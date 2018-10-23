@@ -1287,11 +1287,11 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
             out << "See " << params.out_prefix << ".trees for trees with branch lengths." << endl << endl;
             if (params.topotest_replicates && info.size() > 1) {
                 out << "Tree      logL    deltaL  bp-RELL    p-KH     p-SH    ";
-                if (params.do_weighted_test)
-                    out << "p-WKH    p-WSH    ";
-                out << "c-ELW";
+				if (params.do_weighted_test)
+					out << "p-WKH    p-WSH    ";
+                out << "   c-ELW";
                 if (params.do_au_test)
-                    out << "     p-AU";
+                    out << "       p-AU";
 
                 out << endl << "------------------------------------------------------------------";
                 if (params.do_weighted_test)
@@ -1299,82 +1299,85 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
                 if (params.do_au_test)
                     out << "-------";
                 out << endl;
-            } else {
-                out << "Tree      logL    deltaL" << endl;
-                out << "-------------------------" << endl;
+			} else {
+				out << "Tree      logL    deltaL" << endl;
+				out << "-------------------------" << endl;
 
-            }
-            double maxL = -DBL_MAX;
-            int tid, orig_id;
-            for (tid = 0; tid < info.size(); tid++)
-                if (info[tid].logl > maxL) maxL = info[tid].logl;
-            for (orig_id = 0, tid = 0; orig_id < distinct_trees.size(); orig_id++) {
-                out.width(3);
-                out << right << orig_id+1 << " ";
-                if (distinct_trees[orig_id] >= 0) {
-                    out << " = tree " << distinct_trees[orig_id]+1 << endl;
-                    continue;
-                }
-                out.precision(3);
-                out.width(12);
-                out << info[tid].logl << " ";
-                out.width(7);
-                out << maxL - info[tid].logl;
-                if (!params.topotest_replicates || info.size() <= 1) {
-                    out << endl;
-                    tid++;
-                    continue;
-                }
-                out.precision(4);
-                out << "  ";
-                out.width(6);
-                out << info[tid].rell_bp;
-                if (info[tid].rell_confident)
-                    out << " + ";
-                else
-                    out << " - ";
-                out.width(6);
-                out << right << info[tid].kh_pvalue;
-                if (info[tid].kh_pvalue < 0.05)
-                    out << " - ";
-                else
-                    out << " + ";
-                out.width(6);
-                out << right << info[tid].sh_pvalue;
-                if (info[tid].sh_pvalue < 0.05)
-                    out << " - ";
-                else
-                    out << " + ";
+			}
+			double maxL = -DBL_MAX;
+			int tid, orig_id;
+			for (tid = 0; tid < info.size(); tid++)
+				if (info[tid].logl > maxL) maxL = info[tid].logl;
+			for (orig_id = 0, tid = 0; orig_id < distinct_trees.size(); orig_id++) {
+				out.width(3);
+				out << right << orig_id+1 << " ";
+				if (distinct_trees[orig_id] >= 0) {
+					out << " = tree " << distinct_trees[orig_id]+1 << endl;
+					continue;
+				}
+                out.unsetf(ios::fixed);
+				out.precision(10);
+				out.width(12);
+				out << info[tid].logl << " ";
+				out.width(7);
+                out.precision(5);
+				out << maxL - info[tid].logl;
+				if (!params.topotest_replicates || info.size() <= 1) {
+					out << endl;
+					tid++;
+					continue;
+				}
+				out.precision(3);
+				out << "  ";
+				out.width(6);
+				out << info[tid].rell_bp;
+				if (info[tid].rell_confident)
+					out << " + ";
+				else
+					out << " - ";
+				out.width(6);
+				out << right << info[tid].kh_pvalue;
+				if (info[tid].kh_pvalue < 0.05)
+					out << " - ";
+				else
+					out << " + ";
+				out.width(6);
+				out << right << info[tid].sh_pvalue;
+				if (info[tid].sh_pvalue < 0.05)
+					out << " - ";
+				else
+					out << " + ";
 
-                if (params.do_weighted_test) {
-                    out.width(6);
-                    out << right << info[tid].wkh_pvalue;
-                    if (info[tid].wkh_pvalue < 0.05)
-                        out << " - ";
-                    else
-                        out << " + ";
-                    out.width(6);
-                    out << right << info[tid].wsh_pvalue;
-                    if (info[tid].wsh_pvalue < 0.05)
-                        out << " - ";
-                    else
-                        out << " + ";
-                }
-                out.width(6);
-                out << info[tid].elw_value;
-                if (info[tid].elw_confident)
-                    out << " + ";
-                else
-                    out << " - ";
+				if (params.do_weighted_test) {
+					out.width(6);
+					out << right << info[tid].wkh_pvalue;
+					if (info[tid].wkh_pvalue < 0.05)
+						out << " - ";
+					else
+						out << " + ";
+					out.width(6);
+					out << right << info[tid].wsh_pvalue;
+					if (info[tid].wsh_pvalue < 0.05)
+						out << " - ";
+					else
+						out << " + ";
+				}
+				out.width(9);
+				out << right << info[tid].elw_value;
+				if (info[tid].elw_confident)
+					out << " + ";
+				else
+					out << " - ";
 
                 if (params.do_au_test) {
-                    out.width(6);
+                    out.width(8);
                     out << right << info[tid].au_pvalue;
                     if (info[tid].au_pvalue < 0.05)
                         out << " - ";
                     else
                         out << " + ";
                 }
+                out.setf(ios::fixed);
 
                 out << endl;
                 tid++;
@@ -2049,12 +2052,12 @@ void startTreeReconstruction(Params &params, IQTree* &iqtree, ModelCheckpoint &m
         if (iqtree->isSuperTreeUnlinked()) {
             params.start_tree = STT_PARSIMONY;
         } else if (iqtree->isSuperTree()) {
-			PhyloSuperTree *stree = (PhyloSuperTree*)iqtree;
-			for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++)
-				if ((*it)->aln->seq_type != SEQ_DNA && (*it)->aln->seq_type != SEQ_PROTEIN)
-					params.start_tree = STT_BIONJ;
-		} else if (iqtree->aln->seq_type != SEQ_DNA && iqtree->aln->seq_type != SEQ_PROTEIN)
-			params.start_tree = STT_PARSIMONY;
+            PhyloSuperTree *stree = (PhyloSuperTree*)iqtree;
+            for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++)
+                if ((*it)->aln->seq_type != SEQ_DNA && (*it)->aln->seq_type != SEQ_PROTEIN)
+                    params.start_tree = STT_PARSIMONY;
+        } else if (iqtree->aln->seq_type != SEQ_DNA && iqtree->aln->seq_type != SEQ_PROTEIN)
+            params.start_tree = STT_PARSIMONY;
     }
 
     /***************** Initialization for PLL and sNNI ******************/
@@ -2423,11 +2426,11 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     // prune stable taxa
     pruneTaxa(params, *iqtree, pattern_lh, pruned_taxa, linked_name);
 
-	/***************************************** DO STOCHASTIC TREE SEARCH *******************************************/
-	if (params.min_iterations > 0 && !params.tree_spr) {
-		iqtree->doTreeSearch();
-		iqtree->setAlignment(iqtree->aln);
-	} else {
+    /***************************************** DO STOCHASTIC TREE SEARCH *******************************************/
+    if (params.min_iterations > 0 && !params.tree_spr) {
+        iqtree->doTreeSearch();
+        iqtree->setAlignment(iqtree->aln);
+    } else {
         iqtree->candidateTrees.saveCheckpoint();
         /* do SPR with likelihood function */
         if (params.tree_spr) {
@@ -3596,15 +3599,15 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
     checkpoint->putBool("finished", false);
     checkpoint->setDumpInterval(params.checkpoint_dump_interval);
 
-	/****************** read in alignment **********************/
-	if (params.partition_file) {
-		// Partition model analysis
+    /****************** read in alignment **********************/
+    if (params.partition_file) {
+        // Partition model analysis
         if (params.partition_type == TOPO_UNLINKED)
             alignment = new SuperAlignmentUnlinked(params);
         else
             alignment = new SuperAlignment(params);
-	} else {
-		alignment = new Alignment(params.aln_file, params.sequence_type, params.intype, params.model_name);
+    } else {
+        alignment = new Alignment(params.aln_file, params.sequence_type, params.intype, params.model_name);
 
         if (params.freq_const_patterns) {
             int orig_nsite = alignment->getNSite();

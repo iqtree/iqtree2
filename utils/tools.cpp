@@ -3783,8 +3783,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 #endif
     }
 
-    if (params.do_au_test)
-        outError("The AU test is temporarily disabled due to numerical issue when bp-RELL=0");
+//    if (params.do_au_test)
+//        outError("The AU test is temporarily disabled due to numerical issue when bp-RELL=0");
     
     if (params.model_test_and_tree && params.partition_type != BRLEN_OPTIMIZE)
         outError("-mtree not allowed with edge-linked partition model (-spp or -q)");

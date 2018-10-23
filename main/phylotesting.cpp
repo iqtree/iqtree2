@@ -1674,9 +1674,9 @@ string testOneModel(string &model_name, Params &params, Alignment *in_aln,
     else
         iqtree = new IQTree(in_aln);
     iqtree->setParams(&params);
-    iqtree->sse = params.SSE;
+    iqtree->setLikelihoodKernel(params.SSE);
     iqtree->optimize_by_newton = params.optimize_by_newton;
-    iqtree->num_threads = num_threads;
+    iqtree->setNumThreads(num_threads);
 
     iqtree->setCheckpoint(&model_info);
     iqtree->restoreCheckpoint();
@@ -2948,7 +2948,11 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
     for (k = 0; k < nscales; k++) {
         string str = "SCALE=" + convertDoubleToString(r[k]);    
 		for (boot = 0; boot < nboot; boot++) {
-			tree->aln->createBootstrapAlignment(boot_sample, str.c_str(), rstream);
+            if (r[k] == 1.0 && boot == 0)
+                // 2018-10-23: get one of the bootstrap sample as the original alignment
+                tree->aln->getPatternFreq(boot_sample);
+            else
+                tree->aln->createBootstrapAlignment(boot_sample, str.c_str(), rstream);
             for (ptn = 0; ptn < maxnptn; ptn++)
                 boot_sample_dbl[ptn] = boot_sample[ptn];
             double max_lh = -DBL_MAX, second_max_lh = -DBL_MAX;
@@ -3064,7 +3068,7 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
     //            c = mle.c;
 
                 /* STEP 4: compute p-value according to Eq. 11 */
-                pval = 1.0 - gsl_cdf_ugaussian_P(d-c);
+                pval = gsl_cdf_ugaussian_Q(d-c);
                 z = -pval;
                 ze = se;
                 // compute sum of squared difference
@@ -3076,10 +3080,10 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
                 
             } else {
                 // not enough data for WLS
-                double sum = 0.0;
+                int num0 = 0;
                 for (k = 0; k < nscales; k++)
-                    sum += cc[k];
-                if (sum >= 0.0) 
+                    if (this_bp[k] <= 0.0) num0++;
+                if (num0 > nscales/2)
                     pval = 0.0;
                 else
                     pval = 1.0;
@@ -3088,6 +3092,8 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
                 rss = 0.0;
                 if (verbose_mode >= VB_MED)
                     cout << "   error in wls" << endl;
+                info[tid].au_pvalue = pval;
+                break;
             }
 
             // maximum likelhood fit
@@ -3129,7 +3135,7 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
             ze0=ze;
             idf0 = nscales-2;
             if(fabs(x-th)<1e-10) break;
-        }
+        } // for step
         
         if (failed && verbose_mode >= VB_MED)
             cout << "   degenerated" << endl;
@@ -3241,7 +3247,10 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
         int *rstream = randstream;
 #endif
 		for (boot = 0; boot < params.topotest_replicates; boot++)
-			tree->aln->createBootstrapAlignment(boot_samples + (boot*nptn), params.bootstrap_spec, rstream);
+            if (boot == 0)
+                tree->aln->getPatternFreq(boot_samples + (boot*nptn));
+            else
+                tree->aln->createBootstrapAlignment(boot_samples + (boot*nptn), params.bootstrap_spec, rstream);
 #ifdef _OPENMP
         finish_random(rstream);
         }
