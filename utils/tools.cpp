@@ -4219,7 +4219,8 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --bisymtest-remove-good   Do --bisymtest and remove good partitions" << endl
     << "  --bisymtest-type MAR|INT  Use MARginal/INTernal test when removing partitions" << endl
     << "  --bisymtest-pval NUM      P-value cutoff (default: 0.05)" << endl
-    << "  --bisymtest-keep-zero     Keep NAs in the tests" << endl;
+    << "  --bisymtest-keep-zero     Keep NAs in the tests" << endl
+    << "  --permsymtest NUM         Replicates for permutation tests of symmetry" << endl;
     
     cout << endl;
 

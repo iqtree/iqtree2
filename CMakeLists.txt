@@ -71,7 +71,7 @@ endif()
 # The version number.
 set (iqtree_VERSION_MAJOR 1)
 set (iqtree_VERSION_MINOR 7)
-set (iqtree_VERSION_PATCH "-beta3")
+set (iqtree_VERSION_PATCH "-beta4")
 
 set(BUILD_SHARED_LIBS OFF)
 
@@ -534,6 +534,9 @@ add_subdirectory(alignment)
 add_subdirectory(tree)
 
 # YAML library
+option(YAML_CPP_BUILD_TESTS "Enable testing" OFF)
+option(YAML_CPP_BUILD_TOOLS "Enable parse tools" OFF)
+option(YAML_CPP_BUILD_CONTRIB "Enable contrib stuff in library" OFF)
 add_subdirectory(yaml-cpp)
 add_subdirectory(phylo-yaml)
 
