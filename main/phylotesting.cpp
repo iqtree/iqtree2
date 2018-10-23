@@ -1729,8 +1729,9 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 	dfvec.resize(in_tree->size());
 	lenvec.resize(in_tree->size());
 
-    double *dist = new double[in_tree->size()*(in_tree->size()-1)/2];
-    pair<int,int> *distID = new pair<int,int>[in_tree->size()*(in_tree->size()-1)/2];
+    // 2018-10-23: +1 to avoid crash when size <= 2
+    double *dist = new double[in_tree->size()*(in_tree->size()-1)/2+1];
+    pair<int,int> *distID = new pair<int,int>[in_tree->size()*(in_tree->size()-1)/2+1];
     
     // sort partition by computational cost for OpenMP effciency
 	for (i = 0; i < in_tree->size(); i++) {
