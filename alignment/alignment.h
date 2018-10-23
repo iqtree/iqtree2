@@ -356,6 +356,11 @@ public:
     virtual void getPatternFreq(IntVector &freq);
 
     /**
+     * @param[out] freq vector of site-pattern frequencies
+     */
+    virtual void getPatternFreq(int *freq);
+
+    /**
             @param i sequence index
             @return sequence name
      */
