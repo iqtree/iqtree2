@@ -2672,7 +2672,7 @@ int mleloopmax=30;
 double mleeps=1e-10;
 int mlecoef(double *cnts, double *rr, double bb, int kk,
 	    double *coef0, /* set initinal value (size=2) */
-	    double *lrt, double *df, /* LRT statistic */
+	    double *lrt, int *df, /* LRT statistic */
         double *se
 	    )
 {
@@ -2728,22 +2728,22 @@ int mlecoef(double *cnts, double *rr, double bb, int kk,
   }
 
   /* calc log-likelihood */
-  *lrt=0.0; *df=0.0;
+  *lrt=0.0; *df=0;
   for(i=0;i<m;i++) {
     if(p[i]>0.0 && p[i]<1.0) {
-      *df+=1.0;
+      *df+=1;
       if(c[i]>0.0) a=c[i]*log(c[i]/b[i]/p[i]); else a=0.0;
       if(c[i]<b[i]) a+=(b[i]-c[i])*(log3(p[i])-log3(c[i]/b[i]));
       *lrt += a;
     }
   }
-  *lrt *= 2.0; *df -= 2.0;
+  *lrt *= 2.0; *df -= 2;
 
   /* write back the results */
   coef0[0]=coef[0]; coef0[1]=coef[1];
   *se = v11 + v22 - 2*v12;
 //  vmat[0][0]=v11;vmat[0][1]=vmat[1][0]=v12;vmat[1][1]=v22; 
-  if(loop==mleloopmax || *df< -0.01) i=1; else i=0;
+  if(loop==mleloopmax || *df< 0) i=1; else i=0;
   return i;
 }
 
@@ -2848,14 +2848,14 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
                 else
                     treelhs[(tid*nscales+k)*nboot + boot] = second_max_lh - max_lh;
 //            bp[k*ntrees+max_tid] += nboot_inv;
-        }
+        } // for boot
         
         // sort the replicates
         for (tid = 0; tid < ntrees; tid++) {
             quicksort<double,int>(treelhs + (tid*nscales+k)*nboot, 0, nboot-1);
         }
         
-    }
+    } // for scale
 
     aligned_free(boot_sample_dbl);
     aligned_free(boot_sample);
@@ -2918,7 +2918,16 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
             if (num_k >= 2) {
                 // first obtain d and c by weighted least square
                 doWeightedLeastSquare(nscales, w, rr, rr_inv, cc, d, c, se);
+
+                // maximum likelhood fit
+                double coef0[2] = {d, c};
+                int mlefail = mlecoef(this_bp, r, nboot, nscales, coef0, &rss, &df, &se);
                 
+                if (!mlefail) {
+                    d = coef0[0];
+                    c = coef0[1];
+                }
+
                 se = gsl_ran_ugaussian_pdf(d-c)*sqrt(se);
                 
                 // second, perform MLE estimate of d and c
@@ -2952,22 +2961,10 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
                 rss = 0.0;
                 if (verbose_mode >= VB_MED)
                     cout << "   error in wls" << endl;
-                info[tid].au_pvalue = pval;
-                break;
+                //info[tid].au_pvalue = pval;
+                //break;
             }
 
-            // maximum likelhood fit
-//            double coef0[2] = {d, c};
-//            double df;
-//            int mlefail = mlecoef(this_bp, r, nboot, nscales, coef0, &rss, &df, &se);
-//            
-//            if (!mlefail) {
-//                d = coef0[0];
-//                c = coef0[1];
-//                pval = 1.0 - gsl_cdf_ugaussian_P(d-c);
-//                z = -pval;
-//                ze = se;
-//            }
             
             if (verbose_mode >= VB_MED) {
                 cout.unsetf(ios::fixed);
@@ -2993,7 +2990,7 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
             thp=x; 
             z0=z;
             ze0=ze;
-            idf0 = nscales-2;
+            idf0 = df;
             if(fabs(x-th)<1e-10) break;
         } // for step
         
