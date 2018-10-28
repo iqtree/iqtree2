@@ -1,1 +1,13 @@
-language: c++
+language: cpp
+compiler:
+  - clang
+  - gcc
+script:
+############################################################################
+# Build main and tests
+############################################################################
+  - mkdir -p build
+  - cd build
+  - cmake .. 
+  - make
+     
