@@ -856,6 +856,18 @@ bool checkModelFile(string model_file, bool is_partitioned, ModelCheckpoint &inf
 }
 */
 
+class ModelAdjust {
+public:
+    ModelAdjust() {
+        logl = 0.0;
+        df = 0;
+        sample_size = 0;
+    }
+    double logl;
+    int df;
+    size_t sample_size;
+};
+
 /**
  testing the best-fit model
  return in params.freq_type and params.rate_type
@@ -868,7 +880,7 @@ bool checkModelFile(string model_file, bool is_partitioned, ModelCheckpoint &inf
  */
 string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
         ModelsBlock *models_block, int num_threads, int brlen_type,
-        string set_name = "", string in_model_name = "");
+        string set_name = "", string in_model_name = "", ModelAdjust *adjust = NULL);
 
 /**
  * select models for all partitions
@@ -990,13 +1002,15 @@ string testModelOMatic(Params &params, PhyloTree* in_tree, ModelCheckpoint &mode
     for (int id = 0; id < sizeof(test_seq_types) / sizeof(SeqType); id++) {
         Alignment *newaln = NULL;
         // adapter coefficient according to Whelan et al. 2015
-        double adjusted_logl = 0.0;
-        int adjusted_df = 0;
+        ModelAdjust adjust;
+        adjust.logl = 0.0;
+        adjust.df = 0;
+        adjust.sample_size = orig_aln->getNSite();
         if (test_seq_types[id] == SEQ_PROTEIN) {
             newaln = orig_aln->convertCodonToAA();
-            adjusted_logl = computeAdapter(orig_aln, newaln, adjusted_df);
+            adjust.logl = computeAdapter(orig_aln, newaln, adjust.df);
             if (set_name.empty())
-                cout << "Adapter function: " << adjusted_logl << "  adjusted_df: " << adjusted_df << endl;
+                cout << "Adapter function: " << adjust.logl << "  adjusted_df: " << adjust.df << endl;
         } else if (test_seq_types[id] == SEQ_DNA)
             newaln = orig_aln->convertCodonToDNA();
         else
@@ -1005,14 +1019,12 @@ string testModelOMatic(Params &params, PhyloTree* in_tree, ModelCheckpoint &mode
         in_tree->aln = newaln;
         ModelInfo info;
         info.name = testModel(params, in_tree, model_info, models_block, num_threads,
-                                      brlen_type, set_name, in_model_name);
+                                      brlen_type, set_name, in_model_name, &adjust);
         check = info.restoreCheckpoint(&model_info);
         ASSERT(check);
         // correct log-likelihood with adapter function
-        info.logl += adjusted_logl;
-        info.df += adjusted_df;
-        info.computeICScores(newaln->getNSite());
-        double score_new = info.computeICScore(newaln->getNSite());
+        info.computeICScores(adjust.sample_size);
+        double score_new = info.computeICScore(adjust.sample_size);
         if (score_new < score_best) {
             score_best = score_new;
             model_name = info.name;
@@ -1656,7 +1668,7 @@ void fixPartitions(PhyloSuperTree* super_tree) {
 */
 string testOneModel(string &model_name, Params &params, Alignment *in_aln,
     ModelCheckpoint &model_info, ModelInfo &info, ModelsBlock *models_block,
-    int &num_threads, int brlen_type)
+    int &num_threads, int brlen_type, ModelAdjust *adjust = NULL)
 {
     IQTree *iqtree = NULL;
     if (in_aln->isSuperAlignment()) {
@@ -1803,6 +1815,10 @@ string testOneModel(string &model_name, Params &params, Alignment *in_aln,
     }
 
     info.df = iqtree->getModelFactory()->getNParameters(brlen_type);
+    if (adjust) {
+        info.logl += adjust->logl;
+        info.df += adjust->df;
+    }
     string tree_string = iqtree->getTreeString();
 
     delete iqtree;
@@ -2335,7 +2351,7 @@ bool isMixtureModel(ModelsBlock *models_block, string &model_str) {
 
 string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
     ModelsBlock *models_block, int num_threads, int brlen_type,
-    string set_name, string in_model_name)
+    string set_name, string in_model_name, ModelAdjust *adjust)
 {
     ModelCheckpoint *checkpoint = &model_info;
 
@@ -2352,6 +2368,8 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
 	string best_model;
 
 	int ssize = in_tree->aln->getNSite(); // sample size
+    if (adjust)
+        ssize = adjust->sample_size;
 	if (params.model_test_sample_size)
 		ssize = params.model_test_sample_size;
 	if (set_name == "") {
@@ -2371,6 +2389,13 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
     string best_model_AIC, best_model_AICc, best_model_BIC;
     double best_score_AIC = DBL_MAX, best_score_AICc = DBL_MAX, best_score_BIC = DBL_MAX;
     string best_tree_AIC, best_tree_AICc, best_tree_BIC;
+
+    CKP_RESTORE(best_score_AIC);
+    CKP_RESTORE(best_score_AICc);
+    CKP_RESTORE(best_score_BIC);
+    CKP_RESTORE(best_model_AIC);
+    CKP_RESTORE(best_model_AICc);
+    CKP_RESTORE(best_model_BIC);
 
     CKP_RESTORE(best_tree_AIC);
     CKP_RESTORE(best_tree_AICc);
@@ -2406,7 +2431,7 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
 
         /***** main call to estimate model parameters ******/
         tree_string = testOneModel(model_names[model], params, in_tree->aln,
-            model_info, info, models_block, num_threads, brlen_type);
+            model_info, info, models_block, num_threads, brlen_type, adjust);
 
         info.computeICScores(ssize);
         info.saveCheckpoint(checkpoint);
