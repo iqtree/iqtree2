@@ -203,7 +203,7 @@ void reportModelSelection(ofstream &out, Params &params, ModelCheckpoint *model_
     }
     if (tree->isSuperTree())
         out << "  ID  ";
-    out << "Model             LogL          AIC      w-AIC      AICc     w-AICc       BIC      w-BIC" << endl;
+    out << "Model                  LogL         AIC      w-AIC        AICc     w-AICc         BIC      w-BIC" << endl;
     /*
     if (is_partitioned)
         out << "----------";
@@ -211,6 +211,7 @@ void reportModelSelection(ofstream &out, Params &params, ModelCheckpoint *model_
     out << "----------------------------------------------------------------------------------------" << endl;
     */
     int setid = 1;
+    out.precision(3);
 
     vector<ModelInfo> models;
     model_info->getOrderedModels(tree, models);
@@ -225,13 +226,26 @@ void reportModelSelection(ofstream &out, Params &params, ModelCheckpoint *model_
         out.width(11);
         out << right << it->logl << " ";
         out.width(11);
-        out    << it->AIC_score << ((it->AIC_conf) ? " + " : " - ") << it->AIC_weight << " ";
+        out    << it->AIC_score << ((it->AIC_conf) ? " + " : " - ");
+        out.unsetf(ios::fixed);
+        out.width(8);
+        out << it->AIC_weight << " ";
+        out.setf(ios::fixed);
         out.width(11);
-        out << it->AICc_score << ((it->AICc_conf) ? " + " : " - ") << it->AICc_weight << " ";
+        out << it->AICc_score << ((it->AICc_conf) ? " + " : " - ");
+        out.unsetf(ios::fixed);
+        out.width(8);
+        out << it->AICc_weight << " ";
+        out.setf(ios::fixed);
         out.width(11);
-        out << it->BIC_score  << ((it->BIC_conf) ? " + " : " - ") << it->BIC_weight;
+        out << it->BIC_score  << ((it->BIC_conf) ? " + " : " - ");
+        out.unsetf(ios::fixed);
+        out.width(8);
+        out << it->BIC_weight;
+        out.setf(ios::fixed);
         out << endl;
     }
+    out.precision(4);
 
     /* TODO
     for (it = model_info.begin(); it != model_info.end(); it++) {
