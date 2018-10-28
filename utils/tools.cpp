@@ -1835,10 +1835,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.partition_file = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "-spp") == 0) {
+			if (strcmp(argv[cnt], "-spp") == 0 || strcmp(argv[cnt], "-p") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -spp <partition_file>";
+					throw "Use -p <partition_file>";
 				params.partition_file = argv[cnt];
 				params.partition_type = BRLEN_SCALE;
                 params.opt_gammai = false;
@@ -1859,7 +1859,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
 
-            if (strcmp(argv[cnt], "-spu") == 0) {
+            if (strcmp(argv[cnt], "-spu") == 0 || strcmp(argv[cnt], "-S") == 0) {
                 cnt++;
                 if (cnt >= argc)
                     throw "Use -spu <partition_file>";
@@ -2058,8 +2058,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.k_representative = convert_int(argv[cnt]);
 				continue;
 			}
-			if (strcmp(argv[cnt], "-pdel") == 0
-					|| strcmp(argv[cnt], "-p") == 0) {
+			if (strcmp(argv[cnt], "-pdel") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -pdel <probability>";
@@ -3926,9 +3925,9 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -s <alignment>       Input alignment in PHYLIP/FASTA/NEXUS/CLUSTAL/MSF format" << endl
             << "  -st <data_type>      BIN, DNA, AA, NT2AA, CODON, MORPH (default: auto-detect)" << endl
             << "  -q <partition_file>  Edge-linked partition model (file in NEXUS/RAxML format)" << endl
-            << " -spp <partition_file> Like -q option but allowing partition-specific rates" << endl
+            << "  -p <partition_file>  Like -q option but allowing partition-specific rates" << endl
             << "  -sp <partition_file> Edge-unlinked partition model (like -M option of RAxML)" << endl
-            << " -spu <partition_file> Topology-unlinked partition model" << endl
+            << "  -S <partition_file>  Topology-unlinked partition model" << endl
             << "  -t <start_tree_file> or -t BIONJ or -t RANDOM" << endl
             << "                       Starting tree (default: 99 parsimony tree and BIONJ)" << endl
             << "  -te <user_tree_file> Like -t but fixing user tree (no tree search performed)" << endl
@@ -4243,13 +4242,13 @@ void quickStartGuide() {
          << "3. Combine ModelFinder, tree search, ultrafast bootstrap and SH-aLRT test:" << endl
          << "     iqtree -s example.phy -alrt 1000 -bb 1000" << endl << endl
          << "4. Perform edge-linked proportional partition model (example.nex):" << endl
-         << "     iqtree -s example.phy -spp example.nex" << endl
-         << "   (replace '-spp' by '-sp' for edge-unlinked model)" << endl << endl
+         << "     iqtree -s example.phy -p example.nex" << endl
+         << "   (replace '-p' by '-sp' for edge-unlinked model)" << endl << endl
          << "5. Find best partition scheme by possibly merging partitions:" << endl
-         << "     iqtree -s example.phy -sp example.nex -m MF+MERGE" << endl
+         << "     iqtree -s example.phy -p example.nex -m MF+MERGE" << endl
          << "   (use '-m TESTMERGEONLY' to resemble PartitionFinder)" << endl << endl
          << "6. Find best partition scheme followed by tree inference and bootstrap:" << endl
-         << "     iqtree -s example.phy -spp example.nex -m MFP+MERGE -bb 1000" << endl << endl
+         << "     iqtree -s example.phy -p example.nex -m MFP+MERGE -bb 1000" << endl << endl
 #ifdef _OPENMP
          << "7. Use 4 CPU cores to speed up computation: add '-nt 4' option" << endl << endl
 #endif
