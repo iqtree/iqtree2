@@ -1126,7 +1126,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				verbose_mode = VB_QUIET;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-v") == 0 || strcmp(argv[cnt], "-v1") == 0) {
+			if (strcmp(argv[cnt], "-v") == 0 || strcmp(argv[cnt], "--verbose") == 0) {
 				verbose_mode = VB_MED;
 				continue;
 			}
@@ -1149,7 +1149,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.k_representative = params.min_size;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-pre") == 0) {
+			if (strcmp(argv[cnt], "-pre") == 0 || strcmp(argv[cnt], "--prefix") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -pre <output_prefix>";
@@ -1385,7 +1385,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.tree_gen = BALANCED;
 				continue;
 			}
-            if (strcmp(argv[cnt], "-keep_ident") == 0 || strcmp(argv[cnt], "-keep-ident") == 0) {
+            if (strcmp(argv[cnt], "--keep-ident") == 0 || strcmp(argv[cnt], "-keep-ident") == 0) {
                 params.ignore_identical_seqs = false;
                 continue;
             }
@@ -1467,7 +1467,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.run_mode = EXHAUSTIVE;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-seed") == 0) {
+			if (strcmp(argv[cnt], "-seed") == 0 || strcmp(argv[cnt], "--seed") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -seed <random_seed>";
@@ -1647,7 +1647,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.quad_programming = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-quiet") == 0) {
+			if (strcmp(argv[cnt], "-quiet") == 0 || strcmp(argv[cnt], "--quiet") == 0) {
 				verbose_mode = VB_QUIET;
 				continue;
 			}
@@ -1828,7 +1828,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.do_au_test = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-sp") == 0) {
+			if (strcmp(argv[cnt], "-sp") == 0 || strcmp(argv[cnt], "-Q") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -sp <partition_file>";
@@ -1871,7 +1871,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             
-            if (strcmp(argv[cnt], "-rcluster") == 0) {
+            if (strcmp(argv[cnt], "-rcluster") == 0 || strcmp(argv[cnt], "--rcluster") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -rcluster <percent>";
@@ -1880,7 +1880,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "rcluster percentage must be between 0 and 100";
 				continue;
             }
-            if (strcmp(argv[cnt], "-rclusterf") == 0) {
+            if (strcmp(argv[cnt], "-rclusterf") == 0 || strcmp(argv[cnt], "--rclusterf") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -rcluster <percent>";
@@ -1891,7 +1891,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
             }
 
-            if (strcmp(argv[cnt], "-rcluster-max") == 0) {
+            if (strcmp(argv[cnt], "-rcluster-max") == 0 || strcmp(argv[cnt], "--rclusterm") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -rcluster-max <num>";
@@ -1936,7 +1936,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.ngs_ignore_gaps = false;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-st") == 0) {
+			if (strcmp(argv[cnt], "-st") == 0 || strcmp(argv[cnt], "--seqtype") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -st BIN or -st DNA or -st AA or -st CODON or -st MORPH or -st CRXX or -st CFxx.";
@@ -2067,7 +2067,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Probability of deleting a leaf must be between 0 and 1";
 				continue;
 			}
-			if (strcmp(argv[cnt], "-pers") == 0) {
+			if (strcmp(argv[cnt], "-pers") == 0 || strcmp(argv[cnt], "--perturb") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -pers <perturbation_strength>";
@@ -2127,42 +2127,42 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.model_opt_steps = convert_int(argv[cnt]);
                 continue;
             }
-			if (strcmp(argv[cnt], "-mset") == 0) {
+			if (strcmp(argv[cnt], "-mset") == 0 || strcmp(argv[cnt], "--mset") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -mset <model_set>";
 				params.model_set = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "-madd") == 0) {
+			if (strcmp(argv[cnt], "-madd") == 0 || strcmp(argv[cnt], "--madd") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -madd <extra_model_set>";
 				params.model_extra_set = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "-msub") == 0) {
+			if (strcmp(argv[cnt], "-msub") == 0 || strcmp(argv[cnt], "--msub") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -msub <model_subset>";
 				params.model_subset = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "-mfreq") == 0) {
+			if (strcmp(argv[cnt], "-mfreq") == 0 || strcmp(argv[cnt], "--mfreq") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -mfreq <state_freq_set>";
 				params.state_freq_set = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "-mrate") == 0) {
+			if (strcmp(argv[cnt], "-mrate") == 0 || strcmp(argv[cnt], "--mrate") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -mrate <rate_set>";
 				params.ratehet_set = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "-mdef") == 0) {
+			if (strcmp(argv[cnt], "-mdef") == 0 || strcmp(argv[cnt], "--mdef") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -mdef <model_definition_file>";
@@ -2173,11 +2173,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.modelomatic = true;
                 continue;
             }
-			if (strcmp(argv[cnt], "-mredo") == 0) {
+			if (strcmp(argv[cnt], "-mredo") == 0 || strcmp(argv[cnt], "--mredo") == 0) {
 				params.model_test_again = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-mtree") == 0) {
+			if (strcmp(argv[cnt], "-mtree") == 0 || strcmp(argv[cnt], "--mtree") == 0) {
 				params.model_test_and_tree = 1;
 				continue;
 			}
@@ -2259,7 +2259,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
-			if (strcmp(argv[cnt], "-safe") == 0) {
+			if (strcmp(argv[cnt], "-safe") == 0 || strcmp(argv[cnt], "--safe") == 0) {
 				params.lk_safe_scaling = true;
 				continue;
 			}
@@ -2348,7 +2348,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.freq_const_patterns = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "-c") == 0) {
+			if (strcmp(argv[cnt], "--rates") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -c <#rate_category>";
@@ -2357,7 +2357,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Wrong number of rate categories";
 				continue;
 			}
-			if (strcmp(argv[cnt], "-cmin") == 0) {
+			if (strcmp(argv[cnt], "-cmin") == 0 || strcmp(argv[cnt], "--cmin") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -cmin <#min_rate_category>";
@@ -2366,7 +2366,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Wrong number of rate categories for -cmin";
 				continue;
 			}
-			if (strcmp(argv[cnt], "-cmax") == 0) {
+			if (strcmp(argv[cnt], "-cmax") == 0 || strcmp(argv[cnt], "--cmax") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -cmax <#max_rate_category>";
@@ -2385,7 +2385,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
-			if (strcmp(argv[cnt], "-amin") == 0) {
+			if (strcmp(argv[cnt], "-amin") == 0 || strcmp(argv[cnt], "--alpha-min") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -amin <min_gamma_shape>";
@@ -2395,11 +2395,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
-			if (strcmp(argv[cnt], "-gmean") == 0) {
+			if (strcmp(argv[cnt], "-gmean") == 0 || strcmp(argv[cnt], "--gamma-mean") == 0) {
 				params.gamma_median = false;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-gmedian") == 0) {
+			if (strcmp(argv[cnt], "-gmedian") == 0 || strcmp(argv[cnt], "--gamma-median") == 0) {
 				params.gamma_median = true;
 				continue;
 			}
@@ -2488,7 +2488,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Specified max iteration must be greater than min iteration";
 				continue;
 			}
-			if (strcmp(argv[cnt], "-nm") == 0) {
+			if (strcmp(argv[cnt], "-nm") == 0 || strcmp(argv[cnt], "--nmax") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -nm <#max_iteration>";
@@ -2530,9 +2530,9 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Wrong number of threads";
 				continue;
 			}
-			if (strcmp(argv[cnt], "-b") == 0 || strcmp(argv[cnt], "-bo") == 0) {
+			if (strcmp(argv[cnt], "-b") == 0 || strcmp(argv[cnt], "-bo") == 0 || strcmp(argv[cnt], "--bonly") == 0) {
 				params.multi_tree = true;
-				if (strcmp(argv[cnt], "-bo") == 0)
+				if (strcmp(argv[cnt], "-bo") == 0 || strcmp(argv[cnt], "--bonly") == 0)
 					params.compute_ml_tree = false;
 				if (strcmp(argv[cnt], "-b") == 0)
 					params.consensus_type = CT_CONSENSUS_TREE;
@@ -2548,7 +2548,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 					params.consensus_type = CT_NONE;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-bspec") == 0 || strcmp(argv[cnt], "-bsam") == 0) {
+			if (strcmp(argv[cnt], "--bsam") == 0 || strcmp(argv[cnt], "-bsam") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -bsam <bootstrap_specification>";
@@ -2568,7 +2568,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
 #endif
 
-            if (strcmp(argv[cnt], "-bc") == 0) {
+            if (strcmp(argv[cnt], "-bc") == 0 || strcmp(argv[cnt], "--bcon") == 0) {
 				params.multi_tree = true;
 				params.compute_ml_tree = false;
 				cnt++;
@@ -2640,7 +2640,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 //				params.avoid_duplicated_trees = true;
 //				continue;
 //			}
-			if (strcmp(argv[cnt], "-rf_all") == 0) {
+			if (strcmp(argv[cnt], "-rf_all") == 0 || strcmp(argv[cnt], "-rfa") == 0) {
 				params.rf_dist_mode = RF_ALL_PAIR;
 				continue;
 			}
@@ -2678,7 +2678,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "aLRT replicates must be at least 1000";
 				continue;
 			}
-			if (strcmp(argv[cnt], "-alrt") == 0) {
+			if (strcmp(argv[cnt], "-alrt") == 0 || strcmp(argv[cnt], "--alrt") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -alrt <#replicates | 0>";
@@ -2692,11 +2692,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                 }
 				continue;
 			}
-			if (strcmp(argv[cnt], "-abayes") == 0) {
+			if (strcmp(argv[cnt], "-abayes") == 0 || strcmp(argv[cnt], "--abayes") == 0) {
 				params.aBayes_test = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-lbp") == 0) {
+			if (strcmp(argv[cnt], "-lbp") == 0 || strcmp(argv[cnt], "--lbp") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -lbp <#replicates>";
@@ -2767,7 +2767,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
-			if (strcmp(argv[cnt], "-wsr") == 0) {
+			if (strcmp(argv[cnt], "-wsr") == 0 || strcmp(argv[cnt], "--rate") == 0) {
 				params.print_site_rate |= 1;
 				continue;
 			}
@@ -2970,7 +2970,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.eco_run = convert_int(argv[cnt]);
 				continue;
 			}
-			if (strcmp(argv[cnt], "-bb") == 0) {
+			if (strcmp(argv[cnt], "-bb") == 0 || strcmp(argv[cnt], "-B") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -bb <#replicates>";
@@ -2986,7 +2986,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				//params.nni5Branches = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-beps") == 0) {
+			if (strcmp(argv[cnt], "-beps") == 0 || strcmp(argv[cnt], "--beps") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -beps <epsilon>";
@@ -2995,11 +2995,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Epsilon must be positive";
 				continue;
 			}
-			if (strcmp(argv[cnt], "-wbt") == 0) {
+			if (strcmp(argv[cnt], "-wbt") == 0 || strcmp(argv[cnt], "--wbt") == 0) {
 				params.print_ufboot_trees = 1;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-wbtl") == 0) {
+			if (strcmp(argv[cnt], "-wbtl") == 0 || strcmp(argv[cnt], "--wbtl") == 0) {
                 // print ufboot trees with branch lengths
 				params.print_ufboot_trees = 2;
 				continue;
@@ -3018,14 +3018,14 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.max_candidate_trees = convert_int(argv[cnt]);
 				continue;
 			}
-			if (strcmp(argv[cnt], "-bcor") == 0) {
+			if (strcmp(argv[cnt], "-bcor") == 0 | strcmp(argv[cnt], "--bcor") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -bcor <min_correlation>";
 				params.min_correlation = convert_double(argv[cnt]);
 				continue;
 			}
-			if (strcmp(argv[cnt], "-brefine") == 0 || strcmp(argv[cnt], "-bnni") == 0) {
+			if (strcmp(argv[cnt], "--bnni") == 0 || strcmp(argv[cnt], "-bnni") == 0) {
 				params.ufboot2corr = true;
                 // print ufboot trees with branch lengths
 //				params.print_ufboot_trees = 2; // Diep: relocate to be below this for loop
@@ -3036,7 +3036,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
-			if (strcmp(argv[cnt], "-nstep") == 0) {
+			if (strcmp(argv[cnt], "-nstep") == 0 || strcmp(argv[cnt], "--nstep") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -nstep <step_iterations>";
@@ -3066,7 +3066,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "Jackknife proportion must be between 0.0 and 1.0";
                 continue;
             }
-			if (strcmp(argv[cnt], "-mem") == 0) {
+			if (strcmp(argv[cnt], "-mem") == 0 || strcmp(argv[cnt], "--mem") == 0) {
 				cnt++;
 				if (cnt >= argc)
                     throw "Use -mem max_mem_size";
@@ -3152,7 +3152,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.stop_condition = SC_REAL_TIME;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-numpars") == 0 || strcmp(argv[cnt], "-ninit") == 0) {
+			if (strcmp(argv[cnt], "--ninit") == 0 || strcmp(argv[cnt], "-ninit") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -ninit <number_of_parsimony_trees>";
@@ -3163,7 +3163,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 					params.numNNITrees = params.numInitTrees;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-fast") == 0) {
+			if (strcmp(argv[cnt], "-fast") == 0 || strcmp(argv[cnt], "--fast") == 0) {
                 // fast search option to resemble FastTree
                 if (params.gbo_replicates != 0) {
                     outError("Ultrafast bootstrap (-bb) does not work with -fast option");
@@ -3212,7 +3212,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
 
-			if (strcmp(argv[cnt], "-toppars") == 0 || strcmp(argv[cnt], "-ntop") == 0) {
+			if (strcmp(argv[cnt], "--ntop") == 0 || strcmp(argv[cnt], "-ntop") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -ntop <number_of_top_parsimony_trees>";
@@ -3276,8 +3276,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.maxCandidates = convert_int(argv[cnt]);
 				continue;
 			}
-			if (strcmp(argv[cnt], "-popsize") == 0
-					|| strcmp(argv[cnt], "-numcand") == 0 || strcmp(argv[cnt], "-nbest") == 0) {
+			if (strcmp(argv[cnt], "--nbest") == 0 ||strcmp(argv[cnt], "-nbest") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -nbest <number_of_candidate_trees>";
@@ -3313,7 +3312,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.reinsert_par = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-allnni") == 0) {
+			if (strcmp(argv[cnt], "-allnni") == 0 || strcmp(argv[cnt], "--allnni") == 0) {
 				params.speednni = false;
 				continue;
 			}
@@ -3335,8 +3334,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 //            	params.autostop = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-stop_cond") == 0 || strcmp(argv[cnt], "-numstop") == 0
-                 || strcmp(argv[cnt], "-nstop") == 0) {
+			if (strcmp(argv[cnt], "--nstop") == 0 || strcmp(argv[cnt], "-nstop") == 0) {
 				if (params.stop_condition != SC_BOOTSTRAP_CORRELATION)
 					params.stop_condition = SC_UNSUCCESS_ITERATION;
 				cnt++;
@@ -3494,7 +3492,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.model_test_criterion = MTC_AICC;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-merit") == 0) {
+			if (strcmp(argv[cnt], "-merit") == 0 || strcmp(argv[cnt], "--merit") == 0) {
                 cnt++;
 				if (cnt >= argc)
 					throw "Use -merit AIC|AICC|BIC";
@@ -3514,7 +3512,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.model_test_sample_size = convert_int(argv[cnt]);
 				continue;
 			}
-			if (strcmp(argv[cnt], "-omp") == 0 || strcmp(argv[cnt], "-nt") == 0) {
+			if (strcmp(argv[cnt], "-nt") == 0 || strcmp(argv[cnt], "-c") == 0) {
 				cnt++;
 				if (cnt >= argc)
 				throw "Use -nt <num_threads|AUTO>";
@@ -3528,7 +3526,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
             
-            if (strcmp(argv[cnt], "-ntmax") == 0) {
+            if (strcmp(argv[cnt], "-ntmax") == 0 || strcmp(argv[cnt], "--threads-max") == 0) {
                 cnt++;
                 if (cnt >= argc)
                     throw "Use -ntmax <num_threads_max>";
@@ -3550,7 +3548,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             	params.count_trees = true;
             	continue;
 			}
-			if (strcmp(argv[cnt], "-sprdist") == 0 || strcmp(argv[cnt], "-sprrad") == 0) {
+			if (strcmp(argv[cnt], "--sprrad") == 0 || strcmp(argv[cnt], "--radius") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -sprrad <SPR radius used in parsimony search>";
@@ -3608,6 +3606,14 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
             
+            if (strcmp(argv[cnt], "--tree-fix") == 0) {
+                if (params.gbo_replicates != 0) {
+                    outError("Ultrafast bootstrap does not work with -te option");
+                }
+                params.min_iterations = 0;
+                params.stop_condition = SC_FIXED_ITERATION;
+            }
+                
             if (strcmp(argv[cnt], "-g") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -3616,7 +3622,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             
-			if (strcmp(argv[cnt], "-lmap") == 0) {
+			if (strcmp(argv[cnt], "-lmap") == 0 || strcmp(argv[cnt], "--lmap") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -lmap <likelihood_mapping_num_quartets>";
@@ -3630,7 +3636,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
-			if (strcmp(argv[cnt], "-lmclust") == 0) {
+			if (strcmp(argv[cnt], "-lmclust") == 0 || strcmp(argv[cnt], "--lmclust") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -lmclust <likelihood_mapping_cluster_file>";
@@ -3643,7 +3649,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
-			if (strcmp(argv[cnt], "-wql") == 0) {
+			if (strcmp(argv[cnt], "-wql") == 0 || strcmp(argv[cnt], "--quartetlh") == 0) {
 				params.print_lmap_quartet_lh = true;
 				continue;
 			}
@@ -3683,7 +3689,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             
-			if (strcmp(argv[cnt], "-redo") == 0) {
+			if (strcmp(argv[cnt], "-redo") == 0 || strcmp(argv[cnt], "--redo") == 0) {
 				params.ignore_checkpoint = true;
 				continue;
 			}
@@ -3693,7 +3699,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
-			if (strcmp(argv[cnt], "-cptime") == 0) {
+			if (strcmp(argv[cnt], "-cptime") == 0 || strcmp(argv[cnt], "--cptime") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -cptime <checkpoint_time_interval>";
@@ -3918,78 +3924,73 @@ void usage(char* argv[]) {
 
 void usage_iqtree(char* argv[], bool full_command) {
     printCopyright(cout);
-    cout << "Usage: " << argv[0] << " -s <alignment> [OPTIONS]" << endl << endl;
+    cout << "Usage: iqtree [-s ALIGNMENT] [-p PARTITION] [-m MODEL] [-t TREE] ..." << endl << endl;
     cout << "GENERAL OPTIONS:" << endl
-            << "  -? or -h             Print this help dialog" << endl
-            << "  -version             Display version number" << endl
-            << "  -s <alignment>       Input alignment in PHYLIP/FASTA/NEXUS/CLUSTAL/MSF format" << endl
-            << "  -st <data_type>      BIN, DNA, AA, NT2AA, CODON, MORPH (default: auto-detect)" << endl
-            << "  -q <partition_file>  Edge-linked partition model (file in NEXUS/RAxML format)" << endl
-            << "  -p <partition_file>  Like -q option but allowing partition-specific rates" << endl
-            << "  -sp <partition_file> Edge-unlinked partition model (like -M option of RAxML)" << endl
-            << "  -S <partition_file>  Topology-unlinked partition model" << endl
-            << "  -t <start_tree_file> or -t BIONJ or -t RANDOM" << endl
-            << "                       Starting tree (default: 99 parsimony tree and BIONJ)" << endl
-            << "  -te <user_tree_file> Like -t but fixing user tree (no tree search performed)" << endl
-            << "  -o <outgroup_taxon>  Outgroup taxon name for writing .treefile" << endl
-            << "  -pre <PREFIX>        Prefix for all output files (default: aln/partition)" << endl
-#ifdef _OPENMP
-            << "  -nt <num_threads>    Number of cores/threads or AUTO for automatic detection" << endl
-            << "  -ntmax <max_threads> Max number of threads by -nt AUTO (default: #CPU cores)" << endl
-#endif
-            << "  -seed <number>       Random seed number, normally used for debugging purpose" << endl
-            << "  -v, -vv, -vvv        Verbose mode, printing more messages to screen" << endl
-            << "  -quiet               Quiet mode, suppress printing to screen (stdout)" << endl
-            << "  -keep-ident          Keep identical sequences (default: remove & finally add)" << endl
-            << "  -safe                Safe likelihood kernel to avoid numerical underflow" << endl
-            << "  -mem RAM             Maximal RAM usage for memory saving mode" << endl
+            << "  -h, --help           Print this help dialog" << endl
+            << "  --version            Display version number" << endl
+            << "  -s FILE              PHYLIP/FASTA/NEXUS/CLUSTAL/MSF sequence alignment" << endl
+            << "  -t FILE|PARS|RANDOM  Starting tree (default: 99 parsimony and BIONJ)" << endl
+            << "  --tree-fix           Fix -t tree (no tree search performed)" << endl
+            << "  --prefix STRING      Prefix for all output files (default: aln/partition)" << endl
+            << "  --seed NUMBER        Random seed number, normally used for debugging purpose" << endl
+            << "  --safe               Safe likelihood kernel to avoid numerical underflow" << endl
+            << "  --mem NUMBER[G|M|%]  Maximal RAM usage in GB | MB | %" << endl
             << "  --runs NUMBER        Number of indepedent runs (default: 1)" << endl
+#ifdef _OPENMP
+            << "  -c NUMBER|AUTO       No. cores/threads or AUTO-detect (default: 1)" << endl
+#endif
+            << endl << "PARTITION MODEL:" << endl
+            << "  -p FILE|DIR          NEXUS/RAxML partition file or directory with alignments" << endl
+            << "                       Edge-linked proportional partition model" << endl
+            << "  -q FILE|DIR          Like -p but edge-linked equal partition model " << endl
+            << "  -Q FILE|DIR          Like -p but edge-unlinked partition model" << endl
+            << "  -S FILE|DIR          Like -p but separate tree inference" << endl
             << endl << "CHECKPOINTING TO RESUME STOPPED RUN:" << endl
-            << "  -redo                Redo analysis even for successful runs (default: resume)" << endl
-            << "  -cptime <seconds>    Minimum checkpoint time interval (default: 60 sec)" << endl
+            << "  --redo               Ignore checkpoint and overwrite outputs (default: OFF)" << endl
+            << "  --cptime NUMBER      Checkpoint time interval in seconds (default: 60)" << endl
             << endl << "LIKELIHOOD MAPPING ANALYSIS:" << endl
-            << "  -lmap <#quartets>    Number of quartets for likelihood mapping analysis" << endl
-            << "  -lmclust <clustfile> NEXUS file containing clusters for likelihood mapping" << endl
-            << "  -wql                 Print quartet log-likelihoods to .quartetlh file" << endl
+            << "  --lmap NUMBER        Number of quartets for likelihood mapping analysis" << endl
+            << "  --lmclust FILE       NEXUS file containing clusters for likelihood mapping" << endl
+            << "  --quartetlh          Print quartet log-likelihoods to .quartetlh file" << endl
             << endl << "NEW STOCHASTIC TREE SEARCH ALGORITHM:" << endl
 //            << "  -pll                 Use phylogenetic likelihood library (PLL) (default: off)" << endl
-            << "  -ninit <number>      Number of initial parsimony trees (default: 100)" << endl
-            << "  -ntop <number>       Number of top initial trees (default: 20)" << endl
-            << "  -nbest <number>      Number of best trees retained during search (defaut: 5)" << endl
-            << "  -n <#iterations>     Fix number of iterations to stop (default: auto)" << endl
-            << "  -nstop <number>      Number of unsuccessful iterations to stop (default: 100)" << endl
-            << "  -pers <proportion>   Perturbation strength for randomized NNI (default: 0.5)" << endl
-            << "  -sprrad <number>     Radius for parsimony SPR search (default: 6)" << endl
-            << "  -allnni              Perform more thorough NNI search (default: off)" << endl
-            << "  -g <constraint_tree> (Multifurcating) topological constraint tree file" << endl
-            << "  -fast                Fast search to resemble FastTree" << endl
+            << "  --ninit NUMBER       Number of initial parsimony trees (default: 100)" << endl
+            << "  --ntop NUMBER        Number of top initial trees (default: 20)" << endl
+            << "  --nbest NUMBER       Number of best trees retained during search (defaut: 5)" << endl
+            << "  -n NUMBER            Fix number of iterations to stop (default: OFF)" << endl
+            << "  --nstop NUMBER       Number of unsuccessful iterations to stop (default: 100)" << endl
+            << "  --perturb NUMBER     Perturbation strength for randomized NNI (default: 0.5)" << endl
+            << "  --radius NUMBER      Radius for parsimony SPR search (default: 6)" << endl
+            << "  --allnni             Perform more thorough NNI search (default: OFF)" << endl
+            << "  -g FILE              (Multifurcating) topological constraint tree file" << endl
+            << "  --fast               Fast search to resemble FastTree" << endl
 //            << "  -iqp                 Use the IQP tree perturbation (default: randomized NNI)" << endl
 //            << "  -iqpnni              Switch back to the old IQPNNI tree search algorithm" << endl
             << endl << "ULTRAFAST BOOTSTRAP:" << endl
-            << "  -bb <#replicates>    Ultrafast bootstrap (>=1000)" << endl
-            << "  -bsam GENE|GENESITE  Resample GENE or GENE+SITE for partition (default: SITE)" << endl
-            << "  -wbt                 Write bootstrap trees to .ufboot file (default: none)" << endl
-            << "  -wbtl                Like -wbt but also writing branch lengths" << endl
+            << "  -B NUMBER            Ultrafast bootstrap replicates (>=1000)" << endl
+            << "  -j NUMBER            Proportion of sites for jackknife (default: NONE)" << endl
+            << "  --bsam STRING        GENE|GENESITE resampling for partitions (default: SITE)" << endl
+            << "  --wbt                Write bootstrap trees to .ufboot file (default: none)" << endl
+            << "  --wbtl               Like -wbt but also writing branch lengths" << endl
 //            << "  -n <#iterations>     Minimum number of iterations (default: 100)" << endl
-            << "  -nm <#iterations>    Maximum number of iterations (default: 1000)" << endl
-			<< "  -nstep <#iterations> #Iterations for UFBoot stopping rule (default: 100)" << endl
-            << "  -bcor <min_corr>     Minimum correlation coefficient (default: 0.99)" << endl
-			<< "  -beps <epsilon>      RELL epsilon to break tie (default: 0.5)" << endl
-            << "  -bnni                Optimize UFBoot trees by NNI on bootstrap alignment" << endl
-            << "  -j <jackknife>       Proportion of sites for jackknife (default: NONE)" << endl
+            << "  --nmax NUMBER        Maximum number of iterations (default: 1000)" << endl
+			<< "  --nstep NUMBER       Iterations for UFBoot stopping rule (default: 100)" << endl
+            << "  --bcor NUMBER        Minimum correlation coefficient (default: 0.99)" << endl
+			<< "  --beps NUMBER        RELL epsilon to break tie (default: 0.5)" << endl
+            << "  --bnni               Optimize UFBoot trees by NNI on bootstrap alignment" << endl
             << endl << "STANDARD NON-PARAMETRIC BOOTSTRAP:" << endl
-            << "  -b <#replicates>     Bootstrap + ML tree + consensus tree (>=100)" << endl
-            << "  -bc <#replicates>    Bootstrap + consensus tree" << endl
-            << "  -bo <#replicates>    Bootstrap only" << endl
+            << "  -b NUMBER            Replicates for bootstrap + ML tree + consensus tree" << endl
+            << "  --bcon NUMBER        Replicates for bootstrap + consensus tree" << endl
+            << "  --bonly NUMBER       Replicates for bootstrap only" << endl
 #ifdef USE_BOOSTER
             << "  --tbe                Transfer bootstrap expectation" << endl
 #endif
 //            << "  -t <threshold>       Minimum bootstrap support [0...1) for consensus tree" << endl
             << endl << "SINGLE BRANCH TEST:" << endl
-            << "  -alrt <#replicates>  SH-like approximate likelihood ratio test (SH-aLRT)" << endl
-            << "  -alrt 0              Parametric aLRT test (Anisimova and Gascuel 2006)" << endl
-            << "  -abayes              approximate Bayes test (Anisimova et al. 2011)" << endl
-            << "  -lbp <#replicates>   Fast local bootstrap probabilities" << endl
+            << "  --alrt NUMBER        Replicates for SH approximate likelihood ratio test" << endl
+            << "  --alrt 0             Parametric aLRT test (Anisimova and Gascuel 2006)" << endl
+            << "  --abayes             approximate Bayes test (Anisimova et al. 2011)" << endl
+            << "  --lbp NUMBER         Replicates for fast local bootstrap probabilities" << endl
             << endl << "MODEL-FINDER:" << endl
             << "  -m TESTONLY          Standard model selection (like jModelTest, ProtTest)" << endl
             << "  -m TEST              Standard model selection followed by tree inference" << endl
@@ -3999,186 +4000,155 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -m TESTMERGE         Find best partition scheme followed by tree inference" << endl
             << "  -m MF+MERGE          Find best partition scheme incl. FreeRate heterogeneity" << endl
             << "  -m MFP+MERGE         Like -m MF+MERGE followed by tree inference" << endl
-            << "  -rcluster <percent>  Percentage of partition pairs (relaxed clustering alg.)" << endl
-            << "  -rclusterf <perc.>   Percentage of partition pairs (fast relaxed clustering)" << endl
-            << "  -rcluster-max <num>  Max number of partition pairs (default: 10*#partitions)" << endl
-            << "  -mset program        Restrict search to models supported by other programs" << endl
+            << "  --rcluster NUMBER    Percentage of partition pairs (relaxed clustering alg.)" << endl
+            << "  --rclusterf NUMBER   Percentage of partition pairs (fast relaxed clustering)" << endl
+            << "  --rclusterm NUMBER   Max number of partition pairs (default: 10*partitions)" << endl
+            << "  --mset STRING        Restrict search to models supported by other programs" << endl
             << "                       (raxml, phyml or mrbayes)" << endl
-            << "  -mset <lm-subset>    Restrict search to a subset of the Lie-Markov models" << endl
-            << "                       Options for lm-subset are:" << endl
-            << "                       liemarkov, liemarkovry, liemarkovws, liemarkovmk, strandsymmetric" << endl
-            << "  -mset m1,...,mk      Restrict search to models in a comma-separated list" << endl
-            << "                       (e.g. -mset WAG,LG,JTT)" << endl            
-            << "  -msub source         Restrict search to AA models for specific sources" << endl
+            << "  -m ...+LM            Additionally test Lie Markov models" << endl
+            << "  -m ...+LMRY          Additionally test Lie Markov models with RY symmetry" << endl
+            << "  -m ...+LMWS          Additionally test Lie Markov models with WS symmetry" << endl
+            << "  -m ...+LMMK          Additionally test Lie Markov models with MK symmetry" << endl
+            << "  -m ...+LMSS          Additionally test strand-symmetric models" << endl
+            << "  --mset STR,...,STR   Comma-separated model list (e.g. -mset WAG,LG,JTT)" << endl
+            << "  --msub STRING        Amino-acid model source" << endl
             << "                       (nuclear, mitochondrial, chloroplast or viral)" << endl
-            << "  -mfreq f1,...,fk     Restrict search to using a list of state frequencies" << endl
-            << "                       (default AA: -mfreq FU,F; codon: -mfreq ,F1x4,F3x4,F)" << endl
-            << "  -mrate r1,...,rk     Restrict search to a list of rate-across-sites models" << endl
+            << "  --mfreq STR,...,STR  List of state frequencies" << endl
+            << "  --mrate STR,...,STR  List of rate heterogeneity among sites" << endl
             << "                       (e.g. -mrate E,I,G,I+G,R is used for -m MF)" << endl
-            << "  -cmin <kmin>         Min #categories for FreeRate model [+R] (default: 2)" << endl
-            << "  -cmax <kmax>         Max #categories for FreeRate model [+R] (default: 10)" << endl
-            << "  -merit AIC|AICc|BIC  Optimality criterion to use (default: all)" << endl
+            << "  --cmin NUMBER        Min categories for FreeRate model [+R] (default: 2)" << endl
+            << "  --cmax NUMBER        Max categories for FreeRate model [+R] (default: 10)" << endl
+            << "  --merit AIC|AICc|BIC  Akaike|Bayesian information criterion (default: BIC)" << endl
 //            << "  -msep                Perform model selection and then rate selection" << endl
-            << "  -mtree               Perform full tree search for each model considered" << endl
-            << "  -mredo               Ignore model results computed earlier (default: reuse)" << endl
-            << "  -madd mx1,...,mxk    List of mixture models to also consider" << endl
-            << "  -mdef <nexus_file>   A model definition NEXUS file (see Manual)" << endl
+            << "  --mtree              Perform full tree search for every model" << endl
+            << "  --mredo              Ignore .model.gz checkpoint file (default: OFF)" << endl
+            << "  --madd STR,...,STR   List of mixture models to consider" << endl
+            << "  --mdef FILE          Model definition NEXUS file (see Manual)" << endl
 
             << endl << "SUBSTITUTION MODEL:" << endl
-            << "  -m <model_name>" << endl
-            << "                  DNA: HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef," << endl
+            << "  -m STRING            Model name string (e.g. GTR+F+I+G)" << endl
+            << "                 DNA:  HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef," << endl
             << "                       TIM, TIMef, TVM, TVMef, SYM, GTR, or 6-digit model" << endl
             << "                       specification (e.g., 010010 = HKY)" << endl
-            << "              Protein: LG (default), Poisson, cpREV, mtREV, Dayhoff, mtMAM," << endl
+            << "             Protein:  LG (default), Poisson, cpREV, mtREV, Dayhoff, mtMAM," << endl
             << "                       JTT, WAG, mtART, mtZOA, VT, rtREV, DCMut, PMB, HIVb," << endl
             << "                       HIVw, JTTDCMut, FLU, Blosum62, GTR20, mtMet, mtVer, mtInv" << endl
-            << "      Protein mixture: C10,...,C60, EX2, EX3, EHO, UL2, UL3, EX_EHO, LG4M, LG4X" << endl
-            << "               Binary: JC2 (default), GTR2" << endl
-            << "      Empirical codon: KOSI07, SCHN05" << endl 
-            << "    Mechanistic codon: GY (default), MG, MGK, GY0K, GY1KTS, GY1KTV, GY2K," << endl
+            << "     Protein mixture:  C10,...,C60, EX2, EX3, EHO, UL2, UL3, EX_EHO, LG4M, LG4X" << endl
+            << "              Binary:  JC2 (default), GTR2" << endl
+            << "     Empirical codon:  KOSI07, SCHN05" << endl
+            << "   Mechanistic codon:  GY (default), MG, MGK, GY0K, GY1KTS, GY1KTV, GY2K," << endl
             << "                       MG1KTS, MG1KTV, MG2K" << endl
-            << " Semi-empirical codon: XX_YY where XX is empirical and YY is mechanistic model" << endl
-            << "       Morphology/SNP: MK (default), ORDERED, GTR" << endl
-            << "       Lie Markov DNA: One of the following, optionally prefixed by RY, WS or MK:" << endl
-            << "                       1.1,  2.2b, 3.3a, 3.3b,  3.3c," << endl
-            << "                       3.4,  4.4a, 4.4b, 4.5a,  4.5b," << endl
-            << "                       5.6a, 5.6b, 5.7a, 5.7b,  5.7c," << endl
-            << "                       5.11a,5.11b,5.11c,5.16,  6.6," << endl
-            << "                       6.7a, 6.7b, 6.8a, 6.8b,  6.17a," << endl
-            << "                       6.17b,8.8,  8.10a,8.10b, 8.16," << endl
-            << "                       8.17, 8.18, 9.20a,9.20b,10.12," << endl
-            << "                       10.34,12.12" << endl
-            << "       Non-reversible: STRSYM (strand symmetric model, synonymous with WS6.6)" << endl
-            << "       Non-reversible: UNREST (most general unrestricted model, functionally equivalent to 12.12)" << endl
-            << "       Models can have parameters appended in brackets." << endl
-            << "           e.g. '-mRY3.4{0.2,-0.3}+I' specifies parameters for" << endl
-            << "           RY3.4 model but leaves proportion of invariant sites" << endl
-            << "           unspecified. '-mRY3.4{0.2,-0.3}+I{0.5} gives both." << endl
-            << "           When this is done, the given parameters will be taken" << endl
-            << "           as fixed (default) or as start point for optimization" << endl
-            << "           (if -optfromgiven option supplied)" << endl
-            << "" << endl
-            << "        Otherwise: Name of file containing user-model parameters" << endl
-            << "                   (rate parameters and state frequencies)" << endl
+            << "Semi-empirical codon:  XX_YY where XX is empirical and YY is mechanistic model" << endl
+            << "      Morphology/SNP:  MK (default), ORDERED, GTR" << endl
+            << "      Lie Markov DNA:  1.1, 2.2b, 3.3a, 3.3b, 3.3c, 3.4, 4.4a, 4.4b, 4.5a," << endl
+            << "                       4.5b, 5.6a, 5.6b, 5.7a, 5.7b, 5.7c, 5.11a, 5.11b, 5.11c," << endl
+            << "                       5.16, 6.6, 6.7a, 6.7b, 6.8a, 6.8b, 6.17a, 6.17b, 8.8," << endl
+            << "                       8.10a, 8.10b, 8.16, 8.17, 8.18, 9.20a, 9.20b, 10.12," << endl
+            << "                       10.34, 12.12 (optionally prefixed by RY, WS or MK)" << endl
+            << "      Non-reversible:  STRSYM (strand symmetric model, equiv. WS6.6)" << endl
+            << "      Non-reversible:  UNREST (unrestricted model, equiv. 12.12)" << endl
+            << "           Otherwise:  Name of file containing user-model parameters" << endl
             << endl << "STATE FREQUENCY:" << endl
-            << "  Append one of the following +F... to -m <model_name>" << endl
-            << "  +F                   Empirically counted frequencies from alignment" << endl
-            << "  +FO (letter-O)       Optimized frequencies by maximum-likelihood" << endl
-            << "  +FQ                  Equal frequencies" << endl
-            << "  +FRY, +FWS, +FMK     For DNA models only, +FRY is freq(A+G)=1/2=freq(C+T)," << endl
-            << "                       +FWS is freq(A+T)=1/2=freq(C+G), +FMK is freq(A+C)=1/2=freq(G+T)." << endl
-            << "  +F####               where # are digits - for DNA models only, for basis in ACGT order," << endl        
-            << "                       digits indicate which frequencies are constrained to be the same." << endl
-            << "                       E.g. +F1221 means freq(A)=freq(T), freq(C)=freq(G)." << endl
-            << "  +FU                  Amino-acid frequencies by the given protein matrix" << endl
-            << "  +F1x4 (codon model)  Equal NT frequencies over three codon positions" << endl 
-            << "  +F3x4 (codon model)  Unequal NT frequencies over three codon positions" << endl
+            << "  -m ...+F             Empirically counted frequencies from alignment" << endl
+            << "  -m ...+FO            Optimized frequencies by maximum-likelihood" << endl
+            << "  -m ...+FQ            Equal frequencies" << endl
+            << "  -m ...+FRY           For DNA, freq(A+G)=1/2=freq(C+T)" << endl
+            << "  -m ...+FWS           For DNA, freq(A+T)=1/2=freq(C+G)" << endl
+            << "  -m ...+FMK           For DNA, freq(A+C)=1/2=freq(G+T)" << endl
+            << "  -m ...+Fabcd         4-digit constraint on ACGT frequency" << endl
+            << "                       (e.g. +F1221 means f_A=f_T, f_C=f_G)" << endl
+            << "  -m ...+FU            Amino-acid frequencies given protein matrix" << endl
+            << "  -m ...+F1x4          Equal NT frequencies over three codon positions" << endl
+            << "  -m ...+F3x4          Unequal NT frequencies over three codon positions" << endl
             << endl << "MIXTURE MODEL:" << endl
-            << "  -m \"MIX{model1,...,modelK}\"   Mixture model with K components" << endl
-            << "  -m \"FMIX{freq1,...freqK}\"     Frequency mixture model with K components" << endl
+            << "  -m \"MIX{m1,...,mK}\"  Mixture model with K components" << endl
+            << "  -m \"FMIX{f1,...fK}\"  Frequency mixture model with K components" << endl
             << "  -mwopt               Turn on optimizing mixture weights (default: none)" << endl
 
             << endl << "RATE HETEROGENEITY AMONG SITES:" << endl
-            << "  -m modelname+I       A proportion of invariable sites" << endl
-            << "  -m modelname+G[n]    Discrete Gamma model with n categories (default n=4)" << endl
-            << "  -m modelname*G[n]    Discrete Gamma model with unlinked model parameters" << endl
-            << "  -m modelname+I+G[n]  Invariable sites plus Gamma model with n categories" << endl
-            << "  -m modelname+R[n]    FreeRate model with n categories (default n=4)" << endl
-            << "  -m modelname*R[n]    FreeRate model with unlinked model parameters" << endl
-            << "  -m modelname+I+R[n]  Invariable sites plus FreeRate model with n categories" << endl
-            << "  -m modelname+Hn      Heterotachy model with n classes" << endl
-            << "  -m modelname*Hn      Heterotachy model with n classes and unlinked parameters" << endl
-            << "  -a <Gamma_shape>     Gamma shape parameter for site rates (default: estimate)" << endl
-            << "  -amin <min_shape>    Min Gamma shape parameter for site rates (default: 0.02)" << endl
-            << "  -gmedian             Median approximation for +G site rates (default: mean)" << endl
-            << "  --opt-gamma-inv      More thorough estimation for +I+G model parameters" << endl
-            << "  -i <p_invar>         Proportion of invariable sites (default: estimate)" << endl
-            << "  -wsr                 Write site rates to .rate file" << endl
-            << "  -mh                  Computing site-specific rates to .mhrate file using" << endl
-            << "                       Meyer & von Haeseler (2003) method" << endl
+            << "  -m ...+I             A proportion of invariable sites" << endl
+            << "  -m ...+G[n]          Discrete Gamma model with n categories (default n=4)" << endl
+            << "  -m ...*G[n]          Discrete Gamma model with unlinked model parameters" << endl
+            << "  -m ...+I+G[n]        Invariable sites plus Gamma model with n categories" << endl
+            << "  -m ...+R[n]          FreeRate model with n categories (default n=4)" << endl
+            << "  -m ...*R[n]          FreeRate model with unlinked model parameters" << endl
+            << "  -m ...+I+R[n]        Invariable sites plus FreeRate model with n categories" << endl
+            << "  -m ...+Hn            Heterotachy model with n classes" << endl
+            << "  -m ...*Hn            Heterotachy model with n classes and unlinked parameters" << endl
+            << "  --alpha-min NUMBER   Min Gamma shape parameter for site rates (default: 0.02)" << endl
+            << "  --gamma-median       Median approximation for +G site rates (default: mean)" << endl
+            << "  --rate               Write empirical Bayesian site rates to .rate file" << endl
+            << "  --mlrate             Write maximum likelihood site rates to .mlrate file" << endl
+//            << "  --mhrate             Computing site-specific rates to .mhrate file using" << endl
+//            << "                       Meyer & von Haeseler (2003) method" << endl
 
             << endl << "POLYMORPHISM AWARE MODELS (PoMo):"                                           << endl
-            << " -s <counts_file>      Input counts file (see manual)"                               << endl
-            << " -m <MODEL>+P          DNA substitution model (see above) used with PoMo"            << endl
-            << "   +N<POPSIZE>         Virtual population size (default: 9)"                         << endl
+            << "  -s FILE              Input counts file (see manual)"                               << endl
+            << "  -m ...+P             DNA substitution model (see above) used with PoMo"            << endl
+            << "  -m ...+N<POPSIZE>    Virtual population size (default: 9)"                         << endl
       // TODO DS: Maybe change default to +WH.
-            << "   +[WB|WH|S]          Sampling method (default: +WB), WB: Weighted binomial,"       << endl
-            << "                       WH: Weighted hypergeometric S: Sampled sampling"              << endl
-            << "   +G[n]               Discrete Gamma rate model with n categories (default n=4)"    << endl
+            << "  -m ...+WB|WH|S]      Weighted binomial sampling"       << endl
+            << "  -m ...+WH            Weighted hypergeometric sampling" << endl
+            << "  -m ...+S             Sampled sampling"              << endl
+            << "  -m...+G[n]           Discrete Gamma rate with n categories (default n=4)"    << endl
       // TODO DS: Maybe change default to +WH.
 
             << endl << "ASCERTAINMENT BIAS CORRECTION:" << endl
-            << "  -m modelname+ASC     Correction for absence of invariant sites in alignment" << endl
-
-            << endl << "SINGLE TOPOLOGY HETEROTACHY MODEL:" << endl
-            << " -m <model_name>+H[k]  Heterotachy model mixed branch lengths with k classes" << endl
-            << " -m \"MIX{m1,...mK}+H\"" << endl
-            << " -nni-eval <m>         Loop m times for NNI evaluation (default m=1)" << endl
+            << "  -m ...+ASC           Correction for absence of invariant sites in alignment" << endl
 
             << endl << "SITE-SPECIFIC FREQUENCY MODEL:" << endl 
-            << "  -ft <tree_file>      Input tree to infer site frequency model" << endl
-            << "  -fs <in_freq_file>   Input site frequency model file" << endl
+            << "  -ft FILE             Input tree to infer site frequency model" << endl
+            << "  -fs FILE             Input site frequency model file" << endl
             << "  -fmax                Posterior maximum instead of mean approximation" << endl
-            //<< "  -wsf                 Write site frequency model to .sitefreq file" << endl
-            //<< "  -c <#categories>     Number of Gamma rate categories (default: 4)" << endl
 //            << endl << "TEST OF MODEL HOMOGENEITY:" << endl
 //            << "  -m WHTEST            Testing model (GTR+G) homogeneity assumption using" << endl
 //            << "                       Weiss & von Haeseler (2003) method" << endl
 //            << "  -ns <#simulations>   #Simulations to obtain null-distribution (default: 1000)" << endl
-//            << endl << "TREE INFERENCE:" << endl
-//            << "  -p <probability>     IQP: Probability of deleting leaves (default: auto)" << endl
-//            << "  -k <#representative> IQP: Size of representative leaf set (default: 4)" << endl
-//            << "  -n <#iterations>     Number of iterations  (default: auto)" << endl
-//            << "  -sr <#iterations>    Stopping rule with max. #iterations (default: off)" << endl
-//            << "  -sc <confidence>     Confidence value for stopping rule (default: 0.95)" << endl
-//            << "  -spc <level>         Confidence level for NNI adaptive search (default 0.95)" << endl
-//            << "  -sp_iter <number>    #iterations before NNI adaptive heuristic is started" << endl
-//            << "  -lmd <lambda>        lambda parameter for the PhyML search (default 0.75)" << endl
-//            << "  -nosse               Disable SSE instructions" << endl
-//            << "  -wt                  Writing all intermediate trees into .treels file" << endl
-//            << "  -d <file>            Reading genetic distances from file (default: JC)" << endl
-//            << "  -fixbr               Fix branch lengths of <treefile>" << endl
-//            << "  -seed <number>       Random seed number, normally used for debugging purpose" << endl
-//            << "  -v, -vv, -vvv        Verbose mode, printing more messages to screen" << endl
             << endl << "CONSENSUS RECONSTRUCTION:" << endl
-            << "  -t <tree_file>       Set of input trees for consensus reconstruction" << endl
-            << "  -minsup <threshold>  Min split support in range [0,1]; 0.5 for majority-rule" << endl
-            << "                       consensus (default: 0, i.e. extended consensus)" << endl
-            << "  -bi <burnin>         Discarding <burnin> trees at beginning of <treefile>" << endl
-            << "  -con                 Computing consensus tree to .contree file" << endl
+            << "  -t FILE              Set of input trees for consensus reconstruction" << endl
+            << "  -minsup NUMBER       Min split support, 0.5 for majority-rule consensus" << endl
+            << "                       (default: 0, extended consensus)" << endl
+            << "  -bi NUMBER           Burnin number of trees" << endl
+            << "  -con                 Compute consensus tree to .contree file" << endl
             << "  -net                 Computing consensus network to .nex file" << endl
-            << "  -sup <target_tree>   Assigning support values for <target_tree> to .suptree" << endl
-            << "  -sup2 <target_tree>  Like -sup but work for trees with unequal taxon sets" << endl
-            << "  -suptag <name>       Node name (or ALL) to assign tree IDs where node occurs" << endl
-            << endl << "ROBINSON-FOULDS DISTANCE:" << endl
-            << "  -rf_all              Computing all-to-all RF distances of trees in <treefile>" << endl
-            << "  -rf <treefile2>      Computing all RF distances between two sets of trees" << endl
-            << "                       stored in <treefile> and <treefile2>" << endl
-            << "  -rf2 <treefile2>     Like -rf but work for trees with unequal taxon sets" << endl
-            << "  -rf_adj              Computing RF distances of adjacent trees in <treefile>" << endl
+            << "  -sup FILE            Assign support values into this tree from -t trees" << endl
+            << "  -sup2 FILE           Like -sup but -t trees can have unequal taxon sets" << endl
+            << "  -suptag STRING       Node name (or ALL) to assign tree IDs where node occurs" << endl
+            << endl << "ROBINSON-FOULDS (RF) DISTANCE:" << endl
+            << "  -rfa                 Compute all-to-all RF distances for -t trees" << endl
+            << "  -rf FILE             Compute RF distances between -t trees and this set" << endl
+            << "  -rf2 FILE            Like -rf but trees can have unequal taxon sets" << endl
+//            << "  -rf_adj              Computing RF distances of adjacent trees in <treefile>" << endl
             << endl << "TREE TOPOLOGY TEST:" << endl
-            << "  -z <trees_file>      Evaluating a set of user trees" << endl
-            << "  -zb <#replicates>    Performing BP,KH,SH,ELW tests for trees passed via -z" << endl
-            << "  -zw                  Also performing weighted-KH and weighted-SH tests" << endl
-            << "  -au                  Also performing approximately unbiased (AU) test" << endl
+            << "  -z FILE              Set of user trees" << endl
+            << "  -zb NUMBER           Replicates for topology test of -z trees" << endl
+            << "  -zw                  Weighted KH and SH tests" << endl
+            << "  -au                  Approximately unbiased (AU) test (Shimodaira 2002)" << endl
             << endl << "ANCESTRAL STATE RECONSTRUCTION:" << endl
             << "  -asr                 Ancestral state reconstruction by empirical Bayes" << endl
             << "  -asr-min <prob>      Min probability of ancestral state (default: equil freq)" << endl
 //            << "  -wja                 Write ancestral sequences by joint reconstruction" << endl
 
 
-            << endl;
+            << endl
 
-			cout << "GENERATING RANDOM TREES:" << endl;
-			cout << "  -r <num_taxa>        Create a random tree under Yule-Harding model" << endl;
-			cout << "  -ru <num_taxa>       Create a random tree under Uniform model" << endl;
-			cout << "  -rcat <num_taxa>     Create a random caterpillar tree" << endl;
-			cout << "  -rbal <num_taxa>     Create a random balanced tree" << endl;
-			cout << "  -rcsg <num_taxa>     Create a random circular split network" << endl;
-			cout << "  -rlen <min_len> <mean_len> <max_len>  " << endl;
-			cout << "                       min, mean, and max branch lengths of random trees" << endl;
+			<< "GENERATING RANDOM TREES:" << endl
+			<< "  -r NUMBER            No. taxa for Yule-Harding random tree" << endl
+			<< "  -ru NUMBER           No. taxa for Uniform random tree" << endl
+			<< "  -rcat NUMBER         No. taxa for caterpillar random tree" << endl
+			<< "  -rbal NUMBER         No. taxa for balanced random tree" << endl
+			<< "  -rcsg NUMBER         No. taxa for random circular split network" << endl
+			<< "  -rlen NUM NUM NUM    min, mean, and max random branch lengths" << endl;
 
 			cout << endl << "MISCELLANEOUS:" << endl
+            << "  -o STRING            Outgroup taxon name for writing .treefile" << endl
+            << "  --seqtype STRING     BIN, DNA, AA, NT2AA, CODON, MORPH (default: auto-detect)" << endl
+#ifdef _OPENMP
+            << "  --threads-max NUM    Max number of threads for -c AUTO (default: CPU cores)" << endl
+#endif
+            << "  -v, --verbose        Verbose mode, printing more messages to screen" << endl
+            << "  --quiet              Quiet mode, suppress printing to screen (stdout)" << endl
+            << "  --keep-ident         Keep identical sequences (default: remove & finally add)" << endl
 		    << "  -wt                  Write locally optimal trees into .treels file" << endl
 			<< "  -blfix               Fix branch lengths of user tree passed via -te" << endl
             << "  -blscale             Scale branch lengths of user tree passed via -t" << endl
@@ -4193,16 +4163,15 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -wspm                Write site probabilities per mixture class" << endl
             << "  -wspmr               Write site probabilities per mixture+rate class" << endl
 			<< "  -wpl                 Write partition log-likelihoods to .partlh file" << endl
-            << "  -fconst f1,...,fN    Add constant patterns into alignment (N=#nstates)" << endl
-            << "  -me <epsilon>        LogL epsilon for parameter estimation (default 0.01)" << endl
+            << "  -fconst f1,...,fN    Add constant patterns into alignment (N=no. states)" << endl
+            << "  -me NUMBER           LogL epsilon for parameter estimation (default 0.01)" << endl
             << "  --no-outfiles        Suppress printing output files" << endl
             << "  --eigenlib           Use Eigen3 library" << endl
             << "  -alninfo             Print alignment sites statistics to .alninfo" << endl
             << "  -czb                 Collapse zero branches in final tree" << endl
             << "  --show-lh            Compute tree likelihood without optimisation" << endl
-            << "  --mlrate             Write site-specific rates by ML to .mlrate file" << endl;
 #ifdef IQTREE_TERRAPHAST
-            cout << "  --terrace            Check if the tree lies on a phylogenetic terrace" << endl;
+            << "  --terrace            Check if the tree lies on a phylogenetic terrace" << endl
 #endif
 //            << "  -d <file>            Reading genetic distances from file (default: JC)" << endl
 //			<< "  -d <outfile>         Calculate the distance matrix inferred from tree" << endl
@@ -4210,16 +4179,16 @@ void usage_iqtree(char* argv[], bool full_command) {
 //			<< "  -comp <treefile>     Compare tree with each in the input trees" << endl;
 
 
-			cout << endl;
+			<< endl;
 
     cout << "TEST OF SYMMETRY" << endl
     << "  --bisymtest               Perform three binomial tests of symmetry" << endl
     << "  --bisymtest-remove-bad    Do --bisymtest and remove bad partitions" << endl
     << "  --bisymtest-remove-good   Do --bisymtest and remove good partitions" << endl
     << "  --bisymtest-type MAR|INT  Use MARginal/INTernal test when removing partitions" << endl
-    << "  --bisymtest-pval NUM      P-value cutoff (default: 0.05)" << endl
+    << "  --bisymtest-pval NUMER    P-value cutoff (default: 0.05)" << endl
     << "  --bisymtest-keep-zero     Keep NAs in the tests" << endl
-    << "  --permsymtest NUM         Replicates for permutation tests of symmetry" << endl;
+    << "  --permsymtest NUMBER      Replicates for permutation tests of symmetry" << endl;
     
     cout << endl;
 
