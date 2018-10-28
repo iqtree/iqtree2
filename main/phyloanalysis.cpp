@@ -1190,12 +1190,14 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
 			out << endl << "USER TREES" << endl << "----------" << endl << endl;
 			out << "See " << params.out_prefix << ".trees for trees with branch lengths." << endl << endl;
 			if (params.topotest_replicates && info.size() > 1) {
+                if (params.do_au_test && params.topotest_replicates < 10000)
+                    out << "WARNING: Too few replicates for AU test. At least -zb 10000 for reliable results!" << endl << endl;
                 out << "Tree      logL    deltaL  bp-RELL    p-KH     p-SH    ";
 				if (params.do_weighted_test)
 					out << "p-WKH    p-WSH    ";
-                out << "c-ELW";
+                out << "   c-ELW";
                 if (params.do_au_test)
-                    out << "     p-AU";
+                    out << "       p-AU";
 
                 out << endl << "------------------------------------------------------------------";
                 if (params.do_weighted_test)
@@ -1219,17 +1221,19 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
 					out << " = tree " << distinct_trees[orig_id]+1 << endl;
 					continue;
 				}
-				out.precision(3);
+                out.unsetf(ios::fixed);
+				out.precision(10);
 				out.width(12);
 				out << info[tid].logl << " ";
 				out.width(7);
+                out.precision(5);
 				out << maxL - info[tid].logl;
 				if (!params.topotest_replicates || info.size() <= 1) {
 					out << endl;
 					tid++;
 					continue;
 				}
-				out.precision(4);
+				out.precision(3);
 				out << "  ";
 				out.width(6);
 				out << info[tid].rell_bp;
@@ -1264,21 +1268,22 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
 					else
 						out << " + ";
 				}
-				out.width(6);
-				out << info[tid].elw_value;
+				out.width(9);
+				out << right << info[tid].elw_value;
 				if (info[tid].elw_confident)
 					out << " + ";
 				else
 					out << " - ";
 
                 if (params.do_au_test) {
-                    out.width(6);
+                    out.width(8);
                     out << right << info[tid].au_pvalue;
                     if (info[tid].au_pvalue < 0.05)
                         out << " - ";
                     else
                         out << " + ";
                 }
+                out.setf(ios::fixed);
 
 				out << endl;
 				tid++;

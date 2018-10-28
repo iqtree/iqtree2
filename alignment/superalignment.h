@@ -115,6 +115,11 @@ public:
 	virtual void getPatternFreq(IntVector &pattern_freq);
 
     /**
+     * @param[out] freq vector of site-pattern frequencies
+     */
+    virtual void getPatternFreq(int *freq);
+
+    /**
         Print all site information to a file
         @param filename output file name
     */
