@@ -1256,7 +1256,8 @@ void ModelMarkov::readRates(istream &in) throw(const char*, string) {
 	if (str == "equalrate") {
 		for (int i = 0; i < nrates; i++)
 			rates[i] = 1.0;
-	} else {
+	} else if (is_reversible ){
+        // reversible model
 		try {
 			rates[0] = convert_double(str.c_str());
 		} catch (string &str) {
@@ -1270,7 +1271,37 @@ void ModelMarkov::readRates(istream &in) throw(const char*, string) {
 			if (rates[i] < 0.0)
 				throw "Negative rates not allowed";
 		}
-	}
+    } else {
+        // non-reversible model, read the whole rate matrix
+        int i = 0, row, col;
+        for (row = 0; row < num_states; row++) {
+            double row_sum = 0.0;
+            for (col = 0; col < num_states; col++)
+                if (row == 0 && col == 0) {
+                    // top-left element was already red
+                    try {
+                        row_sum = convert_double(str.c_str());
+                    } catch (string &str) {
+                        outError(str);
+                    }
+                } else if (row != col) {
+                    // non-diagonal element
+                    if (!(in >> rates[i]))
+                        throw name+string(": Rate entries could not be read");
+                    if (rates[i] < 0.0)
+                        throw "Negative rates found";
+                    row_sum += rates[i];
+                    i++;
+                } else {
+                    // diagonal element
+                    double d;
+                    in >> d;
+                    row_sum += d;
+                }
+            if (fabs(row_sum) > 1e-3)
+                throw "Row " + convertIntToString(row) + " does not sum to 0";
+        }
+    }
 }
 
 void ModelMarkov::readRates(string str) throw(const char*) {

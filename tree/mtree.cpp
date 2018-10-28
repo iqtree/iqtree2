@@ -848,7 +848,7 @@ void MTree::parseFile(istream &infile, char &ch, Node* &root, DoubleVector &bran
         renameString(seqname);
 //    seqname[seqlen] = 0;
     if (seqlen == 0 && root->isLeaf())
-        throw "A taxon has no name.";
+        throw "Redundant double-bracket ‘((…))’ with closing bracket ending at";
     if (seqlen > 0)
         root->name.append(seqname);
     if (root->isLeaf()) {
