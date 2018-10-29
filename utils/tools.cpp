@@ -1699,7 +1699,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
-            if (strcmp(argv[cnt], "-czb") == 0 || strcmp(argv[cnt], "--collapse-zero-branch") == 0) {
+            if (strcmp(argv[cnt], "-czb") == 0 || strcmp(argv[cnt], "--polytomy") == 0) {
                 params.collapse_zero_branch = true;
                 continue;
             }
@@ -2530,12 +2530,14 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Wrong number of threads";
 				continue;
 			}
-			if (strcmp(argv[cnt], "-b") == 0 || strcmp(argv[cnt], "-bo") == 0 || strcmp(argv[cnt], "--bonly") == 0) {
+			if (strcmp(argv[cnt], "-b") == 0 || strcmp(argv[cnt], "-j") == 0 || strcmp(argv[cnt], "-bo") == 0 || strcmp(argv[cnt], "--bonly") == 0) {
 				params.multi_tree = true;
 				if (strcmp(argv[cnt], "-bo") == 0 || strcmp(argv[cnt], "--bonly") == 0)
 					params.compute_ml_tree = false;
-				if (strcmp(argv[cnt], "-b") == 0)
+				else
 					params.consensus_type = CT_CONSENSUS_TREE;
+                if (strcmp(argv[cnt], "-j") == 0 && params.jackknife_prop == 0.0)
+                    params.jackknife_prop = 0.5;
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -b <num_bootstrap_samples>";
@@ -2970,7 +2972,9 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.eco_run = convert_int(argv[cnt]);
 				continue;
 			}
-			if (strcmp(argv[cnt], "-bb") == 0 || strcmp(argv[cnt], "-B") == 0) {
+			if (strcmp(argv[cnt], "-bb") == 0 || strcmp(argv[cnt], "-B") == 0 || strcmp(argv[cnt], "-J") == 0) {
+                if (strcmp(argv[cnt], "-J") == 0 && params.jackknife_prop == 0.0)
+                    params.jackknife_prop = 0.5;
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -bb <#replicates>";
@@ -3057,16 +3061,17 @@ void parseArg(int argc, char *argv[], Params &params) {
 //				continue;
 //			}
             
-            if (strcmp(argv[cnt], "-j") == 0 || strcmp(argv[cnt], "--jackknife") == 0) {
+            if (strcmp(argv[cnt], "--jack-prop") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use -j jackknife_proportion";
+                    throw "Use --jack-prop jackknife_proportion";
                 params.jackknife_prop = convert_double(argv[cnt]);
                 if (params.jackknife_prop <= 0.0 || params.jackknife_prop >= 1.0)
                     throw "Jackknife proportion must be between 0.0 and 1.0";
                 continue;
             }
-			if (strcmp(argv[cnt], "-mem") == 0 || strcmp(argv[cnt], "--mem") == 0) {
+
+            if (strcmp(argv[cnt], "-mem") == 0 || strcmp(argv[cnt], "--mem") == 0) {
 				cnt++;
 				if (cnt >= argc)
                     throw "Use -mem max_mem_size";
@@ -3936,6 +3941,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  --safe               Safe likelihood kernel to avoid numerical underflow" << endl
             << "  --mem NUMBER[G|M|%]  Maximal RAM usage in GB | MB | %" << endl
             << "  --runs NUMBER        Number of indepedent runs (default: 1)" << endl
+            << "  --redo               Ignore checkpoint and overwrite outputs (default: OFF)" << endl
 #ifdef _OPENMP
             << "  -c NUMBER|AUTO       No. cores/threads or AUTO-detect (default: 1)" << endl
 #endif
@@ -3945,14 +3951,11 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -q FILE|DIR          Like -p but edge-linked equal partition model " << endl
             << "  -Q FILE|DIR          Like -p but edge-unlinked partition model" << endl
             << "  -S FILE|DIR          Like -p but separate tree inference" << endl
-            << endl << "CHECKPOINTING TO RESUME STOPPED RUN:" << endl
-            << "  --redo               Ignore checkpoint and overwrite outputs (default: OFF)" << endl
-            << "  --cptime NUMBER      Checkpoint time interval in seconds (default: 60)" << endl
-            << endl << "LIKELIHOOD MAPPING ANALYSIS:" << endl
+            << endl << "LIKELIHOOD/QUARTET MAPPING:" << endl
             << "  --lmap NUMBER        Number of quartets for likelihood mapping analysis" << endl
             << "  --lmclust FILE       NEXUS file containing clusters for likelihood mapping" << endl
             << "  --quartetlh          Print quartet log-likelihoods to .quartetlh file" << endl
-            << endl << "NEW STOCHASTIC TREE SEARCH ALGORITHM:" << endl
+            << endl << "TREE SEARCH ALGORITHM:" << endl
 //            << "  -pll                 Use phylogenetic likelihood library (PLL) (default: off)" << endl
             << "  --ninit NUMBER       Number of initial parsimony trees (default: 100)" << endl
             << "  --ntop NUMBER        Number of top initial trees (default: 20)" << endl
@@ -3964,11 +3967,13 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  --allnni             Perform more thorough NNI search (default: OFF)" << endl
             << "  -g FILE              (Multifurcating) topological constraint tree file" << endl
             << "  --fast               Fast search to resemble FastTree" << endl
+            << "  --polytomy           Collapse near-zero branches into polytomy" << endl
 //            << "  -iqp                 Use the IQP tree perturbation (default: randomized NNI)" << endl
 //            << "  -iqpnni              Switch back to the old IQPNNI tree search algorithm" << endl
-            << endl << "ULTRAFAST BOOTSTRAP:" << endl
-            << "  -B NUMBER            Ultrafast bootstrap replicates (>=1000)" << endl
-            << "  -j NUMBER            Proportion of sites for jackknife (default: NONE)" << endl
+            << endl << "ULTRAFAST BOOTSTRAP/JACKKNIFE:" << endl
+            << "  -B NUMBER            Replicates for ultrafast bootstrap (>=1000)" << endl
+            << "  -J NUMBER            Replicates for ultrafast jackknife (>=1000)" << endl
+            << "  --jack-prop NUMBER   Subsampling proportion for jackknife (default: 0.5)" << endl
             << "  --bsam STRING        GENE|GENESITE resampling for partitions (default: SITE)" << endl
             << "  --wbt                Write bootstrap trees to .ufboot file (default: none)" << endl
             << "  --wbtl               Like -wbt but also writing branch lengths" << endl
@@ -3978,8 +3983,10 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  --bcor NUMBER        Minimum correlation coefficient (default: 0.99)" << endl
 			<< "  --beps NUMBER        RELL epsilon to break tie (default: 0.5)" << endl
             << "  --bnni               Optimize UFBoot trees by NNI on bootstrap alignment" << endl
-            << endl << "STANDARD NON-PARAMETRIC BOOTSTRAP:" << endl
+            << endl << "NON-PARAMETRIC BOOTSTRAP/JACKKNIFE:" << endl
             << "  -b NUMBER            Replicates for bootstrap + ML tree + consensus tree" << endl
+            << "  -j NUMBER            Replicates for jackknife + ML tree + consensus tree" << endl
+            << "  --jack-prop NUMBER   Subsampling proportion for jackknife (default: 0.5)" << endl
             << "  --bcon NUMBER        Replicates for bootstrap + consensus tree" << endl
             << "  --bonly NUMBER       Replicates for bootstrap only" << endl
 #ifdef USE_BOOSTER
@@ -4149,6 +4156,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -v, --verbose        Verbose mode, printing more messages to screen" << endl
             << "  --quiet              Quiet mode, suppress printing to screen (stdout)" << endl
             << "  --keep-ident         Keep identical sequences (default: remove & finally add)" << endl
+            << "  --cptime NUMBER      Checkpoint time interval in seconds (default: 60)" << endl
 		    << "  -wt                  Write locally optimal trees into .treels file" << endl
 			<< "  -blfix               Fix branch lengths of user tree passed via -te" << endl
             << "  -blscale             Scale branch lengths of user tree passed via -t" << endl
@@ -4168,7 +4176,6 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  --no-outfiles        Suppress printing output files" << endl
             << "  --eigenlib           Use Eigen3 library" << endl
             << "  -alninfo             Print alignment sites statistics to .alninfo" << endl
-            << "  -czb                 Collapse zero branches in final tree" << endl
             << "  --show-lh            Compute tree likelihood without optimisation" << endl
 #ifdef IQTREE_TERRAPHAST
             << "  --terrace            Check if the tree lies on a phylogenetic terrace" << endl
@@ -4209,29 +4216,22 @@ void quickStartGuide() {
          << "     iqtree -s example.phy -m MF" << endl
          << "   (use '-m TEST' to resemble jModelTest/ProtTest)" << endl << endl
          << "3. Combine ModelFinder, tree search, ultrafast bootstrap and SH-aLRT test:" << endl
-         << "     iqtree -s example.phy -alrt 1000 -bb 1000" << endl << endl
+         << "     iqtree -s example.phy --alrt 1000 -B 1000" << endl << endl
          << "4. Perform edge-linked proportional partition model (example.nex):" << endl
          << "     iqtree -s example.phy -p example.nex" << endl
-         << "   (replace '-p' by '-sp' for edge-unlinked model)" << endl << endl
+         << "   (replace '-p' by '-Q' for edge-unlinked model)" << endl << endl
          << "5. Find best partition scheme by possibly merging partitions:" << endl
          << "     iqtree -s example.phy -p example.nex -m MF+MERGE" << endl
          << "   (use '-m TESTMERGEONLY' to resemble PartitionFinder)" << endl << endl
          << "6. Find best partition scheme followed by tree inference and bootstrap:" << endl
-         << "     iqtree -s example.phy -p example.nex -m MFP+MERGE -bb 1000" << endl << endl
+         << "     iqtree -s example.phy -p example.nex -m MFP+MERGE -B 1000" << endl << endl
 #ifdef _OPENMP
-         << "7. Use 4 CPU cores to speed up computation: add '-nt 4' option" << endl << endl
+         << "7. Use 4 CPU cores to speed up computation: add '-c 4' option" << endl << endl
 #endif
-         << "---" << endl
-         << "PoMo command-line examples:" << endl
-         << "1. Standard tree inference (HKY model, empirical nucleotide frequencies):" << endl
-         << "     iqtree -s counts_file.cf -m HKY+P" << endl << endl
-         << "2. Set virtual population size to 15:" << endl
-         << "     iqtree -s counts_file.cf -m HKY+P+N15" << endl << endl
-         << "3. Use GTR model and estimate state frequencies with maxmimum lilelihood:" << endl
-         << "     iqtree -s counts_file.cf -m GTR+P+FO" << endl << endl
-         << "4. Polymorphism-aware mixture model with N=5 and weighted binomial sampling:" << endl
+         << "8. Polymorphism-aware model with HKY nucleotide model and Gamma rate:" << endl
+         << "     iqtree -s counts_file.cf -m HKY+P+G" << endl << endl
+         << "9. PoMo mixture with virtual popsize 5 and weighted binomial sampling:" << endl
          << "     iqtree -s counts_file.cf -m \"MIX{HKY+P{EMP},JC+P}+N5+WB\"" << endl << endl
-         << "---" << endl
          << "To show all available options: run 'iqtree -h'" << endl << endl
          << "Have a look at the tutorial and manual for more information:" << endl
          << "     http://www.iqtree.org" << endl << endl;
