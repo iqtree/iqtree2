@@ -4052,6 +4052,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --mredo              Ignore .model.gz checkpoint file (default: OFF)" << endl
     << "  --madd STR,...,STR   List of mixture models to consider" << endl
     << "  --mdef FILE          Model definition NEXUS file (see Manual)" << endl
+    << "  --modelomatic        Find best codon/protein/DNA models (Whelan et al. 2015)" << endl
 
     << endl << "SUBSTITUTION MODEL:" << endl
     << "  -m STRING            Model name string (e.g. GTR+F+I+G)" << endl
@@ -4073,8 +4074,8 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "                       5.16, 6.6, 6.7a, 6.7b, 6.8a, 6.8b, 6.17a, 6.17b, 8.8," << endl
     << "                       8.10a, 8.10b, 8.16, 8.17, 8.18, 9.20a, 9.20b, 10.12," << endl
     << "                       10.34, 12.12 (optionally prefixed by RY, WS or MK)" << endl
-    << "      Non-reversible:  STRSYM (strand symmetric model, equiv. WS6.6)" << endl
-    << "      Non-reversible:  UNREST (unrestricted model, equiv. 12.12)" << endl
+    << "      Non-reversible:  STRSYM (strand symmetric model, equiv. WS6.6)," << endl
+    << "                       NONREV, UNREST (unrestricted model, equiv. 12.12)" << endl
     << "           Otherwise:  Name of file containing user-model parameters" << endl
     << endl << "STATE FREQUENCY:" << endl
     << "  -m ...+F             Empirically counted frequencies from alignment" << endl
