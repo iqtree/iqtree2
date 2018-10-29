@@ -1100,7 +1100,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 
             if (strcmp(argv[cnt], "-h") == 0 || strcmp(argv[cnt], "--help") == 0) {
 #ifdef IQ_TREE
-                usage_iqtree(argv, false);
+                usage_iqtree(argv, strcmp(argv[cnt], "--help") == 0);
 #else
                 usage(argv, false);
 #endif
@@ -1385,6 +1385,23 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.tree_gen = BALANCED;
 				continue;
 			}
+            if (strcmp(argv[cnt], "--rand") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -rand UNI | CAT | BAL | NET";
+                if (strcmp(argv[cnt], "UNI") == 0)
+                    params.tree_gen = UNIFORM;
+                else if (strcmp(argv[cnt], "CAT") == 0)
+                    params.tree_gen = CATERPILLAR;
+                else if (strcmp(argv[cnt], "BAL") == 0)
+                    params.tree_gen = BALANCED;
+                else if (strcmp(argv[cnt], "NET") == 0)
+                    params.tree_gen = CIRCULAR_SPLIT_GRAPH;
+                else
+                    throw "wrong --rand option";
+                continue;
+            }
+            
             if (strcmp(argv[cnt], "--keep-ident") == 0 || strcmp(argv[cnt], "-keep-ident") == 0) {
                 params.ignore_identical_seqs = false;
                 continue;
@@ -1404,7 +1421,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.num_splits = convert_int(argv[cnt]);
 				continue;
 			}
-			if (strcmp(argv[cnt], "-rlen") == 0) {
+			if (strcmp(argv[cnt], "-rlen") == 0 || strcmp(argv[cnt], "--rlen") == 0) {
 				cnt++;
 				if (cnt >= argc - 2)
 					throw "Use -rlen <min_len> <mean_len> <max_len>";
@@ -1478,7 +1495,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.calc_pdgain = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-sup") == 0) {
+			if (strcmp(argv[cnt], "-sup") == 0 || strcmp(argv[cnt], "--support") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -sup <target_tree_file>";
@@ -1486,7 +1503,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.consensus_type = CT_ASSIGN_SUPPORT;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-suptag") == 0) {
+			if (strcmp(argv[cnt], "-suptag") == 0 || strcmp(argv[cnt], "--suptag") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -suptag <tagname or ALL>";
@@ -1521,11 +1538,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.tree_weight_file = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "-con") == 0) {
+			if (strcmp(argv[cnt], "-con") == 0 || strcmp(argv[cnt], "--contree") == 0) {
 				params.consensus_type = CT_CONSENSUS_TREE;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-net") == 0) {
+			if (strcmp(argv[cnt], "-net") == 0 || strcmp(argv[cnt], "--connet") == 0) {
 				params.consensus_type = CT_CONSENSUS_NETWORK;
                 continue;
 			}
@@ -1655,7 +1672,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.multi_tree = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-bi") == 0) {
+			if (strcmp(argv[cnt], "-bi") == 0 || strcmp(argv[cnt], "--burnin") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -bi <burnin_value>";
@@ -1673,7 +1690,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "tree_max_count must not be negative";
 				continue;
 			}
-			if (strcmp(argv[cnt], "-minsup") == 0) {
+			if (strcmp(argv[cnt], "-minsup") == 0 || strcmp(argv[cnt], "--sup-min") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -minsup <split_threshold>";
@@ -1800,14 +1817,14 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
 
-            if (strcmp(argv[cnt], "-z") == 0) {
+            if (strcmp(argv[cnt], "-z") == 0 || strcmp(argv[cnt], "--trees") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -z <user_trees_file>";
 				params.treeset_file = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "-zb") == 0) {
+			if (strcmp(argv[cnt], "-zb") == 0 || strcmp(argv[cnt], "--test") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -zb <#replicates>";
@@ -1820,11 +1837,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.topotest_optimize_model = true;
                 continue;
             }
-			if (strcmp(argv[cnt], "-zw") == 0) {
+			if (strcmp(argv[cnt], "-zw") == 0 || strcmp(argv[cnt], "--test-weight") == 0) {
 				params.do_weighted_test = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-au") == 0) {
+			if (strcmp(argv[cnt], "-au") == 0 || strcmp(argv[cnt], "--test-au") == 0) {
 				params.do_au_test = true;
 				continue;
 			}
@@ -2189,7 +2206,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.model_test_separate_rate = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-mwopt") == 0) {
+			if (strcmp(argv[cnt], "-mwopt") == 0 || strcmp(argv[cnt], "--mix-opt") == 0) {
 				params.optimize_mixmodel_weight = true;
 				continue;
 			}
@@ -2319,7 +2336,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
 
-			if (strcmp(argv[cnt], "-fs") == 0) {
+			if (strcmp(argv[cnt], "-fs") == 0 || strcmp(argv[cnt], "--site-freq") == 0) {
                 if (params.tree_freq_file)
                     throw "Specifying both -fs and -ft not allowed";
 				cnt++;
@@ -2329,7 +2346,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 //				params.SSE = LK_EIGEN;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-ft") == 0) {
+			if (strcmp(argv[cnt], "-ft") == 0 || strcmp(argv[cnt], "--tree-freq") == 0) {
                 if (params.site_freq_file)
                     throw "Specifying both -fs and -ft not allowed";
                 cnt++;
@@ -2642,7 +2659,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 //				params.avoid_duplicated_trees = true;
 //				continue;
 //			}
-			if (strcmp(argv[cnt], "-rf_all") == 0 || strcmp(argv[cnt], "-rfa") == 0) {
+			if (strcmp(argv[cnt], "-rf_all") == 0 || strcmp(argv[cnt], "--tree-dist-all") == 0) {
 				params.rf_dist_mode = RF_ALL_PAIR;
 				continue;
 			}
@@ -2650,7 +2667,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.rf_dist_mode = RF_ADJACENT_PAIR;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-rf") == 0) {
+			if (strcmp(argv[cnt], "-rf") == 0 || strcmp(argv[cnt], "--tree-dist") == 0) {
 				params.rf_dist_mode = RF_TWO_TREE_SETS;
 				cnt++;
 				if (cnt >= argc)
@@ -2658,7 +2675,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.second_tree = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "-rf2") == 0) {
+			if (strcmp(argv[cnt], "-rf2") == 0 || strcmp(argv[cnt], "--tree-dist2") == 0) {
 				params.rf_dist_mode = RF_TWO_TREE_SETS_EXTENDED;
 				cnt++;
 				if (cnt >= argc)
@@ -2746,13 +2763,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
-			if (strcmp(argv[cnt], "-asr") == 0) {
+			if (strcmp(argv[cnt], "-asr") == 0 || strcmp(argv[cnt], "--ancestral") == 0) {
 				params.print_ancestral_sequence = AST_MARGINAL;
                 params.ignore_identical_seqs = false;
 				continue;
 			}
 
-			if (strcmp(argv[cnt], "-asr-min") == 0) {
+			if (strcmp(argv[cnt], "-asr-min") == 0 || strcmp(argv[cnt], "--asr-min") == 0) {
                 cnt++;
 				if (cnt >= argc)
 					throw "Use -asr-min <probability>";
@@ -2787,7 +2804,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.print_site_state_freq = WSF_POSTERIOR_MEAN;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-wsfm") == 0 || strcmp(argv[cnt], "-fmax") == 0) {
+			if (strcmp(argv[cnt], "--freq-max") == 0 || strcmp(argv[cnt], "-fmax") == 0) {
 				params.print_site_state_freq = WSF_POSTERIOR_MAX;
 				continue;
 			}
@@ -3595,13 +3612,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -t,-te <start_tree | BIONJ | PARS | PLLPARS>";
-				if (strcmp(argv[cnt], "BIONJ") == 0)
+				if (strcmp(argv[cnt], "BIONJ") == 0 || strcmp(argv[cnt], "NJ") == 0)
 					params.start_tree = STT_BIONJ;
 				else if (strcmp(argv[cnt], "PARS") == 0)
 					params.start_tree = STT_PARSIMONY;
 				else if (strcmp(argv[cnt], "PLLPARS") == 0)
 					params.start_tree = STT_PLL_PARSIMONY;
-                else if (strcmp(argv[cnt], "RANDOM") == 0)
+                else if (strcmp(argv[cnt], "RANDOM") == 0 || strcmp(argv[cnt], "RAND") == 0)
 					params.start_tree = STT_RANDOM_TREE;
                 else {
                     params.user_file = argv[cnt];
@@ -3931,273 +3948,274 @@ void usage_iqtree(char* argv[], bool full_command) {
     printCopyright(cout);
     cout << "Usage: iqtree [-s ALIGNMENT] [-p PARTITION] [-m MODEL] [-t TREE] ..." << endl << endl;
     cout << "GENERAL OPTIONS:" << endl
-            << "  -h, --help           Print this help dialog" << endl
-            << "  --version            Display version number" << endl
-            << "  -s FILE              PHYLIP/FASTA/NEXUS/CLUSTAL/MSF sequence alignment" << endl
-            << "  -t FILE|PARS|RANDOM  Starting tree (default: 99 parsimony and BIONJ)" << endl
-            << "  --tree-fix           Fix -t tree (no tree search performed)" << endl
-            << "  --prefix STRING      Prefix for all output files (default: aln/partition)" << endl
-            << "  --seed NUMBER        Random seed number, normally used for debugging purpose" << endl
-            << "  --safe               Safe likelihood kernel to avoid numerical underflow" << endl
-            << "  --mem NUMBER[G|M|%]  Maximal RAM usage in GB | MB | %" << endl
-            << "  --runs NUMBER        Number of indepedent runs (default: 1)" << endl
-            << "  --redo               Ignore checkpoint and overwrite outputs (default: OFF)" << endl
+    << "  -h                   Print this help dialog" << endl
+    << "  --help               Print more available options" << endl
+    << "  --version            Display version number" << endl
+    << "  -s FILE              PHYLIP/FASTA/NEXUS/CLUSTAL/MSF sequence alignment" << endl
+    << "  -t FILE|PARS|RAND    Starting tree (default: 99 parsimony and BIONJ)" << endl
+    << "  --tree-fix           Fix -t tree (no tree search performed)" << endl
+    << "  --prefix STRING      Prefix for all output files (default: aln/partition)" << endl
+    << "  --seed NUMBER        Random seed number, normally used for debugging purpose" << endl
+    << "  --safe               Safe likelihood kernel to avoid numerical underflow" << endl
+    << "  --mem NUMBER[G|M|%]  Maximal RAM usage in GB | MB | %" << endl
+    << "  --runs NUMBER        Number of indepedent runs (default: 1)" << endl
+    << "  --redo               Ignore checkpoint and overwrite outputs (default: OFF)" << endl
 #ifdef _OPENMP
-            << "  -c NUMBER|AUTO       No. cores/threads or AUTO-detect (default: 1)" << endl
+    << "  -c NUMBER|AUTO       No. cores/threads or AUTO-detect (default: 1)" << endl
 #endif
-            << endl << "PARTITION MODEL:" << endl
-            << "  -p FILE|DIR          NEXUS/RAxML partition file or directory with alignments" << endl
-            << "                       Edge-linked proportional partition model" << endl
-            << "  -q FILE|DIR          Like -p but edge-linked equal partition model " << endl
-            << "  -Q FILE|DIR          Like -p but edge-unlinked partition model" << endl
-            << "  -S FILE|DIR          Like -p but separate tree inference" << endl
-            << endl << "LIKELIHOOD/QUARTET MAPPING:" << endl
-            << "  --lmap NUMBER        Number of quartets for likelihood mapping analysis" << endl
-            << "  --lmclust FILE       NEXUS file containing clusters for likelihood mapping" << endl
-            << "  --quartetlh          Print quartet log-likelihoods to .quartetlh file" << endl
-            << endl << "TREE SEARCH ALGORITHM:" << endl
+    << endl << "PARTITION MODEL:" << endl
+    << "  -p FILE|DIR          NEXUS/RAxML partition file or directory with alignments" << endl
+    << "                       Edge-linked proportional partition model" << endl
+    << "  -q FILE|DIR          Like -p but edge-linked equal partition model " << endl
+    << "  -Q FILE|DIR          Like -p but edge-unlinked partition model" << endl
+    << "  -S FILE|DIR          Like -p but separate tree inference" << endl
+    << endl << "LIKELIHOOD/QUARTET MAPPING:" << endl
+    << "  --lmap NUMBER        Number of quartets for likelihood mapping analysis" << endl
+    << "  --lmclust FILE       NEXUS file containing clusters for likelihood mapping" << endl
+    << "  --quartetlh          Print quartet log-likelihoods to .quartetlh file" << endl
+    << endl << "TREE SEARCH ALGORITHM:" << endl
 //            << "  -pll                 Use phylogenetic likelihood library (PLL) (default: off)" << endl
-            << "  --ninit NUMBER       Number of initial parsimony trees (default: 100)" << endl
-            << "  --ntop NUMBER        Number of top initial trees (default: 20)" << endl
-            << "  --nbest NUMBER       Number of best trees retained during search (defaut: 5)" << endl
-            << "  -n NUMBER            Fix number of iterations to stop (default: OFF)" << endl
-            << "  --nstop NUMBER       Number of unsuccessful iterations to stop (default: 100)" << endl
-            << "  --perturb NUMBER     Perturbation strength for randomized NNI (default: 0.5)" << endl
-            << "  --radius NUMBER      Radius for parsimony SPR search (default: 6)" << endl
-            << "  --allnni             Perform more thorough NNI search (default: OFF)" << endl
-            << "  -g FILE              (Multifurcating) topological constraint tree file" << endl
-            << "  --fast               Fast search to resemble FastTree" << endl
-            << "  --polytomy           Collapse near-zero branches into polytomy" << endl
+    << "  --ninit NUMBER       Number of initial parsimony trees (default: 100)" << endl
+    << "  --ntop NUMBER        Number of top initial trees (default: 20)" << endl
+    << "  --nbest NUMBER       Number of best trees retained during search (defaut: 5)" << endl
+    << "  -n NUMBER            Fix number of iterations to stop (default: OFF)" << endl
+    << "  --nstop NUMBER       Number of unsuccessful iterations to stop (default: 100)" << endl
+    << "  --perturb NUMBER     Perturbation strength for randomized NNI (default: 0.5)" << endl
+    << "  --radius NUMBER      Radius for parsimony SPR search (default: 6)" << endl
+    << "  --allnni             Perform more thorough NNI search (default: OFF)" << endl
+    << "  -g FILE              (Multifurcating) topological constraint tree file" << endl
+    << "  --fast               Fast search to resemble FastTree" << endl
+    << "  --polytomy           Collapse near-zero branches into polytomy" << endl
+#ifdef IQTREE_TERRAPHAST
+    << "  --terrace            Check if the tree lies on a phylogenetic terrace" << endl
+#endif
 //            << "  -iqp                 Use the IQP tree perturbation (default: randomized NNI)" << endl
 //            << "  -iqpnni              Switch back to the old IQPNNI tree search algorithm" << endl
-            << endl << "ULTRAFAST BOOTSTRAP/JACKKNIFE:" << endl
-            << "  -B NUMBER            Replicates for ultrafast bootstrap (>=1000)" << endl
-            << "  -J NUMBER            Replicates for ultrafast jackknife (>=1000)" << endl
-            << "  --jack-prop NUMBER   Subsampling proportion for jackknife (default: 0.5)" << endl
-            << "  --bsam STRING        GENE|GENESITE resampling for partitions (default: SITE)" << endl
-            << "  --wbt                Write bootstrap trees to .ufboot file (default: none)" << endl
-            << "  --wbtl               Like -wbt but also writing branch lengths" << endl
+    << endl << "ULTRAFAST BOOTSTRAP/JACKKNIFE:" << endl
+    << "  -B NUMBER            Replicates for ultrafast bootstrap (>=1000)" << endl
+    << "  -J NUMBER            Replicates for ultrafast jackknife (>=1000)" << endl
+    << "  --jack-prop NUMBER   Subsampling proportion for jackknife (default: 0.5)" << endl
+    << "  --bsam STRING        GENE|GENESITE resampling for partitions (default: SITE)" << endl
+    << "  --wbt                Write bootstrap trees to .ufboot file (default: none)" << endl
+    << "  --wbtl               Like -wbt but also writing branch lengths" << endl
 //            << "  -n <#iterations>     Minimum number of iterations (default: 100)" << endl
-            << "  --nmax NUMBER        Maximum number of iterations (default: 1000)" << endl
-			<< "  --nstep NUMBER       Iterations for UFBoot stopping rule (default: 100)" << endl
-            << "  --bcor NUMBER        Minimum correlation coefficient (default: 0.99)" << endl
-			<< "  --beps NUMBER        RELL epsilon to break tie (default: 0.5)" << endl
-            << "  --bnni               Optimize UFBoot trees by NNI on bootstrap alignment" << endl
-            << endl << "NON-PARAMETRIC BOOTSTRAP/JACKKNIFE:" << endl
-            << "  -b NUMBER            Replicates for bootstrap + ML tree + consensus tree" << endl
-            << "  -j NUMBER            Replicates for jackknife + ML tree + consensus tree" << endl
-            << "  --jack-prop NUMBER   Subsampling proportion for jackknife (default: 0.5)" << endl
-            << "  --bcon NUMBER        Replicates for bootstrap + consensus tree" << endl
-            << "  --bonly NUMBER       Replicates for bootstrap only" << endl
+    << "  --nmax NUMBER        Maximum number of iterations (default: 1000)" << endl
+    << "  --nstep NUMBER       Iterations for UFBoot stopping rule (default: 100)" << endl
+    << "  --bcor NUMBER        Minimum correlation coefficient (default: 0.99)" << endl
+    << "  --beps NUMBER        RELL epsilon to break tie (default: 0.5)" << endl
+    << "  --bnni               Optimize UFBoot trees by NNI on bootstrap alignment" << endl
+    << endl << "NON-PARAMETRIC BOOTSTRAP/JACKKNIFE:" << endl
+    << "  -b NUMBER            Replicates for bootstrap + ML tree + consensus tree" << endl
+    << "  -j NUMBER            Replicates for jackknife + ML tree + consensus tree" << endl
+    << "  --jack-prop NUMBER   Subsampling proportion for jackknife (default: 0.5)" << endl
+    << "  --bcon NUMBER        Replicates for bootstrap + consensus tree" << endl
+    << "  --bonly NUMBER       Replicates for bootstrap only" << endl
 #ifdef USE_BOOSTER
-            << "  --tbe                Transfer bootstrap expectation" << endl
+    << "  --tbe                Transfer bootstrap expectation" << endl
 #endif
 //            << "  -t <threshold>       Minimum bootstrap support [0...1) for consensus tree" << endl
-            << endl << "SINGLE BRANCH TEST:" << endl
-            << "  --alrt NUMBER        Replicates for SH approximate likelihood ratio test" << endl
-            << "  --alrt 0             Parametric aLRT test (Anisimova and Gascuel 2006)" << endl
-            << "  --abayes             approximate Bayes test (Anisimova et al. 2011)" << endl
-            << "  --lbp NUMBER         Replicates for fast local bootstrap probabilities" << endl
-            << endl << "MODEL-FINDER:" << endl
-            << "  -m TESTONLY          Standard model selection (like jModelTest, ProtTest)" << endl
-            << "  -m TEST              Standard model selection followed by tree inference" << endl
-            << "  -m MF                Extended model selection with FreeRate heterogeneity" << endl
-            << "  -m MFP               Extended model selection followed by tree inference" << endl
-            << "  -m TESTMERGEONLY     Find best partition scheme (like PartitionFinder)" << endl
-            << "  -m TESTMERGE         Find best partition scheme followed by tree inference" << endl
-            << "  -m MF+MERGE          Find best partition scheme incl. FreeRate heterogeneity" << endl
-            << "  -m MFP+MERGE         Like -m MF+MERGE followed by tree inference" << endl
-            << "  --rcluster NUMBER    Percentage of partition pairs (relaxed clustering alg.)" << endl
-            << "  --rclusterf NUMBER   Percentage of partition pairs (fast relaxed clustering)" << endl
-            << "  --rclusterm NUMBER   Max number of partition pairs (default: 10*partitions)" << endl
-            << "  --mset STRING        Restrict search to models supported by other programs" << endl
-            << "                       (raxml, phyml or mrbayes)" << endl
-            << "  -m ...+LM            Additionally test Lie Markov models" << endl
-            << "  -m ...+LMRY          Additionally test Lie Markov models with RY symmetry" << endl
-            << "  -m ...+LMWS          Additionally test Lie Markov models with WS symmetry" << endl
-            << "  -m ...+LMMK          Additionally test Lie Markov models with MK symmetry" << endl
-            << "  -m ...+LMSS          Additionally test strand-symmetric models" << endl
-            << "  --mset STR,...,STR   Comma-separated model list (e.g. -mset WAG,LG,JTT)" << endl
-            << "  --msub STRING        Amino-acid model source" << endl
-            << "                       (nuclear, mitochondrial, chloroplast or viral)" << endl
-            << "  --mfreq STR,...,STR  List of state frequencies" << endl
-            << "  --mrate STR,...,STR  List of rate heterogeneity among sites" << endl
-            << "                       (e.g. -mrate E,I,G,I+G,R is used for -m MF)" << endl
-            << "  --cmin NUMBER        Min categories for FreeRate model [+R] (default: 2)" << endl
-            << "  --cmax NUMBER        Max categories for FreeRate model [+R] (default: 10)" << endl
-            << "  --merit AIC|AICc|BIC  Akaike|Bayesian information criterion (default: BIC)" << endl
+    << endl << "SINGLE BRANCH TEST:" << endl
+    << "  --alrt NUMBER        Replicates for SH approximate likelihood ratio test" << endl
+    << "  --alrt 0             Parametric aLRT test (Anisimova and Gascuel 2006)" << endl
+    << "  --abayes             approximate Bayes test (Anisimova et al. 2011)" << endl
+    << "  --lbp NUMBER         Replicates for fast local bootstrap probabilities" << endl
+    << endl << "MODEL-FINDER:" << endl
+    << "  -m TESTONLY          Standard model selection (like jModelTest, ProtTest)" << endl
+    << "  -m TEST              Standard model selection followed by tree inference" << endl
+    << "  -m MF                Extended model selection with FreeRate heterogeneity" << endl
+    << "  -m MFP               Extended model selection followed by tree inference" << endl
+    << "  -m TESTMERGEONLY     Find best partition scheme (like PartitionFinder)" << endl
+    << "  -m TESTMERGE         Find best partition scheme followed by tree inference" << endl
+    << "  -m MF+MERGE          Find best partition scheme incl. FreeRate heterogeneity" << endl
+    << "  -m MFP+MERGE         Like -m MF+MERGE followed by tree inference" << endl
+    << "  --rcluster NUMBER    Percentage of partition pairs (relaxed clustering alg.)" << endl
+    << "  --rclusterf NUMBER   Percentage of partition pairs (fast relaxed clustering)" << endl
+    << "  --rclusterm NUMBER   Max number of partition pairs (default: 10*partitions)" << endl
+    << "  --mset STRING        Restrict search to models supported by other programs" << endl
+    << "                       (raxml, phyml or mrbayes)" << endl
+    << "  -m ...+LM            Additionally test Lie Markov models" << endl
+    << "  -m ...+LMRY          Additionally test Lie Markov models with RY symmetry" << endl
+    << "  -m ...+LMWS          Additionally test Lie Markov models with WS symmetry" << endl
+    << "  -m ...+LMMK          Additionally test Lie Markov models with MK symmetry" << endl
+    << "  -m ...+LMSS          Additionally test strand-symmetric models" << endl
+    << "  --mset STR,...,STR   Comma-separated model list (e.g. -mset WAG,LG,JTT)" << endl
+    << "  --msub STRING        Amino-acid model source" << endl
+    << "                       (nuclear, mitochondrial, chloroplast or viral)" << endl
+    << "  --mfreq STR,...,STR  List of state frequencies" << endl
+    << "  --mrate STR,...,STR  List of rate heterogeneity among sites" << endl
+    << "                       (e.g. -mrate E,I,G,I+G,R is used for -m MF)" << endl
+    << "  --cmin NUMBER        Min categories for FreeRate model [+R] (default: 2)" << endl
+    << "  --cmax NUMBER        Max categories for FreeRate model [+R] (default: 10)" << endl
+    << "  --merit AIC|AICc|BIC  Akaike|Bayesian information criterion (default: BIC)" << endl
 //            << "  -msep                Perform model selection and then rate selection" << endl
-            << "  --mtree              Perform full tree search for every model" << endl
-            << "  --mredo              Ignore .model.gz checkpoint file (default: OFF)" << endl
-            << "  --madd STR,...,STR   List of mixture models to consider" << endl
-            << "  --mdef FILE          Model definition NEXUS file (see Manual)" << endl
+    << "  --mtree              Perform full tree search for every model" << endl
+    << "  --mredo              Ignore .model.gz checkpoint file (default: OFF)" << endl
+    << "  --madd STR,...,STR   List of mixture models to consider" << endl
+    << "  --mdef FILE          Model definition NEXUS file (see Manual)" << endl
 
-            << endl << "SUBSTITUTION MODEL:" << endl
-            << "  -m STRING            Model name string (e.g. GTR+F+I+G)" << endl
-            << "                 DNA:  HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef," << endl
-            << "                       TIM, TIMef, TVM, TVMef, SYM, GTR, or 6-digit model" << endl
-            << "                       specification (e.g., 010010 = HKY)" << endl
-            << "             Protein:  LG (default), Poisson, cpREV, mtREV, Dayhoff, mtMAM," << endl
-            << "                       JTT, WAG, mtART, mtZOA, VT, rtREV, DCMut, PMB, HIVb," << endl
-            << "                       HIVw, JTTDCMut, FLU, Blosum62, GTR20, mtMet, mtVer, mtInv" << endl
-            << "     Protein mixture:  C10,...,C60, EX2, EX3, EHO, UL2, UL3, EX_EHO, LG4M, LG4X" << endl
-            << "              Binary:  JC2 (default), GTR2" << endl
-            << "     Empirical codon:  KOSI07, SCHN05" << endl
-            << "   Mechanistic codon:  GY (default), MG, MGK, GY0K, GY1KTS, GY1KTV, GY2K," << endl
-            << "                       MG1KTS, MG1KTV, MG2K" << endl
-            << "Semi-empirical codon:  XX_YY where XX is empirical and YY is mechanistic model" << endl
-            << "      Morphology/SNP:  MK (default), ORDERED, GTR" << endl
-            << "      Lie Markov DNA:  1.1, 2.2b, 3.3a, 3.3b, 3.3c, 3.4, 4.4a, 4.4b, 4.5a," << endl
-            << "                       4.5b, 5.6a, 5.6b, 5.7a, 5.7b, 5.7c, 5.11a, 5.11b, 5.11c," << endl
-            << "                       5.16, 6.6, 6.7a, 6.7b, 6.8a, 6.8b, 6.17a, 6.17b, 8.8," << endl
-            << "                       8.10a, 8.10b, 8.16, 8.17, 8.18, 9.20a, 9.20b, 10.12," << endl
-            << "                       10.34, 12.12 (optionally prefixed by RY, WS or MK)" << endl
-            << "      Non-reversible:  STRSYM (strand symmetric model, equiv. WS6.6)" << endl
-            << "      Non-reversible:  UNREST (unrestricted model, equiv. 12.12)" << endl
-            << "           Otherwise:  Name of file containing user-model parameters" << endl
-            << endl << "STATE FREQUENCY:" << endl
-            << "  -m ...+F             Empirically counted frequencies from alignment" << endl
-            << "  -m ...+FO            Optimized frequencies by maximum-likelihood" << endl
-            << "  -m ...+FQ            Equal frequencies" << endl
-            << "  -m ...+FRY           For DNA, freq(A+G)=1/2=freq(C+T)" << endl
-            << "  -m ...+FWS           For DNA, freq(A+T)=1/2=freq(C+G)" << endl
-            << "  -m ...+FMK           For DNA, freq(A+C)=1/2=freq(G+T)" << endl
-            << "  -m ...+Fabcd         4-digit constraint on ACGT frequency" << endl
-            << "                       (e.g. +F1221 means f_A=f_T, f_C=f_G)" << endl
-            << "  -m ...+FU            Amino-acid frequencies given protein matrix" << endl
-            << "  -m ...+F1x4          Equal NT frequencies over three codon positions" << endl
-            << "  -m ...+F3x4          Unequal NT frequencies over three codon positions" << endl
-            << endl << "MIXTURE MODEL:" << endl
-            << "  -m \"MIX{m1,...,mK}\"  Mixture model with K components" << endl
-            << "  -m \"FMIX{f1,...fK}\"  Frequency mixture model with K components" << endl
-            << "  -mwopt               Turn on optimizing mixture weights (default: none)" << endl
+    << endl << "SUBSTITUTION MODEL:" << endl
+    << "  -m STRING            Model name string (e.g. GTR+F+I+G)" << endl
+    << "                 DNA:  HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef," << endl
+    << "                       TIM, TIMef, TVM, TVMef, SYM, GTR, or 6-digit model" << endl
+    << "                       specification (e.g., 010010 = HKY)" << endl
+    << "             Protein:  LG (default), Poisson, cpREV, mtREV, Dayhoff, mtMAM," << endl
+    << "                       JTT, WAG, mtART, mtZOA, VT, rtREV, DCMut, PMB, HIVb," << endl
+    << "                       HIVw, JTTDCMut, FLU, Blosum62, GTR20, mtMet, mtVer, mtInv" << endl
+    << "     Protein mixture:  C10,...,C60, EX2, EX3, EHO, UL2, UL3, EX_EHO, LG4M, LG4X" << endl
+    << "              Binary:  JC2 (default), GTR2" << endl
+    << "     Empirical codon:  KOSI07, SCHN05" << endl
+    << "   Mechanistic codon:  GY (default), MG, MGK, GY0K, GY1KTS, GY1KTV, GY2K," << endl
+    << "                       MG1KTS, MG1KTV, MG2K" << endl
+    << "Semi-empirical codon:  XX_YY where XX is empirical and YY is mechanistic model" << endl
+    << "      Morphology/SNP:  MK (default), ORDERED, GTR" << endl
+    << "      Lie Markov DNA:  1.1, 2.2b, 3.3a, 3.3b, 3.3c, 3.4, 4.4a, 4.4b, 4.5a," << endl
+    << "                       4.5b, 5.6a, 5.6b, 5.7a, 5.7b, 5.7c, 5.11a, 5.11b, 5.11c," << endl
+    << "                       5.16, 6.6, 6.7a, 6.7b, 6.8a, 6.8b, 6.17a, 6.17b, 8.8," << endl
+    << "                       8.10a, 8.10b, 8.16, 8.17, 8.18, 9.20a, 9.20b, 10.12," << endl
+    << "                       10.34, 12.12 (optionally prefixed by RY, WS or MK)" << endl
+    << "      Non-reversible:  STRSYM (strand symmetric model, equiv. WS6.6)" << endl
+    << "      Non-reversible:  UNREST (unrestricted model, equiv. 12.12)" << endl
+    << "           Otherwise:  Name of file containing user-model parameters" << endl
+    << endl << "STATE FREQUENCY:" << endl
+    << "  -m ...+F             Empirically counted frequencies from alignment" << endl
+    << "  -m ...+FO            Optimized frequencies by maximum-likelihood" << endl
+    << "  -m ...+FQ            Equal frequencies" << endl
+    << "  -m ...+FRY           For DNA, freq(A+G)=1/2=freq(C+T)" << endl
+    << "  -m ...+FWS           For DNA, freq(A+T)=1/2=freq(C+G)" << endl
+    << "  -m ...+FMK           For DNA, freq(A+C)=1/2=freq(G+T)" << endl
+    << "  -m ...+Fabcd         4-digit constraint on ACGT frequency" << endl
+    << "                       (e.g. +F1221 means f_A=f_T, f_C=f_G)" << endl
+    << "  -m ...+FU            Amino-acid frequencies given protein matrix" << endl
+    << "  -m ...+F1x4          Equal NT frequencies over three codon positions" << endl
+    << "  -m ...+F3x4          Unequal NT frequencies over three codon positions" << endl
 
-            << endl << "RATE HETEROGENEITY AMONG SITES:" << endl
-            << "  -m ...+I             A proportion of invariable sites" << endl
-            << "  -m ...+G[n]          Discrete Gamma model with n categories (default n=4)" << endl
-            << "  -m ...*G[n]          Discrete Gamma model with unlinked model parameters" << endl
-            << "  -m ...+I+G[n]        Invariable sites plus Gamma model with n categories" << endl
-            << "  -m ...+R[n]          FreeRate model with n categories (default n=4)" << endl
-            << "  -m ...*R[n]          FreeRate model with unlinked model parameters" << endl
-            << "  -m ...+I+R[n]        Invariable sites plus FreeRate model with n categories" << endl
-            << "  -m ...+Hn            Heterotachy model with n classes" << endl
-            << "  -m ...*Hn            Heterotachy model with n classes and unlinked parameters" << endl
-            << "  --alpha-min NUMBER   Min Gamma shape parameter for site rates (default: 0.02)" << endl
-            << "  --gamma-median       Median approximation for +G site rates (default: mean)" << endl
-            << "  --rate               Write empirical Bayesian site rates to .rate file" << endl
-            << "  --mlrate             Write maximum likelihood site rates to .mlrate file" << endl
+    << endl << "RATE HETEROGENEITY AMONG SITES:" << endl
+    << "  -m ...+I             A proportion of invariable sites" << endl
+    << "  -m ...+G[n]          Discrete Gamma model with n categories (default n=4)" << endl
+    << "  -m ...*G[n]          Discrete Gamma model with unlinked model parameters" << endl
+    << "  -m ...+I+G[n]        Invariable sites plus Gamma model with n categories" << endl
+    << "  -m ...+R[n]          FreeRate model with n categories (default n=4)" << endl
+    << "  -m ...*R[n]          FreeRate model with unlinked model parameters" << endl
+    << "  -m ...+I+R[n]        Invariable sites plus FreeRate model with n categories" << endl
+    << "  -m ...+Hn            Heterotachy model with n classes" << endl
+    << "  -m ...*Hn            Heterotachy model with n classes and unlinked parameters" << endl
+    << "  --alpha-min NUMBER   Min Gamma shape parameter for site rates (default: 0.02)" << endl
+    << "  --gamma-median       Median approximation for +G site rates (default: mean)" << endl
+    << "  --rate               Write empirical Bayesian site rates to .rate file" << endl
+    << "  --mlrate             Write maximum likelihood site rates to .mlrate file" << endl
 //            << "  --mhrate             Computing site-specific rates to .mhrate file using" << endl
 //            << "                       Meyer & von Haeseler (2003) method" << endl
 
-            << endl << "POLYMORPHISM AWARE MODELS (PoMo):"                                           << endl
-            << "  -s FILE              Input counts file (see manual)"                               << endl
-            << "  -m ...+P             DNA substitution model (see above) used with PoMo"            << endl
-            << "  -m ...+N<POPSIZE>    Virtual population size (default: 9)"                         << endl
-      // TODO DS: Maybe change default to +WH.
-            << "  -m ...+WB|WH|S]      Weighted binomial sampling"       << endl
-            << "  -m ...+WH            Weighted hypergeometric sampling" << endl
-            << "  -m ...+S             Sampled sampling"              << endl
-            << "  -m...+G[n]           Discrete Gamma rate with n categories (default n=4)"    << endl
-      // TODO DS: Maybe change default to +WH.
+    << endl << "POLYMORPHISM AWARE MODELS (PoMo):"                                           << endl
+    << "  -s FILE              Input counts file (see manual)"                               << endl
+    << "  -m ...+P             DNA substitution model (see above) used with PoMo"            << endl
+    << "  -m ...+N<POPSIZE>    Virtual population size (default: 9)"                         << endl
+// TODO DS: Maybe change default to +WH.
+    << "  -m ...+WB|WH|S]      Weighted binomial sampling"       << endl
+    << "  -m ...+WH            Weighted hypergeometric sampling" << endl
+    << "  -m ...+S             Sampled sampling"              << endl
+    << "  -m...+G[n]           Discrete Gamma rate with n categories (default n=4)"    << endl
+// TODO DS: Maybe change default to +WH.
 
-            << endl << "ASCERTAINMENT BIAS CORRECTION:" << endl
-            << "  -m ...+ASC           Correction for absence of invariant sites in alignment" << endl
+    << endl << "COMPLEX MODELS:" << endl
+    << "  -m \"MIX{m1,...,mK}\"  Mixture model with K components" << endl
+    << "  -m \"FMIX{f1,...fK}\"  Frequency mixture model with K components" << endl
+    << "  --mix-opt            Optimize mixture weights (default: detect)" << endl
+    << "  -m ...+ASC           Ascertainment bias correction" << endl
+    << "  --tree-freq FILE     Input tree to infer site frequency model" << endl
+    << "  --site-freq FILE     Input site frequency model file" << endl
+    << "  --freq-max           Posterior maximum instead of mean approximation" << endl
 
-            << endl << "SITE-SPECIFIC FREQUENCY MODEL:" << endl 
-            << "  -ft FILE             Input tree to infer site frequency model" << endl
-            << "  -fs FILE             Input site frequency model file" << endl
-            << "  -fmax                Posterior maximum instead of mean approximation" << endl
-//            << endl << "TEST OF MODEL HOMOGENEITY:" << endl
-//            << "  -m WHTEST            Testing model (GTR+G) homogeneity assumption using" << endl
-//            << "                       Weiss & von Haeseler (2003) method" << endl
-//            << "  -ns <#simulations>   #Simulations to obtain null-distribution (default: 1000)" << endl
-            << endl << "CONSENSUS RECONSTRUCTION:" << endl
-            << "  -t FILE              Set of input trees for consensus reconstruction" << endl
-            << "  -minsup NUMBER       Min split support, 0.5 for majority-rule consensus" << endl
-            << "                       (default: 0, extended consensus)" << endl
-            << "  -bi NUMBER           Burnin number of trees" << endl
-            << "  -con                 Compute consensus tree to .contree file" << endl
-            << "  -net                 Computing consensus network to .nex file" << endl
-            << "  -sup FILE            Assign support values into this tree from -t trees" << endl
-            << "  -sup2 FILE           Like -sup but -t trees can have unequal taxon sets" << endl
-            << "  -suptag STRING       Node name (or ALL) to assign tree IDs where node occurs" << endl
-            << endl << "ROBINSON-FOULDS (RF) DISTANCE:" << endl
-            << "  -rfa                 Compute all-to-all RF distances for -t trees" << endl
-            << "  -rf FILE             Compute RF distances between -t trees and this set" << endl
-            << "  -rf2 FILE            Like -rf but trees can have unequal taxon sets" << endl
-//            << "  -rf_adj              Computing RF distances of adjacent trees in <treefile>" << endl
-            << endl << "TREE TOPOLOGY TEST:" << endl
-            << "  -z FILE              Set of user trees" << endl
-            << "  -zb NUMBER           Replicates for topology test of -z trees" << endl
-            << "  -zw                  Weighted KH and SH tests" << endl
-            << "  -au                  Approximately unbiased (AU) test (Shimodaira 2002)" << endl
-            << endl << "ANCESTRAL STATE RECONSTRUCTION:" << endl
-            << "  -asr                 Ancestral state reconstruction by empirical Bayes" << endl
-            << "  -asr-min <prob>      Min probability of ancestral state (default: equil freq)" << endl
-//            << "  -wja                 Write ancestral sequences by joint reconstruction" << endl
+    << endl << "TREE TOPOLOGY TEST:" << endl
+    << "  --trees FILE         Set of trees to evaluate log-likelihoods" << endl
+    << "  --test NUMBER        Replicates for topology test" << endl
+    << "  --test-weight        Perform weighted KH and SH tests" << endl
+    << "  --test-au            Approximately unbiased (AU) test (Shimodaira 2002)" << endl
 
+    << endl << "ANCESTRAL STATE RECONSTRUCTION:" << endl
+    << "  --ancestral          Ancestral state reconstruction by empirical Bayes" << endl
+    << "  --asr-min NUMBER     Min probability of ancestral state (default: equil freq)" << endl
 
-            << endl
-
-			<< "GENERATING RANDOM TREES:" << endl
-			<< "  -r NUMBER            No. taxa for Yule-Harding random tree" << endl
-			<< "  -ru NUMBER           No. taxa for Uniform random tree" << endl
-			<< "  -rcat NUMBER         No. taxa for caterpillar random tree" << endl
-			<< "  -rbal NUMBER         No. taxa for balanced random tree" << endl
-			<< "  -rcsg NUMBER         No. taxa for random circular split network" << endl
-			<< "  -rlen NUM NUM NUM    min, mean, and max random branch lengths" << endl;
-
-			cout << endl << "MISCELLANEOUS:" << endl
-            << "  -o STRING            Outgroup taxon name for writing .treefile" << endl
-            << "  --seqtype STRING     BIN, DNA, AA, NT2AA, CODON, MORPH (default: auto-detect)" << endl
-#ifdef _OPENMP
-            << "  --threads-max NUM    Max number of threads for -c AUTO (default: CPU cores)" << endl
-#endif
-            << "  -v, --verbose        Verbose mode, printing more messages to screen" << endl
-            << "  --quiet              Quiet mode, suppress printing to screen (stdout)" << endl
-            << "  --keep-ident         Keep identical sequences (default: remove & finally add)" << endl
-            << "  --cptime NUMBER      Checkpoint time interval in seconds (default: 60)" << endl
-		    << "  -wt                  Write locally optimal trees into .treels file" << endl
-			<< "  -blfix               Fix branch lengths of user tree passed via -te" << endl
-            << "  -blscale             Scale branch lengths of user tree passed via -t" << endl
-			<< "  -blmin               Min branch length for optimization (default 0.000001)" << endl
-			<< "  -blmax               Max branch length for optimization (default 100)" << endl
-			<< "  -wsr                 Write site rates and categories to .rate file" << endl
-			<< "  -wsl                 Write site log-likelihoods to .sitelh file" << endl
-            << "  -wslr                Write site log-likelihoods per rate category" << endl
-            << "  -wslm                Write site log-likelihoods per mixture class" << endl
-            << "  -wslmr               Write site log-likelihoods per mixture+rate class" << endl
-            << "  -wspr                Write site probabilities per rate category" << endl
-            << "  -wspm                Write site probabilities per mixture class" << endl
-            << "  -wspmr               Write site probabilities per mixture+rate class" << endl
-			<< "  -wpl                 Write partition log-likelihoods to .partlh file" << endl
-            << "  -fconst f1,...,fN    Add constant patterns into alignment (N=no. states)" << endl
-            << "  -me NUMBER           LogL epsilon for parameter estimation (default 0.01)" << endl
-            << "  --no-outfiles        Suppress printing output files" << endl
-            << "  --eigenlib           Use Eigen3 library" << endl
-            << "  -alninfo             Print alignment sites statistics to .alninfo" << endl
-            << "  --show-lh            Compute tree likelihood without optimisation" << endl
-#ifdef IQTREE_TERRAPHAST
-            << "  --terrace            Check if the tree lies on a phylogenetic terrace" << endl
-#endif
-//            << "  -d <file>            Reading genetic distances from file (default: JC)" << endl
-//			<< "  -d <outfile>         Calculate the distance matrix inferred from tree" << endl
-//			<< "  -stats <outfile>     Output some statistics about branch lengths" << endl
-//			<< "  -comp <treefile>     Compare tree with each in the input trees" << endl;
-
-
-			<< endl;
-
-    cout << "TEST OF SYMMETRY" << endl
+    << endl << "TEST OF SYMMETRY:" << endl
     << "  --bisymtest               Perform three binomial tests of symmetry" << endl
     << "  --bisymtest-remove-bad    Do --bisymtest and remove bad partitions" << endl
     << "  --bisymtest-remove-good   Do --bisymtest and remove good partitions" << endl
     << "  --bisymtest-type MAR|INT  Use MARginal/INTernal test when removing partitions" << endl
     << "  --bisymtest-pval NUMER    P-value cutoff (default: 0.05)" << endl
     << "  --bisymtest-keep-zero     Keep NAs in the tests" << endl
-    << "  --permsymtest NUMBER      Replicates for permutation tests of symmetry" << endl;
+    << "  --permsymtest NUMBER      Replicates for permutation tests of symmetry" << endl
+    << endl;
     
-    cout << endl;
+
+//            << endl << "TEST OF MODEL HOMOGENEITY:" << endl
+//            << "  -m WHTEST            Testing model (GTR+G) homogeneity assumption using" << endl
+//            << "                       Weiss & von Haeseler (2003) method" << endl
+//            << "  -ns <#simulations>   #Simulations to obtain null-distribution (default: 1000)" << endl
+
+    if (full_command)
+    cout
+        << endl << "CONSENSUS RECONSTRUCTION:" << endl
+        << "  -t FILE              Set of input trees for consensus reconstruction" << endl
+        << "  --sup-min NUMBER     Min split support, 0.5 for majority-rule consensus" << endl
+        << "                       (default: 0, extended consensus)" << endl
+        << "  --burnin NUMBER      Burnin number of trees to ignore" << endl
+        << "  --con-tree           Compute consensus tree to .contree file" << endl
+        << "  --con-net            Computing consensus network to .nex file" << endl
+        << "  --support FILE       Assign support values into this tree from -t trees" << endl
+        //<< "  -sup2 FILE           Like -sup but -t trees can have unequal taxon sets" << endl
+        << "  --suptag STRING      Node name (or ALL) to assign tree IDs where node occurs" << endl
+        << endl << "TREE DISTANCE BY ROBINSON-FOULDS (RF) METRIC:" << endl
+        << "  --tree-dist-all      Compute all-to-all RF distances for -t trees" << endl
+        << "  --tree-dist FILE     Compute RF distances between -t trees and this set" << endl
+        << "  --tree-dist2 FILE    Like -rf but trees can have unequal taxon sets" << endl
+    //            << "  -rf_adj              Computing RF distances of adjacent trees in <treefile>" << endl
+    //            << "  -wja                 Write ancestral sequences by joint reconstruction" << endl
+
+
+        << endl
+
+        << "GENERATING RANDOM TREES:" << endl
+        << "  -r NUMBER            No. taxa for Yule-Harding random tree" << endl
+        << "  --rand UNI|CAT|BAL   UNIform | CATerpillar | BALanced random tree" << endl
+        //<< "  --rand NET           Random circular split network" << endl
+        << "  --rlen NUM NUM NUM   min, mean, and max random branch lengths" << endl
+
+        << endl << "MISCELLANEOUS:" << endl
+        << "  -o STRING            Outgroup taxon name for writing .treefile" << endl
+        << "  --seqtype STRING     BIN, DNA, AA, NT2AA, CODON, MORPH (default: auto-detect)" << endl
+    #ifdef _OPENMP
+        << "  --threads-max NUM    Max number of threads for -c AUTO (default: CPU cores)" << endl
+    #endif
+        << "  -v, --verbose        Verbose mode, printing more messages to screen" << endl
+        << "  --quiet              Quiet mode, suppress printing to screen (stdout)" << endl
+        << "  --keep-ident         Keep identical sequences (default: remove & finally add)" << endl
+        << "  --cptime NUMBER      Checkpoint time interval in seconds (default: 60)" << endl
+        << "  -wt                  Write locally optimal trees into .treels file" << endl
+        << "  -blfix               Fix branch lengths of user tree passed via -te" << endl
+        << "  -blscale             Scale branch lengths of user tree passed via -t" << endl
+        << "  -blmin               Min branch length for optimization (default 0.000001)" << endl
+        << "  -blmax               Max branch length for optimization (default 100)" << endl
+        << "  -wsl                 Write site log-likelihoods to .sitelh file" << endl
+        << "  -wslr                Write site log-likelihoods per rate category" << endl
+        << "  -wslm                Write site log-likelihoods per mixture class" << endl
+        << "  -wslmr               Write site log-likelihoods per mixture+rate class" << endl
+        << "  -wspr                Write site probabilities per rate category" << endl
+        << "  -wspm                Write site probabilities per mixture class" << endl
+        << "  -wspmr               Write site probabilities per mixture+rate class" << endl
+        << "  -wpl                 Write partition log-likelihoods to .partlh file" << endl
+        << "  -fconst f1,...,fN    Add constant patterns into alignment (N=no. states)" << endl
+        << "  -me NUMBER           LogL epsilon for parameter estimation (default 0.01)" << endl
+        << "  --no-outfiles        Suppress printing output files" << endl
+        << "  --eigenlib           Use Eigen3 library" << endl
+        << "  -alninfo             Print alignment sites statistics to .alninfo" << endl
+        << "  --show-lh            Compute tree likelihood without optimisation" << endl
+    //            << "  -d <file>            Reading genetic distances from file (default: JC)" << endl
+    //			<< "  -d <outfile>         Calculate the distance matrix inferred from tree" << endl
+    //			<< "  -stats <outfile>     Output some statistics about branch lengths" << endl
+    //			<< "  -comp <treefile>     Compare tree with each in the input trees" << endl;
+
+
+        << endl;
 
     if (full_command) {
         //TODO Print other options here (to be added)
