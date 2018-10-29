@@ -845,7 +845,7 @@ bool ModelMarkov::getVariables(double *variables) {
 double ModelMarkov::targetFunk(double x[]) {
 	bool changed = getVariables(x);
 
-    if (state_freq[num_states-1] < 0) return 1.0e+12;
+    if (state_freq[num_states-1] < 0) return 1.0e+30;
 
 	if (changed) {
 		decomposeRateMatrix();
@@ -856,7 +856,14 @@ double ModelMarkov::targetFunk(double x[]) {
     // avoid numerical issue if state_freq is too small
     for (int i = 0; i < num_states; i++)
         if (state_freq[i] < 0)
-            return 1.0e+12;
+            return 1.0e+30;
+
+    if (!is_reversible) {
+        for (int i = 0; i < num_states; i++)
+            if (state_freq[i] < MIN_FREQUENCY)
+                return 1.0e+30;
+    }
+    
 
 	return -phylo_tree->computeLikelihood();
 
@@ -1028,13 +1035,23 @@ void ModelMarkov::decomposeRateMatrixNonrev() {
     eval = eigensolver.eigenvalues();
     Map<MatrixXcd,Aligned> evec(cevec, num_states, num_states);
     evec = eigensolver.eigenvectors();
+     // NOTE 2018-10-29: determinant is not good for detecting non-diagonalizable
+     // use isInvertible instead (below)
     if (abs(evec.determinant())<1e-8) {
         // limit of 1e-10 is something of a guess. 1e-12 was too restrictive.
         nondiagonalizable = true; // will use scaled squaring instead of eigendecomposition for matrix exponentiation
         return;
+        outWarning("zero evec determinant");
     }
-    Map<MatrixXcd,Aligned> inv_evec(cinv_evec, num_states, num_states);
-    inv_evec = evec.inverse();
+
+    FullPivLU<MatrixXcd> lu(evec);
+    if (lu.isInvertible()) {
+        Map<MatrixXcd,Aligned> inv_evec(cinv_evec, num_states, num_states);
+        inv_evec = lu.inverse();
+    } else {
+        nondiagonalizable = true;
+        outWarning("evec not invertible");
+    }
     
     // sanity check
 //    MatrixXcd eval_diag = eval.asDiagonal();
