@@ -1,6 +1,7 @@
 project(terraphast C CXX)
 
 cmake_minimum_required(VERSION 3.0.2)
+cmake_policy(SET CMP0054 NEW)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
 Option(DEV_ENVIRONMENT "Development environment (extended debugging)" OFF)
@@ -145,45 +146,45 @@ endif()
 # build tests
 #####################################################################
 if(TERRAPHAST_BUILD_TESTS)
-    add_library(Catch INTERFACE)
-    target_include_directories(Catch INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/catch)
+	add_library(Catch INTERFACE)
+	target_include_directories(Catch INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/catch)
 
-    add_executable(unittests
-        test/main.cpp
-        test/advanced.cpp
-        test/bipartitions.cpp
-        test/bitmatrix.cpp
-        test/bits.cpp
-        test/bitvector.cpp
-        test/clamped_uint.cpp
-        test/constraints.cpp
-        test/compile_test.cpp
-        test/fast_set.cpp
-        test/integration.cpp
-        test/multitree_iterator.cpp
-        test/parser.cpp
-        test/rooting.cpp
-        test/small_bipartition.cpp
-        test/stack_allocator.cpp
-        test/subtree_extraction.cpp
-        test/supertree.cpp
-        test/trees.cpp
-        test/union_find.cpp
-        test/util.cpp
-        test/validation.cpp
-        test/simple.cpp
-    )
-    target_link_libraries(unittests terraphast Catch)
-    if(TERRAPHAST_BUILD_CLIB)
-        target_sources(unittests PRIVATE
-            test/c_api.cpp
-        )
-        target_link_libraries(unittests terraces_c)
-    endif()
-    add_test(NAME unittests COMMAND unittests)
-    enable_testing()
+	add_executable(unittests
+		test/main.cc
+		test/advanced.cpp
+		test/bipartitions.cpp
+		test/bitmatrix.cpp
+		test/bits.cpp
+		test/bitvector.cpp
+		test/clamped_uint.cpp
+		test/constraints.cpp
+		test/compile_test.cpp
+		test/fast_set.cpp
+		test/integration.cpp
+		test/multitree_iterator.cpp
+		test/parser.cpp
+		test/rooting.cpp
+		test/small_bipartition.cpp
+		test/stack_allocator.cpp
+		test/subtree_extraction.cpp
+		test/supertree.cpp
+		test/trees.cpp
+		test/union_find.cpp
+		test/util.cpp
+		test/validation.cpp
+		test/simple.cpp
+	)
+	target_link_libraries(unittests terraphast Catch)
+	if(TERRAPHAST_BUILD_CLIB)
+		target_sources(unittests PRIVATE
+			test/c_api.cpp
+		)
+		target_link_libraries(unittests terraces_c)
+	endif()
+	add_test(NAME unittests COMMAND unittests)
+	enable_testing()
 
-    set(terraces_targets ${terraces_targets} unittests)
+	set(terraces_targets ${terraces_targets} unittests)
 endif()
 
 set_target_properties(${terraces_targets} PROPERTIES CXX_STANDARD 11 CXX_STANDARD_REQUIRED ON)
@@ -192,15 +193,14 @@ set_target_properties(${terraces_targets} PROPERTIES CXX_STANDARD 11 CXX_STANDAR
 # set platform-specific options, include platform-specific files
 #####################################################################
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-    set(TERRAPHAST_PLATFORM_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/lib/cl")
-    set(TERRAPHAST_COMPILE_FLAGS -Oi -W4)
+	set(TERRAPHAST_PLATFORM_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/lib/cl")
+	set(TERRAPHAST_COMPILE_FLAGS -Oi -W4)
 
-    # Most of our files only compile with disabled language extensions for VC++
-    # Unfortunately, Catch uses some windows-specific features, so we have to
-    # enable these extensions for the Catch main method (more specific: not disable them)
-    file(GLOB ALL_SOURCES lib/*.cpp c_lib/*.cpp test/*.cpp tools/*.cpp app/*.cpp)
-    list(REMOVE_ITEM ALL_SOURCES "test/main.cpp")
-    set_source_files_properties(${ALL_SOURCES} PROPERTIES COMPILE_FLAGS "-Za")
+	# Most of our files only compile with disabled language extensions for VC++
+	# Unfortunately, Catch uses some windows-specific features, so we have to
+	# enable these extensions for the Catch main method (more specific: not disable them)
+	file(GLOB ALL_SOURCES lib/*.cpp c_lib/*.cpp test/*.cpp tools/*.cpp app/*.cpp)
+	set_source_files_properties(${ALL_SOURCES} PROPERTIES COMPILE_FLAGS "-Za")
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
     set(TERRAPHAST_PLATFORM_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/lib/intel")
     set(TERRAPHAST_COMPILE_FLAGS -Wall -Wextra -Wconversion -Wsign-conversion -Werror)
