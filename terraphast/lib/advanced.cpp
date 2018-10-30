@@ -70,12 +70,12 @@ index fast_count_terrace(const supertree_data& data) {
 
 bool check_terrace(const supertree_data& data) { return fast_count_terrace(data) > 1; }
 
-uint64_t count_terrace(const supertree_data& data) {
+index count_terrace(const supertree_data& data) {
 	tree_enumerator<variants::clamped_count_callback> enumerator{{}};
 	try {
 		return enumerator.run(data.num_leaves, data.constraints, data.root).value();
 	} catch (terraces::tree_count_overflow_error&) {
-		return std::numeric_limits<uint64_t>::max();
+		return std::numeric_limits<index>::max();
 	}
 }
 

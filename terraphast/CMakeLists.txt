@@ -1,6 +1,7 @@
 project(terraphast C CXX)
 
 cmake_minimum_required(VERSION 3.0.2)
+cmake_policy(SET CMP0054 NEW)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
 Option(DEV_ENVIRONMENT "Development environment (extended debugging)" OFF)
@@ -149,7 +150,7 @@ if(TERRAPHAST_BUILD_TESTS)
 	target_include_directories(Catch INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/catch)
 
 	add_executable(unittests
-		test/main.cpp
+		test/main.cc
 		test/advanced.cpp
 		test/bipartitions.cpp
 		test/bitmatrix.cpp
@@ -192,14 +193,13 @@ set_target_properties(${terraces_targets} PROPERTIES CXX_STANDARD 11 CXX_STANDAR
 # set platform-specific options, include platform-specific files
 #####################################################################
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-	set(TERRAPHAST_COMPILER_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/lib/cl")
+	set(TERRAPHAST_PLATFORM_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/lib/cl")
 	set(TERRAPHAST_COMPILE_FLAGS -Oi -W4)
 
 	# Most of our files only compile with disabled language extensions for VC++
 	# Unfortunately, Catch uses some windows-specific features, so we have to
 	# enable these extensions for the Catch main method (more specific: not disable them)
 	file(GLOB ALL_SOURCES lib/*.cpp c_lib/*.cpp test/*.cpp tools/*.cpp app/*.cpp)
-	list(REMOVE_ITEM ALL_SOURCES "test/main.cpp")
 	set_source_files_properties(${ALL_SOURCES} PROPERTIES COMPILE_FLAGS "-Za")
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
 	set(TERRAPHAST_PLATFORM_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/lib/intel")

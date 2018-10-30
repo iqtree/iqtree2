@@ -72,15 +72,16 @@ index fast_count_terrace(const supertree_data& data);
 
 /**
  * Counts all trees on a terrace around a phylogenetic tree.
- * Note that this number might not be representable as a 64 bit integer, and might thus be clamped.
+ * Note that this number might not be representable as a 32/64 bit integer, and might thus be
+ * clamped.
  * \param data The constraints extracted from the tree and missing data matrix describing all
  * possible supertrees.
  * \return The number of trees on the phylogenetic terrace containing the input tree.
- *         Note that if this result is UINT64_MAX = 2^64 - 1, the computations resulted in an
+ *         Note that if this result is UINT32/64_MAX = 2^32/64 - 1, the computations resulted in an
  * overflow,
  *         i.e. the result is only a lower bound on the number of trees on this terrace.
  */
-uint64_t count_terrace(const supertree_data& data);
+index count_terrace(const supertree_data& data);
 
 /**
  * Counts all trees on a terrace around a phylogenetic tree.
