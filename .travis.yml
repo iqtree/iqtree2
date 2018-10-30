@@ -2,12 +2,17 @@ language: cpp
 compiler:
   - clang
   - gcc
+
+before_script:
+  - sudo apt-get install libeigen3-dev
+  - mkdir -p build
+  - cd build
+  - cmake ..
+
 script:
 ############################################################################
 # Build main and tests
 ############################################################################
-  - mkdir -p build
-  - cd build
-  - cmake .. 
   - make
+  - ./iqtree
      
