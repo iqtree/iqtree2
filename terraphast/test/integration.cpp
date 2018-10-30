@@ -28,5 +28,4 @@ TEST_CASE("full_run_disjoint", "[rerooting],[tree_extraction],[constraints],[sup
 }
 
 } // namespace tests
-
 } // namespace terraces
