@@ -1,4 +1,3 @@
-
 #include <terraces/bitmatrix.hpp>
 
 #include <cassert>
