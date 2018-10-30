@@ -1,16 +1,15 @@
 version: 1.0.{build}
 configuration: Release
-platform: x64
+platform:
+- x64
+- Win32
 clone_depth: 1
 before_build:
-- cmd: >-
-    git submodule init
-
-    git submodule update
-
-    cmake -G "Visual Studio 14 2015 Win64" .
+- cmd: 'scripts\build_appveyor.bat'
 build:
   project: terraphast.sln
+  parallel: true
   verbosity: minimal
 test_script:
-- cmd: C:\projects\terraces\Release\unittests.exe
+- cmd: 'Release\unittests.exe'
+
