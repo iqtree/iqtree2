@@ -57,28 +57,26 @@ bool is_on_terrace_from_file(const std::string& nwk_filename, const std::string&
 	return is_on_terrace(nwk_string, matrix_stream, force);
 }
 
-std::uint64_t get_terrace_size(const std::string& nwk_string, std::istream& matrix_stream,
-                               bool force) {
+index get_terrace_size(const std::string& nwk_string, std::istream& matrix_stream, bool force) {
 	return count_terrace(parse_data(nwk_string, matrix_stream, force).first);
 }
 
-std::uint64_t get_terrace_size(std::istream& nwk_stream, std::istream& matrix_stream, bool force) {
+index get_terrace_size(std::istream& nwk_stream, std::istream& matrix_stream, bool force) {
 	return get_terrace_size(read_ifstream_full(nwk_stream), matrix_stream, force);
 }
 
-std::uint64_t get_terrace_size(std::istream& nwk_stream, const std::string& matrix_string,
-                               bool force) {
+index get_terrace_size(std::istream& nwk_stream, const std::string& matrix_string, bool force) {
 	auto matrix_stream = std::istringstream{matrix_string};
 	return get_terrace_size(read_ifstream_full(nwk_stream), matrix_stream, force);
 }
 
-std::uint64_t get_terrace_size(const std::string& nwk_string, const std::string& matrix_string,
-                               bool force) {
+index get_terrace_size(const std::string& nwk_string, const std::string& matrix_string,
+                       bool force) {
 	auto matrix_stream = std::istringstream{matrix_string};
 	return get_terrace_size(nwk_string, matrix_stream, force);
 }
-std::uint64_t get_terrace_size_from_file(const std::string& nwk_filename,
-                                         const std::string& matrix_filename, bool force) {
+index get_terrace_size_from_file(const std::string& nwk_filename,
+                                 const std::string& matrix_filename, bool force) {
 	auto nwk_string = read_file_full(nwk_filename);
 	auto matrix_stream = open_ifstream(matrix_filename);
 	return get_terrace_size(nwk_string, matrix_stream, force);
