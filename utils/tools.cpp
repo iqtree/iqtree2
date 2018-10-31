@@ -26,6 +26,7 @@
 #include "timeutil.h"
 #include "MPIHelper.h"
 #include <dirent.h>
+#include <thread>
 
 #if defined(Backtrace_FOUND)
 #include <execinfo.h>
@@ -4728,6 +4729,12 @@ Params& Params::getInstance() {
 
 
 int countPhysicalCPUCores() {
+    #ifdef _OPENMP
+    return omp_get_num_procs();
+    #else
+    return std::thread::hardware_concurrency();
+    #endif
+    /*
     uint32_t registers[4];
     unsigned logicalcpucount;
     unsigned physicalcpucount;
@@ -4759,6 +4766,7 @@ int countPhysicalCPUCores() {
     }
     if (physicalcpucount < 1) physicalcpucount = 1;
     return physicalcpucount;
+     */
 }
 
 // stacktrace.h (c) 2008, Timo Bingmann from http://idlebox.net/
