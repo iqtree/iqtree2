@@ -435,7 +435,11 @@ void ModelMarkov::computeTransMatrixNonrev(double time, double *trans_matrix, in
         Map<Matrix<double,Dynamic,Dynamic,RowMajor>,Aligned >rate_mat(rate_matrix, num_states, num_states);
         Map<Matrix<double,Dynamic,Dynamic,RowMajor> >trans_mat(trans_matrix, num_states, num_states);
         MatrixXd mat = rate_mat;
-        trans_mat = (mat*time).exp();
+        mat = (mat*time).exp();
+        if (mat.minCoeff() < 0) {
+            outWarning("negative trans_mat");
+        }
+        trans_mat = mat;
     } else if (phylo_tree->params->matrix_exp_technique == MET_EIGEN3LIB_DECOMPOSITION) {
         VectorXcd ceval_exp(num_states);
         ArrayXcd eval = Map<ArrayXcd,Aligned>(ceval, num_states);
@@ -851,6 +855,8 @@ double ModelMarkov::targetFunk(double x[]) {
 		decomposeRateMatrix();
 		ASSERT(phylo_tree);
 		phylo_tree->clearAllPartialLH();
+        if (nondiagonalizable) // matrix is ill-formed
+            return 1.0e+30;
 	}
 
     // avoid numerical issue if state_freq is too small
@@ -1035,14 +1041,16 @@ void ModelMarkov::decomposeRateMatrixNonrev() {
     eval = eigensolver.eigenvalues();
     Map<MatrixXcd,Aligned> evec(cevec, num_states, num_states);
     evec = eigensolver.eigenvectors();
-     // NOTE 2018-10-29: determinant is not good for detecting non-diagonalizable
-     // use isInvertible instead (below)
+    // NOTE 2018-10-29: determinant is not good for detecting non-diagonalizable
+    // use isInvertible instead (below)
+    /*
     if (abs(evec.determinant())<1e-8) {
         // limit of 1e-10 is something of a guess. 1e-12 was too restrictive.
         nondiagonalizable = true; // will use scaled squaring instead of eigendecomposition for matrix exponentiation
         return;
         outWarning("zero evec determinant");
     }
+    */
 
     FullPivLU<MatrixXcd> lu(evec);
     if (lu.isInvertible()) {
