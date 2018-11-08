@@ -1739,11 +1739,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.test_input = TEST_WEAKLY_COMPATIBLE;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-aln") == 0
-					|| strcmp(argv[cnt], "-s") == 0) {
+			if (strcmp(argv[cnt], "--aln") == 0 || strcmp(argv[cnt], "--msa") == 0 || strcmp(argv[cnt], "-s") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -aln, -s <alignment_file>";
+					throw "Use --aln, -s <alignment_file>";
 				params.aln_file = argv[cnt];
 				continue;
 			}

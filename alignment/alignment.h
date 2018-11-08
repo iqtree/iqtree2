@@ -547,6 +547,12 @@ public:
      */
     Alignment *convertCodonToDNA();
 
+    /**
+     @param quartet ID of four taxa
+     @param[out] support number of sites supporting 12|34, 13|24 and 14|23
+     */
+    virtual void computeQuartetSupports(IntVector &quartet, size_t *support);
+    
     /****************************************************************************
             Distance functions
      ****************************************************************************/
