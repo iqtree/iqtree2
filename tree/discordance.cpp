@@ -8,10 +8,12 @@
 #include "phylosupertree.h"
 
 void ConcordanceInfo::extract(Neighbor *branch) {
-    bool check = branch->getAttr("gCF", gCF) && branch->getAttr("gN", gN);
-    ASSERT(check);
+    if (Params::getInstance().treeset_file) {
+        bool check = branch->getAttr("gCF", gCF) && branch->getAttr("gN", gN);
+        ASSERT(check);
+    }
     if (Params::getInstance().site_concordance) {
-        check = branch->getAttr("sCF", sCF) && branch->getAttr("sN", sN) &&
+        bool check = branch->getAttr("sCF", sCF) && branch->getAttr("sN", sN) &&
                 branch->getAttr("sDF1", sDF1) && branch->getAttr("sDF2", sDF2);
         ASSERT(check);
     }
