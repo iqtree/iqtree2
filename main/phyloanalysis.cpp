@@ -3909,6 +3909,17 @@ void assignBranchSupportNew(Params &params) {
     cout << "Reading tree " << params.user_file << " ..." << endl;
     tree->readTree(params.user_file, params.is_rooted);
     cout << tree->leafNum << " taxa and " << tree->branchNum << " branches" << endl;
+
+    BranchVector branches;
+    tree->getInnerBranches(branches);
+    BranchVector::iterator brit;
+    for (brit = branches.begin(); brit != branches.end(); brit++) {
+        Neighbor *branch = brit->second->findNeighbor(brit->first);
+        string value = brit->second->name;
+        if (!value.empty())
+            branch->putAttr("value", value);
+    }
+    
     if (params.treeset_file) {
         MTreeSet trees(params.treeset_file, params.is_rooted, params.tree_burnin, params.tree_max_count);
         double start_time = getRealTime();
@@ -3941,21 +3952,26 @@ void assignBranchSupportNew(Params &params) {
     ofstream out;
     string filename = prefix + ".cf.stat";
     out.open(filename.c_str());
-    out << "# ID: Branch ID" << endl
-        << "# Length: Branch length" << endl
-        << "# Value: Existing branch value" << endl;
+    out << "# Concordance factor statistics" << endl
+        << "# This file can be read in MS Excel or in R with command:" << endl
+        << "#   tab=read.table('" <<  filename << "',header=TRUE)" << endl
+        << "# Columns are tab-separated with following meaning:" << endl
+        << "#   ID:      Branch ID" << endl
+        << "#   Length:  Branch length" << endl
+        << "#   Value:   Existing branch value" << endl;
     if (params.treeset_file)
         out
-        << "# geneCF: Gene concordance factor (%)" << endl
-        << "# geneN: Number of trees decisive for the branch" << endl;
+        << "#   geneCF:  Gene concordance factor (%)" << endl
+        << "#   geneN:   Number of trees decisive for the branch" << endl;
     if (params.internode_certainty == 1) {
-        out << "# IC: internode certainty (Salichos & Rokas 2013)" << endl;
+        out
+    << "#   IC:      Internode certainty (Salichos & Rokas 2013)" << endl;
     }
     if (params.site_concordance)
-        out << "# siteCF: Site concordance factor (%) averaged over " << params.site_concordance << " quartets" << endl
-            << "# siteDF1: Site disconcordance factor (%) for alternative quartet 1" << endl
-            << "# siteDF2: Site disconcordance factor (%) for alternative quartet 2" << endl
-            << "# siteN: number of informative sites averaged over " << params.site_concordance << " quartets" << endl;
+        out << "#   siteCF:  Site concordance factor (%) averaged over " << params.site_concordance << " quartets" << endl
+            << "#   siteDF1: Site disconcordance factor (%) for alternative quartet 1" << endl
+            << "#   siteDF2: Site disconcordance factor (%) for alternative quartet 2" << endl
+            << "#   siteN:   Number of informative sites averaged over " << params.site_concordance << " quartets" << endl;
     out << "ID\tLength\tValue";
     if (params.treeset_file)
         out << "\tgeneCF\tgeneN";
@@ -3964,13 +3980,12 @@ void assignBranchSupportNew(Params &params) {
     if (params.site_concordance)
         out << "\tsiteCF\tsiteDF1\tsiteDF2\tsiteN";
     out << endl;
-    BranchVector branches;
-    tree->getInnerBranches(branches);
-    for (auto brit = branches.begin(); brit != branches.end(); brit++) {
+    for (brit = branches.begin(); brit != branches.end(); brit++) {
         Neighbor *branch = brit->second->findNeighbor(brit->first);
         int ID = brit->second->id;
         double length = branch->length;
-        string value = brit->second->name.substr(0, brit->second->name.find('/'));
+        string value = "NA";
+        branch->getAttr("value", value);
         ConcordanceInfo info;
         info.extract(branch);
         out << ID << '\t' << length << '\t' << value;
