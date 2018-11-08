@@ -46,6 +46,40 @@ void PhyloTree::computeSiteConcordance() {
     }
 }
 
+void Alignment::computeQuartetSupports(IntVector &quartet, size_t *support) {
+    for (auto pat = begin(); pat != end(); pat++) {
+        if (!pat->isInformative()) continue;
+        bool informative = true;
+        for (int j = 0; j < quartet.size(); j++)
+            if (pat->at(quartet[j]) >= num_states) {
+                informative = false;
+                break;
+            }
+        if (!informative) continue;
+        if (pat->at(quartet[0]) == pat->at(quartet[1]) && pat->at(quartet[2]) == pat->at(quartet[3]) && pat->at(quartet[0]) != pat->at(quartet[2]))
+            support[0] += pat->frequency;
+        if (pat->at(quartet[0]) == pat->at(quartet[2]) && pat->at(quartet[1]) == pat->at(quartet[3]) && pat->at(quartet[0]) != pat->at(quartet[1]))
+            support[1] += pat->frequency;
+        if (pat->at(quartet[0]) == pat->at(quartet[3]) && pat->at(quartet[1]) == pat->at(quartet[2]) && pat->at(quartet[0]) != pat->at(quartet[1]))
+            support[2] += pat->frequency;
+    }
+}
+
+void SuperAlignment::computeQuartetSupports(IntVector &quartet, size_t *support) {
+    for (int part = 0; part < partitions.size(); part++) {
+        IntVector part_quartet;
+        for (auto i = quartet.begin(); i != quartet.end(); i++) {
+            if (taxa_index[*i][part] >= 0)
+                part_quartet.push_back(taxa_index[*i][part]);
+            else
+                break;
+        }
+        if (part_quartet.size() != quartet.size())
+            continue;
+        partitions[part]->computeQuartetSupports(part_quartet, support);
+    }
+}
+
 void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, ConcordanceInfo &info, int *rstream) {
     vector<IntVector> taxa;
     taxa.resize(4);
@@ -80,61 +114,7 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, Concordanc
         }
 
         size_t support[3] = {0, 0, 0};
-        for (auto pat = aln->begin(); pat != aln->end(); pat++) {
-            if (!pat->isInformative()) continue;
-            bool informative = true;
-            for (j = 0; j < quartet.size(); j++)
-                if (pat->at(quartet[j]) >= aln->num_states) {
-                    informative = false;
-                    break;
-                }
-            if (!informative) continue;
-            if (pat->at(quartet[0]) == pat->at(quartet[1]) && pat->at(quartet[2]) == pat->at(quartet[3]) && pat->at(quartet[0]) != pat->at(quartet[2]))
-                support[0] += pat->frequency;
-            if (pat->at(quartet[0]) == pat->at(quartet[2]) && pat->at(quartet[1]) == pat->at(quartet[3]) && pat->at(quartet[0]) != pat->at(quartet[1]))
-                support[1] += pat->frequency;
-            if (pat->at(quartet[0]) == pat->at(quartet[3]) && pat->at(quartet[1]) == pat->at(quartet[2]) && pat->at(quartet[0]) != pat->at(quartet[1]))
-                support[2] += pat->frequency;
-        }
-        size_t sum = support[0] + support[1] + support[2];
-        sum_sites += sum;
-        if (sum > 0) {
-            info.sCF += ((double)support[0]) / sum;
-            info.sDF1 += ((double)support[1]) / sum;
-            info.sDF2 += ((double)support[2]) / sum;
-        }
-    }
-    info.sN = (double)sum_sites / nquartets;
-    info.sCF = info.sCF / nquartets;
-    info.sDF1 = info.sDF1 / nquartets;
-    info.sDF2 = info.sDF2 / nquartets;
-}
-
-void PhyloSuperTree::computeSiteConcordance(Branch &branch, int nquartets, ConcordanceInfo &info, int *rstream) {
-    info.sN = info.sCF = info.sDF1 = info.sDF2 = 0.0;
-    size_t sum_sites = 0;
-    for (int q = 0; q < nquartets; q++) {
-        size_t support[3] = {0, 0, 0};
-        // loop over all partitions
-        int part = 0;
-        for (auto tree = begin(); tree != end(); tree++, part++) {
-            SuperNeighbor *nei = (SuperNeighbor*)branch.second->findNeighbor(branch.first);
-            if (!nei->link_neighbors[part])
-                continue;
-            Branch this_branch;
-            this_branch.first = nei->link_neighbors[part]->node;
-            nei = (SuperNeighbor*)branch.first->findNeighbor(branch.second);
-            this_branch.second = nei->link_neighbors[part]->node;
-            
-            // check that this_branch is an internal branch
-            if (this_branch.first->isLeaf() || this_branch.second->isLeaf())
-                continue;
-            ConcordanceInfo this_info;
-            (*tree)->computeSiteConcordance(this_branch, 1, this_info, rstream);
-            support[0] += this_info.sCF * this_info.sN;
-            support[1] += this_info.sDF1 * this_info.sN;
-            support[2] += this_info.sDF2 * this_info.sN;
-        }
+        aln->computeQuartetSupports(quartet, support);
         size_t sum = support[0] + support[1] + support[2];
         sum_sites += sum;
         if (sum > 0) {
