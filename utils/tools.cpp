@@ -3853,6 +3853,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     if (!params.out_prefix) {
     	if (params.eco_dag_file)
     		params.out_prefix = params.eco_dag_file;
+        else if (params.user_file && params.consensus_type == CT_ASSIGN_SUPPORT_EXTENDED)
+            params.out_prefix = params.user_file;
         else if (params.partition_file) {
             params.out_prefix = params.partition_file;
             if (params.out_prefix[strlen(params.out_prefix)-1] == '/' || params.out_prefix[strlen(params.out_prefix)-1] == '\\') {
