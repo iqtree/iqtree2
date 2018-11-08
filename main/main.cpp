@@ -2593,7 +2593,9 @@ int main(int argc, char *argv[]) {
 		processNCBITree(Params::getInstance());
 	} else if (Params::getInstance().user_file && Params::getInstance().eco_dag_file) { /**ECOpd analysis*/
 		processECOpd(Params::getInstance());
-    } else if ((Params::getInstance().aln_file || Params::getInstance().partition_file) && !Params::getInstance().second_tree) {
+    } else if ((Params::getInstance().aln_file || Params::getInstance().partition_file) &&
+               Params::getInstance().consensus_type != CT_ASSIGN_SUPPORT_EXTENDED)
+    {
 		if ((Params::getInstance().siteLL_file || Params::getInstance().second_align) && !Params::getInstance().gbo_replicates)
 		{
 			if (Params::getInstance().siteLL_file)

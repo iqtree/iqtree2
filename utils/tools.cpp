@@ -1511,21 +1511,22 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.support_tag = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "-sup2") == 0 || strcmp(argv[cnt], "--gcf") == 0) {
-				cnt++;
-				if (cnt >= argc)
-					throw "Use -gcf <target_tree_file>";
-				params.second_tree = argv[cnt];
+            if (strcmp(argv[cnt], "-sup2") == 0) {
+                outError("Deprecated -sup2 option, please use --gcf --tree FILE");
+            }
+            
+            if (strcmp(argv[cnt], "--gcf") == 0) {
 				params.consensus_type = CT_ASSIGN_SUPPORT_EXTENDED;
 				continue;
 			}
-            if (strcmp(argv[cnt], "--site-concordance") == 0 || strcmp(argv[cnt], "--scf") == 0) {
+            if (strcmp(argv[cnt], "--scf") == 0) {
+                params.consensus_type = CT_ASSIGN_SUPPORT_EXTENDED;
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use --site-concordance NUM_QUARTETS";
+                    throw "Use --scf NUM_QUARTETS";
                 params.site_concordance = convert_int(argv[cnt]);
                 if (params.site_concordance < 1)
-                    throw "Positive --site-concordance please";
+                    throw "Positive --scf please";
                 continue;
             }
             if (strcmp(argv[cnt], "--qic") == 0) {
@@ -3602,7 +3603,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             
-			if (strcmp(argv[cnt], "-t") == 0 || strcmp(argv[cnt], "-te") == 0) {
+			if (strcmp(argv[cnt], "-t") == 0 || strcmp(argv[cnt], "-te") == 0 || strcmp(argv[cnt], "--tree") == 0) {
                 if (strcmp(argv[cnt], "-te") == 0) {
                     if (params.gbo_replicates != 0) {
                         outError("Ultrafast bootstrap does not work with -te option");

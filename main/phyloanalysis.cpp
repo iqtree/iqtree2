@@ -3887,7 +3887,7 @@ void runUnlinkedPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 }
 
 void assignBranchSupportNew(Params &params) {
-    if (!params.second_tree)
+    if (!params.user_file)
         outError("No target tree file provided");
     PhyloTree *tree;
     Alignment *aln = NULL;
@@ -3906,11 +3906,11 @@ void assignBranchSupportNew(Params &params) {
         tree = new PhyloTree;
     }
     
-    cout << "Reading tree " << params.second_tree << " ..." << endl;
-    tree->readTree(params.second_tree, params.is_rooted);
+    cout << "Reading tree " << params.user_file << " ..." << endl;
+    tree->readTree(params.user_file, params.is_rooted);
     cout << tree->leafNum << " taxa and " << tree->branchNum << " branches" << endl;
-    if (params.user_file) {
-        MTreeSet trees(params.user_file, params.is_rooted, params.tree_burnin, params.tree_max_count);
+    if (params.treeset_file) {
+        MTreeSet trees(params.treeset_file, params.is_rooted, params.tree_burnin, params.tree_max_count);
         double start_time = getRealTime();
         cout << "Computing gene concordance factor..." << endl;
         tree->computeGeneConcordance(trees);
@@ -3929,21 +3929,23 @@ void assignBranchSupportNew(Params &params) {
         cout << getRealTime() - start_time << " sec" << endl;
         delete aln;
     }
-    string prefix = (params.out_prefix) ? params.out_prefix : params.second_tree;
-    string str = prefix + ".suptree";
+    string prefix = (params.out_prefix) ? params.out_prefix : params.user_file;
+    string str = prefix + ".cf.tree";
     tree->printTree(str.c_str());
     cout << "Tree with assigned branch supports written to " << str << endl;
     if (verbose_mode >= VB_DEBUG)
         tree->drawTree(cout);
-    str = prefix + ".branch-id";
+    str = prefix + ".cf.branch";
     tree->printTree(str.c_str(), WT_BR_LEN + WT_INT_NODE + WT_NEWLINE);
     cout << "Tree with branch IDs written to " << str << endl;
     ofstream out;
-    string filename = prefix + ".concord";
+    string filename = prefix + ".cf.stat";
     out.open(filename.c_str());
     out << "# ID: Branch ID" << endl
         << "# Length: Branch length" << endl
-        << "# Value: Existing branch value" << endl
+        << "# Value: Existing branch value" << endl;
+    if (params.treeset_file)
+        out
         << "# geneCF: Gene concordance factor (%)" << endl
         << "# geneN: Number of trees decisive for the branch" << endl;
     if (params.internode_certainty == 1) {
@@ -3954,7 +3956,9 @@ void assignBranchSupportNew(Params &params) {
             << "# siteDF1: Site disconcordance factor (%) for alternative quartet 1" << endl
             << "# siteDF2: Site disconcordance factor (%) for alternative quartet 2" << endl
             << "# siteN: number of informative sites averaged over " << params.site_concordance << " quartets" << endl;
-    out << "ID\tLength\tValue\tgeneCF\tgeneN";
+    out << "ID\tLength\tValue";
+    if (params.treeset_file)
+        out << "\tgeneCF\tgeneN";
     if (params.internode_certainty)
         out << "\tIC";
     if (params.site_concordance)
@@ -3969,9 +3973,11 @@ void assignBranchSupportNew(Params &params) {
         string value = brit->second->name.substr(0, brit->second->name.find('/'));
         ConcordanceInfo info;
         info.extract(branch);
-        info.gCF = round(info.gCF*10000)/100;
-        out << ID << '\t' << length << '\t' << value << '\t'
-            << info.gCF << '\t' << info.gN;
+        out << ID << '\t' << length << '\t' << value;
+        if (params.treeset_file) {
+            info.gCF = round(info.gCF*10000)/100;
+            out << '\t' << info.gCF << '\t' << info.gN;
+        }
         if (params.site_concordance) {
             info.sCF = round(info.sCF*10000)/100;
             info.sDF1 = round(info.sDF1*10000)/100;
