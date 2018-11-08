@@ -231,6 +231,9 @@ public:
 
 };
 
+#define PUT_ATTR(branch, value) branch->putAttr(#value, value)
+#define GET_ATTR(branch, value) branch->getAttr(#value, value)
+
 /**
     Neighbor vector
  */

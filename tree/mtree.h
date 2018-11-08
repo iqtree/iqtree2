@@ -502,8 +502,9 @@ public:
      @param branches the branches are stored here
      @param node the starting node, NULL to start from the root
      @param dad dad of the node, used to direct the search
+     @param post_traveral true for post-traversal, false for pre-traversal
      */
-    void getInnerBranches(BranchVector& branches, Node *node = NULL, Node *dad = NULL);
+    void getInnerBranches(BranchVector& branches, Node *node = NULL, Node *dad = NULL, bool post_traversal = false);
 
     /**
      *      get all descending internal branches below \a node and \a dad up to depth \a depth
@@ -727,7 +728,12 @@ public:
 	STATISTICS
 ********************************************************/
 
-	void extractQuadSubtrees(vector<Split*> &subtrees, Node *node = NULL, Node *dad = NULL);
+    /**
+     extract four subtrees around each inner branch
+     @param[out] subtrees consecutive 4 subtrees
+     @param[out] branches corresponding inner branch vector
+     */
+	void extractQuadSubtrees(vector<Split*> &subtrees, BranchVector &branches, Node *node = NULL, Node *dad = NULL);
 
 	/**
      * OBSOLETE: now in PhyloTree::computeGeneConcordance

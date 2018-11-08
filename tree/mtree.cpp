@@ -1155,16 +1155,22 @@ void MTree::getInnerBranches(Branches& branches, Node *node, Node *dad) {
     }
 }
 
-void MTree::getInnerBranches(BranchVector& branches, Node *node, Node *dad) {
+void MTree::getInnerBranches(BranchVector& branches, Node *node, Node *dad, bool post_traversal) {
     if (!node) node = root;
     FOR_NEIGHBOR_IT(node, dad, it) {
-        if (!node->isLeaf() && !(*it)->node->isLeaf()) {
+        if (!node->isLeaf() && !(*it)->node->isLeaf() && !post_traversal) {
             Branch branch;
             branch.first = node;
             branch.second = (*it)->node;
             branches.push_back(branch);
         }
         getInnerBranches(branches, (*it)->node, node);
+        if (!node->isLeaf() && !(*it)->node->isLeaf() && post_traversal) {
+            Branch branch;
+            branch.first = node;
+            branch.second = (*it)->node;
+            branches.push_back(branch);
+        }
     }
 }
 
@@ -2040,10 +2046,10 @@ void MTree::getTaxa(Split &taxa, Node *node, Node *dad) {
 }
 
 
-void MTree::extractQuadSubtrees(vector<Split*> &subtrees, Node *node, Node *dad) {
+void MTree::extractQuadSubtrees(vector<Split*> &subtrees, BranchVector &branches, Node *node, Node *dad) {
 	if (!node) node = root;
 	FOR_NEIGHBOR_IT(node, dad, it) {
-		extractQuadSubtrees(subtrees, (*it)->node, node);
+		extractQuadSubtrees(subtrees, branches, (*it)->node, node);
 		if ((*it)->node->isLeaf()) continue;
 		// internal branch
 		ASSERT(node->degree() == 3 && (*it)->node->degree() == 3);
@@ -2062,6 +2068,7 @@ void MTree::extractQuadSubtrees(vector<Split*> &subtrees, Node *node, Node *dad)
 			cnt += sp->countTaxa();
 		}
 		ASSERT(cnt == leafNum);
+        branches.push_back({node, child});
 	}
 }
 

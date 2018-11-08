@@ -7,31 +7,16 @@
 
 #include "phylosupertree.h"
 
-void ConcordanceInfo::extract(Neighbor *branch) {
-    if (Params::getInstance().treeset_file) {
-        bool check = branch->getAttr("gCF", gCF) && branch->getAttr("gN", gN);
-        ASSERT(check);
-    }
-    if (Params::getInstance().site_concordance) {
-        bool check = branch->getAttr("sCF", sCF) && branch->getAttr("sN", sN) &&
-                branch->getAttr("sDF1", sDF1) && branch->getAttr("sDF2", sDF2);
-        ASSERT(check);
-    }
-}
-
-void PhyloTree::computeSiteConcordance() {
+void PhyloTree::computeSiteConcordance(map<string,string> &meanings) {
     BranchVector branches;
     getInnerBranches(branches);
     for (auto it = branches.begin(); it != branches.end(); it++) {
-        ConcordanceInfo info;
-        computeSiteConcordance((*it), params->site_concordance, info, randstream);
+        computeSiteConcordance((*it), params->site_concordance, randstream);
         Neighbor *nei = it->second->findNeighbor(it->first);
-        nei->putAttr("sCF", info.sCF);
-        nei->putAttr("sN", info.sN);
-        nei->putAttr("sDF1", info.sDF1);
-        nei->putAttr("sDF2", info.sDF2);
+        double sCF;
+        GET_ATTR(nei, sCF);
 
-        string sup_str = convertDoubleToString(round(info.sCF*1000)/10);
+        string sup_str = convertDoubleToString(round(sCF*1000)/10);
         Node *node = it->second;
         if (Params::getInstance().newick_extended_format) {
             if (node->name.empty() || node->name.back() != ']') {
@@ -44,6 +29,10 @@ void PhyloTree::computeSiteConcordance() {
             node->name += sup_str;
         }
     }
+    meanings.insert({"sCF", "Site concordance factor (%) averaged over " + convertIntToString(params->site_concordance) +  " quartets"});
+    meanings.insert({"sDF1", "Site discordance factor (%) for alternative quartet 1"});
+    meanings.insert({"sDF2", "Site discordance factor (%) for alternative quartet 2"});
+    meanings.insert({"sN", "Number of informative sites averaged over " + convertIntToString(params->site_concordance) +  " quartets"});
 }
 
 void Alignment::computeQuartetSupports(IntVector &quartet, size_t *support) {
@@ -80,7 +69,7 @@ void SuperAlignment::computeQuartetSupports(IntVector &quartet, size_t *support)
     }
 }
 
-void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, ConcordanceInfo &info, int *rstream) {
+void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstream) {
     vector<IntVector> taxa;
     taxa.resize(4);
 
@@ -101,8 +90,10 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, Concordanc
             outError(__func__, " only work with bifurcating tree");
     }
     
-    info.sCF = 0.0; // concordance factor
-    info.sDF1 = info.sDF2 = 0.0;
+    double sCF = 0.0; // concordance factor
+    double sDF1 = 0.0;
+    double sDF2 = 0.0;
+    double sN = 0.0;
     size_t sum_sites = 0;
     for (int i = 0; i < nquartets; i++) {
         int j;
@@ -118,35 +109,43 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, Concordanc
         size_t sum = support[0] + support[1] + support[2];
         sum_sites += sum;
         if (sum > 0) {
-            info.sCF += ((double)support[0]) / sum;
-            info.sDF1 += ((double)support[1]) / sum;
-            info.sDF2 += ((double)support[2]) / sum;
+            sCF += ((double)support[0]) / sum;
+            sDF1 += ((double)support[1]) / sum;
+            sDF2 += ((double)support[2]) / sum;
         }
     }
-    info.sN = (double)sum_sites / nquartets;
-    info.sCF = info.sCF / nquartets;
-    info.sDF1 = info.sDF1 / nquartets;
-    info.sDF2 = info.sDF2 / nquartets;
+    sN = (double)sum_sites / nquartets;
+    sCF = round(sCF / nquartets * 10000)/100;
+    sDF1 = round(sDF1 / nquartets * 10000)/100;
+    sDF2 = round(sDF2 / nquartets * 10000)/100;
+    Neighbor *nei = branch.second->findNeighbor(branch.first);
+    PUT_ATTR(nei, sCF);
+    PUT_ATTR(nei, sN);
+    PUT_ATTR(nei, sDF1);
+    PUT_ATTR(nei, sDF2);
 }
 
 /**
  assign branch supports to a target tree
  */
-void PhyloTree::computeGeneConcordance(MTreeSet &trees) {
-    SplitGraph mysg;
-    NodeVector mynodes, nodes1, nodes2;
-    convertSplits(mysg, &mynodes, root->neighbors[0]->node);
-    getBranches(nodes1, nodes2, root->neighbors[0]->node, NULL, true);
+void PhyloTree::computeGeneConcordance(MTreeSet &trees, map<string,string> &meanings) {
+    StrVector names;
+    getTaxaName(names);
+    StringIntMap name_map;
+    for (auto stri = names.begin(); stri != names.end(); stri++)
+        name_map[*stri] = stri - names.begin();
+    BranchVector branches;
     vector<Split*> subtrees;
-    extractQuadSubtrees(subtrees, root->neighbors[0]->node);
-    IntVector decisive_counts;
-    decisive_counts.resize(mynodes.size(), 0);
+    extractQuadSubtrees(subtrees, branches, root->neighbors[0]->node);
+    IntVector decisive_counts; // number of decisive trees
+    decisive_counts.resize(branches.size(), 0);
+    IntVector supports[3]; // number of trees supporting 3 alternative splits
+    supports[0].resize(branches.size(), 0);
+    supports[1].resize(branches.size(), 0);
+    supports[2].resize(branches.size(), 0);
     StrVector occurence_trees; // list of tree IDs where each split occurs
     if (verbose_mode >= VB_MED)
-        occurence_trees.resize(mynodes.size());
-    SplitGraph::iterator sit;
-    for (sit = mysg.begin(); sit != mysg.end(); sit++)
-        (*sit)->setWeight(0.0);
+        occurence_trees.resize(branches.size());
     int treeid, taxid;
     for (treeid = 0; treeid < trees.size(); treeid++) {
         MTree *tree = trees[treeid];
@@ -155,19 +154,17 @@ void PhyloTree::computeGeneConcordance(MTreeSet &trees) {
         // create the map from taxa between 2 trees
         Split taxa_mask(leafNum);
         for (StrVector::iterator it = taxname.begin(); it != taxname.end(); it++) {
-            taxid = mysg.findLeafName(*it);
-            if (taxid < 0)
+            if (name_map.find(*it) == name_map.end())
                 outError("Taxon not found in full tree: ", *it);
-            taxa_mask.addTaxon(taxid);
+            taxa_mask.addTaxon(name_map[*it]);
         }
         // make the taxa ordering right before converting to split system
         taxname.clear();
         int smallid;
         for (taxid = 0, smallid = 0; taxid < leafNum; taxid++)
             if (taxa_mask.containTaxon(taxid)) {
-                taxname.push_back(mysg.getTaxa()->GetTaxonLabel(taxid));
-                string name = (string)mysg.getTaxa()->GetTaxonLabel(taxid);
-                tree->findLeafName(name)->id = smallid++;
+                taxname.push_back(names[taxid]);
+                tree->findLeafName(names[taxid])->id = smallid++;
             }
         ASSERT(taxname.size() == tree->leafNum);
         
@@ -175,87 +172,80 @@ void PhyloTree::computeGeneConcordance(MTreeSet &trees) {
         //NodeVector nodes;
         tree->convertSplits(sg);
         SplitIntMap hash_ss;
-        for (sit = sg.begin(); sit != sg.end(); sit++)
+        for (auto sit = sg.begin(); sit != sg.end(); sit++)
             hash_ss.insertSplit((*sit), 1);
         
         // now scan through all splits in current tree
         int id, qid;
-        for (sit = mysg.begin(), id = 0, qid = 0; sit != mysg.end(); sit++, id++)
-            if ((*sit)->trivial() < 0) // it is an internal split
-            {
-                
-                bool decisive = true;
-                for (int i = 0; i < 4; i++) {
-                    if (!taxa_mask.overlap(*subtrees[qid+i])) {
-                        decisive = false;
-                        break;
-                    }
+        for (id = 0, qid = 0; qid < subtrees.size(); id++, qid += 4)
+        {
+            bool decisive = true;
+            int i;
+            for (i = 0; i < 4; i++) {
+                if (!taxa_mask.overlap(*subtrees[qid+i])) {
+                    decisive = false;
+                    break;
                 }
-                qid += 4;
-                if (!decisive) continue;
-                
-                decisive_counts[id]++;
-                Split *subsp = (*sit)->extractSubSplit(taxa_mask);
+            }
+            if (!decisive) continue;
+            
+            decisive_counts[id]++;
+            for (i = 0; i < 3; i++) {
+                Split this_split = *subtrees[qid]; // current split
+                this_split += *subtrees[qid+i+1];
+                Split *subsp = this_split.extractSubSplit(taxa_mask);
                 if (subsp->shouldInvert())
                     subsp->invert();
-                Split *sp = hash_ss.findSplit(subsp);
-                if (sp && sp->trivial() < 0) {
-                    (*sit)->setWeight((*sit)->getWeight()+1.0);
-                    if (verbose_mode >= VB_MED)
+                if (hash_ss.findSplit(subsp)) {
+                    supports[i][id]++;
+                    if (verbose_mode >= VB_MED && i == 0)
                         occurence_trees[id] += convertIntToString(treeid+1) + " ";
-                    if (verbose_mode >= VB_MAX) {
-                        for (taxid = 0; taxid < (*sit)->getNTaxa(); taxid++)
-                            if ((*sit)->containTaxon(taxid))
-                                cout << " " << mysg.getTaxa()->GetTaxonLabel(taxid);
-                        cout << " --> ";
-                        for (taxid = 0; taxid < sp->getNTaxa(); taxid++)
-                            if (sp->containTaxon(taxid))
-                                cout << " " << taxname[taxid];
-                        cout << endl;
-                    }
                 }
                 delete subsp;
             }
+        }
         
     }
     
-    ASSERT(nodes1.size() == mynodes.size());
-    for (int i = 0; i < mysg.size(); i++)
-        if (!mynodes[i]->isLeaf())
-        {
-            ASSERT(nodes1[i] == mynodes[i] || nodes2[i] == mynodes[i]);
-            Neighbor *nei;
-            if (nodes1[i] == mynodes[i])
-                nei = nodes1[i]->findNeighbor(nodes2[i]);
+    for (int i = 0; i < branches.size(); i++) {
+        Neighbor *nei = branches[i].second->findNeighbor(branches[i].first);
+        double gCF = round((double)supports[0][i]/decisive_counts[i] * 10000)/100;
+        double gDF1 = round((double)supports[1][i]/decisive_counts[i] * 10000)/100;
+        double gDF2 = round((double)supports[2][i]/decisive_counts[i] * 10000)/100;
+        int gN = decisive_counts[i];
+        PUT_ATTR(nei, gCF);
+        PUT_ATTR(nei, gDF1);
+        PUT_ATTR(nei, gDF2);
+        PUT_ATTR(nei, gN);
+        
+        stringstream tmp;
+        tmp.precision(3);
+        tmp << (double)supports[0][i]/decisive_counts[i]*100;
+        if (verbose_mode >= VB_MED)
+            tmp << "%" << decisive_counts[i];
+        
+        Node *node = branches[i].second;
+        if (Params::getInstance().newick_extended_format) {
+            if (node->name.empty() || node->name.back() != ']')
+                node->name += "[&CF=" + tmp.str() + "]";
             else
-                nei = nodes2[i]->findNeighbor(nodes1[i]);
-            nei->putAttr("gCF", mysg[i]->getWeight()/decisive_counts[i]);
-            nei->putAttr("gN", decisive_counts[i]);
-            
-            stringstream tmp;
-            if (mysg[i]->getWeight() == 0.0)
-                tmp << "0";
-            else
-                tmp << round((mysg[i]->getWeight()/decisive_counts[i])*1000)/10;
-            if (verbose_mode >= VB_MED)
-                tmp << "%" << decisive_counts[i];
-            
-            if (Params::getInstance().newick_extended_format) {
-                if (mynodes[i]->name.empty() || mynodes[i]->name.back() != ']')
-                    mynodes[i]->name += "[&CF=" + tmp.str() + "]";
-                else
-                    mynodes[i]->name = mynodes[i]->name.substr(0, mynodes[i]->name.length()-1) + ",!CF=" + tmp.str() + "]";
-            } else {
-                if (!mynodes[i]->name.empty())
-                    mynodes[i]->name.append("/");
-                mynodes[i]->name.append(tmp.str());
-            }
-            if (verbose_mode >= VB_MED) {
-                cout << mynodes[i]->name << " " << occurence_trees[i] << endl;
-            }
+                node->name = node->name.substr(0, node->name.length()-1) + ",!CF=" + tmp.str() + "]";
+        } else {
+            if (!node->name.empty())
+                node->name.append("/");
+            node->name.append(tmp.str());
         }
+        if (verbose_mode >= VB_MED) {
+            cout << node->name << " " << occurence_trees[i] << endl;
+        }
+    }
     for (vector<Split*>::reverse_iterator it = subtrees.rbegin(); it != subtrees.rend(); it++)
         delete (*it);
+
+    meanings.insert({"gCF", "Gene concordance factor (%)"});
+    meanings.insert({"gDF1", "Gene discordance factor (%) for alternative split 1"});
+    meanings.insert({"gDF2", "Gene discordance factor (%) for alternative split 2"});
+    meanings.insert({"gN", "Number of trees decisive for the branch"});
 }
 
 /**

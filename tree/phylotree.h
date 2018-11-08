@@ -307,20 +307,6 @@ public:
 // END traversal information
 // ********************************************
 
-/** branch concordance information */
-class ConcordanceInfo {
-public:
-    double gCF; // gene concordance factor
-    int gN; // number of decisive genes
-    double sCF; // site concordance factor based on quartets
-    double sDF1; // site discordance factor for 2 alternative quartets
-    double sDF2; // site discordance factor for 2 alternative quartets
-    double sN; // number of decisive sites
-    /**
-        extract information from a branch
-    */
-    void extract(Neighbor *branch);
-};
 
 /**
 Phylogenetic Tree class
@@ -1820,7 +1806,7 @@ public:
     /**
      compute site concordance factor and assign node names
      */
-    void computeSiteConcordance();
+    void computeSiteConcordance(map<string,string> &meanings);
 
     /**
      compute site concordance factor
@@ -1829,14 +1815,14 @@ public:
      @param[out] info concordance information
      @param rstream random stream
      */
-    virtual void computeSiteConcordance(Branch &branch, int nquartets, ConcordanceInfo &info, int *rsteam);
+    virtual void computeSiteConcordance(Branch &branch, int nquartets, int *rsteam);
 
     /**
      Compute gene concordance factor
      for each branch, assign how many times this branch appears in the input set of trees.
      Work fine also when the trees do not have the same taxon set.
      */
-    void computeGeneConcordance(MTreeSet &trees);
+    void computeGeneConcordance(MTreeSet &trees, map<string,string> &meanings);
 
     /**
      Compute quartet concordance factor and internode certainty, similar to Zhou et al. biorxiv
