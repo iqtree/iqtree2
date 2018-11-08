@@ -3887,75 +3887,97 @@ void runUnlinkedPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 }
 
 void assignBranchSupportNew(Params &params) {
-    if (!params.user_file)
-        outError("No trees file provided");
     if (!params.second_tree)
         outError("No target tree file provided");
-    cout << "Reading tree " << params.second_tree << " ..." << endl;
-    PhyloTree tree;
-    tree.readTree(params.second_tree, params.is_rooted);
-    cout << tree.leafNum << " taxa and " << tree.branchNum << " branches" << endl;
-    cout << "Computing gene concordance factor..." << endl;
-    MTreeSet trees(params.user_file, params.is_rooted, params.tree_burnin, params.tree_max_count);
-    tree.computeGeneConcordance(trees);
-    if (params.internode_certainty)
-        tree.computeQuartetConcordance(trees);
+    PhyloTree *tree;
+    Alignment *aln = NULL;
     if (params.site_concordance) {
         params.compute_seq_composition = false;
-        if (!params.aln_file)
-            outError("Please provide an alignment via -s option");
-        Alignment *aln = new Alignment(params.aln_file, params.sequence_type, params.intype, params.model_name);
-        tree.setAlignment(aln);
+        if (!params.aln_file && !params.partition_file)
+            outError("Please provide an alignment (-s) or partition file");
+        if (params.partition_file) {
+            aln = new SuperAlignment(params);
+            tree = new PhyloSuperTree((SuperAlignment*)aln);
+        } else {
+            aln = new Alignment(params.aln_file, params.sequence_type, params.intype, params.model_name);
+            tree = new PhyloTree;
+        }
+    } else {
+        tree = new PhyloTree;
+    }
+    
+    cout << "Reading tree " << params.second_tree << " ..." << endl;
+    tree->readTree(params.second_tree, params.is_rooted);
+    cout << tree->leafNum << " taxa and " << tree->branchNum << " branches" << endl;
+    if (params.user_file) {
+        MTreeSet trees(params.user_file, params.is_rooted, params.tree_burnin, params.tree_max_count);
+        double start_time = getRealTime();
+        cout << "Computing gene concordance factor..." << endl;
+        tree->computeGeneConcordance(trees);
+        if (params.internode_certainty)
+            tree->computeQuartetConcordance(trees);
+        cout << getRealTime() - start_time << " sec" << endl;
+    }
+    if (params.site_concordance) {
+        tree->setAlignment(aln);
+        tree->setParams(&params);
+        if (tree->isSuperTree())
+            ((PhyloSuperTree*)tree)->mapTrees();
         cout << "Computing site concordance factor..." << endl;
-        tree.computeSiteConcordance();
+        double start_time = getRealTime();
+        tree->computeSiteConcordance();
+        cout << getRealTime() - start_time << " sec" << endl;
         delete aln;
     }
-    string str = (string)params.second_tree + ".suptree";
-    tree.printTree(str.c_str());
+    string prefix = (params.out_prefix) ? params.out_prefix : params.second_tree;
+    string str = prefix + ".suptree";
+    tree->printTree(str.c_str());
     cout << "Tree with assigned branch supports written to " << str << endl;
     if (verbose_mode >= VB_DEBUG)
-        tree.drawTree(cout);
-    str = (string)params.second_tree + ".branch-id";
-    tree.printTree(str.c_str(), WT_BR_LEN + WT_INT_NODE + WT_NEWLINE);
+        tree->drawTree(cout);
+    str = prefix + ".branch-id";
+    tree->printTree(str.c_str(), WT_BR_LEN + WT_INT_NODE + WT_NEWLINE);
     cout << "Tree with branch IDs written to " << str << endl;
     ofstream out;
-    string filename = (string)params.second_tree + ".concord";
+    string filename = prefix + ".concord";
     out.open(filename.c_str());
     out << "# ID: Branch ID" << endl
         << "# Length: Branch length" << endl
         << "# Value: Existing branch value" << endl
-        << "# geneCF: Gene concordance factor" << endl
+        << "# geneCF: Gene concordance factor (%)" << endl
         << "# geneN: Number of trees decisive for the branch" << endl;
     if (params.internode_certainty == 1) {
         out << "# IC: internode certainty (Salichos & Rokas 2013)" << endl;
     }
     if (params.site_concordance)
-        out << "# siteCF: Site concordance factor averaged over " << params.site_concordance << " quartets" << endl
+        out << "# siteCF: Site concordance factor (%) averaged over " << params.site_concordance << " quartets" << endl
+            << "# siteDF1: Site disconcordance factor (%) for alternative quartet 1" << endl
+            << "# siteDF2: Site disconcordance factor (%) for alternative quartet 2" << endl
             << "# siteN: number of informative sites averaged over " << params.site_concordance << " quartets" << endl;
     out << "ID\tLength\tValue\tgeneCF\tgeneN";
     if (params.internode_certainty)
         out << "\tIC";
     if (params.site_concordance)
-        out << "\tsiteCF\tsiteN";
+        out << "\tsiteCF\tsiteDF1\tsiteDF2\tsiteN";
     out << endl;
     BranchVector branches;
-    tree.getInnerBranches(branches);
+    tree->getInnerBranches(branches);
     for (auto brit = branches.begin(); brit != branches.end(); brit++) {
         Neighbor *branch = brit->second->findNeighbor(brit->first);
         int ID = brit->second->id;
         double length = branch->length;
         string value = brit->second->name.substr(0, brit->second->name.find('/'));
-        double gCF, gN, sCF, sN;
-        bool check = branch->getAttr("gCF", gCF) && branch->getAttr("gN", gN);
-        ASSERT(check);
-        if (params.site_concordance) {
-            check = branch->getAttr("sCF", sCF) && branch->getAttr("sN", sN);
-            ASSERT(check);
-        }
+        ConcordanceInfo info;
+        info.extract(branch);
+        info.gCF = round(info.gCF*10000)/100;
         out << ID << '\t' << length << '\t' << value << '\t'
-            << gCF << '\t' << gN;
-        if (params.site_concordance)
-            out << '\t' << sCF << '\t' << sN;
+            << info.gCF << '\t' << info.gN;
+        if (params.site_concordance) {
+            info.sCF = round(info.sCF*10000)/100;
+            info.sDF1 = round(info.sDF1*10000)/100;
+            info.sDF2 = round(info.sDF2*10000)/100;
+            out << '\t' << info.sCF << '\t' << info.sDF1 << '\t' << info.sDF2 << '\t' << info.sN;
+        }
         out << endl;
     }
     out.close();

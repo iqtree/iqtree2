@@ -409,6 +409,15 @@ public:
     virtual void endMarginalAncestralState(bool orig_kernel_nonrev, double* &ptn_ancestral_prob, int* &ptn_ancestral_seq);
 
 
+    /**
+     compute site concordance factor
+     @param branch target branch
+     @param nquartets number of quartets
+     @param[out] info concordance information
+     @param rstream random stream
+     */
+    virtual void computeSiteConcordance(Branch &branch, int nquartets, ConcordanceInfo &info, int *rsteam);
+    
 	/**
 		write site-rates to a file in the following format:
 		1  rate_1
