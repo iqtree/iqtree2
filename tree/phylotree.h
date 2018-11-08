@@ -307,6 +307,21 @@ public:
 // END traversal information
 // ********************************************
 
+/** branch concordance information */
+class ConcordanceInfo {
+public:
+    double gCF; // gene concordance factor
+    int gN; // number of decisive genes
+    double sCF; // site concordance factor based on quartets
+    double sDF1; // site discordance factor for 2 alternative quartets
+    double sDF2; // site discordance factor for 2 alternative quartets
+    double sN; // number of decisive sites
+    /**
+        extract information from a branch
+    */
+    void extract(Neighbor *branch);
+};
+
 /**
 Phylogenetic Tree class
 
@@ -1808,11 +1823,13 @@ public:
     void computeSiteConcordance();
 
     /**
-     compute site concordance factor and assign node names
-     @return sCF value for this branch
-     @num_sites average number of quartet informative sites for the branch
+     compute site concordance factor
+     @param branch target branch
+     @param nquartets number of quartets
+     @param[out] info concordance information
+     @param rstream random stream
      */
-    virtual double computeSiteConcordance(Branch &branch, double &num_sites);
+    virtual void computeSiteConcordance(Branch &branch, int nquartets, ConcordanceInfo &info, int *rsteam);
 
     /**
      Compute gene concordance factor

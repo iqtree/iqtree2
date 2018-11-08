@@ -5,22 +5,32 @@
 //  Created by Minh Bui on 24/9/18.
 //
 
-#include "phylotree.h"
+#include "phylosupertree.h"
+
+void ConcordanceInfo::extract(Neighbor *branch) {
+    bool check = branch->getAttr("gCF", gCF) && branch->getAttr("gN", gN);
+    ASSERT(check);
+    if (Params::getInstance().site_concordance) {
+        check = branch->getAttr("sCF", sCF) && branch->getAttr("sN", sN) &&
+                branch->getAttr("sDF1", sDF1) && branch->getAttr("sDF2", sDF2);
+        ASSERT(check);
+    }
+}
 
 void PhyloTree::computeSiteConcordance() {
     BranchVector branches;
     getInnerBranches(branches);
     for (auto it = branches.begin(); it != branches.end(); it++) {
-        double num_sites;
-        double sup = computeSiteConcordance((*it), num_sites);
-        string sup_str = convertDoubleToString(round(sup*1000)/10);
-        Node *node = it->second;
-
+        ConcordanceInfo info;
+        computeSiteConcordance((*it), params->site_concordance, info, randstream);
         Neighbor *nei = it->second->findNeighbor(it->first);
-        
-        nei->putAttr("sCF", round(sup*1000)/10);
-        nei->putAttr("sN", num_sites);
-        
+        nei->putAttr("sCF", info.sCF);
+        nei->putAttr("sN", info.sN);
+        nei->putAttr("sDF1", info.sDF1);
+        nei->putAttr("sDF2", info.sDF2);
+
+        string sup_str = convertDoubleToString(round(info.sCF*1000)/10);
+        Node *node = it->second;
         if (Params::getInstance().newick_extended_format) {
             if (node->name.empty() || node->name.back() != ']') {
                 node->name += "[&sCF=" + sup_str + "]";
@@ -34,7 +44,7 @@ void PhyloTree::computeSiteConcordance() {
     }
 }
 
-double PhyloTree::computeSiteConcordance(Branch &branch, double &num_sites) {
+void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, ConcordanceInfo &info, int *rstream) {
     vector<IntVector> taxa;
     taxa.resize(4);
 
@@ -55,18 +65,19 @@ double PhyloTree::computeSiteConcordance(Branch &branch, double &num_sites) {
             outError(__func__, " only work with bifurcating tree");
     }
     
-    double sum_support = 0.0;
-    int sum_sites = 0;
-    for (int i = 0; i < Params::getInstance().site_concordance; i++) {
+    info.sCF = 0.0; // concordance factor
+    info.sDF1 = info.sDF2 = 0.0;
+    size_t sum_sites = 0;
+    for (int i = 0; i < nquartets; i++) {
         int j;
         // get a random quartet
         IntVector quartet;
         quartet.resize(taxa.size());
         for (j = 0; j < taxa.size(); j++) {
-            quartet[j] = taxa[j][random_int(taxa[j].size())];
+            quartet[j] = taxa[j][random_int(taxa[j].size(), rstream)];
         }
 
-        int support[3] = {0, 0, 0};
+        size_t support[3] = {0, 0, 0};
         for (auto pat = aln->begin(); pat != aln->end(); pat++) {
             if (!pat->isInformative()) continue;
             bool informative = true;
@@ -83,13 +94,57 @@ double PhyloTree::computeSiteConcordance(Branch &branch, double &num_sites) {
             if (pat->at(quartet[0]) == pat->at(quartet[3]) && pat->at(quartet[1]) == pat->at(quartet[2]) && pat->at(quartet[0]) != pat->at(quartet[1]))
                 support[2] += pat->frequency;
         }
-        int sum = support[0] + support[1] + support[2];
+        size_t sum = support[0] + support[1] + support[2];
         sum_sites += sum;
-        if (sum > 0)
-            sum_support += ((double)support[0]) / sum;
+        if (sum > 0) {
+            info.sCF += ((double)support[0]) / sum;
+            info.sDF1 += ((double)support[1]) / sum;
+            info.sDF2 += ((double)support[2]) / sum;
+        }
     }
-    num_sites = (double)sum_sites / Params::getInstance().site_concordance;
-    return sum_support / Params::getInstance().site_concordance;
+    info.sN = (double)sum_sites / nquartets;
+    info.sCF = info.sCF / nquartets;
+    info.sDF1 = info.sDF1 / nquartets;
+    info.sDF2 = info.sDF2 / nquartets;
+}
+
+void PhyloSuperTree::computeSiteConcordance(Branch &branch, int nquartets, ConcordanceInfo &info, int *rstream) {
+    info.sN = info.sCF = info.sDF1 = info.sDF2 = 0.0;
+    size_t sum_sites = 0;
+    for (int q = 0; q < nquartets; q++) {
+        size_t support[3] = {0, 0, 0};
+        // loop over all partitions
+        int part = 0;
+        for (auto tree = begin(); tree != end(); tree++, part++) {
+            SuperNeighbor *nei = (SuperNeighbor*)branch.second->findNeighbor(branch.first);
+            if (!nei->link_neighbors[part])
+                continue;
+            Branch this_branch;
+            this_branch.first = nei->link_neighbors[part]->node;
+            nei = (SuperNeighbor*)branch.first->findNeighbor(branch.second);
+            this_branch.second = nei->link_neighbors[part]->node;
+            
+            // check that this_branch is an internal branch
+            if (this_branch.first->isLeaf() || this_branch.second->isLeaf())
+                continue;
+            ConcordanceInfo this_info;
+            (*tree)->computeSiteConcordance(this_branch, 1, this_info, rstream);
+            support[0] += this_info.sCF * this_info.sN;
+            support[1] += this_info.sDF1 * this_info.sN;
+            support[2] += this_info.sDF2 * this_info.sN;
+        }
+        size_t sum = support[0] + support[1] + support[2];
+        sum_sites += sum;
+        if (sum > 0) {
+            info.sCF += ((double)support[0]) / sum;
+            info.sDF1 += ((double)support[1]) / sum;
+            info.sDF2 += ((double)support[2]) / sum;
+        }
+    }
+    info.sN = (double)sum_sites / nquartets;
+    info.sCF = info.sCF / nquartets;
+    info.sDF1 = info.sDF1 / nquartets;
+    info.sDF2 = info.sDF2 / nquartets;
 }
 
 /**
@@ -192,7 +247,7 @@ void PhyloTree::computeGeneConcordance(MTreeSet &trees) {
                 nei = nodes1[i]->findNeighbor(nodes2[i]);
             else
                 nei = nodes2[i]->findNeighbor(nodes1[i]);
-            nei->putAttr("gCF", round((mysg[i]->getWeight()/decisive_counts[i])*1000)/10);
+            nei->putAttr("gCF", mysg[i]->getWeight()/decisive_counts[i]);
             nei->putAttr("gN", decisive_counts[i]);
             
             stringstream tmp;
