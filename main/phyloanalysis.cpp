@@ -3915,16 +3915,18 @@ void assignBranchSupportNew(Params &params) {
     BranchVector::iterator brit;
     for (brit = branches.begin(); brit != branches.end(); brit++) {
         Neighbor *branch = brit->second->findNeighbor(brit->first);
-        string value = brit->second->name;
-        if (!value.empty())
-            branch->putAttr("value", value);
+        string label = brit->second->name;
+        if (!label.empty())
+            PUT_ATTR(branch, label);
     }
+    
+    map<string,string> meanings;
     
     if (params.treeset_file) {
         MTreeSet trees(params.treeset_file, params.is_rooted, params.tree_burnin, params.tree_max_count);
         double start_time = getRealTime();
         cout << "Computing gene concordance factor..." << endl;
-        tree->computeGeneConcordance(trees);
+        tree->computeGeneConcordance(trees, meanings);
         if (params.internode_certainty)
             tree->computeQuartetConcordance(trees);
         cout << getRealTime() - start_time << " sec" << endl;
@@ -3936,7 +3938,7 @@ void assignBranchSupportNew(Params &params) {
             ((PhyloSuperTree*)tree)->mapTrees();
         cout << "Computing site concordance factor..." << endl;
         double start_time = getRealTime();
-        tree->computeSiteConcordance();
+        tree->computeSiteConcordance(meanings);
         cout << getRealTime() - start_time << " sec" << endl;
         delete aln;
     }
@@ -3956,50 +3958,29 @@ void assignBranchSupportNew(Params &params) {
         << "# This file can be read in MS Excel or in R with command:" << endl
         << "#   tab=read.table('" <<  filename << "',header=TRUE)" << endl
         << "# Columns are tab-separated with following meaning:" << endl
-        << "#   ID:      Branch ID" << endl
-        << "#   Length:  Branch length" << endl
-        << "#   Value:   Existing branch value" << endl;
-    if (params.treeset_file)
-        out
-        << "#   geneCF:  Gene concordance factor (%)" << endl
-        << "#   geneN:   Number of trees decisive for the branch" << endl;
-    if (params.internode_certainty == 1) {
-        out
-    << "#   IC:      Internode certainty (Salichos & Rokas 2013)" << endl;
-    }
-    if (params.site_concordance)
-        out << "#   siteCF:  Site concordance factor (%) averaged over " << params.site_concordance << " quartets" << endl
-            << "#   siteDF1: Site disconcordance factor (%) for alternative quartet 1" << endl
-            << "#   siteDF2: Site disconcordance factor (%) for alternative quartet 2" << endl
-            << "#   siteN:   Number of informative sites averaged over " << params.site_concordance << " quartets" << endl;
-    out << "ID\tLength\tValue";
-    if (params.treeset_file)
-        out << "\tgeneCF\tgeneN";
-    if (params.internode_certainty)
-        out << "\tIC";
-    if (params.site_concordance)
-        out << "\tsiteCF\tsiteDF1\tsiteDF2\tsiteN";
-    out << endl;
+        << "#   ID: Branch ID" << endl;
+    map<string,string>::iterator mit;
+    for (mit = meanings.begin(); mit != meanings.end(); mit++)
+        out << "#   " << mit->first << ": " << mit->second << endl;
+    out << "#   Label: Existing branch label" << endl;
+    out << "#   Length: Branch length" << endl;
+    out << "ID";
+    for (mit = meanings.begin(); mit != meanings.end(); mit++)
+        out << "\t" << mit->first;
+    out << "\tLabel\tLength" << endl;
     for (brit = branches.begin(); brit != branches.end(); brit++) {
         Neighbor *branch = brit->second->findNeighbor(brit->first);
         int ID = brit->second->id;
         double length = branch->length;
-        string value = "NA";
-        branch->getAttr("value", value);
-        ConcordanceInfo info;
-        info.extract(branch);
-        out << ID << '\t' << length << '\t' << value;
-        if (params.treeset_file) {
-            info.gCF = round(info.gCF*10000)/100;
-            out << '\t' << info.gCF << '\t' << info.gN;
+        string label = "NA";
+        GET_ATTR(branch, label);
+        out << ID;
+        for (mit = meanings.begin(); mit != meanings.end(); mit++) {
+            double val;
+            branch->getAttr(mit->first, val);
+            out << '\t' << val;
         }
-        if (params.site_concordance) {
-            info.sCF = round(info.sCF*10000)/100;
-            info.sDF1 = round(info.sDF1*10000)/100;
-            info.sDF2 = round(info.sDF2*10000)/100;
-            out << '\t' << info.sCF << '\t' << info.sDF1 << '\t' << info.sDF2 << '\t' << info.sN;
-        }
-        out << endl;
+        out << '\t' << label << '\t' << length << endl;
     }
     out.close();
     cout << "Concordance factors printed to " << filename << endl;
