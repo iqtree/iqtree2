@@ -793,6 +793,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.second_tree = NULL;
     params.support_tag = NULL;
     params.site_concordance = 0;
+    params.site_concordance_partition = false;
     params.internode_certainty = 0;
     params.tree_weight_file = NULL;
     params.consensus_type = CT_NONE;
@@ -1527,6 +1528,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.site_concordance = convert_int(argv[cnt]);
                 if (params.site_concordance < 1)
                     throw "Positive --scf please";
+                continue;
+            }
+            if (strcmp(argv[cnt], "--scf-part") == 0) {
+                params.site_concordance_partition = true;
                 continue;
             }
             if (strcmp(argv[cnt], "--qic") == 0) {

@@ -35,7 +35,7 @@ void PhyloTree::computeSiteConcordance(map<string,string> &meanings) {
     meanings.insert({"sN", "Number of informative sites averaged over " + convertIntToString(params->site_concordance) +  " quartets"});
 }
 
-void Alignment::computeQuartetSupports(IntVector &quartet, size_t *support) {
+void Alignment::computeQuartetSupports(IntVector &quartet, vector<size_t> &support) {
     for (auto pat = begin(); pat != end(); pat++) {
         if (!pat->isInformative()) continue;
         bool informative = true;
@@ -54,7 +54,7 @@ void Alignment::computeQuartetSupports(IntVector &quartet, size_t *support) {
     }
 }
 
-void SuperAlignment::computeQuartetSupports(IntVector &quartet, size_t *support) {
+void SuperAlignment::computeQuartetSupports(IntVector &quartet, vector<size_t> &support) {
     for (int part = 0; part < partitions.size(); part++) {
         IntVector part_quartet;
         for (auto i = quartet.begin(); i != quartet.end(); i++) {
@@ -65,7 +65,16 @@ void SuperAlignment::computeQuartetSupports(IntVector &quartet, size_t *support)
         }
         if (part_quartet.size() != quartet.size())
             continue;
-        partitions[part]->computeQuartetSupports(part_quartet, support);
+        if (Params::getInstance().site_concordance_partition) {
+            vector<size_t> part_support;
+            part_support.resize(3, 0);
+            partitions[part]->computeQuartetSupports(part_quartet, part_support);
+            for (int j = 0; j < 3; j++) {
+                support[part*3+3+j] += part_support[j];
+                support[j] += part_support[j];
+            }
+        } else
+            partitions[part]->computeQuartetSupports(part_quartet, support);
     }
 }
 
@@ -95,7 +104,13 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstre
     double sDF2 = 0.0;
     double sN = 0.0;
     size_t sum_sites = 0;
-    for (int i = 0; i < nquartets; i++) {
+    int i;
+    vector<size_t> support;
+    support.resize(3, 0);
+    // reserve size for partition-wise concordant/discordant sites
+    if (Params::getInstance().site_concordance_partition && isSuperTree())
+        support.resize(((PhyloSuperTree*)this)->size()*3+3, 0);
+    for (i = 0; i < nquartets; i++) {
         int j;
         // get a random quartet
         IntVector quartet;
@@ -103,8 +118,7 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstre
         for (j = 0; j < taxa.size(); j++) {
             quartet[j] = taxa[j][random_int(taxa[j].size(), rstream)];
         }
-
-        size_t support[3] = {0, 0, 0};
+        support[0] = support[1] = support[2] = 0;
         aln->computeQuartetSupports(quartet, support);
         size_t sum = support[0] + support[1] + support[2];
         sum_sites += sum;
@@ -123,6 +137,17 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstre
     PUT_ATTR(nei, sN);
     PUT_ATTR(nei, sDF1);
     PUT_ATTR(nei, sDF2);
+    // insert key-value for partition-wise con/discordant sites
+    for (i = 3; i < support.size(); i++) {
+        string key;
+        switch (i%3) {
+            case 0: key = "sC"; break;
+            case 1: key = "sD1"; break;
+            case 2: key = "sD2"; break;
+        }
+        key = key + convertIntToString(i/3);
+        nei->putAttr(key, (double)support[i]/nquartets);
+    }
 }
 
 /**

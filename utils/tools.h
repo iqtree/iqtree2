@@ -1204,6 +1204,11 @@ public:
      */
     int site_concordance;
 
+    /**
+     TRUE to print concordant sites per partition
+     */
+    bool site_concordance_partition;
+
     /** 1 to compute internode certainty */
     int internode_certainty;
     
