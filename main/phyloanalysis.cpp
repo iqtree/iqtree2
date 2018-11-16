@@ -3984,6 +3984,40 @@ void assignBranchSupportNew(Params &params) {
     }
     out.close();
     cout << "Concordance factors printed to " << filename << endl;
+    if (!params.site_concordance_partition || !tree->isSuperTree())
+        return;
+    // print partition-wise concordant/discordant sites
+    filename = prefix + ".cf.stat2";
+    out.open(filename);
+    out << "# Concordance factor statistics for loci" << endl
+    << "# This file can be read in MS Excel or in R with command:" << endl
+    << "#   tab2=read.table('" <<  filename << "',header=TRUE)" << endl
+    << "# Columns are tab-separated with following meaning:" << endl
+    << "#   BranID: Branch ID" << endl
+    << "#   PartID: Locus ID" << endl
+    << "#   sC: Number of concordant sites averaged over " << params.site_concordance << " quartets" << endl
+    << "#   sD1: Number of discordant sites for alternative quartet 1" << endl
+    << "#   sD2: Number of discordant sites for alternative quartet 2" << endl
+    << "BranID\tPartID\tsC\tsD1\tsD2" << endl;
+    for (brit = branches.begin(); brit != branches.end(); brit++) {
+        Neighbor *branch = brit->second->findNeighbor(brit->first);
+        int ID = brit->second->id;
+        for (int part = 1; ; part++) {
+            double sC, sD1, sD2;
+            string key = "sC" + convertIntToString(part);
+            if (!branch->getAttr(key, sC))
+                break;
+            key = "sD1" + convertIntToString(part);
+            if (!branch->getAttr(key, sD1))
+                break;
+            key = "sD2" + convertIntToString(part);
+            if (!branch->getAttr(key, sD2))
+                break;
+            out << ID << '\t' << part << '\t' << sC << '\t' << sD1 << '\t' << sD2 << endl;
+        }
+    }
+    out.close();
+    cout << "Concordance factors for loci printed to " << filename << endl;
 }
 
 
