@@ -4160,7 +4160,7 @@ void usage_iqtree(char* argv[], bool full_command) {
 
     << endl << "CONCORDANCE FACTOR ANALYSIS:" << endl
     << "  -t FILE              Reference tree to assign concordance factor" << endl
-    << "  --gcf FILE           Set of trees gene concordance factor (gCF)" << endl
+    << "  --gcf FILE           Set of source trees for gene concordance factor (gCF)" << endl
     << "  --scf NUMBER         Number of quartets for site concordance factor (sCF)" << endl
     << "  -s FILE              Sequence alignment for --scf" << endl
     << "  -p FILE|DIR          Partition file or directory for --scf" << endl
