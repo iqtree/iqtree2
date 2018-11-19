@@ -3993,12 +3993,12 @@ void assignBranchSupportNew(Params &params) {
     << "# This file can be read in MS Excel or in R with command:" << endl
     << "#   tab2=read.table('" <<  filename << "',header=TRUE)" << endl
     << "# Columns are tab-separated with following meaning:" << endl
-    << "#   BranID: Branch ID" << endl
+    << "#   ID: Branch ID" << endl
     << "#   PartID: Locus ID" << endl
     << "#   sC: Number of concordant sites averaged over " << params.site_concordance << " quartets" << endl
     << "#   sD1: Number of discordant sites for alternative quartet 1" << endl
     << "#   sD2: Number of discordant sites for alternative quartet 2" << endl
-    << "BranID\tPartID\tsC\tsD1\tsD2" << endl;
+    << "ID\tPartID\tsC\tsD1\tsD2" << endl;
     for (brit = branches.begin(); brit != branches.end(); brit++) {
         Neighbor *branch = brit->second->findNeighbor(brit->first);
         int ID = brit->second->id;
