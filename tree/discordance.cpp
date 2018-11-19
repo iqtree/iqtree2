@@ -16,7 +16,7 @@ void PhyloTree::computeSiteConcordance(map<string,string> &meanings) {
         double sCF;
         GET_ATTR(nei, sCF);
 
-        string sup_str = convertDoubleToString(round(sCF*1000)/10);
+        string sup_str = convertDoubleToString(sCF);
         Node *node = it->second;
         if (Params::getInstance().newick_extended_format) {
             if (node->name.empty() || node->name.back() != ']') {
