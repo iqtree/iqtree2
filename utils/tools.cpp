@@ -1518,6 +1518,10 @@ void parseArg(int argc, char *argv[], Params &params) {
             
             if (strcmp(argv[cnt], "--gcf") == 0) {
 				params.consensus_type = CT_ASSIGN_SUPPORT_EXTENDED;
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --gcf <user_trees_file>";
+                params.treeset_file = argv[cnt];
 				continue;
 			}
             if (strcmp(argv[cnt], "--scf") == 0) {
@@ -4153,6 +4157,15 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --bisymtest-pval NUMER    P-value cutoff (default: 0.05)" << endl
     << "  --bisymtest-keep-zero     Keep NAs in the tests" << endl
     << "  --permsymtest NUMBER      Replicates for permutation tests of symmetry" << endl
+
+    << endl << "CONCORDANCE FACTOR ANALYSIS:" << endl
+    << "  -t FILE              Reference tree to assign concordance factor" << endl
+    << "  --gcf FILE           Set of trees gene concordance factor (gCF)" << endl
+    << "  --scf NUMBER         Number of quartets for site concordance factor (sCF)" << endl
+    << "  -s FILE              Sequence alignment for --scf" << endl
+    << "  -p FILE|DIR          Partition file or directory for --scf" << endl
+    << "  --scf-part           Write sCF per partition to .cf.stat2 file" << endl
+
     << endl;
     
 
