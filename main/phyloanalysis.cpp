@@ -3945,7 +3945,7 @@ void assignBranchSupportNew(Params &params) {
     string prefix = (params.out_prefix) ? params.out_prefix : params.user_file;
     string str = prefix + ".cf.tree";
     tree->printTree(str.c_str());
-    cout << "Tree with assigned branch supports written to " << str << endl;
+    cout << "Tree with concordance factors written to " << str << endl;
     if (verbose_mode >= VB_DEBUG)
         tree->drawTree(cout);
     str = prefix + ".cf.branch";
@@ -3983,7 +3983,7 @@ void assignBranchSupportNew(Params &params) {
         out << '\t' << label << '\t' << length << endl;
     }
     out.close();
-    cout << "Concordance factors printed to " << filename << endl;
+    cout << "Concordance factors per branch printed to " << filename << endl;
     if (!params.site_concordance_partition || !tree->isSuperTree())
         return;
     // print partition-wise concordant/discordant sites
@@ -4017,7 +4017,7 @@ void assignBranchSupportNew(Params &params) {
         }
     }
     out.close();
-    cout << "Concordance factors for loci printed to " << filename << endl;
+    cout << "Concordance factors per branch and locus printed to " << filename << endl;
 }
 
 
