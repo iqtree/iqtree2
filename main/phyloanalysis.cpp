@@ -3907,7 +3907,8 @@ void assignBranchSupportNew(Params &params) {
     }
     
     cout << "Reading tree " << params.user_file << " ..." << endl;
-    tree->readTree(params.user_file, params.is_rooted);
+    bool rooted = params.is_rooted;
+    tree->readTree(params.user_file, rooted);
     cout << ((tree->rooted) ? "rooted" : "un-rooted") << " tree with "
         << tree->leafNum - tree->rooted << " taxa and " << tree->branchNum << " branches" << endl;
 
@@ -3932,7 +3933,8 @@ void assignBranchSupportNew(Params &params) {
     map<string,string> meanings;
     
     if (params.treeset_file) {
-        MTreeSet trees(params.treeset_file, params.is_rooted, params.tree_burnin, params.tree_max_count);
+        bool rooted = params.is_rooted;
+        MTreeSet trees(params.treeset_file, rooted, params.tree_burnin, params.tree_max_count);
         double start_time = getRealTime();
         cout << "Computing gene concordance factor..." << endl;
         tree->computeGeneConcordance(trees, meanings);

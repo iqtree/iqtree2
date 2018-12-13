@@ -17,7 +17,10 @@ void PhyloTree::computeSiteConcordance(map<string,string> &meanings) {
         if (!GET_ATTR(nei, sCF))
             continue;
 
-        string sup_str = convertDoubleToString(sCF);
+        stringstream tmp;
+        tmp.precision(3);
+        tmp << sCF;
+        string sup_str = tmp.str();
         Node *node = it->second;
         if (Params::getInstance().newick_extended_format) {
             if (node->name.empty() || node->name.back() != ']') {
@@ -256,6 +259,8 @@ void PhyloTree::computeGeneConcordance(MTreeSet &trees, map<string,string> &mean
     }
     
     for (int i = 0; i < branches.size(); i++) {
+        if (decisive_counts[i] == 0)
+            continue;
         Neighbor *nei = branches[i].second->findNeighbor(branches[i].first);
         double gCF = round((double)supports[0][i]/decisive_counts[i] * 10000)/100;
         double gDF1 = round((double)supports[1][i]/decisive_counts[i] * 10000)/100;

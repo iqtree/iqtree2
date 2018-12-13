@@ -222,7 +222,7 @@ void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin, int ma
 			in->exceptions(ios::failbit | ios::badbit);
 
 		}
-		cout << size() << ((front()->rooted) ? " rooted" : " un-rooted") << " tree(s) loaded" << endl;
+		cout << size() << " tree(s) loaded (" << countRooted() << " rooted and " << countUnrooted() << " unrooted)" << endl;
 		if (omitted) cout << omitted << " tree(s) omitted" << endl;
 		//in->exceptions(ios::failbit | ios::badbit);
 		if (compressed) ((igzstream*)in)->close(); else ((ifstream*)in)->close();
@@ -240,18 +240,21 @@ void MTreeSet::checkConsistency() {
 	if (empty()) 
 		return;
 	iterator it;
-	bool rooted = false;
 	int i;
 	bool first = true;
+    // it's OK to have rooed and unrooted trees in the set
+    /*
+    bool rooted = false;
 	for (it = begin(), i = 0; it != end(); it++, i++)
 	if ((*it)) {
 		if (!first && (*it)->rooted != rooted) {
 			cout << i+1 << " " << (*it)->rooted << " " << rooted << endl;
 			outError("Rooted and unrooted trees are mixed up");
-			rooted = (*it)->rooted;
 		}
 		first = false;
+        rooted = (*it)->rooted;
 	}
+     */
 
 	NodeVector taxa1;
 	NodeVector::iterator it2;
@@ -292,6 +295,22 @@ bool MTreeSet::isRooted() {
 	if (empty()) return false;
 	return (front()->rooted);
 }
+
+int MTreeSet::countRooted() {
+    int count = 0;
+    for (auto tree = begin(); tree != end(); tree++)
+        if ((*tree)->rooted)
+            count++;
+    return count;
+}
+
+/**
+ @return number of unrooted trees in the set
+ */
+int MTreeSet::countUnrooted() {
+    return size() - countRooted();
+}
+
 
 void MTreeSet::assignLeafID() {
 	for (iterator it = begin(); it != end(); it++)
