@@ -3908,8 +3908,17 @@ void assignBranchSupportNew(Params &params) {
     
     cout << "Reading tree " << params.user_file << " ..." << endl;
     tree->readTree(params.user_file, params.is_rooted);
-    cout << tree->leafNum << " taxa and " << tree->branchNum << " branches" << endl;
+    cout << ((tree->rooted) ? "rooted" : "un-rooted") << " tree with "
+        << tree->leafNum - tree->rooted << " taxa and " << tree->branchNum << " branches" << endl;
 
+    // 2018-12-13: move initialisation to fix rooted vs unrooted tree
+    if (params.site_concordance) {
+        tree->setAlignment(aln);
+        tree->setParams(&params);
+        if (tree->isSuperTree())
+            ((PhyloSuperTree*)tree)->mapTrees();
+    }
+    
     BranchVector branches;
     tree->getInnerBranches(branches);
     BranchVector::iterator brit;
@@ -3932,10 +3941,6 @@ void assignBranchSupportNew(Params &params) {
         cout << getRealTime() - start_time << " sec" << endl;
     }
     if (params.site_concordance) {
-        tree->setAlignment(aln);
-        tree->setParams(&params);
-        if (tree->isSuperTree())
-            ((PhyloSuperTree*)tree)->mapTrees();
         cout << "Computing site concordance factor..." << endl;
         double start_time = getRealTime();
         tree->computeSiteConcordance(meanings);
@@ -3971,15 +3976,18 @@ void assignBranchSupportNew(Params &params) {
     for (brit = branches.begin(); brit != branches.end(); brit++) {
         Neighbor *branch = brit->second->findNeighbor(brit->first);
         int ID = brit->second->id;
-        double length = branch->length;
-        string label = "NA";
-        GET_ATTR(branch, label);
         out << ID;
         for (mit = meanings.begin(); mit != meanings.end(); mit++) {
-            double val;
-            branch->getAttr(mit->first, val);
-            out << '\t' << val;
+            out << '\t';
+            double val = 0.0;
+            if (branch->getAttr(mit->first, val))
+                out << val;
+            else
+                out << "NA";
         }
+        double length = branch->length;
+        string label;
+        GET_ATTR(branch, label);
         out << '\t' << label << '\t' << length << endl;
     }
     out.close();
@@ -4003,7 +4011,7 @@ void assignBranchSupportNew(Params &params) {
         Neighbor *branch = brit->second->findNeighbor(brit->first);
         int ID = brit->second->id;
         for (int part = 1; ; part++) {
-            double sC, sD1, sD2;
+            double sC = 0, sD1 = 0, sD2 = 0;
             string key = "sC" + convertIntToString(part);
             if (!branch->getAttr(key, sC))
                 break;
