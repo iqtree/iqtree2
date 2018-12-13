@@ -13,8 +13,9 @@ void PhyloTree::computeSiteConcordance(map<string,string> &meanings) {
     for (auto it = branches.begin(); it != branches.end(); it++) {
         computeSiteConcordance((*it), params->site_concordance, randstream);
         Neighbor *nei = it->second->findNeighbor(it->first);
-        double sCF;
-        GET_ATTR(nei, sCF);
+        double sCF = 0.0;
+        if (!GET_ATTR(nei, sCF))
+            continue;
 
         string sup_str = convertDoubleToString(sCF);
         Node *node = it->second;
@@ -36,6 +37,10 @@ void PhyloTree::computeSiteConcordance(map<string,string> &meanings) {
 }
 
 void Alignment::computeQuartetSupports(IntVector &quartet, vector<size_t> &support) {
+    // sanity check e.g. when having rooted tree
+    for (auto q = quartet.begin(); q != quartet.end(); q++)
+        ASSERT(*q < getNSeq());
+        
     for (auto pat = begin(); pat != end(); pat++) {
         if (!pat->isInformative()) continue;
         bool informative = true;
@@ -85,6 +90,9 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstre
     // extract the taxa from the two left subtrees
     int id = 0;
     FOR_NEIGHBOR_DECLARE(branch.first, branch.second, it) {
+        // 2018-12-11: do not consider internal branch at the root
+        if (rooted && (*it)->node == root)
+            return;
         getTaxaID(taxa[id], (*it)->node, branch.first);
         id++;
         if (id > 2)
@@ -93,10 +101,25 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstre
 
     // extract the taxa from the two right subtrees
     FOR_NEIGHBOR(branch.second, branch.first, it) {
+        // 2018-12-11: do not consider internal branch at the root
+        if (rooted && (*it)->node == root)
+            return;
         getTaxaID(taxa[id], (*it)->node, branch.second);
         id++;
         if (id > 4)
             outError(__func__, " only work with bifurcating tree");
+    }
+    
+    ASSERT(id == 4);
+    
+    // 2018-12-11: remove root taxon from taxa for rooted tree
+    if (rooted) {
+        for (auto it = taxa.begin(); it != taxa.end(); it++)
+            for (auto it2 = it->begin(); it2 != it->end(); it2++)
+                if (*it2 == leafNum-1) {
+                    it->erase(it2);
+                    break;
+                }
     }
     
     double sCF = 0.0; // concordance factor

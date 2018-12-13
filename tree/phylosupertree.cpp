@@ -414,7 +414,7 @@ void PhyloSuperTree::linkTree(int part, NodeVector &part_taxa, SuperNode *node, 
 }
 
 void PhyloSuperTree::syncRooting() {
-    if (empty())
+    if (empty() || !front()->root)
         return;
     // check if all trees are similarly rooted or unrooted
     bool same_rooting = true;
