@@ -97,6 +97,16 @@ public:
 	*/
 	bool isRooted();
 
+    /**
+     @return number of rooted trees in the set
+     */
+    int countRooted();
+
+    /**
+     @return number of unrooted trees in the set
+     */
+    int countUnrooted();
+    
 	/**
 		print the tree to the output file in newick format
 		@param outfile the output file.

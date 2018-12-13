@@ -686,7 +686,7 @@ void MTree::readTree(istream &in, bool &is_rooted)
         Node *node;
         parseFile(in, ch, node, branch_len);
         // 2018-01-05: assuming rooted tree if root node has two children
-        if (is_rooted || !branch_len.empty() || node->degree() == 2) {
+        if (is_rooted || (!branch_len.empty() && branch_len[0] != 0.0) || node->degree() == 2) {
             if (branch_len.empty())
                 branch_len.push_back(-1.0);
             if (branch_len[0] == -1.0) branch_len[0] = 0.0;
@@ -697,6 +697,7 @@ void MTree::readTree(istream &in, bool &is_rooted)
             root->addNeighbor(node, branch_len);
             node->addNeighbor(root, branch_len);
             leafNum++;
+            rooted = true;
         } else { // assign root to one of the neighbor of node, if any
             FOR_NEIGHBOR_IT(node, NULL, it)
             if ((*it)->node->isLeaf()) {
