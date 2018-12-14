@@ -3892,10 +3892,10 @@ void assignBranchSupportNew(Params &params) {
     PhyloTree *tree;
     Alignment *aln = NULL;
     if (params.site_concordance) {
-        params.compute_seq_composition = false;
         if (!params.aln_file && !params.partition_file)
             outError("Please provide an alignment (-s) or partition file");
         if (params.partition_file) {
+            params.compute_seq_composition = false;
             aln = new SuperAlignment(params);
             tree = new PhyloSuperTree((SuperAlignment*)aln);
         } else {
@@ -4006,22 +4006,21 @@ void assignBranchSupportNew(Params &params) {
     << "# Columns are tab-separated with following meaning:" << endl
     << "#   ID: Branch ID" << endl
     << "#   TreeID: Tree ID" << endl
-    << "#   gC: 1 if tree is concordant with branch" << endl
-    << "#   gD1: 1 if NNI-1 tree is concordant with branch" << endl
-    << "#   gD2: 1 if NNI-2 tree is concordant with branch" << endl
-    << "#   gDec: 1 if tree is decisive for branch" << endl
-    << "ID\tTreeID\tgC\tgD1\tgD2\tgDec" << endl;
+    << "#   gC: 1/0 if tree is concordant/discordant with branch" << endl
+    << "#   gD1: 1/0 if NNI-1 tree is concordant/discordant with branch" << endl
+    << "#   gD2: 1/0 if NNI-2 tree is concordant/discordant with branch" << endl
+    << "# NOTE: NA means that tree is not decisive for branch" << endl
+    << "ID\tTreeID\tgC\tgD1\tgD2" << endl;
     for (brit = branches.begin(); brit != branches.end(); brit++) {
         Neighbor *branch = brit->second->findNeighbor(brit->first);
         int ID = brit->second->id;
         for (int part = 1; ; part++) {
-            int gC = 0, gD1 = 0, gD2 = 0, gN = 0;
-            if (!branch->getAttr("gN" + convertIntToString(part), gN))
+            string gC, gD1, gD2;
+            if (!branch->getAttr("gC" + convertIntToString(part), gC))
                 break;
-            branch->getAttr("gC" + convertIntToString(part), gC);
             branch->getAttr("gD1" + convertIntToString(part), gD1);
             branch->getAttr("gD2" + convertIntToString(part), gD2);
-            out << ID << '\t' << part << '\t' << gC << '\t' << gD1 << '\t' << gD2 << '\t' << gN << endl;
+            out << ID << '\t' << part << '\t' << gC << '\t' << gD1 << '\t' << gD2 << endl;
         }
     }
     out.close();
@@ -4030,7 +4029,7 @@ void assignBranchSupportNew(Params &params) {
     if (!params.site_concordance_partition || !tree->isSuperTree())
         return;
     // print partition-wise concordant/discordant sites
-    filename = prefix + ".cf.stat_locus";
+    filename = prefix + ".cf.stat_loci";
     out.open(filename);
     out << "# Concordance factor statistics for loci" << endl
     << "# This file can be read in MS Excel or in R with command:" << endl
@@ -4041,6 +4040,7 @@ void assignBranchSupportNew(Params &params) {
     << "#   sC: Number of concordant sites averaged over " << params.site_concordance << " quartets" << endl
     << "#   sD1: Number of discordant sites for alternative quartet 1" << endl
     << "#   sD2: Number of discordant sites for alternative quartet 2" << endl
+    << "# NOTE: NA means that locus is not decisive for branch" << endl
     << "ID\tPartID\tsC\tsD1\tsD2" << endl;
     for (brit = branches.begin(); brit != branches.end(); brit++) {
         Neighbor *branch = brit->second->findNeighbor(brit->first);

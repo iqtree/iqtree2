@@ -254,6 +254,8 @@ void PhyloTree::computeGeneConcordance(MTreeSet &trees, map<string,string> &mean
         int id, qid;
         for (id = 0, qid = 0; qid < subtrees.size(); id++, qid += 4)
         {
+            Neighbor *nei = branches[id].second->findNeighbor(branches[id].first);
+
             bool decisive = true;
             int i;
             for (i = 0; i < 4; i++) {
@@ -262,10 +264,9 @@ void PhyloTree::computeGeneConcordance(MTreeSet &trees, map<string,string> &mean
                     break;
                 }
             }
-            if (params->site_concordance_partition) {
-                Neighbor *nei = branches[id].second->findNeighbor(branches[id].first);
-                int N = (decisive);
-                nei->putAttr("gN" + convertIntToString(treeid+1), N);
+            if (!decisive && params->site_concordance_partition) {
+                for (i = 0; i < 3; i++)
+                    nei->putAttr(prefix[i] + convertIntToString(treeid+1), "NA");
             }
 
             if (!decisive) continue;
@@ -277,12 +278,13 @@ void PhyloTree::computeGeneConcordance(MTreeSet &trees, map<string,string> &mean
                 Split *subsp = this_split.extractSubSplit(taxa_mask);
                 if (subsp->shouldInvert())
                     subsp->invert();
+                int concordant = 0;
                 if (hash_ss.findSplit(subsp)) {
                     supports[i][id]++;
-                    if (params->site_concordance_partition) {
-                        Neighbor *nei = branches[id].second->findNeighbor(branches[id].first);
-                        nei->putAttr(prefix[i] + convertIntToString(treeid+1), 1);
-                    }
+                    concordant = 1;
+                }
+                if (params->site_concordance_partition) {
+                    nei->putAttr(prefix[i] + convertIntToString(treeid+1), concordant);
                 }
                 delete subsp;
             }
