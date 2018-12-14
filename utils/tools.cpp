@@ -1534,7 +1534,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "Positive --scf please";
                 continue;
             }
-            if (strcmp(argv[cnt], "--scf-part") == 0) {
+            if (strcmp(argv[cnt], "--scf-part") == 0 || strcmp(argv[cnt], "--cf-verbose") == 0) {
                 params.site_concordance_partition = true;
                 continue;
             }
@@ -4164,7 +4164,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --scf NUMBER         Number of quartets for site concordance factor (sCF)" << endl
     << "  -s FILE              Sequence alignment for --scf" << endl
     << "  -p FILE|DIR          Partition file or directory for --scf" << endl
-    << "  --scf-part           Write sCF per partition to .cf.stat2 file" << endl
+    << "  --cf-verbose         Write CF per tree/locus to cf.stat_tree/_locus" << endl
 
     << endl;
     

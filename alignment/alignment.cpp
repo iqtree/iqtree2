@@ -454,6 +454,7 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype, str
 
     countConstSite();
 
+    if (Params::getInstance().compute_seq_composition)
     cout << "Alignment has " << getNSeq() << " sequences with " << getNSite()
          << " columns, " << getNPattern() << " distinct patterns" << endl
          << num_informative_sites << " parsimony-informative, "
