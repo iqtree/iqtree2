@@ -3905,7 +3905,8 @@ void assignBranchSupportNew(Params &params) {
     } else {
         tree = new PhyloTree;
     }
-    
+    tree->setParams(&params);
+
     cout << "Reading tree " << params.user_file << " ..." << endl;
     bool rooted = params.is_rooted;
     tree->readTree(params.user_file, rooted);
@@ -3915,7 +3916,6 @@ void assignBranchSupportNew(Params &params) {
     // 2018-12-13: move initialisation to fix rooted vs unrooted tree
     if (params.site_concordance) {
         tree->setAlignment(aln);
-        tree->setParams(&params);
         if (tree->isSuperTree())
             ((PhyloSuperTree*)tree)->mapTrees();
     }
@@ -3994,10 +3994,43 @@ void assignBranchSupportNew(Params &params) {
     }
     out.close();
     cout << "Concordance factors per branch printed to " << filename << endl;
+    if (!params.site_concordance_partition)
+        return;
+    
+    // print concordant/discordant gene trees
+    filename = prefix + ".cf.stat_tree";
+    out.open(filename);
+    out << "# Concordance factor statistics for decisive trees" << endl
+    << "# This file can be read in MS Excel or in R with command:" << endl
+    << "#   tab2=read.table('" <<  filename << "',header=TRUE)" << endl
+    << "# Columns are tab-separated with following meaning:" << endl
+    << "#   ID: Branch ID" << endl
+    << "#   TreeID: Tree ID" << endl
+    << "#   gC: 1 if tree is concordant with branch" << endl
+    << "#   gD1: 1 if NNI-1 tree is concordant with branch" << endl
+    << "#   gD2: 1 if NNI-2 tree is concordant with branch" << endl
+    << "#   gDec: 1 if tree is decisive for branch" << endl
+    << "ID\tTreeID\tgC\tgD1\tgD2\tgDec" << endl;
+    for (brit = branches.begin(); brit != branches.end(); brit++) {
+        Neighbor *branch = brit->second->findNeighbor(brit->first);
+        int ID = brit->second->id;
+        for (int part = 1; ; part++) {
+            int gC = 0, gD1 = 0, gD2 = 0, gN = 0;
+            if (!branch->getAttr("gN" + convertIntToString(part), gN))
+                break;
+            branch->getAttr("gC" + convertIntToString(part), gC);
+            branch->getAttr("gD1" + convertIntToString(part), gD1);
+            branch->getAttr("gD2" + convertIntToString(part), gD2);
+            out << ID << '\t' << part << '\t' << gC << '\t' << gD1 << '\t' << gD2 << '\t' << gN << endl;
+        }
+    }
+    out.close();
+    cout << "Concordance factors per branch and tree printed to " << filename << endl;
+    
     if (!params.site_concordance_partition || !tree->isSuperTree())
         return;
     // print partition-wise concordant/discordant sites
-    filename = prefix + ".cf.stat2";
+    filename = prefix + ".cf.stat_locus";
     out.open(filename);
     out << "# Concordance factor statistics for loci" << endl
     << "# This file can be read in MS Excel or in R with command:" << endl
@@ -4013,15 +4046,12 @@ void assignBranchSupportNew(Params &params) {
         Neighbor *branch = brit->second->findNeighbor(brit->first);
         int ID = brit->second->id;
         for (int part = 1; ; part++) {
-            double sC = 0, sD1 = 0, sD2 = 0;
-            string key = "sC" + convertIntToString(part);
-            if (!branch->getAttr(key, sC))
+            string sC, sD1, sD2;
+            if (!branch->getAttr("sC" + convertIntToString(part), sC))
                 break;
-            key = "sD1" + convertIntToString(part);
-            if (!branch->getAttr(key, sD1))
+            if (!branch->getAttr("sD1" + convertIntToString(part), sD1))
                 break;
-            key = "sD2" + convertIntToString(part);
-            if (!branch->getAttr(key, sD2))
+            if (!branch->getAttr("sD2" + convertIntToString(part), sD2))
                 break;
             out << ID << '\t' << part << '\t' << sC << '\t' << sD1 << '\t' << sD2 << endl;
         }
