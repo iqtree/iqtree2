@@ -4164,7 +4164,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --scf NUMBER         Number of quartets for site concordance factor (sCF)" << endl
     << "  -s FILE              Sequence alignment for --scf" << endl
     << "  -p FILE|DIR          Partition file or directory for --scf" << endl
-    << "  --cf-verbose         Write CF per tree/locus to cf.stat_tree/_locus" << endl
+    << "  --cf-verbose         Write CF per tree/locus to cf.stat_tree/_loci" << endl
 
     << endl;
     
