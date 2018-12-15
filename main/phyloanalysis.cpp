@@ -3889,6 +3889,8 @@ void runUnlinkedPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 void assignBranchSupportNew(Params &params) {
     if (!params.user_file)
         outError("No target tree file provided");
+    if (params.num_threads == 0)
+        outError("-nt AUTO is not supported for concordance factor analysis, please specify no. cores");
     PhyloTree *tree;
     Alignment *aln = NULL;
     if (params.site_concordance) {

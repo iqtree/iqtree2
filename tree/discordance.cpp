@@ -6,12 +6,25 @@
 //
 
 #include "phylosupertree.h"
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 void PhyloTree::computeSiteConcordance(map<string,string> &meanings) {
     BranchVector branches;
     getInnerBranches(branches);
-    for (auto it = branches.begin(); it != branches.end(); it++) {
-        computeSiteConcordance((*it), params->site_concordance, randstream);
+#ifdef _OPENMP
+#pragma omp parallel
+    {
+        int *rstream;
+        init_random(params->ran_seed + omp_get_thread_num(), false, &rstream);
+#pragma omp for
+#else
+        int *rstream = randstream;
+#endif
+    for (auto ii = 0; ii < branches.size(); ii++) {
+        BranchVector::iterator it = branches.begin()+ii;
+        computeSiteConcordance((*it), params->site_concordance, rstream);
         Neighbor *nei = it->second->findNeighbor(it->first);
         double sCF = 0.0;
         if (!GET_ATTR(nei, sCF))
@@ -33,6 +46,10 @@ void PhyloTree::computeSiteConcordance(map<string,string> &meanings) {
             node->name += sup_str;
         }
     }
+#ifdef _OPENMP
+        finish_random(rstream);
+    }
+#endif
     meanings.insert({"sCF", "Site concordance factor (%) averaged over " + convertIntToString(params->site_concordance) +  " quartets"});
     meanings.insert({"sDF1", "Site discordance factor (%) for alternative quartet 1"});
     meanings.insert({"sDF2", "Site discordance factor (%) for alternative quartet 2"});
