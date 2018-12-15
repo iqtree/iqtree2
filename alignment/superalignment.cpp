@@ -536,14 +536,22 @@ void SuperAlignment::printBestPartition(const char *filename) {
             replace(pos.begin(), pos.end(), ',' , ' ');
             out << pos << ";" << endl;
         }
-        out << "  charpartition mymodels =" << endl;
-        for (part = 0; part < partitions.size(); part++) {
-            string name = partitions[part]->name;
-            replace(name.begin(), name.end(), '+', '_');
-            if (part > 0) out << "," << endl;
-            out << "    " << partitions[part]->model_name << ": " << name;
+        bool ok_model = true;
+        for (part = 0; part < partitions.size(); part++)
+            if (partitions[part]->model_name.empty()) {
+                ok_model = false;
+                break;
+            }
+        if (ok_model) {
+            out << "  charpartition mymodels =" << endl;
+            for (part = 0; part < partitions.size(); part++) {
+                string name = partitions[part]->name;
+                replace(name.begin(), name.end(), '+', '_');
+                if (part > 0) out << "," << endl;
+                out << "    " << partitions[part]->model_name << ": " << name;
+            }
+            out << ";" << endl;
         }
-        out << ";" << endl;
         out << "end;" << endl;
         out.close();
         cout << "Partition information was printed to " << filename << endl;

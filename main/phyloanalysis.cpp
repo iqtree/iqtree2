@@ -3605,6 +3605,8 @@ void doSymTest(Alignment *alignment, Params &params) {
                 ((SuperAlignment*)alignment)->removePartitions(part_id);
             else
                 outError("Can't remove all partitions");
+            string filename = (string)params.out_prefix + ((params.symtest == 2)? ".good.nex" : ".bad.nex");
+            ((SuperAlignment*)alignment)->printBestPartition(filename.c_str());
         }
     }
 }
