@@ -267,6 +267,9 @@ void MSetsBlock::Read(NxsToken &token)
 
 		else
 		{
+            errormsg = "Unknown command ";
+            errormsg += token.GetToken();
+            throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());
 			SkippingCommand(token.GetToken());
 			do
 			{
@@ -283,6 +286,11 @@ void MSetsBlock::Read(NxsToken &token)
 	}	// GetNextToken loop
 
 }
+
+void MSetsBlock::SkippingCommand(NxsString commandName) {
+    cout << "WARNING: Skipping unknown command " << commandName << endl;
+}
+
 
 CharSet *MSetsBlock::findCharSet(string name) {
 	for (vector<CharSet*>::iterator it = charsets.begin(); it != charsets.end(); it++)
