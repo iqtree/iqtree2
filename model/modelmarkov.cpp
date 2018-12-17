@@ -476,7 +476,19 @@ void ModelMarkov::computeTransMatrix(double time, double *trans_matrix, int mixt
 
 	/* compute P(t) */
 	double evol_time = time / total_num_subst;
-	double exptime[num_states];
+
+    VectorXd eval_exp(num_states);
+    ArrayXd eval = Map<ArrayXd,Aligned>(eigenvalues, num_states);
+    eval_exp = (eval*evol_time).exp().matrix();
+    Map<Matrix<double,Dynamic,Dynamic,RowMajor>,Aligned> evectors(eigenvectors, num_states, num_states);
+    Map<Matrix<double,Dynamic,Dynamic,RowMajor>,Aligned> inv_evectors(inv_eigenvectors, num_states, num_states);
+    MatrixXd res = evectors * eval_exp.asDiagonal() * inv_evectors;
+    Map<Matrix<double,Dynamic,Dynamic,RowMajor> >map_trans(trans_matrix,num_states,num_states);
+    map_trans = res;
+    return;
+    
+    /*
+    double exptime[num_states];
 	int i, j, k;
 
 	for (i = 0; i < num_states; i++)
@@ -506,6 +518,7 @@ void ModelMarkov::computeTransMatrix(double time, double *trans_matrix, int mixt
 			sum += trans_row[j];
 		trans_row[i] = 1.0 - sum; // update diagonal entry
 	}
+    */
 //	delete [] exptime;
 }
 
@@ -575,6 +588,27 @@ void ModelMarkov::computeTransDerv(double time, double *trans_matrix,
     }
 
 	double evol_time = time / total_num_subst;
+    
+    ArrayXd eval = Map<ArrayXd,Aligned>(eigenvalues, num_states);
+    ArrayXd eval_exp = (eval*evol_time).exp();
+    ArrayXd eval_exp_derv1 = eval_exp*eval;
+    ArrayXd eval_exp_derv2 = eval_exp_derv1*eval;
+
+    Map<Matrix<double,Dynamic,Dynamic,RowMajor>,Aligned> evectors(eigenvectors, num_states, num_states);
+    Map<Matrix<double,Dynamic,Dynamic,RowMajor>,Aligned> inv_evectors(inv_eigenvectors, num_states, num_states);
+    MatrixXd res = evectors * eval_exp.matrix().asDiagonal() * inv_evectors;
+    Map<Matrix<double,Dynamic,Dynamic,RowMajor> >map_trans(trans_matrix,num_states,num_states);
+    map_trans = res;
+
+    res = evectors * eval_exp_derv1.matrix().asDiagonal() * inv_evectors;
+    Map<Matrix<double,Dynamic,Dynamic,RowMajor> >map_derv1(trans_derv1,num_states,num_states);
+    map_derv1 = res;
+
+    res = evectors * eval_exp_derv2.matrix().asDiagonal() * inv_evectors;
+    Map<Matrix<double,Dynamic,Dynamic,RowMajor> >map_derv2(trans_derv2,num_states,num_states);
+    map_derv2 = res;
+
+    /*
 	double exptime[num_states];
 
 	for (i = 0; i < num_states; i++)
@@ -604,6 +638,7 @@ void ModelMarkov::computeTransDerv(double time, double *trans_matrix,
 			}
 		}
 	}
+     */
 //	delete [] exptime;
 }
 
