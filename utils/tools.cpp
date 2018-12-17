@@ -1707,7 +1707,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             if (strcmp(argv[cnt], "-rclusterf") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -rcluster <percent>";
+					throw "Use -rclusterf <percent>";
                 params.partfinder_rcluster = convert_double(argv[cnt]);
                 if (params.partfinder_rcluster < 0 || params.partfinder_rcluster > 100)
                     throw "rcluster percentage must be between 0 and 100";
@@ -1722,6 +1722,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.partfinder_rcluster_max = convert_int(argv[cnt]);
                 if (params.partfinder_rcluster_max <= 0)
                     throw "rcluster-max must be between > 0";
+                if (params.partfinder_rcluster == 100)
+                    params.partfinder_rcluster = 99.9999;
 				continue;
             }
 
