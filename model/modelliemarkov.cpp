@@ -994,7 +994,8 @@ void ModelLieMarkov::setRates() {
 }
 
 void ModelLieMarkov::decomposeRateMatrix() {
-    ModelMarkov::decomposeRateMatrix();
+    return ModelMarkov::decomposeRateMatrix();
+    /*
     if (phylo_tree->params->matrix_exp_technique == MET_SCALING_SQUARING) 
         return;
     if (phylo_tree->params->matrix_exp_technique == MET_EIGEN3LIB_DECOMPOSITION) {
@@ -1006,6 +1007,7 @@ void ModelLieMarkov::decomposeRateMatrix() {
         decomposeRateMatrixClosedForm();
         return;
     }
+     */
 }
 
 void ModelLieMarkov::decomposeRateMatrixEigen3lib() {
@@ -2040,6 +2042,8 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 }
 
 void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix, int mixture) {
+    return ModelMarkov::computeTransMatrix(time, trans_matrix, mixture);
+    /*
   MatrixExpTechnique technique = phylo_tree->params->matrix_exp_technique;
   if (technique == MET_SCALING_SQUARING || nondiagonalizable ) {
         Matrix4d A = Map<Matrix4d>(rate_matrix);
@@ -2099,5 +2103,6 @@ void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix, int m
 
     } else
         ModelMarkov::computeTransMatrix(time, trans_matrix);
+     */
 }
 
