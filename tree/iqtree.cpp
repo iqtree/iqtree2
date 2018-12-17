@@ -4051,6 +4051,8 @@ void IQTree::printResultTree(ostream &out) {
 void IQTree::printBestCandidateTree() {
     if (MPIHelper::getInstance().isWorker())
         return;
+    if (params->suppress_output_flags & OUT_TREEFILE)
+        return;
     string tree_file_name = params->out_prefix;
     tree_file_name += ".treefile";
     readTreeString(candidateTrees.getBestTreeStrings(1)[0]);
