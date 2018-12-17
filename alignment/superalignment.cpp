@@ -1259,11 +1259,12 @@ Alignment *SuperAlignment::concatenateAlignments(set<int> &ids) {
 
 Alignment *SuperAlignment::concatenateAlignments() {
     vector<SeqType> seq_types;
+    vector<char*> genetic_codes;
     vector<set<int> > ids;
     for (int i = 0; i < partitions.size(); i++) {
         bool found = false;
         for (int j = 0; j < seq_types.size(); j++)
-            if (partitions[i]->seq_type == seq_types[j]) {
+            if (partitions[i]->seq_type == seq_types[j] && partitions[i]->genetic_code == genetic_codes[j]) {
                 ids[j].insert(i);
                 found = true;
                 break;
@@ -1272,6 +1273,7 @@ Alignment *SuperAlignment::concatenateAlignments() {
             continue;
         // create a new partition
         seq_types.push_back(partitions[i]->seq_type);
+        genetic_codes.push_back(partitions[i]->genetic_code);
         ids.push_back(set<int>());
         ids.back().insert(i);
     }
