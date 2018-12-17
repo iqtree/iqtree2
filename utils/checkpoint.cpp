@@ -151,6 +151,11 @@ void Checkpoint::dump(bool force) {
     }
     prev_dump_time = getRealTime();
     string filename_tmp = filename + ".tmp";
+    if (fileExists(filename_tmp)) {
+        outWarning("IQ-TREE was killed while writing temporary checkpoint file " + filename_tmp);
+        outWarning("You should increase checkpoint interval from the default 60 seconds");
+        outWarning("via -cptime option to avoid too frequent checkpoint for large datasets");
+    }
     try {
         ostream *out;
         if (compression) 
