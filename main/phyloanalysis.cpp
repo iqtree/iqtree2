@@ -1951,10 +1951,19 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
         cout << "Branch lengths written to " << filename << endl;
     }
     
+    if (params.print_conaln && iqtree.isSuperTree()) {
+        string str = params.out_prefix;
+        str = params.out_prefix;
+        str += ".conaln";
+        ((SuperAlignment*)(iqtree.aln))->printCombinedAlignment(str.c_str());
+    }
+    
     if (params.print_partition_info && iqtree.isSuperTree()) {
+        ASSERT(params.print_conaln);
+        string aln_file = (string)params.out_prefix + ".conaln";
         string partition_info = params.out_prefix;
         partition_info += ".partinfo.nex";
-        ((SuperAlignment*)(iqtree.aln))->printPartition(partition_info.c_str());
+        ((SuperAlignment*)(iqtree.aln))->printPartition(partition_info.c_str(), aln_file.c_str());
         partition_info = (string)params.out_prefix + ".partitions";
         ((SuperAlignment*)(iqtree.aln))->printPartitionRaxml(partition_info.c_str());
     }
@@ -3598,15 +3607,18 @@ void doSymTest(Alignment *alignment, Params &params) {
                 getSymTestID(intsym, part_id, false);
         }
         if (!part_id.empty()) {
+            SuperAlignment *saln = (SuperAlignment*)alignment;
             cout << "Removing " << part_id.size()
             << ((params.symtest == 2)? " bad" : " good") << " partitions (pvalue cutoff = "
             << params.symtest_pcutoff << ")..." << endl;
             if (part_id.size() < alignment->getNSite())
-                ((SuperAlignment*)alignment)->removePartitions(part_id);
+                saln->removePartitions(part_id);
             else
                 outError("Can't remove all partitions");
+            string aln_file = (string)params.out_prefix + ((params.symtest == 2)? ".good.phy" : ".bad.phy");
+            saln->printCombinedAlignment(aln_file.c_str());
             string filename = (string)params.out_prefix + ((params.symtest == 2)? ".good.nex" : ".bad.nex");
-            ((SuperAlignment*)alignment)->printBestPartition(filename.c_str());
+            saln->printPartition(filename.c_str(), aln_file.c_str());
         }
     }
 }
