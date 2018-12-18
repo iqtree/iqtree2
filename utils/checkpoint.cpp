@@ -9,6 +9,7 @@
 #include "tools.h"
 #include "timeutil.h"
 #include "gzstream.h"
+#include <cstdio>
 
 const char* CKP_HEADER =     "--- # IQ-TREE Checkpoint ver >= 1.6";
 const char* CKP_HEADER_OLD = "--- # IQ-TREE Checkpoint";
@@ -149,12 +150,18 @@ void Checkpoint::dump(bool force) {
         return;
     }
     prev_dump_time = getRealTime();
+    string filename_tmp = filename + ".tmp";
+    if (fileExists(filename_tmp)) {
+        outWarning("IQ-TREE was killed while writing temporary checkpoint file " + filename_tmp);
+        outWarning("You should increase checkpoint interval from the default 60 seconds");
+        outWarning("via -cptime option to avoid too frequent checkpoint for large datasets");
+    }
     try {
         ostream *out;
         if (compression) 
-            out = new ogzstream(filename.c_str());
+            out = new ogzstream(filename_tmp.c_str());
         else
-            out = new ofstream(filename.c_str()); 
+            out = new ofstream(filename_tmp.c_str());
         out->exceptions(ios::failbit | ios::badbit);
         *out << header << endl;
         // call dump stream
@@ -165,6 +172,12 @@ void Checkpoint::dump(bool force) {
             ((ofstream*)out)->close();
         delete out;
 //        cout << "Checkpoint dumped" << endl;
+        if (fileExists(filename)) {
+            if (std::remove(filename.c_str()) != 0)
+                outError("Cannot remove file ", filename);
+        }
+        if (std::rename(filename_tmp.c_str(), filename.c_str()) != 0)
+            outError("Cannot rename file ", filename_tmp);
     } catch (ios::failure &) {
         outError(ERR_WRITE_OUTPUT, filename.c_str());
     }
