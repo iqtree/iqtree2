@@ -34,13 +34,6 @@ SuperAlignment::SuperAlignment(Params &params) : Alignment()
     
     init();
 
-    if (params.print_conaln) {
-        string str = params.out_prefix;
-        str = params.out_prefix;
-        str += ".conaln";
-        printCombinedAlignment(str.c_str());
-    }
-    
     cout << "Degree of missing data: " << computeMissingData() << endl;
     
 #ifdef _OPENMP
@@ -484,12 +477,12 @@ void SuperAlignment::readPartitionDir(Params &params) {
     }
 }
 
-void SuperAlignment::printPartition(const char *filename) {
+void SuperAlignment::printPartition(const char *filename, const char *aln_file) {
     try {
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
         out.open(filename);
-        out << "#nexus" << endl << "[ partition information for alignment written in .conaln file ]" << endl
+        out << "#nexus" << endl << "[ partition information for alignment written in " << aln_file <<" file ]" << endl
         << "begin sets;" << endl;
         int part; int start_site;
         for (part = 0, start_site = 1; part < partitions.size(); part++) {
@@ -499,15 +492,23 @@ void SuperAlignment::printPartition(const char *filename) {
             out << "  charset " << name << " = " << start_site << "-" << end_site-1 << ";" << endl;
             start_site = end_site;
         }
-        out << "  charpartition mymodels =" << endl;
-        for (part = 0; part < partitions.size(); part++) {
-            string name = partitions[part]->name;
-            replace(name.begin(), name.end(), '+', '_');
-            if (part > 0) out << "," << endl;
-//            out << "    " << at(part)->getModelNameParams() << ":" << name;
-            out << "    " << partitions[part]->model_name << ":" << name;
+        bool ok_model = true;
+        for (part = 0; part < partitions.size(); part++)
+            if (partitions[part]->model_name.empty()) {
+                ok_model = false;
+                break;
+            }
+        if (ok_model) {
+            out << "  charpartition mymodels =" << endl;
+            for (part = 0; part < partitions.size(); part++) {
+                string name = partitions[part]->name;
+                replace(name.begin(), name.end(), '+', '_');
+                if (part > 0) out << "," << endl;
+    //            out << "    " << at(part)->getModelNameParams() << ":" << name;
+                out << "    " << partitions[part]->model_name << ":" << name;
+            }
+            out << ";" << endl;
         }
-        out << ";" << endl;
         out << "end;" << endl;
         out.close();
         cout << "Partition information was printed to " << filename << endl;

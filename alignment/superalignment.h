@@ -76,7 +76,7 @@ public:
     /** read partition as files in a directory */
     void readPartitionDir(Params &params);
 
-    void printPartition(const char *filename);
+    void printPartition(const char *filename, const char *aln_file);
     
     void printPartitionRaxml(const char *filename);
     
