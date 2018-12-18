@@ -2877,6 +2877,15 @@ void IQTree::refineBootTrees() {
     finish_random();
     randstream = saved_randstream;
 
+    SplitGraph *sg = new SplitGraph;
+    summarizeBootstrap(*sg);
+    sg->removeTrivialSplits();
+    sg->setCheckpoint(checkpoint);
+    boot_splits.push_back(sg);
+
+    saveCheckpoint();
+    checkpoint->dump();
+    
     // restore
     params->gbo_replicates = boot_trees.size();
     params->nni_type = saved_nni_type;
