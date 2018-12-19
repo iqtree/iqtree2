@@ -1208,7 +1208,10 @@ void SuperAlignment::createBootstrapAlignment(int *pattern_freq, const char *spe
 		// resampling sites within genes
 		int offset = 0;
 		for (vector<Alignment*>::iterator it = partitions.begin(); it != partitions.end(); it++) {
-            (*it)->createBootstrapAlignment(pattern_freq + offset, NULL, rstream);
+            if (spec && strncmp(spec, "SCALE=", 6) == 0)
+                (*it)->createBootstrapAlignment(pattern_freq + offset, spec, rstream);
+            else
+                (*it)->createBootstrapAlignment(pattern_freq + offset, NULL, rstream);
 			offset += (*it)->getNPattern();
 		}
 	}
