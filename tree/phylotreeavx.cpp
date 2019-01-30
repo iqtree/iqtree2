@@ -48,6 +48,10 @@ void PhyloTree::setDotProductAVX() {
 void PhyloTree::setLikelihoodKernelAVX() {
     vector_size = 4;
     bool site_model = model_factory && model_factory->model->isSiteSpecificModel();
+
+    if (site_model && ((model_factory && !model_factory->model->isReversible()) || params->kernel_nonrev))
+        outError("Site-specific model is not yet supported for nonreversible models");
+    
     setParsimonyKernelAVX();
     computeLikelihoodDervMixlenPointer = NULL;
 
@@ -98,22 +102,43 @@ void PhyloTree::setLikelihoodKernelAVX() {
 
     if ((model_factory && !model_factory->model->isReversible()) || params->kernel_nonrev) {
         // if nonreversible model
+        if (safe_numeric) {
         switch (aln->num_states) {
         case 4:
-            computeLikelihoodBranchPointer = &PhyloTree::computeNonrevLikelihoodBranchSIMD  <Vec4d, 4>;
-            computeLikelihoodDervPointer = &PhyloTree::computeNonrevLikelihoodDervSIMD      <Vec4d, 4>;
-            computePartialLikelihoodPointer = &PhyloTree::computeNonrevPartialLikelihoodSIMD<Vec4d, 4>;
+            computeLikelihoodBranchPointer = &PhyloTree::computeNonrevLikelihoodBranchSIMD  <Vec4d, SAFE_LH, 4>;
+            computeLikelihoodDervPointer = &PhyloTree::computeNonrevLikelihoodDervSIMD      <Vec4d, SAFE_LH, 4>;
+            computePartialLikelihoodPointer = &PhyloTree::computeNonrevPartialLikelihoodSIMD<Vec4d, SAFE_LH, 4>;
             break;
         case 20:
-            computeLikelihoodBranchPointer = &PhyloTree::computeNonrevLikelihoodBranchSIMD  <Vec4d, 20>;
-            computeLikelihoodDervPointer = &PhyloTree::computeNonrevLikelihoodDervSIMD      <Vec4d, 20>;
-            computePartialLikelihoodPointer = &PhyloTree::computeNonrevPartialLikelihoodSIMD<Vec4d, 20>;
+            computeLikelihoodBranchPointer = &PhyloTree::computeNonrevLikelihoodBranchSIMD  <Vec4d, SAFE_LH, 20>;
+            computeLikelihoodDervPointer = &PhyloTree::computeNonrevLikelihoodDervSIMD      <Vec4d, SAFE_LH, 20>;
+            computePartialLikelihoodPointer = &PhyloTree::computeNonrevPartialLikelihoodSIMD<Vec4d, SAFE_LH, 20>;
             break;
         default:
-            computeLikelihoodBranchPointer = &PhyloTree::computeNonrevLikelihoodBranchGenericSIMD  <Vec4d>;
-            computeLikelihoodDervPointer = &PhyloTree::computeNonrevLikelihoodDervGenericSIMD      <Vec4d>;
-            computePartialLikelihoodPointer = &PhyloTree::computeNonrevPartialLikelihoodGenericSIMD<Vec4d>;
+            computeLikelihoodBranchPointer = &PhyloTree::computeNonrevLikelihoodBranchGenericSIMD  <Vec4d, SAFE_LH>;
+            computeLikelihoodDervPointer = &PhyloTree::computeNonrevLikelihoodDervGenericSIMD      <Vec4d, SAFE_LH>;
+            computePartialLikelihoodPointer = &PhyloTree::computeNonrevPartialLikelihoodGenericSIMD<Vec4d, SAFE_LH>;
             break;
+        }
+        } else {
+            switch (aln->num_states) {
+                case 4:
+                    computeLikelihoodBranchPointer = &PhyloTree::computeNonrevLikelihoodBranchSIMD  <Vec4d, NORM_LH, 4>;
+                    computeLikelihoodDervPointer = &PhyloTree::computeNonrevLikelihoodDervSIMD      <Vec4d, NORM_LH, 4>;
+                    computePartialLikelihoodPointer = &PhyloTree::computeNonrevPartialLikelihoodSIMD<Vec4d, NORM_LH, 4>;
+                    break;
+                case 20:
+                    computeLikelihoodBranchPointer = &PhyloTree::computeNonrevLikelihoodBranchSIMD  <Vec4d, NORM_LH, 20>;
+                    computeLikelihoodDervPointer = &PhyloTree::computeNonrevLikelihoodDervSIMD      <Vec4d, NORM_LH, 20>;
+                    computePartialLikelihoodPointer = &PhyloTree::computeNonrevPartialLikelihoodSIMD<Vec4d, NORM_LH, 20>;
+                    break;
+                default:
+                    computeLikelihoodBranchPointer = &PhyloTree::computeNonrevLikelihoodBranchGenericSIMD  <Vec4d, NORM_LH>;
+                    computeLikelihoodDervPointer = &PhyloTree::computeNonrevLikelihoodDervGenericSIMD      <Vec4d, NORM_LH>;
+                    computePartialLikelihoodPointer = &PhyloTree::computeNonrevPartialLikelihoodGenericSIMD<Vec4d, NORM_LH>;
+                    break;
+            }
+
         }
         computeLikelihoodFromBufferPointer = NULL;
         return;        

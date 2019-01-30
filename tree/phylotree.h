@@ -834,9 +834,9 @@ public:
 //    void computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
     void computeNonrevPartialLikelihood(TraversalInfo &info, size_t ptn_lower, size_t ptn_upper, int thread_id);
-    template <class VectorClass, const bool FMA = false>
+    template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false>
     void computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info, size_t ptn_lower, size_t ptn_upper, int thread_id);
-    template <class VectorClass, const int nstates, const bool FMA = false>
+    template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false>
     void computeNonrevPartialLikelihoodSIMD(TraversalInfo &info, size_t ptn_lower, size_t ptn_upper, int thread_id);
 
     template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
@@ -887,9 +887,9 @@ public:
 //    double computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     double computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad);
-    template<class VectorClass, const bool FMA = false>
+    template<class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false>
     double computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
-    template<class VectorClass, const int nstates, const bool FMA = false>
+    template<class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false>
     double computeNonrevLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
@@ -1203,9 +1203,9 @@ public:
 //    void computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     void computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad, double *df, double *ddf);
-    template<class VectorClass, const bool FMA = false>
+    template<class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false>
     void computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double *df, double *ddf);
-    template<class VectorClass, const int nstates, const bool FMA = false>
+    template<class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false>
     void computeNonrevLikelihoodDervSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double *df, double *ddf);
 
     template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
