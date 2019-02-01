@@ -211,6 +211,11 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 	tred2(a, new_num, eval_new, off_diag);
 	// compute eigenvalues and eigenvectors
 	tqli(eval_new, off_diag, new_num, a);
+    
+    // make sure that all eval are non-positive
+    
+    for (i = 0; i < new_num; i++)
+        ASSERT(eval_new[i] <= 0.01);
 
 	// now get back eigen
 	//for (i = 0,inew = 0; i < num_state; i++)
