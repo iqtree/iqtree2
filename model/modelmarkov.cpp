@@ -1225,7 +1225,8 @@ void ModelMarkov::decomposeRateMatrix(){
         }
         
         // compute rate matrix
-        Q *= pi.asDiagonal();
+        if (!ignore_state_freq)
+            Q *= pi.asDiagonal();
         
         //make row sum equal zero
         VectorXd Q_row_sum = Q.rowwise().sum();
@@ -1242,12 +1243,14 @@ void ModelMarkov::decomposeRateMatrix(){
         
         //symmetrize rate matrix
         Q = pi_sqrt * Q * pi_sqrt_inv;
+        ASSERT((Q - Q.transpose()).cwiseAbs().maxCoeff() < 1e-4 && "transformed Q is symmetric");
         if (verbose_mode >= VB_DEBUG)
             cout << "Symmetric rate matrix:" << endl << Q << endl;
 
         // eigensolver
         SelfAdjointEigenSolver<MatrixXd> eigensolver(Q);
         ASSERT (eigensolver.info() == Eigen::Success);
+        ASSERT(eigensolver.eigenvalues().maxCoeff() < 1e-4 && "eigenvalues are not positive");
 
         if (n == num_states) {
             Map<VectorXd,Aligned> eval(eigenvalues,num_states);
