@@ -1680,7 +1680,7 @@ public:
     /**
         test the best number of threads
     */
-    int testNumThreads();
+    virtual int testNumThreads();
 
     /**
         print warning about too many threads for short alignments
