@@ -33,6 +33,16 @@
 #
 # cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DIQTREE_FLAGS=single <source_dir>   (sequential version)
 #
+# Xcode project example usages:
+#------------------------------
+#
+# To generate Xcode project without OpenMP:
+# cmake -G Xcode -DIQTREE_FLAGS=single <source_dir>
+#
+# To generate Xcode project with OpenMP support,
+# assuming you installed LLVM via Homebrew: brew install --with-toolchain llvm
+# cmake -G XCode -DCMAKE_XCODE_ATTRIBUTE_CC=/usr/local/opt/llvm/bin/clang -DCMAKE_XCODE_ATTRIBUTE_CXX=/usr/local/opt/llvm/bin/clang++ <source_dir>
+#
 
 
 # Compile OpenMP version: cmake ....
@@ -564,10 +574,14 @@ if (IQTREE_FLAGS MATCHES "mpi")
 endif()
 
 if (NOT IQTREE_FLAGS MATCHES "single")
-    if (BINARY32)
-        link_directories(${PROJECT_SOURCE_DIR}/lib32)
-    else()
-        link_directories(${PROJECT_SOURCE_DIR}/lib)
+    if (WIN32)
+        if (BINARY32)
+            link_directories(${PROJECT_SOURCE_DIR}/lib32)
+        else()
+            link_directories(${PROJECT_SOURCE_DIR}/lib)
+        endif()
+    elseif(CLANG AND APPLE)
+        link_directories(${PROJECT_SOURCE_DIR}/libmac)
     endif()
 endif()
 
@@ -637,7 +651,7 @@ if (NOT IQTREE_FLAGS MATCHES "single")
             set(THREAD_LIB "pthreadVC2")
         endif()
     elseif(CLANG AND APPLE)
-        set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L${PROJECT_SOURCE_DIR}/libmac")
+        link_directories(${PROJECT_SOURCE_DIR}/libmac)
     elseif(CLANG AND WIN32)
         if (BINARY32)
             target_link_libraries(iqtree ${PROJECT_SOURCE_DIR}/lib32/libiomp5md.dll)

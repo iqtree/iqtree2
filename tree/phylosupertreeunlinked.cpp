@@ -312,3 +312,16 @@ int PhyloSuperTreeUnlinked::testAllBranches(int threshold, double best_score, do
     }
     return num_low_support;
 }
+
+int PhyloSuperTreeUnlinked::testNumThreads() {
+#ifdef _OPENMP
+    // unlinked partitions scales well with many cores
+    int bestProc = min(countPhysicalCPUCores(), params->num_threads_max);
+    bestProc = min(bestProc, (int)size());
+    cout << "BEST NUMBER OF THREADS: " << bestProc << endl << endl;
+    setNumThreads(bestProc);
+    return bestProc;
+#else
+    return 1;
+#endif
+}

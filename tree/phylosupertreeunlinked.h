@@ -164,7 +164,12 @@ public:
     virtual int testAllBranches(int threshold, double best_score, double *pattern_lh,
                                 int reps, int lbp_reps, bool aLRT_test, bool aBayes_test,
                                 PhyloNode *node = NULL, PhyloNode *dad = NULL);
-    
+
+    /**
+     test the best number of threads
+     */
+    virtual int testNumThreads();
+
 };
 
 #endif /* phylosupertreeunlinked_h */
