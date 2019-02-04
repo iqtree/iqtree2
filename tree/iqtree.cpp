@@ -648,7 +648,7 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
         StrVector outgroup_names;
         convert_string_vec(params->root, outgroup_names);
         for (auto it = outgroup_names.begin(); it != outgroup_names.end(); it++)
-            if (!findNodeName(*it))
+            if (aln->getSeqID(*it) < 0)
                 outError("Specified outgroup taxon " + *it + " not found");
     }
 
