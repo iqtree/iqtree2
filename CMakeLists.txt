@@ -81,7 +81,7 @@ endif()
 # The version number.
 set (iqtree_VERSION_MAJOR 1)
 set (iqtree_VERSION_MINOR 7)
-set (iqtree_VERSION_PATCH "-beta7")
+set (iqtree_VERSION_PATCH "-beta8")
 
 set(BUILD_SHARED_LIBS OFF)
 
