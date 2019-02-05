@@ -3172,6 +3172,10 @@ void PhyloTree::fixOneNegativeBranch(double branch_length, Neighbor *dad_branch,
 
 int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
 
+    // 2019-02-05: fix crash when no variant sites found
+    if (aln->num_variant_sites == 0)
+        return setNegativeBranch(force, params->min_branch_length, root, NULL);
+    
     if (!node) {
         node = root;
         // 2015-11-30: if not bifurcating, initialize unknown branch lengths with 0.1
