@@ -80,7 +80,9 @@ void SuperAlignment::readFromParams(Params &params) {
         << "\t" << (*it)->getNSite() << "\t" << (*it)->num_informative_sites
         << "\t" << (*it)->getNSite()-(*it)->num_variant_sites << "\t"
         << (*it)->model_name << "\t" << (*it)->name << endl;
-        if ((*it)->num_informative_sites == 0) {
+        if ((*it)->num_variant_sites == 0) {
+            outWarning("No variant sites in partition " + (*it)->name);
+        } else if ((*it)->num_informative_sites == 0) {
             outWarning("No parsimony-informative sites in partition " + (*it)->name);
         }
     }
