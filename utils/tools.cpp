@@ -1808,20 +1808,20 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             
-            if (strcmp(argv[cnt], "--bisymstat") == 0) {
+            if (strcmp(argv[cnt], "--symstat") == 0 || strcmp(argv[cnt], "--bisymstat") == 0) {
                 params.symtest_stat = true;
                 if (!params.symtest)
                     params.symtest = 1;
                 continue;
             }
 
-            if (strcmp(argv[cnt], "--permsymtest") == 0) {
+            if (strcmp(argv[cnt], "--permsymtest") == 0 || strcmp(argv[cnt], "--maxsymtest") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use --permsymtest INT";
+                    throw "Use --maxsymtest INT";
                 params.symtest_shuffle = convert_int(argv[cnt]);
                 if (params.symtest_shuffle <= 0)
-                    throw "--permsymtest must be positive";
+                    throw "--maxsymtest must be positive";
                 if (!params.symtest)
                     params.symtest = 1;
                 continue;
@@ -4152,13 +4152,13 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --asr-min NUMBER     Min probability of ancestral state (default: equil freq)" << endl
 
     << endl << "TEST OF SYMMETRY:" << endl
-    << "  --bisymtest               Perform three binomial tests of symmetry" << endl
-    << "  --bisymtest-remove-bad    Do --bisymtest and remove bad partitions" << endl
-    << "  --bisymtest-remove-good   Do --bisymtest and remove good partitions" << endl
-    << "  --bisymtest-type MAR|INT  Use MARginal/INTernal test when removing partitions" << endl
-    << "  --bisymtest-pval NUMER    P-value cutoff (default: 0.05)" << endl
-    << "  --bisymtest-keep-zero     Keep NAs in the tests" << endl
-    << "  --permsymtest NUMBER      Replicates for permutation tests of symmetry" << endl
+    << "  --bisymtest             Perform three binomial tests of symmetry" << endl
+    << "  --maxsymtest NUMBER     Replicates for maximum tests of symmetry" << endl
+    << "  --symtest-remove-bad    Do --bisymtest and remove bad partitions" << endl
+    << "  --symtest-remove-good   Do --bisymtest and remove good partitions" << endl
+    << "  --symtest-type MAR|INT  Use MARginal/INTernal test when removing partitions" << endl
+    << "  --symtest-pval NUMER    P-value cutoff (default: 0.05)" << endl
+    << "  --symtest-keep-zero     Keep NAs in the tests" << endl
 
     << endl << "CONCORDANCE FACTOR ANALYSIS:" << endl
     << "  -t FILE              Reference tree to assign concordance factor" << endl
