@@ -1243,7 +1243,7 @@ void ModelMarkov::decomposeRateMatrix(){
         
         //symmetrize rate matrix
         Q = pi_sqrt * Q * pi_sqrt_inv;
-        ASSERT((Q - Q.transpose()).cwiseAbs().maxCoeff() < 1e-4 && "transformed Q is symmetric");
+        ASSERT((Q - Q.transpose()).cwiseAbs().maxCoeff() < 0.01 && "transformed Q is symmetric");
         if (verbose_mode >= VB_DEBUG)
             cout << "Symmetric rate matrix:" << endl << Q << endl;
 
