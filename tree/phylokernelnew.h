@@ -2974,11 +2974,15 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
 
     tree_lh += horizontal_add(all_tree_lh);
 
-    if (!SAFE_NUMERIC && (std::isnan(tree_lh)))
-        outError("Numerical underflow (lh-branch). Run again with the safe likelihood kernel via `-safe` option");
+//    if (!SAFE_NUMERIC && (std::isnan(tree_lh)))
+//        outError("Numerical underflow (lh-branch). Run again with the safe likelihood kernel via `-safe` option");
 
-    if (std::isnan(tree_lh))
-        outWarning("Numerical underflow for lh-branch");
+    if (std::isnan(tree_lh)) {
+        if (SAFE_NUMERIC)
+            outWarning("Numerical underflow for lh-branch");
+        else
+            outWarning("Numerical underflow for lh-branch, use `-safe` option to avoid this warning");
+    }
 
     // arbitrarily fix tree_lh if underflown for some sites
     if (std::isnan(tree_lh)) {
