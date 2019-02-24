@@ -1891,7 +1891,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -n <#iterations>";
                 if (params.gbo_replicates != 0) {
-                    outError("Ultrafast bootstrap does not work with -n option");
+                    throw("Ultrafast bootstrap does not work with -n option");
                 }
 				params.min_iterations = convert_int(argv[cnt]);
 				params.stop_condition = SC_FIXED_ITERATION;
@@ -2244,11 +2244,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -blmin <min_branch_length>";
 				params.min_branch_length = convert_double(argv[cnt]);
 				if (params.min_branch_length < 0.0)
-					outError("Negative -blmin not allowed!");
+					throw("Negative -blmin not allowed!");
 				if (params.min_branch_length == 0.0)
-					outError("Zero -blmin is not allowed due to numerical problems");
+					throw("Zero -blmin is not allowed due to numerical problems");
 				if (params.min_branch_length > 0.1)
-					outError("-blmin must be < 0.1");
+					throw("-blmin must be < 0.1");
 
 				continue;
 			}
@@ -2258,7 +2258,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -blmax <max_branch_length>";
 				params.max_branch_length = convert_double(argv[cnt]);
 				if (params.max_branch_length < 0.5)
-					outError("-blmax smaller than 0.5 is not allowed");
+					throw("-blmax smaller than 0.5 is not allowed");
 				continue;
 			}
             if (strcmp(argv[cnt], "--show-lh") == 0) {
@@ -2746,7 +2746,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -bb <#replicates>";
                 if (params.stop_condition == SC_FIXED_ITERATION) {
-                    outError("Ultrafast bootstrap does not work with -fast, -te or -n option");
+                    throw("Ultrafast bootstrap does not work with -fast, -te or -n option");
                 }
 				params.gbo_replicates = convert_int(argv[cnt]);
 //				params.avoid_duplicated_trees = true;
@@ -2929,7 +2929,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 			if (strcmp(argv[cnt], "-fast") == 0) {
                 // fast search option to resemble FastTree
                 if (params.gbo_replicates != 0) {
-                    outError("Ultrafast bootstrap (-bb) does not work with -fast option");
+                    throw("Ultrafast bootstrap (-bb) does not work with -fast option");
                 }
                 params.numInitTrees = 2;
 				params.min_iterations = 2;
@@ -2963,7 +2963,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 
             if (strcmp(argv[cnt], "--adt-pert") == 0) {
                 if (params.tabu == true) {
-                    outError("option -tabu and --adt-pert cannot be combined");
+                    throw("option -tabu and --adt-pert cannot be combined");
                 }
                 params.adaptPertubation = true;
                 params.stableSplitThreshold = 1.0;
@@ -3057,7 +3057,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 			if (strcmp(argv[cnt], "-pll") == 0) {
-                outError("-pll option is discontinued.");
+                throw("-pll option is discontinued.");
 				params.pll = true;
 				continue;
 			}
@@ -3146,7 +3146,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -nni-eval <num_evaluation>";
                 params.nni5_num_eval = convert_int(argv[cnt]);
                 if (params.nni5_num_eval < 1)
-                    outError("Positive -nni-eval expected");
+                    throw("Positive -nni-eval expected");
                 continue;
             }
 
@@ -3156,7 +3156,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -bl-eval <num_evaluation>";
                 params.brlen_num_traversal = convert_int(argv[cnt]);
                 if (params.brlen_num_traversal < 1)
-                    outError("Positive -bl-eval expected");
+                    throw("Positive -bl-eval expected");
                 continue;
             }
             
@@ -3332,7 +3332,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 			if (strcmp(argv[cnt], "-t") == 0 || strcmp(argv[cnt], "-te") == 0) {
                 if (strcmp(argv[cnt], "-te") == 0) {
                     if (params.gbo_replicates != 0) {
-                        outError("Ultrafast bootstrap does not work with -te option");
+                        throw("Ultrafast bootstrap does not work with -te option");
                     }
                     params.min_iterations = 0;
                     params.stop_condition = SC_FIXED_ITERATION;
@@ -3399,7 +3399,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -mixlen <number of mixture branch lengths for heterotachy model>";
 				params.num_mixlen = convert_int(argv[cnt]);
 				if (params.num_mixlen < 1)
-					outError("-mixlen must be >= 1");
+					throw("-mixlen must be >= 1");
 				continue;
 			}
             
@@ -3482,19 +3482,49 @@ void parseArg(int argc, char *argv[], Params &params) {
             if (params.root != NULL && params.is_rooted)
                 throw "Not allowed to specify both -o <taxon> and -root";
 
+            if (params.model_test_and_tree && params.partition_type != BRLEN_OPTIMIZE)
+                throw("-mtree not allowed with edge-linked partition model (-spp or -q)");
+            
+            if (params.do_au_test && params.topotest_replicates == 0)
+                throw("For AU test please specify number of bootstrap replicates via -zb option");
+            
+            if (params.lh_mem_save == LM_MEM_SAVE && params.partition_file)
+                throw("-mem option does not work with partition models yet");
+            
+            if (params.gbo_replicates && params.num_bootstrap_samples)
+                throw("UFBoot (-bb) and standard bootstrap (-b) must not be specified together");
+            
+            if ((params.model_name.find("ONLY") != string::npos || (params.model_name.substr(0,2) == "MF" && params.model_name.substr(0,3) != "MFP")) && (params.gbo_replicates || params.num_bootstrap_samples))
+                throw("ModelFinder only cannot be combined with bootstrap analysis");
+            
+            if (params.num_runs > 1 && params.treeset_file)
+                throw("Can't combine --runs and -z options");
+            
+            if (params.num_runs > 1 && params.lmap_num_quartets >= 0)
+                throw("Can't combine --runs and -lmap options");
+
         }
         // try
         catch (const char *str) {
-            outError(str);
+            if (MPIHelper::getInstance().isMaster())
+                outError(str);
+            else
+                exit(EXIT_SUCCESS);
             //} catch (char *str) {
             //outError(str);
         } catch (string str) {
-            outError(str);
+            if (MPIHelper::getInstance().isMaster())
+                outError(str);
+            else
+                exit(EXIT_SUCCESS);
         } catch (...) {
             string err = "Unknown argument \"";
             err += argv[cnt];
             err += "\"";
-            outError(err);
+            if (MPIHelper::getInstance().isMaster())
+                outError(err);
+            else
+                exit(EXIT_SUCCESS);
         }
 
     } // for
@@ -3510,26 +3540,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 //    if (params.do_au_test)
 //        outError("The AU test is temporarily disabled due to numerical issue when bp-RELL=0");
     
-    if (params.model_test_and_tree && params.partition_type != BRLEN_OPTIMIZE)
-        outError("-mtree not allowed with edge-linked partition model (-spp or -q)");
-
-    if (params.do_au_test && params.topotest_replicates == 0)
-        outError("For AU test please specify number of bootstrap replicates via -zb option");
-
-    if (params.lh_mem_save == LM_MEM_SAVE && params.partition_file)
-        outError("-mem option does not work with partition models yet");
-
-    if (params.gbo_replicates && params.num_bootstrap_samples)
-        outError("UFBoot (-bb) and standard bootstrap (-b) must not be specified together");
-
-    if ((params.model_name.find("ONLY") != string::npos || (params.model_name.substr(0,2) == "MF" && params.model_name.substr(0,3) != "MFP")) && (params.gbo_replicates || params.num_bootstrap_samples))
-        outError("ModelFinder only cannot be combined with bootstrap analysis");
-
-    if (params.num_runs > 1 && params.treeset_file)
-        outError("Can't combine --runs and -z options");
-
-    if (params.num_runs > 1 && params.lmap_num_quartets >= 0)
-        outError("Can't combine --runs and -lmap options");
 
 	// Diep:
 	if(params.ufboot2corr == true){
