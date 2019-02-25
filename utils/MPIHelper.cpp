@@ -56,6 +56,31 @@ void MPIHelper::syncRandomSeed() {
 #endif
 }
 
+int MPIHelper::countSameHost() {
+#ifdef _IQTREE_MPI
+    // detect if processes are in the same host
+    char host_name[MPI_MAX_PROCESSOR_NAME];
+    int resultlen;
+    int pID = MPIHelper::getInstance().getProcessID();
+    MPI_Get_processor_name(host_name, &resultlen);
+    char *host_names;
+    host_names = new char[MPI_MAX_PROCESSOR_NAME * MPIHelper::getInstance().getNumProcesses()];
+    
+    MPI_Allgather(host_name, resultlen+1, MPI_CHAR, host_names, MPI_MAX_PROCESSOR_NAME, MPI_CHAR,
+               MPI_COMM_WORLD);
+    
+    int count = 0;
+    for (int i = 0; i < MPIHelper::getInstance().getNumProcesses(); i++)
+        if (strcmp(&host_names[i*MPI_MAX_PROCESSOR_NAME], host_name) == 0)
+            count++;
+    delete [] host_names;
+    if (count>1)
+        cout << "NOTE: " << count << " processes are running on the same host " << host_name << endl; 
+    return count;
+#else
+    return 1;
+#endif
+}
 
 bool MPIHelper::gotMessage() {
     // Check for incoming messages
