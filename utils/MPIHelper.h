@@ -82,8 +82,12 @@ public:
         MPIHelper::processID = processID;
     }
 
+    /** synchronize random seed from master to all workers */
     void syncRandomSeed();
     
+    /** count the number of host with the same name as the current host */
+    int countSameHost();
+
     /** @return true if got any message from another process */
     bool gotMessage();
 

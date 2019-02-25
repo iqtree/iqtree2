@@ -4163,7 +4163,7 @@ int PhyloTree::testNumThreads() {
 #ifndef _OPENMP
     return 1;
 #else
-	int max_procs = min(countPhysicalCPUCores(), params->num_threads_max);
+	int max_procs = min(countPhysicalCPUCores()/MPIHelper::getInstance().countSameHost(), params->num_threads_max);
     cout << "Measuring multi-threading efficiency up to " << max_procs << " CPU cores" << endl;
     DoubleVector runTimes;
     int bestProc = 0;
