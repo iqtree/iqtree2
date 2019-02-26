@@ -569,10 +569,6 @@ add_library(kernelfma tree/phylokernelfma.cpp)
     endif()
 endif()
 
-if (IQTREE_FLAGS MATCHES "mpi")
-    add_library(mympi utils/TreeCollection.cpp utils/ObjectStream.cpp)
-endif()
-
 if (NOT IQTREE_FLAGS MATCHES "single")
     if(CLANG AND APPLE)
         link_directories(${PROJECT_SOURCE_DIR}/libmac)
@@ -677,7 +673,6 @@ endif()
 
 # MPI libraries
 if (IQTREE_FLAGS MATCHES "mpi")
-    target_link_libraries(iqtree mympi)
     if (NOT CMAKE_CXX_COMPILER MATCHES "mpi")
         target_link_libraries(iqtree ${MPI_CXX_LIBRARIES})
     endif()
