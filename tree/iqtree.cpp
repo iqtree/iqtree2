@@ -2421,11 +2421,7 @@ double IQTree::doTreeSearch() {
     cout << "Total number of trees received: " << MPIHelper::getInstance().getNumTreeReceived() << endl;
     cout << "Total number of trees sent: " << MPIHelper::getInstance().getNumTreeSent() << endl;
     cout << "Total number of NNI searches done by myself: " << MPIHelper::getInstance().getNumNNISearch() << endl;
-    //MPIHelper::getInstance().resetNumbers();
-//    MPI_Finalize();
-//    if (MPIHelper::getInstance().getProcessID() != MASTER) {
-//        exit(0);
-//    }
+    MPIHelper::getInstance().resetNumbers();
 #endif
 
     cout << "TREE SEARCH COMPLETED AFTER " << stop_rule.getCurIt() << " ITERATIONS"
@@ -4240,7 +4236,7 @@ int PhyloTree::testNumThreads() {
 #ifndef _OPENMP
     return 1;
 #else
-    int max_procs = min(countPhysicalCPUCores(), params->num_threads_max);
+	int max_procs = min(countPhysicalCPUCores()/MPIHelper::getInstance().countSameHost(), params->num_threads_max);
     cout << "Measuring multi-threading efficiency up to " << max_procs << " CPU cores" << endl;
     DoubleVector runTimes;
     int bestProc = 0;
