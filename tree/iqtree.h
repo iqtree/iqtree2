@@ -310,8 +310,6 @@ public:
      */
     double swapTaxa(PhyloNode *node1, PhyloNode *node2);
 
-    /** collect boostrap trees from workers to master */
-    void collectBootTrees();
 
     /**
             perform tree search
@@ -964,22 +962,6 @@ protected:
     void convertNNI2Splits(SplitIntMap &nniSplits, int numNNIs, vector<NNIMove> &compatibleNNIs);
 
     string generateParsimonyTree(int randomSeed);
-
-#ifdef _IQTREE_MPI
-    /**
-     *  Receive trees from other processes and add them to the candidate set
-     *
-     *  @param allTrees
-     *      If true, wait for tree from every node
-     *      If false, only collect trees that have been sent
-     *  @param maxNumTrees
-     *      Only received up to maxNumTrees to prevent the function to block because it can constantly receive
-     *      new trees
-     *  @param updateStopRule
-     *      To update the stop rule or not
-     */
-    bool MPI_CollectTrees(bool allTrees, int maxNumTrees, bool updateStopRule);
-#endif
 
     double doTreePerturbation();
 

@@ -68,9 +68,6 @@
 #include "vectorclass/instrset.h"
 
 #include "utils/MPIHelper.h"
-#ifdef _IQTREE_MPI
-#include <mpi.h>
-#endif
 
 #ifdef _OPENMP
 	#include <omp.h>
@@ -1721,6 +1718,7 @@ void processNCBITree(Params &params) {
 class outstreambuf : public streambuf {
 public:
     outstreambuf* open( const char* name, ios::openmode mode = ios::out);
+    bool is_open();
     outstreambuf* close();
     ~outstreambuf() { close(); }
     streambuf *get_fout_buf() {
@@ -1754,6 +1752,10 @@ outstreambuf* outstreambuf::open( const char* name, ios::openmode mode) {
 	cout_buf = cout.rdbuf();
 	cout.rdbuf(this);
     return this;
+}
+
+bool outstreambuf::is_open() {
+    return fout.is_open();
 }
 
 outstreambuf* outstreambuf::close() {
@@ -1892,6 +1894,7 @@ void funcExit(void) {
 	}
 	
     endLogFile();
+    MPIHelper::getInstance().finalize();
 }
 
 extern "C" void funcAbort(int signal_number)
@@ -2248,20 +2251,9 @@ int main(int argc, char *argv[]) {
     */
     int instruction_set;
 
-#ifdef _IQTREE_MPI
-	double time_initial, time_current;
-	int n_tasks, task_id;
-	if (MPI_Init(&argc, &argv) != MPI_SUCCESS) {
-		outError("MPI initialization failed!");
-	}
-	MPI_Comm_size(MPI_COMM_WORLD, &n_tasks);
-	MPI_Comm_rank(MPI_COMM_WORLD, &task_id);
-	MPIHelper::getInstance().setNumProcesses(n_tasks);
-	MPIHelper::getInstance().setProcessID(task_id);
-	MPIHelper::getInstance().setNumTreeReceived(0);
-	MPIHelper::getInstance().setNumTreeSent(0);
-    MPIHelper::getInstance().setNumNNISearch(0);
-#endif
+    MPIHelper::getInstance().init(argc, argv);
+    
+    atexit(funcExit);
 
 	/*************************/
 	{ /* local scope */
@@ -2319,18 +2311,23 @@ int main(int argc, char *argv[]) {
         if (checkpoint->hasKey("finished")) {
             if (checkpoint->getBool("finished")) {
                 if (Params::getInstance().force_unfinished) {
-                    cout << "NOTE: Continue analysis although a previous run already finished" << endl;
+                    if (MPIHelper::getInstance().isMaster())
+                        cout << "NOTE: Continue analysis although a previous run already finished" << endl;
                 } else {
-                    outError("Checkpoint (" + filename + ") indicates that a previous run successfully finished\n" +
-                        "Use `-redo` option if you really want to redo the analysis and overwrite all output files.");
                     delete checkpoint;
-                    return EXIT_FAILURE;
+                    if (MPIHelper::getInstance().isMaster())
+                        outError("Checkpoint (" + filename + ") indicates that a previous run successfully finished\n" +
+                            "Use `-redo` option if you really want to redo the analysis and overwrite all output files.");
+                    else
+                        exit(EXIT_SUCCESS);
+                    exit(EXIT_FAILURE);
                 } 
             } else {
                 append_log = true;
             }
         } else {
-            outWarning("Ignore invalid checkpoint file " + filename);
+            if (MPIHelper::getInstance().isMaster())
+                outWarning("Ignore invalid checkpoint file " + filename);
             checkpoint->clear();
         }
     }
@@ -2348,26 +2345,10 @@ int main(int argc, char *argv[]) {
         cout << endl << "******************************************************"
              << endl << "CHECKPOINT: Resuming analysis from " << filename << endl << endl;
     }
-#ifdef _IQTREE_MPI
-	cout << "************************************************" << endl;
-	cout << "* START TREE SEARCH USING MPI WITH " << MPIHelper::getInstance().getNumProcesses() << " PROCESSES *" << endl;
-	cout << "************************************************" << endl;
-	unsigned int rndSeed;
-	if (MPIHelper::getInstance().isMaster()) {
-		rndSeed = Params::getInstance().ran_seed;
-		cout << "Random seed of master = " << rndSeed << endl;
-	}
-	// Broadcast random seed
-	MPI_Bcast(&rndSeed, 1, MPI_INT, PROC_MASTER, MPI_COMM_WORLD);
-	if (MPIHelper::getInstance().isWorker()) {
-//		Params::getInstance().ran_seed = rndSeed + task_id * 100000;
-		Params::getInstance().ran_seed = rndSeed;
-//		printf("Process %d: random_seed = %d\n", task_id, Params::getInstance().ran_seed);
-	}
-#endif
 
-	atexit(funcExit);
-	signal(SIGABRT, &funcAbort);
+    MPIHelper::getInstance().syncRandomSeed();
+    
+    signal(SIGABRT, &funcAbort);
 	signal(SIGFPE, &funcAbort);
 	signal(SIGILL, &funcAbort);
 	signal(SIGSEGV, &funcAbort);
@@ -2499,8 +2480,10 @@ int main(int argc, char *argv[]) {
 	}
 #endif
 
-
-#ifndef _IQTREE_MPI
+#ifdef _IQTREE_MPI
+    cout << endl << "MPI:     " << MPIHelper::getInstance().getNumProcesses() << " processes";
+#endif
+    
     int num_procs = countPhysicalCPUCores();
 #ifdef _OPENMP
     if (num_procs > 1 && Params::getInstance().num_threads == 1) {
@@ -2510,7 +2493,6 @@ int main(int argc, char *argv[]) {
 #else
     if (num_procs > 1)
         cout << endl << endl << "NOTE: Consider using the multicore version because your CPU has " << num_procs << " cores!";
-#endif
 #endif
 
 	//cout << "sizeof(int)=" << sizeof(int) << endl;
@@ -2670,8 +2652,5 @@ int main(int argc, char *argv[]) {
 
 	finish_random();
     
-#ifdef _IQTREE_MPI
-    MPI_Finalize();
-#endif    
 	return EXIT_SUCCESS;
 }
