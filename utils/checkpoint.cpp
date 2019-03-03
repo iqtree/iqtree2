@@ -181,6 +181,13 @@ void Checkpoint::dump(bool force) {
     } catch (ios::failure &) {
         outError(ERR_WRITE_OUTPUT, filename.c_str());
     }
+    // check that the dumping time is too long and increase dump_interval if necessary
+    double dump_time = getRealTime() - prev_dump_time;
+    if (dump_time*20 > dump_interval) {
+        dump_interval = ceil(dump_time*20);
+        cout << "NOTE: " << dump_time << " seconds to dump checkpoint file, increase to "
+        << dump_interval << endl;
+    }
 }
 
 bool Checkpoint::hasKey(string key) {
