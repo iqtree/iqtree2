@@ -779,8 +779,11 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
         if (!(params.suppress_output_flags & OUT_TREEFILE)) {
             if (params.model_name.find("ONLY") != string::npos || (params.model_name.substr(0,2)=="MF" && params.model_name.substr(0,3)!="MFP"))
                 cout << "  Tree used for ModelFinder:     " << params.out_prefix << ".treefile" << endl;
-            else
+            else {
                 cout << "  Maximum-likelihood tree:       " << params.out_prefix << ".treefile" << endl;
+                if (params.partition_type == BRLEN_OPTIMIZE)
+                    cout << "  Partition trees:               " << params.out_prefix << ".parttrees" << endl;
+            }
         }
 //        if (params.snni && params.write_local_optimal_trees) {
 //            cout << "  Locally optimal trees (" << tree.candidateTrees.getNumLocalOptTrees() << "):    " << params.out_prefix << ".suboptimal_trees" << endl;

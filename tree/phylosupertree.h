@@ -130,6 +130,12 @@ public:
 	virtual bool isSuperTree() { return true; }
 
     /**
+     print tree to .treefile
+     @param params program parameters, field root is taken
+     */
+    virtual void printResultTree(string suffix = "");
+
+    /**
      * Return the tree string contining taxon names and branch lengths
      * @return
      */

@@ -22,6 +22,7 @@
 #include "alignment/superalignmentpairwise.h"
 #include "main/phylotesting.h"
 #include "model/partitionmodel.h"
+#include "utils/MPIHelper.h"
 
 PhyloSuperTree::PhyloSuperTree()
  : IQTree()
@@ -190,6 +191,34 @@ void PhyloSuperTree::setNumThreads(int num_threads) {
     PhyloTree::setNumThreads((size() >= num_threads) ? num_threads : 1);
     for (iterator it = begin(); it != end(); it++)
         (*it)->setNumThreads((size() >= num_threads) ? 1 : num_threads);
+}
+
+void PhyloSuperTree::printResultTree(string suffix) {
+    if (MPIHelper::getInstance().isWorker()) {
+        return;
+    }
+    if (params->suppress_output_flags & OUT_TREEFILE)
+        return;
+    
+    IQTree::printResultTree(suffix);
+    
+    string tree_file_name = params->out_prefix;
+    tree_file_name += ".parttrees";
+    if (suffix.compare("") != 0) {
+        tree_file_name += "." + suffix;
+    }
+    try {
+        ofstream out;
+        out.exceptions(ios::failbit | ios::badbit);
+        out.open(tree_file_name);
+        for (iterator it = begin(); it != end(); it++)
+            (*it)->printTree(out, WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
+        out.close();
+    } catch (ios::failure) {
+        outError(ERR_WRITE_OUTPUT, tree_file_name);
+    }
+    if (verbose_mode >= VB_MED)
+        cout << "Partition trees printed to " << tree_file_name << endl;
 }
 
 string PhyloSuperTree::getTreeString() {

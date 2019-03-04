@@ -123,6 +123,9 @@ void PhyloSuperTreePlen::restoreCheckpoint() {
     IQTree::restoreCheckpoint();
 }
 
+void PhyloSuperTreePlen::printResultTree(string suffix) {
+    IQTree::printResultTree(suffix);
+}
 
 // -------------------------------------------------------------------------------------------------------------
 double PhyloSuperTreePlen::computeDist(int seq1, int seq2, double initial_dist, double &var) {
