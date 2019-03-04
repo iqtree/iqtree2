@@ -59,6 +59,12 @@ public:
     virtual void restoreCheckpoint();
 
     /**
+     print tree to .treefile
+     @param params program parameters, field root is taken
+     */
+    virtual void printResultTree(string suffix = "");
+
+    /**
             Read the tree saved with Taxon Names and branch lengths.
             @param tree_string tree string to read from
      */
