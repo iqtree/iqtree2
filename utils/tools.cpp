@@ -897,6 +897,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     //params.freq_type = FREQ_EMPIRICAL;
     params.freq_type = FREQ_UNKNOWN;
     params.keep_zero_freq = true;
+    params.min_state_freq = MIN_FREQUENCY;
     params.min_rate_cats = 2;
     params.num_rate_cats = 4;
     params.max_rate_cats = 10;
@@ -2340,6 +2341,18 @@ void parseArg(int argc, char *argv[], Params &params) {
 
             if (strcmp(argv[cnt], "--keep-zero-freq") == 0) {
                 params.keep_zero_freq = true;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--min-freq") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --min-freq NUM";
+                params.min_state_freq = convert_double(argv[cnt]);
+                if (params.min_state_freq <= 0)
+                    throw "--min-freq must be positive";
+                if (params.min_state_freq >= 1.0)
+                    throw "--min-freq must be < 1.0";
                 continue;
             }
 

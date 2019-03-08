@@ -439,6 +439,11 @@ void ModelMarkov::computeTransMatrixNonrev(double time, double *trans_matrix, in
         if (mat.minCoeff() < 0) {
             outWarning("negative trans_mat");
         }
+        // sanity check rows sum to 1
+        VectorXd row_sum = mat.rowwise().sum();
+        double mincoeff = row_sum.minCoeff();
+        double maxcoeff = row_sum.maxCoeff();
+        ASSERT(maxcoeff < 1.001 && mincoeff > 0.999);
         trans_mat = mat;
     } else if (phylo_tree->params->matrix_exp_technique == MET_EIGEN3LIB_DECOMPOSITION) {
         VectorXcd ceval_exp(num_states);
@@ -897,9 +902,6 @@ bool ModelMarkov::getVariables(double *variables) {
 double ModelMarkov::targetFunk(double x[]) {
 	bool changed = getVariables(x);
 
-//    if (state_freq[num_states-1] < 0)
-//        return 1.0e+30;
-
 	if (changed) {
 		decomposeRateMatrix();
 		ASSERT(phylo_tree);
@@ -910,8 +912,10 @@ double ModelMarkov::targetFunk(double x[]) {
 
     // avoid numerical issue if state_freq is too small
     for (int i = 0; i < num_states; i++)
-        if (state_freq[i] < 0)
+        if (state_freq[i] < 0 || (state_freq[i] > 0 && state_freq[i] < Params::getInstance().min_state_freq)) {
+            outWarning("Weird state_freq[" + convertIntToString(i) + "]=" + convertDoubleToString(state_freq[i]));
             return 1.0e+30;
+        }
 
 //    if (!is_reversible) {
 //        for (int i = 0; i < num_states; i++)
@@ -1080,33 +1084,85 @@ void ModelMarkov::decomposeRateMatrixNonrev() {
     /******** using Eigen3 library ***********/
     
     nondiagonalizable = false; // until proven otherwise
+    int n = 0; // the number of states where freq is non-zero
+    for (i = 0; i < num_states; i++)
+        if (state_freq[i] != 0.0)
+            n++;
+    int ii, jj;
+    MatrixXd Q(n, n);
+    VectorXd pi(n);
+    for (i = 0, ii = 0; i < num_states; i++)
+        if (state_freq[i] != 0.0) {
+            pi(ii) = state_freq[i];
+            ii++;
+        }
+    // normalize pi to sum=1
+    pi = pi*(1.0/pi.sum());
     // RowMajor for rate_matrix
-    Map<Matrix<double,Dynamic,Dynamic,RowMajor>,Aligned > rate_mat(rate_matrix, num_states, num_states);
-    MatrixXd mat = rate_mat;
-    EigenSolver<MatrixXd> eigensolver(mat);
-    ASSERT (eigensolver.info() == Eigen::Success);
-    Map<VectorXcd,Aligned> eval(ceval, num_states);
-    eval = eigensolver.eigenvalues();
-    Map<MatrixXcd,Aligned> evec(cevec, num_states, num_states);
-    evec = eigensolver.eigenvectors();
-    // NOTE 2018-10-29: determinant is not good for detecting non-diagonalizable
-    // use isInvertible instead (below)
-    /*
-    if (abs(evec.determinant())<1e-8) {
-        // limit of 1e-10 is something of a guess. 1e-12 was too restrictive.
-        nondiagonalizable = true; // will use scaled squaring instead of eigendecomposition for matrix exponentiation
-        return;
-        outWarning("zero evec determinant");
+    if (n == num_states)
+        Q = Map<Matrix<double,Dynamic,Dynamic,RowMajor>,Aligned >(rate_matrix, num_states, num_states);
+    else {
+        for (i = 0, ii = 0; i < num_states; i++)
+            if (state_freq[i] != 0.0) {
+                for (j = 0, jj = 0; j < num_states; j++)
+                    if (state_freq[j] != 0.0) {
+                        Q(ii,jj) = rate_matrix[i*num_states+j];
+                        jj++;
+                    }
+                ii++;
+            }
     }
-    */
-
-    FullPivLU<MatrixXcd> lu(evec);
-    if (lu.isInvertible()) {
-        Map<MatrixXcd,Aligned> inv_evec(cinv_evec, num_states, num_states);
-        inv_evec = lu.inverse();
+    EigenSolver<MatrixXd> eigensolver(Q);
+    ASSERT (eigensolver.info() == Eigen::Success);
+    if (n == num_states) {
+        Map<VectorXcd,Aligned> eval(ceval, num_states);
+        eval = eigensolver.eigenvalues();
+        Map<MatrixXcd,Aligned> evec(cevec, num_states, num_states);
+        evec = eigensolver.eigenvectors();
+        FullPivLU<MatrixXcd> lu(evec);
+        if (lu.isInvertible()) {
+            Map<MatrixXcd,Aligned> inv_evec(cinv_evec, num_states, num_states);
+            inv_evec = lu.inverse();
+        } else {
+            nondiagonalizable = true;
+            outWarning("evec not invertible");
+        }
     } else {
-        nondiagonalizable = true;
-        outWarning("evec not invertible");
+        // manual copy non-zero entries
+        for (i = 0, ii = 0; i < num_states; i++)
+            if (state_freq[i] != 0.0) {
+                ceval[i] = eigensolver.eigenvalues()(ii);
+                ii++;
+            } else
+                ceval[i] = 0.0;
+        MatrixXcd evec = eigensolver.eigenvectors();
+        MatrixXcd inv_evec;
+        FullPivLU<MatrixXcd> lu(evec);
+        if (lu.isInvertible()) {
+            inv_evec = lu.inverse();
+        } else {
+            nondiagonalizable = true;
+            outWarning("evec not invertible");
+        }
+        for (i = 0, ii = 0; i < num_states; i++) {
+            auto *eigenvectors_ptr = cevec + (i*num_states);
+            auto *inv_eigenvectors_ptr = cinv_evec + (i*num_states);
+            if (state_freq[i] != 0.0) {
+                for (j = 0, jj = 0; j < num_states; j++)
+                    if (state_freq[j] != 0) {
+                        eigenvectors_ptr[j] = evec(ii,jj);
+                        inv_eigenvectors_ptr[j] = inv_evec(ii,jj);
+                        jj++;
+                    } else {
+                        eigenvectors_ptr[j] = inv_eigenvectors_ptr[j] = (i == j);
+                    }
+                ii++;
+            } else {
+                for (j = 0; j < num_states; j++) {
+                    eigenvectors_ptr[j] = inv_eigenvectors_ptr[j] = (i == j);
+                }
+            }
+        }
     }
     
     // sanity check
@@ -1786,7 +1842,7 @@ int computeStateFreqFromQMatrix (double Q[], double pi[], int n) {
     Map<VectorXd> freq(pi, n);
     freq = A.colPivHouseholderQr().solve(b);
     double sum = freq.sum();
-    ASSERT(fabs(sum-1.0) < 1e-8);
+    ASSERT(fabs(sum-1.0) < 1e-4);
     return 0;
 }
 

@@ -1421,6 +1421,9 @@ public:
     /** FALSE to set zero state frequency to 1e-4.
         Default: FALSE (version <= 1.5.5), TRUE (ver >= 1.5.6) */
     bool keep_zero_freq;
+    
+    /** minimal state frequency for optimisation, default=0.0001 */
+    double min_state_freq;
 
 
     /**
