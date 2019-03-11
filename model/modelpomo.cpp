@@ -1023,45 +1023,51 @@ void ModelPoMo::restoreCheckpoint() {
 // Declaration of helper function; needed by decomposeRateMatrix().
 //int computeStateFreqFromQMatrix (double Q[], double pi[], int n, double space[]);
 
+// void ModelPoMo::decomposeRateMatrix() {
+//     updatePoMoStatesAndRateMatrix();
+//     // Non-reversible.
+//     if (!is_reversible) {
+//         if (phylo_tree->params->matrix_exp_technique == MET_EIGEN_DECOMPOSITION) {
+//             eigensystem_nonrev(rate_matrix, state_freq, eigenvalues, eigenvalues_imag, eigenvectors, inv_eigenvectors, num_states);
+//             return;
+//         }
+//         else if (phylo_tree->params->matrix_exp_technique == MET_SCALING_SQUARING) {
+//             return;
+//         }
+//         else if (phylo_tree->params->matrix_exp_technique == MET_EIGEN3LIB_DECOMPOSITION) {
+//             // Not (yet?) implemented.
+//             // decomposeRateMatrixEigen3lib();
+//             outError("MET_EIGEN3LIB_DECOMPOSITION does not work with PoMo.");
+//         }
+//         else if (phylo_tree->params->matrix_exp_technique == MET_LIE_MARKOV_DECOMPOSITION)
+//             // Not possible?
+//             // decomposeRateMatrixClosedForm();
+//             outError("Matrix decomposition in closed form not available for PoMo.");
+//         else
+//             outError("Matrix decomposition method unknown.");
+//     }
+//     // Reversible.  Alogrithms for symmetric matrizes can be used.
+//     else {
+//         // TODO DS: This leaves room for speed improvements.
+//         // EigenDecomposition::eigensystem_sym() expects a matrix[][]
+//         // object with two indices.  However, it is not used, because
+//         // ModelPoMo::computeRateMatrix() is called anyways from
+//         // within eigensystem_sym().
+// 		double **temp_matrix = new double*[num_states];
+// 		for (int i = 0; i < num_states; i++)
+// 			temp_matrix[i] = new double[num_states];
+// 		eigensystem_sym(temp_matrix, state_freq, eigenvalues, eigenvectors, inv_eigenvectors, num_states);
+// 		for (int i = num_states-1; i >= 0; i--)
+// 			delete [] temp_matrix[i];
+// 		delete [] temp_matrix;
+//     return;
+//     }
+// }
+
 void ModelPoMo::decomposeRateMatrix() {
     updatePoMoStatesAndRateMatrix();
-    // Non-reversible.
-    if (!is_reversible) {
-        if (phylo_tree->params->matrix_exp_technique == MET_EIGEN_DECOMPOSITION) {
-            eigensystem_nonrev(rate_matrix, state_freq, eigenvalues, eigenvalues_imag, eigenvectors, inv_eigenvectors, num_states);
-            return;
-        }
-        else if (phylo_tree->params->matrix_exp_technique == MET_SCALING_SQUARING) {
-            return;
-        }
-        else if (phylo_tree->params->matrix_exp_technique == MET_EIGEN3LIB_DECOMPOSITION) {
-            // Not (yet?) implemented.
-            // decomposeRateMatrixEigen3lib();
-            outError("MET_EIGEN3LIB_DECOMPOSITION does not work with PoMo.");
-        }
-        else if (phylo_tree->params->matrix_exp_technique == MET_LIE_MARKOV_DECOMPOSITION)
-            // Not possible?
-            // decomposeRateMatrixClosedForm();
-            outError("Matrix decomposition in closed form not available for PoMo.");
-        else
-            outError("Matrix decomposition method unknown.");
-    }
-    // Reversible.  Alogrithms for symmetric matrizes can be used.
-    else {
-        // TODO DS: This leaves room for speed improvements.
-        // EigenDecomposition::eigensystem_sym() expects a matrix[][]
-        // object with two indices.  However, it is not used, because
-        // ModelPoMo::computeRateMatrix() is called anyways from
-        // within eigensystem_sym().
-		double **temp_matrix = new double*[num_states];
-		for (int i = 0; i < num_states; i++)
-			temp_matrix[i] = new double[num_states];
-		eigensystem_sym(temp_matrix, state_freq, eigenvalues, eigenvectors, inv_eigenvectors, num_states);
-		for (int i = num_states-1; i >= 0; i--)
-			delete [] temp_matrix[i];
-		delete [] temp_matrix;
+    ModelMarkov::decomposeRateMatrix();
     return;
-    }
 }
 
 void ModelPoMo::set_heterozygosity_boundaries() {
