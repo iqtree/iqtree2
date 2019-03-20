@@ -781,7 +781,7 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
                 cout << "  Tree used for ModelFinder:     " << params.out_prefix << ".treefile" << endl;
             else {
                 cout << "  Maximum-likelihood tree:       " << params.out_prefix << ".treefile" << endl;
-                if (params.partition_type == BRLEN_OPTIMIZE)
+                if (params.partition_type == BRLEN_OPTIMIZE && tree.isSuperTree())
                     cout << "  Partition trees:               " << params.out_prefix << ".parttrees" << endl;
             }
         }

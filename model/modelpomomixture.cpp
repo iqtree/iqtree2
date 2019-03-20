@@ -122,7 +122,7 @@ double ModelPoMoMixture::targetFunk(double x[]) {
 void ModelPoMoMixture::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
     if (opt_mode == OPT_RATEHET) {
 //        ratehet->setBounds(lower_bound, upper_bound, bound_check);
-        lower_bound[1] = POMO_GAMMA_MIN;
+        lower_bound[1] = max(POMO_GAMMA_MIN, Params::getInstance().min_gamma_shape);
         upper_bound[1] = POMO_GAMMA_MAX;
         // Boundary checking is the preferred solution to warn the user if the
         // shape parameter hits the boundary, but it seems to be too verbose.
