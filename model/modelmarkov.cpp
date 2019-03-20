@@ -1294,14 +1294,19 @@ void ModelMarkov::decomposeRateMatrix(){
             Q *= scale_factor;
         }
         
-        if (verbose_mode >= VB_DEBUG)
-            cout << Q << endl;
+//        if (verbose_mode >= VB_DEBUG)
+//            cout << Q << endl;
         
         //symmetrize rate matrix
         Q = pi_sqrt * Q * pi_sqrt_inv;
-        ASSERT((Q - Q.transpose()).cwiseAbs().maxCoeff() < 0.01 && "transformed Q is symmetric");
         if (verbose_mode >= VB_DEBUG)
             cout << "Symmetric rate matrix:" << endl << Q << endl;
+        if ((Q - Q.transpose()).cwiseAbs().maxCoeff() >= 0.01) {
+            cout << "Q: " << endl << Q << endl;
+            cout << "pi: " << pi << endl;
+            writeInfo(cout);
+        }
+        ASSERT((Q - Q.transpose()).cwiseAbs().maxCoeff() < 0.1 && "transformed Q is symmetric");
 
         // eigensolver
         SelfAdjointEigenSolver<MatrixXd> eigensolver(Q);
