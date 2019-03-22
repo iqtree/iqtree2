@@ -29,8 +29,7 @@ ModelPoMo::ModelPoMo(const char *model_name,
 void ModelPoMo::init_mutation_model(const char *model_name,
                                         string model_params,
                                         StateFreqType freq_type,
-                                        string freq_params,
-                                        string pomo_heterozygosity)
+                                        string freq_params)
 {
     // Trick ModelDNA constructor by setting the number of states to 4 (DNA).
     phylo_tree->aln->num_states = n_alleles;
@@ -181,8 +180,7 @@ void ModelPoMo::init(const char *model_name,
     init_mutation_model(model_name,
                         model_params,
                         freq_type,
-                        freq_params,
-                        pomo_heterozygosity);
+                        freq_params);
     init_sampling_method();
     init_boundary_frequencies();
     // Initialize heterozygosity and the scale factor of the mutation rates
