@@ -613,6 +613,7 @@ void ModelPoMo::writeInfo(ostream &out) {
   report(out);
 }
 
+// TODO: s_freqs is not used.
 void ModelPoMo::computeRateMatrix(double **r_matrix, double *s_freqs, int n_states) {
     for (int i = 0; i < n_states; i++) {
         for (int j = 0; j < n_states; j++) {
