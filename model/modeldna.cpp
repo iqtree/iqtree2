@@ -438,10 +438,10 @@ bool ModelDNA::getVariables(double *variables) {
         // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
 		int ndim = getNDim();
 		changed |= memcmpcpy(state_freq, variables+(ndim-num_states+2), (num_states-1)*sizeof(double));
-                double sum = 0;
-                for (i = 0; i < num_states-1; i++) 
-                        sum += state_freq[i];
-                state_freq[num_states-1] = 1.0 - sum;
+//                double sum = 0;
+//                for (i = 0; i < num_states-1; i++)
+//                        sum += state_freq[i];
+//                state_freq[num_states-1] = 1.0 - sum;
     } else {
         // BQM: for special DNA freq stuffs from MDW
         changed |= freqsFromParams(state_freq,variables+num_params+1,freq_type);
