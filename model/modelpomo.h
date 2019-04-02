@@ -98,8 +98,7 @@ class ModelPoMo : virtual public ModelMarkov
     void init_mutation_model(const char *model_name,
                              string model_params,
                              StateFreqType freq_type,
-                             string freq_params,
-                             string pomo_heterozygosity);
+                             string freq_params);
 
     /**
      *  \brief Initialize sampling type.
