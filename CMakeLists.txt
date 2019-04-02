@@ -563,6 +563,7 @@ add_subdirectory(tree)
 option(YAML_CPP_BUILD_TESTS "Enable testing" OFF)
 option(YAML_CPP_BUILD_TOOLS "Enable parse tools" OFF)
 option(YAML_CPP_BUILD_CONTRIB "Enable contrib stuff in library" OFF)
+option(YAML_CPP_INSTALL "Enable generation of install target" OFF)
 add_subdirectory(yaml-cpp)
 add_subdirectory(phylo-yaml)
 
