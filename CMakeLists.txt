@@ -83,7 +83,7 @@ set (iqtree_VERSION_MAJOR 1)
 set (iqtree_VERSION_MINOR 7)
 set (iqtree_VERSION_PATCH "-beta9")
 
-set(BUILD_SHARED_LIBS OFF)
+option(BUILD_SHARED_LIBS "Build Shared Libraries" OFF)
 
 if (CMAKE_C_COMPILER MATCHES "mpic")
     set(IQTREE_FLAGS "${IQTREE_FLAGS} mpi")
