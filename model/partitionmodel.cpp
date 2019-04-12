@@ -261,14 +261,14 @@ double PartitionModel::optimizeLinkedModel(bool write_info, double gradient_epsi
     model->setVariables(variables2);
     ((ModelMarkov*)model)->setBounds(lower_bound, upper_bound, bound_check);
     // expand the bound for linked model
-    for (int i = 1; i <= ndim; i++) {
-        lower_bound[i] = MIN_RATE*0.2;
-        upper_bound[i] = MAX_RATE*2.0;
-    }
-    if (Params::getInstance().optimize_alg.find("NR") != string::npos)
-        score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
-    else
-        score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
+//    for (int i = 1; i <= ndim; i++) {
+//        lower_bound[i] = MIN_RATE*0.2;
+//        upper_bound[i] = MAX_RATE*2.0;
+//    }
+//    if (Params::getInstance().optimize_alg.find("NR") != string::npos)
+//        score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
+//    else
+//        score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
     
     // 2017-12-06: more robust optimization using 2 different routines
     // when estimates are at boundary
@@ -331,14 +331,14 @@ double PartitionModel::optimizeParameters(int fixed_len, bool write_info, double
     double prev_tree_lh = -DBL_MAX, tree_lh = 0.0;
     int ntrees = tree->size();
 
-    unordered_map<string, int> num_params;
+    unordered_map<string, bool> fixed_params;
     unordered_map<string, ModelSubst*>::iterator it;
     
     for (int step = 0; step < Params::getInstance().model_opt_steps; step++) {
         // disable optimizing linked model for the moment
         for (it = linked_models.begin(); it != linked_models.end(); it++) {
-            num_params[it->first] = it->second->getNParams();
-            it->second->setNParams(0);
+            fixed_params[it->first] = ((ModelMarkov*)(it->second))->fixed_parameters;
+            ((ModelMarkov*)(it->second))->fixed_parameters = true;
         }
         tree_lh = 0.0;
         if (tree->part_order.empty()) tree->computePartitionOrder();
@@ -382,8 +382,8 @@ double PartitionModel::optimizeParameters(int fixed_len, bool write_info, double
 
         ModelSubst *saved_model = model;
         for (it = linked_models.begin(); it != linked_models.end(); it++)
-            if (num_params[it->first] > 0) {
-                it->second->setNParams(num_params[it->first]);
+            if (!fixed_params[it->first]) {
+                ((ModelMarkov*)(it->second))->fixed_parameters = false;
                 model = it->second;
                 tree_lh = optimizeLinkedModel(write_info, gradient_epsilon);
                 saveCheckpoint();

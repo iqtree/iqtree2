@@ -7,8 +7,9 @@
 //
 
 #include <stdio.h>
-#include "partitionmodelplen.h"
+#include "model/partitionmodelplen.h"
 #include "utils/timeutil.h"
+#include "model/modelmarkov.h"
 
 /**********************************************************
  * class PartitionModelPlen
@@ -79,7 +80,7 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info, do
     
     //tree->initPartitionInfo(); // FOR OLGA: needed here
 
-    unordered_map<string, int> num_params;
+    unordered_map<string, bool> fixed_params;
     unordered_map<string, ModelSubst*>::iterator it;
 
     for(int part = 0; part < ntrees; part++){
@@ -98,8 +99,8 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info, do
     for(i = 1; i < tree->params->num_param_iterations; i++){
         // disable optimizing linked model for the moment
         for (it = linked_models.begin(); it != linked_models.end(); it++) {
-            num_params[it->first] = it->second->getNParams();
-            it->second->setNParams(0);
+            fixed_params[it->first] = ((ModelMarkov*)(it->second))->fixed_parameters;
+            ((ModelMarkov*)(it->second))->fixed_parameters = true;
         }
 
         cur_lh = 0.0;
@@ -135,8 +136,8 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info, do
 
         ModelSubst *saved_model = model;
         for (it = linked_models.begin(); it != linked_models.end(); it++)
-            if (num_params[it->first] > 0) {
-                it->second->setNParams(num_params[it->first]);
+            if (!fixed_params[it->first]) {
+                ((ModelMarkov*)(it->second))->fixed_parameters = false;
                 model = it->second;
                 cur_lh = optimizeLinkedModel(write_info, gradient_epsilon);
                 saveCheckpoint();
