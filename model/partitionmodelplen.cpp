@@ -78,7 +78,10 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info, do
     
     
     //tree->initPartitionInfo(); // FOR OLGA: needed here
-    
+
+    unordered_map<string, int> num_params;
+    unordered_map<string, ModelSubst*>::iterator it;
+
     for(int part = 0; part < ntrees; part++){
         tree->part_info[part].cur_score = 0.0;
     }
@@ -93,6 +96,12 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info, do
     double begin_time = getRealTime();
     int i;
     for(i = 1; i < tree->params->num_param_iterations; i++){
+        // disable optimizing linked model for the moment
+        for (it = linked_models.begin(); it != linked_models.end(); it++) {
+            num_params[it->first] = it->second->getNParams();
+            it->second->setNParams(0);
+        }
+
         cur_lh = 0.0;
         if (tree->part_order.empty()) tree->computePartitionOrder();
 #ifdef _OPENMP
@@ -101,8 +110,9 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info, do
         for (int partid = 0; partid < ntrees; partid++) {
             int part = tree->part_order[partid];
             // Subtree model parameters optimization
-            tree->part_info[part].cur_score = tree->at(part)->getModelFactory()->optimizeParametersOnly(i+1,
-                                                                                                        gradient_epsilon/min(min(i,ntrees),10), tree->part_info[part].cur_score);
+            tree->part_info[part].cur_score = tree->at(part)->getModelFactory()->
+                optimizeParametersOnly(i+1, gradient_epsilon/min(min(i,ntrees),10),
+                                       tree->part_info[part].cur_score);
             if (tree->part_info[part].cur_score == 0.0)
                 tree->part_info[part].cur_score = tree->at(part)->computeLikelihood();
             cur_lh += tree->part_info[part].cur_score;
@@ -122,6 +132,18 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info, do
         if (tree->params->link_alpha) {
             cur_lh = optimizeLinkedAlpha(write_info, gradient_epsilon);
         }
+
+        ModelSubst *saved_model = model;
+        for (it = linked_models.begin(); it != linked_models.end(); it++)
+            if (num_params[it->first] > 0) {
+                it->second->setNParams(num_params[it->first]);
+                model = it->second;
+                cur_lh = optimizeLinkedModel(write_info, gradient_epsilon);
+                saveCheckpoint();
+                getCheckpoint()->dump();
+            }
+        model = saved_model;
+
         if (verbose_mode >= VB_MED)
             cout << "LnL after optimizing individual models: " << cur_lh << endl;
         if (cur_lh <= tree_lh - 1.0) {
