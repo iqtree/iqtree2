@@ -139,7 +139,8 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info, do
             if (!fixed_params[it->first]) {
                 ((ModelMarkov*)(it->second))->fixed_parameters = false;
                 model = it->second;
-                cur_lh = optimizeLinkedModel(write_info, gradient_epsilon);
+                if (model->getNDim() > 0)
+                    cur_lh = optimizeLinkedModel(write_info, gradient_epsilon);
                 saveCheckpoint();
                 getCheckpoint()->dump();
             }

@@ -386,6 +386,8 @@ bool ModelDNA::setRateType(string rate_str) {
 
 
 int ModelDNA::getNDim() {
+    if (fixed_parameters)
+        return 0;
 	ASSERT(freq_type != FREQ_UNKNOWN);
 	// possible TO-DO: cache nFreqParams(freq_type) to avoid repeat calls.
 //        return (num_params+nFreqParams(freq_type));
