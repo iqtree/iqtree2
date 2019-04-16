@@ -1209,6 +1209,9 @@ public:
      */
     bool site_concordance_partition;
 
+    /** TRUE to print trees associated with discordance factor 1 (NNI-1 tree) */
+    bool print_df1_trees;
+    
     /** 1 to compute internode certainty */
     int internode_certainty;
     
