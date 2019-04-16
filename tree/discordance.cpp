@@ -347,6 +347,9 @@ void PhyloTree::computeGeneConcordance(MTreeSet &trees, map<string,string> &mean
     meanings.insert({"gDF1", "Gene discordance factor (%) for NNI-1 branch"});
     meanings.insert({"gDF2", "Gene discordance factor (%) for NNI-2 branch"});
     meanings.insert({"gN", "Number of trees decisive for the branch"});
+    if (Params::getInstance().print_df1_trees)
+        meanings.insert({"treeDF1", "Newick tree for DF1"});
+    meanings.insert({"*NOTE*", "gCF+gDF1+gDF2 might be < 100%. The remaining % is the fraction of other discordant trees"});
 }
 
 /**

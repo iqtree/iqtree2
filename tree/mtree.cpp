@@ -2060,20 +2060,42 @@ void MTree::extractQuadSubtrees(vector<Split*> &subtrees, BranchVector &branches
 		ASSERT(node->degree() == 3 && (*it)->node->degree() == 3);
 		int cnt = 0;
 		Node *child = (*it)->node;
+        string treestrings[4];
+        int nodeid = 0;
 		FOR_NEIGHBOR_DECLARE(child, node, it2) {
 			Split *sp = new Split(leafNum);
 			getTaxa(*sp, (*it2)->node, child);
 			subtrees.push_back(sp);
 			cnt += sp->countTaxa();
+            if (Params::getInstance().print_df1_trees) {
+                ostringstream ostr;
+                printTree(ostr, WT_BR_LEN, (*it2)->node, child);
+                treestrings[nodeid] = ostr.str();
+                treestrings[nodeid] = treestrings[nodeid].substr(0, treestrings[nodeid].length()-1);
+                nodeid++;
+            }
 		}
 		FOR_NEIGHBOR(node, child, it2) {
 			Split *sp = new Split(leafNum);
 			getTaxa(*sp, (*it2)->node, node);
 			subtrees.push_back(sp);
 			cnt += sp->countTaxa();
+            if (Params::getInstance().print_df1_trees) {
+                ostringstream ostr;
+                printTree(ostr, WT_BR_LEN, (*it2)->node, node);
+                treestrings[nodeid] = ostr.str();
+                treestrings[nodeid] = treestrings[nodeid].substr(0, treestrings[nodeid].length()-1);
+                nodeid++;
+            }
 		}
 		ASSERT(cnt == leafNum);
         branches.push_back({node, child});
+        if (Params::getInstance().print_df1_trees) {
+            ASSERT(nodeid == 4);
+            // output NNI-1 tree
+            string treeDF1 = "(" + treestrings[0] + "," + treestrings[2] + ",(" + treestrings[1] + "," + treestrings[3] + "));";
+            PUT_ATTR(child->findNeighbor(node), treeDF1);
+        }
 	}
 }
 

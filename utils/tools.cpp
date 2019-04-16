@@ -794,6 +794,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.support_tag = NULL;
     params.site_concordance = 0;
     params.site_concordance_partition = false;
+    params.print_df1_trees = false;
     params.internode_certainty = 0;
     params.tree_weight_file = NULL;
     params.consensus_type = CT_NONE;
@@ -1537,6 +1538,10 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
             if (strcmp(argv[cnt], "--scf-part") == 0 || strcmp(argv[cnt], "--cf-verbose") == 0) {
                 params.site_concordance_partition = true;
+                continue;
+            }
+            if (strcmp(argv[cnt], "--df-tree") == 0) {
+                params.print_df1_trees = true;
                 continue;
             }
             if (strcmp(argv[cnt], "--qic") == 0) {
@@ -4206,6 +4211,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << endl << "CONCORDANCE FACTOR ANALYSIS:" << endl
     << "  -t FILE              Reference tree to assign concordance factor" << endl
     << "  --gcf FILE           Set of source trees for gene concordance factor (gCF)" << endl
+    << "  --df-tree            Write discordant trees associated with gDF1" << endl
     << "  --scf NUMBER         Number of quartets for site concordance factor (sCF)" << endl
     << "  -s FILE              Sequence alignment for --scf" << endl
     << "  -p FILE|DIR          Partition file or directory for --scf" << endl

@@ -3987,20 +3987,27 @@ void assignBranchSupportNew(Params &params) {
         << "#   ID: Branch ID" << endl;
     map<string,string>::iterator mit;
     for (mit = meanings.begin(); mit != meanings.end(); mit++)
-        out << "#   " << mit->first << ": " << mit->second << endl;
+        if (mit->first[0] != '*')
+            out << "#   " << mit->first << ": " << mit->second << endl;
     out << "#   Label: Existing branch label" << endl;
     out << "#   Length: Branch length" << endl;
+    for (mit = meanings.begin(); mit != meanings.end(); mit++)
+        if (mit->first[0] == '*')
+            out << "# " << mit->first << ": " << mit->second << endl;
     out << "ID";
     for (mit = meanings.begin(); mit != meanings.end(); mit++)
-        out << "\t" << mit->first;
+        if (mit->first[0] != '*')
+            out << "\t" << mit->first;
     out << "\tLabel\tLength" << endl;
     for (brit = branches.begin(); brit != branches.end(); brit++) {
         Neighbor *branch = brit->second->findNeighbor(brit->first);
         int ID = brit->second->id;
         out << ID;
         for (mit = meanings.begin(); mit != meanings.end(); mit++) {
+            if (mit->first[0] == '*')
+                continue; // ignore NOTES
             out << '\t';
-            double val = 0.0;
+            string val;
             if (branch->getAttr(mit->first, val))
                 out << val;
             else
