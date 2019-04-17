@@ -1375,6 +1375,13 @@ public:
     virtual double optimizeRootPosition(int root_dist, bool write_info, double logl_epsilon);
 
     /**
+     Test all root positions for rooted tree
+     @param write_info true to write information to cout
+     @param logl_epsilon epsilon of log-likelihood to consider as better
+     */
+    virtual double testRootPosition(bool write_info, double logl_epsilon);
+
+    /**
             inherited from Optimization class, to return to likelihood of the tree
             when the current branceh length is set to value
             @param value current branch length

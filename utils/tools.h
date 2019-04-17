@@ -1145,6 +1145,11 @@ public:
     bool root_find;
 
     /**
+     TRUE to test all rooting positions at the end of the run
+     */
+    bool root_test;
+
+    /**
             min branch length, used to create random tree/network
      */
     double min_len;

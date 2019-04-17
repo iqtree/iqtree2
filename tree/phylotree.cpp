@@ -2786,6 +2786,20 @@ void PhyloTree::moveRoot(Node *node1, Node *node2) {
     node1->updateNeighbor(node2, root_dad, len);
     root_dad->updateNeighbor(root_nei2, node2, len);
     node2->updateNeighbor(node1, root_dad, len);
+    
+    if (isSuperTree()) {
+        ((PhyloSuperTree*) this)->mapTrees();
+    }
+    if (Params::getInstance().pll) {
+        pllReadNewick(getTreeString());
+    }
+    resetCurScore();
+    if (Params::getInstance().fixStableSplits || Params::getInstance().adaptPertubation) {
+        buildNodeSplit();
+    }
+    current_it = current_it_back = NULL;
+    clearBranchDirection();
+    computeBranchDirection();
 }
 
 double PhyloTree::optimizeRootPosition(int root_dist, bool write_info, double logl_epsilon) {
@@ -2841,6 +2855,91 @@ double PhyloTree::optimizeRootPosition(int root_dist, bool write_info, double lo
 
     ASSERT(fabs(curScore-best_score) < logl_epsilon);
 
+    return curScore;
+}
+
+double PhyloTree::testRootPosition(bool write_info, double logl_epsilon) {
+    if (!rooted)
+        return curScore;
+    
+    BranchVector branches;
+    getBranches(branches);
+    int i;
+    Node *root_nei = root->neighbors[0]->node;
+    ASSERT(root_nei->degree() == 3);
+    Branch root_br = {NULL, NULL};
+    FOR_NEIGHBOR_IT(root_nei, root, it) {
+        if (root_br.first == NULL)
+            root_br.first = (*it)->node;
+        else
+            root_br.second = (*it)->node;
+    }
+    
+    double best_score = curScore, orig_score = curScore;
+    
+    multimap<double, string> logl_trees;
+    
+    // ignore branches directly descended from root branch
+    for (i = 0; i != branches.size(); )
+        if (branches[i].first == root_nei || branches[i].second == root_nei) {
+            branches[i] = branches[branches.size()-1];
+            branches.pop_back();
+        } else {
+            i++;
+        }
+    branches.push_back(root_br);
+        
+    // get all trees
+//    for (i = 0; i != nodes1.size(); i++) {
+//        moveRoot(nodes1[i], nodes2[i]);
+//        trees.push_back(getTreeString());
+//    }
+//
+    // optimize branch lengths for all trees
+    for (i = 0; i != branches.size(); i++) {
+//    for (auto t = trees.begin()+1; t != trees.end(); t++) {
+        moveRoot(branches[i].first, branches[i].second);
+//        readTreeString(*t);
+        optimizeAllBranches(100, logl_epsilon);
+        stringstream ss;
+        printTree(ss);
+        logl_trees.insert({curScore, ss.str()});
+        if (verbose_mode >= VB_MED) {
+            cout << "Root pos " << i+1 << ": " << curScore << endl;
+            if (verbose_mode >= VB_DEBUG)
+                drawTree(cout);
+        }
+        if (curScore > best_score + logl_epsilon) {
+            if (verbose_mode >= VB_MED || write_info)
+                cout << "Better root: " << curScore << endl;
+            best_score = curScore;
+        }
+    }
+    
+//    readTreeString(best_tree);
+//    curScore = computeLikelihood();
+    
+    ASSERT(curScore > orig_score - 0.1);
+    if (curScore > orig_score)
+        cout << "UPDATE BEST SCORE: " << curScore << endl;
+    
+    ofstream out;
+    string out_file = (string)params->out_prefix + ".rooted_trees";
+    out.open(out_file);
+    out.precision(10);
+    for (auto lt = logl_trees.rbegin(); lt != logl_trees.rend(); lt++) {
+        out << "[ lh=" << lt->first << " ]" << lt->second << endl;
+    }
+    out.close();
+    cout << "Rooted trees with log-likelihoods printed to " << out_file << endl;
+
+    // convert logL to weight based on the best score
+//    ASSERT(logLs.size() == nodes1.size());
+//    for (i = 0; i < logLs.size(); i++) {
+//        double weight = exp(logLs[i] - best_score);
+//        nodes1[i]->name = convertDoubleToString(weight);
+//    }
+    
     return curScore;
 }
 
