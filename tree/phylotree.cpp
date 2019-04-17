@@ -2932,6 +2932,8 @@ double PhyloTree::testRootPosition(bool write_info, double logl_epsilon) {
     }
     out.close();
     cout << "Rooted trees with log-likelihoods printed to " << out_file << endl;
+    if (params->treeset_file.empty())
+        params->treeset_file = out_file;
 
     // convert logL to weight based on the best score
 //    ASSERT(logLs.size() == nodes1.size());

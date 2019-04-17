@@ -863,7 +863,7 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
 
     }
 
-    if (params.treeset_file) {
+    if (!params.treeset_file.empty()) {
         cout << "  Evaluated user trees:          " << params.out_prefix << ".trees" << endl;
 
         if (params.print_tree_lh) {
@@ -1295,8 +1295,8 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
         /* evaluate user trees */
         vector<TreeInfo> info;
         IntVector distinct_trees;
-        if (params.treeset_file) {
-            evaluateTrees(params, &tree, info, distinct_trees);
+        if (!params.treeset_file.empty()) {
+            evaluateTrees(params.treeset_file, params, &tree, info, distinct_trees);
             out.precision(4);
             out.setf(ios_base::fixed);
 
@@ -3956,9 +3956,9 @@ void assignBranchSupportNew(Params &params) {
     
     map<string,string> meanings;
     
-    if (params.treeset_file) {
+    if (!params.treeset_file.empty()) {
         bool rooted = params.is_rooted;
-        MTreeSet trees(params.treeset_file, rooted, params.tree_burnin, params.tree_max_count);
+        MTreeSet trees(params.treeset_file.c_str(), rooted, params.tree_burnin, params.tree_max_count);
         double start_time = getRealTime();
         cout << "Computing gene concordance factor..." << endl;
         tree->computeGeneConcordance(trees, meanings);
