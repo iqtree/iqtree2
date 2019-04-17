@@ -831,7 +831,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.symtest_pcutoff = 0.05;
     params.symtest_stat = false;
     params.symtest_shuffle = 1;
-    params.treeset_file = NULL;
+    //params.treeset_file = NULL;
     params.topotest_replicates = 0;
     params.topotest_optimize_model = false;
     params.do_weighted_test = false;
@@ -3836,7 +3836,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             if ((params.model_name.find("ONLY") != string::npos || (params.model_name.substr(0,2) == "MF" && params.model_name.substr(0,3) != "MFP")) && (params.gbo_replicates || params.num_bootstrap_samples))
                 throw("ModelFinder only cannot be combined with bootstrap analysis");
             
-            if (params.num_runs > 1 && params.treeset_file)
+            if (params.num_runs > 1 && !params.treeset_file.empty())
                 throw("Can't combine --runs and -z options");
             
             if (params.num_runs > 1 && params.lmap_num_quartets >= 0)
@@ -3879,27 +3879,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 //    if (params.do_au_test)
 //        outError("The AU test is temporarily disabled due to numerical issue when bp-RELL=0");
     
-    if (params.model_test_and_tree && params.partition_type != BRLEN_OPTIMIZE)
-        outError("-mtree not allowed with edge-linked partition model (-spp or -q)");
-
-    if (params.do_au_test && params.topotest_replicates == 0)
-        outError("For AU test please specify number of bootstrap replicates via -zb option");
-
-    if (params.lh_mem_save == LM_MEM_SAVE && params.partition_file && params.partition_type != TOPO_UNLINKED)
-        outError("-mem option does not work with partition models yet");
-
-    if (params.gbo_replicates && params.num_bootstrap_samples)
-        outError("UFBoot (-bb) and standard bootstrap (-b) must not be specified together");
-
-    if ((params.model_name.find("ONLY") != string::npos || (params.model_name.substr(0,2) == "MF" && params.model_name.substr(0,3) != "MFP")) && (params.gbo_replicates || params.num_bootstrap_samples))
-        outError("ModelFinder only cannot be combined with bootstrap analysis");
-
-    if (params.num_runs > 1 && params.treeset_file)
-        outError("Can't combine --runs and -z options");
-
-    if (params.num_runs > 1 && params.lmap_num_quartets >= 0)
-        outError("Can't combine --runs and -lmap options");
-
     if (params.terrace_analysis && !params.partition_file)
         outError("Terrace analysis requires partition information.");
 

@@ -246,7 +246,7 @@ void IQTree::initSettings(Params &params) {
             params.min_iterations = 100;
         }
     }
-    if (params.treeset_file && params.min_iterations == -1) {
+    if (!params.treeset_file.empty() && params.min_iterations == -1) {
         params.min_iterations = 1;
         params.stop_condition = SC_FIXED_ITERATION;
         params.numInitTrees = 1;

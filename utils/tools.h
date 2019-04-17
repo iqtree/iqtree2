@@ -840,7 +840,7 @@ public:
     /**
             file containing multiple trees to evaluate at the end
      */
-    char *treeset_file;
+    string treeset_file;
 
     /** number of bootstrap replicates for tree topology test */
     int topotest_replicates;

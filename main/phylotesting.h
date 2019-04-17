@@ -246,9 +246,9 @@ void printAncestralSequences(const char*filename, PhyloTree *tree, AncestralSeqT
  * @param info (OUT) output information
  * @param distinct_ids IDs of distinct trees
  */
-void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVector &distinct_ids);
+void evaluateTrees(string treeset_file, Params &params, IQTree *tree, vector<TreeInfo> &info, IntVector &distinct_ids);
 
-void evaluateTrees(Params &params, IQTree *tree);
+void evaluateTrees(string treeset_file, Params &params, IQTree *tree);
 
 /**
     get sequence type for a model name
