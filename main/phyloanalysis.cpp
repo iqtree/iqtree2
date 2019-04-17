@@ -2550,6 +2550,11 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
     printMiscInfo(params, *iqtree, pattern_lh);
 
+    if (params.root_test) {
+        cout << "Testing root positions..." << endl;
+        iqtree->testRootPosition(true, params.loglh_epsilon);
+    }
+    
     /****** perform SH-aLRT test ******************/
     if ((params.aLRT_replicates > 0 || params.localbp_replicates > 0 || params.aLRT_test || params.aBayes_test) && !params.pll) {
         double mytime = getRealTime();

@@ -490,18 +490,21 @@ public:
     void getBranches(int max_dist, NodeVector &nodes, NodeVector &nodes2, Node *node = NULL, Node *dad = NULL);
 
     /**
+     get all branches below the node
+     @param branches the branches are stored here
+     @param post_traveral true for post-traversal, false for pre-traversal
+     */
+    void getBranches(BranchVector& branches, Node *node = NULL, Node *dad = NULL, bool post_traversal = false);
+
+    /**
             get all inner branches below the node
             @param branches the branches are stored here
-            @param node the starting node, NULL to start from the root
-            @param dad dad of the node, used to direct the search
      */
     void getInnerBranches(Branches& branches, Node *node = NULL, Node *dad = NULL);
 
     /**
      get all inner branches below the node
      @param branches the branches are stored here
-     @param node the starting node, NULL to start from the root
-     @param dad dad of the node, used to direct the search
      @param post_traveral true for post-traversal, false for pre-traversal
      */
     void getInnerBranches(BranchVector& branches, Node *node = NULL, Node *dad = NULL, bool post_traversal = false);

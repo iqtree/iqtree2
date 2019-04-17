@@ -772,6 +772,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.is_rooted = false;
     params.root_move_dist = 2;
     params.root_find = false;
+    params.root_test = false;
     params.sample_size = -1;
     params.repeated_time = 1;
     //params.nr_output = 10000;
@@ -1238,6 +1239,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
 
+            if (strcmp(argv[cnt], "--root-test") == 0) {
+                params.root_test = true;
+                continue;
+            }
+            
 			if (strcmp(argv[cnt], "-all") == 0) {
 				params.find_all = true;
 				continue;
