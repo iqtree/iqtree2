@@ -287,8 +287,10 @@ int PartitionModelPlen::getNParameters(int brlen_type) {
     return df;
 }
 
+/*
 int PartitionModelPlen::getNDim(){
     PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
     int ndim = tree->size() -1;
     return ndim;
 }
+*/
