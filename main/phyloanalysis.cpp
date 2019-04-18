@@ -1012,13 +1012,24 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
                 << endl;
         if (tree.isSuperTree()) {
             if(params.partition_type == BRLEN_SCALE)
-                out    << "Edge-linked-proportional partition model but separate models between partitions" << endl << endl;
+                out << "Edge-linked-proportional partition model with ";
             else if(params.partition_type == BRLEN_FIX)
-                out    << "Edge-linked-equal partition model but separate models between partitions" << endl << endl;
+                out << "Edge-linked-equal partition model with ";
             else if (params.partition_type == BRLEN_OPTIMIZE)
-                out    << "Edge-unlinked partition model and separate models between partitions" << endl << endl;
+                out << "Edge-unlinked partition model with ";
             else
-                out << "Topology-unlinked partition model and separate models between partitions" << endl << endl;
+                out << "Topology-unlinked partition model with ";
+            
+            if (params.model_joint)
+                out << "joint substitution model ";
+            else
+                out << "separate substitution models ";
+            if (params.link_alpha)
+                out << "and joint gamma shape";
+            else
+                out << "and separate rates across sites";
+            out << endl << endl;
+
             PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
             PhyloSuperTree::iterator it;
             int part;
