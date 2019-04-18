@@ -60,7 +60,7 @@ gzstreambuf* gzstreambuf::open( const char* name, int open_mode) {
     if (mode & GZ_NO_COMPRESSION)
         *fmodeptr++ = '0'; // no compression
     else
-        *fmodeptr++ = '9'; // best compression ratio
+        *fmodeptr++ = '1'; // fast compression ratio
     *fmodeptr = '\0';
     file = gzopen( name, fmode);
     if (file == 0)
