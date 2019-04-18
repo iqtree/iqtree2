@@ -49,7 +49,7 @@ public:
      */
     virtual int getNParameters(int brlen_type);
 
-    virtual int getNDim();
+    //virtual int getNDim();
     
     /**
      write information
