@@ -796,6 +796,11 @@ int ModelMarkov::getNDimFreq() {
     // BQM, 2017-05-02: getNDimFreq should return degree of freedom, which is not included in getNDim()
     // That's why 0 is returned for FREQ_ESTIMATE, num_states-1 for FREQ_EMPIRICAL
 
+    if (fixed_parameters)
+        return 0;
+    if (linked_model && linked_model != this)
+        return 0;
+
 	if (freq_type == FREQ_EMPIRICAL)
         return num_states-1;
 	else if (freq_type == FREQ_CODON_1x4) 
