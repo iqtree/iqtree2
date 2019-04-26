@@ -990,6 +990,10 @@ uint64_t PhyloTree::getMemoryRequired(size_t ncategory, bool full_mem) {
     return mem_size;
 }
 
+uint64_t PhyloTree::getMemoryRequiredThreaded(size_t ncategory, bool full_mem) {
+    return getMemoryRequired(ncategory, full_mem);
+}
+
 void PhyloTree::getMemoryRequired(uint64_t &partial_lh_entries, uint64_t &scale_num_entries, uint64_t &partial_pars_entries) {
     // +num_states for ascertainment bias correction
     uint64_t block_size = get_safe_upper_limit(aln->getNPattern()) + get_safe_upper_limit(aln->num_states);

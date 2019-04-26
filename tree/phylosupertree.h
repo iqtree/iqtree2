@@ -372,6 +372,12 @@ public:
     virtual uint64_t getMemoryRequired(size_t ncategory = 1, bool full_mem = false);
 
     /**
+     * compute the memory size for top partitions required for storing partial likelihood vectors
+     * @return memory size required in bytes
+     */
+    virtual uint64_t getMemoryRequiredThreaded(size_t ncategory = 1, bool full_mem = false);
+
+    /**
      * count the number of super branches that map to no branches in gene trees
      */
     int countEmptyBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
