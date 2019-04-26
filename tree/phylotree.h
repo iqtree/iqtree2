@@ -2006,6 +2006,12 @@ public:
      */
     virtual uint64_t getMemoryRequired(size_t ncategory = 1, bool full_mem = false);
 
+    /**
+     * compute the memory size for top partitions required for storing partial likelihood vectors
+     * @return memory size required in bytes
+     */
+    virtual uint64_t getMemoryRequiredThreaded(size_t ncategory = 1, bool full_mem = false);
+    
     void getMemoryRequired(uint64_t &partial_lh_entries, uint64_t &scale_num_entries, uint64_t &partial_pars_entries);
 
     /****** following variables are for ultra-fast bootstrap *******/

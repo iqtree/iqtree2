@@ -1155,7 +1155,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
     StrVector model_names;
     int max_cats = getModelList(params, iqtree.aln, model_names, params.model_test_separate_rate);
     
-    uint64_t mem_size = iqtree.getMemoryRequired(max_cats);
+    uint64_t mem_size = iqtree.getMemoryRequiredThreaded(max_cats);
     cout << "NOTE: ModelFinder requires " << (mem_size / 1024) / 1024 << " MB RAM!" << endl;
     if (mem_size >= getMemorySize()) {
         outError("Memory required exceeds your computer RAM size!");

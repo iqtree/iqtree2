@@ -1181,6 +1181,32 @@ uint64_t PhyloSuperTree::getMemoryRequired(size_t ncategory, bool full_mem) {
 	return mem_size;
 }
 
+// get memory requirement for ModelFinder
+uint64_t PhyloSuperTree::getMemoryRequiredThreaded(size_t ncategory, bool full_mem) {
+    // only get the largest k partitions (k=#threads)
+    int threads = (params->num_threads != 0) ? params->num_threads : params->num_threads_max;
+    threads = min(threads, countPhysicalCPUCores());
+    threads = min(threads, (int)size());
+    
+    // sort partition by computational cost for OpenMP effciency
+    uint64_t *part_mem = new uint64_t[size()];
+    int i;
+    for (i = 0; i < size(); i++) {
+        part_mem[i] = at(i)->getMemoryRequired(ncategory, full_mem);
+    }
+    
+    // sort partition memory in increasing order
+    quicksort<uint64_t, int>(part_mem, 0, size()-1);
+    
+    uint64_t mem = 0;
+    for (i = size()-threads; i < size(); i++)
+        mem += part_mem[i];
+    
+    delete [] part_mem;
+    
+    return mem;
+}
+
 int PhyloSuperTree::countEmptyBranches(PhyloNode *node, PhyloNode *dad) {
 	int count = 0;
     if (!node)
