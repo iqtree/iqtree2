@@ -737,7 +737,7 @@ void ModelMarkov::adaptStateFrequency(double* freq)
             for (j = 0; j < num_states; j++)
                 if (i != j) {
                     rates[k] = (rates[k])*freq[j];
-                    if (state_freq[j] != 0.0)
+                    if (state_freq[j] > ZERO_FREQ)
                         rates[k] /= state_freq[j];
                     k++;
                 }
@@ -1091,13 +1091,13 @@ void ModelMarkov::decomposeRateMatrixNonrev() {
     nondiagonalizable = false; // until proven otherwise
     int n = 0; // the number of states where freq is non-zero
     for (i = 0; i < num_states; i++)
-        if (state_freq[i] != 0.0)
+        if (state_freq[i] > ZERO_FREQ)
             n++;
     int ii, jj;
     MatrixXd Q(n, n);
     VectorXd pi(n);
     for (i = 0, ii = 0; i < num_states; i++)
-        if (state_freq[i] != 0.0) {
+        if (state_freq[i] > ZERO_FREQ) {
             pi(ii) = state_freq[i];
             ii++;
         }
@@ -1108,9 +1108,9 @@ void ModelMarkov::decomposeRateMatrixNonrev() {
         Q = Map<Matrix<double,Dynamic,Dynamic,RowMajor>,Aligned >(rate_matrix, num_states, num_states);
     else {
         for (i = 0, ii = 0; i < num_states; i++)
-            if (state_freq[i] != 0.0) {
+            if (state_freq[i] > ZERO_FREQ) {
                 for (j = 0, jj = 0; j < num_states; j++)
-                    if (state_freq[j] != 0.0) {
+                    if (state_freq[j] > ZERO_FREQ) {
                         Q(ii,jj) = rate_matrix[i*num_states+j];
                         jj++;
                     }
@@ -1135,7 +1135,7 @@ void ModelMarkov::decomposeRateMatrixNonrev() {
     } else {
         // manual copy non-zero entries
         for (i = 0, ii = 0; i < num_states; i++)
-            if (state_freq[i] != 0.0) {
+            if (state_freq[i] > ZERO_FREQ) {
                 ceval[i] = eigensolver.eigenvalues()(ii);
                 ii++;
             } else
@@ -1152,9 +1152,9 @@ void ModelMarkov::decomposeRateMatrixNonrev() {
         for (i = 0, ii = 0; i < num_states; i++) {
             auto *eigenvectors_ptr = cevec + (i*num_states);
             auto *inv_eigenvectors_ptr = cinv_evec + (i*num_states);
-            if (state_freq[i] != 0.0) {
+            if (state_freq[i] > ZERO_FREQ) {
                 for (j = 0, jj = 0; j < num_states; j++)
-                    if (state_freq[j] != 0) {
+                    if (state_freq[j] > ZERO_FREQ) {
                         eigenvectors_ptr[j] = evec(ii,jj);
                         inv_eigenvectors_ptr[j] = inv_evec(ii,jj);
                         jj++;
