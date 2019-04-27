@@ -136,7 +136,7 @@ void RateFree::initFromCatMinusOne() {
         }
     int second = (first == 0) ? 1 : 0;
     for (i = 0; i < ncategory-1; i++)
-        if (prop[i] > prop[second] && second != first)
+        if (prop[i] > prop[second] && i != first)
             second = i;
 
 //    memmove(rates, input->rates, (k+1)*sizeof(double));

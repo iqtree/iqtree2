@@ -1239,13 +1239,13 @@ void ModelMarkov::decomposeRateMatrix(){
         // Use Eigen3 library for eigen decomposition of symmetric matrix
         int n = 0; // the number of states where freq is non-zero
         for (i = 0; i < num_states; i++)
-            if (state_freq[i] != 0.0)
+            if (state_freq[i] > ZERO_FREQ)
                 n++;
         int ii, jj;
         MatrixXd Q(n, n);
         VectorXd pi(n);
         for (i = 0, ii = 0; i < num_states; i++)
-            if (state_freq[i] != 0.0) {
+            if (state_freq[i] > ZERO_FREQ) {
                 pi(ii) = state_freq[i];
                 ii++;
             }
@@ -1258,25 +1258,26 @@ void ModelMarkov::decomposeRateMatrix(){
 
         if (half_matrix) {
             for (i = 0, k = 0, ii = 0; i < num_states; i++)
-            if (state_freq[i] != 0.0){
+            if (state_freq[i] > ZERO_FREQ){
                 Q(ii,ii) = 0.0;
                 for (j = i+1, jj = ii+1; j < num_states; j++, k++)
-                if (state_freq[j] != 0.0) {
+                if (state_freq[j] > ZERO_FREQ) {
                     Q(ii,jj) = Q(jj,ii) = rates[k];
                     jj++;
                 }
                 ASSERT(jj == n);
                 ii++;
-            }
+            } else
+                k += num_states-i-1; // 2019-04-27 BUG FIX: k is not increased properly!
         } else {
             // full matrix
             if (n == num_states)
                 Q = Map<Matrix<double,Dynamic,Dynamic,RowMajor> >(rates,num_states,num_states);
             else {
                 for (i = 0, ii = 0; i < num_states; i++)
-                    if (state_freq[i] != 0.0) {
+                    if (state_freq[i] > ZERO_FREQ) {
                         for (j = 0, jj = 0; j < num_states; j++)
-                            if (state_freq[j] != 0.0) {
+                            if (state_freq[j] > ZERO_FREQ) {
                                 Q(ii,jj) = rates[i*num_states+j];
                                 jj++;
                             }
@@ -1332,7 +1333,7 @@ void ModelMarkov::decomposeRateMatrix(){
         } else {
             // manual copy non-zero entries
             for (i = 0, ii = 0; i < num_states; i++)
-                if (state_freq[i] != 0.0) {
+                if (state_freq[i] > ZERO_FREQ) {
                     eigenvalues[i] = eigensolver.eigenvalues()(ii);
                     ii++;
                 } else
@@ -1342,9 +1343,9 @@ void ModelMarkov::decomposeRateMatrix(){
             for (i = 0, ii = 0; i < num_states; i++) {
                 double *eigenvectors_ptr = eigenvectors + (i*num_states);
                 double *inv_eigenvectors_ptr = inv_eigenvectors + (i*num_states);
-                if (state_freq[i] != 0.0) {
+                if (state_freq[i] > ZERO_FREQ) {
                     for (j = 0, jj = 0; j < num_states; j++)
-                        if (state_freq[j] != 0) {
+                        if (state_freq[j] > ZERO_FREQ) {
                             eigenvectors_ptr[j] = evec(ii,jj);
                             inv_eigenvectors_ptr[j] = inv_evec(ii,jj);
                             jj++;
