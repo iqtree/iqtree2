@@ -2014,7 +2014,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
-			if (strcmp(argv[cnt], "-ao") == 0) {
+			if (strcmp(argv[cnt], "-ao") == 0 || strcmp(argv[cnt], "--out-alignment") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -ao <alignment_file>";

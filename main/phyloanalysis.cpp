@@ -3322,7 +3322,10 @@ void convertAlignment(Params &params, IQTree *iqtree) {
         ((SuperAlignment*)alignment)->printCombinedAlignment(params.aln_output);
         if (params.print_subaln)
             ((SuperAlignment*)alignment)->printSubAlignments(params);
-
+        string partition_info = string(params.aln_output) + ".nex";
+        ((SuperAlignment*)alignment)->printPartition(partition_info.c_str(), params.aln_output);
+        partition_info = (string)params.aln_output + ".partitions";
+        ((SuperAlignment*)alignment)->printPartitionRaxml(partition_info.c_str());
     } else if (params.gap_masked_aln) {
         Alignment out_aln;
         Alignment masked_aln(params.gap_masked_aln, params.sequence_type, params.intype, params.model_name);
