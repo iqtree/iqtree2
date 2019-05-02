@@ -127,7 +127,10 @@ public:
     
     /** optimize linked model parameter of over all partitions */
     double optimizeLinkedModel(bool write_info, double gradient_epsilon);
-    
+
+    /** optimize all linked models parameter of over all partitions */
+    double optimizeLinkedModels(bool write_info, double gradient_epsilon);
+
     void reportLinkedModel(ostream &out);
 
     /**

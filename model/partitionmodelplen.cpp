@@ -97,12 +97,6 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info, do
     double begin_time = getRealTime();
     int i;
     for(i = 1; i < tree->params->num_param_iterations; i++){
-        // disable optimizing linked model for the moment
-        for (it = linked_models.begin(); it != linked_models.end(); it++) {
-            fixed_params[it->first] = ((ModelMarkov*)(it->second))->fixed_parameters;
-            ((ModelMarkov*)(it->second))->fixed_parameters = true;
-        }
-
         cur_lh = 0.0;
         if (tree->part_order.empty()) tree->computePartitionOrder();
 #ifdef _OPENMP
@@ -134,17 +128,9 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info, do
             cur_lh = optimizeLinkedAlpha(write_info, gradient_epsilon);
         }
 
-        ModelSubst *saved_model = model;
-        for (it = linked_models.begin(); it != linked_models.end(); it++)
-            if (!fixed_params[it->first]) {
-                ((ModelMarkov*)(it->second))->fixed_parameters = false;
-                model = it->second;
-                if (model->getNDim() > 0)
-                    cur_lh = optimizeLinkedModel(write_info, gradient_epsilon);
-                saveCheckpoint();
-                getCheckpoint()->dump();
-            }
-        model = saved_model;
+        // optimize linked models
+        if (!linked_models.empty())
+            cur_lh = optimizeLinkedModels(write_info, gradient_epsilon);
 
         if (verbose_mode >= VB_MED)
             cout << "LnL after optimizing individual models: " << cur_lh << endl;
@@ -284,6 +270,11 @@ int PartitionModelPlen::getNParameters(int brlen_type) {
         df += tree->size()-1;
     if (linked_alpha > 0.0)
         df ++;
+    for (auto it = linked_models.begin(); it != linked_models.end(); it++) {
+        bool fixed = it->second->fixParameters(false);
+        df += it->second->getNDim() + it->second->getNDimFreq();
+        it->second->fixParameters(fixed);
+    }
     return df;
 }
 

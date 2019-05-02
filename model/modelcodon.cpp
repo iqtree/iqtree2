@@ -990,6 +990,10 @@ void ModelCodon::setBounds(double *lower_bound, double *upper_bound, bool *bound
 }
 
 double ModelCodon::optimizeParameters(double gradient_epsilon) {
+    
+    if (fixed_parameters)
+        return 0.0;
+    
 	int ndim = getNDim();
 	
 	// return if nothing to be optimized

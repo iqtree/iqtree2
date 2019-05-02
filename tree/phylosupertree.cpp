@@ -643,6 +643,14 @@ void PhyloSuperTree::computePartitionOrder() {
         
     delete [] cost;
     delete [] id;
+    
+    if (verbose_mode >= VB_MED) {
+        cout << "Partitions ordered by computation costs:" << endl;
+        cout << "#nexus" << endl << "begin sets;" << endl;
+        for (i = 0; i < ntrees; i++)
+            cout << "  charset " << at(part_order[i])->aln->name << " = " << at(part_order[i])->aln->position_spec << ";" << endl;
+        cout << "end;" << endl;
+    }
 #else
     for (i = 0; i < ntrees; i++) {
         part_order[i] = i;
