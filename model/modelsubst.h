@@ -62,6 +62,13 @@ public:
 	*/
 	virtual bool isReversible() { return true; };
 	
+    /**
+        fix parameters of the model
+        @param fix true to fix, false to not fix
+        @return the current state of fixing parameters
+     */
+    virtual bool fixParameters(bool fix) { return true; }
+    
 	/**
 	 * @return TRUE if this is a site-specific model, FALSE otherwise
 	 */
@@ -340,18 +347,6 @@ public:
         restore object from the checkpoint
     */
     virtual void restoreCheckpoint();
-
-    /*****************************************************
-     Model linking facility, e.g. between partitions
-     *****************************************************/
-
-    
-    /**
-     link this model to target model
-     @param target target model
-     @return true if successfully linked, false for failure
-     */
-    virtual bool linkModel(ModelSubst *target);
     
 	/**
 		number of states
@@ -379,11 +374,6 @@ public:
 		state frequency type
 	*/
 	StateFreqType freq_type;
-
-    /**
-     target model that this model is linked with
-     */
-    ModelSubst *linked_model;
 
 	/**
 		destructor

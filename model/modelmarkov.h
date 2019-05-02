@@ -111,11 +111,15 @@ public:
     virtual void restoreCheckpoint();
     
     /**
-     link this model to target model
-     @param target target model
-     @return true if successfully linked, false for failure
+     fix parameters of the model
+     @param fix true to fix, false to not fix
+     @return the current state of fixing parameters
      */
-    virtual bool linkModel(ModelSubst *target);
+    virtual bool fixParameters(bool fix) {
+        bool current = fixed_parameters;
+        fixed_parameters = fix;
+        return current;
+    }
 
 	/**
 	 * @return model name

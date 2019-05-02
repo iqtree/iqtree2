@@ -1053,10 +1053,14 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
                 reportModel(out, *(*it));
                 reportRate(out, *(*it));
             }*/
-            if (params.link_model || params.link_alpha) {
+            PartitionModel *part_model = (PartitionModel*)tree.getModelFactory();
+            for (auto itm = part_model->linked_models.begin(); itm != part_model->linked_models.end(); itm++) {
                 for (it = stree->begin(); it != stree->end(); it++)
-                    if (!(*it)->getModel()->linked_model)
-                        reportModel(out, *(*it));
+                    if ((*it)->getModel() == itm->second) {
+                        out << "Linked model of substitution: " << itm->second->getName() << endl << endl;
+                        reportModel(out, (*it)->aln, (*it)->getModel());
+                        break;
+                    }
             }
         } else {
             reportModel(out, tree);

@@ -1124,7 +1124,7 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
                 computePartialLikelihood(*it, ptn_lower, ptn_upper, thread_id);
 
             // reset memory for _pattern_lh_cat
-//            memset(_pattern_lh_cat+ptn_lower*ncat_mix, 0, (ptn_upper-ptn_lower)*ncat_mix*sizeof(double));
+            memset(_pattern_lh_cat+ptn_lower*ncat_mix, 0, sizeof(double)*(ptn_upper-ptn_lower)*ncat_mix);
 
             double *vec_tip = buffer_partial_lh_ptr + block*VectorClass::size()*thread_id;
 

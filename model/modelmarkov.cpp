@@ -188,23 +188,6 @@ void ModelMarkov::restoreCheckpoint() {
     endCheckpoint();
 }
 
-bool ModelMarkov::linkModel(ModelSubst *target) {
-    if (!ModelSubst::linkModel(target))
-        return false;
-    freeMem();
-    ModelMarkov *model = (ModelMarkov*)target;
-    inv_eigenvectors = model->inv_eigenvectors;
-    eigenvectors = model->eigenvectors;
-    eigenvalues = model->eigenvalues;
-    rates = model->rates;
-    cinv_evec = model->cinv_evec;
-    cevec = model->cevec;
-    ceval = model->ceval;
-    eigenvalues_imag = model->eigenvalues_imag;
-    rate_matrix = model->rate_matrix;
-    return true;
-}
-
 void ModelMarkov::setTree(PhyloTree *tree) {
 	phylo_tree = tree;
 }
@@ -782,10 +765,10 @@ int ModelMarkov::getNDim() {
 	if (fixed_parameters)
 		return 0;
     if (!is_reversible)
-        return (linked_model && linked_model != this) ? 0 : num_params;
+        return num_params;
 
     // reversible model
-    int ndim = (linked_model && linked_model != this) ? 0 : num_params;
+    int ndim = num_params;
 	if (freq_type == FREQ_ESTIMATE) 
 		ndim += num_states-1;
 	return ndim;
@@ -797,8 +780,6 @@ int ModelMarkov::getNDimFreq() {
     // That's why 0 is returned for FREQ_ESTIMATE, num_states-1 for FREQ_EMPIRICAL
 
     if (fixed_parameters)
-        return 0;
-    if (linked_model && linked_model != this)
         return 0;
 
 	if (freq_type == FREQ_EMPIRICAL)
@@ -975,6 +956,10 @@ void ModelMarkov::setBounds(double *lower_bound, double *upper_bound, bool *boun
 }
 
 double ModelMarkov::optimizeParameters(double gradient_epsilon) {
+    
+    if (fixed_parameters)
+        return 0.0;
+    
 	int ndim = getNDim();
 	
 	// return if nothing to be optimized
@@ -1603,8 +1588,6 @@ void ModelMarkov::readParametersString(string &model_str) {
 
 ModelMarkov::~ModelMarkov() {
     // mem space pointing to target model and thus avoid double free here
-    if (linked_model && linked_model != this)
-        return;
 	freeMem();
 }
 

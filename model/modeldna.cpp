@@ -392,8 +392,8 @@ int ModelDNA::getNDim() {
 	// possible TO-DO: cache nFreqParams(freq_type) to avoid repeat calls.
 //        return (num_params+nFreqParams(freq_type));
 
-    if (linked_model && linked_model != this)
-        return 0;
+//    if (linked_model && linked_model != this)
+//        return 0;
     
 	int ndim = num_params;
 	if (freq_type == FREQ_ESTIMATE) 
