@@ -725,6 +725,9 @@ string ModelProtein::getNameParams() {
     retname << name;
     retname << freqTypeString(freq_type, phylo_tree->aln->seq_type, true);
     
+    if (fixed_parameters)
+        return retname.str();
+
     if (freq_type == FREQ_ESTIMATE) {
         retname << "{" << state_freq[0];
         for (int i = 1; i < num_states; i++)

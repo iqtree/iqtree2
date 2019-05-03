@@ -1092,6 +1092,9 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
                 break;
             }
     }
+    
+    if (params.model_joint)
+        empty_model_found = false;
 
     // Model already specifed, nothing to do here
     if (!empty_model_found && params.model_name.substr(0, 4) != "TEST" && params.model_name.substr(0, 2) != "MF")
