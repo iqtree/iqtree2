@@ -653,7 +653,7 @@ void ModelProtein::startCheckpoint() {
 
 
 void ModelProtein::saveCheckpoint() {
-    if (num_params > 0) {
+    if (num_params > 0 && !fixed_parameters) {
         startCheckpoint();
         CKP_ARRAY_SAVE(getNumRateEntries(), rates);
         endCheckpoint();
@@ -664,7 +664,7 @@ void ModelProtein::saveCheckpoint() {
 void ModelProtein::restoreCheckpoint() {
     ModelMarkov::restoreCheckpoint();
 
-    if (num_params > 0) {
+    if (num_params > 0 && !fixed_parameters) {
         startCheckpoint();
         CKP_ARRAY_RESTORE(getNumRateEntries(), rates);
         endCheckpoint();
