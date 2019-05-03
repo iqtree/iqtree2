@@ -1058,7 +1058,9 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
                 for (it = stree->begin(); it != stree->end(); it++)
                     if ((*it)->getModel() == itm->second) {
                         out << "Linked model of substitution: " << itm->second->getName() << endl << endl;
+                        bool fixed = (*it)->getModel()->fixParameters(false);
                         reportModel(out, (*it)->aln, (*it)->getModel());
+                        (*it)->getModel()->fixParameters(fixed);
                         break;
                     }
             }

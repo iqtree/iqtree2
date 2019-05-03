@@ -280,7 +280,8 @@ string ModelMarkov::getNameParams() {
 void ModelMarkov::getNameParamsFreq(ostream &retname) {
      // "+F..." but without {frequencies}
     retname << freqTypeString(freq_type, phylo_tree->aln->seq_type, true);
-
+    if (fixed_parameters)
+        return;
     if (freq_type == FREQ_EMPIRICAL || freq_type == FREQ_ESTIMATE ||
         (freq_type == FREQ_USER_DEFINED && phylo_tree->aln->seq_type == SEQ_DNA)) {
         retname << "{" << state_freq[0];
