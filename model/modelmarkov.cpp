@@ -899,7 +899,7 @@ double ModelMarkov::targetFunk(double x[]) {
     // avoid numerical issue if state_freq is too small
     for (int i = 0; i < num_states; i++)
         if (state_freq[i] < 0 || (state_freq[i] > 0 && state_freq[i] < Params::getInstance().min_state_freq)) {
-            outWarning("Weird state_freq[" + convertIntToString(i) + "]=" + convertDoubleToString(state_freq[i]));
+            //outWarning("Weird state_freq[" + convertIntToString(i) + "]=" + convertDoubleToString(state_freq[i]));
             return 1.0e+30;
         }
 

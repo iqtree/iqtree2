@@ -157,6 +157,13 @@ void PartitionModel::startCheckpoint() {
 void PartitionModel::saveCheckpoint() {
     startCheckpoint();
     CKP_SAVE(linked_alpha);
+    for (auto it = linked_models.begin(); it != linked_models.end(); it++) {
+        checkpoint->startStruct(it->first);
+        bool fixed = it->second->fixParameters(false);
+        it->second->saveCheckpoint();
+        it->second->fixParameters(fixed);
+        checkpoint->endStruct();
+    }
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
     int part = 0;
     for (PhyloSuperTree::iterator it = tree->begin(); it != tree->end(); it++, part++) {
@@ -182,6 +189,18 @@ void PartitionModel::restoreCheckpoint() {
         checkpoint->endStruct();
     }
 
+    // restore linked models
+    for (auto it = linked_models.begin(); it != linked_models.end(); it++) {
+        checkpoint->startStruct(it->first);
+        for (auto tit = tree->begin(); tit != tree->end(); tit++)
+            if ((*tit)->getModel()->getName() == it->first) {
+                bool fixed = (*tit)->getModel()->fixParameters(false);
+                (*tit)->getModel()->restoreCheckpoint();
+                (*tit)->getModel()->fixParameters(fixed);
+            }
+        checkpoint->endStruct();
+    }
+    
     endCheckpoint();
 }
 

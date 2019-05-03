@@ -212,7 +212,8 @@ void ModelDNA::saveCheckpoint() {
     // up to model_parameters[num_params]
 //    setVariables(model_parameters);
     startCheckpoint();
-    CKP_ARRAY_SAVE(6, rates);
+    if (!fixed_parameters)
+        CKP_ARRAY_SAVE(6, rates);
     endCheckpoint();
     ModelMarkov::saveCheckpoint();
 }
@@ -221,7 +222,8 @@ void ModelDNA::restoreCheckpoint() {
   // curiously, this seems to be the only plase ModelDNA uses model_parameters.
     ModelMarkov::restoreCheckpoint();
     startCheckpoint();
-    CKP_ARRAY_RESTORE(6, rates);
+    if (!fixed_parameters)
+        CKP_ARRAY_RESTORE(6, rates);
     endCheckpoint();
 //    getVariables(model_parameters);       // updates rates and state_freq
     string rate_spec = param_spec;
