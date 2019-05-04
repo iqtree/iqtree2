@@ -621,9 +621,24 @@ public:
      ****************************************************************************/
 
     /**
+        count occurrences for each state from 0 to STATE_UNKNOWN
+        @param[out] state_count counts for all states
+        @param num_unknown_states number of unknown states e.g. for missing data
+     */
+    void countStates(unsigned *state_count, size_t num_unknown_states);
+    
+    /**
+        convert counts to frequencies using EM algorithm
+        @param[in] state_count counts for all states
+        @paramp[out] state_freq normalized state frequency vector
+     */
+    void convertCountToFreq(unsigned *state_count, double *state_freq);
+
+    /**
             compute empirical state frequencies from the alignment
             @param state_freq (OUT) is filled with state frequencies, assuming state_freq was allocated with 
                     at least num_states entries.
+            @param num_unknown_states number of unknown states e.g. for missing data
      */
     virtual void computeStateFreq(double *state_freq, size_t num_unknown_states = 0);
 

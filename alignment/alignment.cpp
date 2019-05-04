@@ -3783,36 +3783,29 @@ double Alignment::readDist(const char *file_name, double *dist_mat) {
     return longest_dist;
 }
 
-// TODO DS: This only works when the sampling method is SAMPLING_SAMPLED or when
-// the virtual population size is also the sample size (for every species and
-// every site).
-void Alignment::computeStateFreq (double *state_freq, size_t num_unknown_states) {
-    int i, j;
-    double *states_app = new double[num_states*(STATE_UNKNOWN+1)];
-    double *new_freq = new double[num_states];
-    unsigned *state_count = new unsigned[STATE_UNKNOWN+1];
-    double *new_state_freq = new double[num_states];
-
-
+void Alignment::countStates(unsigned *state_count, size_t num_unknown_states) {
     memset(state_count, 0, sizeof(unsigned)*(STATE_UNKNOWN+1));
     state_count[(int)STATE_UNKNOWN] = num_unknown_states;
-
-    for (i = 0; i <= STATE_UNKNOWN; i++)
-        getAppearance(i, &states_app[i*num_states]);
-
-    size_t aln_len = 0;
-
+    
     for (iterator it = begin(); it != end(); it++) {
-        aln_len += it->frequency;
         for (Pattern::iterator it2 = it->begin(); it2 != it->end(); it2++)
             state_count[convertPomoState((int)*it2)] += it->frequency;
     }
+}
+
+void Alignment::convertCountToFreq(unsigned *state_count, double *state_freq) {
+    int i, j;
+    double *states_app = new double[num_states*(STATE_UNKNOWN+1)];
+    double *new_freq = new double[num_states];
+    double *new_state_freq = new double[num_states];
+    
+    for (i = 0; i <= STATE_UNKNOWN; i++)
+        getAppearance(i, &states_app[i*num_states]);
 
     for (i = 0; i < num_states; i++)
         state_freq[i] = 1.0/num_states;
 
     const int NUM_TIME = 8;
-    if (aln_len > 0)
     for (int k = 0; k < NUM_TIME; k++) {
         memset(new_state_freq, 0, sizeof(double)*num_states);
 
@@ -3832,25 +3825,37 @@ void Alignment::computeStateFreq (double *state_freq, size_t num_unknown_states)
         double sum_freq = 0.0;
         for (j = 0; j < num_states; j++)
             sum_freq += new_state_freq[j];
+        if (sum_freq == 0.0)
+            break;
         sum_freq = 1.0/sum_freq;
         for (j = 0; j < num_states; j++)
             state_freq[j] = new_state_freq[j]*sum_freq;
     }
 
-	convfreq(state_freq);
+    convfreq(state_freq);
+    delete [] new_state_freq;
+    delete [] new_freq;
+    delete [] states_app;
+}
+
+// TODO DS: This only works when the sampling method is SAMPLING_SAMPLED or when
+// the virtual population size is also the sample size (for every species and
+// every site).
+void Alignment::computeStateFreq (double *state_freq, size_t num_unknown_states) {
+    unsigned *state_count = new unsigned[STATE_UNKNOWN+1];
+
+    countStates(state_count, num_unknown_states);
+    convertCountToFreq(state_count, state_freq);
 
     if (verbose_mode >= VB_MED) {
         cout << "Empirical state frequencies: ";
         cout << setprecision(10);
-        for (i = 0; i < num_states; i++)
+        for (int i = 0; i < num_states; i++)
             cout << state_freq[i] << " ";
         cout << endl;
     }
 
-    delete [] new_state_freq;
     delete [] state_count;
-    delete [] new_freq;
-    delete [] states_app;
 }
 
 int Alignment::convertPomoState(int state) {
