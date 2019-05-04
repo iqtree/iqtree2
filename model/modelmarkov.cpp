@@ -51,7 +51,6 @@ ModelMarkov::ModelMarkov(PhyloTree *tree, bool reversible, bool adapt_tree)
     highest_freq_state = num_states-1;
 
     // variables for non-reversible model
-    fixed_parameters = false;
 //    model_parameters = NULL;
     rate_matrix = NULL;
     eigenvalues_imag = NULL;

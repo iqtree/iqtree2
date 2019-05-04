@@ -67,7 +67,11 @@ public:
         @param fix true to fix, false to not fix
         @return the current state of fixing parameters
      */
-    virtual bool fixParameters(bool fix) { return true; }
+    virtual bool fixParameters(bool fix) {
+        bool current = fixed_parameters;
+        fixed_parameters = fix;
+        return current;
+    }
     
 	/**
 	 * @return TRUE if this is a site-specific model, FALSE otherwise
@@ -363,7 +367,10 @@ public:
 		full name of the model
 	*/
 	string full_name;
-	
+    
+    /** true to fix parameters, otherwise false */
+    bool fixed_parameters;
+
 	/**
 	 state frequencies
 	 */
