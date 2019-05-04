@@ -282,8 +282,28 @@ double PartitionModel::targetFunk(double x[]) {
     return res;
 }
 
+void PartitionModel::setVariables(double *variables) {
+    model->setVariables(variables);
+}
+
+bool PartitionModel::getVariables(double *variables) {
+    bool changed = false;
+    PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
+    for (auto it = tree->begin(); it != tree->end(); it++)
+        if ((*it)->getModel()->getName() == model->getName())
+            changed |= (*it)->getModel()->getVariables(variables);
+    return changed;
+}
+
+void PartitionModel::scaleStateFreq(bool sum_one) {
+    PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
+    for (auto it = tree->begin(); it != tree->end(); it++)
+        if ((*it)->getModel()->getName() == model->getName())
+            ((ModelMarkov*)(*it)->getModel())->scaleStateFreq(sum_one);
+}
+
 double PartitionModel::optimizeLinkedModel(bool write_info, double gradient_epsilon) {
-    int ndim = model->getNDim();
+    int ndim = getNDim();
     
     // return if nothing to be optimized
     if (ndim == 0) return 0.0;
@@ -305,8 +325,8 @@ double PartitionModel::optimizeLinkedModel(bool write_info, double gradient_epsi
     
     
     // by BFGS algorithm
-    model->setVariables(variables);
-    model->setVariables(variables2);
+    setVariables(variables);
+    setVariables(variables2);
     ((ModelMarkov*)model)->setBounds(lower_bound, upper_bound, bound_check);
     // expand the bound for linked model
 //    for (int i = 1; i <= ndim; i++) {
@@ -321,7 +341,7 @@ double PartitionModel::optimizeLinkedModel(bool write_info, double gradient_epsi
     // 2017-12-06: more robust optimization using 2 different routines
     // when estimates are at boundary
     score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
-    bool changed = model->getVariables(variables);
+    bool changed = getVariables(variables);
     
     if (model->isUnstableParameters()) {
         // parameters at boundary, restart with L-BFGS-B with parameters2
@@ -329,21 +349,24 @@ double PartitionModel::optimizeLinkedModel(bool write_info, double gradient_epsi
         if (score2 > score+0.1) {
             if (verbose_mode >= VB_MED)
                 cout << "NICE: L-BFGS-B found better parameters with LnL=" << score2 << " than BFGS LnL=" << score << endl;
-            changed = model->getVariables(variables2);
+            changed = getVariables(variables2);
             score = score2;
         } else {
             // otherwise, revert what BFGS found
-            changed = model->getVariables(variables);
+            changed = getVariables(variables);
         }
     }
     
     // BQM 2015-09-07: normalize state_freq
     if (model->isReversible() && model->freq_type == FREQ_ESTIMATE) {
-        ((ModelMarkov*)model)->scaleStateFreq(true);
+        scaleStateFreq(true);
         changed = true;
     }
     if (changed) {
-        model->decomposeRateMatrix();
+        PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
+        for (auto it = tree->begin(); it != tree->end(); it++)
+            if ((*it)->getModel()->getName() == model->getName())
+                (*it)->getModel()->decomposeRateMatrix();
         site_rate->phylo_tree->clearAllPartialLH();
         score = site_rate->phylo_tree->computeLikelihood();
     }
@@ -449,8 +472,11 @@ double PartitionModel::optimizeParameters(int fixed_len, bool write_info, double
         }
 
         // optimize linked models
-        if (!linked_models.empty())
-            tree_lh = optimizeLinkedModels(write_info, gradient_epsilon);
+        if (!linked_models.empty()) {
+            double new_tree_lh = optimizeLinkedModels(write_info, gradient_epsilon);
+            ASSERT(new_tree_lh > tree_lh - 0.1);
+            tree_lh = new_tree_lh;
+        }
         
         if (tree_lh-logl_epsilon*10 < prev_tree_lh)
             break;

@@ -129,8 +129,11 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info, do
         }
 
         // optimize linked models
-        if (!linked_models.empty())
-            cur_lh = optimizeLinkedModels(write_info, gradient_epsilon);
+        if (!linked_models.empty()) {
+            double new_cur_lh = optimizeLinkedModels(write_info, gradient_epsilon);
+            ASSERT(new_cur_lh > cur_lh - 0.1);
+            cur_lh = new_cur_lh;
+        }
 
         if (verbose_mode >= VB_MED)
             cout << "LnL after optimizing individual models: " << cur_lh << endl;
