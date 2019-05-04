@@ -21,6 +21,7 @@ ModelSubst::ModelSubst(int nstates) : Optimization(), CheckpointFactory()
 	for (int i = 0; i < num_states; i++)
 		state_freq[i] = 1.0 / num_states;
 	freq_type = FREQ_EQUAL;
+    fixed_parameters = false;
 //    linked_model = NULL;
 }
 
@@ -34,7 +35,7 @@ void ModelSubst::saveCheckpoint() {
 //    CKP_SAVE(name);
 //    CKP_SAVE(full_name);
 //    CKP_SAVE(freq_type);
-    if (freq_type == FREQ_ESTIMATE)
+    if (freq_type == FREQ_ESTIMATE && !fixed_parameters)
         CKP_ARRAY_SAVE(num_states, state_freq);
     endCheckpoint();
     CheckpointFactory::saveCheckpoint();
@@ -49,7 +50,7 @@ void ModelSubst::restoreCheckpoint() {
 //    int freq_type = this->freq_type;
 //    CKP_RESTORE(freq_type);
 //    this->freq_type = (StateFreqType)freq_type;
-    if (freq_type == FREQ_ESTIMATE)
+    if (freq_type == FREQ_ESTIMATE && !fixed_parameters)
         CKP_ARRAY_RESTORE(num_states, state_freq);
     endCheckpoint();
 

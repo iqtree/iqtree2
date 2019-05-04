@@ -110,17 +110,6 @@ public:
     */
     virtual void restoreCheckpoint();
     
-    /**
-     fix parameters of the model
-     @param fix true to fix, false to not fix
-     @return the current state of fixing parameters
-     */
-    virtual bool fixParameters(bool fix) {
-        bool current = fixed_parameters;
-        fixed_parameters = fix;
-        return current;
-    }
-
 	/**
 	 * @return model name
 	 */
@@ -514,9 +503,6 @@ protected:
 			Assume trans_matrix has size of num_states * num_states.
 	*/
 	void computeTransMatrixEigen(double time, double *trans_matrix);
-
-	/** true to fix parameters, otherwise false */
-	bool fixed_parameters;
 
 	/**
 		unrestricted Q matrix. Note that Q is normalized to 1 and has row sums of 0.
