@@ -32,6 +32,21 @@ public:
      */
     virtual void setStateFrequency(double *state_freq);
 
+    /**
+     start structure for checkpointing
+     */
+    virtual void startCheckpoint();
+    
+    /**
+     save object into the checkpoint
+     */
+    virtual void saveCheckpoint();
+    
+    /**
+     restore object from the checkpoint
+     */
+    virtual void restoreCheckpoint();
+
 protected:
 };
 

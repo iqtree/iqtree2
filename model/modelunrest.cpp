@@ -49,3 +49,26 @@ void ModelUnrest::setRates() {
 void ModelUnrest::setStateFrequency(double* freq) {
     // DOES NOTHING
 }
+
+void ModelUnrest::startCheckpoint() {
+    checkpoint->startStruct("ModelUnrest");
+}
+
+void ModelUnrest::saveCheckpoint() {
+    startCheckpoint();
+    if (!fixed_parameters)
+        CKP_ARRAY_SAVE(getNumRateEntries(), rates);
+    endCheckpoint();
+    ModelMarkov::saveCheckpoint();
+}
+
+void ModelUnrest::restoreCheckpoint() {
+    ModelMarkov::restoreCheckpoint();
+    startCheckpoint();
+    if (!fixed_parameters)
+        CKP_ARRAY_RESTORE(getNumRateEntries(), rates);
+    endCheckpoint();
+    decomposeRateMatrix();
+    if (phylo_tree)
+        phylo_tree->clearAllPartialLH();
+}
