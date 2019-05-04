@@ -265,13 +265,15 @@ string ModelMarkov::getNameParams() {
 	ostringstream retname;
 	retname << name;
 //	if (num_states != 4) retname << num_states;
-	retname << '{';
-	int nrates = getNumRateEntries();
-	for (int i = 0; i < nrates; i++) {
-		if (i>0) retname << ',';
-		retname << rates[i];
-	}
-	retname << '}';
+    if (!fixed_parameters) {
+        retname << '{';
+        int nrates = getNumRateEntries();
+        for (int i = 0; i < nrates; i++) {
+            if (i>0) retname << ',';
+            retname << rates[i];
+        }
+        retname << '}';
+    }
     getNameParamsFreq(retname);
     return retname.str();    
 }
