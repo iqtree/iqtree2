@@ -3783,8 +3783,8 @@ double Alignment::readDist(const char *file_name, double *dist_mat) {
     return longest_dist;
 }
 
-void Alignment::countStates(unsigned *state_count, size_t num_unknown_states) {
-    memset(state_count, 0, sizeof(unsigned)*(STATE_UNKNOWN+1));
+void Alignment::countStates(size_t *state_count, size_t num_unknown_states) {
+    memset(state_count, 0, sizeof(size_t)*(STATE_UNKNOWN+1));
     state_count[(int)STATE_UNKNOWN] = num_unknown_states;
     
     for (iterator it = begin(); it != end(); it++) {
@@ -3793,7 +3793,7 @@ void Alignment::countStates(unsigned *state_count, size_t num_unknown_states) {
     }
 }
 
-void Alignment::convertCountToFreq(unsigned *state_count, double *state_freq) {
+void Alignment::convertCountToFreq(size_t *state_count, double *state_freq) {
     int i, j;
     double *states_app = new double[num_states*(STATE_UNKNOWN+1)];
     double *new_freq = new double[num_states];
@@ -3842,7 +3842,7 @@ void Alignment::convertCountToFreq(unsigned *state_count, double *state_freq) {
 // the virtual population size is also the sample size (for every species and
 // every site).
 void Alignment::computeStateFreq (double *state_freq, size_t num_unknown_states) {
-    unsigned *state_count = new unsigned[STATE_UNKNOWN+1];
+    size_t *state_count = new size_t[STATE_UNKNOWN+1];
 
     countStates(state_count, num_unknown_states);
     convertCountToFreq(state_count, state_freq);

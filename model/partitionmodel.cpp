@@ -114,21 +114,21 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
         if (mit->second->freq_type != FREQ_ESTIMATE && mit->second->freq_type != FREQ_EMPIRICAL)
             continue;
         // count state occurrences
-        unsigned *sum_state_counts = NULL;
+        size_t *sum_state_counts = NULL;
         for (it = stree->begin(); it != stree->end(); it++) {
             if ((*it)->getModel()->getName() == mit->second->getName()) {
                 if ((*it)->aln->seq_type == SEQ_CODON)
                     outError("Linking codon models not supported");
                 if ((*it)->aln->seq_type == SEQ_POMO)
                     outError("Linking POMO models not supported");
-                unsigned state_counts[(*it)->aln->STATE_UNKNOWN+1];
+                size_t state_counts[(*it)->aln->STATE_UNKNOWN+1];
                 size_t unknown_states = 0;
                 if( params.partition_type != TOPO_UNLINKED)
                     unknown_states = (*it)->aln->getNSite() * (tree->aln->getNSeq() - (*it)->aln->getNSeq());
                 (*it)->aln->countStates(state_counts, unknown_states);
                 if (!sum_state_counts) {
-                    sum_state_counts = new unsigned[(*it)->aln->STATE_UNKNOWN+1];
-                    memset(sum_state_counts, 0, sizeof(unsigned)*((*it)->aln->STATE_UNKNOWN+1));
+                    sum_state_counts = new size_t[(*it)->aln->STATE_UNKNOWN+1];
+                    memset(sum_state_counts, 0, sizeof(size_t)*((*it)->aln->STATE_UNKNOWN+1));
                 }
                 for (int state = 0; state <= (*it)->aln->STATE_UNKNOWN; state++)
                     sum_state_counts[state] += state_counts[state];
