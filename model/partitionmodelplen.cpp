@@ -180,6 +180,13 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info, do
     //    cout <<"OPTIMIZE MODEL has finished"<< endl;
     if (write_info)
         writeInfo(cout);
+
+    // write linked_models
+    if (verbose_mode <= VB_MIN && write_info) {
+        for (auto it = linked_models.begin(); it != linked_models.end(); it++)
+            it->second->writeInfo(cout);
+    }
+
     cout << "Parameters optimization took " << i-1 << " rounds (" << getRealTime()-begin_time << " sec)" << endl << endl;
     
     return tree_lh;

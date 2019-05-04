@@ -82,7 +82,7 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
         //(*it)->copyTree(tree, taxa_set);
         //(*it)->drawTree(cout);
     }
-    if (linked_models.size() > 1) {
+    if (linked_models.size() > 0) {
         cout << "Linked models:";
         for (auto mit = linked_models.begin(); mit != linked_models.end(); mit++)
             cout << " " << mit->first;
@@ -111,26 +111,42 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
     } else
     for (auto mit = linked_models.begin(); mit != linked_models.end(); mit++) {
         PhyloSuperTree *stree = (PhyloSuperTree*)site_rate->phylo_tree;
-        int nstates = mit->second->num_states;
-        double sum_state_freq[nstates];
-        int state;
-        memset(sum_state_freq, 0, sizeof(double)*nstates);
+        if (mit->second->freq_type != FREQ_ESTIMATE && mit->second->freq_type != FREQ_EMPIRICAL)
+            continue;
+        // count state occurrences
+        unsigned *sum_state_counts = NULL;
         for (it = stree->begin(); it != stree->end(); it++) {
             if ((*it)->getModel()->getName() == mit->second->getName()) {
-                for (state = 0; state < nstates; state++)
-                    sum_state_freq[state] += (*it)->getModel()->state_freq[state];
+                if ((*it)->aln->seq_type == SEQ_CODON)
+                    outError("Linking codon models not supported");
+                if ((*it)->aln->seq_type == SEQ_POMO)
+                    outError("Linking POMO models not supported");
+                unsigned state_counts[(*it)->aln->STATE_UNKNOWN+1];
+                size_t unknown_states = 0;
+                if( params.partition_type != TOPO_UNLINKED)
+                    unknown_states = (*it)->aln->getNSite() * (tree->aln->getNSeq() - (*it)->aln->getNSeq());
+                (*it)->aln->countStates(state_counts, unknown_states);
+                if (!sum_state_counts) {
+                    sum_state_counts = new unsigned[(*it)->aln->STATE_UNKNOWN+1];
+                    memset(sum_state_counts, 0, sizeof(unsigned)*((*it)->aln->STATE_UNKNOWN+1));
+                }
+                for (int state = 0; state <= (*it)->aln->STATE_UNKNOWN; state++)
+                    sum_state_counts[state] += state_counts[state];
             }
         }
-        // normalize state frequencies
-        double sum = 0.0;
-        for (state = 0; state < nstates; state++)
-            sum += sum_state_freq[state];
-        sum = 1.0/sum;
-        for (state = 0; state < nstates; state++)
-            sum_state_freq[state] *= sum;
+        int nstates = mit->second->num_states;
+        double sum_state_freq[nstates];
+        // convert counts to frequencies
+        for (it = stree->begin(); it != stree->end(); it++) {
+            if ((*it)->getModel()->getName() == mit->second->getName()) {
+                (*it)->aln->convertCountToFreq(sum_state_counts, sum_state_freq);
+                break;
+            }
+        }
+
         cout << "sum_state_freq:";
         int prec = cout.precision(8);
-        for (state = 0; state < mit->second->num_states; state++)
+        for (int state = 0; state < mit->second->num_states; state++)
             cout << " " << sum_state_freq[state];
         cout << endl;
         cout.precision(prec);
@@ -140,6 +156,7 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
                 ((ModelMarkov*)(*it)->getModel())->adaptStateFrequency(sum_state_freq);
                 (*it)->getModel()->decomposeRateMatrix();
             }
+        delete [] sum_state_counts;
     }
 }
 
@@ -485,6 +502,11 @@ double PartitionModel::optimizeParameters(int fixed_len, bool write_info, double
     
     if (verbose_mode >= VB_MED || write_info)
 		cout << "Optimal log-likelihood: " << tree_lh << endl;
+    // write linked_models
+    if (verbose_mode <= VB_MIN && write_info) {
+        for (auto it = linked_models.begin(); it != linked_models.end(); it++)
+            it->second->writeInfo(cout);
+    }
     return tree_lh;
 }
 
