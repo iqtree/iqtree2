@@ -82,14 +82,8 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
         //(*it)->copyTree(tree, taxa_set);
         //(*it)->drawTree(cout);
     }
-    if (linked_models.size() > 0) {
-        cout << "Linked models:";
-        for (auto mit = linked_models.begin(); mit != linked_models.end(); mit++)
-            cout << " " << mit->first;
-        cout << endl;
-//        outError("Can't link more than one model yet");
-    }
     if (init_by_divmat) {
+        ASSERT(0 && "init_by_div_mat not working");
         int nstates = linked_models.begin()->second->num_states;
         double *pair_freq = new double[nstates * nstates];
         double *state_freq = new double[nstates];
@@ -115,8 +109,10 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
             continue;
         // count state occurrences
         size_t *sum_state_counts = NULL;
+        int num_parts = 0;
         for (it = stree->begin(); it != stree->end(); it++) {
             if ((*it)->getModel()->getName() == mit->second->getName()) {
+                num_parts++;
                 if ((*it)->aln->seq_type == SEQ_CODON)
                     outError("Linking codon models not supported");
                 if ((*it)->aln->seq_type == SEQ_POMO)
@@ -134,6 +130,7 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
                     sum_state_counts[state] += state_counts[state];
             }
         }
+        cout << "Linking " << mit->first << " model across " << num_parts << " partitions" << endl;
         int nstates = mit->second->num_states;
         double sum_state_freq[nstates];
         // convert counts to frequencies
@@ -144,7 +141,7 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
             }
         }
 
-        cout << "sum_state_freq:";
+        cout << "Mean state frequencies:";
         int prec = cout.precision(8);
         for (int state = 0; state < mit->second->num_states; state++)
             cout << " " << sum_state_freq[state];
