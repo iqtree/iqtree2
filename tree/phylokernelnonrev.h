@@ -639,41 +639,58 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch
 
     if (dad->isLeaf()) {
          // make sure that we do not estimate the virtual branch length from the root
-        ASSERT(!isRootLeaf(dad));
+        // 2019-05-06: assertion removed as it can happen for partition model with missing data
+        //ASSERT(!isRootLeaf(dad));
     	// special treatment for TIP-INTERNAL NODE case
 //    	double *partial_lh_node = new double[(aln->STATE_UNKNOWN+1)*block*3];
         double *partial_lh_node = buffer_partial_lh_ptr;
         double *partial_lh_derv1 = partial_lh_node + (aln->STATE_UNKNOWN+1)*block;
         double *partial_lh_derv2 = partial_lh_derv1 + (aln->STATE_UNKNOWN+1)*block;
         buffer_partial_lh_ptr += get_safe_upper_limit((aln->STATE_UNKNOWN+1)*block*3);
-        IntVector states_dad = aln->seq_states[dad->id];
-        states_dad.push_back(aln->STATE_UNKNOWN);
-        // precompute information from one tip
-        for (IntVector::iterator it = states_dad.begin(); it != states_dad.end(); it++) {
-            double *lh_node = partial_lh_node +(*it)*block;
-            double *lh_derv1 = partial_lh_derv1 +(*it)*block;
-            double *lh_derv2 = partial_lh_derv2 +(*it)*block;
-            double *lh_tip = tip_partial_lh + (*it)*nstates;
-            double *trans_mat_tmp = trans_mat;
-            double *trans_derv1_tmp = trans_derv1;
-            double *trans_derv2_tmp = trans_derv2;
+        if (isRootLeaf(dad)) {
             for (c = 0; c < ncat_mix; c++) {
+                double *lh_node = partial_lh_node + c*nstates;
+                double *lh_derv1 = partial_lh_derv1 + c*nstates;
+                double *lh_derv2 = partial_lh_derv2 + c*nstates;
+                size_t m = c/denom;
+                model->getStateFrequency(lh_node, m);
+                double prop = site_rate->getProp(c%ncat) * model->getMixtureWeight(m);
                 for (i = 0; i < nstates; i++) {
-                    lh_node[i] = 0.0;
-                    lh_derv1[i] = 0.0;
-                    lh_derv2[i] = 0.0;
-                    for (size_t x = 0; x < nstates; x++) {
-                        lh_node[i] += trans_mat_tmp[x] * lh_tip[x];
-                        lh_derv1[i] += trans_derv1_tmp[x] * lh_tip[x];
-                        lh_derv2[i] += trans_derv2_tmp[x] * lh_tip[x];
-                    }
-                    trans_mat_tmp += nstates;
-                    trans_derv1_tmp += nstates;
-                    trans_derv2_tmp += nstates;
+                    lh_node[i] *= prop;
+                    lh_derv1[i] *= prop;
+                    lh_derv2[i] *= prop;
                 }
-                lh_node += nstates;
-                lh_derv1 += nstates;
-                lh_derv2 += nstates;
+            }
+        } else {
+            IntVector states_dad = aln->seq_states[dad->id];
+            states_dad.push_back(aln->STATE_UNKNOWN);
+            // precompute information from one tip
+            for (IntVector::iterator it = states_dad.begin(); it != states_dad.end(); it++) {
+                double *lh_node = partial_lh_node +(*it)*block;
+                double *lh_derv1 = partial_lh_derv1 +(*it)*block;
+                double *lh_derv2 = partial_lh_derv2 +(*it)*block;
+                double *lh_tip = tip_partial_lh + (*it)*nstates;
+                double *trans_mat_tmp = trans_mat;
+                double *trans_derv1_tmp = trans_derv1;
+                double *trans_derv2_tmp = trans_derv2;
+                for (c = 0; c < ncat_mix; c++) {
+                    for (i = 0; i < nstates; i++) {
+                        lh_node[i] = 0.0;
+                        lh_derv1[i] = 0.0;
+                        lh_derv2[i] = 0.0;
+                        for (size_t x = 0; x < nstates; x++) {
+                            lh_node[i] += trans_mat_tmp[x] * lh_tip[x];
+                            lh_derv1[i] += trans_derv1_tmp[x] * lh_tip[x];
+                            lh_derv2[i] += trans_derv2_tmp[x] * lh_tip[x];
+                        }
+                        trans_mat_tmp += nstates;
+                        trans_derv1_tmp += nstates;
+                        trans_derv2_tmp += nstates;
+                    }
+                    lh_node += nstates;
+                    lh_derv1 += nstates;
+                    lh_derv2 += nstates;
+                }
             }
         }
 
@@ -735,7 +752,9 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch
                 //load tip vector
                 for (i = 0; i < VectorClass::size(); i++) {
                     size_t state_dad;
-                    if (ptn+i < orig_nptn)
+                    if (isRootLeaf(dad))
+                        state_dad = block * aln->STATE_UNKNOWN;
+                    else if (ptn+i < orig_nptn)
                         state_dad = block * (aln->at(ptn+i))[dad->id];
                     else if (ptn+i < max_orig_nptn)
                         state_dad = block * aln->STATE_UNKNOWN;
