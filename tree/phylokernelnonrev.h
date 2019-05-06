@@ -753,7 +753,7 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch
                 for (i = 0; i < VectorClass::size(); i++) {
                     size_t state_dad;
                     if (isRootLeaf(dad))
-                        state_dad = block * aln->STATE_UNKNOWN;
+                        state_dad = 0;
                     else if (ptn+i < orig_nptn)
                         state_dad = block * (aln->at(ptn+i))[dad->id];
                     else if (ptn+i < max_orig_nptn)
