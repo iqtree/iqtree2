@@ -813,7 +813,12 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 			// Change the length of branch, (node1,node2) WAS linked to (-=)
 			nei1_new->link_neighbors[part]->length -= old_brlen * part_info[part].part_rate;
 			nei2_new->link_neighbors[part]->length -= old_brlen * part_info[part].part_rate;
-			ASSERT(nei1_new->link_neighbors[part]->length >= 0.0);
+            // Rooted branch length can go below 0 due to numerical precision
+            ASSERT(nei1_new->link_neighbors[part]->length >= -1e-6);
+            if (nei1_new->link_neighbors[part]->length < 0) {
+                nei1_new->link_neighbors[part]->length = 0;
+                nei2_new->link_neighbors[part]->length = 0;
+            }
 
 			// Allocate three new PhyloNeighbors.
 			// For nni1 only one of it will be actually used and which one depends on the NNI.

@@ -87,11 +87,12 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info, do
         tree->part_info[part].cur_score = 0.0;
     }
     
-    if (fixed_len == BRLEN_OPTIMIZE) {
-        tree_lh = tree->optimizeAllBranches(1);
-    } else {
-        tree_lh = tree->computeLikelihood();
-    }
+//    if (fixed_len == BRLEN_OPTIMIZE) {
+//        tree_lh = tree->optimizeAllBranches(1);
+//    } else {
+//        tree_lh = tree->computeLikelihood();
+//    }
+    tree_lh = tree->computeLikelihood();
     
     cout<<"Initial log-likelihood: "<<tree_lh<<endl;
     double begin_time = getRealTime();
