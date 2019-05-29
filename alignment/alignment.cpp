@@ -123,7 +123,7 @@ int Alignment::checkAbsentStates(string msg) {
                 absent_states += ", ";
             absent_states += convertStateBackStr(i);
             count++;
-        } else if (state_freq[i] <= MIN_FREQUENCY) {
+        } else if (state_freq[i] <= Params::getInstance().min_state_freq) {
             if (!rare_states.empty())
                 rare_states += ", ";
             rare_states += convertStateBackStr(i);
@@ -4198,7 +4198,7 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
             state_freq[i] = ntfreq[codon/16] * ntfreq[(codon%16)/4] * ntfreq[codon%4];
 			if (isStopCodon(i)) {
 //                sum_stop += state_freq[i];
-				state_freq[i] = MIN_FREQUENCY;
+				state_freq[i] = Params::getInstance().min_state_freq;
 			} else {
                 sum += state_freq[i];
             }
@@ -4247,7 +4247,7 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
             state_freq[i] = ntfreq[codon/16] * ntfreq[4+(codon%16)/4] * ntfreq[8+codon%4];
 			if (isStopCodon(i)) {
 //                sum_stop += state_freq[i];
-				state_freq[i] = MIN_FREQUENCY;
+				state_freq[i] = Params::getInstance().min_state_freq;
 			} else {
                 sum += state_freq[i];
             }
@@ -4548,9 +4548,9 @@ void Alignment::convfreq(double *stateFrqArr) {
 		freq = stateFrqArr[i];
         // Do not check for a minimum frequency with PoMo because very
         // low frequencies are expected for polymorphic sites.
-		if ((freq < MIN_FREQUENCY) &&
+		if ((freq < Params::getInstance().min_state_freq) &&
             (seq_type != SEQ_POMO)) {
-			stateFrqArr[i] = MIN_FREQUENCY;
+			stateFrqArr[i] = Params::getInstance().min_state_freq;
 		}
 		if (freq > maxfreq) {
 			maxfreq = freq;
