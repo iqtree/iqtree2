@@ -670,9 +670,9 @@ void ModelCodon::readCodonModel(istream &in, bool reset_params) {
 	}
 	memset(state_freq, 0, num_states*sizeof(double));
 	for (i = 0; i < num_states; i++)
-		state_freq[i] = MIN_FREQUENCY;
+        state_freq[i] = Params::getInstance().min_state_freq;
 	for (i = 0; i < nscodons; i++)
-		state_freq[state_map[i]] = f[i]-(num_states-nscodons)*MIN_FREQUENCY/nscodons;
+		state_freq[state_map[i]] = f[i]-(num_states-nscodons)*Params::getInstance().min_state_freq/nscodons;
 
     if (reset_params) {
         fix_omega = fix_kappa = fix_kappa2 = true;
@@ -981,7 +981,7 @@ void ModelCodon::setBounds(double *lower_bound, double *upper_bound, bool *bound
 		for (i = ndim-num_states+2; i <= ndim; i++) {
 //            lower_bound[i] = MIN_FREQUENCY/state_freq[highest_freq_state];
 //			upper_bound[i] = state_freq[highest_freq_state]/MIN_FREQUENCY;
-            lower_bound[i]  = MIN_FREQUENCY;
+            lower_bound[i]  = Params::getInstance().min_state_freq;
 //            upper_bound[i] = 100.0;
             upper_bound[i] = 1.0;
             bound_check[i] = false;

@@ -301,10 +301,10 @@ void ModelMarkov::init_state_freq(StateFreqType type) {
     case FREQ_EQUAL:
         if (phylo_tree->aln->seq_type == SEQ_CODON) {
              int nscodon = phylo_tree->aln->getNumNonstopCodons();
-             double freq_codon = (1.0-(num_states-nscodon)*MIN_FREQUENCY)/(nscodon);
+             double freq_codon = (1.0-(num_states-nscodon)*Params::getInstance().min_state_freq)/(nscodon);
              for (i = 0; i < num_states; i++)
                  if (phylo_tree->aln->isStopCodon(i))
-                     state_freq[i] = MIN_FREQUENCY;
+                     state_freq[i] = Params::getInstance().min_state_freq;
                  else
                      state_freq[i] = freq_codon;
         } else {
@@ -946,14 +946,14 @@ void ModelMarkov::setBounds(double *lower_bound, double *upper_bound, bool *boun
 		for (i = ndim-num_states+2; i <= ndim; i++) {
 //            lower_bound[i] = MIN_FREQUENCY/state_freq[highest_freq_state];
 //			upper_bound[i] = state_freq[highest_freq_state]/MIN_FREQUENCY;
-            lower_bound[i]  = MIN_FREQUENCY;
+            lower_bound[i]  = Params::getInstance().min_state_freq;
 //            upper_bound[i] = 100.0;
             upper_bound[i] = 1.0;
             bound_check[i] = false;
         }
 	} else if (phylo_tree->aln->seq_type == SEQ_DNA) {
         setBoundsForFreqType(&lower_bound[num_params+1], &upper_bound[num_params+1],
-            &bound_check[num_params+1], MIN_FREQUENCY, freq_type);
+            &bound_check[num_params+1], Params::getInstance().min_state_freq, freq_type);
     }
 }
 
