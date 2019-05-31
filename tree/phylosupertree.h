@@ -76,6 +76,12 @@ public:
     virtual void setModelFactory(ModelFactory *model_fac);
 
     /**
+     adapt the model factory, useful for -bsam and -bnni option
+     @param model_fac model factory
+     */
+    virtual void adaptModelFactory(ModelFactory *model_fac);
+
+    /**
             Set the alignment, important to compute parsimony or likelihood score
             Assing taxa ids according to their position in the alignment
             @param alignment associated alignment
