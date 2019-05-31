@@ -2679,7 +2679,11 @@ void IQTree::refineBootTrees() {
         boot_tree->setParams(params);
 
         // copy model
-        boot_tree->setModelFactory(getModelFactory());
+        // BQM 2019-05-31: bug fix with -bsam option
+        if (boot_tree->isSuperTree() && params->bootstrap_spec)
+            ((PhyloSuperTree*)boot_tree)->adaptModelFactory(getModelFactory());
+        else
+            boot_tree->setModelFactory(getModelFactory());
 
 
         // set likelihood kernel

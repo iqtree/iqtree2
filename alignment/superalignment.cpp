@@ -935,6 +935,7 @@ void SuperAlignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern
                     auto site_pattern = boot_aln->site_pattern;
                     for (int j = 1; j < gene_freq[i]; j++)
                         boot_aln->site_pattern.insert(boot_aln->site_pattern.end(), site_pattern.begin(), site_pattern.end());
+                    boot_aln->countConstSite();
                 }
                 partitions.push_back(boot_aln);
             }

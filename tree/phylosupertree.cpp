@@ -95,6 +95,27 @@ void PhyloSuperTree::setModelFactory(ModelFactory *model_fac) {
     }
 }
 
+void PhyloSuperTree::adaptModelFactory(ModelFactory *model_fac) {
+    //PhyloTree::setModelFactory(model_fac);
+    if (model_fac) {
+        PhyloSuperTree *tree = (PhyloSuperTree*)model_fac->site_rate->phylo_tree;
+        for (int part = 0; part != size(); part++) {
+            bool found = false;
+            for (int p = 0; p < tree->size(); p++)
+                if (tree->at(p)->aln->name == at(part)->aln->name) {
+                    at(part)->setModelFactory(tree->at(p)->getModelFactory());
+                    found = true;
+                    break;
+                }
+            ASSERT(found);
+        }
+    } else {
+        for (int part = 0; part != size(); part++) {
+            at(part)->setModelFactory(NULL);
+        }
+    }
+}
+
 void PhyloSuperTree::setSuperAlignment(Alignment *alignment) {
     PhyloTree::setAlignment(alignment);
 
