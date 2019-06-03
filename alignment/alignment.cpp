@@ -2943,13 +2943,22 @@ void convert_range(const char *str, int &lower, int &upper, int &step_size, char
     if (*endptr != '-') return;
 
     // parse the upper bound of the range
-    str = endptr+1;
+    endptr++;
+    // skip blank chars
+    for (; *endptr == ' '; endptr++) {}
+    str = endptr;
     d = strtol(str, &endptr, 10);
     if ((d == 0 && endptr == str) || abs(d) == HUGE_VALL) {
-        string err = "Expecting integer, but found \"";
-        err += str;
-        err += "\" instead";
-        throw err;
+        if (str[0] == '.') {
+            // 2019-06-03: special character '.' for whatever ending position
+            d = lower-1;
+            endptr++;
+        } else {
+            string err = "Expecting integer, but found \"";
+            err += str;
+            err += "\" instead";
+            throw err;
+        }
     }
 
     //lower = d_save;
@@ -2982,6 +2991,9 @@ void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id) {
         for (; *str != 0; ) {
             int lower, upper, step;
             convert_range(str, lower, upper, step, str);
+            // 2019-06-03: special '.' character
+            if (upper == lower-1)
+                upper = aln->getNSite();
             lower--;
             upper--;
             nchars += (upper-lower+1)/step;
