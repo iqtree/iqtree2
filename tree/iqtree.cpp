@@ -954,7 +954,8 @@ void IQTree::initializeModel(Params &params, string &model_name, ModelsBlock *mo
                     setModelFactory(new PartitionModelPlen(params, (PhyloSuperTreePlen*) this, models_block));
 
                 // mapTrees again in case of different rooting
-                ((PhyloSuperTree*)this)->mapTrees();
+                if (root)
+                    ((PhyloSuperTree*)this)->mapTrees();
 
             } else {
                 setModelFactory(new ModelFactory(params, model_name, this, models_block));
