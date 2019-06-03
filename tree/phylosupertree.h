@@ -76,12 +76,6 @@ public:
     virtual void setModelFactory(ModelFactory *model_fac);
 
     /**
-     adapt the model factory, useful for -bsam and -bnni option
-     @param model_fac model factory
-     */
-    virtual void adaptModelFactory(ModelFactory *model_fac);
-
-    /**
      2019-06-03: copy part_info from tree, taking into account -bsam option
      @param tree input super tree
      */
