@@ -2369,6 +2369,14 @@ double IQTree::doTreeSearch() {
 
     }
 
+    // 2019-06-03: check convergence here to avoid effect of refineBootTrees
+    if (boot_splits.size() >= 2 && MPIHelper::getInstance().isMaster()) {
+        // check the stopping criterion for ultra-fast bootstrap
+        if (computeBootstrapCorrelation() < params->min_correlation)
+            cout << "WARNING: bootstrap analysis did not converge. You should rerun with higher number of iterations (-nm option)" << endl;
+        
+    }
+    
     if(params->ufboot2corr) refineBootTrees();
 
     if (optimization_looped)
@@ -3652,13 +3660,6 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
 
     if (verbose_mode >= VB_MED)
     	cout << sg.size() << " splits found" << endl;
-
-    if (!boot_splits.empty()) {
-        // check the stopping criterion for ultra-fast bootstrap
-        if (computeBootstrapCorrelation() < params.min_correlation)
-            cout << "WARNING: bootstrap analysis did not converge. You should rerun with higher number of iterations (-nm option)" << endl;
-
-    }
 
     sg.scaleWeight(1.0 / trees.sumTreeWeights(), false, 4);
     string out_file;
