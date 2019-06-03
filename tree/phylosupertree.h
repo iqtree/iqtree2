@@ -82,6 +82,12 @@ public:
     virtual void adaptModelFactory(ModelFactory *model_fac);
 
     /**
+     2019-06-03: copy part_info from tree, taking into account -bsam option
+     @param tree input super tree
+     */
+    void setPartInfo(PhyloSuperTree *tree);
+    
+    /**
             Set the alignment, important to compute parsimony or likelihood score
             Assing taxa ids according to their position in the alignment
             @param alignment associated alignment
