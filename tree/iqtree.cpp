@@ -2358,6 +2358,14 @@ double IQTree::doTreeSearch() {
 
     }
 
+    // 2019-06-03: check convergence here to avoid effect of refineBootTrees
+    if (boot_splits.size() >= 2 && MPIHelper::getInstance().isMaster()) {
+        // check the stopping criterion for ultra-fast bootstrap
+        if (computeBootstrapCorrelation() < params->min_correlation)
+            cout << "WARNING: bootstrap analysis did not converge. You should rerun with higher number of iterations (-nm option)" << endl;
+        
+    }
+    
     if(params->ufboot2corr) refineBootTrees();
 
     if (optimization_looped)
@@ -2629,8 +2637,10 @@ void IQTree::refineBootTrees() {
     // 2018-08-17: delete duplicated memory
     deleteAllPartialLh();
 
-    // do bootstrap analysis
-    for (int sample = refined_samples; sample < boot_trees.size(); sample++) {
+    ModelsBlock *models_block = readModelsDefinition(*params);
+    
+	// do bootstrap analysis
+	for (int sample = refined_samples; sample < boot_trees.size(); sample++) {
         // create bootstrap alignment
         Alignment* bootstrap_alignment;
         if (aln->isSuperAlignment())
@@ -2669,9 +2679,18 @@ void IQTree::refineBootTrees() {
 
         boot_tree->setParams(params);
 
-        // copy model
-        boot_tree->setModelFactory(getModelFactory());
+        // 2019-06-03: bug fix setting part_info properly
+        if (boot_tree->isSuperTree())
+            ((PhyloSuperTree*)boot_tree)->setPartInfo((PhyloSuperTree*)this);
 
+        // copy model
+        // BQM 2019-05-31: bug fix with -bsam option
+        boot_tree->initializeModel(*params, aln->model_name, models_block);
+        boot_tree->getModelFactory()->setCheckpoint(getCheckpoint());
+        if (isSuperTree())
+            ((PartitionModel*)boot_tree->getModelFactory())->PartitionModel::restoreCheckpoint();
+        else
+            boot_tree->getModelFactory()->restoreCheckpoint();
 
         // set likelihood kernel
         boot_tree->setParams(params);
@@ -2720,7 +2739,7 @@ void IQTree::refineBootTrees() {
 
 
         // delete memory
-        boot_tree->setModelFactory(NULL);
+        //boot_tree->setModelFactory(NULL);
         boot_tree->save_all_trees = 2;
 
         bootstrap_alignment = boot_tree->aln;
@@ -2740,7 +2759,9 @@ void IQTree::refineBootTrees() {
 
         checkpoint->dump();
 
-    }
+	}
+    
+    delete models_block;
 
     cout << "Total " << refined_trees << " ufboot trees refined" << endl;
 
@@ -3629,14 +3650,7 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
     trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1, NULL, false); // do not sort taxa
 
     if (verbose_mode >= VB_MED)
-        cout << sg.size() << " splits found" << endl;
-
-    if (!boot_splits.empty()) {
-        // check the stopping criterion for ultra-fast bootstrap
-        if (computeBootstrapCorrelation() < params.min_correlation)
-            cout << "WARNING: bootstrap analysis did not converge. You should rerun with higher number of iterations (-nm option)" << endl;
-
-    }
+    	cout << sg.size() << " splits found" << endl;
 
     sg.scaleWeight(1.0 / trees.sumTreeWeights(), false, 4);
     string out_file;

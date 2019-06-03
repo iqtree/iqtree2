@@ -100,6 +100,33 @@ void PhyloSuperTree::setModelFactory(ModelFactory *model_fac) {
     }
 }
 
+void PhyloSuperTree::setPartInfo(PhyloSuperTree *tree) {
+    part_info = tree->part_info;
+    int part = 0;
+    for (iterator it = begin(); it != end(); it++, part++) {
+        part_info[part].evalNNIs = 0.0;
+    }
+    if (!params->bootstrap_spec) {
+        return;
+    }
+    // 2018-06-03: for -bsam GENE, number of partitions might be reduced
+    if (part_info.size() <= size())
+        return;
+    part_info.erase(part_info.begin()+size(), part_info.end());
+    for (part = 0; part < part_info.size(); part++) {
+        bool found = false;
+        for (int p = 0; p < tree->size(); p++)
+            if (tree->at(p)->aln->name == at(part)->aln->name) {
+                part_info[part] = tree->part_info[p];
+                part_info[part].evalNNIs = 0.0;
+                found = true;
+                break;
+            }
+        ASSERT(found);
+    }
+}
+
+
 void PhyloSuperTree::setSuperAlignment(Alignment *alignment) {
     PhyloTree::setAlignment(alignment);
 
