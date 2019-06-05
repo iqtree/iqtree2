@@ -172,7 +172,7 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info, s
                     double *partial_lh = dad_branch->partial_lh + (ptn*block + x);
                     // now do the likelihood scaling
                     for (i = 0; i < block; i++) {
-                        partial_lh[i*VectorClass::size()] *= SCALING_THRESHOLD_INVER;
+                        partial_lh[i*VectorClass::size()] = ldexp(partial_lh[i*VectorClass::size()], SCALING_THRESHOLD_EXP);
                     }
                     dad_branch->scale_num[ptn+x] += 1;
                 }
@@ -360,7 +360,7 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info, s
                     double *partial_lh = dad_branch->partial_lh + (ptn*block + x);
                     // now do the likelihood scaling
                     for (i = 0; i < block; i++) {
-                        partial_lh[i*VectorClass::size()] *= SCALING_THRESHOLD_INVER;
+                        partial_lh[i*VectorClass::size()] = ldexp(partial_lh[i*VectorClass::size()], SCALING_THRESHOLD_EXP);
                     }
                     dad_branch->scale_num[ptn+x] += 1;
                 }
@@ -408,7 +408,7 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info, s
                     double *partial_lh = dad_branch->partial_lh + (ptn*block + x);
                     // now do the likelihood scaling
                     for (i = 0; i < block; i++) {
-                        partial_lh[i*VectorClass::size()] *= SCALING_THRESHOLD_INVER;
+                        partial_lh[i*VectorClass::size()] = ldexp(partial_lh[i*VectorClass::size()], SCALING_THRESHOLD_EXP);
                     }
                     dad_branch->scale_num[ptn+x] += 1;
                 }
