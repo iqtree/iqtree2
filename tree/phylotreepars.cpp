@@ -397,6 +397,11 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
     UINT *tmp_partial_pars;
     tmp_partial_pars = newBitsBlock();
 
+    best_pars_score = 0;
+    if (leafNum == size) {
+        outWarning("Constraint tree has all taxa and is bifurcating, which strictly enforces final tree!");
+    }
+    
     // stepwise adding the next taxon for the remaining taxa
     for (; leafNum < size; leafNum++) {
         if (verbose_mode >= VB_MAX)
