@@ -2932,7 +2932,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw("Ultrafast bootstrap (-bb) does not work with -fast option");
                 }
                 params.numInitTrees = 2;
-				params.min_iterations = 2;
+                if (params.min_iterations == -1)
+                    params.min_iterations = 2;
 				params.stop_condition = SC_FIXED_ITERATION;
                 params.modelEps = 0.05;
                 continue;
