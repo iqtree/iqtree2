@@ -738,7 +738,7 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch
 
 	*df = horizontal_add(all_df);
 	*ddf = horizontal_add(all_ddf);
-    ASSERT(!std::isnan(*df) && !std::isinf(*df) && "Numerical underflow for non-rev lh-derivative");
+    ASSERT(std::isfinite(*df) && "Numerical underflow for non-rev lh-derivative");
 
 	if (isASC) {
         double prob_const = 0.0, df_const = 0.0, ddf_const = 0.0;
@@ -1075,7 +1075,7 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
 
     tree_lh = horizontal_add(all_tree_lh);
 
-    if (std::isnan(tree_lh) || std::isinf(tree_lh)) {
+    if (!std::isfinite(tree_lh)) {
         model->writeInfo(cout);
         site_rate->writeInfo(cout);
         ASSERT(0 && "Numerical underflow for non-rev lh-branch");
@@ -1094,7 +1094,7 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
     	for (ptn = 0; ptn < orig_nptn; ptn+=VectorClass::size())
             (VectorClass().load_a(&_pattern_lh[ptn])-prob_const).store_a(&_pattern_lh[ptn]);
     	tree_lh -= aln->getNSite()*prob_const;
-		ASSERT(!std::isnan(tree_lh) && !std::isinf(tree_lh));
+		ASSERT(std::isfinite(tree_lh));
     }
 
     return tree_lh;
