@@ -579,7 +579,8 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
             outError("Invalid use of +ASC because of " + convertIntToString(tree->aln->frac_invariant_sites*tree->aln->getNSite()) +
                 " invariant sites in the alignment");
         }
-		cout << "Ascertainment bias correction: " << unobserved_ptns.size() << " unobservable constant patterns"<< endl;
+        if (verbose_mode >= VB_MED)
+            cout << "Ascertainment bias correction: " << unobserved_ptns.size() << " unobservable constant patterns"<< endl;
 		rate_str = rate_str.substr(0, posasc) + rate_str.substr(posasc+4);
 	} else {
         tree->aln->buildSeqStates(false);
