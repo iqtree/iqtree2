@@ -1077,6 +1077,11 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
     if (nseq == 3)
         best_pars_score = computeParsimony();
 
+    best_pars_score = 0;
+    if (leafNum == nseq) {
+        outWarning("Constraint tree has all taxa and is bifurcating, which strictly enforces final tree!");
+    }
+    
     // stepwise adding the next taxon for the remaining taxa
     for (int step = 0; leafNum < nseq; step++) {
         NodeVector nodes1, nodes2;
