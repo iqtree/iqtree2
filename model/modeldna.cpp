@@ -382,8 +382,14 @@ bool ModelDNA::setRateType(string rate_str) {
 			cout << rates[i] << " ";
 		cout << endl;
 	}
-	param_fixed.resize(num_params+1, false);
-	param_fixed[0] = true; // fix the last entry
+    if (param_fixed.size() == num_params + 1) {
+        num_params = 0;
+        for (auto p : param_fixed)
+            if (!p) num_params++;
+    } else {
+        param_fixed.resize(num_params+1, false);
+        param_fixed[0] = true; // fix the last entry
+    }
 	delete [] num_rates;
 	delete [] avg_rates;
 	return true;
