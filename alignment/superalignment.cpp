@@ -664,7 +664,7 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, 
         if (checked[seq1]) continue;
         bool first_ident_seq = true;
 		for (int seq2 = seq1+1; seq2 < getNSeq(); seq2++) {
-			if (getSeqName(seq2) == not_remove) continue;
+			if (getSeqName(seq2) == not_remove || removed[seq2]) continue;
 			bool equal_seq = true;
 			int part = 0;
 			// check if seq1 and seq2 are identical over all partitions
