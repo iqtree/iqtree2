@@ -1405,7 +1405,7 @@ string testOneModel(string &model_name, Params &params, Alignment *in_aln,
     IQTree *iqtree = NULL;
     if (in_aln->isSuperAlignment()) {
         SuperAlignment *saln = (SuperAlignment*)in_aln;
-        if (brlen_type == BRLEN_OPTIMIZE)
+        if (params.partition_type == BRLEN_OPTIMIZE)
             iqtree = new PhyloSuperTree(saln);
         else
             iqtree = new PhyloSuperTreePlen(saln, brlen_type);
