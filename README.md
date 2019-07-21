@@ -1,7 +1,7 @@
 IQ-TREE
 =======
 
-[![Github All Releases](https://img.shields.io/github/downloads/Cibiv/IQ-TREE/total.svg?style=social&logo=github&label=Download)]()
+[![Github All Releases](https://img.shields.io/github/downloads/Cibiv/IQ-TREE/total.svg?style=social&logo=github&label=Download)](https://github.com/Cibiv/IQ-TREE/releases)
 [![BioConda downloads](https://img.shields.io/conda/dn/bioconda/iqtree.svg?style=flag&label=BioConda%20install)](https://anaconda.org/bioconda/iqtree)
 [![Build Status](https://travis-ci.org/bqminh/IQ-TREE.svg?branch=master)](https://travis-ci.org/bqminh/IQ-TREE)
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
