@@ -4401,22 +4401,26 @@ double binomial_cdf(int x, int n, double p) {
 
 void SymTestResult::computePvalue() {
     if (significant_pairs <= 0) {
-        pvalue = 1.0;
+        pvalue_binom = 1.0;
         return;
     }
 #ifdef USE_BOOST
     boost::math::binomial binom(included_pairs, Params::getInstance().symtest_pcutoff);
-    pvalue = cdf(complement(binom, significant_pairs-1));
+    pvalue_binom = cdf(complement(binom, significant_pairs-1));
 #else
-    pvalue = binomial_cdf(significant_pairs, included_pairs, Params::getInstance().symtest_pcutoff);
+    pvalue_binom = binomial_cdf(significant_pairs, included_pairs, Params::getInstance().symtest_pcutoff);
 #endif
 }
 
 std::ostream& operator<<(std::ostream& stream, const SymTestResult& res) {
     stream << res.significant_pairs << ","
-        << res.included_pairs - res.significant_pairs << "," << res.pvalue;
+    << res.included_pairs - res.significant_pairs << ",";
+    if (Params::getInstance().symtest == SYMTEST_BINOM)
+        stream << res.pvalue_binom;
+    else
+        stream << res.pvalue_maxdiv;
     if (Params::getInstance().symtest_shuffle > 1)
-        stream << "," << res.max_stat << ',' << res.perm_pvalue;
+        stream << "," << res.max_stat << ',' << res.pvalue_perm;
     return stream;
 }
 
@@ -4431,6 +4435,9 @@ void Alignment::doSymTest(size_t vecid, vector<SymTestResult> &vec_sym, vector<S
     sym.max_stat = -1.0;
     marsym.max_stat = -1.0;
     intsym.max_stat = -1.0;
+    sym.pvalue_maxdiv = 1.0;
+    marsym.pvalue_maxdiv = 1.0;
+    intsym.pvalue_maxdiv = 1.0;
     
     vector<Pattern> ptn_shuffled;
     
@@ -4447,6 +4454,8 @@ void Alignment::doSymTest(size_t vecid, vector<SymTestResult> &vec_sym, vector<S
     if (stats)
         stats->reserve(nseq*(nseq-1)/2);
 
+    double max_divergence = 0.0;
+    
     for (int seq1 = 0; seq1 < nseq; seq1++)
         for (int seq2 = seq1+1; seq2 < nseq; seq2++) {
             MatrixXd pair_freq = MatrixXd::Zero(num_states, num_states);
@@ -4462,12 +4471,17 @@ void Alignment::doSymTest(size_t vecid, vector<SymTestResult> &vec_sym, vector<S
                 }
             }
             
+            double divergence = pair_freq.sum() - pair_freq.diagonal().sum();
+            
             // performing test of symmetry
             int i, j;
             
             SymTestStat stat;
             stat.seq1 = seq1;
             stat.seq2 = seq2;
+            stat.pval_sym = nan("");
+            stat.pval_marsym = nan("");
+            stat.pval_intsym = nan("");
             
             int df_sym = num_states*(num_states-1)/2;
             bool applicable = true;
@@ -4535,6 +4549,16 @@ void Alignment::doSymTest(size_t vecid, vector<SymTestResult> &vec_sym, vector<S
             }
             if (stats)
                 stats->push_back(stat);
+            if (divergence > max_divergence) {
+                sym.pvalue_maxdiv = stat.pval_sym;
+                intsym.pvalue_maxdiv = stat.pval_intsym;
+                marsym.pvalue_maxdiv = stat.pval_marsym;
+                max_divergence = divergence;
+            } else if (divergence == max_divergence && random_double(rstream) < 0.5) {
+                sym.pvalue_maxdiv = stat.pval_sym;
+                intsym.pvalue_maxdiv = stat.pval_intsym;
+                marsym.pvalue_maxdiv = stat.pval_marsym;
+            }
         }
     
     sym.computePvalue();

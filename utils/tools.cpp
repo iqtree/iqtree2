@@ -825,7 +825,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 
     params.aln_file = NULL;
     params.phylip_sequential_format = false;
-    params.symtest = false;
+    params.symtest = SYMTEST_NONE;
+    params.symtest_remove = 0;
     params.symtest_keep_zero = false;
     params.symtest_type = 0;
     params.symtest_pcutoff = 0.05;
@@ -1771,30 +1772,39 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.phylip_sequential_format = true;
                 continue;
             }
-            if (strcmp(argv[cnt], "--symtest") == 0 || strcmp(argv[cnt], "--bisymtest") == 0) {
-                params.symtest = 1;
+            if (strcmp(argv[cnt], "--symtest") == 0) {
+                params.symtest = SYMTEST_MAXDIV;
                 continue;
             }
 
-            if (strcmp(argv[cnt], "--symtest-remove-bad") == 0 || strcmp(argv[cnt], "--bisymtest-remove-bad") == 0) {
-                params.symtest = 2;
+            if (strcmp(argv[cnt], "--bisymtest") == 0) {
+                params.symtest = SYMTEST_BINOM;
                 continue;
             }
 
-            if (strcmp(argv[cnt], "--symtest-remove-good") == 0 || strcmp(argv[cnt], "--bisymtest-remove-good") == 0) {
-                params.symtest = 3;
+            if (strcmp(argv[cnt], "--symtest-remove-bad") == 0) {
+                params.symtest_remove = 1;
+                if (params.symtest == SYMTEST_NONE)
+                    params.symtest = SYMTEST_MAXDIV;
                 continue;
             }
 
-            if (strcmp(argv[cnt], "--symtest-keep-zero") == 0 || strcmp(argv[cnt], "--bisymtest-keep-zero") == 0) {
+            if (strcmp(argv[cnt], "--symtest-remove-good") == 0) {
+                params.symtest_remove = 2;
+                if (params.symtest == SYMTEST_NONE)
+                    params.symtest = SYMTEST_MAXDIV;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--symtest-keep-zero") == 0) {
                 params.symtest_keep_zero = true;
                 continue;
             }
 
-            if (strcmp(argv[cnt], "--symtest-type") == 0 || strcmp(argv[cnt], "--bisymtest-type") == 0) {
+            if (strcmp(argv[cnt], "--symtest-type") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use --bisymtest-type SYM|MAR|INT";
+                    throw "Use --symtest-type SYM|MAR|INT";
                 if (strcmp(argv[cnt], "SYM") == 0)
                     params.symtest_type = 0;
                 else if (strcmp(argv[cnt], "MAR") == 0)
@@ -1802,40 +1812,40 @@ void parseArg(int argc, char *argv[], Params &params) {
                 else if (strcmp(argv[cnt], "INT") == 0)
                     params.symtest_type = 2;
                 else
-                    throw "Use --bisymtest-type SYM|MAR|INT";
-                if (!params.symtest)
-                    params.symtest = 1;
+                    throw "Use --symtest-type SYM|MAR|INT";
+                if (params.symtest == SYMTEST_NONE)
+                    params.symtest = SYMTEST_MAXDIV;
                 continue;
             }
 
-            if (strcmp(argv[cnt], "--symtest-pval") == 0 || strcmp(argv[cnt], "--bisymtest-pval") == 0) {
+            if (strcmp(argv[cnt], "--symtest-pval") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use --bisymtest-pval PVALUE_CUTOFF";
+                    throw "Use --symtest-pval PVALUE_CUTOFF";
                 params.symtest_pcutoff = convert_double(argv[cnt]);
                 if (params.symtest_pcutoff <= 0 || params.symtest_pcutoff >= 1)
-                    throw "--bisymtest-pval must be between 0 and 1";
-                if (!params.symtest)
-                    params.symtest = 1;
+                    throw "--symtest-pval must be between 0 and 1";
+                if (params.symtest == SYMTEST_NONE)
+                    params.symtest = SYMTEST_MAXDIV;
                 continue;
             }
             
-            if (strcmp(argv[cnt], "--symstat") == 0 || strcmp(argv[cnt], "--bisymstat") == 0) {
+            if (strcmp(argv[cnt], "--symstat") == 0) {
                 params.symtest_stat = true;
-                if (!params.symtest)
-                    params.symtest = 1;
+                if (params.symtest == SYMTEST_NONE)
+                    params.symtest = SYMTEST_MAXDIV;
                 continue;
             }
 
-            if (strcmp(argv[cnt], "--permsymtest") == 0 || strcmp(argv[cnt], "--maxsymtest") == 0) {
+            if (strcmp(argv[cnt], "--symtest-perm") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use --maxsymtest INT";
+                    throw "Use --symtest-perm INT";
                 params.symtest_shuffle = convert_int(argv[cnt]);
                 if (params.symtest_shuffle <= 0)
-                    throw "--maxsymtest must be positive";
-                if (!params.symtest)
-                    params.symtest = 1;
+                    throw "--symtest-perm must be positive";
+                if (params.symtest == SYMTEST_NONE)
+                    params.symtest = SYMTEST_MAXDIV;
                 continue;
             }
 
@@ -4186,10 +4196,11 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --asr-min NUMBER     Min probability of ancestral state (default: equil freq)" << endl
 
     << endl << "TEST OF SYMMETRY:" << endl
-    << "  --bisymtest             Perform three binomial tests of symmetry" << endl
-    << "  --maxsymtest NUMBER     Replicates for maximum tests of symmetry" << endl
-    << "  --symtest-remove-bad    Do --bisymtest and remove bad partitions" << endl
-    << "  --symtest-remove-good   Do --bisymtest and remove good partitions" << endl
+    << "  --symtest               Perform three tests of symmetry" << endl
+//    << "  --bisymtest             Perform three binomial tests of symmetry" << endl
+//    << "  --symtest-perm NUMBER   Replicates for permutation tests of symmetry" << endl
+    << "  --symtest-remove-bad    Do --symtest and remove bad partitions" << endl
+    << "  --symtest-remove-good   Do --symtest and remove good partitions" << endl
     << "  --symtest-type MAR|INT  Use MARginal/INTernal test when removing partitions" << endl
     << "  --symtest-pval NUMER    P-value cutoff (default: 0.05)" << endl
     << "  --symtest-keep-zero     Keep NAs in the tests" << endl
