@@ -3457,14 +3457,36 @@ IQTree *newIQTree(Params &params, Alignment *alignment) {
 void getSymTestID(vector<SymTestResult> &res, set<int> &id, bool bad_res) {
     if (bad_res) {
         // get significant test ID
-        for (auto i = res.begin(); i != res.end(); i++)
-            if (i->pvalue < Params::getInstance().symtest_pcutoff)
-                id.insert(i - res.begin());
+        switch (Params::getInstance().symtest) {
+            case SYMTEST_BINOM:
+                for (auto i = res.begin(); i != res.end(); i++)
+                    if (i->pvalue_binom < Params::getInstance().symtest_pcutoff)
+                        id.insert(i - res.begin());
+                break;
+            case SYMTEST_MAXDIV:
+                for (auto i = res.begin(); i != res.end(); i++)
+                    if (i->pvalue_maxdiv < Params::getInstance().symtest_pcutoff)
+                        id.insert(i - res.begin());
+                break;
+            default:
+                break;
+        }
     } else {
         // get non-significant test ID
-        for (auto i = res.begin(); i != res.end(); i++)
-            if (i->pvalue >= Params::getInstance().symtest_pcutoff)
-                id.insert(i - res.begin());
+        switch (Params::getInstance().symtest) {
+            case SYMTEST_BINOM:
+                for (auto i = res.begin(); i != res.end(); i++)
+                    if (i->pvalue_binom >= Params::getInstance().symtest_pcutoff)
+                        id.insert(i - res.begin());
+                break;
+            case SYMTEST_MAXDIV:
+                for (auto i = res.begin(); i != res.end(); i++)
+                    if (i->pvalue_maxdiv >= Params::getInstance().symtest_pcutoff)
+                        id.insert(i - res.begin());
+                break;
+            default:
+                break;
+        }
     }
 }
 
@@ -3549,9 +3571,9 @@ void doSymTest(Alignment *alignment, Params &params) {
     if (params.symtest_shuffle > 1) {
         // compute p-value for s-max approach
         for (int part = 0; part < num_parts; part++) {
-            sym[part].perm_pvalue = computePValueSMax(sym, part, num_parts);
-            marsym[part].perm_pvalue = computePValueSMax(marsym, part, num_parts);
-            intsym[part].perm_pvalue = computePValueSMax(intsym, part, num_parts);
+            sym[part].pvalue_perm = computePValueSMax(sym, part, num_parts);
+            marsym[part].pvalue_perm = computePValueSMax(marsym, part, num_parts);
+            intsym[part].pvalue_perm = computePValueSMax(intsym, part, num_parts);
         }
     }
 
@@ -3565,27 +3587,30 @@ void doSymTest(Alignment *alignment, Params &params) {
     << "#    Name:    Partition name" << endl
     << "#    SymSig:  Number of significant sequence pairs by test of symmetry" << endl
     << "#    SymNon:  Number of non-significant sequence pairs by test of symmetry" << endl
-    << "#    SymBi:   P-value for binomial test of symmetry" << endl;
+    << ((Params::getInstance().symtest == SYMTEST_BINOM) ? "#    SymBi:   P-value for binomial test of symmetry" : "#    SymPval: P-value for maximum test of symmetry") << endl;
     if (params.symtest_shuffle > 1)
         out << "#    SymMax:  Maximum of pair statistics by test of symmetry" << endl
             << "#    SymPerm: P-value for permutation test of symmetry" << endl;
     
     out << "#    MarSig:  Number of significant sequence pairs by test of marginal symmetry" << endl
     << "#    MarNon:  Number of non-significant sequence pairs by test of marginal symmetry" << endl
-    << "#    MarBi:   P-value for binomial test of marginal symmetry" << endl;
+    << ((Params::getInstance().symtest == SYMTEST_BINOM) ? "#    MarBi:   P-value for binomial test of marginal symmetry" : "#    MarPval: P-value for maximum test of marginal symmetry") << endl;
     if (params.symtest_shuffle > 1)
         out << "#    MarMax:  Maximum of pair statistics by test of marginal symmetry" << endl
             << "#    MarPerm: P-value for permutation test of marginal symmetry" << endl;
     out << "#    IntSig:  Number of significant sequence pairs by test of internal symmetry" << endl
     << "#    IntNon:  Number of non-significant sequence pairs by test of internal symmetry" << endl
-    << "#    IntBi:   P-value for binomial test of internal symmetry" << endl;
+    << ((Params::getInstance().symtest == SYMTEST_BINOM) ? "#    IntBi:   P-value for binomial test of symmetry" : "#    IntPval: P-value for maximum test of internal symmetry") << endl;
     if (params.symtest_shuffle > 1)
         out << "#    IntMax:  Maximum of pair statistics by test of internal symmetry" << endl
         << "#    IntPerm: P-value for permutation test of internal symmetry" << endl;
     
-    out << "Name,SymSig,SymNon,SymBi" << ((params.symtest_shuffle > 1) ? ",SymMax,SymPerm" : "")
-    << ",MarSig,MarNon,MarBi" << ((params.symtest_shuffle > 1) ? ",MarMax,MarPerm" : "")
-    << ",IntSig,IntNon,IntBi" << ((params.symtest_shuffle > 1) ? ",IntMax,IntPerm" : "") << endl;
+    out << "Name,SymSig,SymNon," << ((Params::getInstance().symtest == SYMTEST_BINOM) ? "SymBi" : "SymPval")
+        << ((params.symtest_shuffle > 1) ? ",SymMax,SymPerm" : "")
+        << ",MarSig,MarNon," << ((Params::getInstance().symtest == SYMTEST_BINOM) ? "MarBi" : "MarPval")
+        << ((params.symtest_shuffle > 1) ? ",MarMax,MarPerm" : "")
+        << ",IntSig,IntNon," << ((Params::getInstance().symtest == SYMTEST_BINOM) ? "IntBi" : "IntPval")
+        << ((params.symtest_shuffle > 1) ? ",IntMax,IntPerm" : "") << endl;
     
     if (alignment->isSuperAlignment()) {
         SuperAlignment *saln = (SuperAlignment*)alignment;
@@ -3598,7 +3623,7 @@ void doSymTest(Alignment *alignment, Params &params) {
 
     if (params.symtest_shuffle > 1) {
         for (int part = num_parts; part < sym.size(); part++) {
-            sym[part].perm_pvalue = marsym[part].perm_pvalue = intsym[part].perm_pvalue = -1.0;
+            sym[part].pvalue_perm = marsym[part].pvalue_perm = intsym[part].pvalue_perm = -1.0;
             out << part % num_parts << ','
             << sym[part] << ',' << marsym[part] << ','  << intsym[part] << endl;
         }
@@ -3617,7 +3642,7 @@ void doSymTest(Alignment *alignment, Params &params) {
     // now filter out partitions
     if (alignment->isSuperAlignment()) {
         set<int> part_id;
-        if (params.symtest == 2) {
+        if (params.symtest_remove == 1) {
             // remove bad loci
             if (params.symtest_type == 0)
                 getSymTestID(sym, part_id, true);
@@ -3625,7 +3650,7 @@ void doSymTest(Alignment *alignment, Params &params) {
                 getSymTestID(marsym, part_id, true);
             else
                 getSymTestID(intsym, part_id, true);
-        } else if (params.symtest == 3) {
+        } else if (params.symtest_remove == 2) {
             // remove good loci
             if (params.symtest_type == 0)
                 getSymTestID(sym, part_id, false);
@@ -3637,15 +3662,15 @@ void doSymTest(Alignment *alignment, Params &params) {
         if (!part_id.empty()) {
             SuperAlignment *saln = (SuperAlignment*)alignment;
             cout << "Removing " << part_id.size()
-            << ((params.symtest == 2)? " bad" : " good") << " partitions (pvalue cutoff = "
+            << ((params.symtest_remove == 1)? " bad" : " good") << " partitions (pvalue cutoff = "
             << params.symtest_pcutoff << ")..." << endl;
             if (part_id.size() < alignment->getNSite())
                 saln->removePartitions(part_id);
             else
                 outError("Can't remove all partitions");
-            string aln_file = (string)params.out_prefix + ((params.symtest == 2)? ".good.phy" : ".bad.phy");
+            string aln_file = (string)params.out_prefix + ((params.symtest_remove == 1)? ".good.phy" : ".bad.phy");
             saln->printCombinedAlignment(aln_file.c_str());
-            string filename = (string)params.out_prefix + ((params.symtest == 2)? ".good.nex" : ".bad.nex");
+            string filename = (string)params.out_prefix + ((params.symtest_remove == 2)? ".good.nex" : ".bad.nex");
             saln->printPartition(filename.c_str(), aln_file.c_str());
         }
     }

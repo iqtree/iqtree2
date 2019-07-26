@@ -485,6 +485,9 @@ enum AncestralSeqType {
     AST_NONE, AST_MARGINAL, AST_JOINT
 };
 
+enum SymTest {
+    SYMTEST_NONE, SYMTEST_BINOM, SYMTEST_MAXDIV
+};
 
 const int BRLEN_OPTIMIZE = 0; // optimize branch lengths
 const int BRLEN_FIX      = 1; // fix branch lengths
@@ -810,12 +813,17 @@ public:
     bool phylip_sequential_format;
 
     /**
-     0 to not perform test of symmetry of Jermiin et al. (default)
-     1 to perform symmetry test
-     2 to do symtest and then remove bad loci
-     3 to do symtest and then remove good loci
+     SYMTEST_NONE to not perform test of symmetry of Jermiin et al. (default)
+     SYMTEST_MAXDIV to perform symmetry test on the pair with maximum divergence
+     SYMTEST_BINOM to perform binomial test of all pair p-values
     */
-    int symtest;
+    SymTest symtest;
+    
+    /**
+     1 to remove bad loci by SymTest
+     2 to remove good loci by SymTest
+     */
+    int symtest_remove;
     
     /** true to keep zero which may result in many taxon pairs not testable (default: false) */
     bool symtest_keep_zero;

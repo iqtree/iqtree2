@@ -28,7 +28,7 @@ class SymTestResult {
 public:
     SymTestResult() {
         significant_pairs = included_pairs = excluded_pairs = 0;
-        pvalue = -1.0;
+        pvalue_binom = -1.0;
     }
     
     /** compute pvalue using bionomial test */
@@ -37,9 +37,10 @@ public:
     int significant_pairs; // number of significant sequence pairs
     int included_pairs; // total number of included sequence pairs
     int excluded_pairs; // number of excluded sequence pairs
-    double pvalue; // pvalue of binomial test of symmetry
     double max_stat; // maximum of the pair statistics
-    double perm_pvalue; // p-value of permutation test of symmetry
+    double pvalue_binom; // pvalue of binomial test of symmetry
+    double pvalue_maxdiv; // p-value of the sequence pair with maximum divergence
+    double pvalue_perm; // p-value of permutation test of symmetry
 };
 
 /** class storing all pairwise statistics */
