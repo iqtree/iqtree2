@@ -819,6 +819,9 @@ public:
     */
     SymTest symtest;
     
+    /** TRUE to do symtest then exist */
+    bool symtest_only;
+    
     /**
      1 to remove bad loci by SymTest
      2 to remove good loci by SymTest
