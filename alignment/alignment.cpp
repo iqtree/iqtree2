@@ -320,7 +320,7 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
         if (checked[seq1]) continue;
         bool first_ident_seq = true;
 		for (int seq2 = seq1+1; seq2 < getNSeq(); seq2++) {
-			if (getSeqName(seq2) == not_remove) continue;
+			if (getSeqName(seq2) == not_remove || removed[seq2]) continue;
 			bool equal_seq = true;
 			for (iterator it = begin(); it != end(); it++)
 				if  ((*it)[seq1] != (*it)[seq2]) {
