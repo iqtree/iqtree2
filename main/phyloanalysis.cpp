@@ -3674,6 +3674,8 @@ void doSymTest(Alignment *alignment, Params &params) {
             saln->printPartition(filename.c_str(), aln_file.c_str());
         }
     }
+    if (params.symtest_only)
+        exit(EXIT_SUCCESS);
 }
 
 void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {

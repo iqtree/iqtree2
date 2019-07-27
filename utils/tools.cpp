@@ -826,6 +826,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.aln_file = NULL;
     params.phylip_sequential_format = false;
     params.symtest = SYMTEST_NONE;
+    params.symtest_only = false;
     params.symtest_remove = 0;
     params.symtest_keep_zero = false;
     params.symtest_type = 0;
@@ -1779,6 +1780,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 
             if (strcmp(argv[cnt], "--bisymtest") == 0) {
                 params.symtest = SYMTEST_BINOM;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--symtest-only") == 0) {
+                params.symtest_only = true;
+                if (params.symtest == SYMTEST_NONE)
+                    params.symtest = SYMTEST_MAXDIV;
                 continue;
             }
 
@@ -4197,6 +4205,7 @@ void usage_iqtree(char* argv[], bool full_command) {
 
     << endl << "TEST OF SYMMETRY:" << endl
     << "  --symtest               Perform three tests of symmetry" << endl
+    << "  --symtest-only          Do --symtest then exist" << endl
 //    << "  --bisymtest             Perform three binomial tests of symmetry" << endl
 //    << "  --symtest-perm NUMBER   Replicates for permutation tests of symmetry" << endl
     << "  --symtest-remove-bad    Do --symtest and remove bad partitions" << endl
