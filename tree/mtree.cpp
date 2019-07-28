@@ -684,7 +684,7 @@ void MTree::readTree(istream &in, bool &is_rooted)
             if (branch_len[0] == -1.0) branch_len[0] = 0.0;
             if (branch_len[0] < 0.0)
                 throw ERR_NEG_BRANCH;
-            is_rooted = true;
+            rooted = is_rooted = true;
             root = newNode(leafNum, ROOT_NAME);
             root->addNeighbor(node, branch_len);
             node->addNeighbor(root, branch_len);

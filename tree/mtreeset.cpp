@@ -235,7 +235,7 @@ void MTreeSet::checkConsistency() {
 	if (empty()) 
 		return;
 	iterator it;
-	bool rooted = false;
+	bool rooted = front()->rooted;
 	int i;
 	bool first = true;
 	for (it = begin(), i = 0; it != end(); it++, i++)
