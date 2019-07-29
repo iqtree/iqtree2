@@ -137,7 +137,7 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info, s
                         else if (ptn+x < max_orig_nptn)
                             tip_child = partial_lh_leaf + block * aln->STATE_UNKNOWN;
                         else if (ptn+x < nptn)
-                            tip_child = partial_lh_leaf + block * model_factory->unobserved_ptns[ptn+x-max_orig_nptn];
+                            tip_child = partial_lh_leaf + block * model_factory->unobserved_ptns[ptn+x-max_orig_nptn][child->node->id];
                         else
                             tip_child = partial_lh_leaf + block * aln->STATE_UNKNOWN;
                         double *this_vec_tip = vec_tip+x;
@@ -273,7 +273,7 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info, s
                     else if (ptn+x < max_orig_nptn)
                         tip_right = partial_lh_right + block * aln->STATE_UNKNOWN;
                     else if (ptn+x < nptn)
-                        tip_right = partial_lh_right + block * model_factory->unobserved_ptns[ptn+x-max_orig_nptn];
+                        tip_right = partial_lh_right + block * model_factory->unobserved_ptns[ptn+x-max_orig_nptn][right->node->id];
                     else
                         tip_right = partial_lh_right + block * aln->STATE_UNKNOWN;
                     double *this_vec_right = vright+x;
@@ -300,8 +300,8 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info, s
                     tip_left  = partial_lh_left  + block * aln->STATE_UNKNOWN;
                     tip_right = partial_lh_right + block * aln->STATE_UNKNOWN;
                 } else if (ptn+x < nptn) {
-                    tip_left  = partial_lh_left  + block * model_factory->unobserved_ptns[ptn+x-max_orig_nptn];
-                    tip_right = partial_lh_right + block * model_factory->unobserved_ptns[ptn+x-max_orig_nptn];
+                    tip_left  = partial_lh_left  + block * model_factory->unobserved_ptns[ptn+x-max_orig_nptn][left->node->id];
+                    tip_right = partial_lh_right + block * model_factory->unobserved_ptns[ptn+x-max_orig_nptn][right->node->id];
                 } else {
                     tip_left  = partial_lh_left  + block * aln->STATE_UNKNOWN;
                     tip_right = partial_lh_right + block * aln->STATE_UNKNOWN;
@@ -382,7 +382,7 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info, s
                 else if (ptn+x < max_orig_nptn)
                     tip = partial_lh_left + block*aln->STATE_UNKNOWN;
                 else if (ptn+x < nptn)
-                    tip = partial_lh_left + block*model_factory->unobserved_ptns[ptn+x-max_orig_nptn];
+                    tip = partial_lh_left + block*model_factory->unobserved_ptns[ptn+x-max_orig_nptn][left->node->id];
                 else
                     tip = partial_lh_left + block*aln->STATE_UNKNOWN;
                 double *this_vec_left = vec_left+x;
@@ -759,7 +759,7 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch
                     else if (ptn+i < max_orig_nptn)
                         state_dad = block * aln->STATE_UNKNOWN;
                     else if (ptn+i < nptn)
-                        state_dad = block * model_factory->unobserved_ptns[ptn+i-max_orig_nptn];
+                        state_dad = block * model_factory->unobserved_ptns[ptn+i-max_orig_nptn][dad->id];
                     else
                         state_dad = block * aln->STATE_UNKNOWN;
 
@@ -1164,7 +1164,7 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
                     else if (ptn+i < max_orig_nptn)
                         lh_tip = partial_lh_node + block*aln->STATE_UNKNOWN;
                     else if (ptn+i < nptn)
-                        lh_tip = partial_lh_node + block*model_factory->unobserved_ptns[ptn+i-max_orig_nptn];
+                        lh_tip = partial_lh_node + block*model_factory->unobserved_ptns[ptn+i-max_orig_nptn][dad->id];
                     else
                         lh_tip = partial_lh_node + block*aln->STATE_UNKNOWN;
 

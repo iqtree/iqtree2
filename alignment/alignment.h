@@ -704,9 +704,10 @@ public:
     virtual void countConstSite();
 
     /**
-     * @return unobserved constant patterns, each entry encoding for one constant character
+     * @param missing_data TRUE for missing data aware correction (for Mark Holder)
+     * @param[out] unobserved_ptns unobserved constant patterns, each entry encoding for one constant character
      */
-    string getUnobservedConstPatterns();
+    void getUnobservedConstPatterns(bool missing_data, vector<Pattern> &unobserved_ptns);
 
     /**
             @return the number of ungappy and unambiguous characters from a sequence

@@ -1467,7 +1467,7 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info, size_t 
                             else if (ptn+i < max_orig_nptn)
                                 child_lh = partial_lh_leaf + block*aln->STATE_UNKNOWN;
                             else if (ptn+i < nptn)
-                                child_lh = partial_lh_leaf + block*model_factory->unobserved_ptns[ptn+i-max_orig_nptn];
+                                child_lh = partial_lh_leaf + block*model_factory->unobserved_ptns[ptn+i-max_orig_nptn][child->node->id];
                             else
                                 child_lh = partial_lh_leaf + block*aln->STATE_UNKNOWN;
                             double *this_vec_tip = vec_tip+i;
@@ -1648,8 +1648,8 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info, size_t 
                         tip_left  = partial_lh_left  + block * aln->STATE_UNKNOWN;
                         tip_right = partial_lh_right + block * aln->STATE_UNKNOWN;
                     } else if (ptn+x < nptn) {
-                        tip_left  = partial_lh_left  + block * model_factory->unobserved_ptns[ptn+x-max_orig_nptn];
-                        tip_right = partial_lh_right + block * model_factory->unobserved_ptns[ptn+x-max_orig_nptn];
+                        tip_left  = partial_lh_left  + block * model_factory->unobserved_ptns[ptn+x-max_orig_nptn][left->node->id];
+                        tip_right = partial_lh_right + block * model_factory->unobserved_ptns[ptn+x-max_orig_nptn][right->node->id];
                     } else {
                         tip_left  = partial_lh_left  + block * aln->STATE_UNKNOWN;
                         tip_right = partial_lh_right + block * aln->STATE_UNKNOWN;
@@ -1766,7 +1766,7 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info, size_t 
                     } else if (ptn+x < max_orig_nptn) {
                         tip = partial_lh_left + block*aln->STATE_UNKNOWN;
                     } else if (ptn+x < nptn) {
-                        tip = partial_lh_left + block*model_factory->unobserved_ptns[ptn+x-max_orig_nptn];
+                        tip = partial_lh_left + block*model_factory->unobserved_ptns[ptn+x-max_orig_nptn][left->node->id];
                     } else {
                         tip = partial_lh_left + block*aln->STATE_UNKNOWN;
                     }
@@ -2041,7 +2041,7 @@ void PhyloTree::computeLikelihoodBufferGenericSIMD(PhyloNeighbor *dad_branch, Ph
                 else if (ptn+i < max_orig_nptn)
                     this_tip_partial_lh = tip_partial_lh + tip_block*aln->STATE_UNKNOWN;
                 else if (ptn+i < nptn)
-                    this_tip_partial_lh = tip_partial_lh + tip_block*model_factory->unobserved_ptns[ptn+i-max_orig_nptn];
+                    this_tip_partial_lh = tip_partial_lh + tip_block*model_factory->unobserved_ptns[ptn+i-max_orig_nptn][dad->id];
                 else
                     this_tip_partial_lh = tip_partial_lh + tip_block*aln->STATE_UNKNOWN;
                 double *this_vec_tip = vec_tip+i;
@@ -2745,7 +2745,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                         else if (ptn+i < max_orig_nptn)
                             lh_tip = partial_lh_node + block*aln->STATE_UNKNOWN;
                         else if (ptn+i < nptn)
-                            lh_tip = partial_lh_node + block*model_factory->unobserved_ptns[ptn+i-max_orig_nptn];
+                            lh_tip = partial_lh_node + block*model_factory->unobserved_ptns[ptn+i-max_orig_nptn][dad->id];
                         else
                             lh_tip = partial_lh_node + block*aln->STATE_UNKNOWN;
 

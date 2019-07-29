@@ -134,7 +134,7 @@ ModelFactory::ModelFactory() : CheckpointFactory() {
     is_storing = false;
     joint_optimize = false;
     fused_mix_rate = false;
-    unobserved_ptns = "";
+    is_holder_corr = false;
 }
 
 size_t findCloseBracket(string &str, size_t start_pos) {
@@ -153,6 +153,7 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
     is_storing = false;
     joint_optimize = params.optimize_model_rate_joint;
     fused_mix_rate = false;
+    is_holder_corr = false;
     string model_str = model_name;
     string rate_str;
 
@@ -579,12 +580,12 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
 
     if ((posasc = rate_str.find("+ASC")) != string::npos) {
         // ascertainment bias correction
-        unobserved_ptns = tree->aln->getUnobservedConstPatterns();
+        tree->aln->getUnobservedConstPatterns(false, unobserved_ptns);
         
         // delete rarely observed state
-        for (int i = unobserved_ptns.length()-1; i >= 0; i--)
-            if (model->state_freq[(int)unobserved_ptns[i]] < 1e-8)
-                unobserved_ptns.erase(i);
+        for (int i = unobserved_ptns.size()-1; i >= 0; i--)
+            if (model->state_freq[(int)unobserved_ptns[i][0]] < 1e-8)
+                unobserved_ptns.erase(unobserved_ptns.begin() + i);
                 
         // rebuild the seq_states to contain states of unobserved constant patterns
         tree->aln->buildSeqStates(true);
@@ -614,6 +615,15 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         tree->aln->buildSeqStates(false);
     }
 
+    /******************** initialize Holder's ascertainment bias correction model ****************************/
+    
+    string::size_type pos_holder;
+    
+    if ((pos_holder = rate_str.find("+HOLDER")) != string::npos) {
+        is_holder_corr = true;
+        tree->aln->getUnobservedConstPatterns(true, unobserved_ptns);
+        rate_str = rate_str.substr(0, pos_holder) + rate_str.substr(pos_holder+7);
+    }
 
     /******************** initialize site rate heterogeneity ****************************/
 
