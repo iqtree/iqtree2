@@ -639,8 +639,12 @@ void PhyloTree::computeAllPartialLh(PhyloNode *node, PhyloNode *dad) {
 
 string PhyloTree::getModelName() {
     string name = model->getName();
-    if (model_factory->unobserved_ptns.size() > 0)
-        name += "+ASC";
+    if (model_factory->unobserved_ptns.size() > 0) {
+        if (model_factory->is_holder_corr)
+            name += "+HOLDER";
+        else
+            name += "+ASC";
+    }
     if (model_factory->fused_mix_rate) {
         name += "*" + site_rate->name.substr(1);
     } else {
@@ -651,8 +655,12 @@ string PhyloTree::getModelName() {
 
 string PhyloTree::getModelNameParams() {
     string name = model->getNameParams();
-    if (model_factory->unobserved_ptns.size() > 0)
-        name += "+ASC";
+    if (model_factory->unobserved_ptns.size() > 0) {
+        if (model_factory->is_holder_corr)
+            name += "+HOLDER";
+        else
+            name += "+ASC";
+    }
     string rate_name = site_rate->getNameParams();
 
     if (model_factory->fused_mix_rate) {
@@ -840,7 +848,14 @@ void PhyloTree::initializeAllPartialLh() {
     // Minh's question: why getAlnNSite() but not getAlnNPattern() ?
     //size_t mem_size = ((getAlnNSite() % 2) == 0) ? getAlnNSite() : (getAlnNSite() + 1);
     // extra #numStates for ascertainment bias correction
-    size_t mem_size = get_safe_upper_limit(getAlnNPattern()) + get_safe_upper_limit(numStates);
+    size_t mem_size = get_safe_upper_limit(getAlnNPattern()) + max(get_safe_upper_limit(numStates),
+        get_safe_upper_limit(model_factory->unobserved_ptns.size()));
+
+    // TODO: disable Newton-Raphson for now
+    if (model_factory->isHolderCorrection()) {
+        optimize_by_newton = false;
+    }
+
     size_t block_size = mem_size * numStates * site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
     // make sure _pattern_lh size is divisible by 4 (e.g., 9->12, 14->16)
     if (!_pattern_lh)

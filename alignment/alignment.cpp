@@ -494,8 +494,12 @@ bool Alignment::isStandardGeneticCode() {
 }
 
 void Alignment::buildSeqStates(bool add_unobs_const) {
-	string unobs_const;
-	if (add_unobs_const) unobs_const = getUnobservedConstPatterns();
+	vector<StateType> unobs_const;
+    if (add_unobs_const) {
+        unobs_const.resize(num_states);
+        for (StateType state = 0; state < num_states; state++)
+            unobs_const[state] = state;
+    }
 	seq_states.clear();
 	seq_states.resize(getNSeq());
 	for (int seq = 0; seq < getNSeq(); seq++) {
@@ -503,8 +507,8 @@ void Alignment::buildSeqStates(bool add_unobs_const) {
 		has_state.resize(STATE_UNKNOWN+1, false);
 		for (int site = 0; site < getNPattern(); site++)
 			has_state[at(site)[seq]] = true;
-		for (string::iterator it = unobs_const.begin(); it != unobs_const.end(); it++)
-			has_state[*it] = true;
+        for (StateType it : unobs_const)
+			has_state[it] = true;
         seq_states[seq].clear();
 		for (int state = 0; state < STATE_UNKNOWN; state++)
 			if (has_state[state])
@@ -3587,19 +3591,35 @@ void Alignment::countConstSite() {
     frac_invariant_sites = ((double)num_invariant_sites) / getNSite();
 }
 
-string Alignment::getUnobservedConstPatterns() {
-	string ret = "";
-	for (char state = 0; state < num_states; state++)
+void Alignment::getUnobservedConstPatterns(bool missing_data, vector<Pattern> &unobserved_ptns) {
+    if (missing_data) {
+        unobserved_ptns.reserve(getNPattern()*num_states);
+        int nseq = getNSeq();
+        for (StateType state = 0; state < num_states; state++)
+            for (auto ptn: *this) {
+                Pattern new_ptn;
+                new_ptn.reserve(nseq);
+                for (auto state_ptn: ptn) {
+                    if (state_ptn < num_states)
+                        new_ptn.push_back(state);
+                    else
+                        new_ptn.push_back(STATE_UNKNOWN);
+                }
+                unobserved_ptns.push_back(new_ptn);
+            }
+        return;
+    }
+    unobserved_ptns.reserve(num_states);
+	for (StateType state = 0; state < num_states; state++)
     if (!isStopCodon(state))
     {
 		Pattern pat;
 		pat.resize(getNSeq(), state);
 		if (pattern_index.find(pat) == pattern_index.end()) {
 			// constant pattern is unobserved
-			ret.push_back(state);
+			unobserved_ptns.push_back(pat);
 		}
 	}
-	return ret;
 }
 
 int Alignment::countProperChar(int seq_id) {

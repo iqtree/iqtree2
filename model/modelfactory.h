@@ -225,8 +225,13 @@ public:
 	 * encoded constant sites that are unobservable and added in the alignment
 	 * this involves likelihood function for ascertainment bias correction for morphological or SNP data (Lewis 2001)
 	 */
-	string unobserved_ptns;
+	vector<Pattern> unobserved_ptns;
 
+    /** true if ASC correction for missing data (Mark Holder) */
+    bool is_holder_corr;
+    
+    bool isHolderCorrection() { return is_holder_corr; }
+    
 	/**
 	 * optimize model and site_rate parameters
 	 * @param gradient_epsilon to control stop
