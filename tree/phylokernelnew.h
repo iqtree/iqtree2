@@ -2586,7 +2586,8 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
     size_t max_orig_nptn = ((orig_nptn+VectorClass::size()-1)/VectorClass::size())*VectorClass::size();
     size_t nptn = max_orig_nptn+model_factory->unobserved_ptns.size();
     size_t tip_mem_size = max_orig_nptn * nstates;
-    bool isASC = model_factory->unobserved_ptns.size() > 0;
+    bool isHolderASC = model_factory->isHolderCorrection();
+    bool isASC = model_factory->unobserved_ptns.size() > 0 && !isHolderASC;
 
     size_t mix_addr_nstates[ncat_mix], mix_addr[ncat_mix];
     size_t denom = (model_factory->fused_mix_rate) ? 1 : ncat;
@@ -2826,7 +2827,10 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                             if (vc_min_scale_ptr[i] != 0.0)
                                 lh_ptn_dbl[i] *= SCALING_THRESHOLD;
                     }
-                    vc_prob_const += lh_ptn;
+                    if (isHolderASC)
+                        lh_ptn.store_a(&_pattern_lh[ptn]);
+                    else
+                        vc_prob_const += lh_ptn;
                 }
             } // FOR PTN
 #ifdef _OPENMP
@@ -2958,7 +2962,10 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                             if (vc_min_scale_ptr[i] != 0.0)
                                 lh_ptn_dbl[i] *= SCALING_THRESHOLD;
                     }
-                    vc_prob_const += lh_ptn;
+                    if (isHolderASC)
+                        lh_ptn.store_a(&_pattern_lh[ptn]);
+                    else
+                        vc_prob_const += lh_ptn;
                 }
             } // FOR LOOP ptn
 #ifdef _OPENMP
@@ -2995,7 +3002,27 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
         }
     }
 
-    if (isASC) {
+    if (isHolderASC) {
+        // Mark Holder's ascertainment bias correction for missing data
+        double *const_lh = _pattern_lh + max_orig_nptn;
+        size_t step_unobserved_ptns = model_factory->unobserved_ptns.size() / nstates;
+        double *const_lh_next = const_lh + step_unobserved_ptns;
+        for (int step = 1; step < nstates; step++, const_lh_next += step_unobserved_ptns) {
+            for (ptn = 0; ptn < orig_nptn; ptn+=VectorClass::size())
+                (VectorClass().load_a(&const_lh[ptn]) + VectorClass().load_a(&const_lh_next[ptn])).store_a(&const_lh[ptn]);
+        }
+        // cutoff the last entries if going beyond
+        for (ptn = orig_nptn; ptn < max_orig_nptn; ptn++)
+            const_lh[ptn] = 0.0;
+        
+        VectorClass sum_corr = 0.0;
+        for (ptn = 0; ptn < orig_nptn; ptn+=VectorClass::size()) {
+            VectorClass prob_variant = log(1.0 - VectorClass().load_a(&const_lh[ptn]));
+            (VectorClass().load_a(&_pattern_lh[ptn]) - prob_variant).store_a(&_pattern_lh[ptn]);
+            sum_corr += prob_variant*VectorClass().load_a(&ptn_freq[ptn]);
+        }
+        tree_lh -= horizontal_add(sum_corr);
+    } else if (isASC) {
     	// ascertainment bias correction
         double prob_const = horizontal_add(all_prob_const);
         if (prob_const >= 1.0 || prob_const < 0.0) {
