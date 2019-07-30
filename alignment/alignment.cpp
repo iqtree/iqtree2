@@ -3593,18 +3593,23 @@ void Alignment::countConstSite() {
 
 void Alignment::getUnobservedConstPatterns(bool missing_data, vector<Pattern> &unobserved_ptns) {
     if (missing_data) {
-        unobserved_ptns.reserve(getNPattern()*num_states);
+        size_t orig_nptn = getNPattern();
+        size_t max_orig_nptn = get_safe_upper_limit(orig_nptn);
+        unobserved_ptns.reserve(max_orig_nptn*num_states);
         int nseq = getNSeq();
         for (StateType state = 0; state < num_states; state++)
-            for (auto ptn: *this) {
+            for (size_t ptn = 0; ptn < max_orig_nptn; ptn++) {
                 Pattern new_ptn;
-                new_ptn.reserve(nseq);
-                for (auto state_ptn: ptn) {
-                    if (state_ptn < num_states)
-                        new_ptn.push_back(state);
-                    else
-                        new_ptn.push_back(STATE_UNKNOWN);
-                }
+                if (ptn < orig_nptn) {
+                    new_ptn.reserve(nseq);
+                    for (auto state_ptn: at(ptn)) {
+                        if (state_ptn < num_states)
+                            new_ptn.push_back(state);
+                        else
+                            new_ptn.push_back(STATE_UNKNOWN);
+                    }
+                } else
+                    new_ptn.resize(nseq, STATE_UNKNOWN);
                 unobserved_ptns.push_back(new_ptn);
             }
         return;

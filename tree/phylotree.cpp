@@ -947,6 +947,8 @@ void PhyloTree::deleteAllPartialLh() {
 uint64_t PhyloTree::getMemoryRequired(size_t ncategory, bool full_mem) {
     // +num_states for ascertainment bias correction
     int64_t nptn = get_safe_upper_limit(aln->getNPattern()) + get_safe_upper_limit(aln->num_states);
+    if (model_factory)
+        nptn = get_safe_upper_limit(aln->getNPattern()) + max(get_safe_upper_limit(aln->num_states), get_safe_upper_limit(model_factory->unobserved_ptns.size()));
     int64_t scale_block_size = nptn;
     if (site_rate)
         scale_block_size *= site_rate->getNRate();
@@ -1012,6 +1014,8 @@ uint64_t PhyloTree::getMemoryRequiredThreaded(size_t ncategory, bool full_mem) {
 void PhyloTree::getMemoryRequired(uint64_t &partial_lh_entries, uint64_t &scale_num_entries, uint64_t &partial_pars_entries) {
     // +num_states for ascertainment bias correction
     uint64_t block_size = get_safe_upper_limit(aln->getNPattern()) + get_safe_upper_limit(aln->num_states);
+    if (model_factory)
+        block_size = get_safe_upper_limit(aln->getNPattern()) + max(get_safe_upper_limit(aln->num_states), get_safe_upper_limit(model_factory->unobserved_ptns.size()));
     size_t scale_size = block_size;
     block_size = block_size * aln->num_states;
     if (site_rate) {
@@ -1037,7 +1041,7 @@ void PhyloTree::getMemoryRequired(uint64_t &partial_lh_entries, uint64_t &scale_
 void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node, PhyloNode *dad) {
     uint64_t pars_block_size = getBitsBlockSize();
     // +num_states for ascertainment bias correction
-    size_t nptn = get_safe_upper_limit(aln->size())+ get_safe_upper_limit(aln->num_states);
+    size_t nptn = get_safe_upper_limit(aln->size())+ max(get_safe_upper_limit(aln->num_states), get_safe_upper_limit(model_factory->unobserved_ptns.size()));
     uint64_t block_size;
     uint64_t scale_block_size = nptn * site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
     block_size = scale_block_size * model->num_states;
@@ -1172,7 +1176,8 @@ double *PhyloTree::newPartialLh() {
 
 size_t PhyloTree::getPartialLhSize() {
     // +num_states for ascertainment bias correction
-    size_t block_size = get_safe_upper_limit(aln->size())+get_safe_upper_limit(aln->num_states);
+    size_t block_size = get_safe_upper_limit(aln->size())+max(get_safe_upper_limit(aln->num_states),
+        get_safe_upper_limit(model_factory->unobserved_ptns.size()));
     block_size *= model->num_states * site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
     return block_size;
 }
@@ -1183,7 +1188,9 @@ size_t PhyloTree::getPartialLhBytes() {
 }
 
 size_t PhyloTree::getScaleNumSize() {
-    return (get_safe_upper_limit(aln->size())+get_safe_upper_limit(aln->num_states)) * site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
+    size_t block_size = get_safe_upper_limit(aln->size())+max(get_safe_upper_limit(aln->num_states),
+        get_safe_upper_limit(model_factory->unobserved_ptns.size()));
+    return (block_size) * site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
 }
 
 size_t PhyloTree::getScaleNumBytes() {
