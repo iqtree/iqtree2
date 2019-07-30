@@ -851,11 +851,6 @@ void PhyloTree::initializeAllPartialLh() {
     size_t mem_size = get_safe_upper_limit(getAlnNPattern()) + max(get_safe_upper_limit(numStates),
         get_safe_upper_limit(model_factory->unobserved_ptns.size()));
 
-    // TODO: disable Newton-Raphson for now
-    if (model_factory->isHolderCorrection()) {
-        optimize_by_newton = false;
-    }
-
     size_t block_size = mem_size * numStates * site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
     // make sure _pattern_lh size is divisible by 4 (e.g., 9->12, 14->16)
     if (!_pattern_lh)
