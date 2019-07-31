@@ -134,7 +134,7 @@ ModelFactory::ModelFactory() : CheckpointFactory() {
     is_storing = false;
     joint_optimize = false;
     fused_mix_rate = false;
-    is_holder_corr = false;
+    ASC_type = ASC_NONE;
 }
 
 size_t findCloseBracket(string &str, size_t start_pos) {
@@ -153,7 +153,7 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
     is_storing = false;
     joint_optimize = params.optimize_model_rate_joint;
     fused_mix_rate = false;
-    is_holder_corr = false;
+    ASC_type = ASC_NONE;
     string model_str = model_name;
     string rate_str;
 
@@ -580,7 +580,8 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
 
     if ((posasc = rate_str.find("+ASC")) != string::npos) {
         // ascertainment bias correction
-        tree->aln->getUnobservedConstPatterns(false, unobserved_ptns);
+        ASC_type = ASC_LEWIS;
+        tree->aln->getUnobservedConstPatterns(ASC_type, unobserved_ptns);
         
         // delete rarely observed state
         for (int i = unobserved_ptns.size()-1; i >= 0; i--)
@@ -611,18 +612,17 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         if (verbose_mode >= VB_MED)
             cout << "Ascertainment bias correction: " << unobserved_ptns.size() << " unobservable constant patterns"<< endl;
 		rate_str = rate_str.substr(0, posasc) + rate_str.substr(posasc+4);
-	} else {
+	} else if ((posasc = rate_str.find("+HOLDER")) != string::npos) {
+        // initialize Holder's ascertainment bias correction model
+        ASC_type = ASC_HOLDER;
+        tree->aln->getUnobservedConstPatterns(ASC_type, unobserved_ptns);
+        // rebuild the seq_states to contain states of unobserved constant patterns
+        tree->aln->buildSeqStates(true);
+        if (verbose_mode >= VB_MED)
+            cout << "Holder's ascertainment bias correction: " << unobserved_ptns.size() << " unobservable constant patterns"<< endl;
+        rate_str = rate_str.substr(0, posasc) + rate_str.substr(posasc+7);
+    } else {
         tree->aln->buildSeqStates(false);
-    }
-
-    /******************** initialize Holder's ascertainment bias correction model ****************************/
-    
-    string::size_type pos_holder;
-    
-    if ((pos_holder = rate_str.find("+HOLDER")) != string::npos) {
-        is_holder_corr = true;
-        tree->aln->getUnobservedConstPatterns(true, unobserved_ptns);
-        rate_str = rate_str.substr(0, pos_holder) + rate_str.substr(pos_holder+7);
     }
 
     /******************** initialize site rate heterogeneity ****************************/

@@ -481,6 +481,13 @@ enum MatrixExpTechnique {
     MET_LIE_MARKOV_DECOMPOSITION
 };
 
+/** ascertainment bias correction type */
+enum ASCType {
+    ASC_NONE, // no ASC
+    ASC_LEWIS, // Lewis's correction for constant sites
+    ASC_HOLDER // Holder's correction for constant sites with missing data
+};
+
 enum AncestralSeqType {
     AST_NONE, AST_MARGINAL, AST_JOINT
 };
