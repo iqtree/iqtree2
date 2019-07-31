@@ -227,10 +227,10 @@ public:
 	 */
 	vector<Pattern> unobserved_ptns;
 
-    /** true if ASC correction for missing data (Mark Holder) */
-    bool is_holder_corr;
+    /** ascertainment bias correction type */
+    ASCType ASC_type;
     
-    bool isHolderCorrection() { return is_holder_corr; }
+    ASCType getASC() { return ASC_type; }
     
 	/**
 	 * optimize model and site_rate parameters

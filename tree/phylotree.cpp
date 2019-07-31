@@ -639,11 +639,15 @@ void PhyloTree::computeAllPartialLh(PhyloNode *node, PhyloNode *dad) {
 
 string PhyloTree::getModelName() {
     string name = model->getName();
-    if (model_factory->unobserved_ptns.size() > 0) {
-        if (model_factory->is_holder_corr)
+    switch (model_factory->getASC()) {
+        case ASC_HOLDER:
             name += "+HOLDER";
-        else
+            break;
+        case ASC_LEWIS:
             name += "+ASC";
+            break;
+        case ASC_NONE:
+            break;
     }
     if (model_factory->fused_mix_rate) {
         name += "*" + site_rate->name.substr(1);
@@ -655,11 +659,15 @@ string PhyloTree::getModelName() {
 
 string PhyloTree::getModelNameParams() {
     string name = model->getNameParams();
-    if (model_factory->unobserved_ptns.size() > 0) {
-        if (model_factory->is_holder_corr)
+    switch (model_factory->getASC()) {
+        case ASC_HOLDER:
             name += "+HOLDER";
-        else
+            break;
+        case ASC_LEWIS:
             name += "+ASC";
+            break;
+        case ASC_NONE:
+            break;
     }
     string rate_name = site_rate->getNameParams();
 

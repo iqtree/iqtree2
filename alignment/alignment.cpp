@@ -3591,8 +3591,10 @@ void Alignment::countConstSite() {
     frac_invariant_sites = ((double)num_invariant_sites) / getNSite();
 }
 
-void Alignment::getUnobservedConstPatterns(bool missing_data, vector<Pattern> &unobserved_ptns) {
-    if (missing_data) {
+void Alignment::getUnobservedConstPatterns(ASCType ASC_type, vector<Pattern> &unobserved_ptns) {
+    if (ASC_type == ASC_NONE)
+        return;
+    if (ASC_type == ASC_HOLDER) {
         size_t orig_nptn = getNPattern();
         size_t max_orig_nptn = get_safe_upper_limit(orig_nptn);
         unobserved_ptns.reserve(max_orig_nptn*num_states);
@@ -3614,6 +3616,8 @@ void Alignment::getUnobservedConstPatterns(bool missing_data, vector<Pattern> &u
             }
         return;
     }
+    
+    // Lewis
     unobserved_ptns.reserve(num_states);
 	for (StateType state = 0; state < num_states; state++)
     if (!isStopCodon(state))
