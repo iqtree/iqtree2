@@ -3680,6 +3680,7 @@ void Alignment::getUnobservedConstPatterns(ASCType ASC_type, vector<Pattern> &un
             break;
         }
         case ASC_INFORMATIVE: {
+            // Holder correction for informative sites
             for (StateType repeat = 0; repeat < num_states; repeat++) {
                 vector<StateType> rest;
                 rest.reserve(num_states-1);
@@ -3688,17 +3689,11 @@ void Alignment::getUnobservedConstPatterns(ASCType ASC_type, vector<Pattern> &un
                 vector<vector<StateType> > singletons;
                 generateSubsets(rest, singletons);
                 for (auto singleton : singletons)
-                    if (singleton.size() < getNSeq()-1) {
+                    if (singleton.size() < getNSeq()-1 || (singleton.size() == getNSeq()-1 && repeat == 0)) {
                         vector<int> seq_pos;
                         generateUninfPatterns(repeat, singleton, seq_pos, unobserved_ptns);
-                    } else if (singleton.size() == getNSeq()-1) {
-                        if (repeat > 0) break;
-                        vector<int> seq_pos;
-                        generateUninfPatterns(repeat, singleton, seq_pos, unobserved_ptns);
-
                     }
             }
-            // Holder correction for informative sites
             break;
         }
         case ASC_INFORMATIVE_MISSING: {
