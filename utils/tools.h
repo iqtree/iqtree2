@@ -484,8 +484,10 @@ enum MatrixExpTechnique {
 /** ascertainment bias correction type */
 enum ASCType {
     ASC_NONE, // no ASC
-    ASC_LEWIS, // Lewis's correction for constant sites
-    ASC_HOLDER // Holder's correction for constant sites with missing data
+    ASC_VARIANT, // Lewis's correction for variant sites
+    ASC_VARIANT_MISSING, // Holder's correction for variant sites with missing data
+    ASC_INFORMATIVE, // correction for parsimony-informative sites
+    ASC_INFORMATIVE_MISSING // Holder's correction for informative sites with missing data
 };
 
 enum AncestralSeqType {

@@ -3324,6 +3324,13 @@ void convertAlignment(Params &params, IQTree *iqtree) {
         alignment = bootstrap_alignment;
         iqtree->aln = alignment;
     }
+
+    int exclude_sites = 0;
+    if (params.aln_nogaps)
+        exclude_sites += EXCLUDE_GAP;
+    if (params.aln_no_const_sites)
+        exclude_sites += EXCLUDE_INVAR;
+
     if (alignment->isSuperAlignment()) {
         ((SuperAlignment*)alignment)->printCombinedAlignment(params.aln_output);
         if (params.print_subaln)
@@ -3337,16 +3344,16 @@ void convertAlignment(Params &params, IQTree *iqtree) {
         Alignment masked_aln(params.gap_masked_aln, params.sequence_type, params.intype, params.model_name);
         out_aln.createGapMaskedAlignment(&masked_aln, alignment);
         out_aln.printPhylip(params.aln_output, false, params.aln_site_list,
-                params.aln_nogaps, params.aln_no_const_sites, params.ref_seq_name);
+                exclude_sites, params.ref_seq_name);
         string str = params.gap_masked_aln;
         str += ".sitegaps";
         out_aln.printSiteGaps(str.c_str());
-    } else if (params.aln_output_format == ALN_PHYLIP)
+    } else if (params.aln_output_format == ALN_PHYLIP) {
         alignment->printPhylip(params.aln_output, false, params.aln_site_list,
-                params.aln_nogaps, params.aln_no_const_sites, params.ref_seq_name);
-    else if (params.aln_output_format == ALN_FASTA)
+                exclude_sites, params.ref_seq_name);
+    } else if (params.aln_output_format == ALN_FASTA)
         alignment->printFasta(params.aln_output, false, params.aln_site_list,
-                params.aln_nogaps, params.aln_no_const_sites, params.ref_seq_name);
+                exclude_sites, params.ref_seq_name);
 }
 
 /**

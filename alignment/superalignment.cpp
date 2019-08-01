@@ -1355,10 +1355,11 @@ void SuperAlignment::printSubAlignments(Params &params) {
 		else
 			filename = params.out_prefix;
 		filename += "." + (*pit)->name;
+        int exclude_sites = (params.aln_nogaps) ? EXCLUDE_GAP : 0;
 		 if (params.aln_output_format == ALN_PHYLIP)
-			(*pit)->printPhylip(filename.c_str(), false, NULL, params.aln_nogaps, false, NULL);
+			(*pit)->printPhylip(filename.c_str(), false, NULL, exclude_sites, NULL);
 		else if (params.aln_output_format == ALN_FASTA)
-			(*pit)->printFasta(filename.c_str(), false, NULL, params.aln_nogaps, false, NULL);
+			(*pit)->printFasta(filename.c_str(), false, NULL, exclude_sites, NULL);
 	}
 }
 

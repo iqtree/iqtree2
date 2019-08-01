@@ -578,9 +578,46 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
 
     string::size_type posasc;
 
-    if ((posasc = rate_str.find("+ASC")) != string::npos) {
+    if ((posasc = rate_str.find("+ASC_INF")) != string::npos) {
         // ascertainment bias correction
-        ASC_type = ASC_LEWIS;
+        ASC_type = ASC_INFORMATIVE;
+        tree->aln->getUnobservedConstPatterns(ASC_type, unobserved_ptns);
+        
+        // rebuild the seq_states to contain states of unobserved constant patterns
+        tree->aln->buildSeqStates(true);
+        if (tree->aln->num_informative_sites != tree->getAlnNSite()) {
+            if (!params.partition_file) {
+                string infsites_file = ((string)params.out_prefix + ".infsites.phy");
+                tree->aln->printPhylip(infsites_file.c_str(), false, NULL, EXCLUDE_UNINF);
+                cerr << "For your convenience alignment with parsimony-informative sites printed to " << infsites_file << endl;
+            }
+            outError("Invalid use of +ASC_INF because of " + convertIntToString(tree->getAlnNSite() - tree->aln->num_informative_sites) +
+                     " parsimony-uninformative sites in the alignment");
+        }
+        if (verbose_mode >= VB_MED)
+            cout << "Ascertainment bias correction: " << unobserved_ptns.size() << " unobservable uninformative patterns"<< endl;
+        rate_str = rate_str.substr(0, posasc) + rate_str.substr(posasc+8);
+    } else if ((posasc = rate_str.find("+ASC_MIS")) != string::npos) {
+        // initialize Holder's ascertainment bias correction model
+        ASC_type = ASC_VARIANT_MISSING;
+        tree->aln->getUnobservedConstPatterns(ASC_type, unobserved_ptns);
+        // rebuild the seq_states to contain states of unobserved constant patterns
+        tree->aln->buildSeqStates(true);
+        if (tree->aln->frac_invariant_sites > 0) {
+            if (!params.partition_file) {
+                string varsites_file = ((string)params.out_prefix + ".varsites.phy");
+                tree->aln->printPhylip(varsites_file.c_str(), false, NULL, EXCLUDE_INVAR);
+                cerr << "For your convenience alignment with variable sites printed to " << varsites_file << endl;
+            }
+            outError("Invalid use of +ASC_MIS because of " + convertIntToString(tree->aln->frac_invariant_sites*tree->aln->getNSite()) +
+                     " invariant sites in the alignment");
+        }
+        if (verbose_mode >= VB_MED)
+            cout << "Holder's ascertainment bias correction: " << unobserved_ptns.size() << " unobservable constant patterns" << endl;
+        rate_str = rate_str.substr(0, posasc) + rate_str.substr(posasc+8);
+    } else if ((posasc = rate_str.find("+ASC")) != string::npos) {
+        // ascertainment bias correction
+        ASC_type = ASC_VARIANT;
         tree->aln->getUnobservedConstPatterns(ASC_type, unobserved_ptns);
         
         // delete rarely observed state
@@ -603,7 +640,7 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
 //                }
             if (!params.partition_file) {
                 string varsites_file = ((string)params.out_prefix + ".varsites.phy");
-                tree->aln->printPhylip(varsites_file.c_str(), false, NULL, false, true);
+                tree->aln->printPhylip(varsites_file.c_str(), false, NULL, EXCLUDE_INVAR);
                 cerr << "For your convenience alignment with variable sites printed to " << varsites_file << endl;
             }
             outError("Invalid use of +ASC because of " + convertIntToString(tree->aln->frac_invariant_sites*tree->aln->getNSite()) +
@@ -612,15 +649,6 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         if (verbose_mode >= VB_MED)
             cout << "Ascertainment bias correction: " << unobserved_ptns.size() << " unobservable constant patterns"<< endl;
 		rate_str = rate_str.substr(0, posasc) + rate_str.substr(posasc+4);
-	} else if ((posasc = rate_str.find("+HOLDER")) != string::npos) {
-        // initialize Holder's ascertainment bias correction model
-        ASC_type = ASC_HOLDER;
-        tree->aln->getUnobservedConstPatterns(ASC_type, unobserved_ptns);
-        // rebuild the seq_states to contain states of unobserved constant patterns
-        tree->aln->buildSeqStates(true);
-        if (verbose_mode >= VB_MED)
-            cout << "Holder's ascertainment bias correction: " << unobserved_ptns.size() << " unobservable constant patterns"<< endl;
-        rate_str = rate_str.substr(0, posasc) + rate_str.substr(posasc+7);
     } else {
         tree->aln->buildSeqStates(false);
     }
