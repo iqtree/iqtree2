@@ -83,6 +83,10 @@ typedef map<vector<StateType>, int> PatternIntMap;
 #endif
 
 
+constexpr int EXCLUDE_GAP   = 1; // exclude gaps
+constexpr int EXCLUDE_INVAR = 2; // exclude invariant sites
+constexpr int EXCLUDE_UNINF = 4; // exclude uninformative sites
+
 /**
 Multiple Sequence Alignment. Stored by a vector of site-patterns
 
@@ -294,16 +298,16 @@ public:
     bool getSiteFromResidue(int seq_id, int &residue_left, int &residue_right);
 
     int buildRetainingSites(const char *aln_site_list, IntVector &kept_sites,
-            bool exclude_gaps, bool exclude_const_sites, const char *ref_seq_name);
+            int exclude_sites, const char *ref_seq_name);
 
     void printPhylip(const char *filename, bool append = false, const char *aln_site_list = NULL,
-    		bool exclude_gaps = false, bool exclude_const_sites = false, const char *ref_seq_name = NULL);
+    		int exclude_sites = 0, const char *ref_seq_name = NULL);
 
     void printPhylip(ostream &out, bool append = false, const char *aln_site_list = NULL,
-    		bool exclude_gaps = false, bool exclude_const_sites = false, const char *ref_seq_name = NULL, bool print_taxid = false);
+    		int exclude_sites = 0, const char *ref_seq_name = NULL, bool print_taxid = false);
 
     void printFasta(const char *filename, bool append = false, const char *aln_site_list = NULL,
-    		bool exclude_gaps = false, bool exclude_const_sites = false, const char *ref_seq_name = NULL);
+    		int exclude_sites = 0, const char *ref_seq_name = NULL);
 
     /**
             Print the number of gaps per site
@@ -703,6 +707,11 @@ public:
      */
     virtual void countConstSite();
 
+    /**
+     * generate uninformative patterns
+     */
+    void generateUninfPatterns(StateType repeat, vector<StateType> &singleton, vector<int> &seq_pos, vector<Pattern> &unobserved_ptns);
+        
     /**
      * @param missing_data TRUE for missing data aware correction (for Mark Holder)
      * @param[out] unobserved_ptns unobserved constant patterns, each entry encoding for one constant character

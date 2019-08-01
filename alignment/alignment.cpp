@@ -2531,7 +2531,7 @@ bool Alignment::getSiteFromResidue(int seq_id, int &residue_left, int &residue_r
 }
 
 int Alignment::buildRetainingSites(const char *aln_site_list, IntVector &kept_sites,
-		bool exclude_gaps, bool exclude_const_sites, const char *ref_seq_name)
+		int exclude_sites, const char *ref_seq_name)
 {
     if (aln_site_list) {
         int seq_id = -1;
@@ -2574,17 +2574,24 @@ int Alignment::buildRetainingSites(const char *aln_site_list, IntVector &kept_si
     }
 
     int j;
-    if (exclude_gaps) {
+    if (exclude_sites & EXCLUDE_GAP) {
         for (j = 0; j < kept_sites.size(); j++)
             if (kept_sites[j] && at(site_pattern[j]).computeAmbiguousChar(num_states) > 0) {
                 kept_sites[j] = 0;
             }
     }
-    if (exclude_const_sites) {
+    if (exclude_sites & EXCLUDE_INVAR) {
         for (j = 0; j < kept_sites.size(); j++)
         	if (at(site_pattern[j]).isInvariant())
         		kept_sites[j] = 0;
 
+    }
+
+    if (exclude_sites & EXCLUDE_UNINF) {
+        for (j = 0; j < kept_sites.size(); j++)
+            if (!at(site_pattern[j]).isInformative())
+                kept_sites[j] = 0;
+        
     }
 
     int final_length = 0;
@@ -2594,9 +2601,9 @@ int Alignment::buildRetainingSites(const char *aln_site_list, IntVector &kept_si
 }
 
 void Alignment::printPhylip(ostream &out, bool append, const char *aln_site_list,
-                            bool exclude_gaps, bool exclude_const_sites, const char *ref_seq_name, bool print_taxid) {
+                            int exclude_sites, const char *ref_seq_name, bool print_taxid) {
     IntVector kept_sites;
-    int final_length = buildRetainingSites(aln_site_list, kept_sites, exclude_gaps, exclude_const_sites, ref_seq_name);
+    int final_length = buildRetainingSites(aln_site_list, kept_sites, exclude_sites, ref_seq_name);
     if (seq_type == SEQ_CODON)
         final_length *= 3;
 
@@ -2620,7 +2627,7 @@ void Alignment::printPhylip(ostream &out, bool append, const char *aln_site_list
 }
 
 void Alignment::printPhylip(const char *file_name, bool append, const char *aln_site_list,
-                            bool exclude_gaps, bool exclude_const_sites, const char *ref_seq_name) {
+                            int exclude_sites, const char *ref_seq_name) {
     try {
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
@@ -2630,7 +2637,7 @@ void Alignment::printPhylip(const char *file_name, bool append, const char *aln_
         else
             out.open(file_name);
 
-        printPhylip(out, append, aln_site_list, exclude_gaps, exclude_const_sites, ref_seq_name);
+        printPhylip(out, append, aln_site_list, exclude_sites, ref_seq_name);
 
         out.close();
         if (verbose_mode >= VB_MED)
@@ -2640,11 +2647,11 @@ void Alignment::printPhylip(const char *file_name, bool append, const char *aln_
     }
 }
 
-void Alignment::printFasta(const char *file_name, bool append, const char *aln_site_list
-                           , bool exclude_gaps, bool exclude_const_sites, const char *ref_seq_name)
+void Alignment::printFasta(const char *file_name, bool append, const char *aln_site_list,
+                           int exclude_sites, const char *ref_seq_name)
 {
     IntVector kept_sites;
-    buildRetainingSites(aln_site_list, kept_sites, exclude_gaps, exclude_const_sites, ref_seq_name);
+    buildRetainingSites(aln_site_list, kept_sites, exclude_sites, ref_seq_name);
     try {
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
@@ -3591,44 +3598,115 @@ void Alignment::countConstSite() {
     frac_invariant_sites = ((double)num_invariant_sites) / getNSite();
 }
 
-void Alignment::getUnobservedConstPatterns(ASCType ASC_type, vector<Pattern> &unobserved_ptns) {
-    if (ASC_type == ASC_NONE)
-        return;
-    if (ASC_type == ASC_HOLDER) {
-        size_t orig_nptn = getNPattern();
-        size_t max_orig_nptn = get_safe_upper_limit(orig_nptn);
-        unobserved_ptns.reserve(max_orig_nptn*num_states);
-        int nseq = getNSeq();
-        for (StateType state = 0; state < num_states; state++)
-            for (size_t ptn = 0; ptn < max_orig_nptn; ptn++) {
-                Pattern new_ptn;
-                if (ptn < orig_nptn) {
-                    new_ptn.reserve(nseq);
-                    for (auto state_ptn: at(ptn)) {
-                        if (state_ptn < num_states)
-                            new_ptn.push_back(state);
-                        else
-                            new_ptn.push_back(STATE_UNKNOWN);
-                    }
-                } else
-                    new_ptn.resize(nseq, STATE_UNKNOWN);
-                unobserved_ptns.push_back(new_ptn);
-            }
+/**
+ * generate all subsets of a set
+ * @param inset input set
+ * @param[out] subsets vector of all subsets of inset
+ */
+template<class T>
+void generateSubsets(vector<T> &inset, vector<vector<T> > &subsets) {
+    if (inset.size() > 30)
+        outError("Cannot work with more than 31 states");
+    uint64_t total = ((uint64_t)1 << inset.size());
+    for (uint64_t binrep = 0; binrep < total; binrep++) {
+        vector<T> subset;
+        for (uint64_t i = 0; i < inset.size(); i++)
+            if (binrep & (1 << i))
+                subset.push_back(inset[i]);
+        subsets.push_back(subset);
+    }
+}
+
+void Alignment::generateUninfPatterns(StateType repeat, vector<StateType> &singleton, vector<int> &seq_pos, vector<Pattern> &unobserved_ptns) {
+    int seqs = getNSeq();
+    if (seq_pos.size() == singleton.size()) {
+        Pattern pat;
+        pat.resize(seqs, repeat);
+        for (int i = 0; i < seq_pos.size(); i++)
+            pat[seq_pos[i]] = singleton[i];
+        unobserved_ptns.push_back(pat);
         return;
     }
-    
-    // Lewis
-    unobserved_ptns.reserve(num_states);
-	for (StateType state = 0; state < num_states; state++)
-    if (!isStopCodon(state))
-    {
-		Pattern pat;
-		pat.resize(getNSeq(), state);
-		if (pattern_index.find(pat) == pattern_index.end()) {
-			// constant pattern is unobserved
-			unobserved_ptns.push_back(pat);
-		}
-	}
+    for (int seq = 0; seq < seqs; seq++) {
+        bool dup = false;
+        for (auto s: seq_pos)
+            if (seq == s) { dup = true; break; }
+        if (dup) continue;
+        vector<int> seq_pos_new = seq_pos;
+        seq_pos_new.push_back(seq);
+        generateUninfPatterns(repeat, singleton, seq_pos_new, unobserved_ptns);
+    }
+}
+
+void Alignment::getUnobservedConstPatterns(ASCType ASC_type, vector<Pattern> &unobserved_ptns) {
+    switch (ASC_type) {
+        case ASC_NONE: break;
+        case ASC_VARIANT: {
+            // Lewis's correction for variant sites
+            unobserved_ptns.reserve(num_states);
+            for (StateType state = 0; state < num_states; state++)
+                if (!isStopCodon(state))
+                    {
+                    Pattern pat;
+                    pat.resize(getNSeq(), state);
+                    if (pattern_index.find(pat) == pattern_index.end()) {
+                        // constant pattern is unobserved
+                        unobserved_ptns.push_back(pat);
+                    }
+                    }
+            break;
+        }
+        case ASC_VARIANT_MISSING: {
+            // Holder's correction for variant sites with missing data
+            size_t orig_nptn = getNPattern();
+            size_t max_orig_nptn = get_safe_upper_limit(orig_nptn);
+            unobserved_ptns.reserve(max_orig_nptn*num_states);
+            int nseq = getNSeq();
+            for (StateType state = 0; state < num_states; state++)
+                for (size_t ptn = 0; ptn < max_orig_nptn; ptn++) {
+                    Pattern new_ptn;
+                    if (ptn < orig_nptn) {
+                        new_ptn.reserve(nseq);
+                        for (auto state_ptn: at(ptn)) {
+                            if (state_ptn < num_states)
+                                new_ptn.push_back(state);
+                            else
+                                new_ptn.push_back(STATE_UNKNOWN);
+                        }
+                    } else
+                        new_ptn.resize(nseq, STATE_UNKNOWN);
+                    unobserved_ptns.push_back(new_ptn);
+                }
+            break;
+        }
+        case ASC_INFORMATIVE: {
+            for (StateType repeat = 0; repeat < num_states; repeat++) {
+                vector<StateType> rest;
+                rest.reserve(num_states-1);
+                for (StateType s = 0; s < num_states; s++)
+                    if (s != repeat) rest.push_back(s);
+                vector<vector<StateType> > singletons;
+                generateSubsets(rest, singletons);
+                for (auto singleton : singletons)
+                    if (singleton.size() < getNSeq()-1) {
+                        vector<int> seq_pos;
+                        generateUninfPatterns(repeat, singleton, seq_pos, unobserved_ptns);
+                    } else if (singleton.size() == getNSeq()-1) {
+                        if (repeat > 0) break;
+                        vector<int> seq_pos;
+                        generateUninfPatterns(repeat, singleton, seq_pos, unobserved_ptns);
+
+                    }
+            }
+            // Holder correction for informative sites
+            break;
+        }
+        case ASC_INFORMATIVE_MISSING: {
+            // Holder correction for informative sites with missing data
+            ASSERT(0 && "Not supported yet");
+            break;
+        }
+    }
 }
 
 int Alignment::countProperChar(int seq_id) {

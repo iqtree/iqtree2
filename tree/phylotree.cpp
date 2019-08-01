@@ -637,18 +637,24 @@ void PhyloTree::computeAllPartialLh(PhyloNode *node, PhyloNode *dad) {
 }
 */
 
+string getASCName(ASCType ASC_type) {
+    switch (ASC_type) {
+        case ASC_NONE:
+            return "";
+        case ASC_VARIANT:
+            return "+ASC";
+        case ASC_VARIANT_MISSING:
+            return "+ASC_MIS";
+        case ASC_INFORMATIVE:
+            return "+ASC_INF";
+        case ASC_INFORMATIVE_MISSING:
+            return "+ASC_INF_MIS";
+    }
+}
+
 string PhyloTree::getModelName() {
     string name = model->getName();
-    switch (model_factory->getASC()) {
-        case ASC_HOLDER:
-            name += "+HOLDER";
-            break;
-        case ASC_LEWIS:
-            name += "+ASC";
-            break;
-        case ASC_NONE:
-            break;
-    }
+    name += getASCName(model_factory->getASC());
     if (model_factory->fused_mix_rate) {
         name += "*" + site_rate->name.substr(1);
     } else {
@@ -659,16 +665,7 @@ string PhyloTree::getModelName() {
 
 string PhyloTree::getModelNameParams() {
     string name = model->getNameParams();
-    switch (model_factory->getASC()) {
-        case ASC_HOLDER:
-            name += "+HOLDER";
-            break;
-        case ASC_LEWIS:
-            name += "+ASC";
-            break;
-        case ASC_NONE:
-            break;
-    }
+    name += getASCName(model_factory->getASC());
     string rate_name = site_rate->getNameParams();
 
     if (model_factory->fused_mix_rate) {

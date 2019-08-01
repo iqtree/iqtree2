@@ -2199,10 +2199,12 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
     size_t max_orig_nptn = ((orig_nptn+VectorClass::size()-1)/VectorClass::size())*VectorClass::size();
     size_t nptn = max_orig_nptn+model_factory->unobserved_ptns.size();
     ASCType ASC_type = model_factory->getASC();
+    bool ASC_Holder = (ASC_type == ASC_VARIANT_MISSING || ASC_type == ASC_INFORMATIVE_MISSING);
+    bool ASC_Lewis = (ASC_type == ASC_VARIANT || ASC_type == ASC_INFORMATIVE);
 
     double *const_df = NULL, *const_ddf = NULL;
 
-    if (ASC_type == ASC_HOLDER) {
+    if (ASC_Holder) {
         const_df = aligned_alloc<double>(get_safe_upper_limit(nptn) - max_orig_nptn);
         const_ddf = aligned_alloc<double>(get_safe_upper_limit(nptn) - max_orig_nptn);
     }
@@ -2467,7 +2469,7 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
                             }
                     }
 
-                    if (ASC_type == ASC_HOLDER) {
+                    if (ASC_Holder) {
                         lh_ptn.store_a(&_pattern_lh[ptn]);
                         df_ptn.store_a(&const_df[ptn-max_orig_nptn]);
                         ddf_ptn.store_a(&const_ddf[ptn-max_orig_nptn]);
@@ -2484,7 +2486,7 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
             {
                 all_df += my_df;
                 all_ddf += my_ddf;
-                if (ASC_type == ASC_LEWIS) {
+                if (ASC_Lewis) {
                     all_prob_const += vc_prob_const;
                     all_df_const += vc_df_const;
                     all_ddf_const += vc_ddf_const;
@@ -2522,7 +2524,7 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
 
 //    ASSERT(std::isfinite(*df) && "Numerical underflow for lh-derivative");
 
-    if (ASC_type == ASC_HOLDER) {
+    if (ASC_Holder) {
         // Mark Holder's ascertainment bias correction for missing data
         double *const_lh = _pattern_lh + max_orig_nptn;
         size_t step_unobserved_ptns = model_factory->unobserved_ptns.size() / nstates;
@@ -2563,7 +2565,7 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
         *ddf += horizontal_add(sum_ddf);
         aligned_free(const_ddf);
         aligned_free(const_df);
-    } else if (ASC_type == ASC_LEWIS) {
+    } else if (ASC_Lewis) {
         double prob_const = 0.0, df_const = 0.0, ddf_const = 0.0;
         prob_const = horizontal_add(all_prob_const);
         df_const = horizontal_add(all_df_const);
@@ -2639,6 +2641,8 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
     size_t nptn = max_orig_nptn+model_factory->unobserved_ptns.size();
     size_t tip_mem_size = max_orig_nptn * nstates;
     ASCType ASC_type = model_factory->getASC();
+    bool ASC_Holder = (ASC_type == ASC_VARIANT_MISSING || ASC_type == ASC_INFORMATIVE_MISSING);
+    bool ASC_Lewis = (ASC_type == ASC_VARIANT || ASC_type == ASC_INFORMATIVE);
 
     size_t mix_addr_nstates[ncat_mix], mix_addr[ncat_mix];
     size_t denom = (model_factory->fused_mix_rate) ? 1 : ncat;
@@ -2878,7 +2882,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                             if (vc_min_scale_ptr[i] != 0.0)
                                 lh_ptn_dbl[i] *= SCALING_THRESHOLD;
                     }
-                    if (ASC_type == ASC_HOLDER)
+                    if (ASC_Holder)
                         lh_ptn.store_a(&_pattern_lh[ptn]);
                     else
                         vc_prob_const += lh_ptn;
@@ -2889,7 +2893,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
 #endif
             {
                 all_tree_lh += vc_tree_lh;
-                if (ASC_type == ASC_LEWIS)
+                if (ASC_Lewis)
                     all_prob_const += vc_prob_const;
             }
         } // FOR thread
@@ -3013,7 +3017,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                             if (vc_min_scale_ptr[i] != 0.0)
                                 lh_ptn_dbl[i] *= SCALING_THRESHOLD;
                     }
-                    if (ASC_type == ASC_HOLDER)
+                    if (ASC_Holder)
                         lh_ptn.store_a(&_pattern_lh[ptn]);
                     else
                         vc_prob_const += lh_ptn;
@@ -3024,7 +3028,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
 #endif
             {
                 all_tree_lh += vc_tree_lh;
-                if (ASC_type == ASC_LEWIS)
+                if (ASC_Lewis)
                     all_prob_const += vc_prob_const;
             }
         } // FOR thread
@@ -3053,7 +3057,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
         }
     }
 
-    if (ASC_type == ASC_HOLDER) {
+    if (ASC_Holder) {
         // Mark Holder's ascertainment bias correction for missing data
         double *const_lh = _pattern_lh + max_orig_nptn;
         size_t step_unobserved_ptns = model_factory->unobserved_ptns.size() / nstates;
@@ -3073,7 +3077,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
             sum_corr += prob_variant*VectorClass().load_a(&ptn_freq[ptn]);
         }
         tree_lh -= horizontal_add(sum_corr);
-    } else if (ASC_type == ASC_LEWIS) {
+    } else if (ASC_Lewis) {
     	// ascertainment bias correction
         double prob_const = horizontal_add(all_prob_const);
         if (prob_const >= 1.0 || prob_const < 0.0) {
@@ -3133,6 +3137,8 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
     size_t max_orig_nptn = ((orig_nptn+VectorClass::size()-1)/VectorClass::size())*VectorClass::size();
     size_t nptn = max_orig_nptn+model_factory->unobserved_ptns.size();
     ASCType ASC_type = model_factory->getASC();
+    bool ASC_Holder = (ASC_type == ASC_VARIANT_MISSING || ASC_type == ASC_INFORMATIVE_MISSING);
+    bool ASC_Lewis = (ASC_type == ASC_VARIANT || ASC_type == ASC_INFORMATIVE);
 
     size_t mix_addr_nstates[ncat_mix], mix_addr[ncat_mix];
     size_t denom = (model_factory->fused_mix_rate) ? 1 : ncat;
@@ -3242,7 +3248,7 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
                     if (buffer_scale_all[ptn+i] != 0.0)
                         lh_ptn_dbl[i] *= SCALING_THRESHOLD;
             }
-            if (ASC_type == ASC_HOLDER)
+            if (ASC_Holder)
                 lh_ptn.store_a(&_pattern_lh[ptn]);
             else
                 vc_prob_const += lh_ptn;
@@ -3252,7 +3258,7 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
 #pragma omp critical
         {
             all_tree_lh += vc_tree_lh;
-            if (ASC_type == ASC_LEWIS)
+            if (ASC_Lewis)
                 all_prob_const += vc_prob_const;
         }
     }
@@ -3279,7 +3285,7 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
         }
     }
 
-    if (ASC_type == ASC_HOLDER) {
+    if (ASC_Holder) {
         // Mark Holder's ascertainment bias correction for missing data
         double *const_lh = _pattern_lh + max_orig_nptn;
         size_t step_unobserved_ptns = model_factory->unobserved_ptns.size() / nstates;
@@ -3299,7 +3305,7 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
             sum_corr += prob_variant*VectorClass().load_a(&ptn_freq[ptn]);
         }
         tree_lh -= horizontal_add(sum_corr);
-    } else if (ASC_type == ASC_LEWIS) {
+    } else if (ASC_Lewis) {
     	// ascertainment bias correction
         double prob_const = horizontal_add(all_prob_const);
         if (prob_const >= 1.0 || prob_const < 0.0) {
@@ -3374,7 +3380,9 @@ void PhyloTree::computeLikelihoodDervMixlenGenericSIMD(PhyloNeighbor *dad_branch
     size_t max_orig_nptn = ((orig_nptn+VectorClass::size()-1)/VectorClass::size())*VectorClass::size();
     size_t nptn = max_orig_nptn+model_factory->unobserved_ptns.size();
     ASCType ASC_type = model_factory->getASC();
-    ASSERT(ASC_type != ASC_HOLDER && "Holder's ascertainment bias correction not supported for this mixlen model");
+    bool ASC_Holder = (ASC_type == ASC_VARIANT_MISSING || ASC_type == ASC_INFORMATIVE_MISSING);
+    bool ASC_Lewis = (ASC_type == ASC_VARIANT || ASC_type == ASC_INFORMATIVE);
+    ASSERT(!ASC_Holder && "Holder's ascertainment bias correction not supported for this mixlen model");
 
 
 //    size_t mix_addr_nstates[ncat_mix], mix_addr[ncat_mix], cat_id[ncat_mix];
@@ -3502,7 +3510,7 @@ void PhyloTree::computeLikelihoodDervMixlenGenericSIMD(PhyloNeighbor *dad_branch
         {
             all_df += my_df;
             all_ddf += my_ddf;
-            if (ASC_type == ASC_LEWIS) {
+            if (ASC_Lewis) {
                 all_prob_const += vc_prob_const;
                 all_df_const += vc_df_const;
                 all_ddf_const += vc_ddf_const;
@@ -3520,7 +3528,7 @@ void PhyloTree::computeLikelihoodDervMixlenGenericSIMD(PhyloNeighbor *dad_branch
     if (!SAFE_NUMERIC && !std::isfinite(df))
         outError("Numerical underflow (lh-derivative-mixlen). Run again with the safe likelihood kernel via `-safe` option");
 
-	if (ASC_type == ASC_LEWIS) {
+	if (ASC_Lewis) {
         double prob_const = 0.0, df_const = 0.0, ddf_const = 0.0;
         prob_const = 1.0/(1.0 - horizontal_add(all_prob_const));
         df_const = horizontal_add(all_df_const);
