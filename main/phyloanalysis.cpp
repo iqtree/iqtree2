@@ -4158,10 +4158,14 @@ void assignBootstrapSupport(const char *input_trees, int burnin, int max_count,
         const char *target_tree, bool rooted, const char *output_tree,
         const char *out_prefix, MExtTree &mytree, const char* tree_weight_file,
         Params *params) {
-    //bool rooted = false;
+    bool myrooted = rooted;
     // read the tree file
     cout << "Reading tree " << target_tree << " ..." << endl;
-    mytree.init(target_tree, rooted);
+    mytree.init(target_tree, myrooted);
+    if (mytree.rooted)
+        cout << "rooted tree detected" << endl;
+    else
+        cout << "unrooted tree detected" << endl;
     // reindex the taxa in the tree to aphabetical names
     NodeVector taxa;
     mytree.getTaxa(taxa);
@@ -4206,8 +4210,11 @@ void assignBootstrapSupport(const char *input_trees, int burnin, int max_count,
         }
         scale /= sg.maxWeight();
     } else {
-        boot_trees.init(input_trees, rooted, burnin, max_count,
-                tree_weight_file);
+        myrooted = rooted;
+        boot_trees.init(input_trees, myrooted, burnin, max_count,
+                        tree_weight_file);
+        if (mytree.rooted != boot_trees.isRooted())
+            outError("Target tree and tree set have different rooting");
         if (boot_trees.equal_taxon_set) {
             boot_trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1, params->support_tag);
             scale /= boot_trees.sumTreeWeights();
