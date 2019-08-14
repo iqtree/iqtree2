@@ -3733,7 +3733,7 @@ void IQTree::writeUFBootTrees(Params &params) {
         NodeVector taxa;
         // change the taxa name from ID to real name
         trees[i]->getOrderedTaxa(taxa);
-        for (j = 0; j < taxa.size(); j++)
+        for (j = 0; j < taxa.size() - (int)rooted; j++)
             taxa[j]->name = aln->getSeqName(taxa[j]->id);
         if (removed_seqs.size() > 0) {
             // reinsert removed seqs into each tree
