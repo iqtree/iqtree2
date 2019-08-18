@@ -171,6 +171,18 @@ string getSeqTypeName(SeqType seq_type) {
     }
 }
 
+string getUsualModelSubst(SeqType seq_type) {
+    switch (seq_type) {
+        case SEQ_DNA: return "GTR";
+        case SEQ_PROTEIN: return "LG";
+        case SEQ_CODON: return "GY"; // too much computation, thus no +G
+        case SEQ_BINARY: return "GTR2";
+        case SEQ_MORPH: return "MK";
+        case SEQ_POMO: return "GTR+P";
+        default: ASSERT(0 && "Unprocessed seq_type"); return "";
+    }
+}
+
 string getUsualModelName(SeqType seq_type) {
     switch (seq_type) {
         case SEQ_DNA: return "GTR+F+G";
@@ -880,7 +892,7 @@ public:
  */
 string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
         ModelsBlock *models_block, int num_threads, int brlen_type,
-        string set_name = "", string in_model_name = "", ModelAdjust *adjust = NULL);
+        string set_name = "", string in_model_name = "", ModelAdjust *adjust = NULL, bool single_model = false);
 
 /**
  * select models for all partitions
@@ -895,7 +907,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
  * @param models (OUT) vectors of model names
  * @return maximum number of rate categories
  */
-int getModelList(Params &params, Alignment *aln, StrVector &models, bool separate_rate = false);
+int getModelList(Params &params, Alignment *aln, StrVector &models, bool separate_rate, bool single_model);
 
 /**
  compute log-adapter function according to Whelan et al. 2015
@@ -963,10 +975,10 @@ double computeAdapter(Alignment *orig_aln, Alignment *newaln, int &adjusted_df) 
  */
 string testModelOMatic(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
     ModelsBlock *models_block, int num_threads, int brlen_type,
-    string set_name = "", string in_model_name = "")
+    string set_name = "", string in_model_name = "", bool single_model = false)
 {
     string model_name = testModel(params, in_tree, model_info, models_block, num_threads,
-                                  brlen_type, set_name, in_model_name);
+                                  brlen_type, set_name, in_model_name, NULL, single_model);
     if (!params.modelomatic || in_tree->aln->seq_type != SEQ_CODON)
         return model_name;
 
@@ -1019,7 +1031,7 @@ string testModelOMatic(Params &params, PhyloTree* in_tree, ModelCheckpoint &mode
         in_tree->aln = newaln;
         ModelInfo info;
         info.name = testModel(params, in_tree, model_info, models_block, num_threads,
-                                      brlen_type, set_name, in_model_name, &adjust);
+                                      brlen_type, set_name, in_model_name, &adjust, single_model);
         check = info.restoreCheckpoint(&model_info);
         ASSERT(check);
         // correct log-likelihood with adapter function
@@ -1156,7 +1168,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
     //        checkpoint->dump(true);
     
     StrVector model_names;
-    int max_cats = getModelList(params, iqtree.aln, model_names, params.model_test_separate_rate);
+    int max_cats = getModelList(params, iqtree.aln, model_names, params.model_test_separate_rate, true);
     
     uint64_t mem_size = iqtree.getMemoryRequiredThreaded(max_cats);
     cout << "NOTE: ModelFinder requires " << (mem_size / 1024) / 1024 << " MB RAM!" << endl;
@@ -1227,7 +1239,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
  * @param models (OUT) vectors of model names
  * @return maximum number of rate categories
  */
-int getModelList(Params &params, Alignment *aln, StrVector &models, bool separate_rate) {
+int getModelList(Params &params, Alignment *aln, StrVector &models, bool separate_rate, bool single_model) {
 	StrVector model_names;
     StrVector freq_names;
 	SeqType seq_type = aln->seq_type;
@@ -1248,7 +1260,9 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
 	const int noptions = sizeof(rate_options) / sizeof(char*);
 	int i, j;
     
-	if (seq_type == SEQ_BINARY) {
+    if (single_model) {
+        model_names.push_back(getUsualModelSubst(seq_type));
+    } else if (seq_type == SEQ_BINARY) {
 		if (params.model_set == NULL) {
             copyCString(bin_model_names, sizeof(bin_model_names) / sizeof(char*), model_names);
         } else if (params.model_set[0] == '+') {
@@ -2032,6 +2046,9 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     if (brlen_type == TOPO_UNLINKED)
         brlen_type = BRLEN_OPTIMIZE;
 
+    bool test_merge = (params.model_name.find("LINK") != string::npos || params.model_name.find("MERGE") != string::npos) && params.partition_type != TOPO_UNLINKED;
+    bool single_model = (params.partfinder_1model) && test_merge && in_tree->size() > 1;
+    
 #ifdef _OPENMP
     parallel_over_partitions = !params.model_test_and_tree && (in_tree->size() >= num_threads);
 #pragma omp parallel for private(i) schedule(dynamic) reduction(+: lhsum, dfsum) if(parallel_over_partitions)
@@ -2048,7 +2065,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             part_model_name = this_tree->aln->model_name;
         ModelInfo best_model;
 		best_model.name = testModelOMatic(params, this_tree, part_model_info, models_block,
-            (parallel_over_partitions ? 1 : num_threads), brlen_type, this_tree->aln->name, part_model_name);
+            (parallel_over_partitions ? 1 : num_threads), brlen_type, this_tree->aln->name, part_model_name, single_model);
 
         bool check = (best_model.restoreCheckpoint(&part_model_info));
         ASSERT(check);
@@ -2087,7 +2104,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 	double inf_score = computeInformationScore(lhsum, dfsum, ssize, params.model_test_criterion);
 	cout << "Full partition model " << criterionName(params.model_test_criterion) << " score: " << inf_score << " (LnL: " << lhsum << "  df:" << dfsum << ")" << endl;
 
-	if ((params.model_name.find("LINK") == string::npos && params.model_name.find("MERGE") == string::npos) || params.partition_type == TOPO_UNLINKED) {
+	if (!test_merge) {
 		super_aln->printBestPartition((string(params.out_prefix) + ".best_scheme.nex").c_str());
 		super_aln->printBestPartitionRaxml((string(params.out_prefix) + ".best_scheme").c_str());
         delete [] distID;
@@ -2206,7 +2223,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
                     tree->saveCheckpoint();
                 }
                 best_model.name = testModelOMatic(params, tree, part_model_info, models_block,
-                    params.model_test_and_tree ? num_threads : 1, params.partition_type, cur_pair.set_name);
+                    params.model_test_and_tree ? num_threads : 1, params.partition_type, cur_pair.set_name, "", single_model);
                 best_model.restoreCheckpoint(&part_model_info);
                 /*
                 if (params.model_test_and_tree) {
@@ -2311,24 +2328,105 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 		final_model_tree += ")";
 	}
 
-	cout << "BEST-FIT PARTITION MODEL: " << endl;
-	cout << "  charpartition " << criterionName(params.model_test_criterion) << " = ";
-	for (i = 0; i < gene_sets.size(); i++) {
-		if (i > 0)
-			cout << ", ";
-		cout << model_names[i] << ":";
-		for (auto j = gene_sets[i].begin(); j != gene_sets[i].end(); j++) {
-			cout << " " << super_aln->partitions[*j]->name;
-		}
-	}
-	cout << ";" << endl;
+//    cout << "BEST-FIT PARTITION MODEL: " << endl;
+//    cout << "  charpartition " << criterionName(params.model_test_criterion) << " = ";
+//    for (i = 0; i < gene_sets.size(); i++) {
+//        if (i > 0)
+//            cout << ", ";
+//        cout << model_names[i] << ":";
+//        for (auto j = gene_sets[i].begin(); j != gene_sets[i].end(); j++) {
+//            cout << " " << super_aln->partitions[*j]->name;
+//        }
+//    }
+//    cout << ";" << endl;
 	cout << "Agglomerative model selection: " << final_model_tree << endl;
     
-    delete [] distID;
-    delete [] dist;
     if (gene_sets.size() < in_tree->size())
         mergePartitions(in_tree, gene_sets, model_names);
-	((SuperAlignment*)in_tree->aln)->printBestPartition((string(params.out_prefix) + ".best_scheme.nex").c_str());
+
+    if (single_model) {
+        // test all candidate models again
+        lhsum = 0.0;
+        dfsum = 0;
+        if (params.partition_type == BRLEN_FIX || params.partition_type == BRLEN_SCALE) {
+            dfsum = in_tree->getNBranchParameters(BRLEN_OPTIMIZE);
+            if (params.partition_type == BRLEN_SCALE)
+                dfsum -= 1;
+        }
+        // sort partition by computational cost for OpenMP effciency
+        for (i = 0; i < in_tree->size(); i++) {
+            distID[i].first = i;
+            Alignment *this_aln = in_tree->at(i)->aln;
+            // computation cost is proportional to #sequences, #patterns, and #states
+            dist[i] = -((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states;
+        }
+        
+        if (num_threads > 1) {
+            quicksort(dist, 0, in_tree->size()-1, distID);
+            if (verbose_mode >= VB_MED) {
+                for (i = 0; i < in_tree->size(); i++) {
+                    cout << i+1 << "\t" << super_aln->partitions[distID[i].first]->name << endl;
+                }
+            }
+        }
+    #ifdef _OPENMP
+        parallel_over_partitions = !params.model_test_and_tree && (in_tree->size() >= num_threads);
+        #pragma omp parallel for private(i) schedule(dynamic) reduction(+: lhsum, dfsum) if(parallel_over_partitions)
+    #endif
+        for (int j = 0; j < in_tree->size(); j++) {
+            i = distID[j].first;
+            PhyloTree *this_tree = in_tree->at(i);
+            // scan through models for this partition, assuming the information occurs consecutively
+            ModelCheckpoint part_model_info;
+            extractModelInfo(this_tree->aln->name, model_info, part_model_info);
+            // do the computation
+            string part_model_name;
+            if (params.model_name.empty())
+                part_model_name = this_tree->aln->model_name;
+            ModelInfo best_model;
+            best_model.name = testModelOMatic(params, this_tree, part_model_info, models_block,
+                (parallel_over_partitions ? 1 : num_threads), brlen_type,
+                this_tree->aln->name, part_model_name, false);
+            
+            bool check = (best_model.restoreCheckpoint(&part_model_info));
+            ASSERT(check);
+            
+            double score = best_model.computeICScore(this_tree->getAlnNSite());
+            this_tree->aln->model_name = best_model.name;
+            lhsum += (lhvec[i] = best_model.logl);
+            dfsum += (dfvec[i] = best_model.df);
+            lenvec[i] = best_model.tree_len;
+            
+    #ifdef _OPENMP
+    #pragma omp critical
+    #endif
+            {
+            num_model++;
+            cout.width(4);
+            cout << right << num_model << " ";
+            cout.width(12);
+            cout << left << best_model.name << " ";
+            cout.width(11);
+            cout << score << " " << this_tree->aln->name;
+            if (num_model >= 10) {
+                double remain_time = (total_num_model-num_model)*(getRealTime()-start_time)/num_model;
+                cout << "\t" << convert_time(getRealTime()-start_time) << " ("
+                << convert_time(remain_time) << " left)";
+            }
+            cout << endl;
+            replaceModelInfo(this_tree->aln->name, model_info, part_model_info);
+            model_info.dump();
+            }
+        }
+    }
+
+    inf_score = computeInformationScore(lhsum, dfsum, ssize, params.model_test_criterion);
+    cout << "Best partition model " << criterionName(params.model_test_criterion) << " score: " << inf_score << " (LnL: " << lhsum << "  df:" << dfsum << ")" << endl;
+
+    delete [] distID;
+    delete [] dist;
+
+    ((SuperAlignment*)in_tree->aln)->printBestPartition((string(params.out_prefix) + ".best_scheme.nex").c_str());
 	((SuperAlignment*)in_tree->aln)->printBestPartitionRaxml((string(params.out_prefix) + ".best_scheme").c_str());
     model_info.dump();
     if (inf_score > concat_info.computeICScore(ssize) + 1.0) {
@@ -2354,14 +2452,14 @@ bool isMixtureModel(ModelsBlock *models_block, string &model_str) {
 
 string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
     ModelsBlock *models_block, int num_threads, int brlen_type,
-    string set_name, string in_model_name, ModelAdjust *adjust)
+    string set_name, string in_model_name, ModelAdjust *adjust, bool single_model)
 {
     ModelCheckpoint *checkpoint = &model_info;
 
 	in_tree->params = &params;
 	StrVector model_names;
     if (in_model_name.empty())
-        getModelList(params, in_tree->aln, model_names, params.model_test_separate_rate);
+        getModelList(params, in_tree->aln, model_names, params.model_test_separate_rate, single_model);
     else {
         model_names.push_back(in_model_name);
     }
