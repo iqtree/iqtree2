@@ -898,6 +898,9 @@ public:
     /** rclusterf algorithm to top 50% pairs instead of only one best pair */
     bool partfinder_rcluster_fast;
 
+    /** use one model (GTR for DNA, LG for protein) for partition finder */
+    bool partfinder_1model;
+
     /** remove all-gap sequences in partition model to account for terrace default: TRUE */
     bool remove_empty_seq;
 
