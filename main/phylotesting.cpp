@@ -2620,12 +2620,12 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
     double best_score_AIC = DBL_MAX, best_score_AICc = DBL_MAX, best_score_BIC = DBL_MAX;
     string best_tree_AIC, best_tree_AICc, best_tree_BIC;
 
-    CKP_RESTORE(best_score_AIC);
-    CKP_RESTORE(best_score_AICc);
-    CKP_RESTORE(best_score_BIC);
-    CKP_RESTORE(best_model_AIC);
-    CKP_RESTORE(best_model_AICc);
-    CKP_RESTORE(best_model_BIC);
+//    CKP_RESTORE(best_score_AIC);
+//    CKP_RESTORE(best_score_AICc);
+//    CKP_RESTORE(best_score_BIC);
+//    CKP_RESTORE(best_model_AIC);
+//    CKP_RESTORE(best_model_AICc);
+//    CKP_RESTORE(best_model_BIC);
 
     CKP_RESTORE(best_tree_AIC);
     CKP_RESTORE(best_tree_AICc);
