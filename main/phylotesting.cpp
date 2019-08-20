@@ -158,6 +158,8 @@ const char *codon_freq_names[] = {"", "+F1X4", "+F3X4", "+F"};
 const double TOL_LIKELIHOOD_MODELTEST = 0.1;
 const double TOL_GRADIENT_MODELTEST   = 0.0001;
 
+extern double RunKMeans1D(int n, int k, double *points, int *weights, double *centers, int *assignments);
+
 string getSeqTypeName(SeqType seq_type) {
     switch (seq_type) {
         case SEQ_BINARY: return "binary";
@@ -1932,6 +1934,117 @@ string testConcatModel(Params &params, SuperAlignment *super_aln, ModelCheckpoin
 }
 
 /**
+ * k-means clustering of partitions using partition-specific tree length
+ * @return score (AIC/BIC/etc.) of the clustering
+ */
+double doKmeansClustering(Params &params, PhyloSuperTree *in_tree,
+    int ncluster, DoubleVector &lenvec,
+    ModelCheckpoint &model_info, ModelsBlock *models_block,
+    int num_threads, bool single_model)
+{
+    
+    cout << "k-means merging into " << ncluster << " clusters..." << endl;
+    
+    ASSERT(lenvec.size() == in_tree->size());
+    int npart = in_tree->size();
+    int i;
+    IntVector weights;
+    weights.resize(npart, 1);
+    int *clusters = new int[npart];
+    double *centers = new double[ncluster];
+    RunKMeans1D(npart, ncluster, lenvec.data(), weights.data(), centers, clusters);
+    
+    vector<set<int> > gene_sets;
+    gene_sets.resize(ncluster);
+    for (i = 0; i < in_tree->size(); i++)
+        gene_sets[clusters[i]].insert(i);
+    
+    SuperAlignment *super_aln = ((SuperAlignment*)in_tree->aln);
+
+    double lhsum = 0.0;
+    int dfsum = 0;
+    if (params.partition_type == BRLEN_FIX || params.partition_type == BRLEN_SCALE) {
+        dfsum = in_tree->getNBranchParameters(BRLEN_OPTIMIZE);
+        if (params.partition_type == BRLEN_SCALE)
+            dfsum -= 1;
+    }
+
+    for (int cluster = 0; cluster < ncluster; cluster++) {
+        string set_name;
+        set<int> merged_set;
+        for (int i = 0; i < in_tree->size(); i++)
+            if (clusters[i] == cluster) {
+                if (!set_name.empty())
+                    set_name += "+";
+                set_name += in_tree->at(i)->aln->name;
+                merged_set.insert(i);
+            }
+        ModelInfo best_model;
+        bool done_before = false;
+        {
+            // if pairs previously examined, reuse the information
+            model_info.startStruct(set_name);
+            if (model_info.getBestModel(best_model.name)) {
+                best_model.restoreCheckpoint(&model_info);
+                done_before = true;
+            }
+            model_info.endStruct();
+        }
+        ModelCheckpoint part_model_info;
+        if (!done_before) {
+            Alignment *aln = super_aln->concatenateAlignments(merged_set);
+            PhyloTree *tree = in_tree->extractSubtree(merged_set);
+            tree->setAlignment(aln);
+            extractModelInfo(set_name, model_info, part_model_info);
+            tree->num_precision = in_tree->num_precision;
+            tree->setParams(&params);
+            tree->sse = params.SSE;
+            tree->optimize_by_newton = params.optimize_by_newton;
+            tree->num_threads = params.model_test_and_tree ? num_threads : 1;
+            /*if (params.model_test_and_tree) {
+             tree->setCheckpoint(new Checkpoint());
+             tree->saveCheckpoint();
+             } else*/
+            {
+            tree->setCheckpoint(&part_model_info);
+            // trick to restore checkpoint
+            tree->restoreCheckpoint();
+            tree->saveCheckpoint();
+            }
+            best_model.name = testModelOMatic(params, tree, part_model_info, models_block,
+                params.model_test_and_tree ? num_threads : 1, params.partition_type,
+                set_name, "", single_model);
+            best_model.restoreCheckpoint(&part_model_info);
+            delete tree;
+            delete aln;
+        }
+        lhsum += best_model.logl;
+        dfsum += best_model.df;
+        {
+            if (!done_before) {
+                replaceModelInfo(set_name, model_info, part_model_info);
+                model_info.dump();
+                cout.width(4);
+                cout << right << cluster+1 << " ";
+                cout.width(12);
+                cout << left << best_model.name << " ";
+                cout.width(11);
+                cout << best_model.logl << " " << set_name;
+                cout << endl;
+            }
+        }
+    }
+    
+    int ssize = in_tree->getAlnNSite();
+    double score = computeInformationScore(lhsum, dfsum, ssize, params.model_test_criterion);
+    cout << "k-means score for " << ncluster << " clusters: " << score << " (LnL: " << lhsum << "  " << "df: " << dfsum << ")" << endl;
+
+    delete [] centers;
+    delete [] clusters;
+    return score;
+}
+
+/**
  * select models for all partitions
  * @param[in,out] model_info (IN/OUT) all model information
  * @return total number of parameters
@@ -2118,6 +2231,22 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 		return;
 	}
 
+    if (params.partfinder_kmeans) {
+        // kmeans cluster based on parition tree length
+        double cur_score = inf_score;
+        int best_cluster = in_tree->size();
+        for (int ncluster = 2; ncluster < in_tree->size(); ncluster++) {
+            double score = doKmeansClustering(params, in_tree, ncluster, lenvec, model_info, models_block, num_threads, single_model);
+            if (score < cur_score) {
+                cout << "Better score found: " << score << endl;
+                cur_score = score;
+                best_cluster = ncluster;
+            } else {
+                break;
+            }
+        }
+    }
+    
 	/* following implements the greedy algorithm of Lanfear et al. (2012) */
 //	int part1, part2;
 	vector<set<int> > gene_sets;
