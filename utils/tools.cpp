@@ -1962,7 +1962,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
             }
 
-            if (strcmp(argv[cnt], "--fast-merge") == 0) {
+            if (strcmp(argv[cnt], "--merge-fast") == 0) {
                 params.partfinder_1model = true;
                 continue;
             }
