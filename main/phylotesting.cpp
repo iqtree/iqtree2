@@ -11,6 +11,7 @@
 #include <config.h>
 #endif
 #include <iqtree_config.h>
+#include <numeric>
 #include "tree/phylotree.h"
 #include "tree/iqtree.h"
 #include "tree/phylosupertree.h"
@@ -1936,28 +1937,25 @@ string testConcatModel(Params &params, SuperAlignment *super_aln, ModelCheckpoin
 /**
  * k-means clustering of partitions using partition-specific tree length
  * @return score (AIC/BIC/etc.) of the clustering
+ * @param[out] gene_sets
+ * @param[out[ model_names
  */
 double doKmeansClustering(Params &params, PhyloSuperTree *in_tree,
     int ncluster, DoubleVector &lenvec,
     ModelCheckpoint &model_info, ModelsBlock *models_block,
-    int num_threads, bool single_model)
+    int num_threads, bool single_model,
+    vector<set<int> > &gene_sets, StrVector &model_names)
 {
     
-    cout << "k-means merging into " << ncluster << " clusters..." << endl;
+    cout << "k-means merging into " << ncluster << " partitions..." << endl;
     
     ASSERT(lenvec.size() == in_tree->size());
     int npart = in_tree->size();
-    int i;
     IntVector weights;
     weights.resize(npart, 1);
     int *clusters = new int[npart];
     double *centers = new double[ncluster];
     RunKMeans1D(npart, ncluster, lenvec.data(), weights.data(), centers, clusters);
-    
-    vector<set<int> > gene_sets;
-    gene_sets.resize(ncluster);
-    for (i = 0; i < in_tree->size(); i++)
-        gene_sets[clusters[i]].insert(i);
     
     SuperAlignment *super_aln = ((SuperAlignment*)in_tree->aln);
 
@@ -1979,6 +1977,7 @@ double doKmeansClustering(Params &params, PhyloSuperTree *in_tree,
                 set_name += in_tree->at(i)->aln->name;
                 merged_set.insert(i);
             }
+        gene_sets.push_back(merged_set);
         ModelInfo best_model;
         bool done_before = false;
         {
@@ -2015,6 +2014,7 @@ double doKmeansClustering(Params &params, PhyloSuperTree *in_tree,
                 params.model_test_and_tree ? num_threads : 1, params.partition_type,
                 set_name, "", single_model);
             best_model.restoreCheckpoint(&part_model_info);
+            model_names.push_back(best_model.name);
             delete tree;
             delete aln;
         }
@@ -2037,7 +2037,7 @@ double doKmeansClustering(Params &params, PhyloSuperTree *in_tree,
     
     int ssize = in_tree->getAlnNSite();
     double score = computeInformationScore(lhsum, dfsum, ssize, params.model_test_criterion);
-    cout << "k-means score for " << ncluster << " clusters: " << score << " (LnL: " << lhsum << "  " << "df: " << dfsum << ")" << endl;
+    cout << "k-means score for " << ncluster << " partitions: " << score << " (LnL: " << lhsum << "  " << "df: " << dfsum << ")" << endl;
 
     delete [] centers;
     delete [] clusters;
@@ -2231,38 +2231,44 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 		return;
 	}
 
+    vector<set<int> > gene_sets;
+    StrVector model_names;
+    StrVector greedy_model_trees;
+
+    gene_sets.resize(in_tree->size());
+    model_names.resize(in_tree->size());
+    greedy_model_trees.resize(in_tree->size());
+    for (i = 0; i < gene_sets.size(); i++) {
+        gene_sets[i].insert(i);
+        model_names[i] = in_tree->at(i)->aln->model_name;
+        greedy_model_trees[i] = in_tree->at(i)->aln->name;
+    }
+
     if (params.partfinder_kmeans) {
         // kmeans cluster based on parition tree length
         double cur_score = inf_score;
-        int best_cluster = in_tree->size();
-        for (int ncluster = 2; ncluster < in_tree->size(); ncluster++) {
-            double score = doKmeansClustering(params, in_tree, ncluster, lenvec, model_info, models_block, num_threads, single_model);
+        for (int ncluster = in_tree->size()-1; ncluster >= 1; ncluster--) {
+            vector<set<int> > this_gene_sets;
+            StrVector this_model_names;
+            //double sum = in_tree->size()/std::accumulate(lenvec.begin(), lenvec.end(), 0.0);
+            for (auto &len : lenvec)
+                len = log(len);
+            double score = doKmeansClustering(params, in_tree, ncluster, lenvec, model_info, models_block, num_threads, single_model, this_gene_sets, this_model_names);
             if (score < cur_score) {
                 cout << "Better score found: " << score << endl;
                 cur_score = score;
-                best_cluster = ncluster;
+                gene_sets = this_gene_sets;
+                model_names = this_model_names;
             } else {
-                break;
+                //break;
             }
         }
+    } else {
+        cout << "Merging models to increase model fit (about " << total_num_model << " total partition schemes)..." << endl;
     }
-    
-	/* following implements the greedy algorithm of Lanfear et al. (2012) */
-//	int part1, part2;
-	vector<set<int> > gene_sets;
-	gene_sets.resize(in_tree->size());
-	StrVector model_names;
-	model_names.resize(in_tree->size());
-	StrVector greedy_model_trees;
-	greedy_model_trees.resize(in_tree->size());
-	for (i = 0; i < gene_sets.size(); i++) {
-		gene_sets[i].insert(i);
-		model_names[i] = in_tree->at(i)->aln->model_name;
-		greedy_model_trees[i] = in_tree->at(i)->aln->name;
-	}
-	cout << "Merging models to increase model fit (about " << total_num_model << " total partition schemes)..." << endl;
 
-	while (gene_sets.size() >= 2) {
+    /* following implements the greedy algorithm of Lanfear et al. (2012) */
+	while (!params.partfinder_kmeans && gene_sets.size() >= 2) {
 		// stepwise merging charsets
 
         // list of all better pairs of partitions than current partitioning scheme
