@@ -846,6 +846,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.partfinder_rcluster_fast = false;
     params.partfinder_1model = false;
     params.partfinder_kmeans = false;
+    params.partfinder_log_rate = false;
     params.remove_empty_seq = true;
     params.terrace_aware = true;
     params.terrace_analysis = false;
@@ -1969,6 +1970,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 
             if (strcmp(argv[cnt], "--merge-kmeans") == 0) {
                 params.partfinder_kmeans = true;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--merge-log-rate") == 0) {
+                params.partfinder_log_rate = true;
                 continue;
             }
 

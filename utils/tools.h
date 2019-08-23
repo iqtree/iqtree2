@@ -904,6 +904,9 @@ public:
     /** use k-means to merge partitions using partition rate */
     bool partfinder_kmeans;
 
+    /** use logarithm of rates for clustering algorithm */
+    bool partfinder_log_rate;
+    
     /** remove all-gap sequences in partition model to account for terrace default: TRUE */
     bool remove_empty_seq;
 

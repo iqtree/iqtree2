@@ -2187,7 +2187,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 		this_tree->aln->model_name = best_model.name;
 		lhsum += (lhvec[i] = best_model.logl);
 		dfsum += (dfvec[i] = best_model.df);
-        lenvec[i] = best_model.tree_len;
+        lenvec[i] = params.partfinder_log_rate ? log(best_model.tree_len) : best_model.tree_len;
 
 #ifdef _OPENMP
 #pragma omp critical
@@ -2247,8 +2247,6 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     if (params.partfinder_kmeans) {
         // kmeans cluster based on parition tree length
         double cur_score = inf_score;
-        for (auto &len : lenvec)
-            len = log(len);
         for (int ncluster = in_tree->size()-1; ncluster >= 1; ncluster--) {
             vector<set<int> > this_gene_sets;
             StrVector this_model_names;
@@ -2424,7 +2422,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             gene_sets[opt_pair.part1] = opt_pair.merged_set;
             lhvec[opt_pair.part1] = opt_pair.logl;
             dfvec[opt_pair.part1] = opt_pair.df;
-            lenvec[opt_pair.part1] = opt_pair.tree_len;
+            lenvec[opt_pair.part1] = params.partfinder_log_rate ? log(opt_pair.tree_len) : opt_pair.tree_len;
             model_names[opt_pair.part1] = opt_pair.model_name;
             greedy_model_trees[opt_pair.part1] = "(" + greedy_model_trees[opt_pair.part1] + "," +
                 greedy_model_trees[opt_pair.part2] + ")" +
@@ -2530,7 +2528,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             this_tree->aln->model_name = best_model.name;
             lhsum += (lhvec[i] = best_model.logl);
             dfsum += (dfvec[i] = best_model.df);
-            lenvec[i] = best_model.tree_len;
+            lenvec[i] = params.partfinder_log_rate ? log(best_model.tree_len) : best_model.tree_len;
             
     #ifdef _OPENMP
     #pragma omp critical
