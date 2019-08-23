@@ -2247,12 +2247,12 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     if (params.partfinder_kmeans) {
         // kmeans cluster based on parition tree length
         double cur_score = inf_score;
+        for (auto &len : lenvec)
+            len = log(len);
         for (int ncluster = in_tree->size()-1; ncluster >= 1; ncluster--) {
             vector<set<int> > this_gene_sets;
             StrVector this_model_names;
             //double sum = in_tree->size()/std::accumulate(lenvec.begin(), lenvec.end(), 0.0);
-            for (auto &len : lenvec)
-                len = log(len);
             double score = doKmeansClustering(params, in_tree, ncluster, lenvec, model_info, models_block, num_threads, single_model, this_gene_sets, this_model_names);
             if (score < cur_score) {
                 cout << "Better score found: " << score << endl;
