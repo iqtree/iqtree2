@@ -535,7 +535,7 @@ MTreeSet::~MTreeSet()
 }
 
 
-void MTreeSet::computeRFDist(int *rfdist, int mode, double weight_threshold) {
+void MTreeSet::computeRFDist(double *rfdist, int mode, double weight_threshold) {
 	// exit if less than 2 trees
 	if (size() < 2)
 		return;
@@ -600,8 +600,8 @@ void MTreeSet::computeRFDist(int *rfdist, int mode, double weight_threshold) {
 }
 
 
-void MTreeSet::computeRFDist(int *rfdist, MTreeSet *treeset2, bool k_by_k,
-	const char *info_file, const char *tree_file, int *incomp_splits) 
+void MTreeSet::computeRFDist(double *rfdist, MTreeSet *treeset2, bool k_by_k,
+	const char *info_file, const char *tree_file, double *incomp_splits)
 {
 	// exit if less than 2 trees
 #ifdef USE_HASH_MAP
@@ -614,7 +614,7 @@ void MTreeSet::computeRFDist(int *rfdist, MTreeSet *treeset2, bool k_by_k,
 	ofstream otree;
 	if (info_file) oinfo.open(info_file);
 	if (tree_file) otree.open(tree_file);
-	if (incomp_splits) memset(incomp_splits, 0, size()*treeset2->size()*sizeof(int));
+	if (incomp_splits) memset(incomp_splits, 0, size()*treeset2->size()*sizeof(double));
 
 	vector<string> taxname(front()->leafNum);
 	vector<SplitIntMap*> hs_vec;
@@ -688,7 +688,12 @@ void MTreeSet::computeRFDist(int *rfdist, MTreeSet *treeset2, bool k_by_k,
 						nodes_vec[id][i]->name = "-" + nodes_vec[id][i]->name;*/
 				} 
 			}
-			int rf_val = (*hsit)->size() + (*hsit2)->size() - 2*common_splits;
+			double rf_val = (*hsit)->size() + (*hsit2)->size() - 2*common_splits;
+            if (Params::getInstance().normalize_tree_dist) {
+                int non_trivial = (*hsit)->size() - (*hsit)->getNTrivialSplits();
+                non_trivial += (*hsit2)->size() - ((*hsit2)->begin())->first->getNTaxa();
+                rf_val /= non_trivial;
+            }
             if (k_by_k)
                 rfdist[id] = rf_val;
             else

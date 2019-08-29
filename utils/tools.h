@@ -1605,6 +1605,11 @@ public:
     int rf_dist_mode;
 
     /**
+     true to normalize tree distances, false otherwise
+     */
+    bool normalize_tree_dist;
+    
+    /**
             compute the site-specific rates by Meyer & von Haeseler method
      */
     bool mvh_site_rate;

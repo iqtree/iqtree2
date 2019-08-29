@@ -1364,7 +1364,7 @@ void calcDistribution(Params &params) {
     }
 }
 
-void printRFDist(ostream &out, int *rfdist, int n, int m, int rf_dist_mode) {
+void printRFDist(ostream &out, double *rfdist, int n, int m, int rf_dist_mode) {
     int i, j;
     if (rf_dist_mode == RF_ADJACENT_PAIR || rf_dist_mode == RF_TWO_TREE_SETS_1BY1) {
         out << "XXX        ";
@@ -1387,7 +1387,7 @@ void printRFDist(ostream &out, int *rfdist, int n, int m, int rf_dist_mode) {
 void computeRFDistExtended(const char *trees1, const char *trees2, const char *filename) {
     cout << "Reading input trees 1 file " << trees1 << endl;
     int ntrees = 0, ntrees2 = 0;
-    int *rfdist_raw = NULL;
+    double *rfdist_raw = NULL;
     try {
         ifstream in;
         in.exceptions(ios::failbit | ios::badbit);
@@ -1416,7 +1416,7 @@ void computeRFDistExtended(const char *trees1, const char *trees2, const char *f
 
         in.close();
         ASSERT(ntrees * ntrees2 == rfdist.size());
-        rfdist_raw = new int[rfdist.size()];
+        rfdist_raw = new double[rfdist.size()];
         copy(rfdist.begin(), rfdist.end(), rfdist_raw);
 
     } catch (ios::failure) {
@@ -1433,7 +1433,7 @@ void computeRFDistExtended(const char *trees1, const char *trees2, const char *f
     } catch (ios::failure) {
         outError(ERR_WRITE_OUTPUT, filename);
     }
-
+    delete [] rfdist_raw;
 }
 
 void computeRFDist(Params &params) {
@@ -1450,8 +1450,8 @@ void computeRFDist(Params &params) {
 
     MTreeSet trees(params.user_file, params.is_rooted, params.tree_burnin, params.tree_max_count);
     int n = trees.size(), m = trees.size();
-    int *rfdist;
-    int *incomp_splits = NULL;
+    double *rfdist;
+    double *incomp_splits = NULL;
     string infoname = params.out_prefix;
     infoname += ".rfinfo";
     string treename = params.out_prefix;
@@ -1466,11 +1466,11 @@ void computeRFDist(Params &params) {
                 outError("Tree sets has different number of trees");
             size = n;
         }
-        rfdist = new int [size];
-        memset(rfdist, 0, size*sizeof(int));
+        rfdist = new double [size];
+        memset(rfdist, 0, size*sizeof(double));
         if (verbose_mode >= VB_MAX) {
-            incomp_splits = new int [size];
-            memset(incomp_splits, 0, size*sizeof(int));
+            incomp_splits = new double [size];
+            memset(incomp_splits, 0, size*sizeof(double));
         }
         if (verbose_mode >= VB_MED)
             trees.computeRFDist(rfdist, &treeset2, (params.rf_dist_mode == RF_TWO_TREE_SETS_1BY1),
@@ -1478,8 +1478,8 @@ void computeRFDist(Params &params) {
         else
             trees.computeRFDist(rfdist, &treeset2, (params.rf_dist_mode == RF_TWO_TREE_SETS_1BY1));
     } else {
-        rfdist = new int [n*n];
-        memset(rfdist, 0, n*n* sizeof(int));
+        rfdist = new double [n*n];
+        memset(rfdist, 0, n*n* sizeof(double));
         trees.computeRFDist(rfdist, params.rf_dist_mode, params.split_weight_threshold);
     }
 
