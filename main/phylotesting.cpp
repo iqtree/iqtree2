@@ -1584,10 +1584,102 @@ void replaceModelInfo(string &set_name, ModelCheckpoint &model_info, ModelCheckp
     }
 }
 
-void extractModelInfo(string &set_name, ModelCheckpoint &model_info, ModelCheckpoint &part_model_info) {
+void extractModelInfo(string &orig_set_name, ModelCheckpoint &model_info, ModelCheckpoint &part_model_info) {
+    string set_name = orig_set_name + CKP_SEP;
     int len = set_name.length();
     for (auto it = model_info.lower_bound(set_name); it != model_info.end() && it->first.substr(0, len) == set_name; it++) {
-        part_model_info.put(it->first.substr(len+1), it->second);
+        part_model_info.put(it->first.substr(len), it->second);
+    }
+}
+
+string getSubsetName(PhyloSuperTree *super_tree, set<int> &subset) {
+    string set_name;
+    for (auto it = subset.begin(); it != subset.end(); it++) {
+        if (it != subset.begin())
+            set_name += "+";
+        set_name += super_tree->at(*it)->aln->name;
+    }
+    return set_name;
+}
+
+int getSubsetAlnLength(PhyloSuperTree *super_tree, set<int> &subset) {
+    int len = 0;
+    for (auto i : subset) {
+        len += super_tree->at(i)->aln->getNSite();
+    }
+    return len;
+}
+
+/**
+ * transfer model parameters from two subsets to the target subsets
+ */
+void transferModelParameters(PhyloSuperTree *super_tree, ModelCheckpoint &model_info, ModelCheckpoint &part_model_info,
+                             set<int> &gene_set1, set<int> &gene_set2)
+{
+    set<int> merged_set;
+    merged_set.insert(gene_set1.begin(), gene_set1.end());
+    merged_set.insert(gene_set2.begin(), gene_set2.end());
+    string set_name = getSubsetName(super_tree, merged_set);
+    string set1_name = getSubsetName(super_tree, gene_set1);
+    string set2_name = getSubsetName(super_tree, gene_set2);
+    double weight1 = getSubsetAlnLength(super_tree, gene_set1);
+    double weight2 = getSubsetAlnLength(super_tree, gene_set2);
+    double weight_sum = weight1 + weight2;
+    weight1 = weight1/weight_sum;
+    weight2 = weight2/weight_sum;
+    enum MeanComp {GEOM_MEAN, ARIT_MEAN};
+    enum ValType {VAL_SINGLE, VAL_VECTOR};
+    vector<tuple<ValType, MeanComp,string> > info_strings = {
+        {VAL_SINGLE, ARIT_MEAN, (string)"RateGamma" + CKP_SEP + "gamma_shape"},
+        {VAL_SINGLE, ARIT_MEAN, (string)"RateGammaInvar" + CKP_SEP + "gamma_shape"},
+        {VAL_SINGLE, ARIT_MEAN, (string)"RateGammaInvar" + CKP_SEP + "p_invar"},
+        {VAL_SINGLE, ARIT_MEAN, (string)"RateInvar" + CKP_SEP + "p_invar"},
+//        {VAL_VECTOR, GEOM_MEAN, (string)"ModelDNA" + CKP_SEP + "rates"},
+    };
+    for (auto info : info_strings) {
+        switch (std::get<0>(info)) {
+            case VAL_SINGLE: {
+                double value1, value2, value;
+                bool ok1 = model_info.get(set1_name + CKP_SEP + std::get<2>(info), value1);
+                bool ok2 = model_info.get(set2_name + CKP_SEP + std::get<2>(info), value2);
+                if (!ok1 || !ok2)
+                    continue;
+                if (part_model_info.get(std::get<2>(info), value))
+                    continue; // value already exist
+                switch (std::get<1>(info)) {
+                    case ARIT_MEAN:
+                        value = weight1*value1 + weight2*value2;
+                        break;
+                    case GEOM_MEAN:
+                        value = sqrt(value1*value2);
+                        break;
+                }
+                part_model_info.put(std::get<2>(info), value);
+                break;
+            }
+            case VAL_VECTOR: {
+                DoubleVector value1, value2, value;
+                bool ok1 = model_info.getVector(set1_name + CKP_SEP + std::get<2>(info), value1);
+                bool ok2 = model_info.getVector(set2_name + CKP_SEP + std::get<2>(info), value2);
+                if (!ok1 || !ok2)
+                    continue;
+                ASSERT(value1.size() == value2.size());
+                if (part_model_info.getVector(std::get<2>(info), value))
+                    continue; // value already exist
+                value.reserve(value1.size());
+                for (int i = 0; i < value1.size(); i++)
+                switch (std::get<1>(info)) {
+                    case ARIT_MEAN:
+                        value.push_back(weight1*value1[i] + weight2*value2[i]);
+                        break;
+                    case GEOM_MEAN:
+                        value.push_back(sqrt(value1[i]*value2[i]));
+                        break;
+                }
+                part_model_info.putVector(std::get<2>(info), value);
+                break;
+            }
+        }
     }
 }
 
@@ -2126,7 +2218,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 
 	cout << "Selecting individual models for " << in_tree->size() << " charsets using " << criterionName(params.model_test_criterion) << "..." << endl;
 	//cout << " No. AIC         AICc        BIC         Charset" << endl;
-	cout << " No. Model        Score       Charset" << endl;
+	cout << " No. Model        Score       TreeLen     Charset" << endl;
 
 	lhvec.resize(in_tree->size());
 	dfvec.resize(in_tree->size());
@@ -2199,7 +2291,10 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             cout.width(12);
             cout << left << best_model.name << " ";
             cout.width(11);
-            cout << score << " " << this_tree->aln->name;
+            cout << score << " ";
+            cout.width(11);
+            cout << best_model.tree_len << " ";
+            cout << this_tree->aln->name;
             if (num_model >= 10) {
                 double remain_time = (total_num_model-num_model)*(getRealTime()-start_time)/num_model;
                 cout << "\t" << convert_time(getRealTime()-start_time) << " (" 
@@ -2315,11 +2410,12 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             ASSERT(cur_pair.part1 < cur_pair.part2);
             cur_pair.merged_set.insert(gene_sets[cur_pair.part1].begin(), gene_sets[cur_pair.part1].end());
             cur_pair.merged_set.insert(gene_sets[cur_pair.part2].begin(), gene_sets[cur_pair.part2].end());
-            for (auto it = cur_pair.merged_set.begin(); it != cur_pair.merged_set.end(); it++) {
-                if (it != cur_pair.merged_set.begin())
-                    cur_pair.set_name += "+";
-                cur_pair.set_name += in_tree->at(*it)->aln->name;
-            }
+            cur_pair.set_name = getSubsetName(in_tree, cur_pair.merged_set);
+            double weight1 = getSubsetAlnLength(in_tree, gene_sets[cur_pair.part1]);
+            double weight2 = getSubsetAlnLength(in_tree, gene_sets[cur_pair.part2]);
+            double sum = 1.0 / (weight1 + weight2);
+            weight1 *= sum;
+            weight2 *= sum;
             ModelInfo best_model;
             bool done_before = false;
 #ifdef _OPENMP
@@ -2335,11 +2431,19 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
                 model_info.endStruct();
             }
             ModelCheckpoint part_model_info;
+            double cur_tree_len = 0.0;
             if (!done_before) {
                 Alignment *aln = super_aln->concatenateAlignments(cur_pair.merged_set);
                 PhyloTree *tree = in_tree->extractSubtree(cur_pair.merged_set);
+                //tree->scaleLength((weight1*lenvec[cur_pair.part1] + weight2*lenvec[cur_pair.part2])/tree->treeLength());
+                if (params.partfinder_log_rate)
+                    tree->scaleLength(exp(0.5*(lenvec[cur_pair.part1]+lenvec[cur_pair.part2])) / tree->treeLength() );
+                else
+                    tree->scaleLength(sqrt(lenvec[cur_pair.part1]*lenvec[cur_pair.part2])/tree->treeLength());
+                cur_tree_len = tree->treeLength();
                 tree->setAlignment(aln);
                 extractModelInfo(cur_pair.set_name, model_info, part_model_info);
+                transferModelParameters(in_tree, model_info, part_model_info, gene_sets[cur_pair.part1], gene_sets[cur_pair.part2]);
                 tree->num_precision = in_tree->num_precision;
                 tree->setParams(&params);
                 tree->sse = params.SSE;
@@ -2386,7 +2490,9 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 					cout.width(12);
 					cout << left << best_model.name << " ";
 					cout.width(11);
-					cout << cur_pair.score << " " << cur_pair.set_name;
+                    cout << cur_pair.score << " ";
+                    cout.width(11);
+                    cout << cur_pair.tree_len << " " << cur_pair.set_name;
                     if (num_model >= 10) {
                         double remain_time = max(total_num_model-num_model, (int64_t)0)*(getRealTime()-start_time)/num_model;
                         cout << "\t" << convert_time(getRealTime()-start_time) << " (" 
