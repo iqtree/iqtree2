@@ -929,6 +929,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 //    params.avoid_duplicated_trees = false;
     params.writeDistImdTrees = false;
     params.rf_dist_mode = 0;
+    params.normalize_tree_dist = false;
     params.mvh_site_rate = false;
     params.rate_mh_type = true;
     params.discard_saturated_site = false;
@@ -2763,6 +2764,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.second_tree = argv[cnt];
 				continue;
 			}
+            
+            if (strcmp(argv[cnt], "--normalize-dist") == 0) {
+                params.normalize_tree_dist = true;
+                continue;
+            }
+            
 			if (strcmp(argv[cnt], "-aLRT") == 0) {
 				cnt++;
 				if (cnt + 1 >= argc)
