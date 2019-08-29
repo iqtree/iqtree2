@@ -2462,10 +2462,10 @@ double PhyloTree::optimizeTreeLengthScaling(double min_scaling, double &scaling,
         }
     }
     if (min_brlen <= 0.0) min_brlen = params->min_branch_length;
-    if (max_scaling > params->max_branch_length / max_brlen)
-        max_scaling = params->max_branch_length / max_brlen;
-    if (min_scaling < params->min_branch_length / min_brlen)
-        min_scaling = params->min_branch_length / min_brlen;
+    if (max_scaling > 10.0*params->max_branch_length / max_brlen)
+        max_scaling = 10.0*params->max_branch_length / max_brlen;
+    if (min_scaling < 0.1*params->min_branch_length / min_brlen)
+        min_scaling = 0.1*params->min_branch_length / min_brlen;
     
     scaling = minimizeOneDimen(min(scaling, min_scaling), scaling, max(max_scaling, scaling), max(TOL_TREE_LENGTH_SCALE, gradient_epsilon), &negative_lh, &ferror);
     if (scaling != current_scaling) {
