@@ -166,9 +166,12 @@ public:
 
 	/**
 		compute the Robinson-Foulds distance between trees
-		@param rfdist (OUT) RF distance
+		@param[out] rfdist output RF distance
+        @param treeset2 second tree set
+        @param k_by_k true to compute distances between corresponding k-th tree of two tree sets,
+            false to do all-by-all
 	*/
-	void computeRFDist(int *rfdist, MTreeSet *treeset2, 
+	void computeRFDist(int *rfdist, MTreeSet *treeset2, bool k_by_k,
 		const char* info_file = NULL, const char *tree_file = NULL, int *incomp_splits = NULL);
 
 	int categorizeDistinctTrees(IntVector &category);
