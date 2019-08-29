@@ -1366,7 +1366,7 @@ void calcDistribution(Params &params) {
 
 void printRFDist(ostream &out, int *rfdist, int n, int m, int rf_dist_mode) {
     int i, j;
-    if (rf_dist_mode == RF_ADJACENT_PAIR) {
+    if (rf_dist_mode == RF_ADJACENT_PAIR || rf_dist_mode == RF_TWO_TREE_SETS_1BY1) {
         out << "XXX        ";
         out << 1 << " " << n << endl;
         for (i = 0; i < n; i++)
@@ -1456,20 +1456,27 @@ void computeRFDist(Params &params) {
     infoname += ".rfinfo";
     string treename = params.out_prefix;
     treename += ".rftree";
-    if (params.rf_dist_mode == RF_TWO_TREE_SETS) {
+    if (params.rf_dist_mode == RF_TWO_TREE_SETS || params.rf_dist_mode == RF_TWO_TREE_SETS_1BY1) {
         MTreeSet treeset2(params.second_tree, params.is_rooted, params.tree_burnin, params.tree_max_count);
         cout << "Computing Robinson-Foulds distances between two sets of trees" << endl;
         m = treeset2.size();
-        rfdist = new int [n*m];
-        memset(rfdist, 0, n*m* sizeof(int));
+        size_t size = n*m;
+        if (params.rf_dist_mode == RF_TWO_TREE_SETS_1BY1) {
+            if (m != n)
+                outError("Tree sets has different number of trees");
+            size = n;
+        }
+        rfdist = new int [size];
+        memset(rfdist, 0, size*sizeof(int));
         if (verbose_mode >= VB_MAX) {
-            incomp_splits = new int [n*m];
-            memset(incomp_splits, 0, n*m* sizeof(int));
+            incomp_splits = new int [size];
+            memset(incomp_splits, 0, size*sizeof(int));
         }
         if (verbose_mode >= VB_MED)
-            trees.computeRFDist(rfdist, &treeset2, infoname.c_str(),treename.c_str(), incomp_splits);
+            trees.computeRFDist(rfdist, &treeset2, (params.rf_dist_mode == RF_TWO_TREE_SETS_1BY1),
+                                infoname.c_str(),treename.c_str(), incomp_splits);
         else
-            trees.computeRFDist(rfdist, &treeset2);
+            trees.computeRFDist(rfdist, &treeset2, (params.rf_dist_mode == RF_TWO_TREE_SETS_1BY1));
     } else {
         rfdist = new int [n*n];
         memset(rfdist, 0, n*n* sizeof(int));
