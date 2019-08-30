@@ -844,7 +844,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.partfinder_rcluster = 100;
     params.partfinder_rcluster_max = 0;
     params.partfinder_rcluster_fast = false;
-    params.partfinder_1model = false;
+    params.partfinder_1model = MERGE_NORMAL;
     params.partfinder_kmeans = false;
     params.partfinder_log_rate = false;
     params.remove_empty_seq = true;
@@ -1965,7 +1965,12 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
 
             if (strcmp(argv[cnt], "--merge-fast") == 0) {
-                params.partfinder_1model = true;
+                params.partfinder_1model = MERGE_FAST;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--merge-fastest") == 0) {
+                params.partfinder_1model = MERGE_FATEST;
                 continue;
             }
 

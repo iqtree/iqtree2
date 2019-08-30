@@ -412,6 +412,10 @@ enum ModelTestCriterion {
     MTC_AIC, MTC_AICC, MTC_BIC, MTC_ALL
 };
 
+enum ModelTestMerge {
+    MERGE_NORMAL, MERGE_FAST, MERGE_FATEST
+};
+
 /**
         Stopping condition type
  */
@@ -900,7 +904,7 @@ public:
     bool partfinder_rcluster_fast;
 
     /** use one model (GTR for DNA, LG for protein) for partition finder */
-    bool partfinder_1model;
+    ModelTestMerge partfinder_1model;
 
     /** use k-means to merge partitions using partition rate */
     bool partfinder_kmeans;

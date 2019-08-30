@@ -895,7 +895,7 @@ public:
  */
 string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
         ModelsBlock *models_block, int num_threads, int brlen_type,
-        string set_name = "", string in_model_name = "", ModelAdjust *adjust = NULL, bool single_model = false);
+        string set_name = "", string in_model_name = "", ModelAdjust *adjust = NULL, ModelTestMerge merge_speed = MERGE_NORMAL);
 
 /**
  * select models for all partitions
@@ -910,7 +910,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
  * @param models (OUT) vectors of model names
  * @return maximum number of rate categories
  */
-int getModelList(Params &params, Alignment *aln, StrVector &models, bool separate_rate, bool single_model);
+int getModelList(Params &params, Alignment *aln, StrVector &models, bool separate_rate, ModelTestMerge merge_speed);
 
 /**
  compute log-adapter function according to Whelan et al. 2015
@@ -978,10 +978,10 @@ double computeAdapter(Alignment *orig_aln, Alignment *newaln, int &adjusted_df) 
  */
 string testModelOMatic(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
     ModelsBlock *models_block, int num_threads, int brlen_type,
-    string set_name = "", string in_model_name = "", bool single_model = false)
+    string set_name = "", string in_model_name = "", ModelTestMerge merge_speed = MERGE_NORMAL)
 {
     string model_name = testModel(params, in_tree, model_info, models_block, num_threads,
-                                  brlen_type, set_name, in_model_name, NULL, single_model);
+                                  brlen_type, set_name, in_model_name, NULL, merge_speed);
     if (!params.modelomatic || in_tree->aln->seq_type != SEQ_CODON)
         return model_name;
 
@@ -1034,7 +1034,7 @@ string testModelOMatic(Params &params, PhyloTree* in_tree, ModelCheckpoint &mode
         in_tree->aln = newaln;
         ModelInfo info;
         info.name = testModel(params, in_tree, model_info, models_block, num_threads,
-                                      brlen_type, set_name, in_model_name, &adjust, single_model);
+            brlen_type, set_name, in_model_name, &adjust, merge_speed);
         check = info.restoreCheckpoint(&model_info);
         ASSERT(check);
         // correct log-likelihood with adapter function
@@ -1171,7 +1171,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
     //        checkpoint->dump(true);
     
     StrVector model_names;
-    int max_cats = getModelList(params, iqtree.aln, model_names, params.model_test_separate_rate, true);
+    int max_cats = getModelList(params, iqtree.aln, model_names, params.model_test_separate_rate, MERGE_FATEST);
     
     uint64_t mem_size = iqtree.getMemoryRequiredThreaded(max_cats);
     cout << "NOTE: ModelFinder requires " << (mem_size / 1024) / 1024 << " MB RAM!" << endl;
@@ -1242,28 +1242,31 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
  * @param models (OUT) vectors of model names
  * @return maximum number of rate categories
  */
-int getModelList(Params &params, Alignment *aln, StrVector &models, bool separate_rate, bool single_model) {
+int getModelList(Params &params, Alignment *aln, StrVector &models, bool separate_rate, ModelTestMerge merge_speed) {
 	StrVector model_names;
     StrVector freq_names;
 	SeqType seq_type = aln->seq_type;
     
 	const char *rate_options[]    = {  "", "+I", "+ASC", "+G", "+I+G", "+ASC+G", "+R", "+ASC+R"};
-	bool test_options_default[]   = {true, true,  false, true,   true,    false,false,    false};
-	bool test_options_morph[]     = {true,false,   true, true,  false,     true,false,    false};    
-	bool test_options_noASC_I[]   = {true,false,  false, true,  false,    false,false,    false};    
-	bool test_options_asc[]       ={false,false,   true,false,  false,     true,false,    false};
-	bool test_options_new[]       = {true, true,  false, true,   true,    false, true,    false};
-	bool test_options_morph_new[] = {true,false,   true, true,  false,     true, true,     true};
-	bool test_options_noASC_I_new[] = {true,false,  false, true,  false,    false, true,    false};
-	bool test_options_asc_new[]   ={false,false,   true,false,  false,     true,false,     true};
-	bool test_options_pomo[]      = {true, false,  false, true,   false,   false,false,    false};
-    bool test_options_norate[]    = {true, false,  false, false,   false,   false,false,    false};
+	bool test_options_default[]   = {true,   true, false,  true,  true,   false, false,  false};
+    bool test_options_fast[]      = {false, false, false, false,  true,   false, false,  false};
+	bool test_options_morph[]     = {true,  false,  true,  true, false,    true, false,  false};
+    bool test_options_morph_fast[]= {false, false, false, false, false,    true, false,  false};
+	bool test_options_noASC_I[]   = {true,  false, false,  true, false,   false, false,  false};
+    bool test_options_noASC_I_fast[]={false,false, false,  true, false,   false, false,  false};
+	bool test_options_asc[]       ={false,  false,  true, false, false,    true, false,  false};
+	bool test_options_new[]       = {true,   true, false,  true,  true,   false,  true,  false};
+	bool test_options_morph_new[] = {true,  false,  true,  true, false,    true,  true,   true};
+	bool test_options_noASC_I_new[]= {true, false, false,  true, false,   false,  true,  false};
+	bool test_options_asc_new[]   = {false, false,  true, false, false,    true, false,   true};
+	bool test_options_pomo[]      = {true,  false, false,  true, false,   false, false,  false};
+    bool test_options_norate[]    = {true,  false, false, false, false,   false, false,  false};
     bool *test_options = test_options_default;
 //	bool test_options_codon[] =  {true,false,  false,false,  false,    false};
 	const int noptions = sizeof(rate_options) / sizeof(char*);
 	int i, j;
     
-    if (single_model) {
+    if (merge_speed != MERGE_NORMAL) {
         model_names.push_back(getUsualModelSubst(seq_type));
     } else if (seq_type == SEQ_BINARY) {
 		if (params.model_set == NULL) {
@@ -1470,7 +1473,7 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
     // If not PoMo, go on with normal treatment.
     else if (aln->frac_invariant_sites == 0.0) {
         // morphological or SNP data: activate +ASC
-        if (with_new) {
+        if (with_new && merge_speed != MERGE_FATEST) {
             if (with_asc)
                 test_options = test_options_asc_new;
             else if (seq_type == SEQ_DNA || seq_type == SEQ_BINARY || seq_type == SEQ_MORPH)
@@ -1479,16 +1482,23 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
                 test_options = test_options_noASC_I_new;
         } else if (with_asc)
             test_options = test_options_asc;
-        else if (seq_type == SEQ_DNA || seq_type == SEQ_BINARY || seq_type == SEQ_MORPH)
-            test_options = test_options_morph;
-        else
-            test_options = test_options_noASC_I;
+        else if (seq_type == SEQ_DNA || seq_type == SEQ_BINARY || seq_type == SEQ_MORPH) {
+            if (merge_speed == MERGE_FATEST)
+                test_options = test_options_morph_fast;
+            else
+                test_options = test_options_morph;
+        } else {
+            if (merge_speed == MERGE_FATEST)
+                test_options = test_options_noASC_I_fast;
+            else
+                test_options = test_options_noASC_I;
+        }
     } else if (aln->frac_invariant_sites >= 1.0) {
         // 2018-06-12: alignment with only invariant sites, no rate variation added
         test_options = test_options_norate;
 	} else {
         // normal data, use +I instead
-        if (with_new) {
+        if (with_new && merge_speed != MERGE_FATEST) {
             // change +I+G to +R
             if (with_asc)
                 test_options = test_options_asc_new;
@@ -1496,7 +1506,9 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
                 test_options = test_options_new;
         } else if (with_asc) {
             test_options = test_options_asc;
-        } else
+        } else if (merge_speed == MERGE_FATEST)
+            test_options = test_options_fast;
+        else
             test_options = test_options_default;
         if (aln->frac_const_sites == 0.0) {
             // deactivate +I
@@ -2035,7 +2047,7 @@ string testConcatModel(Params &params, SuperAlignment *super_aln, ModelCheckpoin
 double doKmeansClustering(Params &params, PhyloSuperTree *in_tree,
     int ncluster, DoubleVector &lenvec,
     ModelCheckpoint &model_info, ModelsBlock *models_block,
-    int num_threads, bool single_model,
+    int num_threads, ModelTestMerge merge_speed,
     vector<set<int> > &gene_sets, StrVector &model_names)
 {
     
@@ -2104,7 +2116,7 @@ double doKmeansClustering(Params &params, PhyloSuperTree *in_tree,
             }
             best_model.name = testModelOMatic(params, tree, part_model_info, models_block,
                 params.model_test_and_tree ? num_threads : 1, params.partition_type,
-                set_name, "", single_model);
+                set_name, "", merge_speed);
             best_model.restoreCheckpoint(&part_model_info);
             model_names.push_back(best_model.name);
             delete tree;
@@ -2252,7 +2264,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
         brlen_type = BRLEN_OPTIMIZE;
 
     bool test_merge = (params.model_name.find("LINK") != string::npos || params.model_name.find("MERGE") != string::npos) && params.partition_type != TOPO_UNLINKED;
-    bool single_model = (params.partfinder_1model) && test_merge && in_tree->size() > 1;
+    ModelTestMerge merge_speed = (test_merge && in_tree->size() > 1) ? params.partfinder_1model : MERGE_NORMAL;
     
 #ifdef _OPENMP
     parallel_over_partitions = !params.model_test_and_tree && (in_tree->size() >= num_threads);
@@ -2270,7 +2282,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             part_model_name = this_tree->aln->model_name;
         ModelInfo best_model;
 		best_model.name = testModelOMatic(params, this_tree, part_model_info, models_block,
-            (parallel_over_partitions ? 1 : num_threads), brlen_type, this_tree->aln->name, part_model_name, single_model);
+            (parallel_over_partitions ? 1 : num_threads), brlen_type, this_tree->aln->name, part_model_name, merge_speed);
 
         bool check = (best_model.restoreCheckpoint(&part_model_info));
         ASSERT(check);
@@ -2310,7 +2322,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     fixPartitions(in_tree);
     
 	double inf_score = computeInformationScore(lhsum, dfsum, ssize, params.model_test_criterion);
-	cout << "Full partition model " << criterionName(params.model_test_criterion) << " score: " << inf_score << " (LnL: " << lhsum << "  df:" << dfsum << ")" << endl;
+	cout << "Full partition model " << criterionName(params.model_test_criterion)
+         << " score: " << inf_score << " (LnL: " << lhsum << "  df:" << dfsum << ")" << endl;
 
 	if (!test_merge) {
 		super_aln->printBestPartition((string(params.out_prefix) + ".best_scheme.nex").c_str());
@@ -2346,7 +2359,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             vector<set<int> > this_gene_sets;
             StrVector this_model_names;
             //double sum = in_tree->size()/std::accumulate(lenvec.begin(), lenvec.end(), 0.0);
-            double score = doKmeansClustering(params, in_tree, ncluster, lenvec, model_info, models_block, num_threads, single_model, this_gene_sets, this_model_names);
+            double score = doKmeansClustering(params, in_tree, ncluster, lenvec, model_info,
+                models_block, num_threads, merge_speed, this_gene_sets, this_model_names);
             if (score < cur_score) {
                 cout << "Better score found: " << score << endl;
                 cur_score = score;
@@ -2460,7 +2474,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
                     tree->saveCheckpoint();
                 }
                 best_model.name = testModelOMatic(params, tree, part_model_info, models_block,
-                    params.model_test_and_tree ? num_threads : 1, params.partition_type, cur_pair.set_name, "", single_model);
+                    params.model_test_and_tree ? num_threads : 1, params.partition_type, cur_pair.set_name, "", merge_speed);
                 best_model.restoreCheckpoint(&part_model_info);
                 /*
                 if (params.model_test_and_tree) {
@@ -2583,7 +2597,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     if (gene_sets.size() < in_tree->size())
         mergePartitions(in_tree, gene_sets, model_names);
 
-    if (single_model) {
+    if (merge_speed == MERGE_FAST) {
         // test all candidate models again
         lhsum = 0.0;
         dfsum = 0;
@@ -2625,7 +2639,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             ModelInfo best_model;
             best_model.name = testModelOMatic(params, this_tree, part_model_info, models_block,
                 (parallel_over_partitions ? 1 : num_threads), brlen_type,
-                this_tree->aln->name, part_model_name, false);
+                this_tree->aln->name, part_model_name, MERGE_NORMAL);
             
             bool check = (best_model.restoreCheckpoint(&part_model_info));
             ASSERT(check);
@@ -2691,14 +2705,14 @@ bool isMixtureModel(ModelsBlock *models_block, string &model_str) {
 
 string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
     ModelsBlock *models_block, int num_threads, int brlen_type,
-    string set_name, string in_model_name, ModelAdjust *adjust, bool single_model)
+    string set_name, string in_model_name, ModelAdjust *adjust, ModelTestMerge merge_speed)
 {
     ModelCheckpoint *checkpoint = &model_info;
 
 	in_tree->params = &params;
 	StrVector model_names;
     if (in_model_name.empty())
-        getModelList(params, in_tree->aln, model_names, params.model_test_separate_rate, single_model);
+        getModelList(params, in_tree->aln, model_names, params.model_test_separate_rate, merge_speed);
     else {
         model_names.push_back(in_model_name);
     }
