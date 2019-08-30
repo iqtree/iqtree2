@@ -1642,11 +1642,11 @@ void transferModelParameters(PhyloSuperTree *super_tree, ModelCheckpoint &model_
     enum MeanComp {GEOM_MEAN, ARIT_MEAN};
     enum ValType {VAL_SINGLE, VAL_VECTOR};
     vector<tuple<ValType, MeanComp,string> > info_strings = {
-        {VAL_SINGLE, ARIT_MEAN, (string)"RateGamma" + CKP_SEP + "gamma_shape"},
-        {VAL_SINGLE, ARIT_MEAN, (string)"RateGammaInvar" + CKP_SEP + "gamma_shape"},
-        {VAL_SINGLE, ARIT_MEAN, (string)"RateGammaInvar" + CKP_SEP + "p_invar"},
-        {VAL_SINGLE, ARIT_MEAN, (string)"RateInvar" + CKP_SEP + "p_invar"},
-//        {VAL_VECTOR, GEOM_MEAN, (string)"ModelDNA" + CKP_SEP + "rates"},
+        make_tuple(VAL_SINGLE, ARIT_MEAN, (string)"RateGamma" + CKP_SEP + "gamma_shape"),
+        make_tuple(VAL_SINGLE, ARIT_MEAN, (string)"RateGammaInvar" + CKP_SEP + "gamma_shape"),
+        make_tuple(VAL_SINGLE, ARIT_MEAN, (string)"RateGammaInvar" + CKP_SEP + "p_invar"),
+        make_tuple(VAL_SINGLE, ARIT_MEAN, (string)"RateInvar" + CKP_SEP + "p_invar")
+        //make_tuple(VAL_VECTOR, GEOM_MEAN, (string)"ModelDNA" + CKP_SEP + "rates")
     };
     for (auto info : info_strings) {
         switch (std::get<0>(info)) {
