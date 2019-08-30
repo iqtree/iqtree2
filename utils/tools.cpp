@@ -929,6 +929,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 //    params.avoid_duplicated_trees = false;
     params.writeDistImdTrees = false;
     params.rf_dist_mode = 0;
+    params.rf_same_pair = false;
     params.normalize_tree_dist = false;
     params.mvh_site_rate = false;
     params.rate_mh_type = true;
@@ -2754,7 +2755,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
             if (strcmp(argv[cnt], "-rf1") == 0 || strcmp(argv[cnt], "--tree-dist1") == 0) {
-                params.rf_dist_mode = RF_TWO_TREE_SETS_1BY1;
+                params.rf_dist_mode = RF_TWO_TREE_SETS;
+                params.rf_same_pair = true;
                 cnt++;
                 if (cnt >= argc)
                     throw "Use --tree-dist1 <second_tree>";

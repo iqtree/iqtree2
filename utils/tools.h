@@ -331,7 +331,6 @@ const int RF_ADJACENT_PAIR = 1;
 const int RF_ALL_PAIR = 2;
 const int RF_TWO_TREE_SETS = 3;
 const int RF_TWO_TREE_SETS_EXTENDED = 4; // work for trees with non-equal taxon sets
-const int RF_TWO_TREE_SETS_1BY1 = 5; // comparing k-th tree of set1 with k-th tree of set2
 
 /**
         split weight summarization
@@ -1608,6 +1607,11 @@ public:
      */
     int rf_dist_mode;
 
+    /**
+     true to compute distance between the same k-th tree in two sets
+     */
+    bool rf_same_pair;
+    
     /**
      true to normalize tree distances, false otherwise
      */
