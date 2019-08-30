@@ -2133,9 +2133,9 @@ void startTreeReconstruction(Params &params, IQTree* &iqtree, ModelCheckpoint &m
 void optimizeConTree(Params &params, IQTree *tree) {
     string contree_file = string(params.out_prefix) + ".contree";
     
-    IntVector rfdist;
+    DoubleVector rfdist;
     tree->computeRFDist(contree_file.c_str(), rfdist);
-    tree->contree_rfdist = rfdist[0];
+    tree->contree_rfdist = (int)rfdist[0];
     
     tree->readTreeFile(contree_file);
     
@@ -4247,7 +4247,7 @@ void assignBootstrapSupport(const char *input_trees, int burnin, int max_count,
     else {
         //mytree.createBootstrapSupport(boot_trees);
         cout << "Unequal taxon sets, rereading trees..." << endl;
-        IntVector rfdist;
+        DoubleVector rfdist;
         mytree.computeRFDist(input_trees, rfdist, 1);
     }
     

@@ -2270,7 +2270,7 @@ void MTree::assignBranchSupport(istream &in, map<int,BranchSupportInfo> &branch_
 }
 */
 
-void MTree::computeRFDist(const char *trees_file, IntVector &dist, int assign_sup) {
+void MTree::computeRFDist(const char *trees_file, DoubleVector &dist, int assign_sup) {
 	cout << "Reading input trees file " << trees_file << endl;
 	try {
 		ifstream in;
@@ -2283,7 +2283,7 @@ void MTree::computeRFDist(const char *trees_file, IntVector &dist, int assign_su
 	}
 }
 
-void MTree::computeRFDist(istream &in, IntVector &dist, int assign_sup) {
+void MTree::computeRFDist(istream &in, DoubleVector &dist, int assign_sup, bool one_tree) {
 	SplitGraph mysg;
     NodeVector nodes;
 	convertSplits(mysg, &nodes, root->neighbors[0]->node);
@@ -2365,7 +2365,11 @@ void MTree::computeRFDist(istream &in, IntVector &dist, int assign_sup) {
 		}
 
 		//cout << "common_splits = " << common_splits << endl;
-        int rf_val = branchNum-leafNum + tree.branchNum-tree.leafNum - 2*common_splits;
+        double max_dist = branchNum-leafNum + tree.branchNum-tree.leafNum;
+        double rf_val = max_dist - 2*common_splits;
+        if (Params::getInstance().normalize_tree_dist) {
+            rf_val = rf_val / max_dist;
+        }
 		dist.push_back(rf_val);
 		char ch;
 		in.exceptions(ios::goodbit);
@@ -2373,6 +2377,9 @@ void MTree::computeRFDist(istream &in, IntVector &dist, int assign_sup) {
 		if (in.eof()) break;
 		in.unget();
 		in.exceptions(ios::failbit | ios::badbit);
+        
+        if (one_tree)
+            break;
 
 	}
     if (assign_sup)

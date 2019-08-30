@@ -754,9 +754,9 @@ public:
 	 * @param trees_file set of trees in NEWICK
 	 * @param dist (OUT) distance vector
 	 */
-	void computeRFDist(const char *trees_file, IntVector &dist, int assign_sup = 0);
+	void computeRFDist(const char *trees_file, DoubleVector &dist, int assign_sup = 0);
 
-	void computeRFDist(istream &in, IntVector &dist, int assign_sup = 0);
+	void computeRFDist(istream &in, DoubleVector &dist, int assign_sup = 0, bool one_tree = false);
 
 	/**
 	 * insert new taxa next to the existing taxa in the tree
