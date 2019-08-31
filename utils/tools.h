@@ -407,6 +407,16 @@ enum AlnFormat {
     ALN_PHYLIP, ALN_FASTA
 };
 
+/*
+    outfile file format
+ FORMAT_NORMAL: usual file format used so far
+ FORMAT_CSV: csv file format
+ FORMAT_TSV: tab separated file format
+ */
+enum FileFormat {
+    FORMAT_NORMAL, FORMAT_CSV, FORMAT_TSV
+};
+
 enum ModelTestCriterion {
     MTC_AIC, MTC_AICC, MTC_BIC, MTC_ALL
 };
@@ -962,6 +972,11 @@ public:
             alignment output format
      */
     AlnFormat aln_output_format;
+    
+    /**
+        output file format
+     */
+    FileFormat output_format;
 
     /**
      tree in extended newick format with node label like [&label=""]

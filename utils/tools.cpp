@@ -854,6 +854,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.aln_output = NULL;
     params.aln_site_list = NULL;
     params.aln_output_format = ALN_PHYLIP;
+    params.output_format = FORMAT_NORMAL;
     params.newick_extended_format = false;
     params.gap_masked_aln = NULL;
     params.concatenate_aln = NULL;
@@ -2090,6 +2091,17 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Unknown output format";
 				continue;
 			}
+
+
+            if (strcmp(argv[cnt], "--out-csv") == 0) {
+                params.output_format = FORMAT_CSV;
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "--out-tsv") == 0) {
+                params.output_format = FORMAT_TSV;
+                continue;
+            }            
 
             if (strcmp(argv[cnt], "--figtree") == 0) {
                 params.newick_extended_format = true;
