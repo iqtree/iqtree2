@@ -2085,7 +2085,7 @@ string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon) {
             cout << endl;
         }
 
-        if (modOptScore < curScore - 1.0) {
+        if (modOptScore < curScore - 1.0 && params->partition_type != TOPO_UNLINKED) {
             cout << "  BUG: Tree logl gets worse after model optimization!" << endl;
             cout << "  Old logl: " << curScore << " / " << "new logl: " << modOptScore << endl;
             printTree("debug.tree");
