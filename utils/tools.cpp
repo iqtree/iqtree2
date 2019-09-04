@@ -3641,7 +3641,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.model_test_sample_size = convert_int(argv[cnt]);
 				continue;
 			}
-			if (strcmp(argv[cnt], "-nt") == 0 || strcmp(argv[cnt], "-c") == 0) {
+			if (strcmp(argv[cnt], "-nt") == 0 || strcmp(argv[cnt], "-c") == 0 ||
+                strcmp(argv[cnt], "-T") == 0  || strcmp(argv[cnt], "--threads") == 0) {
 				cnt++;
 				if (cnt >= argc)
 				throw "Use -nt <num_threads|AUTO>";
@@ -4079,7 +4080,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --runs NUMBER        Number of indepedent runs (default: 1)" << endl
     << "  --redo               Ignore checkpoint and overwrite outputs (default: OFF)" << endl
 #ifdef _OPENMP
-    << "  -c NUMBER|AUTO       No. cores/threads or AUTO-detect (default: 1)" << endl
+    << "  -T NUMBER|AUTO       No. cores/threads or AUTO-detect (default: 1)" << endl
 #endif
     << endl << "PARTITION MODEL:" << endl
     << "  -p FILE|DIR          NEXUS/RAxML partition file or directory with alignments" << endl
