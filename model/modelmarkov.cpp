@@ -987,11 +987,14 @@ double ModelMarkov::optimizeParameters(double gradient_epsilon) {
 	setVariables(variables);
     setVariables(variables2);
 	setBounds(lower_bound, upper_bound, bound_check);
-//    if (phylo_tree->params->optimize_alg.find("BFGS-B") == string::npos)
-//        score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
-//    else
-//        score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
+    if (phylo_tree->params->optimize_alg.find("BFGS-B") == string::npos)
+        score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
+    else
+        score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
 
+    bool changed = getVariables(variables);
+
+    /* 2019-09-05: REMOVED due to numerical issue (NAN) with L-BFGS-B
     // 2017-12-06: more robust optimization using 2 different routines
     // when estimates are at boundary
     score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
@@ -1010,6 +1013,7 @@ double ModelMarkov::optimizeParameters(double gradient_epsilon) {
             changed = getVariables(variables);
         }
     }
+     */
 
     // BQM 2015-09-07: normalize state_freq
 	if (is_reversible && freq_type == FREQ_ESTIMATE) {

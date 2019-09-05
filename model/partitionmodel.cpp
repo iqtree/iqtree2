@@ -347,11 +347,14 @@ double PartitionModel::optimizeLinkedModel(bool write_info, double gradient_epsi
 //        lower_bound[i] = MIN_RATE*0.2;
 //        upper_bound[i] = MAX_RATE*2.0;
 //    }
-//    if (Params::getInstance().optimize_alg.find("NR") != string::npos)
-//        score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
-//    else
-//        score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
-    
+    if (Params::getInstance().optimize_alg.find("NR") != string::npos)
+        score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
+    else
+        score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
+
+    bool changed = getVariables(variables);
+
+    /* 2019-09-05: REMOVED due to numerical issue (NAN) with L-BFGS-B
     // 2017-12-06: more robust optimization using 2 different routines
     // when estimates are at boundary
     score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
@@ -370,6 +373,7 @@ double PartitionModel::optimizeLinkedModel(bool write_info, double gradient_epsi
             changed = getVariables(variables);
         }
     }
+    */
     
     // BQM 2015-09-07: normalize state_freq
     if (model->isReversible() && model->freq_type == FREQ_ESTIMATE) {
