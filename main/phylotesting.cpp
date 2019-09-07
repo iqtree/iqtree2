@@ -178,7 +178,7 @@ string getUsualModelSubst(SeqType seq_type) {
     switch (seq_type) {
         case SEQ_DNA: return "GTR";
         case SEQ_PROTEIN: return "LG";
-        case SEQ_CODON: return "GY"; // too much computation, thus no +G
+        case SEQ_CODON: return "GY";
         case SEQ_BINARY: return "GTR2";
         case SEQ_MORPH: return "MK";
         case SEQ_POMO: return "GTR+P";
@@ -891,11 +891,12 @@ public:
  @param model_info (IN/OUT) information for all models considered
  @param set_name for partition model selection
  @param print_mem_usage true to print RAM memory used (default: false)
+ @param merge_phase true to consider models for merging phase
  @return name of best-fit-model
  */
 string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
         ModelsBlock *models_block, int num_threads, int brlen_type,
-        string set_name = "", string in_model_name = "", ModelAdjust *adjust = NULL, ModelTestMerge merge_speed = MERGE_NORMAL);
+        string set_name = "", string in_model_name = "", ModelAdjust *adjust = NULL, bool merge_phase = false);
 
 /**
  * select models for all partitions
@@ -907,10 +908,14 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 
 /**
  * get the list of model
+ * @param params program parameters
  * @param models (OUT) vectors of model names
+ * @param aln alignment
+ * param separate_rate true to separate rates from models
+ * @param merge_phase true to consider models for merging phase
  * @return maximum number of rate categories
  */
-int getModelList(Params &params, Alignment *aln, StrVector &models, bool separate_rate, ModelTestMerge merge_speed);
+int getModelList(Params &params, Alignment *aln, StrVector &models, bool separate_rate, bool merge_phase);
 
 /**
  compute log-adapter function according to Whelan et al. 2015
@@ -978,10 +983,10 @@ double computeAdapter(Alignment *orig_aln, Alignment *newaln, int &adjusted_df) 
  */
 string testModelOMatic(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
     ModelsBlock *models_block, int num_threads, int brlen_type,
-    string set_name = "", string in_model_name = "", ModelTestMerge merge_speed = MERGE_NORMAL)
+    string set_name = "", string in_model_name = "", bool merge_phase = false)
 {
     string model_name = testModel(params, in_tree, model_info, models_block, num_threads,
-                                  brlen_type, set_name, in_model_name, NULL, merge_speed);
+                                  brlen_type, set_name, in_model_name, NULL, merge_phase);
     if (!params.modelomatic || in_tree->aln->seq_type != SEQ_CODON)
         return model_name;
 
@@ -1034,7 +1039,7 @@ string testModelOMatic(Params &params, PhyloTree* in_tree, ModelCheckpoint &mode
         in_tree->aln = newaln;
         ModelInfo info;
         info.name = testModel(params, in_tree, model_info, models_block, num_threads,
-            brlen_type, set_name, in_model_name, &adjust, merge_speed);
+            brlen_type, set_name, in_model_name, &adjust, merge_phase);
         check = info.restoreCheckpoint(&model_info);
         ASSERT(check);
         // correct log-likelihood with adapter function
@@ -1171,7 +1176,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
     //        checkpoint->dump(true);
     
     StrVector model_names;
-    int max_cats = getModelList(params, iqtree.aln, model_names, params.model_test_separate_rate, MERGE_FATEST);
+    int max_cats = getModelList(params, iqtree.aln, model_names, params.model_test_separate_rate, false);
     
     uint64_t mem_size = iqtree.getMemoryRequiredThreaded(max_cats);
     cout << "NOTE: ModelFinder requires " << (mem_size / 1024) / 1024 << " MB RAM!" << endl;
@@ -1236,153 +1241,131 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
     }
 }
 
-
 /**
- * get the list of model
- * @param models (OUT) vectors of model names
- * @return maximum number of rate categories
+ * get the list of substitution models
  */
-int getModelList(Params &params, Alignment *aln, StrVector &models, bool separate_rate, ModelTestMerge merge_speed) {
-	StrVector model_names;
-    StrVector freq_names;
-	SeqType seq_type = aln->seq_type;
+void getModelSubst(SeqType seq_type, bool standard_code, string model_name,
+                   string model_set, char *model_subset, StrVector &model_names) {
+    int i, j;
     
-	const char *rate_options[]    = {  "", "+I", "+ASC", "+G", "+I+G", "+ASC+G", "+R", "+ASC+R"};
-	bool test_options_default[]   = {true,   true, false,  true,  true,   false, false,  false};
-    bool test_options_fast[]      = {false, false, false, false,  true,   false, false,  false};
-	bool test_options_morph[]     = {true,  false,  true,  true, false,    true, false,  false};
-    bool test_options_morph_fast[]= {false, false, false, false, false,    true, false,  false};
-	bool test_options_noASC_I[]   = {true,  false, false,  true, false,   false, false,  false};
-    bool test_options_noASC_I_fast[]={false,false, false,  true, false,   false, false,  false};
-	bool test_options_asc[]       ={false,  false,  true, false, false,    true, false,  false};
-	bool test_options_new[]       = {true,   true, false,  true,  true,   false,  true,  false};
-	bool test_options_morph_new[] = {true,  false,  true,  true, false,    true,  true,   true};
-	bool test_options_noASC_I_new[]= {true, false, false,  true, false,   false,  true,  false};
-	bool test_options_asc_new[]   = {false, false,  true, false, false,    true, false,   true};
-	bool test_options_pomo[]      = {true,  false, false,  true, false,   false, false,  false};
-    bool test_options_norate[]    = {true,  false, false, false, false,   false, false,  false};
-    bool *test_options = test_options_default;
-//	bool test_options_codon[] =  {true,false,  false,false,  false,    false};
-	const int noptions = sizeof(rate_options) / sizeof(char*);
-	int i, j;
-    
-    if (merge_speed != MERGE_NORMAL) {
+    if (model_set == "1") {
         model_names.push_back(getUsualModelSubst(seq_type));
-    } else if (seq_type == SEQ_BINARY) {
-		if (params.model_set == NULL) {
+        return;
+    }
+    
+    if (seq_type == SEQ_BINARY) {
+        if (model_set.empty()) {
             copyCString(bin_model_names, sizeof(bin_model_names) / sizeof(char*), model_names);
-        } else if (params.model_set[0] == '+') {
+        } else if (model_set[0] == '+') {
             // append model_set into existing models
-            convert_string_vec(params.model_set+1, model_names);
+            convert_string_vec(model_set.c_str()+1, model_names);
             appendCString(bin_model_names, sizeof(bin_model_names) / sizeof(char*), model_names);
-		} else {
-			convert_string_vec(params.model_set, model_names);
-		}
-	} else if (seq_type == SEQ_MORPH) {
-		if (params.model_set == NULL) {
-            copyCString(morph_model_names, sizeof(morph_model_names) / sizeof(char*), model_names);
-        } else if (params.model_set[0] == '+') {
-            // append model_set into existing models
-            convert_string_vec(params.model_set+1, model_names);
-            appendCString(morph_model_names, sizeof(morph_model_names) / sizeof(char*), model_names);
-		} else {
-			convert_string_vec(params.model_set, model_names);
-		}
-	} else if (seq_type == SEQ_DNA || seq_type == SEQ_POMO) {
-		if (params.model_set == NULL) {
-			copyCString(dna_model_names, sizeof(dna_model_names) / sizeof(char*), model_names);
-//            copyCString(dna_freq_names, sizeof(dna_freq_names)/sizeof(char*), freq_names);
-		} else if (strcmp(params.model_set, "partitionfinder") == 0 || strcmp(params.model_set, "phyml") == 0) {
-			copyCString(dna_model_names_old, sizeof(dna_model_names_old) / sizeof(char*), model_names);
-//            copyCString(dna_freq_names, sizeof(dna_freq_names)/sizeof(char*), freq_names);
-		} else if (strcmp(params.model_set, "raxml") == 0) {
-			copyCString(dna_model_names_rax, sizeof(dna_model_names_rax) / sizeof(char*), model_names);
-//            copyCString(dna_freq_names, sizeof(dna_freq_names)/sizeof(char*), freq_names);
-		} else if (strcmp(params.model_set, "mrbayes") == 0) {
-			copyCString(dna_model_names_mrbayes, sizeof(dna_model_names_mrbayes) / sizeof(char*), model_names);
-//            copyCString(dna_freq_names, sizeof(dna_freq_names)/sizeof(char*), freq_names);
-        } else if (strcmp(params.model_set, "modelomatic") == 0) {
-            copyCString(dna_model_names_modelomatic, sizeof(dna_model_names_modelomatic) / sizeof(char*), model_names);
-		} else if (strcmp(params.model_set, "liemarkov") == 0) {
-			copyCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
-			appendCString(dna_model_names_lie_markov_ry, sizeof(dna_model_names_lie_markov_ry) / sizeof(char*), model_names);
-			appendCString(dna_model_names_lie_markov_ws, sizeof(dna_model_names_lie_markov_ws) / sizeof(char*), model_names);
-			appendCString(dna_model_names_lie_markov_mk, sizeof(dna_model_names_lie_markov_mk) / sizeof(char*), model_names);
-		} else if (strcmp(params.model_set, "liemarkovry") == 0) {
-			copyCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
-			appendCString(dna_model_names_lie_markov_ry, sizeof(dna_model_names_lie_markov_ry) / sizeof(char*), model_names);
-		} else if (strcmp(params.model_set, "liemarkovws") == 0) {
-			copyCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
-			appendCString(dna_model_names_lie_markov_ws, sizeof(dna_model_names_lie_markov_ws) / sizeof(char*), model_names);
-		} else if (strcmp(params.model_set, "liemarkovmk") == 0) {
-			copyCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
-			appendCString(dna_model_names_lie_markov_mk, sizeof(dna_model_names_lie_markov_mk) / sizeof(char*), model_names);
-		} else if (strcmp(params.model_set, "strandsymmetric") == 0) {
-			copyCString(dna_model_names_lie_markov_strsym, sizeof(dna_model_names_lie_markov_strsym) / sizeof(char*), model_names);
-			// IMPORTANT NOTE: If you add any more -mset names for sets of Lie Markov models,
-			// you also need to change getPrototypeModel function.
-        } else if (params.model_set[0] == '+') {
-            // append model_set into existing models
-            convert_string_vec(params.model_set+1, model_names);
-            appendCString(dna_model_names, sizeof(dna_model_names) / sizeof(char*), model_names);
-		} else {
-			convert_string_vec(params.model_set, model_names);
-//            copyCString(dna_freq_names, sizeof(dna_freq_names)/sizeof(char*), freq_names);
-		}
-
-        if (params.model_name.find("+LMRY") != string::npos) {
-			appendCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
-			appendCString(dna_model_names_lie_markov_ry, sizeof(dna_model_names_lie_markov_ry) / sizeof(char*), model_names);
-        } else if (params.model_name.find("+LMWS") != string::npos) {
-			appendCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
-			appendCString(dna_model_names_lie_markov_ws, sizeof(dna_model_names_lie_markov_ws) / sizeof(char*), model_names);
-        } else if (params.model_name.find("+LMMK") != string::npos) {
-			appendCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
-			appendCString(dna_model_names_lie_markov_mk, sizeof(dna_model_names_lie_markov_mk) / sizeof(char*), model_names);
-        } else if (params.model_name.find("+LMSS") != string::npos) {
-			appendCString(dna_model_names_lie_markov_strsym, sizeof(dna_model_names_lie_markov_strsym) / sizeof(char*), model_names);
-        } else if (params.model_name.find("+LM") != string::npos) {
-			appendCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
-			appendCString(dna_model_names_lie_markov_ry, sizeof(dna_model_names_lie_markov_ry) / sizeof(char*), model_names);
-			appendCString(dna_model_names_lie_markov_ws, sizeof(dna_model_names_lie_markov_ws) / sizeof(char*), model_names);
-			appendCString(dna_model_names_lie_markov_mk, sizeof(dna_model_names_lie_markov_mk) / sizeof(char*), model_names);
+        } else {
+            convert_string_vec(model_set.c_str(), model_names);
         }
-	} else if (seq_type == SEQ_PROTEIN) {
-		if (params.model_set == NULL) {
-			copyCString(aa_model_names, sizeof(aa_model_names) / sizeof(char*), model_names);
-		} else if (strcmp(params.model_set, "partitionfinder") == 0 || strcmp(params.model_set, "phyml") == 0) {
-			copyCString(aa_model_names_phyml, sizeof(aa_model_names_phyml) / sizeof(char*), model_names);
-		} else if (strcmp(params.model_set, "raxml") == 0) {
-			copyCString(aa_model_names_rax, sizeof(aa_model_names_rax) / sizeof(char*), model_names);
-		} else if (strcmp(params.model_set, "mrbayes") == 0) {
-			copyCString(aa_model_names_mrbayes, sizeof(aa_model_names_mrbayes) / sizeof(char*), model_names);
-        } else if (strcmp(params.model_set, "modelomatic") == 0) {
-            copyCString(aa_model_names_modelomatic, sizeof(aa_model_names_modelomatic) / sizeof(char*), model_names);
-        } else if (params.model_set[0] == '+') {
+    } else if (seq_type == SEQ_MORPH) {
+        if (model_set.empty()) {
+            copyCString(morph_model_names, sizeof(morph_model_names) / sizeof(char*), model_names);
+        } else if (model_set[0] == '+') {
             // append model_set into existing models
-            convert_string_vec(params.model_set+1, model_names);
-            appendCString(aa_model_names, sizeof(aa_model_names) / sizeof(char*), model_names);
-		} else {
-			convert_string_vec(params.model_set, model_names);
-		}
-        copyCString(aa_freq_names, sizeof(aa_freq_names)/sizeof(char*), freq_names);
+            convert_string_vec(model_set.c_str()+1, model_names);
+            appendCString(morph_model_names, sizeof(morph_model_names) / sizeof(char*), model_names);
+        } else {
+            convert_string_vec(model_set.c_str(), model_names);
+        }
+    } else if (seq_type == SEQ_DNA || seq_type == SEQ_POMO) {
+        if (model_set.empty()) {
+            copyCString(dna_model_names, sizeof(dna_model_names) / sizeof(char*), model_names);
+            //            copyCString(dna_freq_names, sizeof(dna_freq_names)/sizeof(char*), freq_names);
+        } else if (model_set == "partitionfinder" || model_set== "phyml") {
+            copyCString(dna_model_names_old, sizeof(dna_model_names_old) / sizeof(char*), model_names);
+            //            copyCString(dna_freq_names, sizeof(dna_freq_names)/sizeof(char*), freq_names);
+        } else if (model_set == "raxml") {
+            copyCString(dna_model_names_rax, sizeof(dna_model_names_rax) / sizeof(char*), model_names);
+            //            copyCString(dna_freq_names, sizeof(dna_freq_names)/sizeof(char*), freq_names);
+        } else if (model_set == "mrbayes") {
+            copyCString(dna_model_names_mrbayes, sizeof(dna_model_names_mrbayes) / sizeof(char*), model_names);
+            //            copyCString(dna_freq_names, sizeof(dna_freq_names)/sizeof(char*), freq_names);
+        } else if (model_set == "modelomatic") {
+            copyCString(dna_model_names_modelomatic, sizeof(dna_model_names_modelomatic) / sizeof(char*), model_names);
+        } else if (model_set == "liemarkov") {
+            copyCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
+            appendCString(dna_model_names_lie_markov_ry, sizeof(dna_model_names_lie_markov_ry) / sizeof(char*), model_names);
+            appendCString(dna_model_names_lie_markov_ws, sizeof(dna_model_names_lie_markov_ws) / sizeof(char*), model_names);
+            appendCString(dna_model_names_lie_markov_mk, sizeof(dna_model_names_lie_markov_mk) / sizeof(char*), model_names);
+        } else if (model_set == "liemarkovry") {
+            copyCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
+            appendCString(dna_model_names_lie_markov_ry, sizeof(dna_model_names_lie_markov_ry) / sizeof(char*), model_names);
+        } else if (model_set == "liemarkovws") {
+            copyCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
+            appendCString(dna_model_names_lie_markov_ws, sizeof(dna_model_names_lie_markov_ws) / sizeof(char*), model_names);
+        } else if (model_set == "liemarkovmk") {
+            copyCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
+            appendCString(dna_model_names_lie_markov_mk, sizeof(dna_model_names_lie_markov_mk) / sizeof(char*), model_names);
+        } else if (model_set == "strandsymmetric") {
+            copyCString(dna_model_names_lie_markov_strsym, sizeof(dna_model_names_lie_markov_strsym) / sizeof(char*), model_names);
+            // IMPORTANT NOTE: If you add any more -mset names for sets of Lie Markov models,
+            // you also need to change getPrototypeModel function.
+        } else if (model_set[0] == '+') {
+            // append model_set into existing models
+            convert_string_vec(model_set.c_str()+1, model_names);
+            appendCString(dna_model_names, sizeof(dna_model_names) / sizeof(char*), model_names);
+        } else {
+            convert_string_vec(model_set.c_str(), model_names);
+        }
         
-        if (params.model_subset) {
+        if (model_name.find("+LMRY") != string::npos) {
+            appendCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
+            appendCString(dna_model_names_lie_markov_ry, sizeof(dna_model_names_lie_markov_ry) / sizeof(char*), model_names);
+        } else if (model_name.find("+LMWS") != string::npos) {
+            appendCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
+            appendCString(dna_model_names_lie_markov_ws, sizeof(dna_model_names_lie_markov_ws) / sizeof(char*), model_names);
+        } else if (model_name.find("+LMMK") != string::npos) {
+            appendCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
+            appendCString(dna_model_names_lie_markov_mk, sizeof(dna_model_names_lie_markov_mk) / sizeof(char*), model_names);
+        } else if (model_name.find("+LMSS") != string::npos) {
+            appendCString(dna_model_names_lie_markov_strsym, sizeof(dna_model_names_lie_markov_strsym) / sizeof(char*), model_names);
+        } else if (model_name.find("+LM") != string::npos) {
+            appendCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
+            appendCString(dna_model_names_lie_markov_ry, sizeof(dna_model_names_lie_markov_ry) / sizeof(char*), model_names);
+            appendCString(dna_model_names_lie_markov_ws, sizeof(dna_model_names_lie_markov_ws) / sizeof(char*), model_names);
+            appendCString(dna_model_names_lie_markov_mk, sizeof(dna_model_names_lie_markov_mk) / sizeof(char*), model_names);
+        }
+    } else if (seq_type == SEQ_PROTEIN) {
+        if (model_set.empty()) {
+            copyCString(aa_model_names, sizeof(aa_model_names) / sizeof(char*), model_names);
+        } else if (model_set == "partitionfinder" || model_set == "phyml") {
+            copyCString(aa_model_names_phyml, sizeof(aa_model_names_phyml) / sizeof(char*), model_names);
+        } else if (model_set == "raxml") {
+            copyCString(aa_model_names_rax, sizeof(aa_model_names_rax) / sizeof(char*), model_names);
+        } else if (model_set == "mrbayes") {
+            copyCString(aa_model_names_mrbayes, sizeof(aa_model_names_mrbayes) / sizeof(char*), model_names);
+        } else if (model_set == "modelomatic") {
+            copyCString(aa_model_names_modelomatic, sizeof(aa_model_names_modelomatic) / sizeof(char*), model_names);
+        } else if (model_set[0] == '+') {
+            // append model_set into existing models
+            convert_string_vec(model_set.c_str()+1, model_names);
+            appendCString(aa_model_names, sizeof(aa_model_names) / sizeof(char*), model_names);
+        } else {
+            convert_string_vec(model_set.c_str(), model_names);
+        }
+        
+        if (model_subset) {
             StrVector submodel_names;
-            if (strncmp(params.model_subset, "nuclear", 3) == 0) {
+            if (strncmp(model_subset, "nuclear", 3) == 0) {
                 copyCString(aa_model_names_nuclear, sizeof(aa_model_names_nuclear) / sizeof(char*), submodel_names);
-            } else if (strncmp(params.model_subset, "mitochondrial", 3) == 0) {
+            } else if (strncmp(model_subset, "mitochondrial", 3) == 0) {
                 copyCString(aa_model_names_mitochondrial, sizeof(aa_model_names_mitochondrial) / sizeof(char*), submodel_names);
-            } else if (strncmp(params.model_subset, "chloroplast", 3) == 0) {
+            } else if (strncmp(model_subset, "chloroplast", 3) == 0) {
                 copyCString(aa_model_names_chloroplast, sizeof(aa_model_names_chloroplast) / sizeof(char*), submodel_names);
-            } else if (strncmp(params.model_subset, "viral",3) == 0) {
+            } else if (strncmp(model_subset, "viral",3) == 0) {
                 copyCString(aa_model_names_viral, sizeof(aa_model_names_viral) / sizeof(char*), submodel_names);
             } else {
                 outError("Wrong -msub option");
             }
             for (i = 0; i < model_names.size(); i++) {
                 bool appear = false;
-                for (j = 0; j < submodel_names.size(); j++) 
+                for (j = 0; j < submodel_names.size(); j++)
                     if (model_names[i] == submodel_names[j]) {
                         appear = true;
                         break;
@@ -1393,24 +1376,24 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
                 }
             }
         }
-
-	} else if (seq_type == SEQ_CODON) {
-		if (params.model_set == NULL) {
-			if (aln->isStandardGeneticCode())
-				copyCString(codon_model_names, sizeof(codon_model_names) / sizeof(char*), model_names);
-			else {
+        
+    } else if (seq_type == SEQ_CODON) {
+        if (model_set.empty()) {
+            if (standard_code)
+                copyCString(codon_model_names, sizeof(codon_model_names) / sizeof(char*), model_names);
+            else {
                 i = sizeof(codon_model_names) / sizeof(char*);
                 for (j = 0; j < i; j++)
                     if (!std_genetic_code[j])
                         model_names.push_back(codon_model_names[j]);
-//				copyCString(codon_model_names, sizeof(codon_model_names) / sizeof(char*) - 1, model_names);
+                //                copyCString(codon_model_names, sizeof(codon_model_names) / sizeof(char*) - 1, model_names);
             }
-        } else if (strcmp(params.model_set, "modelomatic") == 0) {
+        } else if (model_set == "modelomatic") {
             copyCString(codon_model_names_modelomatic, sizeof(codon_model_names_modelomatic) / sizeof(char*), model_names);
-        } else if (params.model_set[0] == '+') {
+        } else if (model_set[0] == '+') {
             // append model_set into existing models
-            convert_string_vec(params.model_set+1, model_names);
-            if (aln->isStandardGeneticCode())
+            convert_string_vec(model_set.c_str()+1, model_names);
+            if (standard_code)
                 appendCString(codon_model_names, sizeof(codon_model_names) / sizeof(char*), model_names);
             else {
                 i = sizeof(codon_model_names) / sizeof(char*);
@@ -1418,25 +1401,166 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
                     if (!std_genetic_code[j])
                         model_names.push_back(codon_model_names[j]);
             }
-		} else
-			convert_string_vec(params.model_set, model_names);
-        copyCString(codon_freq_names, sizeof(codon_freq_names) / sizeof(char*), freq_names);
-	}
+        } else
+            convert_string_vec(model_set.c_str(), model_names);
+    }
+}
+
+void getStateFreqs(SeqType seq_type, char *state_freq_set, StrVector &freq_names) {
+    int j;
     
-	if (model_names.empty()) 
-        return 1;
-    
-    if (params.state_freq_set)
-        convert_string_vec(params.state_freq_set, freq_names);
+    switch (seq_type) {
+        case SEQ_PROTEIN:
+            copyCString(aa_freq_names, sizeof(aa_freq_names)/sizeof(char*), freq_names);
+            break;
+        case SEQ_CODON:
+            copyCString(codon_freq_names, sizeof(codon_freq_names) / sizeof(char*), freq_names);
+            break;
+        default:
+            break;
+    }
+    if (state_freq_set)
+        convert_string_vec(state_freq_set, freq_names);
     for (j = 0; j < freq_names.size(); j++) {
         std::transform(freq_names[j].begin(), freq_names[j].end(), freq_names[j].begin(), ::toupper);
-//        for (i = 0; i < freq_names.size(); i++)
-//            cout << " " << freq_names[i];
-//        cout << endl;
         if (freq_names[j] != "" && freq_names[j][0] != '+')
             freq_names[j] = "+" + freq_names[j];
     }
+}
+
+/**
+ get list of rate heterogeneity
+ */
+void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites,
+                string rate_set, StrVector &ratehet) {
+    const char *rate_options[]    = {  "", "+I", "+ASC", "+G", "+I+G", "+ASC+G", "+R", "+ASC+R"};
+    bool test_options_default[]   = {true,   true, false,  true,  true,   false, false,  false};
+    bool test_options_fast[]      = {false, false, false, false,  true,   false, false,  false};
+    bool test_options_morph[]     = {true,  false,  true,  true, false,    true, false,  false};
+    bool test_options_morph_fast[]= {false, false, false, false, false,    true, false,  false};
+    bool test_options_noASC_I[]   = {true,  false, false,  true, false,   false, false,  false};
+    bool test_options_noASC_I_fast[]={false,false, false,  true, false,   false, false,  false};
+    bool test_options_asc[]       ={false,  false,  true, false, false,    true, false,  false};
+    bool test_options_new[]       = {true,   true, false,  true,  true,   false,  true,  false};
+    bool test_options_morph_new[] = {true,  false,  true,  true, false,    true,  true,   true};
+    bool test_options_noASC_I_new[]= {true, false, false,  true, false,   false,  true,  false};
+    bool test_options_asc_new[]   = {false, false,  true, false, false,    true, false,   true};
+    bool test_options_pomo[]      = {true,  false, false,  true, false,   false, false,  false};
+    bool test_options_norate[]    = {true,  false, false, false, false,   false, false,  false};
+    bool *test_options = test_options_default;
+    //    bool test_options_codon[] =  {true,false,  false,false,  false,    false};
+    const int noptions = sizeof(rate_options) / sizeof(char*);
+    int i, j;
     
+    bool with_new = (model_name.find("NEW") != string::npos || model_name.substr(0,2) == "MF" || model_name.empty());
+    bool with_asc = model_name.find("ASC") != string::npos;
+
+    if (seq_type == SEQ_POMO) {
+        for (i = 0; i < noptions; i++)
+            test_options[i] = test_options_pomo[i];
+    }
+    // If not PoMo, go on with normal treatment.
+    else if (frac_invariant_sites == 0.0) {
+        // morphological or SNP data: activate +ASC
+        if (with_new && rate_set != "1") {
+            if (with_asc)
+                test_options = test_options_asc_new;
+            else if (seq_type == SEQ_DNA || seq_type == SEQ_BINARY || seq_type == SEQ_MORPH)
+                test_options = test_options_morph_new;
+            else
+                test_options = test_options_noASC_I_new;
+        } else if (with_asc)
+            test_options = test_options_asc;
+        else if (seq_type == SEQ_DNA || seq_type == SEQ_BINARY || seq_type == SEQ_MORPH) {
+            if (rate_set == "1")
+                test_options = test_options_morph_fast;
+            else
+                test_options = test_options_morph;
+        } else {
+            if (rate_set == "1")
+                test_options = test_options_noASC_I_fast;
+            else
+                test_options = test_options_noASC_I;
+        }
+    } else if (frac_invariant_sites >= 1.0) {
+        // 2018-06-12: alignment with only invariant sites, no rate variation added
+        test_options = test_options_norate;
+    } else {
+        // normal data, use +I instead
+        if (with_new && rate_set != "1") {
+            // change +I+G to +R
+            if (with_asc)
+                test_options = test_options_asc_new;
+            else
+                test_options = test_options_new;
+        } else if (with_asc) {
+            test_options = test_options_asc;
+        } else if (rate_set == "1")
+            test_options = test_options_fast;
+        else
+            test_options = test_options_default;
+        if (frac_invariant_sites == 0.0) {
+            // deactivate +I
+            for (j = 0; j < noptions; j++)
+                if (strstr(rate_options[j], "+I"))
+                    test_options[j] = false;
+        }
+    }
+    if (!rate_set.empty() && rate_set != "1") {
+        // take the rate_options from user-specified models
+        convert_string_vec(rate_set.c_str(), ratehet);
+        if (!ratehet.empty() && ratehet[0] == "default") {
+            ratehet.erase(ratehet.begin());
+            StrVector ratedef;
+            for (j = 0; j < noptions; j++)
+                if (test_options[j])
+                    ratedef.push_back(rate_options[j]);
+            ratehet.insert(ratehet.begin(), ratedef.begin(), ratedef.end());
+        }
+        for (j = 0; j < ratehet.size(); j++) {
+            if (ratehet[j] != "" && ratehet[j][0] != '+' && ratehet[j][0] != '*')
+                ratehet[j] = "+" + ratehet[j];
+            if (ratehet[j] == "+E") // for equal rate model
+                ratehet[j] = "";
+        }
+    } else {
+        for (j = 0; j < noptions; j++)
+            if (test_options[j])
+                ratehet.push_back(rate_options[j]);
+        
+    }
+}
+
+/**
+ * get the list of model
+ * @param models (OUT) vectors of model names
+ * @return maximum number of rate categories
+ */
+int getModelList(Params &params, Alignment *aln, StrVector &models, bool separate_rate, bool merge_phase) {
+	StrVector model_names;
+    StrVector freq_names;
+	SeqType seq_type = aln->seq_type;
+    
+	int i, j;
+    string model_set;
+    
+    if (merge_phase) {
+        model_set = params.merge_models;
+        if (model_set == "all") {
+            model_set = (params.model_set) ? params.model_set : "";
+        }
+    } else if (params.model_set)
+        model_set = params.model_set;
+
+    getModelSubst(seq_type, aln->isStandardGeneticCode(), params.model_name,
+                  model_set, params.model_subset, model_names);
+
+	if (model_names.empty()) 
+        return 1;
+    
+    getStateFreqs(seq_type, params.state_freq_set, freq_names);
+    
+    // combine model_names with freq_names
     if (freq_names.size() > 0) {
         StrVector orig_model_names = model_names;
         model_names.clear();
@@ -1459,93 +1583,22 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
         }
     }
 
-	bool with_new = (params.model_name.find("NEW") != string::npos || params.model_name.substr(0,2) == "MF" || params.model_name.empty());
-	bool with_asc = params.model_name.find("ASC") != string::npos;
 
-//	if (seq_type == SEQ_CODON) {
-//		for (i = 0; i < noptions; i++)
-//			test_options[i] = test_options_codon[i];
-//	} else
-    if (seq_type == SEQ_POMO) {
-		for (i = 0; i < noptions; i++)
-			test_options[i] = test_options_pomo[i];
-    }
-    // If not PoMo, go on with normal treatment.
-    else if (aln->frac_invariant_sites == 0.0) {
-        // morphological or SNP data: activate +ASC
-        if (with_new && merge_speed != MERGE_FATEST) {
-            if (with_asc)
-                test_options = test_options_asc_new;
-            else if (seq_type == SEQ_DNA || seq_type == SEQ_BINARY || seq_type == SEQ_MORPH)
-                test_options = test_options_morph_new;
-            else
-                test_options = test_options_noASC_I_new;
-        } else if (with_asc)
-            test_options = test_options_asc;
-        else if (seq_type == SEQ_DNA || seq_type == SEQ_BINARY || seq_type == SEQ_MORPH) {
-            if (merge_speed == MERGE_FATEST)
-                test_options = test_options_morph_fast;
-            else
-                test_options = test_options_morph;
-        } else {
-            if (merge_speed == MERGE_FATEST)
-                test_options = test_options_noASC_I_fast;
-            else
-                test_options = test_options_noASC_I;
-        }
-    } else if (aln->frac_invariant_sites >= 1.0) {
-        // 2018-06-12: alignment with only invariant sites, no rate variation added
-        test_options = test_options_norate;
-	} else {
-        // normal data, use +I instead
-        if (with_new && merge_speed != MERGE_FATEST) {
-            // change +I+G to +R
-            if (with_asc)
-                test_options = test_options_asc_new;
-            else
-                test_options = test_options_new;
-        } else if (with_asc) {
-            test_options = test_options_asc;
-        } else if (merge_speed == MERGE_FATEST)
-            test_options = test_options_fast;
-        else
-            test_options = test_options_default;
-        if (aln->frac_const_sites == 0.0) {
-            // deactivate +I
-            for (j = 0; j < noptions; j++)
-                if (strstr(rate_options[j], "+I"))
-                    test_options[j] = false;
-        }
-    }
     
 
     StrVector ratehet;
     int max_cats = params.num_rate_cats;
+    string ratehet_set;
+    if (merge_phase) {
+        ratehet_set = params.merge_rates;
+        if (ratehet_set == "all")
+            ratehet_set = (params.ratehet_set) ? params.ratehet_set : "";
+    } else if (params.ratehet_set)
+        ratehet_set = params.ratehet_set;
 
-	if (params.ratehet_set) {
-		// take the rate_options from user-specified models
-		convert_string_vec(params.ratehet_set, ratehet);
-		if (!ratehet.empty() && ratehet[0] == "default") {
-			ratehet.erase(ratehet.begin());
-			StrVector ratedef;
-			for (j = 0; j < noptions; j++)
-				if (test_options[j])
-					ratedef.push_back(rate_options[j]);
-			ratehet.insert(ratehet.begin(), ratedef.begin(), ratedef.end());
-		}
-        for (j = 0; j < ratehet.size(); j++) {
-            if (ratehet[j] != "" && ratehet[j][0] != '+' && ratehet[j][0] != '*')
-                ratehet[j] = "+" + ratehet[j];
-            if (ratehet[j] == "+E") // for equal rate model 
-                ratehet[j] = "";
-        }
-    } else {
-        for (j = 0; j < noptions; j++)
-            if (test_options[j])
-                ratehet.push_back(rate_options[j]);
-        
-    }
+    getRateHet(seq_type, params.model_name, aln->frac_invariant_sites, ratehet_set, ratehet);
 
+    // add number of rate cateogories for special rate models
     const char *rates[] = {"+R", "*R", "+H", "*H"};
 
     for (i = 0; i < sizeof(rates)/sizeof(char*); i++)
@@ -1570,6 +1623,7 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
     string pomo_suffix = (seq_type == SEQ_POMO) ? "+P" : "";
     // TODO DS: should we allow virtual population size?
 
+    // combine substitution models with rate heterogeneity
     if (separate_rate) {
         for (i = 0; i < model_names.size(); i++) 
             models.push_back(model_names[i]);
@@ -2047,7 +2101,7 @@ string testConcatModel(Params &params, SuperAlignment *super_aln, ModelCheckpoin
 double doKmeansClustering(Params &params, PhyloSuperTree *in_tree,
     int ncluster, DoubleVector &lenvec,
     ModelCheckpoint &model_info, ModelsBlock *models_block,
-    int num_threads, ModelTestMerge merge_speed,
+    int num_threads,
     vector<set<int> > &gene_sets, StrVector &model_names)
 {
     
@@ -2116,7 +2170,7 @@ double doKmeansClustering(Params &params, PhyloSuperTree *in_tree,
             }
             best_model.name = testModelOMatic(params, tree, part_model_info, models_block,
                 params.model_test_and_tree ? num_threads : 1, params.partition_type,
-                set_name, "", merge_speed);
+                set_name, "", true);
             best_model.restoreCheckpoint(&part_model_info);
             model_names.push_back(best_model.name);
             delete tree;
@@ -2178,7 +2232,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     if (params.partfinder_rcluster_max == 0)
         params.partfinder_rcluster_max = max((size_t)1000, 10*in_tree->size());
 
-	if (params.model_name.find("LINK") != string::npos || params.model_name.find("MERGE") != string::npos) {
+	if (params.partition_merge != MERGE_NONE) {
         double p = params.partfinder_rcluster/100.0;
         size_t num_pairs = round(in_tree->size()*(in_tree->size()-1)*p/2);
         if (p < 1.0)
@@ -2263,8 +2317,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     if (brlen_type == TOPO_UNLINKED)
         brlen_type = BRLEN_OPTIMIZE;
 
-    bool test_merge = (params.model_name.find("LINK") != string::npos || params.model_name.find("MERGE") != string::npos) && params.partition_type != TOPO_UNLINKED;
-    ModelTestMerge merge_speed = (test_merge && in_tree->size() > 1) ? params.partfinder_1model : MERGE_NORMAL;
+    bool test_merge = (params.partition_merge != MERGE_NONE) && params.partition_type != TOPO_UNLINKED && (in_tree->size() > 1);
     
 #ifdef _OPENMP
     parallel_over_partitions = !params.model_test_and_tree && (in_tree->size() >= num_threads);
@@ -2282,7 +2335,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             part_model_name = this_tree->aln->model_name;
         ModelInfo best_model;
 		best_model.name = testModelOMatic(params, this_tree, part_model_info, models_block,
-            (parallel_over_partitions ? 1 : num_threads), brlen_type, this_tree->aln->name, part_model_name, merge_speed);
+            (parallel_over_partitions ? 1 : num_threads), brlen_type, this_tree->aln->name, part_model_name, test_merge);
 
         bool check = (best_model.restoreCheckpoint(&part_model_info));
         ASSERT(check);
@@ -2352,7 +2405,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
         greedy_model_trees[i] = in_tree->at(i)->aln->name;
     }
 
-    if (params.partfinder_kmeans) {
+    if (params.partition_merge == MERGE_KMEANS) {
         // kmeans cluster based on parition tree length
         double cur_score = inf_score;
         for (int ncluster = in_tree->size()-1; ncluster >= 1; ncluster--) {
@@ -2360,7 +2413,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             StrVector this_model_names;
             //double sum = in_tree->size()/std::accumulate(lenvec.begin(), lenvec.end(), 0.0);
             double score = doKmeansClustering(params, in_tree, ncluster, lenvec, model_info,
-                models_block, num_threads, merge_speed, this_gene_sets, this_model_names);
+                models_block, num_threads, this_gene_sets, this_model_names);
             if (score < cur_score) {
                 cout << "Better score found: " << score << endl;
                 cur_score = score;
@@ -2375,7 +2428,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     }
 
     /* following implements the greedy algorithm of Lanfear et al. (2012) */
-	while (!params.partfinder_kmeans && gene_sets.size() >= 2) {
+	while (params.partition_merge != MERGE_KMEANS && gene_sets.size() >= 2) {
 		// stepwise merging charsets
 
         // list of all better pairs of partitions than current partitioning scheme
@@ -2474,7 +2527,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
                     tree->saveCheckpoint();
                 }
                 best_model.name = testModelOMatic(params, tree, part_model_info, models_block,
-                    params.model_test_and_tree ? num_threads : 1, params.partition_type, cur_pair.set_name, "", merge_speed);
+                    params.model_test_and_tree ? num_threads : 1, params.partition_type, cur_pair.set_name, "", true);
                 best_model.restoreCheckpoint(&part_model_info);
                 /*
                 if (params.model_test_and_tree) {
@@ -2522,7 +2575,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 		if (better_pairs.empty()) break;
         ModelPairSet compatible_pairs;
 
-        int num_comp_pairs = params.partfinder_rcluster_fast ? gene_sets.size()/2 : 1;
+        int num_comp_pairs = params.partition_merge == MERGE_RCLUSTERF ? gene_sets.size()/2 : 1;
         better_pairs.getCompatiblePairs(num_comp_pairs, compatible_pairs);
         if (compatible_pairs.size() > 1)
             cout << compatible_pairs.size() << " compatible better partition pairs found" << endl;
@@ -2597,7 +2650,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     if (gene_sets.size() < in_tree->size())
         mergePartitions(in_tree, gene_sets, model_names);
 
-    if (merge_speed == MERGE_FAST) {
+    if (params.merge_models != "all") {
         // test all candidate models again
         lhsum = 0.0;
         dfsum = 0;
@@ -2639,7 +2692,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             ModelInfo best_model;
             best_model.name = testModelOMatic(params, this_tree, part_model_info, models_block,
                 (parallel_over_partitions ? 1 : num_threads), brlen_type,
-                this_tree->aln->name, part_model_name, MERGE_NORMAL);
+                this_tree->aln->name, part_model_name, false);
             
             bool check = (best_model.restoreCheckpoint(&part_model_info));
             ASSERT(check);
@@ -2705,14 +2758,14 @@ bool isMixtureModel(ModelsBlock *models_block, string &model_str) {
 
 string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
     ModelsBlock *models_block, int num_threads, int brlen_type,
-    string set_name, string in_model_name, ModelAdjust *adjust, ModelTestMerge merge_speed)
+    string set_name, string in_model_name, ModelAdjust *adjust, bool merge_phase)
 {
     ModelCheckpoint *checkpoint = &model_info;
 
 	in_tree->params = &params;
 	StrVector model_names;
     if (in_model_name.empty())
-        getModelList(params, in_tree->aln, model_names, params.model_test_separate_rate, merge_speed);
+        getModelList(params, in_tree->aln, model_names, params.model_test_separate_rate, merge_phase);
     else {
         model_names.push_back(in_model_name);
     }
