@@ -843,9 +843,9 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.partition_type = BRLEN_OPTIMIZE;
     params.partfinder_rcluster = 100;
     params.partfinder_rcluster_max = 0;
-    params.partfinder_rcluster_fast = false;
-    params.partfinder_1model = MERGE_NORMAL;
-    params.partfinder_kmeans = false;
+    params.partition_merge = MERGE_NONE;
+    params.merge_models = "1";
+    params.merge_rates = "1";
     params.partfinder_log_rate = false;
     params.remove_empty_seq = true;
     params.terrace_aware = true;
@@ -1898,7 +1898,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.partition_file = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "-spp") == 0 || strcmp(argv[cnt], "-p") == 0) {
+			if (strcmp(argv[cnt], "-spp") == 0 || strcmp(argv[cnt], "-p") == 0 || strcmp(argv[cnt], "--partition") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -p <partition_file>";
@@ -1934,6 +1934,20 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             
+            if (strcmp(argv[cnt], "--edge") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --edge equal|scale|unlink";
+                if (strcmp(argv[cnt], "equal") == 0)
+                    params.partition_type = BRLEN_FIX;
+                else if (strcmp(argv[cnt], "scale") == 0)
+                    params.partition_type = BRLEN_SCALE;
+                else if (strcmp(argv[cnt], "unlink") == 0)
+                    params.partition_type = BRLEN_OPTIMIZE;
+                else
+                    throw "Use --edge equal|scale|unlink";
+            }
+            
             if (strcmp(argv[cnt], "-rcluster") == 0 || strcmp(argv[cnt], "--rcluster") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -1941,6 +1955,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.partfinder_rcluster = convert_double(argv[cnt]);
                 if (params.partfinder_rcluster < 0 || params.partfinder_rcluster > 100)
                     throw "rcluster percentage must be between 0 and 100";
+                params.partition_merge = MERGE_RCLUSTER;
 				continue;
             }
             if (strcmp(argv[cnt], "-rclusterf") == 0 || strcmp(argv[cnt], "--rclusterf") == 0) {
@@ -1950,11 +1965,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.partfinder_rcluster = convert_double(argv[cnt]);
                 if (params.partfinder_rcluster < 0 || params.partfinder_rcluster > 100)
                     throw "rcluster percentage must be between 0 and 100";
-                params.partfinder_rcluster_fast = true;
+                params.partition_merge = MERGE_RCLUSTERF;
 				continue;
             }
 
-            if (strcmp(argv[cnt], "-rcluster-max") == 0 || strcmp(argv[cnt], "--rclusterm") == 0) {
+            if (strcmp(argv[cnt], "-rcluster-max") == 0 || strcmp(argv[cnt], "--rcluster-max") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -rcluster-max <num>";
@@ -1963,21 +1978,65 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "rcluster-max must be between > 0";
                 if (params.partfinder_rcluster == 100)
                     params.partfinder_rcluster = 99.9999;
+                if (params.partition_merge != MERGE_RCLUSTER && params.partition_merge != MERGE_RCLUSTERF)
+                    params.partition_merge = MERGE_RCLUSTERF;
 				continue;
             }
 
-            if (strcmp(argv[cnt], "--merge-fast") == 0) {
-                params.partfinder_1model = MERGE_FAST;
+            if (strcmp(argv[cnt], "--merge") == 0) {
+                if (cnt >= argc-1 || argv[cnt+1][0] == '-') {
+                    if (params.partfinder_rcluster == 100)
+                        params.partfinder_rcluster = 99.9999;
+                    params.partition_merge = MERGE_RCLUSTERF;
+                    continue;
+                }
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --merge [none|greedy|rcluster|rclusterf|kmeans]";
+                if (strcmp(argv[cnt], "none") == 0)
+                    params.partition_merge = MERGE_NONE;
+                else if (strcmp(argv[cnt], "greedy") == 0)
+                    params.partition_merge = MERGE_GREEDY;
+                else if (strcmp(argv[cnt], "rcluster") == 0) {
+                    if (params.partfinder_rcluster == 100)
+                        params.partfinder_rcluster = 99.9999;
+                    params.partition_merge = MERGE_RCLUSTER;
+                } else if (strcmp(argv[cnt], "rclusterf") == 0) {
+                    if (params.partfinder_rcluster == 100)
+                        params.partfinder_rcluster = 99.9999;
+                    params.partition_merge = MERGE_RCLUSTERF;
+                } else if (strcmp(argv[cnt], "rcluster") == 0)
+                    params.partition_merge = MERGE_KMEANS;
+                else
+                    throw "Use --merge [none|greedy|rcluster|rclusterf|kmeans]";
                 continue;
             }
 
-            if (strcmp(argv[cnt], "--merge-fastest") == 0) {
-                params.partfinder_1model = MERGE_FATEST;
+            if (strcmp(argv[cnt], "--merge-model") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --merge-model 1|4|ALL|model1,...,modelK";
+                params.merge_models = argv[cnt];
+                if (params.partition_merge == MERGE_NONE) {
+                    if (params.partfinder_rcluster == 100)
+                        params.partfinder_rcluster = 99.9999;
+                    params.partition_merge = MERGE_RCLUSTERF;
+                    continue;
+                }
                 continue;
             }
 
-            if (strcmp(argv[cnt], "--merge-kmeans") == 0) {
-                params.partfinder_kmeans = true;
+            if (strcmp(argv[cnt], "--merge-rate") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --merge-rate rate1,...,rateK";
+                params.merge_rates = argv[cnt];
+                if (params.partition_merge == MERGE_NONE) {
+                    if (params.partfinder_rcluster == 100)
+                        params.partfinder_rcluster = 99.9999;
+                    params.partition_merge = MERGE_RCLUSTERF;
+                    continue;
+                }
                 continue;
             }
 
@@ -2201,11 +2260,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 //				params.avoid_duplicated_trees = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-mod") == 0
-					|| strcmp(argv[cnt], "-m") == 0) {
+			if (strcmp(argv[cnt], "--model") == 0 || strcmp(argv[cnt], "-m") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -mod <model_name>";
+					throw "Use --model <model_name>";
 				params.model_name = argv[cnt];
 				continue;
 			}
@@ -2223,7 +2281,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.model_opt_steps = convert_int(argv[cnt]);
                 continue;
             }
-			if (strcmp(argv[cnt], "-mset") == 0 || strcmp(argv[cnt], "--mset") == 0) {
+			if (strcmp(argv[cnt], "-mset") == 0 || strcmp(argv[cnt], "--mset") == 0 || strcmp(argv[cnt], "--model-set") == 0 ) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -mset <model_set>";
@@ -2237,21 +2295,21 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.model_extra_set = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "-msub") == 0 || strcmp(argv[cnt], "--msub") == 0) {
+			if (strcmp(argv[cnt], "-msub") == 0 || strcmp(argv[cnt], "--msub") == 0 || strcmp(argv[cnt], "--model-sub") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -msub <model_subset>";
 				params.model_subset = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "-mfreq") == 0 || strcmp(argv[cnt], "--mfreq") == 0) {
+			if (strcmp(argv[cnt], "-mfreq") == 0 || strcmp(argv[cnt], "--freq-set") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -mfreq <state_freq_set>";
 				params.state_freq_set = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "-mrate") == 0 || strcmp(argv[cnt], "--mrate") == 0) {
+			if (strcmp(argv[cnt], "-mrate") == 0 || strcmp(argv[cnt], "--rate-set") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -mrate <rate_set>";
@@ -2269,7 +2327,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.modelomatic = true;
                 continue;
             }
-			if (strcmp(argv[cnt], "-mredo") == 0 || strcmp(argv[cnt], "--mredo") == 0) {
+			if (strcmp(argv[cnt], "-mredo") == 0 || strcmp(argv[cnt], "--model-redo") == 0) {
 				params.model_test_again = true;
 				continue;
 			}
@@ -3985,7 +4043,12 @@ void parseArg(int argc, char *argv[], Params &params) {
         else
             params.out_prefix = params.user_file;
     }
-//    if (MPIHelper::getInstance().isWorker()) {
+
+    if (params.model_name.find("LINK") != string::npos || params.model_name.find("MERGE") != string::npos)
+        if (params.partition_merge == MERGE_NONE)
+            params.partition_merge = MERGE_RCLUSTERF;
+
+    //    if (MPIHelper::getInstance().isWorker()) {
     // BUG: setting out_prefix this way cause access to stack, which is cleaned up after returning from this function
 //        string newPrefix = string(params.out_prefix) + "."  + NumberToString(MPIHelper::getInstance().getProcessID()) ;
 //        params.out_prefix = (char *) newPrefix.c_str();
@@ -4143,13 +4206,6 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -m TEST              Standard model selection followed by tree inference" << endl
     << "  -m MF                Extended model selection with FreeRate heterogeneity" << endl
     << "  -m MFP               Extended model selection followed by tree inference" << endl
-    << "  -m TESTMERGEONLY     Find best partition scheme (like PartitionFinder)" << endl
-    << "  -m TESTMERGE         Find best partition scheme followed by tree inference" << endl
-    << "  -m MF+MERGE          Find best partition scheme incl. FreeRate heterogeneity" << endl
-    << "  -m MFP+MERGE         Like -m MF+MERGE followed by tree inference" << endl
-    << "  --rcluster NUMBER    Percentage of partition pairs (relaxed clustering alg.)" << endl
-    << "  --rclusterf NUMBER   Percentage of partition pairs (fast relaxed clustering)" << endl
-    << "  --rclusterm NUMBER   Max number of partition pairs (default: 10*partitions)" << endl
     << "  --mset STRING        Restrict search to models supported by other programs" << endl
     << "                       (raxml, phyml or mrbayes)" << endl
     << "  -m ...+LM            Additionally test Lie Markov models" << endl
@@ -4172,6 +4228,20 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --madd STR,...,STR   List of mixture models to consider" << endl
     << "  --mdef FILE          Model definition NEXUS file (see Manual)" << endl
     << "  --modelomatic        Find best codon/protein/DNA models (Whelan et al. 2015)" << endl
+
+    << endl << "PARTITION-FINDER:" << endl
+    << "  --merge              Merge partitions to increase model fit" << endl
+    << "  --merge greedy|rcluster|rclusterf"
+    << "                       Set merging algorithm (default: rclusterf)" << endl
+    << "  --merge-model 1|all  Use only 1 or all models for merging (default: 1)" << endl
+    << "  --merge-model STR,...,STR" << endl
+    << "                       Comma-separated model list for merging"
+    << "  --merge-rate 1|all   Use only 1 or all rate heterogeneity (default: 1)" << endl
+    << "  --merge-rate STR,...,STR" << endl
+    << "                       Comma-separated rate list for merging"
+    << "  --rcluster NUM       Percentage of partition pairs for rcluster algorithm" << endl
+    << "  --rclusterf NUM      Percentage of partition pairs for rclusterf algorithm" << endl
+    << "  --rcluster-max NUM   Max number of partition pairs (default: 10*partitions)" << endl
 
     << endl << "SUBSTITUTION MODEL:" << endl
     << "  -m STRING            Model name string (e.g. GTR+F+I+G)" << endl

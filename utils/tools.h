@@ -421,8 +421,11 @@ enum ModelTestCriterion {
     MTC_AIC, MTC_AICC, MTC_BIC, MTC_ALL
 };
 
-enum ModelTestMerge {
-    MERGE_NORMAL, MERGE_FAST, MERGE_FATEST
+/**
+ PartitionFinder merging algorithm
+ */
+enum PartitionMerge {
+    MERGE_NONE, MERGE_GREEDY, MERGE_RCLUSTER, MERGE_RCLUSTERF, MERGE_KMEANS
 };
 
 /**
@@ -903,20 +906,20 @@ public:
      */
     int partition_type;
 
+    /** PartitionFinder algorithm, default MERGE_NONE */
+    PartitionMerge partition_merge;
+    
     /** percentage for rcluster algorithm like PartitionFinder */
     double partfinder_rcluster; 
 
     /** absolute limit on #partition pairs for rcluster algorithm */
     size_t partfinder_rcluster_max;
 
-    /** rclusterf algorithm to top 50% pairs instead of only one best pair */
-    bool partfinder_rcluster_fast;
+    /** set of models used for model merging phase */
+    string merge_models;
 
-    /** use one model (GTR for DNA, LG for protein) for partition finder */
-    ModelTestMerge partfinder_1model;
-
-    /** use k-means to merge partitions using partition rate */
-    bool partfinder_kmeans;
+    /** set of rate models used for model merging phase */
+    string merge_rates;
 
     /** use logarithm of rates for clustering algorithm */
     bool partfinder_log_rate;
