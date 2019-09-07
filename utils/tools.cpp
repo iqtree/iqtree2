@@ -4206,18 +4206,18 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -m TEST              Standard model selection followed by tree inference" << endl
     << "  -m MF                Extended model selection with FreeRate heterogeneity" << endl
     << "  -m MFP               Extended model selection followed by tree inference" << endl
-    << "  --mset STRING        Restrict search to models supported by other programs" << endl
-    << "                       (raxml, phyml or mrbayes)" << endl
     << "  -m ...+LM            Additionally test Lie Markov models" << endl
     << "  -m ...+LMRY          Additionally test Lie Markov models with RY symmetry" << endl
     << "  -m ...+LMWS          Additionally test Lie Markov models with WS symmetry" << endl
     << "  -m ...+LMMK          Additionally test Lie Markov models with MK symmetry" << endl
     << "  -m ...+LMSS          Additionally test strand-symmetric models" << endl
-    << "  --mset STR,...,STR   Comma-separated model list (e.g. -mset WAG,LG,JTT)" << endl
+    << "  --mset STRING        Restrict search to models supported by other programs" << endl
+    << "                       (raxml, phyml or mrbayes)" << endl
+    << "  --mset STR,...       Comma-separated model list (e.g. -mset WAG,LG,JTT)" << endl
     << "  --msub STRING        Amino-acid model source" << endl
     << "                       (nuclear, mitochondrial, chloroplast or viral)" << endl
-    << "  --mfreq STR,...,STR  List of state frequencies" << endl
-    << "  --mrate STR,...,STR  List of rate heterogeneity among sites" << endl
+    << "  --mfreq STR,...      List of state frequencies" << endl
+    << "  --mrate STR,...      List of rate heterogeneity among sites" << endl
     << "                       (e.g. -mrate E,I,G,I+G,R is used for -m MF)" << endl
     << "  --cmin NUMBER        Min categories for FreeRate model [+R] (default: 2)" << endl
     << "  --cmax NUMBER        Max categories for FreeRate model [+R] (default: 10)" << endl
@@ -4225,20 +4225,20 @@ void usage_iqtree(char* argv[], bool full_command) {
 //            << "  -msep                Perform model selection and then rate selection" << endl
     << "  --mtree              Perform full tree search for every model" << endl
     << "  --mredo              Ignore .model.gz checkpoint file (default: OFF)" << endl
-    << "  --madd STR,...,STR   List of mixture models to consider" << endl
+    << "  --madd STR,...       List of mixture models to consider" << endl
     << "  --mdef FILE          Model definition NEXUS file (see Manual)" << endl
     << "  --modelomatic        Find best codon/protein/DNA models (Whelan et al. 2015)" << endl
 
     << endl << "PARTITION-FINDER:" << endl
     << "  --merge              Merge partitions to increase model fit" << endl
-    << "  --merge greedy|rcluster|rclusterf"
+    << "  --merge greedy|rcluster|rclusterf" << endl
     << "                       Set merging algorithm (default: rclusterf)" << endl
     << "  --merge-model 1|all  Use only 1 or all models for merging (default: 1)" << endl
-    << "  --merge-model STR,...,STR" << endl
-    << "                       Comma-separated model list for merging"
+    << "  --merge-model STR,..." << endl
+    << "                       Comma-separated model list for merging" << endl
     << "  --merge-rate 1|all   Use only 1 or all rate heterogeneity (default: 1)" << endl
-    << "  --merge-rate STR,...,STR" << endl
-    << "                       Comma-separated rate list for merging"
+    << "  --merge-rate STR,..." << endl
+    << "                       Comma-separated rate list for merging" << endl
     << "  --rcluster NUM       Percentage of partition pairs for rcluster algorithm" << endl
     << "  --rclusterf NUM      Percentage of partition pairs for rclusterf algorithm" << endl
     << "  --rcluster-max NUM   Max number of partition pairs (default: 10*partitions)" << endl
@@ -4304,7 +4304,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -m ...+WB|WH|S]      Weighted binomial sampling"       << endl
     << "  -m ...+WH            Weighted hypergeometric sampling" << endl
     << "  -m ...+S             Sampled sampling"              << endl
-    << "  -m...+G[n]           Discrete Gamma rate with n categories (default n=4)"    << endl
+    << "  -m ...+G[n]          Discrete Gamma rate with n categories (default n=4)"    << endl
 // TODO DS: Maybe change default to +WH.
 
     << endl << "COMPLEX MODELS:" << endl
