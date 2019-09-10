@@ -2512,7 +2512,9 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         cout << endl;
     }
 
-    if (params.min_iterations) {
+    if (!params.final_model_opt) {
+        iqtree->setCurScore(iqtree->computeLikelihood());
+    } else if (params.min_iterations) {
         iqtree->readTreeString(iqtree->getBestTrees()[0]);
         iqtree->initializeAllPartialLh();
         iqtree->clearAllPartialLH();

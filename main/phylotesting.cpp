@@ -1095,6 +1095,102 @@ string testModelOMatic(Params &params, PhyloTree* in_tree, ModelCheckpoint &mode
     return model_name;
 }
 
+void computeFastMLTree(Params &params, IQTree *iqtree) {
+    StrVector saved_model_names;
+    string model_name;
+    if (iqtree->isSuperTree()) {
+        PhyloSuperTree *stree = (PhyloSuperTree*) iqtree;
+        for (auto tree : *stree) {
+            saved_model_names.push_back(tree->aln->model_name);
+            model_name = tree->aln->model_name = getUsualModelName(tree->aln->seq_type);
+        }
+    } else {
+        saved_model_names.push_back(iqtree->aln->model_name);
+        model_name = iqtree->aln->model_name = getUsualModelName(iqtree->aln->seq_type);
+    }
+    
+    cout << "Computing fast ML tree using " << model_name << " model..." << endl;
+    double start_time = getRealTime();
+    
+    // turn off all branch tests
+    int saved_aLRT_replicates = params.aLRT_replicates;
+    int saved_localbp_replicates = params.localbp_replicates;
+    bool saved_aLRT_test = params.aLRT_test;
+    bool saved_aBayes_test = params.aBayes_test;
+    params.aLRT_replicates = 0;
+    params.localbp_replicates = 0;
+    params.aLRT_test = false;
+    params.aBayes_test = false;
+
+    // only perform 1 NNI on starting tree with higher epsilon
+    int saved_numInitTrees = params.numInitTrees;
+    int saved_numNNITrees = params.numNNITrees;
+    int saved_min_iterations = params.min_iterations;
+    STOP_CONDITION saved_stop_condition = params.stop_condition;
+    double saved_modelEps = params.modelEps;
+    bool saved_final_model_opt = params.final_model_opt;
+    VerboseMode saved_verbose_mode = verbose_mode;
+
+    params.numInitTrees = 1;
+    params.min_iterations = 1;
+    params.stop_condition = SC_FIXED_ITERATION;
+    params.modelEps *= 10.0;
+    params.final_model_opt = false;
+    // turn off verbose
+    if (verbose_mode <= VB_MIN)
+        verbose_mode = verbose_mode = VB_QUIET;
+    else
+        verbose_mode = VB_MIN;
+
+    /***** call main tree reconstruction ****/
+    runTreeReconstruction(params, iqtree);
+
+    // restore branch tests
+    params.aLRT_replicates = saved_aLRT_replicates;
+    params.localbp_replicates = saved_localbp_replicates;
+    params.aLRT_test = saved_aLRT_test;
+    params.aBayes_test = saved_aBayes_test;
+
+    // restore parameters
+    params.numInitTrees = saved_numInitTrees;
+    params.numNNITrees = saved_numNNITrees;
+    params.min_iterations = saved_min_iterations;
+    params.stop_condition = saved_stop_condition;
+    iqtree->stop_rule.initialize(params);
+    params.modelEps = saved_modelEps;
+    params.final_model_opt = saved_final_model_opt;
+    verbose_mode = saved_verbose_mode;
+
+    // restore model names
+    
+
+    if (iqtree->isSuperTree()) {
+        PhyloSuperTree *stree = (PhyloSuperTree*) iqtree;
+        int i = 0;
+        for (auto tree : *stree) {
+            tree->aln->model_name = saved_model_names[i];
+            delete tree->getModelFactory()->model;
+            delete tree->getModelFactory()->site_rate;
+            delete tree->getModelFactory();
+            i++;
+        }
+    } else {
+        iqtree->aln->model_name = saved_model_names[0];
+        delete iqtree->getModelFactory()->model;
+        delete iqtree->getModelFactory()->site_rate;
+        delete iqtree->getModelFactory();
+    }
+    
+    iqtree->setModelFactory(NULL);
+    
+    iqtree->getCheckpoint()->dump();
+    cout << "LogL: " << iqtree->getCurScore() << " / Time: " << getRealTime() - start_time << " seconds" << endl;
+
+    
+    iqtree->deleteAllPartialLh();
+
+}
+
 void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
 {
     //    iqtree.setCurScore(-DBL_MAX);
@@ -1155,7 +1251,12 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
     }
     
     // compute initial tree
-    iqtree.computeInitialTree(params.SSE);
+    if (params.modelfinder_ml_tree) {
+        // 2019-09-10: Now perform NNI on the initial tree
+        computeFastMLTree(params, &iqtree);
+    } else {
+        iqtree.computeInitialTree(params.SSE);
+    }
     
     if (iqtree.isSuperTree()) {
         PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
