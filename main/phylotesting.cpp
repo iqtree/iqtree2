@@ -186,16 +186,15 @@ string getUsualModelSubst(SeqType seq_type) {
     }
 }
 
-string getUsualModelName(SeqType seq_type) {
-    switch (seq_type) {
-        case SEQ_DNA: return "GTR+F+G";
-        case SEQ_PROTEIN: return "LG+F+G";
-        case SEQ_CODON: return "GY"; break; // too much computation, thus no +G
-        case SEQ_BINARY: return "GTR2+G";
-        case SEQ_MORPH: return "MK+G";
-        case SEQ_POMO: return "GTR+P";
-        default: ASSERT(0 && "Unprocessed seq_type"); return "";
-    }
+void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites,
+                string rate_set, StrVector &ratehet);
+
+string getUsualModelName(Alignment *aln) {
+    string name = getUsualModelSubst(aln->seq_type);
+    StrVector ratehet;
+    getRateHet(aln->seq_type, Params::getInstance().model_name, aln->frac_invariant_sites, "1", ratehet);
+    ASSERT(!ratehet.empty());
+    return name + ratehet[0];
 }
 
 void ModelInfo::computeICScores(size_t sample_size) {
@@ -1095,100 +1094,135 @@ string testModelOMatic(Params &params, PhyloTree* in_tree, ModelCheckpoint &mode
     return model_name;
 }
 
-void computeFastMLTree(Params &params, IQTree *iqtree) {
-    StrVector saved_model_names;
+/**
+ compute fast ML tree by stepwise addition MP + ML-NNI
+ @return the tree string
+ */
+string computeFastMLTree(Params &params, Alignment *aln,
+                       ModelCheckpoint &model_info, ModelsBlock *models_block,
+                       int &num_threads, int brlen_type) {
     string model_name;
-    if (iqtree->isSuperTree()) {
-        PhyloSuperTree *stree = (PhyloSuperTree*) iqtree;
-        for (auto tree : *stree) {
-            saved_model_names.push_back(tree->aln->model_name);
-            model_name = tree->aln->model_name = getUsualModelName(tree->aln->seq_type);
+    set<string> model_set;
+    int ssize = 0;
+    if (aln->isSuperAlignment()) {
+        SuperAlignment *saln = (SuperAlignment*)aln;
+        for (auto it = saln->partitions.begin(); it != saln->partitions.end(); it++) {
+            if (!model_name.empty())
+                model_name += ",";
+            string this_model_name;
+            model_name += (this_model_name = getUsualModelName(*it));
+            if (model_set.find(this_model_name) == model_set.end())
+                model_set.insert(this_model_name);
+            ssize += (*it)->getNSite();
         }
     } else {
-        saved_model_names.push_back(iqtree->aln->model_name);
-        model_name = iqtree->aln->model_name = getUsualModelName(iqtree->aln->seq_type);
+        model_name = getUsualModelName(aln);
+        model_set.insert(model_name);
+        ssize = aln->getNSite();
     }
-    
-    cout << "Computing fast ML tree using " << model_name << " model..." << endl;
-    double start_time = getRealTime();
-    
-    // turn off all branch tests
-    int saved_aLRT_replicates = params.aLRT_replicates;
-    int saved_localbp_replicates = params.localbp_replicates;
-    bool saved_aLRT_test = params.aLRT_test;
-    bool saved_aBayes_test = params.aBayes_test;
-    params.aLRT_replicates = 0;
-    params.localbp_replicates = 0;
-    params.aLRT_test = false;
-    params.aBayes_test = false;
 
-    // only perform 1 NNI on starting tree with higher epsilon
-    int saved_numInitTrees = params.numInitTrees;
-    int saved_numNNITrees = params.numNNITrees;
-    int saved_min_iterations = params.min_iterations;
-    STOP_CONDITION saved_stop_condition = params.stop_condition;
-    double saved_modelEps = params.modelEps;
-    bool saved_final_model_opt = params.final_model_opt;
-    VerboseMode saved_verbose_mode = verbose_mode;
-
-    params.numInitTrees = 1;
-    params.min_iterations = 1;
-    params.stop_condition = SC_FIXED_ITERATION;
-    params.modelEps *= 10.0;
-    params.final_model_opt = false;
-    // turn off verbose
-    if (verbose_mode <= VB_MIN)
-        verbose_mode = verbose_mode = VB_QUIET;
+    string concat_tree;
+    
+    IQTree *iqtree = NULL;
+    if (aln->isSuperAlignment()) {
+        SuperAlignment *saln = (SuperAlignment*)aln;
+        if (params.partition_type == BRLEN_OPTIMIZE)
+            iqtree = new PhyloSuperTree(saln);
+        else
+            iqtree = new PhyloSuperTreePlen(saln, brlen_type);
+        StrVector model_names;
+        convert_string_vec(model_name.c_str(), model_names);
+        for (int part = 0; part != model_names.size(); part++)
+            saln->partitions[part]->model_name = model_names[part];
+    } else if (posRateHeterotachy(model_name) != string::npos)
+        iqtree = new PhyloTreeMixlen(aln, 0);
     else
-        verbose_mode = VB_MIN;
+        iqtree = new IQTree(aln);
 
-    /***** call main tree reconstruction ****/
-    runTreeReconstruction(params, iqtree);
+    if ((params.start_tree == STT_PLL_PARSIMONY || params.start_tree == STT_RANDOM_TREE || params.pll) && !iqtree->isInitializedPLL()) {
+        /* Initialized all data structure for PLL*/
+        iqtree->initializePLL(params);
+    }
 
-    // restore branch tests
-    params.aLRT_replicates = saved_aLRT_replicates;
-    params.localbp_replicates = saved_localbp_replicates;
-    params.aLRT_test = saved_aLRT_test;
-    params.aBayes_test = saved_aBayes_test;
+    iqtree->setParams(&params);
+    iqtree->setLikelihoodKernel(params.SSE);
+    iqtree->optimize_by_newton = params.optimize_by_newton;
+    iqtree->setNumThreads(num_threads);
+    iqtree->setCheckpoint(&model_info);
 
-    // restore parameters
-    params.numInitTrees = saved_numInitTrees;
-    params.numNNITrees = saved_numNNITrees;
-    params.min_iterations = saved_min_iterations;
-    params.stop_condition = saved_stop_condition;
-    iqtree->stop_rule.initialize(params);
-    params.modelEps = saved_modelEps;
-    params.final_model_opt = saved_final_model_opt;
-    verbose_mode = saved_verbose_mode;
-
-    // restore model names
+    iqtree->computeInitialTree(params.SSE);
+    iqtree->restoreCheckpoint();
     
+    ASSERT(iqtree->root);
+    iqtree->initializeModel(params, model_name, models_block);
+    if (!iqtree->getModel()->isMixture() || aln->seq_type == SEQ_POMO)
+        model_name = iqtree->getModelName();
 
+    iqtree->getModelFactory()->restoreCheckpoint();
+    
+#ifdef _OPENMP
+    if (num_threads <= 0) {
+        num_threads = iqtree->testNumThreads();
+        omp_set_num_threads(num_threads);
+    } else
+        iqtree->warnNumThreads();
+#endif
+    
+    iqtree->initializeAllPartialLh();
+    double saved_modelEps = params.modelEps;
+    //params.modelEps *= 10.0;
+    string initTree;
+    
+    cout << "Optimizing";
+    for (auto str : model_set)
+        cout << " " << str;
+    cout << " model..." << endl;
+    
+    if (iqtree->getCheckpoint()->getBool("finishedFastMLTree")) {
+        // model optimization already done: ignore this step
+        iqtree->setCurScore(iqtree->computeLikelihood());
+        initTree = iqtree->getTreeString();
+        cout << "CHECKPOINT: Tree restored, LogL: " << iqtree->getCurScore() << endl;
+    } else {
+        initTree = iqtree->optimizeModelParameters(true, params.modelEps*100.0);
+        if (iqtree->isMixlen())
+            initTree = ((ModelFactoryMixlen*)iqtree->getModelFactory())->sortClassesByTreeLength();
+
+        // do quick NNI search
+        if (params.start_tree != STT_USER_TREE) {
+            cout << "Performing nearest neighbor interchange..." << endl;
+            iqtree->doNNISearch();
+            initTree = iqtree->getTreeString();
+        }
+        
+        iqtree->saveCheckpoint();
+        iqtree->getModelFactory()->saveCheckpoint();
+        iqtree->getCheckpoint()->putBool("finishedFastMLTree", true);
+        iqtree->getCheckpoint()->dump();
+        //        cout << "initTree: " << initTree << endl;
+    }
+
+    // restore model epsilon
+    params.modelEps = saved_modelEps;
+    
+    // save information to the checkpoint for later retrieval
     if (iqtree->isSuperTree()) {
-        PhyloSuperTree *stree = (PhyloSuperTree*) iqtree;
-        int i = 0;
-        for (auto tree : *stree) {
-            tree->aln->model_name = saved_model_names[i];
-            delete tree->getModelFactory()->model;
-            delete tree->getModelFactory()->site_rate;
-            delete tree->getModelFactory();
-            i++;
+        PhyloSuperTree *stree = (PhyloSuperTree*)iqtree;
+        int part = 0;
+        for (auto it = stree->begin(); it != stree->end(); it++, part++) {
+            model_info.startStruct((*it)->aln->name);
+            (*it)->saveCheckpoint();
+            (*it)->getModelFactory()->saveCheckpoint();
+            model_info.endStruct();
         }
     } else {
-        iqtree->aln->model_name = saved_model_names[0];
-        delete iqtree->getModelFactory()->model;
-        delete iqtree->getModelFactory()->site_rate;
-        delete iqtree->getModelFactory();
+        iqtree->saveCheckpoint();
+        iqtree->getModelFactory()->saveCheckpoint();
     }
-    
-    iqtree->setModelFactory(NULL);
-    
-    iqtree->getCheckpoint()->dump();
-    cout << "LogL: " << iqtree->getCurScore() << " / Time: " << getRealTime() - start_time << " seconds" << endl;
 
-    
-    iqtree->deleteAllPartialLh();
 
+    delete iqtree;
+    return initTree;
 }
 
 void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
@@ -1250,24 +1284,27 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
         CKP_SAVE2((&model_info), partition_type);
     }
     
+    ModelsBlock *models_block = readModelsDefinition(params);
+    
     // compute initial tree
     if (params.modelfinder_ml_tree) {
         // 2019-09-10: Now perform NNI on the initial tree
-        computeFastMLTree(params, &iqtree);
+        string tree_str = computeFastMLTree(params, iqtree.aln, model_info, models_block, params.num_threads, params.partition_type);
+        iqtree.restoreCheckpoint();
     } else {
         iqtree.computeInitialTree(params.SSE);
-    }
     
-    if (iqtree.isSuperTree()) {
-        PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
-        int part = 0;
-        for (auto it = stree->begin(); it != stree->end(); it++, part++) {
-            model_info.startStruct((*it)->aln->name);
-            (*it)->saveCheckpoint();
-            model_info.endStruct();
+        if (iqtree.isSuperTree()) {
+            PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
+            int part = 0;
+            for (auto it = stree->begin(); it != stree->end(); it++, part++) {
+                model_info.startStruct((*it)->aln->name);
+                (*it)->saveCheckpoint();
+                model_info.endStruct();
+            }
+        } else {
+            iqtree.saveCheckpoint();
         }
-    } else {
-        iqtree.saveCheckpoint();
     }
     
     // also save initial tree to the original .ckp.gz checkpoint
@@ -1291,8 +1328,6 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
 #endif
     
 
-    ModelsBlock *models_block = readModelsDefinition(params);
-    
     if (iqtree.isSuperTree()) {
         // partition model selection
         PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
@@ -2173,11 +2208,11 @@ string testConcatModel(Params &params, SuperAlignment *super_aln, ModelCheckpoin
         for (auto it = sconaln->partitions.begin(); it != sconaln->partitions.end(); it++) {
             if (!model_name.empty())
                 model_name += ",";
-            model_name += getUsualModelName((*it)->seq_type);
+            model_name += getUsualModelName(*it);
             ssize += (*it)->getNSite();
         }
     } else {
-        model_name = getUsualModelName(conaln->seq_type);
+        model_name = getUsualModelName(conaln);
         ssize = conaln->getNSite();
     }
     string concat_tree;
@@ -2418,7 +2453,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     ModelInfo concat_info;
 
     // Analysis on supermatrix
-    if (params.partition_type != TOPO_UNLINKED)
+    if (false)
     {
         concat_tree = testConcatModel(params, super_aln, model_info, models_block, num_threads, concat_info);
 
