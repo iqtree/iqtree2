@@ -2151,9 +2151,12 @@ string IQTree::optimizeBranches(int maxTraversal) {
 }
 
 double IQTree::doTreeSearch() {
-    cout << "--------------------------------------------------------------------" << endl;
-    cout << "|             INITIALIZING CANDIDATE TREE SET                      |" << endl;
-    cout << "--------------------------------------------------------------------" << endl;
+    
+    if (params->numInitTrees > 1) {
+        cout << "--------------------------------------------------------------------" << endl;
+        cout << "|             INITIALIZING CANDIDATE TREE SET                      |" << endl;
+        cout << "--------------------------------------------------------------------" << endl;
+    }
 
     double initCPUTime = getRealTime();
     int treesPerProc = (params->numInitTrees) / MPIHelper::getInstance().getNumProcesses() - candidateTrees.size();

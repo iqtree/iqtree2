@@ -1069,6 +1069,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.lh_mem_save = LM_PER_NODE; // auto detect
     params.buffer_mem_save = false;
 	params.start_tree = STT_PLL_PARSIMONY;
+    params.modelfinder_ml_tree = true;
+    params.final_model_opt = true;
 	params.print_splits_file = false;
     params.print_splits_nex_file = true;
     params.ignore_identical_seqs = true;
@@ -3793,6 +3795,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                 }
 				continue;
 			}
+            
+            if (strcmp(argv[cnt], "--no-ml-tree") == 0) {
+                params.modelfinder_ml_tree = false;
+                continue;
+            }
             
             if (strcmp(argv[cnt], "--tree-fix") == 0) {
                 if (params.gbo_replicates != 0) {

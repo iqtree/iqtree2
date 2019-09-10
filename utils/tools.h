@@ -822,6 +822,12 @@ public:
     /* type of starting tree */
     START_TREE_TYPE start_tree;
 
+    /** TRUE to infer fast ML tree for ModelFinder */
+    bool modelfinder_ml_tree;
+    
+    /** TRUE to perform final model optimization */
+    bool final_model_opt;
+    
     /** name of constraint tree file in NEWICK format */
     char *constraint_tree_file;
 
