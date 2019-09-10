@@ -2303,6 +2303,62 @@ double doKmeansClustering(Params &params, PhyloSuperTree *in_tree,
     return score;
 }
 
+class SubsetPair : public pair<int,int> {
+public:
+    // distance between two partition pairs
+    double distance;
+};
+
+bool comparePairs(const SubsetPair &a, const SubsetPair &b) {
+    return a.distance < b.distance;
+}
+
+bool comparePartition(const pair<int,double> &a, const pair<int, double> &b) {
+    return a.second > b.second;
+}
+
+/**
+ find k-closest partition pairs for rcluster algorithm
+ */
+void findClosestPairs(SuperAlignment *super_aln, DoubleVector &lenvec, vector<set<int> > &gene_sets,
+                      double log_transform, vector<SubsetPair> &closest_pairs) {
+    
+    for (int part1 = 0; part1 < lenvec.size()-1; part1++)
+        for (int part2 = part1+1; part2 < lenvec.size(); part2++)
+            if (super_aln->partitions[*gene_sets[part1].begin()]->seq_type == super_aln->partitions[*gene_sets[part2].begin()]->seq_type &&
+                super_aln->partitions[*gene_sets[part1].begin()]->genetic_code == super_aln->partitions[*gene_sets[part2].begin()]->genetic_code) {
+                // only merge partitions of the same data type
+                SubsetPair pair;
+                pair.first = part1;
+                pair.second = part2;
+                if (log_transform)
+                    pair.distance = fabs(log(lenvec[part1]) - log(lenvec[part2]));
+                else
+                    pair.distance = fabs(lenvec[part1] - lenvec[part2]);
+                closest_pairs.push_back(pair);
+            }
+    if (!closest_pairs.empty() && Params::getInstance().partfinder_rcluster < 100) {
+        // sort distance
+        std::sort(closest_pairs.begin(), closest_pairs.end(), comparePairs);
+        size_t num_pairs = round(closest_pairs.size() * (Params::getInstance().partfinder_rcluster/100.0));
+        num_pairs = min(num_pairs, Params::getInstance().partfinder_rcluster_max);
+        if (num_pairs <= 0) num_pairs = 1;
+        closest_pairs.erase(closest_pairs.begin() + num_pairs, closest_pairs.end());
+    }
+}
+
+/**
+ merge vector src into dest, eliminating duplicates
+ */
+void mergePairs(vector<SubsetPair> &dest, vector<SubsetPair> &src) {
+    unordered_set<string> dest_set;
+    for (SubsetPair s: dest)
+        dest_set.insert(convertIntToString(s.first) + "-" + convertIntToString(s.second));
+    for (SubsetPair s: src)
+        if (dest_set.find(convertIntToString(s.first) + "-" + convertIntToString(s.second)) == dest_set.end())
+            dest.push_back(s);
+}
+
 /**
  * select models for all partitions
  * @param[in,out] model_info (IN/OUT) all model information
@@ -2391,28 +2447,19 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 	dfvec.resize(in_tree->size());
 	lenvec.resize(in_tree->size());
 
-    // 2018-10-23: +1 to avoid crash when size <= 2
-    double *dist = new double[in_tree->size()*(in_tree->size()-1)/2+1];
-    pair<int,int> *distID = new pair<int,int>[in_tree->size()*(in_tree->size()-1)/2+1];
-    
     // sort partition by computational cost for OpenMP effciency
+    vector<pair<int,double> > partitionID;
+    
 	for (i = 0; i < in_tree->size(); i++) {
-        distID[i].first = i;
         Alignment *this_aln = in_tree->at(i)->aln;
         // computation cost is proportional to #sequences, #patterns, and #states
-        dist[i] = -((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states;
+        partitionID.push_back({i, ((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states});
     }
     
-    if (num_threads > 1)
-    {
-        quicksort(dist, 0, in_tree->size()-1, distID);
-        if (verbose_mode >= VB_MED) {
-            for (i = 0; i < in_tree->size(); i++) {
-                cout << i+1 << "\t" << super_aln->partitions[distID[i].first]->name << endl;
-            }
-        }
+    if (num_threads > 1) {
+        std::sort(partitionID.begin(), partitionID.end(), comparePartition);
     }
-
+    
     bool parallel_over_partitions = false;
     int brlen_type = params.partition_type;
     if (brlen_type == TOPO_UNLINKED)
@@ -2425,7 +2472,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 #pragma omp parallel for private(i) schedule(dynamic) reduction(+: lhsum, dfsum) if(parallel_over_partitions)
 #endif
 	for (int j = 0; j < in_tree->size(); j++) {
-        i = distID[j].first;
+        i = partitionID[j].first;
         PhyloTree *this_tree = in_tree->at(i);
 		// scan through models for this partition, assuming the information occurs consecutively
 		ModelCheckpoint part_model_info;
@@ -2445,7 +2492,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 		this_tree->aln->model_name = best_model.name;
 		lhsum += (lhvec[i] = best_model.logl);
 		dfsum += (dfvec[i] = best_model.df);
-        lenvec[i] = params.partfinder_log_rate ? log(best_model.tree_len) : best_model.tree_len;
+        lenvec[i] = best_model.tree_len;
 
 #ifdef _OPENMP
 #pragma omp critical
@@ -2482,8 +2529,6 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 	if (!test_merge) {
 		super_aln->printBestPartition((string(params.out_prefix) + ".best_scheme.nex").c_str());
 		super_aln->printBestPartitionRaxml((string(params.out_prefix) + ".best_scheme").c_str());
-        delete [] distID;
-        delete [] dist;
         model_info.dump();
         if (params.partition_type != TOPO_UNLINKED && inf_score > concat_info.computeICScore(ssize) + 1.0) {
             cout << endl;
@@ -2535,46 +2580,39 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
         // list of all better pairs of partitions than current partitioning scheme
         ModelPairSet better_pairs;
 
-        size_t num_pairs = 0;
         // 2015-06-24: begin rcluster algorithm
         // compute distance between gene_sets
-		for (int part1 = 0; part1 < gene_sets.size()-1; part1++)
-			for (int part2 = part1+1; part2 < gene_sets.size(); part2++)
-			if (super_aln->partitions[*gene_sets[part1].begin()]->seq_type == super_aln->partitions[*gene_sets[part2].begin()]->seq_type &&
-                super_aln->partitions[*gene_sets[part1].begin()]->genetic_code == super_aln->partitions[*gene_sets[part2].begin()]->genetic_code)
-            {
-				// only merge partitions of the same data type
-                dist[num_pairs] = fabs(lenvec[part1] - lenvec[part2]);
-                distID[num_pairs].first = part1;
-                distID[num_pairs].second = part2;
-                num_pairs++;
-            }
-        if (num_pairs > 0 && params.partfinder_rcluster < 100) {
-            // sort distance
-            quicksort(dist, 0, num_pairs-1, distID);
-            num_pairs = round(num_pairs * (params.partfinder_rcluster/100.0));
-            num_pairs = min(num_pairs, params.partfinder_rcluster_max);
-            if (num_pairs <= 0) num_pairs = 1;
+        ASSERT(gene_sets.size() == lenvec.size());
+        // find closest partition pairs
+        vector<SubsetPair> closest_pairs;
+        findClosestPairs(super_aln, lenvec, gene_sets, false, closest_pairs);
+        if (params.partfinder_log_rate) {
+            // additional consider pairs by log-rate
+            vector<SubsetPair> log_closest_pairs;
+            findClosestPairs(super_aln, lenvec, gene_sets, true, log_closest_pairs);
+            mergePairs(closest_pairs, log_closest_pairs);
         }
         // sort partition by computational cost for OpenMP effciency
-        for (i = 0; i < num_pairs; i++) {
+        for (i = 0; i < closest_pairs.size(); i++) {
             // computation cost is proportional to #sequences, #patterns, and #states
-            Alignment *this_aln = in_tree->at(distID[i].first)->aln;
-            dist[i] = -((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states;
-            this_aln = in_tree->at(distID[i].second)->aln;
-            dist[i] -= ((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states;
+            Alignment *this_aln = in_tree->at(closest_pairs[i].first)->aln;
+            closest_pairs[i].distance = -((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states;
+            this_aln = in_tree->at(closest_pairs[i].second)->aln;
+            closest_pairs[i].distance -= ((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states;
         }
-        if (num_threads > 1 && num_pairs >= 1)
-            quicksort(dist, 0, num_pairs-1, distID);
+        if (num_threads > 1)
+            std::sort(closest_pairs.begin(), closest_pairs.end(), comparePairs);
 
+        size_t num_pairs = closest_pairs.size();
+        
 #ifdef _OPENMP
 #pragma omp parallel for private(i) schedule(dynamic) if(!params.model_test_and_tree)
 #endif
-        for (int pair = 0; pair < num_pairs; pair++) {
+        for (size_t pair = 0; pair < num_pairs; pair++) {
             // information of current partitions pair
             ModelPair cur_pair;
-            cur_pair.part1 = distID[pair].first;
-            cur_pair.part2 = distID[pair].second;
+            cur_pair.part1 = closest_pairs[pair].first;
+            cur_pair.part2 = closest_pairs[pair].second;
             ASSERT(cur_pair.part1 < cur_pair.part2);
             cur_pair.merged_set.insert(gene_sets[cur_pair.part1].begin(), gene_sets[cur_pair.part1].end());
             cur_pair.merged_set.insert(gene_sets[cur_pair.part2].begin(), gene_sets[cur_pair.part2].end());
@@ -2604,10 +2642,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
                 Alignment *aln = super_aln->concatenateAlignments(cur_pair.merged_set);
                 PhyloTree *tree = in_tree->extractSubtree(cur_pair.merged_set);
                 //tree->scaleLength((weight1*lenvec[cur_pair.part1] + weight2*lenvec[cur_pair.part2])/tree->treeLength());
-                if (params.partfinder_log_rate)
-                    tree->scaleLength(exp(0.5*(lenvec[cur_pair.part1]+lenvec[cur_pair.part2])) / tree->treeLength() );
-                else
-                    tree->scaleLength(sqrt(lenvec[cur_pair.part1]*lenvec[cur_pair.part2])/tree->treeLength());
+                tree->scaleLength(sqrt(lenvec[cur_pair.part1]*lenvec[cur_pair.part2])/tree->treeLength());
                 cur_tree_len = tree->treeLength();
                 tree->setAlignment(aln);
                 extractModelInfo(cur_pair.set_name, model_info, part_model_info);
@@ -2696,7 +2731,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             gene_sets[opt_pair.part1] = opt_pair.merged_set;
             lhvec[opt_pair.part1] = opt_pair.logl;
             dfvec[opt_pair.part1] = opt_pair.df;
-            lenvec[opt_pair.part1] = params.partfinder_log_rate ? log(opt_pair.tree_len) : opt_pair.tree_len;
+            lenvec[opt_pair.part1] = opt_pair.tree_len;
             model_names[opt_pair.part1] = opt_pair.model_name;
             greedy_model_trees[opt_pair.part1] = "(" + greedy_model_trees[opt_pair.part1] + "," +
                 greedy_model_trees[opt_pair.part2] + ")" +
@@ -2760,28 +2795,25 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             if (params.partition_type == BRLEN_SCALE)
                 dfsum -= 1;
         }
+
         // sort partition by computational cost for OpenMP effciency
+        partitionID.clear();
         for (i = 0; i < in_tree->size(); i++) {
-            distID[i].first = i;
             Alignment *this_aln = in_tree->at(i)->aln;
             // computation cost is proportional to #sequences, #patterns, and #states
-            dist[i] = -((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states;
+            partitionID.push_back({i, ((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states});
         }
         
         if (num_threads > 1) {
-            quicksort(dist, 0, in_tree->size()-1, distID);
-            if (verbose_mode >= VB_MED) {
-                for (i = 0; i < in_tree->size(); i++) {
-                    cout << i+1 << "\t" << super_aln->partitions[distID[i].first]->name << endl;
-                }
-            }
+            std::sort(partitionID.begin(), partitionID.end(), comparePartition);
         }
+
     #ifdef _OPENMP
         parallel_over_partitions = !params.model_test_and_tree && (in_tree->size() >= num_threads);
         #pragma omp parallel for private(i) schedule(dynamic) reduction(+: lhsum, dfsum) if(parallel_over_partitions)
     #endif
         for (int j = 0; j < in_tree->size(); j++) {
-            i = distID[j].first;
+            i = partitionID[j].first;
             PhyloTree *this_tree = in_tree->at(i);
             // scan through models for this partition, assuming the information occurs consecutively
             ModelCheckpoint part_model_info;
@@ -2802,7 +2834,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             this_tree->aln->model_name = best_model.name;
             lhsum += (lhvec[i] = best_model.logl);
             dfsum += (dfvec[i] = best_model.df);
-            lenvec[i] = params.partfinder_log_rate ? log(best_model.tree_len) : best_model.tree_len;
+            lenvec[i] = best_model.tree_len;
             
     #ifdef _OPENMP
     #pragma omp critical
@@ -2829,9 +2861,6 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 
     inf_score = computeInformationScore(lhsum, dfsum, ssize, params.model_test_criterion);
     cout << "Best partition model " << criterionName(params.model_test_criterion) << " score: " << inf_score << " (LnL: " << lhsum << "  df:" << dfsum << ")" << endl;
-
-    delete [] distID;
-    delete [] dist;
 
     ((SuperAlignment*)in_tree->aln)->printBestPartition((string(params.out_prefix) + ".best_scheme.nex").c_str());
 	((SuperAlignment*)in_tree->aln)->printBestPartitionRaxml((string(params.out_prefix) + ".best_scheme").c_str());
