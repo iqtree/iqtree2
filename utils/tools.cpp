@@ -846,7 +846,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.partition_merge = MERGE_NONE;
     params.merge_models = "1";
     params.merge_rates = "1";
-    params.partfinder_log_rate = false;
+    params.partfinder_log_rate = true;
     params.remove_empty_seq = true;
     params.terrace_aware = true;
     params.terrace_analysis = false;
@@ -2044,6 +2044,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 
             if (strcmp(argv[cnt], "--merge-log-rate") == 0) {
                 params.partfinder_log_rate = true;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--merge-normal-rate") == 0) {
+                params.partfinder_log_rate = false;
                 continue;
             }
 
