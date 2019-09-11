@@ -1023,6 +1023,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.pll = false;
 #endif
     params.modelEps = 0.01;
+    params.modelfinder_eps = 0.1;
     params.parbran = false;
     params.binary_aln_file = NULL;
     params.maxtime = 1000000;
@@ -3502,7 +3503,20 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Model epsilon must not be larger than 1.0";
 				continue;
 			}
-			if (strcmp(argv[cnt], "-pars_ins") == 0) {
+
+            if (strcmp(argv[cnt], "--mf-epsilon") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --mf-epsilon <modelfinder_epsilon>";
+                params.modelfinder_eps = convert_double(argv[cnt]);
+                if (params.modelfinder_eps <= 0.0)
+                    throw "ModelFinder epsilon must be positive";
+                if (params.modelEps > 1.0)
+                    throw "ModelFinder epsilon must not be larger than 1.0";
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "-pars_ins") == 0) {
 				params.reinsert_par = true;
 				continue;
 			}

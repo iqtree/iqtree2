@@ -690,6 +690,11 @@ public:
 	 *  logl epsilon for model parameter optimization
 	 */
 	double modelEps;
+    
+    /**
+     logl epsilon for ModelFinder
+     */
+    double modelfinder_eps;
 
 	/**
 	 *  New search heuristics (DEFAULT: ON)
