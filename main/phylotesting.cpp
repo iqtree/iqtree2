@@ -1280,10 +1280,15 @@ void transferModelFinderParameters(IQTree *iqtree, Checkpoint *target) {
                 else
                     nsite += tree->at(i)->aln->getNSite();
             }
-            sum = nsite / sum;
+
+            sum /= nsite;
+            iqtree->restoreCheckpoint();
+            iqtree->scaleLength(sum/iqtree->treeLength());
+            iqtree->saveCheckpoint();
+            sum = 1.0/sum;
             for (i = 0; i < tree->size(); i++)
                 tree_lens[i] *= sum;
-            target->putVector("part_rates", tree_lens);
+            target->putVector("part_rates", tree_lens);            
         }
         target->endStruct();
     } else {
