@@ -385,6 +385,11 @@ public:
     void endStruct();
 
     /**
+        @return struct_name
+     */
+    string getStructName() { return struct_name; }
+    
+    /**
         start a new list in the current scope
         @param nelem number of elements
     */
@@ -419,6 +424,14 @@ public:
      @param sub_key key substring to search for
      */
     void putSubCheckpoint(Checkpoint *source, string sub_key);
+
+    /**
+     transfer a checkpoint where the key string contains a given substring
+     @param source checkpoint
+     @param sub_key key substring to search for
+     @param overwrite true to overwrite value even if key exists
+     */
+    void transferSubCheckpoint(Checkpoint *source, string sub_key, bool overwrite = false);
 
 protected:
 
