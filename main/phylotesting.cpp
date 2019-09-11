@@ -156,7 +156,7 @@ short int std_genetic_code_modelomatic[]    = {   0};
 
 const char *codon_freq_names[] = {"", "+F1X4", "+F3X4", "+F"};
 
-const double TOL_LIKELIHOOD_MODELTEST = 0.1;
+//const double TOL_LIKELIHOOD_MODELTEST = 0.1;
 const double TOL_GRADIENT_MODELTEST   = 0.0001;
 
 extern double RunKMeans1D(int n, int k, double *points, int *weights, double *centers, int *assignments);
@@ -1170,7 +1170,7 @@ string computeFastMLTree(Params &params, Alignment *aln,
     
     iqtree->initializeAllPartialLh();
     double saved_modelEps = params.modelEps;
-    params.modelEps *= 10.0;
+    params.modelEps = params.modelfinder_eps;
     string initTree;
     
     double start_time = getRealTime();
@@ -2187,7 +2187,7 @@ string testOneModel(string &model_name, Params &params, Alignment *in_aln,
 
         for (int step = 0; step < 2; step++) {
             info.logl = iqtree->getModelFactory()->optimizeParameters(brlen_type, false,
-                TOL_LIKELIHOOD_MODELTEST, TOL_GRADIENT_MODELTEST);
+                params.modelfinder_eps, TOL_GRADIENT_MODELTEST);
             info.tree_len = iqtree->treeLength();
             iqtree->getModelFactory()->saveCheckpoint();
             iqtree->saveCheckpoint();
@@ -2195,11 +2195,12 @@ string testOneModel(string &model_name, Params &params, Alignment *in_aln,
             // check if logl(+R[k]) is worse than logl(+R[k-1])
             ModelInfo prev_info;
             if (!prev_info.restoreCheckpointRminus1(&model_info, info.name)) break;
-            if (prev_info.logl < info.logl + TOL_GRADIENT_MODELTEST) break;
+            if (prev_info.logl < info.logl + params.modelfinder_eps) break;
             if (step == 0) {
                 iqtree->getRate()->initFromCatMinusOne();
-            } else if (info.logl < prev_info.logl - TOL_LIKELIHOOD_MODELTEST) {
-                outWarning("Log-likelihood of " + info.name + " worse than " + prev_info.name);
+            } else if (info.logl < prev_info.logl - params.modelfinder_eps) {
+                outWarning("Log-likelihood " + convertDoubleToString(info.logl) + " of " +
+                           info.name + " worse than " + prev_info.name + " " + convertDoubleToString(prev_info.logl));
             }
         }
 
