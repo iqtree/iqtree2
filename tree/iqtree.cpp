@@ -2893,7 +2893,7 @@ double IQTree::doTreePerturbation() {
 /****************************************************************************
  Fast Nearest Neighbor Interchange by maximum likelihood
  ****************************************************************************/
-pair<int, int> IQTree::doNNISearch() {
+pair<int, int> IQTree::doNNISearch(bool write_info) {
 
     computeLogL();
     double curBestScore = getBestScore();
@@ -2923,7 +2923,7 @@ pair<int, int> IQTree::doNNISearch() {
         // Better tree or score is found
         if (getCurScore() > curBestScore + params->modelEps) {
             // Re-optimize model parameters (the sNNI algorithm)
-            optimizeModelParameters(false, params->modelEps * 10);
+            optimizeModelParameters(write_info, params->modelEps * 10);
             getModelFactory()->saveCheckpoint();
 
             // 2018-01-09: additional optimize root position

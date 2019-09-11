@@ -430,7 +430,7 @@ public:
      *         @return <number_of_NNIs, number_of_NNI_steps>
      *         This function will automatically use the selected kernel (either PLL or IQ-TREE)
      */
-    pair<int, int> doNNISearch();
+    pair<int, int> doNNISearch(bool write_info = false);
 
     /**
             @brief evaluate all NNIs

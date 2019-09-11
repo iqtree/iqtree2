@@ -1170,10 +1170,12 @@ string computeFastMLTree(Params &params, Alignment *aln,
     
     iqtree->initializeAllPartialLh();
     double saved_modelEps = params.modelEps;
-    //params.modelEps *= 10.0;
+    params.modelEps *= 10.0;
     string initTree;
     
-    cout << "Optimizing";
+    double start_time = getRealTime();
+    
+    cout << "Perform fast likelihood tree search search using";
     for (auto str : model_set)
         cout << " " << str;
     cout << " model..." << endl;
@@ -1184,22 +1186,28 @@ string computeFastMLTree(Params &params, Alignment *aln,
         initTree = iqtree->getTreeString();
         cout << "CHECKPOINT: Tree restored, LogL: " << iqtree->getCurScore() << endl;
     } else {
-        initTree = iqtree->optimizeModelParameters(true, params.modelEps*100.0);
+        bool saved_opt_gammai = params.opt_gammai;
+        // disable thorough I+G optimization
+        params.opt_gammai = false;
+        initTree = iqtree->optimizeModelParameters(false, params.modelEps*50.0);
         if (iqtree->isMixlen())
             initTree = ((ModelFactoryMixlen*)iqtree->getModelFactory())->sortClassesByTreeLength();
 
         // do quick NNI search
         if (params.start_tree != STT_USER_TREE) {
-            cout << "Performing nearest neighbor interchange..." << endl;
-            iqtree->doNNISearch();
+            cout << "Perform nearest neighbor interchange..." << endl;
+            iqtree->doNNISearch(true);
             initTree = iqtree->getTreeString();
         }
-        
+        params.opt_gammai = saved_opt_gammai;
+
         iqtree->saveCheckpoint();
         iqtree->getModelFactory()->saveCheckpoint();
         iqtree->getCheckpoint()->putBool("finishedFastMLTree", true);
         iqtree->getCheckpoint()->dump();
         //        cout << "initTree: " << initTree << endl;
+        cout << "Time for fast ML tree search: " << getRealTime() - start_time << " seconds" << endl;
+        cout << endl;
     }
 
     // restore model epsilon
@@ -1223,6 +1231,68 @@ string computeFastMLTree(Params &params, Alignment *aln,
 
     delete iqtree;
     return initTree;
+}
+
+/**
+ Transfer parameters from ModelFinder into the a checkpoint to speed up later stage
+ */
+void transferModelFinderParameters(IQTree *iqtree, Checkpoint *target) {
+    
+    Checkpoint *source = iqtree->getCheckpoint();
+    
+    // transfer the substitution model and site-rate parameters
+    if (iqtree->isSuperTree()) {
+        DoubleVector tree_lens;
+        string struct_name;
+        if (iqtree->params->partition_type == BRLEN_SCALE || iqtree->params->partition_type == BRLEN_FIX)
+            struct_name = "PartitionModelPlen";
+        else
+            struct_name = "PartitionModel";
+        target->startStruct(struct_name);
+        SuperAlignment *super_aln = (SuperAlignment*)iqtree->aln;
+        for (auto aln : super_aln->partitions) {
+            source->transferSubCheckpoint(target, aln->name + CKP_SEP + "Model");
+            source->transferSubCheckpoint(target, aln->name + CKP_SEP + "Rate");
+
+            // transfer partition rates
+            if (iqtree->params->partition_type == BRLEN_SCALE) {
+                source->startStruct(aln->name);
+                ModelInfo info;
+                info.name = aln->model_name;
+                if (info.restoreCheckpoint(source))
+                    tree_lens.push_back(info.tree_len);
+                else
+                    ASSERT(0 && "Could not restore tree_len");
+                source->endStruct();
+            }
+        }
+
+        if (iqtree->params->partition_type == BRLEN_SCALE) {
+            // now normalize the rates
+            PhyloSuperTree *tree = (PhyloSuperTree*)iqtree;
+            double sum = 0.0;
+            size_t nsite = 0;
+            int i;
+            for (i = 0; i < tree->size(); i++) {
+                sum += tree_lens[i] * tree->at(i)->aln->getNSite();
+                if (tree->at(i)->aln->seq_type == SEQ_CODON && tree->rescale_codon_brlen)
+                    nsite += 3*tree->at(i)->aln->getNSite();
+                else
+                    nsite += tree->at(i)->aln->getNSite();
+            }
+            sum = nsite / sum;
+            for (i = 0; i < tree->size(); i++)
+                tree_lens[i] *= sum;
+            target->putVector("part_rates", tree_lens);
+        }
+        target->endStruct();
+    } else {
+        source->transferSubCheckpoint(target, "Model");
+        source->transferSubCheckpoint(target, "Rate");
+    }
+    
+    // transfer tree
+    source->transferSubCheckpoint(target, "PhyloTree");
 }
 
 void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
@@ -1360,6 +1430,8 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
     // force to dump all checkpointing information
     model_info.dump(true);
     
+    // transfer models parameters
+    transferModelFinderParameters(&iqtree, orig_checkpoint);
     iqtree.setCheckpoint(orig_checkpoint);
     
     params.startCPUTime = cpu_time;
