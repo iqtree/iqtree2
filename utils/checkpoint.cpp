@@ -342,11 +342,13 @@ void Checkpoint::getSubCheckpoint(Checkpoint *target, string partial_key) {
 }
 
 void Checkpoint::putSubCheckpoint(Checkpoint *source, string partial_key) {
-    startStruct(partial_key);
+    if (!partial_key.empty())
+        startStruct(partial_key);
     for (auto it = source->begin(); it != source->end(); it++) {
         put(it->first, it->second);
     }
-    endStruct();
+    if (!partial_key.empty())
+        endStruct();
 }
 
 void Checkpoint::transferSubCheckpoint(Checkpoint *target, string partial_key, bool overwrite) {

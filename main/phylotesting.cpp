@@ -2051,14 +2051,16 @@ void fixPartitions(PhyloSuperTree* super_tree) {
     @param model_name model to be tested
     @param params program parameters
     @param in_tree input tree
-    @param model_info checkpointing information
+    @param[in] in_model_info input checkpointing information
+    @param[out] out_model_info output checkpointing information
     @param[out] info output model information
     @param models_block models block
     @param num_thread number of threads
     @return tree string
 */
 string testOneModel(string &model_name, Params &params, Alignment *in_aln,
-    ModelCheckpoint &model_info, ModelInfo &info, ModelsBlock *models_block,
+    ModelCheckpoint &in_model_info, ModelCheckpoint &out_model_info,
+    ModelInfo &info, ModelsBlock *models_block,
     int &num_threads, int brlen_type, ModelAdjust *adjust = NULL)
 {
     IQTree *iqtree = NULL;
@@ -2081,7 +2083,7 @@ string testOneModel(string &model_name, Params &params, Alignment *in_aln,
     iqtree->optimize_by_newton = params.optimize_by_newton;
     iqtree->setNumThreads(num_threads);
 
-    iqtree->setCheckpoint(&model_info);
+    iqtree->setCheckpoint(&in_model_info);
     iqtree->restoreCheckpoint();
     ASSERT(iqtree->root);
     iqtree->initializeModel(params, model_name, models_block);
@@ -2090,11 +2092,17 @@ string testOneModel(string &model_name, Params &params, Alignment *in_aln,
 
     info.name = model_name;
 
-    if (info.restoreCheckpoint(&model_info)) {
+    if (info.restoreCheckpoint(&in_model_info)) {
         delete iqtree;
         return "";
     }
 
+    iqtree->getModelFactory()->restoreCheckpoint();
+    
+    // now switch to the output checkpoint
+    iqtree->getModelFactory()->setCheckpoint(&out_model_info);
+    iqtree->setCheckpoint(&out_model_info);
+    
     if (params.model_test_and_tree) {
         //--- PERFORM FULL TREE SEARCH PER MODEL ----//
 
@@ -2107,26 +2115,8 @@ string testOneModel(string &model_name, Params &params, Alignment *in_aln,
         if (params.stop_condition == SC_BOOTSTRAP_CORRELATION)
             params.stop_condition = SC_UNSUCCESS_ITERATION;
 
-//        params.model_name = model_name;
         iqtree->aln->model_name = model_name;
         
-//        char *orig_user_tree = params.user_file;
-//        string new_user_tree = (string)params.out_prefix+".treefile";
-//        if (params.model_test_and_tree == 1 && model>0 && fileExists(new_user_tree)) {
-//            params.user_file = (char*)new_user_tree.c_str();
-//        }
-        // set checkpoint
-        // commented out: using model_info as checkpoint
-//        iqtree->setCheckpoint(in_tree->getCheckpoint());
-//        iqtree->num_precision = in_tree->num_precision;
-
-        // clear all checkpointed information
-//        Checkpoint *newCheckpoint = new Checkpoint;
-//        iqtree->getCheckpoint()->getSubCheckpoint(newCheckpoint, "iqtree");
-//        iqtree->getCheckpoint()->clear();
-//        iqtree->getCheckpoint()->insert(newCheckpoint->begin(), newCheckpoint->end());
-//        delete newCheckpoint;
-
         cout << endl << "===> Testing model " << model_name << endl;
 
         if (iqtree->root) {
@@ -2155,15 +2145,6 @@ string testOneModel(string &model_name, Params &params, Alignment *in_aln,
         params.gbo_replicates = orig_gbo_replicates;
         params.stop_condition = orig_stop_condition;
 
-        // clear all checkpointed information
-//        newCheckpoint = new Checkpoint;
-//        iqtree->getCheckpoint()->getSubCheckpoint(newCheckpoint, "iqtree");
-//        iqtree->getCheckpoint()->clear();
-//        iqtree->getCheckpoint()->insert(newCheckpoint->begin(), newCheckpoint->end());
-//        iqtree->getCheckpoint()->putBool("finished", false);
-//        iqtree->getCheckpoint()->dump(true);
-//        delete newCheckpoint;
-
         int count = iqtree->getCheckpoint()->eraseKeyPrefix("finished");
         cout << count << " finished checkpoint entries erased" << endl;
         iqtree->getCheckpoint()->eraseKeyPrefix("CandidateSet");
@@ -2173,7 +2154,6 @@ string testOneModel(string &model_name, Params &params, Alignment *in_aln,
 
         if (verbose_mode >= VB_MED)
             cout << "Optimizing model " << info.name << endl;
-        iqtree->getModelFactory()->restoreCheckpoint();
 
         #ifdef _OPENMP
         if (num_threads <= 0) {
@@ -2194,7 +2174,7 @@ string testOneModel(string &model_name, Params &params, Alignment *in_aln,
 
             // check if logl(+R[k]) is worse than logl(+R[k-1])
             ModelInfo prev_info;
-            if (!prev_info.restoreCheckpointRminus1(&model_info, info.name)) break;
+            if (!prev_info.restoreCheckpointRminus1(&in_model_info, info.name)) break;
             if (prev_info.logl < info.logl + params.modelfinder_eps) break;
             if (step == 0) {
                 iqtree->getRate()->initFromCatMinusOne();
@@ -2296,7 +2276,7 @@ string testConcatModel(Params &params, SuperAlignment *super_aln, ModelCheckpoin
     string concat_tree;
 
     cout << "Testing " << model_name << " on supermatrix..." << endl;
-    concat_tree = testOneModel(model_name, params, conaln, model_info, concat_info,
+    concat_tree = testOneModel(model_name, params, conaln, model_info, model_info, concat_info,
         models_block, num_threads, BRLEN_OPTIMIZE);
 
     concat_info.computeICScores(ssize);
@@ -3075,13 +3055,15 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
 
 		// optimize model parameters
         string orig_model_name = model_names[model];
+        // keep separate output model_info to only update model_info if better model found
+        ModelCheckpoint out_model_info;
 		ModelInfo info;
 		info.set_name = set_name;
         string tree_string;
 
         /***** main call to estimate model parameters ******/
         tree_string = testOneModel(model_names[model], params, in_tree->aln,
-            model_info, info, models_block, num_threads, brlen_type, adjust);
+            model_info, out_model_info, info, models_block, num_threads, brlen_type, adjust);
 
         info.computeICScores(ssize);
         info.saveCheckpoint(checkpoint);
@@ -3128,12 +3110,18 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
             best_score_AIC = info.AIC_score;
             if (!tree_string.empty())
                 best_tree_AIC = tree_string;
+            // only update model_info with better model
+            if (params.model_test_criterion == MTC_AIC)
+                model_info.putSubCheckpoint(&out_model_info, "");
         }
 		if (info.AICc_score < best_score_AICc) {
             best_model_AICc = info.name;
             best_score_AICc = info.AICc_score;
             if (!tree_string.empty())
                 best_tree_AICc = tree_string;
+            // only update model_info with better model
+            if (params.model_test_criterion == MTC_AICC)
+                model_info.putSubCheckpoint(&out_model_info, "");
         }
 
 		if (info.BIC_score < best_score_BIC) {
@@ -3141,6 +3129,9 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
             best_score_BIC = info.BIC_score;
             if (!tree_string.empty())
                 best_tree_BIC = tree_string;
+            // only update model_info with better model
+            if (params.model_test_criterion == MTC_BIC)
+                model_info.putSubCheckpoint(&out_model_info, "");
         }
 
         switch (params.model_test_criterion) {
