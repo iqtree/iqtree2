@@ -2433,7 +2433,7 @@ void MTree::createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, Spl
 				  tmp << "/" << sp->getWeight();
                   
                 // assign tag
-                if (tag && (strcmp(tag, "ALL")==0 || (*it)->node->name == tag))
+                if (tag && (iEquals(tag, "ALL") || (*it)->node->name == tag))
                     tmp << sp->getName();                
 				(*it)->node->name.append(tmp.str());
 			} else {
