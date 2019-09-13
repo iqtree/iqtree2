@@ -220,6 +220,17 @@ string convertDoubleToString(double number) {
     return ss.str(); //return a string with the contents of the stream
 }
 
+bool iEquals(const string a, const string b)
+{
+    unsigned int sz = a.size();
+    if (b.size() != sz)
+        return false;
+    for (unsigned int i = 0; i < sz; ++i)
+        if (tolower(a[i]) != tolower(b[i]))
+            return false;
+    return true;
+}
+
 //From Tung
 
 bool copyFile(const char SRC[], const char DEST[]) {
@@ -3725,7 +3736,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 				throw "Use -nt <num_threads|AUTO>";
-                if (strcmp(argv[cnt], "AUTO") == 0)
+                if (iEquals(argv[cnt], "AUTO"))
                     params.num_threads = 0;
                 else {
                     params.num_threads = convert_int(argv[cnt]);
@@ -3840,7 +3851,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -lmap <likelihood_mapping_num_quartets>";
-                if (strcmp(argv[cnt],"ALL") == 0) {
+                if (iEquals(argv[cnt], "ALL")) {
                     params.lmap_num_quartets = 0;
                 } else {
                     params.lmap_num_quartets = convert_int64(argv[cnt]);

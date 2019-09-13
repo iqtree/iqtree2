@@ -1759,7 +1759,7 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
     
     if (merge_phase) {
         model_set = params.merge_models;
-        if (model_set == "all") {
+        if (iEquals(model_set, "all")) {
             model_set = (params.model_set) ? params.model_set : "";
         }
     } else if (params.model_set)
@@ -1804,7 +1804,7 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
     string ratehet_set;
     if (merge_phase) {
         ratehet_set = params.merge_rates;
-        if (ratehet_set == "all")
+        if (iEquals(ratehet_set, "all"))
             ratehet_set = (params.ratehet_set) ? params.ratehet_set : "";
     } else if (params.ratehet_set)
         ratehet_set = params.ratehet_set;
@@ -2879,7 +2879,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     if (gene_sets.size() < in_tree->size())
         mergePartitions(in_tree, gene_sets, model_names);
 
-    if (params.merge_models != "all") {
+    if (!iEquals(params.merge_models, "all")) {
         // test all candidate models again
         lhsum = 0.0;
         dfsum = 0;

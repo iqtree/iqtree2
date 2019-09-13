@@ -2362,6 +2362,12 @@ string convertInt64ToString(int64_t number);
 string convertDoubleToString(double number);
 
 /**
+ case-insensitive comparison between two strings
+ @return true if two strings are equal.
+ */
+bool iEquals(const string a, const string b);
+    
+/**
  *
  * @param SRC
  * @param DEST
