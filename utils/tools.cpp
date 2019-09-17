@@ -4070,10 +4070,12 @@ void parseArg(int argc, char *argv[], Params &params) {
             if (params.out_prefix[strlen(params.out_prefix)-1] == '/' || params.out_prefix[strlen(params.out_prefix)-1] == '\\') {
                 params.out_prefix[strlen(params.out_prefix)-1] = 0;
             }
-        }
-        else if (params.aln_file)
+        } else if (params.aln_file) {
             params.out_prefix = params.aln_file;
-        else if (params.ngs_file)
+            if (params.out_prefix[strlen(params.out_prefix)-1] == '/' || params.out_prefix[strlen(params.out_prefix)-1] == '\\') {
+                params.out_prefix[strlen(params.out_prefix)-1] = 0;
+            }
+        } else if (params.ngs_file)
             params.out_prefix = params.ngs_file;
         else if (params.ngs_mapped_reads)
             params.out_prefix = params.ngs_mapped_reads;
