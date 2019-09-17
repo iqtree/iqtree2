@@ -1978,7 +1978,8 @@ void mergePartitions(PhyloSuperTree* super_tree, vector<set<int> > &gene_sets, S
 		for (set<int>::iterator i = it->begin(); i != it->end(); i++) {
 			if (i != it->begin()) {
 				aln->name += "+";
-				aln->position_spec += ", ";
+                if (!super_aln->partitions[*i]->position_spec.empty())
+                    aln->position_spec += ", ";
 			}
 			aln->name += super_aln->partitions[*i]->name;
 			aln->position_spec += super_aln->partitions[*i]->position_spec;
@@ -1986,7 +1987,7 @@ void mergePartitions(PhyloSuperTree* super_tree, vector<set<int> > &gene_sets, S
                 if (aln->aln_file.empty())
                     aln->aln_file = super_aln->partitions[*i]->aln_file;
                 else if (aln->aln_file != super_aln->partitions[*i]->aln_file) {
-                    aln->aln_file = "__NA__";
+                    aln->aln_file = aln->aln_file + ',' + super_aln->partitions[*i]->aln_file;
                 }
 			}
 			if (!super_aln->partitions[*i]->sequence_type.empty()) {

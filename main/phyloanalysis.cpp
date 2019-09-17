@@ -3701,7 +3701,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
         else
             alignment = new SuperAlignment(params);
     } else {
-        alignment = new Alignment(params.aln_file, params.sequence_type, params.intype, params.model_name);
+        alignment = createAlignment(params.aln_file, params.sequence_type, params.intype, params.model_name);
 
         if (params.freq_const_patterns) {
             int orig_nsite = alignment->getNSite();
@@ -3979,7 +3979,7 @@ void assignBranchSupportNew(Params &params) {
             aln = new SuperAlignment(params);
             tree = new PhyloSuperTree((SuperAlignment*)aln);
         } else {
-            aln = new Alignment(params.aln_file, params.sequence_type, params.intype, params.model_name);
+            aln = createAlignment(params.aln_file, params.sequence_type, params.intype, params.model_name);
             tree = new PhyloTree;
         }
     } else {
