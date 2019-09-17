@@ -76,6 +76,9 @@ public:
     /** read partition as files in a directory */
     void readPartitionDir(Params &params);
 
+    /** read partition as a comma-separated list of files */
+    void readPartitionList(string file_list, char *sequence_type, InputType &intype, string model, bool remove_empty_seq);
+
     void printPartition(const char *filename, const char *aln_file);
     
     void printPartitionRaxml(const char *filename);

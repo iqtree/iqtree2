@@ -903,4 +903,13 @@ protected:
 
 void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id);
 
+/**
+ create a new Alignment object with possibility of comma-separated file names
+ @param aln_file alignment file name, can be a comma-separated list of file names
+ @param sequence_type sequence data type
+ @param input input file format
+ @param model_name model name
+ */
+Alignment *createAlignment(string aln_file, const char *sequence_type, InputType intype, string model_name);
+
 #endif
