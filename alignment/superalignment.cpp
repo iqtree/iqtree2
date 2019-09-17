@@ -25,10 +25,16 @@
 #include "main/phylotesting.h"
 
 Alignment *createAlignment(string aln_file, const char *sequence_type, InputType intype, string model_name) {
-    if (aln_file.find(',') == string::npos)
+    bool is_dir = isDirectory(aln_file.c_str());
+
+    if (!is_dir && aln_file.find(',') == string::npos)
         return new Alignment((char*)aln_file.c_str(), (char*)sequence_type, intype, model_name);
+
     SuperAlignment *super_aln = new SuperAlignment;
-    super_aln->readPartitionList(aln_file, (char*)sequence_type, intype, model_name, true);
+    if (is_dir)
+        super_aln->readPartitionDir(aln_file, (char*)sequence_type, intype, model_name, true);
+    else
+        super_aln->readPartitionList(aln_file, (char*)sequence_type, intype, model_name, true);
     super_aln->init();
     Alignment *aln = super_aln->concatenateAlignments();
     if (aln->isSuperAlignment())
@@ -63,7 +69,7 @@ SuperAlignment::SuperAlignment(Params &params) : Alignment()
 void SuperAlignment::readFromParams(Params &params) {
     if (isDirectory(params.partition_file)) {
         // reading all files in the directory
-        readPartitionDir(params);
+        readPartitionDir(params.partition_file, params.sequence_type, params.intype, params.model_name, params.remove_empty_seq);
     } else if (strstr(params.partition_file, ",") != nullptr) {
         // reading all files in a comma-separated list
         readPartitionList(params.partition_file, params.sequence_type, params.intype, params.model_name, params.remove_empty_seq);
@@ -453,23 +459,24 @@ void SuperAlignment::readPartitionNexus(Params &params) {
     delete sets_block;
 }
 
-void SuperAlignment::readPartitionDir(Params &params) {
+void SuperAlignment::readPartitionDir(string partition_dir, char *sequence_type,
+                                      InputType &intype, string model, bool remove_empty_seq) {
     //    Params origin_params = params;
 
     StrVector filenames;
-    string dir = params.partition_file;
+    string dir = partition_dir;
     if (dir.back() != '/')
         dir.append("/");
-    getFilesInDir(params.partition_file, filenames);
+    getFilesInDir(partition_dir.c_str(), filenames);
     if (filenames.empty())
-        outError("No file found in ", params.partition_file);
+        outError("No file found in ", partition_dir);
     std::sort(filenames.begin(), filenames.end());
-    cout << "Reading " << filenames.size() << " alignment files in directory " << params.partition_file << endl;
+    cout << "Reading " << filenames.size() << " alignment files in directory " << partition_dir << endl;
     
     for (auto it = filenames.begin(); it != filenames.end(); it++)
     {
         Alignment *part_aln;
-        part_aln = createAlignment(dir+*it, params.sequence_type, params.intype, params.model_name);
+        part_aln = createAlignment(dir+*it, sequence_type, intype, model_name);
 //        if (part_aln->seq_type == SEQ_DNA && (strncmp(params.sequence_type, "CODON", 5) == 0 || strncmp(params.sequence_type, "NT2AA", 5) == 0)) {
 //            Alignment *new_aln = new Alignment();
 //            new_aln->convertToCodonOrAA(part_aln, params.sequence_type+5, strncmp(params.sequence_type, "NT2AA", 5) == 0);
@@ -477,7 +484,7 @@ void SuperAlignment::readPartitionDir(Params &params) {
 //            part_aln = new_aln;
 //        }
         Alignment *new_aln;
-        if (params.remove_empty_seq)
+        if (remove_empty_seq)
             new_aln = part_aln->removeGappySeq();
         else
             new_aln = part_aln;
@@ -486,11 +493,11 @@ void SuperAlignment::readPartitionDir(Params &params) {
         
         if (part_aln != new_aln) delete part_aln;
         new_aln->name = *it;
-        new_aln->model_name = params.model_name;
+        new_aln->model_name = model_name;
         new_aln->aln_file = dir + *it;
         new_aln->position_spec = "";
-        if (params.sequence_type)
-            new_aln->sequence_type = params.sequence_type;
+        if (sequence_type)
+            new_aln->sequence_type = sequence_type;
         partitions.push_back(new_aln);
     }
 }
