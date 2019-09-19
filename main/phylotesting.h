@@ -10,36 +10,91 @@
 
 #include "utils/tools.h"
 #include "utils/checkpoint.h"
+#include "nclextra/modelsblock.h"
+#include "alignment/superalignment.h"
 
 class PhyloTree;
 class IQTree;
+class ModelCheckpoint;
 
-
-class ModelInfo {
+/** model adjustment to decide between dna/prot/codon models */
+class ModelAdjust {
 public:
-	string set_name; // subset name
-	string name; // model name
-	double logl; // tree log likelihood
-	int df;      // #parameters
-    double tree_len; // tree length, added 2015-06-24 for rcluster algorithm
-    string tree; // added 2015-04-28: tree string
-	double AIC_score, AICc_score, BIC_score;    // scores
-	double AIC_weight, AICc_weight, BIC_weight; // weights
-	bool AIC_conf, AICc_conf, BIC_conf;         // in confidence set?
+    ModelAdjust() {
+        logl = 0.0;
+        df = 0;
+        sample_size = 0;
+    }
+    double logl;
+    int df;
+    size_t sample_size;
+};
+
+/**
+    Candidate model under testing
+ */
+class CandidateModel {
+    
+public:
+    
+    /** constructor */
+    CandidateModel(int flag = 0) {
+        this->flag = flag;
+    }
+    
+    CandidateModel(string name, int flag = 0) {
+        this->name = name;
+        this->flag = flag;
+    }
+    
+    CandidateModel(Alignment *aln, int flag = 0) {
+        this->flag = flag;
+        getUsualModel(aln);
+    }
+    
+    /**
+     get usual model for a given alignment
+     @param aln input alignment
+     @return length of the alignment
+     */
+    size_t getUsualModel(Alignment *aln);
+    
+    /**
+     evaluate this model
+     @param model_name model to be tested
+     @param params program parameters
+     @param in_tree input tree
+     @param[in] in_model_info input checkpointing information
+     @param[out] out_model_info output checkpointing information
+     @param[out] info output model information
+     @param models_block models block
+     @param num_thread number of threads
+     @return tree string
+     */
+    string evaluate(Params &params, Alignment *in_aln,
+                    ModelCheckpoint &in_model_info, ModelCheckpoint &out_model_info,
+                    ModelsBlock *models_block,
+                    int &num_threads, int brlen_type, ModelAdjust *adjust = NULL);
+    
+    /**
+     evaluate concatenated alignment
+     */
+    string evaluateConcatenation(Params &params, SuperAlignment *super_aln,
+                                 ModelCheckpoint &model_info, ModelsBlock *models_block, int num_threads);
 
     /**
-        compute information criterion scores (AIC, AICc, BIC)
-    */
+     compute information criterion scores (AIC, AICc, BIC)
+     */
     void computeICScores(size_t sample_size);
-
+    
     /**
-        compute information criterion scores (AIC, AICc, BIC)
-    */
+     compute information criterion scores (AIC, AICc, BIC)
+     */
     double computeICScore(size_t sample_size);
-
+    
     /**
-        save model into checkpoint
-    */
+     save model into checkpoint
+     */
     void saveCheckpoint(Checkpoint *ckp) {
         stringstream ostr;
         ostr.precision(10);
@@ -48,10 +103,10 @@ public:
             ostr << " " << tree;
         ckp->put(name, ostr.str());
     }
-
+    
     /**
-        restore model from checkpoint
-    */
+     restore model from checkpoint
+     */
     bool restoreCheckpoint(Checkpoint *ckp) {
         string val;
         if (ckp->getString(name, val)) {
@@ -61,10 +116,10 @@ public:
         }
         return false;
     }
-
+    
     /**
-        restore model from checkpoint
-    */
+     restore model from checkpoint
+     */
     bool restoreCheckpointRminus1(Checkpoint *ckp, string &model_name) {
         size_t posR;
         const char *rates[] = {"+R", "*R", "+H", "*H"};
@@ -78,6 +133,36 @@ public:
         return false;
     }
 
+    string set_name; // subset name
+    string name; // model name
+    double logl; // tree log likelihood
+    int df;      // #parameters
+    double tree_len; // tree length, added 2015-06-24 for rcluster algorithm
+    string tree; // added 2015-04-28: tree string
+    double AIC_score, AICc_score, BIC_score;    // scores
+    double AIC_weight, AICc_weight, BIC_weight; // weights
+    bool AIC_conf, AICc_conf, BIC_conf;         // in confidence set?
+
+protected:
+    
+    /** flag */
+    int flag;
+};
+
+/**
+ set of candidate models
+ */
+class CandidateModelSet : public vector<CandidateModel> {
+public:
+    /**
+     * get the list of model
+     * @param params program parameters
+     * @param aln alignment
+     * param separate_rate true to separate rates from models
+     * @param merge_phase true to consider models for merging phase
+     * @return maximum number of rate categories
+     */
+    int generate(Params &params, Alignment *aln, bool separate_rate, bool merge_phase);
 };
 
 //typedef vector<ModelInfo> ModelCheckpoint;
@@ -113,7 +198,7 @@ public:
         @param[out] ordered_models list of models ordered by specified criterion
         @return TRUE if ordered_models found, FALSE otherwise (unfinished job)
     */
-    bool getOrderedModels(PhyloTree *tree, vector<ModelInfo> &ordered_models);
+    bool getOrderedModels(PhyloTree *tree, CandidateModelSet &ordered_models);
 
     /*
         get the best tree

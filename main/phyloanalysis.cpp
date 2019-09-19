@@ -213,7 +213,7 @@ void reportModelSelection(ofstream &out, Params &params, ModelCheckpoint *model_
     int setid = 1;
     out.precision(3);
 
-    vector<ModelInfo> models;
+    CandidateModelSet models;
     model_info->getOrderedModels(tree, models);
     for (auto it = models.begin(); it != models.end(); it++) {
         if (tree->isSuperTree()) {
