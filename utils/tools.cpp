@@ -3480,30 +3480,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                 else
                     params.out_file = argv[cnt];
             }
-            if (params.root != NULL && params.is_rooted)
-                throw "Not allowed to specify both -o <taxon> and -root";
-
-            if (params.model_test_and_tree && params.partition_type != BRLEN_OPTIMIZE)
-                throw("-mtree not allowed with edge-linked partition model (-spp or -q)");
-            
-            if (params.do_au_test && params.topotest_replicates == 0)
-                throw("For AU test please specify number of bootstrap replicates via -zb option");
-            
-            if (params.lh_mem_save == LM_MEM_SAVE && params.partition_file)
-                throw("-mem option does not work with partition models yet");
-            
-            if (params.gbo_replicates && params.num_bootstrap_samples)
-                throw("UFBoot (-bb) and standard bootstrap (-b) must not be specified together");
-            
-            if ((params.model_name.find("ONLY") != string::npos || (params.model_name.substr(0,2) == "MF" && params.model_name.substr(0,3) != "MFP")) && (params.gbo_replicates || params.num_bootstrap_samples))
-                throw("ModelFinder only cannot be combined with bootstrap analysis");
-            
-            if (params.num_runs > 1 && params.treeset_file)
-                throw("Can't combine --runs and -z options");
-            
-            if (params.num_runs > 1 && params.lmap_num_quartets >= 0)
-                throw("Can't combine --runs and -lmap options");
-
         }
         // try
         catch (const char *str) {
@@ -3538,9 +3514,30 @@ void parseArg(int argc, char *argv[], Params &params) {
 #endif
     }
 
-//    if (params.do_au_test)
-//        outError("The AU test is temporarily disabled due to numerical issue when bp-RELL=0");
+    if (params.root != NULL && params.is_rooted)
+        outError("Not allowed to specify both -o <taxon> and -root");
     
+    if (params.model_test_and_tree && params.partition_type != BRLEN_OPTIMIZE)
+        outError("-mtree not allowed with edge-linked partition model (-spp or -q)");
+    
+    if (params.do_au_test && params.topotest_replicates == 0)
+        outError("For AU test please specify number of bootstrap replicates via -zb option");
+    
+    if (params.lh_mem_save == LM_MEM_SAVE && params.partition_file)
+        outError("-mem option does not work with partition models yet");
+    
+    if (params.gbo_replicates && params.num_bootstrap_samples)
+        outError("UFBoot (-bb) and standard bootstrap (-b) must not be specified together");
+    
+    if ((params.model_name.find("ONLY") != string::npos || (params.model_name.substr(0,2) == "MF" && params.model_name.substr(0,3) != "MFP")) && (params.gbo_replicates || params.num_bootstrap_samples))
+        outError("ModelFinder-only (-m " + params.model_name + ") cannot be combined with bootstrap analysis");
+    
+    if (params.num_runs > 1 && params.treeset_file)
+        outError("Can't combine --runs and -z options");
+    
+    if (params.num_runs > 1 && params.lmap_num_quartets >= 0)
+        outError("Can't combine --runs and -lmap options");
+
 
 	// Diep:
 	if(params.ufboot2corr == true){
