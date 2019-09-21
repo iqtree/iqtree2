@@ -471,118 +471,6 @@ double computeAdapter(Alignment *orig_aln, Alignment *newaln, int &adjusted_df) 
 }
 
 /**
- wrapper function implementing ModelOMatic method of Whelan et al. (2015)
- */
-/*
-string CandidateModelSet::testModelOMatic(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
-    ModelsBlock *models_block, int num_threads, int brlen_type,
-    string set_name, string in_model_name, bool merge_phase)
-{
-    string model_name = test(params, in_tree, model_info, models_block, num_threads,
-                             brlen_type, set_name, in_model_name, merge_phase);
-    if (!params.modelomatic || in_tree->aln->seq_type != SEQ_CODON)
-        return model_name;
-
-    Checkpoint *checkpoint = &model_info;
-    
-    string best_model_AIC, best_model_AICc, best_model_BIC;
-    double best_score_AIC = -DBL_MAX, best_score_AICc = -DBL_MAX, best_score_BIC = -DBL_MAX;
-    string best_tree_AIC, best_tree_AICc, best_tree_BIC;
-    string best_model_list;
-    
-    CKP_RESTORE(best_tree_AIC);
-    CKP_RESTORE(best_tree_AICc);
-    CKP_RESTORE(best_tree_BIC);
-    model_info.getBestModelList(best_model_list);
-    
-    CandidateModel best_model;
-    best_model.name = model_name;
-    best_model.restoreCheckpoint(&model_info);
-    double score_best = best_model.computeICScore(in_tree->getAlnNSite());
-    Alignment *orig_aln = in_tree->aln;
-    size_t sample_size = orig_aln->getNSite();
-
-    // now convert Codon to AA
-    SeqType test_seq_types[] = {SEQ_PROTEIN, SEQ_DNA};
-    for (int id = 0; id < sizeof(test_seq_types) / sizeof(SeqType); id++) {
-        Alignment *newaln = NULL;
-        // adapter coefficient according to Whelan et al. 2015
-        ModelAdjust adjust;
-        adjust.logl = 0.0;
-        adjust.df = 0;
-        //adjust.sample_size = orig_aln->getNSite();
-        if (test_seq_types[id] == SEQ_PROTEIN) {
-            newaln = orig_aln->convertCodonToAA();
-            adjust.logl = computeAdapter(orig_aln, newaln, adjust.df);
-            if (set_name.empty())
-                cout << "Adapter function: " << adjust.logl << "  adjusted_df: " << adjust.df << endl;
-        } else if (test_seq_types[id] == SEQ_DNA)
-            newaln = orig_aln->convertCodonToDNA();
-        else
-            ASSERT(0 && "Unhandled SeqType");
-        Alignment *prev_aln = in_tree->aln;
-        in_tree->aln = newaln;
-        CandidateModel info;
-        // clear all current models
-        clear();
-        info.name = test(params, in_tree, model_info, models_block, num_threads,
-            brlen_type, set_name, in_model_name, merge_phase);
-        info.restoreCheckpoint(&model_info);
-        // correct log-likelihood with adapter function
-        info.computeICScores(sample_size);
-        double score_new = info.computeICScore(sample_size);
-        if (score_new < score_best) {
-            score_best = score_new;
-            model_name = info.name;
-        } else {
-            // revert if score is worse
-            in_tree->aln = prev_aln;
-            delete newaln;
-        }
-        if (info.AIC_score < best_score_AIC) {
-            best_model_AIC = info.name;
-            best_score_AIC = info.AIC_score;
-            CKP_RESTORE(best_tree_AIC);
-        }
-        if (info.AICc_score < best_score_AICc) {
-            best_model_AICc = info.name;
-            best_score_AICc = info.AICc_score;
-            CKP_RESTORE(best_tree_AICc);
-        }
-        
-        if (info.BIC_score < best_score_BIC) {
-            best_model_BIC = info.name;
-            best_score_BIC = info.BIC_score;
-            CKP_RESTORE(best_tree_BIC);
-        }
-        
-        CKP_SAVE(best_tree_AIC);
-        CKP_SAVE(best_tree_AICc);
-        CKP_SAVE(best_tree_BIC);
-        
-        CKP_SAVE(best_model_AIC);
-        CKP_SAVE(best_model_AICc);
-        CKP_SAVE(best_model_BIC);
-        
-        CKP_SAVE(best_score_AIC);
-        CKP_SAVE(best_score_AICc);
-        CKP_SAVE(best_score_BIC);
-        
-        // merge best_model_list
-        string model_list_new;
-        model_info.getBestModelList(model_list_new);
-        best_model_list = best_model_list + " " + model_list_new;
-        model_info.putBestModelList(best_model_list);
-        model_info.dump();
-    }
-    if (orig_aln != in_tree->aln) {
-        delete orig_aln;
-    }
-    return model_name;
-}
-*/
-
-/**
  compute fast ML tree by stepwise addition MP + ML-NNI
  @return the tree string
  */
@@ -885,7 +773,8 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
         iqtree.aln->model_name = res_models;
     } else {
         // single model selection
-        iqtree.aln->model_name = CandidateModelSet().test(params, &iqtree, model_info, models_block, params.num_threads, BRLEN_OPTIMIZE);
+        iqtree.aln->model_name = CandidateModelSet().test(params, &iqtree,
+            model_info, models_block, params.num_threads, BRLEN_OPTIMIZE);
         
         Checkpoint *checkpoint = &model_info;
         string best_model_AIC, best_model_AICc, best_model_BIC;
@@ -1950,31 +1839,6 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 
 	SuperAlignment *super_aln = ((SuperAlignment*)in_tree->aln);
 
-    string concat_tree;
-    CandidateModel concat_info;
-
-    // Analysis on supermatrix
-    if (false)
-    {
-        concat_tree = concat_info.evaluateConcatenation(params, super_aln, model_info, models_block, num_threads);
-
-        // read tree with branch lengths for linked partition model
-        if (params.partition_type != BRLEN_OPTIMIZE && !concat_tree.empty()) {
-            in_tree->readTreeString(concat_tree);
-            int part = 0;
-            for (auto it = in_tree->begin(); it != in_tree->end(); it++, part++) {
-                model_info.startStruct(in_tree->at(part)->aln->name);
-                (*it)->saveCheckpoint();
-                model_info.endStruct();
-            }
-        }
-        model_info.dump();
-
-        cout << concat_info.name << " / LnL: " << concat_info.logl
-             << " / df: " << concat_info.df << " / AIC: " << concat_info.AIC_score
-             << " / AICc: " << concat_info.AICc_score << " / BIC: " << concat_info.BIC_score << endl;
-    }
-
 	cout << "Selecting individual models for " << in_tree->size() << " charsets using " << criterionName(params.model_test_criterion) << "..." << endl;
 	//cout << " No. AIC         AICc        BIC         Charset" << endl;
 	cout << " No. Model        Score       TreeLen     Charset" << endl;
@@ -2066,11 +1930,6 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 		super_aln->printBestPartition((string(params.out_prefix) + ".best_scheme.nex").c_str());
 		super_aln->printBestPartitionRaxml((string(params.out_prefix) + ".best_scheme").c_str());
         model_info.dump();
-        if (params.partition_type != TOPO_UNLINKED && inf_score > concat_info.computeICScore(ssize) + 1.0) {
-            cout << endl;
-            outWarning("Partition model has worse fit than single model!");
-            outWarning("Add MERGE to -m option to increase model fit!");
-        }
 		return;
 	}
 
@@ -2188,10 +2047,6 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
                 tree->sse = params.SSE;
                 tree->optimize_by_newton = params.optimize_by_newton;
                 tree->num_threads = params.model_test_and_tree ? num_threads : 1;
-                /*if (params.model_test_and_tree) {
-                    tree->setCheckpoint(new Checkpoint());
-                    tree->saveCheckpoint();
-                } else*/
                 {
                     tree->setCheckpoint(&part_model_info);
                     // trick to restore checkpoint
@@ -2201,11 +2056,6 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
                 best_model.name = CandidateModelSet().test(params, tree, part_model_info, models_block,
                     params.model_test_and_tree ? num_threads : 1, params.partition_type, cur_pair.set_name, "", true);
                 best_model.restoreCheckpoint(&part_model_info);
-                /*
-                if (params.model_test_and_tree) {
-                    delete tree->getCheckpoint();
-                }
-                 */
                 delete tree;
                 delete aln;
             }
@@ -2306,17 +2156,6 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 		final_model_tree += ")";
 	}
 
-//    cout << "BEST-FIT PARTITION MODEL: " << endl;
-//    cout << "  charpartition " << criterionName(params.model_test_criterion) << " = ";
-//    for (i = 0; i < gene_sets.size(); i++) {
-//        if (i > 0)
-//            cout << ", ";
-//        cout << model_names[i] << ":";
-//        for (auto j = gene_sets[i].begin(); j != gene_sets[i].end(); j++) {
-//            cout << " " << super_aln->partitions[*j]->name;
-//        }
-//    }
-//    cout << ";" << endl;
 	cout << "Agglomerative model selection: " << final_model_tree << endl;
     
     if (gene_sets.size() < in_tree->size())
@@ -2401,11 +2240,6 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     ((SuperAlignment*)in_tree->aln)->printBestPartition((string(params.out_prefix) + ".best_scheme.nex").c_str());
 	((SuperAlignment*)in_tree->aln)->printBestPartitionRaxml((string(params.out_prefix) + ".best_scheme").c_str());
     model_info.dump();
-    if (inf_score > concat_info.computeICScore(ssize) + 1.0) {
-        cout << endl;
-        outWarning("Partition merging found worse model than single model!");
-        outWarning("Please do not use partition model!");
-    }
 }
 
 bool isMixtureModel(ModelsBlock *models_block, string &model_str) {
