@@ -647,7 +647,7 @@ string computeFastMLTree(Params &params, Alignment *aln,
     
     double start_time = getRealTime();
     
-    cout << "Perform fast likelihood tree search search using " << model_names[0] << " model..." << endl;
+    cout << "Perform fast likelihood tree search using " << model_names[0] << " model..." << endl;
     
     if (iqtree->getCheckpoint()->getBool("finishedFastMLTree")) {
         // model optimization already done: ignore this step
@@ -1647,6 +1647,8 @@ string CandidateModel::evaluate(Params &params, Alignment *in_aln,
     }
     string tree_string = iqtree->getTreeString();
 
+    saveCheckpoint(&in_model_info);
+    
     delete iqtree;
     return tree_string;
 }
@@ -1722,7 +1724,6 @@ string CandidateModel::evaluateConcatenation(Params &params, SuperAlignment *sup
         models_block, num_threads, BRLEN_OPTIMIZE);
 
     computeICScores(ssize);
-    saveCheckpoint(&model_info);
 
     delete conaln;
     return concat_tree;
@@ -2434,10 +2435,11 @@ string CandidateModelSet::test(Params &params, PhyloTree* in_tree, ModelCheckpoi
     Alignment *dna_aln = NULL;
     ModelAdjust prot_adjust;
     int prot_begin = 0, prot_end = 0, dna_begin = 0, dna_end = 0;
+    bool do_modelomatic = params.modelomatic && in_tree->aln->seq_type == SEQ_CODON;
 
     if (in_model_name.empty()) {
         generate(params, in_tree->aln, params.model_test_separate_rate, merge_phase);
-        if (params.modelomatic && in_tree->aln->seq_type == SEQ_CODON) {
+        if (do_modelomatic) {
             // generate models for protein
             // adapter coefficient according to Whelan et al. 2015
             prot_aln = in_tree->aln->convertCodonToAA();
@@ -2469,9 +2471,12 @@ string CandidateModelSet::test(Params &params, PhyloTree* in_tree, ModelCheckpoi
 	if (params.model_test_sample_size)
 		ssize = params.model_test_sample_size;
 	if (set_name == "") {
-		cout << "ModelFinder will test " << size() << " "
-			<< getSeqTypeName(in_tree->aln->seq_type)
-			<< " models (sample size: " << ssize << ") ..." << endl;
+        cout << "ModelFinder will test " << size() << " ";
+        if (do_modelomatic)
+            cout << "codon/AA/DNA";
+        else
+            cout << getSeqTypeName(in_tree->aln->seq_type);
+        cout << " models (sample size: " << ssize << ") ..." << endl;
         if (params.model_test_and_tree == 0)
             cout << " No. Model         -LnL         df  AIC          AICc         BIC" << endl;
 	}
@@ -2536,7 +2541,6 @@ string CandidateModelSet::test(Params &params, PhyloTree* in_tree, ModelCheckpoi
             model_info, out_model_info, models_block, num_threads, brlen_type, adjust);
 
         at(model).computeICScores(ssize);
-        at(model).saveCheckpoint(checkpoint);
 
         CandidateModel prev_info;
 
