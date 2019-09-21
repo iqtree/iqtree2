@@ -542,6 +542,7 @@ if (USE_BOOSTER)
     add_definitions(-DUSE_BOOSTER)
 endif()
 
+add_subdirectory(main)
 add_subdirectory(pll)
 add_subdirectory(ncl)
 add_subdirectory(nclextra)
@@ -586,11 +587,6 @@ add_library(kernelfma tree/phylokernelfma.cpp)
 endif()
 
 add_executable(iqtree
-main/main.cpp
-main/phyloanalysis.cpp
-main/phyloanalysis.h
-main/phylotesting.cpp
-main/phylotesting.h
 obsolete/parsmultistate.cpp
 obsolete/parsmultistate.h
 )
@@ -665,7 +661,8 @@ if (NOT IQTREE_FLAGS MATCHES "single")
 endif()
 
 # basic linking librararies
-target_link_libraries(iqtree pll ncl nclextra utils pda lbfgsb whtest sprng vectorclass model gsl alignment tree yaml-cpp phyloYAML ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
+target_link_libraries(iqtree pll ncl nclextra utils pda lbfgsb whtest sprng vectorclass model
+    gsl alignment tree yaml-cpp phyloYAML main ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
 
 if (USE_TERRAPHAST)
    target_link_libraries(iqtree terrace)
