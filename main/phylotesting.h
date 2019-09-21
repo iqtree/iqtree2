@@ -23,11 +23,9 @@ public:
     ModelAdjust() {
         logl = 0.0;
         df = 0;
-        sample_size = 0;
     }
     double logl;
     int df;
-    size_t sample_size;
 };
 
 /**
@@ -163,6 +161,43 @@ public:
      * @return maximum number of rate categories
      */
     int generate(Params &params, Alignment *aln, bool separate_rate, bool merge_phase);
+
+    /**
+     testing the best-fit model
+     return in params.freq_type and params.rate_type
+     @param params global program parameters
+     @param in_tree phylogenetic tree
+     @param model_info (IN/OUT) information for all models considered
+     @param models_block global model definition
+     @param num_threads number of threads
+     @param brlen_type BRLEN_OPTIMIZE | BRLEN_FIX | BRLEN_SCALE | TOPO_UNLINK
+     @param set_name for partition model selection
+     @param in_model_name a specific model name if testing one model
+     @param adjust model adjustment for modelomatic
+     @param merge_phase true to consider models for merging phase
+     @return name of best-fit-model
+     */
+    string test(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
+                ModelsBlock *models_block, int num_threads, int brlen_type,
+                string set_name = "", string in_model_name = "",
+                bool merge_phase = false);
+
+    /*
+     select between DNA/Protein/Codon models
+     @param params global program parameters
+     @param in_tree phylogenetic tree
+     @param model_info (IN/OUT) information for all models considered
+     @param models_block global model definition
+     @param num_threads number of threads
+     @param brlen_type BRLEN_OPTIMIZE | BRLEN_FIX | BRLEN_SCALE | TOPO_UNLINK
+     @param set_name for partition model selection
+     @param in_model_name a specific model name if testing one model
+     @param merge_phase true to consider models for merging phase
+     @return name of best-fit-model
+     */
+//    string testModelOMatic(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
+//                           ModelsBlock *models_block, int num_threads, int brlen_type,
+//                           string set_name = "", string in_model_name = "", bool merge_phase = false);
 };
 
 //typedef vector<ModelInfo> ModelCheckpoint;

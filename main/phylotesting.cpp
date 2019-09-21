@@ -401,21 +401,6 @@ string criterionName(ModelTestCriterion mtc) {
 
 
 /**
- testing the best-fit model
- return in params.freq_type and params.rate_type
- @param set_name for partitioned analysis
- @param in_tree phylogenetic tree
- @param model_info (IN/OUT) information for all models considered
- @param set_name for partition model selection
- @param print_mem_usage true to print RAM memory used (default: false)
- @param merge_phase true to consider models for merging phase
- @return name of best-fit-model
- */
-string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
-        ModelsBlock *models_block, int num_threads, int brlen_type,
-        string set_name = "", string in_model_name = "", ModelAdjust *adjust = NULL, bool merge_phase = false);
-
-/**
  * select models for all partitions
  * @param[in,out] model_info (IN/OUT) all model information
  * @return total number of parameters
@@ -488,12 +473,13 @@ double computeAdapter(Alignment *orig_aln, Alignment *newaln, int &adjusted_df) 
 /**
  wrapper function implementing ModelOMatic method of Whelan et al. (2015)
  */
-string testModelOMatic(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
+/*
+string CandidateModelSet::testModelOMatic(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
     ModelsBlock *models_block, int num_threads, int brlen_type,
-    string set_name = "", string in_model_name = "", bool merge_phase = false)
+    string set_name, string in_model_name, bool merge_phase)
 {
-    string model_name = testModel(params, in_tree, model_info, models_block, num_threads,
-                                  brlen_type, set_name, in_model_name, NULL, merge_phase);
+    string model_name = test(params, in_tree, model_info, models_block, num_threads,
+                             brlen_type, set_name, in_model_name, merge_phase);
     if (!params.modelomatic || in_tree->aln->seq_type != SEQ_CODON)
         return model_name;
 
@@ -504,25 +490,17 @@ string testModelOMatic(Params &params, PhyloTree* in_tree, ModelCheckpoint &mode
     string best_tree_AIC, best_tree_AICc, best_tree_BIC;
     string best_model_list;
     
-    bool check;
-    check = CKP_RESTORE(best_model_AIC) &&
-            CKP_RESTORE(best_model_AICc) &&
-            CKP_RESTORE(best_model_BIC) &&
-            CKP_RESTORE(best_score_AIC) &&
-            CKP_RESTORE(best_score_AICc) &&
-            CKP_RESTORE(best_score_BIC) &&
-            CKP_RESTORE(best_tree_AIC) &&
-            CKP_RESTORE(best_tree_AICc) &&
-            CKP_RESTORE(best_tree_BIC) &&
-            model_info.getBestModelList(best_model_list);
-    ASSERT(check);
+    CKP_RESTORE(best_tree_AIC);
+    CKP_RESTORE(best_tree_AICc);
+    CKP_RESTORE(best_tree_BIC);
+    model_info.getBestModelList(best_model_list);
     
     CandidateModel best_model;
     best_model.name = model_name;
-    check = best_model.restoreCheckpoint(&model_info);
-    ASSERT(check);
+    best_model.restoreCheckpoint(&model_info);
     double score_best = best_model.computeICScore(in_tree->getAlnNSite());
     Alignment *orig_aln = in_tree->aln;
+    size_t sample_size = orig_aln->getNSite();
 
     // now convert Codon to AA
     SeqType test_seq_types[] = {SEQ_PROTEIN, SEQ_DNA};
@@ -532,7 +510,7 @@ string testModelOMatic(Params &params, PhyloTree* in_tree, ModelCheckpoint &mode
         ModelAdjust adjust;
         adjust.logl = 0.0;
         adjust.df = 0;
-        adjust.sample_size = orig_aln->getNSite();
+        //adjust.sample_size = orig_aln->getNSite();
         if (test_seq_types[id] == SEQ_PROTEIN) {
             newaln = orig_aln->convertCodonToAA();
             adjust.logl = computeAdapter(orig_aln, newaln, adjust.df);
@@ -545,13 +523,14 @@ string testModelOMatic(Params &params, PhyloTree* in_tree, ModelCheckpoint &mode
         Alignment *prev_aln = in_tree->aln;
         in_tree->aln = newaln;
         CandidateModel info;
-        info.name = testModel(params, in_tree, model_info, models_block, num_threads,
-            brlen_type, set_name, in_model_name, &adjust, merge_phase);
-        check = info.restoreCheckpoint(&model_info);
-        ASSERT(check);
+        // clear all current models
+        clear();
+        info.name = test(params, in_tree, model_info, models_block, num_threads,
+            brlen_type, set_name, in_model_name, merge_phase);
+        info.restoreCheckpoint(&model_info);
         // correct log-likelihood with adapter function
-        info.computeICScores(adjust.sample_size);
-        double score_new = info.computeICScore(adjust.sample_size);
+        info.computeICScores(sample_size);
+        double score_new = info.computeICScore(sample_size);
         if (score_new < score_best) {
             score_best = score_new;
             model_name = info.name;
@@ -601,6 +580,7 @@ string testModelOMatic(Params &params, PhyloTree* in_tree, ModelCheckpoint &mode
     }
     return model_name;
 }
+*/
 
 /**
  compute fast ML tree by stepwise addition MP + ML-NNI
@@ -905,7 +885,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
         iqtree.aln->model_name = res_models;
     } else {
         // single model selection
-        iqtree.aln->model_name = testModelOMatic(params, &iqtree, model_info, models_block, params.num_threads, BRLEN_OPTIMIZE);
+        iqtree.aln->model_name = CandidateModelSet().test(params, &iqtree, model_info, models_block, params.num_threads, BRLEN_OPTIMIZE);
         
         Checkpoint *checkpoint = &model_info;
         string best_model_AIC, best_model_AICc, best_model_BIC;
@@ -1652,7 +1632,7 @@ string CandidateModel::evaluate(Params &params, Alignment *in_aln,
             if (prev_info.logl < logl + params.modelfinder_eps) break;
             if (step == 0) {
                 iqtree->getRate()->initFromCatMinusOne();
-            } else if (logl < prev_info.logl - params.modelfinder_eps) {
+            } else if (logl < prev_info.logl - params.modelfinder_eps*10.0) {
                 outWarning("Log-likelihood " + convertDoubleToString(logl) + " of " +
                            name + " worse than " + prev_info.name + " " + convertDoubleToString(prev_info.logl));
             }
@@ -1824,7 +1804,7 @@ double doKmeansClustering(Params &params, PhyloSuperTree *in_tree,
             tree->restoreCheckpoint();
             tree->saveCheckpoint();
             }
-            best_model.name = testModelOMatic(params, tree, part_model_info, models_block,
+            best_model.name = CandidateModelSet().test(params, tree, part_model_info, models_block,
                 params.model_test_and_tree ? num_threads : 1, params.partition_type,
                 set_name, "", true);
             best_model.restoreCheckpoint(&part_model_info);
@@ -2037,7 +2017,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
         if (params.model_name.empty())
             part_model_name = this_tree->aln->model_name;
         CandidateModel best_model;
-		best_model.name = testModelOMatic(params, this_tree, part_model_info, models_block,
+		best_model.name = CandidateModelSet().test(params, this_tree, part_model_info, models_block,
             (parallel_over_partitions ? 1 : num_threads), brlen_type, this_tree->aln->name, part_model_name, test_merge);
 
         bool check = (best_model.restoreCheckpoint(&part_model_info));
@@ -2217,7 +2197,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
                     tree->restoreCheckpoint();
                     tree->saveCheckpoint();
                 }
-                best_model.name = testModelOMatic(params, tree, part_model_info, models_block,
+                best_model.name = CandidateModelSet().test(params, tree, part_model_info, models_block,
                     params.model_test_and_tree ? num_threads : 1, params.partition_type, cur_pair.set_name, "", true);
                 best_model.restoreCheckpoint(&part_model_info);
                 /*
@@ -2378,7 +2358,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             if (params.model_name.empty())
                 part_model_name = this_tree->aln->model_name;
             CandidateModel best_model;
-            best_model.name = testModelOMatic(params, this_tree, part_model_info, models_block,
+            best_model.name = CandidateModelSet().test(params, this_tree, part_model_info, models_block,
                 (parallel_over_partitions ? 1 : num_threads), brlen_type,
                 this_tree->aln->name, part_model_name, false);
             
@@ -2441,31 +2421,55 @@ bool isMixtureModel(ModelsBlock *models_block, string &model_str) {
     return false;
 }
 
-string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
+string CandidateModelSet::test(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
     ModelsBlock *models_block, int num_threads, int brlen_type,
-    string set_name, string in_model_name, ModelAdjust *adjust, bool merge_phase)
+    string set_name, string in_model_name, bool merge_phase)
 {
     ModelCheckpoint *checkpoint = &model_info;
 
 	in_tree->params = &params;
-	CandidateModelSet candidate_models;
-    if (in_model_name.empty())
-        candidate_models.generate(params, in_tree->aln, params.model_test_separate_rate, merge_phase);
-    else {
-        candidate_models.push_back(CandidateModel(in_model_name));
+    
+    // for ModelOMatic
+    Alignment *prot_aln = NULL;
+    Alignment *dna_aln = NULL;
+    ModelAdjust prot_adjust;
+    int prot_begin = 0, prot_end = 0, dna_begin = 0, dna_end = 0;
+
+    if (in_model_name.empty()) {
+        generate(params, in_tree->aln, params.model_test_separate_rate, merge_phase);
+        if (params.modelomatic && in_tree->aln->seq_type == SEQ_CODON) {
+            // generate models for protein
+            // adapter coefficient according to Whelan et al. 2015
+            prot_aln = in_tree->aln->convertCodonToAA();
+            prot_adjust.logl = computeAdapter(in_tree->aln, prot_aln, prot_adjust.df);
+            if (set_name.empty())
+                cout << "Adapter function: " << prot_adjust.logl << "  adjusted_df: " << prot_adjust.df << endl;
+            prot_begin = size();
+            generate(params, prot_aln, params.model_test_separate_rate, merge_phase);
+            prot_end = size();
+
+            // generate models for DNA
+            dna_aln = in_tree->aln->convertCodonToDNA();
+            dna_begin = size();
+            generate(params, dna_aln, params.model_test_separate_rate, merge_phase);
+            dna_end = size();
+        }
+    } else {
+        push_back(CandidateModel(in_model_name));
     }
 
     DoubleVector model_scores;
     int model;
 	string best_model;
+    Alignment *best_aln = in_tree->aln;
 
 	int ssize = in_tree->aln->getNSite(); // sample size
-    if (adjust)
-        ssize = adjust->sample_size;
+    //if (adjust)
+    //    ssize = adjust->sample_size;
 	if (params.model_test_sample_size)
 		ssize = params.model_test_sample_size;
 	if (set_name == "") {
-		cout << "ModelFinder will test " << candidate_models.size() << " "
+		cout << "ModelFinder will test " << size() << " "
 			<< getSeqTypeName(in_tree->aln->seq_type)
 			<< " models (sample size: " << ssize << ") ..." << endl;
         if (params.model_test_and_tree == 0)
@@ -2490,9 +2494,9 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
 
     //------------- MAIN FOR LOOP GOING THROUGH ALL MODELS TO BE TESTED ---------//
 
-	for (model = 0; model < candidate_models.size(); model++) {
+	for (model = 0; model < size(); model++) {
 		//cout << model_names[model] << endl;
-        if (candidate_models[model].name[0] == '+') {
+        if (at(model).name[0] == '+') {
             // now switching to test rate heterogeneity
             if (best_model == "")
                 switch (params.model_test_criterion) {
@@ -2507,55 +2511,63 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
                     break;
                 default: ASSERT(0);
                 }
-            candidate_models[model].name = best_model + candidate_models[model].name;
+            at(model).name = best_model + at(model).name;
         }
 
 		// optimize model parameters
-        string orig_model_name = candidate_models[model].name;
+        string orig_model_name = at(model).name;
         // keep separate output model_info to only update model_info if better model found
         ModelCheckpoint out_model_info;
 		//CandidateModel info;
 		//info.set_name = set_name;
-        candidate_models[model].set_name = set_name;
+        at(model).set_name = set_name;
         string tree_string;
 
         /***** main call to estimate model parameters ******/
-        tree_string = candidate_models[model].evaluate(params, in_tree->aln,
+        ModelAdjust *adjust = NULL;
+        Alignment *this_aln = in_tree->aln;
+        if (prot_begin <= model && model < prot_end) {
+            adjust = &prot_adjust;
+            this_aln = prot_aln;
+        } else if (dna_begin <= model && model < dna_end) {
+            this_aln = dna_aln;
+        }
+        tree_string = at(model).evaluate(params, this_aln,
             model_info, out_model_info, models_block, num_threads, brlen_type, adjust);
 
-        candidate_models[model].computeICScores(ssize);
-        candidate_models[model].saveCheckpoint(checkpoint);
+        at(model).computeICScores(ssize);
+        at(model).saveCheckpoint(checkpoint);
 
         CandidateModel prev_info;
 
         bool skip_model = false;
 
-        if (prev_info.restoreCheckpointRminus1(checkpoint, candidate_models[model].name)) {
+        if (prev_info.restoreCheckpointRminus1(checkpoint, at(model).name)) {
             // check stop criterion for +R
             prev_info.computeICScores(ssize);
             switch (params.model_test_criterion) {
             case MTC_ALL:
-                if (candidate_models[model].AIC_score > prev_info.AIC_score &&
-                    candidate_models[model].AICc_score > prev_info.AICc_score &&
-                    candidate_models[model].BIC_score > prev_info.BIC_score) {
+                if (at(model).AIC_score > prev_info.AIC_score &&
+                    at(model).AICc_score > prev_info.AICc_score &&
+                    at(model).BIC_score > prev_info.BIC_score) {
                     // skip remaining model
                     skip_model = true;
                 }
                 break;
             case MTC_AIC:
-                if (candidate_models[model].AIC_score > prev_info.AIC_score) {
+                if (at(model).AIC_score > prev_info.AIC_score) {
                     // skip remaining model
                     skip_model = true;
                 }
                 break;
             case MTC_AICC:
-                if (candidate_models[model].AICc_score > prev_info.AICc_score) {
+                if (at(model).AICc_score > prev_info.AICc_score) {
                     // skip remaining model
                     skip_model = true;
                 }
                 break;
             case MTC_BIC:
-                if (candidate_models[model].BIC_score > prev_info.BIC_score) {
+                if (at(model).BIC_score > prev_info.BIC_score) {
                     // skip remaining model
                     skip_model = true;
                 }
@@ -2563,39 +2575,45 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
             }
         }
 
-		if (candidate_models[model].AIC_score < best_score_AIC) {
-            best_model_AIC = candidate_models[model].name;
-            best_score_AIC = candidate_models[model].AIC_score;
+		if (at(model).AIC_score < best_score_AIC) {
+            best_model_AIC = at(model).name;
+            best_score_AIC = at(model).AIC_score;
             if (!tree_string.empty())
                 best_tree_AIC = tree_string;
             // only update model_info with better model
-            if (params.model_test_criterion == MTC_AIC)
+            if (params.model_test_criterion == MTC_AIC) {
                 model_info.putSubCheckpoint(&out_model_info, "");
+                best_aln = this_aln;
+            }
         }
-		if (candidate_models[model].AICc_score < best_score_AICc) {
-            best_model_AICc = candidate_models[model].name;
-            best_score_AICc = candidate_models[model].AICc_score;
+		if (at(model).AICc_score < best_score_AICc) {
+            best_model_AICc = at(model).name;
+            best_score_AICc = at(model).AICc_score;
             if (!tree_string.empty())
                 best_tree_AICc = tree_string;
             // only update model_info with better model
-            if (params.model_test_criterion == MTC_AICC)
+            if (params.model_test_criterion == MTC_AICC) {
                 model_info.putSubCheckpoint(&out_model_info, "");
+                best_aln = this_aln;
+            }
         }
 
-		if (candidate_models[model].BIC_score < best_score_BIC) {
-			best_model_BIC = candidate_models[model].name;
-            best_score_BIC = candidate_models[model].BIC_score;
+		if (at(model).BIC_score < best_score_BIC) {
+			best_model_BIC = at(model).name;
+            best_score_BIC = at(model).BIC_score;
             if (!tree_string.empty())
                 best_tree_BIC = tree_string;
             // only update model_info with better model
-            if (params.model_test_criterion == MTC_BIC)
+            if (params.model_test_criterion == MTC_BIC) {
                 model_info.putSubCheckpoint(&out_model_info, "");
+                best_aln = this_aln;
+            }
         }
 
         switch (params.model_test_criterion) {
-            case MTC_AIC: model_scores.push_back(candidate_models[model].AIC_score); break;
-            case MTC_AICC: model_scores.push_back(candidate_models[model].AICc_score); break;
-            default: model_scores.push_back(candidate_models[model].BIC_score); break;
+            case MTC_AIC: model_scores.push_back(at(model).AIC_score); break;
+            case MTC_AICC: model_scores.push_back(at(model).AICc_score); break;
+            default: model_scores.push_back(at(model).BIC_score); break;
         }
 
         CKP_SAVE(best_tree_AIC);
@@ -2608,18 +2626,18 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
             cout.width(3);
             cout << right << model+1 << "  ";
             cout.width(13);
-            cout << left << candidate_models[model].name << " ";
+            cout << left << at(model).name << " ";
             
             cout.precision(3);
             cout << fixed;
             cout.width(12);
-            cout << -candidate_models[model].logl << " ";
+            cout << -at(model).logl << " ";
             cout.width(3);
-            cout << candidate_models[model].df << " ";
+            cout << at(model).df << " ";
             cout.width(12);
-            cout << candidate_models[model].AIC_score << " ";
+            cout << at(model).AIC_score << " ";
             cout.width(12);
-            cout << candidate_models[model].AICc_score << " " << candidate_models[model].BIC_score;
+            cout << at(model).AICc_score << " " << at(model).BIC_score;
             cout << endl;
         }
 
@@ -2631,7 +2649,7 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
                 if ((posR = orig_model_name.find(rates[i])) != string::npos)
                     break;
             string first_part = orig_model_name.substr(0, posR+2);
-            while (model < candidate_models.size()-1 && candidate_models[model+1].name.substr(0, posR+2) == first_part) {
+            while (model < size()-1 && at(model+1).name.substr(0, posR+2) == first_part) {
                 model++;
                 model_scores.push_back(DBL_MAX);
             }
@@ -2639,7 +2657,7 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
 
 	}
 
-    ASSERT(model_scores.size() == candidate_models.size());
+    ASSERT(model_scores.size() == size());
 
     if (best_model_BIC.empty())
         outError("No models were examined! Please check messages above");
@@ -2668,7 +2686,7 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
             break;
         if (model > 0)
             model_list += " ";
-		model_list += candidate_models[model_rank[model]].name;
+		model_list += at(model_rank[model]).name;
     }
 
     model_info.putBestModelList(model_list);
@@ -2683,6 +2701,21 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
     checkpoint->dump();
 
 	delete [] model_rank;
+    
+    // update alignment if best data type changed
+    if (best_aln != in_tree->aln) {
+        delete in_tree->aln;
+        in_tree->aln = best_aln;
+        if (best_aln == prot_aln)
+            prot_aln = NULL;
+        else
+            dna_aln = NULL;
+    }
+
+    if (dna_aln)
+        delete dna_aln;
+    if (prot_aln)
+        delete prot_aln;
 
 //	in_tree->deleteAllPartialLh();
 
