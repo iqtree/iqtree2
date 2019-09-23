@@ -17,16 +17,9 @@ class PhyloTree;
 class IQTree;
 class ModelCheckpoint;
 
-/** model adjustment to decide between dna/prot/codon models */
-class ModelAdjust {
-public:
-    ModelAdjust() {
-        logl = 0.0;
-        df = 0;
-    }
-    double logl;
-    int df;
-};
+const int MF_SAMPLE_SIZE_TRIPLE = 1;
+const int MF_IGNORED            = 2;
+const int MF_DONE               = 4;
 
 /**
     Candidate model under testing
@@ -37,16 +30,20 @@ public:
     
     /** constructor */
     CandidateModel(int flag = 0) {
+        logl = 0.0;
+        df = 0;
+        tree_len = 0.0;
+        aln = NULL;
         this->flag = flag;
     }
     
-    CandidateModel(string name, int flag = 0) {
+    CandidateModel(string name, Alignment *aln, int flag = 0) : CandidateModel(flag) {
         this->name = name;
-        this->flag = flag;
+        this->aln = aln;
     }
     
-    CandidateModel(Alignment *aln, int flag = 0) {
-        this->flag = flag;
+    CandidateModel(Alignment *aln, int flag = 0) : CandidateModel(flag) {
+        this->aln = aln;
         getUsualModel(aln);
     }
     
@@ -59,20 +56,18 @@ public:
     
     /**
      evaluate this model
-     @param model_name model to be tested
      @param params program parameters
-     @param in_tree input tree
+     @param in_aln input alignment
      @param[in] in_model_info input checkpointing information
      @param[out] out_model_info output checkpointing information
-     @param[out] info output model information
      @param models_block models block
      @param num_thread number of threads
+     @param brlen_type BRLEN_OPTIMIZE | BRLEN_FIX | BRLEN_SCALE | TOPO_UNLINKED
      @return tree string
      */
-    string evaluate(Params &params, Alignment *in_aln,
+    string evaluate(Params &params,
                     ModelCheckpoint &in_model_info, ModelCheckpoint &out_model_info,
-                    ModelsBlock *models_block,
-                    int &num_threads, int brlen_type, ModelAdjust *adjust = NULL);
+                    ModelsBlock *models_block, int &num_threads, int brlen_type);
     
     /**
      evaluate concatenated alignment
@@ -84,12 +79,19 @@ public:
      compute information criterion scores (AIC, AICc, BIC)
      */
     void computeICScores(size_t sample_size);
-    
+    void computeICScores();
+
     /**
      compute information criterion scores (AIC, AICc, BIC)
      */
     double computeICScore(size_t sample_size);
     
+    /** @return model score */
+    double getScore();
+
+    /** @return model score */
+    double getScore(ModelTestCriterion mtc);
+
     /**
      save model into checkpoint
      */
@@ -130,7 +132,16 @@ public:
         }
         return false;
     }
+    
+    /** turn on some flag with OR operator */
+    void setFlag(int flag) {
+        this->flag |= flag;
+    }
 
+    bool hasFlag(int flag) {
+        return (this->flag & flag) != 0;
+    }
+    
     string set_name; // subset name
     string name; // model name
     double logl; // tree log likelihood
@@ -141,6 +152,8 @@ public:
     double AIC_weight, AICc_weight, BIC_weight; // weights
     bool AIC_conf, AICc_conf, BIC_conf;         // in confidence set?
 
+    Alignment *aln; // associated alignment
+    
 protected:
     
     /** flag */
@@ -152,6 +165,10 @@ protected:
  */
 class CandidateModelSet : public vector<CandidateModel> {
 public:
+
+    /** get ID of the best model */
+    int getBestModelID(ModelTestCriterion mtc);
+    
     /**
      * get the list of model
      * @param params program parameters
@@ -182,22 +199,13 @@ public:
                 string set_name = "", string in_model_name = "",
                 bool merge_phase = false);
 
-    /*
-     select between DNA/Protein/Codon models
-     @param params global program parameters
-     @param in_tree phylogenetic tree
-     @param model_info (IN/OUT) information for all models considered
-     @param models_block global model definition
-     @param num_threads number of threads
-     @param brlen_type BRLEN_OPTIMIZE | BRLEN_FIX | BRLEN_SCALE | TOPO_UNLINK
-     @param set_name for partition model selection
-     @param in_model_name a specific model name if testing one model
-     @param merge_phase true to consider models for merging phase
-     @return name of best-fit-model
+    /**
+     evaluate all models in parallel
      */
-//    string testModelOMatic(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
-//                           ModelsBlock *models_block, int num_threads, int brlen_type,
-//                           string set_name = "", string in_model_name = "", bool merge_phase = false);
+    string evaluateAll(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
+                     ModelsBlock *models_block, int num_threads, int brlen_type,
+                     string in_model_name = "", bool merge_phase = false, bool write_info = true);
+    
 };
 
 //typedef vector<ModelInfo> ModelCheckpoint;

@@ -793,8 +793,6 @@ public:
   vector<uint32_t> pomo_sampled_states;
   IntIntMap pomo_sampled_states_index; // indexing, to quickly find if a PoMo-2-state is already present
 
-    vector<vector<int> > seq_states; // state set for each sequence in the alignment
-
     /* for site-specific state frequency model with Huaichun, Edward, Andrew */
     
     /* site to model ID map */
@@ -818,7 +816,7 @@ public:
     /* build seq_states containing set of states per sequence
      * @param add_unobs_const TRUE to add all unobserved constant states (for +ASC model)
      */
-    virtual void buildSeqStates(bool add_unobs_const = false);
+    virtual void buildSeqStates(vector<vector<int> > &seq_states, bool add_unobs_const = false);
 
     /** Added by MA
             Compute the probability of this alignment according to the multinomial distribution with parameters determined by the reference alignment

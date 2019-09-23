@@ -662,7 +662,7 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch
                 }
             }
         } else {
-            IntVector states_dad = aln->seq_states[dad->id];
+            IntVector states_dad = model->seq_states[dad->id];
             states_dad.push_back(aln->STATE_UNKNOWN);
             // precompute information from one tip
             for (IntVector::iterator it = states_dad.begin(); it != states_dad.end(); it++) {
@@ -1111,7 +1111,7 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
                     lh_node[i] *= prop;
             }
         } else {
-            IntVector states_dad = aln->seq_states[dad->id];
+            IntVector states_dad = model->seq_states[dad->id];
             states_dad.push_back(aln->STATE_UNKNOWN);
             // precompute information from one tip
             for (IntVector::iterator it = states_dad.begin(); it != states_dad.end(); it++) {

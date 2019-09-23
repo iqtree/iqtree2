@@ -51,7 +51,7 @@ public:
     /* build seq_states containing set of states per sequence
      * @param add_unobs_const TRUE to add all unobserved constant states (for +ASC model)
      */
-    void buildSeqStates(bool add_unobs_const = false);
+//    void buildSeqStates(bool add_unobs_const = false);
 
     /** TRUE if all taxon sets are separate */
     bool unlinked_taxa;
