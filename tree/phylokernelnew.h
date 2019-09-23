@@ -927,7 +927,7 @@ void PhyloTree::computePartialInfo(TraversalInfo &info, VectorClass* buffer) {
                 vector<int>::iterator it;
                 if (nstates % VectorClass::size() == 0) {
                     // vectorized version
-                    for (it = aln->seq_states[child->node->id].begin(); it != aln->seq_states[child->node->id].end(); it++) {
+                    for (it = model->seq_states[child->node->id].begin(); it != model->seq_states[child->node->id].end(); it++) {
                         VectorClass *this_tip_partial_lh = (VectorClass*)&tip_partial_lh[(*it)*nstates];
                         double *this_partial_lh_leaf = &partial_lh_leaf[(*it)*block];
                         VectorClass *echild_ptr = (VectorClass*)echild;
@@ -941,7 +941,7 @@ void PhyloTree::computePartialInfo(TraversalInfo &info, VectorClass* buffer) {
                     }
                 } else {
                     // non-vectorized version
-                    for (it = aln->seq_states[child->node->id].begin(); it != aln->seq_states[child->node->id].end(); it++) {
+                    for (it = model->seq_states[child->node->id].begin(); it != model->seq_states[child->node->id].end(); it++) {
                         double *this_tip_partial_lh = &tip_partial_lh[(*it)*nstates];
                         double *this_partial_lh_leaf = &partial_lh_leaf[(*it)*block];
                         double *echild_ptr = echild;
@@ -994,7 +994,7 @@ void PhyloTree::computePartialInfo(TraversalInfo &info, VectorClass* buffer) {
             if (child->node->isLeaf()) {
                 vector<int>::iterator it;
 
-                for (it = aln->seq_states[child->node->id].begin(); it != aln->seq_states[child->node->id].end(); it++) {
+                for (it = model->seq_states[child->node->id].begin(); it != model->seq_states[child->node->id].end(); it++) {
                     int state = (*it);
                     double *this_partial_lh_leaf = partial_lh_leaf + state*block;
                     VectorClass *echild_ptr = (VectorClass*)echild;
@@ -1044,7 +1044,7 @@ void PhyloTree::computePartialInfo(TraversalInfo &info, VectorClass* buffer) {
             // pre compute information for tip
             if (child->node->isLeaf()) {
                 vector<int>::iterator it;
-                for (it = aln->seq_states[child->node->id].begin(); it != aln->seq_states[child->node->id].end(); it++) {
+                for (it = model->seq_states[child->node->id].begin(); it != model->seq_states[child->node->id].end(); it++) {
                     int state = (*it);
                     double *this_partial_lh_leaf = partial_lh_leaf + state*block;
                     double *echild_ptr = echild;
@@ -2713,7 +2713,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
         }
 
         if (!SITE_MODEL) {
-            IntVector states_dad = aln->seq_states[dad->id];
+            IntVector states_dad = model->seq_states[dad->id];
             states_dad.push_back(aln->STATE_UNKNOWN);
             // precompute information from one tip
             if (nstates % VectorClass::size() == 0) {

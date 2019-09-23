@@ -382,6 +382,9 @@ public:
 	*/
 	StateFreqType freq_type;
 
+    /** state set for each sequence in the alignment */
+    vector<vector<int> > seq_states;
+
 	/**
 		destructor
 	*/

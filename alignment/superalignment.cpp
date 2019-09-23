@@ -168,7 +168,7 @@ void SuperAlignment::buildPattern() {
 	}
 	verbose_mode = save_mode;
 	countConstSite();
-    buildSeqStates();
+//    buildSeqStates();
 }
 
 void SuperAlignment::readPartition(Params &params) {
@@ -327,7 +327,7 @@ void SuperAlignment::readPartitionRaxml(Params &params) {
             else
                 new_aln = part_aln;
             // also rebuild states set of each sequence for likelihood computation
-            new_aln->buildSeqStates();
+//            new_aln->buildSeqStates();
             
             if (part_aln != new_aln) delete part_aln;
 
@@ -439,7 +439,7 @@ void SuperAlignment::readPartitionNexus(Params &params) {
             else
                 new_aln = part_aln;
             // also rebuild states set of each sequence for likelihood computation
-            new_aln->buildSeqStates();
+//            new_aln->buildSeqStates();
             
             if (part_aln != new_aln && part_aln != input_aln) delete part_aln;
             new_aln->name = (*it)->name;
@@ -489,7 +489,7 @@ void SuperAlignment::readPartitionDir(string partition_dir, char *sequence_type,
         else
             new_aln = part_aln;
         // also rebuild states set of each sequence for likelihood computation
-        new_aln->buildSeqStates();
+//        new_aln->buildSeqStates();
         
         if (part_aln != new_aln) delete part_aln;
         new_aln->name = *it;
@@ -532,7 +532,7 @@ void SuperAlignment::readPartitionList(string file_list, char *sequence_type,
         else
             new_aln = part_aln;
         // also rebuild states set of each sequence for likelihood computation
-        new_aln->buildSeqStates();
+//        new_aln->buildSeqStates();
         
         if (part_aln != new_aln) delete part_aln;
         new_aln->name = *it;
@@ -1525,7 +1525,7 @@ Alignment *SuperAlignment::concatenateAlignments(set<int> &ids) {
     	}
     }
     aln->countConstSite();
-    aln->buildSeqStates();
+//    aln->buildSeqStates();
 
 	return aln;
 }

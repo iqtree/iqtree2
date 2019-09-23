@@ -460,7 +460,7 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype, str
          << num_informative_sites << " parsimony-informative, "
          << num_variant_sites-num_informative_sites << " singleton sites, "
          << (int)(frac_const_sites*getNSite()) << " constant sites" << endl;
-    buildSeqStates();
+    //buildSeqStates();
     checkSeqName();
     // OBSOLETE: identical sequences are handled later
 //	checkIdenticalSeq();
@@ -493,7 +493,7 @@ bool Alignment::isStandardGeneticCode() {
 	return (genetic_code == genetic_code1 || genetic_code == genetic_code11);
 }
 
-void Alignment::buildSeqStates(bool add_unobs_const) {
+void Alignment::buildSeqStates(vector<vector<int> > &seq_states, bool add_unobs_const) {
 	vector<StateType> unobs_const;
     if (add_unobs_const) {
         unobs_const.resize(num_states);
@@ -941,7 +941,7 @@ void Alignment::addConstPatterns(char *freq_const_patterns) {
 			addPattern(pat, nsite++, 1);
 	}
     countConstSite();
-    buildSeqStates();
+//    buildSeqStates();
 }
 
 void Alignment::orderPatternByNumChars(int pat_type) {
@@ -2724,7 +2724,7 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
     site_pattern.resize(aln->getNSite() - removed_sites);
     verbose_mode = save_mode;
     countConstSite();
-    buildSeqStates();
+//    buildSeqStates();
     ASSERT(size() <= aln->size());
     if (kept_partitions)
         kept_partitions->push_back(0);
@@ -2767,7 +2767,7 @@ void Alignment::extractPatterns(Alignment *aln, IntVector &ptn_id) {
     site_pattern.resize(site);
     verbose_mode = save_mode;
     countConstSite();
-    buildSeqStates();
+//    buildSeqStates();
     ASSERT(size() <= aln->size());
 }
 
@@ -2809,7 +2809,7 @@ void Alignment::extractPatternFreqs(Alignment *aln, IntVector &ptn_freq) {
     site_pattern.resize(site);
     verbose_mode = save_mode;
     countConstSite();
-    buildSeqStates();
+//    buildSeqStates();
     ASSERT(size() <= aln->size());
 }
 
@@ -2844,7 +2844,7 @@ void Alignment::extractSites(Alignment *aln, IntVector &site_id) {
     }
     verbose_mode = save_mode;
     countConstSite();
-    buildSeqStates();
+//    buildSeqStates();
     // sanity check
     for (iterator it = begin(); it != end(); it++)
     	if (it->at(0) == -1)
@@ -2947,7 +2947,7 @@ void Alignment::convertToCodonOrAA(Alignment *aln, char *gene_code_id, bool nt2a
         outError(err_str.str());
     verbose_mode = save_mode;
     countConstSite();
-    buildSeqStates();
+//    buildSeqStates();
     // sanity check
     for (iterator it = begin(); it != end(); it++)
     	if (it->at(0) == -1)
@@ -3000,7 +3000,7 @@ Alignment *Alignment::convertCodonToAA() {
     }
     verbose_mode = save_mode;
     res->countConstSite();
-    res->buildSeqStates();
+//    res->buildSeqStates();
     return res;
 }
 
@@ -3054,7 +3054,7 @@ Alignment *Alignment::convertCodonToDNA() {
     }
     verbose_mode = save_mode;
     res->countConstSite();
-    res->buildSeqStates();
+//    res->buildSeqStates();
     return res;
 }
 
@@ -3305,7 +3305,7 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
     }
     verbose_mode = save_mode;
     countConstSite();
-    buildSeqStates();
+//    buildSeqStates();
 }
 
 void Alignment::createBootstrapAlignment(IntVector &pattern_freq, const char *spec) {
@@ -3462,7 +3462,7 @@ void Alignment::buildFromPatternFreq(Alignment & aln, IntVector new_pattern_freq
     }
 
     countConstSite();
-    buildSeqStates();
+//    buildSeqStates();
 //    checkSeqName();
 }
 
@@ -3509,7 +3509,7 @@ void Alignment::createGapMaskedAlignment(Alignment *masked_aln, Alignment *aln) 
     }
     verbose_mode = save_mode;
     countConstSite();
-    buildSeqStates();
+//    buildSeqStates();
 }
 
 void Alignment::shuffleAlignment() {
@@ -3541,7 +3541,7 @@ void Alignment::concatenateAlignment(Alignment *aln) {
     }
     verbose_mode = save_mode;
     countConstSite();
-    buildSeqStates();
+//    buildSeqStates();
 }
 
 void Alignment::copyAlignment(Alignment *aln) {
@@ -3575,7 +3575,7 @@ void Alignment::copyAlignment(Alignment *aln) {
     }
     verbose_mode = save_mode;
     countConstSite();
-    buildSeqStates();
+//    buildSeqStates();
 }
 
 void Alignment::countConstSite() {
