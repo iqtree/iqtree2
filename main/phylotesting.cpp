@@ -46,7 +46,7 @@
 
 
 /******* Binary model set ******/
-const char* bin_model_names[] = { "JC2", "GTR2" };
+const char* bin_model_names[] = {"GTR2", "JC2"};
 
 
 /******* Morphological model set ******/
@@ -56,22 +56,22 @@ const char* morph_model_names[] = {"MK"};
 
 
 /******* DNA model set ******/
-const char* dna_model_names[] = { "JC", "F81", "K80", "HKY", "TNe",
-		"TN", "K81", "K81u", "TPM2", "TPM2u", "TPM3", "TPM3u", "TIMe", "TIM",
-		"TIM2e", "TIM2", "TIM3e", "TIM3", "TVMe", "TVM", "SYM", "GTR" };
+const char* dna_model_names[] = {"GTR", "SYM", "TVM",  "TVMe", "TIM3",
+        "TIM3e", "TIM2", "TIM2e", "TIM", "TIMe", "TPM3u", "TPM3",
+        "TPM2u",  "TPM2",  "K81u", "K81", "TN", "TNe",  "HKY",  "K80", "F81", "JC"};
 
 /* DNA models supported by PhyML/PartitionFinder */
-const char* dna_model_names_old[] ={"JC", "F81", "K80", "HKY", "TNe",
- 	 	 "TN", "K81", "K81u", "TIMe", "TIM", "TVMe", "TVM", "SYM", "GTR"};
+const char* dna_model_names_old[] ={"GTR",  "SYM", "TVM", "TVMe", "TIM", "TIMe",
+         "K81u", "K81", "TN", "TNe", "HKY", "K80", "F81", "JC"};
 
 /* DNA model supported by RAxML */
 const char* dna_model_names_rax[] ={"GTR"};
 
 /* DNA model supported by MrBayes */
-const char *dna_model_names_mrbayes[] = {"JC", "F81", "K80", "HKY", "SYM", "GTR"};
+const char *dna_model_names_mrbayes[] = {"GTR", "SYM", "HKY", "K80", "F81", "JC"};
 
 /* DNA model supported by ModelOMatic */
-const char *dna_model_names_modelomatic[] = {"JC", "F81", "K80", "HKY", "GTR"};
+const char *dna_model_names_modelomatic[] = {"GTR", "HKY", "K80", "F81", "JC"};
 
 //const char* dna_freq_names[] = {"+FO"};
 
@@ -116,28 +116,31 @@ const char *dna_model_names_lie_markov_strsym[] = {
 
 
 /****** Protein model set ******/
-const char* aa_model_names[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
-		"cpREV", "mtREV", "rtREV", "mtART", "mtZOA", "VT", "LG", "DCMut", "PMB",
-		"HIVb", "HIVw", "JTTDCMut", "FLU", "Blosum62" , "mtMet" , "mtVer" , "mtInv" };
+const char* aa_model_names[] = {"LG", "WAG", "JTT", "JTTDCMut", "DCMut", "VT", "PMB", "Blosum62", "Dayhoff",
+        "mtREV", "mtART", "mtZOA", "mtMet" , "mtVer" , "mtInv", "mtMAM",
+		"HIVb", "HIVw", "FLU", "rtREV", "cpREV"};
         
 /* Protein models supported by PhyML/PartitionFinder */
-const char *aa_model_names_phyml[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
-		"cpREV", "mtREV", "rtREV", "mtART", "VT", "LG", "DCMut",
-		"HIVb", "HIVw", "Blosum62" };
+const char *aa_model_names_phyml[] = {"LG", "WAG", "JTT", "DCMut", "VT", "Blosum62", "Dayhoff",
+		"mtREV", "mtART", "mtMAM",
+		"HIVb", "HIVw", "rtREV", "cpREV"};
 
 /* Protein models supported by RAxML */
-const char *aa_model_names_rax[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
-		"cpREV", "mtREV", "rtREV", "mtART", "mtZOA", "PMB", "HIVb", "HIVw", "JTTDCMut", "FLU", "VT", "LG", "DCMut", "Blosum62" };
+const char *aa_model_names_rax[] = {"LG", "WAG", "JTT", "JTTDCMut", "DCMut", "VT", "PMB", "Blosum62", "Dayhoff",
+        "mtREV", "mtART", "mtZOA", "mtMAM",
+		"HIVb", "HIVw", "FLU", "rtREV", "cpREV"};
 
-const char* aa_model_names_mrbayes[] = {"Poisson", "Dayhoff", "mtMAM", "JTT", "WAG",
-		"cpREV", "mtREV", "rtREV", "VT", "Blosum62" };
+const char* aa_model_names_mrbayes[] = {"WAG", "JTT", "VT", "Blosum62", "Dayhoff",
+        "mtREV", "mtMAM",
+		"rtREV", "cpREV"};
 
-const char* aa_model_names_modelomatic[] = {"Poisson", "Blosum62", "Dayhoff", "HIVb", "HIVw",
-    "JTT", "LG", "VT", "WAG", "cpREV", "mtART", "mtMAM", "mtREV", "rtREV"};
+const char* aa_model_names_modelomatic[] = {"LG", "WAG", "JTT", "VT", "Blosum62", "Dayhoff",
+        "mtART", "mtMAM", "mtREV",
+        "HIVb", "HIVw", "rtREV", "cpREV"};
 
-const char *aa_model_names_nuclear[] = {"WAG", "Dayhoff","JTT", "LG", "VT", "DCMut", "PMB", "JTTDCMut", "Blosum62"};
+const char *aa_model_names_nuclear[] = {"LG", "WAG", "JTT", "JTTDCMut","DCMut", "VT", "PMB", "Blosum62", "Dayhoff"};
 
-const char *aa_model_names_mitochondrial[] = {"mtREV", "mtMAM", "mtART", "mtZOA", "mtMet" , "mtVer" , "mtInv" };
+const char *aa_model_names_mitochondrial[] = {"mtREV", "mtART", "mtZOA", "mtMet" , "mtVer" , "mtInv", "mtMAM"};
 
 const char *aa_model_names_chloroplast[] = {"cpREV"};
 
@@ -149,12 +152,12 @@ const char* aa_freq_names[] = {"", "+F"};
 /****** Codon models ******/
 //const char *codon_model_names[] = {"GY", "MG", "MGK", "KOSI07", "SCHN05","KOSI07_GY1KTV","SCHN05_GY1KTV"};
 //short int std_genetic_code[]    = {   0,    0,     0,        1,        1,              1,              1};
-const char *codon_model_names[] = {"MG", "MGK", "GY", "KOSI07", "SCHN05"};
+const char *codon_model_names[] = { "GY", "MGK", "MG", "KOSI07", "SCHN05"};
 short int std_genetic_code[]    = {   0,    0,     0,        1,        1};
 const char *codon_model_names_modelomatic[] = {"GY"};
 short int std_genetic_code_modelomatic[]    = {   0};
 
-const char *codon_freq_names[] = {"", "+F1X4", "+F3X4", "+F"};
+const char *codon_freq_names[] = {"+F3X4", "+F1X4", "+F", ""};
 
 //const double TOL_LIKELIHOOD_MODELTEST = 0.1;
 const double TOL_GRADIENT_MODELTEST   = 0.0001;
@@ -177,12 +180,12 @@ string getSeqTypeName(SeqType seq_type) {
 
 string getUsualModelSubst(SeqType seq_type) {
     switch (seq_type) {
-        case SEQ_DNA: return "GTR";
-        case SEQ_PROTEIN: return "LG";
-        case SEQ_CODON: return "GY";
-        case SEQ_BINARY: return "GTR2";
-        case SEQ_MORPH: return "MK";
-        case SEQ_POMO: return "GTR+P";
+        case SEQ_DNA: return dna_model_names[0];
+        case SEQ_PROTEIN: return aa_model_names[0];
+        case SEQ_CODON: return string(codon_model_names[0]) + codon_freq_names[0];
+        case SEQ_BINARY: return bin_model_names[0];
+        case SEQ_MORPH: return morph_model_names[0];
+        case SEQ_POMO: return string(dna_model_names[0]) + "+P";
         default: ASSERT(0 && "Unprocessed seq_type"); return "";
     }
 }
