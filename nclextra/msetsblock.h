@@ -95,6 +95,12 @@ public:
 	*/
 	virtual void Reset();
 
+    /**
+     called when some commands are skipped
+     @param commandName command name
+     */
+    virtual void SkippingCommand(NxsString commandName);
+
 	/**
 		@return the number of sets
 	*/

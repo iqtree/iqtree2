@@ -15,6 +15,7 @@
 #include <cassert>
 #include <vector>
 #include <typeinfo>
+#include "tools.h"
 
 using namespace std;
 
@@ -125,6 +126,26 @@ public:
 	 */
 	bool hasKey(string key);
 
+	/**
+	 * @return true if checkpoint contains the key prefix
+	 * @param key_prefix key prefix to search for
+	 */
+	bool hasKeyPrefix(string key_prefix);
+
+    /**
+        erase all entries with a key prefix
+        @param key_prefix key prefix
+        @return number of entries removed
+    */
+    int eraseKeyPrefix(string key_prefix);
+
+    /**
+     erase all entries without a key prefix
+     @param key_prefix key prefix
+     @return number of entries kept
+     */
+    int keepKeyPrefix(string key_prefix);
+
     /*-------------------------------------------------------------
      * series of get function to get value of a key
      *-------------------------------------------------------------*/
@@ -186,9 +207,13 @@ public:
             CkpStream ss(it->second.substr(pos, next_pos-pos));
         	if (!(ss >> value[i]))
                 break;
-        	if (next_pos == string::npos) break;
+            if (next_pos == string::npos) {
+                ASSERT(i == maxnum-1);
+                break;
+            }
         	pos = next_pos+2;
         }
+        ASSERT(next_pos == string::npos);
         return true;
     }
 
@@ -219,6 +244,39 @@ public:
                 break;
         	if (next_pos == string::npos) break;
         	pos = next_pos+2;
+        }
+        return true;
+    }
+
+    /**
+        get a vector in YAML syntax from checkpoint
+        @param key key name
+        @param num number of elements
+        @param[out] value value
+    */
+    template<class T>
+    bool ymlGetVector(string key, vector<T> &value) {
+        if (key.empty())
+            key = struct_name.substr(0, struct_name.length()-1);
+        else
+            key = struct_name + key;
+        iterator it = find(key);
+        if (it == end())
+            return false;
+        size_t pos = 0, next_pos;
+        value.clear();
+        if ((pos = it->second.find('[')) == string::npos)
+            outError(key + " vector not starting with [");
+        for (int i = 0; ; i++) {
+            next_pos = it->second.find(", ", pos);
+            CkpStream ss(it->second.substr(pos, next_pos-pos));
+            T val;
+            if (ss >> val)
+                value.push_back(val);
+            else
+                break;
+            if (next_pos == string::npos) break;
+            pos = next_pos+2;
         }
         return true;
     }
@@ -327,6 +385,11 @@ public:
     void endStruct();
 
     /**
+        @return struct_name
+     */
+    string getStructName() { return struct_name; }
+    
+    /**
         start a new list in the current scope
         @param nelem number of elements
     */
@@ -354,6 +417,21 @@ public:
         @param sub_key key substring to search for
     */
     void getSubCheckpoint(Checkpoint *target, string sub_key);
+
+    /**
+     put a checkpoint where the key string contains a given substring
+     @param source checkpoint
+     @param sub_key key substring to search for
+     */
+    void putSubCheckpoint(Checkpoint *source, string sub_key);
+
+    /**
+     transfer a checkpoint where the key string contains a given substring
+     @param source checkpoint
+     @param sub_key key substring to search for
+     @param overwrite true to overwrite value even if key exists
+     */
+    void transferSubCheckpoint(Checkpoint *source, string sub_key, bool overwrite = false);
 
 protected:
 

@@ -1,6 +1,11 @@
 IQ-TREE
 =======
 
+[![Github All Releases](https://img.shields.io/github/downloads/Cibiv/IQ-TREE/total.svg?style=social&logo=github&label=Download)](https://github.com/Cibiv/IQ-TREE/releases)
+[![BioConda downloads](https://img.shields.io/conda/dn/bioconda/iqtree.svg?style=flag&label=BioConda%20install)](https://anaconda.org/bioconda/iqtree)
+[![Build Status](https://travis-ci.org/bqminh/IQ-TREE.svg?branch=master)](https://travis-ci.org/bqminh/IQ-TREE)
+[![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
+
 Efficient and versatile phylogenomic software by maximum likelihood <http://www.iqtree.org>
 
 Introduction
@@ -16,7 +21,7 @@ Key features of IQ-TREE
 
 * __Efficient search algorithm__: Fast and effective stochastic algorithm to reconstruct phylogenetic trees by maximum likelihood. IQ-TREE compares favorably to RAxML and PhyML in terms of likelihood while requiring similar amount of computing time ([Nguyen et al., 2015]).
 * __Ultrafast bootstrap__: An ultrafast bootstrap approximation (UFBoot) to assess branch supports. UFBoot is 10 to 40 times faster than RAxML rapid bootstrap and obtains less biased support values ([Minh et al., 2013]).
-* __Ultrafast model selection__: An ultrafast and automatic model selection (ModelFinder) which is 10 to 100 times faster than jModelTest and ProtTest. ModelFinder also finds best-fit partitioning scheme like PartitionFinder.
+* __Ultrafast model selection__: An ultrafast and automatic model selection (ModelFinder) which is 10 to 100 times faster than jModelTest and ProtTest. ModelFinder also finds best-fit partitioning scheme like PartitionFinder ([Kalyaanamoorthy et al., 2017]).
 * __Phylogenetic testing__: Several fast branch tests like SH-aLRT and aBayes test ([Anisimova et al., 2011]) and tree topology tests like the approximately unbiased (AU) test ([Shimodaira, 2002]).
 
 
@@ -25,42 +30,7 @@ The strength of IQ-TREE is the availability of a wide variety of phylogenetic mo
 * __Common models__: All [common substitution models](http://www.iqtree.org/doc/Substitution-Models) for DNA, protein, codon, binary and morphological data with [rate heterogeneity among sites](http://www.iqtree.org/doc/Substitution-Models/#rate-heterogeneity-across-sites) and [ascertainment bias correction](http://www.iqtree.org/doc/Substitution-Models/#ascertainment-bias-correction) for e.g. SNP data.
 * __[Partition models](http://www.iqtree.org/doc/Complex-Models/#partition-models)__: Allowing individual models for different genomic loci (e.g. genes or codon positions), mixed data types, mixed rate heterogeneity types, linked or unlinked branch lengths between partitions.
 * __Mixture Models__: [fully customizable mixture models](http://www.iqtree.org/doc/Complex-Models/#mixture-models) and [empirical protein mixture models](http://www.iqtree.org/doc/Substitution-Models/#protein-models) and.
-
-IQ-TREE PoMo
-------------
-
-IQ-TREE+PoMo is still under development.  Please check out
-
-    iqtree --help
-
-Especially, the section titled `POLYMORPHISM AWARE MODELS (PoMo)`.
-
-```
-POLYMORPHISM AWARE MODELS (PoMo):
-PoMo is run when
-- a Counts File is used as input file, and/or when
-- it is specified in the model string (see below).
-  -st C[FR] or C[FR]ps Counts File (automatically detected).
-                       Useful to customize the virtual population size `ps`
-                       3 <= ps <= 19; ps has to be an odd number, 2 or 10.
-                       F: Sum over partial likelihoods at the tip of the tree (weighted).
-                       R: Random binomial sampling of PoMo states from data (sampled).
-                       Default is `CF9`.
-  -m <sm>+<pm>+<ft>    Default: `HKY+rP+FO`.
-                 <sm>: Substitution model.
-                  DNA: HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef,
-                       TIM, TIMef, TVM, TVMef, SYM, GTR, or a 6-digit model
-                       specification (e.g., 010010 = HKY).
-                 <pm>: PoMo model.
-                       - rP (default; reversible PoMo with tree inference).
-                 <ft>: Frequency type (optional; default: +F, counted).
-                       F or +FO or +FU or +FQ.
-                       Counted, optimized, user-defined, equal state frequency.
-                       This overwrites the specifications of the DNA model.
-  The default model string is: -m HKY+rP+F.
-  Until now, only DNA models work with PoMo.
-  Model testing and rate heterogeneity do not work with PoMo yet.
-```
+* __Polymorphism-aware models (PoMo)__: <http://www.iqtree.org/doc/Polymorphism-Aware-Models>
 
 
 IQ-TREE web service
@@ -83,26 +53,43 @@ _The average response time is one working day._
 Citations
 ---------
 
-To cite IQ-TREE please use:
+When using ModelFinder please cite:
 
-* L.-T. Nguyen, H.A. Schmidt, A. von Haeseler, and B.Q. Minh (2015) IQ-TREE: A fast and effective stochastic algorithm for estimating maximum likelihood phylogenies. *Mol. Biol. Evol.*, 32, 268-274. [DOI: 10.1093/molbev/msu300](http://dx.doi.org/10.1093/molbev/msu300)
+* S. Kalyaanamoorthy, B.Q. Minh, T.K.F. Wong, A. von Haeseler, L.S. Jermiin (2017) ModelFinder: Fast model selection for accurate phylogenetic estimates. *Nat. Methods*, 14:587-589. <https://doi.org/10.1038/nmeth.4285>
+
+When performing tree reconstruction please cite:
+
+* L.-T. Nguyen, H.A. Schmidt, A. von Haeseler, and B.Q. Minh (2015) IQ-TREE: A fast and effective stochastic algorithm for estimating maximum likelihood phylogenies. *Mol. Biol. Evol.*, 32, 268-274. <https://doi.org/10.1093/molbev/msu300>
 
 For the ultrafast bootstrap (UFBoot) please cite:
 
-* B.Q. Minh, M.A.T. Nguyen, and A. von Haeseler (2013) Ultrafast approximation for phylogenetic bootstrap. *Mol. Biol. Evol.*, 30:1188-1195. [DOI: 10.1093/molbev/mst024](http://dx.doi.org/10.1093/molbev/mst024)
+* D.T. Hoang, O. Chernomor, A. von Haeseler, B.Q. Minh, and L.S. Vinh (2017) UFBoot2: Improving the ultrafast bootstrap approximation. *Mol. Biol. Evol.*, in press. <https://doi.org/10.1093/molbev/msx281>
+
+When using posterior mean site frequency model (PMSF) please cite:
+
+* H.C. Wang, B.Q. Minh, S. Susko, A.J. Roger (in press) Modeling site heterogeneity with posterior mean site frequency profiles accelerates accurate phylogenomic estimation. *Syst. Biol.* <https://doi.org/10.1093/sysbio/syx068>
+
+When using partition models please cite:
+
+* O. Chernomor, A. von Haeseler, B.Q. Minh (2016) Terrace aware data structure for phylogenomic inference from supermatrices. *Syst. Biol.*, 65:997-1008. <https://doi.org/10.1093/sysbio/syw037>
+
+When using polymorphism-aware models please cite:
+
+* D. Schrempf, B.Q. Minh, N. De Maio, A. von Haeseler, C. Kosiol (2016) Reversible polymorphism-aware phylogenetic models and their application to tree inference. *J. Theor. Biol.*, 407:362-370. <https://doi.org/10.1016/j.jtbi.2016.07.042>
 
 #### Credits and Acknowledgements
 
 Some parts of the code were taken from the following packages/libraries: [Phylogenetic likelihood library](http://www.libpll.org), [TREE-PUZZLE](http://www.tree-puzzle.de), 
 [BIONJ](http://dx.doi.org/10.1093/oxfordjournals.molbev.a025808), [Nexus Class Libary](http://dx.doi.org/10.1093/bioinformatics/btg319), [Eigen library](http://eigen.tuxfamily.org/),
-[SPRNG library](http://www.sprng.org), [Zlib library](http://www.zlib.net), gzstream library, [vectorclass library](http://www.agner.org/optimize/), [GNU scientific library](https://www.gnu.org/software/gsl/).
+[SPRNG library](http://www.sprng.org), [Zlib library](http://www.zlib.net), [gzstream library](http://www.cs.unc.edu/Research/compgeom/gzstream/), [vectorclass library](http://www.agner.org/optimize/), [GNU scientific library](https://www.gnu.org/software/gsl/).
 
 
-IQ-TREE was partially funded by the [Austrian Science Fund - FWF](http://www.fwf.ac.at/) (grant no. I760-B17 from 2012-2015 and and I 2508-B29 from 2016-2019) and the [University of Vienna](https://www.univie.ac.at/) (Initiativkolleg I059-N).
+IQ-TREE was partially funded by the [Austrian Science Fund - FWF](http://www.fwf.ac.at/) (grant no. I 760-B17 from 2012-2015 and and I 2508-B29 from 2016-2019) and the [University of Vienna](https://www.univie.ac.at/) (Initiativkolleg I059-N).
 
 
 [Anisimova et al., 2011]: http://dx.doi.org/10.1093/sysbio/syr041
 [Guindon et al., 2010]: http://dx.doi.org/10.1093/sysbio/syq010
+[Kalyaanamoorthy et al., 2017]: https://doi.org/10.1038/nmeth.4285
 [Minh et al., 2013]: http://dx.doi.org/10.1093/molbev/mst024
 [Nguyen et al., 2015]: http://dx.doi.org/10.1093/molbev/msu300
 [Shimodaira, 2002]: http://dx.doi.org/10.1080/10635150290069913

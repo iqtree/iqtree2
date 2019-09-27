@@ -1,0 +1,15 @@
+version: 1.0.{build}
+configuration: Release
+platform:
+- x64
+- Win32
+clone_depth: 1
+before_build:
+- cmd: 'scripts\build_appveyor.bat'
+build:
+  project: terraphast.sln
+  parallel: true
+  verbosity: minimal
+test_script:
+- cmd: 'Release\unittests.exe'
+

@@ -34,7 +34,7 @@ class MaAlignment : public Alignment
 public:
     MaAlignment() : Alignment() {};
 
-    MaAlignment(char *filename,  char *sequence_type, InputType &intype) : Alignment(filename, sequence_type, intype){};
+    MaAlignment(char *filename,  char *sequence_type, InputType &intype, string model) : Alignment(filename, sequence_type, intype, model){};
 	
 	MaAlignment(Alignment &align) : Alignment(align){};
 

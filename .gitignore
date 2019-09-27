@@ -17,3 +17,9 @@ build/
 /Default-clang
 .idea/
 .idea/codeStyleSettings.xml
+/GPATH
+/GRTAGS
+/GTAGS
+/.dir-locals.el
+/iqtree_config.h
+.DS_Store

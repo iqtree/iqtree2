@@ -15,8 +15,15 @@
 ConstraintTree::ConstraintTree() : MTree(), SplitIntMap() {
 }
 
+ConstraintTree::~ConstraintTree() {
+    for (iterator mit = begin(); mit != end(); mit++)
+        delete (mit->first);
+    clear();
+}
+
 void ConstraintTree::readConstraint(const char *constraint_file, StrVector &fulltaxname) {
     bool is_rooted = false;
+    freeNode();
     MTree::init(constraint_file, is_rooted);
     initFromTree();
 
@@ -45,8 +52,10 @@ void ConstraintTree::readConstraint(const char *constraint_file, StrVector &full
 void ConstraintTree::initFromTree() {
     if (leafNum <= 3)
         outError("Constraint tree must contain at least 4 taxa");
-    if (rooted)
-        outError("Rooted constraint tree not accepted");
+    if (rooted) {
+        outWarning("Rooted constraint tree will be treated as unrooted tree");
+        convertToUnrooted();
+    }
 
 	// collapse any internal node of degree 2
 	NodeVector nodes;
@@ -79,6 +88,11 @@ void ConstraintTree::initFromTree() {
     SplitGraph sg;
     convertSplits(taxname, sg);
     sg.removeTrivialSplits();
+
+    for (iterator mit = begin(); mit != end(); mit++)
+        delete (mit->first);
+    clear();
+
     for (SplitGraph::iterator sit = sg.begin(); sit != sg.end(); sit++) {
         if (!(*sit)->containTaxon(0))
             (*sit)->invert();
@@ -92,6 +106,14 @@ void ConstraintTree::readConstraint(MTree &src_tree) {
     initFromTree();
 }
 
+int ConstraintTree::removeTaxa(StrVector &taxa_names) {
+    if (taxa_names.empty())
+        return 0;
+    int count = MTree::removeTaxa(taxa_names);
+    if (count == 0) return 0;
+    initFromTree();
+    return count;
+}
 
 bool ConstraintTree::isCompatible(StrVector &tax1, StrVector &tax2) {
 

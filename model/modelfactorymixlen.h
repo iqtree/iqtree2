@@ -38,8 +38,9 @@ public:
 
 
     /**
+     * @param brlen_type either BRLEN_OPTIMIZE, BRLEN_FIX or BRLEN_SCALE
      * @return #parameters of the model + # branches
      */
-    virtual int getNParameters();
+    virtual int getNParameters(int brlen_type);
 
 };

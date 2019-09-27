@@ -21,7 +21,7 @@
 #ifndef PARSMULTISTATE_H
 #define PARSMULTISTATE_H
 
-#include "tools.h"
+#include "utils/tools.h"
 
 void doParsMultiState(Params &params);
 

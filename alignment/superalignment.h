@@ -22,37 +22,6 @@
 
 #include "alignment.h"
 
-
-struct PartitionInfo {
-	string name; // partition name
-	string model_name; // model name
-	string aln_file; // alignment file associated
-	string sequence_type; // sequence type (DNA/AA/BIN)
-	string position_spec; // position specification, e.g., "1-100\1 1-100\2"
-
-	double cur_score;	// current log-likelihood
-	double part_rate;	// partition heterogeneity rate
-	int    evalNNIs;	// number of evaluated NNIs on subtree
-
-	//DoubleVector null_score; // log-likelihood of each branch collapsed to zero
-	//DoubleVector opt_score;  // optimized log-likelihood for every branch
-	//DoubleVector nni1_score; // log-likelihood for 1st NNI for every branch
-	//DoubleVector nni2_score; // log-likelihood for 2nd NNI for every branch
-
-	vector<DoubleVector> cur_brlen;  // current branch lengths
-	//DoubleVector opt_brlen;  // optimized branch lengths for every branch
-	vector<DoubleVector> nni1_brlen; // branch length for 1st NNI for every branch
-	vector<DoubleVector> nni2_brlen; // branch length for 2nd NNI for every branch
-
-	//double *mem_ptnlh; // total memory allocated for all pattern likelihood vectors
-	double *cur_ptnlh; // current pattern likelihoods of the tree
-	//double *nni1_ptnlh; // pattern likelihoods of 1st NNI tree
-	//double *nni2_ptnlh; // pattern likelihoods of 2nd NNI tree
-	NNIMove nniMoves[2];
-};
-
-class PhyloSuperTree;
-
 /**
 Super alignment representing presence/absence of sequences in
 k partitions for a total of n sequences. It has the form:
@@ -73,7 +42,7 @@ class SuperAlignment : public Alignment
 {
 public:
 	/** constructor initialize from a supertree */
-    SuperAlignment(PhyloSuperTree *super_tree);
+    SuperAlignment(Params &params);
 
 	/** constructor initialize empty alignment */
     SuperAlignment();
@@ -81,8 +50,41 @@ public:
     /** destructor */
     ~SuperAlignment();
 
+    /**
+        load partitions from program Params
+        @param params program Params
+     */
+    void readFromParams(Params &params);
+    
+    /**
+     initialize seq_names, taxon_index, buildPattern
+     */
+    virtual void init(StrVector *sequence_names = NULL);
+    
     /** return that this is a super-alignment structure */
 	virtual bool isSuperAlignment() { return true; }
+
+    /** read partition model file */
+    void readPartition(Params &params);
+    
+    /** read RAxML-style partition file */
+    void readPartitionRaxml(Params &params);
+    
+    /** read partition model file in NEXUS format into variable info */
+    void readPartitionNexus(Params &params);
+
+    /** read partition as files in a directory */
+    void readPartitionDir(Params &params);
+
+    /** read partition as a comma-separated list of files */
+    void readPartitionList(string file_list, char *sequence_type, InputType &intype, string model, bool remove_empty_seq);
+
+    void printPartition(const char *filename, const char *aln_file);
+    
+    void printPartitionRaxml(const char *filename);
+    
+    void printBestPartition(const char *filename);
+    void printBestPartitionRaxml(const char *filename);
 
 	/**
 	 * create taxa_index from super-alignment to sub-alignment
@@ -102,6 +104,36 @@ public:
 	*/
 	virtual void getPatternFreq(IntVector &pattern_freq);
 
+    /**
+     * @param[out] freq vector of site-pattern frequencies
+     */
+    virtual void getPatternFreq(int *freq);
+
+    /**
+        Print all site information to a file
+        @param filename output file name
+    */
+    virtual void printSiteInfo(const char* filename);
+
+    /**
+     compute empirical substitution counts between state pairs
+     @param normalize true to normalize row sum to 1, false otherwise
+     @param[out] pair_freq matrix of size num_states*num_states
+     @param[out] state_freq vector of size num_states
+     */
+    virtual void computeDivergenceMatrix(double *pair_freq, double *state_freq, bool normalize = true);
+
+    /**
+     perform matched-pair tests of symmetry of Lars Jermiin et al.
+     @param[out] sym results of test of symmetry
+     @param[out] marsym results of test of marginal symmetry
+     @param[out] intsym results of test of internal symmetry
+     @param out output stream to print results
+     @param rstream random stream to shuffle alignment columns
+     @param out_stat output stream to print pairwise statistics
+     */
+    virtual void doSymTest(size_t vecid, vector<SymTestResult> &sym, vector<SymTestResult> &marsym,
+                           vector<SymTestResult> &intsym, int *rstream = NULL, vector<SymTestStat> *stats = NULL);
 
     /**
             extract sub-alignment of a sub-set of sequences
@@ -112,6 +144,19 @@ public:
             @param[out] kept_partitions (for SuperAlignment) indices of kept partitions
      */
     virtual void extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_true_char, int min_taxa = 0, IntVector *kept_partitions = NULL);
+
+    /**
+        extract a subset of partitions to form a new SuperAlignment object
+        @param part_id vector of partition IDs
+        @return new alignment containing only part_id partitions
+     */
+    SuperAlignment *extractPartitions(IntVector &part_id);
+
+    /**
+     remove a subset of partitions
+     @param part_id vector of partition IDs
+     */
+    void removePartitions(set<int> &part_id);
 
     /**
      * remove identical sequences from alignment
@@ -203,8 +248,14 @@ public:
 	 * print all sub alignments into files with prefix, suffix is the charset name
 	 * @param prefix prefix of output files
 	 */
-	void printSubAlignments(Params &params, vector<PartitionInfo> &part_info);
+	void printSubAlignments(Params &params);
 
+    /**
+     @param quartet ID of four taxa
+     @param[out] support number of sites supporting 12|34, 13|24 and 14|23
+     */
+    virtual void computeQuartetSupports(IntVector &quartet, vector<int64_t> &support);
+    
 	/**
 		@return unconstrained log-likelihood (without a tree)
 	*/
@@ -220,7 +271,7 @@ public:
 	 * it is in form of a binary alignment, where 0 means absence and 1 means presence
 	 * of a gene in a sequence
 	 */
-	void buildPattern();
+	virtual void buildPattern();
 
     /**
             count the fraction of constant sites in the alignment, update the variable frac_const_sites
@@ -256,7 +307,13 @@ public:
 	 * @param ids IDs of sub-alignments
 	 * @return concatenated alignment
 	 */
-    Alignment *concatenateAlignments(IntVector &ids);
+    Alignment *concatenateAlignments(set<int> &ids);
+
+	/**
+	 * concatenate all alignments
+	 * @return concatenated alignment
+	 */
+    Alignment *concatenateAlignments();
 
 
 };

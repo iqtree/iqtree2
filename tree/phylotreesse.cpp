@@ -40,8 +40,36 @@
 
 //#define USING_SSE
 
+void PhyloTree::setNumThreads(int num_threads) {
+    if (!isSuperTree() && aln && num_threads > 1 && num_threads > aln->getNPattern()/8) {
+        outWarning(convertIntToString(num_threads) + " threads for alignment length " +
+                   convertIntToString(aln->getNPattern()) + " will slow down analysis");
+        num_threads = max(aln->getNPattern()/8,1);
+    }
+    this->num_threads = num_threads;
+}
+
 void PhyloTree::setParsimonyKernel(LikelihoodKernel lk) {
-    // set parsimony kernel
+    
+    if (cost_matrix) {
+        // Sankoff parsimony kernel
+        if (lk < LK_SSE2) {
+            computeParsimonyBranchPointer = &PhyloTree::computeParsimonyBranchSankoff;
+            computePartialParsimonyPointer = &PhyloTree::computePartialParsimonySankoff;
+            return;
+        }
+        if (lk >= LK_AVX) {
+            setParsimonyKernelAVX();
+            return;
+        }
+        if (lk >= LK_SSE2) {
+            setParsimonyKernelSSE();
+            return;
+        }
+        ASSERT(0);
+        return;
+    }
+    // set Fitch parsimony kernel
     if (lk < LK_SSE2) {
         computeParsimonyBranchPointer = &PhyloTree::computeParsimonyBranchFast;
         computePartialParsimonyPointer = &PhyloTree::computePartialParsimonyFast;
@@ -58,13 +86,12 @@ void PhyloTree::setParsimonyKernel(LikelihoodKernel lk) {
     ASSERT(0);
 }
 
-void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk, int num_threads) {
+void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 
 	sse = lk;
     vector_size = 1;
     safe_numeric = (params && (params->lk_safe_scaling || leafNum >= params->numseq_safe_scaling)) ||
         (aln && aln->num_states != 4 && aln->num_states != 20);
-    this->num_threads = num_threads;
 
     //--- parsimony kernel ---
     setParsimonyKernel(lk);
@@ -171,7 +198,7 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk, int num_threads) {
 
 void PhyloTree::changeLikelihoodKernel(LikelihoodKernel lk) {
 	if (sse == lk) return;
-    setLikelihoodKernel(lk, num_threads);
+    setLikelihoodKernel(lk);
 }
 
 /*******************************************************
@@ -210,12 +237,114 @@ double PhyloTree::dotProductDoubleCall(double *x, double *y, int size) {
     return (this->*dotProductDouble)(x, y, size);
 }
 
+void PhyloTree::computeTipPartialLikelihoodPoMo(int state, double *lh, bool hyper) {
+  int nstates = aln->num_states;
+  int N = aln->virtual_pop_size;
+
+  memset(lh, 0, sizeof(double)*nstates);
+
+  // decode the id and value
+  int id1 = aln->pomo_sampled_states[state] & 3;
+  int id2 = (aln->pomo_sampled_states[state] >> 16) & 3;
+  int j = (aln->pomo_sampled_states[state] >> 2) & 16383;
+  int M = j + (aln->pomo_sampled_states[state] >> 18);
+
+  // Number of alleles is hard coded here, change if generalization is needed.
+  int nnuc = 4;
+
+  // TODO DS: Implement down sampling or a better approach.
+  if (hyper && M > N)
+    outError("Down sampling not yet supported.");
+
+  // Check if observed state is a fixed one.  If so, many
+  // PoMo states can lead to this data.  E.g., even (2A,8T)
+  // can lead to a sampled data of 7A.
+  if (j == M) {
+    lh[id1] = 1.0;
+    // Second: Polymorphic states.
+    for (int s_id1 = 0; s_id1 < nnuc-1; s_id1++) {
+      for (int s_id2 = s_id1+1; s_id2 < nnuc; s_id2++) {
+        if (s_id1 == id1) {
+          // States are in the order {FIXED,
+          // 1A(N-1)C, ..., (N-1)A1C, ...}.
+          int k;
+          if (s_id1 == 0) k = s_id2 - 1;
+          else k = s_id1 + s_id2;
+          // Start one earlier because increment
+          // happens after execution of for loop
+          // body.
+          int real_state = nnuc - 1 + k*(N-1) + 1;
+          for (int i = 1; i < N; i++, real_state++) {
+            ASSERT(real_state < nstates);
+            if (!hyper)
+              lh[real_state] = std::pow((double)i/(double)N,j);
+            else {
+              lh[real_state] = 1.0;
+              for (int l = 0; l<j; l++)
+                lh[real_state] *= (double) (i-l) / (double) (N-l);
+            }
+          }
+        }
+        // Same but fixed allele is the second one
+        // in polymorphic states.
+        else if (s_id2 == id1) {
+          int k;
+          if (s_id1 == 0) k = s_id2 - 1;
+          else k = s_id1 + s_id2;
+          int real_state = nnuc - 1 + k*(N-1) + 1;
+          for (int i = 1; i < N; i++, real_state++) {
+            ASSERT(real_state < nstates);
+            if (!hyper)
+              lh[real_state] = std::pow((double)(N-i)/(double)N,j);
+            else {
+              lh[real_state] = 1.0;
+              for (int l = 0; l<j; l++)
+                lh[real_state] *= (double) (N-i-l) / (double) (N-l);
+            }
+          }
+        }
+      }
+    }
+  }
+  // Observed state is polymorphic.  We only need to set the
+  // partial likelihoods for states that are also
+  // polymorphic for the same alleles.  E.g., states of type
+  // (ix,(N-i)y) can lead to the observed state (jx,(M-j)y).
+  else {
+    int k;
+    if (id1 == 0) k = id2 - 1;
+    else k = id1 + id2;
+    int real_state = nnuc + k*(N-1);
+    for (int i = 1; i < N; i++, real_state++) {
+      ASSERT(real_state < nstates);
+      if (!hyper)
+        lh[real_state] = binomial_dist(j, M, (double) i / (double) N);
+      if (hyper)
+        lh[real_state] = hypergeometric_dist(j, M, i, N);
+    }
+  }
+
+  // cout << "Sample M,j,id1,id2: " << M << ", " << j << ", " << id1 << ", " << id2 << endl;
+  // cout << "Real partial likelihood vector: ";
+  // for (i=0; i<4; i++)
+  //   cout << real_partial_lh[i] << " ";
+  // cout << endl;
+  // for (i=4; i<nstates; i++) {
+  //   cout << real_partial_lh[i] << " ";
+  //   if ((i-3)%(N-1) == 0)
+  //     cout << endl;
+  // }
+  // double sum = 0.0;
+  // for (i=0; i<nstates; i++)
+  //   sum += real_partial_lh[i];
+  // cout << sum << endl;
+}
 
 
 void PhyloTree::computeTipPartialLikelihood() {
-	if (tip_partial_lh_computed)
+	if ((tip_partial_lh_computed & 1) != 0)
 		return;
-	tip_partial_lh_computed = true;
+	tip_partial_lh_computed |= 1;
     
     
 	//-------------------------------------------------------
@@ -368,12 +497,33 @@ void PhyloTree::computeTipPartialLikelihood() {
                 }
             }
             break;
+        case SEQ_POMO: {
+          if (aln->pomo_sampling_method != SAMPLING_WEIGHTED_BINOM &&
+              aln->pomo_sampling_method != SAMPLING_WEIGHTED_HYPER)
+            outError("Sampling method not supported by PoMo.");
+          bool hyper = false;
+          if (aln->pomo_sampling_method == SAMPLING_WEIGHTED_HYPER)
+            hyper = true;
+          double *real_partial_lh = aligned_alloc<double>(nstates);
+          for (state = 0; state < aln->pomo_sampled_states.size(); state++) {
+            computeTipPartialLikelihoodPoMo(state, real_partial_lh, hyper);
+            // The vector tip_partial_lh stores inner product of real_partial_lh
+            // and inverse eigenvector for each state
+            double *this_tip_partial_lh = &tip_partial_lh[(state+nstates)*nstates];
+            memset(this_tip_partial_lh, 0, nstates*sizeof(double));
+            for (i = 0; i < nstates; i++)
+              this_tip_partial_lh[i] = real_partial_lh[i];
+          }
+          aligned_free(real_partial_lh);
+          break;
+        }
         default:
             break;
         }
         return;
     }
-    
+
+    // THIS IS FOR REVERSIBLE MODEL
     int m, x, nmixtures = model->getNMixtures();
 	double *all_inv_evec = model->getInverseEigenvectors();
 	ASSERT(all_inv_evec);
@@ -435,161 +585,34 @@ void PhyloTree::computeTipPartialLikelihood() {
 			}
 		}
 		break;
-    case SEQ_POMO:
-        // If weighted method is used, we need to handle the
-        // pomo_states accordingly.
-        if (aln->pomo_states.size() > 0) { // added BQM 2015-07
-            int N = aln->virtual_pop_size;
-            DoubleVector logv; // BQM: log(0), log(1), log(2)..., for fast computation
-            logv.resize(N+1);
-            logv[0] = logv[1] = 0.0;
-            for (i = 2; i <= N; i++)
-                logv[i] = log((double)i);
-
-            double *real_partial_lh = aligned_alloc<double>(nstates);
-
-            for (state = 0; state < aln->pomo_states.size(); state++) {
-                double *this_tip_partial_lh = &tip_partial_lh[(state+nstates)*nstates*nmixtures];
-                memset(real_partial_lh, 0, sizeof(double)*nstates);
-
-                // decode the id and value
-                int id1 = aln->pomo_states[state] & 3;
-                int id2 = (aln->pomo_states[state] >> 16) & 3;
-                int j = (aln->pomo_states[state] >> 2) & 16383;
-                int M = j + (aln->pomo_states[state] >> 18);
-                // TODO: Number of alleles is hardcoded here.
-                int nnuc = 4;
-                // Check if observed state is a fixed one.  If so, many
-                // PoMo states can lead to this data.  E.g., even (2A,8T)
-                // can lead to a sampled data of 7A.
-                if (j == M) {
-                    // First: Fixed state.  Tue Jan 12 09:26:48 CET
-                    // FIXME: 2016 DOM: The likelihood of the fixed
-                    // state is increased to improve accuracy.
-                    real_partial_lh[id1] = 1.0;
-                    // real_partial_lh[id1] = nnuc * (nnuc - 1) / 2;
-                    // real_partial_lh[id1] = 3.0;
-                    double sum_lh = real_partial_lh[id1];
-                    // Second: Polymorphic states.
-                    for (int s_id1 = 0; s_id1 < nnuc-1; s_id1++) {
-                        for (int s_id2 = s_id1+1; s_id2 < nnuc; s_id2++) {
-                            if (s_id1 == id1) {
-                                // States are in the order {FIXED,
-                                // 1A(N-1)C, ..., (N-1)A1C, ...}.
-                                int k;
-                                if (s_id1 == 0) k = s_id2 - 1;
-                                else k = s_id1 + s_id2;
-                                // Start one earlier because increment
-                                // happens after execution of for loop
-                                // body.
-                                int real_state = nnuc - 1 + k*(N-1) + 1;
-                                for (i = 1; i < N; i++, real_state++) {
-                                    ASSERT(real_state < nstates);
-                                    real_partial_lh[real_state] =
-                                        std::pow((double)i/(double)N,j);
-                                    sum_lh += real_partial_lh[real_state];
-                                }
-                            }
-                            // Same but fixed allele is the second one
-                            // in polymorphic states.
-                            else if (s_id2 == id1) {
-                                int k;
-                                if (s_id1 == 0) k = s_id2 - 1;
-                                else k = s_id1 + s_id2;
-                                int real_state = nnuc - 1 + k*(N-1) + 1;
-                                for (i = 1; i < N; i++, real_state++) {
-                                    ASSERT(real_state < nstates);
-                                    real_partial_lh[real_state] =
-                                        std::pow((double)(N-i)/(double)N,j);
-                                    sum_lh += real_partial_lh[real_state];
-                                }
-                            }
-                        }
-                    }
-                    // Fri Feb 12 12:55:32 CET 2016 Changed by Dom,
-                    // because normalization treats tip nodes
-                    // differently than interior nodes.
-
-                    // normalize partial likelihoods to total of 1.0
-                    // sum_lh = 1.0/sum_lh;
-                    // for (i = 0; i < nstates; i++)
-                    //     real_partial_lh[i] *= sum_lh;
-                }
-                // Observed state is polymorphic.  We only need to set the
-                // partial likelihoods for states that are also
-                // polymorphic for the same alleles.  E.g., states of type
-                // (ix,(N-i)y) can lead to the observed state (jx,(M-j)y).
-                else {
-                    if (M >= logv.size()) {
-                        for (i = logv.size(); i <= M; i++)
-                            logv.push_back(log((double)i));
-                    }
-                    // Compute (M choose (M-j) = M choose j).
-                    double res = 0.0;
-                    for (i = j+1; i <= M; i++)
-                        res += (logv[i] - logv[i-j]);
-                    // Divide through N**M.
-                    res -= M * logv[N];
-                    int k;
-                    if (id1 == 0) k = id2 - 1;
-                    else k = id1 + id2;
-                    int real_state = nnuc + k*(N-1);
-
-                    double sum_lh = 0.0;
-                    for (i = 1; i < N; i++, real_state++) {
-                        ASSERT(real_state < nstates);
-                        real_partial_lh[real_state] = exp(res + j*logv[i] + (M-j) * logv[N-i]);
-                        sum_lh += real_partial_lh[real_state];
-                    }
-
-                    // Fri Feb 12 12:55:32 CET 2016 Changed by Dom,
-                    // because normalization treats tip nodes
-                    // differently than interior nodes.
-
-                    // normalize partial likelihoods to total of 1.0
-                    // sum_lh = 1.0/sum_lh;
-                    // for (i = 0; i < nstates; i++)
-                    //     real_partial_lh[i] *= sum_lh;
-                }
-
-                // //DEBUG.
-                // cout << "State: M, j, id1, id2: ";
-                // cout << M << ", " << j << ", " << id1 << ", " << id2 << endl;
-                // for (i = 0; i < nstates; i++) {
-                //     cout << " " << real_partial_lh[i];
-                // }
-                // cout << endl;
-
-                // BUG FIX 2015-09-03: tip_partial_lh stores inner product
-                // of real_partial_lh and inverse eigenvector for each
-                // state
-                memset(this_tip_partial_lh, 0, nmixtures*nstates*sizeof(double));
-                for (m = 0; m < nmixtures; m++) {
-                    double *inv_evec = &all_inv_evec[m*nstates*nstates];
-                    for (i = 0; i < nstates; i++)
-                        for (j = 0; j < nstates; j++)
-                            this_tip_partial_lh[m*nstates + i] +=
-                                inv_evec[i*nstates+j] * real_partial_lh[j];
-                }
-            } // for loop
-            aligned_free(real_partial_lh);
-        }
-
-        // // TODO: Do we need to handle STATE_UNKNOWN for PoMo here?
-        // double *su_tip_partial_lh = &tip_partial_lh[(aln->STATE_UNKNOWN)*nstates*nmixtures];
-        // memset(su_tip_partial_lh, 0, nmixtures*nstates*sizeof(double));
-        // for (int m = 0; m < nmixtures; m++) {
-        //     double *inv_evec = &all_inv_evec[m*nstates*nstates];
-        //     for (int i = 0; i < nstates; i++)
-        //         for (int j = 0; j < nstates; j++)
-        //             su_tip_partial_lh[m*nstates + i] +=
-        //                 inv_evec[i*nstates+j] * (double)1/nstates;
-        // }
-        break;
+  case SEQ_POMO: {
+    if (aln->pomo_sampling_method != SAMPLING_WEIGHTED_BINOM &&
+        aln->pomo_sampling_method != SAMPLING_WEIGHTED_HYPER)
+      outError("Sampling method not supported by PoMo.");
+    bool hyper = false;
+    if (aln->pomo_sampling_method == SAMPLING_WEIGHTED_HYPER)
+      hyper = true;
+    double *real_partial_lh = aligned_alloc<double>(nstates);
+    for (state = 0; state < aln->pomo_sampled_states.size(); state++) {
+      computeTipPartialLikelihoodPoMo(state, real_partial_lh, hyper);
+      // The vector tip_partial_lh stores inner product of real_partial_lh
+      // and inverse eigenvector for each state
+      double *this_tip_partial_lh = &tip_partial_lh[(state+nstates)*nstates*nmixtures];
+      memset(this_tip_partial_lh, 0, nmixtures*nstates*sizeof(double));
+      for (m = 0; m < nmixtures; m++) {
+        double *inv_evec = &all_inv_evec[m*nstates*nstates];
+        for (int i = 0; i < nstates; i++)
+          for (int j = 0; j < nstates; j++)
+            this_tip_partial_lh[m*nstates + i] +=
+              inv_evec[i*nstates+j] * real_partial_lh[j];
+      }
+    }
+    aligned_free(real_partial_lh);
+    break;
+  }
 	default:
 		break;
 	}
-
 }
 
 void PhyloTree::computePtnFreq() {
@@ -607,7 +630,9 @@ void PhyloTree::computePtnFreq() {
 void PhyloTree::computePtnInvar() {
 	size_t nptn = aln->getNPattern(), ptn;
 	size_t maxptn = get_safe_upper_limit(nptn)+get_safe_upper_limit(model_factory->unobserved_ptns.size());
-	int nstates = aln->num_states;
+  // For PoMo, only consider monomorphic states and set nstates to the number of
+  // states of the underlying mutation model.
+	int nstates = model->getMutationModel()->num_states;
     int x;
     // ambiguous characters
     int ambi_aa[] = {
@@ -619,7 +644,10 @@ void PhyloTree::computePtnInvar() {
     double state_freq[nstates];
 
     // -1 for mixture model
-    model->getStateFrequency(state_freq, -1);
+
+    // Again for PoMo, the stationary frequencies are set to the stationary
+    // frequencies of the boundary states.
+    model->getMutationModel()->getStateFrequency(state_freq, -1);
 
 	memset(ptn_invar, 0, maxptn*sizeof(double));
 	double p_invar = site_rate->getPInvar();
@@ -630,6 +658,8 @@ void PhyloTree::computePtnInvar() {
 
 			if ((*aln)[ptn].const_char == aln->STATE_UNKNOWN) {
 				ptn_invar[ptn] = p_invar;
+        // For PoMo, if a polymorphic state is considered, the likelihood is
+        // left unchanged and zero because ptn_invar has been initialized to 0.
 			} else if ((*aln)[ptn].const_char < nstates) {
 				ptn_invar[ptn] = p_invar * state_freq[(int) (*aln)[ptn].const_char];
 			} else if (aln->seq_type == SEQ_DNA) {
@@ -1494,7 +1524,7 @@ void PhyloTree::initMarginalAncestralState(ostream &out, bool &orig_kernel_nonre
     if (!orig_kernel_nonrev) {
         // switch to nonrev kernel to compute _pattern_lh_cat_state
         params->kernel_nonrev = true;
-        setLikelihoodKernel(sse, num_threads);
+        setLikelihoodKernel(sse);
         clearAllPartialLH();
     }
     _pattern_lh_cat_state = newPartialLh();
@@ -1582,7 +1612,7 @@ void PhyloTree::endMarginalAncestralState(bool orig_kernel_nonrev, double* &ptn_
     if (!orig_kernel_nonrev) {
         // switch back to REV kernel
         params->kernel_nonrev = orig_kernel_nonrev;
-        setLikelihoodKernel(sse, num_threads);
+        setLikelihoodKernel(sse);
         clearAllPartialLH();
     }
     aligned_free(ptn_ancestral_seq);

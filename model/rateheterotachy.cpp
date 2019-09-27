@@ -33,6 +33,8 @@ RateHeterotachy::RateHeterotachy(int ncat, string params, PhyloTree *tree) : Rat
 		// Minh: Please double check this one. It isn't quite so
 		// clear what fix_params is doing, as it seems to take values
 		// 0, 1 or 2.  -- MDW
+        //BQM: that OK
+
 		if (!(tree->params->optimize_from_given_params)) {
 		        fix_params = 1;
 		} // else fix_params == 0 still. 

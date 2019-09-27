@@ -24,6 +24,30 @@
 #include "supernode.h"
 #include "alignment/superalignment.h"
 
+/**
+    Partition information for each partition
+ */
+struct PartitionInfo {
+    double cur_score;    // current log-likelihood
+    double part_rate;    // partition heterogeneity rate
+    int    evalNNIs;    // number of evaluated NNIs on subtree
+    
+    //DoubleVector null_score; // log-likelihood of each branch collapsed to zero
+    //DoubleVector opt_score;  // optimized log-likelihood for every branch
+    //DoubleVector nni1_score; // log-likelihood for 1st NNI for every branch
+    //DoubleVector nni2_score; // log-likelihood for 2nd NNI for every branch
+    
+    vector<DoubleVector> cur_brlen;  // current branch lengths
+    //DoubleVector opt_brlen;  // optimized branch lengths for every branch
+    vector<DoubleVector> nni1_brlen; // branch length for 1st NNI for every branch
+    vector<DoubleVector> nni2_brlen; // branch length for 2nd NNI for every branch
+    
+    //double *mem_ptnlh; // total memory allocated for all pattern likelihood vectors
+    double *cur_ptnlh; // current pattern likelihoods of the tree
+    //double *nni1_ptnlh; // pattern likelihoods of 1st NNI tree
+    //double *nni2_ptnlh; // pattern likelihoods of 2nd NNI tree
+    NNIMove nniMoves[2];
+};
 
 /**
 Phylogenetic tree for partition model (multi-gene alignment)
@@ -38,17 +62,19 @@ public:
 	*/
     PhyloSuperTree();
 
-	/**
+    /**
+     constructor
+     */
+    PhyloSuperTree(SuperAlignment *alignment, bool new_iqtree = false);
+
+    /**
 		constructor
 	*/
     PhyloSuperTree(SuperAlignment *alignment, PhyloSuperTree *super_tree);
 
-	/**
-		constructor
-	*/
-    PhyloSuperTree(Params &params);
-
-
+    /**
+        destructor
+    */
     ~PhyloSuperTree();
 
     /**
@@ -74,27 +100,17 @@ public:
     virtual void setModelFactory(ModelFactory *model_fac);
 
     /**
+     2019-06-03: copy part_info from tree, taking into account -bsam option
+     @param tree input super tree
+     */
+    void setPartInfo(PhyloSuperTree *tree);
+    
+    /**
             Set the alignment, important to compute parsimony or likelihood score
             Assing taxa ids according to their position in the alignment
             @param alignment associated alignment
      */
     virtual void setSuperAlignment(Alignment *alignment);
-
-    /** read partition model file */
-    void readPartition(Params &params);
-
-    /** read RAxML-style partition file */
-    void readPartitionRaxml(Params &params);
-
-    /** read partition model file in NEXUS format into variable info */
-    void readPartitionNexus(Params &params);
-
-    void printPartition(const char *filename);
-
-    void printPartitionRaxml(const char *filename);
-
-    void printBestPartition(const char *filename);
-    void printBestPartitionRaxml(const char *filename);
 
     /** remove identical sequences from the tree */
     virtual void removeIdenticalSeqs(Params &params);
@@ -109,11 +125,21 @@ public:
 	 */
 	virtual void initSettings(Params& params);
 
-    virtual void setLikelihoodKernel(LikelihoodKernel lk, int num_threads);
+    virtual void setLikelihoodKernel(LikelihoodKernel lk);
 
     virtual void changeLikelihoodKernel(LikelihoodKernel lk);
 
+    virtual void setParsimonyKernel(LikelihoodKernel lk);
+
+    virtual void setNumThreads(int num_threads);
+
 	virtual bool isSuperTree() { return true; }
+
+    /**
+     print tree to .treefile
+     @param params program parameters, field root is taken
+     */
+    virtual void printResultTree(string suffix = "");
 
     /**
      * Return the tree string contining taxon names and branch lengths
@@ -136,6 +162,15 @@ public:
      * restore branch lengths from a vector previously called with saveBranchLengths
      */
     virtual void restoreBranchLengths(DoubleVector &lenvec, int startid = 0, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
+    /**
+        Collapse all internal branches with length <= threshold
+		@param node the starting node, NULL to start from the root
+		@param dad dad of the node, used to direct the search
+        @param threshold branch length threshold
+        @return number of branches collapsed
+    */
+    virtual int collapseInternalBranches(Node *node = NULL, Node *dad = NULL, double threshold = 0.0);
 
     /**
             allocate a new node. Override this if you have an inherited Node class.
@@ -200,7 +235,12 @@ public:
 	 */
 	void linkBranch(int part, SuperNeighbor *nei, SuperNeighbor *dad_nei);
 
-
+    /**
+        make the rooting consistent between trees
+     */
+    void syncRooting();
+    
+    
     /**
             initialize partial_lh vector of all PhyloNeighbors, allocating central_partial_lh
      */
@@ -275,7 +315,7 @@ public:
      *   Apply 5 new branch lengths stored in the NNI move
      *   @param nnimove the NNI move currently in consideration
      */
-    virtual void changeNNIBrans(NNIMove nnimove);
+    virtual void changeNNIBrans(NNIMove &nnimove);
 
     /**
         OBSOLETE!
@@ -329,13 +369,19 @@ public:
 	 * @param ids partitions IDs
 	 * @return subtree
 	 */
-    PhyloTree *extractSubtree(IntVector &ids);
+    PhyloTree *extractSubtree(set<int> &ids);
 
     /**
      * compute the memory size required for storing partial likelihood vectors
      * @return memory size required in bytes
      */
     virtual uint64_t getMemoryRequired(size_t ncategory = 1, bool full_mem = false);
+
+    /**
+     * compute the memory size for top partitions required for storing partial likelihood vectors
+     * @return memory size required in bytes
+     */
+    virtual uint64_t getMemoryRequiredThreaded(size_t ncategory = 1, bool full_mem = false);
 
     /**
      * count the number of super branches that map to no branches in gene trees
@@ -379,8 +425,7 @@ public:
         end computing ancestral sequence probability for an internal node by marginal reconstruction
     */
     virtual void endMarginalAncestralState(bool orig_kernel_nonrev, double* &ptn_ancestral_prob, int* &ptn_ancestral_seq);
-
-
+    
 	/**
 		write site-rates to a file in the following format:
 		1  rate_1
@@ -388,9 +433,9 @@ public:
 		....
 		This function will call computePatternRates()
 		@param out output stream to write rates
-	*/
-	virtual void writeSiteRates(ostream &out, int partid = -1);
-
+        @param bayes TRUE to use empirical Bayesian, false for ML method
+     */
+    virtual void writeSiteRates(ostream &out, bool bayes, int partid = -1);
 
     /**
         write site log likelihood to a output stream
@@ -401,6 +446,22 @@ public:
     virtual void writeSiteLh(ostream &out, SiteLoglType wsl, int partid = -1);
 
 
+    virtual void writeBranch(ostream &out, Node* node1, Node* node2);
+
+    /**
+     write branches into a csv file
+     Feature requested by Rob Lanfear
+     @param out output stream
+     */
+    virtual void writeBranches(ostream &out);
+
+    /**
+        print partition file with best model parameters
+        @param filename output file name
+     */
+    void printBestPartitionParams(const char *filename);
+
+    
     /** True when mixed codon with other data type */
     bool rescale_codon_brlen;
     

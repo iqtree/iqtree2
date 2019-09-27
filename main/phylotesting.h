@@ -94,6 +94,20 @@ public:
     bool getBestModel(string &best_model);
 
     /*
+     get the best model list
+     @param[out] best_model_list list of the best model
+     @return TRUE if best model found, FALSE otherwise (unfinished job)
+     */
+    bool getBestModelList(string &best_model_list);
+
+    /*
+     put the best model list
+     @param best_model_list list of the best model
+     @return TRUE if best model found, FALSE otherwise (unfinished job)
+     */
+    void putBestModelList(string &best_model_list);
+
+    /*
         get the ordered model list according to AIC, AICc or BIC
         @param tree associated tree
         @param[out] ordered_models list of models ordered by specified criterion
@@ -146,6 +160,14 @@ string criterionName(ModelTestCriterion mtc);
 bool checkModelFile(string model_file, bool is_partitioned, ModelCheckpoint &infos);
 
 /**
+ perform ModelFinder to find the best-fit model
+ @param params program parameters
+ @param iqtree phylogenetic tree
+ @param model_info (IN/OUT) information for all models considered
+ */
+void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info);
+
+/**
  testing the best-fit model
  return in params.freq_type and params.rate_type
  @param set_name for partitioned analysis
@@ -155,8 +177,9 @@ bool checkModelFile(string model_file, bool is_partitioned, ModelCheckpoint &inf
  @param print_mem_usage true to print RAM memory used (default: false) 
  @return name of best-fit-model
  */
-string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
-		ModelsBlock *models_block, int num_threads, string set_name = "", bool print_mem_usage = false, string in_model_name = "");
+//string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
+//		ModelsBlock *models_block, int num_threads, int brlen_type,
+//        string set_name = "", bool print_mem_usage = false, string in_model_name = "");
 
 /**
  * print site log likelihoods to a fileExists
@@ -223,9 +246,9 @@ void printAncestralSequences(const char*filename, PhyloTree *tree, AncestralSeqT
  * @param info (OUT) output information
  * @param distinct_ids IDs of distinct trees
  */
-void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVector &distinct_ids);
+void evaluateTrees(string treeset_file, Params &params, IQTree *tree, vector<TreeInfo> &info, IntVector &distinct_ids);
 
-void evaluateTrees(Params &params, IQTree *tree);
+void evaluateTrees(string treeset_file, Params &params, IQTree *tree);
 
 /**
     get sequence type for a model name
@@ -233,9 +256,9 @@ void evaluateTrees(Params &params, IQTree *tree);
     @param seq_type (OUT) sequence type, SEQ_UNKNOWN if is not determined
     @return 1 for parametric model, 2 for empirical model
 */
-int getSeqType(const char *model_name, SeqType &seq_type);
+int detectSeqType(const char *model_name, SeqType &seq_type);
 
-string getSeqType(string model_name);
+string detectSeqTypeName(string model_name);
 
 
 #endif /* PHYLOTESTING_H_ */

@@ -21,6 +21,8 @@ ModelSubst::ModelSubst(int nstates) : Optimization(), CheckpointFactory()
 	for (int i = 0; i < num_states; i++)
 		state_freq[i] = 1.0 / num_states;
 	freq_type = FREQ_EQUAL;
+    fixed_parameters = false;
+//    linked_model = NULL;
 }
 
 void ModelSubst::startCheckpoint() {
@@ -33,7 +35,7 @@ void ModelSubst::saveCheckpoint() {
 //    CKP_SAVE(name);
 //    CKP_SAVE(full_name);
 //    CKP_SAVE(freq_type);
-    if (freq_type == FREQ_ESTIMATE)
+    if (freq_type == FREQ_ESTIMATE && !fixed_parameters)
         CKP_ARRAY_SAVE(num_states, state_freq);
     endCheckpoint();
     CheckpointFactory::saveCheckpoint();
@@ -48,7 +50,7 @@ void ModelSubst::restoreCheckpoint() {
 //    int freq_type = this->freq_type;
 //    CKP_RESTORE(freq_type);
 //    this->freq_type = (StateFreqType)freq_type;
-    if (freq_type == FREQ_ESTIMATE)
+    if (freq_type == FREQ_ESTIMATE && !fixed_parameters)
         CKP_ARRAY_RESTORE(num_states, state_freq);
     endCheckpoint();
 
@@ -123,6 +125,10 @@ void ModelSubst::getStateFrequency(double *state_freq, int mixture) {
 		state_freq[i] = freq;
 }
 
+void ModelSubst::setStateFrequency(double *state_freq) {
+    memcpy(this->state_freq, state_freq, sizeof(double)*num_states);
+}
+
 void ModelSubst::computeTransDerv(double time, double *trans_matrix, 
 		double *trans_derv1, double *trans_derv2, int mixture)
 {
@@ -179,7 +185,11 @@ double *ModelSubst::newTransMatrix() {
 
 ModelSubst::~ModelSubst()
 {
-	if (state_freq) delete [] state_freq;
+    // mem space pointing to target model and thus avoid double free here
+//    if (linked_model && linked_model != this)
+//        return;
+
+    if (state_freq) delete [] state_freq;
 }
 
 

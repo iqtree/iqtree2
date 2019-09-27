@@ -1031,7 +1031,7 @@ void mainlb(int n, int m, double *x,
 				--ifun;
 				--iback;
 			}
-			strcpy(task, "ERROR: ABNORMAL_TERMINATION_IN_LNSRCH");
+			strcpy(task, "WARNING: ABNORMAL_TERMINATION_IN_LNSRCH");
 			++iter;
 			goto L999;
 		} else {

@@ -90,7 +90,7 @@ double mean_sum(int l, int r, double *sumA, double *sumAsquare, int *sumW) {
 //                  and k-1 inclusive).
 // The final cost of the clustering is also returned.
 
-double RunKMeans1D(int n, int k, double *points, int *weights, double *centers, int *assignments) {
+double RunKMeans1D(int n, int k, double *points_orig, int *weights, double *centers, int *assignments) {
 	double *sumA;
 	double *sumAsquare;
 	int *sumW;
@@ -107,6 +107,8 @@ double RunKMeans1D(int n, int k, double *points, int *weights, double *centers, 
 
 	int *index = new int[n+1];
 	for (int i=0; i<n; i++) index[i] = i;
+    double *points = new double[n];
+    memcpy(points, points_orig, n*sizeof(double));
 
 	//for (int i=1; i<=n; i++) cout <<index[i] <<"\t" <<points[i] <<endl;
 
@@ -157,6 +159,7 @@ double RunKMeans1D(int n, int k, double *points, int *weights, double *centers, 
 		i=t; j=j-1;
 	}
 	
+    delete [] points;
 	for (int i=n; i>=0; i--) delete [] trace[i];
 	delete [] trace;
 	for (int i=n; i>=0; i--) delete [] Cost[i];

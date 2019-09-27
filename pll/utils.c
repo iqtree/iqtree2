@@ -152,9 +152,15 @@ static void initializePartitionsSequential(pllInstance *tr, partitionList *pr);
 */
 /***************** UTILITY FUNCTIONS **************************/
 
-#if (!defined(_SVID_SOURCE) && !defined(_BSD_SOURCE) && !defined(_POSIX_C_SOURCE) && !defined(_XOPEN_SOURCE) && !defined(_POSIX_SOURCE))
-static char *
-my_strtok_r (char * s, const char * delim, char **save_ptr)
+char *my_strndup(const char *s, size_t n) {
+    char *ret = (char *) rax_malloc(n+1);
+    strncpy(ret, s, n);
+    ret[n] = 0;
+    return ret;
+}
+
+#ifndef HAVE_STRTOK_R
+char *strtok_r (char * s, const char * delim, char **save_ptr)
 {  
   char *token;
    
@@ -184,14 +190,6 @@ my_strtok_r (char * s, const char * delim, char **save_ptr)
   return token;
 }
 #endif
-
-#if (defined(_SVID_SOURCE) || defined(_BSD_SOURCE) || defined(_POSIX_C_SOURCE) || defined(_XOPEN_SOURCE) || defined(_POSIX_SOURCE))
-#define STRTOK_R strtok_r
-#else
-#define STRTOK_R my_strtok_r
-#endif
-
-
 
 
 void storeExecuteMaskInTraversalDescriptor(pllInstance *tr, partitionList *pr)
@@ -2625,7 +2623,7 @@ static int init_Q_MatrixSymmetries(char *linkageString, partitionList * pr, int 
 
   for(j = 0, str1 = ch; ;j++, str1 = (char *)NULL) 
     {
-      token = STRTOK_R(str1, ",", &saveptr);
+      token = strtok_r(str1, ",", &saveptr);
       if(token == (char *)NULL)
         break;
       if(!(j < numberOfRates))
@@ -3396,7 +3394,7 @@ static linkageList* initLinkageListString(char *linkageString, partitionList * p
 
   for(j = 0, str1 = ch; ;j++, str1 = (char *)NULL) 
     {
-      token = STRTOK_R(str1, ",", &saveptr);
+      token = strtok_r(str1, ",", &saveptr);
       if(token == (char *)NULL)
         break;
       assert(j < pr->numberOfPartitions);

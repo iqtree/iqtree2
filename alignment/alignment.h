@@ -16,56 +16,85 @@
 #include <bitset>
 #include "pattern.h"
 #include "ncl/ncl.h"
-#include "utils/tools.h"
 
-// IMPORTANT: refactor STATE_UNKNOWN
-//const char STATE_UNKNOWN = 126;
-
-/* PoMo: STATE_INVALID is not handled in PoMo.  Set STATE_INVALID to
-   127 to remove warning about comparison to char in alignment.cpp.
-   This is important if the maximum N will be increased above 21
-   because then the state space is larger than 127 and we have to
-   think about something else. */
-/* const unsigned char STATE_INVALID = 255; */
-const unsigned char STATE_INVALID = 127;
-const int NUM_CHAR = 256;
 const double MIN_FREQUENCY          = 0.0001;
 const double MIN_FREQUENCY_DIFF     = 0.00001;
 
+const int NUM_CHAR = 256;
 typedef bitset<NUM_CHAR> StateBitset;
 
-enum SeqType {
-    SEQ_DNA, SEQ_PROTEIN, SEQ_BINARY, SEQ_MORPH, SEQ_MULTISTATE, SEQ_CODON, SEQ_POMO, SEQ_UNKNOWN
+/** class storing results of symmetry tests */
+class SymTestResult {
+public:
+    SymTestResult() {
+        significant_pairs = included_pairs = excluded_pairs = 0;
+        pvalue_binom = -1.0;
+    }
+    
+    /** compute pvalue using bionomial test */
+    void computePvalue();
+    
+    int significant_pairs; // number of significant sequence pairs
+    int included_pairs; // total number of included sequence pairs
+    int excluded_pairs; // number of excluded sequence pairs
+    double max_stat; // maximum of the pair statistics
+    double pvalue_binom; // pvalue of binomial test of symmetry
+    double pvalue_maxdiv; // p-value of the sequence pair with maximum divergence
+    double pvalue_perm; // p-value of permutation test of symmetry
 };
 
+/** class storing all pairwise statistics */
+class SymTestStat {
+public:
+    SymTestStat() {
+        part = 0;
+        seq1 = seq2 = 0;
+        chi2_sym = 0.0;
+        chi2_marsym = std::numeric_limits<double>::quiet_NaN();
+        chi2_intsym = std::numeric_limits<double>::quiet_NaN();
+        pval_sym = std::numeric_limits<double>::quiet_NaN();
+        pval_marsym = std::numeric_limits<double>::quiet_NaN();
+        pval_intsym = std::numeric_limits<double>::quiet_NaN();
+    }
+    int part; // partition ID
+    int seq1, seq2; // ID of sequence 1 and 2
+    double chi2_sym; // chi2 statistic test of symmetry
+    double chi2_marsym; // chi2 statistic test of marginal symmetry
+    double chi2_intsym; // chi2 statistic test of internal symmetry
+    double pval_sym; // chi2 p-value test of symmetry
+    double pval_marsym; // chi2 p-value test of marginal symmetry
+    double pval_intsym; // chi2 p-value test of internal symmetry
+};
+
+std::ostream& operator<< (std::ostream& stream, const SymTestResult& res);
 
 #ifdef USE_HASH_MAP
 struct hashPattern {
-	size_t operator()(const vector<StateType> &sp) const {
-		size_t sum = 0;
-		for (Pattern::const_iterator it = sp.begin(); it != sp.end(); it++)
-			sum = (*it) + (sum << 6) + (sum << 16) - sum;
-		return sum;
-	}
+    size_t operator()(const vector<StateType> &sp) const {
+        size_t sum = 0;
+        for (Pattern::const_iterator it = sp.begin(); it != sp.end(); it++)
+            sum = (*it) + (sum << 6) + (sum << 16) - sum;
+        return sum;
+    }
 };
-typedef unordered_map<string, int> StringIntMap;
-typedef unordered_map<string, double> StringDoubleHashMap;
 typedef unordered_map<vector<StateType>, int, hashPattern> PatternIntMap;
-typedef unordered_map<uint32_t, uint32_t> IntIntMap;
 #else
-typedef map<string, int> StringIntMap;
-typedef map<string, double> StringDoubleHashMap;
 typedef map<vector<StateType>, int> PatternIntMap;
-typedef map<uint32_t, uint32_t> IntIntMap;
 #endif
+
+
+constexpr int EXCLUDE_GAP   = 1; // exclude gaps
+constexpr int EXCLUDE_INVAR = 2; // exclude invariant sites
+constexpr int EXCLUDE_UNINF = 4; // exclude uninformative sites
 
 /**
 Multiple Sequence Alignment. Stored by a vector of site-patterns
 
         @author BUI Quang Minh, Steffen Klaere, Arndt von Haeseler <minh.bui@univie.ac.at>
  */
-class Alignment : public vector<Pattern> {
+class Alignment : public vector<Pattern>, public CharSet, public StateSpace {
     friend class SuperAlignment;
+    friend class SuperAlignmentUnlinked;
 
 public:
 
@@ -80,7 +109,7 @@ public:
             @param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
             @param intype (OUT) input format of the file
      */
-    Alignment(char *filename, char *sequence_type, InputType &intype);
+    Alignment(char *filename, char *sequence_type, InputType &intype, string model);
 
     /**
             destructor
@@ -109,8 +138,22 @@ public:
 	/**
 		determine if the pattern is constant. update the is_const variable.
 	*/
-	void computeConst(Pattern &pat);
+	virtual void computeConst(Pattern &pat);
 
+
+    void printSiteInfoHeader(ostream& out, const char* filename, bool partition = false);
+    /**
+        Print all site information to a stream
+        @param out output stream
+        @param part_id partition ID, negative to omit
+    */
+    void printSiteInfo(ostream &out, int part_id);
+
+    /**
+        Print all site information to a file
+        @param filename output file name
+    */
+    virtual void printSiteInfo(const char* filename);
 
     /**
      * add const patterns into the alignment
@@ -218,16 +261,16 @@ public:
 
     void buildStateMap(char *map, SeqType seq_type);
 
-    virtual char convertState(char state, SeqType seq_type);
+    virtual StateType convertState(char state, SeqType seq_type);
 
     /** 
      * convert state if the number of states (num_states is known)
      * @param state input char to convert
      * @return output char from 0 to 0-num_states or STATE_INVALID or STATE_UNKNOWN
      */
-    char convertState(char state);
+    StateType convertState(char state);
 
-    virtual void convertStateStr(string &str, SeqType seq_type);
+    //virtual void convertStateStr(string &str, SeqType seq_type);
 
 	/**
 	 * convert from internal state to user-readable state (e.g., to ACGT for DNA)
@@ -243,7 +286,7 @@ public:
 	 * @param state internal state code
 	 * @return user-readable state string
 	 */
-	string convertStateBackStr(char state);
+	string convertStateBackStr(StateType state);
 
 	/**
             get alignment site range from the residue range relative to a sequence
@@ -255,16 +298,16 @@ public:
     bool getSiteFromResidue(int seq_id, int &residue_left, int &residue_right);
 
     int buildRetainingSites(const char *aln_site_list, IntVector &kept_sites,
-            bool exclude_gaps, bool exclude_const_sites, const char *ref_seq_name);
+            int exclude_sites, const char *ref_seq_name);
 
     void printPhylip(const char *filename, bool append = false, const char *aln_site_list = NULL,
-    		bool exclude_gaps = false, bool exclude_const_sites = false, const char *ref_seq_name = NULL);
+    		int exclude_sites = 0, const char *ref_seq_name = NULL);
 
     void printPhylip(ostream &out, bool append = false, const char *aln_site_list = NULL,
-    		bool exclude_gaps = false, bool exclude_const_sites = false, const char *ref_seq_name = NULL, bool print_taxid = false);
+    		int exclude_sites = 0, const char *ref_seq_name = NULL, bool print_taxid = false);
 
     void printFasta(const char *filename, bool append = false, const char *aln_site_list = NULL,
-    		bool exclude_gaps = false, bool exclude_const_sites = false, const char *ref_seq_name = NULL);
+    		int exclude_sites = 0, const char *ref_seq_name = NULL);
 
     /**
             Print the number of gaps per site
@@ -316,6 +359,11 @@ public:
      * @param freq (OUT) vector of site-pattern frequencies
      */
     virtual void getPatternFreq(IntVector &freq);
+
+    /**
+     * @param[out] freq vector of site-pattern frequencies
+     */
+    virtual void getPatternFreq(int *freq);
 
     /**
             @param i sequence index
@@ -494,6 +542,22 @@ public:
     */
     void convertToCodonOrAA(Alignment *aln, char *gene_code_id, bool nt2aa = false);
 
+    /**
+     convert this codon alignment to AA
+     */
+    Alignment *convertCodonToAA();
+
+    /**
+     convert this codon alignment to DNA
+     */
+    Alignment *convertCodonToDNA();
+
+    /**
+     @param quartet ID of four taxa
+     @param[out] support number of sites supporting 12|34, 13|24 and 14|23
+     */
+    virtual void computeQuartetSupports(IntVector &quartet, vector<int64_t> &support);
+    
     /****************************************************************************
             Distance functions
      ****************************************************************************/
@@ -562,9 +626,24 @@ public:
      ****************************************************************************/
 
     /**
+        count occurrences for each state from 0 to STATE_UNKNOWN
+        @param[out] state_count counts for all states
+        @param num_unknown_states number of unknown states e.g. for missing data
+     */
+    void countStates(size_t *state_count, size_t num_unknown_states);
+    
+    /**
+        convert counts to frequencies using EM algorithm
+        @param[in] state_count counts for all states
+        @paramp[out] state_freq normalized state frequency vector
+     */
+    void convertCountToFreq(size_t *state_count, double *state_freq);
+
+    /**
             compute empirical state frequencies from the alignment
             @param state_freq (OUT) is filled with state frequencies, assuming state_freq was allocated with 
                     at least num_states entries.
+            @param num_unknown_states number of unknown states e.g. for missing data
      */
     virtual void computeStateFreq(double *state_freq, size_t num_unknown_states = 0);
 
@@ -604,16 +683,24 @@ public:
 	void computeCodonFreq(StateFreqType freq, double *state_freq, double *ntfreq);
 
 	/**
-            compute empirical rates between state pairs
-            @param rates (OUT) vector of size num_states*(num_states-1)/2 for the rates
+            compute empirical substitution counts between state pairs
+            @param normalize true to normalize row sum to 1, false otherwise
+            @param[out] pair_freq matrix of size num_states*num_states
+            @param[out] state_freq vector of size num_states
      */
-    virtual void computeDivergenceMatrix(double *rates);
+    virtual void computeDivergenceMatrix(double *pair_freq, double *state_freq, bool normalize = true);
 
     /**
-            compute non-reversible empirical rates between state pairs
-            @param rates (OUT) vector of size num_states*(num_states-1) for the rates
+        perform matched-pair tests of symmetry of Lars Jermiin et al.
+        @param[out] sym results of test of symmetry
+        @param[out] marsym results of test of marginal symmetry
+        @param[out] intsym results of test of internal symmetry
+        @param out output stream to print results
+        @param rstream random stream to shuffle alignment columns
+        @param out_stat output stream to print pairwise statistics
      */
-    virtual void computeDivergenceMatrixNonRev(double *rates);
+    virtual void doSymTest(size_t vecid, vector<SymTestResult> &sym, vector<SymTestResult> &marsym,
+                           vector<SymTestResult> &intsym, int *rstream = NULL, vector<SymTestStat> *stats = NULL);
 
     /**
             count the fraction of constant sites in the alignment, update the variable frac_const_sites
@@ -621,9 +708,15 @@ public:
     virtual void countConstSite();
 
     /**
-     * @return unobserved constant patterns, each entry encoding for one constant character
+     * generate uninformative patterns
      */
-    string getUnobservedConstPatterns();
+    void generateUninfPatterns(StateType repeat, vector<StateType> &singleton, vector<int> &seq_pos, vector<Pattern> &unobserved_ptns);
+        
+    /**
+     * @param missing_data TRUE for missing data aware correction (for Mark Holder)
+     * @param[out] unobserved_ptns unobserved constant patterns, each entry encoding for one constant character
+     */
+    void getUnobservedConstPatterns(ASCType ASC_type, vector<Pattern> &unobserved_ptns);
 
     /**
             @return the number of ungappy and unambiguous characters from a sequence
@@ -645,11 +738,6 @@ public:
     SeqType seq_type;
 
     StateType STATE_UNKNOWN;
-
-    /**
-            number of states
-     */
-    int num_states;
 
     /**
             fraction of constant sites
@@ -692,17 +780,18 @@ public:
 	 */
 	int virtual_pop_size;
 
-    /// The sampling method (defaults to SAMPLING_WEIGHTED).
-    SamplingType pomo_sampling_method;
+  // TODO DS: Maybe change default to SAMPLING_WEIGHTED_HYPER.
+  /// The sampling method (defaults to SAMPLING_WEIGHTED_BINOM).
+  SamplingType pomo_sampling_method;
 
-    /** BQM: 2015-07-06, 
-        for PoMo data: map from state ID to pair of base1 and base2 
-        represented in the high 16-bit and the low 16-bit of uint32_t
-        for base1, bit0-1 is used to encode the base (A,G,C,T) and the remaining 14 bits store the count
-        same interpretation for base2
-    */
-    vector<uint32_t> pomo_states;
-    IntIntMap pomo_states_index; // indexing, to quickly find if a PoMo-2-state is already present
+  /** BQM: 2015-07-06, 
+      for PoMo data: map from state ID to pair of base1 and base2 
+      represented in the high 16-bit and the low 16-bit of uint32_t
+      for base1, bit0-1 is used to encode the base (A,G,C,T) and the remaining 14 bits store the count
+      same interpretation for base2
+  */
+  vector<uint32_t> pomo_sampled_states;
+  IntIntMap pomo_sampled_states_index; // indexing, to quickly find if a PoMo-2-state is already present
 
     vector<vector<int> > seq_states; // state set for each sequence in the alignment
 
@@ -729,7 +818,7 @@ public:
     /* build seq_states containing set of states per sequence
      * @param add_unobs_const TRUE to add all unobserved constant states (for +ASC model)
      */
-    void buildSeqStates(bool add_unobs_const = false);
+    virtual void buildSeqStates(bool add_unobs_const = false);
 
     /** Added by MA
             Compute the probability of this alignment according to the multinomial distribution with parameters determined by the reference alignment
@@ -762,6 +851,11 @@ public:
 
     /**
             get the appearance for a state, helpful for ambigious states
+
+            For nucleotides, the appearances of A, and C are 1000 and 0100,
+            respectively. If a state is ambiguous, more than one 1 will show up.
+            The appearance of the unknown state is 1111.
+
             @param state the state index
             @param state_app (OUT) state appearance
      */
@@ -808,5 +902,14 @@ protected:
 
 
 void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id);
+
+/**
+ create a new Alignment object with possibility of comma-separated file names
+ @param aln_file alignment file name, can be a comma-separated list of file names
+ @param sequence_type sequence data type
+ @param input input file format
+ @param model_name model name
+ */
+Alignment *createAlignment(string aln_file, const char *sequence_type, InputType intype, string model_name);
 
 #endif

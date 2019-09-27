@@ -22,6 +22,8 @@
 
 #include "modelmarkov.h"
 
+extern const char* builtin_prot_models;
+
 /**
 Substitution models for protein sequences
 
@@ -36,7 +38,7 @@ public:
 		@param freq state frequency type
 		@param tree associated phylogenetic tree
 	*/
-    ModelProtein(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree);
+    ModelProtein(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree, ModelsBlock *models_block);
 
 	/**
 		initialization, called automatically by the constructor, no need to call it
@@ -69,8 +71,10 @@ public:
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
-	virtual string getNameParams() { return name; }
+    virtual string getNameParams();
 
+private:
+    ModelsBlock *models_block;
 
 };
 

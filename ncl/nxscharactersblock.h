@@ -215,6 +215,7 @@ class NxsCharactersBlock
 		char					GetGapSymbol();
 		char					GetMatchcharSymbol();
 		char					GetMissingSymbol();
+        NxsDiscreteMatrix       *GetMatrix() { return matrix; }
 		bool					IsGapState(unsigned i, unsigned j);
 		bool					IsInterleave();
 		bool					IsLabels();
@@ -250,6 +251,8 @@ class NxsCharactersBlock
 		virtual void			Report(ostream &out);
 		virtual void			Reset();
 
+		NxsTaxaBlock			*taxa;				/* pointer to the TAXA block in which taxon labels are stored */
+
 	protected:
 
 		void					BuildCharPosArray(bool check_eliminated = false);
@@ -273,7 +276,6 @@ class NxsCharactersBlock
 		void					ShowStates(ostream &out, unsigned i, unsigned j);
 		void					WriteStates(NxsDiscreteDatum &d, char *s, unsigned slen);
 
-		NxsTaxaBlock			*taxa;				/* pointer to the TAXA block in which taxon labels are stored */
 		NxsAssumptionsBlock		*assumptionsBlock;	/* pointer to the ASSUMPTIONS block in which exsets, taxsets and charsets are stored */
 
 		unsigned				ntax;				/* number of rows in matrix (same as `ntaxTotal' unless fewer taxa appeared in CHARACTERS MATRIX command than were specified in the TAXA block, in which case `ntaxTotal' > `ntax') */

@@ -20,10 +20,9 @@
 #include "phylosupertree.h"
 #include "alignment/superalignment.h"
 #include "alignment/superalignmentpairwise.h"
-#include "nclextra/msetsblock.h"
-#include "nclextra/myreader.h"
 #include "main/phylotesting.h"
 #include "model/partitionmodel.h"
+#include "utils/MPIHelper.h"
 
 PhyloSuperTree::PhyloSuperTree()
  : IQTree()
@@ -31,6 +30,43 @@ PhyloSuperTree::PhyloSuperTree()
 	totalNNIs = evalNNIs = 0;
     rescale_codon_brlen = false;
 	// Initialize the counter for evaluated NNIs on subtrees. FOR THIS CASE IT WON'T BE initialized.
+}
+
+PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment, bool new_iqtree) :  IQTree(alignment) {
+    totalNNIs = evalNNIs = 0;
+
+    rescale_codon_brlen = false;
+    bool has_codon = false;
+    vector<Alignment*>::iterator it;
+    for (it = alignment->partitions.begin(); it != alignment->partitions.end(); it++)
+        if ((*it)->seq_type != SEQ_CODON) {
+            rescale_codon_brlen = true;
+        } else
+            has_codon = true;
+    
+    rescale_codon_brlen &= has_codon;
+
+    // Initialize the counter for evaluated NNIs on subtrees
+    int part = 0;
+
+    StrVector model_names;
+    for (it = alignment->partitions.begin(); it != alignment->partitions.end(); it++, part++) {
+        PhyloTree *tree;
+        if (new_iqtree)
+            tree = new IQTree(*it);
+        else
+            tree = new PhyloTree(*it);
+        push_back(tree);
+        PartitionInfo info;
+        info.cur_ptnlh = NULL;
+        info.nniMoves[0].ptnlh = NULL;
+        info.nniMoves[1].ptnlh = NULL;
+        info.evalNNIs = 0.0;
+        part_info.push_back(info);
+    }
+    
+    aln = alignment;
+    
 }
 
 PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment, PhyloSuperTree *super_tree) :  IQTree(alignment) {
@@ -63,6 +99,33 @@ void PhyloSuperTree::setModelFactory(ModelFactory *model_fac) {
         }
     }
 }
+
+void PhyloSuperTree::setPartInfo(PhyloSuperTree *tree) {
+    part_info = tree->part_info;
+    int part = 0;
+    for (iterator it = begin(); it != end(); it++, part++) {
+        part_info[part].evalNNIs = 0.0;
+    }
+    if (!params->bootstrap_spec) {
+        return;
+    }
+    // 2018-06-03: for -bsam GENE, number of partitions might be reduced
+    if (part_info.size() <= size())
+        return;
+    part_info.erase(part_info.begin()+size(), part_info.end());
+    for (part = 0; part < part_info.size(); part++) {
+        bool found = false;
+        for (int p = 0; p < tree->size(); p++)
+            if (tree->at(p)->aln->name == at(part)->aln->name) {
+                part_info[part] = tree->part_info[p];
+                part_info[part].evalNNIs = 0.0;
+                found = true;
+                break;
+            }
+        ASSERT(found);
+    }
+}
+
 
 void PhyloSuperTree::setSuperAlignment(Alignment *alignment) {
     PhyloTree::setAlignment(alignment);
@@ -117,482 +180,6 @@ void PhyloSuperTree::restoreCheckpoint() {
 
 }
 
-void PhyloSuperTree::readPartition(Params &params) {
-	try {
-		ifstream in;
-		in.exceptions(ios::failbit | ios::badbit);
-		in.open(params.partition_file);
-		in.exceptions(ios::badbit);
-		Params origin_params = params;
-		PartitionInfo info;
-
-		while (!in.eof()) {
-			getline(in, info.name, ',');
-			if (in.eof()) break;
-			getline(in, info.model_name, ',');
-			if (info.model_name == "") info.model_name = params.model_name;
-			getline(in, info.aln_file, ',');
-			if (info.aln_file == "" && params.aln_file) info.aln_file = params.aln_file;
-			getline(in, info.sequence_type, ',');
-			if (info.sequence_type=="" && params.sequence_type) info.sequence_type = params.sequence_type;
-			safeGetline(in, info.position_spec);
-            trimString(info.sequence_type);
-//			cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" <<
-//					info.aln_file << ", seq=" << info.sequence_type << ", pos=" << ((info.position_spec.length() >= 20) ? info.position_spec.substr(0,20)+"..." : info.position_spec) << ") ..." << endl;
-
-			//info.mem_ptnlh = NULL;
-			info.nniMoves[0].ptnlh = NULL;
-			info.nniMoves[1].ptnlh = NULL;
-			info.cur_ptnlh = NULL;
-			part_info.push_back(info);
-			Alignment *part_aln = new Alignment((char*)info.aln_file.c_str(), (char*)info.sequence_type.c_str(), params.intype);
-			if (!info.position_spec.empty()) {
-				Alignment *new_aln = new Alignment();
-				new_aln->extractSites(part_aln, info.position_spec.c_str());
-				delete part_aln;
-				part_aln = new_aln;
-			}
-			PhyloTree *tree = new PhyloTree(part_aln);
-			push_back(tree);
-			params = origin_params;
-		}
-
-		in.clear();
-		// set the failbit again
-		in.exceptions(ios::failbit | ios::badbit);
-		in.close();
-	} catch(ios::failure) {
-		outError(ERR_READ_INPUT);
-	} catch (string str) {
-		outError(str);
-	}
-
-
-}
-
-void PhyloSuperTree::readPartitionRaxml(Params &params) {
-	try {
-		ifstream in;
-		in.exceptions(ios::failbit | ios::badbit);
-		in.open(params.partition_file);
-		in.exceptions(ios::badbit);
-		PartitionInfo info;
-        Alignment *input_aln = NULL;
-        if (!params.aln_file)
-            outError("Please supply an alignment with -s option");
-            
-        input_aln = new Alignment(params.aln_file, params.sequence_type, params.intype);
-
-        cout << endl << "Partition file is not in NEXUS format, assuming RAxML-style partition file..." << endl;
-
-        size_t pos = params.model_name.find_first_of("+*");
-        string rate_type = "";
-        if (pos != string::npos) rate_type = params.model_name.substr(pos);
-
-		while (!in.eof()) {
-			getline(in, info.model_name, ',');
-			if (in.eof()) break;
-            trimString(info.model_name);
-//            std::transform(info.model_name.begin(), info.model_name.end(), info.model_name.begin(), ::toupper);
-
-            bool is_ASC = info.model_name.substr(0,4) == "ASC_";
-            if (is_ASC) info.model_name.erase(0, 4);
-            StateFreqType freq = FREQ_UNKNOWN;
-            if (info.model_name.find_first_of("*+{") == string::npos ) {
-                if (*info.model_name.rbegin() == 'F' && info.model_name != "DAYHOFF") {
-                    freq = FREQ_EMPIRICAL;
-                    info.model_name.erase(info.model_name.length()-1);
-                } else if (*info.model_name.rbegin() == 'X' && info.model_name != "LG4X") {
-                    freq = FREQ_ESTIMATE;
-                    info.model_name.erase(info.model_name.length()-1);
-                }
-            }
-            
-            if (info.model_name.empty())
-                outError("Please give model names in partition file!");
-            if (info.model_name == "BIN") {
-                info.sequence_type = "BIN";
-                info.model_name = "GTR2";
-            } else if (info.model_name == "DNA") {
-                info.sequence_type = "DNA";
-                info.model_name = "GTR";
-            } else if (info.model_name == "MULTI") {
-                info.sequence_type = "MORPH";
-                info.model_name = "MK";
-            } else if (info.model_name.substr(0,5) == "CODON") {
-                info.sequence_type = info.model_name;
-                info.model_name = "GY";
-            } else {
-                info.sequence_type = "AA";
-                if (*info.model_name.begin() == '[') {
-                    if (*info.model_name.rbegin() != ']')
-                        outError("User-defined protein model should be [myProtenSubstitutionModelFileName]");
-                    info.model_name = info.model_name.substr(1, info.model_name.length()-2);
-                }
-            }
-
-            if (freq == FREQ_EMPIRICAL) 
-                info.model_name += "+F";
-            else if (freq == FREQ_ESTIMATE)
-                info.model_name += "+FO";
-            if (is_ASC)
-                info.model_name += "+ASC";
-            info.model_name += rate_type;
-
-			getline(in, info.name, '=');
-            trimString(info.name);
-            if (info.name.empty())
-                outError("Please give partition names in partition file!");
-
-			safeGetline(in, info.position_spec);
-            trimString(info.position_spec);
-            if (info.position_spec.empty())
-                outError("Please specify alignment positions for partition" + info.name);
-            std::replace(info.position_spec.begin(), info.position_spec.end(), ',', ' ');
-            
-//			cout << "Reading partition " << info.name << " (model=" << info.model_name << ", seq=" << info.sequence_type << ", pos=" << ((info.position_spec.length() >= 20) ? info.position_spec.substr(0,20)+"..." : info.position_spec) << ") ..." << endl;
-
-			//info.mem_ptnlh = NULL;
-			info.nniMoves[0].ptnlh = NULL;
-			info.nniMoves[1].ptnlh = NULL;
-			info.cur_ptnlh = NULL;
-			part_info.push_back(info);
-            Alignment *part_aln = new Alignment();
-            part_aln->extractSites(input_aln, info.position_spec.c_str());
-            
-			Alignment *new_aln;
-			if (params.remove_empty_seq)
-				new_aln = part_aln->removeGappySeq();
-			else
-				new_aln = part_aln;
-		    // also rebuild states set of each sequence for likelihood computation
-		    new_aln->buildSeqStates();
-
-			if (part_aln != new_aln) delete part_aln;
-			PhyloTree *tree = new PhyloTree(new_aln);
-            push_back(tree);
-//            cout << new_aln->getNSeq() << " sequences and " << new_aln->getNSite() << " sites extracted" << endl;
-//			params = origin_params;
-		}
-
-		in.clear();
-		// set the failbit again
-		in.exceptions(ios::failbit | ios::badbit);
-		in.close();
-	} catch(ios::failure) {
-		outError(ERR_READ_INPUT);
-	} catch (string str) {
-		outError(str);
-	}
-
-
-}
-
-void PhyloSuperTree::readPartitionNexus(Params &params) {
-	Params origin_params = params;
-	MSetsBlock *sets_block = new MSetsBlock();
-    MyReader nexus(params.partition_file);
-    nexus.Add(sets_block);
-    MyToken token(nexus.inf);
-    nexus.Execute(token);
-
-    Alignment *input_aln = NULL;
-    if (params.aln_file) {
-    	input_aln = new Alignment(params.aln_file, params.sequence_type, params.intype);
-    }
-
-    bool empty_partition = true;
-    vector<CharSet*>::iterator it;
-    for (it = sets_block->charsets.begin(); it != sets_block->charsets.end(); it++)
-    	if ((*it)->model_name != "") {
-    		empty_partition = false;
-    		break;
-    	}
-    if (empty_partition) {
-    	cout << "NOTE: No CharPartition defined, use all CharSets" << endl;
-    }
-
-    cout << endl << "Loading " << sets_block->charsets.size() << " partitions..." << endl;
-
-    for (it = sets_block->charsets.begin(); it != sets_block->charsets.end(); it++)
-    	if (empty_partition || (*it)->char_partition != "") {
-			PartitionInfo info;
-			info.name = (*it)->name;
-			info.model_name = (*it)->model_name;
-			if (info.model_name == "")
-				info.model_name = params.model_name;
-			info.aln_file = (*it)->aln_file;
-			//if (info.aln_file == "" && params.aln_file) info.aln_file = params.aln_file;
-			if (info.aln_file == "" && !params.aln_file)
-				outError("No input data for partition ", info.name);
-			info.sequence_type = (*it)->sequence_type;
-			if (info.sequence_type=="" && params.sequence_type) info.sequence_type = params.sequence_type;
-            
-            if (info.sequence_type == "" && !info.model_name.empty()) {
-                // try to get sequence type from model
-                info.sequence_type = getSeqType(info.model_name.substr(0, info.model_name.find_first_of("+*")));
-            }
-			info.position_spec = (*it)->position_spec;
-			trimString(info.sequence_type);
-//			cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" <<
-//				info.aln_file << ", seq=" << info.sequence_type << ", pos=" << ((info.position_spec.length() >= 20) ? info.position_spec.substr(0,20)+"..." : info.position_spec) << ") ..." << endl;
-            if (info.sequence_type != "" && Alignment::getSeqType(info.sequence_type.c_str()) == SEQ_UNKNOWN)
-                outError("Unknown sequence type " + info.sequence_type);
-			//info.mem_ptnlh = NULL;
-			info.nniMoves[0].ptnlh = NULL;
-			info.nniMoves[1].ptnlh = NULL;
-			info.cur_ptnlh = NULL;
-			part_info.push_back(info);
-			Alignment *part_aln;
-			if (info.aln_file != "") {
-				part_aln = new Alignment((char*)info.aln_file.c_str(), (char*)info.sequence_type.c_str(), params.intype);
-			} else {
-				part_aln = input_aln;
-			}
-			if (!info.position_spec.empty() && info.position_spec != "*") {
-				Alignment *new_aln = new Alignment();
-				new_aln->extractSites(part_aln, info.position_spec.c_str());
-				if (part_aln != input_aln) delete part_aln;
-				part_aln = new_aln;
-			}
-            if (part_aln->seq_type == SEQ_DNA && (info.sequence_type.substr(0, 5) == "CODON" || info.sequence_type.substr(0, 5) == "NT2AA")) {
-				Alignment *new_aln = new Alignment();
-                new_aln->convertToCodonOrAA(part_aln, &info.sequence_type[5], info.sequence_type.substr(0, 5) == "NT2AA");
-                if (part_aln != input_aln) delete part_aln;
-                part_aln = new_aln;
-            }
-			Alignment *new_aln;
-			if (params.remove_empty_seq)
-				new_aln = part_aln->removeGappySeq();
-			else
-				new_aln = part_aln;
-		    // also rebuild states set of each sequence for likelihood computation
-		    new_aln->buildSeqStates();
-
-			if (part_aln != new_aln && part_aln != input_aln) delete part_aln;
-			PhyloTree *tree = new PhyloTree(new_aln);
-			push_back(tree);
-			params = origin_params;
-//			cout << new_aln->getNSeq() << " sequences and " << new_aln->getNSite() << " sites extracted" << endl;
-    	}
-
-    if (input_aln)
-    	delete input_aln;
-    delete sets_block;
-}
-
-void PhyloSuperTree::printPartition(const char *filename) {
-   try {
-		ofstream out;
-		out.exceptions(ios::failbit | ios::badbit);
-		out.open(filename);
-		out << "#nexus" << endl << "[ partition information for alignment written in .conaln file ]" << endl
-			<< "begin sets;" << endl;
-		int part; int start_site;
-		for (part = 0, start_site = 1; part < part_info.size(); part++) {
-			string name = part_info[part].name;
-			replace(name.begin(), name.end(), '+', '_');
-			int end_site = start_site + at(part)->getAlnNSite();
-			out << "  charset " << name << " = " << start_site << "-" << end_site-1 << ";" << endl;
-			start_site = end_site;
-		}
-		out << "  charpartition mymodels =" << endl;
-		for (part = 0; part < part_info.size(); part++) {
-			string name = part_info[part].name;
-			replace(name.begin(), name.end(), '+', '_');
-			if (part > 0) out << "," << endl;
-			out << "    " << at(part)->getModelNameParams() << ":" << name;
-		}
-		out << ";" << endl;
-		out << "end;" << endl;
-		out.close();
-		cout << "Partition information was printed to " << filename << endl;
-	} catch (ios::failure &) {
-		outError(ERR_WRITE_OUTPUT, filename);
-	}
-
-}
-
-void PhyloSuperTree::printBestPartition(const char *filename) {
-   try {
-		ofstream out;
-		out.exceptions(ios::failbit | ios::badbit);
-		out.open(filename);
-		out << "#nexus" << endl
-			<< "begin sets;" << endl;
-		int part;
-		for (part = 0; part < part_info.size(); part++) {
-			string name = part_info[part].name;
-			replace(name.begin(), name.end(), '+', '_');
-			out << "  charset " << name << " = ";
-			if (!part_info[part].aln_file.empty()) out << part_info[part].aln_file << ": ";
-			if (at(part)->aln->seq_type == SEQ_CODON)
-				out << "CODON, ";
-			string pos = part_info[part].position_spec;
-			replace(pos.begin(), pos.end(), ',' , ' ');
-			out << pos << ";" << endl;
-		}
-		out << "  charpartition mymodels =" << endl;
-		for (part = 0; part < part_info.size(); part++) {
-			string name = part_info[part].name;
-			replace(name.begin(), name.end(), '+', '_');
-			if (part > 0) out << "," << endl;
-			out << "    " << part_info[part].model_name << ": " << name;
-		}
-		out << ";" << endl;
-		out << "end;" << endl;
-		out.close();
-		cout << "Partition information was printed to " << filename << endl;
-	} catch (ios::failure &) {
-		outError(ERR_WRITE_OUTPUT, filename);
-	}
-
-}
-
-
-void PhyloSuperTree::printPartitionRaxml(const char *filename) {
-	int part;
-	for (part = 0; part < part_info.size(); part++) {
-		if (part_info[part].aln_file != "") {
-			cout << "INFO: Printing partition in RAxML format is not possible" << endl;
-            return;
-        }
-	}
-   try {
-		ofstream out;
-		out.exceptions(ios::failbit | ios::badbit);
-		out.open(filename);
-		int start_site;
-		for (part = 0, start_site = 1; part < part_info.size(); part++) {
-			string name = part_info[part].name;
-			replace(name.begin(), name.end(), '+', '_');
-			int end_site = start_site + at(part)->getAlnNSite();
-			switch (at(part)->aln->seq_type) {
-			case SEQ_DNA: out << "DNA, "; break;
-			case SEQ_BINARY: out << "BIN, "; break;
-			case SEQ_MORPH: out << "MULTI, "; break;
-			default: out << at(part)->getModel()->name << ","; break;
-			}
-			out << name << " = " << start_site << "-" << end_site-1 << endl;
-			start_site = end_site;
-		}
-		out.close();
-		cout << "Partition information in Raxml format was printed to " << filename << endl;
-	} catch (ios::failure &) {
-		outError(ERR_WRITE_OUTPUT, filename);
-	}
-
-}
-
-void PhyloSuperTree::printBestPartitionRaxml(const char *filename) {
-	int part;
-	for (part = 0; part < part_info.size(); part++) {
-		if (part_info[part].aln_file != "") {
-			cout << "INFO: Printing partition in RAxML format is not possible" << endl;
-            return;
-        }
-	}
-	try {
-		ofstream out;
-		out.exceptions(ios::failbit | ios::badbit);
-		out.open(filename);
-		for (part = 0; part < part_info.size(); part++) {
-			string name = part_info[part].name;
-			replace(name.begin(), name.end(), '+', '_');
-            if (part_info[part].model_name.find("+ASC") != string::npos)
-                out << "ASC_";
-			switch (at(part)->aln->seq_type) {
-			case SEQ_DNA: out << "DNA"; break;
-			case SEQ_BINARY: out << "BIN"; break;
-			case SEQ_MORPH: out << "MULTI"; break;
-            case SEQ_PROTEIN:
-                out << part_info[part].model_name.substr(0, part_info[part].model_name.find_first_of("*{+"));
-                break;
-            case SEQ_CODON:
-                out << "CODON_" << part_info[part].model_name.substr(0, part_info[part].model_name.find_first_of("*{+"));
-                break;
-			default: out << part_info[part].model_name; break;
-			}
-            if (part_info[part].model_name.find("+FO") != string::npos)
-                out << "X";
-            else if (part_info[part].model_name.find("+F") != string::npos)
-                out << "F";
-                
-			out << ", " << name << " = " << part_info[part].position_spec << endl;
-		}
-		out.close();
-		cout << "Partition information in Raxml format was printed to " << filename << endl;
-	} catch (ios::failure &) {
-		outError(ERR_WRITE_OUTPUT, filename);
-	}
-
-}
-
-
-PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
-	totalNNIs = evalNNIs = 0;
-
-	cout << "Reading partition model file " << params.partition_file << " ..." << endl;
-	if (detectInputFile(params.partition_file) == IN_NEXUS) {
-		readPartitionNexus(params);
-        if (part_info.empty()) {
-            outError("No partition found in SETS block. An example syntax looks like: \n#nexus\nbegin sets;\n  charset part1=1-100;\n  charset part2=101-300;\nend;");
-        }
-	} else
-		readPartitionRaxml(params);
-	if (part_info.empty())
-		outError("No partition found");
-
-	// Initialize the counter for evaluated NNIs on subtrees
-    cout << "Subset\tType\tSeqs\tSites\tInfor\tInvar\tModel\tName" << endl;
-	int part = 0;
-    iterator it;
-	for (it = begin(); it != end(); it++, part++) {
-		part_info[part].evalNNIs = 0.0;
-        cout << part+1 << "\t" << part_info[part].sequence_type << "\t" << (*it)->aln->getNSeq()
-             << "\t" << (*it)->getAlnNSite() << "\t" << (*it)->aln->num_informative_sites
-             << "\t" << (*it)->getAlnNSite()-(*it)->aln->num_variant_sites << "\t"
-             << part_info[part].model_name << "\t" << part_info[part].name << endl;
-        if ((*it)->aln->num_informative_sites == 0) {
-            outWarning("No parsimony-informative sites in partition " + part_info[part].name);
-        }
-	}
-
-	aln = new SuperAlignment(this);
-	if (params.print_conaln) {
-		string str = params.out_prefix;
-		str = params.out_prefix;
-		str += ".conaln";
-		((SuperAlignment*)aln)->printCombinedAlignment(str.c_str());
-	}
-
-    // this is important: rescale branch length of codon partitions to be compatible with other partitions.
-    // since for codon models, branch lengths = # nucleotide subst per codon site!
-    rescale_codon_brlen = false;
-    bool has_codon = false;
-	for (it = begin(); it != end(); it++, part++) 
-        if ((*it)->aln->seq_type != SEQ_CODON) {
-            rescale_codon_brlen = true;
-        } else 
-            has_codon = true;
-            
-    rescale_codon_brlen &= has_codon;
-    if (rescale_codon_brlen)
-        cout << "NOTE: Mixed codon and other data, branch lengths of codon partitions are rescaled by 3!" << endl;
-    
-	cout << "Degree of missing data: " << ((SuperAlignment*)aln)->computeMissingData() << endl;
-    
-#ifdef _OPENMP
-    if (params.num_threads > size()) {
-        cout << "Info: multi-threading strategy over alignment sites" << endl;
-    } else {
-        cout << "Info: multi-threading strategy over partitions" << endl;
-    }
-#endif
-	cout << endl;
-
-}
-
 void PhyloSuperTree::setParams(Params* params) {
 	IQTree::setParams(params);
 	for (iterator it = begin(); it != end(); it++) {
@@ -602,23 +189,63 @@ void PhyloSuperTree::setParams(Params* params) {
 
 void PhyloSuperTree::initSettings(Params &params) {
 	IQTree::initSettings(params);
-    num_threads = (size() >= params.num_threads) ? params.num_threads : 1;
+    setLikelihoodKernel(params.SSE);
+    setNumThreads(params.num_threads);
 	for (iterator it = begin(); it != end(); it++) {
 		(*it)->params = &params;
-		(*it)->setLikelihoodKernel(params.SSE, (size() >= params.num_threads) ? 1 : params.num_threads);
 		(*it)->optimize_by_newton = params.optimize_by_newton;
 	}
 
 }
 
-void PhyloSuperTree::setLikelihoodKernel(LikelihoodKernel lk, int num_threads) {
-    PhyloTree::setLikelihoodKernel(lk, (size() >= num_threads) ? num_threads : 1);
+void PhyloSuperTree::setLikelihoodKernel(LikelihoodKernel lk) {
+    PhyloTree::setLikelihoodKernel(lk);
     for (iterator it = begin(); it != end(); it++)
-        (*it)->setLikelihoodKernel(lk, (size() >= num_threads) ? 1 : num_threads);
+        (*it)->setLikelihoodKernel(lk);
+}
+
+void PhyloSuperTree::setParsimonyKernel(LikelihoodKernel lk) {
+    PhyloTree::setParsimonyKernel(lk);
+    for (iterator it = begin(); it != end(); it++)
+        (*it)->setParsimonyKernel(lk);
 }
 
 void PhyloSuperTree::changeLikelihoodKernel(LikelihoodKernel lk) {
 	PhyloTree::changeLikelihoodKernel(lk);
+}
+
+void PhyloSuperTree::setNumThreads(int num_threads) {
+    PhyloTree::setNumThreads((size() >= num_threads) ? num_threads : 1);
+    for (iterator it = begin(); it != end(); it++)
+        (*it)->setNumThreads((size() >= num_threads) ? 1 : num_threads);
+}
+
+void PhyloSuperTree::printResultTree(string suffix) {
+    if (MPIHelper::getInstance().isWorker()) {
+        return;
+    }
+    if (params->suppress_output_flags & OUT_TREEFILE)
+        return;
+    
+    IQTree::printResultTree(suffix);
+    
+    string tree_file_name = params->out_prefix;
+    tree_file_name += ".parttrees";
+    if (suffix.compare("") != 0) {
+        tree_file_name += "." + suffix;
+    }
+    try {
+        ofstream out;
+        out.exceptions(ios::failbit | ios::badbit);
+        out.open(tree_file_name);
+        for (iterator it = begin(); it != end(); it++)
+            (*it)->printTree(out, WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
+        out.close();
+    } catch (ios::failure) {
+        outError(ERR_WRITE_OUTPUT, tree_file_name);
+    }
+    if (verbose_mode >= VB_MED)
+        cout << "Partition trees printed to " << tree_file_name << endl;
 }
 
 string PhyloSuperTree::getTreeString() {
@@ -634,13 +261,14 @@ void PhyloSuperTree::readTreeString(const string &tree_string) {
 	str << tree_string;
 	str.seekg(0, ios::beg);
 	freeNode();
-	readTree(str, rooted);
+    // bug fix 2017-11-30: in case taxon name happens to be ID
+	MTree::readTree(str, rooted);
     assignLeafNames();
 //	setAlignment(aln);
 	setRootNode(params->root);
 	for (iterator it = begin(); it != end(); it++) {
 		(*it)->freeNode();
-		(*it)->readTree(str, rooted);
+		(*it)->readTree(str, (*it)->rooted);
         (*it)->assignLeafNames();
 //		(*it)->setAlignment((*it)->aln);
 	}
@@ -687,6 +315,36 @@ void PhyloSuperTree::restoreBranchLengths(DoubleVector &lenvec, int startid, Phy
 		startid += (*it)->branchNum * (*it)->getMixlen();
 	}
 }
+
+int PhyloSuperTree::collapseInternalBranches(Node *node, Node *dad, double threshold) {
+	if (!node) node = root;
+    int count = 0;
+	FOR_NEIGHBOR_DECLARE(node, dad, it) {
+		count += collapseInternalBranches((*it)->node, node, threshold);
+	}
+    if (node->isLeaf())
+        return count;
+	NeighborVec nei_vec;
+	nei_vec.insert(nei_vec.begin(), node->neighbors.begin(), node->neighbors.end());
+	for (it = nei_vec.begin(); it != nei_vec.end(); it++) 
+	if ((*it)->node != dad && !(*it)->node->isLeaf() && (*it)->length <= threshold) {
+
+        //delete branch of gene-trees
+        SuperNeighbor *snei = (SuperNeighbor*)(*it);
+        int part = 0;
+        for (part = 0; part != size(); part++)
+            if (snei->link_neighbors[part]) {
+                SuperNeighbor* snei_back = (SuperNeighbor*)(*it)->node->findNeighbor(node);
+                at(part)->removeNode(snei_back->link_neighbors[part]->node, snei->link_neighbors[part]->node);
+            }
+
+		// delete the child node
+        removeNode(node, (*it)->node);
+        count++;
+	}
+    return count;
+}
+
 
 Node* PhyloSuperTree::newNode(int node_id, const char* node_name) {
     return (Node*) (new SuperNode(node_id, node_name));
@@ -811,6 +469,32 @@ void PhyloSuperTree::linkTree(int part, NodeVector &part_taxa, SuperNode *node, 
 	linkBranch(part, nei, dad_nei);
 }
 
+void PhyloSuperTree::syncRooting() {
+    if (empty() || !front()->root)
+        return;
+    // check if all trees are similarly rooted or unrooted
+    bool same_rooting = true;
+    iterator tree;
+    for (tree = begin(); tree != end(); tree++) {
+        if ((*tree)->rooted != front()->rooted) {
+            same_rooting = false;
+            break;
+        }
+    }
+    
+    if (same_rooting) {
+        if (!empty() && rooted != front()->rooted) {
+            if (rooted)
+                convertToUnrooted();
+            else
+                convertToRooted();
+        }
+    } else if (!rooted) {
+        // not same rooting between trees
+        convertToRooted();
+    }
+}
+
 void PhyloSuperTree::printMapInfo() {
 	NodeVector nodes1, nodes2;
 	getBranches(nodes1, nodes2);
@@ -847,6 +531,7 @@ void PhyloSuperTree::printMapInfo() {
 
 void PhyloSuperTree::mapTrees() {
 	ASSERT(root);
+    syncRooting();
 	int part = 0, i;
 	if (verbose_mode >= VB_DEBUG)
 		drawTree(cout,  WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE | WT_BR_ID);
@@ -863,7 +548,16 @@ void PhyloSuperTree::mapTrees() {
 		(*it)->getOrderedTaxa(my_taxa);
 		part_taxa.resize(leafNum, NULL);
 		for (i = 0; i < leafNum; i++) {
-			int id = ((SuperAlignment*)aln)->taxa_index[i][part];
+            int id;
+            if (i < aln->getNSeq())
+                id = ((SuperAlignment*)aln)->taxa_index[i][part];
+            else {
+                ASSERT(rooted);
+                if ((*it)->rooted)
+                    id = (*it)->leafNum-1;
+                else
+                    id = -1;
+            }
 			if (id >=0) part_taxa[i] = my_taxa[id];
 		}
 		if (verbose_mode >= VB_DEBUG) {
@@ -891,7 +585,13 @@ void PhyloSuperTree::linkTrees() {
 		part_taxa.resize(leafNum, NULL);
 		int i;
 		for (i = 0; i < leafNum; i++) {
-			int id = ((SuperAlignment*)aln)->taxa_index[i][part];
+            int id;
+            if (i < aln->getNSeq())
+                id = ((SuperAlignment*)aln)->taxa_index[i][part];
+            else if ((*it)->rooted)
+                id = (*it)->leafNum-1;
+            else
+                id = -1;
 			if (id >=0) part_taxa[i] = my_taxa[id];
 		}
 		linkTree(part, part_taxa);
@@ -970,6 +670,14 @@ void PhyloSuperTree::computePartitionOrder() {
         
     delete [] cost;
     delete [] id;
+    
+    if (verbose_mode >= VB_MED) {
+        cout << "Partitions ordered by computation costs:" << endl;
+        cout << "#nexus" << endl << "begin sets;" << endl;
+        for (i = 0; i < ntrees; i++)
+            cout << "  charset " << at(part_order[i])->aln->name << " = " << at(part_order[i])->aln->position_spec << ";" << endl;
+        cout << "end;" << endl;
+    }
 #else
     for (i = 0; i < ntrees; i++) {
         part_order[i] = i;
@@ -1124,12 +832,18 @@ void PhyloSuperTree::initPartitionInfo() {
 
 int PhyloSuperTree::getMaxPartNameLength() {
 	int namelen = 0;
-	for (vector<PartitionInfo>::iterator it = part_info.begin(); it != part_info.end(); it++)
-		namelen = max((int)it->name.length(), namelen);
+	for (iterator it = begin(); it != end(); it++)
+		namelen = max((int)(*it)->aln->name.length(), namelen);
 	return namelen;
 }
 
 NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves) {
+    if (((PhyloNeighbor*)node1->findNeighbor(node2))->direction == TOWARD_ROOT) {
+        // swap node1 and node2 if the direction is not right, only for nonreversible models
+        PhyloNode *tmp = node1;
+        node1 = node2;
+        node2 = tmp;
+    }
     NNIMove myMove;
     //myMove.newloglh = 0;
 	SuperNeighbor *nei1 = ((SuperNeighbor*)node1->findNeighbor(node2));
@@ -1138,7 +852,9 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 	SuperNeighbor *node1_nei = NULL;
 	SuperNeighbor *node2_nei = NULL;
 	SuperNeighbor *node2_nei_other = NULL;
-	FOR_NEIGHBOR_DECLARE(node1, node2, node1_it) {
+	FOR_NEIGHBOR_DECLARE(node1, node2, node1_it)
+    if (((PhyloNeighbor*)*node1_it)->direction != TOWARD_ROOT)
+    {
 		node1_nei = (SuperNeighbor*)(*node1_it);
 		break;
 	}
@@ -1169,7 +885,10 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
     myMove.newloglh = -DBL_MAX;
     // return if both NNIs do not satisfy constraint
     if (!nni_ok[0] && !nni_ok[1]) {
-        ASSERT(!nniMoves);
+//        ASSERT(!nniMoves);
+        if (nniMoves) {
+            nniMoves[0].newloglh = nniMoves[1].newloglh = -DBL_MAX;
+        }
         return myMove;
     }
 
@@ -1366,7 +1085,7 @@ void PhyloSuperTree::doNNI(NNIMove &move, bool clearLH) {
 
 }
 
-void PhyloSuperTree::changeNNIBrans(NNIMove move) {
+void PhyloSuperTree::changeNNIBrans(NNIMove &move) {
 	SuperNeighbor *nei1 = (SuperNeighbor*)move.node1->findNeighbor(move.node2);
 	SuperNeighbor *nei2 = (SuperNeighbor*)move.node2->findNeighbor(move.node1);
 	iterator it;
@@ -1469,17 +1188,16 @@ string PhyloSuperTree::getModelName() {
 	return (string)"Partition model";
 }
 
-PhyloTree *PhyloSuperTree::extractSubtree(IntVector &ids) {
+PhyloTree *PhyloSuperTree::extractSubtree(set<int> &ids) {
 	string union_taxa;
-	int i;
-	for (i = 0; i < ids.size(); i++) {
-		int id = ids[i];
+	for (auto it = ids.begin(); it != ids.end(); it++) {
+		int id = *it;
 		if (id < 0 || id >= size())
 			outError("Internal error ", __func__);
 		string taxa_set;
         Pattern taxa_pat = aln->getPattern(id);
         taxa_set.insert(taxa_set.begin(), taxa_pat.begin(), taxa_pat.end());
-		if (i == 0) union_taxa = taxa_set; else {
+		if (it == ids.begin()) union_taxa = taxa_set; else {
 			for (int j = 0; j < union_taxa.length(); j++)
 				if (taxa_set[j] == 1) union_taxa[j] = 1;
 		}
@@ -1496,6 +1214,32 @@ uint64_t PhyloSuperTree::getMemoryRequired(size_t ncategory, bool full_mem) {
 	for (iterator it = begin(); it != end(); it++)
 		mem_size += (*it)->getMemoryRequired(ncategory, full_mem);
 	return mem_size;
+}
+
+// get memory requirement for ModelFinder
+uint64_t PhyloSuperTree::getMemoryRequiredThreaded(size_t ncategory, bool full_mem) {
+    // only get the largest k partitions (k=#threads)
+    int threads = (params->num_threads != 0) ? params->num_threads : params->num_threads_max;
+    threads = min(threads, countPhysicalCPUCores());
+    threads = min(threads, (int)size());
+    
+    // sort partition by computational cost for OpenMP effciency
+    uint64_t *part_mem = new uint64_t[size()];
+    int i;
+    for (i = 0; i < size(); i++) {
+        part_mem[i] = at(i)->getMemoryRequired(ncategory, full_mem);
+    }
+    
+    // sort partition memory in increasing order
+    quicksort<uint64_t, int>(part_mem, 0, size()-1);
+    
+    uint64_t mem = 0;
+    for (i = size()-threads; i < size(); i++)
+        mem += part_mem[i];
+    
+    delete [] part_mem;
+    
+    return mem;
 }
 
 int PhyloSuperTree::countEmptyBranches(PhyloNode *node, PhyloNode *dad) {
@@ -1523,12 +1267,13 @@ void PhyloSuperTree::removeIdenticalSeqs(Params &params) {
 	if (removed_seqs.empty()) return;
 	// now synchronize aln
 	int part = 0;
+    SuperAlignment *saln = (SuperAlignment*)aln;
 	for (iterator it = begin(); it != end(); it++, part++) {
 		if (verbose_mode >= VB_MED) {
-			cout << "Partition " << part_info[part].name << " " << ((SuperAlignment*)aln)->partitions[part]->getNSeq() <<
+			cout << "Partition " << saln->partitions[part]->name << " " << saln->partitions[part]->getNSeq() <<
 					" sequences from " << (*it)->aln->getNSeq() << " extracted" << endl;
 		}
-		(*it)->aln = ((SuperAlignment*)aln)->partitions[part];
+		(*it)->aln = saln->partitions[part];
 	}
 	if (verbose_mode >= VB_MED) {
 		cout << "Reduced alignment has " << aln->getNSeq() << " sequences with " << getAlnNSite() << " sites and "
@@ -1575,7 +1320,7 @@ void PhyloSuperTree::initMarginalAncestralState(ostream &out, bool &orig_kernel_
     if (!orig_kernel_nonrev) {
         // switch to nonrev kernel to compute _pattern_lh_cat_state
         params->kernel_nonrev = true;
-        setLikelihoodKernel(sse, num_threads);
+        setLikelihoodKernel(sse);
         clearAllPartialLH();
     }
 
@@ -1659,7 +1404,7 @@ void PhyloSuperTree::endMarginalAncestralState(bool orig_kernel_nonrev,
     if (!orig_kernel_nonrev) {
         // switch back to REV kernel
         params->kernel_nonrev = orig_kernel_nonrev;
-        setLikelihoodKernel(sse, num_threads);
+        setLikelihoodKernel(sse);
         clearAllPartialLH();
     }
     aligned_free(ptn_ancestral_seq);
@@ -1677,10 +1422,94 @@ void PhyloSuperTree::writeSiteLh(ostream &out, SiteLoglType wsl, int partid) {
         (*it)->writeSiteLh(out, wsl, part);
 }
 
-void PhyloSuperTree::writeSiteRates(ostream &out, int partid) {
+void PhyloSuperTree::writeSiteRates(ostream &out, bool bayes, int partid) {
 
     int part = 1;
     for (iterator it = begin(); it != end(); it++, part++) {
-        (*it)->writeSiteRates(out, part);
+        (*it)->writeSiteRates(out, bayes, part);
+    }
+}
+
+void PhyloSuperTree::writeBranch(ostream &out, Node* node1, Node* node2) {
+    SuperNeighbor *nei1 = (SuperNeighbor*)node1->findNeighbor(node2);
+    StrVector taxnames;
+    if (getNumTaxa(node1, node2) <= leafNum / 2)
+        getTaxaName(taxnames, node1, node2);
+    else
+        getTaxaName(taxnames, node2, node1);
+    out << nei1->id+1 << ",";
+    bool first = true;
+    for (int i = 0; i < taxnames.size(); i++)
+        if (!taxnames[i].empty()) {
+            if (!first) out << " ";
+            out << taxnames[i];
+            first = false;
+        }
+    out << "," << nei1->length;
+    for (int part = 0; part != size(); part++) {
+        bool present = true;
+        FOR_NEIGHBOR_DECLARE(node1, NULL, it) {
+            SuperNeighbor *nei = (SuperNeighbor*)(*it);
+            if (!nei->link_neighbors[part])
+                present = false;
+        }
+        FOR_NEIGHBOR(node2, NULL, it) {
+            SuperNeighbor *nei = (SuperNeighbor*)(*it);
+            if (!nei->link_neighbors[part])
+                present = false;
+        }
+        out << ",";
+        if (present)
+            out << nei1->link_neighbors[part]->length;
+    }
+}
+
+void PhyloSuperTree::writeBranches(ostream &out) {
+    NodeVector nodes1, nodes2;
+    getBranches(nodes1, nodes2);
+    int i;
+    out << "ID,Taxa,Len";
+    for (i = 0; i < size(); i++)
+        out << "," << at(i)->aln->name;
+    out << endl;
+    for (i = 0; i < nodes1.size(); i++) {
+        writeBranch(out, nodes1[i], nodes2[i]);
+        out << endl;
+    }
+}
+
+void PhyloSuperTree::printBestPartitionParams(const char *filename) {
+    try {
+        ofstream out;
+        out.exceptions(ios::failbit | ios::badbit);
+        out.open(filename);
+        out << "#nexus" << endl
+        << "begin sets;" << endl;
+        int part;
+        SuperAlignment *saln = (SuperAlignment*)aln;
+        for (part = 0; part < size(); part++) {
+            string name = saln->partitions[part]->name;
+            replace(name.begin(), name.end(), '+', '_');
+            out << "  charset " << name << " = ";
+            if (!saln->partitions[part]->aln_file.empty()) out << saln->partitions[part]->aln_file << ": ";
+            if (saln->partitions[part]->seq_type == SEQ_CODON)
+                out << "CODON, ";
+            string pos = saln->partitions[part]->position_spec;
+            replace(pos.begin(), pos.end(), ',' , ' ');
+            out << pos << ";" << endl;
+        }
+        out << "  charpartition mymodels =" << endl;
+        for (part = 0; part < size(); part++) {
+            string name = saln->partitions[part]->name;
+            replace(name.begin(), name.end(), '+', '_');
+            if (part > 0) out << "," << endl;
+            out << "    " << at(part)->getModelNameParams() << ": " << name;
+        }
+        out << ";" << endl;
+        out << "end;" << endl;
+        out.close();
+        cout << "Partition information was printed to " << filename << endl;
+    } catch (ios::failure &) {
+        outError(ERR_WRITE_OUTPUT, filename);
     }
 }

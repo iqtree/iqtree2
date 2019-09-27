@@ -42,7 +42,8 @@ public:
 		constructors
 	*/
 	PhyloSuperTreePlen();
-	PhyloSuperTreePlen(Params &params);
+//    PhyloSuperTreePlen(Params &params);
+    PhyloSuperTreePlen(SuperAlignment *alignment, int partition_type);
 	PhyloSuperTreePlen(SuperAlignment *alignment, PhyloSuperTree *super_tree);
 
 	~PhyloSuperTreePlen();
@@ -56,6 +57,12 @@ public:
         restore object from the checkpoint
     */
     virtual void restoreCheckpoint();
+
+    /**
+     print tree to .treefile
+     @param params program parameters, field root is taken
+     */
+    virtual void printResultTree(string suffix = "");
 
     /**
             Read the tree saved with Taxon Names and branch lengths.
@@ -194,7 +201,7 @@ public:
      *   Apply 5 new branch lengths stored in the NNI move
      *   @param nnimove the NNI move currently in consideration
      */
-    virtual void changeNNIBrans(NNIMove nnimove);
+    virtual void changeNNIBrans(NNIMove &nnimove);
 
     /**
             This is for ML. try to swap the tree with nearest neigbor interchange at the branch connecting node1-node2.

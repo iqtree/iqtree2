@@ -7,8 +7,9 @@
 //
 
 #include <stdio.h>
-#include "partitionmodelplen.h"
+#include "model/partitionmodelplen.h"
 #include "utils/timeutil.h"
+#include "model/modelmarkov.h"
 
 /**********************************************************
  * class PartitionModelPlen
@@ -78,16 +79,20 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info, do
     
     
     //tree->initPartitionInfo(); // FOR OLGA: needed here
-    
+
+    unordered_map<string, bool> fixed_params;
+    unordered_map<string, ModelSubst*>::iterator it;
+
     for(int part = 0; part < ntrees; part++){
         tree->part_info[part].cur_score = 0.0;
     }
     
-    if (fixed_len == BRLEN_OPTIMIZE) {
-        tree_lh = tree->optimizeAllBranches(1);
-    } else {
-        tree_lh = tree->computeLikelihood();
-    }
+//    if (fixed_len == BRLEN_OPTIMIZE) {
+//        tree_lh = tree->optimizeAllBranches(1);
+//    } else {
+//        tree_lh = tree->computeLikelihood();
+//    }
+    tree_lh = tree->computeLikelihood();
     
     cout<<"Initial log-likelihood: "<<tree_lh<<endl;
     double begin_time = getRealTime();
@@ -101,8 +106,9 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info, do
         for (int partid = 0; partid < ntrees; partid++) {
             int part = tree->part_order[partid];
             // Subtree model parameters optimization
-            tree->part_info[part].cur_score = tree->at(part)->getModelFactory()->optimizeParametersOnly(i+1,
-                                                                                                        gradient_epsilon/min(min(i,ntrees),10), tree->part_info[part].cur_score);
+            tree->part_info[part].cur_score = tree->at(part)->getModelFactory()->
+                optimizeParametersOnly(i+1, gradient_epsilon/min(min(i,ntrees),10),
+                                       tree->part_info[part].cur_score);
             if (tree->part_info[part].cur_score == 0.0)
                 tree->part_info[part].cur_score = tree->at(part)->computeLikelihood();
             cur_lh += tree->part_info[part].cur_score;
@@ -122,6 +128,14 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info, do
         if (tree->params->link_alpha) {
             cur_lh = optimizeLinkedAlpha(write_info, gradient_epsilon);
         }
+
+        // optimize linked models
+        if (!linked_models.empty()) {
+            double new_cur_lh = optimizeLinkedModels(write_info, gradient_epsilon);
+            ASSERT(new_cur_lh > cur_lh - 0.1);
+            cur_lh = new_cur_lh;
+        }
+
         if (verbose_mode >= VB_MED)
             cout << "LnL after optimizing individual models: " << cur_lh << endl;
         if (cur_lh <= tree_lh - 1.0) {
@@ -167,6 +181,13 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info, do
     //    cout <<"OPTIMIZE MODEL has finished"<< endl;
     if (write_info)
         writeInfo(cout);
+
+    // write linked_models
+    if (verbose_mode <= VB_MIN && write_info) {
+        for (auto it = linked_models.begin(); it != linked_models.end(); it++)
+            it->second->writeInfo(cout);
+    }
+
     cout << "Parameters optimization took " << i-1 << " rounds (" << getRealTime()-begin_time << " sec)" << endl << endl;
     
     return tree_lh;
@@ -247,7 +268,7 @@ double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
 }
 
 
-int PartitionModelPlen::getNParameters() {
+int PartitionModelPlen::getNParameters(int brlen_type) {
     PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
     int df = 0;
     for (PhyloSuperTreePlen::iterator it = tree->begin(); it != tree->end(); it++) {
@@ -260,11 +281,18 @@ int PartitionModelPlen::getNParameters() {
         df += tree->size()-1;
     if (linked_alpha > 0.0)
         df ++;
+    for (auto it = linked_models.begin(); it != linked_models.end(); it++) {
+        bool fixed = it->second->fixParameters(false);
+        df += it->second->getNDim() + it->second->getNDimFreq();
+        it->second->fixParameters(fixed);
+    }
     return df;
 }
 
+/*
 int PartitionModelPlen::getNDim(){
     PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
     int ndim = tree->size() -1;
     return ndim;
 }
+*/

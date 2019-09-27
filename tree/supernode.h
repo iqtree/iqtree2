@@ -52,6 +52,22 @@ public:
 	SuperNeighbor(Node *anode, double alength, int aid) : PhyloNeighbor(anode, alength, aid) {	
 	}
 
+    /**
+     construct class with another Neighbor
+     @param nei another Neighbor
+     */
+    SuperNeighbor(SuperNeighbor *nei) : PhyloNeighbor(nei) {
+    }
+    
+    
+    /**
+     allocate a new Neighbor by just copying from this one
+     @return pointer to newly created Neighbor
+     */
+    virtual Neighbor* newNeighbor() {
+        return (new SuperNeighbor(this));
+    }
+
 	/**
 		vector of size m (m = #partitions)
 	*/

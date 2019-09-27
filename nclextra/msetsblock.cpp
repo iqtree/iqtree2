@@ -18,6 +18,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "msetsblock.h"
+#include "utils/tools.h"
 
 MSetsBlock::MSetsBlock()
  : NxsBlock()
@@ -105,7 +106,9 @@ void MSetsBlock::Read(NxsToken &token)
 			token.SetLabileFlagBit(NxsToken::preserveUnderscores);
 			token.GetNextToken();
 			do {
-				myset->taxlist.push_back(token.GetToken());
+                string taxname = token.GetToken();
+                renameString(taxname);
+				myset->taxlist.push_back(taxname);
 				token.SetLabileFlagBit(NxsToken::preserveUnderscores);
 				token.GetNextToken();
 			} while (!token.AtEOF() && !token.Equals(";"));
@@ -158,6 +161,7 @@ void MSetsBlock::Read(NxsToken &token)
 				myset->aln_file = myset->position_spec.substr(0, pos);
 				myset->position_spec = myset->position_spec.substr(pos+1);
 			}
+            trimString(myset->position_spec);
             if ((pos=myset->position_spec.find(',')) != string::npos && isalpha(myset->position_spec[0])) {
                 myset->sequence_type = myset->position_spec.substr(0, pos);
                 myset->position_spec = myset->position_spec.substr(pos+1);
@@ -171,7 +175,11 @@ void MSetsBlock::Read(NxsToken &token)
 				errormsg += " instead";
 				throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());
 			}
-
+            trimString(myset->aln_file);
+            trimString(myset->char_partition);
+            trimString(myset->model_name);
+            trimString(myset->position_spec);
+            trimString(myset->sequence_type);
 		} // if (token.Equals("CHARSET"))
 		else if (token.Equals("CHARPARTITION"))
 		{
@@ -259,6 +267,9 @@ void MSetsBlock::Read(NxsToken &token)
 
 		else
 		{
+            errormsg = "Unknown command ";
+            errormsg += token.GetToken();
+            throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());
 			SkippingCommand(token.GetToken());
 			do
 			{
@@ -275,6 +286,11 @@ void MSetsBlock::Read(NxsToken &token)
 	}	// GetNextToken loop
 
 }
+
+void MSetsBlock::SkippingCommand(NxsString commandName) {
+    cout << "WARNING: Skipping unknown command " << commandName << endl;
+}
+
 
 CharSet *MSetsBlock::findCharSet(string name) {
 	for (vector<CharSet*>::iterator it = charsets.begin(); it != charsets.end(); it++)

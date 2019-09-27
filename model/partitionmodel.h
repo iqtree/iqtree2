@@ -66,9 +66,10 @@ public:
     virtual void restoreCheckpoint();
 
     /**
+     * @param brlen_type either BRLEN_OPTIMIZE, BRLEN_FIX or BRLEN_SCALE
      * @return #parameters of the model + # branches
      */
-    virtual int getNParameters();
+    virtual int getNParameters(int brlen_type);
 
 	/**
 		optimize model parameters and tree branch lengths
@@ -104,11 +105,73 @@ public:
 	*/
 	virtual double computeFunction(double shape);
 
+    /**
+     return the number of dimensions
+     */
+    virtual int getNDim();
+    
+    
+    /**
+     the target function which needs to be optimized
+     @param x the input vector x
+     @return the function value at x
+     */
+    virtual double targetFunk(double x[]);
 
-protected:
+    /**
+     rescale the state frequencies
+     @param sum_one TRUE to make frequencies sum to 1, FALSE to make last entry equal to 1
+     */
+    void scaleStateFreq(bool sum_one);
+
+    /**
+     the approximated derivative function
+     @param x the input vector x
+     @param dfx the derivative at x
+     @return the function value at x
+     */
+    
+    /** optimize linked model parameter of over all partitions */
+    double optimizeLinkedModel(bool write_info, double gradient_epsilon);
+
+    /** optimize all linked models parameter of over all partitions */
+    double optimizeLinkedModels(bool write_info, double gradient_epsilon);
+
+    void reportLinkedModel(ostream &out);
+
+    /**
+     @return true if some model is linked between partitions
+     */
+    bool isLinkedModel();
+
+//protected:
 
 	/** linked Gamma shape alpha between partitions */
 	double linked_alpha;
+
+    /**
+        map of linked models by names.
+     */
+    unordered_map<string, ModelSubst*> linked_models;
+    
+    bool opt_gamma_invar;
+    
+protected:
+    
+    /**
+        this function is served for the multi-dimension optimization. It should pack the model parameters
+        into a vector that is index from 1 (NOTE: not from 0)
+        @param variables (OUT) vector of variables, indexed from 1
+     */
+    virtual void setVariables(double *variables);
+    
+    /**
+        this function is served for the multi-dimension optimization. It should assign the model parameters
+        from a vector of variables that is index from 1 (NOTE: not from 0)
+        @param variables vector of variables, indexed from 1
+        @return TRUE if parameters are changed, FALSE otherwise (2015-10-20)
+     */
+    virtual bool getVariables(double *variables);
 
 };
 

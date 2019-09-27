@@ -9,6 +9,7 @@
 #include "tools.h"
 #include "timeutil.h"
 #include "gzstream.h"
+#include <cstdio>
 
 const char* CKP_HEADER =     "--- # IQ-TREE Checkpoint ver >= 1.6";
 const char* CKP_HEADER_OLD = "--- # IQ-TREE Checkpoint";
@@ -149,12 +150,18 @@ void Checkpoint::dump(bool force) {
         return;
     }
     prev_dump_time = getRealTime();
+    string filename_tmp = filename + ".tmp";
+    if (fileExists(filename_tmp)) {
+        outWarning("IQ-TREE was killed while writing temporary checkpoint file " + filename_tmp);
+        outWarning("You should increase checkpoint interval from the default 60 seconds");
+        outWarning("via -cptime option to avoid too frequent checkpoint for large datasets");
+    }
     try {
         ostream *out;
         if (compression) 
-            out = new ogzstream(filename.c_str());
+            out = new ogzstream(filename_tmp.c_str());
         else
-            out = new ofstream(filename.c_str()); 
+            out = new ofstream(filename_tmp.c_str());
         out->exceptions(ios::failbit | ios::badbit);
         *out << header << endl;
         // call dump stream
@@ -165,13 +172,71 @@ void Checkpoint::dump(bool force) {
             ((ofstream*)out)->close();
         delete out;
 //        cout << "Checkpoint dumped" << endl;
+        if (fileExists(filename)) {
+            if (std::remove(filename.c_str()) != 0)
+                outError("Cannot remove file ", filename);
+        }
+        if (std::rename(filename_tmp.c_str(), filename.c_str()) != 0)
+            outError("Cannot rename file ", filename_tmp);
     } catch (ios::failure &) {
         outError(ERR_WRITE_OUTPUT, filename.c_str());
+    }
+    // check that the dumping time is too long and increase dump_interval if necessary
+    double dump_time = getRealTime() - prev_dump_time;
+    if (dump_time*20 > dump_interval) {
+        dump_interval = ceil(dump_time*20);
+        cout << "NOTE: " << dump_time << " seconds to dump checkpoint file, increase to "
+        << dump_interval << endl;
     }
 }
 
 bool Checkpoint::hasKey(string key) {
-	return (find(key) != end());
+	return (find(struct_name + key) != end());
+}
+
+bool Checkpoint::hasKeyPrefix(string key_prefix) {
+    string prefix = key_prefix;
+    if (!struct_name.empty())
+        prefix = struct_name + key_prefix;
+	auto i = lower_bound(prefix);
+    if (i != end()) {
+        if (i->first.compare(0, prefix.size(), prefix) == 0)
+            return true;
+    }
+    return false;
+}
+
+int Checkpoint::eraseKeyPrefix(string key_prefix) {
+    int count = 0;
+    iterator first_it = lower_bound(key_prefix);
+    iterator i;
+	for (i = first_it; i != end(); i++) {
+        if (i->first.compare(0, key_prefix.size(), key_prefix) == 0)
+            count++;
+        else
+            break;
+
+    }
+    if (count)
+        erase(first_it, i);
+    return count;
+}
+
+int Checkpoint::keepKeyPrefix(string key_prefix) {
+    map<string,string> newckp;
+    int count = 0;
+    erase(begin(), lower_bound(key_prefix));
+    
+    for (iterator i = begin(); i != end(); i++) {
+        if (i->first.compare(0, key_prefix.size(), key_prefix) == 0)
+            count++;
+        else {
+            erase(i, end());
+            break;
+        }
+        
+    }
+    return count;
 }
 
 /*-------------------------------------------------------------
@@ -270,9 +335,27 @@ void Checkpoint::endList() {
 }
 
 void Checkpoint::getSubCheckpoint(Checkpoint *target, string partial_key) {
-    for (iterator it = begin(); it != end(); it++) {
-        if (it->first.find(partial_key) != string::npos)
-            (*target)[it->first] = it->second;
+    int len = partial_key.length();
+    for (auto it = lower_bound(partial_key); it != end() && it->first.substr(0, len) == partial_key; it++) {
+        target->put(it->first.substr(len+1), it->second);
+    }
+}
+
+void Checkpoint::putSubCheckpoint(Checkpoint *source, string partial_key) {
+    if (!partial_key.empty())
+        startStruct(partial_key);
+    for (auto it = source->begin(); it != source->end(); it++) {
+        put(it->first, it->second);
+    }
+    if (!partial_key.empty())
+        endStruct();
+}
+
+void Checkpoint::transferSubCheckpoint(Checkpoint *target, string partial_key, bool overwrite) {
+    int len = partial_key.length();
+    for (auto it = lower_bound(partial_key); it != end() && it->first.substr(0, len) == partial_key; it++) {
+        if (overwrite || !target->hasKey(it->first))
+            target->put(it->first, it->second);
     }
 }
 
