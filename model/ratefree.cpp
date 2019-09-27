@@ -44,7 +44,7 @@ RateFree::RateFree(int ncat, double start_alpha, string params, bool sorted_rate
                 rates[i] = 1.0;
                 sum_prop += prop[i];
             }
-            fix_params = 1;
+            fix_params = (Params::getInstance().optimize_from_given_params) ? 0 : 1;
         } else {
             if (params_vec.size() != ncategory*2)
                 outError("Number of parameters for FreeRate model must be twice number of categories");
@@ -56,7 +56,7 @@ RateFree::RateFree(int ncat, double start_alpha, string params, bool sorted_rate
             }
             for (i = 0; i < ncategory; i++)
                 rates[i] /= sum;
-            fix_params = 2;
+            fix_params = (Params::getInstance().optimize_from_given_params) ? 0 : 2;
         }
 		if (fabs(sum_prop-1.0) > 1e-5)
 			outError("Sum of category proportions not equal to 1");
@@ -128,24 +128,30 @@ void RateFree::initFromCatMinusOne() {
     restoreCheckpoint();
     ncategory++;
 
-    int first = 0, second = -1, i;
+    int first = 0, i;
     // get the category k with largest proportion
     for (i = 1; i < ncategory-1; i++)
         if (prop[i] > prop[first]) {
             first = i;
         }
-    second = (first == 0) ? 1 : 0;
+    int second = (first == 0) ? 1 : 0;
     for (i = 0; i < ncategory-1; i++)
-        if (prop[i] > prop[second] && second != first)
+        if (prop[i] > prop[second] && i != first)
             second = i;
 
 //    memmove(rates, input->rates, (k+1)*sizeof(double));
 //    memmove(prop, input->prop, (k+1)*sizeof(double));
 
     // divide highest category into 2 of the same prop
-    rates[ncategory-1] = (-rates[second] + 3*rates[first])/2.0;
+    // 2018-06-12: fix bug negative rates
+    if (-rates[second] + 3*rates[first] > 0.0) {
+        rates[ncategory-1] = (-rates[second] + 3*rates[first])/2.0;
+        rates[first] = (rates[second]+rates[first])/2.0;
+    } else {
+        rates[ncategory-1] = (3*rates[first])/2.0;
+        rates[first] = (rates[first])/2.0;
+    }
     prop[ncategory-1] = prop[first]/2;
-    rates[first] = (rates[second]+rates[first])/2.0;
     prop[first] = prop[first]/2;
 //    if (k < ncategory-2) {
 //        memcpy(&rates[k+2], &input->rates[k+1], (ncategory-2-k)*sizeof(double));
@@ -496,7 +502,9 @@ double RateFree::optimizeWithEM() {
     tree->copyPhyloTree(phylo_tree);
     tree->optimize_by_newton = phylo_tree->optimize_by_newton;
     tree->setParams(phylo_tree->params);
-    tree->setLikelihoodKernel(phylo_tree->sse, phylo_tree->num_threads);
+    tree->setLikelihoodKernel(phylo_tree->sse);
+    tree->setNumThreads(phylo_tree->num_threads);
+
     // initialize model
     ModelFactory *model_fac = new ModelFactory();
     model_fac->joint_optimize = phylo_tree->params->optimize_model_rate_joint;
@@ -521,8 +529,15 @@ double RateFree::optimizeWithEM() {
         }
         ASSERT(score < 0);
         
-        if (step > 0)
+        if (step > 0) {
+            if (score <= old_score-0.1) {
+                phylo_tree->printTree(cout, WT_BR_LEN+WT_NEWLINE);
+                writeInfo(cout);
+                cout << "Partition " << phylo_tree->aln->name << endl;
+                cout << "score: " << score << "  old_score: " << old_score << endl;
+            }
             ASSERT(score > old_score-0.1);
+        }
             
         old_score = score;
         
@@ -604,7 +619,7 @@ double RateFree::optimizeWithEM() {
             subst_model->setTree(tree);
             model_fac->model = subst_model;
             if (subst_model->isMixture() || subst_model->isSiteSpecificModel() || !subst_model->isReversible())
-                tree->setLikelihoodKernel(phylo_tree->sse, phylo_tree->num_threads);
+                tree->setLikelihoodKernel(phylo_tree->sse);
 
                         
             // initialize likelihood

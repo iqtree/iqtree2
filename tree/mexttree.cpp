@@ -24,7 +24,7 @@ void MExtTree::generateRandomTree(TreeGenType tree_type, Params &params, bool bi
 	Alignment *alignment = NULL;
 	if (params.aln_file) {
 		// generate random tree with leaf sets taken from an alignment
-		alignment = new Alignment(params.aln_file, params.sequence_type, params.intype);
+		alignment = createAlignment(params.aln_file, params.sequence_type, params.intype, params.model_name);
 		params.sub_size = alignment->getNSeq();
 	}
 	if (params.sub_size < 3) {
@@ -69,31 +69,6 @@ void MExtTree::setZeroInternalBranches(int num_zero_len) {
 		nodes2[id]->findNeighbor(nodes[id])->length = 0.0;
 		nodes[id] = NULL;
 		nodes2[id] = NULL;
-	}
-}
-
-void MExtTree::collapseZeroBranches(Node *node, Node *dad, double threshold) {
-	if (!node) node = root;
-	FOR_NEIGHBOR_DECLARE(node, dad, it) {
-		collapseZeroBranches((*it)->node, node, threshold);
-	}
-	NeighborVec nei_vec;
-	nei_vec.insert(nei_vec.begin(), node->neighbors.begin(), node->neighbors.end());
-	for (it = nei_vec.begin(); it != nei_vec.end(); it++) 
-	if ((*it)->node != dad) {
-		if ((*it)->length <= threshold) { // delete the child node
-			Node *child = (*it)->node;
-			bool first = true;
-			FOR_NEIGHBOR_IT(child, node, it2) {
-				if (first)
-					node->updateNeighbor(child, (*it2)->node, (*it2)->length);
-				else
-					node->addNeighbor((*it2)->node, (*it2)->length);
-				(*it2)->node->updateNeighbor(child, node);
-				first = false;
-			}
-			delete child;
-		}
 	}
 }
 

@@ -229,7 +229,7 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance, bool write_info) {
         model_factory->site_rate = relative_rate;
         if (getModel()->isMixture()) {
 //            model_factory->fused_mix_rate = true;
-            setLikelihoodKernel(sse, num_threads);
+            setLikelihoodKernel(sse);
         }
 
         // optimize rate model
@@ -241,7 +241,7 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance, bool write_info) {
 
         // 2016-07-22: BUGFIX should rescale rates
         double mean_rate = relative_rate->rescaleRates();
-        if (mean_rate != 1.0 && params->fixed_branch_length != BRLEN_FIX) {
+        if (fabs(mean_rate-1.0) > 1e-6 && params->fixed_branch_length != BRLEN_FIX) {
             scaleLength(mean_rate);
         }
         if (write_info) {
@@ -259,10 +259,14 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance, bool write_info) {
 
         double treelen = treeLength();
         relative_treelen.resize(mixlen);
+        // 2017-12-21: BUG: moved this out of write_info if
+        // otherwise, relative_treelen is not initialized
+        for (i = 0; i < mixlen; i++)
+            relative_treelen[i] = treelen * relative_rate->getRate(i);
+
         if (write_info) {
             cout << "relative_treelen:";
             for (i = 0; i < mixlen; i++) {
-                relative_treelen[i] = treelen * relative_rate->getRate(i);
                 cout << " " << relative_treelen[i];
             }
             cout << endl;
@@ -273,7 +277,7 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance, bool write_info) {
         setRate(saved_rate);
         model_factory->site_rate = saved_rate;
         model_factory->fused_mix_rate = saved_fused_mix_rate;
-        setLikelihoodKernel(sse, num_threads);
+        setLikelihoodKernel(sse);
 
         // set the weights of heterotachy model
         double pinvar = site_rate->getPInvar();
@@ -413,6 +417,9 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
 
     } else {
 
+        if (!model_factory->fused_mix_rate && getModel()->isMixture())
+            outError("Please use option -optlen BFGS to disable EM algorithm");
+        
         // EM algorithm
         size_t ptn, c;
         size_t nptn = aln->getNPattern();
@@ -611,7 +618,7 @@ void PhyloTreeMixlen::printBranchLength(ostream &out, int brtype, bool print_sla
                     out << fixed << length;
                 else
                     out << length;
-            } else if (brtype & WT_BR_CLADE) {
+            } else if (brtype & WT_BR_CLADE && length_nei->node->name != ROOT_NAME) {
                 out << length;
             }
         }
@@ -620,7 +627,7 @@ void PhyloTreeMixlen::printBranchLength(ostream &out, int brtype, bool print_sla
 
     if (brtype & WT_BR_LEN)
         out << ":";
-    else if ((brtype & WT_BR_CLADE) && print_slash)
+    else if ((brtype & WT_BR_CLADE) && print_slash && length_nei->node->name != ROOT_NAME)
         out << "/";
         
     double length = nei->length;
@@ -637,7 +644,7 @@ void PhyloTreeMixlen::printBranchLength(ostream &out, int brtype, bool print_sla
             out << fixed << length;
         else
             out << length;
-    } else if (brtype & WT_BR_CLADE) {
+    } else if (brtype & WT_BR_CLADE && length_nei->node->name != ROOT_NAME) {
         out << length;
     }
 }
@@ -777,8 +784,10 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
 	    	for (ptn = 0; ptn < nptn; ptn++) {
 				double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
 				double *theta = theta_all + ptn*block;
+                
+                // TODO: check with vectorclass!
 				double *lh_tip = tip_partial_lh +
-						((int)((ptn < orig_nptn) ? (aln->at(ptn))[dad->id] :  model_factory->unobserved_ptns[ptn-orig_nptn]))*statemix;
+						((int)((ptn < orig_nptn) ? (aln->at(ptn))[dad->id] :  model_factory->unobserved_ptns[ptn-orig_nptn][dad->id]))*statemix;
 				for (m = 0; m < nmixture; m++) {
 					for (i = 0; i < statecat; i++) {
 						theta[m*statecat+i] = lh_tip[m*nstates + i%nstates] * partial_lh_dad[m*statecat+i];

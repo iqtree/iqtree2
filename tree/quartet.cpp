@@ -921,7 +921,8 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
             // set up parameters
             quartet_tree->setParams(params);
             quartet_tree->optimize_by_newton = params->optimize_by_newton;
-            quartet_tree->setLikelihoodKernel(params->SSE, num_threads);
+            quartet_tree->setLikelihoodKernel(params->SSE);
+            quartet_tree->setNumThreads(num_threads);
 
             // set up partition model
             if (isSuperTree()) {
@@ -1185,6 +1186,7 @@ void readGroupNewick(char *filename, MSetsBlock *sets_block) {
                         break;
                     }
                 } while (ch != ',' && ch != ')');
+                renameString(name);
                 myset->taxlist.push_back(name);
                 if (ch == ',') continue; // continue to read next taxon name
                 if (ch == ')') break;
@@ -1272,7 +1274,7 @@ void PhyloTree::readLikelihoodMappingGroups(char *filename, QuartetGroups &LMGro
 		for (vector<string>::iterator it = (*i)->taxlist.begin(); it != (*i)->taxlist.end(); it++) {
 			taxid = aln->getSeqID(*it);
 			if (taxid < 0) {
-				cout << "Warning: unknown sequence name \"" << (*it) << "\"! Will be ignored." << endl;
+				cout << "WARNING: unknown sequence name \"" << (*it) << "\"! Will be ignored." << endl;
 			} else {
 				LMGroups.GroupX[t] = taxid;
 				// cout << "  " << (*it) << " (" << taxid << "," << LMGroups.GroupX[t] << ")" << endl;
@@ -1281,7 +1283,7 @@ void PhyloTree::readLikelihoodMappingGroups(char *filename, QuartetGroups &LMGro
 			}
 		}
 		if (numtax != t) {
-			cout << "Warning: ignored cluster did contain unknown sequence names!" << endl;
+			cout << "WARNING: ignored cluster did contain unknown sequence names!" << endl;
 			LMGroups.numGrpSeqs[4] = t;
 		}
 	} else {
@@ -1309,7 +1311,7 @@ void PhyloTree::readLikelihoodMappingGroups(char *filename, QuartetGroups &LMGro
 		for (vector<string>::iterator it = (*i)->taxlist.begin(); it != (*i)->taxlist.end(); it++) {
 			taxid = aln->getSeqID(*it);
 			if (taxid < 0) {
-				cout << "Warning: sequence name \"" << (*it) << "\"! Will be ignored." << endl;
+				cout << "WARNING: sequence name \"" << (*it) << "\"! Will be ignored." << endl;
 			} else {
 				switch(n){
 					case 0: LMGroups.GroupA[t] = taxid;
@@ -1534,7 +1536,7 @@ void PhyloTree::reportLikelihoodMapping(ofstream &out) {
 	out << "---------------------------" << endl << endl;
 	out << "Number of quartets: " << params->lmap_num_quartets;
     if (params->lmap_num_quartets < LMGroups.uniqueQuarts)
-        cout << " (randomly chosen with replacement from " 
+        out << " (randomly chosen with replacement from "
 		<< LMGroups.uniqueQuarts << " existing unique quartets)" << endl << endl;
     else
         out << " (all unique quartets)" << endl << endl;

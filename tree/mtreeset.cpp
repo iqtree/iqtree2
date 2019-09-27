@@ -23,6 +23,7 @@
 
 MTreeSet::MTreeSet()
 {
+    equal_taxon_set = false;
 }
 
 MTreeSet::MTreeSet(const char *userTreeFile, bool &is_rooted, 
@@ -122,7 +123,10 @@ void MTreeSet::init(StrVector &treels, bool &is_rooted) {
 		NodeVector taxa;
 		tree->getTaxa(taxa);
 		for (NodeVector::iterator taxit = taxa.begin(); taxit != taxa.end(); taxit++)
-			(*taxit)->id = atoi((*taxit)->name.c_str());
+            if ((*taxit)->name == ROOT_NAME)
+                (*taxit)->id = taxa.size()-1;
+            else
+                (*taxit)->id = atoi((*taxit)->name.c_str());
 		//at(it->second) = tree;
 		push_back(tree);
 		tree_weights.push_back(1);
@@ -218,7 +222,7 @@ void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin, int ma
 			in->exceptions(ios::failbit | ios::badbit);
 
 		}
-		cout << size() << ((front()->rooted) ? " rooted" : " un-rooted") << " tree(s) loaded" << endl;
+		cout << size() << " tree(s) loaded (" << countRooted() << " rooted and " << countUnrooted() << " unrooted)" << endl;
 		if (omitted) cout << omitted << " tree(s) omitted" << endl;
 		//in->exceptions(ios::failbit | ios::badbit);
 		if (compressed) ((igzstream*)in)->close(); else ((ifstream*)in)->close();
@@ -232,21 +236,25 @@ void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin, int ma
 }
 
 void MTreeSet::checkConsistency() {
+    equal_taxon_set = true;
 	if (empty()) 
 		return;
 	iterator it;
-	bool rooted = false;
 	int i;
 	bool first = true;
+    // it's OK to have rooed and unrooted trees in the set
+    /*
+    bool rooted = false;
 	for (it = begin(), i = 0; it != end(); it++, i++)
 	if ((*it)) {
 		if (!first && (*it)->rooted != rooted) {
 			cout << i+1 << " " << (*it)->rooted << " " << rooted << endl;
 			outError("Rooted and unrooted trees are mixed up");
-			rooted = (*it)->rooted;
 		}
 		first = false;
+        rooted = (*it)->rooted;
 	}
+     */
 
 	NodeVector taxa1;
 	NodeVector::iterator it2;
@@ -265,13 +273,20 @@ void MTreeSet::checkConsistency() {
 			first = false;
 		} else {
 			// now check this tree with the first tree	
-			if (tree->leafNum != taxa1.size())
-				outError("Tree has different number of taxa!");
+            if (tree->leafNum != taxa1.size()) {
+                equal_taxon_set = false;
+				cout << "Trees have different number of taxa" << endl;
+                break;
+            }
 	
 			for (it2 = taxa.begin(), i = 0; it2 != taxa.end(); it2++, i++) {
-				if ((*it2)->name != taxa1[i]->name) 
-					outError("Tree has different taxa names!");
+                if ((*it2)->name != taxa1[i]->name) {
+                    equal_taxon_set = false;
+					cout << "Trees have different taxa sets" << endl;
+                    break;
+                }
 			}
+            if (!equal_taxon_set) break;
 		}
 	}
 }
@@ -280,6 +295,22 @@ bool MTreeSet::isRooted() {
 	if (empty()) return false;
 	return (front()->rooted);
 }
+
+int MTreeSet::countRooted() {
+    int count = 0;
+    for (auto tree = begin(); tree != end(); tree++)
+        if ((*tree)->rooted)
+            count++;
+    return count;
+}
+
+/**
+ @return number of unrooted trees in the set
+ */
+int MTreeSet::countUnrooted() {
+    return size() - countRooted();
+}
+
 
 void MTreeSet::assignLeafID() {
 	for (iterator it = begin(); it != end(); it++)
@@ -504,7 +535,7 @@ MTreeSet::~MTreeSet()
 }
 
 
-void MTreeSet::computeRFDist(int *rfdist, int mode, double weight_threshold) {
+void MTreeSet::computeRFDist(double *rfdist, int mode, double weight_threshold) {
 	// exit if less than 2 trees
 	if (size() < 2)
 		return;
@@ -569,8 +600,8 @@ void MTreeSet::computeRFDist(int *rfdist, int mode, double weight_threshold) {
 }
 
 
-void MTreeSet::computeRFDist(int *rfdist, MTreeSet *treeset2, 
-	const char *info_file, const char *tree_file, int *incomp_splits) 
+void MTreeSet::computeRFDist(double *rfdist, MTreeSet *treeset2, bool k_by_k,
+	const char *info_file, const char *tree_file, double *incomp_splits)
 {
 	// exit if less than 2 trees
 #ifdef USE_HASH_MAP
@@ -583,7 +614,7 @@ void MTreeSet::computeRFDist(int *rfdist, MTreeSet *treeset2,
 	ofstream otree;
 	if (info_file) oinfo.open(info_file);
 	if (tree_file) otree.open(tree_file);
-	if (incomp_splits) memset(incomp_splits, 0, size()*treeset2->size()*sizeof(int));
+	if (incomp_splits) memset(incomp_splits, 0, size()*treeset2->size()*sizeof(double));
 
 	vector<string> taxname(front()->leafNum);
 	vector<SplitIntMap*> hs_vec;
@@ -635,7 +666,15 @@ void MTreeSet::computeRFDist(int *rfdist, MTreeSet *treeset2,
 	int col_size = hs_vec.size() - size();
 	for (vector<SplitGraph*>::iterator hsit = sg_vec.begin(); id < size(); hsit++, id++) {
 		int id2 = 0;
-		for (vector<SplitIntMap*>::iterator hsit2 = (hs_vec.begin() + size()); hsit2 != hs_vec.end(); hsit2++, id2++) {
+        vector<SplitIntMap*>::iterator start_it = (hs_vec.begin() + size());
+        vector<SplitIntMap*>::iterator end_it = (hs_vec.end());
+        if (k_by_k) {
+            // only distance between k-th tree
+            start_it = start_it + id;
+            end_it = start_it + 1;
+        }
+
+		for (vector<SplitIntMap*>::iterator hsit2 = start_it; hsit2 != end_it; hsit2++, id2++) {
 			int common_splits = 0;
 			int i = 0;
 			for (SplitGraph::iterator spit = (*hsit)->begin(); spit != (*hsit)->end(); spit++, i++) {
@@ -649,14 +688,22 @@ void MTreeSet::computeRFDist(int *rfdist, MTreeSet *treeset2,
 						nodes_vec[id][i]->name = "-" + nodes_vec[id][i]->name;*/
 				} 
 			}
-			int rf_val = (*hsit)->size() + (*hsit2)->size() - 2*common_splits;
-			rfdist[id*col_size + id2] = rf_val;
+			double rf_val = (*hsit)->size() + (*hsit2)->size() - 2*common_splits;
+            if (Params::getInstance().normalize_tree_dist) {
+                int non_trivial = (*hsit)->size() - (*hsit)->getNTrivialSplits();
+                non_trivial += (*hsit2)->size() - ((*hsit2)->begin())->first->getNTaxa();
+                rf_val /= non_trivial;
+            }
+            if (k_by_k)
+                rfdist[id] = rf_val;
+            else
+                rfdist[id*col_size + id2] = rf_val;
 			if (info_file) oinfo << endl;
 			if (tree_file) { at(id)->printTree(otree); otree << endl; }
 			for (i = 0; i < nodes_vec[id].size(); i++)
 				if (nodes_vec[id][i]->name[0] == '-') nodes_vec[id][i]->name.erase(0,1);
 		}
-		if (!incomp_splits) continue;
+		if (!incomp_splits || k_by_k) continue;
 		id2 = 0;
 		// count incompatible splits
 		for (vector<SplitGraph*>::iterator hsit3 = sg_vec.begin()+size(); hsit3 != sg_vec.end(); hsit3++, id2++) {

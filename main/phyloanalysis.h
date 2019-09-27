@@ -38,8 +38,15 @@ class IQTree;
 */
 void runPhyloAnalysis(Params &params, Checkpoint *checkpoint);
 
-void runTreeReconstruction(Params &params, string &original_model,
-		IQTree &tree, ModelCheckpoint &model_info);
+/**
+    Perform separate tree inference across partitions
+ */
+void runUnlinkedPhyloAnalysis(Params &params, Checkpoint *checkpoint);
+
+void startTreeReconstruction(Params &params, IQTree* &iqtree,
+        ModelCheckpoint &model_info);
+
+void runTreeReconstruction(Params &params, IQTree* &tree);
 
 /**
 	take the collection of trees from input_trees, it assign support values to target_tree

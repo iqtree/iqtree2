@@ -96,14 +96,23 @@ public:
 	/**
 	 * read codon model from a stream, modying rates and state_freq accordingly
 	 * @param in input stream containing lower triangular matrix of rates, frequencies and list of codons
+     * @reset_params true to reset parameters, false otherwise
 	 */
 	void readCodonModel(istream &in, bool reset_params);
 
 	/**
 	 * read codon model from a string, modying rates and state_freq accordingly
 	 * @param str input string containing lower triangular matrix of rates, frequencies and list of codons
+     * @reset_params true to reset parameters, false otherwise
 	 */
 	void readCodonModel(string &str, bool reset_params);
+
+	/**
+	 * read codon model from a file in PAML format
+	 * @param filename input file containing lower triangular matrix of rates, frequencies and list of codons
+     * @reset_params true to reset parameters, false otherwise
+	 */
+    void readCodonModelFile(const char *filename, bool reset_params);
 
 	/**
 		write information

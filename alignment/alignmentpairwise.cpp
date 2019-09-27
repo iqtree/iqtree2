@@ -259,17 +259,26 @@ void AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf) {
 
     for (cat = 0; cat < ncat; cat++) {
         double rate_val = site_rate->getRate(cat);
+        double prop_val = site_rate->getProp(cat);
         if (tree->getModelFactory()->site_rate->getGammaShape() == 0.0)
             rate_val = 1.0;
 
-        double rate_sqr = rate_val * rate_val;
+        double coeff1 = rate_val * prop_val;
+        double coeff2 = rate_val * coeff1;
         tree->getModelFactory()->computeTransDerv(value * rate_val, trans_mat, trans_derv1, trans_derv2);
         for (i = 0; i < trans_size; i++) {
-            sum_trans[i] += trans_mat[i];
-            sum_derv1[i] += trans_derv1[i] * rate_val;
-            sum_derv2[i] += trans_derv2[i] * rate_sqr;
+            sum_trans[i] += trans_mat[i] * prop_val;
+            sum_derv1[i] += trans_derv1[i] * coeff1;
+            sum_derv2[i] += trans_derv2[i] * coeff2;
         }
     }
+    
+    // 2019-07-03: incorporate p_invar
+    double p_invar = site_rate->getPInvar();
+    if (p_invar > 0.0)
+        for (i = 0; i < num_states; i++)
+            sum_trans[i*num_states+i] += p_invar;
+    
     for (i = 0; i < trans_size; i++)
         if (pair_freq[i] > Params::getInstance().min_branch_length && sum_trans[i] > 0.0) {
 //            lh -= pair_freq[i] * log(sum_trans[i]);
@@ -298,10 +307,15 @@ double AlignmentPairwise::optimizeDist(double initial_dist, double &d2l) {
     if (!tree->getModelFactory() || !tree->getRate()) return dist;
 
     double negative_lh, ferror;
+    double max_genetic_dist = MAX_GENETIC_DIST;
+    if (tree->aln->seq_type == SEQ_POMO) {
+        int N = tree->aln->virtual_pop_size;
+        max_genetic_dist *= N*N;
+    }
     if (tree->optimize_by_newton) // Newton-Raphson method
-        dist = minimizeNewton(Params::getInstance().min_branch_length, dist, MAX_GENETIC_DIST, Params::getInstance().min_branch_length, d2l);
+        dist = minimizeNewton(Params::getInstance().min_branch_length, dist, max_genetic_dist, Params::getInstance().min_branch_length, d2l);
     else // Brent method
-        dist = minimizeOneDimen(Params::getInstance().min_branch_length, dist, MAX_GENETIC_DIST, Params::getInstance().min_branch_length, &negative_lh, &ferror);
+        dist = minimizeOneDimen(Params::getInstance().min_branch_length, dist, max_genetic_dist, Params::getInstance().min_branch_length, &negative_lh, &ferror);
 
     return dist;
 }

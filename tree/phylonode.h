@@ -33,6 +33,7 @@ class PhyloNeighbor : public Neighbor {
     friend class PhyloSuperTree;
     friend class PhyloTreeMixlen;
     friend class MemSlotVector;
+    friend class ParsTree;
 
 public:
     friend class TinaTree;
@@ -67,6 +68,29 @@ public:
         partial_pars = NULL;
         direction = UNDEFINED_DIRECTION;
         size = 0;
+    }
+
+    /**
+     construct class with another Neighbor
+     @param nei another Neighbor
+     */
+    PhyloNeighbor(PhyloNeighbor *nei) : Neighbor(nei) {
+        partial_lh = NULL;
+        scale_num = NULL;
+        partial_lh_computed = 0;
+        lh_scale_factor = 0.0;
+        partial_pars = NULL;
+        direction = nei->direction;
+        size = nei->size;
+    }
+
+    
+    /**
+     allocate a new Neighbor by just copying from this one
+     @return pointer to newly created Neighbor
+     */
+    virtual Neighbor* newNeighbor() {
+        return (new PhyloNeighbor(this));
     }
 
     /**

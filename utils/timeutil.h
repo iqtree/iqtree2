@@ -214,7 +214,7 @@ inline uint64_t getTotalSystemMemory()
  */
 __inline uint64_t getMemorySize( )
 {
-#if defined(_WIN32) && (defined(__CYGWIN__) || defined(__CYGWIN32__))
+#if defined(_WIN32) && (defined(__CYGWIN__) || defined(__CYGWIN32__) || !defined(_WIN64))
 	/* Cygwin under Windows. ------------------------------------ */
 	/* New 64-bit MEMORYSTATUSEX isn't available.  Use old 32.bit */
 #warning "getMemorySize() will be wrong if RAM is actually > 4GB"

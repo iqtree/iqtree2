@@ -17,11 +17,9 @@
  * Currently symmetry permutation is applied every time setRates is called.
  * Would be more efficient to apply it just once to basis in constructor.
  */
-#ifdef USE_EIGEN3
 #include <Eigen/Dense>
 #include <unsupported/Eigen/MatrixFunctions>
 using namespace Eigen;
-#endif
 #include "modelliemarkov.h"
 #include <float.h>
 #undef NDEBUG
@@ -330,7 +328,6 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
 {
     // TODO: why is freq_params not handled here?
 
-	nondiagonalizable = false;
     ASSERT(NUM_RATES==getNumRateEntries());
     StateFreqType expected_freq_type; // returned by getLieMarkovModelInfo but not used here
     getLieMarkovModelInfo((string)model_name, name, full_name, model_num, symmetry, expected_freq_type);
@@ -344,8 +341,8 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
 
     setBasis(); // sets basis and num_params
 
-    if (model_parameters)
-        delete[] model_parameters;
+//    if (model_parameters)
+//        delete[] model_parameters;
     model_parameters = new double [num_params];
     memset(model_parameters, 0, sizeof(double)*num_params);
     this->setRates();
@@ -364,7 +361,48 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
         }
         setRates();
     }
+
+    if (freq_type == FREQ_UNKNOWN || expected_freq_type == FREQ_EQUAL) freq_type = expected_freq_type;
     ModelMarkov::init(freq_type);
+}
+
+// Note to Minh: I see ModelUnrest also lacks checkpointing.
+// I think this code could be copied straight over.
+// If modelDNA had a setRates() method,
+// we could make virtual setRates in ModelMarkov and
+// perhaps move this code all into there. - MDW
+void ModelLieMarkov::startCheckpoint() {
+    checkpoint->startStruct("ModelLieMarkov" + name);
+}
+
+void ModelLieMarkov::saveCheckpoint() {
+    // saves model_parameters
+    startCheckpoint();
+    if (num_params > 0)
+        CKP_ARRAY_SAVE(num_params, model_parameters);
+    endCheckpoint();
+    ModelMarkov::saveCheckpoint();
+}
+
+void ModelLieMarkov::restoreCheckpoint() {
+    ModelMarkov::restoreCheckpoint();
+    // restores model_parameters
+    startCheckpoint();
+    if (num_params > 0)
+        CKP_ARRAY_RESTORE(num_params, model_parameters);
+    endCheckpoint();
+    setRates();                        // updates rate matrix
+    decomposeRateMatrix();             // updates eigen system.
+    if (phylo_tree)
+        phylo_tree->clearAllPartialLH();
+}
+
+void ModelLieMarkov::writeInfo(ostream &out) {
+    int i;
+    out << "Model parameters: ";
+    if (num_params>0) out << model_parameters[0];
+    for (i=1; i < num_params; i++) out << "," << model_parameters[i];
+    out << endl;
 }
 
 /*static*/ void ModelLieMarkov::getLieMarkovModelInfo(string model_name, string &name, string &full_name, int &model_num, int &symmetry, StateFreqType &def_freq) {
@@ -441,6 +479,10 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
 
 ModelLieMarkov::~ModelLieMarkov() {
   // Do nothing, for now. model_parameters is reclaimed in ~ModelMarkov
+  
+  // BQM: Do something now
+    if (model_parameters)
+        delete [] model_parameters;
 }
 
 /*
@@ -601,6 +643,8 @@ string ModelLieMarkov::getName() {
         return name+"+F";
     case FREQ_USER_DEFINED:
         return name+"+FU";
+    case FREQ_EQUAL:
+      return name;
     default:
        	cerr << "Bad freq_type for a Lie-Markov model. Can't happen" << endl;
         abort();
@@ -624,6 +668,61 @@ void ModelLieMarkov::setBounds(double *lower_bound, double *upper_bound, bool *b
 	}
 }
 
+void ModelLieMarkov::setVariables(double *variables) {
+	int nrate = getNDim();
+
+    // non-reversible case
+    if (!is_reversible) {
+        if (nrate > 0)
+            memcpy(variables+1, model_parameters, nrate*sizeof(double));
+        return;
+    }
+
+	if (freq_type == FREQ_ESTIMATE) nrate -= (num_states-1);
+	if (nrate > 0)
+		memcpy(variables+1, rates, nrate*sizeof(double));
+	if (freq_type == FREQ_ESTIMATE) {
+        // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
+		int ndim = getNDim();
+		memcpy(variables+(ndim-num_states+2), state_freq, (num_states-1)*sizeof(double));
+    }
+}
+
+bool ModelLieMarkov::getVariables(double *variables) {
+	int nrate = getNDim();
+	int i;
+	bool changed = false;
+
+    // non-reversible case
+    if (!is_reversible) {
+        for (i = 0; i < nrate && !changed; i++)
+            changed = (model_parameters[i] != variables[i+1]);
+        if (changed) {
+            memcpy(model_parameters, variables+1, nrate * sizeof(double));
+            setRates();
+        }
+        return changed;
+    }
+
+	if (freq_type == FREQ_ESTIMATE) nrate -= (num_states-1);
+	if (nrate > 0) {
+		for (i = 0; i < nrate; i++)
+			changed |= (rates[i] != variables[i+1]);
+		memcpy(rates, variables+1, nrate * sizeof(double));
+	}
+
+	if (freq_type == FREQ_ESTIMATE) {
+        // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
+        // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
+		int ndim = getNDim();
+		for (i = 0; i < num_states-1; i++)
+			changed |= (state_freq[i] != variables[i+ndim-num_states+2]);
+		memcpy(state_freq, variables+(ndim-num_states+2), (num_states-1)*sizeof(double));
+
+
+	}
+	return changed;
+}
 
 /*
  * Lie Markov model parameter restart strategy:
@@ -678,14 +777,16 @@ bool ModelLieMarkov::restartParameters(double guess[], int ndim, double lower[],
                 guess[i] = sign2 * upper[i]/2;
             }
 	}
-        cout << "Lie Markov Restart estimation at the boundary, iteration " << iteration;
-        if (verbose_mode >= VB_MED) {
-	    cout << ", new start point:" << std::endl << guess[1] ;
-            for (i = 2; i <= ndim; i++) cout << "," << guess[i]; 
-        }
-        cout << std::endl;
+	if (verbose_mode >= VB_MED) {
+            cout << "Lie Markov Restart estimation at the boundary, iteration " << iteration;
+            if (verbose_mode >= VB_MAX) {
+                cout << ", new start point:" << std::endl << guess[1] ;
+                for (i = 2; i <= ndim; i++) cout << "," << guess[i]; 
+            }
+            cout << std::endl;
+	}
     } else {
-        if (iteration > 1 && verbose_mode >= VB_MED)
+        if (iteration > 1 && verbose_mode >= VB_MAX)
 	  cout << "Lie Markov restarts ended at iteration " << iteration-1 << std::endl;
     
     } // if restart else
@@ -893,7 +994,8 @@ void ModelLieMarkov::setRates() {
 }
 
 void ModelLieMarkov::decomposeRateMatrix() {
-    ModelMarkov::decomposeRateMatrix();
+    return ModelMarkov::decomposeRateMatrix();
+    /*
     if (phylo_tree->params->matrix_exp_technique == MET_SCALING_SQUARING) 
         return;
     if (phylo_tree->params->matrix_exp_technique == MET_EIGEN3LIB_DECOMPOSITION) {
@@ -905,10 +1007,10 @@ void ModelLieMarkov::decomposeRateMatrix() {
         decomposeRateMatrixClosedForm();
         return;
     }
+     */
 }
 
 void ModelLieMarkov::decomposeRateMatrixEigen3lib() {
-#ifdef USE_EIGEN3
   nondiagonalizable = false; // until proven otherwise
     Matrix4d mat(rate_matrix);
     mat.transpose();
@@ -949,10 +1051,6 @@ void ModelLieMarkov::decomposeRateMatrixEigen3lib() {
     for (int i = 0; i < 4; i++)
         for (int j = 0; j < 4; j++)
             ASSERT(abs(check(i,j)) < 1e-4);
-#else
-    outError("Please install Eigen3 library for this option ", __func__);
-#endif
-
 }
 
 const static int a2index[] = {-1, 0, 0, 0, 0, 0,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -1944,7 +2042,8 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 }
 
 void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix, int mixture) {
-#ifdef USE_EIGEN3
+    return ModelMarkov::computeTransMatrix(time, trans_matrix, mixture);
+    /*
   MatrixExpTechnique technique = phylo_tree->params->matrix_exp_technique;
   if (technique == MET_SCALING_SQUARING || nondiagonalizable ) {
         Matrix4d A = Map<Matrix4d>(rate_matrix);
@@ -2004,9 +2103,6 @@ void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix, int m
 
     } else
         ModelMarkov::computeTransMatrix(time, trans_matrix);
-
-#else
-    ModelMarkov::computeTransMatrix(time, trans_matrix);
-#endif
+     */
 }
 

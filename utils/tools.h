@@ -352,8 +352,9 @@ enum InputType {
     IN_NEWICK, IN_NEXUS, IN_FASTA, IN_PHYLIP, IN_COUNTS, IN_CLUSTAL, IN_MSF, IN_OTHER
 };
 
+  // TODO DS: SAMPLING_SAMPLED is DEPRECATED and it is not possible to run PoMo with SAMPLING_SAMPLED.
 enum SamplingType {
-    SAMPLING_WEIGHTED, SAMPLING_SAMPLED
+  SAMPLING_WEIGHTED_BINOM, SAMPLING_WEIGHTED_HYPER, SAMPLING_SAMPLED
 };
 
 /**
@@ -406,8 +407,25 @@ enum AlnFormat {
     ALN_PHYLIP, ALN_FASTA
 };
 
+/*
+    outfile file format
+ FORMAT_NORMAL: usual file format used so far
+ FORMAT_CSV: csv file format
+ FORMAT_TSV: tab separated file format
+ */
+enum FileFormat {
+    FORMAT_NORMAL, FORMAT_CSV, FORMAT_TSV
+};
+
 enum ModelTestCriterion {
     MTC_AIC, MTC_AICC, MTC_BIC, MTC_ALL
+};
+
+/**
+ PartitionFinder merging algorithm
+ */
+enum PartitionMerge {
+    MERGE_NONE, MERGE_GREEDY, MERGE_RCLUSTER, MERGE_RCLUSTERF, MERGE_KMEANS
 };
 
 /**
@@ -426,13 +444,16 @@ enum LEAST_SQUARE_VAR {
 };
 
 enum START_TREE_TYPE {
-	STT_BIONJ, STT_PARSIMONY, STT_PLL_PARSIMONY, STT_RANDOM_TREE
+	STT_BIONJ, STT_PARSIMONY, STT_PLL_PARSIMONY, STT_RANDOM_TREE, STT_USER_TREE
 };
 
 const int MCAT_LOG = 1; // categorize by log(rate) for Meyer & von Haeseler model
 const int MCAT_MEAN = 2; // take the mean of rates for each category for Meyer & von Haeseler model
 const int MCAT_PATTERN = 4; // categorize site-patterns instead of sites for Meyer & von Haeseler model
 
+/* TODO DS: For PoMo, this setting does not make sense.  At the
+   moment, when using PoMo, MAX_GENETIC_DIST is amended, wherever it
+   is used. */
 const double MAX_GENETIC_DIST = 9.0;
 
 struct NNIInfo {
@@ -477,14 +498,27 @@ enum MatrixExpTechnique {
     MET_LIE_MARKOV_DECOMPOSITION
 };
 
+/** ascertainment bias correction type */
+enum ASCType {
+    ASC_NONE, // no ASC
+    ASC_VARIANT, // Lewis's correction for variant sites
+    ASC_VARIANT_MISSING, // Holder's correction for variant sites with missing data
+    ASC_INFORMATIVE, // correction for parsimony-informative sites
+    ASC_INFORMATIVE_MISSING // Holder's correction for informative sites with missing data
+};
+
 enum AncestralSeqType {
     AST_NONE, AST_MARGINAL, AST_JOINT
 };
 
+enum SymTest {
+    SYMTEST_NONE, SYMTEST_BINOM, SYMTEST_MAXDIV
+};
 
 const int BRLEN_OPTIMIZE = 0; // optimize branch lengths
 const int BRLEN_FIX      = 1; // fix branch lengths
 const int BRLEN_SCALE    = 2; // scale branch lengths
+const int TOPO_UNLINKED  = 3; // unlinked/separate tree topologies between partitions
 
 const int OUT_LOG       = 1; // .log file written or not
 const int OUT_TREEFILE  = 2; // .treefile file written or not
@@ -625,6 +659,9 @@ public:
 	 */
 	int sprDist;
 
+    /** cost matrix file for Sankoff parsimony */
+    char *sankoff_cost_file;
+    
 	/**
 	 *  Number of NNI locally optimal trees generated from the set of parsimony trees
 	 *  Default = 20 (out of 100 parsimony trees)
@@ -653,6 +690,11 @@ public:
 	 *  logl epsilon for model parameter optimization
 	 */
 	double modelEps;
+    
+    /**
+     logl epsilon for ModelFinder
+     */
+    double modelfinder_eps;
 
 	/**
 	 *  New search heuristics (DEFAULT: ON)
@@ -785,6 +827,12 @@ public:
     /* type of starting tree */
     START_TREE_TYPE start_tree;
 
+    /** TRUE to infer fast ML tree for ModelFinder */
+    bool modelfinder_ml_tree;
+    
+    /** TRUE to perform final model optimization */
+    bool final_model_opt;
+    
     /** name of constraint tree file in NEWICK format */
     char *constraint_tree_file;
 
@@ -802,12 +850,52 @@ public:
     bool phylip_sequential_format;
 
     /**
+     SYMTEST_NONE to not perform test of symmetry of Jermiin et al. (default)
+     SYMTEST_MAXDIV to perform symmetry test on the pair with maximum divergence
+     SYMTEST_BINOM to perform binomial test of all pair p-values
+    */
+    SymTest symtest;
+    
+    /** TRUE to do symtest then exist */
+    bool symtest_only;
+    
+    /**
+     1 to remove bad loci by SymTest
+     2 to remove good loci by SymTest
+     */
+    int symtest_remove;
+    
+    /** true to keep zero which may result in many taxon pairs not testable (default: false) */
+    bool symtest_keep_zero;
+    
+    /**
+        which test used when removing loci
+        0 test of symmetry (default)
+        1 test of marginal symmetry
+        2 test of internal symmetry
+     */
+    int symtest_type;
+    
+    /** pvalue cutoff (default: 0.05) */
+    double symtest_pcutoff;
+
+    /** TRUE to print all pairwise statistics */
+    double symtest_stat;
+
+    /** Times to shuffle characters within columns of the alignment */
+    int symtest_shuffle;
+
+    /**
             file containing multiple trees to evaluate at the end
      */
-    char *treeset_file;
+    string treeset_file;
 
     /** number of bootstrap replicates for tree topology test */
     int topotest_replicates;
+
+    /** TRUE to optimize model parameters for topology test,
+     FALSE (default) to only optimize branch lengths */
+    bool topotest_optimize_model;
 
     /** true to perform weighted SH and KH test */
     bool do_weighted_test;
@@ -821,24 +909,40 @@ public:
     char *partition_file;
 
     /**
+     *      IMPORTANT (2012-12-21): refactor this variable as below
      * 		defines the relation between edge lengths in supertree and subtrees
-     * 		0 (NULL) for separate edge length (default)
-     * 		'p' for proportional edge length
-     * 		'j' for joint edge length
+     * 		BRLEN_OPTIMIZE (0) for separate edge length (default)
+     * 		BRLEN_FIX (1) for joint edge length
+     * 		BRLEN_SCALE (2) for proportional edge length
      */
-    char partition_type;
+    int partition_type;
 
+    /** PartitionFinder algorithm, default MERGE_NONE */
+    PartitionMerge partition_merge;
+    
     /** percentage for rcluster algorithm like PartitionFinder */
     double partfinder_rcluster; 
 
     /** absolute limit on #partition pairs for rcluster algorithm */
     size_t partfinder_rcluster_max;
 
+    /** set of models used for model merging phase */
+    string merge_models;
+
+    /** set of rate models used for model merging phase */
+    string merge_rates;
+
+    /** use logarithm of rates for clustering algorithm */
+    bool partfinder_log_rate;
+    
     /** remove all-gap sequences in partition model to account for terrace default: TRUE */
     bool remove_empty_seq;
 
     /** use terrace aware data structure for partition models, default: TRUE */
     bool terrace_aware;
+
+    /** check if the tree lies on a terrace */
+    bool terrace_analysis;
 
     /**
             B, D, or P for Binary, DNA, or Protein sequences
@@ -882,7 +986,17 @@ public:
             alignment output format
      */
     AlnFormat aln_output_format;
+    
+    /**
+        output file format
+     */
+    FileFormat output_format;
 
+    /**
+     tree in extended newick format with node label like [&label=""]
+     */
+    bool newick_extended_format;
+    
     /**
             TRUE to discard all gappy positions
      */
@@ -892,6 +1006,9 @@ public:
      * TRUE to discard all constant sites
      */
     bool aln_no_const_sites;
+
+    /** TRUE to print .alninfo file */
+    bool print_aln_info;
 
     /**
             OBSOLETE compute parsimony score on trees
@@ -1079,6 +1196,20 @@ public:
      */
     bool is_rooted;
 
+    /**
+        maximum distance to move root
+     */
+    int root_move_dist;
+
+    /**
+     TRUE to find best root when optimizing model
+     */
+    bool root_find;
+
+    /**
+     TRUE to test all rooting positions at the end of the run
+     */
+    bool root_test;
 
     /**
             min branch length, used to create random tree/network
@@ -1135,6 +1266,22 @@ public:
     */
     char *support_tag;
 
+    /**
+        number of quartets for site concordance factor
+     */
+    int site_concordance;
+
+    /**
+     TRUE to print concordant sites per partition
+     */
+    bool site_concordance_partition;
+
+    /** TRUE to print trees associated with discordance factor 1 (NNI-1 tree) */
+    bool print_df1_trees;
+    
+    /** 1 to compute internode certainty */
+    int internode_certainty;
+    
     /**
             2nd alignment used in computing multinomialProb (Added by MA)
      */
@@ -1219,6 +1366,9 @@ public:
      */
     double split_weight_threshold;
 
+    /** TRUE to collapse zero branches, default FALSE */
+    bool collapse_zero_branch;
+
     /**
             Way to summarize split weight in the consensus tree or network: SW_SUM, SW_AVG_ALL, or SW_AVG_PRESENT
      */
@@ -1272,11 +1422,20 @@ public:
     /** number iterations for parameter optimization, default: 100 */
     int num_param_iterations;
 
+    /** number of independent runs (-nrun option) */
+    int num_runs;
+    
     /**
             name of the substitution model (e.g., HKY, GTR, TN+I+G, JC+G, etc.)
      */
     string model_name;
 
+    /** model name to initialize GTR20 or NONREV protein model */
+    char* model_name_init;
+
+    /** number of steps for linked model optimisation, default: 1 */
+    int model_opt_steps;
+    
     /** set of models for testing */
     char *model_set;
 
@@ -1295,6 +1454,9 @@ public:
     /** model defition file */
     char *model_def_file;
 
+    /** TRUE to perform ModelOMatic method of Whelan et al. 2015 */
+    bool modelomatic;
+    
     /** true to redo model testing even if .model file exists */
     bool model_test_again;
 
@@ -1325,6 +1487,13 @@ public:
             state frequency type
      */
     StateFreqType freq_type;
+
+    /** FALSE to set zero state frequency to 1e-4.
+        Default: FALSE (version <= 1.5.5), TRUE (ver >= 1.5.6) */
+    bool keep_zero_freq;
+    
+    /** minimal state frequency for optimisation, default=0.0001 */
+    double min_state_freq;
 
 
     /**
@@ -1435,6 +1604,9 @@ public:
     */
     char *bootstrap_spec;
 
+    /** 1 or 2 to perform transfer boostrap expectation (TBE) */
+    int transfer_bootstrap;
+    
     /**
             1 if output all intermediate trees (initial trees, NNI-optimal trees and trees after each NNI step)
             2 if output all intermediate trees + 1-NNI-away trees
@@ -1464,6 +1636,16 @@ public:
      */
     int rf_dist_mode;
 
+    /**
+     true to compute distance between the same k-th tree in two sets
+     */
+    bool rf_same_pair;
+    
+    /**
+     true to normalize tree distances, false otherwise
+     */
+    bool normalize_tree_dist;
+    
     /**
             compute the site-specific rates by Meyer & von Haeseler method
      */
@@ -1559,8 +1741,12 @@ public:
     */
     SiteFreqType print_site_state_freq;
 
-    /** TRUE to print site-specific rates, default: FALSE */
-    bool print_site_rate;
+    /**
+     0 (default): do not print .rate file
+     1: print site-specific rates by empirical Bayes
+     2: site-specific rates by maximum-likelihood
+     */
+    int print_site_rate;
 
     /* 1: print site posterior probability for many trees during tree search */
     int print_trees_site_posterior;
@@ -1785,8 +1971,12 @@ public:
 	/** true to print all UFBoot trees to a file */
 	int print_ufboot_trees;
 
-    int contree_rfdist;
+    /**********************************************/
+    /**** variables for jackknife ******************/
 
+    /** proportion of sites to be dropped in jackknife */
+    double jackknife_prop;
+    
     /****** variables for NNI cutoff heuristics ******/
 
     /**
@@ -1851,6 +2041,9 @@ public:
 
     /** number of threads for OpenMP version     */
     int num_threads;
+    
+    /** maximum number of threads, default: #CPU scores  */
+    int num_threads_max;
 
     /** either MTC_AIC, MTC_AICc, MTC_BIC */
     ModelTestCriterion model_test_criterion;
@@ -1884,6 +2077,12 @@ public:
 	/** TRUE to link alpha among Gamma model over partitions */
 	bool link_alpha;
 
+    /** TRUE to link substitution models over partitions */
+    bool link_model;
+
+    /** name of the joint model across partitions */
+    char* model_joint;
+    
 	/** true to count all distinct trees visited during tree search */
 	bool count_trees;
 
@@ -1900,6 +2099,9 @@ public:
 	 * 0: store all partial likelihood vectors
 	 * 1: only store 1 partial likelihood vector per node */
 	LhMemSave lh_mem_save;
+    
+    /** true to save buffer, default: false */
+    bool buffer_mem_save;
 
     /** maximum size of memory allowed to use */
     double max_mem_size;
@@ -1907,12 +2109,19 @@ public:
 	/* TRUE to print .splits file in star-dot format */
 	bool print_splits_file;
     
+    /* TRUE to print .splits.nex file in NEXUS format */
+    bool print_splits_nex_file;
+
+    
     /** TRUE (default) to ignore identical sequences and add them back at the end */
     bool ignore_identical_seqs;
 
     /** TRUE to write initial tree to a file (default: false) */
     bool write_init_tree;
 
+    /** TRUE to write branch lengths of partition trees for each branch of supertree */
+    bool write_branches;
+    
     /** frequencies of const patterns to be inserted into alignment */
     char *freq_const_patterns;
     /** BQM 2015-02-25: true to NOT rescale Gamma+Invar rates by (1-p_invar) */
@@ -1920,6 +2129,9 @@ public:
 
     /** true to compute sequence identity along tree */
     bool compute_seq_identity_along_tree;
+    
+    /** true to compute sequence composition */
+    bool compute_seq_composition;
     
     /** true to ignore checkpoint file */
     bool ignore_checkpoint;
@@ -1997,6 +2209,32 @@ struct PDRelatedMeasures {
 
 
 /*--------------------------------------------------------------*/
+    
+inline size_t get_safe_upper_limit(size_t cur_limit) {
+    if (Params::getInstance().SSE >= LK_AVX512)
+        // AVX-512
+        return ((cur_limit+7)/8)*8;
+    else
+        if (Params::getInstance().SSE >= LK_AVX)
+            // AVX
+            return ((cur_limit+3)/4)*4;
+        else
+            // SSE
+            return ((cur_limit+1)/2)*2;
+}
+
+inline size_t get_safe_upper_limit_float(size_t cur_limit) {
+    if (Params::getInstance().SSE >= LK_AVX512)
+        // AVX-512
+        return ((cur_limit+15)/16)*16;
+    else
+        if (Params::getInstance().SSE >= LK_AVX)
+            // AVX
+            return ((cur_limit+7)/8)*8;
+        else
+            // SSE
+            return ((cur_limit+3)/4)*4;
+}
 /*--------------------------------------------------------------*/
 
 /**
@@ -2124,6 +2362,12 @@ string convertInt64ToString(int64_t number);
 string convertDoubleToString(double number);
 
 /**
+ case-insensitive comparison between two strings
+ @return true if two strings are equal.
+ */
+bool iEquals(const string a, const string b);
+    
+/**
  *
  * @param SRC
  * @param DEST
@@ -2139,11 +2383,24 @@ bool copyFile(const char SRC[], const char DEST[]);
 bool fileExists(string strFilename);
 
 /**
+    check that path is a directory
+ */
+int isDirectory(const char *path);
+
+/**
+    get all file names in a directory
+    @param path directory name
+    @param[out] filenames vector of file names
+    return 0 if FAIL, non-zero otherwise
+ */
+int getFilesInDir(const char *path, StrVector &filenames);
+
+/**
         convert string to int, with error checking
         @param str original string
         @return the number
  */
-int convert_int(const char *str) throw (string);
+int convert_int(const char *str);
 
 /**
         convert string to int, with error checking
@@ -2151,21 +2408,21 @@ int convert_int(const char *str) throw (string);
         @param end_pos end position
         @return the number
  */
-int convert_int(const char *str, int &end_pos) throw (string);
+int convert_int(const char *str, int &end_pos);
 
 /**
         convert comma-separated string to integer vector, with error checking
         @param str original string with integers separated by comma
         @param vec (OUT) integer vector
  */
-void convert_int_vec(const char *str, IntVector &vec) throw (string);
+void convert_int_vec(const char *str, IntVector &vec);
 
 /**
         convert string to int64_t, with error checking
         @param str original string
         @return the number
  */
-int64_t convert_int64(const char *str) throw (string);
+int64_t convert_int64(const char *str);
 
 /**
         convert string to int64_t, with error checking
@@ -2173,14 +2430,14 @@ int64_t convert_int64(const char *str) throw (string);
         @param end_pos end position
         @return the number
  */
-int64_t convert_int64(const char *str, int &end_pos) throw (string);
+int64_t convert_int64(const char *str, int &end_pos);
 
 /**
         convert string to double, with error checking
         @param str original string
         @return the double
  */
-double convert_double(const char *str) throw (string);
+double convert_double(const char *str);
 
 /**
         convert string to double, with error checking
@@ -2188,7 +2445,7 @@ double convert_double(const char *str) throw (string);
         @param end_pos end position
         @return the double
  */
-double convert_double(const char *str, int &end_pos) throw (string);
+double convert_double(const char *str, int &end_pos);
 
 /**
         convert comma-separated string to integer vector, with error checking
@@ -2196,7 +2453,7 @@ double convert_double(const char *str, int &end_pos) throw (string);
         @param vec (OUT) integer vector
         @param separator char separating elements
  */
-void convert_double_vec(const char *str, DoubleVector &vec, char separator = ',') throw (string);
+void convert_double_vec(const char *str, DoubleVector &vec, char separator = ',');
 
 /**
  * Convert seconds to hour, minute, second
@@ -2213,7 +2470,7 @@ string convert_time(const double sec);
         @param upper (OUT) upper bound of the range
         @param step_size (OUT) step size of the range
  */
-void convert_range(const char *str, int &lower, int &upper, int &step_size) throw (string);
+void convert_range(const char *str, int &lower, int &upper, int &step_size);
 
 /**
         convert a string to to range lower:upper:step_size with error checking
@@ -2222,9 +2479,16 @@ void convert_range(const char *str, int &lower, int &upper, int &step_size) thro
         @param upper (OUT) upper bound of the range
         @param step_size (OUT) step size of the range
  */
-void convert_range(const char *str, double &lower, double &upper, double &step_size) throw (string);
+void convert_range(const char *str, double &lower, double &upper, double &step_size);
 
-void convert_string_vec(const char *str, StrVector &str_vec) throw (string);
+void convert_string_vec(const char *str, StrVector &str_vec);
+
+/**
+    change unusual character in names into underscore (_)
+    @param[in/out] name string name
+    @return true if renamed, false otherwise
+ */
+bool renameString(string &name);
 
 /**
         read the file containing branch/split scaling factor and taxa weights
@@ -2299,7 +2563,7 @@ void parseArg(int argc, char *argv[], Params &params);
 		IN_COUNTSFILE if in counts format (PoMo),
                 IN_OTHER if file format unknown.
  */
-InputType detectInputFile(char *input_file);
+InputType detectInputFile(const char *input_file);
 
 /**
         if file exists, ask user to overwrite it or not
@@ -2311,9 +2575,8 @@ bool overwriteFile(char *filename);
 /**
         print usage information
         @param argv program arguments list
-        @param full_command TRUE to print all available commands, FALSE to print normal usage dialog
  */
-void usage(char* argv[], bool full_command);
+void usage(char* argv[]);
 
 /**
  *   Print a string into a file
@@ -2412,6 +2675,18 @@ void my_random_shuffle (T first, T last, int *rstream = NULL)
 		swap (first[i],first[random_int(i+1, rstream)]);
 	}
 }
+
+/**
+ random resampling according to bootstrap or jackknife
+ @param n sample size
+ @param[in/out] sample array of size n with frequency of resampling
+ @param rstream random number generator stream
+*/
+void random_resampling(int n, IntVector &sample, int *rstream = NULL);
+
+#define RESAMPLE_NAME ((Params::getInstance().jackknife_prop == 0.0) ? "bootstrap" : "jackknife")
+#define RESAMPLE_NAME_I ((Params::getInstance().jackknife_prop == 0.0) ? "Bootstrap" : "Jackknife")
+#define RESAMPLE_NAME_UPPER ((Params::getInstance().jackknife_prop == 0.0) ? "BOOTSTRAP" : "JACKKNIFE")
 
 /**
  * generic function for sorting by index
@@ -2669,5 +2944,21 @@ T StringToNumber ( const string &Text )
     T result;
     return ss >> result ? result : 0;
 }
+
+// Calculate logarithm of binomial coefficient N choose i.
+double binomial_coefficient_log(unsigned int N, unsigned int i);
+
+// Calculate probability of having k out of N successes when the probability of
+// a success is p under the binomial distribution.
+double binomial_dist(unsigned int k, unsigned int N, double p);
+
+// Calculate probability of having k out of n successes when there are K out of
+// N successes in the pool under the hypergeometric distribution.
+double hypergeometric_dist(unsigned int k, unsigned int n, unsigned int K, unsigned int N);
+
+// Calculate the Frobenius norm of an N x N matrix M (flattened, rows
+// concatenated) and linearly scaled by SCALE.
+double frob_norm (double m[], int n, double scale=1.0);
+
 
 #endif

@@ -704,6 +704,8 @@ bool Optimization::restartParameters(double guess[], int ndim, double lower[], d
 	} // for
     } // if iteration
     if (restart) {
+      // TODO: Dominik observed that this warning is printed even during model
+      // testing. A quieter solution might be preferred.
 	cout << "Restart estimation at the boundary... " << std::endl;
         for (i = 1; i <= ndim; i++) {
 	    guess[i] = random_double() * (upper[i] - lower[i])/3 + lower[i];
@@ -714,7 +716,7 @@ bool Optimization::restartParameters(double guess[], int ndim, double lower[], d
 
 double Optimization::minimizeMultiDimen(double guess[], int ndim, double lower[], double upper[], bool bound_check[], double gtol, double *hessian) {
 	int i, iter;
-	double fret, minf = 10000000.0;
+	double fret, minf = 1e+12;
 	double *minx = new double [ndim+1];
 	int count = 0;
 	bool restart;
@@ -1106,7 +1108,7 @@ double Optimization::L_BFGS_B(int n, double* x, double* l, double* u, double pgt
 //#endif
 
     if (fail == 51 || fail == 52) {
-        cerr << msg << endl;
+        cout << msg << endl;
     }
 
 	delete[] nbd;

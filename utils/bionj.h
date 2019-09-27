@@ -133,13 +133,15 @@ void Initialize(float **delta, FILE *input, int n, POINTERS *trees)
   int lig;                                          /* matrix line       */
   int col;                                          /* matrix column     */
   float distance;
-  char name_taxon[LEN];                             /* taxon�s name      */
+  char name_taxon[LEN];                             /* taxon name      */
   WORD *name;
 
   for(lig=1; lig <= n; lig++)
     {
-      fscanf(input,"%s",name_taxon);                  /* read taxon�s name */
-      name=(WORD *)calloc(1,sizeof(WORD));            /* taxon�s name is   */
+      // Read taxon name.
+      if (fscanf(input,"%s",name_taxon) != 1)
+        printf("Failed to read taxon name.\n");
+      name=(WORD *)calloc(1,sizeof(WORD));            /* taxon name is   */
       if(name == NULL)                                /* put in trees      */
 	{
 	  printf("Out of memories !!");
@@ -153,7 +155,9 @@ void Initialize(float **delta, FILE *input, int n, POINTERS *trees)
 	  trees[lig].tail=name;
 	  for(col= 1; col <= n; col++)
 	    {
-	      fscanf(input,"%f",&distance);             /* read the distance  */
+        // Read distance.
+        if (fscanf(input,"%f",&distance) != 1)
+          printf("Failed to read distance.\n");
 	      delta[lig][col]=distance;
 	    }
 	}
@@ -673,7 +677,8 @@ int create(const char *inputFile, const char *outputFile) {
   chain2=(char *)calloc(LEN,sizeof(char));
 
   input= fopen(inputFile,"r");
-  fscanf(input,"%d",&n);
+  if (fscanf(input,"%d",&n) != 1)
+    printf("Error reading input file.");
 
   output= fopen(outputFile,"w");
   /*      Create the delta matrix     */

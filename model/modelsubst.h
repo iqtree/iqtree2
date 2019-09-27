@@ -27,6 +27,7 @@ Substitution model abstract class
 class ModelSubst: public Optimization, public CheckpointFactory
 {
 	friend class ModelFactory;
+    friend class PartitionModel;
 
 public:
 	/**
@@ -61,6 +62,17 @@ public:
 	*/
 	virtual bool isReversible() { return true; };
 	
+    /**
+        fix parameters of the model
+        @param fix true to fix, false to not fix
+        @return the current state of fixing parameters
+     */
+    virtual bool fixParameters(bool fix) {
+        bool current = fixed_parameters;
+        fixed_parameters = fix;
+        return current;
+    }
+    
 	/**
 	 * @return TRUE if this is a site-specific model, FALSE otherwise
 	 */
@@ -118,6 +130,18 @@ public:
 			in the upper-diagonal of the rate matrix (since model is reversible)
 	*/
 	virtual int getNumRateEntries() { return num_states*(num_states-1)/2; }
+    
+    /**
+     set num_params variable
+     */
+    virtual void setNParams(int num_params) {}
+    
+    /**
+     get num_params variable
+     */
+    virtual int getNParams() {
+        return 0;
+    }
 
 	/**
 	 * get the size of transition matrix, default is num_states*num_states.
@@ -209,9 +233,15 @@ public:
 		compute the state frequency vector. One should override this function when defining new model.
 		The default is equal state sequency, valid for all kind of data.
         @param mixture (optional) class for mixture model
-		@param state_freq (OUT) state frequency vector. Assume state_freq has size of num_states
+		@param[out] state_freq state frequency vector. Assume state_freq has size of num_states
 	*/
 	virtual void getStateFrequency(double *state_freq, int mixture = 0);
+
+    /**
+     set the state frequency vector.
+     @param state_freq state frequency vector. Assume state_freq has size of num_states
+     */
+    virtual void setStateFrequency(double *state_freq);
 
 	/**
 		get frequency type
@@ -298,6 +328,11 @@ public:
     	return num_states*sizeof(double);
     }
 
+    /**
+    * get the underlying mutation model, used with PoMo model
+    */
+    virtual ModelSubst *getMutationModel() { return this; }
+
 	/*****************************************************
 		Checkpointing facility
 	*****************************************************/
@@ -316,7 +351,7 @@ public:
         restore object from the checkpoint
     */
     virtual void restoreCheckpoint();
-
+    
 	/**
 		number of states
 	*/
@@ -332,7 +367,10 @@ public:
 		full name of the model
 	*/
 	string full_name;
-	
+    
+    /** true to fix parameters, otherwise false */
+    bool fixed_parameters;
+
 	/**
 	 state frequencies
 	 */
@@ -366,6 +404,7 @@ protected:
 	*/
 	virtual bool getVariables(double *variables) { return false; }
 
+    
 };
 
 #endif

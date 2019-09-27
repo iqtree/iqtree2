@@ -183,6 +183,8 @@ void ModelDNA::init(const char *model_name, string model_params, StateFreqType f
 		    full_name = "Time reversible ("+name+")";
 		} else {
 			readParameters(model_name);
+            name = full_name = model_name;
+            freq = FREQ_USER_DEFINED;
 			//name += " (user-defined)";
 		}
 	}
@@ -193,9 +195,11 @@ void ModelDNA::init(const char *model_name, string model_params, StateFreqType f
 	if (model_params != "") {
 	  readRates(model_params);
 	}
-
+	
 	if (freq == FREQ_UNKNOWN ||  def_freq == FREQ_EQUAL) freq = def_freq;
 	ModelMarkov::init(freq);
+//    model_parameters = new double [getNDim()+1]; // see setVariables for explaination of +1
+//    setVariables(model_parameters);
 }
 
 void ModelDNA::startCheckpoint() {
@@ -203,21 +207,32 @@ void ModelDNA::startCheckpoint() {
 }
 
 void ModelDNA::saveCheckpoint() {
+    // construct model_parameters from rates and base freqs. 
+    // This is one-indexed, so parameters are in model_parameters[1]
+    // up to model_parameters[num_params]
+//    setVariables(model_parameters);
     startCheckpoint();
-    CKP_ARRAY_SAVE(6, rates);
+    if (!fixed_parameters)
+        CKP_ARRAY_SAVE(6, rates);
     endCheckpoint();
     ModelMarkov::saveCheckpoint();
 }
 
 void ModelDNA::restoreCheckpoint() {
+  // curiously, this seems to be the only plase ModelDNA uses model_parameters.
     ModelMarkov::restoreCheckpoint();
     startCheckpoint();
-    CKP_ARRAY_RESTORE(6, rates);
+    if (!fixed_parameters)
+        CKP_ARRAY_RESTORE(6, rates);
     endCheckpoint();
+//    getVariables(model_parameters);       // updates rates and state_freq
     string rate_spec = param_spec;
     for (auto i = rate_spec.begin(); i != rate_spec.end(); i++)
         *i = *i + '0';
-    ASSERT(setRateType(rate_spec));
+    
+    if (!rate_spec.empty())
+        if (!setRateType(rate_spec))
+            ASSERT(0 && "Cannot set rate_spec");
 
     decomposeRateMatrix();
     if (phylo_tree)
@@ -231,24 +246,25 @@ void ModelDNA::readRates(string str) throw(const char*) {
 	for (j = 0; j < param_spec.length(); j++)
 		rates[j] = 1.0;
 	num_params = 0;
-	for (i = 0; i < nrates && end_pos < str.length(); i++) {
+	for (i = 0; i <= nrates && end_pos < str.length(); i++) {
 		int new_end_pos;
 		double rate = 0;
+        int id = (i < nrates) ? i+1 : 0;
 		if (str[end_pos] == '?') {
-			param_fixed[i+1] = false;
+			param_fixed[id] = false;
 			end_pos++;
 			rate = 1.0;
 			num_params++;
 		} else {
             if (Params::getInstance().optimize_rate_matrix) {
                 num_params++;
-                param_fixed[i+1] = false;
+                param_fixed[id] = false;
             } else
 	        if (Params::getInstance().optimize_from_given_params) {
                     num_params++;
-                    param_fixed[i+1] = false;
+                    param_fixed[id] = false;
 	        } else {
-	            param_fixed[i+1] = true;
+	            param_fixed[id] = true;
 	        }
 			try {
 				rate = convert_double(str.substr(end_pos).c_str(), new_end_pos);
@@ -259,7 +275,7 @@ void ModelDNA::readRates(string str) throw(const char*) {
 		}
 		if (rate < 0.0)
 			outError("Negative rates found");
-		if (i == nrates-1 && end_pos < str.length())
+		if (i == nrates && end_pos < str.length())
 			outError("More than " + convertIntToString(nrates) + " rate parameters specified in " + str);
 		if (i < nrates-1 && end_pos >= str.length())
 			outError("Unexpected end of string ", str);
@@ -267,7 +283,7 @@ void ModelDNA::readRates(string str) throw(const char*) {
 			outError("Comma to separate rates not found in ", str);
 		end_pos++;
 		for (j = 0; j < param_spec.length(); j++)
-			if (param_spec[j] == i+1)
+			if (param_spec[j] == id)
 				rates[j] = rate;
 	}
 }
@@ -276,17 +292,20 @@ void ModelDNA::readRates(string str) throw(const char*) {
 string ModelDNA::getNameParams() {
 	if (num_params == 0) return name;
 	ostringstream retname;
-	retname << name << '{';
-	int nrates = getNumRateEntries();
-	int k = 0;
-	for (int i = 0; i < nrates; i++) {
-		if (param_spec[i] > k) {
-			if (k>0) retname << ',';
-			retname << rates[i];
-			k++;
-		}
-	}
-	retname << '}';
+    retname << name;
+    if (!fixed_parameters) {
+        retname << '{';
+        int nrates = getNumRateEntries();
+        int k = 0;
+        for (int i = 0; i < nrates; i++) {
+            if (param_spec[i] > k) {
+                if (k>0) retname << ',';
+                retname << rates[i];
+                k++;
+            }
+        }
+        retname << '}';
+    }
     getNameParamsFreq(retname);
 	return retname.str();
 }
@@ -352,7 +371,10 @@ bool ModelDNA::setRateType(string rate_str) {
 	for (i = 0; i <= num_params; i++)
 		avg_rates[i] /= num_rates[i];
 	for (i = 0; i < param_spec.size(); i++) {
-		rates[i] = avg_rates[(int)param_spec[i]] / avg_rates[0];
+        if (avg_rates[0] > 0.0)
+            rates[i] = avg_rates[(int)param_spec[i]] / avg_rates[0];
+        else
+            rates[i] = avg_rates[(int)param_spec[i]];
 	}
 	if (verbose_mode >= VB_DEBUG) {
 		cout << "Initialized rates: ";
@@ -360,8 +382,14 @@ bool ModelDNA::setRateType(string rate_str) {
 			cout << rates[i] << " ";
 		cout << endl;
 	}
-	param_fixed.resize(num_params+1, false);
-	param_fixed[0] = true; // fix the last entry
+    if (param_fixed.size() == num_params + 1) {
+        num_params = 0;
+        for (auto p : param_fixed)
+            if (!p) num_params++;
+    } else {
+        param_fixed.resize(num_params+1, false);
+        param_fixed[0] = true; // fix the last entry
+    }
 	delete [] num_rates;
 	delete [] avg_rates;
 	return true;
@@ -369,10 +397,15 @@ bool ModelDNA::setRateType(string rate_str) {
 
 
 int ModelDNA::getNDim() {
+    if (fixed_parameters)
+        return 0;
 	ASSERT(freq_type != FREQ_UNKNOWN);
 	// possible TO-DO: cache nFreqParams(freq_type) to avoid repeat calls.
 //        return (num_params+nFreqParams(freq_type));
 
+//    if (linked_model && linked_model != this)
+//        return 0;
+    
 	int ndim = num_params;
 	if (freq_type == FREQ_ESTIMATE) 
 		ndim += num_states-1;
@@ -398,8 +431,8 @@ void ModelDNA::writeParameters(ostream &out) {
 }
 
 /*
- * getVariables *writes* the variables (i.e. model parameters).
- * Returns true if any variables have changed, false if not.
+ * getVariables *changes* the state of the model, setting from *variables
+ * Returns true if the model state has changed, false if not.
  */
 bool ModelDNA::getVariables(double *variables) {
     int i;
@@ -421,16 +454,16 @@ bool ModelDNA::getVariables(double *variables) {
         // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
 		int ndim = getNDim();
 		changed |= memcmpcpy(state_freq, variables+(ndim-num_states+2), (num_states-1)*sizeof(double));
+//                double sum = 0;
+//                for (i = 0; i < num_states-1; i++)
+//                        sum += state_freq[i];
+//                state_freq[num_states-1] = 1.0 - sum;
     } else {
         // BQM: for special DNA freq stuffs from MDW
         changed |= freqsFromParams(state_freq,variables+num_params+1,freq_type);
     }
     return changed;
 
-//              double sum = 0;
-//              for (i = 0; i < num_states-1; i++) 
-//                      sum += state_freq[i];
-//              state_freq[num_states-1] = 1.0 - sum;
 
         // BUG FIX 2015.08.28
 //        int nrate = getNDim();
@@ -448,7 +481,17 @@ bool ModelDNA::getVariables(double *variables) {
 }
 
 /*
- * setVariables *reads* the variables (i.e. model parameters).
+ * setVariables *reads* the state of the model and writes into "variables"
+ * Model does not change state. *variables should have length getNDim()+1
+ * If param_spec is (e.g.) 012210 (e.g. K3P model) then in general
+ * we'd have rates 0 and 5 (A<->C and G<->T) written to variables[0],
+ * rates 1 and 4 to variables[1] and rates 2 and 3 to variables[2].
+ * However one of these (typically 0) is 'fixed' (param_fixed)
+ * to always have value 1, and this doesn't get written. 
+ * num_parameters in this case will be two, for two free rates parameters.
+ * Base frequency parameters get written after the rate parameters, so
+ * K3P+FO model (i.e. fits base frequencies with no constraints) would
+ * use variables[3] to variables[5] (3 values) to store base freq info. 
  */
 void ModelDNA::setVariables(double *variables) {
     if (num_params > 0) {

@@ -31,6 +31,7 @@ const double MIN_RATE = 1e-4;
 const double TOL_RATE = 1e-4;
 const double MAX_RATE = 100;
 
+string freqTypeString(StateFreqType freq_type, SeqType seq_type, bool full_str);
 
 /**
 General Markov model of substitution (reversible or non-reversible)
@@ -44,14 +45,17 @@ class ModelMarkov : public ModelSubst, public EigenDecomposition
 	friend class ModelSet;
 	friend class ModelMixture;
     friend class ModelPoMo;
+    friend class PartitionModel;
+    friend class PartitionModelPlen;
 	
 public:
 	/**
 		constructor
 		@param tree associated tree for the model
         @param reversible TRUE (default) for reversible model, FALSE for non-reversible
+        @param adapt_tree TRUE (default) to convert rooted<->unrooted tree
 	*/
-    ModelMarkov(PhyloTree *tree, bool reversible = true);
+    ModelMarkov(PhyloTree *tree, bool reversible = true, bool adapt_tree = true);
 
 	/**
 		@return TRUE if model is time-reversible, FALSE otherwise
@@ -61,8 +65,9 @@ public:
     /**
         set the reversibility of the model
         @param reversible TRUE to make model reversible, FALSE otherwise
+        @param adapt_tree TRUE (default) to convert between rooted and unrooted tree
     */
-    virtual void setReversible(bool reversible);
+    virtual void setReversible(bool reversible, bool adapt_tree = true);
 
 
 	/**
@@ -104,7 +109,7 @@ public:
         restore object from the checkpoint
     */
     virtual void restoreCheckpoint();
-
+    
 	/**
 	 * @return model name
 	 */
@@ -163,10 +168,15 @@ public:
 
 	/**
 		read model parameters from a file
-		@param file_name file containing upper-triangle rate matrix and state frequencies
+		@param file_name file containing rate matrix and state frequencies
 	*/
 	void readParameters(const char *file_name);
 
+	/**
+		read model parameters from a string
+		@param model_str string containing rate matrix and state frequencies
+	*/
+	void readParametersString(string &model_str);
 
 	/**
 		compute the transition probability matrix.
@@ -176,6 +186,15 @@ public:
 			Assume trans_matrix has size of num_states * num_states.
 	*/
 	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0);
+
+    /**
+     compute the transition probability matrix for non-reversible model
+     @param time time between two events
+     @param mixture (optional) class for mixture model
+     @param trans_matrix (OUT) the transition matrix between all pairs of states.
+     Assume trans_matrix has size of num_states * num_states.
+     */
+    virtual void computeTransMatrixNonrev(double time, double *trans_matrix, int mixture = 0);
 
 	/**
 		compute the transition probability between two states
@@ -207,6 +226,13 @@ public:
 	*/
 	virtual void setRateMatrix(double *rate_mat);
 
+    /**
+     Set the full rate matrix of size num_states*num_states
+     @param rate_mat full rate matrix
+     @param freq state frequency
+     */
+    virtual void setFullRateMatrix(double *rate_mat, double *freq);
+
 	/**
 		compute the state frequency vector
         @param mixture (optional) class for mixture model
@@ -219,6 +245,12 @@ public:
 		@param state_freq (IN) state frequency vector. Assume state_freq has size of num_states
 	*/
 	virtual void setStateFrequency(double *state_freq);
+
+    /**
+     set the state frequency vector
+     @param state_freq (IN) state frequency vector. Assume state_freq has size of num_states
+     */
+    virtual void adaptStateFrequency(double *state_freq);
 
 	/**
 	 * compute Q matrix 
@@ -286,6 +318,16 @@ public:
 	 */
 	virtual bool isUnstableParameters();
 
+  // A simple helper function that prints the rates in a nice way and can be
+  // reused by children. The title is necessary, because, e.g., for PoMo, the
+  // rates are mutation rates and not substitution rates, and also
+  // exchangeabilities may be reported.
+  void report_rates(ostream &out, string title, double *r);
+
+  // Report the stationary frequencies state_freq or custom_state_freq (if
+  // given) to output stream out.
+  void report_state_freqs(ostream &out, double *custom_state_freq=NULL);
+
 	/**
 		write information
 		@param out output stream
@@ -298,6 +340,8 @@ public:
 	*/
 	virtual void writeParameters(ostream &out){}
 
+    /** decompose rate matrix for non-reversible models */
+    virtual void decomposeRateMatrixNonrev();
 
 	/**
 		decompose the rate matrix into eigenvalues and eigenvectors
@@ -344,8 +388,39 @@ public:
      */
     static bool validModelName(string model_name);
 
+  // Mon Jul 3 14:47:08 BST 2017; added by Dominik. I had problems with mixture
+  // models together with PoMo and rate heterogeneity. E.g., a model
+  // "MIX{HKY+P+N9+G2,GTR+P+N9+G2}" leads to segmentation faults because the
+  // `ModelPoMoMixture` reports a /wrong/ number of states (i.e., it reports 52
+  // instead of 104). Consequently, the `initMem()` function of ModelMixture,
+  // messes up the `eigenvalues`, etc., variables of the `ModelPoMoMixture`s. I
+  // circumvent this, by adding this virtual function; for normal models, it
+  // just returns `num_states`, however, for mixture models, it returns
+  // `num_states*nmixtures`.
+  virtual int get_num_states_total();
+
+  // Mon Jul 3 15:53:00 BST 2017; added by Dominik. Same problem as with
+  // `get_num_states_total()`. The pointers to the eigenvalues and eigenvectors
+  // need to be updated recursively, if the model is a mixture model. For a
+  // normal Markov model, only the standard pointers are set. This was done in
+  // `ModelMixture::initMem()` before.
+  virtual void update_eigen_pointers(double *eval, double *evec, double *inv_evec);
 
 
+    /**
+        set num_params variable
+     */
+    virtual void setNParams(int num_params) {
+        this->num_params = num_params;
+    }
+    
+    /**
+        get num_params variable
+     */
+    virtual int getNParams() {
+        return num_params;
+    }
+    
 protected:
 
 	/**
@@ -430,16 +505,6 @@ protected:
 	void computeTransMatrixEigen(double time, double *trans_matrix);
 
 	/**
-	    Model parameters - cached so we know when they change, and thus when
-	    recalculations are needed.
-
-	 */
-	double *model_parameters;
-
-	/** true to fix parameters, otherwise false */
-	bool fixed_parameters;
-
-	/**
 		unrestricted Q matrix. Note that Q is normalized to 1 and has row sums of 0.
 		no state frequencies are involved here since Q is a general matrix.
 	*/
@@ -448,16 +513,16 @@ protected:
 	/** imaginary part of eigenvalues */
 	double *eigenvalues_imag;
 	
-	/**
-		temporary working space
-	*/
-	double *temp_space;
-    
     /**
         complex eigenvalues and eigenvectors, pointing to the same pointer 
         to the previous double *eigenvalues and double *eigenvectors
     */
     std::complex<double> *ceval, *cevec, *cinv_evec;
+
+    /** will be set true for nondiagonalizable rate matrices,
+     then will use scaled squaring method for matrix exponentiation.
+    */
+    bool nondiagonalizable;
 
 };
 

@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# link this file in your git-hooks, for example with:
+#      ln .git/hooks/pre-commit pre-commit
+
+if ./scripts/format.sh check
+then
+	echo "nothing to format"
+else
+	echo "unformatted files, please format and stage again" >&2
+	exit 1
+fi
+
+if lizard include lib app test &> "/dev/null"; then
+	echo "no overcomplicated functions found"
+else
+	echo "lizard-warnings found... aborting" >&2
+	exit 1
+fi
+
+cd "build/debug" 
+if ninja ;then
+	echo "debug-build successfull"
+else
+	echo "build-failure... aborting" >&2
+	exit 2
+fi
+cd "../.."
+
+cd "build/debug" 
+if ninja test &> "/dev/null";then
+	echo "unit-tests run succesfully"
+else
+	echo "unit-tests failed... aborting" >&2
+	exit 2
+fi
+cd "../.."

@@ -8,6 +8,7 @@
 
 #include "modelpomomixture.h"
 #include "rategamma.h"
+#include "utils/tools.h"
 
 ModelPoMoMixture::ModelPoMoMixture(const char *model_name,
                      string model_params,
@@ -15,14 +16,14 @@ ModelPoMoMixture::ModelPoMoMixture(const char *model_name,
                      string freq_params,
                      PhyloTree *tree,
                      string pomo_params, string pomo_rate_str)
-	:  
+	:
         ModelMarkov(tree),
         ModelPoMo(model_name, model_params, freq_type, freq_params, tree, pomo_params),
         ModelMixture(tree)
-    
+
 {
-    optimizing_ratehet = false;
-    
+    opt_mode = OPT_NONE;
+
     // get number of categories
     int m, num_rate_cats = 4;
     if (pomo_rate_str.length() > 2 && isdigit(pomo_rate_str[2])) {
@@ -33,6 +34,12 @@ ModelPoMoMixture::ModelPoMoMixture(const char *model_name,
 
     // initialize rate heterogeneity
     ratehet = new RateGamma(num_rate_cats, Params::getInstance().gamma_shape, Params::getInstance().gamma_median, tree);
+
+    // Adjust name.
+    // this->name += pomo_rate_str;
+    // this->full_name += " Gamma rate heterogeneity with " + convertIntToString(num_rate_cats) + " components;";
+    this->name += ratehet->name;
+    this->full_name += ratehet->full_name;
 
     // initialize mixture
     prop = aligned_alloc<double>(num_rate_cats);
@@ -49,34 +56,50 @@ ModelPoMoMixture::ModelPoMoMixture(const char *model_name,
     // allocate memory for mixture components so that they are continuous in RAM
     initMem();
 
-    // TODO: why calling this init here
-    ModelMarkov::init(FREQ_USER_DEFINED);
-    
+    // TODO: why calling this here?
+    ModelMarkov::init(freq_type);
+
 }
 
 
-
+string ModelPoMoMixture::getName() {
+    return ModelPoMo::getName();
+}
 
 ModelPoMoMixture::~ModelPoMoMixture() {
 }
 
+void ModelPoMoMixture::setCheckpoint(Checkpoint *checkpoint) {
+	ModelPoMo::setCheckpoint(checkpoint);
+    ratehet->setCheckpoint(checkpoint);
+}
+
 void ModelPoMoMixture::startCheckpoint() {
-    ModelPoMo::startCheckpoint();
+    checkpoint->startStruct("ModelPoMoMixture");
 }
 
 void ModelPoMoMixture::saveCheckpoint() {
     ModelPoMo::saveCheckpoint();
+    startCheckpoint();
+    ratehet->saveCheckpoint();
+    endCheckpoint();
 }
 
 void ModelPoMoMixture::restoreCheckpoint() {
+    // ratehet needs to be restored first, so that decomposeRateMatrix works properly
+    startCheckpoint();
+    ratehet->restoreCheckpoint();
+    endCheckpoint();
     ModelPoMo::restoreCheckpoint();
 }
 
 
 int ModelPoMoMixture::getNDim() {
-    if (optimizing_ratehet)
+    if (opt_mode == OPT_RATEHET)
         return ratehet->getNDim();
-    return ModelPoMo::getNDim();
+    else if (opt_mode == OPT_POMO)
+        return ModelPoMo::getNDim();
+    else return ratehet->getNDim()+ModelPoMo::getNDim();
 }
 
 
@@ -86,7 +109,7 @@ int ModelPoMoMixture::getNDimFreq() {
 
 
 double ModelPoMoMixture::targetFunk(double x[]) {
-    if (optimizing_ratehet) {
+    if (opt_mode == OPT_RATEHET) {
         getVariables(x);
         phylo_tree->clearAllPartialLH();
         return -phylo_tree->computeLikelihood();
@@ -97,10 +120,12 @@ double ModelPoMoMixture::targetFunk(double x[]) {
 
 
 void ModelPoMoMixture::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
-    if (optimizing_ratehet) {
+    if (opt_mode == OPT_RATEHET) {
 //        ratehet->setBounds(lower_bound, upper_bound, bound_check);
-        lower_bound[1] = 0.2;
-        upper_bound[1] = 100.0;
+        lower_bound[1] = max(POMO_GAMMA_MIN, Params::getInstance().min_gamma_shape);
+        upper_bound[1] = POMO_GAMMA_MAX;
+        // Boundary checking is the preferred solution to warn the user if the
+        // shape parameter hits the boundary, but it seems to be too verbose.
         bound_check[1] = false;
         return;
     }
@@ -112,41 +137,47 @@ void ModelPoMoMixture::writeInfo(ostream &out) {
     ModelPoMo::writeInfo(out);
 }
 
+
 void ModelPoMoMixture::decomposeRateMatrix() {
     // propagate eigenvalues and eigenvectors
     int m, nmix = getNMixtures(), num_states_2 = num_states*num_states;
-    double saved_mutation_rates[n_connections]; 
-    memcpy(saved_mutation_rates, mutation_rates, sizeof(double)*n_connections);
+    double saved_mutation_rate_matrix[n_alleles*n_alleles];
+    memcpy(saved_mutation_rate_matrix, mutation_rate_matrix, sizeof(double)*n_alleles*n_alleles);
 
-    // trick: reverse loop to retain eigenvalues and eigenvectors of the 0th mixture class 
+    // trick: reverse loop to retain eigenvalues and eigenvectors of the 0th mixture class
     for (m = nmix-1; m >= 0; m--) {
         // rescale mutation_rates
-        scaleMutationRatesAndUpdateRateMatrix(ratehet->getRate(m));
+        setScale(ratehet->getRate(m));
         ModelPoMo::decomposeRateMatrix();
+        // TODO Check! TEST: copy state frequency
+        ModelPoMo::getStateFrequency(at(m)->state_freq);
         // copy eigenvalues and eigenvectors
         if (m > 0) {
             memcpy(eigenvalues+m*num_states, eigenvalues, sizeof(double)*num_states);
             memcpy(eigenvectors+m*num_states_2, eigenvectors, sizeof(double)*num_states_2);
             memcpy(inv_eigenvectors+m*num_states_2, inv_eigenvectors, sizeof(double)*num_states_2);
         }
-        // restore mutation_rates
-        memcpy(mutation_rates, saved_mutation_rates, sizeof(double)*n_connections);
+        // restore mutation_rate matrix
+        memcpy(mutation_rate_matrix, saved_mutation_rate_matrix, sizeof(double)*n_alleles*n_alleles);
     }
+    // // Reset scale.
+    setScale(1.0);
     updatePoMoStatesAndRateMatrix();
+    ModelPoMo::getStateFrequency(state_freq);
 }
 
 
 void ModelPoMoMixture::setVariables(double *variables) {
-    if (optimizing_ratehet) {
+    if (opt_mode == OPT_RATEHET) {
         ratehet->setVariables(variables);
         return;
     }
-    ModelPoMo::setVariables(variables);     
+    ModelPoMo::setVariables(variables);
 }
 
 
 bool ModelPoMoMixture::getVariables(double *variables) {
-    if (optimizing_ratehet) {
+    if (opt_mode == OPT_RATEHET) {
         bool changed = ratehet->getVariables(variables);
         if (changed) {
             decomposeRateMatrix();
@@ -160,14 +191,21 @@ bool ModelPoMoMixture::getVariables(double *variables) {
 double ModelPoMoMixture::optimizeParameters(double gradient_epsilon) {
 
     // first optimize pomo model parameters
+    opt_mode = OPT_POMO;
     double score = ModelPoMo::optimizeParameters(gradient_epsilon);
-    
+    opt_mode = OPT_NONE;
+
     // then optimize rate heterogeneity
     if (ratehet->getNDim() > 0) {
-        optimizing_ratehet = true;
+        opt_mode = OPT_RATEHET;
         double score_ratehet = ModelPoMo::optimizeParameters(gradient_epsilon);
-        ratehet->writeInfo(cout);
-        optimizing_ratehet = false;
+        if (verbose_mode >= VB_MIN) {
+          double shape = ratehet->getGammaShape();
+          if (shape <= POMO_GAMMA_MIN)
+            outWarning("The shape parameter of the gamma rate heterogeneity is hitting the lower boundary.");
+          ratehet->writeInfo(cout);
+        }
+        opt_mode = OPT_NONE;
         ASSERT(score_ratehet >= score-0.1);
         return score_ratehet;
     }
@@ -184,10 +222,40 @@ void ModelPoMoMixture::report(ostream &out) {
     phylo_tree->setRate(saved_rate);
 }
 
+int ModelPoMoMixture::get_num_states_total() {
+  // We assume that all mixture model components have the same number of states.
+  return num_states * getNMixtures();
+}
+
+void ModelPoMoMixture::update_eigen_pointers(double *eval, double *evec, double *inv_evec) {
+  eigenvalues = eval;
+  eigenvectors = evec;
+  inv_eigenvectors = inv_evec;
+  // We assume that all mixture model components have the same number of states.
+  int m = 0;
+  for (iterator it = begin(); it != end(); it++, m++) {
+    (*it)->update_eigen_pointers(eval + m*num_states,
+                                 evec + m*num_states*num_states,
+                                 inv_evec + m*num_states*num_states);
+  }
+  return;
+}
+
 bool ModelPoMoMixture::isUnstableParameters() {
     if (ModelPoMo::isUnstableParameters())
         return true;
     if (ModelMixture::isUnstableParameters())
         return true;
     return false;
+}
+
+// I had to write this function because of a compiler error. ModelPoMoMixture is
+// inheriting functions from ModelMixture and from ModelPoMo. I defined
+// computeTransMatrix for ModelPoMo because I thought that the Modelmarkov
+// version did not work for non-reversible substitution models. However, this
+// led to a clash because then computeTransMatrix is defined in both,
+// ModelMixture and ModelPoMo and inheritance is flawed.
+void ModelPoMoMixture::computeTransMatrix(double time, double *trans_matrix, int mixture) {
+  ASSERT(mixture < getNMixtures());
+  at(mixture)->computeTransMatrix(time, trans_matrix);
 }

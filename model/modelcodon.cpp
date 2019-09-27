@@ -10,7 +10,7 @@
 
 
 const double MIN_OMEGA_KAPPA = 0.001;
-const double MAX_OMEGA_KAPPA = 100.0;
+const double MAX_OMEGA_KAPPA = 50.0;
 
 /* Empirical codon model restricted (Kosiol et al. 2007), source: http://www.ebi.ac.uk/goldman/ECM/ */
 string model_ECMrest1 =
@@ -350,8 +350,9 @@ StateFreqType ModelCodon::initCodon(const char *model_name, StateFreqType freq, 
 		return FREQ_USER_DEFINED;
 	} else {
 		//cout << "User-specified model "<< model_name << endl;
-		readParameters(model_name);
+		//readParameters(model_name);
 			//name += " (user-defined)";
+        readCodonModelFile(model_name, reset_params);
 		return FREQ_USER_DEFINED;
 	}
 
@@ -669,9 +670,9 @@ void ModelCodon::readCodonModel(istream &in, bool reset_params) {
 	}
 	memset(state_freq, 0, num_states*sizeof(double));
 	for (i = 0; i < num_states; i++)
-		state_freq[i] = MIN_FREQUENCY;
+        state_freq[i] = Params::getInstance().min_state_freq;
 	for (i = 0; i < nscodons; i++)
-		state_freq[state_map[i]] = f[i]-(num_states-nscodons)*MIN_FREQUENCY/nscodons;
+		state_freq[state_map[i]] = f[i]-(num_states-nscodons)*Params::getInstance().min_state_freq/nscodons;
 
     if (reset_params) {
         fix_omega = fix_kappa = fix_kappa2 = true;
@@ -689,6 +690,30 @@ void ModelCodon::readCodonModel(string &str, bool reset_params) {
 	catch (const char *str) {
 		outError(str);
 	}
+}
+
+void ModelCodon::readCodonModelFile(const char *filename, bool reset_params) {
+	try {
+		ifstream in;
+        // set the failbit and badbit
+        in.exceptions(ios::failbit | ios::badbit);
+        in.open(filename);
+        // remove the failbit
+        in.exceptions(ios::badbit);
+
+		readCodonModel(in, reset_params);
+
+        in.clear();
+        // set the failbit again
+        in.exceptions(ios::failbit | ios::badbit);
+        in.close();
+	}
+	catch (const char *str) {
+		outError(str);
+	}
+	catch (...) {
+        outError(ERR_READ_INPUT, filename);
+    }
 }
 
 void ModelCodon::decomposeRateMatrix() {
@@ -956,7 +981,7 @@ void ModelCodon::setBounds(double *lower_bound, double *upper_bound, bool *bound
 		for (i = ndim-num_states+2; i <= ndim; i++) {
 //            lower_bound[i] = MIN_FREQUENCY/state_freq[highest_freq_state];
 //			upper_bound[i] = state_freq[highest_freq_state]/MIN_FREQUENCY;
-            lower_bound[i]  = MIN_FREQUENCY;
+            lower_bound[i]  = Params::getInstance().min_state_freq;
 //            upper_bound[i] = 100.0;
             upper_bound[i] = 1.0;
             bound_check[i] = false;
@@ -965,6 +990,10 @@ void ModelCodon::setBounds(double *lower_bound, double *upper_bound, bool *bound
 }
 
 double ModelCodon::optimizeParameters(double gradient_epsilon) {
+    
+    if (fixed_parameters)
+        return 0.0;
+    
 	int ndim = getNDim();
 	
 	// return if nothing to be optimized

@@ -23,6 +23,17 @@ Pattern::Pattern()
     num_chars = 0;
 }
 
+Pattern::Pattern(int nseq, int freq)
+: vector<StateType>(nseq)
+{
+    frequency = freq;
+    //    is_const = false;
+    //    is_informative = false;
+    flag = 0;
+    const_char = 255;
+    num_chars = 0;
+}
+
 Pattern::Pattern(const Pattern &pat)
         : vector<StateType>(pat)
 {

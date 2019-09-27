@@ -107,7 +107,7 @@ public:
 
 
     /**
-            In case of mulfurcating tree, randomly resolve multifurcating node to obtain strictly bifurcating tree
+            In case of multifurcating tree, randomly resolve multifurcating node to obtain strictly bifurcating tree
             If the tree is bifurcating, nothing change
      */
     void resolveMultifurcation();
@@ -136,6 +136,11 @@ public:
         return (rooted && node == root);
     }
 
+    /**
+     convert from rooted to unrooted tree
+     */
+    void convertToUnrooted();
+    
     /**
             allocate a new node. Override this if you have an inherited Node class.
             @param node_id node ID
@@ -172,7 +177,7 @@ public:
      ********************************************************/
 
 	/** @return true if tree is bifurcating, false otherwise */
-	bool isBifurcating(Node *node = NULL, Node *dad = NULL);
+	virtual bool isBifurcating(Node *node = NULL, Node *dad = NULL);
     /**
             print information
             @param node the starting node, NULL to start from the root
@@ -192,7 +197,7 @@ public:
             @param out the output stream.
             @param brtype type of branch to print
      */
-    void printTree(ostream & out, int brtype = WT_BR_LEN);
+    virtual void printTree(ostream & out, int brtype = WT_BR_LEN);
 
     /**
      *  internal function called by printTree to print branch length
@@ -340,7 +345,7 @@ public:
             @param node the starting node, NULL to start from the root
             @param dad dad of the node, used to direct the search
      */
-    double treeLength(Node *node = NULL, Node *dad = NULL);
+    virtual double treeLength(Node *node = NULL, Node *dad = NULL);
 
     /**
             @param[out] lenvec tree lengths for each class in mixlen model
@@ -354,7 +359,7 @@ public:
             @param node the starting node, NULL to start from the root
             @param dad dad of the node, used to direct the search
      */
-    double treeLengthInternal(double epsilon, Node *node = NULL, Node *dad = NULL);
+    virtual double treeLengthInternal(double epsilon, Node *node = NULL, Node *dad = NULL);
 
     /**
             @return maximum path length from root node to taxa
@@ -446,6 +451,14 @@ public:
     void getInternalNodes(NodeVector &nodes, Node *node = NULL, Node *dad = NULL);
 
     /**
+         get the descending internal nodes below \a node
+         @param node the starting node, NULL to start from the root
+         @param dad dad of the node, used to direct the search
+         @param nodes (OUT) vector of internal nodes
+     */
+    void getMultifurcatingNodes(NodeVector &nodes, Node *node = NULL, Node *dad = NULL);
+
+    /**
             get the descending internal branches below \a node
             @param node the starting node, NULL to start from the root
             @param dad dad of the node, used to direct the search
@@ -461,16 +474,40 @@ public:
             @param dad dad of the node, used to direct the search
             @param nodes (OUT) vector of one end node of branch
             @param nodes2 (OUT) vector of the other end node of branch
+            @param post_traversal true to add branches in post traversal order, default: pre-traversal
      */
-    void getBranches(NodeVector &nodes, NodeVector &nodes2, Node *node = NULL, Node *dad = NULL);
+    void getBranches(NodeVector &nodes, NodeVector &nodes2, Node *node = NULL, Node *dad = NULL,
+                     bool post_traversal = false);
+
+    /**
+     get all descending branches below the node not further away from max_dist
+     @param max_dist maximum distance for descending branches
+     @param node the starting node, NULL to start from the root
+     @param dad dad of the node, used to direct the search
+     @param nodes (OUT) vector of one end node of branch
+     @param nodes2 (OUT) vector of the other end node of branch
+     */
+    void getBranches(int max_dist, NodeVector &nodes, NodeVector &nodes2, Node *node = NULL, Node *dad = NULL);
+
+    /**
+     get all branches below the node
+     @param branches the branches are stored here
+     @param post_traveral true for post-traversal, false for pre-traversal
+     */
+    void getBranches(BranchVector& branches, Node *node = NULL, Node *dad = NULL, bool post_traversal = false);
 
     /**
             get all inner branches below the node
             @param branches the branches are stored here
-            @param node the starting node, NULL to start from the root
-            @param dad dad of the node, used to direct the search
      */
     void getInnerBranches(Branches& branches, Node *node = NULL, Node *dad = NULL);
+
+    /**
+     get all inner branches below the node
+     @param branches the branches are stored here
+     @param post_traveral true for post-traversal, false for pre-traversal
+     */
+    void getInnerBranches(BranchVector& branches, Node *node = NULL, Node *dad = NULL, bool post_traversal = false);
 
     /**
      *      get all descending internal branches below \a node and \a dad up to depth \a depth
@@ -508,6 +545,17 @@ public:
             @return node if found, otherwise NULL
      */
     Node *findNodeName(string &name, Node *node = NULL, Node* dad = NULL);
+
+    /**
+         find a node with corresponding taxa names
+         @param taxa_set set of taxa names
+         @param node the starting node, must correspond to the first taxon
+         @param dad dad of the node, used to direct the search
+         @param[out] res resulting node and neighbor pair for the split with taxa_set in one side
+         @return true if found, false otherwise
+     */
+    bool findNodeNames(unordered_set<string> &taxa_set, pair<Node*,Neighbor*> &res,
+        Node *node, Node* dad);
 
     /**
             find a leaf with corresponding name
@@ -683,16 +731,22 @@ public:
 	STATISTICS
 ********************************************************/
 
-	void extractQuadSubtrees(vector<Split*> &subtrees, Node *node = NULL, Node *dad = NULL);
+    /**
+     extract four subtrees around each inner branch
+     @param[out] subtrees consecutive 4 subtrees
+     @param[out] branches corresponding inner branch vector
+     */
+	void extractQuadSubtrees(vector<Split*> &subtrees, BranchVector &branches, Node *node = NULL, Node *dad = NULL);
 
 	/**
+     * OBSOLETE: now in PhyloTree::computeGeneConcordance
 	 * for each branch, assign how many times this branch appears in the input set of trees.
 	 * Work fine also when the trees do not have the same taxon set.
 	 * @param trees_file set of trees in NEWICK
 	 */
-	void assignBranchSupport(const char *trees_file);
+	//void assignBranchSupport(const char *trees_file, map<int,BranchSupportInfo> &branch_supports);
 
-	void assignBranchSupport(istream &in);
+	//void assignBranchSupport(istream &in, map<int,BranchSupportInfo> &branch_supports);
 
 	/**
 	 * compute robinson foulds distance between this tree and a set of trees.
@@ -700,9 +754,9 @@ public:
 	 * @param trees_file set of trees in NEWICK
 	 * @param dist (OUT) distance vector
 	 */
-	void computeRFDist(const char *trees_file, IntVector &dist);
+	void computeRFDist(const char *trees_file, DoubleVector &dist, int assign_sup = 0);
 
-	void computeRFDist(istream &in, IntVector &dist);
+	void computeRFDist(istream &in, DoubleVector &dist, int assign_sup = 0, bool one_tree = false);
 
 	/**
 	 * insert new taxa next to the existing taxa in the tree
@@ -713,8 +767,9 @@ public:
 
 	/** remove some taxa from the tree
 	 * @param taxa_names names of taxa that will be removed
+     * @return number of taxa actually removed
 	 */
-	void removeTaxa(StrVector &taxa_names);
+	virtual int removeTaxa(StrVector &taxa_names);
 
 	/** find a first taxon below a subtree */
 	Node *findFirstTaxon(Node *node = NULL, Node *dad = NULL);
@@ -812,11 +867,40 @@ public:
 		@param taxname vector of taxa names
 		@param trees set of trees
 	*/
-	void createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, SplitGraph &sg, SplitIntMap &hash_ss, char *tag,
+	void createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, SplitIntMap &hash_ss, char *tag,
 		Node *node = NULL, Node *dad = NULL);
 
 	void reportDisagreedTrees(vector<string> &taxname, MTreeSet &trees, Split &mysplit);
 
+
+    /********************************************************
+        COLLAPSING BRANCHES
+    ********************************************************/
+
+    /**
+        remove a node from tree
+        @param dad dad of the removed node
+        @param node node to be removed
+    */
+    void removeNode(Node *dad, Node *node);
+
+    /**
+        Collapse all branches with length <= threshold
+		@param node the starting node, NULL to start from the root
+		@param dad dad of the node, used to direct the search
+        @param threshold branch length threshold
+        @return number of branches collapsed
+    */
+	int collapseZeroBranches(Node *node = NULL, Node *dad = NULL, double threshold = 0.0);
+
+    /**
+        Collapse all internal branches with length <= threshold
+		@param node the starting node, NULL to start from the root
+		@param dad dad of the node, used to direct the search
+        @param threshold branch length threshold
+        @return number of branches collapsed
+    */
+    virtual int collapseInternalBranches(Node *node = NULL, Node *dad = NULL, double threshold = 0.0);
 
 protected:
     /**

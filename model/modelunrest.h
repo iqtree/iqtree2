@@ -24,16 +24,30 @@ public:
 	/**
 	 * setup the bounds for joint optimization with BFGS
 	 */
-	void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
+	virtual void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
     
+    /**
+     set the state frequency vector.
+     @param state_freq state frequency vector. Assume state_freq has size of num_states
+     */
+    virtual void setStateFrequency(double *state_freq);
+
+    /**
+     start structure for checkpointing
+     */
+    virtual void startCheckpoint();
+    
+    /**
+     save object into the checkpoint
+     */
+    virtual void saveCheckpoint();
+    
+    /**
+     restore object from the checkpoint
+     */
+    virtual void restoreCheckpoint();
+
 protected:
-
-
-	/**
-	 * Called from getVariables to update the rate matrix for the new
-	 * model parameters.
-	 */
-	virtual void setRates();
 };
 
 #endif /* MODELUNREST_H_ */

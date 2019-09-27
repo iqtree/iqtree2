@@ -28,6 +28,8 @@ phylosupertree.cpp
 phylosupertree.h
 phylosupertreeplen.cpp
 phylosupertreeplen.h
+phylosupertreeunlinked.cpp
+phylosupertreeunlinked.h
 phylotree.cpp
 phylotree.h
 phylotreemixlen.cpp
@@ -39,6 +41,9 @@ supernode.cpp
 supernode.h
 tinatree.cpp
 tinatree.h
+parstree.cpp
+parstree.h
+discordance.cpp
 )
 
 target_link_libraries(tree pll model alignment)
