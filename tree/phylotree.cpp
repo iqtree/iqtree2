@@ -280,7 +280,7 @@ void PhyloTree::readTree(const char *infile, bool &is_rooted) {
     MTree::readTree(infile, is_rooted);
     // 2015-10-14: has to reset this pointer when read in
     current_it = current_it_back = NULL;
-    if (rooted)
+    if (rooted && root)
         computeBranchDirection();
 }
 
