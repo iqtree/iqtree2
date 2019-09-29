@@ -944,7 +944,7 @@ bool IQTree::isInitializedPLL() {
     return pllInst != NULL;
 }
 
-void IQTree::initializeModel(Params &params, string &model_name, ModelsBlock *models_block) {
+void IQTree::initializeModel(Params &params, string model_name, ModelsBlock *models_block) {
     try {
         if (!getModelFactory()) {
             if (isSuperTree()) {

@@ -19,7 +19,9 @@ class ModelCheckpoint;
 
 const int MF_SAMPLE_SIZE_TRIPLE = 1;
 const int MF_IGNORED            = 2;
-const int MF_DONE               = 4;
+const int MF_RUNNING            = 4;
+const int MF_WAITING            = 8;
+const int MF_DONE               = 16;
 
 /**
     Candidate model under testing
@@ -37,14 +39,19 @@ public:
         this->flag = flag;
     }
     
-    CandidateModel(string name, Alignment *aln, int flag = 0) : CandidateModel(flag) {
-        this->name = name;
+    CandidateModel(string subst_name, string rate_name, Alignment *aln, int flag = 0) : CandidateModel(flag) {
+        this->subst_name = subst_name;
+        this->rate_name = rate_name;
         this->aln = aln;
     }
     
     CandidateModel(Alignment *aln, int flag = 0) : CandidateModel(flag) {
         this->aln = aln;
         getUsualModel(aln);
+    }
+    
+    string getName() {
+        return subst_name + rate_name;
     }
     
     /**
@@ -101,7 +108,7 @@ public:
         ostr << logl << " " << df << " " << tree_len;
         if (!tree.empty())
             ostr << " " << tree;
-        ckp->put(name, ostr.str());
+        ckp->put(getName(), ostr.str());
     }
     
     /**
@@ -109,7 +116,7 @@ public:
      */
     bool restoreCheckpoint(Checkpoint *ckp) {
         string val;
-        if (ckp->getString(name, val)) {
+        if (ckp->getString(getName(), val)) {
             stringstream str(val);
             str >> logl >> df >> tree_len;
             return true;
@@ -120,13 +127,14 @@ public:
     /**
      restore model from checkpoint
      */
-    bool restoreCheckpointRminus1(Checkpoint *ckp, string &model_name) {
+    bool restoreCheckpointRminus1(Checkpoint *ckp, CandidateModel *model) {
         size_t posR;
         const char *rates[] = {"+R", "*R", "+H", "*H"};
         for (int i = 0; i < sizeof(rates)/sizeof(char*); i++) {
-            if ((posR = model_name.find(rates[i])) != string::npos) {
-                int cat = convert_int(model_name.substr(posR+2).c_str());
-                name = model_name.substr(0, posR+2) + convertIntToString(cat-1);
+            if ((posR = model->rate_name.find(rates[i])) != string::npos) {
+                int cat = convert_int(model->rate_name.substr(posR+2).c_str());
+                subst_name = model->subst_name;
+                rate_name = model->rate_name.substr(0, posR+2) + convertIntToString(cat-1);
                 return restoreCheckpoint(ckp);
             }
         }
@@ -143,7 +151,8 @@ public:
     }
     
     string set_name; // subset name
-    string name; // model name
+    string subst_name; // substitution matrix name
+    string rate_name; // rate heterogeneity name
     double logl; // tree log likelihood
     int df;      // #parameters
     double tree_len; // tree length, added 2015-06-24 for rcluster algorithm
@@ -166,6 +175,10 @@ protected:
 class CandidateModelSet : public vector<CandidateModel> {
 public:
 
+    CandidateModelSet() : vector<CandidateModel>() {
+        current_model = -1;
+    }
+    
     /** get ID of the best model */
     int getBestModelID(ModelTestCriterion mtc);
     
@@ -194,18 +207,69 @@ public:
      @param merge_phase true to consider models for merging phase
      @return name of best-fit-model
      */
-    string test(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
+    CandidateModel test(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
                 ModelsBlock *models_block, int num_threads, int brlen_type,
                 string set_name = "", string in_model_name = "",
                 bool merge_phase = false);
 
     /**
+     for a rate model XXX+R[k], return XXX+R[k-j] that finished
+     @return the index of fewer category +R model that finished
+     */
+    int getLowerKModel(int model) {
+        size_t posR;
+        const char *rates[] = {"+R", "*R", "+H", "*H"};
+        for (int i = 0; i < sizeof(rates)/sizeof(char*); i++) {
+            if ((posR = at(model).rate_name.find(rates[i])) == string::npos)
+                continue;
+            int cat = convert_int(at(model).rate_name.substr(posR+2).c_str());
+            for (int prev_model = model-1; prev_model >= 0; prev_model--, cat--) {
+                string name = at(model).rate_name.substr(0, posR+2) + convertIntToString(cat-1);
+                if (at(prev_model).rate_name != name)
+                    break;
+                if (!at(prev_model).hasFlag(MF_DONE))
+                    continue;
+                return prev_model;
+            }
+        }
+        return -1;
+    }
+
+    int getHigherKModel(int model) {
+        size_t posR;
+        const char *rates[] = {"+R", "*R", "+H", "*H"};
+        for (int i = 0; i < sizeof(rates)/sizeof(char*); i++) {
+            if ((posR = at(model).rate_name.find(rates[i])) == string::npos)
+                continue;
+            size_t this_posR = at(model).rate_name.find(rates[i]);
+            ASSERT(this_posR != string::npos);
+            int cat = convert_int(at(model).rate_name.substr(this_posR+2).c_str());
+            for (int next_model = model+1; next_model < size(); next_model++, cat++) {
+//                if (at(next_model).name.substr(0, posR) != orig_name.substr(0, posR))
+//                    break;
+                string rate_name = at(model).rate_name.substr(posR, 2) + convertIntToString(cat+1);
+                if (at(next_model).rate_name.find(rate_name) == string::npos)
+                    break;
+                return next_model;
+            }
+        }
+        return -1;
+    }
+
+    /** get the next model to evaluate in parallel */
+    int64_t getNextModel();
+
+    /**
      evaluate all models in parallel
      */
-    string evaluateAll(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
+    CandidateModel evaluateAll(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
                      ModelsBlock *models_block, int num_threads, int brlen_type,
                      string in_model_name = "", bool merge_phase = false, bool write_info = true);
     
+private:
+    
+    /** current model */
+    int64_t current_model;
 };
 
 //typedef vector<ModelInfo> ModelCheckpoint;

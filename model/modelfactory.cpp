@@ -71,7 +71,7 @@ string::size_type findSubStr(string &name, string sub1, string sub2) {
         return pos2;
 }
 
-string::size_type posRateHeterotachy(string &model_name) {
+string::size_type posRateHeterotachy(string model_name) {
     return findSubStr(model_name, "+H", "*H");
 }
 

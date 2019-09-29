@@ -37,7 +37,7 @@ ModelsBlock *readModelsDefinition(Params &params);
     @param model_name model name string
     @return position of +H or *H in the model string, string::npos if not found
 */
-string::size_type posRateHeterotachy(string &model_name);
+string::size_type posRateHeterotachy(string model_name);
 
 /**
     return the position of +R or *R in the model name
