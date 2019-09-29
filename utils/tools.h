@@ -2044,6 +2044,9 @@ public:
     
     /** maximum number of threads, default: #CPU scores  */
     int num_threads_max;
+    
+    /** true to parallel ModelFinder by models instead of sites */
+    bool openmp_by_model;
 
     /** either MTC_AIC, MTC_AICc, MTC_BIC */
     ModelTestCriterion model_test_criterion;

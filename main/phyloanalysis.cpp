@@ -222,7 +222,7 @@ void reportModelSelection(ofstream &out, Params &params, ModelCheckpoint *model_
             setid++;
         }
         out.width(15);
-        out << left << it->name << " ";
+        out << left << it->getName() << " ";
         out.width(11);
         out << right << it->logl << " ";
         out.width(11);

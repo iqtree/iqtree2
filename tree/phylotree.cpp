@@ -652,15 +652,20 @@ string getASCName(ASCType ASC_type) {
     }
 }
 
-string PhyloTree::getModelName() {
-    string name = model->getName();
-    name += getASCName(model_factory->getASC());
+string PhyloTree::getSubstName() {
+    return model->getName() + getASCName(model_factory->getASC());
+}
+
+string PhyloTree::getRateName() {
     if (model_factory->fused_mix_rate) {
-        name += "*" + site_rate->name.substr(1);
+        return "*" + site_rate->name.substr(1);
     } else {
-        name += site_rate->name;
+        return site_rate->name;
     }
-    return name;
+}
+
+string PhyloTree::getModelName() {
+    return getSubstName() + getRateName();
 }
 
 string PhyloTree::getModelNameParams() {
