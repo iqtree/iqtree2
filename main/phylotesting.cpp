@@ -883,6 +883,9 @@ void getModelSubst(SeqType seq_type, bool standard_code, string model_name,
         return;
     }
     
+    if (iEquals(model_set, "ALL"))
+        model_set = "";
+    
     if (seq_type == SEQ_BINARY) {
         if (model_set.empty()) {
             copyCString(bin_model_names, sizeof(bin_model_names) / sizeof(char*), model_names);
@@ -1136,10 +1139,10 @@ void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites
                     test_options[j] = false;
         }
     }
-    if (!rate_set.empty() && rate_set != "1") {
+    if (!rate_set.empty() && rate_set != "1" && !iEquals(rate_set, "ALL") && !iEquals(rate_set, "AUTO")) {
         // take the rate_options from user-specified models
         convert_string_vec(rate_set.c_str(), ratehet);
-        if (!ratehet.empty() && ratehet[0] == "default") {
+        if (!ratehet.empty() && iEquals(ratehet[0], "ALL")) {
             ratehet.erase(ratehet.begin());
             StrVector ratedef;
             for (j = 0; j < noptions; j++)
@@ -1171,12 +1174,11 @@ int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_ra
     
     if (merge_phase) {
         model_set = params.merge_models;
-        if (iEquals(model_set, "all")) {
-            model_set = (params.model_set) ? params.model_set : "";
-        }
     } else if (params.model_set)
         model_set = params.model_set;
 
+    bool auto_model = iEquals(model_set, "AUTO");
+    
     getModelSubst(seq_type, aln->isStandardGeneticCode(), params.model_name,
                   model_set, params.model_subset, model_names);
 
@@ -1216,11 +1218,11 @@ int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_ra
     string ratehet_set;
     if (merge_phase) {
         ratehet_set = params.merge_rates;
-        if (iEquals(ratehet_set, "all"))
-            ratehet_set = (params.ratehet_set) ? params.ratehet_set : "";
-    } else if (params.ratehet_set)
+    } else
         ratehet_set = params.ratehet_set;
 
+    //bool auto_rate = iEquals(ratehet_set, "AUTO");
+    
     getRateHet(seq_type, params.model_name, aln->frac_invariant_sites, ratehet_set, ratehet);
 
     // add number of rate cateogories for special rate models
@@ -1256,21 +1258,25 @@ int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_ra
             if (ratehet[j] != "")
                 push_back(CandidateModel("", ratehet[j] + pomo_suffix, aln));
     } else {
-//        for (i = 0; i < model_names.size(); i++)
-//            for (j = 0; j < ratehet.size(); j++) {
-//                push_back(CandidateModel(model_names[i] + ratehet[j] + pomo_suffix, aln));
-//            }
-        // all rate heterogeneity for the first model
-        for (j = 0; j < ratehet.size(); j++)
-            push_back(CandidateModel(model_names[0], ratehet[j] + pomo_suffix, aln));
-        // now all models the first RHAS
-        for (i = 1; i < model_names.size(); i++)
-            push_back(CandidateModel(model_names[i], ratehet[0] + pomo_suffix, aln));
-        // all remaining models
-        for (i = 1; i < model_names.size(); i++)
-            for (j = 1; j < ratehet.size(); j++) {
-                push_back(CandidateModel(model_names[i], ratehet[j] + pomo_suffix, aln));
-            }
+        if (auto_model) {
+            // all rate heterogeneity for the first model
+            for (j = 0; j < ratehet.size(); j++)
+                push_back(CandidateModel(model_names[0], ratehet[j] + pomo_suffix, aln));
+            // now all models the first RHAS
+            for (i = 1; i < model_names.size(); i++)
+                push_back(CandidateModel(model_names[i], ratehet[0] + pomo_suffix, aln));
+            // all remaining models
+            for (i = 1; i < model_names.size(); i++)
+                for (j = 1; j < ratehet.size(); j++) {
+                    push_back(CandidateModel(model_names[i], ratehet[j] + pomo_suffix, aln));
+                }
+        } else {
+            // testing all models
+            for (i = 0; i < model_names.size(); i++)
+                for (j = 0; j < ratehet.size(); j++) {
+                    push_back(CandidateModel(model_names[i], ratehet[j] + pomo_suffix, aln));
+                }
+        }
     }
     if (params.model_extra_set) {
         StrVector extra_model_names;
@@ -2346,6 +2352,29 @@ bool isMixtureModel(ModelsBlock *models_block, string &model_str) {
     return false;
 }
 
+void CandidateModelSet::filterRates(int finished_model) {
+    double best_score = DBL_MAX;
+    ASSERT(finished_model >= 0);
+    int model;
+    for (model = 0; model <= finished_model; model++)
+        best_score = min(best_score, at(model).getScore());
+    
+    double ok_score = best_score + Params::getInstance().score_diff_thres;
+    set<string> ok_rates;
+    for (model = 0; model <= finished_model; model++)
+        if (at(model).getScore() <= ok_score) {
+            string rate_name = at(model).rate_name;
+            ok_rates.insert(rate_name);
+            if (rate_name.find("+G") == 0)
+                ok_rates.insert("+G");
+            if (rate_name.find("+I+G") == 0)
+                ok_rates.insert("+I+G");
+        }
+    for (model = finished_model+1; model < size(); model++)
+        if (ok_rates.find(at(model).rate_name) == ok_rates.end() && !at(model).rate_name.empty())
+            at(model).setFlag(MF_IGNORED);
+}
+
 CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
     ModelsBlock *models_block, int num_threads, int brlen_type,
     string set_name, string in_model_name, bool merge_phase)
@@ -2426,9 +2455,23 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
     CKP_RESTORE(best_tree_AICc);
     CKP_RESTORE(best_tree_BIC);
 
+    // detect rate hetegeneity automatically or not
+    bool auto_rate = merge_phase ? iEquals(params.merge_rates, "AUTO") : iEquals(params.ratehet_set, "AUTO");
+    int first_block = size();
+    if (auto_rate) {
+        for (first_block = 0; first_block < size(); first_block++)
+            if (first_block+1 < size() && at(first_block+1).subst_name != at(first_block).subst_name)
+                break;
+    }
+    
     //------------- MAIN FOR LOOP GOING THROUGH ALL MODELS TO BE TESTED ---------//
 
 	for (model = 0; model < size(); model++) {
+        if (at(model).hasFlag(MF_IGNORED)) {
+            model_scores.push_back(DBL_MAX);
+            at(model).AIC_score = at(model).AICc_score = at(model).BIC_score = DBL_MAX;
+            continue;
+        }
 		//cout << model_names[model] << endl;
         if (at(model).subst_name == "") {
             // now switching to test rate heterogeneity
@@ -2577,8 +2620,12 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
             while (model < size()-1 && at(model+1).getName().substr(0, posR+2) == first_part) {
                 model++;
                 model_scores.push_back(DBL_MAX);
+                at(model).AIC_score = at(model).AICc_score = at(model).BIC_score = DBL_MAX;
             }
         }
+
+        if (model >= first_block)
+            filterRates(model); // auto filter rate models
 
 	}
 

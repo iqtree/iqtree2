@@ -1449,8 +1449,11 @@ public:
     char *state_freq_set;
 
     /** set of rate heterogeneity model for testing */
-    char *ratehet_set;
+    string ratehet_set;
 
+    /** all models with score worse than the best score + this threshold will be ignored */
+    double score_diff_thres;
+    
     /** model defition file */
     char *model_def_file;
 

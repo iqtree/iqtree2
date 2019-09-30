@@ -904,7 +904,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.model_extra_set = NULL;
     params.model_subset = NULL;
     params.state_freq_set = NULL;
-    params.ratehet_set = NULL;
+    params.ratehet_set = "AUTO";
+    params.score_diff_thres = 10.0;
     params.model_def_file = NULL;
     params.modelomatic = false;
     params.model_test_again = false;
@@ -2301,7 +2302,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.model_opt_steps = convert_int(argv[cnt]);
                 continue;
             }
-			if (strcmp(argv[cnt], "-mset") == 0 || strcmp(argv[cnt], "--mset") == 0 || strcmp(argv[cnt], "--model-set") == 0 ) {
+			if (strcmp(argv[cnt], "-mset") == 0 || strcmp(argv[cnt], "--mset") == 0 || strcmp(argv[cnt], "--models") == 0 ) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -mset <model_set>";
@@ -2322,20 +2323,29 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.model_subset = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "-mfreq") == 0 || strcmp(argv[cnt], "--freq-set") == 0) {
+			if (strcmp(argv[cnt], "-mfreq") == 0 || strcmp(argv[cnt], "--freqs") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -mfreq <state_freq_set>";
 				params.state_freq_set = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "-mrate") == 0 || strcmp(argv[cnt], "--rate-set") == 0) {
+			if (strcmp(argv[cnt], "-mrate") == 0 || strcmp(argv[cnt], "--rates") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -mrate <rate_set>";
 				params.ratehet_set = argv[cnt];
 				continue;
 			}
+            
+            if (strcmp(argv[cnt], "--score-diff") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --score-diff <score>";
+                params.score_diff_thres = convert_double(argv[cnt]);
+                continue;
+            }
+            
 			if (strcmp(argv[cnt], "-mdef") == 0 || strcmp(argv[cnt], "--mdef") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -2534,7 +2544,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.freq_const_patterns = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "--rates") == 0) {
+			if (strcmp(argv[cnt], "--nrate") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -c <#rate_category>";
