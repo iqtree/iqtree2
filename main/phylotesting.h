@@ -193,6 +193,11 @@ public:
     int generate(Params &params, Alignment *aln, bool separate_rate, bool merge_phase);
 
     /**
+     Filter out all "non-promissing" rate models
+     */
+    void filterRates(int finished_model);
+    
+    /**
      testing the best-fit model
      return in params.freq_type and params.rate_type
      @param params global program parameters
