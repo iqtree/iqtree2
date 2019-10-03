@@ -40,8 +40,8 @@ public:
     }
     
     CandidateModel(string subst_name, string rate_name, Alignment *aln, int flag = 0) : CandidateModel(flag) {
-        this->subst_name = subst_name;
-        this->rate_name = rate_name;
+        this->subst_name = orig_subst_name = subst_name;
+        this->rate_name = orig_rate_name = rate_name;
         this->aln = aln;
     }
     
@@ -152,7 +152,9 @@ public:
     
     string set_name; // subset name
     string subst_name; // substitution matrix name
+    string orig_subst_name; // original substitution name
     string rate_name; // rate heterogeneity name
+    string orig_rate_name; // original rate heterogeneity name
     double logl; // tree log likelihood
     int df;      // #parameters
     double tree_len; // tree length, added 2015-06-24 for rcluster algorithm
@@ -196,7 +198,12 @@ public:
      Filter out all "non-promissing" rate models
      */
     void filterRates(int finished_model);
-    
+
+    /**
+     Filter out all "non-promissing" substitution models
+     */
+    void filterSubst(int finished_model);
+
     /**
      testing the best-fit model
      return in params.freq_type and params.rate_type

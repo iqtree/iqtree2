@@ -215,6 +215,8 @@ size_t CandidateModel::getUsualModel(Alignment *aln) {
         rate_name = ratehet[0];
         aln_len = aln->getNSite();
     }
+    orig_subst_name = subst_name;
+    orig_rate_name = rate_name;
     return aln_len;
 }
 
@@ -883,7 +885,7 @@ void getModelSubst(SeqType seq_type, bool standard_code, string model_name,
         return;
     }
     
-    if (iEquals(model_set, "ALL"))
+    if (iEquals(model_set, "ALL") || iEquals(model_set, "AUTO"))
         model_set = "";
     
     if (seq_type == SEQ_BINARY) {
@@ -1174,7 +1176,7 @@ int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_ra
     
     if (merge_phase) {
         model_set = params.merge_models;
-    } else if (params.model_set)
+    } else
         model_set = params.model_set;
 
     bool auto_model = iEquals(model_set, "AUTO");
@@ -2353,25 +2355,50 @@ bool isMixtureModel(ModelsBlock *models_block, string &model_str) {
 }
 
 void CandidateModelSet::filterRates(int finished_model) {
+    if (Params::getInstance().score_diff_thres < 0)
+        return;
     double best_score = DBL_MAX;
     ASSERT(finished_model >= 0);
     int model;
     for (model = 0; model <= finished_model; model++)
-        best_score = min(best_score, at(model).getScore());
+        if (at(model).subst_name == at(0).subst_name)
+            best_score = min(best_score, at(model).getScore());
     
     double ok_score = best_score + Params::getInstance().score_diff_thres;
     set<string> ok_rates;
     for (model = 0; model <= finished_model; model++)
         if (at(model).getScore() <= ok_score) {
-            string rate_name = at(model).rate_name;
+            string rate_name = at(model).orig_rate_name;
             ok_rates.insert(rate_name);
-            if (rate_name.find("+G") == 0)
-                ok_rates.insert("+G");
-            if (rate_name.find("+I+G") == 0)
-                ok_rates.insert("+I+G");
         }
     for (model = finished_model+1; model < size(); model++)
-        if (ok_rates.find(at(model).rate_name) == ok_rates.end() && !at(model).rate_name.empty())
+        if (ok_rates.find(at(model).orig_rate_name) == ok_rates.end() && !at(model).orig_rate_name.empty())
+            at(model).setFlag(MF_IGNORED);
+}
+
+void CandidateModelSet::filterSubst(int finished_model) {
+    if (Params::getInstance().score_diff_thres < 0)
+        return;
+    double best_score = DBL_MAX;
+    ASSERT(finished_model >= 0);
+    int model;
+    for (model = 0; model <= finished_model; model++)
+        if (at(model).rate_name == at(0).rate_name)
+            best_score = min(best_score, at(model).getScore());
+    
+    double ok_score = best_score + Params::getInstance().score_diff_thres;
+    set<string> ok_model;
+    for (model = 0; model <= finished_model; model++) {
+        if (at(model).rate_name != at(0).rate_name)
+            continue;
+        if (at(model).getScore() <= ok_score) {
+            string subst_name = at(model).orig_subst_name;
+            ok_model.insert(subst_name);
+        } else
+            at(model).setFlag(MF_IGNORED);
+    }
+    for (model = finished_model+1; model < size(); model++)
+        if (ok_model.find(at(model).orig_subst_name) == ok_model.end())
             at(model).setFlag(MF_IGNORED);
 }
 
@@ -2429,7 +2456,7 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
 	if (params.model_test_sample_size)
 		ssize = params.model_test_sample_size;
 	if (set_name == "") {
-        cout << "ModelFinder will test " << size() << " ";
+        cout << "ModelFinder will test up to " << size() << " ";
         if (do_modelomatic)
             cout << "codon/AA/DNA";
         else
@@ -2457,12 +2484,21 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
 
     // detect rate hetegeneity automatically or not
     bool auto_rate = merge_phase ? iEquals(params.merge_rates, "AUTO") : iEquals(params.ratehet_set, "AUTO");
-    int first_block = size();
+    bool auto_subst = merge_phase ? iEquals(params.merge_models, "AUTO") : iEquals(params.model_set, "AUTO");
+    int rate_block = size();
     if (auto_rate) {
-        for (first_block = 0; first_block < size(); first_block++)
-            if (first_block+1 < size() && at(first_block+1).subst_name != at(first_block).subst_name)
+        for (rate_block = 0; rate_block < size(); rate_block++)
+            if (rate_block+1 < size() && at(rate_block+1).subst_name != at(rate_block).subst_name)
                 break;
     }
+    
+    int subst_block = size();
+    if (auto_subst) {
+        for (subst_block = size()-1; subst_block >= 0; subst_block--)
+            if (at(subst_block).rate_name == at(0).rate_name)
+                break;
+    }
+    
     
     //------------- MAIN FOR LOOP GOING THROUGH ALL MODELS TO BE TESTED ---------//
 
@@ -2617,15 +2653,15 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
                 if ((posR = orig_model_name.find(rates[i])) != string::npos)
                     break;
             string first_part = orig_model_name.substr(0, posR+2);
-            while (model < size()-1 && at(model+1).getName().substr(0, posR+2) == first_part) {
-                model++;
-                model_scores.push_back(DBL_MAX);
-                at(model).AIC_score = at(model).AICc_score = at(model).BIC_score = DBL_MAX;
+            for (int next = model+1; next < size() && at(next).getName().substr(0, posR+2) == first_part; next++) {
+                at(next).setFlag(MF_IGNORED);
             }
         }
 
-        if (model >= first_block)
+        if (model >= rate_block)
             filterRates(model); // auto filter rate models
+        if (model >= subst_block)
+            filterSubst(model); // auto filter substitution model
 
 	}
 
