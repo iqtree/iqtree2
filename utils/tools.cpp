@@ -900,7 +900,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.model_name = "";
     params.model_name_init = NULL;
     params.model_opt_steps = 10;
-    params.model_set = NULL;
+    params.model_set = "AUTO";
     params.model_extra_set = NULL;
     params.model_subset = NULL;
     params.state_freq_set = NULL;
@@ -2342,7 +2342,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 cnt++;
                 if (cnt >= argc)
                     throw "Use --score-diff <score>";
-                params.score_diff_thres = convert_double(argv[cnt]);
+                if (iEquals(argv[cnt], "all"))
+                    params.score_diff_thres = -1.0;
+                else
+                    params.score_diff_thres = convert_double(argv[cnt]);
                 continue;
             }
             

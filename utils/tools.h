@@ -1437,7 +1437,7 @@ public:
     int model_opt_steps;
     
     /** set of models for testing */
-    char *model_set;
+    string model_set;
 
     /** set of models to be added into default set */
     char *model_extra_set;
