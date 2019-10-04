@@ -900,7 +900,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.model_name = "";
     params.model_name_init = NULL;
     params.model_opt_steps = 10;
-    params.model_set = "AUTO";
+    params.model_set = "ALL";
     params.model_extra_set = NULL;
     params.model_subset = NULL;
     params.state_freq_set = NULL;
@@ -1064,7 +1064,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.tree_freq_file = NULL;
     params.num_threads = 1;
     params.num_threads_max = 10000;
-    params.openmp_by_model = true;
+    params.openmp_by_model = false;
     params.model_test_criterion = MTC_BIC;
 //    params.model_test_stop_rule = MTC_ALL;
     params.model_test_sample_size = 0;
