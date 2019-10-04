@@ -38,6 +38,7 @@
 #include "utils/timeutil.h"
 #include "model/modelfactorymixlen.h"
 #include "tree/phylosupertreeplen.h"
+#include "tree/phylosupertreeunlinked.h"
 
 #include "phyloanalysis.h"
 #include "gsl/mygsl.h"
@@ -539,14 +540,21 @@ string computeFastMLTree(Params &params, Alignment *aln,
     string concat_tree;
     
     IQTree *iqtree = NULL;
+    
+    StrVector saved_model_names;
+    
     if (aln->isSuperAlignment()) {
         SuperAlignment *saln = (SuperAlignment*)aln;
-        if (params.partition_type == BRLEN_OPTIMIZE)
+        if (params.partition_type == TOPO_UNLINKED)
+            iqtree = new PhyloSuperTreeUnlinked(saln);
+        else if (params.partition_type == BRLEN_OPTIMIZE)
             iqtree = new PhyloSuperTree(saln);
         else
             iqtree = new PhyloSuperTreePlen(saln, brlen_type);
-        for (int part = 0; part != subst_names.size(); part++)
+        for (int part = 0; part != subst_names.size(); part++) {
+            saved_model_names.push_back(saln->partitions[part]->model_name);
             saln->partitions[part]->model_name = subst_names[part] + rate_names[part];
+        }
     } else if (posRateHeterotachy(rate_names[0]) != string::npos)
         iqtree = new PhyloTreeMixlen(aln, 0);
     else
@@ -566,7 +574,7 @@ string computeFastMLTree(Params &params, Alignment *aln,
     iqtree->computeInitialTree(params.SSE);
     iqtree->restoreCheckpoint();
     
-    ASSERT(iqtree->root);
+    //ASSERT(iqtree->root);
     iqtree->initializeModel(params, usual_model.getName(), models_block);
     if (!iqtree->getModel()->isMixture() || aln->seq_type == SEQ_POMO) {
         usual_model.subst_name = iqtree->getSubstName();
@@ -635,6 +643,10 @@ string computeFastMLTree(Params &params, Alignment *aln,
             (*it)->getModelFactory()->saveCheckpoint();
             model_info.endStruct();
         }
+        SuperAlignment *saln = (SuperAlignment*)aln;
+        // restore model_names
+        for (int i = 0; i < saln->partitions.size(); i++)
+            saln->partitions[i]->model_name = saved_model_names[i];
     } else {
         iqtree->saveCheckpoint();
         iqtree->getModelFactory()->saveCheckpoint();
@@ -1236,6 +1248,9 @@ int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_ra
 
     size_t pos;
 
+    vector<int> flags;
+    flags.resize(ratehet.size(), 0);
+    
     for (i = 0; i < sizeof(rates)/sizeof(char*); i++)
     for (j = 0; j < ratehet.size(); j++)
         if ((pos = ratehet[j].find(rates[i])) != string::npos &&
@@ -1245,10 +1260,14 @@ int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_ra
             ratehet[j].insert(pos+2, convertIntToString(params.min_rate_cats));
             max_cats = max(max_cats, params.max_rate_cats);
             for (int k = params.min_rate_cats+1; k <= params.max_rate_cats; k++) {
-                ratehet.insert(ratehet.begin()+j+k-params.min_rate_cats, str.substr(0, pos+2) + convertIntToString(k) + str.substr(pos+2));
+                int ins_pos = j+k-params.min_rate_cats;
+                ratehet.insert(ratehet.begin() + ins_pos, str.substr(0, pos+2) + convertIntToString(k) + str.substr(pos+2));
+                flags.insert(flags.begin() + ins_pos, MF_WAITING);
             }
         }
 
+    ASSERT(ratehet.size() == flags.size());
+    
     string pomo_suffix = (seq_type == SEQ_POMO) ? "+P" : "";
     // TODO DS: should we allow virtual population size?
 
@@ -1263,20 +1282,20 @@ int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_ra
         if (auto_model) {
             // all rate heterogeneity for the first model
             for (j = 0; j < ratehet.size(); j++)
-                push_back(CandidateModel(model_names[0], ratehet[j] + pomo_suffix, aln));
+                push_back(CandidateModel(model_names[0], ratehet[j] + pomo_suffix, aln, flags[j]));
             // now all models the first RHAS
             for (i = 1; i < model_names.size(); i++)
-                push_back(CandidateModel(model_names[i], ratehet[0] + pomo_suffix, aln));
+                push_back(CandidateModel(model_names[i], ratehet[0] + pomo_suffix, aln, flags[0]));
             // all remaining models
             for (i = 1; i < model_names.size(); i++)
                 for (j = 1; j < ratehet.size(); j++) {
-                    push_back(CandidateModel(model_names[i], ratehet[j] + pomo_suffix, aln));
+                    push_back(CandidateModel(model_names[i], ratehet[j] + pomo_suffix, aln, flags[j]));
                 }
         } else {
             // testing all models
             for (i = 0; i < model_names.size(); i++)
                 for (j = 0; j < ratehet.size(); j++) {
-                    push_back(CandidateModel(model_names[i], ratehet[j] + pomo_suffix, aln));
+                    push_back(CandidateModel(model_names[i], ratehet[j] + pomo_suffix, aln, flags[j]));
                 }
         }
     }
@@ -2361,8 +2380,11 @@ void CandidateModelSet::filterRates(int finished_model) {
     ASSERT(finished_model >= 0);
     int model;
     for (model = 0; model <= finished_model; model++)
-        if (at(model).subst_name == at(0).subst_name)
+        if (at(model).subst_name == at(0).subst_name) {
+            if (!at(model).hasFlag(MF_DONE + MF_IGNORED))
+                return; // only works if all models done
             best_score = min(best_score, at(model).getScore());
+        }
     
     double ok_score = best_score + Params::getInstance().score_diff_thres;
     set<string> ok_rates;
@@ -2372,7 +2394,7 @@ void CandidateModelSet::filterRates(int finished_model) {
             ok_rates.insert(rate_name);
         }
     for (model = finished_model+1; model < size(); model++)
-        if (ok_rates.find(at(model).orig_rate_name) == ok_rates.end() && !at(model).orig_rate_name.empty())
+        if (ok_rates.find(at(model).orig_rate_name) == ok_rates.end())
             at(model).setFlag(MF_IGNORED);
 }
 
@@ -2503,9 +2525,12 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
     //------------- MAIN FOR LOOP GOING THROUGH ALL MODELS TO BE TESTED ---------//
 
 	for (model = 0; model < size(); model++) {
+        if (model == rate_block+1)
+            filterRates(rate_block); // auto filter rate models
+        if (model == subst_block+1)
+            filterSubst(subst_block); // auto filter substitution model
         if (at(model).hasFlag(MF_IGNORED)) {
             model_scores.push_back(DBL_MAX);
-            at(model).AIC_score = at(model).AICc_score = at(model).BIC_score = DBL_MAX;
             continue;
         }
 		//cout << model_names[model] << endl;
@@ -2541,6 +2566,7 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
             model_info, out_model_info, models_block, num_threads, brlen_type);
 
         at(model).computeICScores(ssize);
+        at(model).setFlag(MF_DONE);
 
         CandidateModel prev_info;
 
@@ -2658,10 +2684,6 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
             }
         }
 
-        if (model >= rate_block)
-            filterRates(model); // auto filter rate models
-        if (model >= subst_block)
-            filterSubst(model); // auto filter substitution model
 
 	}
 
@@ -2821,6 +2843,23 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
 
     double best_score = DBL_MAX;
 
+    // detect rate hetegeneity automatically or not
+    bool auto_rate = merge_phase ? iEquals(params.merge_rates, "AUTO") : iEquals(params.ratehet_set, "AUTO");
+    bool auto_subst = merge_phase ? iEquals(params.merge_models, "AUTO") : iEquals(params.model_set, "AUTO");
+    int rate_block = size();
+    if (auto_rate) {
+        for (rate_block = 0; rate_block < size(); rate_block++)
+            if (rate_block+1 < size() && at(rate_block+1).subst_name != at(rate_block).subst_name)
+                break;
+    }
+    
+    int subst_block = size();
+    if (auto_subst) {
+        for (subst_block = size()-1; subst_block >= 0; subst_block--)
+            if (at(subst_block).rate_name == at(0).rate_name)
+                break;
+    }
+
     int64_t num_models = size();
 #ifdef _OPENMP
 #pragma omp parallel num_threads(num_threads)
@@ -2886,6 +2925,10 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
             cout << endl;
 
         }
+        if (model >= rate_block)
+            filterRates(model); // auto filter rate models
+        if (model >= subst_block)
+            filterSubst(model); // auto filter substitution model
 #ifdef _OPENMP
         }
     } while (model != -1);
