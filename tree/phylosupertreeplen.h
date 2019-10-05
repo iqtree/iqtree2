@@ -48,6 +48,9 @@ public:
 
 	~PhyloSuperTreePlen();
 
+    /** normalize part_rate of part_info */
+    void normalizePartRate();
+
     /**
         save object into the checkpoint
     */

@@ -49,12 +49,20 @@ PhyloSuperTreePlen::PhyloSuperTreePlen(SuperAlignment *alignment, int partition_
 //    fixed_rates = false;
     fixed_rates = (partition_type == BRLEN_FIX) ? true : false;
     int part = 0;
+    bool has_tree_len = false;
     for (iterator it = begin(); it != end(); it++, part++) {
         part_info[part].part_rate = 1.0;
+        if (alignment->partitions[part]->tree_len > 0.0) {
+            part_info[part].part_rate = alignment->partitions[part]->tree_len;
+            has_tree_len = true;
+        }
         part_info[part].evalNNIs = 0.0;
         if ((*it)->aln->seq_type == SEQ_CODON && rescale_codon_brlen)
-            part_info[part].part_rate = 3.0;
+            part_info[part].part_rate *= 3.0;
     }
+    
+    if (has_tree_len)
+        normalizePartRate();
 }
 
 PhyloSuperTreePlen::PhyloSuperTreePlen(SuperAlignment *alignment, PhyloSuperTree *super_tree)
@@ -63,12 +71,39 @@ PhyloSuperTreePlen::PhyloSuperTreePlen(SuperAlignment *alignment, PhyloSuperTree
 	memset(allNNIcases_computed, 0, 5*sizeof(int));
 	fixed_rates = false;
     int part = 0;
+    bool has_tree_len = false;
     for (iterator it = begin(); it != end(); it++, part++) {
         part_info[part].part_rate = 1.0;
+        if (alignment->partitions[part]->tree_len > 0.0) {
+            part_info[part].part_rate = alignment->partitions[part]->tree_len;
+            has_tree_len = true;
+        }
         part_info[part].evalNNIs = 0.0;
         if ((*it)->aln->seq_type == SEQ_CODON && rescale_codon_brlen)
-            part_info[part].part_rate = 3.0;
+            part_info[part].part_rate *= 3.0;
     }
+    if (has_tree_len)
+        normalizePartRate();
+}
+
+void PhyloSuperTreePlen::normalizePartRate() {
+    double sum = 0.0;
+    size_t nsite = 0;
+    int i;
+    for (i = 0; i < size(); i++) {
+        sum += part_info[i].part_rate * at(i)->aln->getNSite();
+        if (at(i)->aln->seq_type == SEQ_CODON && rescale_codon_brlen)
+            nsite += 3*at(i)->aln->getNSite();
+        else
+            nsite += at(i)->aln->getNSite();
+    }
+    sum /= nsite;
+    
+    //scaleLength(sum);
+    sum = 1.0/sum;
+    for (i = 0; i < size(); i++)
+        part_info[i].part_rate *= sum;
+
 }
 
 void PhyloSuperTreePlen::deleteAllPartialLh() {

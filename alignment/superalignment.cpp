@@ -447,6 +447,7 @@ void SuperAlignment::readPartitionNexus(Params &params) {
             new_aln->aln_file = (*it)->aln_file;
             new_aln->position_spec = (*it)->position_spec;
             new_aln->sequence_type = (*it)->sequence_type;
+            new_aln->tree_len = (*it)->tree_len;
             partitions.push_back(new_aln);
 //            PhyloTree *tree = new PhyloTree(new_aln);
 //            push_back(tree);
