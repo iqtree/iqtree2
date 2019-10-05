@@ -228,7 +228,20 @@ void MSetsBlock::Read(NxsToken &token)
 				myset->model_name = model_name;
 				myset->char_partition = partition_name;
 				token.GetNextToken();
-				if (!token.Equals(",") && !token.Equals(";"))
+                if (token.Equals("{")) {
+                    token.GetNextToken();
+                    myset->tree_len = convert_double(token.GetToken().c_str());
+                    token.GetNextToken();
+                    if (!token.Equals("}")) {
+                        errormsg = "Expecting '}', but found ";
+                        errormsg += token.GetToken();
+                        errormsg += " instead";
+                        throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());
+                    }
+                    token.GetNextToken();
+                }
+                
+                if (!token.Equals(",") && !token.Equals(";"))
 				{
 					errormsg = "Expecting ',' or ';', but found ";
 					errormsg += token.GetToken();
