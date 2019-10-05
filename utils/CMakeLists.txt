@@ -16,4 +16,4 @@ else(ZLIB_FOUND)
   target_link_libraries(utils zlibstatic)
 endif(ZLIB_FOUND)
 
-target_link_libraries(utils lbfgsb)
+target_link_libraries(utils lbfgsb sprng)
