@@ -816,7 +816,7 @@ public:
     /* build seq_states containing set of states per sequence
      * @param add_unobs_const TRUE to add all unobserved constant states (for +ASC model)
      */
-    virtual void buildSeqStates(vector<vector<int> > &seq_states, bool add_unobs_const = false);
+    //virtual void buildSeqStates(vector<vector<int> > &seq_states, bool add_unobs_const = false);
 
     /** Added by MA
             Compute the probability of this alignment according to the multinomial distribution with parameters determined by the reference alignment

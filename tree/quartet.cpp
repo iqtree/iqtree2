@@ -939,10 +939,10 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
                     quartet_super_tree->at(i)->setModelFactory(super_tree->at(kept_partitions[i])->getModelFactory());
                     quartet_super_tree->at(i)->setModel(super_tree->at(kept_partitions[i])->getModel());
                     quartet_super_tree->at(i)->setRate(super_tree->at(kept_partitions[i])->getRate());
-                    quartet_super_tree->at(i)->aln->buildSeqStates(quartet_super_tree->at(i)->getModel()->seq_states);
+                    //quartet_super_tree->at(i)->aln->buildSeqStates(quartet_super_tree->at(i)->getModel()->seq_states);
                 }
             } else {
-                quartet_aln->buildSeqStates(getModel()->seq_states);
+                //quartet_aln->buildSeqStates(getModel()->seq_states);
             }
             
             // NOTE: we don't need to set phylo_tree in model and rate because parameters are not reoptimized
@@ -1157,6 +1157,7 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
 #endif
 
     // restore seq_states
+    /*
     if (isSuperTree()) {
         PhyloSuperTree *super_tree = (PhyloSuperTree*)this;
         for (int i = 0; i < super_tree->size(); i++) {
@@ -1165,6 +1166,7 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
     } else {
         aln->buildSeqStates(getModel()->seq_states);
     }
+     */
 } // end PhyloTree::computeQuartetLikelihoods
 
 
