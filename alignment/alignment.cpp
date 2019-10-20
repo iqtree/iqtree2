@@ -493,6 +493,7 @@ bool Alignment::isStandardGeneticCode() {
 	return (genetic_code == genetic_code1 || genetic_code == genetic_code11);
 }
 
+/*
 void Alignment::buildSeqStates(vector<vector<int> > &seq_states, bool add_unobs_const) {
 	vector<StateType> unobs_const;
     if (add_unobs_const) {
@@ -515,6 +516,7 @@ void Alignment::buildSeqStates(vector<vector<int> > &seq_states, bool add_unobs_
 				seq_states[seq].push_back(state);
 	}
 }
+*/
 
 int Alignment::readNexus(char *filename) {
     NxsTaxaBlock *taxa_block;

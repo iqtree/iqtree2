@@ -584,7 +584,7 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         tree->aln->getUnobservedConstPatterns(ASC_type, unobserved_ptns);
         
         // rebuild the seq_states to contain states of unobserved constant patterns
-        tree->aln->buildSeqStates(model->seq_states, true);
+        //tree->aln->buildSeqStates(model->seq_states, true);
         if (tree->aln->num_informative_sites != tree->getAlnNSite()) {
             if (!params.partition_file) {
                 string infsites_file = ((string)params.out_prefix + ".infsites.phy");
@@ -602,7 +602,7 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         ASC_type = ASC_VARIANT_MISSING;
         tree->aln->getUnobservedConstPatterns(ASC_type, unobserved_ptns);
         // rebuild the seq_states to contain states of unobserved constant patterns
-        tree->aln->buildSeqStates(model->seq_states, true);
+        //tree->aln->buildSeqStates(model->seq_states, true);
         if (tree->aln->frac_invariant_sites > 0) {
             if (!params.partition_file) {
                 string varsites_file = ((string)params.out_prefix + ".varsites.phy");
@@ -626,7 +626,7 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
                 unobserved_ptns.erase(unobserved_ptns.begin() + i);
                 
         // rebuild the seq_states to contain states of unobserved constant patterns
-        tree->aln->buildSeqStates(model->seq_states, true);
+        //tree->aln->buildSeqStates(model->seq_states, true);
 //        if (unobserved_ptns.size() <= 0)
 //            outError("Invalid use of +ASC because all constant patterns are observed in the alignment");
         if (tree->aln->frac_invariant_sites > 0) {
@@ -650,7 +650,7 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
             cout << "Ascertainment bias correction: " << unobserved_ptns.size() << " unobservable constant patterns"<< endl;
 		rate_str = rate_str.substr(0, posasc) + rate_str.substr(posasc+4);
     } else {
-        tree->aln->buildSeqStates(model->seq_states, false);
+        //tree->aln->buildSeqStates(model->seq_states, false);
     }
 
     /******************** initialize site rate heterogeneity ****************************/
