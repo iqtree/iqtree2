@@ -1015,6 +1015,8 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
     delete [] this_bp;
     delete [] w;
     delete [] cc;
+    
+    cout << "Time for AU test: " << getRealTime() - start_time << " seconds" << endl;
     //    delete [] bp;
 }
 
