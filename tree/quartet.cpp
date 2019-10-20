@@ -1147,14 +1147,15 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
 		}
 	}
     } /*** end draw lmap_num_quartets quartets randomly ***/
-    if ((params->lmap_num_quartets % 5000) != 0) {
-	cout << ". : " << params->lmap_num_quartets << flush << endl << endl;
-    } else cout << endl;
-
 #ifdef _OPENMP
     finish_random(rstream);
     }
 #endif
+
+    if ((params->lmap_num_quartets % 5000) != 0) {
+	cout << ". : " << params->lmap_num_quartets << flush << endl << endl;
+    } else cout << endl;
+
 
     // restore seq_states
     /*
