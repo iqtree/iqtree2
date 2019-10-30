@@ -94,6 +94,38 @@ void SuperAlignment::readFromParams(Params &params) {
         part_names.insert((*pit)->name);
     }
     
+    if (params.subsampling > 0) {
+        // sumsample a number of partitions
+        int subsample = params.subsampling;
+        if (subsample >= partitions.size())
+            outError("--subsample must be smaller than #partitions");
+        cout << "Random subsampling " << subsample << " partitions (seed: " << params.subsampling_seed <<  ")..." << endl;
+        double prop = double(subsample) / partitions.size();
+        int *rstream;
+        init_random(params.subsampling_seed, false, &rstream);
+        // make sure to sub-sample exact number
+        vector<bool> sample;
+        int i;
+        sample.resize(partitions.size(), false);
+        for (int num = 0; num < subsample; ) {
+            for (i = 0; i < sample.size(); i++) if (!sample[i]) {
+                if (random_double(rstream) < prop) {
+                    sample[i] = true;
+                    num++;
+                    if (num >= subsample)
+                        break;
+                }
+            }
+        }
+        finish_random(rstream);
+        vector<Alignment*> keep_partitions;
+        for (i = 0; i < sample.size(); i++)
+            if (sample[i])
+                keep_partitions.push_back(partitions[i]);
+        // now replace partitions
+        partitions = keep_partitions;
+    }
+    
     // Initialize the counter for evaluated NNIs on subtrees
     cout << "Subset\tType\tSeqs\tSites\tInfor\tInvar\tModel\tName" << endl;
     int part = 0;

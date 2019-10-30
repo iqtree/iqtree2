@@ -1123,6 +1123,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     gettimeofday(&tv, &tz);
     //params.ran_seed = (unsigned) (tv.tv_sec+tv.tv_usec);
     params.ran_seed = (tv.tv_usec);
+    params.subsampling_seed = params.ran_seed;
+    params.subsampling = 0;
 
     for (cnt = 1; cnt < argc; cnt++) {
         try {
@@ -2757,6 +2759,22 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
             
+            if (strcmp(argv[cnt], "--subsample") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --subsample NUMBER";
+                params.subsampling = convert_int(argv[cnt]);
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "--subsample-seed") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --subsample-seed <random_seed>";
+                params.subsampling_seed = convert_int(argv[cnt]);
+                continue;
+            }
+
 #ifdef USE_BOOSTER
             if (strcmp(argv[cnt], "--tbe") == 0) {
                 params.transfer_bootstrap = 1;

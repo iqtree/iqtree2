@@ -1610,6 +1610,12 @@ public:
     /** 1 or 2 to perform transfer boostrap expectation (TBE) */
     int transfer_bootstrap;
     
+    /** subsampling some number of partitions / sites for analysis */
+    int subsampling;
+
+    /** random seed number for subsampling */
+    int subsampling_seed;
+
     /**
             1 if output all intermediate trees (initial trees, NNI-optimal trees and trees after each NNI step)
             2 if output all intermediate trees + 1-NNI-away trees
