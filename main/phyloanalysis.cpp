@@ -879,9 +879,6 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
     /*    if (params.model_name == "WHTEST")
      cout <<"  WH-TEST report:           " << params.out_prefix << ".whtest" << endl;*/
 
-    if (params.terrace_analysis)
-        cout << "  Terrace trees written to:      " << params.out_prefix << ".terrace" << endl;
-
     cout << endl;
 
 }
@@ -1263,7 +1260,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
         }
 #ifdef IQTREE_TERRAPHAST
         if (params.terrace_analysis) {
-            out << "TERRACE ANALYSIS" << endl << "--------------" << endl << endl;
+            out << "TERRACE ANALYSIS" << endl << "----------------" << endl << endl;
 
             string filename = params.out_prefix;
             filename += ".terrace";
