@@ -300,15 +300,20 @@ public:
     int buildRetainingSites(const char *aln_site_list, IntVector &kept_sites,
             int exclude_sites, const char *ref_seq_name);
 
-    void printPhylip(const char *filename, bool append = false, const char *aln_site_list = NULL,
+    void printAlignment(InputType format, const char *filename, bool append = false, const char *aln_site_list = NULL,
     		int exclude_sites = 0, const char *ref_seq_name = NULL);
+
+    virtual void printAlignment(InputType format, ostream &out, bool append = false, const char *aln_site_list = NULL,
+                        int exclude_sites = 0, const char *ref_seq_name = NULL);
 
     void printPhylip(ostream &out, bool append = false, const char *aln_site_list = NULL,
     		int exclude_sites = 0, const char *ref_seq_name = NULL, bool print_taxid = false);
 
-    void printFasta(const char *filename, bool append = false, const char *aln_site_list = NULL,
+    void printFasta(ostream &out, bool append = false, const char *aln_site_list = NULL,
     		int exclude_sites = 0, const char *ref_seq_name = NULL);
 
+    void printNexus(ostream &out, bool append = false, const char *aln_site_list = NULL,
+                    int exclude_sites = 0, const char *ref_seq_name = NULL, bool print_taxid = false);
     /**
             Print the number of gaps per site
             @param filename output file name

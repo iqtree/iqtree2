@@ -127,7 +127,7 @@ void MSetsBlock::Read(NxsToken &token)
 		{
 			// This should be the NTAX keyword
 			//
-			token.SetLabileFlagBit(NxsToken::preserveUnderscores);
+            token.SetLabileFlagBit(NxsToken::preserveUnderscores + NxsToken::hyphenNotPunctuation);
 			token.GetNextToken();
 
 

@@ -388,10 +388,7 @@ void IQTree::initSettings(Params &params) {
                 bootstrap_alignment->createBootstrapAlignment(aln, &this_sample, params.bootstrap_spec);
                 for (size_t j = 0; j < orig_nptn; j++)
                     boot_samples[i][j] = this_sample[j];
-                if(!isSuperTree())
-                    bootstrap_alignment->printPhylip(bootaln_name.c_str(), true);
-                else
-                    ((SuperAlignment *) bootstrap_alignment)->printCombinedAlignment(bootaln_name.c_str(), true);
+                bootstrap_alignment->printAlignment(params.aln_output_format, bootaln_name.c_str(), true);
                 delete bootstrap_alignment;
             } else {
                 IntVector this_sample;
@@ -904,11 +901,7 @@ void IQTree::initializePLL(Params &params) {
 
     /* Read in the alignment file */
     stringstream pllAln;
-    if (aln->isSuperAlignment()) {
-        ((SuperAlignment *) aln)->printCombinedAlignment(pllAln);
-    } else {
-        aln->printPhylip(pllAln);
-    }
+    aln->printAlignment(IN_PHYLIP, pllAln);
     string pllAlnStr = pllAln.str();
     pllAlignment = pllParsePHYLIPString(pllAlnStr.c_str(), pllAlnStr.length());
 
