@@ -2628,56 +2628,108 @@ void Alignment::printPhylip(ostream &out, bool append, const char *aln_site_list
 	}
 }
 
-void Alignment::printPhylip(const char *file_name, bool append, const char *aln_site_list,
-                            int exclude_sites, const char *ref_seq_name) {
-    try {
-        ofstream out;
-        out.exceptions(ios::failbit | ios::badbit);
-
-        if (append)
-            out.open(file_name, ios_base::out | ios_base::app);
-        else
-            out.open(file_name);
-
-        printPhylip(out, append, aln_site_list, exclude_sites, ref_seq_name);
-
-        out.close();
-        if (verbose_mode >= VB_MED)
-        	cout << "Alignment was printed to " << file_name << endl;
-    } catch (ios::failure) {
-        outError(ERR_WRITE_OUTPUT, file_name);
-    }
-}
-
-void Alignment::printFasta(const char *file_name, bool append, const char *aln_site_list,
+void Alignment::printFasta(ostream &out, bool append, const char *aln_site_list,
                            int exclude_sites, const char *ref_seq_name)
 {
     IntVector kept_sites;
     buildRetainingSites(aln_site_list, kept_sites, exclude_sites, ref_seq_name);
+    StrVector::iterator it;
+    int seq_id = 0;
+    for (it = seq_names.begin(); it != seq_names.end(); it++, seq_id++) {
+        out << ">" << (*it) << endl;
+        int j = 0;
+        for (IntVector::iterator i = site_pattern.begin();  i != site_pattern.end(); i++, j++)
+            if (kept_sites[j])
+                out << convertStateBackStr(at(*i)[seq_id]);
+        out << endl;
+    }
+}
+
+void Alignment::printNexus(ostream &out, bool append, const char *aln_site_list,
+                            int exclude_sites, const char *ref_seq_name, bool print_taxid) {
+    IntVector kept_sites;
+    int final_length = buildRetainingSites(aln_site_list, kept_sites, exclude_sites, ref_seq_name);
+    if (seq_type == SEQ_CODON)
+        final_length *= 3;
+    
+    out << "#nexus" << endl << "begin data;" << endl;
+    out << "  dimensions ntax=" << getNSeq() << " nchar=" << final_length << ";" << endl;
+    out << "  format datatype=";
+    switch (seq_type) {
+        case SEQ_DNA:
+        case SEQ_CODON:
+            out << "nucleotide"; break;
+        case SEQ_MORPH:
+        case SEQ_BINARY:
+        case SEQ_MULTISTATE:
+            out << "standard"; break;
+        case SEQ_PROTEIN:
+            out << "protein"; break;
+        default:
+            outError("Unspported datatype for NEXUS file");
+    }
+    out << " missing=? gap=-;" << endl;
+    out << "  matrix" << endl;
+    int max_len = getMaxSeqNameLength();
+    if (print_taxid) max_len = 10;
+    if (max_len < 10) max_len = 10;
+    int seq_id;
+    for (seq_id = 0; seq_id < seq_names.size(); seq_id++) {
+        out << "  ";
+        out.width(max_len);
+        if (print_taxid)
+            out << left << seq_id << " ";
+        else
+            out << left << seq_names[seq_id] << " ";
+        int j = 0;
+        for (IntVector::iterator i = site_pattern.begin();  i != site_pattern.end(); i++, j++)
+            if (kept_sites[j])
+                out << convertStateBackStr(at(*i)[seq_id]);
+        out << endl;
+    }
+    out << "  ;" << endl;
+    out << "end;" << endl;
+    
+}
+
+void Alignment::printAlignment(InputType format, const char *file_name, bool append, const char *aln_site_list,
+                               int exclude_sites, const char *ref_seq_name) {
     try {
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
+        
         if (append)
             out.open(file_name, ios_base::out | ios_base::app);
         else
             out.open(file_name);
-        StrVector::iterator it;
-        int seq_id = 0;
-        for (it = seq_names.begin(); it != seq_names.end(); it++, seq_id++) {
-            out << ">" << (*it) << endl;
-            int j = 0;
-            for (IntVector::iterator i = site_pattern.begin();  i != site_pattern.end(); i++, j++)
-                if (kept_sites[j])
-                    out << convertStateBackStr(at(*i)[seq_id]);
-            out << endl;
-        }
+        
+        printAlignment(format, out, append, aln_site_list, exclude_sites, ref_seq_name);
+
         out.close();
-        cout << "Alignment was printed to " << file_name << endl;
+        if (verbose_mode >= VB_MED || !append)
+            cout << "Alignment was printed to " << file_name << endl;
     } catch (ios::failure) {
         outError(ERR_WRITE_OUTPUT, file_name);
     }
 }
 
+void Alignment::printAlignment(InputType format, ostream &out, bool append, const char *aln_site_list,
+                               int exclude_sites, const char *ref_seq_name) {
+    switch (format) {
+        case IN_PHYLIP:
+            printPhylip(out, append, aln_site_list, exclude_sites, ref_seq_name);
+            break;
+        case IN_FASTA:
+            printFasta(out, append, aln_site_list, exclude_sites, ref_seq_name);
+            break;
+        case IN_NEXUS:
+            printNexus(out, append, aln_site_list, exclude_sites, ref_seq_name);
+            break;
+        default:
+            ASSERT(0 && "Unsupported alignment output format");
+    }
+    
+}
 
 void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_true_char, int min_taxa, IntVector *kept_partitions) {
     IntVector::iterator it;

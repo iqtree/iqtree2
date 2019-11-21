@@ -583,40 +583,49 @@ void SuperAlignment::printPartition(const char *filename, const char *aln_file) 
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
         out.open(filename);
-        out << "#nexus" << endl << "[ partition information for alignment written in " << aln_file <<" file ]" << endl
-        << "begin sets;" << endl;
-        int part; int start_site;
-        for (part = 0, start_site = 1; part < partitions.size(); part++) {
-            string name = partitions[part]->name;
-            replace(name.begin(), name.end(), '+', '_');
-            int end_site = start_site + partitions[part]->getNSite();
-            out << "  charset " << name << " = " << start_site << "-" << end_site-1 << ";" << endl;
-            start_site = end_site;
-        }
-        bool ok_model = true;
-        for (part = 0; part < partitions.size(); part++)
-            if (partitions[part]->model_name.empty()) {
-                ok_model = false;
-                break;
-            }
-        if (ok_model) {
-            out << "  charpartition mymodels =" << endl;
-            for (part = 0; part < partitions.size(); part++) {
-                string name = partitions[part]->name;
-                replace(name.begin(), name.end(), '+', '_');
-                if (part > 0) out << "," << endl;
-    //            out << "    " << at(part)->getModelNameParams() << ":" << name;
-                out << "    " << partitions[part]->model_name << ":" << name;
-            }
-            out << ";" << endl;
-        }
-        out << "end;" << endl;
+        printPartition(out, aln_file);
         out.close();
         cout << "Partition information was printed to " << filename << endl;
     } catch (ios::failure &) {
         outError(ERR_WRITE_OUTPUT, filename);
     }
     
+}
+
+void SuperAlignment::printPartition(ostream &out, const char *aln_file, bool append) {
+    if (append)
+        out << endl;
+    else
+        out << "#nexus" << endl;
+    if (aln_file)
+        out << "[ partition information for alignment written in " << aln_file <<" file ]" << endl;
+    out << "begin sets;" << endl;
+    int part; int start_site;
+    for (part = 0, start_site = 1; part < partitions.size(); part++) {
+        string name = partitions[part]->name;
+        replace(name.begin(), name.end(), '+', '_');
+        int end_site = start_site + partitions[part]->getNSite();
+        out << "  charset " << name << " = " << start_site << "-" << end_site-1 << ";" << endl;
+        start_site = end_site;
+    }
+    bool ok_model = true;
+    for (part = 0; part < partitions.size(); part++)
+        if (partitions[part]->model_name.empty()) {
+            ok_model = false;
+            break;
+        }
+    if (ok_model) {
+        out << "  charpartition mymodels =" << endl;
+        for (part = 0; part < partitions.size(); part++) {
+            string name = partitions[part]->name;
+            replace(name.begin(), name.end(), '+', '_');
+            if (part > 0) out << "," << endl;
+//            out << "    " << at(part)->getModelNameParams() << ":" << name;
+            out << "    " << partitions[part]->model_name << ":" << name;
+        }
+        out << ";" << endl;
+    }
+    out << "end;" << endl;
 }
 
 void SuperAlignment::printBestPartition(const char *filename) {
@@ -1391,57 +1400,15 @@ SuperAlignment::~SuperAlignment()
 	partitions.clear();
 }
 
-void SuperAlignment::printCombinedAlignment(ostream &out, bool print_taxid) {
-	vector<Alignment*>::iterator pit;
-	int final_length = 0;
-	for (pit = partitions.begin(); pit != partitions.end(); pit++)
-        if ((*pit)->seq_type == SEQ_CODON)
-            final_length += 3*(*pit)->getNSite();
-        else
-            final_length += (*pit)->getNSite();
-
-	out << getNSeq() << " " << final_length << endl;
-	int max_len = getMaxSeqNameLength();
-    if (print_taxid) max_len = 10;
-	if (max_len < 10) max_len = 10;
-	int seq_id;
-	for (seq_id = 0; seq_id < seq_names.size(); seq_id++) {
-		out.width(max_len);
-        if (print_taxid)
-            out << left << seq_id << " ";
-        else
-            out << left << seq_names[seq_id] << " ";
-		int part = 0;
-		for (pit = partitions.begin(); pit != partitions.end(); pit++, part++) {
-			int part_seq_id = taxa_index[seq_id][part];
-			int nsite = (*pit)->getNSite();
-			if (part_seq_id >= 0) {
-				for (int i = 0; i < nsite; i++)
-					out << (*pit)->convertStateBackStr((*pit)->getPattern(i) [part_seq_id]);
-			} else {
-				string str(nsite, '?');
-				out << str;
-			}
-		}
-		out << endl;
-	}
-}
-
-void SuperAlignment::printCombinedAlignment(const char *file_name, bool append) {
-	try {
-		ofstream out;
-		out.exceptions(ios::failbit | ios::badbit);
-
-		if (append)
-			out.open(file_name, ios_base::out | ios_base::app);
-		else
-			out.open(file_name);
-        printCombinedAlignment(out);
-		out.close();
-		cout << "Concatenated alignment was printed to " << file_name << endl;
-	} catch (ios::failure) {
-		outError(ERR_WRITE_OUTPUT, file_name);
-	}	
+void SuperAlignment::printAlignment(InputType format, ostream &out, bool append,
+                                    const char *aln_site_list, int exclude_sites,
+                                    const char *ref_seq_name)
+{
+    Alignment *concat = concatenateAlignments();
+    concat->printAlignment(format, out, append, aln_site_list, exclude_sites, ref_seq_name);
+    delete concat;
+    if (format == IN_NEXUS)
+        printPartition(out, NULL, true);
 }
 
 void SuperAlignment::printSubAlignments(Params &params) {
@@ -1455,10 +1422,7 @@ void SuperAlignment::printSubAlignments(Params &params) {
 			filename = params.out_prefix;
 		filename += "." + (*pit)->name;
         int exclude_sites = (params.aln_nogaps) ? EXCLUDE_GAP : 0;
-		 if (params.aln_output_format == ALN_PHYLIP)
-			(*pit)->printPhylip(filename.c_str(), false, NULL, exclude_sites, NULL);
-		else if (params.aln_output_format == ALN_FASTA)
-			(*pit)->printFasta(filename.c_str(), false, NULL, exclude_sites, NULL);
+        (*pit)->printAlignment(params.aln_output_format, filename.c_str(), false, NULL, exclude_sites, NULL);
 	}
 }
 

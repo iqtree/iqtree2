@@ -868,7 +868,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.sequence_type = NULL;
     params.aln_output = NULL;
     params.aln_site_list = NULL;
-    params.aln_output_format = ALN_PHYLIP;
+    params.aln_output_format = IN_PHYLIP;
     params.output_format = FORMAT_NORMAL;
     params.newick_extended_format = false;
     params.gap_masked_aln = NULL;
@@ -2150,7 +2150,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
-			if (strcmp(argv[cnt], "-ao") == 0 || strcmp(argv[cnt], "--out-alignment") == 0) {
+			if (strcmp(argv[cnt], "-ao") == 0 || strcmp(argv[cnt], "--out-alignment") == 0 || strcmp(argv[cnt], "--out-aln") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -ao <alignment_file>";
@@ -2171,14 +2171,16 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.ref_seq_name = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "-af") == 0) {
+			if (strcmp(argv[cnt], "-af") == 0 || strcmp(argv[cnt], "--out-format") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -af phy|fasta";
 				if (strcmp(argv[cnt], "phy") == 0)
-					params.aln_output_format = ALN_PHYLIP;
+					params.aln_output_format = IN_PHYLIP;
 				else if (strcmp(argv[cnt], "fasta") == 0)
-					params.aln_output_format = ALN_FASTA;
+					params.aln_output_format = IN_FASTA;
+                else if (strcmp(argv[cnt], "nexus") == 0)
+                    params.aln_output_format = IN_NEXUS;
 				else
 					throw "Unknown output format";
 				continue;
@@ -4102,7 +4104,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 //        outError("The AU test is temporarily disabled due to numerical issue when bp-RELL=0");
     
     if (params.terrace_analysis && !params.partition_file)
-        outError("Terrace analysis requires partition information.");
+        params.terrace_analysis = false;
 
     if (params.constraint_tree_file && params.partition_type == TOPO_UNLINKED)
         outError("-g constraint tree option does not work with -spu.");

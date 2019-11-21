@@ -399,14 +399,6 @@ enum StateFreqType {
     FREQ_DNA_2113, FREQ_DNA_2131, FREQ_DNA_2311, 
 };
 
-/**
-        alignment format type
- */
-
-enum AlnFormat {
-    ALN_PHYLIP, ALN_FASTA
-};
-
 /*
     outfile file format
  FORMAT_NORMAL: usual file format used so far
@@ -985,7 +977,7 @@ public:
     /**
             alignment output format
      */
-    AlnFormat aln_output_format;
+    InputType aln_output_format;
     
     /**
         output file format
