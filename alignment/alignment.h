@@ -112,6 +112,13 @@ public:
     Alignment(char *filename, char *sequence_type, InputType &intype, string model);
 
     /**
+     constructor
+     @param data_block nexus DATA block
+     @param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
+     */
+    Alignment(NxsDataBlock *data_block, char *sequence_type, string model);
+
+    /**
             destructor
      */
     virtual ~Alignment();
