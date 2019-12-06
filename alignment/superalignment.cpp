@@ -100,7 +100,6 @@ void SuperAlignment::readFromParams(Params &params) {
         if (subsample >= partitions.size())
             outError("--subsample must be smaller than #partitions");
         cout << "Random subsampling " << subsample << " partitions (seed: " << params.subsampling_seed <<  ")..." << endl;
-        double prop = double(subsample) / partitions.size();
         int *rstream;
         init_random(params.subsampling_seed, false, &rstream);
         // make sure to sub-sample exact number
@@ -108,13 +107,10 @@ void SuperAlignment::readFromParams(Params &params) {
         int i;
         sample.resize(partitions.size(), false);
         for (int num = 0; num < subsample; ) {
-            for (i = 0; i < sample.size(); i++) if (!sample[i]) {
-                if (random_double(rstream) < prop) {
-                    sample[i] = true;
-                    num++;
-                    if (num >= subsample)
-                        break;
-                }
+            i = random_int(sample.size(), rstream);
+            if (!sample[i]) {
+                sample[i] = true;
+                num++;
             }
         }
         finish_random(rstream);
