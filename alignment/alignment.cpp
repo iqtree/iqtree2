@@ -470,6 +470,45 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype, str
 
 }
 
+Alignment::Alignment(NxsDataBlock *data_block, char *sequence_type, string model) : vector<Pattern>() {
+    name = "Noname";
+    this->model_name = model;
+    if (sequence_type)
+        this->sequence_type = sequence_type;
+    num_states = 0;
+    frac_const_sites = 0.0;
+    frac_invariant_sites = 0.0;
+    codon_table = NULL;
+    genetic_code = NULL;
+    non_stop_codon = NULL;
+    seq_type = SEQ_UNKNOWN;
+    STATE_UNKNOWN = 126;
+    pars_lower_bound = NULL;
+    
+    extractDataBlock(data_block);
+    if (verbose_mode >= VB_DEBUG)
+        data_block->Report(cout);
+
+    if (getNSeq() < 3)
+        outError("Alignment must have at least 3 sequences");
+    
+    countConstSite();
+    
+    if (Params::getInstance().compute_seq_composition)
+        cout << "Alignment has " << getNSeq() << " sequences with " << getNSite()
+        << " columns, " << getNPattern() << " distinct patterns" << endl
+        << num_informative_sites << " parsimony-informative, "
+        << num_variant_sites-num_informative_sites << " singleton sites, "
+        << (int)(frac_const_sites*getNSite()) << " constant sites" << endl;
+    //buildSeqStates();
+    checkSeqName();
+    // OBSOLETE: identical sequences are handled later
+    //    checkIdenticalSeq();
+    //cout << "Number of character states is " << num_states << endl;
+    //cout << "Number of patterns = " << size() << endl;
+    //cout << "Fraction of constant sites: " << frac_const_sites << endl;
+    
+}
 bool Alignment::isStopCodon(int state) {
     // 2017-05-27: all stop codon removed from Markov process
     return false;

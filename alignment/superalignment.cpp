@@ -388,14 +388,34 @@ void SuperAlignment::readPartitionRaxml(Params &params) {
 void SuperAlignment::readPartitionNexus(Params &params) {
 //    Params origin_params = params;
     MSetsBlock *sets_block = new MSetsBlock();
+    NxsTaxaBlock *taxa_block = NULL;
+    NxsAssumptionsBlock *assumptions_block = NULL;
+    NxsDataBlock *data_block = NULL;
     MyReader nexus(params.partition_file);
     nexus.Add(sets_block);
+
+    if (!params.aln_file) {
+        taxa_block = new NxsTaxaBlock();
+        assumptions_block = new NxsAssumptionsBlock(taxa_block);
+        data_block = new NxsDataBlock(taxa_block, assumptions_block);
+        nexus.Add(taxa_block);
+        nexus.Add(assumptions_block);
+        nexus.Add(data_block);
+    }
+
     MyToken token(nexus.inf);
     nexus.Execute(token);
     
     Alignment *input_aln = NULL;
     if (params.aln_file) {
         input_aln = createAlignment(params.aln_file, params.sequence_type, params.intype, params.model_name);
+    } else {
+        if (data_block->GetNTax() > 0) {
+            input_aln = new Alignment(data_block, params.sequence_type, params.model_name);
+        }
+        delete data_block;
+        delete assumptions_block;
+        delete taxa_block;
     }
     
     bool empty_partition = true;
@@ -415,7 +435,7 @@ void SuperAlignment::readPartitionNexus(Params &params) {
         if (empty_partition || (*it)->char_partition != "") {
             if ((*it)->model_name == "")
                 (*it)->model_name = params.model_name;
-            if ((*it)->aln_file == "" && !params.aln_file) {
+            if ((*it)->aln_file == "" && !input_aln) {
                 if (!(*it)->position_spec.empty()) {
                     (*it)->aln_file = (*it)->position_spec;
                     (*it)->position_spec = "";
