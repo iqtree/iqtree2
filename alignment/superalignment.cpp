@@ -94,19 +94,20 @@ void SuperAlignment::readFromParams(Params &params) {
         part_names.insert((*pit)->name);
     }
     
-    if (params.subsampling > 0) {
+    if (params.subsampling != 0) {
         // sumsample a number of partitions
         int subsample = params.subsampling;
-        if (subsample >= partitions.size())
-            outError("--subsample must be smaller than #partitions");
-        cout << "Random subsampling " << subsample << " partitions (seed: " << params.subsampling_seed <<  ")..." << endl;
+        if (abs(subsample) >= partitions.size())
+            outError("--subsample must be between -" + convertIntToString(partitions.size()-1) + " and " + convertIntToString(partitions.size()-1));
+        cout << "Random subsampling " << ((subsample > 0) ? subsample : partitions.size() + subsample)
+             << " partitions (seed: " << params.subsampling_seed <<  ")..." << endl;
         int *rstream;
         init_random(params.subsampling_seed, false, &rstream);
         // make sure to sub-sample exact number
         vector<bool> sample;
         int i;
         sample.resize(partitions.size(), false);
-        for (int num = 0; num < subsample; ) {
+        for (int num = 0; num < abs(subsample); ) {
             i = random_int(sample.size(), rstream);
             if (!sample[i]) {
                 sample[i] = true;
@@ -114,6 +115,11 @@ void SuperAlignment::readFromParams(Params &params) {
             }
         }
         finish_random(rstream);
+        if (subsample < 0) {
+            // reverse sampling
+            for (i = 0; i < sample.size(); i++)
+                sample[i] = !sample[i];
+        }
         vector<Alignment*> keep_partitions;
         for (i = 0; i < sample.size(); i++)
             if (sample[i])
