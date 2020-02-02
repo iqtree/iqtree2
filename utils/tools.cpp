@@ -2312,7 +2312,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             if (strcmp(argv[cnt], "--loop-model") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use --loop-model NUMBER";
+                    throw "Use --loop-model NUM";
                 params.model_opt_steps = convert_int(argv[cnt]);
                 continue;
             }
@@ -2776,7 +2776,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             if (strcmp(argv[cnt], "--subsample") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use --subsample NUMBER";
+                    throw "Use --subsample NUM";
                 params.subsampling = convert_int(argv[cnt]);
                 continue;
             }
@@ -4233,18 +4233,18 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -t FILE|PARS|RAND    Starting tree (default: 99 parsimony and BIONJ)" << endl
     << "  -o TAX[,...,TAX]     Outgroup taxon (list) for writing .treefile" << endl
     << "  --prefix STRING      Prefix for all output files (default: aln/partition)" << endl
-    << "  --seed NUMBER        Random seed number, normally used for debugging purpose" << endl
+    << "  --seed NUM           Random seed number, normally used for debugging purpose" << endl
     << "  --safe               Safe likelihood kernel to avoid numerical underflow" << endl
-    << "  --mem NUMBER[G|M|%]  Maximal RAM usage in GB | MB | %" << endl
-    << "  --runs NUMBER        Number of indepedent runs (default: 1)" << endl
+    << "  --mem NUM[G|M|%]     Maximal RAM usage in GB | MB | %" << endl
+    << "  --runs NUM           Number of indepedent runs (default: 1)" << endl
     << "  --redo               Ignore checkpoint and overwrite outputs (default: OFF)" << endl
     << "  -v, --verbose        Verbose mode, printing more messages to screen" << endl
     << "  -V, --version        Display version number" << endl
     << "  --quiet              Quiet mode, suppress printing to screen (stdout)" << endl
     << "  -fconst f1,...,fN    Add constant patterns into alignment (N=no. states)" << endl
-    << "  --epsilon NUMBER     Likelihood epsilon for parameter estimate (default 0.01)" << endl
+    << "  --epsilon NUM        Likelihood epsilon for parameter estimate (default 0.01)" << endl
 #ifdef _OPENMP
-    << "  -T NUMBER|AUTO       No. cores/threads or AUTO-detect (default: 1)" << endl
+    << "  -T NUM|AUTO          No. cores/threads or AUTO-detect (default: 1)" << endl
     << "  --threads-max NUM    Max number of threads for -T AUTO (default: all cores)" << endl
 #endif
     << endl << "PARTITION MODEL:" << endl
@@ -4253,19 +4253,21 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -q FILE|DIR          Like -p but edge-linked equal partition model " << endl
     << "  -Q FILE|DIR          Like -p but edge-unlinked partition model" << endl
     << "  -S FILE|DIR          Like -p but separate tree inference" << endl
+    << "  --subsample NUM      Randomly sub-sample partitions (negative for complement)" << endl
+    << "  --subsample-seed NUM Random number seed for --subsample" << endl
     << endl << "LIKELIHOOD/QUARTET MAPPING:" << endl
-    << "  --lmap NUMBER        Number of quartets for likelihood mapping analysis" << endl
+    << "  --lmap NUM           Number of quartets for likelihood mapping analysis" << endl
     << "  --lmclust FILE       NEXUS file containing clusters for likelihood mapping" << endl
     << "  --quartetlh          Print quartet log-likelihoods to .quartetlh file" << endl
     << endl << "TREE SEARCH ALGORITHM:" << endl
 //            << "  -pll                 Use phylogenetic likelihood library (PLL) (default: off)" << endl
-    << "  --ninit NUMBER       Number of initial parsimony trees (default: 100)" << endl
-    << "  --ntop NUMBER        Number of top initial trees (default: 20)" << endl
-    << "  --nbest NUMBER       Number of best trees retained during search (defaut: 5)" << endl
-    << "  -n NUMBER            Fix number of iterations to stop (default: OFF)" << endl
-    << "  --nstop NUMBER       Number of unsuccessful iterations to stop (default: 100)" << endl
-    << "  --perturb NUMBER     Perturbation strength for randomized NNI (default: 0.5)" << endl
-    << "  --radius NUMBER      Radius for parsimony SPR search (default: 6)" << endl
+    << "  --ninit NUM          Number of initial parsimony trees (default: 100)" << endl
+    << "  --ntop NUM           Number of top initial trees (default: 20)" << endl
+    << "  --nbest NUM          Number of best trees retained during search (defaut: 5)" << endl
+    << "  -n NUM               Fix number of iterations to stop (default: OFF)" << endl
+    << "  --nstop NUM          Number of unsuccessful iterations to stop (default: 100)" << endl
+    << "  --perturb NUM        Perturbation strength for randomized NNI (default: 0.5)" << endl
+    << "  --radius NUM         Radius for parsimony SPR search (default: 6)" << endl
     << "  --allnni             Perform more thorough NNI search (default: OFF)" << endl
     << "  -g FILE              (Multifurcating) topological constraint tree file" << endl
     << "  --fast               Fast search to resemble FastTree" << endl
@@ -4279,33 +4281,33 @@ void usage_iqtree(char* argv[], bool full_command) {
 //            << "  -iqp                 Use the IQP tree perturbation (default: randomized NNI)" << endl
 //            << "  -iqpnni              Switch back to the old IQPNNI tree search algorithm" << endl
     << endl << "ULTRAFAST BOOTSTRAP/JACKKNIFE:" << endl
-    << "  -B, --ufboot NUMBER  Replicates for ultrafast bootstrap (>=1000)" << endl
-    << "  -J, --ufjack NUMBER  Replicates for ultrafast jackknife (>=1000)" << endl
-    << "  --jack-prop NUMBER   Subsampling proportion for jackknife (default: 0.5)" << endl
+    << "  -B, --ufboot NUM     Replicates for ultrafast bootstrap (>=1000)" << endl
+    << "  -J, --ufjack NUM     Replicates for ultrafast jackknife (>=1000)" << endl
+    << "  --jack-prop NUM      Subsampling proportion for jackknife (default: 0.5)" << endl
     << "  --sampling STRING    GENE|GENESITE resampling for partitions (default: SITE)" << endl
     << "  --boot-trees         Write bootstrap trees to .ufboot file (default: none)" << endl
     << "  --wbtl               Like --boot-trees but also writing branch lengths" << endl
 //            << "  -n <#iterations>     Minimum number of iterations (default: 100)" << endl
-    << "  --nmax NUMBER        Maximum number of iterations (default: 1000)" << endl
-    << "  --nstep NUMBER       Iterations for UFBoot stopping rule (default: 100)" << endl
-    << "  --bcor NUMBER        Minimum correlation coefficient (default: 0.99)" << endl
-    << "  --beps NUMBER        RELL epsilon to break tie (default: 0.5)" << endl
+    << "  --nmax NUM           Maximum number of iterations (default: 1000)" << endl
+    << "  --nstep NUM          Iterations for UFBoot stopping rule (default: 100)" << endl
+    << "  --bcor NUM           Minimum correlation coefficient (default: 0.99)" << endl
+    << "  --beps NUM           RELL epsilon to break tie (default: 0.5)" << endl
     << "  --bnni               Optimize UFBoot trees by NNI on bootstrap alignment" << endl
     << endl << "NON-PARAMETRIC BOOTSTRAP/JACKKNIFE:" << endl
-    << "  -b, --boot NUMBER    Replicates for bootstrap + ML tree + consensus tree" << endl
-    << "  -j, --jack NUMBER    Replicates for jackknife + ML tree + consensus tree" << endl
-    << "  --jack-prop NUMBER   Subsampling proportion for jackknife (default: 0.5)" << endl
-    << "  --bcon NUMBER        Replicates for bootstrap + consensus tree" << endl
-    << "  --bonly NUMBER       Replicates for bootstrap only" << endl
+    << "  -b, --boot NUM       Replicates for bootstrap + ML tree + consensus tree" << endl
+    << "  -j, --jack NUM       Replicates for jackknife + ML tree + consensus tree" << endl
+    << "  --jack-prop NUM      Subsampling proportion for jackknife (default: 0.5)" << endl
+    << "  --bcon NUM           Replicates for bootstrap + consensus tree" << endl
+    << "  --bonly NUM          Replicates for bootstrap only" << endl
 #ifdef USE_BOOSTER
     << "  --tbe                Transfer bootstrap expectation" << endl
 #endif
 //            << "  -t <threshold>       Minimum bootstrap support [0...1) for consensus tree" << endl
     << endl << "SINGLE BRANCH TEST:" << endl
-    << "  --alrt NUMBER        Replicates for SH approximate likelihood ratio test" << endl
+    << "  --alrt NUM           Replicates for SH approximate likelihood ratio test" << endl
     << "  --alrt 0             Parametric aLRT test (Anisimova and Gascuel 2006)" << endl
     << "  --abayes             approximate Bayes test (Anisimova et al. 2011)" << endl
-    << "  --lbp NUMBER         Replicates for fast local bootstrap probabilities" << endl
+    << "  --lbp NUM            Replicates for fast local bootstrap probabilities" << endl
     << endl << "MODEL-FINDER:" << endl
     << "  -m TESTONLY          Standard model selection (like jModelTest, ProtTest)" << endl
     << "  -m TEST              Standard model selection followed by tree inference" << endl
@@ -4324,8 +4326,8 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --mfreq STR,...      List of state frequencies" << endl
     << "  --mrate STR,...      List of rate heterogeneity among sites" << endl
     << "                       (e.g. -mrate E,I,G,I+G,R is used for -m MF)" << endl
-    << "  --cmin NUMBER        Min categories for FreeRate model [+R] (default: 2)" << endl
-    << "  --cmax NUMBER        Max categories for FreeRate model [+R] (default: 10)" << endl
+    << "  --cmin NUM           Min categories for FreeRate model [+R] (default: 2)" << endl
+    << "  --cmax NUM           Max categories for FreeRate model [+R] (default: 10)" << endl
     << "  --merit AIC|AICc|BIC  Akaike|Bayesian information criterion (default: BIC)" << endl
 //            << "  -msep                Perform model selection and then rate selection" << endl
     << "  --mtree              Perform full tree search for every model" << endl
@@ -4394,7 +4396,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -m ...+I+R[n]        Invariable sites plus FreeRate model with n categories" << endl
     << "  -m ...+Hn            Heterotachy model with n classes" << endl
     << "  -m ...*Hn            Heterotachy model with n classes and unlinked parameters" << endl
-    << "  --alpha-min NUMBER   Min Gamma shape parameter for site rates (default: 0.02)" << endl
+    << "  --alpha-min NUM      Min Gamma shape parameter for site rates (default: 0.02)" << endl
     << "  --gamma-median       Median approximation for +G site rates (default: mean)" << endl
     << "  --rate               Write empirical Bayesian site rates to .rate file" << endl
     << "  --mlrate             Write maximum likelihood site rates to .mlrate file" << endl
@@ -4423,20 +4425,20 @@ void usage_iqtree(char* argv[], bool full_command) {
 
     << endl << "TREE TOPOLOGY TEST:" << endl
     << "  --trees FILE         Set of trees to evaluate log-likelihoods" << endl
-    << "  --test NUMBER        Replicates for topology test" << endl
+    << "  --test NUM           Replicates for topology test" << endl
     << "  --test-weight        Perform weighted KH and SH tests" << endl
     << "  --test-au            Approximately unbiased (AU) test (Shimodaira 2002)" << endl
     << "  --sitelh             Write site log-likelihoods to .sitelh file" << endl
 
     << endl << "ANCESTRAL STATE RECONSTRUCTION:" << endl
     << "  --ancestral          Ancestral state reconstruction by empirical Bayes" << endl
-    << "  --asr-min NUMBER     Min probability of ancestral state (default: equil freq)" << endl
+    << "  --asr-min NUM        Min probability of ancestral state (default: equil freq)" << endl
 
     << endl << "TEST OF SYMMETRY:" << endl
     << "  --symtest               Perform three tests of symmetry" << endl
     << "  --symtest-only          Do --symtest then exist" << endl
 //    << "  --bisymtest             Perform three binomial tests of symmetry" << endl
-//    << "  --symtest-perm NUMBER   Replicates for permutation tests of symmetry" << endl
+//    << "  --symtest-perm NUM      Replicates for permutation tests of symmetry" << endl
     << "  --symtest-remove-bad    Do --symtest and remove bad partitions" << endl
     << "  --symtest-remove-good   Do --symtest and remove good partitions" << endl
     << "  --symtest-type MAR|INT  Use MARginal/INTernal test when removing partitions" << endl
@@ -4447,7 +4449,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -t FILE              Reference tree to assign concordance factor" << endl
     << "  --gcf FILE           Set of source trees for gene concordance factor (gCF)" << endl
     << "  --df-tree            Write discordant trees associated with gDF1" << endl
-    << "  --scf NUMBER         Number of quartets for site concordance factor (sCF)" << endl
+    << "  --scf NUM            Number of quartets for site concordance factor (sCF)" << endl
     << "  -s FILE              Sequence alignment for --scf" << endl
     << "  -p FILE|DIR          Partition file or directory for --scf" << endl
     << "  --cf-verbose         Write CF per tree/locus to cf.stat_tree/_loci" << endl
@@ -4464,9 +4466,9 @@ void usage_iqtree(char* argv[], bool full_command) {
     cout
         << endl << "CONSENSUS RECONSTRUCTION:" << endl
         << "  -t FILE              Set of input trees for consensus reconstruction" << endl
-        << "  --sup-min NUMBER     Min split support, 0.5 for majority-rule consensus" << endl
+        << "  --sup-min NUM        Min split support, 0.5 for majority-rule consensus" << endl
         << "                       (default: 0, extended consensus)" << endl
-        << "  --burnin NUMBER      Burnin number of trees to ignore" << endl
+        << "  --burnin NUM         Burnin number of trees to ignore" << endl
         << "  --con-tree           Compute consensus tree to .contree file" << endl
         << "  --con-net            Computing consensus network to .nex file" << endl
         << "  --support FILE       Assign support values into this tree from -t trees" << endl
@@ -4483,14 +4485,14 @@ void usage_iqtree(char* argv[], bool full_command) {
         << endl
 
         << "GENERATING RANDOM TREES:" << endl
-        << "  -r NUMBER            No. taxa for Yule-Harding random tree" << endl
+        << "  -r NUM               No. taxa for Yule-Harding random tree" << endl
         << "  --rand UNI|CAT|BAL   UNIform | CATerpillar | BALanced random tree" << endl
         //<< "  --rand NET           Random circular split network" << endl
         << "  --rlen NUM NUM NUM   min, mean, and max random branch lengths" << endl
 
         << endl << "MISCELLANEOUS:" << endl
         << "  --keep-ident         Keep identical sequences (default: remove & finally add)" << endl
-        << "  --cptime NUMBER      Checkpoint time interval in seconds (default: 60)" << endl
+        << "  --cptime NUM         Checkpoint time interval in seconds (default: 60)" << endl
         << "  -blfix               Fix branch lengths of user tree passed via -te" << endl
         << "  -blscale             Scale branch lengths of user tree passed via -t" << endl
         << "  -blmin               Min branch length for optimization (default 0.000001)" << endl
