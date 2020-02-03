@@ -213,7 +213,7 @@ void reportModelSelection(ofstream &out, Params &params, ModelCheckpoint *model_
     int setid = 1;
     out.precision(3);
 
-    vector<ModelInfo> models;
+    CandidateModelSet models;
     model_info->getOrderedModels(tree, models);
     for (auto it = models.begin(); it != models.end(); it++) {
         if (tree->isSuperTree()) {
@@ -222,7 +222,7 @@ void reportModelSelection(ofstream &out, Params &params, ModelCheckpoint *model_
             setid++;
         }
         out.width(15);
-        out << left << it->name << " ";
+        out << left << it->getName() << " ";
         out.width(11);
         out << right << it->logl << " ";
         out.width(11);
@@ -879,9 +879,6 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
     /*    if (params.model_name == "WHTEST")
      cout <<"  WH-TEST report:           " << params.out_prefix << ".whtest" << endl;*/
 
-    if (params.terrace_analysis)
-        cout << "  Terrace trees written to:      " << params.out_prefix << ".terrace" << endl;
-
     cout << endl;
 
 }
@@ -1263,7 +1260,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
         }
 #ifdef IQTREE_TERRAPHAST
         if (params.terrace_analysis) {
-            out << "TERRACE ANALYSIS" << endl << "--------------" << endl << endl;
+            out << "TERRACE ANALYSIS" << endl << "----------------" << endl << endl;
 
             string filename = params.out_prefix;
             filename += ".terrace";
@@ -1975,7 +1972,7 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
         string str = params.out_prefix;
         str = params.out_prefix;
         str += ".conaln";
-        ((SuperAlignment*)(iqtree.aln))->printCombinedAlignment(str.c_str());
+        iqtree.aln->printAlignment(params.aln_output_format, str.c_str());
     }
     
     if (params.print_partition_info && iqtree.isSuperTree()) {
@@ -3156,18 +3153,12 @@ void runStandardBootstrap(Params &params, Alignment *alignment, IQTree *tree) {
                 boot_tree = new IQTree(bootstrap_alignment);
         }
         if (params.print_bootaln && MPIHelper::getInstance().isMaster()) {
-            if (bootstrap_alignment->isSuperAlignment())
-                ((SuperAlignment*)bootstrap_alignment)->printCombinedAlignment(bootaln_name.c_str(), true);
-            else
-                bootstrap_alignment->printPhylip(bootaln_name.c_str(), true);
+            bootstrap_alignment->printAlignment(params.aln_output_format, bootaln_name.c_str(), true);
         }
 
         if (params.print_boot_site_freq && MPIHelper::getInstance().isMaster()) {
             printSiteStateFreq((((string)params.out_prefix)+"."+convertIntToString(sample)+".bootsitefreq").c_str(), bootstrap_alignment);
-            if (bootstrap_alignment->isSuperAlignment())
-                ((SuperAlignment*)bootstrap_alignment)->printCombinedAlignment((((string)params.out_prefix)+"."+convertIntToString(sample)+".bootaln").c_str());
-            else
-                bootstrap_alignment->printPhylip((((string)params.out_prefix)+"."+convertIntToString(sample)+".bootaln").c_str());
+                bootstrap_alignment->printAlignment(params.aln_output_format, (((string)params.out_prefix)+"."+convertIntToString(sample)+".bootaln").c_str());
         }
 
         if (!tree->constraintTree.empty()) {
@@ -3334,28 +3325,29 @@ void convertAlignment(Params &params, IQTree *iqtree) {
         exclude_sites += EXCLUDE_INVAR;
 
     if (alignment->isSuperAlignment()) {
-        ((SuperAlignment*)alignment)->printCombinedAlignment(params.aln_output);
+        alignment->printAlignment(params.aln_output_format, params.aln_output, false, params.aln_site_list,
+                                  exclude_sites, params.ref_seq_name);
         if (params.print_subaln)
             ((SuperAlignment*)alignment)->printSubAlignments(params);
-        string partition_info = string(params.aln_output) + ".nex";
-        ((SuperAlignment*)alignment)->printPartition(partition_info.c_str(), params.aln_output);
-        partition_info = (string)params.aln_output + ".partitions";
-        ((SuperAlignment*)alignment)->printPartitionRaxml(partition_info.c_str());
+        if (params.aln_output_format != IN_NEXUS) {
+            string partition_info = string(params.aln_output) + ".nex";
+            ((SuperAlignment*)alignment)->printPartition(partition_info.c_str(), params.aln_output);
+            partition_info = (string)params.aln_output + ".partitions";
+            ((SuperAlignment*)alignment)->printPartitionRaxml(partition_info.c_str());
+        }
     } else if (params.gap_masked_aln) {
         Alignment out_aln;
         Alignment masked_aln(params.gap_masked_aln, params.sequence_type, params.intype, params.model_name);
         out_aln.createGapMaskedAlignment(&masked_aln, alignment);
-        out_aln.printPhylip(params.aln_output, false, params.aln_site_list,
+        out_aln.printAlignment(params.aln_output_format, params.aln_output, false, params.aln_site_list,
                 exclude_sites, params.ref_seq_name);
         string str = params.gap_masked_aln;
         str += ".sitegaps";
         out_aln.printSiteGaps(str.c_str());
-    } else if (params.aln_output_format == ALN_PHYLIP) {
-        alignment->printPhylip(params.aln_output, false, params.aln_site_list,
+    } else  {
+        alignment->printAlignment(params.aln_output_format, params.aln_output, false, params.aln_site_list,
                 exclude_sites, params.ref_seq_name);
-    } else if (params.aln_output_format == ALN_FASTA)
-        alignment->printFasta(params.aln_output, false, params.aln_site_list,
-                exclude_sites, params.ref_seq_name);
+    }
 }
 
 /**
@@ -3677,10 +3669,15 @@ void doSymTest(Alignment *alignment, Params &params) {
                 saln->removePartitions(part_id);
             else
                 outError("Can't remove all partitions");
-            string aln_file = (string)params.out_prefix + ((params.symtest_remove == 1)? ".good.phy" : ".bad.phy");
-            saln->printCombinedAlignment(aln_file.c_str());
-            string filename = (string)params.out_prefix + ((params.symtest_remove == 2)? ".good.nex" : ".bad.nex");
-            saln->printPartition(filename.c_str(), aln_file.c_str());
+            if (params.aln_output_format == IN_NEXUS) {
+                string aln_file = (string)params.out_prefix + ((params.symtest_remove == 1)? ".good.nex" : ".bad.nex");
+                alignment->printAlignment(params.aln_output_format, aln_file.c_str());
+            } else {
+                string aln_file = (string)params.out_prefix + ((params.symtest_remove == 1)? ".good.phy" : ".bad.phy");
+                alignment->printAlignment(params.aln_output_format, aln_file.c_str());
+                string filename = (string)params.out_prefix + ((params.symtest_remove == 2)? ".good.nex" : ".bad.nex");
+                saln->printPartition(filename.c_str(), aln_file.c_str());
+            }
         }
     }
     if (params.symtest_only)
@@ -3826,10 +3823,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
             tree->removeIdenticalSeqs(params);
             if (tree->removed_seqs.size() > 0 && MPIHelper::getInstance().isMaster() && (params.suppress_output_flags & OUT_UNIQUESEQ) == 0) {
                 string filename = (string)params.out_prefix + ".uniqueseq.phy";
-                if (tree->isSuperTree())
-                    ((SuperAlignment*)tree->aln)->printCombinedAlignment(filename.c_str());
-                else
-                    tree->aln->printPhylip(filename.c_str());
+                tree->aln->printAlignment(params.aln_output_format, filename.c_str());
                 cout << endl << "For your convenience alignment with unique sequences printed to " << filename << endl;
             }
         }

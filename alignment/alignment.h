@@ -112,6 +112,13 @@ public:
     Alignment(char *filename, char *sequence_type, InputType &intype, string model);
 
     /**
+     constructor
+     @param data_block nexus DATA block
+     @param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
+     */
+    Alignment(NxsDataBlock *data_block, char *sequence_type, string model);
+
+    /**
             destructor
      */
     virtual ~Alignment();
@@ -300,15 +307,20 @@ public:
     int buildRetainingSites(const char *aln_site_list, IntVector &kept_sites,
             int exclude_sites, const char *ref_seq_name);
 
-    void printPhylip(const char *filename, bool append = false, const char *aln_site_list = NULL,
+    void printAlignment(InputType format, const char *filename, bool append = false, const char *aln_site_list = NULL,
     		int exclude_sites = 0, const char *ref_seq_name = NULL);
+
+    virtual void printAlignment(InputType format, ostream &out, bool append = false, const char *aln_site_list = NULL,
+                        int exclude_sites = 0, const char *ref_seq_name = NULL);
 
     void printPhylip(ostream &out, bool append = false, const char *aln_site_list = NULL,
     		int exclude_sites = 0, const char *ref_seq_name = NULL, bool print_taxid = false);
 
-    void printFasta(const char *filename, bool append = false, const char *aln_site_list = NULL,
+    void printFasta(ostream &out, bool append = false, const char *aln_site_list = NULL,
     		int exclude_sites = 0, const char *ref_seq_name = NULL);
 
+    void printNexus(ostream &out, bool append = false, const char *aln_site_list = NULL,
+                    int exclude_sites = 0, const char *ref_seq_name = NULL, bool print_taxid = false);
     /**
             Print the number of gaps per site
             @param filename output file name
@@ -793,8 +805,6 @@ public:
   vector<uint32_t> pomo_sampled_states;
   IntIntMap pomo_sampled_states_index; // indexing, to quickly find if a PoMo-2-state is already present
 
-    vector<vector<int> > seq_states; // state set for each sequence in the alignment
-
     /* for site-specific state frequency model with Huaichun, Edward, Andrew */
     
     /* site to model ID map */
@@ -818,7 +828,7 @@ public:
     /* build seq_states containing set of states per sequence
      * @param add_unobs_const TRUE to add all unobserved constant states (for +ASC model)
      */
-    virtual void buildSeqStates(bool add_unobs_const = false);
+    //virtual void buildSeqStates(vector<vector<int> > &seq_states, bool add_unobs_const = false);
 
     /** Added by MA
             Compute the probability of this alignment according to the multinomial distribution with parameters determined by the reference alignment

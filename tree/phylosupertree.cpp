@@ -1503,7 +1503,7 @@ void PhyloSuperTree::printBestPartitionParams(const char *filename) {
             string name = saln->partitions[part]->name;
             replace(name.begin(), name.end(), '+', '_');
             if (part > 0) out << "," << endl;
-            out << "    " << at(part)->getModelNameParams() << ": " << name;
+            out << "    " << at(part)->getModelNameParams() << ": " << name << "{" << at(part)->treeLength() << "}";
         }
         out << ";" << endl;
         out << "end;" << endl;

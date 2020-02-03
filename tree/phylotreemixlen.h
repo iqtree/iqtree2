@@ -73,7 +73,7 @@ public:
      */
     virtual Node* newNode(int node_id, int node_name);
 
-    virtual void initializeModel(Params &params, string &model_name, ModelsBlock *models_block);
+    virtual void initializeModel(Params &params, string model_name, ModelsBlock *models_block);
 
     /**
         @return true if this is a tree with mixture branch lengths, default: false

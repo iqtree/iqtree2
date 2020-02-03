@@ -1715,7 +1715,7 @@ void guidedBootstrap(Params &params)
     MaAlignment gboAlign;
     double prob;
     gboAlign.generateExpectedAlignment(&inputAlign, prob);
-    gboAlign.printPhylip(gboAln_name.c_str());
+    gboAlign.printAlignment(IN_PHYLIP, gboAln_name.c_str());
 
 
     string outProb_name = params.out_prefix;

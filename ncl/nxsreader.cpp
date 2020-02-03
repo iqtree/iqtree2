@@ -339,6 +339,7 @@ void NxsReader::Execute(
 
 				for (;;)
 					{
+                    token.SetLabileFlagBit(token.hyphenNotPunctuation);
 					token.GetNextToken();
 
 					if (token.Equals("END") || token.Equals("ENDBLOCK")) 

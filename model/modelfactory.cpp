@@ -71,7 +71,7 @@ string::size_type findSubStr(string &name, string sub1, string sub2) {
         return pos2;
 }
 
-string::size_type posRateHeterotachy(string &model_name) {
+string::size_type posRateHeterotachy(string model_name) {
     return findSubStr(model_name, "+H", "*H");
 }
 
@@ -584,11 +584,11 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         tree->aln->getUnobservedConstPatterns(ASC_type, unobserved_ptns);
         
         // rebuild the seq_states to contain states of unobserved constant patterns
-        tree->aln->buildSeqStates(true);
+        //tree->aln->buildSeqStates(model->seq_states, true);
         if (tree->aln->num_informative_sites != tree->getAlnNSite()) {
             if (!params.partition_file) {
                 string infsites_file = ((string)params.out_prefix + ".infsites.phy");
-                tree->aln->printPhylip(infsites_file.c_str(), false, NULL, EXCLUDE_UNINF);
+                tree->aln->printAlignment(params.aln_output_format, infsites_file.c_str(), false, NULL, EXCLUDE_UNINF);
                 cerr << "For your convenience alignment with parsimony-informative sites printed to " << infsites_file << endl;
             }
             outError("Invalid use of +ASC_INF because of " + convertIntToString(tree->getAlnNSite() - tree->aln->num_informative_sites) +
@@ -602,11 +602,11 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         ASC_type = ASC_VARIANT_MISSING;
         tree->aln->getUnobservedConstPatterns(ASC_type, unobserved_ptns);
         // rebuild the seq_states to contain states of unobserved constant patterns
-        tree->aln->buildSeqStates(true);
+        //tree->aln->buildSeqStates(model->seq_states, true);
         if (tree->aln->frac_invariant_sites > 0) {
             if (!params.partition_file) {
                 string varsites_file = ((string)params.out_prefix + ".varsites.phy");
-                tree->aln->printPhylip(varsites_file.c_str(), false, NULL, EXCLUDE_INVAR);
+                tree->aln->printAlignment(params.aln_output_format, varsites_file.c_str(), false, NULL, EXCLUDE_INVAR);
                 cerr << "For your convenience alignment with variable sites printed to " << varsites_file << endl;
             }
             outError("Invalid use of +ASC_MIS because of " + convertIntToString(tree->aln->frac_invariant_sites*tree->aln->getNSite()) +
@@ -626,7 +626,7 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
                 unobserved_ptns.erase(unobserved_ptns.begin() + i);
                 
         // rebuild the seq_states to contain states of unobserved constant patterns
-        tree->aln->buildSeqStates(true);
+        //tree->aln->buildSeqStates(model->seq_states, true);
 //        if (unobserved_ptns.size() <= 0)
 //            outError("Invalid use of +ASC because all constant patterns are observed in the alignment");
         if (tree->aln->frac_invariant_sites > 0) {
@@ -640,7 +640,7 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
 //                }
             if (!params.partition_file) {
                 string varsites_file = ((string)params.out_prefix + ".varsites.phy");
-                tree->aln->printPhylip(varsites_file.c_str(), false, NULL, EXCLUDE_INVAR);
+                tree->aln->printAlignment(params.aln_output_format, varsites_file.c_str(), false, NULL, EXCLUDE_INVAR);
                 cerr << "For your convenience alignment with variable sites printed to " << varsites_file << endl;
             }
             outError("Invalid use of +ASC because of " + convertIntToString(tree->aln->frac_invariant_sites*tree->aln->getNSite()) +
@@ -650,7 +650,7 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
             cout << "Ascertainment bias correction: " << unobserved_ptns.size() << " unobservable constant patterns"<< endl;
 		rate_str = rate_str.substr(0, posasc) + rate_str.substr(posasc+4);
     } else {
-        tree->aln->buildSeqStates(false);
+        //tree->aln->buildSeqStates(model->seq_states, false);
     }
 
     /******************** initialize site rate heterogeneity ****************************/

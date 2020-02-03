@@ -26,6 +26,7 @@
 #include "utils/tools.h"
 #include "tree/mexttree.h"
 #include "phylotesting.h"
+#include "treetesting.h"
 #include "tree/upperbounds.h" // Olga: functions for Upper Bounds analysis
 #include "utils/pllnni.h"
 

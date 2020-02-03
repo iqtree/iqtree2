@@ -911,6 +911,8 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
             }
         } else {
             // something partition kept, do computations
+            if (quartet_aln->ordered_pattern.empty())
+                quartet_aln->orderPatternByNumChars(PAT_VARIANT);
             PhyloTree *quartet_tree;
             if (isSuperTree()) {
                 quartet_tree = new PhyloSuperTree((SuperAlignment*)quartet_aln, (PhyloSuperTree*)this);
@@ -924,6 +926,11 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
             quartet_tree->setLikelihoodKernel(params->SSE);
             quartet_tree->setNumThreads(num_threads);
 
+            // set model and rate
+            quartet_tree->setModelFactory(model_factory);
+            quartet_tree->setModel(getModel());
+            quartet_tree->setRate(getRate());
+
             // set up partition model
             if (isSuperTree()) {
                 PhyloSuperTree *quartet_super_tree = (PhyloSuperTree*)quartet_tree;
@@ -932,13 +939,12 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
                     quartet_super_tree->at(i)->setModelFactory(super_tree->at(kept_partitions[i])->getModelFactory());
                     quartet_super_tree->at(i)->setModel(super_tree->at(kept_partitions[i])->getModel());
                     quartet_super_tree->at(i)->setRate(super_tree->at(kept_partitions[i])->getRate());
+                    //quartet_super_tree->at(i)->aln->buildSeqStates(quartet_super_tree->at(i)->getModel()->seq_states);
                 }
+            } else {
+                //quartet_aln->buildSeqStates(getModel()->seq_states);
             }
             
-            // set model and rate
-            quartet_tree->setModelFactory(model_factory);
-            quartet_tree->setModel(getModel());
-            quartet_tree->setRate(getRate());
             // NOTE: we don't need to set phylo_tree in model and rate because parameters are not reoptimized
             
             
@@ -1141,15 +1147,27 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
 		}
 	}
     } /*** end draw lmap_num_quartets quartets randomly ***/
-    if ((params->lmap_num_quartets % 5000) != 0) {
-	cout << ". : " << params->lmap_num_quartets << flush << endl << endl;
-    } else cout << endl;
-
 #ifdef _OPENMP
     finish_random(rstream);
     }
 #endif
 
+    if ((params->lmap_num_quartets % 5000) != 0) {
+	cout << ". : " << params->lmap_num_quartets << flush << endl << endl;
+    } else cout << endl;
+
+
+    // restore seq_states
+    /*
+    if (isSuperTree()) {
+        PhyloSuperTree *super_tree = (PhyloSuperTree*)this;
+        for (int i = 0; i < super_tree->size(); i++) {
+            super_tree->at(i)->aln->buildSeqStates(super_tree->at(i)->getModel()->seq_states);
+        }
+    } else {
+        aln->buildSeqStates(getModel()->seq_states);
+    }
+     */
 } // end PhyloTree::computeQuartetLikelihoods
 
 

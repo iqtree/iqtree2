@@ -399,14 +399,6 @@ enum StateFreqType {
     FREQ_DNA_2113, FREQ_DNA_2131, FREQ_DNA_2311, 
 };
 
-/**
-        alignment format type
- */
-
-enum AlnFormat {
-    ALN_PHYLIP, ALN_FASTA
-};
-
 /*
     outfile file format
  FORMAT_NORMAL: usual file format used so far
@@ -985,7 +977,7 @@ public:
     /**
             alignment output format
      */
-    AlnFormat aln_output_format;
+    InputType aln_output_format;
     
     /**
         output file format
@@ -1437,7 +1429,7 @@ public:
     int model_opt_steps;
     
     /** set of models for testing */
-    char *model_set;
+    string model_set;
 
     /** set of models to be added into default set */
     char *model_extra_set;
@@ -1449,8 +1441,11 @@ public:
     char *state_freq_set;
 
     /** set of rate heterogeneity model for testing */
-    char *ratehet_set;
+    string ratehet_set;
 
+    /** all models with score worse than the best score + this threshold will be ignored */
+    double score_diff_thres;
+    
     /** model defition file */
     char *model_def_file;
 
@@ -1607,6 +1602,12 @@ public:
     /** 1 or 2 to perform transfer boostrap expectation (TBE) */
     int transfer_bootstrap;
     
+    /** subsampling some number of partitions / sites for analysis */
+    int subsampling;
+
+    /** random seed number for subsampling */
+    int subsampling_seed;
+
     /**
             1 if output all intermediate trees (initial trees, NNI-optimal trees and trees after each NNI step)
             2 if output all intermediate trees + 1-NNI-away trees
@@ -2044,6 +2045,9 @@ public:
     
     /** maximum number of threads, default: #CPU scores  */
     int num_threads_max;
+    
+    /** true to parallel ModelFinder by models instead of sites */
+    bool openmp_by_model;
 
     /** either MTC_AIC, MTC_AICc, MTC_BIC */
     ModelTestCriterion model_test_criterion;

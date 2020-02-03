@@ -124,7 +124,7 @@ void SuperAlignmentUnlinked::buildPattern() {
     }
     
     countConstSite();
-    buildSeqStates();
+//    buildSeqStates();
 }
 
 void SuperAlignmentUnlinked::computeConst(Pattern &pat) {
@@ -145,6 +145,7 @@ void SuperAlignmentUnlinked::computeConst(Pattern &pat) {
     if (is_informative) pat.flag |= PAT_INFORMATIVE;
 }
 
+/*
 void SuperAlignmentUnlinked::buildSeqStates(bool add_unobs_const) {
     if (!unlinked_taxa) {
         SuperAlignment::buildSeqStates(add_unobs_const);
@@ -160,3 +161,4 @@ void SuperAlignmentUnlinked::buildSeqStates(bool add_unobs_const) {
             seq_states.resize(getNSeq(), IntVector({0,1}));
     }
 }
+*/
