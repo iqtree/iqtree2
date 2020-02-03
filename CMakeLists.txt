@@ -79,9 +79,9 @@ endif()
 
 
 # The version number.
-set (iqtree_VERSION_MAJOR 1)
-set (iqtree_VERSION_MINOR 7)
-set (iqtree_VERSION_PATCH "-beta16")
+set (iqtree_VERSION_MAJOR 2)
+set (iqtree_VERSION_MINOR 0)
+set (iqtree_VERSION_PATCH "-rc1")
 
 option(BUILD_SHARED_LIBS "Build Shared Libraries" OFF)
 
@@ -542,6 +542,7 @@ if (USE_BOOSTER)
     add_definitions(-DUSE_BOOSTER)
 endif()
 
+add_subdirectory(main)
 add_subdirectory(pll)
 add_subdirectory(ncl)
 add_subdirectory(nclextra)
@@ -586,11 +587,6 @@ add_library(kernelfma tree/phylokernelfma.cpp)
 endif()
 
 add_executable(iqtree
-main/main.cpp
-main/phyloanalysis.cpp
-main/phyloanalysis.h
-main/phylotesting.cpp
-main/phylotesting.h
 obsolete/parsmultistate.cpp
 obsolete/parsmultistate.h
 )
@@ -606,7 +602,7 @@ endif()
 
 if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
     if (NOT IQTREE_FLAGS MATCHES "nosse")
-        set_target_properties(iqtree ncl nclextra utils pda lbfgsb whtest sprng vectorclass model gsl alignment tree yaml-cpp phyloYAML PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
+        set_target_properties(iqtree ncl nclextra utils pda lbfgsb whtest sprng vectorclass model gsl alignment tree yaml-cpp phyloYAML main PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
         if (USE_TERRAPHAST)
             set_target_properties(terrace terraphast PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
         endif()
@@ -665,7 +661,8 @@ if (NOT IQTREE_FLAGS MATCHES "single")
 endif()
 
 # basic linking librararies
-target_link_libraries(iqtree pll ncl nclextra utils pda lbfgsb whtest sprng vectorclass model gsl alignment tree yaml-cpp phyloYAML ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
+target_link_libraries(iqtree pll ncl nclextra utils pda lbfgsb whtest sprng vectorclass model
+    gsl alignment tree yaml-cpp phyloYAML main ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
 
 if (USE_TERRAPHAST)
    target_link_libraries(iqtree terrace)

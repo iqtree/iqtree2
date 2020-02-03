@@ -465,6 +465,12 @@ public:
 
     void discardSaturatedSite(bool val);
 
+    /** get substitution matrix name */
+    string getSubstName();
+    
+    /** get rate heterogeneity name */
+    string getRateName();
+    
     /**
             get the name of the model
      */

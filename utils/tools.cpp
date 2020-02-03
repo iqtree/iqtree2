@@ -860,11 +860,15 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.partfinder_log_rate = true;
     params.remove_empty_seq = true;
     params.terrace_aware = true;
+#ifdef IQTREE_TERRAPHAST
+    params.terrace_analysis = true;
+#else
     params.terrace_analysis = false;
+#endif
     params.sequence_type = NULL;
     params.aln_output = NULL;
     params.aln_site_list = NULL;
-    params.aln_output_format = ALN_PHYLIP;
+    params.aln_output_format = IN_PHYLIP;
     params.output_format = FORMAT_NORMAL;
     params.newick_extended_format = false;
     params.gap_masked_aln = NULL;
@@ -900,11 +904,12 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.model_name = "";
     params.model_name_init = NULL;
     params.model_opt_steps = 10;
-    params.model_set = NULL;
+    params.model_set = "ALL";
     params.model_extra_set = NULL;
     params.model_subset = NULL;
     params.state_freq_set = NULL;
-    params.ratehet_set = NULL;
+    params.ratehet_set = "AUTO";
+    params.score_diff_thres = 10.0;
     params.model_def_file = NULL;
     params.modelomatic = false;
     params.model_test_again = false;
@@ -1063,6 +1068,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.tree_freq_file = NULL;
     params.num_threads = 1;
     params.num_threads_max = 10000;
+    params.openmp_by_model = false;
     params.model_test_criterion = MTC_BIC;
 //    params.model_test_stop_rule = MTC_ALL;
     params.model_test_sample_size = 0;
@@ -1121,6 +1127,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     gettimeofday(&tv, &tz);
     //params.ran_seed = (unsigned) (tv.tv_sec+tv.tv_usec);
     params.ran_seed = (tv.tv_usec);
+    params.subsampling_seed = params.ran_seed;
+    params.subsampling = 0;
 
     for (cnt = 1; cnt < argc; cnt++) {
         try {
@@ -1133,7 +1141,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 #endif
                 continue;
             }
-            if (strcmp(argv[cnt], "-version") == 0 || strcmp(argv[cnt], "--version") == 0) {
+            if (strcmp(argv[cnt], "-V") == 0 || strcmp(argv[cnt], "-version") == 0 || strcmp(argv[cnt], "--version") == 0) {
                 printCopyright(cout);
                 exit(EXIT_SUCCESS);
             }
@@ -2081,7 +2089,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 #endif
                 continue;
             }
-			if (strcmp(argv[cnt], "-sf") == 0) {
+
+            if (strcmp(argv[cnt], "--no-terrace") == 0) {
+                params.terrace_analysis = false;
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "-sf") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -sf <ngs_file>";
@@ -2136,7 +2150,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
-			if (strcmp(argv[cnt], "-ao") == 0 || strcmp(argv[cnt], "--out-alignment") == 0) {
+			if (strcmp(argv[cnt], "-ao") == 0 || strcmp(argv[cnt], "--out-alignment") == 0 || strcmp(argv[cnt], "--out-aln") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -ao <alignment_file>";
@@ -2157,14 +2171,16 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.ref_seq_name = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "-af") == 0) {
+			if (strcmp(argv[cnt], "-af") == 0 || strcmp(argv[cnt], "--out-format") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -af phy|fasta";
 				if (strcmp(argv[cnt], "phy") == 0)
-					params.aln_output_format = ALN_PHYLIP;
+					params.aln_output_format = IN_PHYLIP;
 				else if (strcmp(argv[cnt], "fasta") == 0)
-					params.aln_output_format = ALN_FASTA;
+					params.aln_output_format = IN_FASTA;
+                else if (strcmp(argv[cnt], "nexus") == 0)
+                    params.aln_output_format = IN_NEXUS;
 				else
 					throw "Unknown output format";
 				continue;
@@ -2296,11 +2312,11 @@ void parseArg(int argc, char *argv[], Params &params) {
             if (strcmp(argv[cnt], "--loop-model") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use --loop-model NUMBER";
+                    throw "Use --loop-model NUM";
                 params.model_opt_steps = convert_int(argv[cnt]);
                 continue;
             }
-			if (strcmp(argv[cnt], "-mset") == 0 || strcmp(argv[cnt], "--mset") == 0 || strcmp(argv[cnt], "--model-set") == 0 ) {
+			if (strcmp(argv[cnt], "-mset") == 0 || strcmp(argv[cnt], "--mset") == 0 || strcmp(argv[cnt], "--models") == 0 ) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -mset <model_set>";
@@ -2321,20 +2337,32 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.model_subset = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "-mfreq") == 0 || strcmp(argv[cnt], "--freq-set") == 0) {
+			if (strcmp(argv[cnt], "-mfreq") == 0 || strcmp(argv[cnt], "--freqs") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -mfreq <state_freq_set>";
 				params.state_freq_set = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "-mrate") == 0 || strcmp(argv[cnt], "--rate-set") == 0) {
+			if (strcmp(argv[cnt], "-mrate") == 0 || strcmp(argv[cnt], "--rates") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -mrate <rate_set>";
 				params.ratehet_set = argv[cnt];
 				continue;
 			}
+            
+            if (strcmp(argv[cnt], "--score-diff") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --score-diff <score>";
+                if (iEquals(argv[cnt], "all"))
+                    params.score_diff_thres = -1.0;
+                else
+                    params.score_diff_thres = convert_double(argv[cnt]);
+                continue;
+            }
+            
 			if (strcmp(argv[cnt], "-mdef") == 0 || strcmp(argv[cnt], "--mdef") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -2533,7 +2561,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.freq_const_patterns = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "--rates") == 0) {
+			if (strcmp(argv[cnt], "--nrate") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -c <#rate_category>";
@@ -2715,13 +2743,15 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Wrong number of threads";
 				continue;
 			}
-			if (strcmp(argv[cnt], "-b") == 0 || strcmp(argv[cnt], "-j") == 0 || strcmp(argv[cnt], "-bo") == 0 || strcmp(argv[cnt], "--bonly") == 0) {
+			if (strcmp(argv[cnt], "-b") == 0 || strcmp(argv[cnt], "--boot") == 0 ||
+                strcmp(argv[cnt], "-j") == 0 || strcmp(argv[cnt], "--jack") == 0 ||
+                strcmp(argv[cnt], "-bo") == 0 || strcmp(argv[cnt], "--bonly") == 0) {
 				params.multi_tree = true;
 				if (strcmp(argv[cnt], "-bo") == 0 || strcmp(argv[cnt], "--bonly") == 0)
 					params.compute_ml_tree = false;
 				else
 					params.consensus_type = CT_CONSENSUS_TREE;
-                if (strcmp(argv[cnt], "-j") == 0 && params.jackknife_prop == 0.0)
+                if ((strcmp(argv[cnt], "-j") == 0 || strcmp(argv[cnt], "--jack") == 0) && params.jackknife_prop == 0.0)
                     params.jackknife_prop = 0.5;
 				cnt++;
 				if (cnt >= argc)
@@ -2735,7 +2765,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 					params.consensus_type = CT_NONE;
 				continue;
 			}
-			if (strcmp(argv[cnt], "--bsam") == 0 || strcmp(argv[cnt], "-bsam") == 0) {
+			if (strcmp(argv[cnt], "--bsam") == 0 || strcmp(argv[cnt], "-bsam") == 0 || strcmp(argv[cnt], "--sampling") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -bsam <bootstrap_specification>";
@@ -2743,6 +2773,22 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
             
+            if (strcmp(argv[cnt], "--subsample") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --subsample NUM";
+                params.subsampling = convert_int(argv[cnt]);
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "--subsample-seed") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --subsample-seed <random_seed>";
+                params.subsampling_seed = convert_int(argv[cnt]);
+                continue;
+            }
+
 #ifdef USE_BOOSTER
             if (strcmp(argv[cnt], "--tbe") == 0) {
                 params.transfer_bootstrap = 1;
@@ -2781,7 +2827,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
-			if (strcmp(argv[cnt], "-wt") == 0) {
+			if (strcmp(argv[cnt], "-wt") == 0 || strcmp(argv[cnt], "--treels") == 0) {
 				params.write_intermediate_trees = 1;
 				continue;
 			}
@@ -2908,12 +2954,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Local bootstrap (LBP) replicates must be at least 1000";
 				continue;
 			}
-			if (strcmp(argv[cnt], "-wsl") == 0) {
+			if (strcmp(argv[cnt], "-wsl") == 0 || strcmp(argv[cnt], "--sitelh") == 0) {
 				params.print_site_lh = WSL_SITE;
 				continue;
 			}
 
-			if (strcmp(argv[cnt], "-wpl") == 0) {
+			if (strcmp(argv[cnt], "-wpl") == 0 || strcmp(argv[cnt], "--partlh") == 0) {
 				params.print_partition_lh = true;
 				continue;
 			}
@@ -3172,12 +3218,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.eco_run = convert_int(argv[cnt]);
 				continue;
 			}
-			if (strcmp(argv[cnt], "-bb") == 0 || strcmp(argv[cnt], "-B") == 0 || strcmp(argv[cnt], "-J") == 0) {
-                if (strcmp(argv[cnt], "-J") == 0 && params.jackknife_prop == 0.0)
+			if (strcmp(argv[cnt], "-bb") == 0 || strcmp(argv[cnt], "-B") == 0 || strcmp(argv[cnt], "--ufboot") == 0 ||
+                strcmp(argv[cnt], "-J") == 0 || strcmp(argv[cnt], "--ufjack") == 0) {
+                if ((strcmp(argv[cnt], "-J") == 0 || strcmp(argv[cnt], "--ufjack") == 0) && params.jackknife_prop == 0.0)
                     params.jackknife_prop = 0.5;
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -bb <#replicates>";
+					throw "Use -B <#replicates>";
                 if (params.stop_condition == SC_FIXED_ITERATION) {
                     throw("Ultrafast bootstrap does not work with -fast, -te or -n option");
                 }
@@ -3199,7 +3246,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Epsilon must be positive";
 				continue;
 			}
-			if (strcmp(argv[cnt], "-wbt") == 0 || strcmp(argv[cnt], "--wbt") == 0) {
+			if (strcmp(argv[cnt], "-wbt") == 0 || strcmp(argv[cnt], "--wbt") == 0 || strcmp(argv[cnt], "--boot-trees") == 0) {
 				params.print_ufboot_trees = 1;
 				continue;
 			}
@@ -3503,7 +3550,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.pll = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-me") == 0 || strcmp(argv[cnt], "--model-epsilon") == 0) {
+			if (strcmp(argv[cnt], "-me") == 0 || strcmp(argv[cnt], "--epsilon") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -me <model_epsilon>";
@@ -3756,6 +3803,16 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             
+            if (strcmp(argv[cnt], "--thread-model") == 0) {
+                params.openmp_by_model = true;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--thread-site") == 0) {
+                params.openmp_by_model = false;
+                continue;
+            }
+
 //			if (strcmp(argv[cnt], "-rootstate") == 0) {
 //                cnt++;
 //                if (cnt >= argc)
@@ -3919,7 +3976,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
-			if (strcmp(argv[cnt], "--force-unfinish") == 0) {
+			if (strcmp(argv[cnt], "--undo") == 0) {
 				params.force_unfinished = true;
 				continue;
 			}
@@ -4047,7 +4104,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 //        outError("The AU test is temporarily disabled due to numerical issue when bp-RELL=0");
     
     if (params.terrace_analysis && !params.partition_file)
-        outError("Terrace analysis requires partition information.");
+        params.terrace_analysis = false;
 
     if (params.constraint_tree_file && params.partition_type == TOPO_UNLINKED)
         outError("-g constraint tree option does not work with -spu.");
@@ -4070,10 +4127,12 @@ void parseArg(int argc, char *argv[], Params &params) {
             if (params.out_prefix[strlen(params.out_prefix)-1] == '/' || params.out_prefix[strlen(params.out_prefix)-1] == '\\') {
                 params.out_prefix[strlen(params.out_prefix)-1] = 0;
             }
-        }
-        else if (params.aln_file)
+        } else if (params.aln_file) {
             params.out_prefix = params.aln_file;
-        else if (params.ngs_file)
+            if (params.out_prefix[strlen(params.out_prefix)-1] == '/' || params.out_prefix[strlen(params.out_prefix)-1] == '\\') {
+                params.out_prefix[strlen(params.out_prefix)-1] = 0;
+            }
+        } else if (params.ngs_file)
             params.out_prefix = params.ngs_file;
         else if (params.ngs_mapped_reads)
             params.out_prefix = params.ngs_mapped_reads;
@@ -4167,20 +4226,26 @@ void usage_iqtree(char* argv[], bool full_command) {
     printCopyright(cout);
     cout << "Usage: iqtree [-s ALIGNMENT] [-p PARTITION] [-m MODEL] [-t TREE] ..." << endl << endl;
     cout << "GENERAL OPTIONS:" << endl
-    << "  -h                   Print this help dialog" << endl
-    << "  --help               Print more available options" << endl
-    << "  --version            Display version number" << endl
-    << "  -s FILE              PHYLIP/FASTA/NEXUS/CLUSTAL/MSF sequence alignment" << endl
+    << "  -h, --help           Print (more) help usages" << endl
+    << "  -s FILE[,...,FILE]   PHYLIP/FASTA/NEXUS/CLUSTAL/MSF alignment file(s)" << endl
+    << "  -s DIR               Directory of alignment files" << endl
+    << "  --seqtype STRING     BIN, DNA, AA, NT2AA, CODON, MORPH (default: auto-detect)" << endl
     << "  -t FILE|PARS|RAND    Starting tree (default: 99 parsimony and BIONJ)" << endl
-    << "  --tree-fix           Fix -t tree (no tree search performed)" << endl
+    << "  -o TAX[,...,TAX]     Outgroup taxon (list) for writing .treefile" << endl
     << "  --prefix STRING      Prefix for all output files (default: aln/partition)" << endl
-    << "  --seed NUMBER        Random seed number, normally used for debugging purpose" << endl
+    << "  --seed NUM           Random seed number, normally used for debugging purpose" << endl
     << "  --safe               Safe likelihood kernel to avoid numerical underflow" << endl
-    << "  --mem NUMBER[G|M|%]  Maximal RAM usage in GB | MB | %" << endl
-    << "  --runs NUMBER        Number of indepedent runs (default: 1)" << endl
+    << "  --mem NUM[G|M|%]     Maximal RAM usage in GB | MB | %" << endl
+    << "  --runs NUM           Number of indepedent runs (default: 1)" << endl
     << "  --redo               Ignore checkpoint and overwrite outputs (default: OFF)" << endl
+    << "  -v, --verbose        Verbose mode, printing more messages to screen" << endl
+    << "  -V, --version        Display version number" << endl
+    << "  --quiet              Quiet mode, suppress printing to screen (stdout)" << endl
+    << "  -fconst f1,...,fN    Add constant patterns into alignment (N=no. states)" << endl
+    << "  --epsilon NUM        Likelihood epsilon for parameter estimate (default 0.01)" << endl
 #ifdef _OPENMP
-    << "  -T NUMBER|AUTO       No. cores/threads or AUTO-detect (default: 1)" << endl
+    << "  -T NUM|AUTO          No. cores/threads or AUTO-detect (default: 1)" << endl
+    << "  --threads-max NUM    Max number of threads for -T AUTO (default: all cores)" << endl
 #endif
     << endl << "PARTITION MODEL:" << endl
     << "  -p FILE|DIR          NEXUS/RAxML partition file or directory with alignments" << endl
@@ -4188,56 +4253,61 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -q FILE|DIR          Like -p but edge-linked equal partition model " << endl
     << "  -Q FILE|DIR          Like -p but edge-unlinked partition model" << endl
     << "  -S FILE|DIR          Like -p but separate tree inference" << endl
+    << "  --subsample NUM      Randomly sub-sample partitions (negative for complement)" << endl
+    << "  --subsample-seed NUM Random number seed for --subsample" << endl
     << endl << "LIKELIHOOD/QUARTET MAPPING:" << endl
-    << "  --lmap NUMBER        Number of quartets for likelihood mapping analysis" << endl
+    << "  --lmap NUM           Number of quartets for likelihood mapping analysis" << endl
     << "  --lmclust FILE       NEXUS file containing clusters for likelihood mapping" << endl
     << "  --quartetlh          Print quartet log-likelihoods to .quartetlh file" << endl
     << endl << "TREE SEARCH ALGORITHM:" << endl
 //            << "  -pll                 Use phylogenetic likelihood library (PLL) (default: off)" << endl
-    << "  --ninit NUMBER       Number of initial parsimony trees (default: 100)" << endl
-    << "  --ntop NUMBER        Number of top initial trees (default: 20)" << endl
-    << "  --nbest NUMBER       Number of best trees retained during search (defaut: 5)" << endl
-    << "  -n NUMBER            Fix number of iterations to stop (default: OFF)" << endl
-    << "  --nstop NUMBER       Number of unsuccessful iterations to stop (default: 100)" << endl
-    << "  --perturb NUMBER     Perturbation strength for randomized NNI (default: 0.5)" << endl
-    << "  --radius NUMBER      Radius for parsimony SPR search (default: 6)" << endl
+    << "  --ninit NUM          Number of initial parsimony trees (default: 100)" << endl
+    << "  --ntop NUM           Number of top initial trees (default: 20)" << endl
+    << "  --nbest NUM          Number of best trees retained during search (defaut: 5)" << endl
+    << "  -n NUM               Fix number of iterations to stop (default: OFF)" << endl
+    << "  --nstop NUM          Number of unsuccessful iterations to stop (default: 100)" << endl
+    << "  --perturb NUM        Perturbation strength for randomized NNI (default: 0.5)" << endl
+    << "  --radius NUM         Radius for parsimony SPR search (default: 6)" << endl
     << "  --allnni             Perform more thorough NNI search (default: OFF)" << endl
     << "  -g FILE              (Multifurcating) topological constraint tree file" << endl
     << "  --fast               Fast search to resemble FastTree" << endl
     << "  --polytomy           Collapse near-zero branches into polytomy" << endl
+    << "  --tree-fix           Fix -t tree (no tree search performed)" << endl
+    << "  --treels             Write locally optimal trees into .treels file" << endl
+    << "  --show-lh            Compute tree likelihood without optimisation" << endl
 #ifdef IQTREE_TERRAPHAST
     << "  --terrace            Check if the tree lies on a phylogenetic terrace" << endl
 #endif
 //            << "  -iqp                 Use the IQP tree perturbation (default: randomized NNI)" << endl
 //            << "  -iqpnni              Switch back to the old IQPNNI tree search algorithm" << endl
     << endl << "ULTRAFAST BOOTSTRAP/JACKKNIFE:" << endl
-    << "  -B NUMBER            Replicates for ultrafast bootstrap (>=1000)" << endl
-    << "  -J NUMBER            Replicates for ultrafast jackknife (>=1000)" << endl
-    << "  --jack-prop NUMBER   Subsampling proportion for jackknife (default: 0.5)" << endl
-    << "  --bsam STRING        GENE|GENESITE resampling for partitions (default: SITE)" << endl
-    << "  --wbt                Write bootstrap trees to .ufboot file (default: none)" << endl
-    << "  --wbtl               Like -wbt but also writing branch lengths" << endl
+    << "  -B, --ufboot NUM     Replicates for ultrafast bootstrap (>=1000)" << endl
+    << "  -J, --ufjack NUM     Replicates for ultrafast jackknife (>=1000)" << endl
+    << "  --jack-prop NUM      Subsampling proportion for jackknife (default: 0.5)" << endl
+    << "  --sampling STRING    GENE|GENESITE resampling for partitions (default: SITE)" << endl
+    << "  --boot-trees         Write bootstrap trees to .ufboot file (default: none)" << endl
+    << "  --wbtl               Like --boot-trees but also writing branch lengths" << endl
 //            << "  -n <#iterations>     Minimum number of iterations (default: 100)" << endl
-    << "  --nmax NUMBER        Maximum number of iterations (default: 1000)" << endl
-    << "  --nstep NUMBER       Iterations for UFBoot stopping rule (default: 100)" << endl
-    << "  --bcor NUMBER        Minimum correlation coefficient (default: 0.99)" << endl
-    << "  --beps NUMBER        RELL epsilon to break tie (default: 0.5)" << endl
+    << "  --nmax NUM           Maximum number of iterations (default: 1000)" << endl
+    << "  --nstep NUM          Iterations for UFBoot stopping rule (default: 100)" << endl
+    << "  --bcor NUM           Minimum correlation coefficient (default: 0.99)" << endl
+    << "  --beps NUM           RELL epsilon to break tie (default: 0.5)" << endl
     << "  --bnni               Optimize UFBoot trees by NNI on bootstrap alignment" << endl
     << endl << "NON-PARAMETRIC BOOTSTRAP/JACKKNIFE:" << endl
-    << "  -b NUMBER            Replicates for bootstrap + ML tree + consensus tree" << endl
-    << "  -j NUMBER            Replicates for jackknife + ML tree + consensus tree" << endl
-    << "  --jack-prop NUMBER   Subsampling proportion for jackknife (default: 0.5)" << endl
-    << "  --bcon NUMBER        Replicates for bootstrap + consensus tree" << endl
-    << "  --bonly NUMBER       Replicates for bootstrap only" << endl
+    << "  -b, --boot NUM       Replicates for bootstrap + ML tree + consensus tree" << endl
+    << "  -j, --jack NUM       Replicates for jackknife + ML tree + consensus tree" << endl
+    << "  --jack-prop NUM      Subsampling proportion for jackknife (default: 0.5)" << endl
+    << "  --bcon NUM           Replicates for bootstrap + consensus tree" << endl
+    << "  --bonly NUM          Replicates for bootstrap only" << endl
 #ifdef USE_BOOSTER
     << "  --tbe                Transfer bootstrap expectation" << endl
 #endif
 //            << "  -t <threshold>       Minimum bootstrap support [0...1) for consensus tree" << endl
     << endl << "SINGLE BRANCH TEST:" << endl
-    << "  --alrt NUMBER        Replicates for SH approximate likelihood ratio test" << endl
+    << "  --alrt NUM           Replicates for SH approximate likelihood ratio test" << endl
     << "  --alrt 0             Parametric aLRT test (Anisimova and Gascuel 2006)" << endl
     << "  --abayes             approximate Bayes test (Anisimova et al. 2011)" << endl
-    << "  --lbp NUMBER         Replicates for fast local bootstrap probabilities" << endl
+    << "  --lbp NUM            Replicates for fast local bootstrap probabilities" << endl
     << endl << "MODEL-FINDER:" << endl
     << "  -m TESTONLY          Standard model selection (like jModelTest, ProtTest)" << endl
     << "  -m TEST              Standard model selection followed by tree inference" << endl
@@ -4256,8 +4326,8 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --mfreq STR,...      List of state frequencies" << endl
     << "  --mrate STR,...      List of rate heterogeneity among sites" << endl
     << "                       (e.g. -mrate E,I,G,I+G,R is used for -m MF)" << endl
-    << "  --cmin NUMBER        Min categories for FreeRate model [+R] (default: 2)" << endl
-    << "  --cmax NUMBER        Max categories for FreeRate model [+R] (default: 10)" << endl
+    << "  --cmin NUM           Min categories for FreeRate model [+R] (default: 2)" << endl
+    << "  --cmax NUM           Max categories for FreeRate model [+R] (default: 10)" << endl
     << "  --merit AIC|AICc|BIC  Akaike|Bayesian information criterion (default: BIC)" << endl
 //            << "  -msep                Perform model selection and then rate selection" << endl
     << "  --mtree              Perform full tree search for every model" << endl
@@ -4326,7 +4396,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -m ...+I+R[n]        Invariable sites plus FreeRate model with n categories" << endl
     << "  -m ...+Hn            Heterotachy model with n classes" << endl
     << "  -m ...*Hn            Heterotachy model with n classes and unlinked parameters" << endl
-    << "  --alpha-min NUMBER   Min Gamma shape parameter for site rates (default: 0.02)" << endl
+    << "  --alpha-min NUM      Min Gamma shape parameter for site rates (default: 0.02)" << endl
     << "  --gamma-median       Median approximation for +G site rates (default: mean)" << endl
     << "  --rate               Write empirical Bayesian site rates to .rate file" << endl
     << "  --mlrate             Write maximum likelihood site rates to .mlrate file" << endl
@@ -4355,19 +4425,20 @@ void usage_iqtree(char* argv[], bool full_command) {
 
     << endl << "TREE TOPOLOGY TEST:" << endl
     << "  --trees FILE         Set of trees to evaluate log-likelihoods" << endl
-    << "  --test NUMBER        Replicates for topology test" << endl
+    << "  --test NUM           Replicates for topology test" << endl
     << "  --test-weight        Perform weighted KH and SH tests" << endl
     << "  --test-au            Approximately unbiased (AU) test (Shimodaira 2002)" << endl
+    << "  --sitelh             Write site log-likelihoods to .sitelh file" << endl
 
     << endl << "ANCESTRAL STATE RECONSTRUCTION:" << endl
     << "  --ancestral          Ancestral state reconstruction by empirical Bayes" << endl
-    << "  --asr-min NUMBER     Min probability of ancestral state (default: equil freq)" << endl
+    << "  --asr-min NUM        Min probability of ancestral state (default: equil freq)" << endl
 
     << endl << "TEST OF SYMMETRY:" << endl
     << "  --symtest               Perform three tests of symmetry" << endl
     << "  --symtest-only          Do --symtest then exist" << endl
 //    << "  --bisymtest             Perform three binomial tests of symmetry" << endl
-//    << "  --symtest-perm NUMBER   Replicates for permutation tests of symmetry" << endl
+//    << "  --symtest-perm NUM      Replicates for permutation tests of symmetry" << endl
     << "  --symtest-remove-bad    Do --symtest and remove bad partitions" << endl
     << "  --symtest-remove-good   Do --symtest and remove good partitions" << endl
     << "  --symtest-type MAR|INT  Use MARginal/INTernal test when removing partitions" << endl
@@ -4378,7 +4449,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -t FILE              Reference tree to assign concordance factor" << endl
     << "  --gcf FILE           Set of source trees for gene concordance factor (gCF)" << endl
     << "  --df-tree            Write discordant trees associated with gDF1" << endl
-    << "  --scf NUMBER         Number of quartets for site concordance factor (sCF)" << endl
+    << "  --scf NUM            Number of quartets for site concordance factor (sCF)" << endl
     << "  -s FILE              Sequence alignment for --scf" << endl
     << "  -p FILE|DIR          Partition file or directory for --scf" << endl
     << "  --cf-verbose         Write CF per tree/locus to cf.stat_tree/_loci" << endl
@@ -4395,9 +4466,9 @@ void usage_iqtree(char* argv[], bool full_command) {
     cout
         << endl << "CONSENSUS RECONSTRUCTION:" << endl
         << "  -t FILE              Set of input trees for consensus reconstruction" << endl
-        << "  --sup-min NUMBER     Min split support, 0.5 for majority-rule consensus" << endl
+        << "  --sup-min NUM        Min split support, 0.5 for majority-rule consensus" << endl
         << "                       (default: 0, extended consensus)" << endl
-        << "  --burnin NUMBER      Burnin number of trees to ignore" << endl
+        << "  --burnin NUM         Burnin number of trees to ignore" << endl
         << "  --con-tree           Compute consensus tree to .contree file" << endl
         << "  --con-net            Computing consensus network to .nex file" << endl
         << "  --support FILE       Assign support values into this tree from -t trees" << endl
@@ -4414,40 +4485,28 @@ void usage_iqtree(char* argv[], bool full_command) {
         << endl
 
         << "GENERATING RANDOM TREES:" << endl
-        << "  -r NUMBER            No. taxa for Yule-Harding random tree" << endl
+        << "  -r NUM               No. taxa for Yule-Harding random tree" << endl
         << "  --rand UNI|CAT|BAL   UNIform | CATerpillar | BALanced random tree" << endl
         //<< "  --rand NET           Random circular split network" << endl
         << "  --rlen NUM NUM NUM   min, mean, and max random branch lengths" << endl
 
         << endl << "MISCELLANEOUS:" << endl
-        << "  -o STRING            Outgroup taxon name for writing .treefile" << endl
-        << "  --seqtype STRING     BIN, DNA, AA, NT2AA, CODON, MORPH (default: auto-detect)" << endl
-    #ifdef _OPENMP
-        << "  --threads-max NUM    Max number of threads for -c AUTO (default: CPU cores)" << endl
-    #endif
-        << "  -v, --verbose        Verbose mode, printing more messages to screen" << endl
-        << "  --quiet              Quiet mode, suppress printing to screen (stdout)" << endl
         << "  --keep-ident         Keep identical sequences (default: remove & finally add)" << endl
-        << "  --cptime NUMBER      Checkpoint time interval in seconds (default: 60)" << endl
-        << "  -wt                  Write locally optimal trees into .treels file" << endl
+        << "  --cptime NUM         Checkpoint time interval in seconds (default: 60)" << endl
         << "  -blfix               Fix branch lengths of user tree passed via -te" << endl
         << "  -blscale             Scale branch lengths of user tree passed via -t" << endl
         << "  -blmin               Min branch length for optimization (default 0.000001)" << endl
         << "  -blmax               Max branch length for optimization (default 100)" << endl
-        << "  -wsl                 Write site log-likelihoods to .sitelh file" << endl
         << "  -wslr                Write site log-likelihoods per rate category" << endl
         << "  -wslm                Write site log-likelihoods per mixture class" << endl
         << "  -wslmr               Write site log-likelihoods per mixture+rate class" << endl
         << "  -wspr                Write site probabilities per rate category" << endl
         << "  -wspm                Write site probabilities per mixture class" << endl
         << "  -wspmr               Write site probabilities per mixture+rate class" << endl
-        << "  -wpl                 Write partition log-likelihoods to .partlh file" << endl
-        << "  -fconst f1,...,fN    Add constant patterns into alignment (N=no. states)" << endl
-        << "  -me NUMBER           LogL epsilon for parameter estimation (default 0.01)" << endl
+        << "  --partlh             Write partition log-likelihoods to .partlh file" << endl
         << "  --no-outfiles        Suppress printing output files" << endl
         << "  --eigenlib           Use Eigen3 library" << endl
         << "  -alninfo             Print alignment sites statistics to .alninfo" << endl
-        << "  --show-lh            Compute tree likelihood without optimisation" << endl
     //            << "  -d <file>            Reading genetic distances from file (default: JC)" << endl
     //			<< "  -d <outfile>         Calculate the distance matrix inferred from tree" << endl
     //			<< "  -stats <outfile>     Output some statistics about branch lengths" << endl
@@ -4483,7 +4542,7 @@ void quickStartGuide() {
          << "6. Find best partition scheme followed by tree inference and bootstrap:" << endl
          << "     iqtree -s example.phy -p example.nex -m MFP+MERGE -B 1000" << endl << endl
 #ifdef _OPENMP
-         << "7. Use 4 CPU cores to speed up computation: add '-c 4' option" << endl << endl
+         << "7. Use 4 CPU cores to speed up computation: add '-T 4' option" << endl << endl
 #endif
          << "8. Polymorphism-aware model with HKY nucleotide model and Gamma rate:" << endl
          << "     iqtree -s counts_file.cf -m HKY+P+G" << endl << endl

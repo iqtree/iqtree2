@@ -104,7 +104,7 @@ void PhyloTreeMixlen::setMixlen(int mixlen) {
 	this->mixlen = mixlen;
 }
 
-void PhyloTreeMixlen::initializeModel(Params &params, string &model_name, ModelsBlock *models_block) {
+void PhyloTreeMixlen::initializeModel(Params &params, string model_name, ModelsBlock *models_block) {
     try {
         if (!getModelFactory()) {
             setModelFactory(new ModelFactoryMixlen(params, model_name, this, models_block));

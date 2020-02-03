@@ -924,12 +924,12 @@ void PhyloTree::computePartialInfo(TraversalInfo &info, VectorClass* buffer) {
                 }
                 partial_lh_leaf += (aln->STATE_UNKNOWN+1)*block;
             } else if (child->node->isLeaf()) {
-                vector<int>::iterator it;
+                //vector<int>::iterator it;
                 if (nstates % VectorClass::size() == 0) {
                     // vectorized version
-                    for (it = aln->seq_states[child->node->id].begin(); it != aln->seq_states[child->node->id].end(); it++) {
-                        VectorClass *this_tip_partial_lh = (VectorClass*)&tip_partial_lh[(*it)*nstates];
-                        double *this_partial_lh_leaf = &partial_lh_leaf[(*it)*block];
+                    for (int state = 0; state <= aln->STATE_UNKNOWN; state++) {
+                        VectorClass *this_tip_partial_lh = (VectorClass*)&tip_partial_lh[state*nstates];
+                        double *this_partial_lh_leaf = &partial_lh_leaf[state*block];
                         VectorClass *echild_ptr = (VectorClass*)echild;
                         for (x = 0; x < block; x++) {
                             VectorClass vchild = echild_ptr[0] * this_tip_partial_lh[0];
@@ -941,9 +941,9 @@ void PhyloTree::computePartialInfo(TraversalInfo &info, VectorClass* buffer) {
                     }
                 } else {
                     // non-vectorized version
-                    for (it = aln->seq_states[child->node->id].begin(); it != aln->seq_states[child->node->id].end(); it++) {
-                        double *this_tip_partial_lh = &tip_partial_lh[(*it)*nstates];
-                        double *this_partial_lh_leaf = &partial_lh_leaf[(*it)*block];
+                    for (int state = 0; state <= aln->STATE_UNKNOWN; state++) {
+                        double *this_tip_partial_lh = &tip_partial_lh[state*nstates];
+                        double *this_partial_lh_leaf = &partial_lh_leaf[state*block];
                         double *echild_ptr = echild;
                         for (x = 0; x < block; x++) {
                             double vchild = 0.0;
@@ -992,10 +992,9 @@ void PhyloTree::computePartialInfo(TraversalInfo &info, VectorClass* buffer) {
             }
             // pre compute information for tip
             if (child->node->isLeaf()) {
-                vector<int>::iterator it;
+                //vector<int>::iterator it;
 
-                for (it = aln->seq_states[child->node->id].begin(); it != aln->seq_states[child->node->id].end(); it++) {
-                    int state = (*it);
+                for (int state = 0; state <= aln->STATE_UNKNOWN; state++) {
                     double *this_partial_lh_leaf = partial_lh_leaf + state*block;
                     VectorClass *echild_ptr = (VectorClass*)echild;
                     for (c = 0; c < ncat_mix; c++) {
@@ -1043,9 +1042,8 @@ void PhyloTree::computePartialInfo(TraversalInfo &info, VectorClass* buffer) {
             }
             // pre compute information for tip
             if (child->node->isLeaf()) {
-                vector<int>::iterator it;
-                for (it = aln->seq_states[child->node->id].begin(); it != aln->seq_states[child->node->id].end(); it++) {
-                    int state = (*it);
+                //vector<int>::iterator it;
+                for (int state = 0; state <= aln->STATE_UNKNOWN; state++) {
                     double *this_partial_lh_leaf = partial_lh_leaf + state*block;
                     double *echild_ptr = echild;
                     for (c = 0; c < ncat_mix; c++) {
@@ -2713,14 +2711,14 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
         }
 
         if (!SITE_MODEL) {
-            IntVector states_dad = aln->seq_states[dad->id];
-            states_dad.push_back(aln->STATE_UNKNOWN);
+//            IntVector states_dad = model->seq_states[dad->id];
+//            states_dad.push_back(aln->STATE_UNKNOWN);
             // precompute information from one tip
             if (nstates % VectorClass::size() == 0) {
                 // vectorized version
-                for (IntVector::iterator it = states_dad.begin(); it != states_dad.end(); it++) {
-                    double *lh_node = partial_lh_node + (*it)*block;
-                    double *lh_tip = tip_partial_lh + (*it)*tip_block;
+                for (int state = 0; state <= aln->STATE_UNKNOWN; state++) {
+                    double *lh_node = partial_lh_node + state*block;
+                    double *lh_tip = tip_partial_lh + state*tip_block;
                     double *vc_val_tmp = val;
                     for (c = 0; c < ncat_mix; c++) {
                         double *this_lh_tip = lh_tip + mix_addr_nstates[c];
@@ -2733,10 +2731,10 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                 }
             } else {
                 // non-vectorized version
-                for (IntVector::iterator it = states_dad.begin(); it != states_dad.end(); it++) {
-                    double *lh_node = partial_lh_node +(*it)*block;
+                for (int state = 0; state <= aln->STATE_UNKNOWN; state++) {
+                    double *lh_node = partial_lh_node +state*block;
                     double *val_tmp = val;
-                    double *this_tip_partial_lh = tip_partial_lh + (*it)*tip_block;
+                    double *this_tip_partial_lh = tip_partial_lh + state*tip_block;
                     for (c = 0; c < ncat_mix; c++) {
                         double *lh_tip = this_tip_partial_lh + mix_addr_nstates[c];
                         for (i = 0; i < nstates; i++) {

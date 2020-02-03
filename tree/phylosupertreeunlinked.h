@@ -145,6 +145,13 @@ public:
     virtual double treeLengthInternal(double epsilon, Node *node = NULL, Node *dad = NULL);
 
     /**
+     *         @brief Perform NNI search on the current tree topology
+     *         @return <number_of_NNIs, number_of_NNI_steps>
+     *         This function will automatically use the selected kernel (either PLL or IQ-TREE)
+     */
+    virtual pair<int, int> doNNISearch(bool write_info = false);
+
+    /**
      perform tree search
      @return best likelihood found
      */

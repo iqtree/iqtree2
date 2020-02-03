@@ -662,14 +662,14 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch
                 }
             }
         } else {
-            IntVector states_dad = aln->seq_states[dad->id];
-            states_dad.push_back(aln->STATE_UNKNOWN);
+//            IntVector states_dad = model->seq_states[dad->id];
+//            states_dad.push_back(aln->STATE_UNKNOWN);
             // precompute information from one tip
-            for (IntVector::iterator it = states_dad.begin(); it != states_dad.end(); it++) {
-                double *lh_node = partial_lh_node +(*it)*block;
-                double *lh_derv1 = partial_lh_derv1 +(*it)*block;
-                double *lh_derv2 = partial_lh_derv2 +(*it)*block;
-                double *lh_tip = tip_partial_lh + (*it)*nstates;
+            for (int state = 0; state <= aln->STATE_UNKNOWN; state++) {
+                double *lh_node = partial_lh_node +state*block;
+                double *lh_derv1 = partial_lh_derv1 +state*block;
+                double *lh_derv2 = partial_lh_derv2 +state*block;
+                double *lh_tip = tip_partial_lh + state*nstates;
                 double *trans_mat_tmp = trans_mat;
                 double *trans_derv1_tmp = trans_derv1;
                 double *trans_derv2_tmp = trans_derv2;
@@ -1111,12 +1111,12 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
                     lh_node[i] *= prop;
             }
         } else {
-            IntVector states_dad = aln->seq_states[dad->id];
-            states_dad.push_back(aln->STATE_UNKNOWN);
+//            IntVector states_dad = model->seq_states[dad->id];
+//            states_dad.push_back(aln->STATE_UNKNOWN);
             // precompute information from one tip
-            for (IntVector::iterator it = states_dad.begin(); it != states_dad.end(); it++) {
-                double *lh_node = partial_lh_node +(*it)*block;
-                double *lh_tip = tip_partial_lh + (*it)*nstates;
+            for (int state = 0; state <= aln->STATE_UNKNOWN; state++) {
+                double *lh_node = partial_lh_node + state*block;
+                double *lh_tip = tip_partial_lh + state*nstates;
                 double *trans_mat_tmp = trans_mat;
                 for (c = 0; c < ncat_mix; c++) {
                     for (i = 0; i < nstates; i++) {

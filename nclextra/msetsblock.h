@@ -45,6 +45,12 @@ typedef vector<TaxaSetName*> TaxaSetNameVector;
  */
 class CharSet {
 public:
+    
+    /** constructor */
+    CharSet() {
+        tree_len = 0.0;
+    }
+    
 	/** charset name */
 	string name;
 
@@ -62,6 +68,9 @@ public:
 
 	/** name of CharPartition where this charset is included*/
 	string char_partition;
+    
+    /** total tree length for this charset */
+    double tree_len;
 };
 
 

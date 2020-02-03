@@ -137,7 +137,7 @@ public:
 
     bool isInitializedPLL();
     
-    virtual void initializeModel(Params &params, string &model_name, ModelsBlock *models_block);
+    virtual void initializeModel(Params &params, string model_name, ModelsBlock *models_block);
 
     /**
             print tree to .treefile
@@ -430,7 +430,7 @@ public:
      *         @return <number_of_NNIs, number_of_NNI_steps>
      *         This function will automatically use the selected kernel (either PLL or IQ-TREE)
      */
-    pair<int, int> doNNISearch(bool write_info = false);
+    virtual pair<int, int> doNNISearch(bool write_info = false);
 
     /**
             @brief evaluate all NNIs

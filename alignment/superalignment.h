@@ -74,13 +74,14 @@ public:
     void readPartitionNexus(Params &params);
 
     /** read partition as files in a directory */
-    void readPartitionDir(Params &params);
+    void readPartitionDir(string partition_dir, char *sequence_type, InputType &intype, string model, bool remove_empty_seq);
 
     /** read partition as a comma-separated list of files */
     void readPartitionList(string file_list, char *sequence_type, InputType &intype, string model, bool remove_empty_seq);
 
     void printPartition(const char *filename, const char *aln_file);
-    
+    void printPartition(ostream &out, const char *aln_file = NULL, bool append = false);
+
     void printPartitionRaxml(const char *filename);
     
     void printBestPartition(const char *filename);
@@ -234,15 +235,9 @@ public:
 	 * @param filename
 	 * @param append TRUE to append to this file, false to write new file
 	 */
-	void printCombinedAlignment(const char *filename, bool append = false);
-
-    /**
-	 * print the super-alignment to a stream
-	 * @param out output stream
-	 * @param print_taxid true to print taxa IDs instead of names, default: false
-	 */
-    
-	void printCombinedAlignment(ostream &out, bool print_taxid = false);
+    virtual void printAlignment(InputType format, ostream &out, bool append = false,
+                                const char *aln_site_list = NULL, int exclude_sites = 0,
+                                const char *ref_seq_name = NULL);
 
 	/**
 	 * print all sub alignments into files with prefix, suffix is the charset name

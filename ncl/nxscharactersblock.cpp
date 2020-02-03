@@ -2751,7 +2751,7 @@ void NxsCharactersBlock::ResetSymbols()
 			break;
 
 		case NxsCharactersBlock::protein:
-			strcpy(symbols, "ACDEFGHIKLMNPQRSTVWY*");
+			strcpy(symbols, "ACDEFGHIKLMNPQRSTVWY*XU");
 			break;
 
 		default:
@@ -2780,6 +2780,7 @@ void NxsCharactersBlock::ResetSymbols()
 		{
 		equates[ NxsString("B") ] = NxsString("{DN}");
 		equates[ NxsString("Z") ] = NxsString("{EQ}");
+        equates[ NxsString("J") ] = NxsString("{IL}");
 		}
 	}
 
