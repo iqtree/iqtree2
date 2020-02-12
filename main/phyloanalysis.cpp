@@ -4027,13 +4027,17 @@ void assignBranchSupportNew(Params &params) {
     string str = prefix + ".cf.tree";
     tree->printTree(str.c_str());
     cout << "Tree with concordance factors written to " << str << endl;
+    str = prefix + ".cf.tree.nex";
+    string filename = prefix + ".cf.stat";
+    tree->printNexus(str, WT_BR_LEN, "See " + filename + " for branch annotation meanings." +
+                     " This file is best viewed in FigTree.");
+    cout << "Annotated tree (best viewed in FigTree) written to " << str << endl;
     if (verbose_mode >= VB_DEBUG)
         tree->drawTree(cout);
     str = prefix + ".cf.branch";
     tree->printTree(str.c_str(), WT_BR_LEN + WT_INT_NODE + WT_NEWLINE);
     cout << "Tree with branch IDs written to " << str << endl;
     ofstream out;
-    string filename = prefix + ".cf.stat";
     out.open(filename.c_str());
     out << "# Concordance factor statistics" << endl
         << "# This file can be read in MS Excel or in R with command:" << endl
