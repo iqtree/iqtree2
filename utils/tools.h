@@ -307,6 +307,7 @@ const int WT_BR_LEN_FIXED_WIDTH = 256;
 const int WT_BR_ID = 512;
 const int WT_BR_LEN_ROUNDING = 1024;
 const int WT_BR_LEN_SHORT = 2048; // store only 6 digits after the comma for branch lengths
+const int WT_BR_ATTR = 4096; // print branch attributes
 const int TRUE = 1;
 const int FALSE = 0;
 

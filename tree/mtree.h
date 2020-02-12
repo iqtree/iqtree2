@@ -200,6 +200,13 @@ public:
     virtual void printTree(ostream & out, int brtype = WT_BR_LEN);
 
     /**
+     print the tree to the output file in NEXUS format
+     @param outfile the output file.
+     @param brtype type of branch to print
+     */
+    void printNexus(string outfile, int brtype = WT_BR_LEN, string nexus_comment = "");
+
+    /**
      *  internal function called by printTree to print branch length
      *  @param out output stream
      *  @param length_nei target Neighbor to print
