@@ -10,6 +10,8 @@
 #include <omp.h>
 #endif
 
+#define PUT_ATTR_MEANING(branch, value, description) { branch->putAttr(#value, value); meanings.insert({#value, description}); }
+
 void PhyloTree::computeSiteConcordance(map<string,string> &meanings) {
     BranchVector branches;
     getInnerBranches(branches);
@@ -24,7 +26,7 @@ void PhyloTree::computeSiteConcordance(map<string,string> &meanings) {
 #endif
     for (auto ii = 0; ii < branches.size(); ii++) {
         BranchVector::iterator it = branches.begin()+ii;
-        computeSiteConcordance((*it), params->site_concordance, rstream);
+        computeSiteConcordance((*it), params->site_concordance, rstream, meanings);
         Neighbor *nei = it->second->findNeighbor(it->first);
         double sCF = 0.0;
         if (!GET_ATTR(nei, sCF))
@@ -50,10 +52,6 @@ void PhyloTree::computeSiteConcordance(map<string,string> &meanings) {
         finish_random(rstream);
     }
 #endif
-    meanings.insert({"sCF", "Site concordance factor (%) averaged over " + convertIntToString(params->site_concordance) +  " quartets"});
-    meanings.insert({"sDF1", "Site discordance factor (%) for alternative quartet 1"});
-    meanings.insert({"sDF2", "Site discordance factor (%) for alternative quartet 2"});
-    meanings.insert({"sN", "Number of informative sites averaged over " + convertIntToString(params->site_concordance) +  " quartets"});
 }
 
 void Alignment::computeQuartetSupports(IntVector &quartet, vector<int64_t> &support) {
@@ -104,7 +102,7 @@ void SuperAlignment::computeQuartetSupports(IntVector &quartet, vector<int64_t> 
     }
 }
 
-void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstream) {
+void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstream, map<string,string> &meanings) {
     vector<IntVector> taxa;
     taxa.resize(4);
 
@@ -148,6 +146,7 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstre
     double sDF2 = 0.0;
     double sN = 0.0;
     size_t sum_sites = 0;
+    double sCF_N = 0, sDF1_N = 0, sDF2_N = 0;
     int i;
     vector<int64_t> support;
     support.resize(3, 0);
@@ -198,17 +197,33 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstre
             sCF += ((double)support[0]) / sum;
             sDF1 += ((double)support[1]) / sum;
             sDF2 += ((double)support[2]) / sum;
+            sCF_N += support[0];
+            sDF1_N += support[1];
+            sDF2_N += support[2];
         }
     }
     sN = (double)sum_sites / nquartets;
+    // rounding
     sCF = round(sCF / nquartets * 10000)/100;
     sDF1 = round(sDF1 / nquartets * 10000)/100;
     sDF2 = round(sDF2 / nquartets * 10000)/100;
+    sCF_N = round(sCF_N / nquartets * 100)/100;
+    sDF1_N = round(sDF1_N / nquartets * 100)/100;
+    sDF2_N = round(sDF2_N / nquartets * 100)/100;
     Neighbor *nei = branch.second->findNeighbor(branch.first);
-    PUT_ATTR(nei, sCF);
-    PUT_ATTR(nei, sN);
-    PUT_ATTR(nei, sDF1);
-    PUT_ATTR(nei, sDF2);
+    PUT_ATTR_MEANING(nei, sCF, "Site concordance factor averaged over " + convertIntToString(params->site_concordance) +  " quartets (=sCF_N/sN %)");
+    PUT_ATTR_MEANING(nei, sN, "Number of informative sites averaged over " + convertIntToString(params->site_concordance) +  " quartets");
+    PUT_ATTR_MEANING(nei, sDF1, "Site discordance factor for alternative quartet 1 (=sDF1_N/sN %)");
+    PUT_ATTR_MEANING(nei, sDF2, "Site discordance factor for alternative quartet 2 (=sDF2_N/sN %)");
+    PUT_ATTR_MEANING(nei, sCF_N, "sCF in absolute number of sites");
+    PUT_ATTR_MEANING(nei, sDF1_N, "sDF1 in absolute number of sites");
+    PUT_ATTR_MEANING(nei, sDF2_N, "sDF2 in absolute number of sites");
+    stringstream s_factors;
+    s_factors << sCF << "/" << sDF1 << "/" << sDF2;
+    nei->putAttr("sCF/sDF1/sDF2", s_factors.str());
+    stringstream s_factors_N;
+    s_factors_N << sCF_N << "/" << sDF1_N << "/" << sDF2_N;
+    nei->putAttr("sCF_N/sDF1_N/sDF2_N", s_factors_N.str());
     // insert key-value for partition-wise con/discordant sites
     string keys[] = {"sC", "sD1", "sD2"};
     for (i = 3; i < support.size(); i++) {
@@ -218,8 +233,6 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstre
             nei->putAttr(keys[i%3] + convertIntToString(i/3), "NA");
     }
 }
-
-#define PUT_ATTR_MEANING(branch, value, description) { branch->putAttr(#value, value); meanings.insert({#value, description}); }
 
 /**
  assign branch supports to a target tree
