@@ -1316,7 +1316,11 @@ void ModelMarkov::decomposeRateMatrix(){
             decomposeRateMatrixRev();
             return;
         }
-        ASSERT(eigensolver.eigenvalues().maxCoeff() < 1e-4 && "eigenvalues are not positive");
+        if (eigensolver.eigenvalues().maxCoeff() > 1e-4) {
+             // "eigenvalues are not positive", revert to the old function
+            decomposeRateMatrixRev();
+            return;
+        }
 
         if (n == num_states) {
             Map<VectorXd,Aligned> eval(eigenvalues,num_states);
