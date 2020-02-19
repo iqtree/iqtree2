@@ -343,6 +343,9 @@ public:
     /** decompose rate matrix for non-reversible models */
     virtual void decomposeRateMatrixNonrev();
 
+    /** old version of decompose rate matrix for reversible models */
+    void decomposeRateMatrixRev();
+
 	/**
 		decompose the rate matrix into eigenvalues and eigenvectors
 	*/
