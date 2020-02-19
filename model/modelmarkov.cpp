@@ -1303,11 +1303,19 @@ void ModelMarkov::decomposeRateMatrix(){
             cout << "pi: " << pi << endl;
             writeInfo(cout);
         }
-        ASSERT((Q - Q.transpose()).cwiseAbs().maxCoeff() < 0.1 && "transformed Q is symmetric");
+        if ((Q - Q.transpose()).cwiseAbs().maxCoeff() > 0.1) {
+            //  Somehow transformed Q is non-symmetric, revert to the old function
+            decomposeRateMatrixRev();
+            return;
+        }
 
         // eigensolver
         SelfAdjointEigenSolver<MatrixXd> eigensolver(Q);
-        ASSERT (eigensolver.info() == Eigen::Success);
+        if (eigensolver.info() != Eigen::Success) {
+            // Eigen3 failed, revert to the old function
+            decomposeRateMatrixRev();
+            return;
+        }
         ASSERT(eigensolver.eigenvalues().maxCoeff() < 1e-4 && "eigenvalues are not positive");
 
         if (n == num_states) {
@@ -1353,7 +1361,12 @@ void ModelMarkov::decomposeRateMatrix(){
         }
         return;
     }
+    decomposeRateMatrixRev();
+}
 
+void ModelMarkov::decomposeRateMatrixRev() {
+
+    int i, j, k;
     // general reversible model
     double **rate_matrix = new double*[num_states];
 
