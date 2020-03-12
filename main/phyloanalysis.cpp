@@ -1259,9 +1259,11 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
 //            out << endl << endl;
         }
 #ifdef IQTREE_TERRAPHAST
-        if (params.terrace_analysis) {
+        if (params.terrace_analysis && params.compute_ml_tree) {
+            
             out << "TERRACE ANALYSIS" << endl << "----------------" << endl << endl;
-
+            cout << "Running additional analysis: Phylogenetic Terraces ..."<< endl;
+            
             string filename = params.out_prefix;
             filename += ".terrace";
 
@@ -1304,6 +1306,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
             out << "https://doi.org/10.1093/bioinformatics/bty384";
 
             out << endl << endl;
+            cout<< "Done. Results are written in "<<params.out_prefix<<".iqtree file."<<endl;
         }
 #endif
         /* evaluate user trees */

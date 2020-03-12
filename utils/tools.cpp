@@ -861,7 +861,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.remove_empty_seq = true;
     params.terrace_aware = true;
 #ifdef IQTREE_TERRAPHAST
-    params.terrace_analysis = true;
+    params.terrace_analysis = false;
 #else
     params.terrace_analysis = false;
 #endif
@@ -2078,6 +2078,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-no_terrace") == 0) {
 				params.terrace_aware = false;
+                params.terrace_analysis = false;
 				continue;
 			}
             if (strcmp(argv[cnt], "--terrace") == 0) {
