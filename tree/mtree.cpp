@@ -142,6 +142,7 @@ void MTree::copyTree(MTree *tree) {
 }
 
 void MTree::copyTree(MTree *tree, string &taxa_set) {
+    rooted = tree->rooted;
     if (rooted) {
         ASSERT(tree->rooted);
         taxa_set.push_back(1);
