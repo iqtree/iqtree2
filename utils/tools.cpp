@@ -556,7 +556,7 @@ void convert_string_vec(const char *str, StrVector &vec) {
 bool renameString(string &name) {
     bool renamed = false;
     for (string::iterator i = name.begin(); i != name.end(); i++) {
-        if (!isalnum(*i) && (*i) != '_' && (*i) != '-' && (*i) != '.') {
+        if (!isalnum(*i) && (*i) != '_' && (*i) != '-' && (*i) != '.' && (*i) != '|') {
             (*i) = '_';
             renamed = true;
         }
