@@ -4108,7 +4108,10 @@ void parseArg(int argc, char *argv[], Params &params) {
         params.terrace_analysis = false;
 
     if (params.constraint_tree_file && params.partition_type == TOPO_UNLINKED)
-        outError("-g constraint tree option does not work with -spu.");
+        outError("-g constraint tree option does not work with -S yet.");
+
+    if (params.num_bootstrap_samples && params.partition_type == TOPO_UNLINKED)
+        outError("-b bootstrap option does not work with -S yet.");
 
 	// Diep:
 	if(params.ufboot2corr == true){
