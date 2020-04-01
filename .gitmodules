@@ -1,0 +1,3 @@
+[submodule "lsd2"]
+	path = lsd2
+	url = https://github.com/tothuhien/lsd2.git
