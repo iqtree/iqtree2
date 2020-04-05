@@ -4032,7 +4032,21 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
             // --
 
-			if (argv[cnt][0] == '-') {
+            if (strcmp(argv[cnt], "--dating") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --dating LSD";
+                params.dating_method = argv[cnt];
+                if (params.dating_method != "LSD")
+                    throw "Currently only LSD (least-square dating) method is supported";
+#ifndef USE_LSD2
+                throw "IQ-TREE was not compiled with LSD2 library, rerun cmake with -DUSE_LSD2=ON option";
+#endif
+
+                continue;
+            }
+
+            if (argv[cnt][0] == '-') {
                 string err = "Invalid \"";
                 err += argv[cnt];
                 err += "\" option.";

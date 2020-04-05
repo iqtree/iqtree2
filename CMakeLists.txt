@@ -125,6 +125,15 @@ if (USE_TERRAPHAST)
 endif()
 
 ##################################################################
+# Include the LSD2 library
+##################################################################
+option(USE_LSD2 "Use least square dating (lsd2)" OFF)
+
+if (USE_LSD2)
+    add_definitions(-DUSE_LSD2)
+endif()
+
+##################################################################
 # Detect target platforms
 ##################################################################
 if (WIN32)
@@ -572,6 +581,10 @@ if (USE_TERRAPHAST)
    add_subdirectory(terrace)
 endif()
 
+if (USE_LSD2)
+    add_subdirectory(lsd2)
+endif()
+
 ##################################################################
 # the main executable
 ##################################################################
@@ -605,6 +618,9 @@ if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
         set_target_properties(iqtree ncl nclextra utils pda lbfgsb whtest sprng vectorclass model gsl alignment tree yaml-cpp phyloYAML main PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
         if (USE_TERRAPHAST)
             set_target_properties(terrace terraphast PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
+        endif()
+        if (USE_LSD2)
+            set_target_properties(lsd2 PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
         endif()
         if (USE_BOOSTER)
             set_target_properties(booster PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
@@ -666,6 +682,10 @@ target_link_libraries(iqtree pll ncl nclextra utils pda lbfgsb whtest sprng vect
 
 if (USE_TERRAPHAST)
    target_link_libraries(iqtree terrace)
+endif()
+
+if (USE_LSD2)
+    target_link_libraries(iqtree lsd2)
 endif()
 
 if (NOT IQTREE_FLAGS MATCHES "nosse")

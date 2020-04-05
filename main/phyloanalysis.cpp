@@ -60,6 +60,7 @@
 #include "utils/timeutil.h"
 #include "tree/upperbounds.h"
 #include "utils/MPIHelper.h"
+#include "timetree.h"
 
 #ifdef USE_BOOSTER
 extern "C" {
@@ -2614,6 +2615,10 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         cout << " collapsed" << endl;
     }
 
+    if (params.dating_method != "") {
+        doTimeTree(iqtree);
+    }
+    
     printFinalSearchInfo(params, *iqtree, search_cpu_time, search_real_time);
 
     if (params.gbo_replicates && params.online_bootstrap && params.print_ufboot_trees)
