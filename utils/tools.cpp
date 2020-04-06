@@ -556,7 +556,12 @@ void convert_string_vec(const char *str, StrVector &vec, char separator) {
 bool renameString(string &name) {
     bool renamed = false;
     for (string::iterator i = name.begin(); i != name.end(); i++) {
-        if (!isalnum(*i) && (*i) != '_' && (*i) != '-' && (*i) != '.' && (*i) != '|') {
+        if ((*i) == '/') {
+            // PLL does not accept '/' in names, turn it off
+            if (Params::getInstance().start_tree == STT_PLL_PARSIMONY)
+                Params::getInstance().start_tree = STT_PARSIMONY;
+        }
+        if (!isalnum(*i) && (*i) != '_' && (*i) != '-' && (*i) != '.' && (*i) != '|' && (*i) != '/') {
             (*i) = '_';
             renamed = true;
         }
