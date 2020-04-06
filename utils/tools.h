@@ -2182,6 +2182,9 @@ public:
 
     /** extra commands passed to the dating method */
     string dating_options;
+
+    /** date file that has several lines, each line with a taxon name and date in YYYY-MM-DD */
+    string date_file;
 };
 
 /**
