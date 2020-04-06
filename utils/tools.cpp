@@ -4044,10 +4044,16 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.dating_method = argv[cnt];
                 if (params.dating_method != "LSD")
                     throw "Currently only LSD (least-square dating) method is supported";
-#ifndef USE_LSD2
-                throw "IQ-TREE was not compiled with LSD2 library, rerun cmake with -DUSE_LSD2=ON option";
-#endif
+                continue;
+            }
 
+            if (strcmp(argv[cnt], "--date") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --date <date_file>";
+                if (params.dating_method == "")
+                    params.dating_method = "LSD";
+                params.date_file = argv[cnt];
                 continue;
             }
 
@@ -4070,30 +4076,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                 else
                     params.out_file = argv[cnt];
             }
-            if (params.root != NULL && params.is_rooted)
-                throw "Not allowed to specify both -o <taxon> and -root";
-
-            if (params.model_test_and_tree && params.partition_type != BRLEN_OPTIMIZE)
-                throw("-mtree not allowed with edge-linked partition model (-spp or -q)");
-            
-            if (params.do_au_test && params.topotest_replicates == 0)
-                throw("For AU test please specify number of bootstrap replicates via -zb option");
-            
-            if (params.lh_mem_save == LM_MEM_SAVE && params.partition_file)
-                throw("-mem option does not work with partition models yet");
-            
-            if (params.gbo_replicates && params.num_bootstrap_samples)
-                throw("UFBoot (-bb) and standard bootstrap (-b) must not be specified together");
-            
-            if ((params.model_name.find("ONLY") != string::npos || (params.model_name.substr(0,2) == "MF" && params.model_name.substr(0,3) != "MFP")) && (params.gbo_replicates || params.num_bootstrap_samples))
-                throw("ModelFinder only cannot be combined with bootstrap analysis");
-            
-            if (params.num_runs > 1 && !params.treeset_file.empty())
-                throw("Can't combine --runs and -z options");
-            
-            if (params.num_runs > 1 && params.lmap_num_quartets >= 0)
-                throw("Can't combine --runs and -lmap options");
-
         }
         // try
         catch (const char *str) {
@@ -4130,7 +4112,31 @@ void parseArg(int argc, char *argv[], Params &params) {
 
 //    if (params.do_au_test)
 //        outError("The AU test is temporarily disabled due to numerical issue when bp-RELL=0");
+
+    if (params.root != NULL && params.is_rooted)
+        outError("Not allowed to specify both -o <taxon> and -root");
     
+    if (params.model_test_and_tree && params.partition_type != BRLEN_OPTIMIZE)
+        outError("-mtree not allowed with edge-linked partition model (-spp or -q)");
+    
+    if (params.do_au_test && params.topotest_replicates == 0)
+        outError("For AU test please specify number of bootstrap replicates via -zb option");
+    
+    if (params.lh_mem_save == LM_MEM_SAVE && params.partition_file)
+        outError("-mem option does not work with partition models yet");
+    
+    if (params.gbo_replicates && params.num_bootstrap_samples)
+        outError("UFBoot (-bb) and standard bootstrap (-b) must not be specified together");
+    
+    if ((params.model_name.find("ONLY") != string::npos || (params.model_name.substr(0,2) == "MF" && params.model_name.substr(0,3) != "MFP")) && (params.gbo_replicates || params.num_bootstrap_samples))
+        outError("ModelFinder only cannot be combined with bootstrap analysis");
+    
+    if (params.num_runs > 1 && !params.treeset_file.empty())
+        outError("Can't combine --runs and -z options");
+    
+    if (params.num_runs > 1 && params.lmap_num_quartets >= 0)
+        outError("Can't combine --runs and -lmap options");
+
     if (params.terrace_analysis && !params.partition_file)
         params.terrace_analysis = false;
 
@@ -4139,6 +4145,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 
     if (params.num_bootstrap_samples && params.partition_type == TOPO_UNLINKED)
         outError("-b bootstrap option does not work with -S yet.");
+
+    if (params.dating_method != "") {
+    #ifndef USE_LSD2
+        outError("IQ-TREE was not compiled with LSD2 library, rerun cmake with -DUSE_LSD2=ON option");
+    #endif
+    }
 
 	// Diep:
 	if(params.ufboot2corr == true){

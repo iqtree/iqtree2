@@ -19,7 +19,7 @@ void runLSD2(PhyloTree *tree) {
         // print outgroup file for LSD
         StrVector outgroup_names;
         convert_string_vec(Params::getInstance().root, outgroup_names);
-        string outgroup_file = (string)Params::getInstance().out_prefix + ".lsd.outgroup";
+        string outgroup_file = basename + ".outgroup";
         ofstream out;
         out.open(outgroup_file);
         out << outgroup_names.size() << endl;
