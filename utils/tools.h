@@ -2179,6 +2179,9 @@ public:
 
     /** method for phylogenetic dating, currently only LSD is supported */
     string dating_method;
+
+    /** extra commands passed to the dating method */
+    string dating_options;
 };
 
 /**
@@ -2487,7 +2490,7 @@ void convert_range(const char *str, int &lower, int &upper, int &step_size);
  */
 void convert_range(const char *str, double &lower, double &upper, double &step_size);
 
-void convert_string_vec(const char *str, StrVector &str_vec);
+void convert_string_vec(const char *str, StrVector &str_vec, char separator = ',');
 
 /**
     change unusual character in names into underscore (_)
