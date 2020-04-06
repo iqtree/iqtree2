@@ -535,12 +535,12 @@ void convert_range(const char *str, double &lower, double &upper, double &step_s
 
 }
 
-void convert_string_vec(const char *str, StrVector &vec) {
+void convert_string_vec(const char *str, StrVector &vec, char separator) {
     char *beginptr = (char*)str, *endptr;
     vec.clear();
     string elem;
     do {
-    	endptr = strchr(beginptr, ',');
+    	endptr = strchr(beginptr, separator);
     	if (!endptr) {
     		elem.assign(beginptr);
     		vec.push_back(elem);
@@ -4043,6 +4043,14 @@ void parseArg(int argc, char *argv[], Params &params) {
                 throw "IQ-TREE was not compiled with LSD2 library, rerun cmake with -DUSE_LSD2=ON option";
 #endif
 
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--dating-options") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --dating-options <extra_options_for_dating_method>";
+                params.dating_options = argv[cnt];
                 continue;
             }
 
