@@ -2415,6 +2415,13 @@ int getFilesInDir(const char *path, StrVector &filenames);
 int convert_int(const char *str);
 
 /**
+    convert string to int64, with error checking
+    @param str original string
+    @return the number
+ */
+int64_t convert_int64(const char *str);
+
+/**
         convert string to int, with error checking
         @param str original string
         @param end_pos end position
