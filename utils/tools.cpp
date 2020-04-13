@@ -4498,6 +4498,11 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -p FILE|DIR          Partition file or directory for --scf" << endl
     << "  --cf-verbose         Write CF per tree/locus to cf.stat_tree/_loci" << endl
 
+#ifdef USE_LSD2
+    << endl << "TIME TREE RECONSTRUCTION:" << endl
+    << "  --date FILE          Dates of tips or ancestral nodes" << endl
+    << "  --dating STRING      Dating method: LSD for least square dating (default)" << endl
+#endif
     << endl;
     
 
