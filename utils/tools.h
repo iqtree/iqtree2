@@ -2185,6 +2185,12 @@ public:
 
     /** date file that has several lines, each line with a taxon name and date in YYYY-MM-DD */
     string date_file;
+    
+    /** tip date, a real number or YYYY-MM-DD */
+    string date_tip;
+    
+    /** root date, a real number or YYYY-MM-DD */
+    string date_root;
 };
 
 /**

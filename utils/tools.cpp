@@ -4057,6 +4057,26 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
 
+            if (strcmp(argv[cnt], "--date-tip") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --date-tip <YYYY[-MM-DD]>";
+                if (params.dating_method == "")
+                    params.dating_method = "LSD";
+                params.date_tip = argv[cnt];
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--date-root") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --date-root <YYYY[-MM-DD]>";
+                if (params.dating_method == "")
+                    params.dating_method = "LSD";
+                params.date_root = argv[cnt];
+                continue;
+            }
+
             if (strcmp(argv[cnt], "--dating-options") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -4152,6 +4172,11 @@ void parseArg(int argc, char *argv[], Params &params) {
     #endif
     }
 
+    if (params.date_file.empty()) {
+        if (params.date_root.empty() ^ params.date_tip.empty())
+            outError("Both --date-root and --date-tip must be provided when --date file is absent");
+    }
+    
 	// Diep:
 	if(params.ufboot2corr == true){
 		if(params.gbo_replicates <= 0) params.ufboot2corr = false;
@@ -4501,6 +4526,8 @@ void usage_iqtree(char* argv[], bool full_command) {
 #ifdef USE_LSD2
     << endl << "TIME TREE RECONSTRUCTION:" << endl
     << "  --date FILE          Dates of tips or ancestral nodes" << endl
+    << "  --date-tip STRING    Tip dates as a real number or YYYY-MM-DD" << endl
+    << "  --date-root STRING   Root date as a real number or YYYY-MM-DD" << endl
     << "  --dating STRING      Dating method: LSD for least square dating (default)" << endl
 #endif
     << endl;
