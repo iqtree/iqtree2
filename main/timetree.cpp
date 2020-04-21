@@ -114,6 +114,16 @@ void runLSD2(PhyloTree *tree) {
         arg.push_back(date_file);  // only fake file
     }
     
+    if (Params::getInstance().date_root != "") {
+        arg.push_back("-a");
+        arg.push_back(Params::getInstance().date_root);
+    }
+    
+    if (Params::getInstance().date_tip != "") {
+        arg.push_back("-z");
+        arg.push_back(Params::getInstance().date_tip);
+    }
+    
     lsd::InputOutputStream io(tree_stream.str(), outgroup_stream.str(), date_stream.str(), "");
 
     if (Params::getInstance().dating_options != "") {
