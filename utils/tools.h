@@ -2191,6 +2191,9 @@ public:
     
     /** root date, a real number or YYYY-MM-DD */
     string date_root;
+    
+    /** false to remove outgroup from the dated tree, default: true */
+    bool date_with_outgroup;
 };
 
 /**
