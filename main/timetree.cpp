@@ -137,7 +137,8 @@ void writeDate(string date_file, ostream &out, StrVector &taxname) {
         for (auto name : outgroup_names)
             outgroup_set.insert(name);
     }
-    cout << "ID\tTaxon\tDate" << endl;
+    if (verbose_mode >= VB_MED)
+        cout << "ID\tTaxon\tDate" << endl;
     for (int i = 0; i < taxname.size(); i++) {
         string name = taxname[i];
         string date;
@@ -148,7 +149,8 @@ void writeDate(string date_file, ostream &out, StrVector &taxname) {
             date = dates[name];
             retained_dates[name] = date;
         }
-        cout << i+1 << "\t" << name << "\t" << date << endl;
+        if (verbose_mode >= VB_MED)
+            cout << i+1 << "\t" << name << "\t" << date << endl;
     }
     cout << retained_dates.size() << " dates extracted" << endl;
     try {
@@ -163,8 +165,6 @@ void writeDate(string date_file, ostream &out, StrVector &taxname) {
 
 #ifdef USE_LSD2
 void runLSD2(PhyloTree *tree) {
-    cout << "Building time tree by least-square dating (LSD) with command:" << endl;
-    
     string basename = (string)Params::getInstance().out_prefix + ".timetree";
     string treefile = basename + ".subst";
     stringstream tree_stream, outgroup_stream, date_stream;
@@ -233,6 +233,8 @@ void runLSD2(PhyloTree *tree) {
             if (!opt.empty())
                 arg.push_back(opt);
     }
+    
+    cout << "Building time tree by least-square dating (LSD) with command:" << endl;
     
     int argc = arg.size();
     char *argv[argc];
