@@ -1117,6 +1117,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.suppress_output_flags = 0;
     params.ufboot2corr = false;
     params.u2c_nni5 = false;
+    params.date_with_outgroup = false;
     
     params.matrix_exp_technique = MET_EIGEN3LIB_DECOMPOSITION;
 
@@ -4050,7 +4051,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             if (strcmp(argv[cnt], "--date") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use --date <date_file>";
+                    throw "Use --date <date_file>|TAXNAME";
                 if (params.dating_method == "")
                     params.dating_method = "LSD";
                 params.date_file = argv[cnt];
@@ -4077,10 +4078,20 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
 
-            if (strcmp(argv[cnt], "--dating-options") == 0) {
+            if (strcmp(argv[cnt], "--date-no-outgroup") == 0) {
+                params.date_with_outgroup = false;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--date-outgroup") == 0) {
+                params.date_with_outgroup = true;
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "--date-options") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use --dating-options <extra_options_for_dating_method>";
+                    throw "Use --date-options <extra_options_for_dating_method>";
                 params.dating_options = argv[cnt];
                 continue;
             }
