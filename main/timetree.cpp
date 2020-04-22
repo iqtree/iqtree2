@@ -18,6 +18,8 @@ typedef unordered_map<string, string> TaxonDateMap;
  @return converted date as a float or YYYY-MM[-DD] format
  */
 string convertDate(string date, bool is_ISO) {
+    if (date.empty() || !isdigit(date[0]))
+        return date;
     DoubleVector vec;
     convert_double_vec(date.c_str(), vec, '-');
     IntVector month_days = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
@@ -144,8 +146,9 @@ void writeDate(string date_file, ostream &out, Alignment *aln) {
     cout << retained_dates.size() << " dates extracted" << endl;
     try {
         out << retained_dates.size() << endl;
-        for (auto date : retained_dates)
+        for (auto date : retained_dates) {
             out << date.first << " " << convertDate(date.second, is_ISO) << endl;
+        }
     } catch (...) {
         ASSERT(0 && "Error writing date stream");
     }
@@ -160,6 +163,12 @@ void runLSD2(PhyloTree *tree) {
     stringstream tree_stream, outgroup_stream, date_stream;
     tree->printTree(tree_stream);
     StrVector arg = {"lsd", "-i", treefile, "-s", convertIntToString(tree->getAlnNSite()), "-c", "-o", basename};
+    if (Params::getInstance().date_debug) {
+        ofstream out(treefile);
+        out << tree_stream.str();
+        out.close();
+        cout << "Tree printed to " << treefile << endl;
+    }
     
     if (Params::getInstance().root) {
         // print outgroup file for LSD
@@ -169,6 +178,12 @@ void runLSD2(PhyloTree *tree) {
         arg.push_back(outgroup_file); // only fake file
         if (Params::getInstance().date_with_outgroup)
             arg.push_back("-k");
+        if (Params::getInstance().date_debug) {
+            ofstream out(outgroup_file);
+            out << outgroup_stream.str();
+            out.close();
+            cout << "Outgroup printed to " << outgroup_file << endl;
+        }
     } else {
         // search for all possible rootings
         arg.push_back("-r");
@@ -181,6 +196,12 @@ void runLSD2(PhyloTree *tree) {
         string date_file = basename + ".date";
         arg.push_back("-d");
         arg.push_back(date_file);  // only fake file
+        if (Params::getInstance().date_debug) {
+            ofstream out(date_file);
+            out << date_stream.str();
+            out.close();
+            cout << "Date file printed to " << date_file << endl;
+        }
     }
     
     if (Params::getInstance().date_root != "") {

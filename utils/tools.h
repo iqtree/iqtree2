@@ -2194,6 +2194,9 @@ public:
     
     /** false to remove outgroup from the dated tree, default: true */
     bool date_with_outgroup;
+    
+    /** true to print internal date files for debugging purpose */
+    bool date_debug;
 };
 
 /**
