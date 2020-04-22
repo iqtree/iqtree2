@@ -4544,6 +4544,7 @@ void usage_iqtree(char* argv[], bool full_command) {
 #ifdef USE_LSD2
     << endl << "TIME TREE RECONSTRUCTION:" << endl
     << "  --date FILE          Dates of tips or ancestral nodes" << endl
+    << "  --date TAXNAME       Extract dates from taxon names after last '|'" << endl
     << "  --date-tip STRING    Tip dates as a real number or YYYY-MM-DD" << endl
     << "  --date-root STRING   Root date as a real number or YYYY-MM-DD" << endl
     << "  --dating STRING      Dating method: LSD for least square dating (default)" << endl

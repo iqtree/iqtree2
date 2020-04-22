@@ -2622,10 +2622,6 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         cout << " collapsed" << endl;
     }
 
-    if (params.dating_method != "") {
-        doTimeTree(iqtree);
-    }
-    
     printFinalSearchInfo(params, *iqtree, search_cpu_time, search_real_time);
 
     if (params.gbo_replicates && params.online_bootstrap && params.print_ufboot_trees)
@@ -3862,6 +3858,11 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
             tree->printResultTree();
         }
         delete model_info;
+        
+        if (params.dating_method != "") {
+            doTimeTree(tree);
+        }
+
     } else {
         // the classical non-parameter bootstrap (SBS)
 //        if (params.model_name.find("LINK") != string::npos || params.model_name.find("MERGE") != string::npos)
