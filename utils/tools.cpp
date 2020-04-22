@@ -1118,6 +1118,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.ufboot2corr = false;
     params.u2c_nni5 = false;
     params.date_with_outgroup = false;
+    params.date_debug = false;
     
     params.matrix_exp_technique = MET_EIGEN3LIB_DECOMPOSITION;
 
@@ -4088,6 +4089,12 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             
+            if (strcmp(argv[cnt], "--date-debug") == 0) {
+                params.date_debug = true;
+                continue;
+            }
+            
+
             if (strcmp(argv[cnt], "--date-options") == 0) {
                 cnt++;
                 if (cnt >= argc)
