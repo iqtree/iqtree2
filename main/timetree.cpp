@@ -18,7 +18,15 @@ typedef unordered_map<string, string> TaxonDateMap;
  @return converted date as a float or YYYY-MM[-DD] format
  */
 string convertDate(string date, bool is_ISO) {
-    if (date.empty() || !isdigit(date[0]))
+    // check for range in x:y format
+    if (date.find(':') != string::npos) {
+        StrVector vec;
+        convert_string_vec(date.c_str(), vec, ':');
+        if (vec.size() != 2)
+            outError("Invalid date range: " + date);
+        return "b(" + vec[0] + "," + vec[1] + ")";
+    }
+    if (date.empty() || !isdigit(date[0]) || date[0] == '-')
         return date;
     DoubleVector vec;
     convert_double_vec(date.c_str(), vec, '-');
@@ -43,9 +51,14 @@ string convertDate(string date, bool is_ISO) {
 bool hasISODate(TaxonDateMap &dates) {
     for (auto date : dates) {
         DoubleVector vec;
-        convert_double_vec(date.second.c_str(), vec, '-');
-        if (vec.size() > 1)
-            return true;
+        try {
+            convert_double_vec(date.second.c_str(), vec, '-');
+            if (vec.size() > 1)
+                return true;
+        } catch (...) {
+            // cannot parse, just do nothing
+            continue;
+        }
     }
     return false;
 }
@@ -63,6 +76,10 @@ void readDateFile(string date_file, TaxonDateMap &dates) {
             string line;
             if (!safeGetline(in, line))
                 break;
+            // ignore comment
+            if (line.find('#') != string::npos)
+                line = line.substr(0, line.find('#'));
+            trimString(line);
             if (line.empty()) // ignore empty line
                 continue;
             string name, date;
@@ -142,16 +159,38 @@ void writeDate(string date_file, ostream &out, StrVector &taxname) {
     for (int i = 0; i < taxname.size(); i++) {
         string name = taxname[i];
         string date;
-        if (dates.find(name) == dates.end())
-            date = "NA";
-        else if (outgroup_set.find(name) == outgroup_set.end() || Params::getInstance().date_with_outgroup) {
+        if (dates.find(name) == dates.end()) {
+            if (!Params::getInstance().date_tip.empty())
+                date = Params::getInstance().date_tip;
+            else
+                date = "NA";
+        } else if (outgroup_set.find(name) == outgroup_set.end() || Params::getInstance().date_with_outgroup) {
             // ignore the date of the outgroup
             date = dates[name];
+        }
+        if (date != "NA") {
             retained_dates[name] = date;
+            dates.erase(name);
         }
         if (verbose_mode >= VB_MED)
             cout << i+1 << "\t" << name << "\t" << date << endl;
     }
+    
+    // add remaining ancestral dates
+    for (auto date : dates) {
+        if (date.first.substr(0,4) == "mrca")
+            retained_dates[date.first] = date.second;
+        else if (date.first.find(',') != string::npos) {
+            retained_dates["mrca(" + date.first + ")"] = date.second;
+        } else {
+            retained_dates[date.first] = date.second;
+        }
+    }
+
+    if (!Params::getInstance().date_root.empty()) {
+        retained_dates["root"] = Params::getInstance().date_root;
+    }
+    
     cout << retained_dates.size() << " dates extracted" << endl;
     try {
         out << retained_dates.size() << endl;
@@ -211,18 +250,19 @@ void runLSD2(PhyloTree *tree) {
             out.close();
             cout << "Date file printed to " << date_file << endl;
         }
+    } else {
+        // input tip and root date
+        if (Params::getInstance().date_root != "") {
+            arg.push_back("-a");
+            arg.push_back(Params::getInstance().date_root);
+        }
+        
+        if (Params::getInstance().date_tip != "") {
+            arg.push_back("-z");
+            arg.push_back(Params::getInstance().date_tip);
+        }
     }
-    
-    if (Params::getInstance().date_root != "") {
-        arg.push_back("-a");
-        arg.push_back(Params::getInstance().date_root);
-    }
-    
-    if (Params::getInstance().date_tip != "") {
-        arg.push_back("-z");
-        arg.push_back(Params::getInstance().date_tip);
-    }
-    
+
     lsd::InputOutputStream io(tree_stream.str(), outgroup_stream.str(), date_stream.str(), "");
 
     if (Params::getInstance().dating_options != "") {
@@ -269,12 +309,16 @@ void runLSD2(PhyloTree *tree) {
         outError("Couldn't write LSD output files");
     }
     
-    cout << "LSD results written to:" << endl;
-    cout << "  LSD report:                  " << report_file << endl;
-//    cout << "  Time tree in nexus format:   " << tree1_file << endl;
-    cout << "  Time tree in nexus format:   " << tree2_file << endl;
-    cout << "  Time tree in newick format:  " << tree3_file << endl;
-    cout << endl;
+    if (((stringstream*)io.outTree3)->str().empty()) {
+        outError("Something went wrong, LSD could not date the tree");
+    } else {
+        cout << "LSD results written to:" << endl;
+        cout << "  LSD report:                  " << report_file << endl;
+    //    cout << "  Time tree in nexus format:   " << tree1_file << endl;
+        cout << "  Time tree in nexus format:   " << tree2_file << endl;
+        cout << "  Time tree in newick format:  " << tree3_file << endl;
+        cout << endl;
+    }
 }
 #endif
 
