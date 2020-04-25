@@ -6,7 +6,10 @@
  */
 
 #include "timetree.h"
+
+#ifdef USE_LSD2
 #include "lsd2/src/lsd.h"
+#endif
 
 /** map from taxon name to date */
 typedef unordered_map<string, string> TaxonDateMap;
