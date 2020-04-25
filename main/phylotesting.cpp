@@ -2933,8 +2933,8 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
             filterSubst(model); // auto filter substitution model
 #ifdef _OPENMP
         }
-    } while (model != -1);
 #endif
+    } while (model != -1);
     }
     
     // store the best model
