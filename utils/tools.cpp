@@ -2382,7 +2382,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.modelomatic = true;
                 continue;
             }
-			if (strcmp(argv[cnt], "-mredo") == 0 || strcmp(argv[cnt], "--model-redo") == 0) {
+			if (strcmp(argv[cnt], "-mredo") == 0 || strcmp(argv[cnt], "--mredo") == 0 || strcmp(argv[cnt], "--model-redo") == 0) {
 				params.model_test_again = true;
 				continue;
 			}
@@ -3981,10 +3981,17 @@ void parseArg(int argc, char *argv[], Params &params) {
             
 			if (strcmp(argv[cnt], "-redo") == 0 || strcmp(argv[cnt], "--redo") == 0) {
 				params.ignore_checkpoint = true;
+                // 2020-04-27: SEMANTIC CHANGE: also redo ModelFinder
+                params.model_test_again = true;
 				continue;
 			}
 
-			if (strcmp(argv[cnt], "--undo") == 0) {
+            if (strcmp(argv[cnt], "-tredo") == 0 || strcmp(argv[cnt], "--tredo") == 0 || strcmp(argv[cnt], "--redo-tree") == 0) {
+                params.ignore_checkpoint = true;
+                continue;
+            }
+
+			if (strcmp(argv[cnt], "-undo") == 0 || strcmp(argv[cnt], "--undo") == 0) {
 				params.force_unfinished = true;
 				continue;
 			}
@@ -4323,7 +4330,6 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --safe               Safe likelihood kernel to avoid numerical underflow" << endl
     << "  --mem NUM[G|M|%]     Maximal RAM usage in GB | MB | %" << endl
     << "  --runs NUM           Number of indepedent runs (default: 1)" << endl
-    << "  --redo               Ignore checkpoint and overwrite outputs (default: OFF)" << endl
     << "  -v, --verbose        Verbose mode, printing more messages to screen" << endl
     << "  -V, --version        Display version number" << endl
     << "  --quiet              Quiet mode, suppress printing to screen (stdout)" << endl
@@ -4333,6 +4339,11 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -T NUM|AUTO          No. cores/threads or AUTO-detect (default: 1)" << endl
     << "  --threads-max NUM    Max number of threads for -T AUTO (default: all cores)" << endl
 #endif
+    << endl << "CHECKPOINT:" << endl
+    << "  --redo               Redo both ModelFinder and tree search" << endl
+    << "  --redo-tree          Restore ModelFinder and only redo tree search" << endl
+    << "  --undo               Revoke finished run, used when changing some options" << endl
+    << "  --cptime NUM         Minimum checkpoint interval (default: 60 sec and adapt)" << endl
     << endl << "PARTITION MODEL:" << endl
     << "  -p FILE|DIR          NEXUS/RAxML partition file or directory with alignments" << endl
     << "                       Edge-linked proportional partition model" << endl
@@ -4417,7 +4428,6 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --merit AIC|AICc|BIC  Akaike|Bayesian information criterion (default: BIC)" << endl
 //            << "  -msep                Perform model selection and then rate selection" << endl
     << "  --mtree              Perform full tree search for every model" << endl
-    << "  --mredo              Ignore .model.gz checkpoint file (default: OFF)" << endl
     << "  --madd STR,...       List of mixture models to consider" << endl
     << "  --mdef FILE          Model definition NEXUS file (see Manual)" << endl
     << "  --modelomatic        Find best codon/protein/DNA models (Whelan et al. 2015)" << endl
@@ -4587,7 +4597,6 @@ void usage_iqtree(char* argv[], bool full_command) {
 
         << endl << "MISCELLANEOUS:" << endl
         << "  --keep-ident         Keep identical sequences (default: remove & finally add)" << endl
-        << "  --cptime NUM         Checkpoint time interval in seconds (default: 60)" << endl
         << "  -blfix               Fix branch lengths of user tree passed via -te" << endl
         << "  -blscale             Scale branch lengths of user tree passed via -t" << endl
         << "  -blmin               Min branch length for optimization (default 0.000001)" << endl
