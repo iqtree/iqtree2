@@ -623,6 +623,9 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
             else
                 fixed_number = wrapperFixNegativeBranch(false);
             break;
+        case STT_USER_TREE:
+            ASSERT(0 && "User tree should be handled already");
+            break;
         }
         initTree = getTreeString();
         CKP_SAVE(initTree);
@@ -2226,12 +2229,11 @@ double IQTree::doTreeSearch() {
                                            MAIN LOOP OF THE IQ-TREE ALGORITHM
      *=============================================================================================================*/
 
-    bool optimization_looped = false;
-    if (!stop_rule.meetStopCondition(stop_rule.getCurIt(), cur_correlation)) {
+    bool early_stop = stop_rule.meetStopCondition(stop_rule.getCurIt(), cur_correlation);
+    if (!early_stop) {
         cout << "--------------------------------------------------------------------" << endl;
         cout << "|               OPTIMIZING CANDIDATE TREE SET                      |" << endl;
         cout << "--------------------------------------------------------------------" << endl;
-        optimization_looped = true;
     }
 
     // count threshold for computing bootstrap correlation
@@ -2365,7 +2367,7 @@ double IQTree::doTreeSearch() {
     
     if(params->ufboot2corr) refineBootTrees();
 
-    if (optimization_looped)
+    if (!early_stop)
         sendStopMessage();
 
     readTreeString(candidateTrees.getBestTreeStrings()[0]);
@@ -4004,7 +4006,7 @@ void IQTree::syncCandidateTrees(int nTrees, bool updateStopRule) {
             trees += ckp->size();
             ckp->clear();
         }
-        cout << trees << " candidate trees gathered from workers" << endl;
+        cout << "Master: " << trees << " candidate trees gathered from workers" << endl;
         // get the best candidate trees
         int numTrees = max(nTrees, MPIHelper::getInstance().getNumProcesses());
         CandidateSet bestCandidates = candidateTrees.getBestCandidateTrees(numTrees);
@@ -4019,10 +4021,15 @@ void IQTree::syncCandidateTrees(int nTrees, bool updateStopRule) {
         cset.setCheckpoint(ckp);
         cset.saveCheckpoint();
         MPIHelper::getInstance().sendCheckpoint(ckp, PROC_MASTER);
-        cout << ckp->size() << " candidate trees sent to master" << endl;
+        cout << "Worker " << MPIHelper::getInstance().getProcessID() << ": " << ckp->size() << " candidate trees sent to master" << endl;
         ckp->clear();
     }
 
+    if (updateStopRule && stop_rule.meetStopCondition(stop_rule.getCurIt(), 0.0)) {
+        // 2020-04-30: send stop signal
+        ckp->putBool("stop", true);
+    }
+    
     // broadcast candidate trees from master to worker
     MPIHelper::getInstance().broadcastCheckpoint(ckp);
     cout << ckp->size() << " trees broadcasted to workers" << endl;
@@ -4034,6 +4041,12 @@ void IQTree::syncCandidateTrees(int nTrees, bool updateStopRule) {
         cset.restoreCheckpoint();
         for (CandidateSet::iterator it = cset.begin(); it != cset.end(); it++)
             addTreeToCandidateSet(it->second.tree, it->second.score, false, PROC_MASTER);
+        
+        // 2020-04-40: check stop signal
+        if (ckp->getBool("stop")) {
+            cout << "Worker " << MPIHelper::getInstance().getProcessID() << " gets STOP message!" << endl;
+            stop_rule.shouldStop();
+        }
     }
 
     delete ckp;
@@ -4094,7 +4107,7 @@ void IQTree::syncCurrentTree() {
         // now receive the candidate set
         MPIHelper::getInstance().recvCheckpoint(checkpoint, PROC_MASTER);
         if (checkpoint->getBool("stop")) {
-            cout << "Worker gets STOP message!" << endl;
+            cout << "Worker " << MPIHelper::getInstance().getProcessID() << " gets STOP message!" << endl;
             stop_rule.shouldStop();
         } else {
             CandidateSet cset;
