@@ -1119,6 +1119,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.u2c_nni5 = false;
     params.date_with_outgroup = false;
     params.date_debug = false;
+    params.date_replicates = 0;
+    params.clock_stddev = -1.0;
     
     params.matrix_exp_technique = MET_EIGEN3LIB_DECOMPOSITION;
 
@@ -4095,7 +4097,27 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.date_with_outgroup = true;
                 continue;
             }
-            
+
+            if (strcmp(argv[cnt], "--date-ci") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --date-ci <number_of_replicates>";
+                params.date_replicates = convert_int(argv[cnt]);
+                if (params.date_replicates < 1)
+                    throw "--date-ci must be positive";
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--clock-sd") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --clock-sd <standard_dev_of_lognormal_relaxed_lock>";
+                params.clock_stddev = convert_double(argv[cnt]);
+                if (params.clock_stddev < 0)
+                    throw "--clock-sd must be non-negative";
+                continue;
+            }
+
             if (strcmp(argv[cnt], "--date-debug") == 0) {
                 params.date_debug = true;
                 continue;
@@ -4557,6 +4579,10 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --date TAXNAME       Extract dates from taxon names after last '|'" << endl
     << "  --date-tip STRING    Tip dates as a real number or YYYY-MM-DD" << endl
     << "  --date-root STRING   Root date as a real number or YYYY-MM-DD" << endl
+    << "  --date-ci NUM        Number of replicates to compute confidence interval" << endl
+    << "  --clock-sd NUM       Std-dev for lognormal relaxed clock (default: 0.2)" << endl
+    << "  --date-outgroup      Include outgroup in time tree (default: no)" << endl
+    << "  --date-options \"..\"  Extra options passing directly to LSD2" << endl
     << "  --dating STRING      Dating method: LSD for least square dating (default)" << endl
 #endif
     << endl;

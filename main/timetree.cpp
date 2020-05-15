@@ -211,12 +211,21 @@ void runLSD2(PhyloTree *tree) {
     string treefile = basename + ".subst";
     stringstream tree_stream, outgroup_stream, date_stream;
     tree->printTree(tree_stream);
-    StrVector arg = {"lsd", "-i", treefile, "-s", convertIntToString(tree->getAlnNSite()), "-c", "-o", basename};
+    StrVector arg = {"lsd", "-i", treefile, "-s", convertIntToString(tree->getAlnNSite()), "-o", basename};
     if (Params::getInstance().date_debug) {
         ofstream out(treefile);
         out << tree_stream.str();
         out.close();
         cout << "Tree printed to " << treefile << endl;
+    }
+    
+    if (Params::getInstance().date_replicates > 0) {
+        arg.push_back("-f");
+        arg.push_back(convertIntToString(Params::getInstance().date_replicates));
+        if (Params::getInstance().clock_stddev >= 0) {
+            arg.push_back("-q");
+            arg.push_back(convertDoubleToString(Params::getInstance().clock_stddev));
+        }
     }
     
     if (Params::getInstance().root) {
