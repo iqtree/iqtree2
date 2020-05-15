@@ -32,7 +32,11 @@ string convertDate(string date, bool is_ISO) {
     if (date.empty() || !isdigit(date[0]) || date[0] == '-')
         return date;
     DoubleVector vec;
-    convert_double_vec(date.c_str(), vec, '-');
+    try {
+        convert_double_vec(date.c_str(), vec, '-');
+    } catch (...) {
+        outError("Invalid date " + date);
+    }
     IntVector month_days = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
     if (vec.size() == 1 && fabs(vec[0] - floor(vec[0])) < 1e-6 && is_ISO) {
         // incomplete YYYY format, convert it to range YYYY-01-01 to YYYY-12-31
@@ -161,12 +165,11 @@ void writeDate(string date_file, ostream &out, StrVector &taxname) {
         cout << "ID\tTaxon\tDate" << endl;
     for (int i = 0; i < taxname.size(); i++) {
         string name = taxname[i];
-        string date;
+        string date = "NA";
         if (dates.find(name) == dates.end()) {
+            // taxon present in the dates
             if (!Params::getInstance().date_tip.empty())
                 date = Params::getInstance().date_tip;
-            else
-                date = "NA";
         } else if (outgroup_set.find(name) == outgroup_set.end() || Params::getInstance().date_with_outgroup) {
             // ignore the date of the outgroup
             date = dates[name];
@@ -185,7 +188,7 @@ void writeDate(string date_file, ostream &out, StrVector &taxname) {
             retained_dates[date.first] = date.second;
         else if (date.first.find(',') != string::npos) {
             retained_dates["mrca(" + date.first + ")"] = date.second;
-        } else {
+        } else if (outgroup_set.find(date.first) == outgroup_set.end() || Params::getInstance().date_with_outgroup) {
             retained_dates[date.first] = date.second;
         }
     }
@@ -335,9 +338,13 @@ void runLSD2(PhyloTree *tree) {
 #endif
 
 void doTimeTree(PhyloTree *tree) {
+
+    cout << "--- Start phylogenetic dating ---" << endl;
+
 #ifdef USE_LSD2
     if (Params::getInstance().dating_method == "LSD") {
         runLSD2(tree);
+        cout << "--- End phylogenetic dating ---" << endl;
         return;
     }
 #endif
