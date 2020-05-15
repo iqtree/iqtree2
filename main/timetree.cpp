@@ -26,7 +26,12 @@ string convertDate(string date, bool is_ISO) {
         StrVector vec;
         convert_string_vec(date.c_str(), vec, ':');
         if (vec.size() != 2)
-            outError("Invalid date range: " + date);
+            outError("Invalid date range " + date);
+        if (vec[0].empty() || vec[0] == "NA")
+            return "u(" + vec[1] + ")";
+        if (vec[1].empty() || vec[1] == "NA")
+            return "l(" + vec[0] + ")";
+
         return "b(" + vec[0] + "," + vec[1] + ")";
     }
     if (date.empty() || !isdigit(date[0]) || date[0] == '-')
@@ -37,6 +42,8 @@ string convertDate(string date, bool is_ISO) {
     } catch (...) {
         outError("Invalid date " + date);
     }
+    /*
+     THIS IS NOW SUPPORTED in LSD2, SO NO NEED TO CONVERT INCOMPLETE DATE RANGE
     IntVector month_days = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
     if (vec.size() == 1 && fabs(vec[0] - floor(vec[0])) < 1e-6 && is_ISO) {
         // incomplete YYYY format, convert it to range YYYY-01-01 to YYYY-12-31
@@ -47,7 +54,7 @@ string convertDate(string date, bool is_ISO) {
         if (vec[1] < 1 || vec[1] > month_days.size())
             outError("Invalid month in ", date);
         return "b(" + date + "-01," + date + "-" + convertIntToString(month_days[vec[1]-1]) + ")";
-    }
+    }*/
     // otherwise, return the original date string
     return date;
 }
