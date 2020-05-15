@@ -10,7 +10,7 @@
 #include <omp.h>
 #endif
 
-#define PUT_ATTR_MEANING(branch, value, description) { branch->putAttr(#value, value); meanings.insert({#value, description}); }
+#define PUT_MEANING(value, description) meanings.insert({#value, description})
 
 void PhyloTree::computeSiteConcordance(map<string,string> &meanings) {
     BranchVector branches;
@@ -26,7 +26,7 @@ void PhyloTree::computeSiteConcordance(map<string,string> &meanings) {
 #endif
     for (auto ii = 0; ii < branches.size(); ii++) {
         BranchVector::iterator it = branches.begin()+ii;
-        computeSiteConcordance((*it), params->site_concordance, rstream, meanings);
+        computeSiteConcordance((*it), params->site_concordance, rstream);
         Neighbor *nei = it->second->findNeighbor(it->first);
         double sCF = 0.0;
         if (!GET_ATTR(nei, sCF))
@@ -52,6 +52,14 @@ void PhyloTree::computeSiteConcordance(map<string,string> &meanings) {
         finish_random(rstream);
     }
 #endif
+
+    PUT_MEANING(sCF, "Site concordance factor averaged over " + convertIntToString(params->site_concordance) +  " quartets (=sCF_N/sN %)");
+    PUT_MEANING(sN, "Number of informative sites averaged over " + convertIntToString(params->site_concordance) +  " quartets");
+    PUT_MEANING(sDF1, "Site discordance factor for alternative quartet 1 (=sDF1_N/sN %)");
+    PUT_MEANING(sDF2, "Site discordance factor for alternative quartet 2 (=sDF2_N/sN %)");
+    PUT_MEANING(sCF_N, "sCF in absolute number of sites");
+    PUT_MEANING(sDF1_N, "sDF1 in absolute number of sites");
+    PUT_MEANING(sDF2_N, "sDF2 in absolute number of sites");
 }
 
 void Alignment::computeQuartetSupports(IntVector &quartet, vector<int64_t> &support) {
@@ -102,7 +110,7 @@ void SuperAlignment::computeQuartetSupports(IntVector &quartet, vector<int64_t> 
     }
 }
 
-void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstream, map<string,string> &meanings) {
+void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstream) {
     vector<IntVector> taxa;
     taxa.resize(4);
 
@@ -211,13 +219,13 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstre
     sDF1_N = round(sDF1_N / nquartets * 100)/100;
     sDF2_N = round(sDF2_N / nquartets * 100)/100;
     Neighbor *nei = branch.second->findNeighbor(branch.first);
-    PUT_ATTR_MEANING(nei, sCF, "Site concordance factor averaged over " + convertIntToString(params->site_concordance) +  " quartets (=sCF_N/sN %)");
-    PUT_ATTR_MEANING(nei, sN, "Number of informative sites averaged over " + convertIntToString(params->site_concordance) +  " quartets");
-    PUT_ATTR_MEANING(nei, sDF1, "Site discordance factor for alternative quartet 1 (=sDF1_N/sN %)");
-    PUT_ATTR_MEANING(nei, sDF2, "Site discordance factor for alternative quartet 2 (=sDF2_N/sN %)");
-    PUT_ATTR_MEANING(nei, sCF_N, "sCF in absolute number of sites");
-    PUT_ATTR_MEANING(nei, sDF1_N, "sDF1 in absolute number of sites");
-    PUT_ATTR_MEANING(nei, sDF2_N, "sDF2 in absolute number of sites");
+    PUT_ATTR(nei, sCF);
+    PUT_ATTR(nei, sN);
+    PUT_ATTR(nei, sDF1);
+    PUT_ATTR(nei, sDF2);
+    PUT_ATTR(nei, sCF_N);
+    PUT_ATTR(nei, sDF1_N);
+    PUT_ATTR(nei, sDF2_N);
     stringstream s_factors;
     s_factors << sCF << "/" << sDF1 << "/" << sDF2;
     nei->putAttr("sCF/sDF1/sDF2", s_factors.str());
@@ -337,20 +345,15 @@ void PhyloTree::computeGeneConcordance(MTreeSet &trees, map<string,string> &mean
         double gDF1 = round((double)gDF1_N/gN * 10000)/100;
         double gDF2 = round((double)gDF2_N/gN * 10000)/100;
         double gDFP = round((double)gDFP_N/gN * 10000)/100;
-        PUT_ATTR_MEANING(nei, gCF, "Gene concordance factor (=gCF_N/gN %)");
-        PUT_ATTR_MEANING(nei, gDF1, "Gene discordance factor for NNI-1 branch (=gDF1_N/gN %)");
-        PUT_ATTR_MEANING(nei, gDF2, "Gene discordance factor for NNI-2 branch (=gDF2_N/gN %)");
-        PUT_ATTR_MEANING(nei, gDFP, "Gene discordance factor due to polyphyly (=gDFP_N/gN %)");
-        PUT_ATTR_MEANING(nei, gN, "Number of trees decisive for the branch");
-        PUT_ATTR_MEANING(nei, gCF_N, "Number of trees concordant with the branch");
-        PUT_ATTR_MEANING(nei, gDF1_N, "Number of trees concordant with NNI-1 branch");
-        PUT_ATTR_MEANING(nei, gDF2_N, "Number of trees concordant with NNI-2 branch");
-        PUT_ATTR_MEANING(nei, gDFP_N, "Number of trees decisive but discordant due to polyphyly");
-        meanings.insert({"*NOTE*", "(gCF+gDF1+gDF2+gDFP) = 100% and (gCF_N+gDF1_N+gDF2_N+gDFP_N) = gN"});
-        if (Params::getInstance().print_df1_trees) {
-            meanings.insert({"treeDF1", "Newick tree for gDF1"});
-            meanings.insert({"treeDF2", "Newick tree for gDF2"});
-        }
+        PUT_ATTR(nei, gCF);
+        PUT_ATTR(nei, gDF1);
+        PUT_ATTR(nei, gDF2);
+        PUT_ATTR(nei, gDFP);
+        PUT_ATTR(nei, gN);
+        PUT_ATTR(nei, gCF_N);
+        PUT_ATTR(nei, gDF1_N);
+        PUT_ATTR(nei, gDF2_N);
+        PUT_ATTR(nei, gDFP_N);
         stringstream g_factors;
         g_factors << gCF << "/" << gDF1 << "/" << gDF2 << "/" << gDFP;
         nei->putAttr("gCF/gDF1/gDF2/gDFP", g_factors.str());
@@ -379,6 +382,20 @@ void PhyloTree::computeGeneConcordance(MTreeSet &trees, map<string,string> &mean
     for (vector<Split*>::reverse_iterator it = subtrees.rbegin(); it != subtrees.rend(); it++)
         delete (*it);
 
+    PUT_MEANING(gCF, "Gene concordance factor (=gCF_N/gN %)");
+    PUT_MEANING(gDF1, "Gene discordance factor for NNI-1 branch (=gDF1_N/gN %)");
+    PUT_MEANING(gDF2, "Gene discordance factor for NNI-2 branch (=gDF2_N/gN %)");
+    PUT_MEANING(gDFP, "Gene discordance factor due to polyphyly (=gDFP_N/gN %)");
+    PUT_MEANING(gN, "Number of trees decisive for the branch");
+    PUT_MEANING(gCF_N, "Number of trees concordant with the branch");
+    PUT_MEANING(gDF1_N, "Number of trees concordant with NNI-1 branch");
+    PUT_MEANING(gDF2_N, "Number of trees concordant with NNI-2 branch");
+    PUT_MEANING(gDFP_N, "Number of trees decisive but discordant due to polyphyly");
+    meanings.insert({"*NOTE*", "(gCF+gDF1+gDF2+gDFP) = 100% and (gCF_N+gDF1_N+gDF2_N+gDFP_N) = gN"});
+    if (Params::getInstance().print_df1_trees) {
+        meanings.insert({"treeDF1", "Newick tree for gDF1"});
+        meanings.insert({"treeDF2", "Newick tree for gDF2"});
+    }
 }
 
 /**

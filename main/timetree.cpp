@@ -266,7 +266,7 @@ void runLSD2(PhyloTree *tree) {
         }
     }
 
-    lsd::InputOutputStream io(tree_stream.str(), outgroup_stream.str(), date_stream.str(), "");
+    lsd::InputOutputStream io(tree_stream.str(), outgroup_stream.str(), date_stream.str(), "", "");
 
     if (Params::getInstance().dating_options != "") {
         // extra options for LSD
