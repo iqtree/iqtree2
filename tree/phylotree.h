@@ -1833,7 +1833,7 @@ public:
      @param[out] info concordance information
      @param rstream random stream
      */
-    virtual void computeSiteConcordance(Branch &branch, int nquartets, int *rstream, map<string,string> &meanings);
+    virtual void computeSiteConcordance(Branch &branch, int nquartets, int *rstream);
 
     /**
      Compute gene concordance factor
