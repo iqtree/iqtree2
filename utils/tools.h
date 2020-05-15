@@ -2203,6 +2203,9 @@ public:
     
     /** standard deviation of lognormal relaxed clock model for confidence interval estimate */
     double clock_stddev;
+
+    /** z-score for detecting outlier nodes */
+    double date_outlier;
 };
 
 /**

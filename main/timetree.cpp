@@ -237,6 +237,11 @@ void runLSD2(PhyloTree *tree) {
             arg.push_back(convertDoubleToString(Params::getInstance().clock_stddev));
         }
     }
+
+    if (Params::getInstance().date_outlier >= 0) {
+        arg.push_back("-e");
+        arg.push_back(convertIntToString(Params::getInstance().date_outlier));
+    }
     
     if (Params::getInstance().root) {
         // print outgroup file for LSD
