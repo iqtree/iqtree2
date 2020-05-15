@@ -1121,6 +1121,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.date_debug = false;
     params.date_replicates = 0;
     params.clock_stddev = -1.0;
+    params.date_outlier = -1.0;
     
     params.matrix_exp_technique = MET_EIGEN3LIB_DECOMPOSITION;
 
@@ -4118,6 +4119,16 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
 
+            if (strcmp(argv[cnt], "--date-outlier") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --date-outlier <z_score_for_removing_outlier_nodes>";
+                params.date_outlier = convert_double(argv[cnt]);
+                if (params.date_outlier < 0)
+                    throw "--date-outlier must be non-negative";
+                continue;
+            }
+
             if (strcmp(argv[cnt], "--date-debug") == 0) {
                 params.date_debug = true;
                 continue;
@@ -4582,6 +4593,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --date-ci NUM        Number of replicates to compute confidence interval" << endl
     << "  --clock-sd NUM       Std-dev for lognormal relaxed clock (default: 0.2)" << endl
     << "  --date-outgroup      Include outgroup in time tree (default: no)" << endl
+    << "  --date-outlier NUM   Z-score cutoff to exclude outlier nodes (e.g. 3)" << endl
     << "  --date-options \"..\"  Extra options passing directly to LSD2" << endl
     << "  --dating STRING      Dating method: LSD for least square dating (default)" << endl
 #endif
