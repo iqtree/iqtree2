@@ -142,6 +142,7 @@ void MTree::copyTree(MTree *tree) {
 }
 
 void MTree::copyTree(MTree *tree, string &taxa_set) {
+    rooted = tree->rooted;
     if (rooted) {
         ASSERT(tree->rooted);
         taxa_set.push_back(1);
@@ -387,6 +388,31 @@ void MTree::printTree(const char *ofile, int brtype)
     }
 }
 
+void MTree::printNexus(string ofile, int brtype, string nexus_comment)
+{
+    try {
+        ofstream out;
+        out.exceptions(ios::failbit | ios::badbit);
+        if (brtype & WT_APPEND)
+            out.open(ofile, ios_base::out | ios_base::app);
+        else
+            out.open(ofile);
+        out << "#NEXUS" << endl;
+        if (!nexus_comment.empty())
+            out << "[ " << nexus_comment << " ]" << endl;
+        out << "begin trees;" << endl;
+        out << "  tree tree_1 = ";
+        printTree(out, brtype | WT_BR_ATTR);
+        out << endl;
+        out << "end;" << endl;
+        out.close();
+        if (verbose_mode >= VB_DEBUG)
+            cout << "Tree was printed to " << ofile << endl;
+    } catch (ios::failure) {
+        outError(ERR_WRITE_OUTPUT, ofile);
+    }
+}
+
 void MTree::printTree(ostream &out, int brtype) {
     if (root->isLeaf()) {
         if (root->neighbors[0]->node->isLeaf()) {
@@ -442,6 +468,19 @@ void MTree::printBranchLength(ostream &out, int brtype, bool print_slash, Neighb
     if (brtype & WT_BR_LEN_SHORT) prec = 6;
     if (brtype & WT_BR_LEN_ROUNDING) length = round(length);
     out.precision(prec);
+    if ((brtype & WT_BR_ATTR) && !length_nei->attributes.empty()) {
+        // print branch attributes
+        out << "[&";
+        bool first = true;
+        for (auto attr : length_nei->attributes) {
+            if (!first)
+                out << ",";
+            out << attr.first << "=\"" << attr.second << '"';
+            first = false;
+        }
+        out << "]";
+    }
+    
     if (brtype & WT_BR_LEN) {
         if (brtype & WT_BR_LEN_FIXED_WIDTH)
             out << ":" << fixed << length;
@@ -526,7 +565,7 @@ int MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
         out << ")";
         if (brtype & WT_INT_NODE)
             out << node->id;
-        else if (!node->name.empty())
+        else if (!node->name.empty() && (brtype & WT_BR_ATTR) == 0)
             out << node->name;
         if (dad != NULL || length_nei) {
         	printBranchLength(out, brtype, !node->name.empty(), length_nei);
@@ -2113,7 +2152,9 @@ void MTree::extractQuadSubtrees(vector<Split*> &subtrees, BranchVector &branches
             ASSERT(nodeid == 4);
             // output NNI-1 tree
             string treeDF1 = "(" + treestrings[0] + "," + treestrings[2] + ",(" + treestrings[1] + "," + treestrings[3] + "));";
+            string treeDF2 = "(" + treestrings[0] + "," + treestrings[3] + ",(" + treestrings[1] + "," + treestrings[2] + "));";
             PUT_ATTR(child->findNeighbor(node), treeDF1);
+            PUT_ATTR(child->findNeighbor(node), treeDF2);
         }
 	}
 }

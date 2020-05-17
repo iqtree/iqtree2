@@ -103,6 +103,12 @@ void ConstraintTree::initFromTree() {
 
 void ConstraintTree::readConstraint(MTree &src_tree) {
     copyTree(&src_tree);
+    // convert all rooted constraint tree to unrooted
+    if (rooted) {
+        if (verbose_mode >= VB_MED)
+            cout << "Converting rooted constraint tree to unrooted" << endl;
+        convertToUnrooted();
+    }
     initFromTree();
 }
 

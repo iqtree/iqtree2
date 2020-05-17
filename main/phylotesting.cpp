@@ -527,7 +527,7 @@ double computeAdapter(Alignment *orig_aln, Alignment *newaln, int &adjusted_df) 
  */
 string computeFastMLTree(Params &params, Alignment *aln,
                        ModelCheckpoint &model_info, ModelsBlock *models_block,
-                       int &num_threads, int brlen_type) {
+                       int &num_threads, int brlen_type, string dist_file) {
     //string model_name;
     CandidateModel usual_model(aln);
     StrVector subst_names;
@@ -571,6 +571,7 @@ string computeFastMLTree(Params &params, Alignment *aln,
     iqtree->setNumThreads(num_threads);
     iqtree->setCheckpoint(&model_info);
 
+    iqtree->dist_file = dist_file;
     iqtree->computeInitialTree(params.SSE);
     iqtree->restoreCheckpoint();
     
@@ -788,7 +789,8 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
     // compute initial tree
     if (params.modelfinder_ml_tree) {
         // 2019-09-10: Now perform NNI on the initial tree
-        string tree_str = computeFastMLTree(params, iqtree.aln, model_info, models_block, params.num_threads, params.partition_type);
+        string tree_str = computeFastMLTree(params, iqtree.aln, model_info,
+            models_block, params.num_threads, params.partition_type, iqtree.dist_file);
         iqtree.restoreCheckpoint();
     } else {
         iqtree.computeInitialTree(params.SSE);
@@ -2931,8 +2933,8 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
             filterSubst(model); // auto filter substitution model
 #ifdef _OPENMP
         }
-    } while (model != -1);
 #endif
+    } while (model != -1);
     }
     
     // store the best model
