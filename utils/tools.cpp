@@ -4486,8 +4486,8 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "                       specification (e.g., 010010 = HKY)" << endl
     << "             Protein:  LG (default), Poisson, cpREV, mtREV, Dayhoff, mtMAM," << endl
     << "                       JTT, WAG, mtART, mtZOA, VT, rtREV, DCMut, PMB, HIVb," << endl
-    << "                       HIVw, JTTDCMut, FLU, Blosum62, GTR20, mtMet, mtVer, mtInv, Q.LG" << endl
-    << "			Q.pfam, Q.pfam_gb, Q.bird, Q.mammal, Q.insect, Q.plant, Q.yeast" << endl
+    << "                       HIVw, JTTDCMut, FLU, Blosum62, GTR20, mtMet, mtVer, mtInv, FLAVI," << endl
+    << "			Q.LG, Q.pfam, Q.pfam_gb, Q.bird, Q.mammal, Q.insect, Q.plant, Q.yeast" << endl
     << "     Protein mixture:  C10,...,C60, EX2, EX3, EHO, UL2, UL3, EX_EHO, LG4M, LG4X" << endl
     << "              Binary:  JC2 (default), GTR2" << endl
     << "     Empirical codon:  KOSI07, SCHN05" << endl
