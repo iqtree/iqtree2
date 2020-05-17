@@ -780,10 +780,10 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
         if (Params::getInstance().model_name_init) {
             nxs_model = models_block->findModel(Params::getInstance().model_name_init);
             if (nxs_model) {
-                readParametersString(nxs_model->description);
+                readParametersString(nxs_model->description, false);
             } else {
                 // initialize with custom model file
-                readParameters(Params::getInstance().model_name_init);
+                readParameters(Params::getInstance().model_name_init, false);
             }
             rescaleRates(rates, getNumRateEntries());
             if (!isReversible())
@@ -792,7 +792,7 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
             // initialize rate matrix with LG
             nxs_model = models_block->findModel("LG");
             ASSERT(nxs_model);
-            readParametersString(nxs_model->description);
+            readParametersString(nxs_model->description, false);
             rescaleRates(rates, getNumRateEntries());
         }
         // 2018-05-08 bug fix: GTR20 rates are not optimized
@@ -807,10 +807,10 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
         if (Params::getInstance().model_name_init) {
             nxs_model = models_block->findModel(Params::getInstance().model_name_init);
             if (nxs_model) {
-                readParametersString(nxs_model->description);
+                readParametersString(nxs_model->description, false);
             } else {
                 // initialize with custom model file
-                readParameters(Params::getInstance().model_name_init);
+                readParameters(Params::getInstance().model_name_init, false);
             }
             rescaleRates(rates, getNumRateEntries());
             if (isReversible())
@@ -819,7 +819,7 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
             // initialize rate matrix with LG
             nxs_model = models_block->findModel("LG");
             ASSERT(nxs_model);
-            readParametersString(nxs_model->description);
+            readParametersString(nxs_model->description, false);
             rescaleRates(rates, getNumRateEntries());
             setReversible(false);
         }

@@ -307,6 +307,7 @@ const int WT_BR_LEN_FIXED_WIDTH = 256;
 const int WT_BR_ID = 512;
 const int WT_BR_LEN_ROUNDING = 1024;
 const int WT_BR_LEN_SHORT = 2048; // store only 6 digits after the comma for branch lengths
+const int WT_BR_ATTR = 4096; // print branch attributes
 const int TRUE = 1;
 const int FALSE = 0;
 
@@ -2176,7 +2177,35 @@ public:
 	bool ufboot2corr; // to turn on the correction mode for UFBoot under model violations, enable by "-bb <nrep> -correct
 	bool u2c_nni5; // to use NNI5 during Refinement Step of UFBoot2-Corr
 
+    /** method for phylogenetic dating, currently only LSD is supported */
+    string dating_method;
 
+    /** extra commands passed to the dating method */
+    string dating_options;
+
+    /** date file that has several lines, each line with a taxon name and date in YYYY-MM-DD */
+    string date_file;
+    
+    /** tip date, a real number or YYYY-MM-DD */
+    string date_tip;
+    
+    /** root date, a real number or YYYY-MM-DD */
+    string date_root;
+    
+    /** false to remove outgroup from the dated tree, default: true */
+    bool date_with_outgroup;
+    
+    /** true to print internal date files for debugging purpose */
+    bool date_debug;
+    
+    /** number of replicates to compute date confidence interval */
+    int date_replicates;
+    
+    /** standard deviation of lognormal relaxed clock model for confidence interval estimate */
+    double clock_stddev;
+
+    /** z-score for detecting outlier nodes */
+    double date_outlier;
 };
 
 /**
@@ -2407,6 +2436,13 @@ int getFilesInDir(const char *path, StrVector &filenames);
 int convert_int(const char *str);
 
 /**
+    convert string to int64, with error checking
+    @param str original string
+    @return the number
+ */
+int64_t convert_int64(const char *str);
+
+/**
         convert string to int, with error checking
         @param str original string
         @param end_pos end position
@@ -2485,7 +2521,7 @@ void convert_range(const char *str, int &lower, int &upper, int &step_size);
  */
 void convert_range(const char *str, double &lower, double &upper, double &step_size);
 
-void convert_string_vec(const char *str, StrVector &str_vec);
+void convert_string_vec(const char *str, StrVector &str_vec, char separator = ',');
 
 /**
     change unusual character in names into underscore (_)

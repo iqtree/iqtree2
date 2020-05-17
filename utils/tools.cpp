@@ -535,12 +535,12 @@ void convert_range(const char *str, double &lower, double &upper, double &step_s
 
 }
 
-void convert_string_vec(const char *str, StrVector &vec) {
+void convert_string_vec(const char *str, StrVector &vec, char separator) {
     char *beginptr = (char*)str, *endptr;
     vec.clear();
     string elem;
     do {
-    	endptr = strchr(beginptr, ',');
+    	endptr = strchr(beginptr, separator);
     	if (!endptr) {
     		elem.assign(beginptr);
     		vec.push_back(elem);
@@ -556,7 +556,12 @@ void convert_string_vec(const char *str, StrVector &vec) {
 bool renameString(string &name) {
     bool renamed = false;
     for (string::iterator i = name.begin(); i != name.end(); i++) {
-        if (!isalnum(*i) && (*i) != '_' && (*i) != '-' && (*i) != '.') {
+        if ((*i) == '/') {
+            // PLL does not accept '/' in names, turn it off
+            if (Params::getInstance().start_tree == STT_PLL_PARSIMONY)
+                Params::getInstance().start_tree = STT_PARSIMONY;
+        }
+        if (!isalnum(*i) && (*i) != '_' && (*i) != '-' && (*i) != '.' && (*i) != '|' && (*i) != '/') {
             (*i) = '_';
             renamed = true;
         }
@@ -861,7 +866,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.remove_empty_seq = true;
     params.terrace_aware = true;
 #ifdef IQTREE_TERRAPHAST
-    params.terrace_analysis = true;
+    params.terrace_analysis = false;
 #else
     params.terrace_analysis = false;
 #endif
@@ -1112,6 +1117,11 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.suppress_output_flags = 0;
     params.ufboot2corr = false;
     params.u2c_nni5 = false;
+    params.date_with_outgroup = false;
+    params.date_debug = false;
+    params.date_replicates = 0;
+    params.clock_stddev = -1.0;
+    params.date_outlier = -1.0;
     
     params.matrix_exp_technique = MET_EIGEN3LIB_DECOMPOSITION;
 
@@ -2078,6 +2088,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-no_terrace") == 0) {
 				params.terrace_aware = false;
+                params.terrace_analysis = false;
 				continue;
 			}
             if (strcmp(argv[cnt], "--terrace") == 0) {
@@ -2374,7 +2385,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.modelomatic = true;
                 continue;
             }
-			if (strcmp(argv[cnt], "-mredo") == 0 || strcmp(argv[cnt], "--model-redo") == 0) {
+			if (strcmp(argv[cnt], "-mredo") == 0 || strcmp(argv[cnt], "--mredo") == 0 || strcmp(argv[cnt], "--model-redo") == 0) {
 				params.model_test_again = true;
 				continue;
 			}
@@ -3973,10 +3984,17 @@ void parseArg(int argc, char *argv[], Params &params) {
             
 			if (strcmp(argv[cnt], "-redo") == 0 || strcmp(argv[cnt], "--redo") == 0) {
 				params.ignore_checkpoint = true;
+                // 2020-04-27: SEMANTIC CHANGE: also redo ModelFinder
+                params.model_test_again = true;
 				continue;
 			}
 
-			if (strcmp(argv[cnt], "--undo") == 0) {
+            if (strcmp(argv[cnt], "-tredo") == 0 || strcmp(argv[cnt], "--tredo") == 0 || strcmp(argv[cnt], "--redo-tree") == 0) {
+                params.ignore_checkpoint = true;
+                continue;
+            }
+
+			if (strcmp(argv[cnt], "-undo") == 0 || strcmp(argv[cnt], "--undo") == 0) {
 				params.force_unfinished = true;
 				continue;
 			}
@@ -4031,7 +4049,101 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
             // --
 
-			if (argv[cnt][0] == '-') {
+            if (strcmp(argv[cnt], "--dating") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --dating LSD";
+                params.dating_method = argv[cnt];
+                if (params.dating_method != "LSD")
+                    throw "Currently only LSD (least-square dating) method is supported";
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--date") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --date <date_file>|TAXNAME";
+                if (params.dating_method == "")
+                    params.dating_method = "LSD";
+                params.date_file = argv[cnt];
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--date-tip") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --date-tip <YYYY[-MM-DD]>";
+                if (params.dating_method == "")
+                    params.dating_method = "LSD";
+                params.date_tip = argv[cnt];
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--date-root") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --date-root <YYYY[-MM-DD]>";
+                if (params.dating_method == "")
+                    params.dating_method = "LSD";
+                params.date_root = argv[cnt];
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--date-no-outgroup") == 0) {
+                params.date_with_outgroup = false;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--date-outgroup") == 0) {
+                params.date_with_outgroup = true;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--date-ci") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --date-ci <number_of_replicates>";
+                params.date_replicates = convert_int(argv[cnt]);
+                if (params.date_replicates < 1)
+                    throw "--date-ci must be positive";
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--clock-sd") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --clock-sd <standard_dev_of_lognormal_relaxed_lock>";
+                params.clock_stddev = convert_double(argv[cnt]);
+                if (params.clock_stddev < 0)
+                    throw "--clock-sd must be non-negative";
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--date-outlier") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --date-outlier <z_score_for_removing_outlier_nodes>";
+                params.date_outlier = convert_double(argv[cnt]);
+                if (params.date_outlier < 0)
+                    throw "--date-outlier must be non-negative";
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--date-debug") == 0) {
+                params.date_debug = true;
+                continue;
+            }
+            
+
+            if (strcmp(argv[cnt], "--date-options") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --date-options <extra_options_for_dating_method>";
+                params.dating_options = argv[cnt];
+                continue;
+            }
+
+            if (argv[cnt][0] == '-') {
                 string err = "Invalid \"";
                 err += argv[cnt];
                 err += "\" option.";
@@ -4042,30 +4154,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                 else
                     params.out_file = argv[cnt];
             }
-            if (params.root != NULL && params.is_rooted)
-                throw "Not allowed to specify both -o <taxon> and -root";
-
-            if (params.model_test_and_tree && params.partition_type != BRLEN_OPTIMIZE)
-                throw("-mtree not allowed with edge-linked partition model (-spp or -q)");
-            
-            if (params.do_au_test && params.topotest_replicates == 0)
-                throw("For AU test please specify number of bootstrap replicates via -zb option");
-            
-            if (params.lh_mem_save == LM_MEM_SAVE && params.partition_file)
-                throw("-mem option does not work with partition models yet");
-            
-            if (params.gbo_replicates && params.num_bootstrap_samples)
-                throw("UFBoot (-bb) and standard bootstrap (-b) must not be specified together");
-            
-            if ((params.model_name.find("ONLY") != string::npos || (params.model_name.substr(0,2) == "MF" && params.model_name.substr(0,3) != "MFP")) && (params.gbo_replicates || params.num_bootstrap_samples))
-                throw("ModelFinder only cannot be combined with bootstrap analysis");
-            
-            if (params.num_runs > 1 && !params.treeset_file.empty())
-                throw("Can't combine --runs and -z options");
-            
-            if (params.num_runs > 1 && params.lmap_num_quartets >= 0)
-                throw("Can't combine --runs and -lmap options");
-
         }
         // try
         catch (const char *str) {
@@ -4102,13 +4190,51 @@ void parseArg(int argc, char *argv[], Params &params) {
 
 //    if (params.do_au_test)
 //        outError("The AU test is temporarily disabled due to numerical issue when bp-RELL=0");
+
+    if (params.root != NULL && params.is_rooted)
+        outError("Not allowed to specify both -o <taxon> and -root");
     
+    if (params.model_test_and_tree && params.partition_type != BRLEN_OPTIMIZE)
+        outError("-mtree not allowed with edge-linked partition model (-spp or -q)");
+    
+    if (params.do_au_test && params.topotest_replicates == 0)
+        outError("For AU test please specify number of bootstrap replicates via -zb option");
+    
+    if (params.lh_mem_save == LM_MEM_SAVE && params.partition_file)
+        outError("-mem option does not work with partition models yet");
+    
+    if (params.gbo_replicates && params.num_bootstrap_samples)
+        outError("UFBoot (-bb) and standard bootstrap (-b) must not be specified together");
+    
+    if ((params.model_name.find("ONLY") != string::npos || (params.model_name.substr(0,2) == "MF" && params.model_name.substr(0,3) != "MFP")) && (params.gbo_replicates || params.num_bootstrap_samples))
+        outError("ModelFinder only cannot be combined with bootstrap analysis");
+    
+    if (params.num_runs > 1 && !params.treeset_file.empty())
+        outError("Can't combine --runs and -z options");
+    
+    if (params.num_runs > 1 && params.lmap_num_quartets >= 0)
+        outError("Can't combine --runs and -lmap options");
+
     if (params.terrace_analysis && !params.partition_file)
         params.terrace_analysis = false;
 
     if (params.constraint_tree_file && params.partition_type == TOPO_UNLINKED)
-        outError("-g constraint tree option does not work with -spu.");
+        outError("-g constraint tree option does not work with -S yet.");
 
+    if (params.num_bootstrap_samples && params.partition_type == TOPO_UNLINKED)
+        outError("-b bootstrap option does not work with -S yet.");
+
+    if (params.dating_method != "") {
+    #ifndef USE_LSD2
+        outError("IQ-TREE was not compiled with LSD2 library, rerun cmake with -DUSE_LSD2=ON option");
+    #endif
+    }
+
+    if (params.date_file.empty()) {
+        if (params.date_root.empty() ^ params.date_tip.empty())
+            outError("Both --date-root and --date-tip must be provided when --date file is absent");
+    }
+    
 	// Diep:
 	if(params.ufboot2corr == true){
 		if(params.gbo_replicates <= 0) params.ufboot2corr = false;
@@ -4237,7 +4363,6 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --safe               Safe likelihood kernel to avoid numerical underflow" << endl
     << "  --mem NUM[G|M|%]     Maximal RAM usage in GB | MB | %" << endl
     << "  --runs NUM           Number of indepedent runs (default: 1)" << endl
-    << "  --redo               Ignore checkpoint and overwrite outputs (default: OFF)" << endl
     << "  -v, --verbose        Verbose mode, printing more messages to screen" << endl
     << "  -V, --version        Display version number" << endl
     << "  --quiet              Quiet mode, suppress printing to screen (stdout)" << endl
@@ -4247,6 +4372,11 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -T NUM|AUTO          No. cores/threads or AUTO-detect (default: 1)" << endl
     << "  --threads-max NUM    Max number of threads for -T AUTO (default: all cores)" << endl
 #endif
+    << endl << "CHECKPOINT:" << endl
+    << "  --redo               Redo both ModelFinder and tree search" << endl
+    << "  --redo-tree          Restore ModelFinder and only redo tree search" << endl
+    << "  --undo               Revoke finished run, used when changing some options" << endl
+    << "  --cptime NUM         Minimum checkpoint interval (default: 60 sec and adapt)" << endl
     << endl << "PARTITION MODEL:" << endl
     << "  -p FILE|DIR          NEXUS/RAxML partition file or directory with alignments" << endl
     << "                       Edge-linked proportional partition model" << endl
@@ -4331,7 +4461,6 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --merit AIC|AICc|BIC  Akaike|Bayesian information criterion (default: BIC)" << endl
 //            << "  -msep                Perform model selection and then rate selection" << endl
     << "  --mtree              Perform full tree search for every model" << endl
-    << "  --mredo              Ignore .model.gz checkpoint file (default: OFF)" << endl
     << "  --madd STR,...       List of mixture models to consider" << endl
     << "  --mdef FILE          Model definition NEXUS file (see Manual)" << endl
     << "  --modelomatic        Find best codon/protein/DNA models (Whelan et al. 2015)" << endl
@@ -4455,6 +4584,19 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -p FILE|DIR          Partition file or directory for --scf" << endl
     << "  --cf-verbose         Write CF per tree/locus to cf.stat_tree/_loci" << endl
 
+#ifdef USE_LSD2
+    << endl << "TIME TREE RECONSTRUCTION:" << endl
+    << "  --date FILE          Dates of tips or ancestral nodes" << endl
+    << "  --date TAXNAME       Extract dates from taxon names after last '|'" << endl
+    << "  --date-tip STRING    Tip dates as a real number or YYYY-MM-DD" << endl
+    << "  --date-root STRING   Root date as a real number or YYYY-MM-DD" << endl
+    << "  --date-ci NUM        Number of replicates to compute confidence interval" << endl
+    << "  --clock-sd NUM       Std-dev for lognormal relaxed clock (default: 0.2)" << endl
+    << "  --date-outgroup      Include outgroup in time tree (default: no)" << endl
+    << "  --date-outlier NUM   Z-score cutoff to exclude outlier nodes (e.g. 3)" << endl
+    << "  --date-options \"..\"  Extra options passing directly to LSD2" << endl
+    << "  --dating STRING      Dating method: LSD for least square dating (default)" << endl
+#endif
     << endl;
     
 
@@ -4493,7 +4635,6 @@ void usage_iqtree(char* argv[], bool full_command) {
 
         << endl << "MISCELLANEOUS:" << endl
         << "  --keep-ident         Keep identical sequences (default: remove & finally add)" << endl
-        << "  --cptime NUM         Checkpoint time interval in seconds (default: 60)" << endl
         << "  -blfix               Fix branch lengths of user tree passed via -te" << endl
         << "  -blscale             Scale branch lengths of user tree passed via -t" << endl
         << "  -blmin               Min branch length for optimization (default 0.000001)" << endl

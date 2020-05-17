@@ -60,6 +60,7 @@
 #include "utils/timeutil.h"
 #include "tree/upperbounds.h"
 #include "utils/MPIHelper.h"
+#include "timetree.h"
 
 #ifdef USE_BOOSTER
 extern "C" {
@@ -72,6 +73,14 @@ extern "C" {
 #endif
 
 void reportReferences(Params &params, ofstream &out) {
+
+    out << "To cite IQ-TREE please use:" << endl << endl
+    << "Bui Quang Minh, Heiko A. Schmidt, Olga Chernomor, Dominik Schrempf," << endl
+    << "Michael D. Woodhams, Arndt von Haeseler, and Robert Lanfear (2020)" << endl
+    << "IQ-TREE 2: New models and efficient methods for phylogenetic inference" << endl
+    << "in the genomic era. Mol. Biol. Evol., in press." << endl
+    << "https://doi.org/10.1093/molbev/msaa015" << endl << endl;
+    
     bool modelfinder_only = false;
     if (params.model_name.substr(0,4) == "TEST" || params.model_name.substr(0, 2) == "MF" || params.model_name.empty()) {
         out << "To cite ModelFinder please use: " << endl << endl
@@ -90,33 +99,26 @@ void reportReferences(Params &params, ofstream &out) {
             << "https://doi.org/10.1016/j.jtbi.2016.07.042" << endl << endl;
     }
 
-    if (!modelfinder_only)
-    out << "To cite IQ-TREE please use:" << endl << endl
-        << "Lam-Tung Nguyen, Heiko A. Schmidt, Arndt von Haeseler, and Bui Quang Minh" << endl
-        << "(2015) IQ-TREE: A fast and effective stochastic algorithm for estimating" << endl
-        << "maximum likelihood phylogenies. Mol Biol Evol, 32:268-274." << endl
-        << "https://doi.org/10.1093/molbev/msu300" << endl << endl;
-
     if (params.site_freq_file || params.tree_freq_file)
     out << "Since you used site-specific frequency model please also cite: " << endl << endl
-        << "Huai-Chun Wang, Edward Susko, Bui Quang Minh, and Andrew J. Roger (2017)" << endl
+        << "Huai-Chun Wang, Edward Susko, Bui Quang Minh, and Andrew J. Roger (2018)" << endl
         << "Modeling site heterogeneity with posterior mean site frequency profiles" << endl
-        << "accelerates accurate phylogenomic estimation. Syst Biol, in press." << endl
+        << "accelerates accurate phylogenomic estimation. Syst. Biol., 67:216–235." << endl
         << "https://doi.org/10.1093/sysbio/syx068" << endl << endl;
 
 
     if (params.gbo_replicates)
     out << "Since you used ultrafast bootstrap (UFBoot) please also cite: " << endl << endl
         << "Diep Thi Hoang, Olga Chernomor, Arndt von Haeseler, Bui Quang Minh," << endl
-        << "and Le Sy Vinh (2017) UFBoot2: Improving the ultrafast bootstrap" << endl
-        << "approximation. Mol Biol Evol, in press." << endl
+        << "and Le Sy Vinh (2018) UFBoot2: Improving the ultrafast bootstrap" << endl
+        << "approximation. Mol. Biol. Evol., 35:518–522." << endl
         << "https://doi.org/10.1093/molbev/msx281" << endl << endl;
 
     if (params.partition_file)
     out << "Since you used partition models please also cite:" << endl << endl
         << "Olga Chernomor, Arndt von Haeseler, and Bui Quang Minh (2016)" << endl
         << "Terrace aware data structure for phylogenomic inference from" << endl
-        << "supermatrices. Syst Biol, 65:997-1008." << endl
+        << "supermatrices. Syst. Biol., 65:997-1008." << endl
         << "https://doi.org/10.1093/sysbio/syw037" << endl << endl;
 
     if (params.terrace_analysis)
@@ -124,8 +126,14 @@ void reportReferences(Params &params, ofstream &out) {
         << "Biczok R, Bozsoky P, Eisenmann P, Ernst J, Ribizel T, Scholz F," << endl
         << "Trefzer A, Weber F, Hamann M, Stamatakis A. (2018)" << endl
         << "Two C++ libraries for counting trees on a phylogenetic" << endl
-        << "terrace. Bioinformatics." << endl
+        << "terrace. Bioinformatics 34:3399–3401." << endl
         << "https://doi.org/10.1093/bioinformatics/bty384" << endl << endl;
+
+    if (params.dating_method == "LSD")
+        out << "Since you used least square dating (LSD) please also cite: " << endl << endl
+        << "Thu-Hien To, Matthieu Jung, Samantha Lycett, Olivier Gascuel (2016)" << endl
+        << "Fast dating using least-squares criteria and algorithms. Syst. Biol. 65:82-97." << endl
+        << "https://doi.org/10.1093/sysbio/syv068" << endl << endl;
 }
 
 void reportAlignment(ofstream &out, Alignment &alignment, int nremoved_seqs) {
@@ -1259,9 +1267,11 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
 //            out << endl << endl;
         }
 #ifdef IQTREE_TERRAPHAST
-        if (params.terrace_analysis) {
+        if (params.terrace_analysis && params.compute_ml_tree) {
+            
             out << "TERRACE ANALYSIS" << endl << "----------------" << endl << endl;
-
+            cout << "Running additional analysis: Phylogenetic Terraces ..."<< endl;
+            
             string filename = params.out_prefix;
             filename += ".terrace";
 
@@ -1304,6 +1314,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
             out << "https://doi.org/10.1093/bioinformatics/bty384";
 
             out << endl << endl;
+            cout<< "Done. Results are written in "<<params.out_prefix<<".iqtree file."<<endl;
         }
 #endif
         /* evaluate user trees */
@@ -3847,6 +3858,11 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
             tree->printResultTree();
         }
         delete model_info;
+        
+        if (params.dating_method != "") {
+            doTimeTree(tree);
+        }
+
     } else {
         // the classical non-parameter bootstrap (SBS)
 //        if (params.model_name.find("LINK") != string::npos || params.model_name.find("MERGE") != string::npos)
@@ -4027,13 +4043,17 @@ void assignBranchSupportNew(Params &params) {
     string str = prefix + ".cf.tree";
     tree->printTree(str.c_str());
     cout << "Tree with concordance factors written to " << str << endl;
+    str = prefix + ".cf.tree.nex";
+    string filename = prefix + ".cf.stat";
+    tree->printNexus(str, WT_BR_LEN, "See " + filename + " for branch annotation meanings." +
+                     " This file is best viewed in FigTree.");
+    cout << "Annotated tree (best viewed in FigTree) written to " << str << endl;
     if (verbose_mode >= VB_DEBUG)
         tree->drawTree(cout);
     str = prefix + ".cf.branch";
     tree->printTree(str.c_str(), WT_BR_LEN + WT_INT_NODE + WT_NEWLINE);
     cout << "Tree with branch IDs written to " << str << endl;
     ofstream out;
-    string filename = prefix + ".cf.stat";
     out.open(filename.c_str());
     out << "# Concordance factor statistics" << endl
         << "# This file can be read in MS Excel or in R with command:" << endl

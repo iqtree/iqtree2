@@ -170,13 +170,13 @@ public:
 		read model parameters from a file
 		@param file_name file containing rate matrix and state frequencies
 	*/
-	void readParameters(const char *file_name);
+	void readParameters(const char *file_name, bool adapt_tree = true);
 
 	/**
 		read model parameters from a string
 		@param model_str string containing rate matrix and state frequencies
 	*/
-	void readParametersString(string &model_str);
+	void readParametersString(string &model_str, bool adapt_tree = true);
 
 	/**
 		compute the transition probability matrix.
@@ -342,6 +342,9 @@ public:
 
     /** decompose rate matrix for non-reversible models */
     virtual void decomposeRateMatrixNonrev();
+
+    /** old version of decompose rate matrix for reversible models */
+    void decomposeRateMatrixRev();
 
 	/**
 		decompose the rate matrix into eigenvalues and eigenvectors

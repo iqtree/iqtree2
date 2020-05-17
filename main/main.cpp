@@ -2387,7 +2387,10 @@ int main(int argc, char *argv[]) {
                     delete checkpoint;
                     if (MPIHelper::getInstance().isMaster())
                         outError("Checkpoint (" + filename + ") indicates that a previous run successfully finished\n" +
-                            "Use `-redo` option if you really want to redo the analysis and overwrite all output files.");
+                            "Use `-redo` option if you really want to redo the analysis and overwrite all output files.\n" +
+                            "Use `--redo-tree` option if you want to restore ModelFinder and only redo tree search.\n" +
+                            "Use `--undo` option if you want to continue previous run when changing/adding options."
+                        );
                     else
                         exit(EXIT_SUCCESS);
                     exit(EXIT_FAILURE);

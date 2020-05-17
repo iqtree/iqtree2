@@ -1303,12 +1303,24 @@ void ModelMarkov::decomposeRateMatrix(){
             cout << "pi: " << pi << endl;
             writeInfo(cout);
         }
-        ASSERT((Q - Q.transpose()).cwiseAbs().maxCoeff() < 0.1 && "transformed Q is symmetric");
+        if ((Q - Q.transpose()).cwiseAbs().maxCoeff() > 0.1) {
+            //  Somehow transformed Q is non-symmetric, revert to the old function
+            decomposeRateMatrixRev();
+            return;
+        }
 
         // eigensolver
         SelfAdjointEigenSolver<MatrixXd> eigensolver(Q);
-        ASSERT (eigensolver.info() == Eigen::Success);
-        ASSERT(eigensolver.eigenvalues().maxCoeff() < 1e-4 && "eigenvalues are not positive");
+        if (eigensolver.info() != Eigen::Success) {
+            // Eigen3 failed, revert to the old function
+            decomposeRateMatrixRev();
+            return;
+        }
+        if (eigensolver.eigenvalues().maxCoeff() > 1e-4) {
+             // "eigenvalues are not positive", revert to the old function
+            decomposeRateMatrixRev();
+            return;
+        }
 
         if (n == num_states) {
             Map<VectorXd,Aligned> eval(eigenvalues,num_states);
@@ -1353,7 +1365,12 @@ void ModelMarkov::decomposeRateMatrix(){
         }
         return;
     }
+    decomposeRateMatrixRev();
+}
 
+void ModelMarkov::decomposeRateMatrixRev() {
+
+    int i, j, k;
     // general reversible model
     double **rate_matrix = new double*[num_states];
 
@@ -1509,7 +1526,7 @@ void ModelMarkov::readStateFreq(string str) throw(const char*) {
         state_freq[i] *= sum;
 }
 
-void ModelMarkov::readParameters(const char *file_name) {
+void ModelMarkov::readParameters(const char *file_name, bool adapt_tree) {
     if (!fileExists(file_name))
         outError("File not found ", file_name);
 
@@ -1521,9 +1538,9 @@ void ModelMarkov::readParameters(const char *file_name) {
         double d;
         in >> d;
         if (d < 0) {
-            setReversible(false);
+            setReversible(false, adapt_tree);
         } else
-            setReversible(true);
+            setReversible(true, adapt_tree);
         in.close();
     }
 	catch (...) {
@@ -1557,16 +1574,16 @@ void ModelMarkov::readParameters(const char *file_name) {
     }
 }
 
-void ModelMarkov::readParametersString(string &model_str) {
+void ModelMarkov::readParametersString(string &model_str, bool adapt_tree) {
 
     // if detect if reading full matrix or half matrix by the first entry
     int end_pos;
     double d = 0.0;
     d = convert_double(model_str.c_str(), end_pos);
     if (d < 0) {
-        setReversible(false);
+        setReversible(false, adapt_tree);
     } else
-        setReversible(true);
+        setReversible(true, adapt_tree);
 
 	try {
 		stringstream in(model_str);
