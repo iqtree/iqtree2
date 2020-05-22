@@ -2698,7 +2698,10 @@ void IQTree::refineBootTrees() {
 
         // load the current ufboot tree
         // 2019-02-06: fix crash with -sp and -bnni
-        boot_tree->PhyloTree::readTreeString(boot_trees[sample]);
+        if (isSuperTree())
+            boot_tree->PhyloTree::readTreeString(boot_trees[sample]);
+        else
+            boot_tree->readTreeString(boot_trees[sample]);
         
         if (boot_tree->isSuperTree() && params->partition_type == BRLEN_OPTIMIZE) {
             if (((PhyloSuperTree*)boot_tree)->size() > 1) {

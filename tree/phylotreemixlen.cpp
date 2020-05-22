@@ -104,6 +104,13 @@ void PhyloTreeMixlen::setMixlen(int mixlen) {
 	this->mixlen = mixlen;
 }
 
+void PhyloTreeMixlen::readTreeString(const string &tree_string) {
+    IQTree::readTreeString(tree_string);
+    treeLengths(relative_treelen);
+    if (mixlen > 0 && relative_treelen[0] == 0.0)
+        relative_treelen.clear();
+}
+
 void PhyloTreeMixlen::initializeModel(Params &params, string model_name, ModelsBlock *models_block) {
     try {
         if (!getModelFactory()) {
