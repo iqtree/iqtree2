@@ -17,10 +17,9 @@ typedef unordered_map<string, string> TaxonDateMap;
 
 /**
  @param[in] date date string
- @param is_ISO true to force the date being in YYYY-MM-DD format
  @return converted date as a float or YYYY-MM[-DD] format
  */
-string convertDate(string date, bool is_ISO) {
+string convertDate(string date) {
     // check for range in x:y format
     if (date.find(':') != string::npos) {
         StrVector vec;
@@ -42,44 +41,14 @@ string convertDate(string date, bool is_ISO) {
     } catch (...) {
         outError("Invalid date " + date);
     }
-    /*
-     THIS IS NOW SUPPORTED in LSD2, SO NO NEED TO CONVERT INCOMPLETE DATE RANGE
-    IntVector month_days = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-    if (vec.size() == 1 && fabs(vec[0] - floor(vec[0])) < 1e-6 && is_ISO) {
-        // incomplete YYYY format, convert it to range YYYY-01-01 to YYYY-12-31
-        return "b(" + date + "-01-01," + date + "-12-31)";
-    }
-    if (vec.size() == 2) {
-        // incomplete YYYY-MM date string, convert it to range from 1st to last day of month
-        if (vec[1] < 1 || vec[1] > month_days.size())
-            outError("Invalid month in ", date);
-        return "b(" + date + "-01," + date + "-" + convertIntToString(month_days[vec[1]-1]) + ")";
-    }*/
     // otherwise, return the original date string
     return date;
 }
 
 /**
- check if any date is in YYYY-MM-DD format
- */
-bool hasISODate(TaxonDateMap &dates) {
-    for (auto date : dates) {
-        DoubleVector vec;
-        try {
-            convert_double_vec(date.second.c_str(), vec, '-');
-            if (vec.size() > 1)
-                return true;
-        } catch (...) {
-            // cannot parse, just do nothing
-            continue;
-        }
-    }
-    return false;
-}
-/**
  read a date file. Each line has two strings: name and date
  */
-void readDateFile(string date_file, TaxonDateMap &dates) {
+void readDateFile(string date_file, set<string> &node_names, TaxonDateMap &dates) {
     try {
         cout << "Reading date file " << date_file << " ..." << endl;
         ifstream in;
@@ -87,6 +56,7 @@ void readDateFile(string date_file, TaxonDateMap &dates) {
         in.open(date_file);
         int line_num;
         for (line_num = 1; !in.eof(); line_num++) {
+            string line_out = "Line " + convertIntToString(line_num) + ": ";
             string line;
             if (!safeGetline(in, line))
                 break;
@@ -99,7 +69,22 @@ void readDateFile(string date_file, TaxonDateMap &dates) {
             string name, date;
             istringstream line_in(line);
             if (!(line_in >> name >> date))
-                throw "Line " + convertIntToString(line_num) + ": '" + line + "' does not contain name and date";
+                throw line_out + "'" + line + "' does not contain name and date";
+            // error checking, make sure that name appear in tree
+            StrVector name_vec;
+            convert_string_vec(name.c_str(), name_vec);
+            for (auto s : name_vec)
+                if (node_names.find(s) == node_names.end())
+                    throw line_out + "'" + s + "' does not appear in tree";
+            // error checking, make sure is date is valid
+            if (date.empty())
+                throw line_out + "date is empty";
+            try {
+                int end_pos;
+                convert_double(date.c_str(), end_pos);
+            } catch (string str) {
+                throw line_out + str;
+            }
             dates[name] = date;
         }
         in.clear();
@@ -116,9 +101,9 @@ void readDateFile(string date_file, TaxonDateMap &dates) {
 }
 
 /** read the date information from the alignment taxon names */
-void readDateTaxName(StrVector &taxname, TaxonDateMap &dates) {
-    cout << "Extracting date from taxa names..." << endl;
-    for (string name : taxname) {
+void readDateTaxName(set<string> &nodenames, TaxonDateMap &dates) {
+    cout << "Extracting date from node names..." << endl;
+    for (string name : nodenames) {
         // get the date in the taxon name after the '|' sign
         auto pos = name.rfind('|');
         if (pos == string::npos)
@@ -150,15 +135,14 @@ void writeOutgroup(ostream &out, const char *outgroup) {
     }
 }
 
-void writeDate(string date_file, ostream &out, StrVector &taxname) {
+void writeDate(string date_file, ostream &out, set<string> &nodenames) {
     TaxonDateMap dates;
     if (date_file == "TAXNAME") {
         // read the dates from alignment taxon names
-        readDateTaxName(taxname, dates);
+        readDateTaxName(nodenames, dates);
     } else {
-        readDateFile(date_file, dates);
+        readDateFile(date_file, nodenames, dates);
     }
-    bool is_ISO = hasISODate(dates);
     // only retain taxon appearing in alignment
     TaxonDateMap retained_dates;
     set<string> outgroup_set;
@@ -169,14 +153,13 @@ void writeDate(string date_file, ostream &out, StrVector &taxname) {
             outgroup_set.insert(name);
     }
     if (verbose_mode >= VB_MED)
-        cout << "ID\tTaxon\tDate" << endl;
-    for (int i = 0; i < taxname.size(); i++) {
-        string name = taxname[i];
+        cout << "Node\tDate" << endl;
+    for (auto name: nodenames) {
         string date = "NA";
         if (dates.find(name) == dates.end()) {
             // taxon present in the dates
-            if (!Params::getInstance().date_tip.empty())
-                date = Params::getInstance().date_tip;
+//            if (!Params::getInstance().date_tip.empty())
+//                date = Params::getInstance().date_tip;
         } else if (outgroup_set.find(name) == outgroup_set.end() || Params::getInstance().date_with_outgroup) {
             // ignore the date of the outgroup
             date = dates[name];
@@ -186,29 +169,29 @@ void writeDate(string date_file, ostream &out, StrVector &taxname) {
             dates.erase(name);
         }
         if (verbose_mode >= VB_MED)
-            cout << i+1 << "\t" << name << "\t" << date << endl;
+            cout << name << "\t" << date << endl;
     }
     
     // add remaining ancestral dates
     for (auto date : dates) {
-        if (date.first.substr(0,4) == "mrca")
+        if (date.first.substr(0,4) == "mrca" || date.first.substr(0,8) == "ancestor")
             retained_dates[date.first] = date.second;
         else if (date.first.find(',') != string::npos) {
-            retained_dates["mrca(" + date.first + ")"] = date.second;
+            retained_dates["ancestor(" + date.first + ")"] = date.second;
         } else if (outgroup_set.find(date.first) == outgroup_set.end() || Params::getInstance().date_with_outgroup) {
             retained_dates[date.first] = date.second;
         }
     }
 
-    if (!Params::getInstance().date_root.empty()) {
-        retained_dates["root"] = Params::getInstance().date_root;
-    }
+//    if (!Params::getInstance().date_root.empty()) {
+//        retained_dates["root"] = Params::getInstance().date_root;
+//    }
     
     cout << retained_dates.size() << " dates extracted" << endl;
     try {
         out << retained_dates.size() << endl;
         for (auto date : retained_dates) {
-            out << date.first << " " << convertDate(date.second, is_ISO) << endl;
+            out << date.first << " " << convertDate(date.second) << endl;
         }
     } catch (...) {
         ASSERT(0 && "Error writing date stream");
@@ -249,8 +232,8 @@ void runLSD2(PhyloTree *tree) {
         string outgroup_file = basename + ".outgroup";
         arg.push_back("-g");
         arg.push_back(outgroup_file); // only fake file
-        if (Params::getInstance().date_with_outgroup)
-            arg.push_back("-k");
+        if (!Params::getInstance().date_with_outgroup)
+            arg.push_back("-G");
         if (Params::getInstance().date_debug) {
             ofstream out(outgroup_file);
             out << outgroup_stream.str();
@@ -265,9 +248,9 @@ void runLSD2(PhyloTree *tree) {
 
     if (Params::getInstance().date_file != "") {
         // parse the date file
-        StrVector taxname;
-        tree->getTaxaName(taxname);
-        writeDate(Params::getInstance().date_file, date_stream, taxname);
+        set<string> nodenames;
+        tree->getNodeName(nodenames);
+        writeDate(Params::getInstance().date_file, date_stream, nodenames);
         string date_file = basename + ".date";
         arg.push_back("-d");
         arg.push_back(date_file);  // only fake file
@@ -277,17 +260,16 @@ void runLSD2(PhyloTree *tree) {
             out.close();
             cout << "Date file printed to " << date_file << endl;
         }
-    } else {
-        // input tip and root date
-        if (Params::getInstance().date_root != "") {
-            arg.push_back("-a");
-            arg.push_back(Params::getInstance().date_root);
-        }
-        
-        if (Params::getInstance().date_tip != "") {
-            arg.push_back("-z");
-            arg.push_back(Params::getInstance().date_tip);
-        }
+    }
+    // input tip and root date
+    if (Params::getInstance().date_root != "") {
+        arg.push_back("-a");
+        arg.push_back(convertDate(Params::getInstance().date_root));
+    }
+    
+    if (Params::getInstance().date_tip != "") {
+        arg.push_back("-z");
+        arg.push_back(convertDate(Params::getInstance().date_tip));
     }
 
     lsd::InputOutputStream io(tree_stream.str(), outgroup_stream.str(), date_stream.str(), "", "");
@@ -352,6 +334,7 @@ void runLSD2(PhyloTree *tree) {
 void doTimeTree(PhyloTree *tree) {
 
     cout << "--- Start phylogenetic dating ---" << endl;
+    cout.unsetf(ios::fixed);
 
 #ifdef USE_LSD2
     if (Params::getInstance().dating_method == "LSD") {

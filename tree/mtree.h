@@ -441,6 +441,14 @@ public:
     void getTaxaName(vector<string> &taxname, Node *node = NULL, Node *dad = NULL);
 
     /**
+            get the descending node names below the node
+            @param node the starting node, NULL to start from the root
+            @param dad dad of the node, used to direct the search
+            @param[out] nodename node names, with size equal leafNum and ordered with taxon ID
+     */
+    void getNodeName(set<string> &nodename, Node *node = NULL, Node *dad = NULL);
+
+    /**
             get the descending taxa names below the node. different from getTaxaName() in that the
             taxa are not ordered by ID at all!
             @param node the starting node, NULL to start from the root
