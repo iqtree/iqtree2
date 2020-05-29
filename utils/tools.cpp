@@ -1117,7 +1117,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.suppress_output_flags = 0;
     params.ufboot2corr = false;
     params.u2c_nni5 = false;
-    params.date_with_outgroup = false;
+    params.date_with_outgroup = true;
     params.date_debug = false;
     params.date_replicates = 0;
     params.clock_stddev = -1.0;
@@ -4586,14 +4586,14 @@ void usage_iqtree(char* argv[], bool full_command) {
 
 #ifdef USE_LSD2
     << endl << "TIME TREE RECONSTRUCTION:" << endl
-    << "  --date FILE          Dates of tips or ancestral nodes" << endl
+    << "  --date FILE          File containing dates of tips or ancestral nodes" << endl
     << "  --date TAXNAME       Extract dates from taxon names after last '|'" << endl
     << "  --date-tip STRING    Tip dates as a real number or YYYY-MM-DD" << endl
     << "  --date-root STRING   Root date as a real number or YYYY-MM-DD" << endl
     << "  --date-ci NUM        Number of replicates to compute confidence interval" << endl
     << "  --clock-sd NUM       Std-dev for lognormal relaxed clock (default: 0.2)" << endl
-    << "  --date-outgroup      Include outgroup in time tree (default: no)" << endl
-    << "  --date-outlier NUM   Z-score cutoff to exclude outlier nodes (e.g. 3)" << endl
+    << "  --date-no-outgroup   Exclude outgroup from time tree" << endl
+    << "  --date-outlier NUM   Z-score cutoff to remove outlier tips/nodes (e.g. 3)" << endl
     << "  --date-options \"..\"  Extra options passing directly to LSD2" << endl
     << "  --dating STRING      Dating method: LSD for least square dating (default)" << endl
 #endif
