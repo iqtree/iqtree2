@@ -2781,6 +2781,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -bsam <bootstrap_specification>";
 				params.bootstrap_spec = argv[cnt];
+                params.remove_empty_seq = false;
 				continue;
 			}
             
