@@ -4174,9 +4174,9 @@ void PhyloTree::warnNumThreads() {
         return;
     size_t nptn = getAlnNPattern();
     if (nptn < num_threads*vector_size)
-        outError("Too many threads for short alignments, please reduce number of threads or use -nt AUTO to determine it.");
+        outError("Too many threads for short alignments, please reduce number of threads or use -T AUTO to determine it.");
     if (nptn < num_threads*400/aln->num_states)
-        outWarning("Number of threads seems too high for short alignments. Use -nt AUTO to determine best number of threads.");
+        outWarning("Number of threads seems too high for short alignments. Use -T AUTO to determine best number of threads.");
 }
 
 int PhyloTree::testNumThreads() {
