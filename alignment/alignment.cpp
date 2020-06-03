@@ -4666,7 +4666,9 @@ void Alignment::doSymTest(size_t vecid, vector<SymTestResult> &vec_sym, vector<S
                 }
             }
             
-            double divergence = pair_freq.sum() - pair_freq.diagonal().sum();
+            // 2020-06-03: Bug fix found by Peter Foster
+            double sum_elems = pair_freq.sum();
+            double divergence = (sum_elems == 0.0) ? 0.0 : (sum_elems - pair_freq.diagonal().sum()) / sum_elems;
             
             // performing test of symmetry
             int i, j;
