@@ -48,7 +48,7 @@ public:
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
-	virtual string getNameParams() { return name; }
+    virtual string getNameParams();
 
     /**
         start structure for checkpointing

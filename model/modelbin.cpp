@@ -32,16 +32,47 @@ void ModelBIN::init(const char *model_name, string model_params, StateFreqType f
 	name = model_name;
 	full_name = model_name;
 	if (name == "JC2") {
-		freq = FREQ_EQUAL;
+		def_freq = FREQ_EQUAL;
 	} else if (name == "GTR2") {
-		freq = FREQ_ESTIMATE;
+		def_freq = FREQ_ESTIMATE;
 	} else {
 		readParameters(model_name);
 	}
+    if (freq_params != "") {
+        readStateFreq(freq_params);
+    }
+    if (model_params != "") {
+      readRates(model_params);
+    }
 	if (freq == FREQ_UNKNOWN || def_freq == FREQ_EQUAL) freq = def_freq;
 	ModelMarkov::init(freq);
 }
 
 void ModelBIN::startCheckpoint() {
     checkpoint->startStruct("ModelBIN");
+}
+
+string ModelBIN::getNameParams() {
+    //if (num_params == 0) return name;
+    ostringstream retname;
+    retname << name;
+//    if (!fixed_parameters) {
+//        retname << '{';
+//        int nrates = getNumRateEntries();
+//        for (int i = 0; i < nrates; i++) {
+//            if (i>0) retname << ',';
+//            retname << rates[i];
+//        }
+//        retname << '}';
+//    }
+//    getNameParamsFreq(retname);
+    retname << freqTypeString(freq_type, phylo_tree->aln->seq_type, true);
+    if (freq_type == FREQ_EMPIRICAL || freq_type == FREQ_ESTIMATE ||
+        (freq_type == FREQ_USER_DEFINED)) {
+        retname << "{" << state_freq[0];
+        for (int i = 1; i < num_states; i++)
+            retname << "," << state_freq[i];
+        retname << "}";
+    }
+    return retname.str();
 }
