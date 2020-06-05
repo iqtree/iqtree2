@@ -354,6 +354,8 @@ void ModelMarkov::writeInfo(ostream &out) {
         report_rates(out, "Rate parameters", rates);
         report_state_freqs(out);
 		//if (freq_type != FREQ_ESTIMATE) return;
+    } else if (is_reversible && num_states == 2) {
+        report_state_freqs(out);
 	} else if (!is_reversible) {
         // non-reversible
 //        int i;
@@ -401,16 +403,24 @@ void ModelMarkov::report_rates(ostream& out, string title, double *r) {
 }
 
 void ModelMarkov::report_state_freqs(ostream& out, double *custom_state_freq) {
-  double *f;
-  if (custom_state_freq) f = custom_state_freq;
-  else f = state_freq;
-  out << setprecision(3);
-  out << "Base frequencies:";
-  out << "  A: " << f[0];
-  out << "  C: " << f[1];
-  out << "  G: " << f[2];
-  out << "  T: " << f[3];
-  out << endl;
+    double *f;
+    if (custom_state_freq) f = custom_state_freq;
+    else f = state_freq;
+    if (num_states == 4) {
+        out << setprecision(3);
+        out << "Base frequencies:";
+        out << "  A: " << f[0];
+        out << "  C: " << f[1];
+        out << "  G: " << f[2];
+        out << "  T: " << f[3];
+        out << endl;
+    } else if (num_states == 2) {
+        out << setprecision(3);
+        out << "State frequencies:";
+        out << "  0: " << f[0];
+        out << "  1: " << f[1];
+        out << endl;
+    }
 }
 
 void ModelMarkov::computeTransMatrixNonrev(double time, double *trans_matrix, int mixture) {
