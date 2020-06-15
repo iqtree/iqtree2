@@ -1268,6 +1268,9 @@ public:
      TRUE to print concordant sites per partition
      */
     bool site_concordance_partition;
+    
+    /** TRUE to print sCF for all sampled quartet */
+    bool print_cf_quartets;
 
     /** TRUE to print trees associated with discordance factor 1 (NNI-1 tree) */
     bool print_df1_trees;

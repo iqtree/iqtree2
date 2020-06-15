@@ -189,6 +189,7 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstre
             }
         }
     }
+    Neighbor *nei = branch.second->findNeighbor(branch.first);
     for (i = 0; i < nquartets; i++) {
         int j;
         // get a random quartet
@@ -209,6 +210,16 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstre
             sDF1_N += support[1];
             sDF2_N += support[2];
         }
+        if (params->print_cf_quartets) {
+            // print sCF for each quartet
+            stringstream ss;
+            ss << quartet[0]+1 << '\t' << quartet[1]+1 << '\t' << quartet[2]+1 << '\t' << quartet[3]+1
+               << '\t' << (((double)support[0]) / sum) << '\t' << support[0]
+               << '\t' << (((double)support[1]) / sum) << '\t' << support[1]
+               << '\t' << (((double)support[2]) / sum) <<  '\t' << support[2]
+               << '\t' << sum;
+            nei->putAttr("q" + convertIntToString(i), ss.str());
+        }
     }
     sN = (double)sum_sites / nquartets;
     // rounding
@@ -218,7 +229,6 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstre
     sCF_N = round(sCF_N / nquartets * 100)/100;
     sDF1_N = round(sDF1_N / nquartets * 100)/100;
     sDF2_N = round(sDF2_N / nquartets * 100)/100;
-    Neighbor *nei = branch.second->findNeighbor(branch.first);
     PUT_ATTR(nei, sCF);
     PUT_ATTR(nei, sN);
     PUT_ATTR(nei, sDF1);

@@ -811,6 +811,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.support_tag = NULL;
     params.site_concordance = 0;
     params.site_concordance_partition = false;
+    params.print_cf_quartets = false;
     params.print_df1_trees = false;
     params.internode_certainty = 0;
     params.tree_weight_file = NULL;
@@ -1584,6 +1585,10 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
             if (strcmp(argv[cnt], "--scf-part") == 0 || strcmp(argv[cnt], "--cf-verbose") == 0) {
                 params.site_concordance_partition = true;
+                continue;
+            }
+            if (strcmp(argv[cnt], "--cf-quartet") == 0) {
+                params.print_cf_quartets = true;
                 continue;
             }
             if (strcmp(argv[cnt], "--df-tree") == 0) {
@@ -4584,6 +4589,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -s FILE              Sequence alignment for --scf" << endl
     << "  -p FILE|DIR          Partition file or directory for --scf" << endl
     << "  --cf-verbose         Write CF per tree/locus to cf.stat_tree/_loci" << endl
+    << "  --cf-quartet         Write sCF for all resampled quartets to .cf.quartet" << endl
 
 #ifdef USE_LSD2
     << endl << "TIME TREE RECONSTRUCTION:" << endl

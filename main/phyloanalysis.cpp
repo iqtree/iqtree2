@@ -4095,6 +4095,42 @@ void assignBranchSupportNew(Params &params) {
     }
     out.close();
     cout << "Concordance factors per branch printed to " << filename << endl;
+    
+    if (params.print_cf_quartets) {
+        filename = prefix + ".cf.quartet";
+        out.open(filename);
+        out << "# Site concordance factor for all resampled quartets (with replacement)" << endl
+            << "# This file can be read in MS Excel or in R with command:" << endl
+            << "#   tab=read.table('" <<  filename << "',header=TRUE)" << endl
+            << "# Columns are tab-separated with following meaning:" << endl
+            << "#   ID: Branch ID" << endl
+            << "#   QuartID: Quartet ID" << endl
+            << "#   Seq1: ID of sequence 1 on 'left' side of the branch" << endl
+            << "#   Seq2: ID of sequence 2 on 'left' side of the branch" << endl
+            << "#   Seq3: ID of sequence 3 on 'right' side of the branch" << endl
+            << "#   Seq4: ID of sequence 4 on 'right' side of the branch" << endl
+            << "#   qCF: Fraction of concordant sites supporting quartet Seq1,Seq2|Seq3,Seq4 (=qCF_N/qN)" << endl
+            << "#   qCF_N: Number of concordant sites supporting quartet Seq1,Seq2|Seq3,Seq4" << endl
+            << "#   qDF1: Fraction of discordant sites supporting quartet Seq1,Seq3|Seq2,Seq4  (=qDF1_N/qN)" << endl
+            << "#   qDF1_N: Number of discordant sites supporting quartet Seq1,Seq3|Seq2,Seq4" << endl
+            << "#   qDF2: Fraction of discordant sites supporting quartet Seq1,Seq4|Seq2,Seq3 (=qDF2_N/qN)" << endl
+            << "#   qDF2_N: Number of discordant sites supporting quartet Seq1,Seq4|Seq2,Seq3" << endl
+            << "#   qN: Number of decisive sites with four taxa Seq1,Seq2,Seq3,Seq4 (=qCF_N+qDF1_N+qDF2_N)" << endl
+            << "ID\tQuartID\tSeq1\tSeq2\tSeq3\tSeq4\tqCF\tqCF_N\tqDF1\tqDF1_N\tqDF2\tqDF2_N\tqN" << endl;
+        for (brit = branches.begin(); brit != branches.end(); brit++) {
+            Neighbor *branch = brit->second->findNeighbor(brit->first);
+            int ID = brit->second->id;
+            for (int qid = 0; ; qid++) {
+                string qstr;
+                if (branch->attributes.find("q" + convertIntToString(qid)) == branch->attributes.end())
+                    break;
+                out << ID << '\t' << qid+1 << '\t' << branch->attributes["q" + convertIntToString(qid)] << endl;
+            }
+        }
+        out.close();
+        cout << "Site concordance factors for quartets printed to " << filename << endl;
+    }
+    
     if (!params.site_concordance_partition)
         return;
     
