@@ -111,37 +111,48 @@ void SuperAlignment::computeQuartetSupports(IntVector &quartet, vector<int64_t> 
 }
 
 void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstream) {
-    vector<IntVector> taxa;
-    taxa.resize(4);
+    vector<IntVector> left_taxa, right_taxa;
+    //taxa.resize(4);
 
     // extract the taxa from the two left subtrees
+    left_taxa.resize(branch.first->neighbors.size()-1);
     int id = 0;
     FOR_NEIGHBOR_DECLARE(branch.first, branch.second, it) {
         // 2018-12-11: do not consider internal branch at the root
         if (rooted && (*it)->node == root)
             return;
-        getTaxaID(taxa[id], (*it)->node, branch.first);
+        getTaxaID(left_taxa[id], (*it)->node, branch.first);
         id++;
-        if (id > 2)
-            outError(__func__, " only work with bifurcating tree");
+//        if (id > 2)
+//            outError(__func__, " only work with bifurcating tree");
     }
+    ASSERT(id == left_taxa.size());
 
     // extract the taxa from the two right subtrees
+    right_taxa.resize(branch.second->neighbors.size()-1);
+    id = 0;
     FOR_NEIGHBOR(branch.second, branch.first, it) {
         // 2018-12-11: do not consider internal branch at the root
         if (rooted && (*it)->node == root)
             return;
-        getTaxaID(taxa[id], (*it)->node, branch.second);
+        getTaxaID(right_taxa[id], (*it)->node, branch.second);
         id++;
-        if (id > 4)
-            outError(__func__, " only work with bifurcating tree");
+//        if (id > 4)
+//            outError(__func__, " only work with bifurcating tree");
     }
     
-    ASSERT(id == 4);
+    ASSERT(id == right_taxa.size());
     
     // 2018-12-11: remove root taxon from taxa for rooted tree
     if (rooted) {
-        for (auto it = taxa.begin(); it != taxa.end(); it++)
+        vector<IntVector>::iterator it;
+        for (it = left_taxa.begin(); it != left_taxa.end(); it++)
+            for (auto it2 = it->begin(); it2 != it->end(); it2++)
+                if (*it2 == leafNum-1) {
+                    it->erase(it2);
+                    break;
+                }
+        for (it = right_taxa.begin(); it != right_taxa.end(); it++)
             for (auto it2 = it->begin(); it2 != it->end(); it2++)
                 if (*it2 == leafNum-1) {
                     it->erase(it2);
@@ -173,31 +184,54 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstre
                 name_map[(*part_aln)->getSeqName(i)] = i;
             
             // check that at least one taxon from each subtree is present in partition tree
-            for (auto it = taxa.begin(); it != taxa.end(); it++) {
-                bool present = false;
+            vector<IntVector>::iterator it;
+            int left_count = 0, right_count = 0;
+            for (it = left_taxa.begin(); it != left_taxa.end(); it++) {
                 for (auto it2 = it->begin(); it2 != it->end(); it2++) {
                     if (name_map.find(taxname[*it2]) != name_map.end()) {
-                        present = true;
+                        left_count++;
                         break;
                     }
                 }
-                if (!present) {
-                    // not decisive
-                    support[part*3+3] = support[part*3+4] = support[part*3+5] = -1;
-                    break;
+            }
+            for (it = right_taxa.begin(); it != right_taxa.end(); it++) {
+                for (auto it2 = it->begin(); it2 != it->end(); it2++) {
+                    if (name_map.find(taxname[*it2]) != name_map.end()) {
+                        right_count++;
+                        break;
+                    }
                 }
+            }
+            if (left_count < 2 || right_count < 2) {
+                // not decisive
+                support[part*3+3] = support[part*3+4] = support[part*3+5] = -1;
+                break;
             }
         }
     }
     Neighbor *nei = branch.second->findNeighbor(branch.first);
     for (i = 0; i < nquartets; i++) {
-        int j;
         // get a random quartet
         IntVector quartet;
-        quartet.resize(taxa.size());
-        for (j = 0; j < taxa.size(); j++) {
-            quartet[j] = taxa[j][random_int(taxa[j].size(), rstream)];
+        quartet.resize(4);
+        int left_id0 = 0, left_id1 = 1, right_id0 = 0, right_id1 = 1;
+        if (left_taxa.size() > 2) {
+            left_id0 = random_int(left_taxa.size(), rstream);
+            do {
+                left_id1 = random_int(left_taxa.size(), rstream);
+            } while (left_id0 == left_id1);
         }
+        if (right_taxa.size() > 2) {
+            right_id0 = random_int(right_taxa.size(), rstream);
+            do {
+                right_id1 = random_int(right_taxa.size(), rstream);
+            } while (right_id0 == right_id1);
+        }
+        quartet[0] = left_taxa[left_id0][random_int(left_taxa[left_id0].size(), rstream)];
+        quartet[1] = left_taxa[left_id1][random_int(left_taxa[left_id1].size(), rstream)];
+        quartet[2] = right_taxa[right_id0][random_int(right_taxa[right_id0].size(), rstream)];
+        quartet[3] = right_taxa[right_id1][random_int(right_taxa[right_id1].size(), rstream)];
+
         support[0] = support[1] = support[2] = 0;
         aln->computeQuartetSupports(quartet, support);
         size_t sum = support[0] + support[1] + support[2];
