@@ -4,7 +4,8 @@
 //                NEWICK outputs).
 //
 //  BIONJ implementation based on http://www.lirmm.fr/~w3ifa/MAAS/BIONJ/BIONJ.html
-//  NJ    implementation reverse engineered from same,
+//        (see BIONJMatrix).
+//  NJ    implementation reverse engineered from same (see NJMatrix).
 //
 //  Created by James Barbetti on 18/6/20.
 //
@@ -17,7 +18,7 @@
 #include <boost/scoped_array.hpp> //for boost::scoped_array
 #include "utils/timeutil.h"       //for getRealTime()
 
-typedef double NJFloat;
+typedef float NJFloat;
 
 namespace
 {
@@ -56,7 +57,7 @@ public:
     }
 };
 
-struct Cluster: Position
+struct Cluster
 {
     //
     //Describes a cluster (either a single exterior
@@ -185,6 +186,7 @@ public:
             NJFloat* rowData = rows[r];
             rowData[rowNum] = rowData[n-1]; //U-R
         }
+        rowTotals[rowNum] = rowTotals[n-1];
         rows[rowNum] = rows[n-1];
         rows[n-1] = nullptr;
         --n;
@@ -389,7 +391,7 @@ public:
         for (int i=b+1; i<n; ++i) {
             lambda += variance.rows[b][i] - variance.rows[a][i];
         }
-        lambda = 0.5 + lambda / (2.0*(n-2)*Vab);
+        lambda = 0.5 + lambda / (2.0*((NJFloat)n-2)*Vab);
         if (1.0<lambda) lambda=1.0;
         if (lambda<0.0) lambda=0.0;
         return lambda;
