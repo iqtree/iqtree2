@@ -17,6 +17,7 @@
 //              3rd International Joint Conference, BIOSTEC 2010,
 //              Revised Selected Papers), volume 127, pages 334-344,
 //              Springer Verlag, 2011.
+//         Tag: [SMP2011].
 //         (but using a variance matrix, as in BIONJ, and keeping the
 //          distance and variance matrices square - they're not triangular
 //          because (i) *read* memory access patterns are more favourable
@@ -24,8 +25,6 @@
 //                      of the row and column coordinates (but their
 //                      access patterns aren't as favourable, but
 //                (iii) reads vastly outnumber writes)
-//         (and NOT, as yet, using the tighter bound heuristic outlined
-//          in section 2.5 of Simonsen + Mailund + Pedersen).
 //         (there's no code yet for removing duplicated rows either;
 //          those that has distance matrix rows identical to earlier rows;
 //          Rapid NJ "hates" them) (this is also covered in section 2.5)
@@ -137,36 +136,64 @@ public:
 
 template <class T=NJFloat> class Matrix
 {
-    //Note: This is a separate class so that it can be
-    //used for variance as well as distance matrices.
-    //Lines that access the upper-right triangle
-    //of the matrix are tagged with U-R.
-    friend class NJMatrix;
-    friend class BIONJMatrix;
-    friend class BoundingBIONJMatrix;
-protected:
+    //Note 1: This is a separate class so that it can be
+    //        used for square variance (V) and rectangular
+    //        sorted distance (S) and index (I) matrices,
+    //        not just square distance (D) matrices.
+    //        Lines that access the upper-right triangle
+    //        of the matrix are tagged with U-R.
+    //Note 2: I resorted to declaring the data, rows, and
+    //        rowTotals members public, because of problems
+    //        I had accessing them from BoundingMatrix.
+    //Note 3: Perhaps there should be separate SquareMatrix
+    //        and RectangularMatrix classes?
+public:
     size_t n;
-    T *data;
-    T **rows;
-    T *rowTotals;
+    T*     data;
+    T**    rows;
+    T*     rowTotals;
     void setSize(size_t rank) {
-        n         = rank;
-        data      = (rank==0) ? nullptr : new T[rank*rank];
-        rows      = (rank==0) ? nullptr : new T*[rank];
-        rowTotals = (rank==0) ? nullptr : new T[rank];
-        T *rowStart = data;
-        for (int r=0; r<n; ++r) {
-            rows[r] = rowStart;
-            rowStart += n;
-            rowTotals[r] = 0.0;
+        clear();
+        if (0==rank) {
+            return;
+        }
+        try {
+            n         = rank;
+            data      = new T[n*n];
+            rows      = new T*[n];
+            rowTotals = new T[n];
+            T *rowStart = data;
+            for (int r=0; r<n; ++r) {
+                rows[r] = rowStart;
+                rowStart += n;
+                rowTotals[r] = 0.0;
+            }
+            #pragma omp parallel for
+            for (int r=0; r<n; ++r) {
+                zeroRow(r);
+            }
+        }
+        catch (...) {
+            clear();
+            throw;
+        }
+    }
+    void zeroRow(size_t r) {
+        T* rowStart = rows[r];
+        T* rowStop  = rowStart + n;
+        for (T* rowZap=rowStart; rowZap<rowStop; ++rowZap) {
+            *rowZap = 0;
         }
     }
     void assign(const Matrix& rhs) {
+        if (this==&rhs) {
+            return;
+        }
         setSize(rhs.n);
         #pragma omp parallel for
         for (size_t r=0; r<n; ++r) {
-            T * destRow = rows[r];
-            T const * sourceRow = rhs.rows[r];
+            T *             destRow = rows[r];
+            T const *       sourceRow = rhs.rows[r];
             T const * const endSourceRow = sourceRow + n;
             for (; sourceRow<endSourceRow; ++destRow, ++sourceRow) {
                 *destRow = *sourceRow;
@@ -174,9 +201,7 @@ protected:
             rowTotals[r] = rhs.rowTotals[r];
         }
     }
-public:
-    Matrix() {
-        setSize(0);
+    Matrix(): n(0), data(0), rows(0), rowTotals(0) {
     }
     Matrix(const Matrix& rhs) {
         assign(rhs);
@@ -185,6 +210,7 @@ public:
         clear();
     }
     void clear() {
+        n = 0;
         delete [] data;
         delete [] rows;
         delete [] rowTotals;
@@ -193,21 +219,15 @@ public:
         rowTotals = nullptr;
     }
     Matrix& operator=(const Matrix& rhs) {
-        if (&rhs!=this) {
-            clear();
-            assign(rhs);
-        }
+        assign(rhs);
         return *this;
-    }
-    size_t size() {
-        return n;
     }
     void calculateRowTotals() const {
         //Note: Although this isn't currently in use,
         //it's been kept, in case it is needed
         //(after, say, every 200 iterations of
         //neighbour-joining) to deal with accumulated
-        //rounding error.
+        //rounding error.  It might be.
         #pragma omp parallel for
         for (size_t r=0; r<n; ++r) {
             T total = 0;
@@ -218,11 +238,13 @@ public:
             for (size_t c=r+1; c<n; ++c) {
                 total += rowData[c]; //U-R
             }
-            
             rowTotals[r] = total;
         }
     }
-    void removeRow(size_t rowNum)  {
+    void removeRowAndColumn(size_t rowNum)  {
+        //Remove row (and matching column) from a
+        //square matrix, by swapping the last row
+        //(and column) into its place.
         #pragma omp parallel for
         for (size_t r=0; r<n; ++r) {
             T* rowData = rows[r];
@@ -231,6 +253,13 @@ public:
         rowTotals[rowNum] = rowTotals[n-1];
         rows[rowNum] = rows[n-1];
         rows[n-1] = nullptr;
+        --n;
+    }
+    void removeRowOnly(size_t rowNum) {
+        //Remove row from a rectangular matrix.
+        rowTotals[rowNum] = rowTotals[n-1];
+        rows[rowNum]      = rows[n-1];
+        rows[n-1]         = nullptr;
         --n;
     }
 };
@@ -349,7 +378,7 @@ public:
                                 rowToCluster[b], bLength);
         rowToCluster[a] = clusters.size()-1;
         rowToCluster[b] = rowToCluster[n-1];
-        removeRow(b);
+        removeRowAndColumn(b);
     }
     void finishClustering() {
         //Assumes that n is 3
@@ -501,13 +530,19 @@ public:
                                 rowToCluster[b], bLength);
         rowToCluster[a] = clusters.size()-1;
         rowToCluster[b] = rowToCluster[n-1];
-        removeRow(b);
-        variance.removeRow(b); //BIO
+        removeRowAndColumn(b);
+        variance.removeRowAndColumn(b); //BIO
     }
 };
 
-class BoundingBIONJMatrix: public BIONJMatrix
+template <class super=BIONJMatrix> class BoundingMatrix: public super
 {
+    using super::n;
+    using super::rows;
+    using super::rowMinima;
+    using super::rowTotals;
+    using super::rowToCluster;
+    using super::clusters;
 protected:
     //
     //Note 1: mutable members are calculated repeatedly, from
@@ -518,99 +553,103 @@ protected:
     //        rows           is the D matrix
     //        entriesSorted  is the S matrix
     //        entryToCluster is the I matrix
+    //Note 3: scaledMaxEarlierClusterTotal[c] is the largest row total
+    //        for a cluster with a lower number, than cluster c
+    //        (if c indicates a cluster for which there are still rows
+    //        in the distance matrix: call this a live cluster).
+    //        This is a tighter bound, when searching for
+    //        the minimum Qij... and processing distances from
+    //        cluster c to earlier clusters, than the largest
+    //        row total for ALL the live clusters.
+    //        See section 2.5 of Simonsen, Mailund, Pedersen [2011].
     //
     std::vector<int>     clusterToRow;   //Maps clusters to their rows
     std::vector<NJFloat> clusterTotals;  //"Row" totals indexed by cluster
 
     mutable std::vector<NJFloat> scaledClusterTotals;   //The same, multiplied by
                                                         //(1.0 / (n-2)).
+    mutable std::vector<NJFloat> scaledMaxEarlierClusterTotal;
     mutable std::vector<bool>    rowOrderChosen; //Indicates if row order chosen
     mutable std::vector<size_t>  rowScanOrder;   //Order in which rows are to be scanned
                                                  //Only used in... getRowMinima().
-    mutable size_t       operationCount; //Used for testing
     
     Matrix<NJFloat>      entriesSorted; //Entries in distance matrix
                                         //(each row sorted by ascending value)
     Matrix<int>          entryToCluster;//
     
 public:
-    typedef BIONJMatrix super;
-    BoundingBIONJMatrix(const std::string &distanceFilePath)
+    BoundingMatrix(const std::string &distanceFilePath)
     : super(distanceFilePath) {
     }
     virtual void doClustering() {
         //1. Set up vectors indexed by cluster number,
-        operationCount = 0;
-        clusterToRow.resize(super::n);
-        clusterTotals.resize(super::n);
-        for (size_t r=0; r<super::n; ++r) {
+        clusterToRow.resize(n);
+        clusterTotals.resize(n);
+        for (size_t r=0; r<n; ++r) {
             clusterToRow[r]  = r;
-            clusterTotals[r] = super::rowTotals[r];
+            clusterTotals[r] = rowTotals[r];
         }
         
         //2. Set up "scratch" vectors used in getRowMinima
         //   so that it won't be necessary to reallocate them
         //   for each call.
-        scaledClusterTotals.resize(super::n);
-        rowOrderChosen.resize(super::n);
-        rowScanOrder.resize(super::n);
+        scaledClusterTotals.resize(n);
+        scaledMaxEarlierClusterTotal.resize(n);
+        rowOrderChosen.resize(n);
+        rowScanOrder.resize(n);
 
         //2. Set up the matrix with row sorted by distance
         //   And the matrix that tracks which distance is
         //   to which cluster (the S and I matrices, in the
         //   RapidNJ papers).
-        entriesSorted.setSize(super::n);
-        entryToCluster.setSize(super::n);
+        entriesSorted.setSize(n);
+        entryToCluster.setSize(n);
         #pragma omp parallel for
-        for (size_t r=0; r<super::n; ++r) {
-            sortRow(r);
-            //copies row r from the D matrix and sorts it
+        for (size_t r=0; r<n; ++r) {
+            sortRow(r,r);
+            //copies the "left of the diagonal" portion of
+            //row r from the D matrix and sorts it
             //into ascending order.
         }
-        size_t nextPurge = super::n*2/3;
-        while (3<super::n) {
+        size_t nextPurge = 0; //n*2/3;
+        while (3<n) {
             Position best;
-            //std::cout << "n is " << super::n
-            //    << ", cluster count is " << super::clusters.size() << std::endl;
             super::getMinimumEntry(best);
-            //std::cout << "best Vrc was " << best.value << " for row " << best.row
-            //    << " and column " << best.column << std::endl;
             cluster(best.column, best.row);
-            if ( super::n == nextPurge ) {
-                //std::cout << "purging" << std::endl;
+            if ( n == nextPurge ) {
                 #pragma omp parallel for
-                for (int r=0; r<super::n; ++r) {
+                for (int r=0; r<n; ++r) {
                     purgeRow(r);
                 }
-                nextPurge = super::n*2/3;
+                nextPurge = n*2/3;
             }
         }
         super::finishClustering();
-        std::cout << "Did " << operationCount << " V entry operations" << std::endl;
     }
-    void sortRow(size_t r /*row index*/) {
+    void sortRow(size_t r /*row index*/, size_t c /*upper bound on cluster index*/) {
         //1. copy data from a row of the D matrix into the S matrix
         //   (and write the cluster identifiers that correspond to
         //    the values in the D row into the same-numbered
-        //    row in the I matrix).
-        NJFloat* sourceRow      = super::rows[r];
+        //    row in the I matrix), for distances between the cluster
+        //    in that row, and other live clusters (up to, but not including c).
+        NJFloat* sourceRow      = rows[r];
         NJFloat* values         = entriesSorted.rows[r];
         int*     clusterIndices = entryToCluster.rows[r];
         size_t   w = 0;
-        for (size_t i=0; i<super::n; ++i) {
+        for (size_t i=0; i<n; ++i) {
             values[w]         = sourceRow[i];
-            clusterIndices[w] = super::rowToCluster[i];
-            if (i!=r) {
+            clusterIndices[w] = rowToCluster[i];
+            if ( i!=r && clusterIndices[w] < c ) {
                 ++w;
             }
         }
         values[w]         = infiniteDistance; //sentinel value, to stop row search
-        clusterIndices[w] = 0;
+        clusterIndices[w] = 0; //Always room for this, because distance to self
+                               //was excluded via the i!=r check above.
+        
         //2. Sort the row in the S matrix and mirror the sort
         //   on the same row of the I matrix.
         mirroredHeapsort(values, 0, w, clusterIndices);
-        //std::cout << "minimum D for row " << r << " is " << values[0]
-        //    << " for cluster " << clusterIndices[0] << std::endl;
     }
     void purgeRow(size_t r /*row index*/) {
         //Scan a row of the I matrix, so as to remove
@@ -621,7 +660,7 @@ public:
         int*     clusterIndices = entryToCluster.rows[r];
         size_t w = 0;
         size_t i = 0;
-        for (; i<super::n ; ++i ) {
+        for (; i<n ; ++i ) {
             values[w]         = values[i];
             clusterIndices[w] = clusterIndices[i];
             if ( infiniteDistance <= values[i] ) {
@@ -633,29 +672,25 @@ public:
         }
     }
     virtual void cluster(size_t a, size_t b) {
-        size_t clusterA = super::rowToCluster[a];
-        size_t clusterB = super::rowToCluster[b];
-        size_t clusterMoved = super::rowToCluster[super::n-1];
-        //std::cout << "Clustering rows " << a << " and " << b
-        //          << ", unmapping clusters " << clusterA << " and " << clusterB
-        //          << ", moving cluster " << clusterMoved << std::endl;
+        size_t clusterA = rowToCluster[a];
+        size_t clusterB = rowToCluster[b];
+        size_t clusterMoved = rowToCluster[n-1];
         clusterToRow[clusterA] = -1;
         clusterToRow[clusterB] = -1;
-        size_t c = super::clusters.size(); //cluster # of new cluster
+        size_t c = clusters.size(); //cluster # of new cluster
         super::cluster(a,b);
         clusterToRow.emplace_back(a);
-        clusterTotals.emplace_back(super::rowTotals[a]);
-        scaledClusterTotals.emplace_back(super::rowTotals[a] / (super::n-1));
-        //std::cout << "new cluster " << c << " mapped to row " << a << std::endl;
-        if (b<super::n) {
+        clusterTotals.emplace_back(rowTotals[a]);
+        scaledClusterTotals.emplace_back(rowTotals[a] / (n-1));
+        scaledMaxEarlierClusterTotal.emplace_back(0.0);
+        if (b<n) {
             clusterToRow[clusterMoved] = b;
-            //std::cout << "old cluster " << clusterMoved << " mapped to row " << b << std::endl;
         }
         //Mirror row rearrangement done on the D (distance) matrix
         //(and possibly also on the V (variance estimate) matrix),
         //onto the S and I matrices.
-        entriesSorted.rows  [ b ] = entriesSorted.rows [ super::n - 1 ];
-        entryToCluster.rows [ b ] = entryToCluster.rows [ super::n - 1 ];
+        entriesSorted.removeRowOnly(b);
+        entryToCluster.removeRowOnly(b);
         
         //Recalculate cluster totals.
         for (size_t wipe = 0; wipe<c; ++wipe) {
@@ -663,15 +698,16 @@ public:
             //A trick.  This way we don't need to check if clusters
             //are still "live" in the inner loop of getRowMinimum().
         }
-        for (size_t r = 0; r<super::n; ++r) {
-            size_t cluster = super::rowToCluster[r];
-            clusterTotals[cluster] = super::rowTotals[r];
+        for (size_t r = 0; r<n; ++r) {
+            size_t cluster = rowToCluster[r];
+            clusterTotals[cluster] = rowTotals[r];
             //std::cout << "row " << r << ", cluster " << cluster
-            //    << " have total " << super::rowTotals[r] << std::endl;
+            //    << " have total " << rowTotals[r] << std::endl;
         }
-        sortRow(a);
+        sortRow(a, clusters.size());
     }
     void decideOnRowScanningOrder() const {
+        //
         //Rig the order in which rows are scanned based on
         //which rows (might) have the lowest row minima
         //based on what we saw last time.
@@ -681,22 +717,32 @@ public:
         //in memory, so why not do all the rows in ascending order
         //of their best Q-values from the last iteration?
         //
+        //(I have my doubts about this.  I'm now thinking, it should be
+        //better to "read off" the first column of the S matrix and
+        //calculate the corresponding entry in Q for each live cluster;
+        //use up-to-date rather than out-of-date information.
+        //Since we always have to check these entries when we process
+        //the row, why not process them up front, hoping to get a
+        //better bound on min(V) (and "rule out" entire rows with that
+        //bound). -James B).
+        //
         std::sort(rowMinima.begin(), rowMinima.end());
-        for (size_t i=0; i<super::n; ++i) {
+        for (size_t i=0; i<n; ++i) {
             rowOrderChosen[i]=false;
         }
         size_t w = 0;
-        for (size_t r=0; r<rowMinima.size() && rowMinima[r].value < infiniteDistance; ++r) {
-            size_t row = rowMinima[r].row;
+        for (size_t r=0; r < rowMinima.size()
+             && rowMinima[r].value < infiniteDistance; ++r) {
+            size_t rowA = rowMinima[r].row;
+            size_t rowB = rowMinima[r].column;
+            size_t clusterA = rowToCluster[rowA];
+            size_t clusterB = rowToCluster[rowB];
+            size_t row = (clusterA<clusterB) ? rowB : rowA;
             rowScanOrder[w] = row;
-            w += ( row < super::n && !rowOrderChosen[row] ) ? 1 : 0;
+            w += ( row < n && !rowOrderChosen[row] ) ? 1 : 0;
             rowOrderChosen[row] = true;
-            size_t column = rowMinima[r].column;
-            rowScanOrder[w] = column;
-            w += ( column < super::n && !rowOrderChosen[column] ) ? 1 : 0;
-            rowOrderChosen[column] = true;
         }
-        for (size_t r=0; r<super::n; ++r) {
+        for (size_t r=0; r<n; ++r) {
             rowScanOrder[w] = r;
             w += ( rowOrderChosen[r] ? 0 : 1 );
         }
@@ -705,73 +751,68 @@ public:
         //
         //Note: Rather than multiplying distances by (n-2)
         //      repeatedly, it is cheaper to work with cluster
-        //      totals multiplied by (1/(NJFloat)(n-2)).
-        //      Better n multiplications than n*(n-1)/2.
+        //      totals multiplied by (1.0/(NJFloat)(n-2)).
+        //      Better n multiplications than 0.5*n*(n-1).
         //Note 2: Note that these are indexed by cluster number,
         //      and *not* by row number.
         //
-        size_t  c           = super::clusters.size();
-        NJFloat nless2      = ( super::n - 2 );
-        NJFloat tMultiplier = ( super::n <= 2 ) ? 0 : (1 / nless2);
-        NJFloat maxTot = 0; //maximum row total divided by (n-2)
+        size_t  c           = clusters.size();
+        NJFloat nless2      = ( n - 2 );
+        NJFloat tMultiplier = ( n <= 2 ) ? 0 : (1 / nless2);
+        NJFloat maxTot      = -infiniteDistance; //maximum row total divided by (n-2)
         for (size_t i=0; i<c; ++i) {
             scaledClusterTotals[i] = clusterTotals[i] * tMultiplier;
+            scaledMaxEarlierClusterTotal[i] = maxTot;
             if ( 0 <= clusterToRow[i] && maxTot < scaledClusterTotals[i] ) {
                 maxTot=scaledClusterTotals[i];
             }
         }
-        //std::cout << "Maximum row total was " << maxTot << std::endl;
-
         NJFloat qBest = infiniteDistance;
             //upper bound on minimum Q[row,col]
             //  = D[row,col] - R[row]*tMultipler - R[col]*tMultiplier
             //
 
         decideOnRowScanningOrder();
-        
-        rowMinima.resize(super::n);
+        rowMinima.resize(n);
         #pragma omp parallel for
-        for (size_t r=0; r<super::n; ++r) {
-            size_t row = rowScanOrder[r];
-            rowMinima[row] = getRowMinimum(row, maxTot, qBest);
-            NJFloat v = rowMinima[row].value;
-            #pragma omp critical
+        for (size_t r=0; r<n; ++r) {
+            size_t row             = rowScanOrder[r];
+            size_t cluster         = rowToCluster[row];
+            size_t maxEarlierTotal = scaledMaxEarlierClusterTotal[cluster];
+            //Note: Older versions of RapidNJ used maxTot rather than
+            //      maxEarlierTotal here...
+            rowMinima[row]         = getRowMinimum(row, maxEarlierTotal, qBest);
+            NJFloat v              = rowMinima[row].value;
+            //#pragma omp critical
             {
                 if ( v < qBest ) {
                     qBest = v;
-                    //std::cout << "Row " << row << " had min V " << v << std::endl;
                 }
             }
         }
-        //std::cout << "Overall min V was " << qBest << std::endl;
     }
     Position getRowMinimum(size_t row, NJFloat maxTot, NJFloat qBest) const {
-        NJFloat nless2      = ( super::n - 2 );
-        NJFloat tMultiplier = ( super::n <= 2 ) ? 0 : (1 / nless2);
+        NJFloat nless2      = ( n - 2 );
+        NJFloat tMultiplier = ( n <= 2 ) ? 0 : (1 / nless2);
         auto    tot         = scaledClusterTotals.data();
-        NJFloat rowTotal = super::rowTotals[row] * tMultiplier;
-        NJFloat vRowBound = qBest + maxTot + rowTotal;
+        NJFloat rowTotal    = rowTotals[row] * tMultiplier;
+        NJFloat rowBound    = qBest + maxTot + rowTotal;
                 //Upper bound for distance, in this row, that
                 //could (after row totals subtracted) provide a
                 //better min(Q).
-        //std::cout.precision(8);
-        //std::cout << "searching row " << row << " with row total " << rowTotal
-        //    << " and row bound " << vRowBound << std::endl;
 
         Position pos(row, 0, infiniteDistance);
         const NJFloat* rowData   = entriesSorted.rows[row];
         const int*     toCluster = entryToCluster.rows[row];
         size_t i = 0;
         NJFloat Drc;
-        for (i=0; (Drc=rowData[i])<vRowBound; ++i) {
+        for (i=0; (Drc=rowData[i])<rowBound; ++i) {
             size_t  cluster = toCluster[i];
                 //The cluster associated with this distance
                 //The c in Qrc and Drc.
-            //std::cout << "D for cluster " << cluster << " is " << Drc << std::endl;
             NJFloat Qrc = Drc - tot[cluster] - rowTotal;
             if (Qrc < pos.value) {
                 int otherRow = clusterToRow[cluster];
-                //std::cout << "column # for cluster " << cluster << " is " << otherRow << std::endl;
                 if ( 0 <= otherRow ) { //I *think* this check is still necessary,
                                        //despite setting "out of matrix" cluster totals
                                        //to (0-infiniteDistance).
@@ -779,20 +820,13 @@ public:
                     pos.row    = (otherRow < row ) ? row : otherRow;
                     pos.value  = Qrc;
                     if (Qrc < qBest ) {
-                        qBest     = Qrc;
-                        vRowBound = qBest + maxTot + rowTotal;
+                        qBest    = Qrc;
+                        rowBound = qBest + maxTot + rowTotal;
                     }
                 }
             }
         }
-        //std::cout << "Looked at " << i << " entries in the row" << std::endl;
-        #pragma omp critical
-        {
-            operationCount += i + 1;
-        }
         return pos;
-        //std::cout << "min for row " << row << " was " << pos.value
-        //    << " at col " << pos.column << std::endl;
     }
 };
 
@@ -904,7 +938,7 @@ void BIONJ2::constructTreeRapid
     ( const std::string & distanceMatrixFilePath
     , const std::string & newickTreeFilePath)
 {
-    BoundingBIONJMatrix d(distanceMatrixFilePath);
+    BoundingMatrix<BIONJMatrix> d(distanceMatrixFilePath);
     double joinStart = getRealTime();
     d.doClustering();
     double joinElapsed = getRealTime() - joinStart;
