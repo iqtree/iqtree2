@@ -331,7 +331,7 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
     hashes.resize(n, 0);
     #ifdef USE_BOOST
     #ifdef _OPENMP
-        #pragma omp for
+        #pragma omp parallel for
     #endif
     for (int seq1=0; seq1<n; ++seq1) {
         size_t hash = 0;
@@ -340,8 +340,10 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
         }
         hashes[seq1] = hash;
     }
-    auto hashTime = getRealTime() - startHash;
-    cout << "Hashing sequences took " << hashTime << " wall-clock seconds" << endl;
+    if (verbose_mode >= VB_MED) {
+        auto hashTime = getRealTime() - startHash;
+        cout << "Hashing sequences took " << hashTime << " wall-clock seconds" << endl;
+    }
     #endif
     //JB2020-06-17 Finish
 
@@ -377,9 +379,11 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
 		}
 		checked[seq1] = 1;
 	}
-    auto checkTime = getRealTime() - startCheck;
-    cout << "Checking for duplicate sequences took " << checkTime
-        << " wall-clock seconds" << endl;
+    if (verbose_mode >= VB_MED) {
+        auto checkTime = getRealTime() - startCheck;
+        cout << "Checking for duplicate sequences took " << checkTime
+            << " wall-clock seconds" << endl;
+    }
 
 	if (removed_seqs.size() > 0) {
 		if (removed_seqs.size() >= getNSeq()-3)
