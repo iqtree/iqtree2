@@ -50,6 +50,7 @@ const NJFloat infiniteDistance = 1e+300;
 namespace
 {
 
+
 struct Position
 {
     //A position (row, column) in an NJ matrix
@@ -134,8 +135,26 @@ public:
     }
 };
 
+#define MATRIX_ALIGNMENT 64 //Assumed: sizeof(NJFloat) divides MATRIX_ALIGNMENT
+
+template <class P> inline P* matrixAlign(P* p) {
+    //If we've got an array that mighnt't be MATRIX_ALIGNMENT-byte
+    //aligned, but we've got MATRIX_ALIGNMENT/sizeof(P) extra items
+    //in it, we can point to the first item in the array that *is*
+    //MATRIX_ALIGNMENT-byte aligned.  This function returns the
+    //address of that item.
+    uintptr_t address = reinterpret_cast<uintptr_t>(p);
+    if (0<(address % MATRIX_ALIGNMENT))
+    {
+        return p + (MATRIX_ALIGNMENT - (address % MATRIX_ALIGNMENT))/sizeof(P);
+    } else {
+        return p;
+    }
+}
+
 template <class T=NJFloat> class Matrix
 {
+
     //Note 1: This is a separate class so that it can be
     //        used for square variance (V) and rectangular
     //        sorted distance (S) and index (I) matrices,
@@ -158,14 +177,25 @@ public:
             return;
         }
         try {
-            n         = rank;
-            data      = new T[n*n];
-            rows      = new T*[n];
-            rowTotals = new T[n];
-            T *rowStart = data;
+            //
+            //w is n, rounded up so that each row will
+            //have a starting address that is MATRIX_ALIGNMENT-byte aligned.
+            //
+            size_t w  = rank;
+            if (sizeof(T)<MATRIX_ALIGNMENT) {
+                size_t leftOver  = (rank * sizeof(T)) % MATRIX_ALIGNMENT;
+                if (0<leftOver) {
+                    w += (MATRIX_ALIGNMENT-leftOver) / sizeof(T);
+                }
+            }
+            n           = rank;
+            data        = new T[n*w + MATRIX_ALIGNMENT/sizeof(T)];
+            rows        = new T*[n];
+            rowTotals   = new T[n];
+            T *rowStart = matrixAlign(data);
             for (int r=0; r<n; ++r) {
-                rows[r] = rowStart;
-                rowStart += n;
+                rows[r]      = rowStart;
+                rowStart    += w;
                 rowTotals[r] = 0.0;
             }
             #pragma omp parallel for
@@ -318,7 +348,7 @@ public:
         NJFloat nless2      = ( n - 2 );
         NJFloat tMultiplier = ( n <= 2 ) ? 0 : (1 / nless2);
         calculateScaledRowTotals();
-        auto tot = scaledRowTotals.data();
+        NJFloat* tot = scaledRowTotals.data();
         for (size_t r=0; r<n; ++r) {
             tot[r] = rowTotals[r] * tMultiplier;
         }
@@ -326,17 +356,19 @@ public:
         rowMinima[0].value = infiniteDistance;
         #pragma omp parallel for
         for (size_t row=1; row<n; ++row) {
-            Position pos(row, 0, infiniteDistance);
+            float  bestVrc    = infiniteDistance;
+            size_t bestColumn = 0;
             const NJFloat* rowData = rows[row];
             for (size_t col=0; col<row; ++col) {
-                NJFloat v = rowData[col] - tot[col];
-                if (v < pos.value) {
-                    pos.column = col;
-                    pos.value  = v;
+                NJFloat v   = rowData[col] - tot[col];
+                bool better = ( v < bestVrc );
+                if (better) {
+                    bestColumn = col;
+                    bestVrc = v;
                 }
             }
-            pos.value -= tot [row];
-            rowMinima[row] = pos;
+            bestVrc       -= tot [row];
+            rowMinima[row] = Position(row, bestColumn, bestVrc);
         }
     }
     void getMinimumEntry(Position &best) {
@@ -839,30 +871,35 @@ class VectorizedBIONJMatrix: public BIONJMatrix
     //
 public:
     typedef BIONJMatrix super;
+    mutable std::vector<NJFloat> scratchTotals;
+    mutable std::vector<NJFloat> scratchColumnNumbers;
+    size_t  blockSize;
     VectorizedBIONJMatrix(const std::string &distanceMatrixFilePath)
-    : super(distanceMatrixFilePath)
-    {
+    : super(distanceMatrixFilePath) {
+        size_t fluff = MATRIX_ALIGNMENT / sizeof(NJFloat);
+        scratchTotals.resize(n + fluff, 0.0);
+        scratchColumnNumbers.resize(n + fluff, 0.0);
+        Vec4d v;
+        blockSize = v.size();
     }
-    virtual void getRowMinima(Positions& rowMinima) const {
+    virtual void getRowMinima() const {
         NJFloat nless2      = ( n - 2 );
         NJFloat tMultiplier = ( n <= 2 ) ? 0 : (1 / nless2);
-        boost::scoped_array<NJFloat> scratchTotals(new NJFloat[n]);
-        boost::scoped_array<NJFloat> scratchColumnNumbers(new NJFloat[n]);
-        auto tot  = scratchTotals.get();
-        auto nums = scratchColumnNumbers.get();
+        NJFloat* tot  = matrixAlign ( scratchTotals.data() );
+        NJFloat* nums = matrixAlign ( scratchColumnNumbers.data() );
         for (size_t r=0; r<n; ++r) {
             tot[r]  = rowTotals[r] * tMultiplier;
             nums[r] = r;
         }
-        Vec4d v;
-        size_t blockSize = v.size();
+        rowMinima.resize(n);
         rowMinima[0].value = infiniteDistance;
         #pragma omp parallel for
         for (size_t row=1; row<n; ++row) {
             Position pos(row, 0, infiniteDistance);
             const NJFloat* rowData = rows[row];
             size_t col;
-            Vec4d minVector(infiniteDistance, infiniteDistance, infiniteDistance, infiniteDistance);
+            Vec4d minVector  ( infiniteDistance, infiniteDistance
+                             , infiniteDistance, infiniteDistance);
                 //The minima of columns with indices "congruent modulo 4"
                 //For example minVector[1] holds the minimum of
                 //columns 1,5,9,13,17,...
@@ -870,13 +907,12 @@ public:
                 //For each entry in minVector, the column from which
                 //that value came.
             
-            //Take#2: Examine four columns at a time
             for (col=0; col+blockSize<row; col+=blockSize) {
-                Vec4d  rowVector; rowVector.load(rowData+col);
-                Vec4d  totVector; totVector.load(tot+col);
+                Vec4d  rowVector; rowVector.load_a(rowData+col);
+                Vec4d  totVector; totVector.load_a(tot+col);
                 Vec4d  adjVector = rowVector - totVector;
                 Vec4db less      = adjVector < minVector;
-                Vec4d  numVector; numVector.load(nums+col);
+                Vec4d  numVector; numVector.load_a(nums+col);
                 ixVector  = select(less, numVector, ixVector);
                 minVector = select(less, adjVector, minVector);
             }
@@ -887,24 +923,6 @@ public:
                     pos.column = ixVector[c];
                 }
             }
-            
-            /*Take#1 was worse.  Or-ing each 4 right away.  Ee-uw.
-            for (col=0; col+blockSize<row; col+=blockSize) {
-                Vec4d rowVector;rowVector.load(rowData+col);
-                Vec4d totVector;totVector.load(tot+col);
-                Vec4d adjVector = rowVector - totVector;
-                if (horizontal_or(adjVector < minVector)) {
-                    for (int c=0; c<blockSize; ++c) {
-                        if (minVector[c] < pos.value) {
-                            pos.column = col+c;
-                            pos.value  = minVector[c];
-                        }
-                    }
-                    minVector = pos.value;
-                }
-            }
-            */
-            
             for (; col<row; ++col) {
                 NJFloat v = rowData[col] - tot[col];
                 if (v < pos.value) {
@@ -924,7 +942,7 @@ void BIONJ2::constructTree
     ( const std::string & distanceMatrixFilePath
     , const std::string & newickTreeFilePath)
 {
-    /*Vectorized*/BIONJMatrix d(distanceMatrixFilePath);
+    BIONJMatrix d(distanceMatrixFilePath);
     double joinStart = getRealTime();
     d.doClustering();
     double joinElapsed = getRealTime() - joinStart;
@@ -946,7 +964,7 @@ void BIONJ2::constructTreeRapid
     std::cout << "Elapsed time for neighbour joining proper (in BIONJ2/rapidNJ), "
         << joinElapsed << std::endl;
     std::cout.precision(3);
-    d.writeTreeFile(newickTreeFilePath);
+    d.writeTreeFile(newickTreeFilePath + "_2");
 
     VectorizedBIONJMatrix d2(distanceMatrixFilePath);
     joinStart = getRealTime();
@@ -955,4 +973,5 @@ void BIONJ2::constructTreeRapid
     std::cout.precision(6);
     std::cout << "Elapsed time for neighbour joining proper (in BIONJ2/Hand-Vectorized), " << joinElapsed << std::endl;
     std::cout.precision(3);
+    d2.writeTreeFile(newickTreeFilePath + "_v");
 }
