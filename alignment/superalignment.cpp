@@ -23,6 +23,11 @@
 #include "nclextra/msetsblock.h"
 #include "nclextra/myreader.h"
 #include "main/phylotesting.h"
+#include "utils/timeutil.h" //for getRealTime()
+#ifdef USE_BOOST
+#include <boost/container_hash/hash.hpp> //for boost::hash_combine
+#endif
+
 
 Alignment *createAlignment(string aln_file, const char *sequence_type, InputType intype, string model_name) {
     bool is_dir = isDirectory(aln_file.c_str());
@@ -923,17 +928,52 @@ void SuperAlignment::removePartitions(set<int> &removed_id) {
 }
 
 Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVector &removed_seqs, StrVector &target_seqs) {
+    auto n = getNSeq();
     IntVector checked;
     vector<bool> removed;
-    checked.resize(getNSeq(), 0);
-    removed.resize(getNSeq(), false);
-    int seq1;
+    checked.resize(n, 0);
+    removed.resize(n, false);
+    
+    //JB2020-06-23 Begin : Determine hashes for all the sequences
+    auto startHash = getRealTime();
+    vector<size_t> hashes;
+    hashes.resize(n, 0);
+    #ifdef USE_BOOST
+    #ifdef _OPENMP
+        #pragma omp parallel for
+    #endif
+    for (int seq1=0; seq1<n; ++seq1) {
+        size_t hash = 0;
+        int part = 0;
+        for (auto ait = partitions.begin(); ait != partitions.end(); ait++, part++) {
+            int  subseq1 = taxa_index[seq1][part];
+            bool present = ( 0 < subseq1 );
+            boost::hash_combine(hash, present);
+            if (present) {
+                for (iterator it = (*ait)->begin(); it != (*ait)->end(); it++) {
+                    boost::hash_combine(hash, (*it)[subseq1] );
+                }
+            }
+        }
+        hashes[seq1] = hash;
+    }
+    if (verbose_mode >= VB_MED) {
+        auto hashTime = getRealTime() - startHash;
+        cout << "Hashing sequences took " << hashTime << " wall-clock seconds" << endl;
+    }
+    #endif
+    //JB2020-06-23 Finish
 
-	for (seq1 = 0; seq1 < getNSeq(); seq1++) {
+    auto startCheck = getRealTime();
+	for (int seq1 = 0; seq1 < getNSeq(); seq1++) {
         if (checked[seq1]) continue;
         bool first_ident_seq = true;
 		for (int seq2 = seq1+1; seq2 < getNSeq(); seq2++) {
-			if (getSeqName(seq2) == not_remove || removed[seq2]) continue;
+            if (getSeqName(seq2) == not_remove || removed[seq2]) { continue;
+            }
+            if (hashes[seq1]!=hashes[seq2]) {
+                continue;
+            }
 			bool equal_seq = true;
 			int part = 0;
 			// check if seq1 and seq2 are identical over all partitions
@@ -953,26 +993,32 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, 
 					break;
 				}
 				// now if both seqs are present, check sequence content
-				for (iterator it = (*ait)->begin(); it != (*ait)->end(); it++)
+                for (iterator it = (*ait)->begin(); it != (*ait)->end(); it++) {
 					if  ((*it)[subseq1] != (*it)[subseq2]) {
 						equal_seq = false;
 						break;
 					}
-			}
-			if (equal_seq) {
-				if (removed_seqs.size() < getNSeq()-3 && (!keep_two || !first_ident_seq)) {
-					removed_seqs.push_back(getSeqName(seq2));
-					target_seqs.push_back(getSeqName(seq1));
-					removed[seq2] = true;
-				} else {
-                    cout << "NOTE: " << getSeqName(seq2) << " is identical to " << getSeqName(seq1) << " but kept for subsequent analysis" << endl;
                 }
-				checked[seq2] = 1;
-				first_ident_seq = false;
 			}
+            if (!equal_seq) {
+                continue;
+            }
+            if (removed_seqs.size() < getNSeq()-3 && (!keep_two || !first_ident_seq)) {
+                removed_seqs.push_back(getSeqName(seq2));
+                target_seqs.push_back(getSeqName(seq1));
+                removed[seq2] = true;
+            } else {
+                cout << "NOTE: " << getSeqName(seq2) << " is identical to " << getSeqName(seq1) << " but kept for subsequent analysis" << endl;
+            }
+            checked[seq2] = 1;
+            first_ident_seq = false;
 		}
 		checked[seq1] = 1;
 	}
+    if (verbose_mode >= VB_MED) {
+        auto checkTime = getRealTime() - startCheck;
+        cout << "Checking for identical sequences took " << checkTime << " wall-clock seconds" << endl;
+    }
 
 	if (removed_seqs.empty()) return this; // do nothing if the list is empty
 
@@ -981,8 +1027,10 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, 
 
 	// now remove identical sequences
 	IntVector keep_seqs;
-	for (seq1 = 0; seq1 < getNSeq(); seq1++)
+	for (int seq1 = 0; seq1 < getNSeq(); seq1++)
+    {
 		if (!removed[seq1]) keep_seqs.push_back(seq1);
+    }
 	SuperAlignment *aln;
 	aln = new SuperAlignment;
 	aln->extractSubAlignment(this, keep_seqs, 0);

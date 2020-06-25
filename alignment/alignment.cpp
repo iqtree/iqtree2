@@ -17,10 +17,13 @@
 #include "model/rategamma.h"
 #include "gsl/mygsl.h"
 #include "utils/gzstream.h"
+#include "utils/timeutil.h" //for getRealTime()
 #include <Eigen/LU>
 #ifdef USE_BOOST
 #include <boost/math/distributions/binomial.hpp>
+#include <boost/container_hash/hash.hpp>
 #endif
+
 
 using namespace std;
 using namespace Eigen;
@@ -182,9 +185,15 @@ void Alignment::checkSeqName() {
     if (seq_type == SEQ_POMO)
         cout << "NOTE: The composition test for PoMo only tests the proportion of fixed states!" << endl;
 
+    bool listSequences = true;
+        //Todo: Add parameter to disable...
+        //listing of sequences (and set from that)
+    
     int max_len = getMaxSeqNameLength()+1;
-    cout.width(max_len+14);
-    cout << right << "Gap/Ambiguity" << "  Composition  p-value"<< endl;
+    if (listSequences) {
+        cout.width(max_len+14);
+        cout << right << "Gap/Ambiguity" << "  Composition  p-value"<< endl;
+    }
     int num_problem_seq = 0;
     int total_gaps = 0;
     cout.precision(2);
@@ -194,18 +203,21 @@ void Alignment::checkSeqName() {
         int num_gaps = getNSite() - countProperChar(i);
         total_gaps += num_gaps;
         double percent_gaps = ((double)num_gaps / getNSite())*100.0;
-        cout.width(4);
-        cout << right << i+1 << "  ";
-        cout.width(max_len);
-        cout << left << seq_names[i] << " ";
-        cout.width(6);
-        cout << right << percent_gaps << "%";
+        if (listSequences) {
+            cout.width(4);
+            cout << right << i+1 << "  ";
+            cout.width(max_len);
+            cout << left << seq_names[i] << " ";
+            cout.width(6);
+            cout << right << percent_gaps << "%";
+        }
         if (percent_gaps > 50) {
             num_problem_seq++;
         }
 
         double chi2 = 0.0;
         unsigned sum_count = 0;
+        double pvalue;
 
         if (seq_type == SEQ_POMO) {
             // FIXME: Number of nucleotides hardcoded here.
@@ -232,14 +244,7 @@ void Alignment::checkSeqName() {
 
             // chi2 *= getNSite();
             chi2 *= sum_count;
-            double pvalue = chi2prob(nnuc-1, chi2);
-            if (pvalue < 0.05) {
-                cout << "    failed ";
-                num_failed++;
-            } else
-                cout << "    passed ";
-            cout.width(9);
-            cout << right << pvalue*100 << "%";
+            pvalue = chi2prob(nnuc-1, chi2);
         } else {
             for (j = 0; j < num_states; j++)
                 sum_count += count_per_seq[i*num_states+j];
@@ -251,26 +256,30 @@ void Alignment::checkSeqName() {
                     chi2 += (state_freq[j] - freq_per_sequence[j]) * (state_freq[j] - freq_per_sequence[j]) / state_freq[j];
             
             chi2 *= sum_count;
-            double pvalue = chi2prob(df, chi2);
-            if (pvalue < 0.05) {
+            pvalue = chi2prob(df, chi2);
+        }
+        bool failed = (pvalue < 0.05);
+        num_failed += failed ? 1 : 0;
+        if (listSequences) {
+            if (failed) {
                 cout << "    failed ";
-                num_failed++;
             } else
                 cout << "    passed ";
             cout.width(9);
             cout << right << pvalue*100 << "%";
+            cout << endl;
         }
-        cout << endl;
     }
     if (num_problem_seq) cout << "WARNING: " << num_problem_seq << " sequences contain more than 50% gaps/ambiguity" << endl;
-    cout << "**** ";
-    cout.width(max_len+2);
-    cout << left << " TOTAL  ";
-    cout.width(6);
-    cout << right << ((double)total_gaps/getNSite())/getNSeq()*100 << "% ";
-    cout << " " << num_failed << " sequences failed composition chi2 test (p-value<5%; df=" << df << ")" << endl;
-    cout.precision(3);
-
+    if (listSequences) {
+        cout << "**** ";
+        cout.width(max_len+2);
+        cout << left << " TOTAL  ";
+        cout.width(6);
+        cout << right << ((double)total_gaps/getNSite())/getNSeq()*100 << "% ";
+        cout << " " << num_failed << " sequences failed composition chi2 test (p-value<5%; df=" << df << ")" << endl;
+        cout.precision(3);
+    }
     delete [] count_per_seq;
     delete [] freq_per_sequence;
     delete [] state_freq;
@@ -310,46 +319,82 @@ int Alignment::checkIdenticalSeq()
 
 Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVector &removed_seqs, StrVector &target_seqs)
 {
+    auto n = getNSeq();
     IntVector checked;
     vector<bool> removed;
-    checked.resize(getNSeq(), 0);
-    removed.resize(getNSeq(), false);
-    int seq1;
+    checked.resize(n, 0);
+    removed.resize(n, false);
 
-	for (seq1 = 0; seq1 < getNSeq(); seq1++) {
+    //JB2020-06-17 Begin : Determine hashes for all the sequences
+    auto startHash = getRealTime();
+    vector<size_t> hashes;
+    hashes.resize(n, 0);
+    #ifdef USE_BOOST
+    #ifdef _OPENMP
+        #pragma omp parallel for
+    #endif
+    for (int seq1=0; seq1<n; ++seq1) {
+        size_t hash = 0;
+        for (iterator it = begin(); it != end(); ++it) {
+            boost::hash_combine(hash, (*it)[seq1]);
+        }
+        hashes[seq1] = hash;
+    }
+    if (verbose_mode >= VB_MED) {
+        auto hashTime = getRealTime() - startHash;
+        cout << "Hashing sequences took " << hashTime << " wall-clock seconds" << endl;
+    }
+    #endif
+    //JB2020-06-17 Finish
+
+    bool listIdentical = true;
+        //Todo: get it from Params.suppress_duplicate_sequence_warnings
+
+    auto startCheck = getRealTime();
+	for (int seq1 = 0; seq1 < getNSeq(); seq1++) {
         if (checked[seq1]) continue;
         bool first_ident_seq = true;
 		for (int seq2 = seq1+1; seq2 < getNSeq(); seq2++) {
 			if (getSeqName(seq2) == not_remove || removed[seq2]) continue;
+            if (hashes[seq1] != hashes[seq2]) continue; //JB2020-06-17
 			bool equal_seq = true;
-			for (iterator it = begin(); it != end(); it++)
-				if  ((*it)[seq1] != (*it)[seq2]) {
-					equal_seq = false;
-					break;
-				}
-			if (equal_seq) {
-				if (removed_seqs.size() < getNSeq()-3 && (!keep_two || !first_ident_seq)) {
-					removed_seqs.push_back(getSeqName(seq2));
-					target_seqs.push_back(getSeqName(seq1));
-					removed[seq2] = true;
-				} else {
+            for (iterator it = begin(); it != end(); it++) {
+                if  ((*it)[seq1] != (*it)[seq2]) {
+                    equal_seq = false;
+                    break;
+                }
+            }
+			if (!equal_seq) continue;
+            if (removed_seqs.size() < getNSeq()-3 && (!keep_two || !first_ident_seq)) {
+                removed_seqs.push_back(getSeqName(seq2));
+                target_seqs.push_back(getSeqName(seq1));
+                removed[seq2] = true;
+            } else {
+                if (listIdentical) {
                     cout << "NOTE: " << getSeqName(seq2) << " is identical to " << getSeqName(seq1) << " but kept for subsequent analysis" << endl;
                 }
-				checked[seq2] = 1;
-				first_ident_seq = false;
-			}
+            }
+            checked[seq2] = 1;
+            first_ident_seq = false;
 		}
 		checked[seq1] = 1;
 	}
+    if (verbose_mode >= VB_MED) {
+        auto checkTime = getRealTime() - startCheck;
+        cout << "Checking for duplicate sequences took " << checkTime
+            << " wall-clock seconds" << endl;
+    }
 
 	if (removed_seqs.size() > 0) {
 		if (removed_seqs.size() >= getNSeq()-3)
 			outWarning("Your alignment contains too many identical sequences!");
 		IntVector keep_seqs;
-		for (seq1 = 0; seq1 < getNSeq(); seq1++)
+		for (int seq1 = 0; seq1 < getNSeq(); seq1++)
 			if (!removed[seq1]) keep_seqs.push_back(seq1);
 		Alignment *aln = new Alignment;
 		aln->extractSubAlignment(this, keep_seqs, 0);
+        //cout << "NOTE: Identified " << removed_seqs.size()
+        //  << " sequences as duplicates." << endl;
 		return aln;
 	} else return this;
 }
@@ -3827,13 +3872,16 @@ Alignment::~Alignment()
 
 double Alignment::computeObsDist(int seq1, int seq2) {
     int diff_pos = 0, total_pos = 0;
+    total_pos = getNSite() - num_variant_sites; // initialize with number of constant sites
     for (iterator it = begin(); it != end(); it++) {
+        if ((*it).isConst())
+            continue;
         int state1 = convertPomoState((*it)[seq1]);
         int state2 = convertPomoState((*it)[seq2]);
         if  (state1 < num_states && state2 < num_states) {
             //if ((*it)[seq1] != STATE_UNKNOWN && (*it)[seq2] != STATE_UNKNOWN) {
             total_pos += (*it).frequency;
-            if ((*it)[seq1] != (*it)[seq2] )
+            if (state1 != state2 )
                 diff_pos += (*it).frequency;
         }
     }
