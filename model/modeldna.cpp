@@ -430,6 +430,26 @@ void ModelDNA::writeParameters(ostream &out) {
 	}
 }
 
+void ModelDNA::computeTipLikelihood(PML::StateType state, double *state_lk) {
+    if (state < num_states || state >= 18) {
+        ModelSubst::computeTipLikelihood(state, state_lk);
+        return;
+    }
+
+    // special treatment for ambiguous (polymorphic) state
+    memset(state_lk, 0, num_states*sizeof(double));
+    int cstate = state-num_states+1;
+    for (int i = 0; i < num_states; i++) {
+        if ((cstate) & (1 << i))
+            state_lk[i] = 1.0;
+    }
+
+    if (isReversible() && !Params::getInstance().kernel_nonrev) {
+        // transform to inner product of tip likelihood and inverse-eigenvector
+        multiplyWithInvEigenvector(state_lk);
+    }
+}
+
 /*
  * getVariables *changes* the state of the model, setting from *variables
  * Returns true if the model state has changed, false if not.
