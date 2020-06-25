@@ -7,7 +7,8 @@ tools.cpp tools.h
 pllnni.cpp pllnni.h
 checkpoint.cpp checkpoint.h
 MPIHelper.cpp MPIHelper.h
-timeutil.h
+timeutil.h bionj.h
+bionj2.cpp bionj2.h
 )
 
 if(ZLIB_FOUND)

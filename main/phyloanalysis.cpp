@@ -1669,8 +1669,10 @@ void computeInitialDist(Params &params, IQTree &iqtree) {
     }
 
     if (params.compute_jc_dist || params.compute_obs_dist || params.partition_file) {
+        double begin_time = getRealTime();
         longest_dist = iqtree.computeDist(params, iqtree.aln, iqtree.dist_matrix, iqtree.var_matrix, iqtree.dist_file);
-        checkZeroDist(iqtree.aln, iqtree.dist_matrix);
+        //checkZeroDist(iqtree.aln, iqtree.dist_matrix);
+        cout << "Distance calculation time: " << getRealTime() - begin_time << " seconds" << endl;
 
         double max_genetic_dist = MAX_GENETIC_DIST;
         if (iqtree.aln->seq_type == SEQ_POMO) {

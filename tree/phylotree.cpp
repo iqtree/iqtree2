@@ -3144,8 +3144,8 @@ double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
     for (pos = 0; pos < num_pairs; pos++) {
         int seq1 = row_id[pos];
         int seq2 = col_id[pos];
-        double d2l; // moved here for thread-safe (OpenMP)
         int sym_pos = seq1 * nseqs + seq2;
+        double d2l = var_mat[sym_pos]; // moved here for thread-safe (OpenMP)
         dist_mat[sym_pos] = computeDist(seq1, seq2, dist_mat[sym_pos], d2l);
         if (params->ls_var_type == OLS)
             var_mat[sym_pos] = 1.0;

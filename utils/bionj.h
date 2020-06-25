@@ -18,11 +18,18 @@
 ;                                                                           ;
 \*;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;*/
 
+//_OPENMP and #pragma omp lines added by James Barbetti
+#ifdef _OPENMP
+    #define NJ_OMP
+#endif
+
 
 #include <stdio.h>                  
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include "utils/timeutil.h" //JB2020-06-18 for getRealTime()
+
 
 #define PREC 8                             /* precision of branch-lengths  */
 #define PRC  100
@@ -89,7 +96,7 @@ int    Symmetrize(float **delta, int n);
 ;              output-file) or by typing them when asked by the             ;
 ;              program. The input-file has to be formated according         ;
 ;              the PHYLIP standard. The output file is formated             ;
-;              according to the NEWSWICK standard.                          ;
+;              according to the NEWICK standard.                            ;
 ;                                                                           ;
 ;              The lower-half of the delta matrix is occupied by            ;
 ;              dissimilarities. The upper-half of the matrix is             ;
@@ -387,27 +394,31 @@ float Sum_S(int i, float **delta)          /* get sum Si form the diagonal */
 ;                                                                           ;
 \*;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;*/
 
-void Compute_sums_Sx(float **delta, int n)
-{
-  float sum;
-  sum = 0.0;
-  int i;
-  int j;
-
-  for(i= 1; i <= n ; i++)
+    void Compute_sums_Sx(float **delta, int n)
     {
-      if(!Emptied(i,delta))
-	{
-	  sum=0;
-	  for(j=1; j <=n; j++)
-	    {
-	      if(i != j && !Emptied(j,delta))           /* compute the sum Si */
-		sum=sum + Distance(i,j,delta);
-	    }
-	}
-      delta[i][i]=sum;                           /* store the sum Si in */
-    }                                               /* delta�s diagonal    */
-}
+        #ifdef NJ_OMP
+            #pragma omp parallel
+        #endif
+        {
+            #ifdef NJ_OMP
+                #pragma omp for
+            #endif
+            for(int i= 1; i <= n ; i++)
+            {
+                if(!Emptied(i,delta))
+                {
+                    float sum=0;
+                    for(int j=1; j <=n; j++)
+                    {
+                        if(i != j && !Emptied(j,delta))           /* compute the sum Si */
+                            sum=sum + Distance(i,j,delta);
+                    }
+                    delta[i][i]=sum;                           /* store the sum Si in */
+                }
+            }                                               /* delta�s diagonal    */
+        }
+    }
+
 
 
 /*;;;;;;;;;;;;;;;;;;;;;;;;;;;;;Best_pair;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;*\
@@ -427,33 +438,62 @@ void Compute_sums_Sx(float **delta, int n)
 ;                int *b         : the second taxon of the pair              ;
 \*;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;*/
 
-void Best_pair(float **delta, int r, int *a, int *b, int n)
-{
-  float Qxy;                         /* value of the criterion calculated*/
-  int x,y;                           /* the pair which is tested         */
-  float Qmin;                        /* current minimun of the criterion */
-
-  Qmin=1.0e300;
-  for(x=1; x <= n; x++)
+    void Best_pair(float **delta, int r, int *a, int *b, int n)
     {
-      if(!Emptied(x,delta))
+        float Qmin;                        /* current minimun of the criterion */
+        Qmin=1.0e300;
+        float* rowQmin      = new float[n+1]; //JB2020-06-16 Row minima found in parallel
+        int*   rowMinColumn = new int[n+1];   //JB2020-06-16 And which columns they were in
+        int    step = (n<240) ? 1 : (n / 120);//JB2020-06-17 Blocks of adjacent rows
+        
+        #ifdef NJ_OMP
+            #pragma omp parallel
+        #endif
         {
-	  for(y=1; y < x; y++)
-	    {
-	      if(!Emptied(y,delta))
-		{
-		  Qxy=Agglomerative_criterion(x,y,delta,r);
-		  if(Qxy < Qmin-0.000001)
-		    {
-		      Qmin=Qxy;
-		      *a=x;
-		      *b=y;
-		    }
-		}
-	    }
+            #ifdef NJ_OMP
+                #pragma omp for
+            #endif
+            for (int w=2; w<=n; w+=step) {              //JB2020-06-17
+                int w2 = (w+step <= n) ? (w+step) : n;  //JB2020-06-17
+                for (int x=w; x <= w2; ++x)             //JB2020-06-17
+                {
+                    float rowMin = Qmin;
+                    int   bestY  = 0;
+                    if(!Emptied(x,delta))
+                    {
+                        for(int y=1; y < x; ++y)
+                        {
+                            if(!Emptied(y,delta))
+                            {
+                                float Qxy=Agglomerative_criterion(x,y,delta,r);
+                                if(Qxy < rowMin-0.000001)
+                                {
+                                    rowMin=Qxy;
+                                    bestY = y;
+                                }
+                            }
+                        }
+                    }
+                    rowQmin[x] = rowMin;
+                    rowMinColumn[x] = bestY;
+                }
+            }
         }
+        //JB2020-06-16 Begin
+        for (int x=2; x<=n; ++x) //JB2020-06-18 Can start at 2
+        {
+            if (0<rowMinColumn[x]) {
+                if (rowQmin[x] < Qmin - 0.000001) {
+                    Qmin = rowQmin[x];
+                    *a=x;
+                    *b=rowMinColumn[x];
+                }
+            }
+        }
+        delete [] rowMinColumn;
+        delete [] rowQmin;
+        //JB2020-06-16 Finish
     }
-}
 
 
 /*;;;;;;;;;;;;;;;;;;;;;;Finish_branch_length;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;*\
@@ -525,22 +565,16 @@ void Finish(float **delta, int n, POINTERS *trees, FILE *output)
   fprintf(output,"(");
   Print_output(last[0],trees,output);
   fprintf(output,":");
-/*   gcvt(length,PREC, str); */
-/*   fprintf(output,"%s,",str); */
   fprintf(output,"%10.8f,",length);
 
   length=Finish_branch_length(last[1],last[0],last[2],delta);
   Print_output(last[1],trees,output);
   fprintf(output,":");
-/*   gcvt(length,PREC, str); */
-/*   fprintf(output,"%s,",str); */
   fprintf(output,"%10.8f,",length);
 
   length=Finish_branch_length(last[2],last[1],last[0],delta);
   Print_output(last[2],trees,output);
   fprintf(output,":");
-/*   gcvt(length,PREC,str); */
-/*   fprintf(output,"%s",str); */
   fprintf(output,"%10.8f",length);
   fprintf(output,");");
   fprintf(output,"\n");
@@ -644,152 +678,162 @@ float Lamda(int a, int b, float vab, float **delta, int n, int r)
 \*;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;*/
 
 public :
-int create(const char *inputFile, const char *outputFile) {
-
-  FILE *input;                            /* pointer to input file       */
-  FILE *output;                           /* pointer to output file      */
-  POINTERS *trees;                        /* list of subtrees            */
-  char *Name_fich1;                       /* name of the input file      */
-  char *Name_fich2;                       /* name of the output file     */
-  char *chain1;                           /* stringized branch-length    */
-  char *chain2;                           /* idem                        */
-  int *a, *b;                             /* pair to be agglomerated     */
-  float **delta;                          /* delta matrix                */
-  float la;                               /* first taxon�s branch-length */
-  float lb;                               /* second taxon�s branch-length*/
-  float vab;                              /* variance of Dab             */
-  float lamda;
-  int i;
-  int ok;
-  int r;                                  /* number of subtrees          */
-  int n;                                  /* number of taxa              */
-  int x, y;
-  //float t;
-
-
-  /*   Allocation of memories    */
-
-  Name_fich1=(char*)calloc(LEN,sizeof(char));
-  Name_fich2=(char*)calloc(LEN,sizeof(char));
-  a=(int*)calloc(1,sizeof(int));
-  b=(int*)calloc(1,sizeof(int));
-  chain1=(char *)calloc(LEN,sizeof(char));
-  chain2=(char *)calloc(LEN,sizeof(char));
-
-  input= fopen(inputFile,"r");
-  if (fscanf(input,"%d",&n) != 1)
-    printf("Error reading input file.");
-
-  output= fopen(outputFile,"w");
-  /*      Create the delta matrix     */
-
-  delta=(float **)calloc(n+1,sizeof(float*));
-  for(i=1; i<= n; i++)
-    {
-      delta[i]=(float *)calloc(n+1, sizeof(float));
-      if(delta[i] == NULL)
-	{
-	  printf("Out of memories!!");
-	  exit(0);
-	}
+    int create(const char *inputFile, const char *outputFile) {
+        
+        FILE *input;                            /* pointer to input file       */
+        FILE *output;                           /* pointer to output file      */
+        POINTERS *trees;                        /* list of subtrees            */
+        char *Name_fich1;                       /* name of the input file      */
+        char *Name_fich2;                       /* name of the output file     */
+        char *chain1;                           /* stringized branch-length    */
+        char *chain2;                           /* idem                        */
+        int *a, *b;                             /* pair to be agglomerated     */
+        float **delta;                          /* delta matrix                */
+        float la;                               /* first taxon�s branch-length */
+        float lb;                               /* second taxon�s branch-length*/
+        float vab;                              /* variance of Dab             */
+        float lamda;
+        int i;
+        int ok;
+        int r;                                  /* number of subtrees          */
+        int n;                                  /* number of taxa              */
+        //float t;
+        
+        
+        /*   Allocation of memories    */
+        
+        Name_fich1=(char*)calloc(LEN,sizeof(char));
+        Name_fich2=(char*)calloc(LEN,sizeof(char));
+        a=(int*)calloc(1,sizeof(int));
+        b=(int*)calloc(1,sizeof(int));
+        chain1=(char *)calloc(LEN,sizeof(char));
+        chain2=(char *)calloc(LEN,sizeof(char));
+        
+        input= fopen(inputFile,"r");
+        if (fscanf(input,"%d",&n) != 1)
+            printf("Error reading input file.");
+        
+        output= fopen(outputFile,"w");
+        /*      Create the delta matrix     */
+        
+        delta=(float **)calloc(n+1,sizeof(float*));
+        for(i=1; i<= n; i++)
+        {
+            delta[i]=(float *)calloc(n+1, sizeof(float));
+            if(delta[i] == NULL)
+            {
+                printf("Out of memories!!");
+                exit(0);
+            }
+        }
+        trees=(POINTERS *)calloc(n+1,sizeof(POINTERS));
+        if(trees == NULL)
+        {
+            printf("Out of memories!!");
+            exit(0);
+        }
+        /*   initialise and symmetrize the running delta matrix    */
+        
+        rewind(input);
+        while(fscanf(input,"%d",&n) != EOF )
+        {
+            r=n;
+            *a=0;
+            *b=0;
+            Initialize(delta, input, n, trees);
+            ok=Symmetrize(delta, n);
+            if(!ok)
+                printf("\n The matrix  is not symmetric.\n ");
+            auto joinStart = getRealTime(); //JB2020-06-18
+            while (r > 3)                             /* until r=3                 */
+            {
+                Compute_sums_Sx(delta, n);             /* compute the sum Sx       */
+                Best_pair(delta, r, a, b, n);          /* find the best pair by    */
+                vab=Variance(*a, *b, delta);           /* minimizing (1)           */
+                la=Branch_length(*a, *b, delta, r);    /* compute branch-lengths   */
+                lb=Branch_length(*b, *a, delta, r);    /* using formula (2)        */
+                lamda=Lamda(*a, *b, vab, delta, n, r); /* compute lambda* using (9)*/
+                #ifdef NJ_OMP
+                    #pragma omp parallel
+                #endif
+                {
+                    #ifdef NJ_OMP
+                        #pragma omp for
+                    #endif
+                    for(i=1; i <= n; i++)
+                    {
+                        if(!Emptied(i,delta) && (i != *a) && (i != *b))
+                        {
+                            int x, y; //JB Moved x,y declarations here
+                                      //   So they'll be per-thread
+                            if(*a > i)
+                            {
+                                x=*a;
+                                y=i;
+                            }
+                            else
+                            {
+                                x=i;
+                                y=*a;                           /* apply reduction formulae */
+                            }                                  /* 4 and 10 to delta        */
+                            delta[x][y]=Reduction4(*a, la, *b, lb, i, lamda, delta);
+                            delta[y][x]=Reduction10(*a, *b, i, lamda, vab, delta);
+                        }
+                    }
+                }
+                strcpy(chain1,"");                     /* agglomerate the subtrees */
+                strcat(chain1,"(");                    /* a and b together with the*/
+                Concatenate(chain1, *a, trees, 0);     /* branch-lengths according */
+                strcpy(chain1,"");                     /* to the NEWICK format   */
+                strcat(chain1,":");
+                sprintf(chain1+strlen(chain1),"%10.8f",la);
+                strcat(chain1,",");
+                Concatenate(chain1,*a, trees, 1);
+                trees[*a].tail->suiv=trees[*b].head;
+                trees[*a].tail=trees[*b].tail;
+                strcpy(chain1,"");
+                strcat(chain1,":");
+                
+                sprintf(chain1+strlen(chain1),"%10.8f",lb);
+                /* 	  gcvt(lb, PREC, chain2); */
+                /* 	  strcat(chain1, chain2); */
+                strcat(chain1,")");
+                Concatenate(chain1, *a, trees, 1);
+                delta[*b][0]=1.0;                     /* make the b line empty     */
+                trees[*b].head=NULL;
+                trees[*b].tail=NULL;
+                r=r-1;                                /* decrease r                */
+            }
+            Finish(delta, n, trees, output);       /* compute the branch-lengths*/
+            for(i=1; i<=n; i++)       	          /* of the last three subtrees*/
+            {				                /* and print the tree in the */
+                delta[i][0]=0.0;		          /* output-file               */
+                trees[i].head=NULL;
+                trees[i].tail=NULL;
+            }
+            double joinElapsed = getRealTime() - joinStart; //JB2020-06-18
+            printf("Elapsed wall-clock time for neighbour joining proper, %f\n", joinElapsed); //JB2020-06-18
+        }
+        
+        free(trees);
+        for(i=n; i>=1; i--)
+        {
+            free(delta[i]);
+        }
+        free(delta);
+        /* Minh free memory-leak */
+        free(chain2);
+        free(chain1);
+        free(b);
+        free(a);
+        free(Name_fich2);
+        free(Name_fich1);
+        /* Minh done */
+        fclose(input);
+        fclose(output);
+        
+        return 0;
     }
-  trees=(POINTERS *)calloc(n+1,sizeof(POINTERS));
-  if(trees == NULL)
-    {
-      printf("Out of memories!!");
-      exit(0);
-    }
-  /*   initialise and symmetrize the running delta matrix    */
-
-  rewind(input);
-  while(fscanf(input,"%d",&n) != EOF )
-    {
-      r=n;
-      *a=0;
-      *b=0;
-      Initialize(delta, input, n, trees);
-      ok=Symmetrize(delta, n);
-      if(!ok)
-	printf("\n The matrix  is not symmetric.\n ");
-      while (r > 3)                             /* until r=3                 */
-	{
-	  Compute_sums_Sx(delta, n);             /* compute the sum Sx       */
-	  Best_pair(delta, r, a, b, n);          /* find the best pair by    */
-	  vab=Variance(*a, *b, delta);           /* minimizing (1)           */
-	  la=Branch_length(*a, *b, delta, r);    /* compute branch-lengths   */
-	  lb=Branch_length(*b, *a, delta, r);    /* using formula (2)        */
-	  lamda=Lamda(*a, *b, vab, delta, n, r); /* compute lambda* using (9)*/
-	  for(i=1; i <= n; i++)
-	    {
-	      if(!Emptied(i,delta) && (i != *a) && (i != *b))
-		{
-		  if(*a > i)
-		    {
-		      x=*a;
-		      y=i;
-		    }
-		  else
-		    {
-		      x=i;
-		      y=*a;                           /* apply reduction formulae */
-		    }                                  /* 4 and 10 to delta        */
-		  delta[x][y]=Reduction4(*a, la, *b, lb, i, lamda, delta);
-		  delta[y][x]=Reduction10(*a, *b, i, lamda, vab, delta);
-		}
-	    }
-	  strcpy(chain1,"");                     /* agglomerate the subtrees */
-	  strcat(chain1,"(");                    /* a and b together with the*/
-	  Concatenate(chain1, *a, trees, 0);     /* branch-lengths according */
-	  strcpy(chain1,"");                     /* to the NEWSWICK format   */
-	  strcat(chain1,":");
-
-	  sprintf(chain1+strlen(chain1),"%10.8f",la);
-/* 	  gcvt(la,PREC, chain2); */
-/* 	  strcat(chain1, chain2); */
-
-	  strcat(chain1,",");
-	  Concatenate(chain1,*a, trees, 1);
-	  trees[*a].tail->suiv=trees[*b].head;
-	  trees[*a].tail=trees[*b].tail;
-	  strcpy(chain1,"");
-	  strcat(chain1,":");
-
-	  sprintf(chain1+strlen(chain1),"%10.8f",lb);
-/* 	  gcvt(lb, PREC, chain2); */
-/* 	  strcat(chain1, chain2); */
-	  strcat(chain1,")");
-	  Concatenate(chain1, *a, trees, 1);
-	  delta[*b][0]=1.0;                     /* make the b line empty     */
-	  trees[*b].head=NULL;
-	  trees[*b].tail=NULL;
-	  r=r-1;                                /* decrease r                */
-	}
-      Finish(delta, n, trees, output);       /* compute the branch-lengths*/
-      for(i=1; i<=n; i++)       	          /* of the last three subtrees*/
-	{				                /* and print the tree in the */
-	  delta[i][0]=0.0;		          /* output-file               */
-	  trees[i].head=NULL;
-	  trees[i].tail=NULL;
-	}
-    }
-  free(trees);
-  for(i=n; i>=1; i--)
-    {
-      free(delta[i]);
-    }
-  free(delta);
-  /* Minh free memory-leak */
-  free(chain2);
-  free(chain1);
-  free(b);
-  free(a);
-  free(Name_fich2);
-  free(Name_fich1);
-  /* Minh done */
-  fclose(input);
-  fclose(output);
-
-  return 0;
-}
 };
+
 #endif
