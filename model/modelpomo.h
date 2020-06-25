@@ -301,6 +301,12 @@ class ModelPoMo : virtual public ModelMarkov
    */
   virtual ModelSubst *getMutationModel() { return mutation_model; }
 
+    /** compute the tip likelihood vector of a state for Felsenstein's pruning algorithm
+     @param state character state
+     @param[out] state_lk state likehood vector of size num_states
+     */
+    virtual void computeTipLikelihood(PML::StateType state, double *state_lk);
+
  protected:
 
     ModelMarkov *mutation_model;

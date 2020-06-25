@@ -179,6 +179,37 @@ void ModelSubst::computeTransDerv(double time, double *trans_matrix,
 
 }
 
+void ModelSubst::multiplyWithInvEigenvector(double *state_lk) {
+    int nmixtures = getNMixtures();
+    double *inv_eigenvectors = getInverseEigenvectors();
+    double saved_state_lk[num_states];
+    memcpy(saved_state_lk, state_lk, sizeof(double)*num_states);
+    memset(state_lk, 0, sizeof(double)*num_states*nmixtures);
+    for (int m = 0; m < nmixtures; m++) {
+        double *inv_evec = &inv_eigenvectors[m*num_states*num_states];
+        double *this_state_lk = &state_lk[m*num_states];
+        for (int i = 0; i < num_states; i++)
+            for (int j = 0; j < num_states; j++, inv_evec++)
+              this_state_lk[i] += (*inv_evec) * saved_state_lk[j];
+    }
+}
+
+void ModelSubst::computeTipLikelihood(PML::StateType state, double *state_lk) {
+    if (state < num_states) {
+        // single state
+        memset(state_lk, 0, num_states*sizeof(double));
+        state_lk[state] = 1.0;
+    } else {
+        // unknown state
+        for (int i = 0; i < num_states; i++)
+            state_lk[i] = 1.0;
+    }
+    if (isReversible() && !Params::getInstance().kernel_nonrev) {
+        // transform to inner product of tip likelihood and inverse-eigenvector
+        multiplyWithInvEigenvector(state_lk);
+    }
+}
+
 double *ModelSubst::newTransMatrix() {
 	return new double[num_states * num_states];
 }

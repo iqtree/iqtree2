@@ -16,6 +16,7 @@
 #include "utils/tools.h"
 #include "utils/optimization.h"
 #include "utils/checkpoint.h"
+#include "phylo-yaml/statespace.h"
 
 using namespace std;
 
@@ -249,7 +250,17 @@ public:
 	*/
 	virtual StateFreqType getFreqType() { return FREQ_EQUAL; }
 
+    /** for reversible models, multiply likelihood with inverse eigenvectors for fast pruning algorithm
+            @param[in/out] state_lk state likelihood multiplied with inverse eigenvectors
+     */
+    void multiplyWithInvEigenvector(double *state_lk);
 
+    /** compute the tip likelihood vector of a state for Felsenstein's pruning algorithm
+     @param state character state
+     @param[out] state_lk state likehood vector of size num_states
+     */
+    virtual void computeTipLikelihood(PML::StateType state, double *state_lk);
+    
 	/**
 		allocate memory for a transition matrix. One should override this function when defining new model
 		such as Gamma model. The default is to allocate a double vector of size num_states * num_states. This

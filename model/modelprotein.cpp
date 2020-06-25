@@ -951,3 +951,31 @@ string ModelProtein::getNameParams() {
     }
     return retname.str();
 }
+
+void ModelProtein::computeTipLikelihood(PML::StateType state, double *state_lk) {
+    int ambi_aa[] = {
+        2, 3, //4+8, // B = N or D
+        5, 6, //32+64, // Z = Q or E
+        9, 10 //512+1024 // U = I or L
+    };
+    if (state < num_states || state >= num_states + sizeof(ambi_aa)/sizeof(int)/2) {
+        ModelSubst::computeTipLikelihood(state, state_lk);
+        return;
+    }
+
+    // special treatment for ambiguous (polymorphic) state
+    memset(state_lk, 0, num_states*sizeof(double));
+    int cstate = state - num_states;
+    state_lk[ambi_aa[cstate*2]] = 1.0;
+    state_lk[ambi_aa[cstate*2+1]] = 1.0;
+//    for (int i = 0; i < num_states; i++) {
+//        if (ambi_aa[cstate] & (1 << i))
+//            state_lk[i] = 1.0;
+//    }
+
+    if (isReversible() && !Params::getInstance().kernel_nonrev) {
+        // transform to inner product of tip likelihood and inverse-eigenvector
+        multiplyWithInvEigenvector(state_lk);
+    }
+}
+

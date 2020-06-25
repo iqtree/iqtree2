@@ -237,109 +237,6 @@ double PhyloTree::dotProductDoubleCall(double *x, double *y, int size) {
     return (this->*dotProductDouble)(x, y, size);
 }
 
-void PhyloTree::computeTipPartialLikelihoodPoMo(int state, double *lh, bool hyper) {
-  int nstates = aln->num_states;
-  int N = aln->virtual_pop_size;
-
-  memset(lh, 0, sizeof(double)*nstates);
-
-  // decode the id and value
-  int id1 = aln->pomo_sampled_states[state] & 3;
-  int id2 = (aln->pomo_sampled_states[state] >> 16) & 3;
-  int j = (aln->pomo_sampled_states[state] >> 2) & 16383;
-  int M = j + (aln->pomo_sampled_states[state] >> 18);
-
-  // Number of alleles is hard coded here, change if generalization is needed.
-  int nnuc = 4;
-
-  // TODO DS: Implement down sampling or a better approach.
-  if (hyper && M > N)
-    outError("Down sampling not yet supported.");
-
-  // Check if observed state is a fixed one.  If so, many
-  // PoMo states can lead to this data.  E.g., even (2A,8T)
-  // can lead to a sampled data of 7A.
-  if (j == M) {
-    lh[id1] = 1.0;
-    // Second: Polymorphic states.
-    for (int s_id1 = 0; s_id1 < nnuc-1; s_id1++) {
-      for (int s_id2 = s_id1+1; s_id2 < nnuc; s_id2++) {
-        if (s_id1 == id1) {
-          // States are in the order {FIXED,
-          // 1A(N-1)C, ..., (N-1)A1C, ...}.
-          int k;
-          if (s_id1 == 0) k = s_id2 - 1;
-          else k = s_id1 + s_id2;
-          // Start one earlier because increment
-          // happens after execution of for loop
-          // body.
-          int real_state = nnuc - 1 + k*(N-1) + 1;
-          for (int i = 1; i < N; i++, real_state++) {
-            ASSERT(real_state < nstates);
-            if (!hyper)
-              lh[real_state] = std::pow((double)i/(double)N,j);
-            else {
-              lh[real_state] = 1.0;
-              for (int l = 0; l<j; l++)
-                lh[real_state] *= (double) (i-l) / (double) (N-l);
-            }
-          }
-        }
-        // Same but fixed allele is the second one
-        // in polymorphic states.
-        else if (s_id2 == id1) {
-          int k;
-          if (s_id1 == 0) k = s_id2 - 1;
-          else k = s_id1 + s_id2;
-          int real_state = nnuc - 1 + k*(N-1) + 1;
-          for (int i = 1; i < N; i++, real_state++) {
-            ASSERT(real_state < nstates);
-            if (!hyper)
-              lh[real_state] = std::pow((double)(N-i)/(double)N,j);
-            else {
-              lh[real_state] = 1.0;
-              for (int l = 0; l<j; l++)
-                lh[real_state] *= (double) (N-i-l) / (double) (N-l);
-            }
-          }
-        }
-      }
-    }
-  }
-  // Observed state is polymorphic.  We only need to set the
-  // partial likelihoods for states that are also
-  // polymorphic for the same alleles.  E.g., states of type
-  // (ix,(N-i)y) can lead to the observed state (jx,(M-j)y).
-  else {
-    int k;
-    if (id1 == 0) k = id2 - 1;
-    else k = id1 + id2;
-    int real_state = nnuc + k*(N-1);
-    for (int i = 1; i < N; i++, real_state++) {
-      ASSERT(real_state < nstates);
-      if (!hyper)
-        lh[real_state] = binomial_dist(j, M, (double) i / (double) N);
-      if (hyper)
-        lh[real_state] = hypergeometric_dist(j, M, i, N);
-    }
-  }
-
-  // cout << "Sample M,j,id1,id2: " << M << ", " << j << ", " << id1 << ", " << id2 << endl;
-  // cout << "Real partial likelihood vector: ";
-  // for (i=0; i<4; i++)
-  //   cout << real_partial_lh[i] << " ";
-  // cout << endl;
-  // for (i=4; i<nstates; i++) {
-  //   cout << real_partial_lh[i] << " ";
-  //   if ((i-3)%(N-1) == 0)
-  //     cout << endl;
-  // }
-  // double sum = 0.0;
-  // for (i=0; i<nstates; i++)
-  //   sum += real_partial_lh[i];
-  // cout << sum << endl;
-}
-
 
 void PhyloTree::computeTipPartialLikelihood() {
 	if ((tip_partial_lh_computed & 1) != 0)
@@ -356,6 +253,7 @@ void PhyloTree::computeTipPartialLikelihood() {
 	computePtnInvar();
 
     if (getModel()->isSiteSpecificModel()) {
+        // TODO: THIS NEEDS TO BE CHANGED TO USE ModelSubst::computeTipLikelihood()
 //        ModelSet *models = (ModelSet*)model;
         size_t nptn = aln->getNPattern(), max_nptn = ((nptn+vector_size-1)/vector_size)*vector_size, tip_block_size = max_nptn * aln->num_states;
         int nstates = aln->num_states;
@@ -456,6 +354,33 @@ void PhyloTree::computeTipPartialLikelihood() {
         return;
     }
     
+    // 2020-06-23: refactor to use computeTipLikelihood
+    int nmixtures = 1;
+    if (getModel()->isReversible() && !params->kernel_nonrev)
+        nmixtures = getModel()->getNMixtures();
+    int nstates = getModel()->num_states;
+    int state;
+    if (aln->seq_type == SEQ_POMO) {
+        if (aln->pomo_sampling_method != SAMPLING_WEIGHTED_BINOM &&
+            aln->pomo_sampling_method != SAMPLING_WEIGHTED_HYPER)
+            outError("Sampling method not supported by PoMo.");
+        for (state = 0; state < nstates + aln->pomo_sampled_states.size(); state++) {
+            double *state_partial_lh = &tip_partial_lh[state*nstates*nmixtures];
+            getModel()->computeTipLikelihood(state, state_partial_lh);
+        }
+        // has to divide the loop because STATE_UNKNOWN in PoMo is not last state + 1
+        // OPS, STATE_UNKNOWN is 0xffffffff, wasting a lot of RAM and causes integer overflow
+        state = aln->STATE_UNKNOWN;
+        double *state_partial_lh = &tip_partial_lh[state*nstates*nmixtures];
+        getModel()->computeTipLikelihood(state, state_partial_lh);
+    } else {
+        for (state = 0; state <= aln->STATE_UNKNOWN; state++) {
+            double *state_partial_lh = &tip_partial_lh[state*nstates*nmixtures];
+            getModel()->computeTipLikelihood(state, state_partial_lh);
+        }
+    }
+    
+    /*
 	int i, state, nstates = aln->num_states;
 	ASSERT(tip_partial_lh);
 	// ambiguous characters
@@ -613,6 +538,7 @@ void PhyloTree::computeTipPartialLikelihood() {
 	default:
 		break;
 	}
+     */
 }
 
 void PhyloTree::computePtnFreq() {
