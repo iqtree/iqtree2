@@ -44,6 +44,8 @@ AlignmentPairwise::AlignmentPairwise(PhyloTree *atree, int seq1, int seq2) : Ali
         memset(pair_freq, 0, sizeof(double)*total_size);
         int i = 0;
         for (Alignment::iterator it = tree->aln->begin(); it != tree->aln->end(); it++, i++) {
+            if ((*it).isConst())
+                continue;
             int state1 = tree->aln->convertPomoState((*it)[seq_id1]);
             int state2 = tree->aln->convertPomoState((*it)[seq_id2]);
             addPattern(state1, state2, it->frequency, tree->getRate()->getPtnCat(i));

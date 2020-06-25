@@ -3873,6 +3873,8 @@ Alignment::~Alignment()
 double Alignment::computeObsDist(int seq1, int seq2) {
     int diff_pos = 0, total_pos = 0;
     for (iterator it = begin(); it != end(); it++) {
+        if ((*it).isConst())
+            continue;
         int state1 = convertPomoState((*it)[seq1]);
         int state2 = convertPomoState((*it)[seq2]);
         if  (state1 < num_states && state2 < num_states) {
