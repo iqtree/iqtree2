@@ -7,6 +7,7 @@
 
 #include "modelmarkov.h"
 #include "modeldna.h"
+#include "modeldnaerror.h"
 #include "modelprotein.h"
 #include "modelbin.h"
 #include "modelcodon.h"
@@ -983,7 +984,9 @@ const double MIN_MIXTURE_PROP = 0.001;
 //const double MIN_MIXTURE_RATE = 0.01;
 //const double MAX_MIXTURE_RATE = 100.0;
 
-ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqType freq_type, string freq_params,
+ModelSubst* createModel(string model_str, ModelsBlock *models_block,
+                        StateFreqType freq_type, string freq_params,
+                        string seqerr,
                         PhyloTree* tree)
 {
 	ModelSubst *model = NULL;
@@ -1069,7 +1072,10 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
 	} else if (tree->aln->seq_type == SEQ_BINARY) {
 		model = new ModelBIN(model_str.c_str(), model_params, freq_type, freq_params, tree);
 	} else if (tree->aln->seq_type == SEQ_DNA) {
-		model = new ModelDNA(model_str.c_str(), model_params, freq_type, freq_params, tree);
+        if (seqerr.empty())
+            model = new ModelDNA(model_str.c_str(), model_params, freq_type, freq_params, tree);
+        else
+            model = new ModelDNAError(model_str.c_str(), model_params, freq_type, freq_params, seqerr, tree);
 	} else if (tree->aln->seq_type == SEQ_PROTEIN) {
 		model = new ModelProtein(model_str.c_str(), model_params, freq_type, freq_params, tree, models_block);
 	} else if (tree->aln->seq_type == SEQ_CODON) {
@@ -1094,18 +1100,18 @@ ModelMixture::ModelMixture(PhyloTree *tree) : ModelMarkov(tree) {
 }
 
 ModelMixture::ModelMixture(string orig_model_name, string model_name, string model_list, ModelsBlock *models_block,
-		StateFreqType freq, string freq_params, PhyloTree *tree, bool optimize_weights)
+		StateFreqType freq, string freq_params, string seqerr, PhyloTree *tree, bool optimize_weights)
 	: ModelMarkov(tree)
 {
 	prop = NULL;
 	fix_prop = true;
 	optimizing_submodels = false;
     optimize_steps = 0;
-	initMixture(orig_model_name, model_name, model_list, models_block, freq, freq_params, tree, optimize_weights);
+	initMixture(orig_model_name, model_name, model_list, models_block, freq, freq_params, seqerr, tree, optimize_weights);
 }
 
 void ModelMixture::initMixture(string orig_model_name, string model_name, string model_list, ModelsBlock *models_block,
-		StateFreqType freq, string freq_params, PhyloTree *tree, bool optimize_weights)
+		StateFreqType freq, string freq_params, string seqerr, PhyloTree *tree, bool optimize_weights)
 {
     //	const int MAX_MODELS = 64;
 	size_t cur_pos;
@@ -1217,11 +1223,11 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 		if (freq == FREQ_MIXTURE) {
 			for(int f = 0; f != freq_vec.size(); f++) {
                 if (freq_vec[f] == nxs_freq_empirical)
-					model = (ModelMarkov*)createModel(this_name, models_block, FREQ_EMPIRICAL, "", tree);
+					model = (ModelMarkov*)createModel(this_name, models_block, FREQ_EMPIRICAL, "", seqerr, tree);
                 else if (freq_vec[f] == nxs_freq_optimize)
-					model = (ModelMarkov*)createModel(this_name, models_block, FREQ_ESTIMATE, "", tree);
+					model = (ModelMarkov*)createModel(this_name, models_block, FREQ_ESTIMATE, "", seqerr, tree);
 				else
-					model = (ModelMarkov*)createModel(this_name, models_block, FREQ_USER_DEFINED, freq_vec[f]->description, tree);
+					model = (ModelMarkov*)createModel(this_name, models_block, FREQ_USER_DEFINED, freq_vec[f]->description, seqerr, tree);
 				model->total_num_subst = rate * freq_rates[f];
 				push_back(model);
 				weights.push_back(weight * freq_weights[f]);
@@ -1243,7 +1249,7 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 				full_name += model->name;
 			}
 		} else {
-			model = (ModelMarkov*)createModel(this_name, models_block, freq, freq_params, tree);
+			model = (ModelMarkov*)createModel(this_name, models_block, freq, freq_params, seqerr, tree);
 			model->total_num_subst = rate;
 			push_back(model);
 			weights.push_back(weight);

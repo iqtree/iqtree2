@@ -24,11 +24,14 @@ extern const char* builtin_mixmodels_definition;
  * @param model_str model nme
  * @param freq_type state frequency type
  * @param freq_params frequency parameters
+ * @param seqerr sequencing error model
  * @param tree associated phylo tree
  * @param count_rates TRUE to assign rates counted from alignment, FALSE to not initialize rates
  * @return substitution model created
  */
-ModelSubst *createModel(string model_str, ModelsBlock *models_block, StateFreqType freq_type, string freq_params,
+ModelSubst *createModel(string model_str, ModelsBlock *models_block,
+                        StateFreqType freq_type, string freq_params,
+                        string seqerr,
                         PhyloTree *tree);
 
 
@@ -45,10 +48,10 @@ public:
 		@param tree associated phylogenetic tree
 	*/
     ModelMixture(string orig_model_name, string model_name, string model_list, ModelsBlock *models_block,
-    		StateFreqType freq, string freq_params, PhyloTree *tree, bool optimize_weights);
+    		StateFreqType freq, string freq_params, string seqerr, PhyloTree *tree, bool optimize_weights);
 
     void initMixture(string orig_model_name, string model_name, string model_list, ModelsBlock *models_block,
-    		StateFreqType freq, string freq_params, PhyloTree *tree, bool optimize_weights);
+    		StateFreqType freq, string freq_params, string seqerr, PhyloTree *tree, bool optimize_weights);
 
     void initMem();
 

@@ -953,7 +953,7 @@ void ModelMarkov::setBounds(double *lower_bound, double *upper_bound, bool *boun
     }
 
 	if (is_reversible && freq_type == FREQ_ESTIMATE) {
-		for (i = ndim-num_states+2; i <= ndim; i++) {
+		for (i = num_params+1; i <= num_params+num_states-1; i++) {
 //            lower_bound[i] = MIN_FREQUENCY/state_freq[highest_freq_state];
 //			upper_bound[i] = state_freq[highest_freq_state]/MIN_FREQUENCY;
             lower_bound[i]  = Params::getInstance().min_state_freq;
