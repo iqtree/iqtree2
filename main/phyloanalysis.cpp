@@ -1663,7 +1663,7 @@ void computeInitialDist(Params &params, IQTree &iqtree) {
     if (params.dist_file) {
         cout << "Reading distance matrix file " << params.dist_file << " ..." << endl;
     } else if (params.compute_jc_dist) {
-        cout << "Computing Juke-Cantor distances..." << endl;
+        cout << "Computing Jukes-Cantor distances..." << endl;
     } else if (params.compute_obs_dist) {
         cout << "Computing observed distances..." << endl;
     }
@@ -1671,9 +1671,10 @@ void computeInitialDist(Params &params, IQTree &iqtree) {
     if (params.compute_jc_dist || params.compute_obs_dist || params.partition_file) {
         double begin_time = getRealTime();
         longest_dist = iqtree.computeDist(params, iqtree.aln, iqtree.dist_matrix, iqtree.var_matrix, iqtree.dist_file);
-        //checkZeroDist(iqtree.aln, iqtree.dist_matrix);
         cout << "Distance calculation time: " << getRealTime() - begin_time << " seconds" << endl;
-
+        //if (!params.suppress_zero_distance_warnings) {
+        //  checkZeroDist(iqtree.aln, iqtree.dist_matrix);
+        //}
         double max_genetic_dist = MAX_GENETIC_DIST;
         if (iqtree.aln->seq_type == SEQ_POMO) {
             int N = iqtree.aln->virtual_pop_size;

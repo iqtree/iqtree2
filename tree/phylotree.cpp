@@ -20,7 +20,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "phylotree.h"
-#include "utils/bionj.h"
+#include "utils/starttree.h"
 //#include "rateheterogeneity.h"
 #include "alignment/alignmentpairwise.h"
 #include <algorithm>
@@ -3018,7 +3018,6 @@ double PhyloTree::addTaxonML(Node *added_node, Node* &target_node, Node* &target
 }
 
 void PhyloTree::growTreeML(Alignment *alignment) {
-
     cout << "Stepwise addition using ML..." << endl;
     aln = alignment;
     int size = aln->getNSeq();
@@ -3204,8 +3203,6 @@ double PhyloTree::computeDist(Params &params, Alignment *alignment, double* &dis
         dist_mat = new double[alignment->getNSeq() * alignment->getNSeq()];
         memset(dist_mat, 0, sizeof(double) * alignment->getNSeq() * alignment->getNSeq());
         var_mat = new double[alignment->getNSeq() * alignment->getNSeq()];
-        // BUG!
-        //memset(var_mat, 1, sizeof(double) * alignment->getNSeq() * alignment->getNSeq());
         int nseq = alignment->getNSeq();
         for (int i = 0; i < nseq; i++)
             for (int j = 0; j < nseq; j++)
@@ -3264,20 +3261,18 @@ double PhyloTree::computeObsDist(Params &params, Alignment *alignment, double* &
 void PhyloTree::computeBioNJ(Params &params, Alignment *alignment, string &dist_file) {
     string bionj_file = params.out_prefix;
     bionj_file += ".bionj";
-    cout << "Computing BIONJ tree..." << endl;
-    BioNj bionj;
-    bionj.create(dist_file.c_str(), bionj_file.c_str());
-//    bool my_rooted = false;
+    auto treeBuilder
+        = StartTree::Factory::getTreeBuilderByName
+            ( params.start_tree_subtype_name);
+    cout << "Computing " << treeBuilder->getName() << " tree"
+        << "(in file " << bionj_file << ")... from distance matrix"
+        << "(in " << dist_file << ")" << endl;
+    treeBuilder->constructTree(dist_file, bionj_file);
     bool non_empty_tree = (root != NULL);
-//    if (root)
-//        freeNode();
     readTreeFile(bionj_file.c_str());
-    
-
     if (non_empty_tree) {
         initializeAllPartialLh();
     }
-//    setAlignment(alignment);
 }
 
 int PhyloTree::setNegativeBranch(bool force, double newlen, Node *node, Node *dad) {
@@ -5121,7 +5116,9 @@ void PhyloTree::removeIdenticalSeqs(Params &params) {
     if (removed_seqs.size() > 0) {
         cout << "NOTE: " << removed_seqs.size() << " identical sequences (see below) will be ignored for subsequent analysis" << endl;
         for (int i = 0; i < removed_seqs.size(); i++) {
-            cout << "NOTE: " << removed_seqs[i] << " (identical to " << twin_seqs[i] << ") is ignored but added at the end" << endl;
+            if (!params.suppress_duplicate_sequence_warnings) {
+                cout << "NOTE: " << removed_seqs[i] << " (identical to " << twin_seqs[i] << ") is ignored but added at the end" << endl;
+            }
         }
         delete aln;
         aln = new_aln;

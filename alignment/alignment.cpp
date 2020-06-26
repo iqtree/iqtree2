@@ -185,9 +185,7 @@ void Alignment::checkSeqName() {
     if (seq_type == SEQ_POMO)
         cout << "NOTE: The composition test for PoMo only tests the proportion of fixed states!" << endl;
 
-    bool listSequences = true;
-        //Todo: Add parameter to disable...
-        //listing of sequences (and set from that)
+    bool listSequences = !Params::getInstance().suppress_list_of_sequences;
     
     int max_len = getMaxSeqNameLength()+1;
     if (listSequences) {
@@ -384,7 +382,6 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
         cout << "Checking for duplicate sequences took " << checkTime
             << " wall-clock seconds" << endl;
     }
-
 	if (removed_seqs.size() > 0) {
 		if (removed_seqs.size() >= getNSeq()-3)
 			outWarning("Your alignment contains too many identical sequences!");
@@ -398,7 +395,6 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
 		return aln;
 	} else return this;
 }
-
 
 bool Alignment::isGapOnlySeq(int seq_id) {
     ASSERT(seq_id < getNSeq());
@@ -3879,7 +3875,6 @@ double Alignment::computeObsDist(int seq1, int seq2) {
         int state1 = convertPomoState((*it)[seq1]);
         int state2 = convertPomoState((*it)[seq2]);
         if  (state1 < num_states && state2 < num_states) {
-            //if ((*it)[seq1] != STATE_UNKNOWN && (*it)[seq2] != STATE_UNKNOWN) {
             total_pos += (*it).frequency;
             if (state1 != state2 )
                 diff_pos += (*it).frequency;
@@ -3897,16 +3892,9 @@ double Alignment::computeJCDist(int seq1, int seq2) {
     double obs_dist = computeObsDist(seq1, seq2);
     double z = (double)num_states / (num_states-1);
     double x = 1.0 - (z * obs_dist);
-
     if (x <= 0) {
-        // string str = "Too long distance between two sequences ";
-        // str += getSeqName(seq1);
-        // str += " and ";
-        // str += getSeqName(seq2);
-        // outWarning(str);
         return MAX_GENETIC_DIST;
     }
-
     return -log(x) / z;
 }
 
