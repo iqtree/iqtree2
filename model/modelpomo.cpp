@@ -1240,7 +1240,7 @@ void ModelPoMo::computeTipLikelihood(PML::StateType state, double *lh) {
     }
   }
 
-    if (isReversible() && !Params::getInstance().kernel_nonrev) {
+    if (useRevKernel()) {
         // transform to inner product of tip likelihood and inverse-eigenvector
         multiplyWithInvEigenvector(lh);
     }
