@@ -62,7 +62,12 @@ public:
 		@return TRUE if model is time-reversible, FALSE otherwise
 	*/
 	virtual bool isReversible() { return true; };
-	
+
+    /** return true if using reversible likelihood kernel, false for using non-reversible kernel */
+    bool useRevKernel() {
+        return isReversible() && !Params::getInstance().kernel_nonrev;
+    };
+
     /**
         fix parameters of the model
         @param fix true to fix, false to not fix

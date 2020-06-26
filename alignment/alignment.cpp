@@ -660,7 +660,7 @@ void Alignment::computeUnknownState() {
     case SEQ_PROTEIN: STATE_UNKNOWN = 23; break;
     case SEQ_POMO: {
         if (pomo_sampling_method == SAMPLING_SAMPLED) STATE_UNKNOWN = num_states;
-        else STATE_UNKNOWN = 0xffffffff;
+        else STATE_UNKNOWN = 0xffffffff; // only dummy, will be initialized later
         break;
     }
     default: STATE_UNKNOWN = num_states; break;

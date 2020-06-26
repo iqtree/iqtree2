@@ -890,7 +890,7 @@ void PhyloTree::computePartialInfo(TraversalInfo &info, VectorClass* buffer) {
 
     //----------- Non-reversible model --------------
 
-    if (!model->isReversible() || params->kernel_nonrev) {
+    if (!model->useRevKernel()) {
         size_t nstatesqr = nstates*nstates;
         // non-reversible model
         FOR_NEIGHBOR_IT(node, dad, it) {
@@ -1122,7 +1122,7 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compu
     double *buffer = buffer_partial_lh + block*VectorClass::size()*num_threads + get_safe_upper_limit(block)*(aln->STATE_UNKNOWN+2);
 
     // more buffer for non-reversible models
-    if (!model->isReversible() || params->kernel_nonrev) {
+    if (!model->useRevKernel()) {
         buffer += get_safe_upper_limit(3*block*nstates);
         buffer += get_safe_upper_limit(block)*(aln->STATE_UNKNOWN+1)*2;
         buffer += block*2*VectorClass::size()*num_threads;

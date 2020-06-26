@@ -356,7 +356,7 @@ void PhyloTree::computeTipPartialLikelihood() {
     
     // 2020-06-23: refactor to use computeTipLikelihood
     int nmixtures = 1;
-    if (getModel()->isReversible() && !params->kernel_nonrev)
+    if (getModel()->useRevKernel())
         nmixtures = getModel()->getNMixtures();
     int nstates = getModel()->num_states;
     int state;
@@ -364,20 +364,13 @@ void PhyloTree::computeTipPartialLikelihood() {
         if (aln->pomo_sampling_method != SAMPLING_WEIGHTED_BINOM &&
             aln->pomo_sampling_method != SAMPLING_WEIGHTED_HYPER)
             outError("Sampling method not supported by PoMo.");
-        for (state = 0; state < nstates + aln->pomo_sampled_states.size(); state++) {
-            double *state_partial_lh = &tip_partial_lh[state*nstates*nmixtures];
-            getModel()->computeTipLikelihood(state, state_partial_lh);
-        }
-        // has to divide the loop because STATE_UNKNOWN in PoMo is not last state + 1
-        // OPS, STATE_UNKNOWN is 0xffffffff, wasting a lot of RAM and causes integer overflow
-        state = aln->STATE_UNKNOWN;
+        ASSERT(aln->STATE_UNKNOWN == nstates + aln->pomo_sampled_states.size());
+    }
+
+    // assign tip_partial_lh for all admissible states
+    for (state = 0; state <= aln->STATE_UNKNOWN; state++) {
         double *state_partial_lh = &tip_partial_lh[state*nstates*nmixtures];
         getModel()->computeTipLikelihood(state, state_partial_lh);
-    } else {
-        for (state = 0; state <= aln->STATE_UNKNOWN; state++) {
-            double *state_partial_lh = &tip_partial_lh[state*nstates*nmixtures];
-            getModel()->computeTipLikelihood(state, state_partial_lh);
-        }
     }
     
     /*
