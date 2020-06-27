@@ -371,6 +371,10 @@ void PhyloTree::computeTipPartialLikelihood() {
     for (state = 0; state <= aln->STATE_UNKNOWN; state++) {
         double *state_partial_lh = &tip_partial_lh[state*nstates*nmixtures];
         getModel()->computeTipLikelihood(state, state_partial_lh);
+        if (getModel()->useRevKernel()) {
+            // transform to inner product of tip likelihood and inverse-eigenvector
+            getModel()->multiplyWithInvEigenvector(state_partial_lh);
+        }
     }
     
     /*

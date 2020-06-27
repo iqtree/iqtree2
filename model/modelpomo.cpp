@@ -1240,11 +1240,6 @@ void ModelPoMo::computeTipLikelihood(PML::StateType state, double *lh) {
     }
   }
 
-    if (useRevKernel()) {
-        // transform to inner product of tip likelihood and inverse-eigenvector
-        multiplyWithInvEigenvector(lh);
-    }
-
   // cout << "Sample M,j,id1,id2: " << M << ", " << j << ", " << id1 << ", " << id2 << endl;
   // cout << "Real partial likelihood vector: ";
   // for (i=0; i<4; i++)

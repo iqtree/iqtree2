@@ -443,11 +443,6 @@ void ModelDNA::computeTipLikelihood(PML::StateType state, double *state_lk) {
         if ((cstate) & (1 << i))
             state_lk[i] = 1.0;
     }
-
-    if (useRevKernel()) {
-        // transform to inner product of tip likelihood and inverse-eigenvector
-        multiplyWithInvEigenvector(state_lk);
-    }
 }
 
 /*

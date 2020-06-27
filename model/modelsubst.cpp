@@ -204,10 +204,6 @@ void ModelSubst::computeTipLikelihood(PML::StateType state, double *state_lk) {
         for (int i = 0; i < num_states; i++)
             state_lk[i] = 1.0;
     }
-    if (useRevKernel()) {
-        // transform to inner product of tip likelihood and inverse-eigenvector
-        multiplyWithInvEigenvector(state_lk);
-    }
 }
 
 double *ModelSubst::newTransMatrix() {
