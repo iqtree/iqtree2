@@ -968,14 +968,5 @@ void ModelProtein::computeTipLikelihood(PML::StateType state, double *state_lk) 
     int cstate = state - num_states;
     state_lk[ambi_aa[cstate*2]] = 1.0;
     state_lk[ambi_aa[cstate*2+1]] = 1.0;
-//    for (int i = 0; i < num_states; i++) {
-//        if (ambi_aa[cstate] & (1 << i))
-//            state_lk[i] = 1.0;
-//    }
-
-    if (useRevKernel()) {
-        // transform to inner product of tip likelihood and inverse-eigenvector
-        multiplyWithInvEigenvector(state_lk);
-    }
 }
 

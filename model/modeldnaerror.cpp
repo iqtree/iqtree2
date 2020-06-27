@@ -103,11 +103,6 @@ void ModelDNAError::computeTipLikelihood(PML::StateType state, double *state_lk)
         for (int i = 0; i < num_states; i++)
             state_lk[i] = 1.0;
     }
-    if (useRevKernel()) {
-        // transform to inner product of tip likelihood and inverse-eigenvector
-        multiplyWithInvEigenvector(state_lk);
-    }
-
 }
 
 void ModelDNAError::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
