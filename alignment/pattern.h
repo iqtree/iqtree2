@@ -60,15 +60,15 @@ public:
 	*/
     virtual ~Pattern();
 
-    inline bool isConst() {
+    inline bool isConst() const {
         return (flag & PAT_CONST) != 0;
     }
 
-    inline bool isInvariant() {
+    inline bool isInvariant() const {
         return (flag & PAT_INVARIANT) != 0;
     }
 
-    inline bool isInformative() {
+    inline bool isInformative() const {
         return (flag & PAT_INFORMATIVE) != 0;
     }
 
