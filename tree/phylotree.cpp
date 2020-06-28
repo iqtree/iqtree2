@@ -34,6 +34,8 @@
 #include "model/modelmixture.h"
 #include "phylonodemixlen.h"
 #include "phylotreemixlen.h"
+#include <boost/scoped_array.hpp> //for boost::scoped_array
+#include <vectorclass/vectorclass.h>
 
 const int LH_MIN_CONST = 1;
 
@@ -3074,6 +3076,11 @@ void PhyloTree::growTreeML(Alignment *alignment) {
  ****************************************************************************/
 
 double PhyloTree::computeDist(int seq1, int seq2, double initial_dist, double &d2l) {
+    //Todo: check ALL this functionality is in to computeDist_Experimental.
+    //1. The initial_dist == 0.0 check is in computeJCDistanceMatrix.
+    //2. The params->compute_obs_dist check is in PhyloTree::computeDist_Experimental
+    //3. The (model_factory && site_rate) check is there too.
+    
     // if no model or site rate is specified, return JC distance
     if (initial_dist == 0.0) {
         if (params->compute_obs_dist)
@@ -3085,10 +3092,8 @@ double PhyloTree::computeDist(int seq1, int seq2, double initial_dist, double &d
         return initial_dist; // MANUEL: here no d2l is return
 
     // now optimize the distance based on the model and site rate
-    AlignmentPairwise *aln_pair = new AlignmentPairwise(this, seq1, seq2);
-
-    double dist = aln_pair->optimizeDist(initial_dist, d2l);
-    delete aln_pair;
+    AlignmentPairwise aln_pair ( this, seq1, seq2 ); //JB do it on the stack! no new!
+    double dist = aln_pair.optimizeDist(initial_dist, d2l);
     return dist;
 }
 
@@ -3117,14 +3122,319 @@ double PhyloTree::correctDist(double *dist_mat) {
     return longest_dist;
 }
 
+#define HAMMING_VECTOR (1)
+#define VECTOR_MAD     (0)
+
+//
+//Note 1: L is a template parameter so that, when the state range
+//        is 255 or less, it can be char, or if 65535 or less, short.
+//Note 2: F is a template parameter so that, when the maximum
+//        frequency is 255 or less, it could be unsigned char,
+//        or if 65535 or less, short.
+//
+#if (!HAMMING_VECTOR)
+template <class L, class F> inline double hammingDistance
+ ( L unknown, const L* sequenceA, const L* sequenceB
+ , int seqLen, const F* frequencyVector ) {
+    int distance = 0;
+    for (int pos = 0; pos < seqLen; ++pos) {
+        if (sequenceA[pos] != sequenceB[pos]) {
+            if ( sequenceA[pos] != unknown &&
+                sequenceB[pos] != unknown ) {
+                distance += frequencyVector[pos];
+            }
+        }
+    }
+    return distance;
+}
+#endif
+
+#if (HAMMING_VECTOR)
+inline double hammingDistance
+ ( char unknown, const char* sequenceA, const char* sequenceB
+ , int seqLen, const int* frequencyVector ) {
+    int blockStop = 0;
+    int distance  = 0;
+    Vec32c blockA;
+    int blockSize = blockA.size(); //but see scratch. Needs to match
+    if (blockSize < seqLen) {
+        blockStop = seqLen - (seqLen & (blockSize-1));
+        auto aStop = sequenceA + blockStop;
+        Vec32c  blockB;
+#if (VECTOR_MAD)
+        Vec8i   sum0=0, sum1=0, sum2=0, sum3=0;
+#endif
+        const int* f = frequencyVector;
+        auto a = sequenceA;
+        auto b = sequenceB;
+        while (a<aStop) {
+            blockA.load(a);
+            blockB.load(b);
+#if (VECTOR_MAD)
+            auto    diff       = (blockA != blockB);
+            auto    knownA     = (blockA != unknown);
+            auto    knownB     = (blockB != unknown);
+            Vec32c  diff32c    = Vec32c( diff & knownA & knownB );
+            Vec16s  diff16s_a  = extend_low (diff32c);
+            Vec16s  diff16s_b  = extend_high(diff32c);
+            Vec8i   diff8_a    = extend_low (diff16s_a);
+            Vec8i   diff8_b    = extend_high(diff16s_a);
+            Vec8i   diff8_c    = extend_low (diff16s_b);
+            Vec8i   diff8_d    = extend_high(diff16s_b);
+
+            sum0 += select(diff8_a != 0, Vec8i().load(f),    0);
+            sum1 += select(diff8_b != 0, Vec8i().load(f+8),  0);
+            sum2 += select(diff8_c != 0, Vec8i().load(f+16), 0);
+            sum3 += select(diff8_d != 0, Vec8i().load(f+24), 0);
+#else
+            Vec32cb diff32 = blockA != blockB;
+            diff32 &= (blockA != unknown);
+            diff32 &= (blockB != unknown);
+            int i = horizontal_find_first(diff32);
+            if (0<=i) {
+                char scratch[32];
+                diff32.store(scratch);
+                for (; i<blockSize; ++i) {
+                    distance += scratch[i] ? f[i] : 0;
+                }
+            }
+#endif
+            f += blockSize;
+            a += blockSize;
+            b += blockSize;
+        }
+        #if (VECTOR_MAD)
+                distance = horizontal_add(sum0) + horizontal_add(sum1)
+                          + horizontal_add(sum2) + horizontal_add(sum3);
+        #endif
+    }
+    for (int pos=blockStop; pos < seqLen; ++pos ) {
+        if (sequenceA[pos] != sequenceB[pos]) {
+            distance += frequencyVector[pos];
+        }
+    }
+    return distance;
+}
+#endif
+
+template <class L, class F> double computeDistanceMatrix
+    ( LEAST_SQUARE_VAR vartype
+    , L unknown, const L* sequenceMatrix, int nseqs, int seqLen
+    , double denominator, const F* frequencyVector
+    , bool uncorrected, double num_states
+    , double *dist_mat, double *var_mat)
+{
+    //
+    //L is the character type
+    //sequenceMatrix is nseqs rows of seqLen characters
+    //dist_mat and var_mat are as in computeDist
+    //F is the frequency count type
+    //
+    
+    std::vector<double> rowMaxDistance;
+    rowMaxDistance.resize(nseqs, 0.0);
+    double triangleStartTime = getRealTime();
+    double z = num_states / (num_states - 1.0);
+    //Compute the upper-triangle of the distance matrix
+    //(and write the row maximum onto the firt cell in the row)
+    #ifdef _OPENMP
+    #pragma omp parallel for schedule(dynamic)
+    #endif
+    for (int seq1 = 0; seq1<nseqs; ++seq1 ) {
+        //Scanning is from bottom to top so that if "uneven execution"
+        //results in the last few rows being allocated to some worker thread
+        //just before the others finish... it won't be running
+        //"all by itsef" for as long.
+        int      rowOffset     = nseqs * seq1;
+        double*  distRow       = dist_mat       + rowOffset;
+        double*  varRow        = var_mat        + rowOffset;
+        const L* thisSequence  = sequenceMatrix + seq1 * seqLen;
+        const L* otherSequence = thisSequence   + seqLen;
+        double maxDistanceInRow = 0.0;
+        for (int seq2 = seq1 + 1; seq2 < nseqs; ++seq2) {
+            double d2l      = varRow[seq2];
+            double distance = distRow[seq2];
+            if ( 0.0 == distance ) {
+                distance =
+                    hammingDistance ( unknown, thisSequence, otherSequence
+                                    , seqLen, frequencyVector ) / denominator;
+                if (!uncorrected) {
+                    double x      = (1.0 - z * distance);
+                    distance      = (x<=0) ? MAX_GENETIC_DIST : ( -log(x) / z );
+                }
+                distRow[seq2] = distance;
+            }
+            if      (vartype == OLS)                  varRow[seq2] = 1.0;
+            else if (vartype == WLS_PAUPLIN)          varRow[seq2] = 0.0;
+            else if (vartype == WLS_FIRST_TAYLOR)     varRow[seq2] = distance;
+            else if (vartype == WLS_FITCH_MARGOLIASH) varRow[seq2] = distance * distance;
+            else if (vartype == WLS_SECOND_TAYLOR)    varRow[seq2] = -1.0 / d2l;
+            if ( maxDistanceInRow < distance )
+            {
+                maxDistanceInRow = distance;
+            }
+            otherSequence += seqLen;
+        }
+        rowMaxDistance[seq1] = maxDistanceInRow;
+    }
+    cout << "Time to determine upper right triangle was "
+        << (getRealTime() - triangleStartTime) << " sec" << endl;
+
+    //
+    //Determine the longest distance
+    //Todo: Decide if it is worth figuring this out by
+    //      compare-exchange first half, second half,
+    //      (and shrink by half) repeatedly.
+    //      Because each compare-exchange cycle can have
+    //      its own #pragma omp parallel for.
+    //Note: I don't think it is worth it.  Lots of tricky
+    //      code for an O(n) step in an O(L.N^2) problem.
+    //
+    double longest_dist = 0.0;
+    for ( int seq1 = 0; seq1 < nseqs; ++seq1  ) {
+        if ( longest_dist < rowMaxDistance[seq1] ) {
+            longest_dist = rowMaxDistance[seq1];
+        }
+    }
+
+    //
+    //Copy upper-triangle into lower-triangle and write
+    //zeroes to the diagonal.
+    //
+    triangleStartTime = getRealTime();
+    #ifdef _OPENMP
+    #pragma omp parallel for schedule(dynamic)
+    #endif
+    for ( int seq1 = nseqs-1; 0 <= seq1; --seq1 ) {
+        int     rowOffset = nseqs * seq1;
+        double* distRow   = dist_mat + rowOffset;
+        double* varRow    = var_mat  + rowOffset;
+        double* distCol   = dist_mat + seq1; //current entries in the columns
+        double* varCol    = var_mat  + seq1; //...that we are reading down.
+        for ( int seq2 = 0; seq2 < seq1; ++seq2, distCol+=nseqs, varCol+=nseqs ) {
+            distRow [ seq2 ] = *distCol;
+            varRow  [ seq2 ] = *varCol;
+        }
+        distRow [ seq1 ] = 0.0;
+        varRow  [ seq1 ] = 0.0;
+    }
+    cout << "Time to copy upper right triangle to bottom right was "
+        << (getRealTime() - triangleStartTime) << " sec" << endl;
+    return longest_dist;
+}
+
+double PhyloTree::computeDist_Experimental(double *dist_mat, double *var_mat) {
+    //Experimental: Are there any other checks that are needed here?
+    if (model_factory && site_rate) {
+        cout << "Default distance calculation because"
+            << " factory is " << model_factory
+            << ", rate is " << site_rate << endl;
+        return computeDist(dist_mat, var_mat);
+    }
+    bool uncorrected = params->compute_obs_dist;
+        //Use uncorrected (observed) distances
+
+    int  seqCount = aln->getNSeq();
+    double baseTime = getRealTime();
+    bool workToDo = false;
+    cout.precision(6);
+    cout << (getRealTime()-baseTime) << "s Checking if distances already calculated..." << endl;
+    //Check if there's any work to do.
+    //If there are no zeroes off the diagonal, the distance
+    //matrix (ick) has already been initialized and there's no
+    //point doing all the following.
+    {
+        std::vector<double> rowMaxDistance;
+        rowMaxDistance.resize(seqCount, 0.0);
+        #pragma omp parallel for
+        for (int seq1=0; seq1<seqCount; ++seq1) {
+            if (!workToDo) {
+                const double* distRow   = dist_mat + seq1 * seqCount;
+                double maxDistanceInRow = 0;
+                for (int seq2=0; seq2<seqCount; ++seq2) {
+                    double distance = distRow[seq2];
+                    if (0.0 == distance && ( seq1 != seq2 ) ) {
+                        workToDo = true;
+                        break;
+                    }
+                    if ( maxDistanceInRow < distance )
+                    {
+                        maxDistanceInRow = distance;
+                    }
+                }
+                rowMaxDistance[seq1] = maxDistanceInRow;
+            }
+        }
+        if (!workToDo) {
+            cout << (getRealTime()-baseTime) << "s No work to do" << endl;
+            double longest_dist = 0.0;
+            for ( int seq1 = 0; seq1 < seqCount; ++seq1  ) {
+                if ( longest_dist < rowMaxDistance[seq1] ) {
+                    longest_dist = rowMaxDistance[seq1];
+                }
+            }
+            return longest_dist;
+        }
+    }
+    AlignmentSummary s;
+    cout << (getRealTime()-baseTime) << "s Summarizing..." << endl;
+    aln->summarizeSites(s);
+    int seqLen      = s.siteNumbers.size();
+    int maxDistance = 0;
+    
+    cout << (getRealTime()-baseTime) << "s Summarizing found " <<  seqLen
+    << " sites with variation (and non-zero frequency), and a state range of " << ( s.maxState - s.minState) << endl;
+    for (int i=0; i<seqLen; ++i) {
+        maxDistance += s.siteFrequencies[i];
+    }
+    cout << (getRealTime()-baseTime) << "s Maximum possible uncorrected length "
+        << ((double)maxDistance / (double)s.totalFrequency)
+        << " Denominator " << s.totalFrequency << endl;
+    if ( 256 < s.maxState - s.minState ) {
+        cout << (getRealTime()-baseTime) << "s Falling back to stock distance calculation" << endl;
+        double longest = computeDist(dist_mat, var_mat);
+        cout << (getRealTime()-baseTime) << "s Done stock distance calculation" << endl;
+        return longest; //computeDist(dist_mat, var_mat);
+    }
+    typedef char STATE;
+        //char for memory-efficient (non-template) version (using Vec8b)
+        //this is faster than the int version (that uses Vec8i)
+    boost::scoped_array<STATE> sequenceStorage ( new STATE[ seqCount * seqLen ] );
+    STATE* sequenceMatrix = sequenceStorage.get();
+    const int* posToSite = s.siteNumbers.data();
+    Alignment& a = *aln;
+    cout << (getRealTime()-baseTime) <<"s Constructing sequence-major matrix of states"
+        << " at " << seqLen << " varying sites" << endl;
+    #ifdef _OPENMP
+        #pragma omp parallel for
+    #endif
+    for (int seq=0; seq<seqCount; ++seq) { //sequence
+        STATE *sequence = sequenceMatrix + seq * seqLen;
+        for (int seqPos = 0; seqPos < seqLen; ++seqPos) { //position in reduced sequence
+            sequence[seqPos] = static_cast<STATE> ( a[posToSite[seqPos]][seq] );
+            //the state at the (seqPos)th non-constant site, in the (seq)th sequence
+        }
+    }
+    cout << (getRealTime()-baseTime) << "s Determining distance matrix" << endl;
+    const int* frequencies = s.siteFrequencies.data();
+    double longest = computeDistanceMatrix
+        ( params->ls_var_type, static_cast<STATE>(aln->STATE_UNKNOWN)
+         , sequenceMatrix, seqCount, seqLen
+         , s.totalFrequency, frequencies
+         , a.num_states, uncorrected, dist_mat, var_mat);
+    cout << (getRealTime()-baseTime) << "s Longest distance was " << longest << endl;
+    return longest;
+}
+
 double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
     int nseqs = aln->getNSeq();
     int pos = 0;
     int num_pairs = nseqs * (nseqs - 1) / 2;
     double longest_dist = 0.0;
+    cout.precision(6);
+    double baseTime = getRealTime();
     int *row_id = new int[num_pairs];
     int *col_id = new int[num_pairs];
-
     row_id[0] = 0;
     col_id[0] = 1;
     for (pos = 1; pos < num_pairs; pos++) {
@@ -3136,10 +3446,10 @@ double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
         }
     }
     // compute the upper-triangle of distance matrix
+    cout << (getRealTime()-baseTime) << "s Decided on visit order" << endl;
 #ifdef _OPENMP
 #pragma omp parallel for private(pos)
 #endif
-
     for (pos = 0; pos < num_pairs; pos++) {
         int seq1 = row_id[pos];
         int seq2 = col_id[pos];
@@ -3158,6 +3468,7 @@ double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
             var_mat[sym_pos] = -1.0 / d2l;
     }
 
+    cout << (getRealTime()-baseTime) << "s Copying to lower triangle" << endl;
     // copy upper-triangle into lower-triangle and set diagonal = 0
     for (int seq1 = 0; seq1 < nseqs; seq1++)
         for (int seq2 = 0; seq2 <= seq1; seq2++) {
@@ -3181,6 +3492,7 @@ double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
      outWarning("Some distances are saturated. Please check your alignment again");*/
     // NOTE: Bionj does handle long distances already (thanks Manuel)
     //return correctDist(dist_mat);
+    cout << (getRealTime()-baseTime) << "s Longest distance was " << longest_dist << endl;
     return longest_dist;
 }
 
@@ -3200,17 +3512,27 @@ double PhyloTree::computeDist(Params &params, Alignment *alignment, double* &dis
         dist_file += ".mldist";
 
     if (!dist_mat) {
-        dist_mat = new double[alignment->getNSeq() * alignment->getNSeq()];
-        memset(dist_mat, 0, sizeof(double) * alignment->getNSeq() * alignment->getNSeq());
-        var_mat = new double[alignment->getNSeq() * alignment->getNSeq()];
-        int nseq = alignment->getNSeq();
-        for (int i = 0; i < nseq; i++)
-            for (int j = 0; j < nseq; j++)
-                var_mat[i*nseq+j] = 1.0;
+        int n        = alignment->getNSeq();
+        int nSquared = n*n;
+        dist_mat = new double[nSquared];
+        memset(dist_mat, 0, sizeof(double) * nSquared);
+        var_mat = new double[nSquared];
+        #pragma omp parallel for
+        for (int i = 0; i < nSquared; i++) {
+            var_mat[i] = 1.0;
+        }
     }
     if (!params.dist_file) {
-        longest_dist = computeDist(dist_mat, var_mat);
+        double begin_time = getRealTime();
+        longest_dist = (params.experimental)
+            ? computeDist_Experimental(dist_mat, var_mat)
+            : computeDist(dist_mat, var_mat);
+        cout << "Distance calculation time: "
+            << getRealTime() - begin_time << " seconds" << endl;
+        double write_begin_time = getRealTime();
         alignment->printDist(dist_file.c_str(), dist_mat);
+        cout << "Time taken to write distance file: "
+            << getRealTime() - write_begin_time << " seconds " << endl;
     } else {
         longest_dist = alignment->readDist(params.dist_file, dist_mat);
         dist_file = params.dist_file;

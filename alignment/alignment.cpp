@@ -22,6 +22,7 @@
 #ifdef USE_BOOST
 #include <boost/math/distributions/binomial.hpp>
 #include <boost/container_hash/hash.hpp>
+#include <boost/scoped_array.hpp>
 #endif
 
 
@@ -167,8 +168,9 @@ void Alignment::checkSeqName() {
     }
     if (!ok) outError("Please rename sequences listed above!");
 
-    if (!Params::getInstance().compute_seq_composition)
+    if (!Params::getInstance().compute_seq_composition) {
         return;
+    }
     
     double *state_freq = new double[num_states];
 //    double *freq_per_sequence = new double[num_states*getNSeq()];
@@ -345,8 +347,7 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
     #endif
     //JB2020-06-17 Finish
 
-    bool listIdentical = true;
-        //Todo: get it from Params.suppress_duplicate_sequence_warnings
+    bool listIdentical = !Params::getInstance().suppress_duplicate_sequence_warnings;
 
     auto startCheck = getRealTime();
 	for (int seq1 = 0; seq1 < getNSeq(); seq1++) {
@@ -491,16 +492,19 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype, str
     }
 
     if (getNSeq() < 3)
+    {
         outError("Alignment must have at least 3 sequences");
-
+    }
     countConstSite();
 
     if (Params::getInstance().compute_seq_composition)
-    cout << "Alignment has " << getNSeq() << " sequences with " << getNSite()
-         << " columns, " << getNPattern() << " distinct patterns" << endl
-         << num_informative_sites << " parsimony-informative, "
-         << num_variant_sites-num_informative_sites << " singleton sites, "
-         << (int)(frac_const_sites*getNSite()) << " constant sites" << endl;
+    {
+        cout << "Alignment has " << getNSeq() << " sequences with " << getNSite()
+             << " columns, " << getNPattern() << " distinct patterns" << endl
+             << num_informative_sites << " parsimony-informative, "
+             << num_variant_sites-num_informative_sites << " singleton sites, "
+             << (int)(frac_const_sites*getNSite()) << " constant sites" << endl;
+    }
     //buildSeqStates();
     checkSeqName();
     // OBSOLETE: identical sequences are handled later
@@ -3886,6 +3890,81 @@ double Alignment::computeObsDist(int seq1, int seq2) {
         return MAX_GENETIC_DIST; // return +INF if no overlap between two sequences
     }
     return ((double)diff_pos) / total_pos;
+}
+
+void Alignment::summarizeSites(AlignmentSummary &summary) const {
+    int siteCount = size();
+    int sequenceCount = getNSeq();
+    summary.siteNumbers.clear();
+    summary.siteFrequencies.clear();
+    summary.totalFrequency = 0;
+    if (siteCount==0) {
+        summary.minState = STATE_UNKNOWN;
+        summary.maxState = STATE_UNKNOWN;
+        return;
+    }
+    struct SiteSummary
+    {
+    public:
+        StateType minState;
+        StateType maxState;
+        int       frequency;
+        SiteSummary() {
+            minState  = maxState = 0;
+            frequency = 0;
+        }
+    };
+    
+    boost::scoped_array<SiteSummary> siteArray( new SiteSummary[siteCount] );
+    #ifdef _OPENMP
+        #pragma omp parallel for
+    #endif
+    for (int site=0; site<siteCount; ++site) { //per site
+        auto itSite = begin() + site;
+        SiteSummary &s = *(siteArray.get() + site);
+        StateType minStateForSite = (*itSite)[0];
+        StateType maxStateForSite = minStateForSite;
+        if (!itSite->isConst()) {
+            //Experimental: Shouldn't frequency be counted, even for const sites?
+            //But if I put the s.frequency assignment outside the if-block,
+            //that results in reporting of shorter distances than the non-experimental
+            //code.  But I think that Alignment::computeObsDist should be including
+            //frequencies toward total_pos even when (*it).isConst() is true. -James.
+            for (int seq=1; seq<sequenceCount; ++seq) {
+                auto state = (*itSite)[seq] ;
+                if (state < minStateForSite ) {
+                    minStateForSite = state;
+                }
+                else if (maxStateForSite < state ) {
+                    maxStateForSite = state;
+                }
+            }
+        }
+        s.frequency = itSite->frequency;
+        s.minState  = minStateForSite;
+        s.maxState  = maxStateForSite;
+    }
+    int w = 0; //Number of non-const sites, where sequences differ
+    SiteSummary* s = siteArray.get();
+    for (int i=0; i<siteCount; ++i, ++s) {
+        summary.totalFrequency += s->frequency;
+        if ( 0 < s->frequency && s->minState < s->maxState) {
+            if (w==0) {
+                summary.minState = s->minState;
+                summary.maxState = s->maxState;
+            } else {
+                if (s->minState < summary.minState) {
+                    summary.minState = s->minState;
+                }
+                if (summary.maxState < s->maxState) {
+                    summary.maxState = s->maxState;
+                }
+            }
+            summary.siteNumbers.emplace_back(i);
+            summary.siteFrequencies.emplace_back(s->frequency);
+            ++w;
+        }
+    }
 }
 
 double Alignment::computeJCDist(int seq1, int seq2) {

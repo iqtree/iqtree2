@@ -964,6 +964,8 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, 
     #endif
     //JB2020-06-23 Finish
 
+    bool listIdentical = !Params::getInstance().suppress_duplicate_sequence_warnings;
+
     auto startCheck = getRealTime();
 	for (int seq1 = 0; seq1 < getNSeq(); seq1++) {
         if (checked[seq1]) continue;
@@ -1008,7 +1010,10 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, 
                 target_seqs.push_back(getSeqName(seq1));
                 removed[seq2] = true;
             } else {
-                cout << "NOTE: " << getSeqName(seq2) << " is identical to " << getSeqName(seq1) << " but kept for subsequent analysis" << endl;
+                if (listIdentical) {
+                    cout << "NOTE: " << getSeqName(seq2) << " is identical to " << getSeqName(seq1)
+                        << " but kept for subsequent analysis" << endl;
+                }
             }
             checked[seq2] = 1;
             first_ident_seq = false;
