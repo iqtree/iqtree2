@@ -12,33 +12,36 @@
 //  NJ    implementation based on the same (but original NJ, without
 //        a matrix of variance estimates (see NJMatrix).
 //        Paper: "The neighbor-joining method: a new method
-//                for reconstructing phylogenetic trees" (1987).
+//               for reconstructing phylogenetic trees",
+//               Naurya Saitou and Masatoshi Nei (1987).
 //        Tag:   [NS1987]
 //  BoundingNJ implementation loosely based on ideas from
 //        https://birc.au.dk/software/rapidnj/.
-//        Paper: Inference of Large Phylogenies using Neighbour-Joining.
+//        Paper: "Inference of Large Phylogenies using Neighbour-Joining."
 //               Martin Simonsen, Thomas Mailund, Christian N. S. Pedersen.
 //               Communications in Computer and Information Science
 //               (Biomedical Engineering Systems and Technologies:
 //               3rd International Joint Conference, BIOSTEC 2010,
 //               Revised Selected Papers), volume 127, pages 334-344,
 //               Springer Verlag, 2011.
-//         Tag:  [SMP2011].
-//         (but using a variance matrix, as in BIONJ, and keeping the
-//          distance and variance matrices square - they're not triangular
-//          because (i) *read* memory access patterns are more favourable
+//        Tag:  [SMP2011].
+//        (but, optionally, using a variance matrix, as in BIONJ, and
+//        keeping the distance and variance matrices square -
+//        they're not triangular because
+//                  (i) *read* memory access patterns are more favourable
 //                 (ii) *writes* don't require conditional transposition
 //                      of the row and column coordinates (but their
 //                      access patterns aren't as favourable, but
 //                (iii) reads vastly outnumber writes)
-//         (there's no code yet for removing duplicated rows either;
-//          those that has distance matrix rows identical to earlier rows;
-//          Rapid NJ "hates" them) (this is also covered in section 2.5)
-//         See the BoundingBIONJMatrix class.
-//   The vectorized implementations (of BIONJ and NJ) use Agner Fog's
-//   vectorclass library.
+//        (there's no code yet for removing duplicated rows either;
+//        those that has distance matrix rows identical to earlier rows;
+//        Rapid NJ "hates" them) (this is also covered in section 2.5)
+//        See the BoundingBIONJMatrix class.
 //
-//  Created by James Barbetti on 18/6/2020.
+// The vectorized implementations (of BIONJ and NJ) use Agner Fog's
+// vectorclass library.
+//
+// Created by James Barbetti on 18/6/2020.
 //
 
 #include "starttree.h"
@@ -764,7 +767,16 @@ public:
         //better bound on min(V) (and "rule out" entire rows with that
         //bound). -James B).
         //
-        std::sort(rowMinima.begin(), rowMinima.end());
+        for ( int len = rowMinima.size(); 1<len; len=(len+1)/2 ) {
+            int halfLen = len/2;
+            //#pragma omp parallel for (did not help)
+            for ( int j=len-1; halfLen<=j; --j) {
+                int i=j-halfLen;
+                if ( rowMinima[j] < rowMinima[i] ) {
+                    std::swap(rowMinima[i], rowMinima[j]);
+                }
+            }
+        }
         for (size_t i=0; i<n; ++i) {
             rowOrderChosen[i]=false;
         }
