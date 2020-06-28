@@ -76,7 +76,7 @@ namespace StartTree
                 builder.constructTree();
                 double buildElapsed = getRealTime() - buildStart;
                 std::cout.precision(6);
-                std::cout << "Elapsed time for constructing intial tree"
+                std::cout << "Elapsed time for constructing initial tree"
                     << " (with algorithm " << name << "), "
                     << buildElapsed << std::endl;
                 std::cout.precision(3);
