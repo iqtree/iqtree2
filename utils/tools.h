@@ -1128,6 +1128,12 @@ public:
             TRUE to compute the Juke-Cantor distances, default: FALSE
      */
     bool compute_jc_dist;
+    
+    
+    /**
+            TRUE to use experimental implementation to calculate observed (or Jukes-Cantor) distances
+     */
+    bool experimental;
 
     /**
             TRUE to compute the maximum-likelihood distances
