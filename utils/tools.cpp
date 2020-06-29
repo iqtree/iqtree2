@@ -3895,16 +3895,17 @@ void parseArg(int argc, char *argv[], Params &params) {
                 }
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -t,-te <start_tree | BIONJ | PARS | PLLPARS>";
-				if (strcmp(argv[cnt], "BIONJ") == 0 || strcmp(argv[cnt], "NJ") == 0)
-					params.start_tree = STT_BIONJ;
+					throw "Use -t,-te <start_tree | BIONJ | PARS | PLLPARS | RANDOM>";
 				else if (strcmp(argv[cnt], "PARS") == 0)
 					params.start_tree = STT_PARSIMONY;
 				else if (strcmp(argv[cnt], "PLLPARS") == 0)
 					params.start_tree = STT_PLL_PARSIMONY;
                 else if (strcmp(argv[cnt], "RANDOM") == 0 || strcmp(argv[cnt], "RAND") == 0)
 					params.start_tree = STT_RANDOM_TREE;
-                else {
+                else if (START_TREE_RECOGNIZED(argv[cnt])) {
+                    params.start_tree_subtype_name = argv[cnt];
+                    params.start_tree = STT_BIONJ;
+                } else {
                     params.user_file = argv[cnt];
                     if (params.min_iterations == 0)
                         params.start_tree = STT_USER_TREE;
