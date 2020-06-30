@@ -6,50 +6,59 @@
 //  BIONJ implementation based on http://www.lirmm.fr/~w3ifa/MAAS/BIONJ/BIONJ.html
 //        (see BIONJMatrix).  Original authors: Olivier Gascuel
 //        and Hoa Sien Cuong (the code for the Unix version).
+//        Paper: "BIONJ: An Improved Version of the NJ Algorithm
+//                Based on a Simple Model of Sequence Data" (2009).
+//        Tag:   [GAS2009].
 //  NJ    implementation based on the same (but original NJ, without
 //        a matrix of variance estimates (see NJMatrix).
+//        Paper: "The neighbor-joining method: a new method
+//               for reconstructing phylogenetic trees",
+//               Naurya Saitou and Masatoshi Nei (1987).
+//        Tag:   [NS1987]
 //  BoundingNJ implementation loosely based on ideas from
-//        https://birc.au.dk/software/rapidnj/ and
-//        from: Inference of Large Phylogenies using Neighbour-Joining.
-//              Martin Simonsen, Thomas Mailund, Christian N. S. Pedersen.
-//              Communications in Computer and Information Science
-//              (Biomedical Engineering Systems and Technologies:
-//              3rd International Joint Conference, BIOSTEC 2010,
-//              Revised Selected Papers), volume 127, pages 334-344,
-//              Springer Verlag, 2011.
-//         Tag: [SMP2011].
-//         (but using a variance matrix, as in BIONJ, and keeping the
-//          distance and variance matrices square - they're not triangular
-//          because (i) *read* memory access patterns are more favourable
+//        https://birc.au.dk/software/rapidnj/.
+//        Paper: "Inference of Large Phylogenies using Neighbour-Joining."
+//               Martin Simonsen, Thomas Mailund, Christian N. S. Pedersen.
+//               Communications in Computer and Information Science
+//               (Biomedical Engineering Systems and Technologies:
+//               3rd International Joint Conference, BIOSTEC 2010,
+//               Revised Selected Papers), volume 127, pages 334-344,
+//               Springer Verlag, 2011.
+//        Tag:  [SMP2011].
+//        (but, optionally, using a variance matrix, as in BIONJ, and
+//        keeping the distance and variance matrices square -
+//        they're not triangular because
+//                  (i) *read* memory access patterns are more favourable
 //                 (ii) *writes* don't require conditional transposition
 //                      of the row and column coordinates (but their
 //                      access patterns aren't as favourable, but
 //                (iii) reads vastly outnumber writes)
-//         (there's no code yet for removing duplicated rows either;
-//          those that has distance matrix rows identical to earlier rows;
-//          Rapid NJ "hates" them) (this is also covered in section 2.5)
-//         See the BoundingBIONJMatrix class.
+//        (there's no code yet for removing duplicated rows either;
+//        those that has distance matrix rows identical to earlier rows;
+//        Rapid NJ "hates" them) (this is also covered in section 2.5)
+//        See the BoundingBIONJMatrix class.
 //
-//  Created by James Barbetti on 18/6/2020.
+// The vectorized implementations (of BIONJ and NJ) use Agner Fog's
+// vectorclass library.
+//
+// Created by James Barbetti on 18/6/2020.
 //
 
-#include "bionj2.h"
+#include "starttree.h"
 #include "heapsort.h"             //for mirroredHeapsort
 #include <vector>
 #include <string>
 #include <fstream>
 #include <iostream>               //for std::istream
 #include <boost/scoped_array.hpp> //for boost::scoped_array
-#include "utils/timeutil.h"       //for getRealTime()
 #include <vectorclass/vectorclass.h> //for Vec4d
 
 typedef double NJFloat;
 
 const NJFloat infiniteDistance = 1e+300;
 
-namespace
+namespace StartTree
 {
-
 
 struct Position
 {
@@ -423,7 +432,7 @@ public:
             , rowToCluster[2], halfD02 + halfD12 - halfD01);
         n = 0;
     }
-    virtual void doClustering() {
+    virtual void constructTree() {
         while (3<n) {
             Position best;
             getMinimumEntry(best);
@@ -613,7 +622,7 @@ public:
     BoundingMatrix(const std::string &distanceFilePath)
     : super(distanceFilePath) {
     }
-    virtual void doClustering() {
+    virtual void constructTree() {
         //1. Set up vectors indexed by cluster number,
         clusterToRow.resize(n);
         clusterTotals.resize(n);
@@ -758,7 +767,16 @@ public:
         //better bound on min(V) (and "rule out" entire rows with that
         //bound). -James B).
         //
-        std::sort(rowMinima.begin(), rowMinima.end());
+        for ( int len = rowMinima.size(); 1<len; len=(len+1)/2 ) {
+            int halfLen = len/2;
+            //#pragma omp parallel for (did not help)
+            for ( int j=len-1; halfLen<=j; --j) {
+                int i=j-halfLen;
+                if ( rowMinima[j] < rowMinima[i] ) {
+                    std::swap(rowMinima[i], rowMinima[j]);
+                }
+            }
+        }
         for (size_t i=0; i<n; ++i) {
             rowOrderChosen[i]=false;
         }
@@ -862,19 +880,24 @@ public:
     }
 };
 
-class VectorizedBIONJMatrix: public BIONJMatrix
+template <class super=BIONJMatrix, class V=Vec4d, class VB=Vec4db>
+    class VectorizedMatrix: public super
 {
     //
     //Note: this is a first attempt at hand-vectorizing
     //      BIONJMatrix::getRowMinima (via Agner Fog's
     //      vectorclass library).
     //
+    using super::n;
+    using super::rows;
+    using super::rowMinima;
+    using super::rowTotals;
 public:
-    typedef BIONJMatrix super;
     mutable std::vector<NJFloat> scratchTotals;
     mutable std::vector<NJFloat> scratchColumnNumbers;
     size_t  blockSize;
-    VectorizedBIONJMatrix(const std::string &distanceMatrixFilePath)
+    
+    VectorizedMatrix(const std::string &distanceMatrixFilePath)
     : super(distanceMatrixFilePath) {
         size_t fluff = MATRIX_ALIGNMENT / sizeof(NJFloat);
         scratchTotals.resize(n + fluff, 0.0);
@@ -898,21 +921,21 @@ public:
             Position pos(row, 0, infiniteDistance);
             const NJFloat* rowData = rows[row];
             size_t col;
-            Vec4d minVector  ( infiniteDistance, infiniteDistance
-                             , infiniteDistance, infiniteDistance);
+            V minVector  ( infiniteDistance, infiniteDistance
+                          , infiniteDistance, infiniteDistance);
                 //The minima of columns with indices "congruent modulo 4"
                 //For example minVector[1] holds the minimum of
                 //columns 1,5,9,13,17,...
-            Vec4d ixVector(-1,     -1,     -1,     -1);
+            V ixVector(-1,     -1,     -1,     -1);
                 //For each entry in minVector, the column from which
                 //that value came.
             
             for (col=0; col+blockSize<row; col+=blockSize) {
-                Vec4d  rowVector; rowVector.load_a(rowData+col);
-                Vec4d  totVector; totVector.load_a(tot+col);
-                Vec4d  adjVector = rowVector - totVector;
-                Vec4db less      = adjVector < minVector;
-                Vec4d  numVector; numVector.load_a(nums+col);
+                V  rowVector; rowVector.load_a(rowData+col);
+                V  totVector; totVector.load_a(tot+col);
+                V  adjVector = rowVector - totVector;
+                VB less      = adjVector < minVector;
+                V  numVector; numVector.load_a(nums+col);
                 ixVector  = select(less, numVector, ixVector);
                 minVector = select(less, adjVector, minVector);
             }
@@ -936,42 +959,17 @@ public:
     }
 };//end of class
 
-} //end of anonymous namespace
+typedef BoundingMatrix<NJMatrix>      RapidNJ;
+typedef BoundingMatrix<BIONJMatrix>   RapidBIONJ;
+typedef VectorizedMatrix<NJMatrix>    VectorNJ;
+typedef VectorizedMatrix<BIONJMatrix> VectorBIONJ;
 
-void BIONJ2::constructTree
-    ( const std::string & distanceMatrixFilePath
-    , const std::string & newickTreeFilePath)
-{
-    BIONJMatrix d(distanceMatrixFilePath);
-    double joinStart = getRealTime();
-    d.doClustering();
-    double joinElapsed = getRealTime() - joinStart;
-    std::cout.precision(6);
-    std::cout << "Elapsed time for neighbour joining proper (in BIONJ2), " << joinElapsed << std::endl;
-    std::cout.precision(3);
-    d.writeTreeFile(newickTreeFilePath);
+void addBioNJ2020TreeBuilders(Factory& f) {
+    f.advertiseTreeBuilder( new Builder<NJMatrix>    ("NJ",      "Neighbour Joining (Saitou, Nei [1987])"));
+    f.advertiseTreeBuilder( new Builder<RapidNJ>     ("NJ-R",    "Rapid Neighbour Joining (Simonsen, Mailund, Pedersen [2011])"));
+    f.advertiseTreeBuilder( new Builder<VectorNJ>    ("NJ-V",    "Vectorized Neighbour Joining (Saitou, Nei [1987])"));
+    f.advertiseTreeBuilder( new Builder<BIONJMatrix> ("BIONJ",   "BIONJ (Gascuel, Cong [2009])"));
+    f.advertiseTreeBuilder( new Builder<RapidBIONJ>  ("BIONJ-R", "Rapid BIONJ (Saitou, Nei [1987], Gascuel [2009], Simonson Mailund Pedersen [2011])"));
+    f.advertiseTreeBuilder( new Builder<VectorBIONJ> ("BIONJ-V", "Vectorized BIONJ (Gascuel, Cong [2009])"));
 }
-
-void BIONJ2::constructTreeRapid
-    ( const std::string & distanceMatrixFilePath
-    , const std::string & newickTreeFilePath)
-{
-    BoundingMatrix<BIONJMatrix> d(distanceMatrixFilePath);
-    double joinStart = getRealTime();
-    d.doClustering();
-    double joinElapsed = getRealTime() - joinStart;
-    std::cout.precision(6);
-    std::cout << "Elapsed time for neighbour joining proper (in BIONJ2/rapidNJ), "
-        << joinElapsed << std::endl;
-    std::cout.precision(3);
-    d.writeTreeFile(newickTreeFilePath + "_2");
-
-    VectorizedBIONJMatrix d2(distanceMatrixFilePath);
-    joinStart = getRealTime();
-    d2.doClustering();
-    joinElapsed = getRealTime() - joinStart;
-    std::cout.precision(6);
-    std::cout << "Elapsed time for neighbour joining proper (in BIONJ2/Hand-Vectorized), " << joinElapsed << std::endl;
-    std::cout.precision(3);
-    d2.writeTreeFile(newickTreeFilePath + "_v");
-}
+}; //end of namespace

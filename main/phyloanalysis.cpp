@@ -1627,11 +1627,11 @@ void computeMLDist(Params& params, IQTree& iqtree, double begin_time) {
     double longest_dist;
 //    stringstream best_tree_string;
 //    iqtree.printTree(best_tree_string, WT_BR_LEN + WT_TAXON_ID);
-    cout << "Computing ML distances based on estimated model parameters...";
+    cout << "Computing ML distances based on estimated model parameters..." << endl;
     double *ml_dist = NULL;
     double *ml_var = NULL;
     longest_dist = iqtree.computeDist(params, iqtree.aln, ml_dist, ml_var, iqtree.dist_file);
-    cout << " " << (getCPUTime() - begin_time) << " sec" << endl;
+    cout << "Computing ML distances took " << (getCPUTime() - begin_time) << " sec (of CPU time)" << endl;
 
     double max_genetic_dist = MAX_GENETIC_DIST;
     if (iqtree.aln->seq_type == SEQ_POMO) {
@@ -1643,16 +1643,18 @@ void computeMLDist(Params& params, IQTree& iqtree, double begin_time) {
         //cout << "Some ML distances are too long, using old distances..." << endl;
     } //else
     {
+        int n = iqtree.aln->getNSeq();
+        int nSquared = n*n;
         if ( !iqtree.dist_matrix ) {
-            iqtree.dist_matrix = new double[iqtree.aln->getNSeq() * iqtree.aln->getNSeq()];
+            iqtree.dist_matrix = new double[nSquared];
         }
         if ( !iqtree.var_matrix ) {
-            iqtree.var_matrix = new double[iqtree.aln->getNSeq() * iqtree.aln->getNSeq()];
+            iqtree.var_matrix = new double[nSquared];
         }
         memmove(iqtree.dist_matrix, ml_dist,
-                sizeof (double) * iqtree.aln->getNSeq() * iqtree.aln->getNSeq());
+                sizeof(double) * nSquared);
         memmove(iqtree.var_matrix, ml_var,
-                sizeof(double) * iqtree.aln->getNSeq() * iqtree.aln->getNSeq());
+                sizeof(double) * nSquared);
     }
     delete[] ml_dist;
     delete[] ml_var;
@@ -1663,17 +1665,16 @@ void computeInitialDist(Params &params, IQTree &iqtree) {
     if (params.dist_file) {
         cout << "Reading distance matrix file " << params.dist_file << " ..." << endl;
     } else if (params.compute_jc_dist) {
-        cout << "Computing Juke-Cantor distances..." << endl;
+        cout << "Computing Jukes-Cantor distances..." << endl;
     } else if (params.compute_obs_dist) {
         cout << "Computing observed distances..." << endl;
     }
 
     if (params.compute_jc_dist || params.compute_obs_dist || params.partition_file) {
-        double begin_time = getRealTime();
         longest_dist = iqtree.computeDist(params, iqtree.aln, iqtree.dist_matrix, iqtree.var_matrix, iqtree.dist_file);
-        //checkZeroDist(iqtree.aln, iqtree.dist_matrix);
-        cout << "Distance calculation time: " << getRealTime() - begin_time << " seconds" << endl;
-
+        //if (!params.suppress_zero_distance_warnings) {
+        //  checkZeroDist(iqtree.aln, iqtree.dist_matrix);
+        //}
         double max_genetic_dist = MAX_GENETIC_DIST;
         if (iqtree.aln->seq_type == SEQ_POMO) {
             int N = iqtree.aln->virtual_pop_size;
@@ -1683,7 +1684,6 @@ void computeInitialDist(Params &params, IQTree &iqtree) {
             outWarning("Some pairwise distances are too long (saturated)");
         }
     }
-
 }
 
 void initializeParams(Params &params, IQTree &iqtree)

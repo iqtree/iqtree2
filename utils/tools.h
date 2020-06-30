@@ -819,6 +819,7 @@ public:
 
     /* type of starting tree */
     START_TREE_TYPE start_tree;
+    std::string start_tree_subtype_name;
 
     /** TRUE to infer fast ML tree for ModelFinder */
     bool modelfinder_ml_tree;
@@ -1127,6 +1128,12 @@ public:
             TRUE to compute the Juke-Cantor distances, default: FALSE
      */
     bool compute_jc_dist;
+    
+    
+    /**
+            TRUE to use experimental implementation to calculate observed (or Jukes-Cantor) distances
+     */
+    bool experimental;
 
     /**
             TRUE to compute the maximum-likelihood distances
@@ -2209,6 +2216,16 @@ public:
 
     /** z-score for detecting outlier nodes */
     double date_outlier;
+
+    /** supress the list of sequences */
+    double suppress_list_of_sequences;
+
+    /** supress warnings about low or zero distances */
+    double suppress_zero_distance_warnings;
+
+    /** supress notes about duplicate sequences */
+    double suppress_duplicate_sequence_warnings;
+    
 };
 
 /**

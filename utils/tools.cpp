@@ -23,6 +23,7 @@
 
 
 #include "tools.h"
+#include "starttree.h" //for START_TREE_RECOGNIZED macro.
 #include "timeutil.h"
 #include "MPIHelper.h"
 #include <dirent.h>
@@ -781,6 +782,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.dist_file = NULL;
     params.compute_obs_dist = false;
     params.compute_jc_dist = true;
+    params.experimental = false;
     params.compute_ml_dist = true;
     params.compute_ml_tree = true;
     params.budget_file = NULL;
@@ -1140,6 +1142,10 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.ran_seed = (tv.tv_usec);
     params.subsampling_seed = params.ran_seed;
     params.subsampling = 0;
+    
+    params.suppress_list_of_sequences = false;
+    params.suppress_zero_distance_warnings = false;
+    params.suppress_duplicate_sequence_warnings = false;
 
     for (cnt = 1; cnt < argc; cnt++) {
         try {
@@ -1388,6 +1394,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.compute_obs_dist = true;
 				continue;
 			}
+            if (strcmp(argv[cnt], "-experimental") == 0) {
+                params.experimental = true;
+                continue;
+            }
 			if (strcmp(argv[cnt], "-r") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -2155,13 +2165,15 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -starttree BIONJ|PARS|PLLPARS";
-				if (strcmp(argv[cnt], "BIONJ") == 0)
-					params.start_tree = STT_BIONJ;
-				else if (strcmp(argv[cnt], "PARS") == 0)
+                else if (strcmp(argv[cnt], "PARS") == 0)
 					params.start_tree = STT_PARSIMONY;
 				else if (strcmp(argv[cnt], "PLLPARS") == 0)
 					params.start_tree = STT_PLL_PARSIMONY;
-				else
+                else if (START_TREE_RECOGNIZED(argv[cnt])) {
+                    params.start_tree_subtype_name = argv[cnt];
+                    params.start_tree = STT_BIONJ;
+                }
+                else
 					throw "Invalid option, please use -starttree with BIONJ or PARS or PLLPARS";
 				continue;
 			}
@@ -3883,16 +3895,17 @@ void parseArg(int argc, char *argv[], Params &params) {
                 }
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -t,-te <start_tree | BIONJ | PARS | PLLPARS>";
-				if (strcmp(argv[cnt], "BIONJ") == 0 || strcmp(argv[cnt], "NJ") == 0)
-					params.start_tree = STT_BIONJ;
+					throw "Use -t,-te <start_tree | BIONJ | PARS | PLLPARS | RANDOM>";
 				else if (strcmp(argv[cnt], "PARS") == 0)
 					params.start_tree = STT_PARSIMONY;
 				else if (strcmp(argv[cnt], "PLLPARS") == 0)
 					params.start_tree = STT_PLL_PARSIMONY;
                 else if (strcmp(argv[cnt], "RANDOM") == 0 || strcmp(argv[cnt], "RAND") == 0)
 					params.start_tree = STT_RANDOM_TREE;
-                else {
+                else if (START_TREE_RECOGNIZED(argv[cnt])) {
+                    params.start_tree_subtype_name = argv[cnt];
+                    params.start_tree = STT_BIONJ;
+                } else {
                     params.user_file = argv[cnt];
                     if (params.min_iterations == 0)
                         params.start_tree = STT_USER_TREE;
@@ -4140,6 +4153,20 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             
+            if (strcmp(argv[cnt], "--suppress-list-of-sequences") == 0) {
+                params.suppress_list_of_sequences = true;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--suppress-zero-distance") == 0) {
+                params.suppress_zero_distance_warnings = true;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--suppress-duplicate-sequence") == 0) {
+                params.suppress_duplicate_sequence_warnings = true;
+                continue;
+            }
 
             if (strcmp(argv[cnt], "--date-options") == 0) {
                 cnt++;
