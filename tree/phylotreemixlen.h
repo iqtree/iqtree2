@@ -269,7 +269,7 @@ protected:
     /** relative rate, used to initialize branch lengths */
     DoubleVector relative_treelen;
 
-    /** true if during intialization phase */
+    /** true if during initialization phase */
     bool initializing_mixlen;
 
 };

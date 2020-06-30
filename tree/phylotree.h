@@ -1592,6 +1592,7 @@ public:
 
     virtual double computeDist(int seq1, int seq2, double initial_dist);
 
+    
     /**
             compute distance and variance matrix, assume dist_mat and var_mat are allocated by memory of size num_seqs * num_seqs.
             @param dist_mat (OUT) distance matrix between all pairs of sequences in the alignment
@@ -1600,6 +1601,8 @@ public:
      */
     double computeDist(double *dist_mat, double *var_mat);
 
+    double computeDist_Experimental(double *dist_mat, double *var_mat);
+    
     /**
             compute observed distance matrix, assume dist_mat is allocated by memory of size num_seqs * num_seqs.
             @param dist_mat (OUT) distance matrix between all pairs of sequences in the alignment

@@ -1,5 +1,3 @@
-#ifndef BIONJ_H
-#define BIONJ_H
 /*;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;                                                                           ;
 ;                         BIONJ program                                     ;
@@ -23,13 +21,12 @@
     #define NJ_OMP
 #endif
 
-
 #include <stdio.h>                  
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include "utils/timeutil.h" //JB2020-06-18 for getRealTime()
-
+#include "starttree.h"
 
 #define PREC 8                             /* precision of branch-lengths  */
 #define PRC  100
@@ -397,27 +394,22 @@ float Sum_S(int i, float **delta)          /* get sum Si form the diagonal */
     void Compute_sums_Sx(float **delta, int n)
     {
         #ifdef NJ_OMP
-            #pragma omp parallel
+            #pragma omp parallel for
         #endif
+        for(int i= 1; i <= n ; i++)
         {
-            #ifdef NJ_OMP
-                #pragma omp for
-            #endif
-            for(int i= 1; i <= n ; i++)
+            if(!Emptied(i,delta))
             {
-                if(!Emptied(i,delta))
+                float sum=0;
+                for(int j=1; j <=n; j++)
                 {
-                    float sum=0;
-                    for(int j=1; j <=n; j++)
-                    {
-                        if(i != j && !Emptied(j,delta))           /* compute the sum Si */
-                            sum=sum + Distance(i,j,delta);
-                    }
-                    delta[i][i]=sum;                           /* store the sum Si in */
+                    if(i != j && !Emptied(j,delta))           /* compute the sum Si */
+                        sum=sum + Distance(i,j,delta);
                 }
-            }                                               /* delta�s diagonal    */
-        }
-    }
+                delta[i][i]=sum;                           /* store the sum Si in */
+            }
+        }                                               /* delta�s diagonal    */
+}
 
 
 
@@ -447,36 +439,31 @@ float Sum_S(int i, float **delta)          /* get sum Si form the diagonal */
         int    step = (n<240) ? 1 : (n / 120);//JB2020-06-17 Blocks of adjacent rows
         
         #ifdef NJ_OMP
-            #pragma omp parallel
+            #pragma omp parallel for
         #endif
-        {
-            #ifdef NJ_OMP
-                #pragma omp for
-            #endif
-            for (int w=2; w<=n; w+=step) {              //JB2020-06-17
-                int w2 = (w+step <= n) ? (w+step) : n;  //JB2020-06-17
-                for (int x=w; x <= w2; ++x)             //JB2020-06-17
+        for (int w=2; w<=n; w+=step) {              //JB2020-06-17
+            int w2 = (w+step <= n) ? (w+step) : n;  //JB2020-06-17
+            for (int x=w; x <= w2; ++x)             //JB2020-06-17
+            {
+                float rowMin = Qmin;
+                int   bestY  = 0;
+                if(!Emptied(x,delta))
                 {
-                    float rowMin = Qmin;
-                    int   bestY  = 0;
-                    if(!Emptied(x,delta))
+                    for(int y=1; y < x; ++y)
                     {
-                        for(int y=1; y < x; ++y)
+                        if(!Emptied(y,delta))
                         {
-                            if(!Emptied(y,delta))
+                            float Qxy=Agglomerative_criterion(x,y,delta,r);
+                            if(Qxy < rowMin-0.000001)
                             {
-                                float Qxy=Agglomerative_criterion(x,y,delta,r);
-                                if(Qxy < rowMin-0.000001)
-                                {
-                                    rowMin=Qxy;
-                                    bestY = y;
-                                }
+                                rowMin=Qxy;
+                                bestY = y;
                             }
                         }
                     }
-                    rowQmin[x] = rowMin;
-                    rowMinColumn[x] = bestY;
                 }
+                rowQmin[x] = rowMin;
+                rowMinColumn[x] = bestY;
             }
         }
         //JB2020-06-16 Begin
@@ -754,31 +741,26 @@ public :
                 lb=Branch_length(*b, *a, delta, r);    /* using formula (2)        */
                 lamda=Lamda(*a, *b, vab, delta, n, r); /* compute lambda* using (9)*/
                 #ifdef NJ_OMP
-                    #pragma omp parallel
+                    #pragma omp parallel for
                 #endif
+                for(i=1; i <= n; i++)
                 {
-                    #ifdef NJ_OMP
-                        #pragma omp for
-                    #endif
-                    for(i=1; i <= n; i++)
+                    if(!Emptied(i,delta) && (i != *a) && (i != *b))
                     {
-                        if(!Emptied(i,delta) && (i != *a) && (i != *b))
+                        int x, y; //JB Moved x,y declarations here
+                                  //   So they'll be per-thread
+                        if(*a > i)
                         {
-                            int x, y; //JB Moved x,y declarations here
-                                      //   So they'll be per-thread
-                            if(*a > i)
-                            {
-                                x=*a;
-                                y=i;
-                            }
-                            else
-                            {
-                                x=i;
-                                y=*a;                           /* apply reduction formulae */
-                            }                                  /* 4 and 10 to delta        */
-                            delta[x][y]=Reduction4(*a, la, *b, lb, i, lamda, delta);
-                            delta[y][x]=Reduction10(*a, *b, i, lamda, vab, delta);
+                            x=*a;
+                            y=i;
                         }
+                        else
+                        {
+                            x=i;
+                            y=*a;                           /* apply reduction formulae */
+                        }                                  /* 4 and 10 to delta        */
+                        delta[x][y]=Reduction4(*a, la, *b, lb, i, lamda, delta);
+                        delta[y][x]=Reduction10(*a, *b, i, lamda, vab, delta);
                     }
                 }
                 strcpy(chain1,"");                     /* agglomerate the subtrees */
@@ -836,4 +818,33 @@ public :
     }
 };
 
-#endif
+//JB2020-06-26 Begin - Adapter, so that BioNj is available
+//for doing tree construction (via -starttree BIONJ2009).
+class BIONJ2009Adapter: public StartTree::BuilderInterface {
+protected:
+    std::string name = "BIONJ2009";
+    std::string description = "The reference (2009) version of BIONJ (with OMP parallelization)";
+public:
+    BIONJ2009Adapter() {
+    }
+    virtual const std::string& getName() {
+        return name;
+    }
+    virtual const std::string& getDescription() {
+        return description;
+    }
+    virtual void constructTree
+        ( const std::string &distanceMatrixFilePath
+         , const std::string & newickTreeFilePath) {
+            BioNj bio2009;
+            bio2009.create(distanceMatrixFilePath.c_str(), newickTreeFilePath.c_str());
+    }
+};
+
+namespace StartTree {
+    void addBioNJ2009TreeBuilders(Factory& f) {
+        f.advertiseTreeBuilder(new BIONJ2009Adapter());
+    }
+}
+//JB2020-06-26 Finish
+
