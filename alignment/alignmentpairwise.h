@@ -33,14 +33,30 @@ class AlignmentPairwise : public Alignment, public Optimization
 public:
     AlignmentPairwise();
 
-	/**
+    /**
+        pairwise alignment with sequence numbers not yet set
+        @param atree input multiple alignment
+     */
+    AlignmentPairwise(PhyloTree *atree);
+
+    /**
 		construct the pairwise alignment from two sequences of a multiple alignment
-		@param aln input multiple alignment
-		@param seq_id1 ID of the first sequence
-		@param seq_id2 ID of the second sequence
+		@param atree input multiple alignment
+		@param seq1 ID of the first sequence
+		@param seq2 ID of the second sequence
 	*/
     AlignmentPairwise(PhyloTree *atree, int seq1, int seq2);
 
+    
+    /**
+        recalculate the pairwise alignment for a different pair of sequences of
+            the same multiple alignment it was constructed for
+        @param seq1 ID of the first sequence
+        @param seq2 ID of the second sequence
+    */
+    void setSequenceNumbers(int seq1, int seq2);
+    
+    
 	/**
 		compute the likelihood for a distance between two sequences. Used for the ML optimization of the distance.
 		@param value x-value of the function
@@ -69,7 +85,6 @@ public:
 
 	double optimizeDist(double initial_dist, double &d2l);
 
-
 	/**
 		add a pattern into the alignment
 		@param state1
@@ -81,20 +96,42 @@ public:
 	*/
 	bool addPattern(int state1, int state2, int freq, int cat = 0);
 
+    /**
+        calculate the distance (or branch length) between two sequences
+        @param seq1
+        @param seq2 states of the pattern
+        @param initial_dist   previous estimate of distance
+        @param d2l
+        @return a new estimate of branch length
+    */
 
+    double computeDist( int seq1, int seq2, double initial_dist, double &d2l );
+    
 	/**
 		destructor
 	*/
     virtual ~AlignmentPairwise();
 
-	/**
-		pairwise state frequencies
-	*/
-	double *pair_freq;
+	PhyloTree* tree;          //multi-species alignment tree from which sequences
+                              //to be aligned are to be drawn
+    double*    pair_freq;     //array of frequency counts (owned by this instance)
+                              //size is num_states_squared times 1 (or by the number
+                              //of categories).
+    int        trans_size;    //number of elements (rows x columns) in transition matrices
+    double*    trans_mat;     //used in computeFunction(),
+    double*    sum_trans_mat; //used in computeFunction()
+    double*    trans_derv1;   //used in computeFuncDerv()
+    double*    trans_derv2;   //used in computeFuncDerv()
+    double*    sum_derv1;     //used in computeFuncDerv()
+    double*    sum_derv2;     //used in computeFuncDerv()
+    double*    sum_trans;     //used in computeFuncDerv()
 
-	PhyloTree *tree;
-
-	int seq_id1, seq_id2;
+    int        num_states_squared;
+    int        total_size; //number of elements in pair_freq
+    int        seq_id1;
+    int        seq_id2;
+protected:
+    void setTree(PhyloTree* atree);
 };
 
 #endif

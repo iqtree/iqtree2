@@ -199,6 +199,11 @@ void myPartitionsDestroy(partitionList *pl) {
 }
 
 PhyloTree::~PhyloTree() {
+    for ( auto it = distanceProcessors.begin()
+         ; it!=distanceProcessors.end(); ++it) {
+        delete (*it);
+    }
+    distanceProcessors.clear();
     if (nni_scale_num)
         aligned_free(nni_scale_num);
     nni_scale_num = NULL;
@@ -275,7 +280,6 @@ PhyloTree::~PhyloTree() {
     pllPartitions = NULL;
     pllAlignment = NULL;
     pllInst = NULL;
-    
 }
 
 void PhyloTree::readTree(const char *infile, bool &is_rooted) {
@@ -593,6 +597,10 @@ void PhyloTree::setModelFactory(ModelFactory *model_fac) {
     }
 }
 
+bool PhyloTree::hasModelFactory() const {
+    return model_factory != nullptr;
+}
+
 void PhyloTree::setRate(RateHeterogeneity *rate) {
     site_rate = rate;
     if (!rate)
@@ -602,6 +610,10 @@ void PhyloTree::setRate(RateHeterogeneity *rate) {
     //    block = aln->num_states * numCat;
     //    lh_size = aln->size() * block;
     //}
+}
+
+bool PhyloTree::hasRateHeterogeneity() const {
+    return site_rate != nullptr;
 }
 
 RateHeterogeneity *PhyloTree::getRate() {
@@ -3075,6 +3087,18 @@ void PhyloTree::growTreeML(Alignment *alignment) {
  Distance function
  ****************************************************************************/
 
+void PhyloTree::prepareToComputeDistances() {
+#ifdef _OPENMP
+    int threads = omp_get_max_threads();
+#else
+    int threads = 1;
+#endif
+    distanceProcessors.reserve(threads);
+    for (threads -= distanceProcessors.size(); 0 < threads; --threads) {
+        distanceProcessors.emplace_back(new AlignmentPairwise(this));
+    }
+}
+
 double PhyloTree::computeDist(int seq1, int seq2, double initial_dist, double &d2l) {
     //Todo: check ALL this functionality is in to computeDist_Experimental.
     //1. The initial_dist == 0.0 check is in computeJCDistanceMatrix.
@@ -3090,9 +3114,9 @@ double PhyloTree::computeDist(int seq1, int seq2, double initial_dist, double &d
     }
     if (!model_factory || !site_rate)
         return initial_dist; // MANUEL: here no d2l is return
-
+    
     // now optimize the distance based on the model and site rate
-    AlignmentPairwise aln_pair ( this, seq1, seq2 ); //JB do it on the stack! no new!
+    AlignmentPairwise aln_pair ( this, seq1, seq2 );
     double dist = aln_pair.optimizeDist(initial_dist, d2l);
     return dist;
 }
@@ -3427,6 +3451,7 @@ double PhyloTree::computeDist_Experimental(double *dist_mat, double *var_mat) {
 }
 
 double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
+    prepareToComputeDistances();
     int nseqs = aln->getNSeq();
     int pos = 0;
     int num_pairs = nseqs * (nseqs - 1) / 2;
@@ -3451,11 +3476,13 @@ double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
 #pragma omp parallel for private(pos)
 #endif
     for (pos = 0; pos < num_pairs; pos++) {
+        int threadNum = omp_get_thread_num();
+        AlignmentPairwise* processor = distanceProcessors[threadNum];
         int seq1 = row_id[pos];
         int seq2 = col_id[pos];
         int sym_pos = seq1 * nseqs + seq2;
         double d2l = var_mat[sym_pos]; // moved here for thread-safe (OpenMP)
-        dist_mat[sym_pos] = computeDist(seq1, seq2, dist_mat[sym_pos], d2l);
+        dist_mat[sym_pos] = processor->computeDist(seq1, seq2, dist_mat[sym_pos], d2l);
         if (params->ls_var_type == OLS)
             var_mat[sym_pos] = 1.0;
         else if (params->ls_var_type == WLS_PAUPLIN)

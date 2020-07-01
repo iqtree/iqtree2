@@ -41,12 +41,9 @@ void SuperAlignmentUnlinked::init(StrVector *sequence_names) {
     
     max_num_states = 0;
     // first build taxa_index and partitions
-    int part, seq, npart = partitions.size();
-    
     map<string, int> name2part;
-    vector<Alignment*>::iterator it;
     unlinked_taxa = true;
-    for (it = partitions.begin(); it != partitions.end(); it++) {
+    for (auto it = partitions.begin(); it != partitions.end(); it++) {
         // Make sure that all partitions have different seq names
         for (auto sit = (*it)->seq_names.begin(); sit != (*it)->seq_names.end(); sit++) {
             if (name2part.find(*sit) != name2part.end()) {
@@ -64,7 +61,7 @@ void SuperAlignmentUnlinked::init(StrVector *sequence_names) {
         return;
     }
     
-    for (it = partitions.begin(); it != partitions.end(); it++) {
+    for (auto it = partitions.begin(); it != partitions.end(); it++) {
         seq_names.insert(seq_names.end(), (*it)->seq_names.begin(), (*it)->seq_names.end());
     }
 
@@ -72,7 +69,7 @@ void SuperAlignmentUnlinked::init(StrVector *sequence_names) {
     
     /*
     taxa_index.resize(total_seqs, IntVector(npart, -1));
-    for (it = partitions.begin(), part = 0, seq = 0; it != partitions.end(); it++, part++) {
+    for (auto it = partitions.begin(), part = 0, seq = 0; it != partitions.end(); it++, part++) {
         int part_nseq = (*it)->getNSeq();
         for (int part_seq = 0; part_seq < part_nseq; part_seq++, seq++) {
             taxa_index[seq][part] = part_seq;
@@ -89,7 +86,7 @@ void SuperAlignmentUnlinked::buildPattern() {
         SuperAlignment::buildPattern();
         return;
     }
-    int part, seq, npart = partitions.size();
+    int part, npart = partitions.size();
     seq_type = SEQ_BINARY;
     num_states = 2; // binary type because the super alignment presents the presence/absence of taxa in the partitions
     STATE_UNKNOWN = 2;
@@ -104,7 +101,7 @@ void SuperAlignmentUnlinked::buildPattern() {
     resize(npart, Pattern(nseq));
     for (part = 0; part < npart; part++) {
         Pattern *pat = &at(part);
-        for (seq = 0; seq < partitions[part]->getNSeq(); seq++)
+        for (int seq = 0; seq < partitions[part]->getNSeq(); seq++)
             pat->at(start_seq + seq) = 1;
         //addPattern(pat, part);
         computeConst(*pat);
