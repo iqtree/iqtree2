@@ -7,6 +7,7 @@
 
 #include "modeldnaerror.h"
 
+// Bound for sequencing error probability (epsilon)
 #define MIN_EPSILON 0.0001
 #define MAX_EPSILON 0.5
 
@@ -77,32 +78,57 @@ void ModelDNAError::computeTipLikelihood(PML::StateType state, double *state_lk)
         return ModelDNA::ModelSubst::computeTipLikelihood(state, state_lk);
 
     int i;
-    if (state < num_states) {
+
+    int b = -1;
+    if (seqerr_name == "+EA")
+        b = 0;
+    else if (seqerr_name == "+EC")
+        b = 1;
+    else if (seqerr_name == "+EG")
+        b = 2;
+    else if (seqerr_name == "+ET")
+        b = 3;
+    else if (seqerr_name == "+E")
+        b = -1;
+    else {
+        outError("Unknown sequencing error model " + seqerr_name);
+    }
+    
+    // true for observed states, false for unobserved state
+    bool observed[4] = {false, false, false, false};
+    int num_observed = 0; // number of observed states
+    if (state < 4) {
         // single state
-        for (i = 0; i < num_states; i++)
-            state_lk[i] = epsilon/3.0;
-        state_lk[state] = 1.0 - epsilon;
+        observed[state] = true;
+        num_observed = 1;
     } else if (state < 18) {
         // ambiguous (polymorphic) state
         int cstate = state-num_states+1;
-        int obs_states = 0; // number of observed states
         for (i = 0; i < num_states; i++)
-            if ((cstate) & (1 << i))
-                obs_states++;
-        
-        double obs_lk = 1.0 - (4-obs_states)*epsilon/3.0;
-        double unobs_lk = obs_states*epsilon/3.0;
-        for (i = 0; i < num_states; i++) {
-            if ((cstate) & (1 << i))
-                state_lk[i] = obs_lk;
-            else
-                state_lk[i] = unobs_lk;
-        }
+            if ((cstate) & (1 << i)) {
+                observed[i] = true;
+                num_observed++;
+            }
     } else {
         // unknown state
-        for (int i = 0; i < num_states; i++)
-            state_lk[i] = 1.0;
+        for (i = 0; i < num_states; i++)
+            observed[i] = true;
+        num_observed = num_states;
     }
+
+    double observed_lk; // likelihood of observed state
+    double unobserved_lk; // likelihood of unobserved state
+    if (b >= 0) {
+        // nucleotide-specific error towards nucleotide b (Nicola de Maio)
+        observed_lk = observed[b] ? 1.0 : 1.0-epsilon;
+        unobserved_lk = observed[b] ? epsilon : 0.0;
+    } else {
+        // uniform error model (Felsenstein 2004)
+        observed_lk = 1.0 - (4-num_observed)*epsilon/3.0;
+        unobserved_lk = num_observed*epsilon/3.0;
+    }
+    for (i = 0; i < num_states; i++)
+        state_lk[i] = observed[i] ? observed_lk : unobserved_lk;
 }
 
 void ModelDNAError::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
