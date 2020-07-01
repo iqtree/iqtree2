@@ -59,7 +59,7 @@ public:
 	*/
 	virtual void computeFuncDerv(double value, double &df, double &ddf);
 
-	vector<AlignmentPairwise*> partitions;
+	vector<AlignmentPairwise> partitions;
 
 };
 

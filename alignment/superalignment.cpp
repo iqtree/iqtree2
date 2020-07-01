@@ -1175,11 +1175,11 @@ void SuperAlignment::doSymTest(size_t vecid, vector<SymTestResult> &vec_sym, vec
     if (stats)
         all_stats.resize(partitions.size());
 
-    int i, nparts = partitions.size();
+    int nparts = partitions.size();
     #ifdef _OPENMP
-    #pragma omp parallel for private(i)
+    #pragma omp parallel for
     #endif
-    for (i = 0; i < nparts; i++) {
+    for (int i = 0; i < nparts; i++) {
         if (stats) {
             partitions[i]->doSymTest(vecid + i, vec_sym, vec_marsym, vec_intsym, rstream, &all_stats[i]);
             for (auto it = all_stats[i].begin(); it != all_stats[i].end(); it++)
@@ -1188,7 +1188,7 @@ void SuperAlignment::doSymTest(size_t vecid, vector<SymTestResult> &vec_sym, vec
             partitions[i]->doSymTest(vecid + i, vec_sym, vec_marsym, vec_intsym, rstream);
     }
     if (stats) {
-        for (i = 0; i < nparts; i++)
+        for (int i = 0; i < nparts; i++)
             stats->insert(stats->end(), all_stats[i].begin(), all_stats[i].end());
     }
 }

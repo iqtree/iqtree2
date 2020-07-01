@@ -46,6 +46,8 @@
 #include "constrainttree.h"
 #include "memslot.h"
 
+class AlignmentPairwise;
+
 #define BOOT_VAL_FLOAT
 #define BootValType float
 //#define BootValType double
@@ -452,11 +454,23 @@ public:
     virtual void setModelFactory(ModelFactory *model_fac);
 
     /**
+            indicates whether there is a model factory
+            @return true if there is an associated model factory
+     */
+    bool hasModelFactory() const;
+    
+    /**
             set rate heterogeneity, important to compute the likelihood
             @param rate associated rate heterogeneity class
      */
     void setRate(RateHeterogeneity *rate);
 
+    /**
+            indicates whether there is a rate heterogeneity
+            @return true if there is an associated rate heterogeneity
+     */
+    bool hasRateHeterogeneity() const;
+    
     /**
             get rate heterogeneity
             @return associated rate heterogeneity class
@@ -1579,6 +1593,8 @@ public:
             Distance function
      ****************************************************************************/
 
+    virtual void prepareToComputeDistances();
+    
     /**
             compute the distance between 2 sequences.
             @param seq1 index of sequence 1
@@ -2313,6 +2329,7 @@ protected:
     /** cost_matrix for non-uniform parsimony */
     unsigned int * cost_matrix; // Sep 2016: store cost matrix in 1D array
 
+    std::vector<AlignmentPairwise*> distanceProcessors;
 };
 
 #endif
