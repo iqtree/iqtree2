@@ -3,6 +3,24 @@
 //               (that work in terms of .mldist inputs and
 //                NEWICK outputs).
 //
+//  Copyright (C) 2020, James Barbetti.
+//
+//  LICENSE:
+//* This program is free software; you can redistribute it and/or modify
+//* it under the terms of the GNU General Public License as published by
+//* the Free Software Foundation; either version 2 of the License, or
+//* (at your option) any later version.
+//*
+//* This program is distributed in the hope that it will be useful,
+//* but WITHOUT ANY WARRANTY; without even the implied warranty of
+//* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//* GNU General Public License for more details.
+//*
+//* You should have received a copy of the GNU General Public License
+//* along with this program; if not, write to the
+//* Free Software Foundation, Inc.,
+//* 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+//
 //  BIONJ implementation based on http://www.lirmm.fr/~w3ifa/MAAS/BIONJ/BIONJ.html
 //        (see BIONJMatrix).  Original authors: Olivier Gascuel
 //        and Hoa Sien Cuong (the code for the Unix version).
@@ -41,17 +59,32 @@
 // The vectorized implementations (of BIONJ and NJ) use Agner Fog's
 // vectorclass library.
 //
+// Short names used for matrices and vectors (all indices start at 0).
+//   D distance matrix (input, read from an .mldist file)
+//   V estimated variance matrix (used in BIONJ, but not in NJ)
+//   S bottom left triangle of the distance matrix,
+//     with each row sorted in ascending order (see [SMP2011])
+//   I index matrix, indicating (for each row of S, which cluster
+//     each distance was calculated for).
+//   Q connection-cost matrix (doesn't actually exist, cells of it
+//     are calculated).
+//   U vector of row totals (each row, the sum of the corresponding
+//     row of the D matrix).  BIONJ implementations also use vectors
+//     (indexed by cluster) of cluster totals.
+//
 // Created by James Barbetti on 18/6/2020.
 //
 
 #include "starttree.h"
-#include "heapsort.h"             //for mirroredHeapsort
-#include <vector>
-#include <string>
+#include "heapsort.h"                //for mirroredHeapsort, used to sort
+                                     //rows of the S and I matrices
+                                     //See [SMP2011], section 2.5.
+#include <vector>                    //for std::vector
+#include <string>                    //sequence names stored as std::string
 #include <fstream>
-#include <iostream>               //for std::istream
-#include <boost/scoped_array.hpp> //for boost::scoped_array
-#include <vectorclass/vectorclass.h> //for Vec4d
+#include <iostream>                  //for std::istream
+#include <boost/scoped_array.hpp>    //for boost::scoped_array
+#include <vectorclass/vectorclass.h> //for Vec4d and Vec4db vector classes
 
 typedef double NJFloat;
 
@@ -144,7 +177,10 @@ public:
     }
 };
 
-#define MATRIX_ALIGNMENT 64 //Assumed: sizeof(NJFloat) divides MATRIX_ALIGNMENT
+#define MATRIX_ALIGNMENT 64
+    //Assumed: sizeof(NJFloat) divides MATRIX_ALIGNMENT
+    //Vectorized versions run faster (particularly on older
+    //hardware), if rows are aligned.
 
 template <class P> inline P* matrixAlign(P* p) {
     //If we've got an array that mighnt't be MATRIX_ALIGNMENT-byte
@@ -155,7 +191,8 @@ template <class P> inline P* matrixAlign(P* p) {
     uintptr_t address = reinterpret_cast<uintptr_t>(p);
     if (0<(address % MATRIX_ALIGNMENT))
     {
-        return p + (MATRIX_ALIGNMENT - (address % MATRIX_ALIGNMENT))/sizeof(P);
+        return p + (MATRIX_ALIGNMENT
+                    - (address % MATRIX_ALIGNMENT))/sizeof(P);
     } else {
         return p;
     }
@@ -163,7 +200,6 @@ template <class P> inline P* matrixAlign(P* p) {
 
 template <class T=NJFloat> class Matrix
 {
-
     //Note 1: This is a separate class so that it can be
     //        used for square variance (V) and rectangular
     //        sorted distance (S) and index (I) matrices,
@@ -179,7 +215,7 @@ public:
     size_t n;
     T*     data;
     T**    rows;
-    T*     rowTotals;
+    T*     rowTotals; //The U vector
     void setSize(size_t rank) {
         clear();
         if (0==rank) {
@@ -296,6 +332,8 @@ public:
     }
     void removeRowOnly(size_t rowNum) {
         //Remove row from a rectangular matrix.
+        //Don't touch the columns in the row
+        //(Used for the S and I matrices in BIONJ).
         rowTotals[rowNum] = rowTotals[n-1];
         rows[rowNum]      = rows[n-1];
         rows[n-1]         = nullptr;
@@ -304,6 +342,7 @@ public:
 };
 
 class NJMatrix: public Matrix<NJFloat>
+    //NJMatrix is a D matrix (a matrix of distances).
 {
 protected:
     std::vector<size_t>          rowToCluster;
@@ -390,6 +429,7 @@ public:
         }
     }
     virtual void cluster(size_t a, size_t b) {
+        //Cluster two active rows, identified by row indices a and b).
         //Assumed 0<=a<b<n
         NJFloat nless2        = n-2;
         NJFloat tMultiplier   = (n<3) ? 0 : (0.5 / nless2);
@@ -491,7 +531,7 @@ public:
 
 class BIONJMatrix : public NJMatrix {
 protected:
-    Matrix  variance;
+    Matrix  variance;       //The V matrix
     typedef NJMatrix super;
 public:
     explicit BIONJMatrix(const std::string &distanceMatrixFilePath)
@@ -614,9 +654,11 @@ protected:
     mutable std::vector<size_t>  rowScanOrder;   //Order in which rows are to be scanned
                                                  //Only used in... getRowMinima().
     
-    Matrix<NJFloat>      entriesSorted; //Entries in distance matrix
+    Matrix<NJFloat>      entriesSorted; //The S matrix: Entries in distance matrix
                                         //(each row sorted by ascending value)
-    Matrix<int>          entryToCluster;//
+    Matrix<int>          entryToCluster;//The I matrix: for each entry in S, which
+                                        //cluster the row (that the entry came from)
+                                        //was mapped to (at the time).
     
 public:
     BoundingMatrix(const std::string &distanceFilePath)
@@ -738,6 +780,12 @@ public:
             clusterTotals[wipe] = -infiniteDistance;
             //A trick.  This way we don't need to check if clusters
             //are still "live" in the inner loop of getRowMinimum().
+            //When we are "subtracting" cluster totals to calculate
+            //entries in Q, they will come out so big they won't be
+            //considered as candidates for neighbour join.
+            //If we didn't do this we'd have to check, all the time,
+            //when calculating entries in Q, if clusters are still
+            //"live" (have corresponding rows in the D matrix).
         }
         for (size_t r = 0; r<n; ++r) {
             size_t cluster = rowToCluster[r];
@@ -762,6 +810,7 @@ public:
         //better to "read off" the first column of the S matrix and
         //calculate the corresponding entry in Q for each live cluster;
         //use up-to-date rather than out-of-date information.
+        //
         //Since we always have to check these entries when we process
         //the row, why not process them up front, hoping to get a
         //better bound on min(V) (and "rule out" entire rows with that
@@ -971,5 +1020,6 @@ void addBioNJ2020TreeBuilders(Factory& f) {
     f.advertiseTreeBuilder( new Builder<BIONJMatrix> ("BIONJ",   "BIONJ (Gascuel, Cong [2009])"));
     f.advertiseTreeBuilder( new Builder<RapidBIONJ>  ("BIONJ-R", "Rapid BIONJ (Saitou, Nei [1987], Gascuel [2009], Simonson Mailund Pedersen [2011])"));
     f.advertiseTreeBuilder( new Builder<VectorBIONJ> ("BIONJ-V", "Vectorized BIONJ (Gascuel, Cong [2009])"));
+    f.advertiseTreeBuilder( new Builder<BIONJMatrix> ("",        "BIONJ (Gascuel, Cong [2009])"));  //Default.
 }
 }; //end of namespace
