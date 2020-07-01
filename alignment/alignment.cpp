@@ -1537,22 +1537,29 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
     non_stop_codon = NULL;
 
 
-    if (nseq != seq_names.size()) throw "Different number of sequences than specified";
-
+    if (nseq != seq_names.size()) {
+        throw "Different number of sequences than specified";
+    }
+    unordered_set<string> namesSeen;
+    double seqCheckStart = getRealTime();
     /* now check that all sequence names are correct */
     for (seq_id = 0; seq_id < nseq; seq_id ++) {
         ostringstream err_str;
         if (seq_names[seq_id] == "")
             err_str << "Sequence number " << seq_id+1 << " has no names\n";
         // check that all the names are different
-        for (int i = 0; i < seq_id; i++)
-            if (seq_names[i] == seq_names[seq_id])
-                err_str << "The sequence name " << seq_names[seq_id] << " is dupplicated\n";
+        if (!namesSeen.insert(seq_names[seq_id]).second) {
+            err_str << "The sequence name " << seq_names[seq_id] << " is duplicated\n";
+        }
     }
     if (err_str.str() != "")
+    {
         throw err_str.str();
-
-
+    }
+    if (verbose_mode >= VB_MED) {
+        cout.precision(6);
+        cout << "Duplicate sequence name check took " << (getRealTime()-seqCheckStart) << " seconds." << endl;
+    }
     /* now check that all sequences have the same length */
     for (seq_id = 0; seq_id < nseq; seq_id ++) {
         if (sequences[seq_id].length() != nsite) {
@@ -1917,13 +1924,16 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
     in.close();
 
     // now try to cut down sequence name if possible
-    int i, j, step = 0;
+    int i, step = 0;
     StrVector new_seq_names, remain_seq_names;
     new_seq_names.resize(seq_names.size());
     remain_seq_names = seq_names;
 
+    double startShorten = getRealTime();
     for (step = 0; step < 4; step++) {
         bool duplicated = false;
+        unordered_set<string> namesSeenThisTime;
+        //Set of shorted names seen so far, this iteration
         for (i = 0; i < seq_names.size(); i++) {
             if (remain_seq_names[i].empty()) continue;
             size_t pos = remain_seq_names[i].find_first_of(" \t");
@@ -1934,17 +1944,19 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
                 new_seq_names[i] += remain_seq_names[i].substr(0, pos);
                 remain_seq_names[i] = "_" + remain_seq_names[i].substr(pos+1);
             }
-            // now check for duplication
-            if (!duplicated)
-            for (j = 0; j < i-1; j++)
-                if (new_seq_names[j] == new_seq_names[i]) {
-                    duplicated = true;
-                    break;
-                }
+            if (!duplicated) {
+                //add the shortened name for sequence i to the
+                //set of shortened names seen so far, and set
+                //duplicated to true if it was already there.
+                duplicated = !namesSeenThisTime.insert(new_seq_names[i]).second;
+            }
         }
         if (!duplicated) break;
     }
-
+    if (verbose_mode >= VB_MED) {
+        cout.precision(6);
+        cout << "Name shortening took " << (getRealTime() - startShorten) << " seconds." << endl;
+    }
     if (step > 0) {
         for (i = 0; i < seq_names.size(); i++)
             if (seq_names[i] != new_seq_names[i]) {
@@ -1959,13 +1971,11 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
 
 int Alignment::readClustal(char *filename, char *sequence_type) {
 
-
     StrVector sequences;
     igzstream in;
     int line_num = 1;
     string line;
     num_states = 0;
-
 
     // set the failbit and badbit
     in.exceptions(ios::failbit | ios::badbit);
