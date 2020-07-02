@@ -35,6 +35,7 @@
 //#include <Eigen/Core>
 #include "mtree.h"
 #include "alignment/alignment.h"
+#include "alignment/alignmentsummary.h"
 #include "model/modelsubst.h"
 #include "model/modelfactory.h"
 #include "phylonode.h"
@@ -1603,7 +1604,19 @@ public:
             @param (OUT) variance of distance between seq1 and seq2
             @return distance between seq1 and seq2
      */
+    
+    virtual bool hasMatrixOfConvertedSequences() const;
 
+    virtual size_t getConvertedSequenceLength() const;
+    
+    virtual const char* getConvertedSequenceByNumber(int seq1) const;
+    
+    virtual const std::vector<int>& getConvertedSequenceFrequencies() const;
+    
+    virtual int  getSumOfFrequenciesForSitesWithConstantState(int state) const;
+    
+    virtual void doneComputingDistances();
+    
     virtual double computeDist(int seq1, int seq2, double initial_dist, double &var);
 
     virtual double computeDist(int seq1, int seq2, double initial_dist);
@@ -2330,6 +2343,8 @@ protected:
     unsigned int * cost_matrix; // Sep 2016: store cost matrix in 1D array
 
     std::vector<AlignmentPairwise*> distanceProcessors;
+    AlignmentSummary* summary;
+    
 };
 
 #endif

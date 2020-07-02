@@ -9,7 +9,7 @@ checkpoint.cpp checkpoint.h
 MPIHelper.cpp MPIHelper.h
 starttree.cpp starttree.h
 bionj.cpp bionj2.cpp
-timeutil.h
+timeutil.h hammingdistance.h
 )
 
 if(ZLIB_FOUND)

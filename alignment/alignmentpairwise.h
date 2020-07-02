@@ -114,6 +114,8 @@ public:
 
 	PhyloTree* tree;          //multi-species alignment tree from which sequences
                               //to be aligned are to be drawn
+    int        num_states_squared; //the square of num_states
+    int        total_size;    //number of elements in pair_freq
     double*    pair_freq;     //array of frequency counts (owned by this instance)
                               //size is num_states_squared times 1 (or by the number
                               //of categories).
@@ -126,8 +128,6 @@ public:
     double*    sum_derv2;     //used in computeFuncDerv()
     double*    sum_trans;     //used in computeFuncDerv()
 
-    int        num_states_squared;
-    int        total_size; //number of elements in pair_freq
     int        seq_id1;
     int        seq_id2;
 protected:

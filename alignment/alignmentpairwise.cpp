@@ -23,6 +23,7 @@
 AlignmentPairwise::AlignmentPairwise()
         : Alignment(), Optimization()
 {
+    total_size         = 0;
     pair_freq          = nullptr;
     tree               = nullptr;
     num_states         = 0;
@@ -31,7 +32,6 @@ AlignmentPairwise::AlignmentPairwise()
     trans_size         = 0;
     trans_mat          = nullptr;
     sum_trans_mat      = nullptr;
-    total_size         = 0;
     trans_derv1        = nullptr;
     trans_derv2        = nullptr;
     sum_derv1          = nullptr;
@@ -45,37 +45,31 @@ void AlignmentPairwise::setTree(PhyloTree* atree) {
     //      If it is called multiple times on the same instance
     //      it will leak memory.
     //
-    pair_freq     = nullptr;
-    tree          = atree;
-    num_states    = tree->aln->num_states;
+    tree               = atree;
+    num_states         = tree->aln->num_states;
     num_states_squared = num_states * num_states;
-    STATE_UNKNOWN = tree->aln->STATE_UNKNOWN;
-    
-    trans_size    = tree->getModel()->getTransMatrixSize();
+    STATE_UNKNOWN      = tree->aln->STATE_UNKNOWN;
+    trans_size         = 0;
+    auto rate          = tree->getRate();
+    bool isRateSiteSpecific = (rate==nullptr) ? false : rate->isSiteSpecificRate();
+    auto model         = tree->getModel();
+    bool isModelSiteSpecific = (model==nullptr) ? false: model->isSiteSpecificModel();
+    if (model!=nullptr) {
+        trans_size    = model->getTransMatrixSize();
+    }
+    if (!isModelSiteSpecific && !isRateSiteSpecific
+        && rate!=nullptr && rate->getPtnCat(0) >= 0) {
+        total_size *= rate->getNDiscreteRate();
+    }
     trans_mat     = new double[trans_size];
     sum_trans_mat = new double[trans_size];
+    sum_trans     = new double[trans_size];
+    sum_derv1     = new double[trans_size];
+    sum_derv2     = new double[trans_size];
+    trans_derv1   = new double[trans_size];
+    trans_derv2   = new double[trans_size];
     total_size    = num_states_squared;
-    trans_derv1   = nullptr;
-    trans_derv2   = nullptr;
-    sum_derv1     = nullptr;
-    sum_derv2     = nullptr;
-    sum_trans     = nullptr;
-    
-    if (tree->getRate()->isSiteSpecificRate()
-        || tree->getModel()->isSiteSpecificModel()) {
-        return;
-    }
-    if (tree->getRate()->getPtnCat(0) >= 0) {
-        total_size *= tree->getRate()->getNDiscreteRate();
-        // categorized rates
-    } else {
-        sum_trans = new double[trans_size];
-        sum_derv1 = new double[trans_size];
-        sum_derv2 = new double[trans_size];
-    }
-    pair_freq   = new double[total_size];
-    trans_derv1 = new double[trans_size];
-    trans_derv2 = new double[trans_size];
+    pair_freq     = new double[total_size];
 }
 
 AlignmentPairwise::AlignmentPairwise(PhyloTree* tree) {
@@ -85,17 +79,45 @@ AlignmentPairwise::AlignmentPairwise(PhyloTree* tree) {
 void AlignmentPairwise::setSequenceNumbers(int seq1, int seq2) {
     seq_id1 = seq1;
     seq_id2 = seq2;
-    if (tree->getRate()->isSiteSpecificRate()
-        || tree->getModel()->isSiteSpecificModel()) {
+    auto rate = tree->getRate();
+    bool isRateSiteSpecific = (rate==nullptr) ? false : rate->isSiteSpecificRate();
+    auto model = tree->getModel();
+    bool isModelSiteSpecific = (model==nullptr) ? false: model->isSiteSpecificModel();
+    if (isRateSiteSpecific || isModelSiteSpecific) {
         return;
     }
     memset(pair_freq, 0, sizeof(double)*total_size);
-    if (tree->getRate()->getPtnCat(0) >= 0) {
+    if (tree->hasMatrixOfConvertedSequences()
+         && rate->getPtnCat(0) < 0 ) {
+        auto sequence1      = tree->getConvertedSequenceByNumber(seq1);
+        auto sequence2      = tree->getConvertedSequenceByNumber(seq2);
+        auto frequencies    = tree->getConvertedSequenceFrequencies();
+        size_t sequenceLength = tree->getConvertedSequenceLength();
+        for (size_t i=0; i<sequenceLength; ++i) {
+            auto state1 = sequence1[i];
+            auto state2 = sequence2[i];
+            if ( state1 < num_states && state2 < num_states ) {
+                if ( state1 != STATE_UNKNOWN && state2 != STATE_UNKNOWN ) {
+                    pair_freq[state1*num_states + state2] += frequencies[i];
+                    //Todo: Would it be worth storing a multiplication table?!
+                    //      and using that instead of multiplying by num_states?
+                }
+            }
+        }
+        //Add back the cumulative frequencies for any sites
+        //that have the same state in every sequence.
+        for (int state=0; state<num_states; ++state) {
+            pair_freq[state*num_states + state]
+                += tree->getSumOfFrequenciesForSitesWithConstantState(state);
+        }
+        //Todo: Handle the multiple category case here
+        return;
+    } else if (tree->getRate()->getPtnCat(0) >= 0) {
         int i = 0;
         for (auto it = tree->aln->begin(); it != tree->aln->end(); it++, i++) {
             int state1 = tree->aln->convertPomoState((*it)[seq_id1]);
             int state2 = tree->aln->convertPomoState((*it)[seq_id2]);
-            addPattern(state1, state2, it->frequency, tree->getRate()->getPtnCat(i));
+            addPattern(state1, state2, it->frequency, rate->getPtnCat(i));
         }
         return;
     } else {
@@ -104,6 +126,7 @@ void AlignmentPairwise::setSequenceNumbers(int seq1, int seq2) {
             int state2 = tree->aln->convertPomoState((*it)[seq_id2]);
             addPattern(state1, state2, it->frequency);
         }
+        return;
     }
 }
 
