@@ -12,6 +12,7 @@
 #ifndef ALIGNMENT_H
 #define ALIGNMENT_H
 
+#include <map>
 #include <vector>
 #include <bitset>
 #include "pattern.h"
@@ -82,19 +83,6 @@ typedef unordered_map<vector<StateType>, int, hashPattern> PatternIntMap;
 typedef map<vector<StateType>, int> PatternIntMap;
 #endif
 
-/**
-Summary (for an Alignment) of sites where there are variations
-        @author James Barbetti
- */
-struct AlignmentSummary
-{
-public:
-    std::vector<int> siteNumbers;      //of sites with variation
-    std::vector<int> siteFrequencies;  //ditto
-    int totalFrequency; //sum of frequencies (all sites, including constant ones?)
-    StateType minState; //found on a site where there is variation
-    StateType maxState; //ditto
-};
 
 constexpr int EXCLUDE_GAP   = 1; // exclude gaps
 constexpr int EXCLUDE_INVAR = 2; // exclude invariant sites
@@ -586,12 +574,6 @@ public:
     /****************************************************************************
             Distance functions
      ****************************************************************************/
-
-    /**
-            collect statistics about the sites for which at least some sequences differ
-            @param summary Alignment summary to update
-     */
-    virtual void summarizeSites(AlignmentSummary &summary) const;
 
     /**
             compute the observed distance (number of different pairs of positions per site) 

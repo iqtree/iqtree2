@@ -88,11 +88,13 @@ namespace StartTree
                 double buildStart = getRealTime();
                 builder.constructTree();
                 double buildElapsed = getRealTime() - buildStart;
+#if (0)
                 std::cout.precision(6);
-                std::cout << "Elapsed time for constructing initial tree"
-                    << " (with algorithm " << name << "), "
-                    << buildElapsed << std::endl;
+                std::cout << "Wall-clock time for constructing initial tree"
+                << " (with algorithm " << name << "), "
+                << buildElapsed << std::endl;
                 std::cout.precision(3);
+#endif
                 builder.writeTreeFile(newickTreeFilePath);
         }
     };

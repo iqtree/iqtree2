@@ -793,8 +793,8 @@ public :
                 trees[i].head=NULL;
                 trees[i].tail=NULL;
             }
-            double joinElapsed = getRealTime() - joinStart; //JB2020-06-18
-            printf("Elapsed wall-clock time for neighbour joining proper, %f\n", joinElapsed); //JB2020-06-18
+            //double joinElapsed = getRealTime() - joinStart; //JB2020-06-18
+            //printf("Elapsed wall-clock time for neighbour joining proper, %f\n", joinElapsed); //JB2020-06-18
         }
         
         free(trees);
