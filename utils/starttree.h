@@ -85,10 +85,12 @@ namespace StartTree
             ( const std::string &distanceMatrixFilePath
              , const std::string & newickTreeFilePath) {
                 B builder(distanceMatrixFilePath);
-                double buildStart = getRealTime();
-                builder.constructTree();
-                double buildElapsed = getRealTime() - buildStart;
 #if (0)
+                double buildStart = getRealTime();
+#endif
+                builder.constructTree();
+#if (0)
+                double buildElapsed = getRealTime() - buildStart;
                 std::cout.precision(6);
                 std::cout << "Wall-clock time for constructing initial tree"
                 << " (with algorithm " << name << "), "
