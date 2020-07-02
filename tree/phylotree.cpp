@@ -140,6 +140,7 @@ PhyloTree::PhyloTree(Alignment *aln) : MTree(), CheckpointFactory() {
 }
 
 PhyloTree::PhyloTree(string& treeString, Alignment* aln, bool isRooted) : MTree() {
+    init();
     stringstream str;
     str << treeString;
     str.seekg(0, ios::beg);
@@ -201,11 +202,7 @@ void myPartitionsDestroy(partitionList *pl) {
 }
 
 PhyloTree::~PhyloTree() {
-    for ( auto it = distanceProcessors.begin()
-         ; it!=distanceProcessors.end(); ++it) {
-        delete (*it);
-    }
-    distanceProcessors.clear();
+    doneComputingDistances();
     if (nni_scale_num)
         aligned_free(nni_scale_num);
     nni_scale_num = NULL;
@@ -282,7 +279,6 @@ PhyloTree::~PhyloTree() {
     pllPartitions = NULL;
     pllAlignment = NULL;
     pllInst = NULL;
-    delete summary;
     summary = nullptr;
 }
 
@@ -3130,6 +3126,11 @@ int  PhyloTree::getSumOfFrequenciesForSitesWithConstantState(int state) const {
 }
 
 void PhyloTree::doneComputingDistances() {
+    for ( auto it = distanceProcessors.begin()
+         ; it!=distanceProcessors.end(); ++it) {
+        delete (*it);
+    }
+    distanceProcessors.clear();
     delete summary;
     summary = nullptr;
 }
