@@ -146,7 +146,7 @@ bool ModelDNAError::getVariables(double *variables) {
     if (!fix_epsilon) {
         int id = ModelDNA::getNDim()+1;
         changed |= (epsilon != variables[id]);
-        epsilon = variables[getNDim()];
+        epsilon = variables[id];
     }
     return changed;
 }

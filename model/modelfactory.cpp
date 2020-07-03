@@ -254,15 +254,15 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         }
     }
         
-    // decompute error model +E from rate_str
-    string seqerr_str = "";
+    // move error model +E from rate_str to model_str
+    //string seqerr_str = "";
     while ((spec_pos = rate_str.find("+E")) != string::npos) {
         size_t end_pos = rate_str.find_first_of("+*", spec_pos+1);
         if (end_pos == string::npos) {
-            seqerr_str += rate_str.substr(spec_pos);
+            model_str += rate_str.substr(spec_pos);
             rate_str = rate_str.substr(0, spec_pos);
         } else {
-            seqerr_str += rate_str.substr(spec_pos, end_pos - spec_pos);
+            model_str += rate_str.substr(spec_pos, end_pos - spec_pos);
             rate_str = rate_str.substr(0, spec_pos) + rate_str.substr(end_pos);
         }
     }
@@ -533,12 +533,12 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
                 model_list = model_str.substr(4, model_str.length()-5);
                 model_str = model_str.substr(0, 3);
             }
-            model = new ModelMixture(model_name, model_str, model_list, models_block, freq_type, freq_params, seqerr_str, tree, optimize_mixmodel_weight);
+            model = new ModelMixture(model_name, model_str, model_list, models_block, freq_type, freq_params, tree, optimize_mixmodel_weight);
         } else {
             //            string model_desc;
             //            NxsModel *nxsmodel = models_block->findModel(model_str);
             //            if (nxsmodel) model_desc = nxsmodel->description;
-            model = createModel(model_str, models_block, freq_type, freq_params, seqerr_str, tree);
+            model = createModel(model_str, models_block, freq_type, freq_params, tree);
         }
 //        fused_mix_rate &= model->isMixture() && site_rate->getNRate() > 1;
     } else {
@@ -559,11 +559,11 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         for (i = 0; i < tree->aln->site_state_freq.size(); i++) {
             ModelMarkov *modeli;
             if (i == 0) {
-                modeli = (ModelMarkov*)createModel(model_str, models_block, (params.freq_type != FREQ_UNKNOWN) ? params.freq_type : FREQ_EMPIRICAL, "", seqerr_str, tree);
+                modeli = (ModelMarkov*)createModel(model_str, models_block, (params.freq_type != FREQ_UNKNOWN) ? params.freq_type : FREQ_EMPIRICAL, "", tree);
                 modeli->getStateFrequency(state_freq);
                 modeli->getRateMatrix(rates);
             } else {
-                modeli = (ModelMarkov*)createModel(model_str, models_block, FREQ_EQUAL, "", seqerr_str, tree);
+                modeli = (ModelMarkov*)createModel(model_str, models_block, FREQ_EQUAL, "", tree);
                 modeli->setStateFrequency(state_freq);
                 modeli->setRateMatrix(rates);
             }
@@ -884,7 +884,7 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
             delete model;
             for (int i = 1; i < site_rate->getNRate(); i++)
                 model_list += "," + model_str;
-            model = new ModelMixture(model_name, model_str, model_list, models_block, freq_type, freq_params, seqerr_str, tree, optimize_mixmodel_weight);
+            model = new ModelMixture(model_name, model_str, model_list, models_block, freq_type, freq_params, tree, optimize_mixmodel_weight);
         }
         if (model->getNMixtures() != site_rate->getNRate())
             outError("Mixture model and site rate model do not have the same number of categories");
