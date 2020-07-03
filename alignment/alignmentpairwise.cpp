@@ -37,6 +37,9 @@ AlignmentPairwise::AlignmentPairwise()
     sum_derv1          = nullptr;
     sum_derv2          = nullptr;
     sum_trans          = nullptr;
+    pairCount = 0;
+    derivativeCalculationCount = 0;
+    costCalculationCount = 0;
 }
 
 void AlignmentPairwise::setTree(PhyloTree* atree) {
@@ -70,6 +73,10 @@ void AlignmentPairwise::setTree(PhyloTree* atree) {
     trans_derv2   = new double[trans_size];
     total_size    = num_states_squared;
     pair_freq     = new double[total_size];
+    
+    pairCount = 0;
+    derivativeCalculationCount = 0;
+    costCalculationCount = 0;
 }
 
 AlignmentPairwise::AlignmentPairwise(PhyloTree* tree) {
@@ -77,6 +84,7 @@ AlignmentPairwise::AlignmentPairwise(PhyloTree* tree) {
 }
 
 void AlignmentPairwise::setSequenceNumbers(int seq1, int seq2) {
+    ++pairCount;
     seq_id1 = seq1;
     seq_id2 = seq2;
     auto rate = tree->getRate();
@@ -179,6 +187,7 @@ bool AlignmentPairwise::addPattern(int state1, int state2, int freq, int cat) {
 }
 
 double AlignmentPairwise::computeFunction(double value) {
+    ++costCalculationCount;
     RateHeterogeneity *site_rate = tree->getRate();
     int ncat = site_rate->getNDiscreteRate();
     ModelSubst *model = tree->getModel();
@@ -242,6 +251,7 @@ double AlignmentPairwise::computeFunction(double value) {
 }
 
 void AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf) {
+    ++derivativeCalculationCount;
     RateHeterogeneity *site_rate = tree->getRate();
     int ncat = site_rate->getNDiscreteRate();
     ModelSubst *model = tree->getModel();
@@ -357,6 +367,7 @@ double AlignmentPairwise::optimizeDist(double initial_dist, double &d2l) {
         int N = tree->aln->virtual_pop_size;
         max_genetic_dist *= N*N;
     }
+    ++costCalculationCount;
     double min_branch = Params::getInstance().min_branch_length;
     if (tree->optimize_by_newton) { // Newton-Raphson method
         dist = minimizeNewton(min_branch, dist, max_genetic_dist, min_branch, d2l);

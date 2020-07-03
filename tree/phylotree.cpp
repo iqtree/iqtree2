@@ -3117,8 +3117,8 @@ const char* PhyloTree::getConvertedSequenceByNumber(int seq1) const {
     return summary->sequenceMatrix + seq1 * summary->sequenceLength;
 }
 
-const std::vector<int>& PhyloTree::getConvertedSequenceFrequencies() const {
-    return summary->siteFrequencies;
+const int* PhyloTree::getConvertedSequenceFrequencies() const {
+    return summary->siteFrequencies.data();
 }
 
 int  PhyloTree::getSumOfFrequenciesForSitesWithConstantState(int state) const {
@@ -3126,8 +3126,19 @@ int  PhyloTree::getSumOfFrequenciesForSitesWithConstantState(int state) const {
 }
 
 void PhyloTree::doneComputingDistances() {
+    int p=0;
     for ( auto it = distanceProcessors.begin()
-         ; it!=distanceProcessors.end(); ++it) {
+         ; it!=distanceProcessors.end(); ++it, ++p) {
+        if (verbose_mode >= VB_MAX) {
+            double ratio = (double) ((*it)->derivativeCalculationCount) /
+            (double) ((*it)->costCalculationCount);
+            std::cout << "Processor " << p << " processed "
+                << (*it)->pairCount << " pairs, evaluating cost "
+                << (*it)->costCalculationCount << " times, and finding "
+                << (*it)->derivativeCalculationCount << " derivatives "
+                << "( ratio " << ratio << " )"
+                << endl;
+        }
         delete (*it);
     }
     distanceProcessors.clear();
@@ -3451,20 +3462,21 @@ double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
     return longest_dist;
 }
 
-double PhyloTree::computeDist(Params &params, Alignment *alignment, double* &dist_mat, double* &var_mat,
-        string &dist_file) {
-    this->params = &params;
-    double longest_dist = 0.0;
-    aln = alignment;
+void PhyloTree::decideDistanceFilePath(Params& params) {
     dist_file = params.out_prefix;
     if (!model_factory) {
         if (params.compute_obs_dist)
             dist_file += ".obsdist";
         else
-            //dist_file += ".jcdist"; // too many files, I decided to discard .jcdist
             dist_file += ".mldist";
     } else
         dist_file += ".mldist";
+}
+
+double PhyloTree::computeDist(Params &params, Alignment *alignment, double* &dist_mat, double* &var_mat) {
+    this->params = &params;
+    double longest_dist = 0.0;
+    aln = alignment;
 
     if (!dist_mat) {
         int n        = alignment->getNSeq();
@@ -3486,17 +3498,15 @@ double PhyloTree::computeDist(Params &params, Alignment *alignment, double* &dis
             cout << "Distance calculation time: "
             << getRealTime() - begin_time << " seconds" << endl;
         }
-        double write_begin_time = getRealTime();
-        alignment->printDist(dist_file.c_str(), dist_mat);
-        if (verbose_mode >= VB_MED) {
-            cout << "Time taken to write distance file: "
-            << getRealTime() - write_begin_time << " seconds " << endl;
-        }
     } else {
         longest_dist = alignment->readDist(params.dist_file, dist_mat);
         dist_file = params.dist_file;
     }
     return longest_dist;
+}
+
+void PhyloTree::printDistanceFile() {
+    aln->printDist(dist_file.c_str(), dist_matrix);
 }
 
 double PhyloTree::computeObsDist(double *dist_mat) {
@@ -3519,7 +3529,7 @@ double PhyloTree::computeObsDist(double *dist_mat) {
     //return correctDist(dist_mat);
 }
 
-double PhyloTree::computeObsDist(Params &params, Alignment *alignment, double* &dist_mat, string &dist_file) {
+double PhyloTree::computeObsDist(Params &params, Alignment *alignment, double* &dist_mat) {
     double longest_dist = 0.0;
     aln = alignment;
     dist_file = params.out_prefix;
@@ -3530,8 +3540,6 @@ double PhyloTree::computeObsDist(Params &params, Alignment *alignment, double* &
         memset(dist_mat, 0, sizeof(double) * alignment->getNSeq() * alignment->getNSeq());
     }
     longest_dist = computeObsDist(dist_mat);
-    alignment->printDist(dist_file.c_str(), dist_mat);
-
     return longest_dist;
 }
 
@@ -3539,18 +3547,71 @@ double PhyloTree::computeObsDist(Params &params, Alignment *alignment, double* &
  compute BioNJ tree, a more accurate extension of Neighbor-Joining
  ****************************************************************************/
 
-void PhyloTree::computeBioNJ(Params &params, Alignment *alignment, string &dist_file) {
+void PhyloTree::computeBioNJ(Params &params) {
     string bionj_file = params.out_prefix;
     bionj_file += ".bionj";
+    this->decideDistanceFilePath(params);
     auto treeBuilder
         = StartTree::Factory::getTreeBuilderByName
             ( params.start_tree_subtype_name);
-    cout << "Computing " << treeBuilder->getName() << " tree"
-        << " (in file " << bionj_file << ")... from distance matrix"
-        << " (in file " << dist_file << ")" << endl;
-    treeBuilder->constructTree(dist_file, bionj_file);
+    bool wasDoneInMemory = false;
+    #ifdef _OPENMP
+        #pragma omp parallel
+    #endif
+    {
+        #ifdef _OPENMP
+            #pragma omp for
+        #endif
+        for (int i=0; i<2; ++i) {
+            if (i==0) {
+                if (!params.dist_file) {
+                    //This will take longer
+                    double write_begin_time = getRealTime();
+                    printDistanceFile();
+                    if (verbose_mode >= VB_MED) {
+                        #ifdef _OPENMP
+                            #pragma omp critical
+                        #endif
+                        cout << "Time taken to write distance file: "
+                        << getRealTime() - write_begin_time << " seconds " << endl;
+                    }
+                }
+            } else if (this->dist_matrix!=nullptr) {
+                double start_time = getRealTime();
+                wasDoneInMemory = treeBuilder->constructTreeInMemory
+                ( this->aln->getSeqNames(), dist_matrix, bionj_file);
+                if (wasDoneInMemory) {
+                    if (verbose_mode >= VB_MED) {
+                        #ifdef _OPENMP
+                            #pragma omp critical
+                        #endif
+                        cout << "Computing " << treeBuilder->getName() << " tree"
+                            << " (from in-memory) distance matrix took "
+                            << (getRealTime()-start_time) << " sec." << endl;
+                    }
+                }
+            }
+        }
+        #ifdef _OPENMP
+            #pragma omp barrier
+        #endif
+    }
+    if (!wasDoneInMemory) {
+        double start_time = getRealTime();
+        treeBuilder->constructTree(dist_file, bionj_file);
+        if (verbose_mode >= VB_MED) {
+            cout << "Constructing " << treeBuilder->getName() << " tree"
+                << " (from distance file " << dist_file << ") took"
+                << (getRealTime()-start_time) << " sec." << endl;
+        }
+    }
     bool non_empty_tree = (root != NULL);
+    double tree_load_start_time = getRealTime();
     readTreeFile(bionj_file.c_str());
+    if (verbose_mode >= VB_MED) {
+        cout << "Loading tree (from file " << bionj_file << ") took "
+            << (getRealTime()-tree_load_start_time) << " sec." << endl;
+    }
     if (non_empty_tree) {
         initializeAllPartialLh();
     }

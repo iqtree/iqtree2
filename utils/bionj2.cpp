@@ -289,7 +289,7 @@ public:
     T*     data;
     T**    rows;
     T*     rowTotals; //The U vector
-    void setSize(size_t rank) {
+    virtual void setSize(size_t rank) {
         clear();
         if (0==rank) {
             return;
@@ -370,7 +370,7 @@ public:
         assign(rhs);
         return *this;
     }
-    void calculateRowTotals() const {
+    virtual void calculateRowTotals() const {
         //Note: Although this isn't currently in use,
         //it's been kept, in case it is needed
         //(after, say, every 200 iterations of
@@ -421,13 +421,16 @@ public:
     using super::rows;
     using super::setSize;
     using super::n;
+    using super::calculateRowTotals;
     using super::removeRowAndColumn;
 protected:
-    std::vector<size_t>  rowToCluster;
-    ClusterTree<T>       clusters;
-    mutable Positions<T> rowMinima;
+    std::vector<size_t>  rowToCluster; //*not* initialized by setSize
+    ClusterTree<T>       clusters;     //*not* touched by setSize
+    mutable Positions<T> rowMinima;    //*not* touched by setSize
 public:
-    explicit UPGMA_Matrix(const std::string &distanceMatrixFilePath) {
+    UPGMA_Matrix():super() {
+    }
+    void loadMatrixFromFile(const std::string &distanceMatrixFilePath) {
         size_t rank;
         std::fstream in;
         in.open(distanceMatrixFilePath, std::ios_base::in);
@@ -449,12 +452,37 @@ public:
             rowToCluster.emplace_back(r);
         }
         in.close();
+        calculateRowTotals();
         //Note: The old code wrote a message to standard output,
         //      if the matrix was not symmetric.  This code doesn't.
     }
+    virtual void loadMatrix(const std::vector<std::string>& names, double* matrix) {
+        //Assumptions: 2 < names.size(), all names distinct
+        //  matrix is symmetric, with matrix[row*names.size()+col]
+        //  containing the distance between taxon row and taxon col.
+        setSize(names.size());
+        clusters.clear();
+        for (auto it = names.begin(); it != names.end(); ++it) {
+            clusters.addCluster(*it);
+        }
+        rowToCluster.resize(n, 0);
+        for (int r=0; r<n; ++r) {
+            rowToCluster[r]=r;
+        }
+        #pragma omp parallel for
+        for (int row=0; row<n; ++row) {
+            double* sourceStart = matrix + row * n;
+            double* sourceStop  = sourceStart + n;
+            T*      dest        = rows[row];
+            for (double* source=sourceStart; source<sourceStop; ++source, ++dest ) {
+                *dest = *source;
+            }
+        }
+        calculateRowTotals();
+    }
     virtual void constructTree() {
+        Position<T> best;
         while (3<n) {
-            Position<T> best;
             getMinimumEntry(best);
             cluster(best.column, best.row);
         }
@@ -464,6 +492,10 @@ public:
         clusters.writeTreeFile(treeFilePath);
     }
 protected:
+    virtual void setSize(size_t rank) {
+        super::setSize(rank);
+        rowToCluster.clear();
+    }
     void getMinimumEntry(Position<T> &best) {
         getRowMinima();
         best.value = infiniteDistance;
@@ -555,20 +587,20 @@ public:
 protected:
     mutable std::vector<T> scaledRowTotals; //used in getRowMinima
 public:
-    NJMatrix(const std::string &distanceMatrixFilePath)
-        : super(distanceMatrixFilePath) {
-        calculateRowTotals();
-        scaledRowTotals.resize(n, 0.0);
-        calculateScaledRowTotals();
-    }
+    NJMatrix(): super() { }
 protected:
-    void calculateScaledRowTotals() const {
+    virtual void calculateScaledRowTotals() const {
+        scaledRowTotals.reserve(n);
         NJFloat nless2      = ( n - 2 );
         NJFloat tMultiplier = ( n <= 2 ) ? 0 : (1 / nless2);
         #pragma omp parallel for
         for (size_t r=0; r<n; ++r) {
             scaledRowTotals[r] = rowTotals[r] * tMultiplier;
         }
+    }
+    virtual void calculateRowTotals() const {
+        super::calculateRowTotals();
+        calculateScaledRowTotals();
     }
     virtual void getRowMinima() const {
         //
@@ -658,8 +690,13 @@ public:
 protected:
     Matrix<T>  variance;       //The V matrix
 public:
-    explicit BIONJMatrix(const std::string &distanceMatrixFilePath)
-        : super(distanceMatrixFilePath){
+    virtual void loadMatrixFromFile(const std::string &distanceMatrixFilePath)
+    {
+        super::loadMatrixFromFile(distanceMatrixFilePath);
+        variance = *this;
+    }
+    virtual void loadMatrix(const std::vector<std::string>& names, double* matrix) {
+        super::loadMatrix(names, matrix);
         variance = *this;
     }
     inline T chooseLambda(size_t a, size_t b, T Vab) {
@@ -781,9 +818,6 @@ protected:
                                //was mapped to (at the time).
     
 public:
-    BoundingMatrix(const std::string &distanceFilePath)
-    : super(distanceFilePath) {
-    }
     virtual void constructTree() {
         //1. Set up vectors indexed by cluster number,
         clusterToRow.resize(n);
@@ -910,8 +944,6 @@ public:
         for (size_t r = 0; r<n; ++r) {
             size_t cluster = rowToCluster[r];
             clusterTotals[cluster] = rowTotals[r];
-            //std::cout << "row " << r << ", cluster " << cluster
-            //    << " have total " << rowTotals[r] << std::endl;
         }
         sortRow(a, clusters.size());
     }
@@ -1049,6 +1081,7 @@ public:
     }
 };
 
+
 template <class T=NJFloat, class super=BIONJMatrix<T>, class V=Vec4d, class VB=Vec4db>
     class VectorizedMatrix: public super
 {
@@ -1063,18 +1096,19 @@ template <class T=NJFloat, class super=BIONJMatrix<T>, class V=Vec4d, class VB=V
     using super::rows;
     using super::rowMinima;
     using super::rowTotals;
-public:
+    using super::calculateRowTotals;
+protected:
     mutable std::vector<T> scratchTotals;
     mutable std::vector<T> scratchColumnNumbers;
-    size_t  blockSize;
-    
-    VectorizedMatrix(const std::string &distanceMatrixFilePath)
-    : super(distanceMatrixFilePath) {
+    const size_t  blockSize;
+public:
+    VectorizedMatrix() : super(), blockSize(VB().size()) {
+    }
+    virtual void calculateRowTotals() const {
+        super::calculateRowTotals();
         size_t fluff = MATRIX_ALIGNMENT / sizeof(T);
         scratchTotals.resize(n + fluff, 0.0);
         scratchColumnNumbers.resize(n + fluff, 0.0);
-        Vec4d v;
-        blockSize = v.size();
     }
     virtual void getRowMinima() const {
         T nless2      = ( n - 2 );
@@ -1130,6 +1164,63 @@ public:
     }
 };//end of class
 
+template <class T=NJFloat, class V=Vec4d, class VB=Vec4db>
+class VectorizedUPGMA_Matrix: public UPGMA_Matrix<T>
+{
+protected:
+    typedef UPGMA_Matrix<T> super;
+    using super::n;
+    using super::rowMinima;
+    using super::rows;
+    using super::calculateRowTotals;
+    const size_t blockSize;
+    mutable std::vector<T> scratchColumnNumbers;
+public:
+    VectorizedUPGMA_Matrix() : super(), blockSize(VB().size()) {
+    }
+    virtual void calculateRowTotals() const {
+        size_t fluff = MATRIX_ALIGNMENT / sizeof(T);
+        scratchColumnNumbers.resize(n + fluff, 0.0);
+    }
+    virtual void getRowMinima() const
+    {
+        T* nums = matrixAlign ( scratchColumnNumbers.data() );
+        rowMinima.resize(n);
+        rowMinima[0].value = infiniteDistance;
+        //#pragma omp parallel for
+        for (size_t row=1; row<n; ++row) {
+            Position<T> pos(row, 0, infiniteDistance);
+            const T* rowData = rows[row];
+            size_t col;
+            V minVector  = infiniteDistance;
+            V ixVector   = -1 ;
+
+            for (col=0; col+blockSize<row; col+=blockSize) {
+                V  rowVector; rowVector.load_a(rowData+col);
+                VB less      = rowVector < minVector;
+                V  numVector; numVector.load_a(nums+col);
+                ixVector  = select(less, numVector, ixVector);
+                minVector = select(less, rowVector, minVector);
+            }
+            //Extract minimum and column number
+            for (int c=0; c<blockSize; ++c) {
+                if (minVector[c] < pos.value) {
+                    pos.value  = minVector[c];
+                    pos.column = ixVector[c];
+                }
+            }
+            for (; col<row; ++col) {
+                T dist = rowData[col];
+                if (dist < pos.value) {
+                    pos.column = col;
+                    pos.value  = dist;
+                }
+            }
+            rowMinima[row] = pos;
+        }
+    }
+};
+
 typedef BoundingMatrix<NJFloat, NJMatrix<NJFloat>>      RapidNJ;
 typedef BoundingMatrix<NJFloat, BIONJMatrix<NJFloat>>   RapidBIONJ;
 typedef VectorizedMatrix<NJFloat, NJMatrix<NJFloat>>    VectorNJ;
@@ -1143,6 +1234,7 @@ void addBioNJ2020TreeBuilders(Factory& f) {
     f.advertiseTreeBuilder( new Builder<RapidBIONJ>  ("BIONJ-R", "Rapid BIONJ (Saitou, Nei [1987], Gascuel [2009], Simonson Mailund Pedersen [2011])"));
     f.advertiseTreeBuilder( new Builder<VectorBIONJ> ("BIONJ-V", "Vectorized BIONJ (Gascuel, Cong [2009])"));
     f.advertiseTreeBuilder( new Builder<UPGMA_Matrix<NJFloat>>("UPGMA",    "UPGMA (Sokal, Michener [1958])"));
+    f.advertiseTreeBuilder( new Builder<VectorizedUPGMA_Matrix<NJFloat>>("UPGMA-V", "Vectorized UPGMA (Sokal, Michener [1958])"));
     f.advertiseTreeBuilder( new Builder<BIONJMatrix<NJFloat>> ("",        "BIONJ (Gascuel, Cong [2009])"));  //Default.
 }
 }; //end of namespace

@@ -105,13 +105,18 @@ public:
         @return a new estimate of branch length
     */
 
-    double computeDist( int seq1, int seq2, double initial_dist, double &d2l );
+    virtual double computeDist( int seq1, int seq2, double initial_dist, double &d2l );
     
 	/**
 		destructor
 	*/
     virtual ~AlignmentPairwise();
 
+    size_t pairCount;
+    size_t derivativeCalculationCount;
+    size_t costCalculationCount;
+    
+protected:
 	PhyloTree* tree;          //multi-species alignment tree from which sequences
                               //to be aligned are to be drawn
     int        num_states_squared; //the square of num_states
@@ -132,6 +137,8 @@ public:
     int        seq_id2;
 protected:
     void setTree(PhyloTree* atree);
+    
+    
 };
 
 #endif
