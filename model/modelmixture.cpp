@@ -986,7 +986,6 @@ const double MIN_MIXTURE_PROP = 0.001;
 
 ModelSubst* createModel(string model_str, ModelsBlock *models_block,
                         StateFreqType freq_type, string freq_params,
-                        string seqerr,
                         PhyloTree* tree)
 {
 	ModelSubst *model = NULL;
@@ -1039,6 +1038,23 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block,
 		model_params = model_str.substr(pos+1, model_str.length()-pos-2);
 		model_str = model_str.substr(0, pos);
     }
+
+    // sequencing error model
+    string seqerr = "";
+    string::size_type spec_pos;
+    while ((spec_pos = model_str.find("+E")) != string::npos) {
+        string::size_type end_pos = model_str.find_first_of("+*", spec_pos+1);
+        if (end_pos == string::npos) {
+            seqerr = model_str.substr(spec_pos);
+            model_str = model_str.substr(0, spec_pos);
+        } else {
+            seqerr = model_str.substr(spec_pos, end_pos - spec_pos);
+            model_str = model_str.substr(0, spec_pos) + model_str.substr(end_pos);
+        }
+    }
+    
+    if (!seqerr.empty() && tree->aln->seq_type != SEQ_DNA)
+        outError("Sequencing error model " + seqerr + " is only supported for DNA");
 
 	/*
 	if ((model_str == "JC" && tree->aln->seq_type == SEQ_DNA) ||
@@ -1100,18 +1116,18 @@ ModelMixture::ModelMixture(PhyloTree *tree) : ModelMarkov(tree) {
 }
 
 ModelMixture::ModelMixture(string orig_model_name, string model_name, string model_list, ModelsBlock *models_block,
-		StateFreqType freq, string freq_params, string seqerr, PhyloTree *tree, bool optimize_weights)
+		StateFreqType freq, string freq_params, PhyloTree *tree, bool optimize_weights)
 	: ModelMarkov(tree)
 {
 	prop = NULL;
 	fix_prop = true;
 	optimizing_submodels = false;
     optimize_steps = 0;
-	initMixture(orig_model_name, model_name, model_list, models_block, freq, freq_params, seqerr, tree, optimize_weights);
+	initMixture(orig_model_name, model_name, model_list, models_block, freq, freq_params, tree, optimize_weights);
 }
 
 void ModelMixture::initMixture(string orig_model_name, string model_name, string model_list, ModelsBlock *models_block,
-		StateFreqType freq, string freq_params, string seqerr, PhyloTree *tree, bool optimize_weights)
+		StateFreqType freq, string freq_params, PhyloTree *tree, bool optimize_weights)
 {
     //	const int MAX_MODELS = 64;
 	size_t cur_pos;
@@ -1223,11 +1239,11 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 		if (freq == FREQ_MIXTURE) {
 			for(int f = 0; f != freq_vec.size(); f++) {
                 if (freq_vec[f] == nxs_freq_empirical)
-					model = (ModelMarkov*)createModel(this_name, models_block, FREQ_EMPIRICAL, "", seqerr, tree);
+					model = (ModelMarkov*)createModel(this_name, models_block, FREQ_EMPIRICAL, "", tree);
                 else if (freq_vec[f] == nxs_freq_optimize)
-					model = (ModelMarkov*)createModel(this_name, models_block, FREQ_ESTIMATE, "", seqerr, tree);
+					model = (ModelMarkov*)createModel(this_name, models_block, FREQ_ESTIMATE, "", tree);
 				else
-					model = (ModelMarkov*)createModel(this_name, models_block, FREQ_USER_DEFINED, freq_vec[f]->description, seqerr, tree);
+					model = (ModelMarkov*)createModel(this_name, models_block, FREQ_USER_DEFINED, freq_vec[f]->description, tree);
 				model->total_num_subst = rate * freq_rates[f];
 				push_back(model);
 				weights.push_back(weight * freq_weights[f]);
@@ -1249,7 +1265,7 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 				full_name += model->name;
 			}
 		} else {
-			model = (ModelMarkov*)createModel(this_name, models_block, freq, freq_params, seqerr, tree);
+			model = (ModelMarkov*)createModel(this_name, models_block, freq, freq_params, tree);
 			model->total_num_subst = rate;
 			push_back(model);
 			weights.push_back(weight);

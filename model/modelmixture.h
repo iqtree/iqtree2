@@ -31,7 +31,6 @@ extern const char* builtin_mixmodels_definition;
  */
 ModelSubst *createModel(string model_str, ModelsBlock *models_block,
                         StateFreqType freq_type, string freq_params,
-                        string seqerr,
                         PhyloTree *tree);
 
 
@@ -48,10 +47,10 @@ public:
 		@param tree associated phylogenetic tree
 	*/
     ModelMixture(string orig_model_name, string model_name, string model_list, ModelsBlock *models_block,
-    		StateFreqType freq, string freq_params, string seqerr, PhyloTree *tree, bool optimize_weights);
+    		StateFreqType freq, string freq_params, PhyloTree *tree, bool optimize_weights);
 
     void initMixture(string orig_model_name, string model_name, string model_list, ModelsBlock *models_block,
-    		StateFreqType freq, string freq_params, string seqerr, PhyloTree *tree, bool optimize_weights);
+    		StateFreqType freq, string freq_params, PhyloTree *tree, bool optimize_weights);
 
     void initMem();
 
