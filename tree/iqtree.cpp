@@ -615,7 +615,7 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
             break;
         case STT_BIONJ:
             // This is the old default option: using BIONJ as starting tree
-            computeBioNJ(*params, aln, dist_file);
+            computeBioNJ(*params);
             if (verbose_mode >= VB_MED) {
                 cout << "Computing initial tree took " << getRealTime() - start
                 << " wall-clock seconds" << endl;
