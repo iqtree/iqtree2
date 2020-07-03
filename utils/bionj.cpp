@@ -839,6 +839,12 @@ public:
             BioNj bio2009;
             bio2009.create(distanceMatrixFilePath.c_str(), newickTreeFilePath.c_str());
     }
+    virtual bool constructTreeInMemory
+        ( const std::vector<std::string> &sequenceNames
+         , double *distanceMatrix
+         , const std::string & newickTreeFilePath) {
+            return false;
+    }
 };
 
 namespace StartTree {

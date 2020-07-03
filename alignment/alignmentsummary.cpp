@@ -92,7 +92,6 @@ AlignmentSummary::AlignmentSummary(const Alignment* a, bool keepConstSites) {
     }
 }
 
-
 AlignmentSummary::~AlignmentSummary() {
     delete [] sequenceMatrix;
     sequenceMatrix = nullptr;
@@ -122,7 +121,7 @@ bool AlignmentSummary::constructSequenceMatrix(bool treatAllAmbiguousStatesAsUnk
             char *sequence = sequenceMatrix + seq * sequenceLength;
             for (size_t seqPos = 0; seqPos < sequenceLength; ++seqPos) { //position in reduced sequence
                 auto state = alignment->at(posToSite[seqPos])[seq] ;
-                if ( this->alignment->num_states < state ) {
+                if ( this->alignment->num_states <= state ) {
                     state = this->alignment->STATE_UNKNOWN;
                 }
                 sequence[seqPos] = static_cast<char> ( state );
