@@ -2439,7 +2439,10 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
                 iqtree->resetCurScore();
                 double start_bionj = getRealTime();
                 iqtree->computeBioNJ(params, iqtree->aln, iqtree->dist_file);
-                cout << getRealTime() - start_bionj << " seconds" << endl;
+                if (verbose_mode >= VB_MED) {
+                    cout << "Wall-clock time spent creating initial tree was "
+                    << getRealTime() - start_bionj << " seconds" << endl;
+                }
                 if (iqtree->isSuperTree())
                     iqtree->wrapperFixNegativeBranch(true);
                 else

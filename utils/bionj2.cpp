@@ -3,6 +3,24 @@
 //               (that work in terms of .mldist inputs and
 //                NEWICK outputs).
 //
+//  Copyright (C) 2020, James Barbetti.
+//
+//  LICENSE:
+//* This program is free software; you can redistribute it and/or modify
+//* it under the terms of the GNU General Public License as published by
+//* the Free Software Foundation; either version 2 of the License, or
+//* (at your option) any later version.
+//*
+//* This program is distributed in the hope that it will be useful,
+//* but WITHOUT ANY WARRANTY; without even the implied warranty of
+//* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//* GNU General Public License for more details.
+//*
+//* You should have received a copy of the GNU General Public License
+//* along with this program; if not, write to the
+//* Free Software Foundation, Inc.,
+//* 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+//
 //  BIONJ implementation based on http://www.lirmm.fr/~w3ifa/MAAS/BIONJ/BIONJ.html
 //        (see BIONJMatrix).  Original authors: Olivier Gascuel
 //        and Hoa Sien Cuong (the code for the Unix version).
@@ -41,17 +59,32 @@
 // The vectorized implementations (of BIONJ and NJ) use Agner Fog's
 // vectorclass library.
 //
+// Short names used for matrices and vectors (all indices start at 0).
+//   D distance matrix (input, read from an .mldist file)
+//   V estimated variance matrix (used in BIONJ, but not in NJ)
+//   S bottom left triangle of the distance matrix,
+//     with each row sorted in ascending order (see [SMP2011])
+//   I index matrix, indicating (for each row of S, which cluster
+//     each distance was calculated for).
+//   Q connection-cost matrix (doesn't actually exist, cells of it
+//     are calculated).
+//   U vector of row totals (each row, the sum of the corresponding
+//     row of the D matrix).  BIONJ implementations also use vectors
+//     (indexed by cluster) of cluster totals.
+//
 // Created by James Barbetti on 18/6/2020.
 //
 
 #include "starttree.h"
-#include "heapsort.h"             //for mirroredHeapsort
-#include <vector>
-#include <string>
+#include "heapsort.h"                //for mirroredHeapsort, used to sort
+                                     //rows of the S and I matrices
+                                     //See [SMP2011], section 2.5.
+#include <vector>                    //for std::vector
+#include <string>                    //sequence names stored as std::string
 #include <fstream>
-#include <iostream>               //for std::istream
-#include <boost/scoped_array.hpp> //for boost::scoped_array
-#include <vectorclass/vectorclass.h> //for Vec4d
+#include <iostream>                  //for std::istream
+#include <boost/scoped_array.hpp>    //for boost::scoped_array
+#include <vectorclass/vectorclass.h> //for Vec4d and Vec4db vector classes
 
 typedef double NJFloat;
 
@@ -60,7 +93,7 @@ const NJFloat infiniteDistance = 1e+300;
 namespace StartTree
 {
 
-struct Position
+template <class T=NJFloat> struct Position
 {
     //A position (row, column) in an NJ matrix
     //Note that column is always less than row.
@@ -68,9 +101,9 @@ struct Position
 public:
     size_t  row;
     size_t  column;
-    NJFloat value;
+    T       value;
     Position() : row(0), column(0), value(0) {}
-    Position(size_t r, size_t c, NJFloat v)
+    Position(size_t r, size_t c, T v)
         : row(r), column(c), value(v) {}
     Position& operator = (const Position &rhs) {
         row    = rhs.row;
@@ -86,23 +119,25 @@ public:
     }
 };
 
-typedef std::vector<Position> Positions;
+template <class T> class Positions : public std::vector<Position<T>>
+{
+};
 
-struct Link {
+template <class T=NJFloat> struct Link {
     //
     //Describes a link between an interior node and
     //a cluster (clusters are identified by index).
     //
 public:
     size_t  clusterIndex;
-    NJFloat linkDistance;
+    T       linkDistance;
     Link(size_t index, NJFloat distance) {
         clusterIndex = index;
         linkDistance = distance;
     }
 };
 
-struct Cluster
+template <class T=NJFloat> struct Cluster
 {
     //
     //Describes a cluster (either a single exterior
@@ -111,40 +146,114 @@ struct Cluster
     //earlier.
     //
 public:
+    size_t countOfExteriorNodes;
     std::string name;
-    std::vector<Link> links;
+    std::vector<Link<T>> links;
+    Cluster(): countOfExteriorNodes(0) {
+    }
     explicit Cluster(const std::string &taxon_name) {
+        countOfExteriorNodes = 1;
         name = taxon_name;
     }
-    Cluster(size_t a, NJFloat aLength, size_t b, NJFloat bLength) {
-        links.emplace_back(a, aLength);
-        links.emplace_back(b, bLength);
-    }
-    Cluster
-        ( size_t a, NJFloat aLength, size_t b, NJFloat bLength
-        , size_t c, NJFloat cLength) {
-        links.emplace_back(a, aLength);
-        links.emplace_back(b, bLength);
-        links.emplace_back(c, cLength);
-    }
 };
 
-struct Place
+template <class T> class ClusterTree: public std::vector<Cluster<T>>
 {
-    //
-    //Used for keep of tracking where we're up to when
-    //we are writing out the description of a Cluster.
-    //
 public:
-    size_t clusterIndex;
-    size_t linkNumber;
-    Place(size_t ix, size_t num) {
-        clusterIndex = ix;
-        linkNumber = num;
+    typedef std::vector<Cluster<T>> super;
+    using super::at;
+    using super::back;
+    using super::emplace_back;
+    using super::push_back;
+    using super::size;
+    Cluster<T>& addCluster(const std::string& taxon_name) {
+        emplace_back(taxon_name);
+        return back();
+    }
+    Cluster<T>& addCluster(size_t a, T aLength, size_t b, T bLength) {
+        push_back(Cluster<T>());
+        Cluster<T>& cluster = back();
+        cluster.links.emplace_back(a, aLength);
+        cluster.links.emplace_back(b, bLength);
+        cluster.countOfExteriorNodes = at(a).countOfExteriorNodes + at(b).countOfExteriorNodes;
+        return cluster;
+    }
+    Cluster<T>& addCluster
+    ( size_t a, T aLength, size_t b, T bLength
+     , size_t c, T cLength)  {
+        Cluster<T>& cluster = addCluster(a, aLength, b, bLength);
+        cluster.links.emplace_back(c, cLength);
+        cluster.countOfExteriorNodes += at(c).countOfExteriorNodes;
+        return cluster;
+    }
+    void writeTreeFile(const std::string &treeFilePath) const {
+        struct Place
+        {
+            //
+            //Used for keep of tracking where we're up to when
+            //we are writing out the description of a Cluster.
+            //
+        public:
+            size_t clusterIndex;
+            size_t linkNumber;
+            Place(size_t ix, size_t num) {
+                clusterIndex = ix;
+                linkNumber = num;
+            }
+        };
+
+        std::vector<Place> stack;
+        std::fstream out;
+        out.open(treeFilePath, std::ios_base::out);
+        out.precision(8);
+        bool failed = false; //Becomes true if clusters
+                             //defines cycles (should never happen)
+                             //Indicates a fatal logic error
+        int maxLoop = 3 * size();
+                             //More than this, and there must be
+                             //a cycle.  Or something.
+
+        stack.emplace_back(size()-1, 0);
+        do {
+            --maxLoop;
+            if (maxLoop==0) {
+                failed = true;
+                break;
+            }
+            Place here = stack.back();
+            const Cluster<T>& cluster = at(here.clusterIndex);
+            stack.pop_back();
+            if (cluster.links.empty()) {
+                out << cluster.name;
+                continue;
+            }
+            if (here.linkNumber==0) {
+                out << "(";
+                stack.emplace_back(here.clusterIndex, 1);
+                stack.emplace_back(cluster.links[0].clusterIndex, 0);
+                continue;
+            }
+            size_t nextChildNum = here.linkNumber;
+            const Link<T> & linkPrev = cluster.links[nextChildNum-1];
+            out << ":" << linkPrev.linkDistance;
+            if (nextChildNum<cluster.links.size()) {
+                out << ",";
+                const Link<T> & linkNext = cluster.links[nextChildNum];
+                stack.emplace_back(here.clusterIndex, nextChildNum+1);
+                stack.emplace_back(linkNext.clusterIndex, 0);
+            } else {
+                out << ")";
+            }
+        } while (0 < stack.size());
+        out << ";" << std::endl;
+        out.close();
     }
 };
 
-#define MATRIX_ALIGNMENT 64 //Assumed: sizeof(NJFloat) divides MATRIX_ALIGNMENT
+#define MATRIX_ALIGNMENT 64
+    //Assumed: sizeof(NJFloat) divides MATRIX_ALIGNMENT
+    //Vectorized versions run faster (particularly on older
+    //hardware), if rows are aligned.
 
 template <class P> inline P* matrixAlign(P* p) {
     //If we've got an array that mighnt't be MATRIX_ALIGNMENT-byte
@@ -155,7 +264,8 @@ template <class P> inline P* matrixAlign(P* p) {
     uintptr_t address = reinterpret_cast<uintptr_t>(p);
     if (0<(address % MATRIX_ALIGNMENT))
     {
-        return p + (MATRIX_ALIGNMENT - (address % MATRIX_ALIGNMENT))/sizeof(P);
+        return p + (MATRIX_ALIGNMENT
+                    - (address % MATRIX_ALIGNMENT))/sizeof(P);
     } else {
         return p;
     }
@@ -163,7 +273,6 @@ template <class P> inline P* matrixAlign(P* p) {
 
 template <class T=NJFloat> class Matrix
 {
-
     //Note 1: This is a separate class so that it can be
     //        used for square variance (V) and rectangular
     //        sorted distance (S) and index (I) matrices,
@@ -179,7 +288,7 @@ public:
     size_t n;
     T*     data;
     T**    rows;
-    T*     rowTotals;
+    T*     rowTotals; //The U vector
     void setSize(size_t rank) {
         clear();
         if (0==rank) {
@@ -296,6 +405,8 @@ public:
     }
     void removeRowOnly(size_t rowNum) {
         //Remove row from a rectangular matrix.
+        //Don't touch the columns in the row
+        //(Used for the S and I matrices in BIONJ).
         rowTotals[rowNum] = rowTotals[n-1];
         rows[rowNum]      = rows[n-1];
         rows[n-1]         = nullptr;
@@ -303,15 +414,20 @@ public:
     }
 };
 
-class NJMatrix: public Matrix<NJFloat>
-{
-protected:
-    std::vector<size_t>          rowToCluster;
-    std::vector<Cluster>         clusters;
-    mutable Positions            rowMinima;
-    mutable std::vector<NJFloat> scaledRowTotals; //used in getRowMinima
+template <class T=NJFloat> class UPGMA_Matrix: public Matrix<T> {
+    //UPGMA_Matrix is a D matrix (a matrix of distances).
 public:
-    explicit NJMatrix(const std::string &distanceMatrixFilePath) {
+    typedef Matrix<T> super;
+    using super::rows;
+    using super::setSize;
+    using super::n;
+    using super::removeRowAndColumn;
+protected:
+    std::vector<size_t>  rowToCluster;
+    ClusterTree<T>       clusters;
+    mutable Positions<T> rowMinima;
+public:
+    explicit UPGMA_Matrix(const std::string &distanceMatrixFilePath) {
         size_t rank;
         std::fstream in;
         in.open(distanceMatrixFilePath, std::ios_base::in);
@@ -320,12 +436,12 @@ public:
         for (int r=0; r<n; ++r) {
             std::string name;
             in >> name;
-            clusters.emplace_back(name);
+            clusters.addCluster(name);
             for (int c=0; c<n; ++c) {
                 in >> rows[r][c];
                 //Ensure matrix is symmetric (as it is read!)
                 if (c<r && rows[r][c]<rows[c][r]) {
-                    NJFloat v = ( rows[r][c] + rows[c][r] ) * 0.5;
+                    T v = ( rows[r][c] + rows[c][r] ) * 0.5;
                     rows[c][r] = v; //U-R
                     rows[r][c] = v;
                 }
@@ -333,12 +449,119 @@ public:
             rowToCluster.emplace_back(r);
         }
         in.close();
-        calculateRowTotals();
-        scaledRowTotals.resize(n, 0.0);
-        calculateScaledRowTotals();
         //Note: The old code wrote a message to standard output,
         //      if the matrix was not symmetric.  This code doesn't.
     }
+    virtual void constructTree() {
+        while (3<n) {
+            Position<T> best;
+            getMinimumEntry(best);
+            cluster(best.column, best.row);
+        }
+        finishClustering();
+    }
+    void writeTreeFile(const std::string &treeFilePath) const {
+        clusters.writeTreeFile(treeFilePath);
+    }
+protected:
+    void getMinimumEntry(Position<T> &best) {
+        getRowMinima();
+        best.value = infiniteDistance;
+        for (size_t r=0; r<n; ++r) {
+            if (rowMinima[r].value < best.value) {
+                best = rowMinima[r];
+            }
+        }
+    }
+    virtual void getRowMinima() const
+    {
+        rowMinima.resize(n);
+        rowMinima[0].value = infiniteDistance;
+        #pragma omp parallel for
+        for (size_t row=1; row<n; ++row) {
+            float  bestVrc    = infiniteDistance;
+            size_t bestColumn = 0;
+            const  T* rowData = rows[row];
+            for (size_t col=0; col<row; ++col) {
+                T    v      = rowData[col];
+                bool better = ( v < bestVrc );
+                if (better) {
+                    bestColumn = col;
+                    bestVrc = v;
+                }
+            }
+            rowMinima[row] = Position<T>(row, bestColumn, bestVrc);
+        }
+    }
+    void finishClustering() {
+        //Assumes: n is always exactly 3
+        //But:  The formula is probably wrong. Felsenstein [2004] chapter 11 only
+        //      covers UPGMA for rooted trees, and I don't know what
+        //      the right formula is.
+        //
+        T weights[3];
+        T denominator = 0;
+        for (size_t i=0; i<3; ++i) {
+            weights[i] = clusters[rowToCluster[i]].countOfExteriorNodes;
+            denominator += weights[i];
+        }
+        for (size_t i=0; i<3; ++i) {
+            weights[i] /= (2.0 * denominator);
+        }
+        clusters.addCluster
+            ( rowToCluster[0], weights[1]*rows[0][1] + weights[2]*rows[0][2]
+            , rowToCluster[1], weights[0]*rows[0][1] + weights[2]*rows[1][2]
+            , rowToCluster[2], weights[0]*rows[0][2] + weights[1]*rows[1][2]);
+        n = 0;
+    }
+    virtual void cluster(size_t a, size_t b) {
+        double aLength = rows[b][a] * 0.5;
+        double bLength = aLength;
+        size_t aCount = clusters[rowToCluster[a]].countOfExteriorNodes;
+        size_t bCount = clusters[rowToCluster[b]].countOfExteriorNodes;
+        int sumCount = aCount + bCount;
+        double lambda = (double)aCount / (double)sumCount;
+        double mu     = 1.0 - lambda;
+        for (int i=0; i<n; ++i) {
+            if (i!=a && i!=b) {
+                T Dai      = rows[a][i];
+                T Dbi      = rows[b][i];
+                T Dci      = lambda * Dai + mu * Dbi;
+                rows[a][i] = Dci;
+                rows[i][a] = Dci;
+            }
+        }
+        clusters.addCluster ( rowToCluster[a], aLength,
+                              rowToCluster[b], bLength);
+        rowToCluster[a] = clusters.size()-1;
+        rowToCluster[b] = rowToCluster[n-1];
+        removeRowAndColumn(b);
+    }
+};
+
+template <class T=NJFloat> class NJMatrix: public UPGMA_Matrix<T>
+    //NJMatrix is a D matrix (a matrix of distances).
+{
+public:
+    typedef UPGMA_Matrix<T> super;
+    using super::clusters;
+    using super::n;
+    using super::rows;
+    using super::rowMinima;
+    using super::rowTotals;
+    using super::rowToCluster;
+    using super::removeRowAndColumn;
+    using super::calculateRowTotals;
+protected:
+    mutable std::vector<T> scaledRowTotals; //used in getRowMinima
+public:
+    NJMatrix(const std::string &distanceMatrixFilePath)
+        : super(distanceMatrixFilePath) {
+        calculateRowTotals();
+        scaledRowTotals.resize(n, 0.0);
+        calculateScaledRowTotals();
+    }
+protected:
     void calculateScaledRowTotals() const {
         NJFloat nless2      = ( n - 2 );
         NJFloat tMultiplier = ( n <= 2 ) ? 0 : (1 / nless2);
@@ -354,10 +577,10 @@ public:
         //      totals multiplied by (1/(NJFloat)(n-2)).
         //      Better n multiplications than n*(n-1)/2.
         //
-        NJFloat nless2      = ( n - 2 );
-        NJFloat tMultiplier = ( n <= 2 ) ? 0 : (1 / nless2);
+        T nless2      = ( n - 2 );
+        T tMultiplier = ( n <= 2 ) ? 0 : (1 / nless2);
         calculateScaledRowTotals();
-        NJFloat* tot = scaledRowTotals.data();
+        T* tot = scaledRowTotals.data();
         for (size_t r=0; r<n; ++r) {
             tot[r] = rowTotals[r] * tMultiplier;
         }
@@ -367,9 +590,9 @@ public:
         for (size_t row=1; row<n; ++row) {
             float  bestVrc    = infiniteDistance;
             size_t bestColumn = 0;
-            const NJFloat* rowData = rows[row];
+            const T* rowData = rows[row];
             for (size_t col=0; col<row; ++col) {
-                NJFloat v   = rowData[col] - tot[col];
+                T    v      = rowData[col] - tot[col];
                 bool better = ( v < bestVrc );
                 if (better) {
                     bestColumn = col;
@@ -377,37 +600,26 @@ public:
                 }
             }
             bestVrc       -= tot [row];
-            rowMinima[row] = Position(row, bestColumn, bestVrc);
-        }
-    }
-    void getMinimumEntry(Position &best) {
-        getRowMinima();
-        best.value = infiniteDistance;
-        for (size_t r=0; r<n; ++r) {
-            if (rowMinima[r].value < best.value) {
-                best = rowMinima[r];
-            }
+            rowMinima[row] = Position<T>(row, bestColumn, bestVrc);
         }
     }
     virtual void cluster(size_t a, size_t b) {
+        //Cluster two active rows, identified by row indices a and b).
         //Assumed 0<=a<b<n
-        NJFloat nless2        = n-2;
-        NJFloat tMultiplier   = (n<3) ? 0 : (0.5 / nless2);
-        NJFloat medianLength  = 0.5 * rows[a][b];
-        NJFloat fudge         = (rowTotals[a] - rowTotals[b]) * tMultiplier;
-        NJFloat aLength       = medianLength + fudge;
-        NJFloat bLength       = medianLength - fudge;
-        NJFloat lambda        = 0.5;
-        NJFloat mu            = 1.0 - lambda;
-        NJFloat dCorrection   = - lambda * aLength - mu * bLength;
+        T nless2        = n-2;
+        T tMultiplier   = (n<3) ? 0 : (0.5 / nless2);
+        T medianLength  = 0.5 * rows[a][b];
+        T fudge         = (rowTotals[a] - rowTotals[b]) * tMultiplier;
+        T aLength       = medianLength + fudge;
+        T bLength       = medianLength - fudge;
+        T lambda        = 0.5;
+        T mu            = 1.0 - lambda;
+        T dCorrection   = - lambda * aLength - mu * bLength;
         for (int i=0; i<n; ++i) {
             if (i!=a && i!=b) {
-                size_t  x     = (i<a) ? i : a;
-                size_t  y     = (a<i) ? a : i;
-                
-                NJFloat Dai   = rows[a][i];
-                NJFloat Dbi   = rows[b][i];
-                NJFloat Dci   = lambda * Dai + mu * Dbi + dCorrection;
+                T Dai   = rows[a][i];
+                T Dbi   = rows[b][i];
+                T Dci   = lambda * Dai + mu * Dbi + dCorrection;
                 rows[a][i]    = Dci;
                 rows[i][a]    = Dci;
                 rowTotals[i] += Dci - Dai - Dbi; //JB2020-06-18 Adjust row totals
@@ -415,92 +627,44 @@ public:
             }
         }
         rowTotals[a] -= rows[a][b];
-        clusters.emplace_back ( rowToCluster[a], aLength,
-                                rowToCluster[b], bLength);
+        clusters.addCluster ( rowToCluster[a], aLength,
+                              rowToCluster[b], bLength);
         rowToCluster[a] = clusters.size()-1;
         rowToCluster[b] = rowToCluster[n-1];
         removeRowAndColumn(b);
     }
     void finishClustering() {
         //Assumes that n is 3
-        NJFloat halfD01 = 0.5 * rows[0][1];
-        NJFloat halfD02 = 0.5 * rows[0][2];
-        NJFloat halfD12 = 0.5 * rows[1][2];
-        clusters.emplace_back
+        T halfD01 = 0.5 * rows[0][1];
+        T halfD02 = 0.5 * rows[0][2];
+        T halfD12 = 0.5 * rows[1][2];
+        clusters.addCluster
             ( rowToCluster[0], halfD01 + halfD02 - halfD12
             , rowToCluster[1], halfD01 + halfD12 - halfD02
             , rowToCluster[2], halfD02 + halfD12 - halfD01);
         n = 0;
     }
-    virtual void constructTree() {
-        while (3<n) {
-            Position best;
-            getMinimumEntry(best);
-            cluster(best.column, best.row);
-        }
-        finishClustering();
-    }
-    void writeTreeFile(const std::string &treeFilePath) const {
-        std::vector<Place> stack;
-        std::fstream out;
-        out.open(treeFilePath, std::ios_base::out);
-        out.precision(8);
-        bool failed = false; //Becomes true if clusters
-                             //defines cycles (should never happen)
-                             //Indicates a fatal logic error
-        int maxLoop = 3 * clusters.size();
-                             //More than this, and there must be
-                             //a cycle.  Or something.
-
-        stack.emplace_back(clusters.size()-1, 0);
-        do {
-            --maxLoop;
-            if (maxLoop==0) {
-                failed = true;
-                break;
-            }
-            Place here = stack.back();
-            const Cluster& cluster = clusters[here.clusterIndex];
-            stack.pop_back();
-            if (cluster.links.empty()) {
-                out << cluster.name;
-                continue;
-            }
-            if (here.linkNumber==0) {
-                out << "(";
-                stack.emplace_back(here.clusterIndex, 1);
-                stack.emplace_back(cluster.links[0].clusterIndex, 0);
-                continue;
-            }
-            size_t nextChildNum = here.linkNumber;
-            const Link & linkPrev = cluster.links[nextChildNum-1];
-            out << ":" << linkPrev.linkDistance;
-            if (nextChildNum<cluster.links.size()) {
-                out << ",";
-                const Link & linkNext = cluster.links[nextChildNum];
-                stack.emplace_back(here.clusterIndex, nextChildNum+1);
-                stack.emplace_back(linkNext.clusterIndex, 0);
-            } else {
-                out << ")";
-            }
-        } while (0 < stack.size());
-        out << ";" << std::endl;
-        out.close();
-    }
 };
 
-class BIONJMatrix : public NJMatrix {
+template <class T=NJFloat> class BIONJMatrix : public NJMatrix<T> {
+public:
+    typedef NJMatrix<T> super;
+    using super::clusters;
+    using super::n;
+    using super::rows;
+    using super::rowToCluster;
+    using super::rowTotals;
+    using super::removeRowAndColumn;
 protected:
-    Matrix  variance;
-    typedef NJMatrix super;
+    Matrix<T>  variance;       //The V matrix
 public:
     explicit BIONJMatrix(const std::string &distanceMatrixFilePath)
         : super(distanceMatrixFilePath){
         variance = *this;
     }
-    inline NJFloat chooseLambda(size_t a, size_t b, NJFloat Vab) {
+    inline T chooseLambda(size_t a, size_t b, T Vab) {
         //Assumed 0<=a<b<n
-        NJFloat lambda = 0;
+        T lambda = 0;
         if (Vab==0.0) {
             return 0.5;
         }
@@ -513,7 +677,7 @@ public:
         for (int i=b+1; i<n; ++i) {
             lambda += variance.rows[b][i] - variance.rows[a][i];
         }
-        lambda = 0.5 + lambda / (2.0*((NJFloat)n-2)*Vab);
+        lambda = 0.5 + lambda / (2.0*((T)n-2)*Vab);
         if (1.0<lambda) lambda=1.0;
         if (lambda<0.0) lambda=0.0;
         return lambda;
@@ -521,36 +685,33 @@ public:
     virtual void cluster(size_t a, size_t b) {
         //Assumed 0<=a<b<n
         //Bits that differ from super::cluster tagged BIO
-        NJFloat nless2        = n - 2 ;
-        NJFloat tMultiplier   = ( n < 3 ) ? 0 : ( 0.5 / nless2 );
-        NJFloat medianLength  = 0.5 * rows[b][a];
-        NJFloat fudge         = (rowTotals[a] - rowTotals[b]) * tMultiplier;
-        NJFloat aLength       = medianLength + fudge;
-        NJFloat bLength       = medianLength - fudge;
-        NJFloat Vab           = variance.rows[b][a];     //BIO
-        NJFloat lambda        = chooseLambda(a, b, Vab); //BIO
-        NJFloat mu            = 1.0 - lambda;
-        NJFloat dCorrection   = - lambda * aLength - mu * bLength;
-        NJFloat vCorrection   = - lambda * mu * Vab;
-        NJFloat replacementRowTotal = 0;
+        T nless2        = n - 2 ;
+        T tMultiplier   = ( n < 3 ) ? 0 : ( 0.5 / nless2 );
+        T medianLength  = 0.5 * rows[b][a];
+        T fudge         = (rowTotals[a] - rowTotals[b]) * tMultiplier;
+        T aLength       = medianLength + fudge;
+        T bLength       = medianLength - fudge;
+        T Vab           = variance.rows[b][a];     //BIO
+        T lambda        = chooseLambda(a, b, Vab); //BIO
+        T mu            = 1.0 - lambda;
+        T dCorrection   = - lambda * aLength - mu * bLength;
+        T vCorrection   = - lambda * mu * Vab;
+        T replacementRowTotal = 0;
         #pragma omp parallel for
         for (int i=0; i<n; ++i) {
             if (i!=a && i!=b) {
-                size_t  x     = (i<a) ? i : a;
-                size_t  y     = (a<i) ? a : i;
-              
                 //Dci as per reduction 4 in [Gascuel]
-                NJFloat Dai   = rows[a][i];
-                NJFloat Dbi   = rows[b][i];
-                NJFloat Dci   = lambda * Dai + mu * Dbi + dCorrection;
+                T Dai         = rows[a][i];
+                T Dbi         = rows[b][i];
+                T Dci         = lambda * Dai + mu * Dbi + dCorrection;
                 rows[a][i]    = Dci;
                 rows[i][a]    = Dci;
                 rowTotals[i] += Dci - Dai - Dbi; //JB2020-06-18 Adjust row totals
                 
                 //BIO begin (Reduction 10 on variance estimates)
-                NJFloat Vci   = lambda * variance.rows[a][i]
-                              + mu * variance.rows[b][i]
-                              + vCorrection;
+                T Vci   = lambda * variance.rows[a][i]
+                        + mu * variance.rows[b][i]
+                        + vCorrection;
                 variance.rows[a][i] = Vci;
                 variance.rows[i][a] = Vci;
                 //BIO finish
@@ -567,8 +728,7 @@ public:
             replacementRowTotal += rows[a][i];
         }
         rowTotals[a] = replacementRowTotal;
-        clusters.emplace_back ( rowToCluster[a], aLength,
-                                rowToCluster[b], bLength);
+        clusters.addCluster ( rowToCluster[a], aLength, rowToCluster[b], bLength);
         rowToCluster[a] = clusters.size()-1;
         rowToCluster[b] = rowToCluster[n-1];
         removeRowAndColumn(b);
@@ -576,7 +736,7 @@ public:
     }
 };
 
-template <class super=BIONJMatrix> class BoundingMatrix: public super
+template <class T=NJFloat, class super=BIONJMatrix<T>> class BoundingMatrix: public super
 {
     using super::n;
     using super::rows;
@@ -604,19 +764,21 @@ protected:
     //        row total for ALL the live clusters.
     //        See section 2.5 of Simonsen, Mailund, Pedersen [2011].
     //
-    std::vector<int>     clusterToRow;   //Maps clusters to their rows
-    std::vector<NJFloat> clusterTotals;  //"Row" totals indexed by cluster
+    std::vector<int> clusterToRow;   //Maps clusters to their rows
+    std::vector<T>   clusterTotals;  //"Row" totals indexed by cluster
 
-    mutable std::vector<NJFloat> scaledClusterTotals;   //The same, multiplied by
+    mutable std::vector<T>       scaledClusterTotals;   //The same, multiplied by
                                                         //(1.0 / (n-2)).
-    mutable std::vector<NJFloat> scaledMaxEarlierClusterTotal;
+    mutable std::vector<T>       scaledMaxEarlierClusterTotal;
     mutable std::vector<bool>    rowOrderChosen; //Indicates if row order chosen
     mutable std::vector<size_t>  rowScanOrder;   //Order in which rows are to be scanned
                                                  //Only used in... getRowMinima().
     
-    Matrix<NJFloat>      entriesSorted; //Entries in distance matrix
-                                        //(each row sorted by ascending value)
-    Matrix<int>          entryToCluster;//
+    Matrix<T>   entriesSorted; //The S matrix: Entries in distance matrix
+                               //(each row sorted by ascending value)
+    Matrix<int> entryToCluster;//The I matrix: for each entry in S, which
+                               //cluster the row (that the entry came from)
+                               //was mapped to (at the time).
     
 public:
     BoundingMatrix(const std::string &distanceFilePath)
@@ -654,7 +816,7 @@ public:
         }
         size_t nextPurge = 0; //n*2/3;
         while (3<n) {
-            Position best;
+            Position<T> best;
             super::getMinimumEntry(best);
             cluster(best.column, best.row);
             if ( n == nextPurge ) {
@@ -673,10 +835,10 @@ public:
         //    the values in the D row into the same-numbered
         //    row in the I matrix), for distances between the cluster
         //    in that row, and other live clusters (up to, but not including c).
-        NJFloat* sourceRow      = rows[r];
-        NJFloat* values         = entriesSorted.rows[r];
-        int*     clusterIndices = entryToCluster.rows[r];
-        size_t   w = 0;
+        T*     sourceRow      = rows[r];
+        T*     values         = entriesSorted.rows[r];
+        int*   clusterIndices = entryToCluster.rows[r];
+        size_t w = 0;
         for (size_t i=0; i<n; ++i) {
             values[w]         = sourceRow[i];
             clusterIndices[w] = rowToCluster[i];
@@ -738,6 +900,12 @@ public:
             clusterTotals[wipe] = -infiniteDistance;
             //A trick.  This way we don't need to check if clusters
             //are still "live" in the inner loop of getRowMinimum().
+            //When we are "subtracting" cluster totals to calculate
+            //entries in Q, they will come out so big they won't be
+            //considered as candidates for neighbour join.
+            //If we didn't do this we'd have to check, all the time,
+            //when calculating entries in Q, if clusters are still
+            //"live" (have corresponding rows in the D matrix).
         }
         for (size_t r = 0; r<n; ++r) {
             size_t cluster = rowToCluster[r];
@@ -762,6 +930,7 @@ public:
         //better to "read off" the first column of the S matrix and
         //calculate the corresponding entry in Q for each live cluster;
         //use up-to-date rather than out-of-date information.
+        //
         //Since we always have to check these entries when we process
         //the row, why not process them up front, hoping to get a
         //better bound on min(V) (and "rule out" entire rows with that
@@ -801,15 +970,15 @@ public:
         //
         //Note: Rather than multiplying distances by (n-2)
         //      repeatedly, it is cheaper to work with cluster
-        //      totals multiplied by (1.0/(NJFloat)(n-2)).
+        //      totals multiplied by (1.0/(T)(n-2)).
         //      Better n multiplications than 0.5*n*(n-1).
         //Note 2: Note that these are indexed by cluster number,
         //      and *not* by row number.
         //
-        size_t  c           = clusters.size();
-        NJFloat nless2      = ( n - 2 );
-        NJFloat tMultiplier = ( n <= 2 ) ? 0 : (1 / nless2);
-        NJFloat maxTot      = -infiniteDistance; //maximum row total divided by (n-2)
+        size_t c           = clusters.size();
+        T      nless2      = ( n - 2 );
+        T      tMultiplier = ( n <= 2 ) ? 0 : (1 / nless2);
+        T      maxTot      = -infiniteDistance; //maximum row total divided by (n-2)
         for (size_t i=0; i<c; ++i) {
             scaledClusterTotals[i] = clusterTotals[i] * tMultiplier;
             scaledMaxEarlierClusterTotal[i] = maxTot;
@@ -817,7 +986,7 @@ public:
                 maxTot=scaledClusterTotals[i];
             }
         }
-        NJFloat qBest = infiniteDistance;
+        T qBest = infiniteDistance;
             //upper bound on minimum Q[row,col]
             //  = D[row,col] - R[row]*tMultipler - R[col]*tMultiplier
             //
@@ -832,7 +1001,7 @@ public:
             //Note: Older versions of RapidNJ used maxTot rather than
             //      maxEarlierTotal here...
             rowMinima[row]         = getRowMinimum(row, maxEarlierTotal, qBest);
-            NJFloat v              = rowMinima[row].value;
+            T      v               = rowMinima[row].value;
             //#pragma omp critical
             {
                 if ( v < qBest ) {
@@ -841,26 +1010,26 @@ public:
             }
         }
     }
-    Position getRowMinimum(size_t row, NJFloat maxTot, NJFloat qBest) const {
-        NJFloat nless2      = ( n - 2 );
-        NJFloat tMultiplier = ( n <= 2 ) ? 0 : (1 / nless2);
+    Position<T> getRowMinimum(size_t row, T maxTot, T qBest) const {
+        T nless2      = ( n - 2 );
+        T tMultiplier = ( n <= 2 ) ? 0 : (1 / nless2);
         auto    tot         = scaledClusterTotals.data();
-        NJFloat rowTotal    = rowTotals[row] * tMultiplier;
-        NJFloat rowBound    = qBest + maxTot + rowTotal;
+        T rowTotal    = rowTotals[row] * tMultiplier;
+        T rowBound    = qBest + maxTot + rowTotal;
                 //Upper bound for distance, in this row, that
                 //could (after row totals subtracted) provide a
                 //better min(Q).
 
-        Position pos(row, 0, infiniteDistance);
-        const NJFloat* rowData   = entriesSorted.rows[row];
+        Position<T> pos(row, 0, infiniteDistance);
+        const T* rowData   = entriesSorted.rows[row];
         const int*     toCluster = entryToCluster.rows[row];
         size_t i = 0;
-        NJFloat Drc;
+        T Drc;
         for (i=0; (Drc=rowData[i])<rowBound; ++i) {
             size_t  cluster = toCluster[i];
                 //The cluster associated with this distance
                 //The c in Qrc and Drc.
-            NJFloat Qrc = Drc - tot[cluster] - rowTotal;
+            T Qrc = Drc - tot[cluster] - rowTotal;
             if (Qrc < pos.value) {
                 int otherRow = clusterToRow[cluster];
                 if ( 0 <= otherRow ) { //I *think* this check is still necessary,
@@ -880,36 +1049,38 @@ public:
     }
 };
 
-template <class super=BIONJMatrix, class V=Vec4d, class VB=Vec4db>
+template <class T=NJFloat, class super=BIONJMatrix<T>, class V=Vec4d, class VB=Vec4db>
     class VectorizedMatrix: public super
 {
     //
     //Note: this is a first attempt at hand-vectorizing
     //      BIONJMatrix::getRowMinima (via Agner Fog's
     //      vectorclass library).
+    //      It can subclass either NJMatrix or BIONJMatrix.
+    //      It cannot subclass UPGMA_Matrix.
     //
     using super::n;
     using super::rows;
     using super::rowMinima;
     using super::rowTotals;
 public:
-    mutable std::vector<NJFloat> scratchTotals;
-    mutable std::vector<NJFloat> scratchColumnNumbers;
+    mutable std::vector<T> scratchTotals;
+    mutable std::vector<T> scratchColumnNumbers;
     size_t  blockSize;
     
     VectorizedMatrix(const std::string &distanceMatrixFilePath)
     : super(distanceMatrixFilePath) {
-        size_t fluff = MATRIX_ALIGNMENT / sizeof(NJFloat);
+        size_t fluff = MATRIX_ALIGNMENT / sizeof(T);
         scratchTotals.resize(n + fluff, 0.0);
         scratchColumnNumbers.resize(n + fluff, 0.0);
         Vec4d v;
         blockSize = v.size();
     }
     virtual void getRowMinima() const {
-        NJFloat nless2      = ( n - 2 );
-        NJFloat tMultiplier = ( n <= 2 ) ? 0 : (1 / nless2);
-        NJFloat* tot  = matrixAlign ( scratchTotals.data() );
-        NJFloat* nums = matrixAlign ( scratchColumnNumbers.data() );
+        T nless2      = ( n - 2 );
+        T tMultiplier = ( n <= 2 ) ? 0 : (1 / nless2);
+        T* tot  = matrixAlign ( scratchTotals.data() );
+        T* nums = matrixAlign ( scratchColumnNumbers.data() );
         for (size_t r=0; r<n; ++r) {
             tot[r]  = rowTotals[r] * tMultiplier;
             nums[r] = r;
@@ -918,8 +1089,8 @@ public:
         rowMinima[0].value = infiniteDistance;
         #pragma omp parallel for
         for (size_t row=1; row<n; ++row) {
-            Position pos(row, 0, infiniteDistance);
-            const NJFloat* rowData = rows[row];
+            Position<T> pos(row, 0, infiniteDistance);
+            const T* rowData = rows[row];
             size_t col;
             V minVector  ( infiniteDistance, infiniteDistance
                           , infiniteDistance, infiniteDistance);
@@ -947,7 +1118,7 @@ public:
                 }
             }
             for (; col<row; ++col) {
-                NJFloat v = rowData[col] - tot[col];
+                T v = rowData[col] - tot[col];
                 if (v < pos.value) {
                     pos.column = col;
                     pos.value  = v;
@@ -959,17 +1130,19 @@ public:
     }
 };//end of class
 
-typedef BoundingMatrix<NJMatrix>      RapidNJ;
-typedef BoundingMatrix<BIONJMatrix>   RapidBIONJ;
-typedef VectorizedMatrix<NJMatrix>    VectorNJ;
-typedef VectorizedMatrix<BIONJMatrix> VectorBIONJ;
+typedef BoundingMatrix<NJFloat, NJMatrix<NJFloat>>      RapidNJ;
+typedef BoundingMatrix<NJFloat, BIONJMatrix<NJFloat>>   RapidBIONJ;
+typedef VectorizedMatrix<NJFloat, NJMatrix<NJFloat>>    VectorNJ;
+typedef VectorizedMatrix<NJFloat, BIONJMatrix<NJFloat>> VectorBIONJ;
 
 void addBioNJ2020TreeBuilders(Factory& f) {
-    f.advertiseTreeBuilder( new Builder<NJMatrix>    ("NJ",      "Neighbour Joining (Saitou, Nei [1987])"));
-    f.advertiseTreeBuilder( new Builder<RapidNJ>     ("NJ-R",    "Rapid Neighbour Joining (Simonsen, Mailund, Pedersen [2011])"));
-    f.advertiseTreeBuilder( new Builder<VectorNJ>    ("NJ-V",    "Vectorized Neighbour Joining (Saitou, Nei [1987])"));
-    f.advertiseTreeBuilder( new Builder<BIONJMatrix> ("BIONJ",   "BIONJ (Gascuel, Cong [2009])"));
+    f.advertiseTreeBuilder( new Builder<NJMatrix<NJFloat>>    ("NJ",      "Neighbour Joining (Saitou, Nei [1987])"));
+    f.advertiseTreeBuilder( new Builder<RapidNJ>              ("NJ-R",    "Rapid Neighbour Joining (Simonsen, Mailund, Pedersen [2011])"));
+    f.advertiseTreeBuilder( new Builder<VectorNJ>             ("NJ-V",    "Vectorized Neighbour Joining (Saitou, Nei [1987])"));
+    f.advertiseTreeBuilder( new Builder<BIONJMatrix<NJFloat>> ("BIONJ",   "BIONJ (Gascuel, Cong [2009])"));
     f.advertiseTreeBuilder( new Builder<RapidBIONJ>  ("BIONJ-R", "Rapid BIONJ (Saitou, Nei [1987], Gascuel [2009], Simonson Mailund Pedersen [2011])"));
     f.advertiseTreeBuilder( new Builder<VectorBIONJ> ("BIONJ-V", "Vectorized BIONJ (Gascuel, Cong [2009])"));
+    f.advertiseTreeBuilder( new Builder<UPGMA_Matrix<NJFloat>>("UPGMA",    "UPGMA (Sokal, Michener [1958])"));
+    f.advertiseTreeBuilder( new Builder<BIONJMatrix<NJFloat>> ("",        "BIONJ (Gascuel, Cong [2009])"));  //Default.
 }
 }; //end of namespace

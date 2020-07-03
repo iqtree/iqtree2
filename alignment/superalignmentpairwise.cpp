@@ -32,43 +32,34 @@ SuperAlignmentPairwise::SuperAlignmentPairwise(PhyloSuperTree *atree, int seq1, 
 	seq_id2 = seq2;
 	SuperAlignment *aln = (SuperAlignment*) atree->aln;
 	int part = 0;
-	for (PhyloSuperTree::iterator it = atree->begin(); it != atree->end(); it++, part++) {
+    partitions.reserve(atree->size());
+	for ( auto it = atree->begin(); it != atree->end(); it++, part++ ) {
 		int id1 = aln->taxa_index[seq1][part];
 		int id2 = aln->taxa_index[seq2][part];
 		if (id1 >= 0 && id2 >= 0)
-		partitions.push_back(new AlignmentPairwise((*it), id1, id2));
+		partitions.emplace_back(AlignmentPairwise((*it), id1, id2));
 	}
 }
 
 double SuperAlignmentPairwise::computeFunction(double value) {
 	double lh = 0.0;
-	for (vector<AlignmentPairwise*>::iterator it = partitions.begin(); it != partitions.end(); it++) {
-		lh += (*it)->computeFunction(value);
+	for (auto it = partitions.begin(); it != partitions.end(); it++) {
+		lh += it->computeFunction(value);
 	}
 	return lh;
 }
 
-
 void SuperAlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf) {
-//	double lh = 0.0;
 	df = 0.0;
 	ddf = 0.0;
-	for (vector<AlignmentPairwise*>::iterator it = partitions.begin(); it != partitions.end(); it++) {
+	for (auto it = partitions.begin(); it != partitions.end(); it++) {
 		double d1, d2;
-//		lh += (*it)->computeFuncDerv(value, d1, d2);
-		(*it)->computeFuncDerv(value, d1, d2);
+		it->computeFuncDerv(value, d1, d2);
 		df += d1;
 		ddf += d2;
 	}
-//	return lh;
 }
-
 
 SuperAlignmentPairwise::~SuperAlignmentPairwise()
 {
-	for (vector<AlignmentPairwise*>::reverse_iterator it = partitions.rbegin(); it != partitions.rend(); it++)
-		delete (*it);
-	partitions.clear();
 }
-
-

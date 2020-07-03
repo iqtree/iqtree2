@@ -5,6 +5,8 @@ alignment.cpp
 alignment.h
 alignmentpairwise.cpp
 alignmentpairwise.h
+alignmentsummary.cpp
+alignmentsummary.h
 maalignment.cpp
 maalignment.h
 superalignment.cpp

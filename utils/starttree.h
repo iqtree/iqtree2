@@ -1,8 +1,21 @@
 //
-//  starttree.h
-//  iqtree
+//  Copyright (C) 2020, James Barbetti.
 //
-//  Created by James Barbetti on 26/6/20.
+//  LICENSE:
+//* This program is free software; you can redistribute it and/or modify
+//* it under the terms of the GNU General Public License as published by
+//* the Free Software Foundation; either version 2 of the License, or
+//* (at your option) any later version.
+//*
+//* This program is distributed in the hope that it will be useful,
+//* but WITHOUT ANY WARRANTY; without even the implied warranty of
+//* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//* GNU General Public License for more details.
+//*
+//* You should have received a copy of the GNU General Public License
+//* along with this program; if not, write to the
+//* Free Software Foundation, Inc.,
+//* 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //
 
 #ifndef starttree_h
@@ -72,14 +85,18 @@ namespace StartTree
             ( const std::string &distanceMatrixFilePath
              , const std::string & newickTreeFilePath) {
                 B builder(distanceMatrixFilePath);
+#if (0)
                 double buildStart = getRealTime();
+#endif
                 builder.constructTree();
+#if (0)
                 double buildElapsed = getRealTime() - buildStart;
                 std::cout.precision(6);
-                std::cout << "Elapsed time for constructing initial tree"
-                    << " (with algorithm " << name << "), "
-                    << buildElapsed << std::endl;
+                std::cout << "Wall-clock time for constructing initial tree"
+                << " (with algorithm " << name << "), "
+                << buildElapsed << std::endl;
                 std::cout.precision(3);
+#endif
                 builder.writeTreeFile(newickTreeFilePath);
         }
     };
