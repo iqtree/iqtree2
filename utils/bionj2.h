@@ -9,7 +9,7 @@
 #define bionj2_h
 
 #include <string>
-
+#include <algorithm>
 class BIONJ2
 {
 public:
