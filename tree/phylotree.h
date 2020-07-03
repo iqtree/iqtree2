@@ -1611,7 +1611,7 @@ public:
     
     virtual const char* getConvertedSequenceByNumber(int seq1) const;
     
-    virtual const std::vector<int>& getConvertedSequenceFrequencies() const;
+    virtual const int* getConvertedSequenceFrequencies() const;
     
     virtual int  getSumOfFrequenciesForSitesWithConstantState(int state) const;
     
@@ -1621,6 +1621,9 @@ public:
 
     virtual double computeDist(int seq1, int seq2, double initial_dist);
 
+    void decideDistanceFilePath(Params& params);
+    
+    void printDistanceFile();
     
     /**
             compute distance and variance matrix, assume dist_mat and var_mat are allocated by memory of size num_seqs * num_seqs.
@@ -1644,20 +1647,18 @@ public:
             @param params program parameters
             @param alignment input alignment
             @param dist_mat (OUT) distance matrix between all pairs of sequences in the alignment
-            @param dist_file (OUT) name of the distance file
             @return the longest distance
      */
-    double computeDist(Params &params, Alignment *alignment, double* &dist_mat, double* &var_mat, string &dist_file);
+    double computeDist(Params &params, Alignment *alignment, double* &dist_mat, double* &var_mat);
 
     /**
             compute observed distance matrix, allocating memory if necessary
             @param params program parameters
             @param alignment input alignment
             @param dist_mat (OUT) distance matrix between all pairs of sequences in the alignment
-            @param dist_file (OUT) name of the distance file
             @return the longest distance
      */
-    double computeObsDist(Params &params, Alignment *alignment, double* &dist_mat, string &dist_file);
+    double computeObsDist(Params &params, Alignment *alignment, double* &dist_mat);
 
     /**
             correct the distances to follow metric property of triangle inequalities.
@@ -1674,10 +1675,8 @@ public:
     /**
             compute BioNJ tree
             @param params program parameters
-            @param alignment input alignment
-            @param dist_file distance matrix file
      */
-    void computeBioNJ(Params &params, Alignment *alignment, string &dist_file);
+    void computeBioNJ(Params &params);
 
     /**
         called by fixNegativeBranch to fix one branch
