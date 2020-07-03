@@ -35,6 +35,7 @@
 //#include <Eigen/Core>
 #include "mtree.h"
 #include "alignment/alignment.h"
+#include "alignment/alignmentsummary.h"
 #include "model/modelsubst.h"
 #include "model/modelfactory.h"
 #include "phylonode.h"
@@ -45,6 +46,8 @@
 #include "utils/checkpoint.h"
 #include "constrainttree.h"
 #include "memslot.h"
+
+class AlignmentPairwise;
 
 #define BOOT_VAL_FLOAT
 #define BootValType float
@@ -452,11 +455,23 @@ public:
     virtual void setModelFactory(ModelFactory *model_fac);
 
     /**
+            indicates whether there is a model factory
+            @return true if there is an associated model factory
+     */
+    bool hasModelFactory() const;
+    
+    /**
             set rate heterogeneity, important to compute the likelihood
             @param rate associated rate heterogeneity class
      */
     void setRate(RateHeterogeneity *rate);
 
+    /**
+            indicates whether there is a rate heterogeneity
+            @return true if there is an associated rate heterogeneity
+     */
+    bool hasRateHeterogeneity() const;
+    
     /**
             get rate heterogeneity
             @return associated rate heterogeneity class
@@ -1579,6 +1594,8 @@ public:
             Distance function
      ****************************************************************************/
 
+    virtual void prepareToComputeDistances();
+    
     /**
             compute the distance between 2 sequences.
             @param seq1 index of sequence 1
@@ -1587,7 +1604,19 @@ public:
             @param (OUT) variance of distance between seq1 and seq2
             @return distance between seq1 and seq2
      */
+    
+    virtual bool hasMatrixOfConvertedSequences() const;
 
+    virtual size_t getConvertedSequenceLength() const;
+    
+    virtual const char* getConvertedSequenceByNumber(int seq1) const;
+    
+    virtual const std::vector<int>& getConvertedSequenceFrequencies() const;
+    
+    virtual int  getSumOfFrequenciesForSitesWithConstantState(int state) const;
+    
+    virtual void doneComputingDistances();
+    
     virtual double computeDist(int seq1, int seq2, double initial_dist, double &var);
 
     virtual double computeDist(int seq1, int seq2, double initial_dist);
@@ -2313,6 +2342,9 @@ protected:
     /** cost_matrix for non-uniform parsimony */
     unsigned int * cost_matrix; // Sep 2016: store cost matrix in 1D array
 
+    std::vector<AlignmentPairwise*> distanceProcessors;
+    AlignmentSummary* summary;
+    
 };
 
 #endif

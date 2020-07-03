@@ -23,6 +23,7 @@
 #include "utils/starttree.h"
 //#include "rateheterogeneity.h"
 #include "alignment/alignmentpairwise.h"
+#include "alignment/alignmentsummary.h"
 #include <algorithm>
 #include <limits>
 #include "utils/timeutil.h"
@@ -31,11 +32,11 @@
 #include "phylosupertreeplen.h"
 #include "upperbounds.h"
 #include "utils/MPIHelper.h"
+#include "utils/hammingdistance.h"
 #include "model/modelmixture.h"
 #include "phylonodemixlen.h"
 #include "phylotreemixlen.h"
-#include <boost/scoped_array.hpp> //for boost::scoped_array
-#include <vectorclass/vectorclass.h>
+
 
 const int LH_MIN_CONST = 1;
 
@@ -130,6 +131,7 @@ void PhyloTree::init() {
     num_partial_lh_computations = 0;
     vector_size = 0;
     safe_numeric = false;
+    summary = nullptr;
 }
 
 PhyloTree::PhyloTree(Alignment *aln) : MTree(), CheckpointFactory() {
@@ -138,6 +140,7 @@ PhyloTree::PhyloTree(Alignment *aln) : MTree(), CheckpointFactory() {
 }
 
 PhyloTree::PhyloTree(string& treeString, Alignment* aln, bool isRooted) : MTree() {
+    init();
     stringstream str;
     str << treeString;
     str.seekg(0, ios::beg);
@@ -199,6 +202,7 @@ void myPartitionsDestroy(partitionList *pl) {
 }
 
 PhyloTree::~PhyloTree() {
+    doneComputingDistances();
     if (nni_scale_num)
         aligned_free(nni_scale_num);
     nni_scale_num = NULL;
@@ -275,7 +279,7 @@ PhyloTree::~PhyloTree() {
     pllPartitions = NULL;
     pllAlignment = NULL;
     pllInst = NULL;
-    
+    summary = nullptr;
 }
 
 void PhyloTree::readTree(const char *infile, bool &is_rooted) {
@@ -283,7 +287,9 @@ void PhyloTree::readTree(const char *infile, bool &is_rooted) {
     // 2015-10-14: has to reset this pointer when read in
     current_it = current_it_back = NULL;
     if (rooted && root)
+    {
         computeBranchDirection();
+    }
 }
 
 void PhyloTree::readTree(istream &in, bool &is_rooted) {
@@ -593,6 +599,10 @@ void PhyloTree::setModelFactory(ModelFactory *model_fac) {
     }
 }
 
+bool PhyloTree::hasModelFactory() const {
+    return model_factory != nullptr;
+}
+
 void PhyloTree::setRate(RateHeterogeneity *rate) {
     site_rate = rate;
     if (!rate)
@@ -602,6 +612,10 @@ void PhyloTree::setRate(RateHeterogeneity *rate) {
     //    block = aln->num_states * numCat;
     //    lh_size = aln->size() * block;
     //}
+}
+
+bool PhyloTree::hasRateHeterogeneity() const {
+    return site_rate != nullptr;
 }
 
 RateHeterogeneity *PhyloTree::getRate() {
@@ -3072,12 +3086,61 @@ void PhyloTree::growTreeML(Alignment *alignment) {
 }
 
 /****************************************************************************
- Distance function
+ Precalculation of "flattened" structure to speed determination of distance functions
  ****************************************************************************/
 
+void PhyloTree::prepareToComputeDistances() {
+#ifdef _OPENMP
+    int threads = omp_get_max_threads();
+#else
+    int threads = 1;
+#endif
+    distanceProcessors.reserve(threads);
+    for (threads -= distanceProcessors.size(); 0 < threads; --threads) {
+        distanceProcessors.emplace_back(new AlignmentPairwise(this));
+    }
+    if (params->experimental) {
+        summary = new AlignmentSummary(aln, true);
+        summary->constructSequenceMatrix(false);
+    }
+}
+
+bool PhyloTree::hasMatrixOfConvertedSequences() const {
+    return summary!=nullptr && summary->sequenceMatrix!=nullptr;
+}
+
+size_t PhyloTree::getConvertedSequenceLength() const {
+    return summary->sequenceLength;
+}
+
+const char* PhyloTree::getConvertedSequenceByNumber(int seq1) const {
+    return summary->sequenceMatrix + seq1 * summary->sequenceLength;
+}
+
+const std::vector<int>& PhyloTree::getConvertedSequenceFrequencies() const {
+    return summary->siteFrequencies;
+}
+
+int  PhyloTree::getSumOfFrequenciesForSitesWithConstantState(int state) const {
+    return summary->getSumOfConstantSiteFrequenciesForState(state);
+}
+
+void PhyloTree::doneComputingDistances() {
+    for ( auto it = distanceProcessors.begin()
+         ; it!=distanceProcessors.end(); ++it) {
+        delete (*it);
+    }
+    distanceProcessors.clear();
+    delete summary;
+    summary = nullptr;
+}
+
+/****************************************************************************
+Distance function
+****************************************************************************/
 double PhyloTree::computeDist(int seq1, int seq2, double initial_dist, double &d2l) {
     //Todo: check ALL this functionality is in to computeDist_Experimental.
-    //1. The initial_dist == 0.0 check is in computeJCDistanceMatrix.
+    //1. The initial_dist == 0.0 check is in computeDistanceMatrix.
     //2. The params->compute_obs_dist check is in PhyloTree::computeDist_Experimental
     //3. The (model_factory && site_rate) check is there too.
     
@@ -3090,9 +3153,9 @@ double PhyloTree::computeDist(int seq1, int seq2, double initial_dist, double &d
     }
     if (!model_factory || !site_rate)
         return initial_dist; // MANUEL: here no d2l is return
-
+    
     // now optimize the distance based on the model and site rate
-    AlignmentPairwise aln_pair ( this, seq1, seq2 ); //JB do it on the stack! no new!
+    AlignmentPairwise aln_pair ( this, seq1, seq2 );
     double dist = aln_pair.optimizeDist(initial_dist, d2l);
     return dist;
 }
@@ -3122,101 +3185,6 @@ double PhyloTree::correctDist(double *dist_mat) {
     return longest_dist;
 }
 
-#define HAMMING_VECTOR (1)
-#define VECTOR_MAD     (0)
-
-//
-//Note 1: L is a template parameter so that, when the state range
-//        is 255 or less, it can be char, or if 65535 or less, short.
-//Note 2: F is a template parameter so that, when the maximum
-//        frequency is 255 or less, it could be unsigned char,
-//        or if 65535 or less, short.
-//
-#if (!HAMMING_VECTOR)
-template <class L, class F> inline double hammingDistance
- ( L unknown, const L* sequenceA, const L* sequenceB
- , int seqLen, const F* frequencyVector ) {
-    int distance = 0;
-    for (int pos = 0; pos < seqLen; ++pos) {
-        if (sequenceA[pos] != sequenceB[pos]) {
-            if ( sequenceA[pos] != unknown &&
-                sequenceB[pos] != unknown ) {
-                distance += frequencyVector[pos];
-            }
-        }
-    }
-    return distance;
-}
-#endif
-
-#if (HAMMING_VECTOR)
-inline double hammingDistance
- ( char unknown, const char* sequenceA, const char* sequenceB
- , int seqLen, const int* frequencyVector ) {
-    int blockStop = 0;
-    int distance  = 0;
-    Vec32c blockA;
-    int blockSize = blockA.size(); //but see scratch. Needs to match
-    if (blockSize < seqLen) {
-        blockStop = seqLen - (seqLen & (blockSize-1));
-        auto aStop = sequenceA + blockStop;
-        Vec32c  blockB;
-#if (VECTOR_MAD)
-        Vec8i   sum0=0, sum1=0, sum2=0, sum3=0;
-#endif
-        const int* f = frequencyVector;
-        auto a = sequenceA;
-        auto b = sequenceB;
-        while (a<aStop) {
-            blockA.load(a);
-            blockB.load(b);
-#if (VECTOR_MAD)
-            auto    diff       = (blockA != blockB);
-            auto    knownA     = (blockA != unknown);
-            auto    knownB     = (blockB != unknown);
-            Vec32c  diff32c    = Vec32c( diff & knownA & knownB );
-            Vec16s  diff16s_a  = extend_low (diff32c);
-            Vec16s  diff16s_b  = extend_high(diff32c);
-            Vec8i   diff8_a    = extend_low (diff16s_a);
-            Vec8i   diff8_b    = extend_high(diff16s_a);
-            Vec8i   diff8_c    = extend_low (diff16s_b);
-            Vec8i   diff8_d    = extend_high(diff16s_b);
-
-            sum0 += select(diff8_a != 0, Vec8i().load(f),    0);
-            sum1 += select(diff8_b != 0, Vec8i().load(f+8),  0);
-            sum2 += select(diff8_c != 0, Vec8i().load(f+16), 0);
-            sum3 += select(diff8_d != 0, Vec8i().load(f+24), 0);
-#else
-            Vec32cb diff32 = blockA != blockB;
-            diff32 &= (blockA != unknown);
-            diff32 &= (blockB != unknown);
-            int i = horizontal_find_first(diff32);
-            if (0<=i) {
-                char scratch[32];
-                diff32.store(scratch);
-                for (; i<blockSize; ++i) {
-                    distance += scratch[i] ? f[i] : 0;
-                }
-            }
-#endif
-            f += blockSize;
-            a += blockSize;
-            b += blockSize;
-        }
-        #if (VECTOR_MAD)
-                distance = horizontal_add(sum0) + horizontal_add(sum1)
-                          + horizontal_add(sum2) + horizontal_add(sum3);
-        #endif
-    }
-    for (int pos=blockStop; pos < seqLen; ++pos ) {
-        if (sequenceA[pos] != sequenceB[pos]) {
-            distance += frequencyVector[pos];
-        }
-    }
-    return distance;
-}
-#endif
-
 template <class L, class F> double computeDistanceMatrix
     ( LEAST_SQUARE_VAR vartype
     , L unknown, const L* sequenceMatrix, int nseqs, int seqLen
@@ -3233,7 +3201,6 @@ template <class L, class F> double computeDistanceMatrix
     
     std::vector<double> rowMaxDistance;
     rowMaxDistance.resize(nseqs, 0.0);
-    double triangleStartTime = getRealTime();
     double z = num_states / (num_states - 1.0);
     //Compute the upper-triangle of the distance matrix
     //(and write the row maximum onto the firt cell in the row)
@@ -3255,9 +3222,13 @@ template <class L, class F> double computeDistanceMatrix
             double d2l      = varRow[seq2];
             double distance = distRow[seq2];
             if ( 0.0 == distance ) {
-                distance =
+                double unknownFreq = 0;
+                double hamming =
                     hammingDistance ( unknown, thisSequence, otherSequence
-                                    , seqLen, frequencyVector ) / denominator;
+                                    , seqLen, frequencyVector, unknownFreq );
+                if (0<hamming) {
+                    distance = hamming / (denominator - unknownFreq);
+                }
                 if (!uncorrected) {
                     double x      = (1.0 - z * distance);
                     distance      = (x<=0) ? MAX_GENETIC_DIST : ( -log(x) / z );
@@ -3277,9 +3248,7 @@ template <class L, class F> double computeDistanceMatrix
         }
         rowMaxDistance[seq1] = maxDistanceInRow;
     }
-    cout << "Time to determine upper right triangle was "
-        << (getRealTime() - triangleStartTime) << " sec" << endl;
-
+    
     //
     //Determine the longest distance
     //Todo: Decide if it is worth figuring this out by
@@ -3301,7 +3270,6 @@ template <class L, class F> double computeDistanceMatrix
     //Copy upper-triangle into lower-triangle and write
     //zeroes to the diagonal.
     //
-    triangleStartTime = getRealTime();
     #ifdef _OPENMP
     #pragma omp parallel for schedule(dynamic)
     #endif
@@ -3318,27 +3286,25 @@ template <class L, class F> double computeDistanceMatrix
         distRow [ seq1 ] = 0.0;
         varRow  [ seq1 ] = 0.0;
     }
-    cout << "Time to copy upper right triangle to bottom right was "
-        << (getRealTime() - triangleStartTime) << " sec" << endl;
     return longest_dist;
 }
 
+#define EX_START    double baseTime = getRealTime()
+#define EX_TRACE(x) if (verbose_mode < VB_MED) {} \
+                    else cout << (getRealTime()-baseTime) << "s " << x << endl
+
 double PhyloTree::computeDist_Experimental(double *dist_mat, double *var_mat) {
+    EX_START;
     //Experimental: Are there any other checks that are needed here?
     if (model_factory && site_rate) {
-        cout << "Default distance calculation because"
-            << " factory is " << model_factory
-            << ", rate is " << site_rate << endl;
         return computeDist(dist_mat, var_mat);
     }
     bool uncorrected = params->compute_obs_dist;
         //Use uncorrected (observed) distances
-
     int  seqCount = aln->getNSeq();
-    double baseTime = getRealTime();
     bool workToDo = false;
     cout.precision(6);
-    cout << (getRealTime()-baseTime) << "s Checking if distances already calculated..." << endl;
+    EX_TRACE("Checking if distances already calculated...");
     //Check if there's any work to do.
     //If there are no zeroes off the diagonal, the distance
     //matrix (ick) has already been initialized and there's no
@@ -3366,7 +3332,7 @@ double PhyloTree::computeDist_Experimental(double *dist_mat, double *var_mat) {
             }
         }
         if (!workToDo) {
-            cout << (getRealTime()-baseTime) << "s No work to do" << endl;
+            EX_TRACE("No work to do");
             double longest_dist = 0.0;
             for ( int seq1 = 0; seq1 < seqCount; ++seq1  ) {
                 if ( longest_dist < rowMaxDistance[seq1] ) {
@@ -3376,57 +3342,44 @@ double PhyloTree::computeDist_Experimental(double *dist_mat, double *var_mat) {
             return longest_dist;
         }
     }
-    AlignmentSummary s;
-    cout << (getRealTime()-baseTime) << "s Summarizing..." << endl;
-    aln->summarizeSites(s);
-    int seqLen      = s.siteNumbers.size();
+    EX_TRACE("Summarizing...");
+    AlignmentSummary s(aln, false);
     int maxDistance = 0;
     
-    cout << (getRealTime()-baseTime) << "s Summarizing found " <<  seqLen
-    << " sites with variation (and non-zero frequency), and a state range of " << ( s.maxState - s.minState) << endl;
-    for (int i=0; i<seqLen; ++i) {
+    EX_TRACE("Summarizing found " << s.sequenceLength
+        << " sites with variation (and non-zero frequency),"
+        << " and a state range of " << ( s.maxState - s.minState));
+    for (size_t i=0; i<s.sequenceLength; ++i) {
         maxDistance += s.siteFrequencies[i];
     }
-    cout << (getRealTime()-baseTime) << "s Maximum possible uncorrected length "
-        << ((double)maxDistance / (double)s.totalFrequency)
-        << " Denominator " << s.totalFrequency << endl;
+    //Todo: Shouldn't this be totalFrequency, rather than
+    //      totalFrequencyOfNonConst sites?
+    EX_TRACE("Maximum possible uncorrected length "
+        << ((double)maxDistance / (double)s.totalFrequencyOfNonConstSites)
+        << " Denominator " << s.totalFrequencyOfNonConstSites);
     if ( 256 < s.maxState - s.minState ) {
-        cout << (getRealTime()-baseTime) << "s Falling back to stock distance calculation" << endl;
+        EX_TRACE("Falling back to stock distance calculation");
         double longest = computeDist(dist_mat, var_mat);
-        cout << (getRealTime()-baseTime) << "s Done stock distance calculation" << endl;
+        EX_TRACE("Done stock distance calculation");
         return longest; //computeDist(dist_mat, var_mat);
     }
-    typedef char STATE;
-        //char for memory-efficient (non-template) version (using Vec8b)
-        //this is faster than the int version (that uses Vec8i)
-    boost::scoped_array<STATE> sequenceStorage ( new STATE[ seqCount * seqLen ] );
-    STATE* sequenceMatrix = sequenceStorage.get();
-    const int* posToSite = s.siteNumbers.data();
-    Alignment& a = *aln;
-    cout << (getRealTime()-baseTime) <<"s Constructing sequence-major matrix of states"
-        << " at " << seqLen << " varying sites" << endl;
-    #ifdef _OPENMP
-        #pragma omp parallel for
-    #endif
-    for (int seq=0; seq<seqCount; ++seq) { //sequence
-        STATE *sequence = sequenceMatrix + seq * seqLen;
-        for (int seqPos = 0; seqPos < seqLen; ++seqPos) { //position in reduced sequence
-            sequence[seqPos] = static_cast<STATE> ( a[posToSite[seqPos]][seq] );
-            //the state at the (seqPos)th non-constant site, in the (seq)th sequence
-        }
-    }
-    cout << (getRealTime()-baseTime) << "s Determining distance matrix" << endl;
+    EX_TRACE("Constructing sequence-major matrix of states"
+        << " at " << s.sequenceLength << " varying sites"
+        << " for " << s.sequenceCount << " sequences");
+    s.constructSequenceMatrix(true);
+    EX_TRACE("Determining distance matrix with unknown " << aln->STATE_UNKNOWN);
     const int* frequencies = s.siteFrequencies.data();
     double longest = computeDistanceMatrix
-        ( params->ls_var_type, static_cast<STATE>(aln->STATE_UNKNOWN)
-         , sequenceMatrix, seqCount, seqLen
-         , s.totalFrequency, frequencies
-         , a.num_states, uncorrected, dist_mat, var_mat);
-    cout << (getRealTime()-baseTime) << "s Longest distance was " << longest << endl;
+        ( params->ls_var_type, static_cast<char>(aln->STATE_UNKNOWN)
+         , s.sequenceMatrix, s.sequenceCount, s.sequenceLength
+         , s.totalFrequencyOfNonConstSites, frequencies
+         , aln->num_states, uncorrected, dist_mat, var_mat);
+    EX_TRACE("Longest distance was " << longest);
     return longest;
 }
 
 double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
+    prepareToComputeDistances();
     int nseqs = aln->getNSeq();
     int pos = 0;
     int num_pairs = nseqs * (nseqs - 1) / 2;
@@ -3445,17 +3398,19 @@ double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
             col_id[pos] = row_id[pos] + 1;
         }
     }
-    // compute the upper-triangle of distance matrix
-    cout << (getRealTime()-baseTime) << "s Decided on visit order" << endl;
+    EX_TRACE("Decided on visit order");
+    //compute the upper-triangle of distance matrix
 #ifdef _OPENMP
 #pragma omp parallel for private(pos)
 #endif
     for (pos = 0; pos < num_pairs; pos++) {
+        int threadNum = omp_get_thread_num();
+        AlignmentPairwise* processor = distanceProcessors[threadNum];
         int seq1 = row_id[pos];
         int seq2 = col_id[pos];
         int sym_pos = seq1 * nseqs + seq2;
         double d2l = var_mat[sym_pos]; // moved here for thread-safe (OpenMP)
-        dist_mat[sym_pos] = computeDist(seq1, seq2, dist_mat[sym_pos], d2l);
+        dist_mat[sym_pos] = processor->computeDist(seq1, seq2, dist_mat[sym_pos], d2l);
         if (params->ls_var_type == OLS)
             var_mat[sym_pos] = 1.0;
         else if (params->ls_var_type == WLS_PAUPLIN)
@@ -3467,9 +3422,8 @@ double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
         else if (params->ls_var_type == WLS_SECOND_TAYLOR)
             var_mat[sym_pos] = -1.0 / d2l;
     }
-
-    cout << (getRealTime()-baseTime) << "s Copying to lower triangle" << endl;
-    // copy upper-triangle into lower-triangle and set diagonal = 0
+    //cout << (getRealTime()-baseTime) << "s Copying to lower triangle" << endl;
+    //copy upper-triangle into lower-triangle and set diagonal = 0
     for (int seq1 = 0; seq1 < nseqs; seq1++)
         for (int seq2 = 0; seq2 <= seq1; seq2++) {
             pos = seq1 * nseqs + seq2;
@@ -3486,13 +3440,14 @@ double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
         }
     delete[] col_id;
     delete[] row_id;
+    doneComputingDistances();
 
     /*
      if (longest_dist > MAX_GENETIC_DIST * 0.99)
      outWarning("Some distances are saturated. Please check your alignment again");*/
     // NOTE: Bionj does handle long distances already (thanks Manuel)
     //return correctDist(dist_mat);
-    cout << (getRealTime()-baseTime) << "s Longest distance was " << longest_dist << endl;
+    EX_TRACE("Longest distance was " << longest_dist);
     return longest_dist;
 }
 
@@ -3527,12 +3482,16 @@ double PhyloTree::computeDist(Params &params, Alignment *alignment, double* &dis
         longest_dist = (params.experimental)
             ? computeDist_Experimental(dist_mat, var_mat)
             : computeDist(dist_mat, var_mat);
-        cout << "Distance calculation time: "
+        if (verbose_mode >= VB_MED) {
+            cout << "Distance calculation time: "
             << getRealTime() - begin_time << " seconds" << endl;
+        }
         double write_begin_time = getRealTime();
         alignment->printDist(dist_file.c_str(), dist_mat);
-        cout << "Time taken to write distance file: "
+        if (verbose_mode >= VB_MED) {
+            cout << "Time taken to write distance file: "
             << getRealTime() - write_begin_time << " seconds " << endl;
+        }
     } else {
         longest_dist = alignment->readDist(params.dist_file, dist_mat);
         dist_file = params.dist_file;
@@ -3587,8 +3546,8 @@ void PhyloTree::computeBioNJ(Params &params, Alignment *alignment, string &dist_
         = StartTree::Factory::getTreeBuilderByName
             ( params.start_tree_subtype_name);
     cout << "Computing " << treeBuilder->getName() << " tree"
-        << "(in file " << bionj_file << ")... from distance matrix"
-        << "(in " << dist_file << ")" << endl;
+        << " (in file " << bionj_file << ")... from distance matrix"
+        << " (in file " << dist_file << ")" << endl;
     treeBuilder->constructTree(dist_file, bionj_file);
     bool non_empty_tree = (root != NULL);
     readTreeFile(bionj_file.c_str());
