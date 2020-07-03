@@ -1623,16 +1623,23 @@ void printAnalysisInfo(int model_df, IQTree& iqtree, Params& params) {
     cout << endl;
 }
 
-void computeMLDist(Params& params, IQTree& iqtree, double begin_time) {
+void computeMLDist ( Params& params, IQTree& iqtree
+                   , double begin_wallclock_time, double begin_cpu_time) {
     double longest_dist;
 //    stringstream best_tree_string;
 //    iqtree.printTree(best_tree_string, WT_BR_LEN + WT_TAXON_ID);
     cout << "Computing ML distances based on estimated model parameters..." << endl;
-    double *ml_dist = NULL;
-    double *ml_var = NULL;
-    longest_dist = iqtree.computeDist(params, iqtree.aln, ml_dist, ml_var, iqtree.dist_file);
-    cout << "Computing ML distances took " << (getCPUTime() - begin_time) << " sec (of CPU time)" << endl;
-
+    double *ml_dist = nullptr;
+    double *ml_var  = nullptr;
+    iqtree.decideDistanceFilePath(params);
+    longest_dist = iqtree.computeDist(params, iqtree.aln, ml_dist, ml_var);
+    cout << "Computing ML distances took "
+        << (getRealTime() - begin_wallclock_time) << " sec (of wall-clock time) "
+        << (getCPUTime() - begin_cpu_time) << " sec(of CPU time)" << endl;
+    if (!params.dist_file)
+    {
+        iqtree.printDistanceFile();
+    }
     double max_genetic_dist = MAX_GENETIC_DIST;
     if (iqtree.aln->seq_type == SEQ_POMO) {
         int N = iqtree.aln->virtual_pop_size;
@@ -1640,24 +1647,25 @@ void computeMLDist(Params& params, IQTree& iqtree, double begin_time) {
     }
     if (longest_dist > max_genetic_dist * 0.99) {
         outWarning("Some pairwise ML distances are too long (saturated)");
-        //cout << "Some ML distances are too long, using old distances..." << endl;
-    } //else
-    {
-        int n = iqtree.aln->getNSeq();
-        int nSquared = n*n;
-        if ( !iqtree.dist_matrix ) {
-            iqtree.dist_matrix = new double[nSquared];
-        }
-        if ( !iqtree.var_matrix ) {
-            iqtree.var_matrix = new double[nSquared];
-        }
+    }
+    int n = iqtree.aln->getNSeq();
+    int nSquared = n*n;
+    if ( iqtree.dist_matrix == nullptr ) {
+        iqtree.dist_matrix = ml_dist;
+        ml_dist = nullptr;
+    } else {
         memmove(iqtree.dist_matrix, ml_dist,
                 sizeof(double) * nSquared);
+        delete[] ml_dist;
+    }
+    if ( iqtree.var_matrix == nullptr ) {
+        iqtree.var_matrix = ml_var;
+        ml_var = nullptr;
+    } else {
         memmove(iqtree.var_matrix, ml_var,
                 sizeof(double) * nSquared);
+        delete[] ml_var;
     }
-    delete[] ml_dist;
-    delete[] ml_var;
 }
 
 void computeInitialDist(Params &params, IQTree &iqtree) {
@@ -1671,7 +1679,7 @@ void computeInitialDist(Params &params, IQTree &iqtree) {
     }
 
     if (params.compute_jc_dist || params.compute_obs_dist || params.partition_file) {
-        longest_dist = iqtree.computeDist(params, iqtree.aln, iqtree.dist_matrix, iqtree.var_matrix, iqtree.dist_file);
+        longest_dist = iqtree.computeDist(params, iqtree.aln, iqtree.dist_matrix, iqtree.var_matrix);
         //if (!params.suppress_zero_distance_warnings) {
         //  checkZeroDist(iqtree.aln, iqtree.dist_matrix);
         //}
@@ -2433,29 +2441,38 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     //Generate BIONJ tree
     if (MPIHelper::getInstance().isMaster() && !iqtree->getCheckpoint()->getBool("finishedCandidateSet")) {
         if (!finishedInitTree && ((!params.dist_file && params.compute_ml_dist) || params.leastSquareBranch)) {
-            computeMLDist(params, *iqtree, getCPUTime());
-            if (!params.user_file && params.start_tree != STT_RANDOM_TREE) {
-                // NEW 2015-08-10: always compute BIONJ tree into the candidate set
-                iqtree->resetCurScore();
-                double start_bionj = getRealTime();
-                iqtree->computeBioNJ(params, iqtree->aln, iqtree->dist_file);
-                if (verbose_mode >= VB_MED) {
-                    cout << "Wall-clock time spent creating initial tree was "
-                    << getRealTime() - start_bionj << " seconds" << endl;
+            computeMLDist(params, *iqtree, getRealTime(), getCPUTime());
+            if (!params.user_file) {
+                if (params.start_tree != STT_RANDOM_TREE) {
+                    iqtree->resetCurScore();
+                    double start_bionj = getRealTime();
+                    iqtree->computeBioNJ(params);
+                    if (verbose_mode >= VB_MED) {
+                        cout << "Wall-clock time spent creating initial tree was "
+                        << getRealTime() - start_bionj << " seconds" << endl;
+                    }
+                    if (iqtree->isSuperTree())
+                        iqtree->wrapperFixNegativeBranch(true);
+                    else
+                        iqtree->wrapperFixNegativeBranch(false);
+                    iqtree->initializeAllPartialLh();
+                    if (params.start_tree == STT_BIONJ) {
+                        initTree = iqtree->optimizeModelParameters(params.min_iterations==0, initEpsilon);
+                    } else {
+                        initTree = iqtree->optimizeBranches();
+                    }
+                    cout << "Log-likelihood of " << params.start_tree_subtype_name
+                        << " tree: " << iqtree->getCurScore() << endl;
+                    iqtree->candidateTrees.update(initTree, iqtree->getCurScore());
+                } else if (!params.dist_file) {
+                    double write_begin_time = getRealTime();
+                    iqtree->printDistanceFile();
+                    if (verbose_mode >= VB_MED) {
+                        #pragma omp critical
+                        cout << "Time taken to write distance file ( " << iqtree->dist_file << ") : "
+                            << getRealTime() - write_begin_time << " seconds " << endl;
+                    }
                 }
-                if (iqtree->isSuperTree())
-                    iqtree->wrapperFixNegativeBranch(true);
-                else
-                    iqtree->wrapperFixNegativeBranch(false);
-                iqtree->initializeAllPartialLh();
-                if (params.start_tree == STT_BIONJ) {
-                    initTree = iqtree->optimizeModelParameters(params.min_iterations==0, initEpsilon);
-                } else {
-                    initTree = iqtree->optimizeBranches();
-                }
-                cout << "Log-likelihood of BIONJ tree: " << iqtree->getCurScore() << endl;
-//                cout << "BIONJ tree: " << iqtree->getTreeString() << endl;
-                iqtree->candidateTrees.update(initTree, iqtree->getCurScore());
             }
         }
     }

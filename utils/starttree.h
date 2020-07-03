@@ -36,6 +36,10 @@ namespace StartTree
         virtual void constructTree
             ( const std::string &distanceMatrixFilePath
              , const std::string & newickTreeFilePath) = 0;
+        virtual bool constructTreeInMemory
+            ( const std::vector<std::string> &sequenceNames
+             , double *distanceMatrix
+             , const std::string & newickTreeFilePath) = 0;
         virtual const std::string& getName() = 0;
         virtual const std::string& getDescription() = 0;
     };
@@ -71,6 +75,20 @@ namespace StartTree
     protected:
         const std::string name;
         const std::string description;
+        void constructTreeWith(B& builder) {
+            #if (0)
+                double buildStart = getRealTime();
+            #endif
+            builder.constructTree();
+            #if (0)
+                double buildElapsed = getRealTime() - buildStart;
+                std::cout.precision(6);
+                std::cout << "Wall-clock time for constructing initial tree"
+                << " (with algorithm " << name << "), "
+                << buildElapsed << std::endl;
+                std::cout.precision(3);
+            #endif
+        }
     public:
         Builder(const char* nameToUse, const char *descriptionToGive)
         : name(nameToUse), description(descriptionToGive) {
@@ -84,20 +102,20 @@ namespace StartTree
         virtual void constructTree
             ( const std::string &distanceMatrixFilePath
              , const std::string & newickTreeFilePath) {
-                B builder(distanceMatrixFilePath);
-#if (0)
-                double buildStart = getRealTime();
-#endif
-                builder.constructTree();
-#if (0)
-                double buildElapsed = getRealTime() - buildStart;
-                std::cout.precision(6);
-                std::cout << "Wall-clock time for constructing initial tree"
-                << " (with algorithm " << name << "), "
-                << buildElapsed << std::endl;
-                std::cout.precision(3);
-#endif
+                B builder;
+                builder.loadMatrixFromFile(distanceMatrixFilePath);
+                constructTreeWith(builder);
                 builder.writeTreeFile(newickTreeFilePath);
+            }
+        virtual bool constructTreeInMemory
+            ( const std::vector<std::string> &sequenceNames
+            , double *distanceMatrix
+            , const std::string & newickTreeFilePath) {
+                B builder;
+                builder.loadMatrix(sequenceNames, distanceMatrix);
+                constructTreeWith(builder);
+                builder.writeTreeFile(newickTreeFilePath);
+                return true;
         }
     };
 }
