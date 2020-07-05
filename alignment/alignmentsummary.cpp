@@ -13,8 +13,6 @@ AlignmentSummary::AlignmentSummary(const Alignment* a, bool keepConstSites) {
     alignment      = a;
     sequenceMatrix = nullptr;
     sequenceCount  = a->getNSeq();
-    siteNumbers.clear();
-    siteFrequencies.clear();
     totalFrequency = 0;
     totalFrequencyOfNonConstSites = 0;
     if (sequenceCount==0) {
@@ -79,6 +77,7 @@ AlignmentSummary::AlignmentSummary(const Alignment* a, bool keepConstSites) {
                 }
                 siteNumbers.emplace_back(i);
                 siteFrequencies.emplace_back(s->frequency);
+                nonConstSiteFrequencies.emplace_back(s->isConst ? 0 : s->frequency);
                 ++sequenceLength;
             }
         }

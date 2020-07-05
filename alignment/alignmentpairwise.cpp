@@ -386,7 +386,33 @@ double AlignmentPairwise::computeDist
     ( int seq1, int seq2, double initial_dist, double &d2l ) {
     //Only called when -experimental has been passed
     if (initial_dist == 0.0) {
-        if (tree->params->compute_obs_dist)
+        //ZORK
+        if (tree->hasMatrixOfConvertedSequences()) {
+            int distance    = 0;
+            int denominator = 0;
+            auto sequence1        = tree->getConvertedSequenceByNumber(seq1);
+            auto sequence2        = tree->getConvertedSequenceByNumber(seq2);
+            auto nonConstSiteFreq = tree->getConvertedSequenceNonConstFrequencies();
+            size_t sequenceLength = tree->getConvertedSequenceLength();
+            for (size_t i=0; i<sequenceLength; ++i) {
+                auto state1 = sequence1[i];
+                auto state2 = sequence2[i];
+                if ( state1 != STATE_UNKNOWN && state2 != STATE_UNKNOWN ) {
+                    denominator += nonConstSiteFreq[i];
+                    if ( state1 != state2 ) {
+                        distance += nonConstSiteFreq[i];
+                    }
+                }
+            }
+            if (0<distance) {
+                initial_dist = (double)distance / (double)denominator;
+            }
+            if (tree->params->compute_obs_dist) {
+                return initial_dist;
+            }
+            initial_dist = tree->aln->computeJCDistanceFromObservedDistance(initial_dist);
+        }
+        else if (tree->params->compute_obs_dist)
             return (initial_dist = tree->aln->computeObsDist(seq1, seq2));
         else
             initial_dist = tree->aln->computeDist(seq1, seq2);

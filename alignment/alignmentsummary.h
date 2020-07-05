@@ -26,6 +26,8 @@ public:
     const Alignment*   alignment;
     std::vector<int>   siteNumbers;      //of sites with variation
     std::vector<int>   siteFrequencies;  //ditto
+    std::vector<int>   nonConstSiteFrequencies; //ditto, but zeroed if site
+                                                //isConst according to alignment
     std::map<int, int> stateToSumOfConstantSiteFrequencies;
     int                totalFrequency;   //sum of frequencies (*including* constant sites!)
     int                totalFrequencyOfNonConstSites; //ditto (*excluding* constant sites!)
