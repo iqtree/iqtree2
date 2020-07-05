@@ -86,9 +86,20 @@
 #include <boost/scoped_array.hpp>    //for boost::scoped_array
 #include <vectorclass/vectorclass.h> //for Vec4d and Vec4db vector classes
 
-typedef double NJFloat;
-
-const NJFloat infiniteDistance = 1e+300;
+#if (1)
+    //Use double-precision math.
+    typedef double NJFloat;
+    typedef Vec4d  FloatVector;
+    typedef Vec4db FloatBoolVector;
+    const NJFloat infiniteDistance = 1e+300;
+#else
+    //Single-precision math.  This seems to be
+    //about 25% faster.
+    typedef float NJFloat;
+    typedef Vec8f  FloatVector;
+    typedef Vec8fb FloatBoolVector;
+    const NJFloat infiniteDistance = 1e+36;
+#endif
 
 namespace StartTree
 {
@@ -286,6 +297,7 @@ template <class T=NJFloat> class Matrix
     //        and RectangularMatrix classes?
 public:
     size_t n;
+    size_t shrink_n; //if n reaches *this*, pack the array
     T*     data;
     T**    rows;
     T*     rowTotals; //The U vector
@@ -295,18 +307,10 @@ public:
             return;
         }
         try {
-            //
-            //w is n, rounded up so that each row will
-            //have a starting address that is MATRIX_ALIGNMENT-byte aligned.
-            //
-            size_t w  = rank;
-            if (sizeof(T)<MATRIX_ALIGNMENT) {
-                size_t leftOver  = (rank * sizeof(T)) % MATRIX_ALIGNMENT;
-                if (0<leftOver) {
-                    w += (MATRIX_ALIGNMENT-leftOver) / sizeof(T);
-                }
-            }
+            size_t w = widthNeededFor(rank);
             n           = rank;
+            shrink_n    = (rank+rank)/3;
+            if (shrink_n<100) shrink_n=0;
             data        = new T[n*w + MATRIX_ALIGNMENT/sizeof(T)];
             rows        = new T*[n];
             rowTotals   = new T[n];
@@ -325,6 +329,21 @@ public:
             clear();
             throw;
         }
+    }
+    size_t widthNeededFor(size_t width) {
+        //
+        //returns width, rounded up so that each row will
+        //have a starting address that is MATRIX_ALIGNMENT-byte aligned.
+        //
+        if (MATRIX_ALIGNMENT<sizeof(T))
+        {
+            return width;
+        }
+        size_t leftOver  = (width * sizeof(T)) % MATRIX_ALIGNMENT;
+        if (leftOver==0) {
+            return width;
+        }
+        return width + (MATRIX_ALIGNMENT-leftOver) / sizeof(T);
     }
     void zeroRow(size_t r) {
         T* rowStart = rows[r];
@@ -349,9 +368,9 @@ public:
             rowTotals[r] = rhs.rowTotals[r];
         }
     }
-    Matrix(): n(0), data(0), rows(0), rowTotals(0) {
+    Matrix(): n(0), shrink_n(0), data(nullptr), rows(nullptr), rowTotals(nullptr) {
     }
-    Matrix(const Matrix& rhs) {
+    Matrix(const Matrix& rhs): data(nullptr), rows(nullptr), rowTotals(nullptr) {
         assign(rhs);
     }
     virtual ~Matrix() {
@@ -389,19 +408,62 @@ public:
             rowTotals[r] = total;
         }
     }
+    void recalculateTotalForOneRow(size_t a, size_t b) {
+        //recalculate total for row, a, excluding
+        //column b (a<=b).
+        T replacementRowTotal = 0;
+        for (int i=0; i<a; ++i) {
+            replacementRowTotal += rows[a][i];
+        }
+        for (int i=a+1; i<b; ++i) {
+            replacementRowTotal += rows[a][i];
+        }
+        for (int i=b+1; i<n; ++i) {
+            replacementRowTotal += rows[a][i];
+        }
+        rowTotals[a] = replacementRowTotal;
+    }
     void removeRowAndColumn(size_t rowNum)  {
         //Remove row (and matching column) from a
         //square matrix, by swapping the last row
         //(and column) into its place.
         #pragma omp parallel for
         for (size_t r=0; r<n; ++r) {
-            T* rowData = rows[r];
-            rowData[rowNum] = rowData[n-1]; //U-R
+            if (r!=rowNum) {
+              T* rowData = rows[r];
+              rowData[rowNum] = rowData[n-1]; //U-R
+            }
         }
-        rowTotals[rowNum] = rowTotals[n-1];
-        rows[rowNum] = rows[n-1];
-        rows[n-1] = nullptr;
         --n;
+        rowTotals[rowNum] = rowTotals[n];
+        //was rows[rowNum] = rows[n];... but let's copy
+        //instead.  On average it seems (very slightly) faster.
+        T*       destRow   = rows[rowNum];
+        const T* sourceRow = rows[n];
+        rows[n] = nullptr;
+        if (destRow!=sourceRow) {
+            #pragma omp parallel for
+            for (size_t c=0; c<n; ++c) {
+                destRow[c] = sourceRow[c];
+            }
+        }
+        if ( n == shrink_n && 0 < shrink_n) {
+            //Move the data in the array closer to the front.
+            //This also helps (but: only very slightly. 5%ish?).
+            size_t   w = widthNeededFor(n);
+            T* destRow = data;
+            for (int r=1; r<n; ++r) {
+                destRow += w;
+                const T* sourceRow = rows[r];
+                #pragma omp parallel for
+                for (size_t c=0; c<n; ++c) {
+                    destRow[c] = sourceRow[c];
+                }
+                rows[r] = destRow;
+            }
+            shrink_n    = (n+n)/3;
+            if (shrink_n<100) shrink_n=0;
+        }
     }
     void removeRowOnly(size_t rowNum) {
         //Remove row from a rectangular matrix.
@@ -500,8 +562,9 @@ protected:
         getRowMinima();
         best.value = infiniteDistance;
         for (size_t r=0; r<n; ++r) {
-            if (rowMinima[r].value < best.value) {
-                best = rowMinima[r];
+            Position<T> & here = rowMinima[r];
+            if (here.value < best.value) {
+                best = here;
             }
         }
     }
@@ -549,11 +612,11 @@ protected:
     virtual void cluster(size_t a, size_t b) {
         double aLength = rows[b][a] * 0.5;
         double bLength = aLength;
-        size_t aCount = clusters[rowToCluster[a]].countOfExteriorNodes;
-        size_t bCount = clusters[rowToCluster[b]].countOfExteriorNodes;
-        int sumCount = aCount + bCount;
-        double lambda = (double)aCount / (double)sumCount;
-        double mu     = 1.0 - lambda;
+        size_t aCount  = clusters[rowToCluster[a]].countOfExteriorNodes;
+        size_t bCount  = clusters[rowToCluster[b]].countOfExteriorNodes;
+        int    tCount  = aCount + bCount;
+        double lambda  = (double)aCount / (double)tCount;
+        double mu      = 1.0 - lambda;
         for (int i=0; i<n; ++i) {
             if (i!=a && i!=b) {
                 T Dai      = rows[a][i];
@@ -584,6 +647,7 @@ public:
     using super::rowToCluster;
     using super::removeRowAndColumn;
     using super::calculateRowTotals;
+    using super::recalculateTotalForOneRow;
 protected:
     mutable std::vector<T> scaledRowTotals; //used in getRowMinima
 public:
@@ -647,6 +711,7 @@ protected:
         T lambda        = 0.5;
         T mu            = 1.0 - lambda;
         T dCorrection   = - lambda * aLength - mu * bLength;
+        #pragma omp parallel for
         for (int i=0; i<n; ++i) {
             if (i!=a && i!=b) {
                 T Dai   = rows[a][i];
@@ -654,10 +719,11 @@ protected:
                 T Dci   = lambda * Dai + mu * Dbi + dCorrection;
                 rows[a][i]    = Dci;
                 rows[i][a]    = Dci;
-                rowTotals[i] += Dci - Dai - Dbi; //JB2020-06-18 Adjust row totals
-                rowTotals[a] += Dci - Dai;       //on the fly.
+                rowTotals[i] += Dci - Dai - Dbi;
+                                //JB2020-06-18 Adjust row totals on fly
             }
         }
+        recalculateTotalForOneRow(a,b);
         rowTotals[a] -= rows[a][b];
         clusters.addCluster ( rowToCluster[a], aLength,
                               rowToCluster[b], bLength);
@@ -686,6 +752,7 @@ public:
     using super::rows;
     using super::rowToCluster;
     using super::rowTotals;
+    using super::recalculateTotalForOneRow;
     using super::removeRowAndColumn;
 protected:
     Matrix<T>  variance;       //The V matrix
@@ -754,17 +821,7 @@ public:
                 //BIO finish
             }
         }
-        replacementRowTotal = 0;
-        for (int i=0; i<a; ++i) {
-            replacementRowTotal += rows[a][i];
-        }
-        for (int i=a+1; i<b; ++i) {
-            replacementRowTotal += rows[a][i];
-        }
-        for (int i=b+1; i<n; ++i) {
-            replacementRowTotal += rows[a][i];
-        }
-        rowTotals[a] = replacementRowTotal;
+        recalculateTotalForOneRow(a,b);
         clusters.addCluster ( rowToCluster[a], aLength, rowToCluster[b], bLength);
         rowToCluster[a] = clusters.size()-1;
         rowToCluster[b] = rowToCluster[n-1];
@@ -773,7 +830,8 @@ public:
     }
 };
 
-template <class T=NJFloat, class super=BIONJMatrix<T>> class BoundingMatrix: public super
+template <class T=NJFloat, class super=BIONJMatrix<T>>
+class BoundingMatrix: public super
 {
     using super::n;
     using super::rows;
@@ -848,7 +906,7 @@ public:
             //row r from the D matrix and sorts it
             //into ascending order.
         }
-        size_t nextPurge = 0; //n*2/3;
+        size_t nextPurge = (n+n)/2;
         while (3<n) {
             Position<T> best;
             super::getMinimumEntry(best);
@@ -876,13 +934,14 @@ public:
         for (size_t i=0; i<n; ++i) {
             values[w]         = sourceRow[i];
             clusterIndices[w] = rowToCluster[i];
-            if ( i!=r && clusterIndices[w] < c ) {
+            if ( i != r && clusterIndices[w] < c ) {
                 ++w;
             }
         }
         values[w]         = infiniteDistance; //sentinel value, to stop row search
-        clusterIndices[w] = 0; //Always room for this, because distance to self
-                               //was excluded via the i!=r check above.
+        clusterIndices[w] = rowToCluster[r];
+            //Always room for this, because distance to self
+            //was excluded via the i!=r check above.
         
         //2. Sort the row in the S matrix and mirror the sort
         //   on the same row of the I matrix.
@@ -907,22 +966,27 @@ public:
                 ++w;
             }
         }
+        if (w<n) {
+            values[w] = infiniteDistance;
+        }
     }
     virtual void cluster(size_t a, size_t b) {
-        size_t clusterA = rowToCluster[a];
-        size_t clusterB = rowToCluster[b];
-        size_t clusterMoved = rowToCluster[n-1];
-        clusterToRow[clusterA] = -1;
-        clusterToRow[clusterB] = -1;
-        size_t c = clusters.size(); //cluster # of new cluster
+        size_t clusterA         = rowToCluster[a];
+        size_t clusterB         = rowToCluster[b];
+        size_t clusterMoved     = rowToCluster[n-1];
+        clusterToRow[clusterA]  = -1;
+        clusterTotals[clusterA] = -infiniteDistance;
+        clusterToRow[clusterB]  = -1;
+        clusterTotals[clusterB] = -infiniteDistance;
+        size_t clusterC = clusters.size(); //cluster # of new cluster
         super::cluster(a,b);
-        clusterToRow.emplace_back(a);
-        clusterTotals.emplace_back(rowTotals[a]);
-        scaledClusterTotals.emplace_back(rowTotals[a] / (n-1));
-        scaledMaxEarlierClusterTotal.emplace_back(0.0);
         if (b<n) {
             clusterToRow[clusterMoved] = b;
         }
+        clusterToRow.emplace_back(a);
+        clusterTotals.emplace_back(rowTotals[a]);
+        scaledClusterTotals.emplace_back(rowTotals[a] / (T)( n - 1.0 ) );
+        scaledMaxEarlierClusterTotal.emplace_back(0.0);
         //Mirror row rearrangement done on the D (distance) matrix
         //(and possibly also on the V (variance estimate) matrix),
         //onto the S and I matrices.
@@ -930,7 +994,7 @@ public:
         entryToCluster.removeRowOnly(b);
         
         //Recalculate cluster totals.
-        for (size_t wipe = 0; wipe<c; ++wipe) {
+        for (size_t wipe = 0; wipe<clusterC; ++wipe) {
             clusterTotals[wipe] = -infiniteDistance;
             //A trick.  This way we don't need to check if clusters
             //are still "live" in the inner loop of getRowMinimum().
@@ -945,7 +1009,7 @@ public:
             size_t cluster = rowToCluster[r];
             clusterTotals[cluster] = rowTotals[r];
         }
-        sortRow(a, clusters.size());
+        sortRow(a, clusterC);
     }
     void decideOnRowScanningOrder() const {
         //
@@ -966,7 +1030,7 @@ public:
         //Since we always have to check these entries when we process
         //the row, why not process them up front, hoping to get a
         //better bound on min(V) (and "rule out" entire rows with that
-        //bound). -James B).
+        //bound)? -James B).
         //
         for ( int len = rowMinima.size(); 1<len; len=(len+1)/2 ) {
             int halfLen = len/2;
@@ -984,11 +1048,11 @@ public:
         size_t w = 0;
         for (size_t r=0; r < rowMinima.size()
              && rowMinima[r].value < infiniteDistance; ++r) {
-            size_t rowA = rowMinima[r].row;
-            size_t rowB = rowMinima[r].column;
-            size_t clusterA = rowToCluster[rowA];
-            size_t clusterB = rowToCluster[rowB];
-            size_t row = (clusterA<clusterB) ? rowB : rowA;
+            size_t rowA     = rowMinima[r].row;
+            size_t rowB     = rowMinima[r].column;
+            size_t clusterA = (rowA<n) ? rowToCluster[rowA] : 0;
+            size_t clusterB = (rowB<n) ? rowToCluster[rowB] : 0;
+            size_t row      = (clusterA<clusterB) ? rowB : rowA;
             rowScanOrder[w] = row;
             w += ( row < n && !rowOrderChosen[row] ) ? 1 : 0;
             rowOrderChosen[row] = true;
@@ -1014,8 +1078,10 @@ public:
         for (size_t i=0; i<c; ++i) {
             scaledClusterTotals[i] = clusterTotals[i] * tMultiplier;
             scaledMaxEarlierClusterTotal[i] = maxTot;
-            if ( 0 <= clusterToRow[i] && maxTot < scaledClusterTotals[i] ) {
-                maxTot=scaledClusterTotals[i];
+            if ( 0 <= clusterToRow[i] ) {
+                if (maxTot < scaledClusterTotals[i] ) {
+                    maxTot=scaledClusterTotals[i];
+                }
             }
         }
         T qBest = infiniteDistance;
@@ -1029,44 +1095,43 @@ public:
         for (size_t r=0; r<n; ++r) {
             size_t row             = rowScanOrder[r];
             size_t cluster         = rowToCluster[row];
-            size_t maxEarlierTotal = scaledMaxEarlierClusterTotal[cluster];
+            T      maxEarlierTotal = scaledMaxEarlierClusterTotal[cluster];
             //Note: Older versions of RapidNJ used maxTot rather than
             //      maxEarlierTotal here...
-            rowMinima[row]         = getRowMinimum(row, maxEarlierTotal, qBest);
-            T      v               = rowMinima[row].value;
-            //#pragma omp critical
+            rowMinima[r]          = getRowMinimum(row, maxEarlierTotal, qBest);
+            T      v              = rowMinima[row].value;
             {
                 if ( v < qBest ) {
-                    qBest = v;
+                    #pragma omp critical(checkmin)
+                    if (v < qBest) {
+                        qBest = v;
+                    }
                 }
             }
         }
     }
     Position<T> getRowMinimum(size_t row, T maxTot, T qBest) const {
         T nless2      = ( n - 2 );
-        T tMultiplier = ( n <= 2 ) ? 0 : (1 / nless2);
-        auto    tot         = scaledClusterTotals.data();
-        T rowTotal    = rowTotals[row] * tMultiplier;
+        T tMultiplier = ( n <= 2 ) ? 0 : ( 1.0 / nless2 );
+        auto    tot   = scaledClusterTotals.data();
+        T rowTotal    = rowTotals[row] * tMultiplier; //scaled by (1/(n-2)).
         T rowBound    = qBest + maxTot + rowTotal;
                 //Upper bound for distance, in this row, that
                 //could (after row totals subtracted) provide a
                 //better min(Q).
 
         Position<T> pos(row, 0, infiniteDistance);
-        const T* rowData   = entriesSorted.rows[row];
-        const int*     toCluster = entryToCluster.rows[row];
-        size_t i = 0;
+        const T*   rowData   = entriesSorted.rows[row];
+        const int* toCluster = entryToCluster.rows[row];
         T Drc;
-        for (i=0; (Drc=rowData[i])<rowBound; ++i) {
+        for (size_t i=0; (Drc=rowData[i])<rowBound; ++i) {
             size_t  cluster = toCluster[i];
                 //The cluster associated with this distance
                 //The c in Qrc and Drc.
             T Qrc = Drc - tot[cluster] - rowTotal;
             if (Qrc < pos.value) {
                 int otherRow = clusterToRow[cluster];
-                if ( 0 <= otherRow ) { //I *think* this check is still necessary,
-                                       //despite setting "out of matrix" cluster totals
-                                       //to (0-infiniteDistance).
+                if (0<=otherRow) {
                     pos.column = (otherRow < row ) ? otherRow : row;
                     pos.row    = (otherRow < row ) ? row : otherRow;
                     pos.value  = Qrc;
@@ -1082,7 +1147,7 @@ public:
 };
 
 
-template <class T=NJFloat, class super=BIONJMatrix<T>, class V=Vec4d, class VB=Vec4db>
+template <class T=NJFloat, class super=BIONJMatrix<T>, class V=FloatVector, class VB=FloatBoolVector>
     class VectorizedMatrix: public super
 {
     //
@@ -1126,12 +1191,13 @@ public:
             Position<T> pos(row, 0, infiniteDistance);
             const T* rowData = rows[row];
             size_t col;
-            V minVector  ( infiniteDistance, infiniteDistance
-                          , infiniteDistance, infiniteDistance);
-                //The minima of columns with indices "congruent modulo 4"
-                //For example minVector[1] holds the minimum of
+            V minVector = infiniteDistance;
+                //The minima of columns with indices
+                //"congruent modulo blockSize"
+                //For example, if blockSize is 4,
+                //minVector[1] holds the minimum of
                 //columns 1,5,9,13,17,...
-            V ixVector(-1,     -1,     -1,     -1);
+            V ixVector = -1;
                 //For each entry in minVector, the column from which
                 //that value came.
             
@@ -1164,7 +1230,7 @@ public:
     }
 };//end of class
 
-template <class T=NJFloat, class V=Vec4d, class VB=Vec4db>
+template <class T=NJFloat, class V=FloatVector, class VB=FloatBoolVector>
 class VectorizedUPGMA_Matrix: public UPGMA_Matrix<T>
 {
 protected:
