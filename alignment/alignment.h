@@ -585,9 +585,15 @@ public:
     virtual double computeObsDist(int seq1, int seq2);
 
     /**
+            @param obs_dist the observed distance between two sequences
+            @return Jukes-Cantor corrected distance between those sequences
+     */
+    double computeJCDistanceFromObservedDistance(double obs_dist) const;
+    
+    /**
             @param seq1 index of sequence 1
             @param seq2 index of sequence 2
-            @return Juke-Cantor correction distance between seq1 and seq2
+            @return Jukes-Cantor correction distance between seq1 and seq2
      */
     double computeJCDist(int seq1, int seq2);
 

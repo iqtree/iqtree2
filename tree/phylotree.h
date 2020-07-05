@@ -1613,6 +1613,8 @@ public:
     
     virtual const int* getConvertedSequenceFrequencies() const;
     
+    virtual const int* getConvertedSequenceNonConstFrequencies() const;
+    
     virtual int  getSumOfFrequenciesForSitesWithConstantState(int state) const;
     
     virtual void doneComputingDistances();
