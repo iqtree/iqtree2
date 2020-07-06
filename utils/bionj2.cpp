@@ -86,20 +86,11 @@
 #include <boost/scoped_array.hpp>    //for boost::scoped_array
 #include <vectorclass/vectorclass.h> //for Vec4d and Vec4db vector classes
 
-#if (1)
-    //Use double-precision math.
-    typedef double NJFloat;
-    typedef Vec4d  FloatVector;
-    typedef Vec4db FloatBoolVector;
-    const NJFloat infiniteDistance = 1e+300;
-#else
-    //Single-precision math.  This seems to be
-    //about 25% faster.
-    typedef float NJFloat;
-    typedef Vec8f  FloatVector;
-    typedef Vec8fb FloatBoolVector;
-    const NJFloat infiniteDistance = 1e+36;
-#endif
+
+typedef float   NJFloat;
+typedef Vec8f   FloatVector;
+typedef Vec8fb  FloatBoolVector;
+const   NJFloat infiniteDistance = 1e+36;
 
 namespace StartTree
 {
@@ -142,7 +133,7 @@ template <class T=NJFloat> struct Link {
 public:
     size_t  clusterIndex;
     T       linkDistance;
-    Link(size_t index, NJFloat distance) {
+    Link(size_t index, T distance) {
         clusterIndex = index;
         linkDistance = distance;
     }
@@ -537,7 +528,7 @@ public:
             double* sourceStop  = sourceStart + n;
             T*      dest        = rows[row];
             for (double* source=sourceStart; source<sourceStop; ++source, ++dest ) {
-                *dest = *source;
+                *dest = (T) *source;
             }
         }
         calculateRowTotals();
@@ -655,8 +646,8 @@ public:
 protected:
     virtual void calculateScaledRowTotals() const {
         scaledRowTotals.reserve(n);
-        NJFloat nless2      = ( n - 2 );
-        NJFloat tMultiplier = ( n <= 2 ) ? 0 : (1 / nless2);
+        T nless2      = ( n - 2 );
+        T tMultiplier = ( n <= 2 ) ? 0 : (1 / nless2);
         #pragma omp parallel for
         for (size_t r=0; r<n; ++r) {
             scaledRowTotals[r] = rowTotals[r] * tMultiplier;
@@ -670,7 +661,7 @@ protected:
         //
         //Note: Rather than multiplying distances by (n-2)
         //      repeatedly, it is cheaper to work with row
-        //      totals multiplied by (1/(NJFloat)(n-2)).
+        //      totals multiplied by (1/(T)(n-2)).
         //      Better n multiplications than n*(n-1)/2.
         //
         T nless2      = ( n - 2 );
@@ -952,8 +943,8 @@ public:
         //entries that refer to clusters that are no longer
         //being processed. Remove the corresponding values
         //in the same row of the S matrix.
-        NJFloat* values         = entriesSorted.rows[r];
-        int*     clusterIndices = entryToCluster.rows[r];
+        T*    values         = entriesSorted.rows[r];
+        int*  clusterIndices = entryToCluster.rows[r];
         size_t w = 0;
         size_t i = 0;
         for (; i<n ; ++i ) {
@@ -1302,5 +1293,6 @@ void addBioNJ2020TreeBuilders(Factory& f) {
     f.advertiseTreeBuilder( new Builder<UPGMA_Matrix<NJFloat>>("UPGMA",    "UPGMA (Sokal, Michener [1958])"));
     f.advertiseTreeBuilder( new Builder<VectorizedUPGMA_Matrix<NJFloat>>("UPGMA-V", "Vectorized UPGMA (Sokal, Michener [1958])"));
     f.advertiseTreeBuilder( new Builder<BIONJMatrix<NJFloat>> ("",        "BIONJ (Gascuel, Cong [2009])"));  //Default.
+    f.advertiseTreeBuilder( new Builder<BoundingMatrix<double>> ("NJ-R-D", "Double precision Raipd Neighbour Joining"));
 }
 }; //end of namespace
