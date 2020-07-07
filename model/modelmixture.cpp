@@ -1030,15 +1030,6 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block,
         }
     }
 
-    // Now that PoMo stuff has been removed, check for model parameters.
-	size_t pos = model_str.find(OPEN_BRACKET);
-    if (pos != string::npos) {
-		if (model_str.rfind(CLOSE_BRACKET) != model_str.length()-1)
-			outError("Close bracket not found at the end of ", model_str);
-		model_params = model_str.substr(pos+1, model_str.length()-pos-2);
-		model_str = model_str.substr(0, pos);
-    }
-
     // sequencing error model
     string seqerr = "";
     string::size_type spec_pos;
@@ -1055,6 +1046,15 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block,
     
     if (!seqerr.empty() && tree->aln->seq_type != SEQ_DNA)
         outError("Sequencing error model " + seqerr + " is only supported for DNA");
+
+    // Now that PoMo stuff has been removed, check for model parameters.
+	size_t pos = model_str.find(OPEN_BRACKET);
+    if (pos != string::npos) {
+		if (model_str.rfind(CLOSE_BRACKET) != model_str.length()-1)
+			outError("Close bracket not found at the end of ", model_str);
+		model_params = model_str.substr(pos+1, model_str.length()-pos-2);
+		model_str = model_str.substr(0, pos);
+    }
 
 	/*
 	if ((model_str == "JC" && tree->aln->seq_type == SEQ_DNA) ||

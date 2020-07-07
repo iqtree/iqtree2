@@ -20,6 +20,9 @@
 
 using namespace std;
 
+const char OPEN_BRACKET = '{';
+const char CLOSE_BRACKET = '}';
+
 /**
 Substitution model abstract class
 

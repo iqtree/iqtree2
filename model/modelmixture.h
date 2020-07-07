@@ -14,9 +14,6 @@
 #include "nclextra/modelsblock.h"
 
 
-const char OPEN_BRACKET = '{';
-const char CLOSE_BRACKET = '}';
-
 extern const char* builtin_mixmodels_definition;
 
 /**
