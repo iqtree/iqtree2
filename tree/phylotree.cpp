@@ -3121,6 +3121,10 @@ const int* PhyloTree::getConvertedSequenceFrequencies() const {
     return summary->siteFrequencies.data();
 }
 
+const int* PhyloTree::getConvertedSequenceNonConstFrequencies() const {
+    return summary->nonConstSiteFrequencies.data();
+}
+
 int  PhyloTree::getSumOfFrequenciesForSitesWithConstantState(int state) const {
     return summary->getSumOfConstantSiteFrequenciesForState(state);
 }
@@ -3555,47 +3559,48 @@ void PhyloTree::computeBioNJ(Params &params) {
         = StartTree::Factory::getTreeBuilderByName
             ( params.start_tree_subtype_name);
     bool wasDoneInMemory = false;
-    #ifdef _OPENMP
-        #pragma omp parallel
-    #endif
+#ifdef _OPENMP
+    omp_set_nested(true);
+    #pragma omp parallel num_threads(2)
     {
-        #ifdef _OPENMP
-            #pragma omp for
-        #endif
-        for (int i=0; i<2; ++i) {
-            if (i==0) {
-                if (!params.dist_file) {
-                    //This will take longer
-                    double write_begin_time = getRealTime();
-                    printDistanceFile();
-                    if (verbose_mode >= VB_MED) {
-                        #ifdef _OPENMP
-                            #pragma omp critical
-                        #endif
-                        cout << "Time taken to write distance file: "
-                        << getRealTime() - write_begin_time << " seconds " << endl;
-                    }
+        int thread = omp_get_thread_num();
+#else
+    for (int thread=0; thread<2; ++thread) {
+#endif
+        if (thread==0) {
+            if (!params.dist_file) {
+                //This will take longer
+                double write_begin_time = getRealTime();
+                printDistanceFile();
+                if (verbose_mode >= VB_MED) {
+                    #ifdef _OPENMP
+                        #pragma omp critical
+                    #endif
+                    cout << "Time taken to write distance file: "
+                    << getRealTime() - write_begin_time << " seconds " << endl;
                 }
-            } else if (this->dist_matrix!=nullptr) {
-                double start_time = getRealTime();
-                wasDoneInMemory = treeBuilder->constructTreeInMemory
-                ( this->aln->getSeqNames(), dist_matrix, bionj_file);
-                if (wasDoneInMemory) {
-                    if (verbose_mode >= VB_MED) {
-                        #ifdef _OPENMP
-                            #pragma omp critical
-                        #endif
-                        cout << "Computing " << treeBuilder->getName() << " tree"
-                            << " (from in-memory) distance matrix took "
-                            << (getRealTime()-start_time) << " sec." << endl;
-                    }
+            }
+        } else if (this->dist_matrix!=nullptr) {
+            double start_time = getRealTime();
+            wasDoneInMemory = treeBuilder->constructTreeInMemory
+            ( this->aln->getSeqNames(), dist_matrix, bionj_file);
+            if (wasDoneInMemory) {
+                if (verbose_mode >= VB_MED) {
+                    #ifdef _OPENMP
+                        #pragma omp critical
+                    #endif
+                    cout << "Computing " << treeBuilder->getName() << " tree"
+                        << " (from in-memory) distance matrix took "
+                        << (getRealTime()-start_time) << " sec." << endl;
                 }
             }
         }
-        #ifdef _OPENMP
-            #pragma omp barrier
-        #endif
     }
+    #ifdef _OPENMP
+        #pragma omp barrier
+        omp_set_nested(false);
+    #endif
+        
     if (!wasDoneInMemory) {
         double start_time = getRealTime();
         treeBuilder->constructTree(dist_file, bionj_file);
@@ -5828,7 +5833,7 @@ bool PhyloTree::computeTraversalInfo(PhyloNeighbor *dad_branch, PhyloNode *dad, 
         if (verbose_mode >= VB_MED && params->lh_mem_save == LM_MEM_SAVE) {
             int slot_id = mem_slots.findNei(dad_branch) - mem_slots.begin();
             node->name = convertIntToString(slot_id);
-            cout << "Branch " << dad->id << "-" << node->id << " assigned slot " << slot_id << endl;
+            //cout << "Branch " << dad->id << "-" << node->id << " assigned slot " << slot_id << endl;
         }
 
     if (params->lh_mem_save == LM_MEM_SAVE) {
