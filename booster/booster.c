@@ -168,6 +168,9 @@ int main_booster (const char* input_tree, const char *boot_trees,
   /* If true, compute and print in the log file the (normalized) number of moves of each taxa for all branches */
   int count_per_branch = 0;
 	
+
+  opterr = 0;
+    /*
   static struct option long_options[] = {
     {"input", required_argument, 0, 'i'},
     {"boot" , required_argument, 0, 'b'},
@@ -184,10 +187,8 @@ int main_booster (const char* input_tree, const char *boot_trees,
     {0, 0, 0, 0}
   };
 
-  opterr = 0;
   int option_index = 0;
   int c = 0;
-    /*
   while ((c = getopt_long(argc, argv, "i:a:b:d:o:cs:@:S:n:r:hvq", long_options, &option_index)) != -1){
     switch (c){
     case 'i': input_tree = optarg; break;

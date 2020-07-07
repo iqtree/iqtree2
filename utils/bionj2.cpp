@@ -298,7 +298,7 @@ public:
             return;
         }
         try {
-            size_t w = widthNeededFor(rank);
+            size_t w    = widthNeededFor(rank);
             n           = rank;
             shrink_n    = (rank+rank)/3;
             if (shrink_n<100) shrink_n=0;
@@ -791,7 +791,6 @@ public:
         T mu            = 1.0 - lambda;
         T dCorrection   = - lambda * aLength - mu * bLength;
         T vCorrection   = - lambda * mu * Vab;
-        T replacementRowTotal = 0;
         #pragma omp parallel for
         for (int i=0; i<n; ++i) {
             if (i!=a && i!=b) {

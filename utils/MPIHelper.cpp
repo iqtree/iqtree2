@@ -61,7 +61,7 @@ int MPIHelper::countSameHost() {
     // detect if processes are in the same host
     char host_name[MPI_MAX_PROCESSOR_NAME];
     int resultlen;
-    int pID = MPIHelper::getInstance().getProcessID();
+    /*int pID =*/ (void) MPIHelper::getInstance().getProcessID();
     MPI_Get_processor_name(host_name, &resultlen);
     char *host_names;
     host_names = new char[MPI_MAX_PROCESSOR_NAME * MPIHelper::getInstance().getNumProcesses()];

@@ -51,7 +51,7 @@ int WHTest(Params &params, IQTree &tree) {
 
 	int retval;
 	size_t nseq = tree.aln->getNSeq();
-	int nsite = tree.aln->getNSite(); 
+    size_t nsite = tree.aln->getNSite(); 
 
 
 	WHT_setAlignmentSize(nseq, nsite);
