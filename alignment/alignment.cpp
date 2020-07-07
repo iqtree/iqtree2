@@ -3902,14 +3902,19 @@ double Alignment::computeObsDist(int seq1, int seq2) {
     return ((double)diff_pos) / total_pos;
 }
 
-double Alignment::computeJCDist(int seq1, int seq2) {
-    double obs_dist = computeObsDist(seq1, seq2);
+double Alignment::computeJCDistanceFromObservedDistance(double obs_dist) const
+{
     double z = (double)num_states / (num_states-1);
     double x = 1.0 - (z * obs_dist);
     if (x <= 0) {
         return MAX_GENETIC_DIST;
     }
     return -log(x) / z;
+}
+
+double Alignment::computeJCDist(int seq1, int seq2) {
+    double obs_dist = computeObsDist(seq1, seq2);
+    return computeJCDistanceFromObservedDistance(obs_dist);
 }
 
 void Alignment::printDist(ostream &out, double *dist_mat) {

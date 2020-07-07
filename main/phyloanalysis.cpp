@@ -1636,18 +1636,6 @@ void computeMLDist ( Params& params, IQTree& iqtree
     cout << "Computing ML distances took "
         << (getRealTime() - begin_wallclock_time) << " sec (of wall-clock time) "
         << (getCPUTime() - begin_cpu_time) << " sec(of CPU time)" << endl;
-    if (!params.dist_file)
-    {
-        iqtree.printDistanceFile();
-    }
-    double max_genetic_dist = MAX_GENETIC_DIST;
-    if (iqtree.aln->seq_type == SEQ_POMO) {
-        int N = iqtree.aln->virtual_pop_size;
-        max_genetic_dist *= N * N;
-    }
-    if (longest_dist > max_genetic_dist * 0.99) {
-        outWarning("Some pairwise ML distances are too long (saturated)");
-    }
     int n = iqtree.aln->getNSeq();
     int nSquared = n*n;
     if ( iqtree.dist_matrix == nullptr ) {
@@ -1665,6 +1653,18 @@ void computeMLDist ( Params& params, IQTree& iqtree
         memmove(iqtree.var_matrix, ml_var,
                 sizeof(double) * nSquared);
         delete[] ml_var;
+    }
+    if (!params.dist_file)
+    {
+        iqtree.printDistanceFile();
+    }
+    double max_genetic_dist = MAX_GENETIC_DIST;
+    if (iqtree.aln->seq_type == SEQ_POMO) {
+        int N = iqtree.aln->virtual_pop_size;
+        max_genetic_dist *= N * N;
+    }
+    if (longest_dist > max_genetic_dist * 0.99) {
+        outWarning("Some pairwise ML distances are too long (saturated)");
     }
 }
 

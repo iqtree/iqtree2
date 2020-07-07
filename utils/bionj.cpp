@@ -731,7 +731,6 @@ public :
             ok=Symmetrize(delta, n);
             if(!ok)
                 printf("\n The matrix  is not symmetric.\n ");
-            auto joinStart = getRealTime(); //JB2020-06-18
             while (r > 3)                             /* until r=3                 */
             {
                 Compute_sums_Sx(delta, n);             /* compute the sum Sx       */
@@ -793,10 +792,7 @@ public :
                 trees[i].head=NULL;
                 trees[i].tail=NULL;
             }
-            //double joinElapsed = getRealTime() - joinStart; //JB2020-06-18
-            //printf("Elapsed wall-clock time for neighbour joining proper, %f\n", joinElapsed); //JB2020-06-18
         }
-        
         free(trees);
         for(i=n; i>=1; i--)
         {
