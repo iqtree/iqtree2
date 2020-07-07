@@ -335,21 +335,21 @@ public:
     /**
             @return number of sequences
      */
-    inline int getNSeq() const {
+    inline size_t getNSeq() const {
         return seq_names.size();
     }
 
     /**
             @return number of sites (alignment columns)
      */
-    inline int getNSite() {
+    inline size_t getNSite() {
         return site_pattern.size();
     }
 
     /**
              @return number of patterns
      */
-    inline int getNPattern() {
+    inline size_t getNPattern() {
         return size();
     }
 
@@ -443,7 +443,7 @@ public:
             @return TRUE if seq_id contains only gaps or missing characters
             @param seq_id sequence ID
      */
-    bool isGapOnlySeq(int seq_id);
+    bool isGapOnlySeq(size_t seq_id);
 
     virtual bool isSuperAlignment() {
         return false;

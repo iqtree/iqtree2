@@ -105,7 +105,7 @@ public:
         @return a new estimate of branch length
     */
 
-    virtual double computeDist( int seq1, int seq2, double initial_dist, double &d2l );
+    virtual double recomputeDist( int seq1, int seq2, double initial_dist, double &d2l );
     
 	/**
 		destructor

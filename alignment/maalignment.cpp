@@ -88,8 +88,8 @@ IntVector MaAlignment::computeExpectedNorFre()
 	if ( logLL.empty()) 
 		outError("Error: log likelihood of patterns are not given!");
 
-	int patNum = getNPattern();
-	int alignLen = getNSite();		
+	size_t patNum = getNPattern();
+	size_t alignLen = getNSite();		
 	//resize the expectedNorFre vector
 	expectedNorFre.resize(patNum,-1);
 
@@ -144,13 +144,12 @@ void MaAlignment::printPatObsExpFre(const char *fileName, const IntVector expect
 		out.open(fileName);
 		out << "Pattern\tLogLL\tObservedFre\tExpectedFre" << endl;
 
-		int patNum = getNPattern();
-		int seqNum = getNSeq();
-		int seqID;
+		size_t patNum = getNPattern();
+		size_t seqNum = getNSeq();
 
-		for ( int i = 0; i < patNum; i++ )
+		for ( size_t i = 0; i < patNum; ++i )
 		{
-			for ( seqID = 0; seqID < seqNum; seqID++ ){
+			for ( size_t seqID = 0; seqID < seqNum; ++seqID ){
 				out << convertStateBackStr(at(i)[seqID]);
 			}
 			out << "\t" << logLL[i] << "\t" << (*this)[i].frequency << "\t" << expectedNorFre[i] << endl;

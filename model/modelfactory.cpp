@@ -535,15 +535,14 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         model = new ModelSet(model_str.c_str(), tree);
         ModelSet *models = (ModelSet*)model; // assign pointer for convenience
         models->init((params.freq_type != FREQ_UNKNOWN) ? params.freq_type : FREQ_EMPIRICAL);
-        int i;
         models->pattern_model_map.resize(tree->aln->getNPattern(), -1);
-        for (i = 0; i < tree->aln->getNSite(); i++) {
+        for (size_t i = 0; i < tree->aln->getNSite(); ++i) {
             models->pattern_model_map[tree->aln->getPatternID(i)] = tree->aln->site_model[i];
             //cout << "site " << i << " ptn " << tree->aln->getPatternID(i) << " -> model " << site_model[i] << endl;
         }
         double *state_freq = new double[model->num_states];
         double *rates = new double[model->getNumRateEntries()];
-        for (i = 0; i < tree->aln->site_state_freq.size(); i++) {
+        for (size_t i = 0; i < tree->aln->site_state_freq.size(); ++i) {
             ModelMarkov *modeli;
             if (i == 0) {
                 modeli = (ModelMarkov*)createModel(model_str, models_block, (params.freq_type != FREQ_UNKNOWN) ? params.freq_type : FREQ_EMPIRICAL, "", tree);

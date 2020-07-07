@@ -1533,8 +1533,7 @@ void PhyloTree::doLikelihoodMapping() {
 void PhyloTree::reportLikelihoodMapping(ofstream &out) {
     int64_t resolved, partly, unresolved;
     int64_t qid;
-    int leafNum;
-    leafNum = PhyloTree::aln->getNSeq();
+    size_t leafNum = PhyloTree::aln->getNSeq();
     // vector<QuartetInfo> lmap_quartet_info;
     // vector<SeqQuartetInfo> lmap_seq_quartet_info;
 

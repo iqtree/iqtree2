@@ -240,7 +240,7 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance, bool write_info) {
         }
 
         // optimize rate model
-        double tree_lh = relative_rate->optimizeParameters(tolerance);
+        /*double tree_lh =*/ (void) relative_rate->optimizeParameters(tolerance);
 
 //        model_factory->optimizeParameters(params->fixed_branch_length, false, tolerance);
 
@@ -386,7 +386,7 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
             upper_bound[i] = params->max_branch_length;
         }
 
-        double score = minimizeNewtonMulti(lower_bound, variables, upper_bound, params->min_branch_length, mixlen);
+        /*double score =*/ (void) minimizeNewtonMulti(lower_bound, variables, upper_bound, params->min_branch_length, mixlen);
         for (i = 0; i < mixlen; i++) {
             current_it->setLength(i, variables[i]);
             current_it_back->setLength(i, variables[i]);
@@ -886,7 +886,7 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
     	prob_const = 1.0 - prob_const;
     	double df_frac = df_const / prob_const;
     	double ddf_frac = ddf_const / prob_const;
-    	int nsites = aln->getNSite();
+    	size_t nsites = aln->getNSite();
     	df += nsites * df_frac;
     	ddf += nsites *(ddf_frac + df_frac*df_frac);
     }

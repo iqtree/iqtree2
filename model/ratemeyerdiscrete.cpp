@@ -315,7 +315,6 @@ void RateMeyerDiscrete::computeFuncDerv(double value, double &df, double &ddf) {
 //	double lh = 0.0;
 	int nseq = phylo_tree->leafNum;
 	int nstate = phylo_tree->getModel()->num_states;
-	int i, j, k, state1, state2;
 	ModelSubst *model = phylo_tree->getModel();
     int trans_size = nstate * nstate;
 	double *trans_mat = new double[trans_size];
@@ -325,27 +324,31 @@ void RateMeyerDiscrete::computeFuncDerv(double value, double &df, double &ddf) {
 
 	int *pair_freq = new int[trans_size];
 
-	for (i = 0; i < nseq-1; i++) 
-		for (j = i+1; j < nseq; j++) {
+	for (size_t i = 0; i + 1 < nseq; ++i)
+		for (size_t j = i+1; j < nseq; ++j) {
 			memset(pair_freq, 0, trans_size * sizeof(int));
-			for (k = 0; k < size(); k++) {
+			for (size_t k = 0; k < size(); ++k) {
 				if (ptn_cat[k] != optimizing_cat) continue;
 				Pattern *pat = & phylo_tree->aln->at(k);
-				if ((state1 = pat->at(i)) < nstate && (state2 = pat->at(j)) < nstate)
+                int state1 = pat->at(i);
+                int state2 = pat->at(j);
+				if (state1 < nstate && state2 < nstate)
 					pair_freq[state1*nstate + state2] += pat->frequency;
 			}
 			double dist = dist_mat[i*nseq + j];
 			double derv1 = 0.0, derv2 = 0.0;
 			model->computeTransDerv(value * dist, trans_mat, trans_derv1, trans_derv2);
-			for (k = 0; k < trans_size; k++) if (pair_freq[k]) {
-				double t1 = trans_derv1[k] / trans_mat[k];
-				double t2 = trans_derv2[k] / trans_mat[k];
-				trans_derv1[k] = t1;
-				trans_derv2[k] = (t2 - t1*t1);
-//				lh -= log(trans_mat[k]) * pair_freq[k];
-				derv1 += trans_derv1[k] * pair_freq[k];
-				derv2 += trans_derv2[k] * pair_freq[k];
-			}
+            for (size_t k = 0; k < trans_size; ++k) {
+                if (pair_freq[k]) {
+                    double t1 = trans_derv1[k] / trans_mat[k];
+                    double t2 = trans_derv2[k] / trans_mat[k];
+                    trans_derv1[k] = t1;
+                    trans_derv2[k] = (t2 - t1*t1);
+                    //lh -= log(trans_mat[k]) * pair_freq[k];
+                    derv1 += trans_derv1[k] * pair_freq[k];
+                    derv2 += trans_derv2[k] * pair_freq[k];
+                }
+            }
 			df -= derv1 * dist;
 			ddf -= derv2 * dist * dist;
 		}

@@ -563,8 +563,6 @@ double ModelMarkov::computeTrans(double time, int state1, int state2, double &de
 void ModelMarkov::computeTransDerv(double time, double *trans_matrix, 
 	double *trans_derv1, double *trans_derv2, int mixture)
 {
-	int i, j, k;
-
     if (!is_reversible) {
         computeTransMatrix(time, trans_matrix);
         // First derivative = Q * e^(Qt)
@@ -580,19 +578,19 @@ void ModelMarkov::computeTransDerv(double time, double *trans_matrix,
         derv2_mat = prod;
 
         /*
-        for (i = 0; i < num_states; i++)
-            for (j = 0; j < num_states; j++) {
+        for (int i = 0; i < num_states; i++)
+            for (int j = 0; j < num_states; j++) {
                 double val = 0.0;
-                for (k = 0; k < num_states; k++)
+                for (int k = 0; k < num_states; k++)
                     val += rate_matrix[i*num_states+k] * trans_matrix[k*num_states+j];
                 trans_derv1[i*num_states+j] = val;
             }
             
         // Second derivative = Q * Q * e^(Qt)
-        for (i = 0; i < num_states; i++)
-            for (j = 0; j < num_states; j++) {
+        for (int i = 0; i < num_states; i++)
+            for (int j = 0; j < num_states; j++) {
                 double val = 0.0;
-                for (k = 0; k < num_states; k++)
+                for (int k = 0; k < num_states; k++)
                     val += rate_matrix[i*num_states+k] * trans_derv1[k*num_states+j];
                 trans_derv2[i*num_states+j] = val;
             }

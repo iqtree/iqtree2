@@ -191,12 +191,12 @@ public:
 	/**
 	 *		@return number of alignment patterns
 	*/
-	virtual int getAlnNPattern();
+	virtual size_t getAlnNPattern();
 
 	/**
 	 *		@return number of alignment sites
 	*/
-	virtual int getAlnNSite();
+	virtual size_t getAlnNSite();
 
     /**
             compute the distance between 2 sequences.
