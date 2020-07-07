@@ -85,14 +85,14 @@ vector<string>& Alignment::getSeqNames() {
 }
 
 int Alignment::getSeqID(string &seq_name) {
-    for (int i = 0; i < getNSeq(); i++)
+    for (size_t i = 0; i < getNSeq(); i++)
         if (seq_name == getSeqName(i)) return i;
     return -1;
 }
 
 int Alignment::getMaxSeqNameLength() {
     int len = 0;
-    for (int i = 0; i < getNSeq(); i++)
+    for (size_t i = 0; i < getNSeq(); i++)
         if (getSeqName(i).length() > len)
             len = getSeqName(i).length();
     return len;
@@ -173,11 +173,9 @@ void Alignment::checkSeqName() {
     }
     
     double *state_freq = new double[num_states];
-//    double *freq_per_sequence = new double[num_states*getNSeq()];
     double *freq_per_sequence = new double[num_states];
     unsigned *count_per_seq = new unsigned[num_states*getNSeq()];
     computeStateFreq(state_freq);
-//    computeStateFreqPerSequence(freq_per_sequence);
     countStatePerSequence(count_per_seq);
 
     int i, df = -1;
@@ -287,13 +285,14 @@ void Alignment::checkSeqName() {
 
 int Alignment::checkIdenticalSeq()
 {
+    //Todo: This should use sequence hashing.
 	int num_identical = 0;
     IntVector checked;
     checked.resize(getNSeq(), 0);
-	for (int seq1 = 0; seq1 < getNSeq(); seq1++) {
+	for (size_t seq1 = 0; seq1 < getNSeq(); ++seq1) {
         if (checked[seq1]) continue;
 		bool first = true;
-		for (int seq2 = seq1+1; seq2 < getNSeq(); seq2++) {
+		for (size_t seq2 = seq1+1; seq2 < getNSeq(); ++seq2) {
 			bool equal_seq = true;
 			for (iterator it = begin(); it != end(); it++)
 				if  ((*it)[seq1] != (*it)[seq2]) {
@@ -350,10 +349,10 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
     bool listIdentical = !Params::getInstance().suppress_duplicate_sequence_warnings;
 
     auto startCheck = getRealTime();
-	for (int seq1 = 0; seq1 < getNSeq(); seq1++) {
+	for (size_t seq1 = 0; seq1 < getNSeq(); ++seq1) {
         if (checked[seq1]) continue;
         bool first_ident_seq = true;
-		for (int seq2 = seq1+1; seq2 < getNSeq(); seq2++) {
+		for (size_t seq2 = seq1+1; seq2 < getNSeq(); ++seq2) {
 			if (getSeqName(seq2) == not_remove || removed[seq2]) continue;
             if (hashes[seq1] != hashes[seq2]) continue; //JB2020-06-17
 			bool equal_seq = true;
@@ -364,7 +363,7 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
                 }
             }
 			if (!equal_seq) continue;
-            if (removed_seqs.size() < getNSeq()-3 && (!keep_two || !first_ident_seq)) {
+            if (removed_seqs.size()+3 < getNSeq() && (!keep_two || !first_ident_seq)) {
                 removed_seqs.push_back(getSeqName(seq2));
                 target_seqs.push_back(getSeqName(seq1));
                 removed[seq2] = true;
@@ -384,11 +383,13 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
             << " wall-clock seconds" << endl;
     }
 	if (removed_seqs.size() > 0) {
-		if (removed_seqs.size() >= getNSeq()-3)
+		if (removed_seqs.size() + 3 >= getNSeq())
 			outWarning("Your alignment contains too many identical sequences!");
 		IntVector keep_seqs;
-		for (int seq1 = 0; seq1 < getNSeq(); seq1++)
-			if (!removed[seq1]) keep_seqs.push_back(seq1);
+		for (size_t seq1 = 0; seq1 < getNSeq(); seq1++)
+            if (!removed[seq1]) {
+                keep_seqs.emplace_back(seq1);
+            }
 		Alignment *aln = new Alignment;
 		aln->extractSubAlignment(this, keep_seqs, 0);
         //cout << "NOTE: Identified " << removed_seqs.size()
@@ -397,7 +398,7 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
 	} else return this;
 }
 
-bool Alignment::isGapOnlySeq(int seq_id) {
+bool Alignment::isGapOnlySeq(size_t seq_id) {
     ASSERT(seq_id < getNSeq());
     for (iterator it = begin(); it != end(); it++)
         if ((*it)[seq_id] != STATE_UNKNOWN) {
@@ -408,8 +409,8 @@ bool Alignment::isGapOnlySeq(int seq_id) {
 
 Alignment *Alignment::removeGappySeq() {
 	IntVector keep_seqs;
-	int i, nseq = getNSeq();
-	for (i = 0; i < nseq; i++)
+	size_t nseq = getNSeq();
+	for (size_t i = 0; i < nseq; i++)
 		if (! isGapOnlySeq(i)) {
 			keep_seqs.push_back(i);
 		}
@@ -417,7 +418,7 @@ Alignment *Alignment::removeGappySeq() {
 		return this;
     // 2015-12-03: if resulting alignment has too few seqs, try to add some back
     if (keep_seqs.size() < 3 && getNSeq() >= 3) {
-        for (i = 0; i < nseq && keep_seqs.size() < 3; i++)
+        for (size_t i = 0; i < nseq && keep_seqs.size() < 3; i++)
             if (isGapOnlySeq(i))
                 keep_seqs.push_back(i);
     }
@@ -427,9 +428,9 @@ Alignment *Alignment::removeGappySeq() {
 }
 
 void Alignment::checkGappySeq(bool force_error) {
-    int nseq = getNSeq(), i;
+    size_t nseq = getNSeq();
     int wrong_seq = 0;
-    for (i = 0; i < nseq; i++)
+    for (size_t i = 0; i < nseq; i++)
         if (isGapOnlySeq(i)) {
             outWarning("Sequence " + getSeqName(i) + " contains only gaps or missing data");
             wrong_seq++;
@@ -923,8 +924,8 @@ void Alignment::computeConst(Pattern &pat) {
 
 
 void Alignment::printSiteInfo(ostream &out, int part_id) {
-    int nsite = getNSite();
-    for (int site = 0; site != nsite; site++) {
+    size_t nsite = getNSite();
+    for (size_t site = 0; site != nsite; site++) {
         Pattern ptn = getPattern(site);
         if (part_id >= 0)
             out << part_id << "\t";
@@ -1007,27 +1008,28 @@ void Alignment::addConstPatterns(char *freq_const_patterns) {
 	if (vec.size() != num_states)
 		outError("Const pattern frequency vector has different number of states: ", freq_const_patterns);
 
-	int nsite = getNSite(), orig_nsite = getNSite();
-	int i;
-	for (i = 0; i < vec.size(); i++) {
+    size_t nsite = getNSite();
+    size_t orig_nsite = getNSite();
+	for (size_t i = 0; i < vec.size(); i++) {
 		nsite += vec[i];
 		if (vec[i] < 0)
 			outError("Const pattern frequency must be non-negative");
 	}
     site_pattern.resize(nsite, -1);
-	int nseq = getNSeq();
+	size_t nseq = getNSeq();
 	nsite = orig_nsite;
-	for (i = 0; i < vec.size(); i++) if (vec[i] > 0) {
-		Pattern pat;
-		pat.resize(nseq, i);
-//		if (pattern_index.find(pat) != pattern_index.end()) {
-//			outWarning("Constant pattern of all " + convertStateBackStr(i) + " already exists");
-//		}
-		for (int j = 0; j < vec[i]; j++)
-			addPattern(pat, nsite++, 1);
-	}
+    for (size_t i = 0; i < vec.size(); i++) {
+        if (vec[i] > 0) {
+            Pattern pat;
+            pat.resize(nseq, i);
+            //if (pattern_index.find(pat) != pattern_index.end()) {
+            //  outWarning("Constant pattern of all " + convertStateBackStr(i) + " already exists");
+            //}
+            for (int j = 0; j < vec[i]; j++)
+                addPattern(pat, nsite++, 1);
+        }
+    }
     countConstSite();
-//    buildSeqStates();
 }
 
 void Alignment::orderPatternByNumChars(int pat_type) {
@@ -1107,7 +1109,7 @@ void Alignment::ungroupSitePattern()
 {
 	vector<Pattern> stored_pat = (*this);
 	clear();
-	for (int i = 0; i < getNSite(); i++) {
+	for (size_t i = 0; i < getNSite(); ++i) {
 		Pattern pat = stored_pat[getPatternID(i)];
 		pat.frequency = 1;
 		push_back(pat);
@@ -1123,10 +1125,10 @@ void Alignment::regroupSitePattern(int groups, IntVector& site_group)
 	clear();
 	site_pattern.clear();
 	site_pattern.resize(stored_site_pattern.size(), -1);
-	int count = 0;
+	size_t count = 0;
 	for (int g = 0; g < groups; g++) {
 		pattern_index.clear();
-		for (int i = 0; i < site_group.size(); i++)
+		for (size_t i = 0; i < site_group.size(); ++i)
 		if (site_group[i] == g) {
 			count++;
 			Pattern pat = stored_pat[stored_site_pattern[i]];
@@ -1135,7 +1137,7 @@ void Alignment::regroupSitePattern(int groups, IntVector& site_group)
 	}
 	ASSERT(count == stored_site_pattern.size());
 	count = 0;
-	for (iterator it = begin(); it != end(); it++)
+	for (iterator it = begin(); it != end(); ++it)
 		count += it->frequency;
 	ASSERT(count == getNSite());
 	pattern_index.clear();
@@ -2849,15 +2851,14 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
     site_pattern.resize(aln->getNSite(), -1);
     clear();
     pattern_index.clear();
-    int site = 0, removed_sites = 0;
+    size_t removed_sites = 0;
     VerboseMode save_mode = verbose_mode;
     verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
-//    for (iterator pit = aln->begin(); pit != aln->end(); pit++) {
-    for (site = 0; site < aln->getNSite(); site++) {
+    for (size_t site = 0; site < aln->getNSite(); ++site) {
         iterator pit = aln->begin() + (aln->getPatternID(site));
         Pattern pat;
         int true_char = 0;
-        for (it = seq_id.begin(); it != seq_id.end(); it++) {
+        for (it = seq_id.begin(); it != seq_id.end(); ++it) {
             char ch = (*pit)[*it];
             if (ch != STATE_UNKNOWN) true_char++;
             pat.push_back(ch);
@@ -2866,8 +2867,6 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
             removed_sites++;
         else
             addPattern(pat, site-removed_sites);
-//        for (int i = 0; i < (*pit).frequency; i++)
-//            site_pattern[site++] = size()-1;
     }
     site_pattern.resize(aln->getNSite() - removed_sites);
     verbose_mode = save_mode;
@@ -2880,8 +2879,7 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
 
 
 void Alignment::extractPatterns(Alignment *aln, IntVector &ptn_id) {
-    int i;
-    for (i = 0; i < aln->getNSeq(); i++) {
+    for (size_t i = 0; i < aln->getNSeq(); ++i) {
         seq_names.push_back(aln->getSeqName(i));
     }
     name = aln->name;
@@ -2905,7 +2903,7 @@ void Alignment::extractPatterns(Alignment *aln, IntVector &ptn_id) {
     int site = 0;
     VerboseMode save_mode = verbose_mode;
     verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
-    for (i = 0; i != ptn_id.size(); i++) {
+    for (size_t i = 0; i != ptn_id.size(); ++i) {
         ASSERT(ptn_id[i] >= 0 && ptn_id[i] < aln->getNPattern());
         Pattern pat = aln->at(ptn_id[i]);
         addPattern(pat, site, aln->at(ptn_id[i]).frequency);
@@ -2920,9 +2918,8 @@ void Alignment::extractPatterns(Alignment *aln, IntVector &ptn_id) {
 }
 
 void Alignment::extractPatternFreqs(Alignment *aln, IntVector &ptn_freq) {
-    int i;
     ASSERT(ptn_freq.size() <= aln->getNPattern());
-    for (i = 0; i < aln->getNSeq(); i++) {
+    for (size_t i = 0; i < aln->getNSeq(); ++i) {
         seq_names.push_back(aln->getSeqName(i));
     }
     name = aln->name;
@@ -2946,7 +2943,7 @@ void Alignment::extractPatternFreqs(Alignment *aln, IntVector &ptn_freq) {
     int site = 0;
     VerboseMode save_mode = verbose_mode;
     verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
-    for (i = 0; i != ptn_freq.size(); i++)
+    for (size_t i = 0; i != ptn_freq.size(); ++i)
         if (ptn_freq[i]) {
             ASSERT(ptn_freq[i] > 0);
             Pattern pat = aln->at(i);
@@ -2962,8 +2959,7 @@ void Alignment::extractPatternFreqs(Alignment *aln, IntVector &ptn_freq) {
 }
 
 void Alignment::extractSites(Alignment *aln, IntVector &site_id) {
-    int i;
-    for (i = 0; i < aln->getNSeq(); i++) {
+    for (size_t i = 0; i < aln->getNSeq(); ++i) {
         seq_names.push_back(aln->getSeqName(i));
     }
     name = aln->name;
@@ -2986,7 +2982,7 @@ void Alignment::extractSites(Alignment *aln, IntVector &site_id) {
     pattern_index.clear();
     VerboseMode save_mode = verbose_mode;
     verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
-    for (i = 0; i != site_id.size(); i++) {
+    for (size_t i = 0; i != site_id.size(); i++) {
         Pattern pat = aln->getPattern(site_id[i]);
         addPattern(pat, i);
     }
@@ -2994,9 +2990,11 @@ void Alignment::extractSites(Alignment *aln, IntVector &site_id) {
     countConstSite();
 //    buildSeqStates();
     // sanity check
-    for (iterator it = begin(); it != end(); it++)
-    	if (it->at(0) == -1)
+    for (iterator it = begin(); it != end(); it++) {
+        if (it->at(0) == -1) {
     		ASSERT(0);
+        }
+    }
 
     //cout << getNSite() << " positions were extracted" << endl;
     //cout << __func__ << " " << num_states << endl;
@@ -3009,9 +3007,8 @@ void Alignment::convertToCodonOrAA(Alignment *aln, char *gene_code_id, bool nt2a
         outError("Cannot convert non-DNA alignment into codon alignment");
     if (aln->getNSite() % 3 != 0)
         outError("Sequence length is not divisible by 3 when converting to codon sequences");
-    int i, site;
     char AA_to_state[NUM_CHAR];
-    for (i = 0; i < aln->getNSeq(); i++) {
+    for (size_t i = 0; i < aln->getNSeq(); i++) {
         seq_names.push_back(aln->getSeqName(i));
     }
     name = aln->name;
@@ -3040,15 +3037,15 @@ void Alignment::convertToCodonOrAA(Alignment *aln, char *gene_code_id, bool nt2a
 
     VerboseMode save_mode = verbose_mode;
     verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
-    int nsite = aln->getNSite();
-    int nseq = aln->getNSeq();
+    size_t nsite = aln->getNSite();
+    size_t nseq = aln->getNSeq();
     Pattern pat;
     pat.resize(nseq);
     int num_error = 0;
     ostringstream err_str;
 
-    for (site = 0; site < nsite; site+=step) {
-        for (int seq = 0; seq < nseq; seq++) {
+    for (size_t site = 0; site < nsite; site+=step) {
+        for (size_t seq = 0; seq < nseq; ++seq) {
             //char state = convertState(sequences[seq][site], seq_type);
             char state = aln->at(aln->getPatternID(site))[seq];
             // special treatment for codon
@@ -3107,9 +3104,8 @@ Alignment *Alignment::convertCodonToAA() {
     Alignment *res = new Alignment;
     if (seq_type != SEQ_CODON)
         outError("Cannot convert non-codon alignment into AA");
-    int i, site;
     char AA_to_state[NUM_CHAR];
-    for (i = 0; i < getNSeq(); i++) {
+    for (size_t i = 0; i < getNSeq(); ++i) {
         res->seq_names.push_back(getSeqName(i));
     }
     res->name = name;
@@ -3130,13 +3126,13 @@ Alignment *Alignment::convertCodonToAA() {
     
     VerboseMode save_mode = verbose_mode;
     verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
-    int nsite = getNSite();
-    int nseq = getNSeq();
+    size_t nsite = getNSite();
+    size_t nseq = getNSeq();
     Pattern pat;
     pat.resize(nseq);
     
-    for (site = 0; site < nsite; site++) {
-        for (int seq = 0; seq < nseq; seq++) {
+    for (size_t site = 0; site < nsite; ++site) {
+        for (size_t seq = 0; seq < nseq; ++seq) {
             StateType state = at(getPatternID(site))[seq];
             if (state == STATE_UNKNOWN)
                 state = res->STATE_UNKNOWN;
@@ -3148,7 +3144,6 @@ Alignment *Alignment::convertCodonToAA() {
     }
     verbose_mode = save_mode;
     res->countConstSite();
-//    res->buildSeqStates();
     return res;
 }
 
@@ -3156,8 +3151,7 @@ Alignment *Alignment::convertCodonToDNA() {
     Alignment *res = new Alignment;
     if (seq_type != SEQ_CODON)
         outError("Cannot convert non-codon alignment into DNA");
-    int i, site;
-    for (i = 0; i < getNSeq(); i++) {
+    for (size_t i = 0; i < getNSeq(); ++i) {
         res->seq_names.push_back(getSeqName(i));
     }
     res->name = name;
@@ -3176,19 +3170,18 @@ Alignment *Alignment::convertCodonToDNA() {
     
     VerboseMode save_mode = verbose_mode;
     verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
-    int nsite = getNSite();
-    int nseq = getNSeq();
+    size_t nsite = getNSite();
+    size_t nseq = getNSeq();
     Pattern pat[3];
     pat[0].resize(nseq);
     pat[1].resize(nseq);
     pat[2].resize(nseq);
 
-    for (site = 0; site < nsite; site++) {
-        int i;
-        for (int seq = 0; seq < nseq; seq++) {
+    for (size_t site = 0; site < nsite; ++site) {
+        for (size_t seq = 0; seq < nseq; ++seq) {
             StateType state = at(getPatternID(site))[seq];
             if (state == STATE_UNKNOWN) {
-                for (i = 0; i < 3; i++)
+                for (int i = 0; i < 3; ++i)
                     pat[i][seq] = res->STATE_UNKNOWN;
             } else {
                 state = codon_table[state];
@@ -3197,7 +3190,7 @@ Alignment *Alignment::convertCodonToDNA() {
                 pat[2][seq] = state%4;
             }
         }
-        for (i = 0; i < 3; i++)
+        for (int i = 0; i < 3; ++i)
             res->addPattern(pat[i], site*3+i);
     }
     verbose_mode = save_mode;
@@ -3316,7 +3309,7 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
     sequence_type = aln->sequence_type;
     position_spec = aln->position_spec;
     aln_file = aln->aln_file;
-    int site, nsite = aln->getNSite();
+    size_t nsite = aln->getNSite();
     seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());
     num_states = aln->num_states;
     seq_type = aln->seq_type;
@@ -3361,29 +3354,30 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
         int added_sites = 0;
         IntVector sample;
         random_resampling(nsite, sample);
-		for (site = 0; site < nsite; site++)
-        for (int rep = 0; rep < sample[site]; rep++) {
-			int ptn_id = aln->getPatternID(site);
-			Pattern pat = aln->at(ptn_id);
-            int nptn = getNPattern();
-			addPattern(pat, added_sites);
-            if (!aln->site_state_freq.empty() && getNPattern() > nptn) {
-                // a new pattern is added, copy state frequency vector
-                double *state_freq = new double[num_states];
-                memcpy(state_freq, aln->site_state_freq[ptn_id], num_states*sizeof(double));
-                site_state_freq.push_back(state_freq);
+        for (size_t site = 0; site < nsite; ++site) {
+            for (int rep = 0; rep < sample[site]; ++rep) {
+                int ptn_id = aln->getPatternID(site);
+                Pattern pat = aln->at(ptn_id);
+                int nptn = getNPattern();
+                addPattern(pat, added_sites);
+                if (!aln->site_state_freq.empty() && getNPattern() > nptn) {
+                    // a new pattern is added, copy state frequency vector
+                    double *state_freq = new double[num_states];
+                    memcpy(state_freq, aln->site_state_freq[ptn_id], num_states*sizeof(double));
+                    site_state_freq.push_back(state_freq);
+                }
+                if (pattern_freq) ((*pattern_freq)[ptn_id])++;
+                added_sites++;
             }
-			if (pattern_freq) ((*pattern_freq)[ptn_id])++;
-            added_sites++;
-		}
+        }
         if (added_sites < nsite)
             site_pattern.resize(added_sites);
     } else if (strncmp(spec, "GENESITE,", 9) == 0) {
 		// resampling genes, then resampling sites within resampled genes
 		convert_int_vec(spec+9, site_vec);
-		int i;
 		IntVector begin_site;
-		for (i = 0, site = 0; i < site_vec.size(); i++) {
+        size_t site = 0;
+		for (size_t i = 0; i < site_vec.size(); ++i) {
 			begin_site.push_back(site);
 			site += site_vec[i];
 			//cout << "site = " << site_vec[i] << endl;
@@ -3391,9 +3385,9 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
 		if (site > getNSite())
 			outError("Sum of lengths exceeded alignment length");
 
-		for (i = 0; i < site_vec.size(); i++) {
+		for (size_t i = 0; i < site_vec.size(); ++i) {
 			int part = random_int(site_vec.size());
-			for (int j = 0; j < site_vec[part]; j++) {
+			for (int j = 0; j < site_vec[part]; ++j) {
 				site = random_int(site_vec[part]) + begin_site[part];
 				int ptn = aln->getPatternID(site);
 				Pattern pat = aln->at(ptn);
@@ -3404,9 +3398,9 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
     } else if (strncmp(spec, "GENE,", 5) == 0) {
 		// resampling genes instead of sites
 		convert_int_vec(spec+5, site_vec);
-		int i;
+        size_t site = 0;
 		IntVector begin_site;
-		for (i = 0, site = 0; i < site_vec.size(); i++) {
+		for (size_t i = 0; i < site_vec.size(); ++i) {
 			begin_site.push_back(site);
 			site += site_vec[i];
 			//cout << "site = " << site_vec[i] << endl;
@@ -3414,7 +3408,7 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
 		if (site > getNSite())
 			outError("Sum of lengths exceeded alignment length");
 
-		for (i = 0; i < site_vec.size(); i++) {
+		for (size_t i = 0; i < site_vec.size(); ++i) {
 			int part = random_int(site_vec.size());
 			for (site = begin_site[part]; site < begin_site[part] + site_vec[part]; site++) {
 				int ptn = aln->getPatternID(site);
@@ -3429,14 +3423,14 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
     	if (site_vec.size() % 2 != 0)
     		outError("Bootstrap specification length is not divisible by 2");
     	nsite = 0;
-    	int part, begin_site = 0, out_site = 0;
-    	for (part = 0; part < site_vec.size(); part+=2)
+    	int begin_site = 0, out_site = 0;
+    	for (size_t part = 0; part < site_vec.size(); part+=2)
     		nsite += site_vec[part+1];
     	site_pattern.resize(nsite, -1);
-    	for (part = 0; part < site_vec.size(); part += 2) {
+    	for (size_t part = 0; part < site_vec.size(); part+=2) {
     		if (begin_site + site_vec[part] > aln->getNSite())
     			outError("Sum of lengths exceeded alignment length");
-    		for (site = 0; site < site_vec[part+1]; site++) {
+    		for (size_t site = 0; site < site_vec[part+1]; ++site) {
     			int site_id = random_int(site_vec[part]) + begin_site;
     			int ptn_id = aln->getPatternID(site_id);
     			Pattern pat = aln->at(ptn_id);
@@ -3467,7 +3461,7 @@ void Alignment::createBootstrapAlignment(IntVector &pattern_freq, const char *sp
 }
 
 void Alignment::createBootstrapAlignment(int *pattern_freq, const char *spec, int *rstream) {
-    int site, nsite = getNSite();
+    size_t nsite = getNSite();
     memset(pattern_freq, 0, getNPattern()*sizeof(int));
 	IntVector site_vec;
     if (Params::getInstance().jackknife_prop > 0.0 && spec)
@@ -3477,33 +3471,33 @@ void Alignment::createBootstrapAlignment(int *pattern_freq, const char *spec, in
         // multi-scale bootstrapping called by AU test
         int orig_nsite = nsite;
         double scale = convert_double(spec+6);
-        nsite = (int)round(scale * nsite);
-        for (site = 0; site < nsite; site++) {
+        nsite = (size_t)round(scale * nsite);
+        for (size_t site = 0; site < nsite; site++) {
             int site_id = random_int(orig_nsite, rstream);
             int ptn_id = getPatternID(site_id);
             pattern_freq[ptn_id]++;
         }
     } else if (!spec) {
 
-        int nptn = getNPattern();
+        size_t nptn = getNPattern();
 
         if (nsite/8 < nptn || Params::getInstance().jackknife_prop > 0.0) {
             IntVector sample;
             random_resampling(nsite, sample, rstream);
-            for (site = 0; site < nsite; site++)
-            for (int rep = 0; rep < sample[site]; rep++) {
-                int ptn_id = getPatternID(site);
-                pattern_freq[ptn_id]++;
+            for (size_t site = 0; site < nsite; site++) {
+                for (int rep = 0; rep < sample[site]; rep++) {
+                    int ptn_id = getPatternID(site);
+                    pattern_freq[ptn_id]++;
+                }
             }
         } else {
             // BQM 2015-12-27: use multinomial sampling for faster generation if #sites is much larger than #patterns
-            int ptn;
             double *prob = new double[nptn];
-            for (ptn = 0; ptn < nptn; ptn++)
+            for (size_t ptn = 0; ptn < nptn; ++ptn)
                 prob[ptn] = at(ptn).frequency;
             gsl_ran_multinomial(nptn, nsite, prob, (unsigned int*)pattern_freq, rstream);
             int sum = 0;
-            for (ptn = 0; ptn < nptn; ptn++)
+            for (size_t ptn = 0; ptn < nptn; ++ptn)
                 sum += pattern_freq[ptn];
             ASSERT(sum == nsite);
             delete [] prob;
@@ -3511,17 +3505,17 @@ void Alignment::createBootstrapAlignment(int *pattern_freq, const char *spec, in
     } else if (strncmp(spec, "GENESITE,", 9) == 0) {
 		// resampling genes, then resampling sites within resampled genes
 		convert_int_vec(spec+9, site_vec);
-		int i;
 		IntVector begin_site;
-		for (i = 0, site = 0; i < site_vec.size(); i++) {
+        size_t site = 0;
+		for (size_t i = 0; i < site_vec.size(); ++i) {
 			begin_site.push_back(site);
 			site += site_vec[i];
 			//cout << "site = " << site_vec[i] << endl;
 		}
-		if (site > getNSite())
+        if (site > getNSite()) {
 			outError("Sum of lengths exceeded alignment length");
-
-		for (i = 0; i < site_vec.size(); i++) {
+        }
+		for (size_t i = 0; i < site_vec.size(); ++i) {
 			int part = random_int(site_vec.size(), rstream);
 			for (int j = 0; j < site_vec[part]; j++) {
 				site = random_int(site_vec[part], rstream) + begin_site[part];
@@ -3532,19 +3526,19 @@ void Alignment::createBootstrapAlignment(int *pattern_freq, const char *spec, in
 	} else if (strncmp(spec, "GENE,", 5) == 0) {
 		// resampling genes instead of sites
 		convert_int_vec(spec+5, site_vec);
-		int i;
 		IntVector begin_site;
-		for (i = 0, site = 0; i < site_vec.size(); i++) {
-			begin_site.push_back(site);
+        size_t site = 0;
+		for (size_t i = 0; i < site_vec.size(); ++i) {
+			begin_site.emplace_back(site);
 			site += site_vec[i];
 			//cout << "site = " << site_vec[i] << endl;
 		}
-		if (site > getNSite())
+        if (site > getNSite()) {
 			outError("Sum of lengths exceeded alignment length");
-
-		for (i = 0; i < site_vec.size(); i++) {
+        }
+		for (size_t i = 0; i < site_vec.size(); ++i) {
 			int part = random_int(site_vec.size(), rstream);
-			for (site = begin_site[part]; site < begin_site[part] + site_vec[part]; site++) {
+			for (size_t site = begin_site[part]; site < begin_site[part] + site_vec[part]; ++site) {
 				int ptn = getPatternID(site);
 				pattern_freq[ptn]++;
 			}
@@ -3558,11 +3552,11 @@ void Alignment::createBootstrapAlignment(int *pattern_freq, const char *spec, in
         }
 		if (site_vec.size() % 2 != 0)
 			outError("Bootstrap specification length is not divisible by 2");
-		int part, begin_site = 0, out_site = 0;
-		for (part = 0; part < site_vec.size(); part += 2) {
+		int begin_site = 0, out_site = 0;
+		for (size_t part = 0; part < site_vec.size(); part += 2) {
 			if (begin_site + site_vec[part] > getNSite())
 				outError("Sum of lengths exceeded alignment length");
-			for (site = 0; site < site_vec[part+1]; site++) {
+			for (size_t site = 0; site < site_vec[part+1]; ++site) {
 				int site_id = random_int(site_vec[part], rstream) + begin_site;
 				int ptn_id = getPatternID(site_id);
 				pattern_freq[ptn_id]++;
@@ -3575,7 +3569,7 @@ void Alignment::createBootstrapAlignment(int *pattern_freq, const char *spec, in
 
 
 void Alignment::buildFromPatternFreq(Alignment & aln, IntVector new_pattern_freqs){
-	int nsite = aln.getNSite();
+	size_t nsite = aln.getNSite();
     seq_names.insert(seq_names.begin(), aln.seq_names.begin(), aln.seq_names.end());
     name = aln.name;
     model_name = aln.model_name;
@@ -3616,10 +3610,14 @@ void Alignment::buildFromPatternFreq(Alignment & aln, IntVector new_pattern_freq
 
 
 void Alignment::createGapMaskedAlignment(Alignment *masked_aln, Alignment *aln) {
-    if (masked_aln->getNSeq() != aln->getNSeq()) outError("Different number of sequences in masked alignment");
-    if (masked_aln->getNSite() != aln->getNSite()) outError("Different number of sites in masked alignment");
-
-    int site, nsite = aln->getNSite(), nseq = aln->getNSeq();
+    if (masked_aln->getNSeq() != aln->getNSeq()) {
+        outError("Different number of sequences in masked alignment");
+    }
+    if (masked_aln->getNSite() != aln->getNSite()) {
+        outError("Different number of sites in masked alignment");
+    }
+    size_t nsite = aln->getNSite();
+    size_t nseq = aln->getNSeq();
     seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());
     name = aln->name;
     model_name = aln->model_name;
@@ -3647,17 +3645,19 @@ void Alignment::createGapMaskedAlignment(Alignment *masked_aln, Alignment *aln) 
     }
     VerboseMode save_mode = verbose_mode;
     verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
-    for (site = 0; site < nsite; site++) {
+    for (size_t site = 0; site < nsite; ++site) {
         int ptn_id = aln->getPatternID(site);
         Pattern pat = aln->at(ptn_id);
         Pattern masked_pat = masked_aln->at(masked_aln->getPatternID(site));
-        for (int seq = 0; seq < nseq; seq++)
-            if (masked_pat[name_map[seq]] == STATE_UNKNOWN) pat[seq] = STATE_UNKNOWN;
+        for (size_t seq = 0; seq < nseq; ++seq) {
+            if (masked_pat[name_map[seq]] == STATE_UNKNOWN) {
+                pat[seq] = STATE_UNKNOWN;
+            }
+        }
         addPattern(pat, site);
     }
     verbose_mode = save_mode;
     countConstSite();
-//    buildSeqStates();
 }
 
 void Alignment::shuffleAlignment() {
@@ -3667,33 +3667,42 @@ void Alignment::shuffleAlignment() {
 
 
 void Alignment::concatenateAlignment(Alignment *aln) {
-    if (getNSeq() != aln->getNSeq()) outError("Different number of sequences in two alignments");
-    if (num_states != aln->num_states) outError("Different number of states in two alignments");
-    if (seq_type != aln->seq_type) outError("Different data type in two alignments");
-    int site, nsite = aln->getNSite();
-    int cur_sites = getNSite();
+    if (getNSeq() != aln->getNSeq()) {
+        outError("Different number of sequences in two alignments");
+    }
+    if (num_states != aln->num_states) {
+        outError("Different number of states in two alignments");
+    }
+    if (seq_type != aln->seq_type) {
+        outError("Different data type in two alignments");
+    }
+    size_t nsite = aln->getNSite();
+    size_t cur_sites = getNSite();
     site_pattern.resize(cur_sites + nsite , -1);
     IntVector name_map;
     for (StrVector::iterator it = seq_names.begin(); it != seq_names.end(); it++) {
         int seq_id = aln->getSeqID(*it);
-        if (seq_id < 0) outError("The other alignment does not contain taxon ", *it);
+        if (seq_id < 0) {
+            outError("The other alignment does not contain taxon ", *it);
+        }
         name_map.push_back(seq_id);
     }
     VerboseMode save_mode = verbose_mode;
     verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
-    for (site = 0; site < nsite; site++) {
+    for (size_t site = 0; site < nsite; site++) {
         Pattern pat = aln->at(aln->getPatternID(site));
         Pattern new_pat = pat;
-        for (int i = 0; i < name_map.size(); i++) new_pat[i] = pat[name_map[i]];
+        for (size_t i = 0; i < name_map.size(); i++) {
+            new_pat[i] = pat[name_map[i]];
+        }
         addPattern(new_pat, site + cur_sites);
     }
     verbose_mode = save_mode;
     countConstSite();
-//    buildSeqStates();
 }
 
 void Alignment::copyAlignment(Alignment *aln) {
-    int site, nsite = aln->getNSite();
+    size_t nsite = aln->getNSite();
     seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());
     name = aln->name;
     model_name = aln->model_name;
@@ -3715,7 +3724,7 @@ void Alignment::copyAlignment(Alignment *aln) {
     pattern_index.clear();
     VerboseMode save_mode = verbose_mode;
     verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
-    for (site = 0; site < nsite; site++) {
+    for (size_t site = 0; site < nsite; ++site) {
         int site_id = site;
         int ptn_id = aln->getPatternID(site_id);
         Pattern pat = aln->at(ptn_id);
@@ -3766,7 +3775,7 @@ void generateSubsets(vector<T> &inset, vector<vector<T> > &subsets) {
 }
 
 void Alignment::generateUninfPatterns(StateType repeat, vector<StateType> &singleton, vector<int> &seq_pos, vector<Pattern> &unobserved_ptns) {
-    int seqs = getNSeq();
+    size_t seqs = getNSeq();
     if (seq_pos.size() == singleton.size()) {
         Pattern pat;
         pat.resize(seqs, repeat);
@@ -3775,7 +3784,7 @@ void Alignment::generateUninfPatterns(StateType repeat, vector<StateType> &singl
         unobserved_ptns.push_back(pat);
         return;
     }
-    for (int seq = 0; seq < seqs; seq++) {
+    for (size_t seq = 0; seq < seqs; seq++) {
         bool dup = false;
         for (auto s: seq_pos)
             if (seq == s) { dup = true; break; }
@@ -3792,16 +3801,16 @@ void Alignment::getUnobservedConstPatterns(ASCType ASC_type, vector<Pattern> &un
         case ASC_VARIANT: {
             // Lewis's correction for variant sites
             unobserved_ptns.reserve(num_states);
-            for (StateType state = 0; state < num_states; state++)
-                if (!isStopCodon(state))
-                    {
+            for (StateType state = 0; state < num_states; state++) {
+                if (!isStopCodon(state)) {
                     Pattern pat;
                     pat.resize(getNSeq(), state);
                     if (pattern_index.find(pat) == pattern_index.end()) {
                         // constant pattern is unobserved
                         unobserved_ptns.push_back(pat);
                     }
-                    }
+                }
+            }
             break;
         }
         case ASC_VARIANT_MISSING: {
@@ -3918,22 +3927,18 @@ double Alignment::computeJCDist(int seq1, int seq2) {
 }
 
 void Alignment::printDist(ostream &out, double *dist_mat) {
-    int nseqs = getNSeq();
+    size_t nseqs = getNSeq();
     int max_len = getMaxSeqNameLength();
     if (max_len < 10) max_len = 10;
     out << nseqs << endl;
-    int pos = 0;
+    size_t pos = 0;
     out.precision(max((int)ceil(-log10(Params::getInstance().min_branch_length))+1, 6));
     out << fixed;
-    for (int seq1 = 0; seq1 < nseqs; seq1 ++)  {
+    for (size_t seq1 = 0; seq1 < nseqs; ++seq1)  {
         out.width(max_len);
         out << left << getSeqName(seq1) << " ";
-        for (int seq2 = 0; seq2 < nseqs; seq2 ++) {
+        for (size_t seq2 = 0; seq2 < nseqs; ++seq2) {
             out << dist_mat[pos++];
-            /*if (seq2 % 7 == 6) {
-            	out << endl;
-            	out.width(max_len+1);
-            } */
             out << " ";
         }
         out << endl;
@@ -3955,7 +3960,7 @@ void Alignment::printDist(const char *file_name, double *dist_mat) {
 
 double Alignment::readDist(istream &in, double *dist_mat) {
     double longest_dist = 0.0;
-    int nseqs;
+    size_t nseqs;
     in >> nseqs;
     if (nseqs != getNSeq())
         throw "Distance file has different number of taxa";
@@ -4193,11 +4198,10 @@ void Alignment::computeAbsoluteStateFreq(unsigned int *abs_state_freq) {
 
 
 void Alignment::countStatePerSequence (unsigned *count_per_sequence) {
-    int i;
-    int nseqs = getNSeq();
+    size_t nseqs = getNSeq();
     memset(count_per_sequence, 0, sizeof(unsigned)*num_states*nseqs);
     for (iterator it = begin(); it != end(); it++)
-        for (i = 0; i != nseqs; i++) {
+        for (size_t i = 0; i != nseqs; ++i) {
             int state = convertPomoState(it->at(i));
             if (state < num_states) {
                 count_per_sequence[i*num_states + state] += it->frequency;
@@ -4206,25 +4210,22 @@ void Alignment::countStatePerSequence (unsigned *count_per_sequence) {
 }
 
 void Alignment::computeStateFreqPerSequence (double *freq_per_sequence) {
-    int i, j;
-    int nseqs = getNSeq();
+    size_t nseqs = getNSeq();
     double *states_app = new double[num_states*(STATE_UNKNOWN+1)];
     double *new_freq = new double[num_states];
     unsigned *state_count = new unsigned[(STATE_UNKNOWN+1)*nseqs];
     double *new_state_freq = new double[num_states];
-
-
     memset(state_count, 0, sizeof(unsigned)*(STATE_UNKNOWN+1)*nseqs);
 
-    for (i = 0; i <= STATE_UNKNOWN; i++)
+    for (int i = 0; i <= STATE_UNKNOWN; i++)
         getAppearance(i, &states_app[i*num_states]);
 
     for (iterator it = begin(); it != end(); it++)
-        for (i = 0; i != nseqs; i++) {
+        for (size_t i = 0; i != nseqs; i++) {
             state_count[i*(STATE_UNKNOWN+1) + it->at(i)] += it->frequency;
         }
     double equal_freq = 1.0/num_states;
-    for (i = 0; i < num_states*nseqs; i++)
+    for (size_t i = 0; i < num_states*nseqs; i++)
         freq_per_sequence[i] = equal_freq;
 
     const int NUM_TIME = 8;
@@ -4232,24 +4233,24 @@ void Alignment::computeStateFreqPerSequence (double *freq_per_sequence) {
         for (int seq = 0; seq < nseqs; seq++) {
             double *state_freq = &freq_per_sequence[seq*num_states];
             memset(new_state_freq, 0, sizeof(double)*num_states);
-            for (i = 0; i <= STATE_UNKNOWN; i++) {
+            for (int i = 0; i <= STATE_UNKNOWN; i++) {
                 if (state_count[seq*(STATE_UNKNOWN+1)+i] == 0) continue;
                 double sum_freq = 0.0;
-                for (j = 0; j < num_states; j++) {
+                for (int j = 0; j < num_states; j++) {
                     new_freq[j] = state_freq[j] * states_app[i*num_states+j];
                     sum_freq += new_freq[j];
                 }
                 sum_freq = 1.0/sum_freq;
-                for (j = 0; j < num_states; j++) {
+                for (int j = 0; j < num_states; j++) {
                     new_state_freq[j] += new_freq[j]*sum_freq*state_count[seq*(STATE_UNKNOWN+1)+i];
                 }
             }
 
             double sum_freq = 0.0;
-            for (j = 0; j < num_states; j++)
+            for (int j = 0; j < num_states; j++)
                 sum_freq += new_state_freq[j];
             sum_freq = 1.0/sum_freq;
-            for (j = 0; j < num_states; j++)
+            for (int j = 0; j < num_states; j++)
                 state_freq[j] = new_state_freq[j]*sum_freq;
          }
     }
@@ -4425,8 +4426,7 @@ void Alignment::getAppearance(StateType state, StateBitset &state_app) {
 }
 
 void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double *ntfreq) {
-	int nseqs = getNSeq();
-	int i, j;
+	size_t nseqs = getNSeq();
 
 	if (freq == FREQ_CODON_1x4) {
 		memset(ntfreq, 0, sizeof(double)*4);
@@ -4443,19 +4443,19 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 			}
 		}
 		double sum = 0;
-		for (i = 0; i < 4; i++)
+		for (int i = 0; i < 4; i++)
 			sum += ntfreq[i];
-		for (i = 0; i < 4; i++)
+		for (int i = 0; i < 4; i++)
 			ntfreq[i] /= sum;
 		if (verbose_mode >= VB_MED) {
-			for (i = 0; i < 4; i++)
+			for (int i = 0; i < 4; i++)
 				cout << "  " << symbols_dna[i] << ": " << ntfreq[i];
 			cout << endl;
 		}
 		memcpy(ntfreq+4, ntfreq, sizeof(double)*4);
 		memcpy(ntfreq+8, ntfreq, sizeof(double)*4);
         sum = 0.0;
-		for (i = 0; i < num_states; i++) {
+		for (int i = 0; i < num_states; i++) {
             int codon = codon_table[i];
             state_freq[i] = ntfreq[codon/16] * ntfreq[(codon%16)/4] * ntfreq[codon%4];
 			if (isStopCodon(i)) {
@@ -4467,11 +4467,11 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
         }
 //        sum = (1.0-sum)/(1.0-sum_stop);
         sum = 1.0/sum;
-		for (i = 0; i < num_states; i++)
+		for (int i = 0; i < num_states; i++)
             if (!isStopCodon(i))
                 state_freq[i] *= sum;
         sum = 0.0;
-		for (i = 0; i < num_states; i++)
+		for (int i = 0; i < num_states; i++)
                 sum += state_freq[i];
         ASSERT(fabs(sum-1.0)<1e-5);
 	} else if (freq == FREQ_CODON_3x4) {
@@ -4489,14 +4489,14 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 				ntfreq[8+nt3] += (*it).frequency;
 			}
 		}
-		for (j = 0; j < 12; j+=4) {
+		for (int j = 0; j < 12; j+=4) {
 			double sum = 0;
-			for (i = 0; i < 4; i++)
+			for (int i = 0; i < 4; i++)
 				sum += ntfreq[i+j];
-			for (i = 0; i < 4; i++)
+			for (int i = 0; i < 4; i++)
 				ntfreq[i+j] /= sum;
 			if (verbose_mode >= VB_MED) {
-				for (i = 0; i < 4; i++)
+				for (int i = 0; i < 4; i++)
 					cout << "  " << symbols_dna[i] << ": " << ntfreq[i+j];
 				cout << endl;
 			}
@@ -4504,7 +4504,7 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 
 //        double sum_stop=0.0;
         double sum = 0.0;
-		for (i = 0; i < num_states; i++) {
+		for (int i = 0; i < num_states; i++) {
             int codon = codon_table[i];
             state_freq[i] = ntfreq[codon/16] * ntfreq[4+(codon%16)/4] * ntfreq[8+codon%4];
 			if (isStopCodon(i)) {
@@ -4516,11 +4516,11 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
         }
 //        sum = (1.0-sum)/(1.0-sum_stop);
         sum = 1.0 / sum;
-		for (i = 0; i < num_states; i++)
+		for (int i = 0; i < num_states; i++)
             if (!isStopCodon(i))
                 state_freq[i] *= sum;
         sum = 0.0;
-		for (i = 0; i < num_states; i++)
+		for (int i = 0; i < num_states; i++)
                 sum += state_freq[i];
         ASSERT(fabs(sum-1.0)<1e-5);
 
@@ -4564,9 +4564,9 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
         outError("F3X4C not yet implemented. Contact authors if you really need it.");
 	} else if (freq == FREQ_EMPIRICAL || freq == FREQ_ESTIMATE) {
 		memset(state_freq, 0, num_states*sizeof(double));
-        i = 0;
-        for (iterator it = begin(); it != end(); it++, i++)
-			for (int seq = 0; seq < nseqs; seq++) {
+        int i = 0;
+        for (iterator it = begin(); it != end(); ++it, ++i)
+			for (size_t seq = 0; seq < nseqs; seq++) {
 				int state = it->at(seq);
 				if (state >= num_states) continue;
 				state_freq[state] += it->frequency;
@@ -4585,7 +4585,7 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 void Alignment::computeDivergenceMatrix(double *pair_freq, double *state_freq, bool normalize) {
     int i, j;
     ASSERT(pair_freq);
-    int nseqs = getNSeq();
+    size_t nseqs = getNSeq();
     memset(pair_freq, 0, sizeof(double)*num_states*num_states);
     memset(state_freq, 0, sizeof(double)*num_states);
 
@@ -4677,7 +4677,7 @@ std::ostream& operator<<(std::ostream& stream, const SymTestResult& res) {
 void Alignment::doSymTest(size_t vecid, vector<SymTestResult> &vec_sym, vector<SymTestResult> &vec_marsym,
                        vector<SymTestResult> &vec_intsym, int *rstream, vector<SymTestStat> *stats)
 {
-    int nseq = getNSeq();
+    size_t nseq = getNSeq();
 
     const double chi2_cutoff = Params::getInstance().symtest_pcutoff;
     
@@ -4881,11 +4881,11 @@ void Alignment::printSiteGaps(const char *filename) {
         out.open(filename);
         int nsite = getNSite();
         out << nsite << endl << "Site_Gap  ";
-        for (int site = 0; site < getNSite(); site++) {
+        for (size_t site = 0; site < getNSite(); ++site) {
             out << " " << at(getPatternID(site)).computeGapChar(num_states, STATE_UNKNOWN);
         }
         out << endl << "Site_Ambi ";
-        for (int site = 0; site < getNSite(); site++) {
+        for (size_t site = 0; site < getNSite(); ++site) {
             out << " " << at(getPatternID(site)).computeAmbiguousChar(num_states);
         }
         out << endl;
@@ -4915,7 +4915,7 @@ void Alignment::multinomialProb(Alignment refAlign, double &prob)
 // 	cout << "Computing the probability of this alignment given the multinomial distribution determined by a reference alignment ..." << endl;
     //should we check for compatibility of sequence's names and sequence's order in THIS alignment and in the objectAlign??
     //check alignment length
-    int nsite = getNSite();
+    size_t nsite = getNSite();
     ASSERT(nsite == refAlign.getNSite());
     double sumFac = 0;
     double sumProb = 0;
@@ -4947,7 +4947,7 @@ void Alignment::multinomialProb (DoubleVector logLL, double &prob)
 
     ASSERT(logLL.size() == patNum);
 
-    int alignLen = getNSite();
+    size_t alignLen = getNSite();
     //resize the expectedNorFre vector
     expectedNorFre.resize(patNum,-1);
 
@@ -5075,8 +5075,8 @@ double Alignment::multinomialProb (IntVector &pattern_freq)
     //return expectedNorFre;
     //compute the probability of having expectedNorFre given the observed pattern frequencies of THIS alignment
     ASSERT(size() == pattern_freq.size());
-    int patNum = getNPattern();
-    int alignLen = getNSite();
+    size_t patNum = getNPattern();
+    size_t alignLen = getNSite();
     double sumFac = 0;
     double sumProb = 0;
     double fac = logFac(alignLen);
@@ -5092,10 +5092,9 @@ bool Alignment::readSiteStateFreq(const char* site_freq_file)
 {
 	cout << endl << "Reading site-specific state frequency file " << site_freq_file << " ..." << endl;
 	site_model.resize(getNSite(), -1);
-    int i;
     IntVector pattern_to_site; // vector from pattern to the first site
     pattern_to_site.resize(getNPattern(), -1);
-    for (i = 0; i < getNSite(); i++)
+    for (size_t i = 0; i < getNSite(); ++i)
         if (pattern_to_site[getPatternID(i)] == -1)
             pattern_to_site[getPatternID(i)] = i;
 
@@ -5123,7 +5122,7 @@ bool Alignment::readSiteStateFreq(const char* site_freq_file)
 			}
 			double *site_freq_entry = new double[num_states];
 			double sum = 0;
-			for (i = 0; i < num_states; i++) {
+			for (int i = 0; i < num_states; ++i) {
 				in >> freq;
 				if (freq <= 0.0 || freq >= 1.0) throw "Frequencies must be strictly positive and smaller than 1";
 				site_freq_entry[i] = freq;
@@ -5133,7 +5132,7 @@ bool Alignment::readSiteStateFreq(const char* site_freq_file)
                 if (fabs(sum-1.0) > 1e-3)
                     outWarning("Frequencies of site " + site_spec + " do not sum up to 1 and will be normalized");
                 sum = 1.0/sum;
-                for (i = 0; i < num_states; i++)
+                for (int i = 0; i < num_states; ++i)
                     site_freq_entry[i] *= sum;
             }
 			convfreq(site_freq_entry); // regularize frequencies (eg if some freq = 0)
@@ -5144,7 +5143,7 @@ bool Alignment::readSiteStateFreq(const char* site_freq_file)
                 // compare freq with prev_site
                 bool matched_freq = true;
                 double *prev_freq = site_state_freq[site_model[prev_site]];
-                for (i = 0; i < num_states; i++) {
+                for (int i = 0; i < num_states; ++i) {
                     if (site_freq_entry[i] != prev_freq[i]) {
                         matched_freq = false;
                         break;
@@ -5165,7 +5164,7 @@ bool Alignment::readSiteStateFreq(const char* site_freq_file)
             aln_changed = true;
 			// there are some unspecified sites
 			cout << site_model.size() - specified_sites << " unspecified sites will get default frequencies" << endl;
-			for (i = 0; i < site_model.size(); i++)
+			for (size_t i = 0; i < site_model.size(); ++i)
 				if (site_model[i] == -1)
 					site_model[i] = site_state_freq.size();
 			site_state_freq.push_back(NULL);

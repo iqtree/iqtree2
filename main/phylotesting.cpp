@@ -1838,7 +1838,7 @@ double doKmeansClustering(Params &params, PhyloSuperTree *in_tree,
         }
     }
     
-    int ssize = in_tree->getAlnNSite();
+    size_t ssize = in_tree->getAlnNSite();
     double score = computeInformationScore(lhsum, dfsum, ssize, params.model_test_criterion);
     cout << "k-means score for " << ncluster << " partitions: " << score << " (LnL: " << lhsum << "  " << "df: " << dfsum << ")" << endl;
 
@@ -1925,7 +1925,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
         if (params.partition_type == BRLEN_SCALE)
             dfsum -= 1;
     }
-	int ssize = in_tree->getAlnNSite();
+	size_t  ssize = in_tree->getAlnNSite();
 	int64_t num_model = 0;
     int64_t total_num_model = in_tree->size();
 

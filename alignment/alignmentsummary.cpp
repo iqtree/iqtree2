@@ -35,14 +35,14 @@ AlignmentSummary::AlignmentSummary(const Alignment* a, bool keepConstSites) {
     #ifdef _OPENMP
         #pragma omp parallel for
     #endif
-    for (int site=0; site<alignment->size(); ++site) { //per site
-        auto itSite = alignment->begin() + site;
-        SiteSummary &s = *(siteArray.get() + site);
+    for (size_t site=0; site<alignment->size(); ++site) { //per site
+        auto        itSite = alignment->begin() + site;
+        SiteSummary &s     = *(siteArray.get() + site);
         StateType minStateForSite = (*itSite)[0];
         StateType maxStateForSite = minStateForSite;
         s.isConst   = itSite->isConst();
         s.frequency = itSite->frequency;
-        for (int seq=1; seq<sequenceCount; ++seq) {
+        for (size_t seq=1; seq<sequenceCount; ++seq) {
             auto state = (*itSite)[seq] ;
             if (state < minStateForSite ) {
                 minStateForSite = state;
@@ -55,12 +55,12 @@ AlignmentSummary::AlignmentSummary(const Alignment* a, bool keepConstSites) {
         s.maxState  = maxStateForSite;
     }
     sequenceLength = 0; //Number sites where there's some variability
-    SiteSummary* s = siteArray.get();
+    const SiteSummary* s = siteArray.get();
     std::map<int, int> map = stateToSumOfConstantSiteFrequencies;
     for (int i=0; i<alignment->size(); ++i, ++s) {
         bool alreadyCounted = false;
         totalFrequency += s->frequency;
-        totalFrequencyOfNonConstSites += s->isConst ? s->frequency : 0;
+        totalFrequencyOfNonConstSites += s->isConst ? 0 : s->frequency;
         if ( keepConstSites || !s->isConst) {
             if ( 0 < s->frequency && s->minState < s->maxState) {
                 alreadyCounted = true;
@@ -98,7 +98,7 @@ AlignmentSummary::~AlignmentSummary() {
     sequenceCount  = 0;
 }
 
-int AlignmentSummary::getSumOfConstantSiteFrequenciesForState(int state) {
+size_t AlignmentSummary::getSumOfConstantSiteFrequenciesForState(int state) {
     auto it = stateToSumOfConstantSiteFrequencies.find(state);
     return (it == stateToSumOfConstantSiteFrequencies.end()) ? 0 : it->second;
 }

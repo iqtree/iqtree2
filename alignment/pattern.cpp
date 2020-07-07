@@ -19,7 +19,7 @@ Pattern::Pattern()
 //    is_const = false;
 //    is_informative = false;
     flag = 0;
-    const_char = 255;
+    const_char = -1;
     num_chars = 0;
 }
 
@@ -30,7 +30,7 @@ Pattern::Pattern(int nseq, int freq)
     //    is_const = false;
     //    is_informative = false;
     flag = 0;
-    const_char = 255;
+    const_char = -1;
     num_chars = 0;
 }
 

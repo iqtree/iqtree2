@@ -44,7 +44,7 @@ void PhyloTree::setNumThreads(int num_threads) {
     if (!isSuperTree() && aln && num_threads > 1 && num_threads > aln->getNPattern()/8) {
         outWarning(convertIntToString(num_threads) + " threads for alignment length " +
                    convertIntToString(aln->getNPattern()) + " will slow down analysis");
-        num_threads = max(aln->getNPattern()/8,1);
+        num_threads = max(aln->getNPattern()/8,1UL);
     }
     this->num_threads = num_threads;
 }
@@ -359,7 +359,7 @@ void PhyloTree::computeTipPartialLikelihood() {
 //        ModelSet *models = (ModelSet*)model;
         size_t nptn = aln->getNPattern(), max_nptn = ((nptn+vector_size-1)/vector_size)*vector_size, tip_block_size = max_nptn * aln->num_states;
         int nstates = aln->num_states;
-        int nseq = aln->getNSeq();
+        size_t nseq = aln->getNSeq();
         ASSERT(vector_size > 0);
 #ifdef _OPENMP
         #pragma omp parallel for schedule(static)
@@ -1300,7 +1300,7 @@ void PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode 
     	prob_const = 1.0 - prob_const;
     	double df_frac = df_const / prob_const;
     	double ddf_frac = ddf_const / prob_const;
-    	int nsites = aln->getNSite();
+    	size_t nsites = aln->getNSite();
     	df += nsites * df_frac;
     	ddf += nsites *(ddf_frac + df_frac*df_frac);
     }
@@ -1592,8 +1592,9 @@ void PhyloTree::computeMarginalAncestralState(PhyloNeighbor *dad_branch, PhyloNo
 }
 
 void PhyloTree::writeMarginalAncestralState(ostream &out, PhyloNode *node, double *ptn_ancestral_prob, int *ptn_ancestral_seq) {
-    size_t site, nsites = aln->getNSite(), nstates = model->num_states;
-    for (site = 0; site < nsites; site++) {
+    size_t nsites = aln->getNSite();
+    size_t nstates = model->num_states;
+    for (size_t site = 0; site < nsites; ++site) {
         int ptn = aln->getPatternID(site);
         out << node->name << "\t" << site+1 << "\t";
 //        if (params->print_ancestral_sequence == AST_JOINT)

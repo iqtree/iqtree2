@@ -2572,7 +2572,7 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
         prob_const = 1.0 - prob_const;
         double df_frac = df_const / prob_const;
         double ddf_frac = ddf_const / prob_const;
-        int nsites = aln->getNSite();
+        size_t nsites = aln->getNSite();
         *df += nsites * df_frac;
         *ddf += nsites *(ddf_frac + df_frac*df_frac);
     }
@@ -3129,8 +3129,6 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
 
     size_t block = ncat_mix * nstates;
 //    size_t tip_block = nstates * model->getNMixtures();
-    size_t ptn; // for big data size > 4GB memory required
-    size_t c, i;
     size_t orig_nptn = aln->size();
     size_t max_orig_nptn = ((orig_nptn+VectorClass::size()-1)/VectorClass::size())*VectorClass::size();
     size_t nptn = max_orig_nptn+model_factory->unobserved_ptns.size();
@@ -3140,7 +3138,7 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
 
     size_t mix_addr_nstates[ncat_mix], mix_addr[ncat_mix];
     size_t denom = (model_factory->fused_mix_rate) ? 1 : ncat;
-    for (c = 0; c < ncat_mix; c++) {
+    for (size_t c = 0; c < ncat_mix; ++c) {
         size_t m = c/denom;
         mix_addr_nstates[c] = m*nstates;
         mix_addr[c] = mix_addr_nstates[c]*nstates;
@@ -3154,7 +3152,7 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
     double cat_prop[ncat];
 
     if (SITE_MODEL) {
-        for (c = 0; c < ncat; c++) {
+        for (size_t c = 0; c < ncat; ++c) {
             cat_length[c] = site_rate->getRate(c) * current_it->length;
             cat_prop[c] = site_rate->getProp(c);
         }
@@ -3163,25 +3161,25 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
         if (nstates % VectorClass::size() == 0) {
             VectorClass *vc_val0 = (VectorClass*)val0;
             size_t loop_size = nstates / VectorClass::size();
-            for (c = 0; c < ncat_mix; c++) {
+            for (size_t c = 0; c < ncat_mix; ++c) {
                 size_t m = c/denom;
                 VectorClass *eval_ptr = (VectorClass*)(eval + mix_addr_nstates[c]);
                 size_t mycat = c%ncat;
                 double prop = site_rate->getProp(mycat) * model->getMixtureWeight(m);
                 double len = site_rate->getRate(mycat) * current_it->getLength(mycat);
-                for (i = 0; i < loop_size; i++) {
+                for (size_t i = 0; i < loop_size; ++i) {
                     vc_val0[i] = exp(eval_ptr[i] * len) * prop;
                 }
                 vc_val0 += loop_size;
             }
         } else {
-            for (c = 0; c < ncat_mix; c++) {
+            for (size_t c = 0; c < ncat_mix; ++c) {
                 size_t m = c/denom;
                 double *eval_ptr = eval + mix_addr_nstates[c];
                 size_t mycat = c%ncat;
                 double prop = site_rate->getProp(mycat) * model->getMixtureWeight(m);
                 size_t addr = c*nstates;
-                for (i = 0; i < nstates; i++) {
+                for (size_t i = 0; i < nstates; ++i) {
                     double cof = eval_ptr[i]*site_rate->getRate(mycat);
                     double val = exp(cof*current_it->getLength(mycat)) * prop;
                     val0[addr+i] = val;
@@ -3195,20 +3193,20 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
     VectorClass all_tree_lh(0.0), all_prob_const(0.0);
 
 #ifdef _OPENMP
-#pragma omp parallel private(ptn, i, c) num_threads(num_threads)
+#pragma omp parallel num_threads(num_threads)
     {
 #endif
         VectorClass vc_tree_lh(0.0), vc_prob_const(0.0);
 #ifdef _OPENMP
 #pragma omp for schedule(static) nowait
 #endif
-    for (ptn = 0; ptn < nptn; ptn+=VectorClass::size()) {
+    for (size_t ptn = 0; ptn < nptn; ptn+=VectorClass::size()) {
 		VectorClass lh_ptn(0.0);
 		VectorClass *theta = (VectorClass*)(theta_all + ptn*block);
         if (SITE_MODEL) {
             VectorClass *eval_ptr = (VectorClass*)&eval[ptn*nstates];
 //            lh_ptn.load_a(&ptn_invar[ptn]);
-            for (c = 0; c < ncat; c++) {
+            for (size_t c = 0; c < ncat; c++) {
                 VectorClass lh_cat;
 #ifdef KERNEL_FIX_STATES
                 dotProductExp<VectorClass, double, nstates, FMA>(eval_ptr, theta, cat_length[c], lh_cat);
@@ -3242,7 +3240,7 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
             if (horizontal_or(VectorClass().load_a(&buffer_scale_all[ptn]) != 0.0)) {
                 // some entries are rescaled
                 double *lh_ptn_dbl = (double*)&lh_ptn;
-                for (i = 0; i < VectorClass::size(); i++)
+                for (size_t i = 0; i < VectorClass::size(); i++)
                     if (buffer_scale_all[ptn+i] != 0.0)
                         lh_ptn_dbl[i] *= SCALING_THRESHOLD;
             }
@@ -3275,7 +3273,7 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
     // arbitrarily fix tree_lh if underflown for some sites
     if (!std::isfinite(tree_lh)) {
         tree_lh = 0.0;
-        for (ptn = 0; ptn < orig_nptn; ptn++) {
+        for (size_t ptn = 0; ptn < orig_nptn; ++ptn) {
             if (!std::isfinite(_pattern_lh[ptn])) {
                 _pattern_lh[ptn] = LOG_SCALING_THRESHOLD*4; // log(2^(-1024))
             }
@@ -3289,15 +3287,15 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
         size_t step_unobserved_ptns = model_factory->unobserved_ptns.size() / nstates;
         double *const_lh_next = const_lh + step_unobserved_ptns;
         for (int step = 1; step < nstates; step++, const_lh_next += step_unobserved_ptns) {
-            for (ptn = 0; ptn < orig_nptn; ptn+=VectorClass::size())
+            for (size_t ptn = 0; ptn < orig_nptn; ptn+=VectorClass::size())
                 (VectorClass().load_a(&const_lh[ptn]) + VectorClass().load_a(&const_lh_next[ptn])).store_a(&const_lh[ptn]);
         }
         // cutoff the last entries if going beyond
-        for (ptn = orig_nptn; ptn < max_orig_nptn; ptn++)
+        for (size_t ptn = orig_nptn; ptn < max_orig_nptn; ++ptn) {
             const_lh[ptn] = 0.0;
-        
+        }
         VectorClass sum_corr = 0.0;
-        for (ptn = 0; ptn < orig_nptn; ptn+=VectorClass::size()) {
+        for (size_t ptn = 0; ptn < orig_nptn; ptn+=VectorClass::size()) {
             VectorClass prob_variant = log(1.0 - VectorClass().load_a(&const_lh[ptn]));
             (VectorClass().load_a(&_pattern_lh[ptn]) - prob_variant).store_a(&_pattern_lh[ptn]);
             sum_corr += prob_variant*VectorClass().load_a(&ptn_freq[ptn]);
@@ -3319,9 +3317,10 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
 //            _pattern_lh_cat[ptn] *= inv_const;
         
     	prob_const = log(1.0 - prob_const);
-    	for (ptn = 0; ptn < orig_nptn; ptn+=VectorClass::size())
+        for (size_t ptn = 0; ptn < orig_nptn; ptn+=VectorClass::size()) {
             (VectorClass().load_a(&_pattern_lh[ptn])-prob_const).store_a(&_pattern_lh[ptn]);
 //    		_pattern_lh[ptn] -= prob_const;
+        }
     	tree_lh -= aln->getNSite()*prob_const;
 		ASSERT(std::isfinite(tree_lh));
     }
