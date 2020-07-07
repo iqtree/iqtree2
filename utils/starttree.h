@@ -24,6 +24,7 @@
 #include <string>
 #include <map>
 #include <iostream>
+#include <vector>
 #include "timeutil.h"       //for getRealTime()
 
 namespace StartTree
