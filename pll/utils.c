@@ -431,8 +431,6 @@ void hookupFull (nodeptr p, nodeptr q, double *z)
 /* connect node p with q and assign the default branch lengths */
 void hookupDefault (nodeptr p, nodeptr q)
 {
-  int i;
-
   p->back = q;
   q->back = p;
 
