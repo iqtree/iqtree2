@@ -43,65 +43,28 @@ using namespace std;
 template <class VectorClass, const bool append>
 inline void sumVec(VectorClass *A, VectorClass &X, size_t N)
 {
-    if (N == 1) {
-        if (append)
-            X += A[0];
-        else
-            X = A[0];
-        return;
+    if (!append) {
+        X=0;
     }
-
-    size_t i;
-    switch (N % 4) {
-    case 0: {
-        VectorClass V[4];
-        V[0] = A[0];
-        V[1] = A[1];
-        V[2] = A[2];
-        V[3] = A[3];
-        for (i = 4; i < N; i+=4) {
-            V[0] += A[i];
-            V[1] += A[i+1];
-            V[2] += A[i+2];
-            V[3] += A[i+3];
+    size_t cruft = (N & 3);
+    if (cruft<N) {
+        VectorClass  V[4]  = { 0, 0, 0, 0 };
+        for ( VectorClass* Astop = A + ( N - cruft ); A<Astop; A+=4 ) {
+            V[0] += A[0];
+            V[1] += A[1];
+            V[2] += A[2];
+            V[3] += A[3];
         }
-        if (append)
-            X += (V[0] + V[1]) + (V[2] + V[3]);
-        else
-            X = (V[0] + V[1]) + (V[2] + V[3]);
-        break;
-    }
-
-    case 2: {
-        VectorClass V[2];
-        V[0] = A[0];
-        V[1] = A[1];
-        for (i = 2; i < N; i+=2) {
-            V[0] += A[i];
-            V[1] += A[i+1];
+        V[0] += V[2];
+        V[1] += V[3];
+        V[0] += V[1];
+        X    += V[0];
+        if (cruft==0) {
+            return;
         }
-        if (append)
-            X += V[0] + V[1];
-        else
-            X = V[0] + V[1];
-        break;
     }
-
-    default: {
-        VectorClass V[2];
-        // odd N
-        V[0] = A[0];
-        V[1] = A[1];
-        for (i = 2; i < N-1; i+=2) {
-            V[0] += A[i];
-            V[1] += A[i+1];
-        }
-        if (append)
-            X += A[N-1] + V[0] + V[1];
-        else
-            X = A[N-1] + V[0] + V[1];
-        break;
-    }
+    for ( VectorClass* Astop = A + cruft; A<Astop; ++A ) {
+        X += A[0];
     }
 }
 #endif
