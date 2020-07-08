@@ -430,6 +430,14 @@ public:
     virtual Alignment *removeIdenticalSeq(string not_remove, bool keep_two, StrVector &removed_seqs, StrVector &target_seqs);
 
     /**
+     * calculating hashes for sequences
+     * @param v state at a given site, in the sequence being hashed
+     * @param hash running hash value for the sequence (modified)
+     */
+    void adjustHash(StateType v, size_t& hash) const;
+    void adjustHash(bool      v, size_t& hash) const;
+    
+    /**
             Quit if some sequences contain only gaps or missing data
      */
 	virtual void checkGappySeq(bool force_error = true);

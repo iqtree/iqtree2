@@ -7,7 +7,6 @@
 
 #include "alignment.h"
 #include "alignmentsummary.h"
-#include <boost/scoped_array.hpp>
 
 AlignmentSummary::AlignmentSummary(const Alignment* a, bool keepConstSites) {
     alignment      = a;
@@ -31,13 +30,15 @@ AlignmentSummary::AlignmentSummary(const Alignment* a, bool keepConstSites) {
         SiteSummary(): isConst(false), frequency(0), minState(0), maxState(0) {}
     };
     
-    boost::scoped_array<SiteSummary> siteArray( new SiteSummary[alignment->size()] );
+    size_t siteCount = alignment->size();
+    std::vector<SiteSummary> sites;
+    sites.reserve(siteCount);
     #ifdef _OPENMP
         #pragma omp parallel for
     #endif
-    for (size_t site=0; site<alignment->size(); ++site) { //per site
+    for (size_t site=0; site<siteCount; ++site) { //per site
         auto        itSite = alignment->begin() + site;
-        SiteSummary &s     = *(siteArray.get() + site);
+        SiteSummary &s     = sites[site];
         StateType minStateForSite = (*itSite)[0];
         StateType maxStateForSite = minStateForSite;
         s.isConst   = itSite->isConst();
@@ -55,37 +56,37 @@ AlignmentSummary::AlignmentSummary(const Alignment* a, bool keepConstSites) {
         s.maxState  = maxStateForSite;
     }
     sequenceLength = 0; //Number sites where there's some variability
-    const SiteSummary* s = siteArray.get();
     std::map<int, int> map = stateToSumOfConstantSiteFrequencies;
-    for (int i=0; i<alignment->size(); ++i, ++s) {
+    for (size_t site=0; site<siteCount; ++site) {
+        SiteSummary &s      = sites[site];
         bool alreadyCounted = false;
-        totalFrequency += s->frequency;
-        totalFrequencyOfNonConstSites += s->isConst ? 0 : s->frequency;
-        if ( keepConstSites || !s->isConst) {
-            if ( 0 < s->frequency && s->minState < s->maxState) {
+        totalFrequency     += s.frequency;
+        totalFrequencyOfNonConstSites += s.isConst ? 0 : s.frequency;
+        if ( keepConstSites || !s.isConst) {
+            if ( 0 < s.frequency && s.minState < s.maxState) {
                 alreadyCounted = true;
                 if (sequenceLength==0) {
-                    minState = s->minState;
-                    maxState = s->maxState;
+                    minState = s.minState;
+                    maxState = s.maxState;
                 } else {
-                    if (s->minState < minState) {
-                        minState = s->minState;
+                    if (s.minState < minState) {
+                        minState = s.minState;
                     }
-                    if (maxState < s->maxState) {
-                        maxState = s->maxState;
+                    if (maxState < s.maxState) {
+                        maxState = s.maxState;
                     }
                 }
-                siteNumbers.emplace_back(i);
-                siteFrequencies.emplace_back(s->frequency);
-                nonConstSiteFrequencies.emplace_back(s->isConst ? 0 : s->frequency);
+                siteNumbers.emplace_back(site);
+                siteFrequencies.emplace_back(s.frequency);
+                nonConstSiteFrequencies.emplace_back(s.isConst ? 0 : s.frequency);
                 ++sequenceLength;
             }
         }
-        if (s->minState == s->maxState && !alreadyCounted) {
-            if (map.find(s->minState)==map.end()) {
-                map[s->minState] = s->frequency;
+        if (s.minState == s.maxState && !alreadyCounted) {
+            if (map.find(s.minState)==map.end()) {
+                map[s.minState] = s.frequency;
             } else {
-                map[s->minState] += s->frequency;
+                map[s.minState] += s.frequency;
             }
         }
     }

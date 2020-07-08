@@ -24,10 +24,6 @@
 #include "nclextra/myreader.h"
 #include "main/phylotesting.h"
 #include "utils/timeutil.h" //for getRealTime()
-#ifdef USE_BOOST
-#include <boost/container_hash/hash.hpp> //for boost::hash_combine
-#endif
-
 
 Alignment *createAlignment(string aln_file, const char *sequence_type, InputType intype, string model_name) {
     bool is_dir = isDirectory(aln_file.c_str());
@@ -942,10 +938,10 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, 
         for (auto ait = partitions.begin(); ait != partitions.end(); ait++, part++) {
             int  subseq1 = taxa_index[seq1][part];
             bool present = ( 0 < subseq1 );
-            boost::hash_combine(hash, present);
+            adjustHash(present, hash);
             if (present) {
                 for (iterator it = (*ait)->begin(); it != (*ait)->end(); it++) {
-                    boost::hash_combine(hash, (*it)[subseq1] );
+                    adjustHash((*it)[subseq1],hash);
                 }
             }
         }

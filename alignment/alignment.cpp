@@ -22,7 +22,6 @@
 #ifdef USE_BOOST
 #include <boost/math/distributions/binomial.hpp>
 #include <boost/container_hash/hash.hpp>
-#include <boost/scoped_array.hpp>
 #endif
 
 
@@ -335,7 +334,7 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
     for (int seq1=0; seq1<n; ++seq1) {
         size_t hash = 0;
         for (iterator it = begin(); it != end(); ++it) {
-            boost::hash_combine(hash, (*it)[seq1]);
+            adjustHash((*it)[seq1], hash);
         }
         hashes[seq1] = hash;
     }
@@ -396,6 +395,20 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
         //  << " sequences as duplicates." << endl;
 		return aln;
 	} else return this;
+}
+
+void Alignment::adjustHash(StateType v, size_t& hash) const {
+    //Based on what boost::hash_combine() does.
+    //For now there's no need for a templated version
+    //in a separate header file.  But if other classes start
+    //wanting to "roll their own hashing" this should move
+    //to, say, utils/hashing.h.
+    hash ^= std::hash<int>()(v) + 0x9e3779b9
+                     + (hash<<6) + (hash>>2);
+}
+void Alignment::adjustHash(bool v, size_t& hash) const {
+    hash ^= std::hash<bool>()(v) + 0x9e3779b9
+                     + (hash<<6) + (hash>>2);
 }
 
 bool Alignment::isGapOnlySeq(size_t seq_id) {
