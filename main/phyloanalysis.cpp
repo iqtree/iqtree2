@@ -521,7 +521,7 @@ void reportRate(ostream &out, PhyloTree &tree) {
 }
 
 void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, double lh_variance, double main_tree) {
-    int ssize = tree.getAlnNSite();
+    size_t ssize = tree.getAlnNSite();
     double epsilon = 1.0 / ssize;
     double totalLen = tree.treeLength();
     int df = tree.getModelFactory()->getNParameters(BRLEN_OPTIMIZE);
@@ -1474,17 +1474,18 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
 }
 
 void checkZeroDist(Alignment *aln, double *dist) {
-    int ntaxa = aln->getNSeq();
+    size_t ntaxa = aln->getNSeq();
     IntVector checked;
     checked.resize(ntaxa, 0);
-    int i, j;
-    for (i = 0; i < ntaxa - 1; i++) {
+    auto minLen = Params::getInstance().min_branch_length;
+    for (size_t i = 0; i < ntaxa - 1; ++i) {
         if (checked[i])
             continue;
         string str = "";
         bool first = true;
-        for (j = i + 1; j < ntaxa; j++)
-            if (dist[i * ntaxa + j] <= Params::getInstance().min_branch_length) {
+        auto distRow = dist + i*ntaxa;
+        for (size_t j = i + 1; j < ntaxa; ++j)
+            if (distRow[j] <= minLen ) {
                 if (first)
                     str = "ZERO distance between sequences "
                             + aln->getSeqName(i);
@@ -1493,8 +1494,9 @@ void checkZeroDist(Alignment *aln, double *dist) {
                 first = false;
             }
         checked[i] = 1;
-        if (str != "")
+        if (str != "") {
             outWarning(str);
+        }
     }
 }
 
@@ -1636,8 +1638,8 @@ void computeMLDist ( Params& params, IQTree& iqtree
     cout << "Computing ML distances took "
         << (getRealTime() - begin_wallclock_time) << " sec (of wall-clock time) "
         << (getCPUTime() - begin_cpu_time) << " sec(of CPU time)" << endl;
-    int n = iqtree.aln->getNSeq();
-    int nSquared = n*n;
+    size_t n = iqtree.aln->getNSeq();
+    size_t nSquared = n*n;
     if ( iqtree.dist_matrix == nullptr ) {
         iqtree.dist_matrix = ml_dist;
         ml_dist = nullptr;

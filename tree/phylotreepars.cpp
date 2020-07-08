@@ -248,7 +248,6 @@ int PhyloTree::computeParsimonyBranchFast(PhyloNeighbor *dad_branch, PhyloNode *
         computePartialParsimonyFast(dad_branch, dad);
     if ((node_branch->partial_lh_computed & 2) == 0)
         computePartialParsimonyFast(node_branch, node);
-    int site;
     int nsites = (aln->num_parsimony_sites + UINT_BITS-1) / UINT_BITS;
     int nstates = aln->getMaxNumStates();
 
@@ -261,9 +260,9 @@ int PhyloTree::computeParsimonyBranchFast(PhyloNeighbor *dad_branch, PhyloNode *
     switch (nstates) {
     case 4:
         #ifdef _OPENMP
-        #pragma omp parallel for private (site) reduction(+: score) if(nsites>200)
+        #pragma omp parallel for reduction(+: score) if(nsites>200)
         #endif
-		for (site = 0; site < nsites; site++) {
+		for (int site = 0; site < nsites; ++site) {
             size_t offset = 4*site;
             UINT *x = dad_branch->partial_pars + offset;
             UINT *y = node_branch->partial_pars + offset;
@@ -278,10 +277,10 @@ int PhyloTree::computeParsimonyBranchFast(PhyloNeighbor *dad_branch, PhyloNode *
 		break;
     default:
         #ifdef _OPENMP
-        #pragma omp parallel for private (site) reduction(+: score) if(nsites > 800/nstates)
+        #pragma omp parallel for reduction(+: score) if(nsites > 800/nstates)
         #endif
-		for (site = 0; site < nsites; site++) {
-            size_t offset = nstates*site;
+		for (int site = 0; site < nsites; ++site) {
+            size_t offset = nstates * site;
             UINT *x = dad_branch->partial_pars + offset;
             UINT *y = node_branch->partial_pars + offset;
 			int i;
@@ -902,9 +901,9 @@ int PhyloTree::computeParsimonyBranchSankoff(PhyloNeighbor *dad_branch, PhyloNod
 
 void PhyloTree::create3TaxonTree(IntVector &taxon_order, int *rand_stream) {
     freeNode();
-    int nseq = aln->getNSeq();
+    size_t nseq = aln->getNSeq();
     taxon_order.resize(nseq);
-    for (int i = 0; i < nseq; i++)
+    for (size_t i = 0; i < nseq; ++i)
         taxon_order[i] = i;
     // randomize the addition order
     my_random_shuffle(taxon_order.begin(), taxon_order.end(), rand_stream);
@@ -912,7 +911,7 @@ void PhyloTree::create3TaxonTree(IntVector &taxon_order, int *rand_stream) {
     root = newNode(nseq);
     
     // create star tree
-    for (leafNum = 0; leafNum < 3; leafNum++) {
+    for (int leafNum = 0; leafNum < 3; ++leafNum) {
         if (leafNum < 3 && verbose_mode >= VB_MAX)
             cout << "Add " << aln->getSeqName(taxon_order[leafNum]) << " to the tree" << endl;
         Node *new_taxon = newNode(taxon_order[leafNum], aln->getSeqName(taxon_order[leafNum]).c_str());
@@ -954,7 +953,7 @@ void PhyloTree::copyConstraintTree(MTree *tree, IntVector &taxon_order, int *ran
         (*it)->id = aln->getNSeq() + (it - nodes.begin());
 
     // add the remaining taxa
-    for (int i = 0; i < aln->getNSeq(); i++)
+    for (size_t i = 0; i < aln->getNSeq(); ++i)
         if (!pushed[i]) {
             taxon_order.push_back(i);
         }
@@ -1035,7 +1034,7 @@ void PhyloTree::insertNode2Branch(Node* added_node, Node* target_node, Node* tar
 
 int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment, int *rand_stream) {
     aln = alignment;
-    int nseq = aln->getNSeq();
+    size_t nseq = aln->getNSeq();
     if (nseq < 3)
         outError(ERR_FEW_TAXA);
 

@@ -188,7 +188,7 @@ void reorient_edges(Tree *t);
 void reorient_edges_recur(Node *n, Node *prev, Edge *e);
 
 /* utility functions to deal with NH files */
-unsigned int tell_size_of_one_tree(char* filename);
+unsigned int tell_size_of_one_tree(const char* filename);
 int copy_nh_stream_into_str(FILE* nh_stream, char* big_string);
 
 /* actually parsing a tree */

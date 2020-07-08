@@ -55,16 +55,16 @@ void RateMeyerHaeseler::readRateFile(char *rate_file) {
 		in.exceptions(ios::failbit | ios::badbit);
 		in.open(rate_file);
 		char line[256];
-		int site, i;
+		int site;
 		double rate;
-		int nsites = phylo_tree->aln->getNSite();
+		size_t nsites = phylo_tree->aln->getNSite();
 		resize(phylo_tree->aln->getNPattern(), -1.0);
 		int saturated_sites = 0, saturated_ptn = 0;
 
 		in.getline(line, sizeof(line));
 		//if (strncmp(line, "Site", 4) != 0) throw "Wrong header line";
 
-		for (i = 0; i < nsites; i++) {
+		for (size_t i = 0; i < nsites; ++i) {
 			in.getline(line, sizeof(line));
 			stringstream ss(line);
 			string tmp;
@@ -89,7 +89,7 @@ void RateMeyerHaeseler::readRateFile(char *rate_file) {
 		in.exceptions(ios::failbit | ios::badbit);
 		in.close();
 
-		for (i = 0; i < size(); i++)
+		for (size_t i = 0; i < size(); ++i)
 			if (at(i) < 0.0) throw "Some site has no rate information";
 
 		if (saturated_sites) {
@@ -154,7 +154,7 @@ void RateMeyerHaeseler::setRates(DoubleVector &rates) {
 
 void RateMeyerHaeseler::initializeRates() {
 
-	int i, j, rate_id = 0, state1, state2;
+	int rate_id = 0;
 	int nseq = phylo_tree->leafNum;
 	int nstate = phylo_tree->getModel()->num_states;
 
@@ -165,13 +165,22 @@ void RateMeyerHaeseler::initializeRates() {
 
 	for (Alignment::iterator pat = phylo_tree->aln->begin(); pat != phylo_tree->aln->end(); pat++, rate_id++) {
 		int diff = 0, total = 0;
-		for (i = 0; i < nseq-1; i++) if ((state1 = pat->at(i)) < nstate)
-			for (j = i+1; j < nseq; j++) if ((state2 = pat->at(j)) < nstate) {
-				//total += dist_mat[state1 * nstate + state2];
-				//if (state1 != state2) diff += dist_mat[state1 * nstate + state2];
-				total++;
-				if (state1 != state2) diff++;
-		}
+        for (size_t i = 0; i+1 < nseq; ++i) {
+            int state1 = pat->at(i);
+            if (state1 < nstate) {
+                for (size_t j = i+1; j < nseq; ++j) {
+                    int state2 = pat->at(j);
+                    if (state2 < nstate) {
+                        //total += dist_mat[state1 * nstate + state2];
+                        //if (state1 != state2) diff += dist_mat[state1 * nstate + state2];
+                        total++;
+                        if (state1 != state2) {
+                            diff++;
+                        }
+                    }
+                }
+            }
+        }
 		if (diff == 0) diff = 1;
 		if (total == 0) total = 1;
 		double obs_diff = double(diff) / total;
@@ -303,7 +312,7 @@ double RateMeyerHaeseler::optimizeRate(int pattern) {
 
 void RateMeyerHaeseler::optimizeRates() {
 	if (!dist_mat) {
-		dist_mat = new double[phylo_tree->leafNum * phylo_tree->leafNum];
+		dist_mat = new double[(size_t)phylo_tree->leafNum * (size_t)phylo_tree->leafNum];
 	}
 	// compute the distance based on the path lengths between taxa of the tree
 	phylo_tree->calcDist(dist_mat);
@@ -406,42 +415,54 @@ double RateMeyerHaeseler::computeFunction(double value) {
 	}
 	int nseq = phylo_tree->leafNum;
 	int nstate = phylo_tree->getModel()->num_states;
-	int i, j, state1, state2;
 	double lh = 0.0;
 	ModelSubst *model = phylo_tree->getModel();
 	Pattern *pat = & phylo_tree->aln->at(optimizing_pattern);
-	
-	for (i = 0; i < nseq-1; i++) if ((state1 = pat->at(i)) < nstate) 
-		for (j = i+1; j < nseq; j++) if ((state2 = pat->at(j)) < nstate) 
-			lh -= log(model->computeTrans(value * dist_mat[i*nseq + j], state1, state2));
+    
+    for (size_t i = 0; i < nseq-1; ++i) {
+        int state1 = pat->at(i);
+        if (state1 < nstate) {
+            for (size_t j = i+1; j < nseq; ++j) {
+                int state2 = pat->at(j);
+                if (state2 < nstate) {
+                    lh -= log(model->computeTrans(value * dist_mat[i*nseq + j], state1, state2));
+                }
+            }
+        }
+    }
 	return lh;
 }
 
 void RateMeyerHaeseler::computeFuncDerv(double value, double &df, double &ddf) {
 	int nseq = phylo_tree->leafNum;
 	int nstate = phylo_tree->getModel()->num_states;
-	int i, j, state1, state2;
-//	double lh = 0.0;
+    //	double lh = 0.0;
 	double trans, derv1, derv2;
 	ModelSubst *model = phylo_tree->getModel();
 	Pattern *pat = & phylo_tree->aln->at(optimizing_pattern);
 	df = ddf = 0.0;
-	for (i = 0; i < nseq-1; i++) if ((state1 = pat->at(i)) < nstate) 
-		for (j = i+1; j < nseq; j++) if ((state2 = pat->at(j)) < nstate) {
-			double dist = dist_mat[i*nseq + j];
-			trans = model->computeTrans(value * dist, state1, state2, derv1, derv2);
-//			lh -= log(trans);
-			double t1 = derv1 / trans;
-			double t2 = derv2 / trans;
-			df -= t1 * dist;
-			ddf -= dist * dist * (t2 - t1*t1);
-		}
-//	return lh;
+    for (size_t i = 0; i + 1 < nseq; ++i) {
+        int state1 = pat->at(i);
+        if (state1 < nstate) {
+            for (size_t j = i+1; j < nseq; ++j) {
+                int state2 = pat->at(j);
+                if (state2 < nstate) {
+                    double dist = dist_mat[i*nseq + j];
+                    trans = model->computeTrans(value * dist, state1, state2, derv1, derv2);
+                    //			lh -= log(trans);
+                    double t1 = derv1 / trans;
+                    double t2 = derv2 / trans;
+                    df -= t1 * dist;
+                    ddf -= dist * dist * (t2 - t1*t1);
+                }
+            }
+        }
+    }
+    //	return lh;
 }
 
 
 void RateMeyerHaeseler::runIterativeProc(Params &params, IQTree &tree) {
-	int i;
 	if (verbose_mode >= VB_MED) {
 		ofstream out("x");
 		out.close();
@@ -452,13 +473,14 @@ void RateMeyerHaeseler::runIterativeProc(Params &params, IQTree &tree) {
 		IntVector pattern_cat;
 		backup_rate->computePatternRates(*this, pattern_cat);
 		double sum = 0.0;
-		for (i = 0; i < size(); i++)
+        for (size_t i = 0; i < size(); i++) {
 			sum += at(i) * phylo_tree->aln->at(i).frequency;
+        }
 		sum /=  phylo_tree->aln->getNSite();
 		if (fabs(sum - 1.0) > 0.0001) {
 			if (verbose_mode >= VB_MED)
 				cout << "Normalizing Gamma rates (" << sum << ")" << endl;
-			for (i = 0; i < size(); i++)
+			for (size_t i = 0; i < size(); ++i)
 				at(i) /= sum;
 		}
 	}
@@ -476,6 +498,7 @@ void RateMeyerHaeseler::runIterativeProc(Params &params, IQTree &tree) {
 	dist_file += ".tdist";
 	tree.getModelFactory()->stopStoringTransMatrix();
 
+    int i=2;
 	for (i = 2; i < 100; i++) {
 		//DoubleVector prev_rates;
 		//getRates(prev_rates);

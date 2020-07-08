@@ -214,23 +214,24 @@ double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
 {
     PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
     // BQM 22-05-2015: change to optimize individual rates
-    int i;
     double score = 0.0;
-    double nsites = tree->getAlnNSite();
+    size_t nsites = tree->getAlnNSite();
     
     vector<DoubleVector> brlen;
     brlen.resize(tree->branchNum);
     tree->getBranchLengths(brlen);
     double max_brlen = 0.0;
-    for (i = 0; i < brlen.size(); i++)
-        for (int j = 0; j < brlen[i].size(); j++)
-            if (brlen[i][j] > max_brlen)
+    for (size_t i = 0; i < brlen.size(); ++i) {
+        for (size_t j = 0; j < brlen[i].size(); ++j) {
+            if (brlen[i][j] > max_brlen) {
                 max_brlen = brlen[i][j];
-    
+            }
+        }
+    }
     if (tree->part_order.empty()) tree->computePartitionOrder();
     
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: score) private(i) schedule(dynamic) if(tree->num_threads > 1)
+#pragma omp parallel for reduction(+: score) schedule(dynamic) if(tree->num_threads > 1)
 #endif
     for (int j = 0; j < tree->size(); j++) {
         int i = tree->part_order[j];
@@ -246,7 +247,7 @@ double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
     // now normalize the rates
     double sum = 0.0;
     size_t nsite = 0;
-    for (i = 0; i < tree->size(); i++) {
+    for (size_t i = 0; i < tree->size(); ++i) {
         sum += tree->part_info[i].part_rate * tree->at(i)->aln->getNSite();
         if (tree->at(i)->aln->seq_type == SEQ_CODON && tree->rescale_codon_brlen)
             nsite += 3*tree->at(i)->aln->getNSite();
@@ -262,7 +263,7 @@ double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
     }
     tree->scaleLength(sum);
     sum = 1.0/sum;
-    for (i = 0; i < tree->size(); i++)
+    for (size_t i = 0; i < tree->size(); ++i)
         tree->part_info[i].part_rate *= sum;
     return score;
 }

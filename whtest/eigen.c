@@ -64,9 +64,9 @@ int cmatout (FILE * fout, complex x[], int n, int m);
 int cmatinv( complex x[], int n, int m, double space[]);
    
 int abyx (double a, double x[], int n)
-{ int i; for (i=0; i<n; x[i]*=a,i++) ;  return(0); }
+{ for (int i=0; i<n; x[i]*=a,i++) {}  return(0); }
 int xtoy (double x[], double y[], int n)
-{ int i; for (i=0; i<n; y[i]=x[i],i++) ;  return(0); }
+{ for (int i=0; i<n; y[i]=x[i],i++) {}  return(0); }
 
 void matAbyBisC (double A[], double B[], int n, double C[])
 { 

@@ -96,7 +96,7 @@ void SuperAlignmentUnlinked::buildPattern() {
     /*
     VerboseMode save_mode = verbose_mode;
     verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
-    int nseq = getNSeq();
+    size_t nseq = getNSeq();
     int start_seq = 0;
     resize(npart, Pattern(nseq));
     for (part = 0; part < npart; part++) {
