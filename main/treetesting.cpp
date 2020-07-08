@@ -21,7 +21,6 @@
 
 void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
                  bool append, const char *linename) {
-    int i;
     double *pattern_lh;
     if (!ptn_lh) {
         pattern_lh = new double[tree->getAlnNPattern()];
@@ -46,7 +45,7 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
             out.width(10);
             out << left << linename;
         }
-        for (i = 0; i < tree->getAlnNSite(); i++)
+        for (size_t i = 0; i < tree->getAlnNSite(); i++)
             out << " " << pattern_lh[pattern_index[i]];
         out << endl;
         out.close();
@@ -337,8 +336,8 @@ void printSiteProbCategory(const char*filename, PhyloTree *tree, SiteLoglType ws
             for (PhyloSuperTree::iterator it = super_tree->begin(); it != super_tree->end(); it++) {
                 size_t part_ncat = (*it)->getNumLhCat(wsl);
                 (*it)->aln->getSitePatternIndex(pattern_index);
-                size_t site, nsite = (*it)->aln->getNSite();
-                for (site = 0; site < nsite; site++) {
+                size_t nsite = (*it)->aln->getNSite();
+                for (size_t site = 0; site < nsite; ++site) {
                     out << (it-super_tree->begin())+1 << "\t" << site+1;
                     double *prob_cat = ptn_prob_cat + (offset+pattern_index[site]*part_ncat);
                     for (cat = 0; cat < part_ncat; cat++)
@@ -349,8 +348,8 @@ void printSiteProbCategory(const char*filename, PhyloTree *tree, SiteLoglType ws
             }
         } else {
             tree->aln->getSitePatternIndex(pattern_index);
-            int nsite = tree->getAlnNSite();
-            for (int site = 0; site < nsite; site++) {
+            size_t nsite = tree->getAlnNSite();
+            for (size_t site = 0; site < nsite; ++site) {
                 out << site+1;
                 double *prob_cat = ptn_prob_cat + pattern_index[site]*ncat;
                 for (cat = 0; cat < ncat; cat++) {
@@ -369,8 +368,8 @@ void printSiteProbCategory(const char*filename, PhyloTree *tree, SiteLoglType ws
 
 
 void printSiteStateFreq(const char*filename, PhyloTree *tree, double *state_freqs) {
-    
-    int i, j, nsites = tree->getAlnNSite(), nstates = tree->aln->num_states;
+    size_t nsites = tree->getAlnNSite();
+    size_t nstates = tree->aln->num_states;
     double *ptn_state_freq;
     if (state_freqs) {
         ptn_state_freq = state_freqs;
@@ -385,11 +384,11 @@ void printSiteStateFreq(const char*filename, PhyloTree *tree, double *state_freq
         out.open(filename);
         IntVector pattern_index;
         tree->aln->getSitePatternIndex(pattern_index);
-        for (i = 0; i < nsites; i++) {
+        for (size_t i = 0; i < nsites; ++i) {
             out.width(6);
             out << left << i+1 << " ";
             double *state_freq = &ptn_state_freq[pattern_index[i]*nstates];
-            for (j = 0; j < nstates; j++) {
+            for (size_t j = 0; j < nstates; ++j) {
                 out.width(15);
                 out << state_freq[j] << " ";
             }
@@ -407,18 +406,19 @@ void printSiteStateFreq(const char*filename, PhyloTree *tree, double *state_freq
 void printSiteStateFreq(const char* filename, Alignment *aln) {
     if (aln->site_state_freq.empty())
         return;
-    int i, j, nsites = aln->getNSite(), nstates = aln->num_states;
+    size_t nsites  = aln->getNSite();
+    int    nstates = aln->num_states;
     try {
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
         out.open(filename);
         IntVector pattern_index;
         aln->getSitePatternIndex(pattern_index);
-        for (i = 0; i < nsites; i++) {
+        for (size_t i = 0; i < nsites; ++i) {
             out.width(6);
             out << left << i+1 << " ";
             double *state_freq = aln->site_state_freq[pattern_index[i]];
-            for (j = 0; j < nstates; j++) {
+            for (size_t j = 0; j < nstates; ++j) {
                 out.width(15);
                 out << state_freq[j] << " ";
             }
@@ -805,7 +805,7 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
 #ifdef _OPENMP
 #pragma omp for schedule(dynamic)
 #endif
-    for (k = 0; k < nscales; k++) {
+    for (int k = 0; k < nscales; ++k) {
         string str = "SCALE=" + convertDoubleToString(r[k]);
         for (boot = 0; boot < nboot; boot++) {
             if (r[k] == 1.0 && boot == 0)
@@ -1073,7 +1073,6 @@ void evaluateTrees(string treeset_file, Params &params, IQTree *tree, vector<Tre
     double time_start = getRealTime();
     
     int *boot_samples = NULL;
-    size_t boot;
     //double *saved_tree_lhs = NULL;
     double *tree_lhs = NULL; // RELL score matrix of size #trees x #replicates
     double *pattern_lh = NULL;
@@ -1097,7 +1096,7 @@ void evaluateTrees(string treeset_file, Params &params, IQTree *tree, vector<Tre
         if (!(boot_samples = new int [params.topotest_replicates*nptn]))
             outError(ERR_NO_MEMORY);
 #ifdef _OPENMP
-#pragma omp parallel private(boot) if(nptn > 10000)
+#pragma omp parallel if(nptn > 10000)
         {
         int *rstream;
         init_random(params.ran_seed + omp_get_thread_num(), false, &rstream);
@@ -1105,7 +1104,7 @@ void evaluateTrees(string treeset_file, Params &params, IQTree *tree, vector<Tre
 #else
         int *rstream = randstream;
 #endif
-        for (boot = 0; boot < params.topotest_replicates; boot++)
+        for (size_t boot = 0; boot < params.topotest_replicates; boot++)
             if (boot == 0)
                 tree->aln->getPatternFreq(boot_samples + (boot*nptn));
             else
@@ -1211,7 +1210,7 @@ void evaluateTrees(string treeset_file, Params &params, IQTree *tree, vector<Tre
         // now compute RELL scores
         orig_tree_lh[tid] = tree->getCurScore();
         double *tree_lhs_offset = tree_lhs + (tid*params.topotest_replicates);
-        for (boot = 0; boot < params.topotest_replicates; boot++) {
+        for (size_t boot = 0; boot < params.topotest_replicates; boot++) {
             double lh = 0.0;
             int *this_boot_sample = boot_samples + (boot*nptn);
             for (size_t ptn = 0; ptn < nptn; ptn++)
@@ -1235,11 +1234,11 @@ void evaluateTrees(string treeset_file, Params &params, IQTree *tree, vector<Tre
         int *maxcount = new int[params.topotest_replicates];
         memset(maxtid, 0, params.topotest_replicates*sizeof(int));
         memcpy(maxL, tree_lhs, params.topotest_replicates*sizeof(double));
-        for (boot = 0; boot < params.topotest_replicates; boot++)
+        for (size_t boot = 0; boot < params.topotest_replicates; ++boot)
             maxcount[boot] = 1;
         for (tid = 1; tid < ntrees; tid++) {
             double *tree_lhs_offset = tree_lhs + (tid * params.topotest_replicates);
-            for (boot = 0; boot < params.topotest_replicates; boot++)
+            for (size_t boot = 0; boot < params.topotest_replicates; ++boot)
                 if (tree_lhs_offset[boot] > maxL[boot] + params.ufboot_epsilon) {
                     maxL[boot] = tree_lhs_offset[boot];
                     maxtid[boot] = tid;
@@ -1251,7 +1250,7 @@ void evaluateTrees(string treeset_file, Params &params, IQTree *tree, vector<Tre
                     maxcount[boot]++;
                 }
         }
-        for (boot = 0; boot < params.topotest_replicates; boot++)
+        for ( size_t boot = 0; boot < params.topotest_replicates; ++boot)
             tree_probs[maxtid[boot]] += 1.0;
         for (tid = 0; tid < ntrees; tid++) {
             tree_probs[tid] /= params.topotest_replicates;
@@ -1280,16 +1279,16 @@ void evaluateTrees(string treeset_file, Params &params, IQTree *tree, vector<Tre
         /* now do the SH test */
         cout << "Performing KH and SH test..." << endl;
         // SH centering step
-        for (boot = 0; boot < params.topotest_replicates; boot++)
+        for (size_t boot = 0; boot < params.topotest_replicates; ++boot)
             max_lh[boot] = -DBL_MAX;
         double *avg_lh = new double[ntrees];
         for (tid = 0; tid < ntrees; tid++) {
             avg_lh[tid] = 0.0;
             double *tree_lhs_offset = tree_lhs + (tid * params.topotest_replicates);
-            for (boot = 0; boot < params.topotest_replicates; boot++)
+            for (size_t boot = 0; boot < params.topotest_replicates; ++boot)
                 avg_lh[tid] += tree_lhs_offset[boot];
             avg_lh[tid] /= params.topotest_replicates;
-            for (boot = 0; boot < params.topotest_replicates; boot++) {
+            for (size_t boot = 0; boot < params.topotest_replicates; ++boot) {
                 max_lh[boot] = max(max_lh[boot], tree_lhs_offset[boot] - avg_lh[tid]);
             }
         }
@@ -1321,7 +1320,7 @@ void evaluateTrees(string treeset_file, Params &params, IQTree *tree, vector<Tre
             size_t max_id = (tid != orig_max_id) ? orig_max_id : orig_2ndmax_id;
             double orig_diff = orig_tree_lh[max_id] - orig_tree_lh[tid] - avg_lh[tid];
             double *max_kh = tree_lhs + (max_id * params.topotest_replicates);
-            for (boot = 0; boot < params.topotest_replicates; boot++) {
+            for (size_t boot = 0; boot < params.topotest_replicates; ++boot) {
                 if (max_lh[boot] - tree_lhs_offset[boot] > orig_diff)
                     info[tid].sh_pvalue += 1.0;
                 //double max_kh_here = max(max_kh[boot]-avg_lh[max_id], tree_lhs_offset[boot]-avg_lh[tid]);
@@ -1363,7 +1362,7 @@ void evaluateTrees(string treeset_file, Params &params, IQTree *tree, vector<Tre
                             max_id = tid2;
                         }
                     }
-                for (boot = 0; boot < params.topotest_replicates; boot++) {
+                for (size_t boot = 0; boot < params.topotest_replicates; ++boot) {
                     double wmax_diff = -DBL_MAX;
                     for (tid2 = 0; tid2 < ntrees; tid2++)
                         if (tid2 != tid)
@@ -1387,18 +1386,18 @@ void evaluateTrees(string treeset_file, Params &params, IQTree *tree, vector<Tre
         /* now to ELW - Expected Likelihood Weight method */
         cout << "Performing ELW test..." << endl;
         
-        for (boot = 0; boot < params.topotest_replicates; boot++)
+        for (size_t boot = 0; boot < params.topotest_replicates; ++boot)
             max_lh[boot] = -DBL_MAX;
         for (tid = 0; tid < ntrees; tid++) {
             double *tree_lhs_offset = tree_lhs + (tid * params.topotest_replicates);
-            for (boot = 0; boot < params.topotest_replicates; boot++)
+            for (size_t boot = 0; boot < params.topotest_replicates; ++boot)
                 max_lh[boot] = max(max_lh[boot], tree_lhs_offset[boot]);
         }
         double *sumL = new double[params.topotest_replicates];
         memset(sumL, 0, sizeof(double) * params.topotest_replicates);
         for (tid = 0; tid < ntrees; tid++) {
             double *tree_lhs_offset = tree_lhs + (tid * params.topotest_replicates);
-            for (boot = 0; boot < params.topotest_replicates; boot++) {
+            for (size_t boot = 0; boot < params.topotest_replicates; ++boot) {
                 tree_lhs_offset[boot] = exp(tree_lhs_offset[boot] - max_lh[boot]);
                 sumL[boot] += tree_lhs_offset[boot];
             }
@@ -1406,7 +1405,7 @@ void evaluateTrees(string treeset_file, Params &params, IQTree *tree, vector<Tre
         for (tid = 0; tid < ntrees; tid++) {
             double *tree_lhs_offset = tree_lhs + (tid * params.topotest_replicates);
             tree_probs[tid] = 0.0;
-            for (boot = 0; boot < params.topotest_replicates; boot++) {
+            for (size_t boot = 0; boot < params.topotest_replicates; ++boot) {
                 tree_probs[tid] += (tree_lhs_offset[boot] / sumL[boot]);
             }
             tree_probs[tid] /= params.topotest_replicates;

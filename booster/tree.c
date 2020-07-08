@@ -1059,7 +1059,7 @@ void unrooted_to_rooted(Tree* t) {
 
 /* utility functions to deal with NH files */
 
-unsigned int tell_size_of_one_tree(char* filename) {
+unsigned int tell_size_of_one_tree(const char* filename) {
 	/* the only purpose of this is to know about the size of a treefile (NH format) in order to save memspace in allocating the string later on */
 	/* wew open and close this file independently of any other fopen */
 	unsigned int mysize = 0;

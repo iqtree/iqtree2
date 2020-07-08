@@ -166,7 +166,6 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstre
     double sN = 0.0;
     size_t sum_sites = 0;
     double sCF_N = 0, sDF1_N = 0, sDF2_N = 0;
-    int i;
     vector<int64_t> support;
     support.resize(3, 0);
     // reserve size for partition-wise concordant/discordant sites
@@ -176,26 +175,25 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstre
         // check for gene trees not decisive for this branch
         StrVector taxname;
         getTaxaName(taxname);
-        int part = 0;
+        size_t part = 0;
         for (auto part_aln = saln->partitions.begin(); part_aln != saln->partitions.end(); part_aln++, part++) {
             // get the taxa names of the partition tree
             StringIntMap name_map;
-            for (i = 0; i < (*part_aln)->getNSeq(); i++)
+            for (size_t i = 0; i < (*part_aln)->getNSeq(); i++)
                 name_map[(*part_aln)->getSeqName(i)] = i;
             
             // check that at least one taxon from each subtree is present in partition tree
-            vector<IntVector>::iterator it;
             int left_count = 0, right_count = 0;
-            for (it = left_taxa.begin(); it != left_taxa.end(); it++) {
-                for (auto it2 = it->begin(); it2 != it->end(); it2++) {
+            for (auto it = left_taxa.begin(); it != left_taxa.end(); ++it) {
+                for (auto it2 = it->begin(); it2 != it->end(); ++it2) {
                     if (name_map.find(taxname[*it2]) != name_map.end()) {
                         left_count++;
                         break;
                     }
                 }
             }
-            for (it = right_taxa.begin(); it != right_taxa.end(); it++) {
-                for (auto it2 = it->begin(); it2 != it->end(); it2++) {
+            for (auto it = right_taxa.begin(); it != right_taxa.end(); ++it) {
+                for (auto it2 = it->begin(); it2 != it->end(); ++it2) {
                     if (name_map.find(taxname[*it2]) != name_map.end()) {
                         right_count++;
                         break;
@@ -210,7 +208,7 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstre
         }
     }
     Neighbor *nei = branch.second->findNeighbor(branch.first);
-    for (i = 0; i < nquartets; i++) {
+    for (size_t i = 0; i < nquartets; ++i) {
         // get a random quartet
         IntVector quartet;
         quartet.resize(4);
@@ -278,7 +276,7 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstre
     nei->putAttr("sCF_N/sDF1_N/sDF2_N", s_factors_N.str());
     // insert key-value for partition-wise con/discordant sites
     string keys[] = {"sC", "sD1", "sD2"};
-    for (i = 3; i < support.size(); i++) {
+    for (size_t i = 3; i < support.size(); ++i) {
         if (support[i] >= 0)
             nei->putAttr(keys[i%3] + convertIntToString(i/3), (double)support[i]/nquartets);
         else

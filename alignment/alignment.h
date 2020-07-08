@@ -335,21 +335,21 @@ public:
     /**
             @return number of sequences
      */
-    inline int getNSeq() const {
+    inline size_t getNSeq() const {
         return seq_names.size();
     }
 
     /**
             @return number of sites (alignment columns)
      */
-    inline int getNSite() {
+    inline size_t getNSite() {
         return site_pattern.size();
     }
 
     /**
              @return number of patterns
      */
-    inline int getNPattern() {
+    inline size_t getNPattern() {
         return size();
     }
 
@@ -430,6 +430,14 @@ public:
     virtual Alignment *removeIdenticalSeq(string not_remove, bool keep_two, StrVector &removed_seqs, StrVector &target_seqs);
 
     /**
+     * calculating hashes for sequences
+     * @param v state at a given site, in the sequence being hashed
+     * @param hash running hash value for the sequence (modified)
+     */
+    void adjustHash(StateType v, size_t& hash) const;
+    void adjustHash(bool      v, size_t& hash) const;
+    
+    /**
             Quit if some sequences contain only gaps or missing data
      */
 	virtual void checkGappySeq(bool force_error = true);
@@ -443,7 +451,7 @@ public:
             @return TRUE if seq_id contains only gaps or missing characters
             @param seq_id sequence ID
      */
-    bool isGapOnlySeq(int seq_id);
+    bool isGapOnlySeq(size_t seq_id);
 
     virtual bool isSuperAlignment() {
         return false;

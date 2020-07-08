@@ -64,7 +64,7 @@
 /* pointers to reduction buffers for storing and gathering the first and second derivative 
    of the likelihood in Pthreads and MPI */
 
-#if IS_PARALLEL
+#ifdef IS_PARALLEL
 void branchLength_parallelReduce(pllInstance *tr, double *dlnLdlz,  double *d2lnLdlz2, int numBranches ) ;
 //extern double *globalResult;
 #endif

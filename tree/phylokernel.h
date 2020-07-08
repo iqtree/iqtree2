@@ -313,7 +313,7 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
                     sum_scale += LOG_SCALING_THRESHOLD* 4 * ptn_freq[ptn];
                     //sum_scale += log(lh_max) * ptn_freq[ptn];
                     dad_branch->scale_num[ptn] += 4;
-                    int nsite = aln->getNSite();
+                    size_t nsite = aln->getNSite();
                     for (i = 0, x = 0; i < nsite && x < ptn_freq[ptn]; i++)
                         if (aln->getPatternID(i) == ptn) {
                             outWarning((string)"Numerical underflow for site " + convertIntToString(i+1));
@@ -825,7 +825,7 @@ void PhyloTree::computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloN
         prob_const = 1.0 - prob_const;
         double df_frac = df_const / prob_const;
         double ddf_frac = ddf_const / prob_const;
-        int nsites = aln->getNSite();
+        size_t nsites = aln->getNSite();
         df += nsites * df_frac;
         ddf += nsites *(ddf_frac + df_frac*df_frac);
     }
@@ -1766,7 +1766,6 @@ int PhyloTree::computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNo
         computePartialParsimonyFastSIMD<VectorClass>(dad_branch, dad);
     if ((node_branch->partial_lh_computed & 2) == 0)
         computePartialParsimonyFastSIMD<VectorClass>(node_branch, node);
-    int site;
     int nstates = aln->getMaxNumStates();
 
 //    VectorClass score = 0;
@@ -1785,9 +1784,9 @@ int PhyloTree::computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNo
     switch (nstates) {
     case 4:
         #ifdef _OPENMP
-        #pragma omp parallel for private (site) reduction(+: score) if(nsites>num_threads*10)
+        #pragma omp parallel for reduction(+: score) if(nsites>num_threads*10)
         #endif
-        for (site = 0; site < nsites; site++) {
+        for (int site = 0; site < nsites; site++) {
             size_t offset = entry_size*site;
             VectorClass *x = (VectorClass*)(dad_branch->partial_pars + offset);
             VectorClass *y = (VectorClass*)(node_branch->partial_pars + offset);
@@ -1804,9 +1803,9 @@ int PhyloTree::computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNo
         break;
     default:
         #ifdef _OPENMP
-        #pragma omp parallel for private (site) reduction(+: score) if(nsites>num_threads*10)
+        #pragma omp parallel for reduction(+: score) if(nsites>num_threads*10)
         #endif
-        for (site = 0; site < nsites; site++) {
+        for (size_t site = 0; site < nsites; ++site) {
             size_t offset = entry_size*site;
             VectorClass *x = (VectorClass*)(dad_branch->partial_pars + offset);
             VectorClass *y = (VectorClass*)(node_branch->partial_pars + offset);

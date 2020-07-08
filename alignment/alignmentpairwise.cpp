@@ -382,7 +382,7 @@ double AlignmentPairwise::optimizeDist(double initial_dist) {
 	return optimizeDist(initial_dist, d2l);
 }
 
-double AlignmentPairwise::computeDist
+double AlignmentPairwise::recomputeDist
     ( int seq1, int seq2, double initial_dist, double &d2l ) {
     //Only called when -experimental has been passed
     if (initial_dist == 0.0) {

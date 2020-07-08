@@ -354,15 +354,15 @@ Node* PhyloSuperTree::newNode(int node_id, int node_name) {
     return (Node*) (new SuperNode(node_id, node_name));
 }
 
-int PhyloSuperTree::getAlnNPattern() {
-	int num = 0;
+size_t PhyloSuperTree::getAlnNPattern() {
+	size_t num = 0;
 	for (iterator it = begin(); it != end(); it++)
 		num += (*it)->getAlnNPattern();
 	return num;
 }
 
-int PhyloSuperTree::getAlnNSite() {
-	int num = 0;
+size_t PhyloSuperTree::getAlnNSite() {
+	size_t num = 0;
 	for (iterator it = begin(); it != end(); it++)
 		num += (*it)->getAlnNSite();
 	return num;
@@ -1378,14 +1378,15 @@ void PhyloSuperTree::computeMarginalAncestralState(PhyloNeighbor *dad_branch, Ph
 void PhyloSuperTree::writeMarginalAncestralState(ostream &out, PhyloNode *node,
     double *ptn_ancestral_prob, int *ptn_ancestral_seq) {
     int part = 1;
-    for (auto it = begin(); it != end(); it++, part++) {
-        size_t site, nsites = (*it)->getAlnNSite(), nstates = (*it)->model->num_states;
-        for (site = 0; site < nsites; site++) {
+    for (auto it = begin(); it != end(); ++it, ++part) {
+        size_t nsites  = (*it)->getAlnNSite();
+        int    nstates = (*it)->model->num_states;
+        for (size_t site = 0; site < nsites; ++site) {
             int ptn = (*it)->aln->getPatternID(site);
             out << node->name << "\t" << part << "\t" << site+1 << "\t";
             out << (*it)->aln->convertStateBackStr(ptn_ancestral_seq[ptn]);
             double *state_prob = ptn_ancestral_prob + ptn*nstates;
-            for (size_t j = 0; j < nstates; j++) {
+            for (int j = 0; j < nstates; ++j) {
                 out << "\t" << state_prob[j];
             }
             out << endl;
@@ -1410,7 +1411,7 @@ void PhyloSuperTree::endMarginalAncestralState(bool orig_kernel_nonrev,
     aligned_free(ptn_ancestral_seq);
     aligned_free(ptn_ancestral_prob);
 
-    for (auto it = rbegin(); it != rend(); it++) {
+    for (auto it = rbegin(); it != rend(); ++it) {
         aligned_free((*it)->_pattern_lh_cat_state);
         (*it)->_pattern_lh_cat_state = NULL;
     }
@@ -1418,14 +1419,14 @@ void PhyloSuperTree::endMarginalAncestralState(bool orig_kernel_nonrev,
 
 void PhyloSuperTree::writeSiteLh(ostream &out, SiteLoglType wsl, int partid) {
     int part = 1;
-    for (auto it = begin(); it != end(); it++, part++)
+    for (auto it = begin(); it != end(); ++it, ++part)
         (*it)->writeSiteLh(out, wsl, part);
 }
 
 void PhyloSuperTree::writeSiteRates(ostream &out, bool bayes, int partid) {
 
     int part = 1;
-    for (iterator it = begin(); it != end(); it++, part++) {
+    for (iterator it = begin(); it != end(); ++it, ++part) {
         (*it)->writeSiteRates(out, bayes, part);
     }
 }

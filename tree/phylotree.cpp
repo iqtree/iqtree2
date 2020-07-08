@@ -376,8 +376,8 @@ void PhyloTree::copyPhyloTreeMixlen(PhyloTree *tree, int mix) {
 void PhyloTree::setAlignment(Alignment *alignment) {
     aln = alignment;
     bool err = false;
-    int nseq = aln->getNSeq();
-    for (int seq = 0; seq < nseq; seq++) {
+    size_t nseq = aln->getNSeq();
+    for (size_t seq = 0; seq < nseq; seq++) {
         string seq_name = aln->getSeqName(seq);
         Node *node = findLeafName(seq_name);
         if (!node) {
@@ -1403,30 +1403,31 @@ void PhyloTree::computePatternStateFreq(double *ptn_state_freq) {
     ASSERT(getModel()->isMixture());
     computePatternLhCat(WSL_MIXTURE);
     double *lh_cat = _pattern_lh_cat;
-    size_t ptn, nptn = getAlnNPattern(), m, nmixture = getModel()->getNMixtures();
+    size_t nptn = getAlnNPattern();
+    size_t nmixture = getModel()->getNMixtures();
     double *ptn_freq = ptn_state_freq;
-    size_t state, nstates = aln->num_states;
+    size_t nstates = aln->num_states;
 //    ModelMixture *models = (ModelMixture*)model;
     
     if (params->print_site_state_freq == WSF_POSTERIOR_MEAN) {
         cout << "Computing posterior mean site frequencies...." << endl;
         // loop over all site-patterns
-        for (ptn = 0; ptn < nptn; ptn++) {
+        for (size_t ptn = 0; ptn < nptn; ++ptn) {
         
             // first compute posterior for each mixture component
             double sum_lh = 0.0;
-            for (m = 0; m < nmixture; m++) {
+            for (size_t m = 0; m < nmixture; ++m) {
                 sum_lh += lh_cat[m];
             }
             sum_lh = 1.0/sum_lh;
-            for (m = 0; m < nmixture; m++) {
+            for (size_t m = 0; m < nmixture; ++m) {
                 lh_cat[m] *= sum_lh;
             }
             
             // now compute state frequencies
-            for (state = 0; state < nstates; state++) {
+            for (size_t state = 0; state < nstates; ++state) {
                 double freq = 0;
-                for (m = 0; m < nmixture; m++)
+                for (size_t m = 0; m < nmixture; ++m)
                     freq += model->getMixtureClass(m)->state_freq[state] * lh_cat[m];
                 ptn_freq[state] = freq;
             }
@@ -1438,11 +1439,10 @@ void PhyloTree::computePatternStateFreq(double *ptn_state_freq) {
     } else if (params->print_site_state_freq == WSF_POSTERIOR_MAX) {
         cout << "Computing posterior max site frequencies...." << endl;
         // loop over all site-patterns
-        for (ptn = 0; ptn < nptn; ptn++) {
-        
+        for (size_t ptn = 0; ptn < nptn; ++ptn) {
             // first compute posterior for each mixture component
             size_t max_comp = 0;
-            for (m = 1; m < nmixture; m++)
+            for (size_t m = 1; m < nmixture; ++m)
                 if (lh_cat[m] > lh_cat[max_comp]) {
                     max_comp = m;
                 }
@@ -1717,9 +1717,8 @@ int PhyloTree::computePatternCategories(IntVector *pattern_ncat) {
 }
 
 double PhyloTree::computeLogLVariance(double *ptn_lh, double tree_lh) {
-    int i;
-    int nptn = getAlnNPattern();
-    int nsite = getAlnNSite();
+    size_t nptn = getAlnNPattern();
+    size_t nsite = getAlnNSite();
     double *pattern_lh = ptn_lh;
     if (!ptn_lh) {
         pattern_lh = new double[nptn];
@@ -1728,12 +1727,12 @@ double PhyloTree::computeLogLVariance(double *ptn_lh, double tree_lh) {
     IntVector pattern_freq;
     aln->getPatternFreq(pattern_freq);
     if (tree_lh == 0.0) {
-        for (i = 0; i < nptn; i++)
+        for (size_t i = 0; i < nptn; ++i)
             tree_lh += pattern_lh[i] * pattern_freq[i];
     }
     double avg_site_lh = tree_lh / nsite;
     double variance = 0.0;
-    for (i = 0; i < nptn; i++) {
+    for (size_t i = 0; i < nptn; ++i) {
         double diff = (pattern_lh[i] - avg_site_lh);
         variance += diff * diff * pattern_freq[i];
     }
@@ -1745,9 +1744,8 @@ double PhyloTree::computeLogLVariance(double *ptn_lh, double tree_lh) {
 }
 
 double PhyloTree::computeLogLDiffVariance(double *pattern_lh_other, double *ptn_lh) {
-    int i;
-    int nptn = getAlnNPattern();
-    int nsite = getAlnNSite();
+    size_t nptn = getAlnNPattern();
+    size_t nsite = getAlnNSite();
     double *pattern_lh = ptn_lh;
     if (!ptn_lh) {
         pattern_lh = new double[nptn];
@@ -1757,11 +1755,11 @@ double PhyloTree::computeLogLDiffVariance(double *pattern_lh_other, double *ptn_
     aln->getPatternFreq(pattern_freq);
 
     double avg_site_lh_diff = 0.0;
-    for (i = 0; i < nptn; i++)
+    for (size_t i = 0; i < nptn; ++i)
         avg_site_lh_diff += (pattern_lh[i] - pattern_lh_other[i]) * pattern_freq[i];
     avg_site_lh_diff /= nsite;
     double variance = 0.0;
-    for (i = 0; i < nptn; i++) {
+    for (size_t i = 0; i < nptn; ++i) {
         double diff = (pattern_lh[i] - pattern_lh_other[i] - avg_site_lh_diff);
         variance += diff * diff * pattern_freq[i];
     }
@@ -2088,7 +2086,7 @@ void PhyloTree::computeAllSubtreeDistForOneNode(PhyloNode* source, PhyloNode* so
         return;
     } else if (source->isLeaf() && dad->isLeaf()) {
         ASSERT(dist_matrix);
-        int nseq = aln->getNSeq();
+        size_t nseq = aln->getNSeq();
         if (params->ls_var_type == OLS) {
             dist = dist_matrix[dad->id * nseq + source->id];
             weight = 1.0;
@@ -2296,7 +2294,7 @@ void PhyloTree::approxAllBranches(PhyloNode *node, PhyloNode *dad) {
  if (dad->isLeaf() && node->isLeaf()) {
  string key = nodePair2String(dad, node);
  assert(dist_matrix);
- int nseq = aln->getNSeq();
+ size_t nseq = aln->getNSeq();
  double dist = dist_matrix[dad->id * nseq + node->id];
  interSubtreeDistances.insert(StringDoubleMap::value_type(key, dist));
  } else if (!dad->isLeaf() && node->isLeaf()) {
@@ -3036,7 +3034,7 @@ double PhyloTree::addTaxonML(Node *added_node, Node* &target_node, Node* &target
 void PhyloTree::growTreeML(Alignment *alignment) {
     cout << "Stepwise addition using ML..." << endl;
     aln = alignment;
-    int size = aln->getNSeq();
+    size_t size = aln->getNSeq();
     if (size < 3)
         outError(ERR_FEW_TAXA);
 
@@ -3181,22 +3179,25 @@ double PhyloTree::computeDist(int seq1, int seq2, double initial_dist) {
 }
 
 double PhyloTree::correctDist(double *dist_mat) {
-    int i, j, k, pos;
-    int n = aln->getNSeq();
-    int nsqr = n * n;
+    size_t n = aln->getNSeq();
+    size_t nsqr = n * n;
     // use Floyd algorithm to find shortest path between all pairs of taxa
-    for (k = 0; k < n; k++)
-        for (i = 0, pos = 0; i < n; i++)
-            for (j = 0; j < n; j++, pos++) {
+    for (size_t k = 0; k < n; ++k) {
+        for (size_t i = 0, pos = 0; i < n; ++i) {
+            for (size_t j = 0; j < n; ++j, ++pos) {
                 double tmp = dist_mat[i * n + k] + dist_mat[k * n + j];
-                if (dist_mat[pos] > tmp)
+                if (dist_mat[pos] > tmp) {
                     dist_mat[pos] = tmp;
+                }
             }
+        }
+    }
     double longest_dist = 0.0;
-    for (i = 0; i < nsqr; i++)
-        if (dist_mat[i] > longest_dist)
+    for (size_t i = 0; i < nsqr; ++i) {
+        if (dist_mat[i] > longest_dist) {
             longest_dist = dist_mat[i];
-
+        }
+    }
     return longest_dist;
 }
 
@@ -3241,12 +3242,12 @@ template <class L, class F> double computeDistanceMatrix
                 double hamming =
                     hammingDistance ( unknown, thisSequence, otherSequence
                                     , seqLen, frequencyVector, unknownFreq );
-                if (0<hamming) {
+                if (0<hamming && unknownFreq < denominator) {
                     distance = hamming / (denominator - unknownFreq);
-                }
-                if (!uncorrected) {
-                    double x      = (1.0 - z * distance);
-                    distance      = (x<=0) ? MAX_GENETIC_DIST : ( -log(x) / z );
+                    if (!uncorrected) {
+                        double x      = (1.0 - z * distance);
+                        distance      = (x<=0) ? MAX_GENETIC_DIST : ( -log(x) / z );
+                    }
                 }
                 distRow[seq2] = distance;
             }
@@ -3316,7 +3317,7 @@ double PhyloTree::computeDist_Experimental(double *dist_mat, double *var_mat) {
     }
     bool uncorrected = params->compute_obs_dist;
         //Use uncorrected (observed) distances
-    int  seqCount = aln->getNSeq();
+    size_t seqCount = aln->getNSeq();
     bool workToDo = false;
     cout.precision(6);
     EX_TRACE("Checking if distances already calculated...");
@@ -3369,9 +3370,11 @@ double PhyloTree::computeDist_Experimental(double *dist_mat, double *var_mat) {
     }
     //Todo: Shouldn't this be totalFrequency, rather than
     //      totalFrequencyOfNonConst sites?
+    double denominator = s.totalFrequencyOfNonConstSites
+        + s.totalFrequency - aln->num_variant_sites;
     EX_TRACE("Maximum possible uncorrected length "
         << ((double)maxDistance / (double)s.totalFrequencyOfNonConstSites)
-        << " Denominator " << s.totalFrequencyOfNonConstSites);
+        << " Denominator " << denominator);
     if ( 256 < s.maxState - s.minState ) {
         EX_TRACE("Falling back to stock distance calculation");
         double longest = computeDist(dist_mat, var_mat);
@@ -3387,17 +3390,16 @@ double PhyloTree::computeDist_Experimental(double *dist_mat, double *var_mat) {
     double longest = computeDistanceMatrix
         ( params->ls_var_type, static_cast<char>(aln->STATE_UNKNOWN)
          , s.sequenceMatrix, s.sequenceCount, s.sequenceLength
-         , s.totalFrequencyOfNonConstSites, frequencies
-         , aln->num_states, uncorrected, dist_mat, var_mat);
+         , denominator, frequencies, aln->num_states
+         , uncorrected, dist_mat, var_mat);
     EX_TRACE("Longest distance was " << longest);
     return longest;
 }
 
 double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
     prepareToComputeDistances();
-    int nseqs = aln->getNSeq();
-    int pos = 0;
-    int num_pairs = nseqs * (nseqs - 1) / 2;
+    size_t nseqs = aln->getNSeq();
+    size_t num_pairs = nseqs * (nseqs - 1) / 2;
     double longest_dist = 0.0;
     cout.precision(6);
     double baseTime = getRealTime();
@@ -3405,7 +3407,7 @@ double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
     int *col_id = new int[num_pairs];
     row_id[0] = 0;
     col_id[0] = 1;
-    for (pos = 1; pos < num_pairs; pos++) {
+    for (size_t pos = 1; pos < num_pairs; ++pos) {
         row_id[pos] = row_id[pos - 1];
         col_id[pos] = col_id[pos - 1] + 1;
         if (col_id[pos] >= nseqs) {
@@ -3416,16 +3418,16 @@ double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
     EX_TRACE("Decided on visit order");
     //compute the upper-triangle of distance matrix
 #ifdef _OPENMP
-#pragma omp parallel for private(pos)
+#pragma omp parallel for
 #endif
-    for (pos = 0; pos < num_pairs; pos++) {
+    for (size_t pos = 0; pos < num_pairs; ++pos) {
         int threadNum = omp_get_thread_num();
         AlignmentPairwise* processor = distanceProcessors[threadNum];
-        int seq1 = row_id[pos];
-        int seq2 = col_id[pos];
-        int sym_pos = seq1 * nseqs + seq2;
+        size_t seq1 = row_id[pos];
+        size_t seq2 = col_id[pos];
+        size_t sym_pos = seq1 * nseqs + seq2;
         double d2l = var_mat[sym_pos]; // moved here for thread-safe (OpenMP)
-        dist_mat[sym_pos] = processor->computeDist(seq1, seq2, dist_mat[sym_pos], d2l);
+        dist_mat[sym_pos] = processor->recomputeDist(seq1, seq2, dist_mat[sym_pos], d2l);
         if (params->ls_var_type == OLS)
             var_mat[sym_pos] = 1.0;
         else if (params->ls_var_type == WLS_PAUPLIN)
@@ -3439,9 +3441,9 @@ double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
     }
     //cout << (getRealTime()-baseTime) << "s Copying to lower triangle" << endl;
     //copy upper-triangle into lower-triangle and set diagonal = 0
-    for (int seq1 = 0; seq1 < nseqs; seq1++)
-        for (int seq2 = 0; seq2 <= seq1; seq2++) {
-            pos = seq1 * nseqs + seq2;
+    for (size_t seq1 = 0; seq1 < nseqs; ++seq1)
+        for (size_t seq2 = 0; seq2 <= seq1; ++seq2) {
+            size_t pos = seq1 * nseqs + seq2;
             if (seq1 == seq2) {
                 dist_mat[pos] = 0.0;
                 var_mat[pos] = 0.0;
@@ -3483,13 +3485,15 @@ double PhyloTree::computeDist(Params &params, Alignment *alignment, double* &dis
     aln = alignment;
 
     if (!dist_mat) {
-        int n        = alignment->getNSeq();
-        int nSquared = n*n;
-        dist_mat = new double[nSquared];
+        size_t n        = alignment->getNSeq();
+        size_t nSquared = n*n;
+        dist_mat        = new double[nSquared];
         memset(dist_mat, 0, sizeof(double) * nSquared);
-        var_mat = new double[nSquared];
+        var_mat         = new double[nSquared];
+        #ifdef _OPENMP
         #pragma omp parallel for
-        for (int i = 0; i < nSquared; i++) {
+        #endif
+        for (size_t i = 0; i < nSquared; i++) {
             var_mat[i] = 1.0;
         }
     }
@@ -3514,23 +3518,26 @@ void PhyloTree::printDistanceFile() {
 }
 
 double PhyloTree::computeObsDist(double *dist_mat) {
-    int nseqs = aln->getNSeq();
-    int pos = 0;
+    size_t nseqs = aln->getNSeq();
     double longest_dist = 0.0;
-    for (int seq1 = 0; seq1 < nseqs; seq1++)
-        for (int seq2 = 0; seq2 < nseqs; seq2++, pos++) {
+    #ifdef _OPENMP
+    #pragma omp parallel for
+    #endif
+    for (size_t seq1 = 0; seq1 < nseqs; ++seq1) {
+        size_t pos = seq1*nseqs;
+        for (size_t seq2 = 0; seq2 < nseqs; ++seq2, ++pos) {
             if (seq1 == seq2)
                 dist_mat[pos] = 0.0;
             else if (seq2 > seq1) {
                 dist_mat[pos] = aln->computeObsDist(seq1, seq2);
             } else
                 dist_mat[pos] = dist_mat[seq2 * nseqs + seq1];
-
-            if (dist_mat[pos] > longest_dist)
+            if (dist_mat[pos] > longest_dist) {
                 longest_dist = dist_mat[pos];
+            }
         }
+    }
     return longest_dist;
-    //return correctDist(dist_mat);
 }
 
 double PhyloTree::computeObsDist(Params &params, Alignment *alignment, double* &dist_mat) {
@@ -3540,8 +3547,10 @@ double PhyloTree::computeObsDist(Params &params, Alignment *alignment, double* &
     dist_file += ".obsdist";
 
     if (!dist_mat) {
-        dist_mat = new double[alignment->getNSeq() * alignment->getNSeq()];
-        memset(dist_mat, 0, sizeof(double) * alignment->getNSeq() * alignment->getNSeq());
+        size_t n = alignment->getNSeq();
+        size_t nSquared = n * n;
+        dist_mat = new double[nSquared];
+        memset(dist_mat, 0, sizeof(double) * nSquared);
     }
     longest_dist = computeObsDist(dist_mat);
     return longest_dist;
@@ -5501,11 +5510,12 @@ void PhyloTree::computeSeqIdentityAlongTree(Split &sp, Node *node, Node *dad) {
     }
     if (!dad) return;
     // now going along alignment to compute seq identity
-    int ident = 0, nseqs = aln->getNSeq();
+    int ident = 0;
+    size_t nseqs = aln->getNSeq();
     for (Alignment::iterator it = aln->begin(); it != aln->end(); it++) {
         char state = aln->STATE_UNKNOWN;
         bool is_const = true;
-        for (int i = 0; i != nseqs; i++)
+        for (size_t i = 0; i < nseqs; ++i) {
             if ((*it)[i] < aln->num_states && sp.containTaxon(i)) {
                 if (state < aln->num_states && state != (*it)[i]) {
                     is_const = false;
@@ -5513,8 +5523,10 @@ void PhyloTree::computeSeqIdentityAlongTree(Split &sp, Node *node, Node *dad) {
                 }
                 state = (*it)[i];
             }
-        if (is_const)
+        }
+        if (is_const) {
             ident += it->frequency;
+        }
     }
     ident = (ident*100)/aln->getNSite();
     if (node->name == "")
@@ -5873,13 +5885,13 @@ void PhyloTree::writeSiteLh(ostream &out, SiteLoglType wsl, int partid) {
             wsl = WSL_MIXTURE;
         }
     }
-    size_t i, nsites = getAlnNSite();
+    size_t nsites = getAlnNSite();
     size_t ncat = getNumLhCat(wsl);
     double *pattern_lh, *pattern_lh_cat;
     pattern_lh = aligned_alloc<double>(getAlnNPattern());
     pattern_lh_cat = aligned_alloc<double>(getAlnNPattern()*ncat);
     computePatternLikelihood(pattern_lh, NULL, pattern_lh_cat, wsl);
-    for (i = 0; i < nsites; i++) {
+    for (size_t i = 0; i < nsites; ++i) {
         if (partid >= 0)
             out << partid << "\t";
         size_t ptn = aln->getPatternID(i);
@@ -5904,15 +5916,14 @@ void PhyloTree::writeSiteRates(ostream &out, bool bayes, int partid) {
         optimizePatternRates(pattern_rates);
     
     if (pattern_rates.empty()) return;
-    int nsite = aln->getNSite();
-    int i;
+    size_t nsite = aln->getNSite();
     
     out.setf(ios::fixed,ios::floatfield);
     out.precision(5);
     //cout << __func__ << endl;
     IntVector count;
     count.resize(ncategory, 0);
-    for (i = 0; i < nsite; i++) {
+    for (size_t i = 0; i < nsite; ++i) {
         int ptn = aln->getPatternID(i);
         if (partid >= 0)
             out << partid << "\t";
@@ -5939,7 +5950,7 @@ void PhyloTree::writeSiteRates(ostream &out, bool bayes, int partid) {
     }
     if (bayes) {
         cout << "Empirical proportions for each category:";
-        for (i = 0; i < count.size(); i++)
+        for (size_t i = 0; i < count.size(); ++i)
             cout << " " << ((double)count[i])/nsite;
         cout << endl;
     }

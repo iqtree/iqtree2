@@ -1013,7 +1013,7 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch
     	prob_const = 1.0 - prob_const;
     	double df_frac = df_const / prob_const;
     	double ddf_frac = ddf_const / prob_const;
-    	int nsites = aln->getNSite();
+    	size_t nsites = aln->getNSite();
     	*df += nsites * df_frac;
     	*ddf += nsites *(ddf_frac + df_frac*df_frac);
     }

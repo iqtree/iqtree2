@@ -535,7 +535,7 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
             model = "WAG";
             //outError("PLL currently only supports DNA/protein alignments");
         }
-        int nsite = (aln->seq_type == SEQ_CODON) ? getAlnNSite()*3 : getAlnNSite();
+        size_t nsite = (aln->seq_type == SEQ_CODON) ? getAlnNSite()*3 : getAlnNSite();
         pllPartitionFileHandle << model << ", p1 = " << "1-" << nsite << endl;
     }
 }
@@ -1107,7 +1107,7 @@ void IQTree::deleteNonCherryLeaves(PhyloNodeVector &del_leaves) {
     // get the vector of non cherry taxa
     getNonCherryLeaves(noncherry_taxa, cherry_taxa);
     root = NULL;
-    int num_taxa = aln->getNSeq();
+    size_t num_taxa = aln->getNSeq();
     int num_delete = k_delete;
     if (num_delete > num_taxa - 4)
         num_delete = num_taxa - 4;
@@ -1185,7 +1185,7 @@ void IQTree::deleteLeaves(PhyloNodeVector &del_leaves) {
 
 int IQTree::assessQuartet(Node *leaf0, Node *leaf1, Node *leaf2, Node *del_leaf) {
     ASSERT(dist_matrix);
-    int nseq = aln->getNSeq();
+    size_t nseq = aln->getNSeq();
     //int id0 = leaf0->id, id1 = leaf1->id, id2 = leaf2->id;
     double dist0 = dist_matrix[leaf0->id * nseq + del_leaf->id] + dist_matrix[leaf1->id * nseq + leaf2->id];
     double dist1 = dist_matrix[leaf1->id * nseq + del_leaf->id] + dist_matrix[leaf0->id * nseq + leaf2->id];
@@ -3590,7 +3590,7 @@ void IQTree::saveCurrentTree(double cur_logl) {
         IntVector pattern_index;
         aln->getSitePatternIndex(pattern_index);
         out_sitelh << "Site_Lh   ";
-        for (int i = 0; i < getAlnNSite(); i++)
+        for (size_t i = 0; i < getAlnNSite(); ++i)
             out_sitelh << " " << pattern_lh[pattern_index[i]];
         out_sitelh << endl;
     }
@@ -3947,7 +3947,7 @@ void IQTree::printIntermediateTree(int brtype) {
         if (!(brtype & WT_APPEND))
             out_sitelh << aln->getNSite() << endl;
         out_sitelh << "Site_Lh   ";
-        for (int i = 0; i < aln->getNSite(); i++)
+        for (size_t i = 0; i < aln->getNSite(); ++i)
             out_sitelh << "\t" << pattern_lh[aln->getPatternID(i)];
         out_sitelh << endl;
         delete[] pattern_lh;

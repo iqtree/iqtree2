@@ -29,14 +29,14 @@ public:
     std::vector<int>   nonConstSiteFrequencies; //ditto, but zeroed if site
                                                 //isConst according to alignment
     std::map<int, int> stateToSumOfConstantSiteFrequencies;
-    int                totalFrequency;   //sum of frequencies (*including* constant sites!)
-    int                totalFrequencyOfNonConstSites; //ditto (*excluding* constant sites!)
+    size_t             totalFrequency;    //sum of frequencies (*including* constant sites!)
+    size_t             totalFrequencyOfNonConstSites; //ditto (*excluding* constant sites!)
     StateType          minState; //found on any site where there is variation
     StateType          maxState; //ditto
     char*              sequenceMatrix;
     size_t             sequenceLength;  //Sequence length
     size_t             sequenceCount;   //The number of sequences
-    int                getSumOfConstantSiteFrequenciesForState(int state);
+    size_t             getSumOfConstantSiteFrequenciesForState(int state);
     bool constructSequenceMatrix(bool treatAllAmbiguousStatesAsUnknown);
 };
 
