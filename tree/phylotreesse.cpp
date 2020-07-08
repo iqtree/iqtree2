@@ -44,7 +44,7 @@ void PhyloTree::setNumThreads(int num_threads) {
     if (!isSuperTree() && aln && num_threads > 1 && num_threads > aln->getNPattern()/8) {
         outWarning(convertIntToString(num_threads) + " threads for alignment length " +
                    convertIntToString(aln->getNPattern()) + " will slow down analysis");
-        num_threads = max(aln->getNPattern()/8,1UL);
+        num_threads = max(aln->getNPattern()/8,(size_t)1);
     }
     this->num_threads = num_threads;
 }
