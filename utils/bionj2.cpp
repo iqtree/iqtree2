@@ -83,7 +83,6 @@
 #include <string>                    //sequence names stored as std::string
 #include <fstream>
 #include <iostream>                  //for std::istream
-#include <boost/scoped_array.hpp>    //for boost::scoped_array
 #include <vectorclass/vectorclass.h> //for Vec4d and Vec4db vector classes
 
 
