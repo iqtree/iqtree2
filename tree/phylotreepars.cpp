@@ -911,7 +911,7 @@ void PhyloTree::create3TaxonTree(IntVector &taxon_order, int *rand_stream) {
     root = newNode(nseq);
     
     // create star tree
-    for (int leafNum = 0; leafNum < 3; ++leafNum) {
+    for (leafNum = 0; leafNum < 3; ++leafNum) {
         if (leafNum < 3 && verbose_mode >= VB_MAX)
             cout << "Add " << aln->getSeqName(taxon_order[leafNum]) << " to the tree" << endl;
         Node *new_taxon = newNode(taxon_order[leafNum], aln->getSeqName(taxon_order[leafNum]).c_str());
