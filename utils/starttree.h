@@ -45,11 +45,15 @@ namespace StartTree
         virtual const std::string& getDescription() = 0;
     };
 
+    class BenchmarkingTreeBuilder;
+
     class Factory
     {
+        friend class BenchmarkingTreeBuilder;
     private:
         std::map<std::string, BuilderInterface*> mapOfTreeBuilders;
         //Note: Owned by the Factory, and will be deleted in ~Factory.
+    
         
     protected:
         Factory();
@@ -118,6 +122,25 @@ namespace StartTree
                 builder.writeTreeFile(newickTreeFilePath);
                 return true;
         }
+    };
+
+    class BenchmarkingTreeBuilder: public BuilderInterface
+    {
+    protected:
+        const std::string name;
+        const std::string description;
+        std::vector<BuilderInterface*> builders;
+    public:
+        BenchmarkingTreeBuilder(Factory& f, const char* nameToUse, const char *descriptionToGive);
+        virtual const std::string& getName();
+        virtual const std::string& getDescription();
+        virtual void constructTree
+            ( const std::string &distanceMatrixFilePath
+             , const std::string & newickTreeFilePath);
+        virtual bool constructTreeInMemory
+            ( const std::vector<std::string> &sequenceNames
+            , double *distanceMatrix
+             , const std::string & newickTreeFilePath);
     };
 }
 
