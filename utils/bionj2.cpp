@@ -84,12 +84,15 @@
 #include <fstream>
 #include <iostream>                  //for std::istream
 #include <vectorclass/vectorclass.h> //for Vec4d and Vec4db vector classes
-
+#ifdef SHOW_DISTANCE_MATRIX_PROGRESS
+#include <boost/progress.hpp>        //for progress_timer
+#endif
 
 typedef float   NJFloat;
 typedef Vec8f   FloatVector;
 typedef Vec8fb  FloatBoolVector;
 const   NJFloat infiniteDistance = 1e+36;
+const   int     notMappedToRow = -1;
 
 namespace StartTree
 {
@@ -210,11 +213,11 @@ public:
         bool failed = false; //Becomes true if clusters
                              //defines cycles (should never happen)
                              //Indicates a fatal logic error
-        int maxLoop = 3 * size();
+        size_t maxLoop = 3 * size();
                              //More than this, and there must be
                              //a cycle.  Or something.
 
-        stack.emplace_back(size()-1, 0);
+        stack.emplace_back(size()-1, 0); //assumes: size is at least 1!
         do {
             --maxLoop;
             if (maxLoop==0) {
@@ -300,18 +303,20 @@ public:
             size_t w    = widthNeededFor(rank);
             n           = rank;
             shrink_n    = (rank+rank)/3;
-            if (shrink_n<100) shrink_n=0;
+            if (shrink_n<100) {
+                shrink_n=0;
+            }
             data        = new T[n*w + MATRIX_ALIGNMENT/sizeof(T)];
             rows        = new T*[n];
             rowTotals   = new T[n];
             T *rowStart = matrixAlign(data);
-            for (int r=0; r<n; ++r) {
+            for (size_t r=0; r<n; ++r) {
                 rows[r]      = rowStart;
                 rowStart    += w;
                 rowTotals[r] = 0.0;
             }
             #pragma omp parallel for
-            for (int r=0; r<n; ++r) {
+            for (size_t r=0; r<n; ++r) {
                 zeroRow(r);
             }
         }
@@ -402,13 +407,13 @@ public:
         //recalculate total for row, a, excluding
         //column b (a<=b).
         T replacementRowTotal = 0;
-        for (int i=0; i<a; ++i) {
+        for (size_t i=0; i<a; ++i) {
             replacementRowTotal += rows[a][i];
         }
-        for (int i=a+1; i<b; ++i) {
+        for (size_t i=a+1; i<b; ++i) {
             replacementRowTotal += rows[a][i];
         }
-        for (int i=b+1; i<n; ++i) {
+        for (size_t i=b+1; i<n; ++i) {
             replacementRowTotal += rows[a][i];
         }
         rowTotals[a] = replacementRowTotal;
@@ -442,7 +447,7 @@ public:
             //This also helps (but: only very slightly. 5%ish?).
             size_t   w = widthNeededFor(n);
             T* destRow = data;
-            for (int r=1; r<n; ++r) {
+            for (size_t r=1; r<n; ++r) {
                 destRow += w;
                 const T* sourceRow = rows[r];
                 #pragma omp parallel for
@@ -488,11 +493,11 @@ public:
         in.open(distanceMatrixFilePath, std::ios_base::in);
         in >> rank;
         setSize(rank);
-        for (int r=0; r<n; ++r) {
+        for (size_t r=0; r<n; ++r) {
             std::string name;
             in >> name;
             clusters.addCluster(name);
-            for (int c=0; c<n; ++c) {
+            for (size_t c=0; c<n; ++c) {
                 in >> rows[r][c];
                 //Ensure matrix is symmetric (as it is read!)
                 if (c<r && rows[r][c]<rows[c][r]) {
@@ -518,11 +523,11 @@ public:
             clusters.addCluster(*it);
         }
         rowToCluster.resize(n, 0);
-        for (int r=0; r<n; ++r) {
+        for (size_t r=0; r<n; ++r) {
             rowToCluster[r]=r;
         }
         #pragma omp parallel for
-        for (int row=0; row<n; ++row) {
+        for (size_t row=0; row<n; ++row) {
             double* sourceStart = matrix + row * n;
             double* sourceStop  = sourceStart + n;
             T*      dest        = rows[row];
@@ -534,9 +539,15 @@ public:
     }
     virtual void constructTree() {
         Position<T> best;
+        #ifdef SHOW_DISTANCE_MATRIX_PROGRESS
+            boost::progress_display show_progress(n*(n+1)/2);
+        #endif
         while (3<n) {
             getMinimumEntry(best);
             cluster(best.column, best.row);
+            #ifdef SHOW_DISTANCE_MATRIX_PROGRESS
+                show_progress+=n;
+            #endif
         }
         finishClustering();
     }
@@ -562,7 +573,7 @@ protected:
     {
         rowMinima.resize(n);
         rowMinima[0].value = infiniteDistance;
-        #pragma omp parallel for
+        #pragma omp parallel for schedule(dynamic)
         for (size_t row=1; row<n; ++row) {
             float  bestVrc    = infiniteDistance;
             size_t bestColumn = 0;
@@ -604,10 +615,10 @@ protected:
         double bLength = aLength;
         size_t aCount  = clusters[rowToCluster[a]].countOfExteriorNodes;
         size_t bCount  = clusters[rowToCluster[b]].countOfExteriorNodes;
-        int    tCount  = aCount + bCount;
+        size_t tCount  = aCount + bCount;
         double lambda  = (double)aCount / (double)tCount;
         double mu      = 1.0 - lambda;
-        for (int i=0; i<n; ++i) {
+        for (size_t i=0; i<n; ++i) {
             if (i!=a && i!=b) {
                 T Dai      = rows[a][i];
                 T Dbi      = rows[b][i];
@@ -672,7 +683,7 @@ protected:
         }
         rowMinima.resize(n);
         rowMinima[0].value = infiniteDistance;
-        #pragma omp parallel for
+        #pragma omp parallel for schedule(dynamic)
         for (size_t row=1; row<n; ++row) {
             float  bestVrc    = infiniteDistance;
             size_t bestColumn = 0;
@@ -702,7 +713,7 @@ protected:
         T mu            = 1.0 - lambda;
         T dCorrection   = - lambda * aLength - mu * bLength;
         #pragma omp parallel for
-        for (int i=0; i<n; ++i) {
+        for (size_t i=0; i<n; ++i) {
             if (i!=a && i!=b) {
                 T Dai   = rows[a][i];
                 T Dbi   = rows[b][i];
@@ -762,13 +773,13 @@ public:
         if (Vab==0.0) {
             return 0.5;
         }
-        for (int i=0; i<a; ++i) {
+        for (size_t i=0; i<a; ++i) {
             lambda += variance.rows[b][i] - variance.rows[a][i];
         }
-        for (int i=a+1; i<b; ++i) {
+        for (size_t i=a+1; i<b; ++i) {
             lambda += variance.rows[b][i] - variance.rows[a][i];
         }
-        for (int i=b+1; i<n; ++i) {
+        for (size_t i=b+1; i<n; ++i) {
             lambda += variance.rows[b][i] - variance.rows[a][i];
         }
         lambda = 0.5 + lambda / (2.0*((T)n-2)*Vab);
@@ -791,7 +802,7 @@ public:
         T dCorrection   = - lambda * aLength - mu * bLength;
         T vCorrection   = - lambda * mu * Vab;
         #pragma omp parallel for
-        for (int i=0; i<n; ++i) {
+        for (size_t i=0; i<n; ++i) {
             if (i!=a && i!=b) {
                 //Dci as per reduction 4 in [Gascuel]
                 T Dai         = rows[a][i];
@@ -848,7 +859,7 @@ protected:
     //        row total for ALL the live clusters.
     //        See section 2.5 of Simonsen, Mailund, Pedersen [2011].
     //
-    std::vector<int> clusterToRow;   //Maps clusters to their rows
+    std::vector<int> clusterToRow;   //Maps clusters to their rows (-1 means not mapped)
     std::vector<T>   clusterTotals;  //"Row" totals indexed by cluster
 
     mutable std::vector<T>       scaledClusterTotals;   //The same, multiplied by
@@ -863,8 +874,12 @@ protected:
     Matrix<int> entryToCluster;//The I matrix: for each entry in S, which
                                //cluster the row (that the entry came from)
                                //was mapped to (at the time).
+    double rowSortingTime;
     
 public:
+    BoundingMatrix() : super() {
+        rowSortingTime = 0;
+    }
     virtual void constructTree() {
         //1. Set up vectors indexed by cluster number,
         clusterToRow.resize(n);
@@ -888,7 +903,7 @@ public:
         //   RapidNJ papers).
         entriesSorted.setSize(n);
         entryToCluster.setSize(n);
-        #pragma omp parallel for
+        #pragma omp parallel for schedule(dynamic)
         for (size_t r=0; r<n; ++r) {
             sortRow(r,r);
             //copies the "left of the diagonal" portion of
@@ -896,17 +911,23 @@ public:
             //into ascending order.
         }
         size_t nextPurge = (n+n)/2;
+        #ifdef SHOW_DISTANCE_MATRIX_PROGRESS
+            boost::progress_display show_progress(n*(n+1)/2);
+        #endif
         while (3<n) {
             Position<T> best;
             super::getMinimumEntry(best);
             cluster(best.column, best.row);
             if ( n == nextPurge ) {
                 #pragma omp parallel for
-                for (int r=0; r<n; ++r) {
+                for (size_t r=0; r<n; ++r) {
                     purgeRow(r);
                 }
                 nextPurge = n*2/3;
             }
+            #ifdef SHOW_DISTANCE_MATRIX_PROGRESS
+                show_progress+=n;
+            #endif
         }
         super::finishClustering();
     }
@@ -934,7 +955,13 @@ public:
         
         //2. Sort the row in the S matrix and mirror the sort
         //   on the same row of the I matrix.
-        mirroredHeapsort(values, 0, w, clusterIndices);
+        if ( n<=c) {
+            double now = getRealTime();
+            mirroredHeapsort(values, 0, w, clusterIndices);
+            rowSortingTime += (getRealTime() - now);
+        } else {
+            mirroredHeapsort(values, 0, w, clusterIndices);
+        }
     }
     void purgeRow(size_t r /*row index*/) {
         //Scan a row of the I matrix, so as to remove
@@ -951,7 +978,7 @@ public:
             if ( infiniteDistance <= values[i] ) {
                 break;
             }
-            if ( 0 <= clusterToRow[clusterIndices[i]] ) {
+            if ( clusterToRow[clusterIndices[i]] != notMappedToRow ) {
                 ++w;
             }
         }
@@ -963,9 +990,9 @@ public:
         size_t clusterA         = rowToCluster[a];
         size_t clusterB         = rowToCluster[b];
         size_t clusterMoved     = rowToCluster[n-1];
-        clusterToRow[clusterA]  = -1;
+        clusterToRow[clusterA]  = notMappedToRow;
         clusterTotals[clusterA] = -infiniteDistance;
-        clusterToRow[clusterB]  = -1;
+        clusterToRow[clusterB]  = notMappedToRow;
         clusterTotals[clusterB] = -infiniteDistance;
         size_t clusterC = clusters.size(); //cluster # of new cluster
         super::cluster(a,b);
@@ -1021,11 +1048,17 @@ public:
         //better bound on min(V) (and "rule out" entire rows with that
         //bound)? -James B).
         //
-        for ( int len = rowMinima.size(); 1<len; len=(len+1)/2 ) {
-            int halfLen = len/2;
-            //#pragma omp parallel for (did not help)
-            for ( int j=len-1; halfLen<=j; --j) {
-                int i=j-halfLen;
+        
+        //Note, rowMinima might have size 0 (the first time this member
+        //function is called during processing of a distance matrix)
+        //Or it might have a size of n+1 (later times), but it won't be n.
+        for ( size_t len = rowMinima.size(); 1<len; len=(len+1)/2 ) {
+            size_t halfLen = len/2; //rounded down
+            size_t gap     = len-halfLen;
+            //Although the following loop could in theory be parallelized,
+            //using #pragma omp for on it did not seem to help performance any.
+            for ( size_t i=0; i<halfLen; ++i) {
+                size_t j = i + gap;
                 if ( rowMinima[j] < rowMinima[i] ) {
                     std::swap(rowMinima[i], rowMinima[j]);
                 }
@@ -1067,7 +1100,7 @@ public:
         for (size_t i=0; i<c; ++i) {
             scaledClusterTotals[i] = clusterTotals[i] * tMultiplier;
             scaledMaxEarlierClusterTotal[i] = maxTot;
-            if ( 0 <= clusterToRow[i] ) {
+            if ( clusterToRow[i] != notMappedToRow ) {
                 if (maxTot < scaledClusterTotals[i] ) {
                     maxTot=scaledClusterTotals[i];
                 }
@@ -1120,7 +1153,7 @@ public:
             T Qrc = Drc - tot[cluster] - rowTotal;
             if (Qrc < pos.value) {
                 int otherRow = clusterToRow[cluster];
-                if (0<=otherRow) {
+                if (otherRow != notMappedToRow) {
                     pos.column = (otherRow < row ) ? otherRow : row;
                     pos.row    = (otherRow < row ) ? row : otherRow;
                     pos.value  = Qrc;
@@ -1175,7 +1208,7 @@ public:
         }
         rowMinima.resize(n);
         rowMinima[0].value = infiniteDistance;
-        #pragma omp parallel for
+        #pragma omp parallel for schedule(dynamic)
         for (size_t row=1; row<n; ++row) {
             Position<T> pos(row, 0, infiniteDistance);
             const T* rowData = rows[row];
@@ -1200,7 +1233,7 @@ public:
                 minVector = select(less, adjVector, minVector);
             }
             //Extract minimum and column number
-            for (int c=0; c<blockSize; ++c) {
+            for (size_t c=0; c<blockSize; ++c) {
                 if (minVector[c] < pos.value) {
                     pos.value  = minVector[c];
                     pos.column = ixVector[c];
@@ -1242,7 +1275,7 @@ public:
         T* nums = matrixAlign ( scratchColumnNumbers.data() );
         rowMinima.resize(n);
         rowMinima[0].value = infiniteDistance;
-        //#pragma omp parallel for
+        #pragma omp parallel for schedule(dynamic)
         for (size_t row=1; row<n; ++row) {
             Position<T> pos(row, 0, infiniteDistance);
             const T* rowData = rows[row];
@@ -1258,7 +1291,7 @@ public:
                 minVector = select(less, rowVector, minVector);
             }
             //Extract minimum and column number
-            for (int c=0; c<blockSize; ++c) {
+            for (size_t c=0; c<blockSize; ++c) {
                 if (minVector[c] < pos.value) {
                     pos.value  = minVector[c];
                     pos.column = ixVector[c];
@@ -1290,7 +1323,8 @@ void addBioNJ2020TreeBuilders(Factory& f) {
     f.advertiseTreeBuilder( new Builder<VectorBIONJ> ("BIONJ-V", "Vectorized BIONJ (Gascuel, Cong [2009])"));
     f.advertiseTreeBuilder( new Builder<UPGMA_Matrix<NJFloat>>("UPGMA",    "UPGMA (Sokal, Michener [1958])"));
     f.advertiseTreeBuilder( new Builder<VectorizedUPGMA_Matrix<NJFloat>>("UPGMA-V", "Vectorized UPGMA (Sokal, Michener [1958])"));
-    f.advertiseTreeBuilder( new Builder<BIONJMatrix<NJFloat>> ("",        "BIONJ (Gascuel, Cong [2009])"));  //Default.
-    f.advertiseTreeBuilder( new Builder<BoundingMatrix<double>> ("NJ-R-D", "Double precision Raipd Neighbour Joining"));
+    f.advertiseTreeBuilder( new Builder<RapidNJ>                ("",        "Rapid Neighbour Joining (Simonsen, Mailund, Pedersen [2011]) (default)"));  //Default.
+    f.advertiseTreeBuilder( new Builder<BoundingMatrix<double>> ("NJ-R-D", "Double precision Rapid Neighbour Joining"));
+    
 }
 }; //end of namespace
