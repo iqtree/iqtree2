@@ -43,6 +43,7 @@ namespace StartTree
              , const std::string & newickTreeFilePath) = 0;
         virtual const std::string& getName() = 0;
         virtual const std::string& getDescription() = 0;
+        virtual void beSilent() {}
     };
 
     class BenchmarkingTreeBuilder;
@@ -53,7 +54,7 @@ namespace StartTree
     private:
         std::map<std::string, BuilderInterface*> mapOfTreeBuilders;
         //Note: Owned by the Factory, and will be deleted in ~Factory.
-    
+        std::string nameOfDefaultTreeBuilder;
         
     protected:
         Factory();
@@ -66,6 +67,8 @@ namespace StartTree
     public:
         static Factory& getInstance();
         void   advertiseTreeBuilder(BuilderInterface* builder);
+        void   setNameOfDefaultTreeBuilder(const char* name);
+        static const std::string& getNameOfDefaultTreeBuilder();
         static BuilderInterface* getTreeBuilderByName(const std::string& name);
     };
 
@@ -80,23 +83,28 @@ namespace StartTree
     protected:
         const std::string name;
         const std::string description;
+        bool  silent;
         void constructTreeWith(B& builder) {
-            #if (0)
-                double buildStart = getRealTime();
-            #endif
+            double buildStart    = getRealTime();
+            double buildStartCPU = getCPUTime();
             builder.constructTree();
-            #if (0)
-                double buildElapsed = getRealTime() - buildStart;
+            double buildElapsed = getRealTime() - buildStart;
+            double buildCPU = getCPUTime() - buildStartCPU;
+            if (!silent) {
                 std::cout.precision(6);
-                std::cout << "Wall-clock time for constructing initial tree"
-                << " (with algorithm " << name << "), "
-                << buildElapsed << std::endl;
+                std::cout << "Computing "
+                << name << " tree took " << buildElapsed << " sec"
+                << " (of wall-clock time) " << buildCPU << " sec"
+                << " (of CPU time)" << std::endl;
                 std::cout.precision(3);
-            #endif
+            }
         }
     public:
         Builder(const char* nameToUse, const char *descriptionToGive)
-        : name(nameToUse), description(descriptionToGive) {
+        : name(nameToUse), description(descriptionToGive), silent(false) {
+        }
+        virtual void beSilent() {
+            silent = true;
         }
         virtual const std::string& getName() {
             return name;

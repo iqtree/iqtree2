@@ -71,6 +71,14 @@ void Factory::advertiseTreeBuilder(BuilderInterface* builder) {
     addBuilder( name, builder );
 }
 
+void Factory::setNameOfDefaultTreeBuilder(const char* name) {
+    nameOfDefaultTreeBuilder = name;
+}
+
+const std::string& Factory::getNameOfDefaultTreeBuilder() {
+    return getInstance().nameOfDefaultTreeBuilder;
+}
+
 BuilderInterface* Factory::getTreeBuilderByName(const std::string& name) {
     return getInstance().getBuilder(name);
 }
@@ -112,6 +120,7 @@ bool BenchmarkingTreeBuilder::constructTreeInMemory
             #ifdef _OPENMP
                 omp_set_num_threads(1);
             #endif
+            (*it)->beSilent();
             bool succeeded = (*it)->constructTreeInMemory(sequenceNames, distanceMatrix, newickTreeFilePath);
             double elapsed = getRealTime() - startTime;
             if (succeeded) {
