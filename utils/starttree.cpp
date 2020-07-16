@@ -44,6 +44,8 @@ Factory& Factory::getInstance() {
     if (instance.getBuilderCount()==0) {
         addBioNJ2009TreeBuilders(instance);
         addBioNJ2020TreeBuilders(instance);
+        BuilderInterface *bench = new BenchmarkingTreeBuilder(instance, "BENCHMARK", "Benchmark");
+        instance.addBuilder(bench->getName(), bench);
     }
     return instance;
 }
@@ -73,4 +75,61 @@ BuilderInterface* Factory::getTreeBuilderByName(const std::string& name) {
     return getInstance().getBuilder(name);
 }
 
+BenchmarkingTreeBuilder::BenchmarkingTreeBuilder(Factory& f, const char* nameToUse, const char *descriptionToGive)
+    : name(nameToUse), description(descriptionToGive) {
+        for (auto it=f.mapOfTreeBuilders.begin(); it!=f.mapOfTreeBuilders.end(); ++it) {
+            if (!it->second->getName().empty()) {
+                builders.push_back(it->second);
+            }
+        }
+}
+
+const std::string& BenchmarkingTreeBuilder::getName() {
+    return name;
+}
+const std::string& BenchmarkingTreeBuilder::getDescription() {
+    return description;
+}
+
+void BenchmarkingTreeBuilder::constructTree
+    ( const std::string &distanceMatrixFilePath
+     , const std::string & newickTreeFilePath) {
+        for (auto it=builders.begin(); it!=builders.end(); ++it) {
+            (*it)->constructTree(distanceMatrixFilePath, newickTreeFilePath);
+        }
+    }
+
+bool BenchmarkingTreeBuilder::constructTreeInMemory
+    ( const std::vector<std::string> &sequenceNames
+    , double *distanceMatrix
+    , const std::string & newickTreeFilePath) {
+        bool ok = false;
+        #ifdef _OPENMP
+            int maxThreads = omp_get_max_threads();
+        #endif
+        for (auto it=builders.begin(); it!=builders.end(); ++it) {
+            double startTime = getRealTime();
+            #ifdef _OPENMP
+                omp_set_num_threads(1);
+            #endif
+            bool succeeded = (*it)->constructTreeInMemory(sequenceNames, distanceMatrix, newickTreeFilePath);
+            double elapsed = getRealTime() - startTime;
+            if (succeeded) {
+                ok = true;
+                std::cout.precision(6);
+                std::cout << (*it)->getName() << " \t" << elapsed;
+                #ifdef _OPENMP
+                for (int t=2; t<=maxThreads; ++t) {
+                    omp_set_num_threads(t);
+                    startTime = getRealTime();
+                    (*it)->constructTreeInMemory(sequenceNames, distanceMatrix, newickTreeFilePath);
+                    elapsed = getRealTime() - startTime;
+                    std::cout << "\t" << (elapsed);
+                }
+                #endif
+                std::cout << std::endl;
+            }
+        }
+        return true;
+    }
 };
