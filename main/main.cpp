@@ -215,7 +215,7 @@ void printCopyright(ostream &out) {
 #else
      out << "PDA - Phylogenetic Diversity Analyzer version ";
 #endif
-    out << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << iqtree_VERSION_PATCH;
+    out << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << iqtree_VERSION_PATCH << " COVID-edition";
 
 #if defined _WIN32 || defined WIN32
     out << " for Windows";
@@ -235,8 +235,8 @@ void printCopyright(ostream &out) {
 #endif
 
 #ifdef IQ_TREE
-    out << endl << "Developed by Bui Quang Minh, Nguyen Lam Tung, Olga Chernomor,"
-        << endl << "Heiko Schmidt, Dominik Schrempf, Michael Woodhams." << endl << endl;
+    out << endl << "Developed by Bui Quang Minh, James Barbetti, Nguyen Lam Tung,"
+        << endl << "Olga Chernomor, Heiko Schmidt, Dominik Schrempf, Michael Woodhams." << endl << endl;
 #else
     out << endl << "Copyright (c) 2006-2014 Olga Chernomor, Arndt von Haeseler and Bui Quang Minh." << endl << endl;
 #endif

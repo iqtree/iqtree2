@@ -782,7 +782,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.dist_file = NULL;
     params.compute_obs_dist = false;
     params.compute_jc_dist = true;
-    params.experimental = false;
+    params.experimental = true;
     params.compute_ml_dist = true;
     params.compute_ml_tree = true;
     params.budget_file = NULL;
@@ -1398,8 +1398,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.compute_obs_dist = true;
 				continue;
 			}
-            if (strcmp(argv[cnt], "-experimental") == 0) {
+            if (strcmp(argv[cnt], "-experimental") == 0 || strcmp(argv[cnt], "--experimental") == 0) {
                 params.experimental = true;
+                continue;
+            }
+            if (strcmp(argv[cnt], "--no-experimental") == 0) {
+                params.experimental = false;
                 continue;
             }
 			if (strcmp(argv[cnt], "-r") == 0) {
