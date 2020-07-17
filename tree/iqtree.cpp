@@ -633,7 +633,7 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
         initTree = getTreeString();
         CKP_SAVE(initTree);
         saveCheckpoint();
-        checkpoint->dump(true);
+        checkpoint->dump();
     }
 
     if (!constraintTree.isCompatible(this))
