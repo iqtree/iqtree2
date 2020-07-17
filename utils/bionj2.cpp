@@ -1323,8 +1323,9 @@ void addBioNJ2020TreeBuilders(Factory& f) {
     f.advertiseTreeBuilder( new Builder<VectorBIONJ> ("BIONJ-V", "Vectorized BIONJ (Gascuel, Cong [2009])"));
     f.advertiseTreeBuilder( new Builder<UPGMA_Matrix<NJFloat>>("UPGMA",    "UPGMA (Sokal, Michener [1958])"));
     f.advertiseTreeBuilder( new Builder<VectorizedUPGMA_Matrix<NJFloat>>("UPGMA-V", "Vectorized UPGMA (Sokal, Michener [1958])"));
-    f.advertiseTreeBuilder( new Builder<RapidNJ>                ("",        "Rapid Neighbour Joining (Simonsen, Mailund, Pedersen [2011]) (default)"));  //Default.
     f.advertiseTreeBuilder( new Builder<BoundingMatrix<double>> ("NJ-R-D", "Double precision Rapid Neighbour Joining"));
-    
+    const char* defaultName = "RapidNJ";
+    f.advertiseTreeBuilder( new Builder<RapidNJ>                (defaultName, "Rapid Neighbour Joining (Simonsen, Mailund, Pedersen [2011]) (default)"));  //Default.
+    f.setNameOfDefaultTreeBuilder(defaultName);
 }
 }; //end of namespace
