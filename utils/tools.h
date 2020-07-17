@@ -1545,8 +1545,8 @@ public:
      */
     bool optimize_by_newton;
 
-    /** optimization algorithm for parameter estimation: 1-BFGS, 2-BFGS, EM */
-    string optimize_alg;
+    /** optimization algorithm for free rate model: 1-BFGS, 2-BFGS, EM */
+    string optimize_alg_freerate;
 
     /** optimization algorithm for mixture (heterotachy) branch length models */
     string optimize_alg_mixlen;
@@ -1988,6 +1988,15 @@ public:
 
     /** proportion of sites to be dropped in jackknife */
     double jackknife_prop;
+    
+    /**********************************************/
+    /* variables for robust phylogeny (Lanfear & Holland project */
+    
+    /** proportion of sites to keep in robust phylogeny idea */
+    double robust_phy_keep;
+
+    /** use median log-likelihood instead of sum log-likelihood */
+    double robust_median;
     
     /****** variables for NNI cutoff heuristics ******/
 

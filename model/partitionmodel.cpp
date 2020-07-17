@@ -347,10 +347,11 @@ double PartitionModel::optimizeLinkedModel(bool write_info, double gradient_epsi
 //        lower_bound[i] = MIN_RATE*0.2;
 //        upper_bound[i] = MAX_RATE*2.0;
 //    }
-    if (Params::getInstance().optimize_alg.find("BFGS-B") == string::npos)
+
+//    if (Params::getInstance().optimize_alg.find("BFGS-B") == string::npos)
         score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
-    else
-        score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
+//    else
+//        score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
 
     bool changed = getVariables(variables);
 
