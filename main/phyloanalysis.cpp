@@ -924,7 +924,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
         out.exceptions(ios::failbit | ios::badbit);
         out.open(outfile.c_str());
         out << "IQ-TREE " << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR
-            << iqtree_VERSION_PATCH << " built " << __DATE__ << endl
+            << iqtree_VERSION_PATCH << " COVID-edition built " << __DATE__ << endl
                 << endl;
         if (params.partition_file)
             out << "Partition file name: " << params.partition_file << endl;
