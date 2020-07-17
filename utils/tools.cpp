@@ -939,7 +939,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.p_invar_sites = -1.0;
     params.optimize_model_rate_joint = false;
     params.optimize_by_newton = true;
-    params.optimize_alg = "2-BFGS,EM";
+    params.optimize_alg_freerate = "2-BFGS,EM";
     params.optimize_alg_mixlen = "EM";
     params.optimize_alg_gammai = "EM";
     params.optimize_from_given_params = false;
@@ -1029,6 +1029,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 //    params.store_candidate_trees = false;
 	params.print_ufboot_trees = 0;
     params.jackknife_prop = 0.0;
+    params.robust_phy_keep = 1.0;
+    params.robust_median = false;
     //const double INF_NNI_CUTOFF = -1000000.0;
     params.nni_cutoff = -1000000.0;
     params.estimate_nni_cutoff = false;
@@ -1253,7 +1255,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -opt_alg <1-BFGS|2-BFGS|EM>";
-				params.optimize_alg = argv[cnt];
+				params.optimize_alg_freerate = argv[cnt];
 				continue;
 			}
 			if (strcmp(argv[cnt], "-optlen") == 0) {
@@ -3348,8 +3350,35 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "Jackknife proportion must be between 0.0 and 1.0";
                 continue;
             }
+            
+            if (strcmp(argv[cnt], "--robust-phy") == 0) {
+                if (params.robust_median)
+                    throw "Can't couple --robust-phy with --robust-median";
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --robust-phy proportion_of_best_sites_to_keep";
+                params.robust_phy_keep = convert_double(argv[cnt]);
+                if (params.robust_phy_keep <= 0.0 || params.robust_phy_keep > 1.0)
+                    throw "--robust-phy parameter must be between 0 and 1";
+                // TODO: use Brent (instead of Newton) optimisation of branch lengths
+                params.optimize_by_newton = false;
+                params.optimize_alg_gammai = "Brent";
+                params.optimize_alg_freerate = "2-BFGS";
+                continue;
+            }
 
-            if (strcmp(argv[cnt], "-mem") == 0 || strcmp(argv[cnt], "--mem") == 0) {
+            if (strcmp(argv[cnt], "--robust-median") == 0) {
+                if (params.robust_phy_keep < 1.0)
+                    throw "Can't couple --robust-phy with --robust-median";
+                params.robust_median = true;
+                // TODO: use Brent (instead of Newton) optimisation of branch lengths
+                params.optimize_by_newton = false;
+                params.optimize_alg_gammai = "Brent";
+                params.optimize_alg_freerate = "2-BFGS";
+                continue;
+            }
+
+			if (strcmp(argv[cnt], "-mem") == 0 || strcmp(argv[cnt], "--mem") == 0) {
 				cnt++;
 				if (cnt >= argc)
                     throw "Use -mem max_mem_size";

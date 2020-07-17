@@ -780,6 +780,9 @@ public:
 
     bool ptn_freq_computed;
 
+    /** site log-likelihood buffer for robust phylogeny idea */
+    double *_site_lh;
+    
     /** vector size used by SIMD kernel */
     size_t vector_size;
 
