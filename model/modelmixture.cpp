@@ -1282,8 +1282,7 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 	full_name += CLOSE_BRACKET;
 
 	int nmixtures = size();
-	if (prop)
-		aligned_free(prop);
+    aligned_free(prop);
 	prop = aligned_alloc<double>(nmixtures);
 
 	double sum = 0.0;
@@ -1345,78 +1344,76 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 
     delete nxs_freq_optimize;
     delete nxs_freq_empirical;
-
 }
 
 void ModelMixture::initMem() {
-
-	int nmixtures = size();
-
-  // Calculate the total number of states and take into account that each of the
-  // models may be a mixture model itself (PoMo rate heterogeneity).
-
-  int num_states_total = 0;
-  for (iterator it = begin(); it != end(); it++)
-    num_states_total += (*it)->get_num_states_total();
-
-	if (eigenvalues) aligned_free(eigenvalues);
-	if (eigenvectors) aligned_free(eigenvectors);
-	if (inv_eigenvectors) aligned_free(inv_eigenvectors);
-  // if (eigen_coeff) aligned_free(eigen_coeff);
-
-	eigenvalues = aligned_alloc<double>(num_states_total*nmixtures);
-	eigenvectors = aligned_alloc<double>(num_states_total*num_states_total*nmixtures);
-	inv_eigenvectors = aligned_alloc<double>(num_states_total*num_states_total*nmixtures);
-  // int ncoeff = num_states_total*num_states_total*num_states_total;
-  // eigen_coeff = aligned_alloc<double>(ncoeff*nmixtures);
-
-	// assigning memory for individual models
-	int m = 0;
-  int count_num_states = 0;
-  int count_num_states_2 = 0;
-	for (iterator it = begin(); it != end(); it++, m++) {
-    int num_states_this_model = (*it)->get_num_states_total();
-    int num_states_this_model_2 = num_states_this_model * num_states_this_model;
-    // first copy memory for eigen stuffs
-    memcpy(&eigenvalues[count_num_states], (*it)->eigenvalues,
-           num_states_this_model*sizeof(double));
-    memcpy(&eigenvectors[count_num_states_2], (*it)->eigenvectors,
-           num_states_this_model_2*sizeof(double));
-    memcpy(&inv_eigenvectors[count_num_states_2], (*it)->inv_eigenvectors,
-           num_states_this_model_2*sizeof(double));
-    // memcpy(&eigen_coeff[m*ncoeff], (*it)->eigen_coeff, ncoeff*sizeof(double));
-
-    // then delete
-		if ((*it)->eigenvalues) aligned_free((*it)->eigenvalues);
-		if ((*it)->eigenvectors) aligned_free((*it)->eigenvectors);
-		if ((*it)->inv_eigenvectors) aligned_free((*it)->inv_eigenvectors);
-    // if ((*it)->eigen_coeff) aligned_free((*it)->eigen_coeff);
-
-    // And assign new memory. Also, recursively, update respective pointers for
-    // the mixture components of the current model. This is relevant if the
-    // current model is a mixture model itself.
-    (*it)->update_eigen_pointers(&eigenvalues[count_num_states],
-                                 &eigenvectors[count_num_states_2],
-                                 &inv_eigenvectors[count_num_states_2]);
-    // (*it)->eigen_coeff = &eigen_coeff[m*ncoeff];
-
-    // Update the state counters, so that the pointers are assigned correctly
-    // for the next mixture component.
-    count_num_states += num_states_this_model;
-    count_num_states_2 += num_states_this_model_2;
-	}
+    
+    int nmixtures = size();
+    
+    // Calculate the total number of states and take into account that each of the
+    // models may be a mixture model itself (PoMo rate heterogeneity).
+    
+    int num_states_total = 0;
+    for (iterator it = begin(); it != end(); it++) {
+        num_states_total += (*it)->get_num_states_total();
+    }
+    
+    aligned_free(eigenvalues);
+    aligned_free(eigenvectors);
+    aligned_free(inv_eigenvectors);
+    aligned_free(inv_eigenvectors_transposed);
+    ensure_aligned_allocated(eigenvalues, num_states_total*nmixtures);
+    ensure_aligned_allocated(eigenvectors, num_states_total*num_states_total*nmixtures);
+    ensure_aligned_allocated(inv_eigenvectors, num_states_total*num_states_total*nmixtures);
+    ensure_aligned_allocated(inv_eigenvectors_transposed, num_states_total*num_states_total*nmixtures);
+    
+    // assigning memory for individual models
+    int m = 0;
+    int count_num_states = 0;
+    int count_num_states_2 = 0;
+    for (iterator it = begin(); it != end(); it++, m++) {
+        int num_states_this_model = (*it)->get_num_states_total();
+        int num_states_this_model_2 = num_states_this_model * num_states_this_model;
+        // first copy memory for eigen stuffs
+        memcpy(&eigenvalues[count_num_states], (*it)->eigenvalues,
+               num_states_this_model*sizeof(double));
+        memcpy(&eigenvectors[count_num_states_2], (*it)->eigenvectors,
+               num_states_this_model_2*sizeof(double));
+        memcpy(&inv_eigenvectors[count_num_states_2], (*it)->inv_eigenvectors,
+               num_states_this_model_2*sizeof(double));
+        memcpy(&inv_eigenvectors_transposed[count_num_states_2], (*it)->inv_eigenvectors_transposed,
+               num_states_this_model_2*sizeof(double));
+        
+        // then delete
+        aligned_free((*it)->eigenvalues);
+        aligned_free((*it)->eigenvectors);
+        aligned_free((*it)->inv_eigenvectors);
+        aligned_free((*it)->inv_eigenvectors_transposed);
+        
+        // And assign new memory. Also, recursively, update respective pointers for
+        // the mixture components of the current model. This is relevant if the
+        // current model is a mixture model itself.
+        (*it)->update_eigen_pointers(&eigenvalues[count_num_states],
+                                     &eigenvectors[count_num_states_2],
+                                     &inv_eigenvectors[count_num_states_2],
+                                     &inv_eigenvectors_transposed[count_num_states_2]);
+        
+        // Update the state counters, so that the pointers are assigned correctly
+        // for the next mixture component.
+        count_num_states += num_states_this_model;
+        count_num_states_2 += num_states_this_model_2;
+    }
 }
 
 ModelMixture::~ModelMixture() {
-	if (prop)
-		aligned_free(prop);
-	for (reverse_iterator rit = rbegin(); rit != rend(); rit++) {
-//		(*rit)->eigen_coeff = NULL;
-		(*rit)->eigenvalues = NULL;
-		(*rit)->eigenvectors = NULL;
-		(*rit)->inv_eigenvectors = NULL;
-		delete (*rit);
-	}
+    aligned_free(prop);
+    for (reverse_iterator rit = rbegin(); rit != rend(); rit++) {
+        (*rit)->eigenvalues = nullptr;
+        (*rit)->eigenvectors = nullptr;
+        (*rit)->inv_eigenvectors = nullptr;
+        (*rit)->inv_eigenvectors_transposed = nullptr;
+        delete (*rit);
+    }
 }
 
 void ModelMixture::setCheckpoint(Checkpoint *checkpoint) {
@@ -1652,7 +1649,7 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
     tree->central_scale_num = phylo_tree->central_scale_num;
     tree->central_partial_pars = phylo_tree->central_partial_pars;
 
-    tree->copyPhyloTree(phylo_tree);
+    tree->copyPhyloTree(phylo_tree, true);
     tree->optimize_by_newton = phylo_tree->optimize_by_newton;
     tree->setParams(phylo_tree->params);
     tree->setLikelihoodKernel(phylo_tree->sse);
@@ -1752,7 +1749,7 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
 
         // now optimize model one by one
         for (c = 0; c < nmix; c++) if (at(c)->getNDim() > 0) {
-            tree->copyPhyloTreeMixlen(phylo_tree, c);
+            tree->copyPhyloTreeMixlen(phylo_tree, c, true);
             ModelMarkov *subst_model;
             subst_model = at(c);
             tree->setModel(subst_model);

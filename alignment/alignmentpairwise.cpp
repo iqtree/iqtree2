@@ -97,19 +97,22 @@ void AlignmentPairwise::setSequenceNumbers(int seq1, int seq2) {
     memset(pair_freq, 0, sizeof(double)*total_size);
     if (tree->hasMatrixOfConvertedSequences()
          && rate->getPtnCat(0) < 0 ) {
-        auto sequence1      = tree->getConvertedSequenceByNumber(seq1);
-        auto sequence2      = tree->getConvertedSequenceByNumber(seq2);
-        auto frequencies    = tree->getConvertedSequenceFrequencies();
+        auto sequence1        = tree->getConvertedSequenceByNumber(seq1);
+        auto sequence2        = tree->getConvertedSequenceByNumber(seq2);
+        auto frequencies      = tree->getConvertedSequenceFrequencies();
         size_t sequenceLength = tree->getConvertedSequenceLength();
         for (size_t i=0; i<sequenceLength; ++i) {
-            auto state1 = sequence1[i];
-            auto state2 = sequence2[i];
-            if ( state1 < num_states && state2 < num_states ) {
-                if ( state1 != STATE_UNKNOWN && state2 != STATE_UNKNOWN ) {
-                    pair_freq[state1*num_states + state2] += frequencies[i];
-                    //Todo: Would it be worth storing a multiplication table?!
-                    //      and using that instead of multiplying by num_states?
-                }
+            int state1 = sequence1[i];
+            if (num_states<=state1) {
+                continue;
+            }
+            auto pairRow = pair_freq + state1*num_states;
+            int  state2  = sequence2[i];
+            if (num_states<=state2) {
+                continue;
+            }
+            if ( state1 != STATE_UNKNOWN && state2 != STATE_UNKNOWN ) {
+                pairRow[state2] += frequencies[i];
             }
         }
         //Add back the cumulative frequencies for any sites
@@ -194,6 +197,36 @@ double AlignmentPairwise::computeFunction(double value) {
     int nptn = tree->aln->getNPattern();
     double lh = 0.0;
 
+    if (tree->hasMatrixOfConvertedSequences()) {
+        auto sequence1        = tree->getConvertedSequenceByNumber(seq_id1);
+        auto sequence2        = tree->getConvertedSequenceByNumber(seq_id2);
+        auto frequencies      = tree->getConvertedSequenceFrequencies();
+        size_t sequenceLength = tree->getConvertedSequenceLength();
+        
+        if (site_rate->isSiteSpecificRate()) {
+            for (int i = 0; i < sequenceLength; i++) {
+                int state1 = sequence1[i];
+                int state2 = sequence2[i];
+                if (state1 >= num_states || state2 >= num_states) {
+                    continue;
+                }
+                double trans = tree->getModelFactory()->computeTrans(value * site_rate->getPtnRate(i), state1, state2);
+                lh -= log(trans) * frequencies[i];
+            }
+            return lh;
+        } else if (tree->getModel()->isSiteSpecificModel()) {
+            for (int i = 0; i < nptn; i++) {
+                int state1 = sequence1[i];
+                int state2 = sequence2[i];
+                if (state1 >= num_states || state2 >= num_states) {
+                    continue;
+                }
+                double trans = tree->getModelFactory()->computeTrans(value * site_rate->getPtnRate(i), state1, state2);
+                lh -= log(trans) * frequencies[i];
+            }
+            return lh;
+        }
+    }
     // site-specific rates
     if (site_rate->isSiteSpecificRate()) {
         for (int i = 0; i < nptn; i++) {
@@ -205,7 +238,6 @@ double AlignmentPairwise::computeFunction(double value) {
         }
         return lh;
     }
-
     if (tree->getModel()->isSiteSpecificModel()) {
         for (int i = 0; i < nptn; i++) {
             int state1 = tree->aln->at(i)[seq_id1];
@@ -259,35 +291,86 @@ void AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf) {
     int nptn = tree->aln->getNPattern();
     df = 0.0;
     ddf = 0.0;
+    
+    auto sequence1        = tree->getConvertedSequenceByNumber(seq_id1);
+    auto sequence2        = tree->getConvertedSequenceByNumber(seq_id2);
+    auto frequencies      = tree->getConvertedSequenceFrequencies();
+    size_t sequenceLength = tree->getConvertedSequenceLength();
+    if (sequenceLength!=nptn) {
+        sequence1 = sequence2 = nullptr;
+        frequencies = nullptr;
+    }
 
     if (site_rate->isSiteSpecificRate()) {
         for (int i = 0; i < nptn; i++) {
-            int state1 = tree->aln->at(i)[seq_id1];
-            int state2 = tree->aln->at(i)[seq_id2];
-            if (state1 >= num_states || state2 >= num_states) continue;
+            int state1;
+            if (sequence1!=nullptr) {
+                state1 = sequence1[i];
+            } else {
+                state1 = tree->aln->at(i)[seq_id1];
+            }
+            if (num_states<=state1) {
+                continue;
+            }
+            int state2;
+            if (sequence2!=nullptr) {
+                state2 = sequence2[i];
+            } else {
+                state2 = tree->aln->at(i)[seq_id2];
+            }
+            if (num_states<=state2) {
+                continue;
+            }
             double rate_val = site_rate->getPtnRate(i);
             double rate_sqr = rate_val * rate_val;
             double derv1, derv2;
             double trans = tree->getModelFactory()->computeTrans(value * rate_val, state1, state2, derv1, derv2);
             double d1 = derv1 / trans;
-            df -= rate_val * d1 * tree->aln->at(i).frequency;
-            ddf -= rate_sqr * (derv2/trans - d1*d1) * tree->aln->at(i).frequency;
+            double freq;
+            if (frequencies!=nullptr) {
+                freq = frequencies[i];
+            }  else {
+                freq = tree->aln->at(i).frequency;
+            }
+            df -= rate_val * d1 * freq;
+            ddf -= rate_sqr * (derv2/trans - d1*d1) * freq;
         }
         return;
     }
 
     if (tree->getModel()->isSiteSpecificModel()) {
         for (int i = 0; i < nptn; i++) {
-            int state1 = tree->aln->at(i)[seq_id1];
-            int state2 = tree->aln->at(i)[seq_id2];
-            if (state1 >= num_states || state2 >= num_states) continue;
+            int state1;
+            if (sequence1!=nullptr) {
+                state1 = sequence1[i]; }
+            else {
+                state1 = tree->aln->at(i)[seq_id1];
+            }
+            if (num_states<=state1) {
+                continue;
+            }
+            int state2;
+            if (sequence2!=nullptr) {
+                state2 = sequence2[i];
+            } else {
+                state2 = tree->aln->at(i)[seq_id2];
+            }
+            if (num_states<=state2) {
+                continue;
+            }
             double rate_val = site_rate->getPtnRate(i);
             double rate_sqr = rate_val * rate_val;
             double derv1, derv2;
             double trans = tree->getModel()->computeTrans(value * rate_val,model->getPtnModelID(i), state1, state2, derv1, derv2);
             double d1 = derv1 / trans;
-            df -= rate_val * d1 * tree->aln->at(i).frequency;
-            ddf -= rate_sqr * (derv2/trans - d1*d1) * tree->aln->at(i).frequency;
+            double freq;
+            if (frequencies!=nullptr) {
+                freq = frequencies[i];
+            }  else {
+                freq = tree->aln->at(i).frequency;
+            }
+            df -= rate_val * d1 * freq;
+            ddf -= rate_sqr * (derv2/trans - d1*d1) * freq;
         }
         return;
     }
@@ -386,7 +469,6 @@ double AlignmentPairwise::recomputeDist
     ( int seq1, int seq2, double initial_dist, double &d2l ) {
     //Only called when -experimental has been passed
     if (initial_dist == 0.0) {
-        //ZORK
         if (tree->hasMatrixOfConvertedSequences()) {
             int distance    = 0;
             int denominator = 0;

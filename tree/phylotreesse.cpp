@@ -259,30 +259,27 @@ void PhyloTree::computeTipPartialLikelihood() {
         int nstates = aln->num_states;
         size_t nseq = aln->getNSeq();
         ASSERT(vector_size > 0);
+        
+        
 #ifdef _OPENMP
         #pragma omp parallel for schedule(static)
 #endif
         for (int nodeid = 0; nodeid < nseq; nodeid++) {
+            auto stateRow = getConvertedSequenceByNumber(nodeid);
             int i, x, v;
             double *partial_lh = tip_partial_lh + tip_block_size*nodeid;
             size_t ptn;
             for (ptn = 0; ptn < nptn; ptn+=vector_size, partial_lh += nstates*vector_size) {
-//                int state[vector_size];
-//                for (v = 0; v < vector_size; v++) {
-//                    if (ptn+v < nptn)
-//                        state[v] = aln->at(ptn+v)[nodeid];
-//                    else
-//                        state[v] = aln->STATE_UNKNOWN;
-//                }
-
                 double *inv_evec = &model->getInverseEigenvectors()[ptn*nstates*nstates];
                 for (v = 0; v < vector_size; v++) {
                     int state = 0;
-                    if (ptn+v < nptn)
-                        state = aln->at(ptn+v)[nodeid];
-    //                double *partial_lh = node_partial_lh + ptn*nstates;
-//                    double *inv_evec = models->at(ptn)->getInverseEigenvectors();
-
+                    if (ptn+v < nptn) {
+                        if (stateRow!=nullptr) {
+                            state = stateRow[ptn+v];
+                        } else {
+                            state = aln->at(ptn+v)[nodeid];
+                        }
+                    }
                     if (state < nstates) {
                         for (i = 0; i < nstates; i++)
                             partial_lh[i*vector_size+v] = inv_evec[(i*nstates+state)*vector_size+v];
@@ -290,7 +287,6 @@ void PhyloTree::computeTipPartialLikelihood() {
                         // special treatment for unknown char
                         for (i = 0; i < nstates; i++) {
                             double lh_unknown = 0.0;
-//                            double *this_inv_evec = inv_evec + i*nstates;
                             for (x = 0; x < nstates; x++)
                                 lh_unknown += inv_evec[(i*nstates+x)*vector_size+v];
                             partial_lh[i*vector_size+v] = lh_unknown;
@@ -449,7 +445,6 @@ void PhyloTree::computeTipPartialLikelihood() {
     int m, x, nmixtures = model->getNMixtures();
 	double *all_inv_evec = model->getInverseEigenvectors();
 	ASSERT(all_inv_evec);
-
 
 	for (state = 0; state < nstates; state++) {
 		double *this_tip_partial_lh = &tip_partial_lh[state*nstates*nmixtures];

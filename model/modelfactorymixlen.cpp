@@ -125,14 +125,11 @@ string ModelFactoryMixlen::sortClassesByTreeLength() {
                 ((ModelMarkov*)model->getMixtureClass(m))->setEigenvalues(&model->getEigenvalues()[m*num_states]);
                 ((ModelMarkov*)model->getMixtureClass(m))->setEigenvectors(&model->getEigenvectors()[m*num_states*num_states]);
                 ((ModelMarkov*)model->getMixtureClass(m))->setInverseEigenvectors(&model->getInverseEigenvectors()[m*num_states*num_states]);
+                ((ModelMarkov*)model->getMixtureClass(m))->setInverseEigenvectorsTransposed(&model->getInverseEigenvectorsTransposed()[m*num_states*num_states]);
             }
             model->decomposeRateMatrix();
-
-//            model->writeInfo(cout);
             site_rate->writeInfo(cout);
-
         }
-
         tree->clearAllPartialLH();
         ASSERT(fabs(score - tree->computeLikelihood()) < 0.1);
     }

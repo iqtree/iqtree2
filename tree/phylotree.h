@@ -111,7 +111,17 @@ inline T *aligned_alloc(size_t size) {
     return (T*)mem;
 }
 
-inline void aligned_free(void* mem) {
+template <class T> T* ensure_aligned_allocated(T* &ptr, size_t size) {
+    if (ptr==nullptr) {
+        ptr = aligned_alloc<T>(size);
+    }
+    return ptr;
+}
+
+template <class T> void aligned_free(T* & mem) {
+    if (mem==nullptr) {
+        return;
+    }
 #if defined WIN32 || defined _WIN32 || defined __WIN32__
     #if (defined(__MINGW32__) || defined(__clang__)) && defined(BINARY32)
         __mingw_aligned_free(mem);
@@ -121,6 +131,7 @@ inline void aligned_free(void* mem) {
 #else
 	free(mem);
 #endif
+    mem = nullptr;
 }
 
 
@@ -416,16 +427,18 @@ public:
             copy the phylogenetic tree structure into this tree, designed specifically for PhyloTree.
             So there is some distinction with copyTree.
             @param tree the tree to copy
+            @param borrowSummary true if the alignment summary of the other tree is to be "borrowed"
      */
-    void copyPhyloTree(PhyloTree *tree);
+    void copyPhyloTree(PhyloTree *tree, bool borrowSummary);
 
     /**
             copy the phylogenetic tree structure into this tree, designed specifically for PhyloTree.
             So there is some distinction with copyTree.
             @param tree the tree to copy
             @param mix mixture ID of branch lengths
+            @param borrowSummary true if the alignment summary of the other tree is to be "borrowed"
      */
-    virtual void copyPhyloTreeMixlen(PhyloTree *tree, int mix);
+    virtual void copyPhyloTreeMixlen(PhyloTree *tree, int mix, bool borrowSummary);
 
 
     /**
@@ -2348,6 +2361,7 @@ protected:
 
     std::vector<AlignmentPairwise*> distanceProcessors;
     AlignmentSummary* summary;
+    bool isSummaryBorrowed;
     
 };
 

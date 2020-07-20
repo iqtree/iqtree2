@@ -336,9 +336,14 @@ public:
 	}
 
 	virtual double *getInverseEigenvectors() const {
-		return NULL;
+		return nullptr;
 	}
 
+    virtual double *getInverseEigenvectorsTransposed() const {
+        return nullptr;
+    }
+
+    
     /**
      * compute the memory size for the model, can be large for site-specific models
      * @return memory size required in bytes

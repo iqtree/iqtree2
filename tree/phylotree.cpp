@@ -33,6 +33,7 @@
 #include "upperbounds.h"
 #include "utils/MPIHelper.h"
 #include "utils/hammingdistance.h"
+#include "utils/setcheck.h"
 #include "model/modelmixture.h"
 #include "phylonodemixlen.h"
 #include "phylotreemixlen.h"
@@ -133,6 +134,7 @@ void PhyloTree::init() {
     vector_size = 0;
     safe_numeric = false;
     summary = nullptr;
+    isSummaryBorrowed = false;
 }
 
 PhyloTree::PhyloTree(Alignment *aln) : MTree(), CheckpointFactory() {
@@ -204,73 +206,33 @@ void myPartitionsDestroy(partitionList *pl) {
 
 PhyloTree::~PhyloTree() {
     doneComputingDistances();
-    if (nni_scale_num)
-        aligned_free(nni_scale_num);
-    nni_scale_num = NULL;
-    if (nni_partial_lh)
-        aligned_free(nni_partial_lh);
-    nni_partial_lh = NULL;
-    if (central_partial_lh)
-        aligned_free(central_partial_lh);
-    central_partial_lh = NULL;
-    if (central_scale_num)
-        aligned_free(central_scale_num);
-    central_scale_num = NULL;
+    aligned_free(nni_scale_num);
+    aligned_free(nni_partial_lh);
+    aligned_free(central_partial_lh);
+    aligned_free(central_scale_num);
+    aligned_free(central_partial_pars);
+    aligned_free(cost_matrix);
 
-    if (central_partial_pars)
-        aligned_free(central_partial_pars);
-    central_partial_pars = NULL;
-
-    if(cost_matrix){
-        aligned_free(cost_matrix);
-        cost_matrix = NULL;
-    }
-
-    if (model_factory)
-        delete model_factory;
+    delete model_factory;
     model_factory = NULL;
-    if (model)
-        delete model;
+    delete model;
     model = NULL;
-    if (site_rate)
-        delete site_rate;
+    delete site_rate;
     site_rate = NULL;
-    if (_pattern_lh_cat)
-        aligned_free(_pattern_lh_cat);
-    _pattern_lh_cat = NULL;
-    if (_pattern_lh)
-        aligned_free(_pattern_lh);
-    _pattern_lh = NULL;
-    if (_site_lh)
-        aligned_free(_site_lh);
-    _site_lh = NULL;
-    //if (state_freqs)
-    //    delete [] state_freqs;
-    if (theta_all)
-        aligned_free(theta_all);
-    theta_all = NULL;
-    if (buffer_scale_all)
-        aligned_free(buffer_scale_all);
-    buffer_scale_all = NULL;
-    if (buffer_partial_lh)
-        aligned_free(buffer_partial_lh);
-    buffer_partial_lh = NULL;
-    if (ptn_freq)
-        aligned_free(ptn_freq);
-    ptn_freq = NULL;
-    if (ptn_freq_pars)
-        aligned_free(ptn_freq_pars);
-    ptn_freq_pars = NULL;
+    aligned_free(_pattern_lh_cat);
+    aligned_free(_pattern_lh);
+    aligned_free(_site_lh);
+    aligned_free(theta_all);
+    aligned_free(buffer_scale_all);
+    aligned_free(buffer_partial_lh);
+    aligned_free(ptn_freq);
+    aligned_free(ptn_freq_pars);
     ptn_freq_computed = false;
-    if (ptn_invar)
-        aligned_free(ptn_invar);
-    ptn_invar = NULL;
-    if (dist_matrix)
-        delete[] dist_matrix;
+    aligned_free(ptn_invar);
+    delete[] dist_matrix;
     dist_matrix = NULL;
 
-    if (var_matrix)
-        delete[] var_matrix;
+    delete[] var_matrix;
     var_matrix = NULL;
 
     if (pllPartitions)
@@ -283,6 +245,9 @@ PhyloTree::~PhyloTree() {
     pllPartitions = NULL;
     pllAlignment = NULL;
     pllInst = NULL;
+    if (!isSummaryBorrowed) {
+        delete summary;
+    }
     summary = nullptr;
 }
 
@@ -360,27 +325,57 @@ void PhyloTree::copyTree(MTree *tree, string &taxa_set) {
     setAlignment(aln);
 }
 
-void PhyloTree::copyPhyloTree(PhyloTree *tree) {
+void PhyloTree::copyPhyloTree(PhyloTree *tree, bool borrowSummary) {
     MTree::copyTree(tree);
     if (!tree->aln)
         return;
     setAlignment(tree->aln);
+    if (borrowSummary && summary!=tree->summary && tree->summary!=nullptr) {
+        if (!isSummaryBorrowed) {
+            delete summary;
+        }
+        summary           = tree->summary;
+        isSummaryBorrowed = (summary!=nullptr);
+    }
 }
 
-void PhyloTree::copyPhyloTreeMixlen(PhyloTree *tree, int mix) {
+void PhyloTree::copyPhyloTreeMixlen(PhyloTree *tree, int mix, bool borrowSummary) {
     if (tree->isMixlen()) {
         ((PhyloTreeMixlen*)tree)->cur_mixture = mix;
     }
-    copyPhyloTree(tree);
+    copyPhyloTree(tree, borrowSummary);
     if (tree->isMixlen()) {
         ((PhyloTreeMixlen*)tree)->cur_mixture = -1;
     }
 }
 
+#define FAST_NAME_CHECK 1
 void PhyloTree::setAlignment(Alignment *alignment) {
     aln = alignment;
-    bool err = false;
+    //double checkStart = getRealTime();
     size_t nseq = aln->getNSeq();
+    bool err = false;
+#if FAST_NAME_CHECK
+    map<string, Node*> mapNameToNode;
+    getMapOfTaxonNameToNode(nullptr, nullptr, mapNameToNode);
+    for (size_t seq = 0; seq < nseq; seq++) {
+        string seq_name = aln->getSeqName(seq);
+        auto it = mapNameToNode.find(seq_name);
+        if (it==mapNameToNode.end()) {
+            string str = "Alignment sequence ";
+            str += seq_name;
+            str += " does not appear in the tree";
+            err = true;
+            outError(str, false);
+        } else {
+            (*it).second->id = seq;
+            mapNameToNode.erase(it);
+        }
+    }
+#else
+    //For each sequence, find the correponding node, via
+    //the map (if there is one), tag it, and remove it from
+    //the map.
     for (size_t seq = 0; seq < nseq; seq++) {
         string seq_name = aln->getSeqName(seq);
         Node *node = findLeafName(seq_name);
@@ -395,14 +390,22 @@ void PhyloTree::setAlignment(Alignment *alignment) {
             node->id = seq;
         }
     }
+#endif
     if (err) {
         printTree(cout, WT_NEWLINE);
         outError("Tree taxa and alignment sequence do not match (see above)");
     }
-    if (rooted) {
-        ASSERT(root->name == ROOT_NAME);
-        root->id = nseq;
+#if FAST_NAME_CHECK
+    //Since every sequence in the alignment has had its
+    //corresponding node tagged with an id, and that node's
+    //entry has been removed from the map, it follows:
+    //any node still referenced from the map does NOT
+    //correspond to a sequence in the alignment.
+    for (auto it = mapNameToNode.begin(); it != mapNameToNode.end(); ++it) {
+        outError((string)"Tree taxon " + it->first + " does not appear in the alignment", false);
+        err = true;
     }
+#else
     StrVector taxname;
     getTaxaName(taxname);
     for (StrVector::iterator it = taxname.begin(); it != taxname.end(); it++)
@@ -410,7 +413,20 @@ void PhyloTree::setAlignment(Alignment *alignment) {
             outError((string)"Tree taxon " + (*it) + " does not appear in the alignment", false);
             err = true;
         }
-    if (err) outError("Tree taxa and alignment sequence do not match (see above)");
+#endif
+    if (err) {
+        outError("Tree taxa and alignment sequence do not match (see above)");
+    }
+    if (rooted) {
+        ASSERT(root->name == ROOT_NAME);
+        root->id = aln->getNSeq();
+    }
+    /*
+    if (verbose_mode >= VB_MED) {
+        cout << "Alignment namecheck took " << (getRealTime()-checkStart)
+        << " sec (of wall-clock time)" << endl;
+    }
+    */
 }
 
 void PhyloTree::setRootNode(const char *my_root, bool multi_taxa) {
@@ -919,41 +935,20 @@ void PhyloTree::initializeAllPartialLh() {
 }
 
 void PhyloTree::deleteAllPartialLh() {
-
-    if (central_partial_lh) {
-        aligned_free(central_partial_lh);
-    }
-    if (central_scale_num) {
-        aligned_free(central_scale_num);
-    }
-    if (central_partial_pars)
-        aligned_free(central_partial_pars);
-
-    if (nni_scale_num)
-        aligned_free(nni_scale_num);
-    nni_scale_num = NULL;
-    if (nni_partial_lh)
-        aligned_free(nni_partial_lh);
-    nni_partial_lh = NULL;
-
-    if (ptn_invar)
-        aligned_free(ptn_invar);
-    if (ptn_freq)
-        aligned_free(ptn_freq);
-    if (ptn_freq_pars)
-        aligned_free(ptn_freq_pars);
-    if (theta_all)
-        aligned_free(theta_all);
-    if (buffer_scale_all)
-        aligned_free(buffer_scale_all);
-    if (buffer_partial_lh)
-        aligned_free(buffer_partial_lh);
-    if (_pattern_lh_cat)
-        aligned_free(_pattern_lh_cat);
-    if (_pattern_lh)
-        aligned_free(_pattern_lh);
-    if (_site_lh)
-        aligned_free(_site_lh);
+    aligned_free(central_partial_lh);
+    aligned_free(central_scale_num);
+    aligned_free(central_partial_pars);
+    aligned_free(nni_scale_num);
+    aligned_free(nni_partial_lh);
+    aligned_free(ptn_invar);
+    aligned_free(ptn_freq);
+    aligned_free(ptn_freq_pars);
+    aligned_free(theta_all);
+    aligned_free(buffer_scale_all);
+    aligned_free(buffer_partial_lh);
+    aligned_free(_pattern_lh_cat);
+    aligned_free(_pattern_lh);
+    aligned_free(_site_lh);
     central_partial_lh = NULL;
     central_scale_num = NULL;
     central_partial_pars = NULL;
@@ -1722,7 +1717,6 @@ int PhyloTree::computePatternCategories(IntVector *pattern_ncat) {
     delete [] id_mixture;
     delete [] sorted_lh_mixture;
     delete [] lh_mixture;
-//    delete [] cat_prob;
     return num_best_mixture;
 }
 
@@ -2568,9 +2562,10 @@ void PhyloTree::optimizePatternRates(DoubleVector &pattern_rates) {
         ptn_id.push_back(ptn);
         paln->extractPatterns(aln, ptn_id);
         PhyloTree *tree = new PhyloTree;
-        tree->copyPhyloTree(this);
+        tree->copyPhyloTree(this, false); //Local alignment, so tree can't "borrow" the summary of this
         tree->setParams(params);
         tree->setAlignment(paln);
+        tree->prepareToComputeDistances();
         tree->sse = sse;
         tree->num_threads = 1;
         // initialize model
@@ -2580,7 +2575,7 @@ void PhyloTree::optimizePatternRates(DoubleVector &pattern_rates) {
         tree->optimizeTreeLengthScaling(MIN_SITE_RATE, pattern_rates[ptn], MAX_SITE_RATE, 0.0001);
         
         tree->setModelFactory(NULL);
-        
+        tree->doneComputingDistances();
         delete tree;
         delete paln;
     }
@@ -3107,8 +3102,12 @@ void PhyloTree::prepareToComputeDistances() {
     for (threads -= distanceProcessors.size(); 0 < threads; --threads) {
         distanceProcessors.emplace_back(new AlignmentPairwise(this));
     }
+    if (summary!=nullptr && !isSummaryBorrowed) {
+        delete summary;
+        summary = nullptr;
+    }
     if (params->experimental) {
-        summary = new AlignmentSummary(aln, true);
+        summary = new AlignmentSummary(aln, true, true);
         summary->constructSequenceMatrix(false);
     }
 }
@@ -3118,22 +3117,37 @@ bool PhyloTree::hasMatrixOfConvertedSequences() const {
 }
 
 size_t PhyloTree::getConvertedSequenceLength() const {
+    if (summary==nullptr) {
+        return 0;
+    }
     return summary->sequenceLength;
 }
 
 const char* PhyloTree::getConvertedSequenceByNumber(int seq1) const {
+    if (summary==nullptr || summary->sequenceMatrix==nullptr) {
+        return nullptr;
+    }
     return summary->sequenceMatrix + seq1 * summary->sequenceLength;
 }
 
 const int* PhyloTree::getConvertedSequenceFrequencies() const {
+    if (summary==nullptr) {
+        return nullptr;
+    }
     return summary->siteFrequencies.data();
 }
 
 const int* PhyloTree::getConvertedSequenceNonConstFrequencies() const {
+    if (summary==nullptr) {
+        return nullptr;
+    }
     return summary->nonConstSiteFrequencies.data();
 }
 
 int  PhyloTree::getSumOfFrequenciesForSitesWithConstantState(int state) const {
+    if (summary==nullptr) {
+        return 0;
+    }
     return summary->getSumOfConstantSiteFrequenciesForState(state);
 }
 
@@ -3154,7 +3168,9 @@ void PhyloTree::doneComputingDistances() {
         delete (*it);
     }
     distanceProcessors.clear();
-    delete summary;
+    if (!isSummaryBorrowed) {
+        delete summary;
+    }
     summary = nullptr;
 }
 
@@ -3369,7 +3385,7 @@ double PhyloTree::computeDist_Experimental(double *dist_mat, double *var_mat) {
         }
     }
     EX_TRACE("Summarizing...");
-    AlignmentSummary s(aln, false);
+    AlignmentSummary s(aln, false, false);
     int maxDistance = 0;
     
     EX_TRACE("Summarizing found " << s.sequenceLength
@@ -3511,7 +3527,7 @@ double PhyloTree::computeDist(Params &params, Alignment *alignment, double* &dis
         double begin_time = getRealTime();
         longest_dist = (params.experimental)
             ? computeDist_Experimental(dist_mat, var_mat)
-            : computeDist(dist_mat, var_mat);
+            : computeDist(dist_mat, var_mat); //DISABLED
         if (verbose_mode >= VB_MED) {
             cout << "Distance calculation time: "
             << getRealTime() - begin_time << " seconds" << endl;
@@ -3531,7 +3547,7 @@ double PhyloTree::computeObsDist(double *dist_mat) {
     size_t nseqs = aln->getNSeq();
     double longest_dist = 0.0;
     #ifdef _OPENMP
-    #pragma omp parallel for
+    #pragma omp parallel for schedule(dynamic)
     #endif
     for (size_t seq1 = 0; seq1 < nseqs; ++seq1) {
         size_t pos = seq1*nseqs;
@@ -3625,7 +3641,7 @@ void PhyloTree::computeBioNJ(Params &params) {
         treeBuilder->constructTree(dist_file, bionj_file);
         if (verbose_mode >= VB_MED) {
             cout << "Constructing " << treeBuilder->getName() << " tree"
-                << " (from distance file " << dist_file << ") took"
+                << " (from distance file " << dist_file << ") took "
                 << (getRealTime()-start_time) << " sec." << endl;
         }
     }
@@ -4165,8 +4181,6 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 
     mem_slots.eraseSpecialNei();
 
-//     aligned_free(new_partial_lh);
-
      // restore the length of 4 branches around node1, node2
      FOR_NEIGHBOR(node1, node2, it)
          (*it)->setLength((*it)->node->findNeighbor(node1));
@@ -4182,9 +4196,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
      } else {
          res = nniMoves[1];
      }
-    if (newNNIMoves) {
-        delete [] nniMoves;
-    }
+    delete [] nniMoves;
     return res;
 }
 

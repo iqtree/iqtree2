@@ -357,6 +357,7 @@ public:
 
 	virtual double *getEigenvectors() const;
 	virtual double *getInverseEigenvectors() const;
+    virtual double *getInverseEigenvectorsTransposed() const;
 
 //	void setEigenCoeff(double *eigenCoeff);
 
@@ -366,6 +367,23 @@ public:
 
 	void setInverseEigenvectors(double *inv_eigenvectors);
 
+    void setInverseEigenvectorsTransposed(double *inv_eigenvectors);
+
+    static void calculateExponentOfScalarMultiply(const double* source, int size
+                                                  , double scalar, double* dest);
+    
+    static void calculateHadamardProduct(const double* first, const double* second
+                                         , int size, double *dest);
+    
+    static double dotProduct(const double* first, const double* second, int size);
+    
+    static void calculateSquareMatrixTranspose(const double* original, int rank
+                                               , double* transpose);
+    
+    static void aTimesDiagonalBTimesTransposeOfC
+        ( const double* matrixA, const double* rowB
+         , const double* matrixCTranspose, int rank
+         , double* dest);
     /**
      * compute the memory size for the model, can be large for site-specific models
      * @return memory size required in bytes
@@ -407,7 +425,8 @@ public:
   // need to be updated recursively, if the model is a mixture model. For a
   // normal Markov model, only the standard pointers are set. This was done in
   // `ModelMixture::initMem()` before.
-  virtual void update_eigen_pointers(double *eval, double *evec, double *inv_evec);
+  virtual void update_eigen_pointers(double *eval, double *evec
+                                     , double *inv_evec, double *inv_evec_transposed);
 
 
     /**
@@ -487,11 +506,11 @@ protected:
 	*/
 	double *inv_eigenvectors;
 
-	/**
-		coefficient cache, served for fast computation of the P(t) matrix
-	*/
-//	double *eigen_coeff;
-
+    /**
+        transpose of the matrix of the inverse eigenvectors of the rate matrix Q
+    */
+    double *inv_eigenvectors_transposed;
+    
 	/** state with highest frequency, used when optimizing state frequencies +FO */
 	int highest_freq_state;
 

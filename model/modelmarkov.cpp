@@ -22,10 +22,13 @@
 #include <string.h>
 #include "modelliemarkov.h"
 #include "modelunrest.h"
+
 #include <Eigen/Eigenvalues>
 #include <unsupported/Eigen/MatrixFunctions>
 using namespace Eigen;
 
+#include <vectorclass/vectormath_exp.h>
+#include <vectorclass/vectorclass.h>
 
 /** number of squaring for scaling-squaring technique */
 //const int TimeSquare = 10;
@@ -44,14 +47,16 @@ ModelMarkov::ModelMarkov(PhyloTree *tree, bool reversible, bool adapt_tree)
     rates = NULL;
 
     // variables for reversible model
-    eigenvalues = eigenvectors = inv_eigenvectors = NULL;
+    eigenvalues = nullptr;
+    eigenvectors = nullptr;
+    inv_eigenvectors = nullptr;
+    inv_eigenvectors_transposed = nullptr;
     highest_freq_state = num_states-1;
     freq_type = FREQ_UNKNOWN;
     half_matrix = true;
     highest_freq_state = num_states-1;
 
     // variables for non-reversible model
-//    model_parameters = NULL;
     rate_matrix = NULL;
     eigenvalues_imag = NULL;
     ceval = cevec = cinv_evec = NULL;
@@ -68,9 +73,7 @@ ModelMarkov::ModelMarkov(PhyloTree *tree, bool reversible, bool adapt_tree)
 }
 
 void ModelMarkov::setReversible(bool reversible, bool adapt_tree) {
-    
     bool old_reversible = is_reversible;
-    
     is_reversible = reversible;
 
     if (reversible) {
@@ -78,24 +81,23 @@ void ModelMarkov::setReversible(bool reversible, bool adapt_tree) {
         int i;
         int nrate = getNumRateEntries();
 
-        if (rates)
-            delete [] rates;
+        delete [] rates;
         rates = new double[nrate];
-        for (i=0; i < nrate; i++)
+        for (i=0; i < nrate; i++) {
             rates[i] = 1.0;
-
-        if (!eigenvalues)
-            eigenvalues = aligned_alloc<double>(num_states);
-        if (!eigenvectors)
-            eigenvectors = aligned_alloc<double>(num_states*num_states);
-        if (!inv_eigenvectors)
-            inv_eigenvectors = aligned_alloc<double>(num_states*num_states);
-
+        }
+        size_t num_states_squared = num_states * num_states;
+        ensure_aligned_allocated(eigenvalues,  num_states);
+        ensure_aligned_allocated(eigenvectors, num_states_squared);
+        ensure_aligned_allocated(inv_eigenvectors, num_states_squared);
+        ensure_aligned_allocated(inv_eigenvectors_transposed, num_states_squared);
+        
         num_params = nrate - 1;
 
         if (adapt_tree && phylo_tree && phylo_tree->rooted) {
-            if (verbose_mode >= VB_MED)
+            if (verbose_mode >= VB_MED) {
                 cout << "Converting rooted to unrooted tree..." << endl;
+            }
             phylo_tree->convertToUnrooted();
         }
     } else {
@@ -109,24 +111,27 @@ void ModelMarkov::setReversible(bool reversible, bool adapt_tree) {
         // reallocate the mem spaces
         if (rates && old_reversible) {
             // copy old reversible rates into new non-reversible
-            int i, j, k;
-            for (i = 0, k = 0; i < num_states; i++)
-                for (j = i+1; j < num_states; j++, k++) {
+            for (int i = 0, k = 0; i < num_states; i++) {
+                for (int j = i+1; j < num_states; j++, k++) {
                     rate_matrix[i*num_states+j] = rates[k] * state_freq[j];
                     rate_matrix[j*num_states+i] = rates[k] * state_freq[i];
                 }
+            }
             delete [] rates;
             rates = new double[num_rates];
-            for (i = 0, k = 0; i < num_states; i++)
-                for (j = 0; j < num_states; j++)
+            int k = 0;
+            int pos = 0;
+            for (int i = 0; i < num_states; i++) {
+                for (int j = 0; j < num_states; j++, pos++) {
                     if (i!=j) {
-                        rates[k] = rate_matrix[i*num_states+j];
-                        k++;
+                        rates[k] = rate_matrix[pos];
+                        ++k;
                     }
+                }
+            }
             ASSERT(k == num_rates);
         } else {
-            if (rates)
-                delete [] rates;
+            delete [] rates;
             rates = new double [num_rates];
             memset(rates, 0, sizeof(double) * (num_rates));
         }
@@ -477,16 +482,23 @@ void ModelMarkov::computeTransMatrix(double time, double *trans_matrix, int mixt
 	/* compute P(t) */
 	double evol_time = time / total_num_subst;
 
-    VectorXd eval_exp(num_states);
-    ArrayXd eval = Map<ArrayXd,Aligned>(eigenvalues, num_states);
-    eval_exp = (eval*evol_time).exp().matrix();
-    Map<Matrix<double,Dynamic,Dynamic,RowMajor>,Aligned> evectors(eigenvectors, num_states, num_states);
-    Map<Matrix<double,Dynamic,Dynamic,RowMajor>,Aligned> inv_evectors(inv_eigenvectors, num_states, num_states);
-    MatrixXd res = evectors * eval_exp.asDiagonal() * inv_evectors;
-    Map<Matrix<double,Dynamic,Dynamic,RowMajor> >map_trans(trans_matrix,num_states,num_states);
-    map_trans = res;
-    return;
-    
+    if (Params::getInstance().experimental) {
+        double eval_exp[num_states];
+        calculateExponentOfScalarMultiply(eigenvalues, num_states, evol_time, eval_exp);
+        aTimesDiagonalBTimesTransposeOfC( eigenvectors, eval_exp
+                              , inv_eigenvectors_transposed, num_states, trans_matrix);
+        return;
+    } else {
+        VectorXd eval_exp(num_states);
+        ArrayXd eval = Map<ArrayXd,Aligned>(eigenvalues, num_states);
+        eval_exp = (eval*evol_time).exp().matrix();
+        Map<Matrix<double,Dynamic,Dynamic,RowMajor>,Aligned> evectors(eigenvectors, num_states, num_states);
+        Map<Matrix<double,Dynamic,Dynamic,RowMajor>,Aligned> inv_evectors(inv_eigenvectors, num_states, num_states);
+        MatrixXd res = evectors * eval_exp.asDiagonal() * inv_evectors;
+        Map<Matrix<double,Dynamic,Dynamic,RowMajor> >map_trans(trans_matrix,num_states,num_states);
+        map_trans = res;
+        return;
+    }
     /*
     double exptime[num_states];
 	int i, j, k;
@@ -543,22 +555,166 @@ double ModelMarkov::computeTrans(double time, int state1, int state2) {
 }
 
 double ModelMarkov::computeTrans(double time, int state1, int state2, double &derv1, double &derv2) {
-	double evol_time = time / total_num_subst;
-	int i;
-
-//	double *coeff_entry = eigen_coeff + ((state1*num_states+state2)*num_states);
-	double trans_prob = 0.0;
-	derv1 = derv2 = 0.0;
-	for (i = 0; i < num_states; i++) {
-		double trans = eigenvectors[state1*num_states+i] * inv_eigenvectors[i*num_states+state2] * exp(evol_time * eigenvalues[i]);
-		double trans2 = trans * eigenvalues[i];
-		trans_prob += trans;
-		derv1 += trans2;
-		derv2 += trans2 * eigenvalues[i];
-	}
-	return trans_prob;
+    double evol_time = time / total_num_subst;
+    double trans_prob = 0.0;
+    derv1 = derv2 = 0.0;
+    for (int i = 0; i < num_states; i++) {
+        double trans = eigenvectors[state1*num_states+i]
+        * inv_eigenvectors[i*num_states+state2]
+        * exp(evol_time * eigenvalues[i]);
+        double trans2 = trans * eigenvalues[i];
+        trans_prob += trans;
+        derv1 += trans2;
+        derv2 += trans2 * eigenvalues[i];
+    }
+    return trans_prob;
 }
 
+void ModelMarkov::calculateExponentOfScalarMultiply(const double* source, int size
+                                                    , double scalar, double* dest) {
+    if (size==4) {
+        Vec4d v;
+        v.load(source);
+        exp(v*scalar).store(dest);
+        return;
+    }
+    int remainder = size;
+    if (4<size) {
+        //Todo: Investigate. Worth unrolling?
+        Vec4d v;
+        int step  = Vec4d::size();
+        remainder = size & (step - 1);
+        const double* sourceStop = source + (size-remainder);
+        for (; source<sourceStop; source+=step, dest+=step) {
+            v.load(source);
+            exp(v*scalar).store(dest);
+        }
+    }
+    //Do the last few operations one at a time
+    for (; 0<remainder; --remainder, ++source, ++dest) {
+        *dest = exp(*source * scalar);
+    }
+}
+
+void ModelMarkov::calculateHadamardProduct(const double* first
+                                           , const double* second, int size
+                                           , double *dest) {
+    if (size==4) {
+        Vec4d a;
+        Vec4d b;
+        a.load(first);
+        b.load(second);
+        (a*b).store(dest);
+        return;
+    }
+    int offset = 0;
+    if (4<size) {
+        //Todo: Investigate. Worth unrolling?
+        Vec4d a, b;
+        int step  = Vec4d::size();
+        int remainder = size & (step - 1);
+        int integralSize = size - remainder;
+        for (; offset<integralSize; offset += step) {
+            a.load(first + offset);
+            b.load(second + offset);
+            (a*b).store(dest + offset);
+        }
+    }
+    for (; offset<size; ++offset) {
+        dest[offset] = first[offset] * second[offset];
+    }
+}
+
+double ModelMarkov::dotProduct(const double* first
+                            , const double* second, int size) {
+    if (size==4) {
+        Vec4d a;
+        Vec4d b;
+        a.load(first);
+        b.load(second);
+        return horizontal_add(a*b);
+    }
+    int    offset    = 0;
+    double product   = 0;
+    if (4<size) {
+        //Todo: Investigate. Worth unrolling?
+        Vec4d a, b, dot = 0;
+        int step  = Vec4d::size();
+        int remainder = size & (step - 1);
+        int integralSize = size - remainder;
+        for (; offset<integralSize; offset += step) {
+            a.load(first + offset);
+            b.load(second + offset);
+            dot = mul_add(a, b, dot);
+        }
+        product = horizontal_add(dot);
+    }
+    for (; offset<size; ++offset) {
+        product += first[offset] * second[offset];
+    }
+    return product;
+}
+
+
+void ModelMarkov::calculateSquareMatrixTranspose(const double* original, int rank, double* transpose) {
+    const double* originalEntry = original;
+    for (int i=0; i<rank; ++i) {
+        double* destEntry = transpose + i;
+        for (int j=0; j<rank; ++j ) {
+            *destEntry = *originalEntry;
+            ++originalEntry;   //next in column (or: first in next row)
+            destEntry += rank; //next in column
+        }
+    }
+}
+
+void ModelMarkov::aTimesDiagonalBTimesTransposeOfC(const double* matrixA, const double* rowB
+                                      , const double* matrixCTranspose, int rank,double* dest) {
+    if (rank==4) {
+        Vec4d B;
+        B.load(rowB);
+        
+        Vec4d row1, row2, row3, row4; //rows of matrixA * corresponding entries in rowB
+        row1.load_a (matrixA)    *= B;
+        row2.load_a (matrixA+4)  *= B;
+        row3.load_a (matrixA+8)  *= B;
+        row4.load_a (matrixA+12) *= B;
+        
+        Vec4d col1, col2, col3, col4; //rows of matrixCTranspose: columns of matrixC
+        col1.load_a ( matrixCTranspose );
+        col2.load_a ( matrixCTranspose + 4  );
+        col3.load_a ( matrixCTranspose + 8  );
+        col4.load_a ( matrixCTranspose + 12 );
+
+        dest[0]  = horizontal_add(row1*col1);
+        dest[1]  = horizontal_add(row1*col2);
+        dest[2]  = horizontal_add(row1*col3);
+        dest[3]  = horizontal_add(row1*col4);
+        dest[4]  = horizontal_add(row2*col1);
+        dest[5]  = horizontal_add(row2*col2);
+        dest[6]  = horizontal_add(row2*col3);
+        dest[7]  = horizontal_add(row2*col4);
+        dest[8]  = horizontal_add(row3*col1);
+        dest[9]  = horizontal_add(row3*col2);
+        dest[10] = horizontal_add(row3*col3);
+        dest[11] = horizontal_add(row3*col4);
+        dest[12] = horizontal_add(row4*col1);
+        dest[13] = horizontal_add(row4*col2);
+        dest[14] = horizontal_add(row4*col3);
+        dest[15] = horizontal_add(row4*col4);
+        return;
+    } else {
+        double scratch[rank];
+        for (int i=0; i<rank; ++i, matrixA+=rank) {
+            calculateHadamardProduct(matrixA, rowB, rank, scratch);
+            auto rowC = matrixCTranspose;
+            for (int j=0; j<rank; ++j, rowC+=rank) {
+                *dest = dotProduct(scratch, rowC, rank );
+                ++dest;
+            }
+        }
+    }
+}
 
 void ModelMarkov::computeTransDerv(double time, double *trans_matrix, 
 	double *trans_derv1, double *trans_derv2, int mixture)
@@ -600,26 +756,47 @@ void ModelMarkov::computeTransDerv(double time, double *trans_matrix,
 
 	double evol_time = time / total_num_subst;
     
-    ArrayXd eval = Map<ArrayXd,Aligned>(eigenvalues, num_states);
-    ArrayXd eval_exp = (eval*evol_time).exp();
-    ArrayXd eval_exp_derv1 = eval_exp*eval;
-    ArrayXd eval_exp_derv2 = eval_exp_derv1*eval;
+    if (Params::getInstance().experimental) {
+        //James' version
+        double eval_exp[num_states];
+        calculateExponentOfScalarMultiply(eigenvalues, num_states, evol_time, eval_exp);
+        aTimesDiagonalBTimesTransposeOfC( eigenvectors, eval_exp
+                              , inv_eigenvectors_transposed, num_states, trans_matrix);
 
-    Map<Matrix<double,Dynamic,Dynamic,RowMajor>,Aligned> evectors(eigenvectors, num_states, num_states);
-    Map<Matrix<double,Dynamic,Dynamic,RowMajor>,Aligned> inv_evectors(inv_eigenvectors, num_states, num_states);
-    MatrixXd res = evectors * eval_exp.matrix().asDiagonal() * inv_evectors;
-    Map<Matrix<double,Dynamic,Dynamic,RowMajor> >map_trans(trans_matrix,num_states,num_states);
-    map_trans = res;
+        double eval_exp_derv1[num_states];
+        calculateHadamardProduct(eigenvalues, eval_exp, num_states, eval_exp_derv1);
+        aTimesDiagonalBTimesTransposeOfC( eigenvectors, eval_exp_derv1
+                              , inv_eigenvectors_transposed, num_states, trans_derv1);
 
-    res = evectors * eval_exp_derv1.matrix().asDiagonal() * inv_evectors;
-    Map<Matrix<double,Dynamic,Dynamic,RowMajor> >map_derv1(trans_derv1,num_states,num_states);
-    map_derv1 = res;
-
-    res = evectors * eval_exp_derv2.matrix().asDiagonal() * inv_evectors;
-    Map<Matrix<double,Dynamic,Dynamic,RowMajor> >map_derv2(trans_derv2,num_states,num_states);
-    map_derv2 = res;
-
+        double eval_exp_derv2[num_states];
+        calculateHadamardProduct(eigenvalues, eval_exp_derv1, num_states, eval_exp_derv2);
+        aTimesDiagonalBTimesTransposeOfC( eigenvectors, eval_exp_derv2
+                              , inv_eigenvectors_transposed, num_states, trans_derv2);
+    }
+    else
+    {
+        //EIGEN version
+        ArrayXd eval = Map<ArrayXd,Aligned>(eigenvalues, num_states);
+        ArrayXd eval_exp = (eval*evol_time).exp();
+        ArrayXd eval_exp_derv1 = eval_exp*eval;
+        ArrayXd eval_exp_derv2 = eval_exp_derv1*eval;
+        Map<Matrix<double,Dynamic,Dynamic,RowMajor>,Aligned> evectors(eigenvectors, num_states, num_states);
+        Map<Matrix<double,Dynamic,Dynamic,RowMajor>,Aligned> inv_evectors(inv_eigenvectors, num_states, num_states);
+        MatrixXd res = evectors * eval_exp.matrix().asDiagonal() * inv_evectors;
+        Map<Matrix<double,Dynamic,Dynamic,RowMajor> >map_trans(trans_matrix,num_states,num_states);
+        map_trans = res;
+        
+        res = evectors * eval_exp_derv1.matrix().asDiagonal() * inv_evectors;
+        Map<Matrix<double,Dynamic,Dynamic,RowMajor> >map_derv1(trans_derv1,num_states,num_states);
+        map_derv1 = res;
+        
+        res = evectors * eval_exp_derv2.matrix().asDiagonal() * inv_evectors;
+        Map<Matrix<double,Dynamic,Dynamic,RowMajor> >map_derv2(trans_derv2,num_states,num_states);
+        map_derv2 = res;
+    }
+    
     /*
+     //Flat version
 	double exptime[num_states];
 
 	for (i = 0; i < num_states; i++)
@@ -1081,6 +1258,8 @@ void ModelMarkov::decomposeRateMatrixNonrev() {
     
     if (phylo_tree->params->matrix_exp_technique == MET_EIGEN_DECOMPOSITION) {
         eigensystem_nonrev(rate_matrix, state_freq, eigenvalues, eigenvalues_imag, eigenvectors, inv_eigenvectors, num_states);
+        calculateSquareMatrixTranspose(inv_eigenvectors, num_states
+                                       , inv_eigenvectors_transposed);
         return;
     }
     
@@ -1168,11 +1347,13 @@ void ModelMarkov::decomposeRateMatrixNonrev() {
             }
         }
     }
-    
+    calculateSquareMatrixTranspose(inv_eigenvectors, num_states
+                                   , inv_eigenvectors_transposed);
+
     // sanity check
-//    MatrixXcd eval_diag = eval.asDiagonal();
-//    MatrixXd check = (inv_evec * mat * evec - eval_diag).cwiseAbs();
-//    ASSERT(check.maxCoeff() < 1e-4);
+    //    MatrixXcd eval_diag = eval.asDiagonal();
+    //    MatrixXd check = (inv_evec * mat * evec - eval_diag).cwiseAbs();
+    //    ASSERT(check.maxCoeff() < 1e-4);
 }
 
 void ModelMarkov::decomposeRateMatrix(){
@@ -1210,9 +1391,14 @@ void ModelMarkov::decomposeRateMatrix(){
 			eigenvectors[i*num_states+i] = state_freq[0]/state_freq[i];
 		}
 
-		for (i = 0; i < num_states; i++)
-			for (j = 0; j < num_states; j++)
-				inv_eigenvectors[i*num_states+j] = state_freq[j]*eigenvectors[j*num_states+i];
+        for (i = 0; i < num_states; i++) {
+            for (j = 0; j < num_states; j++) {
+				inv_eigenvectors[i*num_states+j]
+                    = state_freq[j]*eigenvectors[j*num_states+i];
+            }
+        }
+        calculateSquareMatrixTranspose(inv_eigenvectors, num_states
+                                       , inv_eigenvectors_transposed);
 		writeInfo(cout);
 		// sanity check
 		double *q = new double[num_states*num_states];
@@ -1231,9 +1417,7 @@ void ModelMarkov::decomposeRateMatrix(){
 		delete [] q;
         return;
 	}
-    
     auto technique = phylo_tree->params->matrix_exp_technique;
-    
     if (technique == MET_EIGEN3LIB_DECOMPOSITION) {
         // Use Eigen3 library for eigen decomposition of symmetric matrix
         int n = 0; // the number of states where freq is non-zero
@@ -1371,40 +1555,42 @@ void ModelMarkov::decomposeRateMatrix(){
                 }
             }
         }
+        calculateSquareMatrixTranspose(inv_eigenvectors, num_states
+                                       , inv_eigenvectors_transposed);
         return;
     }
     decomposeRateMatrixRev();
 }
 
 void ModelMarkov::decomposeRateMatrixRev() {
-
-    int i, j, k;
     // general reversible model
     double **rate_matrix = new double*[num_states];
 
-    for (i = 0; i < num_states; i++)
+    for (int i = 0; i < num_states; i++) {
         rate_matrix[i] = new double[num_states];
-
+    }
     if (half_matrix) {
-        for (i = 0, k = 0; i < num_states; i++) {
+        for (int i = 0, k = 0; i < num_states; i++) {
             rate_matrix[i][i] = 0.0;
-            for (j = i+1; j < num_states; j++, k++) {
+            for (int j = i+1; j < num_states; j++, k++) {
                 rate_matrix[i][j] = (state_freq[i] <= ZERO_FREQ || state_freq[j] <= ZERO_FREQ) ? 0 : rates[k];
                 rate_matrix[j][i] = rate_matrix[i][j];
             }
         }
     } else {
         // full matrix
-        for (i = 0; i < num_states; i++) {
+        for (int i = 0; i < num_states; i++) {
             memcpy(rate_matrix[i], &rates[i*num_states], num_states*sizeof(double));
             rate_matrix[i][i] = 0.0;
         }
     }
     /* eigensystem of 1 PAM rate matrix */
     eigensystem_sym(rate_matrix, state_freq, eigenvalues, eigenvectors, inv_eigenvectors, num_states);
-    //eigensystem(rate_matrix, state_freq, eigenvalues, eigenvectors, inv_eigenvectors, num_states);
-    for (i = num_states-1; i >= 0; i--)
+    calculateSquareMatrixTranspose(inv_eigenvectors, num_states
+                                   , inv_eigenvectors_transposed);
+    for (int i = num_states-1; i >= 0; i--) {
         delete [] rate_matrix[i];
+    }
     delete [] rate_matrix;
 }
 
@@ -1414,7 +1600,9 @@ void ModelMarkov::readRates(istream &in) throw(const char*, string) {
 	in >> str;
 	if (str == "equalrate") {
 		for (int i = 0; i < nrates; i++)
+        {
 			rates[i] = 1.0;
+        }
 	} else if (is_reversible ){
         // reversible model
 		try {
@@ -1624,27 +1812,18 @@ ModelMarkov::~ModelMarkov() {
 
 void ModelMarkov::freeMem()
 {
-    if (inv_eigenvectors)
-        aligned_free(inv_eigenvectors);
-    if (eigenvectors)
-        aligned_free(eigenvectors);
-    if (eigenvalues)
-        aligned_free(eigenvalues);
+    aligned_free(inv_eigenvectors);
+    aligned_free(inv_eigenvectors_transposed);
+    aligned_free(eigenvectors);
+    aligned_free(eigenvalues);
 
-	if (rates) delete [] rates;
+	delete [] rates;
 
-    if (cinv_evec)
-        aligned_free(cinv_evec);
-    if (cevec)
-        aligned_free(cevec);
-    if (ceval)
-        aligned_free(ceval);
-    if (eigenvalues_imag)
-        aligned_free(eigenvalues_imag);
-    if (rate_matrix)
-        aligned_free(rate_matrix);
-//    if (model_parameters)
-//        delete [] model_parameters;
+    aligned_free(cinv_evec);
+    aligned_free(cevec);
+    aligned_free(ceval);
+    aligned_free(eigenvalues_imag);
+    aligned_free(rate_matrix);
 }
 
 double *ModelMarkov::getEigenvalues() const
@@ -1661,30 +1840,33 @@ double* ModelMarkov::getInverseEigenvectors() const {
 	return inv_eigenvectors;
 }
 
-//void ModelGTR::setEigenCoeff(double *eigenCoeff)
-//{
-//    eigen_coeff = eigenCoeff;
-//}
-
-void ModelMarkov::setEigenvalues(double *eigenvalues)
-{
-    this->eigenvalues = eigenvalues;
+double* ModelMarkov::getInverseEigenvectorsTransposed() const {
+    return inv_eigenvectors_transposed;
 }
 
-void ModelMarkov::setEigenvectors(double *eigenvectors)
+void ModelMarkov::setEigenvalues(double *eigenValues)
 {
-    this->eigenvectors = eigenvectors;
+    this->eigenvalues = eigenValues;
 }
 
-void ModelMarkov::setInverseEigenvectors(double *inv_eigenvectors)
+void ModelMarkov::setEigenvectors(double *eigenVectors)
 {
-    this->inv_eigenvectors = inv_eigenvectors;
+    this->eigenvectors = eigenVectors;
+}
+
+void ModelMarkov::setInverseEigenvectors(double *eigenV)
+{
+    this->inv_eigenvectors = eigenV;
+}
+
+void ModelMarkov::setInverseEigenvectorsTransposed(double *eigenVTranspose)
+{
+    this->inv_eigenvectors_transposed = eigenVTranspose;
 }
 
 /****************************************************/
 /*      NON-REVERSIBLE STUFFS                       */
 /****************************************************/
-
 
 void ModelMarkov::setRates() {
 	// I don't know the proper C++ way to handle this: got error if I didn't define something here.
@@ -1711,11 +1893,13 @@ int ModelMarkov::get_num_states_total() {
   return num_states;
 }
 
-void ModelMarkov::update_eigen_pointers(double *eval, double *evec, double *inv_evec) {
-  eigenvalues = eval;
-  eigenvectors = evec;
-  inv_eigenvectors = inv_evec;
-  return;
+void ModelMarkov::update_eigen_pointers(double *eval, double *evec
+                                        , double *inv_evec, double *inv_evec_transposed) {
+    eigenvalues      = eval;
+    eigenvectors     = evec;
+    inv_eigenvectors = inv_evec;
+    inv_eigenvectors_transposed = inv_evec_transposed;
+    return;
 }
 
 void ModelMarkov::computeTransMatrixEigen(double time, double *trans_matrix) {
@@ -1723,10 +1907,9 @@ void ModelMarkov::computeTransMatrixEigen(double time, double *trans_matrix) {
 	double evol_time = time / total_num_subst;
     int nstates_2 = num_states*num_states;
 	double *exptime = new double[nstates_2];
-	int i, j, k;
 
     memset(exptime, 0, sizeof(double)*nstates_2);
-	for (i = 0; i < num_states; i++)
+    for (int i = 0; i < num_states; i++) {
         if (eigenvalues_imag[i] == 0.0) {
             exptime[i*num_states+i] = exp(evol_time * eigenvalues[i]);
         } else {
@@ -1739,25 +1922,24 @@ void ModelMarkov::computeTransMatrixEigen(double time, double *trans_matrix) {
             exptime[i*num_states+i] = exp_eval.real();
             exptime[i*num_states+i-1] = -exp_eval.imag();
         }
-
-
+    }
     // compute V * exp(L t)
-    for (i = 0; i < num_states; i++)
-        for (j = 0; j < num_states; j++) {
+    for (int i = 0; i < num_states; i++) {
+        for (int j = 0; j < num_states; j++) {
             double val = 0;
-            for (k = 0; k < num_states; k++)
+            for (int k = 0; k < num_states; k++)
                 val += eigenvectors[i*num_states+k] * exptime[k*num_states+j];
             trans_matrix[i*num_states+j] = val;
         }
-
+    }
     memcpy(exptime, trans_matrix, sizeof(double)*nstates_2);
 
     // then compute V * exp(L t) * V^{-1}
-    for (i = 0; i < num_states; i++) {
+    for (int i = 0; i < num_states; i++) {
         double row_sum = 0.0;
-        for (j = 0; j < num_states; j++) {
+        for (int j = 0; j < num_states; j++) {
             double val = 0;
-            for (k = 0; k < num_states; k++)
+            for (int k = 0; k < num_states; k++)
                 val += exptime[i*num_states+k] * inv_eigenvectors[k*num_states+j];
             // make sure that trans_matrix are non-negative
             ASSERT(val >= -0.001);
@@ -1767,7 +1949,6 @@ void ModelMarkov::computeTransMatrixEigen(double time, double *trans_matrix) {
         }
         ASSERT(fabs(row_sum-1.0) < 1e-4);
     }
-
     delete [] exptime;
 }
 
