@@ -209,7 +209,7 @@ RateMeyerDiscrete::RateMeyerDiscrete() {
 
 RateMeyerDiscrete::~RateMeyerDiscrete()
 {
-	if (rates) delete [] rates;
+	delete [] rates;
 }
 
 bool RateMeyerDiscrete::isSiteSpecificRate() { 
@@ -282,28 +282,55 @@ double RateMeyerDiscrete::computeFunction(double value) {
 	double lh = 0.0;
 	int nseq = phylo_tree->leafNum;
 	int nstate = phylo_tree->getModel()->num_states;
-	int i, j, k, state1, state2;
 	ModelSubst *model = phylo_tree->getModel();
     int trans_size = nstate * nstate;
 	double *trans_mat = new double[trans_size];
 	int *pair_freq = new int[trans_size];
-
-	for (i = 0; i < nseq-1; i++) 
-		for (j = i+1; j < nseq; j++) {
-			memset(pair_freq, 0, trans_size * sizeof(int));
-			for (k = 0; k < size(); k++) {
-				if (ptn_cat[k] != optimizing_cat) continue;
-				Pattern *pat = & phylo_tree->aln->at(k);
-				if ((state1 = pat->at(i)) < nstate && (state2 = pat->at(j)) < nstate)
-					pair_freq[state1*nstate + state2] += pat->frequency;
-			}
-			model->computeTransMatrix(value * dist_mat[i*nseq + j], trans_mat);
-			for (k = 0; k < trans_size; k++) if (pair_freq[k])
-				lh -= pair_freq[k] * log(trans_mat[k]);
-		}
-	delete [] pair_freq;
-	delete [] trans_mat;
-	return lh;
+    
+    auto frequencies = phylo_tree->getConvertedSequenceFrequencies();
+    for (size_t i = 0; i < nseq-1; i++) {
+        auto eyeSequence = phylo_tree->getConvertedSequenceByNumber(i);
+        for (size_t j = i + 1; j < nseq; j++) {
+            auto jaySequence = phylo_tree->getConvertedSequenceByNumber(j);
+            memset(pair_freq, 0, trans_size * sizeof(int));
+            if (0 && jaySequence!=nullptr) { //DISABLED
+                for (size_t k = 0; k < size(); k++) {
+                    if (ptn_cat[k] != optimizing_cat) {
+                        continue;
+                    }
+                    int state1 = eyeSequence[k];
+                    auto pairRow = pair_freq + state1*nstate;
+                    if (nstate<=state1) {
+                        continue;
+                    }
+                    int state2 = jaySequence[k];
+                    if ( state2 < nstate) {
+                        pairRow[state2] += frequencies[k];
+                    }
+                }
+            } else {
+                for (size_t k = 0; k < size(); k++) {
+                    if (ptn_cat[k] != optimizing_cat) {
+                        continue;
+                    }
+                    Pattern *pat = & phylo_tree->aln->at(k);
+                    int state1 = pat->at(i);
+                    int state2 = pat->at(j);
+                    if ( state1 < nstate && state2 < nstate) {
+                        pair_freq[state1*nstate + state2] += pat->frequency;
+                    }
+                }
+            }
+            model->computeTransMatrix(value * dist_mat[i*nseq + j], trans_mat);
+            for (size_t k = 0; k < trans_size; k++)
+            {
+                lh -= pair_freq[k] * log(trans_mat[k]);
+            }
+        }
+    }
+delete [] pair_freq;
+delete [] trans_mat;
+return lh;
 }
 
 void RateMeyerDiscrete::computeFuncDerv(double value, double &df, double &ddf) {
@@ -323,18 +350,36 @@ void RateMeyerDiscrete::computeFuncDerv(double value, double &df, double &ddf) {
 	df = ddf = 0.0;
 
 	int *pair_freq = new int[trans_size];
-
-	for (size_t i = 0; i + 1 < nseq; ++i)
+    auto frequencies = phylo_tree->getConvertedSequenceFrequencies();
+    for (size_t i = 0; i + 1 < nseq; ++i) {
+        auto eyeSequence = phylo_tree->getConvertedSequenceByNumber(i);
 		for (size_t j = i+1; j < nseq; ++j) {
+            auto jaySequence = phylo_tree->getConvertedSequenceByNumber(j);
 			memset(pair_freq, 0, trans_size * sizeof(int));
-			for (size_t k = 0; k < size(); ++k) {
-				if (ptn_cat[k] != optimizing_cat) continue;
-				Pattern *pat = & phylo_tree->aln->at(k);
-                int state1 = pat->at(i);
-                int state2 = pat->at(j);
-				if (state1 < nstate && state2 < nstate)
-					pair_freq[state1*nstate + state2] += pat->frequency;
-			}
+            if (eyeSequence!=nullptr && jaySequence!=nullptr) {
+                for (size_t k = 0; k < size(); ++k) {
+                    if (ptn_cat[k] != optimizing_cat) continue;
+                    int state1 = eyeSequence[k];
+                    if (nstate<=state1) {
+                        continue;
+                    }
+                    auto pairRow = pair_freq + state1*nstate;
+                    int state2 = jaySequence[k];
+                    if (nstate<=state2) {
+                        continue;
+                    }
+                    pairRow[state2] += frequencies[k];
+                }
+            } else {
+                for (size_t k = 0; k < size(); ++k) {
+                    if (ptn_cat[k] != optimizing_cat) continue;
+                    Pattern *pat = & phylo_tree->aln->at(k);
+                    int state1 = pat->at(i);
+                    int state2 = pat->at(j);
+                    if (state1 < nstate && state2 < nstate)
+                        pair_freq[state1*nstate + state2] += pat->frequency;
+                }
+            }
 			double dist = dist_mat[i*nseq + j];
 			double derv1 = 0.0, derv2 = 0.0;
 			model->computeTransDerv(value * dist, trans_mat, trans_derv1, trans_derv2);
@@ -352,6 +397,7 @@ void RateMeyerDiscrete::computeFuncDerv(double value, double &df, double &ddf) {
 			df -= derv1 * dist;
 			ddf -= derv2 * dist * dist;
 		}
+    }
 	delete [] pair_freq;
 	delete [] trans_derv2;
 	delete [] trans_derv1;
@@ -414,25 +460,39 @@ double RateMeyerDiscrete::optimizeCatRate(int cat) {
 }
 
 void RateMeyerDiscrete::normalizeRates() {
-	double sum = 0.0, ok = 0.0;
-	int nptn = size();
-	int i;
-
-	for (i = 0; i < nptn; i++) {
-		//at(i) = rates[ptn_cat[i]];
-		if (getPtnRate(i) < MAX_SITE_RATE) { 
-			sum += getPtnRate(i) * phylo_tree->aln->at(i).frequency; 
-			ok += phylo_tree->aln->at(i).frequency; 
-		}
-	}
-
-	if (fabs(sum - ok) > 1e-3) {
-		//cout << "Normalizing rates " << sum << " / " << ok << endl;
-		double scale_f = ok / sum;
-		for (i = 0; i < ncategory; i++)
-			if (rates[i] > 2*MIN_SITE_RATE && rates[i] < MAX_SITE_RATE)
-				rates[i] *= scale_f;
-	}
+    double sum = 0.0;
+    double ok  = 0.0;
+    size_t nptn = size();
+    
+    auto frequencies = phylo_tree->getConvertedSequenceFrequencies();
+    if (frequencies!=nullptr) {
+        for (size_t i = 0; i < nptn; i++) {
+            //at(i) = rates[ptn_cat[i]];
+            if (getPtnRate(i) < MAX_SITE_RATE) {
+                double freq = frequencies[i];
+                sum += getPtnRate(i) * freq;
+                ok  += freq;
+            }
+        }
+    } else {
+        for (size_t i = 0; i < nptn; i++) {
+            //at(i) = rates[ptn_cat[i]];
+            if (getPtnRate(i) < MAX_SITE_RATE) {
+                double freq = phylo_tree->aln->at(i).frequency;
+                sum += getPtnRate(i) * freq;
+                ok  += freq;
+            }
+        }
+    }
+    if (fabs(sum - ok) > 1e-3) {
+        //cout << "Normalizing rates " << sum << " / " << ok << endl;
+        double scale_f = ok / sum;
+        for (int i = 0; i < ncategory; i++) {
+            if (rates[i] > 2*MIN_SITE_RATE && rates[i] < MAX_SITE_RATE) {
+                rates[i] *= scale_f;
+            }
+        }
+    }
 }
 
 double RateMeyerDiscrete::classifyRatesKMeans() {

@@ -156,6 +156,8 @@ void ModelPoMoMixture::decomposeRateMatrix() {
             memcpy(eigenvalues+m*num_states, eigenvalues, sizeof(double)*num_states);
             memcpy(eigenvectors+m*num_states_2, eigenvectors, sizeof(double)*num_states_2);
             memcpy(inv_eigenvectors+m*num_states_2, inv_eigenvectors, sizeof(double)*num_states_2);
+            memcpy(inv_eigenvectors_transposed+m*num_states_2
+                   , inv_eigenvectors_transposed, sizeof(double)*num_states_2);
         }
         // restore mutation_rate matrix
         memcpy(mutation_rate_matrix, saved_mutation_rate_matrix, sizeof(double)*n_alleles*n_alleles);
@@ -227,18 +229,26 @@ int ModelPoMoMixture::get_num_states_total() {
   return num_states * getNMixtures();
 }
 
-void ModelPoMoMixture::update_eigen_pointers(double *eval, double *evec, double *inv_evec) {
-  eigenvalues = eval;
-  eigenvectors = evec;
-  inv_eigenvectors = inv_evec;
-  // We assume that all mixture model components have the same number of states.
-  int m = 0;
-  for (iterator it = begin(); it != end(); it++, m++) {
-    (*it)->update_eigen_pointers(eval + m*num_states,
-                                 evec + m*num_states*num_states,
-                                 inv_evec + m*num_states*num_states);
-  }
-  return;
+void ModelPoMoMixture::update_eigen_pointers(double *eval, double *evec
+                                             , double *inv_evec, double* inv_evec_transposed) {
+    eigenvalues = eval;
+    eigenvectors = evec;
+    inv_eigenvectors = inv_evec;
+    inv_eigenvectors_transposed = inv_evec_transposed;
+    
+    // We assume that all mixture model components have the same number of states.
+    size_t rowOffset = 0;
+    size_t matrixOffset = 0; //into matrices
+    size_t num_states_squared = num_states * num_states;
+    
+    for (iterator it = begin(); it != end();
+         it++, rowOffset+=num_states, matrixOffset+=num_states_squared) {
+        (*it)->update_eigen_pointers(eval + rowOffset,
+                                     evec + matrixOffset,
+                                     inv_evec + matrixOffset,
+                                     inv_evec_transposed + matrixOffset);
+    }
+    return;
 }
 
 bool ModelPoMoMixture::isUnstableParameters() {

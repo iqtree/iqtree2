@@ -2042,6 +2042,7 @@ double IQTree::perturb(int times) {
 extern pllUFBootData * pllUFBootDataPtr;
 
 string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon) {
+    prepareToComputeDistances();
     if (logl_epsilon == -1)
         logl_epsilon = params->modelEps;
     cout << "Estimate model parameters (epsilon = " << logl_epsilon << ")" << endl;
@@ -2074,7 +2075,6 @@ string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon) {
         } else {
             modOptScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, printInfo, logl_epsilon);
         }
-
         if (isSuperTree()) {
             ((PhyloSuperTree*) this)->computeBranchLengths();
         }
@@ -2083,7 +2083,6 @@ string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon) {
             outWarning("Estimated model parameters are at boundary that can cause numerical instability!");
             cout << endl;
         }
-
         if (modOptScore < curScore - 1.0 && params->partition_type != TOPO_UNLINKED) {
             cout << "  BUG: Tree logl gets worse after model optimization!" << endl;
             cout << "  Old logl: " << curScore << " / " << "new logl: " << modOptScore << endl;
@@ -2096,7 +2095,7 @@ string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon) {
         if (params->print_trees_site_posterior)
             computePatternCategories();
     }
-
+    doneComputingDistances(); //DISABLED
     return newTree;
 }
 
@@ -2912,7 +2911,9 @@ pair<int, int> IQTree::doNNISearch(bool write_info) {
                 PLL_TRUE, 0, 0, 0, PLL_SUMMARIZE_LH, 0, 0);
         readTreeString(string(pllInst->tree_string));
     } else {
+        prepareToComputeDistances();
         nniInfos = optimizeNNI(Params::getInstance().speednni);
+        doneComputingDistances();
         if (isSuperTree()) {
             ((PhyloSuperTree*) this)->computeBranchLengths();
         }

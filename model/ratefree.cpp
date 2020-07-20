@@ -224,8 +224,6 @@ double RateFree::targetFunk(double x[]) {
 	return -phylo_tree->computeLikelihood();
 }
 
-
-
 /**
 	optimize parameters. Default is to optimize gamma shape
 	@return the best likelihood
@@ -499,7 +497,7 @@ double RateFree::optimizeWithEM() {
 //    tree->central_scale_num = phylo_tree->central_scale_num;
 //    tree->central_partial_pars = phylo_tree->central_partial_pars;
 
-    tree->copyPhyloTree(phylo_tree);
+    tree->copyPhyloTree(phylo_tree, true);
     tree->optimize_by_newton = phylo_tree->optimize_by_newton;
     tree->setParams(phylo_tree->params);
     tree->setLikelihoodKernel(phylo_tree->sse);
@@ -609,7 +607,7 @@ double RateFree::optimizeWithEM() {
         // now optimize rates one by one
         double sum = 0.0;
         for (c = 0; c < nmix; c++) {
-            tree->copyPhyloTree(phylo_tree);
+            tree->copyPhyloTree(phylo_tree, true);
             ModelMarkov *subst_model;
             if (phylo_tree->getModel()->isMixture() && phylo_tree->getModelFactory()->fused_mix_rate)
                 subst_model = (ModelMarkov*)phylo_tree->getModel()->getMixtureClass(c);

@@ -135,7 +135,6 @@ void ModelSet::decomposeRateMatrix()
 	// rearrange eigen to obey vector_size
 	size_t vsize = phylo_tree->vector_size;
 	size_t states2 = num_states*num_states;
-	size_t ptn, i, x;
 
     size_t max_size = get_safe_upper_limit(size());
 
@@ -144,34 +143,36 @@ void ModelSet::decomposeRateMatrix()
         memcpy(&eigenvalues[m*num_states], &eigenvalues[(m-1)*num_states], sizeof(double)*num_states);
         memcpy(&eigenvectors[m*states2], &eigenvectors[(m-1)*states2], sizeof(double)*states2);
         memcpy(&inv_eigenvectors[m*states2], &inv_eigenvectors[(m-1)*states2], sizeof(double)*states2);
+        memcpy(&inv_eigenvectors_transposed[m*states2], &inv_eigenvectors_transposed[(m-1)*states2], sizeof(double)*states2);
     }
 
     double new_eval[num_states*vsize];
     double new_evec[states2*vsize];
     double new_inv_evec[states2*vsize];
 
-	for (ptn = 0; ptn < size(); ptn += vsize) {
-		double *eval_ptr = &eigenvalues[ptn*num_states];
-		double *evec_ptr = &eigenvectors[ptn*states2];
-		double *inv_evec_ptr = &inv_eigenvectors[ptn*states2];
-		for (i = 0; i < vsize; i++) {
-			for (x = 0; x < num_states; x++)
-				new_eval[x*vsize+i] = eval_ptr[x];
-			for (x = 0; x < states2; x++) {
-				new_evec[x*vsize+i] = evec_ptr[x];
-				new_inv_evec[x*vsize+i] = inv_evec_ptr[x];
-			}
-			eval_ptr += num_states;
-			evec_ptr += states2;
-			inv_evec_ptr += states2;
-		}
-		// copy new values
+    for (size_t ptn = 0; ptn < size(); ptn += vsize) {
+        double *eval_ptr = &eigenvalues[ptn*num_states];
+        double *evec_ptr = &eigenvectors[ptn*states2];
+        double *inv_evec_ptr = &inv_eigenvectors[ptn*states2];
+        for (size_t i = 0; i < vsize; i++) {
+            for (size_t x = 0; x < num_states; x++)
+                new_eval[x*vsize+i] = eval_ptr[x];
+            for (size_t x = 0; x < states2; x++) {
+                new_evec[x*vsize+i] = evec_ptr[x];
+                new_inv_evec[x*vsize+i] = inv_evec_ptr[x];
+            }
+            eval_ptr += num_states;
+            evec_ptr += states2;
+            inv_evec_ptr += states2;
+        }
+        // copy new values
         memcpy(&eigenvalues[ptn*num_states], new_eval, sizeof(double)*num_states*vsize);
         memcpy(&eigenvectors[ptn*states2], new_evec, sizeof(double)*states2*vsize);
         memcpy(&inv_eigenvectors[ptn*states2], new_inv_evec, sizeof(double)*states2*vsize);
-	}
+        calculateSquareMatrixTranspose(new_inv_evec, num_states
+                                       , &inv_eigenvectors_transposed[ptn*states2]);
+    }
 }
-
 
 bool ModelSet::getVariables(double* variables)
 {
@@ -188,52 +189,57 @@ void ModelSet::setVariables(double* variables)
 	front()->setVariables(variables);
 }
 
-
 ModelSet::~ModelSet()
 {
-	for (reverse_iterator rit = rbegin(); rit != rend(); rit++) {
-		(*rit)->eigenvalues = NULL;
-		(*rit)->eigenvectors = NULL;
-		(*rit)->inv_eigenvectors = NULL;
-		delete (*rit);
-	}
+    for (reverse_iterator rit = rbegin(); rit != rend(); rit++) {
+        (*rit)->eigenvalues = nullptr;
+        (*rit)->eigenvectors = nullptr;
+        (*rit)->inv_eigenvectors = nullptr;
+        (*rit)->inv_eigenvectors_transposed = nullptr;
+        delete (*rit);
+    }
 }
 
 void ModelSet::joinEigenMemory() {
     size_t nmixtures = get_safe_upper_limit(size());
-	if (eigenvalues) aligned_free(eigenvalues);
-	if (eigenvectors) aligned_free(eigenvectors);
-	if (inv_eigenvectors) aligned_free(inv_eigenvectors);
-
+    aligned_free(eigenvalues);
+    aligned_free(eigenvectors);
+    aligned_free(inv_eigenvectors);
+    aligned_free(inv_eigenvectors_transposed);
+    
     size_t states2 = num_states*num_states;
-
-	eigenvalues = aligned_alloc<double>(num_states*nmixtures);
-	eigenvectors = aligned_alloc<double>(states2*nmixtures);
-	inv_eigenvectors = aligned_alloc<double>(states2*nmixtures);
-
-	// assigning memory for individual models
-	size_t m = 0;
-	for (iterator it = begin(); it != end(); it++, m++) {
+    
+    eigenvalues = aligned_alloc<double>(num_states*nmixtures);
+    eigenvectors = aligned_alloc<double>(states2*nmixtures);
+    inv_eigenvectors = aligned_alloc<double>(states2*nmixtures);
+    inv_eigenvectors_transposed = aligned_alloc<double>(states2*nmixtures);
+    
+    // assigning memory for individual models
+    size_t m = 0;
+    for (iterator it = begin(); it != end(); it++, m++) {
         // first copy memory for eigen stuffs
         memcpy(&eigenvalues[m*num_states], (*it)->eigenvalues, num_states*sizeof(double));
         memcpy(&eigenvectors[m*states2], (*it)->eigenvectors, states2*sizeof(double));
         memcpy(&inv_eigenvectors[m*states2], (*it)->inv_eigenvectors, states2*sizeof(double));
+        memcpy(&inv_eigenvectors_transposed[m*states2], (*it)->inv_eigenvectors_transposed, states2*sizeof(double));
         // then delete
-		if ((*it)->eigenvalues) aligned_free((*it)->eigenvalues);
-		if ((*it)->eigenvectors) aligned_free((*it)->eigenvectors);
-		if ((*it)->inv_eigenvectors) aligned_free((*it)->inv_eigenvectors);
-//		if ((*it)->eigen_coeff) aligned_free((*it)->eigen_coeff);
-
+        aligned_free((*it)->eigenvalues);
+        aligned_free((*it)->eigenvectors);
+        aligned_free((*it)->inv_eigenvectors);
+        aligned_free((*it)->inv_eigenvectors_transposed);
+        
         // and assign new memory
-		(*it)->eigenvalues = &eigenvalues[m*num_states];
-		(*it)->eigenvectors = &eigenvectors[m*states2];
-		(*it)->inv_eigenvectors = &inv_eigenvectors[m*states2];
-	}
-
+        (*it)->eigenvalues = &eigenvalues[m*num_states];
+        (*it)->eigenvectors = &eigenvectors[m*states2];
+        (*it)->inv_eigenvectors = &inv_eigenvectors[m*states2];
+        (*it)->inv_eigenvectors_transposed = &inv_eigenvectors_transposed[m*states2];
+    }
+    
     // copy dummy values
     for (m = size(); m < nmixtures; m++) {
         memcpy(&eigenvalues[m*num_states], &eigenvalues[(m-1)*num_states], sizeof(double)*num_states);
         memcpy(&eigenvectors[m*states2], &eigenvectors[(m-1)*states2], sizeof(double)*states2);
         memcpy(&inv_eigenvectors[m*states2], &inv_eigenvectors[(m-1)*states2], sizeof(double)*states2);
+        memcpy(&inv_eigenvectors_transposed[m*states2], &inv_eigenvectors_transposed[(m-1)*states2], sizeof(double)*states2);
     }
 }

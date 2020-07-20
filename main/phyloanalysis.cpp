@@ -1637,7 +1637,7 @@ void computeMLDist ( Params& params, IQTree& iqtree
     longest_dist = iqtree.computeDist(params, iqtree.aln, ml_dist, ml_var);
     cout << "Computing ML distances took "
         << (getRealTime() - begin_wallclock_time) << " sec (of wall-clock time) "
-        << (getCPUTime() - begin_cpu_time) << " sec(of CPU time)" << endl;
+        << (getCPUTime() - begin_cpu_time) << " sec (of CPU time)" << endl;
     size_t n = iqtree.aln->getNSeq();
     size_t nSquared = n*n;
     if ( iqtree.dist_matrix == nullptr ) {
@@ -2226,7 +2226,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
             iqtree_new->initializePLL(params);
         }
         iqtree_new->setParams(&params);
-        iqtree_new->copyPhyloTree(iqtree);
+        iqtree_new->copyPhyloTree(iqtree, false);
 
         // replace iqtree object
         delete iqtree;

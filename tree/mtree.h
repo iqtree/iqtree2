@@ -441,6 +441,17 @@ public:
     void getTaxaName(vector<string> &taxname, Node *node = NULL, Node *dad = NULL);
 
     /**
+            get the descending taxa names below the node, and map each
+            name to the corresponding leaf node
+            @param node the starting node, nullptr to start from the root
+            @param dad dad of the node, used to direct the search
+            @param[out] map, from taxon name to corresponding node
+     */
+
+    void getMapOfTaxonNameToNode(Node* node, Node* dad
+                                 , map<string, Node*> &map);
+    
+    /**
             get the descending node names below the node
             @param node the starting node, NULL to start from the root
             @param dad dad of the node, used to direct the search

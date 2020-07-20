@@ -8,7 +8,9 @@
 #include "alignment.h"
 #include "alignmentsummary.h"
 
-AlignmentSummary::AlignmentSummary(const Alignment* a, bool keepConstSites) {
+AlignmentSummary::AlignmentSummary(const Alignment* a
+                                   , bool keepConstSites
+                                   , bool keepBoringSites) {
     alignment      = a;
     sequenceMatrix = nullptr;
     sequenceCount  = a->getNSeq();
@@ -56,14 +58,14 @@ AlignmentSummary::AlignmentSummary(const Alignment* a, bool keepConstSites) {
         s.maxState  = maxStateForSite;
     }
     sequenceLength = 0; //Number sites where there's some variability
-    std::map<int, int> map = stateToSumOfConstantSiteFrequencies;
+    std::map<int, int> & map = stateToSumOfConstantSiteFrequencies;
     for (size_t site=0; site<siteCount; ++site) {
         SiteSummary &s      = sites[site];
         bool alreadyCounted = false;
         totalFrequency     += s.frequency;
         totalFrequencyOfNonConstSites += s.isConst ? 0 : s.frequency;
         if ( keepConstSites || !s.isConst) {
-            if ( 0 < s.frequency && s.minState < s.maxState) {
+            if ( keepBoringSites || ( 0 < s.frequency && s.minState < s.maxState) ) {
                 alreadyCounted = true;
                 if (sequenceLength==0) {
                     minState = s.minState;

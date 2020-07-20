@@ -146,7 +146,8 @@ public:
   // need to be updated recursively, if the model is a mixture model. For a
   // normal Markov model, only the standard pointers are set. This was done in
   // `ModelMixture::initMem()` before.
-  virtual void update_eigen_pointers(double *eval, double *evec, double *inv_evec);
+  virtual void update_eigen_pointers(double *eval, double *evec
+                                     , double *inv_evec, double *inv_evec_transposed);
 
 
 	/**

@@ -1278,15 +1278,30 @@ void MTree::getOrderedTaxa(NodeVector &taxa, Node *node, Node *dad) {
 }
 
 void MTree::getTaxaName(vector<string> &taxname, Node *node, Node *dad) {
-    if (!node) node = root;
+    if (!node) {
+        node = root;
+    }
     if (node->isLeaf()) {
-        if (taxname.empty()) taxname.resize(leafNum);
+        if (taxname.empty()) {
+            taxname.resize(leafNum);
+        }
         taxname[node->id] = node->name;
     }
-    //for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++)
-    //if ((*it)->node != dad)	{
     FOR_NEIGHBOR_IT(node, dad, it) {
         getTaxaName(taxname, (*it)->node, node);
+    }
+}
+
+void MTree::getMapOfTaxonNameToNode(Node* node, Node* dad
+                                    , map<string, Node*> &map) {
+    if (!node) {
+        node = root;
+    }
+    if (node->isLeaf()) {
+        map[node->name] = node;
+    }
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        getMapOfTaxonNameToNode((*it)->node, node, map);
     }
 }
 

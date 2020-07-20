@@ -21,7 +21,7 @@ class Alignment;
 struct AlignmentSummary
 {
 public:
-    AlignmentSummary(const Alignment* a, bool keepConstSites);
+    AlignmentSummary(const Alignment* a, bool keepConstSites, bool keepBoringSites);
     ~AlignmentSummary();
     const Alignment*   alignment;
     std::vector<int>   siteNumbers;      //of sites with variation
