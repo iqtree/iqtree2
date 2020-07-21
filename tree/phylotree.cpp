@@ -33,7 +33,6 @@
 #include "upperbounds.h"
 #include "utils/MPIHelper.h"
 #include "utils/hammingdistance.h"
-#include "utils/setcheck.h"
 #include "model/modelmixture.h"
 #include "phylonodemixlen.h"
 #include "phylotreemixlen.h"
