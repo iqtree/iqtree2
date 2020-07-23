@@ -268,12 +268,12 @@ void PhyloSuperTreePlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, b
     #ifdef _OPENMP
     #pragma omp parallel for private(part) schedule(dynamic) if(num_threads > 1)
     #endif    
-	for (int partid = 0; partid < size(); partid++) {
+    for (int partid = 0; partid < size(); partid++) {
         part = part_order_by_nptn[partid];
-		if (((SuperNeighbor*)current_it)->link_neighbors[part]) {
-			part_info[part].cur_score = at(part)->computeLikelihoodFromBuffer();
-		}
-	}
+        if (((SuperNeighbor*)current_it)->link_neighbors[part]) {
+            part_info[part].cur_score = at(part)->computeLikelihoodFromBuffer();
+        }
+    }
 
 	if(clearLH && current_len != current_it->length){
 		for (int part = 0; part < size(); part++) {
@@ -369,29 +369,30 @@ void PhyloSuperTreePlen::computeFuncDerv(double value, double &df_ret, double &d
 	for (int partid = 0; partid < ntrees; partid++) {
         int part = part_order_by_nptn[partid];
         double df_aux, ddf_aux;
-			PhyloNeighbor *nei1_part = nei1->link_neighbors[part];
-			PhyloNeighbor *nei2_part = nei2->link_neighbors[part];
-			if (nei1_part && nei2_part) {
-				at(part)->current_it = nei1_part;
-				at(part)->current_it_back = nei2_part;
-
-				nei1_part->length += lambda*part_info[part].part_rate;
-				nei2_part->length += lambda*part_info[part].part_rate;
-				if(nei1_part->length<-1e-4){
-					cout<<"lambda = "<<lambda<<endl;
-					cout<<"NEGATIVE BRANCH len = "<<nei1_part->length<<endl<<" rate = "<<part_info[part].part_rate<<endl;
-                    ASSERT(0);
-					outError("shit!!   ",__func__);
-				}
-				at(part)->computeLikelihoodDerv(nei2_part,(PhyloNode*)nei1_part->node, &df_aux, &ddf_aux);
-				df += part_info[part].part_rate*df_aux;
-				ddf += part_info[part].part_rate*part_info[part].part_rate*ddf_aux;
-			}
-			else {
-				if (part_info[part].cur_score == 0.0)
-					part_info[part].cur_score = at(part)->computeLikelihood();
-			}
-		}
+        PhyloNeighbor *nei1_part = nei1->link_neighbors[part];
+        PhyloNeighbor *nei2_part = nei2->link_neighbors[part];
+        if (nei1_part && nei2_part) {
+            at(part)->current_it = nei1_part;
+            at(part)->current_it_back = nei2_part;
+            
+            nei1_part->length += lambda*part_info[part].part_rate;
+            nei2_part->length += lambda*part_info[part].part_rate;
+            if(nei1_part->length<-1e-4) {
+                cout<<"lambda = "<<lambda<<endl;
+                cout<<"NEGATIVE BRANCH len = "<<nei1_part->length<<endl<<" rate = "<<part_info[part].part_rate<<endl;
+                ASSERT(0);
+                outError("shit!!   ",__func__);
+            }
+            at(part)->computeLikelihoodDerv(nei2_part,(PhyloNode*)nei1_part->node, &df_aux, &ddf_aux);
+            df += part_info[part].part_rate*df_aux;
+            ddf += part_info[part].part_rate*part_info[part].part_rate*ddf_aux;
+        }
+        else {
+            if (part_info[part].cur_score == 0.0) {
+                part_info[part].cur_score = at(part)->computeLikelihood();
+            }
+        }
+    }
     df_ret = -df;
     ddf_ret = -ddf;
 }

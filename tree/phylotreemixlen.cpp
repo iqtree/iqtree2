@@ -428,7 +428,6 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
             outError("Please use option -optlen BFGS to disable EM algorithm");
         
         // EM algorithm
-        size_t ptn, c;
         size_t nptn = aln->getNPattern();
         size_t nmix = site_rate->getNRate();
         ASSERT(nmix == mixlen);
@@ -448,16 +447,16 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
 
             // E-step
             // decoupled weights (prop) from _pattern_lh_cat to obtain L_ci and compute pattern likelihood L_i
-            for (ptn = 0; ptn < nptn; ptn++) {
+            for (size_t ptn = 0; ptn < nptn; ptn++) {
                 double *this_lk_cat = _pattern_lh_cat + ptn*nmix;
                 double lk_ptn = ptn_invar[ptn];
-                for (c = 0; c < nmix; c++) {
+                for (size_t c = 0; c < nmix; c++) {
                     lk_ptn += this_lk_cat[c];
                 }
                 ASSERT(lk_ptn != 0.0);
                 lk_ptn = ptn_freq[ptn] / lk_ptn;
                 // transform _pattern_lh_cat into posterior probabilities of each category
-                for (c = 0; c < nmix; c++) {
+                for (size_t c = 0; c < nmix; c++) {
                     this_lk_cat[c] *= lk_ptn;
                 }
                 
@@ -469,11 +468,10 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
             computePtnFreq();
             
             for (cur_mixture = 0; cur_mixture < mixlen; cur_mixture++) {
-
                 double *this_lk_cat = _pattern_lh_cat+cur_mixture;
-                for (ptn = 0; ptn < nptn; ptn++)
+                for (size_t ptn = 0; ptn < nptn; ptn++) {
                     ptn_freq[ptn] = this_lk_cat[ptn*nmix];
-                
+                }                
                 double current_len = current_it->getLength(cur_mixture);
                 ASSERT(current_len >= 0.0);
                 // Newton-Raphson method
@@ -760,10 +758,7 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
     
     ASSERT((dad_branch->partial_lh_computed & 1) || node->isLeaf());
     ASSERT((node_branch->partial_lh_computed & 1) || dad->isLeaf());
-//    if ((dad_branch->partial_lh_computed & 1) == 0)
-//        computePartialLikelihood(dad_branch, dad);
-//    if ((node_branch->partial_lh_computed & 1) == 0)
-//        computePartialLikelihood(node_branch, node);
+
     size_t nstates = aln->num_states;
     size_t ncat = site_rate->getNRate();
     size_t nmixture = model->getNMixtures();
@@ -771,8 +766,6 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
     size_t block = ncat * nstates * nmixture;
     size_t statemix = nstates * nmixture;
     size_t statecat = nstates * ncat;
-    size_t ptn; // for big data size > 4GB memory required
-    size_t c, i, m = cur_mixture;
     size_t orig_nptn = aln->size();
     size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
     size_t maxptn = get_safe_upper_limit(nptn);
@@ -786,50 +779,49 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
 	    if (dad->isLeaf()) {
 	    	// special treatment for TIP-INTERNAL NODE case
 #ifdef _OPENMP
-#pragma omp parallel for private(ptn, i, m)
+#pragma omp parallel for
 #endif
-	    	for (ptn = 0; ptn < nptn; ptn++) {
-				double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
-				double *theta = theta_all + ptn*block;
+            for (size_t ptn = 0; ptn < nptn; ptn++) {
+                double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
+                double *theta = theta_all + ptn*block;
                 
                 // TODO: check with vectorclass!
-				double *lh_tip = tip_partial_lh +
-						((int)((ptn < orig_nptn) ? (aln->at(ptn))[dad->id] :  model_factory->unobserved_ptns[ptn-orig_nptn][dad->id]))*statemix;
-				for (m = 0; m < nmixture; m++) {
-					for (i = 0; i < statecat; i++) {
-						theta[m*statecat+i] = lh_tip[m*nstates + i%nstates] * partial_lh_dad[m*statecat+i];
-					}
-				}
-
-			}
+                double *lh_tip = tip_partial_lh +
+                ((int)((ptn < orig_nptn) ? (aln->at(ptn))[dad->id] :  model_factory->unobserved_ptns[ptn-orig_nptn][dad->id]))*statemix;
+                for (size_t m = 0; m < nmixture; m++) {
+                    for (size_t i = 0; i < statecat; i++) {
+                        theta[m*statecat+i] = lh_tip[m*nstates + i%nstates] * partial_lh_dad[m*statecat+i];
+                    }
+                }
+            }
 			// ascertainment bias correction
 	    } else {
 	    	// both dad and node are internal nodes
 		    double *partial_lh_node = node_branch->partial_lh;
 		    double *partial_lh_dad = dad_branch->partial_lh;
 
-	    	size_t all_entries = nptn*block;
+            size_t all_entries = nptn*block;
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
-	    	for (i = 0; i < all_entries; i++) {
-				theta_all[i] = partial_lh_node[i] * partial_lh_dad[i];
-			}
-	    }
-		if (nptn < maxptn) {
-			// copy dummy values
-			for (ptn = nptn; ptn < maxptn; ptn++)
-				memcpy(&theta_all[ptn*block], &theta_all[(ptn-1)*block], block*sizeof(double));
-		}
-		theta_computed = true;
-	}
+            for (size_t i = 0; i < all_entries; i++) {
+                theta_all[i] = partial_lh_node[i] * partial_lh_dad[i];
+            }
+        }
+        if (nptn < maxptn) {
+            // copy dummy values
+            for (size_t ptn = nptn; ptn < maxptn; ptn++)
+                memcpy(&theta_all[ptn*block], &theta_all[(ptn-1)*block], block*sizeof(double));
+        }
+        theta_computed = true;
+    }
 
     double *val0 = new double[statecat];
     double *val1 = new double[statecat];
     double *val2 = new double[statecat];
-	for (c = 0; c < ncat; c++) {
-		double prop = site_rate->getProp(c);
-        for (i = 0; i < nstates; i++) {
+    for (size_t c = 0; c < ncat; c++) {
+        double prop = site_rate->getProp(c);
+        for (size_t i = 0; i < nstates; i++) {
             double cof = eval[cur_mixture*nstates+i]*site_rate->getRate(c);
             // length for heterotachy model
             double val = exp(cof*dad_branch->getLength(cur_mixture)) * prop * model->getMixtureWeight(cur_mixture);
@@ -837,69 +829,59 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
             val0[(c)*nstates+i] = val;
             val1[(c)*nstates+i] = val1_;
             val2[(c)*nstates+i] = cof*val1_;
-		}
-	}
-
+        }
+    }
 
     double my_df = 0.0, my_ddf = 0.0, prob_const = 0.0, df_const = 0.0, ddf_const = 0.0;
 
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: my_df, my_ddf, prob_const, df_const, ddf_const) private(ptn, i)
+#pragma omp parallel for reduction(+:my_df,my_ddf,prob_const,df_const,ddf_const)
 #endif
-    for (ptn = 0; ptn < nptn; ptn++) {
-		double lh_ptn = ptn_invar[ptn], df_ptn = 0.0, ddf_ptn = 0.0;
-		double *theta = theta_all + ptn*block + cur_mixture*statecat;
-		for (i = 0; i < statecat; i++) {
-			lh_ptn += val0[i] * theta[i];
-			df_ptn += val1[i] * theta[i];
-			ddf_ptn += val2[i] * theta[i];
-		}
-
-//        assert(lh_ptn > 0.0);
+    for (size_t ptn = 0; ptn < nptn; ptn++) {
+        double lh_ptn = ptn_invar[ptn], df_ptn = 0.0, ddf_ptn = 0.0;
+        double *theta = theta_all + ptn*block + cur_mixture*statecat;
+        for (size_t i = 0; i < statecat; i++) {
+            lh_ptn += val0[i] * theta[i];
+            df_ptn += val1[i] * theta[i];
+            ddf_ptn += val2[i] * theta[i];
+        }
         lh_ptn = fabs(lh_ptn);
-
         if (ptn < orig_nptn) {
-			double df_frac = df_ptn / lh_ptn;
-			double ddf_frac = ddf_ptn / lh_ptn;
-			double freq = ptn_freq[ptn];
-			double tmp1 = df_frac * freq;
-			double tmp2 = ddf_frac * freq;
-			my_df += tmp1;
-			my_ddf += tmp2 - tmp1 * df_frac;
-		} else {
-			// ascertainment bias correction
-			prob_const += lh_ptn;
-			df_const += df_ptn;
-			ddf_const += ddf_ptn;
-		}
+            double df_frac = df_ptn / lh_ptn;
+            double ddf_frac = ddf_ptn / lh_ptn;
+            double freq = ptn_freq[ptn];
+            double tmp1 = df_frac * freq;
+            double tmp2 = ddf_frac * freq;
+            my_df += tmp1;
+            my_ddf += tmp2 - tmp1 * df_frac;
+        } else {
+            // ascertainment bias correction
+            prob_const += lh_ptn;
+            df_const += df_ptn;
+            ddf_const += ddf_ptn;
+        }
     }
-	df = my_df;
-	ddf = my_ddf;
+    df = my_df;
+    ddf = my_ddf;
     if (std::isnan(df) || std::isinf(df)) {
         df = 0.0;
         ddf = 0.0;
-//        outWarning("Numerical instability (some site-likelihood = 0)");
     }
-
-	if (orig_nptn < nptn) {
-    	// ascertainment bias correction
-    	prob_const = 1.0 - prob_const;
-    	double df_frac = df_const / prob_const;
-    	double ddf_frac = ddf_const / prob_const;
-    	size_t nsites = aln->getNSite();
-    	df += nsites * df_frac;
-    	ddf += nsites *(ddf_frac + df_frac*df_frac);
+    if (orig_nptn < nptn) {
+        // ascertainment bias correction
+        prob_const = 1.0 - prob_const;
+        double df_frac = df_const / prob_const;
+        double ddf_frac = ddf_const / prob_const;
+        size_t nsites = aln->getNSite();
+        df += nsites * df_frac;
+        ddf += nsites *(ddf_frac + df_frac*df_frac);
     }
-
 
     delete [] val2;
     delete [] val1;
     delete [] val0;
 
-
-	df = -df;
+    df = -df;
     ddf = -ddf;
-
-//    return lh;
 }
 

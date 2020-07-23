@@ -209,32 +209,31 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
             #ifdef _OPENMP
             #pragma omp parallel for private (site) reduction(+: score) if(nsites > 800/nstates)
             #endif
-			for (site = 0; site<nsites; site++) {
-				int i;
-				UINT w = 0;
+            for (site = 0; site<nsites; site++) {
+                UINT w = 0;
                 size_t offset = nstates*site;
                 UINT *x = left->partial_pars + offset;
                 UINT *y = right->partial_pars + offset;
                 UINT *z = dad_branch->partial_pars + offset;
                 
-				for (i = 0; i < nstates; i++) {
-					z[i] = x[i] & y[i];
-					w |= z[i];
-				}
-				w = ~w;
-				score += vml_popcnt(w);
-				for (i = 0; i < nstates; i++) {
-					z[i] |= w & (x[i] | y[i]);
-				}
-			}
-			break;
+                for (int i = 0; i < nstates; i++) {
+                    z[i] = x[i] & y[i];
+                    w |= z[i];
+                }
+                w = ~w;
+                score += vml_popcnt(w);
+                for (int i = 0; i < nstates; i++) {
+                    z[i] |= w & (x[i] | y[i]);
+                }
+            }
+            break;
         }
         dad_branch->partial_pars[nstates*nsites] = score + left->partial_pars[nstates*nsites] + right->partial_pars[nstates*nsites];
 //        dad_branch->partial_pars[0] = score;
     }
-    
-    if (!aln->isSuperAlignment())
+    if (!aln->isSuperAlignment()) {
         delete partitions;
+    }
 }
 
 

@@ -224,10 +224,11 @@ void IQTree::initSettings(Params &params) {
     searchinfo.nni_type = params.nni_type;
     optimize_by_newton = params.optimize_by_newton;
     setLikelihoodKernel(params.SSE);
-    if (num_threads > 0)
+    if (num_threads > 0) {
         setNumThreads(num_threads);
-    else
+    } else {
         setNumThreads(params.num_threads);
+    }
     candidateTrees.init(this->aln, 200);
     intermediateTrees.init(this->aln, 200000);
 
@@ -4202,7 +4203,6 @@ int PhyloTree::testNumThreads() {
     setLikelihoodKernel(sse);
 
     for (int proc = 1; proc <= max_procs; proc++) {
-
         omp_set_num_threads(proc);
         setNumThreads(proc);
         initializeAllPartialLh();
