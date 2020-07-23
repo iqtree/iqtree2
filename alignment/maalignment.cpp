@@ -174,7 +174,6 @@ void MaAlignment::generateExpectedAlignment(MaAlignment *aln, double &prob)
 	VerboseMode save_mode = verbose_mode; 
 	verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
 
-	int patID;
 	int site = 0;
 	int npat = aln->getNPattern();
 
@@ -185,7 +184,7 @@ void MaAlignment::generateExpectedAlignment(MaAlignment *aln, double &prob)
 	double sumFacMax = 0;
 	double sumProbMax = 0;
 
-	for (patID = 0; patID < npat; patID++) {
+	for (int patID = 0; patID < npat; ++patID) {
 		int patFre = expectedNorFre[patID];
 		for ( int patSite = 0; patSite < patFre; patSite++)
 		{			

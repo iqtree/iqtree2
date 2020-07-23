@@ -653,6 +653,14 @@ public:
 
     /**
         count occurrences for each state from 0 to STATE_UNKNOWN
+        @param startSite ordinal of first site (assumed 0 and <= stopSite)
+        @param stopSite   ordinal of last site (assumed +ve and <= size())
+        @param[out] state_count counts for all states (for a subset of sites)
+     */
+    void countStatesForSites(size_t startSite, size_t stopSite, size_t *state_count);
+    
+    /**
+        count occurrences for each state from 0 to STATE_UNKNOWN
         @param[out] state_count counts for all states
         @param num_unknown_states number of unknown states e.g. for missing data
      */
