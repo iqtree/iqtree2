@@ -1255,6 +1255,7 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
     stopStoringTransMatrix();
     // modified by Thomas Wong on Sept 11, 15
     // no optimization of branch length in the first round
+    double optimizeStartTime = getRealTime();
     cur_lh = tree->computeLikelihood();
     tree->setCurScore(cur_lh);
     if (verbose_mode >= VB_MED || write_info) {
@@ -1264,8 +1265,13 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
     if (verbose_mode >= VB_DEBUG) p = cout.precision(17);
 
     // PRINT Log-Likelihood
-    cout << "1. Initial log-likelihood: " << cur_lh << endl;
-
+    if (verbose_mode >= VB_MED) {
+        cout << "1. Initial log-likelihood: " << cur_lh << " (took " <<
+        (getRealTime() - optimizeStartTime) << " wall-clock sec)" << endl;
+    } else {
+        cout << "1. Initial log-likelihood: " << cur_lh << endl;
+    }
+        
     // RESTORE previous precision
     if (verbose_mode >= VB_DEBUG) cout.precision(p);
 
@@ -1317,8 +1323,15 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
         }
         if (new_lh > cur_lh + logl_epsilon) {
             cur_lh = new_lh;
-            if (write_info)
-                cout << i << ". Current log-likelihood: " << cur_lh << endl;
+            if (write_info) {
+                if (verbose_mode >= VB_MED) {
+                cout << i << ". Current log-likelihood: " << cur_lh
+                    << " (after " << (getRealTime() - optimizeStartTime) << " wall-clock sec)"
+                    << endl;
+                } else {
+                    cout << i << ". Current log-likelihood: " << cur_lh << endl;
+                }
+            }
         } else {
             site_rate->classifyRates(new_lh);
             if (fixed_len == BRLEN_OPTIMIZE)
