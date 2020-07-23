@@ -72,7 +72,7 @@ void RateGamma::restoreCheckpoint() {
 
 void RateGamma::setNCategory(int ncat) {
 	ncategory = ncat;
-	if (rates) delete [] rates;
+	delete [] rates;
 	rates = new double[ncategory];
     for (int cat = 0; cat < ncategory; cat++)
         rates[cat] = 1.0;
@@ -90,8 +90,8 @@ string RateGamma::getNameParams() {
 
 RateGamma::~RateGamma()
 {
-	if (rates) delete [] rates;
-	rates = NULL;
+	delete [] rates;
+	rates = nullptr;
 }
 
 void RateGamma::computeRates() {

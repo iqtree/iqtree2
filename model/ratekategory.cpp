@@ -40,7 +40,7 @@ RateKategory::RateKategory(int ncat, PhyloTree *tree)
 
 RateKategory::~RateKategory()
 {
-	if (rates) delete [] rates;
+	delete [] rates;
 	rates = NULL;
 }
 
