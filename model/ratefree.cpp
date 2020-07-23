@@ -11,7 +11,7 @@
 
 #include "model/modelfactory.h"
 #include "model/modelmixture.h"
-
+#include "utils/timeutil.h" //temporary : for time log-lining
 
 const double MIN_FREE_RATE = 0.001;
 const double MAX_FREE_RATE = 1000.0;
@@ -100,9 +100,9 @@ void RateFree::setNCategory(int ncat) {
 	if (prop) delete [] prop;
 	prop  = new double[ncategory];
 
-    int i;
-	for (i = 0; i < ncategory; i++)
+    for (int i = 0; i < ncategory; i++) {
         prop[i] = (1.0-getPInvar())/ncategory;
+    }
     
 //	double sum_prop = (ncategory)*(ncategory+1)/2.0;
 //	double sum = 0.0;
@@ -128,14 +128,15 @@ void RateFree::initFromCatMinusOne() {
     restoreCheckpoint();
     ncategory++;
 
-    int first = 0, i;
+    int first = 0;
     // get the category k with largest proportion
-    for (i = 1; i < ncategory-1; i++)
+    for (int i = 1; i < ncategory-1; i++) {
         if (prop[i] > prop[first]) {
             first = i;
         }
+    }
     int second = (first == 0) ? 1 : 0;
-    for (i = 0; i < ncategory-1; i++)
+    for (int i = 0; i < ncategory-1; i++)
         if (prop[i] > prop[second] && i != first)
             second = i;
 
@@ -164,15 +165,16 @@ void RateFree::initFromCatMinusOne() {
 //    prop[ncategory-1] = prop[k] / 2;
 //    prop[k] = prop[k] / 2;
     // sort the rates in increasing order
-    if (sorted_rates)
+    if (sorted_rates) {
         quicksort(rates, 0, ncategory-1, prop);
+    }
     phylo_tree->clearAllPartialLH();
 }
 
 
 RateFree::~RateFree() {
-	if (prop) delete [] prop;
-	prop = NULL;
+    delete [] prop;
+    prop = nullptr;
 }
 
 string RateFree::getNameParams() {
@@ -233,17 +235,18 @@ double RateFree::optimizeParameters(double gradient_epsilon) {
 	int ndim = getNDim();
 
 	// return if nothing to be optimized
-	if (ndim == 0)
+    if (ndim == 0) {
 		return phylo_tree->computeLikelihood();
-
-	if (verbose_mode >= VB_MED)
+    }
+    if (verbose_mode >= VB_MED) {
 		cout << "Optimizing " << name << " model parameters by " << optimize_alg << " algorithm..." << endl;
-
+    }
     // TODO: turn off EM algorithm for +ASC model
-    if ((optimize_alg.find("EM") != string::npos && phylo_tree->getModelFactory()->unobserved_ptns.empty()))
-        if (fix_params == 0)
+    if ((optimize_alg.find("EM") != string::npos && phylo_tree->getModelFactory()->unobserved_ptns.empty())) {
+        if (fix_params == 0) {
             return optimizeWithEM();
-
+        }
+    }
 	//if (freq_type == FREQ_ESTIMATE) scaleStateFreq(false);
 
 	double *variables = new double[ndim+1];
@@ -324,7 +327,6 @@ void RateFree::setBounds(double *lower_bound, double *upper_bound, bool *bound_c
             upper_bound[i+ncategory-1] = MAX_FREE_RATE;
             bound_check[i+ncategory-1] = false;
         }
-        
     }
 //	for (i = ncategory; i <= 2*ncategory-2; i++) {
 //		lower_bound[i] = MIN_FREE_RATE;
@@ -356,12 +358,13 @@ void RateFree::setVariables(double *variables) {
             variables[i+1] = rates[i];
     } else {
         // both rates and weights
-        for (i = 0; i < ncategory-1; i++)
+        for (i = 0; i < ncategory-1; i++) {
             variables[i+1] = prop[i] / prop[ncategory-1];
-        for (i = 0; i < ncategory-1; i++)
+        }
+        for (i = 0; i < ncategory-1; i++) {
             variables[i+ncategory] = rates[i] / rates[ncategory-1];
+        }
     }
-
 }
 
 bool RateFree::getVariables(double *variables) {
@@ -536,13 +539,12 @@ double RateFree::optimizeWithEM() {
             }
             ASSERT(score > old_score-0.1);
         }
-            
         old_score = score;
         
-        memset(new_prop, 0, nmix*sizeof(double));
                 
         // E-step
         // decoupled weights (prop) from _pattern_lh_cat to obtain L_ci and compute pattern likelihood L_i
+        memset(new_prop, 0, nmix*sizeof(double));
         for (ptn = 0; ptn < nptn; ptn++) {
             double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
             double lk_ptn = phylo_tree->ptn_invar[ptn];
@@ -557,12 +559,11 @@ double RateFree::optimizeWithEM() {
                 this_lk_cat[c] *= lk_ptn;
                 new_prop[c] += this_lk_cat[c];
             }
-            
-        } 
+        }
         
         // M-step, update weights according to (*)
         int maxpropid = 0;
-        double new_pinvar = 0.0;    
+        double new_pinvar = 0.0;
         for (c = 0; c < nmix; c++) {
             new_prop[c] = new_prop[c] / phylo_tree->getAlnNSite();
             if (new_prop[c] > new_prop[maxpropid])
@@ -619,14 +620,14 @@ double RateFree::optimizeWithEM() {
             if (subst_model->isMixture() || subst_model->isSiteSpecificModel() || !subst_model->isReversible())
                 tree->setLikelihoodKernel(phylo_tree->sse);
 
-                        
             // initialize likelihood
             tree->initializeAllPartialLh();
             // copy posterior probability into ptn_freq
             tree->computePtnFreq();
             double *this_lk_cat = phylo_tree->_pattern_lh_cat+c;
-            for (ptn = 0; ptn < nptn; ptn++)
+            for (ptn = 0; ptn < nptn; ptn++) {
                 tree->ptn_freq[ptn] = this_lk_cat[ptn*nmix];
+            }
             double scaling = rates[c];
             tree->scaleLength(scaling);
             tree->optimizeTreeLengthScaling(MIN_PROP, scaling, 1.0/prop[c], 0.001);
@@ -636,16 +637,16 @@ double RateFree::optimizeWithEM() {
             // reset subst model
             tree->setModel(NULL);
             subst_model->setTree(phylo_tree);
-            
         }
         
         phylo_tree->clearAllPartialLH();
         if (converged) break;
     }
     
-        // sort the rates in increasing order
-    if (sorted_rates)
+    // sort the rates in increasing order
+    if (sorted_rates) {
         quicksort(rates, 0, ncategory-1, prop);
+    }
     
     // deattach memory
 //    tree->central_partial_lh = NULL;

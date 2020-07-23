@@ -126,8 +126,9 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
                     sum_state_counts = new size_t[(*it)->aln->STATE_UNKNOWN+1];
                     memset(sum_state_counts, 0, sizeof(size_t)*((*it)->aln->STATE_UNKNOWN+1));
                 }
-                for (int state = 0; state <= (*it)->aln->STATE_UNKNOWN; state++)
+                for (int state = 0; state <= (*it)->aln->STATE_UNKNOWN; ++state) {
                     sum_state_counts[state] += state_counts[state];
+                }
             }
         }
         cout << "Linking " << mit->first << " model across " << num_parts << " partitions" << endl;

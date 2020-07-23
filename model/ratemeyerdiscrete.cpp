@@ -349,16 +349,18 @@ void RateMeyerDiscrete::computeFuncDerv(double value, double &df, double &ddf) {
 	double *trans_derv2 = new double[trans_size];
 	df = ddf = 0.0;
 
-	int *pair_freq = new int[trans_size];
+    int *pair_freq = new int[trans_size];
     auto frequencies = phylo_tree->getConvertedSequenceFrequencies();
     for (size_t i = 0; i + 1 < nseq; ++i) {
         auto eyeSequence = phylo_tree->getConvertedSequenceByNumber(i);
-		for (size_t j = i+1; j < nseq; ++j) {
+        for (size_t j = i+1; j < nseq; ++j) {
             auto jaySequence = phylo_tree->getConvertedSequenceByNumber(j);
-			memset(pair_freq, 0, trans_size * sizeof(int));
-            if (eyeSequence!=nullptr && jaySequence!=nullptr) {
+            memset(pair_freq, 0, trans_size * sizeof(int));
+            if (frequencies!=nullptr && eyeSequence!=nullptr && jaySequence!=nullptr) {
                 for (size_t k = 0; k < size(); ++k) {
-                    if (ptn_cat[k] != optimizing_cat) continue;
+                    if (ptn_cat[k] != optimizing_cat) {
+                        continue;
+                    }
                     int state1 = eyeSequence[k];
                     if (nstate<=state1) {
                         continue;
@@ -372,7 +374,9 @@ void RateMeyerDiscrete::computeFuncDerv(double value, double &df, double &ddf) {
                 }
             } else {
                 for (size_t k = 0; k < size(); ++k) {
-                    if (ptn_cat[k] != optimizing_cat) continue;
+                    if (ptn_cat[k] != optimizing_cat) {
+                        continue;
+                    }
                     Pattern *pat = & phylo_tree->aln->at(k);
                     int state1 = pat->at(i);
                     int state2 = pat->at(j);
@@ -380,9 +384,9 @@ void RateMeyerDiscrete::computeFuncDerv(double value, double &df, double &ddf) {
                         pair_freq[state1*nstate + state2] += pat->frequency;
                 }
             }
-			double dist = dist_mat[i*nseq + j];
-			double derv1 = 0.0, derv2 = 0.0;
-			model->computeTransDerv(value * dist, trans_mat, trans_derv1, trans_derv2);
+            double dist = dist_mat[i*nseq + j];
+            double derv1 = 0.0, derv2 = 0.0;
+            model->computeTransDerv(value * dist, trans_mat, trans_derv1, trans_derv2);
             for (size_t k = 0; k < trans_size; ++k) {
                 if (pair_freq[k]) {
                     double t1 = trans_derv1[k] / trans_mat[k];
@@ -394,27 +398,14 @@ void RateMeyerDiscrete::computeFuncDerv(double value, double &df, double &ddf) {
                     derv2 += trans_derv2[k] * pair_freq[k];
                 }
             }
-			df -= derv1 * dist;
-			ddf -= derv2 * dist * dist;
-		}
+            df -= derv1 * dist;
+            ddf -= derv2 * dist * dist;
+        }
     }
-	delete [] pair_freq;
-	delete [] trans_derv2;
-	delete [] trans_derv1;
-	delete [] trans_mat;
-//	return lh;
-
-/*	double lh = 0.0, derv1, derv2;
-	df = 0.0; ddf = 0.0;	
-	for (int i = 0; i < size(); i++)
-		if (ptn_cat[i] == optimizing_cat) {
-			optimizing_pattern = i;
-			int freq =  phylo_tree->aln->at(i).frequency;
-			lh += RateMeyerHaeseler::computeFuncDerv(value, derv1, derv2) * freq;
-			df += derv1 * freq;
-			ddf += derv2 * freq;
-		}
-	return lh;*/
+    delete [] pair_freq;
+    delete [] trans_derv2;
+    delete [] trans_derv1;
+    delete [] trans_mat;
 }
 
 
