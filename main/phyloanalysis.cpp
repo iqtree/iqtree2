@@ -479,7 +479,6 @@ void reportModel(ofstream &out, PhyloTree &tree) {
 }
 
 void reportRate(ostream &out, PhyloTree &tree) {
-    int i;
     RateHeterogeneity *rate_model = tree.getRate();
     out << "Model of rate heterogeneity: " << rate_model->full_name << endl;
     rate_model->writeInfo(out);
@@ -492,18 +491,29 @@ void reportRate(ostream &out, PhyloTree &tree) {
         int cats = rate_model->getNDiscreteRate();
         DoubleVector prop;
         if (rate_model->getGammaShape() > 0 || rate_model->getPtnCat(0) < 0) {
-//            prop.resize(cats, (1.0 - rate_model->getPInvar()) / rate_model->getNRate());
+            //            prop.resize(cats, (1.0 - rate_model->getPInvar()) / rate_model->getNRate());
             prop.resize(cats);
-        for (i = 0; i < cats; i++)
-            prop[i] = rate_model->getProp(i);
+            for (size_t i = 0; i < cats; i++) {
+                prop[i] = rate_model->getProp(i);
+            }
         } else {
             prop.resize(cats, 0.0);
-            for (i = 0; i < tree.aln->getNPattern(); i++)
-                prop[rate_model->getPtnCat(i)] += tree.aln->at(i).frequency;
-            for (i = 0; i < cats; i++)
+            auto   frequencies  = tree.getConvertedSequenceFrequencies();
+            size_t num_patterns = tree.aln->getNPattern();
+            if (frequencies!=nullptr) {
+                for (size_t i = 0; i < num_patterns; i++) {
+                    prop[rate_model->getPtnCat(i)] += frequencies[i];
+                }
+            } else {
+                for (size_t i = 0; i < num_patterns; i++) {
+                    prop[rate_model->getPtnCat(i)] += tree.aln->at(i).frequency;
+                }
+            }
+            for (size_t i = 0; i < cats; i++) {
                 prop[i] /= tree.aln->getNSite();
+            }
         }
-        for (i = 0; i < cats; i++) {
+        for (size_t i = 0; i < cats; i++) {
             out << "  " << i + 1 << "         ";
             out.width(14);
             out << left << rate_model->getRate(i) << " " << prop[i];
@@ -2421,7 +2431,6 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     if (params.min_iterations && !iqtree->isBifurcating())
         outError("Tree search does not work with initial multifurcating tree. Please specify `-n 0` to avoid this.");
 
-
     // Compute maximum likelihood distance
     // ML distance is only needed for IQP
 //    if ( params.start_tree != STT_BIONJ && ((params.snni && !params.iqp) || params.min_iterations == 0)) {
@@ -2444,6 +2453,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     if (MPIHelper::getInstance().isMaster() && !iqtree->getCheckpoint()->getBool("finishedCandidateSet")) {
         if (!finishedInitTree && ((!params.dist_file && params.compute_ml_dist) || params.leastSquareBranch)) {
             computeMLDist(params, *iqtree, getRealTime(), getCPUTime());
+            bool wasMLDistanceWrittenToFile = false;
             if (!params.user_file) {
                 if (params.start_tree != STT_RANDOM_TREE) {
                     iqtree->resetCurScore();
@@ -2453,6 +2463,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
                         cout << "Wall-clock time spent creating initial tree was "
                         << getRealTime() - start_bionj << " seconds" << endl;
                     }
+                    wasMLDistanceWrittenToFile  = !params.dist_file;
                     if (iqtree->isSuperTree())
                         iqtree->wrapperFixNegativeBranch(true);
                     else
@@ -2466,20 +2477,20 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
                     cout << "Log-likelihood of " << params.start_tree_subtype_name
                         << " tree: " << iqtree->getCurScore() << endl;
                     iqtree->candidateTrees.update(initTree, iqtree->getCurScore());
-                } else if (!params.dist_file) {
-                    double write_begin_time = getRealTime();
-                    iqtree->printDistanceFile();
-                    if (verbose_mode >= VB_MED) {
-                        #pragma omp critical
-                        cout << "Time taken to write distance file ( " << iqtree->dist_file << ") : "
-                            << getRealTime() - write_begin_time << " seconds " << endl;
-                    }
+                }
+            }
+            if (!wasMLDistanceWrittenToFile && !params.dist_file) {
+                double write_begin_time = getRealTime();
+                iqtree->printDistanceFile();
+                if (verbose_mode >= VB_MED) {
+                    #pragma omp critical (io)
+                    cout << "Time taken to write distance file ( " << iqtree->dist_file << ") : "
+                    << getRealTime() - write_begin_time << " seconds " << endl;
                 }
             }
         }
     }
-    
-//    iqtree->saveCheckpoint();
+    //iqtree->saveCheckpoint();
 
     double cputime_search_start = getCPUTime();
     double realtime_search_start = getRealTime();
@@ -2487,18 +2498,14 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     if (params.leastSquareNNI) {
         iqtree->computeSubtreeDists();
     }
-    
     if (params.model_name == "WHTEST") {
         cout << endl << "Testing model homogeneity by Weiss & von Haeseler (2003)..." << endl;
         WHTest(params, *iqtree);
     }
-
     NodeVector pruned_taxa;
     StrVector linked_name;
     double *saved_dist_mat = iqtree->dist_matrix;
-    double *pattern_lh;
-
-    pattern_lh = new double[iqtree->getAlnNPattern()];
+    double *pattern_lh = new double[iqtree->getAlnNPattern()];
 
     // prune stable taxa
     pruneTaxa(params, *iqtree, pattern_lh, pruned_taxa, linked_name);
@@ -2522,7 +2529,6 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
             }
         }
     }
-
     // restore pruned taxa
     restoreTaxa(*iqtree, saved_dist_mat, pruned_taxa, linked_name);
 
