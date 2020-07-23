@@ -326,7 +326,6 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
     auto startHash = getRealTime();
     vector<size_t> hashes;
     hashes.resize(n, 0);
-    #ifdef USE_BOOST
     #ifdef _OPENMP
         #pragma omp parallel for
     #endif
@@ -341,7 +340,6 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
         auto hashTime = getRealTime() - startHash;
         cout << "Hashing sequences took " << hashTime << " wall-clock seconds" << endl;
     }
-    #endif
     //JB2020-06-17 Finish
 
     bool listIdentical = !Params::getInstance().suppress_duplicate_sequence_warnings;
@@ -467,11 +465,11 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype, str
     seq_type = SEQ_UNKNOWN;
     STATE_UNKNOWN = 126;
     pars_lower_bound = NULL;
+    double readStart = getRealTime();
     cout << "Reading alignment file " << filename << " ... ";
     intype = detectInputFile(filename);
 
     try {
-
         if (intype == IN_NEXUS) {
             cout << "Nexus format detected" << endl;
             readNexus(filename);
@@ -503,13 +501,18 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype, str
     } catch (string str) {
         outError(str);
     }
-
+    if (verbose_mode >= VB_MED) {
+        cout << "Time to read input file was " << (getRealTime() - readStart) << " sec." << endl;
+    }
     if (getNSeq() < 3)
     {
         outError("Alignment must have at least 3 sequences");
     }
+    double constCountStart = getRealTime();
     countConstSite();
-
+    if (verbose_mode >= VB_MED) {
+        cout << "Time to count constant sites was " << (getRealTime() - constCountStart) << " sec." << endl;
+    }
     if (Params::getInstance().compute_seq_composition)
     {
         cout << "Alignment has " << getNSeq() << " sequences with " << getNSite()
@@ -1163,22 +1166,45 @@ void Alignment::regroupSitePattern(int groups, IntVector& site_group)
 	@return the data type of the input sequences
 */
 SeqType Alignment::detectSequenceType(StrVector &sequences) {
-    int num_nuc = 0;
-    int num_ungap = 0;
-    int num_bin = 0;
-    int num_alpha = 0;
-    int num_digit = 0;
-
-    for (StrVector::iterator it = sequences.begin(); it != sequences.end(); it++)
-        for (string::iterator i = it->begin(); i != it->end(); i++) {
-            if ((*i) != '?' && (*i) != '-' && (*i) != '.' && *i != 'N' && *i != 'X' &&  (*i) != '~') num_ungap++;
-            if ((*i) == 'A' || (*i) == 'C' || (*i) == 'G' || (*i) == 'T' || (*i) == 'U')
-                num_nuc++;
-            if ((*i) == '0' || (*i) == '1')
-                num_bin++;
-            if (isalpha(*i)) num_alpha++;
-            if (isdigit(*i)) num_digit++;
+    size_t num_nuc   = 0;
+    size_t num_ungap = 0;
+    size_t num_bin   = 0;
+    size_t num_alpha = 0;
+    size_t num_digit = 0;
+    double detectStart = getRealTime();
+    size_t sequenceCount = sequences.size();
+#ifdef _OPENMP
+#pragma omp parallel for reduction(+:num_nuc,num_ungap,num_bin,num_alpha,num_digit)
+#endif
+    for (size_t seqNum = 0; seqNum < sequenceCount; ++seqNum) {
+        auto start = sequences.at(seqNum).data();
+        auto stop  = start + sequences.at(seqNum).size();
+        for (auto i = start; i!=stop; ++i) {
+            if ((*i) == 'A' || (*i) == 'C' || (*i) == 'G' || (*i) == 'T' || (*i) == 'U') {
+                ++num_nuc;
+                ++num_ungap;
+                continue;
+            }
+            if ((*i)=='?' || (*i)=='-' || (*i) == '.' ) {
+                continue;
+            }
+            if (*i != 'N' && *i != 'X' &&  (*i) != '~') {
+                num_ungap++;
+                if (isdigit(*i)) {
+                    num_digit++;
+                    if ((*i) == '0' || (*i) == '1') {
+                        num_bin++;
+                    }
+                }
+            }
+            if (isalpha(*i)) {
+                num_alpha++;
+            }
         }
+    }
+    if (verbose_mode >= VB_MED) {
+        cout << "Sequence Type detection took " << (getRealTime()-detectStart) << " seconds." << endl;
+    }
     if (((double)num_nuc) / num_ungap > 0.9)
         return SEQ_DNA;
     if (((double)num_bin) / num_ungap > 0.9)
@@ -1895,7 +1921,6 @@ int Alignment::readPhylipSequential(char *filename, char *sequence_type) {
 }
 
 int Alignment::readFasta(char *filename, char *sequence_type) {
-
     StrVector sequences;
     ostringstream err_str;
     igzstream in;
@@ -1918,8 +1943,9 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
 
     for (; !in.eof(); line_num++) {
         safeGetline(in, line);
-        if (line == "") continue;
-
+        if (line == "") {
+            continue;
+        }
         //cout << line << endl;
         if (line[0] == '>') { // next sequence
             string::size_type pos = line.find_first_of("\n\r");
@@ -1929,7 +1955,9 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
             continue;
         }
         // read sequence contents
-        if (sequences.empty()) throw "First line must begin with '>' to define sequence name";
+        if (sequences.empty()) {
+            throw "First line must begin with '>' to define sequence name";
+        }
         processSeq(sequences.back(), line, line_num);
     }
     in.clear();
@@ -3876,27 +3904,24 @@ void Alignment::getUnobservedConstPatterns(ASCType ASC_type, vector<Pattern> &un
 int Alignment::countProperChar(int seq_id) {
     int num_proper_chars = 0;
     for (iterator it = begin(); it != end(); it++) {
-        if ((*it)[seq_id] < num_states + pomo_sampled_states.size()) num_proper_chars+=(*it).frequency;
+        if ((*it)[seq_id] < num_states + pomo_sampled_states.size()) {
+            num_proper_chars+=(*it).frequency;
+        }
     }
     return num_proper_chars;
 }
 
 Alignment::~Alignment()
 {
-	if (codon_table) {
-		delete [] codon_table;
-		codon_table = NULL;
-	}
-	if (non_stop_codon) {
-		delete [] non_stop_codon;
-		non_stop_codon = NULL;
-	}
-    if (pars_lower_bound) {
-        delete [] pars_lower_bound;
-        pars_lower_bound = NULL;
+    delete [] codon_table;
+    codon_table = nullptr;
+    delete [] non_stop_codon;
+    non_stop_codon = nullptr;
+    delete [] pars_lower_bound;
+    pars_lower_bound = nullptr;
+    for (auto it = site_state_freq.rbegin(); it != site_state_freq.rend(); ++it) {
+        delete [] (*it);
     }
-    for (vector<double*>::reverse_iterator it = site_state_freq.rbegin(); it != site_state_freq.rend(); it++)
-        if (*it) delete [] (*it);
     site_state_freq.clear();
     site_model.clear();
 }
@@ -3917,7 +3942,10 @@ double Alignment::computeObsDist(int seq1, int seq2) {
     }
     if (!total_pos) {
         if (verbose_mode >= VB_MED)
-            outWarning("No overlapping characters between " + getSeqName(seq1) + " and " + getSeqName(seq2));
+        {
+            outWarning("No overlapping characters between "
+                       + getSeqName(seq1) + " and " + getSeqName(seq2));
+        }
         return MAX_GENETIC_DIST; // return +INF if no overlap between two sequences
     }
     return ((double)diff_pos) / total_pos;
@@ -3943,9 +3971,9 @@ void Alignment::printDist(ostream &out, double *dist_mat) {
     int max_len = getMaxSeqNameLength();
     if (max_len < 10) max_len = 10;
     out << nseqs << endl;
-    size_t pos = 0;
     out.precision(max((int)ceil(-log10(Params::getInstance().min_branch_length))+1, 6));
     out << fixed;
+    size_t pos = 0;
     for (size_t seq1 = 0; seq1 < nseqs; ++seq1)  {
         out.width(max_len);
         out << left << getSeqName(seq1) << " ";
@@ -4062,13 +4090,56 @@ double Alignment::readDist(const char *file_name, double *dist_mat) {
     return longest_dist;
 }
 
+void Alignment::countStatesForSites(size_t startPattern, size_t stopPattern, size_t *state_count) {
+    memset(state_count, 0, sizeof(size_t)*(STATE_UNKNOWN+1));
+    for (size_t patternIndex = startPattern; patternIndex < stopPattern; ++patternIndex ) {
+        const Pattern& pat = at(patternIndex);
+        int   freq = pat.frequency;
+        const Pattern::value_type *stateArray = pat.data();
+        size_t stateCount = pat.size();
+        for (int i=0; i<stateCount; ++i) {
+            state_count[convertPomoState(stateArray[i])] += freq;
+        }
+    }
+}
+
+#define PARALLEL_STATE_COUNT 1
 void Alignment::countStates(size_t *state_count, size_t num_unknown_states) {
+    //Note: this was suprisingly slow
+    double countStart = getRealTime();
     memset(state_count, 0, sizeof(size_t)*(STATE_UNKNOWN+1));
     state_count[(int)STATE_UNKNOWN] = num_unknown_states;
-    
-    for (iterator it = begin(); it != end(); it++) {
-        for (Pattern::iterator it2 = it->begin(); it2 != it->end(); it2++)
-            state_count[convertPomoState((int)*it2)] += it->frequency;
+#if PARALLEL_STATE_COUNT && defined(_OPENMP)
+    int thread_count = omp_get_max_threads();
+    int step         = ( size() + thread_count - 1 ) / thread_count;
+    if (1<thread_count) {
+        #pragma omp parallel for schedule(static,1)
+        for (size_t thread=0; thread<thread_count; ++thread) {
+            size_t start = thread*step;
+            size_t stop  = start + step;
+            if (size()<stop) stop=size();
+            size_t localStateCount[this->STATE_UNKNOWN+1];
+            memset(localStateCount, 0, sizeof(size_t)*(STATE_UNKNOWN+1));
+            countStatesForSites(start, stop, localStateCount);
+            #pragma omp critical (sum_states)
+            {
+                for (size_t state=0; state<=STATE_UNKNOWN; ++state) {
+                    state_count[state] += localStateCount[state];
+                }
+            }
+        }
+    } else
+#endif
+    {
+        for (iterator it = begin(); it != end(); it++) {
+            int freq = it->frequency;
+            for (Pattern::iterator it2 = it->begin(); it2 != it->end(); it2++) {
+                state_count[convertPomoState((int)*it2)] += freq;
+            }
+        }
+    }
+    if (verbose_mode >= VB_MED) {
+        cout << "Alignment state count time was " << (getRealTime()-countStart) << " seconds." << endl;
     }
 }
 
@@ -4078,12 +4149,12 @@ void Alignment::convertCountToFreq(size_t *state_count, double *state_freq) {
     double *new_freq = new double[num_states];
     double *new_state_freq = new double[num_states];
     
-    for (i = 0; i <= STATE_UNKNOWN; i++)
+    for (i = 0; i <= STATE_UNKNOWN; i++) {
         getAppearance(i, &states_app[i*num_states]);
-
-    for (i = 0; i < num_states; i++)
+    }
+    for (i = 0; i < num_states; i++) {
         state_freq[i] = 1.0/num_states;
-
+    }
     const int NUM_TIME = 8;
     for (int k = 0; k < NUM_TIME; k++) {
         memset(new_state_freq, 0, sizeof(double)*num_states);
@@ -4100,7 +4171,6 @@ void Alignment::convertCountToFreq(size_t *state_count, double *state_freq) {
                 new_state_freq[j] += new_freq[j]*sum_freq*state_count[i];
             }
         }
-
         double sum_freq = 0.0;
         for (j = 0; j < num_states; j++)
             sum_freq += new_state_freq[j];
@@ -4229,17 +4299,18 @@ void Alignment::computeStateFreqPerSequence (double *freq_per_sequence) {
     double *new_state_freq = new double[num_states];
     memset(state_count, 0, sizeof(unsigned)*(STATE_UNKNOWN+1)*nseqs);
 
-    for (int i = 0; i <= STATE_UNKNOWN; i++)
+    for (int i = 0; i <= STATE_UNKNOWN; i++) {
         getAppearance(i, &states_app[i*num_states]);
-
-    for (iterator it = begin(); it != end(); it++)
+    }
+    for (iterator it = begin(); it != end(); it++) {
         for (size_t i = 0; i != nseqs; i++) {
             state_count[i*(STATE_UNKNOWN+1) + it->at(i)] += it->frequency;
         }
+    }
     double equal_freq = 1.0/num_states;
-    for (size_t i = 0; i < num_states*nseqs; i++)
+    for (size_t i = 0; i < num_states*nseqs; i++) {
         freq_per_sequence[i] = equal_freq;
-
+    }
     const int NUM_TIME = 8;
     for (int k = 0; k < NUM_TIME; k++) {
         for (int seq = 0; seq < nseqs; seq++) {
@@ -4257,7 +4328,6 @@ void Alignment::computeStateFreqPerSequence (double *freq_per_sequence) {
                     new_state_freq[j] += new_freq[j]*sum_freq*state_count[seq*(STATE_UNKNOWN+1)+i];
                 }
             }
-
             double sum_freq = 0.0;
             for (int j = 0; j < num_states; j++)
                 sum_freq += new_state_freq[j];
@@ -4641,7 +4711,6 @@ void Alignment::computeDivergenceMatrix(double *pair_freq, double *state_freq, b
                 pair_freq_ptr[j] *= sum;
         }
     }
-    
     delete [] site_state_freq;
 }
 
@@ -4651,9 +4720,9 @@ double binomial_cdf(int x, int n, double p) {
     double b = 0;
     double logp = log(p), log1p = log(1-p);
     for (int k = 0; k < x; k++) {
-        if (k > 0)
+        if (k > 0) {
             b += log(n-k+1) - log(k);
-        
+        }
         double log_pmf_k = b + k * logp + (n-k) * log1p;
         cdf += exp(log_pmf_k);
     }
@@ -4712,13 +4781,13 @@ void Alignment::doSymTest(size_t vecid, vector<SymTestResult> &vec_sym, vector<S
             ptn_shuffled.push_back(ptn);
         }
     }
-    
     if (stats)
+    {
         stats->reserve(nseq*(nseq-1)/2);
-
+    }
     double max_divergence = 0.0;
     
-    for (int seq1 = 0; seq1 < nseq; seq1++)
+    for (int seq1 = 0; seq1 < nseq; seq1++) {
         for (int seq2 = seq1+1; seq2 < nseq; seq2++) {
             MatrixXd pair_freq = MatrixXd::Zero(num_states, num_states);
             if (rstream) {
@@ -4824,7 +4893,7 @@ void Alignment::doSymTest(size_t vecid, vector<SymTestResult> &vec_sym, vector<S
                 marsym.pvalue_maxdiv = stat.pval_marsym;
             }
         }
-    
+    }
     sym.computePvalue();
     marsym.computePvalue();
     intsym.computePvalue();
@@ -4835,8 +4904,9 @@ void Alignment::doSymTest(size_t vecid, vector<SymTestResult> &vec_sym, vector<S
 
 void Alignment::convfreq(double *stateFrqArr) {
 
-    if (Params::getInstance().keep_zero_freq)
+    if (Params::getInstance().keep_zero_freq) {
         return;
+    }
 	int i, maxi=0;
 	double freq, maxfreq, sum;
 	int zero_states = 0;
@@ -4880,8 +4950,9 @@ double Alignment::computeUnconstrainedLogL() {
     double logl = 0.0;
     int nsite = getNSite(), i;
     double lognsite = log(nsite);
-    for (i = 0; i < nptn; i++)
+    for (i = 0; i < nptn; i++) {
         logl += (log(at(i).frequency) - lognsite) * at(i).frequency;
+    }
     return logl;
 }
 
@@ -4909,16 +4980,18 @@ void Alignment::printSiteGaps(const char *filename) {
 }
 
 void Alignment::getPatternFreq(IntVector &freq) {
-	freq.resize(getNPattern());
-	int cnt = 0;
-	for (iterator it = begin(); it < end(); it++, cnt++)
-		freq[cnt] = (*it).frequency;
+    freq.resize(getNPattern());
+    int cnt = 0;
+    for (iterator it = begin(); it < end(); it++, cnt++) {
+        freq[cnt] = (*it).frequency;
+    }
 }
 
 void Alignment::getPatternFreq(int *freq) {
     int cnt = 0;
-    for (iterator it = begin(); it < end(); it++, cnt++)
+    for (iterator it = begin(); it < end(); it++, cnt++) {
         freq[cnt] = (*it).frequency;
+    }
 }
 
 //added by MA
@@ -4933,8 +5006,7 @@ void Alignment::multinomialProb(Alignment refAlign, double &prob)
     double sumProb = 0;
     double fac = logFac(nsite);
     int index;
-    for ( iterator it = begin(); it != end() ; it++)
-    {
+    for ( iterator it = begin(); it != end() ; it++) {
         PatternIntMap::iterator pat_it = refAlign.pattern_index.find((*it));
         if ( pat_it == refAlign.pattern_index.end() ) //not found ==> error
             outError("Pattern in the current alignment is not found in the reference alignment!");
@@ -4982,7 +5054,6 @@ void Alignment::multinomialProb (DoubleVector logLL, double &prob)
     {
         ell[i] = (double)alignLen * LL[i] / sumLL;
     }
-
 
     //Vector containing r_i where r_0 = ell_0; r_{i+1} = ell_{i+1} + r_i - ordinaryRounding(r_i)
     DoubleVector r(patNum, -1.0);
@@ -5034,8 +5105,7 @@ void Alignment::multinomialProb (double *logLL, double &prob)
     double sumLL = 0; //sum of the likelihood of the patterns in the alignment
     double max_logl = *max_element(logLL, logLL + patNum); // to rescale the log-likelihood
     //Compute the `relative' (to the first pattern) likelihood from the logLL
-    for ( int i = 0; i < patNum; i++ )
-    {
+    for ( int i = 0; i < patNum; i++ ) {
         LL[i] = exp(logLL[i]-max_logl);
         //LL[i] = exp(logLL[i]);
         sumLL += LL[i];
@@ -5044,8 +5114,7 @@ void Alignment::multinomialProb (double *logLL, double &prob)
     //Vector containing l_i = p_i*ell/sum_i(p_i)
     DoubleVector ell(patNum, -1.0);
     //Compute l_i
-    for ( int i = 0; i < patNum; i++ )
-    {
+    for ( int i = 0; i < patNum; i++ ) {
         ell[i] = (double)alignLen * LL[i] / sumLL;
     }
 
@@ -5056,8 +5125,7 @@ void Alignment::multinomialProb (double *logLL, double &prob)
     r[0] = ell[0];
     expectedNorFre[0] = (int)floor(ell[0]+0.5); //note that floor(_number+0.5) returns the ordinary rounding of _number
     //int sum = expectedNorFre[0];
-    for (int j = 1; j < patNum; j++ )
-    {
+    for (int j = 1; j < patNum; j++ ) {
         r[j] = ell[j] + r[j-1] - floor(r[j-1]+0.5);
         expectedNorFre[j] = (int)floor(r[j]+0.5);
         //sum += expectedNorFre[j];
@@ -5102,14 +5170,15 @@ double Alignment::multinomialProb (IntVector &pattern_freq)
 
 bool Alignment::readSiteStateFreq(const char* site_freq_file)
 {
-	cout << endl << "Reading site-specific state frequency file " << site_freq_file << " ..." << endl;
-	site_model.resize(getNSite(), -1);
+    cout << endl << "Reading site-specific state frequency file " << site_freq_file << " ..." << endl;
+    site_model.resize(getNSite(), -1);
     IntVector pattern_to_site; // vector from pattern to the first site
     pattern_to_site.resize(getNPattern(), -1);
-    for (size_t i = 0; i < getNSite(); ++i)
-        if (pattern_to_site[getPatternID(i)] == -1)
+    for (size_t i = 0; i < getNSite(); ++i) {
+        if (pattern_to_site[getPatternID(i)] == -1) {
             pattern_to_site[getPatternID(i)] = i;
-
+        }
+    }
     bool aln_changed = false;
 
 	try {
@@ -5192,7 +5261,6 @@ bool Alignment::readSiteStateFreq(const char* site_freq_file)
 	} catch(ios::failure) {
 		outError(ERR_READ_INPUT);
 	}
-
     if (aln_changed) {
         cout << "Regrouping alignment sites..." << endl;
         regroupSitePattern(site_state_freq.size(), site_model);
