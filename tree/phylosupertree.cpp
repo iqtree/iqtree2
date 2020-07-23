@@ -188,14 +188,13 @@ void PhyloSuperTree::setParams(Params* params) {
 }
 
 void PhyloSuperTree::initSettings(Params &params) {
-	IQTree::initSettings(params);
+    IQTree::initSettings(params);
     setLikelihoodKernel(params.SSE);
     setNumThreads(params.num_threads);
-	for (iterator it = begin(); it != end(); it++) {
-		(*it)->params = &params;
-		(*it)->optimize_by_newton = params.optimize_by_newton;
-	}
-
+    for (iterator it = begin(); it != end(); it++) {
+        (*it)->params = &params;
+        (*it)->optimize_by_newton = params.optimize_by_newton;
+    }
 }
 
 void PhyloSuperTree::setLikelihoodKernel(LikelihoodKernel lk) {
