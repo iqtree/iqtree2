@@ -1438,22 +1438,13 @@ void evaluateTrees(string treeset_file, Params &params, IQTree *tree, vector<Tre
         delete [] tree_probs;
         
     }
-    if (max_lh)
-        delete [] max_lh;
-    if (orig_tree_lh)
-        delete [] orig_tree_lh;
-    if (pattern_lh)
-        aligned_free(pattern_lh);
-    if (pattern_lhs)
-        aligned_free(pattern_lhs);
-    if (lhdiff_weights)
-        delete [] lhdiff_weights;
-    if (tree_lhs)
-        delete [] tree_lhs;
-    //if (saved_tree_lhs)
-    //    delete [] saved_tree_lhs;
-    if (boot_samples)
-        delete [] boot_samples;
+    delete [] max_lh;
+    delete [] orig_tree_lh;
+    aligned_free(pattern_lh);
+    aligned_free(pattern_lhs);
+    delete [] lhdiff_weights;
+    delete [] tree_lhs;
+    delete [] boot_samples;
     
     if (params.print_tree_lh) {
         scoreout.close();
