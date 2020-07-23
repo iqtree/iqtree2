@@ -9,8 +9,6 @@
 #define PHYLOKERNEL_H_
 
 #include "phylotree.h"
-//#include "vectorclass/vectorclass.h"
-//#include "vectorclass/vectormath_exp.h"
 #include "alignment/superalignment.h"
 
 #ifdef __SSE2__
@@ -333,7 +331,7 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
             }
 
         } // for ptn
-        dad_branch->lh_scale_factor += sum_scale;               
+        dad_branch->lh_scale_factor += sum_scale;
                 
         // end multifurcating treatment
     } else if (left->node->isLeaf() && right->node->isLeaf()) {
@@ -892,7 +890,7 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
     if (dad->isLeaf()) {
         // special treatment for TIP-INTERNAL NODE case
 
-        // precompute information from one tip        
+        // precompute information from one tip
         double *partial_lh_node = aligned_alloc<double>((aln->STATE_UNKNOWN+1)*block);
         IntVector states_dad = aln->seq_states[dad->id];
         states_dad.push_back(aln->STATE_UNKNOWN);
@@ -1084,7 +1082,7 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
 //                        vc_ptn[j] = mul_add(vc_val[i] * vc_tip_partial_lh[j*(nstates/VCSIZE)+i%(nstates/VCSIZE)],
 //                                vc_partial_lh_dad[j], vc_ptn[j]);
 //                    }
-//                    
+//
 //                // bugfix 2016-01-21, prob_const can be rescaled
 //                for (j = 0; j < VCSIZE; j++)
 //                    if (dad_branch->scale_num[ptn+j] >= 1)
@@ -1710,15 +1708,10 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                 z[1] |= w & (x[1] | y[1]);
                 z[2] |= w & (x[2] | y[2]);
                 z[3] |= w & (x[3] | y[3]);
-//                horizontal_popcount(w);
-//                score += w;
                 score += fast_popcount(w);
-//                x += 4;
-//                y += 4;
-//                z += 4;
             }
-
             break;
+                
         default:
             #ifdef _OPENMP
             #pragma omp parallel for private (site) reduction(+: score) if(nsites>num_threads*10)
@@ -1738,19 +1731,11 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                 for (i = 0; i < nstates; i++) {
                     z[i] |= w & (x[i] | y[i]);
                 }
-//                horizontal_popcount(w);
-//                score += w;
                 score += fast_popcount(w);
-                x += nstates;
-                y += nstates;
-                z += nstates;
             }
             break;
+                
         }
-//        UINT sum_score = horizontal_add(score); 
-//        UINT *zscore = (UINT*)z;
-//        UINT *xscore = (UINT*)x;
-//        UINT *yscore = (UINT*)y;
         dad_branch->partial_pars[nstates*VCSIZE*nsites] = score + left->partial_pars[nstates*VCSIZE*nsites] + right->partial_pars[nstates*VCSIZE*nsites];
     }
 }
@@ -1792,8 +1777,6 @@ int PhyloTree::computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNo
             VectorClass *y = (VectorClass*)(node_branch->partial_pars + offset);
             VectorClass w = (x[0] & y[0]) | (x[1] & y[1]) | (x[2] & y[2]) | (x[3] & y[3]);
             w = ~w;
-//            horizontal_popcount(w);
-//            score += w;
             score += fast_popcount(w);
             #ifndef _OPENMP
             if (score >= lower_bound) 
@@ -1814,8 +1797,6 @@ int PhyloTree::computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNo
                 w |= x[i] & y[i];
             }
             w = ~w;
-//            horizontal_popcount(w);
-//            score += w;
             score += fast_popcount(w);
             #ifndef _OPENMP
             if (score >= lower_bound) 
@@ -1824,16 +1805,9 @@ int PhyloTree::computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNo
         }
         break;
     }
-//    UINT sum_score = horizontal_add(score);
-//    if (branch_subst)
-//        *branch_subst = sum_score;
-    if (branch_subst)
+    if (branch_subst) {
         *branch_subst = score - sum_end_node;
-//    UINT *xscore = (UINT*)x;
-//    UINT *yscore = (UINT*)y;
-//    sum_score += *xscore + *yscore;
-//    score += *xscore + *yscore;
-//    return sum_score;
+    }
     return score;
 }
 

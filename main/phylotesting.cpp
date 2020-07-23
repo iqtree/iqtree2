@@ -555,16 +555,15 @@ string computeFastMLTree(Params &params, Alignment *aln,
             saved_model_names.push_back(saln->partitions[part]->model_name);
             saln->partitions[part]->model_name = subst_names[part] + rate_names[part];
         }
-    } else if (posRateHeterotachy(rate_names[0]) != string::npos)
+    } else if (posRateHeterotachy(rate_names[0]) != string::npos) {
         iqtree = new PhyloTreeMixlen(aln, 0);
-    else
+    } else {
         iqtree = new IQTree(aln);
-
+    }
     if ((params.start_tree == STT_PLL_PARSIMONY || params.start_tree == STT_RANDOM_TREE || params.pll) && !iqtree->isInitializedPLL()) {
         /* Initialized all data structure for PLL*/
         iqtree->initializePLL(params);
     }
-
     iqtree->setParams(&params);
     iqtree->setLikelihoodKernel(params.SSE);
     iqtree->optimize_by_newton = params.optimize_by_newton;
@@ -1802,7 +1801,7 @@ double doKmeansClustering(Params &params, PhyloSuperTree *in_tree,
             tree->setParams(&params);
             tree->sse = params.SSE;
             tree->optimize_by_newton = params.optimize_by_newton;
-            tree->num_threads = params.model_test_and_tree ? num_threads : 1;
+            tree->setNumThreads(params.model_test_and_tree ? num_threads : 1);
             /*if (params.model_test_and_tree) {
              tree->setCheckpoint(new Checkpoint());
              tree->saveCheckpoint();
@@ -1974,16 +1973,14 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
         // computation cost is proportional to #sequences, #patterns, and #states
         partitionID.push_back({i, ((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states});
     }
-    
     if (num_threads > 1) {
         std::sort(partitionID.begin(), partitionID.end(), comparePartition);
     }
-    
     bool parallel_over_partitions = false;
     int brlen_type = params.partition_type;
-    if (brlen_type == TOPO_UNLINKED)
+    if (brlen_type == TOPO_UNLINKED) {
         brlen_type = BRLEN_OPTIMIZE;
-
+    }
     bool test_merge = (params.partition_merge != MERGE_NONE) && params.partition_type != TOPO_UNLINKED && (in_tree->size() > 1);
     
 #ifdef _OPENMP
@@ -2114,9 +2111,9 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             this_aln = in_tree->at(closest_pairs[i].second)->aln;
             closest_pairs[i].distance -= ((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states;
         }
-        if (num_threads > 1)
+        if (num_threads > 1) {
             std::sort(closest_pairs.begin(), closest_pairs.end(), comparePairs);
-
+        }
         size_t num_pairs = closest_pairs.size();
         
 #ifdef _OPENMP
@@ -2165,7 +2162,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
                 tree->setParams(&params);
                 tree->sse = params.SSE;
                 tree->optimize_by_newton = params.optimize_by_newton;
-                tree->num_threads = params.model_test_and_tree ? num_threads : 1;
+                tree->setNumThreads(params.model_test_and_tree ? num_threads : 1);
                 {
                     tree->setCheckpoint(&part_model_info);
                     // trick to restore checkpoint
