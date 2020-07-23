@@ -57,7 +57,7 @@ void RateHeterotachy::setNCategory(int ncat) {
     if (optimize_steps == 0)
         optimize_steps = ncat*100;
     // initialize with gamma rates
-	if (prop) delete [] prop;
+	delete [] prop;
 	prop  = new double[ncategory];
 
     int i;
@@ -141,7 +141,8 @@ double RateHeterotachy::optimizeParameters(double gradient_epsilon) {
     if (fix_params)
         return phylo_tree->computeLikelihood();
 	if (verbose_mode >= VB_MED)
-		cout << "Optimizing " << name << " model parameters by EM algorithm..." << endl;
+		cout << "Optimizing " << name
+        << " model parameters by EM algorithm..." << endl;
 
     return optimizeWithEM();
 }
@@ -150,7 +151,6 @@ double RateHeterotachy::optimizeWithEM() {
 
     // first compute _pattern_lh_cat
     phylo_tree->computePatternLhCat(WSL_RATECAT);
-    size_t ptn, c;
     size_t nptn = phylo_tree->aln->getNPattern();
     size_t nmix = ncategory;
     
@@ -164,29 +164,29 @@ double RateHeterotachy::optimizeWithEM() {
 
         if (step > 0) {
             // convert _pattern_lh_cat taking into account new weights
-            for (ptn = 0; ptn < nptn; ptn++) {
+            for (size_t ptn = 0; ptn < nptn; ptn++) {
                 double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
-                for (c = 0; c < nmix; c++) {
+                for (size_t c = 0; c < nmix; c++) {
                     this_lk_cat[c] *= ratio_prop[c];
                 }
             } 
         }
         memset(new_prop, 0, nmix*sizeof(double));
-        for (ptn = 0; ptn < nptn; ptn++) {
+        for (size_t ptn = 0; ptn < nptn; ptn++) {
             double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
             double lk_ptn = phylo_tree->ptn_invar[ptn];
-            for (c = 0; c < nmix; c++) {
+            for (size_t c = 0; c < nmix; c++) {
                 lk_ptn += this_lk_cat[c];
             }
             ASSERT(lk_ptn != 0.0);
             lk_ptn = phylo_tree->ptn_freq[ptn] / lk_ptn;
-            for (c = 0; c < nmix; c++) {
+            for (size_t c = 0; c < nmix; c++) {
                 new_prop[c] += this_lk_cat[c] * lk_ptn;
             }
         } 
         bool converged = true;
         double new_pinvar = 0.0;    
-        for (c = 0; c < nmix; c++) {
+        for (size_t c = 0; c < nmix; c++) {
             new_prop[c] /= phylo_tree->getAlnNSite();
             // Make sure that probabilities do not get zero
             if (new_prop[c] < 1e-10) new_prop[c] = 1e-10;
