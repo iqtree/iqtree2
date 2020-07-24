@@ -572,22 +572,22 @@ double ModelMarkov::computeTrans(double time, int state1, int state2, double &de
 
 void ModelMarkov::calculateExponentOfScalarMultiply(const double* source, int size
                                                     , double scalar, double* dest) {
-    if (size==4) {
+    if (size == 4) {
         Vec4d v;
         v.load(source);
-        exp(v*scalar).store(dest);
+        exp(v * scalar).store(dest);
         return;
     }
     int remainder = size;
-    if (4<size) {
+    if (4 < size) {
         //Todo: Investigate. Worth unrolling?
         Vec4d v;
-        int step  = Vec4d::size();
+        int step = Vec4d::size();
         remainder = size & (step - 1);
-        const double* sourceStop = source + (size-remainder);
-        for (; source<sourceStop; source+=step, dest+=step) {
+        const double* sourceStop = source + (size - remainder);
+        for (; source < sourceStop; source += step, dest += step) {
             v.load(source);
-            exp(v*scalar).store(dest);
+            exp(v * scalar).store(dest);
         }
     }
     //Do the last few operations one at a time
@@ -672,13 +672,13 @@ void ModelMarkov::aTimesDiagonalBTimesTransposeOfC(const double* matrixA, const 
                                       , const double* matrixCTranspose, int rank,double* dest) {
     if (rank==4) {
         Vec4d B;
-        B.load(rowB);
+        B.load_a(rowB);
         
         Vec4d row1, row2, row3, row4; //rows of matrixA * corresponding entries in rowB
-        row1.load_a (matrixA)    *= B;
-        row2.load_a (matrixA+4)  *= B;
-        row3.load_a (matrixA+8)  *= B;
-        row4.load_a (matrixA+12) *= B;
+        row1 = row1.load_a (matrixA)    * B;
+        row2 = row2.load_a (matrixA+4)  * B;
+        row3 = row3.load_a (matrixA+8)  * B;
+        row4 = row4.load_a (matrixA+12) * B;
         
         Vec4d col1, col2, col3, col4; //rows of matrixCTranspose: columns of matrixC
         col1.load_a ( matrixCTranspose );
@@ -969,13 +969,15 @@ int ModelMarkov::getNDimFreq() {
     if (fixed_parameters)
         return 0;
 
-	if (freq_type == FREQ_EMPIRICAL)
-        return num_states-1;
-	else if (freq_type == FREQ_CODON_1x4) 
+    if (freq_type == FREQ_EMPIRICAL) {
+        return num_states - 1;
+    }
+    else if (freq_type == FREQ_CODON_1x4) {
         return 3;
-	else if (freq_type == FREQ_CODON_3x4 || freq_type == FREQ_CODON_3x4C) 
+    }
+    else if (freq_type == FREQ_CODON_3x4 || freq_type == FREQ_CODON_3x4C) {
         return 9;
-
+    }
     // commented out due to reason above
 //	if (phylo_tree->aln->seq_type == SEQ_DNA) {
 //            return nFreqParams(freq_type);
@@ -1084,11 +1086,12 @@ double ModelMarkov::targetFunk(double x[]) {
 	}
 
     // avoid numerical issue if state_freq is too small
-    for (int i = 0; i < num_states; i++)
+    for (int i = 0; i < num_states; i++) {
         if (state_freq[i] < 0 || (state_freq[i] > 0 && state_freq[i] < Params::getInstance().min_state_freq)) {
             //outWarning("Weird state_freq[" + convertIntToString(i) + "]=" + convertDoubleToString(state_freq[i]));
             return 1.0e+30;
         }
+    }
 
 //    if (!is_reversible) {
 //        for (int i = 0; i < num_states; i++)
@@ -1144,17 +1147,17 @@ void ModelMarkov::setBounds(double *lower_bound, double *upper_bound, bool *boun
 
 double ModelMarkov::optimizeParameters(double gradient_epsilon) {
     
-    if (fixed_parameters)
+    if (fixed_parameters) {
         return 0.0;
-    
+    }
 	int ndim = getNDim();
 	
 	// return if nothing to be optimized
 	if (ndim == 0) return 0.0;
     
-	if (verbose_mode >= VB_MAX)
-		cout << "Optimizing " << name << " model parameters..." << endl;
-
+    if (verbose_mode >= VB_MAX) {
+        cout << "Optimizing " << name << " model parameters..." << endl;
+    }
 	//if (freq_type == FREQ_ESTIMATE) scaleStateFreq(false);
 
 	double *variables = new double[ndim+1]; // used for BFGS numerical recipes
@@ -1807,23 +1810,27 @@ void ModelMarkov::readParametersString(string &model_str, bool adapt_tree) {
 
 ModelMarkov::~ModelMarkov() {
     // mem space pointing to target model and thus avoid double free here
-	freeMem();
+	internalFreeMem();
 }
 
-void ModelMarkov::freeMem()
-{
+void ModelMarkov::internalFreeMem() {
     aligned_free(inv_eigenvectors);
     aligned_free(inv_eigenvectors_transposed);
     aligned_free(eigenvectors);
     aligned_free(eigenvalues);
 
-	delete [] rates;
+    delete[] rates;
 
     aligned_free(cinv_evec);
     aligned_free(cevec);
     aligned_free(ceval);
     aligned_free(eigenvalues_imag);
     aligned_free(rate_matrix);
+}
+
+void ModelMarkov::freeMem()
+{
+    internalFreeMem();
 }
 
 double *ModelMarkov::getEigenvalues() const
