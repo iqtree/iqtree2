@@ -34,7 +34,7 @@ AlignmentSummary::AlignmentSummary(const Alignment* a
     
     size_t siteCount = alignment->size();
     std::vector<SiteSummary> sites;
-    sites.reserve(siteCount);
+    sites.resize(siteCount);
     #ifdef _OPENMP
         #pragma omp parallel for
     #endif
