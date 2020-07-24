@@ -397,8 +397,10 @@ bool ModelDNA::setRateType(string rate_str) {
 
 
 int ModelDNA::getNDim() {
-    if (fixed_parameters)
-        return 0;
+	if (fixed_parameters)
+	{
+		return 0;
+	}
 	ASSERT(freq_type != FREQ_UNKNOWN);
 	// possible TO-DO: cache nFreqParams(freq_type) to avoid repeat calls.
 //        return (num_params+nFreqParams(freq_type));
@@ -407,22 +409,26 @@ int ModelDNA::getNDim() {
 //        return 0;
     
 	int ndim = num_params;
-	if (freq_type == FREQ_ESTIMATE) 
-		ndim += num_states-1;
-    else
-        ndim += nFreqParams(freq_type);
+	if (freq_type == FREQ_ESTIMATE) {
+		ndim += num_states - 1;
+	} else {
+		ndim += nFreqParams(freq_type);
+	}
 	return ndim;
 }
 
-void ModelDNA::writeParameters(ostream &out) {
+void ModelDNA::writeParameters(ostream& out) {
 	int i;
 	if (freq_type == FREQ_ESTIMATE) {
 		for (i = 0; i < num_states; i++)
 			out << "\t" << state_freq[i];
 	}
-	if (num_params == 0) return;
-	if (num_params <= 1)
+	if (num_params == 0) {
+		return;
+	}
+	if (num_params <= 1) {
 		out << "\t" << rates[1];
+	}
 	else {
 		int nrateout = getNumRateEntries() - 1;
 		for (i = 0; i < nrateout; i++)

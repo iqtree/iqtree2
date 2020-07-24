@@ -989,38 +989,38 @@ void ModelCodon::setBounds(double *lower_bound, double *upper_bound, bool *bound
 	}
 }
 
-double ModelCodon::optimizeParameters(double gradient_epsilon) {
-    
-    if (fixed_parameters)
+double ModelCodon::optimizeParameters(double gradient_epsilon) {    
+    if (fixed_parameters) {
         return 0.0;
-    
-	int ndim = getNDim();
-	
-	// return if nothing to be optimized
-	if (ndim == 0) return 0.0;
-    
-	if (verbose_mode >= VB_MAX)
-		cout << "Optimizing " << name << " model parameters..." << endl;
-
-
+    }    
+	int ndim = getNDim();	
+    if (ndim == 0) {
+        // return if nothing to be optimized
+        return 0.0;
+    }    
+    if (verbose_mode >= VB_MAX) {
+        cout << "Optimizing " << name << " model parameters..." << endl;
+    }
 	double *variables = new double[ndim+1];
 	double *upper_bound = new double[ndim+1];
 	double *lower_bound = new double[ndim+1];
 	bool *bound_check = new bool[ndim+1];
 	double score;
 
-    for (int i = 0; i < num_states; i++)
-        if (state_freq[i] > state_freq[highest_freq_state])
+    for (int i = 0; i < num_states; i++) {
+        if (state_freq[i] > state_freq[highest_freq_state]) {
             highest_freq_state = i;
-
+        }
+    }
 	// by BFGS algorithm
 	setVariables(variables);
 	setBounds(lower_bound, upper_bound, bound_check);
-    if (phylo_tree->params->optimize_alg_freerate.find("BFGS-B") == string::npos)
+    if (phylo_tree->params->optimize_alg_freerate.find("BFGS-B") == string::npos) {
         score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
-    else
-        score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
-
+    }
+    else {
+        score = -L_BFGS_B(ndim, variables + 1, lower_bound + 1, upper_bound + 1, max(gradient_epsilon, TOL_RATE));
+    }
 	bool changed = getVariables(variables);
     // BQM 2015-09-07: normalize state_freq
 	if (freq_type == FREQ_ESTIMATE) { 

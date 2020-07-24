@@ -2355,16 +2355,19 @@ void MTree::computeRFDist(istream &in, DoubleVector &dist, int assign_sup, bool 
 	convertSplits(mysg, &nodes, root->neighbors[0]->node);
     StringIntMap name_index;
     int ntrees, taxid;
-    for (taxid = 0; taxid < mysg.getNTaxa(); taxid++)
+    for (taxid = 0; taxid < mysg.getNTaxa(); taxid++) {
         name_index[mysg.getTaxa()->GetTaxonLabel(taxid)] = taxid;
+    }
     NodeVector::iterator nit;
-    if (assign_sup)
-        for (nit = nodes.begin(); nit != nodes.end(); nit++)
+    if (assign_sup) {
+        for (nit = nodes.begin(); nit != nodes.end(); nit++) {
             (*nit)->height = 0.0;
-    
+        }
+    }    
 	SplitGraph::iterator sit;
-	for (sit = mysg.begin(); sit != mysg.end(); sit++)
-		(*sit)->setWeight(0.0);
+    for (sit = mysg.begin(); sit != mysg.end(); sit++) {
+        (*sit)->setWeight(0.0);
+    }
 	for (ntrees = 1; !in.eof(); ntrees++) {
 		MTree tree;
 		bool is_rooted = false;
@@ -2570,8 +2573,9 @@ int MTree::collapseInternalBranches(Node *node, Node *dad, double threshold) {
 	FOR_NEIGHBOR_DECLARE(node, dad, it) {
 		count += collapseInternalBranches((*it)->node, node, threshold);
 	}
-    if (node->isLeaf())
+    if (node->isLeaf()) {
         return count;
+    }
 	NeighborVec nei_vec;
 	nei_vec.insert(nei_vec.begin(), node->neighbors.begin(), node->neighbors.end());
 	for (it = nei_vec.begin(); it != nei_vec.end(); it++) 

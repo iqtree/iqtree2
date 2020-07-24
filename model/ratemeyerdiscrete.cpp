@@ -293,7 +293,7 @@ double RateMeyerDiscrete::computeFunction(double value) {
         for (size_t j = i + 1; j < nseq; j++) {
             auto jaySequence = phylo_tree->getConvertedSequenceByNumber(j);
             memset(pair_freq, 0, trans_size * sizeof(int));
-            if (0 && jaySequence!=nullptr) { //DISABLED
+            if (jaySequence!=nullptr) { 
                 for (size_t k = 0; k < size(); k++) {
                     if (ptn_cat[k] != optimizing_cat) {
                         continue;
