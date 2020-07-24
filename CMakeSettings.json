@@ -1,0 +1,28 @@
+﻿{
+  "configurations": [
+    {
+      "name": "x64-Debug",
+      "generator": "Ninja",
+      "configurationType": "Debug",
+      "inheritEnvironments": [ "clang_cl_x64" ],
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "cmakeCommandArgs": "-DEIGEN3_INCLUDE_DIR=C:\\Projects\\eigen-3.3.7 -DBoost_INCLUDE_DIR=C:\\Projects\\boost_1_73_0\\boost_1_73_0  -DIQTREE_FLAGS=mpi,fma -DMPI_DIR=c:\\Projects\\Microsoft_MPI_10_1_2",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "variables": []
+    },
+    {
+      "name": "x64-Release",
+      "generator": "Ninja",
+      "configurationType": "RelWithDebInfo",
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "cmakeCommandArgs": "-DEIGEN3_INCLUDE_DIR=C:\\Projects\\eigen-3.3.7 -DBoost_INCLUDE_DIR=C:\\Projects\\boost_1_73_0\\boost_1_73_0  -DIQTREE_FLAGS=mpi,fma -DMPI_DIR=c:\\Projects\\Microsoft_MPI_10_1_2",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "inheritEnvironments": [ "clang_cl_x64" ],
+      "variables": []
+    }
+  ]
+}

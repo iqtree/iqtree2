@@ -29,10 +29,7 @@
  */
 
 #include "mem_alloc.h"
-
-#ifndef WIN32 
-#include <unistd.h>
-#endif
+#include "systypes.h"
 
 #include <math.h>
 #include <time.h> 
@@ -118,9 +115,9 @@ static __inline void computeVectorCAT_FLEX(double *lVector, int *eVector, double
     ump_x2,    
     lz1, 
     lz2,
-    *x1, 
-    *x2, 
-    *x3;
+    *x1 = NULL, 
+    *x2 = NULL, 
+    *x3 = NULL;
   
   int 
     scale,
@@ -367,15 +364,11 @@ static double evaluatePartialCAT_FLEX(int i, double ki, int counter,  traversalI
 
 double evaluatePartialGeneric (pllInstance *tr, partitionList *pr, int i, double ki, int _model)
 {
-  double 
-    result;
-  
-  
-  int     
-    branchReference,
+  double  result=0;  
+  int     branchReference,
 
-    /* number of states of the data type in this partition */
-    states = pr->partitionData[_model]->states;
+        /* number of states of the data type in this partition */
+        states = pr->partitionData[_model]->states;
     
   /* SOS ATTENTION: note the different indexing used for the parallel and sequential versions ! */
 
@@ -495,7 +488,7 @@ static __inline void computeVectorGTRCAT_BINARY(double *lVector, int *eVector, d
 					      unsigned char **yVector, int mxtips)
 {       
   double  d1, d2,  ump_x1, ump_x2, x1px2[2], lz1, lz2; 
-  double *x1, *x2, *x3;
+  double *x1=NULL, *x2=NULL, *x3=NULL;
   int 
     j, k,
     pNumber = ti->pNumber,
@@ -520,6 +513,7 @@ static __inline void computeVectorGTRCAT_BINARY(double *lVector, int *eVector, d
       break;
     default:
       assert(0);
+      return;
     }
      
   lz1 = qz * ki;  
@@ -1226,7 +1220,7 @@ static __inline void computeVectorGTRCATPROT(double *lVector, int *eVector, doub
 				       unsigned char **yVector, int mxtips)
 {       
   double  d1[20], d2[20],  ump_x1, ump_x2, x1px2[20], lz1, lz2; 
-  double *x1, *x2, *x3;
+  double *x1=NULL, *x2=NULL, *x3=NULL;
   int j, k,
     scale = 1,
     pNumber = ti->pNumber,
@@ -1235,7 +1229,6 @@ static __inline void computeVectorGTRCATPROT(double *lVector, int *eVector, doub
  
   x3  = &lVector[20 * (pNumber  - mxtips)];  
  
-
   switch(ti->tipCase)
     {
     case PLL_TIP_TIP:     
@@ -1252,6 +1245,7 @@ static __inline void computeVectorGTRCATPROT(double *lVector, int *eVector, doub
       break;
     default:
       assert(0);
+      return;
     }
      
   lz1 = qz * ki;  
@@ -1347,8 +1341,9 @@ static double evaluatePartialGTRCATPROT(int i, double ki, int counter,  traversa
 
   assert(0 <=  (trav->qNumber - mxtips) && (trav->qNumber - mxtips) < mxtips);  
        
-  if(qz < PLL_ZMIN) 
-    lz = PLL_ZMIN;
+  if (qz < PLL_ZMIN) {
+      qz = PLL_ZMIN; //James B. 23-Jul-2020.  There was cross-talk here: lz was being set, not qz.
+  }
   lz  = log(qz); 
   lz *= ki;  
   

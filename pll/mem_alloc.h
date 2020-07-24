@@ -1,11 +1,9 @@
 #ifndef __mem_alloc_h
 #define __mem_alloc_h
 
-#if defined WIN32 || defined _WIN32 || defined __WIN32__
+#if defined WIN32 || defined _WIN32 || defined __WIN32__ || defined WIN64
 #include <stdlib.h>
-//#include <intrin.h>
 #include <malloc.h>
-//#include <windows.h>
 #endif
 
 #include <stddef.h>
@@ -23,7 +21,7 @@
 //#define rax_realloc realloc
 
 
-#if defined WIN32 || defined _WIN32 || defined __WIN32__
+#if defined WIN32 || defined _WIN32 || defined __WIN32__ || defined(WIN64)
     #if (defined(__MINGW32__) || defined(__clang__)) && defined(BINARY32)
         #define rax_posix_memalign(ptr,alignment,size) *(ptr) = __mingw_aligned_malloc((size),(alignment))
         #define rax_malloc(size) __mingw_aligned_malloc((size), PLL_BYTE_ALIGNMENT)
@@ -41,6 +39,13 @@
     #define rax_calloc calloc
     #define rax_free free
 #endif
+
+inline void rax_malloc_string_copy(char* source, char** dest)
+{
+    size_t bufLen = (strlen(source) + 1);
+    *dest = (char*)rax_malloc(bufLen);
+    strcpy_s(*dest, bufLen, source);
+}
 
 //#define rax_malloc_aligned(x) memalign(PLL_BYTE_ALIGNMENT,x)
 

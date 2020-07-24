@@ -20,8 +20,8 @@ struct constraint {
 	index shared;
 	index right;
 
-	constraint(index left, index shared, index right)
-	        : left{left}, shared{shared}, right{right} {}
+	constraint(index leftIndex, index sharedIndex, index rightIndex)
+	        : left{leftIndex}, shared{sharedIndex}, right{rightIndex} {}
 
 	bool operator==(const constraint& o) const {
 		return std::tie(left, shared, right) == std::tie(o.left, o.shared, o.right);

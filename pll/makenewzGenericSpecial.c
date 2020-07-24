@@ -27,10 +27,7 @@
  * @file bipartitionList.c
  */
 #include "mem_alloc.h"
-
-#ifndef WIN32
-#include <unistd.h>
-#endif
+#include "systypes.h"
 
 #include <math.h>
 #include <time.h>
@@ -1338,20 +1335,14 @@ void execCore(pllInstance *tr, partitionList *pr, volatile double *_dlnLdlz, vol
      if(pr->partitionData[model]->ascBias)
 #endif  
        {
-         size_t
-           i;
-
-         double 
-           correction;
-
-         int            
-           w = 0;
+         double correction = 0;
+         int             w = 0;
          
          volatile double 
            d1 = 0.0,
            d2 = 0.0;                   
          
-         for(i = (size_t)pr->partitionData[model]->lower; i < (size_t)pr->partitionData[model]->upper; i++)
+         for(size_t i = (size_t)pr->partitionData[model]->lower; i < (size_t)pr->partitionData[model]->upper; i++)
            w += tr->aliaswgt[i];     
          
           switch(tr->rateHetModel)
@@ -1366,14 +1357,12 @@ void execCore(pllInstance *tr, partitionList *pr, volatile double *_dlnLdlz, vol
               break;
             default:
               assert(0);
-            }
-        
-         correction = 1.0 - correction;
+            }        
+         correction = 1.0 - correction; //Never used!
      
          /* Lewis correction */
          _dlnLdlz[branchIndex]   =  _dlnLdlz[branchIndex] + dlnLdlz - (double)w * d1;
          _d2lnLdlz2[branchIndex] =  _d2lnLdlz2[branchIndex] + d2lnLdlz2-  (double)w * d2;
-           
        }  
       else
        {
@@ -1381,18 +1370,12 @@ void execCore(pllInstance *tr, partitionList *pr, volatile double *_dlnLdlz, vol
          _d2lnLdlz2[branchIndex] = _d2lnLdlz2[branchIndex] + d2lnLdlz2;
        }
     }
-    else
-    {
-      /* set to 0 to make the reduction operation consistent */
-
-      if(width == 0 && (numBranches > 1))
-      {
-        _dlnLdlz[model]   = 0.0;
+    else if(width == 0 && (numBranches > 1)) {
+          /* set to 0 to make the reduction operation consistent */
+          _dlnLdlz[model]   = 0.0;
         _d2lnLdlz2[model] = 0.0;
       }                                    
-    }
   }
-
 }
 
 

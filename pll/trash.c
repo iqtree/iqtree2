@@ -27,13 +27,7 @@
  * @file trash.c
  */
 #include "mem_alloc.h"
-
-#ifndef WIN32
-#include <sys/times.h>
-#include <sys/types.h>
-#include <sys/time.h>
-#include <unistd.h>  
-#endif
+#include "systypes.h"
 
 #include <limits.h>
 #include <math.h>

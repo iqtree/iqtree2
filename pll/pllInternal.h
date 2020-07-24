@@ -199,7 +199,7 @@ pllBoolean noGap(unsigned int *x, int pos);
 /* from utils.h */
 linkageList* initLinkageList(int *linkList, partitionList *pr);
 
-#if (defined(_FINE_GRAIN_MPI) || defined(_USE_PTHREADS) )
+#if (defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI) || defined(_USE_PTHREADS) )
 /* work tags for parallel regions */
 
 #define PLL_THREAD_NEWVIEW                  0

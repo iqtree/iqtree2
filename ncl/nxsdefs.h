@@ -39,19 +39,24 @@
 
 #define	SUPPORT_OLD_NCL_NAMES
 
+#include <vector>	//for std::vector
+#include <set>      //for std::set
+#include <map>      //for std::map
+#include <xstddef>  //for std::less
+
 class NxsString;
 
-typedef vector<bool>										NxsBoolVector;
-typedef vector<char>										NxsCharVector;
-typedef vector<unsigned>									NxsUnsignedVector;
-typedef vector<NxsString>									NxsStringVector;
-typedef vector<NxsStringVector>								NxsAllelesVector;
+typedef std::vector<bool>										NxsBoolVector;
+typedef std::vector<char>										NxsCharVector;
+typedef std::vector<unsigned>									NxsUnsignedVector;
+typedef std::vector<NxsString>									NxsStringVector;
+typedef std::vector<NxsStringVector>								NxsAllelesVector;
 
-typedef set< unsigned, less<unsigned> >						NxsUnsignedSet;
+typedef std::set< unsigned, std::less<unsigned> >						NxsUnsignedSet;
 
-typedef map< unsigned, NxsStringVector, less<unsigned> >	NxsStringVectorMap;
-typedef map< NxsString, NxsString, less<NxsString> >		NxsStringMap;
-typedef map< NxsString, NxsUnsignedSet, less<NxsString> >	NxsUnsignedSetMap;
+typedef std::map< unsigned, NxsStringVector, std::less<unsigned> >	NxsStringVectorMap;
+typedef std::map< NxsString, NxsString, std::less<NxsString> >		NxsStringMap;
+typedef std::map< NxsString, NxsUnsignedSet, std::less<NxsString> >	NxsUnsignedSetMap;
 
 // The following typedefs are simply for maintaining compatibility with existing code.
 // The names on the right are deprecated and should not be used.

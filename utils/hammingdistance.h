@@ -23,7 +23,7 @@
 
 #define HAMMING_VECTOR (1)
 #define VECTOR_MAD     (0)
-#include <vectorclass/vectorclass.h>
+#include <vectorclass/vectorclass.h> //For Vec32c and Vec32cb classes
 
 //
 //Note 1: L is a template parameter so that, when the state range

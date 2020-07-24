@@ -30,10 +30,7 @@
  */ 
 
 #include "mem_alloc.h"
-
-#ifndef WIN32
-#include <unistd.h>
-#endif
+#include "systypes.h"
 
 #include <math.h>
 #include <time.h> 
@@ -401,7 +398,7 @@ static void evaluateChange(pllInstance *tr, partitionList *pr, int rateNumber, d
             pr->partitionData[i]->executeModel = PLL_FALSE;
         }
 
-        for (i = 0, pos = 0; i < ll->entries; i++)
+        for (i = 0; i < ll->entries; i++)
         {
             int index = ll->ld[i].partitionList[0];
             if (ll->ld[i].valid)
@@ -1681,11 +1678,11 @@ void pllOptBaseFreqs(pllInstance *tr, partitionList * pr, double modelEpsilon, l
         }        
     }
 
-  if(aaPartitions > 0)      
-    optFreqs(tr, pr, modelEpsilon, ll, aaPartitions, states);
-
+  if (aaPartitions > 0) {
+      optFreqs(tr, pr, modelEpsilon, ll, aaPartitions, states);
+  }
   /* then binary */
-  for(i = 0; i < ll->entries; i++)
+  for(i = 0; ll && i < ll->entries; i++)
     {
       switch(pr->partitionData[ll->ld[i].partitionList[0]]->dataType)
 	{
@@ -2023,7 +2020,7 @@ void optRateCatPthreads(pllInstance *tr, partitionList *pr, double lower_spacing
                        > leftLH) && 
                       (fabs(leftLH - v) > epsilon))  
                   {       
-#ifndef WIN32
+#if !defined(WIN32) && !defined(WIN64)
                     if(isnan(v))
                       assert(0);
 #endif
@@ -2038,7 +2035,7 @@ void optRateCatPthreads(pllInstance *tr, partitionList *pr, double lower_spacing
                 while(((v = evaluatePartialGeneric(tr, pr, localIndex, initialRate + k * upper_spacing, model)) > rightLH) &&
                       (fabs(rightLH - v) > epsilon))            
                   {
-#ifndef WIN32
+#if !defined(WIN32) && !defined(WIN64)
                     if(isnan(v))
                       assert(0);
 #endif     
@@ -2120,7 +2117,7 @@ static void optRateCatModel(pllInstance *tr, partitionList *pr, int model, doubl
              > leftLH) && 
             (fabs(leftLH - v) > epsilon))  
         {         
-#ifndef WIN32
+#if !defined(WIN32) && !defined(WIN64)
           if(isnan(v))
             assert(0);
 #endif
@@ -2135,7 +2132,7 @@ static void optRateCatModel(pllInstance *tr, partitionList *pr, int model, doubl
       while(((v = evaluatePartialGeneric(tr, pr, i, initialRate + k * upper_spacing, model)) > rightLH) &&
             (fabs(rightLH - v) > epsilon))      
         {
-#ifndef WIN32
+#if !defined(WIN32) && !defined(WIN64)
           if(isnan(v))
             assert(0);
 #endif     
@@ -2762,8 +2759,9 @@ static void autoProtein(pllInstance *tr, partitionList *pr)
 		    *oldIndex =
 				(int*) rax_malloc(sizeof(int) * pr->numberOfPartitions);
 
-		pllBoolean *oldFreqs = (pllBoolean*) malloc(
-				sizeof(pllBoolean) * pr->numberOfPartitions);
+		//pllBoolean *oldFreqs = (pllBoolean*) malloc(  
+		//		sizeof(pllBoolean) * pr->numberOfPartitions);
+        //  JB 10-Jul-2020 Never used.
 
 		double startLH,
 		      *bestScores = (double*) rax_malloc(
@@ -2785,7 +2783,7 @@ static void autoProtein(pllInstance *tr, partitionList *pr)
 		/* save the currently assigned protein model for each PLL_AUTO partition */
 		for (partitionIndex = 0; partitionIndex < pr->numberOfPartitions; partitionIndex++) {
 			oldIndex[partitionIndex] = pr->partitionData[partitionIndex]->autoProtModels;
-			oldFreqs[partitionIndex] = pr->partitionData[partitionIndex]->protUseEmpiricalFreqs;
+			//oldFreqs[partitionIndex] = pr->partitionData[partitionIndex]->protUseEmpiricalFreqs; //JB 10-Jul-2020 Never used
 			bestIndex[partitionIndex] = -1;
 			bestScores[partitionIndex] = PLL_UNLIKELY;
 		}

@@ -50,7 +50,7 @@ void elemhess(int job, double mat[], int n, int low, int hi,
 typedef struct { double re, im; } complex;
 #define csize(a) (fabs(a.re)+fabs(a.im))
 
-complex compl (double re,double im);
+complex comply (double re,double im);
 /*complex conj (complex a);*/
 complex cplus (complex a, complex b);
 complex cminus (complex a, complex b);
@@ -90,7 +90,7 @@ int matinv( double x[], int n, int m, double space[])
 {
 /* x[n*m]  ... m>=n
 */
-   register int i,j,k;
+   int i,j,k;
    int *irow=(int*) space;
    double ee=1.0e-20, t,t1,xmax;
    double det=1.0;
@@ -160,8 +160,12 @@ int matinv( double x[], int n, int m, double space[])
 
 #define FOR(i,n) for(i=0; i<n; i++)
 #define FPN(file) fputc('\n', file)
+#ifndef min
 #define min(a,b) ((a)<(b)?(a):(b))
+#endif
+#ifndef max
 #define max(a,b) ((a)>(b)?(a):(b))
+#endif
 
 #define BASE        2    /* base of floating point arithmetic */
 #define DIGITS     53    /* no. of digits to the base BASE in the fraction */
@@ -201,7 +205,7 @@ int eigen(int job, double A[], int n, double rr[], double ri[],
 /* complex funcctions
 */
 
-complex compl (double re,double im)
+complex comply (double re,double im)
 {
     complex r;
 
@@ -290,12 +294,13 @@ int cmatby (complex a[], complex b[], complex c[], int n,int m,int k)
 /* a[n*m], b[m*k], c[n*k]  ......  c = a*b
 */
 {
-   int i,j,i1;
-   complex t;
+   int i,j;
 
    FOR (i,n)  FOR(j,k) {
-       for (i1=0,t=compl(0,0); i1<m; i1++)  
-           t = cplus (t, cby(a[i*m+i1],b[i1*k+j]));
+       complex t = comply(0, 0);
+       for (int i1 = 0; i1 < m; i1++) {
+           t = cplus(t, cby(a[i * m + i1], b[i1 * k + j]));
+       }
        c[i*k+j] = t;
    }
    return (0);
@@ -315,7 +320,7 @@ int cmatinv( complex x[], int n, int m, double space[])
 */
    int i,j,k, *irow=(int*) space;
    double xmaxsize, ee=1e-20;
-   complex /*xmax,*/ t,t1;
+   complex t,t1;
 
    FOR(i,n)  {
        xmaxsize = 0.;
@@ -337,7 +342,8 @@ int cmatinv( complex x[], int n, int m, double space[])
                 x[ irow[i]*m+j] = t;
            }
        }
-       t = cdiv (compl(1,0), x[i*m+i]);
+       complex one = comply(1, 0);
+       t = cdiv (one, x[i*m+i]);
        FOR(j,n) {
            if (j == i) continue;
            t1 = cby (t,x[j*m+i]);
@@ -799,10 +805,11 @@ int realeig(int job,double mat[],int n,int low, int hi, double valr[],
                      mat[pos(en,en-1,n)];
             }
             else {
-               v = cdiv(compl(0.0,-mat[pos(en-1,en,n)]),
-                    compl(mat[pos(en-1,en-1,n)]-p,q));
-               mat[pos(en-1,en-1,n)] = v.re;
-               mat[pos(en-1,en,n)] = v.im;
+                complex x = comply(0.0, -mat[pos(en - 1, en, n)]);
+                complex y = comply(mat[pos(en - 1, en - 1, n)] - p, q);
+                v = cdiv(x, y);
+                mat[pos(en - 1, en - 1, n)] = v.re;
+                mat[pos(en - 1, en, n)] = v.im;
             }
             mat[pos(en,en-1,n)] = 0;
             mat[pos(en,en,n)] = 1;
@@ -822,9 +829,11 @@ int realeig(int job,double mat[],int n,int low, int hi, double valr[],
                else {
                   m = i;
                   if (vali[i] == 0) {
-                     v = cdiv(compl(-ra,-sa),compl(w,q));
-                     mat[pos(i,en-1,n)] = v.re;
-                     mat[pos(i,en,n)] = v.im;
+                      complex cx = comply(-ra, -sa);
+                      complex cy = comply(w, q);
+                      v = cdiv(cx, cy);
+                      mat[pos(i, en - 1, n)] = v.re;
+                      mat[pos(i, en, n)] = v.im;
                   }
                   else {                      /* solve complex equations */
                      x = mat[pos(i,i+1,n)];
@@ -835,7 +844,8 @@ int realeig(int job,double mat[],int n,int low, int hi, double valr[],
                         v.re = eps * norm * (fabs(w) +
                                 fabs(q) + fabs(x) + fabs(y) + fabs(z));
                      }
-                     v = cdiv(compl(x*r-z*ra+q*sa,x*s-z*sa-q*ra),v);
+                     complex ch = comply(x * r - z * ra + q * sa, x * s - z * sa - q * ra);
+                     v = cdiv(ch,v);
                      mat[pos(i,en-1,n)] = v.re;
                      mat[pos(i,en,n)] = v.im;
                      if (fabs(x) > fabs(z) + fabs(q)) {
@@ -846,10 +856,12 @@ int realeig(int job,double mat[],int n,int low, int hi, double valr[],
                              q * mat[pos(i,en-1,n)]) / x;
                      }
                      else {
-                        v = cdiv(compl(-r-y*mat[pos(i,en-1,n)],
-                             -s-y*mat[pos(i,en,n)]),compl(z,q));
-                        mat[pos(i+1,en-1,n)] = v.re;
-                        mat[pos(i+1,en,n)] = v.im;
+                         complex ch = comply(-r - y * mat[pos(i, en - 1, n)],
+                             -s - y * mat[pos(i, en, n)]);
+                         complex cj = comply(z, q);
+                         v = cdiv(ch, cj);
+                         mat[pos(i + 1, en - 1, n)] = v.re;
+                         mat[pos(i + 1, en, n)] = v.im;
                      }
                   }
                }

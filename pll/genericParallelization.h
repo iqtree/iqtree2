@@ -63,7 +63,7 @@ extern double masterTimePerPhase;
 /******************/
 /* MPI SPECIFIC   */
 /******************/
-#ifdef _FINE_GRAIN_MPI
+#if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
 #include <mpi.h>
 #ifdef DEBUG_MPI_EACH_SEND
 #define DEBUG_PRINT(text, elem) printf(text, elem)
@@ -80,7 +80,7 @@ extern double masterTimePerPhase;
 #define MASTER_P (processID == 0)
 #define POP_OR_PUT_BYTES(bufPtr, elem, type) (MASTER_P ? (bufPtr = addBytes((bufPtr), &(elem), sizeof(type))) : (bufPtr = popBytes((bufPtr), &(elem), sizeof(type))))
 
-#define ASSIGN_INT(x,y) (MPI_Bcast(&y,1,MPI_INT,0,MPI_COMM_WORLD),DEBUG_PRINT("\tSEND/RECV %d\n", y)) 
+#define ASSIGN_INT(x,y) (MPI_Bcast((int*)(&y),1,MPI_INT,0,MPI_COMM_WORLD),DEBUG_PRINT("\tSEND/RECV %d\n", y)) 
 #define ASSIGN_BUF(x,y,type) (POP_OR_PUT_BYTES(bufPtr, y,type))
 #define ASSIGN_BUF_DBL(x,y) (POP_OR_PUT_BYTES(bufPtrDbl,y, double))
 #define ASSIGN_DBL(x,y) (MPI_Bcast(&y,1,MPI_DOUBLE, 0, MPI_COMM_WORLD), DEBUG_PRINT("\tSEND/RECV %f\n", y)) 
@@ -101,10 +101,12 @@ extern int processID;
 /* PTHREAD SPECIFIC  */
 /*********************/
 #ifdef _USE_PTHREADS
-#if defined (_MSC_VER)
+#ifndef CLANG_UNDER_VS
+#if defined (_MSC_VER) 
 #include "pthread.h"
 #else
 #include <pthread.h>
+#endif
 #endif
 #define _REPRODUCIBLE_MPI_OR_PTHREADS
 #define VOLATILE_PAR volatile 

@@ -5,9 +5,8 @@
  *      Author: minh
  */
 
-
-#include "vectorclass/vectormath_exp.h"
-#include "vectorclass/vectorclass.h"
+#include <vectorclass/vectorclass.h>
+#include <vectorclass/vectormath_exp.h>
 #include "phylokernel.h"
 //#include "phylokernelsafe.h"
 //#include "phylokernelmixture.h"

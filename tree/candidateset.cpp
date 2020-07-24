@@ -232,7 +232,8 @@ void CandidateSet::initParentTrees() {
 int CandidateSet::update(string newTree, double newScore) {
     // Do not update candidate set if the new tree has worse score than the
     // worst tree in the candidate set
-    if (newScore < begin()->first && size() >= maxSize) {
+    auto front = begin();
+    if ( size() >= maxSize && front!=end() && newScore < front->first ) {
         return -2;
     }
     CandidateTree candidate;

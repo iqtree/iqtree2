@@ -94,7 +94,7 @@ public:
     inline int getNStates() { return num_states; }
 
     /** get all number of states incl. missing/gap/ambiguous states */
-    inline int getNAllStates() { return states.size(); }
+    inline size_t getNAllStates() { return states.size(); }
 
     /**
      initialise from a state definition string
