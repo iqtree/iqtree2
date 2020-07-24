@@ -1044,9 +1044,9 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block,
         }
     }
     
-    if (!seqerr.empty() && tree->aln->seq_type != SEQ_DNA)
+    if (!seqerr.empty() && tree->aln->seq_type != SEQ_DNA) {
         outError("Sequencing error model " + seqerr + " is only supported for DNA");
-
+    }
     // Now that PoMo stuff has been removed, check for model parameters.
 	size_t pos = model_str.find(OPEN_BRACKET);
     if (pos != string::npos) {
@@ -1191,12 +1191,16 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
                 outError("Defining both empirical and optimize frequencies not allowed");
 		}
         double sum_weights = 0.0;
-        for (m = 0; m < freq_weights.size(); m++)
-            if (freq_vec[m] != nxs_freq_empirical && freq_vec[m] != nxs_freq_optimize)
+        for (m = 0; m < freq_weights.size(); m++) {
+            if (freq_vec[m] != nxs_freq_empirical && freq_vec[m] != nxs_freq_optimize) {
                 sum_weights += freq_weights[m];
-        for (m = 0; m < freq_weights.size(); m++)
-            if (freq_vec[m] == nxs_freq_empirical || freq_vec[m] == nxs_freq_optimize)
-                freq_weights[m] = sum_weights/freq_weights.size();
+            }
+        }
+        for (m = 0; m < freq_weights.size(); m++) {
+            if (freq_vec[m] == nxs_freq_empirical || freq_vec[m] == nxs_freq_optimize) {
+                freq_weights[m] = sum_weights / freq_weights.size();
+            }
+        }
 		ModelMarkov::init(FREQ_USER_DEFINED);
 	} else {
 		if (freq_params != "")
@@ -1208,8 +1212,9 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 
 	DoubleVector weights;
     name = orig_model_name.substr(0, orig_model_name.find_first_of("+*"));
-    if (!models_block->findMixModel(name))
+    if (!models_block->findMixModel(name)) {
         name = "";
+    }
 	full_name = (string)"MIX" + OPEN_BRACKET;
 	if (model_list == "") model_list = model_name;
 	for (m = 0, cur_pos = 0; cur_pos < model_list.length(); m++) {
@@ -1307,17 +1312,19 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
         for (i = 0; i < nmixtures; i++)
              prop[i] *= sum;
     }
-
 	// rescale total_num_subst such that the global rate is 1
-	for (i = 0, sum = 0.0; i < nmixtures; i++)
-		sum += prop[i]*at(i)->total_num_subst;
-	for (i = 0; i < nmixtures; i++)
-		at(i)->total_num_subst /= sum;
-
-    if (optimize_steps == 0)
-        optimize_steps = (getNDim()+1)*100;
-
-	if (optimize_weights) fix_prop = false;
+    for (i = 0, sum = 0.0; i < nmixtures; i++) {
+        sum += prop[i] * at(i)->total_num_subst;
+    }
+    for (i = 0; i < nmixtures; i++) {
+        at(i)->total_num_subst /= sum;
+    }
+    if (optimize_steps == 0) {
+        optimize_steps = (getNDim() + 1) * 100;
+    }
+    if (optimize_weights) {
+        fix_prop = false;
+    }
 	fix_prop |= (nmixtures == 1);
 	// use central eigen etc. stufffs
 
@@ -1330,16 +1337,16 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
             err = true;
         }
     }
-
-    if (err)
+    if (err) {
         outError("Model reversibility is not consistent");
-    if (rev != isReversible())
+    }
+    if (rev != isReversible()) {
         setReversible(rev);
-
+    }
     // forgot to call this after refactoring
-    if (isReversible())
+    if (isReversible()) {
         initMem();
-
+    }
 	decomposeRateMatrix();
 
     delete nxs_freq_optimize;
@@ -1509,10 +1516,12 @@ void ModelMixture::computeTransDerv(double time, double *trans_matrix,
 int ModelMixture::getNDim() {
 //	int dim = (fix_prop) ? 0: (size()-1);
     int dim = 0;
-    if (!optimizing_submodels && !fix_prop)
-    	dim = size()-1;
-	for (iterator it = begin(); it != end(); it++)
-		dim += (*it)->getNDim();
+    if (!optimizing_submodels && !fix_prop) {
+        dim = size() - 1;
+    }
+    for (iterator it = begin(); it != end(); it++) {
+        dim += (*it)->getNDim();
+    }
 	return dim;
 }
 
@@ -1800,17 +1809,20 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
     int dim = getNDim();
     double score = 0.0;
 
-    if (!phylo_tree->getModelFactory()->unobserved_ptns.empty())
+    if (!phylo_tree->getModelFactory()->unobserved_ptns.empty()) {
         outError("Mixture model +ASC is not supported yet. Contact author if needed.");
-
-    if (dim > 0)
+    }
+    if (dim > 0) {
         score = optimizeWithEM(gradient_epsilon);
-    else if (!fix_prop)
+    }
+    else if (!fix_prop) {
         score = optimizeWeights();
-
+    }
 //	double score = ModelGTR::optimizeParameters(gradient_epsilon);
 	optimizing_submodels = false;
-	if (getNDim() == 0) return score;
+    if (getNDim() == 0) {
+        return score;
+    }
 	// now rescale Q matrices to have proper interpretation of branch lengths
 
 	double sum;
@@ -1833,6 +1845,7 @@ bool ModelMixture::isUnstableParameters() {
     for (c = 0; c < ncategory; c++)
         if (prop[c] < MIN_MIXTURE_PROP*0.1) {
             outWarning("The mixture model might be overfitting because some mixture weights are estimated close to zero");
+            //Todo: Which is it? Break, or return true? James B. 23-Jul-2020
             break;
             return true;
         }

@@ -249,14 +249,16 @@ double PartitionModel::computeFunction(double shape) {
         if (tree->at(i)->getRate()->isGammaRate())
             res += tree->at(i)->getRate()->computeFunction(shape);
     }
-    if (res == 0.0)
+    if (res == 0.0) {
         outError("No partition has Gamma rate heterogeneity!");
+    }
 	return res;
 }
 
 double PartitionModel::optimizeLinkedAlpha(bool write_info, double gradient_epsilon) {
-    if (write_info)
+    if (write_info) {
         cout << "Optimizing linked gamma shape..." << endl;
+    }
 	double negative_lh;
 	double current_shape = linked_alpha;
 	double ferror, optx;

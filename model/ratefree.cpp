@@ -220,9 +220,10 @@ int RateFree::getNDim() {
 
 double RateFree::targetFunk(double x[]) {
 	getVariables(x);
-    if (optimizing_params != 2)
+    if (optimizing_params != 2) {
         // only clear partial_lh if optimizing rates
         phylo_tree->clearAllPartialLH();
+    }
 	return -phylo_tree->computeLikelihood();
 }
 
@@ -236,10 +237,10 @@ double RateFree::optimizeParameters(double gradient_epsilon) {
 
 	// return if nothing to be optimized
     if (ndim == 0) {
-		return phylo_tree->computeLikelihood();
+        return phylo_tree->computeLikelihood();
     }
     if (verbose_mode >= VB_MED) {
-		cout << "Optimizing " << name << " model parameters by " << optimize_alg << " algorithm..." << endl;
+        cout << "Optimizing " << name << " model parameters by " << optimize_alg << " algorithm..." << endl;
     }
     // TODO: turn off EM algorithm for +ASC model
     if ((optimize_alg.find("EM") != string::npos && phylo_tree->getModelFactory()->unobserved_ptns.empty())) {
