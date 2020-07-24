@@ -44,7 +44,11 @@ inline void rax_malloc_string_copy(char* source, char** dest)
 {
     size_t bufLen = (strlen(source) + 1);
     *dest = (char*)rax_malloc(bufLen);
+#ifdef CLANG_UNDER_VS
     strcpy_s(*dest, bufLen, source);
+#else
+    strcpy(*dest, source);
+#endif
 }
 
 //#define rax_malloc_aligned(x) memalign(PLL_BYTE_ALIGNMENT,x)

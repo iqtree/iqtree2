@@ -41,7 +41,8 @@
 
 #include "genericParallelization.h"
 #include "pllInternal.h"
-#include "pll.h"                     //For MPI API headers (if 
+#include "pll.h"
+#include <mpi.h>
 
 /** @file genericParallelization.c
     
@@ -102,7 +103,7 @@ extern const char* getJobName(int tmp);
 extern volatile char *barrierBuffer;
 
 
-#if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
+#if defined(_FINE_GRAIN_MPI) || ( defined(_IQTREE_MPI) && defined(CLANG_UNDER_VS) )
 extern MPI_Datatype TRAVERSAL_MPI; 
 
 /** @brief Pthreads helper function for adding bytes to communication buffer.

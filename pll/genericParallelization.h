@@ -63,7 +63,7 @@ extern double masterTimePerPhase;
 /******************/
 /* MPI SPECIFIC   */
 /******************/
-#if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
+#if defined(_FINE_GRAIN_MPI) || (defined(_IQTREE_MPI) && defined(CLANG_UNDER_VS))
 #include <mpi.h>
 #ifdef DEBUG_MPI_EACH_SEND
 #define DEBUG_PRINT(text, elem) printf(text, elem)

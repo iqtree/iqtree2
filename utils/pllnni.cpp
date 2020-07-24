@@ -846,8 +846,11 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
     pllTree2StringREC(tr->tree_string, tr, pr, tr->start->back, PLL_FALSE,
             PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_TRUE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
     tree_str = (char *) malloc (strlen(tr->tree_string) + 1);
+#ifdef CLANG_UNDER_VS
     strcpy_s(tree_str, strlen(tr->tree_string) + 1, tr->tree_string);
-
+#else
+    strcpy(tree_str, tr->tree_string);
+#endif
     pllBoolean is_stored = PLL_FALSE;
 
     if(is_stored){ // if found the tree_str
