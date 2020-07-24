@@ -20,6 +20,8 @@
 #ifndef NCL_NXSCHARACTERSBLOCK_H
 #define NCL_NXSCHARACTERSBLOCK_H
 
+#include <iostream> //for std::ostream
+
 class NxsTaxaBlock;
 class NxsAssumptionsBlock;
 
@@ -169,6 +171,7 @@ class NxsAssumptionsBlock;
 |	                                            IsPolymorphic
 |>
 */
+class NxsString;      //James B. (Added forward declare needed in VS builds, 23-Jul-2020)
 class NxsCharactersBlock
   : public NxsBlock
 	{
@@ -234,7 +237,7 @@ class NxsCharactersBlock
 		void					RestoreTaxon(unsigned i);
 		bool					IsActiveTaxon(unsigned i);
 		bool					IsDeleted(unsigned i);
-		void					ShowStateLabels(ostream &out, unsigned i, unsigned c, unsigned first_taxon = -1);
+		void					ShowStateLabels(std::ostream &out, unsigned i, unsigned c, unsigned first_taxon = -1);
 		unsigned				GetStateSymbolIndex(unsigned i, unsigned j, unsigned k = 0);	// added by mth for standard data types
 		char					GetState(unsigned i, unsigned j, unsigned k = 0);
 		char					*GetSymbols();
@@ -247,8 +250,8 @@ class NxsCharactersBlock
 		virtual unsigned		TaxonLabelToNumber(NxsString s);
 		virtual unsigned		GetMaxObsNumStates();
 		virtual unsigned		GetObsNumStates(unsigned j);
-		virtual void			DebugShowMatrix(ostream &out, bool use_matchchar, const char *marginText = 0);
-		virtual void			Report(ostream &out);
+		virtual void			DebugShowMatrix(std::ostream &out, bool use_matchchar, const char *marginText = 0);
+		virtual void			Report(std::ostream &out);
 		virtual void			Reset();
 
 		NxsTaxaBlock			*taxa;				/* pointer to the TAXA block in which taxon labels are stored */
@@ -508,7 +511,7 @@ inline unsigned NxsCharactersBlock::GetNumEliminated()
 */
 inline unsigned NxsCharactersBlock::GetNumEquates()
 	{
-	return equates.size();
+	return static_cast<unsigned>(equates.size());
 	}
 
 /*----------------------------------------------------------------------------------------------------------------------
