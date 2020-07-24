@@ -22,6 +22,7 @@
 
 #include <cassert>
 #include <cstring>
+#include <string>
 #include "nxsindent.h"
 
 class IndexSet;
@@ -36,7 +37,7 @@ class IndexSet;
 |	etc.).
 */
 class NxsString
-  : public string
+  : public std::string
 	{
 	public:
 
@@ -71,7 +72,7 @@ class NxsString
 		bool				IsNexusPunctuation(const char c) const;
 		bool				QuotesNeeded() const;
 		NxsString 			UpperCasePrefix() const;
-		friend ostream		&operator<<(std::ostream &out, const NxsString &s);
+		friend std::ostream	&operator<<(std::ostream &out, const NxsString &s);
 
 		//	Modifiers
 		//
@@ -169,7 +170,7 @@ class NStrCaseSensitiveEquals
 |	Binary function class that performs case-Insensitive string compares.
 */
 struct NxsStringEqual
-  : public binary_function<NxsString, NxsString, bool>
+  : public std::binary_function<NxsString, NxsString, bool>
 	{
 	bool operator()(const NxsString &x, const NxsString &y) const;
 	};
@@ -244,7 +245,7 @@ inline bool NxsStringEqual::operator()(
 |	The default constructor.
 */
 inline NxsString::NxsString()
-  : string()
+  : std::string()
 	{
 	}
 
@@ -269,21 +270,6 @@ inline void NxsString::clear()
 	erase();
 	}
 
-/*--------------------------------------------------------------------------------------------------------------------------
-|	Returns true if the Equals comparison function is true for this or any element in the vector `s'.
-*/
-inline bool NxsString::IsInVector(
-  const NxsStringVector &s, /* the vector of NxsString objects to be searched */
-  NxsString::CmpEnum mode)	/* the argument passed to the Equals function, which is called for every element in the vector `s' */
-  const	
-	{
-	for (NxsStringVector::const_iterator sIt = s.begin(); sIt != s.end(); sIt++)
-		{
-		if (Equals(*sIt, mode))
-			return true;
-		}
-	return false;
-	}
 
 /*--------------------------------------------------------------------------------------------------------------------------
 |	A copy constructor taking a C-string argument.
@@ -326,7 +312,7 @@ inline NxsString &NxsString::operator=(
 inline NxsString &NxsString::operator+=(
   const char *s)	/* the C-string to be appended */
 	{
-	append(string(s));
+	append(std::string(s));
 	return *this;
 	}
 
@@ -349,7 +335,7 @@ inline NxsString &NxsString::operator+=(
 	char s[2];
 	s[0] = c;
 	s[1] = '\0';
-	append(string(s));
+	append(std::string(s));
 	return *this;
 	}
 
@@ -595,8 +581,8 @@ inline NxsString &endl(
 /*--------------------------------------------------------------------------------------------------------------------------
 |	Writes the string `s' to the ostream `out'.
 */
-inline ostream &operator<<(
-  ostream &out,			/* the stream to which the string `s' is to be written */
+inline std::ostream &operator<<(
+  std::ostream &out,			/* the stream to which the string `s' is to be written */
   const NxsString &s)	/* the string to write */
 	{
 	out << s.c_str();

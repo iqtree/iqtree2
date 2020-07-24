@@ -30,6 +30,7 @@ public:
     SymTestResult() {
         significant_pairs = included_pairs = excluded_pairs = 0;
         pvalue_binom = -1.0;
+        max_stat = pvalue_maxdiv = pvalue_perm = 0.0;
     }
     
     /** compute pvalue using bionomial test */

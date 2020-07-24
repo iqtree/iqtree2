@@ -220,7 +220,7 @@ void Alignment::checkSeqName() {
             int nnuc = 4;
             df = nnuc-1;
             // Have to normalize allele frequencies.
-            double state_freq_norm[nnuc];
+            double state_freq_norm[4];
             double sum_freq = 0.0;
             for (j = 0; j < nnuc; j++) {
                 sum_freq += state_freq[j];
@@ -837,8 +837,9 @@ void Alignment::computeConst(Pattern &pat) {
     StateBitset state_app;
     state_app.reset();
     int j;
-    for (j = 0; j < num_states; j++)
-    	state_app[j] = 1;
+    for (j = 0; j < num_states; j++) {
+        state_app[j] = 1;
+    }
 
     // number of appearance for each state, to compute is_informative
     size_t num_app[num_states];
@@ -1448,10 +1449,12 @@ char Alignment::convertStateBack(char state) {
 
 string Alignment::convertStateBackStr(StateType state) {
 	string str;
-    if (seq_type == SEQ_POMO)
-        return string("POMO")+convertIntToString(state);
-    if (seq_type == SEQ_MULTISTATE)
+    if (seq_type == SEQ_POMO) {
+        return string("POMO") + convertIntToString(state);
+    }
+    if (seq_type == SEQ_MULTISTATE) {
         return " " + convertIntToString(state);
+    }
 	if (seq_type == SEQ_CODON) {
         // codon data
         if (state >= num_states) return "???";
@@ -2742,9 +2745,9 @@ void Alignment::printPhylip(ostream &out, bool append, const char *aln_site_list
                             int exclude_sites, const char *ref_seq_name, bool print_taxid) {
     IntVector kept_sites;
     int final_length = buildRetainingSites(aln_site_list, kept_sites, exclude_sites, ref_seq_name);
-    if (seq_type == SEQ_CODON)
+    if (seq_type == SEQ_CODON) {
         final_length *= 3;
-
+    }
 	out << getNSeq() << " " << final_length << endl;
 	int max_len = getMaxSeqNameLength();
     if (print_taxid) max_len = 10;
@@ -2757,9 +2760,11 @@ void Alignment::printPhylip(ostream &out, bool append, const char *aln_site_list
         else
             out << left << seq_names[seq_id] << " ";
 		int j = 0;
-		for (IntVector::iterator i = site_pattern.begin();  i != site_pattern.end(); i++, j++)
-			if (kept_sites[j])
-				out << convertStateBackStr(at(*i)[seq_id]);
+        for (IntVector::iterator i = site_pattern.begin(); i != site_pattern.end(); i++, j++) {
+            if (kept_sites[j]) {
+                out << convertStateBackStr(at(*i)[seq_id]);
+            }
+        }
 		out << endl;
 	}
 }
@@ -3240,8 +3245,6 @@ Alignment *Alignment::convertCodonToDNA() {
 }
 
 void convert_range(const char *str, int &lower, int &upper, int &step_size, char* &endptr) throw (string) {
-    //char *endptr;
-    char *beginptr = (char*) str;
 
     // parse the lower bound of the range
     int d = strtol(str, &endptr, 10);
@@ -3294,10 +3297,7 @@ void convert_range(const char *str, int &lower, int &upper, int &step_size, char
         err += "\" instead";
         throw err;
     }
-
     step_size = d;
-    str = beginptr;
-
 }
 
 void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id) {
