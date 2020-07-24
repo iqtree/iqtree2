@@ -42,7 +42,9 @@
 #include <vector>	//for std::vector
 #include <set>      //for std::set
 #include <map>      //for std::map
+#ifdef CLANG_UNDER_VS
 #include <xstddef>  //for std::less
+#endif 
 
 class NxsString;
 

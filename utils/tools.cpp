@@ -460,7 +460,6 @@ string convert_time(const double sec) {
 
 void convert_range(const char *str, int &lower, int &upper, int &step_size) {
     char *endptr;
-    char *beginptr = (char*) str;
 
     // parse the lower bound of the range
     int d = strtol(str, &endptr, 10);
@@ -504,7 +503,6 @@ void convert_range(const char *str, int &lower, int &upper, int &step_size) {
 
 void convert_range(const char *str, double &lower, double &upper, double &step_size) {
     char *endptr;
-    char *beginptr = (char*) str;
 
     // parse the lower bound of the range
     double d = strtod(str, &endptr);
