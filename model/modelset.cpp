@@ -57,8 +57,9 @@ int ModelSet::getPtnModelID(int ptn)
 
 
 double ModelSet::computeTrans(double time, int model_id, int state1, int state2) {
-    if (phylo_tree->vector_size == 1)
+    if (phylo_tree->vector_size == 1) {
         return at(model_id)->computeTrans(time, state1, state2);
+    }
 	// temporary fix problem with vectorized eigenvectors
 	int i;
     int vsize = phylo_tree->vector_size;
@@ -78,9 +79,9 @@ double ModelSet::computeTrans(double time, int model_id, int state1, int state2)
 }
 
 double ModelSet::computeTrans(double time, int model_id, int state1, int state2, double &derv1, double &derv2) {
-    if (phylo_tree->vector_size == 1)
+    if (phylo_tree->vector_size == 1) {
         return at(model_id)->computeTrans(time, state1, state2, derv1, derv2);
-
+    }
 	// temporary fix problem with vectorized eigenvectors
 	int i;
     int vsize = phylo_tree->vector_size;
@@ -111,8 +112,9 @@ int ModelSet::getNDim()
 
 void ModelSet::writeInfo(ostream& out)
 {
-    if (empty())
+    if (empty()) {
         return;
+    }
 	if (verbose_mode >= VB_DEBUG) {
 		int i = 1;
 		for (iterator it = begin(); it != end(); it++, i++) {
@@ -126,10 +128,12 @@ void ModelSet::writeInfo(ostream& out)
 
 void ModelSet::decomposeRateMatrix()
 {
-    if (empty())
+    if (empty()) {
         return;
-	for (iterator it = begin(); it != end(); it++)
-		(*it)->decomposeRateMatrix();
+    }
+    for (iterator it = begin(); it != end(); it++) {
+        (*it)->decomposeRateMatrix();
+    }
 	if (phylo_tree->vector_size == 1)
 		return;
 	// rearrange eigen to obey vector_size

@@ -74,8 +74,9 @@ void RateGamma::setNCategory(int ncat) {
 	ncategory = ncat;
 	delete [] rates;
 	rates = new double[ncategory];
-    for (int cat = 0; cat < ncategory; cat++)
-        rates[cat] = 1.0;
+ 	for (int cat = 0; cat < ncategory; cat++) {
+		rates[cat] = 1.0;
+	}
 	name = "+G" + convertIntToString(ncategory);
 	full_name = "Gamma with " + convertIntToString(ncategory) + " categories";
 	computeRates();
@@ -97,16 +98,14 @@ RateGamma::~RateGamma()
 void RateGamma::computeRates() {
 	int cat; /* category id */
 	double sum_rates = 0.0;
-
 	if (ncategory == 1) {
 		rates[0] = 1.0;
 		return;
 	}
-
     double curScale = 0.0;
-    for (cat = 0; cat < ncategory; cat++)
-        curScale += rates[cat];
-
+	for (cat = 0; cat < ncategory; cat++) {
+		curScale += rates[cat];
+	}
 	if (!cut_median) {
 		computeRatesMean();
 	} else {

@@ -1017,9 +1017,9 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, 
 
 	if (removed_seqs.empty()) return this; // do nothing if the list is empty
 
-    if (removed_seqs.size() + 3 >= getNSeq())
+    if (removed_seqs.size() + 3 >= getNSeq()) {
         outWarning("Your alignment contains too many identical sequences!");
-
+    }
 	// now remove identical sequences
 	IntVector keep_seqs;
 	for (size_t seq1 = 0; seq1 < getNSeq(); ++seq1)
