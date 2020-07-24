@@ -97,7 +97,7 @@ public:
 
 class igzstream : public gzstreambase, public std::istream {
 public:
-    igzstream() : std::istream( &buf) {} 
+    igzstream() : gzstreambase(), std::istream( &buf) {}
     igzstream( const char* name, int open_mode = std::ios::in)
         : gzstreambase( name, open_mode), std::istream( &buf) {}  
     gzstreambuf* rdbuf() { return gzstreambase::rdbuf(); }
@@ -108,7 +108,7 @@ public:
 
 class ogzstream : public gzstreambase, public std::ostream {
 public:
-    ogzstream() : std::ostream( &buf) {}
+    ogzstream() : gzstreambase(), std::ostream( &buf) {}
     ogzstream( const char* name, int mode = std::ios::out)
         : gzstreambase( name, mode), std::ostream( &buf) {}  
     gzstreambuf* rdbuf() { return gzstreambase::rdbuf(); }

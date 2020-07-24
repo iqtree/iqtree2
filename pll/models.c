@@ -33,13 +33,7 @@
 
 
 #include "mem_alloc.h"
-
-#ifndef WIN32
-#include <sys/times.h>
-#include <sys/types.h>
-#include <sys/time.h>
-#include <unistd.h> 
-#endif
+#include "systypes.h"
 
 #include <math.h>
 #include <time.h> 
@@ -4306,7 +4300,6 @@ static void initializeBaseFreqs(partitionList *pr, double **empiricalFrequencies
 void initModel(pllInstance *tr, double **empiricalFrequencies, partitionList * partitions)
 {  
   int model, j;
-  double  temp;  
      
   tr->optimizeRateCategoryInvocations = 1;      
   tr->numberOfInvariableColumns = 0;
@@ -4314,7 +4307,7 @@ void initModel(pllInstance *tr, double **empiricalFrequencies, partitionList * p
   
   for (j = 0; j < tr->originalCrunchedLength; j++) 
     {
-      tr->patrat[j] = temp = 1.0;
+      tr->patrat[j] = 1.0;
       tr->patratStored[j] = 1.0;
       tr->rateCategory[j] = 0;           
     } 

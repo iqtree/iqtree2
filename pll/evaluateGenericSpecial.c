@@ -29,11 +29,7 @@
  * @brief Functions for computing the log likelihood at a given branch of the tree (i.e. a virtual root that is placed at this branch)
  */
 #include "mem_alloc.h"
-
-#ifndef WIN32 
-#include <unistd.h>
-#endif
-
+#include "systypes.h"
 #include <math.h>
 #include <time.h> 
 #include <stdlib.h>
@@ -483,10 +479,10 @@ static double evaluateGammaAsc(int *ex1, int *ex2,
 	  for(j = 0, term = 0.0; j < 4; j++)
 	    {
 	      left  = &(x1[gammaStates * i + numStates * j]);
-	      right = &(x2[gammaStates * i + numStates * j]);	    
-	      
-	      for(l = 0; l < numStates; l++)
-		term += left[l] * right[l] * diagptable[j * numStates + l];	
+	      right = &(x2[gammaStates * i + numStates * j]);
+          for (l = 0; l < numStates; l++) {
+              term += left[l] * right[l] * diagptable[j * numStates + l];
+          }
 	    }
 	  
 	  /* assumes that pow behaves as expected/specified for underflows
@@ -2053,9 +2049,7 @@ void perSiteLogLikelihoods(pllInstance *tr, partitionList *pr, double *logLikeli
 
     for(i = lower, localCount = 0; i < upper; i++, localCount++)
     {
-      double 
-        l;
-
+        double l = 0;
       /* 
          we need to switch of rate heterogeneity implementations here.
          when we have PSR we actually need to provide the per-site rate 

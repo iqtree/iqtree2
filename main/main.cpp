@@ -24,7 +24,7 @@
 
 #include <iqtree_config.h>
 
-#if defined WIN32 || defined _WIN32 || defined __WIN32__
+#if defined WIN32 || defined _WIN32 || defined __WIN32__ || defined WIN64
 //#include <winsock2.h>
 //#include <windows.h>
 //extern __declspec(dllexport) int gethostname(char *name, int namelen);
@@ -32,7 +32,6 @@
 #include <sys/resource.h>
 #endif
 
-//#include "Eigen/Core"
 #include <stdio.h>
 #include "tree/phylotree.h"
 #include <signal.h>
@@ -43,7 +42,6 @@
 #include <errno.h>
 #include "pda/greedy.h"
 #include "pda/pruning.h"
-//#include "naivegreedy.h"
 #include "pda/splitgraph.h"
 #include "pda/circularnetwork.h"
 #include "tree/mtreeset.h"
@@ -53,9 +51,7 @@
 #include "nclextra/myreader.h"
 #include "phyloanalysis.h"
 #include "tree/matree.h"
-//#include "ngs.h"
 #include "obsolete/parsmultistate.h"
-//#include "gss.h"
 #include "alignment/maalignment.h" //added by MA
 #include "tree/ncbitree.h"
 #include "pda/ecopd.h"
@@ -63,7 +59,6 @@
 #include "pda/ecopdmtreeset.h"
 #include "pda/gurobiwrapper.h"
 #include "utils/timeutil.h"
-//#include <unistd.h>
 #include <stdlib.h>
 #include "vectorclass/instrset.h"
 
@@ -74,8 +69,6 @@
 #endif
 
 using namespace std;
-
-
 
 void generateRandomTree(Params &params)
 {
@@ -217,7 +210,7 @@ void printCopyright(ostream &out) {
 #endif
     out << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << iqtree_VERSION_PATCH << " COVID-edition";
 
-#if defined _WIN32 || defined WIN32
+#if defined _WIN32 || defined WIN32 || defined WIN64
     out << " for Windows";
 #elif defined __APPLE__ || defined __MACH__
     out << " for Mac OS X";
@@ -1974,7 +1967,7 @@ extern "C" void funcAbort(int signal_number)
       because abort() was called, your program will exit or crash anyway
       (with a dialog box on Windows).
      */
-#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32) && !defined(__CYGWIN__)
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32) && !defined(WIN64) && !defined(__CYGWIN__)
     print_stacktrace(cerr);
 #endif
 
@@ -1984,7 +1977,7 @@ extern "C" void funcAbort(int signal_number)
         case SIGFPE:  cerr << "ERRONEOUS NUMERIC"; break;
         case SIGILL:  cerr << "ILLEGAL INSTRUCTION"; break;
         case SIGSEGV: cerr << "SEGMENTATION FAULT"; break;
-#if !defined WIN32 && !defined _WIN32 && !defined __WIN32__
+#if !defined WIN32 && !defined _WIN32 && !defined __WIN32__ && !defined WIN64
         case SIGBUS: cerr << "BUS ERROR"; break;
 #endif
     }
@@ -2425,7 +2418,7 @@ int main(int argc, char *argv[]) {
     signal(SIGFPE, &funcAbort);
     signal(SIGILL, &funcAbort);
     signal(SIGSEGV, &funcAbort);
-#if !defined WIN32 && !defined _WIN32 && !defined __WIN32__
+#if !defined WIN32 && !defined _WIN32 && !defined __WIN32__ && !defined WIN64
     signal(SIGBUS, &funcAbort);
 #endif
     printCopyright(cout);
@@ -2438,7 +2431,7 @@ int main(int argc, char *argv[]) {
     */
     //FILE *pfile = popen("hostname","r");
     char hostname[100];
-#if defined WIN32 || defined _WIN32 || defined __WIN32__
+#if defined WIN32 || defined _WIN32 || defined __WIN32__ || defined WIN64
     WSADATA wsaData;
     WSAStartup(MAKEWORD(2, 2), &wsaData);
     gethostname(hostname, sizeof(hostname));

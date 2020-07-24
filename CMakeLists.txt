@@ -43,15 +43,17 @@
 # assuming you installed LLVM via Homebrew: brew install --with-toolchain llvm
 # cmake -G XCode -DCMAKE_XCODE_ATTRIBUTE_CC=/usr/local/opt/llvm/bin/clang -DCMAKE_XCODE_ATTRIBUTE_CXX=/usr/local/opt/llvm/bin/clang++ <source_dir>
 #
-
-
+#
 # Compile OpenMP version: cmake ....
 # Compile 32-bit version: cmake -DIQTREE_FLAGS=m32 ....
 # Compile static version: cmake -DIQTREE_FLAGS=static ....
 # Compile static OpenMP version: cmake -DIQTREE_FLAGS="static" ....
+#
 
 #NOTE: Static linking with clang windows: make a symlink libgcc_eh.a to libgcc.a (administrator required)
 # C:\TDM-GCC-64\lib\gcc\x86_64-w64-mingw32\5.1.0>mklink libgcc_eh.a libgcc.a
+#
+#
 
 cmake_minimum_required(VERSION 2.8.10 FATAL_ERROR)
 set(CMAKE_LEGACY_CYGWIN_WIN32 0)
@@ -77,7 +79,6 @@ if(Boost_FOUND)
     add_definitions(-DUSE_BOOST)
 endif()
 
-
 # The version number.
 set (iqtree_VERSION_MAJOR 2)
 set (iqtree_VERSION_MINOR 1)
@@ -96,7 +97,7 @@ if (NOT CMAKE_BUILD_TYPE)
 endif()
 
 if (CMAKE_BUILD_TYPE STREQUAL "Release")
-    message("Builde mode   : Release")
+    message("Build mode   : Release")
 endif()
 
 if (CMAKE_GENERATOR MATCHES "Xcode")
@@ -143,7 +144,6 @@ if (WIN32)
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
     endif()
     SET(CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
-    add_definitions(-DWIN32)
 elseif (APPLE)
     message("Target OS     : Mac OS X")
     # to be compatible back to Mac OS X 10.7
@@ -176,8 +176,16 @@ set(GCC "FALSE")   #  GNU compiler
 set(CLANG "FALSE") # Clang compiler
 set(ICC "FALSE")   # Intel compiler
 set(VCC "FALSE")   # MS Visual C Compiler, note that it is different from MSVC variable
+set(CLANG_UNDER_VS "FALSE") #Clang compiler, used from inside Visual Studio
 # using C++11 standard
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+if (CMAKE_CXX_COMPILER MATCHES "VISUAL STUDIO")
+    set(CLANG_UNDER_VS "TRUE")
+    #it won't recognize the -std=c++11 parameter.
+    #Todo: don't hard-code this; figure out some way it can be passed in (though ideally, not the whole shebang).
+    include_directories("C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Tools\\Llvm\\lib\\clang\\10.0.0\\include")
+else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+endif()
 
 if (CMAKE_COMPILER_IS_GNUCXX)
     message("Compiler      : GNU Compiler (gcc)")
@@ -231,19 +239,28 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Intel")
 else()
     message("Compiler      : Unknown and untested yet")
 endif()
+message("Compiler version: ${CMAKE_CXX_COMPILER_VERSION}")
 
 set(EXE_SUFFIX "")
 
 if (MSVC)
     # MS Visual Studio environment
     message("Exporting MS Visual Studio projects...")
-    add_definitions(/MP) # enable multi-processor compilation
+    if (CLANG_UNDER_VS)
+        #see https://clang.llvm.org/docs/UsersManual.html#clang-cl
+        #note .GX is how you say -fexceptions
+        add_definitions(/D_UWIN)
+        set(CMAKE_C_FLAGS_RELEASE "/O2 /GX")
+        set(CMAKE_C_FLAGS_DEBUG   "/D_UWIN /GX")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /I${EIGEN3_INCLUDE_DIR}")
+    else()
+        add_definitions(/MP) # enable multi-processor compilation
+    endif()
     if (CMAKE_BUILD_TYPE STREQUAL "Release")
         add_definitions(/Ot /Oi)
         if (VCC)
             add_definitions(/O2)
         elseif (ICC)
-            #add_definitions(/O3)
             add_definitions(/O3)
         endif()
     endif()
@@ -259,6 +276,33 @@ if (IQTREE_FLAGS MATCHES "lto")
 endif()
 
 ##################################################################
+# detect 32 or 64 bit binary
+##################################################################
+set (BINARY32 "FALSE")
+if(CMAKE_SIZEOF_VOID_P EQUAL 4 OR IQTREE_FLAGS MATCHES "m32")
+    set(BINARY32 "TRUE")
+    message("Target binary : 32-bit")
+    if (CMAKE_GENERATOR MATCHES "Win64")
+        error("Both 32-bit and 64-bit mode cannot be specified")
+    endif()
+    if (GCC OR CLANG)
+        set(COMBINED_FLAGS "${COMBINED_FLAGS} -m32")
+    endif()
+    add_definitions(-DBINARY32)
+    if (WIN32)
+        add_definitions(-DWIN32)
+    endif()
+else()
+    message("Target binary : 64-bit")
+    if (CLANG_UNDER_VS)
+        set(COMBINED_FLAGS "${COMBINED_FLAGS} -m64")
+    endif()
+    if (WIN32)
+        add_definitions(-DWIN64)
+    endif()
+endif()
+
+##################################################################
 # configure MPI compilation
 ##################################################################
 
@@ -266,13 +310,28 @@ if (IQTREE_FLAGS MATCHES "mpi")
     add_definitions(-D_IQTREE_MPI)
     if (NOT CMAKE_CXX_COMPILER MATCHES "mpi")
         # if not using the MPI compiler wrapper, set own options manually
-        find_package(MPI REQUIRED)
-        set(CMAKE_CXX_COMPILE_FLAGS "${CMAKE_CXX_COMPILE_FLAGS} ${MPI_CXX_COMPILE_FLAGS}")
-        set(CMAKE_C_COMPILE_FLAGS "${CMAKE_C_COMPILE_FLAGS} ${MPI_C_COMPILE_FLAGS}")
-        set(CMAKE_CXX_LINK_FLAGS "${CMAKE_CXX_LINK_FLAGS} ${MPI_CXX_LINK_FLAGS}")
-        set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} ${MPI_C_LINK_FLAGS}")
-        include_directories(${MPI_C_INCLUDE_PATH})
-        include_directories(${MPI_CXX_INCLUDE_PATH})
+        find_package(MPI)
+        if (MPI_Found)
+            set(CMAKE_CXX_COMPILE_FLAGS "${CMAKE_CXX_COMPILE_FLAGS} ${MPI_CXX_COMPILE_FLAGS}")
+            set(CMAKE_C_COMPILE_FLAGS "${CMAKE_C_COMPILE_FLAGS} ${MPI_C_COMPILE_FLAGS}")
+            set(CMAKE_CXX_LINK_FLAGS "${CMAKE_CXX_LINK_FLAGS} ${MPI_CXX_LINK_FLAGS}")
+            set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} ${MPI_C_LINK_FLAGS}")
+            include_directories(${MPI_C_INCLUDE_PATH})
+            include_directories(${MPI_CXX_INCLUDE_PATH})
+        else()
+            if(CLANG_UNDER_VS)
+                #Under Visual Studio, the MPI package isn't found, if you haven't installed FORTRAN
+                set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /I${MPI_DIR}/Include")
+                set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /I${MPI_DIR}/Include")
+                #Zork. Linker
+                #message("MPI DIR was ${MPI_DIR}")
+                if (BINARY32)
+                    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /LIBPATH:${MPI_DIR}\\lib\\x86 msmpi.lib /PROFILE")
+                else()
+                    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /LIBPATH:${MPI_DIR}\\lib\\x64 msmpi.lib /PROFILE")
+                endif()
+            endif()
+        endif()
     endif()
 endif()
 
@@ -283,25 +342,6 @@ endif()
 if (IQTREE_FLAGS MATCHES "pll")
     add_definitions(-DUSING_PLL)
     set(EXE_SUFFIX "${EXE_SUFFIX}-pll")
-endif()
-
-##################################################################
-# detect 32 or 64 bit binary
-##################################################################
-set (BINARY32 "FALSE")
-if(CMAKE_SIZEOF_VOID_P EQUAL 4 OR IQTREE_FLAGS MATCHES "m32")
-    set(BINARY32 "TRUE")
-    message("Target binary : 32-bit")
-    if (CMAKE_GENERATOR MATCHES "Win64")
-        error("Both 32-bit and 64-bit mode cannot be specified")
-    endif()
-    #SET(EXE_SUFFIX "${EXE_SUFFIX}32")
-    if (GCC OR CLANG)
-        set(COMBINED_FLAGS "${COMBINED_FLAGS} -m32")
-    endif()
-    add_definitions(-DBINARY32)
-else()
-    message("Target binary : 64-bit")
 endif()
 
 if(IQTREE_FLAGS MATCHES "novx")
@@ -315,11 +355,14 @@ endif()
 if (NOT IQTREE_FLAGS MATCHES "single")
     message("OpenMP        : Yes")
     #SET(EXE_SUFFIX "${EXE_SUFFIX}-omp")
-    add_definitions(-D_USE_PTHREADS)
-    if (MSVC)
-        add_definitions(/MT)
+    if (NOT CLANG_UNDER_VS)
+        add_definitions(-D_USE_PTHREADS)
     endif()
-
+    if (MSVC)
+        if (NOT CLANG_UNDER_VS)
+            add_definitions(/MT)
+        endif()
+    endif()
 
     if(CLANG AND APPLE)
         link_directories(${PROJECT_SOURCE_DIR}/libmac)
@@ -345,12 +388,31 @@ if (NOT IQTREE_FLAGS MATCHES "single")
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp -pthread")
     elseif (CLANG)
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
-        if (APPLE OR WIN32)
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xpreprocessor -fopenmp -pthread")
-            set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lomp")
+        if (CLANG_UNDER_VS)
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /openmp /D_CRT_SECURE_NO_WARNINGS /D_CRT_NONSTDC_NO_WARNINGS /DCLANG_UNDER_VS=1")
+            set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   /openmp /D_CRT_SECURE_NO_WARNINGS /D_CRT_NONSTDC_NO_WARNINGS /DCLANG_UNDER_VS=1")
+            include_directories("${PROJECT_SOURCE_DIR}/pll") # for PThreads headers
+            
+            #Next two lines don't work for me, as I only have VS 2019 Community
+            #set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /implib:vcomp.lib")
+            #set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /implib:vcompd.lib")
+
+            #The problem here is that LLVM installs either 64 bit or 32 bit libraries, but not both.
+            #Though perhaps in debug builds this should be libiomp5md.lib
+            set (LLVM_DIR "C:\\Projects\\LLVM_10")
+            set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /LIBPATH:${LLVM_DIR}\\lib libomp.lib")
+
+            #Also need to ensure libomp.dll is in the path (or copied into the output directory).
+            #(You want the one in ${LLVM_DIR}\\bin
+            #But I don't as yet know how to tell CMake to do that. -James B. 23-Jul-2020
         else()
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp -pthread")
+            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
+            if (APPLE OR WIN32 )            
+                set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xpreprocessor -fopenmp -pthread")
+                set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lomp")
+            else()
+                set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp -pthread")
+            endif()
         endif()
     endif()
 else()
@@ -428,7 +490,6 @@ elseif (ICC)
     endif()
 endif()
 
-
 # further flag to improve performance
 
 if (IQTREE_FLAGS MATCHES "fma") # AVX+FMA instruction set
@@ -494,7 +555,7 @@ if (GCC)
     set(CMAKE_C_FLAGS_DEBUG "-O0 -g -fno-inline-functions -fno-inline-functions-called-once -fno-default-inline -fno-inline")
     set(CMAKE_CXX_FLAGS_MEM "-g -O1")
     set(CMAKE_C_FLAGS_MEM "-g -O1")
-elseif (CLANG)
+elseif (CLANG AND NOT CLANG_UNDER_VS)
     set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -fno-inline-functions -fno-inline")
     set(CMAKE_C_FLAGS_DEBUG "-O0 -g -fno-inline-functions -fno-inline")
     set(CMAKE_CXX_FLAGS_MEM "-g -O1")
@@ -728,7 +789,11 @@ endif()
 
 if (WIN32)
     if (MSVC)
-        ADD_CUSTOM_COMMAND(TARGET iqtree2 POST_BUILD COMMAND copy "Release\\iqtree2${EXE_SUFFIX}.exe" "Release\\iqtree2${EXE_SUFFIX}-click.exe")
+        if (CLANG_UNDER_VS)
+            ADD_CUSTOM_COMMAND(TARGET iqtree2 POST_BUILD COMMAND copy "iqtree2${EXE_SUFFIX}.exe" "iqtree2${EXE_SUFFIX}-click.exe")
+        else()
+            ADD_CUSTOM_COMMAND(TARGET iqtree2 POST_BUILD COMMAND copy "Release\\iqtree2${EXE_SUFFIX}.exe" "Release\\iqtree2${EXE_SUFFIX}-click.exe")
+        endif()
     else()
         ADD_CUSTOM_COMMAND(TARGET iqtree2 POST_BUILD COMMAND copy "iqtree2${EXE_SUFFIX}.exe" "iqtree2${EXE_SUFFIX}-click.exe")
     endif()

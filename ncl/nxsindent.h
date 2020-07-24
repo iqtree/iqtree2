@@ -20,6 +20,8 @@
 #ifndef NCL_NXSINDENT_H
 #define NCL_NXSINDENT_H
 
+#include <ostream> //for std::ostream
+
 /*----------------------------------------------------------------------------------------------------------------------
 |	Manipulator for use in indenting text `leftMarg' characters.
 */
@@ -43,8 +45,8 @@ inline Indent::Indent(
 /*----------------------------------------------------------------------------------------------------------------------
 |	Output operator for the Indent manipulator.
 */
-inline ostream &operator <<(
-  ostream &o,		/* the ostream object */
+inline std::ostream &operator <<(
+  std::ostream &o,		/* the ostream object */
   const Indent &i)	/* the Indent object to be sent to `o' */
 	{
 #if defined (HAVE_PRAGMA_UNUSED)

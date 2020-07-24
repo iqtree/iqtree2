@@ -655,7 +655,7 @@ public:
     NJMatrix(): super() { }
 protected:
     virtual void calculateScaledRowTotals() const {
-        scaledRowTotals.reserve(n);
+        scaledRowTotals.resize(n);
         T nless2      = ( n - 2 );
         T tMultiplier = ( n <= 2 ) ? 0 : (1 / nless2);
         #pragma omp parallel for

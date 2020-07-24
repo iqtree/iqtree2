@@ -112,8 +112,8 @@ int Node::calDist(Node* partner, Node* dad, int curLen) {
     if ( this->isLeaf() && dad == NULL ) {
         return this->neighbors[0]->node->calDist(partner, this, 1);
     } else {
-        Node* left = NULL;
-        Node* right = NULL;
+        Node* left = nullptr;
+        Node* right = nullptr;
         for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it++) {
             if ((*it)->node != dad) {
                 if (left == NULL)
@@ -123,28 +123,30 @@ int Node::calDist(Node* partner, Node* dad, int curLen) {
             }
         }
         curLen++;
-//        cout << left->id << endl;
-//        cout << right->id << endl;
         int sumLeft = 0;
         int sumRight = 0;
-        if ( left->isLeaf() ) {
-            if ( left == partner)
-            {
-                //cout << " I found you baby" << endl;
-                return curLen;
+        if (left!=nullptr) { //JB 10-Jul-2020 Don't segfault if null
+            if (left->isLeaf()) {
+                if (left == partner)
+                {
+                    //cout << " I found you baby" << endl;
+                    return curLen;
+                }
+            }
+            else {
+                sumLeft = left->calDist(partner, this, curLen);
             }
         }
-        else {
-            sumLeft = left->calDist(partner, this, curLen);
-        }
-        if ( right->isLeaf() ) {
-            if ( right == partner) {
-                //cout << " I found you baby" << endl;
-                return curLen;
+        if (right != nullptr) { //JB 10-Jul-2020 Don't segfault if null
+            if (right->isLeaf()) {
+                if (right == partner) {
+                    //cout << " I found you baby" << endl;
+                    return curLen;
+                }
             }
-        }
-        else {
-            sumRight = right->calDist(partner, this, curLen);
+            else {
+                sumRight = right->calDist(partner, this, curLen);
+            }
         }
         return sumRight + sumLeft;
     }
@@ -254,6 +256,9 @@ void Node::deleteNode() {
 }
 
 Node::~Node() {
-    deleteNode();
+    NeighborVec::reverse_iterator it;
+    for (it = neighbors.rbegin(); it != neighbors.rend(); it++)
+        delete (*it);
+    neighbors.clear();
 }
 

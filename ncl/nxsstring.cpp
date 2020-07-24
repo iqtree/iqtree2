@@ -875,3 +875,22 @@ NxsStringVector BreakPipeSeparatedList(
 		}
 	return retVec;
 	}
+
+/*--------------------------------------------------------------------------------------------------------------------------
+|	Returns true if the Equals comparison function is true for this or any element in the vector `s'.
+|   (James B. 23-Jul-2020, moved this here, from nxsstring.h, because the references to NxsStringVector 
+|    were a problem when compiling in Visual Studio).
+*/
+bool NxsString::IsInVector(
+	const NxsStringVector& s, /* the vector of NxsString objects to be searched */
+	NxsString::CmpEnum mode)	/* the argument passed to the Equals function, which is called for every element in the vector `s' */
+	const
+{
+	for (NxsStringVector::const_iterator sIt = s.begin(); sIt != s.end(); sIt++)
+	{
+		if (Equals(*sIt, mode))
+			return true;
+	}
+	return false;
+}
+

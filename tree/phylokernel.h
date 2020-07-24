@@ -10,6 +10,10 @@
 
 #include "phylotree.h"
 #include "alignment/superalignment.h"
+#if defined(CLANG_UNDER_VS)
+#   define _mm_popcnt_u64 __popcnt64
+#endif
+#include <vectorclass/vectorclass.h>
 
 #ifdef __SSE2__
 inline Vec2d horizontal_add(Vec2d x[2]) {
@@ -1408,7 +1412,7 @@ inline UINT fast_popcount(Vec4ui &x) {
 }
 
 inline UINT fast_popcount(Vec8ui &x) {
-#if defined (__GNUC__) || defined(__clang__)
+#if (defined (__GNUC__) || defined(__clang__)) && !defined(CLANG_UNDER_VS)
     MEM_ALIGN_BEGIN uint64_t vec[4] MEM_ALIGN_END;
     MEM_ALIGN_BEGIN uint64_t res[4] MEM_ALIGN_END;
     Vec8ui y;
@@ -1421,19 +1425,18 @@ inline UINT fast_popcount(Vec8ui &x) {
     return horizontal_add(y);
 #else
     MEM_ALIGN_BEGIN uint64_t vec[4] MEM_ALIGN_END;
-    MEM_ALIGN_BEGIN int res[4] MEM_ALIGN_END;
-    Vec4ui y;
+    MEM_ALIGN_BEGIN unsigned int res[4] MEM_ALIGN_END;
+    Vec4uq y; //James B. Not Vec4ui: 64 bit integers, not 32.
     x.store_a(vec);
-    res[0] = _mm_popcnt_u64(vec[0]);
-    res[1] = _mm_popcnt_u64(vec[1]);
-    res[2] = _mm_popcnt_u64(vec[2]);
-    res[3] = _mm_popcnt_u64(vec[3]);
+    res[0] = static_cast<unsigned int>(_mm_popcnt_u64(vec[0]));
+    res[1] = static_cast<unsigned int>(_mm_popcnt_u64(vec[1]));
+    res[2] = static_cast<unsigned int>(_mm_popcnt_u64(vec[2]));
+    res[3] = static_cast<unsigned int>(_mm_popcnt_u64(vec[3]));
     y.load_a(res);
     return horizontal_add(y);
 #endif
 
 }
-
 
 inline void horizontal_popcount(Vec4ui &x) {
     MEM_ALIGN_BEGIN UINT vec[4] MEM_ALIGN_END;
@@ -1477,7 +1480,7 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
 //        if (aln->ordered_pattern.empty())
 //            aln->orderPatternByNumChars();
 //        ASSERT(!aln->ordered_pattern.empty());
-        int pars_size = getBitsBlockSize();
+        size_t pars_size = getBitsBlockSize();
         memset(dad_branch->partial_pars, 255, pars_size*sizeof(UINT));
         size_t nsites = (aln->num_parsimony_sites+NUM_BITS-1)/NUM_BITS;
         dad_branch->partial_pars[nstates*VCSIZE*nsites] = 0;
@@ -1494,7 +1497,7 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
 //            aln->orderPatternByNumChars();
 //        ASSERT(!aln->ordered_pattern.empty());
         int leafid = node->id;
-        int pars_size = getBitsBlockSize();
+        size_t pars_size = getBitsBlockSize();
         memset(dad_branch->partial_pars, 0, pars_size*sizeof(UINT));
         int ambi_aa[] = {2, 3, 5, 6, 9, 10}; // {4+8, 32+64, 512+1024};
         UINT *x = dad_branch->partial_pars;
@@ -1592,7 +1595,8 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                 Alignment::iterator pat = aln->ordered_pattern.begin()+ patid;
                 int state = pat->at(leafid);
                 int freq = pat->frequency;
-                if (aln->seq_type == SEQ_POMO && state >= nstates && state < aln->STATE_UNKNOWN) {
+                if (aln->seq_type == SEQ_POMO && state >= nstates 
+                    && state < aln->STATE_UNKNOWN) {
                     state -= nstates;
                     ASSERT(state < aln->pomo_sampled_states.size());
                     int id1 = aln->pomo_sampled_states[state] & 3;
@@ -1788,7 +1792,7 @@ int PhyloTree::computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNo
         #ifdef _OPENMP
         #pragma omp parallel for reduction(+: score) if(nsites>num_threads*10)
         #endif
-        for (size_t site = 0; site < nsites; ++site) {
+        for (int site = 0; site < nsites; ++site) {
             size_t offset = entry_size*site;
             VectorClass *x = (VectorClass*)(dad_branch->partial_pars + offset);
             VectorClass *y = (VectorClass*)(node_branch->partial_pars + offset);
@@ -1833,11 +1837,10 @@ void PhyloTree::computePartialParsimonySankoffSIMD(PhyloNeighbor *dad_branch, Ph
     int nstates = aln->num_states;
     assert(dad_branch->partial_pars);
     
-    int pars_block_size = getBitsBlockSize();
+    size_t pars_block_size = getBitsBlockSize();
     
     
     // internal node
-    UINT i, j, ptn;
     
     UINT * partial_pars = dad_branch->partial_pars;
     memset(partial_pars, 0, sizeof(UINT)*pars_block_size);
@@ -1865,21 +1868,21 @@ void PhyloTree::computePartialParsimonySankoffSIMD(PhyloNeighbor *dad_branch, Ph
     
     if (node->degree() > 3) {
         // multifurcating node
-        for (ptn = 0; ptn < aln->ordered_pattern.size(); ptn+=VectorClass::size()) {
+        for (size_t ptn = 0; ptn < aln->ordered_pattern.size(); ptn+=VectorClass::size()) {
             int ptn_start_index = ptn*nstates;
             VectorClass *partial_pars_ptr = (VectorClass*)&partial_pars[ptn_start_index];
             
             FOR_NEIGHBOR_IT(node, dad, it) if ((*it)->node->name != ROOT_NAME) {
                 if ((*it)->node->isLeaf()) {
                     // leaf node
-                    for (i = 0; i < VectorClass::size(); i++) {
+                    for (int i = 0; i < VectorClass::size(); i++) {
                         UINT *tip_buffer_ptr = (UINT*)tip_buffer + i;
                         UINT *partial_pars_child_ptr = &tip_partial_pars[aln->ordered_pattern[ptn+i][(*it)->node->id]*nstates];
-                        for (j = 0; j < nstates; j++, tip_buffer_ptr += VectorClass::size())
+                        for (int j = 0; j < nstates; j++, tip_buffer_ptr += VectorClass::size())
                             *tip_buffer_ptr = partial_pars_child_ptr[j];
                     }
                     
-                    for (i = 0; i < nstates; i++){
+                    for (int i = 0; i < nstates; i++){
                         partial_pars_ptr[i] += tip_buffer[i];
                     }
                 } else {
@@ -1887,10 +1890,10 @@ void PhyloTree::computePartialParsimonySankoffSIMD(PhyloNeighbor *dad_branch, Ph
                     VectorClass *partial_pars_child_ptr = (VectorClass*)&((PhyloNeighbor*) (*it))->partial_pars[ptn_start_index];
                     UINT *cost_matrix_ptr = cost_matrix;
                     
-                    for (i = 0; i < nstates; i++){
+                    for (int i = 0; i < nstates; i++){
                         // min(j->i) from child_branch
                         VectorClass min_child_ptn_pars = partial_pars_child_ptr[0] + cost_matrix_ptr[0];
-                        for(j = 1; j < nstates; j++) {
+                        for (int j = 1; j < nstates; j++) {
                             min_child_ptn_pars = min(partial_pars_child_ptr[j] + cost_matrix_ptr[j], min_child_ptn_pars);
                         }
                         partial_pars_ptr[i] += min_child_ptn_pars;
@@ -1903,18 +1906,18 @@ void PhyloTree::computePartialParsimonySankoffSIMD(PhyloNeighbor *dad_branch, Ph
         // tip-tip case
         VectorClass *tip_buffer_right = tip_buffer + nstates;
         
-        for (ptn = 0; ptn < aln->ordered_pattern.size(); ptn+=VectorClass::size()){
+        for (size_t ptn = 0; ptn < aln->ordered_pattern.size(); ptn+=VectorClass::size()){
             // ignore const ptn because it does not affect pars score
             //if (aln->at(ptn).isConst()) continue;
-            int ptn_start_index = ptn*nstates;
+            size_t ptn_start_index = ptn*nstates;
             
             // load data for tip
-            for (i = 0; i < VectorClass::size(); i++) {
+            for (int i = 0; i < VectorClass::size(); i++) {
                 UINT *left_ptr = &tip_partial_pars[aln->ordered_pattern[ptn+i][left->node->id]*nstates];
                 UINT *right_ptr = &tip_partial_pars[aln->ordered_pattern[ptn+i][right->node->id]*nstates];
                 UINT *tip_buffer_ptr = (UINT*)tip_buffer + i;
                 UINT *tip_buffer_right_ptr = (UINT*)tip_buffer_right + i;
-                for (j = 0; j < nstates; j++) {
+                for (int j = 0; j < nstates; j++) {
                     *tip_buffer_ptr = left_ptr[j];
                     *tip_buffer_right_ptr = right_ptr[j];
                     tip_buffer_ptr += VectorClass::size();
@@ -1923,22 +1926,22 @@ void PhyloTree::computePartialParsimonySankoffSIMD(PhyloNeighbor *dad_branch, Ph
             }
             VectorClass *partial_pars_ptr = (VectorClass*)&partial_pars[ptn_start_index];
             
-            for (i = 0; i < nstates; i++){
+            for (int i = 0; i < nstates; i++){
                 // min(j->i) from child_branch
                 partial_pars_ptr[i] = tip_buffer[i] + tip_buffer_right[i];
             }
         }
     } else if (left->node->isLeaf() && !right->node->isLeaf()) {
         // tip-inner case
-        for (ptn = 0; ptn < aln->ordered_pattern.size(); ptn+=VectorClass::size()){
+        for (size_t ptn = 0; ptn < aln->ordered_pattern.size(); ptn+=VectorClass::size()){
             // ignore const ptn because it does not affect pars score
             //if (aln->at(ptn).isConst()) continue;
-            int ptn_start_index = ptn*nstates;
+            size_t ptn_start_index = ptn*nstates;
             
-            for (i = 0; i < VectorClass::size(); i++) {
+            for (int i = 0; i < VectorClass::size(); i++) {
                 UINT *left_ptr = &tip_partial_pars[aln->ordered_pattern[ptn+i][left->node->id]*nstates];
                 UINT *tip_buffer_ptr = (UINT*)tip_buffer + i;
-                for (j = 0; j < nstates; j++) {
+                for (int j = 0; j < nstates; j++) {
                     *tip_buffer_ptr = left_ptr[j];
                     tip_buffer_ptr += VectorClass::size();
                 }
@@ -1949,10 +1952,10 @@ void PhyloTree::computePartialParsimonySankoffSIMD(PhyloNeighbor *dad_branch, Ph
             UINT *cost_matrix_ptr = cost_matrix;
             VectorClass right_contrib;
             
-            for(i = 0; i < nstates; i++){
+            for(int i = 0; i < nstates; i++){
                 // min(j->i) from child_branch
                 right_contrib = right_ptr[0] + cost_matrix_ptr[0];
-                for(j = 1; j < nstates; j++) {
+                for(int j = 1; j < nstates; j++) {
                     right_contrib = min(right_ptr[j] + cost_matrix_ptr[j], right_contrib);
                 }
                 partial_pars_ptr[i] = tip_buffer[i] + right_contrib;
@@ -1961,7 +1964,7 @@ void PhyloTree::computePartialParsimonySankoffSIMD(PhyloNeighbor *dad_branch, Ph
         }
     } else {
         // inner-inner case
-        for (ptn = 0; ptn < aln->ordered_pattern.size(); ptn+=VectorClass::size()){
+        for (size_t ptn = 0; ptn < aln->ordered_pattern.size(); ptn+=VectorClass::size()){
             // ignore const ptn because it does not affect pars score
             //if (aln->at(ptn).isConst()) continue;
             int ptn_start_index = ptn*nstates;
@@ -1972,11 +1975,11 @@ void PhyloTree::computePartialParsimonySankoffSIMD(PhyloNeighbor *dad_branch, Ph
             UINT *cost_matrix_ptr = cost_matrix;
             VectorClass left_contrib, right_contrib;
             
-            for(i = 0; i < nstates; i++){
+            for (int i = 0; i < nstates; i++){
                 // min(j->i) from child_branch
                 left_contrib = left_ptr[0] + cost_matrix_ptr[0];
                 right_contrib = right_ptr[0] + cost_matrix_ptr[0];
-                for(j = 1; j < nstates; j++) {
+                for (int j = 1; j < nstates; j++) {
                     left_contrib = min(left_ptr[j] + cost_matrix_ptr[j], left_contrib);
                     right_contrib = min(right_ptr[j] + cost_matrix_ptr[j], right_contrib);
                 }
@@ -2026,25 +2029,24 @@ int PhyloTree::computeParsimonyBranchSankoffSIMD(PhyloNeighbor *dad_branch, Phyl
     // now combine likelihood at the branch
     VectorClass tree_pars = 0;
     int nstates = aln->num_states;
-    UINT i, j, ptn;
     VectorClass branch_pars = 0;
     
     if (dad->isLeaf()) {
         VectorClass *tip_buffer = aligned_alloc<VectorClass>(nstates);
         // external node
-        for (ptn = 0; ptn < aln->ordered_pattern.size(); ptn+=VectorClass::size()){
+        for (size_t ptn = 0; ptn < aln->ordered_pattern.size(); ptn+=VectorClass::size()){
             int ptn_start_index = ptn * nstates;
-            for (i = 0; i < VectorClass::size(); i++) {
+            for (int  i = 0; i < VectorClass::size(); i++) {
                 UINT *node_branch_ptr = &tip_partial_pars[aln->ordered_pattern[ptn+i][dad->id]*nstates];
                 UINT *tip_buffer_ptr = (UINT*)tip_buffer + i;
-                for (j = 0; j < nstates; j++, tip_buffer_ptr += VectorClass::size()) {
+                for (int j = 0; j < nstates; j++, tip_buffer_ptr += VectorClass::size()) {
                     *tip_buffer_ptr = node_branch_ptr[j];
                 }
             }
             VectorClass *dad_branch_ptr = (VectorClass*)&dad_branch->partial_pars[ptn_start_index];
             VectorClass min_ptn_pars = tip_buffer[0] + dad_branch_ptr[0];
             VectorClass br_ptn_pars = tip_buffer[0];
-            for (i = 1; i < nstates; i++){
+            for (int i = 1; i < nstates; i++){
                 // min(j->i) from node_branch
                 VectorClass min_score = tip_buffer[i] + dad_branch_ptr[i];
                 br_ptn_pars = select(min_score < min_ptn_pars, tip_buffer[i], br_ptn_pars);
@@ -2057,18 +2059,18 @@ int PhyloTree::computeParsimonyBranchSankoffSIMD(PhyloNeighbor *dad_branch, Phyl
         aligned_free(tip_buffer);
     }  else {
         // internal node
-        for (ptn = 0; ptn < aln->ordered_pattern.size(); ptn+=VectorClass::size()){
+        for (size_t ptn = 0; ptn < aln->ordered_pattern.size(); ptn+=VectorClass::size()){
             int ptn_start_index = ptn * nstates;
             VectorClass *node_branch_ptr = (VectorClass*)&node_branch->partial_pars[ptn_start_index];
             VectorClass *dad_branch_ptr = (VectorClass*)&dad_branch->partial_pars[ptn_start_index];
             UINT *cost_matrix_ptr = cost_matrix;
             VectorClass min_ptn_pars = UINT_MAX;
             VectorClass br_ptn_pars = UINT_MAX;
-            for(i = 0; i < nstates; i++){
+            for(int i = 0; i < nstates; i++){
                 // min(j->i) from node_branch
                 VectorClass min_score = node_branch_ptr[0] + cost_matrix_ptr[0];
                 VectorClass branch_score = cost_matrix_ptr[0];
-                for(j = 1; j < nstates; j++) {
+                for(int j = 1; j < nstates; j++) {
                     VectorClass value = node_branch_ptr[j] + cost_matrix_ptr[j];
                     branch_score = select(value < min_score, cost_matrix_ptr[j], branch_score);
                     min_score = min(value, min_score);                    

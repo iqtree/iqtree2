@@ -152,7 +152,9 @@
 #include <stdlib.h>                              // define abs(int)
 
 #ifdef _MSC_VER                                  // Microsoft compiler or compatible Intel compiler
+#ifndef CLANG_UNDER_VS
 #include <intrin.h>                              // define _BitScanReverse(int), __cpuid(int[4],int), _xgetbv(int)
+#endif
 #endif // _MSC_VER
 
 // functions in instrset_detect.cpp

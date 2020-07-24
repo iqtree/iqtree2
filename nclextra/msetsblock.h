@@ -113,7 +113,7 @@ public:
 	/**
 		@return the number of sets
 	*/
-	int getNSets() const { return sets.size(); }
+	size_t getNSets() const { return sets.size(); }
 
 	/**
 		@param id set id

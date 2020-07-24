@@ -1030,8 +1030,8 @@ RepresentLeafSet* IQTree::findRepresentLeaves(vector<RepresentLeafSet*> &leaves_
     int set_id = dad->id * 3 + nei_id;
     if (leaves_vec[set_id])
         return leaves_vec[set_id];
-    RepresentLeafSet *leaves = new RepresentLeafSet;
-    RepresentLeafSet * leaves_it[2] = { NULL, NULL };
+    RepresentLeafSet* leaves = new RepresentLeafSet;
+    RepresentLeafSet* leaves_it[2] = { NULL, NULL };
     leaves_vec[set_id] = leaves;
     RepresentLeafSet::iterator last;
     RepresentLeafSet::iterator cur_it;
@@ -1049,8 +1049,11 @@ RepresentLeafSet* IQTree::findRepresentLeaves(vector<RepresentLeafSet*> &leaves_
                 leaves_it[j++] = findRepresentLeaves(leaves_vec, i, node);
             }
         ASSERT(j == 2 && leaves_it[0] && leaves_it[1]);
-        if (leaves_it[0]->empty() && leaves_it[1]->empty()) {
+        if ( 2 <= j && leaves_it[0]->empty() && leaves_it[1]->empty()) {
             cout << "wrong";
+        }
+        if (j < 2) {
+            return leaves;
         }
         RepresentLeafSet::iterator lit[2] = { leaves_it[0]->begin(), leaves_it[1]->begin() };
         while (leaves->size() < k_represent) {

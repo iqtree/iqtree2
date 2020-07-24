@@ -468,8 +468,14 @@ protected:
 	virtual void setRates();
 
     /**
-        free all allocated memory
+        free all allocated memory 
+		(internal version not affected by virtual dispatch; safe to call from destructor)
     */
+	void internalFreeMem();
+
+	/**
+		free all allocated memory
+	*/
 	virtual void freeMem();
 
     /** TRUE if model is reversible */

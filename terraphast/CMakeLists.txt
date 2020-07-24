@@ -192,7 +192,7 @@ set_target_properties(${terraces_targets} PROPERTIES CXX_STANDARD 11 CXX_STANDAR
 #####################################################################
 # set platform-specific options, include platform-specific files
 #####################################################################
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+if(("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC") OR CLANG_UNDER_VS)
 	set(TERRAPHAST_PLATFORM_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/lib/cl")
 	set(TERRAPHAST_COMPILE_FLAGS -Oi -W4)
 
@@ -200,7 +200,9 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 	# Unfortunately, Catch uses some windows-specific features, so we have to
 	# enable these extensions for the Catch main method (more specific: not disable them)
 	file(GLOB ALL_SOURCES lib/*.cpp c_lib/*.cpp test/*.cpp tools/*.cpp app/*.cpp)
-	set_source_files_properties(${ALL_SOURCES} PROPERTIES COMPILE_FLAGS "-Za")
+    if (NOT CLANG_UNDER_VS)
+	    set_source_files_properties(${ALL_SOURCES} PROPERTIES COMPILE_FLAGS "-Za")
+    endif()
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
     set(TERRAPHAST_PLATFORM_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/lib/intel")
     set(TERRAPHAST_COMPILE_FLAGS -Wall -Wextra -Wconversion -Wsign-conversion -Werror)

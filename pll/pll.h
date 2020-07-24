@@ -1502,9 +1502,10 @@ typedef struct
 
 /******************** START OF API FUNCTION DESCRIPTIONS ********************/
 
-#if (defined(_USE_PTHREADS) || defined(_FINE_GRAIN_MPI))
-pllBoolean isThisMyPartition(partitionList *pr, int tid, int model);
-void printParallelTimePerRegion(void); 
+
+#if (defined(_USE_PTHREADS) || defined(_FINE_GRAIN_MPI)) || defined(_IQTREE_MPI)
+pllBoolean isThisMyPartition(partitionList* pr, int tid, int model);
+void printParallelTimePerRegion(void);
 #endif
 
 #ifdef _FINE_GRAIN_MPI

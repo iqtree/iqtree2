@@ -41,7 +41,7 @@
 
 #include "genericParallelization.h"
 #include "pllInternal.h"
-#include "pll.h"
+#include "pll.h"                     //For MPI API headers (if 
 
 /** @file genericParallelization.c
     
@@ -74,7 +74,7 @@ static void computeFraction(partitionList *localPr, int tid, int n);
 static void computeFractionMany(partitionList *localPr, int tid);
 static void initializePartitionsMaster(pllInstance *tr, pllInstance *localTree, partitionList *pr, partitionList *localPr, int tid, int n);
 
-#ifdef _FINE_GRAIN_MPI
+#if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
 static char* addBytes(char *buf, void *toAdd, size_t numBytes); 
 static char* popBytes(char *buf, void *result, size_t numBytes); 
 static void defineTraversalInfoMPI(void);
@@ -96,13 +96,13 @@ double timeBuffer[NUM_PAR_JOBS];
 double timePerRegion[NUM_PAR_JOBS]; 
 #endif
 
-extern char* getJobName(int tmp); 
+extern const char* getJobName(int tmp); 
 
 //extern double *globalResult; 
 extern volatile char *barrierBuffer;
 
 
-#ifdef _FINE_GRAIN_MPI
+#if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
 extern MPI_Datatype TRAVERSAL_MPI; 
 
 /** @brief Pthreads helper function for adding bytes to communication buffer.
@@ -457,6 +457,9 @@ void perSiteLogLikelihoodsPthreads(pllInstance *tr, partitionList *pr, double *l
 
       pllBoolean 
 	execute = ((tr->manyPartitions && isThisMyPartition(pr, tid, model)) || (!tr->manyPartitions));
+      //On Windows, this will result in a compilation error if you don't have an MPI API 
+      //downloaded and installed.  
+      //I've only built with the Microsoft MPI (MS-MPI), v10.1.2 (November 2019).
 
       /* if the entire partition has been assigned to this thread (-Q) or if -Q is not activated 
 	 we need to compute some per-site log likelihoods with thread tid for this partition */
@@ -470,30 +473,29 @@ void perSiteLogLikelihoodsPthreads(pllInstance *tr, partitionList *pr, double *l
 
 	    if(tr->manyPartitions || (i % n == (size_t)tid))
 	      {
-		double 
-		  l;
+	        double l = 0;
 
-		/* now compute the per-site log likelihood at the current site */
+	        /* now compute the per-site log likelihood at the current site */
 
-		switch(tr->rateHetModel)
-		  {
-		  case PLL_CAT:
-		    l = evaluatePartialGeneric (tr, pr, localIndex, pr->partitionData[model]->perSiteRates[pr->partitionData[model]->rateCategory[localIndex]], model);
-		    break;
-		  case PLL_GAMMA:
-		    l = evaluatePartialGeneric (tr, pr, localIndex, 1.0, model);
-		    break;
-		  default:
-		    assert(0);
-		  }
+	        switch(tr->rateHetModel)
+		        {
+		        case PLL_CAT:
+		        l = evaluatePartialGeneric (tr, pr, localIndex, pr->partitionData[model]->perSiteRates[pr->partitionData[model]->rateCategory[localIndex]], model);
+		        break;
+		        case PLL_GAMMA:
+		        l = evaluatePartialGeneric (tr, pr, localIndex, 1.0, model);
+		        break;
+		        default:
+		        assert(0);
+		        }
 
-		/* store it in an array that is local in memory to the current thread,
-		   see function collectDouble() in axml.c for understanding how we then collect these 
-		   values stored in local arrays from the threads */
+	        /* store it in an array that is local in memory to the current thread,
+		        see function collectDouble() in axml.c for understanding how we then collect these 
+		        values stored in local arrays from the threads */
 
-		lhs[i] = l;
+	        lhs[i] = l;
 
-		localIndex++;
+	        localIndex++;
 	      }
 	  }
     }
@@ -975,7 +977,7 @@ static void broadCastAlpha(partitionList *localPr, partitionList *pr)
   int  i, 
     model; 
 
-#ifdef _FINE_GRAIN_MPI
+#if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
     int bufSize = localPr->numberOfPartitions * 4 * sizeof(double);
   char bufDbl[bufSize]; 
   char *bufPtrDbl = bufDbl;   
@@ -1000,7 +1002,7 @@ static void broadCastLg4xWeights(partitionList *localPr, partitionList *pr)
   int  i,
     model;
 
-#ifdef _FINE_GRAIN_MPI
+#if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
     int bufSize = localPr->numberOfPartitions * 4 * sizeof(double);
   char bufDbl[bufSize];
   char *bufPtrDbl = bufDbl;
@@ -1030,8 +1032,7 @@ static void copyLG4(partitionList *localPr, partitionList *pr)
       }
 #endif
 
-    char
-      bufDbl[bufSize];
+    char bufDbl[bufSize];
     char *bufPtrDbl = bufDbl;
 
     RECV_BUF(bufDbl, bufSize, MPI_BYTE);
@@ -1309,7 +1310,7 @@ __inline static void broadcastTraversalInfo(pllInstance *localTree, pllInstance 
     
     @param type type of parallel region
  */ 
-char* getJobName(int type)
+const char* getJobName(int type)
 {
   switch(type)  
     {
@@ -1348,6 +1349,7 @@ char* getJobName(int type)
     case PLL_THREAD_EVALUATE_PER_SITE_LIKES:
       return "PLL_THREAD_EVALUATE_PER_SITE_LIKES";
     default: assert(0); 
+      return "Unrecognized Job Type";
     }
 }
 
@@ -1536,7 +1538,7 @@ static pllBoolean execFunction(pllInstance *tr, pllInstance *localTree, partitio
 
 	if( localTree->rateHetModel == PLL_CAT) /* TRICKY originally this should only be executed by workers  */
 	  {
-#ifdef _FINE_GRAIN_MPI
+#if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
 	    int bufSize = 2 * localTree->originalCrunchedLength * sizeof(double); 
 	    char bufDbl[bufSize], 
 	      *bufPtrDbl = bufDbl; 
@@ -1593,7 +1595,7 @@ static pllBoolean execFunction(pllInstance *tr, pllInstance *localTree, partitio
 	  /* assertCtr = 0,  */
 	  dblBufSize = 0; 
 
-#ifdef _FINE_GRAIN_MPI
+#if defined(FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
 	int bufSize = localPr->numberOfPartitions * sizeof(int); 
 	char buf[bufSize]; 
 	char *bufPtr = buf; 
@@ -1612,7 +1614,7 @@ static pllBoolean execFunction(pllInstance *tr, pllInstance *localTree, partitio
 
 	dblBufSize += 2 * localTree->originalCrunchedLength * sizeof(double); 
 
-#ifdef _FINE_GRAIN_MPI
+#if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
 	char bufDbl[dblBufSize],
 	  *bufPtrDbl = bufDbl;
 #endif
@@ -2080,10 +2082,11 @@ static void distributeYVectors(pllInstance *localTree, pllInstance *tr, partitio
   /* distribute the y-vectors */
   for(j = 1 ; j <= (size_t)localTree->mxtips; j++)	
     {
-#ifdef _FINE_GRAIN_MPI
+#if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
       unsigned char yBuf[tr->originalCrunchedLength]; 	  
-      if(MASTER_P)
-	memcpy(yBuf, tr->yVector[j], tr->originalCrunchedLength * sizeof(unsigned char));
+      if (MASTER_P) {
+          memcpy(yBuf, tr->yVector[j], tr->originalCrunchedLength * sizeof(unsigned char));
+      }
       MPI_Bcast(  yBuf, tr->originalCrunchedLength, MPI_UNSIGNED_CHAR,0,MPI_COMM_WORLD); 
 #endif	  
 
@@ -2219,7 +2222,7 @@ static void initializePartitionsMaster(pllInstance *tr, pllInstance *localTree, 
   treeIsInitialized = PLL_TRUE; 
 
   ASSIGN_INT(localTree->manyPartitions, tr->manyPartitions);
-  ASSIGN_INT(localTree->numberOfThreads, tr->numberOfThreads);
+  ASSIGN_INT(localTree->numberOfThreads, tr->numberOfThreads);  
   ASSIGN_INT(localPr->numberOfPartitions, pr->numberOfPartitions);
 
 #ifdef _USE_PTHREADS
@@ -2228,7 +2231,7 @@ static void initializePartitionsMaster(pllInstance *tr, pllInstance *localTree, 
   else 
     assignAndInitPart1(localTree, tr, localPr, pr, &tid);
 #else 
-  globalResult = rax_calloc((size_t) tr->numberOfThreads * (size_t)pr->numberOfPartitions* 2 ,sizeof(double));
+  globalResult = (double*)rax_calloc((size_t) tr->numberOfThreads * (size_t)pr->numberOfPartitions* 2 ,sizeof(double));
   assignAndInitPart1(localTree, tr, localPr, pr, &tid);
   defineTraversalInfoMPI();
 #endif

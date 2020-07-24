@@ -246,7 +246,7 @@ public:
 	/**
 		@return number of splits
 	*/
-	int getNSplits() {
+	size_t getNSplits() {
 		return size();
 	}
 

@@ -28,7 +28,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "bitset_index.h"
 
 #include <string.h> /* for strcpy, strdup, etc */
+#ifndef CLANG_UNDER_VS
 #include <getopt.h>
+#endif
 #ifdef _OPENMP
 #include <omp.h> /* OpenMP */
 #endif
@@ -157,7 +159,7 @@ int main_booster (const char* input_tree, const char *boot_trees,
   Tree *ref_raw_tree = NULL; /* For raw support at edges : id|avgdist|depth */
   char **alt_tree_strings;
 
-  char *algo = "tbe";
+  const char *algo = "tbe";
   
 //  int quiet = 0;
   
@@ -169,8 +171,8 @@ int main_booster (const char* input_tree, const char *boot_trees,
   int count_per_branch = 0;
 	
 
-  opterr = 0;
     /*
+  opterr = 0;
   static struct option long_options[] = {
     {"input", required_argument, 0, 'i'},
     {"boot" , required_argument, 0, 'b'},
@@ -295,7 +297,7 @@ int main_booster (const char* input_tree, const char *boot_trees,
   int i_tree;
   int num_trees = 0; /* this is the number of trees really analyzed */
 
-  alt_tree_strings = malloc(init_boot_trees * sizeof(char*));
+  alt_tree_strings = (char**)malloc(init_boot_trees * sizeof(char*));
   boottree_file = fopen(boot_trees,"r");
   if (boottree_file == NULL) {
     fprintf(stderr,"File %s not found or impossible to access media. Aborting.\n", boot_trees);
@@ -311,7 +313,7 @@ int main_booster (const char* input_tree, const char *boot_trees,
   while(copy_nh_stream_into_str(boottree_file, big_string)) /* reads from the current point in the stream, retcode 1 iff no error */
     {
       if(num_trees >= init_boot_trees){
-	alt_tree_strings = realloc(alt_tree_strings,init_boot_trees*2*sizeof(char*));
+	alt_tree_strings = (char**)realloc(alt_tree_strings,init_boot_trees*2*sizeof(char*));
 	init_boot_trees *= 2;
       }
       alt_tree_strings[num_trees] = strdup(big_string);
@@ -354,7 +356,7 @@ void fbp(Tree *ref_tree, char **alt_tree_strings,char** taxname_lookup_table, in
   int j;
   Tree *alt_tree;
   int i_tree,i;
-  short unsigned* nb_found = malloc(ref_tree->nb_edges * sizeof(short unsigned));
+  short unsigned* nb_found = (short unsigned*)malloc(ref_tree->nb_edges * sizeof(short unsigned));
   double support;
   // We initialize the reference edge hashmap
   bitset_hashmap *hm = new_bitset_hashmap(ref_tree->nb_edges*2, 0.75);
@@ -518,7 +520,6 @@ void tbe(Tree *ref_tree, Tree *ref_raw_tree, char **alt_tree_strings,char** taxn
     }
   }
 
-  int card;
   double bootstrap_val, avg_dist;
 		
   if(num_trees != 0) {
@@ -532,8 +533,6 @@ void tbe(Tree *ref_tree, Tree *ref_raw_tree, char **alt_tree_strings,char** taxn
       /* the bootstrap value for a branch is inscribed as the name of its descendant (always right side of the edge, by convention) */
       if(ref_tree->a_edges[i]->right->name) free(ref_tree->a_edges[i]->right->name); /* clear name if existing */
       ref_tree->a_edges[i]->right->name = (char*) malloc(16 * sizeof(char));
-      card = ref_tree->a_edges[i]->hashtbl[1]->num_items;
-      if (card > n/2) { card = n - card; }	  
       avg_dist      = (double) dist_accu[i] * 1.0 / num_trees;
       bootstrap_val = (double) 1.0 - avg_dist * 1.0 / (1.0 * ref_tree->a_edges[i]->topo_depth-1.0);
 
@@ -548,8 +547,6 @@ void tbe(Tree *ref_tree, Tree *ref_raw_tree, char **alt_tree_strings,char** taxn
 	/* the bootstrap value for a branch is inscribed as the name of its descendant as id|avgdist|depth */
 	if(ref_raw_tree->a_edges[i]->right->name) free(ref_raw_tree->a_edges[i]->right->name); /* clear name if existing */
 	ref_raw_tree->a_edges[i]->right->name = (char*) malloc(16 * sizeof(char));
-	card = ref_raw_tree->a_edges[i]->hashtbl[1]->num_items;
-	if (card > n/2) { card = n - card; }
 	avg_dist      = (double) dist_accu[i] * 1.0 / num_trees;
 	sprintf(ref_raw_tree->a_edges[i]->right->name, "%d|%.6f|%d", ref_raw_tree->a_edges[i]->id, avg_dist,ref_tree->a_edges[i]->topo_depth);
       }
@@ -600,8 +597,8 @@ int* species_to_move(Edge* re, Edge* be, int dist, int nb_taxa) {
   int i;
   int maxnb = dist;
   if(nb_taxa-dist >= dist) maxnb=nb_taxa-dist;
-  int *diff = calloc(maxnb,sizeof(int));
-  int *equ  = calloc(maxnb,sizeof(int));
+  int *diff = (int*)calloc(maxnb,sizeof(int));
+  int *equ  = (int*)calloc(maxnb,sizeof(int));
   int nbdiff=0, nbequ=0;
 
   for(i = 0; i < nb_taxa; i++) {

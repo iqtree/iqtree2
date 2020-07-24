@@ -38,7 +38,7 @@
 //#define inline __inline
 //#endif
 
-#if (defined _WIN32 || defined __WIN32__ || defined WIN32) 
+#if (defined _WIN32 || defined __WIN32__ || defined WIN32 || defined WIN64) 
 #ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x500
 #endif
@@ -47,7 +47,7 @@
 #ifdef HAVE_GETRUSAGE
 	#include <sys/resource.h>
 #else 
-	#if (defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__
+	#if (defined _WIN32 || defined __WIN32__ || defined WIN64) && ! defined __CYGWIN__
 	# include <windows.h>
 	#else
 	# include <sys/times.h>

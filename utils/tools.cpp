@@ -26,8 +26,19 @@
 #include "starttree.h" //for START_TREE_RECOGNIZED macro.
 #include "timeutil.h"
 #include "MPIHelper.h"
-#include <dirent.h>
+#ifndef CLANG_UNDER_VS
+    #include <dirent.h>
+#else
+     //James B. Workaround for Windows builds where these macros might not be defined
+    #ifndef S_ISDIR
+    #define S_ISDIR(mode) (((mode) & S_IFMT) == S_IFDIR)
+    #endif
+    #ifndef S_ISREG
+    #define S_ISREG(m) (((m) & S_IFMT) == S_IFREG)
+    #endif
+#endif
 #include <thread>
+
 
 #if defined(Backtrace_FOUND)
 #include <execinfo.h>
@@ -294,6 +305,7 @@ int getFilesInDir(const char *path, StrVector &filenames)
     string path_name = path;
     if (path_name.back() != '/')
         path_name.append("/");
+#ifndef CLANG_UNDER_VS
     DIR *dp;
     struct dirent *ep;
     dp = opendir (path);
@@ -312,6 +324,10 @@ int getFilesInDir(const char *path, StrVector &filenames)
         return 0;
     
     return 1;
+#else
+    //TODO: FindFirstFile et cetera, et cetera, et cetera
+    return 0;
+#endif
 }
 int convert_int(const char *str) {
     char *endptr;
@@ -483,10 +499,7 @@ void convert_range(const char *str, int &lower, int &upper, int &step_size) {
         err += "\" instead";
         throw err;
     }
-
     step_size = d;
-    str = beginptr;
-
 }
 
 void convert_range(const char *str, double &lower, double &upper, double &step_size) {
@@ -530,10 +543,7 @@ void convert_range(const char *str, double &lower, double &upper, double &step_s
         err += "\" instead";
         throw err;
     }
-
     step_size = d;
-    str = beginptr;
-
 }
 
 void convert_string_vec(const char *str, StrVector &vec, char separator) {
