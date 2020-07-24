@@ -47,15 +47,15 @@ RateHeterotachy::RateHeterotachy(int ncat, string params, PhyloTree *tree) : Rat
     destructor
 */
 RateHeterotachy::~RateHeterotachy() {
-    if (prop)
-        delete [] prop;
-    prop = NULL;
+    delete [] prop;
+    prop = nullptr;
 }
 
 void RateHeterotachy::setNCategory(int ncat) {
     ncategory = ncat;
-    if (optimize_steps == 0)
-        optimize_steps = ncat*100;
+    if (optimize_steps == 0) {
+        optimize_steps = ncat * 100;
+    }
     // initialize with gamma rates
 	delete [] prop;
 	prop  = new double[ncategory];
@@ -138,12 +138,12 @@ void RateHeterotachy::writeParameters(ostream &out) {
     @return the best likelihood
 */
 double RateHeterotachy::optimizeParameters(double gradient_epsilon) {
-    if (fix_params)
+    if (fix_params) {
         return phylo_tree->computeLikelihood();
-	if (verbose_mode >= VB_MED)
-		cout << "Optimizing " << name
-        << " model parameters by EM algorithm..." << endl;
-
+    }
+    if (verbose_mode >= VB_MED) {
+        cout << "Optimizing " << name << " model parameters by EM algorithm..." << endl;
+    }
     return optimizeWithEM();
 }
 

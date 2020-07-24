@@ -885,17 +885,18 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
                 model_list += "," + model_str;
             model = new ModelMixture(model_name, model_str, model_list, models_block, freq_type, freq_params, tree, optimize_mixmodel_weight);
         }
-        if (model->getNMixtures() != site_rate->getNRate())
+        if (model->getNMixtures() != site_rate->getNRate()) {
             outError("Mixture model and site rate model do not have the same number of categories");
-//        if (!tree->isMixlen()) {
-            // reset mixture model
-            model->setFixMixtureWeight(true);
-            int mix, nmix = model->getNMixtures();
-            for (mix = 0; mix < nmix; mix++) {
-                ((ModelMarkov*)model->getMixtureClass(mix))->total_num_subst = 1.0;
-                model->setMixtureWeight(mix, 1.0);
-            }
-            model->decomposeRateMatrix();
+        }
+        //if (!tree->isMixlen()) {
+        // reset mixture model
+        model->setFixMixtureWeight(true);
+        int mix, nmix = model->getNMixtures();
+        for (mix = 0; mix < nmix; mix++) {
+            ((ModelMarkov*)model->getMixtureClass(mix))->total_num_subst = 1.0;
+            model->setMixtureWeight(mix, 1.0);
+        }
+        model->decomposeRateMatrix();
 //        } else {
 //            site_rate->setFixParams(1);
 //            int c, ncat = site_rate->getNRate();

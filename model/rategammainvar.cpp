@@ -29,8 +29,9 @@ RateGammaInvar::RateGammaInvar(int ncat, double shape, bool median,
     this->optimize_alg = optimize_alg;
     cur_optimize = 0;
     this->testParamDone = testParamDone;
-    for (int cat = 0; cat < ncategory; cat++)
-        rates[cat] = 1.0/(1.0-p_invar);
+    for (int cat = 0; cat < ncategory; cat++) {
+        rates[cat] = 1.0 / (1.0 - p_invar);
+    }
 	computeRates();
 }
 
@@ -130,12 +131,12 @@ double RateGammaInvar::optimizeParameters(double gradient_epsilon) {
 	int ndim = getNDim();
 
 	// return if nothing to be optimized
-	if (ndim == 0)
-		return phylo_tree->computeLikelihood();
-
-    if (verbose_mode >= VB_MED)
+    if (ndim == 0) {
+        return phylo_tree->computeLikelihood();
+    }
+    if (verbose_mode >= VB_MED) {
         cout << "Optimizing " << name << " model parameters by " << optimize_alg << " algorithm..." << endl;
-
+    }
 	if (optimize_alg.find("EM_RR") != string::npos) {
         return randomRestartOptimization(gradient_epsilon);
     } else if (optimize_alg.find("Brent") != string::npos || phylo_tree->aln->frac_const_sites == 0.0 || isFixPInvar() || isFixGammaShape()) {
