@@ -19,6 +19,8 @@
 #ifndef NCL_NXSBLOCK_H
 #define NCL_NXSBLOCK_H
 
+#include "nxsstring.h"	//for NxsString
+#include "nxstoken.h"   //for NxsToken
 class NxsReader;
 
 /*----------------------------------------------------------------------------------------------------------------------

@@ -24,7 +24,7 @@
 |	stopped.
 */
 NxsException::NxsException(
-  NxsString s,	/* the message for the user */
+  const NxsString &s,	/* the message for the user */
   file_pos fp,	/* the current file position */
   long fl,		/* the current file line */
   long fc)		/* the current file column */

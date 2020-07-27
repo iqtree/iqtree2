@@ -19,8 +19,11 @@
 #ifndef NCL_NXSTAXABLOCK_H
 #define NCL_NXSTAXABLOCK_H
 
-#include <iostream> //for std::ostream
-
+#include <iostream>    //for std::ostream
+#include "nxsstring.h"
+#include "nxsdefs.h"   //for NxsBoolVector
+#include "nxstoken.h"  //for NxsToken
+#include "nxsblock.h"  //for NxsBlock
 /*----------------------------------------------------------------------------------------------------------------------
 |	This class handles reading and storage for the NxsReader block TAXA. It overrides the member functions Read and 
 |	Reset, which are abstract virtual functions in the base class NxsBlock. The taxon names are stored in an vector of
