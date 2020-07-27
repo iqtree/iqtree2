@@ -2928,7 +2928,6 @@ determineRearrangementSetting(pllInstance *tr, partitionList *pr,
   tr->doCutoff = PLL_FALSE;
 
   mintrav = 1;
-  maxtrav = 5;
 
   bestTrav = maxtrav = 5;
 
@@ -2953,13 +2952,12 @@ determineRearrangementSetting(pllInstance *tr, partitionList *pr,
 
       tr->startLH = tr->endLH = tr->likelihood;
 
-      for (i = 1; i <= tr->mxtips + tr->mxtips - 2; i++)
-        {
-
-          if (tr->permuteTreeoptimize)
-            index = perm[i];
+      for (i = 1; i <= tr->mxtips + tr->mxtips - 2; i++) {
+          if (perm != NULL)
+              index = perm[i];
           else
-            index = i;
+              index = i;
+
 
           tr->bestOfNode = PLL_UNLIKELY;
           if (rearrangeBIG(tr, pr, tr->nodep[index], mintrav, maxtrav))

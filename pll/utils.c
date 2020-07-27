@@ -156,9 +156,9 @@ char *strtok_r (char * s, const char * delim, char **save_ptr)
   char *token;
    
   /* Scan leading delimiters */
-  if (s == NULL)
-    s = *save_ptr;
-   
+  if (s == NULL) {
+      s = *save_ptr;
+  }   
   s += strspn (s, delim);
   if (*s == '\0')
    {
@@ -632,7 +632,7 @@ void initializePartitionData(pllInstance *localTree, partitionList * localPartit
 
       /* 
          Initializing the xVector array like this is absolutely required !!!!
-         I don't know which programming genious removed this, but it must absolutely stay in here!!!!
+         I don't know which programming genius removed this, but it must absolutely stay in here!!!!
       */
       
       {
@@ -855,33 +855,26 @@ void pllSetBranchLength (pllInstance *tr, nodeptr p, int partition_id, double bl
 }
 
 #if (!defined(_FINE_GRAIN_MPI) && !defined(_USE_PTHREADS))
-static void initializePartitionsSequential(pllInstance *tr, partitionList *pr)
-{ 
-  size_t
-    model;
+static void initializePartitionsSequential(pllInstance* tr, partitionList* pr)
+{
+    for (size_t model = 0; model < (size_t)pr->numberOfPartitions; model++) {
+        assert(pr->partitionData[model]->width == pr->partitionData[model]->upper - pr->partitionData[model]->lower);
+    }
+    initializePartitionData(tr, pr);
 
-  for(model = 0; model < (size_t)pr->numberOfPartitions; model++)
-    assert(pr->partitionData[model]->width == pr->partitionData[model]->upper - pr->partitionData[model]->lower);
-
-  initializePartitionData(tr, pr);
-
-  /* figure in tip sequence data per-site pattern weights */ 
-  for(model = 0; model < (size_t)pr->numberOfPartitions; model++)
-  {
-    size_t
-      j;
-    size_t lower = pr->partitionData[model]->lower;
-    size_t width = pr->partitionData[model]->upper - lower;
-
-    for(j = 1; j <= (size_t)tr->mxtips; j++)
+    /* figure in tip sequence data per-site pattern weights */
+    for (size_t model = 0; model < (size_t)pr->numberOfPartitions; model++)
     {
-      pr->partitionData[model]->yVector[j] = &(tr->yVector[j][pr->partitionData[model]->lower]);
+        size_t lower = pr->partitionData[model]->lower;
+        size_t width = pr->partitionData[model]->upper - lower;
+        for (size_t j = 1; j <= (size_t)tr->mxtips; j++)
+        {
+            pr->partitionData[model]->yVector[j] = &(tr->yVector[j][pr->partitionData[model]->lower]);
+        }
+        memcpy((void*)(&(pr->partitionData[model]->wgt[0])), (void*)(&(tr->aliaswgt[lower])), sizeof(int) * width);
     }
 
-    memcpy((void*)(&(pr->partitionData[model]->wgt[0])),         (void*)(&(tr->aliaswgt[lower])),      sizeof(int) * width);
-  }  
-
-  initMemorySavingAndRecom(tr, pr);
+    initMemorySavingAndRecom(tr, pr);
 }
 #endif
 
@@ -1498,9 +1491,9 @@ static int genericBaseFrequenciesAlignment (pInfo * partition,
   lower    = partition->lower;
   upper    = partition->upper;
 
-  for(l = 0; l < numFreqs; l++)     
-    pfreqs[l] = 1.0 / ((double)numFreqs);
-          
+  for (l = 0; l < numFreqs; l++) {
+      pfreqs[l] = 1.0 / ((double)numFreqs);
+  }          
   for (k = 1; k <= 8; k++) 
     {                                                   
       for(l = 0; l < numFreqs; l++)
