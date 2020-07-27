@@ -410,104 +410,95 @@ static double evaluateCatAsc(int *ex1, int *ex2,
 }
 
 
-static double evaluateGammaAsc(int *ex1, int *ex2,
-				double *x1, double *x2,  
-				double *tipVector, 
-				unsigned char *tipX1, int n, double *diagptable, const int numStates)
+static double evaluateGammaAsc(int* ex1, int* ex2,
+    double* x1, double* x2,
+    double* tipVector,
+    unsigned char* tipX1, int n, double* diagptable, const int numStates)
 {
-  double
-    exponent,
-    sum = 0.0, 
-    unobserved,
-    term,
-    *left, 
-    *right;
-  
-  int     
-    i, 
-    j, 
-    l;   
-  
-  const int 
-    gammaStates = numStates * 4;
-         
-  unsigned char 
-    tip[32];
+    double
+        exponent,
+        sum = 0.0,
+        unobserved,
+        term;
 
-  ascertainmentBiasSequence(tip, numStates);
-   
-  if(tipX1)
-    {               
-      for (i = 0; i < n; i++) 
-	{
-	  left = &(tipVector[numStates * tip[i]]);	  	  
-	  
-	  for(j = 0, term = 0.0; j < 4; j++)
-	    {
-	      right = &(x2[gammaStates * i + numStates * j]);
-	      
-	      for(l = 0; l < numStates; l++)
-		term += left[l] * right[l] * diagptable[j * numStates + l];	      
-	    }	 	  	 
+    int
+        i,
+        j,
+        l;
 
-      /* assumes that pow behaves as expected/specified for underflows
-         from the man page:
-           If result underflows, and is not representable,
-           a range error occurs and 0.0 is returned.
-      */
+    const int
+        gammaStates = numStates * 4;
 
-      exponent = pow(PLL_MINLIKELIHOOD, (double)ex2[i]);
+    unsigned char
+        tip[32];
 
-      unobserved = fabs(term) * exponent;
-	  
+    ascertainmentBiasSequence(tip, numStates);
+
+    if (tipX1)
+    {
+        for (i = 0; i < n; i++) {
+            double* left = tipVector + numStates * tip[i];
+            for (j = 0, term = 0.0; j < 4; j++) {
+                double* right = x2 + gammaStates * i + numStates * j;
+                for (l = 0; l < numStates; l++) {
+                    term += left[l] * right[l] * diagptable[j * numStates + l];
+                }
+            }
+
+            /* assumes that pow behaves as expected/specified for underflows
+               from the man page:
+                 If result underflows, and is not representable,
+                 a range error occurs and 0.0 is returned.
+            */
+
+            exponent = pow(PLL_MINLIKELIHOOD, (double)ex2[i]);
+
+            unobserved = fabs(term) * exponent;
+
 #ifdef _DEBUG_ASC
-	  if(ex2[i] > 0)
-	    {
-	      printf("s %d\n", ex2[i]);
-	      assert(0);
-	    }
+            if (ex2[i] > 0)
+            {
+                printf("s %d\n", ex2[i]);
+                assert(0);
+            }
 #endif	  
-	    
-	  sum += unobserved;
-	}              
-    }              
-  else
-    {           
-      for (i = 0; i < n; i++) 
-	{	  	 	             
-	  
-	  for(j = 0, term = 0.0; j < 4; j++)
-	    {
-	      left  = &(x1[gammaStates * i + numStates * j]);
-	      right = &(x2[gammaStates * i + numStates * j]);
-          for (l = 0; l < numStates; l++) {
-              term += left[l] * right[l] * diagptable[j * numStates + l];
-          }
-	    }
-	  
-	  /* assumes that pow behaves as expected/specified for underflows
-	     from the man page:
-	       If result underflows, and is not representable,
-	       a range error occurs and 0.0 is returned.
-	  */
 
-	  exponent = pow(PLL_MINLIKELIHOOD, (double)(ex1[i] + ex2[i]));
+            sum += unobserved;
+        }
+    }
+    else
+    {
+        for (i = 0; i < n; i++) {
+            for (j = 0, term = 0.0; j < 4; j++) {
+                double* left  = x1 + gammaStates * i + numStates * j;
+                double* right = x2 + gammaStates * i + numStates * j;
+                for (l = 0; l < numStates; l++) {
+                    term += left[l] * right[l] * diagptable[j * numStates + l];
+                }
+            }
 
-	  unobserved = fabs(term) * exponent;
-	  
+            /* assumes that pow behaves as expected/specified for underflows
+               from the man page:
+                 If result underflows, and is not representable,
+                 a range error occurs and 0.0 is returned.
+            */
+
+            exponent = pow(PLL_MINLIKELIHOOD, (double)(ex1[i] + ex2[i]));
+
+            unobserved = fabs(term) * exponent;
+
 #ifdef _DEBUG_ASC
-	  if(ex2[i] > 0 || ex1[i] > 0)
-	    {
-	      printf("s %d %d\n", ex1[i], ex2[i]);
-	      assert(0);
-	    }
+            if (ex2[i] > 0 || ex1[i] > 0)
+            {
+                printf("s %d %d\n", ex1[i], ex2[i]);
+                assert(0);
+            }
 #endif
 
-	  sum += unobserved;
-	}             
-    }        
-
-  return  sum;
+            sum += unobserved;
+        }
+    }
+    return  sum;
 }
 
 
