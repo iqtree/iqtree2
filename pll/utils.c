@@ -41,6 +41,8 @@
 #include <assert.h>
 #include <errno.h>
 #include "cycle.h"
+#include "mem_alloc.h" //for rax_malloc_string_copy
+
 
 
 #if ! (defined(__ppc) || defined(__powerpc__) || defined(PPC))
@@ -60,9 +62,21 @@
 #include "pll.h"
 #include "pllInternal.h"
 
+void rax_malloc_string_copy(const char* source, char** dest)
+{
+    size_t bufLen = (strlen(source) + 1);
+    *dest = (char*)rax_malloc(bufLen);
+    #ifdef CLANG_UNDER_VS
+        strcpy_s(*dest, bufLen, source);
+    #else
+        strcpy(*dest, source);
+    #endif
+}
+
 #define GLOBAL_VARIABLES_DEFINITION
 
 #include "globalVariables.h"
+
 
 /* mappings of BIN/DNA/AA alphabet to numbers */
 
