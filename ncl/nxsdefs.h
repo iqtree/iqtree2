@@ -31,7 +31,7 @@
 //
 #define NCL_MAX_STATES         76
 
-#if defined(__MWERKS__) || defined(__DECCXX) || defined(_MSC_VER)
+#if defined(__MWERKS__) || defined(__DECCXX) || defined(_MSC_VER) 
 	typedef long		file_pos;
 #else
 	typedef streampos	file_pos;
@@ -46,12 +46,11 @@
 #include <xstddef>  //for std::less
 #endif 
 
-class NxsString;
+#include "nxsstring.h"
 
 typedef std::vector<bool>										NxsBoolVector;
 typedef std::vector<char>										NxsCharVector;
 typedef std::vector<unsigned>									NxsUnsignedVector;
-typedef std::vector<NxsString>									NxsStringVector;
 typedef std::vector<NxsStringVector>								NxsAllelesVector;
 
 typedef std::set< unsigned, std::less<unsigned> >						NxsUnsignedSet;

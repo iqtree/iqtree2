@@ -23,6 +23,7 @@
 #include <cassert>
 #include <cstring>
 #include <string>
+#include <vector> //for std::vector
 #include "nxsindent.h"
 
 class IndexSet;
@@ -36,6 +37,7 @@ class IndexSet;
 |	numbers to the ends of strings, an ability which is very useful for producing default labels (e.g. taxon1, taxon2,
 |	etc.).
 */
+
 class NxsString
   : public std::string
 	{
@@ -67,7 +69,7 @@ class NxsString
 		bool				IsADouble() const;
 		bool				IsALong() const;
 		bool				IsCapAbbreviation(const NxsString &s) const;
-		bool				IsInVector(const NxsStringVector &s, NxsString::CmpEnum mode = respect_case) const;
+		bool				IsInVector(const std::vector<NxsString> &s, NxsString::CmpEnum mode = respect_case) const;
 		bool				IsStdAbbreviation(const NxsString &s, bool respectCase) const;
 		bool				IsNexusPunctuation(const char c) const;
 		bool				QuotesNeeded() const;
@@ -128,6 +130,8 @@ class NxsString
 		//	
 		static NxsString 	ToHex(long p, unsigned nFours);
 	};
+
+typedef std::vector<NxsString>									NxsStringVector;
 
 #if defined (NXS_SUPPORT_OLD_NAMES)
 	typedef NxsString nxsstring;

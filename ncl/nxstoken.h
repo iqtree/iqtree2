@@ -20,6 +20,10 @@
 #ifndef NCL_NXSTOKEN_H
 #define NCL_NXSTOKEN_H
 
+#include <iostream>	      //for std::ostream
+#include "nxsstring.h"    //for NxsString and NxsStringVector
+#include "nxsexception.h" //for NxsException
+#include "nxsdefs.h"      //for file_pos
 /*----------------------------------------------------------------------------------------------------------------------
 |	NxsToken objects are used by NxsReader to extract words (tokens) from a NEXUS data file. NxsToken objects know to
 |	correctly skip NEXUS comments and understand NEXUS punctuation, making reading a NEXUS file as simple as repeatedly
@@ -53,7 +57,7 @@ class NxsToken
 
 		NxsString		errormsg;
 
-						NxsToken(istream &i);
+						NxsToken(std::istream &i);
 		virtual			~NxsToken();
 
 		bool			AtEOF();
@@ -80,8 +84,8 @@ class NxsToken
 		bool			StoppedOn(char ch);
 		void			StripWhitespace();
 		void			ToUpper();
-		void			Write(ostream &out);
-		void			Writeln(ostream &out);
+		void			Write(std::ostream &out);
+		void			Writeln(std::ostream &out);
 
 		virtual void	OutputComment(const NxsString &msg);
 		void GetNextContiguousToken(char stop_char); // Added by BQM
@@ -100,7 +104,7 @@ class NxsToken
 
 	private:
 
-		istream			&in;				/* reference to input stream from which tokens will be read */
+		std::istream	&in;				/* reference to input stream from which tokens will be read */
 		file_pos		filepos;			/* current file position (for Metrowerks compiler, type is streampos rather than long) */
 		long			fileline;			/* current file line */
 		long			filecol;			/* current column in current line (refers to column immediately following token just read) */
@@ -183,7 +187,7 @@ inline char NxsToken::GetNextChar()
 	if (failed)
 		{
 		errormsg = "Unknown error reading data file (check to make sure file exists)";
-		throw NxsException(errormsg);
+		throw NxsException(errormsg, *this);
 		}
 
 	if (ch == 13 || ch == 10)
@@ -469,7 +473,7 @@ inline bool NxsToken::StoppedOn(
 |	output stream afterwards.
 */
 inline void NxsToken::Write(
-  ostream &out)	/* the output stream to which to write token NxsString */
+  std::ostream &out)	/* the output stream to which to write token NxsString */
 	{
 	out << token;
 	}
@@ -479,9 +483,9 @@ inline void NxsToken::Write(
 |	stream afterwards.
 */
 inline void NxsToken::Writeln(
-  ostream &out)	/* the output stream to which to write `token' */
+  std::ostream &out)	/* the output stream to which to write `token' */
 	{
-	out << token << endl;
+	out << token << std::endl;
 	}
 
 /**
