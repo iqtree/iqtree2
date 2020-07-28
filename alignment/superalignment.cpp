@@ -1464,12 +1464,12 @@ SuperAlignment::~SuperAlignment()
 	partitions.clear();
 }
 
-void SuperAlignment::printAlignment(InputType format, ostream &out, bool append,
-                                    const char *aln_site_list, int exclude_sites,
-                                    const char *ref_seq_name)
+void SuperAlignment::printAlignment(InputType format, ostream &out, const char* file_name
+                                    , bool append, const char *aln_site_list
+                                    , int exclude_sites, const char *ref_seq_name)
 {
     Alignment *concat = concatenateAlignments();
-    concat->printAlignment(format, out, append, aln_site_list, exclude_sites, ref_seq_name);
+    concat->printAlignment(format, out, file_name, append, aln_site_list, exclude_sites, ref_seq_name);
     delete concat;
     if (format == IN_NEXUS)
         printPartition(out, NULL, true);

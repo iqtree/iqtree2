@@ -235,9 +235,9 @@ public:
 	 * @param filename
 	 * @param append TRUE to append to this file, false to write new file
 	 */
-    virtual void printAlignment(InputType format, ostream &out, bool append = false,
-                                const char *aln_site_list = NULL, int exclude_sites = 0,
-                                const char *ref_seq_name = NULL);
+    virtual void printAlignment(InputType format, ostream &out, const char* file_name
+                                , bool append = false, const char *aln_site_list = NULL
+                                , int exclude_sites = 0, const char *ref_seq_name = NULL);
 
 	/**
 	 * print all sub alignments into files with prefix, suffix is the charset name

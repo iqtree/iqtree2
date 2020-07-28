@@ -51,7 +51,7 @@ public:
 		@param num_states number of states of the model
 		@return the number of gaps 
 	*/
-	int computeGapChar(int num_states, int STATE_UNKNOWN);
+	int computeGapChar(int num_states, int STATE_UNKNOWN) const;
 
 //    Pattern &operator= (Pattern pat);
 

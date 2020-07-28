@@ -133,17 +133,36 @@ public:
     /** get the SeqType for a given string */
     static SeqType getSeqType(const char *sequence_type);
 
+      /**
+               add a pattern into the alignment
+               @param pat the pattern
+               @param site the site index of the pattern from the alignment
+               @param freq frequency of pattern
+               @return TRUE if this pattern hadn't already been seen.
+        */
+    
+    bool addPatternLazy(Pattern &pat, int site, int freq, bool& gaps_only);
 
+    
     /**
             add a pattern into the alignment
             @param pat the pattern
             @param site the site index of the pattern from the alignment
             @param freq frequency of pattern
             @return TRUE if pattern contains only gaps or unknown char. 
-                            In that case, the pattern won't be added.
      */
     bool addPattern(Pattern &pat, int site, int freq = 1);
 
+    
+    /**
+        Update a bunch of patterns that have been added via addPatternLazy
+     (by calling
+     */
+
+    void updatePatterns(size_t oldPatternCount);
+    
+
+    
 	/**
 		determine if the pattern is constant. update the is_const variable.
 	*/
@@ -312,8 +331,9 @@ public:
     void printAlignment(InputType format, const char *filename, bool append = false, const char *aln_site_list = NULL,
     		int exclude_sites = 0, const char *ref_seq_name = NULL);
 
-    virtual void printAlignment(InputType format, ostream &out, bool append = false, const char *aln_site_list = NULL,
-                        int exclude_sites = 0, const char *ref_seq_name = NULL);
+    virtual void printAlignment(InputType format, ostream &out, const char* file_name
+                                , bool append = false, const char *aln_site_list = NULL
+                                , int exclude_sites = 0, const char *ref_seq_name = NULL);
 
     void printPhylip(ostream &out, bool append = false, const char *aln_site_list = NULL,
     		int exclude_sites = 0, const char *ref_seq_name = NULL, bool print_taxid = false);
