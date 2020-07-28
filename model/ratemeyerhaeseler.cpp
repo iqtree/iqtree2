@@ -108,14 +108,17 @@ void RateMeyerHaeseler::readRateFile(char *rate_file) {
 
 RateMeyerHaeseler::~RateMeyerHaeseler()
 {
-	if (dist_mat) delete [] dist_mat;
+    if (dist_mat) delete [] dist_mat;
 }
 
 int RateMeyerHaeseler::getNDim() {
-	if (phylo_tree) 
-		return phylo_tree->aln->getNPattern()-1;
-	if (empty()) return 0;
-	return size()-1; 
+    if (phylo_tree) {
+        return phylo_tree->aln->getNPattern()-1;
+    }
+    if (empty()) {
+        return 0;
+    }
+    return size()-1;
 }
 
 /*
@@ -327,22 +330,22 @@ void RateMeyerHaeseler::optimizeRates() {
 	int nseq = phylo_tree->leafNum;
 	int nstates = phylo_tree->aln->num_states;
 	for (i = 0; i < size(); i++) {
-		int freq = phylo_tree->aln->at(i).frequency;
+        int freq = phylo_tree->aln->at(i).frequency;
 		if (phylo_tree->aln->at(i).computeAmbiguousChar(nstates) <= nseq-2) {
 			optimizeRate(i);
-			if (at(i) == MIN_SITE_RATE) invar_sites += freq; 
+			if (at(i) == MIN_SITE_RATE) invar_sites += freq;
 			if (at(i) == MAX_SITE_RATE) {
-				saturated_sites += freq; 
+				saturated_sites += freq;
 				saturated_ptn ++;
 			}
 		} else { at(i) = MIN_SITE_RATE; ambiguous_sites += freq; }
-		if (at(i) < MAX_SITE_RATE) 
+		if (at(i) < MAX_SITE_RATE)
 		{
 			if (at(i) > MIN_SITE_RATE) sum += at(i) * freq;
 			ok_ptn[i] = 1;
 			ok_sites += freq;
 		}
-	} 
+	}
 
 	// now scale such that the mean of rates is 1
 	double scale_f = ok_sites / sum;
@@ -405,62 +408,74 @@ double RateMeyerHaeseler::optimizeParameters(double epsilon) {
 
 
 double RateMeyerHaeseler::computeFunction(double value) {
-	if (!rate_mh) {
-		if (value != cur_scale) {
-			ptn_tree->scaleLength(value/cur_scale);
-			cur_scale = value;
-			ptn_tree->clearAllPartialLH();
-		}
-		return -ptn_tree->computeLikelihood();
-	}
-	int nseq = phylo_tree->leafNum;
-	int nstate = phylo_tree->getModel()->num_states;
-	double lh = 0.0;
-	ModelSubst *model = phylo_tree->getModel();
-	Pattern *pat = & phylo_tree->aln->at(optimizing_pattern);
-    
-    for (size_t i = 0; i < nseq-1; ++i) {
+    if (!rate_mh) {
+        if (value != cur_scale) {
+            ptn_tree->scaleLength(value/cur_scale);
+            cur_scale = value;
+            ptn_tree->clearAllPartialLH();
+        }
+        return -ptn_tree->computeLikelihood();
+    }
+    int nseq = phylo_tree->leafNum;
+    int nstate = phylo_tree->getModel()->num_states;
+    double lh = 0.0;
+    ModelSubst *model = phylo_tree->getModel();
+    Pattern *pat = & phylo_tree->aln->at(optimizing_pattern);
+    auto nseqLess1 = nseq - 1;
+
+    #ifdef _OPENMP
+    #pragma omp parallel for reduction(-:lh)
+    #endif
+    for (size_t i = 0; i < nseqLess1; ++i) {
         int state1 = pat->at(i);
-        if (state1 < nstate) {
-            for (size_t j = i+1; j < nseq; ++j) {
-                int state2 = pat->at(j);
-                if (state2 < nstate) {
-                    lh -= log(model->computeTrans(value * dist_mat[i*nseq + j], state1, state2));
-                }
+        const double* distRow = dist_mat + i * nseq;
+        if (nstate <= state1 ) {
+            continue;
+        }
+        for (size_t j = i+1; j < nseq; ++j) {
+            int state2 = pat->at(j);
+            if (nstate <= state2) {
+                continue;
             }
+            lh -= log(model->computeTrans(distRow[j], state1, state2));
         }
     }
 	return lh;
 }
 
 void RateMeyerHaeseler::computeFuncDerv(double value, double &df, double &ddf) {
-	int nseq = phylo_tree->leafNum;
-	int nstate = phylo_tree->getModel()->num_states;
+    int nseq = phylo_tree->leafNum;
+    int nstate = phylo_tree->getModel()->num_states;
     //	double lh = 0.0;
-	double trans, derv1, derv2;
-	ModelSubst *model = phylo_tree->getModel();
-	Pattern *pat = & phylo_tree->aln->at(optimizing_pattern);
-	df = ddf = 0.0;
-    for (size_t i = 0; i + 1 < nseq; ++i) {
+    double trans, derv1, derv2;
+    ModelSubst *model = phylo_tree->getModel();
+    Pattern *pat = & phylo_tree->aln->at(optimizing_pattern);
+    df = ddf = 0.0;
+    auto nseqLess1 = nseq - 1;
+    #ifdef _OPENMP
+    #pragma omp parallel for reduction(-:df,ddf)
+    #endif
+    for (size_t i = 0; i < nseqLess1; ++i) {
         int state1 = pat->at(i);
-        if (state1 < nstate) {
-            for (size_t j = i+1; j < nseq; ++j) {
-                int state2 = pat->at(j);
-                if (state2 < nstate) {
-                    double dist = dist_mat[i*nseq + j];
-                    trans = model->computeTrans(value * dist, state1, state2, derv1, derv2);
-                    //			lh -= log(trans);
-                    double t1 = derv1 / trans;
-                    double t2 = derv2 / trans;
-                    df -= t1 * dist;
-                    ddf -= dist * dist * (t2 - t1*t1);
-                }
+        if (nstate<=state1) {
+            continue;
+        }
+        double* distRow = dist_mat + i*nseq;
+        for (size_t j = i+1; j < nseq; ++j) {
+            int state2 = pat->at(j);
+            if (nstate<=state2) {
+                continue;
             }
+            double dist = distRow[j];
+            trans = model->computeTrans(value * dist, state1, state2, derv1, derv2);
+            //			lh -= log(trans);
+            double t1 = derv1 / trans;
+            double t2 = derv2 / trans;
+            df -= t1 * dist;
+            ddf -= dist * dist * (t2 - t1*t1);
         }
     }
-    //	return lh;
 }
-
 
 void RateMeyerHaeseler::runIterativeProc(Params &params, IQTree &tree) {
 	if (verbose_mode >= VB_MED) {
@@ -472,31 +487,43 @@ void RateMeyerHaeseler::runIterativeProc(Params &params, IQTree &tree) {
 	if (backup_rate->getGammaShape() > 0 ) {
 		IntVector pattern_cat;
 		backup_rate->computePatternRates(*this, pattern_cat);
-		double sum = 0.0;
-        for (size_t i = 0; i < size(); i++) {
-			sum += at(i) * phylo_tree->aln->at(i).frequency;
+		double sum    = 0.0;
+        size_t seqLen = size();
+        auto   freq   = phylo_tree->getConvertedSequenceFrequencies();
+        if (freq!=nullptr && seqLen == phylo_tree->getConvertedSequenceLength()) {
+            #ifdef _OPENMP
+            #pragma omp parallel for reduction(+:sum)
+            #endif
+            for (size_t i = 0; i < seqLen ; ++i) {
+                sum += at(i) * freq[i];
+            }
+        } else {
+            for (size_t i = 0; i < seqLen; ++i) {
+                sum += at(i) * phylo_tree->aln->at(i).frequency;
+            }
         }
 		sum /=  phylo_tree->aln->getNSite();
 		if (fabs(sum - 1.0) > 0.0001) {
-			if (verbose_mode >= VB_MED)
-				cout << "Normalizing Gamma rates (" << sum << ")" << endl;
-			for (size_t i = 0; i < size(); ++i)
-				at(i) /= sum;
-		}
+            if (verbose_mode >= VB_MED) {
+                cout << "Normalizing Gamma rates (" << sum << ")" << endl;
+            }
+            for (size_t i = 0; i < size(); ++i) {
+                at(i) /= sum;
+            }
+        }
 	}
 	tree.getModelFactory()->site_rate = this;
 	tree.setRate(this);
 
-	
 	//if  (empty()) initializeRates();
 
-	//setRates(prev_rates);
-	//string rate_file = params.out_prefix;
-	//rate_file += ".mhrate";
-	double prev_lh = tree.getCurScore();
-	string dist_file = params.out_prefix;
-	dist_file += ".tdist";
-	tree.getModelFactory()->stopStoringTransMatrix();
+    //setRates(prev_rates);
+    //string rate_file = params.out_prefix;
+    //rate_file += ".mhrate";
+    double prev_lh = tree.getCurScore();
+    string dist_file = params.out_prefix;
+    dist_file += ".tdist";
+    tree.getModelFactory()->stopStoringTransMatrix();
 
     int i=2;
 	for (i = 2; i < 100; i++) {
