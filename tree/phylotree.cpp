@@ -402,8 +402,10 @@ void PhyloTree::setAlignment(Alignment *alignment) {
     //any node still referenced from the map does NOT
     //correspond to a sequence in the alignment.
     for (auto it = mapNameToNode.begin(); it != mapNameToNode.end(); ++it) {
-        outError((string)"Tree taxon " + it->first + " does not appear in the alignment", false);
-        err = true;
+        if (it->first != ROOT_NAME) {
+            outError((string)"Tree taxon " + it->first + " does not appear in the alignment", false);
+            err = true;
+        }
     }
 #else
     StrVector taxname;
@@ -3046,7 +3048,7 @@ void PhyloTree::prepareToComputeDistances() {
         delete summary;
         summary = nullptr;
     }
-    if (params->experimental) {
+    if (params->experimental && !isSummaryBorrowed) {
         summary = new AlignmentSummary(aln, true, true);
         summary->constructSequenceMatrix(false);
     }
@@ -3360,64 +3362,50 @@ double PhyloTree::computeDist_Experimental(double *dist_mat, double *var_mat) {
 double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
     prepareToComputeDistances();
     size_t nseqs = aln->getNSeq();
-    size_t num_pairs = nseqs * (nseqs - 1) / 2;
     double longest_dist = 0.0;
     cout.precision(6);
     double baseTime = getRealTime();
-    int *row_id = new int[num_pairs];
-    int *col_id = new int[num_pairs];
-    row_id[0] = 0;
-    col_id[0] = 1;
-    for (size_t pos = 1; pos < num_pairs; ++pos) {
-        row_id[pos] = row_id[pos - 1];
-        col_id[pos] = col_id[pos - 1] + 1;
-        if (col_id[pos] >= nseqs) {
-            row_id[pos]++;
-            col_id[pos] = row_id[pos] + 1;
-        }
-    }
-    EX_TRACE("Decided on visit order");
     //compute the upper-triangle of distance matrix
-#ifdef _OPENMP
-#pragma omp parallel for
-#endif
-    for (size_t pos = 0; pos < num_pairs; ++pos) {
+    #ifdef _OPENMP
+    #pragma omp parallel for schedule(dynamic)
+    #endif
+    for (size_t seq1 = 0; seq1 < nseqs; ++seq1) {
         int threadNum = omp_get_thread_num();
         AlignmentPairwise* processor = distanceProcessors[threadNum];
-        size_t seq1 = row_id[pos];
-        size_t seq2 = col_id[pos];
-        size_t sym_pos = seq1 * nseqs + seq2;
-        double d2l = var_mat[sym_pos]; // moved here for thread-safe (OpenMP)
-        dist_mat[sym_pos] = processor->recomputeDist(seq1, seq2, dist_mat[sym_pos], d2l);
-        if (params->ls_var_type == OLS)
-            var_mat[sym_pos] = 1.0;
-        else if (params->ls_var_type == WLS_PAUPLIN)
-            var_mat[sym_pos] = 0.0;
-        else if (params->ls_var_type == WLS_FIRST_TAYLOR)
-            var_mat[sym_pos] = dist_mat[sym_pos];
-        else if (params->ls_var_type == WLS_FITCH_MARGOLIASH)
-            var_mat[sym_pos] = dist_mat[sym_pos] * dist_mat[sym_pos];
-        else if (params->ls_var_type == WLS_SECOND_TAYLOR)
-            var_mat[sym_pos] = -1.0 / d2l;
+        int rowStartPos = seq1 * nseqs;
+        for (size_t seq2=seq1+1; seq2 < nseqs; ++seq2) {
+            size_t sym_pos = rowStartPos + seq2;
+            double d2l = var_mat[sym_pos]; // moved here for thread-safe (OpenMP)
+            dist_mat[sym_pos] = processor->recomputeDist(seq1, seq2, dist_mat[sym_pos], d2l);
+            if (params->ls_var_type == OLS)
+                var_mat[sym_pos] = 1.0;
+            else if (params->ls_var_type == WLS_PAUPLIN)
+                var_mat[sym_pos] = 0.0;
+            else if (params->ls_var_type == WLS_FIRST_TAYLOR)
+                var_mat[sym_pos] = dist_mat[sym_pos];
+            else if (params->ls_var_type == WLS_FITCH_MARGOLIASH)
+                var_mat[sym_pos] = dist_mat[sym_pos] * dist_mat[sym_pos];
+            else if (params->ls_var_type == WLS_SECOND_TAYLOR)
+                var_mat[sym_pos] = -1.0 / d2l;
+        }
     }
     //cout << (getRealTime()-baseTime) << "s Copying to lower triangle" << endl;
     //copy upper-triangle into lower-triangle and set diagonal = 0
-    for (size_t seq1 = 0; seq1 < nseqs; ++seq1)
-        for (size_t seq2 = 0; seq2 <= seq1; ++seq2) {
-            size_t pos = seq1 * nseqs + seq2;
-            if (seq1 == seq2) {
-                dist_mat[pos] = 0.0;
-                var_mat[pos] = 0.0;
+    for (size_t seq1 = 1; seq1 < nseqs; ++seq1) {
+        size_t rowStartPos = seq1 * nseqs;
+        size_t rowStopPos  = rowStartPos + seq1;
+        size_t colPos = seq1;
+        for (size_t rowPos = rowStartPos; rowPos<rowStopPos; ++rowPos, colPos+=nseqs) {
+            auto d = dist_mat[colPos];
+            dist_mat [ rowPos ] = d;
+            var_mat  [ rowPos ] = var_mat [ colPos ];
+            if (d > longest_dist) {
+                longest_dist = d;
             }
-            else {
-                dist_mat[pos] = dist_mat[seq2 * nseqs + seq1];
-                var_mat[pos] = var_mat[seq2 * nseqs + seq1];
-            }
-            if (dist_mat[pos] > longest_dist)
-                longest_dist = dist_mat[pos];
         }
-    delete[] col_id;
-    delete[] row_id;
+        dist_mat [ rowStopPos] = 0.0;
+        var_mat  [ rowStopPos] = 0.0;
+    }
     doneComputingDistances();
 
     /*
@@ -3462,7 +3450,7 @@ double PhyloTree::computeDist(Params &params, Alignment *alignment, double* &dis
         double begin_time = getRealTime();
         longest_dist = (params.experimental)
             ? computeDist_Experimental(dist_mat, var_mat)
-            : computeDist(dist_mat, var_mat); //DISABLED
+            : computeDist(dist_mat, var_mat);
         if (verbose_mode >= VB_MED) {
             cout << "Distance calculation time: "
             << getRealTime() - begin_time << " seconds" << endl;
