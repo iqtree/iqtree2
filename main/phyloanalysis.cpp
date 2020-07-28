@@ -1638,8 +1638,6 @@ void printAnalysisInfo(int model_df, IQTree& iqtree, Params& params) {
 void computeMLDist ( Params& params, IQTree& iqtree
                    , double begin_wallclock_time, double begin_cpu_time) {
     double longest_dist;
-//    stringstream best_tree_string;
-//    iqtree.printTree(best_tree_string, WT_BR_LEN + WT_TAXON_ID);
     cout << "Computing ML distances based on estimated model parameters..." << endl;
     double *ml_dist = nullptr;
     double *ml_var  = nullptr;
@@ -2483,7 +2481,9 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
                 double write_begin_time = getRealTime();
                 iqtree->printDistanceFile();
                 if (verbose_mode >= VB_MED) {
+                    #ifdef _OPENMP
                     #pragma omp critical (io)
+                    #endif
                     cout << "Time taken to write distance file ( " << iqtree->dist_file << ") : "
                     << getRealTime() - write_begin_time << " seconds " << endl;
                 }
