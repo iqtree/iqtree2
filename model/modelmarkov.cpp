@@ -44,7 +44,7 @@ ModelMarkov::ModelMarkov(PhyloTree *tree, bool reversible, bool adapt_tree)
  : ModelSubst(tree->aln->num_states), EigenDecomposition()
 {
     phylo_tree = tree;
-    rates = NULL;
+    rates = nullptr;
 
     // variables for reversible model
     eigenvalues = nullptr;
@@ -57,9 +57,9 @@ ModelMarkov::ModelMarkov(PhyloTree *tree, bool reversible, bool adapt_tree)
     highest_freq_state = num_states-1;
 
     // variables for non-reversible model
-    rate_matrix = NULL;
-    eigenvalues_imag = NULL;
-    ceval = cevec = cinv_evec = NULL;
+    rate_matrix = nullptr;
+    eigenvalues_imag = nullptr;
+    ceval = cevec = cinv_evec = nullptr;
     nondiagonalizable = false;
 
     if (reversible) {
@@ -135,23 +135,19 @@ void ModelMarkov::setReversible(bool reversible, bool adapt_tree) {
             rates = new double [num_rates];
             memset(rates, 0, sizeof(double) * (num_rates));
         }
-
-        if (!eigenvalues_imag)
-            eigenvalues_imag = aligned_alloc<double>(num_states);
-
-        if (!ceval)
-            ceval = aligned_alloc<complex<double> >(num_states);
-        if (!cevec)
-            cevec = aligned_alloc<complex<double> >(num_states*num_states);
-        if (!cinv_evec)
-            cinv_evec = aligned_alloc<complex<double> >(num_states*num_states);
+        
+        size_t num_states_squared = num_states * num_states;
+        ensure_aligned_allocated(eigenvalues_imag, num_states);
+        ensure_aligned_allocated(ceval, num_states);
+        ensure_aligned_allocated(cevec, num_states_squared);
+        ensure_aligned_allocated(cinv_evec, num_states_squared);
         
         if (adapt_tree && phylo_tree && !phylo_tree->rooted) {
             if (verbose_mode >= VB_MED)
                 cout << "Converting unrooted to rooted tree..." << endl;
             phylo_tree->convertToRooted();
         }
-        num_params = num_rates - 1;        
+        num_params = num_rates - 1;
     }
 }
 
@@ -570,7 +566,7 @@ double ModelMarkov::computeTrans(double time, int state1, int state2, double &de
     return trans_prob;
 }
 
-void ModelMarkov::calculateExponentOfScalarMultiply(const double* source, int size
+void ModelMarkov::calculateExponentOfScalarMultiply ( const double* source, int size
                                                     , double scalar, double* dest) {
     if (size == 4) {
         Vec4d v;
@@ -578,21 +574,19 @@ void ModelMarkov::calculateExponentOfScalarMultiply(const double* source, int si
         exp(v * scalar).store(dest);
         return;
     }
-    int remainder = size;
+    int offset=0;
     if (4 < size) {
-        //Todo: Investigate. Worth unrolling?
         Vec4d v;
-        int step = Vec4d::size();
-        remainder = size & (step - 1);
-        const double* sourceStop = source + (size - remainder);
-        for (; source < sourceStop; source += step, dest += step) {
-            v.load(source);
-            exp(v * scalar).store(dest);
+        int step         = Vec4d::size();
+        int integralSize = size - (size & (step - 1));
+        for (; offset < integralSize; offset+=step) {
+            v.load(source+offset);
+            exp(v * scalar).store(dest+offset);
         }
     }
     //Do the last few operations one at a time
-    for (; 0<remainder; --remainder, ++source, ++dest) {
-        *dest = exp(*source * scalar);
+    for (; offset<size; ++offset) {
+        dest[offset] = exp(source[offset] * scalar);
     }
 }
 
@@ -609,7 +603,6 @@ void ModelMarkov::calculateHadamardProduct(const double* first
     }
     int offset = 0;
     if (4<size) {
-        //Todo: Investigate. Worth unrolling?
         Vec4d a, b;
         int step  = Vec4d::size();
         int remainder = size & (step - 1);
@@ -670,48 +663,13 @@ void ModelMarkov::calculateSquareMatrixTranspose(const double* original, int ran
 
 void ModelMarkov::aTimesDiagonalBTimesTransposeOfC(const double* matrixA, const double* rowB
                                       , const double* matrixCTranspose, int rank,double* dest) {
-    if (rank==4) {
-        Vec4d B;
-        B.load_a(rowB);
-        
-        Vec4d row1, row2, row3, row4; //rows of matrixA * corresponding entries in rowB
-        row1 = row1.load_a (matrixA)    * B;
-        row2 = row2.load_a (matrixA+4)  * B;
-        row3 = row3.load_a (matrixA+8)  * B;
-        row4 = row4.load_a (matrixA+12) * B;
-        
-        Vec4d col1, col2, col3, col4; //rows of matrixCTranspose: columns of matrixC
-        col1.load_a ( matrixCTranspose );
-        col2.load_a ( matrixCTranspose + 4  );
-        col3.load_a ( matrixCTranspose + 8  );
-        col4.load_a ( matrixCTranspose + 12 );
-
-        dest[0]  = horizontal_add(row1*col1);
-        dest[1]  = horizontal_add(row1*col2);
-        dest[2]  = horizontal_add(row1*col3);
-        dest[3]  = horizontal_add(row1*col4);
-        dest[4]  = horizontal_add(row2*col1);
-        dest[5]  = horizontal_add(row2*col2);
-        dest[6]  = horizontal_add(row2*col3);
-        dest[7]  = horizontal_add(row2*col4);
-        dest[8]  = horizontal_add(row3*col1);
-        dest[9]  = horizontal_add(row3*col2);
-        dest[10] = horizontal_add(row3*col3);
-        dest[11] = horizontal_add(row3*col4);
-        dest[12] = horizontal_add(row4*col1);
-        dest[13] = horizontal_add(row4*col2);
-        dest[14] = horizontal_add(row4*col3);
-        dest[15] = horizontal_add(row4*col4);
-        return;
-    } else {
-        double scratch[rank];
-        for (int i=0; i<rank; ++i, matrixA+=rank) {
-            calculateHadamardProduct(matrixA, rowB, rank, scratch);
-            auto rowC = matrixCTranspose;
-            for (int j=0; j<rank; ++j, rowC+=rank) {
-                *dest = dotProduct(scratch, rowC, rank );
-                ++dest;
-            }
+    double scratch[rank];
+    for (int i=0; i<rank; ++i, matrixA+=rank) {
+        calculateHadamardProduct(matrixA, rowB, rank, scratch);
+        auto rowC = matrixCTranspose;
+        for (int j=0; j<rank; ++j, rowC+=rank) {
+            *dest = dotProduct(scratch, rowC, rank );
+            ++dest;
         }
     }
 }
@@ -768,7 +726,7 @@ void ModelMarkov::computeTransDerv(double time, double *trans_matrix,
         aTimesDiagonalBTimesTransposeOfC( eigenvectors, eval_exp_derv1
                               , inv_eigenvectors_transposed, num_states, trans_derv1);
 
-        double eval_exp_derv2[num_states];
+        double* eval_exp_derv2 = &eval_exp[0]; //reuse it, why not?
         calculateHadamardProduct(eigenvalues, eval_exp_derv1, num_states, eval_exp_derv2);
         aTimesDiagonalBTimesTransposeOfC( eigenvectors, eval_exp_derv2
                               , inv_eigenvectors_transposed, num_states, trans_derv2);
@@ -1315,12 +1273,14 @@ void ModelMarkov::decomposeRateMatrixNonrev() {
         }
     } else {
         // manual copy non-zero entries
-        for (i = 0, ii = 0; i < num_states; i++)
+        for (i = 0, ii = 0; i < num_states; i++) {
             if (state_freq[i] > ZERO_FREQ) {
                 ceval[i] = eigensolver.eigenvalues()(ii);
                 ii++;
-            } else
+            } else {
                 ceval[i] = 0.0;
+            }
+        }
         MatrixXcd evec = eigensolver.eigenvectors();
         MatrixXcd inv_evec;
         FullPivLU<MatrixXcd> lu(evec);
@@ -1334,7 +1294,7 @@ void ModelMarkov::decomposeRateMatrixNonrev() {
             auto *eigenvectors_ptr = cevec + (i*num_states);
             auto *inv_eigenvectors_ptr = cinv_evec + (i*num_states);
             if (state_freq[i] > ZERO_FREQ) {
-                for (j = 0, jj = 0; j < num_states; j++)
+                for (j = 0, jj = 0; j < num_states; j++) {
                     if (state_freq[j] > ZERO_FREQ) {
                         eigenvectors_ptr[j] = evec(ii,jj);
                         inv_eigenvectors_ptr[j] = inv_evec(ii,jj);
@@ -1342,6 +1302,7 @@ void ModelMarkov::decomposeRateMatrixNonrev() {
                     } else {
                         eigenvectors_ptr[j] = inv_eigenvectors_ptr[j] = (i == j);
                     }
+                }
                 ii++;
             } else {
                 for (j = 0; j < num_states; j++) {
@@ -1349,10 +1310,9 @@ void ModelMarkov::decomposeRateMatrixNonrev() {
                 }
             }
         }
+        calculateSquareMatrixTranspose(inv_eigenvectors, num_states
+                                       , inv_eigenvectors_transposed);
     }
-    calculateSquareMatrixTranspose(inv_eigenvectors, num_states
-                                   , inv_eigenvectors_transposed);
-
     // sanity check
     //    MatrixXcd eval_diag = eval.asDiagonal();
     //    MatrixXd check = (inv_evec * mat * evec - eval_diag).cwiseAbs();
