@@ -180,6 +180,7 @@ Optimization::~Optimization()
 #define SHFT(a,b,c,d) (a)=(b);(b)=(c);(c)=(d);
 #define SIGN(a,b) ((b) >= 0.0 ? fabs(a) : -fabs(a))
 
+#define TRY_AITKEN 0
 /* Brents method in one dimension */
 double Optimization::brent_opt (double ax, double bx, double cx, double tol,
                           double *foptx, double *f2optx, double fax, double fbx, double fcx) {
@@ -204,6 +205,11 @@ double Optimization::brent_opt (double ax, double bx, double cx, double tol,
 		fv=fax;
 	}
 
+#if TRY_AITKEN
+    double delta = 0;     //change in U
+    double lastDelta = 0; //previous change in U
+    double lastU = 0;     //previous value of U
+#endif
 	for (iter=1;iter<=ITMAX;iter++) {
 		xm=0.5*(a+b);
 		tol2=2.0*(tol1=tol*fabs(x)+ZEPS);
@@ -241,6 +247,33 @@ double Optimization::brent_opt (double ax, double bx, double cx, double tol,
 
 		u=(fabs(d) >= tol1 ? x+d : x+SIGN(tol1,d));
 		fu=computeFunction(u);
+        
+#if TRY_AITKEN
+        //In a Nutshell, Aitken's sequence accelerator constructs
+        //an auxiliary sequence, using
+        //"the main sequence, minus the square of the delta divided
+        // by the delta of the delta".
+        
+        double aitken = 0;
+        bool   haveAitken = false;
+        if (iter>=2) {
+            lastDelta = delta;
+            delta     = u - lastU;
+            //For now. Later, use a calculated tolerance
+            if (iter>=3 && 0.00001 < fabs(delta-lastDelta) && 0.00001 < fabs(delta) ) {
+                haveAitken = true;
+                aitken = u - ( delta * delta ) / (delta - lastDelta);
+            }
+        }
+        cout.precision(6);
+        if (!haveAitken) {
+            cout << "f(" << u << ")=" << fu << endl;
+        } else {
+            cout << "f(" << u << ")=" << fu << ", A=" << aitken << ", f(A)=" << computeFunction(aitken) << endl;
+        }
+        lastU = u;
+#endif
+
 		if (fu <= fx) {
 			if (u >= x)
 				a=x;
@@ -303,8 +336,8 @@ double Optimization::minimizeOneDimen(double xmin, double xguess, double xmax, d
 	/* check if this works */
     // compute fb first to save some computation, if any
 	fb = computeFunction(bx);
-	fa = computeFunction(ax);
-	fc = computeFunction(cx);
+	fa = (ax<bx) ? computeFunction(ax) : fb;
+	fc = (bx<cx) ? computeFunction(cx) : fb;
 
 	/* if it works use these borders else be conservative */
 	if ((fa < fb) || (fc < fb)) {
@@ -330,7 +363,7 @@ double Optimization::minimizeOneDimen(double xmin, double xguess, double xmax, d
 	//	optx = brent_opt(xmin, xguess, xmax, tolerance, fx, f2x, fa, fb, fc);
 	//} else
 	optx = brent_opt(ax, bx, cx, tolerance, fx, f2x, fa, fb, fc);
-    if (*fx > fb) // if worse, return initial value 
+    if (*fx > fb) // if worse, return initial value
     {
         *fx = computeFunction(bx);
         return bx;
@@ -715,31 +748,33 @@ bool Optimization::restartParameters(double guess[], int ndim, double lower[], d
 }
 
 double Optimization::minimizeMultiDimen(double guess[], int ndim, double lower[], double upper[], bool bound_check[], double gtol, double *hessian) {
-	int i, iter;
-	double fret, minf = 1e+12;
-	double *minx = new double [ndim+1];
-	int count = 0;
-	bool restart;
-	do {
-		dfpmin(guess, ndim, lower, upper, gtol, &iter, &fret, hessian);
-		if (fret < minf) {
- 			minf = fret;
-			for (i = 1; i <= ndim; i++)
-				minx[i] = guess[i];
-		}
-		count++;
-		// restart the search if at the boundary
-		// it's likely to end at a local optimum at the boundary
-		restart = restartParameters(guess,ndim,lower,upper,bound_check,count);
-	} while (restart);
-	if (count > 1) {
-		for (i = 1; i <= ndim; i++)
-			guess[i] = minx[i];
-		fret = minf;
-	}
-	delete [] minx;
-	
-	return fret;
+    int i, iter;
+    double fret, minf = 1e+12;
+    double *minx = new double [ndim+1];
+    int count = 0;
+    bool restart;
+    do {
+        dfpmin(guess, ndim, lower, upper, gtol, &iter, &fret, hessian);
+        if (fret < minf) {
+            minf = fret;
+            for (i = 1; i <= ndim; i++) {
+                minx[i] = guess[i];
+            }
+        }
+        count++;
+        // restart the search if at the boundary
+        // it's likely to end at a local optimum at the boundary
+        restart = restartParameters(guess,ndim,lower,upper,bound_check,count);
+    } while (restart);
+    if (count > 1) {
+        for (i = 1; i <= ndim; i++) {
+            guess[i] = minx[i];
+        }
+        fret = minf;
+    }
+    delete [] minx;
+    
+    return fret;
 }
 
 
@@ -755,28 +790,38 @@ free_vector(dg,1,n);
 
 
 
-void Optimization::dfpmin(double p[], int n, double lower[], double upper[], double gtol, int *iter, double *fret, double *hessian) {
-	int check,i,its,j;
-	double den,fac,fad,fae,fp,stpmax,sum=0.0,sumdg,sumxi,temp,test;
-	double *dg,*g,*hdg,**hessin,*pnew,*xi;
-
-	dg=new_vector(1,n);
-	g=new_vector(1,n);
-	hdg=new_vector(1,n);
-	hessin=new_matrix(1,n,1,n);
-	pnew=new_vector(1,n);
-	xi=new_vector(1,n);
-	fp = derivativeFunk(p,g);
-	for (i=1;i<=n;i++) {
-		for (j=1;j<=n;j++) hessin[i][j]=0.0;
-		hessin[i][i]=1.0;
-		xi[i] = -g[i];
-		sum += p[i]*p[i];
-	}
+void Optimization::dfpmin(double p[], int n, double lower[], double upper[]
+                          , double gtol, int *iter, double *fret, double *hessian) {
+    int check,i,its,j;
+    double den,fac,fad,fae,fp,stpmax,sum=0.0,sumdg,sumxi,temp,test;
+    double *dg,*g,*hdg,**hessin,*pnew,*xi;
+    
+    dg=new_vector(1,n);
+    g=new_vector(1,n);
+    hdg=new_vector(1,n);
+    hessin=new_matrix(1,n,1,n);
+    pnew=new_vector(1,n);
+    xi=new_vector(1,n);
+    fp = derivativeFunk(p,g);
+    for (i=1;i<=n;++i)
+    {
+        xi[i] = -g[i];
+        sum += p[i]*p[i];
+    }
     if (hessian) {
-        for (i=1; i<=n; i++)
-            for (j=1; j<=n; j++)
-                hessin[i][j] = hessian[(i-1)*n+j-1];
+        int pos = 0;
+        for (i=1; i<=n; i++) {
+            for (j=1; j<=n; j++, ++pos) {
+                hessin[i][j] = hessian[pos];
+            }
+        }
+    } else {
+        for (i=1;i<=n;i++) {
+            for (j=1;j<=n;j++) {
+                hessin[i][j]=0.0;
+            }
+            hessin[i][i]=1.0;
+        }
     }
 	//checkBound(p, xi, lower, upper, n);
 	//checkDirection(p, xi);
@@ -811,11 +856,15 @@ void Optimization::dfpmin(double p[], int n, double lower[], double upper[], dou
 			FREEALL
 			return;
 		}
-		for (i=1;i<=n;i++) dg[i]=g[i]-dg[i];
-		for (i=1;i<=n;i++) {
-			hdg[i]=0.0;
-			for (j=1;j<=n;j++) hdg[i] += hessin[i][j]*dg[j];
-		}
+        for (i=1;i<=n;i++) {
+            dg[i]=g[i]-dg[i];
+        }
+        for (i=1;i<=n;i++) {
+            hdg[i]=0.0;
+            for (j=1;j<=n;j++) {
+                hdg[i] += hessin[i][j]*dg[j];
+            }
+        }
 		fac=fae=sumdg=sumxi=0.0;
 		for (i=1;i<=n;i++) {
 			fac += dg[i]*xi[i];
@@ -827,7 +876,9 @@ void Optimization::dfpmin(double p[], int n, double lower[], double upper[], dou
 		{
 			fac=1.0/fac;
 			fad=1.0/fae;
-			for (i=1;i<=n;i++) dg[i]=fac*xi[i]-fad*hdg[i];
+            for (i=1;i<=n;i++) {
+                dg[i]=fac*xi[i]-fad*hdg[i];
+            }
 			for (i=1;i<=n;i++) {
 				for (j=1;j<=n;j++) {
 					hessin[i][j] += fac*xi[i]*xi[j]
