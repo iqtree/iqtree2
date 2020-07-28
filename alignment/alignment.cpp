@@ -378,20 +378,27 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
         cout << "Checking for duplicate sequences took " << checkTime
             << " wall-clock seconds" << endl;
     }
-	if (removed_seqs.size() > 0) {
-		if (removed_seqs.size() + 3 >= getNSeq())
-			outWarning("Your alignment contains too many identical sequences!");
-		IntVector keep_seqs;
-		for (size_t seq1 = 0; seq1 < getNSeq(); seq1++)
+    if (removed_seqs.size() > 0) {
+        double removeDupeStart = getRealTime();
+        if (removed_seqs.size() + 3 >= getNSeq()) {
+            outWarning("Your alignment contains too many identical sequences!");
+        }
+        IntVector keep_seqs;
+        for (size_t seq1 = 0; seq1 < getNSeq(); seq1++) {
             if (!removed[seq1]) {
                 keep_seqs.emplace_back(seq1);
             }
-		Alignment *aln = new Alignment;
-		aln->extractSubAlignment(this, keep_seqs, 0);
+        }
+        Alignment *aln = new Alignment;
+        aln->extractSubAlignment(this, keep_seqs, 0);
         //cout << "NOTE: Identified " << removed_seqs.size()
         //  << " sequences as duplicates." << endl;
-		return aln;
-	} else return this;
+        if (verbose_mode >= VB_MED) {
+            cout << "Removing " << removed_seqs.size() << " duplicated sequences took "
+            << (getRealTime() - removeDupeStart) << " sec." << endl;
+        }
+        return aln;
+    } else return this;
 }
 
 void Alignment::adjustHash(StateType v, size_t& hash) const {
@@ -810,8 +817,9 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
         }
         num_gaps_only += addPattern(pat, site);
     }
-    if (num_gaps_only)
+    if ( 0 < num_gaps_only ) {
         cout << "WARNING: " << num_gaps_only << " sites contain only gaps or ambiguous characters." << endl;
+    }
     if (verbose_mode >= VB_MAX)
         for (site = 0; site < size(); site++) {
             for (seq = 0; seq < nseq; seq++)
@@ -990,32 +998,56 @@ void Alignment::printSiteInfo(const char* filename) {
     }
 }
 
-bool Alignment::addPattern(Pattern &pat, int site, int freq) {
+bool Alignment::addPatternLazy(Pattern &pat, int site, int freq, bool& gaps_only) {
+    //Returns true if the pattern was actually added, false
+    //if it was identified as a duplicate (and handled by
+    //increasing he frequency of an existing pattern)
     // check if pattern contains only gaps
-    bool gaps_only = true;
+    gaps_only = true;
     for (Pattern::iterator it = pat.begin(); it != pat.end(); it++)
         if ((*it) != STATE_UNKNOWN) {
             gaps_only = false;
             break;
         }
     if (gaps_only) {
-        if (verbose_mode >= VB_DEBUG)
+        if (verbose_mode >= VB_DEBUG) {
             cout << "Site " << site << " contains only gaps or ambiguous characters" << endl;
-        //return true;
+        }
     }
     PatternIntMap::iterator pat_it = pattern_index.find(pat);
     if (pat_it == pattern_index.end()) { // not found
         pat.frequency = freq;
-        computeConst(pat);
+        //We don't do computeConst(pat); here, that's why
+        //there's a "Lazy" in this member function's name!
+        //We do that in addPattern...
         push_back(pat);
         pattern_index[back()] = size()-1;
         site_pattern[site] = size()-1;
+        return true;
     } else {
         int index = pat_it->second;
         at(index).frequency += freq;
         site_pattern[site] = index;
+        return false;
+    }
+}
+
+bool Alignment::addPattern(Pattern &pat, int site, int freq) {
+    bool gaps_only = false;
+    if (addPatternLazy(pat, site, freq, gaps_only)) {
+        computeConst(back());
     }
     return gaps_only;
+}
+
+void Alignment::updatePatterns(size_t oldPatternCount) {
+    size_t patternCount = size();
+    #ifdef _OPENMP
+    #pragma omp parallel for
+    #endif
+    for (size_t patIndex = oldPatternCount; patIndex < patternCount; ++patIndex ) {
+        computeConst(at(patIndex));
+    }
 }
 
 void Alignment::addConstPatterns(char *freq_const_patterns) {
@@ -1034,6 +1066,7 @@ void Alignment::addConstPatterns(char *freq_const_patterns) {
     site_pattern.resize(nsite, -1);
 	size_t nseq = getNSeq();
 	nsite = orig_nsite;
+    size_t oldPatternCount = size(); //JB 27-Jul-2020 (Parallelize)
     for (size_t i = 0; i < vec.size(); i++) {
         if (vec[i] > 0) {
             Pattern pat;
@@ -1041,10 +1074,13 @@ void Alignment::addConstPatterns(char *freq_const_patterns) {
             //if (pattern_index.find(pat) != pattern_index.end()) {
             //  outWarning("Constant pattern of all " + convertStateBackStr(i) + " already exists");
             //}
-            for (int j = 0; j < vec[i]; j++)
-                addPattern(pat, nsite++, 1);
+            for (int j = 0; j < vec[i]; j++) {
+                bool gaps_only;
+                addPatternLazy(pat, nsite++, 1, gaps_only); //JB 27-Jul-2020 (Parallelize)
+            }
         }
     }
+    updatePatterns(oldPatternCount); //JB 27-Jul-20 (Parallelize)
     countConstSite();
 }
 
@@ -1579,7 +1615,6 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
     genetic_code = NULL;
     non_stop_codon = NULL;
 
-
     if (nseq != seq_names.size()) {
         throw "Different number of sequences than specified";
     }
@@ -1757,10 +1792,16 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
             pat[seq] = state;
         }
         if (!num_error)
-            num_gaps_only += addPattern(pat, site/step);
+        {
+            bool gaps_only;
+            addPatternLazy(pat, site/step, 1, gaps_only);
+            num_gaps_only += gaps_only ? 1 : 0;
+        }
     }
-    if (num_gaps_only)
+    updatePatterns(0);
+    if (num_gaps_only) {
         cout << "WARNING: " << num_gaps_only << " sites contain only gaps or ambiguous characters." << endl;
+    }
     if (err_str.str() != "")
         throw err_str.str();
     return 1;
@@ -2748,25 +2789,53 @@ void Alignment::printPhylip(ostream &out, bool append, const char *aln_site_list
     if (seq_type == SEQ_CODON) {
         final_length *= 3;
     }
-	out << getNSeq() << " " << final_length << endl;
-	int max_len = getMaxSeqNameLength();
+    out << getNSeq() << " " << final_length << endl;
+    int max_len = getMaxSeqNameLength();
     if (print_taxid) max_len = 10;
-	if (max_len < 10) max_len = 10;
-	int seq_id;
-	for (seq_id = 0; seq_id < seq_names.size(); seq_id++) {
-		out.width(max_len);
-        if (print_taxid)
-            out << left << seq_id << " ";
-        else
-            out << left << seq_names[seq_id] << " ";
-		int j = 0;
-        for (IntVector::iterator i = site_pattern.begin(); i != site_pattern.end(); i++, j++) {
-            if (kept_sites[j]) {
-                out << convertStateBackStr(at(*i)[seq_id]);
+    if (max_len < 10) max_len = 10;
+
+    auto seq_count = seq_names.size();
+
+    //Precalculate state representation strings
+    vector<std::string> stateStrings;
+    stateStrings.resize(this->num_states);
+    for (int i=0; i<num_states; ++i) {
+        stateStrings[i] = convertStateBackStr(i);
+    }
+
+    //Calculate sequence data in parallel
+    std::vector<std::string> seq_data;
+    seq_data.resize(seq_count);
+    #ifdef _OPENMP
+    #pragma omp parallel for
+    #endif
+    for (size_t seq_id = 0; seq_id < seq_count; seq_id++) {
+        std::string& str = seq_data[seq_id];
+        auto patterns = site_pattern.data();
+        auto patternCount = site_pattern.size();
+        for (int i=0; i<patternCount; ++i) {
+            auto state = at(patterns[i])[seq_id];
+            if (num_states<=state) {
+                str.append(convertStateBackStr(state));
+            } else {
+                str.append(stateStrings[state]);
             }
         }
-		out << endl;
-	}
+        str.append("\n");
+    }
+
+    for (size_t seq_id = 0; seq_id < seq_names.size(); seq_id++) {
+        out.width(max_len);
+        if (print_taxid) {
+            out << left << seq_id << " ";
+        }
+        else {
+            out << left << seq_names[seq_id] << " ";
+        }
+        std::string& str = seq_data[0];
+        out.width(0);
+        out.write(str.c_str(), str.length());
+    }
 }
 
 void Alignment::printFasta(ostream &out, bool append, const char *aln_site_list,
@@ -2844,7 +2913,7 @@ void Alignment::printAlignment(InputType format, const char *file_name, bool app
         else
             out.open(file_name);
         
-        printAlignment(format, out, append, aln_site_list, exclude_sites, ref_seq_name);
+        printAlignment(format, out, file_name, append, aln_site_list, exclude_sites, ref_seq_name);
 
         out.close();
         if (verbose_mode >= VB_MED || !append)
@@ -2854,22 +2923,31 @@ void Alignment::printAlignment(InputType format, const char *file_name, bool app
     }
 }
 
-void Alignment::printAlignment(InputType format, ostream &out, bool append, const char *aln_site_list,
-                               int exclude_sites, const char *ref_seq_name) {
+void Alignment::printAlignment(InputType format, ostream &out, const char* file_name
+                               , bool append, const char *aln_site_list
+                               , int exclude_sites, const char *ref_seq_name) {
+    double printStart = getRealTime();
+    const char* formatName = "phylip";
     switch (format) {
         case IN_PHYLIP:
             printPhylip(out, append, aln_site_list, exclude_sites, ref_seq_name);
             break;
         case IN_FASTA:
+            formatName = "fasta";
             printFasta(out, append, aln_site_list, exclude_sites, ref_seq_name);
             break;
         case IN_NEXUS:
+            formatName = "nexus";
             printNexus(out, append, aln_site_list, exclude_sites, ref_seq_name);
             break;
         default:
             ASSERT(0 && "Unsupported alignment output format");
     }
-    
+    if (verbose_mode >= VB_MED) {
+        std::cout << "Printing alignment to " << formatName << " file "
+            << file_name << " took " << (getRealTime()-printStart)
+            << " sec" << std::endl;
+    }
 }
 
 void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_true_char, int min_taxa, IntVector *kept_partitions) {
@@ -2899,20 +2977,24 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
     size_t removed_sites = 0;
     VerboseMode save_mode = verbose_mode;
     verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
+    
+    size_t oldPatternCount = size(); //JB 27-Jul-2020 Parallelized
     for (size_t site = 0; site < aln->getNSite(); ++site) {
         iterator pit = aln->begin() + (aln->getPatternID(site));
         Pattern pat;
-        int true_char = 0;
         for (it = seq_id.begin(); it != seq_id.end(); ++it) {
-            char ch = (*pit)[*it];
-            if (ch != STATE_UNKNOWN) true_char++;
-            pat.push_back(ch);
+            pat.push_back ( (*pit)[*it] );
         }
-        if (true_char < min_true_char)
+        int true_char = pat.computeGapChar(num_states, STATE_UNKNOWN); //JB 27-Jul-2020 Vectorized
+        if (true_char < min_true_char) {
             removed_sites++;
-        else
-            addPattern(pat, site-removed_sites);
+        }
+        else {
+            bool gaps_only = false;
+            addPatternLazy(pat, site-removed_sites, 1, gaps_only); //JB 27-Jul-2020 Parallelized
+        }
     }
+    updatePatterns(oldPatternCount); //JB 27-Jul-2020 Parallelized
     site_pattern.resize(aln->getNSite() - removed_sites);
     verbose_mode = save_mode;
     countConstSite();
@@ -2937,10 +3019,10 @@ void Alignment::extractPatterns(Alignment *aln, IntVector &ptn_id) {
     STATE_UNKNOWN = aln->STATE_UNKNOWN;
     genetic_code = aln->genetic_code;
     if (seq_type == SEQ_CODON) {
-    	codon_table = new char[num_states];
-    	memcpy(codon_table, aln->codon_table, num_states);
-    	non_stop_codon = new char[strlen(genetic_code)];
-    	memcpy(non_stop_codon, aln->non_stop_codon, strlen(genetic_code));
+        codon_table = new char[num_states];
+        memcpy(codon_table, aln->codon_table, num_states);
+        non_stop_codon = new char[strlen(genetic_code)];
+        memcpy(non_stop_codon, aln->non_stop_codon, strlen(genetic_code));
     }
     site_pattern.resize(aln->getNSite(), -1);
     clear();
@@ -2999,7 +3081,6 @@ void Alignment::extractPatternFreqs(Alignment *aln, IntVector &ptn_freq) {
     site_pattern.resize(site);
     verbose_mode = save_mode;
     countConstSite();
-//    buildSeqStates();
     ASSERT(size() <= aln->size());
 }
 
@@ -3017,10 +3098,10 @@ void Alignment::extractSites(Alignment *aln, IntVector &site_id) {
     STATE_UNKNOWN = aln->STATE_UNKNOWN;
     genetic_code = aln->genetic_code;
     if (seq_type == SEQ_CODON) {
-    	codon_table = new char[num_states];
-    	memcpy(codon_table, aln->codon_table, num_states);
-    	non_stop_codon = new char[strlen(genetic_code)];
-    	memcpy(non_stop_codon, aln->non_stop_codon, strlen(genetic_code));
+        codon_table = new char[num_states];
+        memcpy(codon_table, aln->codon_table, num_states);
+        non_stop_codon = new char[strlen(genetic_code)];
+        memcpy(non_stop_codon, aln->non_stop_codon, strlen(genetic_code));
     }
     site_pattern.resize(site_id.size(), -1);
     clear();
@@ -3033,14 +3114,12 @@ void Alignment::extractSites(Alignment *aln, IntVector &site_id) {
     }
     verbose_mode = save_mode;
     countConstSite();
-//    buildSeqStates();
     // sanity check
     for (iterator it = begin(); it != end(); it++) {
         if (it->at(0) == -1) {
-    		ASSERT(0);
+            ASSERT(0);
         }
     }
-
     //cout << getNSite() << " positions were extracted" << endl;
     //cout << __func__ << " " << num_states << endl;
 }
