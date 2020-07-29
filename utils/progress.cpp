@@ -29,6 +29,7 @@
 namespace {
 bool displayingProgress = true;
     //You can turn off progress displays via progress_display::setProgressDisplay.
+bool isTerminal = false;
 }
 
 progress_display::progress_display( double workToDo, const char* doingWhat
@@ -141,7 +142,7 @@ void progress_display::reportProgress(double time, double cpu, bool newline) {
         lastReportedWork = workDone;
         lastReportedTime = time;
         lastReportedCPUTime = cpu;
-        if (displayingProgress) {
+        if (isTerminal) {
             std::cout << "\33[2K\r";
         }
         if (displayingProgress || newline) {
@@ -151,7 +152,7 @@ void progress_display::reportProgress(double time, double cpu, bool newline) {
                     message += std::string(barLen-message.length(), ' ');
                 }
                 size_t charsInGreen = (size_t) floor( workDone * barLen / totalWorkToDo );
-                if (charsInGreen < message.length()) {
+                if (isTerminal && charsInGreen < message.length()) {
                     size_t charsInGreenOrCyan //number of chars in green or blue
                         = (( message.length() < barLen) ? message.length() : barLen);
                     message = "\33[1;30;102m" + message.substr(0, charsInGreen)
@@ -182,12 +183,36 @@ progress_display& progress_display::done() {
 
 progress_display::~progress_display() {
     if (!isDone) {
+        workDone = totalWorkToDo;
         reportProgress(getRealTime(), getCPUTime(), true);
     }
 }
 
+progress_display& progress_display::hide() {
+    if (!isTerminal) {
+        return *this;
+    }
+    #if _OPENMP
+    #pragma omp critical (io)
+    #endif
+    {
+        std::cout << "\33[2K\r";
+        std::cout.flush();
+    }
+    return *this;
+}
+
+progress_display& progress_display::show() {
+    if (!isTerminal) {
+        return *this;
+    }
+    reportProgress(getRealTime(), getCPUTime(), false);
+    return *this;
+}
+
 void progress_display::setProgressDisplay(bool displayIt) {
     displayingProgress = displayIt;
+    isTerminal = displayIt && isatty(fileno(stdout));
 }
 
 bool progress_display::getProgressDisplay() {

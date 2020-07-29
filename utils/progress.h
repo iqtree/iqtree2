@@ -31,9 +31,10 @@ public:
     progress_display& operator += (double incrementalWork);
     progress_display& operator ++ ();
     progress_display& operator =  (double workDoneNow);
+    progress_display& hide ();
+    progress_display& show ();
     progress_display& done ();
     void reportProgress(double time, double cpu, bool newline);
-
     static void setProgressDisplay(bool displayIt);
     static bool getProgressDisplay();
 };
