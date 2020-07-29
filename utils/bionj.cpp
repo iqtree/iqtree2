@@ -21,10 +21,12 @@
     #define NJ_OMP
 #endif
 
+#include <exception>
 #include <stdio.h>                  
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+
 #include "utils/timeutil.h" //JB2020-06-18 for getRealTime()
 #include "starttree.h"
 
@@ -829,17 +831,23 @@ public:
     virtual const std::string& getDescription() {
         return description;
     }
-    virtual void constructTree
+    virtual bool constructTree
         ( const std::string &distanceMatrixFilePath
          , const std::string & newickTreeFilePath) {
             BioNj bio2009;
             bio2009.create(distanceMatrixFilePath.c_str(), newickTreeFilePath.c_str());
+            return true;
     }
     virtual bool constructTreeInMemory
         ( const std::vector<std::string> &sequenceNames
          , double *distanceMatrix
          , const std::string & newickTreeFilePath) {
             return false;
+    }
+    virtual void setZippedOutput(bool zipIt) {
+        if (zipIt) {
+            std::cerr << "Warning: BIONJ2009 does not support gzip output (or input)" << std::endl;
+        }
     }
 };
 

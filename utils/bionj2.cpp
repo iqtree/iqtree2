@@ -79,14 +79,13 @@
 #include "heapsort.h"                //for mirroredHeapsort, used to sort
                                      //rows of the S and I matrices
                                      //See [SMP2011], section 2.5.
+#include "gzstream.h"                //for igzstream
 #include <vector>                    //for std::vector
 #include <string>                    //sequence names stored as std::string
 #include <fstream>
 #include <iostream>                  //for std::istream
 #include <vectorclass/vectorclass.h> //for Vec4d and Vec4db vector classes
-#ifdef SHOW_DISTANCE_MATRIX_PROGRESS
-#include <boost/progress.hpp>        //for progress_timer
-#endif
+#include "progress.h"                //for progress_display
 
 typedef float   NJFloat;
 typedef Vec8f   FloatVector;
@@ -106,20 +105,24 @@ public:
     size_t  row;
     size_t  column;
     T       value;
-    Position() : row(0), column(0), value(0) {}
-    Position(size_t r, size_t c, T v)
+    size_t  imbalance;
+    Position() : row(0), column(0), value(0), imbalance(0) {}
+    Position(size_t r, size_t c, T v, size_t imbalance)
         : row(r), column(c), value(v) {}
     Position& operator = (const Position &rhs) {
-        row    = rhs.row;
-        column = rhs.column;
-        value  = rhs.value;
+        row       = rhs.row;
+        column    = rhs.column;
+        value     = rhs.value;
+        imbalance = rhs.value;
         return *this;
     }
     bool operator< ( const Position& rhs ) const {
-        return value < rhs.value;
+        return value < rhs.value
+        || (value == rhs.value && imbalance < rhs.imbalance);
     }
     bool operator<= ( const Position& rhs ) const {
-        return value <= rhs.value;
+        return value < rhs.value
+        || (value == rhs.value && imbalance <= rhs.imbalance);
     }
 };
 
@@ -190,7 +193,7 @@ public:
         cluster.countOfExteriorNodes += at(c).countOfExteriorNodes;
         return cluster;
     }
-    void writeTreeFile(const std::string &treeFilePath) const {
+    template <class F> bool writeTreeToFile(const std::string &treeFilePath, F& out) const {
         struct Place
         {
             //
@@ -205,59 +208,85 @@ public:
                 linkNumber = num;
             }
         };
-
-        std::vector<Place> stack;
-        std::fstream out;
-        out.open(treeFilePath, std::ios_base::out);
-        out.precision(8);
-        bool failed = false; //Becomes true if clusters
-                             //defines cycles (should never happen)
-                             //Indicates a fatal logic error
-        size_t maxLoop = 3 * size();
-                             //More than this, and there must be
-                             //a cycle.  Or something.
-
-        stack.emplace_back(size()-1, 0); //assumes: size is at least 1!
-        do {
-            --maxLoop;
-            if (maxLoop==0) {
-                failed = true;
-                break;
-            }
-            Place here = stack.back();
-            const Cluster<T>& cluster = at(here.clusterIndex);
-            stack.pop_back();
-            if (cluster.links.empty()) {
-                out << cluster.name;
-                continue;
-            }
-            if (here.linkNumber==0) {
-                out << "(";
-                stack.emplace_back(here.clusterIndex, 1);
-                stack.emplace_back(cluster.links[0].clusterIndex, 0);
-                continue;
-            }
-            size_t nextChildNum = here.linkNumber;
-            const Link<T> & linkPrev = cluster.links[nextChildNum-1];
-            out << ":" << linkPrev.linkDistance;
-            if (nextChildNum<cluster.links.size()) {
-                out << ",";
-                const Link<T> & linkNext = cluster.links[nextChildNum];
-                stack.emplace_back(here.clusterIndex, nextChildNum+1);
-                stack.emplace_back(linkNext.clusterIndex, 0);
-            } else {
-                out << ")";
-            }
-        } while (0 < stack.size());
-        out << ";" << std::endl;
-        out.close();
+        
+        out.exceptions(std::ios::failbit | std::ios::badbit);
+        try {
+            out.open(treeFilePath.c_str(), std::ios_base::out);
+            out.precision(8);
+            
+            std::vector<Place> stack;
+            bool failed = false; //Becomes true if clusters
+            //defines cycles (should never happen)
+            //Indicates a fatal logic error
+            size_t maxLoop = 3 * size();
+            //More than this, and there must be
+            //a cycle.  Or something.
+            
+            stack.emplace_back(size()-1, 0); //assumes: size is at least 1!
+            do {
+                --maxLoop;
+                if (maxLoop==0) {
+                    failed = true;
+                    break;
+                }
+                Place here = stack.back();
+                const Cluster<T>& cluster = at(here.clusterIndex);
+                stack.pop_back();
+                if (cluster.links.empty()) {
+                    out << cluster.name;
+                    continue;
+                }
+                if (here.linkNumber==0) {
+                    out << "(";
+                    stack.emplace_back(here.clusterIndex, 1);
+                    stack.emplace_back(cluster.links[0].clusterIndex, 0);
+                    continue;
+                }
+                size_t nextChildNum = here.linkNumber;
+                const Link<T> & linkPrev = cluster.links[nextChildNum-1];
+                out << ":" << linkPrev.linkDistance;
+                if (nextChildNum<cluster.links.size()) {
+                    out << ",";
+                    const Link<T> & linkNext = cluster.links[nextChildNum];
+                    stack.emplace_back(here.clusterIndex, nextChildNum+1);
+                    stack.emplace_back(linkNext.clusterIndex, 0);
+                } else {
+                    out << ")";
+                }
+            } while (0 < stack.size());
+            out << ";" << std::endl;
+            out.close();
+            return true;
+        } catch (std::ios::failure &) {
+            std::cerr << "IO error"
+            << " opening/writing file: " << treeFilePath << std::endl;
+            return false;
+        } catch (const char *str) {
+            std::cerr << "Writing newick file failed: " << str << std::endl;
+            return false;
+        } catch (std::string &str) {
+            std::cerr << "Writing newick file failed: " << str << std::endl;
+            return false;
+        }
+    }
+    bool writeTreeFile(bool zipIt, const std::string &treeFilePath) const {
+        if (zipIt) {
+            ogzstream out;
+            return writeTreeToFile(treeFilePath, out);
+        } else {
+            std::fstream out;
+            return writeTreeToFile(treeFilePath, out);
+        }
     }
 };
 
 #define MATRIX_ALIGNMENT 64
+    //MUST be a power of 2 (else x & MATRIX_ALIGNMENT_MASK
+    //would be no good and x % MATRIX_ALIGNMENT would be needed).
     //Assumed: sizeof(NJFloat) divides MATRIX_ALIGNMENT
     //Vectorized versions run faster (particularly on older
     //hardware), if rows are aligned.
+#define MATRIX_ALIGNMENT_MASK (MATRIX_ALIGNMENT - 1)
 
 template <class P> inline P* matrixAlign(P* p) {
     //If we've got an array that mighnt't be MATRIX_ALIGNMENT-byte
@@ -266,10 +295,10 @@ template <class P> inline P* matrixAlign(P* p) {
     //MATRIX_ALIGNMENT-byte aligned.  This function returns the
     //address of that item.
     uintptr_t address = reinterpret_cast<uintptr_t>(p);
-    if (0<(address % MATRIX_ALIGNMENT))
+    auto offset = address & MATRIX_ALIGNMENT_MASK;
+    if (0<offset)
     {
-        return p + (MATRIX_ALIGNMENT
-                    - (address % MATRIX_ALIGNMENT))/sizeof(P);
+        return p + (MATRIX_ALIGNMENT - offset)/sizeof(P);
     } else {
         return p;
     }
@@ -330,11 +359,11 @@ public:
         //returns width, rounded up so that each row will
         //have a starting address that is MATRIX_ALIGNMENT-byte aligned.
         //
-        if (MATRIX_ALIGNMENT<sizeof(T))
+        if (MATRIX_ALIGNMENT<=sizeof(T))
         {
             return width;
         }
-        size_t leftOver  = (width * sizeof(T)) % MATRIX_ALIGNMENT;
+        size_t leftOver  = (width * sizeof(T)) & MATRIX_ALIGNMENT_MASK;
         if (leftOver==0) {
             return width;
         }
@@ -484,36 +513,56 @@ protected:
     std::vector<size_t>  rowToCluster; //*not* initialized by setSize
     ClusterTree<T>       clusters;     //*not* touched by setSize
     mutable Positions<T> rowMinima;    //*not* touched by setSize
+    bool isOutputToBeZipped;
 public:
-    UPGMA_Matrix():super() {
+    UPGMA_Matrix():super(), isOutputToBeZipped(false) {
     }
-    void loadMatrixFromFile(const std::string &distanceMatrixFilePath) {
+    virtual std::string getAlgorithmName() const {
+        return "UPGMA";
+    }
+    bool loadMatrixFromFile(const std::string &distanceMatrixFilePath) {
         size_t rank;
-        std::fstream in;
-        in.open(distanceMatrixFilePath, std::ios_base::in);
-        in >> rank;
-        setSize(rank);
-        for (size_t r=0; r<n; ++r) {
-            std::string name;
-            in >> name;
-            clusters.addCluster(name);
-            for (size_t c=0; c<n; ++c) {
-                in >> rows[r][c];
-                //Ensure matrix is symmetric (as it is read!)
-                if (c<r && rows[r][c]<rows[c][r]) {
-                    T v = ( rows[r][c] + rows[c][r] ) * 0.5;
-                    rows[c][r] = v; //U-R
-                    rows[r][c] = v;
+        igzstream in;
+        try {
+            in.exceptions(std::ios::failbit | std::ios::badbit);
+            in.open(distanceMatrixFilePath.c_str(), std::ios_base::in);
+            in >> rank;
+            setSize(rank);
+            progress_display progress(rank, "Loading distance matrix", "loaded", "row");
+            for (size_t r=0; r<n; ++r) {
+                std::string name;
+                in >> name;
+                clusters.addCluster(name);
+                for (size_t c=0; c<n; ++c) {
+                    in >> rows[r][c];
+                    //Ensure matrix is symmetric (as it is read!)
+                    if (c<r && rows[r][c] != rows[c][r]) {
+                        T v = ( rows[r][c] + rows[c][r] ) * 0.5;
+                        rows[c][r] = v; //U-R
+                        rows[r][c] = v;
+                    }
                 }
+                rowToCluster.emplace_back(r);
+                ++progress;
             }
-            rowToCluster.emplace_back(r);
+            in.close();
+        } catch (std::ios::failure &) {
+            std::cerr << "Load matrix failed: IO error"
+                << " reading file: " << distanceMatrixFilePath << std::endl;
+            return false;
+        } catch (const char *str) {
+            std::cerr << "Load matrix failed: " << str << std::endl;
+            return false;
+        } catch (std::string &str) {
+            std::cerr << "Load matrix failed: " << str << std::endl;
+            return false;
         }
-        in.close();
         calculateRowTotals();
         //Note: The old code wrote a message to standard output,
         //      if the matrix was not symmetric.  This code doesn't.
+        return true;
     }
-    virtual void loadMatrix(const std::vector<std::string>& names, double* matrix) {
+    virtual bool loadMatrix(const std::vector<std::string>& names, double* matrix) {
         //Assumptions: 2 < names.size(), all names distinct
         //  matrix is symmetric, with matrix[row*names.size()+col]
         //  containing the distance between taxon row and taxon col.
@@ -536,23 +585,26 @@ public:
             }
         }
         calculateRowTotals();
+        return true;
     }
-    virtual void constructTree() {
+    virtual bool constructTree() {
         Position<T> best;
-        #ifdef SHOW_DISTANCE_MATRIX_PROGRESS
-            boost::progress_display show_progress(n*(n+1)/2);
-        #endif
+        std::string taskName = "Constructing " + getAlgorithmName() + " tree";
+        progress_display show_progress(n*(n+1)/2, taskName.c_str(), "", "");
         while (3<n) {
             getMinimumEntry(best);
             cluster(best.column, best.row);
-            #ifdef SHOW_DISTANCE_MATRIX_PROGRESS
-                show_progress+=n;
-            #endif
+            show_progress+=n;
         }
         finishClustering();
+        show_progress.done();
+        return true;
     }
-    void writeTreeFile(const std::string &treeFilePath) const {
-        clusters.writeTreeFile(treeFilePath);
+    virtual void setZippedOutput(bool zipIt) {
+        isOutputToBeZipped = zipIt;
+    }
+    bool writeTreeFile(const std::string &treeFilePath) const {
+        return clusters.writeTreeFile(isOutputToBeZipped, treeFilePath);
     }
 protected:
     virtual void setSize(size_t rank) {
@@ -586,7 +638,7 @@ protected:
                     bestVrc = v;
                 }
             }
-            rowMinima[row] = Position<T>(row, bestColumn, bestVrc);
+            rowMinima[row] = Position<T>(row, bestColumn, bestVrc, getImbalance(row, bestColumn));
         }
     }
     void finishClustering() {
@@ -633,6 +685,13 @@ protected:
         rowToCluster[b] = rowToCluster[n-1];
         removeRowAndColumn(b);
     }
+    size_t getImbalance(size_t rowA, size_t rowB) const {
+        size_t clusterA = rowToCluster[rowA];
+        size_t clusterB = rowToCluster[rowB];
+        size_t sizeA = clusters[clusterA].countOfExteriorNodes;
+        size_t sizeB = clusters[clusterB].countOfExteriorNodes;
+        return (sizeA<sizeB) ? (sizeB-sizeA) : (sizeA-sizeB);
+    }
 };
 
 template <class T=NJFloat> class NJMatrix: public UPGMA_Matrix<T>
@@ -649,10 +708,14 @@ public:
     using super::removeRowAndColumn;
     using super::calculateRowTotals;
     using super::recalculateTotalForOneRow;
+    using super::getImbalance;
 protected:
     mutable std::vector<T> scaledRowTotals; //used in getRowMinima
 public:
     NJMatrix(): super() { }
+    virtual std::string getAlgorithmName() const {
+        return "NJ";
+    }
 protected:
     virtual void calculateScaledRowTotals() const {
         scaledRowTotals.resize(n);
@@ -697,7 +760,8 @@ protected:
                 }
             }
             bestVrc       -= tot [row];
-            rowMinima[row] = Position<T>(row, bestColumn, bestVrc);
+            rowMinima[row] = Position<T>(row, bestColumn, bestVrc
+                                         , getImbalance(row, bestColumn));
         }
     }
     virtual void cluster(size_t a, size_t b) {
@@ -758,14 +822,19 @@ public:
 protected:
     Matrix<T>  variance;       //The V matrix
 public:
-    virtual void loadMatrixFromFile(const std::string &distanceMatrixFilePath)
-    {
-        super::loadMatrixFromFile(distanceMatrixFilePath);
-        variance = *this;
+    virtual std::string getAlgorithmName() const {
+        return "BIONJ";
     }
-    virtual void loadMatrix(const std::vector<std::string>& names, double* matrix) {
-        super::loadMatrix(names, matrix);
+    virtual bool loadMatrixFromFile(const std::string &distanceMatrixFilePath)
+    {
+        bool rc = super::loadMatrixFromFile(distanceMatrixFilePath);
         variance = *this;
+        return rc;
+    }
+    virtual bool loadMatrix(const std::vector<std::string>& names, double* matrix) {
+        bool rc = super::loadMatrix(names, matrix);
+        variance = *this;
+        return rc;
     }
     inline T chooseLambda(size_t a, size_t b, T Vab) {
         //Assumed 0<=a<b<n
@@ -880,12 +949,15 @@ public:
     BoundingMatrix() : super() {
         rowSortingTime = 0;
     }
-    virtual void constructTree() {
+    virtual std::string getAlgorithmName() const {
+        return "Rapid" + super::getAlgorithmName();
+    }
+    virtual bool constructTree() {
         //1. Set up vectors indexed by cluster number,
         clusterToRow.resize(n);
         clusterTotals.resize(n);
         for (size_t r=0; r<n; ++r) {
-            clusterToRow[r]  = r;
+            clusterToRow[r]  = static_cast<int>(r);
             clusterTotals[r] = rowTotals[r];
         }
         
@@ -897,39 +969,44 @@ public:
         rowOrderChosen.resize(n);
         rowScanOrder.resize(n);
 
-        //2. Set up the matrix with row sorted by distance
-        //   And the matrix that tracks which distance is
-        //   to which cluster (the S and I matrices, in the
-        //   RapidNJ papers).
-        entriesSorted.setSize(n);
-        entryToCluster.setSize(n);
-        #pragma omp parallel for schedule(dynamic)
-        for (size_t r=0; r<n; ++r) {
-            sortRow(r,r);
-            //copies the "left of the diagonal" portion of
-            //row r from the D matrix and sorts it
-            //into ascending order.
-        }
-        size_t nextPurge = (n+n)/2;
-        #ifdef SHOW_DISTANCE_MATRIX_PROGRESS
-            boost::progress_display show_progress(n*(n+1)/2);
-        #endif
-        while (3<n) {
-            Position<T> best;
-            super::getMinimumEntry(best);
-            cluster(best.column, best.row);
-            if ( n == nextPurge ) {
-                #pragma omp parallel for
-                for (size_t r=0; r<n; ++r) {
-                    purgeRow(r);
-                }
-                nextPurge = n*2/3;
+        {
+            progress_display setupProgress(n, "Setting up auxiliary I and S matrices", "sorting", "row");
+            //2. Set up the matrix with row sorted by distance
+            //   And the matrix that tracks which distance is
+            //   to which cluster (the S and I matrices, in the
+            //   RapidNJ papers).
+            entriesSorted.setSize(n);
+            entryToCluster.setSize(n);
+#pragma omp parallel for schedule(dynamic)
+            for (size_t r=0; r<n; ++r) {
+                sortRow(r,r);
+                ++setupProgress;
+                //copies the "left of the diagonal" portion of
+                //row r from the D matrix and sorts it
+                //into ascending order.
             }
-            #ifdef SHOW_DISTANCE_MATRIX_PROGRESS
-                show_progress+=n;
-            #endif
         }
-        super::finishClustering();
+        {
+            size_t nextPurge = (n+n)/2;
+            std::string taskName = "Constructing " + getAlgorithmName() + " tree";
+            progress_display show_progress(n*(n+1)/2, taskName.c_str(), "", "");
+            while (3<n) {
+                Position<T> best;
+                super::getMinimumEntry(best);
+                cluster(best.column, best.row);
+                if ( n == nextPurge ) {
+                    #pragma omp parallel for
+                    for (size_t r=0; r<n; ++r) {
+                        purgeRow(r);
+                    }
+                    nextPurge = n*2/3;
+                }
+                show_progress+=n;
+            }
+            show_progress.done();
+            super::finishClustering();
+        }
+        return true;
     }
     void sortRow(size_t r /*row index*/, size_t c /*upper bound on cluster index*/) {
         //1. copy data from a row of the D matrix into the S matrix
@@ -943,13 +1020,13 @@ public:
         size_t w = 0;
         for (size_t i=0; i<n; ++i) {
             values[w]         = sourceRow[i];
-            clusterIndices[w] = rowToCluster[i];
+            clusterIndices[w] = static_cast<int>(rowToCluster[i]);
             if ( i != r && clusterIndices[w] < c ) {
                 ++w;
             }
         }
         values[w]         = infiniteDistance; //sentinel value, to stop row search
-        clusterIndices[w] = rowToCluster[r];
+        clusterIndices[w] = static_cast<int>(rowToCluster[r]);
             //Always room for this, because distance to self
             //was excluded via the i!=r check above.
         
@@ -997,7 +1074,7 @@ public:
         size_t clusterC = clusters.size(); //cluster # of new cluster
         super::cluster(a,b);
         if (b<n) {
-            clusterToRow[clusterMoved] = b;
+            clusterToRow[clusterMoved] = static_cast<int>(b);
         }
         clusterToRow.emplace_back(a);
         clusterTotals.emplace_back(rowTotals[a]);
@@ -1142,7 +1219,7 @@ public:
                 //could (after row totals subtracted) provide a
                 //better min(Q).
 
-        Position<T> pos(row, 0, infiniteDistance);
+        Position<T> pos(row, 0, infiniteDistance, 0);
         const T*   rowData   = entriesSorted.rows[row];
         const int* toCluster = entryToCluster.rows[row];
         T Drc;
@@ -1168,7 +1245,6 @@ public:
     }
 };
 
-
 template <class T=NJFloat, class super=BIONJMatrix<T>, class V=FloatVector, class VB=FloatBoolVector>
     class VectorizedMatrix: public super
 {
@@ -1184,12 +1260,16 @@ template <class T=NJFloat, class super=BIONJMatrix<T>, class V=FloatVector, clas
     using super::rowMinima;
     using super::rowTotals;
     using super::calculateRowTotals;
+    using super::getImbalance;
 protected:
     mutable std::vector<T> scratchTotals;
     mutable std::vector<T> scratchColumnNumbers;
     const size_t  blockSize;
 public:
     VectorizedMatrix() : super(), blockSize(VB().size()) {
+    }
+    virtual std::string getAlgorithmName() const {
+        return "Vectorized-" + super::getAlgorithmName();
     }
     virtual void calculateRowTotals() const {
         super::calculateRowTotals();
@@ -1210,7 +1290,7 @@ public:
         rowMinima[0].value = infiniteDistance;
         #pragma omp parallel for schedule(dynamic)
         for (size_t row=1; row<n; ++row) {
-            Position<T> pos(row, 0, infiniteDistance);
+            Position<T> pos(row, 0, infiniteDistance, 0);
             const T* rowData = rows[row];
             size_t col;
             V minVector = infiniteDistance;
@@ -1233,7 +1313,7 @@ public:
                 minVector = select(less, adjVector, minVector);
             }
             //Extract minimum and column number
-            for (size_t c=0; c<blockSize; ++c) {
+            for (int c=0; c<blockSize; ++c) {
                 if (minVector[c] < pos.value) {
                     pos.value  = minVector[c];
                     pos.column = ixVector[c];
@@ -1247,6 +1327,7 @@ public:
                 }
             }
             pos.value -= tot [row];
+            pos.imbalance = getImbalance(pos.row, pos.column);
             rowMinima[row] = pos;
         }
     }
@@ -1261,10 +1342,14 @@ protected:
     using super::rowMinima;
     using super::rows;
     using super::calculateRowTotals;
+    using super::getImbalance;
     const size_t blockSize;
     mutable std::vector<T> scratchColumnNumbers;
 public:
     VectorizedUPGMA_Matrix() : super(), blockSize(VB().size()) {
+    }
+    virtual std::string getAlgorithmName() const {
+        return "Vectorized-" + super::getAlgorithmName();
     }
     virtual void calculateRowTotals() const {
         size_t fluff = MATRIX_ALIGNMENT / sizeof(T);
@@ -1277,7 +1362,7 @@ public:
         rowMinima[0].value = infiniteDistance;
         #pragma omp parallel for schedule(dynamic)
         for (size_t row=1; row<n; ++row) {
-            Position<T> pos(row, 0, infiniteDistance);
+            Position<T> pos(row, 0, infiniteDistance, 0);
             const T* rowData = rows[row];
             size_t col;
             V minVector  = infiniteDistance;
@@ -1291,7 +1376,7 @@ public:
                 minVector = select(less, rowVector, minVector);
             }
             //Extract minimum and column number
-            for (size_t c=0; c<blockSize; ++c) {
+            for (int c=0; c<blockSize; ++c) {
                 if (minVector[c] < pos.value) {
                     pos.value  = minVector[c];
                     pos.column = ixVector[c];
@@ -1304,6 +1389,7 @@ public:
                     pos.value  = dist;
                 }
             }
+            pos.imbalance = getImbalance(pos.row, pos.column);
             rowMinima[row] = pos;
         }
     }

@@ -9,6 +9,7 @@ checkpoint.cpp checkpoint.h
 MPIHelper.cpp MPIHelper.h
 starttree.cpp starttree.h
 bionj.cpp bionj2.cpp
+progress.cpp progress.h
 timeutil.h hammingdistance.h
 )
 
@@ -19,3 +20,13 @@ else(ZLIB_FOUND)
 endif(ZLIB_FOUND)
 
 target_link_libraries(utils lbfgsb sprng)
+
+add_executable(decentTree
+    decentTree.cpp bionj.cpp starttree.cpp bionj2.cpp gzstream.cpp progress.cpp)
+
+if(ZLIB_FOUND)
+  target_link_libraries(decentTree ${ZLIB_LIBRARIES})
+else(ZLIB_FOUND)
+  target_link_libraries(decentTree zlibstatic)
+endif(ZLIB_FOUND)
+
