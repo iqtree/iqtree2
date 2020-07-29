@@ -18,6 +18,8 @@
 #include "gsl/mygsl.h"
 #include "utils/gzstream.h"
 #include "utils/timeutil.h" //for getRealTime()
+#include "utils/progress.h" //for progress_display
+
 #include <Eigen/LU>
 #ifdef USE_BOOST
 #include <boost/math/distributions/binomial.hpp>
@@ -326,8 +328,9 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
     auto startHash = getRealTime();
     vector<size_t> hashes;
     hashes.resize(n, 0);
+    progress_display progress(n*2, "Checking for duplicate sequences");
     #ifdef _OPENMP
-        #pragma omp parallel for
+        #pragma omp parallel for schedule(static,100)
     #endif
     for (int seq1=0; seq1<n; ++seq1) {
         size_t hash = 0;
@@ -335,8 +338,9 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
             adjustHash((*it)[seq1], hash);
         }
         hashes[seq1] = hash;
+        ++progress;
     }
-    if (verbose_mode >= VB_MED) {
+    if (verbose_mode >= VB_MED && !progress_display::getProgressDisplay()) {
         auto hashTime = getRealTime() - startHash;
         cout << "Hashing sequences took " << hashTime << " wall-clock seconds" << endl;
     }
@@ -372,12 +376,14 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
             first_ident_seq = false;
 		}
 		checked[seq1] = 1;
+        ++progress;
 	}
-    if (verbose_mode >= VB_MED) {
+    if (verbose_mode >= VB_MED && !progress_display::getProgressDisplay()) {
         auto checkTime = getRealTime() - startCheck;
         cout << "Checking for duplicate sequences took " << checkTime
             << " wall-clock seconds" << endl;
     }
+    progress.done();
     if (removed_seqs.size() > 0) {
         double removeDupeStart = getRealTime();
         if (removed_seqs.size() + 3 >= getNSeq()) {
@@ -1744,6 +1750,8 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
     clear();
     pattern_index.clear();
     int num_error = 0;
+    
+    progress_display progress(nsite, "Constructing alignment", "examined", "site");
     for (site = 0; site < nsite; site+=step) {
         for (seq = 0; seq < nseq; seq++) {
             //char state = convertState(sequences[seq][site], seq_type);
@@ -1797,13 +1805,16 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
             addPatternLazy(pat, site/step, 1, gaps_only);
             num_gaps_only += gaps_only ? 1 : 0;
         }
+        progress += step;
     }
+    progress.done();
     updatePatterns(0);
     if (num_gaps_only) {
         cout << "WARNING: " << num_gaps_only << " sites contain only gaps or ambiguous characters." << endl;
     }
-    if (err_str.str() != "")
+    if (err_str.str() != "") {
         throw err_str.str();
+    }
     return 1;
 }
 
@@ -1985,25 +1996,30 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
     // remove the failbit
     in.exceptions(ios::badbit);
 
-    for (; !in.eof(); line_num++) {
-        safeGetline(in, line);
-        if (line == "") {
-            continue;
+    {
+        progress_display progress(in.getCompressedLength(), "Reading fasta file", "", "");
+        for (; !in.eof(); line_num++) {
+            safeGetline(in, line);
+            if (line == "") {
+                continue;
+            }
+            //cout << line << endl;
+            if (line[0] == '>') { // next sequence
+                string::size_type pos = line.find_first_of("\n\r");
+                seq_names.push_back(line.substr(1, pos-1));
+                trimString(seq_names.back());
+                sequences.push_back("");
+                continue;
+            }
+            // read sequence contents
+            if (sequences.empty()) {
+                throw "First line must begin with '>' to define sequence name";
+            }
+            processSeq(sequences.back(), line, line_num);
+            progress = (double)in.getCompressedPosition();
         }
-        //cout << line << endl;
-        if (line[0] == '>') { // next sequence
-            string::size_type pos = line.find_first_of("\n\r");
-            seq_names.push_back(line.substr(1, pos-1));
-            trimString(seq_names.back());
-            sequences.push_back("");
-            continue;
-        }
-        // read sequence contents
-        if (sequences.empty()) {
-            throw "First line must begin with '>' to define sequence name";
-        }
-        processSeq(sequences.back(), line, line_num);
     }
+
     in.clear();
     // set the failbit again
     in.exceptions(ios::failbit | ios::badbit);
@@ -4184,7 +4200,7 @@ void Alignment::countStatesForSites(size_t startPattern, size_t stopPattern, siz
 
 #define PARALLEL_STATE_COUNT 1
 void Alignment::countStates(size_t *state_count, size_t num_unknown_states) {
-    //Note: this was suprisingly slow
+    //Note: this was suprisingly slow in Windows builds (Don't know why)
     double countStart = getRealTime();
     memset(state_count, 0, sizeof(size_t)*(STATE_UNKNOWN+1));
     state_count[(int)STATE_UNKNOWN] = num_unknown_states;
