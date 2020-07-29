@@ -71,7 +71,13 @@ gzstreambuf* gzstreambuf::open( const char* name, int open_mode, int compression
         FILE *fp = fopen(name, "rb");
         if (fp) {
             fseek(fp, 0, SEEK_END);
-            compressed_length = ftello(fp);
+            #if defined(WIN64)
+                compressed_length = _ftelli64(fp);
+            #elif defined(WIN32)
+                compressed_length = ftell(fp);
+            #else       
+                compressed_length = ftello(fp); 
+            #endif          
             fclose(fp);
         }
     }
