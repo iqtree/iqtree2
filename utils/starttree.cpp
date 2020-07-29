@@ -18,7 +18,8 @@
 //
 
 #include "starttree.h"
-#include <iostream>
+#include <iostream> //for std::cout
+#include <sstream>  //for std::stringstream
 
 namespace StartTree {
 
@@ -65,6 +66,16 @@ BuilderInterface* Factory::getBuilder(const char* name) {
     std::string s(name);
     return getBuilder(s);
 }
+
+std::string Factory::getListOfTreeBuilders() const {
+    std::stringstream list;
+    for (auto it=mapOfTreeBuilders.begin(); it!=mapOfTreeBuilders.end(); ++it) {
+        auto builder = (*it).second;
+        list << builder->getName() << ": " << builder->getDescription() << "\n";
+    }
+    return list.str();
+}
+
 
 void Factory::advertiseTreeBuilder(BuilderInterface* builder) {
     std::string name = builder->getName();

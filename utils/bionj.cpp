@@ -818,6 +818,17 @@ public :
 
 //JB2020-06-26 Begin - Adapter, so that BioNj is available
 //for doing tree construction (via -starttree BIONJ2009).
+
+namespace {
+    bool endsWith(const std::string s, const char* suffix) {
+        auto suffixLen = strlen(suffix);
+        if (s.length() < suffixLen) {
+            return false;
+        }
+        return s.substr(s.length()-suffixLen, suffixLen) == suffix;
+    }
+};
+
 class BIONJ2009Adapter: public StartTree::BuilderInterface {
 protected:
     std::string name = "BIONJ2009";
@@ -835,6 +846,10 @@ public:
         ( const std::string &distanceMatrixFilePath
          , const std::string & newickTreeFilePath) {
             BioNj bio2009;
+            if (endsWith(distanceMatrixFilePath,".gz")) {
+                std::cerr << "BIONJ2009 cannot handle .gz inputs\n";
+                return false;
+            }
             bio2009.create(distanceMatrixFilePath.c_str(), newickTreeFilePath.c_str());
             return true;
     }

@@ -59,6 +59,7 @@
 #include "pda/ecopdmtreeset.h"
 #include "pda/gurobiwrapper.h"
 #include "utils/timeutil.h"
+#include "utils/operatingsystem.h" //for getOSName()
 #include <stdlib.h>
 #include "vectorclass/instrset.h"
 
@@ -209,20 +210,9 @@ void printCopyright(ostream &out) {
      out << "PDA - Phylogenetic Diversity Analyzer version ";
 #endif
     out << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << iqtree_VERSION_PATCH << " COVID-edition";
-
-#if defined _WIN32 || defined WIN32 || defined WIN64
-    out << " for Windows";
-#elif defined __APPLE__ || defined __MACH__
-    out << " for Mac OS X";
-#elif defined __linux__
-    out << " for Linux";
-#elif defined __unix__ || defined __unix
-    out << " for Unix";
-#else 
-    out << " for unknown platform"
-#endif
-
-    out    << " " << 8*sizeof(void*) << "-bit" << " built " << __DATE__;
+    out << " for " << getOSName();
+    out << " built " << __DATE__;
+    out << " built " << __DATE__;
 #if defined DEBUG 
     out << " - debug mode";
 #endif
