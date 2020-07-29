@@ -24,6 +24,7 @@
 #include <iostream>    //for std::cout
 #include "progress.h"  //for progress_display::setProgressDisplay()
 #include "starttree.h" //for StartTree::Factory
+#include "operatingsystem.h" //for getOSName
 
 #define PROBLEM(x) if (1) problems = problems + x + ".\n"; else 0
 
@@ -37,6 +38,22 @@ namespace {
     }
 };
 
+void showBanner() {
+    std::cout << "\nDecentTree for " << getOSName() << "\n";
+    std::cout << "Based on algorithms (UPGMA, NJ, BIONJ) proposed by Sokal & Michener [1958], Saitou & Nei [1987], Gascuel [2009]\n";
+    std::cout << "Incorporating (in NJ-R and BIONJ-R) techniques proposed by Simonson, Mailund, and Pedersen [2011]\n";
+    std::cout << "Developed by Olivier Gascuel [2009], Hoa Sien Cuong [2009], James Barbetti [2020]\n";
+    std::cout << "(To suppress this banner pass -no-banner)\n";
+}
+
+void showUsage() {
+    std::cout << "\nUsage: DecentTree -in [mldist] -out [newick] -t [algorithm] (-gz) (-no-banner)\n";
+    std::cout << "[mldist] is the path of a distance matrix file (which may be in .gz format)\n";
+    std::cout << "[newick] is the path to write the newick tree file to (if it ends in .gz it will be compressed)\n";
+    std::cout << "[algorithm] is one of the following, supported, distance matrix algorithms:\n";
+    std::cout << StartTree::Factory::getInstance().getListOfTreeBuilders();
+}
+
 int main(int argc, char* argv[]) {
     std::string problems;
     progress_display::setProgressDisplay(true); //Displaying progress bars
@@ -44,6 +61,7 @@ int main(int argc, char* argv[]) {
     std::string inputFilePath;
     std::string outputFilePath;
     bool isOutputZipped = false;
+    bool isBannerSuppressed = false;
     for (int argNum=1; argNum<argc; ++argNum) {
         std::string arg = argv[argNum];
         std::string nextArg = (argNum+1<argc) ? argv[argNum+1] : "";
@@ -56,6 +74,8 @@ int main(int argc, char* argv[]) {
                 algorithmName = nextArg;
             } else {
                 PROBLEM("Algorithm name " + nextArg + " not recognized");
+                PROBLEM("Recognized distance matrix algorithms are:");
+                PROBLEM(StartTree::Factory::getInstance().getListOfTreeBuilders());
             }
             ++argNum;
         }
@@ -66,10 +86,20 @@ int main(int argc, char* argv[]) {
         else if (arg=="-gz") {
             isOutputZipped = true;
         }
+        else if (arg=="-no-banner") {
+            isBannerSuppressed = true;
+        }
         else {
             PROBLEM("Unrecognized command-line argument, " + arg);
             break;
         }
+    }
+    if (argc==1) {
+        if (!isBannerSuppressed) {
+            showBanner();
+        }
+        showUsage();
+        return 0;
     }
     if (inputFilePath.empty()) {
         PROBLEM("Input (mldist) file should be specified via -in [filepath.mldist]");
@@ -83,6 +113,9 @@ int main(int argc, char* argv[]) {
     if (!problems.empty()) {
         std::cerr << problems;
         return 1;
+    }
+    if (!isBannerSuppressed) {
+        showBanner();
     }
     StartTree::BuilderInterface* algorithm = StartTree::Factory::getTreeBuilderByName(algorithmName);
     algorithm->setZippedOutput(isOutputZipped || endsWith(outputFilePath,".gz"));

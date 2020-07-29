@@ -11,6 +11,7 @@ starttree.cpp starttree.h
 bionj.cpp bionj2.cpp
 progress.cpp progress.h
 timeutil.h hammingdistance.h
+operatingsystem.cpp operatingsystem.h
 )
 
 if(ZLIB_FOUND)
@@ -22,7 +23,9 @@ endif(ZLIB_FOUND)
 target_link_libraries(utils lbfgsb sprng)
 
 add_executable(decentTree
-    decentTree.cpp bionj.cpp starttree.cpp bionj2.cpp gzstream.cpp progress.cpp)
+    decentTree.cpp
+    starttree.cpp bionj.cpp bionj2.cpp
+    gzstream.cpp progress.cpp operatingsystem.cpp)
 
 if(ZLIB_FOUND)
   target_link_libraries(decentTree ${ZLIB_LIBRARIES})
