@@ -246,19 +246,7 @@ typedef vector<string> StrVector;
 /**
         matrix of double
  */
-/*
-class DoubleMatrix {
-public:
-        double *value;
-        int rows, cols, size;
-        DoubleMatrix(int arows, int acols);
-        //inline double operator() (int i, int j);
-        inline double &operator() (int i, int j) { return value[i * cols + j]; };
-        inline double *operator[] (int i) {	return value + (i*cols); };
-        virtual ~DoubleMatrix();
-        void setZero();
-};
- */
+
 typedef mmatrix(double) DoubleMatrix;
 
 typedef unsigned int UINT;
