@@ -84,12 +84,13 @@ BuilderInterface* Factory::getTreeBuilderByName(const std::string& name) {
 }
 
 BenchmarkingTreeBuilder::BenchmarkingTreeBuilder(Factory& f, const char* nameToUse, const char *descriptionToGive)
-    : name(nameToUse), description(descriptionToGive) {
-        for (auto it=f.mapOfTreeBuilders.begin(); it!=f.mapOfTreeBuilders.end(); ++it) {
-            if (!it->second->getName().empty()) {
-                builders.push_back(it->second);
-            }
+    : name(nameToUse), description(descriptionToGive)
+    , isOutputToBeZipped(false) {
+    for (auto it=f.mapOfTreeBuilders.begin(); it!=f.mapOfTreeBuilders.end(); ++it) {
+        if (!it->second->getName().empty()) {
+            builders.push_back(it->second);
         }
+    }
 }
 
 const std::string& BenchmarkingTreeBuilder::getName() {
@@ -99,13 +100,20 @@ const std::string& BenchmarkingTreeBuilder::getDescription() {
     return description;
 }
 
-void BenchmarkingTreeBuilder::constructTree
+bool BenchmarkingTreeBuilder::constructTree
     ( const std::string &distanceMatrixFilePath
      , const std::string & newickTreeFilePath) {
+        bool result = (!builders.empty());
         for (auto it=builders.begin(); it!=builders.end(); ++it) {
-            (*it)->constructTree(distanceMatrixFilePath, newickTreeFilePath);
+            (*it)->setZippedOutput(isOutputToBeZipped);
+            result &= (*it)->constructTree(distanceMatrixFilePath, newickTreeFilePath);
         }
+        return result;
     }
+
+void BenchmarkingTreeBuilder::setZippedOutput(bool zipIt) {
+    isOutputToBeZipped = zipIt;
+}
 
 bool BenchmarkingTreeBuilder::constructTreeInMemory
     ( const std::vector<std::string> &sequenceNames
@@ -131,7 +139,7 @@ bool BenchmarkingTreeBuilder::constructTreeInMemory
                 for (int t=2; t<=maxThreads; ++t) {
                     omp_set_num_threads(t);
                     startTime = getRealTime();
-                    (*it)->constructTreeInMemory(sequenceNames, distanceMatrix, newickTreeFilePath);
+                    ok &= (*it)->constructTreeInMemory(sequenceNames, distanceMatrix, newickTreeFilePath);
                     elapsed = getRealTime() - startTime;
                     std::cout << "\t" << (elapsed);
                 }

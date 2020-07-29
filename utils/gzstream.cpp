@@ -25,6 +25,9 @@
 // Standard streambuf implementation following Nicolai Josuttis, "The 
 // Standard C++ Library".
 // ============================================================================
+//
+// Modifications (2020) for keeping track of compressed_length
+// and compressed_position
 
 #include "gzstream.h"
 #include <iostream>
@@ -42,7 +45,7 @@ namespace GZSTREAM_NAMESPACE {
 // class gzstreambuf:
 // --------------------------------------
 
-gzstreambuf* gzstreambuf::open( const char* name, int open_mode) {
+gzstreambuf* gzstreambuf::open( const char* name, int open_mode, int compression_level) {
     if ( is_open())
         return (gzstreambuf*)0;
     mode = open_mode;
@@ -62,10 +65,28 @@ gzstreambuf* gzstreambuf::open( const char* name, int open_mode) {
     else
         *fmodeptr++ = '1'; // fast compression ratio
     *fmodeptr = '\0';
+    
+    //BEGIN - Figure out length of the compressed file
+    if ( mode & std::ios::in) {
+        FILE *fp = fopen(name, "rb");
+        if (fp) {
+            fseek(fp, 0, SEEK_END);
+            compressed_length = ftello(fp);
+            fclose(fp);
+        }
+    }
+    //FINISH - Determining compressed_length
+    
     file = gzopen( name, fmode);
-    if (file == 0)
+    if (file == 0) {
         return (gzstreambuf*)0;
+    }
     opened = 1;
+    
+    if ( mode & std::ios::out) {
+        gzsetparams(file, compression_level, Z_DEFAULT_STRATEGY );
+    }
+    
     return this;
 }
 
@@ -86,7 +107,7 @@ int gzstreambuf::underflow() { // used for input buffer only
     if ( ! (mode & std::ios::in) || ! opened)
         return EOF;
     // Josuttis' implementation of inbuf
-    int n_putback = gptr() - eback();
+    long n_putback = gptr() - eback();
     if ( n_putback > 4)
         n_putback = 4;
     memcpy( buffer + (4 - n_putback), gptr() - n_putback, n_putback);
@@ -94,7 +115,9 @@ int gzstreambuf::underflow() { // used for input buffer only
     int num = gzread( file, buffer+4, bufferSize-4);
     if (num <= 0) // ERROR or EOF
         return EOF;
-
+    
+    compressed_position = gzoffset(file);
+    
     // reset buffer pointers
     setg( buffer + (4 - n_putback),   // beginning of putback area
           buffer + 4,                 // read position
@@ -107,8 +130,9 @@ int gzstreambuf::underflow() { // used for input buffer only
 int gzstreambuf::flush_buffer() {
     // Separate the writing of the buffer from overflow() and
     // sync() operation.
-    int w = pptr() - pbase();
-    if ( gzwrite( file, pbase(), w) != w)
+    int  w = static_cast<int> ( pptr() - pbase() );
+    long wDone = gzwrite( file, pbase(), w);
+    if ( wDone != w)
         return EOF;
     pbump( -w);
     return w;
@@ -136,6 +160,15 @@ int gzstreambuf::sync() {
     }
     return 0;
 }
+
+size_t gzstreambuf::getCompressedLength() {
+    return compressed_length;
+}
+
+size_t gzstreambuf::getCompressedPosition() {
+    return compressed_position;
+}
+
 
 // --------------------------------------
 // class gzstreambase:
