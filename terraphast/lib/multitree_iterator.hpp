@@ -48,12 +48,12 @@ private:
 	std::vector<multitree_iterator_choicepoint> m_choices;
 	std::vector<small_bipartition> m_unconstrained_choices;
 
-	void init_subtree(index subtree_root);
-	void init_subtree(index subtree_root, index single_leaf);
-	void init_subtree(index subtree_root, multitree_nodes::two_leaves two_leaves);
-	void init_subtree(index subtree_root, multitree_nodes::inner_node inner);
-	void init_subtree(index subtree_root, multitree_nodes::unconstrained unconstrained);
-	void init_subtree_unconstrained(index subtree_root, multitree_nodes::unconstrained data);
+	bool init_subtree(index subtree_root);
+	bool init_subtree(index subtree_root, index single_leaf);
+	bool init_subtree(index subtree_root, multitree_nodes::two_leaves two_leaves);
+	bool init_subtree(index subtree_root, multitree_nodes::inner_node inner);
+	bool init_subtree(index subtree_root, multitree_nodes::unconstrained unconstrained);
+	bool init_subtree_unconstrained(index subtree_root, multitree_nodes::unconstrained data);
 
 	bool next(index root);
 	bool next_unconstrained(index root, multitree_nodes::unconstrained unconstrained);
