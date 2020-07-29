@@ -55,67 +55,13 @@
 VerboseMode verbose_mode;
 extern void printCopyright(ostream &out);
 
-/*
-        WIN32 does not define gettimeofday() function.
-        Here declare it extra for WIN32 only.
- */
-//#if defined(WIN32) && !defined(HAVE_GETTIMEOFDAY)
 #if defined(WIN32)
 #include <sstream>
 #endif
-//
-//struct timezone {
-//};
-//
-//void gettimeofday(struct timeval* t, void* timezone) {
-//    struct _timeb timebuffer;
-//    _ftime(&timebuffer);
-//    t->tv_sec = timebuffer.time;
-//    t->tv_usec = 1000 * timebuffer.millitm;
-//}
-//#else
-//#include <sys/time.h>
-//#endif
-
-
-/********************************************************
-        Defining DoubleMatrix methods
- ********************************************************/
-
-/*DoubleMatrix::DoubleMatrix(int arows, int acols) {
-        rows = arows;
-        cols = acols;
-        size =  rows * cols;
-        value = new double[size];
-}
-
-void DoubleMatrix::setZero() {
-        memset(value, 0, size * sizeof(double));
-}
-
-
-DoubleMatrix::~DoubleMatrix() {
-        if (value) delete value;
-        value = NULL;
-}
- */
 
 /********************************************************
         Miscellaneous
  ********************************************************/
-
-/**
-        Output an error to screen, then exit program
-        @param error error message
- */
-/*
-void outError(char *error)
-{
-        cerr << "ERROR: " << error << endl;
-        exit(2);
-}
- */
-
 
 /**
         Output an error to screen, then exit program
