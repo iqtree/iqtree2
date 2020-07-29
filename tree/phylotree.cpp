@@ -21,6 +21,7 @@
  ***************************************************************************/
 #include "phylotree.h"
 #include "utils/starttree.h"
+#include "utils/progress.h"  //for progress_display
 //#include "rateheterogeneity.h"
 #include "alignment/alignmentpairwise.h"
 #include "alignment/alignmentsummary.h"
@@ -3122,14 +3123,15 @@ Distance function
 double PhyloTree::computeDist(int seq1, int seq2, double initial_dist, double &d2l) {
     // if no model or site rate is specified, return JC distance
     if (initial_dist == 0.0) {
-        if (params->compute_obs_dist)
+        if (params->compute_obs_dist) {
             return (initial_dist = aln->computeObsDist(seq1, seq2));
-        else
+        } else {
             initial_dist = aln->computeDist(seq1, seq2);
+        }
     }
-    if (!model_factory || !site_rate)
+    if (!model_factory || !site_rate) {
         return initial_dist; // MANUEL: here no d2l is return
-    
+    }
     // now optimize the distance based on the model and site rate
     AlignmentPairwise aln_pair ( this, seq1, seq2 );
     double dist = aln_pair.optimizeDist(initial_dist, d2l);
@@ -3183,6 +3185,9 @@ template <class L, class F> double computeDistanceMatrix
     double z = num_states / (num_states - 1.0);
     //Compute the upper-triangle of the distance matrix
     //(and write the row maximum onto the firt cell in the row)
+    
+    progress_display progress(nseqs*(nseqs-1)/2, "Calculating observed distances"); //zork
+
     #ifdef _OPENMP
     #pragma omp parallel for schedule(dynamic)
     #endif
@@ -3226,6 +3231,7 @@ template <class L, class F> double computeDistanceMatrix
             otherSequence += seqLen;
         }
         rowMaxDistance[seq1] = maxDistanceInRow;
+        progress += (nseqs - 1 - seq1);
     }
     
     //
@@ -3365,6 +3371,7 @@ double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
     double longest_dist = 0.0;
     cout.precision(6);
     double baseTime = getRealTime();
+    progress_display progress(nseqs*(nseqs-1)/2, "Calculating distance matrix"); //zork
     //compute the upper-triangle of distance matrix
     #ifdef _OPENMP
     #pragma omp parallel for schedule(dynamic)
@@ -3388,6 +3395,7 @@ double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
             else if (params->ls_var_type == WLS_SECOND_TAYLOR)
                 var_mat[sym_pos] = -1.0 / d2l;
         }
+        progress += (nseqs - seq1 - 1);
     }
     //cout << (getRealTime()-baseTime) << "s Copying to lower triangle" << endl;
     //copy upper-triangle into lower-triangle and set diagonal = 0

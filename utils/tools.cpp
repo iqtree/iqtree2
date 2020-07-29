@@ -47,6 +47,7 @@
 
 #include "tools.h"
 #include "timeutil.h"
+#include "progress.h"
 #include "gzstream.h"
 #include "MPIHelper.h"
 #include "alignment/alignment.h"
@@ -758,6 +759,7 @@ void quickStartGuide();
 
 void parseArg(int argc, char *argv[], Params &params) {
     int cnt;
+    progress_display::setProgressDisplay(false);
     verbose_mode = VB_MIN;
     params.tree_gen = NONE;
     params.user_file = NULL;
@@ -3497,6 +3499,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                     params.min_iterations = 2;
 				params.stop_condition = SC_FIXED_ITERATION;
                 params.modelEps = 0.05;
+                params.suppress_list_of_sequences = true;
+                params.suppress_zero_distance_warnings = true;
+                params.suppress_duplicate_sequence_warnings = true;
+                params.optimize_alg_freerate = "1-BFGS";
+                params.opt_gammai = false;
                 continue;
             }
 			if (strcmp(argv[cnt], "-fss") == 0) {
@@ -4216,6 +4223,13 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use --date-options <extra_options_for_dating_method>";
                 params.dating_options = argv[cnt];
+                continue;
+            }
+            
+            std::string arg = argv[cnt];
+            //Todo; move this up, use == rather than strcmp elsewhere, too.
+            if (arg=="-progress-bar" || arg=="--progress-bar" || arg=="-bar") {
+                progress_display::setProgressDisplay(true);
                 continue;
             }
 

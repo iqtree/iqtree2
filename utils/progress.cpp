@@ -91,12 +91,18 @@ void progress_display::reportProgress(double time, double cpu, bool newline) {
         }
         verbed = true;
     } else if (!workVerb.empty() && !workUnitName.empty()) {
-        progress << " " << workVerb << " " << workUnitName;
+        if (!progress.str().empty()) {
+            progress << " ";
+        }
+        progress << workVerb << " " << workUnitName;
         verbed = true;
     }
     if (verbed) {
         if (workDone < totalWorkToDo) {
-            progress << " " << workDone << " (of " << totalWorkToDo << ")";
+            if (!progress.str().empty()) {
+                progress << " ";
+            }
+            progress << workDone << " (of " << totalWorkToDo << ")";
         }
     } else if (0<totalWorkToDo) {
         double percentDone = 100.0 * ( workDone / totalWorkToDo );
@@ -184,3 +190,6 @@ void progress_display::setProgressDisplay(bool displayIt) {
     displayingProgress = displayIt;
 }
 
+bool progress_display::getProgressDisplay() {
+    return displayingProgress;
+}

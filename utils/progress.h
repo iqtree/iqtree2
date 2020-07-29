@@ -35,6 +35,7 @@ public:
     void reportProgress(double time, double cpu, bool newline);
 
     static void setProgressDisplay(bool displayIt);
+    static bool getProgressDisplay();
 };
 
 
