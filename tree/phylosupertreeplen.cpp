@@ -185,11 +185,12 @@ void PhyloSuperTreePlen::mapTrees() {
     // since for codon models, branch lengths = # nucleotide subst per codon site!
     bool noncodon_present = false;
     iterator it;
-    for (it = begin(); it != end(); it++)
-        if ((*it)->aln->seq_type != SEQ_CODON) {
-            noncodon_present = true;
-            break;
-        }
+	for (it = begin(); it != end(); it++) {
+		if ((*it)->aln->seq_type != SEQ_CODON) {
+			noncodon_present = true;
+			break;
+		}
+	}
 	for (it = begin(); it != end(); it++, part++) {
 		string taxa_set;
         Pattern taxa_pat = ((SuperAlignment*)aln)->getPattern(part);
@@ -239,9 +240,10 @@ double PhyloSuperTreePlen::optimizeAllBranches(int my_iterations, double toleran
 }
 
 void PhyloSuperTreePlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH, int maxNRStep) {
-    if (rooted && (node1 == root || node2 == root))
-        return; // does not optimize virtual branch from root
-    
+	if (rooted && (node1 == root || node2 == root))
+	{
+		return; // does not optimize virtual branch from root
+	}    
 	SuperNeighbor *nei1 = (SuperNeighbor*)node1->findNeighbor(node2);
 	SuperNeighbor *nei2 = (SuperNeighbor*)node2->findNeighbor(node1);
 	int part;

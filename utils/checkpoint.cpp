@@ -196,8 +196,9 @@ bool Checkpoint::hasKey(string key) {
 
 bool Checkpoint::hasKeyPrefix(string key_prefix) {
     string prefix = key_prefix;
-    if (!struct_name.empty())
+    if (!struct_name.empty()) {
         prefix = struct_name + key_prefix;
+    }
 	auto i = lower_bound(prefix);
     if (i != end()) {
         if (i->first.compare(0, prefix.size(), prefix) == 0)

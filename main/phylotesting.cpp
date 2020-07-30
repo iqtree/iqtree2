@@ -1929,8 +1929,9 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     int64_t total_num_model = in_tree->size();
 
     // 2017-06-07: -rcluster-max for max absolute number of pairs
-    if (params.partfinder_rcluster_max == 0)
-        params.partfinder_rcluster_max = max((size_t)1000, 10*in_tree->size());
+    if (params.partfinder_rcluster_max == 0) {
+        params.partfinder_rcluster_max = max((size_t)1000, 10 * in_tree->size());
+    }
 
 	if (params.partition_merge != MERGE_NONE) {
         double p = params.partfinder_rcluster/100.0;
@@ -2682,15 +2683,13 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
                 at(next).setFlag(MF_IGNORED);
             }
         }
-
-
 	}
 
     ASSERT(model_scores.size() == size());
 
-    if (best_model_BIC == -1)
+    if (best_model_BIC == -1) {
         outError("No models were examined! Please check messages above");
-
+    }
 	int *model_rank = new int[model_scores.size()];
 
 //    string best_tree; // BQM 2015-07-21: With Lars find best model

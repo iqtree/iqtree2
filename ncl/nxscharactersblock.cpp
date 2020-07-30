@@ -2913,8 +2913,6 @@ void NxsCharactersBlock::WriteStates(
 	else
 		{
 		assert(symbols != NULL);
-		unsigned symbolListLen = strlen(symbols);
-
 		unsigned numStates = matrix->GetNumStates(d);
 		unsigned numCharsNeeded = numStates;
 		if (numStates > 1)
@@ -2924,7 +2922,7 @@ void NxsCharactersBlock::WriteStates(
 		if (numStates == 1)
 			{
 			unsigned v = matrix->GetState(d);
-			assert(v < symbolListLen);
+			assert(v < strlen(symbols));
 			s[0] = symbols[v];
 			s[1] = '\0';
 			}

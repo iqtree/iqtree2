@@ -321,25 +321,27 @@ int PhyloSuperTree::collapseInternalBranches(Node *node, Node *dad, double thres
 	FOR_NEIGHBOR_DECLARE(node, dad, it) {
 		count += collapseInternalBranches((*it)->node, node, threshold);
 	}
-    if (node->isLeaf())
-        return count;
+	if (node->isLeaf()) {
+		return count;
+	}
 	NeighborVec nei_vec;
 	nei_vec.insert(nei_vec.begin(), node->neighbors.begin(), node->neighbors.end());
-	for (it = nei_vec.begin(); it != nei_vec.end(); it++) 
-	if ((*it)->node != dad && !(*it)->node->isLeaf() && (*it)->length <= threshold) {
+	for (it = nei_vec.begin(); it != nei_vec.end(); it++) {
+		if ((*it)->node != dad && !(*it)->node->isLeaf() && (*it)->length <= threshold) {
 
-        //delete branch of gene-trees
-        SuperNeighbor *snei = (SuperNeighbor*)(*it);
-        int part = 0;
-        for (part = 0; part != size(); part++)
-            if (snei->link_neighbors[part]) {
-                SuperNeighbor* snei_back = (SuperNeighbor*)(*it)->node->findNeighbor(node);
-                at(part)->removeNode(snei_back->link_neighbors[part]->node, snei->link_neighbors[part]->node);
-            }
-
-		// delete the child node
-        removeNode(node, (*it)->node);
-        count++;
+			//delete branch of gene-trees
+			SuperNeighbor* snei = (SuperNeighbor*)(*it);
+			int part = 0;
+			for (part = 0; part != size(); part++) {
+				if (snei->link_neighbors[part]) {
+					SuperNeighbor* snei_back = (SuperNeighbor*)(*it)->node->findNeighbor(node);
+					at(part)->removeNode(snei_back->link_neighbors[part]->node, snei->link_neighbors[part]->node);
+				}
+			}
+			// delete the child node
+			removeNode(node, (*it)->node);
+			count++;
+		}
 	}
     return count;
 }

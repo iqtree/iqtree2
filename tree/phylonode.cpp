@@ -32,25 +32,28 @@ void PhyloNode::clearReversePartialLh(PhyloNode *dad) {
 		}
 }
 
-void PhyloNode::clearAllPartialLh(bool make_null, PhyloNode *dad) {
-	PhyloNeighbor *node_nei = (PhyloNeighbor*)findNeighbor(dad);
+void PhyloNode::clearAllPartialLh(bool make_null, PhyloNode* dad) {
+	PhyloNeighbor* node_nei = (PhyloNeighbor*)findNeighbor(dad);
 	node_nei->partial_lh_computed = 0;
 	if (make_null) node_nei->partial_lh = NULL;
 
 
-    if (Params::getInstance().lh_mem_save == LM_MEM_SAVE)
-        node_nei->size = 0;
+	if (Params::getInstance().lh_mem_save == LM_MEM_SAVE)
+		node_nei->size = 0;
 
 	node_nei = (PhyloNeighbor*)dad->findNeighbor(this);
 	node_nei->partial_lh_computed = 0;
-	if (make_null) node_nei->partial_lh = NULL;
-
-    if (Params::getInstance().lh_mem_save == LM_MEM_SAVE)
-        node_nei->size = 0;
-
-	for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it ++)
-		if ((*it)->node != dad)
+	if (make_null) {
+		node_nei->partial_lh = NULL;
+	}
+	if (Params::getInstance().lh_mem_save == LM_MEM_SAVE) {
+		node_nei->size = 0;
+	}
+	for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it++) {
+		if ((*it)->node != dad) {
 			((PhyloNode*)(*it)->node)->clearAllPartialLh(make_null, this);
+		}
+	}
 }
 
 

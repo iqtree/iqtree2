@@ -1552,12 +1552,13 @@ void PhyloTree::reportLikelihoodMapping(ofstream &out) {
 	out << "LIKELIHOOD MAPPING ANALYSIS" << endl;
 	out << "---------------------------" << endl << endl;
 	out << "Number of quartets: " << params->lmap_num_quartets;
-    if (params->lmap_num_quartets < LMGroups.uniqueQuarts)
-        out << " (randomly chosen with replacement from "
-		<< LMGroups.uniqueQuarts << " existing unique quartets)" << endl << endl;
-    else
-        out << " (all unique quartets)" << endl << endl;
-        
+	if (params->lmap_num_quartets < LMGroups.uniqueQuarts) {
+		out << " (randomly chosen with replacement from "
+			<< LMGroups.uniqueQuarts << " existing unique quartets)" << endl << endl;
+	} 
+	else {
+		out << " (all unique quartets)" << endl << endl;
+	}        
 	out << "Quartet trees are based on the selected model of substitution." << endl << endl;
 
 	if(LMGroups.numGroups == 1) {
