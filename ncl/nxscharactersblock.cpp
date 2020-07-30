@@ -2914,21 +2914,19 @@ void NxsCharactersBlock::WriteStates(
 		{
 		assert(symbols != NULL);
 		unsigned numStates = matrix->GetNumStates(d);
+        unsigned symbolListLen = strlen(symbols);
 		unsigned numCharsNeeded = numStates;
 		if (numStates > 1)
 			numCharsNeeded += 2;
 		assert(slen > numCharsNeeded);
 
-		if (numStates == 1)
-			{
+		if (numStates == 1) {
 			unsigned v = matrix->GetState(d);
-			assert(v < strlen(symbols));
-			s[0] = symbols[v];
+			assert(v < symbolListLen);
+            s[0] = (v<symbolListLen) ? symbols[v] : '\0';
 			s[1] = '\0';
-			}
-
-		else
-			{
+        }
+		else {
 			// numStates must be greater than 1
 			//
 			unsigned i = 0;
