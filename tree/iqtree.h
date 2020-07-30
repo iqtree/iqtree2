@@ -732,6 +732,15 @@ public:
     string optimizeModelParameters(bool printInfo = false, double epsilon = -1);
 
     /**
+     *  @brief: either optimize model parameters on the current tree
+     *  or restore them from a checkpoint (this function exists because the
+     *  same things need to be done in two different places, in runTreeReconstruction)
+     *  @param initEpsilon likelihood epsilon for optimization
+     */
+
+    string ensureModelParametersAreSet(double initEpsilon);
+    
+    /**
      *  variable storing the current best tree topology
      */
     topol* pllBestTree;

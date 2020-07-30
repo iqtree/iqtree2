@@ -46,6 +46,7 @@
 #include "utils/checkpoint.h"
 #include "constrainttree.h"
 #include "memslot.h"
+#include "utils/progress.h"
 
 class AlignmentPairwise;
 
@@ -1757,6 +1758,12 @@ public:
         test the best number of threads
     */
     virtual int testNumThreads();
+    
+    /**
+        ensure that the number of threads is set (perhaps calling testNumThreads to do so),
+        perhaps calling warnNumThreads if it might be set too high.
+    */
+    int ensureNumberOfThreadsIsSet(Params *params);
 
     /**
         print warning about too many threads for short alignments
@@ -2170,6 +2177,13 @@ public:
      */
     virtual void writeBranches(ostream &out);
     
+    /**
+       @param out the file path to which a (newly generated) distance file has been written
+        (or blank, if it hasn't)
+     */
+    const string& getDistanceFileWritten() const;
+
+    
 protected:
 
     /**
@@ -2368,10 +2382,29 @@ protected:
     /** cost_matrix for non-uniform parsimony */
     unsigned int * cost_matrix; // Sep 2016: store cost matrix in 1D array
 
+    /** stateful AlignmentPairwise instances used for distance processing*/
     std::vector<AlignmentPairwise*> distanceProcessors;
+
+    /** Summary information (especially sequence-major matrix of pattern states */
     AlignmentSummary* summary;
+
+    /** Indicates if summary was "borrowed" from another PhyloTree instance
+        (if summary isn't borrowed, and isn't null, it needs to be deleted in the
+        destructor*/
     bool isSummaryBorrowed;
     
+    string distanceFileWritten;
+        /** Is set if/when a distance file has been written*/
+
+    
+    /** stack of tasks in progress (top of stack is innermost task) */
+    progress_display* progress;
+    int  progressStackDepth;
+    void initProgress(double size, std::string name, const char*, const char*);
+    void trackProgress(double amount);
+    void hideProgress();
+    void showProgress();
+    void doneProgress();
 };
 
 #endif

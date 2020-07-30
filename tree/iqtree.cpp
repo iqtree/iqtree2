@@ -24,6 +24,7 @@
 #include "phylosupertree.h"
 #include "phylosupertreeplen.h"
 #include "model/partitionmodelplen.h"
+#include "model/modelfactorymixlen.h"
 #include "mexttree.h"
 #include "utils/timeutil.h"
 #include "model/modelmarkov.h"
@@ -318,7 +319,9 @@ void IQTree::initSettings(Params &params) {
 //    max_candidate_trees = params.max_candidate_trees;
 //    if (max_candidate_trees == 0)
 //        max_candidate_trees = aln->getNSeq() * params.step_iterations;
-    setRootNode(params.root);
+    if (!params.compute_ml_tree_only) {
+        setRootNode(params.root);
+    }
 
     size_t i;
 
@@ -655,7 +658,6 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
     if (params->write_init_tree) {
         out_file += ".init_tree";
         printTree(out_file.c_str(), WT_NEWLINE);
-//        printTree(getTreeString().c_str(), WT_NEWLINE);
     }
 }
 
@@ -741,7 +743,6 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
             curParsTree = string(pllInst->tree_string);
             PhyloTree::readTreeStringSeqName(curParsTree);
             wrapperFixNegativeBranch(true);
-            curParsTree = getTreeString();
         } else if (params->start_tree == STT_RANDOM_TREE) {
             generateRandomTree(YULE_HARDING);
             wrapperFixNegativeBranch(true);
@@ -749,18 +750,18 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
                 rooted = false;
                 convertToRooted();
             }
-            curParsTree = getTreeString();
         } else if (params->start_tree == STT_PARSIMONY) {
             /********* Create parsimony tree using IQ-TREE *********/
 #ifdef _OPENMP
             PhyloTree::readTreeString(pars_trees[treeNr-1]);
-            curParsTree = getTreeString();
 #else
             computeParsimonyTree(NULL, aln, randstream);
-            curParsTree = getTreeString();
 #endif
+        } else {
+            //Use the tree we've already got!
         }
-        
+        curParsTree = getTreeString();
+
         int pos = addTreeToCandidateSet(curParsTree, -DBL_MAX, false, MPIHelper::getInstance().getProcessID());
         // if a duplicated tree is generated, then randomize the tree
         if (pos == -1) {
@@ -2103,6 +2104,30 @@ string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon) {
     return newTree;
 }
 
+string IQTree::ensureModelParametersAreSet(double initEpsilon) {
+    string initTree;
+    getModelFactory()->restoreCheckpoint();
+    if (getCheckpoint()->getBool("finishedModelInit")) {
+        // model optimization already done: ignore this step
+        if (!candidateTrees.empty()) {
+            readTreeString(getBestTrees()[0]);
+        }
+        setCurScore(computeLikelihood());
+        initTree = getTreeString();
+        cout << "CHECKPOINT: Model parameters restored, LogL: " << getCurScore() << endl;
+    } else {
+        initTree = optimizeModelParameters(true, initEpsilon);
+        if (isMixlen()) {
+            initTree = ((ModelFactoryMixlen*)getModelFactory())->sortClassesByTreeLength();
+        }
+        saveCheckpoint();
+        getModelFactory()->saveCheckpoint();
+        getCheckpoint()->putBool("finishedModelInit", true);
+        getCheckpoint()->dump();
+    }
+    return initTree;
+}
+
 void IQTree::printBestScores() {
     vector<double> bestScores = candidateTrees.getBestScores(params->popSize);
     for (vector<double>::iterator it = bestScores.begin(); it != bestScores.end(); it++)
@@ -2964,6 +2989,7 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI) {
         tabuSplits = initTabuSplits;
     }
 
+    initProgress(MAXSTEPS, "Optimizing NNI", "done", "step");
     double originalScore = curScore;
     for (numSteps = 1; numSteps <= MAXSTEPS; numSteps++) {
 
@@ -2972,7 +2998,7 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI) {
         if (save_all_trees == 2) {
             saveCurrentTree(curScore); // BQM: for new bootstrap
         }
-        if (verbose_mode >= VB_DEBUG) {
+        if (verbose_mode >= VB_DEBUG && !progress_display::getProgressDisplay()) {
             cout << "Doing NNI round " << numSteps << endl;
             if (isSuperTree()) {
                 ((PhyloSuperTree*) this)->printMapInfo();
@@ -3079,8 +3105,9 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI) {
         }
 
         if(curScore < oldScore - params->loglh_epsilon){
+            hideProgress();
             cout << "$$$$$$$$: " << curScore << "\t" << oldScore << "\t" << curScore - oldScore << endl;
-
+            showProgress();
         }
 
         if (curScore - oldScore <  params->loglh_epsilon)
@@ -3097,7 +3124,9 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI) {
         if (Params::getInstance().writeDistImdTrees) {
             intermediateTrees.update(getTreeString(), curScore);
         }
+        trackProgress(1);
     }
+    doneProgress();
 
     if (totalNNIApplied == 0 && verbose_mode >= VB_MED) {
         cout << "NOTE: Input tree is already NNI-optimal" << endl;
@@ -4187,6 +4216,23 @@ void PhyloTree::warnNumThreads() {
         outWarning("Number of threads seems too high for short alignments. Use -T AUTO to determine best number of threads.");
 }
 
+int PhyloTree::ensureNumberOfThreadsIsSet(Params *params) {
+    #ifdef _OPENMP
+        if (num_threads <= 0 ) {
+            int bestThreads = testNumThreads();
+            omp_set_num_threads(bestThreads);
+            if (params!=nullptr) {
+                params->num_threads = bestThreads;
+            }
+        } else {
+            warnNumThreads();
+        }
+        return num_threads;
+    #else
+        return 1;
+    #endif
+}
+
 int PhyloTree::testNumThreads() {
 #ifndef _OPENMP
     return 1;
@@ -4205,7 +4251,9 @@ int PhyloTree::testNumThreads() {
     trees.push_back(getTreeString());
     setLikelihoodKernel(sse);
 
-    for (int proc = 1; proc <= max_procs; proc++) {
+    initProgress(max_procs, "Determining AUTO threadcount", "tried", "threadcount");
+    for (int proc = 1; proc <= max_procs; ++proc) {
+        trackProgress(1.0);
         omp_set_num_threads(proc);
         setNumThreads(proc);
         initializeAllPartialLh();
@@ -4221,7 +4269,9 @@ int PhyloTree::testNumThreads() {
             // too fast, increase number of iterations
             if (runTime*10 < min_time && proc == 1 && tree == 0) {
                 int new_num_iter = 10;
+                hideProgress();
                 cout << "Increase to " << new_num_iter << " rounds for branch lengths" << endl;
+                showProgress();
                 logl = optimizeAllBranches(new_num_iter - num_iter);
                 num_iter = new_num_iter;
                 runTime = getRealTime() - beginTime;
@@ -4239,27 +4289,33 @@ int PhyloTree::testNumThreads() {
             curScore = saved_curScore;
         }
 
-        if (proc == 1)
+        if (proc == 1) {
+            hideProgress();
             cout << trees.size() << " trees examined" << endl;
+            showProgress();
+        }
 
         deleteAllPartialLh();
 
         runTimes.push_back(runTime);
         double speedup = runTimes[0] / runTime;
 
+        hideProgress();
         cout << "Threads: " << proc << " / Time: " << runTime << " sec / Speedup: " << speedup
             << " / Efficiency: " << (int)round(speedup*100/proc) << "% / LogL: " << (int)logl << endl;
+        showProgress();
 
         // break if too bad efficiency ( < 50%) or worse than than 10% of the best run time
-        if (speedup*2 <= proc || (runTime > runTimes[bestProc]*1.1 && proc>1))
+        if (speedup*2 <= proc || (runTime > runTimes[bestProc]*1.1 && proc>1)) {
             break;
+        }
 
         // update best threads if sufficient
-        if (runTime <= runTimes[bestProc]*0.95)
+        if (runTime <= runTimes[bestProc]*0.95) {
             bestProc = proc-1;
-
+        }
     }
-
+    doneProgress();
     readTreeString(trees[0]);
 
     cout << "BEST NUMBER OF THREADS: " << bestProc+1 << endl << endl;

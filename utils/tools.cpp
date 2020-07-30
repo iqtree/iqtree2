@@ -741,6 +741,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.experimental = true;
     params.compute_ml_dist = true;
     params.compute_ml_tree = true;
+    params.compute_ml_tree_only = false;
     params.budget_file = NULL;
     params.overlap = 0;
     params.is_rooted = false;
@@ -1350,6 +1351,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.compute_ml_dist = false;
 				continue;
 			}
+            std::string arg = argv[cnt];
+            //Todo; move this up, use == rather than strcmp elsewhere, too.
+            if (arg=="-mlnj-only" || arg=="--mlnj-only") {
+                params.compute_ml_tree_only = true;
+                continue;
+            }
 			if (strcmp(argv[cnt], "-dobs") == 0) {
 				params.compute_obs_dist = true;
 				continue;
@@ -4171,9 +4178,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.dating_options = argv[cnt];
                 continue;
             }
-            
-            std::string arg = argv[cnt];
-            //Todo; move this up, use == rather than strcmp elsewhere, too.
             if (arg=="-progress-bar" || arg=="--progress-bar" || arg=="-bar") {
                 progress_display::setProgressDisplay(true);
                 continue;

@@ -1713,7 +1713,9 @@ void initializeParams(Params &params, IQTree &iqtree)
     if (!ok_tree)
     {
         // compute initial tree
-        iqtree.computeInitialTree(params.SSE);
+        if (!params.compute_ml_tree_only) {
+            iqtree.computeInitialTree(params.SSE);
+        }
     }
     ASSERT(iqtree.aln);
 
@@ -1722,9 +1724,10 @@ void initializeParams(Params &params, IQTree &iqtree)
             outError("Weiss & von Haeseler test of model homogeneity only works for DNA");
         iqtree.aln->model_name = "GTR+G";
     }
-
     if (params.gbo_replicates)
+    {
         params.speed_conf = 1.0;
+    }
 
     // TODO: check if necessary
 //    if (iqtree.isSuperTree())
@@ -1761,12 +1764,10 @@ void pruneTaxa(Params &params, IQTree &iqtree, double *pattern_lh, NodeVector &p
         cout << "Pruned alignment contains " << iqtree.aln->getNSeq()
                 << " sequences and " << iqtree.aln->getNSite() << " sites and "
                 << iqtree.aln->getNPattern() << " patterns" << endl;
-        //tree.clearAllPartialLh();
         iqtree.initializeAllPartialLh();
         iqtree.clearAllPartialLH();
         iqtree.setCurScore(iqtree.optimizeAllBranches());
         //cout << "Log-likelihood    after reoptimizing model parameters: " << tree.curScore << endl;
-//        pair<int, int> nniInfo = iqtree.optimizeNNI();
         iqtree.optimizeNNI();
         cout << "Log-likelihood after optimizing partial tree: "
                 << iqtree.getCurScore() << endl;
@@ -2239,10 +2240,11 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         // replace iqtree object
         delete iqtree;
         iqtree = iqtree_new;
-
     }
 
-    iqtree->setRootNode(params.root);
+    if (!params.compute_ml_tree_only) {
+        iqtree->setRootNode(params.root);
+    }
 
     iqtree->restoreCheckpoint();
 
@@ -2332,161 +2334,151 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         }
     }
 
-
-#ifdef _OPENMP
-    if (iqtree->num_threads <= 0) {
-        int bestThreads = iqtree->testNumThreads();
-        omp_set_num_threads(bestThreads);
-        params.num_threads = bestThreads;
-    } else
-        iqtree->warnNumThreads();
-#endif
-
-
-    iqtree->initializeAllPartialLh();
+    bool   finishedInitTree = false;
     double initEpsilon = params.min_iterations == 0 ? params.modelEps : (params.modelEps*10);
-
-
-    if (iqtree->getRate()->name.find("+I+G") != string::npos) {
-        if (params.alpha_invar_file != NULL) { // COMPUTE TREE LIKELIHOOD BASED ON THE INPUT ALPHA AND P_INVAR VALUE
-            computeLoglFromUserInputGAMMAInvar(params, *iqtree);
-            exit(0);
-        }
-
-        if (params.exh_ai) {
-            exhaustiveSearchGAMMAInvar(params, *iqtree);
-            exit(0);
-        }
-
-    }
-
-    // Optimize model parameters and branch lengths using ML for the initial tree
     string initTree;
-    iqtree->clearAllPartialLH();
-
-    iqtree->getModelFactory()->restoreCheckpoint();
-    if (iqtree->getCheckpoint()->getBool("finishedModelInit")) {
-        // model optimization already done: ignore this step
-        if (!iqtree->candidateTrees.empty())
-            iqtree->readTreeString(iqtree->getBestTrees()[0]);
-        iqtree->setCurScore(iqtree->computeLikelihood());
-        initTree = iqtree->getTreeString();
-        cout << "CHECKPOINT: Model parameters restored, LogL: " << iqtree->getCurScore() << endl;
-    } else {
-        initTree = iqtree->optimizeModelParameters(true, initEpsilon);
-        if (iqtree->isMixlen())
-            initTree = ((ModelFactoryMixlen*)iqtree->getModelFactory())->sortClassesByTreeLength();
-
-        iqtree->saveCheckpoint();
-        iqtree->getModelFactory()->saveCheckpoint();
-        iqtree->getCheckpoint()->putBool("finishedModelInit", true);
-        iqtree->getCheckpoint()->dump();
-//        cout << "initTree: " << initTree << endl;
-    }
-
-    if (params.lmap_num_quartets >= 0) {
-        cout << endl << "Performing likelihood mapping with ";
-        if (params.lmap_num_quartets > 0)
-            cout << params.lmap_num_quartets;
-        else
-            cout << "all";
-        cout << " quartets..." << endl;
-        double lkmap_time = getRealTime();
-        iqtree->doLikelihoodMapping();
-        cout << "Likelihood mapping needed " << getRealTime()-lkmap_time << " seconds" << endl << endl;
-    }
+    //None of his will work until there is actually a tree
+    //(we cannot do it until we *have* one).
+    if (!params.compute_ml_tree_only) {
+        iqtree->ensureNumberOfThreadsIsSet(&params);
     
-    // TODO: why is this variable not used? 
-    // ANSWER: moved to doTreeSearch
-//    bool finishedCandidateSet = iqtree.getCheckpoint()->getBool("finishedCandidateSet");
-    bool finishedInitTree = iqtree->getCheckpoint()->getBool("finishedInitTree");
-
-    // now overwrite with random tree
-    if (params.start_tree == STT_RANDOM_TREE && !finishedInitTree) {
-        cout << "Generate random initial Yule-Harding tree..." << endl;
-        iqtree->generateRandomTree(YULE_HARDING);
-        iqtree->wrapperFixNegativeBranch(true);
         iqtree->initializeAllPartialLh();
-        initTree = iqtree->optimizeBranches(params.brlen_num_traversal);
-        cout << "Log-likelihood of random tree: " << iqtree->getCurScore() << endl;
-    }
-
-    /****************** NOW PERFORM MAXIMUM LIKELIHOOD TREE RECONSTRUCTION ******************/
-
-    // Update best tree
-    if (!finishedInitTree) {
-        iqtree->addTreeToCandidateSet(initTree, iqtree->getCurScore(), false, MPIHelper::getInstance().getProcessID());
-        iqtree->printResultTree();
-        iqtree->intermediateTrees.update(iqtree->getTreeString(), iqtree->getCurScore());
-        if (iqtree->isSuperTreeUnlinked()) {
-            PhyloSuperTree* stree = (PhyloSuperTree*)iqtree;
-            for (auto it = stree->begin(); it != stree->end(); it++)
-                ((IQTree*)(*it))->addTreeToCandidateSet((*it)->getTreeString(),
-                    (*it)->getCurScore(), false, MPIHelper::getInstance().getProcessID());
+        
+        if (iqtree->getRate()->name.find("+I+G") != string::npos) {
+            if (params.alpha_invar_file != NULL) { // COMPUTE TREE LIKELIHOOD BASED ON THE INPUT ALPHA AND P_INVAR VALUE
+                computeLoglFromUserInputGAMMAInvar(params, *iqtree);
+                exit(0);
+            }
+            if (params.exh_ai) {
+                exhaustiveSearchGAMMAInvar(params, *iqtree);
+                exit(0);
+            }
         }
+        
+        // Optimize model parameters and branch lengths using ML for the initial tree
+        iqtree->clearAllPartialLH();
+        initTree = iqtree->ensureModelParametersAreSet(initEpsilon);
+        
+        
+        if (params.lmap_num_quartets >= 0) {
+            cout << endl << "Performing likelihood mapping with ";
+            if (params.lmap_num_quartets > 0)
+                cout << params.lmap_num_quartets;
+            else
+                cout << "all";
+            cout << " quartets..." << endl;
+            double lkmap_time = getRealTime();
+            iqtree->doLikelihoodMapping();
+            cout << "Likelihood mapping needed " << getRealTime()-lkmap_time << " seconds" << endl << endl;
+        }
+        
+        finishedInitTree = iqtree->getCheckpoint()->getBool("finishedInitTree");
+        
+        // now overwrite with random tree
+        if (params.start_tree == STT_RANDOM_TREE && !finishedInitTree) {
+            cout << "Generate random initial Yule-Harding tree..." << endl;
+            iqtree->generateRandomTree(YULE_HARDING);
+            iqtree->wrapperFixNegativeBranch(true);
+            iqtree->initializeAllPartialLh();
+            initTree = iqtree->optimizeBranches(params.brlen_num_traversal);
+            cout << "Log-likelihood of random tree: " << iqtree->getCurScore() << endl;
+        }
+        
+        /****************** NOW PERFORM MAXIMUM LIKELIHOOD TREE RECONSTRUCTION ******************/
+        
+        // Update best tree
+        if (!finishedInitTree) {
+            iqtree->addTreeToCandidateSet(initTree, iqtree->getCurScore(), false, MPIHelper::getInstance().getProcessID());
+            iqtree->printResultTree();
+            iqtree->intermediateTrees.update(iqtree->getTreeString(), iqtree->getCurScore());
+            if (iqtree->isSuperTreeUnlinked()) {
+                PhyloSuperTree* stree = (PhyloSuperTree*)iqtree;
+                for (auto it = stree->begin(); it != stree->end(); it++)
+                    ((IQTree*)(*it))->addTreeToCandidateSet((*it)->getTreeString(),
+                                                            (*it)->getCurScore(), false, MPIHelper::getInstance().getProcessID());
+            }
+        }
+        
+        if (params.min_iterations && !iqtree->isBifurcating()) {
+            outError("Tree search does not work with initial multifurcating tree. Please specify `-n 0` to avoid this.");
+        }
+        
+        // Compute maximum likelihood distance
+        // ML distance is only needed for NNI/IQP
+        
+        if ((params.min_iterations <= 1 || params.numInitTrees <= 1) && params.start_tree != STT_BIONJ) {
+            params.compute_ml_dist = false;
+        }
+        if ((params.user_file || params.start_tree == STT_RANDOM_TREE) && params.snni && !params.iqp) {
+            params.compute_ml_dist = false;
+        }
+        if (params.constraint_tree_file) {
+            params.compute_ml_dist = false;
+        }
+        if (iqtree->isSuperTreeUnlinked()) {
+            params.compute_ml_dist = false;
+        }
+        //Todo: Check: is it always true that we've done this, if we reach this line?
+        cout << "Wrote distance file to... " << iqtree->getDistanceFileWritten() << endl;
     }
-
-    if (params.min_iterations && !iqtree->isBifurcating())
-        outError("Tree search does not work with initial multifurcating tree. Please specify `-n 0` to avoid this.");
-
-    // Compute maximum likelihood distance
-    // ML distance is only needed for IQP
-//    if ( params.start_tree != STT_BIONJ && ((params.snni && !params.iqp) || params.min_iterations == 0)) {
-//        params.compute_ml_dist = false;
-//    }
-    if ((params.min_iterations <= 1 || params.numInitTrees <= 1) && params.start_tree != STT_BIONJ)
-        params.compute_ml_dist = false;
-
-    if ((params.user_file || params.start_tree == STT_RANDOM_TREE) && params.snni && !params.iqp) {
-        params.compute_ml_dist = false;
+    bool wantMLDistances = MPIHelper::getInstance().isMaster() && !iqtree->getCheckpoint()->getBool("finishedCandidateSet");
+    if (wantMLDistances) {
+        wantMLDistances = !finishedInitTree && ((!params.dist_file && params.compute_ml_dist) || params.leastSquareBranch);
     }
-
-    if (params.constraint_tree_file)
-        params.compute_ml_dist = false;
-    
-    if (iqtree->isSuperTreeUnlinked())
-        params.compute_ml_dist = false;
-
-    //Generate BIONJ tree
-    if (MPIHelper::getInstance().isMaster() && !iqtree->getCheckpoint()->getBool("finishedCandidateSet")) {
-        if (!finishedInitTree && ((!params.dist_file && params.compute_ml_dist) || params.leastSquareBranch)) {
-            computeMLDist(params, *iqtree, getRealTime(), getCPUTime());
-            bool wasMLDistanceWrittenToFile = false;
-            if (!params.user_file) {
-                if (params.start_tree != STT_RANDOM_TREE) {
+        
+    //Compute ML distances, and generate BIONJ tree from those
+    if (wantMLDistances || params.compute_ml_tree_only) {
+        computeMLDist(params, *iqtree, getRealTime(), getCPUTime());
+        bool wasMLDistanceWrittenToFile = false;
+        if (!params.user_file) {
+            if (params.start_tree != STT_RANDOM_TREE) {
+                if (!params.compute_ml_tree_only) {
                     iqtree->resetCurScore();
-                    double start_bionj = getRealTime();
-                    iqtree->computeBioNJ(params);
-                    if (verbose_mode >= VB_MED) {
-                        cout << "Wall-clock time spent creating initial tree was "
-                        << getRealTime() - start_bionj << " seconds" << endl;
-                    }
-                    wasMLDistanceWrittenToFile  = !params.dist_file;
-                    if (iqtree->isSuperTree())
-                        iqtree->wrapperFixNegativeBranch(true);
-                    else
-                        iqtree->wrapperFixNegativeBranch(false);
+                }
+                double start_bionj = getRealTime();
+                iqtree->computeBioNJ(params);
+                if (verbose_mode >= VB_MED) {
+                    cout << "Wall-clock time spent creating initial tree was "
+                    << getRealTime() - start_bionj << " seconds" << endl;
+                }
+                wasMLDistanceWrittenToFile  = !params.dist_file;
+                if (params.compute_ml_tree_only) {
+                    iqtree->initializeAllPartialPars();
+                    iqtree->clearAllPartialLH();
+                    iqtree->fixNegativeBranch(iqtree->isSuperTree());
+                    //Because wrapperFixNegativeBranch resets the score,
+                    //and that complains if the number of threads isn't set.
+                    //(but... if you set the number of threads first, it
+                    //complains about the negative path lengths).
+                    
+                    //This fails if there are any lengths <=0 (so it has to
+                    //go after the fix-up for negative branch lengths).
+                    auto threadCount = iqtree->ensureNumberOfThreadsIsSet(&params);
+                    cout << "Number of threads is " << threadCount << endl;
+                    initTree = iqtree->ensureModelParametersAreSet(initEpsilon);
+                } else {
+                    iqtree->wrapperFixNegativeBranch(iqtree->isSuperTree());
                     iqtree->initializeAllPartialLh();
                     if (params.start_tree == STT_BIONJ) {
                         initTree = iqtree->optimizeModelParameters(params.min_iterations==0, initEpsilon);
                     } else {
                         initTree = iqtree->optimizeBranches();
                     }
-                    cout << "Log-likelihood of " << params.start_tree_subtype_name
-                        << " tree: " << iqtree->getCurScore() << endl;
-                    iqtree->candidateTrees.update(initTree, iqtree->getCurScore());
                 }
+                cout << "Log-likelihood of " << params.start_tree_subtype_name
+                    << " tree: " << iqtree->getCurScore() << endl;
+                iqtree->candidateTrees.update(initTree, iqtree->getCurScore());
             }
-            if (!wasMLDistanceWrittenToFile && !params.dist_file) {
-                double write_begin_time = getRealTime();
-                iqtree->printDistanceFile();
-                if (verbose_mode >= VB_MED) {
-                    #ifdef _OPENMP
-                    #pragma omp critical (io)
-                    #endif
-                    cout << "Time taken to write distance file ( " << iqtree->dist_file << ") : "
-                    << getRealTime() - write_begin_time << " seconds " << endl;
-                }
+        }
+        if (!wasMLDistanceWrittenToFile && !params.dist_file) {
+            double write_begin_time = getRealTime();
+            iqtree->printDistanceFile();
+            if (verbose_mode >= VB_MED) {
+                #ifdef _OPENMP
+                #pragma omp critical (io)
+                #endif
+                cout << "Time taken to write distance file ( " << iqtree->dist_file << ") : "
+                << getRealTime() - write_begin_time << " seconds " << endl;
             }
         }
     }
@@ -2568,8 +2560,6 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
             string tree;
             Params::getInstance().fixStableSplits = false;
             Params::getInstance().tabu = false;
-            // why doing NNI search here?
-//            iqtree->doNNISearch();
             tree = iqtree->optimizeModelParameters(true);
             iqtree->addTreeToCandidateSet(tree, iqtree->getCurScore(), false, MPIHelper::getInstance().getProcessID());
             iqtree->getCheckpoint()->putBool("finishedModelFinal", true);
@@ -3427,13 +3417,7 @@ void computeSiteFrequencyModel(Params &params, Alignment *alignment) {
     }
 #endif
 
-#ifdef _OPENMP
-    if (tree->num_threads <= 0) {
-        int bestThreads = tree->testNumThreads();
-        omp_set_num_threads(bestThreads);
-    } else
-        tree->warnNumThreads();
-#endif
+    tree->ensureNumberOfThreadsIsSet(nullptr);
 
     tree->initializeAllPartialLh();
     // 2017-12-07: Increase espilon ten times (0.01 -> 0.1) to speedup PMSF computation

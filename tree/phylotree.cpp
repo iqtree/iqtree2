@@ -136,6 +136,8 @@ void PhyloTree::init() {
     safe_numeric = false;
     summary = nullptr;
     isSummaryBorrowed = false;
+    progress = nullptr;
+    progressStackDepth = 0;
 }
 
 PhyloTree::PhyloTree(Alignment *aln) : MTree(), CheckpointFactory() {
@@ -250,6 +252,9 @@ PhyloTree::~PhyloTree() {
         delete summary;
     }
     summary = nullptr;
+    delete progress;
+    progress = nullptr;
+    progressStackDepth = 0;
 }
 
 void PhyloTree::readTree(const char *infile, bool &is_rooted) {
@@ -2674,6 +2679,7 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
     }
     DoubleVector lenvec;
     //cout << tree_lh << endl;
+    initProgress(my_iterations*nodes.size(), "Optimizing branch lengths", "", "");
     for (int i = 0; i < my_iterations; i++) {
 //        string string_brlen = getTreeString();
         saveBranchLengths(lenvec);
@@ -2684,8 +2690,11 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
         for (int j = 0; j < nodes.size(); j++) {
             optimizeOneBranch((PhyloNode*)nodes[j], (PhyloNode*)nodes2[j]);
             if (verbose_mode >= VB_MAX) {
+                hideProgress();
                 cout << "Branch " << nodes[j]->id << " " << nodes2[j]->id << ": " << computeLikelihoodFromBuffer() << endl;
+                showProgress();
             }
+            trackProgress(1);
         }
 
 //        if (i == 0) 
@@ -2704,8 +2713,10 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
         //cout<<"After opt  log-lh = "<<new_tree_lh<<endl;
 
         if (verbose_mode >= VB_MAX) {
+            hideProgress();
             cout << "Likelihood after iteration " << i + 1 << " : ";
             cout << new_tree_lh << endl;
+            showProgress();
         }
 
 //        if (verbose_mode >= VB_DEBUG) {
@@ -2722,9 +2733,12 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
 
         if (new_tree_lh < tree_lh - tolerance*0.1) {
             // IN RARE CASE: tree log-likelihood decreases, revert the branch length and stop
-            if (verbose_mode >= VB_MED)
+            if (verbose_mode >= VB_MED) {
+                hideProgress();
                 cout << "NOTE: Restoring branch lengths as tree log-likelihood decreases after branch length optimization: "
                     << tree_lh << " -> " << new_tree_lh << endl;
+                showProgress();
+            }
 
             clearAllPartialLH();
             restoreBranchLengths(lenvec);
@@ -2736,10 +2750,13 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
             if (aln->seq_type == SEQ_POMO) max_delta_lh = 3.0;
             new_tree_lh = computeLikelihood();
             if (fabs(new_tree_lh-tree_lh) > max_delta_lh) {
+                hideProgress();
                 printTree(cout);
                 cout << endl;
                 cout << "new_tree_lh: " << new_tree_lh << "   tree_lh: " << tree_lh << endl;
+                showProgress();
             }
+            doneProgress();
             ASSERT(fabs(new_tree_lh-tree_lh) < max_delta_lh);
             return new_tree_lh;
         }
@@ -2747,11 +2764,13 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
         // only return if the new_tree_lh >= tree_lh! (in rare case that likelihood decreases, continue the loop)
         if (tree_lh <= new_tree_lh && new_tree_lh <= tree_lh + tolerance) {
             curScore = new_tree_lh;
+            doneProgress();
             return new_tree_lh;
         }
         tree_lh = new_tree_lh;
     }
     curScore = tree_lh;
+    doneProgress();
     return tree_lh;
 }
 
@@ -3001,7 +3020,6 @@ void PhyloTree::growTreeML(Alignment *alignment) {
 
     // stepwise adding the next taxon
     for (leafNum = 3; leafNum < size; leafNum++) {
-
         cout << "Add " << aln->getSeqName(leafNum) << " to the tree" << endl;
         // allocate a new taxon and a new ajedcent internal node
         new_taxon = newNode(leafNum, aln->getSeqName(leafNum).c_str());
@@ -3025,7 +3043,6 @@ void PhyloTree::growTreeML(Alignment *alignment) {
         // compute the likelihood
         clearAllPartialLH();
         optimizeAllBranches();
-        //optimizeNNI();
     }
 
     nodeNum = 2 * leafNum - 2;
@@ -3472,6 +3489,7 @@ double PhyloTree::computeDist(Params &params, Alignment *alignment, double* &dis
 
 void PhyloTree::printDistanceFile() {
     aln->printDist(dist_file.c_str(), dist_matrix);
+    distanceFileWritten = dist_file.c_str();
 }
 
 double PhyloTree::computeObsDist(double *dist_mat) {
@@ -5905,3 +5923,45 @@ void PhyloTree::writeBranches(ostream &out) {
     outError("Please only use this feature with partition model");
 }
 
+const string& PhyloTree::getDistanceFileWritten() const {
+    return distanceFileWritten;
+}
+
+    
+void PhyloTree::initProgress(double size, std::string name, const char* verb, const char* noun) {
+    {
+        ++progressStackDepth;
+        if (progressStackDepth==1) {
+            progress = new progress_display(size, name.c_str(), verb, noun);
+        }
+    }
+}
+    
+void PhyloTree::trackProgress(double amount) {
+    if (progressStackDepth==1) {
+        (*progress) += amount;
+    }
+}
+
+void PhyloTree::hideProgress() {
+    if (progressStackDepth>0) {
+        progress->hide();
+    }
+}
+
+void PhyloTree::showProgress() {
+    if (progressStackDepth>0) {
+        progress->show();
+    }
+}
+
+void PhyloTree::doneProgress() {
+    {
+        --progressStackDepth;
+        if (progressStackDepth==0) {
+            progress->done();
+            delete progress;
+            progress = nullptr;
+        }
+    }
+}
