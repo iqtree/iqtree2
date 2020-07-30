@@ -238,11 +238,15 @@ public:
         	next_pos = it->second.find(", ", pos);
             CkpStream ss(it->second.substr(pos, next_pos-pos));
             T val;
-        	if (ss >> val)
+            if (ss >> val) {
                 value.push_back(val);
-            else
+            }
+            else {
                 break;
-        	if (next_pos == string::npos) break;
+            }
+            if (next_pos == string::npos) {
+                break;
+            }
         	pos = next_pos+2;
         }
         return true;

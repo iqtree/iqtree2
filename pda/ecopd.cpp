@@ -913,27 +913,34 @@ void ECOpd::printInfDAG (const char* fileOUT,PDNetwork &splitsys, Params &params
 	}
 //Constraints----------------------------------------------------------------------
 	//species present in the set-----------------------------------------------
-	if(initialTaxa.size()!=0)
-		for(i=0;i<initialTaxa.size();i++)
-			out<<"x"<<findSpeciesIDname(&initialTaxa[i])<<" = 1"<<endl;
+	if (initialTaxa.size() != 0) {
+		for (i = 0; i < initialTaxa.size(); i++) {
+			out << "x" << findSpeciesIDname(&initialTaxa[i]) << " = 1" << endl;
+		}
+	}
 	//the sum of all species is <= k-------------------------------------------
-			for(i=0;i<nvar-1;i++)
-				out<<"x"<<i<<" + ";
-			out<<"x"<<nvar-1<<" <= "<<nspecies<<endl;
+	for (i = 0; i < nvar - 1; i++) {
+		out << "x" << i << " + ";
+	}
+	out<<"x"<<nvar-1<<" <= "<<nspecies<<endl;
 	//the sum of leaves in the DAG is >= to 1----------------------------------
-			int nleafDAG=0,nleaf=0;
-			for(i=0;i<nvar;i++)
-				if(levelDAG[i]==0)
-					nleafDAG++;
-			for(j=0;j<nvar;j++){
-				if(taxaDAG[j]->degree()==0){
-				nleaf++;
-				if(nleaf<nleafDAG)
-					out<<"x"<<taxaDAG[j]->id<<" + ";
-				else
-					out<<"x"<<taxaDAG[j]->id<<" >= 1"<<endl;
-				}
+	int nleafDAG=0,nleaf=0;
+	for (i = 0; i < nvar; i++) {
+		if (levelDAG[i] == 0) {
+			nleafDAG++;
+		}
+	}
+	for(j=0;j<nvar;j++){
+		if (taxaDAG[j]->degree() == 0) {
+			nleaf++;
+			if (nleaf < nleafDAG) {
+				out << "x" << taxaDAG[j]->id << " + ";
 			}
+			else {
+				out << "x" << taxaDAG[j]->id << " >= 1" << endl;
+			}
+		}
+	}
 	//SURVIVAL CONSTRAINT
 	if(weighted){
 		//constraint: Weighted food web. Sum of weights is greater than a given threshold--------------------------------

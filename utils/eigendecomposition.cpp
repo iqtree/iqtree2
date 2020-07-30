@@ -61,24 +61,27 @@ void EigenDecomposition::eigensystem(
 	memcpy(forg, state_freq, num_state * sizeof(double));
     // BQM 2015-09-07: normalize state frequencies to 1
     double sum = 0.0;
-    for (i = 0; i < num_state; i++) 
-        sum += forg[i];
+	for (i = 0; i < num_state; i++) {
+		sum += forg[i];
+	}
     sum = 1.0/sum;
-    for (i = 0; i < num_state; i++) 
-        forg[i] *= sum;
-
-	for (i = 0; i < num_state; i++)
-		memcpy(a[i], rate_params[i], num_state * sizeof(double)); 
-
+	for (i = 0; i < num_state; i++) {
+		forg[i] *= sum;
+	}
+	for (i = 0; i < num_state; i++) {
+		memcpy(a[i], rate_params[i], num_state * sizeof(double));
+	}
 	//rtfdata(a, forg, num_state); 
 	//    write (a, forg);
 
 	computeRateMatrix(a, forg, num_state); /* make 1 PAM rate matrix */
 
 	/* copy a to b */
-	for (i = 0; i < num_state; i++)
-		for (j = 0; j < num_state; j++)
+	for (i = 0; i < num_state; i++) {
+		for (j = 0; j < num_state; j++) {
 			b[i][j] = a[i][j];
+		}
+	}
 
 	eliminateZero(b, forg, num_state, a, new_forg, new_num);
 
@@ -173,35 +176,39 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 	double error = 0.0;
 	double zero;
 
-	for (i=0; i < num_state; i++)
+	for (i = 0; i < num_state; i++) {
 		a[i] = new double[num_state];
-	for (i=0; i < num_state; i++)
+	}
+	for (i = 0; i < num_state; i++) {
 		b[i] = new double[num_state];
-
+	}
 	/* get relative transition matrix and frequencies */
 	memcpy(forg, state_freq, num_state * sizeof(double));
     
     // BQM 2015-09-07: normalize state frequencies to 1
     double sum = 0.0;
-    for (i = 0; i < num_state; i++) 
-        sum += forg[i];
+	for (i = 0; i < num_state; i++) {
+		sum += forg[i];
+	}
     sum = 1.0/sum;
-    for (i = 0; i < num_state; i++) 
-        forg[i] *= sum;
-
+	for (i = 0; i < num_state; i++) {
+		forg[i] *= sum;
+	}
     
-	for (i = 0; i < num_state; i++)
-		memcpy(a[i], rate_params[i], num_state * sizeof(double)); 
-
+	for (i = 0; i < num_state; i++) {
+		memcpy(a[i], rate_params[i], num_state * sizeof(double));
+	}
 	//rtfdata(a, forg, num_state); 
 	//    write (a, forg);
 
 	computeRateMatrix(a, forg, num_state); /* make 1 PAM rate matrix */
 
 	/* copy a to b */
-	for (i = 0; i < num_state; i++)
-		for (j = 0; j < num_state; j++)
+	for (i = 0; i < num_state; i++) {
+		for (j = 0; j < num_state; j++) {
 			b[i][j] = a[i][j];
+		}
+	}
 
 	eliminateZero(b, forg, num_state, a, new_forg, new_num);
 
@@ -339,15 +346,16 @@ void EigenDecomposition::eigensystem_nonrev(
 	memcpy(forg, state_freq, num_state * sizeof(double));
     // BQM 2015-09-07: normalize state frequencies to 1
     double sum = 0.0;
-    for (i = 0; i < num_state; i++)
-        sum += forg[i];
+	for (i = 0; i < num_state; i++) {
+		sum += forg[i];
+	}
     sum = 1.0/sum;
-    for (i = 0; i < num_state; i++)
-        forg[i] *= sum;
-
-	for (i = 0; i < num_state; i++)
-		memcpy(a[i], &rate_matrix[i*num_state], num_state * sizeof(double));
-
+	for (i = 0; i < num_state; i++) {
+		forg[i] *= sum;
+	}
+	for (i = 0; i < num_state; i++) {
+		memcpy(a[i], &rate_matrix[i * num_state], num_state * sizeof(double));
+	}
 	//rtfdata(a, forg, num_state);
 	//    write (a, forg);
 
@@ -370,12 +378,12 @@ void EigenDecomposition::eigensystem_nonrev(
 	hqr2(new_num, 1, new_num, a, evec_new, eval_new, evali);
     
     // check that complex eigenvalues are conjugated
-    for (i = 0; i < new_num; i++)
-        if (evali[i] != 0.0) {
-            ASSERT(i < new_num-1 && evali[i+1] != 0.0);
-            i++;
-        }
-
+	for (i = 0; i < new_num; i++) {
+		if (evali[i] != 0.0) {
+			ASSERT(i < new_num - 1 && evali[i + 1] != 0.0);
+			i++;
+		}
+	}
 	luinverse(evec_new, inv_evec_new, num_state); /* inverse eigenvectors are in Ievc */
 
 	// now get back eigen

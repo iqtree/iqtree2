@@ -54,15 +54,17 @@ void RateGammaInvar::saveCheckpoint() {
 void RateGammaInvar::restoreCheckpoint() {
     // should restore p_invar first before gamma, because RateGamma will call computeRates()
     RateInvar::restoreCheckpoint();
-    for (int cat = 0; cat < ncategory; cat++)
-        rates[cat] = 1.0/(1.0-p_invar);
+    for (int cat = 0; cat < ncategory; cat++) {
+        rates[cat] = 1.0 / (1.0 - p_invar);
+    }
     RateGamma::restoreCheckpoint();
 }
 
 void RateGammaInvar::setNCategory(int ncat) {
 	RateGamma::setNCategory(ncat);
-    for (int cat = 0; cat < ncategory; cat++)
-        rates[cat] = 1.0/(1.0-p_invar);
+    for (int cat = 0; cat < ncategory; cat++) {
+        rates[cat] = 1.0 / (1.0 - p_invar);
+    }
 	name = "+I" + name;
 	full_name = "Invar+" + full_name;
 	computeRates();

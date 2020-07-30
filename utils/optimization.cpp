@@ -1141,8 +1141,9 @@ double Optimization::L_BFGS_B(int n, double* x, double* l, double* u, double pgt
 	// Default is zero, when the check is suppressed
 
 	int trace = 0;      // non-negative integer.
-    if (verbose_mode >= VB_MAX)
-        trace = 1;
+	if (verbose_mode >= VB_MAX) {
+		trace = 1;
+	}
 	// If positive, tracing information on the progress of the optimization is produced.
 	// Higher values may produce more tracing information.
 

@@ -1065,14 +1065,18 @@ bool ModelMarkov::isUnstableParameters() {
 	int nrates = getNumRateEntries();
 	int i;
     // NOTE: zero rates are not consider unstable anymore
-	for (i = 0; i < nrates; i++)
-		if (/*rates[i] < MIN_RATE+TOL_RATE || */rates[i] > MAX_RATE*0.99)
-			return true;
-
-    if (freq_type == FREQ_ESTIMATE)
-	for (i = 0; i < num_states; i++)
-		if (state_freq[i] > 0.0 && state_freq[i] < MIN_RATE+TOL_RATE)
-			return true;
+    for (i = 0; i < nrates; i++) {
+        if (/*rates[i] < MIN_RATE+TOL_RATE || */rates[i] > MAX_RATE * 0.99) {
+            return true;
+        }
+    }
+    if (freq_type == FREQ_ESTIMATE) {
+        for (i = 0; i < num_states; i++) {
+            if (state_freq[i] > 0.0 && state_freq[i] < MIN_RATE + TOL_RATE) {
+                return true;
+            }
+        }
+    }
 	return false;
 }
 
@@ -1125,9 +1129,11 @@ double ModelMarkov::optimizeParameters(double gradient_epsilon) {
 	bool *bound_check = new bool[ndim+1];
 	double score;
 
-    for (int i = 0; i < num_states; i++)
-        if (state_freq[i] > state_freq[highest_freq_state])
+    for (int i = 0; i < num_states; i++) {
+        if (state_freq[i] > state_freq[highest_freq_state]) {
             highest_freq_state = i;
+        }
+    }
 
 	// by BFGS algorithm
 	setVariables(variables);
@@ -1741,9 +1747,10 @@ void ModelMarkov::readParametersString(string &model_str, bool adapt_tree) {
     d = convert_double(model_str.c_str(), end_pos);
     if (d < 0) {
         setReversible(false, adapt_tree);
-    } else
+    }
+    else {
         setReversible(true, adapt_tree);
-
+    }
 	try {
 		stringstream in(model_str);
 		readRates(in);
