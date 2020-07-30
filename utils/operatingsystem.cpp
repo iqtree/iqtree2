@@ -9,7 +9,9 @@
 #include <string>
 #include <sstream>
 #if defined(WIN32) || defined(WIN64)
-#include <io.h> //for _isatty
+    #include <io.h> //for _isatty
+#else
+    #include <unistd.h> //for isatty
 #endif
 
 std::string getOSName() {
