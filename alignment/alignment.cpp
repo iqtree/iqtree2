@@ -19,6 +19,7 @@
 #include "utils/gzstream.h"
 #include "utils/timeutil.h" //for getRealTime()
 #include "utils/progress.h" //for progress_display
+#include "alignmentsummary.h"
 
 #include <Eigen/LU>
 #ifdef USE_BOOST
@@ -172,21 +173,21 @@ void Alignment::checkSeqName() {
         return;
     }
     
-    double *state_freq = new double[num_states];
-    double *freq_per_sequence = new double[num_states];
+    double state_freq[num_states];
     unsigned *count_per_seq = new unsigned[num_states*getNSeq()];
     computeStateFreq(state_freq);
     countStatePerSequence(count_per_seq);
 
-    int i, df = -1;
-    for (i = 0; i < num_states; i++)
-        if (state_freq[i] > 0.0) df++;
-    
-    if (seq_type == SEQ_POMO)
+    int df = -1; //degrees of freedom (for a chi-squared test)
+    for (int i = 0; i < num_states; i++) {
+        if (state_freq[i] > 0.0) {
+            df++;
+        }
+    }    
+    if (seq_type == SEQ_POMO) {
         cout << "NOTE: The composition test for PoMo only tests the proportion of fixed states!" << endl;
-
+    }
     bool listSequences = !Params::getInstance().suppress_list_of_sequences;
-    
     int max_len = getMaxSeqNameLength()+1;
     if (listSequences) {
         cout.width(max_len+14);
@@ -196,79 +197,121 @@ void Alignment::checkSeqName() {
     int total_gaps = 0;
     cout.precision(2);
     int num_failed = 0;
-    for (i = 0; i < seq_names.size(); i++) {
-        int j;
-        int num_gaps = getNSite() - countProperChar(i);
-        total_gaps += num_gaps;
-        double percent_gaps = ((double)num_gaps / getNSite())*100.0;
-        if (listSequences) {
-            cout.width(4);
-            cout << right << i+1 << "  ";
-            cout.width(max_len);
-            cout << left << seq_names[i] << " ";
-            cout.width(6);
-            cout << right << percent_gaps << "%";
+
+    size_t numSequences   = seq_names.size();
+    size_t numSites       = getNSite();
+    char   maxProperState = static_cast<char>(num_states + pomo_sampled_states.size());
+    AlignmentSummary s(this, true, true);
+
+    //The progress bar, displayed by s.constructSequenceMatrixNoisily,
+    //lies a bit here.  We're not counting gap characters,
+    //we are constructing the sequences (so we can count gap characters quickly).
+    s.constructSequenceMatrixNoisily(false, "Analyzing sequences", "counted gaps in");
+
+    struct SequenceInfo {
+        double percent_gaps;
+        bool   failed;
+        double pvalue;
+    };
+    SequenceInfo* seqInfo = new SequenceInfo[numSequences];
+
+    #ifdef _OPENMP
+    #pragma omp parallel for reduction(+:total_gaps,num_problem_seq,num_failed)
+    #endif
+    for (size_t i = 0; i < numSequences; i++) {
+        size_t num_gaps = numSites;
+        if (s.sequenceMatrix!=nullptr) {
+            //Discount the non-gap characters with a (not-yet-vectorized)
+            //sweep over the sequence.
+            const char* sequence = s.sequenceMatrix + i * s.sequenceLength;
+            for (size_t scan = 0; scan<s.sequenceLength; ++scan) {
+                if (sequence[scan] < maxProperState) {
+                    num_gaps -= s.siteFrequencies[scan];
+                }
+            }
+        } else {
+            //Do the discounting the hard way
+            num_gaps -= countProperChar(i);
         }
-        if (percent_gaps > 50) {
+        total_gaps += num_gaps;
+        seqInfo[i].percent_gaps = ((double)num_gaps / getNSite()) * 100.0;
+        if ( 50.0 < seqInfo[i].percent_gaps ) {
             num_problem_seq++;
         }
-
+        size_t iRow = i * num_states;
+        double freq_per_sequence[num_states];
         double chi2 = 0.0;
         unsigned sum_count = 0;
         double pvalue;
-
         if (seq_type == SEQ_POMO) {
-            // FIXME: Number of nucleotides hardcoded here.
-            int nnuc = 4;
-            df = nnuc-1;
             // Have to normalize allele frequencies.
-            double state_freq_norm[4];
+            double state_freq_norm[num_states];
             double sum_freq = 0.0;
-            for (j = 0; j < nnuc; j++) {
+            for (int j = 0; j < num_states; j++) {
                 sum_freq += state_freq[j];
                 state_freq_norm[j] = state_freq[j];
             }
-            for (j = 0; j < nnuc; j++) {
+            for (int j = 0; j < num_states; j++) {
                 state_freq_norm[j] /= sum_freq;
             }
-
-            for (j = 0; j < nnuc; j++)
-                sum_count += count_per_seq[i*num_states+j];
-            double sum_inv = 1.0/sum_count;
-            for (j = 0; j < nnuc; j++)
-                freq_per_sequence[j] = count_per_seq[i*num_states+j]*sum_inv;
-            for (j = 0; j < nnuc; j++)
+            for (int j = 0; j < num_states; j++) {
+                sum_count += count_per_seq[iRow + j];
+            }
+            double sum_inv = 1.0 / sum_count;
+            for (int j = 0; j < num_states; j++) {
+                freq_per_sequence[j] = count_per_seq[iRow + j] * sum_inv;
+            }
+            for (int j = 0; j < num_states; j++) {
                 chi2 += (state_freq_norm[j] - freq_per_sequence[j]) * (state_freq_norm[j] - freq_per_sequence[j]) / state_freq_norm[j];
-
-            // chi2 *= getNSite();
-            chi2 *= sum_count;
-            pvalue = chi2prob(nnuc-1, chi2);
-        } else {
-            for (j = 0; j < num_states; j++)
-                sum_count += count_per_seq[i*num_states+j];
-            double sum_inv = 1.0/sum_count;
-            for (j = 0; j < num_states; j++)
-                freq_per_sequence[j] = count_per_seq[i*num_states+j]*sum_inv;
-            for (j = 0; j < num_states; j++)
-                if (state_freq[j] > 0.0)
-                    chi2 += (state_freq[j] - freq_per_sequence[j]) * (state_freq[j] - freq_per_sequence[j]) / state_freq[j];
-            
-            chi2 *= sum_count;
-            pvalue = chi2prob(df, chi2);
+            }
+            chi2  *= sum_count;
+            pvalue = chi2prob(num_states - 1, chi2);
         }
-        bool failed = (pvalue < 0.05);
-        num_failed += failed ? 1 : 0;
-        if (listSequences) {
-            if (failed) {
+        else {
+            for (int j = 0; j < num_states; j++) {
+                sum_count += count_per_seq[iRow + j];
+            }
+            double sum_inv = 1.0 / sum_count;
+            for (int j = 0; j < num_states; j++) {
+                freq_per_sequence[j] = count_per_seq[iRow + j] * sum_inv;
+            }
+            for (int j = 0; j < num_states; j++) {
+                if (state_freq[j] > 0.0) {
+                    chi2 += (state_freq[j] - freq_per_sequence[j]) * (state_freq[j] - freq_per_sequence[j]) / state_freq[j];
+                }
+            }
+            chi2  *= sum_count;
+            pvalue = chi2prob(df, chi2);
+
+        }
+        seqInfo[i].pvalue = pvalue;
+        seqInfo[i].failed = (pvalue < 0.05);
+        num_failed += seqInfo[i].failed ? 1 : 0;
+    }
+    if (listSequences) {
+        for (size_t i = 0; i < numSequences; i++) {
+            cout.width(4);
+            cout << right << i + 1 << "  ";
+            cout.width(max_len);
+            cout << left << seq_names[i] << " ";
+            cout.width(6);
+            cout << right << seqInfo[i].percent_gaps << "%";
+            if (seqInfo[i].failed) {
                 cout << "    failed ";
-            } else
+            }
+            else {
                 cout << "    passed ";
+            }
             cout.width(9);
-            cout << right << pvalue*100 << "%";
+            cout << right << (seqInfo[i].pvalue * 100) << "%";
             cout << endl;
         }
     }
-    if (num_problem_seq) cout << "WARNING: " << num_problem_seq << " sequences contain more than 50% gaps/ambiguity" << endl;
+    delete[] seqInfo;
+
+    if (num_problem_seq) {
+        cout << "WARNING: " << num_problem_seq << " sequences contain more than 50% gaps/ambiguity" << endl;
+    }
     if (listSequences) {
         cout << "**** ";
         cout.width(max_len+2);
@@ -279,8 +322,6 @@ void Alignment::checkSeqName() {
         cout.precision(3);
     }
     delete [] count_per_seq;
-    delete [] freq_per_sequence;
-    delete [] state_freq;
 }
 
 int Alignment::checkIdenticalSeq()
@@ -2994,7 +3035,9 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
     VerboseMode save_mode = verbose_mode;
     verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
     
+    progress_display progress(aln->getNSite(), "Identifying sites to remove", "examined", "site");
     size_t oldPatternCount = size(); //JB 27-Jul-2020 Parallelized
+    int    siteMod = 0; //site # modulo 100.
     for (size_t site = 0; site < aln->getNSite(); ++site) {
         iterator pit = aln->begin() + (aln->getPatternID(site));
         Pattern pat;
@@ -3009,7 +3052,13 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
             bool gaps_only = false;
             addPatternLazy(pat, site-removed_sites, 1, gaps_only); //JB 27-Jul-2020 Parallelized
         }
+        if (siteMod == 100 ) {
+            progress += 100;
+            siteMod  = 0;
+        }
+        ++siteMod;
     }
+    progress.done();
     updatePatterns(oldPatternCount); //JB 27-Jul-2020 Parallelized
     site_pattern.resize(aln->getNSite() - removed_sites);
     verbose_mode = save_mode;

@@ -10,6 +10,7 @@
 
 #include <vector>
 #include <map>
+#include <utils/progress.h> //for progress_display
 
 /**
 Summary (for an Alignment) of sites where there are variations
@@ -37,7 +38,10 @@ public:
     size_t             sequenceLength;  //Sequence length
     size_t             sequenceCount;   //The number of sequences
     size_t             getSumOfConstantSiteFrequenciesForState(int state);
-    bool constructSequenceMatrix(bool treatAllAmbiguousStatesAsUnknown);
+    bool constructSequenceMatrix ( bool treatAllAmbiguousStatesAsUnknown
+                                 , progress_display *progress = nullptr);
+    bool constructSequenceMatrixNoisily ( bool treatAllAmbiguousStatesAsUnknown, 
+        const char* taskName, const char* verb);
 };
 
 #endif /* alignmentsummary_hpp */

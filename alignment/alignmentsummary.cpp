@@ -106,7 +106,14 @@ size_t AlignmentSummary::getSumOfConstantSiteFrequenciesForState(int state) {
     return (it == stateToSumOfConstantSiteFrequencies.end()) ? 0 : it->second;
 }
 
-bool AlignmentSummary::constructSequenceMatrix(bool treatAllAmbiguousStatesAsUnknown) {
+bool AlignmentSummary::constructSequenceMatrixNoisily(bool treatAllAmbiguousStatesAsUnknown
+    , const char* taskName, const char* verb) {
+    progress_display progress(sequenceCount, taskName, verb, "sequence");
+    return constructSequenceMatrix(treatAllAmbiguousStatesAsUnknown, &progress);
+}
+
+bool AlignmentSummary::constructSequenceMatrix ( bool treatAllAmbiguousStatesAsUnknown
+                                                , progress_display* progress) {
     delete [] sequenceMatrix;
     sequenceMatrix = nullptr;
     if ( minState<0 || 127 < maxState  ) {
@@ -129,6 +136,9 @@ bool AlignmentSummary::constructSequenceMatrix(bool treatAllAmbiguousStatesAsUnk
                 sequence[seqPos] = static_cast<char> ( state );
                 //the state at the (seqPos)th non-constant site, in the (seq)th sequence
             }
+            if (progress!=nullptr && (seq % 100) == 0) {
+                (*progress) += 100;
+            }
         }
     }
     else
@@ -141,6 +151,9 @@ bool AlignmentSummary::constructSequenceMatrix(bool treatAllAmbiguousStatesAsUnk
             for (size_t seqPos = 0; seqPos < sequenceLength; ++seqPos) { //position in reduced sequence
                 sequence[seqPos] = static_cast<char> ( alignment->at(posToSite[seqPos])[seq] );
                 //the state at the (seqPos)th non-constant site, in the (seq)th sequence
+            }
+            if (progress != nullptr && (seq % 100) == 0) {
+                (*progress) += 100;
             }
         }
     }
