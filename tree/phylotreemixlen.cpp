@@ -577,9 +577,9 @@ pair<int, int> PhyloTreeMixlen::optimizeNNI(bool speedNNI) {
     DoubleVector meanlenvec;
     treeLengths(meanlenvec);
     // compute mean branch length
-    for (j = 0; j < mixlen; j++)
+    for (j = 0; j < mixlen; j++) {
         meanlenvec[j] /= (branchNum);
-
+    }
     // scan over all branches and fix short/long branches
     NodeVector nodes1, nodes2;
     getBranches(nodes1, nodes2);
@@ -587,17 +587,17 @@ pair<int, int> PhyloTreeMixlen::optimizeNNI(bool speedNNI) {
     for (i = 0; i < nodes1.size(); i++) {
         PhyloNeighborMixlen* nei = (PhyloNeighborMixlen*)nodes1[i]->findNeighbor(nodes2[i]);
         PhyloNeighborMixlen* nei_back = (PhyloNeighborMixlen*)nodes2[i]->findNeighbor(nodes1[i]);
-        for (j = 0; j < mixlen; j++)
-//            if (nei->lengths[j] < params->min_branch_length*2.0 || nei->lengths[j] > params->max_branch_length*0.9) {
+        for (j = 0; j < mixlen; j++) {
             if (nei->lengths[j] > params->max_branch_length*0.9) {
                 // if too long or too short branch, assign with mean branch length
                 nei->lengths[j] = nei_back->lengths[j] = meanlenvec[j];
                 num_fixed++;
             }
+        }
     }
-    if (num_fixed > 0)
+    if (num_fixed > 0) {
         optimizeBranches(num_fixed);
-        
+    }
     return IQTree::optimizeNNI(speedNNI);
 }
 

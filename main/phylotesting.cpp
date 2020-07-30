@@ -582,15 +582,7 @@ string computeFastMLTree(Params &params, Alignment *aln,
     }
 
     iqtree->getModelFactory()->restoreCheckpoint();
-    
-#ifdef _OPENMP
-    if (num_threads <= 0) {
-        num_threads = iqtree->testNumThreads();
-        omp_set_num_threads(num_threads);
-    } else
-        iqtree->warnNumThreads();
-#endif
-    
+    iqtree->ensureNumberOfThreadsIsSet(nullptr);
     iqtree->initializeAllPartialLh();
     double saved_modelEps = params.modelEps;
     params.modelEps = params.modelfinder_eps;
@@ -1581,13 +1573,7 @@ string CandidateModel::evaluate(Params &params,
             iqtree->saveCheckpoint();
         }
 
-#ifdef _OPENMP
-        if (num_threads <= 0) {
-            num_threads = iqtree->testNumThreads();
-            omp_set_num_threads(num_threads);
-        } else
-            iqtree->warnNumThreads();
-#endif
+        iqtree->ensureNumberOfThreadsIsSet(nullptr);
 
         runTreeReconstruction(params, iqtree);
         new_logl = iqtree->computeLikelihood();
@@ -1610,14 +1596,7 @@ string CandidateModel::evaluate(Params &params,
         if (verbose_mode >= VB_MED)
             cout << "Optimizing model " << getName() << endl;
 
-        #ifdef _OPENMP
-        if (num_threads <= 0) {
-            num_threads = iqtree->testNumThreads();
-            omp_set_num_threads(num_threads);
-        } else
-            iqtree->warnNumThreads();
-        #endif
-
+        iqtree->ensureNumberOfThreadsIsSet(nullptr);
         iqtree->initializeAllPartialLh();
 
         for (int step = 0; step < 2; step++) {

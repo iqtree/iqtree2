@@ -1134,6 +1134,11 @@ public:
     bool compute_ml_tree;
 
     /**
+            TRUE to compute *only* the maximum-likelihood tree
+      (without using parsimony or observed distances to compute an NJ tree first)
+     */
+    bool compute_ml_tree_only;
+    /**
             file containing budget information
      */
     char *budget_file;
