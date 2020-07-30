@@ -29,6 +29,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef CLANG_UNDER_VS
+	//These are "safe" in the sense that they won't overrun the buffer.  
+	//But they will bomb if the buffer isn't big enough
+	#define safe_strcpy(dest, source) strcpy_s(&dest[0], sizeof(dest), source)
+	#define safe_strcat(dest, source) \
+		(strlen(dest)<sizeof(dest)) \
+			? strcpy_s(&dest[0], sizeof(dest)-strlen(dest), source) \
+			: strcpy_s((&dest[0])+strlen(dest), 0UL, source)
+#else
+#define safe_strcpy(dest, source) strcpy(dest, source)
+#define safe_strcat(dest, source) strcat(dest, source)
+#endif
 #include <time.h>
 #include <math.h>
 #include "weisslambda_sub.h"
@@ -153,26 +165,26 @@ void WHT_setSequenceSite(int seqid, int siteid, char c) {
 }
 
 void WHT_setSequenceName(int seqid, const char *name) {
-	strcpy(baum[seqid].bezeichnung, name);
+	safe_strcpy ( baum[seqid].bezeichnung, name);	
 }
 
 void WHT_setParams(int nsim, double gamma_shape, char *filename, double *dist) {
 	simulation = nsim;
 	alpha = gamma_shape;
-	strcpy(datei_name, filename);
+	safe_strcpy(datei_name, filename);
 	current_sim = 0;
 	p_value_cutoff = 1.0;
 
-	strcpy ( ausgabe_report, datei_name );
-	strcat ( ausgabe_report, ".whtest" );
+	safe_strcpy ( ausgabe_report, datei_name );
+	safe_strcat ( ausgabe_report, ".whtest" );
 
-	strcpy ( ausgabe_sim_result, datei_name );
-	strcat ( ausgabe_sim_result, ".whsim" );
-	strcpy ( ausgabe_dist, datei_name );
-	strcat ( ausgabe_dist, ".whdist" );
+	safe_strcpy ( ausgabe_sim_result, datei_name );
+	safe_strcat ( ausgabe_sim_result, ".whsim" );
+	safe_strcpy ( ausgabe_dist, datei_name );
+	safe_strcat ( ausgabe_dist, ".whdist" );
 
-	strcpy ( ausgabe_nj_tree, datei_name );
-	strcat ( ausgabe_nj_tree, ".nj" );
+	safe_strcpy ( ausgabe_nj_tree, datei_name );
+	safe_strcat ( ausgabe_nj_tree, ".nj" );
 
 	ml_distance = dist;
 	write_dist_matrix = 1;
@@ -267,20 +279,20 @@ void parseArg( int argc,char **argv ) {
 		} else if (strcmp(argv[arg_i], "-fdist") == 0) {
 			fix_distance = 1;
 		} else if (argv[arg_i][0] != '-') {
-			strcpy ( datei_name, argv[arg_i] );
+			safe_strcpy ( datei_name, argv[arg_i] );
 		
-		
-			strcpy ( ausgabe_report, datei_name );
-			strcat ( ausgabe_report, ".whtest" );
+			safe_strcpy ( ausgabe_report, datei_name );
+			safe_strcat ( ausgabe_report, ".whtest" );
 
-			strcpy ( ausgabe_sim_result, ausgabe_report );
-			strcat ( ausgabe_sim_result, ".sim" );
-			strcpy ( ausgabe_dist, ausgabe_report );
-			strcat ( ausgabe_dist, ".dist" );
+			safe_strcpy ( ausgabe_sim_result, ausgabe_report );
+			safe_strcat ( ausgabe_sim_result, ".sim" );
+			safe_strcpy ( ausgabe_dist, ausgabe_report );
+			safe_strcat ( ausgabe_dist, ".dist" );
 			
 		} else {
-			if (isMasterProc())
+			if (isMasterProc()) {
 				printf("Unrecognized %s option, run with '-h' for help\n", argv[arg_i]);
+			}
 			Finalize(1);
 		} 
 	}
@@ -387,7 +399,6 @@ int WHTest_run ( int argc,char **argv ) {
 	/*double *global_sim = NULL;*/
 	int count_sim;
 	int cur_point;
-	int *check_point = NULL;
 
 	double prev_p_wert = 0, own_p_wert;
 	int *valid_pairs;
@@ -447,8 +458,6 @@ int WHTest_run ( int argc,char **argv ) {
 	}
 	delta_sim = ( double* ) calloc ( simulation, sizeof ( double) );
 	valid_pairs = ( int* ) calloc ( simulation, sizeof ( int) );
-	if (check_times > 0)
-		check_point = (int *) malloc(check_times * sizeof(int));
 	/*global_sim = ( double* ) calloc ( simulation, sizeof ( double) );
 	global_pairs = ( int* ) calloc ( simulation, sizeof ( int) );*/
 #ifdef PARALLEL
@@ -517,10 +526,14 @@ int WHTest_run ( int argc,char **argv ) {
 	end_sim = simulation;
 #endif
 
-	for (i = 0; i < check_times; i++) {
-		check_point[i] = work_single*(i+1) / check_times;
-		if (i == check_times-1)
-			check_point[i] = end_sim-start_sim;
+	int* check_point = NULL;
+	if (check_times > 0) {
+		check_point = (int*)malloc(check_times * sizeof(int));
+		for (i = 0; i < check_times; i++) {
+			check_point[i] = work_single * (i + 1) / check_times;
+			if (i == check_times - 1)
+				check_point[i] = end_sim - start_sim;
+		}
 	}
 
 	for ( i = start_sim, count_sim = 0, own_p_wert = 0.0, cur_point = 0; i < end_sim; i++) {
@@ -654,5 +667,3 @@ int WHTest_run ( int argc,char **argv ) {
 		printf("Finished successfully.\n");
 	return 0;
 }
-
-
