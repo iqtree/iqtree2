@@ -11,5 +11,6 @@
 #include <string>
 
 std::string getOSName();
+bool isStandardOutputATerminal();
 
 #endif /* operatingsystem_h */

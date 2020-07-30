@@ -6,7 +6,11 @@
 //
 
 #include "operatingsystem.h"
+#include <string>
 #include <sstream>
+#if defined(WIN32) || defined(WIN64)
+#include <io.h> //for _isatty
+#endif
 
 std::string getOSName() {
     std::stringstream out;
@@ -25,3 +29,10 @@ std::string getOSName() {
     return out.str();
 }
 
+bool isStandardOutputATerminal() {
+#if defined(WIN32) || defined(WIN64)
+    return _isatty(fileno(stdout));
+#else
+    return isatty(fileno(stdout));
+#endif
+}
