@@ -1153,7 +1153,7 @@ void ModelPoMo::computeTipLikelihood(PML::StateType state, double *lh) {
     }
     state = state - num_states;
 
-  bool hyper = (aln->pomo_sampling_method == SAMPLING_WEIGHTED_HYPER);
+  bool hypergeometric = (aln->pomo_sampling_method == SAMPLING_WEIGHTED_HYPER);
   int nstates = aln->num_states;
   int N = aln->virtual_pop_size;
 
@@ -1169,7 +1169,7 @@ void ModelPoMo::computeTipLikelihood(PML::StateType state, double *lh) {
   int nnuc = 4;
 
   // TODO DS: Implement down sampling or a better approach.
-  if (hyper && M > N)
+  if (hypergeometric && M > N)
     outError("Down sampling not yet supported.");
 
   // Check if observed state is a fixed one.  If so, many
@@ -1192,7 +1192,7 @@ void ModelPoMo::computeTipLikelihood(PML::StateType state, double *lh) {
           int real_state = nnuc - 1 + k*(N-1) + 1;
           for (int i = 1; i < N; i++, real_state++) {
             ASSERT(real_state < nstates);
-            if (!hyper)
+            if (!hypergeometric)
               lh[real_state] = std::pow((double)i/(double)N,j);
             else {
               lh[real_state] = 1.0;
@@ -1210,7 +1210,7 @@ void ModelPoMo::computeTipLikelihood(PML::StateType state, double *lh) {
           int real_state = nnuc - 1 + k*(N-1) + 1;
           for (int i = 1; i < N; i++, real_state++) {
             ASSERT(real_state < nstates);
-            if (!hyper)
+            if (!hypergeometric)
               lh[real_state] = std::pow((double)(N-i)/(double)N,j);
             else {
               lh[real_state] = 1.0;
@@ -1233,10 +1233,12 @@ void ModelPoMo::computeTipLikelihood(PML::StateType state, double *lh) {
     int real_state = nnuc + k*(N-1);
     for (int i = 1; i < N; i++, real_state++) {
       ASSERT(real_state < nstates);
-      if (!hyper)
-        lh[real_state] = binomial_dist(j, M, (double) i / (double) N);
-      if (hyper)
-        lh[real_state] = hypergeometric_dist(j, M, i, N);
+      if (hypergeometric) {
+          lh[real_state] = hypergeometric_dist(j, M, i, N);
+      }
+      else {
+          lh[real_state] = binomial_dist(j, M, (double)i / (double)N);
+      }
     }
   }
 

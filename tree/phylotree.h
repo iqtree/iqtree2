@@ -859,7 +859,7 @@ public:
   // Compute the partial likelihoods LH (OUT) at the leaves for an observed PoMo
   // STATE (IN). Use binomial sampling unless hyper is true, then use
   // hypergeometric sampling.
-  void computeTipPartialLikelihoodPoMo(int state, double *lh, bool hyper=false);
+  void computeTipPartialLikelihoodPoMo(int state, double *lh, bool hypergeometric=false);
     void computeTipPartialLikelihood();
     void computeTipPartialParsimony();
     void computePtnInvar();

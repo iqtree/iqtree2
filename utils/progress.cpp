@@ -25,6 +25,8 @@
 #include <sstream>  //for std::ostringstream
 #include <iostream> //for std::cout
 #include <math.h>   //for floor
+#include "operatingsystem.h" //for isStandardOutputATerminal
+
 
 namespace {
 bool displayingProgress = true;
@@ -212,7 +214,7 @@ progress_display& progress_display::show() {
 
 void progress_display::setProgressDisplay(bool displayIt) {
     displayingProgress = displayIt;
-    isTerminal = displayIt && isatty(fileno(stdout));
+    isTerminal = displayIt && isStandardOutputATerminal();
 }
 
 bool progress_display::getProgressDisplay() {
