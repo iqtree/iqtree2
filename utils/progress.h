@@ -31,6 +31,7 @@ public:
     progress_display& operator += (double incrementalWork);
     progress_display& operator ++ ();
     progress_display& operator =  (double workDoneNow);
+    progress_display& incrementBy (double increment);
     progress_display& hide ();
     progress_display& show ();
     progress_display& done ();

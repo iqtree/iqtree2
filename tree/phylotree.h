@@ -2400,11 +2400,16 @@ protected:
     /** stack of tasks in progress (top of stack is innermost task) */
     progress_display* progress;
     int  progressStackDepth;
+    bool isShowingProgressDisabled;
+    void showNoProgress();
     void initProgress(double size, std::string name, const char*, const char*);
     void trackProgress(double amount);
     void hideProgress();
     void showProgress();
     void doneProgress();
+    
+    /** becomes true if/when user is warned about the threadcount in use for this tree */
+    bool warnedAboutThreadCount;
 };
 
 #endif

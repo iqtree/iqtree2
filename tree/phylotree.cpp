@@ -138,6 +138,8 @@ void PhyloTree::init() {
     isSummaryBorrowed = false;
     progress = nullptr;
     progressStackDepth = 0;
+    isShowingProgressDisabled = false;
+    warnedAboutThreadCount = false;
 }
 
 PhyloTree::PhyloTree(Alignment *aln) : MTree(), CheckpointFactory() {
@@ -986,10 +988,21 @@ uint64_t PhyloTree::getMemoryRequired(size_t ncategory, bool full_mem) {
 
             // RAM over requirement, reset to LM_PER_NODE
             if (max_lh_slots > leafNum-2)
+            {
                 max_lh_slots = leafNum-2;
+                if (max_lh_slots < min_lh_slots) {
+                    max_lh_slots = min_lh_slots;
+                }
+            }
         }
         if (max_lh_slots < min_lh_slots) {
-            cout << "WARNING: Too low -mem, automatically increased to " << (mem_size + (min_lh_slots+2)*lh_scale_size)/1048576.0 << " MB" << endl;
+            double newSizeInMegabytes = (mem_size + (min_lh_slots+2)*lh_scale_size)/1048576.0 ;
+            if (1<newSizeInMegabytes) {
+                hideProgress();
+                cout << "WARNING: Too low -mem, automatically increased to "
+                    << newSizeInMegabytes << " MB" << endl;
+                showProgress();
+            }
             max_lh_slots = min_lh_slots;
         }
     }
@@ -5931,37 +5944,45 @@ const string& PhyloTree::getDistanceFileWritten() const {
 void PhyloTree::initProgress(double size, std::string name, const char* verb, const char* noun) {
     {
         ++progressStackDepth;
-        if (progressStackDepth==1) {
+        if (progressStackDepth==1 && !isShowingProgressDisabled) {
             progress = new progress_display(size, name.c_str(), verb, noun);
         }
     }
 }
     
 void PhyloTree::trackProgress(double amount) {
-    if (progressStackDepth==1) {
+    if (!isShowingProgressDisabled && progressStackDepth==1) {
         (*progress) += amount;
     }
 }
 
 void PhyloTree::hideProgress() {
-    if (progressStackDepth>0) {
+    if (!isShowingProgressDisabled && progressStackDepth>0 && progress!=nullptr) {
         progress->hide();
     }
 }
 
 void PhyloTree::showProgress() {
-    if (progressStackDepth>0) {
+    if (!isShowingProgressDisabled && progressStackDepth>0 && progress!=nullptr) {
         progress->show();
     }
 }
 
 void PhyloTree::doneProgress() {
-    {
-        --progressStackDepth;
-        if (progressStackDepth==0) {
+    --progressStackDepth;
+    if (progressStackDepth==0) {
+        if (progress!=nullptr) {
             progress->done();
-            delete progress;
-            progress = nullptr;
         }
+        delete progress;
+        progress = nullptr;
     }
+}
+    
+void PhyloTree::showNoProgress() {
+    if (progress) {
+        delete progress;
+        progress = nullptr;
+    }
+    isShowingProgressDisabled = true;
 }

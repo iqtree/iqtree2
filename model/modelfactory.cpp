@@ -1246,40 +1246,39 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
     ASSERT(model);
     ASSERT(site_rate);
 
-//    double defaultEpsilon = logl_epsilon;
-
     double begin_time = getRealTime();
-    double cur_lh;
     PhyloTree *tree = site_rate->getTree();
     ASSERT(tree);
 
+    double estimatedIterations = tree->params->num_param_iterations; //for now
+    tree->initProgress(estimatedIterations, "Optimizing Model Parameters", "finished", "iteration" );
+    
     stopStoringTransMatrix();
     // modified by Thomas Wong on Sept 11, 15
     // no optimization of branch length in the first round
     double optimizeStartTime = getRealTime();
-    cur_lh = tree->computeLikelihood();
+    double cur_lh = tree->computeLikelihood();
     tree->setCurScore(cur_lh);
+    tree->trackProgress(1.0);
+    
     if (verbose_mode >= VB_MED || write_info) {
-    int p = -1;
-
-    // SET precision to 17 (temporarily)
-    if (verbose_mode >= VB_DEBUG) p = cout.precision(17);
-
-    // PRINT Log-Likelihood
-    if (verbose_mode >= VB_MED) {
-        cout << "1. Initial log-likelihood: " << cur_lh << " (took " <<
-        (getRealTime() - optimizeStartTime) << " wall-clock sec)" << endl;
-    } else {
-        cout << "1. Initial log-likelihood: " << cur_lh << endl;
-    }
-        
-    // RESTORE previous precision
-    if (verbose_mode >= VB_DEBUG) cout.precision(p);
-
+        tree->hideProgress();
+        int p = cout.precision(); //We'll restore it later
+        if (verbose_mode >= VB_DEBUG) {
+            cout.precision(17);
+        }
+        if (verbose_mode >= VB_MED) {
+            cout << "1. Initial log-likelihood: " << cur_lh << " (took " <<
+            (getRealTime() - optimizeStartTime) << " wall-clock sec)" << endl;
+        } else {
+            cout << "1. Initial log-likelihood: " << cur_lh << endl;
+        }
+        cout.precision(p);
         if (verbose_mode >= VB_MAX) {
             tree->printTree(cout);
             cout << endl;
         }
+        tree->showProgress();
     }
 
     // For UpperBounds -----------
@@ -1289,97 +1288,103 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
     }
     // ---------------------------
 
-
     int i;
-    //bool optimize_rate = true;
-//    double gradient_epsilon = min(logl_epsilon, 0.01); // epsilon for parameters starts at epsilon for logl
     for (i = 2; i < tree->params->num_param_iterations; i++) {
         double new_lh;
 
-        // changed to opimise edge length first, and then Q,W,R inside the loop by Thomas on Sept 11, 15
+        // changed to optimise edge length first, and then Q,W,R inside the loop by Thomas on Sept 11, 15
         if (fixed_len == BRLEN_OPTIMIZE)
             new_lh = tree->optimizeAllBranches(min(i,3), logl_epsilon);  // loop only 3 times in total (previously in v0.9.6 5 times)
         else if (fixed_len == BRLEN_SCALE) {
             double scaling = 1.0;
             new_lh = tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling, MAX_BRLEN_SCALE, gradient_epsilon);
-        } else
+        } else {
             new_lh = cur_lh;
-
+        }
         new_lh = optimizeParametersOnly(i, gradient_epsilon, new_lh);
-
         if (new_lh == 0.0) {
-            if (fixed_len == BRLEN_OPTIMIZE)
+            if (fixed_len == BRLEN_OPTIMIZE) {
                 cur_lh = tree->optimizeAllBranches(tree->params->num_param_iterations, logl_epsilon);
-            else if (fixed_len == BRLEN_SCALE) {
+            } else if (fixed_len == BRLEN_SCALE) {
                 double scaling = 1.0;
                 cur_lh = tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling, MAX_BRLEN_SCALE, gradient_epsilon);
             }
             break;
         }
         if (verbose_mode >= VB_MED) {
+            tree->hideProgress();
             model->writeInfo(cout);
             site_rate->writeInfo(cout);
-            if (fixed_len == BRLEN_SCALE)
+            if (fixed_len == BRLEN_SCALE) {
                 cout << "Scaled tree length: " << tree->treeLength() << endl;
+            }
+            tree->showProgress();
         }
         if (new_lh > cur_lh + logl_epsilon) {
             cur_lh = new_lh;
             if (write_info) {
+                tree->hideProgress();
                 if (verbose_mode >= VB_MED) {
-                cout << i << ". Current log-likelihood: " << cur_lh
+                    cout << i << ". Current log-likelihood: " << cur_lh
                     << " (after " << (getRealTime() - optimizeStartTime) << " wall-clock sec)"
                     << endl;
                 } else {
                     cout << i << ". Current log-likelihood: " << cur_lh << endl;
                 }
+                tree->showProgress();
             }
         } else {
             site_rate->classifyRates(new_lh);
-            if (fixed_len == BRLEN_OPTIMIZE)
+            if (fixed_len == BRLEN_OPTIMIZE) {
                 cur_lh = tree->optimizeAllBranches(100, logl_epsilon);
-            else if (fixed_len == BRLEN_SCALE) {
+            } else if (fixed_len == BRLEN_SCALE) {
                 double scaling = 1.0;
                 cur_lh = tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling, MAX_BRLEN_SCALE, gradient_epsilon);
             }
             break;
         }
+        tree->trackProgress(1.0);
     }
-
-    // normalize rates s.t. branch lengths are #subst per site
-//    if (Params::getInstance().optimize_alg_gammai != "EM")
+    tree->doneProgress();
+    
+    //normalize rates s.t. branch lengths are #subst per site
+    //if (Params::getInstance().optimize_alg_gammai != "EM")
     {
         double mean_rate = site_rate->rescaleRates();
         if (fabs(mean_rate-1.0) > 1e-6) {
             if (fixed_len == BRLEN_FIX)
+            {
                 outError("Fixing branch lengths not supported under specified site rate model");
+            }
             tree->scaleLength(mean_rate);
             tree->clearAllPartialLH();
         }
     }
-
     if (Params::getInstance().root_find && tree->rooted && Params::getInstance().root_move_dist > 0) {
         cur_lh = tree->optimizeRootPosition(Params::getInstance().root_move_dist, write_info, logl_epsilon);
         if (verbose_mode >= VB_MED || write_info)
             cout << "Rooting log-likelihood: " << cur_lh << endl;
     }
-    
-    if (verbose_mode >= VB_MED || write_info)
+    if (verbose_mode >= VB_MED || write_info) {
         cout << "Optimal log-likelihood: " << cur_lh << endl;
-
+    }
     // For UpperBounds -----------
-    if(tree->mlCheck == 0)
+    if(tree->mlCheck == 0) {
         tree->mlFirstOpt = cur_lh;
+    }
     // ---------------------------
 
     if (verbose_mode <= VB_MIN && write_info) {
         model->writeInfo(cout);
         site_rate->writeInfo(cout);
-        if (fixed_len == BRLEN_SCALE)
+        if (fixed_len == BRLEN_SCALE) {
             cout << "Scaled tree length: " << tree->treeLength() << endl;
+        }
     }
     double elapsed_secs = getRealTime() - begin_time;
-    if (write_info)
+    if (write_info) {
         cout << "Parameters optimization took " << i-1 << " rounds (" << elapsed_secs << " sec)" << endl;
+    }
     startStoringTransMatrix();
 
     // For UpperBounds -----------

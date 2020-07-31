@@ -74,6 +74,7 @@ Alignment::Alignment()
     seq_type = SEQ_UNKNOWN;
     STATE_UNKNOWN = 126;
     pars_lower_bound = NULL;
+    isShowingProgressDisabled = false;
 }
 
 string &Alignment::getSeqName(int i) {
@@ -369,6 +370,7 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
     auto startHash = getRealTime();
     vector<size_t> hashes;
     hashes.resize(n, 0);
+    //Todo: Disable this when isShowingProgressDisabled is set
     progress_display progress(n*2, "Checking for duplicate sequences");
     #ifdef _OPENMP
         #pragma omp parallel for schedule(static,100)
@@ -1792,6 +1794,7 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
     pattern_index.clear();
     int num_error = 0;
     
+    //Todo: Disable this when isShowingProgressDisabled is set
     progress_display progress(nsite, "Constructing alignment", "examined", "site");
     for (site = 0; site < nsite; site+=step) {
         for (seq = 0; seq < nseq; seq++) {
@@ -2038,6 +2041,7 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
     in.exceptions(ios::badbit);
 
     {
+        //Todo: Disable this when isShowingProgressDisabled is set
         progress_display progress(in.getCompressedLength(), "Reading fasta file", "", "");
         for (; !in.eof(); line_num++) {
             safeGetline(in, line);
@@ -3035,7 +3039,10 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
     VerboseMode save_mode = verbose_mode;
     verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
     
-    progress_display progress(aln->getNSite(), "Identifying sites to remove", "examined", "site");
+    progress_display* progress = nullptr;
+    if (!isShowingProgressDisabled) {
+        progress = new progress_display(aln->getNSite(), "Identifying sites to remove", "examined", "site");
+    }
     size_t oldPatternCount = size(); //JB 27-Jul-2020 Parallelized
     int    siteMod = 0; //site # modulo 100.
     for (size_t site = 0; site < aln->getNSite(); ++site) {
@@ -3052,21 +3059,27 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
             bool gaps_only = false;
             addPatternLazy(pat, site-removed_sites, 1, gaps_only); //JB 27-Jul-2020 Parallelized
         }
-        if (siteMod == 100 ) {
-            progress += 100;
-            siteMod  = 0;
+        if (progress!=nullptr) {
+            if (siteMod == 100 ) {
+                progress->incrementBy(100);
+                siteMod  = 0;
+            }
+            ++siteMod;
         }
-        ++siteMod;
     }
-    progress.done();
+    if (progress!=nullptr) {
+        progress->done();
+        progress = nullptr;
+    }
     updatePatterns(oldPatternCount); //JB 27-Jul-2020 Parallelized
     site_pattern.resize(aln->getNSite() - removed_sites);
     verbose_mode = save_mode;
     countConstSite();
 //    buildSeqStates();
     ASSERT(size() <= aln->size());
-    if (kept_partitions)
+    if (kept_partitions) {
         kept_partitions->push_back(0);
+    }
 }
 
 
@@ -5411,4 +5424,8 @@ bool Alignment::readSiteStateFreq(const char* site_freq_file)
     }
     cout << site_state_freq.size() << " distinct per-site state frequency vectors detected" << endl;
     return aln_changed;
+}
+
+void Alignment::showNoProgress() {
+    isShowingProgressDisabled = true;
 }

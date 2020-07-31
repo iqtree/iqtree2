@@ -674,153 +674,160 @@ void finisheps(FILE *ofp, vector<SeqQuartetInfo> lmap_seq_quartet_info, int leaf
 
 
 void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info, QuartetGroups &LMGroups) {
-
-    if (leafNum < 4) 
+    
+    if (leafNum < 4) {
         outError("Tree must have 4 or more taxa with unique sequences!");
-        
+    }
     int qc[] = {0, 1, 2, 3,  0, 2, 1, 3,  0, 3, 1, 2};
     
     double onethird = 1.0/3.0;
     unsigned char treebits[] = {1, 2, 4};
-
+    
     int sizeA, sizeB, sizeC, sizeD, numGroups;
     int size3, size2, size1, size0;
-
-	// LMGroups.numGroups = 0;
+    
     if(LMGroups.numGroups == 0) { /* no grouping */
-	LMGroups.numGroups = 1;
-	LMGroups.GroupA.resize(leafNum);
-    	for (int s = 0; s<leafNum; s++) LMGroups.GroupA[s] = s;
-	LMGroups.numGrpSeqs[0] = leafNum; /* cluster A */
-	LMGroups.numGrpSeqs[1] = 0; /* cluster B */
-	LMGroups.numGrpSeqs[2] = 0; /* cluster C */
-	LMGroups.numGrpSeqs[3] = 0; /* cluster D */
-	LMGroups.numGrpSeqs[4] = 0; /* excluded */
-	LMGroups.numQuartSeqs  = leafNum; /* all sequences in analysis */
-	LMGroups.numSeqs       = leafNum; /* all sequences in alignment */
-	LMGroups.numGroups = 1;
+        LMGroups.numGroups = 1;
+        LMGroups.GroupA.resize(leafNum);
+        for (int s = 0; s<leafNum; s++) {
+            LMGroups.GroupA[s] = s;
+        }
+        LMGroups.numGrpSeqs[0] = leafNum; /* cluster A */
+        LMGroups.numGrpSeqs[1] = 0; /* cluster B */
+        LMGroups.numGrpSeqs[2] = 0; /* cluster C */
+        LMGroups.numGrpSeqs[3] = 0; /* cluster D */
+        LMGroups.numGrpSeqs[4] = 0; /* excluded */
+        LMGroups.numQuartSeqs  = leafNum; /* all sequences in analysis */
+        LMGroups.numSeqs       = leafNum; /* all sequences in alignment */
+        LMGroups.numGroups = 1;
     }
-
+    
     numGroups = LMGroups.numGroups;
     sizeA = LMGroups.numGrpSeqs[0]; /* cluster A */
     sizeB = LMGroups.numGrpSeqs[1]; /* cluster B */
     sizeC = LMGroups.numGrpSeqs[2]; /* cluster C */
     sizeD = LMGroups.numGrpSeqs[3]; /* cluster D */
-
+    
     switch(LMGroups.numGroups){
-	case 1: 
-	   if(sizeA < 4) 
-		outError("Likelihood Mapping requires 4 or more taxa with unique sequences!"); 
-	   break;
-	case 2: 
-	   if((sizeA < 2)||(sizeB < 2)) 
-		outError("2-cluster Likelihood Mapping requires clusters A and B to have >=2 taxa with unique sequences!"); 
-	   break;
-	case 3: 
-	   if((sizeA < 1)||(sizeB < 1)||(sizeC < 2)) 
-		outError("3-cluster Likelihood Mapping requires clusters B and C to have >=1 and cluster C >=2 taxa with unique sequences!"); 
-	   break;
-	case 4: 
-	   if((sizeA < 1)||(sizeB < 1)||(sizeA < 1)||(sizeD < 1)) 
-		outError("4-cluster Likelihood Mapping requires all 4 clusters to have >0 taxa with unique sequences!"); 
-	   break;
-	default: 
-	   outError("Unknown Likelihood Mapping mode! PLEASE report this to the developers!"); 
-	   break;
+        case 1:
+            if(sizeA < 4) {
+                outError("Likelihood Mapping requires 4 or more taxa with unique sequences!");
+            }
+            break;
+        case 2:
+            if((sizeA < 2)||(sizeB < 2)) {
+                outError("2-cluster Likelihood Mapping requires clusters A and B to have >=2 taxa with unique sequences!");
+            }
+            break;
+        case 3:
+            if((sizeA < 1)||(sizeB < 1)||(sizeC < 2)) {
+                outError("3-cluster Likelihood Mapping requires clusters B and C to have >=1 and cluster C >=2 taxa with unique sequences!");
+            }
+            break;
+        case 4:
+            if((sizeA < 1)||(sizeB < 1)||(sizeA < 1)||(sizeD < 1)) {
+                outError("4-cluster Likelihood Mapping requires all 4 clusters to have >0 taxa with unique sequences!");
+            }
+            break;
+        default:
+            outError("Unknown Likelihood Mapping mode! PLEASE report this to the developers!");
+            break;
     }
     
     switch(LMGroups.numGroups){
-	case 1: 
-	   size3 = sizeA-4;
-	   size2 = sizeA-3;
-	   size1 = sizeA-2;
-	   size0 = sizeA-1;
-	   LMGroups.uniqueQuarts = (int64_t)1 + size3 +
-	                           (int64_t)size2 * (size2-1) / 2 +
-	                           (int64_t)size1 * (size1-1) * (size1-2) / 6 +
-	                           (int64_t)size0 * (size0-1) * (size0-2) * (size0-3) / 24;
-	   break;
-	case 2: 
-	   LMGroups.uniqueQuarts = ((int64_t)sizeA * (sizeA - 1)) / 2 * (sizeB * (sizeB - 1)) / 2; break;
-	case 3: 
-	   LMGroups.uniqueQuarts = (int64_t)sizeA * sizeB * (sizeC * (sizeC - 1)) / 2; break;
-	case 4: 
-	   LMGroups.uniqueQuarts = (int64_t)sizeA * sizeB * sizeC * sizeD; break;
-	default: 
-	   outError("Unknown Likelihood Mapping mode! PLEASE report this to the developers!"); 
-	   break;
+        case 1:
+            size3 = sizeA-4;
+            size2 = sizeA-3;
+            size1 = sizeA-2;
+            size0 = sizeA-1;
+            LMGroups.uniqueQuarts = (int64_t)1 + size3 +
+            (int64_t)size2 * (size2-1) / 2 +
+            (int64_t)size1 * (size1-1) * (size1-2) / 6 +
+            (int64_t)size0 * (size0-1) * (size0-2) * (size0-3) / 24;
+            break;
+        case 2:
+            LMGroups.uniqueQuarts = ((int64_t)sizeA * (sizeA - 1)) / 2 * (sizeB * (sizeB - 1)) / 2; break;
+        case 3:
+            LMGroups.uniqueQuarts = (int64_t)sizeA * sizeB * (sizeC * (sizeC - 1)) / 2; break;
+        case 4:
+            LMGroups.uniqueQuarts = (int64_t)sizeA * sizeB * sizeC * sizeD; break;
+        default:
+            outError("Unknown Likelihood Mapping mode! PLEASE report this to the developers!");
+            break;
     }
-
+    
     if (params->lmap_num_quartets == 0)
         params->lmap_num_quartets = LMGroups.uniqueQuarts;
     if (params->lmap_num_quartets > LMGroups.uniqueQuarts) {
-        cout << "INFO: Number of quartets is reduced to all unique quartets " << LMGroups.uniqueQuarts << endl; 
+        cout << "INFO: Number of quartets is reduced to all unique quartets " << LMGroups.uniqueQuarts << endl;
     }
-
-    cout << "Computing " << params->lmap_num_quartets << " quartet likelihoods (one dot represents 100 quartets)." << endl << endl;
     
+    bool showingProgressBars = progress_display::getProgressDisplay();
+    if (!showingProgressBars) {
+        cout << "Computing " << params->lmap_num_quartets
+        << " quartet likelihoods (one dot represents 100 quartets)." << endl << endl;
+    }
+    initProgress(params->lmap_num_quartets, "Computing quartet likelihoods", "", "");
     lmap_quartet_info.resize(params->lmap_num_quartets);
-    
     bool quartets_drawn = false;
-    
     if (params->lmap_num_quartets == LMGroups.uniqueQuarts) {
         // draw all unique quartets now
         quartets_drawn = true;
         int64_t qid = 0;
         switch (numGroups) {
-        case 1:
-            for (int i0 = 0; i0 < sizeA-3; i0++)
-                for (int i1 = i0+1; i1 < sizeA-2; i1++)
-                    for (int i2 = i1+1; i2 < sizeA-1; i2++)
-                        for (int i3 = i2+1; i3 < sizeA; i3++) {
-                            lmap_quartet_info[qid].seqID[0] = LMGroups.GroupA[i0];
-                            lmap_quartet_info[qid].seqID[1] = LMGroups.GroupA[i1];
-                            lmap_quartet_info[qid].seqID[2] = LMGroups.GroupA[i2];
-                            lmap_quartet_info[qid].seqID[3] = LMGroups.GroupA[i3];
-                            qid++;
-                        }
-            break;
-
-        case 2:
-            for (int i0 = 0; i0 < sizeA-1; i0++)
-                for (int i1 = i0+1; i1 < sizeA; i1++)
-                    for (int i2 = 0; i2 < sizeB-1; i2++)
-                        for (int i3 = i2+1; i3 < sizeB; i3++) {
-                            lmap_quartet_info[qid].seqID[0] = LMGroups.GroupA[i0];
-                            lmap_quartet_info[qid].seqID[1] = LMGroups.GroupA[i1];
-                            lmap_quartet_info[qid].seqID[2] = LMGroups.GroupB[i2];
-                            lmap_quartet_info[qid].seqID[3] = LMGroups.GroupB[i3];
-                            qid++;
-                        }
-            break;
-
-        case 3:
-            for (int i0 = 0; i0 < sizeA; i0++)
-                for (int i1 = 0; i1 < sizeB; i1++)
-                    for (int i2 = 0; i2 < sizeC-1; i2++)
-                        for (int i3 = i2+1; i3 < sizeC; i3++) {
-                            lmap_quartet_info[qid].seqID[0] = LMGroups.GroupA[i0];
-                            lmap_quartet_info[qid].seqID[1] = LMGroups.GroupB[i1];
-                            lmap_quartet_info[qid].seqID[2] = LMGroups.GroupC[i2];
-                            lmap_quartet_info[qid].seqID[3] = LMGroups.GroupC[i3];
-                            qid++;
-                        }
-            break;
-        case 4:
-            for (int i0 = 0; i0 < sizeA; i0++)
-                for (int i1 = 0; i1 < sizeB; i1++)
-                    for (int i2 = 0; i2 < sizeC; i2++)
-                        for (int i3 = 0; i3 < sizeD; i3++) {
-                            lmap_quartet_info[qid].seqID[0] = LMGroups.GroupA[i0];
-                            lmap_quartet_info[qid].seqID[1] = LMGroups.GroupB[i1];
-                            lmap_quartet_info[qid].seqID[2] = LMGroups.GroupC[i2];
-                            lmap_quartet_info[qid].seqID[3] = LMGroups.GroupD[i3];
-                            qid++;
-                        }
-            break;
-
-        default:
-            break;
+            case 1:
+                for (int i0 = 0; i0 < sizeA-3; i0++)
+                    for (int i1 = i0+1; i1 < sizeA-2; i1++)
+                        for (int i2 = i1+1; i2 < sizeA-1; i2++)
+                            for (int i3 = i2+1; i3 < sizeA; i3++) {
+                                lmap_quartet_info[qid].seqID[0] = LMGroups.GroupA[i0];
+                                lmap_quartet_info[qid].seqID[1] = LMGroups.GroupA[i1];
+                                lmap_quartet_info[qid].seqID[2] = LMGroups.GroupA[i2];
+                                lmap_quartet_info[qid].seqID[3] = LMGroups.GroupA[i3];
+                                qid++;
+                            }
+                break;
+                
+            case 2:
+                for (int i0 = 0; i0 < sizeA-1; i0++)
+                    for (int i1 = i0+1; i1 < sizeA; i1++)
+                        for (int i2 = 0; i2 < sizeB-1; i2++)
+                            for (int i3 = i2+1; i3 < sizeB; i3++) {
+                                lmap_quartet_info[qid].seqID[0] = LMGroups.GroupA[i0];
+                                lmap_quartet_info[qid].seqID[1] = LMGroups.GroupA[i1];
+                                lmap_quartet_info[qid].seqID[2] = LMGroups.GroupB[i2];
+                                lmap_quartet_info[qid].seqID[3] = LMGroups.GroupB[i3];
+                                qid++;
+                            }
+                break;
+                
+            case 3:
+                for (int i0 = 0; i0 < sizeA; i0++)
+                    for (int i1 = 0; i1 < sizeB; i1++)
+                        for (int i2 = 0; i2 < sizeC-1; i2++)
+                            for (int i3 = i2+1; i3 < sizeC; i3++) {
+                                lmap_quartet_info[qid].seqID[0] = LMGroups.GroupA[i0];
+                                lmap_quartet_info[qid].seqID[1] = LMGroups.GroupB[i1];
+                                lmap_quartet_info[qid].seqID[2] = LMGroups.GroupC[i2];
+                                lmap_quartet_info[qid].seqID[3] = LMGroups.GroupC[i3];
+                                qid++;
+                            }
+                break;
+            case 4:
+                for (int i0 = 0; i0 < sizeA; i0++)
+                    for (int i1 = 0; i1 < sizeB; i1++)
+                        for (int i2 = 0; i2 < sizeC; i2++)
+                            for (int i3 = 0; i3 < sizeD; i3++) {
+                                lmap_quartet_info[qid].seqID[0] = LMGroups.GroupA[i0];
+                                lmap_quartet_info[qid].seqID[1] = LMGroups.GroupB[i1];
+                                lmap_quartet_info[qid].seqID[2] = LMGroups.GroupC[i2];
+                                lmap_quartet_info[qid].seqID[3] = LMGroups.GroupD[i3];
+                                qid++;
+                            }
+                break;
+                
+            default:
+                break;
         }
         // sanity check
         ASSERT(qid == LMGroups.uniqueQuarts);
@@ -828,335 +835,346 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
     
     // fprintf(stderr,"XXX - #quarts: %d; #groups: %d, A: %d, B:%d, C:%d, D:%d\n", LMGroups.uniqueQuarts, LMGroups.numGroups, sizeA, sizeB, sizeC, sizeD);
     
-
+    
 #ifdef _OPENMP
-    #pragma omp parallel
+#pragma omp parallel
     {
-    int *rstream;
-    init_random(params->ran_seed + omp_get_thread_num(), false, &rstream);
+        int *rstream;
+        init_random(params->ran_seed + omp_get_thread_num(), false, &rstream);
 #else
-    int *rstream = randstream;
+        int *rstream = randstream;
 #endif    
-
-#ifdef _OPENMP
-    #pragma omp for schedule(guided)
-#endif
-    for (int64_t qid = 0; qid < params->lmap_num_quartets; qid++) { /*** draw lmap_num_quartets quartets randomly ***/
-	// fprintf(stderr, "%I64d\n", qid); 
-
-        // uniformly draw 4 taxa
-	// (a) sample taxon 1
-        // was: lmap_quartet_info[qid].seqID[0] = random_int(leafNum);
-        if (!quartets_drawn) {
-            // draw a random quartet
-            lmap_quartet_info[qid].seqID[0] = LMGroups.GroupA[random_int(sizeA, rstream)];
-
-            do {
-            // (b) sample taxon 2 according to the number of clusters
-                // was: lmap_quartet_info[qid].seqID[1] = random_int(leafNum);
-            switch(numGroups){
-            case 1: lmap_quartet_info[qid].seqID[1] = LMGroups.GroupA[random_int(sizeA, rstream)]; break; // a1,A2|a3,a4
-            case 2: lmap_quartet_info[qid].seqID[1] = LMGroups.GroupA[random_int(sizeA, rstream)]; break; // a1,A2|b1,b2
-            case 3: lmap_quartet_info[qid].seqID[1] = LMGroups.GroupB[random_int(sizeB, rstream)]; break; // a ,B |c1,c2
-            case 4: lmap_quartet_info[qid].seqID[1] = LMGroups.GroupB[random_int(sizeB, rstream)]; break; // a ,B |c, d
-            default: outError("Unknown Likelihood Mapping sampling mode! PLEASE report this to the developers!"); break;
-            }
-            } while (lmap_quartet_info[qid].seqID[1] == lmap_quartet_info[qid].seqID[0]);
-            do {
-            // (c) sample taxon 3 according to the number of clusters
-                // was: lmap_quartet_info[qid].seqID[2] = random_int(leafNum);
-            switch(numGroups){
-            case 1: lmap_quartet_info[qid].seqID[2] = LMGroups.GroupA[random_int(sizeA, rstream)]; break; // a1,a2|A3,a4
-            case 2: lmap_quartet_info[qid].seqID[2] = LMGroups.GroupB[random_int(sizeB, rstream)]; break; // a1,a2|B1,b2
-            case 3: lmap_quartet_info[qid].seqID[2] = LMGroups.GroupC[random_int(sizeC, rstream)]; break; // a ,b |C1,c2
-            case 4: lmap_quartet_info[qid].seqID[2] = LMGroups.GroupC[random_int(sizeC, rstream)]; break; // a ,b |C, d
-            default: outError("Unknown Likelihood Mapping sampling mode! PLEASE report this to the developers!"); break;
-            }
-            } while (lmap_quartet_info[qid].seqID[2] == lmap_quartet_info[qid].seqID[0] || lmap_quartet_info[qid].seqID[2] == lmap_quartet_info[qid].seqID[1]);
-            do {
-            // (d) sample taxon 4 according to the number of clusters
-                // was: lmap_quartet_info[qid].seqID[3] = random_int(leafNum);
-            switch(numGroups){
-            case 1: lmap_quartet_info[qid].seqID[3] = LMGroups.GroupA[random_int(sizeA, rstream)]; break; // a1,a2|a3,A4
-            case 2: lmap_quartet_info[qid].seqID[3] = LMGroups.GroupB[random_int(sizeB, rstream)]; break; // a1,a2|b1,B2
-            case 3: lmap_quartet_info[qid].seqID[3] = LMGroups.GroupC[random_int(sizeC, rstream)]; break; // a ,b |c1,C2
-            case 4: lmap_quartet_info[qid].seqID[3] = LMGroups.GroupD[random_int(sizeD, rstream)]; break; // a ,b |c, D
-            default: outError("Unknown Likelihood Mapping sampling mode! PLEASE report this to the developers!"); break;
-            }
-            } while (lmap_quartet_info[qid].seqID[3] == lmap_quartet_info[qid].seqID[0] || lmap_quartet_info[qid].seqID[3] == lmap_quartet_info[qid].seqID[1]
-                || lmap_quartet_info[qid].seqID[3] == lmap_quartet_info[qid].seqID[2]);
-        }
-// fprintf(stderr, "qqq%d: %d, %d, %d, %d\n", qid, lmap_quartet_info[qid].seqID[0], lmap_quartet_info[qid].seqID[1], lmap_quartet_info[qid].seqID[2], lmap_quartet_info[qid].seqID[3]); 
-
-	// *** taxa should not be sorted, because that changes the corners a dot is assigned to - removed HAS ;^)
-        // obsolete: sort(lmap_quartet_info[qid].seqID, lmap_quartet_info[qid].seqID+4); // why sort them?!? HAS ;^)
-
-        // initialize sub-alignment and sub-tree
-        Alignment *quartet_aln;
-        if (aln->isSuperAlignment()) {
-            quartet_aln = new SuperAlignment;
-        } else {
-            quartet_aln = new Alignment;
-        }
-        IntVector seq_id;
-        seq_id.insert(seq_id.begin(), lmap_quartet_info[qid].seqID, lmap_quartet_info[qid].seqID+4);
-        IntVector kept_partitions;
-        // only keep partitions with at least 3 sequences
-        quartet_aln->extractSubAlignment(aln, seq_id, 0, 3, &kept_partitions);
-                
-        if (kept_partitions.size() == 0) {
-            // nothing kept
-            for (int k = 0; k < 3; k++) {
-                lmap_quartet_info[qid].logl[k] = -1.0;
-            }
-        } else {
-            // something partition kept, do computations
-            if (quartet_aln->ordered_pattern.empty())
-                quartet_aln->orderPatternByNumChars(PAT_VARIANT);
-            PhyloTree *quartet_tree;
-            if (isSuperTree()) {
-                quartet_tree = new PhyloSuperTree((SuperAlignment*)quartet_aln, (PhyloSuperTree*)this);
-            } else {
-                quartet_tree = new PhyloTree(quartet_aln);
-            }
-
-            // set up parameters
-            quartet_tree->setParams(params);
-            quartet_tree->optimize_by_newton = params->optimize_by_newton;
-            quartet_tree->setLikelihoodKernel(params->SSE);
-            quartet_tree->setNumThreads(num_threads);
-
-            // set model and rate
-            quartet_tree->setModelFactory(model_factory);
-            quartet_tree->setModel(getModel());
-            quartet_tree->setRate(getRate());
-
-            // set up partition model
-            if (isSuperTree()) {
-                PhyloSuperTree *quartet_super_tree = (PhyloSuperTree*)quartet_tree;
-                PhyloSuperTree *super_tree = (PhyloSuperTree*)this;
-                for (int i = 0; i < quartet_super_tree->size(); i++) {
-                    quartet_super_tree->at(i)->setModelFactory(super_tree->at(kept_partitions[i])->getModelFactory());
-                    quartet_super_tree->at(i)->setModel(super_tree->at(kept_partitions[i])->getModel());
-                    quartet_super_tree->at(i)->setRate(super_tree->at(kept_partitions[i])->getRate());
-                    //quartet_super_tree->at(i)->aln->buildSeqStates(quartet_super_tree->at(i)->getModel()->seq_states);
-                }
-            } else {
-                //quartet_aln->buildSeqStates(getModel()->seq_states);
-            }
-            
-            // NOTE: we don't need to set phylo_tree in model and rate because parameters are not reoptimized
-            
-            
-            
-            // loop over 3 quartets to compute likelihood
-            for (int k = 0; k < 3; k++) {
-                string quartet_tree_str;
-                quartet_tree_str = "(" + quartet_aln->getSeqName(qc[k*4]) + "," + quartet_aln->getSeqName(qc[k*4+1]) + ",(" + 
-                    quartet_aln->getSeqName(qc[k*4+2]) + "," + quartet_aln->getSeqName(qc[k*4+3]) + "));";
-                quartet_tree->readTreeStringSeqName(quartet_tree_str);
-                quartet_tree->initializeAllPartialLh();
-                quartet_tree->wrapperFixNegativeBranch(true);
-                // optimize branch lengths with logl_epsilon=0.1 accuracy
-                lmap_quartet_info[qid].logl[k] = quartet_tree->optimizeAllBranches(10, 0.1);
-            }
-            // reset model & rate so that they are not deleted
-            quartet_tree->setModel(NULL);
-            quartet_tree->setModelFactory(NULL);
-            quartet_tree->setRate(NULL);
-
-            if (isSuperTree()) {
-                PhyloSuperTree *quartet_super_tree = (PhyloSuperTree*)quartet_tree;
-                for (int i = 0; i < quartet_super_tree->size(); i++) {
-                    quartet_super_tree->at(i)->setModelFactory(NULL);
-                    quartet_super_tree->at(i)->setModel(NULL);
-                    quartet_super_tree->at(i)->setRate(NULL);
-                }
-            }
-            delete quartet_tree;
-        }
         
-        delete quartet_aln;
-
-        // determine likelihood order
-        int qworder[3]; // local (thread-safe) vector for sorting
-
-	if (lmap_quartet_info[qid].logl[0] > lmap_quartet_info[qid].logl[1]) {
-		if(lmap_quartet_info[qid].logl[2] > lmap_quartet_info[qid].logl[0]) {
-			qworder[0] = 2;
-			qworder[1] = 0;
-			qworder[2] = 1;		
-		} else if (lmap_quartet_info[qid].logl[2] < lmap_quartet_info[qid].logl[1]) {
-			qworder[0] = 0;
-			qworder[1] = 1;
-			qworder[2] = 2;		
-		} else {
-			qworder[0] = 0;
-			qworder[1] = 2;
-			qworder[2] = 1;		
-		}
-	} else {
-		if(lmap_quartet_info[qid].logl[2] > lmap_quartet_info[qid].logl[1]) {
-			qworder[0] = 2;
-			qworder[1] = 1;
-			qworder[2] = 0;		
-		} else if (lmap_quartet_info[qid].logl[2] < lmap_quartet_info[qid].logl[0]) {
-			qworder[0] = 1;
-			qworder[1] = 0;
-			qworder[2] = 2;		
-		} else {
-			qworder[0] = 1;
-			qworder[1] = 2;
-			qworder[2] = 0;		
-		}
-	}
-
-        // compute Bayesian weights
-        double temp;
-
-	lmap_quartet_info[qid].qweight[0] = lmap_quartet_info[qid].logl[0];
-	lmap_quartet_info[qid].qweight[1] = lmap_quartet_info[qid].logl[1];
-	lmap_quartet_info[qid].qweight[2] = lmap_quartet_info[qid].logl[2];
-
-	temp = lmap_quartet_info[qid].qweight[qworder[1]]-lmap_quartet_info[qid].qweight[qworder[0]];
-	if(temp < -TP_MAX_EXP_DIFF)	/* possible, since 1.0+exp(>36) == 1.0 */
-	   lmap_quartet_info[qid].qweight[qworder[1]] = 0.0;
-	else
-	   lmap_quartet_info[qid].qweight[qworder[1]] = exp(temp);
-
-        temp = lmap_quartet_info[qid].qweight[qworder[2]]-lmap_quartet_info[qid].qweight[qworder[0]];
-	if(temp < -TP_MAX_EXP_DIFF)	/* possible, since 1.0+exp(>36) == 1.0 */
-	   lmap_quartet_info[qid].qweight[qworder[2]] = 0.0;
-	else
-	   lmap_quartet_info[qid].qweight[qworder[2]] = exp(temp);
-
-	lmap_quartet_info[qid].qweight[qworder[0]] = 1.0;
-
-	temp = lmap_quartet_info[qid].qweight[0] + lmap_quartet_info[qid].qweight[1] + lmap_quartet_info[qid].qweight[2];
-	lmap_quartet_info[qid].qweight[0] = lmap_quartet_info[qid].qweight[0]/temp;
-	lmap_quartet_info[qid].qweight[1] = lmap_quartet_info[qid].qweight[1]/temp;
-	lmap_quartet_info[qid].qweight[2] = lmap_quartet_info[qid].qweight[2]/temp;
-
-	// determine which of the three corners (only meaningful if seqIDs NOT sorted)
-	if (treebits[qworder[0]] == 1) {
-		lmap_quartet_info[qid].corner=0;
-	} else {
-		if (treebits[qworder[0]] == 2) {
-			lmap_quartet_info[qid].corner=1;
-		} else {
-			lmap_quartet_info[qid].corner=2;
-		}
-	}
-
-        // determine which of the 7 regions (only meaningful if seqIDs NOT sorted)
-        double temp1, temp2, temp3;
-        unsigned char discreteweight[3];
-        double sqdiff[3];
-
-	/* 100 distribution */
-	temp1 = 1.0 - lmap_quartet_info[qid].qweight[qworder[0]];
-	sqdiff[0] = temp1*temp1 +
-		lmap_quartet_info[qid].qweight[qworder[1]]*lmap_quartet_info[qid].qweight[qworder[1]] +
-		lmap_quartet_info[qid].qweight[qworder[2]]*lmap_quartet_info[qid].qweight[qworder[2]];
-	discreteweight[0] = treebits[qworder[0]];
-
-	/* 110 distribution */
-	temp1 = 0.5 - lmap_quartet_info[qid].qweight[qworder[0]];
-	temp2 = 0.5 - lmap_quartet_info[qid].qweight[qworder[1]];
-	sqdiff[1] = temp1*temp1 + temp2*temp2 +
-		lmap_quartet_info[qid].qweight[qworder[2]]*lmap_quartet_info[qid].qweight[qworder[2]];
-	discreteweight[1] = treebits[qworder[0]] + treebits[qworder[1]];
-
-	/* 111 distribution */
-	temp1 = onethird - lmap_quartet_info[qid].qweight[qworder[0]];
-	temp2 = onethird - lmap_quartet_info[qid].qweight[qworder[1]];
-	temp3 = onethird - lmap_quartet_info[qid].qweight[qworder[2]];
-	sqdiff[2] = temp1 * temp1 + temp2 * temp2 + temp3 * temp3;
-	discreteweight[2] = (unsigned char) 7;
-
-        /* sort in descending order */
-        int sqorder[3]; // local (thread-safe) vector for sorting
-        if (sqdiff[0] > sqdiff[1]) {
-            if(sqdiff[2] > sqdiff[0]) {
-                sqorder[0] = 2;
-                sqorder[1] = 0;
-                sqorder[2] = 1;		
-            } else if (sqdiff[2] < sqdiff[1]) {
-                sqorder[0] = 0;
-                sqorder[1] = 1;
-                sqorder[2] = 2;		
-            } else {
-                sqorder[0] = 0;
-                sqorder[1] = 2;
-                sqorder[2] = 1;		
-            }
-        } else {
-            if(sqdiff[2] > sqdiff[1]) {
-                sqorder[0] = 2;
-                sqorder[1] = 1;
-                sqorder[2] = 0;		
-            } else if (sqdiff[2] < sqdiff[0]) {
-                sqorder[0] = 1;
-                sqorder[1] = 0;
-                sqorder[2] = 2;		
-            } else {
-                sqorder[0] = 1;
-                sqorder[1] = 2;
-                sqorder[2] = 0;		
-            }
-        }
-
-
-        // determine which of the 7 regions (only meaningful if seqIDs NOT sorted)
-        unsigned char qpbranching = (unsigned char) discreteweight[sqorder[2]];
-
-	if (qpbranching == 1) {
-		lmap_quartet_info[qid].area=0; // LM_REG1 - top
-	}
-	if (qpbranching == 2) {
-		lmap_quartet_info[qid].area=1; // LM_REG2 - right
-	}
-	if (qpbranching == 4) {
-		lmap_quartet_info[qid].area=2; // LM_REG3 - left
-	}
-
-	if (qpbranching == 3) {
-		lmap_quartet_info[qid].area=3; // LM_REG4
-	}
-	if (qpbranching == 6) {
-		lmap_quartet_info[qid].area=4; // LM_REG5
-	}
-	if (qpbranching == 5) {
-		lmap_quartet_info[qid].area=5; // LM_REG6
-	}
-
-	if (qpbranching == 7) {
-		lmap_quartet_info[qid].area=6; // LM_REG7 - center 
-	}
-
-	{
-		int64_t count = (qid+1);
-		if ((count % 100) == 0) {
-			cout << '.';
-			if ((count % 1000) == 0) { // separator after 10 dots
-				cout << ' ';
-				if ((count % 5000) == 0) // new-line after 50 dots
-					cout << " : " << count << endl;
-			}
-			cout.flush();
-		}
-	}
-    } /*** end draw lmap_num_quartets quartets randomly ***/
 #ifdef _OPENMP
-    finish_random(rstream);
+#pragma omp for schedule(guided)
+#endif
+        for (int64_t qid = 0; qid < params->lmap_num_quartets; ++qid) { /*** draw lmap_num_quartets quartets randomly ***/
+            progress_display::setProgressDisplay(false);
+            // fprintf(stderr, "%I64d\n", qid);
+            // uniformly draw 4 taxa
+            // (a) sample taxon 1
+            // was: lmap_quartet_info[qid].seqID[0] = random_int(leafNum);
+            if (!quartets_drawn) {
+                // draw a random quartet
+                lmap_quartet_info[qid].seqID[0] = LMGroups.GroupA[random_int(sizeA, rstream)];
+                
+                do {
+                    // (b) sample taxon 2 according to the number of clusters
+                    // was: lmap_quartet_info[qid].seqID[1] = random_int(leafNum);
+                    switch(numGroups){
+                        case 1: lmap_quartet_info[qid].seqID[1] = LMGroups.GroupA[random_int(sizeA, rstream)]; break; // a1,A2|a3,a4
+                        case 2: lmap_quartet_info[qid].seqID[1] = LMGroups.GroupA[random_int(sizeA, rstream)]; break; // a1,A2|b1,b2
+                        case 3: lmap_quartet_info[qid].seqID[1] = LMGroups.GroupB[random_int(sizeB, rstream)]; break; // a ,B |c1,c2
+                        case 4: lmap_quartet_info[qid].seqID[1] = LMGroups.GroupB[random_int(sizeB, rstream)]; break; // a ,B |c, d
+                        default: outError("Unknown Likelihood Mapping sampling mode! PLEASE report this to the developers!"); break;
+                    }
+                } while (lmap_quartet_info[qid].seqID[1] == lmap_quartet_info[qid].seqID[0]);
+                do {
+                    // (c) sample taxon 3 according to the number of clusters
+                    // was: lmap_quartet_info[qid].seqID[2] = random_int(leafNum);
+                    switch(numGroups){
+                        case 1: lmap_quartet_info[qid].seqID[2] = LMGroups.GroupA[random_int(sizeA, rstream)]; break; // a1,a2|A3,a4
+                        case 2: lmap_quartet_info[qid].seqID[2] = LMGroups.GroupB[random_int(sizeB, rstream)]; break; // a1,a2|B1,b2
+                        case 3: lmap_quartet_info[qid].seqID[2] = LMGroups.GroupC[random_int(sizeC, rstream)]; break; // a ,b |C1,c2
+                        case 4: lmap_quartet_info[qid].seqID[2] = LMGroups.GroupC[random_int(sizeC, rstream)]; break; // a ,b |C, d
+                        default: outError("Unknown Likelihood Mapping sampling mode! PLEASE report this to the developers!"); break;
+                    }
+                } while (lmap_quartet_info[qid].seqID[2] == lmap_quartet_info[qid].seqID[0] || lmap_quartet_info[qid].seqID[2] == lmap_quartet_info[qid].seqID[1]);
+                do {
+                    // (d) sample taxon 4 according to the number of clusters
+                    // was: lmap_quartet_info[qid].seqID[3] = random_int(leafNum);
+                    switch(numGroups){
+                        case 1: lmap_quartet_info[qid].seqID[3] = LMGroups.GroupA[random_int(sizeA, rstream)]; break; // a1,a2|a3,A4
+                        case 2: lmap_quartet_info[qid].seqID[3] = LMGroups.GroupB[random_int(sizeB, rstream)]; break; // a1,a2|b1,B2
+                        case 3: lmap_quartet_info[qid].seqID[3] = LMGroups.GroupC[random_int(sizeC, rstream)]; break; // a ,b |c1,C2
+                        case 4: lmap_quartet_info[qid].seqID[3] = LMGroups.GroupD[random_int(sizeD, rstream)]; break; // a ,b |c, D
+                        default: outError("Unknown Likelihood Mapping sampling mode! PLEASE report this to the developers!"); break;
+                    }
+                } while (lmap_quartet_info[qid].seqID[3] == lmap_quartet_info[qid].seqID[0] || lmap_quartet_info[qid].seqID[3] == lmap_quartet_info[qid].seqID[1]
+                         || lmap_quartet_info[qid].seqID[3] == lmap_quartet_info[qid].seqID[2]);
+            }
+            
+            // fprintf(stderr, "qqq%d: %d, %d, %d, %d\n", qid, lmap_quartet_info[qid].seqID[0], lmap_quartet_info[qid].seqID[1], lmap_quartet_info[qid].seqID[2], lmap_quartet_info[qid].seqID[3]);
+            // *** taxa should not be sorted, because that changes the corners a dot is assigned to - removed HAS ;^)
+            // obsolete: sort(lmap_quartet_info[qid].seqID, lmap_quartet_info[qid].seqID+4); // why sort them?!? HAS ;^)
+            
+            // initialize sub-alignment and sub-tree
+            Alignment *quartet_aln;
+            if (aln->isSuperAlignment()) {
+                quartet_aln = new SuperAlignment;
+            } else {
+                quartet_aln = new Alignment;
+            }
+            quartet_aln->showNoProgress();
+            IntVector seq_id;
+            seq_id.insert(seq_id.begin(), lmap_quartet_info[qid].seqID, lmap_quartet_info[qid].seqID+4);
+            IntVector kept_partitions;
+            // only keep partitions with at least 3 sequences
+            quartet_aln->extractSubAlignment(aln, seq_id, 0, 3, &kept_partitions);
+            
+            if (kept_partitions.size() == 0) {
+                // nothing kept
+                for (int k = 0; k < 3; k++) {
+                    lmap_quartet_info[qid].logl[k] = -1.0;
+                }
+            } else {
+                // something partition kept, do computations
+                if (quartet_aln->ordered_pattern.empty())
+                    quartet_aln->orderPatternByNumChars(PAT_VARIANT);
+                PhyloTree *quartet_tree;
+                if (isSuperTree()) {
+                    quartet_tree = new PhyloSuperTree((SuperAlignment*)quartet_aln, (PhyloSuperTree*)this);
+                } else {
+                    quartet_tree = new PhyloTree(quartet_aln);
+                }
+                quartet_tree->warnedAboutThreadCount = true; //Ee-uw!  Otherwise we get lots of warnings!
+                quartet_tree->showNoProgress();
+                
+                // set up parameters
+                quartet_tree->setParams(params);
+                quartet_tree->optimize_by_newton = params->optimize_by_newton;
+                quartet_tree->setLikelihoodKernel(params->SSE);
+                quartet_tree->setNumThreads(num_threads);
+                
+                // set model and rate
+                quartet_tree->setModelFactory(model_factory);
+                quartet_tree->setModel(getModel());
+                quartet_tree->setRate(getRate());
+                
+                // set up partition model
+                if (isSuperTree()) {
+                    PhyloSuperTree *quartet_super_tree = (PhyloSuperTree*)quartet_tree;
+                    PhyloSuperTree *super_tree = (PhyloSuperTree*)this;
+                    for (int i = 0; i < quartet_super_tree->size(); i++) {
+                        quartet_super_tree->at(i)->setModelFactory(super_tree->at(kept_partitions[i])->getModelFactory());
+                        quartet_super_tree->at(i)->setModel(super_tree->at(kept_partitions[i])->getModel());
+                        quartet_super_tree->at(i)->setRate(super_tree->at(kept_partitions[i])->getRate());
+                        //quartet_super_tree->at(i)->aln->buildSeqStates(quartet_super_tree->at(i)->getModel()->seq_states);
+                    }
+                } else {
+                    //quartet_aln->buildSeqStates(getModel()->seq_states);
+                }
+                
+                // NOTE: we don't need to set phylo_tree in model and rate because parameters are not reoptimized
+                // loop over 3 quartets to compute likelihood
+                for (int k = 0; k < 3; k++) {
+                    string quartet_tree_str;
+                    quartet_tree_str = "(" + quartet_aln->getSeqName(qc[k*4]) + "," + quartet_aln->getSeqName(qc[k*4+1]) + ",(" +
+                    quartet_aln->getSeqName(qc[k*4+2]) + "," + quartet_aln->getSeqName(qc[k*4+3]) + "));";
+                    quartet_tree->readTreeStringSeqName(quartet_tree_str);
+                    quartet_tree->initializeAllPartialLh();
+                    quartet_tree->wrapperFixNegativeBranch(true);
+                    // optimize branch lengths with logl_epsilon=0.1 accuracy
+                    lmap_quartet_info[qid].logl[k] = quartet_tree->optimizeAllBranches(10, 0.1);
+                }
+                // reset model & rate so that they are not deleted
+                quartet_tree->setModel(NULL);
+                quartet_tree->setModelFactory(NULL);
+                quartet_tree->setRate(NULL);
+                
+                if (isSuperTree()) {
+                    PhyloSuperTree *quartet_super_tree = (PhyloSuperTree*)quartet_tree;
+                    for (int i = 0; i < quartet_super_tree->size(); i++) {
+                        quartet_super_tree->at(i)->setModelFactory(NULL);
+                        quartet_super_tree->at(i)->setModel(NULL);
+                        quartet_super_tree->at(i)->setRate(NULL);
+                    }
+                }
+                delete quartet_tree;
+            }
+            delete quartet_aln;
+            
+            // determine likelihood order
+            int qworder[3]; // local (thread-safe) vector for sorting
+            
+            if (lmap_quartet_info[qid].logl[0] > lmap_quartet_info[qid].logl[1]) {
+                if(lmap_quartet_info[qid].logl[2] > lmap_quartet_info[qid].logl[0]) {
+                    qworder[0] = 2;
+                    qworder[1] = 0;
+                    qworder[2] = 1;
+                } else if (lmap_quartet_info[qid].logl[2] < lmap_quartet_info[qid].logl[1]) {
+                    qworder[0] = 0;
+                    qworder[1] = 1;
+                    qworder[2] = 2;
+                } else {
+                    qworder[0] = 0;
+                    qworder[1] = 2;
+                    qworder[2] = 1;
+                }
+            } else {
+                if(lmap_quartet_info[qid].logl[2] > lmap_quartet_info[qid].logl[1]) {
+                    qworder[0] = 2;
+                    qworder[1] = 1;
+                    qworder[2] = 0;
+                } else if (lmap_quartet_info[qid].logl[2] < lmap_quartet_info[qid].logl[0]) {
+                    qworder[0] = 1;
+                    qworder[1] = 0;
+                    qworder[2] = 2;
+                } else {
+                    qworder[0] = 1;
+                    qworder[1] = 2;
+                    qworder[2] = 0;
+                }
+            }
+            
+            // compute Bayesian weights
+            double temp;
+            
+            lmap_quartet_info[qid].qweight[0] = lmap_quartet_info[qid].logl[0];
+            lmap_quartet_info[qid].qweight[1] = lmap_quartet_info[qid].logl[1];
+            lmap_quartet_info[qid].qweight[2] = lmap_quartet_info[qid].logl[2];
+            
+            temp = lmap_quartet_info[qid].qweight[qworder[1]]-lmap_quartet_info[qid].qweight[qworder[0]];
+            if(temp < -TP_MAX_EXP_DIFF)	/* possible, since 1.0+exp(>36) == 1.0 */
+                lmap_quartet_info[qid].qweight[qworder[1]] = 0.0;
+            else
+                lmap_quartet_info[qid].qweight[qworder[1]] = exp(temp);
+            
+            temp = lmap_quartet_info[qid].qweight[qworder[2]]-lmap_quartet_info[qid].qweight[qworder[0]];
+            if(temp < -TP_MAX_EXP_DIFF)	/* possible, since 1.0+exp(>36) == 1.0 */
+                lmap_quartet_info[qid].qweight[qworder[2]] = 0.0;
+            else
+                lmap_quartet_info[qid].qweight[qworder[2]] = exp(temp);
+            
+            lmap_quartet_info[qid].qweight[qworder[0]] = 1.0;
+            
+            temp = lmap_quartet_info[qid].qweight[0] + lmap_quartet_info[qid].qweight[1] + lmap_quartet_info[qid].qweight[2];
+            lmap_quartet_info[qid].qweight[0] = lmap_quartet_info[qid].qweight[0]/temp;
+            lmap_quartet_info[qid].qweight[1] = lmap_quartet_info[qid].qweight[1]/temp;
+            lmap_quartet_info[qid].qweight[2] = lmap_quartet_info[qid].qweight[2]/temp;
+            
+            // determine which of the three corners (only meaningful if seqIDs NOT sorted)
+            if (treebits[qworder[0]] == 1) {
+                lmap_quartet_info[qid].corner=0;
+            } else {
+                if (treebits[qworder[0]] == 2) {
+                    lmap_quartet_info[qid].corner=1;
+                } else {
+                    lmap_quartet_info[qid].corner=2;
+                }
+            }
+            
+            // determine which of the 7 regions (only meaningful if seqIDs NOT sorted)
+            double temp1, temp2, temp3;
+            unsigned char discreteweight[3];
+            double sqdiff[3];
+            
+            /* 100 distribution */
+            temp1 = 1.0 - lmap_quartet_info[qid].qweight[qworder[0]];
+            sqdiff[0] = temp1*temp1 +
+            lmap_quartet_info[qid].qweight[qworder[1]]*lmap_quartet_info[qid].qweight[qworder[1]] +
+            lmap_quartet_info[qid].qweight[qworder[2]]*lmap_quartet_info[qid].qweight[qworder[2]];
+            discreteweight[0] = treebits[qworder[0]];
+            
+            /* 110 distribution */
+            temp1 = 0.5 - lmap_quartet_info[qid].qweight[qworder[0]];
+            temp2 = 0.5 - lmap_quartet_info[qid].qweight[qworder[1]];
+            sqdiff[1] = temp1*temp1 + temp2*temp2 +
+            lmap_quartet_info[qid].qweight[qworder[2]]*lmap_quartet_info[qid].qweight[qworder[2]];
+            discreteweight[1] = treebits[qworder[0]] + treebits[qworder[1]];
+            
+            /* 111 distribution */
+            temp1 = onethird - lmap_quartet_info[qid].qweight[qworder[0]];
+            temp2 = onethird - lmap_quartet_info[qid].qweight[qworder[1]];
+            temp3 = onethird - lmap_quartet_info[qid].qweight[qworder[2]];
+            sqdiff[2] = temp1 * temp1 + temp2 * temp2 + temp3 * temp3;
+            discreteweight[2] = (unsigned char) 7;
+            
+            /* sort in descending order */
+            int sqorder[3]; // local (thread-safe) vector for sorting
+            if (sqdiff[0] > sqdiff[1]) {
+                if(sqdiff[2] > sqdiff[0]) {
+                    sqorder[0] = 2;
+                    sqorder[1] = 0;
+                    sqorder[2] = 1;
+                } else if (sqdiff[2] < sqdiff[1]) {
+                    sqorder[0] = 0;
+                    sqorder[1] = 1;
+                    sqorder[2] = 2;
+                } else {
+                    sqorder[0] = 0;
+                    sqorder[1] = 2;
+                    sqorder[2] = 1;
+                }
+            } else {
+                if(sqdiff[2] > sqdiff[1]) {
+                    sqorder[0] = 2;
+                    sqorder[1] = 1;
+                    sqorder[2] = 0;
+                } else if (sqdiff[2] < sqdiff[0]) {
+                    sqorder[0] = 1;
+                    sqorder[1] = 0;
+                    sqorder[2] = 2;
+                } else {
+                    sqorder[0] = 1;
+                    sqorder[1] = 2;
+                    sqorder[2] = 0;
+                }
+            }
+            
+            // determine which of the 7 regions (only meaningful if seqIDs NOT sorted)
+            unsigned char qpbranching = (unsigned char) discreteweight[sqorder[2]];
+            
+            if (qpbranching == 1) {
+                lmap_quartet_info[qid].area=0; // LM_REG1 - top
+            }
+            if (qpbranching == 2) {
+                lmap_quartet_info[qid].area=1; // LM_REG2 - right
+            }
+            if (qpbranching == 4) {
+                lmap_quartet_info[qid].area=2; // LM_REG3 - left
+            }
+            
+            if (qpbranching == 3) {
+                lmap_quartet_info[qid].area=3; // LM_REG4
+            }
+            if (qpbranching == 6) {
+                lmap_quartet_info[qid].area=4; // LM_REG5
+            }
+            if (qpbranching == 5) {
+                lmap_quartet_info[qid].area=5; // LM_REG6
+            }
+            
+            if (qpbranching == 7) {
+                lmap_quartet_info[qid].area=6; // LM_REG7 - center
+            }
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+            {
+                progress_display::setProgressDisplay(showingProgressBars);
+                trackProgress(1.0);
+                progress_display::setProgressDisplay(false);
+            }
+            if (!showingProgressBars)
+            {
+                int64_t count = (qid+1);
+                if ((count % 100) == 0) {
+                    cout << '.';
+                    if ((count % 1000) == 0) { // separator after 10 dots
+                        cout << ' ';
+                        if ((count % 5000) == 0) // new-line after 50 dots
+                            cout << " : " << count << endl;
+                    }
+                    cout.flush();
+                }
+            }
+        } /*** end draw lmap_num_quartets quartets randomly ***/
+#ifdef _OPENMP
+        finish_random(rstream);
     }
 #endif
-
-    if ((params->lmap_num_quartets % 5000) != 0) {
-	cout << ". : " << params->lmap_num_quartets << flush << endl << endl;
-    } else cout << endl;
-
-
+    progress_display::setProgressDisplay(showingProgressBars);
+    doneProgress();
+    
+    if (!showingProgressBars) {
+        if ((params->lmap_num_quartets % 5000) != 0) {
+            cout << ". : " << params->lmap_num_quartets << flush << endl << endl;
+        } else {
+            cout << endl;
+        }
+    }
+    
     // restore seq_states
     /*
     if (isSuperTree()) {
@@ -1167,7 +1185,7 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
     } else {
         aln->buildSeqStates(getModel()->seq_states);
     }
-     */
+    */
 } // end PhyloTree::computeQuartetLikelihoods
 
 
@@ -1388,7 +1406,6 @@ void PhyloTree::doLikelihoodMapping() {
         if (params->lmap_num_quartets > 0 && params->lmap_num_quartets < recommended_quartets) {
             outWarning("Number of quartets is recommended to be at least " + convertInt64ToString(recommended_quartets) + " s.t. each sequence is sampled sufficiently");
         }
-
     }
 
     areacount[0] = 0;
@@ -1417,13 +1434,10 @@ void PhyloTree::doLikelihoodMapping() {
         lmap_seq_quartet_info[qid].countarr[8] = 0;
         lmap_seq_quartet_info[qid].countarr[9] = 0;
     }
-
     computeQuartetLikelihoods(lmap_quartet_info, LMGroups);
 
     for (qid = 0; qid < params->lmap_num_quartets; qid++) {
-	int tempreg;
-
-	tempreg = lmap_quartet_info[qid].area;
+        int tempreg = lmap_quartet_info[qid].area;
         areacount[tempreg]++;
         lmap_seq_quartet_info[leafNum].countarr[tempreg]++; /* which of the 7 regions */
         lmap_seq_quartet_info[lmap_quartet_info[qid].seqID[0]].countarr[tempreg]++;
@@ -1439,7 +1453,6 @@ void PhyloTree::doLikelihoodMapping() {
         lmap_seq_quartet_info[lmap_quartet_info[qid].seqID[2]].countarr[tempreg]++;
         lmap_seq_quartet_info[lmap_quartet_info[qid].seqID[3]].countarr[tempreg]++;
     }
-    
     if (params->print_lmap_quartet_lh) {
         // print quartet file
         filename = (string)params->out_prefix + ".lmap.quartetlh";
@@ -1457,17 +1470,15 @@ void PhyloTree::doLikelihoodMapping() {
     initeps(epsout, LMGroups);
 
     for (qid = 0; qid < params->lmap_num_quartets; qid++) {
-
-	plotlmpointeps(epsout, 
-		// double w1, double w2)
-                lmap_quartet_info[qid].qweight[0],
-                lmap_quartet_info[qid].qweight[1]);
-
-	plotlmpointsvg(svgout, 
-		// double w1, double w2)
-                lmap_quartet_info[qid].qweight[0],
-                lmap_quartet_info[qid].qweight[1]);
-
+        plotlmpointeps(epsout,
+                       // double w1, double w2)
+                       lmap_quartet_info[qid].qweight[0],
+                       lmap_quartet_info[qid].qweight[1]);
+        
+        plotlmpointsvg(svgout,
+                       // double w1, double w2)
+                       lmap_quartet_info[qid].qweight[0],
+                       lmap_quartet_info[qid].qweight[1]);
     }
 
     if (params->print_lmap_quartet_lh) {
@@ -1488,11 +1499,9 @@ void PhyloTree::doLikelihoodMapping() {
                 << "\t" << lmap_quartet_info[qid].area + 1
                 << "\t" << lmap_quartet_info[qid].corner + 1 << endl;
         }
-
 //        PhyloTree::reportLikelihoodMapping(out);
-
     }
-
+    
     resolved   = areacount[0] + areacount[1] + areacount[2];
     partly     = areacount[3] + areacount[4] + areacount[5];
     unresolved = areacount[6];

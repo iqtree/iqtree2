@@ -925,6 +925,10 @@ public:
 	 */
 	bool readSiteStateFreq(const char* site_freq_file);
 
+    /**
+     * disable the display of progress bars for actions being carried out by this alignment
+     */
+    void showNoProgress();
 
 protected:
 
@@ -951,6 +955,7 @@ protected:
 	 */
 	void initCodon(char *gene_code_id);
 
+    bool isShowingProgressDisabled;
 };
 
 

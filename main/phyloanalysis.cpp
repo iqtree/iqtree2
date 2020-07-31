@@ -1083,11 +1083,9 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
             reportModel(out, tree);
             reportRate(out, tree);
         }
-
-            if (params.lmap_num_quartets >= 0) {
+        if (params.lmap_num_quartets >= 0) {
             tree.reportLikelihoodMapping(out);
         }
-
 
         /*
         out << "RATE HETEROGENEITY" << endl << "------------------" << endl
@@ -2180,6 +2178,10 @@ void optimizeConTree(Params &params, IQTree *tree) {
     tree->getCheckpoint()->put("contree", contree);
 }
 
+void handleGammaInvariantOptions(Params &params, IQTree &iqtree);
+
+void handleQuartetLikelihoodMapping(Params &params, IQTree &iqtree);
+
 void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
     //    string dist_file;
@@ -2341,37 +2343,13 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     //(we cannot do it until we *have* one).
     if (!params.compute_ml_tree_only) {
         iqtree->ensureNumberOfThreadsIsSet(&params);
-    
         iqtree->initializeAllPartialLh();
-        
-        if (iqtree->getRate()->name.find("+I+G") != string::npos) {
-            if (params.alpha_invar_file != NULL) { // COMPUTE TREE LIKELIHOOD BASED ON THE INPUT ALPHA AND P_INVAR VALUE
-                computeLoglFromUserInputGAMMAInvar(params, *iqtree);
-                exit(0);
-            }
-            if (params.exh_ai) {
-                exhaustiveSearchGAMMAInvar(params, *iqtree);
-                exit(0);
-            }
-        }
+        handleGammaInvariantOptions(params, *iqtree);
         
         // Optimize model parameters and branch lengths using ML for the initial tree
         iqtree->clearAllPartialLH();
         initTree = iqtree->ensureModelParametersAreSet(initEpsilon);
-        
-        
-        if (params.lmap_num_quartets >= 0) {
-            cout << endl << "Performing likelihood mapping with ";
-            if (params.lmap_num_quartets > 0)
-                cout << params.lmap_num_quartets;
-            else
-                cout << "all";
-            cout << " quartets..." << endl;
-            double lkmap_time = getRealTime();
-            iqtree->doLikelihoodMapping();
-            cout << "Likelihood mapping needed " << getRealTime()-lkmap_time << " seconds" << endl << endl;
-        }
-        
+        handleQuartetLikelihoodMapping(params, *iqtree);
         finishedInitTree = iqtree->getCheckpoint()->getBool("finishedInitTree");
         
         // now overwrite with random tree
@@ -2453,9 +2431,11 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
                     
                     //This fails if there are any lengths <=0 (so it has to
                     //go after the fix-up for negative branch lengths).
-                    auto threadCount = iqtree->ensureNumberOfThreadsIsSet(&params);
-                    cout << "Number of threads is " << threadCount << endl;
+                    iqtree->ensureNumberOfThreadsIsSet(&params);
+                    iqtree->initializeAllPartialLh();
+                    handleGammaInvariantOptions(params, *iqtree);
                     initTree = iqtree->ensureModelParametersAreSet(initEpsilon);
+                    handleQuartetLikelihoodMapping(params, *iqtree);
                 } else {
                     iqtree->wrapperFixNegativeBranch(iqtree->isSuperTree());
                     iqtree->initializeAllPartialLh();
@@ -2527,21 +2507,15 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     double search_cpu_time = getCPUTime() - cputime_search_start;
     double search_real_time = getRealTime() - realtime_search_start;
 
-    // COMMENT THIS OUT BECAUSE IT DELETES ALL BRANCH LENGTHS OF SUBTREES!
-//    if (iqtree.isSuperTree())
-//            ((PhyloSuperTree*) iqtree)->mapTrees();
-
     if (!MPIHelper::getInstance().isMaster()) {
         delete[] pattern_lh;
         return;
     }
-
     if (params.snni && params.min_iterations && verbose_mode >= VB_MED) {
         cout << "Log-likelihoods of " << params.popSize << " best candidate trees: " << endl;
         iqtree->printBestScores();
         cout << endl;
     }
-
     if (!params.final_model_opt) {
         iqtree->setCurScore(iqtree->computeLikelihood());
     } else if (params.min_iterations) {
@@ -2565,7 +2539,6 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
             iqtree->getCheckpoint()->putBool("finishedModelFinal", true);
             iqtree->saveCheckpoint();
         }
-
     }
 
     if (iqtree->isSuperTree()) {
@@ -2684,13 +2657,39 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         out_UB.close();
     }
 
-    if (params.out_file)
+    if (params.out_file) {
         iqtree->printTree(params.out_file);
-
+    }
     delete[] pattern_lh;
 
     runApproximateBranchLengths(params, *iqtree);
+}
 
+void handleGammaInvariantOptions(Params &params, IQTree &iqtree) {
+    if (iqtree.getRate()->name.find("+I+G") != string::npos) {
+        if (params.alpha_invar_file != NULL) { // COMPUTE TREE LIKELIHOOD BASED ON THE INPUT ALPHA AND P_INVAR VALUE
+            computeLoglFromUserInputGAMMAInvar(params, iqtree);
+            exit(0);
+        }
+        if (params.exh_ai) {
+            exhaustiveSearchGAMMAInvar(params, iqtree);
+            exit(0);
+        }
+    }
+}
+
+void handleQuartetLikelihoodMapping(Params &params, IQTree &iqtree) {
+    if (params.lmap_num_quartets >= 0) {
+        cout << endl << "Performing likelihood mapping with ";
+        if (params.lmap_num_quartets > 0)
+            cout << params.lmap_num_quartets;
+        else
+            cout << "all";
+        cout << " quartets..." << endl;
+        double lkmap_time = getRealTime();
+        iqtree.doLikelihoodMapping();
+        cout << "Likelihood mapping needed " << getRealTime()-lkmap_time << " seconds" << endl << endl;
+    }
 }
 
 /**********************************************************

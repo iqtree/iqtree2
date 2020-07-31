@@ -49,6 +49,10 @@ progress_display & progress_display::operator ++ () {
     return (*this) += 1.0;
 }
 
+progress_display& progress_display::incrementBy (double increment) {
+    return (*this) += increment;
+}
+
 progress_display& progress_display::operator =  (double workDoneNow) {
     double increment;
     {
@@ -147,7 +151,7 @@ void progress_display::reportProgress(double time, double cpu, bool newline) {
         if (isTerminal) {
             std::cout << "\33[2K\r";
         }
-        if (displayingProgress || newline) {
+        if (displayingProgress) {
             int barLen = 80;
             if (!newline && workDone < totalWorkToDo) {
                 if (message.length() < barLen ) {
