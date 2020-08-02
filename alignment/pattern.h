@@ -73,18 +73,16 @@ public:
     }
 
 	/**
+		returns true if and only if every state is unknown, 
+		returns false otherwise.
+	*/
+
+	bool isAllGaps(int STATE_UNKNOWN) const;
+
+	/**
 		frequency appearance of the pattern
 	*/
 	int frequency;
-
-	/**
-		true if this is a constant pattern
-		2015-03-04: is_const will also be true for pattern like "AA-A--AAA"
-	*/
-//	bool is_const;
-    
-    /** true if pattern is informative, false otherwise */
-//    bool is_informative;
 
     int flag;
 

@@ -22,7 +22,6 @@
 #define hammingdistance_h
 
 #define HAMMING_VECTOR (1)
-#define VECTOR_MAD     (0)
 #include <vectorclass/vectorclass.h> //For Vec32c and Vec32cb classes
 
 //
@@ -32,7 +31,6 @@
 //        frequency is 255 or less, it could be unsigned char,
 //        or if 65535 or less, short.
 //
-#if (!HAMMING_VECTOR)
 template <class L, class F> inline double hammingDistance
         ( L unknown, const L* sequenceA, const L* sequenceB
          , int seqLen, const F* frequencyVector, double& frequencyOfUnknowns ) {
@@ -48,7 +46,21 @@ template <class L, class F> inline double hammingDistance
     }
     return distance;
 }
-#endif
+
+//Proper name (for what this function does) is perhaps: 
+//sumOfFrequenciesOfCharactersGreaterThanOrEqualTo
+//But for now, this function is named after what
+//it is used for.
+template <class L, class F> inline size_t sumForUnknownCharacters
+    (L boundaryChar, const L* sequence, int seqLen, const F* frequencyVector) {
+    size_t sum = 0;
+    for (int pos = 0; pos < seqLen; ++pos) {
+        if (boundaryChar <= sequence[pos]) {
+            sum += frequencyVector[pos];
+        }
+    }
+    return sum;
+}
 
 #if (HAMMING_VECTOR)
 inline double hammingDistance
@@ -110,6 +122,39 @@ inline double hammingDistance
     frequencyOfUnknowns = freqUnknown;
     return distance;
 }
+
+inline size_t sumForUnknownCharacters
+    ( char boundaryChar, const char* sequence, int seqLen, const int* frequencyVector) {
+    size_t sum = 0;
+    Vec32c blockBoundary = boundaryChar;
+    int blockSize = blockBoundary.size(); //but see scratch. Needs to match
+    int pos = 0;
+    if (blockSize < seqLen) {
+        //Next line assumes that: blockSize is power of 2
+        int blockStop = seqLen - (seqLen & (blockSize - 1)); 
+        for (; pos < blockStop; pos += blockSize) {
+            Vec32c blockRead;
+            blockRead.load(sequence + pos);
+            Vec32cb blockUnknown = ( blockBoundary <= blockRead ) ;
+            int i = horizontal_find_first(blockUnknown);
+            if (0 <= i) {
+                int nextBlock = pos + blockSize;
+                for (int scan = pos + i; scan < nextBlock; ++scan) {
+                    if (boundaryChar <= sequence[scan]) {
+                        sum += frequencyVector[scan];
+                    }
+                }
+            }
+        }
+    }
+    for (; pos < seqLen; ++pos) {
+        if (boundaryChar <= sequence[pos]) {
+            sum += frequencyVector[pos];
+        }
+    }
+    return sum;
+}
+
 #endif
 
 

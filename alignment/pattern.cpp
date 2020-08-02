@@ -86,10 +86,14 @@ int Pattern::computeGapChar(int num_states, int STATE_UNKNOWN) const {
     return num;
 }
 
-//Pattern &Pattern::operator= (Pattern pat) {
-//    assign(pat);
-//    frequency = pat.frequency;
-//    is_const = pat.is_const;
-//    const_char = pat.const_char;
-//    return *this;
-//}
+bool Pattern::isAllGaps(int STATE_UNKNOWN) const {
+    //Probably not worth vectorizing this function, since it will usually
+    //return early (it can return false as soon as a known state  is
+    //seen, which will probably happen very early in the sequence).
+    for (auto it = begin(); it != end(); ++it) {
+        if (*it != STATE_UNKNOWN) {
+            return false;
+        }
+    }
+    return true;
+}
