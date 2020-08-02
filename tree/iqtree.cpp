@@ -2048,8 +2048,9 @@ extern pllUFBootData * pllUFBootDataPtr;
 
 string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon) {
     prepareToComputeDistances();
-    if (logl_epsilon == -1)
+    if (logl_epsilon == -1) {
         logl_epsilon = params->modelEps;
+    }
     cout << "Estimate model parameters (epsilon = " << logl_epsilon << ")" << endl;
     double stime = getRealTime();
     string newTree;
@@ -2940,9 +2941,7 @@ pair<int, int> IQTree::doNNISearch(bool write_info) {
                 PLL_TRUE, 0, 0, 0, PLL_SUMMARIZE_LH, 0, 0);
         readTreeString(string(pllInst->tree_string));
     } else {
-        prepareToComputeDistances();
         nniInfos = optimizeNNI(Params::getInstance().speednni);
-        doneComputingDistances();
         if (isSuperTree()) {
             ((PhyloSuperTree*) this)->computeBranchLengths();
         }
