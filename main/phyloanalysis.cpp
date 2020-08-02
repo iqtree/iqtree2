@@ -2339,8 +2339,9 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     bool   finishedInitTree = false;
     double initEpsilon = params.min_iterations == 0 ? params.modelEps : (params.modelEps*10);
     string initTree;
-    //None of his will work until there is actually a tree
-    //(we cannot do it until we *have* one).
+    iqtree->prepareToComputeDistances();
+    //None of his will work until there are actually taxa tree
+    //(we cannot do it until we *have* that).
     if (!params.compute_ml_tree_only) {
         iqtree->ensureNumberOfThreadsIsSet(&params);
         iqtree->initializeAllPartialLh();
@@ -2480,11 +2481,14 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     double *pattern_lh = new double[iqtree->getAlnNPattern()];
 
     // prune stable taxa
+    iqtree->doneComputingDistances();
     pruneTaxa(params, *iqtree, pattern_lh, pruned_taxa, linked_name);
 
     /***************************************** DO STOCHASTIC TREE SEARCH *******************************************/
     if (params.min_iterations > 0 && !params.tree_spr) {
+        iqtree->prepareToComputeDistances();
         iqtree->doTreeSearch();
+        iqtree->doneComputingDistances();
         iqtree->setAlignment(iqtree->aln);
     } else {
         iqtree->candidateTrees.saveCheckpoint();
