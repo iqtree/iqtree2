@@ -3445,6 +3445,7 @@ double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
         var_mat  [ rowStopPos] = 0.0;
     }
     doneComputingDistances();
+    progress.done();
 
     /*
      if (longest_dist > MAX_GENETIC_DIST * 0.99)
