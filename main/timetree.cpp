@@ -6,6 +6,7 @@
  */
 
 #include "timetree.h"
+#include <utils/io.h> //for safeGetLine
 
 #ifdef USE_LSD2
 #include "lsd2/src/lsd.h"
@@ -58,7 +59,7 @@ void readDateFile(string date_file, set<string> &node_names, TaxonDateMap &dates
         for (line_num = 1; !in.eof(); line_num++) {
             string line_out = "Line " + convertIntToString(line_num) + ": ";
             string line;
-            if (!safeGetline(in, line))
+            if (!safeGetLine(in, line))
                 break;
             // ignore comment
             if (line.find('#') != string::npos)

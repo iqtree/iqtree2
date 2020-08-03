@@ -17,9 +17,10 @@
 #include "model/rategamma.h"
 #include "gsl/mygsl.h"
 #include "utils/gzstream.h"
-#include "utils/timeutil.h" //for getRealTime()
-#include "utils/progress.h" //for progress_display
+#include "utils/timeutil.h"        //for getRealTime()
+#include "utils/progress.h"        //for progress_display
 #include "utils/hammingdistance.h" //for sumForUnknownCharacters
+#include "utils/io.h"              //for safeGetLine
 #include "alignmentsummary.h"
 
 #include <Eigen/LU>
@@ -1949,7 +1950,7 @@ int Alignment::readPhylip(char *filename, char *sequence_type) {
     num_states = 0;
 
     for (; !in.eof(); line_num++) {
-        safeGetline(in, line);
+        safeGetLine(in, line);
         line = line.substr(0, line.find_first_of("\n\r"));
         if (line == "") continue;
 
@@ -2024,7 +2025,7 @@ int Alignment::readPhylipSequential(char *filename, char *sequence_type) {
     num_states = 0;
 
     for (; !in.eof(); line_num++) {
-        safeGetline(in, line);
+        safeGetLine(in, line);
         line = line.substr(0, line.find_first_of("\n\r"));
         if (line == "") continue;
 
@@ -2094,7 +2095,7 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
         //Todo: Disable this when isShowingProgressDisabled is set
         progress_display progress(in.getCompressedLength(), "Reading fasta file", "", "");
         for (; !in.eof(); line_num++) {
-            safeGetline(in, line);
+            safeGetLine(in, line);
             if (line == "") {
                 continue;
             }
@@ -2179,14 +2180,14 @@ int Alignment::readClustal(char *filename, char *sequence_type) {
     in.open(filename);
     // remove the failbit
     in.exceptions(ios::badbit);
-    safeGetline(in, line);
+    safeGetLine(in, line);
     if (line.substr(0, 7) != "CLUSTAL") {
         throw "ClustalW file does not start with 'CLUSTAL'";
     }
 
     int seq_count = 0;
     for (line_num = 2; !in.eof(); line_num++) {
-        safeGetline(in, line);
+        safeGetLine(in, line);
         trimString(line);
         if (line == "") {
             seq_count = 0;
@@ -2245,7 +2246,7 @@ int Alignment::readMSF(char *filename, char *sequence_type) {
     in.open(filename);
     // remove the failbit
     in.exceptions(ios::badbit);
-    safeGetline(in, line);
+    safeGetLine(in, line);
     if (line.find("MULTIPLE_ALIGNMENT") == string::npos) {
         throw "MSF file must start with header line MULTIPLE_ALIGNMENT";
     }
@@ -2254,7 +2255,7 @@ int Alignment::readMSF(char *filename, char *sequence_type) {
     bool seq_started = false;
 
     for (line_num = 2; !in.eof(); line_num++) {
-        safeGetline(in, line);
+        safeGetLine(in, line);
         trimString(line);
         if (line == "") {
             continue;

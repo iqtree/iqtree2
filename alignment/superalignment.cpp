@@ -24,6 +24,7 @@
 #include "nclextra/myreader.h"
 #include "main/phylotesting.h"
 #include "utils/timeutil.h" //for getRealTime()
+#include "utils/io.h"       //for safeGetLine()
 
 Alignment *createAlignment(string aln_file, const char *sequence_type, InputType intype, string model_name) {
     bool is_dir = isDirectory(aln_file.c_str());
@@ -222,7 +223,7 @@ void SuperAlignment::readPartition(Params &params) {
             getline(in, info.sequence_type, ',');
             if (info.sequence_type=="" && params.sequence_type)
                 info.sequence_type = params.sequence_type;
-            safeGetline(in, info.position_spec);
+            safeGetLine(in, info.position_spec);
             trimString(info.sequence_type);
             //            cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" <<
             //                    info.aln_file << ", seq=" << info.sequence_type << ", pos=" << ((info.position_spec.length() >= 20) ? info.position_spec.substr(0,20)+"..." : info.position_spec) << ") ..." << endl;
@@ -338,7 +339,7 @@ void SuperAlignment::readPartitionRaxml(Params &params) {
             if (info.name.empty())
                 outError("Please give partition names in partition file!");
             
-            safeGetline(in, info.position_spec);
+            safeGetLine(in, info.position_spec);
             trimString(info.position_spec);
             if (info.position_spec.empty())
                 outError("Please specify alignment positions for partition" + info.name);

@@ -84,8 +84,10 @@
 #include <string>                    //sequence names stored as std::string
 #include <fstream>
 #include <iostream>                  //for std::istream
+#include <sstream>                   //for std::stringstream
 #include <vectorclass/vectorclass.h> //for Vec4d and Vec4db vector classes
 #include "progress.h"                //for progress_display
+#include "io.h"                      //for safeGetTrimmedLineAsStream
 
 typedef float   NJFloat;
 typedef Vec8f   FloatVector;
@@ -520,9 +522,13 @@ public:
     virtual std::string getAlgorithmName() const {
         return "UPGMA";
     }
+    
     bool loadMatrixFromFile(const std::string &distanceMatrixFilePath) {
         size_t rank;
         igzstream in;
+        bool lower  = false;
+        bool upper  = false;
+        bool square = true;
         try {
             in.exceptions(std::ios::failbit | std::ios::badbit);
             in.open(distanceMatrixFilePath.c_str(), std::ios_base::in);
@@ -530,20 +536,74 @@ public:
             setSize(rank);
             progress_display progress(rank, "Loading distance matrix", "loaded", "row");
             for (size_t r=0; r<n; ++r) {
+                std::stringstream line;
+                safeGetTrimmedLineAsStream(in, line);
                 std::string name;
-                in >> name;
+                line >> name;
                 clusters.addCluster(name);
-                for (size_t c=0; c<n; ++c) {
-                    in >> rows[r][c];
+                if (upper) {
+                    //Copy column r from upper triangle (above the diagonal)
+                    //to the left part of row r (which is in the lower triangle).
+                    for (size_t c=0; c<r; ++c) {
+                        rows[r][c] = rows[c][r];
+                    }
+                    rows[r][r]=0;
+                }
+                int cStart = (upper) ? (r+1) : 0;
+                int cStop  = (lower) ? r     : n;
+                size_t c = cStart;
+                for (; line.tellg()!=-1 && c<cStop; ++c) {
+                    line >> rows[r][c];
                     //Ensure matrix is symmetric (as it is read!)
-                    if (c<r && rows[r][c] != rows[c][r]) {
+                    //Note: I'd rather throw if there's a disagreement!
+                    //But I want backwards compatibility with BIONJ2009.
+                    if (square && c<r && rows[r][c] != rows[c][r]) {
+                        //If loading from a square matrix file,
+                        //and in lower triangle, and the corresponding entry
+                        //in the upper triangle was different, average them both.
                         T v = ( rows[r][c] + rows[c][r] ) * 0.5;
                         rows[c][r] = v; //U-R
                         rows[r][c] = v;
                     }
                 }
+                if (line.tellg()==-1 && c<cStop)
+                {
+                    if (square && r==0 && c==0) {
+                        //Implied lower-triangle format
+                        square = false;
+                        lower  = true;
+                        progress.hide();
+                        std::cout << "Input appears to be in lower-triangle format" << std::endl;
+                        progress.show();
+                    }
+                    else if (square && r==0 && c+1==cStop) {
+                        //Implied upper-triangle format
+                        square = false;
+                        upper  = true;
+                        progress.hide();
+                        std::cout << "Input appears to be in upper-triangle format" << std::endl;
+                        progress.show();
+                        for (size_t shift=cStop-1; 0<shift; --shift) {
+                            rows[0][shift] = rows[0][shift-1];
+                        }
+                        rows[0][0]=0;
+                    }
+                }
+                else if (line.tellg()!=-1) {
+                    std::stringstream problem;
+                    problem << "Expected to see columns [" << (cStart+1) << ".." << cStop << "]"
+                        << " in row " << r << " of the district matrix, but there were more distances.";
+                    throw problem.str();
+                }
                 rowToCluster.emplace_back(r);
                 ++progress;
+            }
+            if (lower) {
+                for (size_t r=0; r<n; ++r) {
+                    for (size_t c=r+1; c<n; ++c) {
+                        rows[r][c] = rows[c][r];
+                    }
+                }
             }
             in.close();
         } catch (std::ios::failure &) {
