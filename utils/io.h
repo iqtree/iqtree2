@@ -1,8 +1,28 @@
+/***************************************************************************
+ *   Copyright (C) 2017-2020 by                                            *
+ *   BUI Quang Minh <minh.bui@univie.ac.at>                                *
+ *   James Barbetti <james_barbetti@yahoo.com>                             *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
 //
-//  io.h
-//  iqtree
-//
-//  Created by James Barbetti on 3/8/20.
+//  safeGetLine (the string version): 
+//  created by BUI Quang Minh <minh.bui@univie.ac.at> 18-Mar-2017.
+//  This file:   Created by James Barbetti on 03-Aug-2020.
+//  safeGetTrimmedLine: James Barbetti 03-Aug-2020.
 //
 
 #ifndef io_h
