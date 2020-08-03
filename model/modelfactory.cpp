@@ -1362,11 +1362,16 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
     }
     if (Params::getInstance().root_find && tree->rooted && Params::getInstance().root_move_dist > 0) {
         cur_lh = tree->optimizeRootPosition(Params::getInstance().root_move_dist, write_info, logl_epsilon);
-        if (verbose_mode >= VB_MED || write_info)
+        if (verbose_mode >= VB_MED || write_info) {
+            tree->hideProgress();
             cout << "Rooting log-likelihood: " << cur_lh << endl;
+            tree->showProgress();
+        }
     }
     if (verbose_mode >= VB_MED || write_info) {
+        tree->hideProgress();
         cout << "Optimal log-likelihood: " << cur_lh << endl;
+        tree->showProgress();
     }
     // For UpperBounds -----------
     if(tree->mlCheck == 0) {
@@ -1378,12 +1383,16 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
         model->writeInfo(cout);
         site_rate->writeInfo(cout);
         if (fixed_len == BRLEN_SCALE) {
+            tree->hideProgress();
             cout << "Scaled tree length: " << tree->treeLength() << endl;
+            tree->showProgress();
         }
     }
     double elapsed_secs = getRealTime() - begin_time;
     if (write_info) {
+        tree->hideProgress();
         cout << "Parameters optimization took " << i-1 << " rounds (" << elapsed_secs << " sec)" << endl;
+        tree->showProgress();
     }
     startStoringTransMatrix();
 

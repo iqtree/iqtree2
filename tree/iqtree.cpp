@@ -700,6 +700,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     int processID = MPIHelper::getInstance().getProcessID();
 
 #ifdef _OPENMP
+    //(a) Construct parsimony trees
     StrVector pars_trees;
     if (params->start_tree == STT_PARSIMONY && nParTrees >= 1) {
         pars_trees.resize(nParTrees);
@@ -712,14 +713,18 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
             if (!constraintTree.empty()) {
                 tree.constraintTree.readConstraint(constraintTree);
             }
+            tree.showNoProgress();
             tree.setParams(params);
             tree.setParsimonyKernel(params->SSE);
             tree.rooted = rooted;
+            initProgress(nParTrees, "Constructing parsiony trees", "constructed", "tree");
             #pragma omp for schedule(dynamic)
             for (int i = 0; i < nParTrees; i++) {
                 tree.computeParsimonyTree(NULL, aln, rstream);
                 pars_trees[i] = tree.getTreeString();
+                trackProgress(1.0);
             }
+            doneProgress();
             finish_random(rstream);
         }
     }
@@ -780,39 +785,49 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     }
 
     if (nParTrees > 0)
+    {
         cout << getRealTime() - startTime << " second" << endl;
-
+    }
     /****************************************************************************************
                           Compute logl of all initial trees
     *****************************************************************************************/
 
     vector<string> initTreeStrings = candidateTrees.getBestTreeStrings();
     candidateTrees.clear();
-
-    if (init_size < initTreeStrings.size())
-        cout << "Computing log-likelihood of " << initTreeStrings.size() - init_size << " initial trees ... ";
+    
+    size_t candidateCount = initTreeStrings.size();
+    bool   sayHowLong = init_size < initTreeStrings.size() && !progress_display::getProgressDisplay();
+    if (sayHowLong) {
+        cout << "Computing log-likelihood of " << initTreeStrings.size() - init_size
+            << " initial trees ... ";
+    }
     startTime = getRealTime();
 
+    //(b) Initialize candidate trees
+    initProgress(candidateCount, "Initializing candidate trees", "initialized", "tree");
     for (vector<string>::iterator it = initTreeStrings.begin(); it != initTreeStrings.end(); ++it) {
         string treeString;
         double score;
         readTreeString(*it);
-        if (it-initTreeStrings.begin() >= init_size)
+        if (it-initTreeStrings.begin() >= init_size) {
             treeString = optimizeBranches(params->brlen_num_traversal);
+        }
         else {
             computeLogL();
             treeString = getTreeString();
         }
         score = getCurScore();
         candidateTrees.update(treeString,score);
+        trackProgress(1.0);
     }
+    doneProgress();
 
-    if (Params::getInstance().writeDistImdTrees)
+    if (Params::getInstance().writeDistImdTrees) {
         intermediateTrees.initTrees(candidateTrees);
-
-    if (init_size < initTreeStrings.size())
+    }
+    if (sayHowLong) {
         cout << getRealTime() - startTime << " seconds" << endl;
-
+    }
     if (nParTrees > 0) {
         cout << "Current best score: " << candidateTrees.getBestScore() << endl;
     }
@@ -820,52 +835,63 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     //---- BLOCKING COMMUNICATION
     syncCandidateTrees(nNNITrees, false);
 
-
     vector<string> bestInitTrees; // Set of best initial trees for doing NNIs
-
     bestInitTrees = candidateTrees.getBestTreeStringsForProcess(nNNITrees);
 
     cout << endl;
-    cout << "Do NNI search on " << bestInitTrees.size() << " best initial trees" << endl;
-    stop_rule.setCurIt(0);
-    if (candidateTrees.size() > Params::getInstance().numSupportTrees)
-        candidateTrees.clear();// TODO why clear here???
 
+    //(c) Run NNI search on candidate trees
+    size_t initialTreeCount = bestInitTrees.size();
+    if (!progress_display::getProgressDisplay()) {
+        cout << "Do NNI search on " << initialTreeCount << " best initial trees" << endl;
+    }
+    stop_rule.setCurIt(0);
+    if (candidateTrees.size() > Params::getInstance().numSupportTrees) {
+        candidateTrees.clear();// TODO why clear here???
+    }
     candidateTrees.setMaxSize(Params::getInstance().numSupportTrees);
     vector<string>::iterator it;
 
+    initProgress(initialTreeCount, "Running NNI search", "Run on", "tree");
     for (it = bestInitTrees.begin(); it != bestInitTrees.end(); it++) {
         readTreeString(*it);
-//        optimizeBranches();
-//        cout << "curScore: " << curScore << "  Tree before NNI: " << getTreeString() << endl;
         doNNISearch();
         string treeString = getTreeString();
         addTreeToCandidateSet(treeString, curScore, true, MPIHelper::getInstance().getProcessID());
-        if (Params::getInstance().writeDistImdTrees)
+        if (Params::getInstance().writeDistImdTrees) {
             intermediateTrees.update(treeString, curScore);
+        }
+        trackProgress(1.0);
     }
+    doneProgress();
 
     // TODO turning this
     if (isMixlen()) {
+        //(d) Optimizing model parameters for the best of the
+        //    candidate trees.
         cout << "Optimizing model parameters for top " << min((int)candidateTrees.size(), params->popSize) << " candidate trees... " << endl;
-
+        
         startTime = getRealTime();
         bestInitTrees = candidateTrees.getBestTreeStrings(params->popSize);
+        size_t countBestTrees = bestInitTrees.size();
+        initProgress(countBestTrees, "Optimizing parameters", "optimized parameters for", "tree");
         for (it = bestInitTrees.begin(); it != bestInitTrees.end(); it++) {
             string tree;
             readTreeString(*it);
             //tree = optimizeBranches();
             tree = optimizeModelParameters();
 //            cout << "Tree after brlen opt: " << tree << endl;
+            hideProgress();
             cout << "Tree " << distance(bestInitTrees.begin(), it)+1 << " / LogL: " << getCurScore() << endl;
             candidateTrees.update(tree, getCurScore());
+            showProgress();
+            trackProgress(1.0);
         }
+        doneProgress();
         cout << getRealTime() - startTime << " seconds" << endl;
     }
-
     //---- BLOCKING COMMUNICATION
     syncCandidateTrees(Params::getInstance().numSupportTrees, true);
-
 }
 
 string IQTree::generateParsimonyTree(int randomSeed) {
@@ -2271,9 +2297,9 @@ double IQTree::doTreeSearch() {
     // count threshold for computing bootstrap correlation
     int ufboot_count, ufboot_count_check;
     stop_rule.getUFBootCountCheck(ufboot_count, ufboot_count_check);
-
+    showNoProgress();
+    
     while (!stop_rule.meetStopCondition(stop_rule.getCurIt(), cur_correlation)) {
-
         searchinfo.curIter = stop_rule.getCurIt();
         // estimate logl_cutoff for bootstrap
         if (!boot_orig_logl.empty())
@@ -2299,18 +2325,16 @@ double IQTree::doTreeSearch() {
         nniInfos = doNNISearch();
         curTree = getTreeString();
         int pos = addTreeToCandidateSet(curTree, curScore, true, MPIHelper::getInstance().getProcessID());
-        if (pos != -2 && pos != -1 && (Params::getInstance().fixStableSplits || Params::getInstance().adaptPertubation))
+        if (pos != -2 && pos != -1 && (Params::getInstance().fixStableSplits || Params::getInstance().adaptPertubation)) {
             candidateTrees.computeSplitOccurences(Params::getInstance().stableSplitThreshold);
-
-        if (MPIHelper::getInstance().isWorker() || MPIHelper::getInstance().gotMessage())
+        }
+        if (MPIHelper::getInstance().isWorker() || MPIHelper::getInstance().gotMessage()) {
             syncCurrentTree();
-
-
+        }
         // TODO: cannot check yet, need to somehow return treechanged
 //        if (nni_count == 0 && params->snni && numPerturb > 0 && treechanged) {
 //            assert(0 && "BUG: NNI could not improved perturbed tree");
 //        }
-//
         if (iqp_assess_quartet == IQP_BOOTSTRAP) {
             // restore alignment
             delete aln;
@@ -2318,11 +2342,9 @@ double IQTree::doTreeSearch() {
             initializeAllPartialLh();
             clearAllPartialLH();
         }
-
         if (isSuperTree()) {
             ((PhyloSuperTree *) this)->computeBranchLengths();
         }
-
         /*----------------------------------------
          * Print information
          *---------------------------------------*/
@@ -2335,7 +2357,6 @@ double IQTree::doTreeSearch() {
         if (params->snni && verbose_mode >= VB_DEBUG) {
             printBestScores();
         }
-
         // DTH: make pllUFBootData usable in summarizeBootstrap
         if (params->pll && params->online_bootstrap && (params->gbo_replicates > 0))
             pllConvertUFBootData2IQTree();
@@ -2345,8 +2366,7 @@ double IQTree::doTreeSearch() {
          * convergence criterion for ultrafast bootstrap
          *---------------------------------------*/
          
-
-        // MASTER receives bootstrap trees and perform stop convergence test 
+        // MASTER receives bootstrap trees and perform stop convergence test
         if ((stop_rule.getCurIt()) >= ufboot_count &&
             params->stop_condition == SC_BOOTSTRAP_CORRELATION && MPIHelper::getInstance().isMaster()) {
             ufboot_count += params->step_iterations/2;
@@ -2369,9 +2389,9 @@ double IQTree::doTreeSearch() {
                     cout << "NOTE: UFBoot does not converge, continue at least " << params->step_iterations << " more iterations" << endl;
                 }
             }
-            if (params->gbo_replicates && params->online_bootstrap && params->print_ufboot_trees)
+            if (params->gbo_replicates && params->online_bootstrap && params->print_ufboot_trees) {
                 writeUFBootTrees(*params);
-
+            }
         } // end of bootstrap convergence test
 
         // print UFBoot trees every 10 iterations
@@ -2383,36 +2403,36 @@ double IQTree::doTreeSearch() {
             printBestCandidateTree();
             bestcandidate_changed = false;
         }
-
         //if (params->partition_type)
         //     ((PhyloSuperTreePlen*)this)->printNNIcasesNUM();
-
     }
 
     // 2019-06-03: check convergence here to avoid effect of refineBootTrees
     if (boot_splits.size() >= 2 && MPIHelper::getInstance().isMaster()) {
         // check the stopping criterion for ultra-fast bootstrap
-        if (computeBootstrapCorrelation() < params->min_correlation)
-            cout << "WARNING: bootstrap analysis did not converge. You should rerun with higher number of iterations (-nm option)" << endl;
-        
+        if (computeBootstrapCorrelation() < params->min_correlation) {
+            cout << "WARNING: bootstrap analysis did not converge."
+                << " You should rerun with higher number of iterations (-nm option)" << endl;
+        }
     }
-    
-    if(params->ufboot2corr) refineBootTrees();
-
-    if (!early_stop)
+    if(params->ufboot2corr) {
+        refineBootTrees();
+    }
+    if (!early_stop) {
         sendStopMessage();
-
+    }
     readTreeString(candidateTrees.getBestTreeStrings()[0]);
 
-    if (testNNI)
+    if (testNNI) {
         outNNI.close();
-    if (params->write_intermediate_trees)
+    }
+    if (params->write_intermediate_trees) {
         out_treels.close();
+    }
     if (params->print_tree_lh) {
         out_treelh.close();
         out_sitelh.close();
     }
-
     // DTH: pllUFBoot deallocation
     if (params->pll) {
         pllDestroyUFBootData();
@@ -2832,18 +2852,20 @@ void IQTree::printIterationInfo(int sourceProcID) {
 
     // only print every 10th iteration or high verbose mode
     if (stop_rule.getCurIt() % 10 == 0 || verbose_mode >= VB_MED) {
-            cout << ((iqp_assess_quartet == IQP_BOOTSTRAP) ? "Bootstrap " : "Iteration ") << stop_rule.getCurIt() <<
-            " / LogL: ";
-            cout << curScore;
-            cout << " / Time: " << convert_time(getRealTime() - params->start_real_time);
-
-            if (stop_rule.getCurIt() > 20) {
-                cout << " (" << convert_time(realtime_remaining) << " left)";
-            }
-            if (MPIHelper::getInstance().getNumProcesses() > 1)
-                cout << " / Process: " << sourceProcID;
-            cout << endl;
+        hideProgress();
+        cout << ((iqp_assess_quartet == IQP_BOOTSTRAP) ? "Bootstrap " : "Iteration ") << stop_rule.getCurIt() <<
+        " / LogL: ";
+        cout << curScore;
+        cout << " / Time: " << convert_time(getRealTime() - params->start_real_time);
+        
+        if (stop_rule.getCurIt() > 20) {
+            cout << " (" << convert_time(realtime_remaining) << " left)";
         }
+        if (MPIHelper::getInstance().getNumProcesses() > 1)
+            cout << " / Process: " << sourceProcID;
+        cout << endl;
+        showProgress();
+    }
 }
 
 //void IQTree::estimateLoglCutoffBS() {
@@ -2987,7 +3009,6 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI) {
     if (!initTabuSplits.empty()) {
         tabuSplits = initTabuSplits;
     }
-
     initProgress(MAXSTEPS, "Optimizing NNI", "done", "step");
     double originalScore = curScore;
     for (numSteps = 1; numSteps <= MAXSTEPS; numSteps++) {
@@ -3119,7 +3140,6 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI) {
         if (Params::getInstance().write_intermediate_trees && save_all_trees != 2) {
             printIntermediateTree(WT_NEWLINE | WT_APPEND | WT_SORT_TAXA | WT_BR_LEN);
         }
-
         if (Params::getInstance().writeDistImdTrees) {
             intermediateTrees.update(getTreeString(), curScore);
         }
@@ -4252,7 +4272,6 @@ int PhyloTree::testNumThreads() {
 
     initProgress(max_procs, "Determining AUTO threadcount", "tried", "threadcount");
     for (int proc = 1; proc <= max_procs; ++proc) {
-        trackProgress(1.0);
         omp_set_num_threads(proc);
         setNumThreads(proc);
         initializeAllPartialLh();
@@ -4313,6 +4332,7 @@ int PhyloTree::testNumThreads() {
         if (runTime <= runTimes[bestProc]*0.95) {
             bestProc = proc-1;
         }
+        trackProgress(1.0);
     }
     doneProgress();
     readTreeString(trees[0]);
