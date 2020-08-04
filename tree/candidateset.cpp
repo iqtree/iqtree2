@@ -509,11 +509,15 @@ void CandidateSet::printTrees(string suffix) {
 
 void CandidateSet::recomputeLoglOfAllTrees(IQTree &treeObject) {
     vector<string> allTreeStrings = getBestTreeStrings();
+    size_t candidateCount = allTreeStrings.size();
+    treeObject.initProgress((double)candidateCount, "Recomputing log-likelihoods of candidates", "processed", "candidate");
     for (vector<string>:: iterator it = allTreeStrings.begin(); it != allTreeStrings.end(); it++) {
         treeObject.readTreeString(*it);
         double score = treeObject.optimizeAllBranches(1);
         update(treeObject.getTreeString(), score);
+        treeObject.trackProgress(1.0);
     }
+    treeObject.doneProgress();
 }
 
 
