@@ -5940,14 +5940,11 @@ void PhyloTree::writeBranches(ostream &out) {
 const string& PhyloTree::getDistanceFileWritten() const {
     return distanceFileWritten;
 }
-
     
 void PhyloTree::initProgress(double size, std::string name, const char* verb, const char* noun) {
-    {
-        ++progressStackDepth;
-        if (progressStackDepth==1 && !isShowingProgressDisabled) {
-            progress = new progress_display(size, name.c_str(), verb, noun);
-        }
+    ++progressStackDepth;
+    if (progressStackDepth==1 && !isShowingProgressDisabled) {
+        progress = new progress_display(size, name.c_str(), verb, noun);
     }
 }
     

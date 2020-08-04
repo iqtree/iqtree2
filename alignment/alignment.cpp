@@ -17,9 +17,10 @@
 #include "model/rategamma.h"
 #include "gsl/mygsl.h"
 #include "utils/gzstream.h"
-#include "utils/timeutil.h" //for getRealTime()
-#include "utils/progress.h" //for progress_display
+#include "utils/timeutil.h"        //for getRealTime()
+#include "utils/progress.h"        //for progress_display
 #include "utils/hammingdistance.h" //for sumForUnknownCharacters
+#include "utils/io.h"              //for safeGetLine
 #include "alignmentsummary.h"
 
 #include <Eigen/LU>
@@ -1048,14 +1049,9 @@ void Alignment::printSiteInfo(const char* filename) {
 bool Alignment::addPatternLazy(Pattern &pat, int site, int freq, bool& gaps_only) {
     //Returns true if the pattern was actually added, false
     //if it was identified as a duplicate (and handled by
-    //increasing he frequency of an existing pattern)
+    //increasing the frequency of an existing pattern)
     // check if pattern contains only gaps
-    gaps_only = true;
-    for (Pattern::iterator it = pat.begin(); it != pat.end(); it++)
-        if ((*it) != STATE_UNKNOWN) {
-            gaps_only = false;
-            break;
-        }
+    gaps_only = pat.isAllGaps(STATE_UNKNOWN);
     if (gaps_only) {
         if (verbose_mode >= VB_DEBUG) {
             cout << "Site " << site << " contains only gaps or ambiguous characters" << endl;
@@ -1949,7 +1945,7 @@ int Alignment::readPhylip(char *filename, char *sequence_type) {
     num_states = 0;
 
     for (; !in.eof(); line_num++) {
-        safeGetline(in, line);
+        safeGetLine(in, line);
         line = line.substr(0, line.find_first_of("\n\r"));
         if (line == "") continue;
 
@@ -2024,7 +2020,7 @@ int Alignment::readPhylipSequential(char *filename, char *sequence_type) {
     num_states = 0;
 
     for (; !in.eof(); line_num++) {
-        safeGetline(in, line);
+        safeGetLine(in, line);
         line = line.substr(0, line.find_first_of("\n\r"));
         if (line == "") continue;
 
@@ -2094,7 +2090,7 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
         //Todo: Disable this when isShowingProgressDisabled is set
         progress_display progress(in.getCompressedLength(), "Reading fasta file", "", "");
         for (; !in.eof(); line_num++) {
-            safeGetline(in, line);
+            safeGetLine(in, line);
             if (line == "") {
                 continue;
             }
@@ -2179,14 +2175,14 @@ int Alignment::readClustal(char *filename, char *sequence_type) {
     in.open(filename);
     // remove the failbit
     in.exceptions(ios::badbit);
-    safeGetline(in, line);
+    safeGetLine(in, line);
     if (line.substr(0, 7) != "CLUSTAL") {
         throw "ClustalW file does not start with 'CLUSTAL'";
     }
 
     int seq_count = 0;
     for (line_num = 2; !in.eof(); line_num++) {
-        safeGetline(in, line);
+        safeGetLine(in, line);
         trimString(line);
         if (line == "") {
             seq_count = 0;
@@ -2245,7 +2241,7 @@ int Alignment::readMSF(char *filename, char *sequence_type) {
     in.open(filename);
     // remove the failbit
     in.exceptions(ios::badbit);
-    safeGetline(in, line);
+    safeGetLine(in, line);
     if (line.find("MULTIPLE_ALIGNMENT") == string::npos) {
         throw "MSF file must start with header line MULTIPLE_ALIGNMENT";
     }
@@ -2254,7 +2250,7 @@ int Alignment::readMSF(char *filename, char *sequence_type) {
     bool seq_started = false;
 
     for (line_num = 2; !in.eof(); line_num++) {
-        safeGetline(in, line);
+        safeGetLine(in, line);
         trimString(line);
         if (line == "") {
             continue;
@@ -2943,7 +2939,7 @@ void Alignment::printPhylip(ostream &out, bool append, const char *aln_site_list
         else {
             out << left << seq_names[seq_id] << " ";
         }
-        std::string& str = seq_data[0];
+        std::string& str = seq_data[seq_id];
         out.width(0);
         out.write(str.c_str(), str.length());
     }
@@ -3095,13 +3091,14 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
     }
     size_t oldPatternCount = size(); //JB 27-Jul-2020 Parallelized
     int    siteMod = 0; //site # modulo 100.
+    size_t seqCount = seq_id.size();
     for (size_t site = 0; site < aln->getNSite(); ++site) {
         iterator pit = aln->begin() + (aln->getPatternID(site));
         Pattern pat;
         for (it = seq_id.begin(); it != seq_id.end(); ++it) {
             pat.push_back ( (*pit)[*it] );
         }
-        int true_char = pat.computeGapChar(num_states, STATE_UNKNOWN); //JB 27-Jul-2020 Vectorized
+        size_t true_char = seqCount - pat.computeGapChar(num_states, STATE_UNKNOWN);
         if (true_char < min_true_char) {
             removed_sites++;
         }
@@ -3344,7 +3341,6 @@ void Alignment::convertToCodonOrAA(Alignment *aln, char *gene_code_id, bool nt2a
         outError(err_str.str());
     verbose_mode = save_mode;
     countConstSite();
-//    buildSeqStates();
     // sanity check
     for (iterator it = begin(); it != end(); it++)
     	if (it->at(0) == -1)

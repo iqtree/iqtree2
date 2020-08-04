@@ -6,7 +6,8 @@
  */
 
 #include "checkpoint.h"
-#include "tools.h"
+//#include "tools.h"
+#include "io.h"         //for safeGetLine
 #include "timeutil.h"
 #include "gzstream.h"
 #include <cstdio>
@@ -39,7 +40,7 @@ void Checkpoint::load(istream &in) {
     size_t pos;
     int listid = 0;
     while (!in.eof()) {
-        safeGetline(in, line);
+        safeGetLine(in, line);
         pos = line.find('#');
         if (pos != string::npos)
             line.erase(pos);
@@ -83,7 +84,7 @@ bool Checkpoint::load() {
         // remove the failbit
         in.exceptions(ios::badbit);
         string line;
-        if (!safeGetline(in, line)) {
+        if (!safeGetLine(in, line)) {
             in.close();
             return false;
         }

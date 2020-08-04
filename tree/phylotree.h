@@ -354,6 +354,7 @@ class PhyloTree : public MTree, public Optimization, public CheckpointFactory {
     friend class ModelFactoryMixlen;
     friend class MemSlotVector;
     friend class ModelFactory;
+    friend class CandidateSet;
 
 public:
     /**
@@ -2183,6 +2184,10 @@ public:
      */
     const string& getDistanceFileWritten() const;
 
+    /** disable progress reporting for this tree
+     */
+    void showNoProgress();
+
     
 protected:
 
@@ -2401,7 +2406,6 @@ protected:
     progress_display* progress;
     int  progressStackDepth;
     bool isShowingProgressDisabled;
-    void showNoProgress();
     void initProgress(double size, std::string name, const char*, const char*);
     void trackProgress(double amount);
     void hideProgress();

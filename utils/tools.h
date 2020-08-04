@@ -2342,10 +2342,6 @@ void outError(const char *error, string msg, bool quit = true);
 void outWarning(const char *warn);
 void outWarning(string warn);
 
-
-/** safe version of std::getline to deal with files from different platforms */ 
-std::istream& safeGetline(std::istream& is, std::string& t);
-
 /*--------------------------------------------------------------*/
 /*--------------------------------------------------------------*/
 
