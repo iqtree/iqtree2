@@ -1049,14 +1049,9 @@ void Alignment::printSiteInfo(const char* filename) {
 bool Alignment::addPatternLazy(Pattern &pat, int site, int freq, bool& gaps_only) {
     //Returns true if the pattern was actually added, false
     //if it was identified as a duplicate (and handled by
-    //increasing he frequency of an existing pattern)
+    //increasing the frequency of an existing pattern)
     // check if pattern contains only gaps
-    gaps_only = true;
-    for (Pattern::iterator it = pat.begin(); it != pat.end(); it++)
-        if ((*it) != STATE_UNKNOWN) {
-            gaps_only = false;
-            break;
-        }
+    gaps_only = pat.isAllGaps(STATE_UNKNOWN);
     if (gaps_only) {
         if (verbose_mode >= VB_DEBUG) {
             cout << "Site " << site << " contains only gaps or ambiguous characters" << endl;
@@ -2944,7 +2939,7 @@ void Alignment::printPhylip(ostream &out, bool append, const char *aln_site_list
         else {
             out << left << seq_names[seq_id] << " ";
         }
-        std::string& str = seq_data[0];
+        std::string& str = seq_data[seq_id];
         out.width(0);
         out.write(str.c_str(), str.length());
     }
@@ -3096,13 +3091,14 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
     }
     size_t oldPatternCount = size(); //JB 27-Jul-2020 Parallelized
     int    siteMod = 0; //site # modulo 100.
+    size_t seqCount = seq_id.size();
     for (size_t site = 0; site < aln->getNSite(); ++site) {
         iterator pit = aln->begin() + (aln->getPatternID(site));
         Pattern pat;
         for (it = seq_id.begin(); it != seq_id.end(); ++it) {
             pat.push_back ( (*pit)[*it] );
         }
-        int true_char = pat.computeGapChar(num_states, STATE_UNKNOWN); //JB 27-Jul-2020 Vectorized
+        size_t true_char = seqCount - pat.computeGapChar(num_states, STATE_UNKNOWN);
         if (true_char < min_true_char) {
             removed_sites++;
         }
@@ -3345,7 +3341,6 @@ void Alignment::convertToCodonOrAA(Alignment *aln, char *gene_code_id, bool nt2a
         outError(err_str.str());
     verbose_mode = save_mode;
     countConstSite();
-//    buildSeqStates();
     // sanity check
     for (iterator it = begin(); it != end(); it++)
     	if (it->at(0) == -1)
