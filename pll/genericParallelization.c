@@ -42,7 +42,10 @@
 #include "genericParallelization.h"
 #include "pllInternal.h"
 #include "pll.h"
+
+#ifdef _IQTREE_MPI
 #include <mpi.h>
+#endif
 
 /** @file genericParallelization.c
     
