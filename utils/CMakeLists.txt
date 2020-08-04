@@ -23,7 +23,7 @@ endif(ZLIB_FOUND)
 target_link_libraries(utils lbfgsb sprng)
 
 add_executable(decentTree
-    decentTree.cpp
+    decenttree.cpp
     starttree.cpp bionj.cpp bionj2.cpp
     gzstream.cpp progress.cpp operatingsystem.cpp)
 
