@@ -180,17 +180,19 @@ size_t gzstreambuf::getCompressedPosition() {
 // class gzstreambase:
 // --------------------------------------
 
-gzstreambase::gzstreambase( const char* name, int mode) {
+gzstreambase::gzstreambase( const char* name, int mode,
+                            int compression_level) {
     init( &buf);
-    open( name, mode);
+    open( name, mode, compression_level);
 }
 
 gzstreambase::~gzstreambase() {
     buf.close();
 }
 
-void gzstreambase::open( const char* name, int open_mode) {
-    if ( ! buf.open( name, open_mode))
+void gzstreambase::open( const char* name, int open_mode,
+                         int compression_level) {
+    if ( ! buf.open( name, open_mode, compression_level))
         clear( rdstate() | std::ios::badbit);
 }
 

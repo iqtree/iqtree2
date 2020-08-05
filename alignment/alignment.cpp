@@ -64,6 +64,7 @@ char genetic_code23[] = "KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSS
 char genetic_code24[] = "KNKNTTTTSSKSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSSWCWCLFLF"; // Pterobranchia mitochondrial
 char genetic_code25[] = "KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSSGCWCLFLF"; // Candidate Division SR1 and Gracilibacteria
 
+
 Alignment::Alignment()
         : vector<Pattern>()
 {
@@ -4169,106 +4170,215 @@ double Alignment::computeJCDist(int seq1, int seq2) {
     return computeJCDistanceFromObservedDistance(obs_dist);
 }
 
-void Alignment::printDist(ostream &out, double *dist_mat) {
+template <class S> void Alignment::printDist(const std::string& format, S &out, double *dist_mat) {
     size_t nseqs = getNSeq();
     int max_len = getMaxSeqNameLength();
     if (max_len < 10) max_len = 10;
     out << nseqs << endl;
-    out.precision(max((int)ceil(-log10(Params::getInstance().min_branch_length))+1, 6));
-    out << fixed;
-    size_t pos = 0;
+    auto precision = max((int)ceil(-log10(Params::getInstance().min_branch_length))+1, 6);
+    out.precision(precision);
+    bool lower = (format.substr(0,5) == "lower");
+    bool upper = (format.substr(0,5) == "upper");
     for (size_t seq1 = 0; seq1 < nseqs; ++seq1)  {
-        out.width(max_len);
-        out << left << getSeqName(seq1) << " ";
-        for (size_t seq2 = 0; seq2 < nseqs; ++seq2) {
-            out << dist_mat[pos++];
-            out << " ";
+        std::stringstream line;
+        line.width(max_len);
+        line.precision(precision);
+        line << std::fixed << std::left << getSeqName(seq1);
+        size_t rowStart = upper ? (seq1+1) : 0;
+        size_t rowStop  = lower ? (seq1) : nseqs;
+        size_t pos      = seq1 * nseqs + rowStart;
+        for (size_t seq2 = rowStart; seq2 < rowStop; ++seq2) {
+            line << " ";
+            line << dist_mat[pos++];
         }
-        out << endl;
+        line << "\n";
+        out << line.str();
     }
+    out.flush();
 }
 
-void Alignment::printDist(const char *file_name, double *dist_mat) {
+void Alignment::printDist ( const std::string& format, int compression_level
+                           , const char *file_name, double *dist_mat) {
     try {
-        ofstream out;
-        out.exceptions(ios::failbit | ios::badbit);
-        out.open(file_name);
-        printDist(out, dist_mat);
-        out.close();
+        if (format.find("gz") == string::npos) {
+            ofstream out;
+            out.exceptions(ios::failbit | ios::badbit);
+            out.open(file_name);
+            printDist(format, out, dist_mat);
+            out.close();
+        } else {
+            //Todo: Decide. Should we be insisting the file name ends with .gz too?
+            ogzstream out;
+            out.exceptions(ios::failbit | ios::badbit);
+            out.open(file_name, ios::out, compression_level);
+            printDist(format, out, dist_mat);
+            out.close();
+        }
         //cout << "Distance matrix was printed to " << file_name << endl;
     } catch (ios::failure) {
         outError(ERR_WRITE_OUTPUT, file_name);
     }
 }
 
-double Alignment::readDist(istream &in, double *dist_mat) {
+double Alignment::readDist(igzstream &in, double *dist_mat) {
     double longest_dist = 0.0;
+    std::stringstream firstLine;
+    safeGetTrimmedLineAsStream(in, firstLine);
     size_t nseqs;
-    in >> nseqs;
-    if (nseqs != getNSeq())
+    firstLine >> nseqs;
+    if (nseqs != getNSeq()) {
         throw "Distance file has different number of taxa";
-    double *tmp_dist_mat = new double[nseqs * nseqs];
-    std::map< string, int > map_seqName_ID;
-    int pos = 0, seq1, seq2, id = 0;
-    // read in distances to a temporary array
-    for (seq1 = 0; seq1 < nseqs; seq1++)  {
-        string seq_name;
-        in >> seq_name;
-        // assign taxa name to integer id
-        map_seqName_ID[seq_name] = id++;
-        /*
-        if (seq_name != getSeqName(seq1))
-            throw "Sequence name " + seq_name + " is different from " + getSeqName(seq1);
-        for (seq2 = 0; seq2 < nseqs; seq2++) {
-            in >> dist_mat[pos++];
-            if (dist_mat[pos-1] > longest_dist)
-                longest_dist = dist_mat[pos-1];
-        }
-         */
-        for (seq2 = 0; seq2 < nseqs; seq2++) {
-            in >> tmp_dist_mat[pos++];
-            //cout << tmp_dist_mat[pos - 1] << "  ";
-            if (tmp_dist_mat[pos - 1] > longest_dist)
-                longest_dist = tmp_dist_mat[pos - 1];
-        }
-        //cout << endl;
     }
-    //cout << "Internal distance matrix: " << endl;
+    double *tmp_dist_mat = new double[nseqs * nseqs];
+    bool lower = false; //becomes true if lower-triangle format identified
+    bool upper = false; //becomes true if upper-triangle format identified
+    std::map< string, int > map_seqName_ID;
+    progress_display readProgress(nseqs*nseqs, "Reading distance matrix from file");
+    // read in distances to a temporary array
+        
+    for (size_t seq1 = 0; seq1 < nseqs; seq1++)  {
+        std::stringstream line;
+        safeGetTrimmedLineAsStream(in, line);
+        string seq_name;
+        line >> seq_name;
+        // assign taxa name to integer id
+        map_seqName_ID[seq_name] = static_cast<int>(seq1);
+
+        size_t pos = nseqs * seq1;
+        if (upper) {
+            //Copy column seq1 from upper triangle (above the diagonal)
+            //to the left part of row seq1 (which is in the lower triangle).
+            size_t column_pos = seq1; //position in column in upper triangle
+            for (size_t seq2=0; seq2<seq1; ++seq2, column_pos+=nseqs) {
+                tmp_dist_mat[pos++] = tmp_dist_mat[column_pos];
+            }
+            //And write zero on the diagonal, in row seq1.
+            tmp_dist_mat[pos++] = 0.0;
+        }
+        size_t rowStart = (upper) ? (seq1+1) : 0; //(row-start relative)
+        size_t rowStop  = (lower) ? seq1     : nseqs;
+        size_t seq2     = rowStart;
+        for (; line.tellg()!=-1 && seq2 < rowStop; ++seq2) {
+            double dist;
+            line >> dist;
+            tmp_dist_mat[pos++] = dist;
+            if (dist > longest_dist) {
+                longest_dist = dist;
+            }
+        }
+        if (line.tellg()==-1 && seq2<rowStop)
+        {
+            if (seq1==0 && seq2==0) {
+                //Implied lower-triangle format
+                tmp_dist_mat[0] = 0.0;
+                readProgress.hide();
+                std::cout << "Distance matrix file is in lower-triangle format" << std::endl;
+                lower  = true;
+                readProgress.show();
+            }
+            else if (seq1==0 && seq2+1==rowStop) {
+                readProgress.hide();
+                std::cout << "Distance matrix file is in upper-triangle format" << std::endl;
+                upper  = true;
+                readProgress.show();
+                for (; 0<seq2; --seq2) {
+                    tmp_dist_mat[seq2] = tmp_dist_mat[seq2-1];
+                }
+                tmp_dist_mat[0] = 0.0;
+            }
+            else {
+                std::stringstream problem;
+                problem << "Too few distances read from row " << (seq1+1)
+                    << " of the distance matrix, for sequence " << seq_name;
+                throw problem.str();
+            }
+        }
+        else if (lower) {
+            tmp_dist_mat[pos++] = 0.0; //Diagonal entry
+            //Leave cells in upper triangle empty (for now)
+        }
+        readProgress += (rowStop - rowStart) * ((lower||upper) ? 2.0 : 1.0);
+    }
+    
+    if (lower) {
+        //Copy the upper triangle of the matrix from the lower triangle
+        for (size_t seq1=0; seq1<nseqs; ++seq1) /*row*/ {
+            size_t rowStart = seq1     * nseqs; //start of (seq1)th row (in dist matrix)
+            size_t rowStop  = rowStart + nseqs; //end of (seq1)th row; start of (seq1+1)th.
+            size_t colPos   = rowStop  + seq1;  //(seq1)th column of (seq1+1)th row
+            //Run across the row, writing the [seq1+1]th through [nseq-1]th
+            //elements of the row, with values read down the (seq1)th column
+            //of the lower triangle.
+            for (size_t rowPos=rowStart+seq1+1; rowPos<rowStop; ++rowPos, colPos+=nseqs) {
+                tmp_dist_mat[rowPos] = tmp_dist_mat[colPos];
+            }
+        }
+    }
+    readProgress.done();
+    
     // Now initialize the internal distance matrix, in which the sequence order is the same
     // as in the alignment
-    for (seq1 = 0; seq1 < nseqs; seq1++) {
-        for (seq2 = 0; seq2 < nseqs; seq2++) {
-            string seq1Name = getSeqName(seq1);
-            string seq2Name = getSeqName(seq2);
-            if (map_seqName_ID.count(seq1Name) == 0) {
-                throw "Could not find taxa name " + seq1Name;
-            }
-            if (map_seqName_ID.count(seq2Name) == 0) {
-                throw "Could not find taxa name " + seq2Name;
-            }
-            int seq1_tmp_id = map_seqName_ID[seq1Name];
-            int seq2_tmp_id = map_seqName_ID[seq2Name];
-            dist_mat[seq1 * nseqs + seq2] = tmp_dist_mat[seq1_tmp_id * nseqs + seq2_tmp_id];
-            //cout << dist_mat[seq1 * nseqs + seq2] << "  ";
+    
+    size_t* actualToTemp = new size_t[nseqs];
+    for (size_t seq1 = 0; seq1 < nseqs; seq1++) {
+        string seq1Name = getSeqName(seq1);
+        if (map_seqName_ID.count(seq1Name) == 0) {
+            throw "Could not find taxa name " + seq1Name;
         }
-        //cout << endl;
+        int seq1_tmp_id = map_seqName_ID[seq1Name];
+        actualToTemp[seq1] = seq1_tmp_id;
     }
+    std::cout << std::endl;
+
+    //Copy distances from tmp_dist_mat to dist_mat,
+    //permuting rows and columns on the way
+    //(by looking up row and column numbers, in the
+    //temporary distance matrix, via actualToTemp).
+    #ifdef _OPENMP
+    #pragma omp parallel for
+    #endif
+    for (size_t seq1 = 0; seq1 < nseqs; seq1++) {
+        auto writeRow = dist_mat     + seq1               * nseqs;
+        auto readRow  = tmp_dist_mat + actualToTemp[seq1] * nseqs;
+        for (size_t seq2 = 0; seq2 < nseqs; seq2++) {
+            writeRow[ seq2 ] = readRow [ actualToTemp[seq2] ];
+        }
+    }
+    delete [] actualToTemp;
+    delete [] tmp_dist_mat;
+
+    /*
+    pos = 0;
+    for (size_t seq1 = 0; seq1 < nseqs; seq1++) {
+        for (size_t seq2 = 0; seq2 < nseqs; seq2++) {
+            std::cout << " " << dist_mat[pos++];
+        }
+        std::cout << std::endl;
+    }
+    */
 
     // check for symmetric matrix
-    for (seq1 = 0; seq1 < nseqs-1; seq1++) {
-        if (dist_mat[seq1*nseqs+seq1] != 0.0)
+    for (size_t seq1 = 0; seq1 < nseqs-1; seq1++) {
+        auto checkRow = dist_mat + seq1*nseqs;
+        if (checkRow[seq1] != 0.0) {
             throw "Diagonal elements of distance matrix is not ZERO";
-        for (seq2 = seq1+1; seq2 < nseqs; seq2++)
-            if (dist_mat[seq1*nseqs+seq2] != dist_mat[seq2*nseqs+seq1])
-                throw "Distance between " + getSeqName(seq1) + " and " + getSeqName(seq2) + " is not symmetric";
+        }
+        auto checkColumn = checkRow + seq1 + nseqs; //same column of next row down
+        for (size_t seq2 = seq1+1; seq2 < nseqs; seq2++, checkColumn+=nseqs) {
+            if (checkRow[seq2] != *checkColumn) {
+                std::stringstream problem;
+                problem << "Distance between " << getSeqName(seq1) << " and " << getSeqName(seq2)
+                    << "( sequence ranks " << seq1 << " and " << seq2 << ")"
+                    << " is not symmetric";
+                throw problem.str();
+            }
+        }
     }
 
     /*
     string dist_file = params.out_prefix;
     dist_file += ".userdist";
-    printDist(dist_file.c_str(), dist_mat);*/
-
-    delete [] tmp_dist_mat;
+    printDist(params.dist_format, dist_file.c_str(), dist_mat);*/
 
     return longest_dist;
 }
@@ -4277,7 +4387,7 @@ double Alignment::readDist(const char *file_name, double *dist_mat) {
     double longest_dist = 0.0;
 
     try {
-        ifstream in;
+        igzstream in;
         in.exceptions(ios::failbit | ios::badbit);
         in.open(file_name);
         longest_dist = readDist(in, dist_mat);

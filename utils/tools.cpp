@@ -671,6 +671,43 @@ void get2RandNumb(const int size, int &first, int &second) {
 
 void quickStartGuide();
 
+namespace {
+    std::string string_to_lower(const char* input) {
+        std::string answer = input;
+        std::transform(answer.begin(), answer.end(), answer.begin(),
+                       []( char c){ return std::tolower(c); });
+        return answer;
+    }
+
+    template <class V, class S> void throw_if_not_in_set
+    ( const char* name, const V& value, S set, size_t setCount ) {
+        for ( size_t i=0; i<setCount; ++i ) {
+            if (value == set[i]) {
+                return;
+            }
+        }
+        std::string complaint = std::string(name) + " was " + value + " but must be one of ";
+        for ( size_t i=0; i<setCount; ++i ) {
+            complaint += (0<i) ? " , " : "";
+            complaint += set[i];
+        }
+        throw complaint;
+    }
+
+    int strip_number_suffix(std::string &stripMe, int defaultValue) {
+        size_t c = stripMe.length();
+        while (0<c && '0'<=stripMe[c-1] && stripMe[c-1]<='9') {
+            --c;
+        }
+        if (c==stripMe.length()) {
+            return defaultValue;
+        }
+        int rv = convert_int( stripMe.c_str() + c );
+        stripMe = stripMe.substr(0, c);
+        return rv;
+    }
+};
+
 void parseArg(int argc, char *argv[], Params &params) {
     int cnt;
     progress_display::setProgressDisplay(false);
@@ -704,6 +741,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.areas_boundary_file = NULL;
     params.boundary_modifier = 1.0;
     params.dist_file = NULL;
+    params.dist_format = "square";
+    params.dist_compression_level = 1;
     params.compute_obs_dist = false;
     params.compute_jc_dist = true;
     params.experimental = true;
@@ -1305,6 +1344,30 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.boundary_modifier = convert_double(argv[cnt]);
 				continue;
 			}
+            std::string arg = argv[cnt];
+            //Todo; move this up, use == rather than strcmp elsewhere, too.
+            if (arg=="-dist-format") {
+                cnt++;
+                if (cnt >= argc) {
+                    throw "Use -dist-format <distance_file_format>";
+                }
+                params.dist_format = string_to_lower(argv[cnt]);
+                params.dist_compression_level
+                    = strip_number_suffix(params.dist_format,
+                                          params.dist_compression_level);
+                if (params.dist_compression_level<0) {
+                    params.dist_compression_level=0;
+                } else if (9<params.dist_compression_level) {
+                    params.dist_compression_level=9;
+                }
+                const char* allowed[] = {
+                    "square", "lower", "upper"
+                    , "square.gz", "lower.gz", "upper.gz"
+                };
+                throw_if_not_in_set ( "dist-format", params.dist_format
+                                    , allowed, sizeof(allowed)/sizeof(allowed[0]));
+                continue;
+            }
 			if (strcmp(argv[cnt], "-dist") == 0
 					|| strcmp(argv[cnt], "-d") == 0) {
 				// calculate distance matrix from the tree
@@ -1319,8 +1382,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.compute_ml_dist = false;
 				continue;
 			}
-            std::string arg = argv[cnt];
-            //Todo; move this up, use == rather than strcmp elsewhere, too.
             if (arg=="-mlnj-only" || arg=="--mlnj-only") {
                 params.compute_ml_tree_only = true;
                 continue;

@@ -531,7 +531,6 @@ void RateMeyerHaeseler::runIterativeProc(Params &params, IQTree &tree) {
 		//getRates(prev_rates);
 		//writeSiteRates(prev_rates, rate_file.c_str());
 		tree.setCurScore(optimizeParameters(0.0));
-		//phylo_tree->aln->printDist(dist_file.c_str(), dist_mat);
 		tree.setCurScore(tree.optimizeAllBranches(i));
 		cout << "Current Log-likelihood: " << tree.getCurScore() << endl;
 		if (tree.getCurScore() <= prev_lh + 1e-4) {

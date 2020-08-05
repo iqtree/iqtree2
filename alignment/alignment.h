@@ -17,6 +17,7 @@
 #include <bitset>
 #include "pattern.h"
 #include "ncl/ncl.h"
+#include "utils/gzstream.h"
 
 const double MIN_FREQUENCY          = 0.0001;
 const double MIN_FREQUENCY_DIFF     = 0.00001;
@@ -640,17 +641,20 @@ public:
 
     /**
             write distance matrix into a file in PHYLIP distance format
+            @param format       distance file format (starting "upper", "lower", or "square"
+                            (indicating upper/lower triangular or square matrix format)
             @param file_name distance file name
             @param dist_mat distance matrix
      */
-    void printDist(const char *file_name, double *dist_mat);
+    void printDist(const std::string& format, int compression_level,
+                   const char *file_name, double *dist_mat);
 
     /**
             write distance matrix into a stream in PHYLIP distance format
             @param out output stream
             @param dist_mat distance matrix
      */
-    void printDist(ostream &out, double *dist_mat);
+    template <class S> void printDist(const std::string&, S &out, double *dist_mat);
 
     /**
             read distance matrix from a file in PHYLIP distance format
@@ -665,7 +669,7 @@ public:
             @param in input stream
             @param dist_mat distance matrix
      */
-    double readDist(istream &in, double *dist_mat);
+    double readDist(igzstream &in, double *dist_mat);
 
 
     /****************************************************************************

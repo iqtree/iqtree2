@@ -2228,6 +2228,12 @@ public:
     /** supress notes about duplicate sequences */
     double suppress_duplicate_sequence_warnings;
     
+    /** format to use when writing (.mldist) distance matrix files */
+    string dist_format;
+
+    /** compression level to use when writing (.mldist) distance matrix files */
+    int    dist_compression_level;
+    
 };
 
 /**

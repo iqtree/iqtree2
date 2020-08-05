@@ -1685,7 +1685,6 @@ void computeInitialDist(Params &params, IQTree &iqtree) {
     } else if (params.compute_obs_dist) {
         cout << "Computing observed distances..." << endl;
     }
-
     if (params.compute_jc_dist || params.compute_obs_dist || params.partition_file) {
         longest_dist = iqtree.computeDist(params, iqtree.aln, iqtree.dist_matrix, iqtree.var_matrix);
         //if (!params.suppress_zero_distance_warnings) {
@@ -2397,8 +2396,11 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         if (iqtree->isSuperTreeUnlinked()) {
             params.compute_ml_dist = false;
         }
-        //Todo: Check: is it always true that we've done this, if we reach this line?
-        cout << "Wrote distance file to... " << iqtree->getDistanceFileWritten() << endl;
+        std::string distFilePath =  iqtree->getDistanceFileWritten();
+        if (!distFilePath.empty()) {
+            cout << "Wrote distance file to... "
+                << iqtree->getDistanceFileWritten() << endl;
+        }
     }
     bool wantMLDistances = MPIHelper::getInstance().isMaster() && !iqtree->getCheckpoint()->getBool("finishedCandidateSet");
     if (wantMLDistances) {

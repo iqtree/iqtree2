@@ -86,9 +86,9 @@ protected:
     gzstreambuf buf;
 public:
     gzstreambase() { init(&buf); }
-    gzstreambase( const char* name, int open_mode);
+    gzstreambase( const char* name, int open_mode, int compression_level = 9);
     ~gzstreambase();
-    void open( const char* name, int open_mode);
+    void open( const char* name, int open_mode, int compression_evel=9);
     void close();
 	z_off_t get_raw_bytes(); // BQM: return number of uncompressed bytes
 
@@ -107,7 +107,7 @@ class igzstream : public gzstreambase, public std::istream {
 public:
     igzstream() : gzstreambase(), std::istream( &buf) {}
     igzstream( const char* name, int open_mode = std::ios::in)
-        : gzstreambase( name, open_mode), std::istream( &buf) {}  
+        : gzstreambase( name, open_mode), std::istream( &buf) {}
     gzstreambuf* rdbuf() { return gzstreambase::rdbuf(); }
     void open( const char* name, int open_mode = std::ios::in) {
         gzstreambase::open( name, open_mode);
@@ -118,12 +118,15 @@ class ogzstream : public gzstreambase, public std::ostream {
 public:
     ogzstream() : gzstreambase(), std::ostream( &buf) {
     }
-    ogzstream( const char* name, int mode = std::ios::out)
-        : gzstreambase( name, mode), std::ostream( &buf) {
+    ogzstream( const char* name, int mode = std::ios::out,
+               int compression_level = 9)
+        : gzstreambase( name, mode, compression_level)
+        , std::ostream( &buf) {
     }
     gzstreambuf* rdbuf() { return gzstreambase::rdbuf(); }
-    void open( const char* name, int open_mode = std::ios::out) {
-        gzstreambase::open( name, open_mode);
+    void open( const char* name, int open_mode = std::ios::out,
+               int compression_level =9) {
+        gzstreambase::open( name, open_mode, compression_level);
     }
 };
 
