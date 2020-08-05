@@ -3502,7 +3502,7 @@ double PhyloTree::computeDist(Params &params, Alignment *alignment, double* &dis
 }
 
 void PhyloTree::printDistanceFile() {
-    aln->printDist(dist_file.c_str(), dist_matrix);
+    aln->printDist(params->dist_format, params->dist_compression_level, dist_file.c_str(), dist_matrix);
     distanceFileWritten = dist_file.c_str();
 }
 
@@ -3557,6 +3557,8 @@ void PhyloTree::computeBioNJ(Params &params) {
         = StartTree::Factory::getTreeBuilderByName
             ( params.start_tree_subtype_name);
     bool wasDoneInMemory = false;
+    double timeToWriteDistanceFile = 0.0;
+    double timeToCalculateMatrix = 0.0;
 #ifdef _OPENMP
     omp_set_nested(true);
     #pragma omp parallel num_threads(2)
@@ -3571,11 +3573,8 @@ void PhyloTree::computeBioNJ(Params &params) {
                 double write_begin_time = getRealTime();
                 printDistanceFile();
                 if (verbose_mode >= VB_MED) {
-                    #ifdef _OPENMP
-                        #pragma omp critical (io)
-                    #endif
-                    cout << "Time taken to write distance file: "
-                    << getRealTime() - write_begin_time << " seconds " << endl;
+                    //Don't log it yet! It might mess up progress reporting!
+                    timeToWriteDistanceFile = getRealTime() - write_begin_time;
                 }
             }
         } else if (this->dist_matrix!=nullptr) {
@@ -3583,14 +3582,8 @@ void PhyloTree::computeBioNJ(Params &params) {
             wasDoneInMemory = treeBuilder->constructTreeInMemory
             ( this->aln->getSeqNames(), dist_matrix, bionj_file);
             if (wasDoneInMemory) {
-                if (verbose_mode >= VB_MED) {
-                    #ifdef _OPENMP
-                        #pragma omp critical (io)
-                    #endif
-                    cout << "Computing " << treeBuilder->getName() << " tree"
-                        << " (from in-memory) distance matrix took "
-                        << (getRealTime()-start_time) << " sec." << endl;
-                }
+                //Don't log it yet!
+                timeToCalculateMatrix = getRealTime() - start_time;
             }
         }
     }
@@ -3598,7 +3591,20 @@ void PhyloTree::computeBioNJ(Params &params) {
         #pragma omp barrier
         omp_set_nested(false);
     #endif
-        
+    if (timeToWriteDistanceFile!=0.0 && verbose_mode >= VB_MED) {
+        //This information is logged *afterwards* because, if
+        //timeToWriteDistanceFile was logged *during* the
+        //calculation of the tree it could mess up the formatting
+        //of the progress reporting (if any) done by the
+        //distance matrix algorithm.
+        cout << "Time taken to write distance file: "
+            << timeToWriteDistanceFile << " seconds " << endl;
+    }
+    if (wasDoneInMemory) {
+        cout << "Computing " << treeBuilder->getName() << " tree"
+            << " (from in-memory) distance matrix took "
+            << timeToCalculateMatrix << " sec." << endl;
+    }
     if (!wasDoneInMemory) {
         double start_time = getRealTime();
         treeBuilder->constructTree(dist_file, bionj_file);
