@@ -1853,6 +1853,7 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
             }
             pat[seq] = state;
         }
+        computeConst(pat);
         if (info.num_error == 0)
         {
             info.isAllGaps = pat.isAllGaps(STATE_UNKNOWN);
