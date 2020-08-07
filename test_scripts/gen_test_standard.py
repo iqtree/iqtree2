@@ -90,7 +90,9 @@ if __name__ == '__main__':
     testNr = testNr + 1
     jobs.append(testCMD)
 #  print "\n".join(jobs)
-  outfile = open(options.outFile, "wb")
+  outfile = open(options.outFile, "w")
   for job in jobs:
-    print >> outfile, job
+    outfile.write(job + "\n")
+    # Or, Python 2 only: print >> outfile, job
+    # Or, Python 3 only: print(job, file=outfile)
   outfile.close()
