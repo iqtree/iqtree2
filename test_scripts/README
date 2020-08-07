@@ -6,10 +6,10 @@ The binary of your branch will be stored in 'iqtree_binaries' directory.
 
 2. Prepare the config_file (see test_configs.txt for an example)
 
-3. If you want to run the standard tests, use the gen_test_standrd.py script (running the script without any option output the help menu) as follows:
-    ./gen_test_standard.py -b <path_to_your_iqtree_binary> -c <config_file>
-    EXAMPLE: ./gen_test_standard.py -b iqtree_binaries/iqtree_master -c test_configs.txt
-A text file named '<your_binary_name>_test_standard_cmds.txt' containing all the test commands will be generated. Copy all the content of the test_script folder to libby. Submit the job with the following commands:
+3. If you want to run the standard tests, use the gen_test_standard.py script (running the script without any option outputs the help menu) as follows:
+    ./gen_test_standard.py -b <path_to_your_iqtree_binary> -c <config_file> -o <output_file>
+    EXAMPLE: ./gen_test_standard.py -b iqtree_binaries/iqtree_master -c test_configs.txt -o test_standard_cmds.txt
+A text file named 'test_standard_cmds.txt' containing all the test commands will be generated. Copy all the content of the test_script folder to libby. Submit the job with the following commands:
     ./submit_jobs.sh <number_of_threads> <cmd_file> <aln_dir> <out_dir> <binary_dir>
     EXAMPLE: ./submit_jobs.sh 16 iqtree_master_test_standard_cmds.txt test_alignments iqtree_master_test_standard iqtree_binaries
 The LOG FILE containing the status of all jobs are writen in <out_dir>/<cmd_file>[0-9]*.log. Look into the file to see whether all jobs have run successfully. Grep for "ERROR" to see which job contains BUG.
