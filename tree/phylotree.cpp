@@ -3936,8 +3936,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
     /*
     if(params->upper_bound_NNI){
         totalNNIub += 2;
-        NNIMove resMove;
-        resMove = getBestNNIForBranUB(node1,node2,this);
+        NNIMove resMove = getBestNNIForBranUB(node1,node2,this);
         // if UB is smaller than the current likelihood, then we don't recompute the likelihood of the swapped topology.
         // Otherwise, follow the normal procedure: evaluate NNIs and compute the likelihood.
 
@@ -3988,26 +3987,21 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
         }
 //        ((PhyloNeighbor*) (*saved_it[id]))->scale_num = newScaleNum();
     }
-    if (params->nni5)
+    if (params->nni5) {
         ASSERT(mem_id == 2);
+    }
 
     // get the Neighbor again since it is replaced for saving purpose
     PhyloNeighbor* node12_it = (PhyloNeighbor*) node1->findNeighbor(node2);
     PhyloNeighbor* node21_it = (PhyloNeighbor*) node2->findNeighbor(node1);
 
     int cnt;
-
-    //NNIMove nniMoves[2];
-    bool newNNIMoves = false;
+    
+    NNIMove localNNIMoves[2];
     if (!nniMoves) {
-        //   Initialize the 2 NNI moves
-        newNNIMoves = true;
-        nniMoves = new NNIMove[2];
-        nniMoves[0].ptnlh = nniMoves[1].ptnlh = NULL;
-        nniMoves[0].node1 = NULL;
-
+        nniMoves = localNNIMoves;
+        //NNIMove constructor now sets node1, node2, and ptnlh to nullptr (James B. 06-Aug-2020)
     }
-
     if (nniMoves[0].node1) {
         // assuming that node1Nei_it and node2Nei_it is defined in nniMoves structure
         for (cnt = 0; cnt < 2; cnt++) {
@@ -4150,22 +4144,21 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 
     mem_slots.eraseSpecialNei();
 
-     // restore the length of 4 branches around node1, node2
-     FOR_NEIGHBOR(node1, node2, it)
-         (*it)->setLength((*it)->node->findNeighbor(node1));
-     FOR_NEIGHBOR(node2, node1, it)
-         (*it)->setLength((*it)->node->findNeighbor(node2));
+    // restore the length of 4 branches around node1, node2
+    FOR_NEIGHBOR(node1, node2, it)
+    (*it)->setLength((*it)->node->findNeighbor(node1));
+    FOR_NEIGHBOR(node2, node1, it)
+    (*it)->setLength((*it)->node->findNeighbor(node2));
+    
+    // restore curScore
+    curScore = backupScore;
 
-     // restore curScore
-     curScore = backupScore;
-
-     NNIMove res;
-     if (nniMoves[0].newloglh > nniMoves[1].newloglh) {
-         res = nniMoves[0];
-     } else {
-         res = nniMoves[1];
-     }
-    delete [] nniMoves;
+    NNIMove res;
+    if (nniMoves[0].newloglh > nniMoves[1].newloglh) {
+        res = nniMoves[0];
+    } else {
+        res = nniMoves[1];
+    }
     return res;
 }
 
@@ -4874,8 +4867,7 @@ void PhyloTree::computeNNIPatternLh(double cur_lh, double &lh2, double *pattern_
     nniMoves[1].ptnlh = pattern_lh3;
     bool nni5 = params->nni5;
     params->nni5 = true; // always optimize 5 branches for accurate SH-aLRT
-    nniMoves[0].node1 = nniMoves[1].node1 = NULL;
-    nniMoves[0].node2 = nniMoves[1].node2 = NULL;
+    //NNIMove constructor now sets node1 and node2 members to nullptr (James B. 06-Aug-2020)
     getBestNNIForBran(node1, node2, nniMoves);
     params->nni5 = nni5;
     lh2 = nniMoves[0].newloglh;

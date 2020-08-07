@@ -417,17 +417,11 @@ NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2
 
 	// ------------------------------------------------------------------
     int cnt;
-
-	//NNIMove nniMoves[2];
-    bool newNNIMoves = false;
-    if (!nniMoves) {
-		//   Initialize the 2 NNI moves
-    	newNNIMoves = true;
-    	nniMoves = new NNIMove[2];
-    	nniMoves[0].ptnlh = nniMoves[1].ptnlh = NULL;
-    	nniMoves[0].node1 = NULL;
+    NNIMove localNNIMoves[2];
+    if (nniMoves==nullptr) {
+        nniMoves = localNNIMoves;
+        //NNIMove constructor now sets node1 and ptnlh to nullptr (James B. 06-Aug-2020)
     }
-
     if (nniMoves[0].node1) {
     	// assuming that node1Nei_it and node2Nei_it are defined in nniMoves structure
     	for (cnt = 0; cnt < 2; cnt++) {
@@ -472,18 +466,15 @@ NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2
 	 // restore curScore
 	 curScore = backupScore;
 
-	 NNIMove myMove;
-	 if (nniMoves[0].newloglh > nniMoves[1].newloglh) {
-		 myMove = nniMoves[0];
-		 myMove.swap_id = 1;
-	 } else {
-		 myMove = nniMoves[1];
-		 myMove.swap_id = 2;
-	 }
-	if (newNNIMoves) {
-		delete [] nniMoves;
-	}
-	return myMove;
+    NNIMove myMove;
+    if (nniMoves[0].newloglh > nniMoves[1].newloglh) {
+        myMove = nniMoves[0];
+        myMove.swap_id = 1;
+    } else {
+        myMove = nniMoves[1];
+        myMove.swap_id = 2;
+    }
+    return myMove;
 }
 
 void PhyloSuperTreePlen::doNNIs(vector<NNIMove> &compatibleNNIs, bool changeBran) {
@@ -536,9 +527,7 @@ void PhyloSuperTreePlen::doNNI(NNIMove &move, bool clearLH)
 	part_move.resize(ntrees);
 	getNNIType(move.node1, move.node2, is_nni);
 
-
 	for (it = begin(), part = 0; it != end(); it++, part++) {
-
 		if(is_nni[part] == NNI_NO_EPSILON){
 			PhyloNeighbor *nei1_part = nei1->link_neighbors[part];
 			PhyloNeighbor *nei2_part = nei2->link_neighbors[part];

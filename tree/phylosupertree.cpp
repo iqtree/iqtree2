@@ -845,8 +845,6 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
         node1 = node2;
         node2 = tmp;
     }
-    NNIMove myMove;
-    //myMove.newloglh = 0;
 	SuperNeighbor *nei1 = ((SuperNeighbor*)node1->findNeighbor(node2));
 	SuperNeighbor *nei2 = ((SuperNeighbor*)node2->findNeighbor(node1));
 	ASSERT(nei1 && nei2);
@@ -882,15 +880,15 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
         nni_ok[nniid++] = constraintTree.isCompatible(nni);
     }
     ASSERT(nniid == 2);
-    myMove.node1 = myMove.node2 = NULL;
-    myMove.newloglh = -DBL_MAX;
     // return if both NNIs do not satisfy constraint
     if (!nni_ok[0] && !nni_ok[1]) {
-//        ASSERT(!nniMoves);
         if (nniMoves) {
             nniMoves[0].newloglh = nniMoves[1].newloglh = -DBL_MAX;
         }
-        return myMove;
+        NNIMove nullMove;
+        //NNIMove constructor now sets node1 and node2 members
+        //to nullptr, and newloglh to -DBL_MAX (James B. 06-Aug-2020).
+        return nullMove;
     }
 
 	//double bestScore = optimizeOneBranch(node1, node2, false);
@@ -975,6 +973,9 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
     if (!nni_ok[0]) nni_scores[0] = -DBL_MAX;
     if (!nni_ok[1]) nni_scores[1] = -DBL_MAX;
 
+    NNIMove myMove;
+    //NNIMove constructor now sets node1 and node2 members
+    //to nullptr, and newloglh to -DBL_MAX (James B. 06-Aug-2020).
 	myMove.node1Nei_it = node1->findNeighborIt(node1_nei->node);
 	myMove.node1 = node1;
 	myMove.node2 = node2;
@@ -988,10 +989,11 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 		myMove.newloglh = nni_scores[1];
 	}
 
-	if (save_all_trees != 2 && !nniMoves) return myMove;
-
+    if (save_all_trees != 2 && !nniMoves) {
+        return myMove;
+    }
 	// for bootstrap now
-    //now setup pattern likelihoods per partition
+    // now setup pattern likelihoods per partition
 	double *save_lh_factor = new double [ntrees];
 	double *save_lh_factor_back = new double [ntrees];
 	nniid = 0;
@@ -1041,9 +1043,7 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
         node2->updateNeighbor(node2_it, node2_nei);
         node2_nei->node->updateNeighbor(node1, node2);
         nniid++;
-
 	}
-
 	delete [] save_lh_factor_back;
 	delete [] save_lh_factor;
 	return myMove;

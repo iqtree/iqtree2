@@ -1442,9 +1442,8 @@ void mergePartitions(PhyloSuperTree* super_tree, vector<set<int> > &gene_sets, S
                 }
 			}
 		}
-		info.cur_ptnlh = NULL;
-		info.nniMoves[0].ptnlh = NULL;
-		info.nniMoves[1].ptnlh = NULL;
+        //Partinfo constructor now sets cur_tpnlh to nullptr (James B. 06-Aug-2020).
+        //NNIMove  constructor now sets ptnlh to nullptr     (James B. 06-Aug-2020).
 		part_info.push_back(info);
 		PhyloTree *tree = super_tree->extractSubtree(*it);
         tree->setParams(super_tree->params);

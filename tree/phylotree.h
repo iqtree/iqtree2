@@ -185,6 +185,9 @@ struct NNIMove {
     // pattern likelihoods
     double *ptnlh;
 
+    NNIMove(): node1(nullptr), node2(nullptr)
+        , newloglh(-DBL_MAX), ptnlh(nullptr) {
+    }
     bool operator<(const NNIMove & rhs) const {
         return newloglh > rhs.newloglh;
     }
@@ -1564,7 +1567,7 @@ public:
        @param node2 1 of the 2 nodes on the branch
        @param nniMoves (IN/OUT) detailed information of the 2 NNIs, set .ptnlh to compute pattern likelihoods
      */
-    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves = NULL);
+    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves = nullptr);
 
     /**
             Do an NNI
