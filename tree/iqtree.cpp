@@ -667,12 +667,14 @@ int IQTree::addTreeToCandidateSet(string treeString, double score, bool updateSt
     if (updateStopRule) {
         stop_rule.setCurIt(stop_rule.getCurIt() + 1);
         if (score > curBestScore) {
+            hideProgress();
             if (pos != -1) {
                 stop_rule.addImprovedIteration(stop_rule.getCurIt());
                 cout << "BETTER TREE FOUND at iteration " << stop_rule.getCurIt() << ": " << score << endl;
             } else {
                 cout << "UPDATE BEST LOG-LIKELIHOOD: " << score << endl;
             }
+            showProgress();
             bestcandidate_changed = true;
             // COMMENT OUT: not safe with MPI version
 //            printResultTree();
