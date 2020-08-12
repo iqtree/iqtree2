@@ -1170,7 +1170,7 @@ void Alignment::orderPatternByNumChars(int pat_type) {
         }
     }
     
-    // fill up to vectoclass with dummy pattern
+    // fill up to vectorclass with dummy pattern
     int maxnptn = get_safe_upper_limit_float(ordered_pattern.size());
     while (ordered_pattern.size() < maxnptn) {
         Pattern pat;
@@ -1264,6 +1264,7 @@ SeqType Alignment::detectSequenceType(StrVector &sequences) {
             if ((*i) == 'A' || (*i) == 'C' || (*i) == 'G' || (*i) == 'T' || (*i) == 'U') {
                 ++num_nuc;
                 ++num_ungap;
+                ++num_alpha;
                 continue;
             }
             if ((*i)=='?' || (*i)=='-' || (*i) == '.' ) {
@@ -2915,6 +2916,7 @@ void Alignment::printPhylip(ostream &out, bool append, const char *aln_site_list
     //Calculate sequence data in parallel
     std::vector<std::string> seq_data;
     seq_data.resize(seq_count);
+    progress_display contentProgress(seq_count, "Calculating content to write to Phylip file");
     #ifdef _OPENMP
     #pragma omp parallel for
     #endif
@@ -2931,8 +2933,11 @@ void Alignment::printPhylip(ostream &out, bool append, const char *aln_site_list
             }
         }
         str.append("\n");
+        ++contentProgress;
     }
+    contentProgress.done();
 
+    progress_display writeProgress(seq_count, "Writing Phylip file");
     for (size_t seq_id = 0; seq_id < seq_names.size(); seq_id++) {
         out.width(max_len);
         if (print_taxid) {
@@ -2944,7 +2949,9 @@ void Alignment::printPhylip(ostream &out, bool append, const char *aln_site_list
         std::string& str = seq_data[seq_id];
         out.width(0);
         out.write(str.c_str(), str.length());
+        ++writeProgress;
     }
+    writeProgress.done();
 }
 
 void Alignment::printFasta(ostream &out, bool append, const char *aln_site_list,
@@ -4429,7 +4436,7 @@ void Alignment::countStates(size_t *state_count, size_t num_unknown_states) {
     if (1<thread_count) {
         #pragma omp parallel for schedule(static,1)
         for (size_t thread=0; thread<thread_count; ++thread) {
-            size_t start = thread*step;
+            size_t start = thread * step;
             size_t stop  = start + step;
             if (size()<stop) stop=size();
             size_t localStateCount[this->STATE_UNKNOWN+1];
