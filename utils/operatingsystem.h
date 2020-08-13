@@ -10,6 +10,12 @@
 
 #include <string>
 
+#if defined(CLANG_UNDER_VS)
+#define CONSOLE_FILE "CON:"
+#else
+#define CONSOLE_FILE "/dev/tty"
+#endif
+
 std::string getOSName();
 bool isStandardOutputATerminal();
 

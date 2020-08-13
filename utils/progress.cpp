@@ -25,13 +25,13 @@
 #include <sstream>  //for std::ostringstream
 #include <iostream> //for std::cout
 #include <math.h>   //for floor
-#include "operatingsystem.h" //for isStandardOutputATerminal
+#include "operatingsystem.h" //for isStandardOutputATerminal and CONSOLE_FILE
 
 
 namespace {
-bool displayingProgress = true;
-    //You can turn off progress displays via progress_display::setProgressDisplay.
-bool isTerminal = false;
+    bool displayingProgress = true;
+        //You can turn off progress displays via progress_display::setProgressDisplay.
+    bool isTerminal = false;
 }
 
 progress_display::progress_display( double workToDo, const char* doingWhat
@@ -39,7 +39,8 @@ progress_display::progress_display( double workToDo, const char* doingWhat
     : startTime(getRealTime()), startCPUTime(getCPUTime())
     , totalWorkToDo(workToDo),  workDone(0.0)
     , taskDescription(doingWhat), isDone(false)
-    , workVerb(verb),            workUnitName(unitName) {
+    , workVerb(verb),            workUnitName(unitName)
+    , termout(CONSOLE_FILE, std::ios_base::out) {
         lastReportedWork    = 0.0;
         lastReportedTime    = startTime;
         lastReportedCPUTime = startCPUTime;
@@ -79,7 +80,8 @@ progress_display & progress_display::operator += (double incrementalWork) {
         #endif
         workDone += incrementalWork;
     }
-    if ( lastReportedWork == 0.0 || time - lastReportedTime > 1.0 ) {
+    bool justASec = floor(time) > floor(lastReportedTime);
+    if ( lastReportedWork == 0.0 || justASec ) {
         reportProgress(time, cpu, false);
     }
     return *this;
@@ -148,29 +150,34 @@ void progress_display::reportProgress(double time, double cpu, bool newline) {
         lastReportedWork = workDone;
         lastReportedTime = time;
         lastReportedCPUTime = cpu;
-        if (isTerminal) {
-            std::cout << "\33[2K\r";
+        if (isTerminal && !termout.fail()) {
+            termout << "\33[2K\r";
         }
         if (displayingProgress) {
             int barLen = 80;
-            if (!newline && workDone < totalWorkToDo) {
-                if (message.length() < barLen ) {
-                    message += std::string(barLen-message.length(), ' ');
-                }
-                size_t charsInGreen = (size_t) floor( workDone * barLen / totalWorkToDo );
-                if (isTerminal && charsInGreen < message.length()) {
-                    size_t charsInGreenOrCyan //number of chars in green or blue
-                        = (( message.length() < barLen) ? message.length() : barLen);
-                    message = "\33[1;30;102m" + message.substr(0, charsInGreen)
-                    + "\33[1;30;106m" + message.substr(charsInGreen, charsInGreenOrCyan - charsInGreen)
-                    + "\33[0m" + message.substr(charsInGreenOrCyan, message.length() - charsInGreenOrCyan);
-                }
-            }
-            std::cout << message;
             if (newline) {
-                std::cout << std::endl;
+                if (!termout.fail()) {
+                    termout.flush();
+                }
+                std::cout << message << std::endl;
             } else {
-                std::cout.flush();
+                if (workDone < totalWorkToDo) {
+                    if (message.length() < barLen ) {
+                        message += std::string(barLen-message.length(), ' ');
+                    }
+                    size_t charsInGreen = (size_t) floor( workDone * barLen / totalWorkToDo );
+                    if (isTerminal && charsInGreen < message.length()) {
+                        size_t charsInGreenOrCyan //number of chars in green or blue
+                            = (( message.length() < barLen) ? message.length() : barLen);
+                        message = "\33[1;30;102m" + message.substr(0, charsInGreen)
+                        + "\33[1;30;106m" + message.substr(charsInGreen, charsInGreenOrCyan - charsInGreen)
+                        + "\33[0m" + message.substr(charsInGreenOrCyan, message.length() - charsInGreenOrCyan);
+                    }
+                }
+                if (!termout.fail()) {
+                    termout << message;
+                    termout.flush();
+                }
             }
         }
     }
@@ -189,21 +196,21 @@ progress_display& progress_display::done() {
 
 progress_display::~progress_display() {
     if (!isDone) {
-        workDone = totalWorkToDo;
-        reportProgress(getRealTime(), getCPUTime(), true);
+        done();
     }
+    termout.close();
 }
 
 progress_display& progress_display::hide() {
-    if (!isTerminal) {
+    if (!isTerminal || termout.fail()) {
         return *this;
     }
     #if _OPENMP
     #pragma omp critical (io)
     #endif
     {
-        std::cout << "\33[2K\r";
-        std::cout.flush();
+        termout << "\33[2K\r";
+        termout.flush();
     }
     return *this;
 }
