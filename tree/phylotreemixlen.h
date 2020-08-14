@@ -223,7 +223,7 @@ public:
      *  @return
      *      <number of NNI steps, number of NNIs> done
      */
-    virtual pair<int, int> optimizeNNI(bool speedNNI = true);
+    virtual pair<int, int> optimizeNNI(bool speedNNI, const char* context);
 
     /** number of mixture categories */
     int mixlen;

@@ -1067,13 +1067,15 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
         
         added_nodes.reserve(removed_nei.size());
     }
-    if (verbose_mode >= VB_MAX)
+    if (verbose_mode >= VB_MAX) {
         cout << "computeParsimony: " << computeParsimony() << endl;
+    }
 
     //UINT *tmp_partial_pars;
     //tmp_partial_pars = newBitsBlock();
-    if (nseq == 3)
+    if (nseq == 3) {
         best_pars_score = computeParsimony();
+    }
 
     best_pars_score = 0;
     if (leafNum == nseq) {
@@ -1081,7 +1083,9 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
     }
     
     // stepwise adding the next taxon for the remaining taxa
-    for (int step = 0; leafNum < nseq; step++) {
+    initProgress(nseq*(nseq+1)/2,
+                 "Constructing parsimony tree", "", "");
+    for (int step = 0; leafNum < nseq; ++step) {
         NodeVector nodes1, nodes2;
         PhyloNode *target_node = NULL;
         PhyloNode *target_dad = NULL;
@@ -1100,8 +1104,11 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
             added_nodes.push_back(added_node);
         } else {
             // add new taxon to the tree
-            if (verbose_mode >= VB_MAX)
+            if (verbose_mode >= VB_MAX) {
+                hideProgress();
                 cout << "Adding " << aln->getSeqName(taxon_order[leafNum]) << " to the tree..." << endl;
+                showProgress();
+            }
             getBranches(nodes1, nodes2);
 
             // allocate a new taxon
@@ -1120,7 +1127,6 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
         added_node->addNeighbor((Node*) 2, -1.0);
 
         for (int nodeid = 0; nodeid < nodes1.size(); nodeid++) {
-        
             int score = addTaxonMPFast(new_taxon, added_node, nodes1[nodeid], nodes2[nodeid]);
             if (score < best_pars_score) {
                 best_pars_score = score;
@@ -1129,8 +1135,11 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
             }
         }
         
-        if (verbose_mode >= VB_MAX)
+        if (verbose_mode >= VB_MAX) {
+            hideProgress();
             cout << ", score = " << best_pars_score << endl;
+            showProgress();
+        }
         // now insert the new node in the middle of the branch node-dad
         insertNode2Branch(added_node, target_node, target_dad);
 
@@ -1145,7 +1154,9 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
 
         // increase number of taxa
         leafNum += getNumTaxa(new_taxon, added_node);
+        trackProgress(step+1);
     }
+    doneProgress();
     
     ASSERT(index == 4*leafNum-6);
 
@@ -1159,12 +1170,13 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
 //    clearAllPartialLH();
     fixNegativeBranch(true);
     // convert to rooted tree if originally so
-    if (orig_rooted)
+    if (orig_rooted) {
         convertToRooted();
+    }
     if (out_prefix) {
-		string file_name = out_prefix;
-		file_name += ".parstree";
-		printTree(file_name.c_str(), WT_NEWLINE + WT_BR_LEN);
+        string file_name = out_prefix;
+        file_name += ".parstree";
+        printTree(file_name.c_str(), WT_NEWLINE + WT_BR_LEN);
     }
 //    if (isSuperTree())
 //        ((PhyloSuperTree*)this)->mapTrees();

@@ -146,10 +146,13 @@ public:
 
     /**
      *         @brief Perform NNI search on the current tree topology
+     *         @param write_info true if information is to be logged
+     *         @param context description of the context of the search (used in progress/log messages)
+     *                      (may be blank)
      *         @return <number_of_NNIs, number_of_NNI_steps>
      *         This function will automatically use the selected kernel (either PLL or IQ-TREE)
      */
-    virtual pair<int, int> doNNISearch(bool write_info = false);
+    virtual pair<int, int> doNNISearch(bool write_info, const char* context);
 
     /**
      perform tree search

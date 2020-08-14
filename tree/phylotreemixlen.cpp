@@ -571,7 +571,7 @@ double PhyloTreeMixlen::optimizeAllBranches(int my_iterations, double tolerance,
     return tree_lh;
 }
 
-pair<int, int> PhyloTreeMixlen::optimizeNNI(bool speedNNI) {
+pair<int, int> PhyloTreeMixlen::optimizeNNI(bool speedNNI, const char* context) {
     int i, j;
 
     DoubleVector meanlenvec;
@@ -598,7 +598,7 @@ pair<int, int> PhyloTreeMixlen::optimizeNNI(bool speedNNI) {
     if (num_fixed > 0) {
         optimizeBranches(num_fixed);
     }
-    return IQTree::optimizeNNI(speedNNI);
+    return IQTree::optimizeNNI(speedNNI, context);
 }
 
 void PhyloTreeMixlen::printBranchLength(ostream &out, int brtype, bool print_slash, Neighbor *length_nei) {

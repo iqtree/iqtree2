@@ -1765,7 +1765,7 @@ void pruneTaxa(Params &params, IQTree &iqtree, double *pattern_lh, NodeVector &p
         iqtree.clearAllPartialLH();
         iqtree.setCurScore(iqtree.optimizeAllBranches());
         //cout << "Log-likelihood    after reoptimizing model parameters: " << tree.curScore << endl;
-        iqtree.optimizeNNI();
+        iqtree.optimizeNNI(true, "");
         cout << "Log-likelihood after optimizing partial tree: "
                 << iqtree.getCurScore() << endl;
     }
@@ -1783,7 +1783,7 @@ void restoreTaxa(IQTree &iqtree, double *saved_dist_mat, NodeVector &pruned_taxa
         iqtree.setCurScore(iqtree.optimizeAllBranches());
         //cout << "Log-likelihood    after reoptimizing model parameters: " << tree.curScore << endl;
         pair<int, int> nniInfo;
-        nniInfo = iqtree.optimizeNNI();
+        nniInfo = iqtree.optimizeNNI(true, "");
         cout << "Log-likelihood    after reoptimizing full tree: " << iqtree.getCurScore() << endl;
         //iqtree.setBestScore(iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, params.model_eps));
 

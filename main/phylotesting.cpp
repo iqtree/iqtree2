@@ -608,7 +608,7 @@ string computeFastMLTree(Params &params, Alignment *aln,
         // do quick NNI search
         if (params.start_tree != STT_USER_TREE) {
             cout << "Perform nearest neighbor interchange..." << endl;
-            iqtree->doNNISearch(true);
+            iqtree->doNNISearch(true, "");
             initTree = iqtree->getTreeString();
         }
         params.opt_gammai = saved_opt_gammai;

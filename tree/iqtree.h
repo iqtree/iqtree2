@@ -344,11 +344,13 @@ public:
 
     /**
      *  Optimize current tree using NNI
-     *
+     * @param speedNNI true, to use fast NNI
+     *  @param context description of the context of the search,
+     *                 to be used in log messages (may be blank).
      *  @return
      *      <number of NNI steps, number of NNIs> done
      */
-    virtual pair<int, int> optimizeNNI(bool speedNNI = true);
+    virtual pair<int, int> optimizeNNI(bool speedNNI, const char* context);
 
     /**
      *  Return the current best score found
@@ -427,10 +429,12 @@ public:
 
     /**
      *         @brief Perform NNI search on the current tree topology
+     *         @param write_info indicates how much information is to be logged
+     *         @param context indicates the context of the NNI search (may be blank)
      *         @return <number_of_NNIs, number_of_NNI_steps>
      *         This function will automatically use the selected kernel (either PLL or IQ-TREE)
      */
-    virtual pair<int, int> doNNISearch(bool write_info = false);
+    virtual pair<int, int> doNNISearch(bool write_info, const char* context);
 
     /**
             @brief evaluate all NNIs
