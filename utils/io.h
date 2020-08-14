@@ -27,7 +27,8 @@
 
 #ifndef io_h
 #define io_h
-#include <string>
+#include <string>  //for std::string
+#include <sstream> //for std::stringstream
 
 template <class S> S& safeGetLine(S& is, std::string& t)
 {
