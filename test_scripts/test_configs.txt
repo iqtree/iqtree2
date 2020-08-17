@@ -1,3 +1,16 @@
+START_PRELIMINARY_TESTS
+-s example.phy
+-s example.phy -m GTR+I+G
+-s example.phy -m MF
+-s example.phy -B 1000 -alrt 1000
+-s example.phy -p example.nex
+-s example.phy -p example.nex -m MF+MERGE
+-s example.phy -p example.nex -m MFP+MERGE -B 1000
+-s example.phy -m GTR+R4 -T AUTO
+-s example.phy -T 4
+-h
+END_PRELIMINARY_TESTS
+
 START_PARTITION_ALN
 example.phy example.nex
 d59_8.phy d59_8.nex
@@ -25,3 +38,4 @@ START_GENERIC_OPTIONS
 -m TEST -b 100
 -m TESTNEW -b 100
 END_GENERIC_OPTIONS
+

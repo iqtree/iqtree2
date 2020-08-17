@@ -8,7 +8,11 @@ import sys, os, time, multiprocessing, optparse
 import subprocess, logging, datetime
 
 def parse_config(config_file):
-  singleAln, partitionAln, partOpts, genericOpts = [], [], [], []
+  singleAln = []
+  partitionAln = []
+  partOpts = []
+  genericOpts = []
+  preliminaryTests = []
   with open(config_file) as f:
     #lines = f.readlines()
     lines = [line.strip() for line in f if line.strip()]
@@ -16,6 +20,7 @@ def parse_config(config_file):
   readPartAln = False
   partOpt = False
   genericOpt = False
+  preliminaryTest = False
   for line in lines:
     #print line
     if line == 'START_SINGLE_ALN':
@@ -26,6 +31,7 @@ def parse_config(config_file):
       continue
     if readSingleAln:
       singleAln.append(line)
+      
     if line == 'START_PARTITION_ALN':
       readPartAln = True
       continue
@@ -34,23 +40,35 @@ def parse_config(config_file):
       continue
     if readPartAln:
       partitionAln.append(line.split())
+      
     if line == 'START_PARTITION_OPTIONS':
       partOpt = True
       continue
     if line == 'END_PARTITION_OPTIONS':
       partOpt = False
       continue
+    if partOpt:
+        partOpts.append(line)
+
     if line == 'START_GENERIC_OPTIONS':
       genericOpt = True
       continue
     if line == 'END_GENERIC_OPTIONS':
       genericOpt = False
       continue
-    if partOpt:
-      partOpts.append(line)
     if genericOpt:
       genericOpts.append(line)
-  return (singleAln, partitionAln, genericOpts, partOpts)
+
+    if line == 'START_PRELIMINARY_TESTS':
+      preliminaryTest = True
+      continue
+    if line == 'END_PRELIMINARY_TESTS':
+      preliminaryTest = False
+      continue
+    if preliminaryTest:
+      preliminaryTests.append(line)
+
+  return (singleAln, partitionAln, genericOpts, partOpts, preliminaryTests)
 
 
 if __name__ == '__main__':
@@ -64,8 +82,13 @@ if __name__ == '__main__':
   if not options.iqtree_bin or not options.config_file:
     parser.print_help()
     exit(0)
-  (singleAln, partitionAln, genericOpts, partOpts) = parse_config(options.config_file)
+  (singleAln, partitionAln, genericOpts, partOpts, preliminaryTests) = parse_config(options.config_file)
   testCmds = []
+  # Generate preliminary tests
+  for prelim in preliminaryTests:
+    cmd = prelim + ' -redo'
+    testCmds.append(cmd)
+  
   # Generate test commands for single model
   for aln in singleAln:
     for opt in genericOpts:
@@ -90,7 +113,10 @@ if __name__ == '__main__':
     testNr = testNr + 1
     jobs.append(testCMD)
 #  print "\n".join(jobs)
-  outfile = open(options.outFile, "w")
+  if options.outFile == "STDOUT":
+    outfile = sys.stdout
+  else:
+    outfile = open(options.outFile, "w")
   for job in jobs:
     outfile.write(job + "\n")
     # Or, Python 2 only: print >> outfile, job

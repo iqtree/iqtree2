@@ -90,13 +90,18 @@ if __name__ == '__main__':
     parser = optparse.OptionParser(usage=usage)
     parser.add_option('-f','--cmd', dest="cmd", help='File containing all commands')
     parser.add_option('-c','--cpu', dest="cpu", help='Number of CPU to use', default=max_cores)
+    parser.add_option('-d','--dir', dest="directory", help='Output directory to use', default='.')
     (options, args) = parser.parse_args()
     if len(sys.argv) == 1:
         parser.print_help()
         exit(0)
-    jobs = open(options.cmd, "r").readlines()
+    if options.cmd == "STDIN" or options.cmd == "":
+        jobs = sys.stdin.readlines()
+    else:
+        jobs = open(options.cmd, "r").readlines()
+    if (options.directory != "."):
+        if not os.path.exists(options.directory):
+            os.mkdir(options.directory)
+        os.chdir(options.directory)
     exec_commands(jobs, options.cmd, int(options.cpu))
     
-    
-
-
