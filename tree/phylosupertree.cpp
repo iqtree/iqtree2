@@ -355,9 +355,9 @@ Node* PhyloSuperTree::newNode(int node_id, int node_name) {
     return (Node*) (new SuperNode(node_id, node_name));
 }
 
-size_t PhyloSuperTree::getAlnNPattern() {
+size_t PhyloSuperTree::getAlnNPattern() const {
 	size_t num = 0;
-	for (iterator it = begin(); it != end(); it++)
+	for (auto it = begin(); it != end(); it++)
 		num += (*it)->getAlnNPattern();
 	return num;
 }

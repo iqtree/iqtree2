@@ -566,7 +566,7 @@ public:
     /**
      *		@return number of alignment patterns
      */
-    virtual size_t getAlnNPattern() {
+    virtual size_t getAlnNPattern() const {
         return aln->getNPattern();
     }
 
@@ -1766,13 +1766,16 @@ public:
     /**
         ensure that the number of threads is set (perhaps calling testNumThreads to do so),
         perhaps calling warnNumThreads if it might be set too high.
+     @param params (parameters supplied on the command-line)
+     @param suppressAnyThreadCountWarnings (self explanatory)
     */
-    int ensureNumberOfThreadsIsSet(Params *params);
+    int ensureNumberOfThreadsIsSet(Params *params,
+                                   bool suppressAnyThreadCountWarnings);
 
     /**
         print warning about too many threads for short alignments
     */
-    void warnNumThreads();
+    void warnNumThreads() const;
 
     /****************************************************************************
             Subtree Pruning and Regrafting by maximum likelihood

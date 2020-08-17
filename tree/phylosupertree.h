@@ -194,7 +194,7 @@ public:
 	/**
 	 *		@return number of alignment patterns
 	*/
-	virtual size_t getAlnNPattern();
+	virtual size_t getAlnNPattern() const;
 
 	/**
 	 *		@return number of alignment sites

@@ -233,8 +233,9 @@ void CandidateModel::computeICScores() {
         for (auto a : super_aln->partitions)
             sample_size += a->getNSite();
     }
-    if (hasFlag(MF_SAMPLE_SIZE_TRIPLE))
+    if (hasFlag(MF_SAMPLE_SIZE_TRIPLE)) {
         sample_size /= 3;
+    }
     computeInformationScores(logl, df, sample_size, AIC_score, AICc_score, BIC_score);
 }
 
@@ -582,7 +583,7 @@ string computeFastMLTree(Params &params, Alignment *aln,
     }
 
     iqtree->getModelFactory()->restoreCheckpoint();
-    iqtree->ensureNumberOfThreadsIsSet(nullptr);
+    iqtree->ensureNumberOfThreadsIsSet(nullptr, false);
     iqtree->initializeAllPartialLh();
     double saved_modelEps = params.modelEps;
     params.modelEps = params.modelfinder_eps;
@@ -1573,7 +1574,7 @@ string CandidateModel::evaluate(Params &params,
             iqtree->saveCheckpoint();
         }
 
-        iqtree->ensureNumberOfThreadsIsSet(nullptr);
+        iqtree->ensureNumberOfThreadsIsSet(nullptr, true);
 
         runTreeReconstruction(params, iqtree);
         new_logl = iqtree->computeLikelihood();
@@ -1596,7 +1597,7 @@ string CandidateModel::evaluate(Params &params,
         if (verbose_mode >= VB_MED) {
             cout << "Optimizing model " << getName() << endl;
         }
-        iqtree->ensureNumberOfThreadsIsSet(nullptr);
+        iqtree->ensureNumberOfThreadsIsSet(nullptr, true);
         iqtree->initializeAllPartialLh();
 
         for (int step = 0; step < 2; step++) {
@@ -2352,55 +2353,68 @@ bool isMixtureModel(ModelsBlock *models_block, string &model_str) {
     return false;
 }
 
-void CandidateModelSet::filterRates(int finished_model) {
-    if (Params::getInstance().score_diff_thres < 0)
-        return;
+int CandidateModelSet::filterRates(int finished_model) {
+    if (Params::getInstance().score_diff_thres < 0) {
+        return 0;\
+    }
     double best_score = DBL_MAX;
     ASSERT(finished_model >= 0);
-    int model;
-    for (model = 0; model <= finished_model; model++)
+    for (int model = 0; model <= finished_model; model++)
         if (at(model).subst_name == at(0).subst_name) {
             if (!at(model).hasFlag(MF_DONE + MF_IGNORED))
-                return; // only works if all models done
+            {
+                return 0; // only works if all models done
+            }
             best_score = min(best_score, at(model).getScore());
         }
     
+    int modelsFiltered = 0;
     double ok_score = best_score + Params::getInstance().score_diff_thres;
     set<string> ok_rates;
-    for (model = 0; model <= finished_model; model++)
+    for (int model = 0; model <= finished_model; model++) {
         if (at(model).getScore() <= ok_score) {
             string rate_name = at(model).orig_rate_name;
             ok_rates.insert(rate_name);
         }
-    for (model = finished_model+1; model < size(); model++)
-        if (ok_rates.find(at(model).orig_rate_name) == ok_rates.end())
-            at(model).setFlag(MF_IGNORED);
+    }
+    for (int model = finished_model+1; model < size(); model++) {
+        if (ok_rates.find(at(model).orig_rate_name) == ok_rates.end()) {
+            if (at(model).setFlag(MF_IGNORED)) {
+                ++modelsFiltered;
+            }
+        }
+    }
+    return modelsFiltered;
 }
 
-void CandidateModelSet::filterSubst(int finished_model) {
-    if (Params::getInstance().score_diff_thres < 0)
-        return;
+int CandidateModelSet::filterSubst(int finished_model) {
+    if (Params::getInstance().score_diff_thres < 0) {
+        return 0;
+    }
     double best_score = DBL_MAX;
     ASSERT(finished_model >= 0);
-    int model;
-    for (model = 0; model <= finished_model; model++)
+    for (int model = 0; model <= finished_model; model++)
         if (at(model).rate_name == at(0).rate_name)
             best_score = min(best_score, at(model).getScore());
     
     double ok_score = best_score + Params::getInstance().score_diff_thres;
     set<string> ok_model;
-    for (model = 0; model <= finished_model; model++) {
+    int countFilteredOut = 0;
+    for (int model = 0; model <= finished_model; model++) {
         if (at(model).rate_name != at(0).rate_name)
             continue;
         if (at(model).getScore() <= ok_score) {
             string subst_name = at(model).orig_subst_name;
             ok_model.insert(subst_name);
         } else
-            at(model).setFlag(MF_IGNORED);
+            countFilteredOut += at(model).setFlag(MF_IGNORED) ? 1 : 0;
     }
-    for (model = finished_model+1; model < size(); model++)
-        if (ok_model.find(at(model).orig_subst_name) == ok_model.end())
-            at(model).setFlag(MF_IGNORED);
+    for (int model = finished_model+1; model < size(); model++) {
+        if (ok_model.find(at(model).orig_subst_name) == ok_model.end()) {
+            countFilteredOut += at(model).setFlag(MF_IGNORED) ? 1 : 0;
+        }
+    }
+    return countFilteredOut;
 }
 
 CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
@@ -2447,7 +2461,6 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
     }
 
     DoubleVector model_scores;
-    int model;
 	int best_model = -1;
     Alignment *best_aln = in_tree->aln;
 
@@ -2499,17 +2512,24 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
             if (at(subst_block).rate_name == at(0).rate_name)
                 break;
     }
-    
+    size_t modelsToTest = 0;
+    for (int model = 0; model < size(); ++model) {
+        modelsToTest += at(model).hasFlag(MF_IGNORED) ? 0 : 1;
+    }
     
     //------------- MAIN FOR LOOP GOING THROUGH ALL MODELS TO BE TESTED ---------//
-
-    in_tree->initProgress(size(), "Testing models", "tested", "model");
-	for (model = 0; model < size(); model++) {
-        if (model == rate_block+1)
-            filterRates(rate_block); // auto filter rate models
-        if (model == subst_block+1)
-            filterSubst(subst_block); // auto filter substitution model
+    
+    in_tree->initProgress(modelsToTest, "Testing models", "tested (or skipped)", "model");
+    for (int model = 0; model < size(); ++model) {
+        if (model == rate_block+1) {
+            in_tree->trackProgress(filterRates(rate_block)); // auto filter rate models
+        }
+        if (model == subst_block+1) {
+            in_tree->trackProgress(filterSubst(subst_block)); // auto filter substitution model
+        }
         if (at(model).hasFlag(MF_IGNORED)) {
+            //Not counted this time; we counted it (as skipped), when
+            //it was marked as MF_IGNORED (see below).
             model_scores.push_back(DBL_MAX);
             continue;
         }
@@ -2656,12 +2676,18 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
             // skip over all +R model of higher categories
             const char *rates[] = {"+R", "*R", "+H", "*H"};
             size_t posR;
-            for (int i = 0; i < sizeof(rates)/sizeof(char*); i++)
-                if ((posR = orig_model_name.find(rates[i])) != string::npos)
+            for (int i = 0; i < sizeof(rates)/sizeof(char*); i++) {
+                if ((posR = orig_model_name.find(rates[i])) != string::npos) {
                     break;
+                }
+            }
             string first_part = orig_model_name.substr(0, posR+2);
             for (int next = model+1; next < size() && at(next).getName().substr(0, posR+2) == first_part; next++) {
-                at(next).setFlag(MF_IGNORED);
+                //Count later models that we're going to skip as skipped (now)
+                //(if they hadn't already been skipped).
+                if (at(next).setFlag(MF_IGNORED)) {
+                    in_tree->trackProgress(1);
+                }
             }
         }
         in_tree->trackProgress(1);
@@ -2692,7 +2718,7 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
 	sort_index(model_scores.data(), model_scores.data() + model_scores.size(), model_rank);
 
     string model_list;
-	for (model = 0; model < model_scores.size(); model++) {
+	for (int model = 0; model < model_scores.size(); model++) {
         if (model_scores[model_rank[model]] == DBL_MAX)
             break;
         if (model > 0)
@@ -2752,8 +2778,9 @@ int64_t CandidateModelSet::getNextModel() {
         next_model = 0;
     else {
         for (next_model = current_model+1; next_model != current_model; next_model++) {
-            if (next_model == size())
+            if (next_model == size()) {
                 next_model = 0;
+            }
             if (!at(next_model).hasFlag(MF_IGNORED + MF_WAITING + MF_RUNNING)) {
                 break;
             }
@@ -2906,10 +2933,12 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
             cout << endl;
 
         }
-        if (model >= rate_block)
+        if (model >= rate_block) {
             filterRates(model); // auto filter rate models
-        if (model >= subst_block)
+        }
+        if (model >= subst_block) {
             filterSubst(model); // auto filter substitution model
+        }
 #ifdef _OPENMP
         }
 #endif

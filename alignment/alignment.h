@@ -371,7 +371,7 @@ public:
     /**
              @return number of patterns
      */
-    inline size_t getNPattern() {
+    inline size_t getNPattern() const {
         return size();
     }
 

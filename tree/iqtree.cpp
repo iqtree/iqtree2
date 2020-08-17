@@ -623,6 +623,14 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
             break;
         case STT_BIONJ:
             // This is the old default option: using BIONJ as starting tree
+            if (this->dist_matrix == nullptr) {
+                //Really, we want to re-use the distance matrix from the tree,
+                //two levels higher in the call stack (in runModelFinder)
+                //(and this is just an easy workaround to avert a null de-reference).
+                //Easier than adding parameters to computeFastMLTree, and to
+                //IQTree::computeInitialTree, but not ideal. -James B. 17-Aug-2020
+                computeDist(*params, aln, dist_matrix, var_matrix);
+            }
             computeBioNJ(*params);
             if (verbose_mode >= VB_MED) {
                 cout << "Computing initial tree took " << getRealTime() - start
@@ -4233,20 +4241,22 @@ void IQTree::sendStopMessage() {
 #endif
 }
 
-void PhyloTree::warnNumThreads() {
+void PhyloTree::warnNumThreads() const {
     if (num_threads <= 1)
         return;
     // return if -nt AUTO
     if (params->num_threads == 0)
         return;
     size_t nptn = getAlnNPattern();
-    if (nptn < num_threads*vector_size)
+    if (nptn < num_threads*vector_size) {
         outError("Too many threads for short alignments, please reduce number of threads or use -T AUTO to determine it.");
-    if (nptn < num_threads*400/aln->num_states)
+    }
+    if (nptn < num_threads*400/aln->num_states) {
         outWarning("Number of threads seems too high for short alignments. Use -T AUTO to determine best number of threads.");
+    }
 }
 
-int PhyloTree::ensureNumberOfThreadsIsSet(Params *params) {
+int PhyloTree::ensureNumberOfThreadsIsSet(Params *params, bool suppressAnyThreadCountWarnings) {
     #ifdef _OPENMP
         if (num_threads <= 0 ) {
             int bestThreads = testNumThreads();
@@ -4254,7 +4264,7 @@ int PhyloTree::ensureNumberOfThreadsIsSet(Params *params) {
             if (params!=nullptr) {
                 params->num_threads = bestThreads;
             }
-        } else {
+        } else if (!suppressAnyThreadCountWarnings) {
             warnNumThreads();
         }
         return num_threads;

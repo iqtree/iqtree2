@@ -145,8 +145,10 @@ public:
     }
     
     /** turn on some flag with OR operator */
-    void setFlag(int flag) {
-        this->flag |= flag;
+    bool setFlag(int flagsToSet) {
+        bool flagChanged = (this->flag & flagsToSet) != flagsToSet;
+        this->flag |= flagsToSet;
+        return flagChanged;
     }
 
     bool hasFlag(int flag) {
@@ -198,14 +200,16 @@ public:
     int generate(Params &params, Alignment *aln, bool separate_rate, bool merge_phase);
 
     /**
-     Filter out all "non-promissing" rate models
+     Filter out all "non-promising" rate models
+                @return the number of "non-promising" models that were filtered out.
      */
-    void filterRates(int finished_model);
+    int filterRates(int finished_model);
 
     /**
-     Filter out all "non-promissing" substitution models
+     Filter out all "non-promising" substitution models
+                @return the number of "non-promising" models that were filtered out.
      */
-    void filterSubst(int finished_model);
+    int filterSubst(int finished_model);
 
     /**
      testing the best-fit model

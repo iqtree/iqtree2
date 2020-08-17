@@ -2342,7 +2342,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     //None of his will work until there are actually taxa tree
     //(we cannot do it until we *have* that).
     if (!params.compute_ml_tree_only) {
-        iqtree->ensureNumberOfThreadsIsSet(&params);
+        iqtree->ensureNumberOfThreadsIsSet(&params, false);
         iqtree->initializeAllPartialLh();
         handleGammaInvariantOptions(params, *iqtree);
         
@@ -2434,7 +2434,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
                     
                     //This fails if there are any lengths <=0 (so it has to
                     //go after the fix-up for negative branch lengths).
-                    iqtree->ensureNumberOfThreadsIsSet(&params);
+                    iqtree->ensureNumberOfThreadsIsSet(&params, false);
                     iqtree->initializeAllPartialLh();
                     handleGammaInvariantOptions(params, *iqtree);
                     initTree = iqtree->ensureModelParametersAreSet(initEpsilon);
@@ -3422,7 +3422,7 @@ void computeSiteFrequencyModel(Params &params, Alignment *alignment) {
     }
 #endif
 
-    tree->ensureNumberOfThreadsIsSet(nullptr);
+    tree->ensureNumberOfThreadsIsSet(nullptr, false);
 
     tree->initializeAllPartialLh();
     // 2017-12-07: Increase espilon ten times (0.01 -> 0.1) to speedup PMSF computation
