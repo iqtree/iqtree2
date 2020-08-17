@@ -2191,6 +2191,27 @@ public:
      */
     void showNoProgress();
 
+    /** start reporting progress on a task
+     @param size how big the task is
+     @param name the name of the task (e.g. "evaluating candidate trees")
+     @param verb the (past-tense) verb used to describe progress (e.g. "evaluated")
+     @param noun the noun used (e.g. "candidate tree")
+     */
+    void initProgress(double size, std::string name, const char* verb, const char* noun);
+
+    /** track progress made on a task*/
+    void trackProgress(double amount);
+    
+    /** hide the progress made on a task (e.g. before writing to cout)*/
+    void hideProgress();
+
+    /** hide the progress made on a task (e.g. after writing to cout)*/
+    void showProgress();
+    
+    /** report that a task is complete*/
+    void doneProgress();
+
+    
     
 protected:
 
@@ -2409,11 +2430,6 @@ protected:
     progress_display* progress;
     int  progressStackDepth;
     bool isShowingProgressDisabled;
-    void initProgress(double size, std::string name, const char*, const char*);
-    void trackProgress(double amount);
-    void hideProgress();
-    void showProgress();
-    void doneProgress();
     
     /** becomes true if/when user is warned about the threadcount in use for this tree */
     bool warnedAboutThreadCount;

@@ -1519,6 +1519,7 @@ string CandidateModel::evaluate(Params &params,
     iqtree->setLikelihoodKernel(params.SSE);
     iqtree->optimize_by_newton = params.optimize_by_newton;
     iqtree->setNumThreads(num_threads);
+    iqtree->showNoProgress();
 
     iqtree->setCheckpoint(&in_model_info);
 #ifdef _OPENMP
@@ -1592,9 +1593,9 @@ string CandidateModel::evaluate(Params &params,
     } else {
         //--- FIX TREE TOPOLOGY AND ESTIMATE MODEL PARAMETERS ----//
 
-        if (verbose_mode >= VB_MED)
+        if (verbose_mode >= VB_MED) {
             cout << "Optimizing model " << getName() << endl;
-
+        }
         iqtree->ensureNumberOfThreadsIsSet(nullptr);
         iqtree->initializeAllPartialLh();
 
@@ -2502,6 +2503,7 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
     
     //------------- MAIN FOR LOOP GOING THROUGH ALL MODELS TO BE TESTED ---------//
 
+    in_tree->initProgress(size(), "Testing models", "tested", "model");
 	for (model = 0; model < size(); model++) {
         if (model == rate_block+1)
             filterRates(rate_block); // auto filter rate models
@@ -2629,8 +2631,8 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
         CKP_SAVE(best_tree_BIC);
         checkpoint->dump();
 
-
-		if (set_name == "") {
+        if (set_name == "") {
+            in_tree->hideProgress();
             cout.width(3);
             cout << right << model+1 << "  ";
             cout.width(13);
@@ -2647,6 +2649,7 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
             cout.width(12);
             cout << at(model).AICc_score << " " << at(model).BIC_score;
             cout << endl;
+            in_tree->showProgress();
         }
 
         if (skip_model) {
@@ -2661,7 +2664,9 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
                 at(next).setFlag(MF_IGNORED);
             }
         }
+        in_tree->trackProgress(1);
 	}
+    in_tree->doneProgress();
 
     ASSERT(model_scores.size() == size());
 

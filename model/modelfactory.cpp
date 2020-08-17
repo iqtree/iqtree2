@@ -1083,7 +1083,9 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
     double bestAlpha = 0.0;
     double bestPInvar = 0.0;
 
-    double testInterval = (frac_const - MIN_PINVAR * 2) / 9;
+    size_t numberOfStartValues = 10; //Was hardcoded
+    
+    double testInterval = (frac_const - MIN_PINVAR * 2.0) / ((double)numberOfStartValues - 1.0);
     double initPInv = MIN_PINVAR;
     double initAlpha = site_rate->getGammaShape();
 
@@ -1092,19 +1094,21 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
         bool stop = false;
         while(!stop) {
             if (write_info) {
+                tree->hideProgress();
                 cout << endl;
-                cout << "Testing with init. pinv = " << initPInv << " / init. alpha = "  << initAlpha << endl;
+                cout << "Testing with init. pinv = " << initPInv
+                    << " / init. alpha = "  << initAlpha << endl;
+                tree->showProgress();
             }
-
             vector<double> estResults = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon, gradient_epsilon,
                                                                    initPInv, initAlpha, initBranLens, model_ckp);
 
-
             if (write_info) {
+                tree->hideProgress();
                 cout << "Est. p_inv: " << estResults[0] << " / Est. gamma shape: " << estResults[1]
                 << " / Logl: " << estResults[2] << endl;
+                tree->showProgress();
             }
-
             if (estResults[2] > bestLogl) {
                 bestLogl = estResults[2];
                 bestAlpha = estResults[1];
@@ -1134,24 +1138,35 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
         }
     } else {
         // Now perform testing different initial p_inv values
-        if (write_info)
-            cout << "Thoroughly optimizing +I+G parameters from 10 start values..." << endl;
+        std::stringstream whatIAmDoing;
+        whatIAmDoing << "Thoroughly optimizing +I+G parameters from "
+            << numberOfStartValues << " start values";
+        if (write_info) {
+            if (!progress_display::getProgressDisplay()) {
+                cout << whatIAmDoing.str() << "..." << endl;
+            }
+        }
+        tree->initProgress(numberOfStartValues,
+                           whatIAmDoing.str(),
+                           "tried", "start value");
         while (initPInv <= frac_const) {
             vector<double> estResults; // vector of p_inv, alpha and logl
-            if (Params::getInstance().opt_gammai_keep_bran)
+            if (Params::getInstance().opt_gammai_keep_bran) {
                 estResults = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon, gradient_epsilon,
                     initPInv, initAlpha, bestLens, model_ckp);
-            else
+            }
+            else {
                 estResults = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon, gradient_epsilon,
                     initPInv, initAlpha, initBranLens, model_ckp);
+            }
             if (write_info) {
+                tree->hideProgress();
                 cout << "Init pinv, alpha: " << initPInv << ", "  << initAlpha
                      << " / Estimate: " << estResults[0] << ", " << estResults[1]
                      << " / LogL: " << estResults[2] << endl;
+                tree->showProgress();
             }
-
             initPInv = initPInv + testInterval;
-
             if (estResults[2] > bestLogl) {
                 bestLogl = estResults[2];
                 bestAlpha = estResults[1];
@@ -1166,9 +1181,10 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
 //                tree->getModel()->getRateMatrix(bestRates);
 //                tree->getModel()->getStateFrequency(bestStateFreqs);
             }
+            tree->trackProgress(1.0);
         }
+        tree->doneProgress();
     }
-
     site_rate->setGammaShape(bestAlpha);
     site_rate->setPInvar(bestPInvar);
 
@@ -1201,9 +1217,9 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
     delete best_ckp;
 
     double elapsed_secs = getRealTime() - begin_time;
-    if (write_info)
+    if (write_info) {
         cout << "Parameters optimization took " << elapsed_secs << " sec" << endl;
-
+    }
     // updating global variable is not safe!
 //    Params::getInstance().testAlpha = false;
 
