@@ -2000,6 +2000,10 @@ public:
     /** distance matrix file */
     string dist_file;
     
+    
+    /** becomes true, if and when the distance matrix has been read from a file */
+    bool is_dist_file_read;
+    
     /**
             TRUE if you want to optimize branch lengths by Newton-Raphson method
      */

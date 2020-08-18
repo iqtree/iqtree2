@@ -1108,6 +1108,19 @@ public:
     char *dist_file;
 
     /**
+            true if processing is incremental (previous trees, or distance
+            matrices, that were based on a subset of the sequences,
+            are to be modified, rather than reconstructed from scratch)
+     */
+    bool incremental;
+    
+    /**
+     if processing is incremental, a string (upper case) describing how
+     new sequences are to be handled (not actually supported as yet)
+     */
+    std::string incremental_method;
+    
+    /**
             TRUE to compute the observed distances instead of Juke-Cantor distances, default: FALSE
      */
     bool compute_obs_dist;

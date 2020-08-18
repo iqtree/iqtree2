@@ -104,7 +104,8 @@ void PhyloTree::init() {
     ptn_freq_pars = NULL;
     ptn_invar = NULL;
     subTreeDistComputed = false;
-    dist_matrix = NULL;
+    dist_matrix = nullptr;
+    is_dist_file_read = false;
     var_matrix = NULL;
     params = NULL;
     setLikelihoodKernel(LK_SSE2);  // FOR TUNG: you forgot to initialize this variable!
@@ -3467,7 +3468,8 @@ void PhyloTree::decideDistanceFilePath(Params& params) {
         dist_file += ".mldist";
 }
 
-double PhyloTree::computeDist(Params &params, Alignment *alignment, double* &dist_mat, double* &var_mat) {
+double PhyloTree::computeDist(Params &params, Alignment *alignment,
+                              double* &dist_mat, double* &var_mat) {
     this->params = &params;
     double longest_dist = 0.0;
     aln = alignment;
@@ -3484,8 +3486,14 @@ double PhyloTree::computeDist(Params &params, Alignment *alignment, double* &dis
         for (size_t i = 0; i < nSquared; i++) {
             var_mat[i] = 1.0;
         }
+        is_dist_file_read = false;
     }
-    if (!params.dist_file) {
+    if (params.dist_file && !is_dist_file_read) {
+        longest_dist = alignment->readDist(params.dist_file, params.incremental, dist_mat);
+        dist_file = params.dist_file;
+        is_dist_file_read = true;
+    }
+    else {
         double begin_time = getRealTime();
         longest_dist = (params.experimental)
             ? computeDist_Experimental(dist_mat, var_mat)
@@ -3494,9 +3502,6 @@ double PhyloTree::computeDist(Params &params, Alignment *alignment, double* &dis
             cout << "Distance calculation time: "
             << getRealTime() - begin_time << " seconds" << endl;
         }
-    } else {
-        longest_dist = alignment->readDist(params.dist_file, dist_mat);
-        dist_file = params.dist_file;
     }
     return longest_dist;
 }
@@ -3629,7 +3634,6 @@ void PhyloTree::computeBioNJ(Params &params) {
 int PhyloTree::setNegativeBranch(bool force, double newlen, Node *node, Node *dad) {
     if (!node) node = root;
     int fixed = 0;
-
     FOR_NEIGHBOR_IT(node, dad, it) {
         if ((*it)->length < 0.0 || force) { // negative branch length detected
             (*it)->length = newlen;
@@ -3651,20 +3655,20 @@ void PhyloTree::fixOneNegativeBranch(double branch_length, Neighbor *dad_branch,
 int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
 
     // 2019-02-05: fix crash when no variant sites found
-    if (aln->num_variant_sites == 0)
+    if (aln->num_variant_sites == 0) {
         return setNegativeBranch(force, params->min_branch_length, root, NULL);
-    
+    }
     if (!node) {
         node = root;
         // 2015-11-30: if not bifurcating, initialize unknown branch lengths with 0.1
-        if (!isBifurcating())
+        if (!isBifurcating()) {
             return setNegativeBranch(force, 0.1, root, NULL);
+        }
     }
     int fixed = 0;
-
-    if (force && !cost_matrix)
+    if (force && !cost_matrix) {
         return setParsimonyBranchLengths();
-    
+    }
     double alpha = (site_rate) ? site_rate->getGammaShape() : 1.0;
     
     FOR_NEIGHBOR_IT(node, dad, it){

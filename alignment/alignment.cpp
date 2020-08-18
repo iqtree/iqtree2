@@ -4228,13 +4228,13 @@ void Alignment::printDist ( const std::string& format, int compression_level
     }
 }
 
-double Alignment::readDist(igzstream &in, double *dist_mat) {
+double Alignment::readDist(igzstream &in, bool is_incremental, double *dist_mat) {
     double longest_dist = 0.0;
     std::stringstream firstLine;
     safeGetTrimmedLineAsStream(in, firstLine);
-    size_t nseqs;
+    size_t nseqs; //Number of sequences in distance matrix file
     firstLine >> nseqs;
-    if (nseqs != getNSeq()) {
+    if (!is_incremental && nseqs != getNSeq()) {
         throw "Distance file has different number of taxa";
     }
     double *tmp_dist_mat = new double[nseqs * nseqs];
@@ -4247,8 +4247,22 @@ double Alignment::readDist(igzstream &in, double *dist_mat) {
     for (size_t seq1 = 0; seq1 < nseqs; seq1++)  {
         std::stringstream line;
         safeGetTrimmedLineAsStream(in, line);
+        
         string seq_name;
         line >> seq_name;
+        if (map_seqName_ID.find(seq_name) != map_seqName_ID.end()) {
+            //When reading a distance file "incrementally", we can't tolerate
+            //duplicate sequence names (and we won't detect them later).
+            //Formerly duplicate sequence names weren't found early, here.
+            //Rather, they were left as is, and a later check (that every
+            //sequence name in the alignment had a matching line in the distance
+            //file) reported a problem (not the *right* problem, but a problem).
+            //But when is_incremental is true, that later check won't throw.
+            stringstream s;
+            s   << "Duplicate sequence name found in line " << (seq1+1)
+                << " of the file: " << seq_name;
+            throw s.str();
+        }
         // assign taxa name to integer id
         map_seqName_ID[seq_name] = static_cast<int>(seq1);
 
@@ -4279,16 +4293,20 @@ double Alignment::readDist(igzstream &in, double *dist_mat) {
             if (seq1==0 && seq2==0) {
                 //Implied lower-triangle format
                 tmp_dist_mat[0] = 0.0;
-                readProgress.hide();
-                std::cout << "Distance matrix file is in lower-triangle format" << std::endl;
+                if (verbose_mode >= VB_MED) {
+                    readProgress.hide();
+                    std::cout << "Distance matrix file is in lower-triangle format" << std::endl;
+                    readProgress.show();
+                }
                 lower  = true;
-                readProgress.show();
             }
             else if (seq1==0 && seq2+1==rowStop) {
-                readProgress.hide();
-                std::cout << "Distance matrix file is in upper-triangle format" << std::endl;
+                if (verbose_mode >= VB_MED) {
+                    readProgress.hide();
+                    std::cout << "Distance matrix file is in upper-triangle format" << std::endl;
+                    readProgress.show();
+                }
                 upper  = true;
-                readProgress.show();
                 for (; 0<seq2; --seq2) {
                     tmp_dist_mat[seq2] = tmp_dist_mat[seq2-1];
                 }
@@ -4327,14 +4345,29 @@ double Alignment::readDist(igzstream &in, double *dist_mat) {
     // Now initialize the internal distance matrix, in which the sequence order is the same
     // as in the alignment
     
-    size_t* actualToTemp = new size_t[nseqs];
+    size_t missingSequences = 0; //count of sequences missing from temporary matrix
+    int* actualToTemp = new int[nseqs];
     for (size_t seq1 = 0; seq1 < nseqs; seq1++) {
         string seq1Name = getSeqName(seq1);
+        int seq1_tmp_id = -1;
         if (map_seqName_ID.count(seq1Name) == 0) {
-            throw "Could not find taxa name " + seq1Name;
+            if (is_incremental) {
+                ++missingSequences;
+            } else {
+                throw "Could not find taxa name " + seq1Name;
+            }
+        } else {
+            seq1_tmp_id = map_seqName_ID[seq1Name];
         }
-        int seq1_tmp_id = map_seqName_ID[seq1Name];
         actualToTemp[seq1] = seq1_tmp_id;
+    }
+    if (is_incremental) {
+        if ( 0 < missingSequences || nseqs != getNSeq() ) {
+            std::cout << missingSequences << " sequences have been added, "
+                << (nseqs + missingSequences - getNSeq() ) //Always >=0
+                << " sequences (found in the distance file) have been removed."
+                << std::endl;
+        }
     }
     std::cout << std::endl;
 
@@ -4342,14 +4375,27 @@ double Alignment::readDist(igzstream &in, double *dist_mat) {
     //permuting rows and columns on the way
     //(by looking up row and column numbers, in the
     //temporary distance matrix, via actualToTemp).
+    //(and, in incremental mode, write zeroes into
+    //"missing" rows or columns (ones that don't
+    //have counterparts in the temporary distance matrix)
     #ifdef _OPENMP
     #pragma omp parallel for
     #endif
     for (size_t seq1 = 0; seq1 < nseqs; seq1++) {
-        auto writeRow = dist_mat     + seq1               * nseqs;
-        auto readRow  = tmp_dist_mat + actualToTemp[seq1] * nseqs;
-        for (size_t seq2 = 0; seq2 < nseqs; seq2++) {
-            writeRow[ seq2 ] = readRow [ actualToTemp[seq2] ];
+        auto writeRow = dist_mat + seq1 * nseqs;
+        if ( 0 <= actualToTemp[seq1] ) {
+            auto readRow  = tmp_dist_mat + actualToTemp[seq1] * nseqs;
+            for (size_t seq2 = 0; seq2 < nseqs; seq2++) {
+                if ( 0 <= actualToTemp[seq2] ) {
+                    writeRow[ seq2 ] = readRow [ actualToTemp[seq2] ];
+                } else {
+                    writeRow[ seq2 ] = 0.0; //zero in
+                }
+            }
+        } else {
+            for (size_t seq2 = 0; seq2 < nseqs; seq2++) {
+                writeRow[ seq2 ] = 0.0;
+            }
         }
     }
     delete [] actualToTemp;
@@ -4391,14 +4437,14 @@ double Alignment::readDist(igzstream &in, double *dist_mat) {
     return longest_dist;
 }
 
-double Alignment::readDist(const char *file_name, double *dist_mat) {
+double Alignment::readDist(const char *file_name, bool is_incremental, double *dist_mat) {
     double longest_dist = 0.0;
 
     try {
         igzstream in;
         in.exceptions(ios::failbit | ios::badbit);
         in.open(file_name);
-        longest_dist = readDist(in, dist_mat);
+        longest_dist = readDist(in, is_incremental, dist_mat);
         in.close();
         cout << "Distance matrix was read from " << file_name << endl;
     } catch (const char *str) {

@@ -679,6 +679,23 @@ namespace {
         return answer;
     }
 
+    std::string string_to_upper(const char* input) {
+        std::string answer = input;
+        std::transform(answer.begin(), answer.end(), answer.begin(),
+                       []( char c){ return std::toupper(c); });
+        return answer;
+    }
+
+    std::string next_argument(int argc, char* argv[], const char* desc, int& cnt ) {
+        cnt++;
+        if (cnt >= argc) {
+            std::string problem = std::string("Use ") + argv[cnt-1] + " <" + desc + ">";
+            throw problem;
+        }
+        return argv[cnt];
+    }
+
+
     template <class V, class S> void throw_if_not_in_set
     ( const char* name, const V& value, S set, size_t setCount ) {
         for ( size_t i=0; i<setCount; ++i ) {
@@ -740,8 +757,9 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.pdtaxa_file = NULL;
     params.areas_boundary_file = NULL;
     params.boundary_modifier = 1.0;
-    params.dist_file = NULL;
+    params.dist_file = nullptr;
     params.dist_format = "square";
+    params.incremental = false;
     params.dist_compression_level = 1;
     params.compute_obs_dist = false;
     params.compute_jc_dist = true;
@@ -1347,11 +1365,8 @@ void parseArg(int argc, char *argv[], Params &params) {
             std::string arg = argv[cnt];
             //Todo; move this up, use == rather than strcmp elsewhere, too.
             if (arg=="-dist-format") {
-                cnt++;
-                if (cnt >= argc) {
-                    throw "Use -dist-format <distance_file_format>";
-                }
-                params.dist_format = string_to_lower(argv[cnt]);
+                std::string nextArg = next_argument(argc, argv, "<distance_file_format>", cnt);
+                params.dist_format = string_to_lower(nextArg.c_str());
                 params.dist_compression_level
                     = strip_number_suffix(params.dist_format,
                                           params.dist_compression_level);
@@ -1366,6 +1381,12 @@ void parseArg(int argc, char *argv[], Params &params) {
                 };
                 throw_if_not_in_set ( "dist-format", params.dist_format
                                     , allowed, sizeof(allowed)/sizeof(allowed[0]));
+                continue;
+            }
+            if (arg=="-incremental") {
+                params.incremental = true;
+                std::string method = next_argument(argc, argv, "incremental method", cnt);
+                params.incremental_method = string_to_upper(method.c_str());
                 continue;
             }
 			if (strcmp(argv[cnt], "-dist") == 0

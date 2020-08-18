@@ -662,14 +662,14 @@ public:
             @param dist_mat distance matrix
             @return the longest distance
      */
-    double readDist(const char *file_name, double *dist_mat);
+    double readDist(const char *file_name, bool is_incremental, double *dist_mat);
 
     /**
             read distance matrix from a stream in PHYLIP distance format
             @param in input stream
             @param dist_mat distance matrix
      */
-    double readDist(igzstream &in, double *dist_mat);
+    double readDist(igzstream &in, bool is_incremental, double *dist_mat);
 
 
     /****************************************************************************
