@@ -31,13 +31,13 @@ public:
      */
     virtual void readTree(istream &in, bool &is_rooted);
     
-    
     /**
      Set the alignment, important to compute parsimony or likelihood score
-     Assing taxa ids according to their position in the alignment
+     using taxa ids (which this function sets, according to their position in the alignment)
      @param alignment associated alignment
      */
     virtual void setAlignment(Alignment *alignment);
+
 
     /**
      * setup all necessary parameters  (declared as virtual needed for phylosupertree)

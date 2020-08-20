@@ -549,7 +549,8 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
     string initTree;
     string out_file = params->out_prefix;
     int score;
-    if (params->stop_condition == SC_FIXED_ITERATION && params->numNNITrees > params->min_iterations) {
+    if ( params->stop_condition == SC_FIXED_ITERATION
+         && params->numNNITrees > params->min_iterations) {
         params->numNNITrees = max(params->min_iterations, 1);
     }
     int fixed_number = 0;
@@ -560,16 +561,34 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
         aln->orderPatternByNumChars(PAT_VARIANT);
     }
     setParsimonyKernel(kernel);
+    bool noisy = !progress_display::getProgressDisplay();
     if (params->user_file) {
         // start the search with user-defined tree
-        cout << "Reading input tree file " << params->user_file << " ...";
+        if (noisy) {
+            cout << "Reading input tree file "
+                << params->user_file << " ...";
+        }
         bool myrooted = params->is_rooted;
         readTree(params->user_file, myrooted);
-        if (myrooted && !isSuperTreeUnlinked()) {
+        if (myrooted && !isSuperTreeUnlinked() && noisy) {
             cout << " rooted tree";
         }
-        cout << endl;
-        setAlignment(aln);
+        if (noisy) {
+            cout << endl;
+        }
+        //
+        //Todo: In incremental mode, if the user-defined tree
+        //      has leaves with names *not* found in the alignment, they
+        //      need to be removed.  If it is *missing* leaves for sequences
+        //      in the alignment, they will need to be added somehow.
+        //      Perhaps by treating the user-defined tree as a constraint
+        //      tree? The code for all that would go... here.
+        //
+        if (params->incremental) {
+            updateToMatchAlignment(aln);
+        } else {
+            setAlignment(aln);
+        }
         if (isSuperTree()) {
             wrapperFixNegativeBranch(params->fixed_branch_length == BRLEN_OPTIMIZE &&
                                      params->partition_type == BRLEN_OPTIMIZE);
@@ -586,8 +605,14 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
         CKP_SAVE(initTree);
         saveCheckpoint();
     } else if (CKP_RESTORE(initTree)) {
+        bool was_restored = true;
         readTreeString(initTree);
-        cout << endl << "CHECKPOINT: Initial tree restored" << endl;
+        if (params->incremental) {
+            was_restored = !updateToMatchAlignment(aln);
+        }
+        if (noisy && was_restored) {
+            cout << endl << "CHECKPOINT: Initial tree restored" << endl;
+        }
     } else {
         START_TREE_TYPE start_tree = params->start_tree;
         // only own parsimony kernel supports constraint tree
@@ -599,14 +624,10 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
             //initCostMatrix(CM_UNIFORM);
             // Create parsimony tree using IQ-Tree kernel
             cout << "Creating fast initial parsimony tree by random order stepwise addition..." << endl;
-//            aln->orderPatternByNumChars();
             start = getRealTime();
             score = computeParsimonyTree(params->out_prefix, aln, randstream);
             cout << getRealTime() - start << " seconds, parsimony score: " << score
                 << " (based on " << aln->num_parsimony_sites << " sites)"<< endl;
-            // already fixed branch length
-            //wrapperFixNegativeBranch(false);
-
             break;
         case STT_RANDOM_TREE:
         case STT_PLL_PARSIMONY:
@@ -637,10 +658,11 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
                 << " wall-clock seconds" << endl;
             }
             params->numInitTrees = 1;
-            if (isSuperTree())
+            if (isSuperTree()) {
                 wrapperFixNegativeBranch(true);
-            else
+            } else {
                 fixed_number = wrapperFixNegativeBranch(false);
+            }
             break;
         case STT_USER_TREE:
             ASSERT(0 && "User tree should be handled already");
@@ -655,7 +677,8 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
         outError("Initial tree is not compatible with constraint tree");
     }
     if (fixed_number) {
-        cout << "WARNING: " << fixed_number << " undefined/negative branch lengths are initialized with parsimony" << endl;
+        cout << "WARNING: " << fixed_number << " undefined/negative"
+            << " branch lengths are initialized with parsimony" << endl;
     }
     if (params->root) {
         StrVector outgroup_names;

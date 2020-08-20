@@ -37,6 +37,7 @@
 #include "model/modelmixture.h"
 #include "phylonodemixlen.h"
 #include "phylotreemixlen.h"
+#include "model/modelfactory.h" //for readModelsDefinition
 
 
 const int LH_MIN_CONST = 1;
@@ -275,14 +276,14 @@ void PhyloTree::readTree(istream &in, bool &is_rooted) {
     // 2015-10-14: has to reset this pointer when read in
     current_it = current_it_back = NULL;
     // remove taxa if necessary
-    if (removed_seqs.size() > 0)
-        removeTaxa(removed_seqs);
-
+    if (removed_seqs.size() > 0) {
+        removeTaxa(removed_seqs, true, "");
+    }
     // collapse any internal node of degree 2
     NodeVector nodes;
     getInternalNodes(nodes);
     int num_collapsed = 0;
-    for (NodeVector::iterator it = nodes.begin(); it != nodes.end(); it++)
+    for (NodeVector::iterator it = nodes.begin(); it != nodes.end(); it++) {
         if ((*it)->degree() == 2) {
             Node *left = (*it)->neighbors[0]->node;
             Node *right = (*it)->neighbors[1]->node;
@@ -292,12 +293,17 @@ void PhyloTree::readTree(istream &in, bool &is_rooted) {
             delete (*it);
             num_collapsed++;
             if (verbose_mode >= VB_MED)
+            {
                 cout << "Node of degree 2 collapsed" << endl;
+            }
         }
-    if (num_collapsed)
+    }
+    if (num_collapsed) {
         initializeTree();
-    if (rooted)
+    }
+    if (rooted) {
         computeBranchDirection();
+    }
 }
 
 void PhyloTree::assignLeafNames(Node *node, Node *dad) {
@@ -440,6 +446,213 @@ void PhyloTree::setAlignment(Alignment *alignment) {
     */
 }
 
+void PhyloTree::configureLikelihoodKernel(const Params& params) {
+    if (computeLikelihoodBranchPointer==nullptr)
+    {
+        setLikelihoodKernel(params.SSE);
+        optimize_by_newton = params.optimize_by_newton;
+        setNumThreads(params.num_threads);
+    }
+}
+
+void PhyloTree::configureModel(Params& params) {
+    if (model==nullptr) {
+        ModelsBlock *models_block = readModelsDefinition(params);
+        if (model_factory==nullptr) {            
+            initializeModel(params, aln->model_name, models_block);
+        }
+        if (getRate()->isHeterotachy() && !isMixlen()) {
+            ASSERT(0 && "Heterotachy tree not properly created");
+        }
+        delete models_block;
+    }
+}
+
+void PhyloTree::initializeModel(Params &params, string model_name, ModelsBlock *models_block) {
+    //Must be overridden in IQTree etc.
+    throw "Uh-oh!  Called initializeModel on PhyloTree rather than a subclass";
+}
+
+#define BODGE_ONE_NODE_IN_TEN (0)
+bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
+    aln = alignment;
+    size_t nseq = aln->getNSeq();
+    
+    //For sequence names that are found in both the
+    //tree and the alignment, set the node id.
+    //(Also: identify sequences NOT found in the tree)
+    map<string, Node*> mapNameToNode;
+    getMapOfTaxonNameToNode(nullptr, nullptr, mapNameToNode);
+    
+#if BODGE_ONE_NODE_IN_TEN
+    //Temporay hack: Deliberate bodging of 10% of the nodes in the tree.
+    for (size_t seq = 0; seq < nseq; seq+=10) {
+        string seq_name = aln->getSeqName(seq);
+        auto it = mapNameToNode.find(seq_name);
+        if (it!=mapNameToNode.end()) {
+            Node* node = it->second;
+            node->name += "_Bodged";
+        }
+    }
+    mapNameToNode.clear();
+    getMapOfTaxonNameToNode(nullptr, nullptr, mapNameToNode);
+#endif
+
+    IntVector taxaIdsToAdd; //not found in tree
+    for (size_t seq = 0; seq < nseq; seq++) {
+        string seq_name = aln->getSeqName(seq);
+        auto it = mapNameToNode.find(seq_name);
+        if (it==mapNameToNode.end()) {
+            taxaIdsToAdd.emplace_back((int)seq);
+        } else {
+            (*it).second->id = seq;
+            mapNameToNode.erase(it);
+        }
+    }
+    auto rootInMap = mapNameToNode.find(ROOT_NAME);
+    if (rootInMap != mapNameToNode.end()) {
+        (*rootInMap).second->id = nseq;
+        mapNameToNode.erase(rootInMap);
+        leafNum = nseq + 1;
+    } else if (root==nullptr && !taxaIdsToAdd.empty()) {
+        //Todo: make sure we HAVE a root, since later steps will need one.
+        throw "Cannot add new taxa to unrooted tree";
+    }
+    
+    bool will_delete = !mapNameToNode.empty();
+    bool will_add    = !taxaIdsToAdd.empty();
+    bool modified     = will_delete || will_add;
+    
+    if (modified) {
+        configureLikelihoodKernel(*params);
+        configureModel(*params);
+        
+        fixNegativeBranch();
+        //Necessary, if we read in a tree that came out of a
+        //distance matrix algorithm (which might have
+        //negative branch lengths (which would bust the stuff below).
+        //Todo: figure out what happens for PhyloSuperTree here
+        //Todo: What if -fixbr is supplied.  Isn't that problematic?
+        
+    }
+    if (will_delete) {
+        //mapNameToNode now lists leaf nodes to be removed
+        //from the tree.  Remove them.
+        StrVector taxaToRemove;
+        for (auto it=mapNameToNode.begin(); it!=mapNameToNode.end(); ++it) {
+            taxaToRemove.emplace_back(it->first);
+        }
+        mapNameToNode.clear();
+        initializeAllPartialLh();
+        clearAllPartialLH();
+        removeTaxa(taxaToRemove, false, "Removing deleted taxa from tree");
+        //Todo: Carry out any requested "after-each-delete" local tidy-up of the tree
+        //      (via an extra parameter to removeTaxa, perhaps?)
+        //Todo: Carry out any requested "after-batch-of-deletes" global tidy-up
+        
+        //Todo: Carry out any requested "after-all-deletes" global tidy-up of the tree.
+        //Todo: If requested *not* to optimize branch lengths here, don't.
+        //optimizeAllBranches(); //<-- this crashes (so, for now, don't do it).
+    }
+    if (will_add) {
+        if (!will_delete) {
+            initializeAllPartialLh();
+            clearAllPartialLH();
+        }
+        addNewTaxaToTree(taxaIdsToAdd);
+        //Todo: Carry out any requested "after-all-inserts" global tidy-up of the tree.
+        //Todo: If requested *not* to optimize branch lengths here, don't.
+        optimizeAllBranches();
+    }
+    return modified;
+}
+
+void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
+    struct LocalLikelihoodStore {
+        std::vector<double* > lh_blocks_to_free;
+        std::vector<UBYTE*  > scale_blocks_to_free;
+        PhyloTree*            tree;
+        LocalLikelihoodStore(PhyloTree *owningTree)
+            : tree(owningTree) {
+        }
+        ~LocalLikelihoodStore() {
+            for (size_t i=0; i<lh_blocks_to_free.size(); ++i) {
+                aligned_free ( lh_blocks_to_free[i] );
+            }
+            for (size_t i=0; i<scale_blocks_to_free.size(); ++i) {
+                aligned_free ( scale_blocks_to_free[i] );
+            }
+        }
+        void prepNode(Node* node) {
+            for (int n = 0; n<node->neighbors.size(); ++n) {
+                PhyloNeighbor* nei = (PhyloNeighbor*)node->neighbors[n];
+                nei->partial_lh = tree->newPartialLh();
+                lh_blocks_to_free.push_back(nei->partial_lh);
+                nei->partial_lh_computed = 0;
+                nei->scale_num = tree->newScaleNum();
+                scale_blocks_to_free.push_back(nei->scale_num);
+            }
+        }
+    } localStore(this);
+    
+    //
+    //Assumes: The tree is rooted.
+    //Notes: This is a fixed-insertion-order, one-at-a-time, no-search-heuristic
+    //       global likelihood implementation (suitable for adding only a few
+    //       taxa at a time).
+    //Todo:  Support options requested via params->incremental_method
+    //       1. Batching of taxa (more than 1 at a time)
+    //       2. Parsimony rather than likelihood
+    //       3. The use of search heuristics
+    //       4. Extra restructuring after each batch of insertions
+    //
+    initProgress(taxaIdsToAdd.size(), "Adding new taxa to tree", "added", "taxon");
+    for (size_t i=0; i<taxaIdsToAdd.size(); ++i) {
+        int         taxonId   = taxaIdsToAdd[i];
+        std::string taxonName = aln->getSeqName(taxonId);
+        Node* new_taxon  = newNode(taxonId, taxonName.c_str());
+        Node* added_node = newNode();
+        added_node->addNeighbor(new_taxon, 1.0);
+        new_taxon->addNeighbor(added_node, 1.0);
+
+        //add dummy neighbors (need this, because of how addTaxonML works)
+        added_node->addNeighbor((Node*) 1, 1.0);
+        added_node->addNeighbor((Node*) 2, 1.0);
+        
+        localStore.prepNode(new_taxon);
+        localStore.prepNode(added_node);
+
+        //Todo: see note 3. Search heuristics (for restricting the subtree to search)
+        Node* search_start    = root->neighbors[0]->node;
+        Node* search_backstop = root;
+
+        Node *target_node = nullptr;
+        Node *target_dad  = nullptr;
+        addTaxonML(added_node, target_node, target_dad, search_start, search_backstop);
+        
+        //
+        // now insert the new node in the middle of the branch node-dad
+        // (question: why the middle?  Why didn't addTaxonML say *where* it
+        //  wanted to put the new node, and return three lengths:
+        //  target_dad:added_node, added_node:target_node, added_node:new_taxon).
+        // surely it calculated them!   When figuring out the score?)
+        //
+        double len     = target_dad->findNeighbor(target_node)->length;
+        double halfLen = len * 0.5;
+        target_node->updateNeighbor(target_dad, added_node, halfLen);
+        target_dad->updateNeighbor(target_node, added_node, halfLen);
+        
+        //replace dummy neighbours (also needed, due to how addTaxonML works)
+        added_node->updateNeighbor((Node*) 1, target_node, halfLen);
+        added_node->updateNeighbor((Node*) 2, target_dad, halfLen);
+        
+        trackProgress(1.0);
+    }
+    doneProgress();
+    clearAllPartialLH(true);
+    clearAllScaleNum();
+}
+
 void PhyloTree::setRootNode(const char *my_root, bool multi_taxa) {
     if (rooted) {
         computeBranchDirection();
@@ -484,7 +697,7 @@ void PhyloTree::readTreeString(const string &tree_string) {
     
     // bug fix 2016-04-14: in case taxon name happens to be ID
     MTree::readTree(str, rooted);
-    
+
     assignLeafNames();
     setRootNode(Params::getInstance().root);
 
@@ -655,6 +868,17 @@ void PhyloTree::clearAllPartialLH(bool make_null) {
     // 2015-10-14: has to reset this pointer when read in
     current_it = current_it_back = NULL;
 }
+
+void PhyloTree::clearAllScaleNum() {
+    if (!root) {
+        return;
+    }
+    ((PhyloNode*) root->neighbors[0]->node)->clearAllScaleNum((PhyloNode*) root);
+    tip_partial_lh_computed = 0;
+    // 2015-10-14: has to reset this pointer when read in
+    current_it = current_it_back = NULL;
+}
+
 
 string getASCName(ASCType ASC_type) {
     switch (ASC_type) {
@@ -2514,7 +2738,6 @@ void PhyloTree::computeFuncDerv(double value, double &df, double &ddf) {
     current_it->length = value;
     current_it_back->length = value;
     computeLikelihoodDerv(current_it, (PhyloNode*) current_it_back->node, &df, &ddf);
-
     df = -df;
     ddf = -ddf;
 }
@@ -2595,7 +2818,9 @@ void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clear
         // Newton-Raphson method
         optx = minimizeNewton(params->min_branch_length, current_len, params->max_branch_length, params->min_branch_length, negative_lh, maxNRStep);
         if (verbose_mode >= VB_DEBUG) {
+            hideProgress();
             cout << "minimizeNewton logl: " << computeLikelihoodFromBuffer() << endl;
+            showProgress();
         }
         if (optx > params->max_branch_length*0.95 && !isSuperTree()) {
             // newton raphson diverged, reset
@@ -2611,7 +2836,9 @@ void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clear
         // Brent method
         optx = minimizeOneDimen(params->min_branch_length, current_len, params->max_branch_length, params->min_branch_length, &negative_lh, &ferror);
         if (verbose_mode >= VB_MAX) {
+            hideProgress();
             cout << "minimizeBrent logl: " << -negative_lh << endl;
+            showProgress();
         }
     }
 
@@ -2628,7 +2855,6 @@ void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clear
 }
 
 double PhyloTree::optimizeChildBranches(PhyloNode *node, PhyloNode *dad) {
-
     FOR_NEIGHBOR_DECLARE(node, dad, it){
         optimizeOneBranch((PhyloNode*) node, (PhyloNode*) (*it)->node);
     }
@@ -2982,10 +3208,11 @@ double PhyloTree::addTaxonML(Node *added_node, Node* &target_node, Node* &target
 
     // now insert the new node in the middle of the branch node-dad
     double len = dad_nei->length;
-    node->updateNeighbor(dad, added_node, len / 2.0);
-    dad->updateNeighbor(node, added_node, len / 2.0);
-    added_node->updateNeighbor((Node*) 1, node, len / 2.0);
-    added_node->updateNeighbor((Node*) 2, dad, len / 2.0);
+    double halfLen = 0.5 * len;
+    node->updateNeighbor(dad, added_node, halfLen);
+    dad->updateNeighbor(node, added_node, halfLen);
+    added_node->updateNeighbor((Node*) 1, node, halfLen);
+    added_node->updateNeighbor((Node*) 2, dad, halfLen);
     // compute the likelihood
     clearAllPartialLH();
     double best_score = optimizeChildBranches((PhyloNode*) added_node);
@@ -2997,16 +3224,15 @@ double PhyloTree::addTaxonML(Node *added_node, Node* &target_node, Node* &target
     added_node->updateNeighbor(node, (Node*) 1, len);
     added_node->updateNeighbor(dad, (Node*) 2, len);
 
-    // now tranverse the tree downwards
-
+    // now traverse the tree downwards
     FOR_NEIGHBOR_IT(node, dad, it){
-        Node *target_node2;
-        Node *target_dad2;
+        Node *target_node2 = nullptr;
+        Node *target_dad2  = nullptr;
         double score = addTaxonML(added_node, target_node2, target_dad2, (*it)->node, node);
         if (score > best_score) {
             best_score = score;
             target_node = target_node2;
-            target_dad = target_dad2;
+            target_dad  = target_dad2;
         }
     }
     return best_score;
@@ -3020,12 +3246,11 @@ void PhyloTree::growTreeML(Alignment *alignment) {
         outError(ERR_FEW_TAXA);
     }
     root = newNode();
-    Node * new_taxon;
 
     // create initial tree with 3 taxa
     for (leafNum = 0; leafNum < 3; leafNum++) {
         cout << "Add " << aln->getSeqName(leafNum) << " to the tree" << endl;
-        new_taxon = newNode(leafNum, aln->getSeqName(leafNum).c_str());
+        Node* new_taxon = newNode(leafNum, aln->getSeqName(leafNum).c_str());
         root->addNeighbor(new_taxon, 1.0);
         new_taxon->addNeighbor(root, 1.0);
     }
@@ -3036,8 +3261,8 @@ void PhyloTree::growTreeML(Alignment *alignment) {
     for (leafNum = 3; leafNum < size; leafNum++) {
         cout << "Add " << aln->getSeqName(leafNum) << " to the tree" << endl;
         // allocate a new taxon and a new ajedcent internal node
-        new_taxon = newNode(leafNum, aln->getSeqName(leafNum).c_str());
-        Node *added_node = newNode();
+        Node* new_taxon  = newNode(leafNum, aln->getSeqName(leafNum).c_str());
+        Node* added_node = newNode();
         added_node->addNeighbor(new_taxon, 1.0);
         new_taxon->addNeighbor(added_node, 1.0);
 
@@ -4353,7 +4578,6 @@ double PhyloTree::optimizeSPR(double cur_score, PhyloNode *node, PhyloNode *dad)
                 sibling1 = (PhyloNode*) (*it)->node;
                 sibling1_len = (*it)->length;
             } else {
-
                 dad2_nei = (PhyloNeighbor*) (*it);
                 sibling2 = (PhyloNode*) (*it)->node;
                 sibling2_len = (*it)->length;
@@ -5455,9 +5679,10 @@ void PhyloTree::removeIdenticalSeqs(Params &params) {
         aln = new_aln;
     }
     if (!constraintTree.empty()) {
-        int count = constraintTree.removeTaxa(removed_seqs);
-        if (count)
+        int count = constraintTree.removeTaxa(removed_seqs, true, "");
+        if (count) {
             cout << count << " taxa removed from constraint tree" << endl;
+        }
     }
 }
 
@@ -5721,9 +5946,10 @@ void PhyloTree::convertToUnrooted() {
 
 void PhyloTree::reorientPartialLh(PhyloNeighbor* dad_branch, Node *dad) {
     ASSERT(!isSuperTree());
-    if (dad_branch->partial_lh)
+    if ( dad_branch->partial_lh != nullptr ) {
         return;
-    Node * node = dad_branch->node;
+    }
+    Node* node = dad_branch->node;
     FOR_NEIGHBOR_IT(node, dad, it) {
         PhyloNeighbor *backnei = (PhyloNeighbor*)(*it)->node->findNeighbor(node);
         if (backnei->partial_lh) {
@@ -5731,8 +5957,9 @@ void PhyloTree::reorientPartialLh(PhyloNeighbor* dad_branch, Node *dad) {
             break;
         }
     }
-    if (params->lh_mem_save == LM_PER_NODE)
+    if (params->lh_mem_save == LM_PER_NODE) {
         ASSERT(dad_branch->partial_lh && "partial_lh is not re-oriented");
+    }
 }
 
 /****************************************************************************
@@ -5750,9 +5977,11 @@ bool PhyloTree::computeTraversalInfo(PhyloNeighbor *dad_branch, PhyloNode *dad, 
 
     size_t num_leaves = 0;
     bool locked[node->degree()];
-    memset(locked, 0, node->degree());
+    for (int i=node->degree()-1; 0<=i; --i) {
+        locked[i] = false;
+    }
 
-    // sort neighbor in desceding size order
+    // sort neighbor in descending size order (with a selection sort!)
     NeighborVec neivec = node->neighbors;
     NeighborVec::iterator it, i2;
     for (it = neivec.begin(); it != neivec.end(); it++) {

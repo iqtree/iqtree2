@@ -458,8 +458,32 @@ public:
             Assing taxa ids according to their position in the alignment
             @param alignment associated alignment
      */
-    virtual void setAlignment(Alignment *alignment);
+    virtual void setAlignment(Alignment* alignment);
 
+    void configureLikelihoodKernel(const Params& params);
+    
+    void configureModel(Params& params);
+    
+    virtual void initializeModel(Params &params, string model_name, ModelsBlock *models_block);
+    
+    /**
+     Modify the tree to match an alignment, resolving differences
+     (by deleting nodes for taxa not found in the alignment,
+     by adding nodes for taxa found in the alignment, but not in the tree)
+     Nodes are assigned taxa ids according to their position in the alignment
+     @param alignment associated alignment
+     @return true if the tree had to be updated (nodes added or removed))
+     */
+    virtual bool updateToMatchAlignment(Alignment *alignment);
+
+    /**
+     Modify a tree, by adding nodes for taxa found in the tree's alignment,
+     but not in the tree, and assigning them taxa ids according to their
+     position in the alignment
+     @param alignment associated alignment
+     */
+    virtual void addNewTaxaToTree(const IntVector& taxaIdsToAdd);
+    
     /** set the root by name
         @param my_root root node name
         @param multi_taxa TRUE if my_root is a comma-separated list of nodes
@@ -577,6 +601,9 @@ public:
         return aln->getNSite();
     }
 
+    virtual void computeBranchLengths() {
+    }
+    
     /**
      * save branch lengths into a vector
      */
@@ -766,6 +793,12 @@ public:
             @param make_null true to make all partial_lh become NULL
      */
     virtual void clearAllPartialLH(bool make_null = false);
+    
+    /**
+            clear all scale number data for a clean computation again
+            @param make_null true to make all scale_num become NULL
+     */
+    virtual void clearAllScaleNum();
 
     /**
      * compute all partial likelihoods if not computed before
@@ -2204,21 +2237,19 @@ public:
      @param verb the (past-tense) verb used to describe progress (e.g. "evaluated")
      @param noun the noun used (e.g. "candidate tree")
      */
-    void initProgress(double size, std::string name, const char* verb, const char* noun);
+    virtual void initProgress(double size, std::string name, const char* verb, const char* noun);
 
     /** track progress made on a task*/
-    void trackProgress(double amount);
+    virtual void trackProgress(double amount);
     
     /** hide the progress made on a task (e.g. before writing to cout)*/
-    void hideProgress();
+    virtual void hideProgress();
 
     /** hide the progress made on a task (e.g. after writing to cout)*/
-    void showProgress();
+    virtual void showProgress();
     
     /** report that a task is complete*/
-    void doneProgress();
-
-    
+    virtual void doneProgress();
     
 protected:
 

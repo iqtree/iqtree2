@@ -56,6 +56,15 @@ void PhyloNode::clearAllPartialLh(bool make_null, PhyloNode* dad) {
 	}
 }
 
+void PhyloNode::clearAllScaleNum(PhyloNode* dad) {
+    for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it++) {
+        ((PhyloNeighbor*)(*it))->scale_num = nullptr;
+        if ((*it)->node != dad) {
+            ((PhyloNode*)(*it)->node)->clearAllScaleNum(this);
+        }
+    }
+}
+
 
 PhyloNode::PhyloNode()
  : Node()

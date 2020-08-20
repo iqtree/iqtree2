@@ -792,10 +792,12 @@ public:
 	void insertTaxa(StrVector &new_taxa, StrVector &existing_taxa);
 
 	/** remove some taxa from the tree
-	 * @param taxa_names names of taxa that will be removed
-     * @return number of taxa actually removed
+         @param taxa_names names of taxa that will be removed
+         @param reassignNodeIDs (if node IDs are to be reassigned)
+         @param context description of the task (if displaying progress)
+         @return number of taxa actually removed
 	 */
-	virtual int removeTaxa(StrVector &taxa_names);
+	virtual int removeTaxa(StrVector &taxa_names, bool reassignNodeIDs, const char* context);
 
 	/** find a first taxon below a subtree */
 	Node *findFirstTaxon(Node *node = NULL, Node *dad = NULL);
@@ -927,6 +929,27 @@ public:
         @return number of branches collapsed
     */
     virtual int collapseInternalBranches(Node *node = NULL, Node *dad = NULL, double threshold = 0.0);
+
+    
+    /** start reporting progress on a task
+     @param size how big the task is
+     @param name the name of the task (e.g. "evaluating candidate trees")
+     @param verb the (past-tense) verb used to describe progress (e.g. "evaluated")
+     @param noun the noun used (e.g. "candidate tree")
+     */
+    virtual void initProgress(double size, std::string name, const char* verb, const char* noun) {}
+
+    /** track progress made on a task*/
+    virtual void trackProgress(double amount) {}
+    
+    /** hide the progress made on a task (e.g. before writing to cout)*/
+    virtual void hideProgress() {}
+
+    /** hide the progress made on a task (e.g. after writing to cout)*/
+    virtual void showProgress() {}
+    
+    /** report that a task is complete*/
+    virtual void doneProgress() {}
 
 protected:
     /**

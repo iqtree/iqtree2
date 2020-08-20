@@ -2836,7 +2836,7 @@ void runMultipleTreeReconstruction(Params &params, Alignment *alignment, IQTree 
     
     cout << "Run " << best_run+1 <<  " gave best log-likelihood: " << runLnL[best_run] << endl;
 
-    // initialize tree and model strucgture
+    // initialize tree and model structure
     ModelsBlock *models_block = readModelsDefinition(params);
     tree->setParams(&params);
     tree->setNumThreads(params.num_threads);

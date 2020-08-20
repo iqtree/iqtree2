@@ -687,12 +687,11 @@ void MTree::readTree(const char *infile, bool &is_rooted) {
     } catch (ios::failure) {
         outError(ERR_READ_INPUT, infile);
     }
-
     rooted = is_rooted;
-
-    if (verbose_mode >= VB_MED)
+    if (verbose_mode >= VB_MED) {
         cout << "Tree contains " << leafNum - is_rooted <<
              " taxa and " << nodeNum-1-is_rooted << " branches" << (is_rooted ? " (rooted)" : "") << endl;
+    }
 }
 
 /*
@@ -2632,21 +2631,28 @@ Node *MTree::findFirstTaxon(Node *node, Node *dad) {
 	return NULL;
 }
 
-int MTree::removeTaxa(StrVector &taxa_names) {
-	if (taxa_names.empty())
+int MTree::removeTaxa(StrVector &taxa_names,
+                      bool reassignNodeIDs, const char* context) {
+    if (taxa_names.empty()) {
         return 0;
-	int count = 0;
-	for (StrVector::iterator sit = taxa_names.begin(); sit != taxa_names.end(); sit++) {
-		Node *node = findLeafName(*sit);
-		if (!node) continue;
-		count++;
-//		if (!node)
-//			outError((string)"Taxon " + (*sit) + " does not appear in the tree");
-		if (node == root)
-		{	// find another root
-			root = findFirstTaxon(root);
-		}
-
+    }
+    int count = 0;
+    if (context!=nullptr) {
+        initProgress(taxa_names.size(), context, "removed", "taxon");
+    }
+    for (StrVector::iterator sit = taxa_names.begin(); sit != taxa_names.end(); sit++) {
+        Node *node = findLeafName(*sit);
+        if (!node) {
+            if (context!=nullptr) {
+                trackProgress(1.0);
+            }
+            continue;
+        }
+        count++;
+        if (node == root) {
+            // find another root
+            root = findFirstTaxon(root);
+        }
 		Node *innode = node->neighbors[0]->node;
 		Node *othernodes[2] = { NULL, NULL };
 		int i;
@@ -2684,22 +2690,30 @@ int MTree::removeTaxa(StrVector &taxa_names) {
 				}
 		}
 		delete node;
-	}
-
-	if (!count) return 0;
-
-	NodeVector taxa;
-	getTaxa(taxa);
-	ASSERT(taxa.size() > 0);
-	// reassign taxon IDs
-	int id = 0;
-	for (NodeVector::iterator nit = taxa.begin(); nit != taxa.end(); nit++)
-        if (*nit == root && rooted)
+        if (context!=nullptr) {
+            trackProgress(1.0);
+        }
+    }
+    if (context!=nullptr) {
+        doneProgress();
+    }
+    if (count==0 || !reassignNodeIDs) {
+        return count;
+    }
+    NodeVector taxa;
+    getTaxa(taxa);
+    ASSERT(taxa.size() > 0);
+    // reassign taxon IDs
+    int id = 0;
+    for (NodeVector::iterator nit = taxa.begin(); nit != taxa.end(); nit++) {
+        if (*nit == root && rooted) {
             (*nit)->id = taxa.size()-1;
-        else
+        } else {
             (*nit)->id = id++;
-	leafNum = taxa.size();
-	initializeTree();
+        }
+    }
+    leafNum = taxa.size();
+    initializeTree();
     return count;
 }
 

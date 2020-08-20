@@ -1195,18 +1195,22 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compu
     if (verbose_mode >= VB_DEBUG && traversal_info.size() > 0) {
         Node *saved = root;
         root = dad;
+        hideProgress();
         drawTree(cout);
+        showProgress();
         root = saved;
     }
 
-    if (traversal_info.empty())
+    if (traversal_info.empty()) {
         return;
+    }
 
     if (!model->isSiteSpecificModel()) {
 
         int num_info = traversal_info.size();
 
         if (verbose_mode >= VB_DEBUG) {
+            hideProgress();
             cout << "traversal order:";
             for (auto it = traversal_info.begin(); it != traversal_info.end(); it++) {
                 cout << "  ";
@@ -1232,8 +1236,8 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compu
                 }
             }
             cout << endl;
+            showProgress();
         }
-
         
         if (!Params::getInstance().buffer_mem_save) {
 #ifdef _OPENMP

@@ -259,6 +259,10 @@ public:
      */
     virtual void clearAllPartialLH(bool make_null = false);
     
+    /**
+     NEWLY ADDED (20-Aug-2020): clear all scale_num info for a clean computation again
+     */
+    virtual void clearAllScaleNum();
 
     /**
             compute the tree likelihood

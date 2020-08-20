@@ -618,6 +618,12 @@ void PhyloSuperTree::clearAllPartialLH(bool make_null) {
     }
 }
 
+void PhyloSuperTree::clearAllScaleNum() {
+    for (iterator it = begin(); it != end(); it++) {
+        (*it)->clearAllScaleNum();
+    }
+}
+
 int PhyloSuperTree::computeParsimonyBranchObsolete(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
     int score = 0, part = 0;
     SuperNeighbor *dad_nei = (SuperNeighbor*)dad_branch;

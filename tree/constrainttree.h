@@ -48,10 +48,12 @@ public:
     void readConstraint(MTree &src_tree);
 
 	/** remove some taxa from the tree
-	 * @param taxa_names names of taxa that will be removed
-     * @return number of taxa actually removed
-	 */
-	virtual int removeTaxa(StrVector &taxa_names);
+     @param taxa_names names of taxa that will be removed
+     @param reassignNodeIDs (if node IDs are to be reassigned)
+     @param context description of the task (if displaying progress)
+     @return number of taxa actually removed
+    */
+	virtual int removeTaxa(StrVector &taxa_names, bool reassignNodeIDs, const char* context);
 
     /** 
         check if a "partial" split defined by two taxa name sets is compatible with the constraint tree.

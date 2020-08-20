@@ -237,6 +237,11 @@ public:
         tell that all partial likelihood vectors below this node are not computed
      */
     void clearAllPartialLh(bool make_null, PhyloNode *dad);
+    
+    /**
+        forget all scale_num vectors below this node
+     */
+    void clearAllScaleNum(PhyloNode* dad);
 
     /**
         tell that all partial likelihood vectors (in reverse direction) below this node are not computed
