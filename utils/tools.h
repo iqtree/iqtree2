@@ -2174,6 +2174,9 @@ public:
 
     /** true if ignoring the "finished" flag in checkpoint file */
     bool force_unfinished;
+    
+    /** TRUE to print checkpoints to 1.ckp.gz, 2.ckp.gz,... */
+    bool print_all_checkpoints;
 
     /** control output files to be written
      * OUT_LOG

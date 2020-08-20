@@ -1121,6 +1121,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.ignore_checkpoint = false;
     params.checkpoint_dump_interval = 60;
     params.force_unfinished = false;
+    params.print_all_checkpoints = false;
     params.suppress_output_flags = 0;
     params.ufboot2corr = false;
     params.u2c_nni5 = false;
@@ -4060,6 +4061,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.checkpoint_dump_interval = convert_int(argv[cnt]);
 				continue;
 			}
+            
+            if (strcmp(argv[cnt], "--all-checkpoint") == 0) {
+                params.print_all_checkpoints = true;
+                continue;
+            }
             
 			if (strcmp(argv[cnt], "--no-log") == 0) {
 				params.suppress_output_flags |= OUT_LOG;
