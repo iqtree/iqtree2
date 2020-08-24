@@ -85,6 +85,22 @@ if __name__ == '__main__':
                         runs[prefix].patterns = int(lastWord)
                 lastWord = word
 
+    command_lines = grep_output('^Command\:', '*_*.log')
+    for line in command_lines.split('\n'):
+        prefix = get_prefix(line)
+        if 0<len(line) and prefix in runs:
+            words    = line.split(' ')
+            #... e.g. Command: [path-to-iqtree2] -pre iqtree2-mpi_TEST_1 -s example.phy
+            #         -redo -m TEST -sp example.nex
+            #... We want the fifth and subsequent words
+            params = ''
+            for i, word in enumerate(words):
+                if (4<=i):
+                    if (5<=i):
+                        params += ' '
+                    params += word
+            runs[prefix].params = params
+
     parsimony_lines = grep_output('"constant sites"', '*_*.log')
     for line in parsimony_lines.split('\n'):
         prefix = get_prefix(line)
@@ -180,6 +196,8 @@ if __name__ == '__main__':
     line_number     = 0
     for run in runs.values():
         line_number += 1
+        if not hasattr(run,'params'):
+            run.params = ''
         if not hasattr(run,'tree_likelihood'):
             run.tree_likelihood = ''
         if not hasattr(run,'consensus_tree_likelihood'):
@@ -198,22 +216,24 @@ if __name__ == '__main__':
             count_succeeded += 1
         if line_number == 1:
             summary_file.write(
-                'Time,Error,Alignment,Partition' +
+                'Params,Prafix,Time,Error,Alignment,Partition' +
                 ',Sequences,Sites,Patterns,Tree,Threads' +
                 ',Likelihood,Consensus_Likelihood' +
-                ',Schemes,Models' )
-        summary_file.write(run.prefix
-            + ',\t' + str(run.elapsed_time)
-            + ',\t' + run.errorCode
-            + ',\t' + run.alignment
-            + ',\t' + run.partition
-            + ',\t' + str(run.sequences)
-            + ',\t' + str(run.sites)
-            + ',\t' + str(run.patterns)
-            + ',\t' + run.startingTree
-            + ',\t' + str(run.numberOfThreads)
-            + ',\t' + str(run.tree_likelihood)
-            + ',\t' + str(run.consensus_tree_likelihood)
+                ',Schemes,Models\n' )
+        summary_file.write( ''
+            + '"'    + run.params + '"'
+            + ',\t'  + run.prefix
+            + ',\t'  + str(run.elapsed_time)
+            + ',\t'  + run.errorCode
+            + ',\t'  + run.alignment
+            + ',\t'  + run.partition
+            + ',\t'  + str(run.sequences)
+            + ',\t'  + str(run.sites)
+            + ',\t'  + str(run.patterns)
+            + ',\t'  + run.startingTree
+            + ',\t'  + str(run.numberOfThreads)
+            + ',\t'  + str(run.tree_likelihood)
+            + ',\t'  + str(run.consensus_tree_likelihood)
             + ',\t"' + str(run.schemes) + '"'
             + ',\t"' + str(run.models) + '"\n')
 

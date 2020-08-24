@@ -28,6 +28,23 @@ def cpu_count():
             pass
 
     return num
+    
+def show_task_progress(frac, message):
+    barLen = 75
+    charsInGreen = int( frac * barLen );
+    while len(message) < barLen:
+        message += " "
+    charsInGreenOrCyan  = len(message)
+    if barLen < charsInGreenOrCyan:
+        charsInGreenOrCyan = barLen
+    formatted = "\33[2K\r\33[1;30;102m"
+    formatted += message[0:charsInGreen] + "\33[1;30;106m"
+    formatted += message[charsInGreen:charsInGreenOrCyan]
+    formatted += "\33[0m" + message[charsInGreenOrCyan:len(message)]
+    print(formatted,end="")
+
+def show_task_complete(text):
+    print("\33[2K\r" + text)
 
 def exec_commands(cmds, name, num_cpus):
     ''' Exec commands in parallel in multiple process 
@@ -56,6 +73,8 @@ def exec_commands(cmds, name, num_cpus):
     logger.info("Available CPUs = " + str(max_task) + " / using " + str(num_cpus) + " CPUs")
     logger.info("Number of jobs = " + str(len(cmds)))
     processes = []
+    cmdCount = len(cmds)
+    cmdNumber = 0
     while True:
         while cmds and len(processes) < num_cpus:
             task = cmds.pop(0)
@@ -63,6 +82,8 @@ def exec_commands(cmds, name, num_cpus):
             task_id, cmd = task.split(" ", 1)
             logger.info("Executing job " + task_id + ": " + cmd.strip())
             #print cmd
+            cmdNumber = cmdNumber + 1
+            show_task_progress(cmdNumber/cmdCount, "Starting command " + str(cmdNumber) + " of " + str(cmdCount))
             task_output = open(task_id + ".out", "w")
             time_cmd = "time " + cmd
             processes.append([subprocess.Popen(time_cmd, stderr=subprocess.STDOUT, stdout=task_output, shell=True), task_id])
@@ -80,6 +101,7 @@ def exec_commands(cmds, name, num_cpus):
                     processes.remove(p)
 
         if not processes and not cmds:
+            show_task_complete("All " + str(cmdCount) + " tasks completed")
             break
         else:
             time.sleep(5)
