@@ -485,7 +485,7 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
     getMapOfTaxonNameToNode(nullptr, nullptr, mapNameToNode);
     
 #if BODGE_ONE_NODE_IN_TEN
-    //Temporay hack: Deliberate bodging of 10% of the nodes in the tree.
+    //Temporary hack: Deliberate bodging of 10% of the nodes in the tree.
     for (size_t seq = 0; seq < nseq; seq+=10) {
         string seq_name = aln->getSeqName(seq);
         auto it = mapNameToNode.find(seq_name);
@@ -511,9 +511,9 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
     }
     auto rootInMap = mapNameToNode.find(ROOT_NAME);
     if (rootInMap != mapNameToNode.end()) {
-        (*rootInMap).second->id = nseq;
+        root =  (*rootInMap).second;
+        root->id = nseq;
         mapNameToNode.erase(rootInMap);
-        leafNum = nseq + 1;
     } else if (root==nullptr && !taxaIdsToAdd.empty()) {
         //Todo: make sure we HAVE a root, since later steps will need one.
         throw "Cannot add new taxa to unrooted tree";
@@ -533,7 +533,6 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
         //negative branch lengths (which would bust the stuff below).
         //Todo: figure out what happens for PhyloSuperTree here
         //Todo: What if -fixbr is supplied.  Isn't that problematic?
-        
     }
     if (will_delete) {
         //mapNameToNode now lists leaf nodes to be removed
@@ -545,7 +544,7 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
         mapNameToNode.clear();
         initializeAllPartialLh();
         clearAllPartialLH();
-        removeTaxa(taxaToRemove, false, "Removing deleted taxa from tree");
+        removeTaxa(taxaToRemove, !will_add, "Removing deleted taxa from tree");
         //Todo: Carry out any requested "after-each-delete" local tidy-up of the tree
         //      (via an extra parameter to removeTaxa, perhaps?)
         //Todo: Carry out any requested "after-batch-of-deletes" global tidy-up
@@ -553,6 +552,9 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
         //Todo: Carry out any requested "after-all-deletes" global tidy-up of the tree.
         //Todo: If requested *not* to optimize branch lengths here, don't.
         //optimizeAllBranches(); //<-- this crashes (so, for now, don't do it).
+        //Todo: does removeTaxa update nodeNum and leafNum as it runs?
+        clearAllScaleNum();
+        clearAllPartialLH(true);
     }
     if (will_add) {
         if (!will_delete) {
@@ -568,33 +570,6 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
 }
 
 void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
-    struct LocalLikelihoodStore {
-        std::vector<double* > lh_blocks_to_free;
-        std::vector<UBYTE*  > scale_blocks_to_free;
-        PhyloTree*            tree;
-        LocalLikelihoodStore(PhyloTree *owningTree)
-            : tree(owningTree) {
-        }
-        ~LocalLikelihoodStore() {
-            for (size_t i=0; i<lh_blocks_to_free.size(); ++i) {
-                aligned_free ( lh_blocks_to_free[i] );
-            }
-            for (size_t i=0; i<scale_blocks_to_free.size(); ++i) {
-                aligned_free ( scale_blocks_to_free[i] );
-            }
-        }
-        void prepNode(Node* node) {
-            for (int n = 0; n<node->neighbors.size(); ++n) {
-                PhyloNeighbor* nei = (PhyloNeighbor*)node->neighbors[n];
-                nei->partial_lh = tree->newPartialLh();
-                lh_blocks_to_free.push_back(nei->partial_lh);
-                nei->partial_lh_computed = 0;
-                nei->scale_num = tree->newScaleNum();
-                scale_blocks_to_free.push_back(nei->scale_num);
-            }
-        }
-    } localStore(this);
-    
     //
     //Assumes: The tree is rooted.
     //Notes: This is a fixed-insertion-order, one-at-a-time, no-search-heuristic
@@ -619,9 +594,6 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
         added_node->addNeighbor((Node*) 1, 1.0);
         added_node->addNeighbor((Node*) 2, 1.0);
         
-        localStore.prepNode(new_taxon);
-        localStore.prepNode(added_node);
-
         //Todo: see note 3. Search heuristics (for restricting the subtree to search)
         Node* search_start    = root->neighbors[0]->node;
         Node* search_backstop = root;
@@ -1197,7 +1169,7 @@ uint64_t PhyloTree::getMemoryRequired(size_t ncategory, bool full_mem) {
 
     int64_t lh_scale_size = block_size * sizeof(double) + scale_block_size * sizeof(UBYTE);
 
-    max_lh_slots = leafNum-2;
+    max_lh_slots = leafNum - 2;
 
     if (!full_mem && params->lh_mem_save == LM_MEM_SAVE) {
         int64_t min_lh_slots = log2(leafNum)+LH_MIN_CONST;
@@ -3214,7 +3186,7 @@ double PhyloTree::addTaxonML(Node *added_node, Node* &target_node, Node* &target
     added_node->updateNeighbor((Node*) 1, node, halfLen);
     added_node->updateNeighbor((Node*) 2, dad, halfLen);
     // compute the likelihood
-    clearAllPartialLH();
+
     double best_score = optimizeChildBranches((PhyloNode*) added_node);
     target_node = node;
     target_dad = dad;
@@ -3442,6 +3414,9 @@ template <class L, class F> double computeDistanceMatrix
     //Compute the upper-triangle of the distance matrix
     //(and write the row maximum onto the firt cell in the row)
     
+    bool count_unknown_as_different = Params::getInstance().count_unknown_as_different;
+        //Unknown counts as 50% different.
+    
     progress_display progress(nseqs*(nseqs-1)/2, "Calculating observed distances"); //zork
 
     #ifdef _OPENMP
@@ -3466,7 +3441,13 @@ template <class L, class F> double computeDistanceMatrix
                 double hamming =
                     hammingDistance ( unknown, thisSequence, otherSequence
                                     , seqLen, frequencyVector, unknownFreq );
-                if (0<hamming && unknownFreq < denominator) {
+                if (count_unknown_as_different) {
+                    distance = ( hamming + unknownFreq * 0.5 ) / denominator;
+                    if (0<distance && !uncorrected) {
+                        double x      = (1.0 - z * distance);
+                        distance      = (x<=0) ? MAX_GENETIC_DIST : ( -log(x) / z );
+                    }
+                } else if (0<hamming && unknownFreq < denominator) {
                     distance = hamming / (denominator - unknownFreq);
                     if (!uncorrected) {
                         double x      = (1.0 - z * distance);

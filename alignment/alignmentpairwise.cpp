@@ -485,11 +485,13 @@ double AlignmentPairwise::recomputeDist
     //Only called when -experimental has been passed
     if (initial_dist == 0.0) {
         if (tree->hasMatrixOfConvertedSequences()) {
-            int distance    = 0;
-            int denominator = 0;
-            auto sequence1        = tree->getConvertedSequenceByNumber(seq1);
-            auto sequence2        = tree->getConvertedSequenceByNumber(seq2);
-            auto nonConstSiteFreq = tree->getConvertedSequenceNonConstFrequencies();
+            bool   count_unknown_as_different =
+                Params::getInstance().count_unknown_as_different;
+            double distance         = 0;
+            int    denominator      = 0;
+            auto   sequence1        = tree->getConvertedSequenceByNumber(seq1);
+            auto   sequence2        = tree->getConvertedSequenceByNumber(seq2);
+            auto   nonConstSiteFreq = tree->getConvertedSequenceNonConstFrequencies();
             size_t sequenceLength = tree->getConvertedSequenceLength();
             for (size_t i=0; i<sequenceLength; ++i) {
                 auto state1 = sequence1[i];
@@ -499,6 +501,9 @@ double AlignmentPairwise::recomputeDist
                     if ( state1 != state2 ) {
                         distance += nonConstSiteFreq[i];
                     }
+                } else if (count_unknown_as_different) {
+                    denominator += nonConstSiteFreq[i];
+                    distance    += nonConstSiteFreq[i] * 0.5;
                 }
             }
             if (0<distance) {

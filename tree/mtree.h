@@ -590,7 +590,7 @@ public:
             @param dad dad of the node, used to direct the search
             @return node if found, otherwise NULL
      */
-    Node *findLeafName(string &name, Node *node = NULL, Node* dad = NULL);
+    Node* findLeafName(const string &name, Node *node = NULL, Node* dad = NULL);
 
     /**
             find a node with corresponding ID
@@ -797,7 +797,7 @@ public:
          @param context description of the task (if displaying progress)
          @return number of taxa actually removed
 	 */
-	virtual int removeTaxa(StrVector &taxa_names, bool reassignNodeIDs, const char* context);
+	virtual int removeTaxa(const StrVector &taxa_names, bool reassignNodeIDs, const char* context);
 
 	/** find a first taxon below a subtree */
 	Node *findFirstTaxon(Node *node = NULL, Node *dad = NULL);

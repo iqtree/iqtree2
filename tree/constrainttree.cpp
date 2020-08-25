@@ -112,7 +112,7 @@ void ConstraintTree::readConstraint(MTree &src_tree) {
     initFromTree();
 }
 
-int ConstraintTree::removeTaxa(StrVector &taxa_names, bool reassignNodeIDs, const char* context) {
+int ConstraintTree::removeTaxa(const StrVector &taxa_names, bool reassignNodeIDs, const char* context) {
     if (taxa_names.empty()) {
         return 0;
     }

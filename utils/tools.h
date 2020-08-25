@@ -1126,6 +1126,11 @@ public:
     bool compute_obs_dist;
 
     /**
+            true to treat unknown characters as different rather than discounting them, default: false.
+     */
+    bool count_unknown_as_different;
+    
+    /**
             TRUE to compute the Juke-Cantor distances, default: FALSE
      */
     bool compute_jc_dist;

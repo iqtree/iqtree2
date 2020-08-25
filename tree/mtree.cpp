@@ -779,11 +779,7 @@ void MTree::initializeTree(Node *node, Node* dad)
     {
         node->id = nodeNum;
         nodeNum++;
-        //node->name = node->id;
-
     }
-    //for (int i = 0; i < node->neighbors.size(); i++)
-    //if (node->neighbors[i]->node != dad)
     FOR_NEIGHBOR_IT(node, dad, it) {
         (*it)->id = branchNum;
         (*it)->node->findNeighbor(node)->id = branchNum;
@@ -1556,7 +1552,7 @@ bool MTree::findNodeNames(unordered_set<string> &taxa_set, pair<Node*,Neighbor*>
     return false;
 }
 
-Node *MTree::findLeafName(string &name, Node *node, Node *dad) {
+Node *MTree::findLeafName(const string &name, Node *node, Node *dad) {
     if (!node) node = root;
     if (node->isLeaf() && node->name == name) return node;
     FOR_NEIGHBOR_IT(node, dad, it) {
@@ -2631,7 +2627,7 @@ Node *MTree::findFirstTaxon(Node *node, Node *dad) {
 	return NULL;
 }
 
-int MTree::removeTaxa(StrVector &taxa_names,
+int MTree::removeTaxa(const StrVector &taxa_names,
                       bool reassignNodeIDs, const char* context) {
     if (taxa_names.empty()) {
         return 0;
@@ -2640,7 +2636,7 @@ int MTree::removeTaxa(StrVector &taxa_names,
     if (context!=nullptr) {
         initProgress(taxa_names.size(), context, "removed", "taxon");
     }
-    for (StrVector::iterator sit = taxa_names.begin(); sit != taxa_names.end(); sit++) {
+    for (auto sit = taxa_names.begin(); sit != taxa_names.end(); sit++) {
         Node *node = findLeafName(*sit);
         if (!node) {
             if (context!=nullptr) {

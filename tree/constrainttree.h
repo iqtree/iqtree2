@@ -53,7 +53,7 @@ public:
      @param context description of the task (if displaying progress)
      @return number of taxa actually removed
     */
-	virtual int removeTaxa(StrVector &taxa_names, bool reassignNodeIDs, const char* context);
+	virtual int removeTaxa(const StrVector &taxa_names, bool reassignNodeIDs, const char* context);
 
     /** 
         check if a "partial" split defined by two taxa name sets is compatible with the constraint tree.

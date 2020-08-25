@@ -762,6 +762,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.incremental = false;
     params.dist_compression_level = 1;
     params.compute_obs_dist = false;
+    params.count_unknown_as_different = false;
     params.compute_jc_dist = true;
     params.experimental = true;
     params.compute_ml_dist = true;
@@ -1407,10 +1408,14 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.compute_ml_tree_only = true;
                 continue;
             }
-			if (strcmp(argv[cnt], "-dobs") == 0) {
-				params.compute_obs_dist = true;
-				continue;
-			}
+            if (strcmp(argv[cnt], "-dobs") == 0) {
+                params.compute_obs_dist = true;
+                continue;
+            }
+            if (strcmp(argv[cnt], "-cud") == 0) {
+                params.count_unknown_as_different = true;
+                continue;
+            }
             if (strcmp(argv[cnt], "-experimental") == 0 || strcmp(argv[cnt], "--experimental") == 0) {
                 params.experimental = true;
                 continue;
