@@ -36,6 +36,7 @@ phylotreemixlen.cpp
 phylotreemixlen.h
 phylotreepars.cpp
 phylotreesse.cpp
+placement.cpp
 quartet.cpp
 supernode.cpp
 supernode.h
