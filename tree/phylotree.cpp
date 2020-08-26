@@ -887,13 +887,15 @@ void PhyloTree::restoreBranchLengths(DoubleVector &lenvec, int startid, PhyloNod
  //    return corrected_bran;
  }
  */
-void PhyloTree::initializeAllPartialPars() {
-    if (!ptn_freq_pars)
+int PhyloTree::initializeAllPartialPars() {
+    if (!ptn_freq_pars) {
         ptn_freq_pars = aligned_alloc<UINT>(get_safe_upper_limit_float(getAlnNPattern()));
+    }
     int index = 0;
     initializeAllPartialPars(index);
     clearAllPartialLH();
     //assert(index == (nodeNum - 1)*2);
+    return index;
 }
 
 void PhyloTree::initializeAllPartialPars(int &index, PhyloNode *node, PhyloNode *dad) {
@@ -904,11 +906,14 @@ void PhyloTree::initializeAllPartialPars(int &index, PhyloNode *node, PhyloNode 
         if (!central_partial_pars) {
             uint64_t tip_partial_pars_size = get_safe_upper_limit_float(aln->num_states * (aln->STATE_UNKNOWN+1));
             size_t memsize = (aln->getNSeq()) * 4 * pars_block_size + tip_partial_pars_size;
-            if (verbose_mode >= VB_MAX)
-                cout << "Allocating " << memsize * sizeof(UINT) << " bytes for partial parsimony vectors" << endl;
+            if (verbose_mode >= VB_MAX) {
+                cout << "Allocating " << memsize * sizeof(UINT)
+                    << " bytes for partial parsimony vectors" << endl;
+            }
             central_partial_pars = aligned_alloc<UINT>(memsize);
-            if (!central_partial_pars)
+            if (!central_partial_pars) {
                 outError("Not enough memory for partial parsimony vectors");
+            }
             tip_partial_pars = central_partial_pars + (aln->getNSeq()) * 4 * pars_block_size;
         }
         index = 0;

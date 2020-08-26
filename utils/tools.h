@@ -2478,6 +2478,14 @@ int getFilesInDir(const char *path, StrVector &filenames);
 int convert_int(const char *str);
 
 /**
+       convert string to int, with error checking (but not throwing on error)
+       @param str original string
+       @param defaultValue value to return if the string isn't numeric
+       @return the number
+*/
+int convert_int_nothrow(const char* str, int defaultValue) throw();
+
+/**
     convert string to int64, with error checking
     @param str original string
     @return the number

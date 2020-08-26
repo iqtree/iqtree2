@@ -659,8 +659,9 @@ public:
 
     /**
             initialize partial_pars vector of all PhyloNeighbors, allocating central_partial_pars
+            @return the number of partial parsimony blocks that were used by existing nodes of the tree
      */
-    virtual void initializeAllPartialPars();
+    virtual int initializeAllPartialPars();
 
     /**
             initialize partial_pars vector of all PhyloNeighbors, allocating central_partial_pars
@@ -763,6 +764,21 @@ public:
      */
     int computeParsimonyBranchSankoff(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
 
+    
+    /**
+            used internally by addNewTaxaToTree() to find the best target branch to add into the tree
+            @param new_taxon (leaf) node to add for new taxon
+            @param added_node (interior) node to add, so as to incorporate the new taxon
+            @param node the current node
+            @param dad dad of the node, used to direct the search
+            @param target_node (OUT) one end of the best branch found
+            @param target_dad (OUT) the other end of the best branch found
+            @param best_score the best parsimony score found thus far
+     */
+    void addTaxonMP(Node* new_taxon, Node* added_node, Node* node, Node* dad,
+                   Node*& target_node, Node*& target_dad, int& best_score);
+
+    
     /****************************************************************************
             likelihood function
      ****************************************************************************/
@@ -1652,7 +1668,7 @@ public:
             @return the likelihood of the tree
      */
     double addTaxonML(Node *added_node, Node* &target_node, Node* &target_dad, Node *node, Node *dad);
-
+    
     /****************************************************************************
             Distance function
      ****************************************************************************/

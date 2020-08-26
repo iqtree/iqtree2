@@ -254,9 +254,18 @@ int convert_int(const char *str) {
         err += "\" instead";
         throw err;
     }
-
     return i;
 }
+
+int convert_int_nothrow(const char* str, int defaultValue) throw() {
+    char *endptr;
+    int i = strtol(str, &endptr, 10);
+    if ((i == 0 && endptr == str) || abs(i) == HUGE_VALL || *endptr != 0) {
+        return defaultValue;
+    }
+    return i;
+}
+
 
 int convert_int(const char *str, int &end_pos) {
 	char *endptr;
