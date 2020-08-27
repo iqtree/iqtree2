@@ -36,11 +36,13 @@ namespace {
 
 progress_display::progress_display( double workToDo, const char* doingWhat
                                    , const char* verb, const char* unitName)
-    : startTime(getRealTime()), startCPUTime(getCPUTime())
-    , totalWorkToDo(workToDo),  workDone(0.0)
+    : startTime(getRealTime()),   startCPUTime(getCPUTime())
+    , totalWorkToDo(workToDo),    workDone(0.0)
     , taskDescription(doingWhat), isDone(false)
-    , workVerb(verb),            workUnitName(unitName)
-    , termout(CONSOLE_FILE, std::ios_base::out) {
+    , workVerb(verb),             workUnitName(unitName)
+    , atMost(false),              hidden(0)
+    , termout(CONSOLE_FILE, std::ios_base::out)
+     {
         lastReportedWork    = 0.0;
         lastReportedTime    = startTime;
         lastReportedCPUTime = startCPUTime;
@@ -111,7 +113,7 @@ void progress_display::reportProgress(double time, double cpu, bool newline) {
             if (!progress.str().empty()) {
                 progress << " ";
             }
-            progress << workDone << " (of " << totalWorkToDo << ")";
+            progress << workDone << " (of " << (atMost ? "at most " : "") << totalWorkToDo << ")";
         }
     } else if (0<totalWorkToDo) {
         double percentDone = 100.0 * ( workDone / totalWorkToDo );
@@ -133,12 +135,13 @@ void progress_display::reportProgress(double time, double cpu, bool newline) {
         } else if (estimatedTime < 100.0) {
             progress.precision(4);
         }
+        const char* leadIn = ( atMost && !verbed) ? " (at most " : " (";
         if (estimatedTime < 600.0 ) {
-            progress << " (" << estimatedTime << " secs to go)";
+            progress << leadIn << estimatedTime << " secs to go)";
         } else if (estimatedTime < 7200.0 ) {
-            progress << " (" << (size_t)(floor(estimatedTime/60.0)) << " min to go)";
+            progress << leadIn << (size_t)(floor(estimatedTime/60.0)) << " min to go)";
         } else {
-            progress << " (" << (size_t)(floor(estimatedTime/3600.0)) << " hrs, "
+            progress << leadIn  << (size_t)(floor(estimatedTime/3600.0)) << " hrs, "
                 << (((size_t)(floor(estimatedTime/60.0)))%60) << " min to go)";
         }
     }
@@ -193,7 +196,6 @@ progress_display& progress_display::done() {
     return *this;
 }
 
-
 progress_display::~progress_display() {
     if (!isDone) {
         done();
@@ -209,8 +211,10 @@ progress_display& progress_display::hide() {
     #pragma omp critical (io)
     #endif
     {
-        termout << "\33[2K\r";
-        termout.flush();
+        if (++hidden == 1) {
+            termout << "\33[2K\r";
+            termout.flush();
+        }
     }
     return *this;
 }
@@ -219,8 +223,51 @@ progress_display& progress_display::show() {
     if (!isTerminal) {
         return *this;
     }
-    reportProgress(getRealTime(), getCPUTime(), false);
+    if (--hidden == 0) {
+        reportProgress(getRealTime(), getCPUTime(), false);
+    }
     return *this;
+}
+
+void progress_display::setTaskDescription(const  char* newDescription) {
+    if (this->taskDescription == newDescription) {
+        return;
+    }
+    if (isTerminal && hidden <= 0) {
+        reportProgress(getRealTime(), getCPUTime(), false);
+    }
+}
+
+void progress_display::setTaskDescription(const  std::string& newDescription) {
+    setTaskDescription(newDescription.c_str());
+}
+
+void progress_display::setWorkRemaining(double newEstimate) {
+    if (newEstimate < 0) {
+        return; //Nonsense!
+    }
+    double oldWorkToDo, newWorkToDo;
+    #if _OPENMP
+    #pragma omp critical (io)
+    #endif
+    {
+        oldWorkToDo = totalWorkToDo;
+        totalWorkToDo = workDone + newEstimate;
+        newWorkToDo = totalWorkToDo;
+    }
+    if (isTerminal && hidden <= 0 && 1.0 < abs(oldWorkToDo - newWorkToDo)) {
+        reportProgress(getRealTime(), getCPUTime(), false);
+    }
+}
+
+void progress_display::setIsEstimateABound(bool isEstimateAnUpperBound) {
+    if (atMost == isEstimateAnUpperBound) {
+        return;
+    }
+    atMost = isEstimateAnUpperBound;
+    if (hidden <= 0) {
+        reportProgress(getRealTime(), getCPUTime(), false);
+    }
 }
 
 void progress_display::setProgressDisplay(bool displayIt) {

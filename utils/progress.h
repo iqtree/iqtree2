@@ -24,7 +24,11 @@ public:
     progress_display& hide ();
     progress_display& show ();
     progress_display& done ();
-    void reportProgress(double time, double cpu, bool newline);
+    void setTaskDescription  (const  char* newDescription);
+    void setTaskDescription  (const  std::string& newDescription);
+    void setWorkRemaining    (double newEstimate);
+    void setIsEstimateABound (bool   isEstimateAnUpperBound);
+    void reportProgress      (double time, double cpu, bool newline);
     static void setProgressDisplay(bool displayIt);
     static bool getProgressDisplay();
 protected:
@@ -39,6 +43,8 @@ protected:
     double lastReportedWork;     //Last reported work done
     double lastReportedTime;     //Last reported wall-clock time
     double lastReportedCPUTime;  //Last reported CPU time
+    bool   atMost;               //Estimate of work to do is an upper bound
+    int    hidden;               //How many more times has hide() been called than show()
     std::fstream termout;        //Terminal output stream (not standard output!)
 };
 

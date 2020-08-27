@@ -1267,7 +1267,7 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
     ASSERT(tree);
 
     double estimatedIterations = tree->params->num_param_iterations; //for now
-    tree->initProgress(estimatedIterations, "Optimizing Model Parameters", "finished", "iteration" );
+    tree->initProgress(estimatedIterations, "Optimizing Model Parameters", "finished", "iteration", true );
     
     stopStoringTransMatrix();
     // modified by Thomas Wong on Sept 11, 15

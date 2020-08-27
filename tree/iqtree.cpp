@@ -3051,7 +3051,7 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI, const char* context) {
         task += " for ";
         task += context;
     }
-    initProgress(MAXSTEPS, task, "done", "step");
+    initProgress(MAXSTEPS, task, "done", "step", true);
     double originalScore = curScore;
     for (numSteps = 1; numSteps <= MAXSTEPS; numSteps++) {
 
@@ -4314,7 +4314,7 @@ int PhyloTree::testNumThreads() {
     trees.push_back(getTreeString());
     setLikelihoodKernel(sse);
 
-    initProgress(max_procs, "Determining AUTO threadcount", "tried", "threadcount");
+    initProgress(max_procs, "Determining AUTO threadcount", "tried", "threadcount", true);
     for (int proc = 1; proc <= max_procs; ++proc) {
         omp_set_num_threads(proc);
         setNumThreads(proc);

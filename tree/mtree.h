@@ -936,8 +936,9 @@ public:
      @param name the name of the task (e.g. "evaluating candidate trees")
      @param verb the (past-tense) verb used to describe progress (e.g. "evaluated")
      @param noun the noun used (e.g. "candidate tree")
+     @param isUpperBound true if (size) was only an upper bound on how big the task might be
      */
-    virtual void initProgress(double size, std::string name, const char* verb, const char* noun) {}
+    virtual void initProgress(double size, std::string name, const char* verb, const char* noun, bool isEstimate=true) {}
 
     /** track progress made on a task*/
     virtual void trackProgress(double amount) {}

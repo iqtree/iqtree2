@@ -2840,7 +2840,7 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
     }
     DoubleVector lenvec;
     //cout << tree_lh << endl;
-    initProgress(my_iterations*nodes.size(), "Optimizing branch lengths", "", "");
+    initProgress(my_iterations*nodes.size(), "Optimizing branch lengths", "", "", true);
     for (int i = 0; i < my_iterations; i++) {
 //        string string_brlen = getTreeString();
         saveBranchLengths(lenvec);
@@ -6062,10 +6062,15 @@ const string& PhyloTree::getDistanceFileWritten() const {
     return distanceFileWritten;
 }
     
-void PhyloTree::initProgress(double size, std::string name, const char* verb, const char* noun) {
+void PhyloTree::initProgress(double size, std::string name, 
+                             const char* verb, const char* noun, 
+                             bool isUpperBound) {
     ++progressStackDepth;
     if (progressStackDepth==1 && !isShowingProgressDisabled) {
         progress = new progress_display(size, name.c_str(), verb, noun);
+        if (isUpperBound) {
+            progress->setIsEstimateABound(true);
+        }
     }
 }
     
