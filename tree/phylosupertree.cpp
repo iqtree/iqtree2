@@ -347,12 +347,12 @@ int PhyloSuperTree::collapseInternalBranches(Node *node, Node *dad, double thres
 }
 
 
-Node* PhyloSuperTree::newNode(int node_id, const char* node_name) {
-    return (Node*) (new SuperNode(node_id, node_name));
+SuperNode* PhyloSuperTree::newNode(int node_id, const char* node_name) {
+    return new SuperNode(node_id, node_name);
 }
 
-Node* PhyloSuperTree::newNode(int node_id, int node_name) {
-    return (Node*) (new SuperNode(node_id, node_name));
+SuperNode* PhyloSuperTree::newNode(int node_id, int node_name) {
+    return new SuperNode(node_id, node_name);
 }
 
 size_t PhyloSuperTree::getAlnNPattern() const {

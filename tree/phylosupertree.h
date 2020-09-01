@@ -181,7 +181,7 @@ public:
             @param node_name node name
             @return a new node
      */
-    virtual Node* newNode(int node_id = -1, const char* node_name = NULL);
+    virtual SuperNode* newNode(int node_id = -1, const char* node_name = NULL);
 
     /**
             allocate a new node. Override this if you have an inherited Node class.
@@ -189,7 +189,7 @@ public:
             @param node_name node name issued by an interger
             @return a new node
      */
-    virtual Node* newNode(int node_id, int node_name);
+    virtual SuperNode* newNode(int node_id, int node_name);
 
 	/**
 	 *		@return number of alignment patterns

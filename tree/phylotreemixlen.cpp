@@ -92,12 +92,12 @@ void PhyloTreeMixlen::restoreCheckpoint() {
     }
 }
 
-Node* PhyloTreeMixlen::newNode(int node_id, const char* node_name) {
-    return (Node*) (new PhyloNodeMixlen(node_id, node_name));
+PhyloNodeMixlen* PhyloTreeMixlen::newNode(int node_id, const char* node_name) {
+    return new PhyloNodeMixlen(node_id, node_name);
 }
 
-Node* PhyloTreeMixlen::newNode(int node_id, int node_name) {
-    return (Node*) (new PhyloNodeMixlen(node_id, node_name));
+PhyloNodeMixlen* PhyloTreeMixlen::newNode(int node_id, int node_name) {
+    return new PhyloNodeMixlen(node_id, node_name);
 }
 
 void PhyloTreeMixlen::setMixlen(int mixlen) {

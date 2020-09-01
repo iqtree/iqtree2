@@ -1011,7 +1011,7 @@ void getNeiBranches(NeighborVec &removed_nei, NodeVector &attached_node, NodeVec
     
 }
 
-void PhyloTree::insertNode2Branch(Node* added_node, Node* target_node, Node* target_dad) {
+void PhyloTree::insertNode2Branch(PhyloNode* added_node, PhyloNode* target_node, PhyloNode* target_dad) {
     target_node->updateNeighbor(target_dad, added_node, -1.0);
     target_dad->updateNeighbor(target_node, added_node, -1.0);
     added_node->updateNeighbor((Node*) 1, target_node, -1.0);
@@ -1127,7 +1127,7 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
         added_node->addNeighbor((Node*) 2, -1.0);
 
         for (int nodeid = 0; nodeid < nodes1.size(); nodeid++) {
-            int score = addTaxonMPFast(new_taxon, added_node, nodes1[nodeid], nodes2[nodeid]);
+            int score = addTaxonMPFast(new_taxon, added_node, (PhyloNode*)nodes1[nodeid], (PhyloNode*)nodes2[nodeid]);
             if (score < best_pars_score) {
                 best_pars_score = score;
                 target_node = (PhyloNode*)nodes1[nodeid];
@@ -1184,7 +1184,7 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
     return best_pars_score;
 }
 
-int PhyloTree::addTaxonMPFast(Node *added_taxon, Node* added_node, Node* node, Node* dad) {
+int PhyloTree::addTaxonMPFast(PhyloNode *added_taxon, PhyloNode* added_node, PhyloNode* node, PhyloNode* dad) {
 
     // now insert the new node in the middle of the branch node-dad
     insertNode2Branch(added_node, node, dad);

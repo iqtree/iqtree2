@@ -358,6 +358,7 @@ class PhyloTree : public MTree, public Optimization, public CheckpointFactory {
     friend class MemSlotVector;
     friend class ModelFactory;
     friend class CandidateSet;
+    friend class CandidateTaxon;
 
 public:
     /**
@@ -382,7 +383,7 @@ public:
     void init();
 
     /**
-            destructor
+            destructor (and supporting deallocation functions)
      */
     virtual ~PhyloTree();
 
@@ -480,9 +481,14 @@ public:
      Modify a tree, by adding nodes for taxa found in the tree's alignment,
      but not in the tree, and assigning them taxa ids according to their
      position in the alignment
-     @param alignment associated alignment
+     @param taxaIdsToAdd
+     @param index_parsimony indicates how many partial parsimony blocks
+      have been allocated to nodes already in the tree
+     @param index_lh indicates how many partial likelhood blocks
+     have been allocated to nodes already in the tree
      */
-    virtual void addNewTaxaToTree(const IntVector& taxaIdsToAdd);
+    virtual void addNewTaxaToTree(const IntVector& taxaIdsToAdd,
+                                  int index_parsimony, int index_lh);
     
     /** set the root by name
         @param my_root root node name
@@ -570,6 +576,8 @@ public:
         @return number of mixture branch lengths, default: 1
     */
     virtual int getMixlen() { return 1; }
+    
+    virtual PhyloNode* getRoot();
 
     /**
             allocate a new node. Override this if you have an inherited Node class.
@@ -577,7 +585,7 @@ public:
             @param node_name node name
             @return a new node
      */
-    virtual Node* newNode(int node_id = -1, const char* node_name = NULL);
+    virtual PhyloNode* newNode(int node_id = -1, const char* node_name = NULL);
 
     /**
             allocate a new node. Override this if you have an inherited Node class.
@@ -585,7 +593,7 @@ public:
             @param node_name node name issued by an interger
             @return a new node
      */
-    virtual Node* newNode(int node_id, int node_name);
+    virtual PhyloNode* newNode(int node_id, int node_name);
 
     /**
      *		@return number of alignment patterns
@@ -775,8 +783,10 @@ public:
             @param target_dad (OUT) the other end of the best branch found
             @param best_score the best parsimony score found thus far
      */
-    void addTaxonMP(Node* new_taxon, Node* added_node, Node* node, Node* dad,
-                   Node*& target_node, Node*& target_dad, int& best_score);
+    void addTaxonMP(PhyloNode* new_taxon, PhyloNode* added_node,
+                    PhyloNode* node, PhyloNode* dad,
+                    PhyloNode*& target_node, PhyloNode*& target_dad,
+                    int& best_score);
 
     
     /****************************************************************************
@@ -795,6 +805,16 @@ public:
      */
     virtual void deleteAllPartialLh();
 
+    virtual void getBlockSizes(size_t& nptn, uint64_t& pars_block_size,
+                               uint64_t& lh_block_size, uint64_t& scale_block_size );
+    //
+    //Note: This probably needs to be passed a partition number too, if it is to work
+    //      properly for PhyloSuperTreePlen.
+    //      See... PhyloSuperTreePlen::initializeAllPartialLh
+    //
+    
+    void ensurePartialLHIsAllocated();
+    
     /**
             initialize partial_lh vector of all PhyloNeighbors, allocating central_partial_lh
             @param node the current node
@@ -810,6 +830,11 @@ public:
      */
     virtual void clearAllPartialLH(bool make_null = false);
     
+    /**
+            clear all partial parsimony data for a clean computation again
+     */
+    virtual void clearAllPartialParsimony();
+
     /**
             clear all scale number data for a clean computation again
             @param make_null true to make all scale_num become NULL
@@ -1376,7 +1401,7 @@ public:
      @param target_node left node of the target branch
      @param target_dad right node of the target branch
      */
-    void insertNode2Branch(Node* added_node, Node* target_node, Node* target_dad);
+    void insertNode2Branch(PhyloNode* added_node, PhyloNode* target_node, PhyloNode* target_dad);
         
     /**
             FAST VERSION: used internally by computeParsimonyTree() to find the best target branch to add into the tree
@@ -1388,7 +1413,7 @@ public:
             @param dad dad of the node, used to direct the search
             @return the parsimony score of the tree
      */
-    int addTaxonMPFast(Node *added_taxon, Node *added_node, Node *node, Node *dad);
+    int addTaxonMPFast(PhyloNode *added_taxon, PhyloNode *added_node, PhyloNode *node, PhyloNode *dad);
 
     /**
         create a 3-taxon tree and return random taxon order
@@ -1660,14 +1685,21 @@ public:
 
     /**
             used internally by growTreeML() to find the best target branch to add into the tree
-            @param added_node node to add
-            @param target_node (OUT) one end of the best branch found
-            @param target_dad (OUT) the other end of the best branch found
+            @param added_taxon leaf node to add
+            @param added_node interior node to add
             @param node the current node
             @param dad dad of the node, used to direct the search
+            @param target_node (OUT) one end of the best branch found
+            @param target_dad (OUT) the other end of the best branch found
+            @param len_to_new_taxon length of link between added_taxon and added_node
+            @param len_to_node length of link between added_node and target_node
+            @param len_to_dad length of link between added_dode and target_dad
             @return the likelihood of the tree
      */
-    double addTaxonML(Node *added_node, Node* &target_node, Node* &target_dad, Node *node, Node *dad);
+    double addTaxonML(PhyloNode* added_taxon,  PhyloNode *added_node,
+                      PhyloNode *node,         PhyloNode *dad,
+                      PhyloNode* &target_node, PhyloNode* &target_dad,
+                      double& lenToNewTaxon, double& lenToNode, double& lenToDad);
     
     /****************************************************************************
             Distance function
@@ -2181,8 +2213,9 @@ public:
             curScore = score;
         else
 		    curScore = -DBL_MAX;
-        if (model)
+        if (model) {
             initializeAllPartialLh();
+        }
 	}
 
     void computeSeqIdentityAlongTree(Split &resp, Node *node = NULL, Node *dad = NULL);

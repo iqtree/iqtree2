@@ -34,6 +34,7 @@ class PhyloNeighbor : public Neighbor {
     friend class PhyloTreeMixlen;
     friend class MemSlotVector;
     friend class ParsTree;
+    friend class CandidateTaxon;
 
 public:
     friend class TinaTree;
@@ -150,7 +151,8 @@ public:
 private:
 
     /**
-        true if the partial likelihood was computed
+        indicates whether the partial likelihood (and/or) the parsimony,
+        is computed (and up to date).
      */
     int partial_lh_computed;
 
@@ -231,8 +233,6 @@ public:
      */
     virtual void addNeighbor(Node *node, double length, int id = -1);
 
-
-
     /**
         tell that all partial likelihood vectors below this node are not computed
      */
@@ -243,6 +243,11 @@ public:
      */
     void clearAllScaleNum(PhyloNode* dad);
 
+    /**
+        tell that all partial parsimony vectors below this node are not computed
+     */
+    void clearAllPartialParsimony(PhyloNode *dad);
+    
     /**
         tell that all partial likelihood vectors (in reverse direction) below this node are not computed
      */
@@ -255,7 +260,7 @@ public:
         using buffered 'size' attribute if computed beforehand
         @param dad dad of this node
     */
-    int computeSize(Node *dad);
+    int computeSize(PhyloNode *dad);
 
 };
 

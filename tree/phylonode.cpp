@@ -65,6 +65,15 @@ void PhyloNode::clearAllScaleNum(PhyloNode* dad) {
     }
 }
 
+void PhyloNode::clearAllPartialParsimony(PhyloNode* dad) {
+    for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it++) {
+        ((PhyloNeighbor*)(*it))->partial_pars = nullptr;
+        if ((*it)->node != dad) {
+            ((PhyloNode*)(*it)->node)->clearAllPartialParsimony(this);
+        }
+    }
+
+}
 
 PhyloNode::PhyloNode()
  : Node()
@@ -96,8 +105,7 @@ void PhyloNode::addNeighbor(Node *node, double length, int id) {
 	neighbors.push_back(new PhyloNeighbor(node, length, id));
 }
 
-
-int PhyloNode::computeSize(Node *dad) {
+int PhyloNode::computeSize(PhyloNode *dad) {
     PhyloNeighbor *nei = (PhyloNeighbor*)dad->findNeighbor(this);
     if (nei->size > 0)
         return nei->size;
