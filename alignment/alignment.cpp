@@ -1800,14 +1800,14 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
         PatternInfo() : num_error(0), isAllGaps(false) {}
     };
     std::vector<PatternInfo> patternInfo;
-    patternInfo.resize(nsite / step);
+    patternInfo.resize((nsite + (step-1)) / step);
     //Todo: Disable progress display, when isShowingProgressDisabled is set
     progress_display progress ( nsite, "Constructing alignment", "examined", "site");
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
     for (int site = 0; site < nsite; site+=step) {
-        PatternInfo& info = patternInfo[site];
+        PatternInfo& info = patternInfo[site/step];
         Pattern& pat = at(site / step);
         pat.resize(nseq);
         for (int seq = 0; seq < nseq; seq++) {
