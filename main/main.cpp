@@ -212,7 +212,6 @@ void printCopyright(ostream &out) {
     out << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << iqtree_VERSION_PATCH << " COVID-edition";
     out << " for " << getOSName();
     out << " built " << __DATE__;
-    out << " built " << __DATE__;
 #if defined DEBUG 
     out << " - debug mode";
 #endif
