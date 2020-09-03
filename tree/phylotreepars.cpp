@@ -1014,8 +1014,8 @@ void getNeiBranches(NeighborVec &removed_nei, NodeVector &attached_node, NodeVec
 void PhyloTree::insertNode2Branch(PhyloNode* added_node, PhyloNode* target_node, PhyloNode* target_dad) {
     target_node->updateNeighbor(target_dad, added_node, -1.0);
     target_dad->updateNeighbor(target_node, added_node, -1.0);
-    added_node->updateNeighbor((Node*) 1, target_node, -1.0);
-    added_node->updateNeighbor((Node*) 2, target_dad, -1.0);
+    added_node->updateNeighbor(DUMMY_NODE_1, target_node, -1.0);
+    added_node->updateNeighbor(DUMMY_NODE_2, target_dad, -1.0);
     ((PhyloNeighbor*) added_node->findNeighbor(target_node))->partial_pars =
     ((PhyloNeighbor*) target_dad->findNeighbor(added_node))->partial_pars;
     ((PhyloNeighbor*) added_node->findNeighbor(target_dad))->partial_pars =
@@ -1123,8 +1123,8 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
             ((PhyloNeighbor*)added_node->findNeighbor(new_taxon))->partial_pars = central_partial_pars + ((index++) * pars_block_size);
         }
         // preserve two neighbors
-        added_node->addNeighbor((Node*) 1, -1.0);
-        added_node->addNeighbor((Node*) 2, -1.0);
+        added_node->addNeighbor(DUMMY_NODE_1, -1.0);
+        added_node->addNeighbor(DUMMY_NODE_2, -1.0);
 
         for (int nodeid = 0; nodeid < nodes1.size(); nodeid++) {
             int score = addTaxonMPFast(new_taxon, added_node, (PhyloNode*)nodes1[nodeid], (PhyloNode*)nodes2[nodeid]);
@@ -1195,8 +1195,8 @@ int PhyloTree::addTaxonMPFast(PhyloNode *added_taxon, PhyloNode* added_node, Phy
     // remove the added node
     node->updateNeighbor(added_node, dad);
     dad->updateNeighbor(added_node, node);
-    added_node->updateNeighbor(node, (Node*) 1);
-    added_node->updateNeighbor(dad, (Node*) 2);
+    added_node->updateNeighbor(node, DUMMY_NODE_1);
+    added_node->updateNeighbor(dad, DUMMY_NODE_2);
 
     // set partial_pars to COMPUTED
     ((PhyloNeighbor*)node->findNeighbor(dad))->partial_lh_computed |= 2;

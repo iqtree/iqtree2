@@ -1407,16 +1407,16 @@ void IQTree::reinsertLeavesByParsimony(PhyloNodeVector &del_leaves) {
         }
 
         //cout << "(" << node1->id << ", " << node2->id << ")" << "----" << "(" << added_node->id << "," << leaf->id << ")" << endl;
-        added_node->updateNeighbor(node1, (Node*) 1);
-        added_node->updateNeighbor(node2, (Node*) 2);
+        added_node->updateNeighbor(node1, DUMMY_NODE_1);
+        added_node->updateNeighbor(node2, DUMMY_NODE_2);
 
         best_pars_score = INT_MAX;
         // TODO: this needs to be adapted
 //        addTaxonMPFast(added_node, target_node, target_dad, NULL, root->neighbors[0]->node, root);
         target_node->updateNeighbor(target_dad, added_node, -1.0);
         target_dad->updateNeighbor(target_node, added_node, -1.0);
-        added_node->updateNeighbor((Node*) 1, target_node, -1.0);
-        added_node->updateNeighbor((Node*) 2, target_dad, -1.0);
+        added_node->updateNeighbor(DUMMY_NODE_1, target_node, -1.0);
+        added_node->updateNeighbor(DUMMY_NODE_2, target_dad, -1.0);
 
     }
 

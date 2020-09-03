@@ -127,8 +127,8 @@ double PhyloTree::addTaxonML(PhyloNode* added_taxon,     PhyloNode *added_node,
     double halfLen = 0.5 * len;
     node->updateNeighbor(dad, added_node, halfLen);
     dad->updateNeighbor(node, added_node, halfLen);
-    added_node->updateNeighbor((Node*) 1, node, halfLen);
-    added_node->updateNeighbor((Node*) 2, dad, halfLen);
+    added_node->updateNeighbor(DUMMY_NODE_1, node, halfLen);
+    added_node->updateNeighbor(DUMMY_NODE_2, dad, halfLen);
     // compute the likelihood
 
     double best_score = optimizeChildBranches((PhyloNode*) added_node);
@@ -137,8 +137,8 @@ double PhyloTree::addTaxonML(PhyloNode* added_taxon,     PhyloNode *added_node,
     // remove the added node
     node->updateNeighbor(added_node, dad, len);
     dad->updateNeighbor(added_node, node, len);
-    added_node->updateNeighbor(node, (Node*) 1, len);
-    added_node->updateNeighbor(dad, (Node*) 2, len);
+    added_node->updateNeighbor(node, DUMMY_NODE_1, len);
+    added_node->updateNeighbor(dad, DUMMY_NODE_2, len);
 
     // now traverse the tree downwards
     FOR_NEIGHBOR_IT(node, dad, it){
@@ -175,8 +175,8 @@ void PhyloTree::addTaxonMP(PhyloNode* added_taxon, PhyloNode *added_node,
         // insert the new node in the middle of the branch node-dad
         node->updateNeighbor(dad, added_node, halfLen);
         dad->updateNeighbor(node, added_node, halfLen);
-        added_node->updateNeighbor((Node*) 1, node, halfLen);
-        added_node->updateNeighbor((Node*) 2, dad, halfLen);
+        added_node->updateNeighbor(DUMMY_NODE_1, node, halfLen);
+        added_node->updateNeighbor(DUMMY_NODE_2, dad, halfLen);
         
         ((PhyloNeighbor*)added_taxon->findNeighbor(added_node))->partial_lh_computed = 0;
         ((PhyloNeighbor*)added_node->findNeighbor(added_taxon))->partial_lh_computed = 0;
@@ -190,8 +190,8 @@ void PhyloTree::addTaxonMP(PhyloNode* added_taxon, PhyloNode *added_node,
         // remove the added node
         node->updateNeighbor ( added_node, dad, len);
         dad->updateNeighbor  ( added_node, node, len);
-        added_node->updateNeighbor ( node, (Node*) 1, 0);
-        added_node->updateNeighbor ( dad,  (Node*) 2, 0);
+        added_node->updateNeighbor ( node, DUMMY_NODE_1, 0);
+        added_node->updateNeighbor ( dad,  DUMMY_NODE_2, 0);
     }
 
     if (score < bestScore) {
@@ -242,8 +242,8 @@ public:
         new_taxon->addNeighbor(added_node, 1.0);
 
         //add dummy neighbors (need this, because of how addTaxonML works)
-        added_node->addNeighbor((Node*) 1, 1.0);
-        added_node->addNeighbor((Node*) 2, 1.0);
+        added_node->addNeighbor(DUMMY_NODE_1, 1.0);
+        added_node->addNeighbor(DUMMY_NODE_2, 1.0);
             
         target_node   = nullptr;
         target_dad    = nullptr;
@@ -295,8 +295,8 @@ public:
         
         //replace dummy neighbours (also needed, due to how (both)
         //                          addTaxonML and addTaxonMP work)
-        added_node->updateNeighbor((Node*) 1, target_node, lenToNode);
-        added_node->updateNeighbor((Node*) 2, target_dad,  lenToDad);
+        added_node->updateNeighbor(DUMMY_NODE_1, target_node, lenToNode);
+        added_node->updateNeighbor(DUMMY_NODE_2, target_dad,  lenToDad);
         
         //Set length of link to new taxon too
         added_node->findNeighbor(new_taxon)->length = lenToNewTaxon;

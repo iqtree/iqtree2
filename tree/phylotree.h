@@ -152,6 +152,9 @@ template <class T> T* ensure_aligned_allocated(T* & ptr, size_t size) {
 typedef std::map< string, double > StringDoubleMap;
 typedef std::map< int, PhyloNode* > IntPhyloNodeMap;
 
+#define DUMMY_NODE_1 ((PhyloNode*)1)
+#define DUMMY_NODE_2 ((PhyloNode*)2)
+
 /*
 #define MappedMat(NSTATES) Map<Matrix<double, NSTATES, NSTATES> >
 #define MappedArr2D(NSTATES) Map<Array<double, NSTATES, NSTATES> >
@@ -594,6 +597,15 @@ public:
             @return a new node
      */
     virtual PhyloNode* newNode(int node_id, int node_name);
+
+    /**
+            indicates whether a given node is a dummy "place-holder" node
+            used when adding new taxa to an existing tree
+            (in addTaxonML or addTaxonMP).
+            @param node the node
+            @return true if the node is a dummy "place-holder", false otherwise.
+     */
+    virtual bool isDummyNode(PhyloNode* node) const;
 
     /**
      *		@return number of alignment patterns
@@ -2302,7 +2314,6 @@ public:
     virtual void doneProgress();
     
 protected:
-
     /**
      *  Instance of the phylogenetic likelihood library. This is basically the tree data strucutre in RAxML
      */

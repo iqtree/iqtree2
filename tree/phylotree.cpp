@@ -788,6 +788,10 @@ PhyloNode* PhyloTree::newNode(int node_id, int node_name) {
     return new PhyloNode(node_id, node_name);
 }
 
+bool PhyloTree::isDummyNode(PhyloNode* node) const {
+    return node == DUMMY_NODE_1 || node == DUMMY_NODE_2;
+}
+
 void PhyloTree::clearAllPartialLH(bool make_null) {
     if (!root) {
         return;
@@ -1355,7 +1359,7 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh,
     }
     FOR_NEIGHBOR_IT(node, dad, it) {
         PhyloNode* child = (PhyloNode*) (*it)->node;
-        if (child!=(PhyloNode*)1 && child!=(PhyloNode*)2) {
+        if (isDummyNode(child)) {
             initializeAllPartialLh(index, indexlh, child, node);
         } else {
             PhyloNeighbor* nei = (PhyloNeighbor*)(*it);
@@ -3195,8 +3199,8 @@ void PhyloTree::growTreeML(Alignment *alignment) {
         new_taxon->addNeighbor(added_node, 1.0);
 
         // preserve two neighbors
-        added_node->addNeighbor((Node*) 1, 1.0);
-        added_node->addNeighbor((Node*) 2, 1.0);
+        added_node->addNeighbor(DUMMY_NODE_1, 1.0);
+        added_node->addNeighbor(DUMMY_NODE_2, 1.0);
 
         PhyloNode *target_node = nullptr;
         PhyloNode *target_dad  = nullptr;
@@ -3207,8 +3211,8 @@ void PhyloTree::growTreeML(Alignment *alignment) {
         double len = target_dad->findNeighbor(target_node)->length;
         target_node->updateNeighbor(target_dad, added_node, len / 2.0);
         target_dad->updateNeighbor(target_node, added_node, len / 2.0);
-        added_node->updateNeighbor((Node*) 1, target_node, len / 2.0);
-        added_node->updateNeighbor((Node*) 2, target_dad, len / 2.0);
+        added_node->updateNeighbor(DUMMY_NODE_1, target_node, len / 2.0);
+        added_node->updateNeighbor(DUMMY_NODE_2, target_dad, len / 2.0);
         // compute the likelihood
         clearAllPartialLH();
         optimizeAllBranches();
