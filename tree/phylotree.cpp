@@ -142,6 +142,7 @@ void PhyloTree::init() {
     progressStackDepth = 0;
     isShowingProgressDisabled = false;
     warnedAboutThreadCount = false;
+    warnedAboutNumericalUnderflow = false;
 }
 
 PhyloTree::PhyloTree(Alignment *aln) : MTree(), CheckpointFactory() {

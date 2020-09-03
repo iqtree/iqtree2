@@ -2532,6 +2532,11 @@ protected:
     
     /** becomes true if/when user is warned about the threadcount in use for this tree */
     bool warnedAboutThreadCount;
+
+    /** becomes true if/when user is warned about numerical underflow, during
+        processing for this tree */
+    bool warnedAboutNumericalUnderflow;
+
 };
 
 #endif
