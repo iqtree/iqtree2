@@ -2571,8 +2571,13 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
     *df  = all_df;
     *ddf = all_ddf;
     if (!std::isfinite(*df)) {
-        getModel()->writeInfo(cout);
-        getRate()->writeInfo(cout);
+        if (!SAFE_NUMERIC || !warnedAboutNumericalUnderflow) {
+            hideProgress();
+            getModel()->writeInfo(cout);
+            getRate()->writeInfo(cout);
+            showProgress();
+            warnedAboutNumericalUnderflow = true;
+        }
     }
     if (!SAFE_NUMERIC && !std::isfinite(*df)) {
         outError("Numerical underflow (lh-derivative). Run again with the safe likelihood kernel via `-safe` option");
@@ -2627,7 +2632,12 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
         *ddf += nsites *(ddf_frac + df_frac*df_frac);
     }
     if (!std::isfinite(*df)) {
-        cout << "WARNING: Numerical underflow for lh-derivative" << endl;
+        if (!warnedAboutNumericalUnderflow) {
+            hideProgress();
+            cout << "WARNING: Numerical underflow for lh-derivative" << endl;
+            showProgress();
+            warnedAboutNumericalUnderflow = true;
+        }
         *df = *ddf = 0.0;
     }
 }
@@ -3075,10 +3085,15 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
 
     tree_lh += all_tree_lh;
     if (!std::isfinite(tree_lh)) {
-        if (SAFE_NUMERIC) {
-            outWarning("Numerical underflow for lh-branch");
-        } else {
-            outWarning("Numerical underflow for lh-branch, use `-safe` option to avoid this warning");
+        if (!warnedAboutNumericalUnderflow) {
+            warnedAboutNumericalUnderflow = true;
+            hideProgress();
+            if (SAFE_NUMERIC) {
+                    outWarning("Numerical underflow for lh-branch");
+            } else {
+                outWarning("Numerical underflow for lh-branch, use `-safe` option to avoid this warning");
+            }
+            showProgress();
         }
     }
 
@@ -3330,10 +3345,18 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
     }
 
     double tree_lh = all_tree_lh;
-    if (!safe_numeric && !std::isfinite(tree_lh))
-        outError("Numerical underflow (lh-from-buffer). Run again with the safe likelihood kernel via `-safe` option");
-
-    ASSERT(std::isfinite(tree_lh) && "Numerical underflow for lh-from-buffer");
+    if (!std::isfinite(tree_lh)) {
+        if (!safe_numeric) {
+            outError("Numerical underflow (lh-from-buffer). Run again with the safe likelihood kernel via `-safe` option");
+        } else {
+            if (!warnedAboutNumericalUnderflow) {
+                hideProgress();
+                outWarning("Numerical underflow (from lh-from-buffer).");
+                showProgress();
+                warnedAboutNumericalUnderflow = true;
+            }
+        }
+    }
 
     // arbitrarily fix tree_lh if underflown for some sites
     if (!std::isfinite(tree_lh)) {
