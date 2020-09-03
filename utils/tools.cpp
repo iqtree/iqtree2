@@ -341,6 +341,16 @@ double convert_double(const char *str) {
     return d;
 }
 
+double convert_double_nothrow(const char *str, double defaultValue) throw() {
+    char *endptr;
+    double d = strtod(str, &endptr);
+    if ((d == 0.0 && endptr == str) || fabs(d) == HUGE_VALF || *endptr != 0) {
+        return defaultValue;
+    }
+    return d;
+}
+
+
 double convert_double(const char *str, int &end_pos) {
 	char *endptr;
 	double d = strtod(str, &endptr);
@@ -964,6 +974,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 #endif
     params.lk_safe_scaling = false;
     params.numseq_safe_scaling = 2000;
+    params.ignore_any_errors = false;
     params.kernel_nonrev = false;
     params.print_site_lh = WSL_NONE;
     params.print_partition_lh = false;
@@ -2537,6 +2548,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "Too small -safe-seq";
 				continue;
 			}
+            
+            if (strcmp(argv[cnt], "--ignore-errors")==0) {
+                params.ignore_any_errors = true;
+                continue;
+            }
 
             if (strcmp(argv[cnt], "--kernel-nonrev") == 0) {
                 params.kernel_nonrev = true;

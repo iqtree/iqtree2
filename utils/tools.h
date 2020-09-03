@@ -1723,6 +1723,9 @@ public:
     /** minimum number of sequences to always use safe scaling, default: 2000 */
     int numseq_safe_scaling;
 
+    /** if true, stubbornly keep processing */
+    bool ignore_any_errors;
+    
     /** TRUE to force using non-reversible likelihood kernel */
     bool kernel_nonrev;
 
@@ -2536,6 +2539,15 @@ double convert_double(const char *str);
         @return the double
  */
 double convert_double(const char *str, int &end_pos);
+
+/**
+       convert string to double, with error checking (but not throwing on error)
+       @param str original string
+       @param defaultValue value to return if the string isn't numeric
+       @return the number
+*/
+double convert_double_nothrow(const char* str, double defaultValue) throw();
+
 
 /**
         convert comma-separated string to integer vector, with error checking
