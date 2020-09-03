@@ -757,6 +757,8 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
             whatAmIDoingHere = std::string("Loading ") + params->start_tree_subtype_name + " tree ";
             break;
         case STT_USER_TREE:
+            /* fall-through */
+        default:
             whatAmIDoingHere = "Loading user tree";
             break;
     }
@@ -901,7 +903,9 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     if (isMixlen()) {
         //(d) Optimizing model parameters for the best of the
         //    candidate trees.
-        cout << "Optimizing model parameters for top " << min((int)candidateTrees.size(), params->popSize) << " candidate trees... " << endl;
+        cout << "Optimizing model parameters for top "
+            << min((int)candidateTrees.size(), params->popSize)
+        << " candidate trees... " << endl;
         
         startTime = getRealTime();
         bestInitTrees = candidateTrees.getBestTreeStrings(params->popSize);
@@ -2641,8 +2645,6 @@ void IQTree::refineBootTrees(){
     binfo.close();
     btreep.close();
     btreea.close();
-
-//    delete aln;
 
     // restore randstream
     finish_random();

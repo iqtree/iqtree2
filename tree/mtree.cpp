@@ -2633,7 +2633,8 @@ int MTree::removeTaxa(const StrVector &taxa_names,
         return 0;
     }
     int count = 0;
-    if (context!=nullptr) {
+    bool showingProgress = (context!=nullptr && *context!='\0');
+    if (showingProgress) {
         initProgress(taxa_names.size(), context, "removed", "taxon");
     }
     for (auto sit = taxa_names.begin(); sit != taxa_names.end(); sit++) {
@@ -2686,11 +2687,11 @@ int MTree::removeTaxa(const StrVector &taxa_names,
 				}
 		}
 		delete node;
-        if (context!=nullptr) {
+        if (showingProgress) {
             trackProgress(1.0);
         }
     }
-    if (context!=nullptr) {
+    if (showingProgress) {
         doneProgress();
     }
     if (count==0 || !reassignNodeIDs) {

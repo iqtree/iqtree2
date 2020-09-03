@@ -948,7 +948,16 @@ public:
 
     /** hide the progress made on a task (e.g. after writing to cout)*/
     virtual void showProgress() {}
+
+    void logLine(const char* line) {
+        hideProgress();
+        std::cout << line << std::endl;
+        showProgress();
+    }
     
+    void logLine(const std::string& line) {
+        logLine(line.c_str());
+    }
     /** report that a task is complete*/
     virtual void doneProgress() {}
 

@@ -374,7 +374,7 @@ public:
         @param node the target node
         @return the iterator to the neighbor that has the node. If not found, return NULL
      */
-    Neighbor *findNeighbor(Node *node);
+    Neighbor* findNeighbor(Node *node);
 
     /**
      * @brief check whether the two nodes are neighbors
