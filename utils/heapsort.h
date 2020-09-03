@@ -26,7 +26,7 @@
 // (the algorithm that people mean, when they claim they've
 //  based their code on J.W.J.William's Heapsort [JW1964] - when they
 //  haven't, since [JW1964] was actually an out-of-place heapsort(!)):
-// There is no "top" of the heap at vaueArray[start]; each other
+// There is no "top" of the heap at valueArray[start]; each other
 // item in the array is, in turn, treated as though it were the top
 // of the heap.  This trick makes the algorithm slightly shorter, and
 // saves O(n) moves and O(log(n)) comparisons.
@@ -34,6 +34,116 @@
 
 #ifndef heapsort_h
 #define heapsort_h
+
+#include "progress.h"
+
+template <class V>
+void constructMinHeapLayer ( V* valueArray, ptrdiff_t start,
+                        ptrdiff_t layerStart, ptrdiff_t layerStop,
+                        ptrdiff_t stop, progress_display* progress ) {
+    //
+    //Note: For lower levels in the heap, it would be better (due to the
+    //      much better temporal locality of reference), to construct the
+    //      heap "top down" (as per J.W.J. Williams' original Heapsort)
+    //      rather than "bottom up" (as per Floyd's Treesort3) (the
+    //      *later* algorithm that "stole" the original Heapsort's name).
+    //      But the difference doesn't become important unless there are
+    //      many millions of items in the heap.  So this implementation
+    //      does things the Treesort3 way.
+    //
+    ptrdiff_t fudge         = 2 - start;
+    ptrdiff_t nextLayerStop = layerStop + layerStop + fudge;
+    if (nextLayerStop < stop) {
+        ptrdiff_t nextLayerStart = layerStart + layerStart + fudge;
+        if ( start+(stop-start)/2 + 1 < nextLayerStop ) {
+            nextLayerStop = start+(stop-start)/2 + 1 ;
+        }
+        constructMinHeapLayer( valueArray, start, nextLayerStart, nextLayerStop, stop, progress);
+    }
+    #ifdef _OPENMP
+    #pragma omp parallel for schedule(static, 1024)
+    #endif
+    for (ptrdiff_t h = layerStop-1; h >= layerStart; --h) {
+        ptrdiff_t i = h;
+        V         v = valueArray[i];
+        ptrdiff_t j = i + i + fudge;
+        while ( j < stop ) {
+            if ( j + 1 < stop ) {
+                j += ( valueArray[j+1] < valueArray[j] ) ? 1 : 0;
+            }
+            if ( v <= valueArray[j] ) {
+                break;
+            }
+            valueArray[i] = valueArray[j];
+            i = j;
+            j = i + i + fudge;
+        }
+        valueArray[i] = v;
+        if ( progress!=nullptr && (h&1023)==0 ) {
+            progress->incrementBy(1024);
+        }
+    }
+}
+
+template <class V>
+void constructMinHeap ( V* valueArray, ptrdiff_t start, ptrdiff_t stop
+                      , const char* task_name ) {
+    //
+    //Constructs a "top-less" radix 2 min heap
+    //of valueArray[start..stop].
+    //
+    ptrdiff_t count      = (stop-start);
+    if (task_name==nullptr || *task_name=='\0') {
+        constructMinHeapLayer(valueArray, start, start, start+2, stop, nullptr);
+    } else {
+        progress_display progress(count/2, task_name);
+        if (2<count) {
+            constructMinHeapLayer(valueArray, start, start, start+2, stop, &progress);
+        }
+        progress.done();
+    }
+}
+
+template <class V>
+void extractTopFromMinHeap ( V* valueArray
+                        , ptrdiff_t start, ptrdiff_t stop) {
+    //
+    //Extracts a *single* value from a radix 2 max heap.
+    //
+    ptrdiff_t fudge = 2 - start;
+    ptrdiff_t i = stop;
+    V         v = valueArray[i];
+    ptrdiff_t j = start;
+    while ( j < stop ) {
+        if ( j + 1 < stop ) {
+            j += ( valueArray[j+1] < valueArray[j] ) ? 1 : 0;
+        }
+        if ( v <= valueArray[j] ) {
+            break;
+        }
+        valueArray[i] = valueArray[j];
+        i = j;
+        j = i + i + fudge;
+    }
+    valueArray[i] = v;
+}
+
+template <class V> class MinHeapOnArray {
+protected:
+    V*     data;
+    size_t count;
+public:
+    MinHeapOnArray(V* arrayStart, size_t elementCount, const char* taskName):
+        data(arrayStart), count(elementCount) {
+        constructMinHeap(data, 0, count, taskName);
+    }
+    V pop_min() {
+        //ASSERT ( count!=0 );
+        --count;
+        extractTopFromMinHeap( data, 0, count );
+        return data[count];
+    }
+};
 
 template <class V, class S>
 void constructMirroredHeap ( V* valueArray
@@ -67,13 +177,15 @@ void constructMirroredHeap ( V* valueArray
         satteliteArray[i] = s;
     }
 }
+
 template <class V, class S>
 void extractFromMirroredHeap ( V* valueArray
                               , ptrdiff_t start, ptrdiff_t stop
                               , S* satteliteArray) {
     //
-    //Extracts a value (and some sattelite information)
-    //from a radix 2 max heap.
+    //Extracts all the values (and associated sattelite information)
+    //from a radix 2 max heap (and an array of sattelite information,
+    //whose entries correspond one-to-one with the entries in the heap).
     //
     ptrdiff_t fudge = 2 - start;
     for (--stop; start<=stop; --stop) {
@@ -108,8 +220,8 @@ void mirroredHeapsort ( V* valueArray
     //on satteliteArray[start..stop].
     //
     if ( start + 1 < stop ) {
-        constructMirroredHeap(valueArray, start, stop, satteliteArray);
-        extractFromMirroredHeap(valueArray, start, stop, satteliteArray);
+        constructMirroredHeap   ( valueArray, start, stop, satteliteArray );
+        extractFromMirroredHeap ( valueArray, start, stop, satteliteArray );
     }
 }
 
