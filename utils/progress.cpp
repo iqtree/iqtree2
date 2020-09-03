@@ -120,8 +120,26 @@ void progress_display::reportProgress(double time, double cpu, bool newline) {
         progress.precision(3);
         progress << " " << percentDone << "% done";
     }
-    progress.precision(6);
-    progress << " in " << elapsedTime << " secs";
+    if (elapsedTime < 60.0) /* less than a minute */ {
+        progress.precision(6);
+        progress << " in " << elapsedTime << " secs";
+    } else {
+        int64_t seconds = (int)floor(elapsedTime);
+        int64_t minutes = seconds / 60;
+        int64_t hours   = minutes / 60;
+        int64_t days    = hours / 24;
+        seconds -= minutes * 60;
+        minutes -= hours * 60;
+        hours   -= days * 24;
+        progress << " in ";
+        if (0<days) {
+            progress << days << "day ";
+        }
+        if (0<hours) {
+            progress << hours << " hr ";
+        }
+        progress << minutes << " min " << seconds << " sec";
+    }
     if (0<elapsedTime && lastReportedCPUTime < cpu) {
         progress.precision(4);
         double percentCPU = 100.0 * ( (cpu-startCPUTime) / elapsedTime);
