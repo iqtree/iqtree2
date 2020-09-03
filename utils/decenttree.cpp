@@ -120,7 +120,7 @@ int main(int argc, char* argv[]) {
     StartTree::BuilderInterface* algorithm = StartTree::Factory::getTreeBuilderByName(algorithmName);
     algorithm->setZippedOutput(isOutputZipped || endsWith(outputFilePath,".gz"));
     if (!algorithm->constructTree(inputFilePath, outputFilePath)) {
-        std::cerr << "Tree construction failed.";
+        std::cerr << "Tree construction failed." << std::endl;
         return 1;
     }
     return 0;
