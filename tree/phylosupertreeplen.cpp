@@ -1792,7 +1792,6 @@ void PhyloSuperTreePlen::initializeAllPartialLh(double* &lh_addr, UBYTE* &scale_
         	PhyloNeighbor *nei_part = nei->link_neighbors[part];
         	if (!nei_part) continue;
         	PhyloNeighbor *nei_part_back = nei_back->link_neighbors[part];
-            
 
             if (params->lh_mem_save == LM_PER_NODE) {
                 if (!nei_part_back->node->isLeaf()) {
@@ -1839,7 +1838,8 @@ void PhyloSuperTreePlen::initializeAllPartialLh(double* &lh_addr, UBYTE* &scale_
     FOR_NEIGHBOR_IT(node, dad, it) initializeAllPartialLh(lh_addr, scale_addr, pars_addr, (PhyloNode*) (*it)->node, node);
 }
 
-void PhyloSuperTreePlen::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node, PhyloNode *dad) {
+void PhyloSuperTreePlen::initializeAllPartialLh(int &index, int &indexlh,
+                                                bool fullOn, PhyloNode *node, PhyloNode *dad) {
 	// this function should not be used, assertion raised if accidentally called
 	ASSERT(0);
 }
@@ -1847,10 +1847,11 @@ void PhyloSuperTreePlen::initializeAllPartialLh(int &index, int &indexlh, PhyloN
 void PhyloSuperTreePlen::reorientPartialLh(PhyloNeighbor* dad_branch, Node *dad) {
     SuperNeighbor *sdad_branch = (SuperNeighbor*) dad_branch;
     SuperNeighbor *snode_branch = (SuperNeighbor*) dad_branch->node->findNeighbor(dad);
-    for (int part = 0; part < size(); part++)
+    for (int part = 0; part < size(); part++) {
         if (sdad_branch->link_neighbors[part]) {
             at(part)->reorientPartialLh(sdad_branch->link_neighbors[part], snode_branch->link_neighbors[part]->node);
         }
+    }
 }
 
 

@@ -14,6 +14,8 @@
 
 #include "node.h"
 
+std::string pointer_to_hex(void *ptr);
+
 typedef unsigned short UBYTE;
 
 /**
@@ -21,6 +23,7 @@ typedef unsigned short UBYTE;
  */
 enum RootDirection {UNDEFINED_DIRECTION, TOWARD_ROOT, AWAYFROM_ROOT};
 
+class PhyloNode;
 /**
 A neighbor in a phylogenetic tree
 
@@ -147,6 +150,10 @@ public:
     int getSize() {
         return size;
     }
+    
+    PhyloNode* getNode() {
+        return (PhyloNode*)node;
+    }
 
 private:
 
@@ -262,6 +269,8 @@ public:
     */
     int computeSize(PhyloNode *dad);
 
+    PhyloNeighbor* findNeighbor(Node* node);
+    
 };
 
 

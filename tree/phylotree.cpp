@@ -474,30 +474,18 @@ void PhyloTree::initializeModel(Params &params, string model_name, ModelsBlock *
     throw "Uh-oh!  Called initializeModel on PhyloTree rather than a subclass";
 }
 
-#define BODGE_ONE_NODE_IN_TEN (0)
 bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
     aln = alignment;
     size_t nseq = aln->getNSeq();
-    
+
+    removeSampleTaxaIfRequested();
+
     //For sequence names that are found in both the
     //tree and the alignment, set the node id.
     //(Also: identify sequences NOT found in the tree)
     map<string, Node*> mapNameToNode;
     getMapOfTaxonNameToNode(nullptr, nullptr, mapNameToNode);
     
-#if BODGE_ONE_NODE_IN_TEN
-    //Temporary hack: Deliberate bodging of 10% of the nodes in the tree.
-    for (size_t seq = 0; seq < nseq; seq+=10) {
-        string seq_name = aln->getSeqName(seq);
-        auto it = mapNameToNode.find(seq_name);
-        if (it!=mapNameToNode.end()) {
-            Node* node = it->second;
-            node->name += "_Bodged";
-        }
-    }
-    mapNameToNode.clear();
-    getMapOfTaxonNameToNode(nullptr, nullptr, mapNameToNode);
-#endif
 
     IntVector taxaIdsToAdd; //not found in tree
     for (size_t seq = 0; seq < nseq; seq++) {
@@ -541,11 +529,13 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
     
     int index_parsimony = 0;
     int index_lh        = 0;
-    ensurePartialLHIsAllocated();
-    initializeAllPartialLh(index_parsimony, index_lh);
-    double likelihood = optimizeAllBranches();
+    double likelihood;
     
     if (will_delete) {
+        ensurePartialLHIsAllocated(0);
+        initializeAllPartialLh(index_parsimony, index_lh, false);
+        //Was formerly: likelihood = optimizeAllBranches();
+        likelihood = computeLikelihood();
         std::cout << "Likelihood score before deletions was " << likelihood << std::endl;
         
         //mapNameToNode now lists leaf nodes to be removed
@@ -564,15 +554,9 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
         //Todo: If requested *not* to optimize branch lengths here, don't.
         //Todo: does removeTaxa update nodeNum and leafNum as it runs?
         deleteAllPartialLh();
-        index_parsimony = 0;
-        index_lh        = 0;
-        ensurePartialLHIsAllocated();
-        initializeAllPartialLh(index_parsimony, index_lh);
-        likelihood = optimizeAllBranches();
     }
     if (will_add) {
-        std::cout << "Likelihood score before insertions was " << likelihood << std::endl;
-        addNewTaxaToTree(taxaIdsToAdd, index_parsimony, index_lh);
+        addNewTaxaToTree(taxaIdsToAdd);
         //Todo: Carry out any requested "after-all-inserts" global tidy-up of the tree.
         //Todo: If requested *not* to optimize branch lengths here, don't.
     }
@@ -797,7 +781,11 @@ void PhyloTree::clearAllPartialLH(bool make_null) {
     if (!root) {
         return;
     }
-    ((PhyloNode*) root->neighbors[0]->node)->clearAllPartialLh(make_null, (PhyloNode*) root);
+    PhyloNode* r = getRoot();
+    PhyloNeighbor* nei = (PhyloNeighbor*)r->neighbors[0];
+    PhyloNode* nextToRoot = (PhyloNode*)nei->node;
+    nextToRoot->clearAllPartialLh(make_null, r);
+    r->clearAllPartialLh(make_null, nextToRoot);
     tip_partial_lh_computed = 0;
     // 2015-10-14: has to reset this pointer when read in
     current_it = current_it_back = nullptr;
@@ -811,6 +799,7 @@ void PhyloTree::clearAllPartialParsimony() {
     PhyloNeighbor* nei = (PhyloNeighbor*)r->neighbors[0];
     PhyloNode* nextToRoot = (PhyloNode*)nei->node;
     nextToRoot->clearAllPartialParsimony(r);
+    r->clearAllPartialParsimony(nextToRoot);
     nei->partial_pars = nullptr;
 }
 
@@ -818,7 +807,11 @@ void PhyloTree::clearAllScaleNum() {
     if (!root) {
         return;
     }
-    ((PhyloNode*) root->neighbors[0]->node)->clearAllScaleNum((PhyloNode*) root);
+    PhyloNode* r = getRoot();
+    PhyloNeighbor* nei = (PhyloNeighbor*)r->neighbors[0];
+    PhyloNode* nextToRoot = (PhyloNode*)nei->node;
+    nextToRoot->clearAllScaleNum(r);
+    r->clearAllScaleNum(nextToRoot);
     tip_partial_lh_computed = 0;
     // 2015-10-14: has to reset this pointer when read in
     current_it = current_it_back = NULL;
@@ -1044,7 +1037,7 @@ size_t PhyloTree::getBufferPartialLhSize() {
     return buffer_size;
 }
 
-void PhyloTree::ensurePartialLHIsAllocated() {
+void PhyloTree::ensurePartialLHIsAllocated(size_t count_of_extra_blocks) {
     int numStates = model->num_states;
     // Minh's question: why getAlnNSite() but not getAlnNPattern() ?
     //size_t mem_size = ((getAlnNSite() % 2) == 0) ? getAlnNSite() : (getAlnNSite() + 1);
@@ -1070,16 +1063,17 @@ void PhyloTree::ensurePartialLHIsAllocated() {
     ensure_aligned_allocated(ptn_freq,          mem_size);
     ensure_aligned_allocated(ptn_freq_pars,     mem_size);
     ensure_aligned_allocated(ptn_invar,         mem_size);
-
+    
+    allocateCentralBlocks(count_of_extra_blocks);
 }
 
 void PhyloTree::initializeAllPartialLh() {
     int index_parsimony = 0;
     int index_lh        = 0;
-    ensurePartialLHIsAllocated();
+    ensurePartialLHIsAllocated(0);
     clearAllPartialLH(true);
     clearAllPartialParsimony();
-    initializeAllPartialLh(index_parsimony, index_lh);
+    initializeAllPartialLh(index_parsimony, index_lh, false);
     if (params->lh_mem_save == LM_MEM_SAVE) {
         mem_slots.init(this, max_lh_slots);
     }
@@ -1112,7 +1106,7 @@ void PhyloTree::deleteAllPartialLh() {
     tip_partial_lh    = nullptr;
     tip_partial_pars  = nullptr;
 
-    clearAllPartialLH();
+    clearAllPartialLH(true);
     clearAllScaleNum();
     clearAllPartialParsimony();
 }
@@ -1229,7 +1223,88 @@ void PhyloTree::getBlockSizes(size_t& nptn, uint64_t& pars_block_size,
     lh_block_size = scale_block_size * model->num_states;
 }
 
-void PhyloTree::initializeAllPartialLh(int &index, int &indexlh,
+void PhyloTree::allocateCentralBlocks(size_t extra_block_count) {
+    size_t   nptn;
+    uint64_t pars_block_size, lh_block_size, scale_block_size;
+    getBlockSizes( nptn, pars_block_size, lh_block_size, scale_block_size );
+
+    // allocate the big central partial likelihoods memory
+    size_t IT_NUM = 2;
+    if (!nni_partial_lh) {
+        // allocate memory only once!
+        nni_partial_lh = aligned_alloc<double>(IT_NUM*lh_block_size);
+        nni_scale_num = aligned_alloc<UBYTE>(IT_NUM*scale_block_size);
+    }
+
+    if (!central_partial_lh) {
+        uint64_t tip_partial_lh_size = get_safe_upper_limit(aln->num_states * (aln->STATE_UNKNOWN+1) * model->getNMixtures());
+        if (model->isSiteSpecificModel())
+        {
+            tip_partial_lh_size = get_safe_upper_limit(aln->size()) * model->num_states * leafNum;
+        }
+        if (max_lh_slots == 0) {
+            getMemoryRequired();
+        }
+        uint64_t mem_size = (uint64_t)(max_lh_slots + extra_block_count) * lh_block_size + 4 + tip_partial_lh_size;
+
+        if (0<extra_block_count) {
+            std::stringstream s;
+            s << "max_lh_slots was " << max_lh_slots << " and extra_block_count was " << extra_block_count;
+            logLine(s.str());
+        }
+        
+        if (verbose_mode >= VB_MAX) {
+            cout << "Allocating " << mem_size * sizeof(double) << " bytes for partial likelihood vectors" << endl;
+        }
+        try {
+            central_partial_lh = aligned_alloc<double>(mem_size);
+        } catch (std::bad_alloc &ba) {
+            outError("Not enough memory for partial likelihood vectors (bad_alloc)");
+        }
+        if (!central_partial_lh) {
+            outError("Not enough memory for partial likelihood vectors");
+        }
+    }
+
+    // now always assign tip_partial_lh
+    if (params->lh_mem_save == LM_PER_NODE) {
+        tip_partial_lh = central_partial_lh + ((nodeNum - leafNum)*lh_block_size);
+    } else {
+        tip_partial_lh = central_partial_lh + (max_lh_slots*lh_block_size);
+    }
+
+    if (!central_scale_num) {
+        uint64_t mem_size = ( max_lh_slots + extra_block_count ) * scale_block_size;
+
+        if (verbose_mode >= VB_MAX)
+            cout << "Allocating " << mem_size * sizeof(UBYTE) << " bytes for scale num vectors" << endl;
+        try {
+            central_scale_num = aligned_alloc<UBYTE>(mem_size);
+        } catch (std::bad_alloc &ba) {
+            outError("Not enough memory for scale num vectors (bad_alloc)");
+        }
+        if (!central_scale_num)
+            outError("Not enough memory for scale num vectors");
+    }
+
+    if (!central_partial_pars) {
+        uint64_t tip_partial_pars_size = get_safe_upper_limit_float(aln->num_states * (aln->STATE_UNKNOWN+1));
+        uint64_t mem_size = (leafNum - 1) * 4 * pars_block_size + tip_partial_pars_size;
+        if (verbose_mode >= VB_MAX)
+            cout << "Allocating " << mem_size * sizeof(UINT)
+                    << " bytes for partial parsimony vectors" << endl;
+        try {
+            central_partial_pars = aligned_alloc<UINT>(mem_size);
+        } catch (std::bad_alloc &ba) {
+            outError("Not enough memory for partial parsimony vectors (bad_alloc)");
+        }
+        if (!central_partial_pars)
+            outError("Not enough memory for partial parsimony vectors");
+        tip_partial_pars = central_partial_pars + ((leafNum - 1) * 4 * pars_block_size);
+    }
+}
+    
+void PhyloTree::initializeAllPartialLh(int &index_pars, int &index_lh, bool fullOn,
                                        PhyloNode *node, PhyloNode *dad) {
     size_t   nptn;
     uint64_t pars_block_size, lh_block_size, scale_block_size;
@@ -1237,136 +1312,79 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh,
     
     if (!node) {
         node = (PhyloNode*) root;
-        // allocate the big central partial likelihoods memory
-        size_t IT_NUM = 2;
-        if (!nni_partial_lh) {
-            // allocate memory only once!
-            nni_partial_lh = aligned_alloc<double>(IT_NUM*lh_block_size);
-            nni_scale_num = aligned_alloc<UBYTE>(IT_NUM*scale_block_size);
-        }
-
-        if (!central_partial_lh) {
-            uint64_t tip_partial_lh_size = get_safe_upper_limit(aln->num_states * (aln->STATE_UNKNOWN+1) * model->getNMixtures());
-            if (model->isSiteSpecificModel())
-                tip_partial_lh_size = get_safe_upper_limit(aln->size()) * model->num_states * leafNum;
-
-            if (max_lh_slots == 0)
-                getMemoryRequired();
-
-            uint64_t mem_size = (uint64_t)max_lh_slots * lh_block_size + 4 + tip_partial_lh_size;
-
-            if (verbose_mode >= VB_MAX)
-                cout << "Allocating " << mem_size * sizeof(double) << " bytes for partial likelihood vectors" << endl;
-            try {
-                central_partial_lh = aligned_alloc<double>(mem_size);
-            } catch (std::bad_alloc &ba) {
-                outError("Not enough memory for partial likelihood vectors (bad_alloc)");
-            }
-            if (!central_partial_lh)
-                outError("Not enough memory for partial likelihood vectors");
-        }
-
-        // now always assign tip_partial_lh
-        if (params->lh_mem_save == LM_PER_NODE) {
-            tip_partial_lh = central_partial_lh + ((nodeNum - leafNum)*lh_block_size);
-        } else {
-            tip_partial_lh = central_partial_lh + (max_lh_slots*lh_block_size);
-        }
-
-        if (!central_scale_num) {
-            uint64_t mem_size = max_lh_slots * scale_block_size;
-
-            if (verbose_mode >= VB_MAX)
-                cout << "Allocating " << mem_size * sizeof(UBYTE) << " bytes for scale num vectors" << endl;
-            try {
-                central_scale_num = aligned_alloc<UBYTE>(mem_size);
-            } catch (std::bad_alloc &ba) {
-                outError("Not enough memory for scale num vectors (bad_alloc)");
-            }
-            if (!central_scale_num)
-                outError("Not enough memory for scale num vectors");
-        }
-
-        if (!central_partial_pars) {
-            uint64_t tip_partial_pars_size = get_safe_upper_limit_float(aln->num_states * (aln->STATE_UNKNOWN+1));
-            uint64_t mem_size = (leafNum - 1) * 4 * pars_block_size + tip_partial_pars_size;
-            if (verbose_mode >= VB_MAX)
-                cout << "Allocating " << mem_size * sizeof(UINT)
-                        << " bytes for partial parsimony vectors" << endl;
-            try {
-                central_partial_pars = aligned_alloc<UINT>(mem_size);
-            } catch (std::bad_alloc &ba) {
-                outError("Not enough memory for partial parsimony vectors (bad_alloc)");
-            }
-            if (!central_partial_pars)
-                outError("Not enough memory for partial parsimony vectors");
-            tip_partial_pars = central_partial_pars + ((leafNum - 1) * 4 * pars_block_size);
-        }
-        index = 0;
-        indexlh = 0;
+        allocateCentralBlocks(0);
+        index_pars = 0;
+        index_lh   = 0;
     }
     if (dad) {
-        // assign a region in central_partial_lh to both Neihgbors (dad->node, and node->dad)
-        PhyloNeighbor *nei = (PhyloNeighbor*) node->findNeighbor(dad);
-        PhyloNeighbor *nei2 = (PhyloNeighbor*) dad->findNeighbor(node);
+        //assign blocks of memory in central_partial_pars and
+        //central_partial_lh to both Neighbors (dad->node, and node->dad)
+        PhyloNeighbor *nei  = isDummyNode(node) ? nullptr : (PhyloNeighbor*) node->findNeighbor(dad);
+        PhyloNeighbor *nei2 = isDummyNode(node) ? nullptr : (PhyloNeighbor*) dad->findNeighbor(node);
         
         // first initialize partial_pars
-        if (nei->partial_pars==nullptr) {
-            nei->partial_pars = central_partial_pars + (index * pars_block_size);
-            index++;
+        if (nei!=nullptr && nei->partial_pars==nullptr) {
+            nei->partial_pars = central_partial_pars + (index_pars * pars_block_size);
+            ++index_pars;
         }
-        if (nei2->partial_pars==nullptr) {
-            nei2->partial_pars = central_partial_pars + (index * pars_block_size);
-            index ++;
+        if (nei2!=nullptr && nei2->partial_pars==nullptr) {
+            nei2->partial_pars = central_partial_pars + (index_pars * pars_block_size);
+            ++index_pars;
         }
-        ASSERT(index < nodeNum * 2 - 1);
+        ASSERT(index_pars < nodeNum * 2 - 1);
         
         // now initialize partial_lh and scale_num
         if (params->lh_mem_save == LM_PER_NODE) {
-            if (!node->isLeaf()) { // only allocate memory to internal node
-                nei->partial_lh = NULL; // do not allocate memory for tip, use tip_partial_lh instead
-                nei->scale_num = NULL;
-                nei2->scale_num = central_scale_num + ((indexlh) * scale_block_size);
-                nei2->partial_lh = central_partial_lh + (indexlh * lh_block_size);
-                indexlh++;
-            } else {
-                nei->partial_lh = NULL; 
-                nei->scale_num = NULL;
-                nei2->scale_num = NULL;
-                nei2->partial_lh = NULL;
+            if (nei!=nullptr && fullOn && !dad->isLeaf()) {
+                // only allocate memory to internal node
+                if (nei->partial_lh==nullptr) {
+                    nei->scale_num  = central_scale_num  + (index_lh * scale_block_size);
+                    nei->partial_lh = central_partial_lh + (index_lh * lh_block_size);
+#if (0)
+                    std::cout << "allocating partial_lh block " << index_lh
+                        << " " << pointer_to_hex(nei->partial_lh)
+                        << " to back-neighbour " << pointer_to_hex(nei)
+                        << " of node " << pointer_to_hex(node) << std::endl;
+#endif
+                    ++index_lh;
+                }
             }
-        } else {
-            nei->partial_lh = NULL;
-            nei->scale_num = NULL;
-            nei2->scale_num = NULL;
-            nei2->partial_lh = NULL;
+            if (nei2!=nullptr && !node->isLeaf()) {
+                // only allocate memory to internal node
+                if (nei2->partial_lh==nullptr) {
+                    nei2->scale_num  = central_scale_num  + (index_lh * scale_block_size);
+                    nei2->partial_lh = central_partial_lh + (index_lh * lh_block_size);
+#if (0)
+                    std::cout << "allocating partial_lh block " << index_lh
+                        << " " << pointer_to_hex(nei2->partial_lh)
+                        << " to front-neighbour " << pointer_to_hex(nei2)
+                        << " of node " << pointer_to_hex(dad) << std::endl;
+#endif
+                    ++index_lh;
+                }
+            }
         }
-
-        // zero memory to allocate contiguous chunk of memory
-//        if (nei->partial_lh)
-//            memset(nei->partial_lh, 0, block_size*sizeof(double));
-//        if (nei2->partial_lh)
-//            memset(nei2->partial_lh, 0, block_size*sizeof(double));
-
-//        if (model->isSiteSpecificModel() && (sse == LK_EIGEN || sse == LK_EIGEN_SSE)) {
-//            // allocate tip memory for this model
-//            if (node->isLeaf()) {
-//                nei2->partial_lh = tip_partial_lh + (node->id * tip_block_size);
-//            }
-//            if (dad->isLeaf()) {
-//                nei->partial_lh = tip_partial_lh + (dad->id * tip_block_size);
-//            }
-//        }
     }
     FOR_NEIGHBOR_IT(node, dad, it) {
         PhyloNode* child = (PhyloNode*) (*it)->node;
-        if (isDummyNode(child)) {
-            initializeAllPartialLh(index, indexlh, child, node);
+        if (!isDummyNode(child)) {
+            initializeAllPartialLh(index_pars, index_lh, fullOn, child, node);
         } else {
             PhyloNeighbor* nei = (PhyloNeighbor*)(*it);
             if (nei->partial_pars==nullptr) {
-                nei->partial_pars = central_partial_pars + (index * pars_block_size);
-                index ++;
+                nei->partial_pars = central_partial_pars + (index_pars * pars_block_size);
+                ++index_pars;
+            }
+            if (nei->partial_lh==nullptr) {
+                nei->scale_num  = central_scale_num  + (index_lh * scale_block_size);
+                nei->partial_lh = central_partial_lh + (index_lh * lh_block_size);
+#if (0)
+                std::cout << "allocating partial_lh block " << index_lh
+                    << " " << pointer_to_hex(nei->partial_lh)
+                    << " to dummy-neighbour " << pointer_to_hex(nei)
+                    << " of node " << pointer_to_hex(node) << std::endl;
+#endif
+                ++index_lh;
             }
         }
     }
@@ -2829,10 +2847,9 @@ void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clear
 
 double PhyloTree::optimizeChildBranches(PhyloNode *node, PhyloNode *dad) {
     FOR_NEIGHBOR_DECLARE(node, dad, it){
-        optimizeOneBranch((PhyloNode*) node, (PhyloNode*) (*it)->node);
+        optimizeOneBranch(node, (PhyloNode*) (*it)->node);
     }
     return computeLikelihoodFromBuffer();
-//    return tree_lh;
 }
 
 void PhyloTree::optimizeAllBranchesLS(PhyloNode *node, PhyloNode *dad) {
@@ -2873,8 +2890,9 @@ void PhyloTree::computeBestTraversal(NodeVector &nodes, NodeVector &nodes2) {
     Node *farleaf = findFarthestLeaf();
     // double call to farthest leaf to find the longest path on the tree
     findFarthestLeaf(farleaf);
-    if (verbose_mode >= VB_MAX)
+    if (verbose_mode >= VB_MAX) {
         cout << "Tree diameter: " << farleaf->height << endl;
+    }
     getPreOrderBranches(nodes, nodes2, farleaf);
 }
 
@@ -2961,16 +2979,19 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
             double max_delta_lh = 1.0;
             // Increase max delta with PoMo because log likelihood is very much lower.
             if (aln->seq_type == SEQ_POMO) max_delta_lh = 3.0;
+            // Different max delta if (aln->seq_type == SEQ_CODON) ?!
             new_tree_lh = computeLikelihood();
             if (fabs(new_tree_lh-tree_lh) > max_delta_lh) {
                 hideProgress();
                 printTree(cout);
                 cout << endl;
                 cout << "new_tree_lh: " << new_tree_lh << "   tree_lh: " << tree_lh << endl;
+                if (!params->ignore_any_errors) {
+                    ASSERT(fabs(new_tree_lh-tree_lh) < max_delta_lh);
+                }
                 showProgress();
             }
             doneProgress();
-            ASSERT(fabs(new_tree_lh-tree_lh) < max_delta_lh);
             return new_tree_lh;
         }
 
@@ -4158,7 +4179,6 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
             mem_id++;
             mem_slots.addSpecialNei((PhyloNeighbor*)*saved_it[id]);
         }
-//        ((PhyloNeighbor*) (*saved_it[id]))->scale_num = newScaleNum();
     }
     if (params->nni5) {
         ASSERT(mem_id == 2);
@@ -5902,8 +5922,13 @@ void PhyloTree::reorientPartialLh(PhyloNeighbor* dad_branch, Node *dad) {
             break;
         }
     }
+    if ( dad_branch->partial_lh != nullptr ) {
+        return;
+    }
     if (params->lh_mem_save == LM_PER_NODE) {
+        hideProgress();
         ASSERT(dad_branch->partial_lh && "partial_lh is not re-oriented");
+        showProgress();
     }
 }
 
@@ -5911,8 +5936,8 @@ void PhyloTree::reorientPartialLh(PhyloNeighbor* dad_branch, Node *dad) {
         helper functions for computing tree traversal
  ****************************************************************************/
 
-bool PhyloTree::computeTraversalInfo(PhyloNeighbor *dad_branch, PhyloNode *dad, double* &buffer) {
-
+bool PhyloTree::computeTraversalInfo(PhyloNeighbor *dad_branch,
+                                     PhyloNode *dad, double* &buffer) {
     size_t nstates = aln->num_states;
     PhyloNode *node = (PhyloNode*)dad_branch->node;
 
@@ -6003,8 +6028,9 @@ bool PhyloTree::computeTraversalInfo(PhyloNeighbor *dad_branch, PhyloNode *dad, 
     if (params->lh_mem_save == LM_MEM_SAVE) {
         for (it = neivec.begin(); it != neivec.end(); it++) {
             if ((*it)->node != dad) {
-                if (!(*it)->node->isLeaf() && locked[it-neivec.begin()])
+                if (!(*it)->node->isLeaf() && locked[it-neivec.begin()]) {
                     mem_slots.unlock((PhyloNeighbor*)*it);
+                }
             }
         }
     }

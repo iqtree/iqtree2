@@ -470,6 +470,11 @@ public:
     
     virtual void initializeModel(Params &params, string model_name, ModelsBlock *models_block);
     
+    /*
+     Modify the tree by marking a subset of the taxa as
+    removed (if requested to do so).*/
+    void removeSampleTaxaIfRequested();
+    
     /**
      Modify the tree to match an alignment, resolving differences
      (by deleting nodes for taxa not found in the alignment,
@@ -490,8 +495,7 @@ public:
      @param index_lh indicates how many partial likelhood blocks
      have been allocated to nodes already in the tree
      */
-    virtual void addNewTaxaToTree(const IntVector& taxaIdsToAdd,
-                                  int index_parsimony, int index_lh);
+    virtual void addNewTaxaToTree(const IntVector& taxaIdsToAdd);
     
     /** set the root by name
         @param my_root root node name
@@ -817,6 +821,8 @@ public:
      */
     virtual void deleteAllPartialLh();
 
+    virtual void allocateCentralBlocks(size_t extra_block_count);
+    
     virtual void getBlockSizes(size_t& nptn, uint64_t& pars_block_size,
                                uint64_t& lh_block_size, uint64_t& scale_block_size );
     //
@@ -825,15 +831,16 @@ public:
     //      See... PhyloSuperTreePlen::initializeAllPartialLh
     //
     
-    void ensurePartialLHIsAllocated();
-    
+    void ensurePartialLHIsAllocated(size_t count_of_extra_blocks);
+        
     /**
             initialize partial_lh vector of all PhyloNeighbors, allocating central_partial_lh
             @param node the current node
             @param dad dad of the node, used to direct the search
             @param index the index
      */
-    virtual void initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    virtual void initializeAllPartialLh(int &index, int &indexlh, bool fullOn,
+                                        PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
 
     /**
@@ -2306,7 +2313,7 @@ public:
     
     /** hide the progress made on a task (e.g. before writing to cout)*/
     virtual void hideProgress();
-
+    
     /** hide the progress made on a task (e.g. after writing to cout)*/
     virtual void showProgress();
     

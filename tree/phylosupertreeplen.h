@@ -112,9 +112,11 @@ public:
             @param dad dad of the node, used to direct the search
             @param index the index
      */
-    virtual void initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    virtual void initializeAllPartialLh(int &index, int &indexlh, bool fullOn,
+                                        PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
-    void initializeAllPartialLh(double* &lh_addr, UBYTE* &scale_addr, UINT* &pars_addr, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    void initializeAllPartialLh(double* &lh_addr, UBYTE* &scale_addr, UINT* &pars_addr,
+                                PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
             de-allocate central_partial_lh

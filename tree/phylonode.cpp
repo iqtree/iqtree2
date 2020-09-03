@@ -11,6 +11,14 @@
 //
 #include "phylonode.h"
 
+std::string pointer_to_hex(void *ptr) {
+    uintptr_t p = reinterpret_cast<uintptr_t>(ptr);
+    std::stringstream s;
+    s << "0x"
+        << std::setfill ('0') << std::setw(sizeof(p)*2)
+        << std::hex << p;
+    return s.str();
+}
 
 void PhyloNeighbor::clearForwardPartialLh(Node *dad) {
 	clearPartialLh();
@@ -33,46 +41,74 @@ void PhyloNode::clearReversePartialLh(PhyloNode *dad) {
 }
 
 void PhyloNode::clearAllPartialLh(bool make_null, PhyloNode* dad) {
-	PhyloNeighbor* node_nei = (PhyloNeighbor*)findNeighbor(dad);
-	node_nei->partial_lh_computed = 0;
-	if (make_null) node_nei->partial_lh = NULL;
-
-
-	if (Params::getInstance().lh_mem_save == LM_MEM_SAVE)
-		node_nei->size = 0;
-
-	node_nei = (PhyloNeighbor*)dad->findNeighbor(this);
-	node_nei->partial_lh_computed = 0;
-	if (make_null) {
-		node_nei->partial_lh = NULL;
-	}
-	if (Params::getInstance().lh_mem_save == LM_MEM_SAVE) {
-		node_nei->size = 0;
-	}
-	for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it++) {
-		if ((*it)->node != dad) {
-			((PhyloNode*)(*it)->node)->clearAllPartialLh(make_null, this);
-		}
-	}
+    bool zeroSize = (Params::getInstance().lh_mem_save == LM_MEM_SAVE);
+    for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); ++it) {
+        PhyloNeighbor* nei = (PhyloNeighbor*)(*it);
+        nei->partial_lh_computed = 0;
+        if (make_null) {
+#if (0)
+            std::cout << "zapping partial_lh block " << pointer_to_hex(nei->partial_lh)
+                << " to front-neighbour " << pointer_to_hex(nei)
+                << " of node " << pointer_to_hex(this) << std::endl;
+#endif
+            nei->partial_lh = nullptr;
+        }
+        if (zeroSize) {
+            nei->size = 0;
+        }
+        if (nei->node != dad) {
+            ((PhyloNode*)(*it)->node)->clearAllPartialLh(make_null, this);
+        }
+    }
+    if (dad==nullptr) {
+        return;
+    }
+    PhyloNeighbor* backnei = dad->findNeighbor(this);
+    if (backnei==nullptr) {
+        return;
+    }
+    backnei->partial_lh_computed = 0;
+    if (make_null) {
+#if (0)
+        std::cout << "zapping partial_lh block " << pointer_to_hex(backnei->partial_lh)
+            << " to back-neighbour " << pointer_to_hex(backnei)
+            << " of dad " << pointer_to_hex(dad) << std::endl;
+#endif
+        backnei->partial_lh = nullptr;
+    }
+    if (zeroSize) {
+        backnei->size = 0;
+    }
 }
 
 void PhyloNode::clearAllScaleNum(PhyloNode* dad) {
     for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it++) {
-        ((PhyloNeighbor*)(*it))->scale_num = nullptr;
-        if ((*it)->node != dad) {
+        PhyloNeighbor* nei = (PhyloNeighbor*)(*it);
+        nei->scale_num = nullptr;
+        if (nei->node != dad) {
             ((PhyloNode*)(*it)->node)->clearAllScaleNum(this);
+        } else {
+            PhyloNeighbor* backnei = nei->getNode()->findNeighbor(this);
+            if (backnei!=nullptr) {
+                backnei->scale_num = nullptr;
+            }
         }
     }
 }
 
 void PhyloNode::clearAllPartialParsimony(PhyloNode* dad) {
     for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it++) {
-        ((PhyloNeighbor*)(*it))->partial_pars = nullptr;
+        PhyloNeighbor* nei = (PhyloNeighbor*)(*it);
+        nei->partial_pars = nullptr;
         if ((*it)->node != dad) {
             ((PhyloNode*)(*it)->node)->clearAllPartialParsimony(this);
+        } else {
+            PhyloNeighbor* backnei = nei->getNode()->findNeighbor(this);
+            if (backnei!=nullptr) {
+                backnei->partial_pars = nullptr;
+            }
         }
     }
-
 }
 
 PhyloNode::PhyloNode()
@@ -120,4 +156,10 @@ int PhyloNode::computeSize(PhyloNode *dad) {
     }
     return nei->size;
 }
+
+PhyloNeighbor* PhyloNode::findNeighbor(Node* node)
+{
+    return (PhyloNeighbor*) Node::findNeighbor(node);
+}
+
 

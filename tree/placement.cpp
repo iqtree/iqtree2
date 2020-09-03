@@ -61,6 +61,34 @@ namespace {
         }
         return static_cast<size_t>(i);
     }
+    size_t getNumberOfTaxaToRemove(size_t countOfTaxa) {
+        if (countOfTaxa<4) {
+            return 0;
+        }
+        string removalString = getIncrementalParameter('R', "");
+        size_t len = removalString.length();
+        if (len==0) {
+            return 0;
+        }
+        size_t numberToRemove;
+        if (removalString[len-1] == '%') {
+            removalString = removalString.substr(0, len-1);
+            double percent = convert_double_nothrow(removalString.c_str(), 0);
+            if (percent<100.0/countOfTaxa) {
+                return 0;
+            } else if (100.0<=percent) {
+                return 0; //Just ignore it. Todo: warn it's being ignored.
+            }
+            numberToRemove = (size_t) floor(percent * countOfTaxa / 100.0 + .5 );
+        } else {
+            numberToRemove = convert_int_nothrow(removalString.c_str(),0);
+        }
+        if (numberToRemove<1 || countOfTaxa <= numberToRemove+3) {
+            return 0;
+        }
+        return numberToRemove;
+    }
+
     CostFunction getCostFunction() {
         auto cf = getIncrementalParameter('C', "MP");
         if (cf=="ML") {
@@ -129,32 +157,79 @@ double PhyloTree::addTaxonML(PhyloNode* added_taxon,     PhyloNode *added_node,
     dad->updateNeighbor(node, added_node, halfLen);
     added_node->updateNeighbor(DUMMY_NODE_1, node, halfLen);
     added_node->updateNeighbor(DUMMY_NODE_2, dad, halfLen);
-    // compute the likelihood
 
-    double best_score = optimizeChildBranches((PhyloNode*) added_node);
+    /*
+    added_node->findNeighbor(added_taxon)->partial_lh_computed = 0;
+    added_node->findNeighbor(node)->partial_lh_computed = 0;
+    added_node->findNeighbor(dad)->partial_lh_computed = 0;
+    added_taxon->findNeighbor(added_node)->partial_lh_computed = 0;
+    node->findNeighbor(added_node)->partial_lh_computed = 0;
+    dad->findNeighbor(added_node)->partial_lh_computed = 0;
+    */
+
+    // compute the likelihood
+    
+#if (0)
+    hideProgress();
+    std::cout << "In addTaxonML (before optimize)" << std::endl;
+    for (int i=0; i<added_node->neighbors.size(); ++i) {
+        PhyloNeighbor* nei = (PhyloNeighbor*) added_node->neighbors[i];
+        std::cout
+            << "U node=" << (intptr_t) nei->node
+            << " lh=" << (intptr_t) nei->partial_lh
+            << " pars=" << (intptr_t) nei->partial_pars << std::endl;
+    }
+    showProgress();
+#endif
+    clearAllPartialLH();
+    computeLikelihood();
+    double best_score  = optimizeChildBranches((PhyloNode*) added_node);
+    len_to_new_taxon   = added_node->findNeighbor(added_taxon)->length;
+    len_to_target_node = added_node->findNeighbor(node)->length;
+    len_to_target_dad  = added_node->findNeighbor(dad)->length;
+    
+#if (0)
+    hideProgress();
+    std::cout << "In addTaxonML, after optimize (score=" << best_score << ")" << std::endl;
+    std::cout << "local lengths: " << len_to_new_taxon << " "
+        << len_to_target_node << " " << len_to_target_dad << std::endl;
+    for (int i=0; i<added_node->neighbors.size(); ++i) {
+        PhyloNeighbor* nei = (PhyloNeighbor*) added_node->neighbors[i];
+        std::cout
+            << "P node=" << (intptr_t) nei->node
+            << " lh=" << (intptr_t) nei->partial_lh
+            << " pars=" << (intptr_t) nei->partial_pars << std::endl;
+    }
+#endif
+    showProgress();
     target_node = node;
     target_dad = dad;
+    
     // remove the added node
     node->updateNeighbor(added_node, dad, len);
     dad->updateNeighbor(added_node, node, len);
-    added_node->updateNeighbor(node, DUMMY_NODE_1, len);
-    added_node->updateNeighbor(dad, DUMMY_NODE_2, len);
+    added_node->updateNeighbor(node, DUMMY_NODE_1, halfLen);
+    added_node->updateNeighbor(dad,  DUMMY_NODE_2, halfLen);
+    node->findNeighbor(dad)->partial_lh_computed = 0;
+    dad->findNeighbor(node)->partial_lh_computed = 0;
 
     // now traverse the tree downwards
     FOR_NEIGHBOR_IT(node, dad, it){
-        PhyloNode *target_node2 = nullptr;
-        PhyloNode *target_dad2  = nullptr;
+        PhyloNode* child = (PhyloNode*)(*it)->node;
+        PhyloNode* target_node2 = nullptr;
+        PhyloNode* target_dad2  = nullptr;
         double len_child = 0;
         double len_node  = 0;
         double len_dad   = 0;
+            
         double score = addTaxonML(added_taxon,  added_node,
-                                  (PhyloNode*)(*it)->node, (PhyloNode*)node,
+                                  child, (PhyloNode*)node,
                                   target_node2, target_dad2,
                                   len_child, len_node, len_dad);
         if (score > best_score) {
-            best_score = score;
-            target_node = target_node2;
-            target_dad  = target_dad2;
+            best_score         = score;
+            target_node        = target_node2;
+            target_dad         = target_dad2;
             len_to_new_taxon   = len_child;
             len_to_target_node = len_node;
             len_to_target_dad  = len_dad;
@@ -178,10 +253,12 @@ void PhyloTree::addTaxonMP(PhyloNode* added_taxon, PhyloNode *added_node,
         added_node->updateNeighbor(DUMMY_NODE_1, node, halfLen);
         added_node->updateNeighbor(DUMMY_NODE_2, dad, halfLen);
         
-        ((PhyloNeighbor*)added_taxon->findNeighbor(added_node))->partial_lh_computed = 0;
-        ((PhyloNeighbor*)added_node->findNeighbor(added_taxon))->partial_lh_computed = 0;
-        ((PhyloNeighbor*)added_node->findNeighbor(node))->partial_lh_computed = 0;
-        ((PhyloNeighbor*)added_node->findNeighbor(dad))->partial_lh_computed = 0;
+        added_node->findNeighbor(added_taxon)->partial_lh_computed = 0;
+        added_node->findNeighbor(node)->partial_lh_computed = 0;
+        added_node->findNeighbor(dad)->partial_lh_computed = 0;
+        added_taxon->findNeighbor(added_node)->partial_lh_computed = 0;
+        node->findNeighbor(added_node)->partial_lh_computed = 0;
+        dad->findNeighbor(added_node)->partial_lh_computed = 0;
 
         // score it
         score = computeParsimonyBranch((PhyloNeighbor*)added_taxon->findNeighbor(added_node),
@@ -192,6 +269,8 @@ void PhyloTree::addTaxonMP(PhyloNode* added_taxon, PhyloNode *added_node,
         dad->updateNeighbor  ( added_node, node, len);
         added_node->updateNeighbor ( node, DUMMY_NODE_1, 0);
         added_node->updateNeighbor ( dad,  DUMMY_NODE_2, 0);
+        node->findNeighbor(dad)->partial_lh_computed = 0;
+        dad->findNeighbor(node)->partial_lh_computed = 0;
     }
 
     if (score < bestScore) {
@@ -254,8 +333,38 @@ public:
         inserted      = false;
             
         // assign partial_pars and partial_lh storage
-        phylo_tree->initializeAllPartialLh(index_parsimony, index_lh, added_node, new_taxon);
-        phylo_tree->initializeAllPartialLh(index_parsimony, index_lh, new_taxon,  added_node);
+        phylo_tree->initializeAllPartialLh(index_parsimony, index_lh, true, added_node, nullptr);
+
+        {
+            size_t   nptn;
+            uint64_t pars_block_size, lh_block_size, scale_block_size;
+            phylo_tree->getBlockSizes( nptn, pars_block_size, lh_block_size, scale_block_size );
+            
+            PhyloNeighbor* nei = (PhyloNeighbor*)added_node->findNeighbor(new_taxon);
+            if (nei->partial_lh==nullptr) {
+                nei->partial_lh = phylo_tree->central_partial_lh + (index_lh * lh_block_size);
+                nei->scale_num  = phylo_tree->central_scale_num + scale_block_size;
+                ++index_lh;
+            }
+            
+            nei = (PhyloNeighbor*)new_taxon->findNeighbor(added_node);
+            if (nei->partial_lh==nullptr) {
+                nei->partial_lh = phylo_tree->central_partial_lh + (index_lh * lh_block_size);
+                nei->scale_num  = phylo_tree->central_scale_num + scale_block_size;
+                ++index_lh;
+            }
+        }
+#if (0)
+        phylo_tree->hideProgress();
+        for (int i=0; i<added_node->neighbors.size(); ++i) {
+            PhyloNeighbor* nei = (PhyloNeighbor*) added_node->neighbors[i];
+            std::cout
+                << "I node=" << (intptr_t) nei->node
+                << " lh=" << (intptr_t) nei->partial_lh
+                << " pars=" << (intptr_t) nei->partial_pars << std::endl;
+        }
+        phylo_tree->showProgress();
+#endif
     }
     void findPlacement(CostFunction costFunction,
                        PhyloNode *search_start, PhyloNode *search_backstop) {
@@ -298,10 +407,20 @@ public:
         added_node->updateNeighbor(DUMMY_NODE_1, target_node, lenToNode);
         added_node->updateNeighbor(DUMMY_NODE_2, target_dad,  lenToDad);
         
+        
+        
         //Set length of link to new taxon too
         added_node->findNeighbor(new_taxon)->length = lenToNewTaxon;
         new_taxon->findNeighbor(added_node)->length = lenToNewTaxon;
         
+        //Mark partial_lh (and partial_parsimony) of/to added_node out of date
+        added_node->findNeighbor(new_taxon)->partial_lh_computed = 0;
+        added_node->findNeighbor(target_node)->partial_lh_computed = 0;
+        added_node->findNeighbor(target_dad)->partial_lh_computed = 0;
+        new_taxon->findNeighbor(added_node)->partial_lh_computed = 0;
+        target_node->findNeighbor(added_node)->partial_lh_computed = 0;
+        target_dad->findNeighbor(added_node)->partial_lh_computed = 0;
+
         inserted = true;
     }
     bool operator < (const CandidateTaxon& rhs) const {
@@ -320,8 +439,33 @@ public:
     }
 };
 
-void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
-                                 int index_parsimony, int index_lh) {
+void PhyloTree::removeSampleTaxaIfRequested() {
+    size_t nseq = aln->getNSeq();
+    size_t countOfTaxaToRemove = getNumberOfTaxaToRemove(nseq);
+    if (0<countOfTaxaToRemove) {
+        map<string, Node*> mapNameToNode;
+        getMapOfTaxonNameToNode(nullptr, nullptr, mapNameToNode);
+        size_t r = 0;
+        for (size_t seq = 0; seq < nseq; ++seq) {
+            r += countOfTaxaToRemove;
+            if ( r >= nseq ) {
+                r -= nseq;
+                string seq_name = aln->getSeqName(seq);
+                auto it = mapNameToNode.find(seq_name);
+                if (it!=mapNameToNode.end()) {
+                    Node* node = it->second;
+                    auto newName = node->name + "_Removed";
+                    if (mapNameToNode.find(newName) == mapNameToNode.end()) {
+                        node->name = newName;
+                        mapNameToNode[newName] = node;
+                    }
+                }
+            }
+        }
+    }
+}
+
+void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
     //
     //Assumes: The tree is rooted.
     //
@@ -340,6 +484,16 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
     size_t   nptn;
     uint64_t pars_block_size, lh_block_size, scale_block_size;
     getBlockSizes( nptn, pars_block_size, lh_block_size, scale_block_size );
+    
+    int index_parsimony = 0;
+    int index_lh        = 0;
+    deleteAllPartialLh();
+    ensurePartialLHIsAllocated(leafNum * 2 + taxaIdsToAdd.size() * 6);
+    initializeAllPartialLh(index_parsimony, index_lh, true);
+    std::cout << "After overallocating lh blocks, index_lh was " << index_lh << std::endl;
+    double likelihood = optimizeAllBranches();
+    std::cout << "Likelihood score before insertions was " << likelihood << std::endl;
+
     
     switch (placement) {
         case MAXIMUM_PARSIMONY:
@@ -375,7 +529,7 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
                 case MAXIMUM_PARSIMONY:
                     clearAllPartialLH();
                     score = - computeParsimony();
-                    if (true) { //if ( verbose_mode >= VB_DEBUG) {
+                    if ( verbose_mode >= VB_MIN) {
                         hideProgress();
                         std::cout << "Parsimony score is currently "
                             << -score << std::endl;
@@ -383,8 +537,9 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
                     }
                     break;
                 case MAXIMUM_LIKELIHOOD:
+                    clearAllPartialLH();
                     score = computeLikelihood();
-                    if (true) { //if ( verbose_mode >= VB_DEBUG) {
+                    if ( verbose_mode >= VB_MIN) {
                         hideProgress();
                         std::cout << "Log-likelihood is currently "
                             << score << std::endl;
@@ -405,7 +560,14 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
             }
             for (size_t i=batchStart; i<batchStop; ++i) {
                 CandidateTaxon& c = candidates[i];
+                hideProgress();
+                std::cout << "Scoring ... " << c.taxonName << std::endl;
                 c.findPlacement(placement, search_start, search_backstop);
+                if ( verbose_mode >= VB_MIN ) {
+                    hideProgress();
+                    std::cout << "Scored " << c.score << " for placement of " << c.taxonName << std::endl;
+                    showProgress();
+                }
             }
             size_t insertStop = batchStart + insertsPerBatch;
             std::sort( candidates.begin() + batchStart, candidates.begin() + batchStop);
@@ -416,12 +578,12 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
             for (size_t i = batchStart; i<insertStop; ++i) {
                 CandidateTaxon& c = candidates[i];
                 if (c.canInsert()) {
-                    //if ( verbose_mode >= VB_DEBUG) {
+                    if ( verbose_mode >= VB_MIN) {
                         hideProgress();
                         std::cout << "Inserting " << c.taxonName
                             << " which had (tree) score " << c.score << std::endl;
                         showProgress();
-                    //}
+                    }
                     c.insertIntoTree();
                     switch (localCleanup) {
                         //Todo: implement local cleanup options
@@ -432,7 +594,7 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
                     ++insertCount;
                 }
             }
-            if ( 1 < batchStop - batchStart && verbose_mode >= VB_MED ) {
+            if ( 1 < batchStop - batchStart && verbose_mode >= VB_MIN ) {
                 hideProgress();
                 std::cout << "Inserted " << (insertCount)
                     << " out of a batch of " << (batchStop - batchStart) << "." << std::endl;
@@ -479,5 +641,7 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
     initializeTree();
     deleteAllPartialLh();
     initializeAllPartialLh();
-    optimizeAllBranches();
+    if (placement==MAXIMUM_LIKELIHOOD) {
+        optimizeAllBranches();
+    }
 }
