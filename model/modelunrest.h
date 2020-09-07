@@ -48,6 +48,7 @@ public:
     virtual void restoreCheckpoint();
 
 protected:
+	void writeInfo(ostream &out);
 };
 
 #endif /* MODELUNREST_H_ */
