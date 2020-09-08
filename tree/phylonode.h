@@ -271,6 +271,8 @@ public:
 
     PhyloNeighbor* findNeighbor(Node* node);
     
+    PhyloNeighbor* firstNeighbor();
+    
 };
 
 

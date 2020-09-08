@@ -46,11 +46,6 @@ void PhyloNode::clearAllPartialLh(bool make_null, PhyloNode* dad) {
         PhyloNeighbor* nei = (PhyloNeighbor*)(*it);
         nei->partial_lh_computed = 0;
         if (make_null) {
-#if (0)
-            std::cout << "zapping partial_lh block " << pointer_to_hex(nei->partial_lh)
-                << " to front-neighbour " << pointer_to_hex(nei)
-                << " of node " << pointer_to_hex(this) << std::endl;
-#endif
             nei->partial_lh = nullptr;
         }
         if (zeroSize) {
@@ -69,11 +64,6 @@ void PhyloNode::clearAllPartialLh(bool make_null, PhyloNode* dad) {
     }
     backnei->partial_lh_computed = 0;
     if (make_null) {
-#if (0)
-        std::cout << "zapping partial_lh block " << pointer_to_hex(backnei->partial_lh)
-            << " to back-neighbour " << pointer_to_hex(backnei)
-            << " of dad " << pointer_to_hex(dad) << std::endl;
-#endif
         backnei->partial_lh = nullptr;
     }
     if (zeroSize) {
@@ -162,4 +152,10 @@ PhyloNeighbor* PhyloNode::findNeighbor(Node* node)
     return (PhyloNeighbor*) Node::findNeighbor(node);
 }
 
+PhyloNeighbor* PhyloNode::firstNeighbor() {
+    if (neighbors.empty()) {
+        return nullptr;
+    }
+    return (PhyloNeighbor*) neighbors[0];
+}
 
