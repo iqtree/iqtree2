@@ -13,5 +13,5 @@ nxsreader.cpp
 nxssetreader.cpp
 nxsstring.cpp
 nxstaxablock.cpp
-nxstoken.cpp
+nxstoken.cpp nxstoken.h
 nxstreesblock.cpp)

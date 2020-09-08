@@ -22,6 +22,7 @@
 #include <fstream>
 //#include "node.h"
 #include "ncl/ncl.h"
+#include "utils/gzstream.h"
 
 /**
 	MyReader class to make more informative message
@@ -33,17 +34,18 @@ public:
 	/**
 		input stream
 	*/
-	ifstream inf;
-
+    pigzstream inf;
+    
 	/**
 		constructor
 		@param infname input file name
 	*/
-	MyReader(char *infname) : NxsReader()
+	MyReader(char *infname) : NxsReader(), inf("nexus")
 	{
-		inf.open(infname, ios::binary);
-		if (!inf.is_open())
+		inf.open(infname, ios::binary | ios::in);
+        if (!inf.is_open()) {
 			outError(ERR_READ_INPUT);
+        }
 	}
 
 	/**
@@ -63,30 +65,35 @@ public:
 	*/
 	virtual void ExecuteStopping() {}
 
-	/**
-		enter a block
-		@param blockName block name
-		@return true always
-	*/
-	virtual bool EnteringBlock(NxsString blockName)
-	{
-		if (verbose_mode >= VB_MED)
-			cout << "Reading \"" << blockName << "\" block..." << endl;
+    /**
+     enter a block
+     @param blockName block name
+     @return true always
+     */
+    virtual bool EnteringBlock(NxsString blockName)
+    {
+        if (verbose_mode >= VB_MED) {
+            inf.hideProgress();
+            cout << "Reading \"" << blockName << "\" block..." << endl;
+            inf.showProgress();
+        }
+        
+        // Returning true means it is ok to delete any data associated with
+        // blocks of this type read in previously
+        //
+        return true;
+    }
 
-		// Returning true means it is ok to delete any data associated with
-		// blocks of this type read in previously
-		//
-		return true;
-	}
-
-	/**
-		skip a block
-		@param blockName block name
-	*/
-	virtual void SkippingBlock(NxsString blockName)
-	{
-		cout << "Skipping unknown block (" << blockName << ")..." << endl;
-	}
+    /**
+     skip a block
+     @param blockName block name
+     */
+    virtual void SkippingBlock(NxsString blockName)
+    {
+        inf.hideProgress();
+        cout << "Skipping unknown block (" << blockName << ")..." << endl;
+        inf.showProgress();
+    }
 
 	//virtual void SkippingDisabledBlock(NxsString blockName) {}
 
@@ -108,12 +115,12 @@ public:
 	*/
 	virtual void	NexusError(NxsString msg, file_pos pos, long line, long col)
 	{
+        inf.hideProgress();
 		cerr << endl;
 		cerr << "Error found at line " << line;
 		cerr << ", column " << col;
 		cerr << " (file position " << pos << "):" << endl;
 		cerr << msg << endl;
-
 		exit(1);
 	}
 };
