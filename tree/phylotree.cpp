@@ -532,9 +532,9 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
     double likelihood;
     
     if (will_delete) {
+        deleteAllPartialLh();
         ensurePartialLHIsAllocated(0);
         initializeAllPartialLh(index_parsimony, index_lh, false);
-        //Was formerly: likelihood = optimizeAllBranches();
         likelihood = computeLikelihood();
         std::cout << "Likelihood score before deletions was " << likelihood << std::endl;
         
@@ -781,9 +781,9 @@ void PhyloTree::clearAllPartialLH(bool make_null) {
     if (!root) {
         return;
     }
-    PhyloNode* r = getRoot();
-    PhyloNeighbor* nei = (PhyloNeighbor*)r->neighbors[0];
-    PhyloNode* nextToRoot = (PhyloNode*)nei->node;
+    PhyloNode*     r          = getRoot();
+    PhyloNeighbor* nei        = r->firstNeighbor();
+    PhyloNode*     nextToRoot = nei->getNode();
     nextToRoot->clearAllPartialLh(make_null, r);
     r->clearAllPartialLh(make_null, nextToRoot);
     tip_partial_lh_computed = 0;
@@ -795,9 +795,9 @@ void PhyloTree::clearAllPartialParsimony() {
     if (!root) {
         return;
     }
-    PhyloNode* r = getRoot();
-    PhyloNeighbor* nei = (PhyloNeighbor*)r->neighbors[0];
-    PhyloNode* nextToRoot = (PhyloNode*)nei->node;
+    PhyloNode*     r          = getRoot();
+    PhyloNeighbor* nei        = r->firstNeighbor();
+    PhyloNode*     nextToRoot = nei->getNode();
     nextToRoot->clearAllPartialParsimony(r);
     r->clearAllPartialParsimony(nextToRoot);
     nei->partial_pars = nullptr;
@@ -807,9 +807,9 @@ void PhyloTree::clearAllScaleNum() {
     if (!root) {
         return;
     }
-    PhyloNode* r = getRoot();
-    PhyloNeighbor* nei = (PhyloNeighbor*)r->neighbors[0];
-    PhyloNode* nextToRoot = (PhyloNode*)nei->node;
+    PhyloNode*     r          = getRoot();
+    PhyloNeighbor* nei        = r->firstNeighbor();
+    PhyloNode*     nextToRoot = nei->getNode();
     nextToRoot->clearAllScaleNum(r);
     r->clearAllScaleNum(nextToRoot);
     tip_partial_lh_computed = 0;
@@ -1438,42 +1438,23 @@ double PhyloTree::computeLikelihood(double *pattern_lh) {
     ASSERT(site_rate);
     ASSERT(root->isLeaf());
     if (!current_it) {
-        Node *leaf = findFarthestLeaf();
-        current_it = (PhyloNeighbor*)leaf->neighbors[0];
-        current_it_back = (PhyloNeighbor*)current_it->node->findNeighbor(leaf);
-//        PhyloNeighbor *nei = ((PhyloNeighbor*) root->neighbors[0]);
-//        current_it = nei;
-//        assert(current_it);
-//        current_it_back = (PhyloNeighbor*) nei->node->findNeighbor(root);
-//        assert(current_it_back);
+        PhyloNode* leaf = findFarthestLeaf();
+        current_it      = leaf->firstNeighbor();
+        current_it_back = current_it->getNode()->findNeighbor(leaf);
     }
-    double score;
-//    string root_name = ROOT_NAME;
-//    Node *vroot = findLeafName(root_name);
-//    if (root_state != aln->STATE_UNKNOWN && vroot) {
-//        if (verbose_mode >= VB_DEBUG)
-//            cout << __func__ << " HIT ROOT STATE " << endl;
-//        score = computeLikelihoodRooted((PhyloNeighbor*) vroot->neighbors[0], (PhyloNode*) vroot);
-//    } else {
-        score = computeLikelihoodBranch(current_it, (PhyloNode*) current_it_back->node);
-//    }
-    if (pattern_lh)
-        memmove(pattern_lh, _pattern_lh, aln->size() * sizeof(double));
-
-    if (pattern_lh && current_it->lh_scale_factor < 0.0) {
+    PhyloNode* node = current_it_back->getNode();
+    curScore        = computeLikelihoodBranch(current_it, node);
+    if (!pattern_lh) {
+        return curScore;
+    }
+    memmove(pattern_lh, _pattern_lh, aln->size() * sizeof(double));
+    if (current_it->lh_scale_factor < 0.0) {
         int nptn = aln->getNPattern();
-        //double check_score = 0.0;
         for (int i = 0; i < nptn; i++) {
             pattern_lh[i] += max(current_it->scale_num[i], UBYTE(0)) * LOG_SCALING_THRESHOLD;
-            //check_score += (pattern_lh[i] * (aln->at(i).frequency));
         }
-        /*       if (fabs(score - check_score) > 1e-6) {
-         cout << "score = " << score << " check_score = " << check_score << endl;
-         outError("Scaling error ", __func__);
-         }*/
     }
-    curScore = score;
-    return score;
+    return curScore;
 }
 
 //double PhyloTree::computeLikelihoodRooted(PhyloNeighbor *dad_branch, PhyloNode *dad) {
@@ -2726,10 +2707,10 @@ double PhyloTree::computeFunction(double value) {
 }
 
 void PhyloTree::computeFuncDerv(double value, double &df, double &ddf) {
-    current_it->length = value;
+    current_it->length      = value;
     current_it_back->length = value;
-    computeLikelihoodDerv(current_it, (PhyloNode*) current_it_back->node, &df, &ddf);
-    df = -df;
+    computeLikelihoodDerv(current_it, current_it_back->getNode(), &df, &ddf);
+    df  = -df;
     ddf = -ddf;
 }
 
@@ -2789,15 +2770,15 @@ int PhyloTree::getNBranchParameters(int brlen_type) {
     return df;
 }
 
-void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH, int maxNRStep) {
-
-    if (rooted && (node1 == root || node2 == root))
+void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2,
+                                    bool clearLH, int maxNRStep) {
+    if (rooted && (node1 == root || node2 == root)) {
         return; // does not optimize virtual branch from root
-        
-    double negative_lh;
-    current_it = (PhyloNeighbor*) node1->findNeighbor(node2);
+    }
+    current_it      = node1->findNeighbor(node2);
+    current_it_back = node2->findNeighbor(node1);
+
     ASSERT(current_it);
-    current_it_back = (PhyloNeighbor*) node2->findNeighbor(node1);
     ASSERT(current_it_back);
 
     double current_len = current_it->length;
@@ -2805,9 +2786,13 @@ void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clear
     ASSERT(current_len >= 0.0);
     theta_computed = false;
 //    mem_slots.cleanup();
+    double negative_lh;
+    double derivative_of_likelihood_wrt_length;
     if (optimize_by_newton) {
         // Newton-Raphson method
-        optx = minimizeNewton(params->min_branch_length, current_len, params->max_branch_length, params->min_branch_length, negative_lh, maxNRStep);
+        optx = minimizeNewton(params->min_branch_length, current_len,
+                              params->max_branch_length, params->min_branch_length,
+                              derivative_of_likelihood_wrt_length, maxNRStep);
         if (verbose_mode >= VB_DEBUG) {
             hideProgress();
             cout << "minimizeNewton logl: " << computeLikelihoodFromBuffer() << endl;
@@ -2816,33 +2801,30 @@ void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clear
         if (optx > params->max_branch_length*0.95 && !isSuperTree()) {
             // newton raphson diverged, reset
             double opt_lh = computeLikelihoodFromBuffer();
-            current_it->length = current_len;
+            current_it->length      = current_len;
             current_it_back->length = current_len;
             double orig_lh = computeLikelihoodFromBuffer();
             if (orig_lh > opt_lh) {
                 optx = current_len;
             }
         }
-    }    else {
+    } else {
         // Brent method
-        optx = minimizeOneDimen(params->min_branch_length, current_len, params->max_branch_length, params->min_branch_length, &negative_lh, &ferror);
+        optx = minimizeOneDimen(params->min_branch_length, current_len,
+                                params->max_branch_length, params->min_branch_length,
+                                &negative_lh, &ferror);
         if (verbose_mode >= VB_MAX) {
             hideProgress();
             cout << "minimizeBrent logl: " << -negative_lh << endl;
             showProgress();
         }
     }
-
-    current_it->length = optx;
+    current_it->length      = optx;
     current_it_back->length = optx;
-    //curScore = -negative_lh;
-
     if (clearLH && current_len != optx) {
         node1->clearReversePartialLh(node2);
         node2->clearReversePartialLh(node1);
     }
-
-//    return -negative_lh;
 }
 
 double PhyloTree::optimizeChildBranches(PhyloNode *node, PhyloNode *dad) {
@@ -2856,15 +2838,13 @@ void PhyloTree::optimizeAllBranchesLS(PhyloNode *node, PhyloNode *dad) {
     if (!node) {
         node = (PhyloNode*) root;
     }
-
     if (dad) {
         double lsBran = optimizeOneBranchLS(node, dad);
-        PhyloNeighbor *node_dad_nei = (PhyloNeighbor*) node->findNeighbor(dad);
-        PhyloNeighbor *dad_node_nei = (PhyloNeighbor*) dad->findNeighbor(node);
+        PhyloNeighbor *node_dad_nei = node->findNeighbor(dad);
+        PhyloNeighbor *dad_node_nei = dad->findNeighbor(node);
         node_dad_nei->length = lsBran;
         dad_node_nei->length = lsBran;
     }
-
     for (NeighborVec::iterator it = (node)->neighbors.begin(); it != (node)->neighbors.end(); it++) {
         if ((*it)->node != (dad)) {
             optimizeAllBranchesLS((PhyloNode*) (*it)->node, node);
@@ -2887,7 +2867,7 @@ void PhyloTree::optimizeAllBranches(PhyloNode *node, PhyloNode *dad, int maxNRSt
 }
 
 void PhyloTree::computeBestTraversal(NodeVector &nodes, NodeVector &nodes2) {
-    Node *farleaf = findFarthestLeaf();
+    PhyloNode *farleaf = findFarthestLeaf();
     // double call to farthest leaf to find the longest path on the tree
     findFarthestLeaf(farleaf);
     if (verbose_mode >= VB_MAX) {
@@ -3228,7 +3208,7 @@ void PhyloTree::growTreeML(Alignment *alignment) {
         PhyloNode *target_dad  = nullptr;
         double dummy1, dummy2, dummy3;
         addTaxonML(new_taxon, added_node,  (PhyloNode*)root->neighbors[0]->node, (PhyloNode*)root,
-            target_node, target_dad,dummy1, dummy2, dummy3);
+                   false, target_node, target_dad,dummy1, dummy2, dummy3);
         // now insert the new node in the middle of the branch node-dad
         double len = target_dad->findNeighbor(target_node)->length;
         target_node->updateNeighbor(target_dad, added_node, len / 2.0);
@@ -6190,4 +6170,10 @@ void PhyloTree::showNoProgress() {
         progress = nullptr;
     }
     isShowingProgressDisabled = true;
+}
+
+    
+PhyloNode* PhyloTree::findFarthestLeaf(PhyloNode *node,
+                                       PhyloNode *dad) {
+    return (PhyloNode*) super::findFarthestLeaf(node, dad);
 }

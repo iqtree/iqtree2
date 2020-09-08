@@ -143,6 +143,13 @@ template <class T> T* ensure_aligned_allocated(T* & ptr, size_t size) {
     mem = nullptr;
 }
 
+#define LOG_LINE(lev,text) \
+    if (verbose_mode >= (lev)) { \
+        std::stringstream s; \
+        s << text; \
+        logLine(s.str()); \
+    } else 0
+
 /**
  *  Row Major Array For Eigen
  */
@@ -364,6 +371,8 @@ class PhyloTree : public MTree, public Optimization, public CheckpointFactory {
     friend class CandidateTaxon;
 
 public:
+    typedef MTree super;
+    
     /**
        default constructor ( everything is initialized to NULL)
      */
@@ -496,6 +505,9 @@ public:
      have been allocated to nodes already in the tree
      */
     virtual void addNewTaxaToTree(const IntVector& taxaIdsToAdd);
+    
+    virtual PhyloNode* findFarthestLeaf(PhyloNode *node = nullptr,
+                                       PhyloNode *dad = nullptr);
     
     /** set the root by name
         @param my_root root node name
@@ -1113,7 +1125,7 @@ public:
 
     /**
             compute the tree likelihood
-            @param pattern_lh (OUT) if not NULL, the function will assign pattern log-likelihoods to this vector
+            @param pattern_lh (OUT) if not nullptr, the function will assign pattern log-likelihoods to this vector
                             assuming pattern_lh has the size of the number of patterns
             @return tree likelihood
      */
@@ -1476,7 +1488,6 @@ public:
             @param node2 2nd end node of the branch
             @param clearLH true to clear the partial likelihood, otherwise false
             @param maxNRStep maximum number of Newton-Raphson steps
-            @return likelihood score
      */
     virtual void optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH = true, int maxNRStep = 100);
 
@@ -1708,6 +1719,8 @@ public:
             @param added_node interior node to add
             @param node the current node
             @param dad dad of the node, used to direct the search
+            @param isAddedAtMidpoint true if the node is to be added at the middle of
+                    the branch (if false, can be added anywhere in the branch)
             @param target_node (OUT) one end of the best branch found
             @param target_dad (OUT) the other end of the best branch found
             @param len_to_new_taxon length of link between added_taxon and added_node
@@ -1717,6 +1730,7 @@ public:
      */
     double addTaxonML(PhyloNode* added_taxon,  PhyloNode *added_node,
                       PhyloNode *node,         PhyloNode *dad,
+                      bool isAddedAtMidpoint,
                       PhyloNode* &target_node, PhyloNode* &target_dad,
                       double& lenToNewTaxon, double& lenToNode, double& lenToDad);
     
