@@ -332,10 +332,10 @@ struct SeqQuartetInfo {
 
 class TraversalInfo {
 public:
-    PhyloNeighbor *dad_branch;
-    PhyloNode *dad;
-    double *echildren;
-    double *partial_lh_leaves;
+    PhyloNeighbor* dad_branch;
+    PhyloNode*     dad;
+    double*        echildren;
+    double*        partial_lh_leaves;
 
     TraversalInfo(PhyloNeighbor *dad_branch, PhyloNode *dad) {
         this->dad = dad;
@@ -504,7 +504,10 @@ public:
      @param index_lh indicates how many partial likelhood blocks
      have been allocated to nodes already in the tree
      */
-    virtual void addNewTaxaToTree(const IntVector& taxaIdsToAdd);
+    void addNewTaxaToTree(const IntVector& taxaIdsToAdd);
+    
+    double taxaAdditionWorkEstimate(size_t newTaxaCount, size_t taxaPerBatch, size_t insertsPerBatch);
+
     
     virtual PhyloNode* findFarthestLeaf(PhyloNode *node = nullptr,
                                        PhyloNode *dad = nullptr);
@@ -857,20 +860,21 @@ public:
 
     /**
             clear all partial likelihood for a clean computation again
-            @param make_null true to make all partial_lh become NULL
+            @param set_to_null true to make all partial_lh become NULL
      */
-    virtual void clearAllPartialLH(bool make_null = false);
+    virtual void clearAllPartialLH(bool set_to_null = false);
     
     /**
             clear all partial parsimony data for a clean computation again
+     @param set_to_null true to make all partial_pars become NULL
      */
-    virtual void clearAllPartialParsimony();
+    virtual void clearAllPartialParsimony(bool set_to_null);
 
     /**
             clear all scale number data for a clean computation again
-            @param make_null true to make all scale_num become NULL
+            @param set_to_null true to make all scale_num become NULL
      */
-    virtual void clearAllScaleNum();
+    virtual void clearAllScaleNum(bool set_to_null);
 
     /**
      * compute all partial likelihoods if not computed before
@@ -1734,6 +1738,18 @@ public:
                       PhyloNode* &target_node, PhyloNode* &target_dad,
                       double& lenToNewTaxon, double& lenToNode, double& lenToDad);
     
+    /**
+            used internally by addTaxonML() to get parsimony branch length estimates
+            which are used as initial estimates for calculating ML branch lengths,
+            for candidate taxa at possible placement sites.
+            @param  fromNode
+            @param  toNode
+            @return the updated branch length
+     */
+
+    double recomputeParsimonyBranchLength(PhyloNode* fromNode, PhyloNode* toNode);
+
+    
     /****************************************************************************
             Distance function
      ****************************************************************************/
@@ -2454,6 +2470,10 @@ protected:
             The variable scale_num in PhyloNeighbor will be assigned to a region inside this variable.
      */
     UBYTE *central_scale_num;
+    /**
+            The total size (in bytes) of the memory block pointed to by central_scale_num
+     */
+    size_t central_scale_num_size_in_bytes;
     UBYTE *nni_scale_num; // used for NNI functions
 
     /**

@@ -958,7 +958,7 @@ protected:
             @param dad dad of 'node', used to direct the recursion
             @return the partial bonus of the branch (node -> dad)
      */
-    double computePartialBonus(Node *node, Node* dad);
+    double computePartialBonus(PhyloNode *node, PhyloNode* dad);
 
     /**
             determine the list of branches with the same best bonus point
@@ -968,7 +968,7 @@ protected:
             @param node the root of the sub-tree
             @param dad dad of 'node', used to direct the recursion
      */
-    void findBestBonus(double &best_score, NodeVector &best_nodes, NodeVector &best_dads, Node *node = NULL, Node *dad = NULL);
+    void findBestBonus(double &best_score, NodeVector &best_nodes, NodeVector &best_dads, PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
 
     void estDeltaMin();
 

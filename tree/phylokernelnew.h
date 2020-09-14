@@ -1146,8 +1146,9 @@ template<class VectorClass>
 void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compute_partial_lh) {
 
     if ((tip_partial_lh_computed & 1) == 0)
+    {
         computeTipPartialLikelihood();
-
+    }
     traversal_info.clear();
 #ifndef KERNEL_FIX_STATES
     size_t nstates = aln->num_states;
@@ -1166,32 +1167,27 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compu
 
     // sort subtrees for mem save technique
     if (params->lh_mem_save == LM_MEM_SAVE) {
-//        sortNeighborBySubtreeSize(node, dad);
-//        sortNeighborBySubtreeSize(dad, node);
         int node_size = node->computeSize(dad);
-        int dad_size = dad->computeSize(node);
-//        PhyloNeighbor *dad_branch = (PhyloNeighbor*)dad->findNeighbor(node);
-//        PhyloNeighbor *node_branch = (PhyloNeighbor*)node->findNeighbor(dad);
+        int dad_size  = dad->computeSize(node);
         if (node_size < dad_size) {
             // swap node and dad due to tree size
-            PhyloNode *tmp = node;
-            node = dad;
-            dad = tmp;
+            std::swap(node, dad);
         }
-
     }
 
-    PhyloNeighbor *dad_branch = (PhyloNeighbor*)dad->findNeighbor(node);
-    PhyloNeighbor *node_branch = (PhyloNeighbor*)node->findNeighbor(dad);
-    bool dad_locked = computeTraversalInfo(dad_branch, dad, buffer);
+    PhyloNeighbor* dad_branch  = dad->findNeighbor(node);
+    PhyloNeighbor* node_branch = node->findNeighbor(dad);
+    bool dad_locked  = computeTraversalInfo(dad_branch, dad, buffer);
     bool node_locked = computeTraversalInfo(node_branch, node, buffer);
     if (params->lh_mem_save == LM_MEM_SAVE) {
-        if (dad_locked)
+        if (dad_locked) {
             mem_slots.unlock(dad_branch);
-        if (node_locked)
+        }
+        if (node_locked) {
             mem_slots.unlock(node_branch);
+        }
     }
-
+    
     if (verbose_mode >= VB_DEBUG && traversal_info.size() > 0) {
         Node *saved = root;
         root = dad;
@@ -1206,9 +1202,7 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compu
     }
 
     if (!model->isSiteSpecificModel()) {
-
         int num_info = traversal_info.size();
-
         if (verbose_mode >= VB_DEBUG) {
             hideProgress();
             cout << "traversal order:";
@@ -1224,12 +1218,12 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compu
                 else
                     cout << it->dad_branch->node->id;
                 if (params->lh_mem_save == LM_MEM_SAVE) {
-                    if (it->dad_branch->partial_lh_computed)
+                    if (it->dad_branch->isLikelihoodComputed())
                         cout << " [";
                     else
                         cout << " (";
                     cout << mem_slots.findNei(it->dad_branch) - mem_slots.begin();
-                    if (it->dad_branch->partial_lh_computed)
+                    if (it->dad_branch->isLikelihoodComputed())
                         cout << "]";
                     else
                         cout << ")";
@@ -1299,7 +1293,7 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info
     PhyloNeighbor* dad_branch = info.dad_branch;
     PhyloNode*     dad        = info.dad;
     ASSERT(dad);
-    PhyloNode *node = (PhyloNode*)(dad_branch->node);
+    PhyloNode*     node       = dad_branch->getNode();
 
 #ifndef KERNEL_FIX_STATES
     size_t nstates = aln->num_states;
@@ -1338,9 +1332,10 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info
         PhyloNeighbor *nei = (PhyloNeighbor*)(*it);
         // make sure that the partial_lh of children are different!
         ASSERT(dad_branch->partial_lh != nei->partial_lh);
-		if (!left) left = nei; else right = nei;
-        if (nei->node->isLeaf())
+        if (!left) left = nei; else right = nei;
+        if (nei->node->isLeaf()) {
             num_leaves++;
+        }
 	}
 
     // precomputed buffer to save times
@@ -1382,21 +1377,14 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info
             echildren = info.echildren;
             partial_lh_leaves = info.partial_lh_leaves;
         }
-
     }
 
     double *eleft = echildren, *eright = echildren + block*nstates;
 
 	if (!left->node->isLeaf() && right->node->isLeaf()) {
-		PhyloNeighbor *tmp = left;
-		left = right;
-		right = tmp;
-        double *etmp = eleft;
-        eleft = eright;
-        eright = etmp;
-        etmp = len_left;
-        len_left = len_right;
-        len_right = etmp;
+        std::swap(left,     right);
+        std::swap(eleft,    eright);
+        std::swap(len_left, len_right);
 	}
 
     if (node->degree() > 3) {
@@ -1456,8 +1444,9 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info
                         VectorClass *partial_lh = partial_lh_all;
                         VectorClass *partial_lh_child = (VectorClass*)(child->partial_lh + ptn*block);
                         if (!SAFE_NUMERIC) {
-                            for (size_t i = 0; i < VectorClass::size(); i++)
+                            for (size_t i = 0; i < VectorClass::size(); i++) {
                                 dad_branch->scale_num[ptn+i] += child->scale_num[ptn+i];
+                            }
                         }
                         for (size_t c = 0; c < ncat_mix; c++) {
                             if (SAFE_NUMERIC) {
@@ -1465,8 +1454,9 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info
                                     scale_dad[x*ncat_mix+c] += scale_child[x*ncat_mix+c];
                             }
                             // compute real partial likelihood vector
-                            for (size_t i = 0; i < nstates; i++)
+                            for (size_t i = 0; i < nstates; i++) {
                                 expchild[i] = exp(eval_ptr[i]*len_child[c]) * partial_lh_child[i];
+                            }
                             for (size_t x = 0; x < nstates; x++) {
                                 VectorClass *this_evec = &evec_ptr[x*nstates];
 #ifdef KERNEL_FIX_STATES
@@ -1483,7 +1473,7 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info
                     len_child += ncat;
                 } else {
                     // non site specific model
-                    PhyloNeighbor *child = (PhyloNeighbor*)*it;
+                    PhyloNeighbor* child = (PhyloNeighbor*)*it;
                     auto stateRow = this->getConvertedSequenceByNumber(child->node->id);
                     auto unknown  = aln->STATE_UNKNOWN;
                     UBYTE *scale_child = SAFE_NUMERIC ? child->scale_num + ptn*ncat_mix : NULL;
@@ -2651,8 +2641,9 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
 {
     PhyloNode*     node        = dad_branch->getNode();
     PhyloNeighbor* node_branch = node->findNeighbor(dad);
-    if (!central_partial_lh)
+    if (!central_partial_lh) {
         initializeAllPartialLh();
+    }
     if (node->isLeaf()) {
         std::swap(dad,        node);
         std::swap(dad_branch, node_branch);
@@ -3339,15 +3330,17 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
             //reduction(+:all_tree_lh,all_prob_const) clause on
             //the omp parallel for.
             all_tree_lh += horizontal_add(vc_tree_lh);
-            if (ASC_Lewis)
+            if (ASC_Lewis) {
                 all_prob_const += horizontal_add(vc_prob_const);
+            }
         }
     }
 
     double tree_lh = all_tree_lh;
     if (!std::isfinite(tree_lh)) {
         if (!safe_numeric) {
-            outError("Numerical underflow (lh-from-buffer). Run again with the safe likelihood kernel via `-safe` option");
+            outError("Numerical underflow (lh-from-buffer)."
+                     " Run again with the safe likelihood kernel via `-safe` option");
         } else {
             if (!warnedAboutNumericalUnderflow) {
                 hideProgress();
@@ -3375,8 +3368,9 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
         size_t step_unobserved_ptns = model_factory->unobserved_ptns.size() / nstates;
         double *const_lh_next = const_lh + step_unobserved_ptns;
         for (int step = 1; step < nstates; step++, const_lh_next += step_unobserved_ptns) {
-            for (size_t ptn = 0; ptn < orig_nptn; ptn+=VectorClass::size())
+            for (size_t ptn = 0; ptn < orig_nptn; ptn+=VectorClass::size()) {
                 (VectorClass().load_a(&const_lh[ptn]) + VectorClass().load_a(&const_lh_next[ptn])).store_a(&const_lh[ptn]);
+            }
         }
         // cutoff the last entries if going beyond
         for (size_t ptn = orig_nptn; ptn < max_orig_nptn; ++ptn) {

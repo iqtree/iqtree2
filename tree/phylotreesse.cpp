@@ -220,24 +220,21 @@ void PhyloTree::computePartialLikelihood(TraversalInfo &info, size_t ptn_left, s
 
 double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad) {
 	return (this->*computeLikelihoodBranchPointer)(dad_branch, dad);
-
 }
 
-void PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad, double *df, double *ddf) {
-	(this->*computeLikelihoodDervPointer)(dad_branch, dad, df, ddf);
+void PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad,
+                                      double *df, double *ddf) {
+    (this->*computeLikelihoodDervPointer)(dad_branch, dad, df, ddf);
 }
-
 
 double PhyloTree::computeLikelihoodFromBuffer() {
-	ASSERT(current_it && current_it_back);
-
+    ASSERT(current_it && current_it_back);
     // TODO: buffer stuff for mixlen model
-	if (computeLikelihoodFromBufferPointer && optimize_by_newton)
-		return (this->*computeLikelihoodFromBufferPointer)();
-	else {
-		return (this->*computeLikelihoodBranchPointer)(current_it, (PhyloNode*)current_it_back->node);
+    if (computeLikelihoodFromBufferPointer && optimize_by_newton)
+        return (this->*computeLikelihoodFromBufferPointer)();
+    else {
+        return (this->*computeLikelihoodBranchPointer)(current_it, current_it_back->getNode());
     }
-
 }
 
 double PhyloTree::dotProductDoubleCall(double *x, double *y, int size) {
@@ -630,9 +627,10 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 
     // don't recompute the likelihood
 	assert(dad);
-    if (dad_branch->partial_lh_computed & 1)
+    if (dad_branch->isLikelihoodComputed()) {
         return;
-    dad_branch->partial_lh_computed |= 1;
+    }
+    dad_branch->setLikelihoodComputed(true);
     PhyloNode *node = (PhyloNode*)(dad_branch->node);
 
 
@@ -676,7 +674,7 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 	FOR_NEIGHBOR_IT(node, dad, it) {
         PhyloNeighbor *nei = (PhyloNeighbor*)*it;
 		if (!left) left = (PhyloNeighbor*)(*it); else right = (PhyloNeighbor*)(*it);
-        if ((nei->partial_lh_computed & 1) == 0)
+        if (!nei->isLikelihoodComputed())
             computePartialLikelihood(nei, node);
         dad_branch->lh_scale_factor += nei->lh_scale_factor;
         if (nei->node->isLeaf())
@@ -689,11 +687,9 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
         FOR_NEIGHBOR_IT(node, dad, it2) {
             PhyloNeighbor *backnei = ((PhyloNeighbor*)(*it2)->node->findNeighbor(node));
             if (backnei->partial_lh) {
-                dad_branch->partial_lh = backnei->partial_lh;
-                dad_branch->scale_num = backnei->scale_num;
-                backnei->partial_lh = NULL;
-                backnei->scale_num = NULL;
-                backnei->partial_lh_computed &= ~1; // clear bit
+                std::swap(dad_branch->partial_lh, backnei->partial_lh);
+                std::swap(dad_branch->scale_num,  backnei->scale_num);
+                backnei->setLikelihoodComputed(false); // clear bit
                 done = true;
                 break;
             }
@@ -1050,9 +1046,9 @@ void PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode 
     	dad_branch = node_branch;
     	node_branch = tmp_nei;
     }
-    if ((dad_branch->partial_lh_computed & 1) == 0)
+    if (!dad_branch->isLikelihoodComputed())
         computePartialLikelihoodEigen(dad_branch, dad);
-    if ((node_branch->partial_lh_computed & 1) == 0)
+    if (!node_branch->isLikelihoodComputed())
         computePartialLikelihoodEigen(node_branch, node);
         
     size_t nstates = aln->num_states;
@@ -1249,10 +1245,10 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
     	dad_branch = node_branch;
     	node_branch = tmp_nei;
     }
-    if ((dad_branch->partial_lh_computed & 1) == 0)
+    if (!dad_branch->isLikelihoodComputed())
 //        computePartialLikelihoodEigen(dad_branch, dad);
         computePartialLikelihood(dad_branch, dad);
-    if ((node_branch->partial_lh_computed & 1) == 0)
+    if (!node_branch->isLikelihoodComputed())
 //        computePartialLikelihoodEigen(node_branch, node);
         computePartialLikelihood(node_branch, node);
     double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
@@ -1450,6 +1446,7 @@ void PhyloTree::initMarginalAncestralState(ostream &out, bool &orig_kernel_nonre
         params->kernel_nonrev = true;
         setLikelihoodKernel(sse);
         clearAllPartialLH();
+        clearAllPartialParsimony(false);
     }
     _pattern_lh_cat_state = newPartialLh();
 
@@ -1555,9 +1552,9 @@ void PhyloTree::computeMarginalAncestralProbability(PhyloNeighbor *dad_branch, P
 
     // TODO: not working yet
 
-//    if ((dad_branch->partial_lh_computed & 1) == 0)
+//    if (!dad_branch->isLikelihoodComputed())
 //        computePartialLikelihood(dad_branch, dad);
-//    if ((node_branch->partial_lh_computed & 1) == 0)
+//    if (!node_branch->isLikelihoodComputed())
 //        computePartialLikelihood(node_branch, node);
     size_t nstates = aln->num_states;
     const size_t nstatesqr=nstates*nstates;
@@ -1699,6 +1696,7 @@ void PhyloTree::computeJointAncestralSequences(int *ancestral_seqs) {
     computeAncestralState((PhyloNeighbor*)root->neighbors[0], NULL, C, ancestral_seqs);
     
     clearAllPartialLH();
+    clearAllPartialParsimony(false);
     
     delete[] C;
 }
@@ -1726,11 +1724,9 @@ void PhyloTree::computeAncestralLikelihood(PhyloNeighbor *dad_branch, PhyloNode 
         FOR_NEIGHBOR_IT(node, dad, it2) {
             PhyloNeighbor *backnei = ((PhyloNeighbor*)(*it2)->node->findNeighbor(node));
             if (backnei->partial_lh) {
-                dad_branch->partial_lh = backnei->partial_lh;
-                dad_branch->scale_num = backnei->scale_num;
-                backnei->partial_lh = NULL;
-                backnei->scale_num = NULL;
-                backnei->partial_lh_computed &= ~1; // clear bit
+                std::swap(dad_branch->partial_lh, backnei->partial_lh);
+                std::swap(dad_branch->scale_num,  backnei->scale_num);
+                backnei->setLikelihoodComputed(false);
                 done = true;
                 break;
             }

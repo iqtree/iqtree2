@@ -21,38 +21,41 @@ std::string pointer_to_hex(void *ptr) {
 }
 
 void PhyloNeighbor::clearForwardPartialLh(Node *dad) {
-	clearPartialLh();
+	setLikelihoodComputed(false);
 	for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it ++)
 		if ((*it)->node != dad)
 			((PhyloNeighbor*)*it)->clearForwardPartialLh(node);
 }
 
 void PhyloNode::clearReversePartialLh(PhyloNode *dad) {
-//	PhyloNeighbor *node_nei = (PhyloNeighbor*)findNeighbor(dad);
-//	assert(node_nei);
-//	node_nei->partial_lh_computed = 0;
-	for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it ++)
-		if ((*it)->node != dad) {
-            PhyloNeighbor *nei = (PhyloNeighbor*)(*it)->node->findNeighbor(this);
-			nei->partial_lh_computed = 0;
+    //	PhyloNeighbor *node_nei = findNeighbor(dad);
+    //	assert(node_nei);
+    //	node_nei->setLikelihoodComputed(false);
+    for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it ++) {
+        PhyloNode* node = (PhyloNode*)(*it)->node;
+        if (node != dad) {
+            PhyloNeighbor* nei  = node->findNeighbor(this);
+            nei->setLikelihoodComputed(false);
             nei->size = 0;
-			((PhyloNode*)(*it)->node)->clearReversePartialLh(this);
-		}
+            node->clearReversePartialLh(this);
+        }
+    }
 }
 
-void PhyloNode::clearAllPartialLh(bool make_null, PhyloNode* dad) {
+void PhyloNode::clearAllPartialLh(bool set_to_null, PhyloNode* dad) {
     bool zeroSize = (Params::getInstance().lh_mem_save == LM_MEM_SAVE);
     for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); ++it) {
         PhyloNeighbor* nei = (PhyloNeighbor*)(*it);
-        nei->partial_lh_computed = 0;
-        if (make_null) {
+        PhyloNode* child   = nei->getNode();
+        nei->setLikelihoodComputed(false);
+        if (set_to_null) {
             nei->partial_lh = nullptr;
         }
         if (zeroSize) {
             nei->size = 0;
         }
-        if (nei->node != dad) {
-            ((PhyloNode*)(*it)->node)->clearAllPartialLh(make_null, this);
+        if (child != dad) {
+            child->clearAllPartialLh(set_to_null, this);
         }
     }
     if (dad==nullptr) {
@@ -62,8 +65,8 @@ void PhyloNode::clearAllPartialLh(bool make_null, PhyloNode* dad) {
     if (backnei==nullptr) {
         return;
     }
-    backnei->partial_lh_computed = 0;
-    if (make_null) {
+    backnei->setLikelihoodComputed(false);
+    if (set_to_null) {
         backnei->partial_lh = nullptr;
     }
     if (zeroSize) {
@@ -71,31 +74,40 @@ void PhyloNode::clearAllPartialLh(bool make_null, PhyloNode* dad) {
     }
 }
 
-void PhyloNode::clearAllScaleNum(PhyloNode* dad) {
+void PhyloNode::clearAllScaleNum(bool set_to_null, PhyloNode* dad) {
     for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it++) {
         PhyloNeighbor* nei = (PhyloNeighbor*)(*it);
-        nei->scale_num = nullptr;
-        if (nei->node != dad) {
-            ((PhyloNode*)(*it)->node)->clearAllScaleNum(this);
+        PhyloNode* child = nei->getNode();
+        if (set_to_null) {
+            nei->scale_num = nullptr;
+        }
+        if (child != dad) {
+            child->clearAllScaleNum(set_to_null, this);
         } else {
-            PhyloNeighbor* backnei = nei->getNode()->findNeighbor(this);
-            if (backnei!=nullptr) {
+            PhyloNeighbor* backnei = child->findNeighbor(this);
+            if (backnei!=nullptr && set_to_null) {
                 backnei->scale_num = nullptr;
             }
         }
     }
 }
 
-void PhyloNode::clearAllPartialParsimony(PhyloNode* dad) {
+void PhyloNode::clearAllPartialParsimony(bool set_to_null, PhyloNode* dad) {
     for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it++) {
         PhyloNeighbor* nei = (PhyloNeighbor*)(*it);
-        nei->partial_pars = nullptr;
-        if ((*it)->node != dad) {
-            ((PhyloNode*)(*it)->node)->clearAllPartialParsimony(this);
+        nei->setParsimonyComputed(false);
+        if (set_to_null) {
+            nei->partial_pars = nullptr;
+        }
+        if (nei->getNode() != dad) {
+            nei->getNode()->clearAllPartialParsimony(set_to_null, this);
         } else {
             PhyloNeighbor* backnei = nei->getNode()->findNeighbor(this);
             if (backnei!=nullptr) {
-                backnei->partial_pars = nullptr;
+                backnei->setParsimonyComputed(false);
+                if (set_to_null) {
+                    backnei->partial_pars = nullptr;
+                }
             }
         }
     }

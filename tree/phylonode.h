@@ -14,6 +14,15 @@
 
 #include "node.h"
 
+#define FOR_EACH_ADJACENT_PHYLO_NODE(mynode, mydad, it, mychild) \
+for (NeighborVec::iterator it = (mynode)->neighbors.begin(); it != (mynode)->neighbors.end(); ++it) \
+    for (PhyloNode* mychild = (PhyloNode*)(*it)->node ; mychild != mydad; mychild = mydad )
+
+#define FOR_EACH_PHYLO_NEIGHBOR(mynode, mydad, it, nei) \
+for (NeighborVec::iterator it = (mynode)->neighbors.begin(); it != (mynode)->neighbors.end(); ++it) \
+    for (PhyloNeighbor* nei = (PhyloNeighbor*)(*it); nei!=nullptr && nei->getNode() != mydad; nei=nullptr )
+
+
 std::string pointer_to_hex(void *ptr);
 
 typedef unsigned short UBYTE;
@@ -154,6 +163,35 @@ public:
     PhyloNode* getNode() {
         return (PhyloNode*)node;
     }
+    
+    bool isLikelihoodComputed() const {
+        return ( partial_lh_computed & LIKELIHOOD_IS_COMPUTED ) != 0;
+    }
+    
+    void setLikelihoodComputed(bool set) {
+        if (set) {
+            partial_lh_computed |= LIKELIHOOD_IS_COMPUTED;
+        } else {
+            partial_lh_computed &= ~LIKELIHOOD_IS_COMPUTED;
+        }
+    }
+    
+    bool isParsimonyComputed() const {
+       return ( partial_lh_computed & PARSIMONY_IS_COMPUTED ) != 0;
+    }
+           
+    void setParsimonyComputed(bool set) {
+        if (set) {
+            partial_lh_computed |= PARSIMONY_IS_COMPUTED;
+        } else {
+            partial_lh_computed &= ~PARSIMONY_IS_COMPUTED;
+        }
+    }
+    
+    void clearComputedFlags() {
+        partial_lh_computed = 0;
+    }
+
 
 private:
 
@@ -162,7 +200,11 @@ private:
         is computed (and up to date).
      */
     int partial_lh_computed;
+    
+    static const int LIKELIHOOD_IS_COMPUTED = 1;
+    static const int PARSIMONY_IS_COMPUTED  = 2;
 
+private:
     /**
         vector containing the partial likelihoods
      */
@@ -243,17 +285,18 @@ public:
     /**
         tell that all partial likelihood vectors below this node are not computed
      */
-    void clearAllPartialLh(bool make_null, PhyloNode *dad);
+    void clearAllPartialLh(bool set_to_null, PhyloNode *dad);
     
     /**
         forget all scale_num vectors below this node
      */
-    void clearAllScaleNum(PhyloNode* dad);
+    void clearAllScaleNum(bool set_to_null, PhyloNode* dad);
 
     /**
         tell that all partial parsimony vectors below this node are not computed
+        @param dad the node below which, all partial parsimony vectors are to be marked as uncomputed
      */
-    void clearAllPartialParsimony(PhyloNode *dad);
+    void clearAllPartialParsimony(bool set_to_null, PhyloNode *dad);
     
     /**
         tell that all partial likelihood vectors (in reverse direction) below this node are not computed

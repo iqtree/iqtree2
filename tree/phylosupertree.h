@@ -257,12 +257,12 @@ public:
     /**
      NEWLY ADDED (2014-12-04): clear all partial likelihood for a clean computation again
      */
-    virtual void clearAllPartialLH(bool make_null = false);
+    virtual void clearAllPartialLH(bool set_to_null = false);
     
     /**
      NEWLY ADDED (20-Aug-2020): clear all scale_num info for a clean computation again
      */
-    virtual void clearAllScaleNum();
+    virtual void clearAllScaleNum(bool set_to_null);
 
     /**
             compute the tree likelihood

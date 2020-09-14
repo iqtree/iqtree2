@@ -587,20 +587,14 @@ template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA>
 void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double *df, double *ddf) {
 #endif
 
-//    assert(rooted);
-
-    PhyloNode *node = (PhyloNode*) dad_branch->node;
-    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
+    PhyloNode*     node        = dad_branch->getNode();
+    PhyloNeighbor* node_branch = node->findNeighbor(dad);
     if (!central_partial_lh) {
         initializeAllPartialLh();
     }
     if (node->isLeaf() || (dad_branch->direction == AWAYFROM_ROOT && !isRootLeaf(dad))) {
-        PhyloNode *tmp_node = dad;
-        dad = node;
-        node = tmp_node;
-        PhyloNeighbor *tmp_nei = dad_branch;
-        dad_branch = node_branch;
-        node_branch = tmp_nei;
+        std::swap(dad, node);
+        std::swap(dad_branch, node_branch);
     }
 
 #ifdef KERNEL_FIX_STATES
@@ -669,8 +663,8 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch
          // make sure that we do not estimate the virtual branch length from the root
         // 2019-05-06: assertion removed as it can happen for partition model with missing data
         //ASSERT(!isRootLeaf(dad));
-    	// special treatment for TIP-INTERNAL NODE case
-//    	double *partial_lh_node = new double[(aln->STATE_UNKNOWN+1)*block*3];
+        // special treatment for TIP-INTERNAL NODE case
+        // double *partial_lh_node = new double[(aln->STATE_UNKNOWN+1)*block*3];
         double *partial_lh_node = buffer_partial_lh_ptr;
         double *partial_lh_derv1 = partial_lh_node + (aln->STATE_UNKNOWN+1)*block;
         double *partial_lh_derv2 = partial_lh_derv1 + (aln->STATE_UNKNOWN+1)*block;

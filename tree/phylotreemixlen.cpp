@@ -294,6 +294,7 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance, bool write_info) {
                 
         delete relative_rate;
         clearAllPartialLH();
+        clearAllPartialParsimony(false);
     }
 
     if (((PhyloNeighborMixlen*)root->neighbors[0])->lengths.size() != mixlen) {
@@ -312,6 +313,7 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance, bool write_info) {
         }
         initializeMixBranches();
         clearAllPartialLH();
+        clearAllPartialParsimony(false);
         relative_treelen = saved_treelen;
     }
 
@@ -519,7 +521,7 @@ double PhyloTreeMixlen::targetFunk(double x[]) {
     if (theta_computed)
         return -computeLikelihoodFromBuffer();
     else
-        return -computeLikelihoodBranch(current_it, (PhyloNode*)current_it_back->node);
+        return -computeLikelihoodBranch(current_it, current_it_back->getNode());
 }
 
 double PhyloTreeMixlen::derivativeFunk(double x[], double dfx[]) {
@@ -562,6 +564,7 @@ double PhyloTreeMixlen::optimizeAllBranches(int my_iterations, double tolerance,
 
 	initializeMixlen(tolerance, false);
     clearAllPartialLH();
+    clearAllPartialParsimony(false);
     
     double tree_lh = PhyloTree::optimizeAllBranches(my_iterations, tolerance, maxNRStep);
 
@@ -733,39 +736,35 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
     current_it->setLength(cur_mixture, value);
     current_it_back->setLength(cur_mixture, value);
 
-    (this->*computeLikelihoodDervMixlenPointer)(current_it, (PhyloNode*) current_it_back->node, df, ddf);
+    (this->*computeLikelihoodDervMixlenPointer)(current_it,  current_it_back->getNode(), df, ddf);
 
 	df = -df;
     ddf = -ddf;
     return;
 
 
-    PhyloNeighbor* dad_branch = current_it;
-    PhyloNode *dad = (PhyloNode*) current_it_back->node;
+    PhyloNeighbor* dad_branch  = current_it;
+    PhyloNode*     dad         = current_it_back->getNode();
 
-    PhyloNode *node = (PhyloNode*) dad_branch->node;
-    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
-    if (!central_partial_lh)
+    PhyloNode*     node        = dad_branch->getNode();
+    PhyloNeighbor* node_branch = node->findNeighbor(dad);
+    if (!central_partial_lh) {
         initializeAllPartialLh();
+    }
     if (node->isLeaf()) {
-    	PhyloNode *tmp_node = dad;
-    	dad = node;
-    	node = tmp_node;
-    	PhyloNeighbor *tmp_nei = dad_branch;
-    	dad_branch = node_branch;
-    	node_branch = tmp_nei;
+        std::swap(dad, node);
+        std::swap(dad_branch, node_branch);
     }
     
-    ASSERT((dad_branch->partial_lh_computed & 1) || node->isLeaf());
-    ASSERT((node_branch->partial_lh_computed & 1) || dad->isLeaf());
+    ASSERT(dad_branch->isLikelihoodComputed()  || node->isLeaf());
+    ASSERT(node_branch->isLikelihoodComputed() || dad->isLeaf());
 
-    size_t nstates = aln->num_states;
-    size_t ncat = site_rate->getNRate();
-    size_t nmixture = model->getNMixtures();
-
-    size_t block = ncat * nstates * nmixture;
-    size_t statemix = nstates * nmixture;
-    size_t statecat = nstates * ncat;
+    size_t nstates   = aln->num_states;
+    size_t ncat      = site_rate->getNRate();
+    size_t nmixture  = model->getNMixtures();
+    size_t block     = ncat * nstates * nmixture;
+    size_t statemix  = nstates * nmixture;
+    size_t statecat  = nstates * ncat;
     size_t orig_nptn = aln->size();
     size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
     size_t maxptn = get_safe_upper_limit(nptn);

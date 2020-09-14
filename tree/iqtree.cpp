@@ -1292,20 +1292,20 @@ int IQTree::assessQuartetParsimony(Node *leaf0, Node *leaf1, Node *leaf2, Node *
 }
 
 void IQTree::initializeBonus(PhyloNode *node, PhyloNode *dad) {
-    if (!node)
-        node = (PhyloNode*) root;
-    if (dad) {
-        PhyloNeighbor *node_nei = (PhyloNeighbor*) node->findNeighbor(dad);
-        PhyloNeighbor *dad_nei = (PhyloNeighbor*) dad->findNeighbor(node);
-        node_nei->lh_scale_factor = 0.0;
-        node_nei->partial_lh_computed = 0;
-        dad_nei->lh_scale_factor = 0.0;
-        dad_nei->partial_lh_computed = 0;
+    if (!node) {
+        node = getRoot();
     }
-
-    FOR_NEIGHBOR_IT(node, dad, it){
-    initializeBonus((PhyloNode*) ((*it)->node), node);
-}
+    if (dad!=nullptr) {
+        PhyloNeighbor *node_nei = node->findNeighbor(dad);
+        PhyloNeighbor *dad_nei  = dad->findNeighbor(node);
+        node_nei->lh_scale_factor = 0.0;
+        node_nei->clearComputedFlags();
+        dad_nei->lh_scale_factor = 0.0;
+        node_nei->clearComputedFlags();
+    }
+    FOR_EACH_ADJACENT_PHYLO_NODE(node, dad, it, child) {
+        initializeBonus(child, node);
+    }
 }
 
 void IQTree::raiseBonus(Neighbor *nei, Node *dad, double bonus) {
@@ -1317,22 +1317,24 @@ void IQTree::raiseBonus(Neighbor *nei, Node *dad, double bonus) {
     //    raiseBonus((*it), nei->node, bonus);
 }
 
-double IQTree::computePartialBonus(Node *node, Node* dad) {
-    PhyloNeighbor *node_nei = (PhyloNeighbor*) node->findNeighbor(dad);
-    if (node_nei->partial_lh_computed)
+double IQTree::computePartialBonus(PhyloNode *node, PhyloNode* dad) {
+    PhyloNeighbor *node_nei = node->findNeighbor(dad);
+    if (node_nei->isLikelihoodComputed()) {
         return node_nei->lh_scale_factor;
-
-    FOR_NEIGHBOR_IT(node, dad, it){
-    node_nei->lh_scale_factor += computePartialBonus((*it)->node, node);
-}
-    node_nei->partial_lh_computed = 1;
+    }
+    FOR_EACH_ADJACENT_PHYLO_NODE(node, dad, it, child) {
+        node_nei->lh_scale_factor += computePartialBonus(child, node);
+    }
+    //Note: formerly this cleared the parsimony computed flag.
+    //Now it only sets the likelihood computed flag (James B. 11-Sep-2020).
+    node_nei->setLikelihoodComputed(true);
     return node_nei->lh_scale_factor;
 }
 
-void IQTree::findBestBonus(double &best_score, NodeVector &best_nodes, NodeVector &best_dads, Node *node, Node *dad) {
+void IQTree::findBestBonus(double &best_score, NodeVector &best_nodes, NodeVector &best_dads, PhyloNode *node, PhyloNode *dad) {
     double score;
     if (!node)
-        node = root;
+        node = getRoot();
     if (!dad) {
         best_score = 0;
     } else {
@@ -1350,7 +1352,7 @@ void IQTree::findBestBonus(double &best_score, NodeVector &best_nodes, NodeVecto
     }
 
     FOR_NEIGHBOR_IT(node, dad, it){
-    findBestBonus(best_score, best_nodes, best_dads, (*it)->node, node);
+    findBestBonus(best_score, best_nodes, best_dads, (PhyloNode*)(*it)->node, node);
 }
 }
 
@@ -2042,8 +2044,8 @@ double IQTree::swapTaxa(PhyloNode *node1, PhyloNode *node2) {
     ASSERT(node1->isLeaf());
     ASSERT(node2->isLeaf());
 
-    PhyloNeighbor *node1nei = (PhyloNeighbor*) *(node1->neighbors.begin());
-    PhyloNeighbor *node2nei = (PhyloNeighbor*) *(node2->neighbors.begin());
+    PhyloNeighbor *node1nei = node1->firstNeighbor();
+    PhyloNeighbor *node2nei = node2->firstNeighbor();
 
     node2nei->node->updateNeighbor(node2, node1);
     node1nei->node->updateNeighbor(node1, node2);
@@ -2052,13 +2054,13 @@ double IQTree::swapTaxa(PhyloNode *node1, PhyloNode *node2) {
     node1->updateNeighbor(node1->neighbors.begin(), node2nei);
     node2->updateNeighbor(node2->neighbors.begin(), node1nei);
 
-    PhyloNeighbor *node1NewNei = (PhyloNeighbor*) *(node1->neighbors.begin());
-    PhyloNeighbor *node2NewNei = (PhyloNeighbor*) *(node2->neighbors.begin());
+    PhyloNeighbor *node1NewNei = node1->firstNeighbor();
+    PhyloNeighbor *node2NewNei = node2->firstNeighbor();
 
     // Reoptimize the branch lengths
-    optimizeOneBranch(node1, (PhyloNode*) node1NewNei->node);
-//    this->curScore = optimizeOneBranch(node2, (PhyloNode*) node2NewNei->node);
-    optimizeOneBranch(node2, (PhyloNode*) node2NewNei->node);
+    optimizeOneBranch(node1, node1NewNei->getNode());
+    //this->curScore = optimizeOneBranch(node2, (PhyloNode*) node2NewNei->node);
+    optimizeOneBranch(node2, node2NewNei->getNode());
     //drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE);
     this->curScore = computeLikelihoodFromBuffer();
     return this->curScore;

@@ -605,22 +605,21 @@ void PhyloSuperTree::initializeAllPartialLh() {
 	}
 }
 
-
 void PhyloSuperTree::deleteAllPartialLh() {
 	for (iterator it = begin(); it != end(); it++) {
 		(*it)->deleteAllPartialLh();
 	}
 }
 
-void PhyloSuperTree::clearAllPartialLH(bool make_null) {
+void PhyloSuperTree::clearAllPartialLH(bool set_to_null) {
     for (iterator it = begin(); it != end(); it++) {
-        (*it)->clearAllPartialLH(make_null);
+        (*it)->clearAllPartialLH(set_to_null);
     }
 }
 
-void PhyloSuperTree::clearAllScaleNum() {
+void PhyloSuperTree::clearAllScaleNum(bool set_to_null) {
     for (iterator it = begin(); it != end(); it++) {
-        (*it)->clearAllScaleNum();
+        (*it)->clearAllScaleNum(set_to_null);
     }
 }
 
@@ -1034,9 +1033,9 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
         	nniMoves[nniid].newloglh = nni_scores[nniid];
        		computePatternLikelihood(nniMoves[nniid].ptnlh, &nni_scores[nniid]);
         }
-        if (save_all_trees == 2)
-        	saveCurrentTree(nni_scores[nniid]);
-
+        if (save_all_trees == 2) {
+            saveCurrentTree(nni_scores[nniid]);
+        }
         // restore information
         for (part = 0; part < ntrees; part++) {
     		at(part)->current_it->lh_scale_factor = save_lh_factor[part];
