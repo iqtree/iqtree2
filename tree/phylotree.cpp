@@ -881,7 +881,7 @@ string PhyloTree::getModelNameParams() {
 
 void PhyloTree::saveBranchLengths(DoubleVector &lenvec, int startid, PhyloNode *node, PhyloNode *dad) {
     if (!node) {
-        node = (PhyloNode*) root;
+        node = getRoot();
         ASSERT(branchNum == nodeNum-1);
         if (lenvec.empty()) lenvec.resize(branchNum*getMixlen() + startid);
     }
@@ -893,7 +893,7 @@ void PhyloTree::saveBranchLengths(DoubleVector &lenvec, int startid, PhyloNode *
 
 void PhyloTree::restoreBranchLengths(DoubleVector &lenvec, int startid, PhyloNode *node, PhyloNode *dad) {
     if (!node) {
-        node = (PhyloNode*) root;
+        node = getRoot();
         ASSERT(!lenvec.empty());
     }
     FOR_NEIGHBOR_IT(node, dad, it){
@@ -940,7 +940,7 @@ int PhyloTree::initializeAllPartialPars() {
 void PhyloTree::initializeAllPartialPars(int &index, PhyloNode *node, PhyloNode *dad) {
     size_t pars_block_size = getBitsBlockSize();
     if (!node) {
-        node = (PhyloNode*) root;
+        node = getRoot();
         // allocate the big central partial pars memory
         if (!central_partial_pars) {
             uint64_t tip_partial_pars_size = get_safe_upper_limit_float(aln->num_states * (aln->STATE_UNKNOWN+1));
@@ -1336,7 +1336,7 @@ void PhyloTree::initializeAllPartialLh(int &index_pars, int &index_lh, bool full
     getBlockSizes( nptn, pars_block_size, lh_block_size, scale_block_size );
     
     if (!node) {
-        node = (PhyloNode*) root;
+        node = getRoot();
         allocateCentralBlocks(0);
         index_pars = 0;
         index_lh   = 0;
@@ -1664,8 +1664,8 @@ void PhyloTree::computePatternStateFreq(double *ptn_state_freq) {
 
 void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, double *ptn_lh_cat, SiteLoglType wsl) {
     /*    if (!dad_branch) {
-     dad_branch = (PhyloNeighbor*) root->neighbors[0];
-     dad = (PhyloNode*) root;
+     dad = getRoot();
+     dad_branch = dad->firstNeighbor();
      }*/
     int nptn = aln->getNPattern();
     int i;
@@ -1811,8 +1811,8 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
 
 void PhyloTree::computePatternProbabilityCategory(double *ptn_prob_cat, SiteLoglType wsl) {
     /*    if (!dad_branch) {
-     dad_branch = (PhyloNeighbor*) root->neighbors[0];
-     dad = (PhyloNode*) root;
+     dad = getRoot();
+     dad_branch = dad->firstNeighbor();
      }*/
     size_t ptn, nptn = aln->getNPattern();
     size_t cat, ncat = getNumLhCat(wsl);
@@ -1983,7 +1983,7 @@ double PhyloTree::computeLogLDiffVariance(PhyloTree *other_tree, double *pattern
 
 void PhyloTree::getUnmarkedNodes(PhyloNodeVector& unmarkedNodes, PhyloNode* node, PhyloNode* dad) {
     if (!node) {
-        node = (PhyloNode*) root;
+        node = getRoot();
     }
 
     if (markedNodeList.find(node->id) == markedNodeList.end()) {
@@ -2453,7 +2453,7 @@ double PhyloTree::approxOneBranch(PhyloNode *node, PhyloNode *dad, double b0) {
 
 void PhyloTree::approxAllBranches(PhyloNode *node, PhyloNode *dad) {
     if (!node) {
-        node = (PhyloNode*) root;
+        node = getRoot();
     }
 
     if (dad) {
@@ -2473,7 +2473,7 @@ void PhyloTree::approxAllBranches(PhyloNode *node, PhyloNode *dad) {
 /*
  void PhyloTree::computeAllSubtreeDists(PhyloNode* node, PhyloNode* dad) {
  if (!node) {
- node = (PhyloNode*) root;
+    node = getRoot();
  }
 
  if (dad) {
@@ -2940,7 +2940,7 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
 //                optimizeOneBranch((PhyloNode*)nodes[j], (PhyloNode*)nodes2[j]);
 //        }
 
-//            optimizeAllBranches((PhyloNode*) root, NULL, maxNRStep);
+//            optimizeAllBranches((getRoot(), NULL, maxNRStep);
             
         double new_tree_lh = computeLikelihoodFromBuffer();
         //cout<<"After opt  log-lh = "<<new_tree_lh<<endl;
@@ -4363,8 +4363,9 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
  ****************************************************************************/
 
 double PhyloTree::optimizeSPR_old(double cur_score, PhyloNode *node, PhyloNode *dad) {
-    if (!node)
-        node = (PhyloNode*) root;
+    if (!node) {
+        node = getRoot();
+    }
     PhyloNeighbor * dad1_nei = NULL;
     PhyloNeighbor * dad2_nei = NULL;
     PhyloNode * sibling1 = NULL;
@@ -4842,7 +4843,7 @@ double PhyloTree::optimizeSPR() {
     for (int i = 0; i < 100; i++) {
         cout << "i = " << i << endl;
         spr_moves.clear();
-        double score = optimizeSPR_old(cur_score, (PhyloNode*) root->neighbors[0]->node);
+        double score = optimizeSPR_old(cur_score, getRoot()->firstNeighbor()->getNode());
         clearAllPartialLH();
         clearAllPartialParsimony(false);
         // why this?
@@ -5366,8 +5367,8 @@ int PhyloTree::testAllBranches(int threshold, double best_score, double *pattern
         PhyloNode *node, PhyloNode *dad) {
     int num_low_support = 0;
     if (!node) {
-        node = (PhyloNode*) root;
-        root->neighbors[0]->node->name = "";
+        node = getRoot();
+        node->firstNeighbor()->getNode()->name = "";
         if (isSuperTree()) {
             int tmp = save_all_trees;
             save_all_trees = 2;
@@ -5584,8 +5585,9 @@ int PhyloTree::restoreStableClade(Alignment *original_aln, NodeVector &pruned_ta
 }
 
 bool PhyloTree::checkEqualScalingFactor(double &sum_scaling, PhyloNode *node, PhyloNode *dad) {
-    if (!node)
-        node = (PhyloNode*) root;
+    if (!node) {
+        node = getRoot();
+    }
     if (dad) {
         double scaling = ((PhyloNeighbor*) node->findNeighbor(dad))->lh_scale_factor
                 + ((PhyloNeighbor*) dad->findNeighbor(node))->lh_scale_factor;

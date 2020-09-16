@@ -35,7 +35,9 @@ TinaTree::~TinaTree()
 int TinaTree::computeParsimonyScore(int ptn, int &states, PhyloNode *node, PhyloNode *dad) {
     int score = 0;
     states = 0;
-    if (!node) node = (PhyloNode*) root;
+    if (!node) {
+        node = getRoot();
+    }
     if (node->degree() > 3)
         outError("Does not work with multifurcating tree");
     if (verbose_mode == VB_DEBUG)
@@ -114,7 +116,7 @@ void TinaTree::initializeAllPartialLh(int &index, int &indexlh, bool fullOn,
                                       PhyloNode *node, PhyloNode *dad) {
     int pars_block_size = getBitsBlockSize();
     if (!node) {
-        node = (PhyloNode*) root;
+        node = getRoot();
         // allocate the big central partial likelihoods memory
 
         if (!central_partial_pars) {

@@ -1741,16 +1741,16 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                 score += fast_popcount(w);
             }
             break;
-                
         }
-        dad_branch->partial_pars[nstates*VCSIZE*nsites] = score + left->partial_pars[nstates*VCSIZE*nsites] + right->partial_pars[nstates*VCSIZE*nsites];
+        auto total = nstates*VCSIZE*nsites;
+        dad_branch->partial_pars[total] = score + left->partial_pars[total] + right->partial_pars[total];
     }
 }
 
 template<class VectorClass>
 int PhyloTree::computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
-    PhyloNode *node = (PhyloNode*) dad_branch->node;
-    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
+    PhyloNode*     node        = dad_branch->getNode();
+    PhyloNeighbor* node_branch = node->findNeighbor(dad);
     ASSERT(node_branch);
     if (central_partial_pars==nullptr) {
         initializeAllPartialPars();
@@ -1783,9 +1783,9 @@ int PhyloTree::computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNo
         #endif
         for (int site = 0; site < nsites; site++) {
             size_t offset = entry_size*site;
-            VectorClass *x = (VectorClass*)(dad_branch->partial_pars + offset);
-            VectorClass *y = (VectorClass*)(node_branch->partial_pars + offset);
-            VectorClass w = (x[0] & y[0]) | (x[1] & y[1]) | (x[2] & y[2]) | (x[3] & y[3]);
+            VectorClass* x = (VectorClass*)(dad_branch->partial_pars + offset);
+            VectorClass* y = (VectorClass*)(node_branch->partial_pars + offset);
+            VectorClass  w = (x[0] & y[0]) | (x[1] & y[1]) | (x[2] & y[2]) | (x[3] & y[3]);
             w = ~w;
             score += fast_popcount(w);
             #ifndef _OPENMP
@@ -1844,7 +1844,6 @@ void PhyloTree::computePartialParsimonySankoffSIMD(PhyloNeighbor *dad_branch, Ph
     assert(dad_branch->partial_pars);
     
     size_t pars_block_size = getBitsBlockSize();
-    
     
     // internal node
     

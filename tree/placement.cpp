@@ -194,12 +194,12 @@ double PhyloTree::addTaxonML(PhyloNode* added_taxon,     PhyloNode *added_node,
     //                      V
     //                 added_taxon
     //
-    double len = dad_nei->length;
+    double len     = dad_nei->length;
     double halfLen = 0.5 * len;
     node->updateNeighbor(dad, added_node, halfLen);
     dad->updateNeighbor(node, added_node, halfLen);
     added_node->updateNeighbor(DUMMY_NODE_1, node, halfLen);
-    added_node->updateNeighbor(DUMMY_NODE_2, dad, halfLen);
+    added_node->updateNeighbor(DUMMY_NODE_2, dad,  halfLen);
     added_node->updateNeighbor(added_taxon, added_taxon, -1);
     added_taxon->updateNeighbor(added_node, added_node, -1);
     
@@ -214,13 +214,13 @@ double PhyloTree::addTaxonML(PhyloNode* added_taxon,     PhyloNode *added_node,
     PhyloNeighbor* nei;
     double best_score = 0;
     if (isAddedAtMidpoint) {
-        len_to_new_taxon = recomputeParsimonyBranchLength(added_taxon, added_node);
+        len_to_new_taxon   = recomputeParsimonyBranchLength(added_taxon, added_node);
         LOG_LINE(VB_DEBUG, "  Parsimony taxon->interior length " << len_to_new_taxon );
-        best_score = computeLikelihoodBranch(added_taxon->findNeighbor(added_node), added_taxon);
+        nei                = added_taxon->findNeighbor(added_node);
+        best_score         = computeLikelihoodBranch(nei, added_taxon);
         LOG_LINE(VB_DEBUG, "  Traversal info size is " << traversal_info.size());
         LOG_LINE(VB_DEBUG, "  Likelihood before optimization " << best_score);
         optimizeOneBranch(added_taxon, added_node, false, 20);
-        nei                = added_taxon->findNeighbor(added_node);
         len_to_target_dad  = halfLen;
         len_to_target_node = halfLen;
         len_to_new_taxon   = nei->length;
@@ -300,8 +300,7 @@ void PhyloTree::addTaxonMP(PhyloNode* added_taxon, PhyloNode *added_node,
             nei->clearComputedFlags();
             nei->getNode()->findNeighbor(added_node)->clearComputedFlags();
         }
-
-        // score it
+        
         score = computeParsimonyBranch(added_taxon->findNeighbor(added_node),
                                        added_taxon);
 
@@ -454,7 +453,6 @@ public:
             nei->clearComputedFlags();
             nei->getNode()->findNeighbor(added_node)->clearComputedFlags();
         }
-
         inserted = true;
     }
     bool operator < (const CandidateTaxon& rhs) const {
@@ -581,8 +579,8 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
             PhyloNode* search_backstop;
             switch (heuristic) {
                 case GLOBAL_SEARCH:
-                    search_start    = (PhyloNode*) root->neighbors[0]->node;
-                    search_backstop = (PhyloNode*) root;
+                    search_backstop = getRoot();
+                    search_start    = search_backstop->firstNeighbor()->getNode();
                     break;
             }
             for (size_t i=batchStart; i<batchStop; ++i) {

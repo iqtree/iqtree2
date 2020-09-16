@@ -3709,7 +3709,7 @@ void IQTree::saveCurrentTree(double cur_logl) {
 
 void IQTree::saveNNITrees(PhyloNode *node, PhyloNode *dad) {
     if (!node) {
-        node = (PhyloNode*) root;
+        node = getRoot();
     }
     if (dad && !node->isLeaf() && !dad->isLeaf()) {
         double *pat_lh1 = new double[aln->getNPattern()];

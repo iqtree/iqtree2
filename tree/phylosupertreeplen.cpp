@@ -1782,7 +1782,7 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
 
 void PhyloSuperTreePlen::initializeAllPartialLh(double* &lh_addr, UBYTE* &scale_addr, UINT* &pars_addr, PhyloNode *node, PhyloNode *dad) {
     if (!node)
-        node = (PhyloNode*) root;
+        node = getRoot();
     if (dad) {
         // assign a region in central_partial_lh to both Neihgbors (dad->node, and node->dad)
         SuperNeighbor *nei = (SuperNeighbor*) node->findNeighbor(dad);
