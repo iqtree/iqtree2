@@ -47,10 +47,11 @@ void showBanner() {
 }
 
 void showUsage() {
-    std::cout << "\nUsage: DecentTree -in [mldist] -out [newick] -t [algorithm] (-gz) (-no-banner)\n";
+    std::cout << "\nUsage: DecentTree -in [mldist] -out [newick] -t [algorithm] -nt [threadcount] (-gz) (-no-banner)\n";
     std::cout << "[mldist] is the path of a distance matrix file (which may be in .gz format)\n";
     std::cout << "[newick] is the path to write the newick tree file to (if it ends in .gz it will be compressed)\n";
     std::cout << "[algorithm] is one of the following, supported, distance matrix algorithms:\n";
+    std::cout << "[threadcount] is the number of threads, which should be between 1 and the number of CPUs.\n";
     std::cout << StartTree::Factory::getInstance().getListOfTreeBuilders();
 }
 
@@ -60,10 +61,11 @@ int main(int argc, char* argv[]) {
     std::string algorithmName  = StartTree::Factory::getNameOfDefaultTreeBuilder();
     std::string inputFilePath;
     std::string outputFilePath;
-    bool isOutputZipped = false;
+    bool isOutputZipped     = false;
     bool isBannerSuppressed = false;
+    int  threadCount        = 0;
     for (int argNum=1; argNum<argc; ++argNum) {
-        std::string arg = argv[argNum];
+        std::string arg     = argv[argNum];
         std::string nextArg = (argNum+1<argc) ? argv[argNum+1] : "";
         if (arg=="-in") {
             inputFilePath = nextArg;
@@ -88,6 +90,14 @@ int main(int argc, char* argv[]) {
         }
         else if (arg=="-no-banner") {
             isBannerSuppressed = true;
+        }
+        else if (arg=="-nt") {
+            if ( nextArg.empty() || nextArg[0]<'0' || '9'<nextArg[0] ) {
+                PROBLEM("-nt argument should be followed by a numeric thread count");
+                break;
+            }
+            threadCount = atol(nextArg.c_str());
+            ++argNum;
         }
         else {
             PROBLEM("Unrecognized command-line argument, " + arg);
@@ -116,6 +126,22 @@ int main(int argc, char* argv[]) {
     }
     if (!isBannerSuppressed) {
         showBanner();
+    }
+    if (threadCount!=0) {
+#ifdef _OPENMP
+        int maxThreadCount = omp_get_max_threads();
+        if (maxThreadCount < threadCount ) {
+            std::cerr << "Warning: Requested number of threads, " << threadCount
+                << " is greater than the maximum, " << maxThreadCount << "." << std::endl;
+            std::cerr << "Warning: " << maxThreadCount << " threads will be used." << std::endl;
+            threadCount = maxThreadCount;
+        }
+        omp_set_num_threads(threadCount);
+#else
+        std::cerr << "Warning: -nt argument, requesting " << threadCount
+            << " thread can not be honoured (Open MP is not enabled in this build)." << std::endl;
+        std::cerr << "Warning: Distance matrix processing will be single-threaded." << std::endl;
+#endif
     }
     StartTree::BuilderInterface* algorithm = StartTree::Factory::getTreeBuilderByName(algorithmName);
     algorithm->setZippedOutput(isOutputZipped || endsWith(outputFilePath,".gz"));
