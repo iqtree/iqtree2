@@ -34,17 +34,18 @@ namespace StartTree
     public:
         BuilderInterface() {}
         virtual ~BuilderInterface() {}
+        virtual bool isBenchmark() const = 0;
         virtual void setZippedOutput(bool zipIt) = 0;
         virtual bool constructTree
             ( const std::string &distanceMatrixFilePath
              , const std::string & newickTreeFilePath) = 0;
         virtual bool constructTreeInMemory
             ( const std::vector<std::string> &sequenceNames
-             , double *distanceMatrix
+             , const double *distanceMatrix
              , const std::string & newickTreeFilePath) = 0;
         virtual const std::string& getName() = 0;
         virtual const std::string& getDescription() = 0;
-        virtual void beSilent() {}
+        virtual void beSilent() = 0;
     };
 
     class BenchmarkingTreeBuilder;
@@ -90,6 +91,9 @@ namespace StartTree
         bool  constructTreeWith(B& builder) {
             double buildStart    = getRealTime();
             double buildStartCPU = getCPUTime();
+            if (silent) {
+                builder.beSilent();
+            }
             builder.constructTree();
             double buildElapsed = getRealTime() - buildStart;
             double buildCPU = getCPUTime() - buildStartCPU;
@@ -117,32 +121,43 @@ namespace StartTree
         virtual const std::string& getDescription() {
             return description;
         }
+        virtual bool isBenchmark() const {
+            return false;
+        }
         virtual void setZippedOutput(bool zipIt) {
             isOutputToBeZipped = zipIt;
         }
         virtual bool constructTree
             ( const std::string &distanceMatrixFilePath
              , const std::string & newickTreeFilePath) {
-                B builder;
-                if (!builder.loadMatrixFromFile(distanceMatrixFilePath)) {
-                    return false;
-                }
-                constructTreeWith(builder);
-                builder.setZippedOutput(isOutputToBeZipped);
-                return builder.writeTreeFile(newickTreeFilePath);
+            B builder;
+            if (silent) {
+                builder.beSilent();
             }
+            if (!builder.loadMatrixFromFile(distanceMatrixFilePath)) {
+                return false;
+            }
+            constructTreeWith(builder);
+            builder.setZippedOutput(isOutputToBeZipped);
+            return builder.writeTreeFile(newickTreeFilePath);
+        }
         virtual bool constructTreeInMemory
             ( const std::vector<std::string> &sequenceNames
-            , double *distanceMatrix
+            , const double *distanceMatrix
             , const std::string & newickTreeFilePath) {
-                B builder;
-                
-                if (!builder.loadMatrix(sequenceNames, distanceMatrix)) {
-                    return false;
-                }
-                constructTreeWith(builder);
-                builder.setZippedOutput(isOutputToBeZipped);
-                return builder.writeTreeFile(newickTreeFilePath);
+            B builder;
+            if (silent) {
+                builder.beSilent();
+            }
+            if (!builder.loadMatrix(sequenceNames, distanceMatrix)) {
+                return false;
+            }
+            constructTreeWith(builder);
+            builder.setZippedOutput(isOutputToBeZipped);
+            if (newickTreeFilePath.empty()) {
+                return true;
+            }
+            return builder.writeTreeFile(newickTreeFilePath);
         }
     };
 
@@ -153,18 +168,21 @@ namespace StartTree
         const std::string description;
         std::vector<BuilderInterface*> builders;
         bool isOutputToBeZipped;
+        bool silent;
     public:
         BenchmarkingTreeBuilder(Factory& f, const char* nameToUse, const char *descriptionToGive);
         virtual const std::string& getName();
         virtual const std::string& getDescription();
+        virtual bool isBenchmark() const;
         virtual bool constructTree
-            ( const std::string &distanceMatrixFilePath
-             , const std::string & newickTreeFilePath);
+            ( const std::string& distanceMatrixFilePath
+            , const std::string& newickTreeFilePath);
         virtual bool constructTreeInMemory
             ( const std::vector<std::string> &sequenceNames
-            , double *distanceMatrix
-             , const std::string & newickTreeFilePath);
+            , const double *distanceMatrix
+            , const std::string& newickTreeFilePath);
         virtual void setZippedOutput(bool zipIt);
+        virtual void beSilent();
     };
 }
 

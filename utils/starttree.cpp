@@ -96,7 +96,7 @@ BuilderInterface* Factory::getTreeBuilderByName(const std::string& name) {
 
 BenchmarkingTreeBuilder::BenchmarkingTreeBuilder(Factory& f, const char* nameToUse, const char *descriptionToGive)
     : name(nameToUse), description(descriptionToGive)
-    , isOutputToBeZipped(false) {
+    , isOutputToBeZipped(false), silent(false) {
     for (auto it=f.mapOfTreeBuilders.begin(); it!=f.mapOfTreeBuilders.end(); ++it) {
         if (!it->second->getName().empty()) {
             builders.push_back(it->second);
@@ -107,8 +107,13 @@ BenchmarkingTreeBuilder::BenchmarkingTreeBuilder(Factory& f, const char* nameToU
 const std::string& BenchmarkingTreeBuilder::getName() {
     return name;
 }
+
 const std::string& BenchmarkingTreeBuilder::getDescription() {
     return description;
+}
+
+bool BenchmarkingTreeBuilder::isBenchmark() const {
+    return true;
 }
 
 bool BenchmarkingTreeBuilder::constructTree
@@ -126,33 +131,79 @@ void BenchmarkingTreeBuilder::setZippedOutput(bool zipIt) {
     isOutputToBeZipped = zipIt;
 }
 
+void BenchmarkingTreeBuilder::beSilent() {
+    silent = true;
+}
+
+namespace {
+    std::string formatPositiveNumber(double n, size_t w) {
+        std::stringstream s;
+        s.precision( (w>=2) ? (w-2) : 0);
+        s << n;
+        std::string t = s.str();
+        if (1.0 <= n ) {
+            if ( t.length() < w ) {
+                return std::string(w-t.length(), ' ') + t;
+            } else {
+                return t;
+            }
+        }
+        if (t.length() == w || w < 2 ) {
+            return t;
+        }
+        if (t.length() < w  ) {
+            return t + std::string(w-t.length(), '0');
+        }
+        bool carry = (t[w] >= '5');
+        if (carry) {
+            int j = w - 1;
+            for (; t[j] == '9'; --j ) {
+                t[j] = '0';
+            }
+            ++t[j];
+        }
+        return t.substr(0,w);
+    }
+}
+
 bool BenchmarkingTreeBuilder::constructTreeInMemory
     ( const std::vector<std::string> &sequenceNames
-    , double *distanceMatrix
+    , const double *distanceMatrix
     , const std::string & newickTreeFilePath) {
         bool ok = false;
         #ifdef _OPENMP
             int maxThreads = omp_get_max_threads();
         #endif
+        size_t maxNameLen = 0;
         for (auto it=builders.begin(); it!=builders.end(); ++it) {
-            double startTime = getRealTime();
+            auto name = (*it)->getName();
+            if ( maxNameLen < name.length() ) {
+                maxNameLen = name.length();
+            }
+        }
+        std::string padding(maxNameLen, '\x20');
+        std::cout.width(0);
+        for (auto it=builders.begin(); it!=builders.end(); ++it) {
+            auto   name      = (*it)->getName();
+            (*it)->beSilent();
             #ifdef _OPENMP
                 omp_set_num_threads(1);
             #endif
-            (*it)->beSilent();
-            bool succeeded = (*it)->constructTreeInMemory(sequenceNames, distanceMatrix, newickTreeFilePath);
-            double elapsed = getRealTime() - startTime;
+            double startTime = getRealTime();
+            bool   succeeded = (*it)->constructTreeInMemory(sequenceNames, distanceMatrix, newickTreeFilePath);
+            double elapsed   = getRealTime() - startTime;
             if (succeeded) {
                 ok = true;
-                std::cout.precision(6);
-                std::cout << (*it)->getName() << " \t" << elapsed;
+                std::cout << (name + padding).substr(0, maxNameLen);
+                std::cout << "\t" << formatPositiveNumber(elapsed,7);
                 #ifdef _OPENMP
                 for (int t=2; t<=maxThreads; ++t) {
+                    std::cout.flush();
                     omp_set_num_threads(t);
                     startTime = getRealTime();
                     ok &= (*it)->constructTreeInMemory(sequenceNames, distanceMatrix, newickTreeFilePath);
                     elapsed = getRealTime() - startTime;
-                    std::cout << "\t" << (elapsed);
+                    std::cout << "\t" << formatPositiveNumber(elapsed,7);
                 }
                 #endif
                 std::cout << std::endl;
@@ -161,3 +212,4 @@ bool BenchmarkingTreeBuilder::constructTreeInMemory
         return true;
     }
 };
+

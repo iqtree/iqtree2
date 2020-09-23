@@ -108,7 +108,7 @@ template <class V>
 void extractTopFromMinHeap ( V* valueArray
                         , ptrdiff_t start, ptrdiff_t stop) {
     //
-    //Extracts a *single* value from a radix 2 max heap.
+    //Extracts a *single* value from a radix 2 min heap.
     //
     ptrdiff_t fudge = 2 - start;
     ptrdiff_t i = stop;
@@ -154,6 +154,11 @@ void constructMirroredHeap ( V* valueArray
     //of valueArray[start..stop] and "mirrors"
     //the permutation of the values
     //on satteliteArray[start..stop].
+    //
+    //Note: This could be parallelized
+    //(as per constructMinHeapLayer), but as yet,
+    //it hasn't.  It'd be better to have a separate
+    //parallelConstructMirroredHeap function for that.
     //
     ptrdiff_t fudge = 2 - start;
     for (ptrdiff_t h = start+(stop-start)/2; h >= start; --h) {

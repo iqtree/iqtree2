@@ -842,6 +842,9 @@ public:
     virtual const std::string& getDescription() {
         return description;
     }
+    virtual bool isBenchmark() const {
+        return false;
+    }
     virtual bool constructTree
         ( const std::string &distanceMatrixFilePath
          , const std::string & newickTreeFilePath) {
@@ -855,7 +858,7 @@ public:
     }
     virtual bool constructTreeInMemory
         ( const std::vector<std::string> &sequenceNames
-         , double *distanceMatrix
+         , const double *distanceMatrix
          , const std::string & newickTreeFilePath) {
             return false;
     }
@@ -863,6 +866,8 @@ public:
         if (zipIt) {
             std::cerr << "Warning: BIONJ2009 does not support gzip output (or input)" << std::endl;
         }
+    }
+    virtual void beSilent() {
     }
 };
 

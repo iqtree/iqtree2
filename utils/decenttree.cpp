@@ -25,6 +25,7 @@
 #include "progress.h"  //for progress_display::setProgressDisplay()
 #include "starttree.h" //for StartTree::Factory
 #include "operatingsystem.h" //for getOSName
+#include "distancematrix.h"  //for loadDistanceMatrixInto
 
 #define PROBLEM(x) if (1) problems = problems + x + ".\n"; else 0
 
@@ -35,6 +36,43 @@ namespace {
             return false;
         }
         return s.substr(s.length()-suffixLen, suffixLen) == suffix;
+    }
+};
+
+class FlatMatrix {
+private:
+    std::vector<std::string> sequenceNames;
+    size_t                   rowCount;
+    double*                  distanceMatrix;
+public:
+    FlatMatrix(): rowCount(0), distanceMatrix(nullptr) {
+    }
+    virtual ~FlatMatrix() {
+        delete [] distanceMatrix;
+        distanceMatrix = nullptr;
+    }
+    const std::vector<std::string> getSequenceNames() const {
+        return sequenceNames;
+    }
+    void setSize(size_t rows) {
+        delete [] distanceMatrix;
+        rowCount = rows;
+        distanceMatrix = new double [ rowCount * rowCount ];
+    }
+    size_t getSize() {
+        return rowCount;
+    }
+    const double* getDistanceMatrix() const {
+        return distanceMatrix;
+    }
+    double cell(size_t r, size_t c) const {
+        return distanceMatrix[r * rowCount + c];
+    }
+    double& cell(size_t r, size_t c) {
+        return distanceMatrix[r * rowCount + c];
+    }
+    void addCluster(const std::string& clusterName) {
+        sequenceNames.emplace_back(clusterName);
     }
 };
 
@@ -62,8 +100,10 @@ int main(int argc, char* argv[]) {
     std::string inputFilePath;
     std::string outputFilePath;
     bool isOutputZipped     = false;
+    bool isOutputSuppressed = false;
     bool isBannerSuppressed = false;
     int  threadCount        = 0;
+    bool beSilent           = false;
     for (int argNum=1; argNum<argc; ++argNum) {
         std::string arg     = argv[argNum];
         std::string nextArg = (argNum+1<argc) ? argv[argNum+1] : "";
@@ -85,6 +125,9 @@ int main(int argc, char* argv[]) {
             outputFilePath = nextArg;
             ++argNum;
         }
+        else if (arg=="-no-out") {
+            isOutputSuppressed = true;
+        }
         else if (arg=="-gz") {
             isOutputZipped = true;
         }
@@ -98,6 +141,10 @@ int main(int argc, char* argv[]) {
             }
             threadCount = atol(nextArg.c_str());
             ++argNum;
+        }
+        else if (arg=="-q") {
+            isBannerSuppressed = true;
+            beSilent = true;
         }
         else {
             PROBLEM("Unrecognized command-line argument, " + arg);
@@ -114,7 +161,7 @@ int main(int argc, char* argv[]) {
     if (inputFilePath.empty()) {
         PROBLEM("Input (mldist) file should be specified via -in [filepath.mldist]");
     }
-    if (outputFilePath.empty()) {
+    if (outputFilePath.empty() && !isOutputSuppressed) {
         PROBLEM("Ouptut (newick format) filepath should be specified via -out [filepath.newick]");
     }
     else if (inputFilePath==outputFilePath) {
@@ -144,10 +191,26 @@ int main(int argc, char* argv[]) {
 #endif
     }
     StartTree::BuilderInterface* algorithm = StartTree::Factory::getTreeBuilderByName(algorithmName);
-    algorithm->setZippedOutput(isOutputZipped || endsWith(outputFilePath,".gz"));
-    if (!algorithm->constructTree(inputFilePath, outputFilePath)) {
-        std::cerr << "Tree construction failed." << std::endl;
+    if (algorithm==nullptr) {
+        std::cerr << "Tree builder algorithm was unexpectedly null (internal logic error)." << std::endl;
         return 1;
+    }
+    algorithm->setZippedOutput(isOutputZipped || endsWith(outputFilePath,".gz"));
+    if (beSilent) {
+        algorithm->beSilent();
+    }
+    if (algorithm->isBenchmark()) {
+        FlatMatrix m;
+        loadDistanceMatrixInto(inputFilePath, false, m);
+        algorithm->constructTreeInMemory(m.getSequenceNames(),
+                                         m.getDistanceMatrix(),
+                                         outputFilePath);
+    }  else {
+        bool succeeded = algorithm->constructTree(inputFilePath, outputFilePath);
+        if (!succeeded) {
+            std::cerr << "Tree construction failed." << std::endl;
+            return 1;
+        }
     }
     return 0;
 }

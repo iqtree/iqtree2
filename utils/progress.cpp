@@ -83,7 +83,7 @@ progress_display & progress_display::operator += (double incrementalWork) {
         workDone += incrementalWork;
     }
     bool justASec = floor(time) > floor(lastReportedTime);
-    if ( lastReportedWork == 0.0 || justASec ) {
+    if ( ( lastReportedWork == 0.0 || justASec ) && !taskDescription.empty() ) {
         reportProgress(time, cpu, false);
     }
     return *this;
@@ -210,7 +210,9 @@ progress_display& progress_display::done() {
     #endif
     workDone = totalWorkToDo;
     isDone = true;
-    reportProgress(getRealTime(), getCPUTime(), true);
+    if (!taskDescription.empty()) {
+        reportProgress(getRealTime(), getCPUTime(), true);
+    }
     return *this;
 }
 
@@ -241,7 +243,7 @@ progress_display& progress_display::show() {
     if (!isTerminal) {
         return *this;
     }
-    if (--hidden == 0) {
+    if ( --hidden == 0 && !taskDescription.empty() ) {
         reportProgress(getRealTime(), getCPUTime(), false);
     }
     return *this;
@@ -251,7 +253,7 @@ void progress_display::setTaskDescription(const  char* newDescription) {
     if (this->taskDescription == newDescription) {
         return;
     }
-    if (isTerminal && hidden <= 0) {
+    if (isTerminal && hidden <= 0 && !taskDescription.empty() ) {
         reportProgress(getRealTime(), getCPUTime(), false);
     }
 }
@@ -283,7 +285,7 @@ void progress_display::setIsEstimateABound(bool isEstimateAnUpperBound) {
         return;
     }
     atMost = isEstimateAnUpperBound;
-    if (hidden <= 0) {
+    if (hidden <= 0 && !taskDescription.empty() ) {
         reportProgress(getRealTime(), getCPUTime(), false);
     }
 }

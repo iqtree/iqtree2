@@ -254,7 +254,7 @@ public:
 };
 
 template <class M> bool loadDistanceMatrixInto
-    (const std::string distanceMatrixFilePath, M& matrix) {
+    (const std::string distanceMatrixFilePath, bool reportProgress, M& matrix) {
     size_t rank;
     igzstream in;
     bool lower  = false;
@@ -267,7 +267,8 @@ template <class M> bool loadDistanceMatrixInto
         safeGetTrimmedLineAsStream(in, line);
         line >> rank;
         matrix.setSize(rank);
-        progress_display progress(rank, "Loading distance matrix", "loaded", "row");
+        const char* taskDescription = reportProgress ? "Loading distance matrix" : "";
+        progress_display progress(rank, taskDescription, "loaded", "row");
         for (size_t r=0; r<matrix.getSize(); ++r) {
             std::stringstream line;
             safeGetTrimmedLineAsStream(in, line);

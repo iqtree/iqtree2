@@ -147,8 +147,9 @@ protected:
     ClusterTree<T>       clusters;     //*not* touched by setSize
     bool                 isOutputToBeZipped;
     mutable Positions<T> rowMinima;    //*not* touched by setSize
+    bool                 silent;
 public:
-    UPGMA_Matrix():super(), isOutputToBeZipped(false) {
+    UPGMA_Matrix():super(), isOutputToBeZipped(false), silent(false) {
     }
     virtual std::string getAlgorithmName() const {
         return "UPGMA";
@@ -161,14 +162,14 @@ public:
         clusters.addCluster(name);
     }
     bool loadMatrixFromFile(const std::string &distanceMatrixFilePath) {
-        bool rc = loadDistanceMatrixInto(distanceMatrixFilePath, *this);
+        bool rc = loadDistanceMatrixInto(distanceMatrixFilePath, true, *this);
         for (int r=0; r<n; ++r) {
             rowToCluster.emplace_back(r);
         }
         calculateRowTotals();
         return rc;
     }
-    virtual bool loadMatrix(const std::vector<std::string>& names, double* matrix) {
+    virtual bool loadMatrix(const std::vector<std::string>& names, const double* matrix) {
         //Assumptions: 2 < names.size(), all names distinct
         //  matrix is symmetric, with matrix[row*names.size()+col]
         //  containing the distance between taxon row and taxon col.
@@ -181,12 +182,15 @@ public:
         for (size_t r=0; r<n; ++r) {
             rowToCluster[r]=r;
         }
+        #ifdef _OPENMP
         #pragma omp parallel for
+        #endif
         for (size_t row=0; row<n; ++row) {
-            double* sourceStart = matrix + row * n;
-            double* sourceStop  = sourceStart + n;
-            T*      dest        = rows[row];
-            for (double* source=sourceStart; source<sourceStop; ++source, ++dest ) {
+            const double* sourceStart = matrix + row * n;
+            const double* sourceStop  = sourceStart + n;
+            T*            dest        = rows[row];
+            for (const double* source=sourceStart;
+                 source<sourceStop; ++source, ++dest ) {
                 *dest = (T) *source;
             }
         }
@@ -196,6 +200,9 @@ public:
     virtual bool constructTree() {
         Position<T> best;
         std::string taskName = "Constructing " + getAlgorithmName() + " tree";
+        if (silent) {
+            taskName="";
+        }
         progress_display show_progress(n*(n+1)/2, taskName.c_str(), "", "");
         while (3<n) {
             getMinimumEntry(best);
@@ -208,6 +215,9 @@ public:
     }
     virtual void setZippedOutput(bool zipIt) {
         isOutputToBeZipped = zipIt;
+    }
+    virtual void beSilent() {
+        silent = true;
     }
     bool writeTreeFile(const std::string &treeFilePath) const {
         return clusters.writeTreeFile(isOutputToBeZipped, treeFilePath);
@@ -227,7 +237,9 @@ protected:
     {
         rowMinima.resize(n);
         rowMinima[0].value = infiniteDistance;
+        #ifdef _OPENMP
         #pragma omp parallel for schedule(dynamic)
+        #endif
         for (size_t row=1; row<n; ++row) {
             float  bestVrc    = infiniteDistance;
             size_t bestColumn = 0;
@@ -311,6 +323,7 @@ public:
     using super::calculateRowTotals;
     using super::recalculateTotalForOneRow;
     using super::getImbalance;
+    using super::silent;
 protected:
     mutable std::vector<T> scaledRowTotals; //used in getRowMinima
 public:
@@ -323,7 +336,9 @@ protected:
         scaledRowTotals.resize(n);
         T nless2      = ( n - 2 );
         T tMultiplier = ( n <= 2 ) ? 0 : (1 / nless2);
+        #ifdef _OPENMP
         #pragma omp parallel for
+        #endif
         for (size_t r=0; r<n; ++r) {
             scaledRowTotals[r] = rowTotals[r] * tMultiplier;
         }
@@ -348,7 +363,9 @@ protected:
         }
         rowMinima.resize(n);
         rowMinima[0].value = infiniteDistance;
+        #ifdef _OPENMP
         #pragma omp parallel for schedule(dynamic)
+        #endif
         for (size_t row=1; row<n; ++row) {
             float  bestVrc    = infiniteDistance;
             size_t bestColumn = 0;
@@ -378,7 +395,9 @@ protected:
         T lambda        = 0.5;
         T mu            = 1.0 - lambda;
         T dCorrection   = - lambda * aLength - mu * bLength;
+        #ifdef _OPENMP
         #pragma omp parallel for
+        #endif
         for (size_t i=0; i<n; ++i) {
             if (i!=a && i!=b) {
                 T Dai   = rows[a][i];
@@ -421,6 +440,7 @@ public:
     using super::rowTotals;
     using super::recalculateTotalForOneRow;
     using super::removeRowAndColumn;
+    using super::silent;
 protected:
     Matrix<T>  variance;       //The V matrix
 public:
@@ -433,7 +453,7 @@ public:
         variance = *this;
         return rc;
     }
-    virtual bool loadMatrix(const std::vector<std::string>& names, double* matrix) {
+    virtual bool loadMatrix(const std::vector<std::string>& names, const double* matrix) {
         bool rc = super::loadMatrix(names, matrix);
         variance = *this;
         return rc;
@@ -472,7 +492,9 @@ public:
         T mu            = 1.0 - lambda;
         T dCorrection   = - lambda * aLength - mu * bLength;
         T vCorrection   = - lambda * mu * Vab;
+        #ifdef _OPENMP
         #pragma omp parallel for
+        #endif
         for (size_t i=0; i<n; ++i) {
             if (i!=a && i!=b) {
                 //Dci as per reduction 4 in [Gascuel]
@@ -510,6 +532,7 @@ class BoundingMatrix: public super
     using super::rowTotals;
     using super::rowToCluster;
     using super::clusters;
+    using super::silent;
 protected:
     //
     //Note 1: mutable members are calculated repeatedly, from
@@ -529,6 +552,11 @@ protected:
     //        cluster c to earlier clusters, than the largest
     //        row total for ALL the live clusters.
     //        See section 2.5 of Simonsen, Mailund, Pedersen [2011].
+    //Note 4: rowOrderChosen is a vector of int rather than bool
+    //        because simultaneous non-overlapping random-access writes
+    //        to elements of std::vector<bool> *can* interfere with each other
+    //        (because std::vector<bool> maps multiple nearby elements onto
+    //         bitfields, so the writes... *do* overlap) (ouch!).
     //
     std::vector<int> clusterToRow;   //Maps clusters to their rows (-1 means not mapped)
     std::vector<T>   clusterTotals;  //"Row" totals indexed by cluster
@@ -536,7 +564,9 @@ protected:
     mutable std::vector<T>       scaledClusterTotals;   //The same, multiplied by
                                                         //(1.0 / (n-2)).
     mutable std::vector<T>       scaledMaxEarlierClusterTotal;
-    mutable std::vector<bool>    rowOrderChosen; //Indicates if row order chosen
+    mutable std::vector<int>     rowOrderChosen; //Indicates if a row's scanning
+                                                 //order chosen has been chosen.
+                                                 //Only used in... getRowScanningOrder().
     mutable std::vector<size_t>  rowScanOrder;   //Order in which rows are to be scanned
                                                  //Only used in... getRowMinima().
     
@@ -546,10 +576,15 @@ protected:
                                //cluster the row (that the entry came from)
                                //was mapped to (at the time).
     double rowSortingTime;
+    int    threadCount;
     
 public:
-    BoundingMatrix() : super() {
-        rowSortingTime = 0;
+    BoundingMatrix() : super(), rowSortingTime(0) {
+        #ifdef _OPENMP
+            threadCount = omp_get_max_threads();
+        #else
+            threadCount = 1;
+        #endif
     }
     virtual std::string getAlgorithmName() const {
         return "Rapid" + super::getAlgorithmName();
@@ -572,14 +607,17 @@ public:
         rowScanOrder.resize(n);
 
         {
-            progress_display setupProgress(n, "Setting up auxiliary I and S matrices", "sorting", "row");
+            const char* taskName = silent ? "" : "Setting up auxiliary I and S matrices";
+            progress_display setupProgress(n, taskName, "sorting", "row");
             //2. Set up the matrix with row sorted by distance
             //   And the matrix that tracks which distance is
             //   to which cluster (the S and I matrices, in the
             //   RapidNJ papers).
             entriesSorted.setSize(n);
             entryToCluster.setSize(n);
-#pragma omp parallel for schedule(dynamic)
+            #ifdef _OPENMP
+            #pragma omp parallel for schedule(dynamic)
+            #endif
             for (size_t r=0; r<n; ++r) {
                 sortRow(r,r,false);
                 ++setupProgress;
@@ -591,13 +629,18 @@ public:
         {
             size_t nextPurge = (n+n)/2;
             std::string taskName = "Constructing " + getAlgorithmName() + " tree";
+            if (silent) {
+                taskName = "";
+            }
             progress_display show_progress(n*(n+1)/2, taskName.c_str(), "", "");
             while (3<n) {
                 Position<T> best;
                 super::getMinimumEntry(best);
                 cluster(best.column, best.row);
                 if ( n == nextPurge ) {
+                    #ifdef _OPENMP
                     #pragma omp parallel for
+                    #endif
                     for (size_t r=0; r<n; ++r) {
                         purgeRow(r);
                     }
@@ -707,36 +750,76 @@ public:
         }
         sortRow(a, clusterC, true);
     }
-    void decideOnRowScanningOrder() const {
+    void decideOnRowScanningOrder(T& qBest) const {
+        size_t rSize = rowMinima.size();
         //
         //Rig the order in which rows are scanned based on
         //which rows (might) have the lowest row minima
         //based on what we saw last time.
+        //
         //The original RapidNJ puts the second-best row from last time first.
         //And, apart from that, goes in row order.
         //But rows in the D, S, and I matrices are (all) shuffled
         //in memory, so why not do all the rows in ascending order
         //of their best Q-values from the last iteration?
-        //
-        //(I have my doubts about this.  I'm now thinking, it should be
-        //better to "read off" the first column of the S matrix and
-        //calculate the corresponding entry in Q for each live cluster;
-        //use up-to-date rather than out-of-date information.
-        //
-        //Since we always have to check these entries when we process
-        //the row, why not process them up front, hoping to get a
-        //better bound on min(V) (and "rule out" entire rows with that
-        //bound)? -James B).
+        //Or, better yet... From this iteration?!
         //
         
+        #define DERIVE_BOUND_FROM_FIRST_COLUMN 1
+        #if (DERIVE_BOUND_FROM_FIRST_COLUMN)
+        {
+            //
+            //Since we always have to check these entries when we process
+            //the row, why not process them up front, hoping to get a
+            //better bound on min(V) (and perhaps even "rule" entire rows
+            //"out of consideration", using that bound)? -James B).
+            //
+            std::vector<T> qLocalBestVector;
+            qLocalBestVector.resize( threadCount, qBest);
+            T* qLocalBest =  qLocalBestVector.data();
+
+            #ifdef _OPEN_MP
+            #pragma omp parallel for
+            #endif
+            for (size_t b=0; b<threadCount; ++b) {
+                T      qBestForThread = qBest;
+                size_t rStart         = b*rSize / threadCount;
+                size_t rStop          = (b+1)*rSize / threadCount;
+                for (size_t r=rStart; r < rStop
+                     && rowMinima[r].value < infiniteDistance; ++r) {
+                    size_t rowA     = rowMinima[r].row;
+                    size_t rowB     = rowMinima[r].column;
+                    if (rowA < n && rowB < n ) {
+                        size_t clusterA = rowToCluster[rowA];
+                        size_t clusterB = rowToCluster[rowB];
+                        T qHere = this->rows[rowA][rowB]
+                                - scaledClusterTotals[clusterA]
+                                - scaledClusterTotals[clusterB];
+                        if (qHere < qBestForThread) {
+                            qBestForThread = qHere;
+                        }
+                    }
+                }
+                qLocalBest[b] = qBestForThread;
+            }
+            for (size_t b=0; b<threadCount; ++b) {
+                if ( qLocalBest[b] < qBest ) {
+                    qBest = qLocalBest[b];
+                }
+            }
+        }
+        #endif
+        
+        int threshold = threadCount << 7; /* multiplied by 128*/
         //Note, rowMinima might have size 0 (the first time this member
         //function is called during processing of a distance matrix)
         //Or it might have a size of n+1 (later times), but it won't be n.
-        for ( size_t len = rowMinima.size(); 1<len; len=(len+1)/2 ) {
+        for ( size_t len = rSize; 1<len; len=(len+1)/2 ) {
             size_t halfLen = len/2; //rounded down
             size_t gap     = len-halfLen;
-            //Although the following loop could in theory be parallelized,
-            //using #pragma omp for on it did not seem to help performance any.
+            #ifdef _OPENMP
+            #pragma omp parallel for if(threshold<halfLen)
+            #endif
             for ( size_t i=0; i<halfLen; ++i) {
                 size_t j = i + gap;
                 if ( rowMinima[j] < rowMinima[i] ) {
@@ -744,24 +827,36 @@ public:
                 }
             }
         }
+        #ifdef _OPENMP
+        #pragma omp parallel for if(threshold<n)
+        #endif
         for (size_t i=0; i<n; ++i) {
-            rowOrderChosen[i]=false;
+            rowOrderChosen[i]=0; //Not chosen yet
         }
+        
         size_t w = 0;
-        for (size_t r=0; r < rowMinima.size()
+        for (size_t r=0; r < rSize
+             && rowMinima[r].row < n
              && rowMinima[r].value < infiniteDistance; ++r) {
             size_t rowA     = rowMinima[r].row;
             size_t rowB     = rowMinima[r].column;
             size_t clusterA = (rowA<n) ? rowToCluster[rowA] : 0;
             size_t clusterB = (rowB<n) ? rowToCluster[rowB] : 0;
-            size_t row      = (clusterA<clusterB) ? rowB : rowA;
-            rowScanOrder[w] = row;
-            w += ( row < n && !rowOrderChosen[row] ) ? 1 : 0;
-            rowOrderChosen[row] = true;
+            size_t row      = (clusterA<clusterB) ? rowA : rowB;
+            if (row < n) {
+                rowScanOrder[w] = row;
+                w += rowOrderChosen[row] ? 0 : 1;
+                rowOrderChosen[row] = 1; //Chosen
+            }
         }
-        for (size_t r=0; r<n; ++r) {
-            rowScanOrder[w] = r;
-            w += ( rowOrderChosen[r] ? 0 : 1 );
+        
+        //The weird-looking middle term in the for loop is
+        //intended: when w reaches n all of the rows (0..n-1)
+        //must be in rowScanOrder, so there's no need to continue
+        //until row==n.
+        for (size_t row=0; w < n ; ++row) {
+            rowScanOrder[w] = row;
+            w += ( rowOrderChosen[row] ? 0 : 1 );
         }
     }
     virtual void getRowMinima() const {
@@ -786,29 +881,29 @@ public:
                 }
             }
         }
+        
         T qBest = infiniteDistance;
             //upper bound on minimum Q[row,col]
             //  = D[row,col] - R[row]*tMultipler - R[col]*tMultiplier
             //
 
-        decideOnRowScanningOrder();
+        decideOnRowScanningOrder(qBest);
         rowMinima.resize(n);
+        
+        #ifdef _OPENMP
         #pragma omp parallel for
+        #endif
         for (size_t r=0; r<n; ++r) {
+            T      qBestForThread  = qBest;
             size_t row             = rowScanOrder[r];
             size_t cluster         = rowToCluster[row];
             T      maxEarlierTotal = scaledMaxEarlierClusterTotal[cluster];
             //Note: Older versions of RapidNJ used maxTot rather than
             //      maxEarlierTotal here...
-            rowMinima[r]          = getRowMinimum(row, maxEarlierTotal, qBest);
-            T      v              = rowMinima[row].value;
-            {
-                if ( v < qBest ) {
-                    #pragma omp critical(checkmin)
-                    if (v < qBest) {
-                        qBest = v;
-                    }
-                }
+            rowMinima[r]           = getRowMinimum(row, maxEarlierTotal, qBestForThread);
+            T      qBestInRow      = rowMinima[row].value;
+            if ( qBestInRow < qBestForThread ) {
+                qBestForThread = qBestInRow;
             }
         }
     }
@@ -825,8 +920,11 @@ public:
         Position<T> pos(row, 0, infiniteDistance, 0);
         const T*   rowData   = entriesSorted.rows[row];
         const int* toCluster = entryToCluster.rows[row];
-        T Drc;
-        for (size_t i=0; (Drc=rowData[i])<rowBound; ++i) {
+        for (size_t i=0; ; ++i) {
+            T Drc = rowData[i];
+            if (rowBound<Drc && 0<i) {
+                break;
+            }
             size_t  cluster = toCluster[i];
                 //The cluster associated with this distance
                 //The c in Qrc and Drc.
@@ -891,7 +989,9 @@ public:
         }
         rowMinima.resize(n);
         rowMinima[0].value = infiniteDistance;
+        #ifdef _OPENMP
         #pragma omp parallel for schedule(dynamic)
+        #endif
         for (size_t row=1; row<n; ++row) {
             Position<T> pos(row, 0, infiniteDistance, 0);
             const T* rowData = rows[row];
@@ -963,7 +1063,9 @@ public:
         T* nums = matrixAlign ( scratchColumnNumbers.data() );
         rowMinima.resize(n);
         rowMinima[0].value = infiniteDistance;
+        #ifdef _OPENMP
         #pragma omp parallel for schedule(dynamic)
+        #endif
         for (size_t row=1; row<n; ++row) {
             Position<T> pos(row, 0, infiniteDistance, 0);
             const T* rowData = rows[row];
