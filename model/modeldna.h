@@ -136,9 +136,8 @@ protected:
 	*/
 	string param_spec;
 	
-	/** vector of boolean, TRUE if corresponding parameter is fixed and FALSE otherwise */
-	vector<bool> param_fixed;
-
+	/** true if corresponding parameter is fixed and false otherwise */
+	BoolVector param_fixed;
 };
 
 #endif

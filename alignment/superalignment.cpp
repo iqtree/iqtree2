@@ -106,9 +106,8 @@ void SuperAlignment::readFromParams(Params &params) {
         int *rstream;
         init_random(params.subsampling_seed, false, &rstream);
         // make sure to sub-sample exact number
-        vector<bool> sample;
+        BoolVector sample(partitions.size(), false);
         int i;
-        sample.resize(partitions.size(), false);
         for (int num = 0; num < abs(subsample); ) {
             i = random_int(sample.size(), rstream);
             if (!sample[i]) {
@@ -778,8 +777,7 @@ void SuperAlignment::printBestPartitionRaxml(const char *filename) {
 void SuperAlignment::linkSubAlignment(int part) {
 	ASSERT(taxa_index.size() == getNSeq());
 	size_t nseq = getNSeq();
-	vector<bool> checked;
-	checked.resize(partitions[part]->getNSeq(), false);
+	BoolVector checked(partitions[part]->getNSeq(), false);
 	for (size_t seq = 0; seq < nseq; seq++) {
 		int id = partitions[part]->getSeqID(getSeqName(seq));
 		if (id < 0)
@@ -920,10 +918,8 @@ void SuperAlignment::removePartitions(set<int> &removed_id) {
 
 Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVector &removed_seqs, StrVector &target_seqs) {
     auto n = getNSeq();
-    IntVector checked;
-    vector<bool> removed;
-    checked.resize(n, 0);
-    removed.resize(n, false);
+    BoolVector isSequenceChecked(n, false);
+    BoolVector isSequenceRemoved(n, false);
     
     //JB2020-06-23 Begin : Determine hashes for all the sequences
     auto startHash = getRealTime();
@@ -959,10 +955,10 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, 
 
     auto startCheck = getRealTime();
 	for (size_t seq1 = 0; seq1 < getNSeq(); ++seq1) {
-        if (checked[seq1]) continue;
+        if (isSequenceChecked[seq1]) continue;
         bool first_ident_seq = true;
 		for (size_t seq2 = seq1+1; seq2 < getNSeq(); ++seq2) {
-            if (getSeqName(seq2) == not_remove || removed[seq2]) { continue;
+            if (getSeqName(seq2) == not_remove || isSequenceRemoved[seq2]) { continue;
             }
             if (hashes[seq1]!=hashes[seq2]) {
                 continue;
@@ -999,17 +995,17 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, 
             if (removed_seqs.size() + 3 < getNSeq() && (!keep_two || !first_ident_seq)) {
                 removed_seqs.push_back(getSeqName(seq2));
                 target_seqs.push_back(getSeqName(seq1));
-                removed[seq2] = true;
+                isSequenceRemoved[seq2] = true;
             } else {
                 if (listIdentical) {
                     cout << "NOTE: " << getSeqName(seq2) << " is identical to " << getSeqName(seq1)
                         << " but kept for subsequent analysis" << endl;
                 }
             }
-            checked[seq2] = 1;
+            isSequenceChecked[seq2] = true;
             first_ident_seq = false;
 		}
-		checked[seq1] = 1;
+		isSequenceChecked[seq1] = true;
 	}
     if (verbose_mode >= VB_MED) {
         auto checkTime = getRealTime() - startCheck;
@@ -1025,7 +1021,9 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, 
 	IntVector keep_seqs;
 	for (size_t seq1 = 0; seq1 < getNSeq(); ++seq1)
     {
-		if (!removed[seq1]) keep_seqs.push_back(seq1);
+        if (!isSequenceRemoved[seq1]) {
+            keep_seqs.push_back(seq1);
+        }
     }
 	SuperAlignment *aln;
 	aln = new SuperAlignment;

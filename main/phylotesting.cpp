@@ -469,7 +469,6 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
  @return adjusted log-likelihood factor
  */
 double computeAdapter(Alignment *orig_aln, Alignment *newaln, int &adjusted_df) {
-    int aa, codon;
 
     // count codon occurences
     unsigned int codon_counts[orig_aln->num_states];
@@ -484,41 +483,49 @@ double computeAdapter(Alignment *orig_aln, Alignment *newaln, int &adjusted_df) 
     //orig_aln->computeStateFreq(codon_freq);
     
     double sum = 0.0;
-    for (codon = 0; codon < orig_aln->num_states; codon++)
+    for (int codon = 0; codon < orig_aln->num_states; ++codon) {
         sum += codon_counts[codon];
+    }
     sum = 1.0/sum;
-    for (codon = 0; codon < orig_aln->num_states; codon++)
+    for (int codon = 0; codon < orig_aln->num_states; ++codon) {
         codon_freq[codon] = sum*codon_counts[codon];
+    }
     
     // new rescale codon_freq s.t. codons coding for the same AA
     // have f summing up to the frequency of this AA
-    for (aa = 0; aa < newaln->num_states; aa++) {
+    for (int aa = 0; aa < newaln->num_states; ++aa) {
         double sum = 0;
-        for (codon = 0; codon < orig_aln->num_states; codon++)
-            if (newaln->convertState(orig_aln->genetic_code[(int)orig_aln->codon_table[codon]]) == aa)
+        for (int codon = 0; codon < orig_aln->num_states; codon++) {
+            if (newaln->convertState(orig_aln->genetic_code[(int)orig_aln->codon_table[codon]]) == aa) {
                 sum += codon_freq[codon];
+            }
+        }
         sum = 1.0/sum;
-        for (codon = 0; codon < orig_aln->num_states; codon++)
-            if (newaln->convertState(orig_aln->genetic_code[(int)orig_aln->codon_table[codon]]) == aa)
+        for (int codon = 0; codon < orig_aln->num_states; codon++) {
+            if (newaln->convertState(orig_aln->genetic_code[(int)orig_aln->codon_table[codon]]) == aa) {
                 codon_freq[codon] *= sum;
+            }
+        }
     }
     
     // now compute adapter function
     double adapter = 0.0;
     adjusted_df = 0;
-    vector<bool> has_AA;
-    has_AA.resize(newaln->num_states, false);
+    BoolVector has_AA(newaln->num_states, false);
     
-    for (codon = 0; codon < orig_aln->num_states; codon++) {
-        if (codon_counts[codon] == 0)
+    for (int codon = 0; codon < orig_aln->num_states; ++codon) {
+        if (codon_counts[codon] == 0) {
             continue;
+        }
         has_AA[newaln->convertState(orig_aln->genetic_code[(int)orig_aln->codon_table[codon]])] = true;
         adapter += codon_counts[codon]*log(codon_freq[codon]);
         adjusted_df++;
     }
-    for (aa = 0; aa < has_AA.size(); aa++)
-        if (has_AA[aa])
+    for (int aa = 0; aa < has_AA.size(); ++aa) {
+        if ( has_AA[aa] ) {
             adjusted_df--;
+        }
+    }
     return adapter;
 }
 

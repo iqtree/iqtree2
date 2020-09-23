@@ -224,8 +224,67 @@ typedef vector<int> IntVector;
 /**
         vector of bool
  */
-typedef vector<bool> BoolVector;
 
+
+template <class T, class S> class CastingVector: public S {
+    //
+    //A subclass of vector (or other container) class S,
+    //where the entries in S are treated as though
+    //they are of type T (via implicit casting).
+    //
+public:
+    typedef S super;
+    typedef typename S::size_type size_type;
+    
+    CastingVector(): super() {}
+    explicit CastingVector(size_type initialSize): super(initialSize) {}
+    CastingVector(size_type initialSize, const T initialValue)
+        : super(initialSize, initialValue) {}
+    CastingVector(const CastingVector& rhs): super(rhs) {}
+    
+    class const_iterator: public super::const_iterator {
+        public:
+            const_iterator( typename super::const_iterator i) : super::const_iterator(i) {};
+            inline T operator*() { return super::const_iterator::operator*(); }
+    };
+
+    class iterator : public super::iterator {
+        public:
+            iterator( typename super::iterator i) : super::iterator(i) {};
+            inline T operator*() { return super::iterator::operator*(); }
+    };
+    
+    const_iterator begin() const { return const_iterator ( super::begin() ); }
+    iterator       begin()       { return iterator( super::begin() ); }
+    const_iterator end()   const { return const_iterator ( super::end() ); }
+    iterator       end()         { return iterator( super::end() ); }
+    inline T operator[] (typename super::size_type i) const {
+        return super::operator[] (i);
+    }
+    
+    class reference {
+        private:
+            S& to_vector;
+            size_type at_index;
+        public:
+            reference(S& vector, size_type index):
+                to_vector(vector), at_index(index) {}
+            operator T() { return to_vector[at_index]; }
+            reference& operator= (const T new_value) {
+                to_vector[at_index] = new_value;
+                return *this;
+            }
+            reference& operator= (const reference& elsewhere) {
+                to_vector[at_index] = elsewhere.to_vector[elsewhere.at_index];
+                return *this;
+            }
+    };
+    inline reference operator[] (typename super::size_type i) {
+        return reference(*(dynamic_cast<S*>(this)), i);
+    }
+};
+
+typedef CastingVector<bool, std::vector<char>> BoolVector;
 
 /**
         vector of char
@@ -296,7 +355,13 @@ const int WT_BR_ID = 512;
 const int WT_BR_LEN_ROUNDING = 1024;
 const int WT_BR_LEN_SHORT = 2048; // store only 6 digits after the comma for branch lengths
 const int WT_BR_ATTR = 4096; // print branch attributes
+#ifdef TRUE
+#undef TRUE
+#endif
 const int TRUE = 1;
+#ifdef FALSE
+#undef FALSE
+#endif
 const int FALSE = 0;
 
 /**

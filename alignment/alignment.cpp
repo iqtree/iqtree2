@@ -361,10 +361,8 @@ int Alignment::checkIdenticalSeq()
 Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVector &removed_seqs, StrVector &target_seqs)
 {
     auto n = getNSeq();
-    IntVector checked;
-    vector<bool> removed;
-    checked.resize(n, 0);
-    removed.resize(n, false);
+    BoolVector isSequenceChecked(n, false);
+    BoolVector isSequenceRemoved(n, false);
 
     //JB2020-06-17 Begin : Determine hashes for all the sequences
     auto startHash = getRealTime();
@@ -392,35 +390,35 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
     bool listIdentical = !Params::getInstance().suppress_duplicate_sequence_warnings;
 
     auto startCheck = getRealTime();
-	for (size_t seq1 = 0; seq1 < getNSeq(); ++seq1) {
-        if (checked[seq1]) continue;
+    for (size_t seq1 = 0; seq1 < getNSeq(); ++seq1) {
+        if ( isSequenceChecked[seq1] ) continue;
         bool first_ident_seq = true;
-		for (size_t seq2 = seq1+1; seq2 < getNSeq(); ++seq2) {
-			if (getSeqName(seq2) == not_remove || removed[seq2]) continue;
+        for (size_t seq2 = seq1+1; seq2 < getNSeq(); ++seq2) {
+            if ( getSeqName(seq2) == not_remove || isSequenceRemoved[seq2] ) continue;
             if (hashes[seq1] != hashes[seq2]) continue; //JB2020-06-17
-			bool equal_seq = true;
+            bool equal_seq = true;
             for (iterator it = begin(); it != end(); it++) {
                 if  ((*it)[seq1] != (*it)[seq2]) {
                     equal_seq = false;
                     break;
                 }
             }
-			if (!equal_seq) continue;
+            if (!equal_seq) continue;
             if (removed_seqs.size()+3 < getNSeq() && (!keep_two || !first_ident_seq)) {
                 removed_seqs.push_back(getSeqName(seq2));
                 target_seqs.push_back(getSeqName(seq1));
-                removed[seq2] = true;
+                isSequenceRemoved[seq2] = true;
             } else {
                 if (listIdentical) {
                     cout << "NOTE: " << getSeqName(seq2) << " is identical to " << getSeqName(seq1) << " but kept for subsequent analysis" << endl;
                 }
             }
-            checked[seq2] = 1;
+            isSequenceChecked[seq2] = true;
             first_ident_seq = false;
-		}
-		checked[seq1] = 1;
+        }
+        isSequenceChecked[seq1] = true;
         ++progress;
-	}
+    }
     if (verbose_mode >= VB_MED && !progress_display::getProgressDisplay()) {
         auto checkTime = getRealTime() - startCheck;
         cout << "Checking for duplicate sequences took " << checkTime
@@ -434,7 +432,7 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
         }
         IntVector keep_seqs;
         for (size_t seq1 = 0; seq1 < getNSeq(); seq1++) {
-            if (!removed[seq1]) {
+            if ( !isSequenceRemoved[seq1] ) {
                 keep_seqs.emplace_back(seq1);
             }
         }
@@ -660,8 +658,7 @@ void Alignment::buildSeqStates(vector<vector<int> > &seq_states, bool add_unobs_
 	seq_states.clear();
 	seq_states.resize(getNSeq());
 	for (int seq = 0; seq < getNSeq(); seq++) {
-		vector<bool> has_state;
-		has_state.resize(STATE_UNKNOWN+1, false);
+		BoolVector has_state(STATE_UNKNOWN+1, false);
 		for (int site = 0; site < getNPattern(); site++)
 			has_state[at(site)[seq]] = true;
         for (StateType it : unobs_const)
