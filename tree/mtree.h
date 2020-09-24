@@ -951,6 +951,9 @@ public:
 
     void logLine(const char* line) {
         hideProgress();
+        #ifdef _OPENMP
+        #pragma omp critical (io)
+        #endif
         std::cout << line << std::endl;
         showProgress();
     }
