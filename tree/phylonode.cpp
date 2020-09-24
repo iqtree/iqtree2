@@ -42,6 +42,17 @@ void PhyloNode::clearReversePartialLh(PhyloNode *dad) {
     }
 }
 
+void PhyloNode::clearReversePartialParsimony(PhyloNode* dad) {
+    FOR_EACH_PHYLO_NEIGHBOR(this, dad, it, nei) {
+        PhyloNode* node = nei->getNode();
+        if (node != dad ) {
+            PhyloNeighbor* reverseNei = node->findNeighbor(this);
+            reverseNei->setParsimonyComputed(false);
+            node->clearReversePartialParsimony(this);
+        }
+    }
+}
+
 void PhyloNode::clearAllPartialLh(bool set_to_null, PhyloNode* dad) {
     bool zeroSize = (Params::getInstance().lh_mem_save == LM_MEM_SAVE);
     for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); ++it) {

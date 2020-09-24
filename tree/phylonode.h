@@ -33,6 +33,7 @@ typedef unsigned short UBYTE;
 enum RootDirection {UNDEFINED_DIRECTION, TOWARD_ROOT, AWAYFROM_ROOT};
 
 class PhyloNode;
+class BlockAllocator;
 /**
 A neighbor in a phylogenetic tree
 
@@ -46,7 +47,9 @@ class PhyloNeighbor : public Neighbor {
     friend class PhyloTreeMixlen;
     friend class MemSlotVector;
     friend class ParsTree;
+    friend class BlockAllocator;
     friend class CandidateTaxon;
+    friend class InsertionPoint;
 
 public:
     friend class TinaTree;
@@ -299,6 +302,12 @@ public:
     void clearAllPartialParsimony(bool set_to_null, PhyloNode *dad);
     
     /**
+        tell that all partial parsimony vectors (in reverse direction), reach from this node
+        are not computed (e.g. dad might be a newly inserted node).
+     */
+    void clearReversePartialParsimony(PhyloNode* dad);
+    
+    /**
         tell that all partial likelihood vectors (in reverse direction) below this node are not computed
      */
     void clearReversePartialLh(PhyloNode *dad);
@@ -318,11 +327,66 @@ public:
     
 };
 
+template <class T, class S> class SubclassPointerVector: public S {
+    //
+    //A subclass of vector class S, of pointers,
+    //where the entries in S are pointer types of T
+    //(where T is a subclass of S::value_type).
+    //
+    //eg. SubclassPointerVector<PhyloNode, NodeVector>
+    //    is a subclass of NodeVector, such that operator[] and
+    //    begin() and end() work in terms of PhyloNode* rather
+    //    than Node*.  So client code won't need to cast
+    //    iterator dereferences or [] entry-lookups to PhyloNode*.
+    //
+    //
+public:
+    typedef S super;
+    using typename S::size_type;
+    
+    class reference {
+        private:
+            S& to_vector;
+            size_type at_index;
+        public:
+            reference(S& vector, size_type index):
+                to_vector(vector), at_index(index) {}
+            operator T*() { return dynamic_cast<T*> ( to_vector[at_index] ) ; }
+            reference& operator= (T* new_value) {
+                to_vector[at_index] = new_value;
+                return *this;
+            }
+            reference& operator= (const reference& elsewhere) {
+                to_vector[at_index] = elsewhere.to_vector[elsewhere.at_index];
+                return *this;
+            }
+    };
+
+    class iterator : public super::iterator {
+        public:
+            iterator( typename super::iterator i) : super::iterator(i) {};
+            T* operator*() { return dynamic_cast<T*>( super::iterator::operator*() ); }
+    };
+    class const_iterator: public super::const_iterator {
+        public:
+            const_iterator( typename super::const_iterator i) : super::const_iterator(i) {};
+            T* operator*() { return dynamic_cast<T*>( super::const_iterator::operator*() ); }
+    };
+    iterator begin() { return iterator( super::begin() ); }
+    iterator end()   { return iterator( super::end() ); }
+    const_iterator begin() const { return const_iterator ( super::begin() ); }
+    const_iterator end() const { return const_iterator ( super::end() ); }
+    T* operator[] (typename super::size_type i) const {
+        return dynamic_cast<T*>( super::operator[] (i) );
+    }
+    reference operator[] (size_type i) {
+        return reference(*(dynamic_cast<S*>(this)), i );
+    }
+};
 
 /**
     Node vector
  */
-typedef vector<PhyloNode*> PhyloNodeVector;
-
+typedef SubclassPointerVector<PhyloNode, NodeVector> PhyloNodeVector;
 
 #endif
