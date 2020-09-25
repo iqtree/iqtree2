@@ -136,7 +136,7 @@ void PhyloTreeMixlen::treeLengths(DoubleVector &lenvec, Node *node, Node *dad) {
 
 void PhyloTreeMixlen::initializeMixBranches(PhyloNode *node, PhyloNode *dad) {
     if (!node) {
-        node = (PhyloNode*)root;
+        node = getRoot();
         // exit if already initialized
 //        if (!((PhyloNeighborMixlen*)root->neighbors[0])->lengths.empty())
 //            return;
@@ -342,9 +342,9 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
     if (initializing_mixlen)
         return PhyloTree::optimizeOneBranch(node1, node2, clearLH, maxNRStep);
 
-    current_it = (PhyloNeighbor*) node1->findNeighbor(node2);
+    current_it =  node1->findNeighbor(node2);
     ASSERT(current_it);
-    current_it_back = (PhyloNeighbor*) node2->findNeighbor(node1);
+    current_it_back = node2->findNeighbor(node1);
     ASSERT(current_it_back);
 
     int i;
@@ -528,7 +528,7 @@ double PhyloTreeMixlen::derivativeFunk(double x[], double dfx[]) {
     int i;
 //    cout.precision(10);
 //    cout << "x: ";
-    for (i = 0; i < mixlen; i++) {
+    for (i = 0; i < mixlen; ++i) {
         ASSERT(!std::isnan(x[i+1]));
         current_it->setLength(i, x[i+1]);
         current_it_back->setLength(i, x[i+1]);
@@ -536,8 +536,8 @@ double PhyloTreeMixlen::derivativeFunk(double x[], double dfx[]) {
     }
 //    cout << endl;
     double df[mixlen+1], ddf[mixlen*mixlen];
-    computeLikelihoodDerv(current_it, (PhyloNode*)current_it_back->node, df, ddf);
-    for (i = 0; i < mixlen; i++)
+    computeLikelihoodDerv(current_it, current_it_back->getNode(), df, ddf);
+    for (i = 0; i < mixlen; ++i)
         df[i] = -df[i];
     memcpy(dfx+1, df, sizeof(double)*mixlen);
     return -df[mixlen];
@@ -549,7 +549,7 @@ void PhyloTreeMixlen::computeFuncDervMulti(double *value, double *df, double *dd
         current_it->setLength(i, value[i]);
         current_it_back->setLength(i, value[i]);
     }
-    computeLikelihoodDerv(current_it, (PhyloNode*)current_it_back->node, df, ddf);
+    computeLikelihoodDerv(current_it, current_it_back->getNode(), df, ddf);
 
     // last element of df is the tree log-ikelihood
     for (i = 0; i <= mixlen; i++) {

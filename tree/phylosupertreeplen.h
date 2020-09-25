@@ -268,7 +268,7 @@ public:
             @param dad dad of the node, used to direct the search
             @return The number of branches that have no/negative length
      */
-    virtual int fixNegativeBranch(bool force = false, Node *node = NULL, Node *dad = NULL);
+    virtual int fixNegativeBranch(bool force = false, PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
 
     virtual void reorientPartialLh(PhyloNeighbor* dad_branch, Node *dad);
 

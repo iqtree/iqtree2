@@ -12,6 +12,7 @@
 #include "tree/mtreeset.h"
 #include "ecopdmtreeset.h"
 #include "pdnetwork.h"
+#include "tree/phylonode.h" //for PhyloNodeVector
 
 /* ===============================================================================
  *	Class for processing IP problem - PD/SD with ecological constraints
@@ -166,7 +167,7 @@ public:
 	/*
 	 * two vectors of nodes, corresponding to ends of branches
 	 */
-	NodeVector nodes1,nodes2;
+	PhyloNodeVector nodes1,nodes2;
 
 	/*
 	 * Ids of species not present on tree/split network

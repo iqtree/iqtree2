@@ -22,7 +22,19 @@
 
 #include "phylonode.h"
 
+#define FOR_EACH_ADJACENT_SUPER_NODE(mynode, mydad, it, mychild) \
+for (NeighborVec::iterator it = (mynode)->neighbors.begin(); it != (mynode)->neighbors.end(); ++it) \
+    for (SuperNode* mychild = (SuperNode*)(*it)->node ; mychild != mydad; mychild = mydad )
+
+#define FOR_EACH_SUPER_NEIGHBOR(mynode, mydad, it, nei) \
+for (NeighborVec::iterator it = (mynode)->neighbors.begin(); it != (mynode)->neighbors.end(); ++it) \
+    for (SuperNeighbor* nei = (SuperNeighbor*)(*it); nei!=nullptr && nei->getNode() != mydad; nei=nullptr )
+
+
 typedef vector<PhyloNeighbor*> PhyloNeighborVec;
+
+
+class SuperNode;
 
 /**
 A neighbor in a phylogenetic SUPER tree
@@ -40,8 +52,7 @@ public:
 		@param anode the other end of the branch
 		@param alength length of branch
 	*/
-	SuperNeighbor(Node *anode, double alength) : PhyloNeighbor(anode, alength) {	
-	}
+    SuperNeighbor(Node *anode, double alength);
 
 	/**
 		construct class with a node and length
@@ -49,24 +60,21 @@ public:
 		@param alength length of branch
 		@param aid branch ID
 	*/
-	SuperNeighbor(Node *anode, double alength, int aid) : PhyloNeighbor(anode, alength, aid) {	
-	}
+    SuperNeighbor(Node *anode, double alength, int aid);
 
     /**
      construct class with another Neighbor
      @param nei another Neighbor
      */
-    SuperNeighbor(SuperNeighbor *nei) : PhyloNeighbor(nei) {
-    }
+    SuperNeighbor(SuperNeighbor *nei);
     
+    virtual SuperNode* getNode();
     
     /**
      allocate a new Neighbor by just copying from this one
      @return pointer to newly created Neighbor
      */
-    virtual Neighbor* newNeighbor() {
-        return (new SuperNeighbor(this));
-    }
+    virtual SuperNeighbor* newNeighbor();
 
 	/**
 		vector of size m (m = #partitions)
@@ -123,6 +131,8 @@ public:
 	*/
 	virtual void addNeighbor(Node *node, double length, int id = -1);
 
+    virtual SuperNeighbor* findNeighbor(Node* node);
+    
     ~SuperNode();
 
 };

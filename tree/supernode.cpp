@@ -19,6 +19,29 @@
  ***************************************************************************/
 #include "supernode.h"
 
+SuperNeighbor::SuperNeighbor(Node *anode, double alength)
+    : PhyloNeighbor(anode, alength) {
+}
+
+SuperNeighbor* SuperNode::findNeighbor(Node* node) {
+    return (SuperNeighbor*)Node::findNeighbor(node);
+}
+
+SuperNeighbor::SuperNeighbor(Node *anode, double alength, int aid)
+    : PhyloNeighbor(anode, alength, aid) {
+}
+
+SuperNeighbor::SuperNeighbor(SuperNeighbor *nei) : PhyloNeighbor(nei) {
+}
+
+SuperNode* SuperNeighbor::getNode() {
+    return (SuperNode*)node;
+}
+
+SuperNeighbor* SuperNeighbor::newNeighbor() {
+    return (new SuperNeighbor(this));
+}
+
 SuperNode::SuperNode()
  : PhyloNode()
 {

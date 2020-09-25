@@ -2501,7 +2501,8 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
             cout << "Start tree.optimizeSPR()" << endl;
             double spr_score = iqtree->optimizeSPR();
             cout << "Finish tree.optimizeSPR()" << endl;
-            //double spr_score = tree.optimizeSPR(tree.curScore, (PhyloNode*) tree.root->neighbors[0]->node);
+            //PhyloNode* nextToRoot = tree.getRoot()->firstNeighbor()->getNode();
+            //double spr_score = tree.optimizeSPR(tree.curScore, nextToRoot);
             if (spr_score <= iqtree->getCurScore()) {
                 cout << "SPR search did not found any better tree" << endl;
             }

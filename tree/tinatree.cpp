@@ -68,9 +68,9 @@ int TinaTree::computeParsimonyScore(int ptn, int &states, PhyloNode *node, Phylo
             intersect_states = states;
         }
 
-        FOR_NEIGHBOR_IT(node, dad, it) {
+        FOR_EACH_ADJACENT_PHYLO_NODE(node, dad, it, child) {
             int states_child;
-            int score_child = computeParsimonyScore(ptn, states_child, (PhyloNode*) ((*it)->node), node);
+            int score_child = computeParsimonyScore(ptn, states_child, child, node);
             union_states |= states_child;
             intersect_states &= states_child;
             score += score_child;
@@ -130,15 +130,16 @@ void TinaTree::initializeAllPartialLh(int &index, int &indexlh, bool fullOn,
     }
     if (dad) {
         // assign a region in central_partial_lh to both Neihgbors (dad->node, and node->dad)
-        PhyloNeighbor *nei = (PhyloNeighbor*) node->findNeighbor(dad);
+        PhyloNeighbor *nei = node->findNeighbor(dad);
         //assert(!nei->partial_lh);
         nei->partial_pars = central_partial_pars + (index * pars_block_size);
-        nei = (PhyloNeighbor*) dad->findNeighbor(node);
+        nei = dad->findNeighbor(node);
         //assert(!nei->partial_lh);
         nei->partial_pars = central_partial_pars + ((index + 1) * pars_block_size);
         index += 2;
         ASSERT(index < nodeNum * 2 - 1);
     }
-    FOR_NEIGHBOR_IT(node, dad, it)
-    initializeAllPartialLh(index, indexlh, fullOn, (PhyloNode*) (*it)->node, node);
+    FOR_EACH_ADJACENT_PHYLO_NODE(node, dad, it, child) {
+        initializeAllPartialLh(index, indexlh, fullOn, child, node);
+    }
 }

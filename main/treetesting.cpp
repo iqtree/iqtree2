@@ -202,7 +202,7 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
         //        outseq.exceptions(ios::failbit | ios::badbit);
         //        outseq.open(filenameseq.c_str());
         
-        NodeVector nodes;
+        PhyloNodeVector nodes;
         tree->getInternalNodes(nodes);
         
         double *marginal_ancestral_prob;
@@ -246,11 +246,11 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
         bool orig_kernel_nonrev;
         tree->initMarginalAncestralState(out, orig_kernel_nonrev, marginal_ancestral_prob, marginal_ancestral_seq);
         
-        for (NodeVector::iterator it = nodes.begin(); it != nodes.end(); it++) {
-            PhyloNode *node = (PhyloNode*)(*it);
-            PhyloNode *dad = (PhyloNode*)node->neighbors[0]->node;
+        for (auto it = nodes.begin(); it != nodes.end(); it++) {
+            PhyloNode* node = (*it);
+            PhyloNode* dad = node->firstNeighbor()->getNode();
             
-            tree->computeMarginalAncestralState((PhyloNeighbor*)dad->findNeighbor(node), dad,
+            tree->computeMarginalAncestralState(dad->findNeighbor(node), dad,
                                                 marginal_ancestral_prob, marginal_ancestral_seq);
             
             //            int *joint_ancestral_node = joint_ancestral + (node->id - tree->leafNum)*nptn;

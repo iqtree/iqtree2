@@ -124,8 +124,8 @@ int RateKategory::computePatternRates(DoubleVector& pattern_rates, IntVector& pa
 
 //	int npattern = phylo_tree->aln->getNPattern();
 //	double *ptn_rates = new double[npattern];
-//	phylo_tree->computeLikelihoodBranchNaive((PhyloNeighbor*)phylo_tree->root->neighbors[0],
-//		(PhyloNode*)phylo_tree->root, NULL, ptn_rates);
+//	phylo_tree->computeLikelihoodBranchNaive(phylo_tree->getRoot()->firstNeighbor(),
+//		phylo_tree->getRoot(), nullptr, ptn_rates);
 //
 //	pattern_rates.clear();
 //	pattern_rates.insert(pattern_rates.begin(), ptn_rates, ptn_rates + npattern);

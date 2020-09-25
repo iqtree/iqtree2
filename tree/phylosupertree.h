@@ -223,7 +223,7 @@ public:
 	 * @param node the current node of the post-order tree traversal
 	 * @param dad the dad of that node used to direct the traversal
 	 */
-	void linkTree(int part, NodeVector &part_taxa, SuperNode *node = NULL, SuperNode *dad = NULL);
+	void linkTree(int part, PhyloNodeVector &part_taxa, SuperNode *node = nullptr, SuperNode *dad = nullptr);
 
 	/**
 	 * Given current supertree T and subtrees T|Y_1,...,T|Y_k, build all maps f_1,...,f_k
@@ -403,7 +403,7 @@ public:
             @param dad dad of the node, used to direct the search
             @return The number of branches that have no/negative length
      */
-    virtual int fixNegativeBranch(bool force = false, Node *node = NULL, Node *dad = NULL);
+    virtual int fixNegativeBranch(bool force = false, PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
 
     virtual int computeParsimonyBranchObsolete(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
 

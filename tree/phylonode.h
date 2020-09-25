@@ -351,7 +351,8 @@ public:
         public:
             reference(S& vector, size_type index):
                 to_vector(vector), at_index(index) {}
-            operator T*() { return dynamic_cast<T*> ( to_vector[at_index] ) ; }
+            operator T*()   { return dynamic_cast<T*> ( to_vector[at_index] ) ; }
+            T* operator->() { return dynamic_cast<T*> ( to_vector[at_index] ) ; }
             reference& operator= (T* new_value) {
                 to_vector[at_index] = new_value;
                 return *this;

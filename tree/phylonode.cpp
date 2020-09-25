@@ -56,8 +56,8 @@ void PhyloNode::clearReversePartialParsimony(PhyloNode* dad) {
 void PhyloNode::clearAllPartialLh(bool set_to_null, PhyloNode* dad) {
     bool zeroSize = (Params::getInstance().lh_mem_save == LM_MEM_SAVE);
     for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); ++it) {
-        PhyloNeighbor* nei = (PhyloNeighbor*)(*it);
-        PhyloNode* child   = nei->getNode();
+        PhyloNeighbor* nei   = (PhyloNeighbor*)(*it);
+        PhyloNode*     child = nei->getNode();
         nei->setLikelihoodComputed(false);
         if (set_to_null) {
             nei->partial_lh = nullptr;
@@ -87,8 +87,8 @@ void PhyloNode::clearAllPartialLh(bool set_to_null, PhyloNode* dad) {
 
 void PhyloNode::clearAllScaleNum(bool set_to_null, PhyloNode* dad) {
     for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it++) {
-        PhyloNeighbor* nei = (PhyloNeighbor*)(*it);
-        PhyloNode* child = nei->getNode();
+        PhyloNeighbor* nei   = (PhyloNeighbor*)(*it);
+        PhyloNode*     child = nei->getNode();
         if (set_to_null) {
             nei->scale_num = nullptr;
         }
@@ -155,7 +155,7 @@ void PhyloNode::addNeighbor(Node *node, double length, int id) {
 }
 
 int PhyloNode::computeSize(PhyloNode *dad) {
-    PhyloNeighbor *nei = (PhyloNeighbor*)dad->findNeighbor(this);
+    PhyloNeighbor *nei = dad->findNeighbor(this);
     if (nei->size > 0)
         return nei->size;
 
