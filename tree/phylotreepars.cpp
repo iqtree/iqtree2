@@ -721,7 +721,7 @@ void PhyloTree::computePartialParsimonySankoff(PhyloNeighbor *dad_branch, PhyloN
         //
         //James B. This calculates a partial parsimony vector oriented
         //         at a leaf (as these are needed during parsimony placement,
-        //         when CandidateTaxon's constructor is calculating parsimony
+        //         when TaxonToPlace's constructor is calculating parsimony
         //         for new_interior->findNeighbor(new_leaf).
         //
         #ifdef _OPENMP

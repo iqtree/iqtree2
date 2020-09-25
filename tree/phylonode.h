@@ -48,8 +48,8 @@ class PhyloNeighbor : public Neighbor {
     friend class MemSlotVector;
     friend class ParsTree;
     friend class BlockAllocator;
-    friend class CandidateTaxon;
-    friend class InsertionPoint;
+    friend class TaxonToPlace;
+    friend class TargetBranch;
 
 public:
     friend class TinaTree;

@@ -1890,7 +1890,7 @@ void PhyloTree::computePartialParsimonySankoffSIMD(PhyloNeighbor *dad_branch,
         //
         //James B. This calculates a partial parsimony vector oriented
         //         at a leaf (as these are needed during parsimony placement,
-        //         when CandidateTaxon's constructor is calculating parsimony
+        //         when TaxonToPlace's constructor is calculating parsimony
         //         for new_interior->findNeighbor(new_leaf).
         //
         //Note: Instead of "write out-of-order into a tip buffer" and then copy to
@@ -1916,7 +1916,6 @@ void PhyloTree::computePartialParsimonySankoffSIMD(PhyloNeighbor *dad_branch,
         return;
     }
     
-
     if (!left->node->isLeaf() && right->node->isLeaf()) {
         // swap leaf and internal node so that left will be the leaf
         std::swap(left, right);
@@ -2100,9 +2099,11 @@ int PhyloTree::computeParsimonyBranchSankoffSIMD(PhyloNeighbor *dad_branch,
     if (!dad_branch->isParsimonyComputed() && !node->isLeaf()) {
         computePartialParsimonySankoffSIMD<VectorClass>(dad_branch, dad);
     }
+    
     if (!node_branch->isParsimonyComputed() && !dad->isLeaf()) {
         computePartialParsimonySankoffSIMD<VectorClass>(node_branch, node);
     }
+    
     // now combine likelihood at the branch
     int nstates = aln->num_states;
     

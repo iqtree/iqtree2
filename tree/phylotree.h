@@ -368,7 +368,7 @@ class PhyloTree : public MTree, public Optimization, public CheckpointFactory {
     friend class MemSlotVector;
     friend class ModelFactory;
     friend class CandidateSet;
-    friend class CandidateTaxon;
+    friend class TaxonToPlace;
     friend class BlockAllocator;
 
 public:
