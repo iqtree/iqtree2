@@ -369,6 +369,7 @@ class PhyloTree : public MTree, public Optimization, public CheckpointFactory {
     friend class ModelFactory;
     friend class CandidateSet;
     friend class CandidateTaxon;
+    friend class BlockAllocator;
 
 public:
     typedef MTree super;
@@ -494,6 +495,8 @@ public:
      */
     virtual bool updateToMatchAlignment(Alignment *alignment);
 
+    bool shouldPlacementUseSankoffParsimony() const;
+    
     /**
      Modify a tree, by adding nodes for taxa found in the tree's alignment,
      but not in the tree, and assigning them taxa ids according to their
@@ -507,7 +510,8 @@ public:
     void addNewTaxaToTree(const IntVector& taxaIdsToAdd);
     
     double taxaAdditionWorkEstimate(size_t newTaxaCount, size_t taxaPerBatch, size_t insertsPerBatch);
-
+    
+    void finishUpAfterTaxaAddition();
     
     virtual PhyloNode* findFarthestLeaf(PhyloNode *node = nullptr,
                                        PhyloNode *dad = nullptr);
@@ -718,6 +722,12 @@ public:
 
     typedef void (PhyloTree::*ComputePartialParsimonyType)(PhyloNeighbor *, PhyloNode *);
     ComputePartialParsimonyType computePartialParsimonyPointer;
+    
+    typedef void (PhyloTree::*ComputePartialParsimonyOutOfTreeType)(const UINT* left_partial_pars,
+                                                     const UINT* right_partial_pars,
+                                                     UINT* dad_partial_pars) const;
+    ComputePartialParsimonyOutOfTreeType computePartialParsimonyOutOfTreePointer;
+
 
     /**
             Compute partial parsimony score of the subtree rooted at dad
@@ -727,17 +737,40 @@ public:
     virtual void computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *dad);
 //    void computePartialParsimonyNaive(PhyloNeighbor *dad_branch, PhyloNode *dad);
     void computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    
+    void computePartialParsimonyOutOfTreeFast(const UINT* left_partial_pars,
+                                              const UINT* right_partial_pars,
+                                              UINT* dad_partial_pars) const;
+
     template<class VectorClass>
     void computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    
+    
+    void computePartialParsimonyOutOfTree(const UINT* left_partial_pars,
+                                          const UINT* right_partial_pars,
+                                          UINT* dad_partial_pars) const;
+    template<class VectorClass>
+    void computePartialParsimonyOutOfTreeSIMD(const UINT* left_partial_pars,
+                                              const UINT* right_partial_pars,
+                                              UINT* dad_partial_pars) const;
 
     template<class VectorClass>
     void computePartialParsimonySankoffSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
+
+    template<class VectorClass>
+    void computePartialParsimonyOutOfTreeSankoffSIMD(const UINT* left_partial_pars,
+                                                     const UINT* right_partial_pars,
+                                                     UINT*       dad_partial_pars) const;
 
     void computeReversePartialParsimony(PhyloNode *node, PhyloNode *dad);
 
     typedef int (PhyloTree::*ComputeParsimonyBranchType)(PhyloNeighbor *, PhyloNode *, int *);
     ComputeParsimonyBranchType computeParsimonyBranchPointer;
 
+    typedef int (PhyloTree::*ComputeParsimonyOutOfTreeType)(const UINT* dad_partial_pars,
+                                             const UINT* node_partial_pars,
+                                             int* branch_subst) const;
+    ComputeParsimonyOutOfTreeType computeParsimonyOutOfTreePointer;
     /**
             compute tree parsimony score on a branch
             @param dad_branch the branch leading to the subtree
@@ -746,15 +779,35 @@ public:
             @return parsimony score of the tree
      */
     virtual int computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
+    
+    virtual int computeParsimonyOutOfTree(const UINT* dad_partial_pars,
+                                          const UINT* node_partial_pars,
+                                          int* branch_subst = nullptr) const;
+
+    
 //    int computeParsimonyBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
     int computeParsimonyBranchFast(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
+    int computeParsimonyOutOfTreeFast(const UINT* dad_partial_pars,
+                                      const UINT* node_partial_pars,
+                                      int*        branch_subst) const;
+    
     template<class VectorClass>
-    int computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
+        int computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
+    
+    template<class VectorClass>
+    int computeParsimonyOutOfTreeSIMD(const UINT* dad_partial_pars,
+                                      const UINT* node_partial_pars,
+                                      int*        branch_subst) const;
 
     template<class VectorClass>
     int computeParsimonyBranchSankoffSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
 
-//    void printParsimonyStates(PhyloNeighbor *dad_branch = NULL, PhyloNode *dad = NULL);
+    template<class VectorClass>
+    int computeParsimonyOutOfTreeSankoffSIMD(const UINT* dad_partial_pars,
+                                             const UINT* node_partial_pars,
+                                             int*        branch_subst) const;
+
+    //    void printParsimonyStates(PhyloNeighbor *dad_branch = NULL, PhyloNode *dad = NULL);
 
     virtual void setParsimonyKernel(LikelihoodKernel lk);
 #if defined(BINARY32) || defined(__NOAVX__)
@@ -794,6 +847,10 @@ public:
      */
     void computePartialParsimonySankoff(PhyloNeighbor *dad_branch, PhyloNode *dad);
     
+    void computePartialParsimonyOutOfTreeSankoff(const UINT* left_partial_pars,
+                                                 const UINT* right_partial_pars,
+                                                 UINT* dad_partial_pars) const;
+    
     /**
      compute tree parsimony score based on a particular branch
      @param dad_branch the branch leading to the subtree
@@ -801,7 +858,13 @@ public:
      @param branch_subst (OUT) if not NULL, the number of substitutions on this branch
      @return parsimony score of the tree
      */
-    int computeParsimonyBranchSankoff(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
+    int computeParsimonyBranchSankoff(PhyloNeighbor *dad_branch, PhyloNode *dad,
+                                      int *branch_subst = NULL);
+    
+    int computeParsimonyOutOfTreeSankoff(const UINT* dad_partial_pars,
+                                         const UINT* node_partial_pars,
+                                         int* branch_subst = nullptr) const;
+
 
     
     /**
@@ -836,7 +899,8 @@ public:
      */
     virtual void deleteAllPartialLh();
 
-    virtual void allocateCentralBlocks(size_t extra_block_count);
+    virtual void allocateCentralBlocks(size_t extra_parsimony_block_count,
+                                       size_t extra_lh_block_count);
     
     virtual void getBlockSizes(size_t& nptn, uint64_t& pars_block_size,
                                uint64_t& lh_block_size, uint64_t& scale_block_size );
@@ -846,7 +910,8 @@ public:
     //      See... PhyloSuperTreePlen::initializeAllPartialLh
     //
     
-    void ensurePartialLHIsAllocated(size_t count_of_extra_blocks);
+    void ensurePartialLHIsAllocated(size_t count_of_extra_parsimony_blocks,
+                                    size_t count_of_extra_lh_blocks);
         
     /**
             initialize partial_lh vector of all PhyloNeighbors, allocating central_partial_lh
@@ -1856,7 +1921,7 @@ public:
             @param dad dad of the node, used to direct the search
             @return The number of branches that have no/negative length
      */
-    virtual int fixNegativeBranch(bool force = false, Node *node = NULL, Node *dad = NULL);
+    virtual int fixNegativeBranch(bool force = false, PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
 
     /**
      Jukes-Cantor correction with alpha shape of Gamma distribution
@@ -1880,7 +1945,7 @@ public:
 //    int assignRandomBranchLengths(bool force = false, Node *node = NULL, Node *dad = NULL);
 
     /* compute Bayesian branch lengths based on ancestral sequence reconstruction */
-    void computeAllBayesianBranchLengths(Node *node = NULL, Node *dad = NULL);
+    void computeAllBayesianBranchLengths(PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
 
     /**
         generate random tree

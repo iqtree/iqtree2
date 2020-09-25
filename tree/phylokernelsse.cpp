@@ -27,13 +27,18 @@
 void PhyloTree::setParsimonyKernelSSE() {
     if (cost_matrix) {
         // Sankoff kernel
-        computeParsimonyBranchPointer = &PhyloTree::computeParsimonyBranchSankoffSIMD<Vec4ui>;
-        computePartialParsimonyPointer = &PhyloTree::computePartialParsimonySankoffSIMD<Vec4ui>;
+        computeParsimonyBranchPointer           = &PhyloTree::computeParsimonyBranchSankoffSIMD<Vec4ui>;
+        computeParsimonyOutOfTreePointer        = &PhyloTree::computeParsimonyOutOfTreeSankoffSIMD<Vec4ui>;
+        computePartialParsimonyPointer          = &PhyloTree::computePartialParsimonySankoffSIMD<Vec4ui>;
+        computePartialParsimonyOutOfTreePointer = &PhyloTree::computePartialParsimonyOutOfTreeSankoffSIMD<Vec4ui>;
+
         return;
     }
     // Fitch kernel
-	computeParsimonyBranchPointer = &PhyloTree::computeParsimonyBranchFastSIMD<Vec4ui>;
-    computePartialParsimonyPointer = &PhyloTree::computePartialParsimonyFastSIMD<Vec4ui>;
+	computeParsimonyBranchPointer           = &PhyloTree::computeParsimonyBranchFastSIMD<Vec4ui>;
+    computeParsimonyOutOfTreePointer        = &PhyloTree::computeParsimonyOutOfTreeSIMD<Vec8ui>;
+    computePartialParsimonyPointer          = &PhyloTree::computePartialParsimonyFastSIMD<Vec4ui>;
+    computePartialParsimonyOutOfTreePointer = &PhyloTree::computePartialParsimonyOutOfTreeSIMD<Vec8ui>;
 }
 
 void PhyloTree::setDotProductSSE() {
@@ -60,7 +65,7 @@ void PhyloTree::setLikelihoodKernelSSE() {
         case 4:
             computeLikelihoodBranchPointer     = &PhyloTree::computeLikelihoodBranchSIMD    <Vec2d, SAFE_LH, 4, false, true>;
             computeLikelihoodDervPointer       = &PhyloTree::computeLikelihoodDervSIMD      <Vec2d, SAFE_LH, 4, false, true>;
-            computePartialLikelihoodPointer    =  &PhyloTree::computePartialLikelihoodSIMD  <Vec2d, SAFE_LH, 4, false, true>;
+            computePartialLikelihoodPointer    = &PhyloTree::computePartialLikelihoodSIMD  <Vec2d, SAFE_LH, 4, false, true>;
             computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferSIMD<Vec2d, 4, false, true>;
             break;
         case 20:
@@ -84,7 +89,7 @@ void PhyloTree::setLikelihoodKernelSSE() {
         case 4:
             computeLikelihoodBranchPointer     = &PhyloTree::computeLikelihoodBranchSIMD    <Vec2d, NORM_LH, 4, false, true>;
             computeLikelihoodDervPointer       = &PhyloTree::computeLikelihoodDervSIMD      <Vec2d, NORM_LH, 4, false, true>;
-            computePartialLikelihoodPointer    =  &PhyloTree::computePartialLikelihoodSIMD  <Vec2d, NORM_LH, 4, false, true>;
+            computePartialLikelihoodPointer    = &PhyloTree::computePartialLikelihoodSIMD  <Vec2d, NORM_LH, 4, false, true>;
             computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferSIMD<Vec2d, 4, false, true>;
             break;
         case 20:

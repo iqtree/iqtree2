@@ -41,7 +41,7 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info
     PhyloNode *dad = info.dad;
     
     ASSERT(dad);
-    PhyloNode *node = (PhyloNode*)(dad_branch->node);
+    PhyloNode *node = dad_branch->getNode();
     
     //    assert(dad_branch->direction != UNDEFINED_DIRECTION);
     
@@ -66,9 +66,9 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info
     
     // internal node
     PhyloNeighbor *left = NULL, *right = NULL; // left & right are two neighbors leading to 2 subtrees
-    FOR_NEIGHBOR_IT(node, dad, it) {
-        if (!left) left = (PhyloNeighbor*)(*it); else right = (PhyloNeighbor*)(*it);
-        if ((*it)->node->isLeaf())
+    FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, nei) {
+        if (!left) left = nei; else right = nei;
+        if (nei->node->isLeaf())
             num_leaves++;
     }
     
@@ -122,8 +122,7 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info
             double *partial_lh_leaf = partial_lh_leaves;
             double *echild = echildren;
             
-            FOR_NEIGHBOR_IT(node, dad, it) {
-                PhyloNeighbor *child = (PhyloNeighbor*)*it;
+            FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, child) {
                 UBYTE *scale_child = SAFE_NUMERIC ? child->scale_num + ptn*ncat_mix : NULL;
                 if (child->node->isLeaf()) {
                     // external node
@@ -228,7 +227,7 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info
                     auto underflown = ((lh_max < SCALING_THRESHOLD) & (VectorClass().load_a(&ptn_invar[ptn]) == 0.0));
                     if (horizontal_or(underflown)) {
                         // now do the likelihood scaling
-                        for (size_t x = 0; x < VectorClass::size(); x++)
+                        for (size_t x = 0; x < VectorClass::size(); x++) {
                             if (underflown[x]) {
                                 double *partial_lh = (double*)partial_lh_all + x;
                                 // now do the likelihood scaling
@@ -237,15 +236,12 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info
                                 }
                                 dad_branch->scale_num[ptn+x] += 1;
                             }
+                        }
                     }
                 }
-                
                 echild += block*nstates;
-            } // FOR_NEIGHBOR
-            
-            
+            } // FOR_EACH_PHYLO_NEIGHBOR
         } // for ptn
-        
         // end multifurcating treatment
     } else if (left->node->isLeaf() && right->node->isLeaf()) {
         
@@ -258,15 +254,9 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info
         
         if (isRootLeaf(right->node)) {
             // swap so that left node is the root
-            PhyloNeighbor *tmp = left;
-            left = right;
-            right = tmp;
-            double *etmp = eleft;
-            eleft = eright;
-            eright = etmp;
-            etmp = partial_lh_left;
-            partial_lh_left = partial_lh_right;
-            partial_lh_right = etmp;
+            std::swap(left, right);
+            std::swap(eleft, eright);
+            std::swap(partial_lh_left, partial_lh_right);
         }
         
         // scale number must be ZERO
@@ -1048,10 +1038,11 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
 
 //    assert(rooted);
 
-    PhyloNode *node = (PhyloNode*) dad_branch->node;
-    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
-    if (!central_partial_lh)
+    PhyloNode*     node        = dad_branch->getNode();
+    PhyloNeighbor* node_branch = node->findNeighbor(dad);
+    if (!central_partial_lh) {
         initializeAllPartialLh();
+    }
     if (node->isLeaf() || (dad_branch->direction == AWAYFROM_ROOT && !isRootLeaf(dad))) {
     	PhyloNode *tmp_node = dad;
     	dad = node;

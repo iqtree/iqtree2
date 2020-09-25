@@ -27,13 +27,17 @@
 void PhyloTree::setParsimonyKernelAVX() {
     if (cost_matrix) {
         // Sankoff kernel
-        computeParsimonyBranchPointer = &PhyloTree::computeParsimonyBranchSankoffSIMD<Vec8ui>;
-        computePartialParsimonyPointer = &PhyloTree::computePartialParsimonySankoffSIMD<Vec8ui>;
+        computeParsimonyBranchPointer           = &PhyloTree::computeParsimonyBranchSankoffSIMD<Vec8ui>;
+        computeParsimonyOutOfTreePointer        = &PhyloTree::computeParsimonyOutOfTreeSankoffSIMD<Vec8ui>;
+        computePartialParsimonyPointer          = &PhyloTree::computePartialParsimonySankoffSIMD<Vec8ui>;
+        computePartialParsimonyOutOfTreePointer = &PhyloTree::computePartialParsimonyOutOfTreeSankoffSIMD<Vec8ui>;
         return;
     }
     // Fitch kernel
-	computeParsimonyBranchPointer = &PhyloTree::computeParsimonyBranchFastSIMD<Vec8ui>;
-    computePartialParsimonyPointer = &PhyloTree::computePartialParsimonyFastSIMD<Vec8ui>;
+	computeParsimonyBranchPointer           = &PhyloTree::computeParsimonyBranchFastSIMD<Vec8ui>;
+    computeParsimonyOutOfTreePointer        = &PhyloTree::computeParsimonyOutOfTreeSIMD<Vec8ui>;
+    computePartialParsimonyPointer          = &PhyloTree::computePartialParsimonyFastSIMD<Vec8ui>;
+    computePartialParsimonyOutOfTreePointer = &PhyloTree::computePartialParsimonyOutOfTreeSIMD<Vec8ui>;
 }
 
 void PhyloTree::setDotProductAVX() {
@@ -60,7 +64,7 @@ void PhyloTree::setLikelihoodKernelAVX() {
         case 4:
             computeLikelihoodBranchPointer     = &PhyloTree::computeLikelihoodBranchSIMD    <Vec4d, SAFE_LH, 4, false, true>;
             computeLikelihoodDervPointer       = &PhyloTree::computeLikelihoodDervSIMD      <Vec4d, SAFE_LH, 4, false, true>;
-            computePartialLikelihoodPointer    =  &PhyloTree::computePartialLikelihoodSIMD  <Vec4d, SAFE_LH, 4, false, true>;
+            computePartialLikelihoodPointer    = &PhyloTree::computePartialLikelihoodSIMD  <Vec4d, SAFE_LH, 4, false, true>;
             computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferSIMD<Vec4d, 4, false, true>;
             break;
         case 20:

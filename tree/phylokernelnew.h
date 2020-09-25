@@ -919,7 +919,8 @@ void PhyloTree::computePartialInfo(TraversalInfo &info, VectorClass* buffer) {
 	double *evec = model->getEigenvectors();
 	double *eval = model->getEigenvalues();
 
-    PhyloNode *dad = info.dad, *node = (PhyloNode*)info.dad_branch->node;
+    PhyloNode* dad  = info.dad;
+    PhyloNode* node = info.dad_branch->getNode();
     double *echild = info.echildren;
     double *partial_lh_leaf = info.partial_lh_leaves;
 
@@ -928,8 +929,7 @@ void PhyloTree::computePartialInfo(TraversalInfo &info, VectorClass* buffer) {
     if (!model->useRevKernel()) {
         size_t nstatesqr = nstates*nstates;
         // non-reversible model
-        FOR_NEIGHBOR_IT(node, dad, it) {
-            PhyloNeighbor *child = (PhyloNeighbor*)*it;
+        FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, child) {
             // precompute information buffer
             if (child->direction == TOWARD_ROOT) {
                 // transpose probability matrix
@@ -1005,8 +1005,7 @@ void PhyloTree::computePartialInfo(TraversalInfo &info, VectorClass* buffer) {
     if (nstates % VectorClass::size() == 0) {
         // vectorized version
         VectorClass *expchild = (VectorClass*)buffer;
-        FOR_NEIGHBOR_IT(node, dad, it) {
-            PhyloNeighbor *child = (PhyloNeighbor*)*it;
+        FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, child) {
             VectorClass *echild_ptr = (VectorClass*)echild;
             // precompute information buffer
             for (c = 0; c < ncat_mix; c++) {
@@ -1057,8 +1056,7 @@ void PhyloTree::computePartialInfo(TraversalInfo &info, VectorClass* buffer) {
     } else {
         // non-vectorized version
         double expchild[nstates];
-        FOR_NEIGHBOR_IT(node, dad, it) {
-            PhyloNeighbor *child = (PhyloNeighbor*)*it;
+        FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, child) {
             // precompute information buffer
             double *echild_ptr = echild;
             for (c = 0; c < ncat_mix; c++) {
@@ -1328,8 +1326,7 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info
 
 	// internal node
 	PhyloNeighbor *left = NULL, *right = NULL; // left & right are two neighbors leading to 2 subtrees
-	FOR_NEIGHBOR_IT(node, dad, it) {
-        PhyloNeighbor *nei = (PhyloNeighbor*)(*it);
+	FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, nei) {
         // make sure that the partial_lh of children are different!
         ASSERT(dad_branch->partial_lh != nei->partial_lh);
         if (!left) left = nei; else right = nei;
@@ -1416,9 +1413,8 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info
             double *partial_lh_leaf = partial_lh_leaves;
             double *echild = echildren;
 
-            FOR_NEIGHBOR_IT(node, dad, it) {
+            FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, child) {
                 if (SITE_MODEL) {
-                    PhyloNeighbor *child = (PhyloNeighbor*)*it;
                     UBYTE *scale_child = SAFE_NUMERIC ? child->scale_num + ptn*ncat_mix : NULL;
                     VectorClass *partial_lh = partial_lh_all;
                     if (child->node->isLeaf()) {
@@ -1473,7 +1469,6 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info
                     len_child += ncat;
                 } else {
                     // non site specific model
-                    PhyloNeighbor* child = (PhyloNeighbor*)*it;
                     auto stateRow = this->getConvertedSequenceByNumber(child->node->id);
                     auto unknown  = aln->STATE_UNKNOWN;
                     UBYTE *scale_child = SAFE_NUMERIC ? child->scale_num + ptn*ncat_mix : NULL;
@@ -2039,8 +2034,8 @@ void PhyloTree::computeLikelihoodBufferGenericSIMD(PhyloNeighbor *dad_branch, Ph
                                                    , size_t ptn_lower, size_t ptn_upper, int packet_id)
 #endif
 {
-    PhyloNode *node = (PhyloNode*) dad_branch->node;
-    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
+    PhyloNode*     node        = dad_branch->getNode();
+    PhyloNeighbor* node_branch = node->findNeighbor(dad);
 
 #ifndef KERNEL_FIX_STATES
     size_t nstates = aln->num_states;
@@ -3417,8 +3412,8 @@ template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA, const bool
 void PhyloTree::computeLikelihoodDervMixlenGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf)
 #endif
 {
-    PhyloNode *node = (PhyloNode*) dad_branch->node;
-    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
+    PhyloNode*     node        = dad_branch->getNode();
+    PhyloNeighbor* node_branch = node->findNeighbor(dad);
     if (!central_partial_lh) {
         initializeAllPartialLh();
     }
