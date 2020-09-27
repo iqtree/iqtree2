@@ -385,6 +385,57 @@ public:
     }
 };
 
+class ParallelParsimonyCalculator {
+private:
+    PhyloTree& tree;
+    typedef std::pair<PhyloNeighbor*, PhyloNode*> WorkItem;
+    std::vector <WorkItem> workToDo;
+public:
+    ParallelParsimonyCalculator(PhyloTree& phylo_tree) : tree(phylo_tree) {}
+    void computePartialParsimony(PhyloNeighbor* dad_branch, PhyloNode* dad) {
+        if (!dad_branch->isParsimonyComputed()) {
+            workToDo.emplace_back(dad_branch, dad);
+        }
+    }
+    void calculate(size_t start_index=0) {
+        size_t stop_index = workToDo.size();
+        if (stop_index <= start_index) {
+            //Bail, if nothing to do
+            return;
+        }
+        
+        //1. Find work to do at a lower level
+        for (int i=start_index; i<stop_index; ++i) {
+            auto item = workToDo[i];
+            PhyloNeighbor* dad_branch = item.first;
+            PhyloNode*     dad        = item.second;
+            PhyloNode*     node       = dad_branch->getNode();
+            FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, nei) {
+                computePartialParsimony(nei, node);
+            }
+        }
+        
+        //2. Do it, and then forget about it
+        calculate(stop_index);
+        workToDo.resize(stop_index);
+        
+        //3. Do the actual parsimony calculations at the
+        //   current level (this doesn't change the content
+        //   of workToDo so workToDo's contents can be
+        //   processed with a parallel pointer loop).
+        WorkItem* startItem = workToDo.data() + start_index;
+        WorkItem* stopItem  = workToDo.data() + stop_index;
+        #ifdef _OPENMP
+        #pragma omp parallel for
+        #endif
+        for (WorkItem* item = startItem; item<stopItem; ++item) {
+            PhyloNeighbor* dad_branch = item->first;
+            PhyloNode*     dad        = item->second;
+            tree.computePartialParsimony(dad_branch, dad);
+        }
+    }
+};
+
 class TaxonToPlace;      //A taxon being added
 class TargetBranch;      //A place it could go
 class TargetBranchRange; //A container of places taxa could go
@@ -456,23 +507,14 @@ public:
     void computeState(PhyloTree& phylo_tree) const {
         PhyloNeighbor* neigh1 = first->findNeighbor(second);
         PhyloNeighbor* neigh2 = second->findNeighbor(first);
-#if (1) //sequential
+        ParallelParsimonyCalculator c(phylo_tree);
         if (!neigh1->isParsimonyComputed()) {
-            phylo_tree.computePartialParsimony(neigh1, first);
+            c.computePartialParsimony(neigh1, first);
         }
         if (!neigh2->isParsimonyComputed()) {
-            phylo_tree.computePartialParsimony(neigh2, second);
-        }
-#else //parallel
-        ParallelParsimonyCalculator c;
-        if (!neigh1->isParsimonyComputed()) {
-            c.add(neigh1);
-        }
-        if (!neigh2->isParsimonyComputed()) {
-            c.add(neigh2);
+            c.computePartialParsimony(neigh1, first);
         }
         c.calculate();
-#endif
         phylo_tree.computePartialParsimonyOutOfTree
             ( neigh1->partial_pars, neigh2->partial_pars, partial_pars );
         //Todo: set up local likelihood and scale_num vectors,
@@ -750,6 +792,7 @@ public:
         node_2->updateNeighbor (node_1, new_interior, bestPlacement.lenToNode2);
         
         //Todo: Are these two really needed?  Won't they be computed later anyway?
+        //As and when needed?
         phylo_tree.computeParsimonyBranch(node_1->findNeighbor(new_interior), node_1);
         phylo_tree.computeParsimonyBranch(node_2->findNeighbor(new_interior), node_2);
         
@@ -1194,7 +1237,7 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
     LOG_LINE ( VB_MIN, "Time spent on searches was "       << timeSpentOnSearches << " sec");
     LOG_LINE ( VB_MIN, "Time spent on actual inserts was " << timeSpentOnInserts << " sec");
     LOG_LINE ( VB_MIN, "Total number of blocked inserts was " << blockedInsertCount );
-    LOG_LINE ( VB_MIN, "At the end of addNewTaxaToTree, index_lhs was "
+    LOG_LINE ( VB_MED, "At the end of addNewTaxaToTree, index_lhs was "
               << allocator.getLikelihoodBlockCount() << ", index_pars was "
               << allocator.getParsimonyBlockCount() << ".");
     LOG_LINE ( VB_MED, "Tidying up tree after inserting taxa.");
