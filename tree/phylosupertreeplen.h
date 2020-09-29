@@ -270,7 +270,7 @@ public:
      */
     virtual int fixNegativeBranch(bool force = false, PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
 
-    virtual void reorientPartialLh(PhyloNeighbor* dad_branch, Node *dad);
+    virtual void reorientPartialLh(PhyloNeighbor* dad_branch, PhyloNode *dad);
 
 protected:
 	vector<uint64_t> partial_lh_entries, scale_num_entries, partial_pars_entries, block_size, scale_block_size;

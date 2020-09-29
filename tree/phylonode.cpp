@@ -20,11 +20,11 @@ std::string pointer_to_hex(void *ptr) {
     return s.str();
 }
 
-void PhyloNeighbor::clearForwardPartialLh(Node *dad) {
-	setLikelihoodComputed(false);
-	for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it ++)
-		if ((*it)->node != dad)
-			((PhyloNeighbor*)*it)->clearForwardPartialLh(node);
+void PhyloNeighbor::clearForwardPartialLh(PhyloNode* dad) {
+    setLikelihoodComputed(false);
+    FOR_EACH_PHYLO_NEIGHBOR(getNode(), dad, it, nei) {
+        nei->clearForwardPartialLh(getNode());
+    }
 }
 
 void PhyloNode::clearReversePartialLh(PhyloNode *dad) {
@@ -34,7 +34,7 @@ void PhyloNode::clearReversePartialLh(PhyloNode *dad) {
     for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it ++) {
         PhyloNode* node = (PhyloNode*)(*it)->node;
         if (node != dad) {
-            PhyloNeighbor* nei  = node->findNeighbor(this);
+            PhyloNeighbor* nei = node->findNeighbor(this);
             nei->setLikelihoodComputed(false);
             nei->size = 0;
             node->clearReversePartialLh(this);
@@ -164,8 +164,8 @@ int PhyloNode::computeSize(PhyloNode *dad) {
         return nei->size;
     }
     nei->size = 0;
-    FOR_NEIGHBOR_IT(this, dad, it) {
-        nei->size += ((PhyloNode*)(*it)->node)->computeSize(this);
+    FOR_EACH_ADJACENT_PHYLO_NODE(this, dad, it, child) {
+        nei->size += child->computeSize(this);
     }
     return nei->size;
 }
@@ -180,5 +180,10 @@ PhyloNeighbor* PhyloNode::firstNeighbor() {
         return nullptr;
     }
     return (PhyloNeighbor*) neighbors[0];
+}
+
+PhyloNeighbor* PhyloNode::getNeighborByIndex(size_t index) {
+    ASSERT(index < neighbors.size());
+    return (PhyloNeighbor*)neighbors[index];
 }
 

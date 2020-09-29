@@ -949,7 +949,7 @@ protected:
             @param node the root of the sub-tree
             @param dad dad of 'node', used to direct the recursion
      */
-    void raiseBonus(Neighbor *nei, Node *dad, double bonus);
+    void raiseBonus(PhyloNeighbor *nei, PhyloNode *dad, double bonus);
 
     /**
             Bonuses are stored in a partial fashion. This function will propagate the bonus at every branch

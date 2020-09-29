@@ -1175,11 +1175,11 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	    		}
 
 	    	// ------ Optimization of branches incident to node2 ---------------
-	    	FOR_NEIGHBOR(node2, node1, it){
+	    	FOR_EACH_SUPER_NEIGHBOR(node2, node1, it, nei){
 	    		// Clear the partial likelihood of node2 neighbor: only for NO or ONE epsilon cases
 	    		for(part = 0; part < ntrees; part++){
-	    			if(((SuperNeighbor*)(*it))->link_neighbors[part] && (is_nni[part]==NNI_NO_EPSILON || is_nni[part]==NNI_ONE_EPSILON)){
-	    				node_link = ((SuperNeighbor*)(*it))->link_neighbors[part]->node;
+	    			if(nei->link_neighbors[part] && (is_nni[part]==NNI_NO_EPSILON || is_nni[part]==NNI_ONE_EPSILON)){
+	    				node_link = nei->link_neighbors[part]->node;
 	    				nei_link  = nei1_new->link_neighbors[part]->node;
 	    				if(node_link->id == nei_link->id){
 	    					nei_link = nei2_new->link_neighbors[part]->node;
@@ -1189,7 +1189,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	    			}
 	    		}
 	    		// Optimize the branch incident to node2
-	    		optimizeOneBranch(node2, (PhyloNode*) (*it)->node, false, NNI_MAX_NR_STEP);
+	    		optimizeOneBranch(node2, nei->getNode(), false, NNI_MAX_NR_STEP);
 				node2->findNeighbor((*it)->node)->getLength(nniMoves[cnt].newLen[i]);
 				i++;
 	    	}
@@ -1847,12 +1847,12 @@ void PhyloSuperTreePlen::initializeAllPartialLh(int &index, int &indexlh,
 	ASSERT(0);
 }
 
-void PhyloSuperTreePlen::reorientPartialLh(PhyloNeighbor* dad_branch, Node *dad) {
-    SuperNeighbor *sdad_branch = (SuperNeighbor*) dad_branch;
-    SuperNeighbor *snode_branch = (SuperNeighbor*) dad_branch->node->findNeighbor(dad);
+void PhyloSuperTreePlen::reorientPartialLh(PhyloNeighbor* dad_branch, PhyloNode *dad) {
+    SuperNeighbor* sdad_branch  = (SuperNeighbor*) dad_branch;
+    SuperNeighbor* snode_branch = (SuperNeighbor*) dad_branch->node->findNeighbor(dad);
     for (int part = 0; part < size(); part++) {
         if (sdad_branch->link_neighbors[part]) {
-            at(part)->reorientPartialLh(sdad_branch->link_neighbors[part], snode_branch->link_neighbors[part]->node);
+            at(part)->reorientPartialLh(sdad_branch->link_neighbors[part], snode_branch->link_neighbors[part]->getNode());
         }
     }
 }

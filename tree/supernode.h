@@ -132,6 +132,10 @@ public:
 	virtual void addNeighbor(Node *node, double length, int id = -1);
 
     virtual SuperNeighbor* findNeighbor(Node* node);
+
+	virtual SuperNeighbor* firstNeighbor();
+
+	virtual SuperNeighbor* getNeighborByIndex(size_t index);
     
     ~SuperNode();
 

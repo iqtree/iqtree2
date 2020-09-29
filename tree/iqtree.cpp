@@ -1305,13 +1305,11 @@ void IQTree::initializeBonus(PhyloNode *node, PhyloNode *dad) {
     }
 }
 
-void IQTree::raiseBonus(Neighbor *nei, Node *dad, double bonus) {
-    ((PhyloNeighbor*) nei)->lh_scale_factor += bonus;
-    if (verbose_mode >= VB_DEBUG)
+void IQTree::raiseBonus(PhyloNeighbor *nei, PhyloNode *dad, double bonus) {
+    nei->lh_scale_factor += bonus;
+    if (verbose_mode >= VB_DEBUG) {
         cout << dad->id << " - " << nei->node->id << " : " << bonus << endl;
-
-    //  FOR_NEIGHBOR_IT(nei->node, dad, it)
-    //    raiseBonus((*it), nei->node, bonus);
+    }
 }
 
 double IQTree::computePartialBonus(PhyloNode *node, PhyloNode* dad) {
@@ -1381,7 +1379,7 @@ void IQTree::assessQuartets(vector<RepresentLeafSet*> &leaves_vec, PhyloNode *cu
             }
     for (cnt = 0; cnt < MAX_DEGREE; cnt++)
         if (bonus[cnt] > 0.0)
-            raiseBonus(cur_root->neighbors[cnt], cur_root, bonus[cnt]);
+            raiseBonus(cur_root->getNeighborByIndex(cnt), cur_root, bonus[cnt]);
 
 }
 
@@ -3091,9 +3089,9 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI, const char* context) {
             Branches filteredNNIBranches;
             filterNNIBranches(appliedNNIs, filteredNNIBranches);
             for (Branches::iterator it = filteredNNIBranches.begin(); it != filteredNNIBranches.end(); it++) {
-                Branch curBranch = it->second;
-                PhyloNeighbor* nei = (PhyloNeighbor*) curBranch.first->findNeighbor(curBranch.second);
-                Split* curSplit = nei->split;
+                Branch         curBranch = it->second;
+                PhyloNeighbor* nei       = (PhyloNeighbor*) curBranch.first->findNeighbor(curBranch.second);
+                Split*         curSplit  = nei->split;
                 bool tabu = false;
                 bool stable = false;
                 if (!tabuSplits.empty()) {

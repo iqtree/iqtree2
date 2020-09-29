@@ -127,14 +127,14 @@ public:
         clear all partial likelihood recursively in forward direction
         @param dad dad of this neighbor
      */
-    void clearForwardPartialLh(Node *dad);
+    void clearForwardPartialLh(PhyloNode *dad);
 
     /**
         DEPRECATED, moved to PhyloTree
         if partial_lh is NULL, reorient partial_lh (LM_PER_NODE technique)
         @param dad dad of this neighbor
     */
-//    void reorientPartialLh(Node *dad);
+//    void reorientPartialLh(PhyloNode *dad);
 
 	/**
 	* For Upper Bounds analysis: get partial likelihood and lh scale factor
@@ -324,6 +324,8 @@ public:
     PhyloNeighbor* findNeighbor(Node* node);
     
     PhyloNeighbor* firstNeighbor();
+
+    PhyloNeighbor* getNeighborByIndex(size_t index);
     
 };
 
@@ -389,5 +391,8 @@ public:
     Node vector
  */
 typedef SubclassPointerVector<PhyloNode, NodeVector> PhyloNodeVector;
+
+typedef pair<PhyloNode*, PhyloNode*> PhyloBranch;
+typedef CastingVector<PhyloBranch, BranchVector> PhyloBranchVector;
 
 #endif

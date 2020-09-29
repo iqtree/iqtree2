@@ -2547,7 +2547,7 @@ protected:
      */
     UINT *central_partial_pars;
 
-    virtual void reorientPartialLh(PhyloNeighbor* dad_branch, Node *dad);
+    virtual void reorientPartialLh(PhyloNeighbor* dad_branch, PhyloNode *dad);
 
     //----------- memory saving technique ------//
 

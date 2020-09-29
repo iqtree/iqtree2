@@ -23,10 +23,6 @@ SuperNeighbor::SuperNeighbor(Node *anode, double alength)
     : PhyloNeighbor(anode, alength) {
 }
 
-SuperNeighbor* SuperNode::findNeighbor(Node* node) {
-    return (SuperNeighbor*)Node::findNeighbor(node);
-}
-
 SuperNeighbor::SuperNeighbor(Node *anode, double alength, int aid)
     : PhyloNeighbor(anode, alength, aid) {
 }
@@ -37,6 +33,23 @@ SuperNeighbor::SuperNeighbor(SuperNeighbor *nei) : PhyloNeighbor(nei) {
 SuperNode* SuperNeighbor::getNode() {
     return (SuperNode*)node;
 }
+
+SuperNeighbor* SuperNode::findNeighbor(Node* node) {
+	return (SuperNeighbor*)Node::findNeighbor(node);
+}
+
+SuperNeighbor* SuperNode::firstNeighbor() {
+	if (neighbors.size() == 0) {
+		return nullptr;
+	}
+	return (SuperNeighbor*)neighbors[0];
+}
+
+SuperNeighbor* SuperNode::getNeighborByIndex(size_t index) {
+	ASSERT(index < neighbors.size());
+	return (SuperNeighbor*)neighbors[index];
+}
+
 
 SuperNeighbor* SuperNeighbor::newNeighbor() {
     return (new SuperNeighbor(this));

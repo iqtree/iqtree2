@@ -1556,10 +1556,8 @@ double PhyloTree::computeLikelihood(double *pattern_lh) {
 //    if (verbose_mode >= VB_DEBUG) {
 //        printTransMatrices(dad_branch->node, dad);
 //        /*
-//         FOR_NEIGHBOR_IT(dad_branch->node, dad, it) {
-//         PhyloNeighbor *pit = (PhyloNeighbor*)(*it);
-//         cout << pit->node->name << "\t" << pit->partial_lh[0] << endl;
-//
+//         FOR_EACH_PHYLO_NEIGHBOR(dad_branch->node, dad, it, pit) {
+//              cout << pit->node->name << "\t" << pit->partial_lh[0] << endl;
 //         }*/
 //    }
 //    double* state_freq = new double[aln->num_states];
@@ -4958,25 +4956,25 @@ void PhyloTree::pruneSubtree(PhyloNode *node, PhyloNode *dad, PruningInfo &info)
     info.node = node;
     info.dad = dad;
 
-    FOR_NEIGHBOR_IT(dad, node, it){
+    FOR_EACH_PHYLO_NEIGHBOR(dad, node, it, nei){
         if (first) {
-            info.dad_it_left = it;
-            info.dad_nei_left = (*it);
-            info.dad_lh_left = ((PhyloNeighbor*) (*it))->partial_lh;
-            info.left_node = (*it)->node;
-            info.left_len = (*it)->length;
+            info.dad_it_left  = it;
+            info.dad_nei_left = nei;
+            info.dad_lh_left  = nei->partial_lh;
+            info.left_node    = nei->node;
+            info.left_len     = nei->length;
             first = false;
         } else {
-            info.dad_it_right = it;
-            info.dad_nei_right = (*it);
-            info.dad_lh_right = ((PhyloNeighbor*) (*it))->partial_lh;
-            info.right_node = (*it)->node;
-            info.right_len = (*it)->length;
+            info.dad_it_right  = it;
+            info.dad_nei_right = nei;
+            info.dad_lh_right  = nei->partial_lh;
+            info.right_node    = nei->node;
+            info.right_len     = nei->length;
         }
     }
-    info.left_it = info.left_node->findNeighborIt(dad);
-    info.right_it = info.right_node->findNeighborIt(dad);
-    info.left_nei = (*info.left_it);
+    info.left_it   = info.left_node->findNeighborIt(dad);
+    info.right_it  = info.right_node->findNeighborIt(dad);
+    info.left_nei  = (*info.left_it);
     info.right_nei = (*info.right_it);
 
     info.left_node->updateNeighbor(info.left_it, info.dad_nei_right);
@@ -5994,20 +5992,21 @@ void PhyloTree::convertToUnrooted() {
     // set a temporary taxon so that tree traversal works
     root = taxon;
     
-    if (params)
+    if (params) {
         setRootNode(params->root);
+    }
 
     initializeTree();
     clearBranchDirection();
 //    computeBranchDirection();
 }
 
-void PhyloTree::reorientPartialLh(PhyloNeighbor* dad_branch, Node *dad) {
+void PhyloTree::reorientPartialLh(PhyloNeighbor* dad_branch, PhyloNode *dad) {
     ASSERT(!isSuperTree());
     if ( dad_branch->partial_lh != nullptr ) {
         return;
     }
-    Node* node = dad_branch->node;
+    PhyloNode* node = dad_branch->getNode();
     FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, nei) {
         PhyloNeighbor *backnei = nei->getNode()->findNeighbor(node);
         if (backnei->partial_lh) {

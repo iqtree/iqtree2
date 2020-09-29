@@ -191,6 +191,8 @@ public:
      */
     virtual SuperNode* newNode(int node_id, int node_name);
 
+    virtual SuperNode* getRoot();
+
 	/**
 	 *		@return number of alignment patterns
 	*/

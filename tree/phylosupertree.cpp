@@ -355,6 +355,10 @@ SuperNode* PhyloSuperTree::newNode(int node_id, int node_name) {
     return new SuperNode(node_id, node_name);
 }
 
+SuperNode* PhyloSuperTree::getRoot() {
+	return (SuperNode*)root;
+}
+
 size_t PhyloSuperTree::getAlnNPattern() const {
 	size_t num = 0;
 	for (auto it = begin(); it != end(); it++)
@@ -386,8 +390,8 @@ double PhyloSuperTree::computeDist(int seq1, int seq2, double initial_dist, doub
 }
 
 void PhyloSuperTree::linkBranch(int part, SuperNeighbor *nei, SuperNeighbor *dad_nei) {
-	SuperNode *node = (SuperNode*)dad_nei->node;
-	SuperNode *dad = (SuperNode*)nei->node;
+	SuperNode *node = dad_nei->getNode();
+	SuperNode *dad  = nei->getNode();
 	nei->link_neighbors[part] = NULL;
 	dad_nei->link_neighbors[part] = NULL;
 	vector<PhyloNeighbor*> part_vec;
@@ -435,12 +439,12 @@ void PhyloSuperTree::linkBranch(int part, SuperNeighbor *nei, SuperNeighbor *dad
 void PhyloSuperTree::linkTree(int part, PhyloNodeVector &part_taxa, SuperNode *node, SuperNode *dad) {
 	if (!node) {
 		if (!root->isLeaf())
-			node = (SuperNode*) root;
+			node = getRoot();
 		else
-			node = (SuperNode*)root->neighbors[0]->node;
+			node = getRoot()->firstNeighbor()->getNode();
 		ASSERT(node);
 		if (node->isLeaf()) // two-taxa tree
-			dad = (SuperNode*)node->neighbors[0]->node;
+			dad = node->firstNeighbor()->getNode();
 	}
 	SuperNeighbor* nei     = nullptr;
 	SuperNeighbor* dad_nei = nullptr;
@@ -464,8 +468,8 @@ void PhyloSuperTree::linkTree(int part, PhyloNodeVector &part_taxa, SuperNode *n
 		return;
 	}
 
-	FOR_NEIGHBOR_DECLARE(node, dad, it) {
-		linkTree(part, part_taxa, (SuperNode*) (*it)->node, (SuperNode*) node);
+	FOR_EACH_ADJACENT_SUPER_NODE(node, dad, it, child) {
+		linkTree(part, part_taxa, child, node);
 	}
 	if (!dad) return;
 	linkBranch(part, nei, dad_nei);
