@@ -622,9 +622,12 @@ public:
     virtual PhyloNode* newNode(int node_id, int node_name);
 
     /**
-            indicates whether a given node is a dummy "place-holder" node
-            used when adding new taxa to an existing tree
-            (in addTaxonML or addTaxonMP).
+            indicates whether a given node is a dummy "place-holder" node,
+            used only for testing the placement cost of adding a new taxon,
+            to an existing tree, by modifying the tree (for example, in 
+            addTaxonML and growTreeML, in reinsertLeavesByParsimony, and in
+            insertNode2Branch, addTaxonMPFast, and computeParsimonyTree).  
+
             @param node the node
             @return true if the node is a dummy "place-holder", false otherwise.
      */
@@ -864,24 +867,6 @@ public:
     int computeParsimonyOutOfTreeSankoff(const UINT* dad_partial_pars,
                                          const UINT* node_partial_pars,
                                          int* branch_subst = nullptr) const;
-
-
-    
-    /**
-            used internally by addNewTaxaToTree() to find the best target branch to add into the tree
-            @param new_taxon (leaf) node to add for new taxon
-            @param added_node (interior) node to add, so as to incorporate the new taxon
-            @param node the current node
-            @param dad dad of the node, used to direct the search
-            @param target_node (OUT) one end of the best branch found
-            @param target_dad (OUT) the other end of the best branch found
-            @param best_score the best parsimony score found thus far
-     */
-    void addTaxonMP(PhyloNode* new_taxon, PhyloNode* added_node,
-                    PhyloNode* node, PhyloNode* dad,
-                    PhyloNode*& target_node, PhyloNode*& target_dad,
-                    int& best_score);
-
     
     /****************************************************************************
             likelihood function

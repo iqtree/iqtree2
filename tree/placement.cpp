@@ -90,7 +90,6 @@ namespace {
         }
         return numberToRemove;
     }
-
     CostFunction getCostFunction() {
         auto cf = getIncrementalParameter('C', "MP");
         if (cf=="ML") {
@@ -281,54 +280,6 @@ double PhyloTree::addTaxonML(PhyloNode* added_taxon,     PhyloNode *added_node,
         }
     }
     return best_score;
-}
-
-
-void PhyloTree::addTaxonMP(PhyloNode* added_taxon, PhyloNode *added_node,
-                           PhyloNode *node, PhyloNode *dad,
-                           PhyloNode* &target_node, PhyloNode* &target_dad,
-                           int& bestScore) {
-    Neighbor* dad_nei = dad->findNeighbor(node);
-    double    len     = dad_nei->length;
-    double    halfLen = 0.5 * len;
-    int       score;
-    {
-        // insert the new node in the middle of the branch node-dad
-        node->updateNeighbor(dad, added_node, halfLen);
-        dad->updateNeighbor(node, added_node, halfLen);
-        added_node->updateNeighbor(DUMMY_NODE_1, node, halfLen);
-        added_node->updateNeighbor(DUMMY_NODE_2, dad, halfLen);
-        
-        FOR_EACH_PHYLO_NEIGHBOR(added_node, nullptr, it, nei) {
-            nei->clearComputedFlags();
-            nei->getNode()->findNeighbor(added_node)->clearComputedFlags();
-        }
-        
-        score = computeParsimonyBranch(added_taxon->findNeighbor(added_node),
-                                       added_taxon);
-
-        // remove the added node
-        node->updateNeighbor ( added_node, dad, len);
-        dad->updateNeighbor  ( added_node, node, len);
-        added_node->updateNeighbor ( node, DUMMY_NODE_1, 0);
-        added_node->updateNeighbor ( dad,  DUMMY_NODE_2, 0);
-        node->findNeighbor(dad)->clearComputedFlags();
-        dad->findNeighbor(node)->clearComputedFlags();
-    }
-    if (score < bestScore) {
-        best_pars_score = score; //So shortcutting will work
-        target_node     = node;
-        target_dad      = dad;
-        bestScore       = score;
-    }
-    trackProgress(1.0);
-
-    // now traverse the tree downwards
-    FOR_EACH_ADJACENT_PHYLO_NODE(node, dad, it, child){
-        addTaxonMP( added_taxon,  added_node,
-                    child,  node,
-                    target_node, target_dad, bestScore);
-    }
 }
 
 class BlockAllocator {
