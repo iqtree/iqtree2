@@ -3418,12 +3418,8 @@ void PhyloTree::computeLikelihoodDervMixlenGenericSIMD(PhyloNeighbor *dad_branch
         initializeAllPartialLh();
     }
     if (node->isLeaf()) {
-        PhyloNode *tmp_node = dad;
-        dad = node;
-        node = tmp_node;
-        PhyloNeighbor *tmp_nei = dad_branch;
-        dad_branch = node_branch;
-        node_branch = tmp_nei;
+        std::swap(dad, node);
+        std::swap(dad_branch, node_branch);
     }
 
 #ifdef KERNEL_FIX_STATES

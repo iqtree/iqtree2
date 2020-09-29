@@ -15,15 +15,15 @@
 
 void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, size_t ptn_lower, size_t ptn_upper, int thread_id) {
 
-    PhyloNeighbor *dad_branch = info.dad_branch;
-    PhyloNode *dad = info.dad;
+    PhyloNeighbor* dad_branch = info.dad_branch;
+    PhyloNode*     dad        = info.dad;
 
     // don't recompute the likelihood
 	ASSERT(dad);
 //    if (dad_branch->partial_lh_computed & 1)
 //        return;
 //    dad_branch->partial_lh_computed |= 1;
-    PhyloNode *node = (PhyloNode*)(dad_branch->node);
+    PhyloNode *node = dad_branch->getNode();
 
     ASSERT(dad_branch->direction != UNDEFINED_DIRECTION);
 
@@ -50,10 +50,9 @@ void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, size_t ptn_l
 //    dad_branch->lh_scale_factor = 0.0;
 
 	// internal node
-	PhyloNeighbor *left = NULL, *right = NULL; // left & right are two neighbors leading to 2 subtrees
-	FOR_NEIGHBOR_IT(node, dad, it) {
-//        PhyloNeighbor *nei = (PhyloNeighbor*)*it;
-		if (!left) left = (PhyloNeighbor*)(*it); else right = (PhyloNeighbor*)(*it);
+	PhyloNeighbor *left = nullptr, *right = nullptr; // left & right are two neighbors leading to 2 subtrees
+	FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, nei) {
+		if (!left) left = nei; else right = nei;
 //        if ((nei->partial_lh_computed & 1) == 0)
 //            computeNonrevPartialLikelihood(nei, node);
 //        dad_branch->lh_scale_factor += nei->lh_scale_factor;
@@ -62,8 +61,8 @@ void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, size_t ptn_l
 //    if (params->lh_mem_save == LM_PER_NODE && !dad_branch->partial_lh) {
 //        // re-orient partial_lh
 //        bool done = false;
-//        FOR_NEIGHBOR_IT(node, dad, it2) {
-//            PhyloNeighbor *backnei = ((PhyloNeighbor*)(*it2)->node->findNeighbor(node));
+//        FOR_EACH_ADJACENT_PHYLO_NODE(node, dad, it2, child) {
+//            PhyloNeighbor *backnei = child->findNeighbor(node);
 //            if (backnei->partial_lh) {
 //                dad_branch->partial_lh = backnei->partial_lh;
 //                dad_branch->scale_num = backnei->scale_num;
@@ -92,12 +91,8 @@ void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, size_t ptn_l
     double *eleft = echildren, *eright = echildren + block*nstates;
     
 	if ((!left->node->isLeaf() && right->node->isLeaf())) {
-		PhyloNeighbor *tmp = left;
-		left = right;
-		right = tmp;
-        double *etmp = eleft;
-        eleft = eright;
-        eright = etmp;
+        std::swap(left,  right);
+        std::swap(eleft, eright);
     }
 
     if (node->degree() > 3) {
@@ -117,14 +112,17 @@ void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, size_t ptn_l
             double *partial_lh_leaf = partial_lh_leaves;
             double *echild = echildren;
 
-            FOR_NEIGHBOR_IT(node, dad, it) {
-                PhyloNeighbor *child = (PhyloNeighbor*)*it;
-                if (child->node->isLeaf()) {
+            FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, nei) {
+                PhyloNode child = nei->getNode();
+                if (child->isLeaf()) {
                     // external node
                     int state_child;
-                    if (child->node == root) 
+                    if (child == root) {
                         state_child = 0;
-                    else state_child = (ptn < orig_ntn) ? (aln->at(ptn))[child->node->id] : model_factory->unobserved_ptns[ptn-orig_ntn];
+                    }
+                    else {
+                        state_child = (ptn < orig_ntn) ? (aln->at(ptn))[child->id] : model_factory->unobserved_ptns[ptn - orig_ntn];
+                    }
                     double *child_lh = partial_lh_leaf + state_child*block;
                     for (c = 0; c < block; c++) {
                         // compute real partial likelihood vector
@@ -134,8 +132,8 @@ void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, size_t ptn_l
                 } else {
                     // internal node
                     double *partial_lh = partial_lh_all;
-                    double *partial_lh_child = child->partial_lh + ptn*block;
-                    dad_branch->scale_num[ptn] += child->scale_num[ptn];
+                    double *partial_lh_child = nei->partial_lh + ptn*block;
+                    dad_branch->scale_num[ptn] += nei->scale_num[ptn];
 
                     double *echild_ptr = echild;
                     for (c = 0; c < ncat; c++) {
@@ -153,12 +151,12 @@ void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, size_t ptn_l
                     }
                 } // if
                 echild += block*nstates;
-            } // FOR_NEIGHBOR
-            
-        
+            } // FOR_EACH_PHYLO_NEIGHBOR
+                    
             double lh_max = partial_lh_all[0];
-            for (i = 1; i < block; i++)
+            for (i = 1; i < block; i++) {
                 lh_max = max(lh_max, partial_lh_all[i]);
+            }
 
             ASSERT(lh_max > 0.0);
             // check if one should scale partial likelihoods
@@ -200,15 +198,9 @@ void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, size_t ptn_l
 
         if (right->node == root) {
             // swap so that left node is the root
-            PhyloNeighbor *tmp = left;
-            left = right;
-            right = tmp;
-            double *etmp = eleft;
-            eleft = eright;
-            eright = etmp;
-            etmp = partial_lh_left;
-            partial_lh_left = partial_lh_right;
-            partial_lh_right = etmp;
+            std::swap(left, right);
+            std::swap(eleft, eright);)
+            std::swap(partial_lh_left, partial_lh_right);
         }
     
 		// scale number must be ZERO
@@ -370,18 +362,14 @@ void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, size_t ptn_l
 void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad, double *df, double *ddf) {
 
     ASSERT(rooted);
+    PhyloNode*     node        = dad_branch->getNode();
+    PhyloNeighbor* node_branch = node->findNeighbor(dad);
 
-    PhyloNode *node = (PhyloNode*) dad_branch->node;
-    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
     if (!central_partial_lh)
         initializeAllPartialLh();
     if (node->isLeaf() || (dad_branch->direction == AWAYFROM_ROOT && dad != root)) {
-    	PhyloNode *tmp_node = dad;
-    	dad = node;
-    	node = tmp_node;
-    	PhyloNeighbor *tmp_nei = dad_branch;
-    	dad_branch = node_branch;
-    	node_branch = tmp_nei;
+        std::swap(node, dad);
+        std::swap(dad_branch, node_branch);
     }
 
     computeTraversalInfo<Vec1d>(node, dad, false);
@@ -600,17 +588,13 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
 
     ASSERT(rooted);
 
-    PhyloNode *node = (PhyloNode*) dad_branch->node;
-    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
+    PhyloNode*     node        = dad_branch->getNode();
+    PhyloNeighbor* node_branch = node->findNeighbor(dad);
     if (!central_partial_lh)
         initializeAllPartialLh();
     if (node->isLeaf() || (dad_branch->direction == AWAYFROM_ROOT && dad != root)) {
-    	PhyloNode *tmp_node = dad;
-    	dad = node;
-    	node = tmp_node;
-    	PhyloNeighbor *tmp_nei = dad_branch;
-    	dad_branch = node_branch;
-    	node_branch = tmp_nei;
+        std::swap(dad, node);
+        std::swap(dad_branch, node_branch);
     }
 
     computeTraversalInfo<Vec1d>(node, dad, false);

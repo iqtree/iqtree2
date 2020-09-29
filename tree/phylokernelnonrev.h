@@ -93,12 +93,8 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info
     double *eleft = echildren, *eright = echildren + block*nstates;
     
     if ((!left->node->isLeaf() && right->node->isLeaf())) {
-        PhyloNeighbor *tmp = left;
-        left = right;
-        right = tmp;
-        double *etmp = eleft;
-        eleft = eright;
-        eright = etmp;
+        std::swap(left,  right);
+        std::swap(eleft, eright);
     }
     
     if (node->degree() > 3) {
@@ -1044,12 +1040,8 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
         initializeAllPartialLh();
     }
     if (node->isLeaf() || (dad_branch->direction == AWAYFROM_ROOT && !isRootLeaf(dad))) {
-    	PhyloNode *tmp_node = dad;
-    	dad = node;
-    	node = tmp_node;
-    	PhyloNeighbor *tmp_nei = dad_branch;
-    	dad_branch = node_branch;
-    	node_branch = tmp_nei;
+        std::swap(dad,        node);
+        std::swap(dad_branch, node_branch);
     }
 
 #ifdef KERNEL_FIX_STATES

@@ -1803,10 +1803,7 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
     PhyloNeighbor *nei1 = current_it;
     PhyloNeighbor *nei2 = current_it_back;
     if (!nei1->node->isLeaf() && nei2->node->isLeaf()) {
-        // exchange
-        PhyloNeighbor *tmp = nei1;
-        nei1 = nei2;
-        nei2 = tmp;
+        std::swap(nei1, nei2);
     }
     if (nei1->node->isLeaf()) {
         // external branch
@@ -3991,9 +3988,7 @@ void PhyloTree::doOneRandomNNI(Branch branch) {
 
     if (((PhyloNeighbor*)branch.first->findNeighbor(branch.second))->direction == TOWARD_ROOT) {
         // swap node1 and node2 if the direction is not right, only for nonreversible models
-        Node *tmp = branch.first;
-        branch.first = branch.second;
-        branch.second = tmp;
+        std::swap(branch.first, branch.second);
     }
 
     NNIMove nni;
@@ -4029,9 +4024,7 @@ NNIMove PhyloTree::getRandomNNI(Branch &branch) {
     // for rooted tree
     if (((PhyloNeighbor*)branch.first->findNeighbor(branch.second))->direction == TOWARD_ROOT) {
         // swap node1 and node2 if the direction is not right, only for nonreversible models
-        Node *tmp = branch.first;
-        branch.first = branch.second;
-        branch.second = tmp;
+        swap(branch.first, branch.second);
     }
     NNIMove nni;
     nni.node1 = (PhyloNode*) branch.first;
@@ -4183,9 +4176,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
     
     if ((node1->findNeighbor(node2))->direction == TOWARD_ROOT) {
         // swap node1 and node2 if the direction is not right, only for nonreversible models
-        PhyloNode *tmp = node1;
-        node1 = node2;
-        node2 = tmp;
+        std::swap(node1, node2);
     }
 
     int IT_NUM = (params->nni5) ? 6 : 2;

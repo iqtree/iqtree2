@@ -222,14 +222,9 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
     VectorClass *eleft = echildren, *eright = echildren + block*nstates/VCSIZE;
     
     if (!left->node->isLeaf() && right->node->isLeaf()) {
-        PhyloNeighbor *tmp = left;
-        left = right;
-        right = tmp;
-        VectorClass *etmp = eleft;
-        eleft = eright;
-        eright = etmp;
+        std::swap(left, right);
+        std::swap(elft, eright);
     }
-    
     
     if (node->degree() > 3) {
 
@@ -589,12 +584,8 @@ void PhyloTree::computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloN
     if (!central_partial_lh)
         initializeAllPartialLh();
     if (node->isLeaf()) {
-        PhyloNode *tmp_node = dad;
-        dad = node;
-        node = tmp_node;
-        PhyloNeighbor *tmp_nei = dad_branch;
-        dad_branch = node_branch;
-        node_branch = tmp_nei;
+        std::swap(dad, node);
+        std::swap(dad_branch, node_branch);
     }
     if (!dad_branch->isLikelihoodComputed())
         computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(dad_branch, dad);
@@ -842,12 +833,8 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
     if (!central_partial_lh)
         initializeAllPartialLh();
     if (node->isLeaf()) {
-        PhyloNode *tmp_node = dad;
-        dad = node;
-        node = tmp_node;
-        PhyloNeighbor *tmp_nei = dad_branch;
-        dad_branch = node_branch;
-        node_branch = tmp_nei;
+        std::swap(dad, node);
+        std::swap(dad_branch, node_branch);
     }
     if (!dad_branch->isLikelihoodComputed()) {
         computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(dad_branch, dad);

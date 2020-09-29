@@ -29,7 +29,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_br
     if (dad_branch->partial_lh_computed & 1)
         return;
     dad_branch->partial_lh_computed |= 1;
-    PhyloNode *node = (PhyloNode*)(dad_branch->node);
+    PhyloNode *node = dad_branch->getNode();
 
     size_t nptn = aln->size(), tip_block_size = get_safe_upper_limit(nptn)*nstates;
     size_t ptn, c;
@@ -38,7 +38,6 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_br
     size_t block = nstates * ncat;
     ModelSet *models = (ModelSet*) model;
     ASSERT(models->size() == nptn);
-
 
 	if (node->isLeaf()) {
 	    dad_branch->lh_scale_factor = 0.0;
@@ -54,10 +53,9 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_br
     dad_branch->lh_scale_factor = 0.0;
 
 	// internal node
-	PhyloNeighbor *left = NULL, *right = NULL; // left & right are two neighbors leading to 2 subtrees
-	FOR_NEIGHBOR_IT(node, dad, it) {
-        PhyloNeighbor *nei = (PhyloNeighbor*)*it;
-		if (!left) left = (PhyloNeighbor*)(*it); else right = (PhyloNeighbor*)(*it);
+	PhyloNeighbor *left = nullptr, *right = nullptr; // left & right are two neighbors leading to 2 subtrees
+	FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, nei) {
+		if (!left) left = nei; else right = nei;
         if ((nei->partial_lh_computed & 1) == 0)
             computeSitemodelPartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(nei, node);
         dad_branch->lh_scale_factor += nei->lh_scale_factor;
@@ -66,8 +64,8 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_br
     if (params->lh_mem_save == LM_PER_NODE && !dad_branch->partial_lh) {
         // re-orient partial_lh
         bool done = false;
-        FOR_NEIGHBOR_IT(node, dad, it2) {
-            PhyloNeighbor *backnei = ((PhyloNeighbor*)(*it2)->node->findNeighbor(node));
+        FOR_EACH_ADJACENT_PHYLO_NODE(node, dad, it2, child) {
+            PhyloNeighbor *backnei = child->findNeighbor(node);
             if (backnei->partial_lh) {
                 dad_branch->partial_lh = backnei->partial_lh;
                 dad_branch->scale_num = backnei->scale_num;
@@ -85,10 +83,8 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_br
     double sum_scale = 0.0;
         
 	if (!left->node->isLeaf() && right->node->isLeaf()) {
-		PhyloNeighbor *tmp = left;
-		left = right;
-		right = tmp;
-	}
+        std::swap(left, right);
+    }
     
     ASSERT(node->degree() == 3); // does not work with multifurcating tree yet
     
@@ -373,17 +369,14 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_br
 
 template <class VectorClass, const int VCSIZE, const int nstates>
 void PhyloTree::computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
-    PhyloNode *node = (PhyloNode*) dad_branch->node;
-    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
-    if (!central_partial_lh)
+    PhyloNode*     node        = dad_branch->getNode();
+    PhyloNeighbor* node_branch = node->findNeighbor(dad);
+    if (!central_partial_lh) {
         initializeAllPartialLh();
+    }
     if (node->isLeaf()) {
-    	PhyloNode *tmp_node = dad;
-    	dad = node;
-    	node = tmp_node;
-    	PhyloNeighbor *tmp_nei = dad_branch;
-    	dad_branch = node_branch;
-    	node_branch = tmp_nei;
+        std::swap(dad, node);
+        std::swap(dad_branch, node_branch);
     }
     if ((dad_branch->partial_lh_computed & 1) == 0)
         computeSitemodelPartialLikelihoodEigenSIMD<VectorClass,VCSIZE,nstates>(dad_branch, dad);
@@ -532,22 +525,18 @@ void PhyloTree::computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branc
         ddf = 0.0;
         outWarning("Numerical instability (some site-likelihood = 0)");
     }
-
 }
 
 template <class VectorClass, const int VCSIZE, const int nstates>
 double PhyloTree::computeSitemodelLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-    PhyloNode *node = (PhyloNode*) dad_branch->node;
-    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
-    if (!central_partial_lh)
+    PhyloNode*     node        = dad_branch->getNode();
+    PhyloNeighbor* node_branch = node->findNeighbor(dad);
+    if (!central_partial_lh) {
         initializeAllPartialLh();
+    }
     if (node->isLeaf()) {
-    	PhyloNode *tmp_node = dad;
-    	dad = node;
-    	node = tmp_node;
-    	PhyloNeighbor *tmp_nei = dad_branch;
-    	dad_branch = node_branch;
-    	node_branch = tmp_nei;
+        std::swap(dad, node);
+        std::swap(dad_branch, node_branch);
     }
     if ((dad_branch->partial_lh_computed & 1) == 0)
         computeSitemodelPartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(dad_branch, dad);

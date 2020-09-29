@@ -57,16 +57,13 @@ void PhyloTree::computeMixturePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
 
 	// internal node
 	ASSERT(node->degree() == 3); // it works only for strictly bifurcating tree
-	PhyloNeighbor *left = NULL, *right = NULL; // left & right are two neighbors leading to 2 subtrees
-	FOR_NEIGHBOR_IT(node, dad, it) {
-		if (!left) left = (PhyloNeighbor*)(*it); else right = (PhyloNeighbor*)(*it);
+	PhyloNeighbor *left = nullptr, *right = nullptr; // left & right are two neighbors leading to 2 subtrees
+	FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, nei) {
+		if (!left) left = nei; else right = nei;
 	}
 
 	if (!left->node->isLeaf() && right->node->isLeaf()) {
-		// swap left and right
-		PhyloNeighbor *tmp = left;
-		left = right;
-		right = tmp;
+		std::swap(left, right);
 	}
 	if ((left->partial_lh_computed & 1) == 0)
 		computeMixturePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(left, node);
@@ -76,8 +73,8 @@ void PhyloTree::computeMixturePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
     if (params->lh_mem_save == LM_PER_NODE && !dad_branch->partial_lh) {
         // re-orient partial_lh
         bool done = false;
-        FOR_NEIGHBOR_IT(node, dad, it2) {
-            PhyloNeighbor *backnei = ((PhyloNeighbor*)(*it2)->node->findNeighbor(node));
+        FOR_EACH_ADJACENT_PHYLO_NODE(node, dad, it2, child) {
+            PhyloNeighbor *backnei = child->findNeighbor(node);
             if (backnei->partial_lh) {
                 dad_branch->partial_lh = backnei->partial_lh;
                 dad_branch->scale_num = backnei->scale_num;
@@ -462,18 +459,15 @@ void PhyloTree::computeMixturePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
 
 template <class VectorClass, const int VCSIZE, const int nstates>
 void PhyloTree::computeMixtureLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
-    PhyloNode *node = (PhyloNode*) dad_branch->node;
-    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
-    if (!central_partial_lh)
-        initializeAllPartialLh();
+    PhyloNode*     node        = dad_branch->getNode();
+    PhyloNeighbor* node_branch = node->findNeighbor(dad);
+	if (!central_partial_lh) {
+		initializeAllPartialLh();
+	}
     if (node->isLeaf()) {
-    	PhyloNode *tmp_node = dad;
-    	dad = node;
-    	node = tmp_node;
-    	PhyloNeighbor *tmp_nei = dad_branch;
-    	dad_branch = node_branch;
-    	node_branch = tmp_nei;
-    }
+		std::swap(dad, node);
+		std::swap(dad_branch, node_branch);
+	}
     if ((dad_branch->partial_lh_computed & 1) == 0)
         computeMixturePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(dad_branch, dad);
     if ((node_branch->partial_lh_computed & 1) == 0)
@@ -728,18 +722,15 @@ void PhyloTree::computeMixtureLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch,
 
 template <class VectorClass, const int VCSIZE, const int nstates>
 double PhyloTree::computeMixtureLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-    PhyloNode *node = (PhyloNode*) dad_branch->node;
-    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
-    if (!central_partial_lh)
-        initializeAllPartialLh();
+    PhyloNode*     node        = dad_branch->getNode();
+    PhyloNeighbor* node_branch = node->findNeighbor(dad);
+	if (!central_partial_lh) {
+		initializeAllPartialLh();
+	}
     if (node->isLeaf()) {
-    	PhyloNode *tmp_node = dad;
-    	dad = node;
-    	node = tmp_node;
-    	PhyloNeighbor *tmp_nei = dad_branch;
-    	dad_branch = node_branch;
-    	node_branch = tmp_nei;
-    }
+		std::swap(dad, node);
+		std::swap(dad_branch, node_branch);
+	}
     if ((dad_branch->partial_lh_computed & 1) == 0)
         computeMixturePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(dad_branch, dad);
     if ((node_branch->partial_lh_computed & 1) == 0)
