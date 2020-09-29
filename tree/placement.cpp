@@ -574,18 +574,27 @@ public:
         : target_range(range), target_index(index) {}
     TargetBranchRef& operator=(const TargetBranchRef& r) = default;
     bool isUsedUp() const {
-        if (target_range==nullptr) return true;
+        if (target_range == nullptr) {
+            return true;
+        }
         return target_range->at(target_index).isUsedUp();
     }
     PhyloNode* getFirst() const {
-        if (target_range==nullptr) return nullptr;
+        if (target_range == nullptr) {
+            return nullptr;
+        }
         return target_range->at(target_index).first;
     }
     PhyloNode* getSecond() const {
-        if (target_range==nullptr) return nullptr;
+        if (target_range == nullptr) {
+            return nullptr;
+        }
         return target_range->at(target_index).second;
     }
     TargetBranch* getTarget() const {
+        if (target_range == nullptr) {
+            return nullptr;
+        }
         return &target_range->at(target_index);
     }
     size_t getTargetIndex() const {
@@ -638,7 +647,7 @@ public:
         node1 = target_branch.getFirst();
         node2 = target_branch.getSecond();
     }
-    bool canStillUse() {
+    bool canStillUse() const {
         return !target_branch.isUsedUp();
     }
     TargetBranch* getTarget() const {
@@ -646,6 +655,9 @@ public:
     }
     size_t getTargetIndex() const {
         return target_branch.getTargetIndex();
+    }
+    void forget() {
+        target_branch = TargetBranchRef(nullptr, 0);
     }
 };
 
@@ -694,7 +706,7 @@ public:
         return taxonId;
     }
     
-    virtual size_t considerPlacements(PossiblePlacement* placements, size_t count) {
+    virtual size_t considerPlacements(const PossiblePlacement* placements, size_t count) {
         size_t bestI = 0;
         for (size_t i=1; i<count; ++i) {
             if (placements[bestI].score < placements[i].score ) {
@@ -705,7 +717,7 @@ public:
         return bestI;
     }
     
-    virtual bool considerAdditionalPlacement(PossiblePlacement& placement) {
+    virtual bool considerAdditionalPlacement(const PossiblePlacement& placement) {
         bool best = (placement.score < bestPlacement.score);
         if (best) {
             bestPlacement = placement;
@@ -716,7 +728,11 @@ public:
     virtual const PossiblePlacement& getBestPlacement() const {
         return bestPlacement;
     }
-    
+
+    virtual bool canInsert() const {
+        return bestPlacement.canStillUse();
+    }
+
     void findPlacement(PhyloTree& phylo_tree,
                        TargetBranchRange* range,
                        size_t insertion_point_count,
@@ -753,9 +769,6 @@ public:
             phylo_tree.logLine(s3.str());
         }
         inserted      = false;
-    }
-    bool canInsert() {
-        return bestPlacement.canStillUse();
     }
     bool operator < (const TaxonToPlace& rhs) const {
         return rhs.bestPlacement.score < bestPlacement.score; //sort best (highest) score to front (not lowest!)
@@ -800,17 +813,22 @@ public:
         reps->emplace_back ( dest.addNewRef(b, new_interior, new_leaf, likelihood_needed ) );
         bestPlacement.target_branch.getTarget()->takeOwnershipOfReplacementVector(reps);
     }
+    virtual void forgetGazumpedPlacements() {
+        bestPlacement.forget();
+    }
     bool insertNearby(PhyloTree& phylo_tree, BlockAllocator& b,
                       TargetBranchRange& dest,
                       PlacementCostCalculator& calculator ) {
+        forgetGazumpedPlacements();
         std::vector<PossiblePlacement> placements;
         assessNewTargetBranches(phylo_tree, calculator,
                                 bestPlacement.getTarget(), placements);
-        if (placements.empty()) {
+        for (auto it = placements.begin(); it != placements.end(); ++it) {
+            considerAdditionalPlacement(*it);
+        }
+        if (!canInsert()) {
             return false;
         }
-        std::sort( placements.begin(), placements.end() );
-        bestPlacement = placements[0];
         insertIntoTree(phylo_tree, b, dest, calculator);
         return true;
     }
@@ -842,11 +860,12 @@ public:
     }
 };
 
-class TaxaToPlace: public std::vector<TaxonToPlace>
+template <class T=TaxonToPlace> class TaxaToPlace: public std::vector<T>
 {
 public:
+    typedef std::vector<T> super;
     explicit TaxaToPlace(size_t reservation) {
-        reserve(reservation);
+        super::reserve(reservation);
     }
     virtual ~TaxaToPlace() = default;
 };
@@ -864,7 +883,7 @@ void TargetBranch::costPlacementOfTaxa
         PossiblePlacement p;
         p.setTargetBranch(targets, targetNumber);
         calculator->assessPlacementCost(phylo_tree, candidate, &p);
-        if (isFirstTargetBranch ) {
+        if (isFirstTargetBranch ) {            
             candidate->considerPlacements(&p, 1);
         } else {
             candidate->considerAdditionalPlacement(p);
@@ -902,7 +921,7 @@ class BatchCleaner {
 public:
     BatchCleaner() = default;
     virtual ~BatchCleaner() = default;
-    void cleanUpAfterBatch(TaxaToPlace& taxa,
+    template <class T> void cleanUpAfterBatch(TaxaToPlace<T>& taxa,
                            int firstTaxon, int lastTaxon,
                            PhyloTree* tree) {
         if (VB_MIN <= verbose_mode) {
@@ -912,11 +931,79 @@ public:
         }
     }
 };
+
 class GlobalCleaner {
 public:
     GlobalCleaner() = default;
     virtual ~GlobalCleaner() = default;
     void cleanUpAfterPlacement(PhyloTree* tree) {
+    }
+};
+
+class LessFussyTaxon: public TaxonToPlace {
+protected:
+    std::vector<PossiblePlacement> placementStore;
+    static const size_t max_placements_to_keep = 5;
+    //Note: this had better not be more than about 10, because
+    //      if it were large, you'd want to maintain a heap.
+public:
+    typedef TaxonToPlace super;
+    LessFussyTaxon() : super() { }
+    LessFussyTaxon(const LessFussyTaxon& rhs) = default; //copy everything!
+    LessFussyTaxon(BlockAllocator& ba, int id, std::string name)
+        : super(ba, id, name) {
+    }
+    virtual size_t considerPlacements(const PossiblePlacement* placements, size_t count) {
+        placementStore.clear();
+        size_t            bestI = 0;
+        for (int i=0; i < count; ++i) {
+            considerAdditionalPlacement(placements[i]);
+            if (i==0 || placements[i] < placements[bestI]) {
+                bestI    = i;
+            }
+        }
+        return bestI;
+    }
+    virtual bool considerAdditionalPlacement(const PossiblePlacement& placement) {
+        size_t placement_count = placementStore.size();
+        if (max_placements_to_keep <= placement_count) {
+            if (placementStore.back() < placement) {
+                return false;
+            }
+            else {
+                placementStore.pop_back();
+            }
+        }
+        placementStore.emplace_back(PossiblePlacement());
+        size_t sweep = placementStore.size() - 1;
+        while ( 0 < sweep && placement < placementStore[sweep-1]) {
+            placementStore[sweep] = placementStore[sweep - 1];
+            --sweep;
+        }
+        placementStore[sweep] = placement;
+        if (sweep == 0) {
+            bestPlacement = placement;
+            return true;
+        }
+        return false;
+    }
+    virtual void forgetGazumpedPlacements() {
+        size_t w = 0;
+        for (size_t r = 0; r < placementStore.size(); ++r) {
+            if (placementStore[r].canStillUse()) {
+                if (w < r) {
+                    placementStore[w] = placementStore[r];
+                }
+                ++w;
+            }
+        }
+        placementStore.resize(w);
+        if (w == 0) {
+            bestPlacement.forget();
+        }
+        else {
+            bestPlacement = placementStore[0];
+        }
     }
 };
 
@@ -1020,6 +1107,8 @@ void logInsert(PhyloTree* tree, Params& params, CostFunction costFunction,
 
 }
 
+typedef TaxonToPlace TaxonTypeInUse;
+
 void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
     //
     //Assumes: The tree is rooted.
@@ -1095,7 +1184,7 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
     
     PlacementCostCalculator* calculator = new ParsimonyCostCalculator();
     
-    TaxaToPlace candidates(newTaxaCount);
+    TaxaToPlace<TaxonTypeInUse> candidates(newTaxaCount);
     LOG_LINE ( VB_DEBUG, "Before allocating TaxonToPlace array"
               << ", index_lh was " << allocator.getLikelihoodBlockCount() );
     for (size_t i=0; i<newTaxaCount; ++i) {
@@ -1210,7 +1299,7 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
         
         targets.removeUsed();
         //Remove all the candidates that we were able to place
-        std::vector<TaxonToPlace> oldCandidates;
+        std::vector<TaxonTypeInUse> oldCandidates;
         std::swap(oldCandidates, candidates);
         //1. Any candidates not considered this time go to the
         //   first batch to consider in the next pass.
