@@ -276,7 +276,7 @@ void PhyloTree::readTree(const char *infile, bool &is_rooted) {
 void PhyloTree::readTree(istream &in, bool &is_rooted) {
     MTree::readTree(in, is_rooted);
     // 2015-10-14: has to reset this pointer when read in
-    current_it = current_it_back = NULL;
+    current_it = current_it_back = nullptr;
     // remove taxa if necessary
     if (removed_seqs.size() > 0) {
         removeTaxa(removed_seqs, true, "");
@@ -326,8 +326,9 @@ void PhyloTree::assignLeafNames(Node *node, Node *dad) {
 
 void PhyloTree::copyTree(MTree *tree) {
     MTree::copyTree(tree);
-    if (!aln)
+    if (aln==nullptr) {
         return;
+    }
     // reset the ID with alignment
     setAlignment(aln);
 }
@@ -336,8 +337,9 @@ void PhyloTree::copyTree(MTree *tree, string &taxa_set) {
     MTree::copyTree(tree, taxa_set);
     if (rooted)
         computeBranchDirection();
-    if (!aln)
+    if (aln==nullptr) {
         return;
+    }
     // reset the ID with alignment
     setAlignment(aln);
 }
@@ -478,7 +480,7 @@ void PhyloTree::initializeModel(Params &params, string model_name, ModelsBlock *
 }
 
 bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
-    aln = alignment;
+    aln         = alignment;
     size_t nseq = aln->getNSeq();
 
     removeSampleTaxaIfRequested();
@@ -487,12 +489,15 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
     //tree and the alignment, set the node id.
     //(Also: identify sequences NOT found in the tree)
     map<string, Node*> mapNameToNode;
+    double mapStart = getRealTime();
     getMapOfTaxonNameToNode(nullptr, nullptr, mapNameToNode);
-    
+    LOG_LINE ( VB_MED, "Mapping taxa names to nodes took "
+              << (getRealTime()-mapStart) << " wall-clock secs" );
+
     IntVector taxaIdsToAdd; //not found in tree
     for (size_t seq = 0; seq < nseq; seq++) {
         string seq_name = aln->getSeqName(seq);
-        auto it = mapNameToNode.find(seq_name);
+        auto   it       = mapNameToNode.find(seq_name);
         if (it==mapNameToNode.end()) {
             taxaIdsToAdd.emplace_back((int)seq);
         } else {
@@ -502,7 +507,7 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
     }
     auto rootInMap = mapNameToNode.find(ROOT_NAME);
     if (rootInMap != mapNameToNode.end()) {
-        root =  (*rootInMap).second;
+        root     = (*rootInMap).second;
         root->id = nseq;
         mapNameToNode.erase(rootInMap);
     } else if (root==nullptr && !taxaIdsToAdd.empty()) {
@@ -512,7 +517,7 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
     
     bool will_delete = !mapNameToNode.empty();
     bool will_add    = !taxaIdsToAdd.empty();
-    bool modified     = will_delete || will_add;
+    bool modified    = will_delete || will_add;
     
     if (!modified) {
         return false;
@@ -520,7 +525,8 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
     
     bool using_sankoff = shouldPlacementUseSankoffParsimony();
     if (using_sankoff) {
-        initCostMatrix(CM_UNIFORM); //Force use of Sankoff parsimony kernel
+        initCostMatrix(CM_UNIFORM);
+        //Force the use of Sankoff parsimony kernel
     }
 
     configureLikelihoodKernel(*params);
@@ -536,12 +542,22 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
         
         deleteAllPartialLh();
         initializeAllPartialLh();
-        int initial_parsimony = computeParsimony();
-        LOG_LINE ( VB_MED, "Parsimony score before deletions was " << initial_parsimony );
+        if (shouldPlacementUseSankoffParsimony()) {
+            computeTipPartialParsimony();
+        }
+        int initial_parsimony = computeParsimony("Computing initial parsimony");
+        LOG_LINE ( VB_MIN, "Parsimony score before deletions was " << initial_parsimony );
         fixNegativeBranch();
-        double likelihood = computeLikelihood();
-        LOG_LINE ( VB_MED, "Likelihood score before deletions was " << likelihood );
-
+        
+        if (shouldPlacementUseLikelihood()) {
+            double likelihoodStart    = getRealTime();
+            double likelihoodCPUStart = getCPUTime();
+            double likelihood         = computeLikelihood();
+            LOG_LINE ( VB_MIN, "Computed initial likelihood in " << (getRealTime() - likelihoodStart) << " wall-clock secs"
+                      << " and " << (getCPUTime() - likelihoodCPUStart) << " cpu secs");
+            LOG_LINE ( VB_MIN, "Likelihood score before deletions was " << likelihood );
+        }
+        
         //mapNameToNode now lists leaf nodes to be removed
         //from the tree.  Remove them.
         StrVector taxaToRemove;
@@ -563,7 +579,22 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
         addNewTaxaToTree(taxaIdsToAdd);
         //Todo: Carry out any requested "after-all-inserts" global tidy-up of the tree.
         //Todo: If requested *not* to optimize branch lengths here, don't.
+
+        if ( VB_MED <= verbose_mode ) {
+            deleteAllPartialLh();
+            initializeAllPartialLh();
+            if (shouldPlacementUseSankoffParsimony()) {
+                computeTipPartialParsimony();
+            }
+            int initial_parsimony = computeParsimony("Computing parsimony (after adding new taxa)");
+            LOG_LINE ( VB_MIN, "Parsimony score after adding new taxa was " << initial_parsimony );
+            fixNegativeBranch();
+            
+            double likelihood         = computeLikelihood();
+            LOG_LINE ( VB_MIN, "Likelihood score after adding new taxa was " << likelihood );
+        }
     }
+
     
     if (using_sankoff && !params->sankoff_cost_file) {
         aligned_free(cost_matrix);
@@ -1036,16 +1067,21 @@ int PhyloTree::computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad,
 }
 
 int PhyloTree::computeParsimonyOutOfTree(const UINT* dad_partial_pars,
-                                      const UINT* node_partial_pars,
-                                      int* branch_subst) const {
+                                         const UINT* node_partial_pars,
+                                         int* branch_subst) const {
     return (this->*computeParsimonyOutOfTreePointer)
            (dad_partial_pars, node_partial_pars, branch_subst);
 }
 
 
-int PhyloTree::computeParsimony() {
+int PhyloTree::computeParsimony(const char* taskDescription) {
     PhyloNode* r = getRoot();
-    return computeParsimonyBranch(r->firstNeighbor(), r);
+    if (taskDescription==nullptr || taskDescription[0]=='\0') {
+        return computeParsimonyBranch(r->firstNeighbor(), r);
+    }
+    ParallelParsimonyCalculator calculator(*this);
+    return calculator.computeParsimonyBranch
+           ( r->firstNeighbor(), r, taskDescription );
 }
 
 

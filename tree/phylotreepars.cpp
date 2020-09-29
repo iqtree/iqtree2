@@ -327,17 +327,13 @@ int PhyloTree::computeParsimonyOutOfTreeFast(const UINT* dad_partial_pars,
 void PhyloTree::computeAllPartialPars(PhyloNode *node, PhyloNode *dad) {
 	if (!node) node = getRoot();
     FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, nei) {
-        
-        //Note: This was already checking whether likelihood had
-        //      been computed, rather than parsimony! (James B. 14-Sep-2020).
-        //      This might be a bug.  It certainly looks like one!
-        if (!nei->isLikelihoodComputed()) {
+        if (!nei->isParsimonyComputed()) {
             computePartialParsimony(nei, node);
         }
         PhyloNeighbor *rev = nei->getNode()->findNeighbor(node);
         
         //Note: this, too, was a "likelihood computed?" check.
-        if (!rev->isLikelihoodComputed()) {
+        if (!rev->isParsimonyComputed()) {
             computePartialParsimony(rev, nei->getNode());
         }
         computeAllPartialPars(nei->getNode(), node);
@@ -1053,10 +1049,11 @@ void PhyloTree::copyConstraintTree(MTree *tree, IntVector &taxon_order, int *ran
         (*it)->id = aln->getNSeq() + (it - nodes.begin());
 
     // add the remaining taxa
-    for (size_t i = 0; i < aln->getNSeq(); ++i)
+    for (size_t i = 0; i < aln->getNSeq(); ++i) {
         if (!pushed[i]) {
             taxon_order.push_back(i);
         }
+    }
     // randomize the addition order
     my_random_shuffle(taxon_order.begin()+constraintTree.leafNum, taxon_order.end(), rand_stream);
 }
@@ -1153,7 +1150,7 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
         create3TaxonTree(taxon_order, rand_stream);
         ASSERT(leafNum == 3);
         initializeAllPartialPars();
-        index = (2*leafNum-3)*2;
+        index     = (2*leafNum-3)*2;
         newNodeID = nseq + leafNum - 2;
     } else {
         // first copy the constraint tree
@@ -1289,8 +1286,15 @@ int PhyloTree::addTaxonMPFast(PhyloNode *added_taxon, PhyloNode* added_node, Phy
     // now insert the new node in the middle of the branch node-dad
     insertNode2Branch(added_node, node, dad);
 
-    // compute the likelihood
+    // compute the parsimony score
     int score = computeParsimonyBranch(added_taxon->findNeighbor(added_node), added_taxon);
+
+    //Would have preferred...
+    //  ParallelParsimonyCalculator c(*this);
+    //  int score = computeParsimonyBranch(added_taxon->findNeighbor(added_node), added_taxon);
+    //...
+    //but... on average, three parsimony vector calculations are needed (at different levels)
+    //so there is nothing to gain by parallelizing the computation.
 
     // remove the added node
     node->updateNeighbor(added_node, dad);
@@ -1302,11 +1306,6 @@ int PhyloTree::addTaxonMPFast(PhyloNode *added_taxon, PhyloNode* added_node, Phy
     node->findNeighbor(dad)->setParsimonyComputed(true);
     dad->findNeighbor(node)->setParsimonyComputed(true);
 
-    // now tranverse the tree downwards
-
-//    FOR_NEIGHBOR_IT(node, dad, it){
-//        addTaxonMPFast(added_node, target_node, target_dad, target_partial_pars, (*it)->node, node);
-//    }
     return score;
 
 }

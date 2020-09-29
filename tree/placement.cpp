@@ -385,56 +385,85 @@ public:
     }
 };
 
-class ParallelParsimonyCalculator {
-private:
-    PhyloTree& tree;
-    typedef std::pair<PhyloNeighbor*, PhyloNode*> WorkItem;
-    std::vector <WorkItem> workToDo;
-public:
-    ParallelParsimonyCalculator(PhyloTree& phylo_tree) : tree(phylo_tree) {}
-    void computePartialParsimony(PhyloNeighbor* dad_branch, PhyloNode* dad) {
-        if (!dad_branch->isParsimonyComputed()) {
-            workToDo.emplace_back(dad_branch, dad);
+ParallelParsimonyCalculator::ParallelParsimonyCalculator(PhyloTree& phylo_tree)
+    : tree(phylo_tree), task_to_start(nullptr), task_in_progress(nullptr) {}
+
+void ParallelParsimonyCalculator::computePartialParsimony
+    ( PhyloNeighbor* dad_branch, PhyloNode* dad ) {
+    if (!dad_branch->isParsimonyComputed()) {
+        workToDo.emplace_back(dad_branch, dad);
+    }
+}
+
+int  ParallelParsimonyCalculator::computeParsimonyBranch
+    ( PhyloNeighbor* dad_branch, PhyloNode* dad,
+      const char* task_description ) {
+    PhyloNode*     node        = dad_branch->getNode();
+    PhyloNeighbor* node_branch = node->findNeighbor(dad);
+
+    int startIndex = workToDo.size();
+    computePartialParsimony(dad_branch,  dad);
+    computePartialParsimony(node_branch, node);
+    calculate(startIndex, task_description);
+    return tree.computeParsimonyBranch(dad_branch, dad);
+}
+
+void ParallelParsimonyCalculator::calculate(int start_index,
+                                            const char* task_description) {
+    int stop_index = workToDo.size();
+    bool tasked = (task_description!=nullptr && task_description[0]!='\0');
+    if (stop_index <= start_index) {
+        //Bail, if nothing to do
+        return;
+    }
+    
+    if (tasked && task_to_start==nullptr) {
+        task_to_start   = task_description;
+        task_in_progress = task_description;
+    }
+    
+    //1. Find work to do at a lower level
+    for (int i=stop_index-1; i>=start_index; --i) {
+        auto item = workToDo[i];
+        PhyloNeighbor* dad_branch = item.first;
+        PhyloNode*     dad        = item.second;
+        PhyloNode*     node       = dad_branch->getNode();
+        FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, nei) {
+            computePartialParsimony(nei, node);
         }
     }
-    void calculate(size_t start_index=0) {
-        size_t stop_index = workToDo.size();
-        if (stop_index <= start_index) {
-            //Bail, if nothing to do
-            return;
-        }
-        
-        //1. Find work to do at a lower level
-        for (int i=start_index; i<stop_index; ++i) {
-            auto item = workToDo[i];
-            PhyloNeighbor* dad_branch = item.first;
-            PhyloNode*     dad        = item.second;
-            PhyloNode*     node       = dad_branch->getNode();
-            FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, nei) {
-                computePartialParsimony(nei, node);
-            }
-        }
-        
-        //2. Do it, and then forget about it
-        calculate(stop_index);
-        workToDo.resize(stop_index);
-        
-        //3. Do the actual parsimony calculations at the
-        //   current level (this doesn't change the content
-        //   of workToDo so workToDo's contents can be
-        //   processed with a parallel pointer loop).
-        WorkItem* startItem = workToDo.data() + start_index;
-        WorkItem* stopItem  = workToDo.data() + stop_index;
-        #ifdef _OPENMP
-        #pragma omp parallel for
-        #endif
-        for (WorkItem* item = startItem; item<stopItem; ++item) {
-            PhyloNeighbor* dad_branch = item->first;
-            PhyloNode*     dad        = item->second;
-            tree.computePartialParsimony(dad_branch, dad);
-        }
+    
+    //2. Do it, and then forget about it
+    calculate(stop_index, "");
+    workToDo.resize(stop_index);
+    
+    //3. Do the actual parsimony calculations at the
+    //   current level (this doesn't change the content
+    //   of workToDo so workToDo's contents can be
+    //   processed with a parallel pointer loop).
+    WorkItem* startItem = workToDo.data() + start_index;
+    WorkItem* stopItem  = workToDo.data() + stop_index;
+    if (task_to_start != nullptr) {
+        tree.initProgress( workToDo.size(), task_to_start, "", "" );
+        task_to_start = nullptr;
     }
-};
+    #ifdef _OPENMP
+    #pragma omp parallel for
+    #endif
+    for (WorkItem* item = startItem; item<stopItem; ++item) {
+        PhyloNeighbor* dad_branch = item->first;
+        PhyloNode*     dad        = item->second;
+        tree.computePartialParsimony(dad_branch, dad);
+    }
+    if (task_in_progress != nullptr) {
+        tree.trackProgress(stopItem-startItem);
+    }
+    workToDo.resize(start_index);
+    if (tasked) {
+        tree.doneProgress();
+        task_in_progress = nullptr;
+    }
+}
 
 class TaxonToPlace;      //A taxon being added
 class TargetBranch;      //A place it could go
@@ -671,19 +700,20 @@ public:
 
 class TaxonToPlace {
     //A taxon that could be added to a tree.
+protected:
+    PossiblePlacement bestPlacement;
 public:
     int               taxonId;
     std::string       taxonName;
-    PossiblePlacement bestPlacement;
     bool              inserted;      //true if this taxon has been inserted
     PhyloNode*        new_leaf;      //leaf
     PhyloNode*        new_interior;  //interior
     const UINT*       partial_pars;  //partial parsimony for new leaf, seen
                                      //from the new interior
     
-    TaxonToPlace(): taxonId(-1), taxonName(), bestPlacement()
-                    , inserted(false), new_leaf(nullptr), new_interior(nullptr)
-                    , partial_pars(nullptr) {
+    TaxonToPlace() : bestPlacement(), taxonId(-1), taxonName()
+                   , inserted(false), new_leaf(nullptr), new_interior(nullptr)
+                   , partial_pars(nullptr) {
     }
 
     TaxonToPlace(const TaxonToPlace& rhs) = default; //copy everything!
@@ -702,6 +732,8 @@ public:
         }
         partial_pars = new_interior->firstNeighbor()->partial_pars;
     }
+    
+    virtual ~TaxonToPlace() = default;
         
     const UINT* getParsimonyBlock() const {
         return partial_pars;
@@ -711,14 +743,36 @@ public:
         return taxonId;
     }
     
+    virtual size_t considerPlacements(PossiblePlacement* placements, size_t count) {
+        size_t bestI = 0;
+        for (size_t i=1; i<count; ++i) {
+            if (placements[bestI].score < placements[i].score ) {
+                bestI = i;
+            }
+        }
+        bestPlacement = placements[bestI];
+        return bestI;
+    }
+    
+    virtual bool considerAdditionalPlacement(PossiblePlacement& placement) {
+        bool best = (placement.score < bestPlacement.score);
+        if (best) {
+            bestPlacement = placement;
+        }
+        return best;
+    }
+    
+    virtual const PossiblePlacement& getBestPlacement() const {
+        return bestPlacement;
+    }
+    
     void findPlacement(PhyloTree& phylo_tree,
                        TargetBranchRange* range,
                        size_t insertion_point_count,
                        SearchHeuristic heuristic,
                        const PlacementCostCalculator* calculator) {
-        
         //
-        //Note: for now heuristic is ignored...
+        //Note: for now, heuristic is ignored...
         //
         std::vector<PossiblePlacement> placements;
         placements.resize(insertion_point_count);
@@ -734,20 +788,14 @@ public:
         #pragma omp parallel for
         #endif
         for (int i=0; i<insertion_point_count; ++i) {
-            PossiblePlacement*    p     = placementArray + i;
+            PossiblePlacement* p = placementArray + i;
             p->setTargetBranch(range, i);
             calculator->assessPlacementCost(phylo_tree, this, p);
             phylo_tree.trackProgress(1.0);
         }
         
-        int bestI = 0;
-        for (int i=1; i<placements.size(); ++i) {
-            if (placements[bestI].score < placements[i].score ) {
-                bestI = i;
-            }
-        }
+        auto bestI = considerPlacements(placements.data(), placements.size());
         
-        bestPlacement = placements[bestI];
         if ( verbose_mode >= VB_MED ) {
             std::stringstream s3;
             s3 << "Best score for " << this->taxonName << " was " << bestPlacement.score << " at place " << bestI;
@@ -849,6 +897,7 @@ public:
     explicit TaxaToPlace(size_t reservation) {
         reserve(reservation);
     }
+    virtual ~TaxaToPlace() = default;
 };
 
 void TargetBranch::costPlacementOfTaxa
@@ -864,8 +913,10 @@ void TargetBranch::costPlacementOfTaxa
         PossiblePlacement p;
         p.setTargetBranch(targets, targetNumber);
         calculator->assessPlacementCost(phylo_tree, candidate, &p);
-        if (isFirstTargetBranch || candidate->bestPlacement.score < p.score ) {
-            candidate->bestPlacement = p;
+        if (isFirstTargetBranch ) {
+            candidate->considerPlacements(&p, 1);
+        } else {
+            candidate->considerAdditionalPlacement(p);
         }
     }
     phylo_tree.trackProgress(candidateCount);
@@ -990,6 +1041,12 @@ bool PhyloTree::shouldPlacementUseSankoffParsimony() const {
     return getCostFunction() == SANKOFF_PARSIMONY;
 }
 
+bool PhyloTree::shouldPlacementUseLikelihood() const {
+    CostFunction       costFunction    = getCostFunction();
+    return ( costFunction != MAXIMUM_PARSIMONY
+             && costFunction != SANKOFF_PARSIMONY);
+}
+
 void logInsert(PhyloTree* tree, Params& params, CostFunction costFunction,
                size_t totalInsertCount, const char* verb,
                TaxonToPlace & c, const char * where) {
@@ -998,7 +1055,7 @@ void logInsert(PhyloTree* tree, Params& params, CostFunction costFunction,
         stringstream s;
         s << totalInsertCount << ". " << verb << " "
             << c.taxonName << " " << where << ". It had ";
-        PossiblePlacement& p = c.bestPlacement;
+        const PossiblePlacement& p = c.getBestPlacement();
         if (costFunction==MAXIMUM_PARSIMONY ||
             costFunction==SANKOFF_PARSIMONY) {
             s << "parsimony score " << (int)(p.score);
@@ -1048,32 +1105,37 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
         //Note that this score tends to disagree.
         double parsimonyStart = getRealTime();
         clearAllPartialParsimony(false);
-        double parsimonyScore = computeParsimony();
+        double parsimonyScore = computeParsimony("Recalculating parsimony score");
         LOG_LINE( VB_MED, "Recalculated parsimony score " << parsimonyScore
                     << " (recalculation cost " << (getRealTime() - parsimonyStart) << " sec)" );
 
         finishUpAfterTaxaAddition();
         return;
     }
+    bool trackLikelihood = shouldPlacementUseLikelihood();
     
-    bool trackLikelihood = (costFunction != MAXIMUM_PARSIMONY
-                            && costFunction != SANKOFF_PARSIMONY);
-        
     size_t   extra_parsimony_blocks = leafNum * 2 - 4;
-    size_t   extra_lh_blocks        = leafNum * 4 - 4 + taxaIdsToAdd.size();
+    size_t   extra_lh_blocks        = trackLikelihood
+                                    ? (leafNum * 4 - 4 + taxaIdsToAdd.size())
+                                    : 0;
     int      index_parsimony        = 0;
     int      index_lh               = 0;
     ensurePartialLHIsAllocated(extra_parsimony_blocks, extra_lh_blocks);
     initializeAllPartialLh(index_parsimony, index_lh, true);
+    if (costFunction == SANKOFF_PARSIMONY) {
+        computeTipPartialParsimony();
+    }
     BlockAllocator allocator(this, index_parsimony, index_lh);
     
     LOG_LINE ( VB_MED, "After overallocating lh blocks, index_lh was " << allocator.getLikelihoodBlockCount() );
-    curScore = computeLikelihood();
-    LOG_LINE ( VB_MED, "Likelihood score before insertions was " << curScore );
-#if (0)
-    curScore = optimizeAllBranches(2);
-    LOG_LINE ( VB_MED, "Optimized likelihood score before insertions was " << curScore);
-#endif
+    if (VB_MED <= verbose_mode) {
+        curScore = computeLikelihood();
+        LOG_LINE ( VB_MED, "Likelihood score before insertions was " << curScore );
+        #if (0)
+            curScore = optimizeAllBranches(2);
+            LOG_LINE ( VB_MED, "Optimized likelihood score before insertions was " << curScore);
+        #endif
+    }
     LOG_LINE ( VB_MED, "Batch size is " << taxaPerBatch
               << " and the number of inserts per batch is " << insertsPerBatch);
     
@@ -1118,13 +1180,7 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
         for (; batchStart+taxaPerBatch <= newTaxaCount; batchStart+=taxaPerBatch) {
             
             timeSpentOnRefreshes -= getRealTime();
-            /*
-            double parsimonyStart = getRealTime();
-            double parsimonyScore = computeParsimony();
-            LOG_LINE( VB_MED, "Parsimony score is currently " << parsimonyScore
-                        << " (recalculation cost " << (getRealTime() - parsimonyStart) << " sec)" );
-            */
-             if (trackLikelihood) {
+            if (trackLikelihood) {
                 clearAllPartialLH(false);
                 clearAllScaleNum(false);
                 double likelihoodScore = computeLikelihood();
@@ -1227,6 +1283,7 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
     }
     doneProgress();
     
+    LOG_LINE ( VB_MED, "Tidying up tree after inserting taxa.");
     global_cleaner->cleanUpAfterPlacement(this);
     
     LOG_LINE ( VB_MIN, "Time spent on refreshes was "      << timeSpentOnRefreshes << " sec");
@@ -1236,7 +1293,6 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
     LOG_LINE ( VB_MED, "At the end of addNewTaxaToTree, index_lhs was "
               << allocator.getLikelihoodBlockCount() << ", index_pars was "
               << allocator.getParsimonyBlockCount() << ".");
-    LOG_LINE ( VB_MED, "Tidying up tree after inserting taxa.");
     if (!trackLikelihood) {
         fixNegativeBranch();
     }
@@ -1251,7 +1307,7 @@ void PhyloTree::finishUpAfterTaxaAddition() {
     initializeTree();
     deleteAllPartialLh();
     initializeAllPartialLh();
-    LOG_LINE ( VB_MIN, "Number of leaves " << this->leafNum << ", of nodes " << this->nodeNum );
+    LOG_LINE ( VB_MED, "Number of leaves " << this->leafNum << ", of nodes " << this->nodeNum );
     CostFunction costFunction = getCostFunction();
     if (costFunction==MAXIMUM_LIKELIHOOD_ANYWHERE ||
         costFunction==MAXIMUM_LIKELIHOOD_MIDPOINT) {

@@ -496,7 +496,7 @@ public:
     virtual bool updateToMatchAlignment(Alignment *alignment);
 
     bool shouldPlacementUseSankoffParsimony() const;
-    
+    bool shouldPlacementUseLikelihood() const;
     /**
      Modify a tree, by adding nodes for taxa found in the tree's alignment,
      but not in the tree, and assigning them taxa ids according to their
@@ -718,7 +718,7 @@ public:
             compute the tree parsimony score
             @return parsimony score of the tree
      */
-    int computeParsimony();
+    int computeParsimony(const char* taskDescription = "");
 
     typedef void (PhyloTree::*ComputePartialParsimonyType)(PhyloNeighbor *, PhyloNode *);
     ComputePartialParsimonyType computePartialParsimonyPointer;
@@ -2645,4 +2645,18 @@ protected:
 
 };
 
+class ParallelParsimonyCalculator {
+private:
+    PhyloTree& tree;
+    typedef std::pair<PhyloNeighbor*, PhyloNode*> WorkItem;
+    std::vector <WorkItem> workToDo;
+    const char* task_to_start;
+    const char* task_in_progress;
+public:
+    ParallelParsimonyCalculator(PhyloTree& phylo_tree);
+    void computePartialParsimony(PhyloNeighbor* dad_branch, PhyloNode* dad) ;
+    int  computeParsimonyBranch(PhyloNeighbor* dad_branch, PhyloNode* dad, const char* taskDescription="");
+    void calculate(int start_index = 0, const char* taskDescription="");
+};
+        
 #endif
