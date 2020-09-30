@@ -834,8 +834,8 @@ double logC(double t, PhyloTree* tree){
 }
 
 void sumFraction(PhyloNode *node1, PhyloNode *node2, PhyloTree *tree){
-	PhyloNeighbor* nei1 = (PhyloNeighbor*) node1->findNeighbor(node2);
-	PhyloNeighbor* nei2 = (PhyloNeighbor*) node2->findNeighbor(node1);
+	PhyloNeighbor* nei1 = node1->findNeighbor(node2);
+	PhyloNeighbor* nei2 = node2->findNeighbor(node1);
 
 //	int loglh = tree->computeLikelihood();
 

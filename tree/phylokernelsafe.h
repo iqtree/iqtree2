@@ -80,11 +80,11 @@ Numeric PhyloTree::dotProductSIMD(Numeric *x, Numeric *y, int size) {
 template <class VectorClass, const int VCSIZE, const int nstates>
 void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad) {
 
-    // don't recompute the likelihood
 	ASSERT(dad);
-    if (dad_branch->partial_lh_computed & 1)
+    if (dad_branch->isLikelihoodComputed()) {
         return;
-    dad_branch->partial_lh_computed |= 1;
+    }
+    dad_branch->setLikelihoodComputed(true);
 
     num_partial_lh_computations++;
 
@@ -143,7 +143,7 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
                 dad_branch->scale_num = backnei->scale_num;
                 backnei->partial_lh = NULL;
                 backnei->scale_num = NULL;
-                backnei->partial_lh_computed &= ~1; // clear bit
+                backnei->setLikelihoodComputed(false);
                 done = true;
                 break;
             }
@@ -1449,16 +1449,17 @@ inline void horizontal_popcount(Vec8ui &x) {
 
 template<class VectorClass>
 void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-    if (dad_branch->partial_lh_computed & 2) {
+
+    if (dad_branch->isParsimonyComputed()) {
         return;
     }
+    dad_branch->setParsimonyComputed(true);
+
     PhyloNode *node    = dad_branch->getNode();
     int nstates        = aln->getMaxNumStates();
     int site           = 0;
     const int VCSIZE   = VectorClass::size();
     const int NUM_BITS = VectorClass::size() * UINT_BITS;
-
-    dad_branch->partial_lh_computed |= 2;
 
     if (node->isLeaf() && dad) {
         // external node

@@ -16,7 +16,7 @@ inline double horizontal_add(double x) {
 }
 
 template <class VectorClass, const int VCSIZE, const int nstates>
-void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor* dad_branch, PhyloNode* dad) {
 
     if (dad_branch->node->degree() > 3) {
         // TODO: SIMD version for multifurcating node
@@ -25,10 +25,11 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_br
     }
 
     // don't recompute the likelihood
-	ASSERT(dad);
-    if (dad_branch->partial_lh_computed & 1)
+    ASSERT(dad);
+    if (dad_branch->isLikelihoodComputed()) {
         return;
-    dad_branch->partial_lh_computed |= 1;
+    }
+    dad_branch->setLikelihoodComputed(true);
     PhyloNode *node = dad_branch->getNode();
 
     size_t nptn = aln->size(), tip_block_size = get_safe_upper_limit(nptn)*nstates;
@@ -71,7 +72,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_br
                 dad_branch->scale_num = backnei->scale_num;
                 backnei->partial_lh = NULL;
                 backnei->scale_num = NULL;
-                backnei->partial_lh_computed &= ~1; // clear bit
+                backnei->setLikelihoodComputed(false);
                 done = true;
                 break;
             }

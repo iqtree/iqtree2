@@ -1086,7 +1086,7 @@ void IQTree::increaseKDelete() {
 //}
 
 RepresentLeafSet* IQTree::findRepresentLeaves(vector<RepresentLeafSet*> &leaves_vec, int nei_id, PhyloNode *dad) {
-    PhyloNode *node = (PhyloNode*) (dad->neighbors[nei_id]->node);
+    PhyloNode *node = dad->getNeighborByIndex(nei_id)->getNode();
     int set_id = dad->id * 3 + nei_id;
     if (leaves_vec[set_id])
         return leaves_vec[set_id];

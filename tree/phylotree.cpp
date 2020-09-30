@@ -4224,18 +4224,20 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
         reorientPartialLh(node2->findNeighbor(node1), node2);
     }
 
-    Neighbor *saved_nei[6];
+    PhyloNeighbor *saved_nei[6];
     int mem_id = 0;
     // save Neighbor and allocate new Neighbor pointer
     for (id = 0; id < IT_NUM; id++) {
-        saved_nei[id] = (*saved_it[id]);
-        *saved_it[id] = saved_nei[id]->newNeighbor();
+        PhyloNeighbor* oldNei = (PhyloNeighbor*)(*saved_it[id]);
+        saved_nei[id]         = oldNei;
+        PhyloNeighbor* newNei = saved_nei[id]->newNeighbor();
+        *saved_it[id]         = newNei;
 
-        if (((PhyloNeighbor*)saved_nei[id])->partial_lh) {
-            ((PhyloNeighbor*) (*saved_it[id]))->partial_lh = nni_partial_lh + mem_id*partial_lh_size;
-            ((PhyloNeighbor*) (*saved_it[id]))->scale_num  = nni_scale_num + mem_id*scale_num_size;
+        if (oldNei->partial_lh) {
+            newNei->partial_lh = nni_partial_lh + mem_id * partial_lh_size;
+            newNei->scale_num  = nni_scale_num  + mem_id * scale_num_size;
             mem_id++;
-            mem_slots.addSpecialNei((PhyloNeighbor*)*saved_it[id]);
+            mem_slots.addSpecialNei(newNei);
         }
     }
     if (params->nni5) {
@@ -4262,17 +4264,18 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
         }
     } else {
         cnt = 0;
-        FOR_NEIGHBOR_IT(node1, node2, node1_it) 
-        if (((PhyloNeighbor*)*node1_it)->direction != TOWARD_ROOT)
-        {
-            cnt = 0;
-            FOR_NEIGHBOR_IT(node2, node1, node2_it) {
-                //   Initialize the 2 NNI moves
-                nniMoves[cnt].node1Nei_it = node1_it;
-                nniMoves[cnt].node2Nei_it = node2_it;
-                cnt++;
+        FOR_EACH_PHYLO_NEIGHBOR(node1, node2, node1_it, nei) {
+            if (nei->direction != TOWARD_ROOT)
+            {
+                cnt = 0;
+                FOR_NEIGHBOR_IT(node2, node1, node2_it) {
+                    //   Initialize the 2 NNI moves
+                    nniMoves[cnt].node1Nei_it = node1_it;
+                    nniMoves[cnt].node2Nei_it = node2_it;
+                    cnt++;
+                }
+                break;
             }
-            break;
         }
         ASSERT(cnt == 2);
     }
@@ -4387,8 +4390,8 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 //            else
 //                mem_slots.restore(node12_it, (PhyloNeighbor*)saved_nei[id]);
 //         }
-         if (*saved_it[id] == current_it) current_it = (PhyloNeighbor*) saved_nei[id];
-         if (*saved_it[id] == current_it_back) current_it_back = (PhyloNeighbor*) saved_nei[id];
+         if (*saved_it[id] == current_it) current_it = saved_nei[id];
+         if (*saved_it[id] == current_it_back) current_it_back = saved_nei[id];
 
          delete (*saved_it[id]);
          (*saved_it[id]) = saved_nei[id];

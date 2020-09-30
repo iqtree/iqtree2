@@ -223,7 +223,7 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
     
     if (!left->node->isLeaf() && right->node->isLeaf()) {
         std::swap(left, right);
-        std::swap(elft, eright);
+        std::swap(eleft, eright);
     }
     
     if (node->degree() > 3) {

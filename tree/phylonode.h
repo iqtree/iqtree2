@@ -105,7 +105,7 @@ public:
      allocate a new Neighbor by just copying from this one
      @return pointer to newly created Neighbor
      */
-    virtual Neighbor* newNeighbor() {
+    virtual PhyloNeighbor* newNeighbor() {
         return (new PhyloNeighbor(this));
     }
 

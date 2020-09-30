@@ -13,32 +13,31 @@
 
 void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad) {
 
-    // don't recompute the likelihood
 	ASSERT(dad);
-    if (dad_branch->partial_lh_computed & 1)
+    if (dad_branch->isLikelihoodComputed()) {
         return;
-    dad_branch->partial_lh_computed |= 1;
-    PhyloNode *node = dad_branch->getNode();
+    }
+    dad_branch->setLikelihoodComputed(true);
 
-
-    size_t nstates = aln->num_states;
-    size_t nptn = aln->size(), tip_block_size = get_safe_upper_limit(nptn)*nstates;
-    size_t ptn, c;
-    size_t ncat = site_rate->getNRate();
-    size_t i, x;
-    size_t block = nstates * ncat;
-    ModelSet *models = (ModelSet*) model;
+    PhyloNode* node    = dad_branch->getNode();
+    size_t     nstates = aln->num_states;
+    size_t     nptn    = aln->size();
+    size_t     tip_block_size = get_safe_upper_limit(nptn) * nstates;
+    size_t     ptn, c;
+    size_t     ncat    = site_rate->getNRate();
+    size_t     i, x;
+    size_t     block   = nstates * ncat;
+    ModelSet*  models  = (ModelSet*) model;
     ASSERT(models->size() == nptn);
 
 
 	if (node->isLeaf()) {
 	    dad_branch->lh_scale_factor = 0.0;
 		// scale number must be ZERO
-//	    memset(dad_branch->scale_num, 0, nptn * sizeof(UBYTE));
-
-		if (!tip_partial_lh_computed)
-			computeTipPartialLikelihood();
-   
+        // memset(dad_branch->scale_num, 0, nptn * sizeof(UBYTE));
+        if (!tip_partial_lh_computed) {
+            computeTipPartialLikelihood();
+        }   
 		return;
 	}
     
@@ -63,7 +62,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch
                 dad_branch->scale_num = backnei->scale_num;
                 backnei->partial_lh = NULL;
                 backnei->scale_num = NULL;
-                backnei->partial_lh_computed &= ~1; // clear bit
+                backnei->setLikelihoodComputed(false);
                 done = true;
                 break;
             }

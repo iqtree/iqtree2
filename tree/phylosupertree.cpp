@@ -640,9 +640,9 @@ int PhyloSuperTree::computeParsimonyBranchObsolete(PhyloNeighbor *dad_branch, Ph
         int this_subst = 0;
         if (dad_nei->link_neighbors[part]) {
             if (branch_subst)
-                score += (*it)->computeParsimonyBranch(dad_nei->link_neighbors[part], (PhyloNode*)node_nei->link_neighbors[part]->node, &this_subst);
+                score += (*it)->computeParsimonyBranch(dad_nei->link_neighbors[part], node_nei->link_neighbors[part]->getNode(), &this_subst);
             else
-                score += (*it)->computeParsimonyBranch(dad_nei->link_neighbors[part], (PhyloNode*)node_nei->link_neighbors[part]->node);
+                score += (*it)->computeParsimonyBranch(dad_nei->link_neighbors[part], node_nei->link_neighbors[part]->getNode());
         } else
             score += (*it)->computeParsimony();
         if (branch_subst)
@@ -857,37 +857,38 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 	SuperNeighbor *nei1 = ((SuperNeighbor*)node1->findNeighbor(node2));
 	SuperNeighbor *nei2 = ((SuperNeighbor*)node2->findNeighbor(node1));
 	ASSERT(nei1 && nei2);
-	SuperNeighbor *node1_nei = NULL;
-	SuperNeighbor *node2_nei = NULL;
-	SuperNeighbor *node2_nei_other = NULL;
+	SuperNeighbor *node1_nei = nullptr;
+	SuperNeighbor *node2_nei = nullptr;
+	SuperNeighbor *node2_nei_other = nullptr;
 	FOR_NEIGHBOR_DECLARE(node1, node2, node1_it)
-    if (((PhyloNeighbor*)*node1_it)->direction != TOWARD_ROOT)
-    {
-		node1_nei = (SuperNeighbor*)(*node1_it);
-		break;
-	}
+		if (((PhyloNeighbor*)*node1_it)->direction != TOWARD_ROOT)
+		{
+			node1_nei = (SuperNeighbor*)(*node1_it);
+			break;
+		}
 	FOR_NEIGHBOR_DECLARE(node2, node1, node2_it) {
 		node2_nei = (SuperNeighbor*)(*node2_it);
 		break;
 	}
 
 	FOR_NEIGHBOR_IT(node2, node1, node2_it_other)
-	if ((*node2_it_other) != node2_nei) {
-		node2_nei_other = (SuperNeighbor*)(*node2_it_other);
-		break;
-	}
+		if ((*node2_it_other) != node2_nei) {
+			node2_nei_other = (SuperNeighbor*)(*node2_it_other);
+			break;
+		}
 
-    // check for compatibility with constraint tree
-    bool nni_ok[2] = {true, true};
-    int nniid = 0;
+	// check for compatibility with constraint tree
+	bool nni_ok[2] = { true, true };
+	int nniid = 0;
 	FOR_NEIGHBOR(node2, node1, node2_it) {
-        NNIMove nni;
+		NNIMove nni;
         nni.node1 = node1;
         nni.node2 = node2;
         nni.node1Nei_it = node1->findNeighborIt(node1_nei->node);
         nni.node2Nei_it = node2_it;
         nni_ok[nniid++] = constraintTree.isCompatible(nni);
     }
+
     ASSERT(nniid == 2);
     // return if both NNIs do not satisfy constraint
     if (!nni_ok[0] && !nni_ok[1]) {
@@ -1006,11 +1007,10 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 	double *save_lh_factor = new double [ntrees];
 	double *save_lh_factor_back = new double [ntrees];
 	nniid = 0;
-	FOR_NEIGHBOR(node2, node1, node2_it) if (nni_ok[nniid]) 
+	FOR_EACH_SUPER_NEIGHBOR(node2, node1, node2_it, nei) if (nni_ok[nniid]) 
     {
-
 		// do the NNI
-		node2_nei = (SuperNeighbor*)(*node2_it);
+		node2_nei = nei;
         node1->updateNeighbor(node1_it, node2_nei);
         node2_nei->node->updateNeighbor(node2, node1);
         node2->updateNeighbor(node2_it, node1_nei);
@@ -1018,11 +1018,11 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 
         for (part = 0; part < ntrees; part++) {
 			bool is_nni = true;
-			FOR_NEIGHBOR_DECLARE(node1, NULL, nit) {
-				if (! ((SuperNeighbor*)*nit)->link_neighbors[part]) { is_nni = false; break; }
+			FOR_EACH_SUPER_NEIGHBOR(node1, nullptr, nit, neiOne) {
+				if (! neiOne->link_neighbors[part] ) { is_nni = false; break; }
 			}
-			FOR_NEIGHBOR(node2, NULL, nit) {
-				if (! ((SuperNeighbor*)*nit)->link_neighbors[part]) { is_nni = false; break; }
+			FOR_EACH_SUPER_NEIGHBOR(node2, nullptr, nit, neiTwo) {
+				if (! neiTwo->link_neighbors[part]) { is_nni = false; break; }
 			}
 			if (!is_nni)
 				memcpy(at(part)->_pattern_lh, part_info[part].cur_ptnlh, at(part)->getAlnNPattern() * sizeof(double));
@@ -1368,7 +1368,7 @@ void PhyloSuperTree::computeMarginalAncestralState(PhyloNeighbor *dad_branch, Ph
         size_t nptn = (*it)->getAlnNPattern();
         size_t nstates = (*it)->model->num_states;
         if (snei->link_neighbors[part]) {
-            (*it)->computeMarginalAncestralState(snei->link_neighbors[part], (PhyloNode*)snei_back->link_neighbors[part]->node,
+            (*it)->computeMarginalAncestralState(snei->link_neighbors[part], snei_back->link_neighbors[part]->getNode(),
                 ptn_ancestral_prob, ptn_ancestral_seq);
         } else {
             // branch does not exist in partition tree

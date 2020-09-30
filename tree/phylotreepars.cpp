@@ -1323,12 +1323,12 @@ void PhyloTree::extractBifurcatingSubTree(NeighborVec &removed_nei, NodeVector &
     // firstly make bifurcating tree
     for (NodeVector::iterator it = nodes.begin(); it != nodes.end(); it++)
     {
-        Node *node = (*it);
+        PhyloNode *node = (PhyloNode*)(*it);
         int id[3];
         id[0] = -1;
         // find the neighbor toward root to preserve root
         for (i = 0; i < node->neighbors.size(); i++)
-            if (((PhyloNeighbor*)node->neighbors[i])->direction == TOWARD_ROOT) {
+            if (node->getNeighborByIndex(i)->direction == TOWARD_ROOT) {
                 id[0] = i;
                 break;
             }

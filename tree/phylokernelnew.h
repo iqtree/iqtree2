@@ -1325,7 +1325,7 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info
     size_t num_leaves = 0;
 
 	// internal node
-	PhyloNeighbor *left = NULL, *right = NULL; // left & right are two neighbors leading to 2 subtrees
+	PhyloNeighbor *left = nullptr, *right = nullptr; // left & right are two neighbors leading to 2 subtrees
 	FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, nei) {
         // make sure that the partial_lh of children are different!
         ASSERT(dad_branch->partial_lh != nei->partial_lh);
@@ -1337,13 +1337,13 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info
 
     // precomputed buffer to save times
     size_t thread_buf_size        = (2*block+nstates)*VectorClass::size();
-    double *buffer_partial_lh_ptr = buffer_partial_lh + (getBufferPartialLhSize() - thread_buf_size*num_packets);
-    double *echildren = NULL;
-    double *partial_lh_leaves = NULL;
+    double* buffer_partial_lh_ptr = buffer_partial_lh + (getBufferPartialLhSize() - thread_buf_size*num_packets);
+    double* echildren             = nullptr;
+    double* partial_lh_leaves     = nullptr;
 
     // pre-compute scaled branch length per category
-    double len_children[ncat*(node->degree()-1)]; // +1 in case num_leaves = 0
-    double *len_left = NULL, *len_right = NULL;
+    double  len_children[ncat*(node->degree()-1)]; // +1 in case num_leaves = 0
+    double* len_left = nullptr, *len_right = nullptr;
 
     if (SITE_MODEL) {
         double *len_children_ptr = len_children;
@@ -1371,13 +1371,13 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info
 #endif
             aligned_free(buffer_tmp);
         } else {
-            echildren = info.echildren;
+            echildren         = info.echildren;
             partial_lh_leaves = info.partial_lh_leaves;
         }
     }
 
-    double *eleft = echildren, *eright = echildren + block*nstates;
-
+    double* eleft = echildren;
+    double* eright = echildren + block * nstates;
 	if (!left->node->isLeaf() && right->node->isLeaf()) {
         std::swap(left,     right);
         std::swap(eleft,    eright);
@@ -1701,7 +1701,6 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info
                     }
                 }
 
-
                 for (size_t c = 0; c < ncat_mix; c++) {
                     double *inv_evec_ptr = inv_evec + mix_addr[c];
                     // compute real partial likelihood vector
@@ -1745,7 +1744,7 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info
         auto unknown = aln->STATE_UNKNOWN;
         
         for (size_t ptn = ptn_lower; ptn < ptn_upper; ptn+=VectorClass::size()) {
-            VectorClass *partial_lh = (VectorClass*)(dad_branch->partial_lh + ptn*block);
+            VectorClass *partial_lh       = (VectorClass*)(dad_branch->partial_lh + ptn*block);
             VectorClass *partial_lh_right = (VectorClass*)(right->partial_lh + ptn*block);
             VectorClass lh_max = 0.0;
 

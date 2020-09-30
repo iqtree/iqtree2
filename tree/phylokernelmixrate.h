@@ -29,9 +29,10 @@ void PhyloTree::computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
 
     // don't recompute the likelihood
 	ASSERT(dad);
-    if (dad_branch->partial_lh_computed & 1)
-        return;
-    dad_branch->partial_lh_computed |= 1;
+	if (dad_branch->isLikelihoodComputed()) {
+		return;
+	}
+	dad_branch->setLikelihoodComputed(true);
 
     size_t     nptn = aln->size() + model_factory->unobserved_ptns.size();
     PhyloNode* node = dad_branch->getNode();
@@ -60,7 +61,7 @@ void PhyloTree::computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
 	ASSERT(node->degree() == 3); // it works only for strictly bifurcating tree
 	PhyloNeighbor *left = nullptr, *right = nullptr; // left & right are two neighbors leading to 2 subtrees
 	FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, nei) {
-		if (!left) left = nei; else right = nei;
+		if (left==nullptr) left = nei; else right = nei;
 	}
 
 	if (!left->node->isLeaf() && right->node->isLeaf()) {
@@ -81,7 +82,7 @@ void PhyloTree::computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
                 dad_branch->scale_num = backnei->scale_num;
                 backnei->partial_lh = NULL;
                 backnei->scale_num = NULL;
-                backnei->partial_lh_computed &= ~1; // clear bit
+				backnei->setLikelihoodComputed(false);
                 done = true;
                 break;
             }

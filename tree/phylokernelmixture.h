@@ -27,12 +27,13 @@ void PhyloTree::computeMixturePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
 
     // don't recompute the likelihood
 	ASSERT(dad);
-    if (dad_branch->partial_lh_computed & 1)
-        return;
-    dad_branch->partial_lh_computed |= 1;
+	if (dad_branch->isLikelihoodComputed()) {
+		return;
+	}
+	dad_branch->setLikelihoodComputed(true);
 
-    size_t nptn = aln->size() + model_factory->unobserved_ptns.size();
-    PhyloNode *node = (PhyloNode*)(dad_branch->node);
+    size_t     nptn = aln->size() + model_factory->unobserved_ptns.size();
+    PhyloNode* node = dad_branch->getNode();
 
 	if (node->isLeaf()) {
 	    dad_branch->lh_scale_factor = 0.0;
@@ -80,7 +81,7 @@ void PhyloTree::computeMixturePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
                 dad_branch->scale_num = backnei->scale_num;
                 backnei->partial_lh = NULL;
                 backnei->scale_num = NULL;
-                backnei->partial_lh_computed &= ~1; // clear bit
+				backnei->setLikelihoodComputed(false);
                 done = true;
                 break;
             }
