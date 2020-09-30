@@ -30,10 +30,6 @@ for (NeighborVec::iterator it = (mynode)->neighbors.begin(); it != (mynode)->nei
 for (NeighborVec::iterator it = (mynode)->neighbors.begin(); it != (mynode)->neighbors.end(); ++it) \
     for (SuperNeighbor* nei = (SuperNeighbor*)(*it); nei!=nullptr && nei->getNode() != mydad; nei=nullptr )
 
-
-typedef vector<PhyloNeighbor*> PhyloNeighborVec;
-
-
 class SuperNode;
 
 /**

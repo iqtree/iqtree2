@@ -1061,7 +1061,8 @@ void PhyloTree::copyConstraintTree(MTree *tree, IntVector &taxon_order, int *ran
 /**
  get all neighboring branches to a removed node
  */
-void getNeiBranches(NeighborVec &removed_nei, NodeVector &attached_node, NodeVector &added_nodes, int i,
+void getNeiBranches(PhyloNeighborVec &removed_nei,
+                    NodeVector &attached_node, NodeVector &added_nodes, int i,
                     NodeVector &nodes1, NodeVector &nodes2)
 {
     // get target branches surrounding attached_node
@@ -1129,7 +1130,8 @@ void PhyloTree::insertNode2Branch(PhyloNode* added_node, PhyloNode* target_node,
     ass_node->clearReversePartialParsimony(added_node);
 }
 
-int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment, int *rand_stream) {
+int PhyloTree::computeParsimonyTree(const char *out_prefix,
+                                    Alignment *alignment, int *rand_stream) {
     aln = alignment;
     size_t nseq = aln->getNSeq();
     if (nseq < 3) {
@@ -1139,10 +1141,10 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
     IntVector taxon_order;
     taxon_order.reserve(aln->getNSeq());
     
-    NeighborVec removed_nei; // removed Neighbor
-    PhyloNodeVector attached_node; // node attached to removed Neighbor
-    PhyloNodeVector added_nodes; // newly added nodes
-    int newNodeID;
+    PhyloNeighborVec removed_nei; // removed Neighbor
+    PhyloNodeVector  attached_node; // node attached to removed Neighbor
+    PhyloNodeVector  added_nodes; // newly added nodes
+    int    newNodeID;
     size_t index;
     size_t pars_block_size = getBitsBlockSize();
 
@@ -1154,7 +1156,11 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
         newNodeID = nseq + leafNum - 2;
     } else {
         // first copy the constraint tree
+        double copyStart = getRealTime();
         copyConstraintTree(&constraintTree, taxon_order, rand_stream);
+        LOG_LINE( VB_MED, "Time to copy constraint tree "
+                 << (getRealTime()-copyStart) << " secs");
+        
         newNodeID = nodeNum - leafNum + nseq;
         index     = (branchNum)*2;
         
@@ -1162,8 +1168,11 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
         initializeAllPartialPars();
         
         // extract a bifurcating subtree and get removed nodes to insert later
+        double extractStart = getRealTime();
         extractBifurcatingSubTree(removed_nei, attached_node, rand_stream);
-        
+        LOG_LINE( VB_MED, "Time to extract bifurcating subtree "
+                 << (getRealTime()-extractStart) << " secs");
+
         added_nodes.reserve(removed_nei.size());
     }
     if (verbose_mode >= VB_MAX) {
@@ -1182,7 +1191,9 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
     }
     
     // stepwise adding the next taxon for the remaining taxa
-    initProgress(leafNum*2 + nseq*(nseq+1) - leafNum*(leafNum+1),
+    double usefulTime = 0;
+    double fudge = leafNum*leafNum * 0.01;
+    initProgress(fudge + leafNum*2 + nseq*(nseq+1) - leafNum*(leafNum+1),
                  "Constructing parsimony tree", "", "");
     for (int step = 0; leafNum < nseq; ++step) {
         PhyloNodeVector nodes1, nodes2;
@@ -1197,7 +1208,7 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
         if (step < removed_nei.size()) {
             // add the removed_nei (from constraint tree) back to the tree
             getNeiBranches(removed_nei, attached_node, added_nodes, step, nodes1, nodes2);
-            new_taxon = (PhyloNode*)removed_nei[step]->node;
+            new_taxon = removed_nei[step]->getNode();
             added_node->neighbors.push_back(removed_nei[step]);
             new_taxon->updateNeighbor(attached_node[step], added_node);
             added_nodes.push_back(added_node);
@@ -1225,6 +1236,7 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
         added_node->addNeighbor(DUMMY_NODE_1, -1.0);
         added_node->addNeighbor(DUMMY_NODE_2, -1.0);
 
+        usefulTime -= getRealTime();
         for (int branch_num = 0; branch_num < nodes1.size(); branch_num++) {
             int score = addTaxonMPFast(new_taxon, added_node, nodes1[branch_num], nodes2[branch_num]);
             if (score < best_pars_score) {
@@ -1233,6 +1245,7 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
                 target_dad  = nodes2[branch_num];
             }
         }
+        usefulTime += getRealTime();
         
         if (verbose_mode >= VB_MAX) {
             hideProgress();
@@ -1253,9 +1266,11 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
 
         // increase number of taxa
         leafNum += getNumTaxa(new_taxon, added_node);
-        trackProgress(nodes1.size());
+        trackProgress(nodes1.size() + ((step==0) ? fudge : 0));
     }
     doneProgress();
+    LOG_LINE ( VB_MED, "Time usefully spent was " <<
+              usefulTime << " seconds");
     
     ASSERT(index == 4*leafNum-6);
 
@@ -1310,8 +1325,10 @@ int PhyloTree::addTaxonMPFast(PhyloNode *added_taxon, PhyloNode* added_node, Phy
 
 }
 
-void PhyloTree::extractBifurcatingSubTree(NeighborVec &removed_nei, NodeVector &attached_node, int *rand_stream) {
-    NodeVector nodes;
+void PhyloTree::extractBifurcatingSubTree(PhyloNeighborVec& removed_nei,
+                                          PhyloNodeVector&  attached_node,
+                                          int *rand_stream) {
+    PhyloNodeVector nodes;
     getMultifurcatingNodes(nodes);
     if (nodes.empty())
         return;
@@ -1321,9 +1338,9 @@ void PhyloTree::extractBifurcatingSubTree(NeighborVec &removed_nei, NodeVector &
     computeBranchDirection();
     
     // firstly make bifurcating tree
-    for (NodeVector::iterator it = nodes.begin(); it != nodes.end(); it++)
+    for (auto it = nodes.begin(); it != nodes.end(); it++)
     {
-        PhyloNode *node = (PhyloNode*)(*it);
+        PhyloNode *node = *it;
         int id[3];
         id[0] = -1;
         // find the neighbor toward root to preserve root
@@ -1348,7 +1365,7 @@ void PhyloTree::extractBifurcatingSubTree(NeighborVec &removed_nei, NodeVector &
         int cur_size = removed_nei.size();
         for (i = 0; i < node->degree(); i++)
             if (i != id[0] && i != id[1] && i != id[2]) {
-                removed_nei.push_back(node->neighbors[i]);
+                removed_nei.push_back(node->getNeighborByIndex(i));
                 attached_node.push_back(node);
             }
         // randomize removed_nei

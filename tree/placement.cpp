@@ -101,12 +101,6 @@ namespace {
         }
         return MAXIMUM_PARSIMONY;
     }
-    enum SearchHeuristic {
-        GLOBAL_SEARCH
-    };
-    SearchHeuristic getSearchHeuristic() {
-        return GLOBAL_SEARCH;
-    }
     enum LocalCleanup {
         NO_LOCAL_CLEANUP
     };
@@ -421,6 +415,19 @@ class TargetBranch;      //A place it could go
 class TargetBranchRange; //A container of places taxa could go
 class TargetBranchRef;   //A reference to a target branch via a target branch range
 class PossiblePlacement; //A costing for a TaxonToPlace at a TargetBranch
+
+class SearchHeuristic {
+public:
+    virtual ~SearchHeuristic() = default;
+    virtual bool isPlacementWorthTrying
+        ( const TaxonToPlace* taxon, const TargetBranch* target ) {
+            return true;
+    }
+    virtual bool isGlobalSearch() {
+        return true;
+    }
+};
+
 class PlacementCostCalculator {
 public:
     virtual void assessPlacementCost(PhyloTree& tree, const TaxonToPlace* taxon,
@@ -443,16 +450,17 @@ class TargetBranch : public std::pair<PhyloNode*, PhyloNode*> {
     UBYTE*  scale_num;
     bool    used;
     ReplacementBranchList* replacements;
-    friend  class TargetBranchRef;
+    friend class TargetBranchRef;
 public:
     typedef std::pair<PhyloNode*, PhyloNode*> super;
-    TargetBranch(): partial_pars(nullptr), partial_lh(nullptr)
+    TargetBranch(): super(nullptr, nullptr)
+                    , partial_pars(nullptr), partial_lh(nullptr)
                     , scale_num(nullptr), used(false)
                     , replacements(nullptr) {}
     ~TargetBranch() {
         delete replacements;
     }
-    TargetBranch(const TargetBranch& rhs) {
+    TargetBranch(const TargetBranch& rhs): super(rhs) {
         partial_pars = rhs.partial_pars;
         partial_lh   = rhs.partial_lh;
         scale_num    = rhs.scale_num;
@@ -461,6 +469,7 @@ public:
         : new ReplacementBranchList(*rhs.replacements);
     }
     TargetBranch& operator= (const TargetBranch& rhs) {
+        super::operator=(rhs);
         partial_pars = rhs.partial_pars;
         partial_lh   = rhs.partial_lh;
         scale_num    = rhs.scale_num;
@@ -506,24 +515,28 @@ public:
         partial_pars      = nullptr;
         partial_lh        = nullptr;
         scale_num         = nullptr;
-        nei->setParsimonyComputed (true);
-        nei->setLikelihoodComputed(nei->partial_lh != nullptr);
+        nei->setParsimonyComputed  ( true );
+        nei->setLikelihoodComputed ( nei->partial_lh != nullptr );
         used  = true;
     }
     const UINT* getParsimonyBlock() const {
         return partial_pars;
     }
+    template <class T>
     void costPlacementOfTaxa(PhyloTree& tree,
-                             TargetBranchRange* targets, size_t targetNumber,
-                             TaxonToPlace* candidateStart, TaxonToPlace* candidateStop,
-                             PlacementCostCalculator* calculator, bool isFirstTargetBranch) const;
+                             TargetBranchRange* targets,
+                             size_t targetNumber,
+                             T* candidateStart,
+                             T* candidateStop,
+                             SearchHeuristic*   heuristic,
+                             PlacementCostCalculator* calculator,
+                             bool isFirstTargetBranch) const;
     void takeOwnershipOfReplacementVector(ReplacementBranchList* branches) {
         replacements = branches;
     }
     ReplacementBranchList* getReplacements() {
         return replacements;
     }
-    
 };
 
 class TargetBranchRef;
@@ -536,13 +549,11 @@ public:
         PhyloNodeVector v1, v2;
         phylo_tree.getBranches(v1, v2);
         reserve(v1.size());
-        
         if ( verbose_mode >= VB_DEBUG ) {
             std::stringstream s1;
             s1 << "TargetBranchRange will have " << v1.size() << " entries";
             phylo_tree.logLine(s1.str());
         }
-
         for (int i=0; i<v1.size(); ++i) {
             emplace_back(b, v1[i], v2[i], calculator.usesLikelihood());
         }
@@ -690,9 +701,7 @@ public:
         new_leaf->addNeighbor(new_interior, -1 );
         PhyloNeighbor* nei = new_interior->firstNeighbor();
         ba.allocateMemoryFor(nei);
-        if (!nei->isParsimonyComputed()) {
-            phylo_tree->computePartialParsimony(nei, new_interior);
-        }
+        phylo_tree->computePartialParsimony(nei, new_interior);
         partial_pars = new_interior->firstNeighbor()->partial_pars;
     }
     
@@ -718,7 +727,7 @@ public:
     }
     
     virtual bool considerAdditionalPlacement(const PossiblePlacement& placement) {
-        bool best = (placement.score < bestPlacement.score);
+        bool best = (!bestPlacement.canStillUse() || placement.score < bestPlacement.score);
         if (best) {
             bestPlacement = placement;
         }
@@ -736,7 +745,7 @@ public:
     void findPlacement(PhyloTree& phylo_tree,
                        TargetBranchRange* range,
                        size_t insertion_point_count,
-                       SearchHeuristic heuristic,
+                       SearchHeuristic* heuristic,
                        const PlacementCostCalculator* calculator) {
         //
         //Note: for now, heuristic is ignored...
@@ -751,30 +760,33 @@ public:
             phylo_tree.logLine(s1.str());
         }
 
+        auto rangeStart = range->data();
         #ifdef _OPENMP
         #pragma omp parallel for
         #endif
         for (int i=0; i<insertion_point_count; ++i) {
-            PossiblePlacement* p = placementArray + i;
-            p->setTargetBranch(range, i);
-            calculator->assessPlacementCost(phylo_tree, this, p);
-            phylo_tree.trackProgress(1.0);
+            if (heuristic->isPlacementWorthTrying(this, rangeStart+i)) {
+                PossiblePlacement* p = placementArray + i;
+                p->setTargetBranch(range, i);
+                calculator->assessPlacementCost(phylo_tree, this, p);
+            }
         }
+        phylo_tree.trackProgress(insertion_point_count);
         
         auto bestI = considerPlacements(placements.data(), placements.size());
         
         if ( verbose_mode >= VB_MED ) {
             std::stringstream s3;
-            s3 << "Best score for " << this->taxonName << " was " << bestPlacement.score << " at place " << bestI;
+            s3 << "Best (lowest) score for " << this->taxonName << " was " << bestPlacement.score << " at place " << bestI;
             phylo_tree.logLine(s3.str());
         }
         inserted      = false;
     }
     bool operator < (const TaxonToPlace& rhs) const {
-        return rhs.bestPlacement.score < bestPlacement.score; //sort best (highest) score to front (not lowest!)
+        return bestPlacement.score < rhs.bestPlacement.score; //lowest score is best
     }
     bool operator <= (const TaxonToPlace& rhs) const {
-        return rhs.bestPlacement.score <= bestPlacement.score; //sort best (highest) score to front (not lowest!)
+        return bestPlacement.score <= rhs.bestPlacement.score; //lowest score is best
     }
     void insertIntoTree(PhyloTree& phylo_tree, BlockAllocator& b,
                         TargetBranchRange& dest,
@@ -819,10 +831,11 @@ public:
     bool insertNearby(PhyloTree& phylo_tree, BlockAllocator& b,
                       TargetBranchRange& dest,
                       PlacementCostCalculator& calculator ) {
+        TargetBranch* blocked_target = bestPlacement.getTarget();
         forgetGazumpedPlacements();
         std::vector<PossiblePlacement> placements;
         assessNewTargetBranches(phylo_tree, calculator,
-                                bestPlacement.getTarget(), placements);
+                                blocked_target, placements);
         for (auto it = placements.begin(); it != placements.end(); ++it) {
             considerAdditionalPlacement(*it);
         }
@@ -870,22 +883,26 @@ public:
     virtual ~TaxaToPlace() = default;
 };
 
+template <class T> //T=TaxonToPlace, usually
 void TargetBranch::costPlacementOfTaxa
-    (PhyloTree& phylo_tree,
-     TargetBranchRange* targets, size_t targetNumber,
-     TaxonToPlace* candidateStart, TaxonToPlace* candidateStop,
-     PlacementCostCalculator* calculator, bool isFirstTargetBranch) const {
+    (PhyloTree&         phylo_tree,
+     TargetBranchRange* targets,
+     size_t             targetNumber,
+     T*                 candidateStart,
+     T*                 candidateStop,
+     SearchHeuristic*   heuristic,
+     PlacementCostCalculator* calculator,
+     bool               isFirstTargetBranch) const {
     double candidateCount = candidateStop - candidateStart;
     #ifdef _OPENMP
     #pragma omp parallel for
     #endif
-    for (TaxonToPlace* candidate = candidateStart; candidate < candidateStop; ++candidate) {
-        PossiblePlacement p;
-        p.setTargetBranch(targets, targetNumber);
-        calculator->assessPlacementCost(phylo_tree, candidate, &p);
-        if (isFirstTargetBranch ) {            
-            candidate->considerPlacements(&p, 1);
-        } else {
+    for (T* candidate = candidateStart;
+         candidate < candidateStop; ++candidate) {
+        if (heuristic->isPlacementWorthTrying(candidate, this)) {
+            PossiblePlacement p;
+            p.setTargetBranch(targets, targetNumber);
+            calculator->assessPlacementCost(phylo_tree, candidate, &p);
             candidate->considerAdditionalPlacement(p);
         }
     }
@@ -893,14 +910,15 @@ void TargetBranch::costPlacementOfTaxa
 }
 
 class ParsimonyCostCalculator : public PlacementCostCalculator {
-    virtual void assessPlacementCost(PhyloTree& phylo_tree, const TaxonToPlace* taxon,
+    virtual void assessPlacementCost(PhyloTree& phylo_tree,
+                                     const TaxonToPlace* taxon,
                                      PossiblePlacement* placement)  const {
         auto target = placement->getTarget();
         int score;
         phylo_tree.computeParsimonyOutOfTree( target->getParsimonyBlock(),
                                               taxon->getParsimonyBlock(),
                                               &score);
-        placement->score = -score;
+        placement->score = score;
         if ( verbose_mode >= VB_MAX ) {
             std::stringstream s2;
             s2  << "Parsimony score for taxon " << taxon->getTaxonId() << " at "
@@ -926,7 +944,8 @@ public:
                            PhyloTree* tree) {
         if (VB_MIN <= verbose_mode) {
             std::stringstream s;
-            s << "Processed batch of " << (lastTaxon - firstTaxon) << " taxa";
+            s << "Processed batch of "
+              << (lastTaxon - firstTaxon) << " taxa";
             tree->logLine(s.str() );
         }
     }
@@ -1060,7 +1079,8 @@ void PhyloTree::removeSampleTaxaIfRequested() {
     }
 }
 
-double PhyloTree::taxaAdditionWorkEstimate(size_t newTaxaCount, size_t taxaPerBatch, size_t insertsPerBatch) {
+double PhyloTree::taxaAdditionWorkEstimate(size_t newTaxaCount, size_t taxaPerBatch,
+                                           size_t insertsPerBatch) {
     if ( newTaxaCount <= taxaPerBatch || taxaPerBatch == 0 ) {
         if ( newTaxaCount <= insertsPerBatch || insertsPerBatch == 0 ) {
             return 3.0 * newTaxaCount * leafNum;
@@ -1069,11 +1089,10 @@ double PhyloTree::taxaAdditionWorkEstimate(size_t newTaxaCount, size_t taxaPerBa
     }
     size_t batchesThisPass  = newTaxaCount / taxaPerBatch;
     double workThisPass     = batchesThisPass * taxaPerBatch * leafNum;
-    double progressThisPass = batchesThisPass * insertsPerBatch;        //Optimistic if inserts = 100% and batches are large.
+    double progressThisPass = batchesThisPass * insertsPerBatch;
+    //Optimistic if inserts = 100% and batches are large.
     return (3.0 * workThisPass / progressThisPass) * newTaxaCount;
 }
-
-#define NEW_TAXON_MAJOR (0)
 
 bool PhyloTree::shouldPlacementUseSankoffParsimony() const {
     return getCostFunction() == SANKOFF_PARSIMONY;
@@ -1104,31 +1123,57 @@ void logInsert(PhyloTree* tree, Params& params, CostFunction costFunction,
             << ", " << p.lenToNode2 << ", " << p.lenToNewTaxon << ")";
         tree->logLine(s.str());
     }
+}
 
+SearchHeuristic* getSearchHeuristic() {
+    return new SearchHeuristic;
 }
 
 typedef TaxonToPlace TaxonTypeInUse;
+//typedef LessFussyTaxon TaxonTypeInUse;
+
+#define NEW_TAXON_MAJOR (0)
+
+struct PlacementRun {
+public:
+    CostFunction             costFunction; //parsimony or likelihood
+    SearchHeuristic*         heuristic; //global? or localized?
+    TaxonCleaner*            taxon_cleaner;
+    BatchCleaner*            batch_cleaner;
+    GlobalCleaner*           global_cleaner;
+    PlacementCostCalculator* calculator;
+
+    PlacementRun(): costFunction(getCostFunction())
+        , heuristic(getSearchHeuristic())
+        , taxon_cleaner(getTaxonCleaner())
+        , batch_cleaner(getBatchCleaner())
+        , global_cleaner(getGlobalCleaner())
+        , calculator(new ParsimonyCostCalculator()) {
+       costFunction = getCostFunction();
+    }
+    ~PlacementRun() {
+        delete global_cleaner;
+        delete batch_cleaner;
+        delete taxon_cleaner;
+        delete heuristic;
+        delete calculator;
+    }
+};
 
 void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
     //
     //Assumes: The tree is rooted.
     //
     Params&            params          = Params::getInstance();
-    SearchHeuristic    heuristic       = getSearchHeuristic();    //global? or localized?
-    CostFunction       costFunction    = getCostFunction(); //parsimony or likelihood
     size_t             taxaPerBatch    = getTaxaPerBatch(taxaIdsToAdd.size());
                                          //Must be 1 or more
     size_t             insertsPerBatch = getInsertsPerBatch(taxaIdsToAdd.size(), taxaPerBatch);
                                          //Must be 1 or more
-    
+    PlacementRun pr;
     deleteAllPartialLh();
     
-    TaxonCleaner*  taxon_cleaner  = getTaxonCleaner(); //todo: use scoped_ptr.
-    BatchCleaner*  batch_cleaner  = getBatchCleaner();
-    GlobalCleaner* global_cleaner = getGlobalCleaner();
-
-    if ( taxaPerBatch == 1 && heuristic == GLOBAL_SEARCH &&
-         ( costFunction == MAXIMUM_PARSIMONY || costFunction == SANKOFF_PARSIMONY ) ) {
+    if ( taxaPerBatch == 1 && pr.heuristic->isGlobalSearch()  &&
+        ( pr.costFunction == MAXIMUM_PARSIMONY || pr.costFunction == SANKOFF_PARSIMONY ) ) {
         //For now, we might as well use the existing step-wise
         //parsimony stuff for adding to a constraint tree, eh?
         //Since, for now, it is a lot faster.
@@ -1161,8 +1206,8 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
     int      index_parsimony        = 0;
     int      index_lh               = 0;
     ensurePartialLHIsAllocated(extra_parsimony_blocks, extra_lh_blocks);
-    initializeAllPartialLh(index_parsimony, index_lh, true);
-    if (costFunction == SANKOFF_PARSIMONY) {
+    initializeAllPartialLh(index_parsimony, index_lh, trackLikelihood);
+    if (pr.costFunction == SANKOFF_PARSIMONY) {
         computeTipPartialParsimony();
     }
     BlockAllocator allocator(this, index_parsimony, index_lh);
@@ -1182,8 +1227,6 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
     double setUpStartTime = getRealTime();
     size_t newTaxaCount = taxaIdsToAdd.size();
     
-    PlacementCostCalculator* calculator = new ParsimonyCostCalculator();
-    
     TaxaToPlace<TaxonTypeInUse> candidates(newTaxaCount);
     LOG_LINE ( VB_DEBUG, "Before allocating TaxonToPlace array"
               << ", index_lh was " << allocator.getLikelihoodBlockCount() );
@@ -1196,7 +1239,7 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
               << ", index_lh was " << allocator.getLikelihoodBlockCount()
               << ", index_pars was " << allocator.getParsimonyBlockCount());
 
-    TargetBranchRange targets(*this, allocator, *calculator);
+    TargetBranchRange targets(*this, allocator, *pr.calculator);
     LOG_LINE ( VB_DEBUG, "After allocating TargetBranchRange"
                << ", index_lh was " << allocator.getLikelihoodBlockCount()
                << ", index_pars was " << allocator.getParsimonyBlockCount());
@@ -1218,7 +1261,6 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
         }
         size_t batchStart=0;
         for (; batchStart+taxaPerBatch <= newTaxaCount; batchStart+=taxaPerBatch) {
-            
             timeSpentOnRefreshes -= getRealTime();
             if (trackLikelihood) {
                 clearAllPartialLH(false);
@@ -1235,10 +1277,10 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
             }
             timeSpentOnRefreshes += getRealTime();
             timeSpentOnSearches -= getRealTime();
-            TaxonToPlace* candidateStart = candidates.data() + batchStart;
-            TaxonToPlace* candidateStop  = candidates.data() + batchStop;
+            TaxonTypeInUse* candidateStart = candidates.data() + batchStart;
+            TaxonTypeInUse* candidateStop  = candidates.data() + batchStop;
 #if (NEW_TAXON_MAJOR)
-            for (TaxonToPlace* c = candidateStart; c<candidateStop; ++c) {
+            for (TaxonTypeInUse* c = candidateStart; c<candidateStop; ++c) {
                 LOG_LINE(VB_DEBUG, "Scoring ... " << c.taxonName);
                 c->findPlacement(*this, targets.data(), targets.size(),
                                 heuristic, calculator);
@@ -1251,7 +1293,8 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
             for (TargetBranch* point = pointStart; point<pointStop; ++point) {
                 point->costPlacementOfTaxa(*this, &targets, point-pointStart,
                                            candidateStart, candidateStop,
-                                           calculator, point==pointStart);
+                                           pr.heuristic, pr.calculator,
+                                           point==pointStart);
             }
 #endif
             timeSpentOnSearches += getRealTime();
@@ -1268,26 +1311,26 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
                 if (c.canInsert()) {
                     ++insertCount;
                     ++totalInsertCount;
-                    c.insertIntoTree(*this, allocator, targets, *calculator);
-                    logInsert(this, params, costFunction, totalInsertCount,
+                    c.insertIntoTree(*this, allocator, targets, *pr.calculator);
+                    logInsert(this, params, pr.costFunction, totalInsertCount,
                               "Inserted", c, "at its preferred branch");
                 } else {
                     //Another candidate taxon has gotten there first
                     ++blockedInsertCount;
                     ++insertCount;
                     ++totalInsertCount;
-                    c.insertNearby(*this, allocator, targets, *calculator);
-                    logInsert(this, params, costFunction, totalInsertCount,
+                    c.insertNearby(*this, allocator, targets, *pr.calculator);
+                    logInsert(this, params, pr.costFunction, totalInsertCount,
                               "Inserted", c, "near its preferred branch");
                 }
-                taxon_cleaner->cleanUpAfterTaxonPlacement(c, this);
+                pr.taxon_cleaner->cleanUpAfterTaxonPlacement(c, this);
             }
             timeSpentOnInserts += getRealTime();
             if ( 1 < batchStop - batchStart ) {
                 LOG_LINE ( VB_MED,  "Inserted " << (insertCount)
                           << " out of a batch of " << (batchStop - batchStart) << "." );
             }
-            batch_cleaner->cleanUpAfterBatch(candidates, batchStart, batchStop, this);
+            pr.batch_cleaner->cleanUpAfterBatch(candidates, batchStart, batchStop, this);
             if (trackLikelihood) {
                 fixNegativeBranch();
             }
@@ -1316,7 +1359,9 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
         }
         newTaxaCount = candidates.size();
         insertsPerBatch = getInsertsPerBatch(taxaIdsToAdd.size(), taxaPerBatch);
-        this->progress->setWorkRemaining(taxaAdditionWorkEstimate(newTaxaCount, taxaPerBatch, insertsPerBatch));
+        auto workLeft   = taxaAdditionWorkEstimate
+                          ( newTaxaCount, taxaPerBatch, insertsPerBatch );
+        this->progress->setWorkRemaining(workLeft);
         LOG_LINE ( VB_MAX, "At the end of this pass, index_lhs was "
                   << allocator.getLikelihoodBlockCount() << ", index_pars was "
                   << allocator.getParsimonyBlockCount());
@@ -1324,7 +1369,7 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
     doneProgress();
     
     LOG_LINE ( VB_MED, "Tidying up tree after inserting taxa.");
-    global_cleaner->cleanUpAfterPlacement(this);
+    pr.global_cleaner->cleanUpAfterPlacement(this);
     
     LOG_LINE ( VB_MIN, "Time spent on refreshes was "      << timeSpentOnRefreshes << " sec");
     LOG_LINE ( VB_MIN, "Time spent on searches was "       << timeSpentOnSearches << " sec");
@@ -1336,10 +1381,6 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
     if (!trackLikelihood) {
         fixNegativeBranch();
     }
-    delete global_cleaner;
-    delete batch_cleaner;
-    delete taxon_cleaner;
-    delete calculator;
     finishUpAfterTaxaAddition();
 }
 
@@ -1347,7 +1388,8 @@ void PhyloTree::finishUpAfterTaxaAddition() {
     initializeTree();
     deleteAllPartialLh();
     initializeAllPartialLh();
-    LOG_LINE ( VB_MED, "Number of leaves " << this->leafNum << ", of nodes " << this->nodeNum );
+    LOG_LINE ( VB_MED, "Number of leaves " << this->leafNum
+              << ", of nodes " << this->nodeNum );
     CostFunction costFunction = getCostFunction();
     if (costFunction==MAXIMUM_LIKELIHOOD_ANYWHERE ||
         costFunction==MAXIMUM_LIKELIHOOD_MIDPOINT) {

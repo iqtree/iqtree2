@@ -103,7 +103,7 @@ public:
             @param node the starting node, NULL to start from the root
             @param dad dad of the node, used to direct the search
      */
-    void extractBifurcatingSubTree(Node *node = NULL, Node *dad = NULL);
+    void extractBifurcatingSubTree(Node *node = nullptr, Node *dad = nullptr);
 
 
     /**

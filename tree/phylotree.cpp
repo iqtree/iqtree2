@@ -573,6 +573,13 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
         //Todo: Carry out any requested "after-all-deletes" global tidy-up of the tree.
         //Todo: If requested *not* to optimize branch lengths here, don't.
         //Todo: does removeTaxa update nodeNum and leafNum as it runs?
+
+        if ( VB_MED <= verbose_mode ) {
+            clearAllPartialParsimony(false);
+            int post_delete_parsimony = computeParsimony("Computing post-delete parsimony");
+            LOG_LINE ( VB_MIN, "Parsimony score after deletions was " << post_delete_parsimony );
+        }
+
         deleteAllPartialLh();
     }
     if (will_add) {
@@ -730,7 +737,7 @@ void PhyloTree::readTreeFile(const string &file_name) {
     if (isSuperTree()) {
         ((PhyloSuperTree*) this)->mapTrees();
     } else {
-        clearAllPartialLH();
+        clearAllPartialLH(false);
         clearAllScaleNum(false);
         clearAllPartialParsimony(false);
     }
@@ -867,7 +874,6 @@ void PhyloTree::clearAllScaleNum(bool set_to_null) {
     current_it_back           = nullptr;
     nextToRoot->clearAllScaleNum(set_to_null, r);
     r->clearAllScaleNum(set_to_null, nextToRoot);
-    
     if (!set_to_null && central_scale_num != nullptr) {
         memset(central_scale_num, 0, central_scale_num_size_in_bytes);
     }

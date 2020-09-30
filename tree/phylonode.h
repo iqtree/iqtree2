@@ -367,13 +367,19 @@ public:
 
     class iterator : public super::iterator {
         public:
+            typedef typename super::iterator::difference_type step;
             iterator( typename super::iterator i) : super::iterator(i) {};
             T* operator*() { return dynamic_cast<T*>( super::iterator::operator*() ); }
+            iterator& operator+=(step move) { super::iterator::operator+=(move); return *this; }
+            iterator  operator+(step move)  { return super::iterator::operator+(move);}
     };
     class const_iterator: public super::const_iterator {
         public:
+            typedef typename super::const_iterator::difference_type step;
             const_iterator( typename super::const_iterator i) : super::const_iterator(i) {};
             T* operator*() { return dynamic_cast<T*>( super::const_iterator::operator*() ); }
+            const_iterator& operator+=(step move) { super::const_iterator::operator+=(move); return *this; }
+            const_iterator  operator+(step move) { return super::iterator::operator+(move);  }
     };
     iterator begin() { return iterator( super::begin() ); }
     iterator end()   { return iterator( super::end() ); }
@@ -388,8 +394,9 @@ public:
 };
 
 /**
-    Node vector
+    PhyloNeighbor and PhyloNode vectors
  */
+typedef SubclassPointerVector<PhyloNeighbor, NeighborVec> PhyloNeighborVec;
 typedef SubclassPointerVector<PhyloNode, NodeVector> PhyloNodeVector;
 
 typedef pair<PhyloNode*, PhyloNode*> PhyloBranch;

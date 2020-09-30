@@ -1512,7 +1512,7 @@ public:
      @param[out] removed_nei vector of removed Neighbor
      @param[out] attached_node vector of node attached to removed Neighbor
      */
-    void extractBifurcatingSubTree(NeighborVec &removed_nei, NodeVector &attached_node, int *rand_stream);
+    void extractBifurcatingSubTree(PhyloNeighborVec &removed_nei, PhyloNodeVector &attached_node, int *rand_stream);
     
 
     /**
