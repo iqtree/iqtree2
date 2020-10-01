@@ -344,8 +344,23 @@ template <class T, class S> class SubclassPointerVector: public S {
     //
 public:
     typedef S super;
+    typedef SubclassPointerVector<T, S> this_type;
+    typedef T* value_type;
     using typename S::size_type;
-    
+
+    SubclassPointerVector() : super() {}
+    SubclassPointerVector(const this_type& rhs) : super(rhs) {}
+    this_type& operator= (const this_type& rhs){
+        super::operator=(rhs);
+        return *this;
+    }
+
+    explicit SubclassPointerVector(const S& rhs) : super(rhs) {}
+    this_type& operator= (const S& rhs) {
+        super::operator=(rhs);
+        return *this;
+    }
+
     class reference {
         private:
             S& to_vector;
@@ -353,8 +368,8 @@ public:
         public:
             reference(S& vector, size_type index):
                 to_vector(vector), at_index(index) {}
-            operator T*()   { return dynamic_cast<T*> ( to_vector[at_index] ) ; }
-            T* operator->() { return dynamic_cast<T*> ( to_vector[at_index] ) ; }
+            operator T*()   { typename S::value_type s = to_vector[at_index]; return dynamic_cast<T*> ( s ) ; }
+            T* operator->() { typename S::value_type s = to_vector[at_index]; return dynamic_cast<T*> ( s ) ; }
             reference& operator= (T* new_value) {
                 to_vector[at_index] = new_value;
                 return *this;
@@ -368,7 +383,8 @@ public:
     class iterator : public super::iterator {
         public:
             typedef typename super::iterator::difference_type step;
-            iterator( typename super::iterator i) : super::iterator(i) {};
+            iterator() : super::iterator() {}
+            iterator( typename super::iterator i) : super::iterator(i) {}
             T* operator*() { return dynamic_cast<T*>( super::iterator::operator*() ); }
             iterator& operator+=(step move) { super::iterator::operator+=(move); return *this; }
             iterator  operator+(step move)  { return super::iterator::operator+(move);}
@@ -376,6 +392,7 @@ public:
     class const_iterator: public super::const_iterator {
         public:
             typedef typename super::const_iterator::difference_type step;
+            const_iterator() : super::const_iterator() {}
             const_iterator( typename super::const_iterator i) : super::const_iterator(i) {};
             T* operator*() { return dynamic_cast<T*>( super::const_iterator::operator*() ); }
             const_iterator& operator+=(step move) { super::const_iterator::operator+=(move); return *this; }

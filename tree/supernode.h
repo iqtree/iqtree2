@@ -30,6 +30,22 @@ for (NeighborVec::iterator it = (mynode)->neighbors.begin(); it != (mynode)->nei
 for (NeighborVec::iterator it = (mynode)->neighbors.begin(); it != (mynode)->neighbors.end(); ++it) \
     for (SuperNeighbor* nei = (SuperNeighbor*)(*it); nei!=nullptr && nei->getNode() != mydad; nei=nullptr )
 
+#define FOR_SUPER_NEIGHBOR(mynode, mydad, it) \
+	for (it = SuperNeighborVec::iterator((mynode)->neighbors.begin()); \
+		 it != (mynode)->neighbors.end(); it++) \
+		if ((*it)->node != (mydad))
+
+#define FOR_SUPER_NEIGHBOR_IT(mynode, mydad, it) \
+	for (SuperNeighborVec::iterator it((mynode)->neighbors.begin()); \
+		 it != (mynode)->neighbors.end(); it++) \
+		if ((*it)->node != (mydad))
+
+#define FOR_SUPER_NEIGHBOR_DECLARE(mynode, mydad, it) \
+	SuperNeighborVec::iterator it((mynode)->neighbors.begin()); \
+	for (; it != (mynode)->neighbors.end(); it++) \
+		if ((*it)->node != (mydad))
+
+
 class SuperNode;
 
 /**
@@ -136,5 +152,18 @@ public:
     ~SuperNode();
 
 };
+
+typedef SubclassPointerVector<SuperNode,     PhyloNodeVector>  SuperNodeVector;
+typedef SubclassPointerVector<SuperNeighbor, PhyloNeighborVec> SuperNeighborVec;
+
+class SuperBranch : public pair<SuperNode*, SuperNode*> {
+public:
+	typedef pair<SuperNode*, SuperNode*> super;
+	SuperBranch(Node* a, Node* b) : super( (SuperNode*)a, (SuperNode*)b ) {
+	}
+	inline SuperNeighbor* lookingLeft()  const { return second->findNeighbor(first); }
+	inline SuperNeighbor* lookingRight() const { return first->findNeighbor(second); }
+};
+
 
 #endif

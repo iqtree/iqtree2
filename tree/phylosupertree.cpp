@@ -324,18 +324,21 @@ int PhyloSuperTree::collapseInternalBranches(Node *node, Node *dad, double thres
 	if (node->isLeaf()) {
 		return count;
 	}
-	NeighborVec nei_vec;
-	nei_vec.insert(nei_vec.begin(), node->neighbors.begin(), node->neighbors.end());
-	for (it = nei_vec.begin(); it != nei_vec.end(); it++) {
-		if ((*it)->node != dad && !(*it)->node->isLeaf() && (*it)->length <= threshold) {
-
+	PhyloNeighborVec phylo_vec(node->neighbors);
+	SuperNeighborVec nei_vec(phylo_vec);
+	//Note: it'd be nice to go: for (auto snei: nei_vec) {...
+	//      but that is, as yet, a bit too modern!
+	for (auto it = nei_vec.begin(); it != nei_vec.end(); ++it) {
+		SuperNeighbor* snei = *it;
+		SuperNode* child = snei->getNode();
+		if (child!=dad && !child->isLeaf() && snei->length <= threshold) {
 			//delete branch of gene-trees
-			SuperNeighbor* snei = (SuperNeighbor*)(*it);
 			int part = 0;
 			for (part = 0; part != size(); part++) {
 				if (snei->link_neighbors[part]) {
-					SuperNeighbor* snei_back = (SuperNeighbor*)(*it)->node->findNeighbor(node);
-					at(part)->removeNode(snei_back->link_neighbors[part]->node, snei->link_neighbors[part]->node);
+					SuperNeighbor* snei_back = child->findNeighbor(node);
+					at(part)->removeNode( snei_back->link_neighbors[part]->node, 
+					                      snei->link_neighbors[part]->node);
 				}
 			}
 			// delete the child node
@@ -392,21 +395,23 @@ double PhyloSuperTree::computeDist(int seq1, int seq2, double initial_dist, doub
 void PhyloSuperTree::linkBranch(int part, SuperNeighbor *nei, SuperNeighbor *dad_nei) {
 	SuperNode *node = dad_nei->getNode();
 	SuperNode *dad  = nei->getNode();
-	nei->link_neighbors[part] = NULL;
-	dad_nei->link_neighbors[part] = NULL;
-	vector<PhyloNeighbor*> part_vec;
-	vector<PhyloNeighbor*> child_part_vec;
-
-	FOR_NEIGHBOR_DECLARE(node, dad, it) {
-		if (((SuperNeighbor*)*it)->link_neighbors[part]) {
-			part_vec.push_back(((SuperNeighbor*)*it)->link_neighbors[part]);
-			child_part_vec.push_back(((SuperNeighbor*)(*it)->node->findNeighbor(node))->link_neighbors[part]);
-			ASSERT(child_part_vec.back()->node == child_part_vec.front()->node || child_part_vec.back()->id == child_part_vec.front()->id);
+	nei->link_neighbors[part] = nullptr;
+	dad_nei->link_neighbors[part] = nullptr;
+	PhyloNeighborVec part_vec;
+	PhyloNeighborVec child_part_vec;
+	
+	FOR_EACH_SUPER_NEIGHBOR(node, dad, it, snei) {
+		if (snei->link_neighbors[part]) {
+			part_vec.push_back(snei->link_neighbors[part]);
+			SuperNeighbor* backnei = snei->getNode()->findNeighbor(node);
+			child_part_vec.push_back(backnei->link_neighbors[part]);
+			ASSERT(child_part_vec.back()->node == child_part_vec.front()->node 
+				|| child_part_vec.back()->id == child_part_vec.front()->id);
 		}
 	}
-
-	if (part_vec.empty())
+	if (part_vec.empty()) {
 		return;
+	}
 	if (part_vec.size() == 1) {
 		nei->link_neighbors[part] = child_part_vec[0];
 		dad_nei->link_neighbors[part] = part_vec[0];
@@ -421,7 +426,7 @@ void PhyloSuperTree::linkBranch(int part, SuperNeighbor *nei, SuperNeighbor *dad
 	PhyloNode* dad_part  = nullptr;
 	FOR_EACH_ADJACENT_SUPER_NODE(node_part, nullptr, it, child) {
 		bool appear = false;
-		for (vector<PhyloNeighbor*>::iterator it2 = part_vec.begin(); it2 != part_vec.end(); it2++){
+		for (auto it2 = part_vec.begin(); it2 != part_vec.end(); ++it2){
 			if ((*it2) == (*it)) {
 				appear = true;
                 break;
@@ -449,12 +454,12 @@ void PhyloSuperTree::linkTree(int part, PhyloNodeVector &part_taxa, SuperNode *n
 	SuperNeighbor* nei     = nullptr;
 	SuperNeighbor* dad_nei = nullptr;
 	if (dad) {
-		nei = (SuperNeighbor*)node->findNeighbor(dad);
-		dad_nei = (SuperNeighbor*)dad->findNeighbor(node);
+		nei = node->findNeighbor(dad);
+		dad_nei = dad->findNeighbor(node);
 		if (nei->link_neighbors.empty()) nei->link_neighbors.resize(size());
 		if (dad_nei->link_neighbors.empty()) dad_nei->link_neighbors.resize(size());
-		nei->link_neighbors[part] = NULL;
-		dad_nei->link_neighbors[part] = NULL;
+		nei->link_neighbors[part] = nullptr;
+		dad_nei->link_neighbors[part] = nullptr;
 	}
 	if (node->isLeaf()) {
 		ASSERT(dad);
@@ -502,15 +507,17 @@ void PhyloSuperTree::syncRooting() {
 }
 
 void PhyloSuperTree::printMapInfo() {
-	NodeVector nodes1, nodes2;
+	SuperNodeVector nodes1, nodes2;
 	getBranches(nodes1, nodes2);
 	int part = 0;
 	for (iterator it = begin(); it != end(); it++, part++) {
 		cout << "Subtree for partition " << part << endl;
 		(*it)->drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE);
 		for (int i = 0; i < nodes1.size(); i++) {
-			PhyloNeighbor *nei1 = ((SuperNeighbor*)nodes1[i]->findNeighbor(nodes2[i]))->link_neighbors[part];
-			PhyloNeighbor *nei2 = ((SuperNeighbor*)nodes2[i]->findNeighbor(nodes1[i]))->link_neighbors[part];
+			SuperNeighbor* superNei1 = nodes1[i]->findNeighbor(nodes2[i]);
+			PhyloNeighbor* nei1      = superNei1->link_neighbors[part];
+			SuperNeighbor* superNei2 = nodes2[i]->findNeighbor(nodes1[i]);
+			PhyloNeighbor* nei2      = superNei2->link_neighbors[part];
 			cout << nodes1[i]->findNeighbor(nodes2[i])->id << ":";
 			if (nodes1[i]->isLeaf()) cout << nodes1[i]->name; else cout << nodes1[i]->id;
 			cout << ",";
@@ -631,7 +638,7 @@ void PhyloSuperTree::clearAllScaleNum(bool set_to_null) {
 int PhyloSuperTree::computeParsimonyBranchObsolete(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
     int score = 0, part = 0;
     SuperNeighbor* dad_nei  = (SuperNeighbor*)dad_branch;
-    SuperNeighbor* node_nei = (SuperNeighbor*)dad_branch->getNode()->findNeighbor(dad);
+    SuperNeighbor* node_nei = dad_nei->getNode()->findNeighbor(dad);
         
     if (branch_subst) {
         branch_subst = 0;
@@ -854,33 +861,34 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
         // swap node1 and node2 if the direction is not right, only for nonreversible models
         std::swap(node1, node2);
     }
-	SuperNeighbor *nei1 = ((SuperNeighbor*)node1->findNeighbor(node2));
-	SuperNeighbor *nei2 = ((SuperNeighbor*)node2->findNeighbor(node1));
+	SuperBranch    branch(node1, node2);
+	SuperNeighbor* nei1 = branch.lookingRight();
+	SuperNeighbor* nei2 = branch.lookingLeft();
 	ASSERT(nei1 && nei2);
 	SuperNeighbor *node1_nei = nullptr;
 	SuperNeighbor *node2_nei = nullptr;
 	SuperNeighbor *node2_nei_other = nullptr;
-	FOR_NEIGHBOR_DECLARE(node1, node2, node1_it)
-		if (((PhyloNeighbor*)*node1_it)->direction != TOWARD_ROOT)
+	FOR_SUPER_NEIGHBOR_DECLARE(node1, node2, node1_it)
+		if ((*node1_it)->direction != TOWARD_ROOT)
 		{
-			node1_nei = (SuperNeighbor*)(*node1_it);
+			node1_nei = *node1_it;
 			break;
 		}
-	FOR_NEIGHBOR_DECLARE(node2, node1, node2_it) {
-		node2_nei = (SuperNeighbor*)(*node2_it);
+	FOR_SUPER_NEIGHBOR_DECLARE(node2, node1, node2_it) {
+		node2_nei = *node2_it;
 		break;
 	}
 
-	FOR_NEIGHBOR_IT(node2, node1, node2_it_other)
+	FOR_SUPER_NEIGHBOR_IT(node2, node1, node2_it_other)
 		if ((*node2_it_other) != node2_nei) {
-			node2_nei_other = (SuperNeighbor*)(*node2_it_other);
+			node2_nei_other = (*node2_it_other);
 			break;
 		}
 
 	// check for compatibility with constraint tree
 	bool nni_ok[2] = { true, true };
 	int nniid = 0;
-	FOR_NEIGHBOR(node2, node1, node2_it) {
+	FOR_SUPER_NEIGHBOR(node2, node1, node2_it) {
 		NNIMove nni;
         nni.node1 = node1;
         nni.node2 = node2;
@@ -907,7 +915,9 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 	double nni_score1 = 0.0, nni_score2 = 0.0;
 	int local_totalNNIs = 0, local_evalNNIs = 0;
 
-    if (part_order.empty()) computePartitionOrder();
+	if (part_order.empty()) {
+		computePartitionOrder();
+	}
 	#ifdef _OPENMP
 	#pragma omp parallel for reduction(+: nni_score1, nni_score2, local_totalNNIs, local_evalNNIs) private(part) schedule(dynamic) if(num_threads>1)
 	#endif
@@ -915,11 +925,11 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
         part = part_order_by_nptn[treeid];
 		bool is_nni = true;
 		local_totalNNIs++;
-		FOR_NEIGHBOR_DECLARE(node1, NULL, nit) {
-			if (! ((SuperNeighbor*)*nit)->link_neighbors[part]) { is_nni = false; break; }
+		FOR_SUPER_NEIGHBOR_DECLARE(node1, NULL, nit) {
+			if (! (*nit)->link_neighbors[part]) { is_nni = false; break; }
 		}
-		FOR_NEIGHBOR(node2, NULL, nit) {
-			if (! ((SuperNeighbor*)*nit)->link_neighbors[part]) { is_nni = false; break; }
+		FOR_SUPER_NEIGHBOR(node2, NULL, nit) {
+			if (! (*nit)->link_neighbors[part]) { is_nni = false; break; }
 		}
 		if (!is_nni && params->terrace_aware) {
 			if (part_info[part].cur_score == 0.0)  {
@@ -1059,8 +1069,9 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 }
 
 void PhyloSuperTree::doNNI(NNIMove &move, bool clearLH) {
-	SuperNeighbor *nei1 = (SuperNeighbor*)move.node1->findNeighbor(move.node2);
-	SuperNeighbor *nei2 = (SuperNeighbor*)move.node2->findNeighbor(move.node1);
+	SuperBranch   branch(move.node1, move.node2);
+	SuperNeighbor* nei1 = branch.lookingRight();
+	SuperNeighbor* nei2 = branch.lookingLeft();
 	SuperNeighbor *node1_nei = (SuperNeighbor*)*move.node1Nei_it;
 	SuperNeighbor *node2_nei = (SuperNeighbor*)*move.node2Nei_it;
 	int part = 0;
@@ -1069,11 +1080,11 @@ void PhyloSuperTree::doNNI(NNIMove &move, bool clearLH) {
 
 	for (it = begin(), part = 0; it != end(); it++, part++) {
 		bool is_nni = true;
-		FOR_NEIGHBOR_DECLARE(move.node1, NULL, nit) {
-			if (! ((SuperNeighbor*)*nit)->link_neighbors[part]) { is_nni = false; break; }
+		FOR_SUPER_NEIGHBOR_DECLARE(move.node1, NULL, nit) {
+			if (! (*nit)->link_neighbors[part]) { is_nni = false; break; }
 		}
-		FOR_NEIGHBOR(move.node2, NULL, nit) {
-			if (! ((SuperNeighbor*)*nit)->link_neighbors[part]) { is_nni = false; break; }
+		FOR_SUPER_NEIGHBOR(move.node2, NULL, nit) {
+			if (! (*nit)->link_neighbors[part]) { is_nni = false; break; }
 		}
 		if (!is_nni) {
 			// relink the branch if it does not correspond to NNI for partition
@@ -1096,18 +1107,19 @@ void PhyloSuperTree::doNNI(NNIMove &move, bool clearLH) {
 }
 
 void PhyloSuperTree::changeNNIBrans(NNIMove &move) {
-	SuperNeighbor *nei1 = (SuperNeighbor*)move.node1->findNeighbor(move.node2);
-	SuperNeighbor *nei2 = (SuperNeighbor*)move.node2->findNeighbor(move.node1);
+	SuperBranch branch(move.node1, move.node2);
+	SuperNeighbor* nei1 = branch.lookingRight();
+	SuperNeighbor* nei2 = branch.lookingLeft();
 	iterator it;
 	int part;
 
 	for (it = begin(), part = 0; it != end(); it++, part++) {
 		bool is_nni = true;
-		FOR_NEIGHBOR_DECLARE(move.node1, NULL, nit) {
-			if (! ((SuperNeighbor*)*nit)->link_neighbors[part]) { is_nni = false; break; }
+		FOR_SUPER_NEIGHBOR_DECLARE(move.node1, NULL, nit) {
+			if (! (*nit)->link_neighbors[part]) { is_nni = false; break; }
 		}
-		FOR_NEIGHBOR(move.node2, NULL, nit) {
-			if (! ((SuperNeighbor*)*nit)->link_neighbors[part]) { is_nni = false; break; }
+		FOR_SUPER_NEIGHBOR(move.node2, NULL, nit) {
+			if (! (*nit)->link_neighbors[part]) { is_nni = false; break; }
 		}
 		if (!is_nni) {
 			continue;
@@ -1153,15 +1165,15 @@ void PhyloSuperTree::computeBranchLengths() {
 	int part = 0, i;
     iterator it;
 
-	NodeVector nodes1, nodes2;
+	SuperNodeVector nodes1, nodes2;
 	getBranches(nodes1, nodes2);
-	vector<SuperNeighbor*> neighbors1;
-	vector<SuperNeighbor*> neighbors2;
+	SuperNeighborVec neighbors1;
+	SuperNeighborVec neighbors2;
 	IntVector occurence;
 	occurence.resize(nodes1.size(), 0);
 	for (i = 0; i < nodes1.size(); i++) {
-		neighbors1.push_back((SuperNeighbor*)nodes1[i]->findNeighbor(nodes2[i]) );
-		neighbors2.push_back((SuperNeighbor*)nodes2[i]->findNeighbor(nodes1[i]) );
+		neighbors1.push_back(nodes1[i]->findNeighbor(nodes2[i]) );
+		neighbors2.push_back(nodes2[i]->findNeighbor(nodes1[i]) );
 		neighbors1.back()->length = 0.0;
 	}
 	for (it = begin(), part = 0; it != end(); it++, part++) {
@@ -1458,13 +1470,11 @@ void PhyloSuperTree::writeBranch(ostream &out, Node* node1, Node* node2) {
     out << "," << nei1->length;
     for (int part = 0; part != size(); part++) {
         bool present = true;
-        FOR_NEIGHBOR_DECLARE(node1, NULL, it) {
-            SuperNeighbor *nei = (SuperNeighbor*)(*it);
+        FOR_EACH_SUPER_NEIGHBOR(node1, nullptr, it, nei) {
             if (!nei->link_neighbors[part])
                 present = false;
         }
-        FOR_NEIGHBOR(node2, NULL, it) {
-            SuperNeighbor *nei = (SuperNeighbor*)(*it);
+        FOR_EACH_SUPER_NEIGHBOR(node2, nullptr, it, nei) {
             if (!nei->link_neighbors[part])
                 present = false;
         }
