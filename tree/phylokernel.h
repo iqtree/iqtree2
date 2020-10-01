@@ -1398,30 +1398,23 @@ inline UINT fast_popcount(Vec4ui &x) {
 }
 
 inline UINT fast_popcount(Vec8ui &x) {
-#if (defined (__GNUC__) || defined(__clang__)) && !defined(CLANG_UNDER_VS)
     MEM_ALIGN_BEGIN uint64_t vec[4] MEM_ALIGN_END;
     MEM_ALIGN_BEGIN uint64_t res[4] MEM_ALIGN_END;
+    x.store_a(vec);
+    #if (defined (__GNUC__) || defined(__clang__)) && !defined(CLANG_UNDER_VS)
+        __asm("popcntq %1, %0" : "=r"(res[0]) : "r"(vec[0]) : );
+        __asm("popcntq %1, %0" : "=r"(res[1]) : "r"(vec[1]) : );
+        __asm("popcntq %1, %0" : "=r"(res[2]) : "r"(vec[2]) : );
+        __asm("popcntq %1, %0" : "=r"(res[3]) : "r"(vec[3]) : );
+    #else
+        res[0] = _mm_popcnt_u64(vec[0]);
+        res[1] = _mm_popcnt_u64(vec[1]);
+        res[2] = _mm_popcnt_u64(vec[2]);
+        res[3] = _mm_popcnt_u64(vec[3]);
+    #endif
     Vec8ui y;
-    x.store_a(vec);
-    __asm("popcntq %1, %0" : "=r"(res[0]) : "r"(vec[0]) : );
-    __asm("popcntq %1, %0" : "=r"(res[1]) : "r"(vec[1]) : );
-    __asm("popcntq %1, %0" : "=r"(res[2]) : "r"(vec[2]) : );
-    __asm("popcntq %1, %0" : "=r"(res[3]) : "r"(vec[3]) : );
     y.load_a(res);
     return horizontal_add(y);
-#else
-    MEM_ALIGN_BEGIN uint64_t vec[4] MEM_ALIGN_END;
-    MEM_ALIGN_BEGIN unsigned int res[4] MEM_ALIGN_END;
-    Vec4uq y; //James B. Not Vec4ui: 64 bit integers, not 32.
-    x.store_a(vec);
-    res[0] = static_cast<unsigned int>(_mm_popcnt_u64(vec[0]));
-    res[1] = static_cast<unsigned int>(_mm_popcnt_u64(vec[1]));
-    res[2] = static_cast<unsigned int>(_mm_popcnt_u64(vec[2]));
-    res[3] = static_cast<unsigned int>(_mm_popcnt_u64(vec[3]));
-    y.load_a(res);
-    return horizontal_add(y);
-#endif
-
 }
 
 inline void horizontal_popcount(Vec4ui &x) {
