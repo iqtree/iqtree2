@@ -452,11 +452,22 @@ public:
                                  , map<string, Node*> &map);
     
     /**
+            get an array (indexed by id) of the leaf nodes in a subtree
+            @param node the starting node, nullptr to start from the root
+            @param dad dad of the node, used to direct the search
+            @param[out] array, from taxon id to corresponding node
+                (or to nullptr if no node with that id was found in the subtree)
+     */
+    void getArrayOfTaxaNodesById(Node* node, Node* dad,
+                                 NodeVector& array);
+    
+    /**
             get the descending node names below the node
             @param node the starting node, NULL to start from the root
             @param dad dad of the node, used to direct the search
             @param[out] nodename node names, with size equal leafNum and ordered with taxon ID
      */
+    
     void getNodeName(set<string> &nodename, Node *node = NULL, Node *dad = NULL);
 
     /**

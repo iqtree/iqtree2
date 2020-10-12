@@ -11,12 +11,11 @@
 //
 #include "phylonode.h"
 
-std::string pointer_to_hex(void *ptr) {
+std::string pointer_to_hex(const void *ptr) {
     uintptr_t p = reinterpret_cast<uintptr_t>(ptr);
     std::stringstream s;
     s << "0x"
-        << std::setfill ('0') << std::setw(sizeof(p)*2)
-        << std::hex << p;
+      << std::hex << p;
     return s.str();
 }
 

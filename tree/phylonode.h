@@ -23,7 +23,29 @@ for (NeighborVec::iterator it = (mynode)->neighbors.begin(); it != (mynode)->nei
     for (PhyloNeighbor* nei = (PhyloNeighbor*)(*it); nei!=nullptr && nei->getNode() != mydad; nei=nullptr )
 
 
-std::string pointer_to_hex(void *ptr);
+std::string pointer_to_hex(const void *ptr);
+
+template <class T> class track_nulled_ptr {
+    private:
+        T* value;
+    public:
+        template <class T2> friend void aligned_free(track_nulled_ptr<T2>&);
+        track_nulled_ptr()           { value = nullptr; }
+        track_nulled_ptr(const T* v) { value = v; }
+        operator T*     ()           { return value; }
+        track_nulled_ptr& operator=(T* v) {
+            if (v==nullptr && value!=nullptr) {
+                value = nullptr;
+            }
+            value = v;
+            return *this;
+        }
+};
+template <class T> void aligned_free(track_nulled_ptr<T>& mem) {
+    //aligned_free(mem.value);
+    mem.value = nullptr;
+}
+
 
 typedef unsigned short UBYTE;
 
@@ -50,6 +72,8 @@ class PhyloNeighbor : public Neighbor {
     friend class BlockAllocator;
     friend class TaxonToPlace;
     friend class TargetBranch;
+    friend class LikelihoodBlockAllocator;
+    friend class LikelihoodCostCalculator;
 
 public:
     friend class TinaTree;
@@ -129,13 +153,6 @@ public:
      */
     void clearForwardPartialLh(PhyloNode *dad);
 
-    /**
-        DEPRECATED, moved to PhyloTree
-        if partial_lh is NULL, reorient partial_lh (LM_PER_NODE technique)
-        @param dad dad of this neighbor
-    */
-//    void reorientPartialLh(PhyloNode *dad);
-
 	/**
 	* For Upper Bounds analysis: get partial likelihood and lh scale factor
 	*/
@@ -211,7 +228,8 @@ private:
     /**
         vector containing the partial likelihoods
      */
-    double *partial_lh;
+
+    double* partial_lh;
 
     /**
         likelihood scaling factor
@@ -385,7 +403,7 @@ public:
             typedef typename super::iterator::difference_type step;
             iterator() : super::iterator() {}
             iterator( typename super::iterator i) : super::iterator(i) {}
-            T* operator*() { return dynamic_cast<T*>( super::iterator::operator*() ); }
+            T* operator*()  { return dynamic_cast<T*> ( super::iterator::operator*() ); }
             iterator& operator+=(step move) { super::iterator::operator+=(move); return *this; }
             iterator  operator+(step move)  { return super::iterator::operator+(move);}
     };

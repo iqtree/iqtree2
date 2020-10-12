@@ -77,7 +77,8 @@ Numeric PhyloTree::dotProductSIMD(Numeric *x, Numeric *y, int size) {
 
 /*
 template <class VectorClass, const int VCSIZE, const int nstates>
-void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
+                                                  LikelihoodBufferSet& buffers) {
 
     // don't recompute the likelihood
     assert(dad);
@@ -127,7 +128,7 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
     FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, nei) {
         if (!left) left = nei; else right = nei;
         if (!nei->isLikelihoodComputed()) {
-            computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(nei, node);
+            computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(nei, node, buffers);
         }
         dad_branch->lh_scale_factor += nei->lh_scale_factor;
         if ((*it)->node->isLeaf()) num_leaves++;
@@ -578,7 +579,9 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
 }
 
 template <class VectorClass, const int VCSIZE, const int nstates>
-void PhyloTree::computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
+void PhyloTree::computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
+                                               double &df, double &ddf,
+                                               LikelihoodBufferSet& buffers) {
     PhyloNode*     node        = dad_branch->getNode();
     PhyloNeighbor* node_branch = node->findNeighbor(dad);
     if (!central_partial_lh)
@@ -588,9 +591,9 @@ void PhyloTree::computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloN
         std::swap(dad_branch, node_branch);
     }
     if (!dad_branch->isLikelihoodComputed())
-        computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(dad_branch, dad);
+        computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(dad_branch, dad), buffers;
     if (!node_branch->isLikelihoodComputed())
-        computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(node_branch, node);
+        computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(node_branch, node, buffers);
     df = ddf = 0.0;
     size_t ncat = site_rate->getNRate();
     size_t ncat_mix = (model_factory->fused_mix_rate) ? ncat : ncat*model->getNMixtures();
@@ -827,7 +830,8 @@ void PhyloTree::computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloN
 
 
 template <class VectorClass, const int VCSIZE, const int nstates>
-double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
+                                                   LikelihoodBufferSet& buffers) {
     PhyloNode*     node        = dad_branch->getNode();
     PhyloNeighbor* node_branch = node->findNeighbor(dad);
     if (!central_partial_lh)
@@ -837,10 +841,10 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
         std::swap(dad_branch, node_branch);
     }
     if (!dad_branch->isLikelihoodComputed()) {
-        computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(dad_branch, dad);
+        computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(dad_branch, dad, buffers);
     }
     if (!node_branch->isLikelihoodComputed()) {
-        computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(node_branch, node);
+        computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(node_branch, node, buffers);
     }
     double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
     size_t ncat = site_rate->getNRate();

@@ -196,7 +196,7 @@ int RateGammaInvar::computePatternRates(DoubleVector &pattern_rates, IntVector &
 	pattern_rates.resize(npattern);
 	pattern_cat.resize(npattern);
 
-	double *lh_cat = phylo_tree->_pattern_lh_cat;
+    double *lh_cat = phylo_tree->tree_buffers._pattern_lh_cat;
 	for (int i = 0; i < npattern; i++) {
 		double sum_rate = 0.0, sum_lh = phylo_tree->ptn_invar[i];
 		int best = 0;
@@ -234,7 +234,7 @@ double RateGammaInvar::optimizeWithEM(double gradient_epsilon) {
 
     double ppInvar = 0;
     for (size_t ptn = 0; ptn < nptn; ptn++) {
-        double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn * ncat;
+        double *this_lk_cat = phylo_tree->tree_buffers._pattern_lh_cat + ptn * ncat;
         double lk_ptn = phylo_tree->ptn_invar[ptn];
         for (size_t cat = 0; cat < ncat; cat++) {
             lk_ptn += this_lk_cat[cat];

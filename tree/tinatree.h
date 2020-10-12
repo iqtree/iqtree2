@@ -54,7 +54,7 @@ public:
 
 	virtual void initializeAllPartialLh();
 
-	virtual void initializeAllPartialLh(int &index, int &indexlh, bool fullOn,
+	virtual void initializeAllPartialLh(int &index, int &indexlh,
                                         PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
 };

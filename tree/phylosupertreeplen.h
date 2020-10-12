@@ -112,7 +112,7 @@ public:
             @param dad dad of the node, used to direct the search
             @param index the index
      */
-    virtual void initializeAllPartialLh(int &index, int &indexlh, bool fullOn,
+    virtual void initializeAllPartialLh(int &index, int &indexlh,
                                         PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     void initializeAllPartialLh(double* &lh_addr, UBYTE* &scale_addr, UINT* &pars_addr,
@@ -153,7 +153,8 @@ public:
             @param dad its dad, used to direct the tranversal
             @return tree likelihood
      */
-    virtual double computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    virtual double computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad,
+                                           LikelihoodBufferSet& buffers);
 
     /**
             compute tree likelihood on a branch given buffer (theta_all), used after optimizing branch length
@@ -168,7 +169,9 @@ public:
             @param iterations number of iterations to loop through all branches
             @return the likelihood of the tree
      */
-    virtual double optimizeAllBranches(int my_iterations = 100, double tolerance = TOL_LIKELIHOOD, int maxNRStep = 100);
+    virtual double optimizeAllBranches(int my_iterations = 100,
+                                       double tolerance = TOL_LIKELIHOOD,
+                                       int maxNRStep = 100);
 
     /**
             optimize one branch length by ML by optimizing all mapped branches of subtrees
@@ -271,7 +274,7 @@ public:
     virtual int fixNegativeBranch(bool force = false, PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
 
     virtual void reorientPartialLh(PhyloNeighbor* dad_branch, PhyloNode *dad);
-
+    
 protected:
 	vector<uint64_t> partial_lh_entries, scale_num_entries, partial_pars_entries, block_size, scale_block_size;
 

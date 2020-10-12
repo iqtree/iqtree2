@@ -1590,7 +1590,7 @@ double ModelMixture::optimizeWeights() {
         if (step > 0) {
             // convert _pattern_lh_cat taking into account new weights
             for (ptn = 0; ptn < nptn; ptn++) {
-                double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
+                double *this_lk_cat = phylo_tree->tree_buffers._pattern_lh_cat + ptn*nmix;
                 for (c = 0; c < nmix; c++) {
                     this_lk_cat[c] *= ratio_prop[c];
                 }
@@ -1598,7 +1598,7 @@ double ModelMixture::optimizeWeights() {
         }
         memset(new_prop, 0, nmix*sizeof(double));
         for (ptn = 0; ptn < nptn; ptn++) {
-            double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
+            double *this_lk_cat = phylo_tree->tree_buffers._pattern_lh_cat + ptn*nmix;
             double lk_ptn = phylo_tree->ptn_invar[ptn];
 //            double lk_ptn = 0.0;
             for (c = 0; c < nmix; c++) {
@@ -1654,8 +1654,8 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
     PhyloTree *tree = new PhyloTree;
 
     // attach memory to save space
-    tree->central_partial_lh = phylo_tree->central_partial_lh;
-    tree->central_scale_num = phylo_tree->central_scale_num;
+    tree->central_partial_lh   = phylo_tree->central_partial_lh;
+    tree->central_scale_num    = phylo_tree->central_scale_num;
     tree->central_partial_pars = phylo_tree->central_partial_pars;
 
     tree->copyPhyloTree(phylo_tree, true);
@@ -1695,7 +1695,7 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
         // E-step
         // decoupled weights (prop) from _pattern_lh_cat to obtain L_ci and compute pattern likelihood L_i
         for (ptn = 0; ptn < nptn; ptn++) {
-            double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
+            double *this_lk_cat = phylo_tree->tree_buffers._pattern_lh_cat + ptn*nmix;
             double lk_ptn = phylo_tree->ptn_invar[ptn];
 //            double lk_ptn = 0.0;
             for (c = 0; c < nmix; c++) {
@@ -1769,7 +1769,7 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
             tree->initializeAllPartialLh();
             // copy posterior probability into ptn_freq
             tree->computePtnFreq();
-            double *this_lk_cat = phylo_tree->_pattern_lh_cat+c;
+            double *this_lk_cat = phylo_tree->tree_buffers._pattern_lh_cat+c;
             for (ptn = 0; ptn < nptn; ptn++)
                 tree->ptn_freq[ptn] = this_lk_cat[ptn*nmix];
             subst_model->optimizeParameters(gradient_epsilon);

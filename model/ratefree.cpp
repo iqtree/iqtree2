@@ -549,7 +549,7 @@ double RateFree::optimizeWithEM() {
         // decoupled weights (prop) from _pattern_lh_cat to obtain L_ci and compute pattern likelihood L_i
         memset(new_prop, 0, nmix*sizeof(double));
         for (ptn = 0; ptn < nptn; ptn++) {
-            double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
+            double *this_lk_cat = phylo_tree->tree_buffers._pattern_lh_cat + ptn*nmix;
             double lk_ptn = phylo_tree->ptn_invar[ptn];
             for (c = 0; c < nmix; c++) {
                 lk_ptn += this_lk_cat[c];
@@ -627,7 +627,7 @@ double RateFree::optimizeWithEM() {
             tree->initializeAllPartialLh();
             // copy posterior probability into ptn_freq
             tree->computePtnFreq();
-            double *this_lk_cat = phylo_tree->_pattern_lh_cat+c;
+            double *this_lk_cat = phylo_tree->tree_buffers._pattern_lh_cat+c;
             for (ptn = 0; ptn < nptn; ptn++) {
                 tree->ptn_freq[ptn] = this_lk_cat[ptn*nmix];
             }

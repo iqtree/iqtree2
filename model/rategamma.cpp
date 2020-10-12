@@ -264,7 +264,7 @@ int RateGamma::computePatternRates(DoubleVector &pattern_rates, IntVector &patte
 	pattern_rates.resize(npattern);
 	pattern_cat.resize(npattern);
 
-	double *lh_cat = phylo_tree->_pattern_lh_cat;
+    double *lh_cat = phylo_tree->tree_buffers._pattern_lh_cat;
 	for (int i = 0; i < npattern; i++) {
 		double sum_rate = 0.0, sum_lh = 0.0;
 		int best = 0;

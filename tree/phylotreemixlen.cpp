@@ -349,7 +349,7 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
 
     int i;
 
-    theta_computed = false;
+    tree_buffers.theta_computed = false;
 
 #ifdef USE_CPPOPTLIB
     if (params->optimize_alg_mixlen.find("cppopt") != string::npos) {
@@ -450,7 +450,7 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
             // E-step
             // decoupled weights (prop) from _pattern_lh_cat to obtain L_ci and compute pattern likelihood L_i
             for (size_t ptn = 0; ptn < nptn; ptn++) {
-                double *this_lk_cat = _pattern_lh_cat + ptn*nmix;
+                double *this_lk_cat = tree_buffers._pattern_lh_cat + ptn*nmix;
                 double lk_ptn = ptn_invar[ptn];
                 for (size_t c = 0; c < nmix; c++) {
                     lk_ptn += this_lk_cat[c];
@@ -466,11 +466,11 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
          
             double negative_lh;
             double optx;
-            theta_computed = false;
+            tree_buffers.theta_computed = false;
             computePtnFreq();
             
             for (cur_mixture = 0; cur_mixture < mixlen; cur_mixture++) {
-                double *this_lk_cat = _pattern_lh_cat+cur_mixture;
+                double *this_lk_cat = tree_buffers._pattern_lh_cat+cur_mixture;
                 for (size_t ptn = 0; ptn < nptn; ptn++) {
                     ptn_freq[ptn] = this_lk_cat[ptn*nmix];
                 }                
@@ -517,11 +517,11 @@ double PhyloTreeMixlen::targetFunk(double x[]) {
         current_it->setLength(i, x[i+1]);
         current_it_back->setLength(i, x[i+1]);
     }
-
-    if (theta_computed)
+    if (tree_buffers.theta_computed)
         return -computeLikelihoodFromBuffer();
     else
-        return -computeLikelihoodBranch(current_it, current_it_back->getNode());
+        return -computeLikelihoodBranch(current_it, current_it_back->getNode(),
+                                        tree_buffers);
 }
 
 double PhyloTreeMixlen::derivativeFunk(double x[], double dfx[]) {
@@ -536,7 +536,8 @@ double PhyloTreeMixlen::derivativeFunk(double x[], double dfx[]) {
     }
 //    cout << endl;
     double df[mixlen+1], ddf[mixlen*mixlen];
-    computeLikelihoodDerv(current_it, current_it_back->getNode(), df, ddf);
+    computeLikelihoodDerv(current_it, current_it_back->getNode(), df, ddf,
+                          tree_buffers);
     for (i = 0; i < mixlen; ++i)
         df[i] = -df[i];
     memcpy(dfx+1, df, sizeof(double)*mixlen);
@@ -549,7 +550,8 @@ void PhyloTreeMixlen::computeFuncDervMulti(double *value, double *df, double *dd
         current_it->setLength(i, value[i]);
         current_it_back->setLength(i, value[i]);
     }
-    computeLikelihoodDerv(current_it, current_it_back->getNode(), df, ddf);
+    computeLikelihoodDerv(current_it, current_it_back->getNode(), df, ddf,
+                          tree_buffers);
 
     // last element of df is the tree log-ikelihood
     for (i = 0; i <= mixlen; i++) {
@@ -736,7 +738,8 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
     current_it->setLength(cur_mixture, value);
     current_it_back->setLength(cur_mixture, value);
 
-    (this->*computeLikelihoodDervMixlenPointer)(current_it,  current_it_back->getNode(), df, ddf);
+    (this->*computeLikelihoodDervMixlenPointer)(current_it,  current_it_back->getNode(), df, ddf,
+                                                tree_buffers);
 
 	df = -df;
     ddf = -ddf;
@@ -771,8 +774,8 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
     double *eval = model->getEigenvalues();
     ASSERT(eval);
 
-	ASSERT(theta_all);
-	if (!theta_computed) {
+    ASSERT(tree_buffers.theta_all);
+    if (!tree_buffers.theta_computed) {
 		// precompute theta for fast branch length optimization
 
 	    if (dad->isLeaf()) {
@@ -781,11 +784,11 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
 #pragma omp parallel for
 #endif
             for (size_t ptn = 0; ptn < nptn; ptn++) {
-                double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
-                double *theta = theta_all + ptn*block;
+                double* partial_lh_dad = dad_branch->partial_lh + ptn*block;
+                double* theta          = tree_buffers.theta_all + ptn*block;
                 
                 // TODO: check with vectorclass!
-                double *lh_tip = tip_partial_lh +
+                double *lh_tip         = tip_partial_lh +
                 ((int)((ptn < orig_nptn) ? (aln->at(ptn))[dad->id] :  model_factory->unobserved_ptns[ptn-orig_nptn][dad->id]))*statemix;
                 for (size_t m = 0; m < nmixture; m++) {
                     for (size_t i = 0; i < statecat; i++) {
@@ -796,23 +799,24 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
 			// ascertainment bias correction
 	    } else {
 	    	// both dad and node are internal nodes
-		    double *partial_lh_node = node_branch->partial_lh;
-		    double *partial_lh_dad = dad_branch->partial_lh;
+		    double* partial_lh_node = node_branch->partial_lh;
+		    double* partial_lh_dad  = dad_branch->partial_lh;
 
             size_t all_entries = nptn*block;
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
             for (size_t i = 0; i < all_entries; i++) {
-                theta_all[i] = partial_lh_node[i] * partial_lh_dad[i];
+                tree_buffers.theta_all[i] = partial_lh_node[i] * partial_lh_dad[i];
             }
         }
         if (nptn < maxptn) {
             // copy dummy values
             for (size_t ptn = nptn; ptn < maxptn; ptn++)
-                memcpy(&theta_all[ptn*block], &theta_all[(ptn-1)*block], block*sizeof(double));
+                memcpy(&tree_buffers.theta_all[ptn*block],
+                       &tree_buffers.theta_all[(ptn-1)*block], block*sizeof(double));
         }
-        theta_computed = true;
+        tree_buffers.theta_computed = true;
     }
 
     double *val0 = new double[statecat];
@@ -838,7 +842,7 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
 #endif
     for (size_t ptn = 0; ptn < nptn; ptn++) {
         double lh_ptn = ptn_invar[ptn], df_ptn = 0.0, ddf_ptn = 0.0;
-        double *theta = theta_all + ptn*block + cur_mixture*statecat;
+        double *theta = tree_buffers.theta_all + ptn*block + cur_mixture*statecat;
         for (size_t i = 0; i < statecat; i++) {
             lh_ptn += val0[i] * theta[i];
             df_ptn += val1[i] * theta[i];

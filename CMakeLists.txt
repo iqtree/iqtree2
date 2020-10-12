@@ -628,6 +628,7 @@ add_subdirectory(model)
 add_subdirectory(gsl)
 add_subdirectory(alignment)
 add_subdirectory(tree)
+add_subdirectory(placement)
 
 # YAML library
 option(YAML_CPP_BUILD_TESTS "Enable testing" OFF)
@@ -739,7 +740,7 @@ endif()
 
 # basic linking librararies
 target_link_libraries(iqtree2 pll ncl nclextra utils pda lbfgsb whtest sprng vectorclass model
-    gsl alignment tree yaml-cpp phyloYAML main ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
+    gsl alignment tree placement yaml-cpp phyloYAML main ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
 
 if (USE_TERRAPHAST)
    target_link_libraries(iqtree2 terrace)

@@ -1300,6 +1300,23 @@ void MTree::getMapOfTaxonNameToNode(Node* node, Node* dad
     }
 }
 
+void MTree::getArrayOfTaxaNodesById(Node* node, Node* dad,
+                             NodeVector& array) {
+    if (!node) {
+        node = root;
+    }
+    if (node->isLeaf() && 0<node->id) {
+        if (array.size() <= node->id) {
+            array.resize(node->id+1, nullptr);
+        }
+        array[node->id] = node;
+    }
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        getArrayOfTaxaNodesById((*it)->node, node, array);
+    }
+}
+
+
 void MTree::getNodeName(set<string> &nodename, Node *node, Node *dad) {
     if (!node) node = root;
     if (!node->name.empty())
