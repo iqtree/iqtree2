@@ -253,7 +253,6 @@ void TargetBranch::costPlacementOfTaxa
      PlacementCostCalculator* calculator,
      bool               isFirstTargetBranch) const {
         
-    double candidateCount = candidateStop - candidateStart;
     TargetBranchRef here(targets, targetNumber);
     #ifdef _OPENMP
     #pragma omp parallel for
@@ -262,12 +261,12 @@ void TargetBranch::costPlacementOfTaxa
          candidate < candidateStop; ++candidate) {
         if (heuristic->isPlacementWorthTrying(candidate, here)) {
             PossiblePlacement p;
-            p.setTargetBranch(targets, targetNumber);
+            p.setTargetBranch(here);
             calculator->assessPlacementCost(phylo_tree, candidate, &p);
             candidate->considerAdditionalPlacement(p);
         }
     }
-    phylo_tree.trackProgress(candidateCount);
+    phylo_tree.trackProgress(candidateStop - candidateStart);
 }
 
 template<>

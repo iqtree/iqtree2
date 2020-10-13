@@ -45,7 +45,6 @@ public:
     virtual bool   considerAdditionalPlacement(const PossiblePlacement& placement) ;
     virtual const  PossiblePlacement& getBestPlacement() const;
     virtual bool   canInsert() const;
-
     void findPlacement ( PhyloTree& phylo_tree,
                          TargetBranchRange& range,
                          SearchHeuristic* heuristic,

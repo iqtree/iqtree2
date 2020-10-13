@@ -26,7 +26,7 @@ void ParsimonyCostCalculator::assessPlacementCost(PhyloTree& phylo_tree,
     if ( verbose_mode >= VB_MAX ) {
         std::stringstream s2;
         s2  << "Parsimony score for taxon " << taxon->getTaxonId()
-            << " at " << placement->getTargetIndex()
+            << " at target branch " << placement->getTargetIndex()
             << " would be " << placement->parsimony_score;
         phylo_tree.logLine(s2.str());
     }

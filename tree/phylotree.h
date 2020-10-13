@@ -482,6 +482,8 @@ public:
      */
     void addNewTaxaToTree(const IntVector& taxaIdsToAdd);
     
+    void reinsertTaxaViaStepwiseParsimony(const IntVector& taxaIdsToAdd);
+    
     double taxaAdditionWorkEstimate(size_t newTaxaCount, size_t taxaPerBatch, size_t insertsPerBatch);
     
     void finishUpAfterTaxaAddition();
