@@ -248,11 +248,11 @@ if (MSVC)
     message("Exporting MS Visual Studio projects...")
     if (CLANG_UNDER_VS)
         #see https://clang.llvm.org/docs/UsersManual.html#clang-cl
-        #note .GX is how you say -fexceptions
+        #note /GX is how you say -fexceptions
         add_definitions(/D_UWIN)
-        set(CMAKE_C_FLAGS_RELEASE "/O2 /GX")
-        set(CMAKE_C_FLAGS_DEBUG   "/D_UWIN /GX")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /I${EIGEN3_INCLUDE_DIR}")
+        set(CMAKE_C_FLAGS_RELEASE "/O2")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /GX")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /I${EIGEN3_INCLUDE_DIR} /GX")
     else()
         add_definitions(/MP) # enable multi-processor compilation
     endif()
