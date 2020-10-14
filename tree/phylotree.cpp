@@ -76,20 +76,24 @@ PhyloTree::PhyloTree() : MTree(), CheckpointFactory() {
 }
 
 void PhyloTree::init() {
+    tracing_lh = false;
     aln = NULL;
     model = NULL;
     site_rate = NULL;
     optimize_by_newton = true;
-    central_partial_lh = NULL;
+    central_partial_lh              = nullptr;
+    lh_block_size                   = 0; //will be set, later, by determineBlockSizes()
     nni_partial_lh = NULL;
     tip_partial_lh = NULL;
     tip_partial_pars = NULL;
     tip_partial_lh_computed = 0;
     ptn_freq_computed = false;
-    central_scale_num = nullptr;
-    central_scale_num_size_in_bytes = 0;
-    nni_scale_num = NULL;
-    central_partial_pars = NULL;
+    central_scale_num               = nullptr;
+    scale_block_size                = 0;
+    central_scale_num_size_in_bytes = 0; //will be set, later, by determineBlockSizes()
+    nni_scale_num                   = nullptr;
+    central_partial_pars            = nullptr;
+    pars_block_size                 = 0; //will be set, later, by determineBlockSizes()
     cost_matrix = NULL;
     model_factory = NULL;
     discard_saturated_site = true;
@@ -989,7 +993,6 @@ int PhyloTree::initializeAllPartialPars() {
 }
 
 void PhyloTree::initializeAllPartialPars(int &index, PhyloNode *node, PhyloNode *dad) {
-    size_t pars_block_size = getBitsBlockSize();
     if (!node) {
         node = getRoot();
         // allocate the big central partial pars memory
@@ -1031,22 +1034,11 @@ void PhyloTree::initializeAllPartialPars(int &index, PhyloNode *node, PhyloNode 
 
 
 size_t PhyloTree::getBitsBlockSize() {
-    // reserve the last entry for parsimony score
-//    return (aln->num_states * aln->size() + UINT_BITS - 1) / UINT_BITS + 1;
-    if (cost_matrix) {
-        return get_safe_upper_limit_float(aln->size() * aln->num_states);
-    }
-    size_t len = aln->getMaxNumStates() * ((max(aln->size(), (size_t)aln->num_variant_sites) + SIMD_BITS - 1) / UINT_BITS) + 4;
-#ifdef __AVX512KNL
-    len = ((len+15)/16)*16;
-#else
-    len = ((len+7)/8)*8;
-#endif
-    return len;
+    return pars_block_size;
 }
 
 UINT *PhyloTree::newBitsBlock() {
-    return aligned_alloc<UINT>(getBitsBlockSize());
+    return aligned_alloc<UINT>(pars_block_size);
 }
 
 
@@ -1309,24 +1301,40 @@ void PhyloTree::getMemoryRequired(uint64_t &partial_lh_entries, uint64_t &scale_
     partial_lh_entries = ((uint64_t)leafNum - 2) * (uint64_t) block_size + 4 + tip_partial_lh_size;
     scale_num_entries  = (leafNum - 2) * scale_size;
 
-    size_t pars_block_size = getBitsBlockSize();
     partial_pars_entries   = (leafNum - 1) * 4 * pars_block_size + tip_partial_pars_size;
 }
 
-void PhyloTree::getBlockSizes(size_t& nptn, uint64_t& pars_block_size,
-                              uint64_t& lh_block_size, uint64_t& scale_block_size ) {
-    pars_block_size = getBitsBlockSize();
+void PhyloTree::determineBlockSizes() {
+    // reserve the last entry for parsimony score
+    // no longer: pars_block_size = (aln->num_states * aln->size() + UINT_BITS - 1) / UINT_BITS + 1;
+    if (cost_matrix) {
+        //Sankoff parsimony tracks a number (a UINT) for each state for each site
+        //(and should have 4 additional UINTs for a total score)
+        pars_block_size = get_safe_upper_limit_float(aln->size() * aln->num_states) + 4;
+    } else {
+        //Otherwise, parsimony tracks a bit per site per state
+        //(and should have 4 additional UINTs for a total score)
+        pars_block_size = aln->getMaxNumStates() * ((max(aln->size(), (size_t)aln->num_variant_sites) + SIMD_BITS - 1) / UINT_BITS) + 4;
+    }
+    #ifdef __AVX512KNL
+        pars_block_size = ((pars_block_size+15)/16)*16;
+    #else
+        pars_block_size = ((pars_block_size+7)/8)*8;
+    #endif
+    
     // +num_states for ascertainment bias correction
-    nptn = get_safe_upper_limit(aln->size())+ max(get_safe_upper_limit(aln->num_states), get_safe_upper_limit(model_factory->unobserved_ptns.size()));
+    size_t nptn = get_safe_upper_limit(aln->size()) + max(get_safe_upper_limit(aln->num_states), get_safe_upper_limit(model_factory->unobserved_ptns.size()));
     scale_block_size = nptn * site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
     lh_block_size = scale_block_size * model->num_states;
 }
 
+size_t PhyloTree::getLhBlockSize() {
+    return lh_block_size;
+}
+
 void PhyloTree::allocateCentralBlocks(size_t extra_parsimony_block_count,
                                       size_t extra_lh_block_count) {
-    size_t   nptn;
-    uint64_t pars_block_size, lh_block_size, scale_block_size;
-    getBlockSizes( nptn, pars_block_size, lh_block_size, scale_block_size );
+    determineBlockSizes();
 
     // allocate the big central partial likelihoods memory
     size_t IT_NUM = 2;
@@ -1417,9 +1425,7 @@ void PhyloTree::allocateCentralBlocks(size_t extra_parsimony_block_count,
     
 void PhyloTree::initializeAllPartialLh(int &index_pars, int &index_lh,
                                        PhyloNode *node, PhyloNode *dad) {
-    size_t   nptn;
-    uint64_t pars_block_size, lh_block_size, scale_block_size;
-    getBlockSizes( nptn, pars_block_size, lh_block_size, scale_block_size );
+    determineBlockSizes( );
     
     if (!node) {
         node = getRoot();

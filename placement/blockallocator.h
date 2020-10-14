@@ -15,9 +15,6 @@ class BlockAllocator {
 protected:
     PhyloTree& phylo_tree;           //the tree that owns the memory (BlockAllocator
                                      //doesn't own any memory)
-    uint64_t   parsimony_block_size; //the size of an (interior) parsimony vector (in UINTs)
-    uint64_t   lh_block_size;        //the size of an (interior) likelihood vector (in doubles)
-    uint64_t   scale_block_size;     //the size of an (interior) scale num vector (in UBYTEs)
     int        index_parsimony;      //the number of parsimony blocks allocated thus far
     size_t     nptn;                 //
     std::vector<UINT*> uint_blocks;  //blocks of locally-allocated unsigned integer to release

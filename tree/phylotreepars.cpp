@@ -49,14 +49,13 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
 
     if (node->name == ROOT_NAME) {
         ASSERT(dad);
-        int pars_size = getBitsBlockSize();
-        memset(dad_branch->partial_pars, 255, pars_size*sizeof(UINT));
+        memset(dad_branch->partial_pars, 255, pars_block_size*sizeof(UINT));
         size_t nsites = (aln->num_parsimony_sites+UINT_BITS-1)/UINT_BITS;
         dad_branch->partial_pars[nstates*nsites] = 0;
     } else if (node->isLeaf() && dad) {
         // external node
         int leafid = node->id;
-        memset(dad_branch->partial_pars, 0, getBitsBlockSize()*sizeof(UINT));
+        memset(dad_branch->partial_pars, 0, pars_block_size*sizeof(UINT));
         int max_sites = ((aln->num_parsimony_sites+UINT_BITS-1)/UINT_BITS)*UINT_BITS;
         int ambi_aa[] = {2, 3, 5, 6, 9, 10}; // {4+8, 32+64, 512+1024};
 //        if (aln->ordered_pattern.empty())
@@ -688,9 +687,7 @@ void PhyloTree::computePartialParsimonySankoff(PhyloNeighbor *dad_branch, PhyloN
      */
     int nstates = aln->num_states;
     assert(dad_branch->partial_pars);
-    
-    int pars_block_size = getBitsBlockSize();
-    
+        
     // internal node
     UINT min_child_ptn_pars;
     
@@ -1146,7 +1143,6 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix,
     PhyloNodeVector  added_nodes; // newly added nodes
     int    newNodeID;
     size_t index;
-    size_t pars_block_size = getBitsBlockSize();
 
     if (constraintTree.empty()) {
         create3TaxonTree(taxon_order, rand_stream);

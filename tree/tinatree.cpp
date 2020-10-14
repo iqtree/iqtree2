@@ -114,7 +114,7 @@ void TinaTree::initializeAllPartialLh() {
 
 void TinaTree::initializeAllPartialLh(int &index, int &indexlh,
                                       PhyloNode *node, PhyloNode *dad) {
-    int pars_block_size = getBitsBlockSize();
+    determineBlockSizes();
     if (!node) {
         node = getRoot();
         // allocate the big central partial likelihoods memory

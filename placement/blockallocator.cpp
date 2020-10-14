@@ -11,7 +11,7 @@
 BlockAllocator::BlockAllocator(PhyloTree& tree,
                int parsimonyIndex)
     : phylo_tree(tree), index_parsimony(parsimonyIndex) {
-        tree.getBlockSizes( nptn, parsimony_block_size, lh_block_size, scale_block_size );
+        tree.determineBlockSizes();
 }
 BlockAllocator::~BlockAllocator() {
     //C++17 or later, merely: for ( block : uint_blocks ) aligned_free(block);
@@ -20,7 +20,8 @@ BlockAllocator::~BlockAllocator() {
     }
 }
 void BlockAllocator::allocateParsimonyBlock(UINT*& partial_pars) {
-    partial_pars = phylo_tree.central_partial_pars + (index_parsimony * parsimony_block_size);
+    partial_pars = phylo_tree.central_partial_pars
+                   + (index_parsimony * phylo_tree.pars_block_size);
     ++index_parsimony;
 }
 void BlockAllocator::allocateMemoryFor(PhyloNeighbor* nei) {
@@ -79,8 +80,10 @@ int LikelihoodBlockAllocator::getLikelihoodBlockCount() const {
 
 void LikelihoodBlockAllocator::allocateLikelihoodBlocks(double*& partial_lh,
                                                         UBYTE*& scale_num) {
-    partial_lh = phylo_tree.central_partial_lh + (index_lh * lh_block_size);
-    scale_num  = phylo_tree.central_scale_num  + (index_lh * scale_block_size);
+    partial_lh = phylo_tree.central_partial_lh
+               + (index_lh * phylo_tree.lh_block_size);
+    scale_num  = phylo_tree.central_scale_num
+               + (index_lh * phylo_tree.scale_block_size);
     ++index_lh;
 }
 void LikelihoodBlockAllocator::allocateMemoryFor(PhyloNeighbor* nei) {

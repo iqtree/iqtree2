@@ -345,6 +345,8 @@ class PhyloTree : public MTree, public Optimization, public CheckpointFactory {
     friend class LikelihoodBlockAllocator;
 
 public:
+    bool tracing_lh;
+    
     typedef MTree super;
     
     /**
@@ -862,8 +864,10 @@ public:
     virtual void allocateCentralBlocks(size_t extra_parsimony_block_count,
                                        size_t extra_lh_block_count);
     
-    virtual void getBlockSizes(size_t& nptn, uint64_t& pars_block_size,
-                               uint64_t& lh_block_size, uint64_t& scale_block_size );
+    virtual void determineBlockSizes();
+        
+    virtual size_t getLhBlockSize();
+    
     //
     //Note: This probably needs to be passed a partition number too, if it is to work
     //      properly for PhyloSuperTreePlen.
@@ -2535,13 +2539,15 @@ protected:
             The variable partial_lh in PhyloNeighbor will be assigned to a region inside this variable.
      */
     double *central_partial_lh;
+    size_t  lh_block_size;  // in doubles
     double *nni_partial_lh; // used for NNI functions
 
     /**
             the main memory storing all scaling event numbers for all neighbors of the tree.
             The variable scale_num in PhyloNeighbor will be assigned to a region inside this variable.
      */
-    UBYTE *central_scale_num;
+    UBYTE* central_scale_num;
+    size_t scale_block_size;  //in UBYTEs
     /**
             The total size (in bytes) of the memory block pointed to by central_scale_num
      */
@@ -2552,7 +2558,8 @@ protected:
             the main memory storing all partial parsimony states for all neighbors of the tree.
             The variable partial_pars in PhyloNeighbor will be assigned to a region inside this variable.
      */
-    UINT *central_partial_pars;
+    UINT*  central_partial_pars;
+    size_t pars_block_size; //in UINTs
 
     virtual void reorientPartialLh(PhyloNeighbor* dad_branch, PhyloNode *dad);
     
