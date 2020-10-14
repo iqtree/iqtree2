@@ -25,14 +25,15 @@ TaxonToPlace::TaxonToPlace(BlockAllocator* ba, int id, std::string name)
     PhyloTree& phylo_tree = ba->getTree();
     new_leaf     = phylo_tree.newNode(taxonId, taxonName.c_str());
     new_interior = phylo_tree.newNode();
+    new_interior->is_floating_interior = true;
     new_interior->addNeighbor(new_leaf, -1 );
     new_leaf->addNeighbor(new_interior, -1 );
     PhyloNeighbor* nei = new_interior->firstNeighbor();
     ba->allocateMemoryFor(nei); //The allocator knows if partial_lh & scale_num wanted
     phylo_tree.computePartialParsimony(nei, new_interior);
     partial_pars = nei->partial_pars;
-    partial_lh = nei->partial_lh;
-    scale_num  = nei->scale_num;
+    partial_lh   = nei->partial_lh;
+    scale_num    = nei->scale_num;
 }
 
 TaxonToPlace::~TaxonToPlace() = default;
@@ -143,7 +144,7 @@ void TaxonToPlace::insertIntoTree(PhyloTree& phylo_tree, BlockAllocator* b,
     down->length         = bestPlacement.lenToNewTaxon;
 
     PhyloNeighbor* up    = new_leaf->findNeighbor(new_interior);
-    up->length = bestPlacement.lenToNewTaxon;
+    up->length           = bestPlacement.lenToNewTaxon;
     up->clearComputedFlags();
     target->handOverComputedStateTo( up);
 
@@ -158,8 +159,8 @@ void TaxonToPlace::insertIntoTree(PhyloTree& phylo_tree, BlockAllocator* b,
     node_1->findNeighbor     (new_interior)->clearComputedFlags();
             
     //Todo: redo likelihood too
-    inserted = true;
-    bool  likelihood_needed = calculator.usesLikelihood();
+    inserted                    = true;
+    bool likelihood_needed      = calculator.usesLikelihood();
     ReplacementBranchList* reps = new ReplacementBranchList;
     reps->emplace_back ( dest.addNewRef(b, new_interior, node_1  , likelihood_needed ) );
     reps->emplace_back ( dest.addNewRef(b, new_interior, node_2  , likelihood_needed ) );

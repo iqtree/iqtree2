@@ -20,7 +20,11 @@ PlacementRun::PlacementRun(PhyloTree& tree, const IntVector& taxaIdsToAdd)
     , global_placement_optimizer(GlobalPlacementOptimizer::getGlobalPlacementOptimizer())
     , calculator(PlacementCostCalculator::getCostCalculator(costFunction))
     , taxa_inserted_this_batch(0), taxa_inserted_in_total(0), taxa_inserted_nearby(0) {
+    if (calculator->usesLikelihood()) {
+        phylo_tree.prepareToComputeDistances(); //Set up state look-up vectors
+    }
 }
+
 void PlacementRun::setUpAllocator(int extra_parsimony_blocks, bool trackLikelihood,
                     int extra_lh_blocks) {
     int      index_parsimony        = 0;
@@ -133,8 +137,10 @@ void PlacementRun::logSubtreesNearAddedTaxa() const {
     }
 }
                      
-                     
 PlacementRun::~PlacementRun() {
+    if (calculator->usesLikelihood()) {
+        phylo_tree.doneComputingDistances();
+    }
     delete global_placement_optimizer;
     delete batch_placement_optimizer;
     delete taxon_placement_optimizer;

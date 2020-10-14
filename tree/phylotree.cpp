@@ -3383,14 +3383,16 @@ void PhyloTree::doneComputingDistances() {
     for ( auto it = distanceProcessors.begin()
          ; it!=distanceProcessors.end(); ++it, ++p) {
         if (verbose_mode >= VB_MAX) {
-            double ratio = (double) ((*it)->derivativeCalculationCount) /
-            (double) ((*it)->costCalculationCount);
-            std::cout << "Processor " << p << " processed "
-                << (*it)->pairCount << " pairs, evaluating cost "
-                << (*it)->costCalculationCount << " times, and finding "
-                << (*it)->derivativeCalculationCount << " derivatives "
-                << "( ratio " << ratio << " )"
-                << endl;
+            if ( 0 < (*it)->costCalculationCount) {
+                double ratio = (double) ((*it)->derivativeCalculationCount) /
+                (double) ((*it)->costCalculationCount);
+                std::cout << "Processor " << p << " processed "
+                    << (*it)->pairCount << " pairs, evaluating cost "
+                    << (*it)->costCalculationCount << " times, and finding "
+                    << (*it)->derivativeCalculationCount << " derivatives "
+                    << "( ratio " << ratio << " )"
+                    << endl;
+            }
         }
         delete (*it);
     }

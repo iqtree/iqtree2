@@ -33,9 +33,11 @@
 class PlacementTraversalInfo: public TraversalInfo {
 protected:
     PhyloTree& phylo_tree;
+    LikelihoodBufferSet& buffers;
 public:
     typedef TraversalInfo super;
     PlacementTraversalInfo(PhyloTree& tree,
+                           LikelihoodBufferSet& buffersToUse,
                            PhyloNeighbor* dad_branch,
                            PhyloNode* dad);
     void computePartialLikelihood(PhyloNeighbor* nei=nullptr,

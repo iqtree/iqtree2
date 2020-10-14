@@ -77,14 +77,15 @@ void TargetBranch::computeState(PhyloTree& phylo_tree) const {
                       << pointer_to_hex(this)
                       << " was " << score);
         
-        double old_length            = neigh1->length;
-        double half_old_length       = 0.5 * old_length;
-        PlacementTraversalInfo info(phylo_tree, nullptr, nullptr);
+        double old_length      = neigh1->length;
+        double half_old_length = 0.5 * old_length;
+        PlacementTraversalInfo info(phylo_tree, localBuffers, nullptr, nullptr);
         
-        PhyloNode fakeExterior;
         PhyloNode fakeInterior;
         fakeInterior.addNeighbor(second,        half_old_length);
         fakeInterior.addNeighbor(first,         half_old_length);
+        
+        PhyloNode fakeExterior;
         fakeInterior.addNeighbor(&fakeExterior, 0.0);
         fakeExterior.addNeighbor(&fakeInterior, 0.0);
         
@@ -93,31 +94,18 @@ void TargetBranch::computeState(PhyloTree& phylo_tree) const {
         fakeNeigh1->partial_lh = neigh1->partial_lh;
         fakeNeigh1->scale_num  = neigh1->scale_num;
         fakeNeigh1->setLikelihoodComputed(true);
-        //TREE_LOG_LINE(phylo_tree, VB_MIN, "fakeNeigh1 " << pointer_to_hex(fakeNeigh1)
-        //              << " copied partial_lh " << pointer_to_hex(neigh1->partial_lh)
-        //              << " from neigh1 " << pointer_to_hex(neigh1));
 
         info.computePartialLikelihood(neigh2, second);
         PhyloNeighbor* fakeNeigh2 = fakeInterior.findNeighbor(first);
         fakeNeigh2->partial_lh    = neigh2->partial_lh;
         fakeNeigh2->scale_num     = neigh2->scale_num;
         fakeNeigh2->setLikelihoodComputed(true);
-        //TREE_LOG_LINE(phylo_tree, VB_MIN, "fakeNeigh2 " << pointer_to_hex(fakeNeigh2)
-        //              << " copied partial_lh " << pointer_to_hex(neigh2->partial_lh)
-        //              << " from neigh2 " << pointer_to_hex(neigh2));
 
         PhyloNeighbor* fakeNeigh3 = fakeExterior.findNeighbor(&fakeInterior);
         fakeNeigh3->partial_lh    = partial_lh;
         fakeNeigh3->scale_num     = scale_num;
         fakeNeigh3->setLikelihoodComputed(false);
-        //TREE_LOG_LINE(phylo_tree, VB_MIN, "neigh3(Up) " << pointer_to_hex(fakeNeigh3)
-        //              << " using placement's partial_lh " << pointer_to_hex(partial_lh));
         info.computePartialLikelihood(fakeNeigh3, &fakeExterior);
-        //TREE_LOG_LINE(phylo_tree, VB_MIN, "neigh3(Up) " << pointer_to_hex(fakeNeigh3)
-        //              << " now has partial_lh " << fakeNeigh3->partial_lh);
-                                
-        //PhyloNeighbor* fakeNeigh4 = fakeInterior.findNeighbor(&fakeExterior);
-        //TREE_LOG_LINE(phylo_tree, VB_MIN, "neigh4(Down) " << pointer_to_hex(fakeNeigh4));
 
         neigh1->length = old_length;
         neigh1->setLikelihoodComputed(false);
@@ -182,8 +170,8 @@ TargetBranchRange::TargetBranchRange(PhyloTree& phylo_tree, BlockAllocator* b,
 }
 
 void TargetBranchRange::removeUsed() {
-    int w=0;
-    for (int r=0; r<size(); ++r) {
+    int w = 0;
+    for (int r = 0; r < size(); ++r ) {
         if (!at(r).isUsedUp()) {
             at(w) = at(r);
             ++w;
