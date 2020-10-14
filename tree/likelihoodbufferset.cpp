@@ -18,30 +18,24 @@ LikelihoodBufferSet::LikelihoodBufferSet():
 }
 
 LikelihoodBufferSet::LikelihoodBufferSet(const LikelihoodBufferSet& copyMe) {
-    theta_block_size          = copyMe.theta_block_size;
-    theta_computed            = theta_borrowed = false;
-    theta_all                 = (theta_block_size==0) ? nullptr
-                              : aligned_alloc<double>(theta_block_size);
+    theta_all = nullptr;
+    ensureThetaAllocated(copyMe.theta_block_size);
 
-    pattern_lh_borrowed       = false;
-    pattern_lh_block_size     = copyMe.pattern_lh_block_size;
-    _pattern_lh               = (pattern_lh_block_size==0) ? nullptr
-                              : aligned_alloc<double>(pattern_lh_block_size);
-
-    pattern_lh_cat_borrowed   = false;
-    pattern_lh_cat_block_size = copyMe.pattern_lh_cat_block_size;
-    _pattern_lh_cat           = (pattern_lh_cat_block_size==0) ? nullptr
-                              : aligned_alloc<double>(pattern_lh_cat_block_size);
-
-    partial_lh_borrowed       = false;
-    partial_lh_block_size     = copyMe.partial_lh_block_size;
-    buffer_partial_lh         = (partial_lh_block_size==0) ? nullptr
-                              : aligned_alloc<double>(partial_lh_block_size);
-
-    scale_all_borrowed        = false;
-    scale_all_block_size      = copyMe.scale_all_block_size;
-    buffer_scale_all          = (scale_all_block_size==0) ? nullptr
-                              : aligned_alloc<double>(scale_all_block_size);
+    _pattern_lh = nullptr;
+    ensurePatternLhAllocated(copyMe.pattern_lh_block_size);
+    
+    _pattern_lh_cat = nullptr;
+    ensurePatternLhCatAllocated(copyMe.pattern_lh_cat_block_size);
+    if (_pattern_lh_cat != nullptr ) {
+        memcpy(_pattern_lh_cat, copyMe._pattern_lh_cat,
+               copyMe.pattern_lh_cat_block_size * sizeof(double));
+    }
+    
+    buffer_partial_lh = nullptr;
+    ensurePartialLhAllocated(copyMe.partial_lh_block_size);
+    
+    buffer_scale_all = nullptr;
+    ensureScaleAllAllocated(copyMe.scale_all_block_size);
 }
 
 void LikelihoodBufferSet::ensureThetaAllocated(size_t desired_block_size) {
@@ -51,6 +45,7 @@ void LikelihoodBufferSet::ensureThetaAllocated(size_t desired_block_size) {
     theta_all        = aligned_alloc<double>(desired_block_size);
     theta_block_size = desired_block_size;
     theta_borrowed   = false;
+    for (int i=0; i<theta_block_size; ++i) theta_all[i]=0;
 }
 
 void LikelihoodBufferSet::borrowTheta(double* theta_start, size_t theta_size_in_doubles) {
@@ -67,6 +62,7 @@ void LikelihoodBufferSet::ensurePatternLhAllocated(size_t desired_block_size_in_
         _pattern_lh = aligned_alloc<double>(desired_block_size_in_doubles);
         pattern_lh_block_size = desired_block_size_in_doubles;
         pattern_lh_borrowed = false;
+        for (int i=0; i<pattern_lh_block_size; ++i) _pattern_lh[i]=0;
     }
 }
 
@@ -81,9 +77,10 @@ void LikelihoodBufferSet::borrowPatternLh(double* borrowMe, size_t size_in_doubl
     
 void LikelihoodBufferSet::ensurePatternLhCatAllocated(size_t desired_block_size_in_doubles) {
     if (!_pattern_lh_cat) {
-        _pattern_lh_cat = aligned_alloc<double>(desired_block_size_in_doubles);
+        _pattern_lh_cat           = aligned_alloc<double>(desired_block_size_in_doubles);
         pattern_lh_cat_block_size = desired_block_size_in_doubles;
-        pattern_lh_cat_borrowed = false;
+        pattern_lh_cat_borrowed   = false;
+        for (int i=0; i<pattern_lh_cat_block_size; ++i) _pattern_lh_cat[i]=0;
     }
 }
 
@@ -101,6 +98,7 @@ void LikelihoodBufferSet::ensurePartialLhAllocated(size_t size_in_doubles) {
         buffer_partial_lh = aligned_alloc<double>(size_in_doubles);
         partial_lh_block_size   = size_in_doubles;
         pattern_lh_cat_borrowed = false;
+        for (int i=0; i<partial_lh_block_size; ++i) buffer_partial_lh[i]=0;
     }
 }
 
@@ -109,7 +107,7 @@ void LikelihoodBufferSet::borrowPartialLh(double* borrowMe, size_t size_in_doubl
         aligned_free(buffer_partial_lh);
     }
     buffer_partial_lh     = borrowMe;
-    partial_lh_block_size = size_in_doubles;
+    partial_lh_block_size = (size_in_doubles==0) ? partial_lh_block_size : size_in_doubles;
     partial_lh_borrowed   = true;
 }
 
@@ -118,6 +116,7 @@ void LikelihoodBufferSet::ensureScaleAllAllocated(size_t size_in_doubles) {
         buffer_scale_all     = aligned_alloc<double>(size_in_doubles);
         scale_all_block_size = size_in_doubles;
         scale_all_borrowed   = false;
+        for (int i=0; i<scale_all_block_size; ++i) buffer_scale_all[i]=0;
     }
 }
 

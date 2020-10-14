@@ -84,7 +84,7 @@ public:
     
     void ensurePartialLhAllocated(size_t size_in_doubles);
     
-    void borrowPartialLh(double* borrowMe, size_t size_in_doubles);
+    void borrowPartialLh(double* borrowMe, size_t size_in_doubles = 0);
     
     void ensureScaleAllAllocated(size_t size_in_doubles);
     
