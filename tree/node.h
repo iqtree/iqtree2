@@ -271,6 +271,12 @@ public:
         list of neighbors
      */
     NeighborVec neighbors;
+    
+    /**
+        true, for "floating" interior nodes, that might (as yet) have
+        one or fewer neighbors.
+     */
+    bool is_floating_interior;
 
     /**
         the height of subtree rooted at this node, used for greedy algorithm
@@ -291,10 +297,7 @@ public:
     /**
         constructor
      */
-    Node() {
-        id = -1;
-        height = -1;
-    };
+    Node();
 
 
     /**
@@ -323,12 +326,6 @@ public:
     virtual ~Node();
 
     /**
-        used for the destructor
-     */
-    virtual void deleteNode();
-
-
-    /**
         @return true of this is a leaf
      */
     bool isLeaf();
@@ -354,7 +351,6 @@ public:
         @return the leaf at the lowest level. Also modify the height, highestNei of this class.
      */
     Node *calcHeight(Node *dad = NULL);
-
 
     /**
      * Calculate the distance between 2 nodes. Only for binary tree.
@@ -555,6 +551,5 @@ struct neighborcmp {
     For greedy algorithm.
  */
 typedef multiset<Neighbor*, neighborcmp> NeighborSet;
-
 
 #endif

@@ -31,10 +31,16 @@
         class Node
  *********************************************/
 
+Node::Node() {
+    id = -1;
+    height = -1;
+    is_floating_interior = false;
+};
+
 Node::Node(int aid) {
     id = aid;
-    //name = NULL;
     height = -1;
+    is_floating_interior = false;
 }
 
 Node::Node(int aid, int aname) {
@@ -43,35 +49,39 @@ Node::Node(int aid, int aname) {
     sprintf(str, "%d", aname);
     name = str;
     height = -1;
+    is_floating_interior = false;
 }
 
 Node::Node(int aid, const char *aname) {
     id = aid;
-    if (aname)
+    if (aname != nullptr ) {
         name = aname;
+    }
     height = -1;
+    is_floating_interior = false;
 }
 
 bool Node::isLeaf() {
-    return neighbors.size() <= 1;
+    return neighbors.size() <= 1 && ! is_floating_interior;
 }
 
 bool Node::isInCherry() {
-	if (this->isLeaf()) {
-		if (neighbors[0]->node->isCherry()) {
-			return true;
-		} else {
-			return false;
-		}
-	} else {
-		return false;
-	}
+    if (this->isLeaf()) {
+        if (neighbors[0]->node->isCherry()) {
+            return true;
+        } else {
+            return false;
+        }
+    } else {
+        return false;
+    }
 }
 
 bool Node::isCherry() {
     int num_leaves = 0;
-    for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it++)
-        if ((*it)->node->isLeaf()) num_leaves++;
+    for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it++) {
+        num_leaves += (*it)->node->isLeaf() ? 1 : 0;
+    }
     return (num_leaves > 1);
 }
 
@@ -150,9 +160,7 @@ int Node::calDist(Node* partner, Node* dad, int curLen) {
         }
         return sumRight + sumLeft;
     }
-
 }
-
 
 /**
         efficient longest path algorithm
@@ -187,11 +195,14 @@ bool Node::isNeighbor(Node* node) {
 }
 
 NeighborVec::iterator Node::findNeighborIt(Node *node) {
-    for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it++)
-        if ((*it)->node == node)
+    NeighborVec::iterator it;
+    for ( it = neighbors.begin(); it != neighbors.end(); it++) {
+        if ((*it)->node == node) {
             return it;
+        }
+    }
     ASSERT(0);
-    return neighbors.end();
+    return it;
 }
 
 void Node::addNeighbor(Node *node, double length, int id) {
@@ -248,17 +259,11 @@ double Node::updateNeighbor(Node* node, Node *newnode) {
     return -1;
 }
 
-void Node::deleteNode() {
-    NeighborVec::reverse_iterator it;
-    for (it = neighbors.rbegin(); it != neighbors.rend(); it++)
-        delete (*it);
-    neighbors.clear();
-}
-
 Node::~Node() {
     NeighborVec::reverse_iterator it;
-    for (it = neighbors.rbegin(); it != neighbors.rend(); it++)
+    for (it = neighbors.rbegin(); it != neighbors.rend(); it++) {
         delete (*it);
+    }
     neighbors.clear();
 }
 
