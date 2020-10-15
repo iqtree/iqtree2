@@ -213,36 +213,43 @@ int isFile(const char *path) {
     return S_ISREG(statbuf.st_mode);
 }
 
-int getFilesInDir(const char *path, StrVector &filenames)
+size_t getFilesInDir(const char *path, StrVector &filenames)
 {
-    if (!isDirectory(path))
+    if (!isDirectory(path)) {
         return 0;
-    string path_name = path;
-    if (path_name.back() != '/')
-        path_name.append("/");
-#ifndef CLANG_UNDER_VS
-    DIR *dp;
-    struct dirent *ep;
-    dp = opendir (path);
-    
-    if (dp != NULL)
-    {
-        while ((ep = readdir (dp)) != NULL) {
-            if (isFile((path_name + ep->d_name).c_str()))
-                filenames.push_back(ep->d_name);
-        }
-        
-        (void) closedir (dp);
-        return 1;
     }
-    else
+    string path_name = path;
+    if (path_name.back() != '/') {
+        path_name.append("/");
+    }
+    size_t oldCount = filenames.size();
+#ifndef CLANG_UNDER_VS
+    DIR* dp = opendir (path);
+    if (dp == nullptr) {
         return 0;
+    }
+    struct dirent* ep;
+    while ((ep = readdir (dp)) != NULL) {
+        if (isFile((path_name + ep->d_name).c_str()))
+            filenames.push_back(ep->d_name);
+    }
+    (void) closedir (dp);
     
-    return 1;
 #else
-    //TODO: FindFirstFile et cetera, et cetera, et cetera
-    return 0;
+    path_name += "*";
+    WIN32_FIND_DATA find_data;
+    HANDLE search_handle = FindFirstFile(path_name.c_str(), &find_data);
+    if (search_handle == INVALID_HANDLE_VALUE) {
+        return 0;
+    }
+    do {
+        if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
+            filenames.emplace_back(find_data.cFileName);
+        }
+    } while (FindNextFile(search_handle, &find_data));
+    FindClose(search_handle);
 #endif
+    return filenames.size() - oldCount;
 }
 int convert_int(const char *str) {
     char *endptr;

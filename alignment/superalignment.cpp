@@ -28,19 +28,21 @@
 
 Alignment *createAlignment(string aln_file, const char *sequence_type, InputType intype, string model_name) {
     bool is_dir = isDirectory(aln_file.c_str());
-
     if (!is_dir && aln_file.find(',') == string::npos)
         return new Alignment((char*)aln_file.c_str(), (char*)sequence_type, intype, model_name);
 
     SuperAlignment *super_aln = new SuperAlignment;
-    if (is_dir)
+    if (is_dir) {
         super_aln->readPartitionDir(aln_file, (char*)sequence_type, intype, model_name, true);
-    else
+    }
+    else {
         super_aln->readPartitionList(aln_file, (char*)sequence_type, intype, model_name, true);
+    }
     super_aln->init();
     Alignment *aln = super_aln->concatenateAlignments();
-    if (aln->isSuperAlignment())
+    if (aln->isSuperAlignment()) {
         outError("Cannot concatenate alignments of different data type ", aln_file);
+    }
     delete super_aln;
     return aln;
 }
@@ -516,16 +518,19 @@ void SuperAlignment::readPartitionNexus(Params &params) {
 void SuperAlignment::readPartitionDir(string partition_dir, char *sequence_type,
                                       InputType &intype, string model, bool remove_empty_seq) {
     //    Params origin_params = params;
+    string dir = partition_dir;
+    if (dir.back() != '/') {
+        dir.append("/");
+    }
 
     StrVector filenames;
-    string dir = partition_dir;
-    if (dir.back() != '/')
-        dir.append("/");
-    getFilesInDir(partition_dir.c_str(), filenames);
-    if (filenames.empty())
+    size_t file_count = getFilesInDir(partition_dir.c_str(), filenames);
+    if (file_count == 0) {
         outError("No file found in ", partition_dir);
+    }
     std::sort(filenames.begin(), filenames.end());
-    cout << "Reading " << filenames.size() << " alignment files in directory " << partition_dir << endl;
+    std::cout << "Reading " << file_count << " alignment files"
+        << " in directory " << partition_dir << std::endl;
     
     for (auto it = filenames.begin(); it != filenames.end(); it++)
     {

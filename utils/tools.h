@@ -2531,12 +2531,12 @@ bool fileExists(string strFilename);
 int isDirectory(const char *path);
 
 /**
-    get all file names in a directory
+    get all file names in a directory (append them to a StrVector)
     @param path directory name
     @param[out] filenames vector of file names
-    return 0 if FAIL, non-zero otherwise
+    return 0 if FAIL, otherwise count of files found
  */
-int getFilesInDir(const char *path, StrVector &filenames);
+size_t getFilesInDir(const char *path, StrVector &filenames);
 
 /**
         convert string to int, with error checking
