@@ -230,4 +230,10 @@ void mirroredHeapsort ( V* valueArray
     }
 }
 
+template <class T, class U>
+void mirroredHeapsort( T& values, U& sattelite) {
+    mirroredHeapsort ( values.data(), 0, values.size(), sattelite.data() );
+}
+
+
 #endif /* heapsort_h */
