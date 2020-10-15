@@ -46,6 +46,7 @@ public:
     virtual const  PossiblePlacement& getBestPlacement() const;
     virtual bool   canInsert() const;
     void findPlacement ( PhyloTree& phylo_tree,
+                         size_t taxonIndex,
                          TargetBranchRange& range,
                          SearchHeuristic* heuristic,
                          const PlacementCostCalculator* calculator );
@@ -65,14 +66,27 @@ public:
                                    std::vector<PossiblePlacement>& scores);
 };
 
-template <class T=TaxonToPlace> class TaxaToPlace: public std::vector<T>
-{
+class TaxaToPlace {
+public:
+    virtual ~TaxaToPlace() = default;
+    virtual TaxonToPlace* getTaxonByIndex(size_t index) = 0;
+    virtual bool isEmpty() const = 0;
+    virtual void sortBatch(size_t batchStart, size_t batchStop) = 0;
+};
+
+template <class T=TaxonToPlace> class TypedTaxaToPlace: public TaxaToPlace, public std::vector<T> {
 public:
     typedef std::vector<T> super;
-    explicit TaxaToPlace(size_t reservation) {
+    explicit TypedTaxaToPlace(size_t reservation) {
         super::reserve(reservation);
     }
-    virtual ~TaxaToPlace() = default;
+    virtual bool isEmpty() const                        { return std::vector<T>::empty(); }
+    virtual TaxonToPlace* getTaxonByIndex(size_t index) { return & std::vector<T>::at(index); }
+    virtual void sortBatch(size_t batchStart, size_t batchStop) {
+        std::sort( std::vector<T>::begin() + batchStart, std::vector<T>::begin() + batchStop);
+
+    }
+    virtual ~TypedTaxaToPlace() = default;
 };
 
 class LessFussyTaxon: public TaxonToPlace {

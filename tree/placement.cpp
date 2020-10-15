@@ -249,7 +249,7 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
     double setUpStartTime = getRealTime();
     size_t newTaxaCount = taxaIdsToAdd.size();
     
-    TaxaToPlace<TaxonTypeInUse> candidates(newTaxaCount);
+    TypedTaxaToPlace<TaxonTypeInUse> candidates(newTaxaCount);
     LOG_LINE ( VB_DEBUG, "Before allocating TaxonToPlace array"
               << ", index_lh was " << pr.block_allocator->getLikelihoodBlockCount() );
     for (size_t i=0; i<newTaxaCount; ++i) {

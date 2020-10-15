@@ -230,57 +230,29 @@ TargetBranchRef TargetBranchRange::addNewRef(BlockAllocator* allocator,
     return TargetBranchRef(this, size()-1);
 }
 
-template<>
 void TargetBranch::costPlacementOfTaxa
     (PhyloTree&         phylo_tree,
-     TargetBranchRange* targets,
+     TargetBranchRange& targets,
      size_t             targetNumber,
-     TaxonToPlace*      candidateStart,
-     TaxonToPlace*      candidateStop,
+     TaxaToPlace&       candidates,
+     size_t             candidateStartIndex,
+     size_t             candidateStopIndex,
      SearchHeuristic*   heuristic,
      PlacementCostCalculator* calculator,
      bool               isFirstTargetBranch) const {
         
-    TargetBranchRef here(targets, targetNumber);
+    TargetBranchRef here(&targets, targetNumber);
     #ifdef _OPENMP
     #pragma omp parallel for
     #endif
-    for (TaxonToPlace* candidate = candidateStart;
-         candidate < candidateStop; ++candidate) {
-        if (heuristic->isPlacementWorthTrying(candidate, here)) {
+    for (size_t i = candidateStartIndex; i< candidateStopIndex; ++i) {
+        TaxonToPlace* candidate = candidates.getTaxonByIndex(i);
+        if (heuristic->isPlacementWorthTrying(candidate, i, here)) {
             PossiblePlacement p;
             p.setTargetBranch(here);
             calculator->assessPlacementCost(phylo_tree, candidate, &p);
             candidate->considerAdditionalPlacement(p);
         }
     }
-    phylo_tree.trackProgress(candidateStop - candidateStart);
-}
-
-template<>
-void TargetBranch::costPlacementOfTaxa
-    (PhyloTree&         phylo_tree,
-     TargetBranchRange* targets,
-     size_t             targetNumber,
-     LessFussyTaxon*    candidateStart,
-     LessFussyTaxon*    candidateStop,
-     SearchHeuristic*   heuristic,
-     PlacementCostCalculator* calculator,
-     bool               isFirstTargetBranch) const {
-        
-    double candidateCount = candidateStop - candidateStart;
-    TargetBranchRef here(targets, targetNumber);
-    #ifdef _OPENMP
-    #pragma omp parallel for
-    #endif
-    for (LessFussyTaxon* candidate = candidateStart;
-         candidate < candidateStop; ++candidate) {
-        if (heuristic->isPlacementWorthTrying(candidate, here)) {
-            PossiblePlacement p;
-            p.setTargetBranch(targets, targetNumber);
-            calculator->assessPlacementCost(phylo_tree, candidate, &p);
-            candidate->considerAdditionalPlacement(p);
-        }
-    }
-    phylo_tree.trackProgress(candidateCount);
+    phylo_tree.trackProgress(candidateStopIndex - candidateStartIndex);
 }

@@ -42,79 +42,18 @@ public:
                         int extra_lh_blocks=0) ;
     void prepareForPlacementRun();
     void prepareForBatch();
-    
-    template <class T> double doBatchPlacement(TaxaToPlace<T>& candidates,
-                                             size_t batchStart, size_t batchStop,
-                                             TargetBranchRange& targets) {
-        ASSERT( !candidates.empty() );
-        T* candidateStart = candidates.data() + batchStart;
-        T* candidateStop  = candidates.data() + batchStop;
-        ASSERT( !targets.empty() );
-        TargetBranch* pointStart = targets.data();
-        TargetBranch* pointStop  = pointStart + targets.size();
-        
-        double refreshTime = 0;
-#if (NEW_TAXON_MAJOR)
-        for (TargetBranch* point = pointStart; point<pointStop; ++point) {
-            point->computeState(phylo_tree);
-        }
-        for (T* c = candidateStart; c<candidateStop; ++c) {
-            TREE_LOG_LINE(phylo_tree, VB_DEBUG, "Scoring ... " << c->taxonName);
-            c->findPlacement(phylo_tree, targets,
-                             heuristic, calculator);
-            const PossiblePlacement& p = c->getBestPlacement();
-            TREE_LOG_LINE(phylo_tree, VB_DEBUG, "Scored " << p.score << " for placement"
-                     << " of " << c->taxonName << " with lengths "
-                     << p.lenToNode1 << ", " << p.lenToNode2 << ", " << p.lenToNewTaxon);
-        }
-#else //TARGET_BRANCH_MAJOR
-        for (TargetBranch* point = pointStart; point<pointStop; ++point) {
-            TREE_LOG_LINE(phylo_tree, VB_DEBUG, "Scoring target branch " << (point-pointStart) << " of " << (pointStop-pointStart));
-            double computeStart = getRealTime();
-            point->computeState(phylo_tree);
-            refreshTime += getRealTime() - computeStart;
-            point->costPlacementOfTaxa(phylo_tree, &targets, point-pointStart,
-                                       candidateStart, candidateStop,
-                                       heuristic, calculator,
-                                       point==pointStart );
-            double forgetStart = getRealTime();
-            point->forgetState();
-            refreshTime += getRealTime() - forgetStart;
-        }
-#endif
-        return refreshTime;
-    }
-    
-    template <class T>
-    void selectPlacementsForInsertion(TaxaToPlace<T>& candidates,
-                                      size_t  batchStart, size_t batchStop,
-                                      size_t& insertStop) {
-        inserts_per_batch = Placement::getInsertsPerBatch(taxa_ids_to_add.size(), batchStop-batchStart);
-        insertStop        = batchStart + inserts_per_batch;
-        std::sort( candidates.begin() + batchStart, candidates.begin() + batchStop);
-        if (batchStop <= insertStop) {
-            insertStop = batchStop; //Want them all
-        }
-    }
-    
+    double doBatchPlacement(TaxaToPlace& candidates,
+                            size_t batchStart, size_t batchStop,
+                            TargetBranchRange& targets);
+    void selectPlacementsForInsertion(TaxaToPlace& candidates,
+                                     size_t  batchStart, size_t batchStop,
+                                     size_t& insertStop);
     void startBatchInsert();
     void insertTaxon(TaxonToPlace& c, TargetBranchRange& targets);
+    void doneBatch(TaxaToPlace& candidates, size_t batchStart, size_t batchStop);
+    
     template <class T>
-    void doneBatch(TaxaToPlace<T>& candidates, size_t batchStart, size_t batchStop) {
-        if ( 1 < batchStop - batchStart ) {
-            TREE_LOG_LINE ( phylo_tree, VB_MED,  "Inserted " << (taxa_inserted_this_batch)
-                      << " out of a batch of " << (batchStop - batchStart) << "." );
-        }
-        batch_placement_optimizer->cleanUpAfterBatch(candidates, batchStart, batchStop, &phylo_tree);
-        if (calculator->usesLikelihood()) {
-            phylo_tree.fixNegativeBranch();
-        }
-        if (taxa_inserted_this_batch == 0) {
-            outError("No taxa inserted in batch");
-        }
-    }
-    template <class T>
-    void donePass(TaxaToPlace<T>& candidates, size_t batchStart, TargetBranchRange& targets) {
+    void donePass(TypedTaxaToPlace<T>& candidates, size_t batchStart, TargetBranchRange& targets) {
         targets.removeUsed();
         //Remove all the candidates that we were able to place
         std::vector<T> oldCandidates;
@@ -139,11 +78,8 @@ public:
                   << block_allocator->getParsimonyBlockCount());
     }
 
-
     void logSubtreesNearAddedTaxa() const;
     ~PlacementRun();
 };
-
-#include <stdio.h>
 
 #endif /* placementrun_h */

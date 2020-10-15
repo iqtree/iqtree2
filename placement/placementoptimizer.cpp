@@ -15,6 +15,17 @@ void TaxonPlacementOptimizer::cleanUpAfterTaxonPlacement(const TaxonToPlace& tax
                                               PhyloTree* tree) {}
 
 BatchPlacementOptimizer::BatchPlacementOptimizer() = default;
+void BatchPlacementOptimizer::cleanUpAfterBatch(TaxaToPlace& taxa,
+                       int firstTaxon, int lastTaxon,
+                       PhyloTree* tree) {
+    if (VB_MIN <= verbose_mode) {
+        std::stringstream s;
+        s << "Processed batch of "
+          << (lastTaxon - firstTaxon) << " taxa";
+        tree->logLine(s.str() );
+    }
+}
+
 BatchPlacementOptimizer::~BatchPlacementOptimizer() = default;
 
 GlobalPlacementOptimizer::GlobalPlacementOptimizer() = default;

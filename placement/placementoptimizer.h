@@ -29,16 +29,9 @@ class BatchPlacementOptimizer {
 public:
     BatchPlacementOptimizer();
     virtual ~BatchPlacementOptimizer();
-    template <class T> void cleanUpAfterBatch(TaxaToPlace<T>& taxa,
-                           int firstTaxon, int lastTaxon,
-                           PhyloTree* tree) {
-        if (VB_MIN <= verbose_mode) {
-            std::stringstream s;
-            s << "Processed batch of "
-              << (lastTaxon - firstTaxon) << " taxa";
-            tree->logLine(s.str() );
-        }
-    }
+    virtual void cleanUpAfterBatch(TaxaToPlace& taxa,
+                                   int firstTaxon, int lastTaxon,
+                                   PhyloTree* tree);
     static BatchPlacementOptimizer* getBatchPlacementOptimizer();
 };
 

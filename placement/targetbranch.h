@@ -43,6 +43,7 @@ typedef std::vector<TargetBranchRef>
 class SearchHeuristic;
 class PlacementCostCalculator;
 class TaxonToPlace;
+class TaxaToPlace;
 
 class TargetBranch : public std::pair<PhyloNode*, PhyloNode*> {
     //A place where a node could be inserted, with likelihood and
@@ -72,12 +73,12 @@ public:
     const double* getLikelihoodBlock() const;
     const UBYTE* getScaleNumBlock() const;
     
-    template <class T>
     void costPlacementOfTaxa(PhyloTree& tree,
-                             TargetBranchRange* targets,
+                             TargetBranchRange& targets,
                              size_t targetNumber,
-                             T* candidateStart,
-                             T* candidateStop,
+                             TaxaToPlace& candidates,
+                             size_t candidateStartIndex,
+                             size_t candidateStopIndex,
                              SearchHeuristic*   heuristic,
                              PlacementCostCalculator* calculator,
                              bool isFirstTargetBranch) const;
@@ -93,6 +94,9 @@ public:
     typedef  vector<TargetBranch> super;
     TargetBranchRange(PhyloTree& phylo_tree, BlockAllocator* b,
                       PlacementCostCalculator* calculator);
+    TargetBranch* getTargetBranch(size_t i) {
+        return &at(i);
+    }
     void removeUsed();
     TargetBranchRef addNewRef(BlockAllocator* allocator,
                               PhyloNode* node1, PhyloNode* node2,

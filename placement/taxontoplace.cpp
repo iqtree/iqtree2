@@ -84,9 +84,10 @@ bool TaxonToPlace::canInsert() const {
 }
 
 void TaxonToPlace::findPlacement(PhyloTree& phylo_tree,
-                   TargetBranchRange& range,
-                   SearchHeuristic* heuristic,
-                   const PlacementCostCalculator* calculator) {
+                                 size_t taxonIndex,
+                                 TargetBranchRange& range,
+                                 SearchHeuristic* heuristic,
+                                 const PlacementCostCalculator* calculator) {
     //
     //Note: for now, heuristic is ignored...
     //
@@ -106,7 +107,7 @@ void TaxonToPlace::findPlacement(PhyloTree& phylo_tree,
     #endif
     for (int i=0; i<target_branch_count; ++i) {
         TargetBranchRef target(&range, i);
-        if (heuristic->isPlacementWorthTrying(this, target)) {
+        if (heuristic->isPlacementWorthTrying(this, taxonIndex, target)) {
             PossiblePlacement* p = placementArray + i;
             p->setTargetBranch(&range, i);
             calculator->assessPlacementCost(phylo_tree, this, p);
