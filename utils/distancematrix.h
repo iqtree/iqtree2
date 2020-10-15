@@ -12,6 +12,7 @@
 #include <fstream>
 #include <iostream>                  //for std::istream
 #include <sstream>                   //for std::stringstream
+#include <vector>                    //for std::vector
 #include "io.h"                      //for safeGetTrimmedLineAsStream
 #include "progress.h"                //for progress_display
 
