@@ -80,6 +80,7 @@ const double TOL_LIKELIHOOD_PARAMOPT = 0.001; // BQM: newly introduced for Model
 //#define SCALING_THRESHOLD (1.0/SCALING_THRESHOLD_INVER)
 // 2^{-256}
 #define SCALING_THRESHOLD 8.636168555094444625386e-78
+#define SCALING_THRESHOLD_INVER (1/SCALING_THRESHOLD)
 //#define SCALING_THRESHOLD ldexp(1.0, -256)
 //#define LOG_SCALING_THRESHOLD log(SCALING_THRESHOLD)
 #define LOG_SCALING_THRESHOLD -177.4456782233459932741
@@ -686,6 +687,8 @@ public:
      */
     virtual int initializeAllPartialPars();
 
+    void ensureCentralPartialParsimonyIsAllocated();
+    
     /**
             initialize partial_pars vector of all PhyloNeighbors, allocating central_partial_pars
             @param node the current node
@@ -1026,7 +1029,6 @@ public:
 
 
     #if (EIGEN_PARTIAL_LIKELIHOOD)
-    template <const int nstates>
     void computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad,
                                        LikelihoodBufferSet& buffers);
 
@@ -1070,7 +1072,7 @@ public:
                                                   LikelihoodBufferSet& buffers);
 
     template <class VectorClass, const int VCSIZE, const int nstates>
-    void computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad
+    void computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
                                                     LikelihoodBufferSet& buffers);
     #endif
 
@@ -1098,14 +1100,17 @@ public:
 //    template<int NSTATES>
 //    inline double computeLikelihoodBranchFast(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
-    //template <const int nstates>
-//    double computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
+#if (EIGEN_PARTIAL_LIKELIHOOD)
+    double computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad,
+                                        LikelihoodBufferSet& buffers);
 
-//    double computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    double computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
-//    template <class VectorClass, const int VCSIZE, const int nstates>
-//    double computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
-
+    template <class VectorClass, const int VCSIZE, const int nstates>
+    double computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
+                                            LikelihoodBufferSet& buffers);
+#endif
+    
     double computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad,
                                          LikelihoodBufferSet& buffers);
     template<class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false>
@@ -1149,9 +1154,11 @@ public:
     typedef double (PhyloTree::*ComputeLikelihoodFromBufferType)(LikelihoodBufferSet&);
     ComputeLikelihoodFromBufferType computeLikelihoodFromBufferPointer;
 
-//    template <class VectorClass, const int VCSIZE, const int nstates>
-//    double computeLikelihoodFromBufferEigenSIMD();
-
+#if (EIGEN_PARTIAL_LIKELIHOOD)
+    template <class VectorClass, const int VCSIZE, const int nstates>
+    double computeLikelihoodFromBufferEigenSIMD(LikelihoodBufferSet& buffers);
+#endif
+    
     template <class VectorClass, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
     double computeLikelihoodFromBufferSIMD(LikelihoodBufferSet& buffers);
 
@@ -1419,20 +1426,22 @@ public:
             computing derivatives of likelihood function
      ****************************************************************************/
 
-    //template <const int nstates>
-//    void computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad,
-    //                                double &df, double &ddf,
-    //                                LikelihoodBufferSet& buffers);
 
-//    void computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad,
-    //                                         double &df, double &ddf,
-    //                                         LikelihoodBufferSet& buffers);
+#if (EIGEN_PARTIAL_LIKELIHOOD)
+    void computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad,
+                                    double &df, double &ddf,
+                                    LikelihoodBufferSet& buffers);
 
-//    template <class VectorClass, const int VCSIZE, const int nstates>
-//    void computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch,
-    //                                    PhyloNode *dad, double &df, double &ddf,
-    //                                    LikelihoodBufferSet& buffers);
+    void computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad,
+                                             double &df, double &ddf,
+                                             LikelihoodBufferSet& buffers);
 
+    template <class VectorClass, const int VCSIZE, const int nstates>
+    void computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch,
+                                        PhyloNode *dad, double &df, double &ddf,
+                                        LikelihoodBufferSet& buffers);
+#endif
+    
     void computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad,
                                      double *df, double *ddf, LikelihoodBufferSet&);
     template<class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false>
@@ -2559,7 +2568,8 @@ protected:
             The variable partial_pars in PhyloNeighbor will be assigned to a region inside this variable.
      */
     UINT*  central_partial_pars;
-    size_t pars_block_size; //in UINTs
+    size_t pars_block_size;          //in UINTs
+    size_t total_parsimony_mem_size; //in UINTs
 
     virtual void reorientPartialLh(PhyloNeighbor* dad_branch, PhyloNode *dad);
     

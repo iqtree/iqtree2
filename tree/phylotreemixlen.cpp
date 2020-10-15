@@ -778,7 +778,7 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
     if (!tree_buffers.theta_computed) {
 		// precompute theta for fast branch length optimization
 
-	    if (dad->isLeaf()) {
+	    if (dad->isLeaf() && 0 <= dad->id) {
 	    	// special treatment for TIP-INTERNAL NODE case
 #ifdef _OPENMP
 #pragma omp parallel for
@@ -825,9 +825,10 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
     for (size_t c = 0; c < ncat; c++) {
         double prop = site_rate->getProp(c);
         for (size_t i = 0; i < nstates; i++) {
-            double cof = eval[cur_mixture*nstates+i]*site_rate->getRate(c);
-            // length for heterotachy model
-            double val = exp(cof*dad_branch->getLength(cur_mixture)) * prop * model->getMixtureWeight(cur_mixture);
+            double cof   = eval[cur_mixture*nstates+i]*site_rate->getRate(c);
+                           // length for heterotachy model
+            double val   = exp(cof*dad_branch->getLength(cur_mixture))
+                           * prop * model->getMixtureWeight(cur_mixture);
             double val1_ = cof*val;
             val0[(c)*nstates+i] = val;
             val1[(c)*nstates+i] = val1_;
@@ -841,11 +842,11 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
 #pragma omp parallel for reduction(+:my_df,my_ddf,prob_const,df_const,ddf_const)
 #endif
     for (size_t ptn = 0; ptn < nptn; ptn++) {
-        double lh_ptn = ptn_invar[ptn], df_ptn = 0.0, ddf_ptn = 0.0;
-        double *theta = tree_buffers.theta_all + ptn*block + cur_mixture*statecat;
+        double  lh_ptn = ptn_invar[ptn], df_ptn = 0.0, ddf_ptn = 0.0;
+        double* theta  = tree_buffers.theta_all + ptn*block + cur_mixture*statecat;
         for (size_t i = 0; i < statecat; i++) {
-            lh_ptn += val0[i] * theta[i];
-            df_ptn += val1[i] * theta[i];
+            lh_ptn  += val0[i] * theta[i];
+            df_ptn  += val1[i] * theta[i];
             ddf_ptn += val2[i] * theta[i];
         }
         lh_ptn = fabs(lh_ptn);
@@ -855,16 +856,16 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
             double freq = ptn_freq[ptn];
             double tmp1 = df_frac * freq;
             double tmp2 = ddf_frac * freq;
-            my_df += tmp1;
+            my_df  += tmp1;
             my_ddf += tmp2 - tmp1 * df_frac;
         } else {
             // ascertainment bias correction
             prob_const += lh_ptn;
-            df_const += df_ptn;
-            ddf_const += ddf_ptn;
+            df_const   += df_ptn;
+            ddf_const  += ddf_ptn;
         }
     }
-    df = my_df;
+    df  = my_df;
     ddf = my_ddf;
     if (std::isnan(df) || std::isinf(df)) {
         df = 0.0;
@@ -884,7 +885,7 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
     delete [] val1;
     delete [] val0;
 
-    df = -df;
+    df  = -df;
     ddf = -ddf;
 }
 

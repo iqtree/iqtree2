@@ -879,7 +879,7 @@ int PhyloTree::computeParsimonyBranchSankoff(PhyloNeighbor *dad_branch,
     PhyloNode*     node        = dad_branch->getNode();
     PhyloNeighbor* node_branch = node->findNeighbor(dad);
     assert(node_branch);
-    
+        
     if (!central_partial_pars) {
         initializeAllPartialPars();
     }
@@ -1252,10 +1252,15 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix,
         insertNode2Branch(added_node, target_node, target_dad);
 
         // assign partial_pars storage
-        target_dad->findNeighbor(added_node)->clearComputedFlags();
-        target_dad->findNeighbor(added_node)->partial_pars = central_partial_pars + ((index++) * pars_block_size);
-        target_node->findNeighbor(added_node)->clearComputedFlags();
-        target_node->findNeighbor(added_node)->partial_pars = central_partial_pars + ((index++) * pars_block_size);
+        PhyloNeighbor* neiDown = target_dad->findNeighbor(added_node);
+        neiDown->clearComputedFlags();
+        neiDown->partial_pars = central_partial_pars + ((index++) * pars_block_size);
+        
+        PhyloNeighbor* neiUp = target_node->findNeighbor(added_node);
+        neiUp->clearComputedFlags();
+        neiUp->partial_pars = central_partial_pars + ((index++) * pars_block_size);
+        
+        ASSERT(neiUp->partial_pars < tip_partial_pars);
 
         target_dad->clearReversePartialParsimony(added_node);
         target_node->clearReversePartialParsimony(added_node);

@@ -85,15 +85,19 @@ void PhyloTree::init() {
     lh_block_size                   = 0; //will be set, later, by determineBlockSizes()
     nni_partial_lh = NULL;
     tip_partial_lh = NULL;
-    tip_partial_pars = NULL;
     tip_partial_lh_computed = 0;
     ptn_freq_computed = false;
     central_scale_num               = nullptr;
     scale_block_size                = 0;
     central_scale_num_size_in_bytes = 0; //will be set, later, by determineBlockSizes()
     nni_scale_num                   = nullptr;
-    central_partial_pars            = nullptr;
-    pars_block_size                 = 0; //will be set, later, by determineBlockSizes()
+    central_partial_pars            = nullptr; //points to per-node partial parsimony vectors
+                                               //followed by tip partial parsimony vectors.
+    total_parsimony_mem_size        = 0;       //will be set, when central_partial_pars is allocated
+    pars_block_size                 = 0;       //will be set, later, by determineBlockSizes()
+    tip_partial_pars                = nullptr; //points to the last part of central_partial_pars
+                                               //(and is set when central_partial_pars is).
+    
     cost_matrix = NULL;
     model_factory = NULL;
     discard_saturated_site = true;
@@ -992,34 +996,49 @@ int PhyloTree::initializeAllPartialPars() {
     return index;
 }
 
+void PhyloTree::ensureCentralPartialParsimonyIsAllocated() {
+    if (central_partial_pars != nullptr) {
+        return;
+    }
+    determineBlockSizes();
+    uint64_t tip_partial_pars_size = get_safe_upper_limit_float(aln->num_states * (aln->STATE_UNKNOWN+1));
+    size_t   vector_count          = aln->getNSeq() * 4;
+    total_parsimony_mem_size       = vector_count * pars_block_size + tip_partial_pars_size;
+
+    LOG_LINE(VB_MAX, "Allocating " << total_parsimony_mem_size * sizeof(UINT)
+             << " bytes for " << vector_count << " partial parsimony vectors "
+             << " of " << (pars_block_size * sizeof(UINT)) << " bytes each, and "
+             << (tip_partial_pars_size * sizeof(UINT)) << " additional bytes for tip vectors");
+    
+    try {
+        central_partial_pars = aligned_alloc<UINT>(total_parsimony_mem_size);
+    } catch (std::bad_alloc &ba) {
+        outError("Not enough memory for partial parsimony vectors (bad_alloc)");
+    }
+    if (!central_partial_pars) {
+        outError("Not enough memory for partial parsimony vectors");
+    }
+    tip_partial_pars = central_partial_pars + total_parsimony_mem_size - tip_partial_pars_size;
+    
+    LOG_LINE(VB_MAX, "central_partial_pars is " << pointer_to_hex(central_partial_pars)
+             << ", tip_partial_pars is " << pointer_to_hex(tip_partial_pars)
+             << ", end of allocation is " << pointer_to_hex(tip_partial_pars+tip_partial_pars_size));
+}
+
 void PhyloTree::initializeAllPartialPars(int &index, PhyloNode *node, PhyloNode *dad) {
     if (!node) {
-        node = getRoot();
-        // allocate the big central partial pars memory
-        if (central_partial_pars == nullptr) {
-            uint64_t tip_partial_pars_size = get_safe_upper_limit_float(aln->num_states * (aln->STATE_UNKNOWN+1));
-            size_t memsize = (aln->getNSeq()) * 4 * pars_block_size + tip_partial_pars_size;
-            if (verbose_mode >= VB_MAX) {
-                cout << "Allocating " << memsize * sizeof(UINT)
-                    << " bytes for partial parsimony vectors" << endl;
-            }
-            central_partial_pars = aligned_alloc<UINT>(memsize);
-            if (!central_partial_pars) {
-                outError("Not enough memory for partial parsimony vectors");
-            }
-            tip_partial_pars = central_partial_pars + (aln->getNSeq()) * 4 * pars_block_size;
-        }
+        ensureCentralPartialParsimonyIsAllocated();
+        node  = getRoot();
         index = 0;
     }
     if (dad) {
-        // make memory alignment 16
-        // assign a region in central_partial_lh to both Neihgbors (dad->node, and node->dad)
-        PhyloNeighbor *nei = node->findNeighbor(dad);
-        nei->partial_pars = central_partial_pars + (index * pars_block_size);
-        nei = dad->findNeighbor(node);
-        nei->partial_pars = central_partial_pars + ((index + 1) * pars_block_size);
-        index += 2;
-        //assert(index < nodeNum * 2 - 1);
+        // assign blocks in central_partial_lh to both Neighbors (dad->node, and node->dad)
+        PhyloNeighbor* backNei = node->findNeighbor(dad);
+        backNei->partial_pars  = central_partial_pars + (index * pars_block_size);
+        PhyloNeighbor* nei     = dad->findNeighbor(node);
+        nei->partial_pars      = central_partial_pars + ((index + 1) * pars_block_size);
+        index                 += 2;
+        ASSERT( nei->partial_pars < tip_partial_pars );
     }
     FOR_EACH_ADJACENT_PHYLO_NODE(node, dad, it, child) {
         initializeAllPartialPars(index, child, node);
@@ -1323,9 +1342,17 @@ void PhyloTree::determineBlockSizes() {
     #endif
     
     // +num_states for ascertainment bias correction
-    size_t nptn = get_safe_upper_limit(aln->size()) + max(get_safe_upper_limit(aln->num_states), get_safe_upper_limit(model_factory->unobserved_ptns.size()));
-    scale_block_size = nptn * site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
-    lh_block_size = scale_block_size * model->num_states;
+    size_t states     = aln->num_states;
+    size_t unobserved = (model_factory == nullptr)
+                        ? 0 : model_factory->unobserved_ptns.size();
+    size_t nptn       = get_safe_upper_limit(aln->size())
+                        + get_safe_upper_limit(max(states,unobserved));
+    size_t mixtures   = (model_factory == nullptr || model_factory->fused_mix_rate || model==nullptr)
+                        ? 1 : model->getNMixtures();
+    size_t rates      = (site_rate!=nullptr) ? site_rate->getNRate() : 1;
+    scale_block_size  = nptn * rates * mixtures;
+    size_t mod_states = (model==nullptr) ? aln->num_states : model->num_states;
+    lh_block_size     = scale_block_size * mod_states;
 }
 
 size_t PhyloTree::getLhBlockSize() {
@@ -1403,24 +1430,7 @@ void PhyloTree::allocateCentralBlocks(size_t extra_parsimony_block_count,
         LOG_LINE ( VB_DEBUG, "Address range for scale blocks is " << pointer_to_hex(central_scale_num)
                   << " to " << pointer_to_hex(central_scale_num + mem_size) );
     }
-
-    if (!central_partial_pars) {
-        uint64_t tip_partial_pars_size = get_safe_upper_limit_float(aln->num_states * (aln->STATE_UNKNOWN+1));
-        uint64_t pars_block_count = (leafNum - 1) * 4 + extra_parsimony_block_count ;
-        uint64_t mem_size = pars_block_count * pars_block_size + tip_partial_pars_size;
-        LOG_LINE ( VB_MED, "Allocated " << (mem_size * sizeof(UINT)) << " bytes "
-                  << " for " << pars_block_count << " partial parsimony blocks, each "
-                  << " of " << (pars_block_size * sizeof(UINT)) << " bytes, and "
-                  << (tip_partial_pars_size * sizeof(UINT)) << " additional bytes for tip vectors");
-        try {
-            central_partial_pars = aligned_alloc<UINT>(mem_size);
-        } catch (std::bad_alloc &ba) {
-            outError("Not enough memory for partial parsimony vectors (bad_alloc)");
-        }
-        if (!central_partial_pars)
-            outError("Not enough memory for partial parsimony vectors");
-        tip_partial_pars = central_partial_pars + (pars_block_count * pars_block_size);
-    }
+    ensureCentralPartialParsimonyIsAllocated();
 }
     
 void PhyloTree::initializeAllPartialLh(int &index_pars, int &index_lh,

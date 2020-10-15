@@ -118,14 +118,7 @@ void TinaTree::initializeAllPartialLh(int &index, int &indexlh,
     if (!node) {
         node = getRoot();
         // allocate the big central partial likelihoods memory
-
-        if (!central_partial_pars) {
-            if (verbose_mode >= VB_MAX)
-                cout << "Allocating " << (leafNum - 1)*4 * pars_block_size * sizeof (UINT) << " bytes for partial parsimony vectors" << endl;
-            central_partial_pars = new UINT[(leafNum-1)*4*pars_block_size];
-            if (!central_partial_pars)
-                outError("Not enough memory for partial parsimony vectors");
-        }
+        ensureCentralPartialParsimonyIsAllocated();
         index = 0;
     }
     if (dad) {
