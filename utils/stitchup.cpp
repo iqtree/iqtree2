@@ -375,12 +375,13 @@ template <class T=double> struct StitchupGraph {
     }
 };
 
-template < class T=double> class StitchupMatrix: public Matrix<T> {
+template < class T=double> class StitchupMatrix: public SquareMatrix<T> {
 public:
-    typedef Matrix<T> super;
+    typedef SquareMatrix<T> super;
     using super::rows;
     using super::setSize;
-    using super::n;
+    using super::row_count;
+    using super::column_count;
     bool silent;
     StitchupMatrix(): isOutputToBeZipped(false) {
     }
@@ -407,9 +408,9 @@ public:
         #ifdef _OPENMP
         #pragma omp parallel for
         #endif
-        for (size_t row=0; row<n; ++row) {
-            const double* sourceStart = matrix + row * n;
-            const double* sourceStop  = sourceStart + n;
+        for (size_t row=0; row<row_count; ++row) {
+            const double* sourceStart = matrix + row * column_count;
+            const double* sourceStop  = sourceStart + column_count;
             auto    dest        = rows[row];
             for (const double* source=sourceStart; source<sourceStop
                  ; ++source, ++dest ) {
@@ -428,12 +429,12 @@ public:
         silent = true;
     }
     virtual bool constructTree() {
-        if (n<3) {
+        if (row_count<3) {
             return false;
         }
         std::vector<LengthSortedStitch<T>> stitches;
-        stitches.reserve(n * n);
-        for (size_t row=0; row<n; ++row) {
+        stitches.reserve(row_count * row_count);
+        for (size_t row=0; row<row_count; ++row) {
             const T* rowData = rows[row];
             for (size_t col=0; col<row; ++col) {
                 stitches.emplace_back(row, col, rowData[col]);
@@ -443,9 +444,10 @@ public:
             heap ( stitches.data(), stitches.size()
                  , silent ? "" : "Constructing min-heap of possible edges" );
         size_t iterations = 0;
-        progress_display progress(0.5*n*(n+1), silent ? "" : "Assembling Stitch-up Graph");
+        size_t row_count_triangle = 0.5*row_count*(row_count+1);
+        progress_display progress(row_count_triangle, silent ? "" : "Assembling Stitch-up Graph");
         std::cout.precision(12);
-        for (size_t join = 0; join + 1 < n; ++join) {
+        for (size_t join = 0; join + 1 < row_count; ++join) {
             LengthSortedStitch<T> shortest;
             int source;
             int dest;

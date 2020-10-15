@@ -39,28 +39,27 @@ template <class P> inline P* matrixAlign(P* p) {
         return p;
     }
 }
+
 template <class T=double> class Matrix
 {
-    //Note 1: This is a separate class so that it can be
-    //        used for square variance (V) and rectangular
-    //        sorted distance (S) and index (I) matrices,
-    //        not just square distance (D) matrices.
-    //        Lines that access the upper-right triangle
-    //        of the matrix are tagged with U-R.
-    //Note 2: I resorted to declaring the data, rows, and
-    //        rowTotals members public, because of problems
-    //        I had accessing them from BoundingMatrix.
-    //Note 3: Perhaps there should be separate SquareMatrix
-    //        and RectangularMatrix classes?
+protected:
+    size_t row_count;
+    size_t column_count;
+    size_t shrink_r; //if row_count reaches *this*, pack the array
 public:
-    size_t n;
-    size_t shrink_n; //if n reaches *this*, pack the array
     T*     data;
     T**    rows;
-    T*     rowTotals; //The U vector
     
-    size_t getSize() {
-        return n;
+    Matrix() : row_count(0), column_count(0), shrink_r(0)
+             , data(nullptr), rows(nullptr) {
+    }
+    virtual void clear() {
+        delete [] data;
+        delete [] rows;
+        data         = nullptr;
+        rows         = nullptr;
+        row_count    = 0;
+        column_count = 0;
     }
     const T*& getRow(size_t r) const {
         return rows[r];
@@ -68,35 +67,39 @@ public:
     T*& getRow(size_t r) {
         return rows[r];
     }
+    void appendColumnToVector(size_t c, std::vector<T>& dest) {
+        for (size_t r=0; r<row_count; ++r) {
+            dest.emplace_back( rows[r][c] );
+        }
+    }
     const T& cell (size_t r, size_t c) const {
         return rows[r][c];
     }
     T& cell (size_t r, size_t c) {
         return rows[r][c];
     }
-    virtual void setSize(size_t rank) {
+    void setDimensions(size_t r, size_t c) {
         clear();
-        if (0==rank) {
+        if (0==c || 0==r) {
             return;
         }
         try {
-            size_t w    = widthNeededFor(rank);
-            n           = rank;
-            shrink_n    = (rank+rank)/3;
-            if (shrink_n<100) {
-                shrink_n=0;
+            size_t w     = widthNeededFor(c);
+            row_count    = r;
+            column_count = c;
+            shrink_r     = (r+r)/3;
+            if (shrink_r<100) {
+                shrink_r=0;
             }
-            data        = new T[n*w + MATRIX_ALIGNMENT/sizeof(T)];
-            rows        = new T*[n];
-            rowTotals   = new T[n];
+            data        = new T[ r * w + MATRIX_ALIGNMENT/sizeof(T)];
+            rows        = new T*[r];
             T *rowStart = matrixAlign(data);
-            for (size_t r=0; r<n; ++r) {
+            for (size_t r=0; r<row_count; ++r) {
                 rows[r]      = rowStart;
                 rowStart    += w;
-                rowTotals[r] = 0.0;
             }
             #pragma omp parallel for
-            for (size_t r=0; r<n; ++r) {
+            for (size_t r=0; r<row_count; ++r) {
                 zeroRow(r);
             }
         }
@@ -105,6 +108,22 @@ public:
             throw;
         }
     }
+    void assign(const Matrix<T> &rhs ) {
+        if (this==&rhs) {
+            return;
+        }
+        setDimensions(rhs.row_count, rhs.column_count);
+        #pragma omp parallel for
+        for (size_t r=0; r<row_count; ++r) {
+            T *             destRow      = rows[r];
+            T const *       sourceRow    = rhs.rows[r];
+            T const * const endSourceRow = sourceRow + column_count;
+            for (; sourceRow<endSourceRow; ++destRow, ++sourceRow) {
+                *destRow = *sourceRow;
+            }
+        }
+    }
+    
     size_t widthNeededFor(size_t width) {
         //
         //returns width, rounded up so that each row will
@@ -122,45 +141,115 @@ public:
     }
     void zeroRow(size_t r) {
         T* rowStart = rows[r];
-        T* rowStop  = rowStart + n;
+        T* rowStop  = rowStart + column_count;
         for (T* rowZap=rowStart; rowZap<rowStop; ++rowZap) {
             *rowZap = 0;
         }
     }
-    void assign(const Matrix& rhs) {
+    virtual void removeColumn(size_t c) {
+        if ( c + 1 < column_count) {
+            #ifdef _OPENMP
+            #pragma omp parallel for
+            #endif
+            for (size_t r=0; r<row_count; ++r) {
+                T* rowData = rows[r];
+                rowData[c] = rowData[column_count-1]; //U-R
+            }
+        }
+        --column_count;
+    }
+    virtual void removeRow(size_t r) {
+        --row_count;
+        //was rows[rowNum] = rows[n];... but let's copy
+        //instead.  On average it seems (very slightly) faster.
+        T*       destRow   = rows[r];
+        const T* sourceRow = rows[row_count];
+        rows[row_count] = nullptr;
+        if (destRow!=sourceRow) {
+            #pragma omp parallel for
+            for (size_t c=0; c<column_count; ++c) {
+                destRow[c] = sourceRow[c];
+            }
+        }
+        if ( row_count == shrink_r && 0 < shrink_r) {
+            //Move the data in the array closer to the front.
+            //This also helps (but: only very slightly. 5%ish?).
+            size_t   w = widthNeededFor(column_count);
+            T* destRow = data;
+            for (size_t r=1; r<row_count; ++r) {
+                destRow += w;
+                const T* sourceRow = rows[r];
+                #pragma omp parallel for
+                for (size_t c=0; c<column_count; ++c) {
+                    destRow[c] = sourceRow[c];
+                }
+                rows[r] = destRow;
+            }
+            shrink_r    = (row_count+row_count)/3;
+            if (shrink_r<100) shrink_r=0;
+        }
+    }
+};
+
+template <class T=double> class SquareMatrix: public Matrix<T>
+{
+    //Note 1: This is a separate class so that it can be
+    //        used for square variance (V) and rectangular
+    //        sorted distance (S) and index (I) matrices,
+    //        not just square distance (D) matrices.
+    //        Lines that access the upper-right triangle
+    //        of the matrix are tagged with U-R.
+    //Note 2: I resorted to declaring the data, rows, and
+    //        rowTotals members public, because of problems
+    //        I had accessing them from BoundingMatrix.
+    //Note 3: Perhaps there should be separate SquareMatrix
+    //        and RectangularMatrix classes?
+public:
+    typedef Matrix<T> super;
+public:
+    using super::rows;
+    using super::removeColumn;
+    using super::removeRow;
+    using super::row_count;
+    using super::column_count;
+    T*     rowTotals; //The U vector
+    
+    size_t getSize() {
+        return row_count;
+    }
+    virtual void setSize(size_t rank) {
+        super::setDimensions(rank,rank);
+        delete [] rowTotals;
+        rowTotals = new T[rank];
+        for (int r=0; r<rank; ++r) {
+            rowTotals[r] = 0.0;
+        }
+    }
+    void assign(const SquareMatrix& rhs) {
         if (this==&rhs) {
             return;
         }
-        setSize(rhs.n);
-        #pragma omp parallel for
-        for (size_t r=0; r<n; ++r) {
-            T *             destRow = rows[r];
-            T const *       sourceRow = rhs.rows[r];
-            T const * const endSourceRow = sourceRow + n;
-            for (; sourceRow<endSourceRow; ++destRow, ++sourceRow) {
-                *destRow = *sourceRow;
-            }
+        super::assign(rhs);
+        delete [] rowTotals;
+        rowTotals = new T[row_count];
+        for (size_t r=0; r<row_count; ++r) {
             rowTotals[r] = rhs.rowTotals[r];
         }
     }
-    Matrix(): n(0), shrink_n(0), data(nullptr), rows(nullptr), rowTotals(nullptr) {
+    SquareMatrix(): super(), rowTotals(nullptr) {
     }
-    Matrix(const Matrix& rhs): data(nullptr), rows(nullptr), rowTotals(nullptr) {
+    SquareMatrix(const SquareMatrix& rhs): rowTotals(nullptr) {
         assign(rhs);
     }
-    virtual ~Matrix() {
+    virtual ~SquareMatrix() {
         clear();
     }
-    void clear() {
-        n = 0;
-        delete [] data;
-        delete [] rows;
+    virtual void clear() {
+        super::clear();
         delete [] rowTotals;
-        data = nullptr;
-        rows = nullptr;
         rowTotals = nullptr;
     }
-    Matrix& operator=(const Matrix& rhs) {
+    SquareMatrix& operator=(const SquareMatrix& rhs) {
         assign(rhs);
         return *this;
     }
@@ -170,14 +259,16 @@ public:
         //(after, say, every 200 iterations of
         //neighbour-joining) to deal with accumulated
         //rounding error.  It might be.
+        #ifdef _OPENMP
         #pragma omp parallel for
-        for (size_t r=0; r<n; ++r) {
+        #endif
+        for (size_t r=0; r<row_count; ++r) {
             T total(0.0);
             const T* rowData = rows[r];
             for (size_t c=0; c<r; ++c) {
                 total += rowData[c];
             }
-            for (size_t c=r+1; c<n; ++c) {
+            for (size_t c=r+1; c<column_count; ++c) {
                 total += rowData[c]; //U-R
             }
             rowTotals[r] = total;
@@ -193,7 +284,7 @@ public:
         for (size_t i=a+1; i<b; ++i) {
             replacementRowTotal += rows[a][i];
         }
-        for (size_t i=b+1; i<n; ++i) {
+        for (size_t i=b+1; i<column_count; ++i) {
             replacementRowTotal += rows[a][i];
         }
         rowTotals[a] = replacementRowTotal;
@@ -202,52 +293,15 @@ public:
         //Remove row (and matching column) from a
         //square matrix, by swapping the last row
         //(and column) into its place.
-        #pragma omp parallel for
-        for (size_t r=0; r<n; ++r) {
-            if (r!=rowNum) {
-              T* rowData = rows[r];
-              rowData[rowNum] = rowData[n-1]; //U-R
-            }
-        }
-        --n;
-        rowTotals[rowNum] = rowTotals[n];
-        //was rows[rowNum] = rows[n];... but let's copy
-        //instead.  On average it seems (very slightly) faster.
-        T*       destRow   = rows[rowNum];
-        const T* sourceRow = rows[n];
-        rows[n] = nullptr;
-        if (destRow!=sourceRow) {
-            #pragma omp parallel for
-            for (size_t c=0; c<n; ++c) {
-                destRow[c] = sourceRow[c];
-            }
-        }
-        if ( n == shrink_n && 0 < shrink_n) {
-            //Move the data in the array closer to the front.
-            //This also helps (but: only very slightly. 5%ish?).
-            size_t   w = widthNeededFor(n);
-            T* destRow = data;
-            for (size_t r=1; r<n; ++r) {
-                destRow += w;
-                const T* sourceRow = rows[r];
-                #pragma omp parallel for
-                for (size_t c=0; c<n; ++c) {
-                    destRow[c] = sourceRow[c];
-                }
-                rows[r] = destRow;
-            }
-            shrink_n    = (n+n)/3;
-            if (shrink_n<100) shrink_n=0;
-        }
+        removeColumn(rowNum);
+        removeRowOnly(rowNum);
     }
     void removeRowOnly(size_t rowNum) {
         //Remove row from a rectangular matrix.
         //Don't touch the columns in the row
         //(Used for the S and I matrices in BIONJ).
-        rowTotals[rowNum] = rowTotals[n-1];
-        rows[rowNum]      = rows[n-1];
-        rows[n-1]         = nullptr;
-        --n;
+        removeRow(rowNum);
+        rowTotals[rowNum] = rowTotals[row_count];
     }
     virtual void addCluster(const std::string &name) {
     }
