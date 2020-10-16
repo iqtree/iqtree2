@@ -15,10 +15,10 @@ PlacementRun::PlacementRun(PhyloTree& tree, const IntVector& taxaIdsToAdd)
     , block_allocator(nullptr)
     , costFunction(Placement::getCostFunction())
     , heuristic(SearchHeuristic::getSearchHeuristic())
-    , taxon_placement_optimizer(TaxonPlacementOptimizer::getTaxonPlacementOptimizer())
-    , batch_placement_optimizer(BatchPlacementOptimizer::getBatchPlacementOptimizer())
-    , global_placement_optimizer(GlobalPlacementOptimizer::getGlobalPlacementOptimizer())
-    , calculator(PlacementCostCalculator::getCostCalculator(costFunction))
+    , taxon_placement_optimizer(TaxonPlacementOptimizer::getNewTaxonPlacementOptimizer())
+    , batch_placement_optimizer(BatchPlacementOptimizer::getNewBatchPlacementOptimizer())
+    , global_placement_optimizer(GlobalPlacementOptimizer::getNewGlobalPlacementOptimizer())
+    , calculator(PlacementCostCalculator::getNewCostCalculator(costFunction))
     , taxa_inserted_this_batch(0), taxa_inserted_in_total(0), taxa_inserted_nearby(0) {
     if (calculator->usesLikelihood()) {
         phylo_tree.prepareToComputeDistances(); //Set up state look-up vectors

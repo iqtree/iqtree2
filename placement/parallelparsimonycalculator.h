@@ -21,6 +21,7 @@ private:
     const char* task_in_progress;
 public:
     ParallelParsimonyCalculator(PhyloTree& phylo_tree);
+
     /**
      Indicate a PhyloNeighbor whose partial parsimony is to be calculated
      (but don't requiest its calculation yet - see the calculate() method).
@@ -38,6 +39,7 @@ public:
         (if progress bars are being displayed)
      */
     int  computeParsimonyBranch(PhyloNeighbor* dad_branch, PhyloNode* dad, const char* taskDescription="");
+
     /**
      Calculate the partial parsimonies of the PhyloNeighbor instances that have
      been passed to computePartialParsimony(), since the last time calculate() was called

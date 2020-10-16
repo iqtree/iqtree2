@@ -36,9 +36,11 @@ public:
     virtual bool usesLikelihood();
 
     /**
-     @return the placement cost calculator to use
+     @param  the placement const function 
+     @return the placement cost calculator to use, allocated via new
+             (it is up to the caller to delete it)
      */
-    static PlacementCostCalculator* getCostCalculator(Placement::CostFunction fun);
+    static PlacementCostCalculator* getNewCostCalculator(Placement::CostFunction fun);
 };
 
 class ParsimonyCostCalculator : public PlacementCostCalculator {

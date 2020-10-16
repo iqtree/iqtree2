@@ -25,12 +25,12 @@ public:
     virtual ~BlockAllocator();
     
     /** request a partial parsimony block
-     @params[out] pointer to the block (to be set to the newly allocated block)*/
+     @param[out] partial_pars - pointer to the block (to be set to the newly allocated block)*/
     void         allocateParsimonyBlock(UINT*& partial_pars);
 
     /** allocate partial parsimony (and perhaps likelihood and scalenum) blocks
      to a PhyloNeighbor instance (in the tree).
-     @params[out] pointer to the PhyloNeighbor instance*/
+     @param[out] nei - pointer to the PhyloNeighbor instance*/
     virtual void allocateMemoryFor(PhyloNeighbor* nei);
 
     /** returns a reference to the PhyloTree,
@@ -44,6 +44,10 @@ public:
      @return the number of assigned parsimony blocks*/
     int          getParsimonyBlockCount() const;
     
+    /** hands over computed partial parsimony and/or likelihood
+        vector block from one PhyloNeighbor instance to another.
+        @param from_nei - the donor
+        @param to_nei - the recipient */
     virtual void handOverComputedState(PhyloNeighbor* from_nei, PhyloNeighbor* to_nei);
     
     /** returns the number of partial parsimony blocks that
@@ -51,10 +55,16 @@ public:
      @return the number of assigned parsimony blocks*/
     virtual int  getLikelihoodBlockCount() const;
     
+    /** may initialize pointers to partial likelihood and scale vectors
+        (if this block allocator handles likelihood resources).
+        @param partial_lh address of a partial likelihood vector pointer
+                (only to be initialized if the pointer is null)
+        @param scale_num address of a scale vector pointer
+                (only to be initialized if *partial_lh is null)*/
     virtual void allocateLikelihoodBlocks(double*& partial_lh, UBYTE*& scale_num);
 
     /** indicates if this block allocator is keeping track of
-     likelihood and scalenum vectors
+        likelihood and scalenum vectors
          @return true if it is, false if not*/
     virtual bool usesLikelihood();
 
@@ -88,6 +98,11 @@ public:
     virtual void allocateLikelihoodBlocks(double*& partial_lh, UBYTE*& scale_num);
     virtual void allocateMemoryFor(PhyloNeighbor* nei);
     virtual void handOverComputedState(PhyloNeighbor* from_nei, PhyloNeighbor* to_nei);
+
+    /** indicates if this block allocator is keeping track of
+        likelihood and scalenum vectors
+         @return true if it is (for LikelihoodBlocAllocator, it always is), 
+         false if not*/
     virtual bool usesLikelihood();
     
     /** Searches a subtree (on the side of second opposite first)
@@ -102,6 +117,7 @@ public:
      */
     void findMissingInputs(PhyloNode* first, PhyloNode* second,
                            PhyloNeighborVec& list);
+
     /** Searches a subtree (on the side of second opposite first)
         for PhyloNeighbor instances that do have
         likelihood vectors allocated, that will *not* need them,

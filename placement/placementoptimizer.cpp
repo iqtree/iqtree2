@@ -33,8 +33,8 @@ GlobalPlacementOptimizer::~GlobalPlacementOptimizer() = default;
 void GlobalPlacementOptimizer::cleanUpAfterPlacement(PhyloTree* tree) {
 }
 
-TaxonPlacementOptimizer* TaxonPlacementOptimizer::getTaxonPlacementOptimizer() {
-    auto localCleanup = Placement::getLocalCleanupAlgorithm();
+TaxonPlacementOptimizer* TaxonPlacementOptimizer::getNewTaxonPlacementOptimizer() {
+    auto localCleanup = Placement::getLocalOptimizationAlgorithm();
     switch (localCleanup) {
         default:
             break;
@@ -42,8 +42,8 @@ TaxonPlacementOptimizer* TaxonPlacementOptimizer::getTaxonPlacementOptimizer() {
     return new TaxonPlacementOptimizer();
 }
 
-BatchPlacementOptimizer* BatchPlacementOptimizer::getBatchPlacementOptimizer() {
-    auto batchCleanup = Placement::getBatchCleanupAlgorithm();
+BatchPlacementOptimizer* BatchPlacementOptimizer::getNewBatchPlacementOptimizer() {
+    auto batchCleanup = Placement::getBatchOptimizationAlgorithm();
     switch (batchCleanup) {
         default:
             break;
@@ -51,8 +51,8 @@ BatchPlacementOptimizer* BatchPlacementOptimizer::getBatchPlacementOptimizer() {
     return new BatchPlacementOptimizer();
 }
 
-GlobalPlacementOptimizer* GlobalPlacementOptimizer::getGlobalPlacementOptimizer() {
-    auto globalCleanup = Placement::getGlobalCleanupAlgorithm();
+GlobalPlacementOptimizer* GlobalPlacementOptimizer::getNewGlobalPlacementOptimizer() {
+    auto globalCleanup = Placement::getGlobalOptimizationAlgorithm();
     switch (globalCleanup) {
         default:
             break;

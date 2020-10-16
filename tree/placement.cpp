@@ -139,7 +139,7 @@ double PhyloTree::addTaxonML(PhyloNode* added_taxon,     PhyloNode *added_node,
 
 void PhyloTree::removeSampleTaxaIfRequested() {
     size_t nseq = aln->getNSeq();
-    size_t countOfTaxaToRemove = Placement::getNumberOfTaxaToRemove(nseq);
+    size_t countOfTaxaToRemove = Placement::getNumberOfTaxaToRemoveAndReinsert(nseq);
     if (0<countOfTaxaToRemove) {
         map<string, Node*> mapNameToNode;
         getMapOfTaxonNameToNode(nullptr, nullptr, mapNameToNode);

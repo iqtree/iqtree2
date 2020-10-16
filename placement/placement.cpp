@@ -19,7 +19,7 @@ std::string getIncrementalParameter(const char letter, const char* defaultValue)
     int braceLevel = 0;
     int i;
     for (i=0; i<inc.length(); ++i) {
-        if (inc[i]==letter && braceLevel==0) {
+        if (inc[i]==letter && braceLevel==0 && (i==0 || inc[i-1]==',') ) {
             break;
         } else if (inc[i]=='{') {
             ++braceLevel;
@@ -63,7 +63,7 @@ size_t getIncrementalParameter(const char letter, size_t defaultValue) {
     }
     return static_cast<size_t>(i);
 }
-size_t getNumberOfTaxaToRemove(size_t countOfTaxa) {
+size_t getNumberOfTaxaToRemoveAndReinsert(size_t countOfTaxa) {
     if (countOfTaxa<4) {
         return 0;
     }
@@ -101,14 +101,17 @@ CostFunction getCostFunction() {
     }
     return MAXIMUM_PARSIMONY;
 }
-LocalCleanup getLocalCleanupAlgorithm() {
+LocalOptimization getLocalOptimizationAlgorithm() {
     auto f = getIncrementalParameter('L', "");
-    return NO_LOCAL_CLEANUP;
+    return NO_LOCAL_OPTIMIZATION;
 }
 size_t getTaxaPerBatch(size_t totalTaxa) {
     size_t taxaPerBatch = getIncrementalParameter('B', 1);
     if (taxaPerBatch==0) {
         taxaPerBatch = totalTaxa;
+        if (taxaPerBatch == 0) {
+            taxaPerBatch = 1;
+        }
     }
     return taxaPerBatch;
 }
@@ -133,16 +136,19 @@ size_t getInsertsPerBatch(size_t totalTaxa, size_t taxaPerBatch) {
     }
     if (numberToInsert < 1 ) {
         numberToInsert = taxaPerBatch;
+        if (numberToInsert < 1) {
+            numberToInsert = 1;
+        }
     }
     return numberToInsert;
 }
-BatchCleanup getBatchCleanupAlgorithm() {
+BatchOptimization getBatchOptimizationAlgorithm() {
     auto f = getIncrementalParameter('A', "");
-    return NO_BATCH_CLEANUP;
+    return NO_BATCH_OPTIMIZATION;
 }
-GlobalCleanup getGlobalCleanupAlgorithm() {
+GlobalOptimization getGlobalOptimizationAlgorithm() {
     auto f = getIncrementalParameter('T', "");
-    return NO_GLOBAL_CLEANUP;
+    return NO_GLOBAL_OPTIMIZATION;
 }
 
 

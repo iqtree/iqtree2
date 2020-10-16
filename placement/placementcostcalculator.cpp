@@ -178,7 +178,7 @@ void LikelihoodCostCalculator::assessPlacementCost(PhyloTree& tree, const TaxonT
             << ", len "    << placement->lenToNewTaxon);
 }
 
-PlacementCostCalculator* PlacementCostCalculator::getCostCalculator(Placement::CostFunction fun) {
+PlacementCostCalculator* PlacementCostCalculator::getNewCostCalculator(Placement::CostFunction fun) {
     switch (fun) {
         case Placement::MAXIMUM_PARSIMONY: /* fall-through */
         case Placement::SANKOFF_PARSIMONY:

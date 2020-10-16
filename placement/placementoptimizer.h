@@ -22,7 +22,7 @@ public:
     virtual ~TaxonPlacementOptimizer();
     void cleanUpAfterTaxonPlacement(const TaxonToPlace& taxon,
                                     PhyloTree* tree);
-    static TaxonPlacementOptimizer* getTaxonPlacementOptimizer();
+    static TaxonPlacementOptimizer* getNewTaxonPlacementOptimizer();
 };
 
 class BatchPlacementOptimizer {
@@ -32,7 +32,7 @@ public:
     virtual void cleanUpAfterBatch(TaxaToPlace& taxa,
                                    int firstTaxon, int lastTaxon,
                                    PhyloTree* tree);
-    static BatchPlacementOptimizer* getBatchPlacementOptimizer();
+    static BatchPlacementOptimizer* getNewBatchPlacementOptimizer();
 };
 
 class GlobalPlacementOptimizer {
@@ -40,7 +40,7 @@ public:
     GlobalPlacementOptimizer();
     virtual ~GlobalPlacementOptimizer();
     void cleanUpAfterPlacement(PhyloTree* tree);
-    static GlobalPlacementOptimizer* getGlobalPlacementOptimizer();
+    static GlobalPlacementOptimizer* getNewGlobalPlacementOptimizer();
 };
 
 
