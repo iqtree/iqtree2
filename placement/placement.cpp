@@ -19,7 +19,7 @@ std::string getIncrementalParameter(const char letter, const char* defaultValue)
     int braceLevel = 0;
     int i;
     for (i=0; i<inc.length(); ++i) {
-        if (inc[i]==letter && braceLevel==0 && (i==0 || inc[i-1]==',') ) {
+        if (inc[i]==letter && braceLevel==0 && (i==0 || inc[i-1]==',' || inc[i-1]=='+') ) {
             break;
         } else if (inc[i]=='{') {
             ++braceLevel;
@@ -107,9 +107,9 @@ LocalOptimization getLocalOptimizationAlgorithm() {
 }
 size_t getTaxaPerBatch(size_t totalTaxa) {
     size_t taxaPerBatch = getIncrementalParameter('B', 1);
-    if (taxaPerBatch==0) {
+    if ( taxaPerBatch == 0 ) {
         taxaPerBatch = totalTaxa;
-        if (taxaPerBatch == 0) {
+        if ( taxaPerBatch == 0 ) {
             taxaPerBatch = 1;
         }
     }

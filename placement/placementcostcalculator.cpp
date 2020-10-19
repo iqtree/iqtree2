@@ -14,20 +14,20 @@ bool PlacementCostCalculator::usesLikelihood() { return false; }
 PlacementCostCalculator::~PlacementCostCalculator() = default;
 
 void ParsimonyCostCalculator::assessPlacementCost(PhyloTree& phylo_tree,
-                                 const TaxonToPlace* taxon,
-                                 PossiblePlacement* placement)  const {
-    auto target = placement->getTarget();
+                                 const TaxonToPlace& taxon,
+                                 PossiblePlacement& placement)  const {
+    auto target = placement.getTarget();
     phylo_tree.computeParsimonyOutOfTree( target->getParsimonyBlock(),
-                                          taxon->getParsimonyBlock(),
-                                          &placement->parsimony_score);
-    placement->score      = placement->parsimony_score;
-    placement->lenToNode1 = target->first->findNeighbor(target->second)->length * 0.5;
-    placement->lenToNode2 = placement->lenToNode1;
+                                          taxon.getParsimonyBlock(),
+                                         &placement.parsimony_score);
+    placement.score      = placement.parsimony_score;
+    placement.lenToNode1 = target->first->findNeighbor(target->second)->length * 0.5;
+    placement.lenToNode2 = placement.lenToNode1;
     if ( verbose_mode >= VB_MAX ) {
         std::stringstream s2;
-        s2  << "Parsimony score for taxon " << taxon->getTaxonId()
-            << " at target branch " << placement->getTargetIndex()
-            << " would be " << placement->parsimony_score;
+        s2  << "Parsimony score for taxon " << taxon.getTaxonId()
+        << " at target branch " << placement.getTargetIndex()
+        << " would be " << placement.parsimony_score;
         phylo_tree.logLine(s2.str());
     }
     
@@ -45,23 +45,23 @@ void ParsimonyCostCalculator::assessPlacementCost(PhyloTree& phylo_tree,
 bool LikelihoodCostCalculator::usesLikelihood() {
     return true;
 }
-void LikelihoodCostCalculator::assessPlacementCost(PhyloTree& tree, const TaxonToPlace* taxon,
-                                 PossiblePlacement* placement) const {
+void LikelihoodCostCalculator::assessPlacementCost(PhyloTree& tree, const TaxonToPlace& taxon,
+                                 PossiblePlacement& placement) const {
     
     super::assessPlacementCost(tree, taxon, placement);
     
-    auto   target            = placement->getTarget();
-    double score             = (placement->parsimony_score > 1) ? placement->parsimony_score : 1;
+    auto   target            = placement.getTarget();
+    double score             = (placement.parsimony_score > 1) ? placement.parsimony_score : 1;
     double normalized        = score / tree.getAlnNSite();
     double alpha             = tree.getGammaShape();
     double parsimony_length  = tree.correctBranchLengthF81( normalized, alpha );
-    placement->lenToNewTaxon = parsimony_length;
+    placement.lenToNewTaxon = parsimony_length;
             
     PhyloNode fakeInterior;
     fakeInterior.is_floating_interior = true;
     
-    PhyloNode fakeLeaf(taxon->new_leaf->id, taxon->new_leaf->name.c_str());
-    fakeLeaf.addNeighbor(&fakeInterior, placement->lenToNewTaxon );
+    PhyloNode fakeLeaf(taxon.new_leaf->id, taxon.new_leaf->name.c_str());
+    fakeLeaf.addNeighbor(&fakeInterior, placement.lenToNewTaxon );
     
     PhyloNeighbor* neighUp = fakeLeaf.findNeighbor(&fakeInterior);
     neighUp->partial_lh    = const_cast<double*> ( target->getLikelihoodBlock());
@@ -69,7 +69,7 @@ void LikelihoodCostCalculator::assessPlacementCost(PhyloTree& tree, const TaxonT
     neighUp->setLikelihoodComputed(true);
 
     double halfLen = 0.5 * target->first->findNeighbor(target->second)->length;
-    fakeInterior.addNeighbor(&fakeLeaf, placement->lenToNewTaxon );
+    fakeInterior.addNeighbor(&fakeLeaf, placement.lenToNewTaxon );
     fakeInterior.addNeighbor(target->first,  halfLen );
     fakeInterior.addNeighbor(target->second, halfLen );
 
@@ -128,7 +128,7 @@ void LikelihoodCostCalculator::assessPlacementCost(PhyloTree& tree, const TaxonT
                           << ", df " << df << ", ddf " << ddf
                           << " for taxon " << leaf_node->id);
         }
-        void optimize(PossiblePlacement* p) {
+        void optimize(PossiblePlacement& p) {
             PlacementTraversalInfo info(tree, buffers, neigh_up, leaf_node );
             info.computePartialLikelihood();
             
@@ -142,13 +142,13 @@ void LikelihoodCostCalculator::assessPlacementCost(PhyloTree& tree, const TaxonT
                                         tree.params->max_branch_length,
                                         tree.params->min_branch_length,
                                         derivative_of_likelihood_wrt_length, 10);
-                p->lenToNewTaxon = optx;
-                p->score         = computeFunction(optx);
+                p.lenToNewTaxon = optx;
+                p.score         = computeFunction(optx);
                 if (optx > tree.params->max_branch_length*0.95 && !tree.isSuperTree()) {
                     // newton raphson diverged, reset
-                    if (initial_score < p->score) {
-                        p->lenToNewTaxon = initial_length;
-                        p->score         = initial_score;
+                    if (initial_score < p.score) {
+                        p.lenToNewTaxon = initial_length;
+                        p.score         = initial_score;
                     }
                 }
             } else {
@@ -159,8 +159,8 @@ void LikelihoodCostCalculator::assessPlacementCost(PhyloTree& tree, const TaxonT
                                         tree.params->max_branch_length,
                                         tree.params->min_branch_length,
                                         &negative_lh, &ferror);
-                p->lenToNewTaxon = optx;
-                p->score         = negative_lh;
+                p.lenToNewTaxon = optx;
+                p.score         = negative_lh;
             }
         }
         double getInitialScore() {
@@ -169,13 +169,13 @@ void LikelihoodCostCalculator::assessPlacementCost(PhyloTree& tree, const TaxonT
     };
     LikelihoodOptimizer opt(tree, &fakeLeaf, neighUp, neighDown);
     opt.optimize(placement);
-    TREE_LOG_LINE(tree, VB_DEBUG, taxon->taxonName
-            << " at target " << placement->getTargetIndex()
-            << " had parsimony score " << placement->parsimony_score
+    TREE_LOG_LINE(tree, VB_DEBUG, taxon.taxonName
+                  << " at target " << placement.getTargetIndex()
+                  << " had parsimony score " << placement.parsimony_score
             << ", len "    << parsimony_length
             << ", old lh " << opt.getInitialScore()
-            << ", new lh " << placement->score
-            << ", len "    << placement->lenToNewTaxon);
+                  << ", new lh " << placement.score
+                  << ", len "    << placement.lenToNewTaxon);
 }
 
 PlacementCostCalculator* PlacementCostCalculator::getNewCostCalculator(Placement::CostFunction fun) {

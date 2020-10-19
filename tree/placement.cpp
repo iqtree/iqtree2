@@ -288,7 +288,7 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
 
             timeSpentOnSearches  -= getRealTime();
             size_t batchStop      = batchStart + pr.taxa_per_batch;
-            pr.doBatchPlacement(candidates, batchStart, batchStop, targets);
+            pr.doBatchPlacementCosting(candidates, batchStart, batchStop, targets);
             timeSpentOnSearches  += getRealTime();
             
             timeSpentOnRanking  -= getRealTime();
@@ -299,11 +299,11 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
             timeSpentOnInserts -= getRealTime();
             pr.startBatchInsert();
             for ( size_t i = batchStart; i<insertStop; ++i) {
-                pr.insertTaxon(candidates[i], targets);
+                pr.insertTaxon(candidates, i, targets);
             }
             timeSpentOnInserts += getRealTime();
             
-            pr.doneBatch(candidates, batchStart, batchStop);
+            pr.doneBatch(candidates, batchStart, batchStop, targets);
         } //batches of items
         
         pr.donePass(candidates, batchStart, targets);
@@ -315,7 +315,7 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
     doneProgress();
     
     LOG_LINE ( VB_MED, "Tidying up tree after inserting taxa.");
-    pr.global_placement_optimizer->cleanUpAfterPlacement(this);
+    pr.global_placement_optimizer->cleanUpAfterPlacement(*this);
     
     LOG_LINE ( VB_MIN, "Time spent on refreshes was "         << timeSpentOnRefreshes << " sec");
     LOG_LINE ( VB_MIN, "Time spent on searches was "          << timeSpentOnSearches << " sec");

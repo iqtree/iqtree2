@@ -107,10 +107,10 @@ void TaxonToPlace::findPlacement(PhyloTree& phylo_tree,
     #endif
     for (int i=0; i<target_branch_count; ++i) {
         TargetBranchRef target(&range, i);
-        if (heuristic->isPlacementWorthTrying(this, taxonIndex, target)) {
+        if (heuristic->isPlacementWorthTrying(*this, taxonIndex, target)) {
             PossiblePlacement* p = placementArray + i;
             p->setTargetBranch(&range, i);
-            calculator->assessPlacementCost(phylo_tree, this, p);
+            calculator->assessPlacementCost(phylo_tree, *this, *p);
         }
     }
     phylo_tree.trackProgress(target_branch_count);
@@ -211,7 +211,7 @@ void TaxonToPlace::assessNewTargetBranches(PhyloTree& phylo_tree,
                 PossiblePlacement p;
                 p.setTargetBranch(*it);
                 p.getTarget()->computeState(phylo_tree);
-                calculator.assessPlacementCost(phylo_tree, this, &p);
+                calculator.assessPlacementCost(phylo_tree, *this, p);
                 scores.emplace_back(p);
             }
         }

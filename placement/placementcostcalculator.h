@@ -26,8 +26,8 @@ public:
      @param tree the PhyloTree
      @param taxon The taxon to be placed
      @param p A place it might go*/
-    virtual void assessPlacementCost(PhyloTree& tree, const TaxonToPlace* taxon,
-                                     PossiblePlacement* p) const = 0;
+    virtual void assessPlacementCost(PhyloTree& tree, const TaxonToPlace& taxon,
+                                     PossiblePlacement& p) const = 0;
 
     /** Indicate whether this placement cost calculator does likelihood calculations
      (and needs PhyloNeighbor instances, for example, to have partial likelihood vectors allocated)
@@ -46,16 +46,16 @@ public:
 class ParsimonyCostCalculator : public PlacementCostCalculator {
 public:
     virtual void assessPlacementCost(PhyloTree& phylo_tree,
-                                     const TaxonToPlace* taxon,
-                                     PossiblePlacement* placement) const;
+                                     const TaxonToPlace& taxon,
+                                     PossiblePlacement& placement) const;
 };
 
 class LikelihoodCostCalculator : public ParsimonyCostCalculator {
 public:
     typedef ParsimonyCostCalculator super;
     virtual bool usesLikelihood();
-    virtual void assessPlacementCost(PhyloTree& tree, const TaxonToPlace* taxon,
-                                     PossiblePlacement* placement) const;
+    virtual void assessPlacementCost(PhyloTree& tree, const TaxonToPlace& taxon,
+                                     PossiblePlacement& placement) const;
 };
 
 

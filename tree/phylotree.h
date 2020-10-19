@@ -687,7 +687,7 @@ public:
      */
     virtual int initializeAllPartialPars();
 
-    void ensureCentralPartialParsimonyIsAllocated();
+    void ensureCentralPartialParsimonyIsAllocated(size_t extra_block_count);
     
     /**
             initialize partial_pars vector of all PhyloNeighbors, allocating central_partial_pars
@@ -860,9 +860,14 @@ public:
     virtual void initializeAllPartialLh();
 
     /**
-            de-allocate central_partial_lh
+            de-allocate central_partial_lh, central_scale_num and parsimony vectors
      */
     virtual void deleteAllPartialLh();
+    
+    /**
+            de-allocate central_partial_pars, tip_partial_pars, and parsimony vectors
+     */
+    virtual void deleteAllPartialParsimony();
 
     virtual void allocateCentralBlocks(size_t extra_parsimony_block_count,
                                        size_t extra_lh_block_count);

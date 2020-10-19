@@ -19,7 +19,7 @@ void SearchHeuristic::prepareToFilter(PhyloTree& tree, TargetBranchRange& target
                                       size_t startTaxon, size_t stopTaxon) {
 }
 
-bool SearchHeuristic::isPlacementWorthTrying(const TaxonToPlace* taxon,
+bool SearchHeuristic::isPlacementWorthTrying(const TaxonToPlace& taxon,
                                              size_t taxonIndex, /* not id, index into TaxaToPlace */
                                              const TargetBranchRef& target ) {
         return true;
@@ -40,6 +40,7 @@ BaseballSearchHeuristic::BaseballSearchHeuristic(PlacementCostCalculator* calcul
 }
 
 BaseballSearchHeuristic::~BaseballSearchHeuristic() {
+    delete calculator;
 }
 
 bool BaseballSearchHeuristic::isGlobalSearch() {
@@ -64,7 +65,7 @@ void BaseballSearchHeuristic::prepareToFilter(PhyloTree& tree, TargetBranchRange
         for (size_t c = startTaxon; c<stopTaxon; ++c ) { //candidate taxon
             PossiblePlacement p;
             p.setTargetBranch(&targets, b);
-            calculator->assessPlacementCost(tree, taxa.getTaxonByIndex(c), &p);
+            calculator->assessPlacementCost(tree, taxa.getTaxonByIndex(c), p);
             scoreRow[c] = p.score;
         }
     }
@@ -106,10 +107,11 @@ void BaseballSearchHeuristic::prepareToFilter(PhyloTree& tree, TargetBranchRange
     //
 }
 
-bool BaseballSearchHeuristic::isPlacementWorthTrying(const TaxonToPlace* taxon, size_t taxonIndex,
+bool BaseballSearchHeuristic::isPlacementWorthTrying(const TaxonToPlace& taxon, size_t taxonIndex,
                                     const TargetBranchRef& target ) {
     return is_worth_trying.cell(target.getTargetIndex() - target_base, taxonIndex-taxon_base);
 }
 
 void BaseballSearchHeuristic::doneFiltering() {
+    is_worth_trying.clear();
 }

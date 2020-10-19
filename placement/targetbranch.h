@@ -50,10 +50,10 @@ class TargetBranch : public std::pair<PhyloNode*, PhyloNode*> {
     //partial parsimony determined, looking into the tree from the
     //insertion point.
     BlockAllocator* blocker;
-    UINT*   partial_pars;
-    double* partial_lh;
-    UBYTE*  scale_num;
-    bool    used;
+    UINT*           partial_pars;
+    double*         partial_lh;
+    UBYTE*          scale_num;
+    bool            used;
     ReplacementBranchList* replacements;
     friend class TargetBranchRef;
 public:
@@ -66,12 +66,12 @@ public:
                  PhyloNode* node1, PhyloNode* node2,
                  bool likelihood_wanted);
     void computeState(PhyloTree& phylo_tree) const;
-    void forgetState() const;
-    bool isUsedUp() const;
+    void forgetState()                       const;
+    bool isUsedUp()                          const;
     void handOverComputedStateTo(PhyloNeighbor* nei) ;
-    const UINT* getParsimonyBlock() const;
-    const double* getLikelihoodBlock() const;
-    const UBYTE* getScaleNumBlock() const;
+    const UINT* getParsimonyBlock()          const;
+    const double* getLikelihoodBlock()       const;
+    const UBYTE* getScaleNumBlock()          const;
     
     void costPlacementOfTaxa(PhyloTree& tree,
                              TargetBranchRange& targets,

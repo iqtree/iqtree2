@@ -996,13 +996,13 @@ int PhyloTree::initializeAllPartialPars() {
     return index;
 }
 
-void PhyloTree::ensureCentralPartialParsimonyIsAllocated() {
+void PhyloTree::ensureCentralPartialParsimonyIsAllocated(size_t extra_vector_count) {
     if (central_partial_pars != nullptr) {
         return;
     }
     determineBlockSizes();
     uint64_t tip_partial_pars_size = get_safe_upper_limit_float(aln->num_states * (aln->STATE_UNKNOWN+1));
-    size_t   vector_count          = aln->getNSeq() * 4;
+    size_t   vector_count          = aln->getNSeq() * 4 + extra_vector_count;
     total_parsimony_mem_size       = vector_count * pars_block_size + tip_partial_pars_size;
 
     LOG_LINE(VB_MAX, "Allocating " << total_parsimony_mem_size * sizeof(UINT)
@@ -1027,7 +1027,7 @@ void PhyloTree::ensureCentralPartialParsimonyIsAllocated() {
 
 void PhyloTree::initializeAllPartialPars(int &index, PhyloNode *node, PhyloNode *dad) {
     if (!node) {
-        ensureCentralPartialParsimonyIsAllocated();
+        ensureCentralPartialParsimonyIsAllocated(0);
         node  = getRoot();
         index = 0;
     }
@@ -1068,7 +1068,8 @@ void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *da
 void PhyloTree::computePartialParsimonyOutOfTree(const UINT* left_partial_pars,
                                       const UINT* right_partial_pars,
                                                  UINT* dad_partial_pars) const {
-    (this->*computePartialParsimonyOutOfTreePointer)(left_partial_pars, right_partial_pars, dad_partial_pars);
+    (this->*computePartialParsimonyOutOfTreePointer)
+        ( left_partial_pars, right_partial_pars, dad_partial_pars );
 }
 
 
@@ -1192,12 +1193,18 @@ void PhyloTree::initializeAllPartialLh() {
     clearAllPartialLH();
 }
 
+void PhyloTree::deleteAllPartialParsimony() {
+    aligned_free(central_partial_pars);
+    tip_partial_pars        = nullptr;
+    clearAllPartialParsimony(true);
+    tip_partial_lh_computed &= ~2;
+}
+
 void PhyloTree::deleteAllPartialLh() {
     //Note: aligned_free now sets the pointer to nullptr
     //      (so there's no need to do that explicitly any more)
     aligned_free(central_partial_lh);
     aligned_free(central_scale_num);
-    aligned_free(central_partial_pars);
     aligned_free(nni_scale_num);
     aligned_free(nni_partial_lh);
     aligned_free(ptn_invar);
@@ -1206,14 +1213,14 @@ void PhyloTree::deleteAllPartialLh() {
     tree_buffers.freeBuffers();
     aligned_free(_site_lh);
 
-    ptn_freq_computed       = false;
-    tip_partial_lh          = nullptr;
-    tip_partial_pars        = nullptr;
-    tip_partial_lh_computed = 0; //was missing!
+    ptn_freq_computed        = false;
+    tip_partial_lh           = nullptr;
+    tip_partial_lh_computed &= ~1; //was missing!
 
     clearAllPartialLH(true);
     clearAllScaleNum(true);
-    clearAllPartialParsimony(true);
+    
+    deleteAllPartialParsimony();
 }
  
 uint64_t PhyloTree::getMemoryRequired(size_t ncategory, bool full_mem) {
@@ -1430,7 +1437,7 @@ void PhyloTree::allocateCentralBlocks(size_t extra_parsimony_block_count,
         LOG_LINE ( VB_DEBUG, "Address range for scale blocks is " << pointer_to_hex(central_scale_num)
                   << " to " << pointer_to_hex(central_scale_num + mem_size) );
     }
-    ensureCentralPartialParsimonyIsAllocated();
+    ensureCentralPartialParsimonyIsAllocated(extra_parsimony_block_count);
 }
     
 void PhyloTree::initializeAllPartialLh(int &index_pars, int &index_lh,

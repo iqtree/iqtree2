@@ -118,7 +118,7 @@ void TinaTree::initializeAllPartialLh(int &index, int &indexlh,
     if (!node) {
         node = getRoot();
         // allocate the big central partial likelihoods memory
-        ensureCentralPartialParsimonyIsAllocated();
+        ensureCentralPartialParsimonyIsAllocated(0);
         index = 0;
     }
     if (dad) {

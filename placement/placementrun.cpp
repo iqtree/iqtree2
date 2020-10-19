@@ -29,6 +29,7 @@ void PlacementRun::setUpAllocator(int extra_parsimony_blocks, bool trackLikeliho
                     int extra_lh_blocks) {
     int      index_parsimony        = 0;
     int      index_lh               = 0;
+    phylo_tree.deleteAllPartialLh();
     phylo_tree.ensurePartialLHIsAllocated(extra_parsimony_blocks, extra_lh_blocks);
     phylo_tree.initializeAllPartialLh(index_parsimony, index_lh);
     block_allocator = trackLikelihood
@@ -64,56 +65,56 @@ void PlacementRun::prepareForBatch() {
     phylo_tree.clearAllPartialParsimony(false);
 }
 
- double PlacementRun::doBatchPlacement(TaxaToPlace& candidates,
-                                       size_t batchStart, size_t batchStop,
-                                       TargetBranchRange& targets) {
+ double PlacementRun::doBatchPlacementCosting(TaxaToPlace& candidates,
+                                              size_t batchStart, size_t batchStop,
+                                              TargetBranchRange& targets) {
     ASSERT( !candidates.isEmpty() );
     ASSERT( !targets.empty() );
-    TargetBranch* pointStart = targets.data();
-    TargetBranch* pointStop  = pointStart + targets.size();
     
     double refreshTime = 0;
     size_t targetCount = targets.size();
-    heuristic->prepareToFilter(phylo_tree, targets, 0, targetCount , candidates, batchStart, batchStop);
+    heuristic->prepareToFilter(phylo_tree, targets, 0, targetCount ,
+                               candidates, batchStart, batchStop);
 
 #if (NEW_TAXON_MAJOR)
      
     double refreshStart = getRealTime();
-    for (TargetBranch* point = pointStart; point<pointStop; ++point) {
-        point->computeState(phylo_tree);
+    for (int t=0; t<targets; ++t) {
+        TargetBranch* target = targets.getTargetBranch(t);
+        taget->computeState(phylo_tree);
     }
     refreshTime += getRealTime() - refreshStart;
 
     for (int i = batchStart; i<batchStop; ++i) {
-        TaxonToPlace* c = candidates.getTaxonByIndex(i);
-        TREE_LOG_LINE(phylo_tree, VB_DEBUG, "Scoring ... " << c->taxonName);
-        c->findPlacement(phylo_tree, i, targets,
+        TaxonToPlace& c = candidates.getTaxonByIndex(i);
+        TREE_LOG_LINE(phylo_tree, VB_DEBUG, "Scoring ... " << c,taxonName);
+        c.findPlacement(phylo_tree, i, targets,
                          heuristic, calculator);
-        const PossiblePlacement& p = c->getBestPlacement();
+        const PossiblePlacement& p = c.getBestPlacement();
         TREE_LOG_LINE(phylo_tree, VB_DEBUG, "Scored " << p.score << " for placement"
-                 << " of " << c->taxonName << " with lengths "
+                      << " of " << c.taxonName << " with lengths "
                  << p.lenToNode1 << ", " << p.lenToNode2 << ", " << p.lenToNewTaxon);
     }
      
 #else //TARGET_BRANCH_MAJOR
      
-    for (size_t i = 0; i < targetCount; ++i ) {
-        TargetBranch* point = targets.getTargetBranch(i);
+    for (size_t t = 0; t < targetCount; ++t ) {
+        TargetBranch* target = targets.getTargetBranch(t);
         TREE_LOG_LINE(phylo_tree, VB_DEBUG,
-                      "Scoring target branch " << i << " of " << targetCount);
+                      "Scoring target branch " << t << " of " << targetCount);
         
         double computeStart = getRealTime();
-        point->computeState(phylo_tree);
+        target->computeState(phylo_tree);
         refreshTime += getRealTime() - computeStart;
         
-        point->costPlacementOfTaxa(phylo_tree,
-                                   targets,    point-pointStart,
+        target->costPlacementOfTaxa(phylo_tree,
+                                   targets,    t,
                                    candidates, batchStart, batchStop,
                                    heuristic,  calculator,
-                                   point==pointStart );
+                                   t == 0 );
         
         double forgetStart = getRealTime();
-        point->forgetState();
+        target->forgetState();
         refreshTime += getRealTime() - forgetStart;
     }
      
@@ -137,7 +138,8 @@ void PlacementRun::startBatchInsert() {
     taxa_inserted_this_batch = 0;
 }
 
-void PlacementRun::insertTaxon(TaxonToPlace& c, TargetBranchRange& targets) {
+void PlacementRun::insertTaxon(TaxaToPlace& taxa, size_t taxon_index, TargetBranchRange& targets) {
+    TaxonToPlace& c = taxa.getTaxonByIndex(taxon_index);
     const char* verb = "inserted";
     const char* where ;
     if (c.canInsert()) {
@@ -170,15 +172,17 @@ void PlacementRun::insertTaxon(TaxonToPlace& c, TargetBranchRange& targets) {
             << ", " << p.lenToNode2 << ", " << p.lenToNewTaxon << ")";
         phylo_tree.logLine(s.str());
     }    
-    taxon_placement_optimizer->cleanUpAfterTaxonPlacement(c, &phylo_tree);
+    taxon_placement_optimizer->cleanUpAfterTaxonPlacement(taxa, taxon_index, targets, phylo_tree);
 }
 
-void PlacementRun::doneBatch(TaxaToPlace& candidates, size_t batchStart, size_t batchStop) {
+void PlacementRun::doneBatch(TaxaToPlace& candidates,
+                             size_t batchStart, size_t batchStop,
+                             TargetBranchRange& targets) {
     if ( 1 < batchStop - batchStart ) {
         TREE_LOG_LINE ( phylo_tree, VB_MED,  "Inserted " << (taxa_inserted_this_batch)
                   << " out of a batch of " << (batchStop - batchStart) << "." );
     }
-    batch_placement_optimizer->cleanUpAfterBatch(candidates, batchStart, batchStop, &phylo_tree);
+    batch_placement_optimizer->cleanUpAfterBatch(candidates, batchStart, batchStop, targets, phylo_tree);
     if (calculator->usesLikelihood()) {
         phylo_tree.fixNegativeBranch();
     }

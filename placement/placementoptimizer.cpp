@@ -11,18 +11,21 @@
 
 TaxonPlacementOptimizer::TaxonPlacementOptimizer() = default;
 TaxonPlacementOptimizer::~TaxonPlacementOptimizer() = default;
-void TaxonPlacementOptimizer::cleanUpAfterTaxonPlacement(const TaxonToPlace& taxon,
-                                              PhyloTree* tree) {}
+void TaxonPlacementOptimizer::cleanUpAfterTaxonPlacement(TaxaToPlace& taxa,
+                                                         size_t taxon_index,
+                                                         TargetBranchRange& targets,
+                                                         PhyloTree& tree) {}
 
 BatchPlacementOptimizer::BatchPlacementOptimizer() = default;
 void BatchPlacementOptimizer::cleanUpAfterBatch(TaxaToPlace& taxa,
-                       int firstTaxon, int lastTaxon,
-                       PhyloTree* tree) {
+                                                int firstTaxon, int lastTaxon,
+                                                TargetBranchRange& targets,
+                                                PhyloTree& tree) {
     if (VB_MIN <= verbose_mode) {
         std::stringstream s;
         s << "Processed batch of "
           << (lastTaxon - firstTaxon) << " taxa";
-        tree->logLine(s.str() );
+        tree.logLine(s.str() );
     }
 }
 
@@ -30,7 +33,7 @@ BatchPlacementOptimizer::~BatchPlacementOptimizer() = default;
 
 GlobalPlacementOptimizer::GlobalPlacementOptimizer() = default;
 GlobalPlacementOptimizer::~GlobalPlacementOptimizer() = default;
-void GlobalPlacementOptimizer::cleanUpAfterPlacement(PhyloTree* tree) {
+void GlobalPlacementOptimizer::cleanUpAfterPlacement(PhyloTree& tree) {
 }
 
 TaxonPlacementOptimizer* TaxonPlacementOptimizer::getNewTaxonPlacementOptimizer() {

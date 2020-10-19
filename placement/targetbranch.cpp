@@ -246,12 +246,12 @@ void TargetBranch::costPlacementOfTaxa
     #pragma omp parallel for
     #endif
     for (size_t i = candidateStartIndex; i< candidateStopIndex; ++i) {
-        TaxonToPlace* candidate = candidates.getTaxonByIndex(i);
+        TaxonToPlace& candidate = candidates.getTaxonByIndex(i);
         if (heuristic->isPlacementWorthTrying(candidate, i, here)) {
             PossiblePlacement p;
             p.setTargetBranch(here);
-            calculator->assessPlacementCost(phylo_tree, candidate, &p);
-            candidate->considerAdditionalPlacement(p);
+            calculator->assessPlacementCost(phylo_tree, candidate, p);
+            candidate.considerAdditionalPlacement(p);
         }
     }
     phylo_tree.trackProgress(candidateStopIndex - candidateStartIndex);

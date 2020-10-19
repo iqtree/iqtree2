@@ -22,6 +22,7 @@ BlockAllocator::~BlockAllocator() {
 void BlockAllocator::allocateParsimonyBlock(UINT*& partial_pars) {
     partial_pars = phylo_tree.central_partial_pars
                    + (index_parsimony * phylo_tree.pars_block_size);
+    ASSERT( partial_pars < phylo_tree.tip_partial_pars );
     ++index_parsimony;
 }
 void BlockAllocator::allocateMemoryFor(PhyloNeighbor* nei) {

@@ -3155,7 +3155,11 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI, const char* context) {
                 appliedNNIs.resize(1);
                 doNNIs(appliedNNIs);
                 curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
-                ASSERT(curScore > appliedNNIs.at(0).newloglh - 0.1);
+                if (curScore <= appliedNNIs.at(0).newloglh - 0.1 ) {
+                    LOG_LINE( VB_MIN, "appliedNNIs.at(0).newloglh is " << appliedNNIs.at(0).newloglh
+                            << ", curScore is " << curScore);
+                    ASSERT(curScore > appliedNNIs.at(0).newloglh - 0.1);
+                }
             } else
                 ASSERT(curScore > appliedNNIs.at(0).newloglh - 0.1 && "Using one NNI reduces LogL");
             totalNNIApplied++;
