@@ -33,6 +33,10 @@
 //               for reconstructing phylogenetic trees",
 //               Naurya Saitou and Masatoshi Nei (1987).
 //        Tag:   [NS1987]
+//  UNJ   implementation based on
+//        Paper: "Concerning the NJ algorithm and its unweighted version, UNJ",
+//               Olivier Gascuel
+//        TAG:   [GAS1997]
 //  BoundingNJ implementation loosely based on ideas from
 //        https://birc.au.dk/software/rapidnj/.
 //        Paper: "Inference of Large Phylogenies using Neighbour-Joining."
@@ -282,12 +286,14 @@ protected:
         size_t tCount  = aCount + bCount;
         double lambda  = (double)aCount / (double)tCount;
         double mu      = 1.0 - lambda;
+        auto rowA = rows[a];
+        auto rowB = rows[b];
         for (size_t i=0; i<row_count; ++i) {
             if (i!=a && i!=b) {
-                T Dai      = rows[a][i];
-                T Dbi      = rows[b][i];
+                T Dai      = rowA[i];
+                T Dbi      = rowB[i];
                 T Dci      = lambda * Dai + mu * Dbi;
-                rows[a][i] = Dci;
+                rowA[i] = Dci;
                 rows[i][a] = Dci;
             }
         }
@@ -300,8 +306,8 @@ protected:
     size_t getImbalance(size_t rowA, size_t rowB) const {
         size_t clusterA = rowToCluster[rowA];
         size_t clusterB = rowToCluster[rowB];
-        size_t sizeA = clusters[clusterA].countOfExteriorNodes;
-        size_t sizeB = clusters[clusterB].countOfExteriorNodes;
+        size_t sizeA    = clusters[clusterA].countOfExteriorNodes;
+        size_t sizeB    = clusters[clusterB].countOfExteriorNodes;
         return (sizeA<sizeB) ? (sizeB-sizeA) : (sizeA-sizeB);
     }
 };
@@ -319,7 +325,6 @@ public:
     using super::rowToCluster;
     using super::removeRowAndColumn;
     using super::calculateRowTotals;
-    using super::recalculateTotalForOneRow;
     using super::getImbalance;
     using super::silent;
 protected:
@@ -386,31 +391,34 @@ protected:
         //Assumed 0<=a<b<n
         T nless2        = row_count-2;
         T tMultiplier   = (row_count<3) ? 0 : (0.5 / nless2);
-        T medianLength  = 0.5 * rows[a][b];
+        T lambda        = 0.5;
+        T medianLength  = lambda * rows[a][b];
         T fudge         = (rowTotals[a] - rowTotals[b]) * tMultiplier;
         T aLength       = medianLength + fudge;
         T bLength       = medianLength - fudge;
-        T lambda        = 0.5;
         T mu            = 1.0 - lambda;
         T dCorrection   = - lambda * aLength - mu * bLength;
+        auto aRow       = rows[a];
+        auto bRow       = rows[b];
+        T cTotal        = 0;
         #ifdef _OPENMP
-        #pragma omp parallel for
+        #pragma omp parallel for reduction(+:cTotal)
         #endif
         for (size_t i=0; i<row_count; ++i) {
             if (i!=a && i!=b) {
-                T Dai   = rows[a][i];
-                T Dbi   = rows[b][i];
-                T Dci   = lambda * Dai + mu * Dbi + dCorrection;
-                rows[a][i]    = Dci;
+                T Dai         = aRow[i];
+                T Dbi         = bRow[i];
+                T Dci         = lambda * Dai + mu * Dbi + dCorrection;
+                aRow[i]       = Dci;
                 rows[i][a]    = Dci;
                 rowTotals[i] += Dci - Dai - Dbi;
                                 //JB2020-06-18 Adjust row totals on fly
+                cTotal       += Dci;
             }
         }
-        recalculateTotalForOneRow(a,b);
-        rowTotals[a] -= rows[a][b];
         clusters.addCluster ( rowToCluster[a], aLength,
                               rowToCluster[b], bLength);
+        rowTotals[a]    = cTotal;
         rowToCluster[a] = clusters.size()-1;
         rowToCluster[b] = rowToCluster[row_count-1];
         removeRowAndColumn(b);
@@ -428,6 +436,98 @@ protected:
     }
 };
 
+template <class T=NJFloat> class UNJMatrix: public NJMatrix<T> {
+protected:
+    size_t original_n;
+public:
+    typedef NJMatrix<T> super;
+    UNJMatrix(): super(), original_n(0) { }
+    virtual std::string getAlgorithmName() const {
+        return "UNJ";
+    }
+    virtual void setSize(size_t rank) {
+        super::setSize(rank);
+        original_n = rank;
+    }
+
+protected:
+    using super::row_count;
+    using super::rows;
+    using super::rowTotals;
+    using super::clusters;
+    using super::rowToCluster;
+    using super::removeRowAndColumn;
+    
+    virtual void cluster(size_t a, size_t b) {
+        //Cluster two active rows, identified by row indices a and b).
+        //Assumes: 0<=a<b<n
+        //
+        //The clusters are weighted in terms of the number of taxa they
+        //contain (aCount and bCount), as per [GAS1997].
+        //(Conceptually, the leaf nodes for the taxa are NOT weighted,
+        // and standard NJ is "downweighting" each taxon, with a weight of
+        // 1/aCount in the cluster for row a, and by a weight of
+        // 1/bCount in the cluster for row b; but in practice, "undoing
+        // the effect of the weighting" requires more multiplication, and
+        // more time).
+        //
+        //Note: The greek letter lambda is given a different role
+        //      in [GAS1997], but I wanted to use it in a fashion
+        //      a bit more consistent with later BIONJ implementations.
+        //      -James B. 19-Oct-2020.
+        //
+        T aCount          = clusters[rowToCluster[a]].countOfExteriorNodes;
+        T bCount          = clusters[rowToCluster[b]].countOfExteriorNodes;
+        T cCount          = aCount + bCount;
+        T tMultiplier     = (row_count<3) ? 0 : (0.5 / ( original_n - cCount));
+        T lambda          = aCount / (aCount + bCount); //relative weight of a in u
+        T mu              = 1.0 - lambda;               //relative weight of b in u
+        auto aRow         = rows[a];
+        auto bRow         = rows[b];
+        
+        T aFudge          = 0.0;
+        #ifdef _OPENMP
+        #pragma omp parallel for
+        #endif
+        for (size_t i=0; i<row_count; ++i) {
+            if (i!=a && i!=b) {
+                T iCount  = clusters[rowToCluster[i]].countOfExteriorNodes;
+                aFudge   += iCount * (aRow[i] - bRow[i]);
+                //reweight the contribution for the cluster in the ith row
+                //according to the number (iCount) of leaf nodes it contains,
+                //as per estimation formula (4) in [GAS1997].
+            }
+        }
+        T abLength        = rows[a][b];
+        T auLength        = 0.5 * abLength + aFudge * tMultiplier;
+        T buLength        = abLength - auLength;
+        T dCorrection     = - lambda * auLength - mu * buLength;
+        T cTotal          = 0.0;
+        #ifdef _OPENMP
+        #pragma omp parallel for reduction(+:cTotal)
+        #endif
+        for (size_t i=0; i<row_count; ++i) {
+            if (i!=a && i!=b) {
+                T Dai         = aRow[i];
+                T Dbi         = bRow[i];
+                T Dci         = lambda * Dai + mu * Dbi + dCorrection;
+                aRow[i]       = Dci;
+                rows[i][a]    = Dci;
+                rowTotals[i] += Dci - Dai - Dbi;
+                                //JB2020-06-18 Adjust row totals on fly
+                cTotal       += Dci;
+            }
+        }
+        clusters.addCluster ( rowToCluster[a], auLength,
+                              rowToCluster[b], buLength);
+        rowTotals[a]    = cTotal;
+        rowToCluster[a] = clusters.size()-1; //cluster u
+        rowToCluster[b] = rowToCluster[row_count-1];
+        removeRowAndColumn(b);
+    }
+};
+
+
 template <class T=NJFloat> class BIONJMatrix : public NJMatrix<T> {
 public:
     typedef NJMatrix<T> super;
@@ -437,7 +537,6 @@ public:
     using super::rows;
     using super::rowToCluster;
     using super::rowTotals;
-    using super::recalculateTotalForOneRow;
     using super::removeRowAndColumn;
     using super::silent;
 protected:
@@ -463,14 +562,16 @@ public:
         if (Vab==0.0) {
             return 0.5;
         }
-        for (size_t i=0; i<a; ++i) {
-            lambda += variance.rows[b][i] - variance.rows[a][i];
+        auto vRowA = variance.rows[a];
+        auto vRowB = variance.rows[b];
+        for (size_t i=0; i<column_count; ++i) {
+            lambda += vRowB[i] - vRowA[i];
         }
-        for (size_t i=a+1; i<b; ++i) {
-            lambda += variance.rows[b][i] - variance.rows[a][i];
+        if (a<column_count) {
+            lambda += vRowA[a] - vRowB[a];
         }
-        for (size_t i=b+1; i<column_count; ++i) {
-            lambda += variance.rows[b][i] - variance.rows[a][i];
+        if (a!=b && b<column_count) {
+            lambda += vRowA[b] - vRowB[b];
         }
         lambda = 0.5 + lambda / (2.0*((T)row_count-2)*Vab);
         if (1.0<lambda) lambda=1.0;
@@ -480,41 +581,47 @@ public:
     virtual void cluster(size_t a, size_t b) {
         //Assumed 0<=a<b<n
         //Bits that differ from super::cluster tagged BIO
-        T nless2        = row_count - 2 ;
-        T tMultiplier   = ( row_count < 3 ) ? 0 : ( 0.5 / nless2 );
-        T medianLength  = 0.5 * rows[b][a];
-        T fudge         = (rowTotals[a] - rowTotals[b]) * tMultiplier;
-        T aLength       = medianLength + fudge;
-        T bLength       = medianLength - fudge;
-        T Vab           = variance.rows[b][a];     //BIO
-        T lambda        = chooseLambda(a, b, Vab); //BIO
-        T mu            = 1.0 - lambda;
-        T dCorrection   = - lambda * aLength - mu * bLength;
-        T vCorrection   = - lambda * mu * Vab;
+        T nless2          = row_count - 2 ;
+        T tMultiplier     = ( row_count < 3 ) ? 0 : ( 0.5 / nless2 );
+        T medianLength    = 0.5 * rows[b][a];
+        T fudge           = (rowTotals[a] - rowTotals[b]) * tMultiplier;
+        T aLength         = medianLength + fudge;
+        T bLength         = medianLength - fudge;
+        T Vab             = variance.rows[b][a];     //BIO
+        T lambda          = chooseLambda(a, b, Vab); //BIO
+        T mu              = 1.0 - lambda;
+        T dCorrection     = - lambda * aLength - mu * bLength;
+        T vCorrection     = - lambda * mu * Vab;
+        auto rowA         = rows[a];
+        auto rowB         = rows[b];
+        auto varianceRowA = variance.rows[a];
+        auto varianceRowB = variance.rows[b];
+        T cTotal          = 0;
         #ifdef _OPENMP
-        #pragma omp parallel for
+        #pragma omp parallel for reduction(+:cTotal)
         #endif
         for (size_t i=0; i<row_count; ++i) {
             if (i!=a && i!=b) {
-                //Dci as per reduction 4 in [Gascuel]
-                T Dai         = rows[a][i];
-                T Dbi         = rows[b][i];
+                //Dci as per reduction 4 in [GAS2009]
+                T Dai         = rowA[i];
+                T Dbi         = rowB[i];
                 T Dci         = lambda * Dai + mu * Dbi + dCorrection;
-                rows[a][i]    = Dci;
+                rowA[i]       = Dci;
                 rows[i][a]    = Dci;
                 rowTotals[i] += Dci - Dai - Dbi; //JB2020-06-18 Adjust row totals
+                cTotal       += Dci;
                 
                 //BIO begin (Reduction 10 on variance estimates)
-                T Vci   = lambda * variance.rows[a][i]
-                        + mu * variance.rows[b][i]
+                T Vci   = lambda * varianceRowA[i]
+                        + mu * varianceRowB[i]
                         + vCorrection;
-                variance.rows[a][i] = Vci;
+                varianceRowA[i] = Vci;
                 variance.rows[i][a] = Vci;
                 //BIO finish
             }
         }
-        recalculateTotalForOneRow(a,b);
         clusters.addCluster ( rowToCluster[a], aLength, rowToCluster[b], bLength);
+        rowTotals[a]    = cTotal;
         rowToCluster[a] = clusters.size()-1;
         rowToCluster[b] = rowToCluster[row_count-1];
         removeRowAndColumn(b);
@@ -788,8 +895,8 @@ public:
                 size_t rStop          = (b+1)*rSize / threadCount;
                 for (size_t r=rStart; r < rStop
                      && rowMinima[r].value < infiniteDistance; ++r) {
-                    size_t rowA     = rowMinima[r].row;
-                    size_t rowB     = rowMinima[r].column;
+                    size_t rowA       = rowMinima[r].row;
+                    size_t rowB       = rowMinima[r].column;
                     if (rowA < row_count && rowB < row_count ) {
                         size_t clusterA = rowToCluster[rowA];
                         size_t clusterB = rowToCluster[rowB];
@@ -995,17 +1102,17 @@ public:
         #endif
         for (size_t row=1; row<row_count; ++row) {
             Position<T> pos(row, 0, infiniteDistance, 0);
-            const T* rowData = rows[row];
-            size_t col;
-            V minVector = infiniteDistance;
-                //The minima of columns with indices
-                //"congruent modulo blockSize"
-                //For example, if blockSize is 4,
-                //minVector[1] holds the minimum of
-                //columns 1,5,9,13,17,...
-            V ixVector = -1;
-                //For each entry in minVector, the column from which
-                //that value came.
+            const T* rowData   = rows[row];
+            size_t   col;
+            V        minVector = infiniteDistance;
+                     //The minima of columns with indices
+                     //"congruent modulo blockSize"
+                     //For example, if blockSize is 4,
+                     //minVector[1] holds the minimum of
+                     //columns 1,5,9,13,17,...
+            V        ixVector  = -1;
+                     //For each entry in minVector, the column from which
+                     //that value came.
             
             for (col=0; col+blockSize<row; col+=blockSize) {
                 V  rowVector; rowVector.load_a(rowData+col);
@@ -1030,8 +1137,8 @@ public:
                     pos.value  = v;
                 }
             }
-            pos.value -= tot [row];
-            pos.imbalance = getImbalance(pos.row, pos.column);
+            pos.value     -= tot [row];
+            pos.imbalance  = getImbalance(pos.row, pos.column);
             rowMinima[row] = pos;
         }
     }
@@ -1078,8 +1185,8 @@ public:
                 V  rowVector; rowVector.load_a(rowData+col);
                 VB less      = rowVector < minVector;
                 V  numVector; numVector.load_a(nums+col);
-                ixVector  = select(less, numVector, ixVector);
-                minVector = select(less, rowVector, minVector);
+                ixVector     = select(less, numVector, ixVector);
+                minVector    = select(less, rowVector, minVector);
             }
             //Extract minimum and column number
             for (int c=0; c<blockSize; ++c) {
@@ -1095,29 +1202,35 @@ public:
                     pos.value  = dist;
                 }
             }
-            pos.imbalance = getImbalance(pos.row, pos.column);
+            pos.imbalance  = getImbalance(pos.row, pos.column);
             rowMinima[row] = pos;
         }
     }
 };
 
-typedef BoundingMatrix<NJFloat, NJMatrix<NJFloat>>      RapidNJ;
-typedef BoundingMatrix<NJFloat, BIONJMatrix<NJFloat>>   RapidBIONJ;
+typedef BoundingMatrix<NJFloat,   NJMatrix<NJFloat>>    RapidNJ;
+typedef BoundingMatrix<NJFloat,   BIONJMatrix<NJFloat>> RapidBIONJ;
 typedef VectorizedMatrix<NJFloat, NJMatrix<NJFloat>>    VectorNJ;
 typedef VectorizedMatrix<NJFloat, BIONJMatrix<NJFloat>> VectorBIONJ;
 
+#define ADVERTISE(type, shortName, longName) \
+    f.advertiseTreeBuilder( new Builder<type>( shortName, longName))
+
 void addBioNJ2020TreeBuilders(Factory& f) {
-    f.advertiseTreeBuilder( new Builder<NJMatrix<NJFloat>>    ("NJ",      "Neighbour Joining (Saitou, Nei [1987])"));
-    f.advertiseTreeBuilder( new Builder<RapidNJ>              ("NJ-R",    "Rapid Neighbour Joining (Simonsen, Mailund, Pedersen [2011])"));
-    f.advertiseTreeBuilder( new Builder<VectorNJ>             ("NJ-V",    "Vectorized Neighbour Joining (Saitou, Nei [1987])"));
-    f.advertiseTreeBuilder( new Builder<BIONJMatrix<NJFloat>> ("BIONJ",   "BIONJ (Gascuel, Cong [2009])"));
-    f.advertiseTreeBuilder( new Builder<RapidBIONJ>  ("BIONJ-R", "Rapid BIONJ (Saitou, Nei [1987], Gascuel [2009], Simonson Mailund Pedersen [2011])"));
-    f.advertiseTreeBuilder( new Builder<VectorBIONJ> ("BIONJ-V", "Vectorized BIONJ (Gascuel, Cong [2009])"));
-    f.advertiseTreeBuilder( new Builder<UPGMA_Matrix<NJFloat>>("UPGMA",    "UPGMA (Sokal, Michener [1958])"));
-    f.advertiseTreeBuilder( new Builder<VectorizedUPGMA_Matrix<NJFloat>>("UPGMA-V", "Vectorized UPGMA (Sokal, Michener [1958])"));
-    f.advertiseTreeBuilder( new Builder<BoundingMatrix<double>> ("NJ-R-D", "Double precision Rapid Neighbour Joining"));
     const char* defaultName = "RapidNJ";
-    f.advertiseTreeBuilder( new Builder<RapidNJ>                (defaultName, "Rapid Neighbour Joining (Simonsen, Mailund, Pedersen [2011]) (default)"));  //Default.
+    ADVERTISE(NJMatrix<NJFloat>,   "NJ",      "Neighbour Joining (Saitou, Nei [1987])");
+    ADVERTISE(UNJMatrix<NJFloat>,  "UNJ",     "Unweighted Neighbour Joining (Gascel [1997])");
+    ADVERTISE(RapidNJ,             "NJ-R",    "Rapid Neighbour Joining"
+                                              " (Simonsen, Mailund, Pedersen [2011])");
+    ADVERTISE(VectorNJ,            "NJ-V",    "Vectorized Neighbour Joining (Saitou, Nei [1987])");
+    ADVERTISE(BIONJMatrix<NJFloat>,"BIONJ",   "BIONJ (Gascuel, Cong [2009])");
+    ADVERTISE(RapidBIONJ,          "BIONJ-R", "Rapid BIONJ (Saitou, Nei [1987], Gascuel [2009],"
+                                              " Simonson Mailund Pedersen [2011])");
+    ADVERTISE(VectorBIONJ,         "BIONJ-V", "Vectorized BIONJ (Gascuel, Cong [2009])");
+    ADVERTISE(UPGMA_Matrix<NJFloat>,"UPGMA",  "UPGMA (Sokal, Michener [1958])");
+    ADVERTISE(VectorizedUPGMA_Matrix<NJFloat>,"UPGMA-V", "Vectorized UPGMA (Sokal, Michener [1958])");
+    ADVERTISE(BoundingMatrix<double>,"NJ-R-D","Double precision Rapid Neighbour Joining");
+    ADVERTISE(RapidNJ,           defaultName, "Rapid Neighbour Joining (Simonsen, Mailund, Pedersen [2011]) (default)");
     f.setNameOfDefaultTreeBuilder(defaultName);
 }
 }; //end of namespace

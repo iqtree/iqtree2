@@ -278,18 +278,27 @@ public:
     void recalculateTotalForOneRow(size_t a, size_t b) {
         //recalculate total for row, a, excluding
         //column b (a<=b).
+        //Note: At present, this member function is not called
+        //(it turns out to be faster to "roll-in" row total
+        // recalculations into existing column for-loops elsewhere).
+        //
         T replacementRowTotal = 0;
-        for (size_t i=0; i<a; ++i) {
-            replacementRowTotal += rows[a][i];
+        auto rowA = rows[a];
+        #ifdef _OPENMP
+        #pragma omp parallel for reduction(+:replacementRowTotal)
+        #endif
+        for (size_t i=0; i<column_count; ++i) {
+            replacementRowTotal += rowA[i];
         }
-        for (size_t i=a+1; i<b; ++i) {
-            replacementRowTotal += rows[a][i];
+        if (a<=column_count) {
+            replacementRowTotal -= rowA[a];
         }
-        for (size_t i=b+1; i<column_count; ++i) {
-            replacementRowTotal += rows[a][i];
+        if (a!=b && b<=column_count) {
+            replacementRowTotal -= rowA[b];
         }
         rowTotals[a] = replacementRowTotal;
     }
+
     void removeRowAndColumn(size_t rowNum)  {
         //Remove row (and matching column) from a
         //square matrix, by swapping the last row
@@ -307,7 +316,7 @@ public:
     virtual void addCluster(const std::string &name) {
     }
 };
-
+    
 template <class M> bool loadDistanceMatrixInto
     (const std::string distanceMatrixFilePath, bool reportProgress, M& matrix) {
     size_t rank;
