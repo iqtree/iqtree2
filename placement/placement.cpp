@@ -90,17 +90,16 @@ size_t getNumberOfTaxaToRemoveAndReinsert(size_t countOfTaxa) {
     }
     return numberToRemove;
 }
-CostFunction getCostFunction() {
+bool doesPlacementUseLikelihood() {
     auto cf = getIncrementalParameter('C', "MP");
-    if (cf=="ML") {
-        return MAXIMUM_LIKELIHOOD_MIDPOINT;
-    } else if (cf=="FML") {
-        return MAXIMUM_LIKELIHOOD_ANYWHERE;
-    } else if (cf=="SMP") {
-        return SANKOFF_PARSIMONY;
-    }
-    return MAXIMUM_PARSIMONY;
+    return cf.find("ML") != std::string::npos;
 }
+bool doesPlacementUseParsimony() {
+    auto cf = getIncrementalParameter('C', "MP");
+    return cf.find("MP") != std::string::npos;
+}
+
+
 LocalOptimization getLocalOptimizationAlgorithm() {
     auto f = getIncrementalParameter('L', "");
     return NO_LOCAL_OPTIMIZATION;

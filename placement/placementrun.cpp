@@ -13,12 +13,11 @@ PlacementRun::PlacementRun(PhyloTree& tree, const IntVector& taxaIdsToAdd)
     , taxa_per_batch(Placement::getTaxaPerBatch(taxaIdsToAdd.size()))
     , inserts_per_batch(Placement::getInsertsPerBatch(taxa_ids_to_add.size(), taxa_per_batch))
     , block_allocator(nullptr)
-    , costFunction(Placement::getCostFunction())
     , heuristic(SearchHeuristic::getSearchHeuristic())
     , taxon_placement_optimizer(TaxonPlacementOptimizer::getNewTaxonPlacementOptimizer())
     , batch_placement_optimizer(BatchPlacementOptimizer::getNewBatchPlacementOptimizer())
     , global_placement_optimizer(GlobalPlacementOptimizer::getNewGlobalPlacementOptimizer())
-    , calculator(PlacementCostCalculator::getNewCostCalculator(costFunction))
+    , calculator(PlacementCostCalculator::getNewCostCalculator())
     , taxa_inserted_this_batch(0), taxa_inserted_in_total(0), taxa_inserted_nearby(0) {
     if (calculator->usesLikelihood()) {
         phylo_tree.prepareToComputeDistances(); //Set up state look-up vectors
@@ -50,7 +49,7 @@ void PlacementRun::prepareForPlacementRun() {
     }
     TREE_LOG_LINE ( phylo_tree, VB_MED, "Batch size is " << taxa_per_batch
               << " and the number of inserts per batch is " << inserts_per_batch);
-    if (costFunction == Placement::SANKOFF_PARSIMONY) {
+    if (calculator->usesSankoffParsimony()) {
         phylo_tree.computeTipPartialParsimony();
     }
 }
@@ -162,8 +161,7 @@ void PlacementRun::insertTaxon(TaxaToPlace& taxa, size_t taxon_index, TargetBran
         s << taxa_inserted_in_total << ". " << verb << " "
             << c.taxonName << " " << where << ". It had ";
         const PossiblePlacement& p = c.getBestPlacement();
-        if (costFunction==Placement::MAXIMUM_PARSIMONY ||
-            costFunction==Placement::SANKOFF_PARSIMONY) {
+        if (!calculator->usesLikelihood()) {
             s << "parsimony score " << (int)(p.score);
         } else {
             s << "likelihood score " << p.score;

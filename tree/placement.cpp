@@ -181,13 +181,11 @@ double PhyloTree::taxaAdditionWorkEstimate(size_t newTaxaCount,
 }
 
 bool PhyloTree::shouldPlacementUseSankoffParsimony() const {
-    return Placement::getCostFunction() == Placement::SANKOFF_PARSIMONY;
+    return Placement::doesPlacementUseParsimony();
 }
 
 bool PhyloTree::shouldPlacementUseLikelihood() const {
-    Placement::CostFunction       costFunction    = Placement::getCostFunction();
-    return ( costFunction != Placement::MAXIMUM_PARSIMONY
-             && costFunction != Placement::SANKOFF_PARSIMONY);
+    return Placement::doesPlacementUseLikelihood();
 }
 
 void PhyloTree::reinsertTaxaViaStepwiseParsimony(const IntVector& taxaIdsToAdd) {
@@ -221,8 +219,7 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
     deleteAllPartialLh();
     
     if ( pr.taxa_per_batch == 1 && pr.heuristic->isGlobalSearch()  &&
-        ( pr.costFunction == Placement::MAXIMUM_PARSIMONY
-         || pr.costFunction == Placement::SANKOFF_PARSIMONY ) ) {
+         !pr.calculator->usesLikelihood() ) {
         reinsertTaxaViaStepwiseParsimony(taxaIdsToAdd);
         finishUpAfterTaxaAddition();
         return;
@@ -340,9 +337,7 @@ void PhyloTree::finishUpAfterTaxaAddition() {
     initializeAllPartialLh();
     LOG_LINE ( VB_MED, "Number of leaves " << this->leafNum
               << ", of nodes " << this->nodeNum );
-    Placement::CostFunction costFunction = Placement::getCostFunction();
-    if (costFunction==Placement::MAXIMUM_LIKELIHOOD_ANYWHERE ||
-        costFunction==Placement::MAXIMUM_LIKELIHOOD_MIDPOINT) {
+    if (Placement::doesPlacementUseLikelihood()) {
         double score = optimizeAllBranches();
         LOG_LINE ( VB_MIN, "After optimizing, likelihood score was " << score );
     }

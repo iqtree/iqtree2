@@ -61,6 +61,7 @@ private:
     size_t       target_base;
     Matrix<bool> is_worth_trying; //Rows are target branches (by index into a TargetBranchRange);
                                   //Columns are taxa (by index into TaxaToPlace).
+    PhyloTree*   tree_in_use;
 
     //
     //1. prepareToFilter ... runs the calculator (ideally a cheap one! Parsimony?)

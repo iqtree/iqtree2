@@ -32,11 +32,22 @@ bool SearchHeuristic::isGlobalSearch() {
     return true;
 }
 SearchHeuristic* SearchHeuristic::getSearchHeuristic() {
-    return new SearchHeuristic;
+    auto heuristic = Placement::getIncrementalParameter('H', "");
+    if (heuristic=="") {
+        return new SearchHeuristic;
+    }
+    else if (heuristic=="MP") {
+        return new BaseballSearchHeuristic(new ParsimonyCostCalculator(false));
+    } else {
+        std::stringstream s;
+        s << "Did not recognize heuristic " << heuristic;
+        outError(s.str());
+        return nullptr;
+    }
 }
 
 BaseballSearchHeuristic::BaseballSearchHeuristic(PlacementCostCalculator* calculatorToUse)
-    : calculator(calculatorToUse) {
+    : calculator(calculatorToUse), tree_in_use(nullptr) {
 }
 
 BaseballSearchHeuristic::~BaseballSearchHeuristic() {
@@ -99,19 +110,42 @@ void BaseballSearchHeuristic::prepareToFilter(PhyloTree& tree, TargetBranchRange
             size_t b = targetIndices[t];
             is_worth_trying.cell(b, c ) = true;
         }
+        if (VB_DEBUG <= verbose_mode) {
+            std::stringstream s;
+            s << taxa.getTaxonByIndex(c).taxonName << " took top " << take << "target branches";
+            tree.logLine(s.str());
+            s.clear();
+            if (take>3) {
+                take=3;
+                s<< "The top " << take << " were: ";
+            } else {
+                s<< "They were: ";
+            }
+            for (size_t t=0; t<take; ++t) {
+                s << " " << targetIndices[t] << "(score " << scoresForTaxon[t] << ")";
+            }
+            tree.logLine(s.str());
+        }
     }
     //Todo: need to tell the tree that we're doing stuff (report progress).
     //      The issue is, how do we count progress here, versus progress in the
     //      more expensive cost-calculation to which this is feeding "combinations
     //      worth trying".
     //
+    tree_in_use = &tree;
 }
 
 bool BaseballSearchHeuristic::isPlacementWorthTrying(const TaxonToPlace& taxon, size_t taxonIndex,
                                     const TargetBranchRef& target ) {
-    return is_worth_trying.cell(target.getTargetIndex() - target_base, taxonIndex-taxon_base);
+    bool tryIt = is_worth_trying.cell(target.getTargetIndex() - target_base, taxonIndex-taxon_base);
+    if (tryIt && tree_in_use!=nullptr) {
+        TREE_LOG_LINE(*tree_in_use, VB_DEBUG, "Will try " << taxon.taxonName
+                      << " against target branch " << target.getTargetIndex());
+    }
+    return tryIt;
 }
 
 void BaseballSearchHeuristic::doneFiltering() {
     is_worth_trying.clear();
+    tree_in_use = nullptr;
 }

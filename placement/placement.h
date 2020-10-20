@@ -14,12 +14,6 @@
 
 namespace Placement {
 
-    enum CostFunction {
-        MAXIMUM_PARSIMONY,           //maximum parsimony  (each taxon, each possible insertion place)
-        SANKOFF_PARSIMONY,           //ditto, but using Sankoff parsimony
-        MAXIMUM_LIKELIHOOD_MIDPOINT, //maximum likelihood (at midpoint of existing branch)
-        MAXIMUM_LIKELIHOOD_ANYWHERE  //maximum likelihood (anyhwere in existing branch)
-    };
     enum LocalOptimization {
         NO_LOCAL_OPTIMIZATION
     };
@@ -55,9 +49,16 @@ namespace Placement {
                 which can be specified as a number or a percentage.*/
     size_t        getNumberOfTaxaToRemoveAndReinsert(size_t countOfTaxa);
 
-    /** determine what cost function is to be used for taxon placement
-        @return the cost function*/
-    CostFunction  getCostFunction();
+    /** indicates whether placement will use parsimony (more to the point:
+        will it need to use partial parsimony vectors
+     @return true if it will*/
+    bool doesPlacementUseParsimony();
+
+    /** indicates whether placement will use likelihood (more to the point:
+     will it need to use partial likehood and scale num vectors).
+     @return true if it will*/
+    bool doesPlacementUseLikelihood();
+
 
     /** determine how many taxa should be processed in the next batch.
         (this *cannot* be specified as a percentage of totalTaxa)

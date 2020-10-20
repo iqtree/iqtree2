@@ -26,7 +26,6 @@ public:
     size_t                    taxa_per_batch;    //Must be 1 or more
     size_t                    inserts_per_batch; //Must be 1 or more
     BlockAllocator*           block_allocator;   //
-    Placement::CostFunction   costFunction;      //parsimony or likelihood
     SearchHeuristic*          heuristic;         //global? or localized?
     TaxonPlacementOptimizer*  taxon_placement_optimizer;
     BatchPlacementOptimizer*  batch_placement_optimizer;

@@ -10,8 +10,18 @@
 #include "taxontoplace.h"
 #include "placementtraversalinfo.h"
 
-bool PlacementCostCalculator::usesLikelihood() { return false; }
 PlacementCostCalculator::~PlacementCostCalculator() = default;
+
+bool PlacementCostCalculator::usesLikelihood()       { return false; }
+
+bool PlacementCostCalculator::usesSankoffParsimony() { return false; }
+
+
+ParsimonyCostCalculator::ParsimonyCostCalculator(bool useSankoff)
+: sankoff(useSankoff) {
+}
+
+bool ParsimonyCostCalculator::usesSankoffParsimony() { return sankoff; }
 
 void ParsimonyCostCalculator::assessPlacementCost(PhyloTree& phylo_tree,
                                  const TaxonToPlace& taxon,
@@ -40,6 +50,10 @@ void ParsimonyCostCalculator::assessPlacementCost(PhyloTree& phylo_tree,
     //      and use the ratio of those parsimony scores to get
     //      better estimates of lenToNode1 to lenToNode2?
     //
+}
+
+LikelihoodCostCalculator::LikelihoodCostCalculator(bool useMidpoint)
+    : ParsimonyCostCalculator(false), midpoint(useMidpoint) {
 }
 
 bool LikelihoodCostCalculator::usesLikelihood() {
@@ -178,16 +192,18 @@ void LikelihoodCostCalculator::assessPlacementCost(PhyloTree& tree, const TaxonT
                   << ", len "    << placement.lenToNewTaxon);
 }
 
-PlacementCostCalculator* PlacementCostCalculator::getNewCostCalculator(Placement::CostFunction fun) {
-    switch (fun) {
-        case Placement::MAXIMUM_PARSIMONY: /* fall-through */
-        case Placement::SANKOFF_PARSIMONY:
-            return new ParsimonyCostCalculator();
-        case Placement::MAXIMUM_LIKELIHOOD_ANYWHERE:
-        case Placement::MAXIMUM_LIKELIHOOD_MIDPOINT:
-            return new LikelihoodCostCalculator();
-        default:
-            outError("No cost calculator class available for specified cost function");
-            return nullptr;
+PlacementCostCalculator* PlacementCostCalculator::getNewCostCalculator() {
+    
+    auto cf = Placement::getIncrementalParameter('C', "MP");
+    if (cf=="ML") {
+        return new LikelihoodCostCalculator(true);
+    } else if (cf=="FML") {
+        return new LikelihoodCostCalculator(false);
+    } else if (cf=="MP") {
+        return new ParsimonyCostCalculator(false);
+    } else if (cf=="SMP") {
+        return new ParsimonyCostCalculator(true);
     }
+    outError("No cost calculator class available for specified cost function");
+    return nullptr;
 }
