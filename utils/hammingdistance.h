@@ -67,11 +67,11 @@ inline double hammingDistance
 ( char unknown, const char* sequenceA, const char* sequenceB
  , int seqLen, const int* frequencyVector
  , double& frequencyOfUnknowns ) {
-    int blockStop = 0;
-    int distance  = 0;
-    int freqUnknown = 0;
+    size_t blockStop = 0;
+    int    distance  = 0;
+    int    freqUnknown = 0;
     Vec32c blockA;
-    int blockSize = blockA.size(); //but see scratch. Needs to match
+    size_t blockSize = blockA.size(); //but see scratch. Needs to match
     if (blockSize < seqLen) {
         blockStop = seqLen - (seqLen & (blockSize-1));
         auto aStop = sequenceA + blockStop;
@@ -122,6 +122,167 @@ inline double hammingDistance
     frequencyOfUnknowns = freqUnknown;
     return distance;
 }
+
+inline size_t conventionalHammingDistance(char unknown,
+                                            const char* sequenceA,
+                                            const char* sequenceB,
+                                            size_t seqLen ) {
+    size_t distance = 0;
+    const char* stopSequenceA = sequenceA+seqLen;
+    for (; sequenceA < stopSequenceA; ++sequenceA, ++sequenceB) {
+        if (*sequenceA != *sequenceB) {
+            if (*sequenceA!=unknown && *sequenceB!=unknown) {
+                ++distance;
+            }
+        }
+    }
+    return distance;
+}
+
+inline size_t conventionalCountBitsSetInEither(uint64_t* a, uint64_t* b,
+                                               size_t count /*in uint64_t*/) {
+    size_t bits_set = 1;
+    for (int i=0; i<count; ++i) {
+        uint64_t bitsInEither = a[i] | b[i];
+        uint64_t delta;
+        #if (defined (__GNUC__) || defined(__clang__)) && !defined(CLANG_UNDER_VS)
+            __asm("popcntq %1, %0" : "=r"(delta) : "r"(bitsInEither) : );
+        #else
+            delta = _mm_popcnt_u64(bitsInEither);
+        #endif
+        bits_set += delta;
+    }
+    return bits_set;
+}
+
+#if (INSTRSET >= 2)
+#if defined(CLANG_UNDER_VS) && !defined(_mm_popcnt_u64)
+#   define _mm_popcnt_u64 __popcnt64
+#endif
+
+#ifdef _MSC_VER
+    #define ALIGN_32(x) __declspec(align(32)) x
+#else
+    #define ALIGN_32(x) x __attribute__((aligned(32)))
+#endif
+
+template <class DV, class CV, class CBV, int W /*power of 2*/>
+inline uint64_t vectorHammingDistanceTemplate(char unknown,
+                              const char* sequenceA,
+                              const char* sequenceB,
+                              size_t seqLen ) {
+    //Note: this is designed to run sequential (it is supposed that
+    //each thread is calculating hamming distances for different
+    //sequences).
+    size_t   blockStop        = 0;
+    DV       distance_vector  = 0;
+    if (W <= seqLen) {
+        blockStop  = seqLen - (seqLen & (W-1));
+        CV blockA; //next 32 bytes from a
+        CV blockB; //next 32 bytes from b
+        CV blockU  = unknown;
+        ALIGN_32(uint64_t vec[W/8]);
+        ALIGN_32(uint64_t res[W/8]);
+        DV distance_bump_vector;
+        for ( size_t i=0; i<blockStop; i+=W) {
+            
+            //Compare W characters at a time
+            blockA.load(sequenceA+i);
+            blockB.load(sequenceB+i);
+            CBV diff32 = (blockA != blockB);
+            if (horizontal_find_first(diff32)<0) {
+               continue;
+            }
+            diff32 &= (blockA != blockU)
+                    & (blockB != blockU);
+            //Count the number of bits set in each 8-byte quarter
+            //of diff32 (8 bits will be set for each character
+            //that differs), in a vector of 4 x uint64_t.
+            CV(diff32).store( reinterpret_cast<char*>(&vec[0]));
+            for (int j=0; j<W/8; ++j) {
+                #if (defined (__GNUC__) || defined(__clang__)) && !defined(CLANG_UNDER_VS)
+                    __asm("popcntq %1, %0" : "=r"(res[j]) : "r"(vec[j]) : );
+                #else
+                    res[j] = _mm_popcnt_u64(vec[j]);
+                #endif
+            }
+            //Vector addition (each element in the distance_vector
+            //is 8 times the count of known characters that differed
+            //in the corresponding 8-byte quarters of the W-byte blocks.
+            distance_bump_vector.load(&res[0]);
+            distance_vector += distance_bump_vector;
+        }
+    }
+    //remember distance_vector counts each difference as 8
+    uint64_t distance    = horizontal_add(distance_vector) >> 3;
+    for (int pos=blockStop; pos < seqLen; ++pos ) {
+        if (sequenceA[pos]!=sequenceB[pos]) {
+            if (sequenceA[pos]!=unknown && sequenceB[pos]!=unknown) {
+                ++distance;
+            }
+        }
+    }
+    return distance;
+}
+
+template <class V, int W>
+size_t countBitsSetInEitherTemplate(uint64_t* a, uint64_t* b,
+                                    size_t count /*in uint64_t*/) {
+    //Assumes: W divides count
+    V count_vector  = 0;
+    V aData;
+    V bData;
+    ALIGN_32(uint64_t vec[W]);
+    ALIGN_32(uint64_t res[W]);
+    V dData;
+    for (int i=0; i<count; i+=W) {
+        aData.load(a+i);
+        bData.load(b+i);
+        (aData | bData).store(&vec[0]);
+        for (int j=0; j<W/8; ++j) {
+            #if (defined (__GNUC__) || defined(__clang__)) && !defined(CLANG_UNDER_VS)
+                __asm("popcntq %1, %0" : "=r"(res[j]) : "r"(vec[j]) : );
+            #else
+                res[j] = _mm_popcnt_u64(vec[j]);
+            #endif
+        }
+        dData.load(&res[0]);
+        count_vector += dData;
+    }
+    return horizontal_add(count_vector);
+}
+#endif
+
+#if (INSTRSET >= 7)
+    inline uint64_t vectorHammingDistance(char unknown, const char* sequenceA,
+                                          const char* sequenceB, size_t seqLen ) {
+        return vectorHammingDistanceTemplate<Vec4uq, Vec32c, Vec32cb, 32>
+                (unknown, sequenceA, sequenceB, seqLen);
+    }
+    inline size_t countBitsSetInEither(uint64_t* a, uint64_t* b,
+                                    size_t count /*in uint64_t*/) {
+        return countBitsSetInEitherTemplate<Vec4uq, 4>(a, b, count);
+    }
+#elif (INSTRSET >= 2)
+    inline uint64_t vectorHammingDistance(char unknown, const char* sequenceA,
+                                          const char* sequenceB, size_t seqLen ) {
+        return vectorHammingDistanceTemplate<Vec2uq, Vec16c, Vec16cb, 16>
+                (unknown, sequenceA, sequenceB, seqLen);
+    }
+    inline size_t countBitsSetInEither(uint64_t* a, uint64_t* b,
+                                size_t count /*in uint64_t*/) {
+        return countBitsSetInEitherTemplate<Vec2uq, 2>(a, b, count);
+    }
+#else
+    inline uint64_t vectorHammingDistance(char unknown, const char* sequenceA,
+                                          const char* sequenceB, size_t seqLen ) {
+        return conventionalHammingDistance(unknown, sequenceA, sequenceB, seqLen);
+    }
+    inline size_t countBitsSetInEither(uint64_t* a, uint64_t* b,
+                                       size_t count /*in uint64_t*/) {
+        return conventionalCountBitsSetInEither(a,b,count);
+    }
+#endif
 
 inline size_t sumForUnknownCharacters
     ( char boundaryChar, const char* sequence, int seqLen, const int* frequencyVector) {
