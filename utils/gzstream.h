@@ -132,8 +132,11 @@ protected:
     std::string format_name;
     progress_display* progress;
 public:
+    typedef igzstream super;
     pigzstream(const char* format);
     void open( const char* name, int open_mode = std::ios::in);
+    void close();
+    void done();
     
     const gzstreambuf* rdbuf() const;
     gzstreambuf* rdbuf();

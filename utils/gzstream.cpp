@@ -226,11 +226,26 @@ void pigzstream::open( const char* name, int open_mode) {
         delete progress;
     }
     igzstream::open( name, open_mode);
-    std::stringstream task;
-    task << "Reading " << format_name << " file " << name;
-    progress = new progress_display((double)getCompressedLength(),
-                                    task.str().c_str(), "", "" );
-    buf.setProgress(progress);
+    if (name!=nullptr && name[0]!='\0') {
+        std::stringstream task;
+        task << "Reading " << format_name << " file " << name;
+        progress = new progress_display((double)getCompressedLength(),
+                                        task.str().c_str(), "", "" );
+        buf.setProgress(progress);
+    }
+}
+
+void pigzstream::close() {
+    super::close();
+    done();
+}
+
+void pigzstream::done() {
+    if (progress!=nullptr) {
+        progress->done();
+        delete progress;
+        progress = nullptr;
+    }
 }
 
 const gzstreambuf* pigzstream::rdbuf() const {
@@ -256,14 +271,8 @@ void pigzstream::showProgress() {
 }
 
 pigzstream::~pigzstream() {
-    if (progress==nullptr) {
-        return;
-    }
-    progress->done();
-    delete progress;
-    progress = nullptr;
+    done();
 }
-
 
 #ifdef GZSTREAM_NAMESPACE
 } // namespace GZSTREAM_NAMESPACE
