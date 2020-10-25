@@ -73,7 +73,9 @@ class PhyloNeighbor : public Neighbor {
     friend class TaxonToPlace;
     friend class TargetBranch;
     friend class LikelihoodBlockAllocator;
+    friend class LikelihoodBlockPair;
     friend class LikelihoodCostCalculator;
+    friend class PlacementTraversalInfo;
 
 public:
     friend class TinaTree;
@@ -180,7 +182,7 @@ public:
         return size;
     }
     
-    PhyloNode* getNode() {
+    PhyloNode* getNode() const {
         return (PhyloNode*)node;
     }
     

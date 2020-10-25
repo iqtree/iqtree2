@@ -77,18 +77,30 @@ public:
     virtual void makeTreeReady(PhyloNode* first, PhyloNode* second);
 };
 
+class LikelihoodBlockPair {
+    public:
+        double* partial_lh;
+        UBYTE*  scale_num;
+        bool    blocks_are_owned;
+        LikelihoodBlockPair();
+        LikelihoodBlockPair(const LikelihoodBlockPair& rhs);
+        LikelihoodBlockPair& operator = (const LikelihoodBlockPair& rhs);
+        LikelihoodBlockPair(double* lh, UBYTE* scale, bool owned=false);
+        void    clear();
+        virtual ~LikelihoodBlockPair();
+        void    copyFrom(PhyloTree& tree, PhyloNeighbor* source);
+        void    allocate(PhyloTree& tree);
+        void    lendTo(PhyloNeighbor* borrower);
+};
+
+typedef std::vector<LikelihoodBlockPair> LikelihoodBlockPairs;
+
 class LikelihoodBlockAllocator: public BlockAllocator {
 protected:
     int                  index_lh;        //the number of likelihood blocks allocated so far
     std::vector<double*> double_blocks;
     std::vector<UBYTE*>  ubyte_blocks;
-    struct spare_block_pair {
-        public:
-            double* partial_lh;
-            UBYTE*  scale_num;
-            spare_block_pair(double* lh, UBYTE* scale);
-    };
-    std::vector<spare_block_pair> spare_block_pairs;
+    std::vector<LikelihoodBlockPair> spare_block_pairs;
 
 public:
     typedef BlockAllocator super;

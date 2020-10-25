@@ -271,14 +271,17 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
     double timeSpentOnSearches  = 0.0;
     double timeSpentOnRanking   = 0.0;
     double timeSpentOnInserts   = 0.0;
+    double timeSpentOnCleanUp   = 0.0;
+    
+    LikelihoodBlockPairs spare_blocks(2);
     initProgress(estimate, "Adding new taxa to tree", "", "");
     for (; 0<newTaxaCount; newTaxaCount = candidates.size() ) {
         if (newTaxaCount<pr.taxa_per_batch) {
             pr.taxa_per_batch = newTaxaCount;
         }
         size_t batchStart=0;
-        for (; batchStart+pr.taxa_per_batch <= newTaxaCount; batchStart+=pr.taxa_per_batch) {
-
+        for (; batchStart+pr.taxa_per_batch <= newTaxaCount
+             ; batchStart+=pr.taxa_per_batch) {
             timeSpentOnRefreshes -= getRealTime();
             pr.prepareForBatch();
             timeSpentOnRefreshes += getRealTime();
@@ -296,15 +299,20 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
             timeSpentOnInserts -= getRealTime();
             pr.startBatchInsert();
             for ( size_t i = batchStart; i<insertStop; ++i) {
-                pr.insertTaxon(candidates, i, targets);
+                pr.insertTaxon(candidates, i, targets, spare_blocks);
             }
             timeSpentOnInserts += getRealTime();
             
+            timeSpentOnCleanUp -= getRealTime();
             pr.doneBatch(candidates, batchStart, batchStop, targets);
+            timeSpentOnCleanUp += getRealTime();
+
         } //batches of items
         
+        timeSpentOnCleanUp -= getRealTime();
         pr.donePass(candidates, batchStart, targets);
-        
+        timeSpentOnCleanUp += getRealTime();
+
         auto workLeft   = taxaAdditionWorkEstimate
                           ( newTaxaCount, pr.taxa_per_batch, pr.inserts_per_batch );
         this->progress->setWorkRemaining(workLeft);
@@ -314,15 +322,22 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
     LOG_LINE ( VB_MED, "Tidying up tree after inserting taxa.");
     pr.global_placement_optimizer->cleanUpAfterPlacement(*this);
     
-    LOG_LINE ( VB_MIN, "Time spent on refreshes was "         << timeSpentOnRefreshes << " sec");
-    LOG_LINE ( VB_MIN, "Time spent on searches was "          << timeSpentOnSearches << " sec");
-    LOG_LINE ( VB_MIN, "Time spent on actual inserts was "    << timeSpentOnInserts << " sec");
-    LOG_LINE ( VB_MIN, "Total number of blocked inserts was " << pr.taxa_inserted_nearby );
+    LOG_LINE ( VB_MIN, "Time spent on refreshes was "          << timeSpentOnRefreshes << " sec");
+    LOG_LINE ( VB_MIN, "Time spent on searches was "           << timeSpentOnSearches << " sec");
+    LOG_LINE ( VB_MIN, "Time spent on actual inserts was "     << timeSpentOnInserts << " sec");
+    LOG_LINE ( VB_MIN, "Time for post-batch optimization was " << timeSpentOnCleanUp << " sec");
+    LOG_LINE ( VB_MIN, "Total number of blocked inserts was "  << pr.taxa_inserted_nearby );
     LOG_LINE ( VB_MED, "At the end of addNewTaxaToTree, index_lhs was "
               << pr.block_allocator->getLikelihoodBlockCount() << ", index_pars was "
               << pr.block_allocator->getParsimonyBlockCount() << ".");
+    if (VB_MED <= verbose_mode && trackLikelihood) {
+        pr.logSubtreesNearAddedTaxa();
+    }
     if (!trackLikelihood) {
         fixNegativeBranch();
+    }
+    if (VB_MED <= verbose_mode && trackLikelihood) {
+        pr.logSubtreesNearAddedTaxa();
     }
     finishUpAfterTaxaAddition();
     
@@ -337,6 +352,7 @@ void PhyloTree::finishUpAfterTaxaAddition() {
     initializeAllPartialLh();
     LOG_LINE ( VB_MED, "Number of leaves " << this->leafNum
               << ", of nodes " << this->nodeNum );
+    this->tracing_lh = false;
     if (Placement::doesPlacementUseLikelihood()) {
         double score = optimizeAllBranches();
         LOG_LINE ( VB_MIN, "After optimizing, likelihood score was " << score );

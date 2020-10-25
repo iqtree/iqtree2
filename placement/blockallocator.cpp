@@ -57,8 +57,90 @@ bool BlockAllocator::usesLikelihood() {
 void BlockAllocator::makeTreeReady(PhyloNode* first, PhyloNode* second) {
 }
 
-LikelihoodBlockAllocator::spare_block_pair::spare_block_pair(double* lh, UBYTE* scale)
-    : partial_lh(lh), scale_num(scale) {}
+LikelihoodBlockPair::LikelihoodBlockPair()
+    : partial_lh(nullptr), scale_num(nullptr), blocks_are_owned(false) {
+}
+
+LikelihoodBlockPair::LikelihoodBlockPair(const LikelihoodBlockPair& rhs)
+    : blocks_are_owned(false) {
+    //If the other is borrowing, this one can borrow too
+    if (!rhs.blocks_are_owned) {
+        partial_lh = rhs.partial_lh;
+        scale_num  = rhs.scale_num;
+    } else {
+        partial_lh = nullptr;
+        scale_num  = nullptr;
+    }
+}
+
+LikelihoodBlockPair& LikelihoodBlockPair::operator = (const LikelihoodBlockPair& rhs) {
+    if (&rhs==this) {
+        return *this;   //self-referential assignment isn't a clear!
+    }
+    clear();
+    //If the other is borrowing, this one can borrow too
+    if (!rhs.blocks_are_owned) {
+        partial_lh = rhs.partial_lh;
+        scale_num  = rhs.scale_num;
+    } else {
+        partial_lh = nullptr;
+        scale_num  = nullptr;
+    }
+    return *this;
+}
+
+LikelihoodBlockPair::LikelihoodBlockPair(double* lh, UBYTE* scale, bool takeOwnership)
+    : partial_lh(lh), scale_num(scale), blocks_are_owned(takeOwnership) {}
+
+void LikelihoodBlockPair::clear() {
+    if (blocks_are_owned) {
+        aligned_free(partial_lh);
+        aligned_free(scale_num);
+    }
+    else {
+        partial_lh = nullptr;
+        scale_num  = nullptr;
+    }
+    blocks_are_owned = false;
+}
+
+LikelihoodBlockPair::~LikelihoodBlockPair() {
+    clear();
+}
+
+void    LikelihoodBlockPair::copyFrom(PhyloTree& tree, PhyloNeighbor* source) {
+    allocate(tree);
+    if (source->partial_lh != nullptr) {
+        memcpy(partial_lh, source->partial_lh, tree.lh_block_size * sizeof(partial_lh[0]));
+    } else {
+        memset(partial_lh, 0, tree.lh_block_size * sizeof(partial_lh[0]) );
+    }
+    if (source->scale_num != nullptr) {
+        memcpy(scale_num, source->scale_num, tree.scale_block_size * sizeof(scale_num[0]));
+    } else {
+        memset(scale_num, 0, tree.scale_block_size * sizeof(scale_num[0]) );
+    }
+}
+
+void LikelihoodBlockPair::allocate(PhyloTree& tree)
+{
+    //
+    //Assumed: If partial_lh and scale_num are already allocated, and
+    //         owned by this instance, they're the right size for tree,
+    //         (as per tree.pars_block_size and tree.scale_block_size).
+    //
+    if (!blocks_are_owned) {
+        clear();
+    }
+    ensure_aligned_allocated(partial_lh, tree.lh_block_size);
+    ensure_aligned_allocated(scale_num,  tree.scale_block_size);
+    blocks_are_owned = true;
+}
+
+void    LikelihoodBlockPair::lendTo(PhyloNeighbor* borrower) {
+    borrower->partial_lh = this->partial_lh;
+    borrower->scale_num  = this->scale_num;
+}
 
 
 LikelihoodBlockAllocator::LikelihoodBlockAllocator(PhyloTree& tree,
@@ -166,8 +248,7 @@ void LikelihoodBlockAllocator::makeTreeReady(PhyloNode* first,
             //recycle older unused blocks
             auto block_pair = spare_block_pairs.back();
             spare_block_pairs.pop_back();
-            recipient->partial_lh = block_pair.partial_lh;
-            recipient->scale_num  = block_pair.scale_num;
+            block_pair.lendTo(recipient);
         }
         recipient->setLikelihoodComputed(false);
     }

@@ -78,9 +78,10 @@ void PlacementRun::prepareForBatch() {
 #if (NEW_TAXON_MAJOR)
      
     double refreshStart = getRealTime();
+    LikelihoodBlockPairs blocks(2);
     for (int t=0; t<targets; ++t) {
         TargetBranch* target = targets.getTargetBranch(t);
-        taget->computeState(phylo_tree);
+        target->computeState(phylo_tree, blocks);
     }
     refreshTime += getRealTime() - refreshStart;
 
@@ -96,14 +97,14 @@ void PlacementRun::prepareForBatch() {
     }
      
 #else //TARGET_BRANCH_MAJOR
-     
+    LikelihoodBlockPairs blocks(2);
     for (size_t t = 0; t < targetCount; ++t ) {
         TargetBranch* target = targets.getTargetBranch(t);
         TREE_LOG_LINE(phylo_tree, VB_DEBUG,
                       "Scoring target branch " << t << " of " << targetCount);
         
         double computeStart = getRealTime();
-        target->computeState(phylo_tree);
+        target->computeState(phylo_tree, blocks);
         refreshTime += getRealTime() - computeStart;
         
         target->costPlacementOfTaxa(phylo_tree,
@@ -137,21 +138,23 @@ void PlacementRun::startBatchInsert() {
     taxa_inserted_this_batch = 0;
 }
 
-void PlacementRun::insertTaxon(TaxaToPlace& taxa, size_t taxon_index, TargetBranchRange& targets) {
+void PlacementRun::insertTaxon(TaxaToPlace& taxa, size_t taxon_index,
+                               TargetBranchRange& targets,
+                               LikelihoodBlockPairs& blocks) {
     TaxonToPlace& c = taxa.getTaxonByIndex(taxon_index);
     const char* verb = "inserted";
     const char* where ;
     if (c.canInsert()) {
         ++taxa_inserted_this_batch;
         ++taxa_inserted_in_total;
-        c.insertIntoTree(phylo_tree, block_allocator, targets, *calculator);
+        c.insertIntoTree(phylo_tree, *block_allocator, blocks, targets, *calculator);
         where = "on its desired branch";
     } else {
         //Another candidate taxon has gotten there first
         ++taxa_inserted_nearby;
         ++taxa_inserted_this_batch;
         ++taxa_inserted_in_total;
-        c.insertNearby(phylo_tree, block_allocator, targets, *calculator);
+        c.insertNearby(phylo_tree, *block_allocator, blocks, targets, *calculator);
         where = "near its desired branch";
     }
     

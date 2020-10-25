@@ -130,8 +130,8 @@ bool TaxonToPlace::operator < (const TaxonToPlace& rhs) const {
 bool TaxonToPlace::operator <= (const TaxonToPlace& rhs) const {
     return bestPlacement.score <= rhs.bestPlacement.score; //lowest score is best
 }
-void TaxonToPlace::insertIntoTree(PhyloTree& phylo_tree, BlockAllocator* b,
-                    TargetBranchRange& dest,
+void TaxonToPlace::insertIntoTree(PhyloTree& phylo_tree, BlockAllocator& b,
+                    LikelihoodBlockPairs& blocks, TargetBranchRange& dest,
                     PlacementCostCalculator& calculator) {
     //
     //Assumes, canInsert() returned true, and the tree has not
@@ -150,12 +150,12 @@ void TaxonToPlace::insertIntoTree(PhyloTree& phylo_tree, BlockAllocator* b,
     target->handOverComputedStateTo( up);
 
     new_interior->addNeighbor(node_2, bestPlacement.lenToNode2 );
-    b->handOverComputedState (node_1->findNeighbor(node_2), new_interior->findNeighbor(node_2) );
+    b.handOverComputedState  (node_1->findNeighbor(node_2), new_interior->findNeighbor(node_2) );
     node_1->updateNeighbor   (node_2, new_interior, bestPlacement.lenToNode1);
     node_1->findNeighbor     (new_interior)->clearComputedFlags();
 
     new_interior->addNeighbor(node_1, bestPlacement.lenToNode1 );
-    b->handOverComputedState (node_2->findNeighbor(node_1), new_interior->findNeighbor(node_1) );
+    b.handOverComputedState  (node_2->findNeighbor(node_1), new_interior->findNeighbor(node_1) );
     node_2->updateNeighbor   (node_1, new_interior, bestPlacement.lenToNode2);
     node_1->findNeighbor     (new_interior)->clearComputedFlags();
             
@@ -163,17 +163,18 @@ void TaxonToPlace::insertIntoTree(PhyloTree& phylo_tree, BlockAllocator* b,
     inserted                    = true;
     bool likelihood_needed      = calculator.usesLikelihood();
     ReplacementBranchList* reps = new ReplacementBranchList;
-    reps->emplace_back ( dest.addNewRef(b, new_interior, node_1  , likelihood_needed ) );
-    reps->emplace_back ( dest.addNewRef(b, new_interior, node_2  , likelihood_needed ) );
-    reps->emplace_back ( dest.addNewRef(b, new_interior, new_leaf, likelihood_needed ) );
+    reps->emplace_back ( dest.addNewRef(b, blocks, new_interior, node_1  , likelihood_needed ) );
+    reps->emplace_back ( dest.addNewRef(b, blocks, new_interior, node_2  , likelihood_needed ) );
+    reps->emplace_back ( dest.addNewRef(b, blocks, new_interior, new_leaf, likelihood_needed ) );
     bestPlacement.target_branch.getTarget()->takeOwnershipOfReplacementVector(reps);
 }
 void TaxonToPlace::forgetGazumpedPlacements() {
     bestPlacement.forget();
 }
-bool TaxonToPlace::insertNearby(PhyloTree& phylo_tree, BlockAllocator* b,
-                  TargetBranchRange& dest,
-                  PlacementCostCalculator& calculator ) {
+bool TaxonToPlace::insertNearby(PhyloTree& phylo_tree, BlockAllocator& b,
+                                LikelihoodBlockPairs& blocks,
+                                TargetBranchRange& dest,
+                                PlacementCostCalculator& calculator ) {
     TargetBranch* blocked_target = bestPlacement.getTarget();
     forgetGazumpedPlacements();
     std::vector<PossiblePlacement> placements;
@@ -185,7 +186,7 @@ bool TaxonToPlace::insertNearby(PhyloTree& phylo_tree, BlockAllocator* b,
     if (!canInsert()) {
         return false;
     }
-    insertIntoTree(phylo_tree, b, dest, calculator);
+    insertIntoTree(phylo_tree, b, blocks, dest, calculator);
     return true;
 }
 void TaxonToPlace::assessNewTargetBranches(PhyloTree& phylo_tree,
@@ -201,6 +202,7 @@ void TaxonToPlace::assessNewTargetBranches(PhyloTree& phylo_tree,
     }
     std::vector< ReplacementBranchList* > stack;
     stack.push_back(reps);
+    LikelihoodBlockPairs blocks(2);
     while (!stack.empty()) {
         reps = stack.back();
         stack.pop_back();
@@ -210,7 +212,7 @@ void TaxonToPlace::assessNewTargetBranches(PhyloTree& phylo_tree,
             } else {
                 PossiblePlacement p;
                 p.setTargetBranch(*it);
-                p.getTarget()->computeState(phylo_tree);
+                p.getTarget()->computeState(phylo_tree, blocks);
                 calculator.assessPlacementCost(phylo_tree, *this, p);
                 scores.emplace_back(p);
             }

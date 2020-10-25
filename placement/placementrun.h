@@ -74,9 +74,11 @@ public:
      a taxon is inserted, that marks an existing target branch as used up, and adds three
          new target branches (for the new branches, on either side of the new interior node,
      and between the new interior node and the taxon's leaf node.
+     @param blocks [todo: explain]
      */
     void insertTaxon(TaxaToPlace& taxa, size_t taxon_index,
-                     TargetBranchRange& targets);
+                     TargetBranchRange& targets,
+                     LikelihoodBlockPairs& blocks);
     
     /** called when a batch has been processed.
      @param taxa  the taxa being added to the tree

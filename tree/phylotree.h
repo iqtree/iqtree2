@@ -97,11 +97,11 @@ const int SPR_DEPTH = 2;
         logLine(s.str()); \
     } else 0
 
-#define TREE_LOG_LINE(t, lev, text) \
-    if (verbose_mode >= (lev)) { \
-        std::stringstream s; \
-        s << text; \
-        (t).logLine(s.str()); \
+#define TREE_LOG_LINE(xtree, xlev, xtext) \
+    if (verbose_mode >= (xlev)) { \
+        std::stringstream xsx; \
+        xsx << xtext; \
+        (xtree).logLine(xsx.str()); \
     } else 0
 
 /**
@@ -344,6 +344,7 @@ class PhyloTree : public MTree, public Optimization, public CheckpointFactory {
     friend class BlockAllocator;
     friend class PlacementTraversalInfo;
     friend class LikelihoodBlockAllocator;
+    friend class LikelihoodBlockPair;
 
 public:
     bool tracing_lh;
@@ -706,7 +707,7 @@ public:
     typedef void (PhyloTree::*ComputePartialParsimonyType)(PhyloNeighbor *, PhyloNode *);
     ComputePartialParsimonyType computePartialParsimonyPointer;
     
-    typedef void (PhyloTree::*ComputePartialParsimonyOutOfTreeType)(const UINT* left_partial_pars,
+    typedef double (PhyloTree::*ComputePartialParsimonyOutOfTreeType)(const UINT* left_partial_pars,
                                                      const UINT* right_partial_pars,
                                                      UINT* dad_partial_pars) const;
     ComputePartialParsimonyOutOfTreeType computePartialParsimonyOutOfTreePointer;
@@ -721,19 +722,19 @@ public:
 //    void computePartialParsimonyNaive(PhyloNeighbor *dad_branch, PhyloNode *dad);
     void computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode *dad);
     
-    void computePartialParsimonyOutOfTreeFast(const UINT* left_partial_pars,
-                                              const UINT* right_partial_pars,
-                                              UINT* dad_partial_pars) const;
+    double computePartialParsimonyOutOfTreeFast(const UINT* left_partial_pars,
+                                                const UINT* right_partial_pars,
+                                                UINT* dad_partial_pars) const;
 
     template<class VectorClass>
     void computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
     
     
-    void computePartialParsimonyOutOfTree(const UINT* left_partial_pars,
+    double computePartialParsimonyOutOfTree(const UINT* left_partial_pars,
                                           const UINT* right_partial_pars,
                                           UINT* dad_partial_pars) const;
     template<class VectorClass>
-    void computePartialParsimonyOutOfTreeSIMD(const UINT* left_partial_pars,
+    double computePartialParsimonyOutOfTreeSIMD(const UINT* left_partial_pars,
                                               const UINT* right_partial_pars,
                                               UINT* dad_partial_pars) const;
 
@@ -741,7 +742,7 @@ public:
     void computePartialParsimonySankoffSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     template<class VectorClass>
-    void computePartialParsimonyOutOfTreeSankoffSIMD(const UINT* left_partial_pars,
+    double computePartialParsimonyOutOfTreeSankoffSIMD(const UINT* left_partial_pars,
                                                      const UINT* right_partial_pars,
                                                      UINT*       dad_partial_pars) const;
 
@@ -830,9 +831,9 @@ public:
      */
     void computePartialParsimonySankoff(PhyloNeighbor *dad_branch, PhyloNode *dad);
     
-    void computePartialParsimonyOutOfTreeSankoff(const UINT* left_partial_pars,
-                                                 const UINT* right_partial_pars,
-                                                 UINT* dad_partial_pars) const;
+    double computePartialParsimonyOutOfTreeSankoff(const UINT* left_partial_pars,
+                                                   const UINT* right_partial_pars,
+                                                   UINT* dad_partial_pars) const;
     
     /**
      compute tree parsimony score based on a particular branch

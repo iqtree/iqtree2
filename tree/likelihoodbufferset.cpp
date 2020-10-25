@@ -45,7 +45,10 @@ void LikelihoodBufferSet::ensureThetaAllocated(size_t desired_block_size) {
     theta_all        = aligned_alloc<double>(desired_block_size);
     theta_block_size = desired_block_size;
     theta_borrowed   = false;
-    for (int i=0; i<theta_block_size; ++i) theta_all[i]=0;
+    theta_computed   = false;
+    for (int i=0; i<theta_block_size; ++i) {
+        theta_all[i]=0;
+    }
 }
 
 void LikelihoodBufferSet::borrowTheta(double* theta_start, size_t theta_size_in_doubles) {
@@ -54,6 +57,7 @@ void LikelihoodBufferSet::borrowTheta(double* theta_start, size_t theta_size_in_
     }
     theta_all        = theta_start;
     theta_block_size = theta_size_in_doubles;
+    theta_computed   = false;
     theta_borrowed   = true;
 }
 

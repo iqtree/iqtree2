@@ -673,7 +673,7 @@ void PhyloTree::computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloN
         }
     }
 
-    assert(buffers.theta_all);
+    assert(buffers.theta_all != nullptr);
     if (!buffers.theta_computed) {
         buffers.theta_computed = true;
         // precompute theta for fast branch length optimization
@@ -1275,8 +1275,6 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
 
 template <class VectorClass, const int VCSIZE, const int nstates>
 double PhyloTree::computeLikelihoodFromBufferEigenSIMD(LikelihoodBufferSet& buffers) {
-
-
     assert(buffers.theta_all && buffers.theta_computed);
 
     double tree_lh = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
@@ -1746,7 +1744,7 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
 }
 
 template<class VectorClass>
-void PhyloTree::computePartialParsimonyOutOfTreeSIMD(const UINT* left_partial_pars,
+double PhyloTree::computePartialParsimonyOutOfTreeSIMD(const UINT* left_partial_pars,
                                                      const UINT* right_partial_pars,
                                                      UINT* dad_partial_pars) const {
 
@@ -1806,6 +1804,7 @@ void PhyloTree::computePartialParsimonyOutOfTreeSIMD(const UINT* left_partial_pa
     }
     auto total = nstates*VCSIZE*nsites;
     dad_partial_pars[total] = score + left_partial_pars[total] + right_partial_pars[total];
+    return dad_partial_pars[total];
 }
 
 template<class VectorClass>
@@ -2088,15 +2087,16 @@ void PhyloTree::computePartialParsimonySankoffSIMD(PhyloNeighbor *dad_branch,
 }
 
 template<class VectorClass>
-void PhyloTree::computePartialParsimonyOutOfTreeSankoffSIMD
+double PhyloTree::computePartialParsimonyOutOfTreeSankoffSIMD
         (const UINT* left_partial_pars, const UINT* right_partial_pars,
          UINT*       dad_partial_pars) const
 {
+    size_t score    = 0;
     size_t ptnCount = aln->ordered_pattern.size();
     size_t ptnStep  = VectorClass::size();
     int nstates = aln->num_states;
     #ifdef _OPENMP
-    #pragma omp parallel for
+    #pragma omp parallel for reduction(+:score)
     #endif
     for (size_t ptn = 0; ptn < ptnCount; ptn+=ptnStep){
         // ignore const ptn because it does not affect pars score
@@ -2119,7 +2119,13 @@ void PhyloTree::computePartialParsimonyOutOfTreeSankoffSIMD
             partial_pars_ptr[i] = left_contrib + right_contrib;
             cost_matrix_ptr    += nstates;
         }
+        VectorClass here = partial_pars_ptr[0];
+        for (int i = 0; i < nstates; i++){
+            here = min(partial_pars_ptr[i],here);
+        }
+        score += horizontal_add(here);
     }
+    return score;
 }
 
 template<class VectorClass>

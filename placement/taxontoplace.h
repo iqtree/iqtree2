@@ -102,9 +102,11 @@ public:
         added to the phylo tree by the insertion).
      @param phylo_tree the phylo tree
      @param b the BlockAllocator (needed, when adding new branches
+     @param blocks [Todo: explain]
      @param dest the target branch range (new target branches)
      @param calculator the PlacementCostCalculator (at present, only asked if uses likelihood!)*/
-    void insertIntoTree ( PhyloTree& phylo_tree, BlockAllocator* b,
+    void insertIntoTree ( PhyloTree& phylo_tree, BlockAllocator& b,
+                          LikelihoodBlockPairs& blocks,
                           TargetBranchRange& dest,
                           PlacementCostCalculator& calculator);
     
@@ -116,9 +118,11 @@ public:
         added to the phylo tree by the insertion).
      @param phylo_tree the phylo tree
      @param b the BlockAllocator (needed, when adding new branches
+     @param blocks [Todo: explain]
      @param dest the target branch range (new target branches)
      @param calculator the PlacementCostCalculator (at present, only asked if uses likelihood!)*/
-    bool insertNearby ( PhyloTree& phylo_tree, BlockAllocator* b,
+    bool insertNearby ( PhyloTree& phylo_tree, BlockAllocator& b,
+                        LikelihoodBlockPairs& blocks,
                         TargetBranchRange& dest,
                         PlacementCostCalculator& calculator );
     

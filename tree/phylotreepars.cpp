@@ -182,7 +182,7 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
     }
 }
 
-void PhyloTree::computePartialParsimonyOutOfTreeFast(const UINT* left_partial_pars,
+double PhyloTree::computePartialParsimonyOutOfTreeFast(const UINT* left_partial_pars,
                                                     const UINT* right_partial_pars,
                                                     UINT* dad_partial_pars) const {
 
@@ -241,6 +241,7 @@ void PhyloTree::computePartialParsimonyOutOfTreeFast(const UINT* left_partial_pa
     }
     auto total = nstates*nsites;
     dad_partial_pars[total] = score + left_partial_pars[total] + right_partial_pars[total];
+    return  dad_partial_pars[total];
 }
 
 
@@ -833,13 +834,14 @@ void PhyloTree::computePartialParsimonySankoff(PhyloNeighbor *dad_branch, PhyloN
     computePartialParsimonyOutOfTreeSankoff(left->partial_pars, right->partial_pars, partial_pars );
 }
 
-void PhyloTree::computePartialParsimonyOutOfTreeSankoff(const UINT* left_partial_pars,
+double PhyloTree::computePartialParsimonyOutOfTreeSankoff(const UINT* left_partial_pars,
                                                         const UINT* right_partial_pars,
                                                         UINT* dad_partial_pars) const {
     int nstates  = aln->num_states;
     int ptnCount = aln->ordered_pattern.size();
+    size_t score = 0;
     #ifdef _OPENMP //James B. This for-loop parallelized, 18-Sep-2020.
-    #pragma omp parallel for
+    #pragma omp parallel for reduction(+:score)
     #endif
     for (UINT ptn = 0; ptn < ptnCount; ++ptn){
         // ignore const ptn because it does not affect pars score
@@ -861,7 +863,14 @@ void PhyloTree::computePartialParsimonyOutOfTreeSankoff(const UINT* left_partial
             partial_pars_ptr[i] = left_contrib + right_contrib;
             cost_matrix_ptr    += nstates;
         }
+        UINT here = partial_pars_ptr[0];
+        for ( UINT i = 0; i < nstates; ++i ){
+            UINT there = partial_pars_ptr[i] ;
+            here = ( here < there ) ? here : there;
+        }
+        score += here;
     }
+    return score;
 }
 
 /**

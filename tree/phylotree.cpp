@@ -1065,10 +1065,10 @@ void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *da
     (this->*computePartialParsimonyPointer)(dad_branch, dad);
 }
 
-void PhyloTree::computePartialParsimonyOutOfTree(const UINT* left_partial_pars,
+double PhyloTree::computePartialParsimonyOutOfTree(const UINT* left_partial_pars,
                                       const UINT* right_partial_pars,
                                                  UINT* dad_partial_pars) const {
-    (this->*computePartialParsimonyOutOfTreePointer)
+    return (this->*computePartialParsimonyOutOfTreePointer)
         ( left_partial_pars, right_partial_pars, dad_partial_pars );
 }
 
@@ -1640,10 +1640,9 @@ double PhyloTree::computePatternLhCat(SiteLoglType wsl) {
         current_it      = leaf->firstNeighbor();
         current_it_back = current_it->getNode()->findNeighbor(leaf);
     }
-
-    double score;
-
-    score = computeLikelihoodBranch(current_it, current_it_back->getNode(), tree_buffers);
+    double score  = computeLikelihoodBranch(current_it,
+                                            current_it_back->getNode(),
+                                            tree_buffers);
     // TODO: SIMD aware
     transformPatternLhCat();
     /*
@@ -1765,7 +1764,7 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
     if (ptn_lh_cat) {
         // Right now only Naive version store _pattern_lh_cat!
         computePatternLhCat(wsl);
-    } 
+    }
     
     double sum_scaling = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
     //double sum_scaling = 0.0;
@@ -1942,10 +1941,10 @@ int PhyloTree::computePatternCategories(IntVector *pattern_ncat) {
     size_t num_best_mixture = 0;
     ASSERT(ncat < sizeof(uint64_t)*8 && nmixture < sizeof(uint64_t)*8);
 
-    double *lh_cat = tree_buffers._pattern_lh_cat;
-    double *lh_mixture = new double[nmixture];
-    double *sorted_lh_mixture = new double[nmixture];
-    int *id_mixture = new int[nmixture];
+    double* lh_cat            = tree_buffers._pattern_lh_cat;
+    double* lh_mixture        = new double[nmixture];
+    double* sorted_lh_mixture = new double[nmixture];
+    int*    id_mixture        = new int[nmixture];
     
 //    for (c = 0; c < ncat; c++)
 //        cat_prob[c] = getRate()->getProp(c);
@@ -2732,13 +2731,13 @@ void PhyloTree::computeAllBayesianBranchLengths(PhyloNode *node, PhyloNode *dad)
 
 double PhyloTree::computeLikelihoodZeroBranch(PhyloNeighbor *dad_branch, PhyloNode *dad) {
     double lh_zero_branch;
-    double saved_len = dad_branch->length;
-    PhyloNeighbor *node_branch = dad_branch->getNode()->findNeighbor(dad);
-    dad_branch->length = 0.0;
-    node_branch->length = 0.0;
-    lh_zero_branch = computeLikelihoodBranch(dad_branch, dad, tree_buffers);
+    double         saved_len   = dad_branch->length;
+    PhyloNeighbor* node_branch = dad_branch->getNode()->findNeighbor(dad);
+    dad_branch->length         = 0.0;
+    node_branch->length        = 0.0;
+    lh_zero_branch      = computeLikelihoodBranch(dad_branch, dad, tree_buffers);
     // restore branch length
-    dad_branch->length = saved_len;
+    dad_branch->length  = saved_len;
     node_branch->length = saved_len;
 
     return lh_zero_branch;
@@ -2993,12 +2992,10 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
     PhyloNeighbor* firstNeighbor = nodes[0]->findNeighbor(nodes2[0]);
     double tree_lh = computeLikelihoodBranch(firstNeighbor, nodes[0],
                                              tree_buffers);
-    
     if (verbose_mode >= VB_MAX) {
         cout << "Initial tree log-likelihood: " << tree_lh << endl;
     }
     DoubleVector lenvec;
-    //cout << tree_lh << endl;
     initProgress(my_iterations*nodes.size(), "Optimizing branch lengths", "", "", true);
     for (int i = 0; i < my_iterations; i++) {
 //        string string_brlen = getTreeString();

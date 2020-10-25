@@ -18,6 +18,7 @@
 #include <vector>
 #include <tree/phylonode.h>
 #include <tree/phylotree.h>
+#include "blockallocator.h"
 
 class TargetBranch;
 class TargetBranchRange;
@@ -65,7 +66,9 @@ public:
     TargetBranch(BlockAllocator* allocator,
                  PhyloNode* node1, PhyloNode* node2,
                  bool likelihood_wanted);
-    void computeState(PhyloTree& phylo_tree) const;
+    void computeState(PhyloTree& phylo_tree, LikelihoodBlockPairs &blocks) const;
+    void dumpNeighbor(VerboseMode level, const char* prefix,
+                      PhyloTree& phylo_tree, PhyloNeighbor* nei) const;
     void forgetState()                       const;
     bool isUsedUp()                          const;
     void handOverComputedStateTo(PhyloNeighbor* nei) ;
@@ -98,7 +101,8 @@ public:
         return &at(i);
     }
     void removeUsed();
-    TargetBranchRef addNewRef(BlockAllocator* allocator,
+    TargetBranchRef addNewRef(BlockAllocator& allocator,
+                              LikelihoodBlockPairs& blocks,
                               PhyloNode* node1, PhyloNode* node2,
                               bool likelihood_wanted);
 };

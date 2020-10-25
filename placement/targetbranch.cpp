@@ -59,24 +59,60 @@ TargetBranch::TargetBranch(BlockAllocator* allocator,
     used  = false;
 }
 
-void TargetBranch::computeState(PhyloTree& phylo_tree) const {
+void TargetBranch::dumpNeighbor(VerboseMode level, const char* name,
+                                PhyloTree& phylo_tree, PhyloNeighbor* nei) const
+{
+    PhyloNode* node = nei->getNode();
+    std::stringstream s;
+    s << name << " (scale factor " << nei->lh_scale_factor << ")";
+    if (node->isLeaf()) {
+        s << " points to exterior " << node->id
+          << " (" << node->name << ")\n";
+    } else {
+        s << " points to interior\n";
+    }
+    if (nei->partial_lh!=nullptr) {
+        s.precision(6);
+        std::string sep  = name;
+        sep += " ";
+        std::string sep2 = "\n" + sep;
+        for (int i=0; i<phylo_tree.lh_block_size; ++i) {
+            s << (((i&7)==0) ? sep : " ");
+            s << nei->partial_lh[i];
+            sep = sep2;
+        }
+        s << "\n";
+        s << "Scale";
+        for (int i=0; i<phylo_tree.scale_block_size; ++i) {
+            s << " " << nei->scale_num[i];
+        }
+        s << "\n";
+    } else {
+        s << name << " does not have a partial likelihood block";
+    }
+    TREE_LOG_LINE(phylo_tree, level, s.str() );
+}
+
+void TargetBranch::computeState(PhyloTree& phylo_tree,
+                                LikelihoodBlockPairs &blocks) const {
     PhyloNeighbor* neigh1 = first->findNeighbor(second);
     PhyloNeighbor* neigh2 = second->findNeighbor(first);
     ParallelParsimonyCalculator c(phylo_tree);
     c.computePartialParsimony(neigh1, first);
     c.computePartialParsimony(neigh2, second);
     c.calculate();
-    phylo_tree.computePartialParsimonyOutOfTree
+    double pars = phylo_tree.computePartialParsimonyOutOfTree
         ( neigh1->partial_pars, neigh2->partial_pars, partial_pars );
+    TREE_LOG_LINE(phylo_tree, VB_MAX, "TB Parsimony was " << pars
+                  << ", neigh1->length was " << neigh1->length);
     if (partial_lh != nullptr) {
         blocker->makeTreeReady(first, second);
         LikelihoodBufferSet localBuffers(phylo_tree.tree_buffers);
         double score = -phylo_tree.computeLikelihoodBranch(neigh1, first, localBuffers);
-        TREE_LOG_LINE(phylo_tree, VB_DEBUG,
+        TREE_LOG_LINE(phylo_tree, VB_MIN,
                       "Preliminary likelihood score for place "
                       << pointer_to_hex(this)
                       << " was " << score);
-        
         double old_length      = neigh1->length;
         double half_old_length = 0.5 * old_length;
         PlacementTraversalInfo info(phylo_tree, localBuffers, nullptr, nullptr);
@@ -84,23 +120,52 @@ void TargetBranch::computeState(PhyloTree& phylo_tree) const {
         PhyloNode fakeInterior;
         fakeInterior.addNeighbor(second,        half_old_length);
         fakeInterior.addNeighbor(first,         half_old_length);
-        
-        PhyloNode fakeExterior;
-        fakeInterior.addNeighbor(&fakeExterior, 0.0);
-        fakeExterior.addNeighbor(&fakeInterior, 0.0);
-        
-        info.computePartialLikelihood(neigh1, first);
-        PhyloNeighbor* fakeNeigh1 = fakeInterior.findNeighbor(second);
-        fakeNeigh1->partial_lh = neigh1->partial_lh;
-        fakeNeigh1->scale_num  = neigh1->scale_num;
-        fakeNeigh1->setLikelihoodComputed(true);
 
-        info.computePartialLikelihood(neigh2, second);
+        PhyloNode fakeExterior;
+        fakeInterior.addNeighbor(&fakeExterior, half_old_length);
+        fakeExterior.addNeighbor(&fakeInterior, half_old_length);
+
+        neigh1->length = half_old_length;
+        neigh2->length = half_old_length;
+        
+        blocks.resize(2);
+
+        PhyloNeighbor* fakeNeigh1 = fakeInterior.findNeighbor(second);
+        fakeNeigh1->partial_lh    = neigh1->partial_lh;
+        fakeNeigh1->scale_num     = neigh1->scale_num;
+        fakeNeigh1->lh_scale_factor = neigh1->lh_scale_factor;
+        if (neigh1->partial_lh != nullptr ) {
+            blocks[0].allocate(phylo_tree);
+            blocks[0].lendTo(neigh1);
+            neigh1->setLikelihoodComputed(false);
+            //info.computePartialLikelihood(neigh1, first);
+        }
+
         PhyloNeighbor* fakeNeigh2 = fakeInterior.findNeighbor(first);
         fakeNeigh2->partial_lh    = neigh2->partial_lh;
         fakeNeigh2->scale_num     = neigh2->scale_num;
+        fakeNeigh2->lh_scale_factor = neigh2->lh_scale_factor;
+        if (neigh2->partial_lh != nullptr ) {
+            blocks[1].allocate(phylo_tree);
+            blocks[1].lendTo(neigh2);
+            neigh2->setLikelihoodComputed(false);
+            //info.computePartialLikelihood(neigh2, second);
+        }
+        
+        score = -phylo_tree.computeLikelihoodBranch(neigh1, first, localBuffers);
+        TREE_LOG_LINE(phylo_tree, VB_MIN,
+                      "Second likelihood score for place "
+                      << pointer_to_hex(this)
+                      << " was " << score);
+        
+        std::swap(neigh1->partial_lh, fakeNeigh1->partial_lh );
+        std::swap(neigh1->scale_num,  fakeNeigh1->scale_num  );
+        std::swap(neigh2->partial_lh, fakeNeigh2->partial_lh );
+        std::swap(neigh2->scale_num,  fakeNeigh2->scale_num  );
+        fakeNeigh1->setLikelihoodComputed(true);
         fakeNeigh2->setLikelihoodComputed(true);
 
+        //phylo_tree.tracing_lh = true;
         PhyloNeighbor* fakeNeigh3 = fakeExterior.findNeighbor(&fakeInterior);
         fakeNeigh3->partial_lh    = partial_lh;
         fakeNeigh3->scale_num     = scale_num;
@@ -108,9 +173,15 @@ void TargetBranch::computeState(PhyloTree& phylo_tree) const {
         info.computePartialLikelihood(fakeNeigh3, &fakeExterior);
 
         neigh1->length = old_length;
-        neigh1->setLikelihoodComputed(false);
         neigh2->length = old_length;
-        neigh2->setLikelihoodComputed(false);
+
+#if (0)
+        dumpNeighbor(VB_MIN, "LO", phylo_tree, neigh1);
+        dumpNeighbor(VB_MIN, "RO", phylo_tree, neigh2);
+        dumpNeighbor(VB_MIN, "LF", phylo_tree, fakeNeigh1);
+        dumpNeighbor(VB_MIN, "RF", phylo_tree, fakeNeigh2);
+        dumpNeighbor(VB_MIN, "MF", phylo_tree, fakeNeigh3);
+#endif
     }
 }
 
@@ -222,11 +293,12 @@ size_t TargetBranchRef::getTargetIndex() const {
     return target_index;
 }
 
-TargetBranchRef TargetBranchRange::addNewRef(BlockAllocator* allocator,
+TargetBranchRef TargetBranchRange::addNewRef(BlockAllocator& allocator,
+                                             LikelihoodBlockPairs& blocks,
                                              PhyloNode* node1, PhyloNode* node2,
                                              bool likelihood_wanted) {
-    emplace_back(allocator, node1, node2, likelihood_wanted);
-    back().computeState(allocator->getTree());
+    emplace_back(&allocator, node1, node2, likelihood_wanted);
+    back().computeState(allocator.getTree(), blocks);
     return TargetBranchRef(this, size()-1);
 }
 
@@ -240,7 +312,7 @@ void TargetBranch::costPlacementOfTaxa
      SearchHeuristic*   heuristic,
      PlacementCostCalculator* calculator,
      bool               isFirstTargetBranch) const {
-        
+
     TargetBranchRef here(&targets, targetNumber);
     #ifdef _OPENMP
     #pragma omp parallel for
