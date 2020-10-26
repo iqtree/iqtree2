@@ -141,12 +141,19 @@ void PhyloTree::removeSampleTaxaIfRequested() {
     size_t nseq = aln->getNSeq();
     size_t countOfTaxaToRemove = Placement::getNumberOfTaxaToRemoveAndReinsert(nseq);
     if (0<countOfTaxaToRemove) {
+        LOG_LINE(VB_DEBUG, "Will mark " << countOfTaxaToRemove << " (out of " << nseq
+                    << ") sequences, to be removed.");
         map<string, Node*> mapNameToNode;
         getMapOfTaxonNameToNode(nullptr, nullptr, mapNameToNode);
         size_t r = 0;
+        LOG_LINE(VB_MAX, "Before removing sequences:");
+        for (auto it=mapNameToNode.begin(); it!=mapNameToNode.end(); ++it) {
+            LOG_LINE( VB_MAX, "sequence " << it->first << " has id " << it->second );
+        }
+
         for (size_t seq = 0; seq < nseq; ++seq) {
             r += countOfTaxaToRemove;
-            if ( r >= nseq ) {
+            if ( nseq <= r ) {
                 r -= nseq;
                 string seq_name = aln->getSeqName(seq);
                 auto it = mapNameToNode.find(seq_name);
@@ -157,6 +164,7 @@ void PhyloTree::removeSampleTaxaIfRequested() {
                         node->name = newName;
                         mapNameToNode[newName] = node;
                     }
+                    LOG_LINE(VB_MED, "Marking sequence " << seq << " (" << node->name << ") to be removed.");
                 }
             }
         }
@@ -347,11 +355,12 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
 }
 
 void PhyloTree::finishUpAfterTaxaAddition() {
-    initializeTree();
     deleteAllPartialLh();
-    initializeAllPartialLh();
+    initializeTree(); //Make sure branch numbers et cetera are set.
     LOG_LINE ( VB_MED, "Number of leaves " << this->leafNum
-              << ", of nodes " << this->nodeNum );
+                    << ", of nodes "       << this->nodeNum
+                    << ", of branches "    << this->branchNum);
+    initializeAllPartialLh();
     this->tracing_lh = false;
     if (Placement::doesPlacementUseLikelihood()) {
         double score = optimizeAllBranches();

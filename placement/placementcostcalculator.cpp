@@ -64,7 +64,7 @@ void LikelihoodCostCalculator::assessPlacementCost(PhyloTree& tree, const TaxonT
     
     super::assessPlacementCost(tree, taxon, placement);
     
-    auto   target            = placement.getTarget();
+    TargetBranch* target     = placement.getTarget();
     double score             = (placement.parsimony_score > 1) ? placement.parsimony_score : 1;
     double normalized        = score / tree.getAlnNSite();
     double alpha             = tree.getGammaShape();
@@ -77,12 +77,14 @@ void LikelihoodCostCalculator::assessPlacementCost(PhyloTree& tree, const TaxonT
     PhyloNode fakeLeaf(taxon.new_leaf->id, taxon.new_leaf->name.c_str());
     fakeLeaf.addNeighbor(&fakeInterior, placement.lenToNewTaxon );
     
-    PhyloNeighbor* neighUp = fakeLeaf.findNeighbor(&fakeInterior);
-    neighUp->partial_lh    = const_cast<double*> ( target->getLikelihoodBlock());
-    neighUp->scale_num     = const_cast<UBYTE*>  ( target->getScaleNumBlock() );
+    PhyloNeighbor* neighUp   = fakeLeaf.findNeighbor(&fakeInterior);
+    neighUp->partial_lh      = target->getLikelihoodBlock();
+    neighUp->scale_num       = target->getScaleNumBlock();
+    neighUp->lh_scale_factor = target->getLhScaleFactor();
     neighUp->setLikelihoodComputed(true);
 
     fakeInterior.addNeighbor(&fakeLeaf, placement.lenToNewTaxon );
+    PhyloNeighbor* neighDown = fakeInterior.findNeighbor(&fakeLeaf);
     
     if (!this->midpoint) {
         double halfLen = 0.5 * target->first->findNeighbor(target->second)->length;
@@ -93,16 +95,16 @@ void LikelihoodCostCalculator::assessPlacementCost(PhyloTree& tree, const TaxonT
         PhyloNeighbor* realNeiLeft  = target->second->findNeighbor(target->first);
         neighLeft->partial_lh       = realNeiLeft->partial_lh;
         neighLeft->scale_num        = realNeiLeft->scale_num;
+        neighLeft->lh_scale_factor  = realNeiLeft->lh_scale_factor;
         neighLeft->setLikelihoodComputed(true);
 
         PhyloNeighbor* neighRight   = fakeInterior.findNeighbor(target->second);
         PhyloNeighbor* realNeiRight = target->first->findNeighbor(target->second);
         neighRight->partial_lh      = realNeiRight->partial_lh;
         neighRight->scale_num       = realNeiRight->scale_num;
+        neighRight->lh_scale_factor = realNeiRight->lh_scale_factor;
         neighRight->setLikelihoodComputed(true);
-    }
-    
-    PhyloNeighbor* neighDown    = fakeInterior.findNeighbor(&fakeLeaf);
+    }    
     
     struct LikelihoodOptimizer : public Optimization
     {
@@ -197,8 +199,11 @@ void LikelihoodCostCalculator::assessPlacementCost(PhyloTree& tree, const TaxonT
     };
     LikelihoodOptimizer opt(tree, &fakeLeaf, neighUp, neighDown);
     opt.optimize(placement);
+    target->setLhScaleFactor(neighUp->lh_scale_factor);
+    
     TREE_LOG_LINE(tree, VB_MIN, taxon.taxonName
-                  << " at target " << placement.getTargetIndex()
+                  << " (taxon " << taxon.taxonId << ")"
+                  << " at target branch " << placement.getTargetIndex()
                   << " had parsimony score " << placement.parsimony_score
             << ", len "    << parsimony_length
             << ", old lh " << opt.getInitialScore()

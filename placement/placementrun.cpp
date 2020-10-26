@@ -81,7 +81,7 @@ void PlacementRun::prepareForBatch() {
     LikelihoodBlockPairs blocks(2);
     for (int t=0; t<targets; ++t) {
         TargetBranch* target = targets.getTargetBranch(t);
-        target->computeState(phylo_tree, blocks);
+        target->computeState(phylo_tree, t, blocks);
     }
     refreshTime += getRealTime() - refreshStart;
 
@@ -104,7 +104,7 @@ void PlacementRun::prepareForBatch() {
                       "Scoring target branch " << t << " of " << targetCount);
         
         double computeStart = getRealTime();
-        target->computeState(phylo_tree, blocks);
+        target->computeState(phylo_tree, t, blocks);
         refreshTime += getRealTime() - computeStart;
         
         target->costPlacementOfTaxa(phylo_tree,
@@ -160,10 +160,11 @@ void PlacementRun::insertTaxon(TaxaToPlace& taxa, size_t taxon_index,
     
     if (( verbose_mode >= VB_MIN && !phylo_tree.params->suppress_list_of_sequences)
         || verbose_mode >= VB_MED ) {
+        const PossiblePlacement& p = c.getBestPlacement();
         stringstream s;
         s << taxa_inserted_in_total << ". " << verb << " "
-            << c.taxonName << " " << where << ". It had ";
-        const PossiblePlacement& p = c.getBestPlacement();
+            << c.taxonName << " " << where
+        << " (branch index " << p.getTargetIndex() << "). It had ";
         if (!calculator->usesLikelihood()) {
             s << "parsimony score " << (int)(p.score);
         } else {

@@ -68,15 +68,15 @@ void BaseballSearchHeuristic::prepareToFilter(PhyloTree& tree, TargetBranchRange
     Matrix<double> scores;
     scores.setDimensions( stopTarget-startTarget, stopTaxon-startTaxon);
     LikelihoodBlockPairs blocks(2);
-    for (size_t b = startTarget; b<stopTarget; ++b ) { //branch
-        targets.getTargetBranch(b)->computeState(tree, blocks);
-        double* scoreRow = scores.getRow(b-startTarget);
+    for (size_t t = startTarget; t<stopTarget; ++t ) { //branch
+        targets.getTargetBranch(t)->computeState(tree, t, blocks);
+        double* scoreRow = scores.getRow(t-startTarget);
         #ifdef _OPENMP
         #pragma omp parallel for
         #endif
         for (size_t c = startTaxon; c<stopTaxon; ++c ) { //candidate taxon
             PossiblePlacement p;
-            p.setTargetBranch(&targets, b);
+            p.setTargetBranch(&targets, t);
             calculator->assessPlacementCost(tree, taxa.getTaxonByIndex(c), p);
             scoreRow[c] = p.score;
         }
