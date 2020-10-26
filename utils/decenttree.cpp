@@ -366,11 +366,12 @@ int main(int argc, char* argv[]) {
     std::string alignmentFilePath;
     std::string inputFilePath;
     std::string outputFilePath;
-    bool isOutputZipped     = false;
-    bool isOutputSuppressed = false;
-    bool isBannerSuppressed = false;
-    int  threadCount        = 0;
-    bool beSilent           = false;
+    bool isOutputZipped           = false;
+    bool isOutputSuppressed       = false;
+    bool isOutputToStandardOutput = false; //caller asked for newick tree to go to std::cout
+    bool isBannerSuppressed       = false;
+    int  threadCount              = 0;
+    bool beSilent                 = false;
     for (int argNum=1; argNum<argc; ++argNum) {
         std::string arg     = argv[argNum];
         std::string nextArg = (argNum+1<argc) ? argv[argNum+1] : "";
@@ -404,6 +405,11 @@ int main(int argc, char* argv[]) {
         }
         else if (arg=="-no-out") {
             isOutputSuppressed = true;
+        }
+        else if (arg=="-std-out") {
+            //Write output to standard output
+            outputFilePath = "STDOUT";
+            isOutputToStandardOutput = true;
         }
         else if (arg=="-gz") {
             isOutputZipped = true;
@@ -439,8 +445,9 @@ int main(int argc, char* argv[]) {
         PROBLEM("Input (mldist) file should be specified via -in [filepath.mldist]");
         PROBLEM("Or alignment (fasta) file may be specified via -fasta [filepath.fasta]");
     }
-    if (outputFilePath.empty() && !isOutputSuppressed) {
+    if (outputFilePath.empty() && !isOutputSuppressed && !isOutputToStandardOutput) {
         PROBLEM("Ouptut (newick format) filepath should be specified via -out [filepath.newick]");
+        PROBLEM("Or output can be sent to standard output, or suppressed, via -std-out or -no-out");
     }
     else if (!inputFilePath.empty() && inputFilePath==outputFilePath) {
         PROBLEM("Input file and output file paths are the same (" + inputFilePath + ")");
@@ -486,9 +493,9 @@ int main(int argc, char* argv[]) {
             succeeded = loadDistanceMatrixInto(inputFilePath, false, m);
         }
         if (succeeded) {
-            algorithm->constructTreeInMemory(m.getSequenceNames(),
-                                             m.getDistanceMatrix(),
-                                             outputFilePath);
+            succeeded = algorithm->constructTreeInMemory(m.getSequenceNames(),
+                                                         m.getDistanceMatrix(),
+                                                         outputFilePath);
         }
     }  else {
         if (!alignmentFilePath.empty()) {
@@ -496,14 +503,11 @@ int main(int argc, char* argv[]) {
                 succeeded = algorithm->constructTreeInMemory
                     ( m.getSequenceNames(), m.getDistanceMatrix(),
                       outputFilePath );
-                if (succeeded) {
-                    //Todo: Don't we need to write the matrix out?!
-                }
             }
             exit(succeeded ? 0 : 1);
         }
         if (!succeeded) {
-            algorithm->constructTree(inputFilePath, outputFilePath);
+            succeeded = algorithm->constructTree(inputFilePath, outputFilePath);
         }
         if (!succeeded) {
             std::cerr << "Tree construction failed." << std::endl;

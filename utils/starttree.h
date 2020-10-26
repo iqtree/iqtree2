@@ -138,6 +138,9 @@ namespace StartTree
                 return false;
             }
             constructTreeWith(builder);
+            if (newickTreeFilePath.empty()) {
+                return true;
+            }
             builder.setZippedOutput(isOutputToBeZipped);
             return builder.writeTreeFile(newickTreeFilePath);
         }

@@ -296,7 +296,7 @@ template <class T=double> struct StitchupGraph {
         std::cout << std::endl;
     }
     template <class F>
-    bool writeTreeToFile ( const std::string &treeFilePath, F& out ) const {
+    bool writeTreeToOpenFile (progress_display& progress, F& out) const {
         auto lastEdge = stitches.end();
         --lastEdge;
         size_t lastNodeIndex = lastEdge->source;
@@ -312,15 +312,21 @@ template <class T=double> struct StitchupGraph {
                 nodeToEdge[i] = j;
             }
         }
+        writeSubtree(stitchVector, nodeToEdge, nullptr, lastNodeIndex, progress, out);
+        out << ";" << std::endl;
+        return true;
+    }
+    template <class F>
+    bool writeTreeToFile ( const std::string &treeFilePath, F& out ) const {
+        bool success = false;
         std::string desc = "Writing STITCH tree to ";
         desc+=treeFilePath;
-        progress_display progress(edgeCount, desc.c_str(), "wrote", "edge");
+        progress_display progress(stitches.size(), desc.c_str(), "wrote", "edge");
         out.exceptions(std::ios::failbit | std::ios::badbit);
         try {
             out.open(treeFilePath.c_str(), std::ios_base::out);
             out.precision(8);
-            writeSubtree(stitchVector, nodeToEdge, nullptr, lastNodeIndex, progress, out);
-            out << ";" << std::endl;
+            success = writeTreeToOpenFile(progress, out);
         } catch (std::ios::failure &) {
             std::cerr << "IO error"
             << " opening/writing file: " << treeFilePath << std::endl;
@@ -334,7 +340,7 @@ template <class T=double> struct StitchupGraph {
         }
         out.close();
         progress.done();
-        return true;
+        return success;
     }
     template <class F>
     void writeSubtree ( const std::vector<Stitch<T>> stitchVector, std::vector<size_t>  nodeToEdge,
@@ -365,7 +371,10 @@ template <class T=double> struct StitchupGraph {
         }
     }
     bool writeTreeFile(bool zipIt, const std::string &treeFilePath) const {
-        if (zipIt) {
+        if (treeFilePath == "STDOUT") {
+            progress_display progress(stitches.size(), "", "", "");
+            return writeTreeToOpenFile(progress, std::cout);
+        } else if (zipIt) {
             ogzstream out;
             return writeTreeToFile(treeFilePath, out);
         } else {
