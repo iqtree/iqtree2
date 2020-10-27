@@ -14,12 +14,13 @@ PlacementRun::PlacementRun(PhyloTree& tree, const IntVector& taxaIdsToAdd)
     , inserts_per_batch(Placement::getInsertsPerBatch(taxa_ids_to_add.size(), taxa_per_batch))
     , block_allocator(nullptr)
     , heuristic(SearchHeuristic::getSearchHeuristic())
+    , calculator(PlacementCostCalculator::getNewCostCalculator())
+    , use_likelihood(heuristic->usesLikelihood() || calculator->usesLikelihood())
     , taxon_placement_optimizer(TaxonPlacementOptimizer::getNewTaxonPlacementOptimizer())
     , batch_placement_optimizer(BatchPlacementOptimizer::getNewBatchPlacementOptimizer())
-    , global_placement_optimizer(GlobalPlacementOptimizer::getNewGlobalPlacementOptimizer())
-    , calculator(PlacementCostCalculator::getNewCostCalculator())
+    , global_placement_optimizer(GlobalPlacementOptimizer::getNewGlobalPlacementOptimizer(use_likelihood))
     , taxa_inserted_this_batch(0), taxa_inserted_in_total(0), taxa_inserted_nearby(0) {
-    if (calculator->usesLikelihood()) {
+    if (use_likelihood) {
         phylo_tree.prepareToComputeDistances(); //Set up state look-up vectors
     }
 }
@@ -117,7 +118,7 @@ void PlacementRun::prepareForBatch() {
         target->forgetState();
         refreshTime += getRealTime() - forgetStart;
     }
-     
+
 #endif
     heuristic->doneFiltering();
     return refreshTime;
@@ -174,7 +175,7 @@ void PlacementRun::insertTaxon(TaxaToPlace& taxa, size_t taxon_index,
             << ", " << p.lenToNode2 << ", " << p.lenToNewTaxon << ")";
         phylo_tree.logLine(s.str());
     }    
-    taxon_placement_optimizer->cleanUpAfterTaxonPlacement(taxa, taxon_index, targets, phylo_tree);
+    taxon_placement_optimizer->optimizeAfterTaxonPlacement(taxa, taxon_index, targets, phylo_tree);
 }
 
 void PlacementRun::doneBatch(TaxaToPlace& candidates,
@@ -184,7 +185,7 @@ void PlacementRun::doneBatch(TaxaToPlace& candidates,
         TREE_LOG_LINE ( phylo_tree, VB_MED,  "Inserted " << (taxa_inserted_this_batch)
                   << " out of a batch of " << (batchStop - batchStart) << "." );
     }
-    batch_placement_optimizer->cleanUpAfterBatch(candidates, batchStart, batchStop, targets, phylo_tree);
+    batch_placement_optimizer->optimizeAfterBatch(candidates, batchStart, batchStop, targets, phylo_tree);
     if (calculator->usesLikelihood()) {
         phylo_tree.fixNegativeBranch();
     }
@@ -221,6 +222,19 @@ void PlacementRun::logSubtreesNearAddedTaxa() const {
                 << " , and right branch " << rightLength << ")"
                 << std::endl;
         }
+    }
+}
+
+void PlacementRun::donePlacement() {
+    if (VB_MED <= verbose_mode && use_likelihood) {
+        logSubtreesNearAddedTaxa();
+    }
+
+    TREE_LOG_LINE(phylo_tree, VB_MED, "Tidying up tree after inserting taxa.");
+    global_placement_optimizer->optimizeAfterPlacement(phylo_tree);
+
+    if (VB_MED <= verbose_mode && use_likelihood) {
+        logSubtreesNearAddedTaxa();
     }
 }
                      

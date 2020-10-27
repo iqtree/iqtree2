@@ -13,6 +13,14 @@
 
 SearchHeuristic::~SearchHeuristic() = default;
 
+bool SearchHeuristic::isGlobalSearch() const {
+    return true;
+}
+
+bool SearchHeuristic::usesLikelihood() const {
+    return false;
+}
+
 void SearchHeuristic::prepareToFilter(PhyloTree& tree, TargetBranchRange& targets,
                                       size_t startTarget, size_t stopTarget,
                                       TaxaToPlace& taxa,
@@ -28,9 +36,6 @@ bool SearchHeuristic::isPlacementWorthTrying(const TaxonToPlace& taxon,
 void SearchHeuristic::doneFiltering() {
 }
 
-bool SearchHeuristic::isGlobalSearch() {
-    return true;
-}
 SearchHeuristic* SearchHeuristic::getSearchHeuristic() {
     auto heuristic = Placement::getIncrementalParameter('H', "");
     if (heuristic=="") {
@@ -50,12 +55,16 @@ BaseballSearchHeuristic::BaseballSearchHeuristic(PlacementCostCalculator* calcul
     : calculator(calculatorToUse), tree_in_use(nullptr) {
 }
 
-BaseballSearchHeuristic::~BaseballSearchHeuristic() {
-    delete calculator;
+bool BaseballSearchHeuristic::isGlobalSearch() const {
+    return false;
 }
 
-bool BaseballSearchHeuristic::isGlobalSearch() {
-    return false;
+bool BaseballSearchHeuristic::usesLikelihood() const {
+    return true;
+}
+
+BaseballSearchHeuristic::~BaseballSearchHeuristic() {
+    delete calculator;
 }
 
 void BaseballSearchHeuristic::prepareToFilter(PhyloTree& tree, TargetBranchRange& targets,

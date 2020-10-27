@@ -20,7 +20,7 @@ class TaxonPlacementOptimizer {
 public:
     TaxonPlacementOptimizer();
     virtual ~TaxonPlacementOptimizer();
-    void cleanUpAfterTaxonPlacement(TaxaToPlace& taxa,
+    void optimizeAfterTaxonPlacement(TaxaToPlace& taxa,
                                     size_t taxon_index,
                                     TargetBranchRange& targets,
                                     PhyloTree& tree);
@@ -35,7 +35,7 @@ class BatchPlacementOptimizer {
 public:
     BatchPlacementOptimizer();
     virtual ~BatchPlacementOptimizer();
-    virtual void cleanUpAfterBatch(TaxaToPlace& taxa,
+    virtual void optimizeAfterBatch(TaxaToPlace& taxa,
                                    int start_taxon_index,
                                    int stop_taxon_index,
                                    TargetBranchRange& targets,
@@ -51,12 +51,20 @@ class GlobalPlacementOptimizer {
 public:
     GlobalPlacementOptimizer();
     virtual ~GlobalPlacementOptimizer();
-    void cleanUpAfterPlacement(PhyloTree& tree);
+    virtual void optimizeAfterPlacement(PhyloTree& tree);
     
     /** allocate a new GlobalPlacementOptimizer that matches what
         has been asked for in the -incremental parameter
         @return a new GlobalPlacementOptimizer instance (it is up to the caller to delete it) */
-    static GlobalPlacementOptimizer* getNewGlobalPlacementOptimizer();
+    static GlobalPlacementOptimizer* getNewGlobalPlacementOptimizer(bool use_likelihood);
+};
+
+class GlobalLikelihoodPlacementOptimizer: public GlobalPlacementOptimizer {
+public:
+    typedef GlobalPlacementOptimizer super;
+    GlobalLikelihoodPlacementOptimizer();
+    virtual ~GlobalLikelihoodPlacementOptimizer();
+    virtual void optimizeAfterPlacement(PhyloTree& tree);
 };
 
 #endif /* placementoptimizer_h */

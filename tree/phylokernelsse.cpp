@@ -25,8 +25,7 @@
 #endif
 
 void PhyloTree::setParsimonyKernelSSE() {
-    if (cost_matrix) {
-        // Sankoff kernel
+    if (isUsingSankoffParsimony()) {
         computeParsimonyBranchPointer           = &PhyloTree::computeParsimonyBranchSankoffSIMD<Vec4ui>;
         computeParsimonyOutOfTreePointer        = &PhyloTree::computeParsimonyOutOfTreeSankoffSIMD<Vec4ui>;
         computePartialParsimonyPointer          = &PhyloTree::computePartialParsimonySankoffSIMD<Vec4ui>;

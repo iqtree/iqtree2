@@ -138,7 +138,6 @@ void TargetBranch::computeState(PhyloTree& phylo_tree,
             blocks[0].allocate(phylo_tree);
             blocks[0].lendTo(neigh1);
             neigh1->setLikelihoodComputed(false);
-            //info.computePartialLikelihood(neigh1, first);
         }
 
         PhyloNeighbor* fakeNeigh2   = fakeInterior.findNeighbor(first);
@@ -149,16 +148,15 @@ void TargetBranch::computeState(PhyloTree& phylo_tree,
             blocks[1].allocate(phylo_tree);
             blocks[1].lendTo(neigh2);
             neigh2->setLikelihoodComputed(false);
-            //info.computePartialLikelihood(neigh2, second);
         }
         
         score = -phylo_tree.computeLikelihoodBranch(neigh1, first, localBuffers);
-        
-        std::swap(neigh1->partial_lh, fakeNeigh1->partial_lh );
-        std::swap(neigh1->scale_num,  fakeNeigh1->scale_num  );
+
+        std::swap(neigh1->partial_lh,       fakeNeigh1->partial_lh );
+        std::swap(neigh1->scale_num,        fakeNeigh1->scale_num  );
         std::swap(neigh1->lh_scale_factor,  fakeNeigh1->lh_scale_factor  );
-        std::swap(neigh2->partial_lh, fakeNeigh2->partial_lh );
-        std::swap(neigh2->scale_num,  fakeNeigh2->scale_num  );
+        std::swap(neigh2->partial_lh,       fakeNeigh2->partial_lh );
+        std::swap(neigh2->scale_num,        fakeNeigh2->scale_num  );
         std::swap(neigh2->lh_scale_factor,  fakeNeigh2->lh_scale_factor  );
         fakeNeigh1->setLikelihoodComputed(true);
         fakeNeigh2->setLikelihoodComputed(true);

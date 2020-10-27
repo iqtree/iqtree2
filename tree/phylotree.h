@@ -89,20 +89,47 @@ const int SPR_DEPTH = 2;
 
 //using namespace Eigen;
 
-
-#define LOG_LINE(lev,text) \
+#if !defined(CLANG_UNDER_VS) || !defined(_DEBUG)
+    #define LOG_LINE(lev,text) \
     if (verbose_mode >= (lev)) { \
         std::stringstream s; \
         s << text; \
         logLine(s.str()); \
     } else 0
 
-#define TREE_LOG_LINE(xtree, xlev, xtext) \
+    #define TREE_LOG_LINE(xtree, xlev, xtext) \
     if (verbose_mode >= (xlev)) { \
         std::stringstream xsx; \
         xsx << xtext; \
         (xtree).logLine(xsx.str()); \
     } else 0
+#else
+    #define LOG_LINE(lev,text) \
+    if (1) { \
+        std::stringstream xsx; \
+        xsx << text; \
+        if (verbose_mode >= (lev)) { \
+            logLine(xsx.str()); \
+        } \
+        xsx << "\n"; \
+        OutputDebugStringA(xsx.str().c_str()); \
+    } \
+    else (0)
+
+    #define TREE_LOG_LINE(xtree, xlev, xtext) \
+    if (1) { \
+        std::stringstream xsx; \
+        xsx << xtext; \
+        if (verbose_mode >= (xlev)) { \
+            (xtree).logLine(xsx.str()); \
+        } \
+        xsx << "\n"; \
+        OutputDebugStringA(xsx.str().c_str()); \
+    } \
+    else (0)
+
+#endif
+
 
 /**
  *  Row Major Array For Eigen
@@ -473,6 +500,11 @@ public:
     virtual bool updateToMatchAlignment(Alignment *alignment);
 
     bool shouldPlacementUseSankoffParsimony() const;
+
+    bool isUsingSankoffParsimony() const;
+
+    void stopUsingSankoffParsimony();
+
     bool shouldPlacementUseLikelihood() const;
     /**
      Modify a tree, by adding nodes for taxa found in the tree's alignment,
@@ -489,8 +521,6 @@ public:
     void reinsertTaxaViaStepwiseParsimony(const IntVector& taxaIdsToAdd);
     
     double taxaAdditionWorkEstimate(size_t newTaxaCount, size_t taxaPerBatch, size_t insertsPerBatch);
-    
-    void finishUpAfterTaxaAddition();
     
     virtual PhyloNode* findFarthestLeaf(PhyloNode *node = nullptr,
                                        PhyloNode *dad = nullptr);

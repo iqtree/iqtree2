@@ -11,13 +11,13 @@
 
 TaxonPlacementOptimizer::TaxonPlacementOptimizer() = default;
 TaxonPlacementOptimizer::~TaxonPlacementOptimizer() = default;
-void TaxonPlacementOptimizer::cleanUpAfterTaxonPlacement(TaxaToPlace& taxa,
+void TaxonPlacementOptimizer::optimizeAfterTaxonPlacement(TaxaToPlace& taxa,
                                                          size_t taxon_index,
                                                          TargetBranchRange& targets,
                                                          PhyloTree& tree) {}
 
 BatchPlacementOptimizer::BatchPlacementOptimizer() = default;
-void BatchPlacementOptimizer::cleanUpAfterBatch(TaxaToPlace& taxa,
+void BatchPlacementOptimizer::optimizeAfterBatch(TaxaToPlace& taxa,
                                                 int firstTaxon, int lastTaxon,
                                                 TargetBranchRange& targets,
                                                 PhyloTree& tree) {
@@ -33,7 +33,55 @@ BatchPlacementOptimizer::~BatchPlacementOptimizer() = default;
 
 GlobalPlacementOptimizer::GlobalPlacementOptimizer() = default;
 GlobalPlacementOptimizer::~GlobalPlacementOptimizer() = default;
-void GlobalPlacementOptimizer::cleanUpAfterPlacement(PhyloTree& tree) {
+
+void GlobalPlacementOptimizer::optimizeAfterPlacement(PhyloTree& tree) {
+    tree.deleteAllPartialLh();
+
+    if (tree.isUsingSankoffParsimony() && !tree.params->sankoff_cost_file) {
+        tree.stopUsingSankoffParsimony();
+        tree.setParsimonyKernel(tree.params->SSE);
+    }
+
+    tree.initializeTree(); //Make sure branch numbers et cetera are set.
+    TREE_LOG_LINE(tree, VB_MED, 
+        "Number of leaves " << tree.leafNum
+        << ", of nodes "    << tree.nodeNum
+        << ", of branches " << tree.branchNum);
+    tree.initializeAllPartialLh();
+    tree.tracing_lh = false;
+
+    //First, recompute parsimony
+    int parsimony_score = tree.computeParsimony("Computing parsimony (after adding taxa)");
+    TREE_LOG_LINE(tree, VB_MIN, "Parsimony score after adding taxa was " << parsimony_score);
+
+    //Then, fix any negative branches
+    double negativeStart = getRealTime();
+    tree.fixNegativeBranch();
+    double negativeElapsed = getRealTime() - negativeStart;
+    TREE_LOG_LINE(tree, VB_MED, "Fixing negative branches took " << negativeElapsed << " wall-clock seconds");
+
+    //And, at last, compute the tree likelihood
+    double likelyStart   = getRealTime();
+    double likelihood    = tree.computeLikelihood();
+    double likelyElapsed = getRealTime() - likelyStart;
+    TREE_LOG_LINE(tree, VB_MIN, "Likelihood score after adding taxa was " << likelihood
+        << " (and took " << likelyElapsed << " wall-clock seconds to calculate)");
+
+}
+
+GlobalLikelihoodPlacementOptimizer::GlobalLikelihoodPlacementOptimizer()  = default;
+
+GlobalLikelihoodPlacementOptimizer::~GlobalLikelihoodPlacementOptimizer() = default;
+
+void GlobalLikelihoodPlacementOptimizer::optimizeAfterPlacement(PhyloTree& tree) {
+    super::optimizeAfterPlacement(tree);
+    //Optimize
+    double optimizeStart   = getRealTime();
+    double score           = tree.optimizeAllBranches();
+    double optimizeElapsed = getRealTime() - optimizeStart;
+    TREE_LOG_LINE(tree, VB_MIN, "After optimizing"
+        << " (which took " << optimizeElapsed << " wall-clock seconds)"
+        << ", likelihood score was " << score);
 }
 
 TaxonPlacementOptimizer* TaxonPlacementOptimizer::getNewTaxonPlacementOptimizer() {
@@ -54,13 +102,14 @@ BatchPlacementOptimizer* BatchPlacementOptimizer::getNewBatchPlacementOptimizer(
     return new BatchPlacementOptimizer();
 }
 
-GlobalPlacementOptimizer* GlobalPlacementOptimizer::getNewGlobalPlacementOptimizer() {
+GlobalPlacementOptimizer* GlobalPlacementOptimizer::getNewGlobalPlacementOptimizer(bool useLikelihood) {
     auto globalCleanup = Placement::getGlobalOptimizationAlgorithm();
     switch (globalCleanup) {
         default:
             break;
     }
-    return new GlobalPlacementOptimizer();
+    return useLikelihood ? new GlobalLikelihoodPlacementOptimizer()
+                         : new GlobalPlacementOptimizer();
 }
 
 

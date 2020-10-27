@@ -493,7 +493,7 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
               << (getRealTime()-mapStart) << " wall-clock secs" );
     if (VB_MAX <= verbose_mode) {
         for (auto it=mapNameToNode.begin(); it!=mapNameToNode.end(); ++it) {
-            LOG_LINE( VB_MAX, "sequence " << it->first << " has id " << it->second );
+            LOG_LINE( VB_MAX, "sequence " << it->first << " has id " << it->second->id );
         }
     }
 
@@ -619,22 +619,23 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
         addNewTaxaToTree(taxaIdsToAdd);
         //Todo: Carry out any requested "after-all-inserts" global tidy-up of the tree.
         //Todo: If requested *not* to optimize branch lengths here, don't.
+        //Note: If the Sankoff cost matrix isn't wanted after placement, it
+        //      will be deallocated (switching back to regular parsimony)
+        //      in GlobalPlacementOptimizer::optimizeAfterPlacement.
     }
-    if (using_sankoff && !params->sankoff_cost_file) {
-        aligned_free(cost_matrix);
-        setParsimonyKernel(params->SSE);
+    else {
+        if (isUsingSankoffParsimony() && !params->sankoff_cost_file) {
+            stopUsingSankoffParsimony();
+        }
+        std::stringstream s;
+        s << "Computing parsimony (after deleting taxa";
+        int parsimony_score = computeParsimony(s.str().c_str());
+        LOG_LINE(VB_MIN, "Parsimony score after deleting taxa was " << parsimony_score);
+        fixNegativeBranch();
+        double likelihood = computeLikelihood();
+        LOG_LINE(VB_MIN, "Likelihood score after deleting taxa was " << likelihood);
     }
-    deleteAllPartialLh();
-    initializeAllPartialLh();
 
-    std::string verbing = ( will_add ? "adding new" : "deleting");
-    std::stringstream s;
-    s << "Computing parsimony (after " << verbing << " taxa";
-    int parsimony_score = computeParsimony(s.str().c_str());
-    LOG_LINE ( VB_MIN, "Parsimony score after " << verbing << " taxa was " << parsimony_score );
-    fixNegativeBranch();
-    double likelihood = computeLikelihood();
-    LOG_LINE ( VB_MIN, "Likelihood score after " << verbing << " taxa was " << likelihood );
 
     return true;
 }
@@ -1353,7 +1354,7 @@ void PhyloTree::getMemoryRequired(uint64_t &partial_lh_entries, uint64_t &scale_
 void PhyloTree::determineBlockSizes() {
     // reserve the last entry for parsimony score
     // no longer: pars_block_size = (aln->num_states * aln->size() + UINT_BITS - 1) / UINT_BITS + 1;
-    if (cost_matrix) {
+    if (isUsingSankoffParsimony()) {
         //Sankoff parsimony tracks a number (a UINT) for each state for each site
         //(and should have 4 additional UINTs for a total score)
         pars_block_size = get_safe_upper_limit_float(aln->size() * aln->num_states) + 4;
@@ -3967,7 +3968,7 @@ int PhyloTree::fixNegativeBranch(bool force, PhyloNode *node, PhyloNode *dad) {
         }
     }
     int fixed = 0;
-    if (force && !cost_matrix) {
+    if (force && !isUsingSankoffParsimony()) {
         return setParsimonyBranchLengths();
     }
     double alpha = (site_rate) ? site_rate->getGammaShape() : 1.0;

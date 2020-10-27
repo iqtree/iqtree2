@@ -23,7 +23,11 @@ class PhyloTree;
 class SearchHeuristic {
 public:
     virtual ~SearchHeuristic();
-    virtual bool isGlobalSearch();
+
+    /** indicates if this earch heuristic makes use of partial likelihood vectors */
+    virtual bool usesLikelihood() const;
+
+    virtual bool isGlobalSearch() const;
     
     /** called to give the SearchHeuristic a chance to set up (or allocate)
         internal structures, before it is asked whether placements should be
@@ -79,7 +83,8 @@ public:
             (BaseballSearchHeuristic's destructor will delete it) */
     BaseballSearchHeuristic(PlacementCostCalculator* calculatorToUse);
     virtual ~BaseballSearchHeuristic();
-    virtual bool isGlobalSearch();
+    virtual bool isGlobalSearch() const;
+    virtual bool usesLikelihood() const;
     virtual void prepareToFilter(PhyloTree& tree, TargetBranchRange& targets,
                                  size_t startTarget, size_t stopTarget,
                                  TaxaToPlace& taxa, size_t startTaxon, size_t stopTaxon);

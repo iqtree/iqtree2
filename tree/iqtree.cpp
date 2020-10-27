@@ -552,7 +552,7 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
         params->numNNITrees = max(params->min_iterations, 1);
     }
     int fixed_number = 0;
-    if (params->sankoff_cost_file && !cost_matrix) {
+    if (params->sankoff_cost_file && !isUsingSankoffParsimony()) {
         loadCostMatrixFile(params->sankoff_cost_file);
     }
     if (aln->ordered_pattern.empty()) {

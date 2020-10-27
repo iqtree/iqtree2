@@ -148,7 +148,7 @@ void PhyloTree::removeSampleTaxaIfRequested() {
         size_t r = 0;
         LOG_LINE(VB_MAX, "Before removing sequences:");
         for (auto it=mapNameToNode.begin(); it!=mapNameToNode.end(); ++it) {
-            LOG_LINE( VB_MAX, "sequence " << it->first << " has id " << it->second );
+            LOG_LINE( VB_MAX, "sequence " << it->first << " has id " << it->second->id );
         }
 
         for (size_t seq = 0; seq < nseq; ++seq) {
@@ -229,7 +229,7 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
     if ( pr.taxa_per_batch == 1 && pr.heuristic->isGlobalSearch()  &&
          !pr.calculator->usesLikelihood() ) {
         reinsertTaxaViaStepwiseParsimony(taxaIdsToAdd);
-        finishUpAfterTaxaAddition();
+        pr.donePlacement();
         return;
     }
     
@@ -238,15 +238,24 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
     //Todo: What about # of likelihood vectors when
     //      likelihood vectors aren't being allocated per node.
     //      extra_lh_blocks should be even less, in that case.
-    size_t   extra_parsimony_blocks = nodeNum - 1;
+    size_t   sequences              = aln->getNSeq();
+    size_t   target_branch_count    = sequences * 2 - 1;
+    size_t   additional_sequences   = taxaIdsToAdd.size();
+    size_t   extra_parsimony_blocks = target_branch_count + additional_sequences * 4;
+        //each target branch needs a parsimony block, and
+        //although each taxon to place just needs one parsimony block
+        //(looking down from the new interior to the new exterior), 
+        //each addition of a taxon later creates 3 *new* target branches, 
+        //each of which needs a new "upward" looking parsimony block.  
+        //(hence the: multiplication, of additional_sequences, by 4).
+
     size_t   extra_lh_blocks        = trackLikelihood
-                                    ? (nodeNum - 1 + 4 * taxaIdsToAdd.size())
+                                    ? (target_branch_count + additional_sequences * 4)
                                     : 0;
         //each target branch needs its own lh block, and
         //although each TaxonToPlace just needs one lh block
         //each addition of a taxon later creates 3 *new* target branches
         //(each of which needs its own lh block)
-        //(hence the: multiplication of the # of new taxa... by 4).
     
     pr.setUpAllocator(extra_parsimony_blocks, trackLikelihood, extra_lh_blocks);
     pr.prepareForPlacementRun();
@@ -327,9 +336,6 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
     }
     doneProgress();
     
-    LOG_LINE ( VB_MED, "Tidying up tree after inserting taxa.");
-    pr.global_placement_optimizer->cleanUpAfterPlacement(*this);
-    
     LOG_LINE ( VB_MIN, "Time spent on refreshes was "          << timeSpentOnRefreshes << " sec");
     LOG_LINE ( VB_MIN, "Time spent on searches was "           << timeSpentOnSearches << " sec");
     LOG_LINE ( VB_MIN, "Time spent on actual inserts was "     << timeSpentOnInserts << " sec");
@@ -338,32 +344,7 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
     LOG_LINE ( VB_MED, "At the end of addNewTaxaToTree, index_lhs was "
               << pr.block_allocator->getLikelihoodBlockCount() << ", index_pars was "
               << pr.block_allocator->getParsimonyBlockCount() << ".");
-    if (VB_MED <= verbose_mode && trackLikelihood) {
-        pr.logSubtreesNearAddedTaxa();
-    }
-    if (!trackLikelihood) {
-        fixNegativeBranch();
-    }
-    if (VB_MED <= verbose_mode && trackLikelihood) {
-        pr.logSubtreesNearAddedTaxa();
-    }
-    finishUpAfterTaxaAddition();
-    
-    if (VB_MED <= verbose_mode) {
-        pr.logSubtreesNearAddedTaxa();
-    }
+
+    pr.donePlacement();
 }
 
-void PhyloTree::finishUpAfterTaxaAddition() {
-    deleteAllPartialLh();
-    initializeTree(); //Make sure branch numbers et cetera are set.
-    LOG_LINE ( VB_MED, "Number of leaves " << this->leafNum
-                    << ", of nodes "       << this->nodeNum
-                    << ", of branches "    << this->branchNum);
-    initializeAllPartialLh();
-    this->tracing_lh = false;
-    if (Placement::doesPlacementUseLikelihood()) {
-        double score = optimizeAllBranches();
-        LOG_LINE ( VB_MIN, "After optimizing, likelihood score was " << score );
-    }
-}

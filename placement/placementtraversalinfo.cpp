@@ -18,14 +18,17 @@ PlacementTraversalInfo::PlacementTraversalInfo(
     size_t children_size   = get_safe_upper_limit(block*nstates*2);
     size_t leaf_size_floor = (phylo_tree.aln->STATE_UNKNOWN+1)*block*2;
     size_t lh_leaf_size    = get_safe_upper_limit(leaf_size_floor);
-    
-    echildren         = aligned_alloc<double>(children_size);
-    partial_lh_leaves = aligned_alloc<double>(lh_leaf_size);
+    echildren              = aligned_alloc<double>(children_size);
+    partial_lh_leaves      = aligned_alloc<double>(lh_leaf_size);
 }
 
 void PlacementTraversalInfo::computePartialLikelihood(PhyloNeighbor* nei, PhyloNode* node) {
-    if (nei!=nullptr)  dad_branch=nei;
-    if (node!=nullptr) dad=node;
+    if (nei != nullptr) {
+        dad_branch = nei;
+    }
+    if (node != nullptr) {
+        dad = node;
+    }
     size_t orig_nptn = roundUpToMultiple(phylo_tree.aln->size(), 8);
     size_t nptn      = roundUpToMultiple(orig_nptn+phylo_tree.model_factory->unobserved_ptns.size(), 8);
 

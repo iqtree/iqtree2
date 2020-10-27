@@ -162,6 +162,7 @@ public:
 template <class T=TaxonToPlace> class TypedTaxaToPlace: public TaxaToPlace, public std::vector<T> {
 public:
     typedef std::vector<T> super;
+    TypedTaxaToPlace() = default;
     explicit TypedTaxaToPlace(size_t reservation) {
         super::reserve(reservation);
     }
