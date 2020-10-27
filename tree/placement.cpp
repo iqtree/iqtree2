@@ -14,6 +14,7 @@
 #include <placement/placementcostcalculator.h>
 #include <placement/placementoptimizer.h>
 #include <placement/placementrun.h>
+#include <utils/timekeeper.h>
 
 /****************************************************************************
  Stepwise addition (greedy) by maximum likelihood
@@ -283,13 +284,13 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
         
     double estimate = taxaAdditionWorkEstimate
     ( newTaxaCount, pr.taxa_per_batch, pr.inserts_per_batch );
-    double timeSpentOnRefreshes = 0.0; //Time spent recalculating parsimony &/or likelihood
-                                       //for the entire tree
-    double timeSpentOnSearches  = 0.0;
-    double timeSpentOnRanking   = 0.0;
-    double timeSpentOnInserts   = 0.0;
-    double timeSpentOnCleanUp   = 0.0;
     
+    TimeKeeper refreshTime("Refresh");
+    TimeKeeper searchTime("Search");
+    TimeKeeper rankingTime("Ranking");
+    TimeKeeper insertTime("Insert");
+    TimeKeeper optoTime("Post-Batch Optimization");
+        
     LikelihoodBlockPairs spare_blocks(2);
     initProgress(estimate, "Adding new taxa to tree", "", "");
     for (; 0<newTaxaCount; newTaxaCount = candidates.size() ) {
@@ -299,52 +300,58 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
         size_t batchStart=0;
         for (; batchStart+pr.taxa_per_batch <= newTaxaCount
              ; batchStart+=pr.taxa_per_batch) {
-            timeSpentOnRefreshes -= getRealTime();
+            refreshTime.start();
             pr.prepareForBatch();
-            timeSpentOnRefreshes += getRealTime();
+            refreshTime.stop();
 
-            timeSpentOnSearches  -= getRealTime();
+            searchTime.start();
             size_t batchStop      = batchStart + pr.taxa_per_batch;
             pr.doBatchPlacementCosting(candidates, batchStart, batchStop, targets);
-            timeSpentOnSearches  += getRealTime();
+            searchTime.stop();
             
-            timeSpentOnRanking  -= getRealTime();
+            rankingTime.start();
             size_t insertStop    = batchStart;
             pr.selectPlacementsForInsertion( candidates, batchStart, batchStop, insertStop);
-            timeSpentOnRanking  += getRealTime();
+            rankingTime.stop();
             
-            timeSpentOnInserts -= getRealTime();
+            insertTime.start();
             pr.startBatchInsert();
             for ( size_t i = batchStart; i<insertStop; ++i) {
                 pr.insertTaxon(candidates, i, targets, spare_blocks);
             }
-            timeSpentOnInserts += getRealTime();
+            insertTime.stop();
             
-            timeSpentOnCleanUp -= getRealTime();
+            optoTime.start();
             pr.doneBatch(candidates, batchStart, batchStop, targets);
-            timeSpentOnCleanUp += getRealTime();
+            optoTime.stop();
 
         } //batches of items
         
-        timeSpentOnCleanUp -= getRealTime();
+        optoTime.start();
         pr.donePass(candidates, batchStart, targets);
-        timeSpentOnCleanUp += getRealTime();
+        optoTime.stop();
 
         auto workLeft   = taxaAdditionWorkEstimate
                           ( newTaxaCount, pr.taxa_per_batch, pr.inserts_per_batch );
         this->progress->setWorkRemaining(workLeft);
     }
     doneProgress();
-    
-    LOG_LINE ( VB_MIN, "Time spent on refreshes was "          << timeSpentOnRefreshes << " sec");
-    LOG_LINE ( VB_MIN, "Time spent on searches was "           << timeSpentOnSearches << " sec");
-    LOG_LINE ( VB_MIN, "Time spent on actual inserts was "     << timeSpentOnInserts << " sec");
-    LOG_LINE ( VB_MIN, "Time for post-batch optimization was " << timeSpentOnCleanUp << " sec");
+
     LOG_LINE ( VB_MIN, "Total number of blocked inserts was "  << pr.taxa_inserted_nearby );
     LOG_LINE ( VB_MED, "At the end of addNewTaxaToTree, index_lhs was "
               << pr.block_allocator->getLikelihoodBlockCount() << ", index_pars was "
               << pr.block_allocator->getParsimonyBlockCount() << ".");
-
+        
+    optoTime.start();
     pr.donePlacement();
+    optoTime.stop();
+    
+    if (VB_MIN <= verbose_mode) {
+        std::cout.precision(4);
+        refreshTime.report();
+        searchTime.report();
+        insertTime.report();
+        optoTime.report();
+    }
 }
 

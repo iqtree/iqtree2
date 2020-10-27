@@ -52,15 +52,21 @@ void ParsimonyCostCalculator::assessPlacementCost(PhyloTree& phylo_tree,
     //
 }
 
+
 LikelihoodCostCalculator::LikelihoodCostCalculator(bool useMidpoint)
     : ParsimonyCostCalculator(false), midpoint(useMidpoint) {
+}
+
+LikelihoodCostCalculator::~LikelihoodCostCalculator()
+{
 }
 
 bool LikelihoodCostCalculator::usesLikelihood() {
     return true;
 }
+
 void LikelihoodCostCalculator::assessPlacementCost(PhyloTree& tree, const TaxonToPlace& taxon,
-                                 PossiblePlacement& placement) const {
+                                                   PossiblePlacement& placement) const {
     
     super::assessPlacementCost(tree, taxon, placement);
     
@@ -141,7 +147,7 @@ void LikelihoodCostCalculator::assessPlacementCost(PhyloTree& tree, const TaxonT
             neigh_up->length   = value;
             neigh_down->length = value;
             double score = -tree.computeLikelihoodBranch(neigh_up, leaf_node, buffers);
-            TREE_LOG_LINE(tree, VB_MIN, "  length " << value
+            TREE_LOG_LINE(tree, VB_MAX, "  length " << value
                           << ", f " << score
                           << " for taxon " << leaf_node->id);
             return score;
@@ -152,7 +158,7 @@ void LikelihoodCostCalculator::assessPlacementCost(PhyloTree& tree, const TaxonT
             tree.computeLikelihoodDerv(neigh_up, leaf_node, &df, &ddf, buffers);
             df  = -df;
             ddf = -ddf;
-            TREE_LOG_LINE(tree, VB_MIN, "  length " << value
+            TREE_LOG_LINE(tree, VB_MAX, "  length " << value
                           << ", df " << df << ", ddf " << ddf
                           << " for taxon " << leaf_node->id);
         }
@@ -201,12 +207,12 @@ void LikelihoodCostCalculator::assessPlacementCost(PhyloTree& tree, const TaxonT
     opt.optimize(placement);
     target->setLhScaleFactor(neighUp->lh_scale_factor);
     
-    TREE_LOG_LINE(tree, VB_MIN, taxon.taxonName
+    TREE_LOG_LINE(tree, VB_MED, taxon.taxonName
                   << " (taxon " << taxon.taxonId << ")"
                   << " at target branch " << placement.getTargetIndex()
                   << " had parsimony score " << placement.parsimony_score
-            << ", len "    << parsimony_length
-            << ", old lh " << opt.getInitialScore()
+                  << ", len "    << parsimony_length
+                  << ", old lh " << opt.getInitialScore()
                   << ", new lh " << placement.score
                   << ", len "    << placement.lenToNewTaxon);
 }

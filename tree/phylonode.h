@@ -25,6 +25,17 @@ for (NeighborVec::iterator it = (mynode)->neighbors.begin(); it != (mynode)->nei
 
 std::string pointer_to_hex(const void *ptr);
 
+template <class T> std::string array_to_string(T* base, size_t N) {
+    std::stringstream s;
+    s << "{ ";
+    for (size_t r = 0; r<N; ++r) {
+        if (0<r) s << ", ";
+        s << base[r];
+    }
+    s << " }";
+    return s.str();
+}
+
 template <class T> class track_nulled_ptr {
     private:
         T* value;

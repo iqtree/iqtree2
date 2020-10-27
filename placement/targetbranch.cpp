@@ -91,7 +91,7 @@ void TargetBranch::dumpNeighbor(VerboseMode level, const char* name,
         }
         s << "\n";
     } else {
-        s << name << " does not have a partial likelihood block";
+        s << name << " does not have a partial likelihood block.\n";
     }
     TREE_LOG_LINE(phylo_tree, level, s.str() );
 }
@@ -125,41 +125,25 @@ void TargetBranch::computeState(PhyloTree& phylo_tree,
         fakeInterior.addNeighbor(&fakeExterior, half_old_length);
         fakeExterior.addNeighbor(&fakeInterior, half_old_length);
 
-        neigh1->length = half_old_length;
-        neigh2->length = half_old_length;
-        
         blocks.resize(2);
 
         PhyloNeighbor* fakeNeigh1   = fakeInterior.findNeighbor(second);
-        fakeNeigh1->partial_lh      = neigh1->partial_lh;
-        fakeNeigh1->scale_num       = neigh1->scale_num;
-        fakeNeigh1->lh_scale_factor = neigh1->lh_scale_factor;
-        if (neigh1->partial_lh != nullptr ) {
+        if (!second->isLeaf()) {
             blocks[0].allocate(phylo_tree);
-            blocks[0].lendTo(neigh1);
-            neigh1->setLikelihoodComputed(false);
+            blocks[0].lendTo(fakeNeigh1);
+            info.computePartialLikelihood(fakeNeigh1, first);
+            //dumpNeighbor(VB_MIN, "LO", phylo_tree, neigh1);
+            //dumpNeighbor(VB_MIN, "LF", phylo_tree, fakeNeigh1);
         }
 
         PhyloNeighbor* fakeNeigh2   = fakeInterior.findNeighbor(first);
-        fakeNeigh2->partial_lh      = neigh2->partial_lh;
-        fakeNeigh2->scale_num       = neigh2->scale_num;
-        fakeNeigh2->lh_scale_factor = neigh2->lh_scale_factor;
-        if (neigh2->partial_lh != nullptr ) {
+        if (!first->isLeaf()) {
             blocks[1].allocate(phylo_tree);
-            blocks[1].lendTo(neigh2);
-            neigh2->setLikelihoodComputed(false);
+            blocks[1].lendTo(fakeNeigh2);
+            info.computePartialLikelihood(fakeNeigh2, second);
+            //dumpNeighbor(VB_MIN, "RO", phylo_tree, neigh2);
+            //dumpNeighbor(VB_MIN, "RF", phylo_tree, fakeNeigh2);
         }
-        
-        score = -phylo_tree.computeLikelihoodBranch(neigh1, first, localBuffers);
-
-        std::swap(neigh1->partial_lh,       fakeNeigh1->partial_lh );
-        std::swap(neigh1->scale_num,        fakeNeigh1->scale_num  );
-        std::swap(neigh1->lh_scale_factor,  fakeNeigh1->lh_scale_factor  );
-        std::swap(neigh2->partial_lh,       fakeNeigh2->partial_lh );
-        std::swap(neigh2->scale_num,        fakeNeigh2->scale_num  );
-        std::swap(neigh2->lh_scale_factor,  fakeNeigh2->lh_scale_factor  );
-        fakeNeigh1->setLikelihoodComputed(true);
-        fakeNeigh2->setLikelihoodComputed(true);
 
         PhyloNeighbor* fakeNeigh3   = fakeExterior.findNeighbor(&fakeInterior);
         fakeNeigh3->partial_lh      = partial_lh;
@@ -168,17 +152,7 @@ void TargetBranch::computeState(PhyloTree& phylo_tree,
         fakeNeigh3->setLikelihoodComputed(false);
         info.computePartialLikelihood(fakeNeigh3, &fakeExterior);
         branch_lh_scale_factor      = fakeNeigh3->lh_scale_factor;
-
-        neigh1->length = old_length;
-        neigh2->length = old_length;
-
-#if (0)
-        dumpNeighbor(VB_MIN, "LO", phylo_tree, neigh1);
-        dumpNeighbor(VB_MIN, "RO", phylo_tree, neigh2);
-        dumpNeighbor(VB_MIN, "LF", phylo_tree, fakeNeigh1);
-        dumpNeighbor(VB_MIN, "RF", phylo_tree, fakeNeigh2);
-        dumpNeighbor(VB_MIN, "MF", phylo_tree, fakeNeigh3);
-#endif
+        //dumpNeighbor(VB_MIN, "MF", phylo_tree, fakeNeigh3);
     }
 }
 

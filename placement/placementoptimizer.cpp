@@ -48,7 +48,6 @@ void GlobalPlacementOptimizer::optimizeAfterPlacement(PhyloTree& tree) {
         << ", of nodes "    << tree.nodeNum
         << ", of branches " << tree.branchNum);
     tree.initializeAllPartialLh();
-    tree.tracing_lh = false;
 
     //First, recompute parsimony
     int parsimony_score = tree.computeParsimony("Computing parsimony (after adding taxa)");

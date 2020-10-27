@@ -76,7 +76,6 @@ PhyloTree::PhyloTree() : MTree(), CheckpointFactory() {
 }
 
 void PhyloTree::init() {
-    tracing_lh = false;
     aln = NULL;
     model = NULL;
     site_rate = NULL;
@@ -1093,6 +1092,9 @@ double PhyloTree::computePartialParsimonyOutOfTree(const UINT* left_partial_pars
         ( left_partial_pars, right_partial_pars, dad_partial_pars );
 }
 
+void PhyloTree::computePartialInfoDouble(TraversalInfo &info, double* buffer) {
+    (this->*computePartialInfoPointer)(info, buffer);
+}
 
 void PhyloTree::computeReversePartialParsimony(PhyloNode *node, PhyloNode *dad) {
     PhyloNeighbor* node_nei = node->findNeighbor(dad);

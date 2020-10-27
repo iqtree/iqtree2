@@ -374,7 +374,6 @@ class PhyloTree : public MTree, public Optimization, public CheckpointFactory {
     friend class LikelihoodBlockPair;
 
 public:
-    bool tracing_lh;
     
     typedef MTree super;
     
@@ -1023,6 +1022,8 @@ public:
     void computePartialInfo(TraversalInfo &info, VectorClass* buffer);
     template<class VectorClass>
     void computePartialInfo(TraversalInfo &info, VectorClass* buffer);
+    template<class VectorClass>
+    void computePartialInfoWrapper(TraversalInfo &info, double* buffer);    
 
     /** 
         sort neighbor in descending order of subtree size (number of leaves within subree)
@@ -1189,6 +1190,10 @@ public:
     virtual double computeLikelihoodFromBuffer();
     typedef double (PhyloTree::*ComputeLikelihoodFromBufferType)(LikelihoodBufferSet&);
     ComputeLikelihoodFromBufferType computeLikelihoodFromBufferPointer;
+    
+    typedef void (PhyloTree::*ComputePartialInfoType)(TraversalInfo &info, double* buffer);
+    ComputePartialInfoType computePartialInfoPointer;
+    void computePartialInfoDouble(TraversalInfo &info, double* buffer);
 
 #if (EIGEN_PARTIAL_LIKELIHOOD)
     template <class VectorClass, const int VCSIZE, const int nstates>

@@ -49,11 +49,13 @@ void PhyloTree::setDotProductAVX() {
 }
 
 void PhyloTree::setLikelihoodKernelAVX() {
-    vector_size = 4;
-    bool site_model = model_factory && model_factory->model->isSiteSpecificModel();
+    vector_size               = 4;
+    computePartialInfoPointer = &PhyloTree::computePartialInfoWrapper<Vec4d>;
+    bool site_model           = model_factory && model_factory->model->isSiteSpecificModel();
 
-    if (site_model && ((model_factory && !model_factory->model->isReversible()) || params->kernel_nonrev))
+    if (site_model && ((model_factory && !model_factory->model->isReversible()) || params->kernel_nonrev)) {
         outError("Site-specific model is not yet supported for nonreversible models");
+    }
     
     setParsimonyKernelAVX();
     computeLikelihoodDervMixlenPointer = NULL;

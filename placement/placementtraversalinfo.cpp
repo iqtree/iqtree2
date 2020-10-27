@@ -20,6 +20,7 @@ PlacementTraversalInfo::PlacementTraversalInfo(
     size_t lh_leaf_size    = get_safe_upper_limit(leaf_size_floor);
     echildren              = aligned_alloc<double>(children_size);
     partial_lh_leaves      = aligned_alloc<double>(lh_leaf_size);
+    buffer_tmp             = aligned_alloc<double>(phylo_tree.aln->num_states);
 }
 
 void PlacementTraversalInfo::computePartialLikelihood(PhyloNeighbor* nei, PhyloNode* node) {
@@ -32,6 +33,8 @@ void PlacementTraversalInfo::computePartialLikelihood(PhyloNeighbor* nei, PhyloN
     size_t orig_nptn = roundUpToMultiple(phylo_tree.aln->size(), 8);
     size_t nptn      = roundUpToMultiple(orig_nptn+phylo_tree.model_factory->unobserved_ptns.size(), 8);
 
+    phylo_tree.computePartialInfoDouble(*this, buffer_tmp);
+    
     //
     //Note: Using 8 here is dodgy.  It would be better if we knew the
     //      size (in doubles) of the vector class the tree is using.
@@ -56,6 +59,7 @@ double PlacementTraversalInfo::getBranchScore() {
 }
 
 PlacementTraversalInfo::~PlacementTraversalInfo() {
+    aligned_free(buffer_tmp);
     aligned_free(echildren);
     aligned_free(partial_lh_leaves);
 }

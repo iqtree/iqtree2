@@ -50,11 +50,13 @@ void PhyloTree::setDotProductSSE() {
 }
 
 void PhyloTree::setLikelihoodKernelSSE() {
-    vector_size = 2;
-    bool site_model = model_factory && model_factory->model->isSiteSpecificModel();
+    vector_size               = 2;
+    computePartialInfoPointer = &PhyloTree::computePartialInfoWrapper<Vec2d>;
+    bool site_model           = model_factory && model_factory->model->isSiteSpecificModel();
 
-    if (site_model && ((model_factory && !model_factory->model->isReversible()) || params->kernel_nonrev))
+    if (site_model && ((model_factory && !model_factory->model->isReversible()) || params->kernel_nonrev)) {
         outError("Site-specific model is not yet supported for nonreversible models");
+    }
     
     setParsimonyKernelSSE();
     computeLikelihoodDervMixlenPointer = NULL;

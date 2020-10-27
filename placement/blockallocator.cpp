@@ -133,13 +133,17 @@ void LikelihoodBlockPair::allocate(PhyloTree& tree)
         clear();
     }
     ensure_aligned_allocated(partial_lh, tree.lh_block_size);
+    memset(partial_lh, 0, tree.lh_block_size * sizeof(partial_lh[0]) );
     ensure_aligned_allocated(scale_num,  tree.scale_block_size);
+    memset(scale_num, 0, tree.scale_block_size * sizeof(scale_num[0]) );
     blocks_are_owned = true;
 }
 
 void    LikelihoodBlockPair::lendTo(PhyloNeighbor* borrower) {
-    borrower->partial_lh = this->partial_lh;
-    borrower->scale_num  = this->scale_num;
+    borrower->partial_lh      = this->partial_lh;
+    borrower->scale_num       = this->scale_num;
+    borrower->lh_scale_factor = 0;
+    borrower->setLikelihoodComputed(false);
 }
 
 

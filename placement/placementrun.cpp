@@ -216,11 +216,13 @@ void PlacementRun::logSubtreesNearAddedTaxa() const {
                 }
             }
             auto length = leaf->firstNeighbor()->length;
-            std::cout << (i+1) << "." << "Node [" << leaf->id << "]=" << leaf->name
-                << " now has branch length " << length
-                << " (interior left branch " << leftLength
-                << " , and right branch " << rightLength << ")"
-                << std::endl;
+            if (VB_MED <= verbose_mode) {
+                std::cout << (i+1) << "." << "Node [" << leaf->id << "]=" << leaf->name
+                    << " now has branch length " << length
+                    << " (interior left branch " << leftLength
+                    << " , and right branch " << rightLength << ")"
+                    << std::endl;
+            }
         }
     }
 }
