@@ -323,7 +323,9 @@ void ModelMarkov::init_state_freq(StateFreqType type) {
 //                      phylo_tree->aln->computeCodonFreq(state_freq);
         } else if (phylo_tree->aln->seq_type != SEQ_POMO) {
             double emp_state_freq[num_states];
+            phylo_tree->hideProgress();
             phylo_tree->aln->computeStateFreq(emp_state_freq);
+            phylo_tree->showProgress();
             setStateFrequency(emp_state_freq);
         } for (i = 0; i < num_states; i++)
             if (state_freq[i] > state_freq[highest_freq_state])
@@ -336,9 +338,11 @@ void ModelMarkov::init_state_freq(StateFreqType type) {
     }
     if (phylo_tree->aln->seq_type == SEQ_DNA) {
         // BQM 2017-05-02: first, empirically count state_freq from alignment
-        if (freq_type >= FREQ_DNA_RY)
+        if (freq_type >= FREQ_DNA_RY) {
+            phylo_tree->hideProgress();
             phylo_tree->aln->computeStateFreq(state_freq);
-
+            phylo_tree->showProgress();
+        }
         // For complex DNA freq_types, adjust state_freq to conform to that freq_type.
         forceFreqsConform(state_freq, freq_type);
     }

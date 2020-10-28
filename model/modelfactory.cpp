@@ -1203,10 +1203,14 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
     tree->clearAllPartialLH();
     tree->setCurScore(tree->computeLikelihood());
     if (write_info) {
+        tree->hideProgress();
         cout << "Optimal pinv,alpha: " << bestPInvar << ", " << bestAlpha << " / ";
         cout << "LogL: " << tree->getCurScore() << endl << endl;
+        tree->showProgress();
     }
-    ASSERT(fabs(tree->getCurScore() - bestLogl) < 1.0);
+    if (!tree->params->ignore_any_errors) {
+        ASSERT(fabs(tree->getCurScore() - bestLogl) < 1.0);
+    }
 
 //    delete [] rates;
 //    delete [] state_freqs;
@@ -1218,7 +1222,9 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
 
     double elapsed_secs = getRealTime() - begin_time;
     if (write_info) {
+        tree->hideProgress();
         cout << "Parameters optimization took " << elapsed_secs << " sec" << endl;
+        tree->showProgress();
     }
     // updating global variable is not safe!
 //    Params::getInstance().testAlpha = false;

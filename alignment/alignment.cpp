@@ -4502,9 +4502,6 @@ void Alignment::countStates(size_t *state_count, size_t num_unknown_states) {
             }
         }
     }
-    if (verbose_mode >= VB_MED) {
-        cout << "Alignment state count time was " << (getRealTime()-countStart) << " seconds." << endl;
-    }
 }
 
 void Alignment::convertCountToFreq(size_t *state_count, double *state_freq) {
@@ -4700,15 +4697,6 @@ void Alignment::computeStateFreqPerSequence (double *freq_per_sequence) {
                 state_freq[j] = new_state_freq[j]*sum_freq;
          }
     }
-
-//	convfreq(state_freq);
-//
-//    if (verbose_mode >= VB_MED) {
-//        cout << "Empirical state frequencies: ";
-//        for (i = 0; i < num_states; i++)
-//            cout << state_freq[i] << " ";
-//        cout << endl;
-//    }
 
     delete [] new_state_freq;
     delete [] state_count;

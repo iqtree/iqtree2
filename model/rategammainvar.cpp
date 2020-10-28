@@ -220,7 +220,9 @@ double RateGammaInvar::optimizeWithEM(double gradient_epsilon) {
 
     cur_optimize = 0;
     double gamma_lh = RateGamma::optimizeParameters(gradient_epsilon);
-    ASSERT(gamma_lh > curlh - 1.0);
+    if (!phylo_tree->params->ignore_any_errors) {
+        ASSERT(gamma_lh > curlh - 1.0);
+    }
     curlh = gamma_lh;
 
     size_t ncat = getNRate();

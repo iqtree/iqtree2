@@ -1600,10 +1600,8 @@ string CandidateModel::evaluate(Params &params,
 
     } else {
         //--- FIX TREE TOPOLOGY AND ESTIMATE MODEL PARAMETERS ----//
+        TREE_LOG_LINE(*iqtree, VB_MED, "Optimizing model " << getName());
 
-        if (verbose_mode >= VB_MED) {
-            cout << "Optimizing model " << getName() << endl;
-        }
         iqtree->ensureNumberOfThreadsIsSet(nullptr, true);
         iqtree->initializeAllPartialLh();
 
@@ -2682,18 +2680,20 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
         if (skip_model) {
             // skip over all +R model of higher categories
             const char *rates[] = {"+R", "*R", "+H", "*H"};
-            size_t posR;
+            size_t posR = std::string::npos;
             for (int i = 0; i < sizeof(rates)/sizeof(char*); i++) {
-                if ((posR = orig_model_name.find(rates[i])) != string::npos) {
+                if ((posR = orig_model_name.find(rates[i])) != std::string::npos) {
                     break;
                 }
             }
-            string first_part = orig_model_name.substr(0, posR+2);
-            for (int next = model+1; next < size() && at(next).getName().substr(0, posR+2) == first_part; next++) {
-                //Count later models that we're going to skip as skipped (now)
-                //(if they hadn't already been skipped).
-                if (at(next).setFlag(MF_IGNORED)) {
-                    in_tree->trackProgress(1);
+            if (posR != std::string::npos) {
+                string first_part = orig_model_name.substr(0, posR + 2);
+                for (int next = model + 1; next < size() && at(next).getName().substr(0, posR + 2) == first_part; next++) {
+                    //Count later models that we're going to skip as skipped (now)
+                    //(if they hadn't already been skipped).
+                    if (at(next).setFlag(MF_IGNORED)) {
+                        in_tree->trackProgress(1);
+                    }
                 }
             }
         }
