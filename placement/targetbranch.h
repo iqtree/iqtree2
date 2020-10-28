@@ -54,6 +54,7 @@ class TargetBranch : public std::pair<PhyloNode*, PhyloNode*> {
     UINT*           partial_pars;
     double*         partial_lh;
     UBYTE*          scale_num;
+    mutable double  branch_lh_scale_factor;
     bool            used;
     ReplacementBranchList* replacements;
     friend class TargetBranchRef;
@@ -66,15 +67,20 @@ public:
     TargetBranch(BlockAllocator* allocator,
                  PhyloNode* node1, PhyloNode* node2,
                  bool likelihood_wanted);
-    void computeState(PhyloTree& phylo_tree, LikelihoodBlockPairs &blocks) const;
+    void computeState(PhyloTree& phylo_tree,
+                      size_t target_branch_index,
+                      LikelihoodBlockPairs &blocks) const;
     void dumpNeighbor(VerboseMode level, const char* prefix,
                       PhyloTree& phylo_tree, PhyloNeighbor* nei) const;
-    void forgetState()                       const;
-    bool isUsedUp()                          const;
+    void forgetState()            const;
+    bool isUsedUp()               const;
     void handOverComputedStateTo(PhyloNeighbor* nei) ;
-    const UINT* getParsimonyBlock()          const;
-    const double* getLikelihoodBlock()       const;
-    const UBYTE* getScaleNumBlock()          const;
+    UINT*   getParsimonyBlock()   const;
+    double* getLikelihoodBlock()  const;
+    UBYTE*  getScaleNumBlock()    const;
+    double  getLhScaleFactor()    const;
+    void    setLhScaleFactor(double v);
+
     
     void costPlacementOfTaxa(PhyloTree& tree,
                              TargetBranchRange& targets,

@@ -491,6 +491,17 @@ int PhyloTree::setParsimonyBranchLengths() {
  Sankoff parsimony function
  ****************************************************************************/
 
+bool PhyloTree::isUsingSankoffParsimony() const {
+    return cost_matrix != nullptr;
+}
+
+void PhyloTree::stopUsingSankoffParsimony() {
+    if (isUsingSankoffParsimony()) {
+        deleteAllPartialParsimony();
+        aligned_free(cost_matrix);
+        setParsimonyKernel(params->SSE);
+    }
+}
 
 void PhyloTree::initCostMatrix(CostMatrixType cost_type) {
     if(cost_matrix){

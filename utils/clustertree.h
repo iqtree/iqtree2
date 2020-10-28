@@ -81,6 +81,8 @@ public:
         cluster.links.emplace_back(a, aLength);
         cluster.links.emplace_back(b, bLength);
         cluster.countOfExteriorNodes = at(a).countOfExteriorNodes + at(b).countOfExteriorNodes;
+        //std::cout << "Cluster " << (size()-1)
+        //<< " is (" << a << ", " << b << ")" << std::endl;
         return cluster;
     }
     Cluster<T>& addCluster
@@ -89,55 +91,15 @@ public:
         Cluster<T>& cluster = addCluster(a, aLength, b, bLength);
         cluster.links.emplace_back(c, cLength);
         cluster.countOfExteriorNodes += at(c).countOfExteriorNodes;
+        //std::cout << "Final cluster " << (size()-1)
+        //<< " is (" << a << ", " << b << ", " << c << ")" << std::endl;
         return cluster;
     }
     template <class F> bool writeTreeToFile(const std::string &treeFilePath, F& out) const {
         out.exceptions(std::ios::failbit | std::ios::badbit);
         try {
             out.open(treeFilePath.c_str(), std::ios_base::out);
-            out.precision(8);
-            
-            std::vector<Place> stack;
-            bool failed = false; //Becomes true if clusters
-            //defines cycles (should never happen)
-            //Indicates a fatal logic error
-            size_t maxLoop = 3 * size();
-            //More than this, and there must be
-            //a cycle.  Or something.
-            
-            stack.emplace_back(size()-1, 0); //assumes: size is at least 1!
-            do {
-                --maxLoop;
-                if (maxLoop==0) {
-                    failed = true;
-                    break;
-                }
-                Place here = stack.back();
-                const Cluster<T>& cluster = at(here.clusterIndex);
-                stack.pop_back();
-                if (cluster.links.empty()) {
-                    out << cluster.name;
-                    continue;
-                }
-                if (here.linkNumber==0) {
-                    out << "(";
-                    stack.emplace_back(here.clusterIndex, 1);
-                    stack.emplace_back(cluster.links[0].clusterIndex, 0);
-                    continue;
-                }
-                size_t nextChildNum = here.linkNumber;
-                const Link<T> & linkPrev = cluster.links[nextChildNum-1];
-                out << ":" << linkPrev.linkDistance;
-                if (nextChildNum<cluster.links.size()) {
-                    out << ",";
-                    const Link<T> & linkNext = cluster.links[nextChildNum];
-                    stack.emplace_back(here.clusterIndex, nextChildNum+1);
-                    stack.emplace_back(linkNext.clusterIndex, 0);
-                } else {
-                    out << ")";
-                }
-            } while (0 < stack.size());
-            out << ";" << std::endl;
+            writeTreeToOpenFile(out);
             out.close();
             return true;
         } catch (std::ios::failure &) {
@@ -152,8 +114,56 @@ public:
             return false;
         }
     }
+    template <class F> bool writeTreeToOpenFile(F& out) const {
+        out.precision(8);
+
+        std::vector<Place> stack;
+        bool failed = false; //Becomes true if clusters
+        //defines cycles (should never happen)
+        //Indicates a fatal logic error
+        size_t maxLoop = 3 * size();
+        //More than this, and there must be
+        //a cycle.  Or something.
+        
+        stack.emplace_back(size()-1, 0); //assumes: size is at least 1!
+        do {
+            --maxLoop;
+            if (maxLoop==0) {
+                failed = true;
+                break;
+            }
+            Place here = stack.back();
+            const Cluster<T>& cluster = at(here.clusterIndex);
+            stack.pop_back();
+            if (cluster.links.empty()) {
+                out << cluster.name;
+                continue;
+            }
+            if (here.linkNumber==0) {
+                out << "(";
+                stack.emplace_back(here.clusterIndex, 1);
+                stack.emplace_back(cluster.links[0].clusterIndex, 0);
+                continue;
+            }
+            size_t nextChildNum = here.linkNumber;
+            const Link<T> & linkPrev = cluster.links[nextChildNum-1];
+            out << ":" << linkPrev.linkDistance;
+            if (nextChildNum<cluster.links.size()) {
+                out << ",";
+                const Link<T> & linkBelow = cluster.links[nextChildNum];
+                stack.emplace_back(here.clusterIndex, nextChildNum+1);
+                stack.emplace_back(linkBelow.clusterIndex, 0);
+            } else {
+                out << ")";
+            }
+        } while (0 < stack.size());
+        out << ";" << std::endl;
+        return !failed;
+    }
     bool writeTreeFile(bool zipIt, const std::string &treeFilePath) const {
-        if (zipIt) {
+        if (treeFilePath == "STDOUT") {
+            return writeTreeToOpenFile(std::cout);
+        } else if (zipIt) {
             ogzstream out;
             return writeTreeToFile(treeFilePath, out);
         } else {

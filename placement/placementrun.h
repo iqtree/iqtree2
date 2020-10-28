@@ -27,11 +27,13 @@ public:
     size_t                    inserts_per_batch; //Must be 1 or more
     BlockAllocator*           block_allocator;   //
     SearchHeuristic*          heuristic;         //global? or localized?
-    TaxonPlacementOptimizer*  taxon_placement_optimizer;
-    BatchPlacementOptimizer*  batch_placement_optimizer;
-    GlobalPlacementOptimizer* global_placement_optimizer;
     PlacementCostCalculator*  calculator;        //
-    
+    bool                      use_likelihood;    //true if heuristic or calculator do
+
+    TaxonPlacementOptimizer* taxon_placement_optimizer;
+    BatchPlacementOptimizer* batch_placement_optimizer;
+    GlobalPlacementOptimizer* global_placement_optimizer;
+
     size_t                    taxa_inserted_this_batch;
     size_t                    taxa_inserted_in_total; //for a given pass
     size_t                    taxa_inserted_nearby;   //taxa that couldn't be inserted at their
@@ -103,7 +105,7 @@ public:
                   TargetBranchRange& targets) {
         targets.removeUsed();
         //Remove all the candidates that we were able to place
-        std::vector<T> oldCandidates;
+        TypedTaxaToPlace<T> oldCandidates;
         std::swap(oldCandidates, candidates);
         //1. Any candidates not considered this time go to the
         //   first batch to consider in the next pass.
@@ -127,6 +129,9 @@ public:
 
     /** Log tree structures *near* the newly added taxa*/
     void logSubtreesNearAddedTaxa() const;
+
+    void donePlacement();
+
     ~PlacementRun();
 };
 

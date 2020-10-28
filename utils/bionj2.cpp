@@ -230,7 +230,7 @@ protected:
         best.value = infiniteDistance;
         for (size_t r=0; r<row_count; ++r) {
             Position<T> & here = rowMinima[r];
-            if (here.value < best.value) {
+            if (here.value < best.value && here.row != here.column) {
                 best = here;
             }
         }
@@ -1002,17 +1002,12 @@ public:
         #pragma omp parallel for
         #endif
         for (size_t r=0; r<row_count ; ++r) {
-            T      qBestForThread  = qBest;
             size_t row             = rowScanOrder[r];
             size_t cluster         = rowToCluster[row];
             T      maxEarlierTotal = scaledMaxEarlierClusterTotal[cluster];
             //Note: Older versions of RapidNJ used maxTot rather than
             //      maxEarlierTotal here...
-            rowMinima[r]           = getRowMinimum(row, maxEarlierTotal, qBestForThread);
-            T      qBestInRow      = rowMinima[row].value;
-            if ( qBestInRow < qBestForThread ) {
-                qBestForThread = qBestInRow;
-            }
+            rowMinima[r]           = getRowMinimum(row, maxEarlierTotal, qBest);
         }
     }
     Position<T> getRowMinimum(size_t row, T maxTot, T qBest) const {

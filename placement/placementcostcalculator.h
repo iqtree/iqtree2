@@ -13,7 +13,7 @@
 
 #include <tree/phylotree.h>
 #include "possibleplacement.h"
-#include "placement.h" //for Placement::doesPlacementUseParsimony, doesPlacementUseLikelihood
+#include "placement.h"         //for Placement::doesPlacementUseParsimony, doesPlacementUseLikelihood
 
 class TaxonToPlace;
 
@@ -63,10 +63,11 @@ public:
 
 class LikelihoodCostCalculator : public ParsimonyCostCalculator {
 private:
-    bool midpoint;
+    bool       midpoint;
 public:
     typedef ParsimonyCostCalculator super;
     LikelihoodCostCalculator(bool useMidpoint);
+    ~LikelihoodCostCalculator();
     virtual bool usesLikelihood();
     virtual void assessPlacementCost(PhyloTree& tree, const TaxonToPlace& taxon,
                                      PossiblePlacement& placement) const;

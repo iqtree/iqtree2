@@ -13,6 +13,14 @@
 
 SearchHeuristic::~SearchHeuristic() = default;
 
+bool SearchHeuristic::isGlobalSearch() const {
+    return true;
+}
+
+bool SearchHeuristic::usesLikelihood() const {
+    return false;
+}
+
 void SearchHeuristic::prepareToFilter(PhyloTree& tree, TargetBranchRange& targets,
                                       size_t startTarget, size_t stopTarget,
                                       TaxaToPlace& taxa,
@@ -28,9 +36,6 @@ bool SearchHeuristic::isPlacementWorthTrying(const TaxonToPlace& taxon,
 void SearchHeuristic::doneFiltering() {
 }
 
-bool SearchHeuristic::isGlobalSearch() {
-    return true;
-}
 SearchHeuristic* SearchHeuristic::getSearchHeuristic() {
     auto heuristic = Placement::getIncrementalParameter('H', "");
     if (heuristic=="") {
@@ -50,12 +55,16 @@ BaseballSearchHeuristic::BaseballSearchHeuristic(PlacementCostCalculator* calcul
     : calculator(calculatorToUse), tree_in_use(nullptr) {
 }
 
-BaseballSearchHeuristic::~BaseballSearchHeuristic() {
-    delete calculator;
+bool BaseballSearchHeuristic::isGlobalSearch() const {
+    return false;
 }
 
-bool BaseballSearchHeuristic::isGlobalSearch() {
-    return false;
+bool BaseballSearchHeuristic::usesLikelihood() const {
+    return true;
+}
+
+BaseballSearchHeuristic::~BaseballSearchHeuristic() {
+    delete calculator;
 }
 
 void BaseballSearchHeuristic::prepareToFilter(PhyloTree& tree, TargetBranchRange& targets,
@@ -68,15 +77,15 @@ void BaseballSearchHeuristic::prepareToFilter(PhyloTree& tree, TargetBranchRange
     Matrix<double> scores;
     scores.setDimensions( stopTarget-startTarget, stopTaxon-startTaxon);
     LikelihoodBlockPairs blocks(2);
-    for (size_t b = startTarget; b<stopTarget; ++b ) { //branch
-        targets.getTargetBranch(b)->computeState(tree, blocks);
-        double* scoreRow = scores.getRow(b-startTarget);
+    for (size_t t = startTarget; t<stopTarget; ++t ) { //branch
+        targets.getTargetBranch(t)->computeState(tree, t, blocks);
+        double* scoreRow = scores.getRow(t-startTarget);
         #ifdef _OPENMP
         #pragma omp parallel for
         #endif
         for (size_t c = startTaxon; c<stopTaxon; ++c ) { //candidate taxon
             PossiblePlacement p;
-            p.setTargetBranch(&targets, b);
+            p.setTargetBranch(&targets, t);
             calculator->assessPlacementCost(tree, taxa.getTaxonByIndex(c), p);
             scoreRow[c] = p.score;
         }

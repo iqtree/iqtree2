@@ -34,6 +34,8 @@ class PlacementTraversalInfo: public TraversalInfo {
 protected:
     PhyloTree& phylo_tree;
     LikelihoodBufferSet& buffers;
+    double *buffer_tmp;
+
 public:
     typedef TraversalInfo super;
     PlacementTraversalInfo(PhyloTree& tree,

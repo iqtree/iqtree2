@@ -76,7 +76,6 @@ PhyloTree::PhyloTree() : MTree(), CheckpointFactory() {
 }
 
 void PhyloTree::init() {
-    tracing_lh = false;
     aln = NULL;
     model = NULL;
     site_rate = NULL;
@@ -489,14 +488,21 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
     map<string, Node*> mapNameToNode;
     double mapStart = getRealTime();
     getMapOfTaxonNameToNode(nullptr, nullptr, mapNameToNode);
-    LOG_LINE ( VB_MED, "Mapping taxa names to nodes took "
+    LOG_LINE ( VB_DEBUG, "Mapping taxa names to nodes took "
               << (getRealTime()-mapStart) << " wall-clock secs" );
+    if (VB_MAX <= verbose_mode) {
+        for (auto it=mapNameToNode.begin(); it!=mapNameToNode.end(); ++it) {
+            LOG_LINE( VB_MAX, "sequence " << it->first << " has id " << it->second->id );
+        }
+    }
 
     IntVector taxaIdsToAdd; //not found in tree
     for (size_t seq = 0; seq < nseq; seq++) {
         string seq_name = aln->getSeqName(seq);
         auto   it       = mapNameToNode.find(seq_name);
         if (it==mapNameToNode.end()) {
+            LOG_LINE( VB_MED, "Could not find sequence " << seq << " " << seq_name
+                     << " in the tree.  It will be added.");
             taxaIdsToAdd.emplace_back((int)seq);
         } else {
             (*it).second->id = seq;
@@ -583,14 +589,23 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
                       << ", and right branch " << rightLength << ")");
         }
         mapNameToNode.clear();
-        removeTaxa(taxaToRemove, !will_add, "Removing deleted taxa from tree");
+        LOG_LINE ( VB_DEBUG, "Before delete, number of leaves " << this->leafNum
+                        << ", of nodes "       << this->nodeNum
+                        << ", of branches "    << this->branchNum);
+        auto countRemoved = removeTaxa(taxaToRemove, !will_add, "Removing deleted taxa from tree");
         //Todo: Carry out any requested "after-each-delete" local tidy-up of the tree
         //      (via an extra parameter to removeTaxa, perhaps?)
         //Todo: Carry out any requested "after-batch-of-deletes" global tidy-up
         
         //Todo: Carry out any requested "after-all-deletes" global tidy-up of the tree.
         //Todo: If requested *not* to optimize branch lengths here, don't.
-        //Todo: does removeTaxa update nodeNum and leafNum as it runs?
+
+        leafNum   -= countRemoved;
+        branchNum -= countRemoved*2;
+        nodeNum   -= countRemoved*2;
+        LOG_LINE ( VB_DEBUG, "After delete, number of leaves " << this->leafNum
+                        << ", of nodes "       << this->nodeNum
+                        << ", of branches "    << this->branchNum);
 
         if ( VB_MED <= verbose_mode ) {
             clearAllPartialParsimony(false);
@@ -603,22 +618,23 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
         addNewTaxaToTree(taxaIdsToAdd);
         //Todo: Carry out any requested "after-all-inserts" global tidy-up of the tree.
         //Todo: If requested *not* to optimize branch lengths here, don't.
+        //Note: If the Sankoff cost matrix isn't wanted after placement, it
+        //      will be deallocated (switching back to regular parsimony)
+        //      in GlobalPlacementOptimizer::optimizeAfterPlacement.
     }
-    if (using_sankoff && !params->sankoff_cost_file) {
-        aligned_free(cost_matrix);
-        setParsimonyKernel(params->SSE);
+    else {
+        if (isUsingSankoffParsimony() && !params->sankoff_cost_file) {
+            stopUsingSankoffParsimony();
+        }
+        std::stringstream s;
+        s << "Computing parsimony (after deleting taxa";
+        int parsimony_score = computeParsimony(s.str().c_str());
+        LOG_LINE(VB_MIN, "Parsimony score after deleting taxa was " << parsimony_score);
+        fixNegativeBranch();
+        double likelihood = computeLikelihood();
+        LOG_LINE(VB_MIN, "Likelihood score after deleting taxa was " << likelihood);
     }
-    deleteAllPartialLh();
-    initializeAllPartialLh();
 
-    std::string verbing = ( will_add ? "adding new" : "deleting");
-    std::stringstream s;
-    s << "Computing parsimony (after " << verbing << " taxa";
-    int parsimony_score = computeParsimony(s.str().c_str());
-    LOG_LINE ( VB_MIN, "Parsimony score after " << verbing << " taxa was " << parsimony_score );
-    fixNegativeBranch();
-    double likelihood = computeLikelihood();
-    LOG_LINE ( VB_MIN, "Likelihood score after " << verbing << " taxa was " << likelihood );
 
     return true;
 }
@@ -937,11 +953,14 @@ string PhyloTree::getModelNameParams() {
     return name;
 }
 
-void PhyloTree::saveBranchLengths(DoubleVector &lenvec, int startid, PhyloNode *node, PhyloNode *dad) {
+void PhyloTree::saveBranchLengths(DoubleVector &lenvec, int startid,
+                                  PhyloNode *node, PhyloNode *dad) {
     if (!node) {
         node = getRoot();
         ASSERT(branchNum == nodeNum-1);
-        if (lenvec.empty()) lenvec.resize(branchNum*getMixlen() + startid);
+        if (lenvec.empty()) {
+            lenvec.resize(branchNum*getMixlen() + startid);
+        }
     }
     FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, nei){
         nei->getLength(lenvec, nei->id*getMixlen() + startid);
@@ -949,7 +968,8 @@ void PhyloTree::saveBranchLengths(DoubleVector &lenvec, int startid, PhyloNode *
     }
 }
 
-void PhyloTree::restoreBranchLengths(DoubleVector &lenvec, int startid, PhyloNode *node, PhyloNode *dad) {
+void PhyloTree::restoreBranchLengths(DoubleVector &lenvec, int startid,
+                                     PhyloNode *node, PhyloNode *dad) {
     if (!node) {
         node = getRoot();
         ASSERT(!lenvec.empty());
@@ -1005,7 +1025,7 @@ void PhyloTree::ensureCentralPartialParsimonyIsAllocated(size_t extra_vector_cou
     size_t   vector_count          = aln->getNSeq() * 4 + extra_vector_count;
     total_parsimony_mem_size       = vector_count * pars_block_size + tip_partial_pars_size;
 
-    LOG_LINE(VB_MAX, "Allocating " << total_parsimony_mem_size * sizeof(UINT)
+    LOG_LINE(VB_DEBUG, "Allocating " << total_parsimony_mem_size * sizeof(UINT)
              << " bytes for " << vector_count << " partial parsimony vectors "
              << " of " << (pars_block_size * sizeof(UINT)) << " bytes each, and "
              << (tip_partial_pars_size * sizeof(UINT)) << " additional bytes for tip vectors");
@@ -1072,6 +1092,9 @@ double PhyloTree::computePartialParsimonyOutOfTree(const UINT* left_partial_pars
         ( left_partial_pars, right_partial_pars, dad_partial_pars );
 }
 
+void PhyloTree::computePartialInfoDouble(TraversalInfo &info, double* buffer) {
+    (this->*computePartialInfoPointer)(info, buffer);
+}
 
 void PhyloTree::computeReversePartialParsimony(PhyloNode *node, PhyloNode *dad) {
     PhyloNeighbor* node_nei = node->findNeighbor(dad);
@@ -1333,7 +1356,7 @@ void PhyloTree::getMemoryRequired(uint64_t &partial_lh_entries, uint64_t &scale_
 void PhyloTree::determineBlockSizes() {
     // reserve the last entry for parsimony score
     // no longer: pars_block_size = (aln->num_states * aln->size() + UINT_BITS - 1) / UINT_BITS + 1;
-    if (cost_matrix) {
+    if (isUsingSankoffParsimony()) {
         //Sankoff parsimony tracks a number (a UINT) for each state for each site
         //(and should have 4 additional UINTs for a total score)
         pars_block_size = get_safe_upper_limit_float(aln->size() * aln->num_states) + 4;
@@ -1390,13 +1413,13 @@ void PhyloTree::allocateCentralBlocks(size_t extra_parsimony_block_count,
         uint64_t mem_size = (uint64_t)(max_lh_slots + extra_lh_block_count) * lh_block_size
             + 4 + tip_partial_lh_size;
 
-        if (0<extra_lh_block_count) {
+        if (VB_MED<=verbose_mode && 0<extra_lh_block_count) {
             std::stringstream s;
             s   << "max_lh_slots was " << max_lh_slots
-                << " and extra_block_count was " << extra_lh_block_count;
+                << " and extra_lh_block_count was " << extra_lh_block_count;
             logLine(s.str());
         }
-        LOG_LINE ( VB_MED, "Allocating " << mem_size * sizeof(double) << " bytes for "
+        LOG_LINE ( VB_DEBUG, "Allocating " << mem_size * sizeof(double) << " bytes for "
                   << (max_lh_slots + extra_lh_block_count) << " partial likelihood vectors "
                   << "( " << (tip_partial_lh_size+4) * sizeof(double) << " bytes for tips and scores)");
         try {
@@ -1407,12 +1430,12 @@ void PhyloTree::allocateCentralBlocks(size_t extra_parsimony_block_count,
         if (!central_partial_lh) {
             outError("Not enough memory for partial likelihood vectors");
         }
-        LOG_LINE ( VB_MED, "central_partial_lh is " << pointer_to_hex(central_partial_lh)
+        LOG_LINE ( VB_DEBUG, "central_partial_lh is " << pointer_to_hex(central_partial_lh)
                   << " through " << pointer_to_hex(central_partial_lh + mem_size));
                 
         // We need not treat params->lh_mem_save == LM_PER_NODE as a special case.
         tip_partial_lh = central_partial_lh + ((max_lh_slots + extra_lh_block_count) * lh_block_size);
-        LOG_LINE (VB_MED, "tip_partial_lh is " << pointer_to_hex(tip_partial_lh)
+        LOG_LINE (VB_DEBUG, "tip_partial_lh is " << pointer_to_hex(tip_partial_lh)
                     << " through " << pointer_to_hex(tip_partial_lh + tip_partial_lh_size ));
     }
 
@@ -1767,20 +1790,23 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
     }
     
     double sum_scaling = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
-    //double sum_scaling = 0.0;
     if (sum_scaling < 0.0) {
         if (current_it->lh_scale_factor == 0.0) {
             for (i = 0; i < nptn; i++) {
-                ptn_lh[i] = tree_buffers._pattern_lh[i] + (max(UBYTE(0), current_it_back->scale_num[i])) * LOG_SCALING_THRESHOLD;
+                UBYTE scale_up = max(UBYTE(0), current_it_back->scale_num[i]);
+                ptn_lh[i] = tree_buffers._pattern_lh[i] + scale_up * LOG_SCALING_THRESHOLD;
             }
         } else if (current_it_back->lh_scale_factor == 0.0){
             for (i = 0; i < nptn; i++) {
-                ptn_lh[i] = tree_buffers._pattern_lh[i] + (max(UBYTE(0), current_it->scale_num[i])) * LOG_SCALING_THRESHOLD;
+                UBYTE scale_up = max(UBYTE(0), current_it->scale_num[i]);
+                ptn_lh[i] = tree_buffers._pattern_lh[i] + scale_up * LOG_SCALING_THRESHOLD;
             }
         } else {
             for (i = 0; i < nptn; i++) {
-                ptn_lh[i] = tree_buffers._pattern_lh[i] + (max(UBYTE(0), current_it->scale_num[i]) +
-                    max(UBYTE(0), current_it_back->scale_num[i])) * LOG_SCALING_THRESHOLD;
+                UBYTE scale_up_fwd  = max(UBYTE(0), current_it->scale_num[i]);
+                UBYTE scale_up_back = max(UBYTE(0), current_it_back->scale_num[i]);
+                int   scale_up      = scale_up_fwd + scale_up_back;
+                ptn_lh[i] = tree_buffers._pattern_lh[i] + scale_up * LOG_SCALING_THRESHOLD;
             }
         }
     } else {
@@ -3944,7 +3970,7 @@ int PhyloTree::fixNegativeBranch(bool force, PhyloNode *node, PhyloNode *dad) {
         }
     }
     int fixed = 0;
-    if (force && !cost_matrix) {
+    if (force && !isUsingSankoffParsimony()) {
         return setParsimonyBranchLengths();
     }
     double alpha = (site_rate) ? site_rate->getGammaShape() : 1.0;

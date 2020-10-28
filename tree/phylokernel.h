@@ -92,9 +92,9 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
     size_t nptn = aln->size() + model_factory->unobserved_ptns.size();
     PhyloNode *node = dad_branch->getNode();
 
-    if (!tip_partial_lh_computed)
+    if (!tip_partial_lh_computed) {
         computeTipPartialLikelihood();
-
+    }
     if (node->isLeaf()) {
         dad_branch->lh_scale_factor = 0.0;
         //memset(dad_branch->scale_num, 0, nptn * sizeof(UBYTE));
@@ -103,16 +103,16 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
 
     size_t orig_nptn = aln->size();
 
-    size_t ncat = site_rate->getNRate();
+    size_t ncat     = site_rate->getNRate();
     size_t ncat_mix = (model_factory->fused_mix_rate) ? ncat : ncat*model->getNMixtures();
     assert(nstates == aln->num_states && nstates >= VCSIZE && VCSIZE == VectorClass().size());
     assert(model->isReversible()); // only works with reversible model!
     const size_t nstatesqr=nstates*nstates;
-    size_t block = nstates * ncat_mix;
+    size_t block     = nstates * ncat_mix;
     size_t tip_block = nstates * model->getNMixtures();
 
     size_t mix_addr_nstates[ncat_mix], mix_addr[ncat_mix];
-    size_t denom = (model_factory->fused_mix_rate) ? 1 : ncat;
+    size_t denom     = (model_factory->fused_mix_rate) ? 1 : ncat;
     for (int c = 0; c < ncat_mix; c++) {
         size_t m = c/denom;
         mix_addr_nstates[c] = m*nstates;
@@ -121,7 +121,7 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
 
     // internal node
     dad_branch->lh_scale_factor = 0.0;
-    PhyloNeighbor *left = NULL, *right = NULL; // left & right are two neighbors leading to 2 subtrees
+    PhyloNeighbor* left = nullptr, *right = nullptr; // left & right are two neighbors leading to 2 subtrees
     int num_leaves = 0;
     FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, nei) {
         if (!left) left = nei; else right = nei;
@@ -160,12 +160,13 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
     double *eval = model->getEigenvalues();
 
 
-    VectorClass *echildren = aligned_alloc<VectorClass>(block*nstates/VCSIZE*(node->degree()-1));
-    double *partial_lh_leaves = NULL;
-    if (num_leaves > 0)
+    VectorClass* echildren = aligned_alloc<VectorClass>(block*nstates/VCSIZE*(node->degree()-1));
+    double* partial_lh_leaves = nullptr;
+    if (num_leaves > 0) {
         partial_lh_leaves = aligned_alloc<double>((aln->STATE_UNKNOWN+1)*block*num_leaves);
-    VectorClass *echild = echildren;
-    double *partial_lh_leaf = partial_lh_leaves;
+    }
+    VectorClass* echild          = echildren;
+    double*      partial_lh_leaf = partial_lh_leaves;
     
     
     FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, child) {
@@ -224,7 +225,8 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
         echild += block*nstates/VCSIZE;
     }
     
-    VectorClass *eleft = echildren, *eright = echildren + block*nstates/VCSIZE;
+    VectorClass* eleft = echildren;
+    VectorClass* eright = echildren + block*nstates/VCSIZE;
     
     if (!left->node->isLeaf() && right->node->isLeaf()) {
         std::swap(left, right);
@@ -343,7 +345,6 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
                     dad_branch->scale_num[ptn] += 1;
                 }
             }
-
         } // for ptn
         dad_branch->lh_scale_factor += sum_scale;
                 
@@ -895,19 +896,19 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
     if (!node_branch->isLikelihoodComputed()) {
         computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(node_branch, node, buffers);
     }
-    double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
-    size_t ncat = site_rate->getNRate();
+    double tree_lh  = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
+    size_t ncat     = site_rate->getNRate();
     size_t ncat_mix = (model_factory->fused_mix_rate) ? ncat : ncat*model->getNMixtures();
-    size_t denom = (model_factory->fused_mix_rate) ? 1 : ncat;
+    size_t denom    = (model_factory->fused_mix_rate) ? 1 : ncat;
     size_t mix_addr_nstates[ncat_mix];
 
-    size_t block = ncat_mix * nstates;
+    size_t block     = ncat_mix * nstates;
     size_t tip_block = nstates * model->getNMixtures();
     size_t orig_nptn = aln->size();
-    size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
-    size_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
-    maxptn = max(maxptn, aln->size()+((model_factory->unobserved_ptns.size()+VCSIZE-1)/VCSIZE)*VCSIZE);
-    double *eval = model->getEigenvalues();
+    size_t nptn      = aln->size()+model_factory->unobserved_ptns.size();
+    size_t maxptn    = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
+    maxptn           = max(maxptn, aln->size()+((model_factory->unobserved_ptns.size()+VCSIZE-1)/VCSIZE)*VCSIZE);
+    double* eval     = model->getEigenvalues();
     assert(eval);
 
     VectorClass *vc_val = (VectorClass*)aligned_alloc<double>(block);
@@ -915,7 +916,7 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
 
     for (int c = 0; c < ncat_mix; c++) {
         size_t mycat = c%ncat;
-        size_t m = c/denom;
+        size_t m     = c/denom;
         mix_addr_nstates[c] = m*nstates;
         double *eval_ptr = eval + mix_addr_nstates[c];
         VectorClass vc_len(site_rate->getRate(mycat)*dad_branch->length);
@@ -1277,26 +1278,26 @@ template <class VectorClass, const int VCSIZE, const int nstates>
 double PhyloTree::computeLikelihoodFromBufferEigenSIMD(LikelihoodBufferSet& buffers) {
     assert(buffers.theta_all && buffers.theta_computed);
 
-    double tree_lh = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
+    double tree_lh   = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
 
-    size_t ncat = site_rate->getNRate();
-    size_t ncat_mix = (model_factory->fused_mix_rate) ? ncat : ncat*model->getNMixtures();
-    size_t denom = (model_factory->fused_mix_rate) ? 1 : ncat;
+    size_t ncat      = site_rate->getNRate();
+    size_t ncat_mix  = (model_factory->fused_mix_rate) ? ncat : ncat*model->getNMixtures();
+    size_t denom     = (model_factory->fused_mix_rate) ? 1 : ncat;
 
-    size_t block = ncat_mix * nstates;
+    size_t block     = ncat_mix * nstates;
     size_t orig_nptn = aln->size();
-    size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
-//    size_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
-    double *eval = model->getEigenvalues();
+    size_t nptn      = aln->size()+model_factory->unobserved_ptns.size();
+//    size_t maxptn  = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
+    double *eval     = model->getEigenvalues();
     assert(eval);
 
     VectorClass *vc_val0 = (VectorClass*)aligned_alloc<double>(block);
 
     VectorClass vc_len = current_it->length;
     for (int c = 0; c < ncat_mix; c++) {
-        size_t m = c/denom;
-        double *eval_ptr = eval + (m)*nstates;
-        size_t mycat = c%ncat;
+        size_t  m        = c/denom;
+        double* eval_ptr = eval + (m)*nstates;
+        size_t  mycat    = c%ncat;
         VectorClass vc_rate = site_rate->getRate(mycat);
         VectorClass vc_prop = site_rate->getProp(mycat) * model->getMixtureWeight(m);
         for (int i = 0; i < nstates/VCSIZE; i++) {

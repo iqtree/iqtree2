@@ -55,8 +55,7 @@ void PhyloTree::setNumThreads(int threadCount) {
 }
 
 void PhyloTree::setParsimonyKernel(LikelihoodKernel lk) {    
-    if (cost_matrix) {
-        // Sankoff parsimony kernel
+    if (isUsingSankoffParsimony()) {
         if (lk < LK_SSE2) {
             computeParsimonyBranchPointer           = &PhyloTree::computeParsimonyBranchSankoff;
             computeParsimonyOutOfTreePointer        = &PhyloTree::computeParsimonyOutOfTreeSankoff;
@@ -95,9 +94,10 @@ void PhyloTree::setParsimonyKernel(LikelihoodKernel lk) {
 }
 
 void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
+	sse                       = lk;
+    vector_size               = 1;
+    computePartialInfoPointer = &PhyloTree::computePartialInfoWrapper<Vec1d>;
 
-	sse = lk;
-    vector_size = 1;
     safe_numeric = (params && (params->lk_safe_scaling || leafNum >= params->numseq_safe_scaling)) ||
         (aln && aln->num_states != 4 && aln->num_states != 20);
 
