@@ -136,9 +136,8 @@ double RateGammaInvar::optimizeParameters(double gradient_epsilon) {
     if (ndim == 0) {
         return phylo_tree->computeLikelihood();
     }
-    if (verbose_mode >= VB_MED) {
-        cout << "Optimizing " << name << " model parameters by " << optimize_alg << " algorithm..." << endl;
-    }
+    TREE_LOG_LINE(*phylo_tree, VB_MED, "Optimizing " << name << " model parameters by " << optimize_alg << " algorithm...");
+
 	if (optimize_alg.find("EM_RR") != string::npos) {
         return randomRestartOptimization(gradient_epsilon);
     } else if (optimize_alg.find("Brent") != string::npos || phylo_tree->aln->frac_const_sites == 0.0 || isFixPInvar() || isFixGammaShape()) {
@@ -221,7 +220,9 @@ double RateGammaInvar::optimizeWithEM(double gradient_epsilon) {
 
     cur_optimize = 0;
     double gamma_lh = RateGamma::optimizeParameters(gradient_epsilon);
-    ASSERT(gamma_lh > curlh - 1.0);
+    if (!phylo_tree->params->ignore_any_errors) {
+        ASSERT(gamma_lh > curlh - 1.0);
+    }
     curlh = gamma_lh;
 
     size_t ncat = getNRate();

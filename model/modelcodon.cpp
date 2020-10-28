@@ -998,9 +998,7 @@ double ModelCodon::optimizeParameters(double gradient_epsilon) {
         // return if nothing to be optimized
         return 0.0;
     }    
-    if (verbose_mode >= VB_MAX) {
-        cout << "Optimizing " << name << " model parameters..." << endl;
-    }
+    TREE_LOG_LINE(*phylo_tree, VB_MAX, "Optimizing " << name << " model parameters...");
 	double *variables = new double[ndim+1];
 	double *upper_bound = new double[ndim+1];
 	double *lower_bound = new double[ndim+1];

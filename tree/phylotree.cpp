@@ -1455,7 +1455,7 @@ void PhyloTree::allocateCentralBlocks(size_t extra_parsimony_block_count,
         if (!central_scale_num) {
             outError("Not enough memory for scale num vectors");
         }
-        LOG_LINE ( VB_MED, "Allocated " << central_scale_num_size_in_bytes << " bytes"
+        LOG_LINE ( VB_DEBUG, "Allocated " << central_scale_num_size_in_bytes << " bytes"
                     << " for " << slots_wanted << " scale blocks");
         LOG_LINE ( VB_DEBUG, "Address range for scale blocks is " << pointer_to_hex(central_scale_num)
                   << " to " << pointer_to_hex(central_scale_num + mem_size) );
@@ -1563,6 +1563,7 @@ UBYTE *PhyloTree::newScaleNum() {
     return aligned_alloc<UBYTE>(getScaleNumSize());
 }
 
+<<<<<<< HEAD
 PhyloNode* PhyloTree::findFirstFarLeaf(PhyloNode *node, PhyloNode *dad) const {
     do {
         FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, nei) {
@@ -1574,6 +1575,8 @@ PhyloNode* PhyloTree::findFirstFarLeaf(PhyloNode *node, PhyloNode *dad) const {
     return node;
 }
 
+=======
+>>>>>>> ece9282111b364446d75132b59a129c3a0ca6041
 double PhyloTree::computeLikelihood(double *pattern_lh) {
     ASSERT(model);
     ASSERT(site_rate);
@@ -1654,6 +1657,18 @@ void PhyloTree::transformPatternLhCat() {
         }
     }
     aligned_free(mem);
+}
+
+PhyloNode* PhyloTree::findFirstFarLeaf(PhyloNode* node) const {
+    PhyloNode* dad = nullptr;
+    do {
+        FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, nei) {
+            dad = node;
+            node = nei->getNode();
+            break;
+        }
+    } while (!node->isLeaf());
+    return node;
 }
 
 double PhyloTree::computePatternLhCat(SiteLoglType wsl) {
@@ -2933,10 +2948,11 @@ void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2,
         optx = minimizeNewton(params->min_branch_length, current_len,
                               params->max_branch_length, params->min_branch_length,
                               derivative_of_likelihood_wrt_length, maxNRStep);
-        LOG_LINE ( VB_DEBUG , "optx=" << optx
+        LOG_LINE ( VB_DEBUG , "  branch=" << current_it->id << ", optx=" << optx
                   << ", dlh=" << derivative_of_likelihood_wrt_length
                   << ", minimizeNewton logl: "
-                  << computeLikelihoodFromBuffer() ); //Todo: downgrade to VB_DEBUG
+                  << computeLikelihoodFromBuffer()
+                  << ", previous length " << current_len); 
         if (optx > params->max_branch_length*0.95 && !isSuperTree()) {
             // newton raphson diverged, reset
             double opt_lh = computeLikelihoodFromBuffer();
@@ -3009,69 +3025,33 @@ void PhyloTree::computeBestTraversal(NodeVector &nodes, NodeVector &nodes2) {
 }
 
 double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int maxNRStep) {
-    if (verbose_mode >= VB_MAX) {
-        cout << "Optimizing branch lengths (max " << my_iterations << " loops)..." << endl;
-    }
+
+    LOG_LINE(VB_MAX, "Optimizing branch lengths (max " << my_iterations << " loops)...");
+
     PhyloNodeVector nodes, nodes2;
     computeBestTraversal(nodes, nodes2);
-    PhyloNeighbor* firstNeighbor = nodes[0]->findNeighbor(nodes2[0]);
-    double tree_lh = computeLikelihoodBranch(firstNeighbor, nodes[0],
+    PhyloNode*     firstNode     = nodes[0];
+    PhyloNeighbor* firstNeighbor = firstNode->findNeighbor(nodes2[0]);
+    double tree_lh = computeLikelihoodBranch(firstNeighbor, firstNode,
                                              tree_buffers);
-    if (verbose_mode >= VB_MAX) {
-        cout << "Initial tree log-likelihood: " << tree_lh << endl;
-    }
+    LOG_LINE(VB_MAX, "Initial tree log-likelihood: " << tree_lh);
     DoubleVector lenvec;
     initProgress(my_iterations*nodes.size(), "Optimizing branch lengths", "", "", true);
     for (int i = 0; i < my_iterations; i++) {
-//        string string_brlen = getTreeString();
+        LOG_LINE(VB_MAX, "Likelihood before iteration " << i + 1 << " : " << tree_lh);
         saveBranchLengths(lenvec);
-//        if (verbose_mode >= VB_DEBUG) {
-//            printTree(cout, WT_BR_LEN+WT_NEWLINE);
-//        }
-
         for (int j = 0; j < nodes.size(); j++) {
             optimizeOneBranch(nodes[j], nodes2[j]);
-            if (verbose_mode >= VB_MAX) {
-                hideProgress();
-                cout << "Branch " << nodes[j]->id << " " << nodes2[j]->id << ": " << computeLikelihoodFromBuffer() << endl;
-                showProgress();
+            LOG_LINE(VB_MAX, "Branch " << nodes[j]->id << " " << nodes2[j]->id << ": " << computeLikelihoodFromBuffer());
+            if ( (j % 100) == 99) {
+                trackProgress(100.0);
             }
-            trackProgress(1);
         }
+        trackProgress(nodes.size() % 100);
 
-//        if (i == 0) 
-//            optimizeOneBranch(nodes[0], nodes2[0]);
-//        if (i % 2 == 0) {
-//            for (int j = 1; j < nodes.size(); j++)
-//                optimizeOneBranch(nodes[j], nodes2[j]);
-//        } else {
-//            for (int j = nodes.size()-2; j >= 0; j--)
-//                optimizeOneBranch(nodes[j], nodes2[j]);
-//        }
-
-//            optimizeAllBranches((getRoot(), NULL, maxNRStep);
-            
         double new_tree_lh = computeLikelihoodFromBuffer();
-        //cout<<"After opt  log-lh = "<<new_tree_lh<<endl;
+        LOG_LINE(VB_MAX, "Likelihood after iteration " << i + 1 << " : " << new_tree_lh);
 
-        if (verbose_mode >= VB_MAX) {
-            hideProgress();
-            cout << "Likelihood after iteration " << i + 1 << " : ";
-            cout << new_tree_lh << endl;
-            showProgress();
-        }
-
-//        if (verbose_mode >= VB_DEBUG) {
-//            printTree(cout, WT_BR_LEN+WT_NEWLINE);
-//        }
-
-//        if (new_tree_lh < tree_lh - 10.0) { // make sure that the new tree likelihood never decreases too much
-//            cout << "ERROR: Branch length optimization failed as log-likelihood decreases too much: " << tree_lh << "  --> " << new_tree_lh << endl;
-//            getModel()->writeInfo(cout);
-//            getRate()->writeInfo(cout);
-//            assert(new_tree_lh >= tree_lh - 10.0);
-//        }
-        
         if (new_tree_lh < tree_lh - tolerance*0.1) {
             // IN RARE CASE: tree log-likelihood decreases, revert the branch length and stop
             if (verbose_mode >= VB_MED) {
@@ -3084,8 +3064,6 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
             clearAllPartialLH();
             restoreBranchLengths(lenvec);
 
-            //clearAllPartialLH();
-//            readTreeString(string_brlen);
             double max_delta_lh = 1.0;
             // Increase max delta with PoMo because log likelihood is very much lower.
             if (aln->seq_type == SEQ_POMO) max_delta_lh = 3.0;

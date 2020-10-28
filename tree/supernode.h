@@ -161,12 +161,10 @@ typedef SubclassPointerVector<SuperNeighbor, PhyloNeighborVec> SuperNeighborVec;
 
 class SuperBranch : public pair<SuperNode*, SuperNode*> {
 public:
-	typedef pair<SuperNode*, SuperNode*> super;
-	SuperBranch(Node* a, Node* b) : super( (SuperNode*)a, (SuperNode*)b ) {
-	}
-	inline SuperNeighbor* lookingLeft()  const { return second->findNeighbor(first); }
-	inline SuperNeighbor* lookingRight() const { return first->findNeighbor(second); }
+    typedef pair<SuperNode*, SuperNode*> super;
+    SuperBranch(Node* a, Node* b) : super( (SuperNode*)a, (SuperNode*)b ) {
+    }
+    inline SuperNeighbor* lookingLeft()  const { return second->findNeighbor(first); }
+    inline SuperNeighbor* lookingRight() const { return first->findNeighbor(second); }
 };
-
-
 #endif

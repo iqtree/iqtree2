@@ -1203,10 +1203,14 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
     tree->clearAllPartialLH();
     tree->setCurScore(tree->computeLikelihood());
     if (write_info) {
+        tree->hideProgress();
         cout << "Optimal pinv,alpha: " << bestPInvar << ", " << bestAlpha << " / ";
         cout << "LogL: " << tree->getCurScore() << endl << endl;
+        tree->showProgress();
     }
-    ASSERT(fabs(tree->getCurScore() - bestLogl) < 1.0);
+    if (!tree->params->ignore_any_errors) {
+        ASSERT(fabs(tree->getCurScore() - bestLogl) < 1.0);
+    }
 
 //    delete [] rates;
 //    delete [] state_freqs;
@@ -1218,7 +1222,9 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
 
     double elapsed_secs = getRealTime() - begin_time;
     if (write_info) {
+        tree->hideProgress();
         cout << "Parameters optimization took " << elapsed_secs << " sec" << endl;
+        tree->showProgress();
     }
     // updating global variable is not safe!
 //    Params::getInstance().testAlpha = false;
@@ -1309,20 +1315,26 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
         double new_lh;
 
         // changed to optimise edge length first, and then Q,W,R inside the loop by Thomas on Sept 11, 15
-        if (fixed_len == BRLEN_OPTIMIZE)
-            new_lh = tree->optimizeAllBranches(min(i,3), logl_epsilon);  // loop only 3 times in total (previously in v0.9.6 5 times)
+        if (fixed_len == BRLEN_OPTIMIZE) {
+            TREE_LOG_LINE(*tree, VB_MAX, "Optimizing branch lengths");
+            new_lh = tree->optimizeAllBranches(min(i, 3), logl_epsilon);  // loop only 3 times in total (previously in v0.9.6 5 times)
+        }
         else if (fixed_len == BRLEN_SCALE) {
             double scaling = 1.0;
+            TREE_LOG_LINE(*tree, VB_MAX, "Optimizing branch scaling");
             new_lh = tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling, MAX_BRLEN_SCALE, gradient_epsilon);
         } else {
             new_lh = cur_lh;
         }
+        TREE_LOG_LINE(*tree, VB_MAX, "Optimizing parameters");
         new_lh = optimizeParametersOnly(i, gradient_epsilon, new_lh);
         if (new_lh == 0.0) {
             if (fixed_len == BRLEN_OPTIMIZE) {
+                TREE_LOG_LINE(*tree, VB_MAX, "Optimizing branch lengths (2nd time)");
                 cur_lh = tree->optimizeAllBranches(tree->params->num_param_iterations, logl_epsilon);
             } else if (fixed_len == BRLEN_SCALE) {
                 double scaling = 1.0;
+                TREE_LOG_LINE(*tree, VB_MAX, "Optimizing branch scaling (2nd time)");
                 cur_lh = tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling, MAX_BRLEN_SCALE, gradient_epsilon);
             }
             break;
@@ -1352,9 +1364,11 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
         } else {
             site_rate->classifyRates(new_lh);
             if (fixed_len == BRLEN_OPTIMIZE) {
+                TREE_LOG_LINE(*tree, VB_MAX, "Optimizing branch lengths (3rd time)");
                 cur_lh = tree->optimizeAllBranches(100, logl_epsilon);
             } else if (fixed_len == BRLEN_SCALE) {
                 double scaling = 1.0;
+                TREE_LOG_LINE(*tree, VB_MAX, "Optimizing branch scaling (3rd time)");
                 cur_lh = tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling, MAX_BRLEN_SCALE, gradient_epsilon);
             }
             break;

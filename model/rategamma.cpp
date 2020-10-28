@@ -212,10 +212,10 @@ bool RateGamma::getVariables(double *variables) {
 }
 
 double RateGamma::optimizeParameters(double gradient_epsilon, double min_gamma, double max_gamma) {
-	if (fix_gamma_shape)
+	if (fix_gamma_shape) {
 		return phylo_tree->computeLikelihood();
-	if (verbose_mode >= VB_MAX)
-		cout << "Optimizing gamma shape..." << endl;
+	}
+	TREE_LOG_LINE(*phylo_tree, VB_MAX, "Optimizing gamma shape...");
 	double negative_lh;
 	double current_shape = gamma_shape;
 	double ferror, optx;
@@ -232,8 +232,7 @@ double RateGamma::optimizeParameters(double gradient_epsilon, double min_gamma, 
 double RateGamma::optimizeParameters(double gradient_epsilon) {
 	if (fix_gamma_shape)
 		return phylo_tree->computeLikelihood();
-	if (verbose_mode >= VB_MAX)
-		cout << "Optimizing gamma shape..." << endl;
+	TREE_LOG_LINE(*phylo_tree, VB_MAX, "Optimizing gamma shape...");
 	double negative_lh;
 	double current_shape = gamma_shape;
 	double ferror, optx;
