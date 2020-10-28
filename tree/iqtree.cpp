@@ -3142,9 +3142,12 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI, const char* context) {
         // do non-conflicting positive NNIs
         doNNIs(appliedNNIs);
         curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
+        const double loglh_tolerance = 0.1;
+        auto expected_score = appliedNNIs.at(0).newloglh;
 
-        if (curScore < appliedNNIs.at(0).newloglh - params->loglh_epsilon) {
-            //cout << "Tree getting worse: curScore = " << curScore << " / best score = " <<  appliedNNIs.at(0).newloglh << endl;
+        if (curScore < expected_score - params->loglh_epsilon) {
+            LOG_LINE( VB_MAX, "Tree getting worse. curScore = " << curScore
+                     << " / best score = " << expected_score);
             // tree cannot be worse if only 1 NNI is applied
             if (appliedNNIs.size() > 1) {
                 // revert all applied NNIs
@@ -3155,31 +3158,34 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI, const char* context) {
                 appliedNNIs.resize(1);
                 doNNIs(appliedNNIs);
                 curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
-                if (curScore <= appliedNNIs.at(0).newloglh - 0.1 ) {
-                    LOG_LINE( VB_MIN, "appliedNNIs.at(0).newloglh is " << appliedNNIs.at(0).newloglh
-                            << ", curScore is " << curScore);
-                    ASSERT(curScore > appliedNNIs.at(0).newloglh - 0.1);
-                }
-            } else
-                ASSERT(curScore > appliedNNIs.at(0).newloglh - 0.1 && "Using one NNI reduces LogL");
+            }
+            if (curScore <= expected_score - loglh_tolerance ) {
+                //In large trees this is possible, because optimizeAllBranches
+                //might not have behaved as expected.
+                LOG_LINE(VB_MIN, "Current likelihood (" << curScore << ")"
+                        << " was less than expected (" << expected_score << ")"
+                        << " by more (" << (expected_score - curScore) << ")"
+                        << " than " << loglh_tolerance << ".");
+            } else {
+                LOG_LINE(VB_MED, "Current likelihood (" << curScore << ")"
+                    << " was less than expected (" << expected_score << ")"
+                    << " by more (" << (expected_score - curScore) << ")"
+                    << " than epsilon (" << params->loglh_epsilon << ")");
+            }
+            if (!params->ignore_any_errors) {
+                ASSERT(curScore > appliedNNIs.at(0).newloglh - loglh_tolerance);
+            }
             totalNNIApplied++;
         } else {
             totalNNIApplied += appliedNNIs.size();
         }
-
-        if(curScore < oldScore - params->loglh_epsilon){
-            hideProgress();
-            cout << "$$$$$$$$: " << curScore << "\t" << oldScore << "\t" << curScore - oldScore << endl;
-            showProgress();
-        }
-
         if (curScore - oldScore <  params->loglh_epsilon)
+        {
             break;
-
+        }
         if (params->snni && (curScore > curBestScore + 0.1)) {
             curBestScore = curScore;
         }
-
         if (Params::getInstance().write_intermediate_trees && save_all_trees != 2) {
             printIntermediateTree(WT_NEWLINE | WT_APPEND | WT_SORT_TAXA | WT_BR_LEN);
         }
