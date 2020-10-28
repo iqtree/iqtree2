@@ -297,6 +297,7 @@ template <class T=double> struct StitchupGraph {
     }
     template <class F>
     bool writeTreeToOpenFile (progress_display& progress, F& out) const {
+        out.precision(8);
         auto lastEdge = stitches.end();
         --lastEdge;
         size_t lastNodeIndex = lastEdge->source;
@@ -325,7 +326,6 @@ template <class T=double> struct StitchupGraph {
         out.exceptions(std::ios::failbit | std::ios::badbit);
         try {
             out.open(treeFilePath.c_str(), std::ios_base::out);
-            out.precision(8);
             success = writeTreeToOpenFile(progress, out);
         } catch (std::ios::failure &) {
             std::cerr << "IO error"

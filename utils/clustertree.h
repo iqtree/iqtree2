@@ -99,7 +99,6 @@ public:
         out.exceptions(std::ios::failbit | std::ios::badbit);
         try {
             out.open(treeFilePath.c_str(), std::ios_base::out);
-            out.precision(8);
             writeTreeToOpenFile(out);
             out.close();
             return true;
@@ -116,6 +115,8 @@ public:
         }
     }
     template <class F> bool writeTreeToOpenFile(F& out) const {
+        out.precision(8);
+
         std::vector<Place> stack;
         bool failed = false; //Becomes true if clusters
         //defines cycles (should never happen)
