@@ -1563,7 +1563,7 @@ UBYTE *PhyloTree::newScaleNum() {
     return aligned_alloc<UBYTE>(getScaleNumSize());
 }
 
-PhyloNode *findFirstFarLeaf(PhyloNode *node, PhyloNode *dad = nullptr) {
+PhyloNode* PhyloTree::findFirstFarLeaf(PhyloNode *node, PhyloNode *dad) const {
     do {
         FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, nei) {
             dad = node;
@@ -1572,7 +1572,6 @@ PhyloNode *findFirstFarLeaf(PhyloNode *node, PhyloNode *dad = nullptr) {
         }
     } while (!node->isLeaf());
     return node;
-    
 }
 
 double PhyloTree::computeLikelihood(double *pattern_lh) {

@@ -15,13 +15,15 @@
 #include "node.h"
 
 #define FOR_EACH_ADJACENT_PHYLO_NODE(mynode, mydad, it, mychild) \
-for (NeighborVec::iterator it = (mynode)->neighbors.begin(); it != (mynode)->neighbors.end(); ++it) \
-    for (PhyloNode* mychild = (PhyloNode*)(*it)->node ; mychild != mydad; mychild = mydad )
+    for (PhyloNode* mychild=nullptr, *child2x=(mynode); child2x!=nullptr; child2x=nullptr) \
+        for (NeighborVec::iterator it = (mynode)->neighbors.begin(); it != (mynode)->neighbors.end(); ++it) \
+            if ((mychild = (PhyloNode*)(*it)->node ) && mychild != (mydad) )
 
 #define FOR_EACH_PHYLO_NEIGHBOR(mynode, mydad, it, nei) \
-for (NeighborVec::iterator it = (mynode)->neighbors.begin(); it != (mynode)->neighbors.end(); ++it) \
-    for (PhyloNeighbor* nei = (PhyloNeighbor*)(*it); nei!=nullptr && nei->getNode() != mydad; nei=nullptr )
-
+    for (size_t ncx = (mynode)->neighbors.size(); ncx!=0; ncx=0) \
+        for (PhyloNeighbor* nei=nullptr, *nei2x=(PhyloNeighbor*)(mynode)->neighbors[0]; nei2x!=nullptr ; nei2x=nullptr) \
+            for (NeighborVec::iterator it = (mynode)->neighbors.begin(); it != (mynode)->neighbors.end(); ++it) \
+                if ((nei = (PhyloNeighbor*)(*it)) && nei->getNode() != (mydad) )
 
 std::string pointer_to_hex(const void *ptr);
 
