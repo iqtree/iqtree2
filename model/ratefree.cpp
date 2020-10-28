@@ -239,9 +239,7 @@ double RateFree::optimizeParameters(double gradient_epsilon) {
     if (ndim == 0) {
         return phylo_tree->computeLikelihood();
     }
-    if (verbose_mode >= VB_MED) {
-        cout << "Optimizing " << name << " model parameters by " << optimize_alg << " algorithm..." << endl;
-    }
+    TREE_LOG_LINE(*phylo_tree, VB_MED, "Optimizing " << name << " model parameters by " << optimize_alg << " algorithm...");
     // TODO: turn off EM algorithm for +ASC model
     if ((optimize_alg.find("EM") != string::npos && phylo_tree->getModelFactory()->unobserved_ptns.empty())) {
         if (fix_params == 0) {

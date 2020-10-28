@@ -60,8 +60,7 @@ double RateKategory::optimizeParameters(double gradient_epsilon)
 	// return if nothing to be optimized
 	if (ndim == 0) return 0.0;
 
-	if (verbose_mode >= VB_MAX)
-		cout << "Optimizing " << name << " model parameters..." << endl;
+	TREE_LOG_LINE(*phylo_tree, VB_MAX, "Optimizing " << name << " model parameters...");
 
 	//if (freq_type == FREQ_ESTIMATE) scaleStateFreq(false);
 

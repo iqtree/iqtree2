@@ -707,15 +707,19 @@ ModelPoMo::estimateEmpiricalBoundaryStateFreqs(double * freq_boundary_states)
         }
         // Output vector if verbose mode.
         if (verbose_mode >= VB_MAX) {
-            std::cout << "Absolute empirical state frequencies:" << std::endl;
+            std::stringstream text;
+            text.precision(6);
+            text << "Absolute empirical state frequencies:" << std::endl;
             for (int i = 0; i < num_states; i++)
-                std::cout << abs_state_freq[i] << " ";
-            std::cout << std::endl;
+                text << abs_state_freq[i] << " ";
+            TREE_LOG_LINE(*phylo_tree, VB_MAX, text.str());
         }
         // Set highest_freq_state.
-        for (int i = 0; i < num_states; i++)
-            if (abs_state_freq[i] > abs_state_freq[highest_freq_state])
+        for (int i = 0; i < num_states; i++) {
+            if (abs_state_freq[i] > abs_state_freq[highest_freq_state]) {
                 highest_freq_state = i;
+            }
+        }
     } else {
         for (Alignment::iterator it = phylo_tree->aln->begin();
              it != phylo_tree->aln->end(); it++) {

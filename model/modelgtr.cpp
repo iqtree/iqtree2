@@ -161,10 +161,16 @@ void ModelGTR::init(StateFreqType type) {
 	case FREQ_EMPIRICAL:
 		if (phylo_tree->aln->seq_type == SEQ_CODON) {
 			double ntfreq[12];
+			phylo_tree->hideProgress();
 			phylo_tree->aln->computeCodonFreq(freq_type, state_freq, ntfreq);
 //			phylo_tree->aln->computeCodonFreq(state_freq);
-		} else
+			phylo_tree->showProgress();
+		}
+		else {
+			phylo_tree->hideProgress();
 			phylo_tree->aln->computeStateFreq(state_freq);
+			phylo_tree->showProgress();
+		}
 		for (i = 0; i < num_states; i++)
 			if (state_freq[i] > state_freq[highest_freq_state])
 				highest_freq_state = i;
@@ -175,8 +181,9 @@ void ModelGTR::init(StateFreqType type) {
 	default: break;
 	}
 	decomposeRateMatrix();
-	if (verbose_mode >= VB_MAX)
+	if (verbose_mode >= VB_MAX) {
 		writeInfo(cout);
+	}
 
 }
 
@@ -558,8 +565,7 @@ double ModelGTR::optimizeParameters(double gradient_epsilon) {
 	// return if nothing to be optimized
 	if (ndim == 0) return 0.0;
     
-	if (verbose_mode >= VB_MAX)
-		cout << "Optimizing " << name << " model parameters..." << endl;
+	TREE_LOG_LINE(*phylo_tree, VB_MAX, "Optimizing " << name << " model parameters...");
 
 	//if (freq_type == FREQ_ESTIMATE) scaleStateFreq(false);
 
