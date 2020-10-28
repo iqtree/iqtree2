@@ -1255,6 +1255,13 @@ public:
     virtual double computePatternLhCat(SiteLoglType wsl);
 
     /**
+     * find a leaf (any leaf) from node
+     * @param node to start from
+     * @return a leaf node reachable from node
+     */
+    virtual PhyloNode* findFirstFarLeaf(PhyloNode* node) const;
+
+    /**
         compute state frequency for each pattern (for Huaichun)
         @param[out] ptn_state_freq state frequency vector per pattern, 
             should be pre-allocated with size of num_patterns * num_states
