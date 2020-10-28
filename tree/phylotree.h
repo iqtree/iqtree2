@@ -1255,13 +1255,12 @@ public:
     virtual double computePatternLhCat(SiteLoglType wsl);
     
     /**
-     * find a leaf near a node (by visiting the first neighboring node, other than dad,
-     * repeatedly, until a leaf is reached.
+     * find a leaf near a node (by visiting a neighboring node, that
+     * hasn't been visited before, repeatedly, until a leaf is reached.
      * @param node - starting point of the search (may not be nullptr)
-     * @param dad   - node that may not be visited on path to leaf (may be nullptr)
      * @return a leaf reachable from node (not found on the path through dad)
      */
-    PhyloNode* findFirstFarLeaf(PhyloNode *node, PhyloNode *dad = nullptr) const;
+    PhyloNode* findFirstFarLeaf(PhyloNode *node) const;
 
     /**
         compute state frequency for each pattern (for Huaichun)
