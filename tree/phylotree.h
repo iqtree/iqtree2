@@ -1385,7 +1385,7 @@ public:
      * Update all subtree distances that are affect by doing an NNI on branch (node1-node2)
      * @param nni NNI move that is carried out
      */
-    void updateSubtreeDists(NNIMove &nni);
+    void updateSubtreeDists(const NNIMove &nni);
 
     /**
      * Compute all pairwise distance of subtree rooted at \a source and other subtrees
@@ -1821,7 +1821,7 @@ public:
             @param move reference to an NNI move object containing information about the move
             @param clearLH decides whether or not the partial likelihood should be cleared
      */
-    virtual void doNNI(NNIMove &move, bool clearLH = true);
+    virtual void doNNI(const NNIMove &move, bool clearLH = true);
 
     /**
      * [DEPRECATED]
@@ -1844,7 +1844,7 @@ public:
      *   Apply 5 new branch lengths stored in the NNI move
      *   @param nnimove the NNI move currently in consideration
      */
-    virtual void changeNNIBrans(NNIMove &nnimove);
+    virtual void changeNNIBrans(const NNIMove &nnimove);
 
     /****************************************************************************
             Stepwise addition (greedy) by maximum likelihood

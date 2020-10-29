@@ -476,7 +476,7 @@ NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2
     return myMove;
 }
 
-void PhyloSuperTreePlen::doNNIs(vector<NNIMove> &compatibleNNIs, bool changeBran) {
+void PhyloSuperTreePlen::doNNIs(const vector<NNIMove> &compatibleNNIs, bool changeBran) {
 	IQTree::doNNIs(compatibleNNIs, changeBran);
 	mapBranchLen();
 	//clearAllPartialLH();
@@ -511,7 +511,7 @@ void PhyloSuperTreePlen::getNNIType(PhyloNode *node1, PhyloNode *node2, vector<N
 	}
 }
 
-void PhyloSuperTreePlen::doNNI(NNIMove &move, bool clearLH)
+void PhyloSuperTreePlen::doNNI(const NNIMove &move, bool clearLH)
 {
 	//checkBranchLen();
 	SuperBranch   branch(move.node1, move.node2);
@@ -1589,17 +1589,13 @@ int PhyloSuperTreePlen::fixNegativeBranch(bool force, PhyloNode *node, PhyloNode
         // it is necessary to map the branch lengths from supertree into gene trees!
         mapTrees();
     }
-
 	return fixed;
 }
 
-void PhyloSuperTreePlen::changeNNIBrans(NNIMove &nnimove) {
-
+void PhyloSuperTreePlen::changeNNIBrans(const NNIMove &nnimove) {
 	PhyloTree::changeNNIBrans(nnimove);
 	//mapBranchLen();
-
 }
-
 
 /**
         initialize partial_lh vector of all PhyloNeighbors, allocating central_partial_lh

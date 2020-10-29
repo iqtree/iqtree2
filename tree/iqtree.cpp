@@ -834,7 +834,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     startTime = getRealTime();
 
     //(b) Initialize candidate trees
-    initProgress(candidateCount, "Assessing log-likelihood of candidate trees", "assessed", "tree");
+    initProgress(candidateCount, "Assessing candidate trees", "assessed", "tree");
     for (vector<string>::iterator it = initTreeStrings.begin(); it != initTreeStrings.end(); ++it) {
         string treeString;
         double score;
@@ -901,9 +901,9 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     if (isMixlen()) {
         //(d) Optimizing model parameters for the best of the
         //    candidate trees.
-        cout << "Optimizing model parameters for top "
+        LOG_LINE(VB_MIN, "Optimizing model parameters for top "
             << min((int)candidateTrees.size(), params->popSize)
-        << " candidate trees... " << endl;
+            << " candidate trees... ");
         
         startTime = getRealTime();
         bestInitTrees = candidateTrees.getBestTreeStrings(params->popSize);
@@ -922,7 +922,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
             trackProgress(1.0);
         }
         doneProgress();
-        cout << getRealTime() - startTime << " seconds" << endl;
+        LOG_LINE(VB_MIN, "... " << getRealTime() - startTime << " seconds");
     }
     //---- BLOCKING COMMUNICATION
     syncCandidateTrees(Params::getInstance().numSupportTrees, true);
@@ -1175,9 +1175,7 @@ void IQTree::deleteNonCherryLeaves(PhyloNodeVector &del_leaves) {
     int num_delete = k_delete;
     if (num_delete > num_taxa - 4)
         num_delete = num_taxa - 4;
-    if (verbose_mode >= VB_DEBUG) {
-        cout << "Deleting " << num_delete << " leaves" << endl;
-    }
+    LOG_LINE(VB_DEBUG, "Deleting " << num_delete << " leaves");
     vector<unsigned int> indices_noncherry(noncherry_taxa.size());
     //iota(indices_noncherry.begin(), indices_noncherry.end(), 0);
     unsigned int startValue = 0;
@@ -1222,11 +1220,10 @@ void IQTree::deleteLeaves(PhyloNodeVector &del_leaves) {
     //int num_delete = floor(p_delete * taxa.size());
     int num_delete = k_delete;
     int i;
-    if (num_delete > taxa.size() - 4)
+    if (num_delete > taxa.size() - 4) {
         num_delete = taxa.size() - 4;
-    if (verbose_mode >= VB_DEBUG) {
-        cout << "Deleting " << num_delete << " leaves" << endl;
     }
+    LOG_LINE(VB_DEBUG, "Deleting " << num_delete << " leaves");
     // now try to randomly delete some taxa of the probability of p_delete
     for (i = 0; i < num_delete;) {
         int id = random_int(taxa.size());
@@ -1307,9 +1304,7 @@ void IQTree::initializeBonus(PhyloNode *node, PhyloNode *dad) {
 
 void IQTree::raiseBonus(PhyloNeighbor *nei, PhyloNode *dad, double bonus) {
     nei->lh_scale_factor += bonus;
-    if (verbose_mode >= VB_DEBUG) {
-        cout << dad->id << " - " << nei->node->id << " : " << bonus << endl;
-    }
+    LOG_LINE(VB_DEBUG, dad->id << " - " << nei->node->id << " : " << bonus);
 }
 
 double IQTree::computePartialBonus(PhyloNode *node, PhyloNode* dad) {
@@ -1427,15 +1422,17 @@ void IQTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
     ASSERT(root->isLeaf());
 
     for (auto it_leaf = del_leaves.begin(); it_leaf != del_leaves.end(); it_leaf++) {
-        if (verbose_mode >= VB_DEBUG)
-            cout << "Reinserting " << (*it_leaf)->name << " (" << (*it_leaf)->id << ")" << endl;
+        LOG_LINE(VB_DEBUG, "Reinserting " << (*it_leaf)->name << " (" << (*it_leaf)->id << ")");
         vector<RepresentLeafSet*> leaves_vec;
         leaves_vec.resize(nodeNum * 3, NULL);
         initializeBonus();
         PhyloNodeVector nodes;
         getInternalNodes(nodes);
-        if (verbose_mode >= VB_DEBUG)
+        if (verbose_mode >= VB_DEBUG) {
+            hideProgress();
             drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE | WT_BR_ID);
+            showProgress();
+        }
         //printTree(cout, WT_BR_LEN | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE);
         for (auto it = nodes.begin(); it != nodes.end(); it++) {
             assessQuartets(leaves_vec, *it, *it_leaf);
@@ -1443,14 +1440,14 @@ void IQTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
         NodeVector best_nodes, best_dads;
         double best_bonus;
         findBestBonus(best_bonus, best_nodes, best_dads);
-        if (verbose_mode >= VB_DEBUG)
-            cout << "Best bonus " << best_bonus << " " << best_nodes[0]->id << " " << best_dads[0]->id << endl;
+        LOG_LINE(VB_DEBUG, "Best bonus " << best_bonus 
+            << " " << best_nodes[0]->id << " " << best_dads[0]->id);
         ASSERT(best_nodes.size() == best_dads.size());
         int node_id = random_int(best_nodes.size());
-        if (best_nodes.size() > 1 && verbose_mode >= VB_DEBUG)
-            cout << best_nodes.size() << " branches show the same best bonus, branch nr. " << node_id << " is chosen"
-                    << endl;
-
+        if (best_nodes.size() > 1) {
+            LOG_LINE(VB_DEBUG, best_nodes.size() << " branches show the same best bonus"
+                << ", branch nr. " << node_id << " is chosen");
+        }
         reinsertLeaf(*it_leaf, best_nodes[node_id], best_dads[node_id]);
         //clearRepresentLeaves(leaves_vec, *it_node, *it_leaf);
         /*if (verbose_mode >= VB_DEBUG) {
@@ -1467,8 +1464,11 @@ void IQTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
     }
     initializeTree(); // BQM: re-index nodes and branches s.t. ping-pong neighbors have the same ID
 
-    if (verbose_mode >= VB_DEBUG)
+    if (verbose_mode >= VB_DEBUG) {
+        hideProgress();
         drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE | WT_BR_ID);
+        showProgress();
+    }
 }
 
 void IQTree::doParsimonyReinsertion() {
@@ -1726,9 +1726,11 @@ string IQTree::doRandomNNIs(bool storeTabu) {
 
 
 void IQTree::doIQP() {
-    if (verbose_mode >= VB_DEBUG)
+    if (verbose_mode >= VB_DEBUG) {
+        hideProgress();
         drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE | WT_BR_ID);
-    //double time_begin = getCPUTime();
+        showProgress();
+    }
     PhyloNodeVector del_leaves;
     deleteLeaves(del_leaves);
     reinsertLeaves(del_leaves);
@@ -1740,18 +1742,10 @@ void IQTree::doIQP() {
     }
 
     resetCurScore();
-//    lhComputed = false;
 
     if (isSuperTree()) {
         ((PhyloSuperTree*) this)->mapTrees();
     }
-
-//    if (enable_parsimony) {
-//        cur_pars_score = computeParsimony();
-//        if (verbose_mode >= VB_MAX) {
-//            cout << "IQP Likelihood = " << curScore << "  Parsimony = " << cur_pars_score << endl;
-//        }
-//    }
 }
 
 double IQTree::inputTree2PLL(string treestring, bool computeLH) {
@@ -2388,7 +2382,9 @@ double IQTree::doTreeSearch() {
 //        }
 
         if (params->snni && verbose_mode >= VB_DEBUG) {
+            hideProgress();
             printBestScores();
+            showProgress();
         }
         // DTH: make pllUFBootData usable in summarizeBootstrap
         if (params->pll && params->online_bootstrap && (params->gbo_replicates > 0))
@@ -3058,7 +3054,7 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI, const char* context) {
             saveCurrentTree(curScore); // BQM: for new bootstrap
         }
         if (verbose_mode >= VB_DEBUG && !progress_display::getProgressDisplay()) {
-            cout << "Doing NNI round " << numSteps << endl;
+            LOG_LINE(VB_DEBUG, "Doing NNI round " << numSteps);
             if (isSuperTree()) {
                 ((PhyloSuperTree*) this)->printMapInfo();
             }
@@ -3149,6 +3145,7 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI, const char* context) {
             LOG_LINE( VB_MAX, "Tree getting worse. curScore = " << curScore
                      << " / best score = " << expected_score);
             // tree cannot be worse if only 1 NNI is applied
+            double dodgy_score = curScore;
             if (appliedNNIs.size() > 1) {
                 // revert all applied NNIs
                 doNNIs(appliedNNIs);
@@ -3159,7 +3156,7 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI, const char* context) {
                 doNNIs(appliedNNIs);
                 curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
             }
-            if (curScore <= expected_score - loglh_tolerance ) {
+            if (curScore < expected_score - loglh_tolerance ) {
                 //In large trees this is possible, because optimizeAllBranches
                 //might not have behaved as expected.
                 LOG_LINE(VB_MIN, "Current likelihood (" << curScore << ")"
@@ -3167,13 +3164,15 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI, const char* context) {
                         << " by more (" << (expected_score - curScore) << ")"
                         << " than " << loglh_tolerance << ".");
             } else {
-                LOG_LINE(VB_MED, "Current likelihood (" << curScore << ")"
+                LOG_LINE(VB_MED, "Post-NNI Likelihood score (" << dodgy_score << ")"
                     << " was less than expected (" << expected_score << ")"
                     << " by more (" << (expected_score - curScore) << ")"
-                    << " than epsilon (" << params->loglh_epsilon << ")");
+                    << " than epsilon (" << params->loglh_epsilon << ")."
+                    << " After applying only the 1st NNI,"
+                    << " Likelihood score is now: " << curScore);
             }
             if (!params->ignore_any_errors) {
-                ASSERT(curScore > appliedNNIs.at(0).newloglh - loglh_tolerance);
+                ASSERT(curScore >= expected_score - loglh_tolerance);
             }
             totalNNIApplied++;
         } else {
@@ -3373,8 +3372,8 @@ void IQTree::pllDestroyUFBootData(){
 }
 
 
-void IQTree::doNNIs(vector<NNIMove> &compatibleNNIs, bool changeBran) {
-    for (vector<NNIMove>::iterator it = compatibleNNIs.begin(); it != compatibleNNIs.end(); it++) {
+void IQTree::doNNIs(const vector<NNIMove> &compatibleNNIs, bool changeBran) {
+    for (auto it = compatibleNNIs.begin(); it != compatibleNNIs.end(); it++) {
         doNNI(*it);
         if (!params->leastSquareNNI && changeBran) {
             // apply new branch lengths

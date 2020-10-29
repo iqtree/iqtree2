@@ -195,21 +195,22 @@ public:
     /**
             Do an NNI on the supertree and synchronize all subtrees respectively
             @param move the single NNI
+            @param clearLH decides whether or not the partial likelihood should be cleared
      */
-    virtual void doNNI(NNIMove &move, bool clearLH = true);
+    virtual void doNNI(const NNIMove &move, bool clearLH = true);
 
 	/**
             apply  NNIs from the non-conflicting NNI list
             @param compatibleNNIs vector of all compatible NNIs
             @param changeBran whether or not the computed branch lengths should be applied
      */
-    virtual void doNNIs(vector<NNIMove> &compatibleNNIs, bool changeBran = true);
+    virtual void doNNIs(const vector<NNIMove> &compatibleNNIs, bool changeBran = true);
 
     /**
      *   Apply 5 new branch lengths stored in the NNI move
      *   @param nnimove the NNI move currently in consideration
      */
-    virtual void changeNNIBrans(NNIMove &nnimove);
+    virtual void changeNNIBrans(const NNIMove &nnimove);
 
     /**
             This is for ML. try to swap the tree with nearest neigbor interchange at the branch connecting node1-node2.

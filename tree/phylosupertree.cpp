@@ -1068,7 +1068,7 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 	return myMove;
 }
 
-void PhyloSuperTree::doNNI(NNIMove &move, bool clearLH) {
+void PhyloSuperTree::doNNI(const NNIMove &move, bool clearLH) {
 	SuperBranch   branch(move.node1, move.node2);
 	SuperNeighbor* nei1 = branch.lookingRight();
 	SuperNeighbor* nei2 = branch.lookingLeft();
@@ -1106,7 +1106,7 @@ void PhyloSuperTree::doNNI(NNIMove &move, bool clearLH) {
 
 }
 
-void PhyloSuperTree::changeNNIBrans(NNIMove &move) {
+void PhyloSuperTree::changeNNIBrans(const NNIMove &move) {
 	SuperBranch branch(move.node1, move.node2);
 	SuperNeighbor* nei1 = branch.lookingRight();
 	SuperNeighbor* nei2 = branch.lookingLeft();
@@ -1134,11 +1134,13 @@ void PhyloSuperTree::changeNNIBrans(NNIMove &move) {
 		int numlen = 1;
 		if (params->nni5) numlen = 5;
 		if (move.swap_id == 1) {
-			for (int i = 0; i < numlen; i++)
-				part_move.newLen[i] = part_info[part].nni1_brlen[brid*numlen + i];
+			for (int i = 0; i < numlen; i++) {
+				part_move.newLen[i] = part_info[part].nni1_brlen[brid * numlen + i];
+			}
 		} else {
-			for (int i = 0; i < numlen; i++)
-				part_move.newLen[i] = part_info[part].nni2_brlen[brid*numlen + i];
+			for (int i = 0; i < numlen; i++) {
+				part_move.newLen[i] = part_info[part].nni2_brlen[brid * numlen + i];
+			}
 		}
 
 		(*it)->changeNNIBrans(part_move);

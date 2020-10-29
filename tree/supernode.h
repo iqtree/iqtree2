@@ -28,10 +28,9 @@
             if ((mychild = (SuperNode*)(*it)->node ) && mychild != mydad )
 
 #define FOR_EACH_SUPER_NEIGHBOR(mynode, mydad, it, nei) \
-    for (size_t ncx = (mynode)->neighbors.size(); ncx!=0; ncx=0) \
-        for (SuperNeighbor* nei=nullptr, *nei2x=(SuperNeighbor*)(mynode)->neighbors[0]; nei2x!=nullptr ; nei2x=nullptr) \
-            for (NeighborVec::iterator it = (mynode)->neighbors.begin(); it != (mynode)->neighbors.end(); ++it) \
-                if ((nei = (SuperNeighbor*)(*it)) && nei->getNode() != (mydad) )
+    for (SuperNeighbor* nei=nullptr, *nei2x=((SuperNode*)(mynode))->firstNeighbor(); nei2x!=nullptr ; nei2x=nullptr) \
+        for (NeighborVec::iterator it = (mynode)->neighbors.begin(); it != (mynode)->neighbors.end(); ++it) \
+            if ((nei = (SuperNeighbor*)(*it)) && nei->getNode() != (mydad) )
 
 #define FOR_SUPER_NEIGHBOR(mynode, mydad, it) \
 	for (it = SuperNeighborVec::iterator((mynode)->neighbors.begin()); \

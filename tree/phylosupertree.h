@@ -317,14 +317,15 @@ public:
     /**
             Do an NNI on the supertree and synchronize all subtrees respectively
             @param move the single NNI
+            @param clearLH indicates whether or not the partial likelihood should be cleared
      */
-    virtual void doNNI(NNIMove &move, bool clearLH = true);
+    virtual void doNNI(const NNIMove &move, bool clearLH = true);
 
     /**
      *   Apply 5 new branch lengths stored in the NNI move
      *   @param nnimove the NNI move currently in consideration
      */
-    virtual void changeNNIBrans(NNIMove &nnimove);
+    virtual void changeNNIBrans(const NNIMove &nnimove);
 
     /**
         OBSOLETE!

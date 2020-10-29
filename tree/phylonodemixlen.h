@@ -110,7 +110,7 @@ public:
         the default is just to return a single branch length
         @return branch length for class c
     */
-    virtual void setLength(DoubleVector &vec) { 
+    virtual void setLength(const DoubleVector &vec) { 
         lengths = vec;
     }
 
@@ -131,7 +131,7 @@ public:
         @param vec source branch length vector
         @param start_pos starting position in vec to copy from
     */
-    virtual void setLength(DoubleVector &vec, int start_pos, int num_elem) { 
+    virtual void setLength(const DoubleVector &vec, int start_pos, int num_elem) { 
         ASSERT(start_pos+num_elem <= vec.size());
         lengths.clear();
         lengths.insert(lengths.begin(), vec.begin()+start_pos, vec.begin()+start_pos+num_elem);
