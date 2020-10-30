@@ -616,8 +616,6 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
     }
     if (will_add) {
         addNewTaxaToTree(taxaIdsToAdd);
-        //Todo: Carry out any requested "after-all-inserts" global tidy-up of the tree.
-        //Todo: If requested *not* to optimize branch lengths here, don't.
         //Note: If the Sankoff cost matrix isn't wanted after placement, it
         //      will be deallocated (switching back to regular parsimony)
         //      in GlobalPlacementOptimizer::optimizeAfterPlacement.
@@ -867,7 +865,6 @@ void PhyloTree::clearAllPartialLH(bool set_to_null) {
     nextToRoot->clearAllPartialLh(set_to_null, atRoot);
     atRoot->clearAllPartialLh(set_to_null, nextToRoot);
     tip_partial_lh_computed = 0;
-    // 2015-10-14: has to reset this pointer when read in
     current_it      = nullptr;
     current_it_back = nullptr;
 }
@@ -974,10 +971,12 @@ void PhyloTree::restoreBranchLengths(DoubleVector &lenvec, int startid,
         node = getRoot();
         ASSERT(!lenvec.empty());
     }
+    size_t mixLen = getMixlen();
     FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, nei){
         PhyloNode* child = nei->getNode();
-        nei->setLength(lenvec, (*it)->id*getMixlen() + startid, getMixlen());
-        child->findNeighbor(node)->setLength(lenvec, nei->id*getMixlen() + startid, getMixlen());
+        size_t indexIntoVector = nei->id * mixLen;
+        nei->setLength(lenvec, indexIntoVector + startid, mixLen);
+        child->findNeighbor(node)->setLength(lenvec, indexIntoVector + startid, mixLen);
         PhyloTree::restoreBranchLengths(lenvec, startid, child, node);
     }
 }
@@ -2267,22 +2266,22 @@ void PhyloTree::updateSubtreeDists(const NNIMove &nnimove) {
 
     // ((A,C),(B,D))
     // C and D are the 2 subtree that get swapped
-    FOR_EACH_ADJACENT_PHYLO_NODE(node1, node2, it, node_C_or_D) {
+    FOR_EACH_ADJACENT_PHYLO_NODE(node1, node2, it, node_A_or_C) {
         if ((*it)->id != node1Nei->id) {
-            nodeA = node_C_or_D;
+            nodeA = node_A_or_C;
         } else {
-            nodeC = node_C_or_D;
+            nodeC = node_A_or_C;
         }
     }
 
     ASSERT(nodeA);
     ASSERT(nodeC);
 
-    FOR_EACH_ADJACENT_PHYLO_NODE(node2, node1, it, node_C_or_D) {
+    FOR_EACH_ADJACENT_PHYLO_NODE(node2, node1, it, node_B_or_D) {
         if ((*it)->id != node2Nei->id) {
-            nodeB = node_C_or_D;
+            nodeB = node_B_or_D;
         } else {
-            nodeD = node_C_or_D;
+            nodeD = node_B_or_D;
         }
     }
 
@@ -2917,15 +2916,15 @@ void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2,
     ASSERT(current_it);
     ASSERT(current_it_back);
 
-    double current_len = current_it->length;
-    ASSERT(current_len >= 0.0);
+    double original_len = current_it->length;
+    ASSERT(original_len >= 0.0);
     tree_buffers.theta_computed = false;
-    double orig_lh = computeLikelihoodBranch(current_it, current_it_back->getNode(), tree_buffers);
-    double optx;
+    double original_lh = computeLikelihoodBranch(current_it, node1, tree_buffers);
+    double new_len;
     if (optimize_by_newton) {
         // Newton-Raphson method
         double derivative_of_likelihood_wrt_length = 0;
-        optx = minimizeNewton(params->min_branch_length, current_len,
+        new_len = minimizeNewton(params->min_branch_length, original_len,
             params->max_branch_length, params->min_branch_length,
             derivative_of_likelihood_wrt_length, maxNRStep);
     }
@@ -2933,25 +2932,26 @@ void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2,
         // Brent method
         double negative_lh = 0;
         double ferror;
-        optx = minimizeOneDimen(params->min_branch_length, current_len,
+        new_len = minimizeOneDimen(params->min_branch_length, original_len,
             params->max_branch_length, params->min_branch_length,
             &negative_lh, &ferror);
     }
-    current_it->length      = optx;
-    current_it_back->length = optx;
+    current_it->length      = new_len;
+    current_it_back->length = new_len;
     curScore = computeLikelihoodFromBuffer();
     LOG_LINE(VB_MAX, "  branch=" << current_it->id 
-        << ", old_len=" << current_len << ", new_len=" << optx 
-        << ", old_lh="  << orig_lh     << ", new_lh="  << curScore
-        << ", delta="   << (curScore-orig_lh));
-    if (optimize_by_newton && optx > params->max_branch_length*0.95 && !isSuperTree()) {
-        if (orig_lh > curScore) {
-            current_it->length      = current_len;
-            current_it_back->length = current_len;
-            curScore                = orig_lh;
+        << ", old_len=" << original_len << ", new_len=" << new_len
+        << ", old_lh="  << original_lh  << ", new_lh="  << curScore
+        << ", delta="   << (curScore - original_lh));
+    if (optimize_by_newton && new_len > params->max_branch_length*0.95 && !isSuperTree()) {
+        if (original_lh > curScore) {
+            current_it->length      = original_len;
+            current_it_back->length = original_len;
+            new_len                 = original_len;
+            curScore                = original_lh;
         }
     }
-    if (clearLH && current_len != optx) {
+    if (clearLH && original_len != new_len) {
         node1->clearReversePartialLh(node2);
         node2->clearReversePartialLh(node1);
     }
@@ -4151,16 +4151,16 @@ void PhyloTree::changeNNIBrans(const NNIMove &nnimove) {
     if (params->nni5) {
         int i = 1;
         FOR_EACH_PHYLO_NEIGHBOR(node1, node2, it, nei) {
-            PhyloNeighbor* nei_back = (node1)->findNeighbor((*it)->node);
+            PhyloNeighbor* nei_back = (node1)->findNeighbor(nei->node);
             nei->setLength(nnimove.newLen[i]);
             nei_back->setLength(nnimove.newLen[i]);
-            i++;
+            ++i;
         }
         FOR_EACH_PHYLO_NEIGHBOR(node2, node1, it, nei) {
-            PhyloNeighbor* nei_back = (node2)->findNeighbor((*it)->node);
+            PhyloNeighbor* nei_back = (node2)->findNeighbor(nei->node);
             nei->setLength(nnimove.newLen[i]);
             nei_back->setLength(nnimove.newLen[i]);
-            i++;
+            ++i;
         }
     }
 }
@@ -5989,8 +5989,6 @@ void PhyloTree::reorientPartialLh(PhyloNeighbor* dad_branch,
     FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, nei) {
         PhyloNeighbor *backnei = nei->getNode()->findNeighbor(node);
         if (backnei->partial_lh) {
-            //LOG_LINE(VB_MIN, "Giving partial_lh from " << pointer_to_hex(backnei)
-            //         << " to " << pointer_to_hex(dad_branch));
             mem_slots.takeover(dad_branch, backnei);
             break;
         }

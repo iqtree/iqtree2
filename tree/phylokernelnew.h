@@ -2047,6 +2047,8 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info,
     if (Params::getInstance().buffer_mem_save) {
         aligned_free(partial_lh_leaves);
         aligned_free(echildren);
+        info.partial_lh_leaves = nullptr;
+        info.echildren         = nullptr;
     }
 }
 
@@ -2102,8 +2104,7 @@ void PhyloTree::computeLikelihoodBufferGenericSIMD(PhyloNeighbor *dad_branch, Ph
         computePartialLikelihood(*it, ptn_lower, ptn_upper, packet_id, buffers);
     }
 
-    //Todo: Decide.  Should PhyloNode::isLeaf() care whether id is negative?
-    if (dad->isLeaf() && 0 <= dad->id) {
+    if (dad->isLeaf()) {
         // special treatment for TIP-INTERNAL NODE case
         double *tip_partial_lh_node = &tip_partial_lh[dad->id * max_orig_nptn * nstates];
         double *vec_tip = buffer_partial_lh_ptr + tip_block * VectorClass::size() * packet_id;

@@ -318,6 +318,9 @@ public:
     double*        echildren;
     double*        partial_lh_leaves;
 
+    TraversalInfo() : dad_branch(nullptr), dad(nullptr),
+        echildren(nullptr), partial_lh_leaves(nullptr) {
+    }
     TraversalInfo(PhyloNeighbor *dad_branch, PhyloNode *dad) {
         this->dad                  = dad;
         this->dad_branch           = dad_branch;

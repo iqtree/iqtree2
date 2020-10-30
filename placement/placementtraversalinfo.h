@@ -38,6 +38,7 @@ protected:
 
 public:
     typedef TraversalInfo super;
+    PlacementTraversalInfo() = delete;
     PlacementTraversalInfo(PhyloTree& tree,
                            LikelihoodBufferSet& buffersToUse,
                            PhyloNeighbor* dad_branch,

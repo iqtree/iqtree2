@@ -563,6 +563,8 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info,
     if (Params::getInstance().buffer_mem_save) {
         aligned_free(partial_lh_leaves);
         aligned_free(echildren);
+        info.partial_lh_leaves = nullptr;
+        info.echildren = nullptr;
     }
 }
 

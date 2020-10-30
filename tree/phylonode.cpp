@@ -27,9 +27,6 @@ void PhyloNeighbor::clearForwardPartialLh(PhyloNode* dad) {
 }
 
 void PhyloNode::clearReversePartialLh(PhyloNode *dad) {
-    //	PhyloNeighbor *node_nei = findNeighbor(dad);
-    //	assert(node_nei);
-    //	node_nei->setLikelihoodComputed(false);
     FOR_EACH_ADJACENT_PHYLO_NODE(this, dad, it, node) {
         PhyloNeighbor* backNei = node->findNeighbor(this);
         backNei->setLikelihoodComputed(false);
@@ -81,7 +78,6 @@ void PhyloNode::clearAllScaleNum(bool set_to_null, PhyloNode* dad) {
     FOR_EACH_PHYLO_NEIGHBOR(this, nullptr, it, nei) {
         PhyloNode*     child = nei->getNode();
         if (set_to_null) {
-            //if (nei->scale_num) std::cout << " Nulling " << pointer_to_hex(backnei) << std::endl;
             nei->scale_num = nullptr;
         }
         if (child != dad) {
@@ -89,7 +85,6 @@ void PhyloNode::clearAllScaleNum(bool set_to_null, PhyloNode* dad) {
         } else {
             PhyloNeighbor* backnei = child->findNeighbor(this);
             if (backnei!=nullptr && set_to_null) {
-                //std::cout << " Nulling " << pointer_to_hex(backnei) << std::endl;
                 backnei->scale_num = nullptr;
             }
         }

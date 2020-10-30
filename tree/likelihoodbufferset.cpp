@@ -143,7 +143,6 @@ void LikelihoodBufferSet::forget() {
     buffer_partial_lh         = nullptr;
     partial_lh_borrowed       = false;
     buffer_scale_all          = nullptr;
-    scale_all_block_size      = 0;
 }
 
 void LikelihoodBufferSet::freeBuffers() {
