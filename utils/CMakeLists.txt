@@ -9,6 +9,7 @@ checkpoint.cpp checkpoint.h
 MPIHelper.cpp MPIHelper.h
 starttree.cpp starttree.h
 bionj.cpp bionj2.cpp stitchup.cpp
+upgma.h nj.h rapidnj.h 
 clustertree.h distancematrix.h heapsort.h
 progress.cpp progress.h
 timekeeper.cpp timekeeper.h
