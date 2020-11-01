@@ -253,10 +253,15 @@ public:
                 pos.row   = bestOtherRow;
                 pos.value = bestV - rowData[secondBestOtherRow];
             }
+            if (1<i) {
+                purgeRow(row);
+            }
         }
         return pos;
     }
 };
+
+typedef RapidParsimonyMatrix ParsimonyJoiningMatrixType;
 
 int PhyloTree::joinParsimonyTree(const char *out_prefix,
                                  Alignment *alignment) {
@@ -266,8 +271,8 @@ int PhyloTree::joinParsimonyTree(const char *out_prefix,
         outError(ERR_FEW_TAXA);
     }
 
-    AuctionParsimonyMatrix rpm(*this);
-    rpm.join();
+    ParsimonyJoiningMatrixType pjm(*this);
+    pjm.join();
 
     /* how long does this take?! */
     fixNegativeBranch(true);

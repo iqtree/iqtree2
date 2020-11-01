@@ -203,7 +203,7 @@ public:
             mirroredHeapsort(values, 0, w, clusterIndices);
         }
     }
-    void purgeRow(size_t r /*row index*/) {
+    void purgeRow(size_t r /*row index*/) const {
         //Scan a row of the I matrix, so as to remove
         //entries that refer to clusters that are no longer
         //being processed. Remove the corresponding values
