@@ -96,11 +96,11 @@ public:
             next_partial_pars += tree->pars_block_size;
         }
     }
-    void allocateParsimonyForAll(PhyloNode* near, PhyloNode* back) {
-        FOR_EACH_PHYLO_NEIGHBOR(near, back, it, nei) {
+    void allocateParsimonyForAll(PhyloNode* near_node, PhyloNode* back) {
+        FOR_EACH_PHYLO_NEIGHBOR(near_node, back, it, nei) {
             allocateParsimonyFor(nei);
-            allocateParsimonyForAll(nei->getNode(), near);
-            PhyloNeighbor* backNei = nei->getNode()->findNeighbor(near);
+            allocateParsimonyForAll(nei->getNode(), near_node);
+            PhyloNeighbor* backNei = nei->getNode()->findNeighbor(near_node);
             allocateParsimonyFor(backNei);
         }
     }
