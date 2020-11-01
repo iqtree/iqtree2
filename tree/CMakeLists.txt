@@ -35,6 +35,7 @@ phylotree.h
 phylotreemixlen.cpp
 phylotreemixlen.h
 phylotreepars.cpp
+parsimonyjoining.cpp
 phylotreesse.cpp
 placement.cpp
 quartet.cpp

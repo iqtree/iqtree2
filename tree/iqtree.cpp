@@ -624,9 +624,19 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
             cout << "Creating fast initial parsimony tree by random order stepwise addition..." << endl;
             start = getRealTime();
             score = computeParsimonyTree(params->out_prefix, aln, randstream);
-            cout << getRealTime() - start << " seconds, parsimony score: " << score
+            cout << "Step-wise parsimony addition took " << getRealTime() - start << " seconds"
+                <<", parsimony score: " << score
                 << " (based on " << aln->num_parsimony_sites << " sites)"<< endl;
             break;
+        case STT_PARSIMONY_JOINING:
+            cout << "Creating parsimony tree by parsimony joining..." << endl;
+            start = getRealTime();
+            score = joinParsimonyTree(params->out_prefix, aln);
+            cout << "Parsimony joining took " << getRealTime() - start << " seconds"
+                << ", parsimony score: " << score
+                << " (based on " << aln->num_parsimony_sites << " sites)"<< endl;
+            break;
+
         case STT_RANDOM_TREE:
         case STT_PLL_PARSIMONY:
             cout << endl;
@@ -751,6 +761,10 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
             whatAmIDoingHere = "Constructing parsimony trees";
             verb = "constructed";
             break;
+        case STT_PARSIMONY_JOINING:
+            whatAmIDoingHere = "Constructing parsimony tree via parsimony joining";
+            verb = "constructed";
+            break;
         case STT_BIONJ:
             whatAmIDoingHere = std::string("Loading ") + params->start_tree_subtype_name + " tree ";
             break;
@@ -798,6 +812,8 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
                 tree.computeParsimonyTree(NULL, aln, rstream);
                 finish_random(rstream);
                 PhyloTree::readTreeString(tree.getTreeString());
+            } else if (params->start_tree == STT_PARSIMONY_JOINING) {
+                joinParsimonyTree(nullptr, aln);
             } else {
                 //Use the tree we've already got!
             }
@@ -3166,7 +3182,7 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI, const char* context) {
             } else {
                 LOG_LINE(VB_MED, "Post-NNI Likelihood score (" << dodgy_score << ")"
                     << " was less than expected (" << expected_score << ")"
-                    << " by more (" << (expected_score - curScore) << ")"
+                    << " by more (" << (expected_score - dodgy_score) << ")"
                     << " than epsilon (" << params->loglh_epsilon << ")."
                     << " After applying only the 1st NNI,"
                     << " Likelihood score is now: " << curScore);

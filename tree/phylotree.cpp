@@ -1397,10 +1397,11 @@ void PhyloTree::allocateCentralBlocks(size_t extra_parsimony_block_count,
         nni_partial_lh = aligned_alloc<double>(IT_NUM*lh_block_size);
         nni_scale_num = aligned_alloc<UBYTE>(IT_NUM*scale_block_size);
     }
-
-    uint64_t tip_partial_lh_size = get_safe_upper_limit(aln->num_states * (aln->STATE_UNKNOWN+1) * model->getNMixtures());
+    
+    int mixtures = (model == nullptr) ? 1 : model->getNMixtures();
+    uint64_t tip_partial_lh_size = get_safe_upper_limit(aln->num_states * (aln->STATE_UNKNOWN+1) * mixtures );
     if (!central_partial_lh) {
-        if (model->isSiteSpecificModel())
+        if (model!=nullptr && model->isSiteSpecificModel())
         {
             tip_partial_lh_size = get_safe_upper_limit(aln->size()) * model->num_states * leafNum;
         }

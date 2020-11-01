@@ -74,7 +74,7 @@ void ParallelParsimonyCalculator::calculate(int start_index,
         task_to_start = nullptr;
     }
     #ifdef _OPENMP
-    #pragma omp parallel for
+    #pragma omp parallel for schedule(dynamic)
     #endif
     for (WorkItem* item = startItem; item<stopItem; ++item) {
         PhyloNeighbor* dad_branch = item->first;

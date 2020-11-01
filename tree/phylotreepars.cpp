@@ -167,7 +167,7 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
             dad_branch->partial_pars[(site/UINT_BITS)*nstates] |= ~((1<<(site%UINT_BITS)) - 1);
     } else {
         // internal node
-        ASSERT(node->degree() == 3); // it works only for strictly bifurcating tree
+        ASSERT(node->degree() == 3 || (dad==nullptr && 1<node->degree())  );  // it works only for strictly bifurcating tree
         PhyloNeighbor *left = NULL, *right = NULL; // left & right are two neighbors leading to 2 subtrees
         FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, pit) {
             if (pit->node->name != ROOT_NAME && !pit->isParsimonyComputed()) {

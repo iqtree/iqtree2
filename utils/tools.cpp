@@ -2217,9 +2217,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 			if (strcmp(argv[cnt], "-starttree") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -starttree BIONJ|PARS|PLLPARS";
+					throw "Use -starttree BIONJ|PARS|PLLPARS|PJ";
                 else if (strcmp(argv[cnt], "PARS") == 0)
 					params.start_tree = STT_PARSIMONY;
+                else if (strcmp(argv[cnt], "PJ") == 0)
+                    params.start_tree = STT_PARSIMONY_JOINING;
 				else if (strcmp(argv[cnt], "PLLPARS") == 0)
 					params.start_tree = STT_PLL_PARSIMONY;
                 else if (START_TREE_RECOGNIZED(argv[cnt])) {
@@ -3985,9 +3987,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                 }
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -t,-te <start_tree | BIONJ | PARS | PLLPARS | RANDOM>";
+					throw "Use -t,-te <start_tree | BIONJ | PARS | PLLPARS | PJ | RANDOM>";
 				else if (strcmp(argv[cnt], "PARS") == 0)
 					params.start_tree = STT_PARSIMONY;
+                else if (strcmp(argv[cnt], "PJ") == 0)
+                    params.start_tree = STT_PARSIMONY_JOINING;
 				else if (strcmp(argv[cnt], "PLLPARS") == 0)
 					params.start_tree = STT_PLL_PARSIMONY;
                 else if (strcmp(argv[cnt], "RANDOM") == 0 || strcmp(argv[cnt], "RAND") == 0)

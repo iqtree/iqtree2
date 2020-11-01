@@ -176,12 +176,11 @@ double Node::longestPath2(Node* &node1, Node* &node2) {
 
 Neighbor *Node::findNeighbor(Node *node) {
 	int size = neighbors.size();
-    for (int i = 0; i < size; i++)
-        if (neighbors[i]->node == node) return neighbors[i];
-    /*
-    for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it ++)
-            if ((*it)->node == node)
-                    return (*it);*/
+    for (int i = 0; i < size; i++) {
+        if (neighbors[i]->node == node) {
+            return neighbors[i];
+        }
+    }
     cout << "ERROR : Could not find neighbors of node " << node->id << endl;
     ASSERT(0);
     return NULL;

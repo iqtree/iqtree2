@@ -1729,7 +1729,7 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
             delete partitions;
     } else {
         // internal node
-        ASSERT(node->degree() == 3); // it works only for strictly bifurcating tree
+        ASSERT(node->degree() == 3 || (dad==nullptr && 1<node->degree())  ); // it works only for strictly bifurcating tree
         PhyloNeighbor *left = NULL, *right = NULL; // left & right are two neighbors leading to 2 subtrees
         FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, pit) {
             if (!pit->isParsimonyComputed()) {

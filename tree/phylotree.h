@@ -375,6 +375,7 @@ class PhyloTree : public MTree, public Optimization, public CheckpointFactory {
     friend class PlacementTraversalInfo;
     friend class LikelihoodBlockAllocator;
     friend class LikelihoodBlockPair;
+    friend class ParsimonyMatrix;
 
 public:
     
@@ -1628,7 +1629,16 @@ public:
      * @return parsimony score
      */
     virtual int computeParsimonyTree(const char *out_prefix, Alignment *alignment, int *rand_stream);
-        
+
+    /**
+     * FAST VERSION: compute parsimony tree by parsimony joining
+     * @param out_prefix prefix for .parstree file
+     * @param alignment input alignment
+     * @return parsimony score
+     */
+    virtual int joinParsimonyTree(const char *out_prefix, Alignment *alignment);
+
+    
     /****************************************************************************
             Branch length optimization by maximum likelihood
      ****************************************************************************/
