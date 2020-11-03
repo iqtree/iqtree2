@@ -1619,8 +1619,9 @@ int PhyloTree::getNumLhCat(SiteLoglType wsl) {
 }
 
 void PhyloTree::transformPatternLhCat() {
-    if (vector_size == 1)
+    if (vector_size == 1) {
         return;
+    }
 
     size_t nptn = ((aln->size()+vector_size-1)/vector_size)*vector_size;
 //    size_t nstates = aln->num_states;
@@ -1664,19 +1665,10 @@ double PhyloTree::computePatternLhCat(SiteLoglType wsl) {
     double score  = computeLikelihoodBranch(current_it,
                                             current_it_back->getNode(),
                                             tree_buffers);
-    // TODO: SIMD aware
     transformPatternLhCat();
-    /*
-    if (getModel()->isSiteSpecificModel()) {
-        score = computeLikelihoodBranch(current_it, current_it_back->getNode());
-    } else if (!getModel()->isMixture())
-        score = computeLikelihoodBranch(current_it, current_it_back->getNode());
-    else if (getModelFactory()->fused_mix_rate)
-        score = computeLikelihoodBranch(current_it, current_it_back->getNode());
-    else {
-        score = computeLikelihoodBranch(current_it, current_it_back->getNode());
-    */
-    if (!getModel()->isSiteSpecificModel() && getModel()->isMixture() && !getModelFactory()->fused_mix_rate) {
+
+    if (!getModel()->isSiteSpecificModel() && getModel()->isMixture() 
+        && !getModelFactory()->fused_mix_rate) {
         if (wsl == WSL_MIXTURE || wsl == WSL_RATECAT) {
             double *lh_cat = tree_buffers._pattern_lh_cat;
             double *lh_res = tree_buffers._pattern_lh_cat;
@@ -3004,20 +2996,18 @@ void PhyloTree::computeBestTraversal(NodeVector &nodes, NodeVector &nodes2) {
 }
 
 double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int maxNRStep) {
-
     LOG_LINE(VB_MAX, "Optimizing branch lengths (max " << my_iterations << " loops)...");
-
     PhyloNodeVector nodes, nodes2;
     computeBestTraversal(nodes, nodes2);
     PhyloNode*     firstNode     = nodes[0];
     PhyloNeighbor* firstNeighbor = firstNode->findNeighbor(nodes2[0]);
-    double tree_lh = computeLikelihoodBranch(firstNeighbor, firstNode,
+    double previous_score = computeLikelihoodBranch(firstNeighbor, firstNode,
                                              tree_buffers);
-    LOG_LINE(VB_MAX, "Initial tree log-likelihood: " << tree_lh);
+    LOG_LINE(VB_MAX, "Initial tree log-likelihood: " << previous_score);
     DoubleVector lenvec;
     initProgress(my_iterations*nodes.size(), "Optimizing branch lengths", "", "", true);
     for (int i = 0; i < my_iterations; i++) {
-        LOG_LINE(VB_MAX, "Likelihood before iteration " << i + 1 << " : " << tree_lh);
+        LOG_LINE(VB_MAX, "Likelihood before iteration " << i + 1 << " : " << previous_score);
         saveBranchLengths(lenvec);
         for (int j = 0; j < nodes.size(); j++) {
             optimizeOneBranch(nodes[j], nodes2[j]);
@@ -3028,17 +3018,14 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
         }
         trackProgress(nodes.size() % 100);
 
-        double new_tree_lh = computeLikelihoodFromBuffer();
-        LOG_LINE(VB_MAX, "Likelihood after iteration " << i + 1 << " : " << new_tree_lh);
+        curScore = computeLikelihoodFromBuffer();
+        LOG_LINE(VB_MAX, "Likelihood after iteration " << i + 1 << " : " << curScore);
 
-        if (new_tree_lh < tree_lh - tolerance*0.1) {
+        if (curScore < previous_score - tolerance*0.1) {
             // IN RARE CASE: tree log-likelihood decreases, revert the branch length and stop
-            if (verbose_mode >= VB_MED) {
-                hideProgress();
-                cout << "NOTE: Restoring branch lengths as tree log-likelihood decreases after branch length optimization: "
-                    << tree_lh << " -> " << new_tree_lh << endl;
-                showProgress();
-            }
+            LOG_LINE(VB_MED, "NOTE: Restoring branch lengths"
+                << " as tree log-likelihood decreases after branch length optimization: "
+                << previous_score << " -> " << curScore);
 
             clearAllPartialLH();
             restoreBranchLengths(lenvec);
@@ -3047,32 +3034,28 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
             // Increase max delta with PoMo because log likelihood is very much lower.
             if (aln->seq_type == SEQ_POMO) max_delta_lh = 3.0;
             // Different max delta if (aln->seq_type == SEQ_CODON) ?!
-            new_tree_lh = computeLikelihood();
-            if (fabs(new_tree_lh-tree_lh) > max_delta_lh) {
+            curScore = computeLikelihood();
+            if (fabs(curScore- previous_score) > max_delta_lh) {
                 hideProgress();
                 printTree(cout);
                 cout << endl;
                 showProgress();
-                LOG_LINE(VB_QUIET, "new_tree_lh: " << new_tree_lh << "   tree_lh: " << tree_lh);
+                LOG_LINE(VB_QUIET, "new_tree_lh: " << curScore << " previous_tree_lh: " << previous_score);
                 if (!params->ignore_any_errors) {
-                    ASSERT(fabs(new_tree_lh-tree_lh) < max_delta_lh);
+                    ASSERT(fabs(curScore- previous_score) < max_delta_lh);
                 }
             }
-            doneProgress();
-            return new_tree_lh;
+            break;
         }
 
         // only return if the new_tree_lh >= tree_lh! (in rare case that likelihood decreases, continue the loop)
-        if (tree_lh <= new_tree_lh && new_tree_lh <= tree_lh + tolerance) {
-            curScore = new_tree_lh;
-            doneProgress();
-            return new_tree_lh;
+        if (previous_score <= curScore && curScore  <= previous_score + tolerance) {
+            break;
         }
-        tree_lh = new_tree_lh;
+        previous_score = curScore;
     }
-    curScore = tree_lh;
     doneProgress();
-    return tree_lh;
+    return curScore;
 }
 
 void PhyloTree::moveRoot(Node *node1, Node *node2) {
@@ -4059,30 +4042,17 @@ NNIMove PhyloTree::getRandomNNI(Branch &branch) {
 }
 
 void PhyloTree::doNNI(const NNIMove &move, bool clearLH) {
-    PhyloNode *node1 = move.node1;
-    PhyloNode *node2 = move.node2;
+    PhyloNode*            node1       = move.node1;
+    PhyloNode*            node2       = move.node2;
     NeighborVec::iterator node1Nei_it = move.node1Nei_it;
     NeighborVec::iterator node2Nei_it = move.node2Nei_it;
-    Neighbor *node1Nei = *(node1Nei_it);
-    Neighbor *node2Nei = *(node2Nei_it);
+    PhyloNeighbor*        node1Nei    = (PhyloNeighbor*)*(node1Nei_it);
+    PhyloNeighbor*        node2Nei    = (PhyloNeighbor*)*(node2Nei_it);
 
-    // TODO MINH
-    /*    Node *nodeA = node1Nei->node;
-     Node *nodeB = node2Nei->node;
-
-     NeighborVec::iterator nodeA_it = nodeA->findNeighborIt(node1);
-     NeighborVec::iterator nodeB_it = nodeB->findNeighborIt(node2);
-     Neighbor *nodeANei = *(nodeA_it);
-     Neighbor *nodeBNei = *(nodeB_it);
-     *node1Nei_it = node2Nei;
-     *nodeB_it = nodeANei;
-     *node2Nei_it = node1Nei;
-     *nodeA_it = nodeBNei;*/
-    // END TODO MINH
     ASSERT(node1->degree() == 3 && node2->degree() == 3);
 
-    PhyloNeighbor *node12_it = node1->findNeighbor(node2); // return neighbor of node1 which points to node 2
-    PhyloNeighbor *node21_it = node2->findNeighbor(node1); // return neighbor of node2 which points to node 1
+    PhyloNeighbor* node12_it = node1->findNeighbor(node2); 
+    PhyloNeighbor* node21_it = node2->findNeighbor(node1); 
 
     // reorient partial_lh before swap
     if (!isSuperTree()) {
@@ -4091,24 +4061,18 @@ void PhyloTree::doNNI(const NNIMove &move, bool clearLH) {
     }
     
     // do the NNI swap
+    LOG_LINE(VB_MAX, "  Swapping branches " << node2Nei->id << " and " << node1Nei->id);
     node1->updateNeighbor(node1Nei_it, node2Nei);
     node2Nei->node->updateNeighbor(node2, node1);
+    PhyloNeighbor* backNei = node2Nei->getNode()->findNeighbor(node1);//JB
+    backNei->length        = node2Nei->length; //JB
+    backNei->id            = node2Nei->id;     //JB
 
     node2->updateNeighbor(node2Nei_it, node1Nei);
     node1Nei->node->updateNeighbor(node1, node2);
-
-    // BQM check branch ID
-    /*
-     if (node1->findNeighbor(nodeB)->id != nodeB->findNeighbor(node1)->id) {
-     cout << node1->findNeighbor(nodeB)->id << "<->" << nodeB->findNeighbor(node1)->id << endl;
-     cout << node1->id << "," << nodeB->id << endl;
-     outError("Wrong ID");
-     }
-     if (node2->findNeighbor(nodeA)->id != nodeA->findNeighbor(node2)->id) {
-     cout << node2->findNeighbor(nodeA)->id << "<->" << nodeA->findNeighbor(node2)->id << endl;
-     cout << node2->id << "," << nodeA->id << endl;
-     outError("Wrong ID");
-     }*/
+    backNei         = node1Nei->getNode()->findNeighbor(node2); //JB
+    backNei->length = node1Nei->length;     //JB
+    backNei->id     = node1Nei->id;         //JB
 
     PhyloNeighbor *nei12 = node1->findNeighbor(node2); // return neighbor of node1 which points to node 2
     PhyloNeighbor *nei21 = node2->findNeighbor(node1); // return neighbor of node2 which points to node 1
@@ -4117,8 +4081,6 @@ void PhyloTree::doNNI(const NNIMove &move, bool clearLH) {
         // clear partial likelihood vector
         nei12->clearPartialLh();
         nei21->clearPartialLh();
-        nei12->size = nei21->size = 0;
-
         node2->clearReversePartialLh(node1);
         node1->clearReversePartialLh(node2);
     }
@@ -4166,8 +4128,48 @@ void PhyloTree::changeNNIBrans(const NNIMove &nnimove) {
     }
 }
 
-NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove* nniMoves) {
+template<class T=double> class SettingRestorer
+{
+protected:
+    std::vector<T*> variables;
+    std::vector<T>  settings;
+public:
+    void remember(T& rememberMe) {
+        variables.emplace_back(&rememberMe);
+        settings.emplace_back(rememberMe);
+    }
+    void restore() {
+        size_t i = variables.size();
+        while (0 < i) {
+            --i;
+            (*(variables[i])) = settings[i];
+        }
+        variables.clear();
+        settings.clear();
+    }
+    ~SettingRestorer() {
+        restore();
+    }
+};
 
+void PhyloTree::clearInwardViewsFromNeighbors(PhyloNode* node1, PhyloNode* node2) {
+    if (params->nni5) {
+        node1->findNeighbor(node2)->clearPartialLh();
+        node2->findNeighbor(node1)->clearPartialLh();
+        return;
+    }
+    FOR_EACH_ADJACENT_PHYLO_NODE(node1, nullptr, it, node_X)
+    {
+        PhyloNeighbor* nei = node_X->findNeighbor(node1);
+        nei->clearPartialLh();
+    }
+    FOR_EACH_ADJACENT_PHYLO_NODE(node2, nullptr, it, node_Y) {
+        PhyloNeighbor* nei = node_Y->findNeighbor(node2);
+        nei->clearPartialLh();
+    }
+}
+
+NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove* nniMoves) {
     ASSERT(!node1->isLeaf() && !node2->isLeaf());
     ASSERT(node1->degree() == 3 && node2->degree() == 3);
     
@@ -4175,6 +4177,26 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
         // swap node1 and node2 if the direction is not right, only for nonreversible models
         std::swap(node1, node2);
     }
+
+    SettingRestorer<PhyloNeighbor*> s1;
+    s1.remember(current_it);
+    s1.remember(current_it_back);
+
+    LOG_LINE(VB_DEBUG, "curScore on entry to getBestNNIForBran was " << curScore);
+    SettingRestorer<double> s2;
+    FOR_EACH_PHYLO_NEIGHBOR(node1, nullptr, it, nei) {
+        LOG_LINE(VB_DEBUG, "branch [" << nei->id << "] from node1 "
+            << pointer_to_hex(nei) << " length was " << nei->length);
+        s2.remember(nei->length);
+        s2.remember(nei->getNode()->findNeighbor(node1)->length);
+    }
+    FOR_EACH_PHYLO_NEIGHBOR(node2, nullptr, it, nei) {
+        LOG_LINE(VB_DEBUG, "branch [" << nei->id << "] from node2 "
+            << pointer_to_hex(nei) << " length was " << nei->length);
+        s2.remember(nei->length);
+        s2.remember(nei->getNode()->findNeighbor(node2)->length);
+    }
+    s2.remember(curScore);
 
     int IT_NUM = (params->nni5) ? 6 : 2;
 
@@ -4279,14 +4301,13 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
     nniMoves[0].node2    = nniMoves[1].node2    = node2;
     nniMoves[0].newloglh = nniMoves[1].newloglh = -DBL_MAX;
 
-    double backupScore   = curScore;
     for (cnt = 0; cnt < 2; cnt++) if (constraintTree.isCompatible(nniMoves[cnt])) 
     {
         // do the NNI swap
-        NeighborVec::iterator node1_it = nniMoves[cnt].node1Nei_it;
-        NeighborVec::iterator node2_it = nniMoves[cnt].node2Nei_it;
-        Neighbor* node1_nei = *node1_it;
-        Neighbor* node2_nei = *node2_it;
+        NeighborVec::iterator node1_it  = nniMoves[cnt].node1Nei_it;
+        NeighborVec::iterator node2_it  = nniMoves[cnt].node2Nei_it;
+        Neighbor*             node1_nei = *node1_it;
+        Neighbor*             node2_nei = *node2_it;
 
         // reorient partial_lh before swap
         reorientPartialLh(node12_it, node1);
@@ -4307,47 +4328,44 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 
         int nni5_num_eval = max(params->nni5_num_eval, getMixlen());
 
-        for (int step = 0; step < nni5_num_eval; step++) {
-            // clear partial likelihood vector
-            node12_it->clearPartialLh();
-            node21_it->clearPartialLh();
+        clearInwardViewsFromNeighbors(node1, node2);
 
-            // compute the score of the swapped topology
-            //        double saved_len = node1_nei->length;
-
-            // BUG FIX: commented out following (reported by Stephen Crotty)
-            //        optimizeOneBranch(node1, node2, false, NNI_MAX_NR_STEP);
-            //        node1->findNeighbor(node2)->getLength(nniMoves[cnt].newLen[0]);
-
-            int i=1;
-            if (params->nni5) {
-                FOR_EACH_ADJACENT_PHYLO_NODE(node1, node2, it, node_X)
-                {
-                    node_X->findNeighbor(node1)->clearPartialLh();
+        if (params->nni5) {
+            for (int stepsToGo = nni5_num_eval; 0 < stepsToGo; --stepsToGo) {
+                FOR_EACH_ADJACENT_PHYLO_NODE(node1, node2, it, node_X) {
+                    PhyloNeighbor* nei = node_X->findNeighbor(node1);
                     optimizeOneBranch(node1, node_X, false, NNI_MAX_NR_STEP);
-                    node1->findNeighbor(node_X)->getLength(nniMoves[cnt].newLen[i]);
-                    i++;
                 }
-                node21_it->clearPartialLh();
+                FOR_EACH_ADJACENT_PHYLO_NODE(node2, node1, it, node_Y) {
+                    PhyloNeighbor* nei = node_Y->findNeighbor(node2);
+                    optimizeOneBranch(node2, node_Y, false, NNI_MAX_NR_STEP);
+                }
+                if (1 < stepsToGo) {
+                    optimizeOneBranch(node1, node2, false, NNI_MAX_NR_STEP);
+                }
             }
+        }
 
-            optimizeOneBranch(node1, node2, false, NNI_MAX_NR_STEP);
-            node1->findNeighbor(node2)->getLength(nniMoves[cnt].newLen[0]);
-
-            if (params->nni5) {
-                FOR_EACH_PHYLO_NEIGHBOR(node2, node1, it, nei)
-                {
-                    PhyloNode* child = nei->getNode();
-                    optimizeOneBranch(node2, child, false, NNI_MAX_NR_STEP);
-                    node2->findNeighbor(child)->getLength(nniMoves[cnt].newLen[i]);
-                    i++;
-                }
-                node12_it->clearPartialLh();
+        optimizeOneBranch(node1, node2, false, NNI_MAX_NR_STEP);
+        node1->findNeighbor(node2)->getLength(nniMoves[cnt].newLen[0]);
+        if (params->nni5) {
+            int i = 1;
+            FOR_EACH_ADJACENT_PHYLO_NODE(node1, node2, it, node_X) {
+                PhyloNeighbor* nei = node_X->findNeighbor(node1);
+                nei->getLength(nniMoves[cnt].newLen[i]);
+                ++i;
+            }
+            FOR_EACH_ADJACENT_PHYLO_NODE(node2, node1, it, node_Y) {
+                PhyloNeighbor* nei = node_Y->findNeighbor(node2);
+                nei->getLength(nniMoves[cnt].newLen[i]);
+                ++i;
             }
         }
         double score = computeLikelihoodFromBuffer();
-        LOG_LINE(VB_DEBUG, "NNI " << node1->id << " - " << node2->id << ": " << score);
+        LOG_LINE(VB_DEBUG, "NNI of nodes with Ids " << node1->id << " - " << node2->id
+            << ": scores " << score);
         nniMoves[cnt].newloglh = score;
+
         // compute the pattern likelihoods if wanted
         if (nniMoves[cnt].ptnlh) {
             computePatternLikelihood(nniMoves[cnt].ptnlh, &score);
@@ -4359,36 +4377,34 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
         reorientPartialLh(node12_it, node1);
         reorientPartialLh(node21_it, node2);
 
-        // else, swap back, also recover the branch lengths
         node1->updateNeighbor(node1_it, node1_nei);
         node1_nei->node->updateNeighbor(node2, node1);
         node2->updateNeighbor(node2_it, node2_nei);
         node2_nei->node->updateNeighbor(node1, node2);
-        // ONLY FOR CHECKING WITH OLGA's PLEN MODEL
-        //node1_nei->length = node2_nei->length = saved_len;
     }
 
-     // restore the Neighbor*
-     for (id = IT_NUM-1; id >= 0; id--) {
-         if (*saved_it[id] == current_it) current_it = saved_nei[id];
-         if (*saved_it[id] == current_it_back) current_it_back = saved_nei[id];
-
-         delete (*saved_it[id]);
-         (*saved_it[id]) = saved_nei[id];
-     }
+    // restore the Neighbor*
+    for (id = IT_NUM-1; id >= 0; id--) {
+        //
+        //James B. 02-Nov-2020. Two commented-out lines were not necessarily valid,
+        //if current_it and current_it_back were both on one of the new branches
+        //after the node swap, they would NOT point at each other at all!
+        //It's simplest to just... restore()... what was saved.
+        //
+        //if (*saved_it[id] == current_it) current_it = saved_nei[id];
+        //if (*saved_it[id] == current_it_back) current_it_back = saved_nei[id];
+        //
+        delete (*saved_it[id]);
+        (*saved_it[id]) = saved_nei[id];
+    }
+    //James B. 02-Nov-2020. Restore current_it and current_it_back.
+    s1.restore();
 
     mem_slots.eraseSpecialNei();
 
-    // restore the length of 4 branches around node1, node2
-    FOR_EACH_PHYLO_NEIGHBOR(node1, node2, it, nei) {
-        nei->length = nei->getNode()->findNeighbor(node1)->length;
-    }
-    FOR_EACH_PHYLO_NEIGHBOR(node2, node1, it, nei) {
-        nei->length = nei->getNode()->findNeighbor(node2)->length;
-    }
-    
-    // restore curScore
-    curScore = backupScore;
+    //James B. 02-Nov-2020 Restore the current score, the lengths of *both* 
+    //ends of the 5 branches between and around node1 and node2 
+    s2.restore();
 
     LOG_LINE(VB_MAX, "NNI scores were " << nniMoves[0].newloglh << " and " << nniMoves[1].newloglh);
     NNIMove res;
@@ -4397,6 +4413,17 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
     } else {
         res = nniMoves[1];
     }
+    LOG_LINE(VB_MAX, "  Node1<->Node2 branch has id " << res.node1->findNeighbor(res.node2)->id << ", new len " << res.newLen);
+    LOG_LINE(VB_MAX, "  Swapped branch 1 has id " << (*res.node1Nei_it)->id << " and length " << (*res.node1Nei_it)->length);
+    LOG_LINE(VB_MAX, "  Swapped branch 2 has id " << (*res.node2Nei_it)->id << " and length " << (*res.node2Nei_it)->length);
+
+#if (0)
+    double saved_score = curScore;
+    double rescore     = computeLikelihood();
+    LOG_LINE(VB_MAX, "  Rescore after restore was " << rescore 
+        << " versus previous score of " << saved_score );
+#endif
+
     return res;
 }
 

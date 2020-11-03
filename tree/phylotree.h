@@ -1829,6 +1829,8 @@ public:
      */
     virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves = nullptr);
 
+    virtual void clearInwardViewsFromNeighbors(PhyloNode* node1, PhyloNode* node2);
+
     /**
             Do an NNI
             @param move reference to an NNI move object containing information about the move

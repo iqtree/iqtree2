@@ -461,8 +461,8 @@ void PhyloTree::computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branc
         VectorClass lh_ptn[VCSIZE];
         VectorClass df_ptn[VCSIZE];
         VectorClass ddf_ptn[VCSIZE];
-		VectorClass *theta = (VectorClass*)(theta_all + ptn*block);        
-        VectorClass* eval;
+		const VectorClass* theta = (VectorClass*)(theta_all + ptn*block);        
+        const VectorClass* eval;
         
         for (j = 0; j < VCSIZE; j++) {
             lh_ptn[j] = 0.0;
@@ -745,8 +745,8 @@ double PhyloTree::computeSitemodelLikelihoodFromBufferEigenSIMD() {
 #endif
     for (ptn = 0; ptn < nptn; ptn+=VCSIZE) {
         VectorClass lh_ptn[VCSIZE];
-        VectorClass* eval;
-        VectorClass *theta = (VectorClass*)(theta_all + ptn*block);
+        const VectorClass* eval;
+        const VectorClass* theta = (VectorClass*)(theta_all + ptn*block);
         
         for (j = 0; j < VCSIZE; j++) {
             lh_ptn[j] = 0.0;
