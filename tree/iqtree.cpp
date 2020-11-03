@@ -3151,8 +3151,9 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI, const char* context) {
         appliedNNIs.clear();
         getCompatibleNNIs(positiveNNIs, appliedNNIs);
 
-        // do non-conflicting positive NNIs
-        doNNIs(appliedNNIs);
+        LOG_LINE(VB_DEBUG, "Applying " << appliedNNIs.size() 
+            << " non-conflicting positive NNIs");
+        doNNIs(appliedNNIs, true);
         curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
         const double loglh_tolerance = 0.1;
         auto expected_score = appliedNNIs.at(0).newloglh;
@@ -3163,13 +3164,14 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI, const char* context) {
             // tree cannot be worse if only 1 NNI is applied
             double dodgy_score = curScore;
             if (appliedNNIs.size() > 1) {
-                // revert all applied NNIs
-                doNNIs(appliedNNIs);
+                LOG_LINE(VB_DEBUG, "Reverting " << appliedNNIs.size() << " NNIs");
+                doNNIs(appliedNNIs, false);
                 restoreBranchLengths(lenvec);
-                clearAllPartialLH();
                 // only do the best NNI
                 appliedNNIs.resize(1);
-                doNNIs(appliedNNIs);
+                LOG_LINE(VB_DEBUG, "Reapplying " << appliedNNIs.size() << " NNIs");
+                doNNIs(appliedNNIs, true);
+                clearAllPartialLH();
                 curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
             }
             if (curScore < expected_score - loglh_tolerance ) {
