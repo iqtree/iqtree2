@@ -18,29 +18,38 @@ LikelihoodBufferSet::LikelihoodBufferSet():
 }
 
 LikelihoodBufferSet::LikelihoodBufferSet(const LikelihoodBufferSet& copyMe) {
-    theta_all = nullptr;
+    theta_all         = nullptr;
+    _pattern_lh       = nullptr;
+    _pattern_lh_cat   = nullptr;
+    buffer_partial_lh = nullptr;
+    buffer_scale_all  = nullptr;
+
     ensureThetaAllocated(copyMe.theta_block_size);
 
-    _pattern_lh = nullptr;
     ensurePatternLhAllocated(copyMe.pattern_lh_block_size);
     
-    _pattern_lh_cat = nullptr;
     ensurePatternLhCatAllocated(copyMe.pattern_lh_cat_block_size);
     if (_pattern_lh_cat != nullptr ) {
         memcpy(_pattern_lh_cat, copyMe._pattern_lh_cat,
                copyMe.pattern_lh_cat_block_size * sizeof(double));
     }
     
-    buffer_partial_lh = nullptr;
     ensurePartialLhAllocated(copyMe.partial_lh_block_size);
     
-    buffer_scale_all = nullptr;
     ensureScaleAllAllocated(copyMe.scale_all_block_size);
 }
 
 void LikelihoodBufferSet::ensureThetaAllocated(size_t desired_block_size) {
     if (theta_all != nullptr) {
-        return;
+        if (desired_block_size <= theta_block_size) {
+            return;
+        }
+        if (theta_borrowed) {
+            theta_all = nullptr;
+        }
+        else {
+            aligned_free(theta_all);
+        }
     }
     theta_all        = aligned_alloc<double>(desired_block_size);
     theta_block_size = desired_block_size;
@@ -62,7 +71,15 @@ void LikelihoodBufferSet::borrowTheta(double* theta_start, size_t theta_size_in_
 }
 
 void LikelihoodBufferSet::ensurePatternLhAllocated(size_t desired_block_size_in_doubles) {
-    if (!_pattern_lh) {
+    if (_pattern_lh != nullptr && pattern_lh_block_size < desired_block_size_in_doubles) {
+        if (!pattern_lh_borrowed) {
+            aligned_free(_pattern_lh);
+        }
+        else {
+            _pattern_lh = nullptr;
+        }
+    }
+    if (_pattern_lh==nullptr) {
         _pattern_lh = aligned_alloc<double>(desired_block_size_in_doubles);
         pattern_lh_block_size = desired_block_size_in_doubles;
         pattern_lh_borrowed = false;
@@ -71,16 +88,24 @@ void LikelihoodBufferSet::ensurePatternLhAllocated(size_t desired_block_size_in_
 }
 
 void LikelihoodBufferSet::borrowPatternLh(double* borrowMe, size_t size_in_doubles) {
-    if (_pattern_lh && !pattern_lh_borrowed) {
+    if (_pattern_lh!=nullptr && !pattern_lh_borrowed) {
         aligned_free(_pattern_lh);
     }
-    _pattern_lh = borrowMe;
+    _pattern_lh           = borrowMe;
     pattern_lh_block_size = size_in_doubles;
-    pattern_lh_borrowed = true;
+    pattern_lh_borrowed   = true;
 }
     
 void LikelihoodBufferSet::ensurePatternLhCatAllocated(size_t desired_block_size_in_doubles) {
-    if (!_pattern_lh_cat) {
+    if (_pattern_lh_cat != nullptr && pattern_lh_cat_block_size < desired_block_size_in_doubles) {
+        if (!pattern_lh_cat_borrowed) {
+            aligned_free(_pattern_lh_cat);
+        }
+        else {
+            _pattern_lh_cat = nullptr;
+        }
+    }
+    if (_pattern_lh_cat==nullptr) {
         _pattern_lh_cat           = aligned_alloc<double>(desired_block_size_in_doubles);
         pattern_lh_cat_block_size = desired_block_size_in_doubles;
         pattern_lh_cat_borrowed   = false;
@@ -89,7 +114,7 @@ void LikelihoodBufferSet::ensurePatternLhCatAllocated(size_t desired_block_size_
 }
 
 void LikelihoodBufferSet::borrowPatternLhCat(double* borrowMe, size_t size_in_doubles) {
-    if (_pattern_lh_cat && !pattern_lh_cat_borrowed) {
+    if (_pattern_lh_cat!=nullptr && !pattern_lh_cat_borrowed) {
         aligned_free(_pattern_lh_cat);
     }
     _pattern_lh_cat           = borrowMe;
@@ -98,16 +123,26 @@ void LikelihoodBufferSet::borrowPatternLhCat(double* borrowMe, size_t size_in_do
 }
 
 void LikelihoodBufferSet::ensurePartialLhAllocated(size_t size_in_doubles) {
-    if (!buffer_partial_lh) {
-        buffer_partial_lh = aligned_alloc<double>(size_in_doubles);
-        partial_lh_block_size   = size_in_doubles;
-        pattern_lh_cat_borrowed = false;
-        for (int i=0; i<partial_lh_block_size; ++i) buffer_partial_lh[i]=0;
+    if (buffer_partial_lh != nullptr && partial_lh_block_size < size_in_doubles) {
+        if (!partial_lh_borrowed) {
+            aligned_free(_pattern_lh_cat);
+        }
+        else {
+            _pattern_lh_cat = nullptr;
+        }
+    }
+    if (buffer_partial_lh == nullptr) {
+        buffer_partial_lh     = aligned_alloc<double>(size_in_doubles);
+        partial_lh_block_size = size_in_doubles;
+        partial_lh_borrowed   = false;
+        for (int i = 0; i < partial_lh_block_size; ++i) {
+            buffer_partial_lh[i] = 0;
+        }
     }
 }
 
 void LikelihoodBufferSet::borrowPartialLh(double* borrowMe, size_t size_in_doubles) {
-    if (buffer_partial_lh && !partial_lh_borrowed) {
+    if (buffer_partial_lh!=nullptr && !partial_lh_borrowed) {
         aligned_free(buffer_partial_lh);
     }
     buffer_partial_lh     = borrowMe;
@@ -116,16 +151,26 @@ void LikelihoodBufferSet::borrowPartialLh(double* borrowMe, size_t size_in_doubl
 }
 
 void LikelihoodBufferSet::ensureScaleAllAllocated(size_t size_in_doubles) {
-    if (!buffer_scale_all) {
+    if (buffer_scale_all != nullptr && scale_all_block_size < size_in_doubles) {
+        if (!partial_lh_borrowed) {
+            aligned_free(buffer_scale_all);
+        }
+        else {
+            buffer_scale_all = nullptr;
+        }
+    }
+    if (buffer_scale_all == nullptr) {
         buffer_scale_all     = aligned_alloc<double>(size_in_doubles);
         scale_all_block_size = size_in_doubles;
         scale_all_borrowed   = false;
-        for (int i=0; i<scale_all_block_size; ++i) buffer_scale_all[i]=0;
+        for (int i = 0; i < scale_all_block_size; ++i) {
+            buffer_scale_all[i] = 0;
+        }
     }
 }
 
 void LikelihoodBufferSet::borrowScaleAll(double* borrowMe, size_t size_in_doubles) {
-    if (buffer_scale_all && !scale_all_borrowed) {
+    if (buffer_scale_all!=nullptr && !scale_all_borrowed) {
         aligned_free(buffer_partial_lh);
     }
     buffer_partial_lh    = borrowMe;
