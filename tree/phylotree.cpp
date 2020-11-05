@@ -1162,6 +1162,8 @@ size_t PhyloTree::getBufferPartialLhSize() {
 
 void PhyloTree::ensurePartialLHIsAllocated(size_t count_of_extra_parsimony_blocks,
                                            size_t count_of_extra_lh_blocks) {
+    determineBlockSizes();
+
     int numStates = model->num_states;
     // Minh's question: why getAlnNSite() but not getAlnNPattern() ?
     //size_t mem_size = ((getAlnNSite() % 2) == 0) ? getAlnNSite() : (getAlnNSite() + 1);
@@ -1190,18 +1192,19 @@ void PhyloTree::ensurePartialLHIsAllocated(size_t count_of_extra_parsimony_block
     ensure_aligned_allocated(ptn_freq,          mem_size);
     ensure_aligned_allocated(ptn_freq_pars,     mem_size);
     ensure_aligned_allocated(ptn_invar,         mem_size);
-    
+
     allocateCentralBlocks(count_of_extra_parsimony_blocks,
                           count_of_extra_lh_blocks);
 }
 
 void PhyloTree::initializeAllPartialLh() {
-    int index_parsimony = 0;
-    int index_lh        = 0;
-    ensurePartialLHIsAllocated(0, 0);
     clearAllPartialLH(true);
     clearAllScaleNum(true);
     clearAllPartialParsimony(true);
+    ensurePartialLHIsAllocated(0,0);
+
+    int index_parsimony = 0;
+    int index_lh = 0;
     initializeAllPartialLh(index_parsimony, index_lh);
     if (params->lh_mem_save == LM_MEM_SAVE) {
         mem_slots.init(this, max_lh_slots);
@@ -1367,7 +1370,7 @@ void PhyloTree::determineBlockSizes() {
     #else
         pars_block_size = ((pars_block_size+7)/8)*8;
     #endif
-    
+
     // +num_states for ascertainment bias correction
     size_t states     = aln->num_states;
     size_t unobserved = (model_factory == nullptr)
@@ -1430,6 +1433,7 @@ void PhyloTree::allocateCentralBlocks(size_t extra_parsimony_block_count,
         }
         LOG_LINE ( VB_DEBUG, "central_partial_lh is " << pointer_to_hex(central_partial_lh)
                   << " through " << pointer_to_hex(central_partial_lh + mem_size));
+        memset(central_partial_lh, 0, mem_size*sizeof(double));
                 
         // We need not treat params->lh_mem_save == LM_PER_NODE as a special case.
         tip_partial_lh = central_partial_lh + ((max_lh_slots + extra_lh_block_count) * lh_block_size);
@@ -1463,7 +1467,6 @@ void PhyloTree::allocateCentralBlocks(size_t extra_parsimony_block_count,
     
 void PhyloTree::initializeAllPartialLh(int &index_pars, int &index_lh,
                                        PhyloNode *node, PhyloNode *dad) {
-    determineBlockSizes( );
     
     if (!node) {
         node = getRoot();

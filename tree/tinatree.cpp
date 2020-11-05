@@ -114,15 +114,17 @@ void TinaTree::initializeAllPartialLh() {
 
 void TinaTree::initializeAllPartialLh(int &index, int &indexlh,
                                       PhyloNode *node, PhyloNode *dad) {
-    determineBlockSizes();
-    if (!node) {
+
+    if (node==nullptr) {
         node = getRoot();
-        // allocate the big central partial likelihoods memory
         ensureCentralPartialParsimonyIsAllocated(0);
         index = 0;
     }
+    else if (pars_block_size == 0) {
+        ensureCentralPartialParsimonyIsAllocated(0);
+    }
     if (dad) {
-        // assign a region in central_partial_lh to both Neihgbors (dad->node, and node->dad)
+        // assign a region in central_partial_lh to both Neighbours (dad->node, and node->dad)
         PhyloNeighbor *nei = node->findNeighbor(dad);
         //assert(!nei->partial_lh);
         nei->partial_pars = central_partial_pars + (index * pars_block_size);
