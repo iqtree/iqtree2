@@ -1282,25 +1282,45 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
     double cur_lh = tree->computeLikelihood();
     tree->setCurScore(cur_lh);
     tree->trackProgress(1.0);
-    
+
     if (verbose_mode >= VB_MED || write_info) {
-        tree->hideProgress();
         int p = cout.precision(); //We'll restore it later
-        if (verbose_mode >= VB_DEBUG) {
+        if (VB_MED <= verbose_mode) {
             cout.precision(17);
+            TREE_LOG_LINE(*tree, VB_MED, "1. Initial log-likelihood: " << cur_lh << " (took " <<
+                (getRealTime() - optimizeStartTime) << " wall-clock sec)");
         }
-        if (verbose_mode >= VB_MED) {
-            cout << "1. Initial log-likelihood: " << cur_lh << " (took " <<
-            (getRealTime() - optimizeStartTime) << " wall-clock sec)" << endl;
-        } else {
-            cout << "1. Initial log-likelihood: " << cur_lh << endl;
+        else {
+            TREE_LOG_LINE(*tree, VB_QUIET, "1. Initial log-likelihood: " << cur_lh);
         }
-        cout.precision(p);
         if (verbose_mode >= VB_MAX) {
+            tree->hideProgress();
             tree->printTree(cout);
             cout << endl;
+            cout.precision(p);
+            tree->showProgress();
+#if (0)
+            std::stringstream buffer;
+            buffer.precision(17);
+            buffer << "theta_all = {";
+            for (size_t i = 0; i < tree->tree_buffers.theta_block_size; ++i) {
+                buffer << " " << tree->tree_buffers.theta_all[i];
+            }
+            buffer << "}" << endl;
+            buffer << "buffer_scale_all = {";
+            for (size_t i = 0; i < tree->tree_buffers.scale_all_block_size; ++i) {
+                buffer << " " << tree->tree_buffers.buffer_scale_all[i];
+            }
+            buffer << "}" << endl;
+            buffer << "_pattern_lh = {";
+            for (size_t i = 0; i < tree->tree_buffers.pattern_lh_block_size; ++i) {
+                buffer << " " << tree->tree_buffers._pattern_lh[i];
+            }
+            buffer << "}" << endl;
+            TREE_LOG_LINE(*tree, VB_QUIET, buffer.str());
+#endif
         }
-        tree->showProgress();
+        cout.precision(p);
     }
 
     // For UpperBounds -----------
