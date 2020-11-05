@@ -4470,7 +4470,6 @@ void Alignment::countStatesForSites(size_t startPattern, size_t stopPattern, siz
 #define PARALLEL_STATE_COUNT 1
 void Alignment::countStates(size_t *state_count, size_t num_unknown_states) {
     //Note: this was suprisingly slow in Windows builds (Don't know why)
-    double countStart = getRealTime();
     memset(state_count, 0, sizeof(size_t)*(STATE_UNKNOWN+1));
     state_count[(int)STATE_UNKNOWN] = num_unknown_states;
 #if PARALLEL_STATE_COUNT && defined(_OPENMP)
