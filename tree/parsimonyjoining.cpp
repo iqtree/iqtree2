@@ -21,14 +21,14 @@ protected:
     
     PhyloTree*       tree;
     PhyloNeighborVec topOfCluster;
-    PhyloNode*       dummyRoot;
+    PhyloNode*       dummy_root;
     UINT*            next_partial_pars;
     
     double rowTotalMultiplier;
     
 public:
-    ParsimonyMatrix(): tree(nullptr), dummyRoot(nullptr), next_partial_pars(nullptr)
-                    , rowTotalMultiplier(2.0){
+    ParsimonyMatrix(): tree(nullptr), dummy_root(nullptr), next_partial_pars(nullptr)
+                    , rowTotalMultiplier(2.0) {
         //rowTotalMultiplier of 0.0: ignore row totals (so
         //basically a parsimony equivalent of Kruskal's Algorithm)
         //rowTotalMultiplier of 1.0 is like NJ
@@ -41,7 +41,7 @@ public:
     void setTree(PhyloTree* treeToUse) {
         tree = treeToUse;
         tree->ensureCentralPartialParsimonyIsAllocated(0);
-        dummyRoot = nullptr;
+        dummy_root = nullptr;
         next_partial_pars = tree->central_partial_pars;
         ASSERT(next_partial_pars && next_partial_pars < tree->tip_partial_pars);
     }
@@ -110,10 +110,10 @@ public:
         T cTotal        = 0;
 
         PhyloNode*     topNodeInCluster = tree->newNode();
-        dummyRoot->addNeighbor(topNodeInCluster, -1);
-        PhyloNeighbor* neighToCluster   = dummyRoot->firstNeighbor();
+        dummy_root->addNeighbor(topNodeInCluster, -1);
+        PhyloNeighbor* neighToCluster   = dummy_root->firstNeighbor();
         topOfCluster.emplace_back(neighToCluster);
-        dummyRoot->neighbors.resize(0);
+        dummy_root->neighbors.resize(0);
         {
             allocateParsimonyFor(neighToCluster);
             
@@ -163,8 +163,8 @@ public:
         ASSERT( row_count == 3);
         for (size_t i=0;i<3;++i) {
             PhyloNeighbor* clusterTopNei = topOfCluster[rowToCluster[i]];
-            dummyRoot->neighbors.emplace_back( clusterTopNei );
-            clusterTopNei->getNode()->addNeighbor(dummyRoot, -1);
+            dummy_root->neighbors.emplace_back( clusterTopNei );
+            clusterTopNei->getNode()->addNeighbor(dummy_root, -1);
         }
         clusters.addCluster
             ( rowToCluster[0], -1
@@ -176,7 +176,7 @@ public:
         tree->rooted   = false;
         tree->initializeTree();
         tree->setAlignment(tree->aln);
-        allocateParsimonyForAll(dummyRoot, nullptr);
+        allocateParsimonyForAll(dummy_root, nullptr);
     }
     virtual void calculateScaledRowTotals() const {
         super::calculateScaledRowTotals();
@@ -188,9 +188,9 @@ public:
         }
     }
     virtual void join() {
-        dummyRoot  = tree->newNode();
-        size_t n   = tree->aln->getNSeq();
-        auto names = tree->aln->getSeqNames();
+        dummy_root   = tree->newNode();
+        size_t n     = tree->aln->getNSeq();
+        auto   names = tree->aln->getSeqNames();
         setSize(n);
         for (auto it = names.begin(); it != names.end(); ++it) {
             clusters.addCluster(*it);
@@ -199,7 +199,7 @@ public:
         calculateLeafParsimonyDistances();
         calculateRowTotals();
         constructTree();
-        dummyRoot = nullptr;
+        dummy_root = nullptr;
     }
 };
 
@@ -283,6 +283,8 @@ int PhyloTree::joinParsimonyTree(const char *out_prefix,
         printTree(file_name.c_str(), WT_NEWLINE + WT_BR_LEN);
     }
     
+    clearAllPartialParsimony(true);
+    initializeAllPartialPars();
     return computeParsimony();
 }
 
