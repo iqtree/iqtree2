@@ -50,10 +50,13 @@ Pattern::~Pattern()
 {
 }
 
-int Pattern::computeAmbiguousChar(int num_states) {
+int Pattern::computeAmbiguousChar(int num_states) const {
     int num = 0;
-    for (iterator i = begin(); i != end(); i++)
-        if (*i >= num_states) num++;
+    for (auto it = begin(); it != end(); ++it) {
+        if (*it >= num_states) {
+            num++;
+        }
+    }
     return num;
 }
 

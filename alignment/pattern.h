@@ -45,7 +45,7 @@ public:
 		@param num_states number of states of the model
 		@return the number of ambiguous character incl. gaps 
 	*/
-	int computeAmbiguousChar(int num_states);
+	int computeAmbiguousChar(int num_states) const;
 
 	/**
 		@param num_states number of states of the model

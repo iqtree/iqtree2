@@ -80,22 +80,22 @@ Alignment::Alignment()
     isShowingProgressDisabled = false;
 }
 
-string &Alignment::getSeqName(int i) {
+const string &Alignment::getSeqName(int i) const {
     ASSERT(i >= 0 && i < (int)seq_names.size());
     return seq_names[i];
 }
 
-vector<string>& Alignment::getSeqNames() {
+const vector<string>& Alignment::getSeqNames() const {
 	return seq_names;
 }
 
-int Alignment::getSeqID(string &seq_name) {
+int Alignment::getSeqID(const string &seq_name) const {
     for (size_t i = 0; i < getNSeq(); i++)
         if (seq_name == getSeqName(i)) return i;
     return -1;
 }
 
-int Alignment::getMaxSeqNameLength() {
+int Alignment::getMaxSeqNameLength() const {
     int len = 0;
     for (size_t i = 0; i < getNSeq(); i++)
         if (getSeqName(i).length() > len)
@@ -358,40 +358,51 @@ int Alignment::checkIdenticalSeq()
 	return num_identical;
 }
 
-Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVector &removed_seqs, StrVector &target_seqs)
-{
-    auto n = getNSeq();
-    BoolVector isSequenceChecked(n, false);
-    BoolVector isSequenceRemoved(n, false);
-
-    //JB2020-06-17 Begin : Determine hashes for all the sequences
+vector<size_t> Alignment::getSequenceHashes(progress_display* progress) const {
     auto startHash = getRealTime();
+    auto n = getNSeq();
     vector<size_t> hashes;
     hashes.resize(n, 0);
     //Todo: Disable this when isShowingProgressDisabled is set
-    progress_display progress(n*2, "Checking for duplicate sequences");
     #ifdef _OPENMP
         #pragma omp parallel for schedule(static,100)
     #endif
     for (int seq1=0; seq1<n; ++seq1) {
         size_t hash = 0;
-        for (iterator it = begin(); it != end(); ++it) {
+        for (auto it = begin(); it != end(); ++it) {
             adjustHash((*it)[seq1], hash);
         }
         hashes[seq1] = hash;
-        ++progress;
+        if (progress!=nullptr && (n%100)==99) {
+            progress->incrementBy(100.0);
+        }
+    }
+    if (progress!=nullptr) {
+        progress->incrementBy(n%100);
     }
     if (verbose_mode >= VB_MED && !progress_display::getProgressDisplay()) {
         auto hashTime = getRealTime() - startHash;
         cout << "Hashing sequences took " << hashTime << " wall-clock seconds" << endl;
     }
-    //JB2020-06-17 Finish
+    return hashes;
+}
+
+Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVector &removed_seqs, StrVector &target_seqs)
+{
+    auto n = getNSeq();
+    BoolVector isSequenceChecked(n, false);
+    BoolVector isSequenceRemoved(n, false);
+    
+    progress_display progress(n*2, isShowingProgressDisabled ? "" :  "Checking for duplicate sequences");
+    vector<size_t> hashes = getSequenceHashes(&progress);
 
     bool listIdentical = !Params::getInstance().suppress_duplicate_sequence_warnings;
 
     auto startCheck = getRealTime();
     for (size_t seq1 = 0; seq1 < getNSeq(); ++seq1) {
-        if ( isSequenceChecked[seq1] ) continue;
+        if ( isSequenceChecked[seq1] ) {
+            continue;
+        }
         bool first_ident_seq = true;
         for (size_t seq2 = seq1+1; seq2 < getNSeq(); ++seq2) {
             if ( getSeqName(seq2) == not_remove || isSequenceRemoved[seq2] ) continue;
@@ -1455,7 +1466,7 @@ StateType Alignment::convertState(char state) {
 
 
 // TODO: state should int
-char Alignment::convertStateBack(char state) {
+char Alignment::convertStateBack(char state) const {
     if (state == STATE_UNKNOWN) return '-';
     if (state == STATE_INVALID) return '?';
 
@@ -1525,7 +1536,7 @@ char Alignment::convertStateBack(char state) {
     }
 }
 
-string Alignment::convertStateBackStr(StateType state) {
+string Alignment::convertStateBackStr(StateType state) const {
 	string str;
     if (seq_type == SEQ_POMO) {
         return string("POMO") + convertIntToString(state);
@@ -1593,9 +1604,8 @@ void Alignment::initCodon(char *gene_code_id) {
 	}
 	ASSERT(strlen(genetic_code) == 64);
 
-	int codon;
 	num_states = 0;
-	for (codon = 0; codon < strlen(genetic_code); codon++)
+	for (int codon = 0; codon < strlen(genetic_code); codon++)
 		if (genetic_code[codon] != '*')
 			num_states++; // only count non-stop codons
 	codon_table = new char[num_states];
@@ -1650,51 +1660,52 @@ SeqType Alignment::getSeqType(const char *sequence_type) {
     return user_seq_type;
 }
 
-int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq, int nsite) {
-    int seq_id;
-    ostringstream err_str;
-    codon_table = NULL;
-    genetic_code = NULL;
-    non_stop_codon = NULL;
+bool Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq, int nsite) {
+    codon_table    = nullptr;
+    genetic_code   = nullptr;
+    non_stop_codon = nullptr;
 
     if (nseq != seq_names.size()) {
         throw "Different number of sequences than specified";
     }
     unordered_set<string> namesSeen;
     double seqCheckStart = getRealTime();
-    /* now check that all sequence names are correct */
-    for (seq_id = 0; seq_id < nseq; seq_id ++) {
-        ostringstream err_str;
-        if (seq_names[seq_id] == "")
-            err_str << "Sequence number " << seq_id+1 << " has no names\n";
-        // check that all the names are different
-        if (!namesSeen.insert(seq_names[seq_id]).second) {
-            err_str << "The sequence name " << seq_names[seq_id] << " is duplicated\n";
-        }
-    }
-    if (err_str.str() != "")
+    
     {
-        throw err_str.str();
-    }
-    if (verbose_mode >= VB_MED) {
-        cout.precision(6);
-        cout << "Duplicate sequence name check took " << (getRealTime()-seqCheckStart) << " seconds." << endl;
-    }
-    /* now check that all sequences have the same length */
-    for (seq_id = 0; seq_id < nseq; seq_id ++) {
-        if (sequences[seq_id].length() != nsite) {
-            err_str << "Sequence " << seq_names[seq_id] << " contains ";
-            if (sequences[seq_id].length() < nsite)
-                err_str << "not enough";
-            else
-                err_str << "too many";
-
-            err_str << " characters (" << sequences[seq_id].length() << ")\n";
+        ostringstream err_str;
+        /* now check that all sequence names are correct */
+        for (int seq_id = 0; seq_id < nseq; seq_id ++) {
+            if (seq_names[seq_id] == "")
+                err_str << "Sequence number " << seq_id+1 << " has no names\n";
+            // check that all the names are different
+            if (!namesSeen.insert(seq_names[seq_id]).second) {
+                err_str << "The sequence name " << seq_names[seq_id] << " is duplicated\n";
+            }
         }
+        if (err_str.str() != "")
+        {
+            throw err_str.str();
+        }
+        if (verbose_mode >= VB_MED) {
+            cout.precision(6);
+            cout << "Duplicate sequence name check took " << (getRealTime()-seqCheckStart) << " seconds." << endl;
+        }
+        /* now check that all sequences have the same length */
+        for (int seq_id = 0; seq_id < nseq; seq_id ++) {
+            if (sequences[seq_id].length() != nsite) {
+                err_str << "Sequence " << seq_names[seq_id] << " contains ";
+                if (sequences[seq_id].length() < nsite)
+                    err_str << "not enough";
+                else
+                    err_str << "too many";
+                
+                err_str << " characters (" << sequences[seq_id].length() << ")\n";
+            }
+        }
+        
+        if (err_str.str() != "")
+            throw err_str.str();
     }
-
-    if (err_str.str() != "")
-        throw err_str.str();
 
     /* now check data type */
     seq_type = detectSequenceType(sequences);
@@ -1762,13 +1773,17 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
             outWarning("Your specified sequence type is different from the detected one");
         seq_type = user_seq_type;
     }
+    return constructPatterns(nseq, nsite, sequences);
+}
 
+bool Alignment::constructPatterns(int nseq, int nsite, const StrVector& sequences) {
     //initStateSpace(seq_type);
     
     // now convert to patterns
     char char_to_state[NUM_CHAR];
     char AA_to_state[NUM_CHAR];
     computeUnknownState();
+    bool nt2aa = strncmp(sequence_type.c_str(), "NT2AA", 5) == 0;
     if (nt2aa) {
         buildStateMap(char_to_state, SEQ_DNA);
         buildStateMap(AA_to_state, SEQ_PROTEIN);
@@ -1840,13 +1855,16 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
             	}
             }
             if (state == STATE_INVALID) {
-                if (info.num_error < 100) {
-                    info.errors << "Sequence " << seq_names[seq] << " has invalid character " << sequences[seq][site];
-                    if (seq_type == SEQ_CODON)
-                        err_str << sequences[seq][site+1] << sequences[seq][site+2];
-                    err_str << " at site " << site+1 << endl;
-                } else if (info.num_error == 100)
-                    err_str << "...many more..." << endl;
+                if (info.num_error <= 100) {
+                    if (info.num_error < 100) {
+                        info.errors << "Sequence " << seq_names[seq] << " has invalid character " << sequences[seq][site];
+                        if (seq_type == SEQ_CODON)
+                            info.errors << sequences[seq][site+1] << sequences[seq][site+2];
+                        info.errors << " at site " << site+1 << endl;
+                    } else if (info.num_error == 100) {
+                        info.errors << "...many more..." << endl;
+                    }
+                }
                 ++info.num_error;
             }
             pat[seq] = state;
@@ -1860,6 +1878,7 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
     }
     progress.done();
 
+    std::stringstream err_str;
     //2. Now handle warnings and errors, and compress patterns, sequentially
     progress_display progressCompress(nsite, "Compressing patterns", "processed", "site");
     int num_gaps_only = 0;
@@ -1905,7 +1924,7 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
     if (err_str.str() != "") {
         throw err_str.str();
     }
-    return 1;
+    return true;
 }
 
 void processSeq(string &sequence, string &line, int line_num) {
@@ -2324,8 +2343,6 @@ int Alignment::readMSF(char *filename, char *sequence_type) {
     in.exceptions(ios::failbit | ios::badbit);
     in.close();
     return buildPattern(sequences, sequence_type, seq_names.size(), sequences.front().length());
-
-
 }
 
 // TODO: Use outWarning to print warnings.
@@ -2356,8 +2373,6 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     // Sampled vector of nucleotide base counts (N individuals are
     // sampled out of =values=).
     IntVector sampled_values;
-    // Iterator to loop over bases.
-    IntVector::iterator i;
 
     // Variables to convert sampled_values to a state in the pattern.
     int sum;
@@ -2611,16 +2626,16 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
             id1 = -1;
             id2 = -1;
             // Sum over elements and count non-zero elements.
-            for(i = values.begin(); i != values.end(); ++i) {
+            for(auto it = values.begin(); it != values.end(); ++it) {
                 // `i` is an iterator object that points to some
                 // element of `value`.
-            	if (*i != 0) {
+            	if (*it != 0) {
                     // `i - values.begin()` ranges from 0 to 3 and
                     // determines the nucleotide or allele type.
-            		if (id1 == -1) id1 = i - values.begin();
-            		else id2 = i - values.begin();
+            		if (id1 == -1) id1 = it - values.begin();
+            		else id2 = it - values.begin();
             		count++;
-                	sum += *i;
+                	sum += *it;
             	}
             }
             // Determine state (cf. above).
@@ -2799,7 +2814,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     return 1;
 }
 
-bool Alignment::getSiteFromResidue(int seq_id, int &residue_left, int &residue_right) {
+bool Alignment::getSiteFromResidue(int seq_id, int &residue_left, int &residue_right) const {
     int i, j;
     int site_left = -1, site_right = -1;
     for (i = 0, j = -1; i < getNSite(); i++) {
@@ -2820,8 +2835,7 @@ bool Alignment::getSiteFromResidue(int seq_id, int &residue_left, int &residue_r
 }
 
 int Alignment::buildRetainingSites(const char *aln_site_list, IntVector &kept_sites,
-		int exclude_sites, const char *ref_seq_name)
-{
+		int exclude_sites, const char *ref_seq_name) const {
     if (aln_site_list) {
         int seq_id = -1;
         if (ref_seq_name) {
@@ -2848,7 +2862,9 @@ int Alignment::buildRetainingSites(const char *aln_site_list, IntVector &kept_si
                 if (left > right) throw "Left range is bigger than right range";
                 left--;
                 if (right > getNSite()) throw "Right range is bigger than alignment size";
-                if (seq_id >= 0) getSiteFromResidue(seq_id, left, right);
+                if (seq_id >= 0) {
+                    getSiteFromResidue(seq_id, left, right);
+                }
                 for (int i = left; i < right; i++)
                     kept_sites[i] = 1;
             }
@@ -2889,8 +2905,51 @@ int Alignment::buildRetainingSites(const char *aln_site_list, IntVector &kept_si
     return final_length;
 }
 
+void Alignment::getStateStrings(StrVector& stateStrings) const {
+    //Precalculate state representation strings
+    stateStrings.resize(this->num_states);
+    for (int i=0; i<num_states; ++i) {
+        stateStrings[i] = convertStateBackStr(i);
+    }
+}
+
+void Alignment::getOneSequence(StrVector& stateStrings, size_t seq_id, string& str) const {
+    auto patterns = site_pattern.data();
+    auto patternCount = site_pattern.size();
+    for (int i=0; i<patternCount; ++i) {
+        auto state = at(patterns[i])[seq_id];
+        if (num_states<=state) {
+            str.append(convertStateBackStr(state));
+        } else {
+            str.append(stateStrings[state]);
+        }
+    }
+    str.append("\n");
+}
+
+void Alignment::getAllSequences(const char* task_description, StrVector& seq_data) const {
+    StrVector stateStrings;
+    getStateStrings(stateStrings);
+    //Calculate sequence data in parallel
+    auto seq_count = seq_names.size();
+    seq_data.clear();
+    seq_data.resize(seq_count);
+    progress_display contentProgress(seq_count, task_description);
+    #ifdef _OPENMP
+    #pragma omp parallel for
+    #endif
+    for (size_t seq_id = 0; seq_id < seq_count; seq_id++) {
+        getOneSequence(stateStrings, seq_id, seq_data[seq_id]);
+        if ((seq_id%100)==99) {
+            contentProgress += 100.0;
+        }
+    }
+    contentProgress += seq_count % 100;
+    contentProgress.done();
+}
+
 void Alignment::printPhylip(ostream &out, bool append, const char *aln_site_list,
-                            int exclude_sites, const char *ref_seq_name, bool print_taxid) {
+                            int exclude_sites, const char *ref_seq_name, bool print_taxid) const {
     IntVector kept_sites;
     int final_length = buildRetainingSites(aln_site_list, kept_sites, exclude_sites, ref_seq_name);
     if (seq_type == SEQ_CODON) {
@@ -2903,37 +2962,10 @@ void Alignment::printPhylip(ostream &out, bool append, const char *aln_site_list
 
     auto seq_count = seq_names.size();
 
-    //Precalculate state representation strings
-    vector<std::string> stateStrings;
-    stateStrings.resize(this->num_states);
-    for (int i=0; i<num_states; ++i) {
-        stateStrings[i] = convertStateBackStr(i);
-    }
 
-    //Calculate sequence data in parallel
-    std::vector<std::string> seq_data;
-    seq_data.resize(seq_count);
-    progress_display contentProgress(seq_count, "Calculating content to write to Phylip file");
-    #ifdef _OPENMP
-    #pragma omp parallel for
-    #endif
-    for (size_t seq_id = 0; seq_id < seq_count; seq_id++) {
-        std::string& str = seq_data[seq_id];
-        auto patterns = site_pattern.data();
-        auto patternCount = site_pattern.size();
-        for (int i=0; i<patternCount; ++i) {
-            auto state = at(patterns[i])[seq_id];
-            if (num_states<=state) {
-                str.append(convertStateBackStr(state));
-            } else {
-                str.append(stateStrings[state]);
-            }
-        }
-        str.append("\n");
-        ++contentProgress;
-    }
-    contentProgress.done();
-
+    StrVector seq_data;
+    getAllSequences("Calculating content to write to Phylip file", seq_data);
+    
     progress_display writeProgress(seq_count, "Writing Phylip file");
     for (size_t seq_id = 0; seq_id < seq_names.size(); seq_id++) {
         out.width(max_len);
@@ -3787,7 +3819,7 @@ void Alignment::createBootstrapAlignment(int *pattern_freq, const char *spec, in
         }
 		for (size_t i = 0; i < site_vec.size(); ++i) {
 			int part = random_int(site_vec.size(), rstream);
-			for (size_t site = begin_site[part]; site < begin_site[part] + site_vec[part]; ++site) {
+			for (site = begin_site[part]; site < begin_site[part] + site_vec[part]; ++site) {
 				int ptn = getPatternID(site);
 				pattern_freq[ptn]++;
 			}
@@ -3954,13 +3986,13 @@ void Alignment::copyAlignment(Alignment *aln) {
     size_t nsite = aln->getNSite();
     seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());
     name = aln->name;
-    model_name = aln->model_name;
+    model_name    = aln->model_name;
     sequence_type = aln->sequence_type;
+    seq_type      = aln->seq_type;
     position_spec = aln->position_spec;
-    aln_file = aln->aln_file;
-    num_states = aln->num_states;
-    seq_type = aln->seq_type;
-    genetic_code = aln->genetic_code;
+    aln_file      = aln->aln_file;
+    num_states    = aln->num_states;
+    genetic_code  = aln->genetic_code;
     if (seq_type == SEQ_CODON) {
     	codon_table = new char[num_states];
     	memcpy(codon_table, aln->codon_table, num_states);
@@ -3981,8 +4013,59 @@ void Alignment::copyAlignment(Alignment *aln) {
     }
     verbose_mode = save_mode;
     countConstSite();
-//    buildSeqStates();
 }
+
+bool Alignment::isCompatible(const Alignment* other, std::string& whyNot) const {
+    std::stringstream reason;
+    if (seq_type!=other->seq_type) {
+        reason << "Sequence type (" << other->sequence_type << ")"
+        << " disagrees in file " << other->aln_file << "\n";
+    }
+    if (num_states!=other->num_states) {
+        reason << "Number of states (" << other->num_states << ")"
+        << " disagrees in file " << other->aln_file << "\n";
+    }
+    if (STATE_UNKNOWN!=other->STATE_UNKNOWN) {
+        reason << "Unknown state (" << other->STATE_UNKNOWN << ")"
+        << " disagrees in file " << other->aln_file << "\n";
+    }
+    if (getNSite()!=other->getNSite()) {
+        reason << "Number of sites (" << other->getNSite() << ")"
+        << " disagrees in file " << other->aln_file << "\n";
+    }
+    whyNot = reason.str();
+    return whyNot.empty();
+}
+
+bool Alignment::updateFrom(const Alignment* other,
+                           const std::vector<std::pair<int,int>>& updated_sequences,
+                           const IntVector& added_sequences) {
+    std::string why_not;
+    if (!isCompatible(other, why_not)) {
+        return false;
+    }
+    StrVector sequences;
+    getAllSequences("", sequences);
+    StrVector stateStrings;
+    getStateStrings(stateStrings);
+    
+    for (auto it=updated_sequences.begin(); it!=updated_sequences.end(); ++it) {
+        int other_seq_id = it->second;
+        other->getOneSequence(stateStrings, other_seq_id, sequences[it->first] );
+    }
+    for (auto it=added_sequences.begin(); it!=added_sequences.end(); ++it) {
+        int other_seq_id = *it;
+        seq_names.push_back( other->getSeqName(other_seq_id));
+        string str;
+        other->getOneSequence(stateStrings, other_seq_id, str );
+        sequences.emplace_back(str);
+    }
+    int nseq  = sequences.size();
+    int nsite = getNSite();
+    
+    return constructPatterns(nseq, nsite, sequences);
+}
+
 
 void Alignment::countConstSite() {
     int num_const_sites = 0;

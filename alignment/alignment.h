@@ -197,7 +197,9 @@ public:
      */
     int readNexus(char *filename);
 
-    int buildPattern(StrVector &sequences, char *sequence_type, int nseq, int nsite);
+    bool buildPattern(StrVector &sequences, char *sequence_type, int nseq, int nsite);
+    
+    bool constructPatterns(int nseq, int nsite, const StrVector& sequences);
 
     /**
             read the alignment in PHYLIP format (interleaved)
@@ -307,7 +309,7 @@ public:
 	 * @param state internal state code
 	 * @return user-readable state
 	 */
-    char convertStateBack(char state);
+    char convertStateBack(char state) const;
 
     /**
 	 * convert from internal state to user-readable state (e.g., to ACGT for DNA)
@@ -315,7 +317,7 @@ public:
 	 * @param state internal state code
 	 * @return user-readable state string
 	 */
-	string convertStateBackStr(StateType state);
+	string convertStateBackStr(StateType state) const;
 
 	/**
             get alignment site range from the residue range relative to a sequence
@@ -324,10 +326,10 @@ public:
             @param residue_right (IN/OUT) right of range [left,right)
             @return TRUE if success, FALSE if out of range
      */
-    bool getSiteFromResidue(int seq_id, int &residue_left, int &residue_right);
+    bool getSiteFromResidue(int seq_id, int &residue_left, int &residue_right) const;
 
     int buildRetainingSites(const char *aln_site_list, IntVector &kept_sites,
-            int exclude_sites, const char *ref_seq_name);
+            int exclude_sites, const char *ref_seq_name) const;
 
     void printAlignment(InputType format, const char *filename, bool append = false, const char *aln_site_list = NULL,
     		int exclude_sites = 0, const char *ref_seq_name = NULL);
@@ -337,8 +339,14 @@ public:
                                 , int exclude_sites = 0, const char *ref_seq_name = NULL);
 
     void printPhylip(ostream &out, bool append = false, const char *aln_site_list = NULL,
-    		int exclude_sites = 0, const char *ref_seq_name = NULL, bool print_taxid = false);
+    		int exclude_sites = 0, const char *ref_seq_name = NULL, bool print_taxid = false) const;
+    
+    void getAllSequences(const char* task_description, StrVector& seq_data) const;
+    void getStateStrings(StrVector& stateStrings) const;
+    void getOneSequence(StrVector& stateStrings, size_t seq_id, string& str) const;
 
+
+    
     void printFasta(ostream &out, bool append = false, const char *aln_site_list = NULL,
     		int exclude_sites = 0, const char *ref_seq_name = NULL);
 
@@ -364,7 +372,7 @@ public:
     /**
             @return number of sites (alignment columns)
      */
-    inline size_t getNSite() {
+    inline size_t getNSite() const {
         return site_pattern.size();
     }
 
@@ -384,10 +392,10 @@ public:
     }
 
     /**
-     * @param pattern_index (OUT) vector of size = alignment length storing pattern index of all sites
+     * @param out_pattern_index (OUT) vector of size = alignment length storing pattern index of all sites
      */
-    virtual void getSitePatternIndex(IntVector &pattern_index) {
-        pattern_index = site_pattern;
+    virtual void getSitePatternIndex(IntVector &out_pattern_index) {
+        out_pattern_index = site_pattern;
     }
 
     /**
@@ -404,24 +412,24 @@ public:
             @param i sequence index
             @return sequence name
      */
-    string &getSeqName(int i);
+    const string &getSeqName(int i) const;
 
     /**
      *  Get a list of all sequence names
      *  @return vector containing the sequence names
      */
-    vector<string>& getSeqNames();
+    const vector<string>& getSeqNames() const;
 
     /**
             @param seq_name sequence name
             @return corresponding ID, -1 if not found
      */
-    int getSeqID(string &seq_name);
+    int getSeqID(const string &seq_name) const;
 
     /**
             @return length of the longest sequence name
      */
-    int getMaxSeqNameLength();
+    int getMaxSeqNameLength() const;
 
     /*
         check if some state is absent, which may cause numerical issues
@@ -450,6 +458,14 @@ public:
      * @return this if no sequences were removed, or new alignment if at least 1 sequence was removed
      */
     virtual Alignment *removeIdenticalSeq(string not_remove, bool keep_two, StrVector &removed_seqs, StrVector &target_seqs);
+
+    
+    /**
+     * calclulate hashes of all the sequences
+     * @param progress - progress_display instance against which progress is to be reported
+     * @return a vector ( vector<size_t> ) of the hashes of all the sequences
+     */
+    vector<size_t> getSequenceHashes(progress_display* progress) const;
 
     /**
      * calculating hashes for sequences
@@ -565,6 +581,23 @@ public:
             @param aln input alignment
      */
     void copyAlignment(Alignment *aln);
+    
+    /** Update this alignment, from another
+     *  @param other - the source alignment (may not be == this)
+     *  @param updated_sequences - vector indicating sequences to be replaced
+     *  (in each pair, first is the id in this alignment, second is the id in the other alignment)
+     *  @param added_sequences - vector indicating sequences to be added
+     *  (ids of those sequences in the other alignment)
+     */
+    bool updateFrom(const Alignment* other,
+                    const std::vector<std::pair<int,int>>& updated_sequences,
+                    const IntVector& added_sequences);
+    
+    /** Check if this alignment can be updated from another (called from: updateFrom())
+     *  @param other - the source alignment (may not be == this)
+     *  @return true if the other alignment is compatible
+     */
+    bool isCompatible(const Alignment* other, std::string& whyNot) const;
 
     /**
             extract a sub-set of sites

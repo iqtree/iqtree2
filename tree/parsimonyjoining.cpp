@@ -48,7 +48,7 @@ public:
     virtual void calculateLeafParsimonies() {
         ParallelParsimonyCalculator calculator(*tree);
         for (size_t i=0; i<tree->aln->getNSeq(); ++i) {
-            std::string&   leaf_name = tree->aln->getSeqName(i);
+            auto           leaf_name = tree->aln->getSeqName(i);
             PhyloNode*     leafNode  = tree->newNode(i, leaf_name.c_str());
             PhyloNeighbor* topNei    = new PhyloNeighbor(leafNode, -1);
                 //Todo: should come via tree.newNeighbor(), but that doesn't

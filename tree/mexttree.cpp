@@ -342,7 +342,8 @@ void MExtTree::generateYuleHarding(Params &params, bool binary) {
 
 }
 
-void MExtTree::generateConstrainedYuleHarding(Params &params, MTree* constraint_tree, StrVector &taxnames) {
+void MExtTree::generateConstrainedYuleHarding(Params &params, MTree* constraint_tree,
+                                              const StrVector &taxnames) {
 	int size = taxnames.size();
 	if (size < 3)
 		outError(ERR_FEW_TAXA);
@@ -350,7 +351,6 @@ void MExtTree::generateConstrainedYuleHarding(Params &params, MTree* constraint_
 	NodeVector innodes;
     StrVector names;
     StringIntMap namemap;
-    StrVector::iterator it;
     
     // copy constraint tree and resolve multifurcation
     copyTree(constraint_tree);
@@ -358,13 +358,16 @@ void MExtTree::generateConstrainedYuleHarding(Params &params, MTree* constraint_
     
     getTaxa(myleaves);
     getTaxaName(names);
-    for (it = names.begin(); it != names.end(); it++)
+    for (auto it = names.begin(); it != names.end(); it++) {
         namemap[*it] = 1;
+    }
 
     // add the remaining taxa names
-    for (it = taxnames.begin(); it != taxnames.end(); it++)
-        if (namemap.find(*it) == namemap.end())
+    for (auto it = taxnames.begin(); it != taxnames.end(); it++) {
+        if (namemap.find(*it) == namemap.end()) {
             names.push_back(*it);
+        }
+    }
     ASSERT(names.size() == taxnames.size());
     my_random_shuffle(names.begin()+leafNum, names.end());
 

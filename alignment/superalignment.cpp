@@ -626,7 +626,6 @@ void SuperAlignment::printPartition(ostream &out, const char *aln_file, bool app
     if (aln_file)
         out << "[ partition information for alignment written in " << aln_file <<" file ]" << endl;
     out << "begin sets;" << endl;
-    int part;
     int start_site = 1;
     for (size_t part = 0; part < partitions.size(); ++part) {
         string name = partitions[part]->name;
@@ -643,7 +642,7 @@ void SuperAlignment::printPartition(ostream &out, const char *aln_file, bool app
         }
     if (ok_model) {
         out << "  charpartition mymodels =" << endl;
-        for (part = 0; part < partitions.size(); part++) {
+        for (size_t part = 0; part < partitions.size(); ++part) {
             string name = partitions[part]->name;
             replace(name.begin(), name.end(), '+', '_');
             if (part > 0) out << "," << endl;
@@ -921,13 +920,10 @@ void SuperAlignment::removePartitions(set<int> &removed_id) {
     buildPattern();
 }
 
-Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVector &removed_seqs, StrVector &target_seqs) {
-    auto n = getNSeq();
-    BoolVector isSequenceChecked(n, false);
-    BoolVector isSequenceRemoved(n, false);
-    
+std::vector<size_t>& SuperAlignment::getSequenceHashes(progress_display* progress) const {
     //JB2020-06-23 Begin : Determine hashes for all the sequences
     auto startHash = getRealTime();
+    auto n         = getNSeq();
     vector<size_t> hashes;
     hashes.resize(n, 0);
     #ifdef USE_BOOST
@@ -942,7 +938,7 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, 
             bool present = ( 0 < subseq1 );
             adjustHash(present, hash);
             if (present) {
-                for (iterator it = (*ait)->begin(); it != (*ait)->end(); it++) {
+                for (auto it = (*ait)->begin(); it != (*ait)->end(); it++) {
                     adjustHash((*it)[subseq1],hash);
                 }
             }
@@ -955,11 +951,21 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, 
     }
     #endif
     //JB2020-06-23 Finish
+    return hashes;
+}
 
+Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVector &removed_seqs, StrVector &target_seqs) {
+    auto n = getNSeq();
+    BoolVector isSequenceChecked(n, false);
+    BoolVector isSequenceRemoved(n, false);
+
+    progress_display progress(n*2, isShowingProgressDisabled ? "" :  "Checking for duplicate sequences");
+    vector<size_t> hashes = getSequenceHashes(&progress);
+    
     bool listIdentical = !Params::getInstance().suppress_duplicate_sequence_warnings;
 
     auto startCheck = getRealTime();
-	for (size_t seq1 = 0; seq1 < getNSeq(); ++seq1) {
+	for (size_t seq1 = 0; seq1 < getNSeq(); ++seq1, ++progress) {
         if (isSequenceChecked[seq1]) continue;
         bool first_ident_seq = true;
 		for (size_t seq2 = seq1+1; seq2 < getNSeq(); ++seq2) {
@@ -1012,6 +1018,7 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, 
 		}
 		isSequenceChecked[seq1] = true;
 	}
+    progress.done();
     if (verbose_mode >= VB_MED) {
         auto checkTime = getRealTime() - startCheck;
         cout << "Checking for identical sequences took " << checkTime << " wall-clock seconds" << endl;
@@ -1518,9 +1525,8 @@ double SuperAlignment::computeMissingData() {
 Alignment *SuperAlignment::concatenateAlignments(set<int> &ids) {
 	string union_taxa;
 	int nsites = 0, nstates = 0;
-    set<int>::iterator it;
 	SeqType sub_type = SEQ_UNKNOWN;
-	for (it = ids.begin(); it != ids.end(); it++) {
+	for (auto it = ids.begin(); it != ids.end(); it++) {
 		int id = *it;
 		ASSERT(id >= 0 && id < partitions.size());
 		if (nstates == 0) nstates = partitions[id]->num_states;
@@ -1560,8 +1566,8 @@ Alignment *SuperAlignment::concatenateAlignments(set<int> &ids) {
     }
 
     int site = 0;
-    for (it = ids.begin(); it != ids.end(); it++) {
-    	int id = *it;
+    for (auto itId = ids.begin(); itId != ids.end(); ++itId) {
+    	int id = *itId;
         // 2018-08-23: important bugfix in v1.6: taxa_set has wrong correspondance
 		//string taxa_set;
         //Pattern taxa_pat = getPattern(id);

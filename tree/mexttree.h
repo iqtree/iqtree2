@@ -81,7 +81,7 @@ public:
         @param constraint_tree a (multifurcating) constraint tree
         @param taxnames taxa names
 	*/
-	void generateConstrainedYuleHarding(Params &params, MTree* constraint_tree, StrVector &taxnames);
+	void generateConstrainedYuleHarding(Params &params, MTree* constraint_tree, const StrVector &taxnames);
 
 
 	/**

@@ -168,6 +168,13 @@ public:
      * @return this if no sequences were removed, or new alignment if at least 1 sequence was removed
      */
     virtual Alignment *removeIdenticalSeq(string not_remove, bool keep_two, StrVector &removed_seqs, StrVector &target_seqs);
+    
+    
+    /** determine hashes
+     @param progress pointer to a progress_display instance to report  progress against
+     @return a vector of the hashes of the sequences in the alignment
+     */
+    virtual std::vector<size_t>& getSequenceHashes(progress_display* progress) const;
 
 
     /*
