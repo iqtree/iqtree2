@@ -653,9 +653,9 @@ void readTaxaSets(char *filename, MSetsBlock *sets) {
         in.exceptions(ios::badbit);
         while (!in.eof()) {
             int ntaxa = 0;
-            string str;
-            if (!(in >> str)) break;
-            ntaxa = convert_int(str.c_str());
+            string str_taxa;
+            if (!(in >> str_taxa)) break;
+            ntaxa = convert_int(str_taxa.c_str());
             if (ntaxa <= 0) throw "Number of taxa must be > 0";
             count++;
             //allsets->resize(allsets->size()+1);
@@ -1411,26 +1411,32 @@ void parseArg(int argc, char *argv[], Params &params) {
                                     , allowed, sizeof(allowed)/sizeof(allowed[0]));
                 continue;
             }
-            if (arg=="-incremental") {
+            if (arg=="-update") {
                 params.incremental = true;
                 std::string method = next_argument(argc, argv, "incremental method", cnt);
                 params.incremental_method = string_to_upper(method.c_str());
                 continue;
             }
-			if (strcmp(argv[cnt], "-dist") == 0
-					|| strcmp(argv[cnt], "-d") == 0) {
-				// calculate distance matrix from the tree
-				params.run_mode = CALC_DIST;
-				cnt++;
-				if (cnt >= argc)
-					throw "Use -dist <distance_file>";
-				params.dist_file = argv[cnt];
-				continue;
-			}
-			if (strcmp(argv[cnt], "-djc") == 0) {
-				params.compute_ml_dist = false;
-				continue;
-			}
+            if (arg=="-merge") {
+                std::string alignment_file = next_argument(argc, argv, "alignment file (to merge)", cnt);
+                params.additional_alignment_files.emplace_back(alignment_file);            
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "-dist") == 0
+                || strcmp(argv[cnt], "-d") == 0) {
+                // calculate distance matrix from the tree
+                params.run_mode = CALC_DIST;
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -dist <distance_file>";
+                params.dist_file = argv[cnt];
+                continue;
+            }
+            if (strcmp(argv[cnt], "-djc") == 0) {
+                params.compute_ml_dist = false;
+                continue;
+            }
             if (arg=="-mlnj-only" || arg=="--mlnj-only") {
                 params.compute_ml_tree_only = true;
                 continue;
@@ -2196,7 +2202,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -st BIN or -st DNA or -st AA or -st CODON or -st MORPH or -st CRXX or -st CFxx.";
-                string arg = argv[cnt];
                 params.sequence_type = argv[cnt];
                 // if (arg.substr(0,2) == "CR") params.pomo_random_sampling = true;
                 // if (arg.substr(0,2) == "CF" || arg.substr(0,2) == "CR") {
@@ -4406,7 +4411,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 //        string newPrefix = string(params.out_prefix) + "."  + NumberToString(MPIHelper::getInstance().getProcessID()) ;
 //        params.out_prefix = (char *) newPrefix.c_str();
 //    }
-
+    
+    if (!params.additional_alignment_files.empty()) {
+        params.incremental_method = true;
+    }
 }
 
 void usage(char* argv[]) {

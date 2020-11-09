@@ -1187,6 +1187,12 @@ public:
     std::string incremental_method;
     
     /**
+     if asked to merge additional alignments (one after another), via placement,
+            a vector containing the files containing alignments.
+     */
+    StrVector additional_alignment_files;
+    
+    /**
             TRUE to compute the observed distances instead of Juke-Cantor distances, default: FALSE
      */
     bool compute_obs_dist;
