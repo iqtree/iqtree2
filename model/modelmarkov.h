@@ -432,8 +432,8 @@ public:
     /**
         set num_params variable
      */
-    virtual void setNParams(int num_params) {
-        this->num_params = num_params;
+    virtual void setNParams(int number_of_parameters) {
+        this->num_params = number_of_parameters;
     }
     
     /**

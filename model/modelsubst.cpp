@@ -119,14 +119,14 @@ void ModelSubst::getQMatrix(double *q_mat) {
 			if (i == j) q_mat[k] = -1.0; else q_mat[k] = 1.0/3;
 }
 
-void ModelSubst::getStateFrequency(double *state_freq, int mixture) {
-	double freq = 1.0 / num_states;
-	for (int i = 0; i < num_states; i++)
-		state_freq[i] = freq;
+void ModelSubst::getStateFrequency(double *state_frequency_array, int mixture) {
+    double freq = 1.0 / num_states;
+    for (int i = 0; i < num_states; i++)
+        state_frequency_array[i] = freq;
 }
 
-void ModelSubst::setStateFrequency(double *state_freq) {
-    memcpy(this->state_freq, state_freq, sizeof(double)*num_states);
+void ModelSubst::setStateFrequency(double *state_frequency_array) {
+    memcpy(this->state_freq, state_frequency_array, sizeof(double)*num_states);
 }
 
 void ModelSubst::computeTransDerv(double time, double *trans_matrix, 

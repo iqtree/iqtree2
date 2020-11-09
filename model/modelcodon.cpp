@@ -419,12 +419,12 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
 	ModelMarkov::init(freq);
 }
 
-StateFreqType ModelCodon::initMG94(bool fix_kappa, StateFreqType freq, CodonKappaStyle kappa_style) {
+StateFreqType ModelCodon::initMG94(bool should_fix_kappa, StateFreqType freq, CodonKappaStyle kappa_style) {
 	/* Muse-Gaut 1994 model with 1 parameters: omega */
 
     fix_omega = false;
-    this->fix_kappa = fix_kappa;
-    if (fix_kappa)
+    this->fix_kappa = should_fix_kappa;
+    if (should_fix_kappa)
         kappa = 1.0;
     fix_kappa2 = true;
     codon_freq_style = CF_TARGET_NT;
@@ -457,11 +457,12 @@ StateFreqType ModelCodon::initMG94(bool fix_kappa, StateFreqType freq, CodonKapp
     return FREQ_CODON_3x4;
 }
 
-StateFreqType ModelCodon::initGY94(bool fix_kappa, CodonKappaStyle kappa_style) {
+StateFreqType ModelCodon::initGY94(bool should_fix_kappa, CodonKappaStyle kappa_style) {
     fix_omega = false;
-    this->fix_kappa = fix_kappa;
-    if (fix_kappa)
+    this->fix_kappa = should_fix_kappa;
+    if (should_fix_kappa) {
         kappa = 1.0;
+    }
     fix_kappa2 = true;
     codon_freq_style = CF_TARGET_CODON;
     this->codon_kappa_style = kappa_style;

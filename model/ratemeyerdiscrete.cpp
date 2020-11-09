@@ -147,17 +147,16 @@ double RunKMeans1D(int n, int k, double *points_orig, int *weights, double *cent
 	
 	double min_cost = Cost[n][k];
 	
-    int i = n; int j = k;
-    while (i>0) {
-		int t= trace[i][j];
-		centers[j-1] = (sumA[i]-sumA[t])/(sumW[i]-sumW[t]);
-		//cout << "category " <<k-j<<endl;
-		for (int _i=t+1; _i<=i; _i++) {
-			//cout <<index[_i] << "\t" <<points[_i] <<endl;
-			assignments[index[_i-1]] = j-1; //points[_i] \in category k-j
-		}
-		i=t; j=j-1;
-	}
+    for (int i=n, j=k; i>0; --j) {
+        int t= trace[i][j];
+        centers[j-1] = (sumA[i]-sumA[t])/(sumW[i]-sumW[t]);
+        //cout << "category " <<k-j<<endl;
+        for (int _i=t+1; _i<=i; _i++) {
+            //cout <<index[_i] << "\t" <<points[_i] <<endl;
+            assignments[index[_i-1]] = j-1; //points[_i] \in category k-j
+        }
+        i=t;
+    }
 	
     delete [] points;
 	for (int i=n; i>=0; i--) delete [] trace[i];

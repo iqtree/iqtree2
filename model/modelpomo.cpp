@@ -324,12 +324,11 @@ void ModelPoMo::updatePoMoStatesAndRateMatrix () {
     computeStateFreq();
 
     // Compute rate matrix.
-    int i, j;
     double tot_sum = 0.0;
-    for (i = 0; i < num_states; i++) {
+    for (int i = 0; i < num_states; i++) {
         double row_sum = 0.0;
         // Loop over columns in row state1 (transition to state2).
-        for (j = 0; j < num_states; j++)
+        for (int j = 0; j < num_states; j++)
             if (i != j) {
                 row_sum +=
                     (rates[i*num_states+j] =

@@ -904,8 +904,9 @@ void ModelMarkov::getQMatrix(double *q_mat) {
 	for (i = 0; i < num_states; i++)
 		memmove(q_mat + (i*num_states), rate_matrix[i], num_states * sizeof(double));
 
-	for (i = num_states-1; i >= 0; i--)
+    for (i = num_states-1; i >= 0; i--) {
 		delete [] rate_matrix[i];
+    }
 	delete [] rate_matrix;
 
 }

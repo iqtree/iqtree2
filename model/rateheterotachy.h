@@ -117,7 +117,7 @@ public:
         set number of optimization steps
         @param opt_steps number of optimization steps
     */
-    virtual void setOptimizeSteps(int optimize_steps) { this->optimize_steps = optimize_steps; }
+    virtual void setOptimizeSteps(int steps) { this->optimize_steps = steps; }
 
 	/**
 		optimize parameters. Default is to optimize gamma shape

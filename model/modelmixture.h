@@ -109,7 +109,7 @@ public:
 	 * @param cat mixture class
 	 * @return weight of a mixture model component
 	 */
-	virtual void setFixMixtureWeight(bool fix_prop) { this->fix_prop = fix_prop; }
+	virtual void setFixMixtureWeight(bool fix_weight) { this->fix_prop = fix_weight; }
 
 	/**
 	 * @param cat mixture class ID
@@ -189,7 +189,7 @@ public:
         set number of optimization steps
         @param opt_steps number of optimization steps
     */
-    virtual void setOptimizeSteps(int optimize_steps) { this->optimize_steps = optimize_steps; }
+    virtual void setOptimizeSteps(int steps) { this->optimize_steps = steps; }
 
     /** @return true if model is fused with site_rate */
     bool isFused();
