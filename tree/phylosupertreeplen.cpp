@@ -239,11 +239,10 @@ void PhyloSuperTreePlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, b
 	SuperBranch    branch(node1, node2);
 	SuperNeighbor* nei1 = branch.lookingRight();
 	SuperNeighbor* nei2 = branch.lookingLeft();
-	int part;
 
 	current_it      = node1->findNeighbor(node2);
     current_it_back = node2->findNeighbor(node1);
-	for (part = 0; part < size(); part++) {
+	for (size_t part = 0; part < size(); part++) {
 		if (((SuperNeighbor*)current_it)->link_neighbors[part]) {
             at(part)->current_it = ((SuperNeighbor*)current_it)->link_neighbors[part];
             at(part)->current_it_back = ((SuperNeighbor*)current_it_back)->link_neighbors[part];
@@ -251,7 +250,7 @@ void PhyloSuperTreePlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, b
 	}
     
 	double current_len = current_it->length;
-	for (part = 0; part < size(); part++) {
+	for (size_t part = 0; part < size(); part++) {
         at(part)->tree_buffers.theta_computed = false;
 	}
 
@@ -261,17 +260,17 @@ void PhyloSuperTreePlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, b
     if (part_order.empty()) computePartitionOrder();
 	// bug fix: assign cur_score into part_info
     #ifdef _OPENMP
-    #pragma omp parallel for private(part) schedule(dynamic) if(num_threads > 1)
+    #pragma omp parallel for schedule(dynamic) if(num_threads > 1)
     #endif    
-    for (int partid = 0; partid < size(); partid++) {
-        part = part_order_by_nptn[partid];
+    for (size_t partid = 0; partid < size(); ++partid) {
+        size_t part = part_order_by_nptn[partid];
         if (((SuperNeighbor*)current_it)->link_neighbors[part]) {
             part_info[part].cur_score = at(part)->computeLikelihoodFromBuffer();
         }
     }
 
 	if(clearLH && current_len != current_it->length){
-		for (int part = 0; part < size(); part++) {
+		for (size_t part = 0; part < size(); part++) {
 			PhyloNeighbor *nei1_part = nei1->link_neighbors[part];
 			PhyloNeighbor *nei2_part = nei2->link_neighbors[part];
 			if(nei1_part){
@@ -771,7 +770,6 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 
 	// Auxiliary variables: we allocate new PhyloNeighbor for [node_link->findNeighbor(nei_link)]
 	Node *node_link, *nei_link;
-	SuperNeighbor *nei;
 
 	// For ONE_epsilon case: saves "id" of the neighbors that have an empty image
 	int id_eps[part];
@@ -853,6 +851,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 			// We have this if condition, since saved_nei will be newly allocated neis in nni5 case,
 			// while saved_it are the actual neighbors and we don't want to mess them up
 			for(id = 2; id < 6; id++){
+                SuperNeighbor* nei;
 				if(params->nni5){
 					nei = saved_nei[id];
 				} else {
@@ -1170,8 +1169,8 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 
 	    	// ------ Clear the partial likelihood on the central branch -------
 			for (part = 0; part < ntrees; part++) {
-				SuperBranch    branch(node2, node1);
-				SuperNeighbor* nei = branch.lookingRight();
+				SuperBranch    back_branch(node2, node1);
+				SuperNeighbor* nei = back_branch.lookingRight();
 				if (nei->link_neighbors[part] && (is_nni[part] == NNI_NO_EPSILON || is_nni[part] == NNI_ONE_EPSILON)) {
 					nei->link_neighbors[part]->clearPartialLh();
 				}

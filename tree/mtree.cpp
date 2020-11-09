@@ -1436,20 +1436,17 @@ inline int splitnumtaxacmp(const Split* a, const Split* b)
 }
 
 void MTree::convertToTree(SplitGraph &sg) {
-    SplitGraph::iterator it;
-    int taxid;
-    int count;
 	BoolVector has_tax;
 	has_tax.resize(sg.getNTaxa(), false);
 	// first add trivial splits if not existed
-	for (it = sg.begin(); it != sg.end(); it++) {
-		taxid = (*it)->trivial();
+	for (auto it = sg.begin(); it != sg.end(); it++) {
+		int taxid = (*it)->trivial();
 		if (taxid >= 0) has_tax[taxid] = true;
 	}
-	for (count = 0; count < has_tax.size(); count++)
-		if (!has_tax[count]) {
+	for (int taxid = 0; taxid < has_tax.size(); taxid++)
+		if (!has_tax[taxid]) {
 			Split *sp = new Split(sg.getNTaxa());
-			sp->addTaxon(count);
+			sp->addTaxon(taxid);
 			sg.push_back(sp);
 		}
     // sort splits by the number of taxa they contain
@@ -1466,9 +1463,10 @@ void MTree::convertToTree(SplitGraph &sg) {
     leaves.resize(leafNum, NULL);
     cladetaxa.resize(leafNum, NULL);
     // first add all trivial splits into tree
-    for (it = sg.begin(), count = 0; it != sg.end(); it++, count++) {
+    auto it = sg.begin();
+    for (int count = 0; it != sg.end(); it++, count++) {
         //(*it)->report(cout);
-        taxid = (*it)->trivial();
+        int taxid = (*it)->trivial();
         if (taxid < 0) break;
         ASSERT(leaves[taxid] == NULL);
         leaves[taxid] = newNode(taxid, sg.getTaxa()->GetTaxonLabel(taxid).c_str());
@@ -1476,8 +1474,9 @@ void MTree::convertToTree(SplitGraph &sg) {
         cladetaxa[taxid] = (*it);
     }
     // now fill in all missing taxa with zero terminal branch
-    for (taxid = 0; taxid < leafNum; taxid++)
+    for (int taxid = 0; taxid < leafNum; taxid++) {
         ASSERT(leaves[taxid]);
+    }
 
     // now add non-trivial splits, cotinue with the interrupted iterator
     for (/*it = sg.begin()*/; it != sg.end(); it++) {
@@ -1486,7 +1485,7 @@ void MTree::convertToTree(SplitGraph &sg) {
         Node *newnode = newNode(nodeNum);
         int count = 0;
 
-        for (taxid = 0; taxid < leaves.size(); )
+        for (int taxid = 0; taxid < leaves.size(); )
             if (cladetaxa[taxid]->subsetOf(*mysp)) // clade is a subset of current split
             {
                 count += cladetaxa[taxid]->countTaxa();
@@ -1506,7 +1505,7 @@ void MTree::convertToTree(SplitGraph &sg) {
     }
     ASSERT(leaves.size() >= 3);
     Node *newnode = newNode(nodeNum);
-    for (taxid = 0; taxid < leaves.size(); taxid++) {
+    for (int taxid = 0; taxid < leaves.size(); ++taxid) {
         double len = leaves[taxid]->updateNeighbor(NULL, newnode);
         newnode->addNeighbor(leaves[taxid], len);
     }
@@ -1522,14 +1521,14 @@ void MTree::convertToTree(SplitGraph &sg) {
     
 }
 
-Node *MTree::findNodeName(string &name, Node *node, Node *dad) {
+Node *MTree::findNodeName(const string &name, Node *node, Node *dad) {
     if (!node) node = root;
     if (node->name == name) return node;
     FOR_NEIGHBOR_IT(node, dad, it) {
         Node *res = findNodeName(name, (*it)->node, node);
         if (res) return res;
     }
-    return NULL;
+    return nullptr;
 }
 
 bool MTree::findNodeNames(unordered_set<string> &taxa_set, pair<Node*,Neighbor*> &res, Node *node, Node *dad) {
@@ -2602,10 +2601,10 @@ int MTree::collapseInternalBranches(Node *node, Node *dad, double threshold) {
 void MTree::insertTaxa(StrVector &new_taxa, StrVector &existing_taxa) {
 	if (new_taxa.empty()) return;
 	IntVector id;
-	int i;
 	id.resize(new_taxa.size());
-	for (i = 0; i < id.size(); i++)
+    for (int i = 0; i < id.size(); i++) {
 		id[i] = i;
+    }
 	// randomize order before reinsert back into tree
 	my_random_shuffle(id.begin(), id.end());
 

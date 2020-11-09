@@ -10,9 +10,9 @@
 #include "candidateset.h"
 #include "utils/MPIHelper.h"
 
-void CandidateSet::init(Alignment *aln, int maxSize) {
-    this->aln = aln;
-    this->maxSize = maxSize;
+void CandidateSet::init(Alignment *alignment, int max_size) {
+    this->aln     = alignment;
+    this->maxSize = max_size;
 }
 
 CandidateSet::~CandidateSet() {
@@ -478,8 +478,8 @@ void CandidateSet::reportStableSplits() {
     }
 }
 
-void CandidateSet::setAln(Alignment *aln) {
-    this->aln = aln;
+void CandidateSet::setAln(Alignment *alignment) {
+    this->aln = alignment;
 }
 
 CandidateSet CandidateSet::getCandidateTrees(double score) {

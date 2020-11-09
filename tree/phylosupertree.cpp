@@ -289,19 +289,18 @@ void PhyloSuperTree::readTreeString(const string &tree_string) {
  */
 void PhyloSuperTree::saveBranchLengths(DoubleVector &lenvec, int startid, PhyloNode *node, PhyloNode *dad) {
     ASSERT(getMixlen() == 1); // supertree and treemixlen not allowed together
-	int totalBranchNum = branchNum * getMixlen();
-	iterator it;
-	for (it = begin(); it != end(); it++) {
-		totalBranchNum += (*it)->branchNum * (*it)->getMixlen();
-	}
-	lenvec.resize(startid + totalBranchNum);
-
-	PhyloTree::saveBranchLengths(lenvec, startid);
-	startid += branchNum * getMixlen();
-	for (iterator it = begin(); it != end(); it++) {
-		(*it)->saveBranchLengths(lenvec, startid);
-		startid += (*it)->branchNum * (*it)->getMixlen();
-	}
+    int totalBranchNum = branchNum * getMixlen();
+    for (auto it = begin(); it != end(); it++) {
+        totalBranchNum += (*it)->branchNum * (*it)->getMixlen();
+    }
+    lenvec.resize(startid + totalBranchNum);
+    
+    PhyloTree::saveBranchLengths(lenvec, startid);
+    startid += branchNum * getMixlen();
+    for (auto it = begin(); it != end(); it++) {
+        (*it)->saveBranchLengths(lenvec, startid);
+        startid += (*it)->branchNum * (*it)->getMixlen();
+    }
 }
 /**
  * restore branch lengths from a vector previously called with saveBranchLengths
@@ -318,8 +317,8 @@ void PhyloSuperTree::restoreBranchLengths(DoubleVector &lenvec, int startid, Phy
 int PhyloSuperTree::collapseInternalBranches(Node *node, Node *dad, double threshold) {
 	if (!node) node = root;
     int count = 0;
-	FOR_NEIGHBOR_DECLARE(node, dad, it) {
-		count += collapseInternalBranches((*it)->node, node, threshold);
+	FOR_EACH_ADJACENT_SUPER_NODE(node, dad, it, child) {
+		count += collapseInternalBranches(child, node, threshold);
 	}
 	if (node->isLeaf()) {
 		return count;

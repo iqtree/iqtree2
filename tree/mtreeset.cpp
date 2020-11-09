@@ -627,7 +627,6 @@ void MTreeSet::computeRFDist(double *rfdist, MTreeSet *treeset2, bool k_by_k,
 	front()->getTaxaName(taxname);
 
 
-	iterator it;
 	// converting trees into split system then stored in SplitIntMap for efficiency
 	for (iterator it = begin(); it != end(); it++) {
 		SplitGraph *sg = new SplitGraph();
@@ -647,7 +646,7 @@ void MTreeSet::computeRFDist(double *rfdist, MTreeSet *treeset2, bool k_by_k,
 	}
 
 	// converting trees into split system then stored in SplitIntMap for efficiency
-	for (it = treeset2->begin(); it != treeset2->end(); it++) {
+	for (auto it = treeset2->begin(); it != treeset2->end(); it++) {
 		SplitGraph *sg = new SplitGraph();
 		SplitIntMap *hs = new SplitIntMap();
 		NodeVector nodes;

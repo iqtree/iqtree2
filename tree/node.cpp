@@ -204,16 +204,16 @@ NeighborVec::iterator Node::findNeighborIt(Node *node) {
     return it;
 }
 
-void Node::addNeighbor(Node *node, double length, int id) {
-    neighbors.push_back(new Neighbor(node, length, id));
+void Node::addNeighbor(Node *node, double length, int branch_id) {
+    neighbors.push_back(new Neighbor(node, length, branch_id));
 }
 
-void Node::addNeighbor(Node *node, DoubleVector &length, int id) {
+void Node::addNeighbor(Node *node, DoubleVector &length, int branch_id) {
 //	assert(!length.empty());
     if (length.empty())
-        addNeighbor(node, -1.0, id);
+        addNeighbor(node, -1.0, branch_id);
     else
-        addNeighbor(node, length[0], id);
+        addNeighbor(node, length[0], branch_id);
 }
 
 void Node::updateNeighbor(NeighborVec::iterator nei_it, Neighbor *newnei) {

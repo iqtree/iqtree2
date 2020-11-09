@@ -356,8 +356,8 @@ public:
         return maxSize;
     }
 
-    void setMaxSize(int maxSize) {
-        this->maxSize = maxSize;
+    void setMaxSize(int max_size) {
+        this->maxSize = max_size;
     }
 
 private:

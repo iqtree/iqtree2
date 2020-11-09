@@ -59,8 +59,9 @@ void PhyloTreeMixlen::saveCheckpoint() {
         if (this->relative_treelen.size() > 0) {
             ASSERT(mixlen == this->relative_treelen.size());
             double relative_treelen[mixlen];
-            for (int i = 0; i < mixlen; i++)
+            for (int i = 0; i < mixlen; i++) {
                 relative_treelen[i] = this->relative_treelen[i];
+            }
             CKP_ARRAY_SAVE(mixlen, relative_treelen);
         }
         endCheckpoint();
@@ -141,7 +142,6 @@ void PhyloTreeMixlen::initializeMixBranches(PhyloNode *node, PhyloNode *dad) {
 //        if (!((PhyloNeighborMixlen*)root->neighbors[0])->lengths.empty())
 //            return;
     }
-    int i;
     FOR_NEIGHBOR_IT(node, dad, it) {
         // assign length of left branch
         PhyloNeighborMixlen *nei = (PhyloNeighborMixlen*)(*it);
@@ -151,7 +151,7 @@ void PhyloTreeMixlen::initializeMixBranches(PhyloNode *node, PhyloNode *dad) {
             ASSERT(nei->length >= 0);
             nei->lengths.resize(mixlen, nei->length);
             back_nei->lengths.resize(mixlen, back_nei->length);
-            for (i = 0; i < mixlen; i++) {
+            for (int i = 0; i < mixlen; i++) {
                 nei->lengths[i] = back_nei->lengths[i] = max(params->min_branch_length, nei->length * relative_treelen[i]);
             }
         } else if (nei->lengths.size() > mixlen) {
@@ -164,17 +164,19 @@ void PhyloTreeMixlen::initializeMixBranches(PhyloNode *node, PhyloNode *dad) {
             nei->lengths.resize(mixlen, nei->length);
             back_nei->lengths.resize(mixlen, back_nei->length);
             double avglen = 0.0;
-            for (i = 0; i < cur; i++)
+            for (int i = 0; i < cur; i++) {
                 avglen += nei->lengths[i];
+            }
             avglen /= cur;
-            for (i = cur; i < mixlen; i++) {
+            for (int i = cur; i < mixlen; i++) {
                 nei->lengths[i] = back_nei->lengths[i] = max(params->min_branch_length, avglen * relative_treelen[i]);
             }
         }
 
         double mean_len = 0.0;
-        for (int i = 0; i < mixlen; i++)
+        for (int i = 0; i < mixlen; i++) {
             mean_len += nei->lengths[i] * site_rate->getProp(i);
+        }
 //        mean_len /= mixlen;
         nei->length = back_nei->length = mean_len;
 

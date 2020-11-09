@@ -581,7 +581,7 @@ public:
             @param dad dad of the node, used to direct the search
             @return node if found, otherwise NULL
      */
-    Node *findNodeName(string &name, Node *node = NULL, Node* dad = NULL);
+    Node *findNodeName(const string &name, Node *node = NULL, Node* dad = NULL);
 
     /**
          find a node with corresponding taxa names
@@ -889,8 +889,8 @@ public:
     void setExtendedFigChar();
 
     /** set pointer of params variable */
-    virtual void setParams(Params* params) {
-        this->params = params;
+    virtual void setParams(Params* params_to_use) {
+        this->params = params_to_use;
     };
 
     /********************************************************

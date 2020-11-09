@@ -128,13 +128,12 @@ void PhyloSuperTreeUnlinked::restoreCheckpoint() {
  */
 void PhyloSuperTreeUnlinked::saveBranchLengths(DoubleVector &lenvec, int startid, PhyloNode *node, PhyloNode *dad) {
     int totalBranchNum = 0;
-    iterator it;
-    for (it = begin(); it != end(); it++) {
+    for (auto it = begin(); it != end(); it++) {
         totalBranchNum += (*it)->branchNum * (*it)->getMixlen();
     }
     lenvec.resize(startid + totalBranchNum);
     
-    for (iterator it = begin(); it != end(); it++) {
+    for (auto  it = begin(); it != end(); it++) {
         (*it)->saveBranchLengths(lenvec, startid);
         startid += (*it)->branchNum * (*it)->getMixlen();
     }
@@ -324,12 +323,12 @@ int PhyloSuperTreeUnlinked::testAllBranches(int threshold, double best_score, do
                             int reps, int lbp_reps, bool aLRT_test, bool aBayes_test,
                             PhyloNode *node, PhyloNode *dad)
 {
-    int id;
     int num_low_support = 0;
     double *ptn_lh[size()];
     ptn_lh[0] = pattern_lh;
-    for (id = 1; id < size(); id++)
+    for (int id = 1; id < size(); id++) {
         ptn_lh[id] = ptn_lh[id-1] + at(id-1)->getAlnNPattern();
+    }
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+: num_low_support)
 #endif

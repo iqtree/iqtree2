@@ -117,11 +117,11 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstre
     // extract the taxa from the two left subtrees
     left_taxa.resize(branch.first->neighbors.size()-1);
     int id = 0;
-    FOR_NEIGHBOR_DECLARE(branch.first, branch.second, it) {
+    FOR_NEIGHBOR_DECLARE(branch.first, branch.second, itNeighbor) {
         // 2018-12-11: do not consider internal branch at the root
-        if (rooted && (*it)->node == root)
+        if (rooted && (*itNeighbor)->node == root)
             return;
-        getTaxaID(left_taxa[id], (*it)->node, branch.first);
+        getTaxaID(left_taxa[id], (*itNeighbor)->node, branch.first);
         id++;
 //        if (id > 2)
 //            outError(__func__, " only work with bifurcating tree");
@@ -131,11 +131,11 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstre
     // extract the taxa from the two right subtrees
     right_taxa.resize(branch.second->neighbors.size()-1);
     id = 0;
-    FOR_NEIGHBOR(branch.second, branch.first, it) {
+    FOR_NEIGHBOR(branch.second, branch.first, itNeighbor) {
         // 2018-12-11: do not consider internal branch at the root
-        if (rooted && (*it)->node == root)
+        if (rooted && (*itNeighbor)->node == root)
             return;
-        getTaxaID(right_taxa[id], (*it)->node, branch.second);
+        getTaxaID(right_taxa[id], (*itNeighbor)->node, branch.second);
         id++;
 //        if (id > 4)
 //            outError(__func__, " only work with bifurcating tree");
@@ -145,14 +145,13 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstre
     
     // 2018-12-11: remove root taxon from taxa for rooted tree
     if (rooted) {
-        vector<IntVector>::iterator it;
-        for (it = left_taxa.begin(); it != left_taxa.end(); it++)
+        for (auto it = left_taxa.begin(); it != left_taxa.end(); it++)
             for (auto it2 = it->begin(); it2 != it->end(); it2++)
                 if (*it2 == leafNum-1) {
                     it->erase(it2);
                     break;
                 }
-        for (it = right_taxa.begin(); it != right_taxa.end(); it++)
+        for (auto it = right_taxa.begin(); it != right_taxa.end(); it++)
             for (auto it2 = it->begin(); it2 != it->end(); it2++)
                 if (*it2 == leafNum-1) {
                     it->erase(it2);
