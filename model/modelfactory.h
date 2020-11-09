@@ -26,6 +26,7 @@
 #include "nclextra/modelsblock.h"
 #include "utils/checkpoint.h"
 #include "alignment/alignment.h"
+#include "main/phylotesting.h"
 
 const double MIN_BRLEN_SCALE = 0.01;
 const double MAX_BRLEN_SCALE = 100.0;
@@ -263,6 +264,10 @@ public:
 
     double optimizeAllParameters(double gradient_epsilon);
 
+    /**
+     Synchronization of check point for MPI
+     */
+    SyncChkPoint* syncChkPoint;
 
 protected:
 
@@ -283,6 +288,7 @@ protected:
 
     vector<double> optimizeGammaInvWithInitValue(int fixed_len, double logl_epsilon, double gradient_epsilon,
                                        double initPInv, double initAlpha, DoubleVector &lenvec, Checkpoint *model_ckp);
+    
 };
 
 #endif

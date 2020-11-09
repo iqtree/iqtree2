@@ -3752,6 +3752,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
         doSymTest(alignment, params);
     }
 
+    cout << "params.print_aln_info = " << params.print_aln_info << endl << flush;
     if (params.print_aln_info) {
         string site_info_file = string(params.out_prefix) + ".alninfo";
         alignment->printSiteInfo(site_info_file.c_str());
@@ -3844,6 +3845,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
         alignment->checkGappySeq(params.remove_empty_seq);
 
         // remove identical sequences
+        cout << "params.ignore_identical_seqs = " << params.ignore_identical_seqs << endl << flush;
         if (params.ignore_identical_seqs) {
             tree->removeIdenticalSeqs(params);
             if (tree->removed_seqs.size() > 0 && MPIHelper::getInstance().isMaster() && (params.suppress_output_flags & OUT_UNIQUESEQ) == 0) {
@@ -3854,13 +3856,17 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
         }
         alignment = NULL; // from now on use tree->aln instead
 
+        cout << "start tree reconstruction" << endl << flush;
         startTreeReconstruction(params, tree, *model_info);
         // call main tree reconstruction
+        cout << "call main tree reconstruction. params.num_runs = " << params.num_runs << endl << flush;
         if (params.num_runs == 1)
             runTreeReconstruction(params, tree);
         else
             runMultipleTreeReconstruction(params, tree->aln, tree);
-        
+
+        cout << "finish main tree reconstruction" << endl << flush;
+
         if (MPIHelper::getInstance().isMaster()) {
             reportPhyloAnalysis(params, *tree, *model_info);
         }
