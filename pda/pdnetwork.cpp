@@ -1297,8 +1297,8 @@ void PDNetwork::findPDArea_LP(Params &params, vector<SplitSet> &areas_set) {
 		if (difftime(time_cur, time_init) > 10) {
 			// write output if more than 10 seconds have elapsed
 			printOutputSetScore(params, areas_set);
-			PDRelatedMeasures pd_more; // just for called function, nothing
-			summarizeSplit(params, *this, areas_set, pd_more, false);
+			PDRelatedMeasures dummy_pd_more; // just for called function, nothing
+			summarizeSplit(params, *this, areas_set, dummy_pd_more, false);
 			time_init = time_cur;
 		}
 	}
@@ -1839,16 +1839,21 @@ void PDNetwork::lpVariableBinary(const char *outfile, Params &params, Split &inc
 }
 
 
-void PDNetwork::lpVariableBinary(const char *outfile, Params &params, IntVector &initialset) {
-	int nvars;
-	if (isPDArea())
-		nvars = area_taxa.size();
-	else
-		nvars = getNTaxa();
-	Split included_vars(nvars);
-	for (IntVector::iterator it2 = initialset.begin(); it2 != initialset.end(); it2++)
-		included_vars.addTaxon(*it2);
-	lpVariableBinary(outfile, params, included_vars);
+void PDNetwork::lpVariableBinary(const char *outfile, Params &params,
+                                 IntVector &initial_set) {
+    int nvars;
+    if (isPDArea()) {
+        nvars = area_taxa.size();
+    }
+    else {
+        nvars = getNTaxa();
+    }
+    Split included_vars(nvars);
+    for (IntVector::iterator it2 = initial_set.begin()
+         ; it2 != initial_set.end(); it2++) {
+        included_vars.addTaxon(*it2);
+    }
+    lpVariableBinary(outfile, params, included_vars);
 }
 
 void PDNetwork::lpInitialArea(ostream &out, Params &params) {
@@ -1856,7 +1861,7 @@ void PDNetwork::lpInitialArea(ostream &out, Params &params) {
 	int j;
 
 	// adding constraint for initialset
-	for (IntVector::iterator it = initialset.begin(); it != initialset.end(); it++) {
+	for (auto it = initialset.begin(); it != initialset.end(); it++) {
 		if (it == initialset.begin() && (params.root || params.is_rooted)) // ignore the root
 			continue;
 		out << "1 <= ";

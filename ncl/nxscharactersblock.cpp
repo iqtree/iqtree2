@@ -1529,8 +1529,8 @@ bool NxsCharactersBlock::HandleNextState(
 		//
 		else
 			{
-			int p = PositionInSymbols(ch);
-			if (p < 0)
+			int pos = PositionInSymbols(ch);
+			if (pos < 0)
 				{
 				errormsg = "State specified (";
 				errormsg += token.GetToken();
@@ -1541,7 +1541,7 @@ bool NxsCharactersBlock::HandleNextState(
 				errormsg += ", not found in list of valid symbols";
 				throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());
 				}
-			matrix->AddState(i, j, p);
+			matrix->AddState(i, j, pos);
 			matrix->SetPolymorphic(i, j, 0);
 			}
 		}	// if (!tokens && token.GetTokenLength() == 1)
@@ -1604,8 +1604,8 @@ bool NxsCharactersBlock::HandleNextState(
 					pFirst++;
 					while (*pFirst != '\0' && *pFirst != t[k])
 						{
-						int p = PositionInSymbols(*pFirst);
-						if (p < 0)
+						int pos = PositionInSymbols(*pFirst);
+						if (pos < 0)
 							{
 							errormsg = "State specified (";
 							errormsg += *pFirst;
@@ -1616,7 +1616,7 @@ bool NxsCharactersBlock::HandleNextState(
 							errormsg += ", not found in list of valid symbols";
 							throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());
 							}
-						matrix->AddState(i, j, p);
+						matrix->AddState(i, j, pos);
 						pFirst++;
 						}
 
@@ -1624,8 +1624,8 @@ bool NxsCharactersBlock::HandleNextState(
 					}
 				else
 					{
-					int p = PositionInSymbols(t[k]);
-					if (p < 0)
+					int pos = PositionInSymbols(t[k]);
+					if (pos < 0)
 						{
 						errormsg = "State specified (";
 						errormsg += t[k];
@@ -1636,8 +1636,8 @@ bool NxsCharactersBlock::HandleNextState(
 						errormsg += ", not found in list of valid symbols";
 						throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());
 						}
-					pFirst = (symbols + p);
-					matrix->AddState(i, j, p);
+					pFirst = (symbols + pos);
+					matrix->AddState(i, j, pos);
 					}
 
 				} // if (t[k] == '~') ... else ... loop

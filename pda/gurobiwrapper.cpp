@@ -32,7 +32,7 @@
 	@param ntaxa number of taxa
 	@param score (OUT) returned optimal score
 	@param variables (OUT) array of returned solution
-	@param verbose_mode verbose mode
+	@param verbosity verbose mode
 	@return 
 		-1 if gurobi was not installed properly or does not exist at all
 		0 if everything works file, 
@@ -41,7 +41,7 @@
 		7 if returned solution is not binary. In this case, one should run the solver 
 		again with strict binary variable constraint.
 */
-int gurobi_solve(char *filename, int ntaxa, double *score, double *variables, int verbose_mode, int num_threads) {
+int gurobi_solve(char *filename, int ntaxa, double *score, double *variables, int verbosity, int num_threads) {
 	int ret = 0;
 	*score = -1;
 	string command;
@@ -50,7 +50,7 @@ int gurobi_solve(char *filename, int ntaxa, double *score, double *variables, in
 	ss << "gurobi_cl Threads=" << num_threads << " ResultFile=" << filename
 		<< ".sol MIPGap=0 "<< filename  << " >" << filename << ".log ";
 	command = ss.str();
-	if (verbose_mode >= VB_MED)
+	if (verbosity >= VB_MED)
 		cout << command << endl;
 	int sys_ret = system(command.c_str());
 	if (sys_ret != 0) {
@@ -84,9 +84,9 @@ int gurobi_solve(char *filename, int ntaxa, double *score, double *variables, in
 			double value;
 			in >> value;
 			if (value > tolerance && (1.0 - value) > tolerance) {
-				if (verbose_mode >= VB_MED) cout << endl << str << " = " << value;
+				if (verbosity >= VB_MED) cout << endl << str << " = " << value;
 				ret = 7;
-				if (!verbose_mode) break;
+				if (!verbosity) break;
 			}
 			variables[index] = value;
 		}
