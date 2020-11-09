@@ -323,8 +323,6 @@ void IQTree::initSettings(Params &params) {
         setRootNode(params.root);
     }
 
-    size_t i;
-
     if (params.online_bootstrap && params.gbo_replicates > 0 && !isSuperTreeUnlinked()) {
         if (aln->getNSeq() < 4)
             outError("It makes no sense to perform bootstrap with less than 4 sequences.");
@@ -368,7 +366,7 @@ void IQTree::initSettings(Params &params) {
 #endif
         BootValType *mem = aligned_alloc<BootValType>(nptn * (size_t)(params.gbo_replicates));
         memset(mem, 0, nptn * (size_t)(params.gbo_replicates) * sizeof(BootValType));
-        for (i = 0; i < params.gbo_replicates; i++) {
+        for (size_t i = 0; i < params.gbo_replicates; i++) {
             boot_samples[i] = mem + i*nptn;
         }
         if (boot_trees.empty()) {
@@ -381,7 +379,7 @@ void IQTree::initSettings(Params &params) {
         }
         VerboseMode saved_mode = verbose_mode;
         verbose_mode = VB_QUIET;
-        for (i = 0; i < params.gbo_replicates; i++) {
+        for (size_t i = 0; i < params.gbo_replicates; i++) {
             if (params.print_bootaln) {
                 Alignment* bootstrap_alignment;
                 if (aln->isSuperAlignment())
@@ -574,16 +572,11 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
         if (noisy) {
             cout << endl;
         }
-        //
-        //Todo: In incremental mode, if the user-defined tree
-        //      has leaves with names *not* found in the alignment, they
-        //      need to be removed.  If it is *missing* leaves for sequences
-        //      in the alignment, they will need to be added somehow.
-        //      Perhaps by treating the user-defined tree as a constraint
-        //      tree? The code for all that would go... here.
-        //
         if (params->incremental) {
             updateToMatchAlignment(aln);
+            if (params->additional_alignment_files.empty()) {
+                mergeAlignments(params->additional_alignment_files);
+            }
         } else {
             setAlignment(aln);
         }

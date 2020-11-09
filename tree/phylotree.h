@@ -52,6 +52,7 @@
 #include "utils/progress.h"
 #include "alignedalloc.h"
 #include "likelihoodbufferset.h"
+#include "nnimove.h"
 
 class AlignmentPairwise;
 
@@ -92,9 +93,9 @@ const int SPR_DEPTH = 2;
 #if !defined(CLANG_UNDER_VS) || !defined(_DEBUG)
     #define LOG_LINE(lev,text) \
     if (verbose_mode >= (lev)) { \
-        std::stringstream s; \
-        s << text; \
-        logLine(s.str()); \
+        std::stringstream xsx; \
+        xsx << text; \
+        logLine(xsx.str()); \
     } else 0
 
     #define TREE_LOG_LINE(xtree, xlev, xtext) \
@@ -157,32 +158,6 @@ typedef std::map< int, PhyloNode* > IntPhyloNodeMap;
 
 const int MAX_SPR_MOVES = 20;
 
-struct NNIMove {
-
-    // Two nodes representing the central branch
-    PhyloNode *node1, *node2;
-
-    // Roots of the two subtree that are swapped
-    NeighborVec::iterator node1Nei_it, node2Nei_it;
-
-    // log-likelihood of the tree after applying the NNI
-    double newloglh;
-
-    int swap_id;
-
-    // new branch lengths of 5 branches corresponding to the NNI
-    DoubleVector newLen[5];
-
-    // pattern likelihoods
-    double *ptnlh;
-
-    NNIMove(): node1(nullptr), node2(nullptr)
-        , newloglh(-DBL_MAX), ptnlh(nullptr) {
-    }
-    bool operator<(const NNIMove & rhs) const {
-        return newloglh > rhs.newloglh;
-    }
-};
 
 /**
         an SPR move.
@@ -376,6 +351,8 @@ class PhyloTree : public MTree, public Optimization, public CheckpointFactory {
     friend class LikelihoodBlockAllocator;
     friend class LikelihoodBlockPair;
     friend class ParsimonyMatrix;
+    friend class NNIMove;
+    friend class NNIContext;
 
 public:
     
@@ -501,6 +478,24 @@ public:
      @return true if the tree had to be updated (nodes added or removed))
      */
     virtual bool updateToMatchAlignment(Alignment *alignment);
+    
+    /** Prepare to place taxa in the tree.
+     */
+    virtual void prepareForPlacement();
+    virtual void logTaxaToBeRemoved(const map<string, Node*>& mapNameToNode);
+    
+    /** Prepare to delete taxa from the tree.
+     */
+    virtual void prepareForDeletes();
+    virtual void doneDeletes(size_t countRemoved,
+                             bool are_there_placements_to_follow);
+    /**
+     Modify the tree by merging files
+     @param alignment_paths vector of paths of files for associated alignments
+     */
+    virtual void mergeAlignments(const StrVector& alignment_paths);
+    
+    virtual void mergeAlignment(const Alignment* new_aln);
 
     bool shouldPlacementUseSankoffParsimony() const;
 
@@ -2404,8 +2399,8 @@ public:
 		return curScore;
 	}
 
-	void setCurScore(double curScore) {
-		this->curScore = curScore;
+	void setCurScore(double score) {
+		this->curScore = score;
 	}
 
 	/**

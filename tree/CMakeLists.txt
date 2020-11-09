@@ -46,9 +46,11 @@ tinatree.h
 parstree.cpp
 parstree.h
 discordance.cpp
-likelihoodbufferset.h
 likelihoodbufferset.cpp
+likelihoodbufferset.h
 alignedalloc.h
+nnimove.cpp
+nnimove.h
 )
 
 target_link_libraries(tree pll model alignment)

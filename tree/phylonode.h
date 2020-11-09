@@ -89,6 +89,7 @@ class PhyloNeighbor : public Neighbor {
     friend class LikelihoodCostCalculator;
     friend class PlacementTraversalInfo;
     friend class ParsimonyMatrix;
+    friend class NNIContext;
 
 public:
     friend class TinaTree;
