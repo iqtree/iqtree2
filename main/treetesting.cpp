@@ -779,21 +779,19 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
     if (!treelhs)
         outError("Not enough memory to perform AU test!");
     
-    size_t k, tid, ptn;
-    
     double start_time = getRealTime();
     
     cout << "Generating " << nscales << " x " << nboot << " multiscale bootstrap replicates... ";
     
 #ifdef _OPENMP
-#pragma omp parallel private(k, tid, ptn)
+#pragma omp parallel
     {
     int *rstream;
     init_random(params.ran_seed + omp_get_thread_num(), false, &rstream);
 #else
     int *rstream = randstream;
 #endif
-    size_t boot;
+
     int *boot_sample = aligned_alloc<int>(maxnptn);
     memset(boot_sample, 0, maxnptn*sizeof(int));
     
@@ -804,22 +802,25 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
 #endif
     for (int k = 0; k < nscales; ++k) {
         string str = "SCALE=" + convertDoubleToString(r[k]);
-        for (boot = 0; boot < nboot; boot++) {
-            if (r[k] == 1.0 && boot == 0)
+        for (size_t boot = 0; boot < nboot; boot++) {
+            if (r[k] == 1.0 && boot == 0) {
                 // 2018-10-23: get one of the bootstrap sample as the original alignment
                 tree->aln->getPatternFreq(boot_sample);
-            else
+            }
+            else {
                 tree->aln->createBootstrapAlignment(boot_sample, str.c_str(), rstream);
-            for (ptn = 0; ptn < maxnptn; ptn++)
+            }
+            for (size_t ptn = 0; ptn < maxnptn; ptn++) {
                 boot_sample_dbl[ptn] = boot_sample[ptn];
+            }
             double max_lh = -DBL_MAX, second_max_lh = -DBL_MAX;
             int max_tid = -1;
-            for (tid = 0; tid < ntrees; tid++) {
+            for (size_t tid = 0; tid < ntrees; tid++) {
                 double *pattern_lh = pattern_lhs + (tid*maxnptn);
                 double tree_lh;
                 if (params.SSE == LK_386) {
                     tree_lh = 0.0;
-                    for (ptn = 0; ptn < nptn; ptn++)
+                    for (size_t ptn = 0; ptn < nptn; ptn++)
                         tree_lh += pattern_lh[ptn] * boot_sample_dbl[ptn];
                 } else {
                     tree_lh = tree->dotProductDoubleCall(pattern_lh, boot_sample_dbl, nptn);
@@ -839,16 +840,19 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
             }
             
             // compute difference from max_lh
-            for (tid = 0; tid < ntrees; tid++)
-                if (tid != max_tid)
+            for (size_t tid = 0; tid < ntrees; tid++) {
+                if (tid != max_tid) {
                     treelhs[(tid*nscales+k)*nboot + boot] = max_lh - treelhs[(tid*nscales+k)*nboot + boot];
-                else
+                }
+                else {
                     treelhs[(tid*nscales+k)*nboot + boot] = second_max_lh - max_lh;
+                }
             //            bp[k*ntrees+max_tid] += nboot_inv;
+            }
         } // for boot
         
         // sort the replicates
-        for (tid = 0; tid < ntrees; tid++) {
+        for (size_t tid = 0; tid < ntrees; tid++) {
             quicksort<double,int>(treelhs + (tid*nscales+k)*nboot, 0, nboot-1);
         }
         
@@ -884,7 +888,7 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
     double *w = new double[nscales];
     double *this_bp = new double[nscales];
     cout << "TreeID\tAU\tRSS\td\tc" << endl;
-    for (tid = 0; tid < ntrees; tid++) {
+    for (size_t tid = 0; tid < ntrees; tid++) {
         double *this_stat = treelhs + tid*nscales*nboot;
         double xn = this_stat[(nscales/2)*nboot + nboot/2], x;
         double c, d; // c, d in original paper
@@ -899,7 +903,7 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
         for (step = 0; step < max_step; step++) {
             x = xn;
             int num_k = 0;
-            for (k = 0; k < nscales; k++) {
+            for (size_t k = 0; k < nscales; k++) {
                 this_bp[k] = cntdist3(this_stat + k*nboot, nboot, x) / nboot;
                 if (this_bp[k] <= 0 || this_bp[k] >= 1) {
                     cc[k] = w[k] = 0.0;
@@ -939,7 +943,7 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
                 ze = se;
                 // compute sum of squared difference
                 rss = 0.0;
-                for (k = 0; k < nscales; k++) {
+                for (size_t k = 0; k < nscales; k++) {
                     double diff = cc[k] - (rr[k]*d + rr_inv[k]*c);
                     rss += w[k] * diff * diff;
                 }
@@ -947,8 +951,11 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
             } else {
                 // not enough data for WLS
                 int num0 = 0;
-                for (k = 0; k < nscales; k++)
-                    if (this_bp[k] <= 0.0) num0++;
+                for (size_t k = 0; k < nscales; k++) {
+                    if (this_bp[k] <= 0.0) {
+                        num0++;
+                    }
+                }
                 if (num0 > nscales/2)
                     pval = 0.0;
                 else

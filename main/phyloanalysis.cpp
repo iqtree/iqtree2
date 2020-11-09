@@ -3706,8 +3706,8 @@ void doSymTest(Alignment *alignment, Params &params) {
             } else {
                 string aln_file = (string)params.out_prefix + ((params.symtest_remove == 1)? ".good.phy" : ".bad.phy");
                 alignment->printAlignment(params.aln_output_format, aln_file.c_str());
-                string filename = (string)params.out_prefix + ((params.symtest_remove == 2)? ".good.nex" : ".bad.nex");
-                saln->printPartition(filename.c_str(), aln_file.c_str());
+                string nexus_filename = (string)params.out_prefix + ((params.symtest_remove == 2)? ".good.nex" : ".bad.nex");
+                saln->printPartition(nexus_filename.c_str(), aln_file.c_str());
             }
         }
     }
@@ -4043,7 +4043,6 @@ void assignBranchSupportNew(Params &params) {
     map<string,string> meanings;
     
     if (!params.treeset_file.empty()) {
-        bool rooted = params.is_rooted;
         MTreeSet trees(params.treeset_file.c_str(), rooted, params.tree_burnin, params.tree_max_count);
         double start_time = getRealTime();
         cout << "Computing gene concordance factor..." << endl;

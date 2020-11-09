@@ -48,12 +48,12 @@ RateMeyerHaeseler::RateMeyerHaeseler()
 	rate_mh = true;
 }
 
-void RateMeyerHaeseler::readRateFile(char *rate_file) {
-	cout << "Reading site-specific rate file " << rate_file << " ..." << endl;
+void RateMeyerHaeseler::readRateFile(char *rate_file_to_read) {
+	cout << "Reading site-specific rate file " << rate_file_to_read << " ..." << endl;
 	try {
 		ifstream in;
 		in.exceptions(ios::failbit | ios::badbit);
-		in.open(rate_file);
+		in.open(rate_file_to_read);
 		char line[256];
 		int site;
 		double rate;

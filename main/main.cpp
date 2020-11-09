@@ -1122,8 +1122,8 @@ void runPDSplit(Params &params) {
                 SplitGraph sg2;
                 (*it)->convertSplits(taxname, sg2);
                 // change the current split system
-                for (SplitGraph::reverse_iterator it = sg.rbegin(); it != sg.rend(); it++) {
-                    delete *it;
+                for (auto itDel = sg.rbegin(); itDel != sg.rend(); ++itDel) {
+                    delete *itDel;
                 }
                 sg.clear();
                 sg.insert(sg.begin(), sg2.begin(), sg2.end());

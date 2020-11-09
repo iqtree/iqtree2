@@ -194,30 +194,34 @@ string getUsualModelSubst(SeqType seq_type) {
 void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites,
                 string rate_set, StrVector &ratehet);
 
-size_t CandidateModel::getUsualModel(Alignment *aln) {
+size_t CandidateModel::getUsualModel(Alignment *alignment) {
     size_t aln_len = 0;
-    if (aln->isSuperAlignment()) {
-        SuperAlignment *super_aln = (SuperAlignment*)aln;
-        for (auto it = super_aln->partitions.begin(); it != super_aln->partitions.end(); it++) {
+    if (alignment->isSuperAlignment()) {
+        SuperAlignment *super_aln = (SuperAlignment*)alignment;
+        for (auto it = super_aln->partitions.begin()
+             ; it != super_aln->partitions.end(); it++) {
             CandidateModel usual_model(*it);
-            if (!subst_name.empty())
+            if (!subst_name.empty()) {
                 subst_name += ',';
+            }
             subst_name += usual_model.subst_name;
-            if (!rate_name.empty())
+            if (!rate_name.empty()) {
                 rate_name += ',';
+            }
             rate_name += usual_model.rate_name;
-            aln_len += (*it)->getNSite();
+            aln_len   += (*it)->getNSite();
         }
     } else {
-        subst_name = getUsualModelSubst(aln->seq_type);
+        subst_name = getUsualModelSubst(alignment->seq_type);
         StrVector ratehet;
-        getRateHet(aln->seq_type, Params::getInstance().model_name, aln->frac_invariant_sites, "1", ratehet);
+        getRateHet(alignment->seq_type, Params::getInstance().model_name,
+                   alignment->frac_invariant_sites, "1", ratehet);
         ASSERT(!ratehet.empty());
         rate_name = ratehet[0];
-        aln_len = aln->getNSite();
+        aln_len = alignment->getNSite();
     }
     orig_subst_name = subst_name;
-    orig_rate_name = rate_name;
+    orig_rate_name  = rate_name;
     return aln_len;
 }
 
@@ -482,13 +486,13 @@ double computeAdapter(Alignment *orig_aln, Alignment *newaln, int &adjusted_df) 
     double codon_freq[orig_aln->num_states];
     //orig_aln->computeStateFreq(codon_freq);
     
-    double sum = 0.0;
+    double original_sum = 0.0;
     for (int codon = 0; codon < orig_aln->num_states; ++codon) {
-        sum += codon_counts[codon];
+        original_sum += codon_counts[codon];
     }
-    sum = 1.0/sum;
+    double original_multiplier = 1.0/original_sum;
     for (int codon = 0; codon < orig_aln->num_states; ++codon) {
-        codon_freq[codon] = sum*codon_counts[codon];
+        codon_freq[codon] = original_multiplier*codon_counts[codon];
     }
     
     // new rescale codon_freq s.t. codons coding for the same AA
@@ -1182,7 +1186,7 @@ void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites
 int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_rate, bool merge_phase) {
 	StrVector model_names;
     StrVector freq_names;
-	SeqType seq_type = aln->seq_type;
+	SeqType alignment_seq_type = aln->seq_type;
     
 	int i, j;
     string model_set;
@@ -1194,13 +1198,13 @@ int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_ra
 
     bool auto_model = iEquals(model_set, "AUTO");
     
-    getModelSubst(seq_type, aln->isStandardGeneticCode(), params.model_name,
+    getModelSubst(alignment_seq_type, aln->isStandardGeneticCode(), params.model_name,
                   model_set, params.model_subset, model_names);
 
 	if (model_names.empty()) 
         return 1;
     
-    getStateFreqs(seq_type, params.state_freq_set, freq_names);
+    getStateFreqs(alignment_seq_type, params.state_freq_set, freq_names);
     
     // combine model_names with freq_names
     if (freq_names.size() > 0) {
@@ -1225,9 +1229,6 @@ int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_ra
         }
     }
 
-
-    
-
     StrVector ratehet;
     int max_cats = params.num_rate_cats;
     string ratehet_set;
@@ -1238,7 +1239,7 @@ int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_ra
 
     //bool auto_rate = iEquals(ratehet_set, "AUTO");
     
-    getRateHet(seq_type, params.model_name, aln->frac_invariant_sites, ratehet_set, ratehet);
+    getRateHet(alignment_seq_type, params.model_name, aln->frac_invariant_sites, ratehet_set, ratehet);
 
     // add number of rate cateogories for special rate models
     const char *rates[] = {"+R", "*R", "+H", "*H"};
@@ -1269,7 +1270,7 @@ int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_ra
 
     ASSERT(ratehet.size() == flags.size());
     
-    string pomo_suffix = (seq_type == SEQ_POMO) ? "+P" : "";
+    string pomo_suffix = (alignment_seq_type == SEQ_POMO) ? "+P" : "";
     // TODO DS: should we allow virtual population size?
 
     // combine substitution models with rate heterogeneity

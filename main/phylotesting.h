@@ -151,8 +151,8 @@ public:
         return flagChanged;
     }
 
-    bool hasFlag(int flag) {
-        return (this->flag & flag) != 0;
+    bool hasFlag(int flag_to_check) {
+        return (this->flag & flag_to_check) != 0;
     }
     
     string set_name; // subset name

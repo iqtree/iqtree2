@@ -129,8 +129,8 @@ void writeOutgroup(ostream &out, const char *outgroup) {
     convert_string_vec(outgroup, outgroup_names);
     try {
         out << outgroup_names.size() << endl;
-        for (auto outgroup : outgroup_names) {
-            out << outgroup << endl;
+        for (auto current_outgroup : outgroup_names) {
+            out << current_outgroup << endl;
         }
     } catch (...) {
         ASSERT(0 && "Error writing outgroup stream");
