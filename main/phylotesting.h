@@ -8,14 +8,22 @@
 #ifndef PHYLOTESTING_H_
 #define PHYLOTESTING_H_
 
+#ifdef _IQTREE_MPI
+    #include <mpi.h>
+#endif
+
 #include "utils/tools.h"
 #include "utils/checkpoint.h"
 #include "nclextra/modelsblock.h"
 #include "alignment/superalignment.h"
+#include "utils/MPIHelper.h"
 
 class PhyloTree;
 class IQTree;
 class ModelCheckpoint;
+class SyncChkPoint;
+class PhyloSuperTree;
+class SubsetPair;
 
 const int MF_SAMPLE_SIZE_TRIPLE = 1;
 const int MF_IGNORED            = 2;
@@ -40,17 +48,20 @@ public:
         AICc_score = DBL_MAX;
         BIC_score = DBL_MAX;
         this->flag = flag;
+        syncChkPoint = nullptr;
     }
     
     CandidateModel(string subst_name, string rate_name, Alignment *aln, int flag = 0) : CandidateModel(flag) {
         this->subst_name = orig_subst_name = subst_name;
         this->rate_name = orig_rate_name = rate_name;
         this->aln = aln;
+        syncChkPoint = nullptr;
     }
     
     CandidateModel(Alignment *aln, int flag = 0) : CandidateModel(flag) {
         this->aln = aln;
         getUsualModel(aln);
+        syncChkPoint = nullptr;
     }
     
     string getName() {
@@ -130,19 +141,7 @@ public:
     /**
      restore model from checkpoint
      */
-    bool restoreCheckpointRminus1(Checkpoint *ckp, CandidateModel *model) {
-        size_t posR;
-        const char *rates[] = {"+R", "*R", "+H", "*H"};
-        for (int i = 0; i < sizeof(rates)/sizeof(char*); i++) {
-            if ((posR = model->rate_name.find(rates[i])) != string::npos) {
-                int cat = convert_int(model->rate_name.substr(posR+2).c_str());
-                subst_name = model->subst_name;
-                rate_name = model->rate_name.substr(0, posR+2) + convertIntToString(cat-1);
-                return restoreCheckpoint(ckp);
-            }
-        }
-        return false;
-    }
+    bool restoreCheckpointRminus1(Checkpoint *ckp, CandidateModel *model);
     
     /** turn on some flag with OR operator */
     void setFlag(int flag) {
@@ -167,7 +166,12 @@ public:
     bool AIC_conf, AICc_conf, BIC_conf;         // in confidence set?
 
     Alignment *aln; // associated alignment
-    
+
+    /**
+     Synchronization of check point for MPI
+     */
+    SyncChkPoint* syncChkPoint;
+
 protected:
     
     /** flag */
@@ -182,6 +186,7 @@ public:
 
     CandidateModelSet() : vector<CandidateModel>() {
         current_model = -1;
+        syncChkPoint = nullptr;
     }
     
     /** get ID of the best model */
@@ -206,7 +211,7 @@ public:
      Filter out all "non-promissing" substitution models
      */
     void filterSubst(int finished_model);
-
+    
     /**
      testing the best-fit model
      return in params.freq_type and params.rate_type
@@ -281,6 +286,12 @@ public:
                      ModelsBlock *models_block, int num_threads, int brlen_type,
                      string in_model_name = "", bool merge_phase = false, bool write_info = true);
     
+    /**
+     Synchronization of check point for MPI
+     */
+    SyncChkPoint* syncChkPoint;
+    int tag;
+
 private:
     
     /** current model */
@@ -331,6 +342,335 @@ public:
 
 };
 
+/** model information by merging two partitions */
+struct ModelPair {
+    /** score after merging */
+    double score;
+    /** ID of partition 1 */
+    int part1;
+    /** ID of partition 2 */
+    int part2;
+    /** log-likelihood */
+    double logl;
+    /** degree of freedom */
+    int df;
+    /** tree length */
+    double tree_len;
+    /** IDs of merged partitions */
+    set<int> merged_set;
+    /** set name */
+    string set_name;
+    /* best model name */
+    string model_name;
+};
+
+class ModelPairSet : public multimap<double, ModelPair> {
+
+public:
+
+    /** insert a partition pair */
+    void insertPair(ModelPair &pair) {
+        insert(value_type(pair.score, pair));
+    }
+
+    /**
+        find the maximum compatible partition pairs
+        @param num max number of pairs to return
+    */
+    void getCompatiblePairs(int num, ModelPairSet &res) {
+        set<int> part_ids;
+
+        for (auto it = begin(); it != end() && res.size() < num; it++) {
+
+            // check for compatibility
+            vector<int> overlap;
+            set_intersection(part_ids.begin(), part_ids.end(),
+                it->second.merged_set.begin(), it->second.merged_set.end(),
+                std::back_inserter(overlap));
+
+            if (!overlap.empty()) continue;
+
+            // take the union
+            part_ids.insert(it->second.merged_set.begin(), it->second.merged_set.end());
+
+            // put the compatible pair to the set
+            res.insertPair(it->second);
+        }
+    }
+
+};
+
+/*
+ * This class is designed for partition finder
+ */
+class PartitionFinder {
+
+private:
+    int brlen_type;
+    bool test_merge;
+    SuperAlignment *super_aln;
+
+    /**
+     * Process the computation of the best model for a merge
+     *
+     * nthreads : number of threads available for this job
+     * need_next_treeID : whether it is needed to get the next tree ID
+     *
+     * if need_next_treeID and (MASTER or IS_ASYN_COMM = 0)
+     *    return the next Job ID from master
+     * else
+     *    return -1
+     */
+    int getBestModelForOneMerge(int job_id, int nthreads, bool need_next_jobID, SyncChkPoint& syncChkPt);
+    
+    /**
+     * Process the computation of the best model for a single partition
+     *
+     * nthreads : number of threads available for this job
+     * need_next_treeID : whether it is needed to get the next tree ID
+     *
+     * if need_next_treeID, then
+     *    if WORKER and IS_ASYN_COMM = 1 (i.e. asynchronous communication)
+     *        return the index of the array storing MPI_Request
+     *    else
+     *        return the next Job ID from master
+     * else
+     *    return -1
+     */
+    int computeBestModelforOnePartition(int tree_id, int nthreads, bool need_next_treeID, SyncChkPoint& syncChkPt);
+
+    /**
+     * Process the computation of the best model for a single job
+     *
+     * nthreads : number of threads available for this job
+     * need_next_jobID : whether it is needed to get the next job ID
+     *
+     * job_type = 1 : for partition
+     * job_type = 2 : for merge
+     *
+     * if need_next_jobID and (MASTER or IS_ASYN_COMM = 0)
+     *    return the next Job ID from master
+     * else
+     *    return -1
+     */
+    int computeBestModelforOneJob(int job_id, int nthreads, bool need_next_jobID, int job_type, SyncChkPoint& syncChkPt);
+
+    /**
+     * compute and process the best model for the jobs
+     * nthreads : the number of threads available for these jobs
+     * job_type = 1 : for partition
+     * job_type = 2 : for merge
+    */
+    void getBestModelforJobs(int nthreads, vector<int>* jobs, int job_type, int tid);
+
+    /**
+     * For Worker, but not for Master process
+     * compute and process the best model for the jobs by asynchronous communication
+     * the number of threads available for these jobs always equals to 1
+     * job_type = 1 : for partition
+     * job_type = 2 : for merge
+    */
+    void getBestModelforJobsAsyn(int nthreads, vector<int>* jobs, int job_type, int tid);
+    
+    /**
+     * compute the best model
+     * job_type = 1 : for all partitions
+     * job_type = 2 : for all merges
+     */
+    void getBestModel(int job_type);
+
+    /*
+     * Consolidate the partition results (for MPI)
+     */
+    void consolidPartitionResults();
+    
+    /*
+     * Consolidate the merge results (for MPI)
+     */
+    void consolidMergeResults();
+    
+public:
+    ModelCheckpoint *model_info;
+    DoubleVector lhvec; // log-likelihood for each partition
+    IntVector dfvec; // number of parameters for each partition
+    DoubleVector lenvec; // tree length for each partition
+    double lhsum;
+    int dfsum;
+    double start_time;
+    int64_t total_num_model;
+    int64_t num_model;
+    vector<SubsetPair> closest_pairs;
+    vector<set<int> > gene_sets;
+    PhyloSuperTree* in_tree;
+    size_t  ssize;
+    Params *params;
+    double inf_score;
+    ModelPairSet better_pairs; // list of all better pairs of partitions than current partitioning scheme
+
+    ModelsBlock *models_block;
+    int num_threads;
+    int num_processes;
+
+    int nextjob;
+    int jobdone;
+    int tot_job_num;
+    vector<int> remain_job_list;
+    
+    vector<SyncChkPoint> syncChkPtList;
+    // vector<int> numThresEachProcess;
+    int base;
+    
+    // for ONE-SIDE communication
+    double last_syn_time;
+    vector<int> tree_id_vec;
+    vector<double> tree_len_vec;
+    vector<string> model_name_vec;
+    vector<double> score_vec;
+    vector<string> set_name_vec;
+    vector<int> tag_vec;
+    ModelCheckpoint process_model_info;
+
+#ifdef _IQTREE_MPI
+    // shared memory space to be accessed by the other processors
+    int   *val_ptr;
+    MPI_Win   win;
+#endif
+
+    /* Constructor
+     */
+    PartitionFinder(Params *inparams, PhyloSuperTree* intree, ModelCheckpoint *modelinfo,
+                    ModelsBlock *modelsblock, int numthreads);
+
+    /*
+     * Perform the computation
+     */
+    void test_PartitionModel();
+
+    /*
+     *  initialize the shared memory space to be accessed by the other processors
+     */
+    void initialMPIShareMemory();
+
+    /*
+     *  free the shared memory space
+     */
+    void freeMPIShareMemory();
+
+    /*
+     * For MPI
+     * assign initial jobs to processors
+     * input: a set of jobs ordered by the estimated computational costs
+     *
+     * DIST_RATIO: the ratio of the total jobs distributed to the processors
+     */
+    void jobAssignment(vector<pair<int,double> > &job_ids, vector<vector<int>* >&currJobs);
+
+    /*
+     * Show the result of best model for the partition
+     */
+    void showPartitionResult(ModelCheckpoint& part_model_info, int tree_id, double tree_len, const string& model_name, double score, int tag);
+
+    /*
+     * Show the result of best model for the partition
+     */
+    void showPartitionResults(ModelCheckpoint& part_model_info, vector<int>& tree_id, vector<double>& tree_len, vector<string>& model_name, vector<double>& score, vector<int>& tag);
+    
+    /*
+     * Show the the other worker's result of best model for the merge
+     */
+    void showMergeResult(ModelCheckpoint& part_model_info, double tree_len, const string& model_name, double score, string& set_name, bool done_before, int tag);
+
+    /*
+     * Show the the other worker's result of best model for the merge
+     */
+    void showMergeResults(ModelCheckpoint& part_model_info, vector<double>& tree_len, vector<string>& model_name, vector<double>& score, vector<string>& set_name, vector<int>& tag);
+};
+
+
+/*
+ * This class is designed for synchronization of checkpoints for partition finder
+ */
+class SyncChkPoint {
+
+private:
+    // shared among threads
+    PartitionFinder* pfinder;
+
+    // each thread has its own copy
+    int num_processes; // the number of processors
+    
+public:
+
+    int tid; // id of thread
+    int base; // communcation's tag = id + base
+    
+    /*  constructor
+     */
+    SyncChkPoint(PartitionFinder* pf, int thres_id);
+    
+    /*  Destructor
+     */
+    ~SyncChkPoint();
+    
+    /*
+     * initialize
+     */
+    void initialize();
+
+    /*
+     * Show the result of best model
+     */
+    void showResult(ModelCheckpoint& part_model_info, int tag);
+
+    /*
+     * FOR MASTER - synchronize the checkpoints from the other processors
+     * Receive checkpoint from worker and send the next Job ID to workers
+     * increase the value of next_job and job_done by 1
+     * update the master's checkpoint: model_info
+     */
+    void masterSyncOtherChkpts(bool chk_gotMessage = true);
+    
+    /*
+     * FOR WORKER
+     * send checkpoint to master
+     * clear the checkpoint
+     *
+     * if need_nextJobID and NOT ASYN_COMM (i.e. non-asynchronous communication)
+     * return the next Job ID from master
+     * else -1
+     */
+    int sendChkptToMaster(ModelCheckpoint &model_info, bool need_nextJobID, int job_type, bool forceToSyn = false);
+
+    /*
+     * receive an integer from the master (for synchronous communication)
+     */
+    int recvInt(int tag);
+
+    /*
+     * get the next Job ID by accessing the shared memory in the master process
+     */
+    int getNextJobID();
+   
+#ifdef _IQTREE_MPI
+
+    void sendCheckpoint(Checkpoint *ckp, int dest, int tag);
+    
+    void recvCheckpoint(Checkpoint *ckp, int src, int tag);
+    
+    void recvAnyCheckpoint(Checkpoint *ckp, int& src, int& tag);
+    
+    void recvAnyString(string &str, int& src, int& tag);
+
+    /*
+     * Check for incoming messages
+     * if there is a message, collect the tag value and the source
+     */
+    bool gotMessage(int& tag, int& source);
+    
+#endif
+    
+};
+
 /**
  * computing AIC, AICc, and BIC scores
  */
@@ -372,6 +712,5 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
 int detectSeqType(const char *model_name, SeqType &seq_type);
 
 string detectSeqTypeName(string model_name);
-
 
 #endif /* PHYLOTESTING_H_ */

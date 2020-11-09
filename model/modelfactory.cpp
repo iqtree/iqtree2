@@ -135,6 +135,7 @@ ModelFactory::ModelFactory() : CheckpointFactory() {
     joint_optimize = false;
     fused_mix_rate = false;
     ASC_type = ASC_NONE;
+    syncChkPoint = nullptr;
 }
 
 size_t findCloseBracket(string &str, size_t start_pos) {
@@ -154,6 +155,7 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
     joint_optimize = params.optimize_model_rate_joint;
     fused_mix_rate = false;
     ASC_type = ASC_NONE;
+    syncChkPoint = nullptr;
     string model_str = model_name;
     string rate_str;
 
@@ -1254,7 +1256,7 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
     ASSERT(tree);
 
     stopStoringTransMatrix();
-    // modified by Thomas Wong on Sept 11, 15
+
     // no optimization of branch length in the first round
     double optimizeStartTime = getRealTime();
     cur_lh = tree->computeLikelihood();
@@ -1296,7 +1298,12 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
     for (i = 2; i < tree->params->num_param_iterations; i++) {
         double new_lh;
 
-        // changed to opimise edge length first, and then Q,W,R inside the loop by Thomas on Sept 11, 15
+        // synchronize the checkpoints of the other processors
+        if (syncChkPoint != nullptr) {
+            syncChkPoint->masterSyncOtherChkpts();
+        }
+
+        // changed to opimise edge length first, and then Q,W,R inside the loop
         if (fixed_len == BRLEN_OPTIMIZE)
             new_lh = tree->optimizeAllBranches(min(i,3), logl_epsilon);  // loop only 3 times in total (previously in v0.9.6 5 times)
         else if (fixed_len == BRLEN_SCALE) {
@@ -1305,7 +1312,17 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
         } else
             new_lh = cur_lh;
 
+        // synchronize the checkpoints of the other processors
+        if (syncChkPoint != nullptr) {
+            syncChkPoint->masterSyncOtherChkpts();
+        }
+
         new_lh = optimizeParametersOnly(i, gradient_epsilon, new_lh);
+
+        // synchronize the checkpoints of the other processors
+        if (syncChkPoint != nullptr) {
+            syncChkPoint->masterSyncOtherChkpts();
+        }
 
         if (new_lh == 0.0) {
             if (fixed_len == BRLEN_OPTIMIZE)

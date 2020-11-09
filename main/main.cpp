@@ -1792,14 +1792,16 @@ protected:
 };
 
 outstreambuf* outstreambuf::open( const char* name, ios::openmode mode) {
-    if (!(Params::getInstance().suppress_output_flags & OUT_LOG) && MPIHelper::getInstance().isMaster()) {
-        fout.open(name, mode);
-        if (!fout.is_open()) {
-            cerr << "ERROR: Could not open " << name << " for logging" << endl;
-            exit(EXIT_FAILURE);
-            return NULL;
+    if (!(Params::getInstance().suppress_output_flags & OUT_LOG)) {
+        if (MPIHelper::getInstance().isMaster()) {
+            fout.open(name, mode);
+            if (!fout.is_open()) {
+                cerr << "ERROR: Could not open " << name << " for logging" << endl;
+                exit(EXIT_FAILURE);
+                return NULL;
+            }
+            fout_buf = fout.rdbuf();
         }
-        fout_buf = fout.rdbuf();
     }
     cout_buf = cout.rdbuf();
     cout.rdbuf(this);
@@ -2601,6 +2603,7 @@ int main(int argc, char *argv[]) {
     if (MPIHelper::getInstance().getNumProcesses() > 1) {
         if (Params::getInstance().aln_file || Params::getInstance().partition_file) {
             runPhyloAnalysis(Params::getInstance(), checkpoint);
+            cout << "finish runPhyloAnalysis" << endl << flush;
         } else {
             outError("Please use one MPI process! The feature you wanted does not need parallelization.");
         }
