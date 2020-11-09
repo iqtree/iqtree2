@@ -36,7 +36,6 @@
 #include "alignment/alignment.h"
 
 /* program options */
-int nni0;
 int nni5;
 extern VerboseMode verbose_mode;
 int NNI_MAX_NR_STEP = 10;
@@ -680,102 +679,103 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 	int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
 	int numPosNNI = 0;
 	int i;
-	pllNNIMove nni0; // dummy NNI to store backup information
-	nni0.p = p;
-	nni0.nniType = 0;
-	nni0.likelihood = searchinfo.curLogl;
-	for (i = 0; i < PLL_NUM_BRANCHES; i++) {
-		nni0.z0[i] = p->z[i];
-		nni0.z1[i] = p->next->z[i];
-		nni0.z2[i] = p->next->next->z[i];
-		nni0.z3[i] = q->next->z[i];
-		nni0.z4[i] = q->next->next->z[i];
-	}
+    pllNNIMove nniA; // dummy NNI to store backup information
+    nniA.p = p;
+    nniA.nniType = 0;
+    nniA.likelihood = searchinfo.curLogl;
+    for (i = 0; i < PLL_NUM_BRANCHES; i++) {
+        nniA.z0[i] = p->z[i];
+        nniA.z1[i] = p->next->z[i];
+        nniA.z2[i] = p->next->next->z[i];
+        nniA.z3[i] = q->next->z[i];
+        nniA.z4[i] = q->next->next->z[i];
+    }
 
 	pllNNIMove bestNNI;
 
 	/* do an NNI move of type 1 */
 	double lh1 = doOneNNI(tr, pr, p, 0, searchinfo.nni_type, &searchinfo);
-	if (globalParams->count_trees)
-		countDistinctTrees(tr, pr);
-	pllNNIMove nni1;
-	nni1.p = p;
-	nni1.nniType = 0;
-	// Store the optimized branch lengths
-	for (i = 0; i < PLL_NUM_BRANCHES; i++) {
-		nni1.z0[i] = p->z[i];
-		nni1.z1[i] = p->next->z[i];
-		nni1.z2[i] = p->next->next->z[i];
-		nni1.z3[i] = q->next->z[i];
-		nni1.z4[i] = q->next->next->z[i];
-	}
-	nni1.likelihood = lh1;
-	nni1.loglDelta = lh1 - nni0.likelihood;
-	nni1.negLoglDelta = -nni1.loglDelta;
+    if (globalParams->count_trees) {
+        countDistinctTrees(tr, pr);
+    }
+    pllNNIMove nniB;
+    nniB.p = p;
+    nniB.nniType = 0;
+    // Store the optimized branch lengths
+    for (i = 0; i < PLL_NUM_BRANCHES; i++) {
+        nniB.z0[i] = p->z[i];
+        nniB.z1[i] = p->next->z[i];
+        nniB.z2[i] = p->next->next->z[i];
+        nniB.z3[i] = q->next->z[i];
+        nniB.z4[i] = q->next->next->z[i];
+    }
+    nniB.likelihood = lh1;
+    nniB.loglDelta = lh1 - nniB.likelihood;
+    nniB.negLoglDelta = -nniB.loglDelta;
 
 	/* Restore previous NNI move */
 	doOneNNI(tr, pr, p, 0, TOPO_ONLY);
 	/* Restore the old branch length */
-	for (i = 0; i < PLL_NUM_BRANCHES; i++) {
-		p->z[i] = nni0.z0[i];
-		q->z[i] = nni0.z0[i];
-		p->next->z[i] = nni0.z1[i];
-		p->next->back->z[i] = nni0.z1[i];
-		p->next->next->z[i] = nni0.z2[i];
-		p->next->next->back->z[i] = nni0.z2[i];
-		q->next->z[i] = nni0.z3[i];
-		q->next->back->z[i] = nni0.z3[i];
-		q->next->next->z[i] = nni0.z4[i];
-		q->next->next->back->z[i] = nni0.z4[i];
-	}
+    for (i = 0; i < PLL_NUM_BRANCHES; i++) {
+        p->z[i] = nniA.z0[i];
+        q->z[i] = nniA.z0[i];
+        p->next->z[i] = nniA.z1[i];
+        p->next->back->z[i] = nniA.z1[i];
+        p->next->next->z[i] = nniA.z2[i];
+        p->next->next->back->z[i] = nniA.z2[i];
+        q->next->z[i] = nniA.z3[i];
+        q->next->back->z[i] = nniA.z3[i];
+        q->next->next->z[i] = nniA.z4[i];
+        q->next->next->back->z[i] = nniA.z4[i];
+    }
 
 	/* do an NNI move of type 2 */
 	double lh2 = doOneNNI(tr, pr, p, 1, searchinfo.nni_type, &searchinfo);
 	if (globalParams->count_trees)
 		countDistinctTrees(tr, pr);
 
-	// Create the nniMove struct to store this move
-	pllNNIMove nni2;
-	nni2.p = p;
-	nni2.nniType = 1;
-	// Store the optimized central branch length
-	for (i = 0; i < PLL_NUM_BRANCHES; i++) {
-		nni2.z0[i] = p->z[i];
-		nni2.z1[i] = p->next->z[i];
-		nni2.z2[i] = p->next->next->z[i];
-		nni2.z3[i] = q->next->z[i];
-		nni2.z4[i] = q->next->next->z[i];
-	}
-	nni2.likelihood = lh2;
-	nni2.loglDelta = lh2 - nni0.likelihood;
-	nni2.negLoglDelta = -nni2.loglDelta;
-
-	if (nni2.likelihood > nni1.likelihood) {
-		bestNNI = nni2;
-	} else {
-		bestNNI = nni1;
-	}
+    // Create the nniMove struct to store this move
+    pllNNIMove nniC;
+    nniC.p = p;
+    nniC.nniType = 1;
+    // Store the optimized central branch length
+    for (i = 0; i < PLL_NUM_BRANCHES; i++) {
+        nniC.z0[i] = p->z[i];
+        nniC.z1[i] = p->next->z[i];
+        nniC.z2[i] = p->next->next->z[i];
+        nniC.z3[i] = q->next->z[i];
+        nniC.z4[i] = q->next->next->z[i];
+    }
+    nniC.likelihood = lh2;
+    nniC.loglDelta = lh2 - nniA.likelihood;
+    nniC.negLoglDelta = -nniC.loglDelta;
+    
+    if (nniC.likelihood > nniB.likelihood) {
+        bestNNI = nniC;
+    } else {
+        bestNNI = nniB;
+    }
 
 	if (bestNNI.likelihood > searchinfo.curLogl + 1e-6) {
 		numPosNNI++;
 		searchinfo.posNNIList.push_back(bestNNI);
 	}
 
-	/* Restore previous NNI move */
-	doOneNNI(tr, pr, p, 1, TOPO_ONLY);
-	/* Restore the old branch length */
-	for (i = 0; i < PLL_NUM_BRANCHES; i++) {
-		p->z[i] = nni0.z0[i];
-		q->z[i] = nni0.z0[i];
-		p->next->z[i] = nni0.z1[i];
-		p->next->back->z[i] = nni0.z1[i];
-		p->next->next->z[i] = nni0.z2[i];
-		p->next->next->back->z[i] = nni0.z2[i];
-		q->next->z[i] = nni0.z3[i];
-		q->next->back->z[i] = nni0.z3[i];
-		q->next->next->z[i] = nni0.z4[i];
-		q->next->next->back->z[i] = nni0.z4[i];
-	}
+    /* Restore previous NNI move */
+    doOneNNI(tr, pr, p, 1, TOPO_ONLY);
+    /* Restore the old branch length */
+    for (i = 0; i < PLL_NUM_BRANCHES; i++) {
+        p->z[i] = nniA.z0[i];
+        q->z[i] = nniA.z0[i];
+        p->next->z[i] = nniA.z1[i];
+        p->next->back->z[i] = nniA.z1[i];
+        p->next->next->z[i] = nniA.z2[i];
+        p->next->next->back->z[i] = nniA.z2[i];
+        q->next->z[i] = nniA.z3[i];
+        q->next->back->z[i] = nniA.z3[i];
+        q->next->next->z[i] = nniA.z4[i];
+        q->next->next->back->z[i] = nniA.z4[i];
+    }
 
 	// Re-compute the partial likelihood vectors
 	// TODO: One could save these instead of recomputation

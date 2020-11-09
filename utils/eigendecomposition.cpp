@@ -288,14 +288,14 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 		cout << "\nWARNING: Eigensystem doesn't satisfy eigenvalue equation! (gap=" << error << ")" << endl;
         
 		cout << " State frequencies (might be un-normalized): " << new_num << " states freq > " << ZERO_FREQ << endl;
-        double sum = 0.0;
+        double sum_of_frequencies = 0.0;
         cout.precision(7);
 		for (i = 0; i < num_state; i++) {
             cout << state_freq[i] << " ";
-            sum += state_freq[i];
+            sum_of_frequencies += state_freq[i];
         }
 		cout << endl;
-        cout << "sum = " << sum << endl;
+        cout << "sum = " << sum_of_frequencies << endl;
 		ASSERT(0);
 	}
 

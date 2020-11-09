@@ -106,8 +106,8 @@ public:
         return curIteration;
     }
 
-    void setCurIt(int curIteration) {
-        StopRule::curIteration = curIteration;
+    void setCurIt(int current_iteration) {
+        StopRule::curIteration = current_iteration;
     }
 
     void shouldStop() {

@@ -95,13 +95,13 @@ public:
             data        = new T[ r * w + MATRIX_ALIGNMENT/sizeof(T)];
             rows        = new T*[r];
             T *rowStart = matrixAlign(data);
-            for (size_t r=0; r<row_count; ++r) {
-                rows[r]      = rowStart;
+            for (size_t row=0; row<row_count; ++row) {
+                rows[row]      = rowStart;
                 rowStart    += w;
             }
             #pragma omp parallel for
-            for (size_t r=0; r<row_count; ++r) {
-                zeroRow(r);
+            for (size_t row=0; row<row_count; ++row) {
+                zeroRow(row);
             }
         }
         catch (...) {
@@ -159,11 +159,11 @@ public:
         }
         --column_count;
     }
-    virtual void removeRow(size_t r) {
+    virtual void removeRow(size_t row_to_remove) {
         --row_count;
         //was rows[rowNum] = rows[n];... but let's copy
         //instead.  On average it seems (very slightly) faster.
-        T*       destRow   = rows[r];
+        T*       destRow   = rows[row_to_remove];
         const T* sourceRow = rows[row_count];
         rows[row_count] = nullptr;
         if (destRow!=sourceRow) {
@@ -175,11 +175,11 @@ public:
         if ( row_count == shrink_r && 0 < shrink_r) {
             //Move the data in the array closer to the front.
             //This also helps (but: only very slightly. 5%ish?).
-            size_t   w = widthNeededFor(column_count);
-            T* destRow = data;
+            size_t w = widthNeededFor(column_count);
+            destRow  = data;
             for (size_t r=1; r<row_count; ++r) {
                 destRow += w;
-                const T* sourceRow = rows[r];
+                sourceRow = rows[r];
                 #pragma omp parallel for
                 for (size_t c=0; c<column_count; ++c) {
                     destRow[c] = sourceRow[c];
@@ -327,9 +327,9 @@ template <class M> bool loadDistanceMatrixInto
     try {
         in.exceptions(std::ios::failbit | std::ios::badbit);
         in.open(distanceMatrixFilePath.c_str(), std::ios_base::in);
-        std::stringstream line;
-        safeGetTrimmedLineAsStream(in, line);
-        line >> rank;
+        std::stringstream first_line;
+        safeGetTrimmedLineAsStream(in, first_line);
+        first_line >> rank;
         matrix.setSize(rank);
         const char* taskDescription = reportProgress ? "Loading distance matrix" : "";
         progress_display progress(rank, taskDescription, "loaded", "row");

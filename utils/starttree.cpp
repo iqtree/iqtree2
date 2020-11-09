@@ -176,15 +176,15 @@ bool BenchmarkingTreeBuilder::constructTreeInMemory
         #endif
         size_t maxNameLen = 0;
         for (auto it=builders.begin(); it!=builders.end(); ++it) {
-            auto name = (*it)->getName();
-            if ( maxNameLen < name.length() ) {
-                maxNameLen = name.length();
+            auto builder_name = (*it)->getName();
+            if ( maxNameLen < builder_name.length() ) {
+                maxNameLen = builder_name.length();
             }
         }
         std::string padding(maxNameLen, '\x20');
         std::cout.width(0);
         for (auto it=builders.begin(); it!=builders.end(); ++it) {
-            auto   name      = (*it)->getName();
+            auto   builder_name = (*it)->getName();
             (*it)->beSilent();
             #ifdef _OPENMP
                 omp_set_num_threads(1);
@@ -194,7 +194,7 @@ bool BenchmarkingTreeBuilder::constructTreeInMemory
             double elapsed   = getRealTime() - startTime;
             if (succeeded) {
                 ok = true;
-                std::cout << (name + padding).substr(0, maxNameLen);
+                std::cout << (builder_name + padding).substr(0, maxNameLen);
                 std::cout << "\t" << formatPositiveNumber(elapsed,7);
                 #ifdef _OPENMP
                 for (int t=2; t<=maxThreads; ++t) {

@@ -29,14 +29,14 @@ Checkpoint::~Checkpoint() {
 }
 
 
-void Checkpoint::setFileName(string filename) {
-	this->filename = filename;
+void Checkpoint::setFileName(string filename_to_use) {
+	this->filename = filename_to_use;
 }
 
 
 void Checkpoint::load(istream &in) {
     string line;
-    string struct_name;
+    string local_struct_name;
     size_t pos;
     int listid = 0;
     while (!in.eof()) {
@@ -48,7 +48,7 @@ void Checkpoint::load(istream &in) {
 //            trimString(line);
         if (line.empty()) continue;
         if (line[0] != ' ') {
-            struct_name = "";
+            local_struct_name = "";
         }
 //            trimString(line);
         line.erase(0, line.find_first_not_of(" \n\r\t"));
@@ -56,17 +56,17 @@ void Checkpoint::load(istream &in) {
         pos = line.find(": ");
         if (pos != string::npos) {
             // mapping
-            (*this)[struct_name + line.substr(0, pos)] = line.substr(pos+2);
+            (*this)[local_struct_name + line.substr(0, pos)] = line.substr(pos+2);
         } else if (line[line.length()-1] == ':') {
             // start a new struct
             line.erase(line.length()-1);
             trimString(line);
-            struct_name = line + CKP_SEP;
+            local_struct_name = line + CKP_SEP;
             listid = 0;
             continue;
         } else {
             // collection
-            (*this)[struct_name + convertIntToString(listid)] = line;
+            (*this)[local_struct_name + convertIntToString(listid)] = line;
             listid++;
         }
     }
@@ -109,16 +109,16 @@ bool Checkpoint::load() {
     return false;
 }
 
-void Checkpoint::setCompression(bool compression) {
-    this->compression = compression;
+void Checkpoint::setCompression(bool compression_to_use) {
+    this->compression = compression_to_use;
 }
 
 /**
     set the header line to overwrite the default header
     @param header header line
 */
-void Checkpoint::setHeader(string header) {
-    this->header = "--- # " + header;
+void Checkpoint::setHeader(string header_to_use) {
+    this->header = "--- # " + header_to_use;
 }
 
 void Checkpoint::setDumpInterval(double interval) {
@@ -126,14 +126,14 @@ void Checkpoint::setDumpInterval(double interval) {
 }
 
 void Checkpoint::dump(ostream &out) {
-    string struct_name;
+    string local_struct_name;
     size_t pos;
     int listid = 0;
     for (iterator i = begin(); i != end(); i++) {
         if ((pos = i->first.find(CKP_SEP)) != string::npos) {
-            if (struct_name != i->first.substr(0, pos)) {
-                struct_name = i->first.substr(0, pos);
-                out << struct_name << ':' << endl;
+            if (local_struct_name != i->first.substr(0, pos)) {
+                local_struct_name = i->first.substr(0, pos);
+                out << local_struct_name << ':' << endl;
                 listid = 0;
             }
             // check if key is a collection
@@ -370,8 +370,8 @@ CheckpointFactory::CheckpointFactory() {
     checkpoint = NULL;
 }
 
-void CheckpointFactory::setCheckpoint(Checkpoint *checkpoint) {
-    this->checkpoint = checkpoint;
+void CheckpointFactory::setCheckpoint(Checkpoint *checkpoint_to_use) {
+    this->checkpoint = checkpoint_to_use;
 }
 
 Checkpoint *CheckpointFactory::getCheckpoint() {

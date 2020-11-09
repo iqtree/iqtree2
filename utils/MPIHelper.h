@@ -62,8 +62,8 @@ public:
         return numProcesses;
     }
 
-    void setNumProcesses(int numProcesses) {
-        MPIHelper::numProcesses = numProcesses;
+    void setNumProcesses(int number_of_processes) {
+        MPIHelper::numProcesses = number_of_processes;
     }
 
     int getProcessID() const {
@@ -78,8 +78,8 @@ public:
         return processID != PROC_MASTER;
     }
 
-    void setProcessID(int processID) {
-        MPIHelper::processID = processID;
+    void setProcessID(int process_id) {
+        MPIHelper::processID = process_id;
     }
 
     /** synchronize random seed from master to all workers */
@@ -164,16 +164,16 @@ public:
         return numTreeReceived;
     }
 
-    void setNumTreeReceived(int numTreeReceived) {
-        MPIHelper::numTreeReceived = numTreeReceived;
+    void setNumTreeReceived(int num_received) {
+        MPIHelper::numTreeReceived = num_received;
     }
 
     int getNumTreeSent() const {
         return numTreeSent;
     }
 
-    void setNumTreeSent(int numTreeSent) {
-        MPIHelper::numTreeSent = numTreeSent;
+    void setNumTreeSent(int num_sent) {
+        MPIHelper::numTreeSent = num_sent;
     }
     
     void resetNumbers() {
@@ -192,8 +192,8 @@ public:
         return numNNISearch;
     }
 
-    void setNumNNISearch(int numNNISearch) {
-        MPIHelper::numNNISearch = numNNISearch;
+    void setNumNNISearch(int num_nni_search) {
+        MPIHelper::numNNISearch = num_nni_search;
     }
 
 private:
