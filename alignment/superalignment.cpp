@@ -920,7 +920,7 @@ void SuperAlignment::removePartitions(set<int> &removed_id) {
     buildPattern();
 }
 
-std::vector<size_t>& SuperAlignment::getSequenceHashes(progress_display* progress) const {
+std::vector<size_t> SuperAlignment::getSequenceHashes(progress_display* progress) const {
     //JB2020-06-23 Begin : Determine hashes for all the sequences
     auto startHash = getRealTime();
     auto n         = getNSeq();
