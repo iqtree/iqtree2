@@ -52,7 +52,7 @@ std::string getIncrementalParameter(const char letter, const char* defaultValue)
     return answer;
 }
 
-size_t getIncrementalParameter(const char letter, size_t defaultValue) {
+size_t getIncrementalSizeParameter(const char letter, size_t defaultValue) {
     auto s = getIncrementalParameter(letter, "");
     if (s.empty()) {
         return defaultValue;
@@ -105,7 +105,7 @@ LocalOptimization getLocalOptimizationAlgorithm() {
     return NO_LOCAL_OPTIMIZATION;
 }
 size_t getTaxaPerBatch(size_t totalTaxa) {
-    size_t taxaPerBatch = getIncrementalParameter('B', 1);
+    size_t taxaPerBatch = getIncrementalSizeParameter('B', 0);
     if ( taxaPerBatch == 0 ) {
         taxaPerBatch = totalTaxa;
         if ( taxaPerBatch == 0 ) {
@@ -118,7 +118,7 @@ size_t getInsertsPerBatch(size_t totalTaxa, size_t taxaPerBatch) {
     string insertString = getIncrementalParameter('I', "");
     size_t len = insertString.length();
     if (len==0) {
-        return 0;
+        return taxaPerBatch;
     }
     size_t numberToInsert;
     if (insertString[len-1] == '%') {

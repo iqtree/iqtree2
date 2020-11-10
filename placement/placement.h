@@ -41,7 +41,7 @@ namespace Placement {
         @param letter       - the letter that indicates the parameter
         @param defaultValue - the default value of the parameter
         @return the value of the parameter*/
-    size_t        getIncrementalParameter(const char letter, size_t defaultValue);
+    size_t        getIncrementalSizeParameter(const char letter, size_t defaultValue);
 
     /** determine how many (if any) taxa are to be removed, and reinserted
         @param countOfTaxa - the total number of taxa in the tree
