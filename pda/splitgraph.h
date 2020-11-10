@@ -382,7 +382,7 @@ public:
 	 * remove all trivial splits
 	 * @return number of trivial splits removed
 	*/
-	int removeTrivialSplits();
+	size_t removeTrivialSplits();
     
 protected:
 

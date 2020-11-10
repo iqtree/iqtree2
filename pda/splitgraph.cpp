@@ -755,15 +755,21 @@ int SplitGraph::findLeafName(string &name) {
     return -1;
 }
 
-int SplitGraph::removeTrivialSplits() {
-    int removed = 0;
-    for (iterator itg = begin(); itg != end(); )  {
-        if ((*itg)->trivial() >= 0) {
-            removed++;
-            delete (*itg);
-            (*itg) = back();
-            pop_back(); 
-        } else itg++;
+size_t SplitGraph::removeTrivialSplits() {
+    size_t removed = 0;
+    size_t count   = size();
+    size_t i       = 0;
+    while (i<count) {
+        if (0 <= at(i)->trivial()) {
+            ++removed;
+            delete at(i);
+            at(i) = back();
+            pop_back();
+            --count;
+        } 
+        else {
+            ++i;
+        }        
     }
     return removed;
 }
