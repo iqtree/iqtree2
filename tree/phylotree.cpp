@@ -1374,6 +1374,7 @@ void PhyloTree::initializeAllPartialLh() {
     clearAllPartialLH(true);
     clearAllScaleNum(true);
     clearAllPartialParsimony(true);
+    getMemoryRequired();
     ensurePartialLHIsAllocated(0,0);
 
     int index_parsimony = 0;
@@ -1527,6 +1528,11 @@ void PhyloTree::getMemoryRequired(uint64_t &partial_lh_entries, uint64_t &scale_
 }
 
 void PhyloTree::determineBlockSizes() {
+
+    size_t old_pars_block_size  = pars_block_size;
+    size_t old_scale_block_size = scale_block_size;
+    size_t old_lh_block_size    = lh_block_size;
+
     // reserve the last entry for parsimony score
     // no longer: pars_block_size = (aln->num_states * aln->size() + UINT_BITS - 1) / UINT_BITS + 1;
     if (isUsingSankoffParsimony()) {
@@ -1544,6 +1550,7 @@ void PhyloTree::determineBlockSizes() {
         pars_block_size = ((pars_block_size+7)/8)*8;
     #endif
 
+
     // +num_states for ascertainment bias correction
     size_t states     = aln->num_states;
     size_t unobserved = (model_factory == nullptr)
@@ -1556,6 +1563,16 @@ void PhyloTree::determineBlockSizes() {
     scale_block_size  = nptn * rates * mixtures;
     size_t mod_states = (model==nullptr) ? aln->num_states : model->num_states;
     lh_block_size     = scale_block_size * mod_states;
+
+    if (old_scale_block_size < scale_block_size && this->central_scale_num != nullptr) {
+        deleteAllPartialLh();
+    }
+    else if (old_lh_block_size < lh_block_size && this->central_partial_lh != nullptr) {
+        deleteAllPartialLh();
+    }
+    if (old_pars_block_size < pars_block_size && this->central_partial_pars != nullptr) {
+        deleteAllPartialParsimony();
+    }
 }
 
 size_t PhyloTree::getLhBlockSize() {
@@ -1587,11 +1604,9 @@ void PhyloTree::allocateCentralBlocks(size_t extra_parsimony_block_count,
         uint64_t mem_size = (uint64_t)(max_lh_slots + extra_lh_block_count) * lh_block_size
             + 4 + tip_partial_lh_size;
 
-        if (VB_MED<=verbose_mode && 0<extra_lh_block_count) {
-            std::stringstream s;
-            s   << "max_lh_slots was " << max_lh_slots
-                << " and extra_lh_block_count was " << extra_lh_block_count;
-            logLine(s.str());
+        if (0<extra_lh_block_count) {
+            LOG_LINE(VB_MED, "max_lh_slots was " << max_lh_slots
+                << " and extra_lh_block_count was " << extra_lh_block_count);
         }
         LOG_LINE ( VB_DEBUG, "Allocating " << mem_size * sizeof(double) << " bytes for "
                   << (max_lh_slots + extra_lh_block_count) << " partial likelihood vectors "
@@ -1615,13 +1630,11 @@ void PhyloTree::allocateCentralBlocks(size_t extra_parsimony_block_count,
     }
 
 
-    if (!central_scale_num) {
+    if (central_scale_num == nullptr) {
         auto slots_wanted = max_lh_slots + extra_lh_block_count;
         uint64_t mem_size = slots_wanted * scale_block_size;
         central_scale_num_size_in_bytes = mem_size * sizeof(UBYTE);
-
-        if (verbose_mode >= VB_MAX)
-            cout << "Allocating " << central_scale_num_size_in_bytes << " bytes for scale num vectors" << endl;
+        LOG_LINE(VB_MAX, "Allocating " << central_scale_num_size_in_bytes << " bytes for scale num vectors");
         try {
             central_scale_num = aligned_alloc<UBYTE>(mem_size);
         } catch (std::bad_alloc &ba) {

@@ -107,13 +107,17 @@ void TargetBranch::computeState(PhyloTree& phylo_tree,
     c.calculate();
     double pars = phylo_tree.computePartialParsimonyOutOfTree
         ( neigh1->partial_pars, neigh2->partial_pars, partial_pars );
-    TREE_LOG_LINE(phylo_tree, VB_MAX, "TB Parsimony was " << pars
-                  << ", neigh1->length was " << neigh1->length);
+    if (phylo_tree.leafNum < 50) {
+        TREE_LOG_LINE(phylo_tree, VB_MAX, "TB Parsimony was " << pars
+                      << ", neigh1->length was " << neigh1->length);
+    }
     if (partial_lh != nullptr) {
         blocker->makeTreeReady(first, second);
         LikelihoodBufferSet localBuffers(phylo_tree.tree_buffers);
         double score = -phylo_tree.computeLikelihoodBranch(neigh1, first, localBuffers);
-        TREE_LOG_LINE(phylo_tree, VB_MAX, "TB Initial Likelihood was " << score);
+        if (phylo_tree.leafNum < 50) {
+            TREE_LOG_LINE(phylo_tree, VB_MAX, "TB Initial Likelihood was " << score);
+        }
 
         double old_length      = neigh1->length;
         double half_old_length = 0.5 * old_length;

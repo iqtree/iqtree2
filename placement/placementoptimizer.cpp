@@ -35,6 +35,7 @@ GlobalPlacementOptimizer::GlobalPlacementOptimizer() = default;
 GlobalPlacementOptimizer::~GlobalPlacementOptimizer() = default;
 
 void GlobalPlacementOptimizer::optimizeAfterPlacement(PhyloTree& tree) {
+    tree.initializeTree(); //Make sure branch numbers et cetera are set.
     tree.deleteAllPartialLh();
 
     if (tree.isUsingSankoffParsimony() && !tree.params->sankoff_cost_file) {
@@ -42,11 +43,11 @@ void GlobalPlacementOptimizer::optimizeAfterPlacement(PhyloTree& tree) {
         tree.setParsimonyKernel(tree.params->SSE);
     }
 
-    tree.initializeTree(); //Make sure branch numbers et cetera are set.
     TREE_LOG_LINE(tree, VB_MED, 
         "Number of leaves " << tree.leafNum
         << ", of nodes "    << tree.nodeNum
         << ", of branches " << tree.branchNum);
+    tree.determineBlockSizes();
     tree.initializeAllPartialLh();
 
     //First, recompute parsimony

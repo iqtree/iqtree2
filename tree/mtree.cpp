@@ -1643,6 +1643,10 @@ MTree::~MTree()
     root = NULL;
 }
 
+bool MTree::isRootLeaf(Node* node) {
+    return (rooted && node == root);
+}
+
 int MTree::freeNode(Node *node, Node *dad)
 {
 	if ( root == NULL )
@@ -1783,6 +1787,10 @@ void MTree::setExtendedFigChar() {
 	fig_char[2] = '/';
 	//fig_char[3] = 195;
 	fig_char[4] = '\\';
+}
+
+void MTree::setParams(Params* params_to_use) {
+    params = params_to_use;
 }
 
 void MTree::drawTree(ostream &out, int brtype, double zero_epsilon) {
@@ -2027,9 +2035,59 @@ void MTree::calcDist(Node *aroot, double cur_len, double* &dist, Node *node, Nod
     	branch_length = (*it)->length;
         calcDist(aroot, cur_len + branch_length, dist, (*it)->node, node);
     }
+}
+
+void MTree::treeLengths(DoubleVector& lenvec, Node* node, Node* dad) {
 
 }
 
+string MTree::getBranchID(Node* node1, Node* node2) {
+    string key("");
+    if (node1->id < node2->id) {
+        key += convertIntToString(node1->id) + "-"
+            + convertIntToString(node2->id);
+    }
+    else {
+        key += convertIntToString(node2->id) + "-"
+            + convertIntToString(node1->id);
+    }
+    return key;
+}
+
+void MTree::initProgress(double size, std::string name, const char* verb, const char* noun, bool isEstimate) {
+}
+
+void MTree::trackProgress(double amount) {
+}
+
+void MTree::hideProgress() {
+}
+
+void MTree::showProgress() {
+}
+
+void MTree::logLine(const char* line) {
+    hideProgress();
+    #if (0)
+        #ifdef CLANG_UNDER_VS
+            #ifdef DEBUG
+            _CrtCheckMemory();
+            #endif  
+        #endif
+    #endif
+    #ifdef _OPENMP
+    #pragma omp critical (io)
+    #endif
+    std::cout << line << std::endl;
+    showProgress();
+}
+
+void MTree::logLine(const std::string& line) {
+    logLine(line.c_str());
+}
+
+void MTree::doneProgress() {
+}
 
 /*********************************************
 	class PDTaxaSet

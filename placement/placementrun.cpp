@@ -43,15 +43,20 @@ void PlacementRun::setUpAllocator(int extra_parsimony_blocks,
 }
                      
 void PlacementRun::prepareForPlacementRun() {
-    TREE_LOG_LINE ( phylo_tree, VB_MED, "After overallocating lh blocks, index_lh was "
-              << block_allocator->getLikelihoodBlockCount() );
+    if (use_likelihood) {
+        TREE_LOG_LINE(phylo_tree, VB_MED, "After overallocating lh blocks, index_lh was "
+            << block_allocator->getLikelihoodBlockCount());
+    }
     if (VB_MED <= verbose_mode) {
         double curScore = phylo_tree.computeLikelihood();
-        TREE_LOG_LINE ( phylo_tree, VB_MED, "Likelihood score before insertions was " << curScore );
-        #if (0)
-            curScore = phylo_tree.optimizeAllBranches(2);
-            LOG_LINE ( phylo_tree, VB_MED, "Optimized likelihood score before insertions was " << curScore);
-        #endif
+        TREE_LOG_LINE(phylo_tree, VB_MED, "Likelihood score before insertions was " << curScore);
+#if (0)
+        curScore = phylo_tree.optimizeAllBranches(2);
+        LOG_LINE(phylo_tree, VB_MED, "Optimized likelihood score before insertions was " << curScore);
+#endif
+        if (!use_likelihood) {
+            phylo_tree.deleteAllPartialLh();
+        }
     }
     TREE_LOG_LINE ( phylo_tree, VB_MED, "Batch size is " << taxa_per_batch
               << " and the number of inserts per batch is " << inserts_per_batch);
@@ -104,10 +109,14 @@ void PlacementRun::prepareForBatch() {
      
 #else //TARGET_BRANCH_MAJOR
     LikelihoodBlockPairs blocks(2);
+    size_t tStep = 1;
+    while (tStep * 100 <= targetCount) tStep *= 10;
     for (size_t t = 0; t < targetCount; ++t ) {
         TargetBranch* target = targets.getTargetBranch(t);
-        TREE_LOG_LINE(phylo_tree, VB_DEBUG,
-                      "Scoring target branch " << t << " of " << targetCount);
+        if ((t & tStep) == 0) {
+            TREE_LOG_LINE(phylo_tree, VB_DEBUG,
+                "Scoring target branch " << t << " of " << targetCount);
+        }
         
         double computeStart = getRealTime();
         target->computeState(phylo_tree, t, blocks);
