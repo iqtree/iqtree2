@@ -4413,7 +4413,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 //    }
     
     if (!params.additional_alignment_files.empty()) {
-        params.incremental_method = true;
+        params.incremental = true;
     }
 }
 
