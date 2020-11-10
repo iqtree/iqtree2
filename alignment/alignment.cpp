@@ -76,7 +76,7 @@ Alignment::Alignment()
     non_stop_codon = NULL;
     seq_type = SEQ_UNKNOWN;
     STATE_UNKNOWN = 126;
-    pars_lower_bound = NULL;
+    pars_lower_bound = nullptr;
     isShowingProgressDisabled = false;
 }
 
@@ -363,7 +363,6 @@ vector<size_t> Alignment::getSequenceHashes(progress_display* progress) const {
     auto n = getNSeq();
     vector<size_t> hashes;
     hashes.resize(n, 0);
-    //Todo: Disable this when isShowingProgressDisabled is set
     #ifdef _OPENMP
         #pragma omp parallel for schedule(static,100)
     #endif
@@ -383,6 +382,29 @@ vector<size_t> Alignment::getSequenceHashes(progress_display* progress) const {
     if (verbose_mode >= VB_MED && !progress_display::getProgressDisplay()) {
         auto hashTime = getRealTime() - startHash;
         cout << "Hashing sequences took " << hashTime << " wall-clock seconds" << endl;
+    }
+    return hashes;
+}
+
+vector<size_t> Alignment::getPatternIndependentSequenceHashes(progress_display* progress) const {
+    auto n = getNSeq();
+    vector<size_t> hashes;
+    hashes.resize(n, 0);
+    
+    auto patterns     = site_pattern.data();
+    auto patternCount = site_pattern.size();
+    #ifdef _OPENMP
+        #pragma omp parallel for schedule(static,100)
+    #endif
+    for (int seq1=0; seq1<n; ++seq1) {
+        size_t hash = 0;
+        for (int i=0; i<patternCount; ++i) {
+            adjustHash(at(patterns[i])[seq1], hash);
+        }
+        hashes[seq1] = hash;
+        if (progress!=nullptr && (n%100)==99) {
+            progress->incrementBy(100.0);
+        }
     }
     return hashes;
 }
@@ -529,7 +551,7 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype, str
     non_stop_codon = NULL;
     seq_type = SEQ_UNKNOWN;
     STATE_UNKNOWN = 126;
-    pars_lower_bound = NULL;
+    pars_lower_bound = nullptr;
     double readStart = getRealTime();
     cout << "Reading alignment file " << filename << " ... ";
     intype = detectInputFile(filename);
@@ -609,7 +631,7 @@ Alignment::Alignment(NxsDataBlock *data_block, char *sequence_type, string model
     non_stop_codon = NULL;
     seq_type = SEQ_UNKNOWN;
     STATE_UNKNOWN = 126;
-    pars_lower_bound = NULL;
+    pars_lower_bound = nullptr;
     
     extractDataBlock(data_block);
     if (verbose_mode >= VB_DEBUG)
@@ -1137,27 +1159,32 @@ void Alignment::addConstPatterns(char *freq_const_patterns) {
 }
 
 void Alignment::orderPatternByNumChars(int pat_type) {
-    int nptn = getNPattern();
-    int ptn, site, i = 0;
-    int *num_chars = new int[nptn];
-    int *ptn_order = new int[nptn];
+    int  nptn           = getNPattern();
+    int* num_chars      = new int[nptn];
+    int* ptn_order      = new int[nptn];
     const int UINT_BITS = sizeof(UINT)*8;
     if (pat_type == PAT_INFORMATIVE)
         num_parsimony_sites = num_informative_sites;
     else
         num_parsimony_sites = num_variant_sites;
 
-    int maxi = (num_parsimony_sites+UINT_BITS-1)/UINT_BITS;
+    int  maxi        = (num_parsimony_sites+UINT_BITS-1)/UINT_BITS;
+    delete[] pars_lower_bound;
+    pars_lower_bound = nullptr;
     pars_lower_bound = new UINT[maxi+1];
-    UINT sum = 0;
+    UINT sum         = 0;
     memset(pars_lower_bound, 0, (maxi+1)*sizeof(UINT));
-    for (ptn = 0; ptn < nptn; ptn++) {
+    #ifdef _OPENMP
+    #pragma omp parallel for
+    #endif
+    for (size_t ptn = 0; ptn < nptn; ++ptn) {
         num_chars[ptn] =  -at(ptn).num_chars + (at(ptn).isInvariant())*1024;
         ptn_order[ptn] = ptn;
     }
     quicksort(num_chars, 0, nptn-1, ptn_order);
     ordered_pattern.clear();
-    for (ptn = 0, site = 0, i = 0; ptn < nptn; ptn++) {
+    size_t i = 0;
+    for (size_t ptn = 0, site = 0; ptn < nptn; ptn++) {
         if (pat_type == PAT_INFORMATIVE) {
             if (!at(ptn_order[ptn]).isInformative())
                 break;
@@ -1773,12 +1800,13 @@ bool Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq
             outWarning("Your specified sequence type is different from the detected one");
         seq_type = user_seq_type;
     }
-    return constructPatterns(nseq, nsite, sequences);
+    return constructPatterns(nseq, nsite, sequences, nullptr);
 }
 
-bool Alignment::constructPatterns(int nseq, int nsite, const StrVector& sequences) {
+bool Alignment::constructPatterns(int nseq, int nsite,
+                                  const StrVector& sequences,
+                                  progress_display* progress) {
     //initStateSpace(seq_type);
-    
     // now convert to patterns
     char char_to_state[NUM_CHAR];
     char AA_to_state[NUM_CHAR];
@@ -1787,9 +1815,9 @@ bool Alignment::constructPatterns(int nseq, int nsite, const StrVector& sequence
     if (nt2aa) {
         buildStateMap(char_to_state, SEQ_DNA);
         buildStateMap(AA_to_state, SEQ_PROTEIN);
-    } else
+    } else {
         buildStateMap(char_to_state, seq_type);
-
+    }
     int step = 1;
     if (seq_type == SEQ_CODON || nt2aa) {
         step = 3;
@@ -1813,8 +1841,12 @@ bool Alignment::constructPatterns(int nseq, int nsite, const StrVector& sequence
     };
     std::vector<PatternInfo> patternInfo;
     patternInfo.resize((nsite + (step-1)) / step);
-    //Todo: Disable progress display, when isShowingProgressDisabled is set
-    progress_display progress ( nsite, "Constructing alignment", "examined", "site");
+    progress_display* progress_here = nullptr;
+    if (progress==nullptr && !isShowingProgressDisabled) {
+        progress_display* progress_here = new progress_display( nsite, "Constructing alignment",
+                                                               "examined", "site");
+        progress = progress_here;
+    }
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
@@ -1874,13 +1906,25 @@ bool Alignment::constructPatterns(int nseq, int nsite, const StrVector& sequence
         {
             info.isAllGaps = pat.isAllGaps(STATE_UNKNOWN);
         }
-        progress += step;
+        if (progress!=nullptr) {
+            progress->incrementBy(step);
+        }
     }
-    progress.done();
+    if (progress_here!=nullptr) {
+        progress_here->done();
+        delete progress_here;
+        progress_here = progress = nullptr;
+    }
 
     std::stringstream err_str;
     //2. Now handle warnings and errors, and compress patterns, sequentially
-    progress_display progressCompress(nsite, "Compressing patterns", "processed", "site");
+
+    if (progress==nullptr && !isShowingProgressDisabled) {
+        progress_display* progress_here = new progress_display(nsite, "Compressing patterns",
+                                                               "processed", "site");
+        progress = progress_here;
+    }
+
     int num_gaps_only = 0;
     int w = 0;
     int site = 0;
@@ -1888,9 +1932,9 @@ bool Alignment::constructPatterns(int nseq, int nsite, const StrVector& sequence
         PatternInfo& info = patternInfo[r];
         std::string warnings = info.warnings.str();
         if (!warnings.empty()) {
-            progressCompress.hide();
+            if (progress!=nullptr) { progress->hide(); }
             cout << warnings;
-            progressCompress.show();
+            if (progress!=nullptr) { progress->show(); }
         }
         std::string errors = info.errors.str();
         if (!errors.empty()) {
@@ -1914,12 +1958,20 @@ bool Alignment::constructPatterns(int nseq, int nsite, const StrVector& sequence
                 site_pattern[r] = q;
             }
         }
-        progressCompress += step;
+        if (progress!=nullptr) {
+            progress->incrementBy(step);
+        }
     }
     resize(w);
-    progressCompress.done();
+    if (progress_here!=nullptr) {
+        progress_here->done();
+        delete progress_here;
+        progress_here = progress = nullptr;
+    }
     if (num_gaps_only) {
+        if (progress!=nullptr) { progress->hide(); }
         cout << "WARNING: " << num_gaps_only << " sites contain only gaps or ambiguous characters." << endl;
+        if (progress!=nullptr) { progress->show(); }
     }
     if (err_str.str() != "") {
         throw err_str.str();
@@ -2914,7 +2966,7 @@ void Alignment::getStateStrings(StrVector& stateStrings) const {
 }
 
 void Alignment::getOneSequence(StrVector& stateStrings, size_t seq_id, string& str) const {
-    auto patterns = site_pattern.data();
+    auto patterns     = site_pattern.data();
     auto patternCount = site_pattern.size();
     for (int i=0; i<patternCount; ++i) {
         auto state = at(patterns[i])[seq_id];
@@ -4039,7 +4091,8 @@ bool Alignment::isCompatible(const Alignment* other, std::string& whyNot) const 
 
 bool Alignment::updateFrom(const Alignment* other,
                            const std::vector<std::pair<int,int>>& updated_sequences,
-                           const IntVector& added_sequences) {
+                           const IntVector& added_sequences,
+                           progress_display* progress) {
     std::string why_not;
     if (!isCompatible(other, why_not)) {
         return false;
@@ -4049,21 +4102,48 @@ bool Alignment::updateFrom(const Alignment* other,
     StrVector stateStrings;
     getStateStrings(stateStrings);
     
+    IntVector dest_seq_ids;
+    IntVector source_seq_ids;
     for (auto it=updated_sequences.begin(); it!=updated_sequences.end(); ++it) {
-        int other_seq_id = it->second;
-        other->getOneSequence(stateStrings, other_seq_id, sequences[it->first] );
+        dest_seq_ids.push_back(it->first);
+        source_seq_ids.push_back(it->second);
     }
-    for (auto it=added_sequences.begin(); it!=added_sequences.end(); ++it) {
-        int other_seq_id = *it;
-        seq_names.push_back( other->getSeqName(other_seq_id));
-        string str;
-        other->getOneSequence(stateStrings, other_seq_id, str );
-        sequences.emplace_back(str);
+    size_t update_count = dest_seq_ids.size();
+        
+    #ifdef _OPENMP
+    #pragma omp parallel for
+    #endif
+    for (size_t i=0; i<update_count; ++i) {
+        size_t new_seq_id = source_seq_ids[i];
+        size_t old_seq_id = dest_seq_ids[i];
+        other->getOneSequence(stateStrings, new_seq_id, sequences[old_seq_id]);
+        if (progress!=nullptr) {
+            progress->incrementBy(1.0);
+        }
     }
-    int nseq  = sequences.size();
+    
+    size_t old_seq_count = sequences.size();
+    size_t add_count     = added_sequences.size();
+    size_t nseq          = old_seq_count + add_count;
+    sequences.resize(nseq);
+    seq_names.resize(nseq);
+    #ifdef _OPENMP
+    #pragma omp parallel for
+    #endif
+    for (size_t r=0; r<add_count; ++r) {
+        int    other_seq_id = added_sequences[r];
+        size_t w            = old_seq_count + r;
+        seq_names[w]        = other->getSeqName(other_seq_id);
+        other->getOneSequence(stateStrings, other_seq_id, sequences[w] );
+        if (progress!=nullptr) {
+            progress->incrementBy(1.0);
+        }
+    }
     int nsite = getNSite();
     
-    return constructPatterns(nseq, nsite, sequences);
+    bool rc = constructPatterns(nseq, nsite, sequences, progress);
+    orderPatternByNumChars(PAT_VARIANT);
+    return rc;
 }
 
 

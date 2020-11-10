@@ -595,6 +595,11 @@ string computeFastMLTree(Params &params, Alignment *aln,
 
     iqtree->getModelFactory()->restoreCheckpoint();
     iqtree->ensureNumberOfThreadsIsSet(nullptr, false);
+    
+    if (!params.additional_alignment_files.empty()) {
+        iqtree->mergeAlignments(params.additional_alignment_files);
+    }
+    
     iqtree->initializeAllPartialLh();
     double saved_modelEps = params.modelEps;
     params.modelEps = params.modelfinder_eps;
@@ -809,6 +814,11 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
         } else {
             iqtree.saveCheckpoint();
         }
+        
+        if (!params.additional_alignment_files.empty()) {
+            iqtree.mergeAlignments(params.additional_alignment_files);
+        }
+
     }
     
     // also save initial tree to the original .ckp.gz checkpoint

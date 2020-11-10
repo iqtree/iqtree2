@@ -226,22 +226,24 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
     //
     PlacementRun pr(*this, taxaIdsToAdd);
     deleteAllPartialLh();
+    deleteAllPartialParsimony();
     
+    bool     trackLikelihood        = shouldPlacementUseLikelihood();
+    size_t   additional_sequences   = taxaIdsToAdd.size();
+
     if ( pr.taxa_per_batch == 1 && pr.heuristic->isGlobalSearch()  &&
-         !pr.calculator->usesLikelihood() ) {
+         !pr.calculator->usesLikelihood() && !trackLikelihood ) {
+        pr.setUpAllocator(additional_sequences*4, false, 0);
         reinsertTaxaViaStepwiseParsimony(taxaIdsToAdd);
         pr.donePlacement();
         return;
     }
-    
-    bool trackLikelihood  = shouldPlacementUseLikelihood();
 
     //Todo: What about # of likelihood vectors when
     //      likelihood vectors aren't being allocated per node.
     //      extra_lh_blocks should be even less, in that case.
     size_t   sequences              = aln->getNSeq();
     size_t   target_branch_count    = sequences * 2 - 1;
-    size_t   additional_sequences   = taxaIdsToAdd.size();
     size_t   extra_parsimony_blocks = target_branch_count + additional_sequences * 4;
         //each target branch needs a parsimony block, and
         //although each taxon to place just needs one parsimony block

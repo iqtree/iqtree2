@@ -38,7 +38,7 @@ void SearchHeuristic::doneFiltering() {
 
 SearchHeuristic* SearchHeuristic::getSearchHeuristic() {
     auto heuristic = Placement::getIncrementalParameter('H', "");
-    if (heuristic=="") {
+    if (heuristic=="" || heuristic=="0") {
         return new SearchHeuristic;
     }
     else if (heuristic=="MP") {

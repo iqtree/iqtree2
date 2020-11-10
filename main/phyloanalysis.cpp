@@ -1705,13 +1705,17 @@ void initializeParams(Params &params, IQTree &iqtree)
 {
 //    iqtree.setCurScore(-DBL_MAX);
     bool ok_tree = iqtree.root;
-    if (iqtree.isSuperTreeUnlinked())
+    if (iqtree.isSuperTreeUnlinked()) {
         ok_tree = ((PhyloSuperTree*)&iqtree)->front()->root;
+    }
     if (!ok_tree)
     {
         // compute initial tree
         if (!params.compute_ml_tree_only) {
             iqtree.computeInitialTree(params.SSE);
+        }
+        if (!params.additional_alignment_files.empty()) {
+            iqtree.mergeAlignments(params.additional_alignment_files);
         }
     }
     ASSERT(iqtree.aln);

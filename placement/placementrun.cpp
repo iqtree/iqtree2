@@ -25,16 +25,21 @@ PlacementRun::PlacementRun(PhyloTree& tree, const IntVector& taxaIdsToAdd)
     }
 }
 
-void PlacementRun::setUpAllocator(int extra_parsimony_blocks, bool trackLikelihood,
-                    int extra_lh_blocks) {
+void PlacementRun::setUpAllocator(int extra_parsimony_blocks,
+                                  bool trackLikelihood,
+                                  int extra_lh_blocks) {
     int      index_parsimony        = 0;
     int      index_lh               = 0;
-    phylo_tree.deleteAllPartialLh();
-    phylo_tree.ensurePartialLHIsAllocated(extra_parsimony_blocks, extra_lh_blocks);
-    phylo_tree.initializeAllPartialLh(index_parsimony, index_lh);
-    block_allocator = trackLikelihood
-        ? new LikelihoodBlockAllocator(phylo_tree, index_parsimony, index_lh)
-        : new BlockAllocator(phylo_tree, index_parsimony);
+    phylo_tree.deleteAllPartialLh(); //For now: implies a call to deleteAllPartialParsimony
+    if (trackLikelihood) {
+        phylo_tree.ensurePartialLHIsAllocated(extra_parsimony_blocks, extra_lh_blocks);
+        phylo_tree.initializeAllPartialLh(index_parsimony, index_lh);
+        block_allocator = new LikelihoodBlockAllocator(phylo_tree, index_parsimony, index_lh);
+    } else {
+        phylo_tree.ensureCentralPartialParsimonyIsAllocated(extra_parsimony_blocks);
+        phylo_tree.initializeAllPartialPars(index_parsimony);
+        block_allocator = new BlockAllocator(phylo_tree, index_parsimony);
+    }
 }
                      
 void PlacementRun::prepareForPlacementRun() {

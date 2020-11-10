@@ -1684,6 +1684,8 @@ void SuperAlignment::orderPatternByNumChars(int pat_type) {
         num_parsimony_sites = num_variant_sites;
 
     int maxi = (num_parsimony_sites+UINT_BITS-1)/UINT_BITS;
+    delete [] pars_lower_bound;
+    pars_lower_bound = nullptr;
     pars_lower_bound = new UINT[maxi+1];
     memset(pars_lower_bound, 0, (maxi+1)*sizeof(UINT));
     size_t nseq = getNSeq();

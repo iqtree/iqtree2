@@ -574,9 +574,6 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
         }
         if (params->incremental) {
             updateToMatchAlignment(aln);
-            if (params->additional_alignment_files.empty()) {
-                mergeAlignments(params->additional_alignment_files);
-            }
         } else {
             setAlignment(aln);
         }
@@ -1062,8 +1059,9 @@ void IQTree::initializeModel(Params &params, string model_name, ModelsBlock *mod
         pllInitModel(pllInst, pllPartitions);
     }
 
-    if (aln->ordered_pattern.empty())
+    if (aln->ordered_pattern.empty()) {
         aln->orderPatternByNumChars(PAT_VARIANT);
+    }
 
 }
 double IQTree::getProbDelete() {

@@ -199,7 +199,8 @@ public:
 
     bool buildPattern(StrVector &sequences, char *sequence_type, int nseq, int nsite);
     
-    bool constructPatterns(int nseq, int nsite, const StrVector& sequences);
+    bool constructPatterns(int nseq, int nsite, const StrVector& sequences,
+                           progress_display* progress);
 
     /**
             read the alignment in PHYLIP format (interleaved)
@@ -461,11 +462,23 @@ public:
 
     
     /**
-     * calclulate hashes of all the sequences
+     * calclulate hashes of all the sequences (note: hashes depend on patterns, so
+     * although hashes are valid for comparing sequences in the same Alignment,
+     * they are not valid for comparing sequences between two Alignment instances
+     * (use the slower getPatternIndependentSequenceHashes() for that).
      * @param progress - progress_display instance against which progress is to be reported
      * @return a vector ( vector<size_t> ) of the hashes of all the sequences
      */
     vector<size_t> getSequenceHashes(progress_display* progress) const;
+
+    /**
+     * calclulate hashes of all the sequences (these hashes are independent of the patterns,
+     * and can be used to compare sequences from different Alignment instances).
+     * @param progress - progress_display instance against which progress is to be reported
+     * @return a vector ( vector<size_t> ) of the hashes of all the sequences
+     */
+
+    vector<size_t> getPatternIndependentSequenceHashes(progress_display* progress) const;
 
     /**
      * calculating hashes for sequences
@@ -591,7 +604,8 @@ public:
      */
     bool updateFrom(const Alignment* other,
                     const std::vector<std::pair<int,int>>& updated_sequences,
-                    const IntVector& added_sequences);
+                    const IntVector& added_sequences,
+                    progress_display* progress);
     
     /** Check if this alignment can be updated from another (called from: updateFrom())
      *  @param other - the source alignment (may not be == this)

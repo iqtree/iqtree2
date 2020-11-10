@@ -113,6 +113,8 @@ void TargetBranch::computeState(PhyloTree& phylo_tree,
         blocker->makeTreeReady(first, second);
         LikelihoodBufferSet localBuffers(phylo_tree.tree_buffers);
         double score = -phylo_tree.computeLikelihoodBranch(neigh1, first, localBuffers);
+        TREE_LOG_LINE(phylo_tree, VB_MAX, "TB Initial Likelihood was " << score);
+
         double old_length      = neigh1->length;
         double half_old_length = 0.5 * old_length;
         PlacementTraversalInfo info(phylo_tree, localBuffers, nullptr, nullptr);

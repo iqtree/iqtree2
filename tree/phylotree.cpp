@@ -486,7 +486,7 @@ void PhyloTree::prepareForDeletes() {
         computeTipPartialParsimony();
     }
     int initial_parsimony = computeParsimony("Computing initial parsimony");
-    LOG_LINE ( VB_MIN, "Parsimony score before deletions was " << initial_parsimony );
+    LOG_LINE ( VB_MED, "Parsimony score before deletions was " << initial_parsimony );
     fixNegativeBranch();
     
     if (shouldPlacementUseLikelihood()) {
@@ -536,7 +536,11 @@ void PhyloTree::prepareForPlacement() {
         initCostMatrix(CM_UNIFORM);
         //Force the use of Sankoff parsimony kernel
     }
-
+    if (aln!=nullptr) {
+        if ( aln->ordered_pattern.empty() ) {
+            aln->orderPatternByNumChars(PAT_VARIANT);
+        }
+    }
     configureLikelihoodKernel(*params);
     configureModel(*params);
     setParsimonyKernel(params->SSE);
@@ -655,22 +659,30 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
 void PhyloTree::mergeAlignment(const Alignment* new_aln) {
     typedef std::map<std::string, size_t> NameMap;
 
-    size_t         old_count  = aln->getNSeq();
-    vector<size_t> old_hashes = aln->getSequenceHashes(nullptr);
-    vector<size_t> new_hashes = new_aln->getSequenceHashes(nullptr);
-    auto           old_names  = aln->getSeqNames();
+    const std::string& path     = new_aln->aln_file;
+    size_t         old_count    = aln->getNSeq();
+    size_t         new_count    = new_aln->getNSeq();
+    size_t         site_count   = aln->getNSite();
+    std::string    task_name    = "Merging alignment " + path;
+    StrVector      state_strings;
+    
+    aln->getStateStrings(state_strings);
+    initProgress(old_count+new_count*2+2*site_count, task_name.c_str(), "", "");
+    
+    vector<size_t> old_hashes     = aln->getPatternIndependentSequenceHashes(progress);
+    vector<size_t> new_hashes     = new_aln->getPatternIndependentSequenceHashes(progress);
+    auto           old_names      = aln->getSeqNames();
+    auto           new_names      = new_aln->getSeqNames();
+    size_t         count_the_same = 0;
     NameMap        name_to_id;
     for (size_t old_seq_id = 0 ; old_seq_id < old_count; ++old_seq_id) {
         name_to_id[old_names[old_seq_id]] = old_seq_id;
     }
-    size_t         new_count   = new_aln->getNSeq();
-    auto           new_names   = new_aln->getSeqNames();
-    IntVector      added_sequences;   //ids of sequences in alignment just added
+    IntVector added_sequences;   //ids of sequences in alignment just added
     std::vector<std::pair<int,int>> updated_sequences;
         //first is the sequence number in the original alignment
         //second is the sequence number in the additional (second) alignment
-    StrVector      names_of_updated_sequences;
-    const std::string& path = new_aln->aln_file;
+    StrVector          names_of_updated_sequences;
     
     for (size_t new_seq_id = 0; new_seq_id < new_count; ++new_seq_id) {
         std::string new_name = new_names[new_seq_id];
@@ -681,7 +693,9 @@ void PhyloTree::mergeAlignment(const Alignment* new_aln) {
             added_sequences.push_back(new_seq_id);
             //Todo: what if there is an identical sequence in the
             //      existing alignment?
-            LOG_LINE(VB_MIN, "Sequence " << new_name << " will be added from " << path);
+            if (!params->suppress_list_of_sequences) {
+                LOG_LINE(VB_MIN, "Sequence " << new_name << " will be added from " << path);
+            }
         } else {
             size_t old_seq_id = find->second;
             if (old_count <= old_seq_id) {
@@ -691,30 +705,56 @@ void PhyloTree::mergeAlignment(const Alignment* new_aln) {
             //Name already seen in the alignment. Has the sequence changed?
             bool same = old_hashes[old_seq_id] == new_hashes[new_seq_id];
             if (same) {
-                auto old_it = aln->begin();
-                auto new_it = new_aln->begin();
-                for (; old_it != aln->end(); ++old_it, ++new_it) {
-                    if  ((*old_it)[old_seq_id] != (*new_it)[new_seq_id]) {
+                //
+                //Todo: It would be better to ask Alignment to do this comparison
+                //      (wouldn't have to construct the two sequence strings, then).
+                //
+                std::string old_sequence;
+                std::string new_sequence;
+                aln->getOneSequence    (state_strings, old_seq_id, old_sequence);
+                new_aln->getOneSequence(state_strings, new_seq_id, new_sequence);
+                ASSERT(old_sequence.length() == new_sequence.length());
+                size_t len = old_sequence.length();
+                for (size_t i=0; i<len; ++i) {
+                    if (old_sequence[i]!=new_sequence[i]) {
+                        LOG_LINE(VB_DEBUG, "Sequence " << new_name << ": first changed "
+                                 << " site was " << i << " (of " << len << ")");
                         same = false;
                         break;
                     }
                 }
                 if (same) {
-                    LOG_LINE(VB_MED, "Sequence " << new_name << " unchanged in " << path);
+                    ++count_the_same;
+                    if (!params->suppress_list_of_sequences) {
+                        LOG_LINE(VB_MIN, "Sequence " << new_name << " unchanged in " << path);
+                    }
                     continue;
                 }
+            } else {
+                LOG_LINE(VB_DEBUG, "Sequence " << new_name
+                         << " had different hash (" << new_hashes[new_seq_id] << ")"
+                         << " from before (" << old_hashes[old_seq_id] << ")");
             }
-            LOG_LINE(VB_MIN, "Sequence " << new_name << " updated in " << path);
+            if (!params->suppress_list_of_sequences) {
+                LOG_LINE(VB_MIN, "Sequence " << new_name << " updated in " << path);
+            }
             updated_sequences.emplace_back(old_seq_id, new_seq_id);
             names_of_updated_sequences.emplace_back(new_name);
         }
+        progress->incrementBy(1.0);
     }
     size_t count_updated          = updated_sequences.size();
     size_t count_added            = added_sequences.size();
     size_t count_updated_or_added = count_updated + count_added;
     if (count_updated_or_added) {
+        LOG_LINE(VB_MIN, "Adding " << count_added << ", and Updating " << count_updated << " sequences");
+        if (0<count_the_same) {
+            LOG_LINE(VB_MIN, "Leaving " << count_the_same << " sequences unchanged" );
+        }
+        aln->updateFrom(new_aln, updated_sequences, added_sequences, progress);
+        doneProgress();
+        LOG_LINE(VB_MED, "Incremental Method: " << params->incremental_method);
         prepareForPlacement();
-        aln->updateFrom(new_aln, updated_sequences, added_sequences);
         IntVector ids_of_sequences_to_place;
         if (0<count_updated) {
             prepareForDeletes();
@@ -727,8 +767,11 @@ void PhyloTree::mergeAlignment(const Alignment* new_aln) {
         }
         for (auto it=added_sequences.begin(); it!=added_sequences.end(); ++it) {
             //Each taxon that was added to the alignment needs to be added to the tree.
-            ids_of_sequences_to_place.push_back(*it);
+            //added_sequences gives sequence id in the *new* alignment, not the *old*
+            ids_of_sequences_to_place.push_back(old_count);
+            ++old_count;
         }
+
         addNewTaxaToTree(ids_of_sequences_to_place);
     }
 }
@@ -742,14 +785,17 @@ void PhyloTree::mergeAlignments(const StrVector& paths) {
         if (params->remove_empty_seq) {
             Alignment* dead_aln = new_aln;
             new_aln = new_aln->removeGappySeq();
-            delete dead_aln;
+            if (dead_aln!=new_aln) {
+                delete dead_aln;
+            }
         }
         try {
             if (new_aln->getNSite()==aln->getNSite()) {
                 new_aln->name             = path; //Just want the file name part of the path
                 new_aln->model_name       = aln->model_name;
                 new_aln->aln_file         = path;
-                new_aln->position_spec = "";
+                new_aln->position_spec    = "";
+                new_aln->showNoProgress();
                 ASSERT(aln->seq_type == new_aln->seq_type);
                 if (aln->seq_type == new_aln->seq_type) {
                     mergeAlignment(new_aln);
@@ -1152,7 +1198,7 @@ void PhyloTree::ensureCentralPartialParsimonyIsAllocated(size_t extra_vector_cou
     total_parsimony_mem_size       = vector_count * pars_block_size + tip_partial_pars_size;
 
     LOG_LINE(VB_DEBUG, "Allocating " << total_parsimony_mem_size * sizeof(UINT)
-             << " bytes for " << vector_count << " partial parsimony vectors "
+             << " bytes for " << vector_count << " partial parsimony vectors"
              << " of " << (pars_block_size * sizeof(UINT)) << " bytes each, and "
              << (tip_partial_pars_size * sizeof(UINT)) << " additional bytes for tip vectors");
     
