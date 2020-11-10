@@ -181,6 +181,9 @@ void progress_display::reportProgress(double time, double cpu, bool newline) {
                     termout.flush();
                 }
                 std::cout << message << std::endl;
+                #if defined(CLANG_UNDER_VS)
+                    OutputDebugStringA((message + "\n").c_str());
+                #endif
             } else {
                 if (workDone < totalWorkToDo) {
                     if (message.length() < barLen ) {
