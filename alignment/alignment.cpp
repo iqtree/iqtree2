@@ -1160,63 +1160,72 @@ void Alignment::addConstPatterns(char *freq_const_patterns) {
 
 void Alignment::orderPatternByNumChars(int pat_type) {
     int  nptn           = getNPattern();
-    int* num_chars      = new int[nptn];
-    int* ptn_order      = new int[nptn];
     const int UINT_BITS = sizeof(UINT)*8;
-    if (pat_type == PAT_INFORMATIVE)
+    if (pat_type == PAT_INFORMATIVE) {
         num_parsimony_sites = num_informative_sites;
-    else
+    } else {
         num_parsimony_sites = num_variant_sites;
+    }
 
-    int  maxi        = (num_parsimony_sites+UINT_BITS-1)/UINT_BITS;
+    size_t frequency_total = 0;
+    {
+        int* num_chars      = new int[nptn];
+        int* ptn_order      = new int[nptn];
+        #ifdef _OPENMP
+        #pragma omp parallel for
+        #endif
+        for (size_t ptn = 0; ptn < nptn; ++ptn) {
+            num_chars[ptn] =  -at(ptn).num_chars + (at(ptn).isInvariant())*1024;
+            ptn_order[ptn] = ptn;
+        }
+        quicksort(num_chars, 0, nptn-1, ptn_order);
+        delete [] num_chars;
+        for (size_t ptn = 0; ptn < nptn; ++ptn) {
+            auto pat = at(ptn_order[ptn]);
+            if (pat.isInvariant()) {
+                nptn = ptn;
+            }
+            else if (pat_type == PAT_INFORMATIVE && !pat.isInformative() ) {
+                nptn = ptn;
+            }
+        }
+        ordered_pattern.clear();
+        ordered_pattern.resize(nptn);
+        cout << "ordered_pattern size starts at " << nptn << endl;
+        #ifdef _OPENMP
+        #pragma omp parallel for reduction(+:frequency_total)
+        #endif
+        for (size_t ptn = 0; ptn < nptn; ++ptn) {
+            ordered_pattern[ptn] = at(ptn_order[ptn]);
+            frequency_total += ordered_pattern[ptn].frequency;
+        }
+        delete [] ptn_order;
+    }
+
+    size_t maxi      = (frequency_total+UINT_BITS-1)/UINT_BITS;
     delete[] pars_lower_bound;
     pars_lower_bound = nullptr;
     pars_lower_bound = new UINT[maxi+1];
-    UINT sum         = 0;
     memset(pars_lower_bound, 0, (maxi+1)*sizeof(UINT));
-    #ifdef _OPENMP
-    #pragma omp parallel for
-    #endif
-    for (size_t ptn = 0; ptn < nptn; ++ptn) {
-        num_chars[ptn] =  -at(ptn).num_chars + (at(ptn).isInvariant())*1024;
-        ptn_order[ptn] = ptn;
-    }
-    quicksort(num_chars, 0, nptn-1, ptn_order);
-    ordered_pattern.clear();
+
+    int site = 0;
     size_t i = 0;
-    for (size_t ptn = 0, site = 0; ptn < nptn; ptn++) {
-        if (pat_type == PAT_INFORMATIVE) {
-            if (!at(ptn_order[ptn]).isInformative())
-                break;
-        } else {
-            if (at(ptn_order[ptn]).isInvariant())
-                break;
-        }
-        ordered_pattern.push_back(at(ptn_order[ptn]));
-        int freq = ordered_pattern.back().frequency;
-        UINT num = ordered_pattern.back().num_chars - 1;
-        for (int j = 0; j < freq; j++, site++) {
+    UINT sum = 0;
+    for (size_t ptn = 0; ptn < nptn; ptn++) {
+        auto pat = ordered_pattern[ptn];
+        for (int j = pat.frequency; 0 < j; --j, site++) {
             if (site == UINT_BITS) {
                 sum += pars_lower_bound[i];
-                i++;
+                ++i;
                 site = 0;
             }
-            pars_lower_bound[i] += num;
+            ASSERT(i<maxi);
+            pars_lower_bound[i] += pat.num_chars - 1;
         }
     }
-    
-    // fill up to vectorclass with dummy pattern
-    int maxnptn = get_safe_upper_limit_float(ordered_pattern.size());
-    while (ordered_pattern.size() < maxnptn) {
-        Pattern pat;
-        pat.resize(getNSeq(), STATE_UNKNOWN);
-        pat.frequency = 0;
-        ordered_pattern.push_back(pat);
-    }
     sum += pars_lower_bound[i];
-    // now transform lower_bound
-//    assert(i == maxi-1);
 
+    // now transform lower_bound
     for (int j = 0; j <= i; j++) {
         UINT newsum = sum - pars_lower_bound[j];
         pars_lower_bound[j] = sum;
@@ -1224,16 +1233,23 @@ void Alignment::orderPatternByNumChars(int pat_type) {
     }
 
     if (verbose_mode >= VB_MAX) {
-//        for (ptn = 0; ptn < nptn; ptn++)
-//            cout << at(ptn_order[ptn]).num_chars << " ";
+        //for (ptn = 0; ptn < nptn; ptn++)
+        //    cout << at(ptn_order[ptn]).num_chars << " ";
         for (int j = 0; j <= i; j++) {
             cout << pars_lower_bound[j] << " ";
         }
         cout << endl << sum << endl;
     }
-    delete [] ptn_order;
-    delete [] num_chars;
-//    cout << ordered_pattern.size() << " ordered_pattern" << endl;
+
+    // fill up to vectorclass with dummy pattern
+    size_t maxnptn = get_safe_upper_limit_float(num_parsimony_sites);
+    for (size_t ptn=nptn; ptn<maxnptn; ++ptn) {
+        Pattern pat;
+        pat.resize(getNSeq(), STATE_UNKNOWN);
+        pat.frequency = 0;
+        ordered_pattern.emplace_back(pat);
+    }
+    cout << "ordered_pattern size is now " << ordered_pattern.size() << endl;
 }
 
 void Alignment::ungroupSitePattern()
