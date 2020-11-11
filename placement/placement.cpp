@@ -90,13 +90,24 @@ size_t getNumberOfTaxaToRemoveAndReinsert(size_t countOfTaxa) {
     }
     return numberToRemove;
 }
+
 bool doesPlacementUseLikelihood() {
     auto cf = getIncrementalParameter('C', "MP");
     return cf.find("ML") != std::string::npos;
 }
+
 bool doesPlacementUseParsimony() {
     auto cf = getIncrementalParameter('C', "MP");
-    return cf.find("MP") != std::string::npos;
+    auto heuristic = Placement::getIncrementalParameter('H', "");
+    return cf.find("MP") != std::string::npos
+        || heuristic.find("MP") != std::string::npos;
+}
+
+bool doesPlacementUseSankoffParsimony() {
+    auto cf = getIncrementalParameter('C', "MP");
+    auto heuristic = Placement::getIncrementalParameter('H', "");
+
+    return (cf == "SMP" || heuristic == "SMP");
 }
 
 

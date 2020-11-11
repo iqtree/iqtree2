@@ -54,6 +54,10 @@ namespace Placement {
      @return true if it will*/
     bool doesPlacementUseParsimony();
 
+    /** indicates whether placement will use Sankoff parsimony
+     @return true if it will*/
+    bool doesPlacementUseSankoffParsimony();
+
     /** indicates whether placement will use likelihood (more to the point:
      will it need to use partial likehood and scale num vectors).
      @return true if it will*/

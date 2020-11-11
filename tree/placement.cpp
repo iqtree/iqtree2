@@ -190,7 +190,7 @@ double PhyloTree::taxaAdditionWorkEstimate(size_t newTaxaCount,
 }
 
 bool PhyloTree::shouldPlacementUseSankoffParsimony() const {
-    return Placement::doesPlacementUseParsimony();
+    return Placement::doesPlacementUseSankoffParsimony();
 }
 
 bool PhyloTree::shouldPlacementUseLikelihood() const {
