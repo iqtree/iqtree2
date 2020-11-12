@@ -1018,29 +1018,31 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 	nniid = 0;
 	FOR_EACH_SUPER_NEIGHBOR(node2, node1, node2_it, nei) if (nni_ok[nniid]) 
     {
-		// do the NNI
-		node2_nei = nei;
+        // do the NNI
+        node2_nei = nei;
         node1->updateNeighbor(node1_it, node2_nei);
         node2_nei->node->updateNeighbor(node2, node1);
         node2->updateNeighbor(node2_it, node1_nei);
         node1_nei->node->updateNeighbor(node1, node2);
 
         for (part = 0; part < ntrees; part++) {
-			bool is_nni = true;
-			FOR_EACH_SUPER_NEIGHBOR(node1, nullptr, nit, neiOne) {
-				if (! neiOne->link_neighbors[part] ) { is_nni = false; break; }
-			}
-			FOR_EACH_SUPER_NEIGHBOR(node2, nullptr, nit, neiTwo) {
-				if (! neiTwo->link_neighbors[part]) { is_nni = false; break; }
-			}
-			if (!is_nni)
+            bool is_nni = true;
+            FOR_EACH_SUPER_NEIGHBOR(node1, nullptr, nit, neiOne) {
+                if (! neiOne->link_neighbors[part] ) { is_nni = false; break; }
+            }
+            FOR_EACH_SUPER_NEIGHBOR(node2, nullptr, nit, neiTwo) {
+                if (! neiTwo->link_neighbors[part]) { is_nni = false; break; }
+            }
+            if (!is_nni) {
                 memcpy(at(part)->tree_buffers._pattern_lh, part_info[part].cur_ptnlh, at(part)->getAlnNPattern() * sizeof(double));
-			else
+            }
+            else {
                 memcpy(at(part)->tree_buffers._pattern_lh, part_info[part].nniMoves[nniid].ptnlh, at(part)->getAlnNPattern() * sizeof(double));
-    		save_lh_factor[part] = at(part)->current_it->lh_scale_factor;
-    		save_lh_factor_back[part] = at(part)->current_it_back->lh_scale_factor;
-    		at(part)->current_it->lh_scale_factor = 0.0;
-    		at(part)->current_it_back->lh_scale_factor = 0.0;
+            }
+            save_lh_factor[part] = at(part)->current_it->lh_scale_factor;
+            save_lh_factor_back[part] = at(part)->current_it_back->lh_scale_factor;
+            at(part)->current_it->lh_scale_factor = 0.0;
+            at(part)->current_it_back->lh_scale_factor = 0.0;
         }
         if (nniMoves) {
         	nniMoves[nniid].newloglh = nni_scores[nniid];
