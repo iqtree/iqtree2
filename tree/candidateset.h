@@ -336,9 +336,7 @@ public:
 	 */
 	void removeCandidateSplits(string treeString);
 
-    int getNumStableSplits() const {
-        return numStableSplits;
-    }
+    int getNumStableSplits() const;
 
     /**
      *  Print candidate trees and their likelihood
@@ -352,13 +350,9 @@ public:
      */
     void recomputeLoglOfAllTrees(IQTree &treeObject);
 
-    int getMaxSize() const {
-        return maxSize;
-    }
+    int getMaxSize() const;
 
-    void setMaxSize(int max_size) {
-        this->maxSize = max_size;
-    }
+    void setMaxSize(int max_size);
 
 private:
     /**

@@ -67,12 +67,10 @@ void CandidateSet::restoreCheckpoint() {
         ss >> score >> tree;
 //        CKP_RESTORE(tree);
         update(tree, score);
-
     }
     checkpoint->endList();
     checkpoint->endStruct();
 }
-
 
 string CandidateSet::getRandTopTree(int numTopTrees) {
     ASSERT(!empty());
@@ -104,12 +102,13 @@ vector<string> CandidateSet::getBestTreeStringsForProcess(int numTree) {
     int numProc = MPIHelper::getInstance().getNumProcesses();
     int procID = MPIHelper::getInstance().getProcessID();
 
-    if (numTree < numProc)
+    if (numTree < numProc) {
         numTree = numProc; // BUG FIX: make sure that each process gets at least 1 tree
-
+    }
     vector<string> alltrees = getBestTreeStrings(numTree);
-    if (numProc == 1) return alltrees;
-    
+    if (numProc == 1) {
+        return alltrees;
+    }
     if (numTree == 0 || numTree > alltrees.size()) {
         numTree = alltrees.size();
     }
@@ -161,13 +160,13 @@ bool CandidateSet::replaceTree(string tree, double score) {
 }
 */
 
-
 void CandidateSet::addCandidateSplits(string treeString) {
     vector<string> taxaNames = aln->getSeqNames();
     MTree tree(treeString, taxaNames, Params::getInstance().is_rooted);
     SplitGraph allSplits;
     tree.convertSplits(allSplits);
-    for (SplitGraph::iterator splitIt = allSplits.begin(); splitIt != allSplits.end(); splitIt++) {
+    for (auto splitIt = allSplits.begin();
+         splitIt != allSplits.end(); splitIt++) {
         int value;
         Split *sp = candSplits.findSplit(*splitIt, value);
         if (sp != NULL) {
@@ -187,7 +186,8 @@ void CandidateSet::removeCandidateSplits(string treeString) {
     MTree tree(treeString, taxaNames, Params::getInstance().is_rooted);
     SplitGraph allSplits;
     tree.convertSplits(allSplits);
-    for (SplitGraph::iterator splitIt = allSplits.begin(); splitIt != allSplits.end(); splitIt++) {
+    for (auto splitIt = allSplits.begin();
+         splitIt != allSplits.end(); splitIt++) {
         int value = 0;
         Split *sp;
         sp = candSplits.findSplit(*splitIt, value);
@@ -207,6 +207,11 @@ void CandidateSet::removeCandidateSplits(string treeString) {
     candSplits.setNumTree(candSplits.getNumTree() - 1);
 }
 
+int CandidateSet::getNumStableSplits() const {
+    return numStableSplits;
+}
+
+
 string CandidateSet::getNextCandTree() {
     string tree;
     ASSERT(!empty());
@@ -221,13 +226,12 @@ string CandidateSet::getNextCandTree() {
 void CandidateSet::initParentTrees() {
     if (parentTrees.empty()) {
         int count = Params::getInstance().popSize;
-        for (reverse_iterator i = rbegin(); i != rend() && count > 0; i++, count--) {
+        for (auto i = rbegin();
+             i != rend() && count > 0; i++, count--) {
             parentTrees.push(i->second.tree);
-            //cout << i->first << endl;
         }
     }
 }
-
 
 int CandidateSet::update(string newTree, double newScore) {
     // Do not update candidate set if the new tree has worse score than the
@@ -237,9 +241,9 @@ int CandidateSet::update(string newTree, double newScore) {
         return -2;
     }
     CandidateTree candidate;
-    candidate.score = newScore;
+    candidate.score    = newScore;
     candidate.topology = convertTreeString(newTree);
-    candidate.tree = newTree;
+    candidate.tree     = newTree;
 
     int treePos;
     CandidateSet::iterator candidateTreeIt;
@@ -255,7 +259,6 @@ int CandidateSet::update(string newTree, double newScore) {
         ASSERT(topologies.size() == size());
         return -1;
     }
-
     candidateTreeIt = insert(CandidateSet::value_type(newScore, candidate));
     topologies[candidate.topology] = newScore;
 
@@ -263,9 +266,7 @@ int CandidateSet::update(string newTree, double newScore) {
         removeWorstTree();
     }
     ASSERT(topologies.size() == size());
-
     treePos = distance(candidateTreeIt, end());
-
     return treePos;
 }
 
@@ -273,7 +274,8 @@ vector<double> CandidateSet::getBestScores(int numBestScore) {
     if (numBestScore == 0)
         numBestScore = size();
     vector<double> res;
-    for (reverse_iterator rit = rbegin(); rit != rend() && numBestScore > 0; rit++, numBestScore--) {
+    for (reverse_iterator rit = rbegin();
+         rit != rend() && numBestScore > 0; rit++, numBestScore--) {
         res.push_back(rit->first);
     }
     return res;
@@ -344,13 +346,15 @@ CandidateSet CandidateSet::getBestCandidateTrees(int numTrees) {
     if (numTrees >= size() || numTrees == 0)
         numTrees = (int) size();
 
-    for (reverse_iterator rit = rbegin(); rit != rend() && numTrees > 0; rit++, numTrees--) {
+    for (reverse_iterator rit = rbegin();
+         rit != rend() && numTrees > 0; rit++, numTrees--) {
         res.insert(*rit);
     }
     return res;
 }
 
-void CandidateSet::getAllTrees(vector<string> &trees, vector<double> &scores, int format) {
+void CandidateSet::getAllTrees(vector<string> &trees,
+                               vector<double> &scores, int format) {
     trees.clear();
     scores.clear();
 
@@ -373,7 +377,7 @@ bool CandidateSet::treeExist(string tree) {
 }
 
 CandidateSet::iterator CandidateSet::getCandidateTree(string topology) {
-    for (CandidateSet::reverse_iterator rit = rbegin(); rit != rend(); rit++) {
+    for (auto rit = rbegin(); rit != rend(); rit++) {
         if (rit->second.topology == topology)
             return --(rit.base());
     }
@@ -400,7 +404,6 @@ void CandidateSet::removeCandidateTree(string topology) {
     }
     ASSERT(removed);
 }
-
 
 void CandidateSet::removeWorstTree() {
     topologies.erase(begin()->second.topology);
@@ -520,11 +523,11 @@ void CandidateSet::recomputeLoglOfAllTrees(IQTree &treeObject) {
     treeObject.doneProgress();
 }
 
+int CandidateSet::getMaxSize() const {
+    return maxSize;
+}
 
-
-
-
-
-
-
+void CandidateSet::setMaxSize(int max_size) {
+    this->maxSize = max_size;
+}
 
