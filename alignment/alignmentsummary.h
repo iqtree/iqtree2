@@ -21,9 +21,7 @@ class Alignment;
 
 struct AlignmentSummary
 {
-public:
-    AlignmentSummary(const Alignment* a, bool keepConstSites, bool keepBoringSites);
-    ~AlignmentSummary();
+protected:
     const Alignment*   alignment;
     std::vector<int>   siteNumbers;      //of sites with variation
     std::vector<int>   siteFrequencies;  //ditto
@@ -35,13 +33,28 @@ public:
     StateType          minState; //found on any site where there is variation
     StateType          maxState; //ditto
     char*              sequenceMatrix;
-    size_t             sequenceLength;  //Sequence length
+    size_t             sequenceLength;  //Sequence length (or: count of sites per sequence)
     size_t             sequenceCount;   //The number of sequences
-    size_t             getSumOfConstantSiteFrequenciesForState(int state);
-    bool constructSequenceMatrix ( bool treatAllAmbiguousStatesAsUnknown
-                                 , progress_display *progress = nullptr);
-    bool constructSequenceMatrixNoisily ( bool treatAllAmbiguousStatesAsUnknown, 
-        const char* taskName, const char* verb);
+
+public:
+    AlignmentSummary(const Alignment* a, bool keepConstSites, bool keepBoringSites);
+    ~AlignmentSummary();
+    bool   hasSequenceMatrix() const;
+    size_t getSequenceCount() const;
+    size_t getSumOfConstantSiteFrequenciesForState(int state) const;
+    const  std::vector<int>& getSiteFrequencies() const;
+    size_t getTotalFrequency() const;
+    const  std::vector<int>& getNonConstSiteFrequencies() const;
+    size_t getTotalFrequencyOfNonConstSites() const;
+    
+    const char* getSequenceMatrix() const;
+    const char* getSequence(size_t sequence_id) const;
+    size_t      getSequenceLength() const;
+    size_t      getStateCount() const;
+    bool        constructSequenceMatrix ( bool treatAllAmbiguousStatesAsUnknown,
+                                          progress_display *progress = nullptr);
+    bool        constructSequenceMatrixNoisily ( bool treatAllAmbiguousStatesAsUnknown,
+                                                 const char* taskName, const char* verb);
 };
 
 #endif /* alignmentsummary_hpp */

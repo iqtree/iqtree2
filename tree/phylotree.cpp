@@ -808,6 +808,10 @@ void PhyloTree::mergeAlignments(const StrVector& paths) {
         }
         delete new_aln;
     }
+    auto mergedTree = getTreeString();
+    CKP_SAVE(mergedTree);
+    saveCheckpoint();
+    checkpoint->dump();
 }
 
 void PhyloTree::setRootNode(const char *my_root, bool multi_taxa) {
@@ -2278,7 +2282,6 @@ void PhyloTree::getUnmarkedNodes(PhyloNodeVector& unmarkedNodes, PhyloNode* node
     if (!node) {
         node = getRoot();
     }
-
     if (markedNodeList.find(node->id) == markedNodeList.end()) {
         int numUnmarkedNei = 0;
         for (NeighborVec::iterator it = (node)->neighbors.begin(); it != (node)->neighbors.end(); it++) {
@@ -2684,7 +2687,6 @@ set<int> PhyloTree::computeNodeBranchDists(Node *node, Node *dad) {
     resl.insert(node->id);
     return resl;
 }
-
 
 /*
     b0: initial guess for the maximum
@@ -3508,35 +3510,35 @@ void PhyloTree::prepareToComputeDistances() {
 }
 
 bool PhyloTree::hasMatrixOfConvertedSequences() const {
-    return summary!=nullptr && summary->sequenceMatrix!=nullptr;
+    return summary!=nullptr && summary->hasSequenceMatrix();
 }
 
 size_t PhyloTree::getConvertedSequenceLength() const {
     if (summary==nullptr) {
         return 0;
     }
-    return summary->sequenceLength;
+    return summary->getSequenceLength();
 }
 
 const char* PhyloTree::getConvertedSequenceByNumber(int seq1) const {
-    if (summary==nullptr || summary->sequenceMatrix==nullptr) {
+    if (!hasMatrixOfConvertedSequences()) {
         return nullptr;
     }
-    return summary->sequenceMatrix + seq1 * summary->sequenceLength;
+    return summary->getSequence(seq1);
 }
 
 const int* PhyloTree::getConvertedSequenceFrequencies() const {
     if (summary==nullptr) {
         return nullptr;
     }
-    return summary->siteFrequencies.data();
+    return summary->getSiteFrequencies().data();
 }
 
 const int* PhyloTree::getConvertedSequenceNonConstFrequencies() const {
     if (summary==nullptr) {
         return nullptr;
     }
-    return summary->nonConstSiteFrequencies.data();
+    return summary->getNonConstSiteFrequencies().data();
 }
 
 int  PhyloTree::getSumOfFrequenciesForSitesWithConstantState(int state) const {
@@ -3794,34 +3796,34 @@ double PhyloTree::computeDist_Experimental(double *dist_mat, double *var_mat) {
     AlignmentSummary s(aln, false, false);
     int maxDistance = 0;
     
-    EX_TRACE("Summarizing found " << s.sequenceLength
+    EX_TRACE("Summarizing found " << s.getSequenceLength()
         << " sites with variation (and non-zero frequency),"
-        << " and a state range of " << ( s.maxState - s.minState));
-    for (size_t i=0; i<s.sequenceLength; ++i) {
-        maxDistance += s.siteFrequencies[i];
+        << " and a state range of " << ( s.getStateCount()));
+    for (size_t i=0; i<s.getSequenceLength(); ++i) {
+        maxDistance += s.getSiteFrequencies()[i];
     }
     //Todo: Shouldn't this be totalFrequency, rather than
     //      totalFrequencyOfNonConst sites?
-    double denominator = s.totalFrequencyOfNonConstSites
-        + s.totalFrequency - aln->num_variant_sites;
+    double denominator = s.getTotalFrequencyOfNonConstSites()
+        + s.getTotalFrequency() - aln->num_variant_sites;
     EX_TRACE("Maximum possible uncorrected length "
-        << ((double)maxDistance / (double)s.totalFrequencyOfNonConstSites)
+        << ((double)maxDistance / (double)s.getTotalFrequencyOfNonConstSites())
         << " Denominator " << denominator);
-    if ( 256 < s.maxState - s.minState ) {
+    if ( 256 < s.getStateCount()  ) {
         EX_TRACE("Falling back to stock distance calculation");
         double longest = computeDist(dist_mat, var_mat);
         EX_TRACE("Done stock distance calculation");
         return longest; //computeDist(dist_mat, var_mat);
     }
     EX_TRACE("Constructing sequence-major matrix of states"
-        << " at " << s.sequenceLength << " varying sites"
-        << " for " << s.sequenceCount << " sequences");
+        << " at " << s.getSequenceLength() << " varying sites"
+        << " for " << s.getSequenceCount() << " sequences");
     s.constructSequenceMatrix(true);
     EX_TRACE("Determining distance matrix with unknown " << aln->STATE_UNKNOWN);
-    const int* frequencies = s.siteFrequencies.data();
+    const int* frequencies = s.getSiteFrequencies().data();
     double longest = computeDistanceMatrix
         ( params->ls_var_type, static_cast<char>(aln->STATE_UNKNOWN)
-         , s.sequenceMatrix, s.sequenceCount, s.sequenceLength
+         , s.getSequenceMatrix(), s.getSequenceCount(), s.getSequenceLength()
          , denominator, frequencies, aln->num_states
          , uncorrected, dist_mat, var_mat);
     EX_TRACE("Longest distance was " << longest);
@@ -4654,7 +4656,6 @@ double PhyloTree::optimizeSPR(double cur_score, PhyloNode *node, PhyloNode *dad)
             }
             spr_path.pop_back();
         }
-
         FOR_EACH_PHYLO_NEIGHBOR(sibling2, sibling1, it, nei)
         {
             spr_path.push_back(sibling2_nei);
@@ -4819,7 +4820,6 @@ double PhyloTree::swapSPR(double cur_score, int cur_depth, PhyloNode *node1, Phy
         if (score > cur_score) return score;
     }
     spr_path.pop_back();
-
     return cur_score;
 }
 
@@ -6287,7 +6287,7 @@ void PhyloTree::doneProgress() {
 }
     
 void PhyloTree::showNoProgress() {
-    if (progress) {
+    if (progress!=nullptr) {
         delete progress;
         progress = nullptr;
     }

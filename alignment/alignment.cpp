@@ -208,7 +208,7 @@ void Alignment::checkSeqName() {
     size_t numSequences      = seq_names.size();
     size_t numSites          = getNSite();
     char   firstUnknownState = static_cast<char>(num_states + pomo_sampled_states.size());
-    const int* frequencies  = s.siteFrequencies.data();
+    const int* frequencies   = s.getSiteFrequencies().data();
 
     struct SequenceInfo {
         double percent_gaps;
@@ -220,16 +220,17 @@ void Alignment::checkSeqName() {
     int num_problem_seq = 0;
     int total_gaps = 0;
     int num_failed = 0;
+    size_t seq_len = s.getSequenceLength();
 #ifdef _OPENMP
     #pragma omp parallel for reduction(+:total_gaps,num_problem_seq,num_failed)
     #endif
     for (size_t i = 0; i < numSequences; i++) {
         size_t num_gaps;
-        if (s.sequenceMatrix!=nullptr) {
+        if (s.hasSequenceMatrix()) {
             //Discount the non-gap characters with a (not-yet-vectorized)
             //sweep over the sequence.
-            const char* sequence = s.sequenceMatrix + i * s.sequenceLength;
-            num_gaps = sumForUnknownCharacters(firstUnknownState, sequence, s.sequenceLength, frequencies);
+            const char* sequence = s.getSequence(i);
+            num_gaps = sumForUnknownCharacters(firstUnknownState, sequence, seq_len, frequencies);
         } else {
             //Do the discounting the hard way
             num_gaps = numSites - countProperChar(i);
@@ -1191,7 +1192,6 @@ void Alignment::orderPatternByNumChars(int pat_type) {
         }
         ordered_pattern.clear();
         ordered_pattern.resize(nptn);
-        cout << "ordered_pattern size starts at " << nptn << endl;
         #ifdef _OPENMP
         #pragma omp parallel for reduction(+:frequency_total)
         #endif
@@ -1249,7 +1249,6 @@ void Alignment::orderPatternByNumChars(int pat_type) {
         pat.frequency = 0;
         ordered_pattern.emplace_back(pat);
     }
-    cout << "ordered_pattern size is now " << ordered_pattern.size() << endl;
 }
 
 void Alignment::ungroupSitePattern()
@@ -1932,6 +1931,7 @@ bool Alignment::constructPatterns(int nseq, int nsite,
         progress_here = progress = nullptr;
     }
 
+
     std::stringstream err_str;
     //2. Now handle warnings and errors, and compress patterns, sequentially
 
@@ -2174,8 +2174,8 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
     in.exceptions(ios::badbit);
 
     {
-        //Todo: Disable this when isShowingProgressDisabled is set
-        progress_display progress(in.getCompressedLength(), "Reading fasta file", "", "");
+        const char* task = isShowingProgressDisabled ? "" : "Reading fasta file";
+        progress_display progress(in.getCompressedLength(), task, "", "");
         for (; !in.eof(); line_num++) {
             safeGetLine(in, line);
             if (line == "") {
@@ -2196,6 +2196,7 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
             processSeq(sequences.back(), line, line_num);
             progress = (double)in.getCompressedPosition();
         }
+        progress.done();
     }
 
     in.clear();

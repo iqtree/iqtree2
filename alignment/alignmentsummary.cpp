@@ -101,9 +101,49 @@ AlignmentSummary::~AlignmentSummary() {
     sequenceCount  = 0;
 }
 
-size_t AlignmentSummary::getSumOfConstantSiteFrequenciesForState(int state) {
+bool   AlignmentSummary::hasSequenceMatrix() const {
+    return sequenceMatrix != nullptr;
+}
+
+size_t AlignmentSummary::getSequenceCount() const {
+    return sequenceCount;
+}
+
+size_t AlignmentSummary::getSumOfConstantSiteFrequenciesForState(int state) const {
     auto it = stateToSumOfConstantSiteFrequencies.find(state);
     return (it == stateToSumOfConstantSiteFrequencies.end()) ? 0 : it->second;
+}
+
+const std::vector<int>& AlignmentSummary::getSiteFrequencies() const {
+    return siteFrequencies;
+}
+
+size_t AlignmentSummary::getTotalFrequency() const {
+    return totalFrequency;
+}
+
+const std::vector<int>& AlignmentSummary::getNonConstSiteFrequencies() const {
+    return nonConstSiteFrequencies;
+}
+
+size_t AlignmentSummary::getTotalFrequencyOfNonConstSites() const {
+    return totalFrequencyOfNonConstSites;
+}
+
+const char* AlignmentSummary::getSequenceMatrix() const {
+    return sequenceMatrix;
+}
+
+const char* AlignmentSummary::getSequence(size_t sequence_id) const {
+    if (sequenceMatrix==nullptr) {
+        return nullptr;
+    }
+    ASSERT(sequence_id < sequenceCount);
+    return sequenceMatrix + sequence_id * sequenceLength;
+}
+
+size_t AlignmentSummary::getSequenceLength() const {
+    return sequenceLength;
 }
 
 bool AlignmentSummary::constructSequenceMatrixNoisily(bool treatAllAmbiguousStatesAsUnknown
@@ -111,6 +151,11 @@ bool AlignmentSummary::constructSequenceMatrixNoisily(bool treatAllAmbiguousStat
     progress_display progress(sequenceCount, taskName, verb, "sequence");
     return constructSequenceMatrix(treatAllAmbiguousStatesAsUnknown, &progress);
 }
+
+size_t AlignmentSummary::getStateCount() const {
+    return maxState - minState + 1;
+}
+
 
 bool AlignmentSummary::constructSequenceMatrix ( bool treatAllAmbiguousStatesAsUnknown
                                                 , progress_display* progress) {
