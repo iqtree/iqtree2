@@ -8,8 +8,9 @@ pllnni.cpp pllnni.h
 checkpoint.cpp checkpoint.h
 MPIHelper.cpp MPIHelper.h
 starttree.cpp starttree.h
+flatmatrix.cpp flatmatrix.h
 bionj.cpp bionj2.cpp stitchup.cpp
-upgma.h nj.h rapidnj.h 
+upgma.h nj.h rapidnj.h
 clustertree.h distancematrix.h heapsort.h
 progress.cpp progress.h
 timekeeper.cpp timekeeper.h
@@ -25,7 +26,7 @@ endif(ZLIB_FOUND)
 target_link_libraries(utils lbfgsb sprng)
 
 add_executable(decentTree
-    decenttree.cpp
+    decenttree.cpp flatmatrix.cpp
     starttree.cpp bionj.cpp bionj2.cpp stitchup.cpp
     gzstream.cpp progress.cpp operatingsystem.cpp)
 

@@ -26,6 +26,7 @@
 #include "progress.h"        //for progress_display::setProgressDisplay()
 #include "starttree.h"       //for StartTree::Factory
 #include "operatingsystem.h" //for getOSName
+#include "flatmatrix.h"      //for FlatMatrix
 #include "distancematrix.h"  //for loadDistanceMatrixInto
 #include "hammingdistance.h" //for hammingDistance
 #include "gzstream.h"
@@ -42,44 +43,12 @@ namespace {
         }
         return s.substr(s.length()-suffixLen, suffixLen) == suffix;
     }
+
+    bool correcting_distances = true;
+    bool is_DNA = true;
 };
 
-class FlatMatrix {
-private:
-    std::vector<std::string> sequenceNames;
-    size_t                   rowCount;
-    double*                  distanceMatrix;
-public:
-    FlatMatrix(): rowCount(0), distanceMatrix(nullptr) {
-    }
-    virtual ~FlatMatrix() {
-        delete [] distanceMatrix;
-        distanceMatrix = nullptr;
-    }
-    const std::vector<std::string> getSequenceNames() const {
-        return sequenceNames;
-    }
-    void setSize(size_t rows) {
-        delete [] distanceMatrix;
-        rowCount = rows;
-        distanceMatrix = new double [ rowCount * rowCount ];
-    }
-    size_t getSize() {
-        return rowCount;
-    }
-    const double* getDistanceMatrix() const {
-        return distanceMatrix;
-    }
-    double cell(size_t r, size_t c) const {
-        return distanceMatrix[r * rowCount + c];
-    }
-    double& cell(size_t r, size_t c) {
-        return distanceMatrix[r * rowCount + c];
-    }
-    void addCluster(const std::string& clusterName) {
-        sequenceNames.emplace_back(clusterName);
-    }
-};
+
 
 void showBanner() {
     std::cout << "\nDecentTree for " << getOSName() << "\n";
@@ -90,13 +59,19 @@ void showBanner() {
 }
 
 void showUsage() {
-    std::cout << "\nUsage: DecentTree (-fasta [fastapath]) -in [mldist] -out [newick] -t [algorithm] (-nt [threadcount]) (-gz) (-no-banner) (-q)\n";
+    std::cout << "\nUsage: DecentTree (-fasta [fastapath] (-uncorrected) (-not-dna))"
+              << "\n       -in [mldist] -out [newick] -t [algorithm]"
+              << "\n       (-nt [threadcount]) (-gz) (-no-banner) (-q)\n";
     std::cout << "Arguments in parentheses () are optional.\n";
     std::cout << "[fastapath] is the path of a .fasta format file specifying genetic sequences (which may be in .gz format)\n";
+    std::cout << "            (it is always assumed that the character indicating an unknown state is 'N')\n";
     std::cout << "[mldist] is the path of a distance matrix file (which may be in .gz format)\n";
     std::cout << "[newick] is the path to write the newick tree file to (if it ends in .gz it will be compressed)\n";
     std::cout << "[threadcount] is the number of threads, which should be between 1 and the number of CPUs.\n";
     std::cout << "-q asks for quiet (less progress reporting).\n";
+    std::cout << "-uncorrected turns of Jukes-Cantor distance correction (only relevant if -fasta supplied).\n";
+    std::cout << "-not-dna indicates number of states to be determined from input (only relevant if -fasta supplied).\n";
+    
     std::cout << "[algorithm] is one of the following, supported, distance matrix algorithms:\n";
     std::cout << StartTree::Factory::getInstance().getListOfTreeBuilders();
 }
@@ -149,13 +124,22 @@ bool checkLastTwoSequenceLengths(const std::vector<std::string>& sequences) {
     return true;
 }
 
-double correctDistance(double obs_dist, double num_states) {
+inline double correctDistance(double char_dist, double chars_compared,
+                              double num_states) {
+    double obs_dist = (0<chars_compared)
+                    ? (char_dist/chars_compared) : 0.0;
     double z = num_states / (num_states-1);
     double x = 1.0 - (z * obs_dist);
     if (x <= 0) {
         return 10; //Todo: parameter should control this
     }
     return -log(x) / z;
+}
+
+inline double uncorrectedDistance(double char_dist,
+                                  double chars_compared) {
+    return (0<chars_compared)
+        ? (char_dist/chars_compared) : 0.0;
 }
 
 bool loadSequenceDistancesIntoMatrix(const std::vector<std::string>& seq_names,
@@ -178,6 +162,7 @@ bool loadSequenceDistancesIntoMatrix(const std::vector<std::string>& seq_names,
     uint64_t*  unk_buffer    = new uint64_t  [ unkLen * rank];
     uint64_t** unknown_data  = new uint64_t* [ rank ];
     memset(unk_buffer, 0, unkLen * rank);
+    
     {
         const char* task = report_progress ? "Extracting variant sites": "";
         progress_display extract_progress(rank, task, "extracted from", "sequence");
@@ -225,6 +210,31 @@ bool loadSequenceDistancesIntoMatrix(const std::vector<std::string>& seq_names,
         }
         extract_progress.done();
     }
+    
+    //Determine the number of states (needed for correcting distances)
+    double num_states = 0.0;
+    if (is_DNA) {
+        num_states = 4;
+    }
+    else
+    {
+        std::vector<size_t> char_counts;
+        char_counts.resize(256, 0);
+        auto char_count_array = char_counts.data();
+        const unsigned char* start_buffer = reinterpret_cast<unsigned char*>(buffer);
+        const unsigned char* end_buffer   = start_buffer + rank * seqLen;
+        for (const unsigned char* scan=start_buffer; scan<end_buffer; ++scan) {
+            ++char_count_array[*scan];
+        }
+        for (int i=0; i<256; ++i) {
+            num_states += (char_counts[i]==0) ? 0 : 1;
+        }
+        if (0<char_counts[unknown_char]) {
+            --num_states;
+        }
+    }
+    
+    
     {
         const char* task = report_progress ? "Calculating distances": "";
         progress_display progress( rank*(rank-1)/2, task );
@@ -241,7 +251,11 @@ bool loadSequenceDistancesIntoMatrix(const std::vector<std::string>& seq_names,
                                           unkLen);
                 double distance  = 0;
                 if (count_unknown<rawSeqLen) {
-                    distance  = correctDistance(char_distance, rawSeqLen - count_unknown);
+                    if (correcting_distances) {
+                        distance  = correctDistance(char_distance, rawSeqLen - count_unknown, num_states);
+                    } else {
+                        distance  = uncorrectedDistance(char_distance, rawSeqLen - count_unknown);
+                    }
                 }
                 m.cell(row, col) = distance;
                 m.cell(col, row) = distance;
@@ -359,6 +373,12 @@ bool loadAlignmentIntoDistanceMatrix(const std::string& alignmentFilePath,
                                            report_progress, m);
 }
 
+bool writeDistanceMatrixToFile(const FlatMatrix& m,
+                               const std::string& distFilePath) {
+    std::string format = "square";
+    return m.writeToDistanceFile ( format, 5, distFilePath );
+}
+
 int main(int argc, char* argv[]) {
     std::stringstream problems;
     progress_display::setProgressDisplay(true); //Displaying progress bars
@@ -366,6 +386,7 @@ int main(int argc, char* argv[]) {
     std::string alignmentFilePath;
     std::string inputFilePath;
     std::string outputFilePath;
+    std::string distanceOutputFilePath;
     bool isOutputZipped           = false;
     bool isOutputSuppressed       = false;
     bool isOutputToStandardOutput = false; //caller asked for newick tree to go to std::cout
@@ -384,9 +405,16 @@ int main(int argc, char* argv[]) {
         }
         else if (arg=="-in" || arg=="-dist") {
             if (nextArg.empty()) {
-                PROBLEM("should be followed by a file path");
+                PROBLEM(arg + " should be followed by a file path");
             }
             inputFilePath = nextArg;
+            ++argNum;
+        }
+        else if (arg=="-dist-out") {
+            if (nextArg.empty()) {
+                PROBLEM(arg + " should be followed by a file path");
+            }
+            distanceOutputFilePath = nextArg;
             ++argNum;
         }
         else if (arg=="-t") {
@@ -417,6 +445,9 @@ int main(int argc, char* argv[]) {
         else if (arg=="-no-banner") {
             isBannerSuppressed = true;
         }
+        else if (arg=="-uncorrected") {
+            correcting_distances = false;
+        }
         else if (arg=="-nt") {
             if ( nextArg.empty() || nextArg[0]<'0' || '9'<nextArg[0] ) {
                 PROBLEM("-nt argument should be followed by a numeric thread count");
@@ -428,6 +459,9 @@ int main(int argc, char* argv[]) {
         else if (arg=="-q") {
             isBannerSuppressed = true;
             beSilent = true;
+        }
+        else if (arg=="-not-dna") {
+            is_DNA = false;
         }
         else {
             PROBLEM("Unrecognized command-line argument, " + arg);
@@ -489,6 +523,9 @@ int main(int argc, char* argv[]) {
     if (algorithm->isBenchmark()) {
         if (!alignmentFilePath.empty()) {
             succeeded = loadAlignmentIntoDistanceMatrix(alignmentFilePath, false, m);
+            if (!distanceOutputFilePath.empty()) {
+                succeeded = writeDistanceMatrixToFile(m, distanceOutputFilePath);
+            }
         } else {
             succeeded = loadDistanceMatrixInto(inputFilePath, false, m);
         }
@@ -500,9 +537,14 @@ int main(int argc, char* argv[]) {
     }  else {
         if (!alignmentFilePath.empty()) {
             if (loadAlignmentIntoDistanceMatrix(alignmentFilePath, true, m)) {
-                succeeded = algorithm->constructTreeInMemory
+                if (!distanceOutputFilePath.empty()) {
+                    succeeded = writeDistanceMatrixToFile(m, distanceOutputFilePath);
+                }
+                if (succeeded) {
+                    succeeded = algorithm->constructTreeInMemory
                     ( m.getSequenceNames(), m.getDistanceMatrix(),
                       outputFilePath );
+                }
             }
             exit(succeeded ? 0 : 1);
         }
