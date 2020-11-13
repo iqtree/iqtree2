@@ -54,6 +54,15 @@ const std::vector<std::string>& FlatMatrix::getSequenceNames() const {
     return sequenceNames;
 }
 
+const std::string& FlatMatrix::sequenceName(size_t i) const {
+    return sequenceNames[i];
+}
+
+std::string& FlatMatrix::sequenceName(size_t i) {
+    return sequenceNames[i];
+}
+
+
 void FlatMatrix::setSize(size_t rows) {
     if (!borrowed) {
         delete [] distanceMatrix;

@@ -24,16 +24,18 @@ public:
     virtual ~FlatMatrix();
     
     const std::vector<std::string>& getSequenceNames() const;
-    void          setSize(size_t rows);
-    size_t        getSize();
-    const double* getDistanceMatrix() const;
-    double        cell(size_t r, size_t c) const;
-    double&       cell(size_t r, size_t c);
-    void          addCluster(const std::string& clusterName);
-    size_t        getMaxSeqNameLength() const;
-    bool          writeToDistanceFile(const std::string& format,
-                                      int compression_level,
-                                      const std::string& file_name) const;
+    size_t             getMaxSeqNameLength()    const;
+    const std::string& sequenceName(size_t i)   const;
+    std::string&       sequenceName(size_t i);
+    void               setSize(size_t rows);
+    size_t             getSize();
+    const double*      getDistanceMatrix()      const;
+    double             cell(size_t r, size_t c) const;
+    double&            cell(size_t r, size_t c);
+    void               addCluster(const std::string& clusterName);
+    bool               writeToDistanceFile(const std::string& format,
+                                           int compression_level,
+                                           const std::string& file_name) const;
     template <class S>
     void          writeDistancesToOpenFile(const std::string& format,
                                            S &out) const;
