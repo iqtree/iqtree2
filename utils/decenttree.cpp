@@ -33,7 +33,6 @@
 
 #define PROBLEM(x) if (1) problems << x << ".\n"; else 0
 
-const char unknown_char = 'N';
 
 namespace {
     bool endsWith(const std::string s, const char* suffix) {
@@ -45,45 +44,65 @@ namespace {
     }
 
     bool correcting_distances = true;
-    bool is_DNA = true;
+    bool is_DNA               = true;
+    bool numbered_names       = false;
+    char unknown_char         = 'N';
+    int  precision            = 8;
+    int  compression_level    = 9;
+    std::string msaOutputPath; //write .msa formatted version of .fasta input here
+    std::string alphabet;      //defaults to ACGT
+    std::string unknown_chars; //defaults to .~_-?N
 };
-
-
 
 void showBanner() {
     std::cout << "\nDecentTree for " << getOSName() << "\n";
-    std::cout << "Based on algorithms (UPGMA, NJ, BIONJ) proposed by Sokal & Michener [1958], Saitou & Nei [1987], Gascuel [2009]\n";
+    std::cout << "Based on algorithms (UPGMA, NJ, BIONJ) proposed by Sokal & Michener [1958],\n";
+    std::cout << "Saitou & Nei [1987], Gascuel [1997] and [2009]\n";
     std::cout << "Incorporating (in NJ-R and BIONJ-R) techniques proposed by Simonson, Mailund, and Pedersen [2011]\n";
     std::cout << "Developed by Olivier Gascuel [2009], Hoa Sien Cuong [2009], James Barbetti [2020]\n";
     std::cout << "(To suppress this banner pass -no-banner)\n";
 }
 
 void showUsage() {
-    std::cout << "\nUsage: DecentTree (-fasta [fastapath] (-uncorrected) (-not-dna))"
-              << "\n       -in [mldist] -out [newick] -t [algorithm]"
-              << "\n       (-nt [threadcount]) (-gz) (-no-banner) (-q)\n";
+    std::cout << "Usage: decenttree (-fasta [fastapath] (-uncorrected)\n";
+    std::cout << "       (-alphabet [states]) (-unknown [chars]) (-not-dna))\n";
+    std::cout << "       -in [mldist] (-c [level]) (-f [prec]) -out [newick] -t [algorithm]\n";
+    std::cout << "       (-nt [threads]) (-gz) (-no-banner) (-q)\n";
     std::cout << "Arguments in parentheses () are optional.\n";
-    std::cout << "[fastapath] is the path of a .fasta format file specifying genetic sequences (which may be in .gz format)\n";
-    std::cout << "            (it is always assumed that the character indicating an unknown state is 'N')\n";
-    std::cout << "[mldist] is the path of a distance matrix file (which may be in .gz format)\n";
-    std::cout << "[newick] is the path to write the newick tree file to (if it ends in .gz it will be compressed)\n";
-    std::cout << "[threadcount] is the number of threads, which should be between 1 and the number of CPUs.\n";
-    std::cout << "-q asks for quiet (less progress reporting).\n";
-    std::cout << "-uncorrected turns of Jukes-Cantor distance correction (only relevant if -fasta supplied).\n";
-    std::cout << "-not-dna indicates number of states to be determined from input (only relevant if -fasta supplied).\n";
-    
-    std::cout << "[algorithm] is one of the following, supported, distance matrix algorithms:\n";
+    std::cout << "[fastapath]  is the path of a .fasta format file specifying genetic sequences\n";
+    std::cout << "             (which may be in .gz format)\n";
+    std::cout << "             (by default, the character indicating an unknown state is 'N')\n";
+    std::cout << "[states]     are the characters for each site\n";
+    std::cout << "[chars]      are the characters that indicate a site has an unknown character.\n";
+    std::cout << "[mldist]     is the path of a distance matrix file (which may be in .gz format)\n";
+    std::cout << "[newick]     is the path to write the newick tree file to (if it ends in .gz it will be compressed)\n";
+    std::cout << "[threads]    is the number of threads, which should be between 1 and the number of CPUs.\n";
+    std::cout << "-q           asks for quiet (less progress reporting).\n";
+    std::cout << "-uncorrected turns off Jukes-Cantor distance correction (only relevant if -fasta supplied).\n";
+    std::cout << "-not-dna     indicates number of states to be determined from input (if -fasta supplied).\n";
+    std::cout << "-num         indicates sequence names will be replaced with A1, A2, ... in outputs.\n";
+    std::cout << "[level]      is a compression level between 1 and 9 (default 5)\n";
+    std::cout << "[prec]       is a precision (default 6)\n";
+    std::cout << "[algorithm]  is one of the following, supported, distance matrix algorithms:\n";
+
     std::cout << StartTree::Factory::getInstance().getListOfTreeBuilders();
 }
 
-bool processSequenceLine(std::string &sequence, std::string &line, size_t line_num) {
+bool processSequenceLine(const std::vector<int> &in_alphabet,
+                         std::string &sequence,
+                         std::string &line, size_t line_num) {
     //Note: this is based on processSeq from IQTree's alignment/ alignment.cpp
     //(except it returns false rather than throwing exceptions), and writes
     //errors to std::cerr.
     for (auto it = line.begin(); it != line.end(); it++) {
         if ((*it) <= ' ') continue;
-        if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.' || (*it) == '*' || (*it) == '~')
-            sequence.append(1, toupper(*it));
+        if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.' || (*it) == '*' || (*it) == '~') {
+            auto c = toupper(*it);
+            if (!in_alphabet[c]) {
+                c = unknown_char;
+            }
+            sequence.append(1, c);
+        }
         else if (*it == '(' || *it == '{') {
             while (*it != ')' && *it != '}' && it != line.end()) {
                 it++;
@@ -235,6 +254,8 @@ bool loadSequenceDistancesIntoMatrix(const std::vector<std::string>& seq_names,
     }
     
     
+    
+    
     {
         const char* task = report_progress ? "Calculating distances": "";
         progress_display progress( rank*(rank-1)/2, task );
@@ -256,6 +277,9 @@ bool loadSequenceDistancesIntoMatrix(const std::vector<std::string>& seq_names,
                     } else {
                         distance  = uncorrectedDistance(char_distance, rawSeqLen - count_unknown);
                     }
+                }
+                if (distance<0) {
+                    distance = 0;
                 }
                 m.cell(row, col) = distance;
                 m.cell(col, row) = distance;
@@ -303,6 +327,11 @@ bool loadAlignmentIntoDistanceMatrix(const std::string& alignmentFilePath,
     size_t line_num = 0;
     std::vector<std::string> seq_names;
     std::vector<std::string> sequences;
+    std::vector<int> in_alphabet;
+    in_alphabet.resize(256, 0);
+    for (auto alpha=alphabet.begin(); alpha!=alphabet.end(); ++alpha) {
+        in_alphabet[*alpha] = 1;
+    }
     for (; !in.eof(); line_num++) {
         std::string line;
         safeGetLine(in, line);
@@ -326,7 +355,7 @@ bool loadAlignmentIntoDistanceMatrix(const std::string& alignmentFilePath,
             std::cerr << "First line must begin with '>' to define sequence name" << std::endl;
             return false;
         }
-        else if (!processSequenceLine(sequences.back(), line, line_num)) {
+        else if (!processSequenceLine(in_alphabet, sequences.back(), line, line_num)) {
             return false;
         }
     }
@@ -368,25 +397,55 @@ bool loadAlignmentIntoDistanceMatrix(const std::string& alignmentFilePath,
         }
     }
     
+    if (!msaOutputPath.empty()) {
+        std::ofstream out;
+        out.exceptions(std::ios::failbit | std::ios::badbit);
+        out.open(msaOutputPath.c_str());
+        size_t len = sequences.size()==0 ? 0 : sequences[0].length();
+        
+        out << sequences.size() << " " << len << "\n";
+        for (size_t i=0; i<sequences.size(); ++i) {
+            std::string name     = seq_names[i];
+            std::string seq_data = sequences[i];
+            if (numbered_names) {
+                std::stringstream number_name;
+                number_name << "A" << (i+1); //"A1", "A2", ...
+                name = number_name.str();
+            }
+            out << name << " " << seq_data << "\n";
+        }
+        out.close();
+    }
+    
     return loadSequenceDistancesIntoMatrix(seq_names, sequences,
                                            is_site_variant,
                                            report_progress, m);
 }
 
-bool writeDistanceMatrixToFile(const FlatMatrix& m,
+bool writeDistanceMatrixToFile(FlatMatrix& m,
                                const std::string& distFilePath) {
     std::string format = "square";
-    return m.writeToDistanceFile ( format, 5, distFilePath );
+    if (numbered_names) {
+        auto name_count = m.getSequenceNames().size();
+        for (size_t i=0; i<name_count; ++i) {
+            std::stringstream name;
+            name << "A" << (i+1); //"A1", "A2", ...
+            m.sequenceName(i) = name.str();
+        }
+    }
+    return m.writeToDistanceFile(format, precision,
+                                 compression_level,
+                                 distFilePath );
 }
 
 int main(int argc, char* argv[]) {
     std::stringstream problems;
     progress_display::setProgressDisplay(true); //Displaying progress bars
     std::string algorithmName  = StartTree::Factory::getNameOfDefaultTreeBuilder();
-    std::string alignmentFilePath;
-    std::string inputFilePath;
-    std::string outputFilePath;
-    std::string distanceOutputFilePath;
+    std::string alignmentFilePath; //only .fasta format is supported
+    std::string inputFilePath;     //phylip distance matrix formats are supported
+    std::string outputFilePath;    //newick tree format
+    std::string distanceOutputFilePath; //phylip distance matrix format
     bool isOutputZipped           = false;
     bool isOutputSuppressed       = false;
     bool isOutputToStandardOutput = false; //caller asked for newick tree to go to std::cout
@@ -408,6 +467,31 @@ int main(int argc, char* argv[]) {
                 PROBLEM(arg + " should be followed by a file path");
             }
             inputFilePath = nextArg;
+            ++argNum;
+        }
+        else if (arg=="-c") {
+            if (nextArg.empty()) {
+                PROBLEM(arg + " should be followed by compression level between 1 and 9");
+            }
+            compression_level = atoi(arg.c_str());
+            if (compression_level<0) compression_level = 0;
+            if (9<compression_level) compression_level = 9;
+            ++argNum;
+        }
+        else if (arg=="-f") {
+            if (nextArg.empty()) {
+                PROBLEM(arg + " should be followed by precision level between 4 and 15");
+            }
+            precision = atoi(arg.c_str());
+            if (15<precision) precision=15;
+            if (precision<1)  precision=1;
+            ++argNum;
+        }
+        else if (arg=="-msa-out") {
+            if (nextArg.empty()) {
+                PROBLEM(arg + " should be followed by a file path");
+            }
+            msaOutputPath = nextArg;
             ++argNum;
         }
         else if (arg=="-dist-out") {
@@ -460,6 +544,23 @@ int main(int argc, char* argv[]) {
             isBannerSuppressed = true;
             beSilent = true;
         }
+        else if (arg=="-alphabet") {
+            if (nextArg.empty()) {
+                PROBLEM(arg + " should be followed by a list of characters");
+            }
+            alphabet = nextArg;
+            ++argNum;
+        }
+        else if (arg=="-unknown") {
+            if (nextArg.empty()) {
+                PROBLEM(arg + " should be followed by a list of characters");
+            }
+            unknown_chars = nextArg;
+            ++argNum;
+        }
+        else if (arg=="-num") {
+            numbered_names = true;
+        }
         else if (arg=="-not-dna") {
             is_DNA = false;
         }
@@ -493,6 +594,16 @@ int main(int argc, char* argv[]) {
     if (!isBannerSuppressed) {
         showBanner();
     }
+    if (alphabet.empty() && is_DNA) {
+        alphabet = "ACGT";
+    }
+    if (unknown_chars.empty()) {
+        unknown_chars = ".~_-?N";
+        unknown_char  = 'N';
+    } else {
+        unknown_char = unknown_chars[unknown_chars.length()-1];
+    }
+    
     if (threadCount!=0) {
 #ifdef _OPENMP
         int maxThreadCount = omp_get_max_threads();
@@ -518,6 +629,7 @@ int main(int argc, char* argv[]) {
     if (beSilent) {
         algorithm->beSilent();
     }
+    algorithm->setPrecision(precision);
     FlatMatrix m;
     bool succeeded = false;
     if (algorithm->isBenchmark()) {

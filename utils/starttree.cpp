@@ -135,6 +135,10 @@ void BenchmarkingTreeBuilder::beSilent() {
     silent = true;
 }
 
+void BenchmarkingTreeBuilder::setPrecision(int precisionToUse) {
+    precision = precisionToUse;
+}
+
 namespace {
     std::string formatPositiveNumber(double n, size_t w) {
         std::stringstream s;
@@ -186,6 +190,7 @@ bool BenchmarkingTreeBuilder::constructTreeInMemory
         for (auto it=builders.begin(); it!=builders.end(); ++it) {
             auto   builder_name = (*it)->getName();
             (*it)->beSilent();
+            (*it)->setPrecision(precision);
             #ifdef _OPENMP
                 omp_set_num_threads(1);
             #endif

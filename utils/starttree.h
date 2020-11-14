@@ -46,6 +46,7 @@ namespace StartTree
         virtual const std::string& getName() = 0;
         virtual const std::string& getDescription() = 0;
         virtual void beSilent() = 0;
+        virtual void setPrecision(int precision) = 0;
     };
 
     class BenchmarkingTreeBuilder;
@@ -88,6 +89,7 @@ namespace StartTree
         const std::string description;
         bool  silent;
         bool  isOutputToBeZipped;
+        int   precision;
         bool  constructTreeWith(B& builder) {
             double buildStart    = getRealTime();
             double buildStartCPU = getCPUTime();
@@ -110,7 +112,7 @@ namespace StartTree
     public:
         Builder(const char* nameToUse, const char *descriptionToGive)
         : name(nameToUse), description(descriptionToGive), silent(false)
-        , isOutputToBeZipped(false) {
+        , isOutputToBeZipped(false), precision(6) {
         }
         virtual void beSilent() {
             silent = true;
@@ -142,7 +144,7 @@ namespace StartTree
                 return true;
             }
             builder.setZippedOutput(isOutputToBeZipped);
-            return builder.writeTreeFile(newickTreeFilePath);
+            return builder.writeTreeFile(precision, newickTreeFilePath);
         }
         virtual bool constructTreeInMemory
             ( const std::vector<std::string> &sequenceNames
@@ -160,7 +162,10 @@ namespace StartTree
             if (newickTreeFilePath.empty()) {
                 return true;
             }
-            return builder.writeTreeFile(newickTreeFilePath);
+            return builder.writeTreeFile(precision, newickTreeFilePath);
+        }
+        virtual void setPrecision(int precision_to_use) {
+            precision = precision_to_use;
         }
     };
 
@@ -172,6 +177,7 @@ namespace StartTree
         std::vector<BuilderInterface*> builders;
         bool isOutputToBeZipped;
         bool silent;
+        int  precision;
     public:
         BenchmarkingTreeBuilder(Factory& f, const char* nameToUse, const char *descriptionToGive);
         virtual const std::string& getName();
@@ -186,6 +192,7 @@ namespace StartTree
             , const std::string& newickTreeFilePath);
         virtual void setZippedOutput(bool zipIt);
         virtual void beSilent();
+        virtual void setPrecision(int precisionToUse);
     };
 }
 

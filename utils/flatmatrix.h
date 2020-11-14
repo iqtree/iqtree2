@@ -34,11 +34,12 @@ public:
     double&            cell(size_t r, size_t c);
     void               addCluster(const std::string& clusterName);
     bool               writeToDistanceFile(const std::string& format,
+                                           int precision,
                                            int compression_level,
                                            const std::string& file_name) const;
     template <class S>
     void          writeDistancesToOpenFile(const std::string& format,
-                                           S &out) const;
+                                           int precision, S &out) const;
 };
 
 #endif /* flatmatrix_h */

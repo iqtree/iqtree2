@@ -296,8 +296,8 @@ template <class T=double> struct StitchupGraph {
         std::cout << std::endl;
     }
     template <class F>
-    bool writeTreeToOpenFile (progress_display& progress, F& out) const {
-        out.precision(8);
+    bool writeTreeToOpenFile (int precision, progress_display& progress, F& out) const {
+        out.precision(precision);
         auto lastEdge = stitches.end();
         --lastEdge;
         size_t lastNodeIndex = lastEdge->source;
@@ -318,7 +318,7 @@ template <class T=double> struct StitchupGraph {
         return true;
     }
     template <class F>
-    bool writeTreeToFile ( const std::string &treeFilePath, F& out ) const {
+    bool writeTreeToFile ( int precision, const std::string &treeFilePath, F& out ) const {
         bool success = false;
         std::string desc = "Writing STITCH tree to ";
         desc+=treeFilePath;
@@ -326,7 +326,7 @@ template <class T=double> struct StitchupGraph {
         out.exceptions(std::ios::failbit | std::ios::badbit);
         try {
             out.open(treeFilePath.c_str(), std::ios_base::out);
-            success = writeTreeToOpenFile(progress, out);
+            success = writeTreeToOpenFile(precision, progress, out);
         } catch (std::ios::failure &) {
             std::cerr << "IO error"
             << " opening/writing file: " << treeFilePath << std::endl;
@@ -370,16 +370,16 @@ template <class T=double> struct StitchupGraph {
             out << ":" << backstop->length;
         }
     }
-    bool writeTreeFile(bool zipIt, const std::string &treeFilePath) const {
+    bool writeTreeFile(bool zipIt, int precision, const std::string &treeFilePath) const {
         if (treeFilePath == "STDOUT") {
             progress_display progress(stitches.size(), "", "", "");
-            return writeTreeToOpenFile(progress, std::cout);
+            return writeTreeToOpenFile(precision, progress, std::cout);
         } else if (zipIt) {
             ogzstream out;
-            return writeTreeToFile(treeFilePath, out);
+            return writeTreeToFile(precision, treeFilePath, out);
         } else {
             std::fstream out;
-            return writeTreeToFile(treeFilePath, out);
+            return writeTreeToFile(precision, treeFilePath, out);
         }
     }
 };
@@ -428,8 +428,8 @@ public:
         }
         return true;
     }
-    bool writeTreeFile(const std::string &treeFilePath) const {
-        return graph.writeTreeFile(isOutputToBeZipped, treeFilePath);
+    bool writeTreeFile(int precision, const std::string &treeFilePath) const {
+        return graph.writeTreeFile(isOutputToBeZipped, precision, treeFilePath);
     }
     virtual void setZippedOutput(bool zipIt) {
         isOutputToBeZipped = zipIt;

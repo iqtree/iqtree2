@@ -869,6 +869,9 @@ public:
     }
     virtual void beSilent() {
     }
+    virtual void setPrecision(int precision) {
+        //IGNORED
+    }
 };
 
 namespace StartTree {

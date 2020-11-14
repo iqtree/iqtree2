@@ -95,11 +95,11 @@ public:
         //<< " is (" << a << ", " << b << ", " << c << ")" << std::endl;
         return cluster;
     }
-    template <class F> bool writeTreeToFile(const std::string &treeFilePath, F& out) const {
+    template <class F> bool writeTreeToFile(int precision, const std::string &treeFilePath, F& out) const {
         out.exceptions(std::ios::failbit | std::ios::badbit);
         try {
             out.open(treeFilePath.c_str(), std::ios_base::out);
-            writeTreeToOpenFile(out);
+            writeTreeToOpenFile(precision, out);
             out.close();
             return true;
         } catch (std::ios::failure &) {
@@ -114,9 +114,8 @@ public:
             return false;
         }
     }
-    template <class F> bool writeTreeToOpenFile(F& out) const {
-        out.precision(8);
-
+    template <class F> bool writeTreeToOpenFile(int precision, F& out) const {
+        out.precision(precision);
         std::vector<Place> stack;
         bool failed = false; //Becomes true if clusters
         //defines cycles (should never happen)
@@ -160,15 +159,16 @@ public:
         out << ";" << std::endl;
         return !failed;
     }
-    bool writeTreeFile(bool zipIt, const std::string &treeFilePath) const {
+    bool writeTreeFile(bool zipIt, int precision,
+                       const std::string &treeFilePath) const {
         if (treeFilePath == "STDOUT") {
-            return writeTreeToOpenFile(std::cout);
+            return writeTreeToOpenFile(precision, std::cout);
         } else if (zipIt) {
             ogzstream out;
-            return writeTreeToFile(treeFilePath, out);
+            return writeTreeToFile(precision, treeFilePath, out);
         } else {
             std::fstream out;
-            return writeTreeToFile(treeFilePath, out);
+            return writeTreeToFile(precision, treeFilePath, out);
         }
     }
 }; //end of ClusterTree class

@@ -145,8 +145,8 @@ public:
     virtual void beSilent() {
         silent = true;
     }
-    bool writeTreeFile(const std::string &treeFilePath) const {
-        return clusters.writeTreeFile(isOutputToBeZipped, treeFilePath);
+    bool writeTreeFile(int precision, const std::string &treeFilePath) const {
+        return clusters.writeTreeFile(isOutputToBeZipped, precision, treeFilePath);
     }
 protected:
     void getMinimumEntry(Position<T> &best) {

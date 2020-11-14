@@ -94,6 +94,7 @@ void FlatMatrix::addCluster(const std::string& clusterName) {
 }
 
 bool FlatMatrix::writeToDistanceFile(const std::string& format,
+                                     int precision,
                                      int compression_level,
                                      const std::string& file_name) const {
     try {
@@ -101,14 +102,14 @@ bool FlatMatrix::writeToDistanceFile(const std::string& format,
             std::ofstream out;
             out.exceptions(std::ios::failbit | std::ios::badbit);
             out.open(file_name.c_str());
-            writeDistancesToOpenFile(format, out);
+            writeDistancesToOpenFile(format, precision, out);
             out.close();
         } else {
             //Todo: Decide. Should we be insisting the file name ends with .gz too?
             ogzstream out;
             out.exceptions(std::ios::failbit | std::ios::badbit);
             out.open(file_name.c_str(), std::ios::out, compression_level);
-            writeDistancesToOpenFile(format, out);
+            writeDistancesToOpenFile(format, precision, out);
             out.close();
         }
     } catch (std::ios::failure) {
@@ -117,18 +118,13 @@ bool FlatMatrix::writeToDistanceFile(const std::string& format,
     return true;
 }
 
-namespace {
-    const double min_branch_length = 0.000001;
-}
-
 template <class S>
 void FlatMatrix::writeDistancesToOpenFile(const std::string& format,
-                                          S &out) const {
+                                          int precision, S &out) const {
     size_t nseqs   = sequenceNames.size();
     int    max_len = getMaxSeqNameLength();
     if (max_len < 10) max_len = 10;
     out << nseqs << std::endl;
-    auto precision = std::max((int)ceil(-log10(min_branch_length))+1, 6);
     out.precision(precision);
     bool lower = (format.substr(0,5) == "lower");
     bool upper = (format.substr(0,5) == "upper");
