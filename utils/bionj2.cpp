@@ -1,7 +1,9 @@
 //
-//  bionj2.cpp - Implementations of NJ and BIONJ algorithms
+//  bionj2.cpp - Advertisment of NJ and BIONJ algorithms
 //               (that work in terms of .mldist inputs and
-//                NEWICK outputs).
+//                NEWICK outputs); this class defines functions
+//               that make those algorithms available, via a 
+//               StartTree::Factory.
 //
 //  Copyright (C) 2020, James Barbetti.
 //
@@ -34,11 +36,11 @@
 //     row of the D matrix).  BIONJ implementations also use vectors
 //     (indexed by cluster) of cluster totals.
 //
-// Created by James Barbetti on 18/6/2020.
+// Created by James Barbetti on 18-Jun-2020.
 // Notes:
 // 1. Before 12-Aug-2020, the Matrix and ClusterTree template
 //    classes were declared in this file (rather than in
-//    separate headers)
+//    separate headers) (see clustertree.h, distancematrix.h)
 // 2. Before 31-Oct-2020,
 //    (a) UPGMA_Matrix, VectorizedUPGMA_Matrix were here
 //        (they are now in upgma.h)
@@ -56,8 +58,6 @@
 
 namespace StartTree
 {
-
-
 
 #define ADVERTISE(type, shortName, longName) \
     f.advertiseTreeBuilder( new Builder<type>( shortName, longName))

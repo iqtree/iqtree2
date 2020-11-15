@@ -1,34 +1,76 @@
 //
-//  nj.h
-//  iqtree
+//  nj.h - Implementations of NJ, BIONJ, and UNJ algorithms.
+//
+//  NJ    implementation based on the same (but original NJ, without
+//        a matrix of variance estimates (see NJMatrix).
+//        Paper:  "The neighbor-joining method: a new method
+//                for reconstructing phylogenetic trees",
+//                Naurya Saitou and Masatoshi Nei (1987).
+//        Tag:    [NS1987]
+//        Class:  NJMatrix<T> (where T is the floating point type)
+//        Notes:  Subclass of UPGMA_Matrix<T>.
 //
 //  BIONJ implementation based on http://www.lirmm.fr/~w3ifa/MAAS/BIONJ/BIONJ.html
 //        (see BIONJMatrix).  Original authors: Olivier Gascuel
 //        and Hoa Sien Cuong (the code for the Unix version).
 //        Paper: "BIONJ: An Improved Version of the NJ Algorithm
 //                Based on a Simple Model of Sequence Data" (2009).
-//        Tag:   [GAS2009].
-//  NJ    implementation based on the same (but original NJ, without
-//        a matrix of variance estimates (see NJMatrix).
-//        Paper: "The neighbor-joining method: a new method
-//               for reconstructing phylogenetic trees",
-//               Naurya Saitou and Masatoshi Nei (1987).
-//        Tag:   [NS1987]
-//  UNJ   implementation based on
+//        Precis: Based on NJ. Adds a V (variance estimate) matrix
+//                which is used to determine 
+//                (doubles the memor requirements)
+//        Tag:    [GAS2009].
+//        Class:  BIONJMatrix<T>
+//        Notes:  Subclass of NJMatrix.
+//                Uses *square* matrices (rather than triangular matrices)
+//                (square matrices make the program simpler, and gives its
+//                 memory access patterns better spatial locality of reference,
+//                 at the cost of doubling the memory requirements).
+//                Calculations are "moved left of the summation" wherever possible
+//                (the formulae used are equivialent to those in [GAS2009], but
+//                with calculations moved outside of for-loops wherever possible,
+//                and function calls avoided as much as was practicable).
+//
+//  UNJ   implementation based on a 1997 paper.
 //        Paper: "Concerning the NJ algorithm and its unweighted version, UNJ",
 //               Olivier Gascuel
 //        TAG:   [GAS1997]
+//        Class: UNJMatrix<T>
+//        Note:  Subclass of NJMatrix.
+//               UNJ's name ("unweighted...") is a bit misleading.
+//               To recover the "unweighted" contributions of the taxons in
+//               two clusters of sizes s1 and s2 it is necessary to reweight
+//               contributions from both (e.g. d = d1*s1/(s1+s2) + d2*s2/(s1+s2)),
+//               where d1 and d2 are distances from another cluster (cluster 3)
+//               to clusters 1 and 2.
+//               This makes UNJ slower than NJ, in partice.
 //
 // The vectorized implementations (of BIONJ and NJ) use Agner Fog's
 // vectorclass library.
-
-//  Created by James Barbetti on 31/10/20.
 //
+//  This file, created by James Barbetti on 31-Oct-2020.
+//  (But the bulk of the code in it was from bionj2.cpp,
+//  which dates back to 18-Jun-2020).
+//
+//  LICENSE:
+//* This program is free software; you can redistribute it and/or modify
+//* it under the terms of the GNU General Public License as published by
+//* the Free Software Foundation; either version 2 of the License, or
+//* (at your option) any later version.
+//*
+//* This program is distributed in the hope that it will be useful,
+//* but WITHOUT ANY WARRANTY; without even the implied warranty of
+//* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//* GNU General Public License for more details.
+//*
+//* You should have received a copy of the GNU General Public License
+//* along with this program; if not, write to the
+//* Free Software Foundation, Inc.,
+//* 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #ifndef nj_h
 #define nj_h
 
-#include "upgma.h"
+#include "upgma.h" //for UPGMA_Matrix template class
 #include "tools.h" //for ASSERT macro
 
 namespace StartTree
@@ -266,7 +308,8 @@ public:
         variance = *this;
         return rc;
     }
-    virtual bool loadMatrix(const std::vector<std::string>& names, const double* matrix) {
+    virtual bool loadMatrix(const std::vector<std::string>& names, 
+                            const double* matrix) {
         bool rc = super::loadMatrix(names, matrix);
         variance = *this;
         return rc;
@@ -326,7 +369,7 @@ public:
                 rowTotals[i] += Dci - Dai - Dbi; //JB2020-06-18 Adjust row totals
                 cTotal       += Dci;
                 
-                //BIO begin (Reduction 10 on variance estimates)
+                //BIO begin (Reduction 10 on variance estimates) in [GAS2009]
                 T Vci   = lambda * varianceRowA[i]
                         + mu * varianceRowB[i]
                         + vCorrection;
@@ -344,8 +387,9 @@ public:
     }
 };
 
-template <class T=NJFloat, class super=BIONJMatrix<T>, class V=FloatVector, class VB=FloatBoolVector>
-    class VectorizedMatrix: public super
+template <class T=NJFloat, class super=BIONJMatrix<T>, 
+          class V=FloatVector, class VB=FloatBoolVector>
+class VectorizedMatrix: public super
 {
     //
     //Note: this is a first attempt at hand-vectorizing
@@ -401,8 +445,8 @@ public:
                      //minVector[1] holds the minimum of
                      //columns 1,5,9,13,17,...
             V        ixVector  = -1;
-                     //For each entry in minVector, the column from which
-                     //that value came.
+                     //For each entry in minVector, the column 
+                     //from which that value came.
             
             for (col=0; col+blockSize<row; col+=blockSize) {
                 V  rowVector; rowVector.load_a(rowData+col);

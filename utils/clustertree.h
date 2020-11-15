@@ -1,8 +1,26 @@
 //
-//  clustertree.h
-//  iqtree
+//  clustertree.h - Classes for tracking clusters during distance matrix
+//                  tree construction, and for writing out a Newick format
+//                  file, based on those clusters.
 //
-//  Created by James Barbetti on 12/8/20.
+//  Created by James Barbetti on 12-Aug-2020 (but Link, Cluster, and ClusterTree
+//  were originally, from 18-Jun-2020, in bionj2.cpp).
+//
+//  LICENSE:
+//* This program is free software; you can redistribute it and/or modify
+//* it under the terms of the GNU General Public License as published by
+//* the Free Software Foundation; either version 2 of the License, or
+//* (at your option) any later version.
+//*
+//* This program is distributed in the hope that it will be useful,
+//* but WITHOUT ANY WARRANTY; without even the implied warranty of
+//* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//* GNU General Public License for more details.
+//*
+//* You should have received a copy of the GNU General Public License
+//* along with this program; if not, write to the
+//* Free Software Foundation, Inc.,
+//* 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //
 
 #ifndef clustertree_h
@@ -80,7 +98,8 @@ public:
         Cluster<T>& cluster = back();
         cluster.links.emplace_back(a, aLength);
         cluster.links.emplace_back(b, bLength);
-        cluster.countOfExteriorNodes = at(a).countOfExteriorNodes + at(b).countOfExteriorNodes;
+        cluster.countOfExteriorNodes = at(a).countOfExteriorNodes 
+                                     + at(b).countOfExteriorNodes;
         //std::cout << "Cluster " << (size()-1)
         //<< " is (" << a << ", " << b << ")" << std::endl;
         return cluster;
@@ -95,7 +114,10 @@ public:
         //<< " is (" << a << ", " << b << ", " << c << ")" << std::endl;
         return cluster;
     }
-    template <class F> bool writeTreeToFile(int precision, const std::string &treeFilePath, F& out) const {
+    template <class F> 
+    bool writeTreeToFile(int precision, 
+                         const std::string &treeFilePath, 
+                         F& out) const {
         out.exceptions(std::ios::failbit | std::ios::badbit);
         try {
             out.open(treeFilePath.c_str(), std::ios_base::out);

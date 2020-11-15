@@ -1,8 +1,24 @@
 //
-//  distancematrix.h
-//  iqtree
+//  distancematrix.h - Template classes, Matrix and SquareMatrix,
+//                     used in distance matrix tree construction
+//                     algorithms.
+//  Copyright James Barbetti (2020)
 //
-//  Created by James Barbetti on 12/8/20.
+//  LICENSE:
+//* This program is free software; you can redistribute it and/or modify
+//* it under the terms of the GNU General Public License as published by
+//* the Free Software Foundation; either version 2 of the License, or
+//* (at your option) any later version.
+//*
+//* This program is distributed in the hope that it will be useful,
+//* but WITHOUT ANY WARRANTY; without even the implied warranty of
+//* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//* GNU General Public License for more details.
+//*
+//* You should have received a copy of the GNU General Public License
+//* along with this program; if not, write to the
+//* Free Software Foundation, Inc.,
+//* 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //
 
 #ifndef distancematrix_h
@@ -99,7 +115,9 @@ public:
                 rows[row]      = rowStart;
                 rowStart    += w;
             }
+            #ifdef _OPENMP
             #pragma omp parallel for
+            #endif
             for (size_t row=0; row<row_count; ++row) {
                 zeroRow(row);
             }
@@ -114,7 +132,9 @@ public:
             return;
         }
         setDimensions(rhs.row_count, rhs.column_count);
+        #ifdef _OPENMP
         #pragma omp parallel for
+        #endif
         for (size_t r=0; r<row_count; ++r) {
             T *             destRow      = rows[r];
             T const *       sourceRow    = rhs.rows[r];
@@ -166,7 +186,9 @@ public:
         const T* sourceRow = rows[row_count];
         rows[row_count] = nullptr;
         if (destRow!=sourceRow) {
+            #ifdef _OPENMP
             #pragma omp parallel for
+            #endif
             for (size_t c=0; c<column_count; ++c) {
                 destRow[c] = sourceRow[c];
             }
@@ -179,7 +201,9 @@ public:
             for (size_t r=1; r<row_count; ++r) {
                 destRow += w;
                 sourceRow = rows[r];
+                #ifdef _OPENMP
                 #pragma omp parallel for
+                #endif
                 for (size_t c=0; c<column_count; ++c) {
                     destRow[c] = sourceRow[c];
                 }
@@ -403,7 +427,8 @@ template <class M> bool loadDistanceMatrixInto
             else if (line.tellg()!=-1) {
                 std::stringstream problem;
                 problem << "Expected to see columns [" << (cStart+1) << ".." << cStop << "]"
-                    << " in row " << r << " of the distance matrix, but there were more distances.";
+                    << " in row " << r << " of the distance matrix,"
+                    << " but there were more distances.";
                 throw problem.str();
             }
             ++progress;

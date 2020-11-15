@@ -1,9 +1,24 @@
-//
 //  stitchup.cpp - Implements the "Family Stitch-up" (distance matrix)
 //                 tree construction algorithm, which works by "stitching up"
 //                 a graph, based on probable familial relationships
 //                 (steps 1 through 3), and then "removing the excess
 //                 stitches" (in step 4).
+//
+//  LICENSE:
+//* This program is free software; you can redistribute it and/or modify
+//* it under the terms of the GNU General Public License as published by
+//* the Free Software Foundation; either version 2 of the License, or
+//* (at your option) any later version.
+//*
+//* This program is distributed in the hope that it will be useful,
+//* but WITHOUT ANY WARRANTY; without even the implied warranty of
+//* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//* GNU General Public License for more details.
+//*
+//* You should have received a copy of the GNU General Public License
+//* along with this program; if not, write to the
+//* Free Software Foundation, Inc.,
+//* 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //
 //  1. For each leaf node, a "caterpillar chain" of nodes is maintained,
 //     (initially, each leaf node is the only node in its chain). Interior
@@ -35,8 +50,8 @@
 //
 //  Family stitch-up places an each way bet, inserting *two* internal nodes (each
 //  close to one of the leaf nodes getting linked) (Step 2), and only later removes
-//  the (degree 2) nodes that correspond to "possibilities that didn't pan out" (in Step 4)
-//  (in a nutshell: the strategy is
+//  the (degree 2) nodes that correspond to "possibilities that didn't pan out"
+//  (in Step 4) (in a nutshell: the strategy is:
 //  "let the leaf-distances, alone, decide the topology", and then, only later,
 //  "let the topology decide the geometry").
 //
@@ -226,7 +241,8 @@ template <class T=double> struct StitchupGraph {
     }
     void removeThroughThroughNodes() {
         //Removes any "through-through" interior nodes of degree 2.
-        const char* taskDescription = silent ? "" : "Removing degree-2 nodes from stitchup graph";
+        const char* taskDescription = silent 
+            ? "" : "Removing degree-2 nodes from stitchup graph";
         progress_display progress ( stitches.size()*2,
                                     taskDescription, "", "");
         std::vector<int> replacements;
@@ -287,7 +303,8 @@ template <class T=double> struct StitchupGraph {
         for (auto it=stitches.begin(); it!=stitches.end(); ++it) {
             if (it->source<it->destination) {
                 ++cols;
-                std::cout << it->source << ":" << it->destination << " " << it->length << "\t";
+                std::cout << it->source << ":" << it->destination 
+                    << " " << it->length << "\t";
                 if (cols==4) {
                     std::cout << std::endl;
                     cols = 0;
@@ -297,7 +314,9 @@ template <class T=double> struct StitchupGraph {
         std::cout << std::endl;
     }
     template <class F>
-    bool writeTreeToOpenFile (int precision, progress_display& progress, F& out) const {
+    bool writeTreeToOpenFile (int precision, 
+                              progress_display& progress, 
+                              F& out) const {
         out.precision(precision);
         auto lastEdge = stitches.end();
         --lastEdge;
@@ -314,12 +333,15 @@ template <class T=double> struct StitchupGraph {
                 nodeToEdge[i] = j;
             }
         }
-        writeSubtree(stitchVector, nodeToEdge, nullptr, lastNodeIndex, progress, out);
+        writeSubtree(stitchVector, nodeToEdge, nullptr, 
+                     lastNodeIndex, progress, out);
         out << ";" << std::endl;
         return true;
     }
     template <class F>
-    bool writeTreeToFile ( int precision, const std::string &treeFilePath, F& out ) const {
+    bool writeTreeToFile(int precision, 
+                         const std::string &treeFilePath, 
+                         F& out ) const {
         bool success = false;
         std::string desc = "Writing STITCH tree to ";
         desc+=treeFilePath;
@@ -344,7 +366,8 @@ template <class T=double> struct StitchupGraph {
         return success;
     }
     template <class F>
-    void writeSubtree ( const std::vector<Stitch<T>> stitchVector, std::vector<size_t>  nodeToEdge,
+    void writeSubtree ( const std::vector<Stitch<T>> stitchVector, 
+                        std::vector<size_t>  nodeToEdge,
                         const Stitch<T>* backstop, int nodeIndex,
                         progress_display &progress, F& out) const {
         bool isLeaf = ( nodeIndex < leafNames.size() );
@@ -361,7 +384,8 @@ template <class T=double> struct StitchupGraph {
                 if ( nodeToEdge[child] != y /*no backsies*/ ) {
                     out << sep;
                     sep = ",";
-                    writeSubtree( stitchVector, nodeToEdge, &stitchVector[x], child, progress, out);
+                    writeSubtree(stitchVector, nodeToEdge, &stitchVector[x], 
+                                 child, progress, out);
                 }
                 ++progress;
             }
@@ -371,7 +395,8 @@ template <class T=double> struct StitchupGraph {
             out << ":" << backstop->length;
         }
     }
-    bool writeTreeFile(bool zipIt, int precision, const std::string &treeFilePath) const {
+    bool writeTreeFile(bool zipIt, int precision, 
+                       const std::string &treeFilePath) const {
         if (treeFilePath == "STDOUT") {
             progress_display progress(stitches.size(), "", "", "");
             return writeTreeToOpenFile(precision, progress, std::cout);
@@ -445,7 +470,8 @@ public:
                  , silent ? "" : "Constructing min-heap of possible edges" );
         size_t iterations = 0;
         size_t row_count_triangle = 0.5*row_count*(row_count+1);
-        progress_display progress(row_count_triangle, silent ? "" : "Assembling Stitch-up Graph");
+        const char* task_name = silent ? "" : "Assembling Stitch-up Graph";
+        progress_display progress(row_count_triangle, task_name );
         std::cout.precision(12);
         for (size_t join = 0; join + 1 < row_count; ++join) {
             LengthSortedStitch<T> shortest;
@@ -469,7 +495,8 @@ protected:
     bool            isOutputToBeZipped;
 };
 
-template < class T=double, class S=NJMatrix<T> > class NearestTaxonClusterJoiningMatrix: public S {
+template < class T=double, class S=NJMatrix<T> > 
+class NearestTaxonClusterJoiningMatrix: public S {
     //
     //This is a mash-up of StitchupMatrix and Neighbor-Joining
     //(It works by considering the initial taxa distances, as
@@ -513,21 +540,23 @@ public:
                 taxon1(t1), taxon2(t2), length(dist) {}
             TaxonEdge& operator=(const TaxonEdge& rhs) = default;
         };
-        T fudge = 1.0 / (T)row_count;
+        T multiplier = 1.0 / (T)row_count;
         size_t row_count_triangle = row_count*(row_count-1)/2;
         std::vector<TaxonEdge> edges;
         edges.reserve(row_count_triangle);
         for (size_t row=0; row<row_count; ++row) {
             const T* rowData = rows[row];
             for (size_t col=0; col<row; ++col) {
-                edges.emplace_back(col, row, rowData[col] - (rowTotals[row] + rowTotals[col])*fudge);
+                double d = rowData[col] - (rowTotals[row] + rowTotals[col]) *multiplier;
+                edges.emplace_back(col, row, d);
             }
         }
         MinHeapOnArray< TaxonEdge >
             heap ( edges.data(), edges.size()
                  , silent ? "" : "Constructing min-heap of possible edges" );
         size_t iterations = 0;
-        progress_display progress(row_count_triangle, silent ? "" : "Assembling NTCJ Tree");
+        const char* task_name = silent ? "" : "Assembling NTCJ Tree";
+        progress_display progress(row_count_triangle, task_name );
 
         size_t taxon_count = row_count;
         std::vector<size_t> taxonToRow;

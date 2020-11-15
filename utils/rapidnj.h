@@ -1,6 +1,5 @@
 //
-//  rapidnj.h
-//  iqtree
+//  rapidnj.h - RapidNJ and RapidBIONJ distance matrix tree construction.
 //
 //  BoundingNJ implementation loosely based on ideas from
 //        https://birc.au.dk/software/rapidnj/.
@@ -21,11 +20,51 @@
 //                      access patterns aren't as favourable, but
 //                (iii) reads vastly outnumber writes)
 //        (there's no code yet for removing duplicated rows either;
-//        those that has distance matrix rows identical to earlier rows;
+//        those that have distance matrix rows identical to earlier rows;
 //        Rapid NJ "hates" them) (this is also covered in section 2.5)
-//        See the BoundingBIONJMatrix class.
 //
-//  Created by James Barbetti on 31/10/20.
+//        The BoundingMatrix class adds branch-and-bound optimization
+//        to *other* distance matrix implementations.  In this file, only
+//        to NJ and BIONJ, via the RapidNJ and RapidBIONJ classes.
+//        
+//        It sets up auxiliary S and I matrices.  In each row:
+//        S = unadjusted distances to clusters that were in play
+//            when this row was set up (ascending order)
+//        I = the cluster indices that corresponded to each of
+//            the cells in S.
+//
+//        Rows of S and I are sorted by mirroredHeapsort.
+//        (S is sorted, I is permuted to match).
+//        (S and I are the names of these matrices in [SMP2011]).
+//
+//Notes:  1.An SI matrix, of pair<T,size_t> would probably be better,
+//          as that could be sorted faster.
+//        2.An adaptive row-sorting routine could be used,
+//          particularly if new SI rows (after cluster joins) were 
+//          constructed (not merely in cluster index order) in an 
+//          order "suggested" by the content of one (or both?) of the
+//          *existing* SI rows.
+//          (but... row sorting is only ~10% of running time)
+//
+//  This file, created by James Barbetti on 31-Oct-2020.
+//  (But the bulk of the code in it was from bionj2.cpp,
+//  which dates back to 18-Jun-2020).
+//
+//  LICENSE:
+//* This program is free software; you can redistribute it and/or modify
+//* it under the terms of the GNU General Public License as published by
+//* the Free Software Foundation; either version 2 of the License, or
+//* (at your option) any later version.
+//*
+//* This program is distributed in the hope that it will be useful,
+//* but WITHOUT ANY WARRANTY; without even the implied warranty of
+//* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//* GNU General Public License for more details.
+//*
+//* You should have received a copy of the GNU General Public License
+//* along with this program; if not, write to the
+//* Free Software Foundation, Inc.,
+//* 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //
 
 #ifndef rapidnj_h
@@ -123,7 +162,8 @@ public:
         rowScanOrder.resize(row_count);
 
         {
-            const char* taskName = silent ? "" : "Setting up auxiliary I and S matrices";
+            const char* taskName = silent 
+                ? "" :  "Setting up auxiliary I and S matrices";
             progress_display setupProgress(row_count, taskName, "sorting", "row");
             //2. Set up the matrix with row sorted by distance
             //   And the matrix that tracks which distance is

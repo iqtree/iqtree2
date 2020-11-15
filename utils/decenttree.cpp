@@ -33,7 +33,6 @@
 
 #define PROBLEM(x) if (1) problems << x << ".\n"; else 0
 
-
 namespace {
     bool endsWith(const std::string s, const char* suffix) {
         auto suffixLen = strlen(suffix);
@@ -96,7 +95,8 @@ bool processSequenceLine(const std::vector<int> &in_alphabet,
     //errors to std::cerr.
     for (auto it = line.begin(); it != line.end(); it++) {
         if ((*it) <= ' ') continue;
-        if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.' || (*it) == '*' || (*it) == '~') {
+        if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.' 
+            || (*it) == '*' || (*it) == '~') {
             auto c = toupper(*it);
             if (!in_alphabet[c]) {
                 c = unknown_char;
@@ -108,7 +108,8 @@ bool processSequenceLine(const std::vector<int> &in_alphabet,
                 it++;
             }
             if (it == line.end()) {
-                std::cerr << "Line " << line_num << ": No matching close-bracket ) or } found";
+                std::cerr << "Line " << line_num 
+                    << ": No matching close-bracket ) or } found";
                 return false;
             }
             sequence.append(1, unknown_char);
@@ -118,7 +119,8 @@ bool processSequenceLine(const std::vector<int> &in_alphabet,
                     << " is treated as unknown character" << std::endl;
             #endif
         } else {
-            std::cerr << "Line " << line_num << ": Unrecognized character "  + std::string(1,*it);
+            std::cerr << "Line " << line_num 
+                << ": Unrecognized character "  + std::string(1,*it);
             return false;
         }
     }
@@ -253,9 +255,6 @@ bool loadSequenceDistancesIntoMatrix(const std::vector<std::string>& seq_names,
         }
     }
     
-    
-    
-    
     {
         const char* task = report_progress ? "Calculating distances": "";
         progress_display progress( rank*(rank-1)/2, task );
@@ -270,16 +269,17 @@ bool loadSequenceDistancesIntoMatrix(const std::vector<std::string>& seq_names,
                 uint64_t count_unknown = countBitsSetInEither
                                          (unknown_data[row], unknown_data[col],
                                           unkLen);
-                double distance  = 0;
-                if (count_unknown<rawSeqLen) {
+                double   distance      = 0;
+                int      adjSeqLen     = rawSeqLen - count_unknown;
+                if (0<adjSeqLen) {
                     if (correcting_distances) {
-                        distance  = correctDistance(char_distance, rawSeqLen - count_unknown, num_states);
+                        distance = correctDistance(char_distance, adjSeqLen, num_states);
                     } else {
-                        distance  = uncorrectedDistance(char_distance, rawSeqLen - count_unknown);
+                        distance = uncorrectedDistance(char_distance, adjSeqLen);
                     }
-                }
-                if (distance<0) {
-                    distance = 0;
+                    if (distance < 0) {
+                        distance = 0;
+                    }
                 }
                 m.cell(row, col) = distance;
                 m.cell(col, row) = distance;
@@ -321,7 +321,8 @@ bool loadAlignmentIntoDistanceMatrix(const std::string& alignmentFilePath,
     pigzstream in(report_progress ? "fasta" : "");
     in.open(alignmentFilePath.c_str(), std::ios::binary | std::ios::in);
     if (!in.is_open()) {
-        std::cerr << "Unable to open alignment file " << alignmentFilePath << std::endl;
+        std::cerr << "Unable to open alignment file " 
+            << alignmentFilePath << std::endl;
         return false;
     }
     size_t line_num = 0;
@@ -352,7 +353,8 @@ bool loadAlignmentIntoDistanceMatrix(const std::string& alignmentFilePath,
         }
         // read sequence contents
         else if (sequences.empty()) {
-            std::cerr << "First line must begin with '>' to define sequence name" << std::endl;
+            std::cerr << "First line must begin with '>'"
+                << " to define sequence name" << std::endl;
             return false;
         }
         else if (!processSequenceLine(in_alphabet, sequences.back(), line, line_num)) {
@@ -416,7 +418,6 @@ bool loadAlignmentIntoDistanceMatrix(const std::string& alignmentFilePath,
         }
         out.close();
     }
-    
     return loadSequenceDistancesIntoMatrix(seq_names, sequences,
                                            is_site_variant,
                                            report_progress, m);
@@ -622,7 +623,8 @@ int main(int argc, char* argv[]) {
     }
     StartTree::BuilderInterface* algorithm = StartTree::Factory::getTreeBuilderByName(algorithmName);
     if (algorithm==nullptr) {
-        std::cerr << "Tree builder algorithm was unexpectedly null (internal logic error)." << std::endl;
+        std::cerr << "Tree builder algorithm was unexpectedly null"
+            << " (internal logic error)." << std::endl;
         return 1;
     }
     algorithm->setZippedOutput(isOutputZipped || endsWith(outputFilePath,".gz"));
