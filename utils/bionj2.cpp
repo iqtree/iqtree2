@@ -52,28 +52,32 @@
 #include "upgma.h"
 #include "nj.h"
 #include "rapidnj.h"
+#include "auctionmatrix.h"
 
 namespace StartTree
 {
+
+
 
 #define ADVERTISE(type, shortName, longName) \
     f.advertiseTreeBuilder( new Builder<type>( shortName, longName))
 
 void addBioNJ2020TreeBuilders(Factory& f) {
     const char* defaultName = "RapidNJ";
-    ADVERTISE(NJMatrix<NJFloat>,   "NJ",      "Neighbour Joining (Saitou, Nei [1987])");
-    ADVERTISE(UNJMatrix<NJFloat>,  "UNJ",     "Unweighted Neighbour Joining (Gascel [1997])");
-    ADVERTISE(RapidNJ,             "NJ-R",    "Rapid Neighbour Joining"
-                                              " (Simonsen, Mailund, Pedersen [2011])");
-    ADVERTISE(VectorNJ,            "NJ-V",    "Vectorized Neighbour Joining (Saitou, Nei [1987])");
-    ADVERTISE(BIONJMatrix<NJFloat>,"BIONJ",   "BIONJ (Gascuel, Cong [2009])");
-    ADVERTISE(RapidBIONJ,          "BIONJ-R", "Rapid BIONJ (Saitou, Nei [1987], Gascuel [2009],"
-                                              " Simonson Mailund Pedersen [2011])");
-    ADVERTISE(VectorBIONJ,         "BIONJ-V", "Vectorized BIONJ (Gascuel, Cong [2009])");
-    ADVERTISE(UPGMA_Matrix<NJFloat>,"UPGMA",  "UPGMA (Sokal, Michener [1958])");
-    ADVERTISE(VectorizedUPGMA_Matrix<NJFloat>,"UPGMA-V", "Vectorized UPGMA (Sokal, Michener [1958])");
-    ADVERTISE(BoundingMatrix<double>,"NJ-R-D","Double precision Rapid Neighbour Joining");
-    ADVERTISE(RapidNJ,           defaultName, "Rapid Neighbour Joining (Simonsen, Mailund, Pedersen [2011]) (default)");
+    ADVERTISE(NJMatrix<NJFloat>,    "NJ",      "Neighbour Joining (Saitou, Nei [1987])");
+    ADVERTISE(UNJMatrix<NJFloat>,   "UNJ",     "Unweighted Neighbour Joining (Gascel [1997])");
+    ADVERTISE(RapidNJ,              "NJ-R",    "Rapid Neighbour Joining"
+                                               " (Simonsen, Mailund, Pedersen [2011])");
+    ADVERTISE(VectorNJ,             "NJ-V",    "Vectorized Neighbour Joining (Saitou, Nei [1987])");
+    ADVERTISE(BIONJMatrix<NJFloat>, "BIONJ",   "BIONJ (Gascuel, Cong [2009])");
+    ADVERTISE(RapidBIONJ,           "BIONJ-R", "Rapid BIONJ (Saitou, Nei [1987], Gascuel [2009],"
+                                               " Simonson Mailund Pedersen [2011])");
+    ADVERTISE(VectorBIONJ,          "BIONJ-V", "Vectorized BIONJ (Gascuel, Cong [2009])");
+    ADVERTISE(UPGMA_Matrix<NJFloat>,"UPGMA",   "UPGMA (Sokal, Michener [1958])");
+    ADVERTISE(VectorizedUPGMA_Matrix<NJFloat>, "UPGMA-V", "Vectorized UPGMA (Sokal, Michener [1958])");
+    ADVERTISE(BoundingMatrix<double>,"NJ-R-D", "Double precision Rapid Neighbour Joining");
+    ADVERTISE(RapidNJ,           defaultName,  "Rapid Neighbour Joining (Simonsen, Mailund, Pedersen [2011]) (default)");
     f.setNameOfDefaultTreeBuilder(defaultName);
+    ADVERTISE(DistanceAuctionMatrix, "AUCTION",    "Auction Joining");
 }
 }; //end of namespace

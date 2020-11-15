@@ -243,7 +243,6 @@ protected:
     }
 };
 
-
 template <class T=NJFloat> class BIONJMatrix : public NJMatrix<T> {
 public:
     typedef NJMatrix<T> super;

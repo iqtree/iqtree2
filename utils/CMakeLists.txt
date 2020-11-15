@@ -10,7 +10,7 @@ MPIHelper.cpp MPIHelper.h
 starttree.cpp starttree.h
 flatmatrix.cpp flatmatrix.h
 bionj.cpp bionj2.cpp stitchup.cpp
-upgma.h nj.h rapidnj.h
+upgma.h nj.h rapidnj.h auctionmatrix.h
 clustertree.h distancematrix.h heapsort.h
 progress.cpp progress.h
 timekeeper.cpp timekeeper.h

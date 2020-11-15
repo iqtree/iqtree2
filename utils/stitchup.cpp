@@ -59,6 +59,7 @@
 
 #include "starttree.h"
 #include "distancematrix.h"
+#include "nj.h"
 #include "clustertree.h"
 #include "progress.h"
 #include "heapsort.h" //for MinHeap template class
@@ -391,6 +392,7 @@ public:
     using super::setSize;
     using super::row_count;
     using super::column_count;
+    using super::loadDistancesFromFlatArray;
     bool silent;
     StitchupMatrix(): isOutputToBeZipped(false) {
     }
@@ -414,18 +416,7 @@ public:
         for (auto it = names.begin(); it != names.end(); ++it) {
             addCluster(*it);
         }
-        #ifdef _OPENMP
-        #pragma omp parallel for
-        #endif
-        for (size_t row=0; row<row_count; ++row) {
-            const double* sourceStart = matrix + row * column_count;
-            const double* sourceStop  = sourceStart + column_count;
-            auto    dest        = rows[row];
-            for (const double* source=sourceStart; source<sourceStop
-                 ; ++source, ++dest ) {
-                *dest = (T) *source;
-            }
-        }
+        loadDistancesFromFlatArray(matrix);
         return true;
     }
     bool writeTreeFile(int precision, const std::string &treeFilePath) const {
@@ -442,7 +433,7 @@ public:
             return false;
         }
         std::vector<LengthSortedStitch<T>> stitches;
-        stitches.reserve(row_count * row_count);
+        stitches.reserve(row_count * (row_count-1) / 2);
         for (size_t row=0; row<row_count; ++row) {
             const T* rowData = rows[row];
             for (size_t col=0; col<row; ++col) {
@@ -478,9 +469,111 @@ protected:
     bool            isOutputToBeZipped;
 };
 
+template < class T=double, class S=NJMatrix<T> > class NearestTaxonClusterJoiningMatrix: public S {
+    //
+    //This is a mash-up of StitchupMatrix and Neighbor-Joining
+    //(It works by considering the initial taxa distances, as
+    //per the NJ distance metric, between points in different
+    //clusters, joining the two clusters containing the taxa
+    //that are closest, according to that metric).
+    //It is somewhat faster than NJ but it gets worse answers.
+    //For now, this seems to be a failed experiment.
+    //
+public:
+    typedef NJMatrix<T> super;
+    //member variables from super-class
+    using super::row_count;
+    using super::rows;
+    using super::silent;
+    using super::clusters;
+    using super::rowTotals;
+    //member functions from super-class
+    using super::cluster;
+    using super::finishClustering;
+    
+    virtual std::string getAlgorithmName() const {
+        return "NTCJ";
+    }
+    virtual bool constructTree() {
+        if (row_count<3) {
+            return false;
+        }
+        class TaxonEdge {
+        public:
+            size_t taxon1, taxon2;
+            T      length;
+            bool operator <  ( const TaxonEdge &r) const {
+                return length < r.length;
+            }
+            bool operator <= ( const TaxonEdge &r) const {
+                return length < r.length;
+            }
+            TaxonEdge(): taxon1(0), taxon2(0), length(0) {}
+            TaxonEdge(size_t t1, size_t t2, T dist) :
+                taxon1(t1), taxon2(t2), length(dist) {}
+            TaxonEdge& operator=(const TaxonEdge& rhs) = default;
+        };
+        T fudge = 1.0 / (T)row_count;
+        size_t row_count_triangle = row_count*(row_count-1)/2;
+        std::vector<TaxonEdge> edges;
+        edges.reserve(row_count_triangle);
+        for (size_t row=0; row<row_count; ++row) {
+            const T* rowData = rows[row];
+            for (size_t col=0; col<row; ++col) {
+                edges.emplace_back(col, row, rowData[col] - (rowTotals[row] + rowTotals[col])*fudge);
+            }
+        }
+        MinHeapOnArray< TaxonEdge >
+            heap ( edges.data(), edges.size()
+                 , silent ? "" : "Constructing min-heap of possible edges" );
+        size_t iterations = 0;
+        progress_display progress(row_count_triangle, silent ? "" : "Assembling NTCJ Tree");
+
+        size_t taxon_count = row_count;
+        std::vector<size_t> taxonToRow;
+        taxonToRow.resize(taxon_count);
+        size_t* tr = taxonToRow.data();
+        #ifdef _OPENMP
+        #pragma omp parallel for
+        #endif
+        for (size_t t=0; t<taxon_count; ++t) {
+            tr[t] = t;
+        }
+        while (3<row_count) {
+            TaxonEdge shortest;
+            do {
+                shortest = heap.pop_min();
+                ++iterations;
+            } while ( tr[shortest.taxon1] == tr[shortest.taxon2] );
+            size_t rA = tr[shortest.taxon1];
+            size_t rB = tr[shortest.taxon2];
+            size_t r1 = (rA<rB) ? rA : rB;
+            size_t r2 = (rB<rA) ? rA : rB;
+            cluster( r1, r2);
+            #ifdef _OPENMP
+            #pragma omp parallel for
+            #endif
+            for (size_t t=0; t<taxon_count; ++t) {
+                if (tr[t] == r2) {
+                    tr[t] = r1;
+                }
+                else if (tr[t] == row_count) {
+                    tr[t] = r2;
+                }
+            }
+            progress.incrementBy(taxon_count-row_count);
+        }
+        finishClustering();
+        progress.done();
+        return true;
+    }
+};
+
 void addStitchupTreeBuilders(Factory& f) {
     f.advertiseTreeBuilder( new Builder<StitchupMatrix<double>>
         ("STITCH",      "Family Stitch-up (Lowest Cost)"));
+    f.advertiseTreeBuilder( new Builder<NearestTaxonClusterJoiningMatrix<double>>
+        ("NTCJ",        "Cluster joining by nearest (NJ) taxon distance"));
 }
 
 } //end of StartTree namespace.

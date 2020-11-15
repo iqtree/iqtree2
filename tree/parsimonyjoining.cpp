@@ -8,6 +8,7 @@
 #include "phylotree.h"
 #include <placement/parallelparsimonycalculator.h>
 #include <utils/rapidnj.h>
+#include <utils/auctionmatrix.h>
 
 class ParsimonyMatrix: public StartTree::NJMatrix<NJFloat> {
 protected:
@@ -209,55 +210,18 @@ public:
     RapidParsimonyMatrix(PhyloTree& tree) {
         setTree(&tree);
     }
+    virtual std::string getAlgorithmName() const {
+        return "RapidPJ";
+    }
 };
 
-class AuctionParsimonyMatrix: public StartTree::BoundingMatrix<NJFloat, ParsimonyMatrix>  {
-    //
-    //A reverse auction algorithm: each row "bids" to be clustered
-    //(lowest bid wins) based on the difference between the best join
-    //involving it (and another lower-numbered cluster) and the
-    //second-best.  if there aren't two lower-numbered clusters,
-    //no bid is placed (infiniteDistance is returned).
-    //
-    //This is a little faster than actually looking at all of the
-    //parsimony distances!  And it practice, yields answers that aren't
-    //that much worse.
-    //
+class AuctionParsimonyMatrix:public StartTree::AuctionMatrix<NJFloat, ParsimonyMatrix> {
 public:
-    typedef StartTree::BoundingMatrix<NJFloat, ParsimonyMatrix> super;
     AuctionParsimonyMatrix(PhyloTree& tree) {
         setTree(&tree);
     }
-    StartTree::Position<T> getRowMinimum(size_t row, T maxTot, T qBest) const {
-        StartTree::Position<T> pos(row, 0, infiniteDistance, 0);
-        const T*   rowData   = entriesSorted.rows[row];
-        const int* toCluster = entryToCluster.rows[row];
-        size_t i = 0;
-        int   bestOtherRow;
-        for (i=0; rowData[i]<infiniteDistance; ++i) {
-            bestOtherRow = clusterToRow[toCluster[i]];
-            if (bestOtherRow != notMappedToRow) {
-                break;
-            }
-        }
-        if (rowData[i] < infiniteDistance) {
-            T     bestV = rowData[i];
-            int   secondBestOtherRow;
-            for (; rowData[i]<infiniteDistance; ++i) {
-                secondBestOtherRow = clusterToRow[toCluster[i]];
-                if (secondBestOtherRow != notMappedToRow) {
-                    break;
-                }
-            }
-            if (rowData[i] < infiniteDistance) {
-                pos.row   = bestOtherRow;
-                pos.value = bestV - rowData[secondBestOtherRow];
-            }
-            if (1<i) {
-                purgeRow(row);
-            }
-        }
-        return pos;
+    virtual std::string getAlgorithmName() const {
+        return "AuctionPJ";
     }
 };
 

@@ -124,7 +124,6 @@ public:
             }
         }
     }
-    
     size_t widthNeededFor(size_t width) {
         //
         //returns width, rounded up so that each row will
@@ -188,6 +187,20 @@ public:
             }
             shrink_r    = (row_count+row_count)/3;
             if (shrink_r<100) shrink_r=0;
+        }
+    }
+    virtual void loadDistancesFromFlatArray(const double* matrix) {
+        #ifdef _OPENMP
+        #pragma omp parallel for
+        #endif
+        for (size_t row=0; row<row_count; ++row) {
+            const double* sourceStart = matrix + row * column_count;
+            const double* sourceStop  = sourceStart + column_count;
+            T*            dest        = rows[row];
+            for (const double* source=sourceStart;
+                 source<sourceStop; ++source, ++dest ) {
+                *dest = (T) *source;
+            }
         }
     }
 };

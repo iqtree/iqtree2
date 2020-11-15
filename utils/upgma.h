@@ -67,6 +67,7 @@ public:
     typedef SquareMatrix<T> super;
     using super::rows;
     using super::setSize;
+    using super::loadDistancesFromFlatArray;
     using super::calculateRowTotals;
     using super::removeRowAndColumn;
     using super::row_count;
@@ -107,18 +108,7 @@ public:
         for (auto it = names.begin(); it != names.end(); ++it) {
             clusters.addCluster(*it);
         }
-        #ifdef _OPENMP
-        #pragma omp parallel for
-        #endif
-        for (size_t row=0; row<row_count; ++row) {
-            const double* sourceStart = matrix + row * column_count;
-            const double* sourceStop  = sourceStart + column_count;
-            T*            dest        = rows[row];
-            for (const double* source=sourceStart;
-                 source<sourceStop; ++source, ++dest ) {
-                *dest = (T) *source;
-            }
-        }
+        loadDistancesFromFlatArray(matrix);
         calculateRowTotals();
         return true;
     }
