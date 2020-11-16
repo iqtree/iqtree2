@@ -762,7 +762,6 @@ void parseArg(int argc, char *argv[], Params &params) {
     progress_display::setProgressDisplay(false);
     verbose_mode = VB_MIN;
     params.tree_gen = NONE;
-    params.user_file = NULL;
     params.constraint_tree_file = NULL;
     params.opt_gammai = true;
     params.opt_gammai_fast = false;
@@ -772,7 +771,6 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.testAlphaEps = 0.1;
     params.exh_ai = false;
     params.alpha_invar_file = NULL;
-    params.out_prefix = NULL;
     params.out_file = NULL;
     params.sub_size = 0;
     params.pd_proportion = 0.0;
@@ -4291,7 +4289,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 err += "\" option.";
                 throw err;
             } else {
-                if (params.user_file == NULL)
+                if (params.user_file.empty())
                     params.user_file = argv[cnt];
                 else
                     params.out_file = argv[cnt];
@@ -4321,7 +4319,7 @@ void parseArg(int argc, char *argv[], Params &params) {
         }
 
     } // for
-    if (!params.user_file && !params.aln_file && !params.ngs_file && !params.ngs_mapped_reads && !params.partition_file) {
+    if (params.user_file.empty() && !params.aln_file && !params.ngs_file && !params.ngs_mapped_reads && !params.partition_file) {
 #ifdef IQ_TREE
         quickStartGuide();
 //        usage_iqtree(argv, false);
@@ -4385,20 +4383,20 @@ void parseArg(int argc, char *argv[], Params &params) {
 		params.print_ufboot_trees = 2; // 2017-09-25: fix bug regarding the order of -bb 1000 -bnni -wbt
 	}
 
-    if (!params.out_prefix) {
+    if (params.out_prefix.empty()) {
     	if (params.eco_dag_file)
     		params.out_prefix = params.eco_dag_file;
-        else if (params.user_file && params.consensus_type == CT_ASSIGN_SUPPORT_EXTENDED)
+        else if (!params.user_file.empty() && params.consensus_type == CT_ASSIGN_SUPPORT_EXTENDED)
             params.out_prefix = params.user_file;
         else if (params.partition_file) {
             params.out_prefix = params.partition_file;
-            if (params.out_prefix[strlen(params.out_prefix)-1] == '/' || params.out_prefix[strlen(params.out_prefix)-1] == '\\') {
-                params.out_prefix[strlen(params.out_prefix)-1] = 0;
+            if (params.out_prefix.back() == '/' || params.out_prefix.back() == '\\') {
+                params.out_prefix.pop_back();
             }
         } else if (params.aln_file) {
             params.out_prefix = params.aln_file;
-            if (params.out_prefix[strlen(params.out_prefix)-1] == '/' || params.out_prefix[strlen(params.out_prefix)-1] == '\\') {
-                params.out_prefix[strlen(params.out_prefix)-1] = 0;
+            if (params.out_prefix.back() == '/' || params.out_prefix.back() == '\\') {
+                params.out_prefix.pop_back();
             }
         } else if (params.ngs_file)
             params.out_prefix = params.ngs_file;
@@ -4880,7 +4878,7 @@ InputType detectInputFile(const char *input_file) {
     return IN_OTHER;
 }
 
-bool overwriteFile(char *filename) {
+bool overwriteFile(const char *filename) {
     ifstream infile(filename);
     if (infile.is_open()) {
         cout << "Overwrite " << filename << " (y/n)? ";

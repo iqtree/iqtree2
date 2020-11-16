@@ -77,7 +77,7 @@ void generateRandomTree(Params &params)
         outError(ERR_FEW_TAXA);
     }
 
-    if (!params.user_file) {
+    if (params.user_file.empty()) {
         outError("Please specify an output tree file name");
     }
     ////cout << "Random number seed: " << params.ran_seed << endl << endl;
@@ -88,7 +88,7 @@ void generateRandomTree(Params &params)
 
         if (params.tree_gen == YULE_HARDING || params.tree_gen == CATERPILLAR ||
             params.tree_gen == BALANCED || params.tree_gen == UNIFORM || params.tree_gen == STAR_TREE) {
-            if (!overwriteFile(params.user_file)) return;
+            if (!overwriteFile(params.user_file.c_str())) return;
             ofstream out;
             out.open(params.user_file);
             MTree itree;
@@ -151,7 +151,9 @@ void generateRandomTree(Params &params)
         // Generate random trees if optioned
         else if (params.tree_gen == CIRCULAR_SPLIT_GRAPH) {
             cout << "Generating random circular split network..." << endl;
-            if (!overwriteFile(params.user_file)) return;
+            if (!overwriteFile(params.user_file.c_str())) {
+                return;
+            }
             sg.generateCircular(params);
         } else if (params.tree_gen == TAXA_SET) {
             sg.init(params);
@@ -430,13 +432,13 @@ void printTaxaSet(Params &params, vector<PDTaxaSet> &taxa_set, RunMode cur_mode)
             } else {
                 filename += ".pdtree";
             }
-            (*tid).printTree((char*)filename.c_str());
+            (*tid).printTree(filename.c_str());
 
             filename = params.out_prefix;
             filename += ".";
             filename += subsize;
             filename += ".pdtaxa";
-            (*tid).printTaxa((char*)filename.c_str());
+            (*tid).printTaxa(filename.c_str());
         } else {
             out << subsize << " " << (*tid).score << endl;
             scoreout << subsize << " " << (*tid).score << endl;
@@ -461,7 +463,7 @@ void runPDTree(Params &params)
 
     if (params.run_mode == CALC_DIST) {
         bool is_rooted = false;
-        MExtTree tree(params.user_file, is_rooted);
+        MExtTree tree(params.user_file.c_str(), is_rooted);
         cout << "Tree contains " << tree.leafNum << " taxa." << endl;
         cout << "Calculating distance matrix..." << endl;
         tree.calcDist(params.dist_file);
@@ -1031,7 +1033,7 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
     }
 }
 
-void printGainMatrix(char *filename, mmatrix(double) &delta_gain, int start_k) {
+void printGainMatrix(const char *filename, mmatrix(double) &delta_gain, int start_k) {
     try {
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
@@ -1170,7 +1172,7 @@ void runPDSplit(Params &params) {
         sg.calcPDGain(pd_set, delta_gain);
         string filename = params.out_prefix;
         filename += ".pdgain";
-        printGainMatrix((char*)filename.c_str(), delta_gain, pd_set.front().front()->countTaxa());
+        printGainMatrix(filename.c_str(), delta_gain, pd_set.front().front()->countTaxa());
         //cout << delta_gain;
     }
 
@@ -1199,7 +1201,7 @@ void readTaxaOrder(char *taxa_order_file, StrVector &taxa_order) {
 
 void calcTreeCluster(Params &params) {
     ASSERT(params.taxa_order_file);
-    MExtTree tree(params.user_file, params.is_rooted);
+    MExtTree tree(params.user_file.c_str(), params.is_rooted);
 //    StrVector taxa_order;
     //readTaxaOrder(params.taxa_order_file, taxa_order);
     NodeVector taxa;
@@ -1269,7 +1271,7 @@ void printAreaList(Params &params) {
     sets = new MSetsBlock();
      cout << "Reading input file " << params.user_file << "..." << endl;
 
-    MyReader nexus(params.user_file);
+    MyReader nexus(params.user_file.c_str());
 
     nexus.Add(sets);
 
@@ -1493,22 +1495,23 @@ void computeRFDistSamePair(const char *trees1, const char *trees2, const char *f
 
 void computeRFDist(Params &params) {
 
-    if (!params.user_file) outError("User tree file not provided");
-
+    if (params.user_file.empty()) {
+        outError("User tree file not provided");
+    }
     string filename = params.out_prefix;
     filename += ".rfdist";
 
     if (params.rf_dist_mode == RF_TWO_TREE_SETS_EXTENDED) {
-        computeRFDistExtended(params.user_file, params.second_tree, filename.c_str());
+        computeRFDistExtended(params.user_file.c_str(), params.second_tree, filename.c_str());
         return;
     }
 
     if (params.rf_same_pair) {
-        computeRFDistSamePair(params.user_file, params.second_tree, filename.c_str());
+        computeRFDistSamePair(params.user_file.c_str(), params.second_tree, filename.c_str());
         return;
     }
 
-    MTreeSet trees(params.user_file, params.is_rooted, params.tree_burnin, params.tree_max_count);
+    MTreeSet trees(params.user_file.c_str(), params.is_rooted, params.tree_burnin, params.tree_max_count);
     int n = trees.size(), m = trees.size();
     double *rfdist;
     double *incomp_splits = NULL;
@@ -1570,14 +1573,14 @@ void testInputFile(Params &params) {
 
 /**MINH ANH: for some statistics about the branches on the input tree*/
 void branchStats(Params &params){
-    MaTree mytree(params.user_file, params.is_rooted);
+    MaTree mytree(params.user_file.c_str(), params.is_rooted);
     mytree.drawTree(cout,WT_TAXON_ID + WT_INT_NODE);
     //report to output file
     string output;
     if (params.out_file)
         output = params.out_file;
     else {
-        if (params.out_prefix)
+        if (!params.out_prefix.empty())
             output = params.out_prefix;
         else
             output = params.user_file;
@@ -1637,7 +1640,8 @@ void compare(Params &params){
     cout << "Tree with branchID (nodeID) was printed to: " << drawFile << endl;
 
 
-    MTreeSet trees(params.user_file,params.is_rooted, params.tree_burnin, params.tree_max_count);
+    MTreeSet trees(params.user_file.c_str(),params.is_rooted,
+                   params.tree_burnin, params.tree_max_count);
     DoubleMatrix brMatrix;
     DoubleVector BSDs;
     IntVector RFs;
@@ -1649,10 +1653,12 @@ void compare(Params &params){
     if (params.out_file)
         output = params.out_file;
     else {
-        if (params.out_prefix)
+        if (!params.out_prefix.empty()) {
             output = params.out_prefix;
-        else
+        }
+        else {
             output = params.user_file;
+        }
         output += ".compare";
     }
 
@@ -1744,7 +1750,8 @@ void computeMulProb(Params &params)
 
 void processNCBITree(Params &params) {
     NCBITree tree;
-    Node *dad = tree.readNCBITree(params.user_file, params.ncbi_taxid, params.ncbi_taxon_level, params.ncbi_ignore_level);
+    Node *dad = tree.readNCBITree(params.user_file.c_str(), params.ncbi_taxid,
+                                  params.ncbi_taxon_level, params.ncbi_ignore_level);
     if (params.ncbi_names_file) tree.readNCBINames(params.ncbi_names_file);
 
     cout << "Dad ID: " << dad->name << " Root ID: " << tree.root->name << endl;
@@ -2116,7 +2123,7 @@ void processECOpd(Params &params) {
     outFile += ".pda";
 
     //Defining the input phylo type: t - rooted/unrooted tree, n - split network
-    params.intype=detectInputFile(params.user_file);
+    params.intype=detectInputFile(params.user_file.c_str());
     if(params.intype == IN_NEWICK){
         params.eco_type = "t";
     } else if(params.intype == IN_NEXUS){
@@ -2137,7 +2144,7 @@ void processECOpd(Params &params) {
 
     if(strcmp(params.eco_type,"t")==0){
     /*--------------------------------- EcoPD Trees ---------------------------------*/
-        ECOpd tree(params.user_file,params.is_rooted);
+        ECOpd tree(params.user_file.c_str(),params.is_rooted);
 
         // Setting all the information-----------------
         tree.phyloType = "t";
@@ -2183,7 +2190,7 @@ void processECOpd(Params &params) {
         // Solve IP problem
         cout<<"Solving the problem..."<<endl;
         variables = new double[tree.nvar];
-        int g_return = gurobi_solve((char*)model_file.c_str(), tree.nvar, &score, variables, verbose_mode, threads);
+        int g_return = gurobi_solve(model_file.c_str(), tree.nvar, &score, variables, verbose_mode, threads);
         if(verbose_mode == VB_MAX){
             cout<<"GUROBI finished with "<<g_return<<" return."<<endl;
             for(i=0; i<tree.nvar; i++)
@@ -2192,13 +2199,13 @@ void processECOpd(Params &params) {
         }
         tree.dietConserved(variables);
         params.run_time = getCPUTime() - startTime;
-        tree.printResults((char*)outFile.c_str(),variables,score,params);
-        tree.printSubFoodWeb((char*)subFoodWeb.c_str(),variables);
+        tree.printResults(outFile.c_str(),variables,score,params);
+        tree.printSubFoodWeb(subFoodWeb.c_str(),variables);
         delete[] variables;
 
     } else if(strcmp(params.eco_type,"n")==0){
     /*----------------------------- EcoPD SplitNetwork ------------------------------*/
-        params.intype=detectInputFile(params.user_file);
+        params.intype=detectInputFile(params.user_file.c_str());
         PDNetwork splitSYS(params);
         ECOpd ecoInfDAG;
 
@@ -2234,7 +2241,7 @@ void processECOpd(Params &params) {
         ecoInfDAG.printInfDAG(model_file.c_str(),splitSYS,params);
         cout<<"Solving the problem..."<<endl;
         variables = new double[ecoInfDAG.nvar];
-        int g_return = gurobi_solve((char*)model_file.c_str(), ecoInfDAG.nvar, &score, variables, verbose_mode, threads);
+        int g_return = gurobi_solve(model_file.c_str(), ecoInfDAG.nvar, &score, variables, verbose_mode, threads);
         if(verbose_mode == VB_MAX){
             cout<<"GUROBI finished with "<<g_return<<" return."<<endl;
             for(i=0; i<ecoInfDAG.nvar; i++)
@@ -2245,13 +2252,13 @@ void processECOpd(Params &params) {
         ecoInfDAG.totalSD = splitSYS.calcWeight();
         ecoInfDAG.dietConserved(variables);
         params.run_time = getCPUTime() - startTime;
-        ecoInfDAG.printResults((char*)outFile.c_str(),variables, score,params);
-        ecoInfDAG.printSubFoodWeb((char*)subFoodWeb.c_str(),variables);
+        ecoInfDAG.printResults(outFile.c_str(),variables, score,params);
+        ecoInfDAG.printSubFoodWeb(subFoodWeb.c_str(),variables);
         delete[] variables;
     }
 }
 
-void collapseLowBranchSupport(char *user_file, char *split_threshold_str) {
+void collapseLowBranchSupport(const char *user_file, char *split_threshold_str) {
     DoubleVector minsup;
     convert_double_vec(split_threshold_str, minsup, '/');
     if (minsup.empty())
@@ -2596,106 +2603,116 @@ int main(int argc, char *argv[]) {
     version = sversion.str();
     CKP_SAVE(version);
     checkpoint->endStruct();
+    
+    Params& params = Params::getInstance();
 
     if (MPIHelper::getInstance().getNumProcesses() > 1) {
-        if (Params::getInstance().aln_file || Params::getInstance().partition_file) {
-            runPhyloAnalysis(Params::getInstance(), checkpoint);
+        if (params.aln_file || params.partition_file) {
+            runPhyloAnalysis(params, checkpoint);
         } else {
             outError("Please use one MPI process! The feature you wanted does not need parallelization.");
         }
     } else
     // call the main function
-    if (Params::getInstance().tree_gen != NONE) {
-        generateRandomTree(Params::getInstance());
-    } else if (Params::getInstance().do_pars_multistate) {
-        doParsMultiState(Params::getInstance());
-    } else if (Params::getInstance().rf_dist_mode != 0) {
-        computeRFDist(Params::getInstance());
-    } else if (Params::getInstance().test_input != TEST_NONE) {
-        Params::getInstance().intype = detectInputFile(Params::getInstance().user_file);
-        testInputFile(Params::getInstance());
-    } else if (Params::getInstance().run_mode == PRINT_TAXA) {
-        printTaxa(Params::getInstance());
-    } else if (Params::getInstance().run_mode == PRINT_AREA) {
-        printAreaList(Params::getInstance());
-    } else if (Params::getInstance().run_mode == SCALE_BRANCH_LEN || Params::getInstance().run_mode == SCALE_NODE_NAME) {
-        scaleBranchLength(Params::getInstance());
-    } else if (Params::getInstance().run_mode == PD_DISTRIBUTION) {
-        calcDistribution(Params::getInstance());
-    } else if (Params::getInstance().run_mode == STATS){ /**MINH ANH: for some statistics on the input tree*/
-        branchStats(Params::getInstance()); // MA
-    } else if (Params::getInstance().branch_cluster > 0) {
-        calcTreeCluster(Params::getInstance());
-    } else if (Params::getInstance().ncbi_taxid) {
-        processNCBITree(Params::getInstance());
-    } else if (Params::getInstance().user_file && Params::getInstance().eco_dag_file) { /**ECOpd analysis*/
-        processECOpd(Params::getInstance());
-    } else if ((Params::getInstance().aln_file || Params::getInstance().partition_file) &&
-               Params::getInstance().consensus_type != CT_ASSIGN_SUPPORT_EXTENDED)
+    if (params.tree_gen != NONE) {
+        generateRandomTree(params);
+    } else if (params.do_pars_multistate) {
+        doParsMultiState(params);
+    } else if (params.rf_dist_mode != 0) {
+        computeRFDist(params);
+    } else if (params.test_input != TEST_NONE) {
+        params.intype = detectInputFile(params.user_file.c_str());
+        testInputFile(params);
+    } else if (params.run_mode == PRINT_TAXA) {
+        printTaxa(params);
+    } else if (params.run_mode == PRINT_AREA) {
+        printAreaList(params);
+    } else if (params.run_mode == SCALE_BRANCH_LEN || params.run_mode == SCALE_NODE_NAME) {
+        scaleBranchLength(params);
+    } else if (params.run_mode == PD_DISTRIBUTION) {
+        calcDistribution(params);
+    } else if (params.run_mode == STATS){ /**MINH ANH: for some statistics on the input tree*/
+        branchStats(params); // MA
+    } else if (params.branch_cluster > 0) {
+        calcTreeCluster(params);
+    } else if (params.ncbi_taxid) {
+        processNCBITree(params);
+    } else if (!params.user_file.empty() && params.eco_dag_file) { /**ECOpd analysis*/
+        processECOpd(params);
+    } else if ((params.aln_file || params.partition_file) &&
+               params.consensus_type != CT_ASSIGN_SUPPORT_EXTENDED)
     {
-        if ((Params::getInstance().siteLL_file || Params::getInstance().second_align) && !Params::getInstance().gbo_replicates)
+        if ((params.siteLL_file || params.second_align) && !params.gbo_replicates)
         {
-            if (Params::getInstance().siteLL_file)
-                guidedBootstrap(Params::getInstance());
-            if (Params::getInstance().second_align)
-                computeMulProb(Params::getInstance());
+            if (params.siteLL_file)
+                guidedBootstrap(params);
+            if (params.second_align)
+                computeMulProb(params);
         } else {
-            runPhyloAnalysis(Params::getInstance(), checkpoint);
+            runPhyloAnalysis(params, checkpoint);
         }
-//    } else if (Params::getInstance().ngs_file || Params::getInstance().ngs_mapped_reads) {
-//        runNGSAnalysis(Params::getInstance());
-//    } else if (Params::getInstance().pdtaxa_file && Params::getInstance().gene_scale_factor >=0.0 && Params::getInstance().gene_pvalue_file) {
-//        runGSSAnalysis(Params::getInstance());
-    } else if (Params::getInstance().consensus_type != CT_NONE) {
+//    } else if (params.ngs_file || params.ngs_mapped_reads) {
+//        runNGSAnalysis(params);
+//    } else if (params.pdtaxa_file && params.gene_scale_factor >=0.0 && params.gene_pvalue_file) {
+//        runGSSAnalysis(params);
+    } else if (params.consensus_type != CT_NONE) {
         MExtTree tree;
-        switch (Params::getInstance().consensus_type) {
+        switch (params.consensus_type) {
             case CT_CONSENSUS_TREE:
-                computeConsensusTree(Params::getInstance().user_file, Params::getInstance().tree_burnin, Params::getInstance().tree_max_count, Params::getInstance().split_threshold,
-                    Params::getInstance().split_weight_threshold, Params::getInstance().out_file, Params::getInstance().out_prefix, Params::getInstance().tree_weight_file, &Params::getInstance());
+                computeConsensusTree(params.user_file.c_str(),
+                                     params.tree_burnin, params.tree_max_count,
+                                     params.split_threshold, params.split_weight_threshold,
+                                     params.out_file, params.out_prefix.c_str(),
+                                     params.tree_weight_file, &params);
                 break;
             case CT_CONSENSUS_NETWORK:
-                computeConsensusNetwork(Params::getInstance().user_file, Params::getInstance().tree_burnin, Params::getInstance().tree_max_count, Params::getInstance().split_threshold,
-                    Params::getInstance().split_weight_summary, Params::getInstance().split_weight_threshold, Params::getInstance().out_file, Params::getInstance().out_prefix, Params::getInstance().tree_weight_file);
+                computeConsensusNetwork(params.user_file.c_str(), params.tree_burnin,
+                                        params.tree_max_count, params.split_threshold,
+                                        params.split_weight_summary, params.split_weight_threshold,
+                                        params.out_file, params.out_prefix.c_str(),
+                                        params.tree_weight_file);
                 break;
             case CT_ASSIGN_SUPPORT:
-                assignBootstrapSupport(Params::getInstance().user_file, Params::getInstance().tree_burnin, Params::getInstance().tree_max_count, 
-                    Params::getInstance().second_tree, Params::getInstance().is_rooted, Params::getInstance().out_file,
-                    Params::getInstance().out_prefix, tree, Params::getInstance().tree_weight_file, &Params::getInstance());
+                assignBootstrapSupport(params.user_file.c_str(), params.tree_burnin,
+                                       params.tree_max_count, params.second_tree,
+                                       params.is_rooted, params.out_file,
+                                       params.out_prefix.c_str(), tree,
+                                       params.tree_weight_file, &params);
                 break;
             case CT_ASSIGN_SUPPORT_EXTENDED:
-                assignBranchSupportNew(Params::getInstance());
+                assignBranchSupportNew(params);
                 break;
             case CT_NONE: break;
             /**MINH ANH: for some comparison*/
-            case COMPARE: compare(Params::getInstance()); break; //MA
+            case COMPARE: compare(params); break; //MA
         }
-    } else if (Params::getInstance().split_threshold_str) {
+    } else if (params.split_threshold_str) {
         // for Ricardo: keep those splits from input tree above given support threshold
-        collapseLowBranchSupport(Params::getInstance().user_file, Params::getInstance().split_threshold_str);
+        collapseLowBranchSupport(params.user_file.c_str(), params.split_threshold_str);
     } else {
-        Params::getInstance().intype = detectInputFile(Params::getInstance().user_file);
-        if (Params::getInstance().intype == IN_NEWICK && Params::getInstance().pdtaxa_file && Params::getInstance().tree_gen == NONE) {
-            if (Params::getInstance().budget_file) {
-                //if (Params::getInstance().budget < 0) Params::getInstance().run_mode = PD_USER_SET;
+        params.intype = detectInputFile(params.user_file.c_str());
+        if (params.intype == IN_NEWICK && params.pdtaxa_file && params.tree_gen == NONE) {
+            if (params.budget_file) {
+                //if (params.budget < 0) params.run_mode = PD_USER_SET;
             } else {
-                if (Params::getInstance().sub_size < 1 && Params::getInstance().pd_proportion == 0.0)
-                    Params::getInstance().run_mode = PD_USER_SET;
+                if (params.sub_size < 1 && params.pd_proportion == 0.0)
+                    params.run_mode = PD_USER_SET;
             }
             // input is a tree, check if it is a reserve selection -> convert to splits
-            if (Params::getInstance().run_mode != PD_USER_SET) Params::getInstance().multi_tree = true;
+            if (params.run_mode != PD_USER_SET) params.multi_tree = true;
         }
 
 
-        if (Params::getInstance().intype == IN_NEWICK && !Params::getInstance().find_all && Params::getInstance().budget_file == NULL &&
-            Params::getInstance().find_pd_min == false && Params::getInstance().calc_pdgain == false &&
-            Params::getInstance().run_mode != LINEAR_PROGRAMMING && Params::getInstance().multi_tree == false)
-            runPDTree(Params::getInstance());
-        else if (Params::getInstance().intype == IN_NEXUS || Params::getInstance().intype == IN_NEWICK) {
-            if (Params::getInstance().run_mode == LINEAR_PROGRAMMING && Params::getInstance().find_pd_min)
+        if (params.intype == IN_NEWICK && !params.find_all && params.budget_file == NULL &&
+            params.find_pd_min == false && params.calc_pdgain == false &&
+            params.run_mode != LINEAR_PROGRAMMING && params.multi_tree == false)
+            runPDTree(params);
+        else if (params.intype == IN_NEXUS || params.intype == IN_NEWICK) {
+            if (params.run_mode == LINEAR_PROGRAMMING && params.find_pd_min)
                 outError("Current linear programming does not support finding minimal PD sets!");
-            if (Params::getInstance().find_all && Params::getInstance().run_mode == LINEAR_PROGRAMMING)
-                Params::getInstance().binary_programming = true;
-            runPDSplit(Params::getInstance());
+            if (params.find_all && params.run_mode == LINEAR_PROGRAMMING)
+                params.binary_programming = true;
+            runPDSplit(params);
         } else {
             outError("Unknown file input format");
         }

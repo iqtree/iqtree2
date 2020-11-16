@@ -32,7 +32,7 @@ void WHT_setSequenceSite(int seqid, int siteid, char c);
 
 void WHT_setSequenceName(int seqid, const char *name);
 
-void WHT_setParams(int nsim, double gamma_shape, char *filename, double *dist);
+void WHT_setParams(int nsim, double gamma_shape, const char *filename, double *dist);
 
 void WHT_getResults(double *delta, double *delta_quantile, double *p_value);
 

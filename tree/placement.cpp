@@ -203,8 +203,9 @@ void PhyloTree::reinsertTaxaViaStepwiseParsimony(const IntVector& taxaIdsToAdd) 
     freeNode();
     root = nullptr;
     cout << "Creating fast initial parsimony tree by random order stepwise addition..." << endl;
-    double start = getRealTime();
-    double score = computeParsimonyTree(Params::getInstance().out_prefix, aln, randstream);
+    double  start  = getRealTime();
+    Params& params = Params::getInstance();
+    double  score  = computeParsimonyTree(params.out_prefix.c_str(), aln, randstream);
     cout << getRealTime() - start << " seconds, parsimony score: " << score
         << " (based on " << aln->num_parsimony_sites << " sites)"<< endl;
 

@@ -874,7 +874,7 @@ public:
     /**
              input file name
      */
-    char *user_file;
+    std::string user_file;
 
     /* type of starting tree */
     START_TREE_TYPE start_tree;
@@ -892,7 +892,7 @@ public:
     /**
             prefix of the output file, default is the same as input file
      */
-    char *out_prefix;
+    std::string out_prefix;
 
     /**
             alignment file name
@@ -2749,7 +2749,7 @@ InputType detectInputFile(const char *input_file);
         @param filename file name
         @return TRUE if agree to overwrite an existing file, or simply file does not exist
  */
-bool overwriteFile(char *filename);
+bool overwriteFile(const char *filename);
 
 /**
         print usage information

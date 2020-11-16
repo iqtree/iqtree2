@@ -796,7 +796,7 @@ void MTree::parseBranchLength(string &lenstr, DoubleVector &branch_len) {
         return;
     }
     convert_double_vec(in_comment.c_str(), branch_len, BRANCH_LENGTH_SEPARATOR);
-//    const char* str = (char*)in_comment.c_str() + 1;
+//    const char* str = in_comment.c_str() + 1;
 //    int pos;
 //    for (int i = 1; str[0] == 'L'; i++) {
 //        str++;
@@ -2118,7 +2118,7 @@ void PDTaxaSet::printTaxa(ostream &out) {
             out << (*it)->name << endl;
 }
 
-void PDTaxaSet::printTaxa(char *filename) {
+void PDTaxaSet::printTaxa(const char *filename) {
     try {
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
@@ -2136,7 +2136,7 @@ void PDTaxaSet::printTree(ostream &out) {
         out << tree_str << endl;
 }
 
-void PDTaxaSet::printTree(char *filename) {
+void PDTaxaSet::printTree(const char *filename) {
     try {
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);

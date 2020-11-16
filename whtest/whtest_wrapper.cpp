@@ -29,7 +29,7 @@ extern "C" {
 }
 #endif
 
-void addArg(int &argc, char **argv, char *arg) {
+void addArg(int &argc, char **argv, const char *arg) {
 	argv[argc] = new char[strlen(arg)+1];
 	strcpy(argv[argc], arg);
 	argc++;
@@ -39,9 +39,9 @@ int WHTest_old(Params &params, PhyloTree &tree) {
 	int argc = 0;
 	char *argv[10];
 	char tmp[100];
-	addArg(argc, argv, (char*)"WHTest");
+	addArg(argc, argv, "WHTest");
 	addArg(argc, argv, params.aln_file);
-	addArg(argc, argv, (char*)"-a");
+	addArg(argc, argv, "-a");
 	sprintf(tmp, "%f", tree.getModelFactory()->site_rate->getGammaShape());
 	addArg(argc, argv, tmp);
 	return WHTest_run(argc, argv);
@@ -65,7 +65,7 @@ int WHTest(Params &params, IQTree &tree) {
 	double gamma_shape = tree.getModelFactory()->site_rate->getGammaShape();
 	if (gamma_shape == 0) gamma_shape = 100.0;
 	//WHT_setParams(params.whtest_simulations, gamma_shape, params.out_prefix, tree.dist_matrix);
-	WHT_setParams(params.whtest_simulations, gamma_shape, params.out_prefix, NULL);
+    WHT_setParams(params.whtest_simulations, gamma_shape, params.out_prefix.c_str(), NULL);
 	retval = WHTest_run(0, NULL);
 	WHT_getResults(&params.whtest_delta, &params.whtest_delta_quantile, &params.whtest_p_value);
 	return retval;

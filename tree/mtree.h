@@ -1068,7 +1068,7 @@ public:
             print taxa to file
             @param filename output file name
      */
-    void printTaxa(char *filename);
+    void printTaxa(const char *filename);
 
     /**
             print tree to stream
@@ -1080,7 +1080,7 @@ public:
             print tree to file
             @param filename output file name
      */
-    void printTree(char *filename);
+    void printTree(const char *filename);
 
     /**
             convert from the taxa node vector to set of their IDs

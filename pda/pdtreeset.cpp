@@ -30,7 +30,7 @@ PDTreeSet::PDTreeSet(Params &params) {
 }
 
 void PDTreeSet::init(Params &params) {
-	MTreeSet::init(params.user_file, params.is_rooted, params.tree_burnin, params.tree_max_count);
+    MTreeSet::init(params.user_file.c_str(), params.is_rooted, params.tree_burnin, params.tree_max_count);
 
 	if (isRootedTrees()) {
 		params.sub_size++;
@@ -48,7 +48,7 @@ void PDTreeSet::init(Params &params) {
 	}
 
 	if (isRootedTrees()) {
-		char *rname = (char*)ROOT_NAME;
+		const char *rname = ROOT_NAME;
 		readRootNode(rname);
 	}
 	// read the parameter file

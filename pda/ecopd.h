@@ -152,7 +152,7 @@ public:
 	/*
 	 * Prints the sub food web corresponding to the optimal subset
 	 */
-	void printSubFoodWeb(char* fileOUT, double* variables);
+	void printSubFoodWeb(const char* fileOUT, double* variables);
 
 	/*
 	 * t for tree or n for networks
@@ -243,7 +243,7 @@ public:
 	 * print the results
 	 */
 
-	void printResults(char* fileOUT,double* variables, double score, Params &params);
+	void printResults(const char* fileOUT,double* variables, double score, Params &params);
 
 	/*
 	 * Splits number and total SD

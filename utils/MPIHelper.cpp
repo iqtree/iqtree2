@@ -103,7 +103,7 @@ bool MPIHelper::gotMessage() {
 
 #ifdef _IQTREE_MPI
 void MPIHelper::sendString(string &str, int dest, int tag) {
-    char *buf = (char*)str.c_str();
+    const char *buf = str.c_str();
     MPI_Send(buf, str.length()+1, MPI_CHAR, dest, tag, MPI_COMM_WORLD);
 }
 
@@ -190,7 +190,7 @@ void MPIHelper::gatherCheckpoint(Checkpoint *ckp) {
         recvBuffer = new char[totalCount+1];
         memset(recvBuffer, 0, totalCount+1);
     }
-    char *buf = (char*)str.c_str();
+    const char *buf = str.c_str();
     MPI_Gatherv(buf, msgCount, MPI_CHAR, recvBuffer, msgCounts, displ, MPI_CHAR, PROC_MASTER, MPI_COMM_WORLD);
 
     if (isMaster()) {

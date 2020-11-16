@@ -168,7 +168,7 @@ void WHT_setSequenceName(int seqid, const char *name) {
 	safe_strcpy ( baum[seqid].bezeichnung, name);	
 }
 
-void WHT_setParams(int nsim, double gamma_shape, char *filename, double *dist) {
+void WHT_setParams(int nsim, double gamma_shape, const char *filename, double *dist) {
 	simulation = nsim;
 	alpha = gamma_shape;
 	safe_strcpy(datei_name, filename);

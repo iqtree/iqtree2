@@ -1274,7 +1274,7 @@ void ECOpd::checkInitialTaxa(){
 	}
 }
 
-void ECOpd::printSubFoodWeb(char* fileOUT, double* variables){
+void ECOpd::printSubFoodWeb(const char* fileOUT, double* variables){
 	ofstream out;
 	out.exceptions(ios::failbit | ios::badbit);
 	out.open(fileOUT);
@@ -1308,7 +1308,7 @@ void ECOpd::dietConserved(double *variables){
 	}
 }
 
-void ECOpd::printResults(char* fileOUT,double* variables, double score,Params &params){
+void ECOpd::printResults(const char* fileOUT,double* variables, double score,Params &params){
 	cout<<endl<<"Results of the analysis are printed to "<<fileOUT<<endl<<endl;
 	ofstream out;
 	out.exceptions(ios::failbit | ios::badbit);

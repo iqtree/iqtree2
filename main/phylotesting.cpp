@@ -377,32 +377,32 @@ int detectSeqType(const char *model_name, SeqType &seq_type) {
 
     seq_type = SEQ_UNKNOWN;
     
-    copyCString(bin_model_names, sizeof(bin_model_names)/sizeof(char*), model_list, true);
+    copyCString(bin_model_names, element_count(bin_model_names), model_list, true);
     for (i = 0; i < model_list.size(); i++)
         if (model_str == model_list[i]) {
             seq_type = SEQ_BINARY;
             break;
         }
-    copyCString(morph_model_names, sizeof(morph_model_names)/sizeof(char*), model_list, true);
+    copyCString(morph_model_names, element_count(morph_model_names), model_list, true);
     for (i = 0; i < model_list.size(); i++)
         if (model_str == model_list[i]) {
             seq_type = SEQ_MORPH;
             break;
         }
-    copyCString(dna_model_names, sizeof(dna_model_names)/sizeof(char*), model_list, true);
+    copyCString(dna_model_names, element_count(dna_model_names), model_list, true);
     for (i = 0; i < model_list.size(); i++)
         if (model_str == model_list[i]) {
             seq_type = SEQ_DNA;
             break;
         }
-    copyCString(aa_model_names, sizeof(aa_model_names)/sizeof(char*), model_list, true);
+    copyCString(aa_model_names, element_count(aa_model_names), model_list, true);
     for (i = 0; i < model_list.size(); i++)
         if (model_str == model_list[i]) {
             seq_type = SEQ_PROTEIN;
             empirical_model = true;
             break;
         }
-    copyCString(codon_model_names, sizeof(codon_model_names)/sizeof(char*), model_list, true);
+    copyCString(codon_model_names, element_count(codon_model_names), model_list, true);
     for (i = 0; i < model_list.size(); i++)
         if (model_str.substr(0,model_list[i].length()) == model_list[i]) {
             seq_type = SEQ_CODON;
@@ -917,97 +917,97 @@ void getModelSubst(SeqType seq_type, bool standard_code, string model_name,
     
     if (seq_type == SEQ_BINARY) {
         if (model_set.empty()) {
-            copyCString(bin_model_names, sizeof(bin_model_names) / sizeof(char*), model_names);
+            copyCString(bin_model_names, element_count(bin_model_names), model_names);
         } else if (model_set[0] == '+') {
             // append model_set into existing models
             convert_string_vec(model_set.c_str()+1, model_names);
-            appendCString(bin_model_names, sizeof(bin_model_names) / sizeof(char*), model_names);
+            appendCString(bin_model_names, element_count(bin_model_names), model_names);
         } else {
             convert_string_vec(model_set.c_str(), model_names);
         }
     } else if (seq_type == SEQ_MORPH) {
         if (model_set.empty()) {
-            copyCString(morph_model_names, sizeof(morph_model_names) / sizeof(char*), model_names);
+            copyCString(morph_model_names, element_count(morph_model_names), model_names);
         } else if (model_set[0] == '+') {
             // append model_set into existing models
             convert_string_vec(model_set.c_str()+1, model_names);
-            appendCString(morph_model_names, sizeof(morph_model_names) / sizeof(char*), model_names);
+            appendCString(morph_model_names, element_count(morph_model_names), model_names);
         } else {
             convert_string_vec(model_set.c_str(), model_names);
         }
     } else if (seq_type == SEQ_DNA || seq_type == SEQ_POMO) {
         if (model_set.empty()) {
-            copyCString(dna_model_names, sizeof(dna_model_names) / sizeof(char*), model_names);
-            //            copyCString(dna_freq_names, sizeof(dna_freq_names)/sizeof(char*), freq_names);
+            copyCString(dna_model_names, element_count(dna_model_names), model_names);
+            //            copyCString(dna_freq_names, element_count(dna_freq_names), freq_names);
         } else if (model_set == "partitionfinder" || model_set== "phyml") {
-            copyCString(dna_model_names_old, sizeof(dna_model_names_old) / sizeof(char*), model_names);
-            //            copyCString(dna_freq_names, sizeof(dna_freq_names)/sizeof(char*), freq_names);
+            copyCString(dna_model_names_old, element_count(dna_model_names_old), model_names);
+            //            copyCString(dna_freq_names, element_count(dna_freq_names), freq_names);
         } else if (model_set == "raxml") {
-            copyCString(dna_model_names_rax, sizeof(dna_model_names_rax) / sizeof(char*), model_names);
-            //            copyCString(dna_freq_names, sizeof(dna_freq_names)/sizeof(char*), freq_names);
+            copyCString(dna_model_names_rax, element_count(dna_model_names_rax), model_names);
+            //            copyCString(dna_freq_names, element_count(dna_freq_names), freq_names);
         } else if (model_set == "mrbayes") {
-            copyCString(dna_model_names_mrbayes, sizeof(dna_model_names_mrbayes) / sizeof(char*), model_names);
-            //            copyCString(dna_freq_names, sizeof(dna_freq_names)/sizeof(char*), freq_names);
+            copyCString(dna_model_names_mrbayes, element_count(dna_model_names_mrbayes), model_names);
+            //            copyCString(dna_freq_names, element_count(dna_freq_names), freq_names);
         } else if (model_set == "modelomatic") {
-            copyCString(dna_model_names_modelomatic, sizeof(dna_model_names_modelomatic) / sizeof(char*), model_names);
+            copyCString(dna_model_names_modelomatic, element_count(dna_model_names_modelomatic), model_names);
         } else if (model_set == "liemarkov") {
-            copyCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
-            appendCString(dna_model_names_lie_markov_ry, sizeof(dna_model_names_lie_markov_ry) / sizeof(char*), model_names);
-            appendCString(dna_model_names_lie_markov_ws, sizeof(dna_model_names_lie_markov_ws) / sizeof(char*), model_names);
-            appendCString(dna_model_names_lie_markov_mk, sizeof(dna_model_names_lie_markov_mk) / sizeof(char*), model_names);
+            copyCString(dna_model_names_lie_markov_fullsym, element_count(dna_model_names_lie_markov_fullsym), model_names);
+            appendCString(dna_model_names_lie_markov_ry, element_count(dna_model_names_lie_markov_ry), model_names);
+            appendCString(dna_model_names_lie_markov_ws, element_count(dna_model_names_lie_markov_ws), model_names);
+            appendCString(dna_model_names_lie_markov_mk, element_count(dna_model_names_lie_markov_mk), model_names);
         } else if (model_set == "liemarkovry") {
-            copyCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
-            appendCString(dna_model_names_lie_markov_ry, sizeof(dna_model_names_lie_markov_ry) / sizeof(char*), model_names);
+            copyCString(dna_model_names_lie_markov_fullsym, element_count(dna_model_names_lie_markov_fullsym) , model_names);
+            appendCString(dna_model_names_lie_markov_ry, element_count(dna_model_names_lie_markov_ry), model_names);
         } else if (model_set == "liemarkovws") {
-            copyCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
-            appendCString(dna_model_names_lie_markov_ws, sizeof(dna_model_names_lie_markov_ws) / sizeof(char*), model_names);
+            copyCString(dna_model_names_lie_markov_fullsym, element_count(dna_model_names_lie_markov_fullsym), model_names);
+            appendCString(dna_model_names_lie_markov_ws, element_count(dna_model_names_lie_markov_ws) , model_names);
         } else if (model_set == "liemarkovmk") {
-            copyCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
-            appendCString(dna_model_names_lie_markov_mk, sizeof(dna_model_names_lie_markov_mk) / sizeof(char*), model_names);
+            copyCString(dna_model_names_lie_markov_fullsym, element_count(dna_model_names_lie_markov_fullsym), model_names);
+            appendCString(dna_model_names_lie_markov_mk, element_count(dna_model_names_lie_markov_mk), model_names);
         } else if (model_set == "strandsymmetric") {
-            copyCString(dna_model_names_lie_markov_strsym, sizeof(dna_model_names_lie_markov_strsym) / sizeof(char*), model_names);
+            copyCString(dna_model_names_lie_markov_strsym, element_count(dna_model_names_lie_markov_strsym), model_names);
             // IMPORTANT NOTE: If you add any more -mset names for sets of Lie Markov models,
             // you also need to change getPrototypeModel function.
         } else if (model_set[0] == '+') {
             // append model_set into existing models
             convert_string_vec(model_set.c_str()+1, model_names);
-            appendCString(dna_model_names, sizeof(dna_model_names) / sizeof(char*), model_names);
+            appendCString(dna_model_names, element_count(dna_model_names), model_names);
         } else {
             convert_string_vec(model_set.c_str(), model_names);
         }
         
         if (model_name.find("+LMRY") != string::npos) {
-            appendCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
-            appendCString(dna_model_names_lie_markov_ry, sizeof(dna_model_names_lie_markov_ry) / sizeof(char*), model_names);
+            appendCString(dna_model_names_lie_markov_fullsym, element_count(dna_model_names_lie_markov_fullsym), model_names);
+            appendCString(dna_model_names_lie_markov_ry, element_count(dna_model_names_lie_markov_ry) , model_names);
         } else if (model_name.find("+LMWS") != string::npos) {
-            appendCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
-            appendCString(dna_model_names_lie_markov_ws, sizeof(dna_model_names_lie_markov_ws) / sizeof(char*), model_names);
+            appendCString(dna_model_names_lie_markov_fullsym, element_count(dna_model_names_lie_markov_fullsym), model_names);
+            appendCString(dna_model_names_lie_markov_ws, element_count(dna_model_names_lie_markov_ws), model_names);
         } else if (model_name.find("+LMMK") != string::npos) {
-            appendCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
-            appendCString(dna_model_names_lie_markov_mk, sizeof(dna_model_names_lie_markov_mk) / sizeof(char*), model_names);
+            appendCString(dna_model_names_lie_markov_fullsym, element_count(dna_model_names_lie_markov_fullsym), model_names);
+            appendCString(dna_model_names_lie_markov_mk, element_count(dna_model_names_lie_markov_mk) , model_names);
         } else if (model_name.find("+LMSS") != string::npos) {
-            appendCString(dna_model_names_lie_markov_strsym, sizeof(dna_model_names_lie_markov_strsym) / sizeof(char*), model_names);
+            appendCString(dna_model_names_lie_markov_strsym, element_count(dna_model_names_lie_markov_strsym), model_names);
         } else if (model_name.find("+LM") != string::npos) {
-            appendCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
-            appendCString(dna_model_names_lie_markov_ry, sizeof(dna_model_names_lie_markov_ry) / sizeof(char*), model_names);
-            appendCString(dna_model_names_lie_markov_ws, sizeof(dna_model_names_lie_markov_ws) / sizeof(char*), model_names);
-            appendCString(dna_model_names_lie_markov_mk, sizeof(dna_model_names_lie_markov_mk) / sizeof(char*), model_names);
+            appendCString(dna_model_names_lie_markov_fullsym, element_count(dna_model_names_lie_markov_fullsym), model_names);
+            appendCString(dna_model_names_lie_markov_ry, element_count(dna_model_names_lie_markov_ry), model_names);
+            appendCString(dna_model_names_lie_markov_ws, element_count(dna_model_names_lie_markov_ws), model_names);
+            appendCString(dna_model_names_lie_markov_mk, element_count(dna_model_names_lie_markov_mk), model_names);
         }
     } else if (seq_type == SEQ_PROTEIN) {
         if (model_set.empty()) {
-            copyCString(aa_model_names, sizeof(aa_model_names) / sizeof(char*), model_names);
+            copyCString(aa_model_names, element_count(aa_model_names), model_names);
         } else if (model_set == "partitionfinder" || model_set == "phyml") {
-            copyCString(aa_model_names_phyml, sizeof(aa_model_names_phyml) / sizeof(char*), model_names);
+            copyCString(aa_model_names_phyml, element_count(aa_model_names_phyml), model_names);
         } else if (model_set == "raxml") {
-            copyCString(aa_model_names_rax, sizeof(aa_model_names_rax) / sizeof(char*), model_names);
+            copyCString(aa_model_names_rax, element_count(aa_model_names_rax), model_names);
         } else if (model_set == "mrbayes") {
-            copyCString(aa_model_names_mrbayes, sizeof(aa_model_names_mrbayes) / sizeof(char*), model_names);
+            copyCString(aa_model_names_mrbayes, element_count(aa_model_names_mrbayes), model_names);
         } else if (model_set == "modelomatic") {
-            copyCString(aa_model_names_modelomatic, sizeof(aa_model_names_modelomatic) / sizeof(char*), model_names);
+            copyCString(aa_model_names_modelomatic, element_count(aa_model_names_modelomatic), model_names);
         } else if (model_set[0] == '+') {
             // append model_set into existing models
             convert_string_vec(model_set.c_str()+1, model_names);
-            appendCString(aa_model_names, sizeof(aa_model_names) / sizeof(char*), model_names);
+            appendCString(aa_model_names, element_count(aa_model_names), model_names);
         } else {
             convert_string_vec(model_set.c_str(), model_names);
         }
@@ -1015,13 +1015,13 @@ void getModelSubst(SeqType seq_type, bool standard_code, string model_name,
         if (model_subset) {
             StrVector submodel_names;
             if (strncmp(model_subset, "nuclear", 3) == 0) {
-                copyCString(aa_model_names_nuclear, sizeof(aa_model_names_nuclear) / sizeof(char*), submodel_names);
+                copyCString(aa_model_names_nuclear, element_count(aa_model_names_nuclear), submodel_names);
             } else if (strncmp(model_subset, "mitochondrial", 3) == 0) {
-                copyCString(aa_model_names_mitochondrial, sizeof(aa_model_names_mitochondrial) / sizeof(char*), submodel_names);
+                copyCString(aa_model_names_mitochondrial, element_count(aa_model_names_mitochondrial), submodel_names);
             } else if (strncmp(model_subset, "chloroplast", 3) == 0) {
-                copyCString(aa_model_names_chloroplast, sizeof(aa_model_names_chloroplast) / sizeof(char*), submodel_names);
+                copyCString(aa_model_names_chloroplast, element_count(aa_model_names_chloroplast), submodel_names);
             } else if (strncmp(model_subset, "viral",3) == 0) {
-                copyCString(aa_model_names_viral, sizeof(aa_model_names_viral) / sizeof(char*), submodel_names);
+                copyCString(aa_model_names_viral, element_count(aa_model_names_viral), submodel_names);
             } else {
                 outError("Wrong -msub option");
             }
@@ -1042,23 +1042,23 @@ void getModelSubst(SeqType seq_type, bool standard_code, string model_name,
     } else if (seq_type == SEQ_CODON) {
         if (model_set.empty()) {
             if (standard_code)
-                copyCString(codon_model_names, sizeof(codon_model_names) / sizeof(char*), model_names);
+                copyCString(codon_model_names, element_count(codon_model_names), model_names);
             else {
-                i = sizeof(codon_model_names) / sizeof(char*);
+                i = element_count(codon_model_names);
                 for (j = 0; j < i; j++)
                     if (!std_genetic_code[j])
                         model_names.push_back(codon_model_names[j]);
-                //                copyCString(codon_model_names, sizeof(codon_model_names) / sizeof(char*) - 1, model_names);
+                //                copyCString(codon_model_names, element_count(codon_model_names) - 1, model_names);
             }
         } else if (model_set == "modelomatic") {
-            copyCString(codon_model_names_modelomatic, sizeof(codon_model_names_modelomatic) / sizeof(char*), model_names);
+            copyCString(codon_model_names_modelomatic, element_count(codon_model_names_modelomatic), model_names);
         } else if (model_set[0] == '+') {
             // append model_set into existing models
             convert_string_vec(model_set.c_str()+1, model_names);
             if (standard_code)
-                appendCString(codon_model_names, sizeof(codon_model_names) / sizeof(char*), model_names);
+                appendCString(codon_model_names, element_count(codon_model_names), model_names);
             else {
-                i = sizeof(codon_model_names) / sizeof(char*);
+                i = element_count(codon_model_names);
                 for (j = 0; j < i; j++)
                     if (!std_genetic_code[j])
                         model_names.push_back(codon_model_names[j]);
@@ -1073,10 +1073,10 @@ void getStateFreqs(SeqType seq_type, char *state_freq_set, StrVector &freq_names
     
     switch (seq_type) {
         case SEQ_PROTEIN:
-            copyCString(aa_freq_names, sizeof(aa_freq_names)/sizeof(char*), freq_names);
+            copyCString(aa_freq_names, element_count(aa_freq_names), freq_names);
             break;
         case SEQ_CODON:
-            copyCString(codon_freq_names, sizeof(codon_freq_names) / sizeof(char*), freq_names);
+            copyCString(codon_freq_names, element_count(codon_freq_names), freq_names);
             break;
         default:
             break;
@@ -1111,7 +1111,7 @@ void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites
     bool test_options_norate[]    = {true,  false, false, false, false,   false, false,  false};
     bool *test_options = test_options_default;
     //    bool test_options_codon[] =  {true,false,  false,false,  false,    false};
-    const int noptions = sizeof(rate_options) / sizeof(char*);
+    const int noptions = element_count(rate_options);
     int i, j;
     
     bool with_new = (model_name.find("NEW") != string::npos || model_name.substr(0,2) == "MF" || model_name.empty());
@@ -1254,7 +1254,7 @@ int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_ra
     // add number of rate cateogories for special rate models
     const char *rates[] = {"+R", "*R", "+H", "*H"};
 
-    for (i = 0; i < sizeof(rates)/sizeof(char*); i++)
+    for (i = 0; i < element_count(rates); i++)
         if (params.model_name.find(rates[i]) != string::npos)
             ratehet.push_back(rates[i]);
 
@@ -1263,7 +1263,7 @@ int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_ra
     vector<int> flags;
     flags.resize(ratehet.size(), 0);
     
-    for (i = 0; i < sizeof(rates)/sizeof(char*); i++)
+    for (i = 0; i < element_count(rates); i++)
     for (j = 0; j < ratehet.size(); j++)
         if ((pos = ratehet[j].find(rates[i])) != string::npos &&
             (pos >= ratehet[j].length()-2 || !isdigit(ratehet[j][pos+2]) ))
@@ -2692,7 +2692,7 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
             // skip over all +R model of higher categories
             const char *rates[] = {"+R", "*R", "+H", "*H"};
             size_t posR = std::string::npos;
-            for (int i = 0; i < sizeof(rates)/sizeof(char*); i++) {
+            for (int i = 0; i < element_count(rates); i++) {
                 if ((posR = orig_model_name.find(rates[i])) != std::string::npos) {
                     break;
                 }

@@ -71,7 +71,7 @@ void SplitGraph::init(Params &params)
     mtrees = NULL;
     if (params.intype == IN_NEWICK) {
         // read the input file, can contain more than 1 tree
-        mtrees = new MTreeSet(params.user_file, params.is_rooted, params.tree_burnin, params.tree_max_count);
+        mtrees = new MTreeSet(params.user_file.c_str(), params.is_rooted, params.tree_burnin, params.tree_max_count);
         //mtree = new MTree(params.user_file, params.is_rooted);
 
         if (params.is_rooted) {
@@ -92,7 +92,7 @@ void SplitGraph::init(Params &params)
     
          cout << "Reading input file " << params.user_file << "..." << endl;
 
-        MyReader nexus(params.user_file);
+        MyReader nexus(params.user_file.c_str());
     
         nexus.Add(taxa);
         nexus.Add(splits);

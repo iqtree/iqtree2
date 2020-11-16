@@ -559,7 +559,7 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
     }
     setParsimonyKernel(kernel);
     bool noisy = !progress_display::getProgressDisplay();
-    if (params->user_file) {
+    if (!params->user_file.empty()) {
         // start the search with user-defined tree
         std::stringstream msg;
         if (noisy) {
@@ -567,7 +567,7 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
                 << params->user_file << " ...";
         }
         bool myrooted = params->is_rooted;
-        readTree(params->user_file, myrooted);
+        readTree(params->user_file.c_str(), myrooted);
         if (myrooted && !isSuperTreeUnlinked() && noisy) {
             msg << " rooted tree";
         }
@@ -615,7 +615,7 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
             // Create parsimony tree using IQ-Tree kernel
             logLine("Creating fast initial parsimony tree by random order stepwise addition...");
             start = getRealTime();
-            score = computeParsimonyTree(params->out_prefix, aln, randstream);
+                score = computeParsimonyTree(params->out_prefix.c_str(), aln, randstream);
             LOG_LINE(VB_QUIET, "Step-wise parsimony addition"
                      << " took " << getRealTime() - start << " seconds"
                      <<", parsimony score: " << score
@@ -624,7 +624,7 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
         case STT_PARSIMONY_JOINING:
             logLine("Creating parsimony tree by parsimony joining...");
             start = getRealTime();
-            score = joinParsimonyTree(params->out_prefix, aln);
+                score = joinParsimonyTree(params->out_prefix.c_str(), aln);
             LOG_LINE(VB_QUIET, "Parsimony joining took " << getRealTime() - start << " seconds"
                 << ", parsimony score: " << score
                 << " (based on " << aln->num_parsimony_sites << " sites)");
@@ -4018,7 +4018,7 @@ void IQTree::printPhylolibTree(const char* suffix) {
     pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, PLL_TRUE, 1, 0, 0, 0,
             PLL_SUMMARIZE_LH, 0, 0);
     char phylolibTree[1024];
-    strcpy(phylolibTree, params->out_prefix);
+    strcpy(phylolibTree, params->out_prefix.c_str());
     strcat(phylolibTree, suffix);
     FILE *phylolib_tree = fopen(phylolibTree, "w");
     fprintf(phylolib_tree, "%s", pllInst->tree_string);

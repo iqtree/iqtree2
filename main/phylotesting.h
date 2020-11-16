@@ -13,6 +13,8 @@
 #include "nclextra/modelsblock.h"
 #include "alignment/superalignment.h"
 
+#define element_count(a) (sizeof(a)/sizeof((a)[0]))
+
 class PhyloTree;
 class IQTree;
 class ModelCheckpoint;
@@ -133,7 +135,7 @@ public:
     bool restoreCheckpointRminus1(Checkpoint *ckp, CandidateModel *model) {
         size_t posR;
         const char *rates[] = {"+R", "*R", "+H", "*H"};
-        for (int i = 0; i < sizeof(rates)/sizeof(char*); i++) {
+        for (int i = 0; i < element_count(rates); i++) {
             if ((posR = model->rate_name.find(rates[i])) != string::npos) {
                 int cat = convert_int(model->rate_name.substr(posR+2).c_str());
                 subst_name = model->subst_name;
@@ -238,7 +240,7 @@ public:
     int getLowerKModel(int model) {
         size_t posR;
         const char *rates[] = {"+R", "*R", "+H", "*H"};
-        for (int i = 0; i < sizeof(rates)/sizeof(char*); i++) {
+        for (int i = 0; i < element_count(rates); i++) {
             if ((posR = at(model).rate_name.find(rates[i])) == string::npos)
                 continue;
             int cat = convert_int(at(model).rate_name.substr(posR+2).c_str());
@@ -257,7 +259,7 @@ public:
     int getHigherKModel(int model) {
         size_t posR;
         const char *rates[] = {"+R", "*R", "+H", "*H"};
-        for (int i = 0; i < sizeof(rates)/sizeof(char*); i++) {
+        for (int i = 0; i < element_count(rates); i++) {
             if ((posR = at(model).rate_name.find(rates[i])) == string::npos)
                 continue;
             size_t this_posR = at(model).rate_name.find(rates[i]);

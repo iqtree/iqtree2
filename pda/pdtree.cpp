@@ -31,7 +31,7 @@ PDTree::PDTree(Params &params)
 }
 
 void PDTree::init(Params &params) {
-	MTree::init(params.user_file, params.is_rooted);
+    MTree::init(params.user_file.c_str(), params.is_rooted);
 	if (params.is_rooted) {
 		params.sub_size++;
 		params.min_size++;

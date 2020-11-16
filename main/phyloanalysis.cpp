@@ -810,7 +810,7 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
     if (params.num_runs > 1)
         cout << "  Trees from independent runs:   " << params.out_prefix << ".runtrees" << endl;
 
-    if (!params.user_file && params.start_tree == STT_BIONJ) {
+    if (params.user_file.empty() && params.start_tree == STT_BIONJ) {
         cout << "  BIONJ tree:                    " << params.out_prefix << ".bionj"
                 << endl;
     }
@@ -941,8 +941,9 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
         if (params.aln_file)
             out << "Input file name: " << params.aln_file << endl;
 
-        if (params.user_file)
+        if (!params.user_file.empty()) {
             out << "User tree file name: " << params.user_file << endl;
+        }
         out << "Type of analysis: ";
         bool modelfinder = params.model_name.substr(0,4)=="TEST" || params.model_name.substr(0,2) == "MF" || params.model_name.empty();
         if (modelfinder)
@@ -1160,7 +1161,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
                 out << "TREE USED FOR ModelFinder" << endl
                     << "-------------------------" << endl << endl;
             } else if (params.min_iterations == 0) {
-                if (params.user_file)
+                if (!params.user_file.empty())
                     out << "USER TREE" << endl
                         << "---------" << endl << endl;
                 else
@@ -1932,7 +1933,7 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
     }
     
     if (params.print_ancestral_sequence) {
-        printAncestralSequences(params.out_prefix, &iqtree, params.print_ancestral_sequence);
+        printAncestralSequences(params.out_prefix.c_str(), &iqtree, params.print_ancestral_sequence);
     }
     
     if (params.print_site_state_freq != WSF_NONE && !params.site_freq_file && !params.tree_freq_file) {
@@ -2391,7 +2392,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         if ((params.min_iterations <= 1 || params.numInitTrees <= 1) && params.start_tree != STT_BIONJ) {
             params.compute_ml_dist = false;
         }
-        if ((params.user_file || params.start_tree == STT_RANDOM_TREE) && params.snni && !params.iqp) {
+        if ((!params.user_file.empty() || params.start_tree == STT_RANDOM_TREE) && params.snni && !params.iqp) {
             params.compute_ml_dist = false;
         }
         if (params.constraint_tree_file) {
@@ -2415,7 +2416,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     if (wantMLDistances || params.compute_ml_tree_only) {
         computeMLDist(params, *iqtree, getRealTime(), getCPUTime());
         bool wasMLDistanceWrittenToFile = false;
-        if (!params.user_file) {
+        if (params.user_file.empty()) {
             if (params.start_tree != STT_RANDOM_TREE) {
                 if (!params.compute_ml_tree_only) {
                     iqtree->resetCurScore();
@@ -2639,7 +2640,8 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         double weight_threshold = (params.split_threshold<1) ? params.split_threshold : (params.gbo_replicates-1.0)/params.gbo_replicates;
         weight_threshold *= 100.0;
         computeConsensusTree(splitsfile.c_str(), 0, 1e6, -1,
-                             weight_threshold, NULL, params.out_prefix, NULL, &params);
+                             weight_threshold, nullptr,
+                             params.out_prefix.c_str(), nullptr, &params);
         // now optimize branch lengths of the consensus tree
         string current_tree = iqtree->getTreeString();
         optimizeConTree(params, iqtree);
@@ -3263,7 +3265,8 @@ void runStandardBootstrap(Params &params, Alignment *alignment, IQTree *tree) {
         const char* saved_root = params.root;
         params.root = root_name.c_str();
         computeConsensusTree(boottrees_name.c_str(), 0, 1e6, -1,
-                params.split_threshold, NULL, params.out_prefix, NULL, &params);
+                             params.split_threshold, nullptr,
+                             params.out_prefix.c_str(), nullptr, &params);
         params.root = saved_root;
     }
 
@@ -3290,8 +3293,8 @@ void runStandardBootstrap(Params &params, Alignment *alignment, IQTree *tree) {
                 << " SUPPORTS TO THE TREE FROM ORIGINAL ALIGNMENT" << endl << endl;
             MExtTree ext_tree;
             assignBootstrapSupport(boottrees_name.c_str(), 0, 1e6,
-                    treefile_name.c_str(), false, treefile_name.c_str(),
-                    params.out_prefix, ext_tree, NULL, &params);
+                                   treefile_name.c_str(), false, treefile_name.c_str(),
+                                   params.out_prefix.c_str(), ext_tree, NULL, &params);
             tree->copyTree(&ext_tree);
             reportPhyloAnalysis(params, *tree, *model_info);
         }
@@ -3816,9 +3819,10 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
     }
 
     if (params.compute_seq_identity_along_tree) {
-        if (!params.user_file)
+        if (params.user_file.empty()) {
             outError("Please supply a user tree file!");
-        tree->readTree(params.user_file, params.is_rooted);
+        }
+        tree->readTree(params.user_file.c_str(), params.is_rooted);
         if (!tree->rooted && !params.root) {
             outError("Tree is unrooted, thus you have to specify a root with -o option");
         }
@@ -3834,7 +3838,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
     } else if (params.aln_output) {
         /************ convert alignment to other format and write to output file *************/
         convertAlignment(params, tree);
-    } else if (params.gbo_replicates > 0 && params.user_file && params.second_tree) {
+    } else if (params.gbo_replicates > 0 && !params.user_file.empty() && params.second_tree) {
         // run one of the UFBoot analysis
 //        runGuidedBootstrap(params, alignment, *tree);
         outError("Obsolete feature");
@@ -3935,15 +3939,15 @@ void runUnlinkedPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
     
     MTreeSet part_trees;
     
-    if (params.user_file) {
+    if (!params.user_file.empty()) {
         // reading user tree file for all partitions
         bool is_rooted = false;
-        part_trees.readTrees(params.user_file, is_rooted, 0, super_aln->partitions.size());
+        part_trees.readTrees(params.user_file.c_str(), is_rooted, 0, super_aln->partitions.size());
         if (is_rooted)
             outError("Rooted trees not allowed: ", params.user_file);
         if (part_trees.size() != super_aln->partitions.size())
             outError("User tree file does not have the same number of trees as partitions");
-        params.user_file = NULL;
+        params.user_file.clear();
     }
 
     ModelCheckpoint *model_info = new ModelCheckpoint;
@@ -3999,10 +4003,12 @@ void runUnlinkedPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 }
 
 void assignBranchSupportNew(Params &params) {
-    if (!params.user_file)
+    if (params.user_file.empty()) {
         outError("No target tree file provided");
-    if (params.num_threads == 0)
+    }
+    if (params.num_threads == 0) {
         outError("-nt AUTO is not supported for concordance factor analysis, please specify no. cores");
+    }
     PhyloTree *tree;
     Alignment *aln = NULL;
     if (params.site_concordance) {
@@ -4023,7 +4029,7 @@ void assignBranchSupportNew(Params &params) {
 
     cout << "Reading tree " << params.user_file << " ..." << endl;
     bool rooted = params.is_rooted;
-    tree->readTree(params.user_file, rooted);
+    tree->readTree(params.user_file.c_str(), rooted);
     cout << ((tree->rooted) ? "rooted" : "un-rooted") << " tree with "
         << tree->leafNum - tree->rooted << " taxa and " << tree->branchNum << " branches" << endl;
 
@@ -4062,8 +4068,9 @@ void assignBranchSupportNew(Params &params) {
         cout << getRealTime() - start_time << " sec" << endl;
         delete aln;
     }
-    string prefix = (params.out_prefix) ? params.out_prefix : params.user_file;
-    string str = prefix + ".cf.tree";
+    string prefix = (params.out_prefix.empty())
+                  ? params.user_file : params.out_prefix;
+    string str    = prefix + ".cf.tree";
     tree->printTree(str.c_str());
     cout << "Tree with concordance factors written to " << str << endl;
     str = prefix + ".cf.tree.nex";
@@ -4383,8 +4390,8 @@ void computeConsensusTree(const char *input_trees, int burnin, int max_count,
 
     MTreeSet boot_trees;
     if (params && detectInputFile(input_trees) == IN_NEXUS) {
-        char *user_file = params->user_file;
-        params->user_file = (char*) input_trees;
+        const char *user_file = params->user_file.c_str();
+        params->user_file = input_trees;
         params->split_weight_summary = SW_COUNT; // count number of splits
         sg.init(*params);
         params->user_file = user_file;
