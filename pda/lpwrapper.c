@@ -26,7 +26,7 @@ void lp_solve_version_info(int *majorversion, int *minorversion, int *release, i
 	/*lp_solve_version(majorversion, minorversion, release, build);*/
 }
 
-int lp_solve(char *filename, int ntaxa, double *score, double *variables, int verbose_mode) {
+int lp_solve(const char *filename, int ntaxa, double *score, double *variables, int verbose_mode) {
 	return 5;
 /*	lprec *lp = NULL;
 	int ret;

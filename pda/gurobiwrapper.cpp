@@ -41,7 +41,7 @@
 		7 if returned solution is not binary. In this case, one should run the solver 
 		again with strict binary variable constraint.
 */
-int gurobi_solve(char *filename, int ntaxa, double *score, double *variables, int verbosity, int num_threads) {
+int gurobi_solve(const char *filename, int ntaxa, double *score, double *variables, int verbosity, int num_threads) {
 	int ret = 0;
 	*score = -1;
 	string command;

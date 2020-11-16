@@ -42,7 +42,7 @@ extern "C" {
 		7 if returned solution is not binary. In this case, one should run the solver 
 		again with strict binary variable constraint.
 */
-int lp_solve(char *filename, int ntaxa, double *score, double *variables, int verbose_mode);
+int lp_solve(const char *filename, int ntaxa, double *score, double *variables, int verbose_mode);
 
 /*int lp_demo();*/
 
