@@ -40,7 +40,7 @@ public:
 		constructor
 		@param infname input file name
 	*/
-	MyReader(char *infname) : NxsReader(), inf("nexus")
+	MyReader(const char *infname) : NxsReader(), inf("nexus")
 	{
 		inf.open(infname, ios::binary | ios::in);
         if (!inf.is_open()) {
