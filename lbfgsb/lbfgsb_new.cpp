@@ -3832,6 +3832,13 @@ void dcstep(double *stx, double *fx, double *dx,
 } /* dcstep */
 /* ====================== The end of dcstep ============================== */
 
+void pvector(const char *title, double *x, int n)
+{
+    int i;
+    cout << title;
+    for (i = 0; i < n; i++) cout << x[i] << " ";
+    cout << endl;
+}
 
 void prn3lb(int n, double *x, double *f, char *task, int iprint,
 		int info, int iter, int nfgv, int nintol, int nskip,
@@ -3851,7 +3858,7 @@ void prn3lb(int n, double *x, double *f, char *task, int iprint,
 			cout << "inal function value " << *f << endl;
 			cout << endl;
 		}
-		if (iprint >= 100) pvector((char*)"X =", x, n);
+		if (iprint >= 100) pvector("X =", x, n);
 		if (iprint >= 1)
 			cout << "F = " << *f << endl;
 	}
@@ -3898,9 +3905,9 @@ void prn1lb(int n, int m, double *l, double *u, double *x,
 	if (iprint >=  0) {
 		cout << "N = " << n << ", M = " << m << " machine precision = " << epsmch << endl;
 		if (iprint >= 100){
-			pvector((char*)"L =", l, n);
-			pvector((char*)"X0 =",x, n);
-			pvector((char*)"U =", u, n);
+			pvector("L =", l, n);
+			pvector("X0 =",x, n);
+			pvector("U =", u, n);
 		}
 	}
 }
@@ -3958,21 +3965,16 @@ void prn2lb(int n, double *x, double *f, double *g, int iprint,
 	if (iprint >=  99) {
 		cout << "LINE SEARCH " << iback << " times; norm of step = " << xstep << "\n";
 		if (iprint > 100) {
-			pvector((char*)"X =", x, n);
-			pvector((char*)"G =", g, n);
+			pvector("X =", x, n);
+			pvector("G =", g, n);
 		}
 	} else if (iprint > 0 && iter%iprint == 0) {
-		cout << "At iterate " << iter << "  f = " << *f << "  |proj g|=  " << sbgnrm << "\n";
+		cout << "At iterate " << iter
+             << " f = " << *f << "  |proj"
+             << " g|=  " << sbgnrm << "\n";
 	}
 }
 
-void pvector(char *title, double *x, int n)
-{
-	int i;
-	cout << title;
-	for (i = 0; i < n; i++) cout << x[i] << " ";
-	cout << endl;
-}
 
 
 int dcopy(int *n, double *dx, int *incx,
