@@ -74,10 +74,12 @@ public:
     void readPartitionNexus(Params &params);
 
     /** read partition as files in a directory */
-    void readPartitionDir(string partition_dir, char *sequence_type, InputType &intype, string model, bool remove_empty_seq);
+    void readPartitionDir(string partition_dir, const char *sequence_type,
+                          InputType &intype, string model, bool remove_empty_seq);
 
     /** read partition as a comma-separated list of files */
-    void readPartitionList(string file_list, char *sequence_type, InputType &intype, string model, bool remove_empty_seq);
+    void readPartitionList(string file_list, const char *sequence_type, InputType &intype,
+                           string model, bool remove_empty_seq);
 
     void printPartition(const char *filename, const char *aln_file);
     void printPartition(ostream &out, const char *aln_file = NULL, bool append = false);

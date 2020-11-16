@@ -289,7 +289,8 @@ int convert_int(const char *str, int &end_pos) {
 }
 
 void convert_int_vec(const char *str, IntVector &vec) {
-    char *beginptr = (char*)str, *endptr;
+    const char *beginptr = str;
+    char* endptr;
     vec.clear();
     do {
 		int i = strtol(beginptr, &endptr, 10);
@@ -301,7 +302,9 @@ void convert_int_vec(const char *str, IntVector &vec) {
 			throw err;
 		}
 		vec.push_back(i);
-		if (*endptr == ',') endptr++;
+        if (*endptr == ',') {
+            endptr++;
+        }
 		beginptr = endptr;
     } while (*endptr != 0);
 }
@@ -372,7 +375,8 @@ double convert_double(const char *str, int &end_pos) {
 }
 
 void convert_double_vec(const char *str, DoubleVector &vec, char separator) {
-    char *beginptr = (char*)str, *endptr;
+    const char *beginptr = str;
+    char* endptr;
     vec.clear();
     do {
 		double d = strtod(beginptr, &endptr);
@@ -384,8 +388,10 @@ void convert_double_vec(const char *str, DoubleVector &vec, char separator) {
 			throw err;
 		}
 		vec.push_back(d);
-		if (*endptr == separator) endptr++;
-		beginptr = endptr;
+        if (*endptr == separator) {
+            endptr++;
+        }
+        beginptr = endptr;
     } while (*endptr != 0);
 }
 
@@ -486,7 +492,7 @@ void convert_range(const char *str, double &lower, double &upper, double &step_s
 }
 
 void convert_string_vec(const char *str, StrVector &vec, char separator) {
-    char *beginptr = (char*)str, *endptr;
+    const char *beginptr = str, *endptr;
     vec.clear();
     string elem;
     do {

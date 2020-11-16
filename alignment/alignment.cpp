@@ -538,7 +538,8 @@ void Alignment::checkGappySeq(bool force_error) {
     }
 }
 
-Alignment::Alignment(char *filename, char *sequence_type, InputType &intype, string model) : vector<Pattern>() {
+Alignment::Alignment(const char *filename, const char *sequence_type,
+                     InputType &intype, string model) : vector<Pattern>() {
     name = "Noname";
     this->model_name = model;
     if (sequence_type)
@@ -705,7 +706,7 @@ void Alignment::buildSeqStates(vector<vector<int> > &seq_states, bool add_unobs_
 }
 */
 
-int Alignment::readNexus(char *filename) {
+int Alignment::readNexus(const char *filename) {
     NxsTaxaBlock *taxa_block;
     NxsAssumptionsBlock *assumptions_block;
     NxsDataBlock *data_block = NULL;
@@ -1608,7 +1609,7 @@ void Alignment::convertStateStr(string &str, SeqType seq_type) {
 }
 */
  
-void Alignment::initCodon(char *gene_code_id) {
+void Alignment::initCodon(const char *gene_code_id) {
     // build index from 64 codons to non-stop codons
 	int transl_table = 1;
 	if (strlen(gene_code_id) > 0) {
@@ -1702,7 +1703,7 @@ SeqType Alignment::getSeqType(const char *sequence_type) {
     return user_seq_type;
 }
 
-bool Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq, int nsite) {
+bool Alignment::buildPattern(StrVector &sequences, const char *sequence_type, int nseq, int nsite) {
     codon_table    = nullptr;
     genetic_code   = nullptr;
     non_stop_codon = nullptr;
@@ -2014,7 +2015,7 @@ void processSeq(string &sequence, string &line, int line_num) {
     }
 }
 
-int Alignment::readPhylip(char *filename, char *sequence_type) {
+int Alignment::readPhylip(const char *filename, const char *sequence_type) {
 
     StrVector sequences;
     ostringstream err_str;
@@ -2090,7 +2091,7 @@ int Alignment::readPhylip(char *filename, char *sequence_type) {
     return buildPattern(sequences, sequence_type, nseq, nsite);
 }
 
-int Alignment::readPhylipSequential(char *filename, char *sequence_type) {
+int Alignment::readPhylipSequential(const char *filename, const char *sequence_type) {
 
     StrVector sequences;
     ostringstream err_str;
@@ -2152,7 +2153,7 @@ int Alignment::readPhylipSequential(char *filename, char *sequence_type) {
     return buildPattern(sequences, sequence_type, nseq, nsite);
 }
 
-int Alignment::readFasta(char *filename, char *sequence_type) {
+int Alignment::readFasta(const char *filename, const char *sequence_type) {
     StrVector sequences;
     ostringstream err_str;
     igzstream in;
@@ -2250,7 +2251,7 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
     return buildPattern(sequences, sequence_type, seq_names.size(), sequences.front().length());
 }
 
-int Alignment::readClustal(char *filename, char *sequence_type) {
+int Alignment::readClustal(const char *filename, const char *sequence_type) {
 
     StrVector sequences;
     igzstream in;
@@ -2314,7 +2315,7 @@ int Alignment::readClustal(char *filename, char *sequence_type) {
 }
 
 
-int Alignment::readMSF(char *filename, char *sequence_type) {
+int Alignment::readMSF(const char *filename, const char *sequence_type) {
 
 
     StrVector sequences;
@@ -2415,7 +2416,7 @@ int Alignment::readMSF(char *filename, char *sequence_type) {
 }
 
 // TODO: Use outWarning to print warnings.
-int Alignment::readCountsFormat(char* filename, char* sequence_type) {
+int Alignment::readCountsFormat(const char* filename, const char* sequence_type) {
     int npop = 0;                // Number of populations.
     int nsites = 0;              // Number of sites.
     int N = 9;                   // Virtual population size; defaults
@@ -3612,12 +3613,14 @@ void convert_range(const char *str, int &lower, int &upper, int &step_size, char
 
 void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id) {
     int i;
-    char *str = (char*)spec;
+    const char *str = spec;
     int nchars = 0;
     try {
         for (; *str != 0; ) {
             int lower, upper, step;
-            convert_range(str, lower, upper, step, str);
+            char* endstr;
+            convert_range(str, lower, upper, step, endstr);
+            str = endstr;
             // 2019-06-03: special '.' character
             if (upper == lower-1)
                 upper = aln->getNSite();
@@ -3632,8 +3635,9 @@ void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id) {
             if (lower < 0) throw "Negative site ID";
             if (lower > upper) throw "Wrong range";
             if (step < 1) throw "Wrong step size";
-            for (i = lower; i <= upper; i+=step)
+            for (i = lower; i <= upper; i+=step) {
                 site_id.push_back(i);
+            }
             if (*str == ',' || *str == ' ') str++;
             //else break;
         }

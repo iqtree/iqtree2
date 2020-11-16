@@ -112,7 +112,7 @@ public:
             @param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
             @param intype (OUT) input format of the file
      */
-    Alignment(char *filename, char *sequence_type, InputType &intype, string model);
+    Alignment(const char *filename, const char *sequence_type, InputType &intype, string model);
 
     /**
      constructor
@@ -195,11 +195,13 @@ public:
             @param filename file name
             @return 1 on success, 0 on failure
      */
-    int readNexus(char *filename);
+    int readNexus(const char* filename);
 
-    bool buildPattern(StrVector &sequences, char *sequence_type, int nseq, int nsite);
+    bool buildPattern(StrVector &sequences, const char *sequence_type,
+                      int nseq, int nsite);
     
-    bool constructPatterns(int nseq, int nsite, const StrVector& sequences,
+    bool constructPatterns(int nseq, int nsite,
+                           const StrVector& sequences,
                            progress_display* progress);
 
     /**
@@ -208,7 +210,7 @@ public:
             @param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
             @return 1 on success, 0 on failure
      */
-    int readPhylip(char *filename, char *sequence_type);
+    int readPhylip(const char *filename, const char *sequence_type);
 
     /**
             read the alignment in sequential PHYLIP format
@@ -216,7 +218,7 @@ public:
             @param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
             @return 1 on success, 0 on failure
      */
-    int readPhylipSequential(char *filename, char *sequence_type);
+    int readPhylipSequential(const char *filename, const char *sequence_type);
 
     /**
             read the alignment in FASTA format
@@ -224,7 +226,7 @@ public:
             @param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
             @return 1 on success, 0 on failure
      */
-    int readFasta(char *filename, char *sequence_type);
+    int readFasta(const char *filename, const char *sequence_type);
 
     /** 
      * Read the alignment in counts format (PoMo).
@@ -236,7 +238,7 @@ public:
      *
      * @return 1 on success, 0 on failure
      */
-    int readCountsFormat(char *filename, char *sequence_type);
+    int readCountsFormat(const char *filename, const char *sequence_type);
 
     /**
             read the alignment in CLUSTAL format
@@ -244,7 +246,7 @@ public:
             @param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
             @return 1 on success, 0 on failure
      */
-    int readClustal(char *filename, char *sequence_type);
+    int readClustal(const char *filename, const char *sequence_type);
 
     /**
             read the alignment in MSF format
@@ -252,7 +254,7 @@ public:
             @param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
             @return 1 on success, 0 on failure
      */
-    int readMSF(char *filename, char *sequence_type);
+    int readMSF(const char *filename, const char *sequence_type);
 
     /**
             extract the alignment from a nexus data block, called by readNexus()
@@ -1004,7 +1006,7 @@ protected:
 	 * special initialization for codon sequences, e.g., setting #states, genetic_code
 	 * @param sequence_type user-defined sequence type
 	 */
-	void initCodon(char *gene_code_id);
+	void initCodon(const char *gene_code_id);
 
     bool isShowingProgressDisabled;
 };

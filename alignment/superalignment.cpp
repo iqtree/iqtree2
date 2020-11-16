@@ -26,17 +26,19 @@
 #include "utils/timeutil.h" //for getRealTime()
 #include "utils/io.h"       //for safeGetLine()
 
-Alignment *createAlignment(string aln_file, const char *sequence_type, InputType intype, string model_name) {
+Alignment *createAlignment(string aln_file, const char *sequence_type,
+                           InputType intype, string model_name) {
     bool is_dir = isDirectory(aln_file.c_str());
-    if (!is_dir && aln_file.find(',') == string::npos)
-        return new Alignment((char*)aln_file.c_str(), (char*)sequence_type, intype, model_name);
-
+    if (!is_dir && aln_file.find(',') == string::npos) {
+        return new Alignment(aln_file.c_str(),
+                             sequence_type, intype, model_name);
+    }
     SuperAlignment *super_aln = new SuperAlignment;
     if (is_dir) {
-        super_aln->readPartitionDir(aln_file, (char*)sequence_type, intype, model_name, true);
+        super_aln->readPartitionDir(aln_file, sequence_type, intype, model_name, true);
     }
     else {
-        super_aln->readPartitionList(aln_file, (char*)sequence_type, intype, model_name, true);
+        super_aln->readPartitionList(aln_file, sequence_type, intype, model_name, true);
     }
     super_aln->init();
     Alignment *aln = super_aln->concatenateAlignments();
@@ -234,7 +236,8 @@ void SuperAlignment::readPartition(Params &params) {
 //            info.nniMoves[1].ptnlh = NULL;
 //            info.cur_ptnlh = NULL;
 //            part_info.push_back(info);
-            Alignment *part_aln = createAlignment(info.aln_file, info.sequence_type.c_str(), params.intype, info.model_name);
+            Alignment *part_aln = createAlignment(info.aln_file, info.sequence_type.c_str(),
+                                                  params.intype, info.model_name);
             if (!info.position_spec.empty()) {
                 Alignment *new_aln = new Alignment();
                 new_aln->extractSites(part_aln, info.position_spec.c_str());
@@ -515,7 +518,7 @@ void SuperAlignment::readPartitionNexus(Params &params) {
     delete sets_block;
 }
 
-void SuperAlignment::readPartitionDir(string partition_dir, char *sequence_type,
+void SuperAlignment::readPartitionDir(string partition_dir, const char *sequence_type,
                                       InputType &intype, string model, bool remove_empty_seq) {
     //    Params origin_params = params;
     string dir = partition_dir;
@@ -561,8 +564,10 @@ void SuperAlignment::readPartitionDir(string partition_dir, char *sequence_type,
     }
 }
 
-void SuperAlignment::readPartitionList(string file_list, char *sequence_type,
-    InputType &intype, string model, bool remove_empty_seq)
+void SuperAlignment::readPartitionList(string file_list,
+                                       const char *sequence_type,
+                                       InputType &intype, string model,
+                                       bool remove_empty_seq)
 {
     //    Params origin_params = params;
     

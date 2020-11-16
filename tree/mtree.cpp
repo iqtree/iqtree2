@@ -796,7 +796,7 @@ void MTree::parseBranchLength(string &lenstr, DoubleVector &branch_len) {
         return;
     }
     convert_double_vec(in_comment.c_str(), branch_len, BRANCH_LENGTH_SEPARATOR);
-//    char* str = (char*)in_comment.c_str() + 1;
+//    const char* str = (char*)in_comment.c_str() + 1;
 //    int pos;
 //    for (int i = 1; str[0] == 'L'; i++) {
 //        str++;

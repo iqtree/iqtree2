@@ -50,8 +50,13 @@
 // redefine assertion
 inline void _my_assert(const char* expression, const char *func, const char* file, int line)
 {
-    char *sfile = (char*)strrchr(file, '/');
-    if (!sfile) sfile = (char*)file; else sfile++;
+    const char *sfile = strrchr(file, '/');
+    if (!sfile) {
+        sfile = file;
+    }
+    else {
+        ++sfile;
+    }
     cerr << sfile << ":" << line << ": " << func << ": Assertion `" << expression << "' failed." << endl;
     abort();
 }
