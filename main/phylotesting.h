@@ -290,7 +290,6 @@ public:
      Synchronization of check point for MPI
      */
     SyncChkPoint* syncChkPoint;
-    int tag;
 
 private:
     
@@ -411,20 +410,7 @@ private:
     SuperAlignment *super_aln;
 
     /**
-     * Process the computation of the best model for a merge
-     *
-     * nthreads : number of threads available for this job
-     * need_next_treeID : whether it is needed to get the next tree ID
-     *
-     * if need_next_treeID and (MASTER or IS_ASYN_COMM = 0)
-     *    return the next Job ID from master
-     * else
-     *    return -1
-     */
-    int getBestModelForOneMerge(int job_id, int nthreads, bool need_next_jobID, SyncChkPoint& syncChkPt);
-    
-    /**
-     * Process the computation of the best model for a single partition
+     * Process the computation of the best model for a single partition with MPI
      *
      * nthreads : number of threads available for this job
      * need_next_treeID : whether it is needed to get the next tree ID
@@ -437,41 +423,43 @@ private:
      * else
      *    return -1
      */
-    int computeBestModelforOnePartition(int tree_id, int nthreads, bool need_next_treeID, SyncChkPoint& syncChkPt);
+    int computeBestModelforOnePartitionMPI(int tree_id, int nthreads, bool need_next_treeID, SyncChkPoint& syncChkPt);
 
     /**
-     * Process the computation of the best model for a single job
+     * Process the computation of the best model for a merge with MPI
      *
      * nthreads : number of threads available for this job
-     * need_next_jobID : whether it is needed to get the next job ID
+     * need_next_treeID : whether it is needed to get the next tree ID
      *
-     * job_type = 1 : for partition
-     * job_type = 2 : for merge
-     *
-     * if need_next_jobID and (MASTER or IS_ASYN_COMM = 0)
+     * if need_next_treeID and (MASTER or IS_ASYN_COMM = 0)
      *    return the next Job ID from master
      * else
      *    return -1
      */
-    int computeBestModelforOneJob(int job_id, int nthreads, bool need_next_jobID, int job_type, SyncChkPoint& syncChkPt);
-
-    /**
-     * compute and process the best model for the jobs
-     * nthreads : the number of threads available for these jobs
-     * job_type = 1 : for partition
-     * job_type = 2 : for merge
-    */
-    void getBestModelforJobs(int nthreads, vector<int>* jobs, int job_type, int tid);
-
-    /**
-     * For Worker, but not for Master process
-     * compute and process the best model for the jobs by asynchronous communication
-     * the number of threads available for these jobs always equals to 1
-     * job_type = 1 : for partition
-     * job_type = 2 : for merge
-    */
-    void getBestModelforJobsAsyn(int nthreads, vector<int>* jobs, int job_type, int tid);
+    int getBestModelForOneMergeMPI(int job_id, int nthreads, bool need_next_jobID, SyncChkPoint& syncChkPt);
     
+	/**
+	 * compute and process the best model for partitions (for MPI)
+	 */
+	void getBestModelforPartitionsMPI(int nthreads, vector<vector<int>* >& jobs);
+
+	/**
+	 * compute and process the best model for merges (for MPI)
+	 */
+	void getBestModelforMergesMPI(int nthreads, vector<vector<int>* >& jobs);
+
+    /**
+     * compute and process the best model for partitions (without MPI)
+     * nthreads : the number of threads available for these jobs
+     */
+    void getBestModelforPartitionsNoMPI(int nthreads, vector<pair<int,double> >& jobs);
+
+    /**
+     * compute and process the best model for merges (without MPI)
+     * nthreads : the number of threads available for these jobs
+     */
+    void getBestModelforMergesNoMPI(int nthreads, vector<pair<int,double> >& jobs);
+
     /**
      * compute the best model
      * job_type = 1 : for all partitions
@@ -516,8 +504,6 @@ public:
     int tot_job_num;
     vector<int> remain_job_list;
     
-    vector<SyncChkPoint> syncChkPtList;
-    // vector<int> numThresEachProcess;
     int base;
     
     // for ONE-SIDE communication
@@ -596,27 +582,14 @@ private:
     // shared among threads
     PartitionFinder* pfinder;
 
-    // each thread has its own copy
-    int num_processes; // the number of processors
-    
 public:
 
-    int tid; // id of thread
-    int base; // communcation's tag = id + base
-    
+    int mytag;
+
     /*  constructor
      */
     SyncChkPoint(PartitionFinder* pf, int thres_id);
     
-    /*  Destructor
-     */
-    ~SyncChkPoint();
-    
-    /*
-     * initialize
-     */
-    void initialize();
-
     /*
      * Show the result of best model
      */
