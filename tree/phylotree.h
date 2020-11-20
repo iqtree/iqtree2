@@ -163,24 +163,27 @@ const int MAX_SPR_MOVES = 20;
         an SPR move.
  */
 struct SPRMove {
-    PhyloNode *prune_dad;
-    PhyloNode *prune_node;
-    PhyloNode *regraft_dad;
-    PhyloNode *regraft_node;
-    double score;
+    PhyloNode* prune_node;
+    PhyloNode* prune_dad;
+    PhyloNode* regraft_node;
+    PhyloNode* regraft_dad;
+    double     score;
+    inline SPRMove(PhyloNode* pruneNode, PhyloNode* pruneDad,
+                   PhyloNode* graftDad,  PhyloNode* graftNode, double sprScore)
+        : prune_node(pruneNode),   prune_dad(pruneDad)
+        , regraft_node(graftNode), regraft_dad(graftDad)
+        , score(sprScore) {}
 };
 
 struct SPR_compare {
-
-    bool operator()(SPRMove s1, SPRMove s2) const {
+    bool operator()(const SPRMove& s1, const SPRMove& s2) const {
         return s1.score > s2.score;
     }
 };
 
 class SPRMoves : public set<SPRMove, SPR_compare> {
 public:
-    void add(PhyloNode *prune_node, PhyloNode *prune_dad,
-            PhyloNode *regraft_node, PhyloNode *regraft_dad, double score);
+    void add(const SPRMove& move);
 };
 
 /*

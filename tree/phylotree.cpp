@@ -49,21 +49,15 @@ const int LH_MIN_CONST = 1;
  SPRMoves class
  ****************************************************************************/
 
-void SPRMoves::add(PhyloNode *prune_node, PhyloNode *prune_dad, PhyloNode *regraft_node, PhyloNode *regraft_dad,
-        double score) {
-    if (size() >= MAX_SPR_MOVES && score <= rbegin()->score)
+void SPRMoves::add(const SPRMove& spr) {
+    if (size() >= MAX_SPR_MOVES && spr.score <= rbegin()->score) {
         return;
+    }
     if (size() >= MAX_SPR_MOVES) {
         iterator it = end();
         it--;
         erase(it);
     }
-    SPRMove spr;
-    spr.prune_node = prune_node;
-    spr.prune_dad = prune_dad;
-    spr.regraft_node = regraft_node;
-    spr.regraft_dad = regraft_dad;
-    spr.score = score;
     insert(spr);
 }
 
@@ -3193,7 +3187,7 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
     PhyloNode*     firstNode     = nodes[0];
     PhyloNeighbor* firstNeighbor = firstNode->findNeighbor(nodes2[0]);
     double previous_score = computeLikelihoodBranch(firstNeighbor, firstNode,
-                                             tree_buffers);
+                                                    tree_buffers);
     LOG_LINE(VB_MAX, "Initial tree log-likelihood: " << previous_score);
     DoubleVector lenvec;
     initProgress(my_iterations*nodes.size(), "Optimizing branch lengths", "", "", true);
@@ -4496,7 +4490,7 @@ double PhyloTree::optimizeSPR_old(double cur_score, PhyloNode *node, PhyloNode *
                 return score;
             spr_path.pop_back();
         }
-        // if likelihood does not imporve, swap back
+        // if likelihood does not improve, swap back
         sibling1->updateNeighbor(sibling2, dad, sibling1_len);
         sibling2->updateNeighbor(sibling1, dad, sibling2_len);
         dad1_nei->node = sibling1;
@@ -4516,8 +4510,11 @@ double PhyloTree::optimizeSPR_old(double cur_score, PhyloNode *node, PhyloNode *
 /**
  move the subtree (dad1-node1) to the branch (dad2-node2)
  */
-double PhyloTree::swapSPR_old(double cur_score, int cur_depth, PhyloNode *node1, PhyloNode *dad1, PhyloNode *orig_node1,
-        PhyloNode *orig_node2, PhyloNode *node2, PhyloNode *dad2, vector<PhyloNeighbor*> &spr_path) {
+double PhyloTree::swapSPR_old(double cur_score, int cur_depth,
+                              PhyloNode* node1,      PhyloNode* dad1,
+                              PhyloNode* orig_node1, PhyloNode* orig_node2,
+                              PhyloNode* node2,      PhyloNode* dad2,
+                              vector<PhyloNeighbor*> &spr_path) {
     PhyloNeighbor* node1_nei      = node1->findNeighbor(dad1);
     PhyloNeighbor* dad1_nei       = dad1->findNeighbor(node1);
     double         node1_dad1_len = node1_nei->length;
@@ -4579,8 +4576,8 @@ double PhyloTree::swapSPR_old(double cur_score, int cur_depth, PhyloNode *node1,
         node1_nei->length = node1_dad1_len;
         dad1_nei->length = node1_dad1_len;
 
-        // add to candiate SPR moves
-        spr_moves.add(node1, dad1, node2, dad2, score);
+        // add to candidate SPR moves
+        spr_moves.add(SPRMove(node1, dad1, node2, dad2, score));
     }
     if (cur_depth >= spr_radius)
     {
@@ -4807,7 +4804,7 @@ double PhyloTree::swapSPR(double cur_score, int cur_depth, PhyloNode *node1, Phy
 
         // add to candiate SPR moves
         // Tung : why adding negative SPR move ?
-        spr_moves.add(node1, dad1, node2, dad2, score);
+        spr_moves.add(SPRMove(node1, dad1, node2, dad2, score));
     }
     if (cur_depth >= spr_radius) {
         return cur_score;
