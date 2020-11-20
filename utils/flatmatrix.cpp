@@ -131,14 +131,17 @@ void FlatMatrix::writeDistancesToOpenFile(const std::string& format,
     for (size_t seq1 = 0; seq1 < nseqs; ++seq1)  {
         std::stringstream line;
         line.width(max_len);
-        line.precision(precision);
         line << std::fixed << std::left << sequenceNames[seq1];
+        line.precision(precision);
         size_t rowStart = upper ? (seq1+1) : 0;
-        size_t rowStop  = lower ? (seq1) : nseqs;
+        size_t rowStop  = lower ? (seq1)   : nseqs;
         size_t pos      = seq1 * nseqs + rowStart;
-        for (size_t seq2 = rowStart; seq2 < rowStop; ++seq2) {
-            line << " ";
-            line << distanceMatrix[pos++];
+        for (size_t seq2 = rowStart; seq2 < rowStop; ++seq2, ++pos) {
+            if (distanceMatrix[pos] <= 0) {
+                line << " 0";
+            } else {
+                line << " " << distanceMatrix[pos];
+            }
         }
         line << "\n";
         out << line.str();
