@@ -3029,7 +3029,6 @@ pair<int, int> IQTree::doNNISearch(bool write_info, const char* context) {
         }
     }
     MPIHelper::getInstance().setNumNNISearch(MPIHelper::getInstance().getNumNNISearch() + 1);
-
     return nniInfos;
 }
 
@@ -3149,33 +3148,42 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI, const char* context) {
         LOG_LINE(VB_DEBUG, "Applying " << appliedNNIs.size() 
             << " non-conflicting positive NNIs");
         doNNIs(appliedNNIs, true);
-        curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
+        double previous_score = curScore;
+        curScore = optimizeAllBranches(2, params->loglh_epsilon, NNI_MAX_NR_STEP);
         const double loglh_tolerance = 0.1;
         auto expected_score = appliedNNIs.at(0).newloglh;
 
         if (curScore < expected_score - params->loglh_epsilon) {
-            LOG_LINE( VB_MAX, "Tree getting worse. curScore = " << curScore
-                     << " / best score = " << expected_score);
+            std::stringstream details;
+            details <<  "Tree getting worse. curScore = " << curScore
+                    << " / best score = " << expected_score
+                    << " / previous score = " << previous_score << ".";
+            LOG_LINE( VB_MAX, details.str());
+            if (VB_MAX <= verbose_mode) {
+                details.clear();
+            }
             // tree cannot be worse if only 1 NNI is applied
             double dodgy_score = curScore;
             if (appliedNNIs.size() > 1) {
-                LOG_LINE(VB_DEBUG, "Reverting " << appliedNNIs.size() << " NNIs");
+                details << "Reverted all but one of the " << appliedNNIs.size() << " NNIs.";
+                LOG_LINE(VB_DEBUG, "Reverting " << appliedNNIs.size() << " NNIs.");
                 doNNIs(appliedNNIs, false);
                 restoreBranchLengths(lenvec);
                 // only do the best NNI
                 appliedNNIs.resize(1);
-                LOG_LINE(VB_DEBUG, "Reapplying " << appliedNNIs.size() << " NNIs");
+                LOG_LINE(VB_DEBUG, "Reapplying " << appliedNNIs.size() << " NNIs.");
                 doNNIs(appliedNNIs, true);
                 clearAllPartialLH();
-                curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
+                curScore = optimizeAllBranches(2, params->loglh_epsilon, NNI_MAX_NR_STEP);
             }
             if (curScore < expected_score - loglh_tolerance ) {
                 //In large trees this is possible, because optimizeAllBranches
                 //might not have behaved as expected.
                 LOG_LINE(VB_MIN, "Current likelihood (" << curScore << ")"
-                        << " was less than expected (" << expected_score << ")"
+                        << " after one NNI was less than expected (" << expected_score << ")"
                         << " by more (" << (expected_score - curScore) << ")"
                         << " than " << loglh_tolerance << ".");
+                LOG_LINE(VB_MIN, details.str() );
             } else {
                 LOG_LINE(VB_MED, "Post-NNI Likelihood score (" << dodgy_score << ")"
                     << " was less than expected (" << expected_score << ")"
@@ -3185,6 +3193,7 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI, const char* context) {
                     << " Likelihood score is now: " << curScore);
             }
             if (!params->ignore_any_errors) {
+                hideProgress(); //abortProgress() would be better, if there were such a thing.
                 ASSERT(curScore >= expected_score - loglh_tolerance);
             }
             totalNNIApplied++;
@@ -3289,7 +3298,6 @@ void IQTree::pllLogBootSamples(int** pll_boot_samples, int nsamples, int npatter
         bfile << endl << "sum = "  << sum << endl;
     }
     bfile.close();
-
 }
 
 void IQTree::pllInitUFBootData(){
