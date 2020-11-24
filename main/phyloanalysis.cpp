@@ -2135,23 +2135,15 @@ void startTreeReconstruction(Params &params, IQTree* &iqtree, ModelCheckpoint &m
         } else if (iqtree->aln->seq_type != SEQ_DNA && iqtree->aln->seq_type != SEQ_PROTEIN)
             params.start_tree = STT_PARSIMONY;
     }
-
-    /***************** Initialization for PLL and sNNI ******************/
-    if (params.start_tree == STT_PLL_PARSIMONY || params.start_tree == STT_RANDOM_TREE || params.pll) {
-        /* Initialized all data structure for PLL*/
-        iqtree->initializePLL(params);
-    }
+    iqtree->setParams(&params);
+    iqtree->initializePLLIfNecessary();
     
     /********************* Compute pairwise distances *******************/
     if (params.start_tree == STT_BIONJ || params.iqp || params.leastSquareBranch) {
         computeInitialDist(params, *iqtree);
     }
     
-    /******************** Pass the parameter object params to IQTree *******************/
-    iqtree->setParams(&params);
-
     /*************** SET UP PARAMETERS and model testing ****************/
-
        // FOR TUNG: swapping the order cause bug for -m TESTLINK
 //    iqtree.initSettings(params);
 
@@ -2207,14 +2199,8 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     // Make sure that no partial likelihood of IQ-TREE is initialized when PLL is used to save memory
     if (params.pll) {
         iqtree->deleteAllPartialLh();
-    }
-    
-    /***************** Initialization for PLL and sNNI ******************/
-    if ((params.start_tree == STT_PLL_PARSIMONY || params.start_tree == STT_RANDOM_TREE || params.pll) && !iqtree->isInitializedPLL()) {
-        /* Initialized all data structure for PLL*/
-        iqtree->initializePLL(params);
-    }
-    
+    }    
+    iqtree->initializePLLIfNecessary();
     
     /********************* Compute pairwise distances *******************/
     if ((params.start_tree == STT_BIONJ || params.iqp || params.leastSquareBranch) && !iqtree->root) {
@@ -2236,11 +2222,8 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
             iqtree_new->constraintTree.readConstraint(iqtree->constraintTree);
         iqtree_new->removed_seqs = iqtree->removed_seqs;
         iqtree_new->twin_seqs = iqtree->twin_seqs;
-        if (params.start_tree == STT_PLL_PARSIMONY || params.start_tree == STT_RANDOM_TREE || params.pll) {
-            /* Initialized all data structure for PLL*/
-            iqtree_new->initializePLL(params);
-        }
         iqtree_new->setParams(&params);
+        iqtree_new->initializePLLIfNecessary();
         iqtree_new->copyPhyloTree(iqtree, false);
 
         // replace iqtree object

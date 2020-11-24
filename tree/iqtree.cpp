@@ -620,7 +620,9 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
                      << " took " << getRealTime() - start << " seconds"
                      <<", parsimony score: " << score
                      << " (based on " << aln->num_parsimony_sites << " sites)");
+            optimizeConstructedTree();
             break;
+
         case STT_PARSIMONY_JOINING:
             logLine("Creating parsimony tree by parsimony joining...");
             start = getRealTime();
@@ -628,6 +630,7 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
             LOG_LINE(VB_QUIET, "Parsimony joining took " << getRealTime() - start << " seconds"
                 << ", parsimony score: " << score
                 << " (based on " << aln->num_parsimony_sites << " sites)");
+            optimizeConstructedTree();
             break;
 
         case STT_RANDOM_TREE:
@@ -643,6 +646,7 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
                      << " took " << getRealTime() - start << " seconds");
             wrapperFixNegativeBranch(true);
             break;
+
         case STT_BIONJ:
             // This is the old default option: using BIONJ as starting tree
             if (this->dist_matrix == nullptr) {
@@ -664,11 +668,14 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
             } else {
                 fixed_number = wrapperFixNegativeBranch(false);
             }
+            optimizeConstructedTree();
             break;
+
         case STT_USER_TREE:
             ASSERT(0 && "User tree should be handled already");
             break;
         }
+
         initTree = getTreeString();
         CKP_SAVE(initTree);
         saveCheckpoint();
@@ -934,7 +941,6 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 }
 
 string IQTree::generateParsimonyTree(int randomSeed) {
-    string parsimonyTreeString;
     if (params->start_tree == STT_PLL_PARSIMONY) {
         pllInst->randomNumberSeed = randomSeed;
         pllComputeRandomizedStepwiseAdditionParsimonyTree(pllInst,
@@ -943,18 +949,18 @@ string IQTree::generateParsimonyTree(int randomSeed) {
         pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions,
                         pllInst->start->back, PLL_FALSE, PLL_TRUE, PLL_FALSE,
                         PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
-        parsimonyTreeString = string(pllInst->tree_string);
-        PhyloTree::readTreeString(parsimonyTreeString);
+        string pllTreeString = string(pllInst->tree_string);
+        PhyloTree::readTreeString(pllTreeString);
         wrapperFixNegativeBranch(true);
-        parsimonyTreeString = getTreeString();
     } else if (params->start_tree == STT_RANDOM_TREE) {
         generateRandomTree(YULE_HARDING);
         wrapperFixNegativeBranch(true);
-        parsimonyTreeString = getTreeString();
+        optimizeConstructedTree();
     } else {
         computeParsimonyTree(NULL, aln, randstream);
-        parsimonyTreeString = getTreeString();
+        optimizeConstructedTree();
     }
+    string parsimonyTreeString = getTreeString();
     return parsimonyTreeString;
 }
 
@@ -971,17 +977,21 @@ void IQTree::initializePLL(Params &params) {
     /* Create a PLL getInstance */
     pllInst = pllCreateInstance(&pllAttr);
 
-    /* Read in the alignment file */
-    stringstream pllAln;
-    aln->printAlignment(IN_PHYLIP, pllAln, "");
-    string pllAlnStr = pllAln.str();
-    pllAlignment = pllParsePHYLIPString(pllAlnStr.c_str(), pllAlnStr.length());
-
-    /* Read in the partition information */
-    // BQM: to avoid printing file
-    stringstream pllPartitionFileHandle;
-    createPLLPartition(params, pllPartitionFileHandle);
-    pllQueue *partitionInfo = pllPartitionParseString(pllPartitionFileHandle.str().c_str());
+    {
+        /* Read in the alignment file */
+        stringstream pllAln;
+        aln->printAlignment(IN_PHYLIP, pllAln, "");
+        string pllAlnStr = pllAln.str();
+        pllAlignment = pllParsePHYLIPString(pllAlnStr.c_str(), pllAlnStr.length());
+    }
+    pllQueue* partitionInfo;
+    {
+        /* Read in the partition information */
+        // BQM: to avoid printing file
+        stringstream pllPartitionFileHandle;
+        createPLLPartition(params, pllPartitionFileHandle);
+        partitionInfo = pllPartitionParseString(pllPartitionFileHandle.str().c_str());
+    }
 
     /* Validate the partitions */
     if (!pllPartitionsValidate(partitionInfo, pllAlignment)) {
@@ -4310,6 +4320,54 @@ int PhyloTree::ensureNumberOfThreadsIsSet(Params *params, bool suppressAnyThread
     #else
         return 1;
     #endif
+}
+
+void IQTree::initializePLLIfNecessary() {
+    if (isInitializedPLL()) {
+        return;
+    }
+    if (params->start_tree == STT_PLL_PARSIMONY 
+        || params->start_tree == STT_RANDOM_TREE || params->pll) {
+        initializePLL(*params);
+    }
+}
+
+void IQTree::optimizeConstructedTree() {
+    //Note: this should not be called if start_tree is STT_PLL_PARSIMONY
+    if (params->max_spr_iterations == 0) {
+        return;
+    }
+    initializeAllPartialPars();
+    auto initial_parsimony = computeParsimony("Computing initial parsimony");
+    LOG_LINE(VB_MIN, "Before doing (up to) " 
+        << params->max_spr_iterations << " rounds of SPR,"
+        << " parsimony score was " << initial_parsimony);
+
+    //For now, use PLL to do Parsimony SPR
+    double init_start = getRealTime();
+    if (!isInitializedPLL()) {
+        initializePLL(*params);
+    }
+    string constructedTreeString = getTreeString();
+    pllReadNewick(constructedTreeString);
+    double opt_start = getRealTime();
+    int iterations = pllOptimizeWithParsimonySPR(pllInst, pllPartitions, 
+        params->max_spr_iterations,  params->tree_spr);
+    double read_start = getRealTime();
+    pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions,
+        pllInst->start->back, PLL_FALSE, PLL_TRUE, PLL_FALSE,
+        PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
+    string pllTreeString = string(pllInst->tree_string);
+    PhyloTree::readTreeString(pllTreeString);
+
+    double pars_start = getRealTime();
+    initializeAllPartialPars();
+    auto optimized_parsimony = computeParsimony("Computing post optimization parsimony");
+    LOG_LINE(VB_MIN, "After " << iterations << " rounds of SPR,"
+        << " parsimony score was " << optimized_parsimony);
+    double pll_overhead = (opt_start - init_start) + (pars_start - read_start);
+    LOG_LINE(VB_MED, "PLL overhead was " << pll_overhead << " wall-clock seconds");
+    LOG_LINE(VB_MED, "SPR optimization took " << (read_start - opt_start) << " wall-clock seconds");
 }
 
 int PhyloTree::testNumThreads() {

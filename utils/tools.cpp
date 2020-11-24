@@ -900,6 +900,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 //    params.parsimony = false;
 //    params.parsimony_tree = false;
     params.tree_spr = false;
+    params.max_spr_iterations = 0;
     params.nexus_output = false;
     params.k_representative = 4;
     params.loglh_epsilon = 0.001;
@@ -2333,6 +2334,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.tree_spr = true;
 				continue;
 			}
+            if (arg=="-max-spr") {
+                // subtree pruning and regrafting 
+                std::string nextArg       = next_argument(argc, argv, "<max_spr_iterations>", cnt);
+                params.tree_spr           = true; //but this turns on ML spr too.
+                params.max_spr_iterations = atoi(nextArg.c_str());
+                continue;
+            }
 			if (strcmp(argv[cnt], "-krep") == 0) {
 				cnt++;
 				if (cnt >= argc)

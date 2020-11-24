@@ -572,11 +572,8 @@ string computeFastMLTree(Params &params, Alignment *aln,
     } else {
         iqtree = new IQTree(aln);
     }
-    if ((params.start_tree == STT_PLL_PARSIMONY || params.start_tree == STT_RANDOM_TREE || params.pll) && !iqtree->isInitializedPLL()) {
-        /* Initialized all data structure for PLL*/
-        iqtree->initializePLL(params);
-    }
     iqtree->setParams(&params);
+    iqtree->initializePLLIfNecessary();
     iqtree->setLikelihoodKernel(params.SSE);
     iqtree->optimize_by_newton = params.optimize_by_newton;
     iqtree->setNumThreads(num_threads);

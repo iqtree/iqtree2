@@ -1862,9 +1862,6 @@ void pllMakeParsimonyTreeFast(pllInstance *tr, partitionList *pr, int sprDist)
     nextsp,
     *perm        = (int *)rax_malloc((size_t)(tr->mxtips + 1) * sizeof(int));  
 
-  unsigned int 
-    randomMP, 
-    startMP;         
   
   assert(!tr->constrained);
 
@@ -1917,8 +1914,8 @@ void pllMakeParsimonyTreeFast(pllInstance *tr, partitionList *pr, int sprDist)
   
   nodeRectifierPars(tr);
   
-  randomMP = tr->bestParsimony;        
-  
+  unsigned int randomMP = tr->bestParsimony;          
+  unsigned int startMP;
   do
     {
       startMP = randomMP;
@@ -1937,3 +1934,28 @@ void pllMakeParsimonyTreeFast(pllInstance *tr, partitionList *pr, int sprDist)
   
   rax_free(perm);
 } 
+
+int pllOptimizeWithParsimonySPR(pllInstance* tr, partitionList* pr, 
+                                 int maxSprIterations, int sprDist) {
+    allocateParsimonyDataStructures(tr, pr);
+    unsigned int randomMP = tr->bestParsimony;
+    unsigned int startMP;
+    int iteration = 0;
+    do
+    {
+        startMP = randomMP;
+        nodeRectifierPars(tr);
+        for (int i = 1; i <= tr->mxtips + tr->mxtips - 2; i++)
+        {
+            rearrangeParsimony(tr, pr, tr->nodep[i], 1, sprDist, PLL_FALSE);
+            if (tr->bestParsimony < randomMP)
+            {
+                restoreTreeRearrangeParsimony(tr, pr);
+                randomMP = tr->bestParsimony;
+            }
+        }
+        ++iteration;
+    } while (iteration < maxSprIterations && randomMP < startMP);
+    pllFreeParsimonyDataStructures(tr, pr);
+    return iteration;
+}

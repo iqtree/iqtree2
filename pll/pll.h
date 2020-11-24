@@ -1648,6 +1648,7 @@ void pllTreeInitTopologyForAlignment (pllInstance * tr, pllAlignmentData * align
 extern void pllMakeRandomTree ( pllInstance *tr);
 void pllMakeParsimonyTree(pllInstance *tr);
 extern void pllMakeParsimonyTreeFast(pllInstance *tr, partitionList *pr, int sprDist);
+extern int pllOptimizeWithParsimonySPR(pllInstance* tr, partitionList* pr, int maxSprIterations, int sprDist);
 void pllComputeRandomizedStepwiseAdditionParsimonyTree(pllInstance * tr, partitionList * partitions, int sprDist);
 nodeptr pllGetRandomSubtree(pllInstance *);
 extern void pllFreeParsimonyDataStructures(pllInstance *tr, partitionList *pr);

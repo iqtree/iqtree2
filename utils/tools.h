@@ -1476,6 +1476,11 @@ public:
     bool tree_spr;
 
     /**
+            the maximum number of iterations of SPR to do
+     */
+    int  max_spr_iterations;
+
+    /**
             true if printing out of optimal sets in NEXUS format
      */
     bool nexus_output;

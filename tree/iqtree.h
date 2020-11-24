@@ -134,8 +134,9 @@ public:
     void createPLLPartition(Params &params, ostream &pllPartitionFileHandle);
 
     void initializePLL(Params &params);
-
     bool isInitializedPLL();
+    void initializePLLIfNecessary();
+    void optimizeConstructedTree();
     
     virtual void initializeModel(Params &params, string model_name, ModelsBlock *models_block);
 
