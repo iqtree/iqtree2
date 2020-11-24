@@ -3993,7 +3993,11 @@ void PhyloTree::computeBioNJ(Params &params) {
     double timeToWriteDistanceFile = 0.0;
     double timeToCalculateMatrix = 0.0;
 #ifdef _OPENMP
-    omp_set_nested(true);
+    #ifdef CLANG_UNDER_VS
+        omp_set_max_active_levels(1);
+    #else
+        omp_set_nested(true); // 't allow nested OpenMP parallelism
+    #endif
     #pragma omp parallel num_threads(2)
     {
         int thread = omp_get_thread_num();
@@ -4022,7 +4026,11 @@ void PhyloTree::computeBioNJ(Params &params) {
     }
     #ifdef _OPENMP
         #pragma omp barrier
-        omp_set_nested(false);
+        #ifdef CLANG_UNDER_VS
+            omp_set_max_active_levels(0);
+        #else
+            omp_set_nested(false); // don't allow nested OpenMP parallelism
+        #endif
     #endif
     if (timeToWriteDistanceFile!=0.0 && verbose_mode >= VB_MED) {
         //This information is logged *afterwards* because, if
@@ -4904,10 +4912,10 @@ double PhyloTree::assessSPRMove(double cur_score, const SPRMove &spr) {
     clearAllPartialParsimony(false);
 
     return cur_score;
-
 }
 
 double PhyloTree::optimizeSPR() {
+    fixNegativeBranch();
     double cur_score = computeLikelihood();
     //spr_radius = leafNum / 5;
     spr_radius = 10;
@@ -4936,7 +4944,6 @@ double PhyloTree::optimizeSPR() {
         }
     }
     return cur_score;
-    //return optimizeAllBranches();
 }
 
 double PhyloTree::optimizeSPRBranches() {
