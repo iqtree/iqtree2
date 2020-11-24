@@ -152,8 +152,9 @@ void Alignment::checkSeqName() {
     StrVector::iterator it;
     for (it = seq_names.begin(); it != seq_names.end(); it++) {
         string orig_name = (*it);
-        if (renameString(*it))
+        if (renameString(*it)) {
             warn_str << orig_name << " -> " << (*it) << endl;
+        }
     }
     if (!warn_str.str().empty() && Params::getInstance().compute_seq_composition) {
         string str = "Some sequence names are changed as follows:\n";
@@ -1997,18 +1998,23 @@ bool Alignment::constructPatterns(int nseq, int nsite,
 }
 
 void processSeq(string &sequence, string &line, int line_num) {
-    for (string::iterator it = line.begin(); it != line.end(); it++) {
+    const char* lineStart = line.data();
+    const char* lineEnd = line.data() + line.size();
+
+    for (const char* it = lineStart; it != lineEnd; ++it) {
         if ((*it) <= ' ') continue;
-        if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.' || (*it) == '*' || (*it) == '~')
+        if (isalnum(*it) || (*it) == '-' || (*it) == '?' || (*it) == '.' || (*it) == '*' || (*it) == '~') {
             sequence.append(1, toupper(*it));
+        }
         else if (*it == '(' || *it == '{') {
             auto start_it = it;
-            while (*it != ')' && *it != '}' && it != line.end())
-                it++;
-            if (it == line.end())
+            while (*it != ')' && *it != '}' && it != lineEnd)
+                ++it;
+            if (it == lineEnd) {
                 throw "Line " + convertIntToString(line_num) + ": No matching close-bracket ) or } found";
+            }
             sequence.append(1, '?');
-            cout << "NOTE: Line " << line_num << ": " << line.substr(start_it-line.begin(), (it-start_it)+1) << " is treated as unknown character" << endl;
+            cout << "NOTE: Line " << line_num << ": " << line.substr(start_it-lineStart, (it-start_it)+1) << " is treated as unknown character" << endl;
         } else {
             throw "Line " + convertIntToString(line_num) + ": Unrecognized character "  + *it;
         }
