@@ -284,6 +284,10 @@ size_t countBitsSetInEitherTemplate(uint64_t* a, uint64_t* b,
     }
 #endif
 
+inline size_t countBitsSetIn(uint64_t* a, size_t count) {
+    return countBitsSetInEither(a,a,count);
+}
+
 inline size_t sumForUnknownCharacters
     ( char boundaryChar, const char* sequence, int seqLen, const int* frequencyVector) {
     size_t sum = 0;

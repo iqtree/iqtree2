@@ -25,12 +25,14 @@ namespace StartTree {
 
 extern void addBioNJ2009TreeBuilders(Factory& f);
 extern void addBioNJ2020TreeBuilders(Factory& f);
+//extern void addStitchupTreeBuilders (Factory& f);
 
 Factory::Factory() {
 }
 
 Factory::~Factory() {
-    for (auto it=mapOfTreeBuilders.begin(); it!=mapOfTreeBuilders.end(); ++it) {
+    for (auto it=mapOfTreeBuilders.begin();
+         it!=mapOfTreeBuilders.end(); ++it) {
         delete it->second;
     }
     mapOfTreeBuilders.clear();
@@ -45,6 +47,7 @@ Factory& Factory::getInstance() {
     if (instance.getBuilderCount()==0) {
         addBioNJ2009TreeBuilders(instance);
         addBioNJ2020TreeBuilders(instance);
+        //addStitchupTreeBuilders(instance);
         BuilderInterface *bench = new BenchmarkingTreeBuilder(instance, "BENCHMARK", "Benchmark");
         instance.addBuilder(bench->getName(), bench);
     }
@@ -69,13 +72,14 @@ BuilderInterface* Factory::getBuilder(const char* name) {
 
 std::string Factory::getListOfTreeBuilders() const {
     std::stringstream list;
-    for (auto it=mapOfTreeBuilders.begin(); it!=mapOfTreeBuilders.end(); ++it) {
+    for (auto it=mapOfTreeBuilders.begin();
+         it!=mapOfTreeBuilders.end(); ++it) {
         auto builder = (*it).second;
-        list << builder->getName() << ": " << builder->getDescription() << "\n";
+        list << builder->getName() << ": "
+             << builder->getDescription() << "\n";
     }
     return list.str();
 }
-
 
 void Factory::advertiseTreeBuilder(BuilderInterface* builder) {
     std::string name = builder->getName();
@@ -94,7 +98,8 @@ BuilderInterface* Factory::getTreeBuilderByName(const std::string& name) {
     return getInstance().getBuilder(name);
 }
 
-BenchmarkingTreeBuilder::BenchmarkingTreeBuilder(Factory& f, const char* nameToUse, const char *descriptionToGive)
+BenchmarkingTreeBuilder::BenchmarkingTreeBuilder(Factory& f, const char* nameToUse,
+                                                 const char *descriptionToGive)
     : name(nameToUse), description(descriptionToGive)
     , isOutputToBeZipped(false), silent(false) {
     for (auto it=f.mapOfTreeBuilders.begin(); it!=f.mapOfTreeBuilders.end(); ++it) {
@@ -119,13 +124,14 @@ bool BenchmarkingTreeBuilder::isBenchmark() const {
 bool BenchmarkingTreeBuilder::constructTree
     ( const std::string &distanceMatrixFilePath
      , const std::string & newickTreeFilePath) {
-        bool result = (!builders.empty());
-        for (auto it=builders.begin(); it!=builders.end(); ++it) {
-            (*it)->setZippedOutput(isOutputToBeZipped);
-            result &= (*it)->constructTree(distanceMatrixFilePath, newickTreeFilePath);
-        }
-        return result;
+    bool result = (!builders.empty());
+    for (auto it=builders.begin(); it!=builders.end(); ++it) {
+        (*it)->setZippedOutput(isOutputToBeZipped);
+        result &= (*it)->constructTree(distanceMatrixFilePath,
+                                       newickTreeFilePath);
     }
+    return result;
+}
 
 void BenchmarkingTreeBuilder::setZippedOutput(bool zipIt) {
     isOutputToBeZipped = zipIt;
@@ -171,50 +177,54 @@ namespace {
 }
 
 bool BenchmarkingTreeBuilder::constructTreeInMemory
-    ( const std::vector<std::string> &sequenceNames
-    , const double *distanceMatrix
-    , const std::string & newickTreeFilePath) {
-        bool ok = false;
-        #ifdef _OPENMP
-            int maxThreads = omp_get_max_threads();
-        #endif
-        size_t maxNameLen = 0;
-        for (auto it=builders.begin(); it!=builders.end(); ++it) {
-            auto builder_name = (*it)->getName();
-            if ( maxNameLen < builder_name.length() ) {
-                maxNameLen = builder_name.length();
-            }
+( const std::vector<std::string> &sequenceNames
+, const double *distanceMatrix
+, const std::string & newickTreeFilePath) {
+    bool ok = false;
+    #ifdef _OPENMP
+        int maxThreads = omp_get_max_threads();
+    #endif
+    size_t maxNameLen = 0;
+    for (auto it=builders.begin(); it!=builders.end(); ++it) {
+        auto builder_name = (*it)->getName();
+        if ( maxNameLen < builder_name.length() ) {
+            maxNameLen = builder_name.length();
         }
-        std::string padding(maxNameLen, '\x20');
-        std::cout.width(0);
-        for (auto it=builders.begin(); it!=builders.end(); ++it) {
-            auto   builder_name = (*it)->getName();
-            (*it)->beSilent();
-            (*it)->setPrecision(precision);
-            #ifdef _OPENMP
-                omp_set_num_threads(1);
-            #endif
-            double startTime = getRealTime();
-            bool   succeeded = (*it)->constructTreeInMemory(sequenceNames, distanceMatrix, newickTreeFilePath);
-            double elapsed   = getRealTime() - startTime;
-            if (succeeded) {
-                ok = true;
-                std::cout << (builder_name + padding).substr(0, maxNameLen);
-                std::cout << "\t" << formatPositiveNumber(elapsed,7);
-                #ifdef _OPENMP
-                for (int t=2; t<=maxThreads; ++t) {
-                    std::cout.flush();
-                    omp_set_num_threads(t);
-                    startTime = getRealTime();
-                    ok &= (*it)->constructTreeInMemory(sequenceNames, distanceMatrix, newickTreeFilePath);
-                    elapsed = getRealTime() - startTime;
-                    std::cout << "\t" << formatPositiveNumber(elapsed,7);
-                }
-                #endif
-                std::cout << std::endl;
-            }
-        }
-        return true;
     }
+    std::string padding(maxNameLen, '\x20');
+    std::cout.width(0);
+    for (auto it=builders.begin(); it!=builders.end(); ++it) {
+        auto   builder_name = (*it)->getName();
+        (*it)->beSilent();
+        (*it)->setPrecision(precision);
+        #ifdef _OPENMP
+            omp_set_num_threads(1);
+        #endif
+        double startTime = getRealTime();
+        bool   succeeded = (*it)->constructTreeInMemory(sequenceNames,
+                                                        distanceMatrix,
+                                                        newickTreeFilePath);
+        double elapsed   = getRealTime() - startTime;
+        if (succeeded) {
+            ok = true;
+            std::cout << (builder_name + padding).substr(0, maxNameLen);
+            std::cout << "\t" << formatPositiveNumber(elapsed,7);
+            #ifdef _OPENMP
+            for (int t=2; t<=maxThreads; ++t) {
+                std::cout.flush();
+                omp_set_num_threads(t);
+                startTime = getRealTime();
+                ok &= (*it)->constructTreeInMemory(sequenceNames,
+                                                   distanceMatrix,
+                                                   newickTreeFilePath);
+                elapsed = getRealTime() - startTime;
+                std::cout << "\t" << formatPositiveNumber(elapsed,7);
+            }
+            #endif
+            std::cout << std::endl;
+        }
+    }
+    return true;
+}
 };
 

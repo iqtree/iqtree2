@@ -42,15 +42,18 @@ namespace {
         return s.substr(s.length()-suffixLen, suffixLen) == suffix;
     }
 
-    bool correcting_distances = true;
-    bool is_DNA               = true;
-    bool numbered_names       = false;
-    char unknown_char         = 'N';
-    int  precision            = 8;
-    int  compression_level    = 9;
+    bool correcting_distances      = true;
+    bool is_DNA                    = true;
+    bool numbered_names            = false;
+    bool filter_problem_sequences  = false;
+    char unknown_char              = 'N';
+    int  precision                 = 8;
+    int  compression_level         = 9;
     std::string msaOutputPath; //write .msa formatted version of .fasta input here
     std::string alphabet;      //defaults to ACGT
     std::string unknown_chars; //defaults to .~_-?N
+    std::string format             = "square.interleaved";
+    bool        interleaved_format = true;
 };
 
 void showBanner() {
@@ -127,24 +130,6 @@ bool processSequenceLine(const std::vector<int> &in_alphabet,
     return true;
 }
 
-bool checkLastTwoSequenceLengths(const std::vector<std::string>& sequences) {
-    if (2<=sequences.size()) {
-        const std::string& last        = sequences.back();
-        auto               last_length = last.length();
-        const std::string& penultimate = sequences[sequences.size()-2];
-        if (last_length != penultimate.length()) {
-            //std::cout << last << std::endl << std::endl;
-            //std::cout << penultimate << std::endl << std::endl;
-            std::cerr << "Sequence " << (sequences.size())
-                << " had length ("          << last_length          << ")"
-                << " different from that (" << penultimate.length() << ")"
-                << " of the previous sequence." << std::endl;
-            return false;
-        }
-    }
-    return true;
-}
-
 inline double correctDistance(double char_dist, double chars_compared,
                               double num_states) {
     double obs_dist = (0<chars_compared)
@@ -163,24 +148,79 @@ inline double uncorrectedDistance(double char_dist,
         ? (char_dist/chars_compared) : 0.0;
 }
 
-bool loadSequenceDistancesIntoMatrix(const std::vector<std::string>& seq_names,
-                                     const std::vector<std::string>& sequences,
+struct Sequence {
+protected:
+    std::string name;
+    std::string sequence_data;
+    bool        is_problematic;
+
+public:
+    explicit Sequence(const std::string& seq_name)
+        : name(seq_name), is_problematic(false) {}
+    size_t sequenceLength()           const { return sequence_data.size(); }
+    const char* data()                const { return sequence_data.data(); }
+    const std::string& sequenceData() const { return sequence_data; }
+          std::string& sequenceData()       { return sequence_data; }
+    const std::string& getName()      const { return name; }
+    bool  isProblematic()             const { return is_problematic; }
+    void  markAsProblematic()               { is_problematic = true; }
+};
+
+struct Sequences: public std::vector<Sequence> {
+    bool checkLastTwoSequenceLengths() const {
+        if (2<=size()) {
+            const std::string& last        = back().sequenceData();
+            auto               last_length = last.length();
+            const std::string& penultimate = at(size()-2).sequenceData();
+            if (last_length != penultimate.length()) {
+                //std::cout << last << std::endl << std::endl;
+                //std::cout << penultimate << std::endl << std::endl;
+                std::cerr << "Sequence " << (size())
+                    << " had length ("          << last_length          << ")"
+                    << " different from that (" << penultimate.length() << ")"
+                    << " of the previous sequence." << std::endl;
+                return false;
+            }
+        }
+        return true;
+    }
+    size_t countOfProblematicSequences() {
+        size_t count = 0;
+        for (size_t i=0; i<size(); ++i) {
+            if (at(i).isProblematic()) {
+                ++count;
+            }
+        }
+        return count;
+    }
+    std::string getFormattedName(size_t i) {
+        if (numbered_names) {
+            std::stringstream number_name;
+            number_name << "A" << (i+1); //"A1", "A2", ...
+            return number_name.str();
+        } else {
+            return at(i).getName();
+        }
+    }
+};
+
+bool loadSequenceDistancesIntoMatrix(Sequences& sequences,
                                      const std::vector<char>&   is_site_variant,
                                      bool report_progress, FlatMatrix& m) {
-    size_t rank      = seq_names.size();
-    size_t rawSeqLen = sequences.front().length();
-    m.setSize(rank);
+    size_t rank      = sequences.size();
+    size_t rawSeqLen = sequences.front().sequenceLength();
     size_t seqLen    = 0; //# of characters that actually vary between two sequences
+    m.setSize(rank);
     for (auto it=is_site_variant.begin(); it!=is_site_variant.end(); ++it) {
         seqLen += *it;
     }
     for (size_t row=0; row<rank; ++row) {
-        m.addCluster(seq_names[row]);
+        m.addCluster(sequences[row].getName());
     }
     size_t     unkLen        = ((seqLen+255)/256)*4;
-    char*      buffer        = new char  [ seqLen * rank];
-    char**     sequence_data = new char* [ rank ];
-    uint64_t*  unk_buffer    = new uint64_t  [ unkLen * rank];
+    char*      buffer        = new char      [ seqLen * rank ];
+    char**     sequence_data = new char*     [ rank ];
+    uint64_t*  unk_buffer    = new uint64_t  [ unkLen * rank ];
     uint64_t** unknown_data  = new uint64_t* [ rank ];
     memset(unk_buffer, 0, unkLen * rank);
     
@@ -192,8 +232,8 @@ bool loadSequenceDistancesIntoMatrix(const std::vector<std::string>& seq_names,
         #endif
         for (size_t row=0; row<rank; ++row) {
             sequence_data[row] = buffer + seqLen * row;
-            const char* site = sequences[row].data();
-            char* write = sequence_data[row] ;
+            const char* site   = sequences[row].data();
+            char*       write  = sequence_data[row] ;
             if (seqLen<rawSeqLen) {
                 for (size_t col=0; col<rawSeqLen; ++col) {
                     *write = site[col];
@@ -280,6 +320,18 @@ bool loadSequenceDistancesIntoMatrix(const std::vector<std::string>& seq_names,
                     if (distance < 0) {
                         distance = 0;
                     }
+                } else {
+                    bool eitherMarked = sequences[row].isProblematic()
+                                     || sequences[col].isProblematic();
+                    if (!eitherMarked)
+                    {
+                        //Cannot calculate distance between these two sequences.
+                        //Mark one of them (the one with more unknowns) as problematic.
+                        uint64_t unkRow = countBitsSetIn(unknown_data[row], unkLen);
+                        uint64_t unkCol = countBitsSetIn(unknown_data[col], unkLen);
+                        size_t   zap    = (unkCol < unkRow) ? unkCol : unkRow;
+                        sequences[zap].markAsProblematic();
+                    }
                 }
                 m.cell(row, col) = distance;
                 m.cell(col, row) = distance;
@@ -315,9 +367,10 @@ public:
     }
 };
 
-bool loadAlignmentIntoDistanceMatrix(const std::string& alignmentFilePath,
-                                     bool report_progress,
-                                     FlatMatrix &m) {
+bool loadAlignment(const std::string& alignmentFilePath,
+                   bool report_progress, Sequences &sequences,
+                   std::vector<char>& is_site_variant)
+{
     pigzstream in(report_progress ? "fasta" : "");
     in.open(alignmentFilePath.c_str(), std::ios::binary | std::ios::in);
     if (!in.is_open()) {
@@ -326,8 +379,6 @@ bool loadAlignmentIntoDistanceMatrix(const std::string& alignmentFilePath,
         return false;
     }
     size_t line_num = 0;
-    std::vector<std::string> seq_names;
-    std::vector<std::string> sequences;
     std::vector<int> in_alphabet;
     in_alphabet.resize(256, 0);
     for (auto alpha=alphabet.begin(); alpha!=alphabet.end(); ++alpha) {
@@ -341,14 +392,13 @@ bool loadAlignmentIntoDistanceMatrix(const std::string& alignmentFilePath,
         }
         if (line[0] == '>') { // next sequence
             auto pos = line.find_first_of("\n\r");
-            seq_names.emplace_back(line.substr(1, pos-1));
-            std::string& str = seq_names.back();
+            std::string str = line.substr(1, pos-1);
             str.erase(0, str.find_first_not_of(" \n\r\t"));
             str.erase(str.find_last_not_of(" \n\r\t")+1);
-            if (!checkLastTwoSequenceLengths(sequences)) {
+            if (!sequences.checkLastTwoSequenceLengths()) {
                 return false;
             }
-            sequences.push_back("");
+            sequences.emplace_back(str);
             continue;
         }
         // read sequence contents
@@ -357,19 +407,19 @@ bool loadAlignmentIntoDistanceMatrix(const std::string& alignmentFilePath,
                 << " to define sequence name" << std::endl;
             return false;
         }
-        else if (!processSequenceLine(in_alphabet, sequences.back(), line, line_num)) {
+        else if (!processSequenceLine(in_alphabet, sequences.back().sequenceData(),
+                                      line, line_num)) {
             return false;
         }
     }
-    if (!checkLastTwoSequenceLengths(sequences)) {
+    if (!sequences.checkLastTwoSequenceLengths()) {
         return false;
     }
     in.close();
     
-    std::vector<char>   is_site_variant;
     std::vector<size_t> sequence_odd_site_count;
     {
-        size_t seqLen   = sequences.front().length();
+        size_t seqLen   = sequences.front().sequenceLength();
         std::vector<SiteInfo> sites;
         sites.resize(seqLen);
         SiteInfo* siteData = sites.data();
@@ -398,34 +448,67 @@ bool loadAlignmentIntoDistanceMatrix(const std::string& alignmentFilePath,
             is_site_variant[i] = 1;
         }
     }
-    
-    if (!msaOutputPath.empty()) {
-        std::ofstream out;
-        out.exceptions(std::ios::failbit | std::ios::badbit);
-        out.open(msaOutputPath.c_str());
-        size_t len = sequences.size()==0 ? 0 : sequences[0].length();
-        
+    return true;
+}
+
+bool writeMSAOutputFile(Sequences& sequences, const std::string& msaPath)
+{
+    //This is writing a format that fastme likes for its inputs.
+    std::ofstream out;
+    out.exceptions(std::ios::failbit | std::ios::badbit);
+    bool success = false;
+    try {
+        out.open(msaPath.c_str());
+        size_t len = sequences.size()==0 ? 0 : sequences[0].sequenceLength();
         out << sequences.size() << " " << len << "\n";
-        for (size_t i=0; i<sequences.size(); ++i) {
-            std::string name     = seq_names[i];
-            std::string seq_data = sequences[i];
-            if (numbered_names) {
-                std::stringstream number_name;
-                number_name << "A" << (i+1); //"A1", "A2", ...
-                name = number_name.str();
+        
+        //Todo: The following is for the interleaved sequence format
+        //      that fastme likes.
+        if (interleaved_format) {
+            for (size_t pos=0; pos<len; pos+=60) {
+                for (size_t i=0; i<sequences.size(); ++i) {
+                    const std::string& seq_data = sequences[i].sequenceData();
+                    if (pos==0) {
+                        out << sequences.getFormattedName(i);
+                    } else {
+                        out << "      ";
+                    }
+                    size_t posEnd = pos + 60;
+                    if (len<posEnd) posEnd = len;
+                    for (size_t block=pos; block<posEnd; block+=10) {
+                        size_t blockEnd = block + 10;
+                        if (posEnd<blockEnd) {
+                            posEnd = blockEnd;
+                        }
+                        out << " " << seq_data.substr(block, blockEnd-block);
+                    }
+                    out << "\n";
+                }
+                out << "\n";
             }
-            out << name << " " << seq_data << "\n";
+        } else {
+            //Flat
+            for (size_t i=0; i<sequences.size(); ++i) {
+                out << sequences.getFormattedName(i) << " "
+                    << sequences.at(i).sequenceData() << "\n";
+            }
         }
-        out.close();
+        success = true;
     }
-    return loadSequenceDistancesIntoMatrix(seq_names, sequences,
-                                           is_site_variant,
-                                           report_progress, m);
+    catch (std::ios::failure f) {
+        std::cerr << "I/O error trying to write"
+            << " MSA format file: " << msaPath << std::endl;
+    }
+    catch (...) {
+        std::cerr << "Unexpected error trying to write"
+            << " MSA format file: " << msaPath << std::endl;
+    }
+    out.close();
+    return success;
 }
 
 bool writeDistanceMatrixToFile(FlatMatrix& m,
                                const std::string& distFilePath) {
-    std::string format = "square";
     if (numbered_names) {
         auto name_count = m.getSequenceNames().size();
         for (size_t i=0; i<name_count; ++i) {
@@ -437,6 +520,73 @@ bool writeDistanceMatrixToFile(FlatMatrix& m,
     return m.writeToDistanceFile(format, precision,
                                  compression_level,
                                  distFilePath );
+}
+
+void removeProblematicSequences(Sequences& sequences,
+                                FlatMatrix& m) {
+    size_t count_problem_sequences = sequences.countOfProblematicSequences();
+    if (count_problem_sequences==0) {
+        return;
+    }
+    Sequences  old_sequences;
+    FlatMatrix old_matrix;
+    
+    std::cout << "Removing " << count_problem_sequences
+        << " problematic sequences." << std::endl;
+    
+    double startTime = getRealTime();
+    std::swap(sequences, old_sequences);
+    std::swap(old_matrix, m);
+    m.setSize(old_sequences.size() - count_problem_sequences);
+    size_t rNew = 0;
+    for (size_t r=0; r<old_sequences.size(); ++r) {
+        if (!old_sequences[r].isProblematic()) {
+            sequences.emplace_back(old_sequences[r].getName());
+            m.sequenceName(rNew) = old_sequences[r].getName();
+            size_t cNew = 0;
+            for (size_t c=0; c<old_sequences.size(); ++c) {
+                if (!old_sequences[c].isProblematic()) {
+                    m.cell(rNew, cNew) = old_matrix.cell(r, c);
+                    ++cNew;
+                }
+            }
+            ++rNew;
+        }
+    }
+    std::cout << "Removed sequences"
+        << " in " << (getRealTime() - startTime)
+        << " wall-clock seconds." << std::endl;
+}
+
+bool prepInput(const std::string& alignmentInputFilePath,
+               const std::string& matrixInputFilePath,
+               bool  reportProgress,
+               const std::string& distanceOutputFilePath,
+               Sequences& sequences, FlatMatrix& m) {
+    bool succeeded = false;
+    if (!alignmentInputFilePath.empty()) {
+        Sequences sequences;
+        std::vector<char> is_site_variant;
+        succeeded =  loadAlignment
+                     (alignmentInputFilePath, reportProgress,
+                      sequences, is_site_variant);
+        succeeded &= loadSequenceDistancesIntoMatrix
+                     (sequences, is_site_variant,
+                      reportProgress, m);
+        if (filter_problem_sequences) {
+            removeProblematicSequences(sequences, m);
+        }
+        if (succeeded && !msaOutputPath.empty()) {
+            writeMSAOutputFile(sequences, msaOutputPath);
+        }
+        if (succeeded && !distanceOutputFilePath.empty()) {
+            writeDistanceMatrixToFile(m, distanceOutputFilePath);
+        }
+    } else if (!matrixInputFilePath.empty()) {
+        succeeded = loadDistanceMatrixInto(matrixInputFilePath,
+                                           reportProgress, m);
+    }
+    return succeeded;
 }
 
 int main(int argc, char* argv[]) {
@@ -545,6 +695,9 @@ int main(int argc, char* argv[]) {
             isBannerSuppressed = true;
             beSilent = true;
         }
+        else if (arg=="-filter") {
+            filter_problem_sequences = true;
+        }
         else if (arg=="-alphabet") {
             if (nextArg.empty()) {
                 PROBLEM(arg + " should be followed by a list of characters");
@@ -604,7 +757,6 @@ int main(int argc, char* argv[]) {
     } else {
         unknown_char = unknown_chars[unknown_chars.length()-1];
     }
-    
     if (threadCount!=0) {
 #ifdef _OPENMP
         int maxThreadCount = omp_get_max_threads();
@@ -632,43 +784,27 @@ int main(int argc, char* argv[]) {
         algorithm->beSilent();
     }
     algorithm->setPrecision(precision);
+    Sequences  sequences;
     FlatMatrix m;
-    bool succeeded = false;
-    if (algorithm->isBenchmark()) {
-        if (!alignmentFilePath.empty()) {
-            succeeded = loadAlignmentIntoDistanceMatrix(alignmentFilePath, false, m);
-            if (!distanceOutputFilePath.empty()) {
-                succeeded = writeDistanceMatrixToFile(m, distanceOutputFilePath);
-            }
-        } else {
-            succeeded = loadDistanceMatrixInto(inputFilePath, false, m);
-        }
-        if (succeeded) {
-            succeeded = algorithm->constructTreeInMemory(m.getSequenceNames(),
-                                                         m.getDistanceMatrix(),
-                                                         outputFilePath);
-        }
-    }  else {
-        if (!alignmentFilePath.empty()) {
-            if (loadAlignmentIntoDistanceMatrix(alignmentFilePath, true, m)) {
-                if (!distanceOutputFilePath.empty()) {
-                    succeeded = writeDistanceMatrixToFile(m, distanceOutputFilePath);
-                }
-                if (succeeded) {
-                    succeeded = algorithm->constructTreeInMemory
-                    ( m.getSequenceNames(), m.getDistanceMatrix(),
-                      outputFilePath );
-                }
-            }
-            exit(succeeded ? 0 : 1);
-        }
-        if (!succeeded) {
-            succeeded = algorithm->constructTree(inputFilePath, outputFilePath);
-        }
-        if (!succeeded) {
-            std::cerr << "Tree construction failed." << std::endl;
-            return 1;
-        }
+    bool succeeded = prepInput(alignmentFilePath, inputFilePath,
+                               !algorithm->isBenchmark(),
+                               distanceOutputFilePath,
+                               sequences, m);
+    if (succeeded) {
+        succeeded = algorithm->constructTreeInMemory(m.getSequenceNames(),
+                                                     m.getDistanceMatrix(),
+                                                     outputFilePath);
+    }
+    else if (!inputFilePath.empty()) {
+        succeeded = algorithm->constructTree(inputFilePath, outputFilePath);
+    }
+    else {
+        std::cerr << "Distance matrix calculation failed." << std::endl;
+        return 1;
+    }
+    if (!succeeded) {
+        std::cerr << "Tree construction failed." << std::endl;
+        return 1;
     }
     return 0;
 }
