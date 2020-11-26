@@ -1003,8 +1003,10 @@ void MTree::getNonCherryLeaves(NodeVector &noncherry, NodeVector &cherry, Node *
     }
 }
 
-void MTree::getTaxa(NodeVector &taxa, Node *node, Node *dad) {
-    if (!node) node = root;
+void MTree::getTaxa(NodeVector &taxa, Node *node, Node *dad) const {
+    if (!node) {
+        node = root;
+    }
     if (node->isLeaf()) {
         taxa.push_back(node);
     }
@@ -2193,7 +2195,7 @@ void MTree::assignLeafNameByID(Node *node, Node *dad) {
         assignLeafNameByID((*it)->node, node);
 }
 
-void MTree::getTaxa(Split &taxa, Node *node, Node *dad) {
+void MTree::getTaxa(Split &taxa, Node *node, Node *dad) const {
 	if (!node) node = root;
 	if (node->isLeaf()) {
 		taxa.addTaxon(node->id);

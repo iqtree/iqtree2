@@ -136,7 +136,14 @@ public:
     void initializePLL(Params &params);
     bool isInitializedPLL();
     void initializePLLIfNecessary();
+    
     void optimizeConstructedTree();
+    
+    /***
+     * get all the taxa nodes in the tree, into a vector ordered (and indexed) by taxon id
+     * @return vector of taxa nodes (in taxon id order)
+     */
+    PhyloNodeVector getTaxaNodesInIDOrder() const;
     
     virtual void initializeModel(Params &params, string model_name, ModelsBlock *models_block);
 

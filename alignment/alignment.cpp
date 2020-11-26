@@ -85,6 +85,12 @@ const string &Alignment::getSeqName(int i) const {
     return seq_names[i];
 }
 
+void Alignment::setSeqName(int i, string name_to_use) {
+    ASSERT(i >= 0 && i < (int)seq_names.size());
+    seq_names[i] = name_to_use;
+}
+
+
 const vector<string>& Alignment::getSeqNames() const {
 	return seq_names;
 }

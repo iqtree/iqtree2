@@ -2578,7 +2578,7 @@ pllDestroyInstance (pllInstance * tr)
 
 }
 
-/* initializwe a parameter linkage list for a certain parameter type (can be whatever).
+/* initialize a parameter linkage list for a certain parameter type (can be whatever).
    the input is an integer vector that contaions NumberOfModels (numberOfPartitions) elements.
 
    if we want to have all alpha parameters unlinked and have say 4 partitions the input 

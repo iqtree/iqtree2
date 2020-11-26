@@ -4471,7 +4471,7 @@ double PhyloTree::optimizeSPR_old(double cur_score, PhyloNode *node, PhyloNode *
         sibling2_nei->clearPartialLh();
 
         // now try to move the subtree to somewhere else
-        vector<PhyloNeighbor*> spr_path;
+        PhyloNeighborVec spr_path;
 
         FOR_EACH_PHYLO_NEIGHBOR(sibling1, sibling2, it, nei)
         {
@@ -4518,11 +4518,11 @@ double PhyloTree::optimizeSPR_old(double cur_score, PhyloNode *node, PhyloNode *
 /**
  move the subtree (dad1-node1) to the branch (dad2-node2)
  */
-double PhyloTree::swapSPR_old(double cur_score, int cur_depth,
+double PhyloTree::swapSPR_old(double cur_score,      int cur_depth,
                               PhyloNode* node1,      PhyloNode* dad1,
                               PhyloNode* orig_node1, PhyloNode* orig_node2,
                               PhyloNode* node2,      PhyloNode* dad2,
-                              vector<PhyloNeighbor*> &spr_path) {
+                              PhyloNeighborVec &spr_path) {
     PhyloNeighbor* node1_nei      = node1->findNeighbor(dad1);
     PhyloNeighbor* dad1_nei       = dad1->findNeighbor(node1);
     double         node1_dad1_len = node1_nei->length;
@@ -4539,12 +4539,12 @@ double PhyloTree::swapSPR_old(double cur_score, int cur_depth,
         FOR_EACH_PHYLO_NEIGHBOR(dad1, node1, it, nei){
             if (first) {
                 nei->node = dad2;
-                nei->length = len2 / 2;
+                nei->length = len2 * 0.5;
                 dad2->updateNeighbor(node2, dad1, len2 / 2);
                 first = false;
             } else {
                 nei->node = node2;
-                nei->length = len2 / 2;
+                nei->length = len2 * 0.5;
                 node2->updateNeighbor(dad2, dad1, len2 / 2);
             }
             nei->clearPartialLh();
@@ -4552,30 +4552,17 @@ double PhyloTree::swapSPR_old(double cur_score, int cur_depth,
         node2_nei->clearPartialLh();
         dad2_nei->clearPartialLh();
         node1_nei->clearPartialLh();
-        vector<PhyloNeighbor*>::iterator it2;
-        for (it2 = spr_path.begin(); it2 != spr_path.end(); ++it2) {
+        for (auto it2 = spr_path.begin(); it2 != spr_path.end(); ++it2) {
             (*it2)->clearPartialLh();
         }
+        
         clearAllPartialLH();
-        // optimize relevant branches
-        double score;
-
         /* testing different branch optimization */
         optimizeOneBranch(node1, dad1);
-        score = computeLikelihoodFromBuffer();
-        //score = optimizeOneBranch(dad2, dad1);
-        //score = optimizeOneBranch(node2, dad1);
-        /*
-         PhyloNode *cur_node = dad2;
-         for (int i = spr_path.size()-1; i >= 0; i--) {
-         score = optimizeOneBranch(cur_node, spr_path[i]->getNode());
-         cur_node = spr_path[i]->getNode();
-         }
-         */
-        //score = optimizeAllBranches(dad1);
-        // if score improves, return
-        if (score > cur_score)
+        double score = computeLikelihoodFromBuffer();
+        if (score > cur_score) {
             return score;
+        }
         // else, swap back
         node2->updateNeighbor(dad1, dad2, len2);
         dad2->updateNeighbor(dad1, node2, len2);
@@ -4645,7 +4632,7 @@ double PhyloTree::optimizeSPR(double cur_score, PhyloNode *node, PhyloNode *dad)
         sibling2_nei->clearPartialLh();
 
         // now try to move the subtree to somewhere else
-        vector<PhyloNeighbor*> spr_path;
+        PhyloNeighborVec spr_path;
 
         FOR_EACH_PHYLO_NEIGHBOR(sibling1, sibling2, it, nei)
         {
@@ -4702,7 +4689,7 @@ double PhyloTree::optimizeSPR(double cur_score, PhyloNode *node, PhyloNode *dad)
  move the subtree (dad1-node1) to the branch (dad2-node2)
  */
 double PhyloTree::swapSPR(double cur_score, int cur_depth, PhyloNode *node1, PhyloNode *dad1, PhyloNode *orig_node1,
-        PhyloNode *orig_node2, PhyloNode *node2, PhyloNode *dad2, vector<PhyloNeighbor*> &spr_path) {
+        PhyloNode *orig_node2, PhyloNode *node2, PhyloNode *dad2, PhyloNeighborVec &spr_path) {
 
     PhyloNeighbor* node1_nei  = node1->findNeighbor(dad1);
     PhyloNeighbor* dad1_nei   = dad1->findNeighbor(node1);
@@ -4756,9 +4743,8 @@ double PhyloTree::swapSPR(double cur_score, int cur_depth, PhyloNode *node1, Phy
         dad1_nei->length = 0.9;
 
         //Save the partial likelihood from the removal point to the insertion point
-        vector<PhyloNeighbor*>::iterator it2;
         vector<double*> saved_partial_lhs(spr_path.size());
-        for (it2 = spr_path.begin(); it2 != spr_path.end(); it2++) {
+        for (auto it2 = spr_path.begin(); it2 != spr_path.end(); it2++) {
             saved_partial_lhs.push_back((*it2)->partial_lh);
             (*it2)->partial_lh = newPartialLh();
             (*it2)->clearPartialLh();
@@ -4803,7 +4789,7 @@ double PhyloTree::swapSPR(double cur_score, int cur_depth, PhyloNode *node1, Phy
         node1_nei->length = node1_dad1_len;
         dad1_nei->length = node1_dad1_len;
         int index = 0;
-        for (it2 = spr_path.begin(); it2 != spr_path.end(); it2++) {
+        for (auto it2 = spr_path.begin(); it2 != spr_path.end(); it2++) {
             aligned_free((*it2)->partial_lh); //James B. 07-Oct-2020 (not delete[]).
             (*it2)->partial_lh = saved_partial_lhs.at(index);
             (*it2)->unclearPartialLh();
@@ -4917,8 +4903,7 @@ double PhyloTree::assessSPRMove(double cur_score, const SPRMove &spr) {
 double PhyloTree::optimizeSPR() {
     fixNegativeBranch();
     double cur_score = computeLikelihood();
-    //spr_radius = leafNum / 5;
-    spr_radius = 10;
+    spr_radius = params->sprDist;
     for (int i = 0; i < 100; i++) {
         cout << "i = " << i << endl;
         spr_moves.clear();

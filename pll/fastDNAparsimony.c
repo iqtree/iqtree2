@@ -1427,7 +1427,6 @@ static int rearrangeParsimony(pllInstance *tr, partitionList *pr, nodeptr p, int
 static void restoreTreeRearrangeParsimony(pllInstance *tr, partitionList *pr)
 {    
   removeNodeParsimony(tr->removeNode);  
-  //removeNodeParsimony(tr->removeNode, tr);  
   restoreTreeParsimony(tr, pr, tr->removeNode, tr->insertNode);
 }
 
@@ -1880,8 +1879,8 @@ void pllMakeParsimonyTreeFast(pllInstance *tr, partitionList *pr, int sprDist)
       nodeptr q;
       
       tr->bestParsimony = INT_MAX;
-      nextsp = ++(tr->ntips);             
-      p = tr->nodep[perm[nextsp]];                 
+      nextsp = ++(tr->ntips);
+      p = tr->nodep[perm[nextsp]];
       q = tr->nodep[(tr->nextnode)++];
       p->back = q;
       q->back = p;
@@ -1889,7 +1888,7 @@ void pllMakeParsimonyTreeFast(pllInstance *tr, partitionList *pr, int sprDist)
       if(tr->grouped)
         {
           int 
-            number = p->back->number;            
+            number = p->back->number;
 
           tr->constraintVector[number] = -9;
         }
@@ -1938,24 +1937,32 @@ void pllMakeParsimonyTreeFast(pllInstance *tr, partitionList *pr, int sprDist)
 int pllOptimizeWithParsimonySPR(pllInstance* tr, partitionList* pr, 
                                  int maxSprIterations, int sprDist) {
     allocateParsimonyDataStructures(tr, pr);
-    unsigned int randomMP = tr->bestParsimony;
+    unsigned int totalNodes = tr->mxtips + tr->mxtips - 2;
+    newviewParsimony(tr, pr, tr->nodep[totalNodes-1]);
+    nodeRectifierPars(tr);
+
+    int          iterationsToGo = maxSprIterations;
+    unsigned int randomMP       = tr->bestParsimony;
     unsigned int startMP;
-    int iteration = 0;
-    do
+    do //Always do at least one iteration
     {
         startMP = randomMP;
+        //printf("start iteration=%d, mp=%d, sprdist=%d\n",
+        //       maxSprIterations-iterationsToGo+1,
+        //       startMP, sprDist);
         nodeRectifierPars(tr);
-        for (int i = 1; i <= tr->mxtips + tr->mxtips - 2; i++)
+        for (int i = 1; i <= totalNodes ; ++i)
         {
-            rearrangeParsimony(tr, pr, tr->nodep[i], 1, sprDist, PLL_FALSE);
-            if (tr->bestParsimony < randomMP)
-            {
+            nodeptr p = tr->nodep[i];
+            rearrangeParsimony(tr, pr, p, 1, sprDist, PLL_FALSE);
+            if (tr->bestParsimony < randomMP) {
+                //printf("better %d %d\n", i, tr->bestParsimony);
                 restoreTreeRearrangeParsimony(tr, pr);
                 randomMP = tr->bestParsimony;
             }
         }
-        ++iteration;
-    } while (iteration < maxSprIterations && randomMP < startMP);
+        --iterationsToGo;
+    } while (0<iterationsToGo && randomMP < startMP);
     pllFreeParsimonyDataStructures(tr, pr);
-    return iteration;
+    return maxSprIterations - iterationsToGo;
 }

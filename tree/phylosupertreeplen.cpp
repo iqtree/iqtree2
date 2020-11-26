@@ -731,7 +731,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	 * Variables to be used for saving/restoring purposes on SubTrees
 	 *------------------------------------------------------------------------------------*/
 
-	vector<PhyloNeighbor*> sub_saved_nei1,sub_saved_nei2,sub_saved_nei;
+	PhyloNeighborVec sub_saved_nei1,sub_saved_nei2,sub_saved_nei;
 	vector<NeighborVec::iterator> sub_saved_it;
 
 	// Saving linked neighbor of node1->findNei(node2)
@@ -914,8 +914,8 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	 * node1_nei -> node1_link_nei[part]
 	 * node2_nei -> node2_link_nei[part]
 	 * -------------------------------------------------------------------*/
-	vector<PhyloNode*> node1_link,node2_link;
-	vector<PhyloNeighbor*> node1_link_nei,node2_link_nei;
+	PhyloNodeVector  node1_link,node2_link;
+	PhyloNeighborVec node1_link_nei,node2_link_nei;
 	vector<NeighborVec::iterator> node1_link_it, node2_link_it;
 
 	// Nodes which correspond to node1 and node2 on partitions

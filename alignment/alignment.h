@@ -416,9 +416,18 @@ public:
             @return sequence name
      */
     const string &getSeqName(int i) const;
+    
+    /**
+     * Change the name of a sequence
+            @param i sequence index
+            @param name_to_use name to set it to (it is assumed that
+     *            it does not duplicate the name of another sequence; it
+     *            is up to the caller to ensure that it does not).
+     */
+    void  setSeqName(int i, string name_to_use);
 
     /**
-     *  Get a list of all sequence names
+     *  Get a vector containing all the sequence names
      *  @return vector containing the sequence names
      */
     const vector<string>& getSeqNames() const;

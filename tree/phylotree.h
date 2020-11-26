@@ -2096,14 +2096,14 @@ public:
      */
     double swapSPR_old(double cur_score, int cur_depth, PhyloNode *node1, PhyloNode *dad1,
             PhyloNode *orig_node1, PhyloNode *orig_node2,
-            PhyloNode *node2, PhyloNode *dad2, vector<PhyloNeighbor*> &spr_path);
+            PhyloNode *node2, PhyloNode *dad2, PhyloNeighborVec &spr_path);
 
     /**
             move the subtree (dad1-node1) to the branch (dad2-node2)
      */
     double swapSPR(double cur_score, int cur_depth, PhyloNode *node1, PhyloNode *dad1,
             PhyloNode *orig_node1, PhyloNode *orig_node2,
-            PhyloNode *node2, PhyloNode *dad2, vector<PhyloNeighbor*> &spr_path);
+            PhyloNode *node2, PhyloNode *dad2, PhyloNeighborVec &spr_path);
 
     double assessSPRMove(double cur_score, const SPRMove &spr);
 

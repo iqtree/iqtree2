@@ -403,7 +403,7 @@ public:
             @param dad dad of the node, used to direct the search
             @param taxa (OUT) vector of taxa
      */
-    void getTaxa(NodeVector &taxa, Node *node = nullptr, Node *dad = nullptr);
+    void getTaxa(NodeVector &taxa, Node *node = nullptr, Node *dad = nullptr) const;
 
     /**
      	get all descending taxa which are in non-cherry position
@@ -420,7 +420,7 @@ public:
 		@param dad dad of the node, used to direct the search
 		@param taxa (OUT) vector of taxa
 	*/
-	void getTaxa(Split &taxa, Node *node = nullptr, Node *dad = nullptr);
+	void getTaxa(Split &taxa, Node *node = nullptr, Node *dad = nullptr) const;
 
     /**
             get the descending taxa below the node
