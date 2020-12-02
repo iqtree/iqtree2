@@ -46,12 +46,26 @@ class PlacementCostCalculator;
 class TaxonToPlace;
 class TaxaToPlace;
 
+struct CostPair {
+public:
+    bool   hasForwardCost;
+    double forwardCost;
+    bool   hasBackwardCost;
+    double backwardCost;
+    CostPair(): hasForwardCost(false),  forwardCost(0)
+              , hasBackwardCost(false), backwardCost(0) {}
+};
+
 class TargetBranch : public std::pair<PhyloNode*, PhyloNode*> {
     //A place where a node could be inserted, with likelihood and
     //partial parsimony determined, looking into the tree from the
     //insertion point.
     BlockAllocator* blocker;
     UINT*           partial_pars;
+    double          connection_cost;     //The cost of adding a node in the middle of the branch
+    double          branch_cost;         //The branch cost (typically, the parsimony score) of
+                                         //the first<-->second branch).
+    double          net_connection_cost; //connection_cost - branch_cost
     double*         partial_lh;
     UBYTE*          scale_num;
     mutable double  branch_lh_scale_factor;
@@ -69,7 +83,7 @@ public:
                  bool likelihood_wanted);
     void computeState(PhyloTree& phylo_tree,
                       size_t target_branch_index,
-                      LikelihoodBlockPairs &blocks) const;
+                      LikelihoodBlockPairs &blocks);
     void dumpNeighbor(VerboseMode level, const char* prefix,
                       PhyloTree& phylo_tree, PhyloNeighbor* nei) const;
     void forgetState()            const;
@@ -81,7 +95,6 @@ public:
     double  getLhScaleFactor()    const;
     void    setLhScaleFactor(double v);
 
-    
     void costPlacementOfTaxa(PhyloTree& tree,
                              TargetBranchRange& targets,
                              size_t targetNumber,
@@ -94,6 +107,30 @@ public:
     
     void takeOwnershipOfReplacementVector(ReplacementBranchList* branches);
     ReplacementBranchList* getReplacements();
+    
+    //The following functions are used for parsimony rearrangement
+    
+    double getBranchCost() const;
+    
+    /** Calculate the benefit (in terms of reduced state changes required
+     according to maximum parsimony), if this branch is disconnected
+     @param phylo_tree
+     @param other_branch
+     @return  If this branch is AB, and the other is EF, returns
+            cost(AC)+cost(BC)+cost(CD)+cost(CE)+cost(CF) - cost(AB) - cost(EF)
+     
+     */
+    double   getFullDisconnectionBenefit    (const PhyloTree& phylo_tree) const;
+    CostPair getPartialDisconnectionBenefit (const PhyloTree& phylo_tree) const;
+    
+    double   getFullConnectionCost    (const PhyloTree& phylo_tree,
+                                       const TargetBranch& other_branch) const;
+    double   getForwardConnectionCost (const PhyloTree& phylo_tree,
+                                       const TargetBranch& other_branch) const;
+    double   getBackwardConnectionCost(const PhyloTree& phylo_tree,
+                                       const TargetBranch& other_branch) const;
+
+    bool   isExternalBranch() const;
 };
 
 class TargetBranchRef;
@@ -112,10 +149,5 @@ public:
                               PhyloNode* node1, PhyloNode* node2,
                               bool likelihood_wanted);
 };
-
-
-
-
-
 
 #endif /* targetbranch_h */
