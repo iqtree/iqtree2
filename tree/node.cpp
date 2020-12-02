@@ -61,8 +61,12 @@ Node::Node(int aid, const char *aname) {
     is_floating_interior = false;
 }
 
-bool Node::isLeaf() {
+bool Node::isLeaf() const {
     return neighbors.size() <= 1 && ! is_floating_interior;
+}
+
+bool Node::isInterior() const {
+    return neighbors.size() > 1 || is_floating_interior;
 }
 
 bool Node::isInCherry() {

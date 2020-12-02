@@ -328,7 +328,12 @@ public:
     /**
         @return true of this is a leaf
      */
-    bool isLeaf();
+    bool isLeaf() const;
+
+    /**
+        @return true of this is an interior node
+     */
+    bool isInterior() const;
 
     /**
      *  @return TRUE if this node is a leaf in a cherry
