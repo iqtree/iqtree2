@@ -162,6 +162,15 @@ PhyloNeighbor* PhyloNode::findNeighbor(Node* node)
     return (PhyloNeighbor*) Node::findNeighbor(node);
 }
 
+bool PhyloNode::hasNeighbor(PhyloNode* node) {
+    FOR_EACH_ADJACENT_PHYLO_NODE(this, nullptr, it, child) {
+        if (child==node) {
+            return true;
+        }
+    }
+    return false;
+}
+
 PhyloNeighbor* PhyloNode::firstNeighbor() {
     if (neighbors.empty()) {
         return nullptr;
@@ -173,4 +182,24 @@ PhyloNeighbor* PhyloNode::getNeighborByIndex(size_t index) {
     ASSERT(index < neighbors.size());
     return (PhyloNeighbor*)neighbors[index];
 }
+
+PhyloBranch::PhyloBranch() : super(nullptr, nullptr) {}
+
+PhyloBranch::PhyloBranch(const Branch& copyMe)
+    : super((PhyloNode*)(copyMe.first), (PhyloNode*)(copyMe.second)) {}
+
+PhyloBranch::PhyloBranch(PhyloNode* left, PhyloNode* right)
+    : super(left, right) {}
+
+int PhyloBranch::getBranchID() const {
+    FOR_EACH_PHYLO_NEIGHBOR(first, nullptr, it, nei) {
+        if (nei->getNode() == second) {
+            return nei->id;
+        }
+    }
+    ASSERT(false);
+    return -1;
+}
+
+
 

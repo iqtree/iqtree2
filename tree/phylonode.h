@@ -224,6 +224,11 @@ public:
         }
     }
     
+    UINT* get_partial_pars() {
+        return partial_pars;
+    }
+
+    
     void clearComputedFlags() {
         partial_lh_computed = 0;
     }
@@ -356,6 +361,8 @@ public:
     int computeSize(PhyloNode *dad);
 
     PhyloNeighbor* findNeighbor(Node* node);
+
+    bool hasNeighbor(PhyloNode* node);
     
     PhyloNeighbor* firstNeighbor();
 
@@ -450,7 +457,14 @@ public:
 typedef SubclassPointerVector<PhyloNeighbor, NeighborVec> PhyloNeighborVec;
 typedef SubclassPointerVector<PhyloNode, NodeVector> PhyloNodeVector;
 
-typedef pair<PhyloNode*, PhyloNode*> PhyloBranch;
+struct PhyloBranch: public pair<PhyloNode*, PhyloNode*> {
+    typedef pair<PhyloNode*, PhyloNode*> super;
+    PhyloBranch();
+    PhyloBranch(PhyloNode* left, PhyloNode* right);
+    PhyloBranch(const Branch &copyMe );
+    int getBranchID() const;
+};
+
 typedef CastingVector<PhyloBranch, BranchVector> PhyloBranchVector;
 
 #endif
