@@ -748,10 +748,15 @@ public:
      */
     double modelfinder_eps;
 
+    size_t parsimony_nni_iterations;
+    size_t parsimony_spr_iterations;
+    size_t parsimony_tbr_iterations;
+
 	/**
 	 *  New search heuristics (DEFAULT: ON)
 	 */
 	bool snni;
+    
 
 	/**
 	 *  Specify how the branch lengths are optimzed after each NNI operation

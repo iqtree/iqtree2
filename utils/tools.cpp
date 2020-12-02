@@ -905,6 +905,9 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.k_representative = 4;
     params.loglh_epsilon = 0.001;
     params.numSmoothTree = 1;
+    params.parsimony_nni_iterations = 0;
+    params.parsimony_spr_iterations = 0;
+    params.parsimony_tbr_iterations = 0;
     params.nni5 = true;
     params.nni5_num_eval = 1;
     params.brlen_num_traversal = 1;
@@ -2341,6 +2344,16 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.max_spr_iterations = atoi(nextArg.c_str());
                 continue;
             }
+            if (arg=="-parsimony-spr") {
+                std::string nextArg       = next_argument(argc, argv, "<max_parsimony_spr_iterations>", cnt);
+                params.parsimony_spr_iterations = atoi(nextArg.c_str());
+                continue;
+            }
+            if (arg=="-parsimony-tbr") {
+                std::string nextArg       = next_argument(argc, argv, "<max_parsimony_tbr_iterations>", cnt);
+                params.parsimony_tbr_iterations = atoi(nextArg.c_str());
+                continue;
+            }
 			if (strcmp(argv[cnt], "-krep") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -3247,6 +3260,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.nni_sort = true;
 				continue;
 			}
+            if (arg=="-parsimony-nni") {
+                std::string nextArg       = next_argument(argc, argv, "<max_parsimony_nni_iterations>", cnt);
+                params.parsimony_nni_iterations = atoi(nextArg.c_str());
+                continue;
+            }
 			if (strcmp(argv[cnt], "-plog") == 0) {
 				params.gene_pvalue_loga = true;
 				continue;
