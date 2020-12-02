@@ -55,7 +55,7 @@ public:
                 //Todo: should come via tree.newNeighbor(), but that doesn't
                 //      exist.
             allocateParsimonyFor(topNei);
-            calculator.computePartialParsimony(topNei, DUMMY_NODE_1);
+            calculator.schedulePartialParsimony(topNei, DUMMY_NODE_1);
             topOfCluster.emplace_back(topNei);
         }
         calculator.calculate(0, "Calculating leaf parsimony vectors");
