@@ -731,12 +731,17 @@ public:
 
     /**
             compute the tree parsimony score
-            @return parsimony score of the tree
+     @param  taskDescription - how to describe what is happening
+     @param  bidirectional - if true, calculate parsimony in both directions
+     @return parsimony score of the tree
      */
-    int computeParsimony(const char* taskDescription = "");
+    int computeParsimony(const char* taskDescription = "", bool bidirectional=false);
 
     typedef void (PhyloTree::*ComputePartialParsimonyType)(PhyloNeighbor *, PhyloNode *);
     ComputePartialParsimonyType computePartialParsimonyPointer;
+    
+    typedef int (PhyloTree::*GetSubtreeParsimonyType)(PhyloNeighbor *, PhyloNode *) const;
+    GetSubtreeParsimonyType getSubTreeParsimonyPointer;
     
     typedef double (PhyloTree::*ComputePartialParsimonyOutOfTreeType)(const UINT* left_partial_pars,
                                                      const UINT* right_partial_pars,
@@ -752,10 +757,12 @@ public:
     virtual void computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *dad);
 //    void computePartialParsimonyNaive(PhyloNeighbor *dad_branch, PhyloNode *dad);
     void computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode *dad);
-    
+    int  computeMarginalParsimony(PhyloNeighbor* dad_branch, PhyloNode* dad);
+
     double computePartialParsimonyOutOfTreeFast(const UINT* left_partial_pars,
                                                 const UINT* right_partial_pars,
                                                 UINT* dad_partial_pars) const;
+    int getSubTreeParsimonyFast(PhyloNeighbor* dad_branch, PhyloNode* dad) const;
 
     template<class VectorClass>
     void computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
@@ -768,7 +775,10 @@ public:
     double computePartialParsimonyOutOfTreeSIMD(const UINT* left_partial_pars,
                                               const UINT* right_partial_pars,
                                               UINT* dad_partial_pars) const;
-
+    
+    template <class VectorClass>
+    int getSubTreeParsimonyFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad) const;
+    
     template<class VectorClass>
     void computePartialParsimonySankoffSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
@@ -777,6 +787,9 @@ public:
                                                      const UINT* right_partial_pars,
                                                      UINT*       dad_partial_pars) const;
 
+    template<class VectorClass>
+    int getSubTreeParsimonySankoffSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad) const;
+    
     void computeReversePartialParsimony(PhyloNode *node, PhyloNode *dad);
 
     typedef int (PhyloTree::*ComputeParsimonyBranchType)(PhyloNeighbor *, PhyloNode *, int *);
@@ -798,7 +811,8 @@ public:
     virtual int computeParsimonyOutOfTree(const UINT* dad_partial_pars,
                                           const UINT* node_partial_pars,
                                           int* branch_subst = nullptr) const;
-
+    
+    virtual int getSubTreeParsimony(PhyloNeighbor *dad_branch, PhyloNode *dad) const;
     
 //    int computeParsimonyBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
     int computeParsimonyBranchFast(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
@@ -865,6 +879,8 @@ public:
     double computePartialParsimonyOutOfTreeSankoff(const UINT* left_partial_pars,
                                                    const UINT* right_partial_pars,
                                                    UINT* dad_partial_pars) const;
+    
+    int getSubTreeParsimonySankoff(PhyloNeighbor* dad_branch, PhyloNode* dad) const;
     
     /**
      compute tree parsimony score based on a particular branch
@@ -1635,6 +1651,8 @@ public:
      * @return parsimony score
      */
     virtual int joinParsimonyTree(const char *out_prefix, Alignment *alignment);
+    
+    void doParsimonyNNI();
 
     
     /****************************************************************************
@@ -1828,6 +1846,8 @@ public:
     virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves = nullptr);
 
     virtual void clearInwardViewsFromNeighbors(PhyloNode* node1, PhyloNode* node2);
+    
+    virtual void clearInwardParsimonyFromNeighbors(PhyloNode* node1, PhyloNode* node2);
 
     /**
             Do an NNI

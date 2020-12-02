@@ -1765,17 +1765,17 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info,
         auto unknown      = aln->STATE_UNKNOWN;
         
         for (size_t ptn = ptn_lower; ptn < ptn_upper; ptn+=VectorClass::size()) {
-            VectorClass* partial_lh       = (VectorClass*)(dad_branch->partial_lh + ptn*block);
+            VectorClass*       partial_lh       = (VectorClass*)(dad_branch->partial_lh + ptn*block);
             const VectorClass* partial_lh_right = (VectorClass*)(right->partial_lh + ptn*block);
             VectorClass lh_max = 0.0;
 
             if (SITE_MODEL) {
-                VectorClass *expleft  = (VectorClass*)vec_left;
-                VectorClass *expright = expleft+nstates;
-                VectorClass *vleft    = (VectorClass*)&partial_lh_left[ptn*nstates];
-                const VectorClass *eval_ptr = (VectorClass*) &eval[ptn*nstates];
-                const VectorClass *evec_ptr = (VectorClass*) &evec[ptn*states_square];
-                const VectorClass *inv_evec_ptr = (VectorClass*) &inv_evec[ptn*states_square];
+                VectorClass*       expleft      = (VectorClass*)vec_left;
+                VectorClass*       expright     = expleft+nstates;
+                VectorClass*       vleft        = (VectorClass*) &partial_lh_left[ptn*nstates];
+                const VectorClass* eval_ptr     = (VectorClass*) &eval[ptn*nstates];
+                const VectorClass* evec_ptr     = (VectorClass*) &evec[ptn*states_square];
+                const VectorClass* inv_evec_ptr = (VectorClass*) &inv_evec[ptn*states_square];
                 for (size_t c = 0; c < ncat; c++) {
                     for (size_t i = 0; i < nstates; i++) {
                         expleft[i]  = exp(eval_ptr[i]*len_left[c]) * vleft[i];
@@ -1940,9 +1940,9 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info,
             double*      eright_ptr   = eright;
             VectorClass* expleft      = partial_lh_tmp + nstates;
             VectorClass* expright     = expleft + nstates;
-            VectorClass* eval_ptr     = nullptr;
-            VectorClass* evec_ptr     = nullptr;
-            VectorClass* inv_evec_ptr = nullptr;
+            const VectorClass* eval_ptr     = nullptr;
+            const VectorClass* evec_ptr     = nullptr;
+            const VectorClass* inv_evec_ptr = nullptr;
             if (SITE_MODEL) {
                 eval_ptr = (VectorClass*)&eval[ptn * nstates];
                 evec_ptr = (VectorClass*)&evec[ptn * states_square];
@@ -1965,7 +1965,7 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info,
                     }
                     
                     for (size_t x = 0; x < nstates; x++) {
-                        VectorClass *this_evec = evec_ptr + x*nstates;
+                        const VectorClass *this_evec = evec_ptr + x*nstates;
 #ifdef KERNEL_FIX_STATES
                         dotProductDualVec<VectorClass, VectorClass, nstates, FMA>(this_evec, expleft, this_evec, expright, partial_lh_tmp[x]);
 #else
@@ -2502,10 +2502,10 @@ void PhyloTree::computeLikelihoodDervGenericSIMD
                         for (size_t i = 0; i < nstates; i++) {
                             VectorClass cof  = eval_ptr[i] * cat_rate[c];
                             VectorClass val  = exp(cof*dad_length)*theta[i];
-                            VectorClass val1 = cof*val;
+                            VectorClass val2 = cof*val;
                             lh_cat  += val;
-                            df_cat  += val1;
-                            ddf_cat  = mul_add(cof, val1, ddf_cat);
+                            df_cat  += val2;
+                            ddf_cat  = mul_add(cof, val2, ddf_cat);
                         }
                         lh_ptn   = mul_add(cat_prop[c], lh_cat, lh_ptn);
                         df_ptn   = mul_add(cat_prop[c], df_cat, df_ptn);

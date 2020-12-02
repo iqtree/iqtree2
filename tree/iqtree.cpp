@@ -4350,16 +4350,21 @@ PhyloNodeVector IQTree::getTaxaNodesInIDOrder() const {
 }
 
 void IQTree::optimizeConstructedTree() {
+    if (0<params->parsimony_nni_iterations) {
+        doParsimonyNNI();
+    }
     //Note: this should not be called if start_tree is STT_PLL_PARSIMONY
-    if (params->max_spr_iterations == 0) {
+    //(as parsimony spr iterations will already have been done).
+    if (params->parsimony_spr_iterations == 0) {
         return;
     }
-    initializeAllPartialPars();
-    auto initial_parsimony = computeParsimony("Computing initial parsimony");
-    LOG_LINE(VB_MED, "Before doing (up to) " 
-        << params->max_spr_iterations << " rounds of SPR,"
-        << " parsimony score was " << initial_parsimony);
-
+    if (0==params->parsimony_nni_iterations) {
+        initializeAllPartialPars();
+        auto initial_parsimony = computeParsimony("Computing initial parsimony");
+        LOG_LINE(VB_MIN, "Before doing (up to) "
+            << params->parsimony_spr_iterations << " rounds of parsimony SPR,"
+            << " parsimony score was " << initial_parsimony);
+    }
     //For now, use PLL to do Parsimony SPR
     double init_start = getRealTime();
     StrVector oldNames;
@@ -4386,7 +4391,7 @@ void IQTree::optimizeConstructedTree() {
     pllReadNewick(constructedTreeString);
     double opt_start = getRealTime();
     int iterations = pllOptimizeWithParsimonySPR(pllInst, pllPartitions, 
-        params->max_spr_iterations,  params->sprDist);
+        params->parsimony_spr_iterations,  params->sprDist);
     double read_start = getRealTime();
     pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions,
         pllInst->start->back, PLL_FALSE, PLL_TRUE, PLL_FALSE,
@@ -4409,7 +4414,7 @@ void IQTree::optimizeConstructedTree() {
     double pars_start = getRealTime();
     initializeAllPartialPars();
     auto optimized_parsimony = computeParsimony("Computing post optimization parsimony");
-    LOG_LINE(VB_MED, "After " << iterations << " rounds of SPR,"
+    LOG_LINE(VB_MIN, "After " << iterations << " rounds of Parsimony SPR,"
         << " parsimony score was " << optimized_parsimony);
     double pll_overhead = (opt_start - init_start) + (pars_start - read_start);
     double spr_time     = (read_start - opt_start);

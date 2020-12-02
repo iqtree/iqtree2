@@ -30,6 +30,7 @@ void PhyloTree::setParsimonyKernelAVX() {
         computeParsimonyOutOfTreePointer        = &PhyloTree::computeParsimonyOutOfTreeSankoffSIMD<Vec8ui>;
         computePartialParsimonyPointer          = &PhyloTree::computePartialParsimonySankoffSIMD<Vec8ui>;
         computePartialParsimonyOutOfTreePointer = &PhyloTree::computePartialParsimonyOutOfTreeSankoffSIMD<Vec8ui>;
+        getSubTreeParsimonyPointer              = &PhyloTree::getSubTreeParsimonySankoffSIMD<Vec8ui>;
         return;
     }
     // Fitch kernel
@@ -37,6 +38,7 @@ void PhyloTree::setParsimonyKernelAVX() {
     computeParsimonyOutOfTreePointer        = &PhyloTree::computeParsimonyOutOfTreeSIMD<Vec8ui>;
     computePartialParsimonyPointer          = &PhyloTree::computePartialParsimonyFastSIMD<Vec8ui>;
     computePartialParsimonyOutOfTreePointer = &PhyloTree::computePartialParsimonyOutOfTreeSIMD<Vec8ui>;
+    getSubTreeParsimonyPointer              = &PhyloTree::getSubTreeParsimonyFastSIMD<Vec8ui>;
 }
 
 void PhyloTree::setDotProductAVX() {

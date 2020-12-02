@@ -30,14 +30,15 @@ void PhyloTree::setParsimonyKernelSSE() {
         computeParsimonyOutOfTreePointer        = &PhyloTree::computeParsimonyOutOfTreeSankoffSIMD<Vec4ui>;
         computePartialParsimonyPointer          = &PhyloTree::computePartialParsimonySankoffSIMD<Vec4ui>;
         computePartialParsimonyOutOfTreePointer = &PhyloTree::computePartialParsimonyOutOfTreeSankoffSIMD<Vec4ui>;
-
+        getSubTreeParsimonyPointer              = &PhyloTree::getSubTreeParsimonySankoffSIMD<Vec4ui>;
         return;
     }
     // Fitch kernel
 	computeParsimonyBranchPointer           = &PhyloTree::computeParsimonyBranchFastSIMD<Vec4ui>;
-    computeParsimonyOutOfTreePointer        = &PhyloTree::computeParsimonyOutOfTreeSIMD<Vec8ui>;
+    computeParsimonyOutOfTreePointer        = &PhyloTree::computeParsimonyOutOfTreeSIMD<Vec4ui>;
     computePartialParsimonyPointer          = &PhyloTree::computePartialParsimonyFastSIMD<Vec4ui>;
-    computePartialParsimonyOutOfTreePointer = &PhyloTree::computePartialParsimonyOutOfTreeSIMD<Vec8ui>;
+    computePartialParsimonyOutOfTreePointer = &PhyloTree::computePartialParsimonyOutOfTreeSIMD<Vec4ui>;
+    getSubTreeParsimonyPointer              = &PhyloTree::getSubTreeParsimonyFastSIMD<Vec4ui>;
 }
 
 void PhyloTree::setDotProductSSE() {

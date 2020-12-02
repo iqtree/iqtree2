@@ -61,6 +61,7 @@ void PhyloTree::setParsimonyKernel(LikelihoodKernel lk) {
             computeParsimonyOutOfTreePointer        = &PhyloTree::computeParsimonyOutOfTreeSankoff;
             computePartialParsimonyPointer          = &PhyloTree::computePartialParsimonySankoff;
             computePartialParsimonyOutOfTreePointer = &PhyloTree::computePartialParsimonyOutOfTreeSankoff;
+            getSubTreeParsimonyPointer              = &PhyloTree::getSubTreeParsimonySankoff;
             return;
         }
         if (lk >= LK_AVX) {
@@ -80,6 +81,7 @@ void PhyloTree::setParsimonyKernel(LikelihoodKernel lk) {
         computeParsimonyOutOfTreePointer        = &PhyloTree::computeParsimonyOutOfTreeFast;
         computePartialParsimonyPointer          = &PhyloTree::computePartialParsimonyFast;
         computePartialParsimonyOutOfTreePointer = &PhyloTree::computePartialParsimonyOutOfTreeFast;
+        getSubTreeParsimonyPointer              = &PhyloTree::getSubTreeParsimonyFast;
     	return;
     }
     if (lk >= LK_AVX) {

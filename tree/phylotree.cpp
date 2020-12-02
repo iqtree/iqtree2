@@ -1255,6 +1255,20 @@ void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *da
     (this->*computePartialParsimonyPointer)(dad_branch, dad);
 }
 
+int PhyloTree::getSubTreeParsimony(PhyloNeighbor* dad_branch, PhyloNode* dad) const {
+    return (this->*getSubTreeParsimonyPointer)(dad_branch, dad);
+}
+
+int PhyloTree::computeMarginalParsimony(PhyloNeighbor* dad_branch, PhyloNode* dad) {
+    PhyloNode* node = dad_branch->getNode();
+    computePartialParsimony(dad_branch, dad);
+    int cost = this->getSubTreeParsimony(dad_branch, dad);
+    FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, nei) {
+        cost -= this->getSubTreeParsimony(nei, node);
+    }
+    return cost;
+}
+
 double PhyloTree::computePartialParsimonyOutOfTree(const UINT* left_partial_pars,
                                       const UINT* right_partial_pars,
                                                  UINT* dad_partial_pars) const {
@@ -1275,7 +1289,8 @@ void PhyloTree::computeReversePartialParsimony(PhyloNode *node, PhyloNode *dad) 
     }
 }
 
-int PhyloTree::computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
+int PhyloTree::computeParsimonyBranch(PhyloNeighbor* dad_branch,
+                                      PhyloNode* dad, int* branch_subst) {
     return (this->*computeParsimonyBranchPointer)(dad_branch, dad, branch_subst);
 }
 
@@ -1286,13 +1301,15 @@ int PhyloTree::computeParsimonyOutOfTree(const UINT* dad_partial_pars,
            (dad_partial_pars, node_partial_pars, branch_subst);
 }
 
-
-int PhyloTree::computeParsimony(const char* taskDescription) {
+int PhyloTree::computeParsimony(const char* taskDescription, bool bidirectional) {
     PhyloNode* r = getRoot();
     if (taskDescription==nullptr || taskDescription[0]=='\0') {
         return computeParsimonyBranch(r->firstNeighbor(), r);
     }
     ParallelParsimonyCalculator calculator(*this);
+    if (bidirectional) {
+        return calculator.computeAllParsimony(r->firstNeighbor(), r);
+    }
     return calculator.computeParsimonyBranch
            ( r->firstNeighbor(), r, taskDescription );
 }
@@ -4320,7 +4337,6 @@ void PhyloTree::changeNNIBrans(const NNIMove &nnimove) {
         }
     }
 }
-
 
 void PhyloTree::clearInwardViewsFromNeighbors(PhyloNode* node1, PhyloNode* node2) {
     if (params->nni5) {
