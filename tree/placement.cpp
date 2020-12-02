@@ -350,11 +350,13 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
     optoTime.stop();
     
     if (VB_MIN <= verbose_mode) {
+        hideProgress();
         std::cout.precision(4);
         refreshTime.report();
         searchTime.report();
         insertTime.report();
         optoTime.report();
+        showProgress();
     }
 }
 
