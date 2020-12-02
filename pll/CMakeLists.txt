@@ -16,27 +16,28 @@ add_library(pll
   evaluateGenericSpecial.c
   evaluatePartialGenericSpecial.c
   fastDNAparsimony.c
-  hardware.c
-  hash.c
-  lexer.c
+  hardware.c hardware.h
+  hash.c hash.h
+  lexer.c lexer.h
   makenewzGenericSpecial.c
   models.c
-  newick.c
+  newick.c newick.h
   newviewGenericSpecial.c
-  genericParallelization.c
+  genericParallelization.c genericParallelization.h
   optimizeModel.c
-  parsePartition.c
-  queue.c
+  parsePartition.c parsePartition.h
+  queue.c queue.h
   randomTree.c
   recom.c
   restartHashTable.c
   searchAlgo.c
   ssort.c
-  stack.c
+  stack.c stack.h
   topologies.c
   trash.c
   treeIO.c
-  utils.c)
+  utils.c
+  pll.h pllInternal.h pthread.h errcodes.h globalVariables.h systypes.h mem_alloc.h)
 else()
 add_library(pll 
   alignment.c

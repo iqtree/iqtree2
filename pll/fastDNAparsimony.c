@@ -1937,9 +1937,11 @@ void pllMakeParsimonyTreeFast(pllInstance *tr, partitionList *pr, int sprDist)
 int pllOptimizeWithParsimonySPR(pllInstance* tr, partitionList* pr, 
                                  int maxSprIterations, int sprDist) {
     allocateParsimonyDataStructures(tr, pr);
+
     unsigned int totalNodes = tr->mxtips + tr->mxtips - 2;
-    newviewParsimony(tr, pr, tr->nodep[totalNodes-1]);
     nodeRectifierPars(tr);
+    tr->bestParsimony = UINT_MAX;
+    tr->bestParsimony = evaluateParsimony(tr, pr, tr->start, PLL_TRUE);
 
     int          iterationsToGo = maxSprIterations;
     unsigned int randomMP       = tr->bestParsimony;
@@ -1960,6 +1962,9 @@ int pllOptimizeWithParsimonySPR(pllInstance* tr, partitionList* pr,
                 restoreTreeRearrangeParsimony(tr, pr);
                 randomMP = tr->bestParsimony;
             }
+            //else {
+            //    printf("worse %d %d\n", i, tr->bestParsimony);
+            //}
         }
         --iterationsToGo;
     } while (0<iterationsToGo && randomMP < startMP);
