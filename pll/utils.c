@@ -1954,7 +1954,7 @@ static void pllTreeInitDefaults (pllInstance * tr, int tips)
 
   tr->nodeBaseAddress  = p0;
 
-  tr->nameList         = (char **)   rax_malloc ((tips + 1) * sizeof (char *));
+  tr->nameList         = (char **)   rax_calloc ((tips + 1), sizeof (char *));
   tr->nodep            = (nodeptr *) rax_malloc ((2 * tips) * sizeof (nodeptr));
 
   tr->autoProteinSelectionType = PLL_AUTO_ML;
@@ -2174,7 +2174,7 @@ linkTaxa (pllInstance * pInst, pllNewickTree * nTree, int taxaExist)
         else
          {
            child = pInst->nodep[leaf];
-           pInst->nameList[leaf] = strdup (nodeInfo->name);
+           rax_malloc_string_copy(nodeInfo->name, pInst->nameList + leaf);
            pllHashAdd (pInst->nameHash, pllHashString(pInst->nameList[leaf], pInst->nameHash->size), pInst->nameList[leaf], (void *) (pInst->nodep[leaf]));
            ++ leaf;
          }
@@ -2371,12 +2371,11 @@ nodeptr pllGetOrientedNodePointer (pllInstance * pInst, nodeptr p)
 //          double z = exp((-1 * atof(item->branch))/tr->fracchange);
 //          if(z < PLL_ZMIN) z = PLL_ZMIN;
 //          if(z > PLL_ZMAX) z = PLL_ZMAX;
-//          for (k = 0; k < PLL_NUM_BRANCHES; ++ k)
+//          for (k = 0; k < PLL_NUM_BRANCHES; ++ k) {
 //            v->z[k] = tr->nodep[j]->z[k] = z;
-//            
-//          //t->nameList[j] = strdup (item->name);
-//          tr->nameList[j] = (char *) rax_malloc ((strlen (item->name) + 1) * sizeof (char));
-//          strcpy (tr->nameList[j], item->name);
+//          }
+//          
+//          rax_malloc_string_copy(item->name, t->nameList + j);
 //          
 //          pllHashAdd (tr->nameHash, tr->nameList[j], (void *) (tr->nodep[j]));
 //          ++ j;
@@ -2543,8 +2542,10 @@ pllDestroyInstance (pllInstance * tr)
 {
   int i;
 
-  for (i = 1; i <= tr->mxtips; ++ i)
-    rax_free (tr->nameList[i]);
+  for (i = 1; i <= tr->mxtips; ++i) {
+    rax_free(tr->nameList[i]);
+    tr->nameList[i] = NULL;
+  }
   
   pllHashDestroy (&(tr->nameHash), NULL);
   if (tr->yVector)

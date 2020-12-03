@@ -322,6 +322,7 @@ parse_phylip (pllAlignmentData * alignmentData, int input)
      {
        if (token.tokenType == PLL_TOKEN_EOF)
         {
+          fprintf(stderr, "Too few sequences (%d) found\n", i);
           rc = parsedOk (sequenceLength, alignmentData->sequenceCount, alignmentData->sequenceLength);
           rax_free (sequenceLength);
           return (rc);
@@ -329,16 +330,17 @@ parse_phylip (pllAlignmentData * alignmentData, int input)
 
        if (token.tokenType == PLL_TOKEN_UNKNOWN)
         {
+           fprintf(stderr, "Unknown token found reading sequence %d from line %d\n", j, i);
           rax_free (sequenceLength);
           return (0);
         }
 
        CONSUME(PLL_TOKEN_WHITESPACE | PLL_TOKEN_NEWLINE)
 
-
        if (token.tokenType != PLL_TOKEN_STRING && token.tokenType != PLL_TOKEN_NUMBER && token.tokenType != PLL_TOKEN_FLOAT)
         {
-          rax_free (sequenceLength);
+           fprintf(stderr, "Unrecognized token type %d, reading sequence %d from line %d\n", token.tokenType, j, i);
+           rax_free (sequenceLength);
           return (0);
         }
        alignmentData->sequenceLabels[i + 1] = my_strndup (token.lexeme, token.len);
@@ -350,13 +352,15 @@ parse_phylip (pllAlignmentData * alignmentData, int input)
      {
        if (token.tokenType == PLL_TOKEN_EOF)
         {
-          rc = parsedOk (sequenceLength, alignmentData->sequenceCount, alignmentData->sequenceLength);
+           fprintf(stderr, "Reached end of file reading sequence (%d) from line %d\n", j, i);
+           rc = parsedOk (sequenceLength, alignmentData->sequenceCount, alignmentData->sequenceLength);
           rax_free (sequenceLength);
           return (rc);
         }
 
        if (token.tokenType == PLL_TOKEN_UNKNOWN)
         {
+           fprintf(stderr, "Unknown token found reading sequence %d from line %d\n", j, i);
          rax_free (sequenceLength);
          return (0);
         }
@@ -365,6 +369,7 @@ parse_phylip (pllAlignmentData * alignmentData, int input)
 
        if (token.tokenType != PLL_TOKEN_STRING)
         {
+           fprintf(stderr, "Expected string, when reading sequence %d from line %d\n", j, i);
           rax_free (sequenceLength);
           return (0);
         }
@@ -498,6 +503,7 @@ pllParsePHYLIPString (const char *rawdata, long filesize)
   if (! parse_phylip (alignmentData, input))
    {
      errno = PLL_ERROR_PHYLIP_BODY_SYNTAX;
+     fprintf(stderr, "Error while parsing PHYLIP body\n");
      pllAlignmentDataDestroy (alignmentData);
      lex_table_restore();
 //     rax_free (rawdata);
