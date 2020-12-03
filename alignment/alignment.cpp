@@ -451,7 +451,9 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
                 isSequenceRemoved[seq2] = true;
             } else {
                 if (listIdentical) {
+                    progress.hide();
                     cout << "NOTE: " << getSeqName(seq2) << " is identical to " << getSeqName(seq1) << " but kept for subsequent analysis" << endl;
+                    progress.show();
                 }
             }
             isSequenceChecked[seq2] = true;
@@ -4147,9 +4149,11 @@ bool Alignment::updateFrom(const Alignment* other,
     #pragma omp parallel for
     #endif
     for (size_t i=0; i<update_count; ++i) {
-        size_t new_seq_id = source_seq_ids[i];
-        size_t old_seq_id = dest_seq_ids[i];
-        other->getOneSequence(stateStrings, new_seq_id, sequences[old_seq_id]);
+        size_t source_id = source_seq_ids[i];
+        size_t dest_id   = dest_seq_ids[i];
+        std::string replacement;
+        other->getOneSequence(stateStrings, source_id, replacement);
+        sequences[dest_id] = replacement;
         if (progress!=nullptr) {
             progress->incrementBy(1.0);
         }

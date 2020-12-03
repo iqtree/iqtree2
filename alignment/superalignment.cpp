@@ -1014,8 +1014,10 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, 
                 isSequenceRemoved[seq2] = true;
             } else {
                 if (listIdentical) {
+                    progress.hide();
                     cout << "NOTE: " << getSeqName(seq2) << " is identical to " << getSeqName(seq1)
                         << " but kept for subsequent analysis" << endl;
+                    progress.show();
                 }
             }
             isSequenceChecked[seq2] = true;
