@@ -47,7 +47,7 @@ public:
         ASSERT(next_partial_pars && next_partial_pars < tree->tip_partial_pars);
     }
     virtual void calculateLeafParsimonies() {
-        ParallelParsimonyCalculator calculator(*tree);
+        ParallelParsimonyCalculator calculator(*tree, false);
         for (size_t i=0; i<tree->aln->getNSeq(); ++i) {
             auto           leaf_name = tree->aln->getSeqName(i);
             PhyloNode*     leafNode  = tree->newNode(i, leaf_name.c_str());

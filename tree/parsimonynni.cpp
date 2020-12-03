@@ -109,11 +109,11 @@ void PhyloTree::doParsimonyNNI() {
     TimeKeeper sorting   ("sorting NNI moves");
     TimeKeeper applying  ("applying NNI moves");
     
-    initProgress(branch_count*max_iterations,
+    initProgress(branch_count*(max_iterations*2+1),
                  "Looking for parsimony nearest neighbor exchanges", "", "");
     for (size_t iteration = 1; iteration <= max_iterations; ++iteration ) {
         rescoring.start();
-        double parsimony_score = computeParsimony("Determining two-way parsimony", true);
+        double parsimony_score = computeParsimony("Determining two-way parsimony", true, true );
         rescoring.stop();
         LOG_LINE(VB_MIN, "Parsimony score before parsimony NNI"
                  << " iteration " << iteration
@@ -122,12 +122,10 @@ void PhyloTree::doParsimonyNNI() {
         evaluating.start();
         std::vector<double> branch_cost;
         branch_cost.resize(branch_count);
-        
         if ( 1 < iteration ) {
             branches.clear();
             getBranches(branches);
         }
-        
         #ifdef _OPENMP
         #pragma omp parallel for
         #endif
@@ -152,7 +150,7 @@ void PhyloTree::doParsimonyNNI() {
         std::vector<PossibleExchange> best_exchange;
         best_exchange.resize(branch_count);
         #ifdef _OPENMP
-        //#pragma omp parallel for
+        #pragma omp parallel for
         #endif
         for (int i=0; i<branch_count; ++i) {
             PhyloBranch tb(branches[i]);
@@ -173,16 +171,14 @@ void PhyloTree::doParsimonyNNI() {
                 GET_OTHER_ADJACENT_PHYLO_NODES(tb.second, tb.first,
                                                right1, right2);
                 
-                ParallelParsimonyCalculator ppc(*this);
+                ParallelParsimonyCalculator ppc(*this, false);
                 PossibleExchange& best = best_exchange[i];
-                
                 double cost1 = ppc.parsimonyLink4Cost(left1, right1,
                                                       tb.first, tb.second,
                                                       left2, right2,
                                                       buffer1[t], buffer2[t]);
                 LOG_LINE(VB_DEBUG, "for " << i << " cost1 " << cost1 << ","
                          << " oldcost " << branch_cost[i] );
-
                 best.consider(i, left1, tb, right2, cost1 - branch_cost[i]);
                 
                 double cost2 = ppc.parsimonyLink4Cost(left1, right2, tb.first,
@@ -216,7 +212,7 @@ void PhyloTree::doParsimonyNNI() {
                 expected_delta -= x.delta;
                 PhyloNode* left2  = x.getOtherLeftNode();
                 PhyloNode* right2 = x.getOtherRightNode();
-                ParallelParsimonyCalculator ppc(*this);
+                ParallelParsimonyCalculator ppc(*this, false);
                 double swap_cost;
                 swap_cost = ppc.parsimonyLink4Cost(x.right, left2, x.middle.first,
                                                    x.middle.second, x.left, right2,
@@ -263,7 +259,6 @@ void PhyloTree::doParsimonyNNI() {
                     x.middle.second->clearReversePartialParsimony(x.middle.first);
                 }
             }
-            trackProgress(1.0);
         }
         applying.stop();
         if (count_exchanged==0) {
@@ -274,10 +269,11 @@ void PhyloTree::doParsimonyNNI() {
                  << " and did " << count_exchanged << " interchanges,"
                  << " with expected delta " << expected_delta << ","
                  << " and actual delta " << actual_delta);
+        
     }
     doneProgress();
     rescoring.start();
-    double parsimony_score = computeParsimony("Recalculating one-way parsimony");
+    double parsimony_score = computeParsimony("Recalculating one-way parsimony", false, true);
     LOG_LINE(VB_MIN, "Parsimony score after parsimony NNI"
              << " was " << parsimony_score);
     rescoring.stop();

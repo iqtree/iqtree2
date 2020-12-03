@@ -111,7 +111,7 @@ void TargetBranch::computeState(PhyloTree& phylo_tree,
                                 LikelihoodBlockPairs &blocks) {
     PhyloNeighbor* neigh1 = first->findNeighbor(second);
     PhyloNeighbor* neigh2 = second->findNeighbor(first);
-    ParallelParsimonyCalculator c(phylo_tree);
+    ParallelParsimonyCalculator c(phylo_tree, false);
     c.schedulePartialParsimony(neigh1, first);
     c.schedulePartialParsimony(neigh2, second);
     c.calculate();

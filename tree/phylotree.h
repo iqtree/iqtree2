@@ -735,7 +735,8 @@ public:
      @param  bidirectional - if true, calculate parsimony in both directions
      @return parsimony score of the tree
      */
-    int computeParsimony(const char* taskDescription = "", bool bidirectional=false);
+    int computeParsimony(const char* taskDescription = "", bool bidirectional=false,
+                         bool report_progress=false);
 
     typedef void (PhyloTree::*ComputePartialParsimonyType)(PhyloNeighbor *, PhyloNode *);
     ComputePartialParsimonyType computePartialParsimonyPointer;

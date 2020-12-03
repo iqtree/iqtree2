@@ -21,8 +21,9 @@ private:
     
     const char* task_to_start;
     const char* task_in_progress;
+    bool        report_progress_to_tree;
 public:
-    ParallelParsimonyCalculator(PhyloTree& phylo_tree);
+    explicit ParallelParsimonyCalculator(PhyloTree& phylo_tree, bool report_back=false);
 
     /**
      Indicate a PhyloNeighbor whose partial parsimony is to be calculated

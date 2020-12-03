@@ -1525,7 +1525,9 @@ int PhyloTree::computeParsimonyOutOfTree(const UINT* dad_partial_pars,
            (dad_partial_pars, node_partial_pars, branch_subst);
 }
 
-int PhyloTree::computeParsimony(const char* taskDescription, bool bidirectional) {
+int PhyloTree::computeParsimony(const char* taskDescription,
+                                bool bidirectional,
+                                bool countProgress) {
     if (central_partial_pars == nullptr) {
         initializeAllPartialPars();
     }
@@ -1533,7 +1535,7 @@ int PhyloTree::computeParsimony(const char* taskDescription, bool bidirectional)
     if (taskDescription==nullptr || taskDescription[0]=='\0') {
         return computeParsimonyBranch(r->firstNeighbor(), r);
     }
-    ParallelParsimonyCalculator calculator(*this);
+    ParallelParsimonyCalculator calculator(*this, countProgress);
     if (bidirectional) {
         return calculator.computeAllParsimony(r->firstNeighbor(), r);
     }

@@ -11,8 +11,11 @@
 
 #include "parallelparsimonycalculator.h"
 
-ParallelParsimonyCalculator::ParallelParsimonyCalculator(PhyloTree& phylo_tree)
-    : tree(phylo_tree), task_to_start(nullptr), task_in_progress(nullptr) {}
+ParallelParsimonyCalculator::ParallelParsimonyCalculator(PhyloTree& phylo_tree,
+                                                         bool report_progress)
+    : tree(phylo_tree), task_to_start(nullptr)
+    , task_in_progress(nullptr), report_progress_to_tree(report_progress)
+    {}
 
 int ParallelParsimonyCalculator::schedulePartialParsimony
     ( PhyloNeighbor* dad_branch, PhyloNode* dad ) {
@@ -98,11 +101,12 @@ int  ParallelParsimonyCalculator::computeAllParsimony
 void ParallelParsimonyCalculator::computeReverseParsimony(PhyloNeighbor* dad_branch,
                                                           PhyloNode* dad) {
     std::vector <WorkItem> stuffToDo;
-    std::vector <WorkItem> stuffToDoNext;
-    stuffToDo.emplace_back(dad_branch, dad);    
+    stuffToDo.emplace_back(dad_branch, dad);
     while (!stuffToDo.empty()) {
+        std::vector <WorkItem> stuffToDoNext;
+        size_t r = 0;
         size_t w = 0;
-        for (size_t r=0; r<stuffToDo.size(); ++r) {
+        for (;r<stuffToDo.size(); ++r) {
             PhyloNeighbor* nei   = stuffToDo[r].first;
             PhyloNode*     node  = stuffToDo[r].second;
             PhyloNode*     child = nei->getNode();
@@ -126,6 +130,9 @@ void ParallelParsimonyCalculator::computeReverseParsimony(PhyloNeighbor* dad_bra
             PhyloNeighbor* dad_branch = item->first;
             PhyloNode*     dad        = item->second;
             tree.computePartialParsimony(dad_branch, dad);
+        }
+        if (report_progress_to_tree) {
+            tree.trackProgress(r);
         }
         std::swap(stuffToDo, stuffToDoNext);
     }
@@ -179,7 +186,7 @@ void ParallelParsimonyCalculator::calculate(int start_index,
         PhyloNode*     dad        = item->second;
         tree.computePartialParsimony(dad_branch, dad);
     }
-    if (task_in_progress != nullptr) {
+    if (task_in_progress != nullptr || report_progress_to_tree) {
         tree.trackProgress(stopItem-startItem);
     }
     workToDo.resize(start_index);
