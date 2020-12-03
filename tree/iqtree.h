@@ -884,11 +884,6 @@ protected:
     //int iqpnni_iterations;
 
     /**
-            bonus values of all branches, used for IQP algorithm
-     */
-    //double *bonus_values;
-
-    /**
             delete a set of leaves from tree (with the probability p_delete), assume tree is birfucating
             @param del_leaves (OUT) the list of deleted leaves
      */
@@ -939,7 +934,6 @@ protected:
 
     /**
             assess the important quartets around a virtual root of the tree.
-            This function will assign bonus points to branches by updating the variable 'bonus_values'
             @param cur_root the current virtual root
             @param del_leaf a leaf that was deleted (not in the existing sub-tree)
      */
@@ -950,7 +944,7 @@ protected:
             @param node the root of the sub-tree
             @param dad dad of 'node', used to direct the recursion
      */
-    void initializeBonus(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    void initializeBonus(PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
 
     /**
             raise the bonus points for all branches in the subtree rooted at a node

@@ -433,14 +433,11 @@ void IQTree::initSettings(Params &params) {
 }
 
 IQTree::~IQTree() {
-    //if (bonus_values)
-    //delete bonus_values;
-    //bonus_values = NULL;
-
-    for (vector<SplitGraph*>::reverse_iterator it2 = boot_splits.rbegin(); it2 != boot_splits.rend(); it2++)
+    for (auto it2 = boot_splits.rbegin(); it2 != boot_splits.rend(); it2++) {
         delete (*it2);
+        *it2 = nullptr;
+    }
     boot_splits.clear();
-    //if (boot_splits) delete boot_splits;
 
     if (!boot_samples.empty()) {
         aligned_free(boot_samples[0]); // free memory

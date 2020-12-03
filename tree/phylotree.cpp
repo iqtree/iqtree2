@@ -235,16 +235,18 @@ PhyloTree::~PhyloTree() {
     delete[] var_matrix;
     var_matrix = NULL;
 
-    if (pllPartitions)
+    if (pllPartitions!=nullptr) {
         myPartitionsDestroy(pllPartitions);
-    if (pllAlignment)
+        pllPartitions = nullptr;
+    }
+    if (pllAlignment!=nullptr) {
         pllAlignmentDataDestroy(pllAlignment);
-    if (pllInst)
+        pllAlignment = nullptr;
+    }
+    if (pllInst) {
         pllDestroyInstance(pllInst);
-
-    pllPartitions = NULL;
-    pllAlignment = NULL;
-    pllInst = NULL;
+        pllInst = nullptr;
+    }
     if (!isSummaryBorrowed) {
         delete summary;
     }
