@@ -346,7 +346,7 @@ public:
     
     void getAllSequences(const char* task_description, StrVector& seq_data) const;
     void getStateStrings(StrVector& stateStrings) const;
-    void getOneSequence(StrVector& stateStrings, size_t seq_id, string& str) const;
+    void getOneSequence(const StrVector& stateStrings, size_t seq_id, string& str) const;
 
 
     

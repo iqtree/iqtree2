@@ -2997,7 +2997,8 @@ void Alignment::getStateStrings(StrVector& stateStrings) const {
     }
 }
 
-void Alignment::getOneSequence(StrVector& stateStrings, size_t seq_id, string& str) const {
+void Alignment::getOneSequence(const StrVector& stateStrings,
+                               size_t seq_id, string& str) const {
     auto patterns     = site_pattern.data();
     auto patternCount = site_pattern.size();
     for (int i=0; i<patternCount; ++i) {
