@@ -1638,32 +1638,13 @@ void computeMLDist ( Params& params, IQTree& iqtree
                    , double begin_wallclock_time, double begin_cpu_time) {
     double longest_dist;
     cout << "Computing ML distances based on estimated model parameters..." << endl;
-    double *ml_dist = nullptr;
-    double *ml_var  = nullptr;
     iqtree.decideDistanceFilePath(params);
-    longest_dist = iqtree.computeDist(params, iqtree.aln, ml_dist, ml_var);
+    longest_dist = iqtree.computeDistanceMatrix(params, iqtree.aln);
     cout << "Computing ML distances took "
         << (getRealTime() - begin_wallclock_time) << " sec (of wall-clock time) "
         << (getCPUTime() - begin_cpu_time) << " sec (of CPU time)" << endl;
-    size_t n = iqtree.aln->getNSeq();
-    size_t nSquared = n*n;
-    if ( iqtree.dist_matrix == nullptr ) {
-        iqtree.dist_matrix = ml_dist;
-        ml_dist = nullptr;
-    } else {
-        memmove(iqtree.dist_matrix, ml_dist,
-                sizeof(double) * nSquared);
-        delete[] ml_dist;
-    }
-    if ( iqtree.var_matrix == nullptr ) {
-        iqtree.var_matrix = ml_var;
-        ml_var = nullptr;
-    } else {
-        memmove(iqtree.var_matrix, ml_var,
-                sizeof(double) * nSquared);
-        delete[] ml_var;
-    }
-    if (!params.dist_file)
+
+    if ( params.dist_file != nullptr )
     {
         iqtree.printDistanceFile();
     }
@@ -1687,7 +1668,7 @@ void computeInitialDist(Params &params, IQTree &iqtree) {
         cout << "Computing observed distances..." << endl;
     }
     if (params.compute_jc_dist || params.compute_obs_dist || params.partition_file) {
-        longest_dist = iqtree.computeDist(params, iqtree.aln, iqtree.dist_matrix, iqtree.var_matrix);
+        longest_dist = iqtree.computeDistanceMatrix(params, iqtree.aln);
         //if (!params.suppress_zero_distance_warnings) {
         //  checkZeroDist(iqtree.aln, iqtree.dist_matrix);
         //}

@@ -1963,42 +1963,41 @@ public:
 
     void decideDistanceFilePath(Params& params);
     
-    void printDistanceFile();
+    void printDistanceFile() const;
     
     /**
-            compute distance and variance matrix, assume dist_mat and var_mat are allocated by memory of size num_seqs * num_seqs.
-            @param dist_mat (OUT) distance matrix between all pairs of sequences in the alignment
-            @param var_mat (OUT) variance matrix for distance matrix
+            compute distance and variance matrices (dist_matrix and var_matrix)
             @return the longest distance
      */
-    double computeDist(double *dist_mat, double *var_mat);
+    double computeDistanceMatrix();
 
-    double computeDist_Experimental(double *dist_mat, double *var_mat);
+    double computeDistanceMatrix_Experimental();
     
     /**
             compute observed distance matrix, assume dist_mat is allocated by memory of size num_seqs * num_seqs.
             @param dist_mat (OUT) distance matrix between all pairs of sequences in the alignment
             @return the longest distance
      */
-    double computeObsDist(double *dist_mat);
+    double computeObservedDistanceMatrix();
 
     /**
-            compute distance matrix, allocating memory if necessary
+            compute distance matrix, allocating memory if necessary (via ensureDistanceMatrixAllocated)
             @param params program parameters
             @param alignment input alignment
             @param dist_mat (OUT) distance matrix between all pairs of sequences in the alignment
             @return the longest distance
      */
-    double computeDist(Params &params, Alignment *alignment, double* &dist_mat, double* &var_mat);
+    double computeDistanceMatrix(Params &params, Alignment *alignment);
+
+    void ensureDistanceMatrixAllocated(size_t minimum_rank, bool allocate_variance_matrix_too);
 
     /**
             compute observed distance matrix, allocating memory if necessary
             @param params program parameters
             @param alignment input alignment
-            @param dist_mat (OUT) distance matrix between all pairs of sequences in the alignment
             @return the longest distance
      */
-    double computeObsDist(Params &params, Alignment *alignment, double* &dist_mat);
+    double computeObservedDistanceMatrix(Params &params, Alignment *alignment);
 
     /**
             correct the distances to follow metric property of triangle inequalities.
@@ -2304,6 +2303,12 @@ public:
      * Variance matrix
      */
     double *var_matrix;
+
+    /*
+    * Rank (number of rows, also number of columns) of the allocated distance matrix
+    * (or zero if it is not allocated)
+    */
+    size_t dist_matrix_rank;
 
     /** distance matrix file */
     string dist_file;
@@ -2739,10 +2744,9 @@ protected:
         destructor*/
     bool isSummaryBorrowed;
     
-    string distanceFileWritten;
+    mutable string distanceFileWritten;
         /** Is set if/when a distance file has been written*/
 
-    
     /** stack of tasks in progress (top of stack is innermost task) */
     progress_display* progress;
     int  progressStackDepth;

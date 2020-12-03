@@ -48,8 +48,9 @@ void IQTree::init() {
 //    PhyloTree::init();
     k_represent = 0;
     k_delete = k_delete_min = k_delete_max = k_delete_stay = 0;
-    dist_matrix = NULL;
-    var_matrix = NULL;
+    dist_matrix = nullptr;
+    dist_matrix_rank = 0;
+    var_matrix  = nullptr;
 //    curScore = 0.0; // Current score of the tree
     cur_pars_score = -1;
 //    enable_parsimony = false;
@@ -652,7 +653,7 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
                 //(and this is just an easy workaround to avert a null de-reference).
                 //Easier than adding parameters to computeFastMLTree, and to
                 //IQTree::computeInitialTree, but not ideal. -James B. 17-Aug-2020
-                computeDist(*params, aln, dist_matrix, var_matrix);
+                computeDistanceMatrix(*params, aln);
             }
             computeBioNJ(*params);
             if (verbose_mode >= VB_MED) {
@@ -1257,7 +1258,7 @@ void IQTree::deleteLeaves(PhyloNodeVector &del_leaves) {
 }
 
 int IQTree::assessQuartet(Node *leaf0, Node *leaf1, Node *leaf2, Node *del_leaf) {
-    ASSERT(dist_matrix);
+    ASSERT(dist_matrix!=nullptr);
     size_t nseq = aln->getNSeq();
     //int id0 = leaf0->id, id1 = leaf1->id, id2 = leaf2->id;
     double dist0 = dist_matrix[leaf0->id * nseq + del_leaf->id] + dist_matrix[leaf1->id * nseq + leaf2->id];

@@ -2068,15 +2068,12 @@ void MTree::hideProgress() {
 void MTree::showProgress() {
 }
 
+#define HUNTING_HEAP_CORRUPTION (0)
 void MTree::logLine(const char* line) {
     hideProgress();
-    #if (0)
-        #ifdef CLANG_UNDER_VS
-            #ifdef DEBUG
-            _CrtCheckMemory();
-            #endif  
-        #endif
-    #endif
+    #if HUNTING_HEAP_CORRUPTION && defined(CLANG_UNDER_VS) && defined(DEBUG)
+        _CrtCheckMemory();
+    #endif //HUNTING_HEAP_CORRUPTION
     #ifdef _OPENMP
     #pragma omp critical (io)
     #endif

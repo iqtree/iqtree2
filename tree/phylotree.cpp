@@ -103,6 +103,7 @@ void PhyloTree::init() {
     ptn_invar = NULL;
     subTreeDistComputed = false;
     dist_matrix = nullptr;
+    dist_matrix_rank = 0;
     is_dist_file_read = false;
     var_matrix = NULL;
     params = NULL;
@@ -230,10 +231,11 @@ PhyloTree::~PhyloTree() {
     ptn_freq_computed = false;
     aligned_free(ptn_invar);
     delete[] dist_matrix;
-    dist_matrix = NULL;
+    dist_matrix = nullptr;
+    dist_matrix_rank = 0;
 
     delete[] var_matrix;
-    var_matrix = NULL;
+    var_matrix = nullptr;
 
     if (pllPartitions!=nullptr) {
         myPartitionsDestroy(pllPartitions);
@@ -3982,11 +3984,11 @@ template <class L, class F> double computeDistanceMatrix
 #define EX_TRACE(x) if (verbose_mode < VB_MED) {} \
                     else cout << (getRealTime()-baseTime) << "s " << x << endl
 
-double PhyloTree::computeDist_Experimental(double *dist_mat, double *var_mat) {
+double PhyloTree::computeDistanceMatrix_Experimental() {
     EX_START;
     //Experimental: Are there any other checks that are needed here?
     if (model_factory && site_rate) {
-        return computeDist(dist_mat, var_mat);
+        return computeDistanceMatrix();
     }
     bool uncorrected = params->compute_obs_dist;
         //Use uncorrected (observed) distances
@@ -4004,7 +4006,7 @@ double PhyloTree::computeDist_Experimental(double *dist_mat, double *var_mat) {
         #pragma omp parallel for
         for (int seq1=0; seq1<seqCount; ++seq1) {
             if (!workToDo) {
-                const double* distRow   = dist_mat + seq1 * seqCount;
+                const double* distRow   = dist_matrix + seq1 * seqCount;
                 double maxDistanceInRow = 0;
                 for (int seq2=0; seq2<seqCount; ++seq2) {
                     double distance = distRow[seq2];
@@ -4050,7 +4052,7 @@ double PhyloTree::computeDist_Experimental(double *dist_mat, double *var_mat) {
         << " Denominator " << denominator);
     if ( 256 < s.getStateCount()  ) {
         EX_TRACE("Falling back to stock distance calculation");
-        double longest = computeDist(dist_mat, var_mat);
+        double longest = computeDistanceMatrix();
         EX_TRACE("Done stock distance calculation");
         return longest; //computeDist(dist_mat, var_mat);
     }
@@ -4060,16 +4062,16 @@ double PhyloTree::computeDist_Experimental(double *dist_mat, double *var_mat) {
     s.constructSequenceMatrix(true);
     EX_TRACE("Determining distance matrix with unknown " << aln->STATE_UNKNOWN);
     const int* frequencies = s.getSiteFrequencies().data();
-    double longest = computeDistanceMatrix
+    double longest = ::computeDistanceMatrix
         ( params->ls_var_type, static_cast<char>(aln->STATE_UNKNOWN)
          , s.getSequenceMatrix(), s.getSequenceCount(), s.getSequenceLength()
          , denominator, frequencies, aln->num_states
-         , uncorrected, dist_mat, var_mat);
+         , uncorrected, dist_matrix, var_matrix);
     EX_TRACE("Longest distance was " << longest);
     return longest;
 }
 
-double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
+double PhyloTree::computeDistanceMatrix() {
     prepareToComputeDistances();
     size_t nseqs = aln->getNSeq();
     double longest_dist = 0.0;
@@ -4086,18 +4088,18 @@ double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
         int rowStartPos = seq1 * nseqs;
         for (size_t seq2=seq1+1; seq2 < nseqs; ++seq2) {
             size_t sym_pos = rowStartPos + seq2;
-            double d2l = var_mat[sym_pos]; // moved here for thread-safe (OpenMP)
-            dist_mat[sym_pos] = processor->recomputeDist(seq1, seq2, dist_mat[sym_pos], d2l);
+            double d2l = var_matrix[sym_pos]; // moved here for thread-safe (OpenMP)
+            dist_matrix[sym_pos] = processor->recomputeDist(seq1, seq2, dist_matrix[sym_pos], d2l);
             if (params->ls_var_type == OLS)
-                var_mat[sym_pos] = 1.0;
+                var_matrix[sym_pos] = 1.0;
             else if (params->ls_var_type == WLS_PAUPLIN)
-                var_mat[sym_pos] = 0.0;
+                var_matrix[sym_pos] = 0.0;
             else if (params->ls_var_type == WLS_FIRST_TAYLOR)
-                var_mat[sym_pos] = dist_mat[sym_pos];
+                var_matrix[sym_pos] = dist_matrix[sym_pos];
             else if (params->ls_var_type == WLS_FITCH_MARGOLIASH)
-                var_mat[sym_pos] = dist_mat[sym_pos] * dist_mat[sym_pos];
+                var_matrix[sym_pos] = dist_matrix[sym_pos] * dist_matrix[sym_pos];
             else if (params->ls_var_type == WLS_SECOND_TAYLOR)
-                var_mat[sym_pos] = -1.0 / d2l;
+                var_matrix[sym_pos] = -1.0 / d2l;
         }
         progress += (nseqs - seq1 - 1);
     }
@@ -4108,15 +4110,15 @@ double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
         size_t rowStopPos  = rowStartPos + seq1;
         size_t colPos = seq1;
         for (size_t rowPos = rowStartPos; rowPos<rowStopPos; ++rowPos, colPos+=nseqs) {
-            auto d = dist_mat[colPos];
-            dist_mat [ rowPos ] = d;
-            var_mat  [ rowPos ] = var_mat [ colPos ];
+            auto d = dist_matrix[colPos];
+            dist_matrix [ rowPos ] = d;
+            var_matrix  [ rowPos ] = var_matrix [ colPos ];
             if (d > longest_dist) {
                 longest_dist = d;
             }
         }
-        dist_mat [ rowStopPos] = 0.0;
-        var_mat  [ rowStopPos] = 0.0;
+        dist_matrix [ rowStopPos] = 0.0;
+        var_matrix  [ rowStopPos] = 0.0;
     }
     doneComputingDistances();
     progress.done();
@@ -4141,36 +4143,49 @@ void PhyloTree::decideDistanceFilePath(Params& params) {
         dist_file += ".mldist";
 }
 
-double PhyloTree::computeDist(Params &params, Alignment *alignment,
-                              double* &dist_mat, double* &var_mat) {
-    this->params = &params;
-    double longest_dist = 0.0;
-    aln = alignment;
-
-    if (!dist_mat) {
-        size_t n        = alignment->getNSeq();
-        size_t nSquared = n*n;
-        dist_mat        = new double[nSquared];
-        memset(dist_mat, 0, sizeof(double) * nSquared);
-        var_mat         = new double[nSquared];
+void PhyloTree::ensureDistanceMatrixAllocated(size_t minimum_rank, 
+                                              bool allocate_variance_matrix_too) {
+    if (this->dist_matrix_rank < minimum_rank) {
+        delete[] dist_matrix;
+        delete[] var_matrix;
+        dist_matrix = nullptr;
+        var_matrix = nullptr;
+    }
+    size_t nSquared = minimum_rank * minimum_rank;
+    if (this->dist_matrix == nullptr) {
+        dist_matrix_rank = minimum_rank;
+        dist_matrix = new double[nSquared];
+        memset(dist_matrix, 0, sizeof(double) * nSquared);
+        is_dist_file_read = false;
+    }
+    if (this->var_matrix == nullptr && allocate_variance_matrix_too) {
+        var_matrix = new double[nSquared];
         #ifdef _OPENMP
         #pragma omp parallel for
         #endif
         for (size_t i = 0; i < nSquared; i++) {
-            var_mat[i] = 1.0;
+            var_matrix[i] = 1.0;
         }
-        is_dist_file_read = false;
     }
+}
+
+double PhyloTree::computeDistanceMatrix(Params &params, Alignment *alignment) {
+    this->params = &params;
+    double longest_dist = 0.0;
+    aln = alignment;
+
+    size_t n = alignment->getNSeq();
+    ensureDistanceMatrixAllocated(n, true);
     if (params.dist_file && !is_dist_file_read) {
-        longest_dist = alignment->readDist(params.dist_file, params.incremental, dist_mat);
+        longest_dist = alignment->readDist(params.dist_file, params.incremental, dist_matrix);
         dist_file = params.dist_file;
         is_dist_file_read = true;
     }
     else {
         double begin_time = getRealTime();
         longest_dist = (params.experimental)
-            ? computeDist_Experimental(dist_mat, var_mat)
-            : computeDist(dist_mat, var_mat);
+            ? computeDistanceMatrix_Experimental()
+            : computeDistanceMatrix();
         if (verbose_mode >= VB_MED) {
             cout << "Distance calculation time: "
             << getRealTime() - begin_time << " seconds" << endl;
@@ -4179,13 +4194,14 @@ double PhyloTree::computeDist(Params &params, Alignment *alignment,
     return longest_dist;
 }
 
-void PhyloTree::printDistanceFile() {
+void PhyloTree::printDistanceFile() const {
     aln->printDist(params->dist_format, params->dist_compression_level, dist_file.c_str(), dist_matrix);
     distanceFileWritten = dist_file.c_str();
 }
 
-double PhyloTree::computeObsDist(double *dist_mat) {
+double PhyloTree::computeObservedDistanceMatrix() {
     size_t nseqs = aln->getNSeq();
+    ensureDistanceMatrixAllocated(nseqs, false);
     double longest_dist = 0.0;
     #ifdef _OPENMP
     #pragma omp parallel for schedule(dynamic)
@@ -4194,32 +4210,26 @@ double PhyloTree::computeObsDist(double *dist_mat) {
         size_t pos = seq1*nseqs;
         for (size_t seq2 = 0; seq2 < nseqs; ++seq2, ++pos) {
             if (seq1 == seq2)
-                dist_mat[pos] = 0.0;
+                dist_matrix[pos] = 0.0;
             else if (seq2 > seq1) {
-                dist_mat[pos] = aln->computeObsDist(seq1, seq2);
+                dist_matrix[pos] = aln->computeObsDist(seq1, seq2);
             } else
-                dist_mat[pos] = dist_mat[seq2 * nseqs + seq1];
-            if (dist_mat[pos] > longest_dist) {
-                longest_dist = dist_mat[pos];
+                dist_matrix[pos] = dist_matrix[seq2 * nseqs + seq1];
+            if (dist_matrix[pos] > longest_dist) {
+                longest_dist = dist_matrix[pos];
             }
         }
     }
     return longest_dist;
 }
 
-double PhyloTree::computeObsDist(Params &params, Alignment *alignment, double* &dist_mat) {
+double PhyloTree::computeObservedDistanceMatrix(Params &params, Alignment *alignment) {
     double longest_dist = 0.0;
     aln = alignment;
     dist_file = params.out_prefix;
     dist_file += ".obsdist";
 
-    if (!dist_mat) {
-        size_t n = alignment->getNSeq();
-        size_t nSquared = n * n;
-        dist_mat = new double[nSquared];
-        memset(dist_mat, 0, sizeof(double) * nSquared);
-    }
-    longest_dist = computeObsDist(dist_mat);
+    longest_dist = computeObservedDistanceMatrix();
     return longest_dist;
 }
 
