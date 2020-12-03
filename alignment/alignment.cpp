@@ -4376,7 +4376,7 @@ double Alignment::computeJCDist(int seq1, int seq2) {
     return computeJCDistanceFromObservedDistance(obs_dist);
 }
 
-template <class S> void Alignment::printDist(const std::string& format, S &out, double *dist_mat) {
+template <class S> void Alignment::printDist(const std::string& format, S &out, double *dist_mat) const {
     size_t nseqs = getNSeq();
     int max_len = getMaxSeqNameLength();
     if (max_len < 10) max_len = 10;
@@ -4404,7 +4404,7 @@ template <class S> void Alignment::printDist(const std::string& format, S &out, 
 }
 
 void Alignment::printDist ( const std::string& format, int compression_level
-                           , const char *file_name, double *dist_mat) {
+                           , const char *file_name, double *dist_mat) const {
     try {
         if (format.find("gz") == string::npos) {
             ofstream out;

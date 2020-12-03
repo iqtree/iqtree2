@@ -705,14 +705,14 @@ public:
             @param dist_mat distance matrix
      */
     void printDist(const std::string& format, int compression_level,
-                   const char *file_name, double *dist_mat);
+                   const char *file_name, double *dist_mat) const;
 
     /**
             write distance matrix into a stream in PHYLIP distance format
             @param out output stream
             @param dist_mat distance matrix
      */
-    template <class S> void printDist(const std::string&, S &out, double *dist_mat);
+    template <class S> void printDist(const std::string&, S &out, double *dist_mat) const;
 
     /**
             read distance matrix from a file in PHYLIP distance format
