@@ -917,6 +917,12 @@ public:
      */
     virtual void deleteAllPartialParsimony();
 
+    /**
+            call both deleteAllPartialLh and deleteAllPartialParsimony
+            (doesn't need to be virtual).
+     */
+    void deleteAllPartialLhAndParsimony();
+
     virtual void allocateCentralBlocks(size_t extra_parsimony_block_count,
                                        size_t extra_lh_block_count);
     

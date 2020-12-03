@@ -577,10 +577,6 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
 
         models->joinEigenMemory();
         models->decomposeRateMatrix();
-
-        // delete information of the old alignment
-//        tree->aln->ordered_pattern.clear();
-//        tree->deleteAllPartialLh();
     }
 
 //    if (model->isMixture())

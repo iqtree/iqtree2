@@ -1503,7 +1503,7 @@ void fixPartitions(PhyloSuperTree* super_tree) {
         return;
     super_aln->buildPattern();
     super_aln->orderPatternByNumChars(PAT_VARIANT);
-    super_tree->deleteAllPartialLh();
+    super_tree->deleteAllPartialLhAndParsimony();
 }
 
 string CandidateModel::evaluate(Params &params,
@@ -2764,14 +2764,12 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
         else
             dna_aln = NULL;
     }
-
-    if (dna_aln)
+    if (dna_aln) {
         delete dna_aln;
-    if (prot_aln)
+    }
+    if (prot_aln) {
         delete prot_aln;
-
-//	in_tree->deleteAllPartialLh();
-
+    }
     string best_tree;
     model_info.getBestTree(best_tree);
 

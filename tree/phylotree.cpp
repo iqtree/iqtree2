@@ -474,16 +474,16 @@ void PhyloTree::prepareForDeletes() {
     LOG_LINE ( VB_DEBUG, "Before delete, number of leaves " << this->leafNum
                     << ", of nodes "       << this->nodeNum
                     << ", of branches "    << this->branchNum);
-    deleteAllPartialLh();
-    initializeAllPartialLh();
+    deleteAllPartialLh(); //Todo: Only clear partial Lh
+    clearAllPartialParsimony(false);
     if (shouldPlacementUseSankoffParsimony()) {
         computeTipPartialParsimony();
     }
     int initial_parsimony = computeParsimony("Computing initial parsimony");
     LOG_LINE ( VB_MED, "Parsimony score before deletions was " << initial_parsimony );
-    fixNegativeBranch();
-    
     if (shouldPlacementUseLikelihood()) {
+        initializeAllPartialLh();
+        fixNegativeBranch();
         double likelihoodStart    = getRealTime();
         double likelihoodCPUStart = getCPUTime();
         double likelihood         = computeLikelihood();
@@ -503,12 +503,11 @@ void PhyloTree::doneDeletes(size_t countRemoved, bool are_placements_to_follow) 
                     << ", of nodes "       << this->nodeNum
                     << ", of branches "    << this->branchNum);
 
+    deleteAllPartialLhAndParsimony();
     if ( VB_MED <= verbose_mode ) {
-        clearAllPartialParsimony(false);
         int post_delete_parsimony = computeParsimony("Computing post-delete parsimony");
         LOG_LINE ( VB_MIN, "Parsimony score after deletions was " << post_delete_parsimony );
     }
-    deleteAllPartialLh();
     if (!are_placements_to_follow) {
         if (isUsingSankoffParsimony() && !params->sankoff_cost_file) {
             stopUsingSankoffParsimony();
@@ -1523,6 +1522,9 @@ int PhyloTree::computeParsimonyOutOfTree(const UINT* dad_partial_pars,
 }
 
 int PhyloTree::computeParsimony(const char* taskDescription, bool bidirectional) {
+    if (central_partial_pars == nullptr) {
+        initializeAllPartialPars();
+    }
     PhyloNode* r = getRoot();
     if (taskDescription==nullptr || taskDescription[0]=='\0') {
         return computeParsimonyBranch(r->firstNeighbor(), r);
@@ -1652,7 +1654,10 @@ void PhyloTree::deleteAllPartialLh() {
 
     clearAllPartialLH(true);
     clearAllScaleNum(true);
-    
+}
+
+void PhyloTree::deleteAllPartialLhAndParsimony() {
+    deleteAllPartialLh();
     deleteAllPartialParsimony();
 }
  
@@ -5977,10 +5982,14 @@ void PhyloTree::removeIdenticalSeqs(Params &params) {
 void PhyloTree::reinsertIdenticalSeqs(Alignment *orig_aln) {
     if (removed_seqs.empty()) return;
 
+    //delete all partial likelihood and partial parsimony 
+    //vectors, which will be automatically recreated later
+    //James B. 03-Dec-2020.  Better to do this *before* 
+    //inserting taxa, rather than *after*.
+    deleteAllPartialLhAndParsimony();
+    
     insertTaxa(removed_seqs, twin_seqs);
     setAlignment(orig_aln);
-    // delete all partial_lh, which will be automatically recreated later
-    deleteAllPartialLh();
 }
 
 void PhyloTree::computeSeqIdentityAlongTree(Split &sp, Node *node, Node *dad) {

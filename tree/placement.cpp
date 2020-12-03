@@ -220,18 +220,17 @@ void PhyloTree::reinsertTaxaViaStepwiseParsimony(const IntVector& taxaIdsToAdd) 
 typedef TaxonToPlace TaxonTypeInUse;
 //typedef LessFussyTaxon TaxonTypeInUse;
 
-
 void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
     //
     //Assumes: The tree is rooted.
     //
     PlacementRun pr(*this, taxaIdsToAdd);
-    deleteAllPartialLh();
-    deleteAllPartialParsimony();
+    deleteAllPartialLhAndParsimony();
     
     bool     trackLikelihood        = shouldPlacementUseLikelihood();
     size_t   additional_sequences   = taxaIdsToAdd.size();
 
+    //Todo: Change how the caller selects step-wise parsimony!
     if ( pr.taxa_per_batch == 1 && pr.heuristic->isGlobalSearch()  &&
          !pr.calculator->usesLikelihood() && !trackLikelihood ) {
         pr.setUpAllocator(additional_sequences*4, false, 0);
@@ -359,4 +358,3 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
         showProgress();
     }
 }
-

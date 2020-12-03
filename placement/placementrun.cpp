@@ -30,7 +30,7 @@ void PlacementRun::setUpAllocator(int extra_parsimony_blocks,
                                   int extra_lh_blocks) {
     int      index_parsimony        = 0;
     int      index_lh               = 0;
-    phylo_tree.deleteAllPartialLh(); //For now: implies a call to deleteAllPartialParsimony
+    phylo_tree.deleteAllPartialLhAndParsimony(); 
     if (trackLikelihood) {
         phylo_tree.ensurePartialLHIsAllocated(extra_parsimony_blocks, extra_lh_blocks);
         phylo_tree.initializeAllPartialLh(index_parsimony, index_lh);

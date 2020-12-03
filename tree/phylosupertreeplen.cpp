@@ -111,7 +111,6 @@ void PhyloSuperTreePlen::deleteAllPartialLh() {
 		// reset these pointers so that they are not deleted
 		(*it)->central_partial_lh = NULL;
 		(*it)->central_scale_num = NULL;
-//		(*it)->central_partial_pars = NULL;
         (*it)->tree_buffers.forget();
 		(*it)->ptn_freq = NULL;
 		(*it)->ptn_freq_computed = false;

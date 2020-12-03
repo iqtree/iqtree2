@@ -1717,6 +1717,7 @@ void initializeParams(Params &params, IQTree &iqtree)
         }
         if (!params.additional_alignment_files.empty()) {
             iqtree.mergeAlignments(params.additional_alignment_files);
+            iqtree.optimizeConstructedTree();
         }
     }
     ASSERT(iqtree.aln);
@@ -2198,7 +2199,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     
     // Make sure that no partial likelihood of IQ-TREE is initialized when PLL is used to save memory
     if (params.pll) {
-        iqtree->deleteAllPartialLh();
+        iqtree->deleteAllPartialLhAndParsimony();
     }    
     iqtree->initializePLLIfNecessary();
     

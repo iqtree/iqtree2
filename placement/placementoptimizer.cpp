@@ -39,22 +39,23 @@ void GlobalPlacementOptimizer::optimizeAfterPlacement(PhyloTree& tree) {
     tree.deleteAllPartialLh();
 
     if (tree.isUsingSankoffParsimony() && !tree.params->sankoff_cost_file) {
+        tree.deleteAllPartialParsimony();
         tree.stopUsingSankoffParsimony();
         tree.setParsimonyKernel(tree.params->SSE);
     }
+    tree.determineBlockSizes();
 
     TREE_LOG_LINE(tree, VB_MED, 
         "Number of leaves " << tree.leafNum
         << ", of nodes "    << tree.nodeNum
         << ", of branches " << tree.branchNum);
-    tree.determineBlockSizes();
-    tree.initializeAllPartialLh();
 
     //First, recompute parsimony
     int parsimony_score = tree.computeParsimony("Computing parsimony (after adding taxa)");
     TREE_LOG_LINE(tree, VB_MIN, "Parsimony score after adding taxa was " << parsimony_score);
 
     //Then, fix any negative branches
+    tree.initializeAllPartialLh();
     double negativeStart = getRealTime();
     tree.fixNegativeBranch();
     double negativeElapsed = getRealTime() - negativeStart;
@@ -66,7 +67,6 @@ void GlobalPlacementOptimizer::optimizeAfterPlacement(PhyloTree& tree) {
     double likelyElapsed = getRealTime() - likelyStart;
     TREE_LOG_LINE(tree, VB_MIN, "Likelihood score after adding taxa was " << likelihood
         << " (and took " << likelyElapsed << " wall-clock seconds to calculate)");
-
 }
 
 GlobalLikelihoodPlacementOptimizer::GlobalLikelihoodPlacementOptimizer()  = default;

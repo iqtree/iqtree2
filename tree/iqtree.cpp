@@ -2734,7 +2734,7 @@ void IQTree::refineBootTrees() {
     checkpoint->endStruct();
     
     // 2018-08-17: delete duplicated memory
-    deleteAllPartialLh();
+    deleteAllPartialLhAndParsimony();
 
     ModelsBlock *models_block = readModelsDefinition(*params);
     
@@ -4486,7 +4486,7 @@ int PhyloTree::testNumThreads() {
             LOG_LINE(VB_QUIET,trees.size() << " trees examined");
         }
 
-        deleteAllPartialLh();
+        deleteAllPartialLhAndParsimony();
 
         runTimes.push_back(runTime);
         double speedup = runTimes[0] / runTime;
