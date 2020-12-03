@@ -593,7 +593,7 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
         if (it==mapNameToNode.end()) {
             LOG_LINE( VB_MED, "Could not find sequence " << seq << " " << seq_name
                      << " in the tree.  It will be added.");
-            taxaIdsToAdd.emplace_back((int)seq);
+            taxaIdsToAdd.push_back((int)seq);
         } else {
             (*it).second->id = seq;
             mapNameToNode.erase(it);
@@ -608,7 +608,6 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
         //Todo: make sure we HAVE a root, since later steps will need one.
         throw "Cannot add new taxa to unrooted tree";
     }
-    
     bool will_delete = !mapNameToNode.empty();
     bool will_add    = !taxaIdsToAdd.empty();
     bool modified    = will_delete || will_add;
@@ -616,7 +615,6 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
     if (!modified) {
         return false;
     }
-    
     prepareForPlacement();
     
     if (will_delete) {
@@ -630,7 +628,7 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
         //from the tree.  Remove them.
         StrVector taxaToRemove;
         for (auto it=mapNameToNode.begin(); it!=mapNameToNode.end(); ++it) {
-            taxaToRemove.emplace_back(it->first);
+            taxaToRemove.push_back(it->first);
         }
         logTaxaToBeRemoved(mapNameToNode);
         mapNameToNode.clear();
@@ -650,8 +648,124 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
     return true;
 }
 
+namespace {
+    //Mapping names to ids
+    class NameToIDMap: public std::map<std::string, size_t> {
+    public:
+        explicit NameToIDMap(const vector<std::string>& src) {
+            size_t count = src.size();
+            for (size_t id = 0 ; id < count; ++id) {
+                operator[](src[id]) = id;
+            }
+        }
+    };
+
+    typedef std::set<std::string>          NameSet;
+    typedef std::pair<size_t, NameSet>     CountAndNames;
+    typedef std::pair<size_t, std::string> HashedSequence;
+
+    class UniqueSequenceMap: public std::map<HashedSequence,CountAndNames> {
+        public:
+        size_t trackHashAndSequence(size_t hash,
+                                    std::string sequence,
+                                    std::string name) {
+            HashedSequence hashed(hash, sequence);
+            auto it = find(hashed);
+            if (it==end()) {
+                NameSet name_set;
+                name_set.insert(name);
+                (*this)[hashed] = CountAndNames(1, name_set);
+                return 1;
+            } else {
+                it->second.second.insert(name); //record name
+                return ++it->second.first;   //bump up count
+            }
+        }
+        size_t untrackHashAndSequence(size_t      hash,
+                                      std::string sequence,
+                                      std::string name) {
+            HashedSequence hashed(hash, sequence);
+            auto it = find(hashed);
+            ASSERT( it!=end() );
+            if (it==end()) {
+                return 0;
+            }
+            it->second.second.erase(name);
+            size_t count =  --it->second.first ;
+            if ( count == 0) {
+                erase(it);
+            }
+            return count;
+        }
+        bool getHashAndSequenceFirstName(size_t hash,
+                                         std::string sequence,
+                                         std::string& put_name_here) {
+            HashedSequence hashed(hash, sequence);
+            auto it = find(hashed);
+            if (it==end() || it->second.second.empty()) {
+                return false;
+            }
+            put_name_here = *(it->second.second.begin());
+            return true;
+        }
+        void loadAlignment(const StrVector& state_strings,
+                           const std::vector<size_t>& old_hashes,
+                           Alignment* aln,
+                           const NameToIDMap& name_to_id,
+                           const StrVector&   removed_seqs,
+                           const StrVector&   twin_seqs) {
+            size_t old_count = aln->getNSeq();
+            //Count the number of copies,
+            //of each sequence in the old alignment
+            for (size_t old_seq_id = 0 ;
+                 old_seq_id < old_count; ++old_seq_id) {
+                std::string old_sequence;
+                aln->getOneSequence (state_strings, old_seq_id,
+                                     old_sequence);
+                trackHashAndSequence(old_hashes[old_seq_id],
+                                     old_sequence,
+                                     aln->getSeqName(old_seq_id));
+            }
+            //Also count the duplicate sequences,
+            //that have been dropped from the alignment.
+            size_t old_dupe_count = removed_seqs.size();
+            for ( size_t i=0; i < old_dupe_count; ++i ) {
+                auto f = name_to_id.find(twin_seqs[i]);
+                if ( f != name_to_id.end() ) {
+                    size_t      old_seq_id = f->second;
+                    std::string old_sequence;
+                    aln->getOneSequence (state_strings, old_seq_id,
+                                         old_sequence);
+                    trackHashAndSequence(old_hashes[old_seq_id],
+                                         old_sequence,
+                                         removed_seqs[i]);
+                }
+            }
+        }
+    };
+
+    //Mapping names of duplicate sequences to the names of
+    //the old sequences, they are copies of
+    class NameToNameMap: public std::map<std::string, std::string> {
+    public:
+        NameToNameMap(const StrVector& keys, const StrVector& values) {
+            ASSERT(keys.size() == values.size());
+            for (size_t i = 0; i < keys.size(); ++i) {
+                operator[](keys[i]) = values[i];
+            }
+        }
+        void getKeysAndValues(StrVector& keys, StrVector& values) const {
+            keys.clear();
+            values.clear();
+            for (auto it = begin(); it!=end(); ++it ) {
+                keys.push_back(it->first);
+                values.push_back(it->second);
+            }
+        }
+    };
+}
+
 void PhyloTree::mergeAlignment(const Alignment* new_aln) {
-    typedef std::map<std::string, size_t> NameMap;
 
     const std::string& path     = new_aln->aln_file;
     size_t         old_count    = aln->getNSeq();
@@ -661,57 +775,95 @@ void PhyloTree::mergeAlignment(const Alignment* new_aln) {
     StrVector      state_strings;
     
     aln->getStateStrings(state_strings);
-    initProgress(old_count+new_count*2+2*site_count, task_name.c_str(), "", "");
+    initProgress(old_count+new_count*2+2*site_count,
+                 task_name.c_str(), "", "");
     
-    vector<size_t> old_hashes     = aln->getPatternIndependentSequenceHashes(progress);
-    vector<size_t> new_hashes     = new_aln->getPatternIndependentSequenceHashes(progress);
-    auto           old_names      = aln->getSeqNames();
-    auto           new_names      = new_aln->getSeqNames();
-    size_t         count_the_same = 0;
-    NameMap        name_to_id;
-    for (size_t old_seq_id = 0 ; old_seq_id < old_count; ++old_seq_id) {
-        name_to_id[old_names[old_seq_id]] = old_seq_id;
+    vector<size_t>   old_hashes     = aln->getPatternIndependentSequenceHashes(progress);
+    vector<size_t>   new_hashes     = new_aln->getPatternIndependentSequenceHashes(progress);
+    const StrVector& old_names      = aln->getSeqNames();
+    auto             new_names      = new_aln->getSeqNames();
+    size_t           count_the_same = 0;
+    
+    NameToIDMap   name_to_id   (old_names);
+    NameToNameMap dupe_to_twin (removed_seqs, twin_seqs);
+
+    UniqueSequenceMap unique_seq_map;
+    if (params->ignore_identical_seqs) {
+        unique_seq_map.loadAlignment(state_strings, old_hashes, aln,
+                                     name_to_id, removed_seqs, twin_seqs);
     }
+    
     IntVector added_sequences;   //ids of sequences in alignment just added
     std::vector<std::pair<int,int>> updated_sequences;
         //first is the sequence number in the original alignment
         //second is the sequence number in the additional (second) alignment
-    StrVector          names_of_updated_sequences;
+    StrVector names_of_updated_sequences;
+    IntVector duplicated_sequence_ids;
+        //ids of sequences, in alignment getting
+        //merged, that were duplicated in the original sequence
     
     for (size_t new_seq_id = 0; new_seq_id < new_count; ++new_seq_id) {
+        progress->incrementBy(1.0);
         std::string new_name = new_names[new_seq_id];
+        std::string new_sequence;
+        new_aln->getOneSequence(state_strings, new_seq_id, new_sequence);
         auto find = name_to_id.find(new_name);
+        bool was_old_dupe = false;
         if (find==name_to_id.end()) {
-            size_t merged_seq_id = old_count + added_sequences.size();
-            name_to_id[new_name] = merged_seq_id;
-            added_sequences.push_back(new_seq_id);
-            //Todo: what if there is an identical sequence in the
-            //      existing alignment?
-            if (!params->suppress_list_of_sequences) {
-                LOG_LINE(VB_MIN, "Sequence " << new_name << " will be added from " << path);
+            auto find_dupe = dupe_to_twin.find(new_name);
+            if (find_dupe!=dupe_to_twin.end()) {
+                find = name_to_id.find(find_dupe->second);
+                was_old_dupe = true;
+            }
+        }
+        if (find==name_to_id.end()) {
+            bool suppress = false;
+            if (params->ignore_identical_seqs) {
+                size_t copies = unique_seq_map.trackHashAndSequence
+                                ( new_hashes[new_seq_id], new_sequence,
+                                  new_name );
+                if (2<copies) {
+                    duplicated_sequence_ids.push_back(new_seq_id);
+                    if (!params->suppress_list_of_sequences) {
+                        LOG_LINE(VB_MIN, "Sequence " << new_name
+                                 << " duplicated in " << path);
+                    }
+                    suppress = true;
+                }
+            }
+            if (!suppress) {
+                added_sequences.push_back(new_seq_id);
+                if (!params->suppress_list_of_sequences) {
+                    LOG_LINE(VB_MIN, "Sequence " << new_name
+                             << " will be added from " << path);
+                }
+                size_t merged_seq_id = old_count + added_sequences.size();
+                name_to_id[new_name] = merged_seq_id;
             }
         } else {
             size_t old_seq_id = find->second;
             if (old_count <= old_seq_id) {
-                LOG_LINE(VB_MIN, "Ignoring sequence with duplicated name " << new_name << " found in " << path);
+                //This sequence name duplicates that of a sequence found
+                //earlier in the same file.
+                LOG_LINE(VB_MIN, "Ignoring sequence with duplicated name "
+                         << new_name << " found in " << path);
                 continue;
             }
             //Name already seen in the alignment. Has the sequence changed?
-            bool same = old_hashes[old_seq_id] == new_hashes[new_seq_id];
+            bool same = (old_hashes[old_seq_id] == new_hashes[new_seq_id]);
+            std::string old_sequence;
+            aln->getOneSequence(state_strings, old_seq_id, old_sequence);
+            ASSERT(old_sequence.length() == new_sequence.length());
             if (same) {
                 //
                 //Todo: It would be better to ask Alignment to do this comparison
                 //      (wouldn't have to construct the two sequence strings, then).
                 //
-                std::string old_sequence;
-                std::string new_sequence;
-                aln->getOneSequence    (state_strings, old_seq_id, old_sequence);
-                new_aln->getOneSequence(state_strings, new_seq_id, new_sequence);
-                ASSERT(old_sequence.length() == new_sequence.length());
                 size_t len = old_sequence.length();
-                for (size_t i=0; i<len; ++i) {
+                for (size_t i = 0 ; i < len; ++i ) {
                     if (old_sequence[i]!=new_sequence[i]) {
-                        LOG_LINE(VB_DEBUG, "Sequence " << new_name << ": first changed "
+                        LOG_LINE(VB_DEBUG,
+                                 "Sequence " << new_name << ": first changed "
                                  << " site was " << i << " (of " << len << ")");
                         same = false;
                         break;
@@ -720,7 +872,8 @@ void PhyloTree::mergeAlignment(const Alignment* new_aln) {
                 if (same) {
                     ++count_the_same;
                     if (!params->suppress_list_of_sequences) {
-                        LOG_LINE(VB_MIN, "Sequence " << new_name << " unchanged in " << path);
+                        LOG_LINE(VB_MIN, "Sequence " << new_name
+                                 << " unchanged in " << path);
                     }
                     continue;
                 }
@@ -729,43 +882,109 @@ void PhyloTree::mergeAlignment(const Alignment* new_aln) {
                          << " had different hash (" << new_hashes[new_seq_id] << ")"
                          << " from before (" << old_hashes[old_seq_id] << ")");
             }
-            if (!params->suppress_list_of_sequences) {
-                LOG_LINE(VB_MIN, "Sequence " << new_name << " updated in " << path);
+            bool still_a_dupe = false;
+            if (params->ignore_identical_seqs) {
+                unique_seq_map.untrackHashAndSequence(old_hashes[old_seq_id],
+                                                      old_sequence, new_name);
+                if (2<unique_seq_map.trackHashAndSequence  (new_hashes[new_seq_id],
+                                                            new_sequence, new_name)) {
+                    still_a_dupe = true;
+                    std::string old_name;
+                    unique_seq_map.getHashAndSequenceFirstName(new_hashes[new_seq_id],
+                                                               new_sequence, old_name);
+                    dupe_to_twin[new_name] = old_name;
+                }
             }
-            updated_sequences.emplace_back(old_seq_id, new_seq_id);
-            names_of_updated_sequences.emplace_back(new_name);
+            if (!params->suppress_list_of_sequences) {
+                const char* preamble = was_old_dupe ? "Duplicated sequence " : "Sequence ";
+                LOG_LINE(VB_MIN, preamble << new_name << " updated in " << path);
+            }
+            if (was_old_dupe) {
+                //this was an update to a sequence that was a duplicate
+                if (!still_a_dupe) {
+                    dupe_to_twin.erase(new_name);
+                    added_sequences.push_back(new_seq_id);
+                    if (!params->suppress_list_of_sequences) {
+                        LOG_LINE(VB_MIN, "Sequence " << new_name
+                                 << " will be added from " << path);
+                    }
+                    size_t merged_seq_id = old_count + added_sequences.size();
+                    name_to_id[new_name] = merged_seq_id;
+                }
+            } else {
+                updated_sequences.emplace_back(old_seq_id, new_seq_id);
+                names_of_updated_sequences.push_back(new_name);
+                name_to_id[new_name] = old_count;
+            }
         }
-        progress->incrementBy(1.0);
     }
     size_t count_updated          = updated_sequences.size();
     size_t count_added            = added_sequences.size();
     size_t count_updated_or_added = count_updated + count_added;
+    size_t count_duplicated       = duplicated_sequence_ids.size();
     if (count_updated_or_added) {
-        LOG_LINE(VB_MIN, "Adding " << count_added << ", and Updating " << count_updated << " sequences");
+        LOG_LINE(VB_MIN, "Adding " << count_added << ","
+                << " and Updating " << count_updated << " sequences");
         if (0<count_the_same) {
-            LOG_LINE(VB_MIN, "Leaving " << count_the_same << " sequences unchanged" );
+            LOG_LINE(VB_MIN, "Leaving " << count_the_same
+                     << " sequences unchanged" );
         }
-        aln->updateFrom(new_aln, updated_sequences, added_sequences, progress);
+        if (0<count_duplicated) {
+            for (auto it=duplicated_sequence_ids.begin();
+                 it!=duplicated_sequence_ids.end(); ++it) {
+                size_t      new_seq_id = *it;
+                std::string new_name   = new_names[new_seq_id];
+                size_t      new_hash   = new_hashes[new_seq_id];
+                std::string new_sequence;
+                std::string old_name;
+                new_aln->getOneSequence(state_strings,
+                                        new_seq_id, new_sequence);
+                if (unique_seq_map.getHashAndSequenceFirstName(new_hash,
+                                                               new_sequence,
+                                                               old_name ) ) {
+                    dupe_to_twin[new_name] = old_name;
+                } else {
+                    //Nasty corner case.  This was a duplicate, of an existing sequence
+                    //but that sequence has been replaced by an updated version (!).
+                    //Ee-uw!  So we *can* add this sequence, after all!
+                    --count_duplicated;
+                    unique_seq_map.trackHashAndSequence(new_hash, new_sequence,
+                                                        new_name);
+                    added_sequences.push_back(new_seq_id);
+                }
+            }
+            LOG_LINE(VB_MIN, "Dropped " << count_duplicated
+                     << " duplicated sequences from consideration ");
+            LOG_LINE(VB_MIN, "These will be added back after analysis is complete.");
+        }
+        aln->updateFrom(new_aln, updated_sequences,
+                        added_sequences, progress);
         doneProgress();
-        LOG_LINE(VB_MED, "Incremental Method: " << params->incremental_method);
+        LOG_LINE(VB_MED, "Incremental Method: "
+                 << params->incremental_method);
         prepareForPlacement();
         IntVector ids_of_sequences_to_place;
         if (0<count_updated) {
             prepareForDeletes();
             removeTaxa(names_of_updated_sequences, false, "");
             doneDeletes(count_updated, true);
-            for (auto it=updated_sequences.begin(); it!=updated_sequences.end(); ++it) {
+            for (auto it=updated_sequences.begin();
+                 it!=updated_sequences.end(); ++it) {
                 ids_of_sequences_to_place.push_back(it->first);
-                //Each taxon that was removed (because it was updated) has to be put back.
+                //Each taxon that was removed (because it was updated)
+                //has to be put back.
             }
         }
-        for (auto it=added_sequences.begin(); it!=added_sequences.end(); ++it) {
-            //Each taxon that was added to the alignment needs to be added to the tree.
-            //added_sequences gives sequence id in the *new* alignment, not the *old*
+        for (auto it=added_sequences.begin();
+             it!=added_sequences.end(); ++it) {
+            //Each taxon that was added to the alignment,
+            //needs to be added to the tree.
+            //added_sequences gives sequence id
+            //in the *new* alignment, not the *old*
             ids_of_sequences_to_place.push_back(old_count);
             ++old_count;
         }
-
+        dupe_to_twin.getKeysAndValues(removed_seqs, twin_seqs);
         addNewTaxaToTree(ids_of_sequences_to_place);
     }
 }
@@ -785,7 +1004,8 @@ void PhyloTree::mergeAlignments(const StrVector& paths) {
         }
         try {
             if (new_aln->getNSite()==aln->getNSite()) {
-                new_aln->name             = path; //Just want the file name part of the path
+                new_aln->name             = path; //Just want the file
+                                                  //name part of the path
                 new_aln->model_name       = aln->model_name;
                 new_aln->aln_file         = path;
                 new_aln->position_spec    = "";
@@ -863,7 +1083,8 @@ void PhyloTree::readTreeString(const string &tree_string) {
         pllReadNewick(getTreeString());
     }
     resetCurScore();
-    if (Params::getInstance().fixStableSplits || Params::getInstance().adaptPertubation) {
+    if (Params::getInstance().fixStableSplits ||
+        Params::getInstance().adaptPertubation) {
         buildNodeSplit();
     }
     current_it = current_it_back = NULL;
@@ -3508,7 +3729,7 @@ void PhyloTree::prepareToComputeDistances() {
 #endif
     distanceProcessors.reserve(threads);
     for (threads -= distanceProcessors.size(); 0 < threads; --threads) {
-        distanceProcessors.emplace_back(new AlignmentPairwise(this));
+        distanceProcessors.push_back(new AlignmentPairwise(this));
     }
     if (summary!=nullptr && !isSummaryBorrowed) {
         delete summary;
