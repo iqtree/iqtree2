@@ -1785,7 +1785,11 @@ void PhyloTree::determineBlockSizes() {
     if (isUsingSankoffParsimony()) {
         //Sankoff parsimony tracks a number (a UINT) for each state for each site
         //(and should have 4 additional UINTs for a total score)
-        pars_block_size = get_safe_upper_limit_float(aln->size() * aln->num_states) + 4;
+        
+        size_t ptnCount = aln->ordered_pattern.size();
+        size_t nstates  = aln->num_states;
+        pars_block_size = get_safe_upper_limit_float(ptnCount * nstates) + 4;
+        //ZORK
     } else {
         //Otherwise, parsimony tracks a bit per site per state
         //(and should have 4 additional UINTs for a total score)
@@ -6512,13 +6516,13 @@ void PhyloTree::trackProgress(double amount) {
     }
 }
 
-void PhyloTree::hideProgress() {
+void PhyloTree::hideProgress() const {
     if (!isShowingProgressDisabled && progressStackDepth>0 && progress!=nullptr) {
         progress->hide();
     }
 }
 
-void PhyloTree::showProgress() {
+void PhyloTree::showProgress() const {
     if (!isShowingProgressDisabled && progressStackDepth>0 && progress!=nullptr) {
         progress->show();
     }

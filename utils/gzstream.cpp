@@ -257,13 +257,13 @@ gzstreambuf* pigzstream::rdbuf() {
     return gzstreambase::rdbuf();
 }
 
-void pigzstream::hideProgress() {
+void pigzstream::hideProgress() const {
     if (progress==nullptr) {
         return;
     }
     progress->hide();
 }
-void pigzstream::showProgress() {
+void pigzstream::showProgress() const {
     if (progress==nullptr) {
         return;
     }

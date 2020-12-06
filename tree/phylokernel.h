@@ -1913,14 +1913,6 @@ void PhyloTree::computePartialParsimonySankoffSIMD(PhyloNeighbor *dad_branch,
         return;
     }
     PhyloNode *node = dad_branch->getNode();
-    //assert(node->degree() <= 3);
-    /*
-     if(aln->num_states != cost_nstates){
-     cout << "Your cost matrix is not compatible with the alignment"
-     << " in terms of number of states. Please check!" << endl;
-     exit(1);
-     }
-     */
     size_t nstates = aln->num_states;
     assert(dad_branch->partial_pars);
     
@@ -1943,11 +1935,12 @@ void PhyloTree::computePartialParsimonySankoffSIMD(PhyloNeighbor *dad_branch,
             }
         }
     }
-    dad_branch->setParsimonyComputed(true);
     computeTipPartialParsimony();
+    dad_branch->setParsimonyComputed(true);
     memset(partial_pars, 0, sizeof(UINT)*pars_block_size);
-    int  ptnCount = aln->ordered_pattern.size();
-    UINT score    = 0;
+    size_t ptnCount     = aln->ordered_pattern.size();
+    size_t total_offset = ptnCount*nstates;
+    UINT   score        = 0;
     if (left==nullptr && right==nullptr && 0<=node->id && node->id<aln->getNSeq()) {
         //
         //James B. This calculates a partial parsimony vector oriented
@@ -1972,11 +1965,15 @@ void PhyloTree::computePartialParsimonySankoffSIMD(PhyloNeighbor *dad_branch,
                 for (int j = 0; j < nstates; j++, tip_buffer_ptr += VectorClass::size()) {
                     UINT increment = partial_pars_child_ptr[j];
                     *tip_buffer_ptr += increment;
-                    score += increment;
                 }
             }
+            VectorClass here = partial_pars_ptr[0];
+            for (int i = 1; i < nstates; i++) {
+                here = min(partial_pars_ptr[i],here);
+            }
+            score += horizontal_add(here);
         }
-        partial_pars[ptnCount*nstates] = score;
+        partial_pars[total_offset] = score;
         return;
     }
     
@@ -2007,7 +2004,6 @@ void PhyloTree::computePartialParsimonySankoffSIMD(PhyloNeighbor *dad_branch,
                         for (int j = 0; j < nstates; ++j, tip_buffer_ptr += VectorClass::size()) {
                             UINT increment   = partial_pars_child_ptr[j];
                             *tip_buffer_ptr += increment;
-                            score           += increment;
                         }
                     }
                 } else {
@@ -2021,13 +2017,17 @@ void PhyloTree::computePartialParsimonySankoffSIMD(PhyloNeighbor *dad_branch,
                             min_child_ptn_pars = min(partial_pars_child_ptr[j] + cost_matrix_ptr[j], min_child_ptn_pars);
                         }
                         partial_pars_ptr[i] += min_child_ptn_pars;
-                        score               += horizontal_add(min_child_ptn_pars);
-                        cost_matrix_ptr += nstates;
+                        cost_matrix_ptr     += nstates;
                     }
                 }
             }
+            VectorClass here = partial_pars_ptr[0];
+            for (int i = 0; i < nstates; i++){
+                here = min(partial_pars_ptr[i],here);
+            }
+            score += horizontal_add(here);
         }
-        partial_pars[ptnCount*nstates] = score;
+        partial_pars[total_offset] = score;
         return;
     }
     
@@ -2052,12 +2052,16 @@ void PhyloTree::computePartialParsimonySankoffSIMD(PhyloNeighbor *dad_branch,
                 for (int j = 0; j < nstates; j++) {
                     UINT increment         = (left_ptr[j] + right_ptr[j]);
                     *tip_buffer_ptr       += increment;
-                    score                 += increment;
                     tip_buffer_ptr        += VectorClass::size();
                 }
             }
+            VectorClass here = partial_pars_ptr[0];
+            for (int i = 0; i < nstates; i++){
+                here = min(partial_pars_ptr[i],here);
+            }
+            score += horizontal_add(here);
         }
-        partial_pars[ptnCount*nstates] = score;
+        partial_pars[total_offset] = score;
         return;
     }
     
@@ -2096,11 +2100,15 @@ void PhyloTree::computePartialParsimonySankoffSIMD(PhyloNeighbor *dad_branch,
                 }
                 VectorClass increment = tip_buffer[i] + right_contrib;
                 partial_pars_ptr[i]   = increment;
-                score                += horizontal_add(increment);
                 cost_matrix_ptr      += nstates;
             }
+            VectorClass here = partial_pars_ptr[0];
+            for (int i = 0; i < nstates; i++){
+                here = min(partial_pars_ptr[i],here);
+            }
+            score += horizontal_add(here);
         }
-        partial_pars[ptnCount*nstates] = score;
+        partial_pars[total_offset] = score;
         return;
     }
     // inner-inner case
@@ -2113,7 +2121,7 @@ double PhyloTree::computePartialParsimonyOutOfTreeSankoffSIMD
         (const UINT* left_partial_pars, const UINT* right_partial_pars,
          UINT*       dad_partial_pars) const
 {
-    size_t score    = 0;
+    UINT   score    = 0;
     size_t ptnCount = aln->ordered_pattern.size();
     size_t ptnStep  = VectorClass::size();
     size_t nstates  = aln->num_states;
@@ -2147,7 +2155,8 @@ double PhyloTree::computePartialParsimonyOutOfTreeSankoffSIMD
         }
         score += horizontal_add(here);
     }
-    dad_partial_pars[ptnCount*nstates] = score;
+    size_t total_offset = ptnCount * nstates;
+    dad_partial_pars[total_offset] = score;
     return score;
 }
 
@@ -2156,11 +2165,11 @@ int PhyloTree::getSubTreeParsimonySankoffSIMD(PhyloNeighbor* dad_branch, PhyloNo
     if (dad_branch->partial_pars==nullptr) {
         return 0;
     }
-    size_t ptnCount = aln->ordered_pattern.size();
-    size_t nstates  = aln->num_states;
-    return dad_branch->partial_pars[ptnCount*nstates];
+    size_t ptnCount     = aln->ordered_pattern.size();
+    size_t nstates      = aln->num_states;
+    size_t total_offset = ptnCount * nstates;
+    return dad_branch->partial_pars[total_offset];
 }
-
 
 template<class VectorClass>
 int PhyloTree::computeParsimonyBranchSankoffSIMD(PhyloNeighbor *dad_branch,
@@ -2181,11 +2190,7 @@ int PhyloTree::computeParsimonyBranchSankoffSIMD(PhyloNeighbor *dad_branch,
         std::swap(dad, node);
         std::swap(dad_branch, node_branch);
     }
-    
-    //int nptn = aln->size();
-    //    if(!_pattern_pars) _pattern_pars = aligned_alloc<BootValTypePars>(nptn+VCSIZE_USHORT);
-    //    memset(_pattern_pars, 0, sizeof(BootValTypePars) * (nptn+VCSIZE_USHORT));
-    
+        
     if (!dad_branch->isParsimonyComputed() && !node->isLeaf()) {
         computePartialParsimonySankoffSIMD<VectorClass>(dad_branch, dad);
     }
@@ -2280,6 +2285,5 @@ int PhyloTree::computeParsimonyOutOfTreeSankoffSIMD(const UINT* dad_partial_pars
     }
     return tree_pars;
 }
-
 
 #endif /* PHYLOKERNEL_H_ */

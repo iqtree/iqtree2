@@ -140,12 +140,10 @@ void PhyloTree::doParsimonyNNI() {
             int rightParsimony = getSubTreeParsimony(nei1, tb.first);
             int leftParsimony  = getSubTreeParsimony(nei2, tb.second);
             branch_cost[i] = leftParsimony + middleParsimony + rightParsimony;
-            if (i<10) {
-                LOG_LINE(VB_DEBUG, "branch=" << i
-                         << ", left=" << leftParsimony
-                         << ", mid=" << middleParsimony
-                         << ", right=" << rightParsimony);
-            }
+            LOG_LINE(VB_DEBUG, "branch=" << i
+                     << ", left=" << leftParsimony
+                     << ", mid=" << middleParsimony
+                     << ", right=" << rightParsimony);
         }
         std::vector<PossibleExchange> best_exchange;
         best_exchange.resize(branch_count);

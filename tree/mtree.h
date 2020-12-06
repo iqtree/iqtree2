@@ -951,14 +951,14 @@ public:
     virtual void trackProgress(double amount);
     
     /** hide the progress made on a task (e.g. before writing to cout)*/
-    virtual void hideProgress();
+    virtual void hideProgress() const;
 
     /** hide the progress made on a task (e.g. after writing to cout)*/
-    virtual void showProgress();
+    virtual void showProgress() const;
 
-    void logLine(const char* line);
+    void logLine(const char* line) const;
     
-    void logLine(const std::string& line);
+    void logLine(const std::string& line) const;
 
     /** report that a task is complete*/
     virtual void doneProgress();

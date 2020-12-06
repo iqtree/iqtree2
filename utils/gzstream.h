@@ -141,8 +141,8 @@ public:
     const gzstreambuf* rdbuf() const;
     gzstreambuf* rdbuf();
     
-    void hideProgress();
-    void showProgress();
+    void hideProgress() const;
+    void showProgress() const;
     ~pigzstream();
 };
 

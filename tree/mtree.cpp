@@ -2062,14 +2062,14 @@ void MTree::initProgress(double size, std::string name, const char* verb, const 
 void MTree::trackProgress(double amount) {
 }
 
-void MTree::hideProgress() {
+void MTree::hideProgress() const {
 }
 
-void MTree::showProgress() {
+void MTree::showProgress() const {
 }
 
 #define HUNTING_HEAP_CORRUPTION (0)
-void MTree::logLine(const char* line) {
+void MTree::logLine(const char* line) const {
     hideProgress();
     #if HUNTING_HEAP_CORRUPTION && defined(CLANG_UNDER_VS) && defined(DEBUG)
         _CrtCheckMemory();
@@ -2081,7 +2081,7 @@ void MTree::logLine(const char* line) {
     showProgress();
 }
 
-void MTree::logLine(const std::string& line) {
+void MTree::logLine(const std::string& line) const {
     logLine(line.c_str());
 }
 
