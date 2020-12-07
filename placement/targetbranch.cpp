@@ -344,7 +344,21 @@ double TargetBranch::getFullDisconnectionBenefit(const PhyloTree& phylo_tree) co
     //If this branch is CD, and C's other neighbors are A and B,
     //and D's other neighbors are E and F, then the parsimony benefit
     //is cost(AC)+cost(BC)+cost(CD)+cost(DE)+cost(DF) - cost(AB) - cost(EF)
-    //Since it's so expensive to calculate, it's cached.
+    //
+    //    From:     To:
+    //
+    //    A   B    A---B
+    //     \ /
+    //      C
+    //      |
+    //      D
+    //     / \
+    //    E   F    E---F
+    //
+    //Since it's so expensive to calculate, the output of this function
+    //should probably be cached.  This is the bisection benefit in a TBR
+    //iteration.
+    //
     
     double disconnection_benefit = branch_cost;
     PhyloNeighborVec orphans;
@@ -382,9 +396,28 @@ double TargetBranch::getFullConnectionCost(const PhyloTree& phylo_tree,
     //If this branch is AB, and the other is EF, returns
     //cost(AC)+cost(BC)+cost(CD)+cost(DE)+cost(DF) - cost(AB) - cost(EF)
     //(the cost of adding the cross-bar of the H).
+    //
+    //    From:     To:
+    //
+    //    A---B     A   B
+    //               \ /
+    //                C
+    //                |
+    //                D
+    //               / \
+    //    E---F     E   F
+    //
+    //This isn't as expensive as it sounds, because the net cost of connecting
+    //C to A and B (minus the cost of disconnecting A and B), 
+    //is stored in this->net_connection_cost, and the net cost of
+    //connecting D to E and F is stored in other_branch.net_connection_cost.
+    //So only the cost of the CD branch needs to be calculated.
+    //
+    //This is the reconnection cost in a TBR iteration.
+    //
     
-    double costACPlusBCMinusAB = net_connection_cost;
-    double costDEPlusDFMinusEF = other_branch.net_connection_cost;
+    double costACPlusBCMinusAB = net_connection_cost; //Connecting C to AB
+    double costDEPlusDFMinusEF = other_branch.net_connection_cost; //D to EF
     int    costCD              = 0;
     phylo_tree.computeParsimonyOutOfTree(partial_pars,
                                          other_branch.partial_pars,
@@ -403,9 +436,19 @@ CostPair TargetBranch::getPartialDisconnectionBenefit(const PhyloTree& phylo_tre
     //                 C                                        C
     //                 |                                        |
     //                 D                                        D
+    //             (whatever)                               (whatever)
+    //or , from:                       to:              
+    //             (whatever)                               (whatever)
+    //                 C                                        C
+    //                 |                                        |
+    //                 D                                        D
+    //                / \
+    //               E   F                                   E-----F
     //
     //This is used, in conjunction with getTeeConnectionCost, when evaluating
-    //possible SPR (subtree prune and regraft) moves.
+    //possible SPR (subtree prune and regraft) moves.  
+    //Calling this function is expensive (6 out-of-tree branch length 
+    //calculations), so the result should probably be cached.
     //
     CostPair result;
     if (!first->isLeaf()) {
@@ -460,11 +503,14 @@ double TargetBranch::getForwardConnectionCost(const PhyloTree& phylo_tree,
     //Letter-T connection
     //If this branch is CD, and the other is AB, returns the cost of
     //connecting A     B the subtree C-D by linking A and B to C.
-    //            \   /
+    //            \   /    (if C were *not* connected to anything).
     //              C
     //              |
     //              D
-    //It is assumed that A-B is, at present, connected to D via C (and not C via D).
+    //It is assumed that A-B is, at present, not connected to C via D
+    //(it *might* be connected to D via C).
+    //It is also assumed that C is an interior node!
+    //
     auto   view_from_D = other_branch.partial_pars;   //what the updated view from D would be
     auto   view_to_D   = first->findNeighbor(second)->partial_pars;
            //what the existing view from C would be
@@ -481,12 +527,15 @@ double TargetBranch::getBackwardConnectionCost(const PhyloTree& phylo_tree,
                                                const TargetBranch& other_branch) const {
     //Letter-T connection
     //If this branch is CD, and the other is EF, returns the cost of
-    //connecting    C the subtree D-C by linking E and F to D.
-    //              |
+    //connecting    C the subtree D-C by linking E and F to D (if 
+    //              |         D were *not* connected to anything).
     //              D
     //             / \
     //            E   F
-    //It is assumed that E-F is, at present, connected to C via D (and not D via C).
+    //It is assumed that E-F is, at present, not connected to D via C
+    //(it *might* be connected to C via D).
+    //It is also assumed that D is an interior node!
+    //
     auto view_from_C = other_branch.partial_pars;
     auto view_to_C   = second->findNeighbor(first)->partial_pars;
     int  updatedCDCost;
