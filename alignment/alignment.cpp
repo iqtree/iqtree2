@@ -1868,7 +1868,7 @@ bool Alignment::constructPatterns(int nseq, int nsite,
     patternInfo.resize((nsite + (step-1)) / step);
     progress_display* progress_here = nullptr;
     if (progress==nullptr && !isShowingProgressDisabled) {
-        progress_display* progress_here = new progress_display( nsite, "Constructing alignment",
+        progress_here = new progress_display( nsite, "Constructing alignment",
                                                                "examined", "site");
         progress = progress_here;
     }
@@ -1946,8 +1946,8 @@ bool Alignment::constructPatterns(int nseq, int nsite,
     //2. Now handle warnings and errors, and compress patterns, sequentially
 
     if (progress==nullptr && !isShowingProgressDisabled) {
-        progress_display* progress_here = new progress_display(nsite, "Compressing patterns",
-                                                               "processed", "site");
+        progress_here = new progress_display(nsite, "Compressing patterns",
+                                             "processed", "site");
         progress = progress_here;
     }
 
