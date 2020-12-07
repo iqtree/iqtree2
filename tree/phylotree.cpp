@@ -3871,7 +3871,7 @@ double PhyloTree::correctDist(double *dist_mat) {
 
 template <class L, class F> double computeDistanceMatrix
     ( LEAST_SQUARE_VAR vartype
-    , L unknown, const L* sequenceMatrix, int nseqs, int seqLen
+    , L unknown, const L* sequenceMatrix, size_t nseqs, size_t seqLen
     , double denominator, const F* frequencyVector
     , bool uncorrected, double num_states
     , double *dist_mat, double *var_mat)
@@ -3897,18 +3897,18 @@ template <class L, class F> double computeDistanceMatrix
     #ifdef _OPENMP
     #pragma omp parallel for schedule(dynamic)
     #endif
-    for (int seq1 = 0; seq1<nseqs; ++seq1 ) {
+    for (size_t seq1 = 0; seq1<nseqs; ++seq1 ) {
         //Scanning is from bottom to top so that if "uneven execution"
         //results in the last few rows being allocated to some worker thread
         //just before the others finish... it won't be running
         //"all by itsef" for as long.
-        int      rowOffset     = nseqs * seq1;
+        size_t   rowOffset     = nseqs * seq1;
         double*  distRow       = dist_mat       + rowOffset;
         double*  varRow        = var_mat        + rowOffset;
         const L* thisSequence  = sequenceMatrix + seq1 * seqLen;
         const L* otherSequence = thisSequence   + seqLen;
         double maxDistanceInRow = 0.0;
-        for (int seq2 = seq1 + 1; seq2 < nseqs; ++seq2) {
+        for (size_t seq2 = seq1 + 1; seq2 < nseqs; ++seq2) {
             double d2l      = varRow[seq2];
             double distance = distRow[seq2];
             if ( 0.0 == distance ) {
@@ -3957,7 +3957,7 @@ template <class L, class F> double computeDistanceMatrix
     //      code for an O(n) step in an O(L.N^2) problem.
     //
     double longest_dist = 0.0;
-    for ( int seq1 = 0; seq1 < nseqs; ++seq1  ) {
+    for ( size_t seq1 = 0; seq1 < nseqs; ++seq1  ) {
         if ( longest_dist < rowMaxDistance[seq1] ) {
             longest_dist = rowMaxDistance[seq1];
         }
@@ -3971,12 +3971,12 @@ template <class L, class F> double computeDistanceMatrix
     #pragma omp parallel for schedule(dynamic)
     #endif
     for ( int seq1 = nseqs-1; 0 <= seq1; --seq1 ) {
-        int     rowOffset = nseqs * seq1;
+        size_t  rowOffset = nseqs * seq1;
         double* distRow   = dist_mat + rowOffset;
         double* varRow    = var_mat  + rowOffset;
         double* distCol   = dist_mat + seq1; //current entries in the columns
         double* varCol    = var_mat  + seq1; //...that we are reading down.
-        for ( int seq2 = 0; seq2 < seq1; ++seq2, distCol+=nseqs, varCol+=nseqs ) {
+        for ( size_t seq2 = 0; seq2 < seq1; ++seq2, distCol+=nseqs, varCol+=nseqs ) {
             distRow [ seq2 ] = *distCol;
             varRow  [ seq2 ] = *varCol;
         }
@@ -4010,11 +4010,11 @@ double PhyloTree::computeDistanceMatrix_Experimental() {
         std::vector<double> rowMaxDistance;
         rowMaxDistance.resize(seqCount, 0.0);
         #pragma omp parallel for
-        for (int seq1=0; seq1<seqCount; ++seq1) {
+        for (size_t seq1=0; seq1<seqCount; ++seq1) {
             if (!workToDo) {
                 const double* distRow   = dist_matrix + seq1 * seqCount;
                 double maxDistanceInRow = 0;
-                for (int seq2=0; seq2<seqCount; ++seq2) {
+                for (size_t seq2=0; seq2<seqCount; ++seq2) {
                     double distance = distRow[seq2];
                     if (0.0 == distance && ( seq1 != seq2 ) ) {
                         workToDo = true;
@@ -4031,7 +4031,7 @@ double PhyloTree::computeDistanceMatrix_Experimental() {
         if (!workToDo) {
             EX_TRACE("No work to do");
             double longest_dist = 0.0;
-            for ( int seq1 = 0; seq1 < seqCount; ++seq1  ) {
+            for ( size_t seq1 = 0; seq1 < seqCount; ++seq1  ) {
                 if ( longest_dist < rowMaxDistance[seq1] ) {
                     longest_dist = rowMaxDistance[seq1];
                 }
