@@ -51,7 +51,7 @@
 #define DIST_RATIO 0.8
 
 // for one-side communication, how often perform synchronization between the master and the workers
-#define TIME_SYN 3 // in seconds
+#define TIME_SYN 10 // in seconds
 
 /******* Binary model set ******/
 const char* bin_model_names[] = {"GTR2", "JC2"};

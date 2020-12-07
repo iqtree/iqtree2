@@ -43,8 +43,10 @@ void MPIHelper::finalize() {
 void MPIHelper::syncRandomSeed() {
 #ifdef _IQTREE_MPI
     unsigned int rndSeed;
+    unsigned int rndSampleSeed;
     if (MPIHelper::getInstance().isMaster()) {
         rndSeed = Params::getInstance().ran_seed;
+        rndSampleSeed = Params::getInstance().subsampling_seed;
     }
     // Broadcast random seed
     MPI_Bcast(&rndSeed, 1, MPI_INT, PROC_MASTER, MPI_COMM_WORLD);
@@ -52,6 +54,11 @@ void MPIHelper::syncRandomSeed() {
         //        Params::getInstance().ran_seed = rndSeed + task_id * 100000;
         Params::getInstance().ran_seed = rndSeed;
         //        printf("Process %d: random_seed = %d\n", task_id, Params::getInstance().ran_seed);
+    }
+    // Broadcast random subsampling seed
+    MPI_Bcast(&rndSampleSeed, 1, MPI_INT, PROC_MASTER, MPI_COMM_WORLD);
+    if (MPIHelper::getInstance().isWorker()) {
+        Params::getInstance().subsampling_seed = rndSampleSeed;
     }
 #endif
 }
