@@ -2533,6 +2533,67 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     partitionFinder.test_PartitionModel();
 }
 
+
+/*
+ * send an integer vector from the master to a worker
+ */
+void sendVector(vector<int>& data, int worker) {
+
+    if (MPIHelper::getInstance().isWorker())
+        return;
+
+#ifdef _IQTREE_MPI
+    int n = data.size();
+
+    // send the number of elements to the worker
+    MPI_Send(&n, 1, MPI_INT, worker, 0, MPI_COMM_WORLD);
+    if (n == 0)
+        return;
+
+    int* buff = new int[n];
+    int i;
+    for (i=0; i<data.size(); i++) {
+        buff[i] = data[i];
+    }
+    // send the number array to the worker
+    MPI_Send(buff, n, MPI_INT, worker, 0, MPI_COMM_WORLD);
+    delete[] buff;
+#endif
+}
+
+/*
+ * receive an integer vector from the master
+ */
+void recVector(vector<int>& data) {
+
+    if (MPIHelper::getInstance().isMaster())
+        return;
+
+#ifdef _IQTREE_MPI
+    int n;
+    data.clear();
+
+    // receive the number of elements from the master
+    MPI_Recv(&n, 1, MPI_INT, PROC_MASTER, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    if (n == 0)
+        return;
+
+    int* buff = new int[n];
+    // receive the number array from the master
+    MPI_Recv(buff, n, MPI_INT, PROC_MASTER, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    int i;
+    for (i=0; i<n; i++) {
+        data.push_back(buff[i]);
+    }
+    delete[] buff;
+#endif
+}
+
+struct jobcomp {
+    // for sorting the jobs
+    bool operator() (const int& i1, const int& i2) const {return i1<i2;}
+};
+
 /* Constructor
  */
 PartitionFinder::PartitionFinder(Params *inparams, PhyloSuperTree* intree, ModelCheckpoint *modelinfo,
@@ -2560,25 +2621,25 @@ void PartitionFinder::showMergeResult(ModelCheckpoint& part_model_info, double t
         if (!done_before) {
             replaceModelInfo(set_name, *model_info, part_model_info);
             model_info->dump();
-        }
 
-        num_model++;
-        cout.width(4);
-        cout << right << num_model << " ";
-        if (tag != -1)
-            cout << tag << " ";
-        cout.width(12);
-        cout << left << model_name << " ";
-        cout.width(11);
-        cout << score << " ";
-        cout.width(11);
-        cout << tree_len << " " << set_name;
-        if (num_model >= 10) {
-            remain_time = max(total_num_model-num_model, (int64_t)0)*(getRealTime()-start_time)/num_model;
-            cout << "\t" << convert_time(getRealTime()-start_time) << " ("
-                 << convert_time(remain_time) << " left)";
+            num_model++;
+            cout.width(4);
+            cout << right << num_model << " ";
+            if (tag != -1)
+                cout << tag << " ";
+            cout.width(12);
+            cout << left << model_name << " ";
+            cout.width(11);
+            cout << score << " ";
+            cout.width(11);
+            cout << tree_len << " " << set_name;
+            if (num_model >= 10) {
+                remain_time = max(total_num_model-num_model, (int64_t)0)*(getRealTime()-start_time)/num_model;
+                cout << "\t" << convert_time(getRealTime()-start_time) << " ("
+                     << convert_time(remain_time) << " left)";
+            }
+            cout << endl;
         }
-        cout << endl;
         
         // update the number of jobs done
         jobdone++;
@@ -2588,7 +2649,7 @@ void PartitionFinder::showMergeResult(ModelCheckpoint& part_model_info, double t
 /*
  * Show the the other worker's result of best model for the merge
  */
-void PartitionFinder::showMergeResults(ModelCheckpoint& part_model_info, vector<double>& tree_len, vector<string>& model_name, vector<double>& score, vector<string>& set_name, vector<int>& tag) {
+void PartitionFinder::showMergeResults(ModelCheckpoint& part_model_info, vector<double>& tree_len, vector<string>& model_name, vector<double>& score, vector<string>& set_name, vector<int>& tag, int tot_jobs_done) {
 
     double remain_time;
     int i;
@@ -2620,7 +2681,7 @@ void PartitionFinder::showMergeResults(ModelCheckpoint& part_model_info, vector<
         }
 
         // update the number of jobs done
-        jobdone += tree_len.size();
+        jobdone += tot_jobs_done;
     }
 
 }
@@ -2746,28 +2807,24 @@ int PartitionFinder::getBestModelForOneMergeMPI(int job_id, int nthreads, bool n
         // for Worker -- ONESIDE communication
         #ifdef ONESIDE_COMM
 
-            if (!done_before) {
-                // consolidate part_model_info into the process_model_info
-                #ifdef _OPENMP
-                #pragma omp critical
-                #endif
-                {
-                    replaceModelInfo(cur_pair.set_name, process_model_info, part_model_info);
-                }
-            }
-
             #ifdef _OPENMP
             #pragma omp critical
             #endif
             {
-                tree_id_vec.push_back(job_id);
-                tree_len_vec.push_back(cur_pair.tree_len);
-                model_name_vec.push_back(cur_pair.model_name);
-                score_vec.push_back(cur_pair.score);
-                set_name_vec.push_back(cur_pair.set_name);
-                tag_vec.push_back(syncChkPt.mytag);
-            }
+                if (!done_before) {
+                    // consolidate part_model_info into the process_model_info
+                    replaceModelInfo(cur_pair.set_name, process_model_info, part_model_info);
 
+                    tree_id_vec.push_back(job_id);
+                    tree_len_vec.push_back(cur_pair.tree_len);
+                    model_name_vec.push_back(cur_pair.model_name);
+                    score_vec.push_back(cur_pair.score);
+                    set_name_vec.push_back(cur_pair.set_name);
+                    tag_vec.push_back(syncChkPt.mytag);
+                }
+                tot_jobs_done++;
+            }
+        
             // send the process_model_info to master if time is long enough
             next_job_id = syncChkPt.sendChkptToMaster(process_model_info, need_next_jobID, job_type);
         
@@ -3051,7 +3108,7 @@ void PartitionFinder::getBestModelforMergesMPI(int nthreads, vector<vector<int>*
         bool need_nextJobID = false;
         bool forceToSyn = true;
         int job_type = 2; // merge
-        if (tree_id_vec.size() > 0) {
+        if (tot_jobs_done > 0) {
             SyncChkPoint syncChkPt(this, 0);
             syncChkPt.sendChkptToMaster(process_model_info, need_nextJobID, job_type, forceToSyn);
         }
@@ -3256,8 +3313,9 @@ void PartitionFinder::getBestModel(int job_type) {
     vector<pair<int,double> > jobIDs;
     vector<vector<int>* > currJobs;
     vector<int>* jobs;
+    vector<int> closest_p_vector;
     bool run_parallel;
-    int i;
+    int i,w;
 
     if (job_type == 1) {
         // for partitions
@@ -3280,6 +3338,36 @@ void PartitionFinder::getBestModel(int job_type) {
             findClosestPairs(super_aln, lenvec, gene_sets, true, log_closest_pairs);
             mergePairs(closest_pairs, log_closest_pairs);
         }
+
+/*
+#ifdef _IQTREE_MPI
+        if (MPIHelper::getInstance().getNumProcesses() > 0) {
+            if (MPIHelper::getInstance().isMaster()) {
+                // for Master
+                // send to each worker
+                for (i=0; i<closest_pairs.size(); i++) {
+                    closest_p_vector.push_back(closest_pairs[i].first);
+                    closest_p_vector.push_back(closest_pairs[i].second);
+                }
+                for (w=1; w<num_processes; w++) {
+                    sendVector(closest_p_vector,w);
+                }
+            } else {
+                // receive the closest_p_vector from the master
+                closest_p_vector.clear();
+                closest_pairs.clear();
+                recVector(closest_p_vector);
+                ASSERT(closest_p_vector.size() % 2 == 0);
+                for (i=0; i<closest_p_vector.size(); i+=2) {
+                    SubsetPair sp;
+                    sp.first = closest_p_vector[i];
+                    sp.second = closest_p_vector[i+1];
+                    closest_pairs.push_back(sp);
+                }
+            }
+        }
+#endif
+*/
         // sort partition by computational cost for OpenMP effciency
         for (i = 0; i < closest_pairs.size(); i++) {
             // computation cost is proportional to #sequences, #patterns, and #states
@@ -3339,6 +3427,7 @@ void PartitionFinder::getBestModel(int job_type) {
         score_vec.clear();
         set_name_vec.clear();
         tag_vec.clear();
+        tot_jobs_done = 0;
     
         // initialize the checkpoint for the whole processor
         process_model_info.clear();
@@ -3421,6 +3510,7 @@ void PartitionFinder::consolidPartitionResults() {
 void PartitionFinder::consolidMergeResults() {
 
 #ifdef _IQTREE_MPI
+    better_pairs.clear();
     for (size_t pair = 0; pair < closest_pairs.size(); pair++) {
         // information of current partitions pair
         ModelPair cur_pair;
@@ -3452,9 +3542,11 @@ void PartitionFinder::consolidMergeResults() {
         int dfnew = dfsum - dfvec[cur_pair.part1] - dfvec[cur_pair.part2] + best_model.df;
         cur_pair.score = computeInformationScore(lhnew, dfnew, ssize, params->model_test_criterion);
 
-        if (cur_pair.score < inf_score)
+        if (cur_pair.score < inf_score) {
             better_pairs.insertPair(cur_pair);
+        }
     }
+
 #endif
 }
 
@@ -3711,66 +3803,6 @@ void PartitionFinder::freeMPIShareMemory() {
 }
 
 /*
- * send an integer vector from the master to a worker
- */
-void sendVector(vector<int>& data, int worker) {
-
-    if (MPIHelper::getInstance().isWorker())
-        return;
-
-#ifdef _IQTREE_MPI
-    int n = data.size();
-
-    // send the number of elements to the worker
-    MPI_Send(&n, 1, MPI_INT, worker, 0, MPI_COMM_WORLD);
-    if (n == 0)
-        return;
-
-    int* buff = new int[n];
-    int i;
-    for (i=0; i<data.size(); i++) {
-        buff[i] = data[i];
-    }
-    // send the number array to the worker
-    MPI_Send(buff, n, MPI_INT, worker, 0, MPI_COMM_WORLD);
-    delete[] buff;
-#endif
-}
-
-/*
- * receive an integer vector from the master
- */
-void recVector(vector<int>& data) {
-
-    if (MPIHelper::getInstance().isMaster())
-        return;
-
-#ifdef _IQTREE_MPI
-    int n;
-    data.clear();
-
-    // receive the number of elements from the master
-    MPI_Recv(&n, 1, MPI_INT, PROC_MASTER, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    if (n == 0)
-        return;
-
-    int* buff = new int[n];
-    // receive the number array from the master
-    MPI_Recv(buff, n, MPI_INT, PROC_MASTER, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    int i;
-    for (i=0; i<n; i++) {
-        data.push_back(buff[i]);
-    }
-    delete[] buff;
-#endif
-}
-
-struct jobcomp {
-    // for sorting the jobs
-    bool operator() (const int& i1, const int& i2) const {return i1<i2;}
-};
-
-/*
  * For MPI
  * assign initial jobs to processors
  * input: a set of jobs ordered by the estimated computational costs
@@ -3923,6 +3955,7 @@ void SyncChkPoint::showResult(ModelCheckpoint& part_model_info, int work_tag) {
         vector<double> score_vec;
         vector<int> tag_vec;
         vector<string> set_name_vec;
+        int tot_jobsdone;
         key = "pf_tree_len";
         ASSERT(part_model_info.getVector(key, tree_len_vec));
         key = "pf_model_name";
@@ -3941,7 +3974,9 @@ void SyncChkPoint::showResult(ModelCheckpoint& part_model_info, int work_tag) {
             // merge
             key = "pf_set_name";
             ASSERT(part_model_info.getVector(key, set_name_vec));
-            pfinder->showMergeResults(part_model_info, tree_len_vec, model_name_vec, score_vec, set_name_vec, tag_vec);
+            key = "pf_tot_jobs_done";
+            ASSERT(part_model_info.get(key, tot_jobsdone));
+            pfinder->showMergeResults(part_model_info, tree_len_vec, model_name_vec, score_vec, set_name_vec, tag_vec, tot_jobsdone);
         }
     }
 }
@@ -4062,7 +4097,7 @@ int SyncChkPoint::sendChkptToMaster(ModelCheckpoint &model_info, bool need_nextJ
         #pragma omp critical
         #endif
         {
-            if (forceToSyn || (getRealTime() - pfinder->last_syn_time > TIME_SYN && pfinder->tree_id_vec.size() > 0)) {
+            if (forceToSyn || (getRealTime() - pfinder->last_syn_time > TIME_SYN && (pfinder->tot_jobs_done > 0 || pfinder->tree_id_vec.size() > 0))) {
                 // prepare to do synchronization
                 pfinder->last_syn_time = getRealTime();
                 key = "pf_tree_id"; model_info.putVector(key, pfinder->tree_id_vec);
@@ -4072,10 +4107,8 @@ int SyncChkPoint::sendChkptToMaster(ModelCheckpoint &model_info, bool need_nextJ
                 key = "pf_tag"; model_info.putVector(key, pfinder->tag_vec);
                 key = "pf_job_type"; model_info.put(key, job_type);
                 key = "pf_data_num"; model_info.put(key, "multiple");
-
-                if (pfinder->set_name_vec.size() > 0) {
-                    key = "pf_set_name"; model_info.putVector(key, pfinder->set_name_vec);
-                }
+                key = "pf_tot_jobs_done"; model_info.put(key, pfinder->tot_jobs_done);
+                key = "pf_set_name"; model_info.putVector(key, pfinder->set_name_vec);
                 
                 stringstream ss;
                 model_info.dump(ss);
@@ -4090,6 +4123,8 @@ int SyncChkPoint::sendChkptToMaster(ModelCheckpoint &model_info, bool need_nextJ
                 pfinder->model_name_vec.clear();
                 pfinder->score_vec.clear();
                 pfinder->tag_vec.clear();
+                pfinder->tot_jobs_done = 0;
+
                 // clear the checkpoint for this process
                 model_info.clear();
             }

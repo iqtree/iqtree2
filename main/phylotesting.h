@@ -514,6 +514,7 @@ public:
     vector<double> score_vec;
     vector<string> set_name_vec;
     vector<int> tag_vec;
+    int tot_jobs_done;
     ModelCheckpoint process_model_info;
 
 #ifdef _IQTREE_MPI
@@ -569,7 +570,7 @@ public:
     /*
      * Show the the other worker's result of best model for the merge
      */
-    void showMergeResults(ModelCheckpoint& part_model_info, vector<double>& tree_len, vector<string>& model_name, vector<double>& score, vector<string>& set_name, vector<int>& tag);
+    void showMergeResults(ModelCheckpoint& part_model_info, vector<double>& tree_len, vector<string>& model_name, vector<double>& score, vector<string>& set_name, vector<int>& tag, int tot_jobs_done);
 };
 
 
