@@ -3892,8 +3892,7 @@ template <class L, class F> double computeDistanceMatrix
     bool count_unknown_as_different = Params::getInstance().count_unknown_as_different;
         //Unknown counts as 50% different.
     
-    progress_display progress(nseqs*(nseqs-1)/2, "Calculating observed distances"); //zork
-
+    progress_display progress(nseqs*(nseqs-1)/2, "Calculating observed distances");
     #ifdef _OPENMP
     #pragma omp parallel for schedule(dynamic)
     #endif
@@ -3945,6 +3944,7 @@ template <class L, class F> double computeDistanceMatrix
         rowMaxDistance[seq1] = maxDistanceInRow;
         progress += (nseqs - 1 - seq1);
     }
+    progress.done();
     
     //
     //Determine the longest distance
@@ -3967,6 +3967,9 @@ template <class L, class F> double computeDistanceMatrix
     //Copy upper-triangle into lower-triangle and write
     //zeroes to the diagonal.
     //
+    const char* taskReflect = "Determining distance matrix lower triangle from upper";
+    if (verbose_mode<VB_MED) taskReflect="";
+    progress_display progress2(nseqs*(nseqs-1)/2, taskReflect);
     #ifdef _OPENMP
     #pragma omp parallel for schedule(dynamic)
     #endif
@@ -3982,7 +3985,9 @@ template <class L, class F> double computeDistanceMatrix
         }
         distRow [ seq1 ] = 0.0;
         varRow  [ seq1 ] = 0.0;
+        progress2 += seq1;
     }
+    progress2.done();
     return longest_dist;
 }
 
@@ -3992,8 +3997,7 @@ template <class L, class F> double computeDistanceMatrix
 
 double PhyloTree::computeDistanceMatrix_Experimental() {
     EX_START;
-    //Experimental: Are there any other checks that are needed here?
-    if (model_factory && site_rate) {
+    if (model_factory!=nullptr && site_rate!=nullptr) {
         return computeDistanceMatrix();
     }
     bool uncorrected = params->compute_obs_dist;
@@ -4066,7 +4070,7 @@ double PhyloTree::computeDistanceMatrix_Experimental() {
         << " at " << s.getSequenceLength() << " varying sites"
         << " for " << s.getSequenceCount() << " sequences");
     s.constructSequenceMatrix(true);
-    EX_TRACE("Determining distance matrix with unknown " << aln->STATE_UNKNOWN);
+    EX_TRACE("Determining distance matrix");
     const int* frequencies = s.getSiteFrequencies().data();
     double longest = ::computeDistanceMatrix
         ( params->ls_var_type, static_cast<char>(aln->STATE_UNKNOWN)
@@ -4083,7 +4087,7 @@ double PhyloTree::computeDistanceMatrix() {
     double longest_dist = 0.0;
     cout.precision(6);
     double baseTime = getRealTime();
-    progress_display progress(nseqs*(nseqs-1)/2, "Calculating distance matrix"); //zork
+    progress_display progress(nseqs*(nseqs-1)/2, "Calculating distance matrix");
     //compute the upper-triangle of distance matrix
     #ifdef _OPENMP
     #pragma omp parallel for schedule(dynamic)
@@ -4091,7 +4095,7 @@ double PhyloTree::computeDistanceMatrix() {
     for (size_t seq1 = 0; seq1 < nseqs; ++seq1) {
         int threadNum = omp_get_thread_num();
         AlignmentPairwise* processor = distanceProcessors[threadNum];
-        int rowStartPos = seq1 * nseqs;
+        size_t rowStartPos = seq1 * nseqs;
         for (size_t seq2=seq1+1; seq2 < nseqs; ++seq2) {
             size_t sym_pos = rowStartPos + seq2;
             double d2l = var_matrix[sym_pos]; // moved here for thread-safe (OpenMP)
@@ -4109,6 +4113,10 @@ double PhyloTree::computeDistanceMatrix() {
         }
         progress += (nseqs - seq1 - 1);
     }
+    progress.done();
+    const char* taskReflect = "Determining distance matrix lower triangle from upper";
+    if (verbose_mode<VB_MED) taskReflect="";
+    progress_display progress2(nseqs*(nseqs-1)/2, taskReflect);
     //cout << (getRealTime()-baseTime) << "s Copying to lower triangle" << endl;
     //copy upper-triangle into lower-triangle and set diagonal = 0
     for (size_t seq1 = 1; seq1 < nseqs; ++seq1) {
@@ -4125,9 +4133,10 @@ double PhyloTree::computeDistanceMatrix() {
         }
         dist_matrix [ rowStopPos] = 0.0;
         var_matrix  [ rowStopPos] = 0.0;
+        progress2 += seq1;
     }
+    progress2.done();
     doneComputingDistances();
-    progress.done();
 
     /*
      if (longest_dist > MAX_GENETIC_DIST * 0.99)
@@ -4244,6 +4253,7 @@ double PhyloTree::computeObservedDistanceMatrix(Params &params, Alignment *align
  ****************************************************************************/
 
 void PhyloTree::computeBioNJ(Params &params) {
+    deleteAllPartialLhAndParsimony();
     string bionj_file = params.out_prefix;
     bionj_file += ".bionj";
     this->decideDistanceFilePath(params);
