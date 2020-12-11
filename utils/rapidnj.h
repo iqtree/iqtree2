@@ -37,7 +37,7 @@
 //        (S is sorted, I is permuted to match).
 //        (S and I are the names of these matrices in [SMP2011]).
 //
-//Notes:  1.An SI matrix, of pair<T,size_t> would probably be better,
+//Notes:  1.An SI matrix, of pair<T,int> would probably be better,
 //          as that could be sorted faster.
 //        2.An adaptive row-sorting routine could be used,
 //          particularly if new SI rows (after cluster joins) were 
