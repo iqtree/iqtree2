@@ -1771,7 +1771,7 @@ static void optRates(pllInstance *tr, partitionList * pr, double modelEpsilon, l
   *   Return \b PLL_TRUE in case there exists at least one protein partition and all of
   *   protein partitions are assigned a joint GTR matrix. Otherwise return \b PLL_FALSE
   */
-static pllBoolean AAisGTR(partitionList *pr)
+pllBoolean AAisGTR(partitionList *pr)
 {
   int i, count = 0;
 

@@ -983,8 +983,8 @@ static void broadCastAlpha(partitionList *localPr, partitionList *pr)
 
 #if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
     int bufSize = localPr->numberOfPartitions * 4 * sizeof(double);
-  char bufDbl[bufSize]; 
-  char *bufPtrDbl = bufDbl;   
+    char bufDbl[bufSize];
+    char *bufPtrDbl = bufDbl;
 #endif
 
   RECV_BUF(bufDbl, bufSize, MPI_BYTE); 
@@ -1008,8 +1008,8 @@ static void broadCastLg4xWeights(partitionList *localPr, partitionList *pr)
 
 #if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
     int bufSize = localPr->numberOfPartitions * 4 * sizeof(double);
-  char bufDbl[bufSize];
-  char *bufPtrDbl = bufDbl;
+    char bufDbl[bufSize];
+    char *bufPtrDbl = bufDbl;
 #endif
 
   RECV_BUF(bufDbl, bufSize, MPI_BYTE);
@@ -1025,25 +1025,29 @@ static void copyLG4(partitionList *localPr, partitionList *pr)
 {
     int model, i, k;
 
-    /* determine size of buffer needed first */
-    int bufSize = 0;
-
-#ifdef _FINE_GRAIN_MPI
+    #if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
+        /* determine size of buffer needed first */
+        int bufSize = 0;
+    #endif
+    
+    #ifdef _FINE_GRAIN_MPI
     for(model = 0; model < localPr->numberOfPartitions; ++model )
       {
         const partitionLengths *pl = getPartitionLengths(pr->partitionData[model]);
         bufSize += 4*(pl->eignLength + pl->evLength + pl->eiLength + pl->tipVectorLength + pl->substRatesLength + pl->frequenciesLength) * sizeof(double) ;
       }
-#endif
+    #endif
 
+    #if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
     char bufDbl[bufSize];
     char *bufPtrDbl = bufDbl;
+    #endif
 
     RECV_BUF(bufDbl, bufSize, MPI_BYTE);
 
     for (model = 0; model < localPr->numberOfPartitions; model++)
     {
-        pInfo * localInfo = localPr->partitionData[model];
+        //pInfo * localInfo = localPr->partitionData[model];
         pInfo * info = pr->partitionData[model];
 
         if (info->protModels == PLL_LG4M || info->protModels == PLL_LG4X)
@@ -1091,20 +1095,25 @@ static void broadCastRates(partitionList *localPr, partitionList *pr)
   int 
     model;
 
-  /* determine size of buffer needed first */
-  int bufSize = 0;
+#if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
+    
+    /* determine size of buffer needed first */
+    int bufSize = 0;
+#endif
+    
 #ifdef _FINE_GRAIN_MPI
-  for(model = 0; model < localPr->numberOfPartitions; ++model )
-    {	  
-      const partitionLengths *pl = getPartitionLengths(pr->partitionData[model]); /* this is constant, isnt it?  */
-      bufSize += (pl->eignLength + pl->evLength + pl->eiLength + pl->tipVectorLength) * sizeof(double) ;
+    for(model = 0; model < localPr->numberOfPartitions; ++model )
+    {
+        const partitionLengths *pl = getPartitionLengths(pr->partitionData[model]); /* this is constant, isnt it?  */
+        bufSize += (pl->eignLength + pl->evLength + pl->eiLength + pl->tipVectorLength) * sizeof(double) ;
     }
 #endif
 
-  char
-      bufDbl[bufSize];
+#if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
+    char bufDbl[bufSize];
     char *bufPtrDbl = bufDbl;
-
+#endif
+    
   RECV_BUF(bufDbl, bufSize, MPI_BYTE);
   int i ; 
 

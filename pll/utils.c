@@ -1317,7 +1317,7 @@ partitionList * pllPartitionsCommit (pllQueue * parts, pllAlignmentData * alignm
     @param nTaxa
       Number of taxa, i.e. size of site
 */
-static __inline void
+inline void
 copySite (unsigned char ** dst, unsigned char ** src, int to, int from, int nTaxa)
 {
   int i;

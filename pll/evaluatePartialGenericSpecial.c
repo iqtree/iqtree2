@@ -101,7 +101,7 @@ static double evaluatePartialGTRGAMMA(int i, int counter,  traversalInfo *ti, do
    model of rate heterogeneity. */
 
 
-static __inline void computeVectorCAT_FLEX(double *lVector, int *eVector, double ki, int i, double qz, double rz,
+void computeVectorCAT_FLEX(double *lVector, int *eVector, double ki, int i, double qz, double rz,
 					 traversalInfo *ti, double *EIGN, double *EI, double *EV, double *tipVector, 
 					 unsigned char **yVector, int mxtips, const int states)
 {      
