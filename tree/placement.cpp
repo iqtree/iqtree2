@@ -243,15 +243,24 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
     //      likelihood vectors aren't being allocated per node.
     //      extra_lh_blocks should be even less, in that case.
     size_t   sequences              = aln->getNSeq();
-    size_t   target_branch_count    = sequences * 2 - 1;
+    size_t   target_branch_count    = sequences * 2 - 3;
     size_t   extra_parsimony_blocks = target_branch_count + additional_sequences * 4;
-        //each target branch needs a parsimony block, and
-        //although each taxon to place just needs one parsimony block
-        //(looking down from the new interior to the new exterior), 
-        //each addition of a taxon later creates 3 *new* target branches, 
-        //each of which needs a new "upward" looking parsimony block.  
-        //(hence the: multiplication, of additional_sequences, by 4).
-
+        //each target branch (including those for the sequences that
+        //aren't yet in the tree) needs a parsimony block, and
+        //for each additional taxon to place, there are 4 additional
+        //                        parsimony blocks needed.
+        //              A         (Two on the branch between the added
+        //              |          taxon and its interior, I, two on each
+        //              | (2)      of the branches that connect the
+        //              |          taxon's interior, I, to existing interior
+        //              I          nodes, L and R, minus the two on the branch
+        //             / \         that formerly connected L and R directly
+        //        (2) /   \ (2)    to each other.
+        //           /     \
+        //          L       R
+        //           x(-2)-x
+    
+    
     size_t   extra_lh_blocks        = trackLikelihood
                                     ? (target_branch_count + additional_sequences * 4)
                                     : 0;
@@ -260,15 +269,16 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
         //each addition of a taxon later creates 3 *new* target branches
         //(each of which needs its own lh block)
     
-    pr.setUpAllocator(extra_parsimony_blocks, trackLikelihood, extra_lh_blocks);
     pr.prepareForPlacementRun();
+    pr.setUpAllocator(extra_parsimony_blocks, trackLikelihood, extra_lh_blocks);
     
     double setUpStartTime = getRealTime();
     size_t newTaxaCount = taxaIdsToAdd.size();
     
     TypedTaxaToPlace<TaxonTypeInUse> candidates(newTaxaCount);
     LOG_LINE ( VB_DEBUG, "Before allocating TaxonToPlace array"
-              << ", index_lh was " << pr.block_allocator->getLikelihoodBlockCount() );
+              << ", index_lh was "
+              << pr.block_allocator->getLikelihoodBlockCount() );
     for (size_t i=0; i<newTaxaCount; ++i) {
         int         taxonId   = taxaIdsToAdd[i];
         std::string taxonName = aln->getSeqName(taxonId);
