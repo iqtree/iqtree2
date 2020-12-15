@@ -64,20 +64,6 @@ public:
         } \
     } else 0
 
-void PhyloTree::clearInwardParsimonyFromNeighbors(PhyloNode* node1, PhyloNode* node2) {
-    //Todo: Do I need this?
-    FOR_EACH_ADJACENT_PHYLO_NODE(node1, nullptr, it, node_X)
-    {
-        PhyloNeighbor* nei = node_X->findNeighbor(node1);
-        nei->setParsimonyComputed(false);
-        
-    }
-    FOR_EACH_ADJACENT_PHYLO_NODE(node2, nullptr, it, node_Y) {
-        PhyloNeighbor* nei = node_Y->findNeighbor(node2);
-        nei->setParsimonyComputed(false);
-    }
-}
-
 void PhyloTree::doParsimonyNNI() {
     size_t max_iterations = params->parsimony_nni_iterations;
     PhyloBranchVector branches;

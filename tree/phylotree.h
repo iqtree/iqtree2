@@ -1714,7 +1714,8 @@ public:
             @param iterations number of iterations to loop through all branches
             @return the likelihood of the tree
      */
-    virtual double optimizeAllBranches(int my_iterations = 100, double tolerance = TOL_LIKELIHOOD, int maxNRStep = 100);
+    virtual double optimizeAllBranches(int my_iterations = 100, double tolerance = TOL_LIKELIHOOD,
+                                       int maxNRStep = 100, bool were_lengths_consistent = true);
 
     void moveRoot(Node *node1, Node *node2);
 
@@ -1854,8 +1855,6 @@ public:
 
     virtual void clearInwardViewsFromNeighbors(PhyloNode* node1, PhyloNode* node2);
     
-    virtual void clearInwardParsimonyFromNeighbors(PhyloNode* node1, PhyloNode* node2);
-
     /**
             Do an NNI
             @param move reference to an NNI move object containing information about the move

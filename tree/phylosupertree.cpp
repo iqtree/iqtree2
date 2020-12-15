@@ -306,12 +306,12 @@ void PhyloSuperTree::saveBranchLengths(DoubleVector &lenvec, int startid, PhyloN
  * restore branch lengths from a vector previously called with saveBranchLengths
  */
 void PhyloSuperTree::restoreBranchLengths(DoubleVector &lenvec, int startid, PhyloNode *node, PhyloNode *dad) {
-	PhyloTree::restoreBranchLengths(lenvec, startid);
-	startid += branchNum * getMixlen();
-	for (iterator it = begin(); it != end(); it++) {
-		(*it)->restoreBranchLengths(lenvec, startid);
-		startid += (*it)->branchNum * (*it)->getMixlen();
-	}
+    PhyloTree::restoreBranchLengths(lenvec, startid);
+    startid += branchNum * getMixlen();
+    for (iterator it = begin(); it != end(); it++) {
+        (*it)->restoreBranchLengths(lenvec, startid);
+        startid += (*it)->branchNum * (*it)->getMixlen();
+    }
 }
 
 int PhyloSuperTree::collapseInternalBranches(Node *node, Node *dad, double threshold) {
@@ -775,7 +775,8 @@ void PhyloSuperTree::computePatternProbabilityCategory(double *ptn_prob_cat, Sit
 	}
 }
 
-double PhyloSuperTree::optimizeAllBranches(int my_iterations, double tolerance, int maxNRStep) {
+double PhyloSuperTree::optimizeAllBranches(int my_iterations, double tolerance,
+                                           int maxNRStep, bool were_lengths_consistent) {
 	double tree_lh = 0.0;
 	int ntrees = size();
     if (part_order.empty()) computePartitionOrder();
@@ -784,7 +785,8 @@ double PhyloSuperTree::optimizeAllBranches(int my_iterations, double tolerance, 
 	#endif
 	for (int j = 0; j < ntrees; j++) {
         int i = part_order[j];
-		part_info[i].cur_score = at(i)->optimizeAllBranches(my_iterations, tolerance/min(ntrees,10), maxNRStep);
+        part_info[i].cur_score = at(i)->optimizeAllBranches(my_iterations, tolerance/min(ntrees,10),
+                                                            maxNRStep, were_lengths_consistent);
 		tree_lh += part_info[i].cur_score;
 		if (verbose_mode >= VB_MAX)
 			at(i)->printTree(cout, WT_BR_LEN + WT_NEWLINE);
@@ -1143,11 +1145,8 @@ void PhyloSuperTree::changeNNIBrans(const NNIMove &move) {
 				part_move.newLen[i] = part_info[part].nni2_brlen[brid * numlen + i];
 			}
 		}
-
 		(*it)->changeNNIBrans(part_move);
-
 	}
-
 }
 
 //void PhyloSuperTree::restoreAllBrans(PhyloNode *node, PhyloNode *dad) {

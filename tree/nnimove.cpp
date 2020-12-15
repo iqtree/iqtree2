@@ -19,8 +19,8 @@ void NNIMove::doSwap(PhyloTree* tree) {
     // do the NNI swap
     NeighborVec::iterator node1_it  = node1Nei_it;
     NeighborVec::iterator node2_it  = node2Nei_it;
-    Neighbor*             node1_nei = *node1_it;
-    Neighbor*             node2_nei = *node2_it;
+    PhyloNeighbor*        node1_nei = (PhyloNeighbor*)*node1_it;
+    PhyloNeighbor*        node2_nei = (PhyloNeighbor*)*node2_it;
 
     // reorient partial_lh before swap
     tree->reorientPartialLh(node1->findNeighbor(node2), node1);
@@ -31,7 +31,13 @@ void NNIMove::doSwap(PhyloTree* tree) {
 
     node2->updateNeighbor(node2_it, node1_nei);
     node1_nei->node->updateNeighbor(node1, node2);
+    
+    std::swap(node1_nei->length, node2_nei->length);
+
+    tree->clearInwardViewsFromNeighbors(node1, node2);
 }
+
+
 
 void NNIMove::getLengths(bool nni5) {
     node1->findNeighbor(node2)->getLength(newLen[0]);
@@ -49,7 +55,9 @@ void NNIMove::getLengths(bool nni5) {
         }
     }
 }
-void NNIMove::optimizeNNIBranches(PhyloTree* tree, bool nni5, int nni5_num_eval) {
+
+double NNIMove::optimizeNNIBranches(PhyloTree* tree, bool nni5, int nni5_num_eval) {
+    tree->optimizeOneBranch(node1, node2, false, NNI_MAX_NR_STEP);
     if (nni5) {
         for (int stepsToGo = nni5_num_eval; 0 < stepsToGo; --stepsToGo) {
             FOR_EACH_ADJACENT_PHYLO_NODE(node1, node2, it, node_X) {
@@ -59,16 +67,18 @@ void NNIMove::optimizeNNIBranches(PhyloTree* tree, bool nni5, int nni5_num_eval)
             FOR_EACH_ADJACENT_PHYLO_NODE(node2, node1, it, node_Y) {
                 tree->optimizeOneBranch(node2, node_Y, false, NNI_MAX_NR_STEP);
             }
+            tree->optimizeOneBranch(node1, node2, false, NNI_MAX_NR_STEP);
         }
     }
-    tree->optimizeOneBranch(node1, node2, false, NNI_MAX_NR_STEP);
     newloglh = tree->computeLikelihoodFromBuffer();
-    TREE_LOG_LINE(*tree, VB_DEBUG, "NNI of nodes with Ids " << node1->id << " - " << node2->id
+    TREE_LOG_LINE(*tree, VB_DEBUG, "NNI of branch " << central_branch_id
+        << " for nodes with Ids " << node1->id << " - " << node2->id
         << ": scores " << newloglh);
     // compute the pattern likelihoods if wanted
     if (ptnlh != nullptr) {
         tree->computePatternLikelihood(ptnlh, &newloglh);
     }
+    return newloglh;
 }
 
 NNIContext::NNIContext(PhyloTree* phylo_tree, PhyloNode* firstNode, PhyloNode* secondNode)

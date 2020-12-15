@@ -39,28 +39,33 @@ class PhyloTree;
 class NNIMove {
 public:
     // Two nodes representing the central branch
-    PhyloNode *node1, *node2;
+    PhyloNode* node1;
+    PhyloNode* node2;
 
     // Roots of the two subtree that are swapped
-    NeighborVec::iterator node1Nei_it, node2Nei_it;
+    NeighborVec::iterator node1Nei_it;
+    NeighborVec::iterator node2Nei_it;
 
     // log-likelihood of the tree after applying the NNI
-    double newloglh;
+    double       newloglh;
 
-    int swap_id;
+    // the id # of the branch around which the NNI takes place
+    int          central_branch_id;
+    
+    int          swap_id;
 
     // new branch lengths of 5 branches corresponding to the NNI
     DoubleVector newLen[5];
 
     // pattern likelihoods
-    double *ptnlh;
+    double*      ptnlh;
 
     NNIMove();
-    bool operator<(const NNIMove & rhs) const;
+    bool    operator<(const NNIMove & rhs) const;
     
-    void doSwap(PhyloTree* tree);
-    void getLengths(bool nni5);
-    void optimizeNNIBranches(PhyloTree* tree, bool nni5, int nni5_num_eval);
+    void    doSwap(PhyloTree* tree);
+    void    getLengths(bool nni5);
+    double  optimizeNNIBranches(PhyloTree* tree, bool nni5, int nni5_num_eval);
 };
 
 

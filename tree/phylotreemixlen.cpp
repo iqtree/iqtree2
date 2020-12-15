@@ -564,13 +564,15 @@ void PhyloTreeMixlen::computeFuncDervMulti(double *value, double *df, double *dd
         ddf[i] = -ddf[i];
 }
 
-double PhyloTreeMixlen::optimizeAllBranches(int my_iterations, double tolerance, int maxNRStep) {
+double PhyloTreeMixlen::optimizeAllBranches(int my_iterations, double tolerance,
+                                            int maxNRStep, bool were_lengths_consistent) {
 
 	initializeMixlen(tolerance, false);
     clearAllPartialLH();
     clearAllPartialParsimony(false);
     
-    double tree_lh = PhyloTree::optimizeAllBranches(my_iterations, tolerance, maxNRStep);
+    double tree_lh = PhyloTree::optimizeAllBranches(my_iterations, tolerance,
+                                                    maxNRStep, were_lengths_consistent);
 
     if (!initializing_mixlen)
         assignMeanMixBranches();
