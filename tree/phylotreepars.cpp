@@ -10,6 +10,9 @@
 #include "phylotree.h"
 //#include "vectorclass/vectorclass.h"
 #include "phylosupertree.h"
+#include <placement/taxontoplace.h>
+#include <placement/blockallocator.h>
+#include <placement/parallelparsimonycalculator.h>
 
 #if defined (__GNUC__) || defined(__clang__)
 #define vml_popcnt __builtin_popcount
@@ -1191,6 +1194,218 @@ void PhyloTree::insertNode2Branch(PhyloNode* added_node, PhyloNode* target_node,
     ass_node->clearReversePartialParsimony(added_node);
 }
 
+int PhyloTree::computeParsimonyTreeNew(const char *out_prefix,
+                                       Alignment *alignment,
+                                       int *rand_stream) {
+    if (!constraintTree.empty()) {
+        NodeVector multis;
+        getMultifurcatingNodes(multis);
+        if (!multis.empty()) {
+            return computeParsimonyTree(out_prefix, alignment, rand_stream);
+        }
+    }
+    aln = alignment;
+    size_t nseq = aln->getNSeq();
+    if (nseq < 3) {
+        outError(ERR_FEW_TAXA);
+    }
+    freeNode();
+    deleteAllPartialLhAndParsimony();
+    IntVector taxon_order;
+    taxon_order.resize(nseq);
+    if (!constraintTree.empty()) {
+        copyConstraintTree(&constraintTree, taxon_order, rand_stream);
+    } else {
+        create3TaxonTree(taxon_order, rand_stream);
+    }
+    for (size_t i=0; i<leafNum; ++i) {
+        LOG_LINE(VB_DEBUG, "Initial node " << aln->getSeqName(taxon_order[i]));
+    }
+    
+    int index_parsimony = 0;
+    setParsimonyKernel(params->SSE);
+    
+    bool zeroNumThreadsWhenDone = false;
+    if (num_threads==0) {
+        zeroNumThreadsWhenDone = true;
+        num_threads = params->num_threads;
+        if (num_threads==0) {
+            #ifdef _OPENMP
+                num_threads = omp_get_max_threads();
+            #else
+                num_threads = 1;
+            #endif
+        }
+    }
+    
+    ensureNumberOfThreadsIsSet(params, true);
+    ASSERT(0<num_threads);
+    ensureCentralPartialParsimonyIsAllocated(num_threads);
+    initializeAllPartialPars(index_parsimony);
+    BlockAllocator* block_allocator = new BlockAllocator(*this, index_parsimony);
+
+    size_t count_to_add = taxon_order.size()-leafNum;
+
+    //On each iteration 4*leafNum-4 parsimony vectors
+    //are recalculated, so the sum is 2*(nseq*nseq-1)
+    initProgress(nseq*(nseq-1)*2 - (size_t)leafNum*((size_t)leafNum-1)*2
+                 + 4*leafNum-4 /*initial tree's parsimony*/
+                 + count_to_add*num_threads /*threading overhead*/,
+                 "Constructing parsimony tree", "", "");
+    
+    TypedTaxaToPlace<TaxonToPlace> candidates;
+    candidates.resize(count_to_add);
+    for (size_t i=0; i<count_to_add; ++i) {
+        int         taxonId   = taxon_order[i+leafNum];
+        std::string taxonName = aln->getSeqName(taxonId);
+        candidates[i].initialize(block_allocator, taxonId, taxonName);
+    }
+    #ifdef _OPENMP
+    #pragma omp parallel for
+    #endif
+    for (size_t i=0; i<count_to_add; ++i) {
+        candidates[i].computeParsimony(this);
+        if (i%100==99) {
+            trackProgress(100);
+        }
+    }
+    trackProgress(count_to_add%100);
+    std::vector<UINT*> buffer;
+    for (int i=0; i<=num_threads; ++i) {
+        size_t offset = index_parsimony * pars_block_size;
+        buffer.push_back( central_partial_pars + offset );
+        ASSERT( buffer[i] < tip_partial_pars );
+        ++index_parsimony;
+    }
+    int parsimony_score;
+    {
+        ParallelParsimonyCalculator ppc(*this, true);
+        parsimony_score = ppc.computeAllParsimony(getRoot()->firstNeighbor(), getRoot());
+        LOG_LINE(VB_DEBUG, "Parsimony score for first "
+                 << leafNum << " taxa is " << parsimony_score);
+    }
+    IntVector scores;
+    scores.resize(nseq * 2 - 3);
+    PhyloBranchVector branches;
+    getBranches(branches);
+    for (size_t i=0; i<count_to_add; ++i) {
+        size_t branch_count = branches.size();
+        auto pars = candidates[i].getParsimonyBlock();
+        #ifdef _OPENMP
+        #pragma omp parallel for num_threads(num_threads)
+        #endif
+        for (size_t j=0; j<branch_count; ++j) {
+            int t;
+            #ifdef _OPENMP
+                t = omp_get_thread_num();
+            #else
+                t = 0;
+            #endif
+            PhyloBranch b(branches[j]);
+            PhyloNeighbor* nei1 = b.getLeftNeighbor();
+            PhyloNeighbor* nei2 = b.getRightNeighbor();
+            int link = computePartialParsimonyOutOfTree(nei1->partial_pars,
+                                                        nei2->partial_pars,
+                                                        buffer[t]);
+            int branch = 0;
+            computeParsimonyOutOfTree(pars, buffer[t], &branch);
+            scores[j] = link + branch; //cost to link anything there
+                                       //plus cost to link this there
+            if ((j%100)==99) {
+                trackProgress(100.0);
+            }
+        }
+        trackProgress(branch_count % 100);
+        size_t bestJ = 0;
+        double bestScore = scores[0];
+        for (size_t j=1; j<branch_count; ++j) {
+            if (scores[j]<bestScore) {
+                bestScore = scores[j];
+                bestJ = j;
+            }
+        }
+        trackProgress(num_threads);
+        
+#if (0)
+        std::stringstream s;
+        s << candidates[i].new_leaf->name;
+        for (size_t j=0; j<branch_count; ++j) {
+            s << " " << scores[j];
+        }
+        LOG_LINE(VB_DEBUG, s.str());
+#endif
+        
+        PhyloBranch b(branches[bestJ]);
+        PhyloNode*  newInterior = candidates[i].new_interior;
+        PhyloNode*  leaf        = candidates[i].new_leaf;
+        
+        newInterior->addNeighbor(b.first, -1);
+        PhyloNeighbor* newNeiLeft  = newInterior->findNeighbor(b.first);
+        block_allocator->allocateMemoryFor(newNeiLeft);
+        PhyloNeighbor* oldNeiLeft  = b.second->findNeighbor(b.first);
+        std::swap(newNeiLeft->partial_pars,  oldNeiLeft->partial_pars);
+        newNeiLeft->setParsimonyComputed(true);
+        oldNeiLeft->node = newInterior;
+        oldNeiLeft->setParsimonyComputed(false);
+    
+        newInterior->addNeighbor(b.second, -1);
+        PhyloNeighbor* newNeiRight = newInterior->findNeighbor(b.second);
+        block_allocator->allocateMemoryFor(newNeiRight);
+        PhyloNeighbor* oldNeiRight = b.first->findNeighbor(b.second);
+        std::swap(newNeiRight->partial_pars,  oldNeiRight->partial_pars);
+        newNeiRight->setParsimonyComputed(true);
+        oldNeiRight->node = newInterior;
+        oldNeiRight->setParsimonyComputed(false);
+
+        newInterior->is_floating_interior = false;
+
+        PhyloNeighbor* leafNei = leaf->findNeighbor(newInterior);
+        block_allocator->allocateMemoryFor(leafNei);
+        
+        leafNei->setParsimonyComputed(true);
+        newInterior->clearReversePartialParsimony(leaf);
+        
+        branches.emplace_back(b.second, newInterior);
+        branches.emplace_back(newInterior, leaf);
+        branches[bestJ] = PhyloBranch(b.first, newInterior);
+
+        ParallelParsimonyCalculator ppc(*this, true);
+        ppc.computeReverseParsimony(newInterior, leaf);
+        LOG_LINE(VB_DEBUG, "Added " << candidates[i].taxonName
+                 << " with score " << bestScore);
+        ++leafNum;
+    }
+    doneProgress();
+    delete block_allocator;
+    deleteAllPartialParsimony();
+    nodeNum = 2 * leafNum - 2;
+    initializeTree();
+    {
+        ensureCentralPartialParsimonyIsAllocated(0);
+        initializeAllPartialPars(index_parsimony);
+        ParallelParsimonyCalculator ppc(*this, false);
+        PhyloNode* r = getRoot();
+        PhyloNeighbor* rootNei = r->firstNeighbor();
+        parsimony_score = ppc.computeParsimonyBranch(rootNei, r);
+    }
+    if (zeroNumThreadsWhenDone) {
+        num_threads = 0;
+    }
+    bool orig_rooted = rooted;
+    rooted = false;
+    setAlignment(alignment);
+    fixNegativeBranch(true);
+    if (orig_rooted) {
+        convertToRooted();
+    }
+    if (out_prefix) {
+        string file_name = out_prefix;
+        file_name += ".parstree";
+        printTree(file_name.c_str(), WT_NEWLINE + WT_BR_LEN);
+    }
+    return parsimony_score;
+}
+
 int PhyloTree::computeParsimonyTree(const char *out_prefix,
                                     Alignment *alignment, int *rand_stream) {
     aln = alignment;
@@ -1252,9 +1467,10 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix,
     
     // stepwise adding the next taxon for the remaining taxa
     double usefulTime = 0;
-    double fudge = leafNum*leafNum * 0.01;
+    double fudge      = leafNum * leafNum * 0.01;
     initProgress(fudge + leafNum*2 + nseq*(nseq+1) - leafNum*(leafNum+1),
                  "Constructing parsimony tree", "", "");
+    
     for (int step = 0; leafNum < nseq; ++step) {
         PhyloNodeVector nodes1, nodes2;
         PhyloNode*      target_node = nullptr;
@@ -1336,7 +1552,6 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix,
     doneProgress();
     LOG_LINE ( VB_MED, "Time usefully spent was " <<
               usefulTime << " seconds");
-    
     ASSERT(index == 4*leafNum-6);
 
     nodeNum = 2 * leafNum - 2;

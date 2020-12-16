@@ -1652,6 +1652,15 @@ public:
     virtual int computeParsimonyTree(const char *out_prefix, Alignment *alignment, int *rand_stream);
 
     /**
+     * FASTER VERSION: compute parsimony tree by step-wise addition
+     * @param out_prefix prefix for .parstree file
+     * @param alignment input alignment
+     * @param rand_stream random stream
+     * @return parsimony score
+     */
+    virtual int computeParsimonyTreeNew(const char *out_prefix, Alignment *alignment, int *rand_stream);
+
+    /**
      * FAST VERSION: compute parsimony tree by parsimony joining
      * @param out_prefix prefix for .parstree file
      * @param alignment input alignment
