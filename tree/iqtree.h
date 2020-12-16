@@ -461,8 +461,6 @@ public:
      */
     void evaluateNNIs(Branches &nniBranches, vector<NNIMove> &outNNIMoves);
 
-    double optimizeNNIBranches(Branches &nniBranches);
-
     /**
             search all positive NNI move on the current tree and save them
             on the possilbleNNIMoves list

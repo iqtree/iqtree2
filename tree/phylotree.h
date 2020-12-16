@@ -1816,14 +1816,6 @@ public:
      ****************************************************************************/
 
     /**
-            Deprecated
-            search by a nearest neigbor interchange, then optimize branch lengths. Do it
-            until tree does not improve
-            @return the likelihood of the tree
-     */
-//    double optimizeNNIBranches();
-
-    /**
             search by a nearest neigbor interchange
             @return the likelihood of the tree
      */

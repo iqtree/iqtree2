@@ -4624,10 +4624,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
     int branch_id = nei1->id;
 
     NNIContext context(this, node1, node2);
-
-    int cnt;
-    
-    NNIMove localNNIMoves[2];
+    NNIMove    localNNIMoves[2];
     if (!nniMoves) {
         nniMoves = localNNIMoves;
         //NNIMove constructor now sets node1, node2, and ptnlh to nullptr (James B. 06-Aug-2020)
@@ -4635,13 +4632,13 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
     
     if (nniMoves[0].node1 != nullptr) {
         // assuming that node1Nei_it and node2Nei_it is defined in nniMoves structure
-        for (cnt = 0; cnt < 2; cnt++) {
+        for (int cnt = 0; cnt < 2; cnt++) {
             // sanity check
             if (!node1->findNeighbor((*nniMoves[cnt].node1Nei_it)->node)) outError(__func__);
             if (!node2->findNeighbor((*nniMoves[cnt].node2Nei_it)->node)) outError(__func__);
         }
     } else {
-        cnt = 0;
+        int cnt = 0;
         FOR_EACH_PHYLO_NEIGHBOR(node1, node2, node1_it, nei) {
             if (nei->direction != TOWARD_ROOT)
             {
@@ -4664,10 +4661,9 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
     nniMoves[0].node2    = nniMoves[1].node2    = node2;
     nniMoves[0].newloglh = nniMoves[1].newloglh = -DBL_MAX;
 
-    for (cnt = 0; cnt < 2; cnt++) {
+    for (int cnt = 0; cnt < 2; cnt++) {
         if (constraintTree.isCompatible(nniMoves[cnt])) {
             NNIMove& move = nniMoves[cnt];
-            
             optimizeOneBranch(move.node1, move.node2, false, NNI_MAX_NR_STEP);
             double old_log_lh = computeLikelihoodFromBuffer();
             move.doSwap(this);
@@ -4700,12 +4696,12 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
     LOG_LINE(VB_MAX, "  Swapped branch 1 has id " << (*res.node1Nei_it)->id << " and length " << (*res.node1Nei_it)->length);
     LOG_LINE(VB_MAX, "  Swapped branch 2 has id " << (*res.node2Nei_it)->id << " and length " << (*res.node2Nei_it)->length);
 
-#if (0)
-    double saved_score = curScore;
-    double rescore     = computeLikelihood();
-    LOG_LINE(VB_MAX, "  Rescore after restore was " << rescore 
-        << " versus previous score of " << saved_score );
-#endif
+    #if (0)
+        double saved_score = curScore;
+        double rescore     = computeLikelihood();
+        LOG_LINE(VB_MAX, "  Rescore after restore was " << rescore
+            << " versus previous score of " << saved_score );
+    #endif
 
     return res;
 }
