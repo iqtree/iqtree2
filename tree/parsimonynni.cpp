@@ -71,11 +71,20 @@ void PhyloTree::doParsimonyNNI() {
     size_t branch_count = branches.size();
     std::vector<TargetBranch> targets;
     
-    if (0<params->num_threads) {
-        num_threads = params->num_threads;
-    } else {
-        ensureNumberOfThreadsIsSet(params, true);
+    bool zeroNumThreads = false;
+    if (num_threads==0) {
+        if (0<params->num_threads) {
+            num_threads = params->num_threads;
+        } else {
+            #ifdef _OPENMP
+            num_threads = omp_get_max_threads();
+            #else
+            num_threads = 0;
+            #endif
+        }
+        zeroNumThreads = true;
     }
+    
     deleteAllPartialParsimony();
     setParsimonyKernel(params->SSE);
     ensureCentralPartialParsimonyIsAllocated( num_threads * 2 + 2 );
@@ -113,7 +122,7 @@ void PhyloTree::doParsimonyNNI() {
             getBranches(branches);
         }
         #ifdef _OPENMP
-        #pragma omp parallel for
+        #pragma omp parallel for num_threads(num_threads)
         #endif
         for (size_t i=0; i<branch_count; ++i) {
             PhyloBranch    tb(branches[i]);
@@ -134,7 +143,7 @@ void PhyloTree::doParsimonyNNI() {
         std::vector<PossibleExchange> best_exchange;
         best_exchange.resize(branch_count);
         #ifdef _OPENMP
-        #pragma omp parallel for
+        #pragma omp parallel for num_threads(num_threads)
         #endif
         for (int i=0; i<branch_count; ++i) {
             PhyloBranch tb(branches[i]);
@@ -273,4 +282,9 @@ void PhyloTree::doParsimonyNNI() {
     }
     
     deleteAllPartialParsimony();
+    
+    if (zeroNumThreads) {
+        num_threads = 0;
+    }
+    
 }
