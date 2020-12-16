@@ -345,7 +345,9 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
 
         auto workLeft   = taxaAdditionWorkEstimate
                           ( newTaxaCount, pr.taxa_per_batch, pr.inserts_per_batch );
-        this->progress->setWorkRemaining(workLeft);
+        if (progress!=nullptr) {
+            progress->setWorkRemaining(workLeft);
+        }
     }
     doneProgress();
 
