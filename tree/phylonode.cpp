@@ -201,5 +201,13 @@ int PhyloBranch::getBranchID() const {
     return -1;
 }
 
+PhyloNeighbor* PhyloBranch::getLeftNeighbor() const {
+    return first->findNeighbor(second);
+}
+
+PhyloNeighbor* PhyloBranch::getRightNeighbor() const {
+    return second->findNeighbor(first);
+}
+
 
 
