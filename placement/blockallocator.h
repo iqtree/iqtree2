@@ -28,6 +28,13 @@ public:
      @param[out] partial_pars - pointer to the block (to be set to the newly allocated block)*/
     void         allocateParsimonyBlock(UINT*& partial_pars);
 
+    /** request multiple partial parsimony blocks
+        @param vectorSize number of blocks to allocate
+        @param[out] vector of parsimony blocks to append the
+                    allocated block addresses to*/
+    void         allocateVectorOfParsimonyBlocks(int vectorSize,
+        std::vector<UINT*>& buffers);
+
     /** allocate partial parsimony (and perhaps likelihood and scalenum) blocks
      to a PhyloNeighbor instance (in the tree).
      @param[out] nei - pointer to the PhyloNeighbor instance*/

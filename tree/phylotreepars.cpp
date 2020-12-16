@@ -1063,8 +1063,9 @@ void PhyloTree::create3TaxonTree(IntVector &taxon_order, int *rand_stream) {
     freeNode();
     size_t nseq = aln->getNSeq();
     taxon_order.resize(nseq);
-    for (size_t i = 0; i < nseq; ++i)
+    for (size_t i = 0; i < nseq; ++i) {
         taxon_order[i] = i;
+    }
     // randomize the addition order
     my_random_shuffle(taxon_order.begin(), taxon_order.end(), rand_stream);
     
@@ -1201,6 +1202,8 @@ int PhyloTree::computeParsimonyTreeNew(const char *out_prefix,
         NodeVector multis;
         getMultifurcatingNodes(multis);
         if (!multis.empty()) {
+            //This function doesn't (yet) handle constraint trees
+            //that aren't bifurcated.
             return computeParsimonyTree(out_prefix, alignment, rand_stream);
         }
     }
@@ -1222,11 +1225,9 @@ int PhyloTree::computeParsimonyTreeNew(const char *out_prefix,
         LOG_LINE(VB_DEBUG, "Initial node " << aln->getSeqName(taxon_order[i]));
     }
     
-    int index_parsimony = 0;
-    setParsimonyKernel(params->SSE);
     
     bool zeroNumThreadsWhenDone = false;
-    if (num_threads==0) {
+    if (num_threads<1) {
         zeroNumThreadsWhenDone = true;
         num_threads = params->num_threads;
         if (num_threads==0) {
@@ -1236,29 +1237,29 @@ int PhyloTree::computeParsimonyTreeNew(const char *out_prefix,
                 num_threads = 1;
             #endif
         }
+        ASSERT(0 < num_threads);
     }
-    
-    ensureNumberOfThreadsIsSet(params, true);
-    ASSERT(0<num_threads);
+    setParsimonyKernel(params->SSE);
     ensureCentralPartialParsimonyIsAllocated(num_threads);
+    int index_parsimony = 0;
     initializeAllPartialPars(index_parsimony);
-    BlockAllocator* block_allocator = new BlockAllocator(*this, index_parsimony);
+    BlockAllocator block_allocator(*this, index_parsimony);
 
     size_t count_to_add = taxon_order.size()-leafNum;
 
     //On each iteration 4*leafNum-4 parsimony vectors
     //are recalculated, so the sum is 2*(nseq*nseq-1)
     initProgress(nseq*(nseq-1)*2 - (size_t)leafNum*((size_t)leafNum-1)*2
-                 + 4*leafNum-4 /*initial tree's parsimony*/
+                 + 4*leafNum-4 /*initial tree's parsimony vector count*/
                  + count_to_add*num_threads /*threading overhead*/,
                  "Constructing parsimony tree", "", "");
-    
+        
     TypedTaxaToPlace<TaxonToPlace> candidates;
     candidates.resize(count_to_add);
     for (size_t i=0; i<count_to_add; ++i) {
         int         taxonId   = taxon_order[i+leafNum];
         std::string taxonName = aln->getSeqName(taxonId);
-        candidates[i].initialize(block_allocator, taxonId, taxonName);
+        candidates[i].initialize(&block_allocator, taxonId, taxonName);
     }
     #ifdef _OPENMP
     #pragma omp parallel for
@@ -1270,13 +1271,10 @@ int PhyloTree::computeParsimonyTreeNew(const char *out_prefix,
         }
     }
     trackProgress(count_to_add%100);
+
     std::vector<UINT*> buffer;
-    for (int i=0; i<=num_threads; ++i) {
-        size_t offset = index_parsimony * pars_block_size;
-        buffer.push_back( central_partial_pars + offset );
-        ASSERT( buffer[i] < tip_partial_pars );
-        ++index_parsimony;
-    }
+    block_allocator.allocateVectorOfParsimonyBlocks(num_threads, buffer);
+
     int parsimony_score;
     {
         ParallelParsimonyCalculator ppc(*this, true);
@@ -1341,7 +1339,7 @@ int PhyloTree::computeParsimonyTreeNew(const char *out_prefix,
         
         newInterior->addNeighbor(b.first, -1);
         PhyloNeighbor* newNeiLeft  = newInterior->findNeighbor(b.first);
-        block_allocator->allocateMemoryFor(newNeiLeft);
+        block_allocator.allocateMemoryFor(newNeiLeft);
         PhyloNeighbor* oldNeiLeft  = b.second->findNeighbor(b.first);
         std::swap(newNeiLeft->partial_pars,  oldNeiLeft->partial_pars);
         newNeiLeft->setParsimonyComputed(true);
@@ -1350,7 +1348,7 @@ int PhyloTree::computeParsimonyTreeNew(const char *out_prefix,
     
         newInterior->addNeighbor(b.second, -1);
         PhyloNeighbor* newNeiRight = newInterior->findNeighbor(b.second);
-        block_allocator->allocateMemoryFor(newNeiRight);
+        block_allocator.allocateMemoryFor(newNeiRight);
         PhyloNeighbor* oldNeiRight = b.first->findNeighbor(b.second);
         std::swap(newNeiRight->partial_pars,  oldNeiRight->partial_pars);
         newNeiRight->setParsimonyComputed(true);
@@ -1360,7 +1358,7 @@ int PhyloTree::computeParsimonyTreeNew(const char *out_prefix,
         newInterior->is_floating_interior = false;
 
         PhyloNeighbor* leafNei = leaf->findNeighbor(newInterior);
-        block_allocator->allocateMemoryFor(leafNei);
+        block_allocator.allocateMemoryFor(leafNei);
         
         leafNei->setParsimonyComputed(true);
         newInterior->clearReversePartialParsimony(leaf);
@@ -1376,7 +1374,6 @@ int PhyloTree::computeParsimonyTreeNew(const char *out_prefix,
         ++leafNum;
     }
     doneProgress();
-    delete block_allocator;
     deleteAllPartialParsimony();
     nodeNum = 2 * leafNum - 2;
     initializeTree();
