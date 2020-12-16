@@ -91,45 +91,41 @@ int  ParallelParsimonyCalculator::computeAllParsimony
     ( PhyloNeighbor* dad_branch, PhyloNode* dad,
       const char* task_description ) {
     int result = computeParsimonyBranch(dad_branch, dad, task_description);
-    computeReverseParsimony(dad_branch, dad);
     PhyloNode*     node     = dad_branch->getNode();
-    PhyloNeighbor* back_nei = node->findNeighbor(dad);
-    computeReverseParsimony(back_nei, node);
+    computeReverseParsimony(dad, node);
     return result;
 }
 
-void ParallelParsimonyCalculator::computeReverseParsimony(PhyloNeighbor* dad_branch,
-                                                          PhyloNode* dad) {
-    std::vector <WorkItem> stuffToDo;
-    stuffToDo.emplace_back(dad_branch, dad);
+void ParallelParsimonyCalculator::computeReverseParsimony(PhyloNode* first,
+                                                          PhyloNode* second) {
+    std::vector <PhyloBranch> stuffToDo;
+    stuffToDo.emplace_back(first, second);
+    stuffToDo.emplace_back(second, first);
     while (!stuffToDo.empty()) {
-        std::vector <WorkItem> stuffToDoNext;
+        std::vector <PhyloBranch> stuffToDoNext;
         size_t r = 0;
         size_t w = 0;
         for (;r<stuffToDo.size(); ++r) {
-            PhyloNeighbor* nei   = stuffToDo[r].first;
-            PhyloNode*     node  = stuffToDo[r].second;
-            PhyloNode*     child = nei->getNode();
-            FOR_EACH_PHYLO_NEIGHBOR(child, node, it, nei2) {
-                stuffToDoNext.emplace_back(nei2, child);
+            PhyloNode* first  = stuffToDo[r].first;
+            PhyloNode* second = stuffToDo[r].second;
+            FOR_EACH_ADJACENT_PHYLO_NODE(first, second, it, back) {
+                stuffToDoNext.emplace_back(back, first);
             }
-            PhyloNeighbor* back_nei = child->findNeighbor(node);
             //Only keep the (PhyloNeighbor*, PhyloNode*)
             //pairs where we need to compute reverse parsimony now.
-            stuffToDo[w].first  = back_nei; //reverse direction!
-            stuffToDo[w].second = child;
-            w                  += ( back_nei->isParsimonyComputed() ? 0 : 1 );
+            stuffToDo[w]       = stuffToDo[r];
+            PhyloNeighbor* nei = first->findNeighbor(second);
+            w                 += ( nei->isParsimonyComputed() ? 0 : 1 );
         }
         stuffToDo.resize(w);
-        WorkItem* startItem = stuffToDo.data();
-        WorkItem* stopItem  = stuffToDo.data() + w;
+        PhyloBranch* startItem = stuffToDo.data();
+        PhyloBranch* stopItem  = stuffToDo.data() + w;
         #ifdef _OPENMP
         #pragma omp parallel for schedule(dynamic)
         #endif
-        for (WorkItem* item = startItem; item<stopItem; ++item) {
-            PhyloNeighbor* dad_branch = item->first;
-            PhyloNode*     dad        = item->second;
-            tree.computePartialParsimony(dad_branch, dad);
+        for (PhyloBranch* item = startItem; item<stopItem; ++item) {
+            PhyloNeighbor* nei = item->first->findNeighbor(item->second);
+            tree.computePartialParsimony(nei, item->first);
         }
         if (report_progress_to_tree) {
             tree.trackProgress(r);
@@ -137,7 +133,6 @@ void ParallelParsimonyCalculator::computeReverseParsimony(PhyloNeighbor* dad_bra
         std::swap(stuffToDo, stuffToDoNext);
     }
 }
-
 
 void ParallelParsimonyCalculator::calculate(int start_index,
                                             const char* task_description) {
@@ -147,7 +142,6 @@ void ParallelParsimonyCalculator::calculate(int start_index,
         //Bail, if nothing to do
         return;
     }
-    
     if (tasked && task_to_start==nullptr) {
         task_to_start    = task_description;
         task_in_progress = task_description;

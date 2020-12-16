@@ -55,7 +55,7 @@ public:
     int  computeParsimonyBranch(PhyloNeighbor* dad_branch, PhyloNode* dad,
                                 const char* taskDescription="");
 
-    void computeReverseParsimony(PhyloNeighbor* dad_branch, PhyloNode* dad);
+    void computeReverseParsimony(PhyloNode* first, PhyloNode* second);
 
     int  computeAllParsimony(PhyloNeighbor* dad_branch, PhyloNode* dad,
                              const char* taskDescription="");
