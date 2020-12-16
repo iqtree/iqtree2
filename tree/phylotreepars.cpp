@@ -1369,8 +1369,8 @@ int PhyloTree::computeParsimonyTreeNew(const char *out_prefix,
 
         ParallelParsimonyCalculator ppc(*this, true);
         ppc.computeReverseParsimony(newInterior, leaf);
-        LOG_LINE(VB_DEBUG, "Added " << candidates[i].taxonName
-                 << " with score " << bestScore);
+        LOG_LINE(VB_DEBUG, "After adding " << candidates[i].taxonName
+                 << " parsimony score was " << bestScore);
         ++leafNum;
     }
     doneProgress();
@@ -1547,8 +1547,6 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix,
         trackProgress(nodes1.size() + ((step==0) ? fudge : 0));
     }
     doneProgress();
-    LOG_LINE ( VB_MED, "Time usefully spent was " <<
-              usefulTime << " seconds");
     ASSERT(index == 4*leafNum-6);
 
     nodeNum = 2 * leafNum - 2;
