@@ -44,7 +44,10 @@ public:
     
     TaxonToPlace();
     TaxonToPlace(const TaxonToPlace& rhs); //copy everything!
-    TaxonToPlace(BlockAllocator* ba, int id, std::string name);
+    TaxonToPlace(BlockAllocator* ba, int id, std::string name, bool delayCompute=false);
+    void initialize(BlockAllocator* ba, int id, std::string name, bool delayCompute=false);
+    void computeParsimony(PhyloTree* tree);
+
     virtual      ~TaxonToPlace();
         
     const UINT*   getParsimonyBlock()  const; //returns partial_pars

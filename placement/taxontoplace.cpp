@@ -19,10 +19,19 @@ TaxonToPlace::TaxonToPlace() : bestPlacement(), taxonId(-1), taxonName()
 
 TaxonToPlace::TaxonToPlace(const TaxonToPlace& rhs) = default; //copy everything!
 
-TaxonToPlace::TaxonToPlace(BlockAllocator* ba, int id, std::string name)
-    : taxonId(id), taxonName(name), inserted(false)
-    , partial_lh(nullptr), scale_num(nullptr) {
+TaxonToPlace::TaxonToPlace(BlockAllocator* ba, int id,
+                           std::string name, bool delay) {
+    initialize(ba, id, name, delay);
+}
+
+void TaxonToPlace::initialize(BlockAllocator* ba, int id,
+                              std::string name, bool delayCompute) {
     PhyloTree& phylo_tree = ba->getTree();
+    inserted     = false;
+    partial_lh   = nullptr;
+    scale_num    = nullptr;
+    taxonId      = id;
+    taxonName    = name;
     new_leaf     = phylo_tree.newNode(taxonId, taxonName.c_str());
     new_interior = phylo_tree.newNode();
     new_interior->is_floating_interior = true;
@@ -30,10 +39,17 @@ TaxonToPlace::TaxonToPlace(BlockAllocator* ba, int id, std::string name)
     new_leaf->addNeighbor(new_interior, -1 );
     PhyloNeighbor* nei = new_interior->firstNeighbor();
     ba->allocateMemoryFor(nei); //The allocator knows if partial_lh & scale_num wanted
-    phylo_tree.computePartialParsimony(nei, new_interior);
     partial_pars = nei->partial_pars;
     partial_lh   = nei->partial_lh;
     scale_num    = nei->scale_num;
+    if (!delayCompute) {
+        phylo_tree.computePartialParsimony(nei, new_interior);
+    }
+}
+
+void TaxonToPlace::computeParsimony(PhyloTree* tree) {
+    PhyloNeighbor* nei = new_interior->firstNeighbor();
+    tree->computePartialParsimony(nei, new_interior);
 }
 
 TaxonToPlace::~TaxonToPlace() = default;
