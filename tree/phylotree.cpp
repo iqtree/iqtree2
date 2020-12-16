@@ -807,7 +807,7 @@ void PhyloTree::mergeAlignment(const Alignment* new_aln) {
         //merged, that were duplicated in the original sequence
     
     for (size_t new_seq_id = 0; new_seq_id < new_count; ++new_seq_id) {
-        progress->incrementBy(1.0);
+        trackProgress(1.0);
         std::string new_name = new_names[new_seq_id];
         std::string new_sequence;
         new_aln->getOneSequence(state_strings, new_seq_id, new_sequence);
@@ -3487,11 +3487,11 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance,
             }
             break;
         }
-
         // only return if the new_tree_lh >= tree_lh! (in rare case that likelihood decreases, continue the loop)
-        if (previous_score <= curScore && curScore  <= previous_score + tolerance) {
+        if (previous_score <= curScore && curScore <= previous_score + tolerance) {
             break;
         }
+        LOG_LINE(VB_DEBUG, "Prev " << previous_score << ", Curr " << curScore);
         previous_score = curScore;
         were_lengths_consistent = true;
     }
