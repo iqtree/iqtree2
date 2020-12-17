@@ -1,8 +1,12 @@
 //
-//  assert.h
+//  my_assert.h
 //  iqtree
 //
-//  Created by James Barbetti on 17/12/20.
+//_my_assert function, originally created by
+//BUI Quang Minh <minh.bui@univie.ac.at> 21-Aug-2016.
+//This file: created by James Barbetti on 17-Dec-2020.
+//(decentTree needs _my_assert and ASSERT, but
+// doesn't need anything from the rest of tools.h)
 //
 
 #ifndef assert_h
@@ -10,6 +14,11 @@
 
 #include <stdlib.h>
 #include <iostream>
+
+// for MSVC
+#ifndef __func__
+#define __func__ __FUNCTION__
+#endif
 
 // redefine assertion
 inline void _my_assert(const char* expression, const char *func, const char* file, int line)
