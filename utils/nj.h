@@ -70,8 +70,8 @@
 #ifndef nj_h
 #define nj_h
 
-#include "upgma.h" //for UPGMA_Matrix template class
-#include "tools.h" //for ASSERT macro
+#include "upgma.h"     //for UPGMA_Matrix template class
+#include "my_assert.h" //for ASSERT macro
 
 namespace StartTree
 {

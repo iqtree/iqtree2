@@ -16,7 +16,7 @@
 #include <string>                    //sequence names stored as std::string
 #include <vectorclass/vectorclass.h> //for Vec4d and Vec4db vector classes
 #include "progress.h"                //for progress_display
-#include "tools.h"                   //for ASSERT macro
+#include "my_assert.h"                   //for ASSERT macro
 
 typedef float   NJFloat;
 typedef Vec8f   FloatVector;

@@ -27,7 +27,7 @@
 #include <string.h>
 #include <time.h>
 
-#include "utils/timeutil.h" //JB2020-06-18 for getRealTime()
+#include "timeutil.h"  //JB2020-06-18 for getRealTime()
 #include "starttree.h"
 
 #define PREC 8                             /* precision of branch-lengths  */

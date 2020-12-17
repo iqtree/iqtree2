@@ -46,30 +46,8 @@
 
 #define SPRNG
 #include "sprng/sprng.h"
+#include "my_assert.h"
 
-// redefine assertion
-inline void _my_assert(const char* expression, const char *func, const char* file, int line)
-{
-    const char *sfile = strrchr(file, '/');
-    if (!sfile) {
-        sfile = file;
-    }
-    else {
-        ++sfile;
-    }
-    cerr << sfile << ":" << line << ": " << func << ": Assertion `" << expression << "' failed." << endl;
-    abort();
-}
- 
-#ifdef NDEBUG
-#define ASSERT(EXPRESSION) ((void)0)
-#else
-    #if defined(__GNUC__) || defined(__clang__)
-        #define ASSERT(EXPRESSION) ((EXPRESSION) ? (void)0 : _my_assert(#EXPRESSION, __PRETTY_FUNCTION__, __FILE__, __LINE__))
-    #else
-        #define ASSERT(EXPRESSION) ((EXPRESSION) ? (void)0 : _my_assert(#EXPRESSION, __func__, __FILE__, __LINE__))
-    #endif
-#endif
 
 
 #define USE_HASH_MAP
