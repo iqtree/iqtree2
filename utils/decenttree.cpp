@@ -329,7 +329,7 @@ bool loadSequenceDistancesIntoMatrix(Sequences& sequences,
                         //Mark one of them (the one with more unknowns) as problematic.
                         uint64_t unkRow = countBitsSetIn(unknown_data[row], unkLen);
                         uint64_t unkCol = countBitsSetIn(unknown_data[col], unkLen);
-                        size_t   zap    = (unkCol < unkRow) ? unkCol : unkRow;
+                        intptr_t zap    = (unkCol < unkRow) ? row : col;
                         sequences[zap].markAsProblematic();
                     }
                 }
