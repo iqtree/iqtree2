@@ -18,11 +18,11 @@
 #include "progress.h"                //for progress_display
 #include "my_assert.h"                   //for ASSERT macro
 
-typedef float   NJFloat;
-typedef Vec8f   FloatVector;
-typedef Vec8fb  FloatBoolVector;
-const   NJFloat infiniteDistance = 1e+36;
-const   int     notMappedToRow = -1;
+typedef float    NJFloat;
+typedef Vec8f    FloatVector;
+typedef Vec8fb   FloatBoolVector;
+const   NJFloat  infiniteDistance = (NJFloat)(1e+36);
+const   intptr_t notMappedToRow = -1;
 
 namespace StartTree
 {
@@ -32,10 +32,10 @@ template <class T=NJFloat> struct Position
     //Note that column is always less than row.
     //(Because that's the convention in RapidNJ).
 public:
-    size_t  row;
-    size_t  column;
-    T       value;
-    size_t  imbalance;
+    intptr_t row;
+    intptr_t column;
+    T        value;
+    size_t   imbalance;
     Position() : row(0), column(0), value(0), imbalance(0) {}
     Position(size_t r, size_t c, T v, size_t imbalance)
         : row(r), column(c), value(v) {}
@@ -43,7 +43,7 @@ public:
         row       = rhs.row;
         column    = rhs.column;
         value     = rhs.value;
-        imbalance = rhs.value;
+        imbalance = rhs.imbalance;
         return *this;
     }
     bool operator< ( const Position& rhs ) const {
@@ -142,7 +142,7 @@ protected:
     void getMinimumEntry(Position<T> &best) {
         getRowMinima();
         best.value = infiniteDistance;
-        for (size_t r=0; r<row_count; ++r) {
+        for (intptr_t r=0; r<row_count; ++r) {
             Position<T> & here = rowMinima[r];
             if (here.value < best.value && here.row != here.column) {
                 best = here;
@@ -156,11 +156,11 @@ protected:
         #ifdef _OPENMP
         #pragma omp parallel for schedule(dynamic)
         #endif
-        for (size_t row=1; row<row_count; ++row) {
-            float  bestVrc    = infiniteDistance;
+        for (intptr_t row=1; row<row_count; ++row) {
+            T      bestVrc    = (T)infiniteDistance;
             size_t bestColumn = 0;
             const  T* rowData = rows[row];
-            for (size_t col=0; col<row; ++col) {
+            for (intptr_t col=0; col<row; ++col) {
                 T    v      = rowData[col];
                 bool better = ( v < bestVrc );
                 if (better) {
@@ -178,13 +178,13 @@ protected:
         //
         ASSERT( row_count == 3);
         T weights[3];
-        T denominator = 0;
+        T denominator = (T)0.0;
         for (size_t i=0; i<3; ++i) {
-            weights[i] = clusters[rowToCluster[i]].countOfExteriorNodes;
+            weights[i]   = (T)clusters[rowToCluster[i]].countOfExteriorNodes;
             denominator += weights[i];
         }
         for (size_t i=0; i<3; ++i) {
-            weights[i] /= (2.0 * denominator);
+            weights[i] /= ((T)2.0 * denominator);
         }
         clusters.addCluster
             ( rowToCluster[0], weights[1]*rows[0][1] + weights[2]*rows[0][2]
@@ -192,22 +192,22 @@ protected:
             , rowToCluster[2], weights[0]*rows[0][2] + weights[1]*rows[1][2]);
         row_count = 0;
     }
-    virtual void cluster(size_t a, size_t b) {
-        double aLength = rows[b][a] * 0.5;
-        double bLength = aLength;
+    virtual void cluster(intptr_t a, intptr_t b) {
+        T      aLength = rows[b][a] * (T)0.5;
+        T      bLength = aLength;
         size_t aCount  = clusters[rowToCluster[a]].countOfExteriorNodes;
         size_t bCount  = clusters[rowToCluster[b]].countOfExteriorNodes;
         size_t tCount  = aCount + bCount;
-        double lambda  = (double)aCount / (double)tCount;
-        double mu      = 1.0 - lambda;
+        T      lambda  = (T)aCount / (T)tCount;
+        T      mu      = (T)1.0 - lambda;
         auto rowA = rows[a];
         auto rowB = rows[b];
-        for (size_t i=0; i<row_count; ++i) {
+        for (intptr_t i=0; i<row_count; ++i) {
             if (i!=a && i!=b) {
                 T Dai      = rowA[i];
                 T Dbi      = rowB[i];
                 T Dci      = lambda * Dai + mu * Dbi;
-                rowA[i] = Dci;
+                rowA[i]    = Dci;
                 rows[i][a] = Dci;
             }
         }
@@ -236,7 +236,7 @@ protected:
     using super::row_count;
     using super::calculateRowTotals;
     using super::getImbalance;
-    const size_t blockSize;
+    const intptr_t blockSize;
     mutable std::vector<T> scratchColumnNumbers;
 public:
     VectorizedUPGMA_Matrix() : super(), blockSize(VB().size()) {
@@ -256,10 +256,10 @@ public:
         #ifdef _OPENMP
         #pragma omp parallel for schedule(dynamic)
         #endif
-        for (size_t row=1; row<row_count; ++row) {
+        for (intptr_t row=1; row<row_count; ++row) {
             Position<T> pos(row, 0, infiniteDistance, 0);
             const T* rowData = rows[row];
-            size_t col;
+            intptr_t col;
             V minVector  = infiniteDistance;
             V ixVector   = -1 ;
 
@@ -274,7 +274,7 @@ public:
             for (int c=0; c<blockSize; ++c) {
                 if (minVector[c] < pos.value) {
                     pos.value  = minVector[c];
-                    pos.column = ixVector[c];
+                    pos.column = (size_t)ixVector[c];
                 }
             }
             for (; col<row; ++col) {

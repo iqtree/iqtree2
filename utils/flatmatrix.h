@@ -34,6 +34,7 @@ private:
     double*                  distanceMatrix;
     bool                     borrowed;
 public:
+    typedef double cell_type;
     FlatMatrix();
     FlatMatrix(const std::vector<std::string>& sequence_names,
                double* distance_data);

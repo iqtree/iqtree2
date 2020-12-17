@@ -21,7 +21,15 @@
 #ifndef TIMEUTIL_H
 #define TIMEUTIL_H
 
+#if defined(DECENT_TREE)
+#if defined(_MSC_VER)
+#include "decenttree_msvc_config.h"
+#else
+#include "decenttree_config.h"
+#endif 
+#else
 #include <iqtree_config.h>
+#endif
 #include <stdlib.h>
 
 #include <errno.h>
@@ -70,10 +78,17 @@
 
 	__inline void gettimeofday(struct timeval* t, void* timezone)
 	{       
-		struct _timeb timebuffer;
-		_ftime( &timebuffer );
-		t->tv_sec=timebuffer.time;
-		t->tv_usec=1000*timebuffer.millitm;
+		#ifdef _MSC_VER
+			struct __timeb64 timebuffer;
+			_ftime64_s(&timebuffer);
+			t->tv_sec = (long)timebuffer.time;
+			t->tv_usec = 1000 * timebuffer.millitm;
+		#else
+			struct _timeb timebuffer;
+			_ftime( &timebuffer );
+			t->tv_sec = (long)timebuffer.time;
+			t->tv_usec = 1000 * timebuffer.millitm;
+		#endif
 	}
 	#else /* UNIX */
 	#include <sys/time.h>

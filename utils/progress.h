@@ -16,11 +16,19 @@ class progress_display {
 public:
     explicit progress_display ( double workToDo, const char* doingWhat=""
                               , const char* verb="", const char* unitName="");
+    explicit progress_display ( size_t workToDo, const char* doingWhat = ""
+                              , const char* verb = "", const char* unitName = "");
+    explicit progress_display ( intptr_t workToDo, const char* doingWhat = ""
+                              , const char* verb = "", const char* unitName = "");
     ~progress_display();
-    progress_display& operator += (double incrementalWork);
+    progress_display& operator += (double   incrementalWork);
+    progress_display& operator += (size_t   incrementalWork);
+    progress_display& operator += (intptr_t incrementalWork);
     progress_display& operator ++ ();
-    progress_display& operator =  (double workDoneNow);
-    progress_display& incrementBy (double increment);
+    progress_display& operator =  (double   workDoneNow);
+    progress_display& incrementBy (double   increment);
+    progress_display& incrementBy (size_t   increment);
+    progress_display& incrementBy (intptr_t increment);
     progress_display& hide ();
     progress_display& show ();
     progress_display& done ();

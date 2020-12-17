@@ -146,27 +146,27 @@ void BenchmarkingTreeBuilder::setPrecision(int precisionToUse) {
 }
 
 namespace {
-    std::string formatPositiveNumber(double n, size_t w) {
+    std::string formatPositiveNumber(double n, intptr_t w) {
         std::stringstream s;
         s.precision( (w>=2) ? (w-2) : 0);
         s << n;
         std::string t = s.str();
         if (1.0 <= n ) {
-            if ( t.length() < w ) {
+            if ( t.length() < (size_t)w ) {
                 return std::string(w-t.length(), ' ') + t;
             } else {
                 return t;
             }
         }
-        if (t.length() == w || w < 2 ) {
+        if (t.length() == (size_t)w || w < 2 ) {
             return t;
         }
-        if (t.length() < w  ) {
+        if (t.length() < (size_t)w  ) {
             return t + std::string(w-t.length(), '0');
         }
         bool carry = (t[w] >= '5');
         if (carry) {
-            int j = w - 1;
+            intptr_t j = w - 1;
             for (; t[j] == '9'; --j ) {
                 t[j] = '0';
             }

@@ -16,9 +16,16 @@
 ;                                                                           ;
 \*;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;*/
 
-//_OPENMP and #pragma omp lines added by James Barbetti
+//Lines tagged //JB added by James Barbetti in 2020.
 #ifdef _OPENMP
     #define NJ_OMP
+#endif
+#ifdef _MSC_VER
+    #ifndef _CRT_SECURE_NO_WARNINGS
+        #define _CRT_SECURE_NO_WARNINGS //JB2020-12-17 Warnings about strcpy, fopen, etc.
+    #endif
+    #pragma warning(disable: 4244)  //JB2020-12-17 Warnings about double -> float conversions
+    #pragma warning(disable: 4305)  //JB2020-12-17 Warnings about double -> float truncations
 #endif
 
 #include <exception>
@@ -435,7 +442,7 @@ float Sum_S(int i, float **delta)          /* get sum Si form the diagonal */
     void Best_pair(float **delta, int r, int *a, int *b, int n)
     {
         float Qmin;                        /* current minimun of the criterion */
-        Qmin=1.0e300;
+        Qmin=1.0e36;                          //JB2020-12-17 Don't overflow float! (formerly 1e300).
         float* rowQmin      = new float[n+1]; //JB2020-06-16 Row minima found in parallel
         int*   rowMinColumn = new int[n+1];   //JB2020-06-16 And which columns they were in
         int    step = (n<240) ? 1 : (n / 120);//JB2020-06-17 Blocks of adjacent rows

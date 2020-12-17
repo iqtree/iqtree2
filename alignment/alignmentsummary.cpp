@@ -182,7 +182,7 @@ bool AlignmentSummary::constructSequenceMatrix ( bool treatAllAmbiguousStatesAsU
                 //the state at the (seqPos)th non-constant site, in the (seq)th sequence
             }
             if (progress!=nullptr && (seq % 100) == 0) {
-                (*progress) += 100;
+                (*progress) += 100.0;
             }
         }
     }
@@ -198,7 +198,7 @@ bool AlignmentSummary::constructSequenceMatrix ( bool treatAllAmbiguousStatesAsU
                 //the state at the (seqPos)th non-constant site, in the (seq)th sequence
             }
             if (progress != nullptr && (seq % 100) == 0) {
-                (*progress) += 100;
+                (*progress) += 100.0;
             }
         }
     }

@@ -76,9 +76,11 @@
 namespace StartTree
 {
 
-template <class T=NJFloat, class super=BIONJMatrix<T>>
-class BoundingMatrix: public super
+template <class T=NJFloat, class SUPER=BIONJMatrix<T>>
+class BoundingMatrix: public SUPER
 {
+public:
+    typedef SUPER super;
 protected:
     using super::rows;
     using super::row_count;
@@ -112,8 +114,8 @@ protected:
     //        (because std::vector<bool> maps multiple nearby elements onto
     //         bitfields, so the writes... *do* overlap) (ouch!).
     //
-    std::vector<int> clusterToRow;   //Maps clusters to their rows (-1 means not mapped)
-    std::vector<T>   clusterTotals;  //"Row" totals indexed by cluster
+    std::vector<intptr_t> clusterToRow;   //Maps clusters to their rows (-1 means not mapped)
+    std::vector<T>        clusterTotals;  //"Row" totals indexed by cluster
 
     mutable std::vector<T>       scaledClusterTotals;   //The same, multiplied by
                                                         //(1.0 / (n-2)).
@@ -148,7 +150,7 @@ public:
         //1. Set up vectors indexed by cluster number,
         clusterToRow.resize(row_count);
         clusterTotals.resize(row_count);
-        for (size_t r=0; r<row_count; ++r) {
+        for (intptr_t r=0; r<row_count; ++r) {
             clusterToRow[r]  = static_cast<int>(r);
             clusterTotals[r] = rowTotals[r];
         }
@@ -174,7 +176,7 @@ public:
             #ifdef _OPENMP
             #pragma omp parallel for schedule(dynamic)
             #endif
-            for (size_t r=0; r<row_count; ++r) {
+            for (intptr_t r=0; r<row_count; ++r) {
                 sortRow(r,r,false);
                 ++setupProgress;
                 //copies the "left of the diagonal" portion of
@@ -198,7 +200,7 @@ public:
                     #ifdef _OPENMP
                     #pragma omp parallel for
                     #endif
-                    for (size_t r=0; r<row_count; ++r) {
+                    for (intptr_t r=0; r<row_count; ++r) {
                         purgeRow(r);
                     }
                     nextPurge = (row_count + row_count)/3;
@@ -217,11 +219,11 @@ public:
         //    the values in the D row into the same-numbered
         //    row in the I matrix), for distances between the cluster
         //    in that row, and other live clusters (up to, but not including c).
-        T*     sourceRow      = rows[r];
-        T*     values         = entriesSorted.rows[r];
-        int*   clusterIndices = entryToCluster.rows[r];
-        size_t w = 0;
-        for (size_t i=0; i<row_count; ++i) {
+        T*       sourceRow      = rows[r];
+        T*       values         = entriesSorted.rows[r];
+        int*     clusterIndices = entryToCluster.rows[r];
+        intptr_t w = 0;
+        for (intptr_t i=0; i<row_count; ++i) {
             values[w]         = sourceRow[i];
             clusterIndices[w] = static_cast<int>(rowToCluster[i]);
             if ( i != r && clusterIndices[w] < c ) {
@@ -243,15 +245,15 @@ public:
             mirroredHeapsort(values, 0, w, clusterIndices);
         }
     }
-    void purgeRow(size_t r /*row index*/) const {
+    void purgeRow(intptr_t r /*row index*/) const {
         //Scan a row of the I matrix, so as to remove
         //entries that refer to clusters that are no longer
         //being processed. Remove the corresponding values
         //in the same row of the S matrix.
         T*    values         = entriesSorted.rows[r];
         int*  clusterIndices = entryToCluster.rows[r];
-        size_t w = 0;
-        size_t i = 0;
+        intptr_t w = 0;
+        intptr_t i = 0;
         for (; i<row_count ; ++i ) {
             values[w]         = values[i];
             clusterIndices[w] = clusterIndices[i];
@@ -266,7 +268,7 @@ public:
             values[w] = infiniteDistance;
         }
     }
-    virtual void cluster(size_t a, size_t b) {
+    virtual void cluster(intptr_t a, intptr_t b) {
         size_t clusterA         = rowToCluster[a];
         size_t clusterB         = rowToCluster[b];
         size_t clusterMoved     = rowToCluster[row_count-1];
@@ -282,7 +284,7 @@ public:
         clusterToRow.emplace_back(a);
         clusterTotals.emplace_back(rowTotals[a]);
         scaledClusterTotals.emplace_back(rowTotals[a] / (T)( row_count - 1.0 ) );
-        scaledMaxEarlierClusterTotal.emplace_back(0.0);
+        scaledMaxEarlierClusterTotal.emplace_back((T)0.0);
         //Mirror row rearrangement done on the D (distance) matrix
         //(and possibly also on the V (variance estimate) matrix),
         //onto the S and I matrices.
@@ -301,14 +303,14 @@ public:
             //when calculating entries in Q, if clusters are still
             //"live" (have corresponding rows in the D matrix).
         }
-        for (size_t r = 0; r<row_count; ++r) {
+        for (intptr_t r = 0; r<row_count; ++r) {
             size_t cluster = rowToCluster[r];
             clusterTotals[cluster] = rowTotals[r];
         }
         sortRow(a, clusterC, true);
     }
     void decideOnRowScanningOrder(T& qBest) const {
-        size_t rSize = rowMinima.size();
+        intptr_t rSize = rowMinima.size();
         //
         //Rig the order in which rows are scanned based on
         //which rows (might) have the lowest row minima
@@ -344,8 +346,8 @@ public:
                 size_t rStop          = (b+1)*rSize / threadCount;
                 for (size_t r=rStart; r < rStop
                      && rowMinima[r].value < infiniteDistance; ++r) {
-                    size_t rowA       = rowMinima[r].row;
-                    size_t rowB       = rowMinima[r].column;
+                    intptr_t rowA     = rowMinima[r].row;
+                    intptr_t rowB     = rowMinima[r].column;
                     if (rowA < row_count && rowB < row_count ) {
                         size_t clusterA = rowToCluster[rowA];
                         size_t clusterB = rowToCluster[rowB];
@@ -371,14 +373,14 @@ public:
         //Note, rowMinima might have size 0 (the first time this member
         //function is called during processing of a distance matrix)
         //Or it might have a size of n+1 (later times), but it won't be n.
-        for ( size_t len = rSize; 1<len; len=(len+1)/2 ) {
-            size_t halfLen = len/2; //rounded down
-            size_t gap     = len-halfLen;
+        for ( intptr_t len = rSize; 1<len; len=(len+1)/2 ) {
+            intptr_t halfLen = len/2; //rounded down
+            intptr_t gap     = len-halfLen;
             #ifdef _OPENMP
             #pragma omp parallel for if(threshold<halfLen)
             #endif
-            for ( size_t i=0; i<halfLen; ++i) {
-                size_t j = i + gap;
+            for ( intptr_t i=0; i<halfLen; ++i) {
+                intptr_t j = i + gap;
                 if ( rowMinima[j] < rowMinima[i] ) {
                     std::swap(rowMinima[i], rowMinima[j]);
                 }
@@ -387,20 +389,20 @@ public:
         #ifdef _OPENMP
         #pragma omp parallel for if(threshold<row_count)
         #endif
-        for (size_t i = 0; i < row_count; ++i) {
+        for (intptr_t i = 0; i < row_count; ++i) {
             rowOrderChosen[i]=0; //Not chosen yet
         }
         
-        size_t w = 0;
-        for (size_t r=0; r < rSize
+        intptr_t w = 0;
+        for (intptr_t r=0; r < rSize
              && rowMinima[r].row < row_count
              && rowMinima[r].value < infiniteDistance; ++r) {
-            size_t rowA     = rowMinima[r].row;
-            size_t rowB     = rowMinima[r].column;
-            size_t clusterA = (rowA<row_count) ? rowToCluster[rowA] : 0;
-            size_t clusterB = (rowB<row_count) ? rowToCluster[rowB] : 0;
+            intptr_t rowA   = rowMinima[r].row;
+            intptr_t rowB   = rowMinima[r].column;
+            size_t clusterA = (rowA < row_count) ? rowToCluster[rowA] : 0;
+            size_t clusterB = (rowB < row_count) ? rowToCluster[rowB] : 0;
             size_t row      = (clusterA<clusterB) ? rowA : rowB;
-            if (row < row_count) {
+            if (row < (size_t)row_count) {
                 rowScanOrder[w] = row;
                 w += rowOrderChosen[row] ? 0 : 1;
                 rowOrderChosen[row] = 1; //Chosen
@@ -411,7 +413,7 @@ public:
         //intended: when w reaches n all of the rows (0..n-1)
         //must be in rowScanOrder, so there's no need to continue
         //until row==n.
-        for (size_t row=0; w < row_count ; ++row) {
+        for (intptr_t row=0; w < row_count ; ++row) {
             rowScanOrder[w] = row;
             w += ( rowOrderChosen[row] ? 0 : 1 );
         }
@@ -426,8 +428,8 @@ public:
         //      and *not* by row number.
         //
         size_t c           = clusters.size();
-        T      nless2      = ( row_count - 2 );
-        T      tMultiplier = ( row_count <= 2 ) ? 0 : (1 / nless2);
+        T      nless2      = (T)( row_count - 2 );
+        T      tMultiplier = ( row_count <= 2 ) ? (T)0.0 : ((T)1.0 / nless2);
         T      maxTot      = -infiniteDistance; //maximum row total divided by (n-2)
         for (size_t i=0; i<c; ++i) {
             scaledClusterTotals[i] = clusterTotals[i] * tMultiplier;
@@ -450,7 +452,7 @@ public:
         #ifdef _OPENMP
         #pragma omp parallel for
         #endif
-        for (size_t r=0; r<row_count ; ++r) {
+        for (intptr_t  r=0; r<row_count ; ++r) {
             size_t row             = rowScanOrder[r];
             size_t cluster         = rowToCluster[row];
             T      maxEarlierTotal = scaledMaxEarlierClusterTotal[cluster];
@@ -459,9 +461,9 @@ public:
             rowMinima[r]           = getRowMinimum(row, maxEarlierTotal, qBest);
         }
     }
-    Position<T> getRowMinimum(size_t row, T maxTot, T qBest) const {
-        T nless2      = ( row_count - 2 );
-        T tMultiplier = ( row_count <= 2 ) ? 0 : ( 1.0 / nless2 );
+    Position<T> getRowMinimum(intptr_t row, T maxTot, T qBest) const {
+        T nless2      = (T)( row_count - 2 );
+        T tMultiplier = ( row_count <= 2 ) ? (T)0.0 : ( (T)1.0 / nless2 );
         auto    tot   = scaledClusterTotals.data();
         T rowTotal    = rowTotals[row] * tMultiplier; //scaled by (1/(n-2)).
         T rowBound    = qBest + maxTot + rowTotal;
@@ -482,7 +484,7 @@ public:
                 //The c in Qrc and Drc.
             T Qrc = Drc - tot[cluster] - rowTotal;
             if (Qrc < pos.value) {
-                int otherRow = clusterToRow[cluster];
+                intptr_t otherRow = clusterToRow[cluster];
                 if (otherRow != notMappedToRow) {
                     pos.column = (otherRow < row ) ? otherRow : row;
                     pos.row    = (otherRow < row ) ? row : otherRow;

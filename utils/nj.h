@@ -106,12 +106,12 @@ protected:
         //      Better n multiplications than n*(n-1)/2.
         //
         scaledRowTotals.resize(row_count);
-        T nless2      = ( row_count - 2 );
-        T tMultiplier = ( row_count <= 2 ) ? 0 : (1 / nless2);
+        T nless2      = (T)( row_count - 2 );
+        T tMultiplier = ( row_count <= 2 ) ? (T)0.0 : ((T)1.0 / nless2);
         #ifdef _OPENMP
         #pragma omp parallel for
         #endif
-        for (size_t r=0; r<row_count; ++r) {
+        for (intptr_t r=0; r<row_count; ++r) {
             scaledRowTotals[r] = rowTotals[r] * tMultiplier;
         }
     }
@@ -127,11 +127,11 @@ protected:
         #ifdef _OPENMP
         #pragma omp parallel for schedule(dynamic)
         #endif
-        for (size_t row=1; row<row_count; ++row) {
-            float  bestVrc    = infiniteDistance;
-            size_t bestColumn = 0;
-            const T* rowData = rows[row];
-            for (size_t col=0; col<row; ++col) {
+        for (intptr_t row=1; row<row_count; ++row) {
+            T        bestVrc    = infiniteDistance;
+            size_t   bestColumn = 0;
+            const T* rowData    = rows[row];
+            for (intptr_t col=0; col<row; ++col) {
                 T    v      = rowData[col] - tot[col];
                 bool better = ( v < bestVrc );
                 if (better) {
@@ -144,25 +144,25 @@ protected:
                                          , getImbalance(row, bestColumn));
         }
     }
-    virtual void cluster(size_t a, size_t b) {
+    virtual void cluster(intptr_t a, intptr_t b) {
         //Cluster two active rows, identified by row indices a and b).
         //Assumed 0<=a<b<n
-        T nless2        = row_count-2;
-        T tMultiplier   = (row_count<3) ? 0 : (0.5 / nless2);
-        T lambda        = 0.5;
+        T nless2        = (T)(row_count-2);
+        T tMultiplier   = (row_count<3) ? (T)0.0 : ((T)0.5 / nless2);
+        T lambda        = (T)0.5;
         T medianLength  = lambda * rows[a][b];
         T fudge         = (rowTotals[a] - rowTotals[b]) * tMultiplier;
         T aLength       = medianLength + fudge;
         T bLength       = medianLength - fudge;
-        T mu            = 1.0 - lambda;
+        T mu            = (T)1.0 - lambda;
         T dCorrection   = - lambda * aLength - mu * bLength;
         auto aRow       = rows[a];
         auto bRow       = rows[b];
-        T cTotal        = 0;
+        T cTotal        = (T)0.0;
         #ifdef _OPENMP
         #pragma omp parallel for reduction(+:cTotal)
         #endif
-        for (size_t i=0; i<row_count; ++i) {
+        for (intptr_t i=0; i<row_count; ++i) {
             if (i!=a && i!=b) {
                 T Dai         = aRow[i];
                 T Dbi         = bRow[i];
@@ -183,9 +183,9 @@ protected:
     }
     virtual void finishClustering() {
         ASSERT( row_count == 3);
-        T halfD01 = 0.5 * rows[0][1];
-        T halfD02 = 0.5 * rows[0][2];
-        T halfD12 = 0.5 * rows[1][2];
+        T halfD01 = (T)0.5 * rows[0][1];
+        T halfD02 = (T)0.5 * rows[0][2];
+        T halfD12 = (T)0.5 * rows[1][2];
         clusters.addCluster
             ( rowToCluster[0], halfD01 + halfD02 - halfD12
             , rowToCluster[1], halfD01 + halfD12 - halfD02
@@ -216,7 +216,7 @@ protected:
     using super::rowToCluster;
     using super::removeRowAndColumn;
     
-    virtual void cluster(size_t a, size_t b) {
+    virtual void cluster(intptr_t a, intptr_t b) {
         //Cluster two active rows, identified by row indices a and b).
         //Assumes: 0<=a<b<n
         //
@@ -234,12 +234,12 @@ protected:
         //      a bit more consistent with later BIONJ implementations.
         //      -James B. 19-Oct-2020.
         //
-        T aCount          = clusters[rowToCluster[a]].countOfExteriorNodes;
-        T bCount          = clusters[rowToCluster[b]].countOfExteriorNodes;
-        T cCount          = aCount + bCount;
-        T tMultiplier     = (row_count<3) ? 0 : (0.5 / ( original_n - cCount));
-        T lambda          = aCount / (aCount + bCount); //relative weight of a in u
-        T mu              = 1.0 - lambda;               //relative weight of b in u
+        size_t aCount     = clusters[rowToCluster[a]].countOfExteriorNodes;
+        size_t bCount     = clusters[rowToCluster[b]].countOfExteriorNodes;
+        size_t cCount     = aCount + bCount;
+        T tMultiplier     = (row_count<3) ? (T)0.0 : ((T)0.5 / (T)( original_n - cCount));
+        T lambda          = (T)aCount / (T)(aCount + bCount); //relative weight of a in u
+        T mu              = (T)1.0 - lambda;                  //relative weight of b in u
         auto aRow         = rows[a];
         auto bRow         = rows[b];
         
@@ -247,9 +247,9 @@ protected:
         #ifdef _OPENMP
         #pragma omp parallel for
         #endif
-        for (size_t i=0; i<row_count; ++i) {
+        for (intptr_t i=0; i<row_count; ++i) {
             if (i!=a && i!=b) {
-                T iCount  = clusters[rowToCluster[i]].countOfExteriorNodes;
+                T iCount  = (T)(clusters[rowToCluster[i]].countOfExteriorNodes);
                 aFudge   += iCount * (aRow[i] - bRow[i]);
                 //reweight the contribution for the cluster in the ith row
                 //according to the number (iCount) of leaf nodes it contains,
@@ -257,14 +257,14 @@ protected:
             }
         }
         T abLength        = rows[a][b];
-        T auLength        = 0.5 * abLength + aFudge * tMultiplier;
+        T auLength        = (T)0.5 * abLength + aFudge * tMultiplier;
         T buLength        = abLength - auLength;
         T dCorrection     = - lambda * auLength - mu * buLength;
-        T cTotal          = 0.0;
+        T cTotal          = (T)0.0;
         #ifdef _OPENMP
         #pragma omp parallel for reduction(+:cTotal)
         #endif
-        for (size_t i=0; i<row_count; ++i) {
+        for (intptr_t i=0; i<row_count; ++i) {
             if (i!=a && i!=b) {
                 T Dai         = aRow[i];
                 T Dbi         = bRow[i];
@@ -314,7 +314,7 @@ public:
         variance = *this;
         return rc;
     }
-    inline T chooseLambda(size_t a, size_t b, T Vab) {
+    inline T chooseLambda(intptr_t a, intptr_t b, T Vab) {
         //Assumed 0<=a<b<n
         T lambda = 0;
         if (Vab==0.0) {
@@ -322,7 +322,7 @@ public:
         }
         auto vRowA = variance.rows[a];
         auto vRowB = variance.rows[b];
-        for (size_t i=0; i<column_count; ++i) {
+        for (intptr_t i=0; i<column_count; ++i) {
             lambda += vRowB[i] - vRowA[i];
         }
         if (a<column_count) {
@@ -331,34 +331,34 @@ public:
         if (a!=b && b<column_count) {
             lambda += vRowA[b] - vRowB[b];
         }
-        lambda = 0.5 + lambda / (2.0*((T)row_count-2)*Vab);
-        if (1.0<lambda) lambda=1.0;
-        if (lambda<0.0) lambda=0.0;
+        lambda = (T)0.5 + lambda / ((T)2.0*((T)row_count-2)*Vab);
+        if (1.0<lambda) lambda=(T)1.0;
+        if (lambda<0.0) lambda=(T)0.0;
         return lambda;
     }
-    virtual void cluster(size_t a, size_t b) {
+    virtual void cluster(intptr_t a, intptr_t b) {
         //Assumed 0<=a<b<n
         //Bits that differ from super::cluster tagged BIO
-        T nless2          = row_count - 2 ;
-        T tMultiplier     = ( row_count < 3 ) ? 0 : ( 0.5 / nless2 );
-        T medianLength    = 0.5 * rows[b][a];
+        T nless2          = (T)(row_count - 2);
+        T tMultiplier     = ( row_count < 3 ) ? (T)0.0 : ( (T)0.5 / nless2 );
+        T medianLength    = (T)0.5 * rows[b][a];
         T fudge           = (rowTotals[a] - rowTotals[b]) * tMultiplier;
         T aLength         = medianLength + fudge;
         T bLength         = medianLength - fudge;
         T Vab             = variance.rows[b][a];     //BIO
         T lambda          = chooseLambda(a, b, Vab); //BIO
-        T mu              = 1.0 - lambda;
+        T mu              = (T)1.0 - lambda;
         T dCorrection     = - lambda * aLength - mu * bLength;
         T vCorrection     = - lambda * mu * Vab;
         auto rowA         = rows[a];
         auto rowB         = rows[b];
         auto varianceRowA = variance.rows[a];
         auto varianceRowB = variance.rows[b];
-        T cTotal          = 0;
+        T cTotal          = (T)0.0;
         #ifdef _OPENMP
         #pragma omp parallel for reduction(+:cTotal)
         #endif
-        for (size_t i=0; i<row_count; ++i) {
+        for (intptr_t i=0; i<row_count; ++i) {
             if (i!=a && i!=b) {
                 //Dci as per reduction 4 in [GAS2009]
                 T Dai         = rowA[i];
@@ -387,10 +387,11 @@ public:
     }
 };
 
-template <class T=NJFloat, class super=BIONJMatrix<T>, 
+template <class T=NJFloat, class SUPER=BIONJMatrix<T>, 
           class V=FloatVector, class VB=FloatBoolVector>
-class VectorizedMatrix: public super
+class VectorizedMatrix: public SUPER
 {
+    typedef SUPER super;
     //
     //Note: this is a first attempt at hand-vectorizing
     //      BIONJMatrix::getRowMinima (via Agner Fog's
@@ -407,7 +408,7 @@ class VectorizedMatrix: public super
 protected:
     mutable std::vector<T> scratchTotals;
     mutable std::vector<T> scratchColumnNumbers;
-    const size_t  blockSize;
+    const intptr_t  blockSize;
 public:
     VectorizedMatrix() : super(), blockSize(VB().size()) {
     }
@@ -421,23 +422,23 @@ public:
         scratchColumnNumbers.resize(row_count + fluff, 0.0);
     }
     virtual void getRowMinima() const {
-        T nless2      = ( row_count - 2 );
-        T tMultiplier = ( row_count <= 2 ) ? 0 : (1 / nless2);
+        T nless2      = (T)( row_count - 2 );
+        T tMultiplier = ( row_count <= 2 ) ? (T)0.0 : ((T)1.0 / nless2);
         T* tot  = matrixAlign ( scratchTotals.data() );
         T* nums = matrixAlign ( scratchColumnNumbers.data() );
-        for (size_t r=0; r<row_count; ++r) {
+        for (intptr_t r=0; r<row_count; ++r) {
             tot[r]  = rowTotals[r] * tMultiplier;
-            nums[r] = r;
+            nums[r] = (T)r;
         }
         rowMinima.resize(row_count);
         rowMinima[0].value = infiniteDistance;
         #ifdef _OPENMP
         #pragma omp parallel for schedule(dynamic)
         #endif
-        for (size_t row=1; row<row_count; ++row) {
+        for (intptr_t row=1; row<row_count; ++row) {
             Position<T> pos(row, 0, infiniteDistance, 0);
             const T* rowData   = rows[row];
-            size_t   col;
+            intptr_t col;
             V        minVector = infiniteDistance;
                      //The minima of columns with indices
                      //"congruent modulo blockSize"
@@ -461,7 +462,7 @@ public:
             for (int c=0; c<blockSize; ++c) {
                 if (minVector[c] < pos.value) {
                     pos.value  = minVector[c];
-                    pos.column = ixVector[c];
+                    pos.column = (size_t)(ixVector[c]);
                 }
             }
             for (; col<row; ++col) {

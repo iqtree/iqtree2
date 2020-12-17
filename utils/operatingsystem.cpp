@@ -33,7 +33,7 @@ std::string getOSName() {
 
 bool isStandardOutputATerminal() {
 #if defined(WIN32) || defined(WIN64)
-    return _isatty(fileno(stdout));
+    return _isatty(_fileno(stdout));
 #else
     return isatty(fileno(stdout));
 #endif

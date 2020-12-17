@@ -16,8 +16,8 @@ upgma.h nj.h rapidnj.h auctionmatrix.h
 clustertree.h distancematrix.h heapsort.h
 progress.cpp progress.h
 timekeeper.cpp timekeeper.h
-timeutil.h hammingdistance.h io.h
-operatingsystem.cpp operatingsystem.h io.h my_assert.h)
+timeutil.h hammingdistance.h safe_io.h
+operatingsystem.cpp operatingsystem.h my_assert.h)
 
 if(ZLIB_FOUND)
   target_link_libraries(utils ${ZLIB_LIBRARIES})
@@ -40,7 +40,7 @@ add_executable(decentTree
     heapsort.h
     gzstream.cpp gzstream.h
     progress.cpp progress.h
-    my_assert.h io.h timeutil.h operatingsystem.cpp operatingsystem.h)
+    my_assert.h "safe_io.h" timeutil.h operatingsystem.cpp operatingsystem.h)
 
 if(ZLIB_FOUND)
   target_link_libraries(decentTree ${ZLIB_LIBRARIES})

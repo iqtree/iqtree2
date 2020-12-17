@@ -80,7 +80,7 @@ void constructMinHeapLayer ( V* valueArray, ptrdiff_t start,
         }
         valueArray[i] = v;
         if ( progress!=nullptr && (h&1023)==0 ) {
-            progress->incrementBy(1024);
+            progress->incrementBy(1024.0);
         }
     }
 }
@@ -92,7 +92,7 @@ void constructMinHeap ( V* valueArray, ptrdiff_t start, ptrdiff_t stop
     //Constructs a "top-less" radix 2 min heap
     //of valueArray[start..stop].
     //
-    ptrdiff_t count      = (stop-start);
+    size_t count      = (stop-start);
     if (task_name==nullptr || *task_name=='\0') {
         constructMinHeapLayer(valueArray, start, start, start+2, stop, nullptr);
     } else {

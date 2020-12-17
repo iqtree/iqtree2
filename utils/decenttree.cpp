@@ -207,14 +207,14 @@ struct Sequences: public std::vector<Sequence> {
 bool loadSequenceDistancesIntoMatrix(Sequences& sequences,
                                      const std::vector<char>&   is_site_variant,
                                      bool report_progress, FlatMatrix& m) {
-    size_t rank      = sequences.size();
-    size_t rawSeqLen = sequences.front().sequenceLength();
-    size_t seqLen    = 0; //# of characters that actually vary between two sequences
+    intptr_t rank      = sequences.size();
+    size_t   rawSeqLen = sequences.front().sequenceLength();
+    size_t   seqLen    = 0; //# of characters that actually vary between two sequences
     m.setSize(rank);
     for (auto it=is_site_variant.begin(); it!=is_site_variant.end(); ++it) {
         seqLen += *it;
     }
-    for (size_t row=0; row<rank; ++row) {
+    for (intptr_t row=0; row<rank; ++row) {
         m.addCluster(sequences[row].getName());
     }
     size_t     unkLen        = ((seqLen+255)/256)*4;
@@ -230,7 +230,7 @@ bool loadSequenceDistancesIntoMatrix(Sequences& sequences,
         #ifdef _OPENMP
         #pragma omp parallel for
         #endif
-        for (size_t row=0; row<rank; ++row) {
+        for (intptr_t row=0; row<rank; ++row) {
             sequence_data[row] = buffer + seqLen * row;
             const char* site   = sequences[row].data();
             char*       write  = sequence_data[row] ;
@@ -266,7 +266,7 @@ bool loadSequenceDistancesIntoMatrix(Sequences& sequences,
                 *write_unk = unk;
             }
             if ((row%100)==0) {
-                extract_progress += 100;
+                extract_progress += 100.0;
             }
         }
         extract_progress.done();
@@ -301,8 +301,8 @@ bool loadSequenceDistancesIntoMatrix(Sequences& sequences,
         #ifdef _OPENMP
         #pragma omp parallel for schedule(dynamic)
         #endif
-        for (size_t row=0; row<rank; ++row) {
-            for (size_t col=row+1; col<rank; ++col) {
+        for (intptr_t row=0; row<rank; ++row) {
+            for (intptr_t col=row+1; col<rank; ++col) {
                 uint64_t char_distance = vectorHammingDistance
                                          (unknown_char, sequence_data[row],
                                           sequence_data[col], seqLen);
@@ -310,12 +310,12 @@ bool loadSequenceDistancesIntoMatrix(Sequences& sequences,
                                          (unknown_data[row], unknown_data[col],
                                           unkLen);
                 double   distance      = 0;
-                int      adjSeqLen     = rawSeqLen - count_unknown;
+                intptr_t adjSeqLen     = rawSeqLen - count_unknown;
                 if (0<adjSeqLen) {
                     if (correcting_distances) {
-                        distance = correctDistance(char_distance, adjSeqLen, num_states);
+                        distance = correctDistance((double)char_distance, (double)adjSeqLen, (double)num_states);
                     } else {
-                        distance = uncorrectedDistance(char_distance, adjSeqLen);
+                        distance = uncorrectedDistance((double)char_distance, (double)adjSeqLen);
                     }
                     if (distance < 0) {
                         distance = 0;

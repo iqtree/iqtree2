@@ -105,7 +105,7 @@ public:
             allocateParsimonyFor(backNei);
         }
     }
-    virtual void cluster(size_t a, size_t b) {
+    virtual void cluster(intptr_t a, intptr_t b) {
         auto aRow       = rows[a];
         auto bRow       = rows[b];
         T cTotal        = 0;

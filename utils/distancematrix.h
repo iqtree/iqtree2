@@ -29,7 +29,7 @@
 #include <iostream>                  //for std::istream
 #include <sstream>                   //for std::stringstream
 #include <vector>                    //for std::vector
-#include "io.h"                      //for safeGetTrimmedLineAsStream
+#include "safe_io.h"                      //for safeGetTrimmedLineAsStream
 #include "progress.h"                //for progress_display
 
 
@@ -60,10 +60,11 @@ template <class P> inline P* matrixAlign(P* p) {
 template <class T=double> class Matrix
 {
 protected:
-    size_t row_count;
-    size_t column_count;
-    size_t shrink_r; //if row_count reaches *this*, pack the array
+    intptr_t row_count;
+    intptr_t column_count;
+    intptr_t shrink_r; //if row_count reaches *this*, pack the array
 public:
+    typedef T cell_type;
     T*     data;
     T**    rows;
     
@@ -111,14 +112,14 @@ public:
             data        = new T[ r * w + MATRIX_ALIGNMENT/sizeof(T)];
             rows        = new T*[r];
             T *rowStart = matrixAlign(data);
-            for (size_t row=0; row<row_count; ++row) {
+            for (intptr_t row=0; row<row_count; ++row) {
                 rows[row]      = rowStart;
                 rowStart    += w;
             }
             #ifdef _OPENMP
             #pragma omp parallel for
             #endif
-            for (size_t row=0; row<row_count; ++row) {
+            for (intptr_t row=0; row<row_count; ++row) {
                 zeroRow(row);
             }
         }
@@ -135,7 +136,7 @@ public:
         #ifdef _OPENMP
         #pragma omp parallel for
         #endif
-        for (size_t r=0; r<row_count; ++r) {
+        for (intptr_t r=0; r<row_count; ++r) {
             T *             destRow      = rows[r];
             T const *       sourceRow    = rhs.rows[r];
             T const * const endSourceRow = sourceRow + column_count;
@@ -166,12 +167,12 @@ public:
             *rowZap = 0;
         }
     }
-    virtual void removeColumn(size_t c) {
+    virtual void removeColumn(intptr_t c) {
         if ( c + 1 < column_count) {
             #ifdef _OPENMP
             #pragma omp parallel for
             #endif
-            for (size_t r=0; r<row_count; ++r) {
+            for (intptr_t r=0; r<row_count; ++r) {
                 T* rowData = rows[r];
                 rowData[c] = rowData[column_count-1]; //U-R
             }
@@ -189,7 +190,7 @@ public:
             #ifdef _OPENMP
             #pragma omp parallel for
             #endif
-            for (size_t c=0; c<column_count; ++c) {
+            for (intptr_t c=0; c<column_count; ++c) {
                 destRow[c] = sourceRow[c];
             }
         }
@@ -198,13 +199,13 @@ public:
             //This also helps (but: only very slightly. 5%ish?).
             size_t w = widthNeededFor(column_count);
             destRow  = data;
-            for (size_t r=1; r<row_count; ++r) {
+            for (intptr_t r=1; r<row_count; ++r) {
                 destRow += w;
                 sourceRow = rows[r];
                 #ifdef _OPENMP
                 #pragma omp parallel for
                 #endif
-                for (size_t c=0; c<column_count; ++c) {
+                for (intptr_t c=0; c<column_count; ++c) {
                     destRow[c] = sourceRow[c];
                 }
                 rows[r] = destRow;
@@ -217,7 +218,7 @@ public:
         #ifdef _OPENMP
         #pragma omp parallel for
         #endif
-        for (size_t row=0; row<row_count; ++row) {
+        for (intptr_t row=0; row<row_count; ++row) {
             const double* sourceStart = matrix + row * column_count;
             const double* sourceStop  = sourceStart + column_count;
             T*            dest        = rows[row];
@@ -260,7 +261,7 @@ public:
         delete [] rowTotals;
         rowTotals = new T[rank];
         for (int r=0; r<rank; ++r) {
-            rowTotals[r] = 0.0;
+            rowTotals[r] = (T)0.0;
         }
     }
     void assign(const SquareMatrix& rhs) {
@@ -270,7 +271,7 @@ public:
         super::assign(rhs);
         delete [] rowTotals;
         rowTotals = new T[row_count];
-        for (size_t r=0; r<row_count; ++r) {
+        for (intptr_t r=0; r<row_count; ++r) {
             rowTotals[r] = rhs.rowTotals[r];
         }
     }
@@ -300,13 +301,13 @@ public:
         #ifdef _OPENMP
         #pragma omp parallel for
         #endif
-        for (size_t r=0; r<row_count; ++r) {
-            T total(0.0);
+        for (intptr_t r=0; r<row_count; ++r) {
+            T total = (T)0.0;
             const T* rowData = rows[r];
-            for (size_t c=0; c<r; ++c) {
+            for (intptr_t c=0; c<r; ++c) {
                 total += rowData[c];
             }
-            for (size_t c=r+1; c<column_count; ++c) {
+            for (intptr_t c=r+1; c<column_count; ++c) {
                 total += rowData[c]; //U-R
             }
             rowTotals[r] = total;
@@ -384,8 +385,8 @@ template <class M> bool loadDistanceMatrixInto
                 }
                 matrix.cell(r,r) = 0;
             }
-            int cStart = (upper) ? (r+1) : 0;
-            int cStop  = (lower) ? r     : matrix.getSize();
+            size_t cStart = (upper) ? (r+1) : 0;
+            size_t cStop  = (lower) ? r     : matrix.getSize();
             size_t c = cStart;
             for (; line.tellg()!=-1 && c<cStop; ++c) {
                 line >> matrix.cell(r,c);
@@ -396,7 +397,7 @@ template <class M> bool loadDistanceMatrixInto
                     //If loading from a square matrix file,
                     //and in lower triangle, and the corresponding entry
                     //in the upper triangle was different, average them both.
-                    auto v = ( matrix.cell(r,c) + matrix.cell(c,r) ) * 0.5;
+                    typename M::cell_type v = ( matrix.cell(r,c) + matrix.cell(c,r) ) * (typename M::cell_type)0.5;
                     matrix.cell(c,r) = v; //U-R
                     matrix.cell(r,c) = v;
                 }

@@ -3976,12 +3976,12 @@ template <class L, class F> double computeDistanceMatrix
     #ifdef _OPENMP
     #pragma omp parallel for schedule(dynamic)
     #endif
-    for ( int seq1 = nseqs-1; 0 <= seq1; --seq1 ) {
-        size_t  rowOffset = nseqs * seq1;
-        double* distRow   = dist_mat + rowOffset;
-        double* varRow    = var_mat  + rowOffset;
-        double* distCol   = dist_mat + seq1; //current entries in the columns
-        double* varCol    = var_mat  + seq1; //...that we are reading down.
+    for ( intptr_t seq1 = nseqs-1; 0 <= seq1; --seq1 ) {
+        intptr_t rowOffset = nseqs * seq1;
+        double*  distRow   = dist_mat + rowOffset;
+        double*  varRow    = var_mat  + rowOffset;
+        double*  distCol   = dist_mat + seq1; //current entries in the columns
+        double*  varCol    = var_mat  + seq1; //...that we are reading down.
         for ( size_t seq2 = 0; seq2 < seq1; ++seq2, distCol+=nseqs, varCol+=nseqs ) {
             distRow [ seq2 ] = *distCol;
             varRow  [ seq2 ] = *varCol;

@@ -41,12 +41,19 @@ progress_display::progress_display( double workToDo, const char* doingWhat
     , taskDescription(doingWhat), isDone(false)
     , workVerb(verb),             workUnitName(unitName)
     , atMost(false),              hidden(0)
-    , termout(CONSOLE_FILE, std::ios_base::out)
-     {
+    , termout(CONSOLE_FILE, std::ios_base::out) {
         lastReportedWork    = 0.0;
         lastReportedTime    = startTime;
         lastReportedCPUTime = startCPUTime;
 }
+
+progress_display::progress_display(size_t workToDo, const char* doingWhat, 
+                                   const char* verb, const char* unitName)
+    : progress_display((double)workToDo, doingWhat, verb, unitName) {}
+
+progress_display::progress_display(intptr_t workToDo, const char* doingWhat,
+    const char* verb, const char* unitName)
+    : progress_display((double)workToDo, doingWhat, verb, unitName) {}
 
 progress_display & progress_display::operator ++ () {
     return (*this) += 1.0;
@@ -55,6 +62,15 @@ progress_display & progress_display::operator ++ () {
 progress_display& progress_display::incrementBy (double increment) {
     return (*this) += increment;
 }
+
+progress_display& progress_display::incrementBy(size_t increment) {
+    return (*this) += increment;
+}
+
+progress_display& progress_display::incrementBy(intptr_t increment) {
+    return (*this) += increment;
+}
+
 
 progress_display& progress_display::operator =  (double workDoneNow) {
     double increment;
@@ -87,6 +103,14 @@ progress_display & progress_display::operator += (double incrementalWork) {
         reportProgress(time, cpu, false);
     }
     return *this;
+}
+
+progress_display& progress_display::operator += (size_t incrementalWork) {
+    return *this += (double)incrementalWork;
+}
+
+progress_display& progress_display::operator += (intptr_t incrementalWork) {
+    return *this += (double)incrementalWork;
 }
 
 void progress_display::reportProgress(double time, double cpu, bool newline) {

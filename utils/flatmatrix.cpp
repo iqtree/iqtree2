@@ -122,7 +122,7 @@ template <class S>
 void FlatMatrix::writeDistancesToOpenFile(const std::string& format,
                                           int precision, S &out) const {
     size_t nseqs   = sequenceNames.size();
-    int    max_len = getMaxSeqNameLength();
+    size_t max_len = getMaxSeqNameLength();
     if (max_len < 10) max_len = 10;
     out << nseqs << std::endl;
     out.precision(precision);
@@ -150,8 +150,8 @@ void FlatMatrix::writeDistancesToOpenFile(const std::string& format,
 }
 
 size_t FlatMatrix::getMaxSeqNameLength() const {
-    int len = 0;
-    size_t nseqs   = sequenceNames.size();
+    size_t len   = 0;
+    size_t nseqs = sequenceNames.size();
     for (size_t i = 0; i < nseqs; i++) {
         if (sequenceNames[i].length() > len) {
             len = sequenceNames[i].length();

@@ -172,11 +172,11 @@ template <class T=double> struct StitchupGraph {
         setMembers.push_back(singletonSet);
         ++nodeCount;
     }
-    bool areLeavesInSameSet(int leafA, int leafB) {
+    bool areLeavesInSameSet(size_t leafA, size_t leafB) {
         return taxonToSetNumber[leafA]
                 == taxonToSetNumber[leafB];
     }
-    int staple(int leafA, int leafB, T length) {
+    int staple(size_t leafA, size_t leafB, T length) {
         int interiorA = nodeCount;
         T legLengthA = (length - taxonToDistance[leafA]) * STAPLE_LEG;
         stitchLink(taxonToNodeNumber[leafA], interiorA, legLengthA);
@@ -245,15 +245,15 @@ template <class T=double> struct StitchupGraph {
             ? "" : "Removing degree-2 nodes from stitchup graph";
         progress_display progress ( stitches.size()*2,
                                     taskDescription, "", "");
-        std::vector<int> replacements;
-        std::vector<T>   replacementLengths;
+        std::vector<intptr_t> replacements;
+        std::vector<T>        replacementLengths;
         replacements.reserve(nodeCount);
         replacementLengths.resize(nodeCount, 0);
         for (int i=0; i<nodeCount; ++i) {
             replacements.push_back(i);
         }
-        int    node      = -1; //Source node of last edge
-        size_t degree    = 0;  //Degree of that node
+        intptr_t node      = -1; //Source node of last edge
+        size_t   degree    = 0;  //Degree of that node
         for (auto it=stitches.begin(); it!=stitches.end(); ++it) {
             if (it->source != node) {
                 if (node!=-1) {
@@ -267,7 +267,7 @@ template <class T=double> struct StitchupGraph {
                 }
                 node   = it->source;
                 degree = 1;
-                if (it->destination < node) {
+                if ((intptr_t)it->destination < node) {
                     replacements[node]       = it->destination;
                     replacementLengths[node] = it->length;
                 }
@@ -285,9 +285,9 @@ template <class T=double> struct StitchupGraph {
         std::set< Stitch<T> > oldStitches;
         std::swap(stitches, oldStitches);
         for (auto it=oldStitches.begin(); it!=oldStitches.end(); ++it) {
-            T   length = it->length;
-            int source = replacements[it->source];
-            int dest   = replacements[it->destination];
+            T        length = it->length;
+            intptr_t source = replacements[it->source];
+            intptr_t dest   = replacements[it->destination];
             if (source!=dest) {
                 length += replacementLengths[it->source];
                 length += replacementLengths[it->destination];
@@ -328,7 +328,7 @@ template <class T=double> struct StitchupGraph {
         int j = 0;
         for (auto it=stitches.begin(); it!=stitches.end(); ++it, ++j) {
             stitchVector.push_back(*it);
-            int i = it->source;
+            size_t i = it->source;
             if (nodeToEdge[i]==edgeCount) {
                 nodeToEdge[i] = j;
             }
@@ -368,7 +368,7 @@ template <class T=double> struct StitchupGraph {
     template <class F>
     void writeSubtree ( const std::vector<Stitch<T>> stitchVector, 
                         std::vector<size_t>  nodeToEdge,
-                        const Stitch<T>* backstop, int nodeIndex,
+                        const Stitch<T>* backstop, size_t nodeIndex,
                         progress_display &progress, F& out) const {
         bool isLeaf = ( nodeIndex < leafNames.size() );
         if (isLeaf) {
@@ -380,7 +380,7 @@ template <class T=double> struct StitchupGraph {
             size_t y = stitchVector.size();
             nodeToEdge[nodeIndex] = y;
             for (; x<y && stitchVector[x].source == nodeIndex; ++x) {
-                int child = stitchVector[x].destination;
+                size_t child = stitchVector[x].destination;
                 if ( nodeToEdge[child] != y /*no backsies*/ ) {
                     out << sep;
                     sep = ",";
@@ -459,9 +459,9 @@ public:
         }
         std::vector<LengthSortedStitch<T>> stitches;
         stitches.reserve(row_count * (row_count-1) / 2);
-        for (size_t row=0; row<row_count; ++row) {
+        for (intptr_t row=0; row<row_count; ++row) {
             const T* rowData = rows[row];
-            for (size_t col=0; col<row; ++col) {
+            for (intptr_t col=0; col<row; ++col) {
                 stitches.emplace_back(row, col, rowData[col]);
             }
         }
@@ -469,14 +469,14 @@ public:
             heap ( stitches.data(), stitches.size()
                  , silent ? "" : "Constructing min-heap of possible edges" );
         size_t iterations = 0;
-        size_t row_count_triangle = 0.5*row_count*(row_count+1);
+        double row_count_triangle = 0.5*(double)row_count*(double)(row_count+1);
         const char* task_name = silent ? "" : "Assembling Stitch-up Graph";
         progress_display progress(row_count_triangle, task_name );
         std::cout.precision(12);
-        for (size_t join = 0; join + 1 < row_count; ++join) {
+        for (intptr_t join = 0; join + 1 < row_count; ++join) {
             LengthSortedStitch<T> shortest;
-            int source;
-            int dest;
+            size_t source;
+            size_t dest;
             do {
                 shortest = heap.pop_min();
                 source   = shortest.source;
@@ -544,9 +544,9 @@ public:
         size_t row_count_triangle = row_count*(row_count-1)/2;
         std::vector<TaxonEdge> edges;
         edges.reserve(row_count_triangle);
-        for (size_t row=0; row<row_count; ++row) {
+        for (intptr_t row=0; row<row_count; ++row) {
             const T* rowData = rows[row];
-            for (size_t col=0; col<row; ++col) {
+            for (intptr_t col=0; col<row; ++col) {
                 double d = rowData[col] - (rowTotals[row] + rowTotals[col]) *multiplier;
                 edges.emplace_back(col, row, d);
             }
@@ -558,14 +558,14 @@ public:
         const char* task_name = silent ? "" : "Assembling NTCJ Tree";
         progress_display progress(row_count_triangle, task_name );
 
-        size_t taxon_count = row_count;
+        intptr_t taxon_count = row_count;
         std::vector<size_t> taxonToRow;
         taxonToRow.resize(taxon_count);
         size_t* tr = taxonToRow.data();
         #ifdef _OPENMP
         #pragma omp parallel for
         #endif
-        for (size_t t=0; t<taxon_count; ++t) {
+        for (intptr_t t=0; t<taxon_count; ++t) {
             tr[t] = t;
         }
         while (3<row_count) {
@@ -582,7 +582,7 @@ public:
             #ifdef _OPENMP
             #pragma omp parallel for
             #endif
-            for (size_t t=0; t<taxon_count; ++t) {
+            for (intptr_t t=0; t<taxon_count; ++t) {
                 if (tr[t] == r2) {
                     tr[t] = r1;
                 }

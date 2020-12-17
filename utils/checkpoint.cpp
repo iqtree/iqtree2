@@ -7,7 +7,7 @@
 
 #include "checkpoint.h"
 //#include "tools.h"
-#include "io.h"         //for safeGetLine
+#include "safe_io.h"   //for safeGetLine
 #include "timeutil.h"
 #include "gzstream.h"
 #include <cstdio>

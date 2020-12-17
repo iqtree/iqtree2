@@ -69,8 +69,15 @@ gzstreambuf* gzstreambuf::open( const char* name, int open_mode, int compression
     *fmodeptr = '\0';
     
     //BEGIN - Figure out length of the compressed file
-    if ( mode & std::ios::in) {
-        FILE *fp = fopen(name, "rb");
+    if (mode & std::ios::in) {
+        FILE* fp = nullptr;
+        #ifdef _MSC_VER
+            if (fopen_s(&fp, name, "rb") != 0) {
+                fp = nullptr;
+            }
+        #else
+            fp = fopen(name, "rb");
+        #endif  
         if (fp) {
             fseek(fp, 0, SEEK_END);
             #if defined(WIN64)
@@ -115,7 +122,7 @@ int gzstreambuf::underflow() { // used for input buffer only
     if ( ! (mode & std::ios::in) || ! opened)
         return EOF;
     // Josuttis' implementation of inbuf
-    long n_putback = gptr() - eback();
+    intptr_t n_putback = gptr() - eback();
     if ( n_putback > 4)
         n_putback = 4;
     memcpy( buffer + (4 - n_putback), gptr() - n_putback, n_putback);

@@ -24,7 +24,7 @@
 #include "nclextra/myreader.h"
 #include "main/phylotesting.h"
 #include "utils/timeutil.h" //for getRealTime()
-#include "utils/io.h"       //for safeGetLine()
+#include "utils/safe_io.h"  //for safeGetLine()
 
 Alignment *createAlignment(string aln_file, const char *sequence_type,
                            InputType intype, string model_name) {

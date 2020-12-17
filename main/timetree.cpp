@@ -6,7 +6,7 @@
  */
 
 #include "timetree.h"
-#include <utils/io.h> //for safeGetLine
+#include <utils/safe_io.h> //for safeGetLine
 
 #ifdef USE_LSD2
 #include "lsd2/src/lsd.h"

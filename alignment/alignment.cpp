@@ -20,7 +20,7 @@
 #include "utils/timeutil.h"        //for getRealTime()
 #include "utils/progress.h"        //for progress_display
 #include "utils/hammingdistance.h" //for sumForUnknownCharacters
-#include "utils/io.h"              //for safeGetLine
+#include "utils/safe_io.h"         //for safeGetLine
 #include "alignmentsummary.h"
 
 #include <Eigen/LU>
@@ -1868,8 +1868,8 @@ bool Alignment::constructPatterns(int nseq, int nsite,
     patternInfo.resize((nsite + (step-1)) / step);
     progress_display* progress_here = nullptr;
     if (progress==nullptr && !isShowingProgressDisabled) {
-        progress_here = new progress_display( nsite, "Constructing alignment",
-                                                               "examined", "site");
+        progress_here = new progress_display( (double) nsite, "Constructing alignment",
+                                              "examined", "site");
         progress = progress_here;
     }
 #ifdef _OPENMP
@@ -1932,7 +1932,7 @@ bool Alignment::constructPatterns(int nseq, int nsite,
             info.isAllGaps = pat.isAllGaps(STATE_UNKNOWN);
         }
         if (progress!=nullptr) {
-            progress->incrementBy(step);
+            progress->incrementBy((double)step);
         }
     }
     if (progress_here!=nullptr) {
@@ -1946,7 +1946,7 @@ bool Alignment::constructPatterns(int nseq, int nsite,
     //2. Now handle warnings and errors, and compress patterns, sequentially
 
     if (progress==nullptr && !isShowingProgressDisabled) {
-        progress_here = new progress_display(nsite, "Compressing patterns",
+        progress_here = new progress_display((double)nsite, "Compressing patterns",
                                              "processed", "site");
         progress = progress_here;
     }
@@ -1985,7 +1985,7 @@ bool Alignment::constructPatterns(int nseq, int nsite,
             }
         }
         if (progress!=nullptr) {
-            progress->incrementBy(step);
+            progress->incrementBy((double)step);
         }
     }
     resize(w);
@@ -3231,7 +3231,7 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
         }
         if (progress!=nullptr) {
             if (siteMod == 100 ) {
-                progress->incrementBy(100);
+                progress->incrementBy(100.0);
                 siteMod  = 0;
             }
             ++siteMod;

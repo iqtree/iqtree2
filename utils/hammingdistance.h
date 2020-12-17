@@ -65,7 +65,7 @@ template <class L, class F> inline size_t sumForUnknownCharacters
 #if (HAMMING_VECTOR)
 inline double hammingDistance
 ( char unknown, const char* sequenceA, const char* sequenceB
- , int seqLen, const int* frequencyVector
+ , size_t seqLen, const int* frequencyVector
  , double& frequencyOfUnknowns ) {
     size_t blockStop = 0;
     int    distance  = 0;
@@ -111,7 +111,7 @@ inline double hammingDistance
             b += blockSize;
         }
     }
-    for (int pos=blockStop; pos < seqLen; ++pos ) {
+    for (size_t pos=blockStop; pos < seqLen; ++pos ) {
         if (sequenceA[pos]==unknown || sequenceB[pos]==unknown) {
             freqUnknown += frequencyVector[pos];
         }
@@ -215,7 +215,7 @@ inline uint64_t vectorHammingDistanceTemplate(char unknown,
     }
     //remember distance_vector counts each difference as 8
     uint64_t distance    = horizontal_add(distance_vector) >> 3;
-    for (int pos=blockStop; pos < seqLen; ++pos ) {
+    for (size_t pos=blockStop; pos < seqLen; ++pos ) {
         if (sequenceA[pos]!=sequenceB[pos]) {
             if (sequenceA[pos]!=unknown && sequenceB[pos]!=unknown) {
                 ++distance;
