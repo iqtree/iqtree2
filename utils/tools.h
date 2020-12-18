@@ -58,10 +58,6 @@
 //#define GCC_VERSION 0
 #endif
 
-// for MSVC
-#ifndef __func__
-#define __func__ __FUNCTION__
-#endif
 
 #if defined(USE_HASH_MAP)
 //    #include <unordered_map>
@@ -104,7 +100,6 @@
 
 using namespace std;
 
-
 #if	defined(USE_HASH_MAP) && GCC_VERSION < 40300 && !defined(_MSC_VER) && !defined(__clang__)
 /*
         Define the hash function of Split
@@ -125,7 +120,6 @@ namespace __gnu_cxx {
     };
 } // namespace
 #endif // USE_HASH_MAP
-
 
 class Linear {
 public:

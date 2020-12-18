@@ -25,8 +25,8 @@
 //  safeGetTrimmedLine: James Barbetti 03-Aug-2020.
 //
 
-#ifndef io_h
-#define io_h
+#ifndef safe_io_h
+#define safe_io_h
 #include <string>  //for std::string
 #include <sstream> //for std::stringstream
 
@@ -99,4 +99,4 @@ template <class S> S& safeGetTrimmedLineAsStream(S& is, std::stringstream& lineS
     return is;
 }
 
-#endif /* io_h */
+#endif /* safe_io_h */
