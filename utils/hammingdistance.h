@@ -139,6 +139,10 @@ inline size_t conventionalHammingDistance(char unknown,
     return distance;
 }
 
+#if defined(CLANG_UNDER_VS) && !defined(_mm_popcnt_u64)
+#   define _mm_popcnt_u64 __popcnt64
+#endif
+
 inline size_t conventionalCountBitsSetInEither(uint64_t* a, uint64_t* b,
                                                size_t count /*in uint64_t*/) {
     size_t bits_set = 1;
@@ -156,9 +160,6 @@ inline size_t conventionalCountBitsSetInEither(uint64_t* a, uint64_t* b,
 }
 
 #if (INSTRSET >= 2)
-#if defined(CLANG_UNDER_VS) && !defined(_mm_popcnt_u64)
-#   define _mm_popcnt_u64 __popcnt64
-#endif
 
 #ifdef _MSC_VER
     #define ALIGN_32(x) __declspec(align(32)) x

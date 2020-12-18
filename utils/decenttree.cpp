@@ -567,26 +567,34 @@ bool prepInput(const std::string& alignmentInputFilePath,
     if (!alignmentInputFilePath.empty()) {
         Sequences sequences;
         std::vector<char> is_site_variant;
-        succeeded =  loadAlignment
-                     (alignmentInputFilePath, reportProgress,
-                      sequences, is_site_variant);
-        succeeded &= loadSequenceDistancesIntoMatrix
-                     (sequences, is_site_variant,
-                      reportProgress, m);
+        if (!loadAlignment(alignmentInputFilePath, reportProgress,
+            sequences, is_site_variant)) {
+            return false;
+        }
+        if (!loadSequenceDistancesIntoMatrix
+                         (sequences, is_site_variant,
+                          reportProgress, m)) {
+            return false;
+        }
         if (filter_problem_sequences) {
             removeProblematicSequences(sequences, m);
         }
-        if (succeeded && !msaOutputPath.empty()) {
+        if (!msaOutputPath.empty()) {
             writeMSAOutputFile(sequences, msaOutputPath);
         }
-        if (succeeded && !distanceOutputFilePath.empty()) {
+        if (!distanceOutputFilePath.empty()) {
             writeDistanceMatrixToFile(m, distanceOutputFilePath);
         }
     } else if (!matrixInputFilePath.empty()) {
-        succeeded = loadDistanceMatrixInto(matrixInputFilePath,
-                                           reportProgress, m);
+        if (!loadDistanceMatrixInto(matrixInputFilePath,
+                                    reportProgress, m)) {
+            return false;
+        }
     }
-    return succeeded;
+    else {
+        return false;
+    }
+    return true;
 }
 
 int main(int argc, char* argv[]) {

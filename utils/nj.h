@@ -449,14 +449,15 @@ public:
                      //For each entry in minVector, the column 
                      //from which that value came.
             
-            for (col=0; col+blockSize<row; col+=blockSize) {
+            intptr_t colStop = row - blockSize;
+            for (col=0; col<colStop; col+=blockSize) {
                 V  rowVector; rowVector.load_a(rowData+col);
                 V  totVector; totVector.load_a(tot+col);
                 V  adjVector = rowVector - totVector;
                 VB less      = adjVector < minVector;
                 V  numVector; numVector.load_a(nums+col);
-                ixVector  = select(less, numVector, ixVector);
-                minVector = select(less, adjVector, minVector);
+                ixVector     = select(less, numVector, ixVector);
+                minVector    = select(less, adjVector, minVector);
             }
             //Extract minimum and column number
             for (int c=0; c<blockSize; ++c) {
