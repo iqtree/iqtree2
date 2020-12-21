@@ -1,15 +1,15 @@
 //
 //  parsimonynni.cpp
-//  alignment
+//  Parsimony NNI implementation.
 //
 //  Created by James Barbetti on 30/11/20.
 //
 
-#include <stdio.h>
 #include <placement/blockallocator.h>
 #include <placement/targetbranch.h>
 #include <placement/parallelparsimonycalculator.h>
 #include <utils/timekeeper.h>
+#include "phylonode.h" //for GET_OTHER_ADJACENT_PHYLO_NODES
 
 class PossibleExchange {
 public:
@@ -56,20 +56,11 @@ public:
     }
 };
 
-#define GET_OTHER_ADJACENT_PHYLO_NODES(node, dad, child_one, child_two) \
-    if (1) { \
-        child_one = child_two = nullptr; \
-        FOR_EACH_ADJACENT_PHYLO_NODE(node, dad, it, child) { \
-            if (child_one==nullptr) child_one = child; else child_two = child; \
-        } \
-    } else 0
-
 void PhyloTree::doParsimonyNNI() {
     size_t max_iterations = params->parsimony_nni_iterations;
     PhyloBranchVector branches;
     getBranches(branches);
     size_t branch_count = branches.size();
-    std::vector<TargetBranch> targets;
     
     bool zeroNumThreads = false;
     if (num_threads==0) {

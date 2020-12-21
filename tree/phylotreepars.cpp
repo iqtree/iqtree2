@@ -179,7 +179,12 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
             }
             if (!left) left = pit; else right = pit;
         }
-        computePartialParsimonyOutOfTreeFast(left->partial_pars, right->partial_pars, dad_branch->partial_pars);
+        ASSERT(left!=nullptr && right!=nullptr);
+        if (left!=nullptr && right!=nullptr) {
+            computePartialParsimonyOutOfTreeFast(left->partial_pars,
+                                                 right->partial_pars,
+                                                 dad_branch->partial_pars);
+        }
     }
     if (!aln->isSuperAlignment()) {
         delete partitions;
@@ -1175,7 +1180,9 @@ void getNeiBranches(PhyloNeighborVec &removed_nei,
     ASSERT(nodes1.size() == 3 + (i-j-1)*2);
 }
 
-void PhyloTree::insertNode2Branch(PhyloNode* added_node, PhyloNode* target_node, PhyloNode* target_dad) {
+void PhyloTree::insertNode2Branch(PhyloNode* added_node,
+                                  PhyloNode* target_node,
+                                  PhyloNode* target_dad) {
     target_node->updateNeighbor(target_dad, added_node, -1.0);
     target_dad->updateNeighbor(target_node, added_node, -1.0);
     added_node->updateNeighbor(DUMMY_NODE_1, target_node, -1.0);

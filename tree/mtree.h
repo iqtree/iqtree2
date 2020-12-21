@@ -515,6 +515,13 @@ public:
                      bool post_traversal = false);
 
     /**
+            get all descending branches below the node
+            @param nodes (OUT) vector of one end node of branch
+            @param nodes2 (OUT) vector of the other end node of branch
+     */
+    void getBranchesInIDOrder(NodeVector &nodes, NodeVector &nodes2);
+
+    /**
      get all descending branches below the node not further away from max_dist
      @param max_dist maximum distance for descending branches
      @param node the starting node, nullptr to start from the root

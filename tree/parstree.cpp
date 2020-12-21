@@ -48,10 +48,15 @@ UINT ParsTree::findMstScore(int ptn) {
 	}
 
 	int state_count = 0;
-	for(int i = 0; i < aln->num_states; i++)
-		if(site_states[i] == 0) state_count++;
-	if(state_count <= 1) return 0;
-
+    for(int i = 0; i < aln->num_states; i++) {
+        if(site_states[i] == 0) {
+            state_count++;
+        }
+    }
+    if(state_count <= 1) {
+        delete [] site_states; //JB 21-Dec-2020 Patched memory leak
+        return 0;
+    }
 //	cout << "state_count = " << state_count << endl;
 
 	//--- Prim algorithm

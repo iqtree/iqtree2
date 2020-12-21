@@ -40,16 +40,16 @@ public:
         }
     }
 
-    PhyloNeighborMixlen(PhyloNeighborMixlen *nei) : PhyloNeighbor(nei) {
-        lengths = nei->lengths;
+    PhyloNeighborMixlen(const PhyloNeighborMixlen &nei) : PhyloNeighbor(nei) {
+        lengths = nei.lengths;
     }
     
     /**
      allocate a new Neighbor by just copying from this one
      @return pointer to newly created Neighbor
      */
-    virtual PhyloNeighborMixlen* newNeighbor() {
-        return (new PhyloNeighborMixlen(this));
+    virtual PhyloNeighborMixlen* newNeighbor() const {
+        return (new PhyloNeighborMixlen(*this));
     }
 
     /** branch lengths for mixture */

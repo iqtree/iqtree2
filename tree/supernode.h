@@ -48,8 +48,65 @@
 		if ((*it)->node != (mydad))
 
 
-class SuperNode;
+class SuperNeighbor;
 
+/**
+Node of a super tree
+
+    @author BUI Quang Minh <minh.bui@univie.ac.at>
+*/
+class SuperNode : public PhyloNode
+{
+    friend class PhyloSuperTree;
+
+public:
+    /**
+        constructor
+    */
+    SuperNode();
+
+    /**
+        constructor
+        @param aid id of this node
+    */
+    SuperNode(int aid);
+
+    /**
+        constructor
+        @param aid id of this node
+        @param aname name of this node
+    */
+    SuperNode(int aid, int aname);
+
+    /**
+        constructor
+        @param aid id of this node
+        @param aname name of this node
+    */
+    SuperNode(int aid, const char *aname);
+
+    /**
+        initialization
+    */
+    void init();
+
+    /**
+        add a neighbor
+        @param node the neighbor node
+        @param length branch length
+        @param id branch ID
+    */
+    virtual void addNeighbor(Node *node, double length, int id = -1);
+
+    virtual SuperNeighbor* findNeighbor(Node* node);
+
+    virtual SuperNeighbor* firstNeighbor();
+
+    virtual SuperNeighbor* getNeighborByIndex(size_t index);
+    
+    ~SuperNode();
+
+};
 /**
 A neighbor in a phylogenetic SUPER tree
 
@@ -80,15 +137,15 @@ public:
      construct class with another Neighbor
      @param nei another Neighbor
      */
-    SuperNeighbor(SuperNeighbor *nei);
+    SuperNeighbor(const SuperNeighbor& nei);
     
-    virtual SuperNode* getNode();
+    virtual SuperNode* getNode() const;
     
     /**
      allocate a new Neighbor by just copying from this one
      @return pointer to newly created Neighbor
      */
-    virtual SuperNeighbor* newNeighbor();
+    virtual SuperNeighbor* newNeighbor() const;
 
 	/**
 		vector of size m (m = #partitions)
@@ -97,63 +154,7 @@ public:
 
 };
 
-/**
-Node of a super tree
 
-	@author BUI Quang Minh <minh.bui@univie.ac.at>
-*/
-class SuperNode : public PhyloNode
-{
-	friend class PhyloSuperTree;
-
-public:
-	/**
-		constructor 
-	*/
-    SuperNode();
-
-	/**
-		constructor 
-		@param aid id of this node
-	*/
-	SuperNode(int aid);
-
-	/**
-		constructor 
-		@param aid id of this node
-		@param aname name of this node
-	*/
-	SuperNode(int aid, int aname);
-
-	/**
-		constructor 
-		@param aid id of this node
-		@param aname name of this node
-	*/
-	SuperNode(int aid, const char *aname);
-
-	/**
-		initialization
-	*/
-	void init();
-
-	/**
-		add a neighbor
-		@param node the neighbor node
-		@param length branch length
-		@param id branch ID
-	*/
-	virtual void addNeighbor(Node *node, double length, int id = -1);
-
-    virtual SuperNeighbor* findNeighbor(Node* node);
-
-	virtual SuperNeighbor* firstNeighbor();
-
-	virtual SuperNeighbor* getNeighborByIndex(size_t index);
-    
-    ~SuperNode();
-
-};
 
 typedef SubclassPointerVector<SuperNode,     PhyloNodeVector>  SuperNodeVector;
 typedef SubclassPointerVector<SuperNeighbor, PhyloNeighborVec> SuperNeighborVec;

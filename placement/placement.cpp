@@ -31,7 +31,6 @@ std::string getIncrementalParameter(const char letter, const char* defaultValue)
         return answer;  //Didn't find it
     }
     ++i;
-    defaultValue = "";
     int j;
     for (j=i; j<inc.length(); ++j) {
         if (inc[j]=='+' && braceLevel==0) {
