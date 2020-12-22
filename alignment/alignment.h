@@ -918,6 +918,10 @@ public:
     /** site to state frequency vector */
     vector<double*> site_state_freq;
 
+    /** vector counting the number of singleton parsimony states
+        for each taxon (used in Parsimony Joining).*/
+    std::vector<UINT> singleton_parsimony_states;
+    
     /**
      * @return true if data type is SEQ_CODON and state is a stop codon
      */
@@ -1004,6 +1008,7 @@ protected:
             Site to pattern index
      */
     IntVector site_pattern;
+    
 
     /**
             hash map from pattern to index in the vector of patterns (the alignment)

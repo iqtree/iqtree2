@@ -1725,6 +1725,27 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
             int max_sites = ((site+UINT_BITS-1)/UINT_BITS);
             memset(x, 255, (VCSIZE - max_sites)*sizeof(UINT));
         }
+        {
+            //Count sites where the taxon, indicated by leafid, is the
+            //taxon that has a "singleton" state (is the only one in the
+            //pattern with this state, when all of the others that have
+            //known states have the one known state).
+            //
+            //(Such sites are parsimony-uninformative but tracking how
+            // many of them there are, per taxon, potentially makes
+            // parsimony branch lengths more accurate).
+            //
+            const size_t NUM_BITS   = VectorClass::size() * UINT_BITS;
+            const size_t nstates    = aln->getMaxNumStates();
+            const size_t nsites     = (aln->num_parsimony_sites+NUM_BITS-1)/NUM_BITS;
+            const size_t VCSIZE     = VectorClass::size();
+            auto  total             = nstates*VCSIZE*nsites;
+            if ( 0 <= leafid && leafid < aln->singleton_parsimony_states.size() ) {
+                UINT onesuch_site_count = aln->singleton_parsimony_states[leafid];
+                dad_branch->partial_pars[total] = onesuch_site_count;
+            }
+        }
+
         if (!aln->isSuperAlignment())
             delete partitions;
     } else {

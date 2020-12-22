@@ -483,7 +483,7 @@ void ModelMarkov::computeTransMatrix(double time, double *trans_matrix, int mixt
 	/* compute P(t) */
 	double evol_time = time / total_num_subst;
 
-    if (Params::getInstance().experimental) {
+    if (Params::getInstance().use_custom_matrix_diagonal_math) {
         double eval_exp[num_states];
         calculateExponentOfScalarMultiply(eigenvalues, num_states, evol_time, eval_exp);
         aTimesDiagonalBTimesTransposeOfC( eigenvectors, eval_exp
@@ -719,7 +719,7 @@ void ModelMarkov::computeTransDerv(double time, double *trans_matrix,
 
 	double evol_time = time / total_num_subst;
     
-    if (Params::getInstance().experimental) {
+    if (Params::getInstance().use_custom_matrix_diagonal_math) {
         //James' version
         double eval_exp[num_states];
         calculateExponentOfScalarMultiply(eigenvalues, num_states, evol_time, eval_exp);

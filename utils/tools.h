@@ -720,6 +720,8 @@ public:
      */
     double modelfinder_eps;
 
+    bool   use_compute_parsimony_tree_new;
+    
     size_t parsimony_nni_iterations;
     bool   parsimony_pll_spr;
     size_t parsimony_spr_iterations;
@@ -1192,9 +1194,11 @@ public:
     
     
     /**
-            TRUE to use experimental implementation to calculate observed (or Jukes-Cantor) distances
+            TRUE to use AlignmentSummary implementation to calculate observed (or Jukes-Cantor) distances
      */
-    bool experimental;
+    bool use_alignment_summary_for_distance_calculation;
+    
+    bool use_custom_matrix_diagonal_math;
 
     /**
             TRUE to compute the maximum-likelihood distances

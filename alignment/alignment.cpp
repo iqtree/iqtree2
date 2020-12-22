@@ -28,6 +28,7 @@
 #include <boost/math/distributions/binomial.hpp>
 #endif
 
+#define USE_UNINFORMATIVE_PARSIMONY (0)
 
 using namespace std;
 using namespace Eigen;
@@ -941,27 +942,45 @@ void Alignment::computeConst(Pattern &pat) {
 
     // number of appearance for each state, to compute is_informative
     size_t num_app[num_states];
+    size_t last_app[num_states]; //last appearance
     memset(num_app, 0, num_states*sizeof(size_t));
 
-    for (Pattern::iterator i = pat.begin(); i != pat.end(); i++) {
+    auto   pat_data = pat.data();
+    size_t pat_len  = pat.size();
+    for (size_t i = 0; i < pat_len; ++i) {
+        Pattern::value_type j = pat_data[i];
     	StateBitset this_app;
-    	getAppearance(*i, this_app);
+    	getAppearance(j, this_app);
     	state_app &= this_app;
-        if (*i < num_states) {
-            num_app[(int)(*i)]++;
+        if (j < num_states) {
+            auto state = (int)j;
+            num_app [state]++;
+            last_app[state] = i;
         }
 //        else if (*i != STATE_UNKNOWN) {
 //            // ambiguous characters
 //            is_const = false;
 //        }
     }
+    
     int count = 0; // number of states with >= 2 appearances
     pat.num_chars = 0; // number of states with >= 1 appearance
     for (j = 0; j < num_states; j++) if (num_app[j]) {
         pat.num_chars++;
         if (num_app[j] >= 2) {
-            count++;
+            ++count;
         }
+#if (USE_UNINFORMATIVE_PARSIMONY)
+        else if (num_app[j] == 1) {
+            #ifdef _OPENMP
+            #pragma omp critical
+            #endif
+            {
+                singleton_parsimony_states.resize(pat_len,0);
+                singleton_parsimony_states[last_app[j]] += pat.frequency;
+            }
+        }
+#endif
     }
 
     // at least 2 states, each appearing at least twice
@@ -1127,6 +1146,7 @@ bool Alignment::addPattern(Pattern &pat, int site, int freq) {
 
 void Alignment::updatePatterns(size_t oldPatternCount) {
     size_t patternCount = size();
+    
     #ifdef _OPENMP
     #pragma omp parallel for
     #endif

@@ -794,7 +794,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.compute_obs_dist = false;
     params.count_unknown_as_different = false;
     params.compute_jc_dist = true;
-    params.experimental = true;
+    params.use_alignment_summary_for_distance_calculation = true;
+    params.use_custom_matrix_diagonal_math = true;
     params.compute_ml_dist = true;
     params.compute_ml_tree = true;
     params.compute_ml_tree_only = false;
@@ -905,6 +906,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.k_representative = 4;
     params.loglh_epsilon = 0.001;
     params.numSmoothTree = 1;
+    params.use_compute_parsimony_tree_new = false;
     params.parsimony_nni_iterations = 0;
     params.parsimony_spr_iterations = 0;
     params.parsimony_pll_spr        = true;
@@ -1460,12 +1462,23 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
             if (strcmp(argv[cnt], "-experimental") == 0
                 || strcmp(argv[cnt], "--experimental") == 0) {
-                params.experimental      = true;
                 params.parsimony_pll_spr = false;
+                params.use_compute_parsimony_tree_new = true;
+                continue;
+            }
+            if (arg=="-old-stepwise-parsimony") {
+                params.use_compute_parsimony_tree_new = false;
+                continue;
+            }
+            if (arg=="-old-matrix-math") {
+                params.use_custom_matrix_diagonal_math = false;
+                continue;
+            }
+            if (arg=="-old-distance-calculation") {
+                params.use_alignment_summary_for_distance_calculation = false;
                 continue;
             }
             if (strcmp(argv[cnt], "--no-experimental") == 0) {
-                params.experimental = false;
                 continue;
             }
 			if (strcmp(argv[cnt], "-r") == 0) {

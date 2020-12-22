@@ -86,6 +86,12 @@ const double TOL_LIKELIHOOD_PARAMOPT = 0.001; // BQM: newly introduced for Model
 //#define LOG_SCALING_THRESHOLD log(SCALING_THRESHOLD)
 #define LOG_SCALING_THRESHOLD -177.4456782233459932741
 
+#ifdef __AVX512KNL
+#define SIMD_BITS 512
+#else
+#define SIMD_BITS 256
+#endif
+
 const int SPR_DEPTH = 2;
 
 //using namespace Eigen;

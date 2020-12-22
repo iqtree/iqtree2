@@ -1465,13 +1465,6 @@ void PhyloTree::initializeAllPartialPars(int &index, PhyloNode *node, PhyloNode 
     }
 }
 
-#ifdef __AVX512KNL
-#define SIMD_BITS 512
-#else
-#define SIMD_BITS 256
-#endif
-
-
 size_t PhyloTree::getBitsBlockSize() {
     return pars_block_size;
 }
@@ -1799,8 +1792,8 @@ void PhyloTree::determineBlockSizes() {
         //Otherwise, parsimony tracks a bit per site per state
         //(and should have 1 additional UINTs for a total score)
         size_t bits_per_state  = max(aln->size(), (size_t)aln->num_variant_sites);
-        size_t bytes_per_state = (bits_per_state + SIMD_BITS - 1) / UINT_BITS;
-        pars_block_size = aln->getMaxNumStates() * bytes_per_state + 1;
+        size_t uints_per_state = (bits_per_state + SIMD_BITS - 1) / UINT_BITS;
+        pars_block_size = aln->getMaxNumStates() * uints_per_state + 1;
     }
     pars_block_size = get_safe_upper_limit_float(pars_block_size);
 
@@ -3754,7 +3747,8 @@ void PhyloTree::prepareToComputeDistances() {
         delete summary;
         summary = nullptr;
     }
-    if (params->experimental && !isSummaryBorrowed) {
+    if (params->use_alignment_summary_for_distance_calculation
+        && !isSummaryBorrowed) {
         summary = new AlignmentSummary(aln, true, true);
         summary->constructSequenceMatrix(false);
     }
@@ -4202,7 +4196,7 @@ double PhyloTree::computeDistanceMatrix(Params &params, Alignment *alignment) {
     }
     else {
         double begin_time = getRealTime();
-        longest_dist = (params.experimental)
+        longest_dist = (params.use_alignment_summary_for_distance_calculation)
             ? computeDistanceMatrix_Experimental()
             : computeDistanceMatrix();
         if (verbose_mode >= VB_MED) {
