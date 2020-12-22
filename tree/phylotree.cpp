@@ -459,7 +459,7 @@ void PhyloTree::configureLikelihoodKernel(const Params& params) {
 void PhyloTree::configureModel(Params& params) {
     if (model==nullptr) {
         ModelsBlock *models_block = readModelsDefinition(params);
-        if (model_factory==nullptr) {            
+        if (model_factory==nullptr && aln!=nullptr) {
             initializeModel(params, aln->model_name, models_block);
         }
         if (getRate()->isHeterotachy() && !isMixlen()) {
@@ -1765,7 +1765,8 @@ void PhyloTree::getMemoryRequired(uint64_t &partial_lh_entries, uint64_t &scale_
         block_size *= site_rate->getNRate();
         scale_size *= site_rate->getNRate();
     }
-    if (model && !model_factory->fused_mix_rate) {
+    if (model!=nullptr && model_factory!=nullptr
+        && !model_factory->fused_mix_rate) {
         block_size *= model->getNMixtures();
         scale_size *= model->getNMixtures();
     }
@@ -6397,7 +6398,7 @@ bool PhyloTree::computeTraversalInfo(PhyloNeighbor* dad_branch,
         for (size_t i = 0; i < neivec.size(); ++i) {
             PhyloNode* child = neivec[i]->getNode();
             if (child != dad) {
-                if (!child->isLeaf() && locked[i]) {
+                if (child->isInterior() && locked[i]) {
                     mem_slots.unlock(neivec[i]);
                 }
             }

@@ -4353,23 +4353,6 @@ void IQTree::initializePLLIfNecessary() {
     }
 }
 
-PhyloNodeVector IQTree::getTaxaNodesInIDOrder() const {
-    PhyloNodeVector taxa;
-    getTaxa(taxa);
-    PhyloNodeVector result;
-    result.resize(leafNum, nullptr);
-    for (auto it=taxa.begin(); it!=taxa.end(); ++it) {
-        auto node = *it;
-        ASSERT(0<=node->id && node->id<leafNum);
-        ASSERT(result[node->id] == nullptr);
-        result[node->id] = node;
-    }
-    for (auto itResult=result.begin(); itResult!=result.end(); ++itResult) {
-        ASSERT((*itResult)!=nullptr);
-    }
-    return result;
-}
-
 void IQTree::optimizeConstructedTree() {
     if (0<params->parsimony_nni_iterations) {
         doParsimonyNNI();
@@ -4386,66 +4369,11 @@ void IQTree::optimizeConstructedTree() {
             << params->parsimony_spr_iterations << " rounds of parsimony SPR,"
             << " parsimony score was " << initial_parsimony);
     }
-    //For now, use PLL to do Parsimony SPR
-    double init_start = getRealTime();
-    StrVector oldNames;
-    bool areNamesDummied = false;
-    if (!isInitializedPLL()) {
-        //Names containing '/' characters give PLL trouble.
-        //Simplest way to avoid the risk... is to dummy all
-        //the names for the (PLL) duration.
-        areNamesDummied = true;
-        oldNames        = aln->getSeqNames();
-        PhyloNodeVector taxa ( getTaxaNodesInIDOrder() );
-        ASSERT(taxa.size() == aln->getSeqNames().size());
-        for (size_t i=0; i<taxa.size(); ++i) {
-            std::stringstream dummy;
-            dummy << "S" << i;
-            std::string dummyName = dummy.str();
-            taxa[i]->name = dummyName;
-            aln->setSeqName(i, dummyName);
-        }
-        initializePLL(*params);
+    if (params->parsimony_pll_spr) {
+        doPLLParsimonySPR();
+    } else {
+        doParsimonySPR();
     }
-    string constructedTreeString = getTreeString();
-    //LOG_LINE(VB_MAX, constructedTreeString);
-    pllReadNewick(constructedTreeString);
-    double opt_start = getRealTime();
-    int iterations = pllOptimizeWithParsimonySPR(pllInst, pllPartitions, 
-        params->parsimony_spr_iterations,  params->sprDist);
-    double read_start = getRealTime();
-    pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions,
-        pllInst->start->back, PLL_FALSE, PLL_TRUE, PLL_FALSE,
-        PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
-    string pllTreeString = string(pllInst->tree_string);
-    PhyloTree::readTreeString(pllTreeString);
-    
-    //LOG_LINE(VB_MAX, pllTreeString);x
-    if (areNamesDummied) {
-        PhyloNodeVector taxa ( getTaxaNodesInIDOrder() );
-        ASSERT(taxa.size() == aln->getSeqNames().size());
-        for (size_t i=0; i<taxa.size(); ++i) {
-            taxa[i]->name = oldNames[i];
-            aln->setSeqName(i, oldNames[i]);
-        }
-        pllDestroyInstance(pllInst);
-        pllInst = nullptr;
-    }
-
-    double pars_start = getRealTime();
-    initializeAllPartialPars();
-    auto optimized_parsimony = computeParsimony("Computing post optimization parsimony");
-    LOG_LINE(VB_MIN, "After " << iterations << " rounds of Parsimony SPR,"
-        << " parsimony score was " << optimized_parsimony);
-    double pll_overhead = (opt_start - init_start) + (pars_start - read_start);
-    double spr_time     = (read_start - opt_start);
-    LOG_LINE(VB_MED, "PLL overhead was " << pll_overhead << " wall-clock seconds");
-    LOG_LINE(VB_MED, "SPR optimization took " << spr_time << " wall-clock seconds");
-    
-    double fix_start = getRealTime();
-    fixNegativeBranch();
-    double fix_time  = getRealTime()-fix_start;
-    LOG_LINE(VB_MED, "Fixing -ve branches tool " << fix_time << " wall-clock seconds");
 }
 
 int PhyloTree::testNumThreads() {

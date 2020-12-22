@@ -514,8 +514,10 @@ double AlignmentPairwise::recomputeDist
             }
             initial_dist = tree->aln->computeJCDistanceFromObservedDistance(initial_dist);
         }
-        else if (tree->params->compute_obs_dist)
-            return (initial_dist = tree->aln->computeObsDist(seq1, seq2));
+        else if (tree->params->compute_obs_dist) {
+            initial_dist = tree->aln->computeObsDist(seq1, seq2);
+            return initial_dist;
+        }
         else
             initial_dist = tree->aln->computeDist(seq1, seq2);
     }

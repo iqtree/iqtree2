@@ -46,14 +46,14 @@ class PlacementCostCalculator;
 class TaxonToPlace;
 class TaxaToPlace;
 
-struct CostPair {
+struct BenefitPair {
 public:
-    bool   hasForwardCost;
-    double forwardCost;
-    bool   hasBackwardCost;
-    double backwardCost;
-    CostPair(): hasForwardCost(false),  forwardCost(0)
-              , hasBackwardCost(false), backwardCost(0) {}
+    bool   hasForwardBenefit;
+    double forwardBenefit;
+    bool   hasBackwardBenefit;
+    double backwardBenefit;
+    BenefitPair(): hasForwardBenefit(false),  forwardBenefit(0)
+              , hasBackwardBenefit(false), backwardBenefit(0) {}
 };
 
 class TargetBranch : public std::pair<PhyloNode*, PhyloNode*> {
@@ -65,7 +65,6 @@ class TargetBranch : public std::pair<PhyloNode*, PhyloNode*> {
     double          connection_cost;     //The cost of adding a node in the middle of the branch
     double          branch_cost;         //The branch cost (typically, the parsimony score) of
                                          //the first<-->second branch).
-    double          net_connection_cost; //connection_cost - branch_cost
     double*         partial_lh;
     UBYTE*          scale_num;
     mutable double  branch_lh_scale_factor;
@@ -81,11 +80,14 @@ public:
     TargetBranch(BlockAllocator* allocator,
                  PhyloNode* node1, PhyloNode* node2,
                  bool likelihood_wanted);
-    void computeState(PhyloTree& phylo_tree,
-                      size_t target_branch_index,
-                      LikelihoodBlockPairs &blocks);
-    void dumpNeighbor(VerboseMode level, const char* prefix,
-                      PhyloTree& phylo_tree, PhyloNeighbor* nei) const;
+    double computeState (PhyloTree& phylo_tree,
+                         size_t target_branch_index,
+                         LikelihoodBlockPairs &blocks);
+    void   dumpNeighbor (VerboseMode level, const char* prefix,
+                         PhyloTree& phylo_tree, PhyloNeighbor* nei) const;
+    void   updateMapping(int branch_id,
+                         PhyloNode* updated_first,
+                         PhyloNode* updated_second);
     void forgetState()            const;
     bool isUsedUp()               const;
     void handOverComputedStateTo(PhyloNeighbor* nei) ;
@@ -110,8 +112,11 @@ public:
     
     //The following functions are used for parsimony rearrangement
     
-    double getBranchCost() const;
-    
+    double getBranchCost()        const;
+    double getFirstSubTreeCost()  const;
+    double getSecondSubTreeCost() const;
+    double getConnectionCost()    const;
+
     /** Calculate the benefit (in terms of reduced state changes required
      according to maximum parsimony), if this branch is disconnected
      @param phylo_tree
@@ -120,17 +125,18 @@ public:
             cost(AC)+cost(BC)+cost(CD)+cost(CE)+cost(CF) - cost(AB) - cost(EF)
      
      */
-    double   getFullDisconnectionBenefit    (const PhyloTree& phylo_tree) const;
-    CostPair getPartialDisconnectionBenefit (const PhyloTree& phylo_tree) const;
+    double      getFullDisconnectionBenefit    (const PhyloTree& phylo_tree,
+                                                const TargetBranchRange& branches) const;
+    BenefitPair getPartialDisconnectionBenefit (const PhyloTree& phylo_tree,
+                                                const TargetBranchRange& branches) const;
     
-    double   getFullConnectionCost    (const PhyloTree& phylo_tree,
-                                       const TargetBranch& other_branch) const;
-    double   getForwardConnectionCost (const PhyloTree& phylo_tree,
-                                       const TargetBranch& other_branch) const;
-    double   getBackwardConnectionCost(const PhyloTree& phylo_tree,
-                                       const TargetBranch& other_branch) const;
-
-    bool   isExternalBranch() const;
+    double      getFullConnectionCost    (const PhyloTree& phylo_tree,
+                                          const TargetBranch& other_branch) const;
+    double      getForwardConnectionCost (const PhyloTree& phylo_tree,
+                                          const TargetBranch& other_branch) const;
+    double      getBackwardConnectionCost(const PhyloTree& phylo_tree,
+                                          const TargetBranch& other_branch) const;
+    bool        isExternalBranch() const;
 };
 
 class TargetBranchRef;
@@ -139,7 +145,8 @@ class TargetBranchRange : public vector<TargetBranch> {
 public:
     typedef  vector<TargetBranch> super;
     TargetBranchRange(PhyloTree& phylo_tree, BlockAllocator* b,
-                      PlacementCostCalculator* calculator);
+                      PlacementCostCalculator* calculator,
+                      bool match_branch_numbers);
     TargetBranch* getTargetBranch(size_t i) {
         return &at(i);
     }

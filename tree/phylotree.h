@@ -1641,7 +1641,11 @@ public:
      */
     void extractBifurcatingSubTree(PhyloNeighborVec &removed_nei, PhyloNodeVector &attached_node, int *rand_stream);
     
-
+    /***
+     * get all the taxa nodes in the tree, into a vector ordered (and indexed) by taxon id
+     * @return vector of taxa nodes (in taxon id order)
+     */
+    PhyloNodeVector getTaxaNodesInIDOrder() const;
     /**
      * FAST VERSION: compute parsimony tree by step-wise addition
      * @param out_prefix prefix for .parstree file
@@ -1667,9 +1671,12 @@ public:
      * @return parsimony score
      */
     virtual int joinParsimonyTree(const char *out_prefix, Alignment *alignment);
-    
+        
     void doParsimonyNNI();
-
+    
+    void doParsimonySPR();
+    
+    void doParsimonyTBR();
     
     /****************************************************************************
             Branch length optimization by maximum likelihood

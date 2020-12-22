@@ -16,7 +16,7 @@
 
 TargetBranch::TargetBranch() : super(nullptr, nullptr), blocker(nullptr)
                , partial_pars(nullptr)
-               , connection_cost(0), branch_cost(0), net_connection_cost(0)
+               , connection_cost(0), branch_cost(0)
                , partial_lh(nullptr)
                , scale_num(nullptr), branch_lh_scale_factor(0)
                , used(false)
@@ -31,7 +31,6 @@ TargetBranch::TargetBranch(const TargetBranch& rhs): super(rhs) {
     partial_pars           = rhs.partial_pars;
     connection_cost        = rhs.connection_cost;
     branch_cost            = rhs.branch_cost;
-    net_connection_cost    = rhs.net_connection_cost;
     partial_lh             = rhs.partial_lh;
     scale_num              = rhs.scale_num;
     branch_lh_scale_factor = rhs.branch_lh_scale_factor;
@@ -47,7 +46,6 @@ TargetBranch& TargetBranch::operator= (const TargetBranch& rhs) {
         partial_pars           = rhs.partial_pars;
         connection_cost        = rhs.connection_cost;
         branch_cost            = rhs.branch_cost;
-        net_connection_cost    = rhs.net_connection_cost;
         partial_lh             = rhs.partial_lh;
         scale_num              = rhs.scale_num;
         branch_lh_scale_factor = rhs.branch_lh_scale_factor;
@@ -63,7 +61,7 @@ TargetBranch::TargetBranch(BlockAllocator* allocator,
                PhyloNode* node1, PhyloNode* node2,
                bool likelihood_wanted)
     : super(node1, node2), blocker(allocator), partial_pars(nullptr)
-    , connection_cost(0), branch_cost(0), net_connection_cost(0)
+    , connection_cost(0), branch_cost(0)
     , partial_lh(nullptr), scale_num(nullptr)
     , branch_lh_scale_factor(0), used(false)
     , replacements(nullptr) {
@@ -106,7 +104,7 @@ void TargetBranch::dumpNeighbor(VerboseMode level, const char* name,
     TREE_LOG_LINE(phylo_tree, level, s.str() );
 }
 
-void TargetBranch::computeState(PhyloTree& phylo_tree,
+double TargetBranch::computeState(PhyloTree& phylo_tree,
                                 size_t target_branch_index,
                                 LikelihoodBlockPairs &blocks) {
     PhyloNeighbor* neigh1 = first->findNeighbor(second);
@@ -115,14 +113,15 @@ void TargetBranch::computeState(PhyloTree& phylo_tree,
     c.schedulePartialParsimony(neigh1, first);
     c.schedulePartialParsimony(neigh2, second);
     c.calculate();
-    connection_cost = phylo_tree.computePartialParsimonyOutOfTree
-        ( neigh1->partial_pars, neigh2->partial_pars, partial_pars );
-    branch_cost =  phylo_tree.computeParsimonyOutOfTree
-                            ( neigh1->partial_pars, neigh2->partial_pars);
-    net_connection_cost = connection_cost - branch_cost;
+    connection_cost     = phylo_tree.computePartialParsimonyOutOfTree
+                          (neigh1->partial_pars, neigh2->partial_pars,
+                           partial_pars);
+    int second_subtree_cost = phylo_tree.getSubTreeParsimony(neigh1, first);
+    int first_subtree_cost  = phylo_tree.getSubTreeParsimony(neigh2, second);
+    branch_cost         = connection_cost - first_subtree_cost - second_subtree_cost;
     if (phylo_tree.leafNum < 50) {
         TREE_LOG_LINE(phylo_tree, VB_MAX, "TB Parsimony (net) was "
-                      << connection_cost << " (" << net_connection_cost << ")"
+                      << connection_cost << " (" << branch_cost << ")"
                       << ", neigh1->length was " << neigh1->length);
     }
     if (partial_lh != nullptr) {
@@ -174,6 +173,22 @@ void TargetBranch::computeState(PhyloTree& phylo_tree,
         branch_lh_scale_factor      = fakeNeigh3->lh_scale_factor;
         //dumpNeighbor(VB_MIN, "MF", phylo_tree, fakeNeigh3);
     }
+    return connection_cost;
+}
+
+void TargetBranch::updateMapping(int branch_id,
+                                   PhyloNode* updated_first,
+                                   PhyloNode* updated_second) {
+    first  = updated_first;
+    second = updated_second;
+    PhyloNeighbor* first_nei  = first->findNeighbor(second);
+    PhyloNeighbor* second_nei = second->findNeighbor(first);
+    first_nei ->setParsimonyComputed(false);
+    second_nei->setParsimonyComputed(false);
+    first_nei ->id = branch_id;
+    second_nei->id = branch_id;
+    first->clearReversePartialParsimony(second);
+    second->clearReversePartialParsimony(first);
 }
 
 void TargetBranch::forgetState() const {
@@ -225,9 +240,15 @@ ReplacementBranchList* TargetBranch::getReplacements() {
 }
 
 TargetBranchRange::TargetBranchRange(PhyloTree& phylo_tree, BlockAllocator* b,
-               PlacementCostCalculator* calculator): super() {
+                                     PlacementCostCalculator* calculator,
+                                     bool match_branch_numbers): super() {
     PhyloNodeVector v1, v2;
-    phylo_tree.getBranches(v1, v2);
+    if (match_branch_numbers) {
+        phylo_tree.getBranchesInIDOrder(v1, v2);
+    }
+    else {
+        phylo_tree.getBranches(v1, v2);
+    }
     reserve(v1.size());
     if ( verbose_mode >= VB_DEBUG ) {
         std::stringstream s1;
@@ -337,7 +358,12 @@ double TargetBranch::getBranchCost() const {
     return branch_cost;
 }
 
-double TargetBranch::getFullDisconnectionBenefit(const PhyloTree& phylo_tree) const {
+double TargetBranch::getConnectionCost() const {
+    return connection_cost;
+}
+
+double TargetBranch::getFullDisconnectionBenefit(const PhyloTree& phylo_tree,
+                                                 const TargetBranchRange& branches) const {
     ASSERT(!isExternalBranch());
     ASSERT(first->degree()  == 3);
     ASSERT(second->degree() == 3);
@@ -407,26 +433,18 @@ double TargetBranch::getFullConnectionCost(const PhyloTree& phylo_tree,
     //               / \
     //    E---F     E   F
     //
-    //This isn't as expensive as it sounds, because the net cost of connecting
-    //C to A and B (minus the cost of disconnecting A and B), 
-    //is stored in this->net_connection_cost, and the net cost of
-    //connecting D to E and F is stored in other_branch.net_connection_cost.
-    //So only the cost of the CD branch needs to be calculated.
-    //
     //This is the reconnection cost in a TBR iteration.
     //
     
-    double costACPlusBCMinusAB = net_connection_cost; //Connecting C to AB
-    double costDEPlusDFMinusEF = other_branch.net_connection_cost; //D to EF
     int    costCD              = 0;
     phylo_tree.computeParsimonyOutOfTree(partial_pars,
                                          other_branch.partial_pars,
                                          &costCD);
-    
-    return costACPlusBCMinusAB + costDEPlusDFMinusEF + costCD;
+    return costCD;
 }
 
-CostPair TargetBranch::getPartialDisconnectionBenefit(const PhyloTree& phylo_tree) const {
+BenefitPair TargetBranch::getPartialDisconnectionBenefit(const PhyloTree& phylo_tree,
+                                                         const TargetBranchRange& branches) const {
     //
     //Letter-T disconnection
     //If this branch is CD, and C is connected to A and B, determine the
@@ -437,6 +455,7 @@ CostPair TargetBranch::getPartialDisconnectionBenefit(const PhyloTree& phylo_tre
     //                 |                                        |
     //                 D                                        D
     //             (whatever)                               (whatever)
+    //
     //or , from:                       to:              
     //             (whatever)                               (whatever)
     //                 C                                        C
@@ -450,50 +469,16 @@ CostPair TargetBranch::getPartialDisconnectionBenefit(const PhyloTree& phylo_tre
     //Calling this function is expensive (6 out-of-tree branch length 
     //calculations), so the result should probably be cached.
     //
-    CostPair result;
-    if (!first->isLeaf()) {
+    BenefitPair result;
+    if (first->isInterior()) {
         ASSERT(first->degree() == 3);
-        result.hasForwardCost = true;
-        result.forwardCost    = branch_cost;
-        PhyloNeighborVec orphans;
-        FOR_EACH_PHYLO_NEIGHBOR(first, second, it, x_to_c) {
-            PhyloNeighbor* c_to_x = first->findNeighbor(x_to_c->getNode());
-            int costCX = 0;
-            phylo_tree.computeParsimonyOutOfTree(c_to_x->partial_pars,
-                                                 x_to_c->partial_pars,
-                                                 &costCX);
-            result.forwardCost += costCX;
-            orphans.push_back(c_to_x);
-        }
-        for (size_t i=0; i<orphans.size(); i+=2) {
-            int costAB = 0;
-            phylo_tree.computeParsimonyOutOfTree(orphans[i]->partial_pars,
-                                                 orphans[i+1]->partial_pars,
-                                                 &costAB);
-            result.forwardCost -= costAB;
-        }
+        result.hasForwardBenefit = true;
+        result.forwardBenefit = branch_cost;
     }
-    if (!second->isLeaf()) {
+    if (second->isInterior()) {
         ASSERT(second->degree() == 3);
-        result.hasBackwardCost = true;
-        result.backwardCost    = branch_cost;
-        PhyloNeighborVec orphans;
-        FOR_EACH_PHYLO_NEIGHBOR(second, first, it, x_to_d) {
-            PhyloNeighbor* d_to_x = second->findNeighbor(x_to_d->getNode());
-            int costDX = 0;
-            phylo_tree.computeParsimonyOutOfTree(d_to_x->partial_pars,
-                                                 x_to_d->partial_pars,
-                                                 &costDX);
-            result.backwardCost += costDX;
-            orphans.push_back(d_to_x);
-        }
-        for (size_t i=0; i<orphans.size(); i+=2) {
-            int costEF = 0;
-            phylo_tree.computeParsimonyOutOfTree(orphans[i]->partial_pars,
-                                                 orphans[i+1]->partial_pars,
-                                                 &costEF);
-            result.backwardCost -= costEF;
-        }
+        result.hasBackwardBenefit = true;
+        result.backwardBenefit = branch_cost;
     }
     return result;
 }
@@ -515,12 +500,10 @@ double TargetBranch::getForwardConnectionCost(const PhyloTree& phylo_tree,
     auto   view_to_D   = first->findNeighbor(second)->partial_pars;
            //what the existing view from C would be
     int    updatedCDCost;
-    phylo_tree.computeParsimonyOutOfTree(view_from_D,
-                                         view_to_D,
+    phylo_tree.computeParsimonyOutOfTree(view_from_D, view_to_D,
                                          &updatedCDCost);
-    double cost = other_branch.net_connection_cost
-                + updatedCDCost - branch_cost;
-    return cost;
+    
+    return (double)updatedCDCost;
 }
 
 double TargetBranch::getBackwardConnectionCost(const PhyloTree& phylo_tree,
@@ -540,7 +523,6 @@ double TargetBranch::getBackwardConnectionCost(const PhyloTree& phylo_tree,
     auto view_to_C   = second->findNeighbor(first)->partial_pars;
     int  updatedCDCost;
     phylo_tree.computeParsimonyOutOfTree(view_from_C, view_to_C, &updatedCDCost);
-    double cost = other_branch.net_connection_cost
-                + updatedCDCost - branch_cost;
-    return cost;
+    
+    return (double)updatedCDCost;
 }

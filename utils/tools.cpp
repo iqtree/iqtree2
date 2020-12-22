@@ -907,6 +907,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.numSmoothTree = 1;
     params.parsimony_nni_iterations = 0;
     params.parsimony_spr_iterations = 0;
+    params.parsimony_pll_spr        = true;
     params.parsimony_tbr_iterations = 0;
     params.nni5 = true;
     params.nni5_num_eval = 1;
@@ -1457,8 +1458,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.count_unknown_as_different = true;
                 continue;
             }
-            if (strcmp(argv[cnt], "-experimental") == 0 || strcmp(argv[cnt], "--experimental") == 0) {
-                params.experimental = true;
+            if (strcmp(argv[cnt], "-experimental") == 0
+                || strcmp(argv[cnt], "--experimental") == 0) {
+                params.experimental      = true;
+                params.parsimony_pll_spr = false;
                 continue;
             }
             if (strcmp(argv[cnt], "--no-experimental") == 0) {

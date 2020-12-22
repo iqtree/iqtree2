@@ -190,6 +190,14 @@ Neighbor *Node::findNeighbor(Node *node) {
     return NULL;
 }
 
+Neighbor *Node::firstNeighbor() const {
+    int size = neighbors.size();
+    if (size==0) {
+        return nullptr;
+    }
+    return neighbors[0];
+}
+
 bool Node::isNeighbor(Node* node) {
     int size = neighbors.size();
     for (int i = 0; i < size; i++)

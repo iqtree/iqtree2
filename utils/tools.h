@@ -721,6 +721,7 @@ public:
     double modelfinder_eps;
 
     size_t parsimony_nni_iterations;
+    bool   parsimony_pll_spr;
     size_t parsimony_spr_iterations;
     size_t parsimony_tbr_iterations;
 

@@ -175,7 +175,7 @@ Node* MTree::copyTree(MTree *tree, string &taxa_set, double &len, Node *node, No
     Node *new_node = NULL;
     NodeVector new_nodes;
     DoubleVector new_lens;
-    if (node->isLeaf()) {
+    if (node!=nullptr && node->isLeaf()) {
         len = 0.0;
         if (taxa_set[node->id]) {
             new_node = newNode(leafNum++, node->name.c_str());
@@ -1202,6 +1202,29 @@ void MTree::getBranches(BranchVector& branches, Node *node, Node *dad, bool post
     }
 }
 
+void MTree::getBranchesInIDOrder(NodeVector& v1, NodeVector& v2) {
+    size_t branch_count = leafNum * 2 - 3;
+    v1.resize(branch_count, nullptr);
+    v2.resize(branch_count, nullptr);
+    std::vector<Node*> stack;
+    stack.push_back(root);
+    size_t count_set = 0;
+    while (!stack.empty() && count_set<=branch_count) {
+        Node* node = stack.back();
+        stack.pop_back();
+        FOR_EACH_NEIGHBOR(node, nullptr, it, nei) {
+            if (v1[nei->id]==nullptr) {
+                Node* other_node = nei->getNode();
+                v1[nei->id] = node;
+                v2[nei->id] = other_node;
+                stack.push_back(other_node);
+                ++count_set;
+            }
+        }
+    }
+    ASSERT(count_set == branch_count);
+}
+
 void MTree::getInnerBranches(Branches& branches, Node *node, Node *dad) {
     if (!node) node = root;
     FOR_NEIGHBOR_IT(node, dad, it) {
@@ -1656,10 +1679,11 @@ int MTree::freeNode(Node *node, Node *dad)
     if (!node) node = root;
     NeighborVec::reverse_iterator it;
     int num_nodes = 1;
-    for (it = node->neighbors.rbegin(); it != node->neighbors.rend(); it++)
+    for (it = node->neighbors.rbegin(); it != node->neighbors.rend(); it++) {
         if ((*it)->node != dad) {
             num_nodes += freeNode((*it)->node, node);
         }
+    }
     delete node;
     return num_nodes;
 }
@@ -1740,8 +1764,9 @@ void MTree::convertToUnrooted() {
             if (!node1) node1 = (*it)->node; else node2 = (*it)->node;
             len += (*it)->length;
         }
-        node1->updateNeighbor(node, node2, len);
-        node2->updateNeighbor(node, node1, len);
+        ASSERT(node1!=nullptr && node2!=nullptr);
+        if (node1!=nullptr) node1->updateNeighbor(node, node2, len);
+        if (node2!=nullptr) node2->updateNeighbor(node, node1, len);
         delete node;
     } else {
         // only delete root node
@@ -2744,7 +2769,8 @@ int MTree::removeTaxa(const StrVector &taxa_names,
 		{
 			// merge two branches
 			for (i = 0; i < 2; i++)
-				for (it = othernodes[i]->neighbors.begin(); it != othernodes[i]->neighbors.end(); it++)
+				for (it = othernodes[i]->neighbors.begin();
+                     it != othernodes[i]->neighbors.end(); ++it)
 					if ((*it)->node == innode)
 					{
 						(*it)->node = othernodes[1-i];

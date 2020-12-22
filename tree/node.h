@@ -109,20 +109,20 @@ public:
         construct class with another Neighbor
         @param nei another Neighbor
      */
-    Neighbor(Neighbor *nei) {
-        node = nei->node;
-        length = nei->length;
-        id = nei->id;
+    Neighbor(const Neighbor& nei) {
+        node = nei.node;
+        length = nei.length;
+        id = nei.id;
         split = NULL;
-        attributes = nei->attributes;
+        attributes = nei.attributes;
     }
 
     /**
      allocate a new Neighbor by just copying from this one
      @return pointer to newly created Neighbor
      */
-    virtual Neighbor* newNeighbor() {
-        return (new Neighbor(this));
+    virtual Neighbor* newNeighbor() const {
+        return (new Neighbor(*this));
     }
     
 
@@ -130,6 +130,10 @@ public:
         destructor
      */
     virtual ~Neighbor() {
+    }
+    
+    virtual Node* getNode() const {
+        return this->node;
     }
 
     /**
@@ -373,9 +377,14 @@ public:
 
     /**
         @param node the target node
-        @return the iterator to the neighbor that has the node. If not found, return NULL
+        @return the neighbor that has the node. If not found, return NULL
      */
     Neighbor* findNeighbor(Node *node);
+    
+    /**
+        @return the first neighbor of the node
+     */
+    Neighbor* firstNeighbor() const;
 
     /**
      * @brief check whether the two nodes are neighbors
@@ -498,6 +507,15 @@ public:
 	for (it = (mynode)->neighbors.begin(); it != (mynode)->neighbors.end(); it++) \
 		if ((*it)->node != (mydad))
 
+#define FOR_EACH_ADJACENT_NODE(mynode, mydad, it, mychild) \
+    for (Node* mychild=nullptr, *child2x=(mynode); child2x!=nullptr; child2x=nullptr) \
+        for (NeighborVec::iterator it = (mynode)->neighbors.begin(); it != (mynode)->neighbors.end(); ++it) \
+            if ((mychild = (*it)->node ) && mychild != (mydad) )
+
+#define FOR_EACH_NEIGHBOR(mynode, mydad, it, nei) \
+    for (Neighbor* nei=nullptr, *nei2x=((mynode))->firstNeighbor(); nei2x!=nullptr ; nei2x=nullptr) \
+        for (NeighborVec::iterator it = (mynode)->neighbors.begin(); it != (mynode)->neighbors.end(); ++it) \
+            if ((nei = (*it)) && nei->getNode() != (mydad) )
 
 
 

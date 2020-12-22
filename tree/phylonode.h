@@ -24,6 +24,14 @@
         for (NeighborVec::iterator it = (mynode)->neighbors.begin(); it != (mynode)->neighbors.end(); ++it) \
                 if ((nei = (PhyloNeighbor*)(*it)) && nei->getNode() != (mydad) )
 
+#define GET_OTHER_ADJACENT_PHYLO_NODES(node, dad, child_one, child_two) \
+if (1) { \
+    child_one = child_two = nullptr; \
+    FOR_EACH_ADJACENT_PHYLO_NODE(node, dad, it, child) { \
+        if (child_one==nullptr) child_one = child; else child_two = child; \
+    } \
+} else 0
+
 std::string pointer_to_hex(const void *ptr);
 
 template <class T> std::string array_to_string(T* base, size_t N) {
@@ -66,7 +74,101 @@ typedef unsigned short UBYTE;
  */
 enum RootDirection {UNDEFINED_DIRECTION, TOWARD_ROOT, AWAYFROM_ROOT};
 
-class PhyloNode;
+
+class PhyloNeighbor;
+/**
+A node in a phylogenetic tree
+
+    @author BUI Quang Minh, Steffen Klaere, Arndt von Haeseler <minh.bui@univie.ac.at>
+ */
+class PhyloNode : public Node {
+    friend class PhyloTree;
+
+public:
+    /**
+        constructor
+     */
+    PhyloNode();
+
+    /**
+        constructor
+        @param aid id of this node
+     */
+    PhyloNode(int aid);
+
+    /**
+        constructor
+        @param aid id of this node
+        @param aname name of this node
+     */
+    PhyloNode(int aid, int aname);
+
+    /**
+        constructor
+        @param aid id of this node
+        @param aname name of this node
+     */
+    PhyloNode(int aid, const char *aname);
+
+    /**
+        initialization
+     */
+    void init();
+
+    /**
+        add a neighbor
+        @param node the neighbor node
+        @param length branch length
+        @param id branch ID
+     */
+    virtual void addNeighbor(Node *node, double length, int id = -1);
+
+    /**
+        tell that all partial likelihood vectors below this node are not computed
+     */
+    void clearAllPartialLh(bool set_to_null, PhyloNode *dad);
+    
+    /**
+        forget all scale_num vectors below this node
+     */
+    void clearAllScaleNum(bool set_to_null, PhyloNode* dad);
+
+    /**
+        tell that all partial parsimony vectors below this node are not computed
+        @param dad the node below which, all partial parsimony vectors are to be marked as uncomputed
+     */
+    void clearAllPartialParsimony(bool set_to_null, PhyloNode *dad);
+    
+    /**
+        tell that all partial parsimony vectors (in reverse direction), reach from this node
+        are not computed (e.g. dad might be a newly inserted node).
+     */
+    void clearReversePartialParsimony(PhyloNode* dad);
+    
+    /**
+        tell that all partial likelihood vectors (in reverse direction) below this node are not computed
+     */
+    void clearReversePartialLh(PhyloNode *dad);
+
+    void computeReversePartialLh(PhyloNode *dad);
+
+    /**
+        compute the size (#taxa) of the subtree rooted at this node
+        using buffered 'size' attribute if computed beforehand
+        @param dad dad of this node
+    */
+    int computeSize(PhyloNode *dad);
+
+    PhyloNeighbor* findNeighbor(Node* node);
+
+    bool hasNeighbor(PhyloNode* node);
+    
+    PhyloNeighbor* firstNeighbor();
+
+    PhyloNeighbor* getNeighborByIndex(size_t index);
+    
+};
+
 class BlockAllocator;
 /**
 A neighbor in a phylogenetic tree
@@ -130,23 +232,22 @@ public:
      construct class with another Neighbor
      @param nei another Neighbor
      */
-    PhyloNeighbor(PhyloNeighbor *nei) : Neighbor(nei) {
-        partial_lh = NULL;
-        scale_num = NULL;
+    PhyloNeighbor(const PhyloNeighbor& nei) : Neighbor(nei) {
+        partial_lh = nullptr;
+        scale_num = nullptr;
         partial_lh_computed = 0;
         lh_scale_factor = 0.0;
-        partial_pars = NULL;
-        direction = nei->direction;
-        size = nei->size;
+        partial_pars = nullptr;
+        direction = nei.direction;
+        size = nei.size;
     }
 
-    
     /**
      allocate a new Neighbor by just copying from this one
      @return pointer to newly created Neighbor
      */
-    virtual PhyloNeighbor* newNeighbor() {
-        return (new PhyloNeighbor(this));
+    virtual PhyloNeighbor* newNeighbor() const {
+        return (new PhyloNeighbor(*this));
     }
 
     /**
@@ -196,7 +297,7 @@ public:
         return size;
     }
     
-    PhyloNode* getNode() const {
+    virtual PhyloNode* getNode() const {
         return (PhyloNode*)node;
     }
     
@@ -275,99 +376,6 @@ private:
     /** size of subtree below this neighbor in terms of number of taxa */
     int size;
 
-};
-
-/**
-A node in a phylogenetic tree
-
-    @author BUI Quang Minh, Steffen Klaere, Arndt von Haeseler <minh.bui@univie.ac.at>
- */
-class PhyloNode : public Node {
-    friend class PhyloTree;
-
-public:
-    /**
-        constructor
-     */
-    PhyloNode();
-
-    /**
-        constructor
-        @param aid id of this node
-     */
-    PhyloNode(int aid);
-
-    /**
-        constructor
-        @param aid id of this node
-        @param aname name of this node
-     */
-    PhyloNode(int aid, int aname);
-
-    /**
-        constructor
-        @param aid id of this node
-        @param aname name of this node
-     */
-    PhyloNode(int aid, const char *aname);
-
-    /**
-        initialization
-     */
-    void init();
-
-    /**
-        add a neighbor
-        @param node the neighbor node
-        @param length branch length
-        @param id branch ID
-     */
-    virtual void addNeighbor(Node *node, double length, int id = -1);
-
-    /**
-        tell that all partial likelihood vectors below this node are not computed
-     */
-    void clearAllPartialLh(bool set_to_null, PhyloNode *dad);
-    
-    /**
-        forget all scale_num vectors below this node
-     */
-    void clearAllScaleNum(bool set_to_null, PhyloNode* dad);
-
-    /**
-        tell that all partial parsimony vectors below this node are not computed
-        @param dad the node below which, all partial parsimony vectors are to be marked as uncomputed
-     */
-    void clearAllPartialParsimony(bool set_to_null, PhyloNode *dad);
-    
-    /**
-        tell that all partial parsimony vectors (in reverse direction), reach from this node
-        are not computed (e.g. dad might be a newly inserted node).
-     */
-    void clearReversePartialParsimony(PhyloNode* dad);
-    
-    /**
-        tell that all partial likelihood vectors (in reverse direction) below this node are not computed
-     */
-    void clearReversePartialLh(PhyloNode *dad);
-
-    void computeReversePartialLh(PhyloNode *dad);
-
-    /** 
-        compute the size (#taxa) of the subtree rooted at this node
-        using buffered 'size' attribute if computed beforehand
-        @param dad dad of this node
-    */
-    int computeSize(PhyloNode *dad);
-
-    PhyloNeighbor* findNeighbor(Node* node);
-
-    bool hasNeighbor(PhyloNode* node);
-    
-    PhyloNeighbor* firstNeighbor();
-
-    PhyloNeighbor* getNeighborByIndex(size_t index);
-    
 };
 
 template <class T, class S> class SubclassPointerVector: public S {

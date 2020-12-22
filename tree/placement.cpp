@@ -288,7 +288,7 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
               << ", index_lh was " << pr.block_allocator->getLikelihoodBlockCount()
               << ", index_pars was " << pr.block_allocator->getParsimonyBlockCount());
 
-    TargetBranchRange targets(*this, pr.block_allocator, pr.calculator);
+    TargetBranchRange targets(*this, pr.block_allocator, pr.calculator, false);
     LOG_LINE ( VB_DEBUG, "After allocating TargetBranchRange"
               << ", index_lh was " << pr.block_allocator->getLikelihoodBlockCount()
               << ", index_pars was " << pr.block_allocator->getParsimonyBlockCount());
