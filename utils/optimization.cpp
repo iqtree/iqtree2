@@ -1225,7 +1225,11 @@ void Optimization::lbfgsb(int n, int m, double *x, double *l, double *u, int *nb
 	/* this needs to be zeroed for snd in mainlb to be zeroed */
 	wa = (double *) malloc((2*m*n+4*n+11*m*m+8*m) * sizeof(double));
 	iwa = (int *) malloc(3*n * sizeof(int));
+#ifdef _MSC_VER
 	strcpy_s(task, sizeof(task), "START");
+#else
+	strcpy(task, "START");
+#endif
 	while(1) {
 		/* Main workhorse setulb() from ../appl/lbfgsb.c : */
 		setulb(n, m, x, l, u, nbd, &f, g, factr, &pgtol, wa, iwa, task,
