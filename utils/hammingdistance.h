@@ -290,14 +290,14 @@ inline size_t countBitsSetIn(uint64_t* a, size_t count) {
 }
 
 inline size_t sumForUnknownCharacters
-    ( char boundaryChar, const char* sequence, int seqLen, const int* frequencyVector) {
+    ( char boundaryChar, const char* sequence, intptr_t seqLen, const int* frequencyVector) {
     size_t sum = 0;
     Vec32c blockBoundary = boundaryChar;
     int blockSize = blockBoundary.size(); //but see scratch. Needs to match
     int pos = 0;
     if (blockSize < seqLen) {
         //Next line assumes that: blockSize is power of 2
-        int blockStop = seqLen - (seqLen & (blockSize - 1)); 
+        intptr_t blockStop = seqLen - (seqLen & (blockSize - 1)); 
         for (; pos < blockStop; pos += blockSize) {
             Vec32c blockRead;
             blockRead.load(sequence + pos);

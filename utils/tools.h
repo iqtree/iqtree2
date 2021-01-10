@@ -722,10 +722,10 @@ public:
 
     bool   use_compute_parsimony_tree_new;
     
-    size_t parsimony_nni_iterations;
+    int    parsimony_nni_iterations;
     bool   parsimony_pll_spr;
-    size_t parsimony_spr_iterations;
-    size_t parsimony_tbr_iterations;
+    int    parsimony_spr_iterations;
+    int    parsimony_tbr_iterations;
 
 	/**
 	 *  New search heuristics (DEFAULT: ON)
@@ -1671,7 +1671,7 @@ public:
     /**
             number of threads for gurobi call
      */
-    bool gurobi_threads;
+    int gurobi_threads;
 
     /**
             TRUE if doing bootstrap on the input trees (good, bad, ugly)
@@ -2836,9 +2836,9 @@ double random_double(int *rstream = NULL);
 template <class T>
 void my_random_shuffle (T first, T last, int *rstream = NULL)
 {
-	int n = last - first;
-	for (int i=n-1; i>0; --i) {
-		swap (first[i],first[random_int(i+1, rstream)]);
+	intptr_t n = last - first;
+	for (intptr_t i=n-1; i>0; --i) {
+		swap (first[i],first[random_int(static_cast<int>(i)+1, rstream)]);
 	}
 }
 
@@ -2903,7 +2903,7 @@ void sort_index(T* first, T* last, int *index) {
         arr[i] = *x;
     }
     ASSERT(last - first == i);
-    quicksort_index(arr, index, 0, (last - first) - 1);
+    quicksort_index(arr, index, 0, static_cast<int>(last - first) - 1);
     delete [] arr;
 }
 

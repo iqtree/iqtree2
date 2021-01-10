@@ -26,7 +26,7 @@
 #include "starttree.h" //for START_TREE_RECOGNIZED macro.
 #include "timeutil.h"
 #include "MPIHelper.h"
-#ifndef CLANG_UNDER_VS
+#if !defined(CLANG_UNDER_VS) && !defined(_MSC_VER)
     #include <dirent.h>
 #else
      //James B. Workaround for Windows builds where these macros might not be defined
@@ -55,7 +55,7 @@
 VerboseMode verbose_mode;
 extern void printCopyright(ostream &out);
 
-#if defined(WIN32)
+#if defined(WIN32) ||defined(WIN64)
 #include <sstream>
 #endif
 
@@ -149,12 +149,15 @@ string convertDoubleToString(double number) {
 
 bool iEquals(const string a, const string b)
 {
-    unsigned int sz = a.size();
-    if (b.size() != sz)
+    auto sz = a.size();
+    if (b.size() != sz) {
         return false;
-    for (unsigned int i = 0; i < sz; ++i)
-        if (tolower(a[i]) != tolower(b[i]))
+    }
+    for (size_t i = 0; i < sz; ++i) {
+        if (tolower(a[i]) != tolower(b[i])) {
             return false;
+        }
+    }
     return true;
 }
 
@@ -223,7 +226,7 @@ size_t getFilesInDir(const char *path, StrVector &filenames)
         path_name.append("/");
     }
     size_t oldCount = filenames.size();
-#ifndef CLANG_UNDER_VS
+#if !defined(CLANG_UNDER_VS) && !defined(_MSC_VER)
     DIR* dp = opendir (path);
     if (dp == nullptr) {
         return 0;
@@ -284,7 +287,7 @@ int convert_int(const char *str, int &end_pos) {
 		err += "\" instead";
 		throw err;
 	}
-	end_pos = endptr - str;
+	end_pos = static_cast<int>(endptr - str);
 	return i;
 }
 
@@ -334,7 +337,7 @@ int64_t convert_int64(const char *str, int &end_pos) {
 		err += "\" instead";
 		throw err;
 	}
-	end_pos = endptr - str;
+	end_pos = static_cast<int>(endptr - str);
 	return i;
 }
 
@@ -370,7 +373,7 @@ double convert_double(const char *str, int &end_pos) {
 		err += "\" instead";
 		throw err;
 	}
-	end_pos = endptr - str;
+	end_pos = static_cast<int>(endptr - str);
 	return d;
 }
 
@@ -2873,8 +2876,9 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -gthreads <gurobi_threads>";
 				params.gurobi_threads = convert_int(argv[cnt]);
-				if (params.gurobi_threads < 1)
-					throw "Wrong number of threads";
+                if (params.gurobi_threads < 1) {
+                    throw "Wrong number of threads";
+                }
 				continue;
 			}
 			if (strcmp(argv[cnt], "-b") == 0 || strcmp(argv[cnt], "--boot") == 0 ||
@@ -3409,7 +3413,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.max_candidate_trees = convert_int(argv[cnt]);
 				continue;
 			}
-			if (strcmp(argv[cnt], "-bcor") == 0 | strcmp(argv[cnt], "--bcor") == 0) {
+            //James B. 23-Dec-2020 Next line had a | where || was intended.
+			if (strcmp(argv[cnt], "-bcor") == 0 || strcmp(argv[cnt], "--bcor") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -bcor <min_correlation>";
@@ -4937,10 +4942,11 @@ bool overwriteFile(const char *filename) {
 
 void parseAreaName(char *area_names, set<string> &areas) {
     string all = area_names;
-    int pos;
     while (!all.empty()) {
-        pos = all.find(',');
-        if (pos < 0) pos = all.length();
+        auto pos = all.find(',');
+        if (pos == std::string::npos) {
+            pos = all.length();
+        }
         areas.insert(all.substr(0, pos));
         if (pos >= (signed int) all.length())
             all = "";
@@ -5224,9 +5230,10 @@ void random_resampling(int n, IntVector &sample, int *rstream) {
         }
     } else {
         // jackknife resampling
-        int total = floor((1.0 - Params::getInstance().jackknife_prop)*n);
-        if (total <= 0)
+        int total = static_cast<int>(floor((1.0 - Params::getInstance().jackknife_prop) * n));
+        if (total <= 0) {
             outError("Jackknife sample size is zero");
+        }
         // make sure jackknife samples have exacly the same size
         for (int num = 0; num < total; ) {
             for (int i = 0; i < n; i++) if (!sample[i]) {
@@ -6073,7 +6080,7 @@ double binomial_coefficient_log(unsigned int N, unsigned int n) {
   if (n==0)
     return 0.0;
   if (N >= logv.size()) {
-    for (unsigned int i = logv.size(); i <= N; i++)
+    for (auto i = logv.size(); i <= N; ++i)
       logv.push_back(log((double) i));
   }
   double binom_log = 0.0;

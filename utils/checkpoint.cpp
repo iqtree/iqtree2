@@ -337,7 +337,7 @@ void Checkpoint::endList() {
 }
 
 void Checkpoint::getSubCheckpoint(Checkpoint *target, string partial_key) {
-    int len = partial_key.length();
+    int len = static_cast<int>(partial_key.length());
     for (auto it = lower_bound(partial_key); it != end() && it->first.substr(0, len) == partial_key; it++) {
         target->put(it->first.substr(len+1), it->second);
     }
@@ -354,7 +354,7 @@ void Checkpoint::putSubCheckpoint(Checkpoint *source, string partial_key) {
 }
 
 void Checkpoint::transferSubCheckpoint(Checkpoint *target, string partial_key, bool overwrite) {
-    int len = partial_key.length();
+    int len = static_cast<int>(partial_key.length());
     for (auto it = lower_bound(partial_key); it != end() && it->first.substr(0, len) == partial_key; it++) {
         if (overwrite || !target->hasKey(it->first))
             target->put(it->first, it->second);

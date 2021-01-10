@@ -191,8 +191,8 @@ double StopRule::getRemainingTime(int cur_iteration) {
 double StopRule::predict (double &upperTime) {
 	if (time_vec.size() < 4) return 0;
 	//readVector(time_vec);
-	double predictedTime_ = cmpExtinctTime (time_vec.size());
-	upperTime = cmpUpperTime (time_vec.size(), 1.0 - confidence_value);
+	double predictedTime_ = cmpExtinctTime (static_cast<int>(time_vec.size()));
+	upperTime = cmpUpperTime (static_cast<int>(time_vec.size()), 1.0 - confidence_value);
 	return predictedTime_;
 }
 
@@ -202,7 +202,7 @@ void StopRule::addImprovedIteration(int iteration) {
 	if (stop_condition != SC_WEIBULL) return;
 	double upperTime;
 	if (predict(upperTime) == 0) return;
-	predicted_iteration = upperTime;
+	predicted_iteration = static_cast<int>(upperTime);
 	if (stop_condition == SC_WEIBULL && predicted_iteration > max_iteration)
 		predicted_iteration = max_iteration;
 	if (predicted_iteration < min_iteration)
@@ -212,9 +212,10 @@ void StopRule::addImprovedIteration(int iteration) {
 }
 
 int StopRule::getLastImprovedIteration() {
-	if (time_vec.empty())
+	if (time_vec.empty()) {
 		return 0;
-	return time_vec[0];
+	}
+	return static_cast<int>(time_vec[0]);
 }
 
 void StopRule::cmpInvMat (DoubleMatrix &oriMat, DoubleMatrix &invMat, int size) {
@@ -337,8 +338,8 @@ void StopRule::multiple (DoubleMatrix &mat1, DoubleMatrix &mat2, DoubleMatrix &p
 	int row_, col_;
 	//proMat.setLimit (mat1.getNRow (), mat2.getNCol ());
 	proMat.resize(mat1.size());
-	int nrow_ = proMat.size();
-	int ncol_ = mat2[0].size();
+	int nrow_ = static_cast<int>(proMat.size());
+	int ncol_ = static_cast<int>(mat2[0].size());
 	for (row_ = 0; row_ < proMat.size(); row_++)   proMat[row_].resize(ncol_);
 	for (row_ = 0; row_ < nrow_; row_ ++)
 		for (col_ = 0; col_ < ncol_; col_ ++) {

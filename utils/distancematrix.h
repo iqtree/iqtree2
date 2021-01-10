@@ -86,8 +86,12 @@ public:
         return rows[r];
     }
     void appendColumnToVector(size_t c, std::vector<T>& dest) {
-        for (size_t r=0; r<row_count; ++r) {
-            dest.emplace_back( rows[r][c] );
+        dest.resize(row_count);
+        T* dest_ptr = dest.data();
+        //Not parallelized: called from within other for-loops
+        //that are already parallelized.
+        for (intptr_t r=0; r<row_count; ++r) {
+            dest_ptr[r] = rows[r][c];
         }
     }
     const T& cell (size_t r, size_t c) const {

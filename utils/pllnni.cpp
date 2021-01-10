@@ -19,6 +19,10 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
+#define _CRT_SECURE_NO_WARNINGS (1)
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -116,7 +120,7 @@ double pllDoRandomNNIs(pllInstance *tr, partitionList *pr, int numNNI) {
 			int nniType = random_int(2);
 			doOneNNI(tr, pr, (*it), nniType, TOPO_ONLY);
 		}
-		cnt1 += selectedBrans.size();
+		cnt1 += static_cast<int>(selectedBrans.size());
 		if (numNNI - cnt1 < numNNIinStep) {
 			numNNIinStep = numNNI - cnt1;
 		}
@@ -338,8 +342,8 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 		}
 
 		/* Applying all independent NNI moves */
-		searchinfo.curNumAppliedNNIs = selectedNNIs.size();
-		for (vector<pllNNIMove>::iterator it = selectedNNIs.begin(); it != selectedNNIs.end(); it++) {
+		searchinfo.curNumAppliedNNIs = static_cast<int>(selectedNNIs.size());
+		for (auto it = selectedNNIs.begin(); it != selectedNNIs.end(); it++) {
 			/* do the topological change */
 			doOneNNI(tr, pr, (*it).p, (*it).nniType, TOPO_ONLY);
 			if (globalParams->speednni) {
@@ -361,7 +365,7 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 			if (globalParams->count_trees) {
 	            countDistinctTrees(tr, pr);
 			}
-			int numNNI = selectedNNIs.size();
+			int numNNI = static_cast<int>(selectedNNIs.size());
 			/* new tree likelihood should not be smaller the likelihood of the computed best NNI */
 			while (tr->likelihood < selectedNNIs.back().likelihood) {
 				if (numNNI == 1) {
@@ -605,7 +609,7 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Typ
 
 double estBestLoglImp(SearchInfo* searchinfo) {
     double res = 0.0;
-    int index = floor(searchinfo->deltaLogl.size() * 5 / 100);
+	int index = static_cast<int>(floor(searchinfo->deltaLogl.size() * 5 / 100));
     set<double>::reverse_iterator ri;
     for (ri = searchinfo->deltaLogl.rbegin(); ri != searchinfo->deltaLogl.rend(); ++ri) {
         //cout << (*ri) << " ";
@@ -846,7 +850,7 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
     pllTree2StringREC(tr->tree_string, tr, pr, tr->start->back, PLL_FALSE,
             PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_TRUE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
     tree_str = (char *) malloc (strlen(tr->tree_string) + 1);
-#ifdef CLANG_UNDER_VS
+#if defined(CLANG_UNDER_VS) || defined(_MSC_VER)
     strcpy_s(tree_str, strlen(tr->tree_string) + 1, tr->tree_string);
 #else
     strcpy(tree_str, tr->tree_string);
@@ -1069,5 +1073,3 @@ char *pllTree2StringREC(char *treestr, pllInstance *tr, partitionList *pr, nodep
 	while (*treestr) treestr++;
 	return  treestr;
 }
-
-

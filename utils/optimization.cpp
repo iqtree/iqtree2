@@ -17,6 +17,9 @@
 #include "lbfgsb/lbfgsb_new.h"
 #include "tools.h"
 
+#ifdef _MSC_VER
+#include <boost/scoped_array.hpp>
+#endif
 
 using namespace std;
 
@@ -516,15 +519,28 @@ double Optimization::minimizeNewtonMulti(double *x1, double *xguess, double *x2,
 {
 	int i, step;
     int N_2 = N*N;
-	double df[N_2], dx[N], dxold[N], f[N+1], space[N];
-	double temp, xh[N], xl[N], rts[N], rts_old[N];
+	double temp;
+#ifndef _MSC_VER
+	double df[N_2], dx[N], dxold[N], f[N + 1], space[N];
+	double xh[N], xl[N], rts[N], rts_old[N];
+#else
+	boost::scoped_array<double> df(new double[N_2]);
+	boost::scoped_array<double> dx(new double[N]);
+	boost::scoped_array<double> dxold(new double[N]);
+	boost::scoped_array<double> f(new double[N+1]);
+	boost::scoped_array<double> space(new double[N]);
+	boost::scoped_array<double> xh(new double[N]);
+	boost::scoped_array<double> xl(new double[N]);
+	boost::scoped_array<double> rts(new double[N]);
+	boost::scoped_array<double> rts_old(new double[N]);
+#endif
 
     for (i = 0; i < N; i++) {
         rts[i] = xguess[i];
         if (rts[i] < x1[i]) rts[i] = x1[i];
         if (rts[i] > x2[i]) rts[i] = x2[i];
     }
-    computeFuncDervMulti(rts, f, df);
+    computeFuncDervMulti(&rts[0], &f[0], &df[0]);
     double score = f[N];
 //    double score = targetFunk(rts-1);
 //    cout << "Newton step 0: " << score << endl;
@@ -547,15 +563,15 @@ double Optimization::minimizeNewtonMulti(double *x1, double *xguess, double *x2,
     }
 
     if (stop) {
-        memcpy(xguess, rts, sizeof(double)*N);
+        memcpy(xguess, (void*)&rts[0], sizeof(double)*N);
         return score;
     }
 
 	for (step = 1; step <= maxNRStep; step++) {
-		memcpy(rts_old, rts, sizeof(double)*N);
+		memcpy(&rts_old[0], (void*)&rts[0], sizeof(double)*N);
 
         // first compute inverse of hessian matrix
-        matinv(df, N, N, space);
+        matinv(&df[0], N, N, &space[0]);
         // now take the product
         for (i = 0; i < N; i++) {
             space[i] = 0.0;
@@ -589,17 +605,18 @@ double Optimization::minimizeNewtonMulti(double *x1, double *xguess, double *x2,
                     rts[i] = rts_old[i];
                 }
             }
-            double new_score = targetFunk(rts-1);
+			//Note: The next line looks very wrong to me. James B. 23-Dec-2020.
+            double new_score = targetFunk(&rts[0]-1);
             if (new_score <= score) break;
             // score increased, reduce step size by half
-            memcpy(rts, rts_old, sizeof(double)*N);
+            memcpy(&rts[0], &rts_old[0], sizeof(double)*N);
             alpha *= 0.5;
         } while (!stop);
         
         if (stop) {
             break;
         }
-        computeFuncDervMulti(rts, f, df);
+        computeFuncDervMulti(&rts[0], &f[0], &df[0]);
         score = f[N];
 
 //        double score = targetFunk(rts-1);
@@ -622,7 +639,7 @@ double Optimization::minimizeNewtonMulti(double *x1, double *xguess, double *x2,
 	}
 
     // copy returned x-value
-    memcpy(xguess, rts, sizeof(double)*N);
+    memcpy(xguess, &rts[0], sizeof(double)*N);
 
     if (stop)
         return score;
@@ -1208,7 +1225,7 @@ void Optimization::lbfgsb(int n, int m, double *x, double *l, double *u, int *nb
 	/* this needs to be zeroed for snd in mainlb to be zeroed */
 	wa = (double *) malloc((2*m*n+4*n+11*m*m+8*m) * sizeof(double));
 	iwa = (int *) malloc(3*n * sizeof(int));
-	strcpy(task, "START");
+	strcpy_s(task, sizeof(task), "START");
 	while(1) {
 		/* Main workhorse setulb() from ../appl/lbfgsb.c : */
 		setulb(n, m, x, l, u, nbd, &f, g, factr, &pgtol, wa, iwa, task,
