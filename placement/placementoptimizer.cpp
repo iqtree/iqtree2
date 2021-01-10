@@ -18,7 +18,7 @@ void TaxonPlacementOptimizer::optimizeAfterTaxonPlacement(TaxaToPlace& taxa,
 
 BatchPlacementOptimizer::BatchPlacementOptimizer() = default;
 void BatchPlacementOptimizer::optimizeAfterBatch(TaxaToPlace& taxa,
-                                                int firstTaxon, int lastTaxon,
+                                                intptr_t firstTaxon, intptr_t lastTaxon,
                                                 TargetBranchRange& targets,
                                                 PhyloTree& tree) {
     if (VB_MIN <= verbose_mode) {
@@ -86,28 +86,16 @@ void GlobalLikelihoodPlacementOptimizer::optimizeAfterPlacement(PhyloTree& tree)
 
 TaxonPlacementOptimizer* TaxonPlacementOptimizer::getNewTaxonPlacementOptimizer() {
     auto localCleanup = Placement::getLocalOptimizationAlgorithm();
-    switch (localCleanup) {
-        default:
-            break;
-    }
     return new TaxonPlacementOptimizer();
 }
 
 BatchPlacementOptimizer* BatchPlacementOptimizer::getNewBatchPlacementOptimizer() {
     auto batchCleanup = Placement::getBatchOptimizationAlgorithm();
-    switch (batchCleanup) {
-        default:
-            break;
-    }
     return new BatchPlacementOptimizer();
 }
 
 GlobalPlacementOptimizer* GlobalPlacementOptimizer::getNewGlobalPlacementOptimizer(bool useLikelihood) {
-    auto globalCleanup = Placement::getGlobalOptimizationAlgorithm();
-    switch (globalCleanup) {
-        default:
-            break;
-    }
+    auto globalCleanup = Placement::getGlobalOptimizationAlgorithm();    
     return useLikelihood ? new GlobalLikelihoodPlacementOptimizer()
                          : new GlobalPlacementOptimizer();
 }

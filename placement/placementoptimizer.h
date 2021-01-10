@@ -36,8 +36,8 @@ public:
     BatchPlacementOptimizer();
     virtual ~BatchPlacementOptimizer();
     virtual void optimizeAfterBatch(TaxaToPlace& taxa,
-                                   int start_taxon_index,
-                                   int stop_taxon_index,
+                                   intptr_t start_taxon_index,
+                                   intptr_t stop_taxon_index,
                                    TargetBranchRange& targets,
                                    PhyloTree& tree);
     

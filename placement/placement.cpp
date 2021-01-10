@@ -56,7 +56,7 @@ size_t getIncrementalSizeParameter(const char letter, size_t defaultValue) {
     if (s.empty()) {
         return defaultValue;
     }
-    int i = convert_int_nothrow(s.c_str(), defaultValue);
+    int i = convert_int_nothrow(s.c_str(), static_cast<int>(defaultValue));
     if (i<0) {
         return defaultValue;
     }

@@ -193,7 +193,7 @@ void PlacementRun::insertTaxon(TaxaToPlace& taxa, size_t taxon_index,
 }
 
 void PlacementRun::doneBatch(TaxaToPlace& candidates,
-                             size_t batchStart, size_t batchStop,
+                             intptr_t batchStart, intptr_t batchStop,
                              TargetBranchRange& targets) {
     if ( 1 < batchStop - batchStart ) {
         TREE_LOG_LINE ( phylo_tree, VB_MED,  "Inserted " << (taxa_inserted_this_batch)

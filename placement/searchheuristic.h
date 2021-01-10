@@ -40,8 +40,8 @@ public:
      @param startTaxon the index (in taxa) of the first taxon to be considered
      @param stopTaxon one more than the index of the last taxon to be considered*/
     virtual void prepareToFilter(PhyloTree& tree, TargetBranchRange& targets,
-                                 size_t startTarget, size_t stopTarget,
-                                 TaxaToPlace& taxa, size_t startTaxon, size_t stopTaxon);
+                                 intptr_t startTarget, intptr_t stopTarget,
+                                 TaxaToPlace& taxa, intptr_t startTaxon, intptr_t stopTaxon);
     
     
     virtual bool isPlacementWorthTrying(const TaxonToPlace& taxon,
@@ -86,8 +86,9 @@ public:
     virtual bool isGlobalSearch() const;
     virtual bool usesLikelihood() const;
     virtual void prepareToFilter(PhyloTree& tree, TargetBranchRange& targets,
-                                 size_t startTarget, size_t stopTarget,
-                                 TaxaToPlace& taxa, size_t startTaxon, size_t stopTaxon);
+                                 intptr_t startTarget, intptr_t stopTarget,
+                                 TaxaToPlace& taxa, 
+                                 intptr_t startTaxon, intptr_t stopTaxon);
     virtual bool isPlacementWorthTrying(const  TaxonToPlace& taxon,
                                         size_t taxonIndex,
                                         const  TargetBranchRef& target );

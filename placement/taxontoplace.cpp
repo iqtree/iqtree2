@@ -129,13 +129,14 @@ void TaxonToPlace::findPlacement(PhyloTree& phylo_tree,
             calculator->assessPlacementCost(phylo_tree, *this, *p);
         }
     }
-    phylo_tree.trackProgress(target_branch_count);
+    phylo_tree.trackProgress(static_cast<double>(target_branch_count));
     
     auto bestI = considerPlacements(placements.data(), placements.size());
     
     if ( verbose_mode >= VB_MED ) {
         std::stringstream s3;
-        s3 << "Best (lowest) score for " << this->taxonName << " was " << bestPlacement.score << " at place " << bestI;
+        s3 << "Best (lowest) score for " << this->taxonName 
+            << " was " << bestPlacement.score << " at place " << bestI;
         phylo_tree.logLine(s3.str());
     }
     inserted      = false;

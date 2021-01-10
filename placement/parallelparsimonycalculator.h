@@ -67,11 +67,11 @@ public:
      @param start_index the "top" of the stack (the point at which to begin calculation)
      @param taskDescription a description of the task; may point to an empty string
      */
-    void calculate(int start_index = 0, const char* taskDescription="");
+    void calculate(intptr_t start_index = 0, const char* taskDescription="");
     
-    int parsimonyLink4Cost(PhyloNode* a, PhyloNode* b, PhyloNode* c,
-                           PhyloNode* d, PhyloNode* e, PhyloNode* f,
-                           UINT* buffer1, UINT* buffer2);
+    double parsimonyLink4Cost(PhyloNode* a, PhyloNode* b, PhyloNode* c,
+                              PhyloNode* d, PhyloNode* e, PhyloNode* f,
+                              UINT* buffer1, UINT* buffer2);
 
 };
 

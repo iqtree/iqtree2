@@ -22,9 +22,9 @@ bool SearchHeuristic::usesLikelihood() const {
 }
 
 void SearchHeuristic::prepareToFilter(PhyloTree& tree, TargetBranchRange& targets,
-                                      size_t startTarget, size_t stopTarget,
+                                      intptr_t startTarget, intptr_t stopTarget,
                                       TaxaToPlace& taxa,
-                                      size_t startTaxon, size_t stopTaxon) {
+                                      intptr_t startTaxon, intptr_t stopTaxon) {
 }
 
 bool SearchHeuristic::isPlacementWorthTrying(const TaxonToPlace& taxon,
@@ -68,43 +68,43 @@ BaseballSearchHeuristic::~BaseballSearchHeuristic() {
 }
 
 void BaseballSearchHeuristic::prepareToFilter(PhyloTree& tree, TargetBranchRange& targets,
-                                              size_t startTarget, size_t stopTarget,
+                                              intptr_t startTarget, intptr_t stopTarget,
                                               TaxaToPlace& taxa,
-                                              size_t startTaxon, size_t stopTaxon) {
+                                              intptr_t startTaxon, intptr_t stopTaxon) {
     target_base = startTarget;
     taxon_base  = startTaxon;
     is_worth_trying.setDimensions( stopTarget-startTarget, stopTaxon-startTaxon) ;
     Matrix<double> scores;
     scores.setDimensions( stopTarget-startTarget, stopTaxon-startTaxon);
     LikelihoodBlockPairs blocks(2);
-    for (size_t t = startTarget; t<stopTarget; ++t ) { //branch
+    for (intptr_t t = startTarget; t<stopTarget; ++t ) { //branch
         targets.getTargetBranch(t)->computeState(tree, t, blocks);
         double* scoreRow = scores.getRow(t-startTarget);
         #ifdef _OPENMP
         #pragma omp parallel for
         #endif
-        for (size_t c = startTaxon; c<stopTaxon; ++c ) { //candidate taxon
+        for (intptr_t c = startTaxon; c<stopTaxon; ++c ) { //candidate taxon
             PossiblePlacement p;
             p.setTargetBranch(&targets, t);
             calculator->assessPlacementCost(tree, taxa.getTaxonByIndex(c), p);
             scoreRow[c] = p.score;
         }
     }
-    size_t taxon_count  = stopTaxon  -  startTaxon;
-    size_t target_count = stopTarget -  startTarget;
+    intptr_t taxon_count  = stopTaxon  -  startTaxon;
+    intptr_t target_count = stopTarget -  startTarget;
     
     #ifdef _OPENMP
     #pragma omp parallel for
     #endif
-    for (size_t c = 0; c<taxon_count; ++c ) { //candidate taxon (0-based)
+    for (intptr_t c = 0; c<taxon_count; ++c ) { //candidate taxon (0-based)
         std::vector<double> scoresForTaxon;
         scores.appendColumnToVector(c, scoresForTaxon);
-        std::vector<size_t> targetIndices;
-        for (size_t b = 0; b < target_count ; ++b ) {
+        std::vector<intptr_t> targetIndices;
+        for (intptr_t b = 0; b < target_count ; ++b ) {
             targetIndices.emplace_back(b);
         }
         mirroredHeapsort( scoresForTaxon, targetIndices );
-        size_t take = static_cast<size_t> ( floor(sqrt(target_count)) );
+        intptr_t take = static_cast<intptr_t> ( floor(sqrt(target_count)) );
         //Always at least 1, never more than target_count.
         
         if ( scoresForTaxon[0] == scoresForTaxon[take-1] ) {
@@ -116,8 +116,8 @@ void BaseballSearchHeuristic::prepareToFilter(PhyloTree& tree, TargetBranchRange
             double same = scoresForTaxon[take-1];
             for (; 1<take && scoresForTaxon[take-2] == same; --take) {}
         }
-        for (size_t t = 0; t < take ; ++t) {
-            size_t b = targetIndices[t];
+        for (intptr_t t = 0; t < take ; ++t) {
+            intptr_t b = targetIndices[t];
             is_worth_trying.cell(b, c ) = true;
         }
         if (VB_DEBUG <= verbose_mode) {
@@ -131,7 +131,7 @@ void BaseballSearchHeuristic::prepareToFilter(PhyloTree& tree, TargetBranchRange
             } else {
                 s<< "They were: ";
             }
-            for (size_t t=0; t<take; ++t) {
+            for (intptr_t  t=0; t<take; ++t) {
                 s << " " << targetIndices[t] << "(score " << scoresForTaxon[t] << ")";
             }
             tree.logLine(s.str());

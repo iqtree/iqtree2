@@ -105,8 +105,8 @@ void TargetBranch::dumpNeighbor(VerboseMode level, const char* name,
 }
 
 double TargetBranch::computeState(PhyloTree& phylo_tree,
-                                size_t target_branch_index,
-                                LikelihoodBlockPairs &blocks) {
+                                  intptr_t target_branch_index,
+                                  LikelihoodBlockPairs &blocks) {
     PhyloNeighbor* neigh1 = first->findNeighbor(second);
     PhyloNeighbor* neigh2 = second->findNeighbor(first);
     ParallelParsimonyCalculator c(phylo_tree, false);
@@ -176,17 +176,17 @@ double TargetBranch::computeState(PhyloTree& phylo_tree,
     return connection_cost;
 }
 
-void TargetBranch::updateMapping(int branch_id,
-                                   PhyloNode* updated_first,
-                                   PhyloNode* updated_second) {
+void TargetBranch::updateMapping(intptr_t branch_id,
+                                 PhyloNode* updated_first,
+                                 PhyloNode* updated_second) {
     first  = updated_first;
     second = updated_second;
     PhyloNeighbor* first_nei  = first->findNeighbor(second);
     PhyloNeighbor* second_nei = second->findNeighbor(first);
     first_nei ->setParsimonyComputed(false);
     second_nei->setParsimonyComputed(false);
-    first_nei ->id = branch_id;
-    second_nei->id = branch_id;
+    first_nei ->id = static_cast<int>(branch_id);
+    second_nei->id = static_cast<int>(branch_id);
     first->clearReversePartialParsimony(second);
     second->clearReversePartialParsimony(first);
 }
@@ -328,8 +328,8 @@ void TargetBranch::costPlacementOfTaxa
      TargetBranchRange& targets,
      size_t             targetNumber,
      TaxaToPlace&       candidates,
-     size_t             candidateStartIndex,
-     size_t             candidateStopIndex,
+     intptr_t           candidateStartIndex,
+     intptr_t           candidateStopIndex,
      SearchHeuristic*   heuristic,
      PlacementCostCalculator* calculator,
      bool               isFirstTargetBranch) const {
@@ -338,7 +338,7 @@ void TargetBranch::costPlacementOfTaxa
     #ifdef _OPENMP
     #pragma omp parallel for
     #endif
-    for (size_t i = candidateStartIndex; i< candidateStopIndex; ++i) {
+    for (intptr_t i = candidateStartIndex; i< candidateStopIndex; ++i) {
         TaxonToPlace& candidate = candidates.getTaxonByIndex(i);
         if (heuristic->isPlacementWorthTrying(candidate, i, here)) {
             PossiblePlacement p;
@@ -347,7 +347,8 @@ void TargetBranch::costPlacementOfTaxa
             candidate.considerAdditionalPlacement(p);
         }
     }
-    phylo_tree.trackProgress(candidateStopIndex - candidateStartIndex);
+    double work_done = (double)candidateStopIndex - (double)candidateStartIndex;
+    phylo_tree.trackProgress(work_done);
 }
 
 bool TargetBranch::isExternalBranch() const {

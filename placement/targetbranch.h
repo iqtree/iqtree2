@@ -81,11 +81,11 @@ public:
                  PhyloNode* node1, PhyloNode* node2,
                  bool likelihood_wanted);
     double computeState (PhyloTree& phylo_tree,
-                         size_t target_branch_index,
+                         intptr_t target_branch_index,
                          LikelihoodBlockPairs &blocks);
     void   dumpNeighbor (VerboseMode level, const char* prefix,
                          PhyloTree& phylo_tree, PhyloNeighbor* nei) const;
-    void   updateMapping(int branch_id,
+    void   updateMapping(intptr_t branch_id,
                          PhyloNode* updated_first,
                          PhyloNode* updated_second);
     void forgetState()            const;
@@ -101,8 +101,8 @@ public:
                              TargetBranchRange& targets,
                              size_t targetNumber,
                              TaxaToPlace& candidates,
-                             size_t candidateStartIndex,
-                             size_t candidateStopIndex,
+                             intptr_t candidateStartIndex,
+                             intptr_t candidateStopIndex,
                              SearchHeuristic*   heuristic,
                              PlacementCostCalculator* calculator,
                              bool isFirstTargetBranch) const;

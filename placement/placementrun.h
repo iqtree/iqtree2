@@ -87,7 +87,7 @@ public:
      @param start_taxon_index  the taxon index (index into candidates) for the first taxon in the batch
      @param stop_taxon_index  one more than the taxon index for the last taxon in the batch*/
     void doneBatch  (TaxaToPlace& taxa,
-                     size_t start_taxon_index, size_t stop_taxon_index,
+                     intptr_t start_taxon_index, intptr_t stop_taxon_index,
                      TargetBranchRange& targets);
     
     /** Remove taxa that have been inserted, from a TypedTaxaToPlace<T> container,

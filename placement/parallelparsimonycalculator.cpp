@@ -35,9 +35,9 @@ int ParallelParsimonyCalculator::schedulePartialParsimony(const PhyloBranch& bra
     return 1;
 }
 
-int ParallelParsimonyCalculator::parsimonyLink4Cost(PhyloNode* a, PhyloNode* b, PhyloNode* c,
-                                                    PhyloNode* d, PhyloNode* e, PhyloNode* f,
-                                                    UINT* buffer1, UINT* buffer2) {
+double ParallelParsimonyCalculator::parsimonyLink4Cost(PhyloNode* a, PhyloNode* b, PhyloNode* c,
+                                                       PhyloNode* d, PhyloNode* e, PhyloNode* f,
+                                                       UINT* buffer1, UINT* buffer2) {
     PhyloBranchVector branches;
     branches.resize(4);
     FOR_EACH_ADJACENT_PHYLO_NODE(c, d, it, x) {
@@ -80,7 +80,7 @@ int  ParallelParsimonyCalculator::computeParsimonyBranch
     PhyloNode*     node        = dad_branch->getNode();
     PhyloNeighbor* node_branch = node->findNeighbor(dad);
 
-    int startIndex = workToDo.size();
+    intptr_t startIndex = workToDo.size();
     schedulePartialParsimony(dad_branch,  dad);
     schedulePartialParsimony(node_branch, node);
     calculate(startIndex, task_description);
@@ -103,9 +103,9 @@ void ParallelParsimonyCalculator::computeReverseParsimony(PhyloNode* first,
     stuffToDo.emplace_back(second, first);
     while (!stuffToDo.empty()) {
         std::vector <PhyloBranch> stuffToDoNext;
-        size_t r = 0;
-        size_t w = 0;
-        for (;r<stuffToDo.size(); ++r) {
+        intptr_t r = 0;
+        intptr_t w = 0;
+        for (;r<static_cast<intptr_t>(stuffToDo.size()); ++r) {
             PhyloNode* first  = stuffToDo[r].first;
             PhyloNode* second = stuffToDo[r].second;
             FOR_EACH_ADJACENT_PHYLO_NODE(first, second, it, back) {
@@ -118,25 +118,25 @@ void ParallelParsimonyCalculator::computeReverseParsimony(PhyloNode* first,
             w                 += ( nei->isParsimonyComputed() ? 0 : 1 );
         }
         stuffToDo.resize(w);
-        PhyloBranch* startItem = stuffToDo.data();
-        PhyloBranch* stopItem  = stuffToDo.data() + w;
+        PhyloBranch* firstItem = stuffToDo.data();
         #ifdef _OPENMP
         #pragma omp parallel for schedule(dynamic)
         #endif
-        for (PhyloBranch* item = startItem; item<stopItem; ++item) {
-            PhyloNeighbor* nei = item->first->findNeighbor(item->second);
+        for (intptr_t i = 0; i < w; ++i) {
+            PhyloBranch*   item = firstItem + i;
+            PhyloNeighbor* nei  = item->first->findNeighbor(item->second);
             tree.computePartialParsimony(nei, item->first);
         }
         if (report_progress_to_tree) {
-            tree.trackProgress(r);
+            tree.trackProgress(static_cast<double>(r));
         }
         std::swap(stuffToDo, stuffToDoNext);
     }
 }
 
-void ParallelParsimonyCalculator::calculate(int start_index,
+void ParallelParsimonyCalculator::calculate(intptr_t start_index,
                                             const char* task_description) {
-    int stop_index = workToDo.size();
+    intptr_t stop_index = workToDo.size();
     bool tasked = (task_description!=nullptr && task_description[0]!='\0');
     if (stop_index <= start_index) {
         //Bail, if nothing to do
@@ -148,7 +148,7 @@ void ParallelParsimonyCalculator::calculate(int start_index,
     }
     
     //1. Find work to do at a lower level
-    for (int i=stop_index-1; i>=start_index; --i) {
+    for (intptr_t  i=stop_index-1; i>=start_index; --i) {
         auto item = workToDo[i];
         PhyloNeighbor* dad_branch = item.first;
         PhyloNode*     dad        = item.second;
@@ -166,22 +166,24 @@ void ParallelParsimonyCalculator::calculate(int start_index,
     //   current level (this doesn't change the content
     //   of workToDo so workToDo's contents can be
     //   processed with a parallel pointer loop).
-    WorkItem* startItem = workToDo.data() + start_index;
-    WorkItem* stopItem  = workToDo.data() + stop_index;
+    WorkItem* item_data = workToDo.data();
     if (task_to_start != nullptr) {
-        tree.initProgress( workToDo.size(), task_to_start, "", "" );
+        double estimate = static_cast<double>(workToDo.size());
+        tree.initProgress( estimate, task_to_start, "", "" );
         task_to_start = nullptr;
     }
     #ifdef _OPENMP
     #pragma omp parallel for schedule(dynamic)
     #endif
-    for (WorkItem* item = startItem; item<stopItem; ++item) {
+    for (intptr_t i = start_index; i < stop_index; ++i) {
+        WorkItem*      item       = item_data + i;
         PhyloNeighbor* dad_branch = item->first;
         PhyloNode*     dad        = item->second;
         tree.computePartialParsimony(dad_branch, dad);
     }
     if (task_in_progress != nullptr || report_progress_to_tree) {
-        tree.trackProgress(stopItem-startItem);
+        double work_done = (double)stop_index - (double)start_index;
+        tree.trackProgress(work_done);
     }
     workToDo.resize(start_index);
     if (tasked) {
