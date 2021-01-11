@@ -43,10 +43,11 @@ void PartitionModelPlen::saveCheckpoint() {
     startCheckpoint();
     PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
     if (!tree->fixed_rates) {
-        int nrates = tree->part_info.size();
+        int nrates = static_cast<int>(tree->part_info.size());
         double *part_rates = new double[nrates];
-        for (int i = 0; i < nrates; i++)
+        for (size_t i = 0; i < nrates; i++) {
             part_rates[i] = tree->part_info[i].part_rate;
+        }
         CKP_ARRAY_SAVE(nrates, part_rates);
         delete [] part_rates;
     }
@@ -58,11 +59,12 @@ void PartitionModelPlen::restoreCheckpoint() {
     startCheckpoint();
     PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
     if (!tree->fixed_rates) {
-        int nrates = tree->part_info.size();
+        int nrates = static_cast<int>(tree->part_info.size());
         double *part_rates = new double[nrates];
         if (CKP_ARRAY_RESTORE(nrates, part_rates)) {
-            for (int i = 0; i < nrates; i++)
+            for (size_t i = 0; i < nrates; i++) {
                 tree->part_info[i].part_rate = part_rates[i];
+            }
             tree->mapTrees();
         }
         delete [] part_rates;
@@ -75,8 +77,7 @@ void PartitionModelPlen::restoreCheckpoint() {
 double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
     PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
     double tree_lh = 0.0, cur_lh = 0.0;
-    int ntrees = tree->size();
-    
+    size_t ntrees = tree->size();
     
     //tree->initPartitionInfo(); // FOR OLGA: needed here
 
@@ -200,10 +201,10 @@ double PartitionModelPlen::optimizeParametersGammaInvar(int fixed_len, bool writ
 
 void PartitionModelPlen::writeInfo(ostream &out) {
     PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
-    int ntrees = tree->size();
+    auto ntrees = tree->size();
     if (!tree->fixed_rates) {
         out << "Partition-specific rates: ";
-        for(int part = 0; part < ntrees; part++){
+        for(size_t part = 0; part < ntrees; part++){
             out << " " << tree->part_info[part].part_rate;
         }
         out << endl;
@@ -236,7 +237,7 @@ double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
     for (int j = 0; j < tree->size(); j++) {
         int i = tree->part_order[j];
         double min_scaling = 1.0/tree->at(i)->getAlnNSite();
-        double max_scaling = nsites / tree->at(i)->getAlnNSite();
+        double max_scaling = static_cast<double>(nsites / tree->at(i)->getAlnNSite());
         if (max_scaling < tree->part_info[i].part_rate)
             max_scaling = tree->part_info[i].part_rate;
         if (min_scaling > tree->part_info[i].part_rate)
@@ -278,8 +279,9 @@ int PartitionModelPlen::getNParameters(int brlen_type) {
         (*it)->getModelFactory()->site_rate->getNDim();
     }
     df += tree->branchNum;
-    if(!tree->fixed_rates)
-        df += tree->size()-1;
+    if (!tree->fixed_rates) {
+        df += static_cast<int>(tree->size()) - 1;
+    }
     if (linked_alpha > 0.0)
         df ++;
     for (auto it = linked_models.begin(); it != linked_models.end(); it++) {

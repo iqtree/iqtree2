@@ -48,13 +48,13 @@ public:
 	/**
 		@return the number of rate categories
 	*/
-	virtual int getNRate() { return ncategory; }
+	virtual int getNRate() const { return ncategory; }
 
 	/**
 		get the number of rate categories for site-specific category model
 		@return the number of rate categories
 	*/
-	virtual int getNDiscreteRate() { return ncategory; }
+	virtual int getNDiscreteRate() const { return ncategory; }
 
 	/**
 		@param category category ID from 0 to #category-1

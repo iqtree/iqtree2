@@ -159,6 +159,7 @@ public:
 	*/
 	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0);
 
+
 protected:
 
     /** normally false, set to true while optimizing rate heterogeneity */
@@ -178,6 +179,45 @@ protected:
 		@return TRUE if parameters are changed, FALSE otherwise (2015-10-20)
 	*/
 	virtual bool getVariables(double *variables);
+
+#ifdef _MSC_VER
+	//MSVC generates warning messages about these member functions
+	//being inherited "via dominance". Explictly declaring them
+	//instead shuts those warnings up.
+public:
+	virtual string getNameParams() { return ModelMixture::getNameParams(); }
+	virtual bool isMixture()       { return ModelMixture::isMixture(); }
+	virtual int getNMixtures()     { return ModelMixture::getNMixtures(); }
+	virtual double getMixtureWeight(int cat)              { return ModelMixture::getMixtureWeight(cat); }	
+	virtual void setMixtureWeight(int cat, double weight) { ModelMixture::setMixtureWeight(cat, weight); }
+	virtual void setFixMixtureWeight(bool fix_weight)     { ModelMixture::setFixMixtureWeight(fix_weight); }
+	virtual ModelSubst* getMixtureClass(int cat)          { return ModelMixture::getMixtureClass(cat); }
+	virtual void setMixtureClass(int cat, ModelSubst* m)  { ModelMixture::setMixtureClass(cat, m); }
+	virtual void getStateFrequency(double* state_freq, int mixture = 0) 
+	{ 
+		ModelMixture::getStateFrequency(state_freq, mixture); 
+	}
+	virtual void computeTransDerv(double time, double* trans_matrix,
+		double* trans_derv1, double* trans_derv2, int mixture = 0) {
+		ModelMixture::computeTransDerv(time, trans_matrix, 
+			trans_derv1, trans_derv2, mixture); 
+	}
+	virtual void setOptimizeSteps(int steps)   { ModelMixture::setOptimizeSteps(steps); }
+	virtual uint64_t getMemoryRequired()       { return ModelMixture::getMemoryRequired(); }
+	virtual void writeParameters(ostream& out) { ModelMixture::writeParameters(out); }
+
+	virtual bool isPolymorphismAware() { return ModelPoMo::isPolymorphismAware(); };
+	virtual int getNumRateEntries()    { return ModelPoMo::getNumRateEntries();  }
+	virtual void computeTipLikelihood(PML::StateType state, double* state_lk) {
+		ModelPoMo::computeTipLikelihood(state, state_lk);
+	}
+	virtual ModelSubst* getMutationModel() { return ModelPoMo::getMutationModel(); }	
+	virtual void setRates()                { ModelPoMo::setRates(); }
+	virtual void computeRateMatrix(double** rate_matrix, double* state_freq, int num_state) {
+		ModelPoMo::computeRateMatrix(rate_matrix, state_freq, num_state);
+	}
+#endif
+
 
 };
 

@@ -90,7 +90,8 @@ ModelsBlock *readModelsDefinition(Params &params) {
     try
     {
         // loading internal model definitions
-        stringstream in(builtin_mixmodels_definition);
+        stringstream in;
+        loadBuiltInMixInModels(in);
         ASSERT(in && "stringstream is OK");
         NxsReader nexus;
         nexus.Add(models_block);
@@ -103,7 +104,8 @@ ModelsBlock *readModelsDefinition(Params &params) {
     try
     {
         // loading internal protei model definitions
-        stringstream in(builtin_prot_models);
+        stringstream in;
+        loadBuiltInProteinModels(in);
         ASSERT(in && "stringstream is OK");
         NxsReader nexus;
         nexus.Add(models_block);
@@ -599,7 +601,8 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
                 tree->aln->printAlignment(params.aln_output_format, infsites_file.c_str(), false, NULL, EXCLUDE_UNINF);
                 cerr << "For your convenience alignment with parsimony-informative sites printed to " << infsites_file << endl;
             }
-            outError("Invalid use of +ASC_INF because of " + convertIntToString(tree->getAlnNSite() - tree->aln->num_informative_sites) +
+            int useless_sites = static_cast<int>(tree->getAlnNSite()) - tree->aln->num_informative_sites;
+            outError("Invalid use of +ASC_INF because of " + convertIntToString(useless_sites) +
                      " parsimony-uninformative sites in the alignment");
         }
         if (verbose_mode >= VB_MED)
@@ -617,11 +620,16 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
                 tree->aln->printAlignment(params.aln_output_format, varsites_file.c_str(), false, NULL, EXCLUDE_INVAR);
                 cerr << "For your convenience alignment with variable sites printed to " << varsites_file << endl;
             }
-            outError("Invalid use of +ASC_MIS because of " + convertIntToString(tree->aln->frac_invariant_sites*tree->aln->getNSite()) +
+            double  fraction    = tree->aln->frac_invariant_sites;
+            double  site_count  = static_cast<double>(tree->aln->getNSite());
+            double  estimate    = floor(fraction * site_count + .5);
+            int64_t invar_count = static_cast<int64_t> (estimate);
+            outError("Invalid use of +ASC_MIS because of " + convertInt64ToString(invar_count) +
                      " invariant sites in the alignment");
         }
-        if (verbose_mode >= VB_MED)
+        if (verbose_mode >= VB_MED) {
             cout << "Holder's ascertainment bias correction: " << unobserved_ptns.size() << " unobservable constant patterns" << endl;
+        }
         rate_str = rate_str.substr(0, posasc) + rate_str.substr(posasc+8);
     } else if ((posasc = rate_str.find("+ASC")) != string::npos) {
         // ascertainment bias correction
@@ -629,7 +637,7 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         tree->aln->getUnobservedConstPatterns(ASC_type, unobserved_ptns);
         
         // delete rarely observed state
-        for (int i = unobserved_ptns.size()-1; i >= 0; i--)
+        for (intptr_t i = static_cast<intptr_t>(unobserved_ptns.size())-1; i >= 0; i--)
             if (model->state_freq[(int)unobserved_ptns[i][0]] < 1e-8)
                 unobserved_ptns.erase(unobserved_ptns.begin() + i);
                 
@@ -651,7 +659,11 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
                 tree->aln->printAlignment(params.aln_output_format, varsites_file.c_str(), false, NULL, EXCLUDE_INVAR);
                 cerr << "For your convenience alignment with variable sites printed to " << varsites_file << endl;
             }
-            outError("Invalid use of +ASC because of " + convertIntToString(tree->aln->frac_invariant_sites*tree->aln->getNSite()) +
+            double  fraction    = tree->aln->frac_invariant_sites;
+            double  site_count  = static_cast<double>(tree->aln->getNSite());
+            double  estimate    = floor(fraction * site_count + .5);
+            int64_t invar_count = static_cast<int64_t> (estimate);
+            outError("Invalid use of +ASC because of " + convertInt64ToString(invar_count) +
                 " invariant sites in the alignment");
         }
         if (verbose_mode >= VB_MED)
@@ -1142,7 +1154,7 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
                 cout << whatIAmDoing.str() << "..." << endl;
             }
         }
-        tree->initProgress(numberOfStartValues,
+        tree->initProgress(static_cast<double>(numberOfStartValues),
                            whatIAmDoing.str(),
                            "tried", "start value");
         while (initPInv <= frac_const) {
@@ -1280,7 +1292,7 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
     tree->trackProgress(1.0);
 
     if (verbose_mode >= VB_MED || write_info) {
-        int p = cout.precision(); //We'll restore it later
+        auto p = cout.precision(); //We'll restore it later
         if (VB_MED <= verbose_mode) {
             cout.precision(17);
             TREE_LOG_LINE(*tree, VB_MED, "1. Initial log-likelihood: " << cur_lh << " (took " <<
@@ -1488,13 +1500,13 @@ void ModelFactory::computeTransMatrix(double time, double *trans_matrix, int mix
         return;
     }
     int mat_size = model->num_states * model->num_states;
-    iterator ass_it = find(round(time * 1e6));
+    iterator ass_it = find(static_cast<int>(round(time * 1e6)));
     if (ass_it == end()) {
         // allocate memory for 3 matricies
         double *trans_entry = new double[mat_size * 3];
         trans_entry[mat_size] = trans_entry[mat_size+1] = 0.0;
         model->computeTransMatrix(time, trans_entry, mixture);
-        ass_it = insert(value_type(round(time * 1e6), trans_entry)).first;
+        ass_it = insert(value_type(static_cast<int>(round(time * 1e6)), trans_entry)).first;
     } else {
         //if (verbose_mode >= VB_MAX)
             //cout << "ModelFactory bingo" << endl;
@@ -1510,13 +1522,13 @@ void ModelFactory::computeTransDerv(double time, double *trans_matrix,
         return;
     }
     int mat_size = model->num_states * model->num_states;
-    iterator ass_it = find(round(time * 1e6));
+    iterator ass_it = find(static_cast<int>(round(time * 1e6)));
     if (ass_it == end()) {
         // allocate memory for 3 matricies
         double *trans_entry = new double[mat_size * 3];
         trans_entry[mat_size] = trans_entry[mat_size+1] = 0.0;
         model->computeTransDerv(time, trans_entry, trans_entry+mat_size, trans_entry+(mat_size*2), mixture);
-        ass_it = insert(value_type(round(time * 1e6), trans_entry)).first;
+        ass_it = insert(value_type(static_cast<int>(round(time * 1e6)), trans_entry)).first;
     } else if (ass_it->second[mat_size] == 0.0 && ass_it->second[mat_size+1] == 0.0) {
         double *trans_entry = ass_it->second;
         model->computeTransDerv(time, trans_entry, trans_entry+mat_size, trans_entry+(mat_size*2), mixture);

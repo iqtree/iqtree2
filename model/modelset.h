@@ -40,7 +40,7 @@ public:
 	 * get the size of transition matrix, default is num_states*num_states.
 	 * can be changed for e.g. site-specific model
 	 */
-	virtual int getTransMatrixSize() { return num_states * num_states * size(); }
+	virtual int getTransMatrixSize() { return num_states * num_states * static_cast<int>(size()); }
 
 
 	/**

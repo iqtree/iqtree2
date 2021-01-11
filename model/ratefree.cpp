@@ -188,7 +188,7 @@ string RateFree::getNameParams() {
 	return str.str();
 }
 
-double RateFree::meanRates() {
+double RateFree::meanRates() const {
 	double ret = 0.0;
 	for (int i = 0; i < ncategory; i++)
 		ret += prop[i] * rates[i];
@@ -485,7 +485,7 @@ void RateFree::writeParameters(ostream &out) {
 }
 
 double RateFree::optimizeWithEM() {
-    size_t nptn = phylo_tree->aln->getNPattern();
+    intptr_t nptn = phylo_tree->aln->getNPattern();
     size_t nmix = ncategory;
     const double MIN_PROP = 1e-4;
     
@@ -539,7 +539,7 @@ double RateFree::optimizeWithEM() {
         // E-step
         // decoupled weights (prop) from _pattern_lh_cat to obtain L_ci and compute pattern likelihood L_i
         memset(new_prop, 0, nmix*sizeof(double));
-        for (size_t ptn = 0; ptn < nptn; ptn++) {
+        for (intptr_t ptn = 0; ptn < nptn; ptn++) {
             double *this_lk_cat = phylo_tree->tree_buffers._pattern_lh_cat + ptn*nmix;
             double lk_ptn = phylo_tree->ptn_invar[ptn];
             for (size_t c = 0; c < nmix; c++) {
@@ -559,7 +559,7 @@ double RateFree::optimizeWithEM() {
         int    maxpropid  = 0;
         double new_pinvar = 0.0;
         double reciprocalOfNSite = 1.0 / (double)(phylo_tree->getAlnNSite());
-        for (size_t c = 0; c < nmix; c++) {
+        for (int c = 0; c < nmix; c++) {
             new_prop[c] *= reciprocalOfNSite;
             if (new_prop[c] > new_prop[maxpropid]) {
                 maxpropid = c;
@@ -604,7 +604,7 @@ double RateFree::optimizeWithEM() {
         
         // now optimize rates one by one
         double sum = 0.0;
-        for (size_t c = 0; c < nmix; c++) {
+        for (int c = 0; c < nmix; c++) {
             tree->copyPhyloTree(phylo_tree, true);
             ModelMarkov *subst_model;
             if (phylo_tree->getModel()->isMixture() && phylo_tree->getModelFactory()->fused_mix_rate)
@@ -624,7 +624,7 @@ double RateFree::optimizeWithEM() {
             // copy posterior probability into ptn_freq
             tree->computePtnFreq();
             double *this_lk_cat = phylo_tree->tree_buffers._pattern_lh_cat+c;
-            for (size_t ptn = 0; ptn < nptn; ptn++) {
+            for (intptr_t ptn = 0; ptn < nptn; ptn++) {
                 tree->ptn_freq[ptn] = this_lk_cat[ptn*nmix];
             }
             double scaling = rates[c];

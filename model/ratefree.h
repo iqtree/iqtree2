@@ -40,7 +40,7 @@ public:
 	/**
 		@return true if this is a Gamma model (default: false)
 	*/	
-    virtual int isGammaRate() { return 0; }
+    virtual int isGammaRate() const { return 0; }
 
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
@@ -110,7 +110,7 @@ public:
 	 * used to normal branch lengths if mean rate is not equal to 1 (e.g. FreeRate model)
 	 * @return mean rate, default = 1
 	 */
-	virtual double meanRates();
+	virtual double meanRates() const;
 
 	/**
 	 * rescale rates s.t. mean rate is equal to 1, useful for FreeRate model

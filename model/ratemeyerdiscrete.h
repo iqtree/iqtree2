@@ -50,7 +50,7 @@ public:
 		get the number of rate categories for site-specific category model
 		@return the number of rate categories
 	*/
-	virtual int getNDiscreteRate();
+	virtual int getNDiscreteRate() const;
 
 	/**
 		@param category category ID from 0 to #category-1

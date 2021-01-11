@@ -57,7 +57,7 @@ public:
 		get the number of rate categories. 
 		@return the number of rate categories
 	*/
-	//virtual int getNRate() { return size(); }
+	//virtual int getNRate() const { return size(); }
 
 
 	/**

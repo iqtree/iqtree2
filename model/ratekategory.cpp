@@ -101,7 +101,7 @@ int RateKategory::computePatternRates(DoubleVector& pattern_rates, IntVector& pa
 
 	phylo_tree->computePatternLhCat(WSL_RATECAT);
 
-	int npattern = phylo_tree->aln->getNPattern();
+	int npattern = static_cast<int>(phylo_tree->aln->getNPattern());
 	pattern_rates.resize(npattern);
 	pattern_cat.resize(npattern);
 

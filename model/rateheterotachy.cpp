@@ -149,7 +149,7 @@ double RateHeterotachy::optimizeWithEM() {
 
     // first compute _pattern_lh_cat
     phylo_tree->computePatternLhCat(WSL_RATECAT);
-    size_t nptn = phylo_tree->aln->getNPattern();
+    intptr_t nptn = phylo_tree->aln->getNPattern();
     size_t nmix = ncategory;
     
     double *new_prop = aligned_alloc<double>(nmix);
@@ -162,7 +162,7 @@ double RateHeterotachy::optimizeWithEM() {
 
         if (step > 0) {
             // convert _pattern_lh_cat taking into account new weights
-            for (size_t ptn = 0; ptn < nptn; ptn++) {
+            for (intptr_t ptn = 0; ptn < nptn; ptn++) {
                 double *this_lk_cat = phylo_tree->tree_buffers._pattern_lh_cat + ptn*nmix;
                 for (size_t c = 0; c < nmix; c++) {
                     this_lk_cat[c] *= ratio_prop[c];
@@ -170,7 +170,7 @@ double RateHeterotachy::optimizeWithEM() {
             } 
         }
         memset(new_prop, 0, nmix*sizeof(double));
-        for (size_t ptn = 0; ptn < nptn; ptn++) {
+        for (intptr_t ptn = 0; ptn < nptn; ptn++) {
             double *this_lk_cat = phylo_tree->tree_buffers._pattern_lh_cat + ptn*nmix;
             double lk_ptn = phylo_tree->ptn_invar[ptn];
             for (size_t c = 0; c < nmix; c++) {
@@ -217,8 +217,8 @@ double RateHeterotachy::optimizeWithEM() {
     return phylo_tree->computeLikelihood();
 
 /*
-    size_t ptn, c;
-    size_t nptn = phylo_tree->aln->getNPattern();
+    intptr_t ptn, c;
+    intptr_t nptn = phylo_tree->aln->getNPattern();
     size_t nmix = ncategory;
     const double MIN_PROP = 1e-4;
     

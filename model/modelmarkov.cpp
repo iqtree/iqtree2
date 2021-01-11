@@ -30,6 +30,11 @@ using namespace Eigen;
 #include <vectorclass/vectormath_exp.h>
 #include <vectorclass/vectorclass.h>
 
+#ifdef _MSC_VER
+#include <boost/scoped_array.hpp>
+#endif
+
+
 /** number of squaring for scaling-squaring technique */
 //const int TimeSquare = 10;
 
@@ -322,11 +327,15 @@ void ModelMarkov::init_state_freq(StateFreqType type) {
             phylo_tree->aln->computeCodonFreq(freq_type, state_freq, ntfreq);
 //                      phylo_tree->aln->computeCodonFreq(state_freq);
         } else if (phylo_tree->aln->seq_type != SEQ_POMO) {
+#ifndef _MSC_VER
             double emp_state_freq[num_states];
+#else
+            boost::scoped_array<double> emp_state_freq ( new double[num_states] );
+#endif
             phylo_tree->hideProgress();
-            phylo_tree->aln->computeStateFreq(emp_state_freq);
+            phylo_tree->aln->computeStateFreq(&emp_state_freq[0]);
             phylo_tree->showProgress();
-            setStateFrequency(emp_state_freq);
+            setStateFrequency(&emp_state_freq[0]);
         } for (i = 0; i < num_states; i++)
             if (state_freq[i] > state_freq[highest_freq_state])
                 highest_freq_state = i;
@@ -484,9 +493,13 @@ void ModelMarkov::computeTransMatrix(double time, double *trans_matrix, int mixt
 	double evol_time = time / total_num_subst;
 
     if (Params::getInstance().use_custom_matrix_diagonal_math) {
+#ifndef _MSC_VER
         double eval_exp[num_states];
-        calculateExponentOfScalarMultiply(eigenvalues, num_states, evol_time, eval_exp);
-        aTimesDiagonalBTimesTransposeOfC( eigenvectors, eval_exp
+#else
+        boost::scoped_array<double> eval_exp(new double[num_states]);
+#endif        
+        calculateExponentOfScalarMultiply(eigenvalues, num_states, evol_time, &eval_exp[0]);
+        aTimesDiagonalBTimesTransposeOfC( eigenvectors, &eval_exp[0]
                               , inv_eigenvectors_transposed, num_states, trans_matrix);
         return;
     } else {
@@ -668,12 +681,16 @@ void ModelMarkov::calculateSquareMatrixTranspose(const double* original, int ran
 
 void ModelMarkov::aTimesDiagonalBTimesTransposeOfC(const double* matrixA, const double* rowB
                                       , const double* matrixCTranspose, int rank,double* dest) {
+#ifndef _MSC_VER
     double scratch[rank];
+#else
+    boost::scoped_array<double> scratch(new double[rank]);
+#endif
     for (int i=0; i<rank; ++i, matrixA+=rank) {
-        calculateHadamardProduct(matrixA, rowB, rank, scratch);
+        calculateHadamardProduct(matrixA, rowB, rank, &scratch[0]);
         auto rowC = matrixCTranspose;
         for (int j=0; j<rank; ++j, rowC+=rank) {
-            *dest = dotProduct(scratch, rowC, rank );
+            *dest = dotProduct(&scratch[0], rowC, rank );
             ++dest;
         }
     }
@@ -721,18 +738,26 @@ void ModelMarkov::computeTransDerv(double time, double *trans_matrix,
     
     if (Params::getInstance().use_custom_matrix_diagonal_math) {
         //James' version
+#ifndef _MSC_VER
         double eval_exp[num_states];
-        calculateExponentOfScalarMultiply(eigenvalues, num_states, evol_time, eval_exp);
-        aTimesDiagonalBTimesTransposeOfC( eigenvectors, eval_exp
+#else
+        boost::scoped_array<double> eval_exp(new double[num_states]);
+#endif
+        calculateExponentOfScalarMultiply(eigenvalues, num_states, evol_time, &eval_exp[0]);
+        aTimesDiagonalBTimesTransposeOfC( eigenvectors, &eval_exp[0]
                               , inv_eigenvectors_transposed, num_states, trans_matrix);
 
+#ifndef _MSC_VER
         double eval_exp_derv1[num_states];
-        calculateHadamardProduct(eigenvalues, eval_exp, num_states, eval_exp_derv1);
-        aTimesDiagonalBTimesTransposeOfC( eigenvectors, eval_exp_derv1
+#else
+        boost::scoped_array<double> eval_exp_derv1(new double[num_states]);
+#endif
+        calculateHadamardProduct(eigenvalues, &eval_exp[0], num_states, &eval_exp_derv1[0]);
+        aTimesDiagonalBTimesTransposeOfC( eigenvectors, &eval_exp_derv1[0]
                               , inv_eigenvectors_transposed, num_states, trans_derv1);
 
         double* eval_exp_derv2 = &eval_exp[0]; //reuse it, why not?
-        calculateHadamardProduct(eigenvalues, eval_exp_derv1, num_states, eval_exp_derv2);
+        calculateHadamardProduct(eigenvalues, &eval_exp_derv1[0], num_states, eval_exp_derv2);
         aTimesDiagonalBTimesTransposeOfC( eigenvectors, eval_exp_derv2
                               , inv_eigenvectors_transposed, num_states, trans_derv2);
     }
@@ -1568,7 +1593,7 @@ void ModelMarkov::decomposeRateMatrixRev() {
     delete [] rate_matrix;
 }
 
-void ModelMarkov::readRates(istream &in) throw(const char*, string) {
+void ModelMarkov::readRates(istream &in) THROW_SPEC_2(const char*, string) {
 	int nrates = getNumRateEntries();
 	string str;
 	in >> str;
@@ -1625,7 +1650,7 @@ void ModelMarkov::readRates(istream &in) throw(const char*, string) {
     }
 }
 
-void ModelMarkov::readRates(string str) throw(const char*) {
+void ModelMarkov::readRates(string str) THROW_SPEC(const char*) {
 	int nrates = getNumRateEntries();
 	int end_pos = 0;
 	cout << __func__ << " " << str << endl;
@@ -1654,7 +1679,7 @@ void ModelMarkov::readRates(string str) throw(const char*) {
 
 }
 
-void ModelMarkov::readStateFreq(istream &in) throw(const char*) {
+void ModelMarkov::readStateFreq(istream &in) THROW_SPEC(const char*) {
 	int i;
 	for (i = 0; i < num_states; i++) {
 		if (!(in >> state_freq[i])) 
@@ -1671,7 +1696,7 @@ void ModelMarkov::readStateFreq(istream &in) throw(const char*) {
         state_freq[i] *= sum;
 }
 
-void ModelMarkov::readStateFreq(string str) throw(const char*) {
+void ModelMarkov::readStateFreq(string str) THROW_SPEC(const char*) {
 	int i;
 	int end_pos = 0;
 	for (i = 0; i < num_states; i++) {
@@ -1733,9 +1758,13 @@ void ModelMarkov::readParameters(const char *file_name, bool adapt_tree) {
 	writeInfo(cout);
 
     if (!is_reversible) {
-        // check consistency of state_freq
+        // check consistency of state_freq        
+#ifndef _MSC_VER
         double saved_state_freq[num_states];
-        memcpy(saved_state_freq, state_freq, sizeof(double)*num_states);
+#else
+        boost::scoped_array<double> saved_state_freq(new double[num_states]);
+#endif
+        memcpy(&saved_state_freq[0], state_freq, sizeof(double)*num_states);
         decomposeRateMatrix();
         for (int i = 0; i < num_states; i++)
             if (fabs(state_freq[i] - saved_state_freq[i]) > 1e-3)
@@ -1769,8 +1798,12 @@ void ModelMarkov::readParametersString(string &model_str, bool adapt_tree) {
 
     if (!is_reversible) {
         // check consistency of state_freq
+#ifndef _MSC_VER
         double saved_state_freq[num_states];
-        memcpy(saved_state_freq, state_freq, sizeof(double)*num_states);
+#else
+        boost::scoped_array<double> saved_state_freq(new double[num_states]);
+#endif
+        memcpy(&saved_state_freq[0], state_freq, sizeof(double)*num_states);
         decomposeRateMatrix();
         for (int i = 0; i < num_states; i++)
             if (fabs(state_freq[i] - saved_state_freq[i]) > 1e-3)

@@ -81,7 +81,7 @@ public:
 		get the proportion of invariable sites
 		@return the proportion of invariable sites
 	*/
-	virtual double getPInvar() { return p_invar; }
+	virtual double getPInvar() const { return p_invar; }
 
 	/**
 	 * setup the bounds for joint optimization with BFGS

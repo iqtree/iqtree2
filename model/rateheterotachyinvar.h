@@ -103,6 +103,24 @@ public:
 
 	virtual void setNCategory(int ncat);
 
+#ifdef _MSC_VER
+	//MSVC generates warning messages about these member functions
+	//being inherited "via dominance". Explictly declaring them
+	//instead shuts those warnings up.
+	virtual bool isHeterotachy()                     { return RateHeterotachy::isHeterotachy(); }
+	virtual int  getNRate()                    const { return RateHeterotachy::getNRate();  }
+	virtual int  getNDiscreteRate()            const { return RateHeterotachy::getNDiscreteRate(); }
+	virtual void setProp(int category, double value) { RateHeterotachy::setProp(category, value); }
+	virtual int  getFixParams()                      { return RateHeterotachy::getFixParams(); 	}
+	virtual void setFixParams(int mode)              { RateHeterotachy::setFixParams(mode); }
+	virtual void setOptimizeSteps(int steps)         { RateHeterotachy::setOptimizeSteps(steps);  }
+
+	virtual double getPInvar()                 const { return RateInvar::getPInvar(); }
+	virtual void   setPInvar(double pInvar)          { RateInvar::setPInvar(pInvar); }
+	virtual bool   isFixPInvar()               const { return RateInvar::isFixPInvar(); }
+	void    setFixPInvar(bool fixPInvar)             { RateInvar::setFixPInvar(fixPInvar); }
+#endif
+
 protected:
 
 	/**

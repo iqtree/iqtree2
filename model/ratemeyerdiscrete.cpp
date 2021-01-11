@@ -215,7 +215,7 @@ bool RateMeyerDiscrete::isSiteSpecificRate() {
 	return !is_categorized; 
 }
 
-int RateMeyerDiscrete::getNDiscreteRate() { 
+int RateMeyerDiscrete::getNDiscreteRate() const { 
 	if (!is_categorized) return RateMeyerHaeseler::getNDiscreteRate();
 	ASSERT(ncategory > 0);
 	return ncategory; 
@@ -279,7 +279,7 @@ double RateMeyerDiscrete::computeFunction(double value) {
 	}
 
 	double lh = 0.0;
-	int nseq = phylo_tree->leafNum;
+	int nseq = static_cast<int>(phylo_tree->leafNum);
 	int nstate = phylo_tree->getModel()->num_states;
 	ModelSubst *model = phylo_tree->getModel();
     int trans_size = nstate * nstate;
@@ -287,9 +287,9 @@ double RateMeyerDiscrete::computeFunction(double value) {
 	int *pair_freq = new int[trans_size];
     
     auto frequencies = phylo_tree->getConvertedSequenceFrequencies();
-    for (size_t i = 0; i < nseq-1; i++) {
+    for (int i = 0; i < nseq-1; i++) {
         auto eyeSequence = phylo_tree->getConvertedSequenceByNumber(i);
-        for (size_t j = i + 1; j < nseq; j++) {
+        for (int j = i + 1; j < nseq; j++) {
             auto jaySequence = phylo_tree->getConvertedSequenceByNumber(j);
             memset(pair_freq, 0, trans_size * sizeof(int));
             if (jaySequence!=nullptr) { 
@@ -350,9 +350,9 @@ void RateMeyerDiscrete::computeFuncDerv(double value, double &df, double &ddf) {
 
     int *pair_freq = new int[trans_size];
     auto frequencies = phylo_tree->getConvertedSequenceFrequencies();
-    for (size_t i = 0; i + 1 < nseq; ++i) {
+    for (int i = 0; i + 1 < nseq; ++i) {
         auto eyeSequence = phylo_tree->getConvertedSequenceByNumber(i);
-        for (size_t j = i+1; j < nseq; ++j) {
+        for (int j = i+1; j < nseq; ++j) {
             auto jaySequence = phylo_tree->getConvertedSequenceByNumber(j);
             memset(pair_freq, 0, trans_size * sizeof(int));
             if (frequencies!=nullptr && eyeSequence!=nullptr && jaySequence!=nullptr) {
@@ -452,24 +452,24 @@ double RateMeyerDiscrete::optimizeCatRate(int cat) {
 void RateMeyerDiscrete::normalizeRates() {
     double sum = 0.0;
     double ok  = 0.0;
-    size_t nptn = size();
+	intptr_t nptn = size();
     
     auto frequencies = phylo_tree->getConvertedSequenceFrequencies();
     if (frequencies!=nullptr) {
-        for (size_t i = 0; i < nptn; i++) {
-            //at(i) = rates[ptn_cat[i]];
-            if (getPtnRate(i) < MAX_SITE_RATE) {
+        for (intptr_t i = 0; i < nptn; i++) {
+			//Note: Won't work for > 2 billion
+            if (getPtnRate(static_cast<int>(i)) < MAX_SITE_RATE) {
                 double freq = frequencies[i];
-                sum += getPtnRate(i) * freq;
+                sum += getPtnRate(static_cast<int>(i)) * freq;
                 ok  += freq;
             }
         }
     } else {
-        for (size_t i = 0; i < nptn; i++) {
-            //at(i) = rates[ptn_cat[i]];
-            if (getPtnRate(i) < MAX_SITE_RATE) {
+        for (intptr_t  i = 0; i < nptn; i++) {
+			//Note: Won't work for > 2 billion
+            if (getPtnRate(static_cast<int>(i)) < MAX_SITE_RATE) {
                 double freq = phylo_tree->aln->at(i).frequency;
-                sum += getPtnRate(i) * freq;
+                sum += getPtnRate(static_cast<int>(i)) * freq;
                 ok  += freq;
             }
         }
@@ -488,7 +488,7 @@ void RateMeyerDiscrete::normalizeRates() {
 double RateMeyerDiscrete::classifyRatesKMeans() {
 
 	ASSERT(ncategory > 0);
-	int nptn = size();
+	int nptn = static_cast<int>(size()); 
 
 	// clustering the rates with k-means
 	//AddKMeansLogging(&cout, false);
@@ -562,7 +562,7 @@ double RateMeyerDiscrete::classifyRates(double tree_lh) {
 	}
 
 	// identifying proper number of categories
-	int nptn = phylo_tree->aln->getNPattern();
+	int nptn = static_cast<int>(phylo_tree->aln->getNPattern());
 	rates = new double[nptn];
 
 	for (ncategory = 2; ; ncategory++) {

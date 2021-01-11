@@ -8,6 +8,10 @@
 #include <Eigen/Dense>
 #include <unsupported/Eigen/MatrixFunctions>
 
+#ifdef _MSC_VER
+#include <boost/scoped_array.hpp>
+#endif
+
 ModelPoMo::ModelPoMo(PhyloTree *tree) : ModelMarkov(tree) {
 }
 
@@ -682,16 +686,24 @@ ModelPoMo::estimateEmpiricalBoundaryStateFreqs(double * freq_boundary_states)
     memset(freq_boundary_states, 0, sizeof(double)*n_alleles);
 
     if (sampling_method == SAMPLING_SAMPLED) {
+#ifndef _MSC_VER
         unsigned int abs_state_freq[num_states];
-        memset(abs_state_freq, 0, sizeof(unsigned int)*num_states);
-        phylo_tree->aln->computeAbsoluteStateFreq(abs_state_freq);
+#else
+        boost::scoped_array<unsigned int> abs_state_freq(new unsigned int[num_states]);
+#endif
+        memset(&abs_state_freq[0], 0, sizeof(unsigned int)*num_states);
+        phylo_tree->aln->computeAbsoluteStateFreq(&abs_state_freq[0]);
         int n;
         int x;
         int y;
 
+#ifndef _MSC_VER
         int sum[n_alleles];
+#else
+        boost::scoped_array<int> sum(new int[n_alleles]);
+#endif
         int tot_sum = 0;
-        memset (sum, 0, n_alleles * sizeof(int));
+        memset (&sum[0], 0, n_alleles * sizeof(int));
 
         for (int i = 0; i < num_states; i++) {
             decomposeState(i, n, x, y);
@@ -758,9 +770,13 @@ ModelPoMo::estimateEmpiricalWattersonTheta()
     double sum_theta_w = 0.0;
 
     if (sampling_method == SAMPLING_SAMPLED) {
+#ifndef _MSC_VER
         unsigned int abs_state_freq[num_states];
-        memset(abs_state_freq, 0, sizeof(unsigned int)*num_states);
-        phylo_tree->aln->computeAbsoluteStateFreq(abs_state_freq);
+#else
+        boost::scoped_array<unsigned int> abs_state_freq(new unsigned int[num_states]);
+#endif
+        memset(&abs_state_freq[0], 0, sizeof(unsigned int)*num_states);
+        phylo_tree->aln->computeAbsoluteStateFreq(&abs_state_freq[0]);
         for (int i = 0; i < n_alleles; i++) sum_fix += abs_state_freq[i];
         for (int i = n_alleles; i < num_states; i++) sum_pol += abs_state_freq[i];
         theta_p = (double) sum_pol / (double) (sum_fix + sum_pol);
@@ -1150,7 +1166,8 @@ void ModelPoMo::computeTransMatrix(double time, double *trans_matrix, int mixtur
 
 void ModelPoMo::computeTipLikelihood(PML::StateType state, double *lh) {
     Alignment *aln = phylo_tree->aln;
-    if (state < num_states || state >= num_states+aln->pomo_sampled_states.size()) {
+    if (static_cast<int>(state) < num_states 
+        || static_cast<int>(state) >= num_states+aln->pomo_sampled_states.size()) {
         ModelSubst::computeTipLikelihood(state, lh);
         return;
     }

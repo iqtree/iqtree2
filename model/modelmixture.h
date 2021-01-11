@@ -13,8 +13,7 @@
 #include "modelmarkov.h"
 #include "nclextra/modelsblock.h"
 
-
-extern const char* builtin_mixmodels_definition;
+extern void loadBuiltInMixInModels(stringstream& here);
 
 /**
  * create a substitution model
@@ -91,7 +90,7 @@ public:
 	/**
 	 * @return the number of mixture model components
 	 */
-	virtual int getNMixtures() {return size(); }
+	virtual int getNMixtures() {return static_cast<int>(size()); }
 
  	/**
 	 * @param cat mixture class

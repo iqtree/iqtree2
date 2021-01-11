@@ -590,7 +590,7 @@ bool ModelLieMarkov::isReversible() {
 
 
 /* static */ void ModelLieMarkov::parseModelName(string model_name, int* model_num, int* symmetry) {
-    int len = model_name.length();
+    auto len = model_name.length();
     string base_name;
     string name_lower = model_name;
     for (string::iterator it = name_lower.begin(); it != name_lower.end(); it++)

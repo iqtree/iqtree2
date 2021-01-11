@@ -12,6 +12,9 @@
 #include "model/modelmarkov.h"
 #include "model/modelmixture.h"
 #include "rateheterotachy.h"
+#ifdef _MSC_VER
+#include <boost/scoped_array.hpp>
+#endif
 
 ModelFactoryMixlen::ModelFactoryMixlen(Params &params, string &model_name, PhyloTree *tree, ModelsBlock *models_block) :
     ModelFactory(params, model_name, tree, models_block) {
@@ -68,19 +71,25 @@ string ModelFactoryMixlen::sortClassesByTreeLength() {
     ASSERT(brlen.size() == tree->branchNum * tree->mixlen);
 
     // compute tree lengths
+#ifndef _MSC_VER
     double treelen[tree->mixlen];
     int index[tree->mixlen];
-    memset(treelen, 0, sizeof(double)*tree->mixlen);
+#else
+    boost::scoped_array<double> treelen(new double[tree->mixlen]);
+    boost::scoped_array<int>    index  (new int[tree->mixlen]);
+#endif
+    memset(&treelen[0], 0, sizeof(double)*tree->mixlen);
     int i, j;
-    for (i = 0; i < tree->mixlen; i++)
+    for (i = 0; i < tree->mixlen; i++) {
         index[i] = i;
+    }
     for (i = 0, j = 0; i < brlen.size(); i++, j++) {
         if (j == tree->mixlen) j = 0;
         treelen[j] += brlen[i];
     }
 
     // sort tree lengths and reorder branch lengths
-    quicksort(treelen, 0, tree->mixlen-1, index);
+    quicksort(&treelen[0], 0, tree->mixlen-1, &index[0]);
     bool sorted = true;
     for (j = 0; j < tree->mixlen; j++)
         if (index[j] != j) { sorted = false; break; };
@@ -96,28 +105,39 @@ string ModelFactoryMixlen::sortClassesByTreeLength() {
 
         ASSERT(tree->mixlen == site_rate->getNRate());
         // reoder class weights
+#ifndef _MSC_VER
         double prop[site_rate->getNRate()];
-        for (j = 0; j < site_rate->getNRate(); j++)
+#else
+        boost::scoped_array<double> prop(new double[site_rate->getNRate()]);
+#endif
+        for (j = 0; j < site_rate->getNRate(); j++) {
             prop[j] = site_rate->getProp(index[j]);
-        for (j = 0; j < site_rate->getNRate(); j++)
+        }
+        for (j = 0; j < site_rate->getNRate(); j++) {
             site_rate->setProp(j, prop[j]);
-
+        }
         // reorder mixture models
         if (fused_mix_rate) {
             ASSERT(model->getNMixtures() == site_rate->getNRate());
 //            ModelMixture *mixmodel = (ModelMixture*)model;
             int nmix = model->getNMixtures();
+#ifndef _MSC_VER
             ModelSubst *models[nmix];
-            for (j = 0; j < nmix; j++)
+#else
+            boost::scoped_array<ModelSubst*> models(new ModelSubst * [nmix]);
+#endif
+            for (j = 0; j < nmix; j++) {
                 models[j] = model->getMixtureClass(index[j]);
-            for (j = 0; j < nmix; j++)
+            }
+            for (j = 0; j < nmix; j++) {
                 model->setMixtureClass(j, models[j]);
-
-            for (j = 0; j < site_rate->getNRate(); j++)
+            }
+            for (j = 0; j < site_rate->getNRate(); j++) {
                 prop[j] = model->getMixtureWeight(index[j]);
-            for (j = 0; j < site_rate->getNRate(); j++)
+            }
+            for (j = 0; j < site_rate->getNRate(); j++) {
                 model->setMixtureWeight(j, prop[j]);
-
+            }
             // assigning memory for individual models
             int m = 0;
             int num_states = model->num_states;

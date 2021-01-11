@@ -85,7 +85,7 @@ public:
 	 * used to normal branch lengths if mean rate is not equal to 1 (e.g. FreeRate model)
 	 * @return mean rate, default = 1
 	 */
-	virtual double meanRates();
+	virtual double meanRates() const;
 
 	/**
 	 * rescale rates s.t. mean rate is equal to 1, useful for FreeRate model
@@ -196,6 +196,24 @@ private:
      *  Start with different initial values of p_inv
      */
     double randomRestartOptimization(double gradient_epsilon);
+
+#ifdef _MSC_VER
+	//Explicitly say, for member functions otherwise inherited via dominance
+	//which superclass they are to be inherited from (to silence... 11 warnings).
+	//The "dominance" warning messages basically result from a MSVC compiler bug.
+	virtual int    getNRate()         const { return RateGamma::getNRate(); }
+	virtual int    getNDiscreteRate() const { return RateGamma::getNDiscreteRate(); }
+	virtual void   setRate(int category, double value) { RateGamma::setRate(category, value); }
+	virtual double getGammaShape()    const { return RateGamma::getGammaShape(); }
+	virtual void   setGammaShape(double gs) { RateGamma::setGammaShape(gs); }
+	virtual bool   isFixGammaShape()  const { return RateGamma::isFixGammaShape(); }
+	virtual void   setFixGammaShape(bool fixGammaShape) { RateGamma::setFixGammaShape(fixGammaShape); }
+	virtual int    isGammaRate()      const { return RateGamma::isGammaRate(); }
+
+	virtual double getPInvar()        const { return RateInvar::getPInvar(); }
+	virtual bool isFixPInvar()        const { return RateInvar::isFixPInvar(); }
+	void    setFixPInvar(bool fixPInvar)    { RateInvar::setFixPInvar(fixPInvar); }
+#endif
 };
 
 #endif

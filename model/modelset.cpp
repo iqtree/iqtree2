@@ -16,8 +16,12 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 #include "modelset.h"
+
+#ifdef _MSC_VER
+#include <boost/scoped_array.hpp>
+#endif
+
 
 ModelSet::ModelSet(const char *model_name, PhyloTree *tree) : ModelMarkov(tree)
 {
@@ -62,7 +66,7 @@ double ModelSet::computeTrans(double time, int model_id, int state1, int state2)
     }
 	// temporary fix problem with vectorized eigenvectors
 	int i;
-    int vsize = phylo_tree->vector_size;
+    int vsize        = static_cast<int>(phylo_tree->vector_size);
     int states_vsize = num_states*vsize;
     int model_vec_id = model_id % vsize;
     int start_ptn = model_id - model_vec_id;
@@ -84,7 +88,7 @@ double ModelSet::computeTrans(double time, int model_id, int state1, int state2,
     }
 	// temporary fix problem with vectorized eigenvectors
 	int i;
-    int vsize = phylo_tree->vector_size;
+    int vsize = static_cast<int>(phylo_tree->vector_size);
     int states_vsize = num_states*vsize;
     int model_vec_id = model_id % vsize;
     int start_ptn = model_id - model_vec_id;
@@ -134,13 +138,13 @@ void ModelSet::decomposeRateMatrix()
     for (iterator it = begin(); it != end(); it++) {
         (*it)->decomposeRateMatrix();
     }
-	if (phylo_tree->vector_size == 1)
-		return;
+    if (phylo_tree->vector_size == 1) {
+        return;
+    }
 	// rearrange eigen to obey vector_size
-	size_t vsize = phylo_tree->vector_size;
-	size_t states2 = num_states*num_states;
-
-    size_t max_size = get_safe_upper_limit(size());
+	int  vsize    = static_cast<int>(phylo_tree->vector_size);
+	int  states2  = num_states*num_states;
+    int  max_size = static_cast<int>(get_safe_upper_limit(size()));
 
     // copy dummy values
     for (size_t m = size(); m < max_size; m++) {
@@ -150,18 +154,25 @@ void ModelSet::decomposeRateMatrix()
         memcpy(&inv_eigenvectors_transposed[m*states2], &inv_eigenvectors_transposed[(m-1)*states2], sizeof(double)*states2);
     }
 
+#ifndef _MSC_VER
     double new_eval[num_states*vsize];
     double new_evec[states2*vsize];
     double new_inv_evec[states2*vsize];
+#else
+    boost::scoped_array<double> new_eval(new double[num_states * vsize]);
+    boost::scoped_array<double> new_evec(new double[states2 * vsize]);
+    boost::scoped_array<double> new_inv_evec(new double[states2 * vsize]);
+#endif
 
-    for (size_t ptn = 0; ptn < size(); ptn += vsize) {
+    for (intptr_t ptn = 0; ptn < static_cast<intptr_t>(size()); ptn += vsize) {
         double *eval_ptr = &eigenvalues[ptn*num_states];
         double *evec_ptr = &eigenvectors[ptn*states2];
         double *inv_evec_ptr = &inv_eigenvectors[ptn*states2];
-        for (size_t i = 0; i < vsize; i++) {
-            for (size_t x = 0; x < num_states; x++)
-                new_eval[x*vsize+i] = eval_ptr[x];
-            for (size_t x = 0; x < states2; x++) {
+        for (int i = 0; i < vsize; i++) {
+            for (int x = 0; x < num_states; x++) {
+                new_eval[x * vsize + i] = eval_ptr[x];
+            }
+            for (int x = 0; x < states2; x++) {
                 new_evec[x*vsize+i] = evec_ptr[x];
                 new_inv_evec[x*vsize+i] = inv_evec_ptr[x];
             }
@@ -170,10 +181,10 @@ void ModelSet::decomposeRateMatrix()
             inv_evec_ptr += states2;
         }
         // copy new values
-        memcpy(&eigenvalues[ptn*num_states], new_eval, sizeof(double)*num_states*vsize);
-        memcpy(&eigenvectors[ptn*states2], new_evec, sizeof(double)*states2*vsize);
-        memcpy(&inv_eigenvectors[ptn*states2], new_inv_evec, sizeof(double)*states2*vsize);
-        calculateSquareMatrixTranspose(new_inv_evec, num_states
+        memcpy(&eigenvalues[ptn*num_states],   &new_eval[0], sizeof(double)*num_states*vsize);
+        memcpy(&eigenvectors[ptn*states2],     &new_evec[0], sizeof(double)*states2*vsize);
+        memcpy(&inv_eigenvectors[ptn*states2], &new_inv_evec[0], sizeof(double)*states2*vsize);
+        calculateSquareMatrixTranspose(&new_inv_evec[0], num_states
                                        , &inv_eigenvectors_transposed[ptn*states2]);
     }
 }

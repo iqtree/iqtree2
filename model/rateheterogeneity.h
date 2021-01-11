@@ -103,7 +103,7 @@ public:
 		get the number of rate categories. The default returns 1 category since it is homogeneous model
 		@return the number of rate categories
 	*/
-	virtual int getNRate() { return 1; }
+	virtual int getNRate() const { return 1; }
 
 	/**
 		set the number of rate categories. The default raises assertion since it is homogeneous model
@@ -120,7 +120,7 @@ public:
 		The default returns 1 category since it is homogeneous model
 		@return the number of rate categories
 	*/
-	virtual int getNDiscreteRate() { return 1; }
+	virtual int getNDiscreteRate() const { return 1; }
 
 	/**
 		get the rate of a specified category. Default returns 1.0 since it is homogeneous model
@@ -168,7 +168,7 @@ public:
 		get the proportion of invariable sites. Default returns 0.0 since it is homogeneous model
 		@return the proportion of invariable sites
 	*/
-	virtual double getPInvar() { return 0.0; }
+	virtual double getPInvar() const { return 0.0; }
 
 	/**
 		set the proportion of invariable sites. Default: do nothing
@@ -195,7 +195,7 @@ public:
 		get the Gamma shape. Default returns 0.0 since it is homogeneous model
 		@return Gamma shape
 	*/	
-	virtual double getGammaShape() { return 0.0; }
+	virtual double getGammaShape() const { return 0.0; }
 
 	/**
 		set the Gamma shape. Default: nothing
@@ -215,7 +215,7 @@ public:
 	/**
 		@return >0 if this is a Gamma model (default: 0)
 	*/	
-    virtual int isGammaRate() { return 0; }
+    virtual int isGammaRate() const { return 0; }
 
     /**
         fix parameters, so that no optimization done
@@ -271,7 +271,7 @@ public:
 	 * used to normal branch lengths if mean rate is not equal to 1 (e.g. FreeRate model)
 	 * @return mean rate, default = 1
 	 */
-	virtual double meanRates() { return 1.0; }
+	virtual double meanRates() const { return 1.0; }
 
 	/**
 	 * rescale rates s.t. mean rate is equal to 1, useful for FreeRate model

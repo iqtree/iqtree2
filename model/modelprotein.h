@@ -22,7 +22,7 @@
 
 #include "modelmarkov.h"
 
-extern const char* builtin_prot_models;
+extern void loadBuiltInProteinModels(stringstream& here);
 
 /**
 Substitution models for protein sequences
@@ -66,7 +66,7 @@ public:
 		read the rates from an input stream. it will throw error messages if failed
 		@param in input stream
 	*/
-	virtual void readRates(istream &in) throw(const char*, string);
+	virtual void readRates(istream &in) THROW_SPEC_2(const char*, string);
 
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}

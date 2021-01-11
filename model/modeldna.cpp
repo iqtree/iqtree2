@@ -239,7 +239,7 @@ void ModelDNA::restoreCheckpoint() {
         phylo_tree->clearAllPartialLH();
 }
 
-void ModelDNA::readRates(string str) throw(const char*) {
+void ModelDNA::readRates(string str) THROW_SPEC(const char*) {
 	int nrates = *max_element(param_spec.begin(), param_spec.end());
 	int end_pos = 0;
 	int i, j;
@@ -314,7 +314,7 @@ bool ModelDNA::setRateType(string rate_str) {
 	//char first_type = 127;
 	//char last_type = 0;
 	//char t = first_type;
-	int num_ch = rate_str.length();
+	int num_ch = static_cast<int>(rate_str.length());
 	int i;
 
 	if (num_ch != getNumRateEntries()) {
@@ -437,7 +437,7 @@ void ModelDNA::writeParameters(ostream& out) {
 }
 
 void ModelDNA::computeTipLikelihood(PML::StateType state, double *state_lk) {
-    if (state < num_states || state >= 18) {
+    if (static_cast<int>(state) < num_states || state >= 18) {
         ModelSubst::computeTipLikelihood(state, state_lk);
         return;
     }
@@ -459,7 +459,7 @@ bool ModelDNA::getVariables(double *variables) {
     int i;
     bool changed = false;
     if (num_params > 0) {
-        int num_all = param_spec.length();
+        int num_all = static_cast<int>(param_spec.length());
         if (verbose_mode >= VB_MAX) {
             for (i = 1; i <= num_params; i++)
                 cout << "  estimated variables[" << i << "] = " << variables[i] << endl;
@@ -516,7 +516,7 @@ bool ModelDNA::getVariables(double *variables) {
  */
 void ModelDNA::setVariables(double *variables) {
     if (num_params > 0) {
-        int num_all = param_spec.length();
+        int num_all = static_cast<int>(param_spec.length());
         for (int i = 0; i < num_all; i++)
             if (!param_fixed[param_spec[i]])
                 variables[(int)param_spec[i]] = rates[i];

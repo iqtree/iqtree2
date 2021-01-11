@@ -103,6 +103,33 @@ public:
 
 	virtual void setNCategory(int ncat);
 
+#ifdef _MSC_VER
+	//MSVC generates warning messages about these member functions
+	//being inherited "via dominance". Explictly declaring them
+	//instead shuts those warnings up.
+	virtual int    getNRate()         const { return RateGamma::getNRate(); }
+	virtual void   setRate(int category, double value) { RateGamma::setRate(category, value); }
+	virtual int    getNDiscreteRate() const { return RateGamma::getNDiscreteRate(); }
+	virtual double getGammaShape()    const { return RateGamma::getGammaShape(); }
+	virtual void   setGammaShape(double gs) { RateGamma::setGammaShape(gs); }
+	virtual bool   isFixGammaShape()  const { return RateGamma::isFixGammaShape(); }
+	virtual void   setFixGammaShape(bool fixGammaShape) { RateGamma::setFixGammaShape(fixGammaShape); }
+	virtual int    isGammaRate()      const { return RateGamma::isGammaRate(); }
+	virtual int    computePatternRates(DoubleVector& pattern_rates, IntVector& pattern_cat) {
+		return RateGamma::computePatternRates(pattern_rates, pattern_cat);
+	}
+
+	virtual double getPInvar()        const { return RateInvar::getPInvar(); }
+	virtual void   setPInvar(double pInvar) { RateInvar::setPInvar(pInvar); }
+	virtual bool   isFixPInvar()      const { return RateInvar::isFixPInvar(); }
+	void    setFixPInvar(bool fixPInvar)    { RateInvar::setFixPInvar(fixPInvar); }
+
+
+	virtual double meanRates()        const { return RateFree::meanRates(); }
+	virtual double rescaleRates()           { return RateFree::rescaleRates(); }
+	virtual void initFromCatMinusOne()      { RateFree::initFromCatMinusOne(); }
+#endif
+
 protected:
 
 	/**

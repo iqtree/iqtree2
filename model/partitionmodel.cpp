@@ -22,6 +22,10 @@
 #include "model/rategamma.h"
 #include "model/modelmarkov.h"
 
+#ifdef _MSC_VER
+#include <boost/scoped_array.hpp>
+#endif
+
 PartitionModel::PartitionModel()
         : ModelFactory()
 {
@@ -117,41 +121,50 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
                     outError("Linking codon models not supported");
                 if ((*it)->aln->seq_type == SEQ_POMO)
                     outError("Linking POMO models not supported");
+#ifndef _MSC_VER
                 size_t state_counts[(*it)->aln->STATE_UNKNOWN+1];
+#else
+                boost::scoped_array<size_t> state_counts(new size_t[(*it)->aln->STATE_UNKNOWN + 1]);
+#endif
                 size_t unknown_states = 0;
                 if( params.partition_type != TOPO_UNLINKED)
                     unknown_states = (*it)->aln->getNSite() * (tree->aln->getNSeq() - (*it)->aln->getNSeq());
-                (*it)->aln->countStates(state_counts, unknown_states);
+                (*it)->aln->countStates(&state_counts[0], unknown_states);
                 if (!sum_state_counts) {
                     sum_state_counts = new size_t[(*it)->aln->STATE_UNKNOWN+1];
                     memset(sum_state_counts, 0, sizeof(size_t)*((*it)->aln->STATE_UNKNOWN+1));
                 }
-                for (int state = 0; state <= (*it)->aln->STATE_UNKNOWN; ++state) {
+                for (int state = 0; state <= static_cast<int>((*it)->aln->STATE_UNKNOWN); ++state) {
                     sum_state_counts[state] += state_counts[state];
                 }
             }
         }
         cout << "Linking " << mit->first << " model across " << num_parts << " partitions" << endl;
         int nstates = mit->second->num_states;
+#ifndef _MSC_VER
         double sum_state_freq[nstates];
+#else
+        boost::scoped_array<double> sum_state_freq(new double[nstates]);
+#endif
         // convert counts to frequencies
         for (it = stree->begin(); it != stree->end(); it++) {
             if ((*it)->getModel()->getName() == mit->second->getName()) {
-                (*it)->aln->convertCountToFreq(sum_state_counts, sum_state_freq);
+                (*it)->aln->convertCountToFreq(sum_state_counts, &sum_state_freq[0]);
                 break;
             }
         }
 
         cout << "Mean state frequencies:";
-        int prec = cout.precision(8);
-        for (int state = 0; state < mit->second->num_states; state++)
+        auto prec = cout.precision(8);
+        for (int state = 0; state < mit->second->num_states; state++) {
             cout << " " << sum_state_freq[state];
+        }
         cout << endl;
         cout.precision(prec);
 
         for (it = stree->begin(); it != stree->end(); it++)
             if ((*it)->getModel()->getName() == mit->second->getName()) {
-                ((ModelMarkov*)(*it)->getModel())->adaptStateFrequency(sum_state_freq);
+                ((ModelMarkov*)(*it)->getModel())->adaptStateFrequency(&sum_state_freq[0]);
                 (*it)->getModel()->decomposeRateMatrix();
             }
         delete [] sum_state_counts;
@@ -238,7 +251,7 @@ int PartitionModel::getNParameters(int brlen_type) {
 double PartitionModel::computeFunction(double shape) {
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
     double res = 0.0;
-    int ntrees = tree->size();
+    int ntrees = static_cast<int>(tree->size());
     linked_alpha = shape;
     if (tree->part_order.empty()) tree->computePartitionOrder();
 #ifdef _OPENMP
@@ -280,7 +293,7 @@ double PartitionModel::targetFunk(double x[]) {
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
     
     double res = 0;
-    int ntrees = tree->size();
+    int ntrees = static_cast<int>(tree->size());
     if (tree->part_order.empty()) tree->computePartitionOrder();
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+: res) schedule(dynamic) if(tree->num_threads > 1)
@@ -450,7 +463,7 @@ bool PartitionModel::isLinkedModel() {
 double PartitionModel::optimizeParameters(int fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
     double prev_tree_lh = -DBL_MAX, tree_lh = 0.0;
-    int ntrees = tree->size();
+    int ntrees = static_cast<int>(tree->size());
 
     for (int step = 0; step < Params::getInstance().model_opt_steps; step++) {
         tree_lh = 0.0;

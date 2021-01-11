@@ -113,12 +113,12 @@ RateMeyerHaeseler::~RateMeyerHaeseler()
 
 int RateMeyerHaeseler::getNDim() {
     if (phylo_tree) {
-        return phylo_tree->aln->getNPattern()-1;
+        return static_cast<int>(phylo_tree->aln->getNPattern())-1;
     }
     if (empty()) {
         return 0;
     }
-    return size()-1;
+    return static_cast<int>(size())-1;
 }
 
 /*
@@ -138,7 +138,7 @@ double RateMeyerHaeseler::getPtnRate(int ptn) {
 
 int RateMeyerHaeseler::computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat) {
 	pattern_rates.insert(pattern_rates.begin(), begin(), end());
-    return size();
+    return static_cast<int>(size());
 }
 
 void RateMeyerHaeseler::getRates(DoubleVector &rates) {
@@ -416,17 +416,17 @@ double RateMeyerHaeseler::computeFunction(double value) {
         }
         return -ptn_tree->computeLikelihood();
     }
-    int nseq = phylo_tree->leafNum;
+    int nseq = static_cast<int>(phylo_tree->leafNum);
     int nstate = phylo_tree->getModel()->num_states;
     double lh = 0.0;
     ModelSubst *model = phylo_tree->getModel();
     Pattern *pat = & phylo_tree->aln->at(optimizing_pattern);
-    auto nseqLess1 = nseq - 1;
+    int nseqLess1 = nseq - 1;
 
     #ifdef _OPENMP
     #pragma omp parallel for reduction(-:lh)
     #endif
-    for (size_t i = 0; i < nseqLess1; ++i) {
+    for (int i = 0; i < nseqLess1; ++i) {
         int state1 = pat->at(i);
         const double* distRow = dist_mat + i * nseq;
         if (nstate <= state1 ) {
@@ -450,12 +450,15 @@ void RateMeyerHaeseler::computeFuncDerv(double value, double &df, double &ddf) {
     double trans, derv1, derv2;
     ModelSubst *model = phylo_tree->getModel();
     Pattern *pat = & phylo_tree->aln->at(optimizing_pattern);
-    df = ddf = 0.0;
     auto nseqLess1 = nseq - 1;
+
+	double dfLocal  = 0.0; //MSVC's OMP insists that variables in reduction
+	double ddfLocal = 0.0; //clauses cannot have reference type.
+
     #ifdef _OPENMP
-    #pragma omp parallel for reduction(-:df,ddf)
+    #pragma omp parallel for reduction(-:dfLocal,ddfLocal)
     #endif
-    for (size_t i = 0; i < nseqLess1; ++i) {
+    for (int i = 0; i < nseqLess1; ++i) {
         int state1 = pat->at(i);
         if (nstate<=state1) {
             continue;
@@ -471,10 +474,12 @@ void RateMeyerHaeseler::computeFuncDerv(double value, double &df, double &ddf) {
             //			lh -= log(trans);
             double t1 = derv1 / trans;
             double t2 = derv2 / trans;
-            df -= t1 * dist;
-            ddf -= dist * dist * (t2 - t1*t1);
+            dfLocal  -= t1 * dist;
+            ddfLocal -= dist * dist * (t2 - t1*t1);
         }
     }
+	df  = dfLocal;
+	ddf = ddfLocal;
 }
 
 void RateMeyerHaeseler::runIterativeProc(Params &params, IQTree &tree) {
@@ -487,18 +492,18 @@ void RateMeyerHaeseler::runIterativeProc(Params &params, IQTree &tree) {
 	if (backup_rate->getGammaShape() > 0 ) {
 		IntVector pattern_cat;
 		backup_rate->computePatternRates(*this, pattern_cat);
-		double sum    = 0.0;
-        size_t seqLen = size();
-        auto   freq   = phylo_tree->getConvertedSequenceFrequencies();
+		double   sum    = 0.0;
+        intptr_t seqLen = static_cast<intptr_t>(size());
+        auto     freq   = phylo_tree->getConvertedSequenceFrequencies();
         if (freq!=nullptr && seqLen == phylo_tree->getConvertedSequenceLength()) {
             #ifdef _OPENMP
             #pragma omp parallel for reduction(+:sum)
             #endif
-            for (size_t i = 0; i < seqLen ; ++i) {
+            for (intptr_t i = 0; i < seqLen ; ++i) {
                 sum += at(i) * freq[i];
             }
         } else {
-            for (size_t i = 0; i < seqLen; ++i) {
+            for (intptr_t i = 0; i < seqLen; ++i) {
                 sum += at(i) * phylo_tree->aln->at(i).frequency;
             }
         }

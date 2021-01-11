@@ -12,6 +12,10 @@
 #include "modelsubst.h"
 #include "utils/tools.h"
 
+#ifdef _MSC_VER
+#include <boost/scoped_array.hpp>
+#endif
+
 ModelSubst::ModelSubst(int nstates) : Optimization(), CheckpointFactory()
 {
 	num_states = nstates;
@@ -182,8 +186,12 @@ void ModelSubst::computeTransDerv(double time, double *trans_matrix,
 void ModelSubst::multiplyWithInvEigenvector(double *state_lk) {
     int nmixtures = getNMixtures();
     double *inv_eigenvectors = getInverseEigenvectors();
+#ifndef _MSC_VER
     double saved_state_lk[num_states];
-    memcpy(saved_state_lk, state_lk, sizeof(double)*num_states);
+#else
+	boost::scoped_array<double> saved_state_lk( new double [num_states]);
+#endif
+    memcpy(&saved_state_lk[0], state_lk, sizeof(double)*num_states);
     memset(state_lk, 0, sizeof(double)*num_states*nmixtures);
     for (int m = 0; m < nmixtures; m++) {
         double *inv_evec = &inv_eigenvectors[m*num_states*num_states];
@@ -195,7 +203,7 @@ void ModelSubst::multiplyWithInvEigenvector(double *state_lk) {
 }
 
 void ModelSubst::computeTipLikelihood(PML::StateType state, double *state_lk) {
-    if (state < num_states) {
+    if (static_cast<int>(state) < num_states) {
         // single state
         memset(state_lk, 0, num_states*sizeof(double));
         state_lk[state] = 1.0;

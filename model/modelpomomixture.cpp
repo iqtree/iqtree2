@@ -10,6 +10,10 @@
 #include "rategamma.h"
 #include "utils/tools.h"
 
+#ifdef _MSC_VER
+#include <boost/scoped_array.hpp>
+#endif
+
 ModelPoMoMixture::ModelPoMoMixture(const char *model_name,
                      string model_params,
                      StateFreqType freq_type,
@@ -141,8 +145,12 @@ void ModelPoMoMixture::writeInfo(ostream &out) {
 void ModelPoMoMixture::decomposeRateMatrix() {
     // propagate eigenvalues and eigenvectors
     int m, nmix = getNMixtures(), num_states_2 = num_states*num_states;
+#ifndef _MSC_VER
     double saved_mutation_rate_matrix[n_alleles*n_alleles];
-    memcpy(saved_mutation_rate_matrix, mutation_rate_matrix, sizeof(double)*n_alleles*n_alleles);
+#else
+    boost::scoped_array<double> saved_mutation_rate_matrix(new double[n_alleles * n_alleles]);
+#endif
+    memcpy(&saved_mutation_rate_matrix[0], mutation_rate_matrix, sizeof(double)*n_alleles*n_alleles);
 
     // trick: reverse loop to retain eigenvalues and eigenvectors of the 0th mixture class
     for (m = nmix-1; m >= 0; m--) {
@@ -160,7 +168,7 @@ void ModelPoMoMixture::decomposeRateMatrix() {
                    , inv_eigenvectors_transposed, sizeof(double)*num_states_2);
         }
         // restore mutation_rate matrix
-        memcpy(mutation_rate_matrix, saved_mutation_rate_matrix, sizeof(double)*n_alleles*n_alleles);
+        memcpy(mutation_rate_matrix, &saved_mutation_rate_matrix[0], sizeof(double)*n_alleles*n_alleles);
     }
     // // Reset scale.
     setScale(1.0);
