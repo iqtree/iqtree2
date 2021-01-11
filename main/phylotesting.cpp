@@ -440,7 +440,7 @@ string detectSeqTypeName(string model_name) {
 
 void computeInformationScores(double tree_lh, int df, size_t sample_size, double &AIC, double &AICc, double &BIC) {
 	AIC = -2 * tree_lh + 2 * df;
-	AICc = AIC + 2.0 * df * (df + 1) / max(sample_size - df - 1, 1);
+	AICc = AIC + 2.0 * df * (df + 1) / max(static_cast<int>(sample_size - df - 1), 1);
 	BIC = -2 * tree_lh + df * log(sample_size);
 }
 

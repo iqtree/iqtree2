@@ -649,7 +649,7 @@ void PhyloTree::computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloN
     intptr_t orig_nptn = aln->size();
     intptr_t nptn = aln->size()+model_factory->unobserved_ptns.size();
     intptr_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
-    maxptn = max(maxptn, aln->size()+((model_factory->unobserved_ptns.size()+VCSIZE-1)/VCSIZE)*VCSIZE);
+    maxptn = max(maxptn, static_cast<intptr_t>(aln->size()+((model_factory->unobserved_ptns.size()+VCSIZE-1)/VCSIZE)*VCSIZE));
 
     size_t mix_addr_nstates[ncat_mix];
     size_t denom = (model_factory->fused_mix_rate) ? 1 : ncat;
@@ -912,7 +912,7 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
     intptr_t orig_nptn = aln->size();
     intptr_t nptn = aln->size()+model_factory->unobserved_ptns.size();
     intptr_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
-    maxptn           = max(maxptn, aln->size()+((model_factory->unobserved_ptns.size()+VCSIZE-1)/VCSIZE)*VCSIZE);
+    maxptn           = max(maxptn, static_cast<intptr_t>(aln->size()+((model_factory->unobserved_ptns.size()+VCSIZE-1)/VCSIZE)*VCSIZE));
     double* eval     = model->getEigenvalues();
     assert(eval);
 
@@ -2139,7 +2139,9 @@ void PhyloTree::computePartialParsimonySankoffSIMD(PhyloNeighbor *dad_branch,
                 here = min(partial_pars_ptr[i],here);
             }
             score += horizontal_add(here);
+#ifdef _MSC_VER
             aligned_free(tip_buffer);
+#endif
         }
         partial_pars[total_offset] = score;
         return;
