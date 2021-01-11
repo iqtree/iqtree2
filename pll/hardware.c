@@ -1,3 +1,7 @@
+#if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
+#define _CRT_SECURE_NO_WARNINGS (1)
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
@@ -9,7 +13,7 @@
 #define PLL_FEAT_AVAIL(x,y) (((x) & (y)) == (y))
 #define PLL_SYS_CPU_DIR_PATH "/sys/devices/system/cpu/"
 
-#ifdef CLANG_UNDER_VS
+#if defined(CLANG_UNDER_VS) || defined(_MSC_VER)
     //James B. Workaround for Windows builds where these macros might not be defined
     #ifndef S_ISDIR
     #define S_ISDIR(mode) (((mode) & S_IFMT) == S_IFDIR)
@@ -17,6 +21,7 @@
     #ifndef S_ISREG
     #define S_ISREG(m) (((m) & S_IFMT) == S_IFREG)
     #endif
+    #include <intrin.h> //for prototype of __cpuid
 #endif
 
 static __inline void cpuid(unsigned int op, int count,

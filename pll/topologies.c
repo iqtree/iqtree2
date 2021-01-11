@@ -321,7 +321,7 @@ static int saveSubtree (nodeptr p, topol *tpl, int numsp, int numBranches)
       r->valptr = r0[r->descend].valptr;   /* Inherit first child's value */
       }                                 /* End of internal node processing */
 
-  return  (r - r0);
+    return  (int)(r - r0);
 }
 
 /** @brief Get the node with the smallest tip value

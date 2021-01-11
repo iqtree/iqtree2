@@ -29,6 +29,12 @@
  * @brief Miscellaneous general utility and helper functions
  */
 
+#if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
+ //Turn off warnings about the use of strcpy, strncpy, localtime and fopen
+ //(until all those calls are replaced with calls to the _s versions).
+#define _CRT_SECURE_NO_WARNINGS (1)
+#endif 
+
 #include "systypes.h"
 #include <math.h>
 #include <time.h>

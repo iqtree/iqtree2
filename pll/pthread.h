@@ -317,10 +317,12 @@ enum {
 #define HAVE_STRUCT_TIMESPEC
 #if !defined(_TIMESPEC_DEFINED)
 #define _TIMESPEC_DEFINED
+#if !defined(_MSC_VER)
 struct timespec {
         time_t tv_sec;
         long tv_nsec;
 };
+#endif /* _MSC_VER*/
 #endif /* _TIMESPEC_DEFINED */
 #endif /* HAVE_STRUCT_TIMESPEC */
 

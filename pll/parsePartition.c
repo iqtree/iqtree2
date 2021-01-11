@@ -347,7 +347,7 @@ pllQueue * pllPartitionParse (const char * filename)
      return (0);
    }
 
-  n = strlen (rawdata);
+  n = (long)strlen (rawdata);
 
   init_lexan (rawdata, n);
   input = get_next_symbol();
@@ -375,7 +375,7 @@ pllQueue * pllPartitionParseString (const char * p)
   int input;
   pllQueue * partitions;
 
-  n = strlen(p);
+  n = (long)strlen(p);
   init_lexan (p, n);
   input = get_next_symbol();
 

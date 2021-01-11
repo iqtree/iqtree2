@@ -239,8 +239,17 @@ pllAlignmentDataDumpFile (pllAlignmentData * alignmentData, int fileFormat, cons
 
   outfun = (fileFormat == PLL_FORMAT_PHYLIP) ? dump_phylip_content : dump_fasta_content;
 
-  fp = fopen (filename,"wb");
-  if (!fp) return (PLL_FALSE);
+#ifdef _MSC_VER
+  if (fopen_s(&fp, filename, "wb") != 0) {
+      return PLL_FALSE;
+  }
+#else
+  fp = fopen(filename, "wb");
+#endif
+
+  if (!fp) {
+      return (PLL_FALSE);
+  }
   
   /* if PHYLIP print the silly header at the beginning */
   if (fileFormat == PLL_FORMAT_PHYLIP)

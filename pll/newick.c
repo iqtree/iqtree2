@@ -26,6 +26,11 @@
  * 
  * @file newick.c
  */
+
+#if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
+#define _CRT_SECURE_NO_WARNINGS (1)
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -498,7 +503,7 @@ pllNewickParseString (const char * newick)
   
   t = (pllNewickTree *) rax_calloc (1, sizeof (pllNewickTree));
 
-  n = strlen (newick);
+  n = (int)(strlen(newick));
 
   init_lexan (newick, n);
   input = get_next_symbol();

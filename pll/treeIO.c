@@ -26,6 +26,13 @@
  * 
  * @file treeIO.c
  */
+
+#if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
+//Turn off warnings about the use of sprintf 
+//(until all those calls are replaced with calls to sprintf_s).
+#define _CRT_SECURE_NO_WARNINGS (1)
+#endif 
+
 #include "mem_alloc.h"
 #include "systypes.h"
 

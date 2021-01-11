@@ -1898,7 +1898,7 @@ int pllNniSearch(pllInstance * tr, partitionList *pr, int estimateModel) {
 	}
     if (cnt_nni == 0) {
         free(nniList); //James B. 23-Jul-2020 (memory leak)
-        return 0.0;
+        return 0;
     }
 
 	nniMove* impNNIList = (nniMove*) malloc(cnt_nni * sizeof(nniMove));
@@ -1945,7 +1945,7 @@ int pllNniSearch(pllInstance * tr, partitionList *pr, int estimateModel) {
 	int notImproved;
 	do {
 		notImproved = PLL_FALSE;
-		int numNNI2Apply = ceil(numNonConflictNNI * delta);
+		int numNNI2Apply = (int) ceil(numNonConflictNNI * delta);
 		for (i = 0; i < numNNI2Apply; i++) {
 			// Just do the topological change
 			pllTopologyPerformNNI(tr, nonConfNNIList[i].p, nonConfNNIList[i].nniType);

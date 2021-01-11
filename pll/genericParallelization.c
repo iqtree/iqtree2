@@ -446,14 +446,13 @@ void pllStopPthreads (pllInstance * tr)
  */ 
 void perSiteLogLikelihoodsPthreads(pllInstance *tr, partitionList *pr, double *lhs, int n, int tid)
 {
-  size_t 
+  int
     model, 
     i;
 
   for(model = 0; model < (size_t)pr->numberOfPartitions; model++)
     {      
-      size_t 
-	localIndex = 0;
+      int localIndex = 0;
 
       /* decide if this partition is handled by the thread when -Q is ativated 
 	 or when -Q is not activated figure out which sites have been assigned to the 
@@ -837,7 +836,7 @@ static int doublesToBuffer(double *buf, double *srcTar, pllInstance *tr, partiti
 	}
     }
   
-  return buf - initPtr; 
+  return (int)(buf - initPtr); 
 }
 
 
@@ -852,57 +851,70 @@ static int doublesToBuffer(double *buf, double *srcTar, pllInstance *tr, partiti
     
     @todo mpi_alltoallv/w may be more efficient, but it is a hell to set up
  */ 
-void broadcastAfterRateOpt(pllInstance *tr, pllInstance *localTree, partitionList *pr, int n, int tid)
-{				  
-  int
-    num1 = 0,
-    num2 = 0,
-    num3 = 0, 
-    i ; 
-    
-  for(i = 0; i < n; ++i)
+void broadcastAfterRateOpt(pllInstance* tr, pllInstance* localTree, partitionList* pr, int n, int tid)
+{
+    int
+        num1 = 0,
+        num2 = 0,
+        num3 = 0,
+        i;
+
+
+    for (i = 0; i < n; ++i)
     {
-      double
-	allBuf[tr->originalCrunchedLength * 3],
-	buf1[tr->originalCrunchedLength],
-	buf2[tr->originalCrunchedLength], 
-	buf3[tr->originalCrunchedLength]; 
 
 #ifdef _USE_PTHREADS
-      if(i != tid)
-	continue; 
+        if (i != tid)
+            continue;
 #endif
-      int numDouble = 0; 
-      
-      /* extract doubles  */
+#ifndef _MSC_VER
+        double
+            allBuf[tr->originalCrunchedLength * 3],
+            buf1[tr->originalCrunchedLength],
+            buf2[tr->originalCrunchedLength],
+            buf3[tr->originalCrunchedLength];
+#else
+        int     crunch = tr->originalCrunchedLength;
+        double* fatBuff = (double*)malloc(crunch * 6 * sizeof(double));
+        double* allBuf = fatBuff;
+        double* buf1 = fatBuff + 3 * crunch;
+        double* buf2 = buf1 + crunch;
+        double* buf3 = buf2 + crunch;
+#endif
+        int numDouble = 0;
 
-      num1 = doublesToBuffer(buf1, localTree->patrat, tr, pr, n,i, PLL_TRUE, i!= tid);
-      num2 = doublesToBuffer(buf2, localTree->patratStored, tr, pr, n,i, PLL_TRUE, i!= tid);
-      num3 = doublesToBuffer(buf3, localTree->lhs, tr, pr, n,i, PLL_TRUE, i!= tid);
+        /* extract doubles  */
 
-      /* printf("%d + %d + %d\n", num1, num2, num3);  */
+        num1 = doublesToBuffer(buf1, localTree->patrat, tr, pr, n, i, PLL_TRUE, i != tid);
+        num2 = doublesToBuffer(buf2, localTree->patratStored, tr, pr, n, i, PLL_TRUE, i != tid);
+        num3 = doublesToBuffer(buf3, localTree->lhs, tr, pr, n, i, PLL_TRUE, i != tid);
 
-      numDouble += num1 + num2 + num3; 
+        /* printf("%d + %d + %d\n", num1, num2, num3);  */
 
-      /* copy doubles  */
-      
-      memcpy(allBuf, buf1, num1 * sizeof(double)); 
-      memcpy(allBuf + num1, buf2, num2 * sizeof(double)); 
-      memcpy(allBuf + (num1 + num2) , buf3, num3 * sizeof(double)); 
+        numDouble += num1 + num2 + num3;
 
-      BCAST_BUF(allBuf, numDouble, MPI_DOUBLE, i); 
+        /* copy doubles  */
 
-      memcpy(buf1, allBuf, num1 * sizeof(double)); 
-      memcpy(buf2, allBuf + num1, num2 * sizeof(double)); 
-      memcpy(buf3, allBuf + (num1 + num2), num3 * sizeof(double)); 
-      
-      /* re-insert doubles  */
-      int assertCtr = 0; 
-      assertCtr += doublesToBuffer(buf1, tr->patrat, tr, pr, n,i,PLL_FALSE, PLL_FALSE);
-      assertCtr += doublesToBuffer(buf2, tr->patratStored, tr, pr, n,i,PLL_FALSE, PLL_FALSE);
-      assertCtr += doublesToBuffer(buf3, tr->lhs, tr, pr, n,i,PLL_FALSE, PLL_FALSE);
+        memcpy(allBuf, buf1, num1 * sizeof(double));
+        memcpy(allBuf + num1, buf2, num2 * sizeof(double));
+        memcpy(allBuf + (num1 + num2), buf3, num3 * sizeof(double));
 
-      assert(assertCtr == numDouble); 
+        BCAST_BUF(allBuf, numDouble, MPI_DOUBLE, i);
+
+        memcpy(buf1, allBuf, num1 * sizeof(double));
+        memcpy(buf2, allBuf + num1, num2 * sizeof(double));
+        memcpy(buf3, allBuf + (num1 + num2), num3 * sizeof(double));
+
+        /* re-insert doubles  */
+        int assertCtr = 0;
+        assertCtr += doublesToBuffer(buf1, tr->patrat, tr, pr, n, i, PLL_FALSE, PLL_FALSE);
+        assertCtr += doublesToBuffer(buf2, tr->patratStored, tr, pr, n, i, PLL_FALSE, PLL_FALSE);
+        assertCtr += doublesToBuffer(buf3, tr->lhs, tr, pr, n, i, PLL_FALSE, PLL_FALSE);
+
+        assert(assertCtr == numDouble);
+        #ifdef _MSC_VER
+                free(fatBuff);
+        #endif
     }
 }
 
@@ -1206,6 +1218,12 @@ static void reduceEvaluateIterative(pllInstance *tr, pllInstance *localTree, par
     }
 
   /* printf("collecting done\n" ); */
+#ifndef _MSC_VER
+  double buf[localPr->numberOfPartitions];
+#else
+  double* buf = (double*)calloc(localPr->numberOfPartitions, sizeof(double));
+#endif
+
 #ifdef _REPRODUCIBLE_MPI_OR_PTHREADS
   /* 
      aberer: I implemented this as a mpi_gather operation into this buffer, 
@@ -1213,11 +1231,10 @@ static void reduceEvaluateIterative(pllInstance *tr, pllInstance *localTree, par
      master takes care of the reduction; 
   */
 
-  double 
-    buf[localPr->numberOfPartitions];
 
-  for(model = 0; model < localPr->numberOfPartitions; ++model)
-    buf[model] = localPr->partitionData[model]->partitionLH;
+  for (model = 0; model < localPr->numberOfPartitions; ++model) {
+      buf[model] = localPr->partitionData[model]->partitionLH;
+  }
 
   /* either make reproducible or efficient */
   ASSIGN_GATHER(globalResult, buf, localPr->numberOfPartitions, PLL_DOUBLE, tid);
@@ -1225,14 +1242,16 @@ static void reduceEvaluateIterative(pllInstance *tr, pllInstance *localTree, par
   /* printf("gather worked\n"); */
 #else 
   /* the efficient mpi version: a proper reduce  */
-  double 
-    buf[localPr->numberOfPartitions];
   
   for(model = 0; model < localPr->numberOfPartitions; ++model)
     buf[model] = localPr->partitionData[model]->partitionLH;
 
+#ifndef _MSC_VER
   double 
     targetBuf[localPr->numberOfPartitions];
+#else
+  double* targetBuf = (double*)calloc(localPr->numberOfPartitions, sizeof(double));
+#endif
   
   memset(targetBuf, 0, sizeof(double) * localPr->numberOfPartitions);
 
@@ -1244,7 +1263,14 @@ static void reduceEvaluateIterative(pllInstance *tr, pllInstance *localTree, par
 	localPr->partitionData[model]->partitionLH = targetBuf[model];
       }
     }
+  #ifdef _MSC_VER
+    free(targetBuf);
+  #endif
 #endif
+#ifdef _MSC_VER
+  free(buf);
+#endif
+
 }
 
 
@@ -1451,13 +1477,24 @@ static pllBoolean execFunction(pllInstance *tr, pllInstance *localTree, partitio
 
 #ifdef _REPRODUCIBLE_MPI_OR_PTHREADS
 	/* MPI: implemented as a gather again, pthreads: just buffer copying */	
-	double buf[ 2 * numBranches];
+    #ifndef _MSC_VER
+	    double buf[ 2 * numBranches];
+    #else
+        double* buf = (double*)calloc(2*numBranches, sizeof(double));
+    #endif
 	memcpy( buf, dlnLdlz, numBranches * sizeof(double) );
 	memcpy(buf + numBranches, d2lnLdlz2, numBranches * sizeof(double));
 
 	ASSIGN_GATHER(globalResult, buf,  2 * numBranches, PLL_DOUBLE, tid);
+    #ifdef _MSC_VER
+        free(buf);
+    #endif
 #else 	
+    #ifndef _MSC_VER
 	double result[numBranches];
+    #else
+    double *result = (double*)calloc(numBranches, sizeof(double));
+    #endif
 	memset(result,0, numBranches * sizeof(double));
 	MPI_Reduce( dlnLdlz , result , numBranches, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 	if(MASTER_P)
@@ -1467,6 +1504,9 @@ static pllBoolean execFunction(pllInstance *tr, pllInstance *localTree, partitio
 	MPI_Reduce( d2lnLdlz2 , result , numBranches, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 	if(MASTER_P)
 	  memcpy(globalResult + numBranches, result, sizeof(double) * numBranches);
+    #ifdef _MSC_VER
+        free(result);
+    #endif
 #endif
       }
 
@@ -2087,8 +2127,8 @@ static void distributeYVectors(pllInstance *localTree, pllInstance *tr, partitio
     n = localTree->numberOfThreads,
     globalCounter = 0,
     localCounter = 0,
-    model = 0, 
     j; 
+  int model = 0;
   int tid = localTree->threadID; 
   
 
@@ -2166,8 +2206,8 @@ static void distributeWeights(pllInstance *localTree, pllInstance *tr, partition
   size_t     
     globalCounter = 0,
     i,
-    localCounter  = 0,
-    model; 
+    localCounter  = 0; 
+  int model;
 
 
 
@@ -2200,7 +2240,6 @@ static void distributeWeights(pllInstance *localTree, pllInstance *tr, partition
 	}
     }
 }
-
 
 /** @brief Initialize the partitioning scheme (master function) in parallel environment.
     
@@ -2245,7 +2284,9 @@ static void initializePartitionsMaster(pllInstance *tr, pllInstance *localTree, 
     assignAndInitPart1(localTree, tr, localPr, pr, &tid);
 #else 
   globalResult = (double*)rax_calloc((size_t) tr->numberOfThreads * (size_t)pr->numberOfPartitions* 2 ,sizeof(double));
-  assignAndInitPart1(localTree, tr, localPr, pr, &tid);
+  #if defined(_FINE_GRAIN_MPI)
+      assignAndInitPart1(localTree, tr, localPr, pr, &tid);
+  #endif
   defineTraversalInfoMPI();
 #endif
 

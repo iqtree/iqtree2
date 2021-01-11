@@ -2616,8 +2616,8 @@ void pllNewviewIterative (pllInstance *tr, partitionList *pr, int startIndex)
     for(model = 0; model < pr->numberOfPartitions; model++)
     {
       /* number of sites in this partition */
-      size_t            
-        width  = (size_t)pr->partitionData[model]->width;
+      int            
+        width  = pr->partitionData[model]->width;
 
       /* this conditional statement is exactly identical to what we do in pllEvaluateIterative */
 
@@ -2682,7 +2682,7 @@ void pllNewviewIterative (pllInstance *tr, partitionList *pr, int startIndex)
 
           /* get the number of states in the data stored in partition model */
           
-          states = (size_t)pr->partitionData[model]->states,
+          states = pr->partitionData[model]->states,
           
           /* get the length of the current likelihood array stored at node p. This is 
              important mainly for the SEV-based memory saving option described in here:

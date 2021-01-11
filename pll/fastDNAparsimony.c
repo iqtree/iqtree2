@@ -124,7 +124,6 @@ static __inline uint32_t __builtin_popcount (uint32_t a) {
 		uint32_t e = d * 0x01010101;
 		return   e >> 24;
 	}
-//#		define __builtin_popcount __popcnt
 #		define __builtin_popcountl __popcnt64
 #       endif
 #	endif
@@ -177,8 +176,11 @@ PLL_ALIGN_BEGIN unsigned int counts[INTS_PER_VECTOR] PLL_ALIGN_END;
 
 static __inline unsigned int vectorPopcount(INT_TYPE v)
 {
-  unsigned long
-    counts[LONG_INTS_PER_VECTOR] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
+#ifndef _MSC_VER
+  unsigned long counts[LONG_INTS_PER_VECTOR]  __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
+#else
+    unsigned long* counts = malloc(LONG_INTS_PER_VECTOR * sizeof(long));
+#endif 
 
   int    
     i,
@@ -186,8 +188,12 @@ static __inline unsigned int vectorPopcount(INT_TYPE v)
   
   VECTOR_STORE((CAST)counts, v);
 
-  for(i = 0; i < LONG_INTS_PER_VECTOR; i++)
-    sum += __builtin_popcountl(counts[i]);
+  for (i = 0; i < LONG_INTS_PER_VECTOR; i++) {
+      sum += (int)(__builtin_popcountl(counts[i]));
+  }
+#ifdef _MSC_VER
+  free(counts);
+#endif
              
   return ((unsigned int)sum);
 }
@@ -1953,7 +1959,7 @@ int pllOptimizeWithParsimonySPR(pllInstance* tr, partitionList* pr,
         //       maxSprIterations-iterationsToGo+1,
         //       startMP, sprDist);
         nodeRectifierPars(tr);
-        for (int i = 1; i <= totalNodes ; ++i)
+        for (unsigned int i = 1; i <= totalNodes ; ++i)
         {
             nodeptr p = tr->nodep[i];
             rearrangeParsimony(tr, pr, p, 1, sprDist, PLL_FALSE);

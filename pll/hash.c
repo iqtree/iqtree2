@@ -94,8 +94,13 @@ int pllHashAdd  (pllHashTable * hTable, unsigned int hash, const char * s, void 
   /* store the string together with the element if given */
   if (s)
    {
-     hItem->str = (char *) rax_malloc ((strlen(s) + 1) * sizeof (char));
-     strcpy (hItem->str, s);
+      size_t len = strlen(s);
+     hItem->str = (char *) rax_malloc ((len+1 ) * sizeof (char));
+#ifdef _MSC_VER
+     strcpy_s (hItem->str, len+1, s);
+#else
+     strcpy(hItem->str, s);
+#endif
    }
   else
    hItem->str = NULL;
