@@ -44,7 +44,7 @@ MSetsBlock::~MSetsBlock()
 
 void MSetsBlock::Report(ostream &out)
 {
-	int nsets = getNSets();
+	int nsets = static_cast<int>(getNSets());
 	out << "Number of sets: " << nsets << endl;
 	for (TaxaSetNameVector::iterator i = sets.begin(); i != sets.end(); i++) {
 		out << "Set " << (*i)->name << " contains: ";

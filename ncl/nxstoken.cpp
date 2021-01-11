@@ -281,8 +281,8 @@ bool NxsToken::Abbreviation(
   NxsString s)	/* the comparison string */
 	{
 	int k;
-	int slen = s.size();
-	int tlen = token.size();
+	int slen = static_cast<int>(s.size());
+	int tlen = static_cast<int>(token.size());
 	char tokenChar, otherChar;
 
 	// The variable mlen refers to the "mandatory" portion
@@ -341,7 +341,7 @@ bool NxsToken::Begins(
 	unsigned k;
 	char tokenChar, otherChar;
 
-	unsigned slen = s.size();
+	unsigned slen = static_cast<unsigned>(s.size());
 	if (slen > token.size())
 		return false;
 
@@ -376,7 +376,7 @@ bool NxsToken::Equals(
 	unsigned k;
 	char tokenChar, otherChar;
 
-	unsigned slen = s.size();
+	unsigned slen = static_cast<unsigned>(s.size());
 	if (slen != token.size())
 		return false;
 

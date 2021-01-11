@@ -20,6 +20,10 @@
 #ifndef NCL_NXSSTRING_H
 #define NCL_NXSSTRING_H
 
+#if (defined(WIN32) || defined(WIN64)) && (!(defined(_CRT_SECURE_NO_WARNINGS)))
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
 #include <cassert>
 #include <cstring>
 #include <string>
@@ -361,7 +365,11 @@ inline NxsString &NxsString::operator+=(
   const int i)	/* the int to append */
 	{
 	char tmp[81];
+#ifdef _MSC_VER
+	sprintf_s(tmp, "%d", i);
+#else
 	sprintf(tmp, "%d", i);
+#endif
 	append(tmp);
 	return *this;
 	}
@@ -396,7 +404,11 @@ inline NxsString& NxsString::operator+=(
   unsigned i)	/* the integer to be appended */
 	{
 	char tmp[81];
+#ifdef _MSC_VER
+	sprintf_s(tmp, "%u", i);
+#else
 	sprintf(tmp, "%u", i);
+#endif
 	append(tmp);
 	return *this;
 	}
@@ -408,7 +420,11 @@ inline NxsString& NxsString::operator+=(
   const long l)	/* the long integer to be appended */
 	{
 	char tmp[81];
+#ifdef _MSC_VER
+	sprintf_s(tmp, "%ld", l);
+#else
 	sprintf(tmp, "%ld", l);
+#endif
 	append(tmp);
 	return *this;
 	}
@@ -420,7 +436,11 @@ inline NxsString& NxsString::operator+=(
   const unsigned long l)	/* the unsigned long integer to be appended */
 	{
 	char tmp[81];
+#ifdef _MSC_VER
+	sprintf_s(tmp, "%lu", l);
+#else
 	sprintf(tmp, "%lu", l);
+#endif
 	append(tmp);
 	return *this;
 	}
@@ -566,7 +586,7 @@ inline unsigned char *NxsString::p_str(
   const
 	{
 	memmove(buffer + 1, c_str(), length());
-	buffer[0] = length();
+	buffer[0] = static_cast<unsigned char>(length());
 	return buffer;
 	}
 

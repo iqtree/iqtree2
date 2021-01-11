@@ -215,7 +215,8 @@ void MPdaBlock::Read(NxsToken &token)
 				//
 				token.GetNextToken();
 
-				int taxcost = convert_double(token.GetToken().c_str());
+				//James B. 23-Dec-2020 (taxcost was declared as int?!)  (double! Surely!)
+				double taxcost = convert_double(token.GetToken().c_str());
 				if (taxcost < 0)
 				{
 					errormsg = "Taxon cost should be greater than or equal to zero (";
@@ -338,7 +339,7 @@ void MPdaBlock::readBudgetAreaFile(Params &params) {
 	in.exceptions(ios::failbit | ios::badbit);
 	cout << "Reading budget for areas information file " << params.budget_file << "..." << endl;
 	string areaname;
-	int nareas = sgraph->getNAreas();
+	auto nareas = sgraph->getNAreas();
 	int i;
 
 	try {

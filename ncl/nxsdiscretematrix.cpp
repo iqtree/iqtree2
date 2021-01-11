@@ -338,7 +338,7 @@ unsigned NxsDiscreteMatrix::GetObsNumStates(
 			stateset.insert(GetState(d, k));
 		}
 
-	return stateset.size();
+	return static_cast<unsigned>(stateset.size());
 	}
 
 /*----------------------------------------------------------------------------------------------------------------------

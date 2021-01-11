@@ -410,7 +410,7 @@ NxsString NxsTreesBlock::GetTranslatedTreeDescription(
 	// s is the original tree definition string 
 	//
 	NxsString s = treeDescription[i];
-	unsigned slen = s.size();
+	unsigned slen = static_cast<unsigned>(s.size());
 	assert(slen > 1);
 
 	// x is the new tree definition string that will be built

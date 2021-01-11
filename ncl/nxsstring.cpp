@@ -40,7 +40,11 @@ NxsString &NxsString::operator+=(
 	// Create a C-string representing the supplied double value. 
 	// The # causes a decimal point to always be output.
 	//
+#ifndef _MSC_VER
 	sprintf(tmp, "%#3.6f", d);
+#else
+	sprintf_s(tmp, sizeof(tmp), "%#3.6f", d);
+#endif
 	unsigned tmplen = (unsigned)strlen(tmp);
 
 	// If the C-string has a lot of trailing zeros, lop them off
@@ -81,7 +85,7 @@ NxsString &NxsString::AddTail(
 NxsString &NxsString::AddQuotes() 
 	{
 	NxsString withQuotes;
-	int len = length();
+	int len = static_cast<int>(length());
 	withQuotes.reserve(len + 4);
 	withQuotes += '\'';
 	for (NxsString::const_iterator sIt = begin(); sIt != end(); sIt++)
@@ -350,11 +354,15 @@ NxsString &NxsString::RightJustifyDbl(
 		erase();
 
 	char fmtstr[81];
+#ifndef _MSC_VER
 	sprintf(fmtstr, "%%.%df", p);
+#else
+	sprintf_s(fmtstr, sizeof(fmtstr), "%%.%df", p);
+#endif
 	NxsString tmp;
 	tmp.PrintF(fmtstr, x);
 
-	unsigned num_spaces = w - tmp.length();
+	unsigned num_spaces = static_cast<unsigned>(w - tmp.length());
 	assert(num_spaces >= 0);
 
 	for (unsigned k = 0; k < num_spaces; k++)
@@ -377,7 +385,7 @@ NxsString &NxsString::RightJustifyString(
 	if (clear_first)
 		erase();
 
-	unsigned num_spaces = w - s.length();
+	unsigned num_spaces = w - static_cast<int>(s.length());
 	assert(num_spaces >= 0);
 
 	for (unsigned k = 0; k < num_spaces; k++)
@@ -436,7 +444,7 @@ bool NxsString::QuotesNeeded() const
 */
 NxsString &NxsString::BlanksToUnderscores()
 	{
-	unsigned len = length();
+	unsigned len = static_cast<unsigned>(length());
 	for (unsigned k = 0; k < len; k++)
 		{
 		char &ch = at(k);
@@ -451,7 +459,7 @@ NxsString &NxsString::BlanksToUnderscores()
 */
 NxsString &NxsString::UnderscoresToBlanks()
 	{
-	unsigned len = length();
+	unsigned len = static_cast<unsigned>(length());
 	for (unsigned k = 0; k < len; k++)
 		{
 		char &ch = at(k);
@@ -603,8 +611,8 @@ bool NxsString::EqualsCaseInsensitive(
   const
 	{
 	unsigned k;
-	unsigned slen = s.size();
-	unsigned tlen = size();
+	unsigned slen = static_cast<unsigned>(s.size());
+	unsigned tlen = static_cast<int>(size());
 	if (slen != tlen)
 		return false;
 

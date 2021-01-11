@@ -228,7 +228,7 @@ unsigned NxsCharactersBlock::CharLabelToNumber(
 
 	unsigned k = 1;
 	if (iter != charLabels.end())
-		k += (iter - charLabels.begin());
+		k += static_cast<int>(iter - charLabels.begin());
 	else
 		k = 0;
 
@@ -297,7 +297,7 @@ void NxsCharactersBlock::Consume(
 	other.matrix		= NULL;
 
 	equates.clear();
-	int size = other.equates.size();
+	int size = static_cast<int>(other.equates.size());
 	if (size > 0)
 		{
 		NxsStringMap::const_iterator i;
@@ -307,7 +307,7 @@ void NxsCharactersBlock::Consume(
 		}
 
 	eliminated.clear();
-	size = eliminated.size();
+	size = static_cast<int>(eliminated.size());
 	if (size > 0)
 		{
 		NxsUnsignedSet::const_iterator i;
@@ -317,7 +317,7 @@ void NxsCharactersBlock::Consume(
 		}
 
 	charLabels.clear();
-	size = charLabels.size();
+	size = static_cast<int>(charLabels.size());
 	if (size > 0)
 		{
 		NxsStringVector::const_iterator i;
@@ -327,7 +327,7 @@ void NxsCharactersBlock::Consume(
 		}
 
 	charStates.clear();
-	size = charStates.size();
+	size = static_cast<int>(charStates.size());
 	if (size > 0)
 		{
 		NxsStringVectorMap::const_iterator i;
@@ -380,7 +380,7 @@ void NxsCharactersBlock::DebugShowMatrix(
 
 			// Print out enough spaces to even up the left edge of the matrix output
 			//
-			unsigned currTaxonLabelLen = currTaxonLabel.size();
+			unsigned currTaxonLabelLen = static_cast<int>(currTaxonLabel.size());
 			unsigned diff = width - currTaxonLabelLen;
 			for (k = 0; k < diff+5; k++)
 				out << ' ';
@@ -529,7 +529,7 @@ bool NxsCharactersBlock::IsInSymbols(
   char ch)	/* the symbol character to search for */
 	{
 	assert(symbols != NULL);
-	unsigned symbolsLength = strlen(symbols);
+	unsigned symbolsLength = static_cast<unsigned>(strlen(symbols));
 	bool found = false;
 	for (unsigned i = 0; i < symbolsLength; i++)
 		{
@@ -845,7 +845,7 @@ void NxsCharactersBlock::HandleEliminate(
 	//
 	NxsSetReader(token, ncharTotal, eliminated, *this, NxsSetReader::charset).Run();
 
-	nchar = ncharTotal - eliminated.size();
+	nchar = ncharTotal - static_cast<int>(eliminated.size());
 
 	if (nchar != ncharTotal && (charLabels.size() > 0 || charStates.size() > 0)) 
 		{
@@ -1121,7 +1121,7 @@ void NxsCharactersBlock::HandleFormat(
 			token.GetNextToken();
 
 			token.StripWhitespace();
-			unsigned numNewSymbols = token.GetTokenLength();
+			unsigned numNewSymbols = static_cast<unsigned >(token.GetTokenLength());
 
 			if ((int)numNewSymbols > maxNewStates)
 				{
@@ -1134,7 +1134,7 @@ void NxsCharactersBlock::HandleFormat(
 				}
 
 			NxsString t = token.GetToken();
-			unsigned tlen = t.size();
+			unsigned tlen = static_cast<unsigned>(t.size());
 
 			// Check to make sure user has not used any symbols already in the
 			// default symbols list for this data type
@@ -1553,7 +1553,7 @@ bool NxsCharactersBlock::HandleNextState(
 		// Token should be in one of the following forms: LEFT_SQUIGGLYacgRIGHT_SQUIGGLY LEFT_SQUIGGLYa~gRIGHT_SQUIGGLY LEFT_SQUIGGLYa c gRIGHT_SQUIGGLY (acg) (a~g) (a c g) 
 		//
 		NxsString t = token.GetToken();
-		unsigned tlen = t.size();
+		unsigned tlen = static_cast<unsigned>(t.size());
 		unsigned poly = (t[0] == '(');
 		assert(poly || t[0] == '{');
 		assert((poly && t[tlen-1] == ')') || (!poly && t[tlen-1] == '}'));
@@ -1795,7 +1795,7 @@ unsigned NxsCharactersBlock::HandleTokenState(
 	// state saved in matrix would be 0 (it would be 1 if "medium" were specified in the data file, 
 	// and 2 if "large" were specified in the data file).
 	//
-	unsigned k = (cit - ci_begin);
+	unsigned k = static_cast<unsigned>(cit - ci_begin);
 	return k;
 	}
 
@@ -2072,7 +2072,7 @@ void NxsCharactersBlock::HandleTransposedMatrix(
 						throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());
 						}
 
-					unsigned positionInCharLabelsList = (iter - charLabels.begin());
+					unsigned positionInCharLabelsList = static_cast<unsigned>(iter - charLabels.begin());
 
 					// Make sure user has not duplicated data for a single character or changed the order 
 					// in which characters appear in different interleave pages
@@ -2371,7 +2371,7 @@ unsigned NxsCharactersBlock::PositionInSymbols(
   char ch)	/* the symbol character to search for */
 	{
 	assert(symbols != NULL);
-	unsigned symbolsLength = strlen(symbols);
+	unsigned symbolsLength = static_cast<unsigned>(strlen(symbols));
 	bool found = false;
 	unsigned i;
 	for (i = 0; i < symbolsLength; i++)
@@ -2566,7 +2566,7 @@ void NxsCharactersBlock::Report(
 			NxsStringVectorMap::const_iterator cib = charStates.find(k);
 			if (cib != charStates.end())
 				{
-				int ns = (*cib).second.size();
+				int ns = static_cast<int>((*cib).second.size());
 				for (int m = 0; m < ns; m++)
 					{
 					out << "\t\t" << (*cib).second[m] << endl;
@@ -2598,7 +2598,7 @@ void NxsCharactersBlock::Report(
 
 	out << "  Valid symbols are: " << symbols << endl;
 
-	int numEquateMacros = equates.size();
+	int numEquateMacros = static_cast<int>(equates.size());
 	if (numEquateMacros > 0)
 		{
 		out << "  Equate macros in effect:" << endl;
@@ -2914,7 +2914,7 @@ void NxsCharactersBlock::WriteStates(
 		{
 		assert(symbols != NULL);
 		unsigned numStates = matrix->GetNumStates(d);
-        unsigned symbolListLen = strlen(symbols);
+        unsigned symbolListLen = static_cast<unsigned>(strlen(symbols));
 		unsigned numCharsNeeded = numStates;
 		if (numStates > 1)
 			numCharsNeeded += 2;

@@ -73,8 +73,8 @@ class NxsToken
 		NxsString		GetToken(bool respect_case = true);
 		const char		*GetTokenAsCStr(bool respect_case = true);
 		const NxsString	&GetTokenReference();
-		int				GetTokenLength() const;
-		bool			IsPlusMinusToken();
+		size_t	        GetTokenLength() const;
+		bool            IsPlusMinusToken();
 		bool			IsPunctuationToken();
 		bool			IsWhitespaceToken();
 		void			ReplaceToken(const NxsString s);
@@ -369,7 +369,7 @@ inline const char *NxsToken::GetTokenAsCStr(
 /*----------------------------------------------------------------------------------------------------------------------
 |	Returns token.size().
 */
-inline int NxsToken::GetTokenLength() const
+inline size_t NxsToken::GetTokenLength() const
 	{
 	return token.size();
 	}

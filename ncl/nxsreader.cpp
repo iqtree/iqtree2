@@ -285,7 +285,11 @@ void NxsReader::Execute(
 					{
 					if (currBlock->IsEnabled()) 
 						{
+#ifndef _MSC_VER
 						strcpy(id_str, currBlock->GetID().c_str());
+#else
+						strcpy_s(id_str, sizeof(id_str), currBlock->GetID().c_str());
+#endif
 						bool ok_to_read = EnteringBlock(id_str);
 						if (!ok_to_read) 
 							currBlock = NULL;

@@ -270,7 +270,7 @@ unsigned NxsTaxaBlock::GetMaxTaxonLabelLength()
 	unsigned maxlen = 0;
 	for (unsigned i = 0; i < ntax; i++)
 		{
-		unsigned thislen = taxonLabels[i].size();
+		unsigned thislen = static_cast<unsigned>(taxonLabels[i].size());
 		if (thislen > maxlen)
 			maxlen = thislen;
 		}
