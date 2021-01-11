@@ -263,7 +263,7 @@ float rtnewt(void (*funcd)(float, float *, float *), float x1, float x2,
 	int j;
 	float df,dx,f,rtn;
 
-	rtn=0.5*(x1+x2);
+	rtn=(float)(0.5*(x1+x2));
 	for (j=1;j<=JMAX;j++) {
 		(*funcd)(rtn,&f,&df);
 		dx=f/df;

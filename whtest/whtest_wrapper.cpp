@@ -35,6 +35,12 @@ void addArg(int &argc, char **argv, const char *arg) {
 	argc++;
 }
 
+#ifdef _MSC_VER
+#define format_string sprintf_s
+#else
+#define format_string sprintf
+#endif
+
 int WHTest_old(Params &params, PhyloTree &tree) {
 	int argc = 0;
 	char *argv[10];
@@ -42,7 +48,7 @@ int WHTest_old(Params &params, PhyloTree &tree) {
 	addArg(argc, argv, "WHTest");
 	addArg(argc, argv, params.aln_file);
 	addArg(argc, argv, "-a");
-	sprintf(tmp, "%f", tree.getModelFactory()->site_rate->getGammaShape());
+	format_string(tmp, "%f", tree.getModelFactory()->site_rate->getGammaShape());
 	addArg(argc, argv, tmp);
 	return WHTest_run(argc, argv);
 }
@@ -50,22 +56,26 @@ int WHTest_old(Params &params, PhyloTree &tree) {
 int WHTest(Params &params, IQTree &tree) {
 
 	int retval;
-	size_t nseq = tree.aln->getNSeq();
-    size_t nsite = tree.aln->getNSite(); 
+	int nseq  = tree.aln->getNSeq32();
+    int nsite = tree.aln->getNSite32(); 
 
 
 	WHT_setAlignmentSize(nseq, nsite);
 	WHT_allocateMemory();
-	for (size_t i = 0; i < nseq; i++)
-		for (size_t j = 0; j < nsite; j++)
+	for (int i = 0; i < nseq; i++) {
+		for (int j = 0; j < nsite; j++) {
 			WHT_setSequenceSite(i, j, (*tree.aln)[tree.aln->getPatternID(j)][i]);
-			
-	for (size_t i = 0; i < nseq; i++)
+		}
+	}			
+	for (int i = 0; i < nseq; i++) {
 		WHT_setSequenceName(i, tree.aln->getSeqName(i).c_str());
+	}
 	double gamma_shape = tree.getModelFactory()->site_rate->getGammaShape();
-	if (gamma_shape == 0) gamma_shape = 100.0;
+	if (gamma_shape == 0) {
+		gamma_shape = 100.0;
+	}
 	//WHT_setParams(params.whtest_simulations, gamma_shape, params.out_prefix, tree.dist_matrix);
-    WHT_setParams(params.whtest_simulations, gamma_shape, params.out_prefix.c_str(), NULL);
+    WHT_setParams(static_cast<int>(params.whtest_simulations), gamma_shape, params.out_prefix.c_str(), NULL);
 	retval = WHTest_run(0, NULL);
 	WHT_getResults(&params.whtest_delta, &params.whtest_delta_quantile, &params.whtest_p_value);
 	return retval;

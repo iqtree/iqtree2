@@ -452,12 +452,13 @@ void StateSpace::parseStateSpace(YAML::Node datatype) {
     }
     
     num_all_states = stateID;
-    min_state_len = max_state_len = states.begin()->first.length();
+    min_state_len = max_state_len = static_cast<int>(states.begin()->first.length());
     for (auto i = states.begin(); i != states.end(); i++) {
-        if (min_state_len > i->first.length())
-            min_state_len = i->first.length();
-        if (max_state_len < i->first.length())
-            max_state_len = i->first.length();
+        int first_len = static_cast<int>(i->first.length());
+        if (min_state_len > first_len)
+            min_state_len = first_len;
+        if (max_state_len < first_len)
+            max_state_len = first_len;
     }
 }
 

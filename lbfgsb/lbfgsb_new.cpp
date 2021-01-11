@@ -208,7 +208,11 @@ void lbfgsb(int n, int m, double *x, double *l, double *u, int *nbd,
 	/* this needs to be zeroed for snd in mainlb to be zeroed */
 	wa = (double *) malloc((2*m*n+4*n+11*m*m+8*m) * sizeof(double));
 	iwa = (int *) malloc(3*n * sizeof(int));
+#ifdef _MSC_VER
+	strcpy_s(task, sizeof(task), "START");
+#else
 	strcpy(task, "START");
+#endif
 	while(1) {
 		/* Main workhorse setulb() from ../appl/lbfgsb.c : */
 		setulb(n, m, x, l, u, nbd, &f, g, factr, &pgtol, wa, iwa, task,
@@ -787,7 +791,7 @@ void mainlb(int n, int m, double *x,
 		sbtime = 0.;
 		lnscht = 0.;
 		/*         'word' records the status of subspace solutions. */
-		strcpy(word, "---");
+		strcpy_s(word, sizeof(word), "---");
 		/*         'info' records the termination information. */
 		info = 0;
 		itfile = 0;
@@ -864,7 +868,7 @@ void mainlb(int n, int m, double *x,
 		}
 	}
 	/*     Compute f0 and g0. */
-	strcpy(task, "FG_START");
+	strcpy(task,  "FG_START");
 	/*        return to the driver to calculate f and g; reenter at 111. */
 	goto L1000;
 	L111:
@@ -877,7 +881,7 @@ void mainlb(int n, int m, double *x,
 
 	if (sbgnrm <= *pgtol) {
 		/*                  terminate the algorithm. */
-		strcpy(task, "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL");
+		strcpy(task,  "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL");
 		goto L999;
 	}
 	/* ----------------- the beginning of the loop -------------------------- */

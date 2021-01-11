@@ -29,7 +29,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef CLANG_UNDER_VS
+#if defined(CLANG_UNDER_VS) || defined(_MSC_VER)
 	//These are "safe" in the sense that they won't overrun the buffer.  
 	//But they will bomb if the buffer isn't big enough
 	#define safe_strcpy(dest, source) strcpy_s(&dest[0], sizeof(dest), source)
@@ -353,7 +353,7 @@ void FinishReport(time_t begin_time) {
 	time(&end_time);
 	finishedDate_ = ctime(&end_time);
 
-	prog_time = difftime (end_time, begin_time);
+	prog_time = (int)(difftime (end_time, begin_time));
 
 	nHour_ = prog_time / 3600;
 	nMin_ = (prog_time  - nHour_ * 3600) / 60;

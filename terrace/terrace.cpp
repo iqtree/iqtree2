@@ -43,7 +43,7 @@ Terrace::Terrace(PhyloTree &tree, SuperAlignment* saln) :
 
     auto terraphast_nwk = terraces::parse_nwk(nwk.str(), indices);
 
-    int n_partitions = saln->taxa_index[0].size();
+    int n_partitions = static_cast<int>(saln->taxa_index[0].size());
 
     for (int i=0; i<labels.size(); i++) {
         for (int j=0; j<n_partitions; j++) {

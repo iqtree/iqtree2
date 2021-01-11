@@ -18,6 +18,12 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
+ //Turn off (about four) warnings that would otherwise be reported in ncl\nxsstring.h
+#define _CRT_SECURE_NO_WARNINGS (1)
+#endif
+
+
 #include "tree/phylotree.h"
 #include "tree/tinatree.h"
 #include "parsmultistate.h"

@@ -10,6 +10,7 @@ namespace terraces {
 namespace bits {
 
 #ifdef _WIN64
+#include <intrin.h>
 inline index popcount(index word) { return (index)__popcnt64(word); }
 
 inline index bitscan(index word) {

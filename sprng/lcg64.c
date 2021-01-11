@@ -289,9 +289,9 @@ int *igenptr;
 
   advance_state(genptr);	/* next state in sequence */
 
-  ist0 = genptr->state[0];
-  ist1 = genptr->state[1];
-  ist2 = genptr->state[2];
+  ist0 = (unsigned int)(genptr->state[0]);
+  ist1 = (unsigned int)(genptr->state[1]);
+  ist2 = (unsigned int)(genptr->state[2]);
   
 #if defined(HP) || defined(SUN) || defined(SOLARIS) || defined(GENERIC)
 /*IEEE mantissa is 52 bits. */
@@ -471,7 +471,7 @@ char **buffer;
   struct rngen *q;
 
   q = (struct rngen *) genptr;
-  size = 48 + strlen(q->gentype)+1;
+  size = 48 + (int)(strlen(q->gentype))+1;
   
   initp = p = (unsigned char *) mymalloc(size); /* allocate memory */
   /* The new load/store routines make using sizeof unnecessary. Infact, */
@@ -496,18 +496,17 @@ char **buffer;
   p += store_long64(q->state,8,p);
   p += store_long64(q->multiplier,8,p);
 #else  /* No 64 bit type available */
-  m[0] = q->state[2]; temp = q->state[1];m[0]=(m[0]<<12)|(temp>>10);
-  m[1] = q->state[1]; temp = q->state[0];m[1]=(m[1]<<22)|(temp);
+  m[0] = (unsigned int)(q->state[2]); temp = (unsigned int)(q->state[1]);m[0]=(m[0]<<12)|(temp>>10);
+  m[1] = (unsigned int)(q->state[1]); temp = (unsigned int)(q->state[0]);m[1]=(m[1]<<22)|(temp);
   p += store_intarray(m,2,4,p);
-  m[0] = q->multiplier[2]; temp = q->multiplier[1];m[0]=(m[0]<<12)|(temp>>10);
-  m[1] = q->multiplier[1]; temp = q->multiplier[0];m[1]=(m[1]<<22)|(temp);
+  m[0] = (unsigned int)(q->multiplier[2]); temp = (unsigned int)(q->multiplier[1]);m[0]=(m[0]<<12)|(temp>>10);
+  m[1] = (unsigned int)(q->multiplier[1]); temp = (unsigned int)(q->multiplier[0]);m[1]=(m[1]<<22)|(temp);
   p += store_intarray(m,2,4,p);
-#endif
-  
+#endif  
   
   *buffer =  (char *) initp;
   assert(p-initp == size);
-  return p-initp;
+  return (int)(p-initp);
 }
 
 
