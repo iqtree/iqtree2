@@ -1460,12 +1460,20 @@ void PhyloTree::doLikelihoodMapping() {
 
     string lmap_svgfilename = (string)params->out_prefix + ".lmap.svg";
     FILE *svgout;
+#ifdef _MSC_VER
     int err = fopen_s(&svgout, lmap_svgfilename.c_str(), "w");
+#else
+    svgout = fopen(lmap_svgfilename.c_str(), "w");
+#endif
     initsvg(svgout, LMGroups);
 
     string lmap_epsfilename = (string)params->out_prefix + ".lmap.eps";
     FILE *epsout;
+#ifdef _MSC_VER
     err = fopen_s(&epsout, lmap_epsfilename.c_str(), "w");
+#else
+    epsout = fopen(lmap_epsfilename.c_str(), "w");
+#endif
     initeps(epsout, LMGroups);
 
     for (qid = 0; qid < params->lmap_num_quartets; qid++) {

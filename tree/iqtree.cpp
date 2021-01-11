@@ -1855,7 +1855,11 @@ void IQTree::inputModelIQTree2PLL() {
         linkagePattern << partNr;
         auto pattern_len = linkagePattern.str().length();
         char *pattern = new char[pattern_len + 1];
+#ifdef _MSC_VER
         strcpy_s(pattern, pattern_len+1, linkagePattern.str().c_str());
+#else
+        strcpy(pattern, linkagePattern.str().c_str());
+#endif
         pllLinkAlphaParameters(pattern, pllPartitions);
         pllLinkFrequencies(pattern, pllPartitions);
         pllLinkRates(pattern, pllPartitions);
@@ -4071,10 +4075,16 @@ void IQTree::printPhylolibTree(const char* suffix) {
     pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, PLL_TRUE, 1, 0, 0, 0,
             PLL_SUMMARIZE_LH, 0, 0);
     char phylolibTreePath[1024];
+#ifdef _MSC_VER
     strcpy_s(phylolibTreePath, sizeof(phylolibTreePath), params->out_prefix.c_str());
     strcat_s(phylolibTreePath, sizeof(phylolibTreePath), suffix);
     FILE* phylolib_tree = nullptr;
     fopen_s(&phylolib_tree, phylolibTreePath, "w");
+#else
+    strcpy(phylolibTreePath, params->out_prefix.c_str());
+    strcat(phylolibTreePath, suffix);
+    FILE* phylolib_tree = fopen(phylolibTreePath, "w");
+#endif
     fprintf(phylolib_tree, "%s", pllInst->tree_string);
     LOG_LINE(VB_QUIET,"Tree optimized by Phylolib was written to " << phylolibTreePath);
 }
