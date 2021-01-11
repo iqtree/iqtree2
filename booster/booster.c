@@ -23,14 +23,19 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 */
 
+#if !defined(_MSC_VER) && !defined(CLANG_UNDER_VS)
+#include <getopt.h>
+#elif !defined(_CRT_SECURE_NO_WARNINGS)
+//Suppress about 10 warnings we'd otherwise get in this file (mostly for fopen)
+#define _CRT_SECURE_NO_WARNINGS (1)
+#endif
+
 #include "io.h"
 #include "tree.h"
 #include "bitset_index.h"
 
 #include <string.h> /* for strcpy, strdup, etc */
-#ifndef CLANG_UNDER_VS
-#include <getopt.h>
-#endif
+
 #ifdef _OPENMP
 #include <omp.h> /* OpenMP */
 #endif
@@ -316,7 +321,11 @@ int main_booster (const char* input_tree, const char *boot_trees,
 	alt_tree_strings = (char**)realloc(alt_tree_strings,init_boot_trees*2*sizeof(char*));
 	init_boot_trees *= 2;
       }
+#ifdef _MSC_VER
+      alt_tree_strings[num_trees] = _strdup(big_string);
+#else
       alt_tree_strings[num_trees] = strdup(big_string);
+#endif
       num_trees++;
     }
   fclose(boottree_file);

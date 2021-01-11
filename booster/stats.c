@@ -92,10 +92,21 @@ double mean_double_vec(double* myvec, int length) {
 int median_int_vec(int* myvec, int length) {
 	/* we don't want to modify the original vector, so work on a copy that is going
 	   to be sorted: */
-	int i, mycopy[length];
-	for(i=0;i<length;i++) mycopy[i] = myvec[i];
+	int i;
+#ifndef _MSC_VER
+	int mycopy[length];
+#else
+	int* mycopy = (int*)malloc(length * sizeof(int));
+#endif
+	for (i = 0; i < length; i++) {
+		mycopy[i] = myvec[i];
+	}
 	divide_and_conquer_int_vec(mycopy, length);
-	return mycopy[(int)(floor(length/2))];
+	int rc = mycopy[(int)(floor(length/2))];
+#ifdef _MSC_VER
+	free(mycopy);
+#endif
+	return rc;
 }
 
 
@@ -103,10 +114,20 @@ double median_double_vec(double* myvec, int length) {
 	/* we don't want to modify the original vector, so work on a copy that is going
 	   to be sorted: */
 	int i;
+#ifndef _MSC_VER
 	double mycopy[length];
-	for(i=0;i<length;i++) mycopy[i] = myvec[i];
+#else
+	double* mycopy = (double*)malloc(length * sizeof(double));
+#endif
+	for (i = 0; i < length; i++) {
+		mycopy[i] = myvec[i];
+	}
 	divide_and_conquer_double_vec(mycopy, length);
-	return mycopy[(int)(floor(length/2))];
+	double rc = mycopy[(int)(floor(length/2))];
+#ifdef _MSC_VER
+	free(mycopy);
+#endif
+	return rc;
 }
 
 void summary_double_vec(double* myvec, int length, double* result) {
@@ -120,7 +141,11 @@ void summary_double_vec(double* myvec, int length, double* result) {
 	   5) maximum */
 
 	int i;
+#ifndef _MSC_VER
 	double mycopy[length];
+#else
+	double* mycopy = (double*)malloc(length * sizeof(double));
+#endif
 	for(i=0;i<length;i++) mycopy[i] = myvec[i];
 	divide_and_conquer_double_vec(mycopy, length);
 	result[0] = mycopy[0];				/* min */
@@ -129,6 +154,10 @@ void summary_double_vec(double* myvec, int length, double* result) {
 	result[3] = mean_double_vec(mycopy, length);	/* mean */ 
 	result[4] = mycopy[(int)(floor(3*length/4))];	/* 3rd quart. */
 	result[5] = mycopy[length-1];			/* max */
+#ifdef _MSC_VER
+	free(mycopy);
+#endif
+
 } /* end summary_double_vec */
 
 
@@ -191,7 +220,11 @@ void merge_sorted_int_vecs(int* myvec, int length1, int length2) {
 	   and myvec[length1..(length1+length2-1)] that are two sorted vectors.
 	   It merges the two in place, reusing the initial space. */
 	int i, index1=0, index2=0, index_res=0, total_length = length1 + length2;
+#ifndef _MSC_VER
 	int temp[total_length];
+#else
+	int* temp = malloc(total_length * sizeof(int));
+#endif
 	int* vec1 = myvec, *vec2 = myvec+length1; /* pointer arithmetic */
 	/* index1 and index2 indicate the next elements of the two subvectors to be processed */
 	while(index1 < length1 && index2 < length2) {
@@ -204,14 +237,20 @@ void merge_sorted_int_vecs(int* myvec, int length1, int length2) {
 	else for (i = index2; i < length2; i++) temp[index_res++] = vec2[i];
 	/* sanity check */
 	if (index_res != total_length) {
-	  fprintf(stderr,"fatal error : input lengths do not sum up to output length. Aborting.\n");
-	  Generic_Exit(__FILE__,__LINE__,__FUNCTION__,EXIT_FAILURE);
+		fprintf(stderr, "fatal error : input lengths do not sum up to output length. Aborting.\n");
+		#ifdef _MSC_VER
+			free(temp);
+		#endif
+		Generic_Exit(__FILE__, __LINE__, __FUNCTION__, EXIT_FAILURE);
 	}
-	/* now we copy the result back into the original vector, to do the thing in place */
-	for(i=0;i<total_length;i++) myvec[i] = temp[i];
+	/* now we copy the result back into the original vector */
+	for (i = 0; i < total_length; i++) {
+		myvec[i] = temp[i];
+	}
+#ifdef _MSC_VER
+	free(temp);
+#endif
 } /* end of merge_sorted_int_vecs */
-
-
 
 void divide_and_conquer_int_vec(int* vec, int length) {
 	/* this function works "in place" and does not allocate extra memory.
@@ -239,13 +278,17 @@ void merge_sorted_double_vecs(double* myvec, int length1, int length2) {
 	/* this function assumes that we have myvec[0..(length1-1)]
 	   and myvec[length1..(length1+length2-1)] that are two sorted vectors.
 	   It merges the two in place, reusing the initial space. */
-	int i, index1=0, index2=0, index_res=0, total_length = length1 + length2;
+	int i, index1 = 0, index2 = 0, index_res = 0, total_length = length1 + length2;
+#ifndef _MSC_VER
 	double temp[total_length];
-	double* vec1 = myvec, *vec2 = myvec+length1; /* pointer arithmetic */
+#else
+	double* temp = (double*)malloc(total_length * sizeof(double));
+#endif
+	double* vec1 = myvec, * vec2 = myvec + length1; /* pointer arithmetic */
 	/* index1 and index2 indicate the next elements of the two subvectors to be processed */
-	while(index1 < length1 && index2 < length2) {
+	while (index1 < length1 && index2 < length2) {
 		/* there are still elements to treat in both vectors */
-		if(vec1[index1] <= vec2[index2]) temp[index_res++] = vec1[index1++];
+		if (vec1[index1] <= vec2[index2]) temp[index_res++] = vec1[index1++];
 		else temp[index_res++] = vec2[index2++];
 	}
 	/* now at least one of the input subvecs is fully processed, remains the other: */
@@ -253,11 +296,19 @@ void merge_sorted_double_vecs(double* myvec, int length1, int length2) {
 	else for (i = index2; i < length2; i++) temp[index_res++] = vec2[i];
 	/* sanity check */
 	if (index_res != total_length) {
-	  fprintf(stderr,"fatal error : input lengths do not sum up to output length. Aborting.\n");
-	  Generic_Exit(__FILE__,__LINE__,__FUNCTION__,EXIT_FAILURE);
+		fprintf(stderr, "fatal error : input lengths do not sum up to output length. Aborting.\n");
+		#ifdef _MSC_VER
+				free(temp);
+		#endif
+		Generic_Exit(__FILE__, __LINE__, __FUNCTION__, EXIT_FAILURE);
 	}
 	/* now we copy the result back into the original vector, to do the thing in place */
-	for(i=0;i<total_length;i++) myvec[i] = temp[i];
+	for (i = 0; i < total_length; i++) {
+		myvec[i] = temp[i];
+	}
+#ifdef _MSC_VER
+	free(temp);
+#endif
 } /* end of merge_sorted_double_vecs */
 
 
@@ -401,9 +452,9 @@ int* sample(int* data, int length, int num, int replace){
 /* Shuffles the data in the array of length size */
 void shuffle(void *obj, size_t nmemb, size_t size){
   void *temp = malloc(size);
-  size_t n = nmemb;
+  int n = (int)nmemb;
   while ( n > 1 ) {
-    size_t k = rand_to(n--);
+    int k = rand_to(n--);
     memcpy(temp, BYTE(obj) + n*size, size);
     memcpy(BYTE(obj) + n*size, BYTE(obj) + k*size, size);
     memcpy(BYTE(obj) + k*size, temp, size);

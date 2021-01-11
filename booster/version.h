@@ -28,7 +28,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include <stdio.h>
 #include <stdlib.h>
-#ifndef CLANG_UNDER_VS
+#if !defined(_MSC_VER) && !defined(CLANG_UNDER_VS)
 #include <libgen.h>
 #endif
 

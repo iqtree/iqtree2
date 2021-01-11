@@ -23,6 +23,17 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 */
 
+#if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
+//Turn off (about twenty) warnings that would otherwise be reported in this file
+#define _CRT_SECURE_NO_WARNINGS (1)
+#endif
+
+#if defined(_MSC_VER)
+#define duplicate_string _strdup
+#else
+#define duplicate_string strdup
+#endif
+
 #include "tree.h"
 #include "externs.h"
 
@@ -246,8 +257,8 @@ Node* new_node(const char* name, Tree* t, int degree) {
 	nn->br = malloc(degree * sizeof(Edge*));
 	nn->id = t->next_avail_node_id++;
 	if(degree==1 && !name) { fprintf(stderr,"Fatal error : won't create a leaf with no name. Aborting.\n"); Generic_Exit(__FILE__,__LINE__,__FUNCTION__,EXIT_FAILURE);}
-	if(name) { nn->name = strdup(name); } else nn->name = NULL;
-	if(degree==1) { t->taxa_names[t->next_avail_taxon_id++] = strdup(name); }
+	if(name) { nn->name = duplicate_string(name); } else nn->name = NULL;
+	if(degree==1) { t->taxa_names[t->next_avail_taxon_id++] = duplicate_string(name); }
 	nn->comment = NULL;
 	for(i=0; i < nn->nneigh; i++) { nn->neigh[i] = NULL; nn->br[i] = NULL; }
 	nn->depth = MAX_NODE_DEPTH;
@@ -452,9 +463,9 @@ void collapse_branch(Edge* branch, Tree* tree) {
 	new->neigh = malloc(degree * sizeof(Node*));
 	new->br = malloc(degree * sizeof(Edge*));
 	new->id = node1->id; /* because we are going to store the node at this index in tree->a_nodes */
-	new->name = strdup("collapsed");
+	new->name = duplicate_string("collapsed");
 	new->comment = NULL;
-	new->depth = min_int(node1->depth, node2->depth);
+	new->depth = min_int((int)node1->depth, (int)node2->depth);
 
 	/* very important: set tree->node0 to new in case it was either node1 or node2 */
 	if (tree->node0 == node1 || tree->node0 == node2) tree->node0 = new;
@@ -602,7 +613,7 @@ void remove_taxon(int taxon_id, Tree* tree){
   j=0;
   for(i=0;i<tree->nb_taxa;i++){
     if(strcmp(n_to_remove->name,tree->taxa_names[i]) != 0){
-      new_taxa_names[j] = strdup(tree->taxa_names[i]);
+      new_taxa_names[j] = duplicate_string(tree->taxa_names[i]);
       j++;
     }
     free(tree->taxa_names[i]);
@@ -670,7 +681,7 @@ void remove_taxon(int taxon_id, Tree* tree){
   for(i=0; i < tree->nb_taxa; i++){
     free(tree->taxname_lookup_table[i]);
     if(i<(tree->nb_taxa-1))
-      tree->taxname_lookup_table[i] = strdup(tree->taxa_names[i]);
+      tree->taxname_lookup_table[i] = duplicate_string(tree->taxa_names[i]);
   }
 
   /**
@@ -921,7 +932,7 @@ void shuffle_taxa(Tree *tree){
   for (i=0; i < tree->nb_nodes; i++){
     if (tree->a_nodes[i]->nneigh == 1){
       /* if(input_tree->a_nodes[i]->name) { free(input_tree->a_nodes[i]->name); input_tree->a_nodes[i]->name = NULL; } */
-      tree->a_nodes[i]->name = strdup(tree->taxa_names[shuffled_indices[node]]);
+      tree->a_nodes[i]->name = duplicate_string(tree->taxa_names[shuffled_indices[node]]);
       node++;
     }
   }
@@ -1254,7 +1265,7 @@ void parse_substring_into_node(char* in_str, int begin, int end, Node* current_n
 				} /* end if */
 		} /* end for */
 
-		current_tree->taxa_names[current_tree->next_avail_taxon_id++] = strdup(current_node->name);
+		current_tree->taxa_names[current_tree->next_avail_taxon_id++] = duplicate_string(current_node->name);
 
 	} else { /* at least one comma, so at least two sons: */
 		for (i=0; i <= nb_commas; i++) { /* e.g. three iterations for two commas */
@@ -1424,7 +1435,9 @@ char** build_taxname_lookup_table(Tree* tree) {
 	/* lookup tables are shared between trees, be able to compare hashtables (one taxon == one index in the lookup table) */
 	int i;
 	char** output = (char**) malloc(tree->nb_taxa * sizeof(char*));
-	for(i=0; i < tree->nb_taxa; i++) output[i] = strdup(tree->taxa_names[i]);
+	for (i = 0; i < tree->nb_taxa; i++) {
+		output[i] = duplicate_string(tree->taxa_names[i]);
+	}
 	return output;
 }
 
