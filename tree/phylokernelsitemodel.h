@@ -32,8 +32,8 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor* dad_br
     dad_branch->setLikelihoodComputed(true);
     PhyloNode *node = dad_branch->getNode();
 
-    size_t nptn = aln->size(), tip_block_size = get_safe_upper_limit(nptn)*nstates;
-    size_t ptn, c;
+    intptr_t nptn = aln->size(), tip_block_size = get_safe_upper_limit(nptn)*nstates;
+    intptr_t ptn, c;
     size_t ncat = site_rate->getNRate();
     size_t i, x, j;
     size_t block = nstates * ncat;
@@ -388,10 +388,10 @@ void PhyloTree::computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branc
     size_t ncat = site_rate->getNRate();
 
     size_t block = ncat * nstates;
-    size_t ptn; // for big data size > 4GB memory required
+    intptr_t ptn; // for big data size > 4GB memory required
     size_t c, i, j;
-    size_t nptn = aln->size();
-    size_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
+    intptr_t nptn = aln->size();
+    intptr_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
 
 	ASSERT(theta_all);
 	if (!theta_computed) {
@@ -546,10 +546,10 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_b
     size_t ncat = site_rate->getNRate();
 
     size_t block = ncat * nstates;
-    size_t ptn; // for big data size > 4GB memory required
+    intptr_t ptn; // for big data size > 4GB memory required
     size_t c, i, j;
-    size_t nptn = aln->size();
-    size_t maxptn = get_safe_upper_limit(nptn);
+    intptr_t nptn = aln->size();
+    intptr_t maxptn = get_safe_upper_limit(nptn);
 
     ModelSet *models = (ModelSet*)model;
     VectorClass tree_lh = 0.0;
@@ -723,9 +723,9 @@ double PhyloTree::computeSitemodelLikelihoodFromBufferEigenSIMD() {
     size_t ncat = site_rate->getNRate();
 
     size_t block = ncat * nstates;
-    size_t ptn; // for big data size > 4GB memory required
+    intptr_t ptn; // for big data size > 4GB memory required
     size_t c, i, j;
-    size_t nptn = aln->size();
+    intptr_t nptn = aln->size();
 
     ModelSet *models = (ModelSet*)model;
     

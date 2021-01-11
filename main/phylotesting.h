@@ -340,9 +340,9 @@ public:
 /**
  * computing AIC, AICc, and BIC scores
  */
-void computeInformationScores(double tree_lh, int df, int ssize, double &AIC, double &AICc, double &BIC);
+void computeInformationScores(double tree_lh, int df, size_t sample_size, double &AIC, double &AICc, double &BIC);
 
-double computeInformationScore(double tree_lh, int df, int ssize, ModelTestCriterion mtc);
+double computeInformationScore(double tree_lh, int df, size_t sample_size, ModelTestCriterion mtc);
 
 string criterionName(ModelTestCriterion mtc);
 

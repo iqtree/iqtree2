@@ -141,7 +141,7 @@ double CircularNetwork::computePDScore(int sub_size, DoubleMatrix &table, int ro
 }
 
 void rotateTaxaOrder(vector<int> &origin_order, vector<int> &new_order, int root) {
-	int ntaxa = origin_order.size();
+	int ntaxa = static_cast<int>(origin_order.size());
 	int i, id = ntaxa;
 	for (i = 0; i < ntaxa; i++) 
 		if (origin_order[i] == root) { id = i; break; }
@@ -311,18 +311,18 @@ void CircularNetwork::calcMaxBudget(int budget, mmatrix(int) &max_b, vector<int>
 	max_b.resize(ntaxa-1);
 	for (u = 0; u < ntaxa-1; u++) {
 		max_b[u].resize(ntaxa);
-		max_b[u][u] = pda->costs[taxa_order[u]];
+		max_b[u][u] = static_cast<int>(pda->costs[taxa_order[u]]);
 		if (max_b[u][u] > budget) 
 			max_b[u][u] = budget;
 		for (v = u+1; v < ntaxa; v++) {
-			max_b[u][v] = max_b[u][v-1] + pda->costs[taxa_order[v]];
+			max_b[u][v] = static_cast<int>(max_b[u][v-1] + pda->costs[taxa_order[v]]);
 			if (max_b[u][v] > budget) 
 				max_b[u][v] = budget;
 		}
 	}
 	for (u = 0; u < ntaxa-1; u++)
 		for (v = u+1; v < ntaxa; v++)
-			max_b[u][v] -= (pda->costs[taxa_order[u]] + pda->costs[taxa_order[v]]);
+			max_b[u][v] -= static_cast<int>(pda->costs[taxa_order[u]] + pda->costs[taxa_order[v]]);
 }
 
 
@@ -338,10 +338,10 @@ void CircularNetwork::constructPDBudget(int budget, bool find_all, mmatrix(doubl
 	int max_v = -1, total_b;
 	vector<int> vec_v;
 	// reduce the budget
-	budget -= pda->costs[taxa_order[root]];
+	budget -= static_cast<int>(pda->costs[taxa_order[root]]);
 
 	for (v = root+1; v < ntaxa; v++) {
-		total_b = budget - pda->costs[taxa_order[v]];
+		total_b = budget - static_cast<int>(pda->costs[taxa_order[v]]);
 		if (total_b > max_b[root][v]) total_b = max_b[root][v];
 		if (total_b < 0) continue;
 		if (max_pd < dist[root][v] + table[v][total_b]) {
@@ -358,7 +358,7 @@ void CircularNetwork::constructPDBudget(int budget, bool find_all, mmatrix(doubl
 		// find all u,v with the same max_pd
 		vec_v.push_back(max_v);
 		for (v = max_v+1; v < ntaxa; v++) {
-			total_b = budget - pda->costs[taxa_order[v]];
+			total_b = budget - static_cast<int>(pda->costs[taxa_order[v]]);
 			if (total_b > max_b[root][v]) total_b = max_b[root][v];
 			if (total_b < 0) continue;
 			if (max_pd == dist[root][v] + table[v][total_b]) {
@@ -379,7 +379,7 @@ void CircularNetwork::constructPDBudget(int budget, bool find_all, mmatrix(doubl
 		pd_set->addTaxon(taxa_order[root]);
 		pd_set->addTaxon(taxa_order[max_v]);
 		if (!find_all) {
-			b = budget - pda->costs[taxa_order[max_v]];
+			b = budget - static_cast<int>(pda->costs[taxa_order[max_v]]);
 			if (b > max_b[root][max_v]) b = max_b[root][max_v];
 			// now trace to the minimum budget required
 			while (b > 0 && table[max_v][b] == table[max_v][b-1]) b--;
@@ -390,7 +390,7 @@ void CircularNetwork::constructPDBudget(int budget, bool find_all, mmatrix(doubl
 				int max_s = -1;
 				for (s = root+1; s < max_v; s++) 
 					if (b >= pda->costs[taxa_order[s]]) {
-						int sub_b = b - pda->costs[taxa_order[s]];
+						int sub_b = b - static_cast<int>(pda->costs[taxa_order[s]]);
 						if (sub_b > max_b[root][s]) sub_b = max_b[root][s];
 						if (sub_b < 0) continue;
 						if (max < dist[s][max_v] + table[s][sub_b]) {
@@ -400,14 +400,14 @@ void CircularNetwork::constructPDBudget(int budget, bool find_all, mmatrix(doubl
 					}
 				if (max_s == -1) break;
 				pd_set->addTaxon(taxa_order[max_s]);
-				b -= pda->costs[taxa_order[max_s]];
+				b -= static_cast<int>(pda->costs[taxa_order[max_s]]);
 				if (b > max_b[root][max_s])
 					b = max_b[root][max_s];
 				max_v = max_s;
 			}
 			taxa_set.push_back(pd_set);
 		} else {
-			b = budget - pda->costs[taxa_order[max_v]];
+			b = budget - static_cast<int>(pda->costs[taxa_order[max_v]]);
 			if (b > max_b[root][max_v]) b = max_b[root][max_v];
 			constructPDBudget(b, max_v, pd_set, table, dist, taxa_set, taxa_order, max_b, root);
 		}
@@ -427,7 +427,7 @@ void CircularNetwork::constructPDBudget(int budget, int max_v, Split *pd_set,
 	
 		for (s = root+1; s < max_v; s++) 
 			if (b >= pda->costs[taxa_order[s]]) {
-				int sub_b = b - pda->costs[taxa_order[s]];
+				int sub_b = b - static_cast<int>(pda->costs[taxa_order[s]]);
 				if (sub_b > max_b[root][s]) sub_b = max_b[root][s];
 				if (sub_b < 0) continue;
 				if (max < dist[s][max_v] + table[s][sub_b]) {
@@ -441,7 +441,7 @@ void CircularNetwork::constructPDBudget(int budget, int max_v, Split *pd_set,
 		// recursive if find another PD set	
 		for (s = max_s+1; s < max_v; s++) 
 			if (b >= pda->costs[taxa_order[s]]) {
-				int sub_b = b - pda->costs[taxa_order[s]];
+				int sub_b = b - static_cast<int>(pda->costs[taxa_order[s]]);
 				if (sub_b > max_b[root][s]) sub_b = max_b[root][s];
 				if (sub_b < 0) continue;
 				if (max == dist[s][max_v] + table[s][sub_b]) {
@@ -453,7 +453,7 @@ void CircularNetwork::constructPDBudget(int budget, int max_v, Split *pd_set,
 			}
 
 		pd_set->addTaxon(taxa_order[max_s]);
-		b -= pda->costs[taxa_order[max_s]];
+		b -= static_cast<int>(pda->costs[taxa_order[max_s]]);
 		if (b > max_b[root][max_s]) b = max_b[root][max_s];
 		max_v = max_s;
 	}
@@ -501,8 +501,8 @@ void CircularNetwork::computePDBudgetInfo(Params &params, mmatrix(double) &table
 		if (total_b < 0) continue;
 
 		for (s = root+1; s < v; s++)
-			for (b = pda->costs[taxa_order[s]]; b <= total_b; b++) {
-				int sub_b = b - pda->costs[taxa_order[s]];
+			for (b = static_cast<int>(pda->costs[taxa_order[s]]); b <= total_b; b++) {
+				int sub_b = b - static_cast<int>(pda->costs[taxa_order[s]]);
 				if (sub_b > max_b[root][s]) sub_b = max_b[root][s];
 				double sum = dist[v][s] + table[s][sub_b];
 				if (table[v][b] < sum) {
@@ -529,9 +529,9 @@ double CircularNetwork::computePDBudgetScore(int budget, mmatrix(double) &table,
 	int v;
 	int total_b;
 
-	budget -= pda->costs[taxa_order[root]];
+	budget -= static_cast<int>(pda->costs[taxa_order[root]]);
 	for (v = root+1; v < ntaxa; v++) {
-		total_b = budget - pda->costs[taxa_order[v]];
+		total_b = budget - static_cast<int>(pda->costs[taxa_order[v]]);
 		if (total_b > max_b[root][v]) total_b = max_b[root][v];
 		if (total_b < 0) continue;
 		if (max_pd < dist[root][v] + table[v][total_b]) {
@@ -572,7 +572,7 @@ void CircularNetwork::findCircularRootedPDBudget(Params &params, vector<SplitSet
 		constructPDBudget(b, params.find_all, table, dist, taxa_set[b-params.min_budget], taxa_order, max_b, 0);
 		if (verbose_mode >= VB_MAX) {
 			cout << "budget " << b << ": " << taxa_set.size()-set_count << " set(s)" << endl;
-			set_count = taxa_set.size();
+			set_count = static_cast<int>(taxa_set.size());
 		}
 	}
 }

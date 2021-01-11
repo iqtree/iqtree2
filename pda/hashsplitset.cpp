@@ -68,6 +68,6 @@ void SplitIntMap::buildMap(SplitGraph &sg, bool use_index) {
         if (use_index) 
             insertSplit(sg[i], i);
         else
-            insertSplit(sg[i], sg[i]->getWeight());
+            insertSplit(sg[i], static_cast<int>(sg[i]->getWeight()));
     }
 }

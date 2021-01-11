@@ -5,6 +5,10 @@
  *      Author: minh
  */
 
+#if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
+ //Turn off (4) warnings about sprintf calls in ncl\nxsstring.h
+#define _CRT_SECURE_NO_WARNINGS (1)
+#endif
 
 #include "vectorclass/vectormath_exp.h"
 #include "vectorclass/vectorclass.h"
@@ -19,6 +23,7 @@
 #define KERNEL_FIX_STATES
 #include "phylokernelnew.h"
 #include "phylokernelnonrev.h"
+
 
 #ifndef __AVX__
 #error "You must compile this file with AVX enabled!"

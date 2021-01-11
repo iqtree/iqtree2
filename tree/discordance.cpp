@@ -71,7 +71,7 @@ void Alignment::computeQuartetSupports(IntVector &quartet, vector<int64_t> &supp
         if (!pat->isInformative()) continue;
         bool informative = true;
         for (int j = 0; j < quartet.size(); j++)
-            if (pat->at(quartet[j]) >= num_states) {
+            if (static_cast<int>(pat->at(quartet[j])) >= num_states) {
                 informative = false;
                 break;
             }
@@ -178,7 +178,7 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstre
         for (auto part_aln = saln->partitions.begin(); part_aln != saln->partitions.end(); part_aln++, part++) {
             // get the taxa names of the partition tree
             StringIntMap name_map;
-            for (size_t i = 0; i < (*part_aln)->getNSeq(); i++)
+            for (int i = 0; i < (*part_aln)->getNSeq32(); i++)
                 name_map[(*part_aln)->getSeqName(i)] = i;
             
             // check that at least one taxon from each subtree is present in partition tree
@@ -212,22 +212,24 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstre
         IntVector quartet;
         quartet.resize(4);
         int left_id0 = 0, left_id1 = 1, right_id0 = 0, right_id1 = 1;
-        if (left_taxa.size() > 2) {
-            left_id0 = random_int(left_taxa.size(), rstream);
+        int left_taxa_count  = static_cast<int>(left_taxa.size());
+        if (2 < left_taxa_count) {
+            left_id0 = random_int(left_taxa_count, rstream);
             do {
-                left_id1 = random_int(left_taxa.size(), rstream);
+                left_id1 = random_int(left_taxa_count, rstream);
             } while (left_id0 == left_id1);
         }
-        if (right_taxa.size() > 2) {
-            right_id0 = random_int(right_taxa.size(), rstream);
+        int right_taxa_count = static_cast<int>(right_taxa.size());
+        if (right_taxa_count > 2) {
+            right_id0 = random_int(right_taxa_count, rstream);
             do {
-                right_id1 = random_int(right_taxa.size(), rstream);
+                right_id1 = random_int(right_taxa_count, rstream);
             } while (right_id0 == right_id1);
         }
-        quartet[0] = left_taxa[left_id0][random_int(left_taxa[left_id0].size(), rstream)];
-        quartet[1] = left_taxa[left_id1][random_int(left_taxa[left_id1].size(), rstream)];
-        quartet[2] = right_taxa[right_id0][random_int(right_taxa[right_id0].size(), rstream)];
-        quartet[3] = right_taxa[right_id1][random_int(right_taxa[right_id1].size(), rstream)];
+        quartet[0] = left_taxa[left_id0][random_int(static_cast<int>(left_taxa[left_id0].size()), rstream)];
+        quartet[1] = left_taxa[left_id1][random_int(static_cast<int>(left_taxa[left_id1].size()), rstream)];
+        quartet[2] = right_taxa[right_id0][random_int(static_cast<int>(right_taxa[right_id0].size()), rstream)];
+        quartet[3] = right_taxa[right_id1][random_int(static_cast<int>(right_taxa[right_id1].size()), rstream)];
 
         support[0] = support[1] = support[2] = 0;
         aln->computeQuartetSupports(quartet, support);
@@ -249,7 +251,7 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstre
                << '\t' << (((double)support[1]) / sum) << '\t' << support[1]
                << '\t' << (((double)support[2]) / sum) <<  '\t' << support[2]
                << '\t' << sum;
-            nei->putAttr("q" + convertIntToString(i), ss.str());
+            nei->putAttr("q" + convertInt64ToString(i), ss.str());
         }
     }
     sN = (double)sum_sites / nquartets;
@@ -277,9 +279,9 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstre
     string keys[] = {"sC", "sD1", "sD2"};
     for (size_t i = 3; i < support.size(); ++i) {
         if (support[i] >= 0)
-            nei->putAttr(keys[i%3] + convertIntToString(i/3), (double)support[i]/nquartets);
+            nei->putAttr(keys[i%3] + convertInt64ToString(i/3), (double)support[i]/nquartets);
         else
-            nei->putAttr(keys[i%3] + convertIntToString(i/3), "NA");
+            nei->putAttr(keys[i%3] + convertInt64ToString(i/3), "NA");
     }
 }
 
@@ -291,7 +293,7 @@ void PhyloTree::computeGeneConcordance(MTreeSet &trees, map<string,string> &mean
     getTaxaName(names);
     StringIntMap name_map;
     for (auto stri = names.begin(); stri != names.end(); stri++)
-        name_map[*stri] = stri - names.begin();
+        name_map[*stri] = static_cast<int>(stri - names.begin());
     BranchVector branches;
     vector<Split*> subtrees;
     extractQuadSubtrees(subtrees, branches, root->neighbors[0]->node);
@@ -317,7 +319,7 @@ void PhyloTree::computeGeneConcordance(MTreeSet &trees, map<string,string> &mean
         // make the taxa ordering right before converting to split system
         taxname.clear();
         int smallid;
-        for (taxid = 0, smallid = 0; taxid < leafNum; taxid++)
+        for (taxid = 0, smallid = 0; taxid < static_cast<int>(leafNum); taxid++)
             if (taxa_mask.containTaxon(taxid)) {
                 taxname.push_back(names[taxid]);
                 tree->findLeafName(names[taxid])->id = smallid++;
@@ -498,7 +500,7 @@ double PhyloTree::computeQuartetConcordance(Branch &branch, MTreeSet &trees) {
         IntVector quartet;
         quartet.resize(taxa.size());
         for (j = 0; j < taxa.size(); j++) {
-            quartet[j] = taxa[j][random_int(taxa[j].size())];
+            quartet[j] = taxa[j][random_int(static_cast<int>(taxa[j].size()))];
         }
         
         int quartetCF[3] = {0, 0, 0};

@@ -164,7 +164,7 @@ void PDNetwork::readInitialSet(Params &params) {
 	if (isPDArea()) return;
 
 	if (isBudgetConstraint()) {
-		int budget = (params.budget >= 0) ? params.budget : pda->budget;
+		int budget = (params.budget >= 0) ? params.budget : static_cast<int>(pda->budget);
 		if (calcCost(initialset) > budget)
 			outError(ERR_TOO_SMALL_BUDGET);
 	} else {
@@ -199,7 +199,7 @@ void PDNetwork::proceedInitialSet() {
 void PDNetwork::readInitialAreas(Params &params) {
 	if (!isPDArea())
 		outError("Invalid -ia option: no areas specified");
-	int nareas = sets->getNSets();
+	int nareas = static_cast<int>(sets->getNSets());
 	StrVector area_name;
 	readInitAreaFile(params, nareas, area_name);
 	if (area_name.empty()) 
@@ -213,7 +213,7 @@ void PDNetwork::readInitialAreas(Params &params) {
 	}
 
 	if (isBudgetConstraint()) {
-		int budget = (params.budget >= 0) ? params.budget : pda->budget;
+		int budget = (params.budget >= 0) ? params.budget : static_cast<int>(pda->budget);
 		if (calcCost(initialareas) > budget)
 			outError(ERR_TOO_SMALL_BUDGET);
 	} else {
@@ -240,7 +240,7 @@ void PDNetwork::initPDMin() {
 int PDNetwork::calcCost(IntVector &taxset) {
 	int sum = 0;
 	for (IntVector::iterator it = taxset.begin(); it != taxset.end(); it++)
-		sum += pda->costs[*it];
+		sum += static_cast<int>(pda->costs[*it]);
 	return sum;
 }
 
@@ -327,7 +327,7 @@ void PDNetwork::computePD(Params &params, SplitSet &pd_set, PDRelatedMeasures &p
 void PDNetwork::updateSplitVector(Split &curset, SplitSet &best_set) 
 {
 	if (curset.weight > best_set[0]->weight) {
-		for (int it = best_set.size()-1; it >= 0; it--) 
+		for (int it = static_cast<int>(best_set.size())-1; it >= 0; it--)
 			delete best_set[it];
 		best_set.clear();
 	}
@@ -358,7 +358,7 @@ double PDNetwork::calcRaisedWeight(Split &taxa_set,
 int PDNetwork::calcMaxBudget() {
 	int sum = 0;
 	for (DoubleVector::iterator it = pda->costs.begin(); it != pda->costs.end(); it++)
-		sum += (*it);
+		sum += static_cast<int>(*it);
 	return sum;
 }
 
@@ -367,7 +367,7 @@ void PDNetwork::enterFindPD(Params &params) {
 	// check parameters
 	if (params.pd_proportion == 0.0) {
 		if (isBudgetConstraint()) {
-			int budget = (params.budget >= 0) ? params.budget : pda->getBudget();
+			int budget = (params.budget >= 0) ? params.budget : static_cast<int>(pda->getBudget());
 			if (budget < 0) {
 				outError(ERR_NO_BUDGET);
 			}
@@ -394,14 +394,17 @@ void PDNetwork::enterFindPD(Params &params) {
 	
 		if (isBudgetConstraint()) {
 			// fix the budget and min_budget first
-			if (params.budget < 0) params.budget = pda->budget;
+			if (params.budget < 0) params.budget = static_cast<int>(pda->budget);
 			if (verbose_mode >= VB_DEBUG) {
 				pda->Report(cout);
 			}
 			cout << "Budget constraint with budget = " << params.budget << " ..." << endl;
-			if (params.min_budget < 0)
-				params.min_budget = pda->min_budget;
-			if (params.min_budget < 0) params.min_budget = params.budget;
+			if (params.min_budget < 0) {
+				params.min_budget = static_cast<int>(pda->min_budget);
+			}
+			if (params.min_budget < 0) {
+				params.min_budget = params.budget;
+			}
 	
 			// resize the taxa_set
 			int max_budget = calcMaxBudget();
@@ -447,7 +450,7 @@ void PDNetwork::findPD(Params &params, vector<SplitSet> &taxa_set, vector<int> &
 	enterFindPD(params);
 
 	int ntaxa = getNTaxa();
-	int nsplits = getNSplits();
+	int nsplits = static_cast<int>(getNSplits());
 	Split curset(ntaxa, 0.0);
 	IntList rem_splits;
 
@@ -566,7 +569,7 @@ double PDNetwork::exhaustPDBudget(int cur_budget, int cur_tax, Split &curset,
 		}
 
 		if (tax < ntaxa-1)
-			exhaustPDBudget(cur_budget - pda->costs[taxa_order[tax]], tax, 
+			exhaustPDBudget(cur_budget - static_cast<int>(pda->costs[taxa_order[tax]]), tax,
 				curset, find_all, best_set, taxa_order, rem_splits, rem_it);
 		
 			//curset.report(cout);
@@ -890,7 +893,7 @@ void PDNetwork::findPD_LP(Params &params, vector<SplitSet> &taxa_set) {
 
 void PDNetwork::transformLP_Area2(Params &params, const char *outfile,
                                   int total_size, bool make_bin) {
-	int nareas = getNAreas();
+	int nareas = static_cast<int>(getNAreas());
 	Split included_area(nareas);
 	IntVector::iterator it2;
 	for (it2 = initialareas.begin(); it2 != initialareas.end(); it2++)
@@ -922,7 +925,7 @@ void PDNetwork::transformLP_Area2(Params &params, const char *outfile,
 
 void PDNetwork::transformMinK_Area2(Params &params, const char *outfile,
                                     double pd_proportion, bool make_bin) {
-	int nareas = getNAreas();
+	int nareas = static_cast<int>(getNAreas());
 	Split included_area(nareas);
 	IntVector::iterator it2;
 	for (it2 = initialareas.begin(); it2 != initialareas.end(); it2++)
@@ -953,7 +956,7 @@ void PDNetwork::transformMinK_Area2(Params &params, const char *outfile,
 
 double PDNetwork::findMinKArea_LP(Params &params, const char* filename,
                                   double pd_proportion, Split &area) {
-	int nareas = area_taxa.size();
+	int nareas = static_cast<int>(area_taxa.size());
 	double *variables = new double[nareas];
 	double score;
 	int lp_ret, i;
@@ -1015,16 +1018,16 @@ void PDNetwork::computeFeasibleBudget(Params &params, IntVector &ok_budget) {
 	cout << "Computing feasible budget values..." << endl;
 	IntVector cost_present;
     auto maxi = max_element(pda->costs.begin(), pda->costs.end());
-	cost_present.resize((*maxi) + 1, 0);
+	cost_present.resize(static_cast<size_t>(*maxi) + 1, 0);
 	int i, j, num_cost = 0;
 	DoubleVector::iterator it;
 	for (it = pda->costs.begin(); it != pda->costs.end(); it++) {
 		if ((*it) != round(*it)) {
 			outError("Non integer cost detected.");
 		}
-		if ((*it) != 0 && !(cost_present[*it])) {
+		if ((*it) != 0.0 && !(cost_present[static_cast<int>(*it)])) {
 			num_cost++;	
-			cost_present[*it] = 1;
+			cost_present[static_cast<int>(*it)] = 1;
 		}
 	}
     if (num_cost == 0) {
@@ -1067,6 +1070,11 @@ void PDNetwork::computeFeasibleBudget(Params &params, IntVector &ok_budget) {
 	cout << endl;
 }
 
+#ifdef _MSC_VER
+#define format_string printf_s
+#else
+#define format_string printf
+#endif
 
 void PDNetwork::printOutputSetScore(Params &params, vector<SplitSet> &pd_set) {
 	char filename[300];
@@ -1078,14 +1086,14 @@ void PDNetwork::printOutputSetScore(Params &params, vector<SplitSet> &pd_set) {
 	ofstream out;
 	if (params.nr_output == 1) {
 		if (params.run_mode == PD_USER_SET || !isPDArea()) {
-            sprintf(filename, "%s.pdtaxa", params.out_prefix.c_str());
+            format_string(filename, "%s.pdtaxa", params.out_prefix.c_str());
 			cout << "All taxa list(s) printed to " << filename << endl;
 		} else { 
-            sprintf(filename, "%s.pdarea", params.out_prefix.c_str());
+			format_string(filename, "%s.pdarea", params.out_prefix.c_str());
 			cout << "All area list(s) printed to " << filename << endl;
 		}
 		out.open(filename);
-        sprintf(scorename, "%s.score", params.out_prefix.c_str());
+		format_string(scorename, "%s.score", params.out_prefix.c_str());
 		scoreout.open(scorename);
 	}
 	double total_weight = calcWeight();
@@ -1107,12 +1115,12 @@ void PDNetwork::printOutputSetScore(Params &params, vector<SplitSet> &pd_set) {
 			//if (count != c_old) {
 			if (c_num == 0) {
 				//c_num = 0;
-                sprintf(filename, "%s.%d.pdtaxa",
+                format_string(filename, "%s.%d.pdtaxa",
                         params.out_prefix.c_str(), count);
 			}
 			else {
 				//c_num++;
-                sprintf(filename, "%s.%d.pdtaxa.%d",
+                format_string(filename, "%s.%d.pdtaxa.%d",
                         params.out_prefix.c_str(), count, c_num);
 			}
 			//if (fabs(w_old - this_set->getWeight()) > 1e-5 || (c_old != count))
@@ -1205,7 +1213,7 @@ void PDNetwork::findPDArea_LP(Params &params, vector<SplitSet> &areas_set) {
 	ofile += ".lp";
 	double score;
 	int lp_ret, i;
-	int nareas = area_taxa.size();
+	int nareas = static_cast<int>(area_taxa.size());
 	int k, min_k, max_k, step_k, index;
 
 	if (params.pd_proportion == 1.0 && params.min_proportion == 0.0) {
@@ -1230,7 +1238,7 @@ void PDNetwork::findPDArea_LP(Params &params, vector<SplitSet> &areas_set) {
 		if (params.min_proportion == 0.0) params.min_proportion = params.pd_proportion;
 		cout << "running p = ";
 		double prop;
-		areas_set.resize(round((params.pd_proportion-params.min_proportion)/params.step_proportion) + 1);
+		areas_set.resize(static_cast<size_t>(round((params.pd_proportion-params.min_proportion)/params.step_proportion)) + 1);
 		for (prop = params.min_proportion, index = 0;
              prop <= params.pd_proportion + 1e-6;
              prop += params.step_proportion, index++) {
@@ -1343,7 +1351,7 @@ bool PDNetwork::isPDArea() {
 
 void PDNetwork::calcPDArea(Split &area_id_set) {
 	int ntaxa = getNTaxa();
-	int nareas = area_taxa.size();
+	int nareas = static_cast<int>(area_taxa.size());
 	Split sp(ntaxa);
 	for (int i = 0; i < nareas; i++)
 		if (area_id_set.containTaxon(i))
@@ -1366,7 +1374,7 @@ void PDNetwork::transformLP_Area_Coverage(const char *outfile,
                                           Params &params,
                                           Split &included_area) {
 	int ntaxa = getNTaxa();
-	int nareas = getNAreas();
+	int nareas = static_cast<int>(getNAreas());
 	int i, j;
 	IntVector::iterator it;
 	Split tax_cover(ntaxa);
@@ -1423,7 +1431,7 @@ void PDNetwork::transformLP_Area_Coverage(const char *outfile,
 int PDNetwork::findMinAreas(Params &params, Split &area_id) {
 	string ofile = params.out_prefix;
 	ofile += ".lp";
-	int nareas = getNAreas();
+	int nareas = static_cast<int>(getNAreas());
 	int i;
 	double *variables = new double[nareas];
 	double score;
@@ -1462,7 +1470,7 @@ int PDNetwork::findMinAreas(Params &params, Split &area_id) {
 			area_id.addTaxon(i);
 			taxon_coverage += *(area_taxa[i]);
 			if (isBudgetConstraint())
-				count += pda->getCost(i);
+				count += static_cast<int>(pda->getCost(i));
 			else
 				count++;
 		}
@@ -1546,7 +1554,7 @@ void PDNetwork::lpObjectiveMaxSD(ostream &out, Params &params,
 void PDNetwork::lpObjectiveMinK(ostream &out, Params &params) {
 	iterator spit;
 	int i, j;
-	int nareas = area_taxa.size();
+	int nareas = static_cast<int>(area_taxa.size());
 
 	// define the objective function
 	if (params.gurobi_format)
@@ -1592,7 +1600,7 @@ void PDNetwork::lpK_BudgetConstraint(ostream &out, Params &params,
 	int nvars;
 	int i, j;
 	if (isPDArea())
-		nvars = area_taxa.size();
+		nvars = static_cast<int>(area_taxa.size());
 	else
 		nvars = getNTaxa();
 
@@ -1641,7 +1649,7 @@ void PDNetwork::lpBoundaryConstraint(ostream &out, Params &params) {
 		return;
 	if (params.quad_programming) return;
 	int i, j;
-	int nareas = area_taxa.size();
+	int nareas = static_cast<int>(area_taxa.size());
 
 	for (i = 0; i < nareas-1; i++)
 		for (j = i+1; j < nareas; j++)
@@ -1666,7 +1674,7 @@ void PDNetwork::lpSplitConstraint_RS(ostream &out, Params &params,
 	int i,j;
 	//int root_id = -1;
 	//if (params.root || params.is_rooted) root_id = initialset[0];
-	int nareas = area_taxa.size();
+	int nareas = static_cast<int>(area_taxa.size());
 
 
 	// adding the constraint for splits
@@ -1844,9 +1852,9 @@ void PDNetwork::lpVariableBinary(ostream &out, Params &params,
 	int nvars;
 	int j;
 	if (isPDArea())
-		nvars = area_taxa.size();
+		nvars = static_cast<int>(area_taxa.size());
 	else
-		nvars = getNTaxa();
+		nvars = static_cast<int>(getNTaxa());
 
 	bool first = true;
 	for (j = 0; j < nvars; j++) {
@@ -1895,7 +1903,7 @@ void PDNetwork::lpVariableBinary(const char *outfile, Params &params,
                                  IntVector &initial_set) {
     int nvars;
     if (isPDArea()) {
-        nvars = area_taxa.size();
+        nvars = static_cast<int>(area_taxa.size());
     }
     else {
         nvars = getNTaxa();
@@ -1909,7 +1917,7 @@ void PDNetwork::lpVariableBinary(const char *outfile, Params &params,
 }
 
 void PDNetwork::lpInitialArea(ostream &out, Params &params) {
-	int nareas = getNAreas();
+	int nareas = static_cast<int>(getNAreas());
 	int j;
 
 	// adding constraint for initialset
@@ -1970,7 +1978,7 @@ void PDNetwork::checkYValue(int total_size, vector<int> &y_value) {
 void PDNetwork::checkYValue_Area(int total_size, vector<int> &y_value,
                                  vector<int> &count1, vector<int> &count2) {
 	iterator spit;
-	int nareas = area_taxa.size();
+	int nareas = static_cast<int>(area_taxa.size());
 	int i, j;
 
 	y_value.resize(getNSplits(), -1);

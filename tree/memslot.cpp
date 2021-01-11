@@ -63,7 +63,7 @@ void MemSlotVector::addNei(PhyloNeighbor *nei, iterator it) {
     nei->partial_lh = it->partial_lh;
     nei->scale_num = it->scale_num;
     it->nei = nei;
-    nei_id_map[nei] = it-begin();
+    nei_id_map[nei] = static_cast<int>(it-begin());
 }
 
 
@@ -76,7 +76,7 @@ void MemSlotVector::addSpecialNei(PhyloNeighbor *nei) {
     ms.partial_lh = nei->partial_lh;
     ms.scale_num = nei->scale_num;
     push_back(ms);
-    nei_id_map[nei] = size()-1;
+    nei_id_map[nei] = static_cast<int>(size())-1;
 }
 
 void MemSlotVector::eraseSpecialNei() {
@@ -140,7 +140,7 @@ int MemSlotVector::allocate(PhyloNeighbor *nei) {
         ASSERT(it->nei == NULL);
         addNei(nei, it);
         free_count++;
-        return it-begin();
+        return static_cast<int>(it-begin());
     }
 
     int min_size = INT_MAX;
@@ -165,7 +165,7 @@ int MemSlotVector::allocate(PhyloNeighbor *nei) {
 
     // assign mem to nei
     addNei(nei, best);
-    return best-begin();
+    return static_cast<int>(best-begin());
 
 }
 
@@ -216,7 +216,7 @@ void MemSlotVector::takeover(PhyloNeighbor *nei, PhyloNeighbor *taken_nei) {
 //    if (id->status & MEM_SPECIAL)
 //        return;
     nei_id_map.erase(nei_id_map.find(taken_nei));
-    nei_id_map[nei] = id - begin();
+    nei_id_map[nei] = static_cast<int>(id - begin());
     if (id->nei == taken_nei) {
         id->nei = nei;
     }
@@ -232,7 +232,7 @@ void MemSlotVector::replace(PhyloNeighbor *new_nei, PhyloNeighbor *old_nei) {
     it->partial_lh = new_nei->partial_lh;
     it->scale_num = new_nei->scale_num;
     it->status = MEM_LOCKED + MEM_SPECIAL;
-    nei_id_map[new_nei] = it-begin();
+    nei_id_map[new_nei] = static_cast<int>(it-begin());
 //    nei_id_map.erase(old_nei);
     cout << "slot " << distance(begin(), it) << " replaced" << endl;
 }

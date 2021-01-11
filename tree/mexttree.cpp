@@ -25,7 +25,7 @@ void MExtTree::generateRandomTree(TreeGenType tree_type, Params &params, bool bi
 	if (params.aln_file) {
 		// generate random tree with leaf sets taken from an alignment
 		alignment = createAlignment(params.aln_file, params.sequence_type, params.intype, params.model_name);
-		params.sub_size = alignment->getNSeq();
+		params.sub_size = alignment->getNSeq32();
 	}
 	if (params.sub_size < 3) {
 		outError(ERR_FEW_TAXA);
@@ -60,15 +60,16 @@ void MExtTree::generateRandomTree(TreeGenType tree_type, Params &params, bool bi
 void MExtTree::setZeroInternalBranches(int num_zero_len) {
 	NodeVector nodes, nodes2;
 	generateNNIBraches(nodes, nodes2);
+	int node_count = static_cast<int>(nodes.size());
 	if (num_zero_len > nodes.size()) outError("The specified number of zero branches is too much");
 	for (int i = 0; i < num_zero_len;) {
-		int id = random_int(nodes.size());
+		int id = random_int(node_count);
 		if (!nodes[id]) continue;
 		i++;
 		nodes[id]->findNeighbor(nodes2[id])->length = 0.0;
 		nodes2[id]->findNeighbor(nodes[id])->length = 0.0;
-		nodes[id] = NULL;
-		nodes2[id] = NULL;
+		nodes[id]  = nullptr;
+		nodes2[id] = nullptr;
 	}
 }
 
@@ -121,7 +122,7 @@ void MExtTree::generateCaterpillar(int size) {
 	// indexing the leaves
 	setLeavesName(myleaves);
 
-	leafNum = myleaves.size();
+	leafNum = static_cast<unsigned int>(myleaves.size());
 	nodeNum = leafNum;
 	initializeTree();
 
@@ -147,7 +148,7 @@ void MExtTree::generateBalanced(int size) {
 
 	while (myleaves.size() < size) {
 
-		int cur_size = myleaves.size();
+		int cur_size = static_cast<int>(myleaves.size());
 		// additionally add a leaf
 		for (i = 0; i < cur_size && myleaves.size() < size; i++)
 		{
@@ -175,7 +176,7 @@ void MExtTree::generateBalanced(int size) {
 	// indexing the leaves
 	setLeavesName(myleaves);
 
-	leafNum = myleaves.size();
+	leafNum = static_cast<int>(myleaves.size());
 	nodeNum = leafNum;
 	initializeTree();
 
@@ -299,7 +300,7 @@ void MExtTree::generateYuleHarding(Params &params, bool binary) {
 		if (binary) {
 			index = random_int(i);
 		} else {
- 			index = random_int(i + innodes.size());
+ 			index = random_int(i + static_cast<int>(innodes.size()));
 		}
 		if (index < i) {
 			node = myleaves[index];
@@ -335,7 +336,7 @@ void MExtTree::generateYuleHarding(Params &params, bool binary) {
 	// indexing the leaves
 	setLeavesName(myleaves);
 
-	leafNum = myleaves.size();
+	leafNum = static_cast<unsigned int>(myleaves.size());
 	nodeNum = leafNum;
 	initializeTree();
 
@@ -344,7 +345,7 @@ void MExtTree::generateYuleHarding(Params &params, bool binary) {
 
 void MExtTree::generateConstrainedYuleHarding(Params &params, MTree* constraint_tree,
                                               const StrVector &taxnames) {
-	int size = taxnames.size();
+	unsigned int size = static_cast<int>(taxnames.size());
 	if (size < 3)
 		outError(ERR_FEW_TAXA);
 	NodeVector myleaves;
@@ -468,7 +469,8 @@ void MExtTree::createCluster(NodeVector &taxa, mmatrix(int) &clusters, Node *nod
 				clusters.back().push_back((int)((*nit)->height));
 			}
 			child->name = "";
-			child->name += clusters.size();
+			//Note: this next line looks wrong.
+			child->name += static_cast<int>(clusters.size());
 		}
 		createCluster(taxa, clusters, child, node);
 	}

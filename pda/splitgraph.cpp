@@ -81,7 +81,8 @@ void SplitGraph::init(Params &params)
         if (mtrees->isRooted() && params.root != NULL)
             outError(ERR_CONFLICT_ROOT);
         //SplitIntMap hash_ss;
-        mtrees->convertSplits(*this, params.split_threshold, params.split_weight_summary, params.split_weight_threshold);
+        mtrees->convertSplits(*this, params.split_threshold, static_cast<int>(params.split_weight_summary), 
+                              params.split_weight_threshold);
 
         if (verbose_mode >= VB_DEBUG)
             saveFileStarDot(cout);
@@ -106,7 +107,7 @@ void SplitGraph::init(Params &params)
             if (getNSplits() > 0) 
                 outError("Ambiguous input file, pls only specify either SPLITS block or TREES block");
             convertFromTreesBlock(params.tree_burnin, params.tree_max_count, params.split_threshold, 
-                params.split_weight_summary, params.split_weight_threshold, params.tree_weight_file);
+                static_cast<int>(params.split_weight_summary), params.split_weight_threshold, params.tree_weight_file);
         }
 
     }
@@ -164,9 +165,9 @@ void SplitGraph::saveCheckpoint() {
     int ntax = getNTaxa();
 //    checkpoint->startStruct("S");
     CKP_SAVE(ntax);
-    int nsplits = size();
+    int nsplits = static_cast<int>(size());
     CKP_SAVE(nsplits);
-    checkpoint->startList(size());
+    checkpoint->startList(static_cast<int>(size()));
     for (iterator it = begin(); it != end(); it++) {
         checkpoint->addListElement();
         stringstream ss;
@@ -266,13 +267,13 @@ SplitGraph::~SplitGraph()
 void SplitGraph::convertFromTreesBlock(int burnin, int max_count, double split_threshold, 
     int split_weight_summary, double weight_threshold, const char *tree_weight_file) {
     cout << trees->GetNumTrees() << " tree(s) loaded" << endl;
-    if (burnin >= trees->GetNumTrees())
+    if (burnin >= static_cast<int>(trees->GetNumTrees()))
         outError("Burnin value is too large");
     if (burnin > 0)
     cout << burnin << " beginning tree(s) discarded" << endl;
     mtrees = new MTreeSet();
     
-    for (int i = burnin; i < trees->GetNumTrees() && (i < burnin+max_count); i++) {
+    for (int i = burnin; i < static_cast<int>(trees->GetNumTrees()) && (i < burnin+max_count); i++) {
         stringstream strs(trees->GetTranslatedTreeDescription(i), ios::in | ios::out | ios::app);
         strs << ";";
         MTree *tree = mtrees->newTree();
@@ -652,7 +653,7 @@ bool SplitGraph::containSplit(Split &sp) {
 
 double SplitGraph::computeBoundary(Split &area) {
     if (!areas_boundary) return 0.0;
-    int nareas = sets->getNSets();
+    int nareas = static_cast<int>(sets->getNSets());
     double boundary = 0.0;
     for (int i = 0; i < nareas; i++) 
     if (area.containTaxon(i)) {

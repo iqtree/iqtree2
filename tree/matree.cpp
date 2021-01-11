@@ -46,9 +46,9 @@ void MaTree::printBrInfo(ostream& out) {
     sort(outer.begin(),outer.end());
     sort(all.begin(),all.end());
     //for the statistics
-    int noInner = inner.size();
-    int noOuter = outer.size();
-    int noBr = all.size();
+    int noInner = static_cast<int>(inner.size());
+    int noOuter = static_cast<int>(outer.size());
+    int noBr    = static_cast<int>(all.size());
     double aveInner = 0;
     double aveOuter = 0;
     double treeLen = 0;
@@ -90,7 +90,7 @@ void MaTree::comparedTo (MTreeSet &trees, DoubleMatrix &brLenMatrix, IntVector &
     taxname.resize(leafNum);
     getTaxaName(taxname);
 
-    int noTree = trees.size();
+    int noTree = static_cast<int>(trees.size());
     if (noTree == 0 ) return;
     RFs.resize(noTree);
     BSDs.resize(noTree);
@@ -162,9 +162,11 @@ void MaTree::comparedTo (MTreeSet &trees, DoubleMatrix &brLenMatrix, IntVector &
 //void MaTree::convertSplitIntMap(SplitIntMap &sim){}
 
 void MaTree::convertSplitIntMap(SplitIntMap &sim, Split *resp, const int taxonID, Node *node, Node *dad) {
-    if (!node) node = root;
+    if (!node) {
+        node = root;
+    }
     ASSERT(resp->getNTaxa() == leafNum);
-    ASSERT (taxonID >= 0 && taxonID < leafNum);
+    ASSERT (taxonID >= 0 && static_cast<intptr_t>(taxonID) < static_cast<intptr_t>(leafNum));
     bool has_child = false;
     FOR_NEIGHBOR_IT(node, dad, it) {
         //vector<int> taxa;

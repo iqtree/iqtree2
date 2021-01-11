@@ -5,11 +5,18 @@
  *      Author: minh
  */
 
-
+#if defined(_MSC_VER) 
+#ifndef _CRT_SECURE_NO_WARNINGS
+ //Turn off (4) warnings about sprintf calls in ncl\nxsstring.h
+#define _CRT_SECURE_NO_WARNINGS (1)
+#endif
+#include <boost/scoped_array.hpp>
+#endif
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
+
 #include <iqtree_config.h>
 #include <numeric>
 #include "tree/phylotree.h"
@@ -176,6 +183,7 @@ string getSeqTypeName(SeqType seq_type) {
         case SEQ_POMO: return "PoMo";
         case SEQ_UNKNOWN: return "unknown";
         case SEQ_MULTISTATE: return "MultiState";
+        default: return "unknown";
     }
 }
 
@@ -226,7 +234,7 @@ size_t CandidateModel::getUsualModel(Alignment *alignment) {
 }
 
 void CandidateModel::computeICScores(size_t sample_size) {
-    computeInformationScores(logl, df, sample_size, AIC_score, AICc_score, BIC_score);
+    computeInformationScores(logl, df, static_cast<int>(sample_size), AIC_score, AICc_score, BIC_score);
 }
 
 void CandidateModel::computeICScores() {
@@ -256,6 +264,9 @@ double CandidateModel::getScore(ModelTestCriterion mtc) {
         case MTC_BIC:
             return BIC_score;
         case MTC_ALL:
+            ASSERT(0 && "Unhandled case");
+            return 0.0;
+        default:
             ASSERT(0 && "Unhandled case");
             return 0.0;
     }
@@ -427,15 +438,15 @@ string detectSeqTypeName(string model_name) {
     return "";
 }
 
-void computeInformationScores(double tree_lh, int df, int ssize, double &AIC, double &AICc, double &BIC) {
+void computeInformationScores(double tree_lh, int df, size_t sample_size, double &AIC, double &AICc, double &BIC) {
 	AIC = -2 * tree_lh + 2 * df;
-	AICc = AIC + 2.0 * df * (df + 1) / max(ssize - df - 1, 1);
-	BIC = -2 * tree_lh + df * log(ssize);
+	AICc = AIC + 2.0 * df * (df + 1) / max(sample_size - df - 1, 1);
+	BIC = -2 * tree_lh + df * log(sample_size);
 }
 
-double computeInformationScore(double tree_lh, int df, int ssize, ModelTestCriterion mtc) {
+double computeInformationScore(double tree_lh, int df, size_t sample_size, ModelTestCriterion mtc) {
 	double AIC, AICc, BIC;
-	computeInformationScores(tree_lh, df, ssize, AIC, AICc, BIC);
+	computeInformationScores(tree_lh, df, sample_size, AIC, AICc, BIC);
 	if (mtc == MTC_AIC)
 		return AIC;
 	if (mtc == MTC_AICC)
@@ -475,15 +486,24 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 double computeAdapter(Alignment *orig_aln, Alignment *newaln, int &adjusted_df) {
 
     // count codon occurences
+#ifndef _MSC_VER
     unsigned int codon_counts[orig_aln->num_states];
-    orig_aln->computeAbsoluteStateFreq(codon_counts);
+#else
+    boost::scoped_array<unsigned int> codon_counts(new unsigned int[orig_aln->num_states]);
+#endif
+    orig_aln->computeAbsoluteStateFreq(&codon_counts[0]);
     
     // compute AA frequency
 //    double aa_freq[newaln->num_states];
 //    newaln->computeStateFreq(aa_freq);
     
     // compute codon frequency
+#ifndef _MSC_VER
     double codon_freq[orig_aln->num_states];
+#else
+    boost::scoped_array<double> codon_freq(new double[orig_aln->num_states]);
+#endif 
+
     //orig_aln->computeStateFreq(codon_freq);
     
     double original_sum = 0.0;
@@ -1325,7 +1345,7 @@ void replaceModelInfo(string &set_name, ModelCheckpoint &model_info, ModelCheckp
 
 void extractModelInfo(string &orig_set_name, ModelCheckpoint &model_info, ModelCheckpoint &part_model_info) {
     string set_name = orig_set_name + CKP_SEP;
-    int len = set_name.length();
+    int len = static_cast<int>(set_name.length());
     for (auto it = model_info.lower_bound(set_name); it != model_info.end() && it->first.substr(0, len) == set_name; it++) {
         part_model_info.put(it->first.substr(len), it->second);
     }
@@ -1344,7 +1364,7 @@ string getSubsetName(PhyloSuperTree *super_tree, set<int> &subset) {
 int getSubsetAlnLength(PhyloSuperTree *super_tree, set<int> &subset) {
     int len = 0;
     for (auto i : subset) {
-        len += super_tree->at(i)->aln->getNSite();
+        len += static_cast<int>(super_tree->at(i)->aln->getNSite());
     }
     return len;
 }
@@ -1745,7 +1765,7 @@ double doKmeansClustering(Params &params, PhyloSuperTree *in_tree,
     cout << "k-means merging into " << ncluster << " partitions..." << endl;
     
     ASSERT(lenvec.size() == in_tree->size());
-    int npart = in_tree->size();
+    int npart = static_cast<int>(in_tree->size());
     IntVector weights;
     weights.resize(npart, 1);
     int *clusters = new int[npart];
@@ -1830,8 +1850,8 @@ double doKmeansClustering(Params &params, PhyloSuperTree *in_tree,
         }
     }
     
-    size_t ssize = in_tree->getAlnNSite();
-    double score = computeInformationScore(lhsum, dfsum, ssize, params.model_test_criterion);
+    size_t sample_size = in_tree->getAlnNSite();
+    double score = computeInformationScore(lhsum, dfsum, sample_size, params.model_test_criterion);
     cout << "k-means score for " << ncluster << " partitions: " << score << " (LnL: " << lhsum << "  " << "df: " << dfsum << ")" << endl;
 
     delete [] centers;
@@ -1876,7 +1896,7 @@ void findClosestPairs(SuperAlignment *super_aln, DoubleVector &lenvec, vector<se
     if (!closest_pairs.empty() && Params::getInstance().partfinder_rcluster < 100) {
         // sort distance
         std::sort(closest_pairs.begin(), closest_pairs.end(), comparePairs);
-        size_t num_pairs = round(closest_pairs.size() * (Params::getInstance().partfinder_rcluster/100.0));
+        size_t num_pairs = static_cast<size_t>(round(closest_pairs.size() * (Params::getInstance().partfinder_rcluster / 100.0)));
         num_pairs = min(num_pairs, Params::getInstance().partfinder_rcluster_max);
         if (num_pairs <= 0) num_pairs = 1;
         closest_pairs.erase(closest_pairs.begin() + num_pairs, closest_pairs.end());
@@ -1905,7 +1925,6 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 {
 //    params.print_partition_info = true;
 //    params.print_conaln = true;
-	int i = 0;
 //	PhyloSuperTree::iterator it;
 	DoubleVector lhvec; // log-likelihood for each partition
 	DoubleVector dfvec; // number of parameters for each partition
@@ -1928,19 +1947,20 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 
 	if (params.partition_merge != MERGE_NONE) {
         double p = params.partfinder_rcluster/100.0;
-        size_t num_pairs = round(in_tree->size()*(in_tree->size()-1)*p/2);
+        size_t num_pairs = static_cast<size_t>(round(in_tree->size()*(in_tree->size()-1)*p/2));
         if (p < 1.0)
             num_pairs = min(num_pairs, params.partfinder_rcluster_max);
         total_num_model += num_pairs;
-        for (i = in_tree->size()-2; i > 0; i--)
-            total_num_model += max(round(i*p), 1.0);
+        for (int i = static_cast<int>(in_tree->size()) - 2; i > 0; i--) {
+            total_num_model += static_cast<int64_t>(max(round(i * p), 1.0));
+        }
     }
 
 
 #ifdef _OPENMP
     if (num_threads <= 0) {
         // partition selection scales well with many cores
-        num_threads = min((int64_t)countPhysicalCPUCores(), total_num_model);
+        num_threads = min(countPhysicalCPUCores(), static_cast<int>(total_num_model));
         num_threads = min(num_threads, params.num_threads_max);
         omp_set_num_threads(num_threads);
         cout << "NUMBER OF THREADS FOR PARTITION FINDING: " << num_threads << endl;
@@ -1962,7 +1982,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     // sort partition by computational cost for OpenMP effciency
     vector<pair<int,double> > partitionID;
     
-	for (i = 0; i < in_tree->size(); i++) {
+	for (int i = 0; i < in_tree->size(); i++) {
         Alignment *this_aln = in_tree->at(i)->aln;
         // computation cost is proportional to #sequences, #patterns, and #states
         partitionID.push_back({i, ((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states});
@@ -1979,10 +1999,10 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     
 #ifdef _OPENMP
     parallel_over_partitions = !params.model_test_and_tree && (in_tree->size() >= num_threads);
-#pragma omp parallel for private(i) schedule(dynamic) reduction(+: lhsum, dfsum) if(parallel_over_partitions)
+#pragma omp parallel for schedule(dynamic) reduction(+: lhsum, dfsum) if(parallel_over_partitions)
 #endif
 	for (int j = 0; j < in_tree->size(); j++) {
-        i = partitionID[j].first;
+        int i = partitionID[j].first;
         PhyloTree *this_tree = in_tree->at(i);
 		// scan through models for this partition, assuming the information occurs consecutively
 		ModelCheckpoint part_model_info;
@@ -2001,7 +2021,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 		double score = best_model.computeICScore(this_tree->getAlnNSite());
 		this_tree->aln->model_name = best_model.getName();
 		lhsum += (lhvec[i] = best_model.logl);
-		dfsum += (dfvec[i] = best_model.df);
+		dfvec[i] = best_model.df;
+        dfsum += best_model.df;
         lenvec[i] = best_model.tree_len;
 
 #ifdef _OPENMP
@@ -2050,7 +2071,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     gene_sets.resize(in_tree->size());
     model_names.resize(in_tree->size());
     greedy_model_trees.resize(in_tree->size());
-    for (i = 0; i < gene_sets.size(); i++) {
+    for (int i = 0; i < static_cast<int>(gene_sets.size()); ++i) {
         gene_sets[i].insert(i);
         model_names[i] = in_tree->at(i)->aln->model_name;
         greedy_model_trees[i] = in_tree->at(i)->aln->name;
@@ -2059,7 +2080,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     if (params.partition_merge == MERGE_KMEANS) {
         // kmeans cluster based on parition tree length
         double cur_score = inf_score;
-        for (int ncluster = in_tree->size()-1; ncluster >= 1; ncluster--) {
+        for (int ncluster = static_cast<int>(in_tree->size())-1; ncluster >= 1; ncluster--) {
             vector<set<int> > this_gene_sets;
             StrVector this_model_names;
             //double sum = in_tree->size()/std::accumulate(lenvec.begin(), lenvec.end(), 0.0);
@@ -2098,7 +2119,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             mergePairs(closest_pairs, log_closest_pairs);
         }
         // sort partition by computational cost for OpenMP effciency
-        for (i = 0; i < closest_pairs.size(); i++) {
+        for (int i = 0; i < closest_pairs.size(); i++) {
             // computation cost is proportional to #sequences, #patterns, and #states
             Alignment *this_aln = in_tree->at(closest_pairs[i].first)->aln;
             closest_pairs[i].distance = -((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states;
@@ -2108,12 +2129,12 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
         if (num_threads > 1) {
             std::sort(closest_pairs.begin(), closest_pairs.end(), comparePairs);
         }
-        size_t num_pairs = closest_pairs.size();
+        intptr_t num_pairs = closest_pairs.size();
         
 #ifdef _OPENMP
-#pragma omp parallel for private(i) schedule(dynamic) if(!params.model_test_and_tree)
+#pragma omp parallel for schedule(dynamic) if(!params.model_test_and_tree)
 #endif
-        for (size_t pair = 0; pair < num_pairs; pair++) {
+        for (intptr_t pair = 0; pair < num_pairs; pair++) {
             // information of current partitions pair
             ModelPair cur_pair;
             cur_pair.part1 = closest_pairs[pair].first;
@@ -2174,7 +2195,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             cur_pair.model_name = best_model.getName();
             cur_pair.tree_len = best_model.tree_len;
             double lhnew = lhsum - lhvec[cur_pair.part1] - lhvec[cur_pair.part2] + best_model.logl;
-            int dfnew = dfsum - dfvec[cur_pair.part1] - dfvec[cur_pair.part2] + best_model.df;
+            int dfnew = static_cast<int>(floor(dfsum - dfvec[cur_pair.part1] - dfvec[cur_pair.part2] + best_model.df));
             cur_pair.score = computeInformationScore(lhnew, dfnew, ssize, params.model_test_criterion);
 #ifdef _OPENMP
 #pragma omp critical
@@ -2207,7 +2228,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 		if (better_pairs.empty()) break;
         ModelPairSet compatible_pairs;
 
-        int num_comp_pairs = params.partition_merge == MERGE_RCLUSTERF ? gene_sets.size()/2 : 1;
+        int num_comp_pairs = params.partition_merge == MERGE_RCLUSTERF ? static_cast<int>(gene_sets.size())/2 : 1;
         better_pairs.getCompatiblePairs(num_comp_pairs, compatible_pairs);
         if (compatible_pairs.size() > 1)
             cout << compatible_pairs.size() << " compatible better partition pairs found" << endl;
@@ -2217,7 +2238,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             ModelPair opt_pair = it_pair->second;
 
             lhsum = lhsum - lhvec[opt_pair.part1] - lhvec[opt_pair.part2] + opt_pair.logl;
-            dfsum = dfsum - dfvec[opt_pair.part1] - dfvec[opt_pair.part2] + opt_pair.df;
+            dfsum = static_cast<int>(dfsum - dfvec[opt_pair.part1] - dfvec[opt_pair.part2]) + opt_pair.df;
             inf_score = computeInformationScore(lhsum, dfsum, ssize, params.model_test_criterion);
             ASSERT(inf_score <= opt_pair.score + 0.1);
 
@@ -2231,7 +2252,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             model_names[opt_pair.part1] = opt_pair.model_name;
             greedy_model_trees[opt_pair.part1] = "(" + greedy_model_trees[opt_pair.part1] + "," +
                 greedy_model_trees[opt_pair.part2] + ")" +
-                convertIntToString(in_tree->size()-gene_sets.size()+1) + ":" +
+                convertIntToString(static_cast<int>(in_tree->size()-gene_sets.size())+1) + ":" +
                 convertDoubleToString(inf_score);
 
             // delete entry opt_part2
@@ -2258,7 +2279,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 		final_model_tree = greedy_model_trees[0];
 	else {
 		final_model_tree = "(";
-		for (i = 0; i < greedy_model_trees.size(); i++) {
+		for (int i = 0; i < greedy_model_trees.size(); i++) {
 			if (i>0)
 				final_model_tree += ",";
 			final_model_tree += greedy_model_trees[i];
@@ -2283,7 +2304,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 
         // sort partition by computational cost for OpenMP effciency
         partitionID.clear();
-        for (i = 0; i < in_tree->size(); i++) {
+        for (int i = 0; i < in_tree->size(); i++) {
             Alignment *this_aln = in_tree->at(i)->aln;
             // computation cost is proportional to #sequences, #patterns, and #states
             partitionID.push_back({i, ((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states});
@@ -2293,12 +2314,12 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             std::sort(partitionID.begin(), partitionID.end(), comparePartition);
         }
 
-    #ifdef _OPENMP
+        #ifdef _OPENMP
         parallel_over_partitions = !params.model_test_and_tree && (in_tree->size() >= num_threads);
-        #pragma omp parallel for private(i) schedule(dynamic) reduction(+: lhsum, dfsum) if(parallel_over_partitions)
-    #endif
+        #pragma omp parallel for schedule(dynamic) reduction(+: lhsum, dfsum) if(parallel_over_partitions)
+        #endif
         for (int j = 0; j < in_tree->size(); j++) {
-            i = partitionID[j].first;
+            int i = partitionID[j].first;
             PhyloTree *this_tree = in_tree->at(i);
             // scan through models for this partition, assuming the information occurs consecutively
             ModelCheckpoint part_model_info;
@@ -2318,7 +2339,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             double score = best_model.computeICScore(this_tree->getAlnNSite());
             this_tree->aln->model_name = best_model.getName();
             lhsum += (lhvec[i] = best_model.logl);
-            dfsum += (dfvec[i] = best_model.df);
+            dfvec[i] = best_model.df;
+            dfsum += best_model.df;
             lenvec[i] = best_model.tree_len;
             
     #ifdef _OPENMP
@@ -2477,7 +2499,7 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
 	int best_model = -1;
     Alignment *best_aln = in_tree->aln;
 
-	int ssize = in_tree->aln->getNSite(); // sample size
+	int ssize = static_cast<int>(in_tree->aln->getNSite()); // sample size
     //if (adjust)
     //    ssize = adjust->sample_size;
 	if (params.model_test_sample_size)
@@ -2510,18 +2532,18 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
     CKP_RESTORE(best_tree_BIC);
 
     // detect rate hetegeneity automatically or not
-    bool auto_rate = merge_phase ? iEquals(params.merge_rates, "AUTO") : iEquals(params.ratehet_set, "AUTO");
+    bool auto_rate  = merge_phase ? iEquals(params.merge_rates, "AUTO") : iEquals(params.ratehet_set, "AUTO");
     bool auto_subst = merge_phase ? iEquals(params.merge_models, "AUTO") : iEquals(params.model_set, "AUTO");
-    int rate_block = size();
+    int rate_block  = static_cast<int>(size());
     if (auto_rate) {
         for (rate_block = 0; rate_block < size(); rate_block++)
             if (rate_block+1 < size() && at(rate_block+1).subst_name != at(rate_block).subst_name)
                 break;
     }
     
-    int subst_block = size();
+    int subst_block = static_cast<int>(size());
     if (auto_subst) {
-        for (subst_block = size()-1; subst_block >= 0; subst_block--)
+        for (subst_block = static_cast<int>(size())-1; subst_block >= 0; subst_block--)
             if (at(subst_block).rate_name == at(0).rate_name)
                 break;
     }
@@ -2532,7 +2554,7 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
     
     //------------- MAIN FOR LOOP GOING THROUGH ALL MODELS TO BE TESTED ---------//
     
-    in_tree->initProgress(modelsToTest, "Testing models", "tested (or skipped)", "model");
+    in_tree->initProgress(static_cast<double>(modelsToTest), "Testing models", "tested (or skipped)", "model");
     for (int model = 0; model < size(); ++model) {
         if (model == rate_block+1) {
             in_tree->trackProgress(filterRates(rate_block)); // auto filter rate models
@@ -2867,16 +2889,16 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
     // detect rate hetegeneity automatically or not
     bool auto_rate = merge_phase ? iEquals(params.merge_rates, "AUTO") : iEquals(params.ratehet_set, "AUTO");
     bool auto_subst = merge_phase ? iEquals(params.merge_models, "AUTO") : iEquals(params.model_set, "AUTO");
-    int rate_block = size();
+    int rate_block = static_cast<int>(size());
     if (auto_rate) {
-        for (rate_block = 0; rate_block < size(); rate_block++)
+        for (rate_block = 0; rate_block < static_cast<int>(size()); rate_block++)
             if (rate_block+1 < size() && at(rate_block+1).subst_name != at(rate_block).subst_name)
                 break;
     }
     
-    int subst_block = size();
+    int subst_block = static_cast<int>(size());
     if (auto_subst) {
-        for (subst_block = size()-1; subst_block >= 0; subst_block--)
+        for (subst_block = static_cast<int>(size())-1; subst_block >= 0; subst_block--)
             if (at(subst_block).rate_name == at(0).rate_name)
                 break;
     }
@@ -2905,11 +2927,11 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
         at(model).computeICScores();
         at(model).setFlag(MF_DONE);
         
-        int lower_model = getLowerKModel(model);
+        int lower_model = getLowerKModel(static_cast<int>(model));
         if (lower_model >= 0 && at(lower_model).getScore() < at(model).getScore()) {
             // ignore all +R_k model with higher category
-            for (int higher_model = model; higher_model != -1;
-                higher_model = getHigherKModel(higher_model)) {
+            for (auto higher_model = model; higher_model != -1;
+                higher_model = getHigherKModel(static_cast<int>(higher_model))) {
                 at(higher_model).setFlag(MF_IGNORED);
             }
             
@@ -2947,10 +2969,10 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
 
         }
         if (model >= rate_block) {
-            filterRates(model); // auto filter rate models
+            filterRates(static_cast<int>(model)); // auto filter rate models
         }
         if (model >= subst_block) {
-            filterSubst(model); // auto filter substitution model
+            filterSubst(static_cast<int>(model)); // auto filter substitution model
         }
 #ifdef _OPENMP
         }
@@ -2971,7 +2993,7 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
     multimap<double,int> model_sorted;
     for (int64_t model = 0; model < num_models; model++)
         if (at(model).hasFlag(MF_DONE)) {
-            model_sorted.insert(multimap<double,int>::value_type(at(model).getScore(), model));
+            model_sorted.insert(multimap<double,int>::value_type(at(model).getScore(), static_cast<int>(model)));
         }
     string model_list;
     for (auto it = model_sorted.begin(); it != model_sorted.end(); it++) {
@@ -3001,5 +3023,3 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
 
     return at(best_model);
 }
-
-

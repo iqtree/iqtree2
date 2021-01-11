@@ -145,7 +145,7 @@ Node* NCBITree::readNCBITree(istream &in, int root_id, const char* taxon_level, 
 
     for (node_id = 0; node_id <= max_node_id; node_id++)
         if (nodes[node_id]) {
-            parent_id = nodes[node_id]->height;
+            parent_id = static_cast<int>(nodes[node_id]->height);
             if (!nodes[parent_id]) throw "Parent ID not found";
             if (parent_id == node_id) {
                 cout << "Ignore " << node_id << " | " << parent_id << endl;
@@ -168,7 +168,7 @@ Node* NCBITree::readNCBITree(istream &in, int root_id, const char* taxon_level, 
     root = nodes[root_id];
 
     if (taxon_level) {
-        int pruned = pruneTaxa(node_levels, taxon_level, root, nodes[root->height]);
+        int pruned = pruneTaxa(node_levels, taxon_level, root, nodes[static_cast<int>(root->height)]);
         cout << pruned << " nodes below " << taxon_level << " are pruned" << endl;
     }
 
@@ -176,7 +176,7 @@ Node* NCBITree::readNCBITree(istream &in, int root_id, const char* taxon_level, 
 //	cout << pruned << " nodes of degree 2 are pruned" << endl;
 
     leafNum = nodeNum = branchNum = 0;
-    countNodeNum(root, nodes[root->height]);
+    countNodeNum(root, nodes[static_cast<int>(root->height)]);
 
     /*	for (node_id = 0; node_id <= max_node_id; node_id++)
     	if (nodes[node_id] && nodes[node_id]->isLeaf()) {
@@ -188,7 +188,7 @@ Node* NCBITree::readNCBITree(istream &in, int root_id, const char* taxon_level, 
 
 
     cout << num_nodes << " NCBI nodes, " << nodeNum << " tree nodes, " << leafNum << " leaves, " << branchNum << " branches" << endl;
-    return nodes[nodes[root_id]->height];
+    return nodes[static_cast<int>(nodes[root_id]->height)];
 }
 
 int NCBITree::pruneTaxa(StrVector &node_levels, const char* taxon_level, Node *node, Node *dad) {

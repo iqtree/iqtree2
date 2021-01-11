@@ -30,8 +30,8 @@ void PlacementTraversalInfo::computePartialLikelihood(PhyloNeighbor* nei, PhyloN
     if (node != nullptr) {
         dad = node;
     }
-    size_t orig_nptn = roundUpToMultiple(phylo_tree.aln->size(), 8);
-    size_t nptn      = roundUpToMultiple(orig_nptn+phylo_tree.model_factory->unobserved_ptns.size(), 8);
+    intptr_t orig_nptn = roundUpToMultiple(phylo_tree.aln->size(), 8);
+    intptr_t nptn = roundUpToMultiple(orig_nptn+phylo_tree.model_factory->unobserved_ptns.size(), 8);
 
     phylo_tree.computePartialInfoDouble(*this, buffer_tmp);
     
@@ -40,7 +40,7 @@ void PlacementTraversalInfo::computePartialLikelihood(PhyloNeighbor* nei, PhyloN
     //      size (in doubles) of the vector class the tree is using.
     //      Because we'd prefer to use that.
     //
-    std::vector<size_t> limits;
+    std::vector<intptr_t> limits;
     phylo_tree.computePatternPacketBounds(8, phylo_tree.num_threads,
                                           phylo_tree.num_packets, nptn, limits);
     #ifdef _OPENMP

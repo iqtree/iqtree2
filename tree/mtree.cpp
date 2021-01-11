@@ -100,7 +100,7 @@ void MTree::init(MTree &tree) {
 
 void MTree::assignIDs(vector<string>& taxaNames) {
     bool err = false;
-    int nseq = taxaNames.size();
+    int nseq = static_cast<int>(taxaNames.size());
     for (int seq = 0; seq < nseq; seq++) {
         string seq_name = taxaNames[seq];
         Node *node = findLeafName(seq_name);
@@ -165,7 +165,7 @@ Node* MTree::copyTree(MTree *tree, string &taxa_set, double &len, Node *node, No
         if (taxa_set[tree->root->id]) {
             node = tree->root;
         } else {
-            for (int i = 0; i < tree->leafNum; i++)
+            for (int i = 0; i < static_cast<int>(tree->leafNum); i++)
                 if (taxa_set[i]) {
                     node = tree->findNodeID(i);
                     break;
@@ -220,7 +220,7 @@ void MTree::extractBifurcatingSubTree(Node *node, Node *dad) {
     if (!node) node = root;
     if (node->degree() > 3) {
         int id1, id2, id3;
-        id1 = node->findNeighborIt(dad) - node->neighbors.begin();
+        id1 = static_cast<int>(node->findNeighborIt(dad) - node->neighbors.begin());
         do {
             id2 = random_int(node->degree());
         } while (id2 == id1);
@@ -671,7 +671,7 @@ void MTree::printTaxa(ostream &out, Node *node, Node *dad)
 }
 
 void MTree::printTaxa(ostream &out, NodeVector &subtree) {
-    for (int i = 0; i < leafNum; i++)
+    for (int i = 0; i < static_cast<int>(leafNum); i++)
         if (subtree[i] != NULL) {
             out << subtree[i]->name << endl;
         }
@@ -1499,7 +1499,7 @@ void MTree::convertToTree(SplitGraph &sg) {
         cladetaxa[taxid] = (*it);
     }
     // now fill in all missing taxa with zero terminal branch
-    for (int taxid = 0; taxid < leafNum; taxid++) {
+    for (int taxid = 0; taxid < static_cast<int>(leafNum); taxid++) {
         ASSERT(leaves[taxid]);
     }
 
@@ -1902,7 +1902,7 @@ void MTree::drawTree2(ostream &out, int brtype, double brscale, IntVector &subtr
         if (node->isLeaf()) node = node->neighbors[0]->node;
     } else {
         if (brtype & WT_BR_SCALE) {
-            br_len = floor(node->findNeighbor(dad)->length * brscale)-1;
+            br_len = static_cast<int>(floor(node->findNeighbor(dad)->length * brscale)-1);
             if (br_len < 2) br_len = 2;
         }
         if (node->findNeighbor(dad)->length <= zero_epsilon) zero_length = true;
@@ -2023,9 +2023,9 @@ void MTree::calcDist(char *filename) {
         // now write the distances in phylip .dist format
         out << leafNum << endl;
 
-        for (i = 0; i < leafNum; i++) {
+        for (i = 0; i < static_cast<int>(leafNum); i++) {
             out << taxname[i] << "   ";
-            for (j = 0; j < leafNum; j++) {
+            for (j = 0; j < static_cast<int>(leafNum); j++) {
                 out << dist[i*leafNum + j] << "  ";
             }
             out << endl;
@@ -2200,7 +2200,7 @@ void MTree::assignLeafID(Node *node, Node *dad) {
     if (!node) node = root;
     if (node->isLeaf()) {
         node->id = atoi(node->name.c_str());
-        ASSERT(node->id >= 0 && node->id < leafNum);
+        ASSERT(node->id >= 0 && node->id < static_cast<int>(leafNum));
     }
     FOR_NEIGHBOR_IT(node, dad, it)
     assignLeafID((*it)->node, node);
@@ -2482,7 +2482,7 @@ void MTree::computeRFDist(istream &in, DoubleVector &dist, int assign_sup, bool 
 		// make the taxa ordering right before converting to split system
 		taxname.clear();
 		int smallid;
-		for (taxid = 0, smallid = 0; taxid < leafNum; taxid++)
+		for (taxid = 0, smallid = 0; taxid < static_cast<int>(leafNum); taxid++)
 			if (taxa_mask.containTaxon(taxid)) {
 				taxname.push_back(mysg.getTaxa()->GetTaxonLabel(taxid));
 				string name = (string)mysg.getTaxa()->GetTaxonLabel(taxid);
@@ -2547,7 +2547,7 @@ void MTree::computeRFDist(istream &in, DoubleVector &dist, int assign_sup, bool 
     if (assign_sup)
         for (nit = nodes.begin(); nit != nodes.end(); nit++)
             if (!(*nit)->isLeaf())
-                (*nit)->name = convertIntToString((*nit)->height);
+                (*nit)->name = convertIntToString(static_cast<int>((*nit)->height));
 
 //	cout << ntrees << " trees read" << endl;
 
@@ -2708,7 +2708,7 @@ void MTree::insertTaxa(StrVector &new_taxa, StrVector &existing_taxa) {
 		old_node->updateNeighbor(old_taxon, new_node, len);
 	}
 
-    leafNum = leafNum + new_taxa.size();
+    leafNum = leafNum + static_cast<int>(new_taxa.size());
     initializeTree();
 }
 
@@ -2733,7 +2733,8 @@ int MTree::removeTaxa(const StrVector &taxa_names,
     int count = 0;
     bool showingProgress = (context!=nullptr && *context!='\0');
     if (showingProgress) {
-        initProgress(taxa_names.size(), context, "removed", "taxon");
+        double work_to_do = static_cast<double>(taxa_names.size());
+        initProgress(work_to_do, context, "removed", "taxon");
     }
     for (auto sit = taxa_names.begin(); sit != taxa_names.end(); sit++) {
         Node *node = findLeafName(*sit);
@@ -2803,12 +2804,12 @@ int MTree::removeTaxa(const StrVector &taxa_names,
     int id = 0;
     for (NodeVector::iterator nit = taxa.begin(); nit != taxa.end(); nit++) {
         if (*nit == root && rooted) {
-            (*nit)->id = taxa.size()-1;
+            (*nit)->id = static_cast<int>(taxa.size())-1;
         } else {
             (*nit)->id = id++;
         }
     }
-    leafNum = taxa.size();
+    leafNum = static_cast<unsigned int>(taxa.size());
     initializeTree();
     return count;
 }

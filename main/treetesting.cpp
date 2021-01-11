@@ -12,6 +12,14 @@
 #endif
 #include <iqtree_config.h>
 
+#ifdef _MSC_VER
+#if !defined(_CRT_SECURE_NO_WARNINGS)
+ //Turn off (4) warnings about sprintf calls in ncl\nxsstring.h
+#define _CRT_SECURE_NO_WARNINGS (1)
+#endif
+#include <boost/scoped_array.hpp>
+#endif
+
 #include "treetesting.h"
 #include "tree/phylotree.h"
 #include "tree/phylosupertree.h"
@@ -71,12 +79,16 @@ void printPartitionLh(const char*filename, PhyloTree *tree, double *ptn_lh,
     } else
         pattern_lh = ptn_lh;
     
+#ifndef _MSC_VER
     double partition_lh[stree->size()];
+#else
+    boost::scoped_array<double> partition_lh(new double[stree->size()]);
+#endif
     double *pattern_lh_ptr = pattern_lh;
     for (int part = 0; part < stree->size(); part++) {
-        size_t nptn = stree->at(part)->getAlnNPattern();
+        intptr_t nptn = stree->at(part)->getAlnNPattern();
         partition_lh[part] = 0.0;
-        for (int i = 0; i < nptn; i++)
+        for (intptr_t i = 0; i < nptn; i++)
             partition_lh[part] += pattern_lh_ptr[i] * stree->at(part)->ptn_freq[i];
         pattern_lh_ptr += nptn;
     }
@@ -234,11 +246,11 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
             PhyloSuperTree *stree = (PhyloSuperTree*)tree;
             out << "Node\tPart\tSite\tState";
             for (size_t i = 0; i < stree->front()->aln->num_states; i++)
-                out << "\tp_" << stree->front()->aln->convertStateBackStr(i);
+                out << "\tp_" << stree->front()->aln->convertStateBackStr(static_cast<PML::StateType>(i));
         } else {
             out << "Node\tSite\tState";
             for (size_t i = 0; i < tree->aln->num_states; i++)
-                out << "\tp_" << tree->aln->convertStateBackStr(i);
+                out << "\tp_" << tree->aln->convertStateBackStr(static_cast<PML::StateType>(i));
         }
         out << endl;
         
@@ -474,9 +486,9 @@ int countDistinctTrees(const char *filename, bool rooted, IQTree *tree, IntVecto
         outError("Cannot read file ", filename);
     }
     if (exclude_duplicate)
-        return treels.size();
+        return static_cast<int>(treels.size());
     else
-        return distinct_ids.size();
+        return static_cast<int>(distinct_ids.size());
 }
 
 //const double TOL_RELL_SCORE = 0.01;
@@ -678,7 +690,19 @@ int mlecoef(double *cnts, double *rr, double bb, int kk,
     double d1f, d2f, d11f, d12f, d22f; /* derivatives */
     double v11, v12, v22; /* inverse of -d??f */
     double a,e;
+#ifndef _MSC_VER
     double s[kk], r[kk],c[kk], b[kk],z[kk],p[kk],d[kk],g[kk],h[kk];
+#else 
+    boost::scoped_array<double> s(new double[kk]);
+    boost::scoped_array<double> r(new double[kk]);
+    boost::scoped_array<double> c(new double[kk]);
+    boost::scoped_array<double> b(new double[kk]);
+    boost::scoped_array<double> z(new double[kk]);
+    boost::scoped_array<double> p(new double[kk]);
+    boost::scoped_array<double> d(new double[kk]);
+    boost::scoped_array<double> g(new double[kk]);
+    boost::scoped_array<double> h(new double[kk]);
+#endif
     
     m=0;
     for(i=0;i<kk;i++)
@@ -755,7 +779,7 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
         outWarning("Too few replicates for AU test. At least -zb 10000 for reliable results!");
     
     /* STEP 1: specify scale factors */
-    size_t nscales = 10;
+    int    nscales = 10;
     double r[] = {0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4};
     double rr[] = {sqrt(0.5), sqrt(0.6), sqrt(0.7), sqrt(0.8), sqrt(0.9), 1.0,
         sqrt(1.1), sqrt(1.2), sqrt(1.3), sqrt(1.4)};
@@ -764,11 +788,11 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
     
     /* STEP 2: compute bootstrap proportion */
     size_t ntrees = info.size();
-    size_t nboot = params.topotest_replicates;
+    int    nboot  = static_cast<int>(params.topotest_replicates);
     //    double nboot_inv = 1.0 / nboot;
     
-    size_t nptn = tree->getAlnNPattern();
-    size_t maxnptn = get_safe_upper_limit(nptn);
+    intptr_t nptn = tree->getAlnNPattern();
+    intptr_t maxnptn = get_safe_upper_limit(nptn);
     
     //    double *bp = new double[ntrees*nscales];
     //    memset(bp, 0, sizeof(double)*ntrees*nscales);
@@ -810,20 +834,20 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
             else {
                 tree->aln->createBootstrapAlignment(boot_sample, str.c_str(), rstream);
             }
-            for (size_t ptn = 0; ptn < maxnptn; ptn++) {
+            for (intptr_t ptn = 0; ptn < maxnptn; ptn++) {
                 boot_sample_dbl[ptn] = boot_sample[ptn];
             }
             double max_lh = -DBL_MAX, second_max_lh = -DBL_MAX;
             int max_tid = -1;
-            for (size_t tid = 0; tid < ntrees; tid++) {
+            for (int tid = 0; tid < ntrees; tid++) {
                 double *pattern_lh = pattern_lhs + (tid*maxnptn);
                 double tree_lh;
                 if (params.SSE == LK_386) {
                     tree_lh = 0.0;
-                    for (size_t ptn = 0; ptn < nptn; ptn++)
+                    for (intptr_t ptn = 0; ptn < nptn; ptn++)
                         tree_lh += pattern_lh[ptn] * boot_sample_dbl[ptn];
                 } else {
-                    tree_lh = tree->dotProductDoubleCall(pattern_lh, boot_sample_dbl, nptn);
+                    tree_lh = tree->dotProductDoubleCall(pattern_lh, boot_sample_dbl, static_cast<int>(nptn));
                 }
                 // rescale lh
                 tree_lh /= r[k];
@@ -853,7 +877,7 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
         
         // sort the replicates
         for (size_t tid = 0; tid < ntrees; tid++) {
-            quicksort<double,int>(treelhs + (tid*nscales+k)*nboot, 0, nboot-1);
+            quicksort<double,int>(treelhs + (tid*nscales+k)*nboot, 0, static_cast<int>(nboot)-1);
         }
         
     } // for scale
@@ -922,7 +946,8 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
                 
                 // maximum likelhood fit
                 double coef0[2] = {d, c};
-                int mlefail = mlecoef(this_bp, r, nboot, nscales, coef0, &rss, &df, &se);
+                int mlefail = mlecoef(this_bp, r, static_cast<double>(nboot), 
+                                      nscales, coef0, &rss, &df, &se);
                 
                 if (!mlefail) {
                     d = coef0[0];
@@ -1084,7 +1109,7 @@ void evaluateTrees(string treeset_file, Params &params, IQTree *tree, vector<Tre
     double *orig_tree_lh = NULL; // Original tree log-likelihoods
     double *max_lh = NULL;
     double *lhdiff_weights = NULL;
-    size_t nptn = tree->getAlnNPattern();
+    intptr_t nptn = tree->getAlnNPattern();
     size_t maxnptn = get_safe_upper_limit(nptn);
     
     if (params.topotest_replicates && ntrees > 1) {
@@ -1108,7 +1133,7 @@ void evaluateTrees(string treeset_file, Params &params, IQTree *tree, vector<Tre
 #else
         int *rstream = randstream;
 #endif
-        for (size_t boot = 0; boot < params.topotest_replicates; boot++)
+        for (int boot = 0; boot < params.topotest_replicates; boot++)
             if (boot == 0)
                 tree->aln->getPatternFreq(boot_samples + (boot*nptn));
             else
@@ -1217,7 +1242,7 @@ void evaluateTrees(string treeset_file, Params &params, IQTree *tree, vector<Tre
         for (size_t boot = 0; boot < params.topotest_replicates; boot++) {
             double lh = 0.0;
             int *this_boot_sample = boot_samples + (boot*nptn);
-            for (size_t ptn = 0; ptn < nptn; ptn++)
+            for (intptr_t ptn = 0; ptn < nptn; ptn++)
                 lh += pattern_lh[ptn] * this_boot_sample[ptn];
             tree_lhs_offset[boot] = lh;
         }
@@ -1264,7 +1289,7 @@ void evaluateTrees(string treeset_file, Params &params, IQTree *tree, vector<Tre
         sort_index(tree_probs, tree_probs + ntrees, tree_ranks);
         double prob_sum = 0.0;
         // obtain the confidence set
-        for (tid = ntrees-1; tid >= 0; tid--) {
+        for (tid = static_cast<int>(ntrees)-1; tid >= 0; tid--) {
             info[tree_ranks[tid]].rell_confident = true;
             prob_sum += tree_probs[tree_ranks[tid]];
             if (prob_sum > 0.95) break;
@@ -1420,7 +1445,7 @@ void evaluateTrees(string treeset_file, Params &params, IQTree *tree, vector<Tre
         sort_index(tree_probs, tree_probs + ntrees, tree_ranks);
         prob_sum = 0.0;
         // obtain the confidence set
-        for (tid = ntrees-1; tid >= 0; tid--) {
+        for (tid = static_cast<int>(ntrees)-1; tid >= 0; tid--) {
             info[tree_ranks[tid]].elw_confident = true;
             prob_sum += tree_probs[tree_ranks[tid]];
             if (prob_sum > 0.95) break;

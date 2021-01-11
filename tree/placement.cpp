@@ -139,7 +139,7 @@ double PhyloTree::addTaxonML(PhyloNode* added_taxon,     PhyloNode *added_node,
 }
 
 void PhyloTree::removeSampleTaxaIfRequested() {
-    size_t nseq = aln->getNSeq();
+    int nseq = static_cast<int>(aln->getNSeq());
     size_t countOfTaxaToRemove = Placement::getNumberOfTaxaToRemoveAndReinsert(nseq);
     if (0<countOfTaxaToRemove) {
         LOG_LINE(VB_DEBUG, "Will mark " << countOfTaxaToRemove << " (out of " << nseq
@@ -152,7 +152,7 @@ void PhyloTree::removeSampleTaxaIfRequested() {
             LOG_LINE( VB_MAX, "sequence " << it->first << " has id " << it->second->id );
         }
 
-        for (size_t seq = 0; seq < nseq; ++seq) {
+        for (int seq = 0; seq < nseq; ++seq) {
             r += countOfTaxaToRemove;
             if ( nseq <= r ) {
                 r -= nseq;
@@ -183,8 +183,8 @@ double PhyloTree::taxaAdditionWorkEstimate(size_t newTaxaCount,
                    * newTaxaCount / insertsPerBatch;
     }
     size_t batchesThisPass  = newTaxaCount / taxaPerBatch;
-    double workThisPass     = batchesThisPass * taxaPerBatch * leafNum;
-    double progressThisPass = batchesThisPass * insertsPerBatch;
+    double workThisPass     = static_cast<double>(batchesThisPass * taxaPerBatch * leafNum);
+    double progressThisPass = static_cast<double>(batchesThisPass * insertsPerBatch);
     //Optimistic if inserts = 100% and batches are large.
     return (3.0 * workThisPass / progressThisPass) * newTaxaCount;
 }
@@ -227,8 +227,8 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
     PlacementRun pr(*this, taxaIdsToAdd);
     deleteAllPartialLhAndParsimony();
     
-    bool     trackLikelihood        = shouldPlacementUseLikelihood();
-    size_t   additional_sequences   = taxaIdsToAdd.size();
+    bool trackLikelihood      = shouldPlacementUseLikelihood();
+    int  additional_sequences = static_cast<int>(taxaIdsToAdd.size());
 
     //Todo: Change how the caller selects step-wise parsimony!
     if ( pr.taxa_per_batch == 1 && pr.heuristic->isGlobalSearch()  &&
@@ -242,9 +242,9 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
     //Todo: What about # of likelihood vectors when
     //      likelihood vectors aren't being allocated per node.
     //      extra_lh_blocks should be even less, in that case.
-    size_t   sequences              = aln->getNSeq();
-    size_t   target_branch_count    = sequences * 2 - 3;
-    size_t   extra_parsimony_blocks = target_branch_count + additional_sequences * 4;
+    int sequences              = static_cast<int>(aln->getNSeq());
+    int target_branch_count    = sequences * 2 - 3;
+    int extra_parsimony_blocks = target_branch_count + additional_sequences * 4;
         //each target branch (including those for the sequences that
         //aren't yet in the tree) needs a parsimony block, and
         //for each additional taxon to place, there are 4 additional
@@ -261,9 +261,9 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
         //           x(-2)-x
     
     
-    size_t   extra_lh_blocks        = trackLikelihood
-                                    ? (target_branch_count + additional_sequences * 4)
-                                    : 0;
+    int extra_lh_blocks = trackLikelihood
+                          ? (target_branch_count + additional_sequences * 4)
+                          : 0;
         //each target branch needs its own lh block, and
         //although each TaxonToPlace just needs one lh block
         //each addition of a taxon later creates 3 *new* target branches

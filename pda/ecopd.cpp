@@ -1038,7 +1038,7 @@ void ECOpd::generateFirstMultinorm(vector<int> &x, int n, int k) {
 
 bool ECOpd::generateNextMultinorm(vector<int> &x) {
      if (x.size() < 2) return false;
-     int id = x.size()-1;
+     int id = static_cast<int>(x.size())-1;
      while (id >= 0 && x[id] == 0) id--;
      if (id <= 0) return false;
      x[id-1]++;
@@ -1210,7 +1210,7 @@ void ECOpd::defineK(Params &params){
 		nvar--;
 
 	if(params.k_percent)
-		k = params.k_percent*0.01*nvar;
+		k = static_cast<int>(floor(params.k_percent*0.01*nvar));
 	else if(params.sub_size)
 		k = params.sub_size;
 
@@ -1261,7 +1261,7 @@ void ECOpd::checkInitialTaxa(){
 		}
 		cout<<endl;
 		if(eraseSET.size()!=0)
-			for(i = eraseSET.size()-1; i>=0; i--){
+			for(i = static_cast<int>(eraseSET.size())-1; i>=0; i--){
 				initialTaxa.erase(initialTaxa.begin() + eraseSET[i]);
 			}
 		cout<<"------------------------------------------"<<endl;

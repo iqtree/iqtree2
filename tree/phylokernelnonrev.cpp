@@ -13,7 +13,8 @@
 #include "vectorclass/vectorf64.h"
 
 
-void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, size_t ptn_lower, size_t ptn_upper, int thread_id) {
+void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, intptr_t ptn_lower, 
+                                               intptr_t ptn_upper, int thread_id) {
 
     PhyloNeighbor* dad_branch = info.dad_branch;
     PhyloNode*     dad        = info.dad;
@@ -28,7 +29,7 @@ void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, size_t ptn_l
     ASSERT(dad_branch->direction != UNDEFINED_DIRECTION);
 
     size_t nstates = aln->num_states;
-//    size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
+//    intptr_t nptn = aln->size()+model_factory->unobserved_ptns.size();
 
 	if (node->isLeaf()) {
 //	    dad_branch->lh_scale_factor = 0.0;
@@ -40,7 +41,7 @@ void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, size_t ptn_l
     
     ASSERT(node->degree() >= 3);
     
-    size_t ptn, c;
+    intptr_t ptn, c;
     size_t orig_ntn = aln->size();
     size_t ncat = site_rate->getNRate();
 //    const size_t nstatesqr=nstates*nstates;
@@ -383,10 +384,10 @@ void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode
     size_t ncat = site_rate->getNRate();
 
     size_t block = ncat * nstates;
-    size_t ptn; // for big data size > 4GB memory required
+    intptr_t ptn; // for big data size > 4GB memory required
     size_t c, i, x;
-    size_t orig_nptn = aln->size();
-    size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
+    intptr_t orig_nptn = aln->size();
+    intptr_t nptn = aln->size()+model_factory->unobserved_ptns.size();
 
     double *trans_mat = new double[block*nstates*3];
     double *trans_derv1 = trans_mat + block*nstates;
@@ -456,8 +457,8 @@ void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode
 #pragma omp parallel for reduction(+: my_df, my_ddf, prob_const, df_const, ddf_const) private(ptn, i, c) schedule(static,1) num_threads(num_threads)
 #endif
         for (int thread_id = 0; thread_id < num_threads; thread_id++) {
-            size_t ptn_lower = limits[thread_id];
-            size_t ptn_upper = limits[thread_id+1];
+            intptr_t ptn_lower = limits[thread_id];
+            intptr_t ptn_upper = limits[thread_id+1];
             // first compute partial_lh
             for (vector<TraversalInfo>::iterator it = traversal_info.begin(); it != traversal_info.end(); it++)
                 computePartialLikelihood(*it, ptn_lower, ptn_upper, thread_id);
@@ -510,8 +511,8 @@ void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode
 #pragma omp parallel for reduction(+: my_df, my_ddf, prob_const, df_const, ddf_const) private(ptn, i, c, x) schedule(static,1) num_threads(num_threads)
 #endif
         for (int thread_id = 0; thread_id < num_threads; thread_id++) {
-            size_t ptn_lower = limits[thread_id];
-            size_t ptn_upper = limits[thread_id+1];
+            intptr_t ptn_lower = limits[thread_id];
+            intptr_t ptn_upper = limits[thread_id+1];
             // first compute partial_lh
             for (vector<TraversalInfo>::iterator it = traversal_info.begin(); it != traversal_info.end(); it++)
                 computePartialLikelihood(*it, ptn_lower, ptn_upper, thread_id);
@@ -610,10 +611,10 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
     size_t ncat = site_rate->getNRate();
 
     size_t block = ncat * nstates;
-    size_t ptn; // for big data size > 4GB memory required
+    intptr_t ptn; // for big data size > 4GB memory required
     size_t c, i, x;
-    size_t orig_nptn = aln->size();
-    size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
+    intptr_t orig_nptn = aln->size();
+    intptr_t nptn = aln->size()+model_factory->unobserved_ptns.size();
 
     vector<size_t> limits;
     computeBounds<Vec1d>(num_threads, nptn, limits);
@@ -666,8 +667,8 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
 #pragma omp parallel for reduction(+: tree_lh, prob_const) private(ptn, i, c) schedule(static,1) num_threads(num_threads)
 #endif
         for (int thread_id = 0; thread_id < num_threads; thread_id++) {
-            size_t ptn_lower = limits[thread_id];
-            size_t ptn_upper = limits[thread_id+1];
+            intptr_t ptn_lower = limits[thread_id];
+            intptr_t ptn_upper = limits[thread_id+1];
             // first compute partial_lh
             for (vector<TraversalInfo>::iterator it = traversal_info.begin(); it != traversal_info.end(); it++)
                 computePartialLikelihood(*it, ptn_lower, ptn_upper, thread_id);
@@ -716,8 +717,8 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
 #pragma omp parallel for reduction(+: tree_lh, prob_const) private(ptn, i, c, x) schedule(static,1) num_threads(num_threads)
 #endif
         for (int thread_id = 0; thread_id < num_threads; thread_id++) {
-            size_t ptn_lower = limits[thread_id];
-            size_t ptn_upper = limits[thread_id+1];
+            intptr_t ptn_lower = limits[thread_id];
+            intptr_t ptn_upper = limits[thread_id+1];
             // first compute partial_lh
             for (vector<TraversalInfo>::iterator it = traversal_info.begin(); it != traversal_info.end(); it++)
                 computePartialLikelihood(*it, ptn_lower, ptn_upper, thread_id);
@@ -797,7 +798,7 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
 
         // BQM 2015-10-11: fix this those functions using _pattern_lh_cat
 //        double inv_const = 1.0 / (1.0-prob_const);
-//        size_t nptn_cat = orig_nptn*ncat;
+//        intptr_t nptn_cat = orig_nptn*ncat;
 //    	for (ptn = 0; ptn < nptn_cat; ptn++)
 //            _pattern_lh_cat[ptn] *= inv_const;
         

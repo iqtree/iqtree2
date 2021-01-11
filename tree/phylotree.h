@@ -34,7 +34,7 @@
 //#define EIGEN_TUNE_FOR_CPU_CACHE_SIZE (8*512*512)
 //#include <Eigen/Core>
 
-#define EIGEN_PARTIAL_LIKELIHOOD (0) //Set to 1 to turn it all back on
+#define EIGEN_PARTIAL_LIKELIHOOD (1) //Set to 1 to turn it all back on
 
 #include "mtree.h"
 #include "alignment/alignment.h"
@@ -1080,7 +1080,7 @@ public:
     void computePtnFreq();
     
     void computePatternPacketBounds(int vector_size, int threads, int packets,
-                                    size_t elements, vector<size_t> &limits);
+                                    intptr_t elements, vector<intptr_t> &limits);
 
     /**
             compute the partial likelihood at a subtree
@@ -1088,10 +1088,10 @@ public:
             @param dad its dad, used to direct the tranversal
      */
     virtual void computePartialLikelihood(TraversalInfo &info,
-                                          size_t ptn_lower, size_t ptn_upper, int thread_id,
+                                          intptr_t ptn_lower, intptr_t ptn_upper, int thread_id,
                                           LikelihoodBufferSet& buffers);
     typedef void (PhyloTree::*ComputePartialLikelihoodType)(TraversalInfo &info,
-                                                            size_t ptn_lower, size_t ptn_upper, int thread_id,
+                                                            intptr_t ptn_lower, intptr_t ptn_upper, int thread_id,
                                                             LikelihoodBufferSet& buffers);
     ComputePartialLikelihoodType computePartialLikelihoodPointer;
 
@@ -1109,25 +1109,25 @@ public:
     #endif
     
     void computeNonrevPartialLikelihood(TraversalInfo &info,
-                                        size_t ptn_lower, size_t ptn_upper, int thread_id,
+                                        intptr_t ptn_lower, intptr_t ptn_upper, int thread_id,
                                         LikelihoodBufferSet& buffers);
     template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false>
     void computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info,
-                                                   size_t ptn_lower, size_t ptn_upper, int thread_id,
+                                                   intptr_t ptn_lower, intptr_t ptn_upper, int thread_id,
                                                    LikelihoodBufferSet& buffers);
     template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false>
     void computeNonrevPartialLikelihoodSIMD(TraversalInfo &info,
-                                            size_t ptn_lower, size_t ptn_upper, int thread_id,
+                                            intptr_t ptn_lower, intptr_t ptn_upper, int thread_id,
                                             LikelihoodBufferSet& buffers);
 
     template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
     void computePartialLikelihoodSIMD(TraversalInfo &info,
-                                      size_t ptn_lower, size_t ptn_upper, int thread_id,
+                                      intptr_t ptn_lower, intptr_t ptn_upper, int thread_id,
                                       LikelihoodBufferSet& buffers);
 
     template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false, const bool SITE_MODEL = false>
     void computePartialLikelihoodGenericSIMD(TraversalInfo &info,
-                                             size_t ptn_lower, size_t ptn_upper, int thread_id,
+                                             intptr_t ptn_lower, intptr_t ptn_upper, int thread_id,
                                              LikelihoodBufferSet& buffers);
 
     #if (EIGEN_PARTIAL_LIKELIHOOD)
@@ -1537,13 +1537,13 @@ public:
     template <class VectorClass, const bool SAFE_NUMERIC, const int nstates,
               const bool FMA = false, const bool SITE_MODEL = false>
     void computeLikelihoodBufferSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
-                                     size_t ptn_lower, size_t ptn_upper, int thread_id,
+                                     intptr_t ptn_lower, intptr_t ptn_upper, int thread_id,
                                      LikelihoodBufferSet& buffers);
 
     template <class VectorClass, const bool SAFE_NUMERIC,
             const bool FMA = false, const bool SITE_MODEL = false>
     void computeLikelihoodBufferGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
-                                            size_t ptn_lower, size_t ptn_upper, int thread_id,
+                                            intptr_t ptn_lower, intptr_t ptn_upper, int thread_id,
                                             LikelihoodBufferSet& buffers);
 
     template <class VectorClass, const bool SAFE_NUMERIC, const int nstates,
@@ -1967,7 +1967,7 @@ public:
     
     virtual const int* getConvertedSequenceNonConstFrequencies() const;
     
-    virtual int  getSumOfFrequenciesForSitesWithConstantState(int state) const;
+    virtual size_t  getSumOfFrequenciesForSitesWithConstantState(int state) const;
     
     virtual void doneComputingDistances();
     

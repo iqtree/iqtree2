@@ -88,7 +88,7 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
 
     num_partial_lh_computations++;
 
-    size_t nptn = aln->size() + model_factory->unobserved_ptns.size();
+    intptr_t nptn = aln->size() + model_factory->unobserved_ptns.size();
     PhyloNode *node = dad_branch->getNode();
 
     if (!tip_partial_lh_computed)
@@ -100,8 +100,8 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
 		return;
 	}
 
-    size_t ptn, c;
-    size_t orig_nptn = aln->size();
+    intptr_t ptn, c;
+    intptr_t orig_nptn = aln->size();
 
     size_t ncat = site_rate->getNRate();
     size_t ncat_mix = (model_factory->fused_mix_rate) ? ncat : ncat*model->getNMixtures();
@@ -580,11 +580,11 @@ void PhyloTree::computeLikelihoodDervEigenSIMD
     size_t ncat_mix = (model_factory->fused_mix_rate) ? ncat : ncat*model->getNMixtures();
     size_t block = ncat_mix * nstates;
     size_t tip_block = nstates * model->getNMixtures();
-    size_t ptn; // for big data size > 4GB memory required
+    intptr_t ptn; // for big data size > 4GB memory required
     size_t c, i, j;
-    size_t orig_nptn = aln->size();
-    size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
-    size_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
+    intptr_t orig_nptn = aln->size();
+    intptr_t nptn = aln->size()+model_factory->unobserved_ptns.size();
+    intptr_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
     maxptn = max(maxptn, aln->size()+((model_factory->unobserved_ptns.size()+VCSIZE-1)/VCSIZE)*VCSIZE);
 
     size_t mix_addr_nstates[ncat_mix];
@@ -664,7 +664,7 @@ void PhyloTree::computeLikelihoodDervEigenSIMD
 			    double *partial_lh_node = node_branch->partial_lh + ptn*block;
 			    double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
 
-                size_t ptn_ncat = ptn*ncat_mix; 
+                intptr_t ptn_ncat = ptn*ncat_mix;
                 UBYTE *scale_dad = dad_branch->scale_num + ptn_ncat;
                 UBYTE *scale_node = node_branch->scale_num + ptn_ncat;
                 UBYTE sum_scale[ncat_mix];
@@ -872,11 +872,11 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
 
     size_t block = ncat_mix * nstates;
     size_t tip_block = nstates * model->getNMixtures();
-    size_t ptn; // for big data size > 4GB memory required
+    intptr_t ptn; // for big data size > 4GB memory required
     size_t c, i, j;
-    size_t orig_nptn = aln->size();
-    size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
-    size_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
+    intptr_t orig_nptn = aln->size();
+    intptr_t nptn = aln->size()+model_factory->unobserved_ptns.size();
+    intptr_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
     maxptn = max(maxptn, aln->size()+((model_factory->unobserved_ptns.size()+VCSIZE-1)/VCSIZE)*VCSIZE);
     double *eval = model->getEigenvalues();
     ASSERT(eval);
@@ -1230,11 +1230,11 @@ double PhyloTree::computeLikelihoodFromBufferEigenSIMD() {
     size_t denom = (model_factory->fused_mix_rate) ? 1 : ncat;
 
     size_t block = ncat_mix * nstates;
-    size_t ptn; // for big data size > 4GB memory required
+    intptr_t ptn; // for big data size > 4GB memory required
     size_t c, i, j;
-    size_t orig_nptn = aln->size();
-    size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
-//    size_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
+    intptr_t orig_nptn = aln->size();
+    intptr_t nptn = aln->size()+model_factory->unobserved_ptns.size();
+//    intptr_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
     double *eval = model->getEigenvalues();
     ASSERT(eval);
 

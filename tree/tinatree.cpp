@@ -32,7 +32,7 @@ TinaTree::~TinaTree()
 }
 
 
-int TinaTree::computeParsimonyScore(int ptn, int &states, PhyloNode *node, PhyloNode *dad) {
+int TinaTree::computeParsimonyScore(intptr_t ptn, int &states, PhyloNode *node, PhyloNode *dad) {
     int score = 0;
     states = 0;
     if (!node) {
@@ -90,7 +90,7 @@ int TinaTree::computeParsimonyScore() {
     ASSERT(root && root->isLeaf());
 
     int score = 0;
-    for (size_t ptn = 0; ptn < aln->size(); ++ptn)
+    for (intptr_t ptn = 0; ptn < static_cast<intptr_t>(aln->size()); ++ptn)
         if (!aln->at(ptn).isConst()) {
             int states;
             int ptn_score = computeParsimonyScore(ptn, states);

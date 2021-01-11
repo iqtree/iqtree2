@@ -123,8 +123,8 @@ void Split::setNTaxa(int antaxa)
 
 int Split::countTaxa() const {
 	int count=0;
-	for (int i = 0; i < size(); i++)
-		for (UINT j = 0; j < UINT_BITS && (i*UINT_BITS+j < getNTaxa()); j++)
+	for (size_t i = 0; i < size(); i++)
+		for (size_t j = 0; j < UINT_BITS && (i*UINT_BITS+j < getNTaxa()); j++)
 			if ((*this)[i] & (1 << j))
 			{
 				count++;
@@ -136,8 +136,8 @@ void Split::report(ostream &out)
 {
 
 	out << getWeight() << '\t';
-	for (int i = 0; i < size(); i++)
-		for (UINT j = 0; j < UINT_BITS && (i*UINT_BITS+j < getNTaxa()); j++)
+	for (size_t i = 0; i < size(); i++)
+		for (size_t j = 0; j < UINT_BITS && (i*UINT_BITS+j < getNTaxa()); j++)
 			if ((*this)[i] & (1 << j))
 			{
 				//out << i * UINT_BITS + j + 1 << " ";
@@ -148,11 +148,11 @@ void Split::report(ostream &out)
 
 
 int Split::firstTaxon() {
-	for (int i = 0; i < size(); i++)
+	for (size_t i = 0; i < size(); i++)
 		if ((*this)[i] != 0) {
-			for (UINT j = 0; j < UINT_BITS && (i*UINT_BITS+j < getNTaxa()); j++)
+			for (size_t j = 0; j < UINT_BITS && (i*UINT_BITS+j < getNTaxa()); j++)
 				if ((*this)[i] & (1 << j)) {
-					return (i * UINT_BITS + j);
+					return static_cast<int>(i * UINT_BITS + j);
 				}
 		}
 	return -1;
@@ -546,7 +546,7 @@ double kMeansOneDim(int n, int ncat, double *data, double *center, int *cluster)
 	// now trace back
 	bound[k] = n-1;
 	for (i = k-1; i >= 0; i--) {
-		bound[i] = id[i][bound[i+1]];
+		bound[i] = static_cast<int>(id[i][bound[i+1]]);
 	}
 
 	for (i = 0; i < k; i++) {

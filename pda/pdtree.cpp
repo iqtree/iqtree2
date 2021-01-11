@@ -40,7 +40,7 @@ void PDTree::init(Params &params) {
 		outError(ERR_CONFLICT_ROOT);
 	}
 
-	if (params.sub_size > leafNum) {
+	if (static_cast<size_t>(params.sub_size) > leafNum) {
 		ostringstream err;
 		err << "Subset size k = " << params.sub_size-params.is_rooted << 
 			" is greater than the number of taxa = " << leafNum-params.is_rooted;

@@ -61,7 +61,7 @@ PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment, bool new_iqtree) :  IQ
         info.cur_ptnlh = NULL;
         info.nniMoves[0].ptnlh = NULL;
         info.nniMoves[1].ptnlh = NULL;
-        info.evalNNIs = 0.0;
+        info.evalNNIs = 0;
         part_info.push_back(info);
     }
     
@@ -80,7 +80,7 @@ PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment, PhyloSuperTree *super_
 	// Initialize the counter for evaluated NNIs on subtrees
 	int part = 0;
 	for (iterator it = begin(); it != end(); it++, part++) {
-		part_info[part].evalNNIs = 0.0;
+		part_info[part].evalNNIs = 0;
 	}
 
 	aln = alignment;
@@ -104,7 +104,7 @@ void PhyloSuperTree::setPartInfo(PhyloSuperTree *tree) {
     part_info = tree->part_info;
     int part = 0;
     for (iterator it = begin(); it != end(); it++, part++) {
-        part_info[part].evalNNIs = 0.0;
+        part_info[part].evalNNIs = 0;
     }
     if (!params->bootstrap_spec) {
         return;
@@ -118,7 +118,7 @@ void PhyloSuperTree::setPartInfo(PhyloSuperTree *tree) {
         for (int p = 0; p < tree->size(); p++)
             if (tree->at(p)->aln->name == at(part)->aln->name) {
                 part_info[part] = tree->part_info[p];
-                part_info[part].evalNNIs = 0.0;
+                part_info[part].evalNNIs = 0;
                 found = true;
                 break;
             }
@@ -559,7 +559,7 @@ void PhyloSuperTree::mapTrees() {
 		PhyloNodeVector my_taxa, part_taxa;
 		(*it)->getOrderedTaxa(my_taxa);
 		part_taxa.resize(leafNum, NULL);
-		for (i = 0; i < leafNum; i++) {
+		for (i = 0; i < static_cast<int>(leafNum); i++) {
             int id;
             if (i < aln->getNSeq())
                 id = ((SuperAlignment*)aln)->taxa_index[i][part];
@@ -596,7 +596,7 @@ void PhyloSuperTree::linkTrees() {
 		(*it)->getOrderedTaxa(my_taxa);
 		part_taxa.resize(leafNum, NULL);
 		int i;
-		for (i = 0; i < leafNum; i++) {
+		for (i = 0; i < static_cast<int>(leafNum); i++) {
             int id;
             if (i < aln->getNSeq())
                 id = ((SuperAlignment*)aln)->taxa_index[i][part];
@@ -660,30 +660,30 @@ int PhyloSuperTree::computeParsimonyBranchObsolete(PhyloNeighbor *dad_branch, Ph
 void PhyloSuperTree::computePartitionOrder() {
     if (!part_order.empty())
         return;
-    int i, ntrees = size();
+	int ntrees = static_cast<int>(size());
     part_order.resize(ntrees);
     part_order_by_nptn.resize(ntrees);
 #ifdef _OPENMP
     int *id = new int[ntrees];
     double *cost = new double[ntrees];
     
-    for (i = 0; i < ntrees; i++) {
+    for (int i = 0; i < ntrees; i++) {
         Alignment *part_aln = at(i)->aln;
         cost[i] = -((double)part_aln->getNSeq())*part_aln->getNPattern()*part_aln->num_states;
         id[i] = i;
     }
     quicksort(cost, 0, ntrees-1, id);
-    for (i = 0; i < ntrees; i++) 
+    for (int i = 0; i < ntrees; i++) 
         part_order[i] = id[i];
         
     // compute part_order by number of patterns
-    for (i = 0; i < ntrees; i++) {
+    for (int i = 0; i < ntrees; i++) {
         Alignment *part_aln = at(i)->aln;
         cost[i] = -((double)part_aln->getNPattern())*part_aln->num_states;
         id[i] = i;
     }
     quicksort(cost, 0, ntrees-1, id);
-    for (i = 0; i < ntrees; i++) 
+    for (int i = 0; i < ntrees; i++) 
         part_order_by_nptn[i] = id[i];
         
     delete [] cost;
@@ -692,12 +692,12 @@ void PhyloSuperTree::computePartitionOrder() {
     if (verbose_mode >= VB_MED) {
         cout << "Partitions ordered by computation costs:" << endl;
         cout << "#nexus" << endl << "begin sets;" << endl;
-        for (i = 0; i < ntrees; i++)
+        for (int i = 0; i < ntrees; i++)
             cout << "  charset " << at(part_order[i])->aln->name << " = " << at(part_order[i])->aln->position_spec << ";" << endl;
         cout << "end;" << endl;
     }
 #else
-    for (i = 0; i < ntrees; i++) {
+    for (int i = 0; i < ntrees; i++) {
         part_order[i] = i;
         part_order_by_nptn[i] = i;
     }
@@ -706,7 +706,7 @@ void PhyloSuperTree::computePartitionOrder() {
 
 double PhyloSuperTree::computeLikelihood(double *pattern_lh) {
 	double tree_lh = 0.0;
-	int ntrees = size();
+	int ntrees = static_cast<int>(size());
 	if (pattern_lh) {
 		//#ifdef _OPENMP
 		//#pragma omp parallel for reduction(+: tree_lh)
@@ -754,8 +754,8 @@ void PhyloSuperTree::computePatternLikelihood(double *pattern_lh, double *cur_lo
 		double sum_logl = 0;
 		offset = 0;
 		for (it = begin(); it != end(); it++) {
-			int nptn = (*it)->aln->getNPattern();
-			for (int j = 0; j < nptn; j++)
+			intptr_t nptn = (*it)->aln->getNPattern();
+			for (intptr_t j = 0; j < nptn; j++)
 				sum_logl += pattern_lh[offset + j] * (*it)->aln->at(j).frequency;
 			offset += (*it)->aln->getNPattern();
 		}
@@ -778,7 +778,7 @@ void PhyloSuperTree::computePatternProbabilityCategory(double *ptn_prob_cat, Sit
 double PhyloSuperTree::optimizeAllBranches(int my_iterations, double tolerance,
                                            int maxNRStep, bool were_lengths_consistent) {
 	double tree_lh = 0.0;
-	int ntrees = size();
+	int ntrees = static_cast<int>(size());
     if (part_order.empty()) computePartitionOrder();
 	#ifdef _OPENMP
 	#pragma omp parallel for reduction(+: tree_lh) schedule(dynamic) if(num_threads > 1)
@@ -835,7 +835,7 @@ void PhyloSuperTree::initPartitionInfo() {
 
 		if (save_all_trees == 2 || params->write_intermediate_trees >= 2) {
 			// initialize ptnlh for ultrafast bootstrap
-			int nptn = (*it)->getAlnNPattern();
+			intptr_t nptn = (*it)->getAlnNPattern();
 			if (!part_info[part].cur_ptnlh)
 				part_info[part].cur_ptnlh = new double[nptn];
 			if (!part_info[part].nniMoves[0].ptnlh)
@@ -912,7 +912,7 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 
 	//double bestScore = optimizeOneBranch(node1, node2, false);
 
-	int ntrees = size(), part;
+	int ntrees = static_cast<int>(size());
 	double nni_score1 = 0.0, nni_score2 = 0.0;
 	int local_totalNNIs = 0, local_evalNNIs = 0;
 
@@ -920,10 +920,10 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 		computePartitionOrder();
 	}
 	#ifdef _OPENMP
-	#pragma omp parallel for reduction(+: nni_score1, nni_score2, local_totalNNIs, local_evalNNIs) private(part) schedule(dynamic) if(num_threads>1)
+	#pragma omp parallel for reduction(+: nni_score1, nni_score2, local_totalNNIs, local_evalNNIs) schedule(dynamic) if(num_threads>1)
 	#endif
 	for (int treeid = 0; treeid < ntrees; treeid++) {
-        part = part_order_by_nptn[treeid];
+        int part = part_order_by_nptn[treeid];
 		bool is_nni = true;
 		local_totalNNIs++;
 		FOR_SUPER_NEIGHBOR_DECLARE(node1, NULL, nit) {
@@ -1027,7 +1027,7 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
         node2->updateNeighbor(node2_it, node1_nei);
         node1_nei->node->updateNeighbor(node1, node2);
 
-        for (part = 0; part < ntrees; part++) {
+        for (int part = 0; part < ntrees; part++) {
             bool is_nni = true;
             FOR_EACH_SUPER_NEIGHBOR(node1, nullptr, nit, neiOne) {
                 if (! neiOne->link_neighbors[part] ) { is_nni = false; break; }
@@ -1054,7 +1054,7 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
             saveCurrentTree(nni_scores[nniid]);
         }
         // restore information
-        for (part = 0; part < ntrees; part++) {
+        for (int part = 0; part < ntrees; part++) {
     		at(part)->current_it->lh_scale_factor = save_lh_factor[part];
     		at(part)->current_it_back->lh_scale_factor = save_lh_factor_back[part];
         }
@@ -1192,10 +1192,10 @@ void PhyloSuperTree::computeBranchLengths() {
             if ((*it)->aln->seq_type == SEQ_CODON && rescale_codon_brlen) {
                 // rescale branch length by 3
                 neighbors1[i]->length += (nei1->length) * (*it)->aln->getNSite() / brfreq[nei1->id];
-                occurence[i] += (*it)->aln->getNSite()*3;
+                occurence[i] += (*it)->aln->getNSite32()*3;
             } else {
                 neighbors1[i]->length += (nei1->length) * (*it)->aln->getNSite() / brfreq[nei1->id];
-                occurence[i] += (*it)->aln->getNSite();
+                occurence[i] += (*it)->aln->getNSite32();
             }
 			//cout << neighbors1[i]->id << "  " << nodes1[i]->id << nodes1[i]->name <<"," << nodes2[i]->id << nodes2[i]->name <<": " << (nei1->length) / brfreq[nei1->id] << endl;
 		}
@@ -1255,12 +1255,12 @@ uint64_t PhyloSuperTree::getMemoryRequiredThreaded(size_t ncategory, bool full_m
     }
     
     // sort partition memory in increasing order
-    quicksort<uint64_t, int>(part_mem, 0, size()-1);
+    quicksort<uint64_t, int>(part_mem, 0, static_cast<int>(size())-1);
     
     uint64_t mem = 0;
-    for (i = size()-threads; i < size(); i++)
-        mem += part_mem[i];
-    
+	for (i = static_cast<int>(size()) - threads; i < static_cast<int>(size()); i++) {
+		mem += part_mem[i];
+	}    
     delete [] part_mem;
     
     return mem;
@@ -1352,7 +1352,7 @@ void PhyloSuperTree::initMarginalAncestralState(ostream &out, bool &orig_kernel_
     bool mixed_data = false;
 
     for (auto it = begin(); it != end(); it++) {
-        size_t nptn = (*it)->aln->size();
+		intptr_t nptn = (*it)->aln->size();
         size_t nstates = (*it)->model->num_states;
         (*it)->_pattern_lh_cat_state = (*it)->newPartialLh();
         total_size += nptn*nstates;
@@ -1379,7 +1379,7 @@ void PhyloSuperTree::computeMarginalAncestralState(PhyloNeighbor *dad_branch, Ph
     SuperNeighbor* snei_back = snei->getNode()->findNeighbor(dad);
     int part = 0;
     for (auto it = begin(); it != end(); it++, part++) {
-        size_t nptn = (*it)->getAlnNPattern();
+		intptr_t nptn = (*it)->getAlnNPattern();
         size_t nstates = (*it)->model->num_states;
         if (snei->link_neighbors[part]) {
             (*it)->computeMarginalAncestralState(snei->link_neighbors[part], snei_back->link_neighbors[part]->getNode(),
@@ -1387,7 +1387,7 @@ void PhyloSuperTree::computeMarginalAncestralState(PhyloNeighbor *dad_branch, Ph
         } else {
             // branch does not exist in partition tree
             double eqprob = 1.0/nstates;
-            for (size_t ptn = 0; ptn < nptn; ptn++) {
+            for (intptr_t ptn = 0; ptn < nptn; ptn++) {
                 for (size_t i = 0; i < nstates; i++)
                     ptn_ancestral_prob[ptn*nstates+i] = eqprob;
                 ptn_ancestral_seq[ptn] = (*it)->aln->STATE_UNKNOWN;
@@ -1414,7 +1414,7 @@ void PhyloSuperTree::writeMarginalAncestralState(ostream &out, PhyloNode *node,
             }
             out << endl;
         }
-        size_t nptn = (*it)->getAlnNPattern();
+		intptr_t nptn = (*it)->getAlnNPattern();
         ptn_ancestral_prob += nptn*nstates;
         ptn_ancestral_seq += nptn;
     }
@@ -1457,7 +1457,7 @@ void PhyloSuperTree::writeSiteRates(ostream &out, bool bayes, int partid) {
 void PhyloSuperTree::writeBranch(ostream &out, Node* node1, Node* node2) {
     SuperNeighbor *nei1 = (SuperNeighbor*)node1->findNeighbor(node2);
     StrVector taxnames;
-    if (getNumTaxa(node1, node2) <= leafNum / 2)
+    if (getNumTaxa(node1, node2) <= static_cast<int>(leafNum) / 2)
         getTaxaName(taxnames, node1, node2);
     else
         getTaxaName(taxnames, node2, node1);

@@ -60,7 +60,7 @@ void PhyloTree::doParsimonyNNI() {
     size_t max_iterations = params->parsimony_nni_iterations;
     PhyloBranchVector branches;
     getBranches(branches);
-    size_t branch_count = branches.size();
+    intptr_t branch_count = branches.size();
     
     bool zeroNumThreads = false;
     if (num_threads==0) {
@@ -95,7 +95,8 @@ void PhyloTree::doParsimonyNNI() {
     TimeKeeper sorting   ("sorting NNI moves");
     TimeKeeper applying  ("applying NNI moves");
     
-    initProgress(branch_count*(max_iterations*2+1),
+    double work_estimate = static_cast<double>(branch_count * (max_iterations * 2 + 1));
+    initProgress(work_estimate,
                  "Looking for parsimony nearest neighbor exchanges", "", "");
     for (size_t iteration = 1; iteration <= max_iterations; ++iteration ) {
         rescoring.start();
@@ -115,7 +116,7 @@ void PhyloTree::doParsimonyNNI() {
         #ifdef _OPENMP
         #pragma omp parallel for num_threads(num_threads)
         #endif
-        for (size_t i=0; i<branch_count; ++i) {
+        for (intptr_t i=0; i<branch_count; ++i) {
             PhyloBranch    tb(branches[i]);
             PhyloNeighbor* nei1 = tb.first->findNeighbor(tb.second);
             PhyloNeighbor* nei2 = tb.second->findNeighbor(tb.first);
@@ -182,9 +183,9 @@ void PhyloTree::doParsimonyNNI() {
         applying.start();
         size_t count_considered = 0;
         size_t count_exchanged  = 0;
-        size_t expected_delta   = 0;
-        size_t actual_delta     = 0;
-        for (size_t i=0; i<branch_count; ++i) {
+        double expected_delta   = 0;
+        double actual_delta     = 0;
+        for (intptr_t i=0; i<branch_count; ++i) {
             PossibleExchange& x = best_exchange[i];
             if (0 <= x.delta) {
                 break;

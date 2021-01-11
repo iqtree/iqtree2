@@ -5,6 +5,11 @@
  *      Author: minh
  */
 
+#if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
+ //Turn off (4) warnings about sprintf calls in ncl\nxsstring.h
+#define _CRT_SECURE_NO_WARNINGS (1)
+#endif
+
 #include "timetree.h"
 #include <utils/safe_io.h> //for safeGetLine
 

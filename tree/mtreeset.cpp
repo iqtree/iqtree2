@@ -124,7 +124,7 @@ void MTreeSet::init(StrVector &treels, bool &is_rooted) {
 		tree->getTaxa(taxa);
 		for (NodeVector::iterator taxit = taxa.begin(); taxit != taxa.end(); taxit++) {
 			if ((*taxit)->name == ROOT_NAME) {
-				(*taxit)->id = taxa.size() - 1;
+				(*taxit)->id = static_cast<int>(taxa.size()) - 1;
 			}
 			else {
 				(*taxit)->id = atoi((*taxit)->name.c_str());
@@ -147,7 +147,7 @@ void MTreeSet::init(vector<string> &trees, vector<string> &taxonNames, bool &is_
 		MTree *tree = newTree();
 		stringstream ss(*it);
 		tree->readTree(ss, is_rooted);
-	    int nseq = taxonNames.size();
+	    int nseq = static_cast<int>(taxonNames.size());
 	    ASSERT(tree->getNumTaxa() == nseq);
 	    for (int seq = 0; seq < nseq; seq++) {
 	        string seq_name = taxonNames[seq];
@@ -311,7 +311,7 @@ int MTreeSet::countRooted() {
  @return number of unrooted trees in the set
  */
 int MTreeSet::countUnrooted() {
-    return size() - countRooted();
+    return static_cast<int>(size() - countRooted());
 }
 
 
@@ -352,7 +352,7 @@ void MTreeSet::convertSplits(SplitGraph &sg, double split_threshold, int weighti
 	}*/
 	//SplitGraph temp;
 	convertSplits(sg, hash_ss, weighting_type, weight_threshold);
-	int nsplits = sg.getNSplits();
+	int nsplits = static_cast<int>(sg.getNSplits());
 
 	double threshold = split_threshold * size();
 //	cout << "threshold = " << threshold << endl;
@@ -596,7 +596,7 @@ void MTreeSet::computeRFDist(double *rfdist, int mode, double weight_threshold) 
 		}
 	}
 	// delete memory 
-	for (id = size()-1; id >= 0; id--) {
+	for (id = static_cast<int>(size())-1; id >= 0; id--) {
 		delete hs_vec[id];
 		delete sg_vec[id];
 	}
@@ -665,7 +665,7 @@ void MTreeSet::computeRFDist(double *rfdist, MTreeSet *treeset2, bool k_by_k,
 
 	// now start the RF computation
 	int id = 0;
-	int col_size = hs_vec.size() - size();
+	int col_size = static_cast<int>(hs_vec.size() - size());
 	for (vector<SplitGraph*>::iterator hsit = sg_vec.begin(); id < size(); hsit++, id++) {
 		int id2 = 0;
         vector<SplitIntMap*>::iterator start_it = (hs_vec.begin() + size());
@@ -690,10 +690,10 @@ void MTreeSet::computeRFDist(double *rfdist, MTreeSet *treeset2, bool k_by_k,
 						nodes_vec[id][i]->name = "-" + nodes_vec[id][i]->name;*/
 				} 
 			}
-			double rf_val = (*hsit)->size() + (*hsit2)->size() - 2*common_splits;
+			double rf_val = (*hsit)->size() + static_cast<int>((*hsit2)->size()) - 2*common_splits;
             if (Params::getInstance().normalize_tree_dist) {
-                int non_trivial = (*hsit)->size() - (*hsit)->getNTrivialSplits();
-                non_trivial += (*hsit2)->size() - ((*hsit2)->begin())->first->getNTaxa();
+                int non_trivial = static_cast<int>((*hsit)->size()) - (*hsit)->getNTrivialSplits();
+                non_trivial += static_cast<int>((*hsit2)->size()) - static_cast<int>(((*hsit2)->begin())->first->getNTaxa());
                 rf_val /= non_trivial;
             }
             if (k_by_k)
@@ -720,7 +720,7 @@ void MTreeSet::computeRFDist(double *rfdist, MTreeSet *treeset2, bool k_by_k,
 		}
 	}
 	// delete memory 
-	for (id = hs_vec.size()-1; id >= 0; id--) {
+	for (id = static_cast<int>(hs_vec.size())-1; id >= 0; id--) {
 		delete hs_vec[id];
 		delete sg_vec[id];
 	}

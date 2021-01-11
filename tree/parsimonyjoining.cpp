@@ -28,7 +28,7 @@ protected:
     PhyloNode*       true_root;          //The node for sequence zero
     UINT*            next_partial_pars;
     
-    double rowTotalMultiplier;
+    T                rowTotalMultiplier;
     
 public:
     ParsimonyMatrix(): tree(nullptr), last_interior_node(nullptr)
@@ -53,7 +53,8 @@ public:
     }
     virtual void calculateLeafParsimonies() {
         ParallelParsimonyCalculator calculator(*tree, false);
-        for (size_t i=0; i<tree->aln->getNSeq(); ++i) {
+        int nseq = static_cast<int>(tree->aln->getNSeq());
+        for (int i=0; i<nseq; ++i) {
             auto           leaf_name = tree->aln->getSeqName(i);
             PhyloNode*     leafNode  = tree->newNode(i, leaf_name.c_str());
             PhyloNeighbor* topNei    = new PhyloNeighbor(leafNode, -1);
@@ -72,14 +73,14 @@ public:
         #if _OPENMP
         #pragma omp parallel for schedule(dynamic)
         #endif
-        for (size_t r=0; r<row_count; ++r) {
+        for (intptr_t r=0; r<row_count; ++r) {
             auto currRow   = rows[r];
             auto rowVector = topOfCluster[r]->partial_pars;
-            for (size_t c=r+1; c<row_count; ++c) {
+            for (intptr_t c=r+1; c<row_count; ++c) {
                 auto colVector = topOfCluster[c]->partial_pars;
                 int score;
                 tree->computeParsimonyOutOfTree( rowVector, colVector, &score );
-                currRow[c] = score;
+                currRow[c] = static_cast<T>(score);
             }
             progress += (row_count - r);
         }
@@ -87,9 +88,9 @@ public:
         #if _OPENMP
         #pragma omp parallel for
         #endif
-        for (size_t r=1; r<row_count; ++r) {
+        for (intptr_t r=1; r<row_count; ++r) {
             auto currRow    = rows[r];
-            for (size_t c=0; c<r; ++c) {
+            for (intptr_t c=0; c<r; ++c) {
                 currRow[c] = rows[c][r];
             }
         }
@@ -140,7 +141,7 @@ public:
         #ifdef _OPENMP
         #pragma omp parallel for reduction(+:cTotal)
         #endif
-        for (size_t i=0; i<row_count; ++i) {
+        for (intptr_t i=0; i<row_count; ++i) {
             if (i!=a && i!=b) {
                 T Dai         = aRow[i];
                 T Dbi         = bRow[i];
@@ -149,7 +150,7 @@ public:
                 auto iVector  = topOfCluster[rowToCluster[i]]->partial_pars;
                 int score     = 0;
                 tree->computeParsimonyOutOfTree( abVector, iVector, &score );
-                T Dci         = score;
+                T Dci         = static_cast<T>(score);
 
                 aRow[i]       = Dci;
                 rows[i][a]    = Dci;
@@ -178,7 +179,7 @@ public:
             , rowToCluster[1], -1
             , rowToCluster[2], -1);
         row_count      = 0;
-        tree->leafNum  = tree->aln->getNSeq();
+        tree->leafNum  = tree->aln->getNSeq32();
         tree->root     = true_root;
         tree->rooted   = false;
         tree->initializeTree();
@@ -190,7 +191,7 @@ public:
         #ifdef _OPENMP
         #pragma omp parallel for
         #endif
-        for (size_t r=0; r<row_count; ++r) {
+        for (intptr_t r=0; r<row_count; ++r) {
             scaledRowTotals[r] *= rowTotalMultiplier;
         }
     }

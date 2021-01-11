@@ -59,9 +59,9 @@ void Greedy::run(Params &params, vector<PDTaxaSet> &taxa_set)
 		updateOnLongestPath(root->highestNei->node, subtree, taxa_set[0]);
 	} else {
 		root = initialset[0];
-		int included = initialset.size();
+		int included = static_cast<int>(initialset.size());
 		// put all taxa on the initial set into subtree
-		for (NodeVector::iterator it = initialset.begin(); it != initialset.end(); it++) {
+		for (auto it = initialset.begin(); it != initialset.end(); it++) {
 			if (subtree[(*it)->id]) {
 				cout << "Duplicated " << (*it)->name << endl;
 				included--;

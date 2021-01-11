@@ -72,6 +72,10 @@ extern "C" {
     #include "terrace/terrace.h"
 #endif
 
+#if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
+#define _CRT_SECURE_NO_WARNINGS (1)
+#endif
+
 void reportReferences(Params &params, ofstream &out) {
 
     out << "To cite IQ-TREE please use:" << endl << endl
@@ -493,7 +497,7 @@ void reportRate(ostream &out, PhyloTree &tree) {
         if (rate_model->getGammaShape() > 0 || rate_model->getPtnCat(0) < 0) {
             //            prop.resize(cats, (1.0 - rate_model->getPInvar()) / rate_model->getNRate());
             prop.resize(cats);
-            for (size_t i = 0; i < cats; i++) {
+            for (int i = 0; i < cats; i++) {
                 prop[i] = rate_model->getProp(i);
             }
         } else {
@@ -502,18 +506,20 @@ void reportRate(ostream &out, PhyloTree &tree) {
             size_t num_patterns = tree.aln->getNPattern();
             if (frequencies!=nullptr) {
                 for (size_t i = 0; i < num_patterns; i++) {
-                    prop[rate_model->getPtnCat(i)] += frequencies[i];
+                    //This won't work if >2 billion patterns
+                    prop[rate_model->getPtnCat(static_cast<int>(i))] += static_cast<double>(frequencies[i]);
                 }
             } else {
                 for (size_t i = 0; i < num_patterns; i++) {
-                    prop[rate_model->getPtnCat(i)] += tree.aln->at(i).frequency;
+                    //This won't work if >2 billion patterns
+                    prop[rate_model->getPtnCat(static_cast<int>(i))] += static_cast<double>(tree.aln->at(i).frequency);
                 }
             }
-            for (size_t i = 0; i < cats; i++) {
+            for (int i = 0; i < cats; i++) {
                 prop[i] /= tree.aln->getNSite();
             }
         }
-        for (size_t i = 0; i < cats; i++) {
+        for (int i = 0; i < cats; i++) {
             out << "  " << i + 1 << "         ";
             out.width(14);
             out << left << rate_model->getRate(i) << " " << prop[i];
@@ -1011,8 +1017,10 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
                 << "  Invar:  Number of invariant sites" << endl
                 << "  Const:  Number of constant sites (can be subset of invariant sites)" << endl << endl;
 
-        } else
-            reportAlignment(out, *(tree.aln), tree.removed_seqs.size());
+        }
+        else {
+            reportAlignment(out, *(tree.aln), static_cast<int>(tree.removed_seqs.size()));
+        }
 
         out.precision(4);
         out << fixed;
@@ -1497,8 +1505,8 @@ void checkZeroDist(Alignment *aln, double *dist) {
             if (distRow[j] <= minLen ) {
                 if (first)
                     str = "ZERO distance between sequences "
-                            + aln->getSeqName(i);
-                str += ", " + aln->getSeqName(j);
+                            + aln->getSeqName(static_cast<int>(i));
+                str += ", " + aln->getSeqName(static_cast<int>(j));
                 checked[j] = 1;
                 first = false;
             }
@@ -2259,8 +2267,9 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
     if (!params.pll) {
         uint64_t total_mem = getMemorySize();
-        if (params.lh_mem_save == LM_MEM_SAVE && params.max_mem_size > total_mem)
-            params.max_mem_size = total_mem;
+        if (params.lh_mem_save == LM_MEM_SAVE && params.max_mem_size > total_mem) {
+            params.max_mem_size = static_cast<double>(total_mem);
+        }
 
         uint64_t mem_required = iqtree->getMemoryRequired();
 
@@ -2300,7 +2309,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         int max_procs = countPhysicalCPUCores();
         if (mem_required * max_procs > total_mem * iqtree->num_threads && iqtree->num_threads > 0) {
             outWarning("Memory required per CPU-core (" + convertDoubleToString((double)mem_required/iqtree->num_threads/1024/1024/1024)+
-            " GB) is higher than your computer RAM per CPU-core ("+convertIntToString(total_mem/max_procs/1024/1024/1024)+
+            " GB) is higher than your computer RAM per CPU-core ("+convertIntToString(static_cast<int>(total_mem/max_procs/1024/1024/1024))+
             " GB), thus multiple runs may exceed RAM!");
         }
     }
@@ -2604,7 +2613,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         splitsfile += ".splits.nex";
         double weight_threshold = (params.split_threshold<1) ? params.split_threshold : (params.gbo_replicates-1.0)/params.gbo_replicates;
         weight_threshold *= 100.0;
-        computeConsensusTree(splitsfile.c_str(), 0, 1e6, -1,
+        computeConsensusTree(splitsfile.c_str(), 0, 1000000, -1,
                              weight_threshold, nullptr,
                              params.out_prefix.c_str(), nullptr, &params);
         // now optimize branch lengths of the consensus tree
@@ -2709,7 +2718,7 @@ void runMultipleTreeReconstruction(Params &params, Alignment *alignment, IQTree 
             best_run = run;
 
     // do multiple tree reconstruction
-    for (run = runLnL.size(); run < params.num_runs; run++) {
+    for (run = static_cast<int>(runLnL.size()); run < params.num_runs; run++) {
 
         tree->getCheckpoint()->startStruct("run" + convertIntToString(run+1));
         
@@ -2733,7 +2742,7 @@ void runMultipleTreeReconstruction(Params &params, Alignment *alignment, IQTree 
             }
         } else {
             // allocate heterotachy tree if neccessary
-            int pos = posRateHeterotachy(alignment->model_name);
+            auto pos = posRateHeterotachy(alignment->model_name);
             
             if (params.num_mixlen > 1) {
                 iqtree = new PhyloTreeMixlen(alignment, params.num_mixlen);
@@ -3151,7 +3160,7 @@ void runStandardBootstrap(Params &params, Alignment *alignment, IQTree *tree) {
             }
         } else {
             // allocate heterotachy tree if neccessary
-            int pos = posRateHeterotachy(alignment->model_name);
+            auto pos = posRateHeterotachy(alignment->model_name);
             
             if (params.num_mixlen > 1) {
                 boot_tree = new PhyloTreeMixlen(bootstrap_alignment, params.num_mixlen);
@@ -3229,7 +3238,7 @@ void runStandardBootstrap(Params &params, Alignment *alignment, IQTree *tree) {
         string root_name = (params.root) ? params.root : alignment->getSeqName(0);
         const char* saved_root = params.root;
         params.root = root_name.c_str();
-        computeConsensusTree(boottrees_name.c_str(), 0, 1e6, -1,
+        computeConsensusTree(boottrees_name.c_str(), 0, 1000000, -1.0,
                              params.split_threshold, nullptr,
                              params.out_prefix.c_str(), nullptr, &params);
         params.root = saved_root;
@@ -3257,7 +3266,7 @@ void runStandardBootstrap(Params &params, Alignment *alignment, IQTree *tree) {
             cout << endl << "===> ASSIGN " << RESAMPLE_NAME_UPPER
                 << " SUPPORTS TO THE TREE FROM ORIGINAL ALIGNMENT" << endl << endl;
             MExtTree ext_tree;
-            assignBootstrapSupport(boottrees_name.c_str(), 0, 1e6,
+            assignBootstrapSupport(boottrees_name.c_str(), 0, 1000000,
                                    treefile_name.c_str(), false, treefile_name.c_str(),
                                    params.out_prefix.c_str(), ext_tree, NULL, &params);
             tree->copyTree(&ext_tree);
@@ -3401,11 +3410,12 @@ void computeSiteFrequencyModel(Params &params, Alignment *alignment) {
     // 2017-12-07: Increase espilon ten times (0.01 -> 0.1) to speedup PMSF computation
     tree->getModelFactory()->optimizeParameters(params.fixed_branch_length, true, params.modelEps*10);
 
-    size_t nptn = alignment->getNPattern(), nstates = alignment->num_states;
+    intptr_t nptn    = alignment->getNPattern();
+    intptr_t nstates = alignment->num_states;
     double *ptn_state_freq = new double[nptn*nstates];
     tree->computePatternStateFreq(ptn_state_freq);
     alignment->site_state_freq.resize(nptn);
-    for (size_t ptn = 0; ptn < nptn; ptn++) {
+    for (intptr_t ptn = 0; ptn < nptn; ptn++) {
         double *f = new double[nstates];
         memcpy(f, ptn_state_freq+ptn*nstates, sizeof(double)*nstates);
         alignment->site_state_freq[ptn] = f;
@@ -3444,7 +3454,7 @@ IQTree *newIQTree(Params &params, Alignment *alignment) {
         
     } else {
         // allocate heterotachy tree if neccessary
-        int pos = posRateHeterotachy(alignment->model_name);
+        auto pos = posRateHeterotachy(alignment->model_name);
         
         if (params.num_mixlen > 1) {
             tree = new PhyloTreeMixlen(alignment, params.num_mixlen);
@@ -3465,12 +3475,12 @@ void getSymTestID(vector<SymTestResult> &res, set<int> &id, bool bad_res) {
             case SYMTEST_BINOM:
                 for (auto i = res.begin(); i != res.end(); i++)
                     if (i->pvalue_binom < Params::getInstance().symtest_pcutoff)
-                        id.insert(i - res.begin());
+                        id.insert(static_cast<int>(i - res.begin()));
                 break;
             case SYMTEST_MAXDIV:
                 for (auto i = res.begin(); i != res.end(); i++)
                     if (i->pvalue_maxdiv < Params::getInstance().symtest_pcutoff)
-                        id.insert(i - res.begin());
+                        id.insert(static_cast<int>(i - res.begin()));
                 break;
             default:
                 break;
@@ -3481,12 +3491,12 @@ void getSymTestID(vector<SymTestResult> &res, set<int> &id, bool bad_res) {
             case SYMTEST_BINOM:
                 for (auto i = res.begin(); i != res.end(); i++)
                     if (i->pvalue_binom >= Params::getInstance().symtest_pcutoff)
-                        id.insert(i - res.begin());
+                        id.insert(static_cast<int>(i - res.begin()));
                 break;
             case SYMTEST_MAXDIV:
                 for (auto i = res.begin(); i != res.end(); i++)
                     if (i->pvalue_maxdiv >= Params::getInstance().symtest_pcutoff)
-                        id.insert(i - res.begin());
+                        id.insert(static_cast<int>(i - res.begin()));
                 break;
             default:
                 break;
@@ -3509,10 +3519,10 @@ void doSymTest(Alignment *alignment, Params &params) {
     cout << "Performing matched-pair tests of symmetry...";
     vector<SymTestResult> sym, marsym, intsym;
 
-    size_t num_parts = 1;
-    if (alignment->isSuperAlignment())
-        num_parts = ((SuperAlignment*)alignment)->partitions.size();
-    
+    int num_parts = 1;
+    if (alignment->isSuperAlignment()) {
+        num_parts = static_cast<int>(((SuperAlignment*)alignment)->partitions.size());
+    }    
     string filename_stat = string(params.out_prefix) + ".symstat.csv";
     ofstream *out_stat = NULL;
     if (params.symtest_stat) {
@@ -3626,7 +3636,7 @@ void doSymTest(Alignment *alignment, Params &params) {
     }
 
     if (params.symtest_shuffle > 1) {
-        for (int part = num_parts; part < sym.size(); part++) {
+        for (int part = num_parts; part < static_cast<int>(sym.size()); ++part) {
             sym[part].pvalue_perm = marsym[part].pvalue_perm = intsym[part].pvalue_perm = -1.0;
             out << part % num_parts << ','
             << sym[part] << ',' << marsym[part] << ','  << intsym[part] << endl;
@@ -3704,7 +3714,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
         alignment = createAlignment(params.aln_file, params.sequence_type, params.intype, params.model_name);
 
         if (params.freq_const_patterns) {
-            int orig_nsite = alignment->getNSite();
+            auto orig_nsite = alignment->getNSite();
             alignment->addConstPatterns(params.freq_const_patterns);
             cout << "INFO: " << alignment->getNSite() - orig_nsite << " const sites added into alignment" << endl;
         }
@@ -3907,7 +3917,7 @@ void runUnlinkedPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
     if (!params.user_file.empty()) {
         // reading user tree file for all partitions
         bool is_rooted = false;
-        part_trees.readTrees(params.user_file.c_str(), is_rooted, 0, super_aln->partitions.size());
+        part_trees.readTrees(params.user_file.c_str(), is_rooted, 0, static_cast<int>(super_aln->partitions.size()));
         if (is_rooted)
             outError("Rooted trees not allowed: ", params.user_file);
         if (part_trees.size() != super_aln->partitions.size())
@@ -3922,7 +3932,7 @@ void runUnlinkedPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
         checkpoint->startStruct((*alnit)->name);
 
         // allocate heterotachy tree if neccessary
-        int pos = posRateHeterotachy((*alnit)->model_name);
+        auto pos = posRateHeterotachy((*alnit)->model_name);
         IQTree *tree;
         
         if (params.num_mixlen > 1) {
@@ -4251,7 +4261,7 @@ void assignBootstrapSupport(const char *input_trees, int burnin, int max_count,
     if (params && detectInputFile(input_trees) == IN_NEXUS) {
         sg.init(*params);
         for (SplitGraph::iterator it = sg.begin(); it != sg.end(); it++)
-            hash_ss.insertSplit((*it), (*it)->getWeight());
+            hash_ss.insertSplit((*it), static_cast<int>((*it)->getWeight()));
         StrVector sgtaxname;
         sg.getTaxaName(sgtaxname);
         i = 0;
@@ -4362,7 +4372,7 @@ void computeConsensusTree(const char *input_trees, int burnin, int max_count,
         params->user_file = user_file;
         for (SplitGraph::iterator it = sg.begin(); it != sg.end();)
             if ((*it)->getWeight() > weight_threshold) {
-                hash_ss.insertSplit((*it), (*it)->getWeight());
+                hash_ss.insertSplit((*it), static_cast<int>((*it)->getWeight()));
                 it++;
             } else {
                 // delete the split

@@ -33,8 +33,9 @@ void ConstraintTree::readConstraint(const char *constraint_file, const StrVector
     getTaxaName(taxname);
 
     StringIntMap fulltax_index;
-    for (auto it = fulltaxname.begin(); it != fulltaxname.end(); it++)
-        fulltax_index[(*it)] = it - fulltaxname.begin();
+    for (auto it = fulltaxname.begin(); it != fulltaxname.end(); it++) {
+        fulltax_index[(*it)] = static_cast<int>(it - fulltaxname.begin());
+    }
 
     bool err = false;
         
@@ -80,8 +81,9 @@ void ConstraintTree::initFromTree() {
     StrVector::iterator it;
     getTaxaName(taxname);
     taxname_index.clear();
-    for (it = taxname.begin(); it != taxname.end(); it++)
-        taxname_index[(*it)] = it - taxname.begin();
+    for (it = taxname.begin(); it != taxname.end(); it++) {
+        taxname_index[(*it)] = static_cast<int>(it - taxname.begin());
+    }
 
     // convert into split system
     SplitGraph sg;
@@ -175,7 +177,7 @@ bool ConstraintTree::isCompatible(StrVector &tax1, StrVector &tax2) {
         return true;
     } else {
         // partial split
-        ASSERT(tax_count1 + tax_count2 < leafNum);
+        ASSERT(tax_count1 + tax_count2 < static_cast<int>(leafNum));
         Split taxa_mask(sp1);
         taxa_mask += sp2;
         Split* subsp = sp1.extractSubSplit(taxa_mask);

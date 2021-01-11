@@ -110,7 +110,7 @@ vector<string> CandidateSet::getBestTreeStringsForProcess(int numTree) {
         return alltrees;
     }
     if (numTree == 0 || numTree > alltrees.size()) {
-        numTree = alltrees.size();
+        numTree = static_cast<int>(alltrees.size());
     }
     int cnt = 0;
     vector<string> res;
@@ -266,13 +266,14 @@ int CandidateSet::update(string newTree, double newScore) {
         removeWorstTree();
     }
     ASSERT(topologies.size() == size());
-    treePos = distance(candidateTreeIt, end());
+    treePos = static_cast<int>(distance(candidateTreeIt, end()));
     return treePos;
 }
 
 vector<double> CandidateSet::getBestScores(int numBestScore) {
-    if (numBestScore == 0)
-        numBestScore = size();
+    if (numBestScore == 0) {
+        numBestScore = static_cast<int>(size());
+    }
     vector<double> res;
     for (reverse_iterator rit = rbegin();
          rit != rend() && numBestScore > 0; rit++, numBestScore--) {
@@ -412,7 +413,7 @@ void CandidateSet::removeWorstTree() {
 
 int CandidateSet::computeSplitOccurences(double supportThreshold) {
     candSplits.clear();
-    candSplits.setNumTree(size());
+    candSplits.setNumTree(static_cast<int>(size()));
 
     /* Store all splits in the best trees in candSplits.
      * The variable numTree in SpitInMap is the number of trees, from which the splits are converted.

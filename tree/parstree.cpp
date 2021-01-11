@@ -43,7 +43,7 @@ UINT ParsTree::findMstScore(int ptn) {
 	for(int i = 0; i < aln->num_states; i++) site_states[i] = UINT_MAX;
 	Pattern pat = aln->at(ptn);
 	for(int j = 0; j < pat.size(); j++){
-		if(pat[j] < aln->num_states) site_states[pat[j]] = 0;
+		if(pat[j] < static_cast<size_t>(aln->num_states)) site_states[pat[j]] = 0;
 //		else initLeafSiteParsForAmbiguousState(pat[j], site_states)
 	}
 
@@ -80,7 +80,7 @@ UINT ParsTree::findMstScore(int ptn) {
 			}
 		}
 		// find among nodes unadded the one with smallest value
-		int min_label = UINT_MAX;
+		UINT min_label = UINT_MAX;
 		add_node = -1;
 		for(int c = 0; c < aln->num_states; c++){
 			if((added[c] == false) && (site_states[c] == 0))

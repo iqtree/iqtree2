@@ -13,6 +13,10 @@
 #include "model/ratefree.h"
 #include "utils/MPIHelper.h"
 
+#ifdef _MSC_VER
+#include <boost/scoped_array.hpp>
+#endif
+
 #ifdef USE_CPPOPTLIB
 #include "cppoptlib/solver/newtondescentsolver.h"
 #include "cppoptlib/solver/lbfgsbsolver.h"
@@ -58,11 +62,15 @@ void PhyloTreeMixlen::saveCheckpoint() {
         startCheckpoint();
         if (this->relative_treelen.size() > 0) {
             ASSERT(mixlen == this->relative_treelen.size());
+#ifndef _MSC_VER
             double relative_treelen[mixlen];
+#else
+            boost::scoped_array<double> relative_treelen(new double[mixlen]);
+#endif
             for (int i = 0; i < mixlen; i++) {
                 relative_treelen[i] = this->relative_treelen[i];
             }
-            CKP_ARRAY_SAVE(mixlen, relative_treelen);
+            CKP_ARRAY_SAVE(mixlen, &relative_treelen[0]);
         }
         endCheckpoint();
     }
@@ -75,8 +83,12 @@ void PhyloTreeMixlen::saveCheckpoint() {
 void PhyloTreeMixlen::restoreCheckpoint() {
     if (mixlen > 0) {
         startCheckpoint();
+#ifndef _MSC_VER
         double relative_treelen[mixlen];
-        if (CKP_ARRAY_RESTORE(mixlen, relative_treelen)) {
+#else
+        boost::scoped_array<double> relative_treelen(new double[mixlen]);
+#endif
+        if (CKP_ARRAY_RESTORE(mixlen, &relative_treelen[0])) {
             this->relative_treelen.resize(mixlen);
             for (int i = 0; i < mixlen; i++)
                 this->relative_treelen[i] = relative_treelen[i];
@@ -160,7 +172,7 @@ void PhyloTreeMixlen::initializeMixBranches(PhyloNode *node, PhyloNode *dad) {
             back_nei->lengths.resize(mixlen);
         } else {
             // too few lengths, add more
-            int cur = nei->lengths.size();
+            int cur = static_cast<int>(nei->lengths.size());
             nei->lengths.resize(mixlen, nei->length);
             back_nei->lengths.resize(mixlen, back_nei->length);
             double avglen = 0.0;
@@ -381,16 +393,24 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
     if (params->optimize_alg_mixlen.find("newton") != string::npos) {
 
         //----- Newton-Raphson -----//
+#ifndef _MSC_VER
         double lower_bound[mixlen];
         double upper_bound[mixlen];
         double variables[mixlen];
+#else
+        boost::scoped_array<double> lower_bound(new double[mixlen]);
+        boost::scoped_array<double> upper_bound(new double[mixlen]);
+        boost::scoped_array<double> variables(new double[mixlen]);
+#endif
         for (i = 0; i < mixlen; i++) {
             lower_bound[i] = params->min_branch_length;
             variables[i] = current_it->getLength(i);
             upper_bound[i] = params->max_branch_length;
         }
 
-        /*double score =*/ (void) minimizeNewtonMulti(lower_bound, variables, upper_bound, params->min_branch_length, mixlen);
+        minimizeNewtonMulti(&lower_bound[0], &variables[0], 
+                            &upper_bound[0], params->min_branch_length, 
+                            mixlen);
         for (i = 0; i < mixlen; i++) {
             current_it->setLength(i, variables[i]);
             current_it_back->setLength(i, variables[i]);
@@ -399,10 +419,17 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
 
         // BFGS method to simultaneously optimize all lengths per branch
         // It is often better than the true Newton method (Numerical Recipes in C++, chap. 10.7)
+#ifndef _MSC_VER
         double variables[mixlen+1];
         double upper_bound[mixlen+1];
         double lower_bound[mixlen+1];
         bool bound_check[mixlen+1];
+#else 
+        boost::scoped_array<double> variables ( new double [mixlen + 1]);
+        boost::scoped_array<double> upper_bound ( new double [mixlen + 1]);
+        boost::scoped_array<double> lower_bound ( new double [mixlen + 1]);
+        boost::scoped_array<bool> bound_check( new bool [mixlen + 1]);
+#endif
         for (i = 0; i < mixlen; i++) {
             lower_bound[i+1] = params->min_branch_length;
             variables[i+1] = current_it->getLength(i);
@@ -410,13 +437,21 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
             bound_check[i+1] = false;
         }
 
-        double grad[mixlen+1], hessian[mixlen*mixlen];
-        computeFuncDervMulti(variables+1, grad, hessian);
+#ifndef _MSC_VER
+        double grad[mixlen + 1];
+        double hessian[mixlen * mixlen];
+#else
+        boost::scoped_array<double> grad( new double [mixlen + 1]);
+        boost::scoped_array<double> hessian( new double [mixlen * mixlen]);
+#endif 
+        computeFuncDervMulti(&variables[1], &grad[0], &hessian[0]);
         double score;
         if (params->optimize_alg_mixlen.find("BFGS-B") != string::npos)
-            score = -L_BFGS_B(mixlen, variables+1, lower_bound+1, upper_bound+1, params->min_branch_length);
+            score = -L_BFGS_B(mixlen, &variables[1], &lower_bound[1], 
+                              &upper_bound[1], params->min_branch_length);
         else
-            score = -minimizeMultiDimen(variables, mixlen, lower_bound, upper_bound, bound_check, params->min_branch_length, hessian);
+            score = -minimizeMultiDimen(&variables[0], mixlen, &lower_bound[0], &upper_bound[0], 
+                                        &bound_check[0], params->min_branch_length, &hessian[0]);
 
         for (i = 0; i < mixlen; i++) {
             current_it->setLength(i, variables[i+1]);
@@ -432,7 +467,7 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
             outError("Please use option -optlen BFGS to disable EM algorithm");
         
         // EM algorithm
-        size_t nptn = aln->getNPattern();
+        intptr_t nptn = aln->getNPattern();
         size_t nmix = site_rate->getNRate();
         ASSERT(nmix == mixlen);
 
@@ -451,7 +486,7 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
 
             // E-step
             // decoupled weights (prop) from _pattern_lh_cat to obtain L_ci and compute pattern likelihood L_i
-            for (size_t ptn = 0; ptn < nptn; ptn++) {
+            for (intptr_t ptn = 0; ptn < nptn; ptn++) {
                 double *this_lk_cat = tree_buffers._pattern_lh_cat + ptn*nmix;
                 double lk_ptn = ptn_invar[ptn];
                 for (size_t c = 0; c < nmix; c++) {
@@ -473,7 +508,7 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
             
             for (cur_mixture = 0; cur_mixture < mixlen; cur_mixture++) {
                 double *this_lk_cat = tree_buffers._pattern_lh_cat+cur_mixture;
-                for (size_t ptn = 0; ptn < nptn; ptn++) {
+                for (intptr_t ptn = 0; ptn < nptn; ptn++) {
                     ptn_freq[ptn] = this_lk_cat[ptn*nmix];
                 }                
                 double current_len = current_it->getLength(cur_mixture);
@@ -527,22 +562,24 @@ double PhyloTreeMixlen::targetFunk(double x[]) {
 }
 
 double PhyloTreeMixlen::derivativeFunk(double x[], double dfx[]) {
-    int i;
-//    cout.precision(10);
-//    cout << "x: ";
-    for (i = 0; i < mixlen; ++i) {
+    for (int i = 0; i < mixlen; ++i) {
         ASSERT(!std::isnan(x[i+1]));
         current_it->setLength(i, x[i+1]);
         current_it_back->setLength(i, x[i+1]);
-//        cout << " " << x[i+1];
     }
-//    cout << endl;
-    double df[mixlen+1], ddf[mixlen*mixlen];
-    computeLikelihoodDerv(current_it, current_it_back->getNode(), df, ddf,
+#ifndef _MSC_VER
+    double df[mixlen + 1];
+    double ddf[mixlen*mixlen];
+#else
+    boost::scoped_array<double> df  ( new double [mixlen + 1] );
+    boost::scoped_array<double> ddf ( new double [static_cast<size_t>(mixlen) * static_cast<size_t>(mixlen)]);
+#endif
+    computeLikelihoodDerv(current_it, current_it_back->getNode(), &df[0], &ddf[0],
                           tree_buffers);
-    for (i = 0; i < mixlen; ++i)
+    for (int i = 0; i < mixlen; ++i) {
         df[i] = -df[i];
-    memcpy(dfx+1, df, sizeof(double)*mixlen);
+    }
+    memcpy(dfx+1, &df[0], sizeof(double)*mixlen);
     return -df[mixlen];
 }
 
@@ -772,9 +809,9 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
     size_t block     = ncat * nstates * nmixture;
     size_t statemix  = nstates * nmixture;
     size_t statecat  = nstates * ncat;
-    size_t orig_nptn = aln->size();
-    size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
-    size_t maxptn = get_safe_upper_limit(nptn);
+    intptr_t orig_nptn = aln->size();
+    intptr_t nptn = aln->size()+model_factory->unobserved_ptns.size();
+    intptr_t maxptn = get_safe_upper_limit(nptn);
     double *eval = model->getEigenvalues();
     ASSERT(eval);
 
@@ -787,7 +824,7 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
-            for (size_t ptn = 0; ptn < nptn; ptn++) {
+            for (intptr_t ptn = 0; ptn < nptn; ptn++) {
                 double* partial_lh_dad = dad_branch->partial_lh + ptn*block;
                 double* theta          = tree_buffers.theta_all + ptn*block;
                 
@@ -806,17 +843,17 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
 		    double* partial_lh_node = node_branch->partial_lh;
 		    double* partial_lh_dad  = dad_branch->partial_lh;
 
-            size_t all_entries = nptn*block;
+            intptr_t all_entries = nptn*block;
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
-            for (size_t i = 0; i < all_entries; i++) {
+            for (intptr_t i = 0; i < all_entries; i++) {
                 tree_buffers.theta_all[i] = partial_lh_node[i] * partial_lh_dad[i];
             }
         }
         if (nptn < maxptn) {
             // copy dummy values
-            for (size_t ptn = nptn; ptn < maxptn; ptn++)
+            for (intptr_t ptn = nptn; ptn < maxptn; ptn++)
                 memcpy(&tree_buffers.theta_all[ptn*block],
                        &tree_buffers.theta_all[(ptn-1)*block], block*sizeof(double));
         }
@@ -826,7 +863,7 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
     double *val0 = new double[statecat];
     double *val1 = new double[statecat];
     double *val2 = new double[statecat];
-    for (size_t c = 0; c < ncat; c++) {
+    for (int c = 0; c < ncat; c++) {
         double prop = site_rate->getProp(c);
         for (size_t i = 0; i < nstates; i++) {
             double cof   = eval[cur_mixture*nstates+i]*site_rate->getRate(c);
@@ -845,7 +882,7 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+:my_df,my_ddf,prob_const,df_const,ddf_const)
 #endif
-    for (size_t ptn = 0; ptn < nptn; ptn++) {
+    for (intptr_t ptn = 0; ptn < nptn; ptn++) {
         double  lh_ptn = ptn_invar[ptn], df_ptn = 0.0, ddf_ptn = 0.0;
         double* theta  = tree_buffers.theta_all + ptn*block + cur_mixture*statecat;
         for (size_t i = 0; i < statecat; i++) {

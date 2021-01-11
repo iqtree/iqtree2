@@ -46,7 +46,7 @@ void PhyloTree::computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
 		return;
 	}
 
-    size_t ptn, c;
+	intptr_t ptn, c;
     size_t orig_ntn = aln->size();
 
     size_t ncat = site_rate->getNRate();
@@ -465,11 +465,11 @@ void PhyloTree::computeMixrateLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch,
     size_t ncat = site_rate->getNRate();
 
     size_t block = ncat * nstates;
-    size_t ptn; // for big data size > 4GB memory required
+	intptr_t ptn; // for big data size > 4GB memory required
     size_t c, i, j;
-    size_t orig_nptn = aln->size();
-    size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
-    size_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
+	intptr_t orig_nptn = aln->size();
+	intptr_t nptn = aln->size()+model_factory->unobserved_ptns.size();
+	intptr_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
     maxptn = max(maxptn, aln->size()+((model_factory->unobserved_ptns.size()+VCSIZE-1)/VCSIZE)*VCSIZE);
     double *eval = model->getEigenvalues();
     ASSERT(eval);
@@ -710,11 +710,11 @@ double PhyloTree::computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
     size_t ncat = site_rate->getNRate();
 
     size_t block = ncat * nstates;
-    size_t ptn; // for big data size > 4GB memory required
+	intptr_t ptn; // for big data size > 4GB memory required
     size_t c, i, j;
-    size_t orig_nptn = aln->size();
-    size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
-    size_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
+	intptr_t orig_nptn = aln->size();
+	intptr_t nptn = aln->size()+model_factory->unobserved_ptns.size();
+	intptr_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
     maxptn = max(maxptn, aln->size()+((model_factory->unobserved_ptns.size()+VCSIZE-1)/VCSIZE)*VCSIZE);
     double *eval = model->getEigenvalues();
     ASSERT(eval);
@@ -974,11 +974,11 @@ double PhyloTree::computeMixrateLikelihoodFromBufferEigenSIMD() {
 
     size_t ncat = site_rate->getNRate();
     size_t block = ncat * nstates;
-    size_t ptn; // for big data size > 4GB memory required
+	intptr_t ptn; // for big data size > 4GB memory required
     size_t c, i, j;
-    size_t orig_nptn = aln->size();
-    size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
-//    size_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
+	intptr_t orig_nptn = aln->size();
+	intptr_t nptn = aln->size()+model_factory->unobserved_ptns.size();
+//    intptr_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
     double *eval = model->getEigenvalues();
     ASSERT(eval);
 

@@ -447,9 +447,9 @@ void PhyloTree::computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, P
     size_t ncat = site_rate->getNRate();
 
     size_t block = ncat * nstates;
-    size_t ptn; // for big data size > 4GB memory required
+    intptr_t ptn; // for big data size > 4GB memory required
     size_t c, i;
-    size_t nptn = aln->size();
+    intptr_t nptn = aln->size();
 
 	ASSERT(theta_all);
 	if (!theta_computed) {
@@ -566,9 +566,9 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branc
     size_t ncat = site_rate->getNRate();
 
     size_t block = ncat * nstates;
-    size_t ptn; // for big data size > 4GB memory required
+    intptr_t ptn; // for big data size > 4GB memory required
     size_t c, i;
-    size_t nptn = aln->size();
+    intptr_t nptn = aln->size();
 
 
 	memset(_pattern_lh_cat, 0, sizeof(double)*nptn*ncat);
@@ -674,9 +674,9 @@ double PhyloTree::computeSitemodelLikelihoodFromBufferEigen() {
     size_t ncat = site_rate->getNRate();
 
     size_t block = ncat * nstates;
-    size_t ptn; // for big data size > 4GB memory required
+    intptr_t ptn; // for big data size > 4GB memory required
     size_t c, i;
-    size_t nptn = aln->size();
+    intptr_t nptn = aln->size();
 
     ModelSet *models = (ModelSet*)model;
     

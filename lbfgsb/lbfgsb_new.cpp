@@ -791,7 +791,11 @@ void mainlb(int n, int m, double *x,
 		sbtime = 0.;
 		lnscht = 0.;
 		/*         'word' records the status of subspace solutions. */
+#ifdef _MSC_VER
 		strcpy_s(word, sizeof(word), "---");
+#else
+		strcpy(word, "---");
+#endif
 		/*         'info' records the termination information. */
 		info = 0;
 		itfile = 0;

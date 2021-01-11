@@ -239,7 +239,7 @@ public:
 	/**
 		@return number of areas
 	*/
-	int getNAreas() {
+	size_t getNAreas() {
 		return sets->getNSets();
 	}
 

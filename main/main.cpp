@@ -24,6 +24,11 @@
 
 #include <iqtree_config.h>
 
+#if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
+ //Turn off (4) warnings about sprintf calls in ncl\nxsstring.h
+#define _CRT_SECURE_NO_WARNINGS (1)
+#endif
+
 #if defined WIN32 || defined _WIN32 || defined __WIN32__ || defined WIN64
 //#include <winsock2.h>
 //#include <windows.h>
@@ -299,9 +304,12 @@ void summarizeFooter(ostream &out, Params &params) {
 
 int getMaxNameLen(vector<string> &setName) {
     int len = 0;
-    for (vector<string>::iterator it = setName.begin(); it != setName.end(); it++)
-        if (len < (*it).length())
-            len = (*it).length();
+    for (vector<string>::iterator it = setName.begin(); it != setName.end(); it++) {
+        int lenHere = static_cast<int>((*it).length());
+        if (len < lenHere) {
+            len = lenHere;
+        }
+    }
     return len;
 }
 
@@ -521,11 +529,11 @@ void runPDTree(Params &params)
 
     if (params.run_mode == GREEDY || params.run_mode == BOTH_ALG ||
         (params.run_mode == DETECTED)) {
-
-        if (params.run_mode == DETECTED && params.sub_size >= test_greedy.leafNum * 7 / 10
-            && params.min_size < 2)
+        int seventyPercentLeafNum = static_cast<int>(test_greedy.leafNum * 7 / 10);
+        if (params.run_mode == DETECTED && params.sub_size >= seventyPercentLeafNum
+            && params.min_size < 2) {
             detected_greedy = false;
-
+        }
         if (detected_greedy) {
             params.detected_mode = GREEDY;
             t_begin=getCPUTime();
@@ -925,7 +933,7 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
                         " the optimal PD score and PD sets" << endl;
                     out << "are identical to the case when budget = " << subsize-stepsize << endl;
                     //out << "**************************************************************" << endl;
-                    subsize += (next-it)*stepsize;
+                    subsize += static_cast<int>(next-it)*stepsize;
                     it = next;
                     if (it == pd_set.end()) break;
                 }
@@ -933,7 +941,7 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
 
             if (it != pd_set.begin()) separator(out, 1);
 
-            int num_sets = (*it).size();
+            int num_sets = static_cast<int>((*it).size());
             double weight = (*it).getWeight();
 
             if (params.run_mode != PD_USER_SET) {
@@ -1088,7 +1096,7 @@ void runPDSplit(Params &params) {
     // check parameters
     if (sg.isPDArea()) {
         if (sg.isBudgetConstraint()) {
-            int budget = (params.budget >= 0) ? params.budget : sg.getPdaBlock()->getBudget();
+            double budget = (params.budget >= 0) ? params.budget : sg.getPdaBlock()->getBudget();
             if (budget < 0 && params.pd_proportion == 0.0) params.run_mode = PD_USER_SET;
         } else {
             int sub_size = (params.sub_size >= 1) ? params.sub_size : sg.getPdaBlock()->getSubSize();
@@ -1419,8 +1427,10 @@ void computeRFDistExtended(const char *trees1, const char *trees2, const char *f
                 cout << ntrees << " " << endl;
             DoubleVector dist;
             tree.computeRFDist(trees2, dist);
-            ntrees2 = dist.size();
-            rfdist.insert(rfdist.end(), dist.begin(), dist.end());
+            ntrees2 = static_cast<int>(dist.size());
+            for (double x : dist) {
+                rfdist.push_back(static_cast<int>(x));
+            }
             char ch;
             in.exceptions(ios::goodbit);
             (in) >> ch;
@@ -1467,7 +1477,7 @@ void computeRFDistSamePair(const char *trees1, const char *trees2, const char *f
                 cout << ntrees << " " << endl;
             DoubleVector dist;
             tree.computeRFDist(in2, dist, 0, true);
-            ntrees2 = dist.size();
+            ntrees2 = static_cast<int>(dist.size());
             rfdist.insert(rfdist.end(), dist.begin(), dist.end());
             char ch;
             in.exceptions(ios::goodbit);
@@ -1512,7 +1522,8 @@ void computeRFDist(Params &params) {
     }
 
     MTreeSet trees(params.user_file.c_str(), params.is_rooted, params.tree_burnin, params.tree_max_count);
-    int n = trees.size(), m = trees.size();
+    int n = static_cast<int>(trees.size());
+    int m = n;
     double *rfdist;
     double *incomp_splits = NULL;
     string infoname = params.out_prefix;
@@ -1522,7 +1533,7 @@ void computeRFDist(Params &params) {
     if (params.rf_dist_mode == RF_TWO_TREE_SETS) {
         MTreeSet treeset2(params.second_tree, params.is_rooted, params.tree_burnin, params.tree_max_count);
         cout << "Computing Robinson-Foulds distances between two sets of trees" << endl;
-        m = treeset2.size();
+        m = static_cast<int>(treeset2.size());
         size_t size = n*m;
         if (params.rf_same_pair) {
             if (m != n)
@@ -1646,7 +1657,7 @@ void compare(Params &params){
     DoubleVector BSDs;
     IntVector RFs;
     mytree.comparedTo(trees, brMatrix, RFs, BSDs);
-    int numTree = trees.size();
+    int numTree = static_cast<int>(trees.size());
     int numNode = mytree.nodeNum;
 
     string output;
@@ -2154,7 +2165,7 @@ void processECOpd(Params &params) {
             cout<<"LeafNUM = "<<tree.leafNum<<endl;
             cout<<"root_id = "<<tree.root->id<<" root_name = "<<tree.root->name<<endl;
 
-            for(i=0; i<tree.leafNum; i++){
+            for(i=0; i<static_cast<int>(tree.leafNum); ++i){
                 cout<<i<<" "<<tree.findNodeID(i)->name <<endl;
             }
         }
@@ -2248,8 +2259,8 @@ void processECOpd(Params &params) {
                 cout<<"x"<<i<<" = "<<variables[i]<<endl;
             cout<<"score = "<<score<<endl;
         }
-        ecoInfDAG.splitsNUM = splitSYS.getNSplits();
-        ecoInfDAG.totalSD = splitSYS.calcWeight();
+        ecoInfDAG.splitsNUM = static_cast<int>(splitSYS.getNSplits());
+        ecoInfDAG.totalSD   = static_cast<int>(splitSYS.calcWeight());
         ecoInfDAG.dietConserved(variables);
         params.run_time = getCPUTime() - startTime;
         ecoInfDAG.printResults(outFile.c_str(),variables, score,params);
@@ -2324,7 +2335,7 @@ int main(int argc, char *argv[]) {
         intargc = 0;
         intargv = NULL;
 
-        for (n = strlen(argv[0]) - 5;
+        for (n = static_cast<int>(strlen(argv[0])) - 5;
              (n >= 0) && !found && (argv[0][n] != '/')
              && (argv[0][n] != '\\'); n--) {
 
@@ -2672,7 +2683,8 @@ int main(int argc, char *argv[]) {
             case CT_CONSENSUS_NETWORK:
                 computeConsensusNetwork(params.user_file.c_str(), params.tree_burnin,
                                         params.tree_max_count, params.split_threshold,
-                                        params.split_weight_summary, params.split_weight_threshold,
+                                        static_cast<int>(params.split_weight_summary), 
+                                        params.split_weight_threshold,
                                         params.out_file, params.out_prefix.c_str(),
                                         params.tree_weight_file);
                 break;

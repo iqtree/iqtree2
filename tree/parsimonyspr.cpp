@@ -18,7 +18,7 @@ PhyloNodeVector PhyloTree::getTaxaNodesInIDOrder() const {
     result.resize(leafNum, nullptr);
     for (auto it=taxa.begin(); it!=taxa.end(); ++it) {
         auto node = *it;
-        ASSERT(0<=node->id && node->id<leafNum);
+        ASSERT(0<=node->id && node->id<static_cast<int>(leafNum));
         ASSERT(result[node->id] == nullptr);
         result[node->id] = node;
     }
@@ -31,10 +31,10 @@ PhyloNodeVector PhyloTree::getTaxaNodesInIDOrder() const {
 namespace {
     struct ParsimonySPRMove {
     public:
-        double benefit;
-        int    source_branch_id;
-        int    target_branch_id;
-        bool   isForward;        //branch.first moves, branch.second does not
+        double   benefit;
+        intptr_t source_branch_id;
+        intptr_t target_branch_id;
+        bool     isForward;        //branch.first moves, branch.second does not
         
         //Members used for checking whether an SPR is still valid
         //after other changes might have been made to the tree.
@@ -117,7 +117,7 @@ namespace {
         ParsimonySPRMove() {
             initialize(0);
         }
-        void initialize(int source_branch) {
+        void initialize(intptr_t source_branch) {
             benefit          = -1.0;
             source_branch_id = source_branch;
             target_branch_id = -1;
@@ -261,9 +261,9 @@ namespace {
 };
 
 void PhyloTree::doParsimonySPR() {
-    size_t max_iterations  = params->parsimony_spr_iterations; //assumed >0
-    size_t branch_count    = leafNum * 2 - 3;                  //assumed > 3
-    int    index_parsimony = 0;
+    size_t   max_iterations  = params->parsimony_spr_iterations; //assumed >0
+    intptr_t branch_count    = leafNum * 2 - 3;                  //assumed > 3
+    int      index_parsimony = 0;
 
     TimeKeeper initializing ("initializing");
     TimeKeeper rescoring    ("rescoring parsimony");
@@ -271,7 +271,8 @@ void PhyloTree::doParsimonySPR() {
     TimeKeeper sorting      ("sorting SPR moves");
     TimeKeeper applying     ("applying SPR moves");
 
-    initProgress(branch_count*(max_iterations*2+1),
+    double work_estimate = (double)branch_count * ((double)max_iterations * 2.0 + 1.0);
+    initProgress(work_estimate,
                  "Looking for parsimony SPR moves", "", "");
 
     initializing.start();
@@ -323,7 +324,7 @@ void PhyloTree::doParsimonySPR() {
         #ifdef _OPENMP
         #pragma omp parallel for
         #endif
-        for (size_t i=0; i<branch_count; ++i) {
+        for (intptr_t i=0; i<branch_count; ++i) {
             TargetBranch&     tb   = targets[i];
             tb.computeState(*this, i, dummyBlocks);
             LOG_LINE(VB_DEBUG, "Branch " << i
@@ -337,9 +338,9 @@ void PhyloTree::doParsimonySPR() {
         #ifdef _OPENMP
         #pragma omp parallel for num_threads(num_threads) reduction(+:positions_considered)
         #endif
-        for (size_t i=0; i<branch_count; ++i) {
-            TargetBranch&     tb          = targets[i];
-            ParsimonySPRMove& move        = moves[i];
+        for (intptr_t i=0; i<branch_count; ++i) {
+            TargetBranch&     tb   = targets[i];
+            ParsimonySPRMove& move = moves[i];
             move.initialize(i);
             BenefitPair benefit = tb.getPartialDisconnectionBenefit(*this, targets);
             //LOG_LINE(VB_MIN, "for s=" << i << " bf=" << benefit.forwardBenefit
@@ -365,7 +366,7 @@ void PhyloTree::doParsimonySPR() {
             }
             positions_considered += move.positions_considered;
         }
-        trackProgress(branch_count % 100);
+        trackProgress(static_cast<double>(branch_count % 100));
         evaluating.stop();
     
         LOG_LINE(VB_DEBUG, "sorting SPR moves");
@@ -470,12 +471,13 @@ void IQTree::doPLLParsimonySPR() {
         oldNames        = aln->getSeqNames();
         PhyloNodeVector taxa ( getTaxaNodesInIDOrder() );
         ASSERT(taxa.size() == aln->getSeqNames().size());
-        for (size_t i=0; i<taxa.size(); ++i) {
+        intptr_t taxa_count = taxa.size();
+        for (intptr_t i=0; i<taxa_count; ++i) {
             std::stringstream dummy;
             dummy << "S" << i;
             std::string dummyName = dummy.str();
             taxa[i]->name = dummyName;
-            aln->setSeqName(i, dummyName);
+            aln->setSeqName(static_cast<int>(i), dummyName);
         }
         initializePLL(*params);
     }
@@ -484,7 +486,8 @@ void IQTree::doPLLParsimonySPR() {
     pllReadNewick(constructedTreeString);
     double opt_start = getRealTime();
     int iterations = pllOptimizeWithParsimonySPR(pllInst, pllPartitions,
-        params->parsimony_spr_iterations,  params->sprDist);
+        params->parsimony_spr_iterations,  
+        params->sprDist);
     double read_start = getRealTime();
     pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions,
         pllInst->start->back, PLL_FALSE, PLL_TRUE, PLL_FALSE,
@@ -495,10 +498,12 @@ void IQTree::doPLLParsimonySPR() {
     //LOG_LINE(VB_MAX, pllTreeString);x
     if (areNamesDummied) {
         PhyloNodeVector taxa ( getTaxaNodesInIDOrder() );
-        ASSERT(taxa.size() == aln->getSeqNames().size());
-        for (size_t i=0; i<taxa.size(); ++i) {
+        intptr_t taxa_count     = taxa.size();
+        intptr_t seq_name_count = aln->getSeqNames().size();
+        ASSERT(taxa_count == seq_name_count);
+        for (intptr_t i=0; i<taxa_count; ++i) {
             taxa[i]->name = oldNames[i];
-            aln->setSeqName(i, oldNames[i]);
+            aln->setSeqName(static_cast<int>(i), oldNames[i]);
         }
         pllDestroyInstance(pllInst);
         pllInst = nullptr;

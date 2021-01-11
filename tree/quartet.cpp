@@ -689,7 +689,7 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
     if(LMGroups.numGroups == 0) { /* no grouping */
         LMGroups.numGroups = 1;
         LMGroups.GroupA.resize(leafNum);
-        for (int s = 0; s<leafNum; s++) {
+        for (unsigned int s = 0; s<leafNum; s++) {
             LMGroups.GroupA[s] = s;
         }
         LMGroups.numGrpSeqs[0] = leafNum; /* cluster A */
@@ -767,7 +767,8 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
         cout << "Computing " << params->lmap_num_quartets
         << " quartet likelihoods (one dot represents 100 quartets)." << endl << endl;
     }
-    initProgress(params->lmap_num_quartets, "Computing quartet likelihoods", "", "");
+    initProgress(static_cast<double>(params->lmap_num_quartets), 
+                 "Computing quartet likelihoods", "", "");
     lmap_quartet_info.resize(params->lmap_num_quartets);
     bool quartets_drawn = false;
     if (params->lmap_num_quartets == LMGroups.uniqueQuarts) {
@@ -1242,7 +1243,7 @@ void readGroupNewick(char *filename, MSetsBlock *sets_block) {
                 } while (ch != ',' && ch != ';');
                 myset->name = name;
             } else {
-                myset->name = "Cluster" + convertIntToString(sets->size());
+                myset->name = "Cluster" + convertInt64ToString(sets->size());
             }
             // check for duplicated name
             for (TaxaSetNameVector::iterator it = sets->begin(); it != sets->end()-1; it++)
@@ -1266,9 +1267,7 @@ void readGroupNewick(char *filename, MSetsBlock *sets_block) {
     }
 }
 
-void PhyloTree::readLikelihoodMappingGroups(char *filename, QuartetGroups &LMGroups) {
-
-    int numsets, numtax, taxid;
+void PhyloTree::readLikelihoodMappingGroups(char *filename, QuartetGroups &LMGroups) {    
     char clustchar;
     MSetsBlock *lmclusters;
     lmclusters = new MSetsBlock();
@@ -1294,7 +1293,7 @@ void PhyloTree::readLikelihoodMappingGroups(char *filename, QuartetGroups &LMGro
     cout << "(The leading numbers represent the order from the master alignment.)" << endl << endl;
 
     TaxaSetNameVector *allsets = lmclusters->getSets();
-    numsets = allsets->size();
+    intptr_t numsets = allsets->size();
 
     if(numsets > 5) outError("Only up to 4 Likelihood Mapping clusters allowed, plus one 'ignored' cluster!");
 
@@ -1302,13 +1301,13 @@ void PhyloTree::readLikelihoodMappingGroups(char *filename, QuartetGroups &LMGro
     for (TaxaSetNameVector::iterator i = allsets->begin(); i != allsets->end(); i++) {
 	if ((*i)->name.compare("ignored")==0 || (*i)->name.compare("IGNORED")==0) {
 		LMGroups.Name[4] = (*i)->name;
-		numtax = (*i)->taxlist.size();
+		int numtax = static_cast<int>((*i)->taxlist.size());
 		LMGroups.numGrpSeqs[4] = numtax;
 		LMGroups.GroupX.resize(numtax);
 		cout << "Cluster \"" << LMGroups.Name[4] << "\" lists " << (*i)->taxlist.size() << " sequences to be ignored:" << endl;
 		int t = 0;
 		for (vector<string>::iterator it = (*i)->taxlist.begin(); it != (*i)->taxlist.end(); it++) {
-			taxid = aln->getSeqID(*it);
+			auto taxid = aln->getSeqID(*it);
 			if (taxid < 0) {
 				cout << "WARNING: unknown sequence name \"" << (*it) << "\"! Will be ignored." << endl;
 			} else {
@@ -1331,7 +1330,7 @@ void PhyloTree::readLikelihoodMappingGroups(char *filename, QuartetGroups &LMGro
     			default: outError("Only up to 4 Likelihood Mapping clusters allowed, plus one 'ignored' cluster!"); break;
 		}
 		LMGroups.Name[n] = (*i)->name;
-		numtax = (*i)->taxlist.size();
+		int numtax = static_cast<int>((*i)->taxlist.size());
 		LMGroups.numGrpSeqs[n] = numtax;
 		switch(n){
 			case 0: LMGroups.GroupA.resize(numtax); break;
@@ -1345,7 +1344,7 @@ void PhyloTree::readLikelihoodMappingGroups(char *filename, QuartetGroups &LMGro
 
 		int t = 0;
 		for (vector<string>::iterator it = (*i)->taxlist.begin(); it != (*i)->taxlist.end(); it++) {
-			taxid = aln->getSeqID(*it);
+			auto taxid = aln->getSeqID(*it);
 			if (taxid < 0) {
 				cout << "WARNING: sequence name \"" << (*it) << "\"! Will be ignored." << endl;
 			} else {
@@ -1461,12 +1460,12 @@ void PhyloTree::doLikelihoodMapping() {
 
     string lmap_svgfilename = (string)params->out_prefix + ".lmap.svg";
     FILE *svgout;
-    svgout = fopen(lmap_svgfilename.c_str(), "w");
+    int err = fopen_s(&svgout, lmap_svgfilename.c_str(), "w");
     initsvg(svgout, LMGroups);
 
     string lmap_epsfilename = (string)params->out_prefix + ".lmap.eps";
     FILE *epsout;
-    epsout = fopen(lmap_epsfilename.c_str(), "w");
+    err = fopen_s(&epsout, lmap_epsfilename.c_str(), "w");
     initeps(epsout, LMGroups);
 
     for (qid = 0; qid < params->lmap_num_quartets; qid++) {
@@ -1541,7 +1540,6 @@ void PhyloTree::doLikelihoodMapping() {
 
 void PhyloTree::reportLikelihoodMapping(ofstream &out) {
     int64_t resolved, partly, unresolved;
-    int64_t qid;
     size_t leafNum = PhyloTree::aln->getNSeq();
     // vector<QuartetInfo> lmap_quartet_info;
     // vector<SeqQuartetInfo> lmap_seq_quartet_info;
@@ -1707,128 +1705,131 @@ void PhyloTree::reportLikelihoodMapping(ofstream &out) {
         out << "Quartet support of regions a1, a2, a3 (mainly for clustered analysis):" << endl << endl;
         out << "     #quartets    a1 (% a1)        a2 (% a2)        a3 (% a3)    name" << endl;
 	out << "-----------------------------------------------------------------------------" << endl;
-        for (qid = 0; qid <= leafNum; qid++) {
-	    int64_t sumq0, sumq = lmap_seq_quartet_info[qid].countarr[7] + lmap_seq_quartet_info[qid].countarr[8] + lmap_seq_quartet_info[qid].countarr[9];
-	    if (sumq>0) sumq0=sumq;
-	    else sumq0=1;
+    for (int qid = 0; qid <= static_cast<int>(leafNum); qid++) {
+        int64_t sumq0, sumq = lmap_seq_quartet_info[qid].countarr[7] + lmap_seq_quartet_info[qid].countarr[8] + lmap_seq_quartet_info[qid].countarr[9];
+        if (sumq > 0) sumq0 = sumq;
+        else sumq0 = 1;
 
-	    if (qid < leafNum) {
-               out.setf(ios::fixed, ios::floatfield); // set fixed floating format
-               out.precision(2);
-               out << setw(4) << qid+1 
-                   << setw(9) << sumq
-        	   << setw(7) << lmap_seq_quartet_info[qid].countarr[7]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[7]/sumq0 << ") "
-        	   << setw(7) << lmap_seq_quartet_info[qid].countarr[8]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[8]/sumq0 << ") "
-        	   << setw(7) << lmap_seq_quartet_info[qid].countarr[9]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[9]/sumq0 << ")  " 
-        	   << PhyloTree::aln->getSeqName(qid) << endl;
-	    } else {
-	       out << "-----------------------------------------------------------------------------" << endl;
-               out.setf(ios::fixed, ios::floatfield); // set fixed floating format
-               out.precision(2);
-               out << "    "
-                   << setw(9) << sumq
-        	   << setw(7) << lmap_seq_quartet_info[qid].countarr[7]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[7]/sumq0 << ") "
-        	   << setw(7) << lmap_seq_quartet_info[qid].countarr[8]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[8]/sumq0 << ") "
-        	   << setw(7) << lmap_seq_quartet_info[qid].countarr[9]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[9]/sumq0 << ")  " << endl;
-	    }
+        if (qid < leafNum) {
+            out.setf(ios::fixed, ios::floatfield); // set fixed floating format
+            out.precision(2);
+            out << setw(4) << qid + 1
+                << setw(9) << sumq
+                << setw(7) << lmap_seq_quartet_info[qid].countarr[7]
+                << " (" << setw(6) << (double)100.0 * lmap_seq_quartet_info[qid].countarr[7] / sumq0 << ") "
+                << setw(7) << lmap_seq_quartet_info[qid].countarr[8]
+                << " (" << setw(6) << (double)100.0 * lmap_seq_quartet_info[qid].countarr[8] / sumq0 << ") "
+                << setw(7) << lmap_seq_quartet_info[qid].countarr[9]
+                << " (" << setw(6) << (double)100.0 * lmap_seq_quartet_info[qid].countarr[9] / sumq0 << ")  "
+                << PhyloTree::aln->getSeqName(qid) << endl;
         }
+        else {
+            out << "-----------------------------------------------------------------------------" << endl;
+            out.setf(ios::fixed, ios::floatfield); // set fixed floating format
+            out.precision(2);
+            out << "    "
+                << setw(9) << sumq
+                << setw(7) << lmap_seq_quartet_info[qid].countarr[7]
+                << " (" << setw(6) << (double)100.0 * lmap_seq_quartet_info[qid].countarr[7] / sumq0 << ") "
+                << setw(7) << lmap_seq_quartet_info[qid].countarr[8]
+                << " (" << setw(6) << (double)100.0 * lmap_seq_quartet_info[qid].countarr[8] / sumq0 << ") "
+                << setw(7) << lmap_seq_quartet_info[qid].countarr[9]
+                << " (" << setw(6) << (double)100.0 * lmap_seq_quartet_info[qid].countarr[9] / sumq0 << ")  " << endl;
+        }
+    }
 
         out << endl << endl << "Quartet support of areas 1-7 (mainly for clustered analysis):" << endl << endl;
         out << "                   resolved                                           partly                                             unresolved  name" << endl;
         out << "     #quartets     1 (% 1)          2 (% 2)          3 (% 3)          4 (% 4)          5 (% 5)          6 (% 6)          7 (% 7)" << endl;
 	out << "------------------------------------------------------------------------------------------------------------------------------------------------" << endl;
-        for (qid = 0; qid <= leafNum; qid++) {
-	    int64_t sumq0, sumq = lmap_seq_quartet_info[qid].countarr[7] + lmap_seq_quartet_info[qid].countarr[8] + lmap_seq_quartet_info[qid].countarr[9];
-	    if (sumq>0) sumq0=sumq;
-	    else sumq0=1;
+    for (int qid = 0; qid <= static_cast<int>(leafNum); qid++) {
+        int64_t sumq0, sumq = lmap_seq_quartet_info[qid].countarr[7] + lmap_seq_quartet_info[qid].countarr[8] + lmap_seq_quartet_info[qid].countarr[9];
+        if (sumq > 0) sumq0 = sumq;
+        else sumq0 = 1;
 
-	    if (qid < leafNum) {
-               out.setf(ios::fixed, ios::floatfield); // set fixed floating format
-               out.precision(2);
-               out << setw(4) << qid+1 
-                   << setw(9) << sumq
-                   << setw(7) << lmap_seq_quartet_info[qid].countarr[0] 
-		   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[0]/sumq0 << ") "
-        	   << setw(7) << lmap_seq_quartet_info[qid].countarr[1] 
-                   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[1]/sumq0 << ") "
-        	   << setw(7) << lmap_seq_quartet_info[qid].countarr[2]
-                   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[2]/sumq0 << ") "
-        	   << setw(7) << lmap_seq_quartet_info[qid].countarr[3]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[3]/sumq0 << ") "
-        	   << setw(7) << lmap_seq_quartet_info[qid].countarr[4]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[4]/sumq0 << ") "
-        	   << setw(7) << lmap_seq_quartet_info[qid].countarr[5]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[5]/sumq0 << ") "
-        	   << setw(7) << lmap_seq_quartet_info[qid].countarr[6]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[6]/sumq0 << ")  "
-        	   << PhyloTree::aln->getSeqName(qid) << endl;
-	    } else {
-	       out << "------------------------------------------------------------------------------------------------------------------------------------------------" << endl;
-               out.setf(ios::fixed, ios::floatfield); // set fixed floating format
-               out.precision(2);
-               out << "    "
-                   << setw(9) << sumq
-                   << setw(7) << lmap_seq_quartet_info[qid].countarr[0] 
-		   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[0]/sumq0 << ") "
-        	   << setw(7) << lmap_seq_quartet_info[qid].countarr[1] 
-                   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[1]/sumq0 << ") "
-        	   << setw(7) << lmap_seq_quartet_info[qid].countarr[2]
-                   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[2]/sumq0 << ") "
-        	   << setw(7) << lmap_seq_quartet_info[qid].countarr[3]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[3]/sumq0 << ") "
-        	   << setw(7) << lmap_seq_quartet_info[qid].countarr[4]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[4]/sumq0 << ") "
-        	   << setw(7) << lmap_seq_quartet_info[qid].countarr[5]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[5]/sumq0 << ") "
-        	   << setw(7) << lmap_seq_quartet_info[qid].countarr[6]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[6]/sumq0 << ")  " 
-	           << endl << endl;
-	    }
+        if (qid < leafNum) {
+            out.setf(ios::fixed, ios::floatfield); // set fixed floating format
+            out.precision(2);
+            out << setw(4) << qid + 1
+                << setw(9) << sumq
+                << setw(7) << lmap_seq_quartet_info[qid].countarr[0]
+                << " (" << setw(6) << (double)100.0 * lmap_seq_quartet_info[qid].countarr[0] / sumq0 << ") "
+                << setw(7) << lmap_seq_quartet_info[qid].countarr[1]
+                << " (" << setw(6) << (double)100.0 * lmap_seq_quartet_info[qid].countarr[1] / sumq0 << ") "
+                << setw(7) << lmap_seq_quartet_info[qid].countarr[2]
+                << " (" << setw(6) << (double)100.0 * lmap_seq_quartet_info[qid].countarr[2] / sumq0 << ") "
+                << setw(7) << lmap_seq_quartet_info[qid].countarr[3]
+                << " (" << setw(6) << (double)100.0 * lmap_seq_quartet_info[qid].countarr[3] / sumq0 << ") "
+                << setw(7) << lmap_seq_quartet_info[qid].countarr[4]
+                << " (" << setw(6) << (double)100.0 * lmap_seq_quartet_info[qid].countarr[4] / sumq0 << ") "
+                << setw(7) << lmap_seq_quartet_info[qid].countarr[5]
+                << " (" << setw(6) << (double)100.0 * lmap_seq_quartet_info[qid].countarr[5] / sumq0 << ") "
+                << setw(7) << lmap_seq_quartet_info[qid].countarr[6]
+                << " (" << setw(6) << (double)100.0 * lmap_seq_quartet_info[qid].countarr[6] / sumq0 << ")  "
+                << PhyloTree::aln->getSeqName(qid) << endl;
         }
+        else {
+            out << "------------------------------------------------------------------------------------------------------------------------------------------------" << endl;
+            out.setf(ios::fixed, ios::floatfield); // set fixed floating format
+            out.precision(2);
+            out << "    "
+                << setw(9) << sumq
+                << setw(7) << lmap_seq_quartet_info[qid].countarr[0]
+                << " (" << setw(6) << (double)100.0 * lmap_seq_quartet_info[qid].countarr[0] / sumq0 << ") "
+                << setw(7) << lmap_seq_quartet_info[qid].countarr[1]
+                << " (" << setw(6) << (double)100.0 * lmap_seq_quartet_info[qid].countarr[1] / sumq0 << ") "
+                << setw(7) << lmap_seq_quartet_info[qid].countarr[2]
+                << " (" << setw(6) << (double)100.0 * lmap_seq_quartet_info[qid].countarr[2] / sumq0 << ") "
+                << setw(7) << lmap_seq_quartet_info[qid].countarr[3]
+                << " (" << setw(6) << (double)100.0 * lmap_seq_quartet_info[qid].countarr[3] / sumq0 << ") "
+                << setw(7) << lmap_seq_quartet_info[qid].countarr[4]
+                << " (" << setw(6) << (double)100.0 * lmap_seq_quartet_info[qid].countarr[4] / sumq0 << ") "
+                << setw(7) << lmap_seq_quartet_info[qid].countarr[5]
+                << " (" << setw(6) << (double)100.0 * lmap_seq_quartet_info[qid].countarr[5] / sumq0 << ") "
+                << setw(7) << lmap_seq_quartet_info[qid].countarr[6]
+                << " (" << setw(6) << (double)100.0 * lmap_seq_quartet_info[qid].countarr[6] / sumq0 << ")  "
+                << endl << endl;
+        }
+    }
 
         out << endl << endl << "Quartet resolution per sequence (phylogenetic information):" << endl << endl;
         out << "      #quartets   resolved           partly          unresolved  name" << endl;
 	out << "-----------------------------------------------------------------------------" << endl;
-        for (qid = 0; qid <= leafNum; qid++) {
-	    int64_t resolved = lmap_seq_quartet_info[qid].countarr[LM_REG1] + lmap_seq_quartet_info[qid].countarr[LM_REG2] + lmap_seq_quartet_info[qid].countarr[LM_REG3];
-	    int64_t partly   = lmap_seq_quartet_info[qid].countarr[LM_REG4] + lmap_seq_quartet_info[qid].countarr[LM_REG5] + lmap_seq_quartet_info[qid].countarr[LM_REG6];
-	    int64_t unres    = lmap_seq_quartet_info[qid].countarr[LM_REG7];
-	    int64_t sumq0, sumq = lmap_seq_quartet_info[qid].countarr[7] + lmap_seq_quartet_info[qid].countarr[8] + lmap_seq_quartet_info[qid].countarr[9];
-	    if (sumq>0) sumq0=sumq;
-	    else sumq0=1;
+    for (int qid = 0; qid <= static_cast<int>(leafNum); qid++) {
+        int64_t resolved = lmap_seq_quartet_info[qid].countarr[LM_REG1] + lmap_seq_quartet_info[qid].countarr[LM_REG2] + lmap_seq_quartet_info[qid].countarr[LM_REG3];
+        int64_t partly = lmap_seq_quartet_info[qid].countarr[LM_REG4] + lmap_seq_quartet_info[qid].countarr[LM_REG5] + lmap_seq_quartet_info[qid].countarr[LM_REG6];
+        int64_t unres = lmap_seq_quartet_info[qid].countarr[LM_REG7];
+        int64_t sumq0, sumq = lmap_seq_quartet_info[qid].countarr[7] + lmap_seq_quartet_info[qid].countarr[8] + lmap_seq_quartet_info[qid].countarr[9];
+        if (sumq > 0) sumq0 = sumq;
+        else sumq0 = 1;
 
-	    if (qid < leafNum) {
-               out.setf(ios::fixed, ios::floatfield); // set fixed floating format
-               out.precision(2);
-               out << setw(4) << qid+1 
-                   << setw(9) << sumq
-                   << setw(7) << resolved
-		   << " (" << setw(6) << (double) 100.0*resolved/sumq0 << ") "
-        	   << setw(7) << partly
-                   << " (" << setw(6) << (double) 100.0*partly/sumq0 << ") "
-        	   << setw(7) << unres
-                   << " (" << setw(6) << (double) 100.0*unres/sumq0 << ")  "
-        	   << PhyloTree::aln->getSeqName(qid) << endl;
-	    } else {
-	       out << "-----------------------------------------------------------------------------" << endl;
-               out.setf(ios::fixed, ios::floatfield); // set fixed floating format
-               out.precision(2);
-               out << "    "
-                   << setw(9) << sumq
-                   << setw(7) << resolved
-		   << " (" << setw(6) << (double) 100.0*resolved/sumq0 << ") "
-        	   << setw(7) << partly
-                   << " (" << setw(6) << (double) 100.0*partly/sumq0 << ") "
-        	   << setw(7) << unres
-                   << " (" << setw(6) << (double) 100.0*unres/sumq0 << ")  " << endl;
-	    }
+        if (qid < leafNum) {
+            out.setf(ios::fixed, ios::floatfield); // set fixed floating format
+            out.precision(2);
+            out << setw(4) << qid + 1
+                << setw(9) << sumq
+                << setw(7) << resolved
+                << " (" << setw(6) << (double)100.0 * resolved / sumq0 << ") "
+                << setw(7) << partly
+                << " (" << setw(6) << (double)100.0 * partly / sumq0 << ") "
+                << setw(7) << unres
+                << " (" << setw(6) << (double)100.0 * unres / sumq0 << ")  "
+                << PhyloTree::aln->getSeqName(qid) << endl;
         }
+        else {
+            out << "-----------------------------------------------------------------------------" << endl;
+            out.setf(ios::fixed, ios::floatfield); // set fixed floating format
+            out.precision(2);
+            out << "    "
+                << setw(9) << sumq
+                << setw(7) << resolved
+                << " (" << setw(6) << (double)100.0 * resolved / sumq0 << ") "
+                << setw(7) << partly
+                << " (" << setw(6) << (double)100.0 * partly / sumq0 << ") "
+                << setw(7) << unres
+                << " (" << setw(6) << (double)100.0 * unres / sumq0 << ")  " << endl;
+        }
+    }
 
     resolved   = areacount[0] + areacount[1] + areacount[2];
     partly     = areacount[3] + areacount[4] + areacount[5];

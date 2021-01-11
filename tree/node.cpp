@@ -90,7 +90,7 @@ bool Node::isCherry() {
 }
 
 int Node::degree() {
-    return neighbors.size();
+    return static_cast<int>(neighbors.size());
 }
 
 /** calculate the height of the subtree rooted at this node,
@@ -179,7 +179,7 @@ double Node::longestPath2(Node* &node1, Node* &node2) {
 }
 
 Neighbor *Node::findNeighbor(Node *node) {
-	int size = neighbors.size();
+	int size = static_cast<int>(neighbors.size());
     for (int i = 0; i < size; i++) {
         if (neighbors[i]->node == node) {
             return neighbors[i];
@@ -191,7 +191,7 @@ Neighbor *Node::findNeighbor(Node *node) {
 }
 
 Neighbor *Node::firstNeighbor() const {
-    int size = neighbors.size();
+    int size = static_cast<int>(neighbors.size());
     if (size==0) {
         return nullptr;
     }
@@ -199,7 +199,7 @@ Neighbor *Node::firstNeighbor() const {
 }
 
 bool Node::isNeighbor(Node* node) {
-    int size = neighbors.size();
+    int size = static_cast<int>(neighbors.size());
     for (int i = 0; i < size; i++)
         if (neighbors[i]->node == node) return true;
     return false;
