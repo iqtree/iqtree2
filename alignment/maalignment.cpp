@@ -165,7 +165,7 @@ void MaAlignment::generateExpectedAlignment(MaAlignment *aln, double &prob)
 	//cout << "In function: generating expected alignment!" << endl;
 	IntVector expectedNorFre = aln->computeExpectedNorFre();
 	
-	int nsite = aln->getNSite();
+	int nsite = static_cast<int>(aln->getNSite());
 	seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());
 	num_states = aln->num_states;
 	site_pattern.resize(nsite, -1);
@@ -175,7 +175,7 @@ void MaAlignment::generateExpectedAlignment(MaAlignment *aln, double &prob)
 	verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
 
 	int site = 0;
-	int npat = aln->getNPattern();
+	int npat = static_cast<int>(aln->getNPattern());
 
 	double sumFac = 0;
 	double sumProb = 0;

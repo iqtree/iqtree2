@@ -103,8 +103,10 @@ void SuperAlignment::readFromParams(Params &params) {
     if (params.subsampling != 0) {
         // sumsample a number of partitions
         int subsample = params.subsampling;
-        if (abs(subsample) >= partitions.size())
-            outError("--subsample must be between -" + convertIntToString(partitions.size()-1) + " and " + convertIntToString(partitions.size()-1));
+        if (abs(subsample) >= partitions.size()) {
+            outError("--subsample must be between -" + convertInt64ToString(partitions.size() - 1) + 
+                " and " + convertInt64ToString(partitions.size() - 1));
+        }
         cout << "Random subsampling " << ((subsample > 0) ? subsample : partitions.size() + subsample)
              << " partitions (seed: " << params.subsampling_seed <<  ")..." << endl;
         int *rstream;
@@ -113,7 +115,7 @@ void SuperAlignment::readFromParams(Params &params) {
         BoolVector sample(partitions.size(), false);
         int i;
         for (int num = 0; num < abs(subsample); ) {
-            i = random_int(sample.size(), rstream);
+            i = random_int(static_cast<int>(sample.size()), rstream);
             if (!sample[i]) {
                 sample[i] = true;
                 num++;
@@ -167,13 +169,13 @@ void SuperAlignment::init(StrVector *sequence_names) {
 
     size_t site = 0;
 	for (auto it = partitions.begin(); it != partitions.end(); ++it, ++site) {
-		size_t nseq = (*it)->getNSeq();
+		int nseq = static_cast<int>((*it)->getNSeq());
 		//cout << "nseq  = " << nseq << endl;
-		for (size_t seq = 0; seq < nseq; ++seq) {
+		for (int seq = 0; seq < nseq; ++seq) {
 			int id = getSeqID((*it)->getSeqName(seq));
 			if (id < 0) {
 				seq_names.push_back((*it)->getSeqName(seq));
-				id = seq_names.size()-1;
+				id = static_cast<int>(seq_names.size())-1;
 				IntVector vec(nsite, -1);
 				vec[site] = seq;
 				taxa_index.push_back(vec);
@@ -195,13 +197,14 @@ void SuperAlignment::buildPattern() {
 	pattern_index.clear();
 	VerboseMode save_mode = verbose_mode; 
 	verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
-	size_t nseq = getNSeq();
+	int nseq = getNSeq32();
 	for (size_t site = 0; site < nsite; site++) {
  		Pattern pat;
  		pat.resize(nseq, 0);
-		for (size_t seq = 0; seq < nseq; seq++)
-			pat[seq] = (taxa_index[seq][site] >= 0)? 1 : 0;
-		addPattern(pat, site);
+        for (int seq = 0; seq < nseq; seq++) {
+            pat[seq] = (taxa_index[seq][site] >= 0) ? 1 : 0;
+        }
+		addPattern(pat, static_cast<int>(site));
 	}
 	verbose_mode = save_mode;
 	countConstSite();
@@ -635,7 +638,7 @@ void SuperAlignment::printPartition(ostream &out, const char *aln_file, bool app
     for (size_t part = 0; part < partitions.size(); ++part) {
         string name = partitions[part]->name;
         replace(name.begin(), name.end(), '+', '_');
-        int end_site = start_site + partitions[part]->getNSite();
+        int end_site = start_site + partitions[part]->getNSite32();
         out << "  charset " << name << " = " << start_site << "-" << end_site-1 << ";" << endl;
         start_site = end_site;
     }
@@ -720,7 +723,7 @@ void SuperAlignment::printPartitionRaxml(const char *filename) {
         for (part = 0, start_site = 1; part < partitions.size(); part++) {
             string name = partitions[part]->name;
             replace(name.begin(), name.end(), '+', '_');
-            int end_site = start_site + partitions[part]->getNSite();
+            int end_site = start_site + partitions[part]->getNSite32();
             switch (partitions[part]->seq_type) {
                 case SEQ_DNA: out << "DNA, "; break;
                 case SEQ_BINARY: out << "BIN, "; break;
@@ -785,9 +788,9 @@ void SuperAlignment::printBestPartitionRaxml(const char *filename) {
 
 void SuperAlignment::linkSubAlignment(int part) {
 	ASSERT(taxa_index.size() == getNSeq());
-	size_t nseq = getNSeq();
+	int nseq = getNSeq32();
 	BoolVector checked(partitions[part]->getNSeq(), false);
-	for (size_t seq = 0; seq < nseq; seq++) {
+	for (int seq = 0; seq < nseq; ++seq) {
 		int id = partitions[part]->getSeqID(getSeqName(seq));
 		if (id < 0)
 			taxa_index[seq][part] = -1;
@@ -837,7 +840,7 @@ void SuperAlignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int 
 		Alignment *subaln = new Alignment;
 		subaln->extractSubAlignment(*ait, sub_seq_id, 0);
 		partitions.push_back(subaln);
-		linkSubAlignment(partitions.size()-1);
+		linkSubAlignment(static_cast<int>(partitions.size())-1);
         if (kept_partitions) kept_partitions->push_back(part);
 //		cout << subaln->getNSeq() << endl;
 //		subaln->printPhylip(cout);
@@ -879,7 +882,7 @@ SuperAlignment *SuperAlignment::extractPartitions(IntVector &part_id) {
     size_t part = 0;
     for (auto ait = part_id.begin(); ait != part_id.end(); ++ait, ++part) {
         newaln->partitions.push_back(partitions[*ait]);
-        newaln->linkSubAlignment(newaln->partitions.size()-1);
+        newaln->linkSubAlignment(static_cast<int>(newaln->partitions.size())-1);
     }
     
     // now build the patterns based on taxa_index
@@ -890,7 +893,8 @@ SuperAlignment *SuperAlignment::extractPartitions(IntVector &part_id) {
 void SuperAlignment::removePartitions(set<int> &removed_id) {
     // remove part_id from partitions
     vector<Alignment*> new_partitions;
-    for (size_t i = 0; i < partitions.size(); ++i)
+    int num_partitions = static_cast<int>(partitions.size());
+    for (int i = 0; i < num_partitions; ++i)
         if (removed_id.find(i) == removed_id.end()) {
             // not found in the removed set
             new_partitions.push_back(partitions[i]);
@@ -913,14 +917,15 @@ void SuperAlignment::removePartitions(set<int> &removed_id) {
             }
     }
     
-    
     // build the taxa_index
     taxa_index.resize(getNSeq());
-    for (size_t i = 0; i < getNSeq(); ++i)
-        taxa_index[i].resize(partitions.size(), -1);
-    for (size_t i = 0; i < partitions.size(); ++i)
-        linkSubAlignment(i);
 
+    for (size_t i = 0; i < getNSeq(); ++i) {
+        taxa_index[i].resize(partitions.size(), -1);
+    }
+    for (int i = 0; i < num_partitions; ++i) {
+        linkSubAlignment(i);
+    }
     // now build the patterns based on taxa_index
     buildPattern();
 }
@@ -970,10 +975,11 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, 
     bool listIdentical = !Params::getInstance().suppress_duplicate_sequence_warnings;
 
     auto startCheck = getRealTime();
-	for (size_t seq1 = 0; seq1 < getNSeq(); ++seq1, ++progress) {
+    int nseq = getNSeq32();
+	for (int seq1 = 0; seq1 < nseq; ++seq1, ++progress) {
         if (isSequenceChecked[seq1]) continue;
         bool first_ident_seq = true;
-		for (size_t seq2 = seq1+1; seq2 < getNSeq(); ++seq2) {
+		for (int seq2 = seq1+1; seq2 < nseq; ++seq2) {
             if (getSeqName(seq2) == not_remove || isSequenceRemoved[seq2]) { continue;
             }
             if (hashes[seq1]!=hashes[seq2]) {
@@ -1038,7 +1044,7 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, 
     }
 	// now remove identical sequences
 	IntVector keep_seqs;
-	for (size_t seq1 = 0; seq1 < getNSeq(); ++seq1)
+	for (int seq1 = 0; seq1 < nseq; ++seq1)
     {
         if (!isSequenceRemoved[seq1]) {
             keep_seqs.push_back(seq1);
@@ -1053,7 +1059,7 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, 
 int SuperAlignment::checkAbsentStates(string msg) {
     int count = 0;
     for (auto it = partitions.begin(); it != partitions.end(); ++it)
-        count += (*it)->checkAbsentStates("partition " + convertIntToString((it-partitions.begin())+1));
+        count += (*it)->checkAbsentStates("partition " + convertInt64ToString((it-partitions.begin())+1));
     return count;
 }
 
@@ -1096,11 +1102,11 @@ void SuperAlignment::checkGappySeq() {
 void SuperAlignment::getSitePatternIndex(IntVector &pattern_index) {
 	int nptn = 0;
 	for (vector<Alignment*>::iterator it = partitions.begin(); it != partitions.end(); it++) {
-		int nsite = pattern_index.size();
+		int nsite = static_cast<int>(pattern_index.size());
 		pattern_index.insert(pattern_index.end(), (*it)->site_pattern.begin(), (*it)->site_pattern.end());
 		for (int i = nsite; i < pattern_index.size(); i++)
 			pattern_index[i] += nptn;
-		nptn += (*it)->getNPattern();
+		nptn += static_cast<int>((*it)->getNPattern());
 	}
 }
 
@@ -1183,7 +1189,7 @@ void SuperAlignment::doSymTest(size_t vecid, vector<SymTestResult> &vec_sym, vec
     if (stats)
         all_stats.resize(partitions.size());
 
-    int nparts = partitions.size();
+    int nparts = static_cast<int>(partitions.size());
     #ifdef _OPENMP
     #pragma omp parallel for
     #endif
@@ -1317,7 +1323,7 @@ void SuperAlignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern
         ASSERT(!pattern_freq);
         // resampling whole genes
         IntVector gene_freq;
-        random_resampling(super_aln->partitions.size(), gene_freq);
+        random_resampling(static_cast<int>(super_aln->partitions.size()), gene_freq);
         for (int i = 0; i < gene_freq.size(); i++)
             if (gene_freq[i] > 0) {
                 Alignment *boot_aln = new Alignment;
@@ -1337,7 +1343,7 @@ void SuperAlignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern
         ASSERT(!pattern_freq);
         // resampling whole genes then sites within resampled genes
         IntVector gene_freq;
-        random_resampling(super_aln->partitions.size(), gene_freq);
+        random_resampling(static_cast<int>(super_aln->partitions.size()), gene_freq);
         for (int i = 0; i < gene_freq.size(); i++)
             for (int rep = 0; rep < gene_freq[i]; rep++) {
             Alignment *boot_aln = new Alignment;
@@ -1355,7 +1361,7 @@ void SuperAlignment::createBootstrapAlignment(IntVector &pattern_freq, const cha
 	ASSERT(isSuperAlignment());
 	int nptn = 0;
 	for (vector<Alignment*>::iterator it = partitions.begin(); it != partitions.end(); it++) {
-		nptn += (*it)->getNPattern();
+		nptn += static_cast<int>((*it)->getNPattern());
 	}
 	pattern_freq.resize(0);
 	int *internal_freq = new int[nptn];
@@ -1372,22 +1378,22 @@ void SuperAlignment::createBootstrapAlignment(int *pattern_freq, const char *spe
 
 	if (spec && strncmp(spec, "GENE", 4) == 0) {
 		// resampling whole genes
-		int nptn = 0;
+		intptr_t nptn = 0;
 		IntVector part_pos;
 		for (vector<Alignment*>::iterator it = partitions.begin(); it != partitions.end(); it++) {
-			part_pos.push_back(nptn);
+			part_pos.push_back(static_cast<int>(nptn));
 			nptn += (*it)->getNPattern();
 		}
 		memset(pattern_freq, 0, nptn * sizeof(int));
         IntVector gene_freq;
-        random_resampling(partitions.size(), gene_freq, rstream);
+        random_resampling(static_cast<int>(partitions.size()), gene_freq, rstream);
 		for (int part = 0; part < partitions.size(); part++)
         for (int rep = 0; rep < gene_freq[part]; rep++){
 			Alignment *aln = partitions[part];
 			if (strncmp(spec,"GENESITE",8) == 0) {
 				// then resampling sites in resampled gene
                 IntVector sample;
-                random_resampling(aln->getNSite(), sample, rstream);
+                random_resampling(static_cast<int>(aln->getNSite()), sample, rstream);
 				for (int site = 0; site < sample.size(); site++)
                 for (int rep2 = 0; rep2 < sample[site]; rep2++) {
 					int ptn_id = aln->getPatternID(site);
@@ -1400,7 +1406,7 @@ void SuperAlignment::createBootstrapAlignment(int *pattern_freq, const char *spe
 		}
 	} else {
 		// resampling sites within genes
-		int offset = 0;
+		intptr_t offset = 0;
 		for (vector<Alignment*>::iterator it = partitions.begin(); it != partitions.end(); it++) {
             if (spec && strncmp(spec, "SCALE=", 6) == 0)
                 (*it)->createBootstrapAlignment(pattern_freq + offset, spec, rstream);
@@ -1430,7 +1436,7 @@ double SuperAlignment::computeObsDist(int seq1, int seq2) {
 		if (id1 < 0 || id2 < 0) continue;
 		int num_states = partitions[site]->num_states;
 		for (Alignment::iterator it = partitions[site]->begin(); it != partitions[site]->end(); it++) 
-			if  ((*it)[id1] < num_states && (*it)[id2] < num_states) {
+			if  (static_cast<int>((*it)[id1]) < num_states && static_cast<int>((*it)[id2]) < num_states) {
 				total_pos += (*it).frequency;
 				if ((*it)[id1] != (*it)[id2] )
 					diff_pos += (*it).frequency;
@@ -1546,7 +1552,7 @@ Alignment *SuperAlignment::concatenateAlignments(set<int> &ids) {
 		string taxa_set;
         Pattern taxa_pat = getPattern(id);
         taxa_set.insert(taxa_set.begin(), taxa_pat.begin(), taxa_pat.end());
-		nsites += partitions[id]->getNSite();
+		nsites += static_cast<int>(partitions[id]->getNSite());
 		if (it == ids.begin()) union_taxa = taxa_set; else {
 			for (int j = 0; j < union_taxa.length(); j++)
 				if (taxa_set[j] == 1) union_taxa[j] = 1;
@@ -1648,9 +1654,9 @@ Alignment *SuperAlignment::concatenateAlignments() {
     for (size_t site = 0; site != nsite; ++site) {
         Alignment *part_aln = concatenateAlignments(ids[site]);
         saln->partitions.push_back(part_aln);
-        size_t nseq = part_aln->getNSeq();
+        int nseq = static_cast<int>(part_aln->getNSeq());
         //cout << "nseq  = " << nseq << endl;
-        for (size_t seq = 0; seq < nseq; ++seq) {
+        for (int seq = 0; seq < nseq; ++seq) {
             int id = saln->getSeqID(part_aln->getSeqName(seq));
             ASSERT(id >= 0);
             saln->taxa_index[id][site] = seq;

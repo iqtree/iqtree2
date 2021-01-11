@@ -22,10 +22,10 @@ class Alignment;
 struct AlignmentSummary
 {
 protected:
-    const Alignment*   alignment;
-    std::vector<int>   siteNumbers;      //of sites with variation
-    std::vector<int>   siteFrequencies;  //ditto
-    std::vector<int>   nonConstSiteFrequencies; //ditto, but zeroed if site
+    const Alignment*      alignment;
+    std::vector<intptr_t> siteNumbers;      //of sites with variation
+    std::vector<int>      siteFrequencies;  //ditto
+    std::vector<int>      nonConstSiteFrequencies; //ditto, but zeroed if site
                                                 //isConst according to alignment
     std::map<int, int> stateToSumOfConstantSiteFrequencies;
     size_t             totalFrequency;    //sum of frequencies (*including* constant sites!)
@@ -33,14 +33,14 @@ protected:
     StateType          minState; //found on any site where there is variation
     StateType          maxState; //ditto
     char*              sequenceMatrix;
-    size_t             sequenceLength;  //Sequence length (or: count of sites per sequence)
-    size_t             sequenceCount;   //The number of sequences
+    intptr_t           sequenceLength;  //Sequence length (or: count of sites per sequence)
+    int                sequenceCount;   //The number of sequences
 
 public:
     AlignmentSummary(const Alignment* a, bool keepConstSites, bool keepBoringSites);
     ~AlignmentSummary();
     bool   hasSequenceMatrix() const;
-    size_t getSequenceCount() const;
+    int    getSequenceCount() const;
     size_t getSumOfConstantSiteFrequenciesForState(int state) const;
     const  std::vector<int>& getSiteFrequencies() const;
     size_t getTotalFrequency() const;
@@ -48,7 +48,7 @@ public:
     size_t getTotalFrequencyOfNonConstSites() const;
     
     const char* getSequenceMatrix() const;
-    const char* getSequence(size_t sequence_id) const;
+    const char* getSequence(int sequence_id) const;
     size_t      getSequenceLength() const;
     size_t      getStateCount() const;
     bool        constructSequenceMatrix ( bool treatAllAmbiguousStatesAsUnknown,

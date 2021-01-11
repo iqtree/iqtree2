@@ -194,7 +194,7 @@ double AlignmentPairwise::computeFunction(double value) {
     RateHeterogeneity *site_rate = tree->getRate();
     int ncat = site_rate->getNDiscreteRate();
     ModelSubst *model = tree->getModel();
-    int nptn = tree->aln->getNPattern();
+    intptr_t nptn = tree->aln->getNPattern();
     double lh = 0.0;
 
     if (tree->hasMatrixOfConvertedSequences()) {
@@ -288,9 +288,9 @@ void AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf) {
     int ncat = site_rate->getNDiscreteRate();
     ModelSubst *model = tree->getModel();
     int trans_size = tree->getModel()->getTransMatrixSize();
-    int nptn = tree->aln->getNPattern();
-    df = 0.0;
-    ddf = 0.0;
+    intptr_t nptn = tree->aln->getNPattern();
+    double local_df  = 0.0; //MSVC insists that variables in reduction clauses
+    double local_ddf = 0.0; //may not be reference types.
     
     auto sequence1        = tree->getConvertedSequenceByNumber(seq_id1);
     auto sequence2        = tree->getConvertedSequenceByNumber(seq_id2);
@@ -303,8 +303,10 @@ void AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf) {
 
     if (site_rate->isSiteSpecificRate()) {
         if (sequence1!=nullptr && sequence2!=nullptr && frequencies!=nullptr) {
-            #pragma omp parallel for reduction(-:df,ddf) schedule(dynamic,100)
-            for (int i = 0; i < nptn; ++i) {
+            #ifdef _OPENMP
+            #pragma omp parallel for reduction(-:local_df,local_ddf) schedule(dynamic,100)
+            #endif
+            for (intptr_t i = 0; i < nptn; ++i) {
                 int state1 = sequence1[i];
                 if (num_states<=state1) {
                     continue;
@@ -314,16 +316,19 @@ void AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf) {
                     continue;
                 }
                 double freq = frequencies[i];
-                double rate_val = site_rate->getPtnRate(i);
+                double rate_val = site_rate->getPtnRate(static_cast<int>(i));
                 double rate_sqr = rate_val * rate_val;
                 double derv1, derv2;
                 double trans = tree->getModelFactory()->computeTrans(value * rate_val, state1, state2, derv1, derv2);
                 double d1 = derv1 / trans;
-                df -= rate_val * d1 * freq;
-                ddf -= rate_sqr * (derv2/trans - d1*d1) * freq;
+                local_df  -= rate_val * d1 * freq;
+                local_ddf -= rate_sqr * (derv2/trans - d1*d1) * freq;
             }
         } else {
-            for (int i = 0; i < nptn; i++) {
+            #ifdef _OPENMP
+            #pragma omp parallel for reduction(-:local_df,local_ddf) schedule(dynamic,100)
+            #endif
+            for (intptr_t i = 0; i < nptn; i++) {
                 int state1 = tree->aln->at(i)[seq_id1];
                 if (num_states<=state1) {
                     continue;
@@ -332,23 +337,27 @@ void AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf) {
                 if (num_states<=state2) {
                     continue;
                 }
-                double rate_val = site_rate->getPtnRate(i);
+                double rate_val = site_rate->getPtnRate(static_cast<int>(i));
                 double rate_sqr = rate_val * rate_val;
                 double derv1, derv2;
                 double trans = tree->getModelFactory()->computeTrans(value * rate_val, state1, state2, derv1, derv2);
                 double d1 = derv1 / trans;
                 double freq = tree->aln->at(i).frequency;
-                df -= rate_val * d1 * freq;
-                ddf -= rate_sqr * (derv2/trans - d1*d1) * freq;
+                local_df  -= rate_val * d1 * freq;
+                local_ddf -= rate_sqr * (derv2/trans - d1*d1) * freq;
             }
         }
+        df  = local_df;
+        ddf = local_ddf;
         return;
     }
 
     if (tree->getModel()->isSiteSpecificModel()) {
         if (sequence1!=nullptr && sequence2!=nullptr && frequencies!=nullptr) {
-            #pragma omp parallel for reduction(-:df,ddf) schedule(dynamic,100)
-            for (int i = 0; i < nptn; i++) {
+            #ifdef _OPENMP
+            #pragma omp parallel for reduction(-:local_df,local_ddf) schedule(dynamic,100)
+            #endif
+            for (intptr_t i = 0; i < nptn; i++) {
                 int state1 = sequence1[i];
                 if (num_states<=state1) {
                     continue;
@@ -358,16 +367,19 @@ void AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf) {
                     continue;
                 }
                 double freq = frequencies[i];
-                double rate_val = site_rate->getPtnRate(i);
+                double rate_val = site_rate->getPtnRate(static_cast<int>(i));
                 double rate_sqr = rate_val * rate_val;
                 double derv1, derv2;
-                double trans = tree->getModel()->computeTrans(value * rate_val,model->getPtnModelID(i), state1, state2, derv1, derv2);
+                double trans = tree->getModel()->computeTrans(value * rate_val,model->getPtnModelID(static_cast<int>(i)), state1, state2, derv1, derv2);
                 double d1 = derv1 / trans;
-                df -= rate_val * d1 * freq;
-                ddf -= rate_sqr * (derv2/trans - d1*d1) * freq;
+                local_df  -= rate_val * d1 * freq;
+                local_ddf -= rate_sqr * (derv2/trans - d1*d1) * freq;
             }
         } else {
-            for (int i = 0; i < nptn; i++) {
+            #ifdef _OPENMP
+            #pragma omp parallel for reduction(-:local_df,local_ddf) schedule(dynamic,100)
+            #endif
+            for (intptr_t i = 0; i < nptn; i++) {
                 int state1 = tree->aln->at(i)[seq_id1];
                 if (num_states<=state1) {
                     continue;
@@ -376,16 +388,18 @@ void AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf) {
                 if (num_states<=state2) {
                     continue;
                 }
-                double rate_val = site_rate->getPtnRate(i);
+                double rate_val = site_rate->getPtnRate(static_cast<int>(i));
                 double rate_sqr = rate_val * rate_val;
                 double derv1, derv2;
-                double trans = tree->getModel()->computeTrans(value * rate_val,model->getPtnModelID(i), state1, state2, derv1, derv2);
+                double trans = tree->getModel()->computeTrans(value * rate_val,model->getPtnModelID(static_cast<int>(i)), state1, state2, derv1, derv2);
                 double d1 = derv1 / trans;
                 double freq = tree->aln->at(i).frequency;
-                df -= rate_val * d1 * freq;
-                ddf -= rate_sqr * (derv2/trans - d1*d1) * freq;
+                local_df -= rate_val * d1 * freq;
+                local_ddf -= rate_sqr * (derv2/trans - d1*d1) * freq;
             }
         }
+        df = local_df;
+        ddf = local_ddf;
         return;
     }
     
@@ -396,17 +410,21 @@ void AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf) {
             double derv1 = 0.0, derv2 = 0.0;
             tree->getModelFactory()->computeTransDerv(value*rate_val, trans_mat, trans_derv1, trans_derv2);
             double *pair_pos = pair_freq + cat*trans_size;
-            for (int i = 0; i < trans_size; i++) if (pair_pos[i] > 0) {
-                if (trans_mat[i] <= 0) {
-                    throw "Negative transition probability";
+            for (int i = 0; i < trans_size; i++) {
+                if (pair_pos[i] > 0) {
+                    if (trans_mat[i] <= 0) {
+                        throw "Negative transition probability";
+                    }
+                    double d1 = trans_derv1[i] / trans_mat[i];
+                    derv1 += pair_pos[i] * d1;
+                    derv2 += pair_pos[i] * (trans_derv2[i] / trans_mat[i] - d1 * d1);
                 }
-                double d1 = trans_derv1[i] / trans_mat[i];
-                derv1 += pair_pos[i] * d1;
-                derv2 += pair_pos[i] * (trans_derv2[i]/trans_mat[i] - d1 * d1);
             }
-            df -= derv1 * rate_val;
-            ddf -= derv2 * rate_val * rate_val;
+            local_df  -= derv1 * rate_val;
+            local_ddf -= derv2 * rate_val * rate_val;
         }
+        df = local_df;
+        ddf = local_ddf;
         return;
     }
 
@@ -443,10 +461,12 @@ void AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf) {
     for (int i = 0; i < trans_size; i++) {
         if (pair_freq[i] > Params::getInstance().min_branch_length && sum_trans[i] > 0.0) {
             double d1 = sum_derv1[i] / sum_trans[i];
-            df  -= pair_freq[i] * d1;
-            ddf -= pair_freq[i] * (sum_derv2[i]/sum_trans[i] - d1 * d1);
+            local_df  -= pair_freq[i] * d1;
+            local_ddf -= pair_freq[i] * (sum_derv2[i]/sum_trans[i] - d1 * d1);
         }
     }
+    df  = local_df;
+    ddf = local_ddf;
     return;
 }
 

@@ -142,7 +142,7 @@ public:
                @return TRUE if this pattern hadn't already been seen.
         */
     
-    bool addPatternLazy(Pattern &pat, int site, int freq, bool& gaps_only);
+    bool addPatternLazy(Pattern &pat, intptr_t site, int freq, bool& gaps_only);
 
     
     /**
@@ -160,7 +160,7 @@ public:
      (by calling
      */
 
-    void updatePatterns(size_t oldPatternCount);
+    void updatePatterns(intptr_t oldPatternCount);
     
 
     
@@ -372,6 +372,10 @@ public:
         return seq_names.size();
     }
 
+    inline int getNSeq32() const {
+        return static_cast<int>(seq_names.size());
+    }
+
     /**
             @return number of sites (alignment columns)
      */
@@ -380,17 +384,25 @@ public:
     }
 
     /**
+            @return number of sites (alignment columns);
+            for client code that assumes that there are 2^31 sites.
+     */
+    inline int getNSite32() const {
+        return static_cast<int>(site_pattern.size());
+    }
+
+    /**
              @return number of patterns
      */
-    inline size_t getNPattern() const {
+    inline intptr_t getNPattern() const {
         return size();
     }
 
-    inline int getPatternID(int site) {
+    inline int getPatternID(size_t site) {
         return site_pattern[site];
     }
 
-    inline Pattern getPattern(int site) {
+    inline Pattern getPattern(size_t site) {
         return at(site_pattern[site]);
     }
 
@@ -441,7 +453,7 @@ public:
     /**
             @return length of the longest sequence name
      */
-    int getMaxSeqNameLength() const;
+    size_t getMaxSeqNameLength() const;
 
     /*
         check if some state is absent, which may cause numerical issues

@@ -50,7 +50,7 @@ void SuperAlignmentUnlinked::init(StrVector *sequence_names) {
                 unlinked_taxa = false;
                 break;
             }
-            name2part[*sit] = (it) - partitions.begin();
+            name2part[*sit] = static_cast<int>((it) - partitions.begin());
         }
     }
 
@@ -86,7 +86,8 @@ void SuperAlignmentUnlinked::buildPattern() {
         SuperAlignment::buildPattern();
         return;
     }
-    int part, npart = partitions.size();
+    int part;
+    int npart = static_cast<int>(partitions.size());
     seq_type = SEQ_BINARY;
     num_states = 2; // binary type because the super alignment presents the presence/absence of taxa in the partitions
     STATE_UNKNOWN = 2;
@@ -114,7 +115,7 @@ void SuperAlignmentUnlinked::buildPattern() {
     ASSERT(start_seq == nseq);
     verbose_mode = save_mode;
     */
-    resize(1, Pattern(getNSeq(), npart));
+    resize(1, Pattern(getNSeq32(), npart));
     computeConst(at(0));
     for (part = 0; part < npart; part++) {
         site_pattern[part] = 0;

@@ -53,7 +53,7 @@ Pattern::~Pattern()
 int Pattern::computeAmbiguousChar(int num_states) const {
     int num = 0;
     for (auto it = begin(); it != end(); ++it) {
-        if (*it >= num_states) {
+        if (static_cast<int>(*it) >= num_states) {
             num++;
         }
     }
