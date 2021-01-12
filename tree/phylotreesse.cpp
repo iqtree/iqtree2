@@ -48,7 +48,10 @@ void PhyloTree::setNumThreads(int threadCount) {
             showProgress();
             warnedAboutThreadCount = true;
         }
-        threadCount = max(static_cast<int>(aln->getNPattern()/8),1);
+        threadCount = aln->getNPattern()/8;
+        if (threadCount==0) {
+            threadCount = 1;
+        }
     }
     this->num_threads = threadCount;
     this->num_packets = (num_threads==1) ? 1 : (num_threads*PACKETS_PER_THREAD);
@@ -99,10 +102,13 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 	sse                       = lk;
     vector_size               = 1;
     computePartialInfoPointer = &PhyloTree::computePartialInfoWrapper<Vec1d>;
-    unsigned int safe_scaling = static_cast<unsigned int>(params->numseq_safe_scaling);
-
-    safe_numeric = (params && (params->lk_safe_scaling || leafNum >= safe_scaling)) ||
-        (aln && aln->num_states != 4 && aln->num_states != 20);
+    if (params!=nullptr) {
+        unsigned int safe_scaling = static_cast<unsigned int>(params->numseq_safe_scaling);
+        safe_numeric = (params && (params->lk_safe_scaling || leafNum >= safe_scaling)) ||
+            (aln && aln->num_states != 4 && aln->num_states != 20);
+    } else {
+        safe_numeric = false;
+    }
 
     //--- parsimony kernel ---
     setParsimonyKernel(lk);
