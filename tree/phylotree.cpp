@@ -132,7 +132,6 @@ void PhyloTree::init() {
 //    lhComputed = false;
     curScore = -DBL_MAX;
     root = NULL;
-    params = NULL;
     current_scaling = 1.0;
     is_opt_scaling = false;
     num_partial_lh_computations = 0;

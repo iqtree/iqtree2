@@ -227,7 +227,8 @@ namespace {
                              : source.getBackwardConnectionCost(tree, target);
             return benefit - cost;
         }
-        void apply(PhyloTree& tree, LikelihoodBlockPairs blocks, TargetBranchRange& branches) {
+        double apply(PhyloTree& tree, LikelihoodBlockPairs blocks,
+                     TargetBranchRange& branches) {
             TargetBranch& source     = branches[source_branch_id];
             TargetBranch& target     = branches[target_branch_id];
             PhyloNode*    moved_node = isForward ? source.first : source.second;
@@ -262,19 +263,20 @@ namespace {
             right_branch.updateMapping(snip_right_id, new_right, moved_node);
             
             target.updateMapping(target_branch_id, snip_left, snip_right);
+            //Note: The branch that target_branch_id now refers to,
+            //      is the branch that, were we reversing the SPR,
+            //      would be the "new" target branch (it's the branch
+            //      that came to be when we "snipped out" moved_node.
             
-            //Todo: return if logging level isn't high
-            
-            if (VB_MAX<=verbose_mode) {
-                double score;
-                left_branch   .computeState (tree, snip_left_id,     blocks);
-                right_branch  .computeState (tree, snip_right_id,    blocks);
-                target        .computeState (tree, target_branch_id, blocks);
-                score = source.computeState (tree, source_branch_id, blocks);
+            double score;
+            left_branch   .computeState (tree, snip_left_id,     blocks);
+            right_branch  .computeState (tree, snip_right_id,    blocks);
+            target        .computeState (tree, target_branch_id, blocks);
+            score = source.computeState (tree, source_branch_id, blocks);
 
-                TREE_LOG_LINE(tree, VB_MAX, "Updated parsimony score"
-                              << " after applying SPR move was " << score);
-            }
+            TREE_LOG_LINE(tree, VB_MAX, "Updated parsimony score"
+                          << " after applying SPR move was " << score);
+            return score;
         }
     };
 };
@@ -437,8 +439,21 @@ void PhyloTree::doParsimonySPR() {
                      << " linking branch " << move.source_branch_id
                      << ((move.isForward) ? " forward" : " backward" )
                      << " to branch " << move.target_branch_id);
-            move.apply(*this, dummyBlocks, targets);
-            ++spr_moves_applied;
+            double revised_score = move.apply(*this, dummyBlocks, targets);
+            if (parsimony_score <= revised_score) {
+                const char* same_or_worse = (parsimony_score < revised_score)
+                    ? " a worse " : " the same ";
+                LOG_LINE(VB_MAX, "Reverting SPR move; as it resulted in"
+                         << same_or_worse << "parsimony score"
+                         << " (" << revised_score << ")");
+                //ParsimonyMove::move() is its own inverse.  Calling it again
+                //with the same parameters, reverses what it did.
+                revised_score = move.apply(*this, dummyBlocks, targets);
+                ASSERT( revised_score == parsimony_score );
+            } else {
+                parsimony_score = revised_score;
+                ++spr_moves_applied;
+            }
         }
         applying.stop();
         if (spr_moves_applied==0) {
