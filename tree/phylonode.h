@@ -457,6 +457,10 @@ public:
     reference operator[] (size_type i) {
         return reference(*(dynamic_cast<S*>(this)), i );
     }
+    this_type& reverseAll() {
+        std::reverse(super::begin(), super::end());
+        return *this;
+    }
 };
 
 /**

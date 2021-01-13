@@ -212,6 +212,7 @@ template <class T, class S> class CastingVector: public S {
 public:
     typedef S super;
     typedef typename S::size_type size_type;
+    typedef CastingVector<T,S> this_type;
     
     CastingVector(): super() {}
     explicit CastingVector(size_type initialSize): super(initialSize) {}
@@ -258,6 +259,10 @@ public:
     };
     inline reference operator[] (typename super::size_type i) {
         return reference(*(dynamic_cast<S*>(this)), i);
+    }
+    this_type& reverseAll() {
+        std::reverse ( super::begin(), super::end());
+        return *this;
     }
 };
 
