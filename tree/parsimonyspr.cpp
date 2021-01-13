@@ -153,7 +153,51 @@ namespace {
         double getBenefit() const {
             return benefit;
         }
-        bool isStillPossible(const TargetBranchRange& branches) const {
+        bool isAConnectedThroughBToC(PhyloNode* a, PhyloNode* b,
+                                     PhyloNode* c, PhyloBranchVector& path) const {
+            //Note: This uses a breadth-first search, because the
+            //SPR radius is likely to be low (and a depth-first
+            //search would have an expected running time proportional
+            //to the size of the tree) (though it would be prettier!).
+            std::vector<PhyloBranch> this_layer;
+            std::vector<PhyloBranch> previous_layers;
+            this_layer.push_back(PhyloBranch(a,b));
+            do
+            {
+                std::vector<PhyloBranch> next_layer;
+                for (auto it=this_layer.begin(); it!=this_layer.end(); ++it) {
+                    PhyloBranch branch(*it);
+                    FOR_EACH_ADJACENT_PHYLO_NODE(branch.second, branch.first, itNode, x) {
+                        if (x==c) {
+                            //Reconstruct the pathway, all the way back to a,
+                            //from what is in previous_layers.
+                            path.emplace_back(branch.second, x);
+                            path.emplace_back(branch);
+                            PhyloNode* hunting = branch.first;
+                            for (auto rev=previous_layers.rbegin();
+                                 rev!=previous_layers.rend(); ++rev) {
+                                PhyloBranch way_back(*rev);
+                                if (way_back.second==hunting) {
+                                    path.emplace_back(way_back);
+                                    hunting = way_back.first;
+                                }
+                            }
+                            path.reverseAll();
+                            return true;
+                        }
+                        else {
+                            next_layer.emplace_back(branch.second, x);
+                        }
+                    }
+                    previous_layers.emplace_back(branch);
+                }
+                std::swap(this_layer, next_layer);
+            } while ( ! this_layer.empty());
+            return false;
+        }
+        bool isStillPossible(const TargetBranchRange& branches,
+                             PhyloBranchVector& path) const {
+            path.clear();
             const TargetBranch& source = branches[source_branch_id];
             if (source.first  != source_first)   return false;
             if (source.second != source_second) return false;
@@ -161,39 +205,14 @@ namespace {
             if (target.first  != target_first)   return false;
             if (target.second != target_second) return false;
             if (isForward) {
-                return isAConnectedThroughBToC(source.second, source.first, target.first);
+                return isAConnectedThroughBToC(source.second, source.first, target.first, path);
             } else {
-                return isAConnectedThroughBToC(source.first, source.second, target.first);
+                return isAConnectedThroughBToC(source.first, source.second, target.first, path);
             }
         }
-        bool isNoLongerPossible(const TargetBranchRange& branches) const {
-            return !isStillPossible(branches);
-        }
-        bool isAConnectedThroughBToC(PhyloNode*a, PhyloNode*b,
-                                     PhyloNode* c) const {
-            //Note: This uses a breadth-first search, because the
-            //SPR radius is likely to be low (and a depth-first
-            //search would have an expected running time proportional
-            //to the size of the tree) (though it would be prettier!).
-            std::vector<PhyloBranch> this_layer;
-            this_layer.push_back(PhyloBranch(a,b));
-            do
-            {
-                std::vector<PhyloBranch> next_layer;
-                for (auto it=this_layer.begin(); it!=this_layer.end(); ++it) {
-                    PhyloBranch b(*it);
-                    FOR_EACH_ADJACENT_PHYLO_NODE(b.second, b.first, itNode, x) {
-                        if (x==c) {
-                            return true;
-                        }
-                        else {
-                            next_layer.emplace_back(b.second, x);
-                        }
-                    }
-                }
-                std::swap(this_layer, next_layer);
-            } while ( ! this_layer.empty());
-            return false;
+        bool isNoLongerPossible(const TargetBranchRange& branches,
+                                PhyloBranchVector& path) const {
+            return !isStillPossible(branches, path);
         }
         double recalculateBenefit(PhyloTree& tree, TargetBranchRange& branches,
                                   LikelihoodBlockPairs &blocks) {
@@ -394,7 +413,8 @@ void PhyloTree::doParsimonySPR() {
             if ( move.getBenefit() <= 0 ) {
                 break;
             }
-            if ( move.isNoLongerPossible(targets) ) {
+            PhyloBranchVector path;
+            if ( move.isNoLongerPossible(targets, path) ) {
                 //The tree topology has changed and this SPR move
                 //is no longer legal (source doesn't exist, target
                 //branch doesn't exist, or target branch is now on
