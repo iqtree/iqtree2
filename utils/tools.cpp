@@ -911,9 +911,11 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.numSmoothTree = 1;
     params.use_compute_parsimony_tree_new = false;
     params.parsimony_nni_iterations = 0;
+    params.use_lazy_parsimony_spr   = false;
     params.parsimony_spr_iterations = 0;
     params.parsimony_pll_spr        = true;
     params.parsimony_tbr_iterations = 0;
+    params.use_lazy_parsimony_tbr   = false;
     params.nni5 = true;
     params.nni5_num_eval = 1;
     params.brlen_num_traversal = 1;
@@ -2366,6 +2368,14 @@ void parseArg(int argc, char *argv[], Params &params) {
             if (arg=="-parsimony-spr") {
                 std::string nextArg       = next_argument(argc, argv, "<max_parsimony_spr_iterations>", cnt);
                 params.parsimony_spr_iterations = atoi(nextArg.c_str());
+                continue;
+            }
+            if (arg=="-lazy-spr") {
+                params.use_lazy_parsimony_spr = true;
+                continue;
+            }
+            if (arg=="-lazy-tbr") {
+                params.use_lazy_parsimony_tbr = true;
                 continue;
             }
             if (arg=="-parsimony-tbr") {

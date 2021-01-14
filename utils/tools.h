@@ -730,7 +730,9 @@ public:
     int    parsimony_nni_iterations;
     bool   parsimony_pll_spr;
     int    parsimony_spr_iterations;
+    bool   use_lazy_parsimony_spr;
     int    parsimony_tbr_iterations;
+    bool   use_lazy_parsimony_tbr;
 
 	/**
 	 *  New search heuristics (DEFAULT: ON)
