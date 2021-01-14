@@ -1614,8 +1614,8 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix,
 
         usefulTime -= getRealTime();
         for (int branch_num = 0; branch_num < nodes1.size(); branch_num++) {
-            int score = addTaxonMPFast(new_taxon, added_node, nodes1[branch_num], nodes2[branch_num]);
-            if (score < static_cast<int>(best_pars_score)) {
+            UINT score = addTaxonMPFast(new_taxon, added_node, nodes1[branch_num], nodes2[branch_num]);
+            if (branch_num == 0 || score < best_pars_score) {
                 best_pars_score = score;
                 target_node = nodes1[branch_num];
                 target_dad  = nodes2[branch_num];
@@ -1674,13 +1674,14 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix,
     return best_pars_score;
 }
 
-int PhyloTree::addTaxonMPFast(PhyloNode *added_taxon, PhyloNode* added_node, PhyloNode* node, PhyloNode* dad) {
+UINT PhyloTree::addTaxonMPFast(PhyloNode *added_taxon, PhyloNode* added_node,
+                               PhyloNode* node, PhyloNode* dad) {
 
     // now insert the new node in the middle of the branch node-dad
     insertNode2Branch(added_node, node, dad);
 
     // compute the parsimony score
-    int score = computeParsimonyBranch(added_taxon->findNeighbor(added_node), added_taxon);
+    UINT score = computeParsimonyBranch(added_taxon->findNeighbor(added_node), added_taxon);
 
     //Would have preferred...
     //  ParallelParsimonyCalculator c(*this);

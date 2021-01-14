@@ -1631,7 +1631,7 @@ public:
             @param dad dad of the node, used to direct the search
             @return the parsimony score of the tree
      */
-    int addTaxonMPFast(PhyloNode *added_taxon, PhyloNode *added_node, PhyloNode *node, PhyloNode *dad);
+    UINT addTaxonMPFast(PhyloNode *added_taxon, PhyloNode *added_node, PhyloNode *node, PhyloNode *dad);
 
     /**
         create a 3-taxon tree and return random taxon order
