@@ -29,8 +29,11 @@ PhyloNodeVector PhyloTree::getTaxaNodesInIDOrder() const {
 }
 
 namespace {
-    struct ParsimonySPRMove {
+    struct ParsimonyLazySPRMove {
     public:
+        typedef  ParsimonyLazySPRMove this_type;
+
+        bool     lazy;
         double   benefit;
         intptr_t source_branch_id;
         intptr_t target_branch_id;
@@ -45,30 +48,30 @@ namespace {
         
         int64_t positions_considered;
         
-        ParsimonySPRMove(const ParsimonySPRMove& rhs) = default;
+        ParsimonyLazySPRMove(const this_type& rhs) = default;
         
-        ParsimonySPRMove& operator=(const ParsimonySPRMove& rhs) = default;
+        ParsimonyLazySPRMove& operator=(const this_type& rhs) = default;
         
-        bool operator < (const ParsimonySPRMove& rhs) const {
+        bool operator < (const this_type& rhs) const {
             return benefit < rhs.benefit;
         }
         
-        bool operator <= (const ParsimonySPRMove& rhs) const {
+        bool operator <= (const this_type& rhs) const {
             return benefit <= rhs.benefit;
         }
 
-        struct SPRSearch {
+        struct LazySPRSearch {
             public:
             const PhyloTree&         tree;
             const TargetBranchRange& branches;
             const TargetBranch&      source;
             double                   discon;
-            ParsimonySPRMove&        put_answer_here;
+            ParsimonyLazySPRMove&    put_answer_here;
             
-            SPRSearch(const PhyloTree& phylo_tree,
+            LazySPRSearch(const PhyloTree& phylo_tree,
                       const TargetBranchRange& target_branches,
                       double disconnection_benefit,
-                      ParsimonySPRMove& output)
+                      ParsimonyLazySPRMove& output)
                 : tree(phylo_tree), branches(target_branches)
                 , source(target_branches[output.source_branch_id])
                 , discon(disconnection_benefit)
@@ -114,10 +117,11 @@ namespace {
             }
         };
     public:
-        ParsimonySPRMove() {
-            initialize(0);
+        ParsimonyLazySPRMove() {
+            initialize(0, true);
         }
-        void initialize(intptr_t source_branch) {
+        void initialize(intptr_t source_branch, bool beLazy) {
+            lazy             = beLazy;
             benefit          = -1.0;
             source_branch_id = source_branch;
             target_branch_id = -1;
@@ -128,9 +132,9 @@ namespace {
             target_second    = nullptr;
             positions_considered = 0;
         }
-        void findForwardSPR(const PhyloTree& tree, const TargetBranchRange& branches,
+        void findForwardLazySPR(const PhyloTree& tree, const TargetBranchRange& branches,
                             int radius, double disconnection_benefit) {
-            SPRSearch s(tree, branches, disconnection_benefit, *this);
+            LazySPRSearch s(tree, branches, disconnection_benefit, *this);
             const TargetBranch& tb = branches[source_branch_id];
             PhyloNode* left;
             PhyloNode* right;
@@ -139,9 +143,9 @@ namespace {
             s.searchForForwardsSPR(left,  tb.first, radius);
             s.searchForForwardsSPR(right, tb.first, radius);
         }
-        void findBackwardSPR(const PhyloTree& tree, const TargetBranchRange& branches,
+        void findBackwardLazySPR(const PhyloTree& tree, const TargetBranchRange& branches,
                              int radius, double disconnection_benefit) {
-            SPRSearch s(tree, branches, disconnection_benefit, *this);
+            LazySPRSearch s(tree, branches, disconnection_benefit, *this);
             const TargetBranch& tb = branches[source_branch_id];
             PhyloNode* left;
             PhyloNode* right;
@@ -277,15 +281,183 @@ namespace {
             TREE_LOG_LINE(tree, VB_MAX, "Updated parsimony score"
                           << " after applying SPR move was " << score);
             return score;
-        }
-    };
-};
+        } //ParsimonyLazySPRMove::apply
+    }; //ParsimonyLazySPRMove
+
+    class ParsimonySPRMove: public ParsimonyLazySPRMove {
+        public:
+            typedef  ParsimonySPRMove this_type;
+            typedef  ParsimonyLazySPRMove super;
+            ParsimonySPRMove(const this_type& rhs) = default;
+            ParsimonySPRMove& operator=(const this_type& rhs) = default;
+            ParsimonySPRMove() = default;
+        
+            struct ProperSPRSearch: public LazySPRSearch {
+                public:
+                typedef LazySPRSearch super;
+                std::vector<UINT*>& path_parsimony;
+                    //This is a vector of size at least radius + 2, for any
+                    //radius passed to searchForForwardsSPR or to
+                    //searchForBackwardsSPR.  The [tree->params->sprDist+1]
+                    //entry in the vector can be a copy (when disconnecting
+                    //x from left and right), it is either the parsimony
+                    //vector of the view, from x, towards the subtree
+                    //containing left, OR the parsimony vector of the view
+                    //from x, towards the subtree containing right.
+                    //The others are all "private" to the search and will
+                    //be calculated (and repeatedly overwritten) during the
+                    //search.                
+                
+                ProperSPRSearch(const PhyloTree& phylo_tree,
+                          const TargetBranchRange& target_branches,
+                          double disconnection_benefit,
+                          std::vector<UINT*>& path_parsimony_to_use,
+                          ParsimonyLazySPRMove& output)
+                    : super(phylo_tree, target_branches, disconnection_benefit, output)
+                    , path_parsimony(path_parsimony_to_use) /*proper*/ {
+                }
+                PhyloNode* other_adjacent_node(PhyloNode*a, PhyloNode*b, PhyloNode*c) {
+                    //Return the other node, adjacent to a, that isn't b or c
+                    FOR_EACH_ADJACENT_PHYLO_NODE(a, b, it, x) {
+                        if (x!=c) return x;
+                    }
+                    ASSERT(0 && "could not find other adjacent node");
+                    return nullptr;
+                }
+                void prepareToSearch(PhyloNode* left, PhyloNode* right,
+                                     PhyloNode* snipped, int radius) {
+                    //Sets up path_parsimony[radius+1] to the view from
+                    //snipped, of the subtree containing right.
+                    path_parsimony.resize(radius+2, nullptr);
+                    path_parsimony[radius+1] = snipped->findNeighbor(right)->get_partial_pars();
+                    discon = tree.getSubTreeParsimony(left->findNeighbor(snipped), left)
+                           - tree.getSubTreeParsimony(snipped->findNeighbor(right), snipped);
+                }
+                void searchForForwardsSPR(PhyloNode* current, PhyloNode* prev,
+                                          int radius, double parsimony) {
+                    FOR_EACH_ADJACENT_PHYLO_NODE(current, prev, it, next) {
+                        //path_parsimony[radius+1] has already been set "above"
+                        //(in the callstack), or in prepareToSearch.
+                        UINT*      on_path_vector  = path_parsimony[radius+1];
+                        PhyloNode* off_path_node   = other_adjacent_node(current, next, prev);
+                        UINT*      off_path_vector = current->findNeighbor(off_path_node)->get_partial_pars();
+                        double   updated_parsimony = tree.computePartialParsimonyOutOfTree
+                                                     ( on_path_vector, off_path_vector
+                                                     , path_parsimony[radius] );
+                        if (1<radius) {
+                            searchForForwardsSPR(next, current, radius-1, parsimony);
+                        }
+                        int target_branch_id = (*it)->id;
+                        
+                        double connecto = tree.computePartialParsimonyOutOfTree
+                                          ( current->findNeighbor(next)->get_partial_pars()
+                                          , path_parsimony[radius], path_parsimony[0] );
+                        
+                        int new_branch_cost = 0;
+                        tree.computeParsimonyOutOfTree
+                            ( path_parsimony[0]
+                            , source.first->findNeighbor(source.second)->get_partial_pars()
+                            , &new_branch_cost );
+                        double subtree_cost = tree.getSubTreeParsimony
+                                              ( source.first->findNeighbor(source.second),
+                                                source.first );
+                        
+                        double benefit = parsimony - connecto - new_branch_cost - subtree_cost;
+                        if (put_answer_here.benefit<benefit) {
+                            put_answer_here.benefit          = benefit;
+                            put_answer_here.target_branch_id = target_branch_id;
+                            put_answer_here.isForward        = true;
+                        }
+                        ++put_answer_here.positions_considered;
+                    }
+                }
+                void searchForBackwardsSPR(PhyloNode* current, PhyloNode* prev,
+                                          int radius, double parsimony) {
+                    FOR_EACH_ADJACENT_PHYLO_NODE(current, prev, it, next) {
+                        UINT*      on_path_vector  = path_parsimony[radius+1];
+                        PhyloNode* off_path_node   = other_adjacent_node(current, next, prev);
+                        UINT*      off_path_vector = current->findNeighbor(off_path_node)->get_partial_pars();
+                        double   updated_parsimony = tree.computePartialParsimonyOutOfTree
+                                                     ( on_path_vector, off_path_vector
+                                                     , path_parsimony[radius] );
+                        if (1<radius) {
+                            searchForBackwardsSPR(next, current, radius-1, parsimony);
+                        }
+                        int target_branch_id = (*it)->id;
+                        
+                        double connecto = tree.computePartialParsimonyOutOfTree
+                                          ( current->findNeighbor(next)->get_partial_pars()
+                                           , path_parsimony[radius], path_parsimony[0] );
+                        int new_branch_cost = 0;
+                        tree.computeParsimonyOutOfTree
+                            ( path_parsimony[0]
+                            , source.second->findNeighbor(source.first)->get_partial_pars()
+                            , &new_branch_cost );
+                        double subtree_cost = tree.getSubTreeParsimony
+                                              ( source.second->findNeighbor(source.first),
+                                                source.second );
+
+                        double benefit = parsimony - connecto - new_branch_cost - subtree_cost;
+                        if (put_answer_here.benefit<benefit) {
+                            put_answer_here.benefit          = benefit;
+                            put_answer_here.target_branch_id = target_branch_id;
+                            put_answer_here.isForward        = false;
+                        }
+                        ++put_answer_here.positions_considered;
+                    }
+                }
+            };
+
+            void findForwardSPR(const PhyloTree& tree, const TargetBranchRange& branches,
+                                int radius, double disconnection_benefit,
+                                std::vector<UINT*> &path_parsimony,
+                                double parsimony_score) {
+                if (lazy) {
+                    super::findForwardLazySPR(tree, branches, radius, disconnection_benefit);
+                    return;
+                }
+                ProperSPRSearch s(tree, branches, disconnection_benefit,
+                                  path_parsimony, *this);
+                const TargetBranch& tb = branches[source_branch_id];
+                PhyloNode* left;
+                PhyloNode* right;
+                GET_OTHER_ADJACENT_PHYLO_NODES(tb.first, tb.second,
+                                               left, right);
+                s.prepareToSearch     (left,  right,    tb.first, radius);
+                s.searchForForwardsSPR(left,  tb.first, radius,   parsimony_score);
+                s.prepareToSearch     (right, left,     tb.first, radius);
+                s.searchForForwardsSPR(right, tb.first, radius,   parsimony_score);
+            }
+            void findBackwardSPR(const PhyloTree& tree, const TargetBranchRange& branches,
+                                 int radius, double disconnection_benefit,
+                                 std::vector<UINT*> &path_parsimony,
+                                 double parsimony_score) {
+                if (lazy) {
+                    super::findBackwardLazySPR(tree, branches, radius, disconnection_benefit);
+                    return;
+                }
+                ProperSPRSearch s(tree, branches, disconnection_benefit,
+                                  path_parsimony, *this);
+                const TargetBranch& tb = branches[source_branch_id];
+                PhyloNode* left;
+                PhyloNode* right;
+                GET_OTHER_ADJACENT_PHYLO_NODES(tb.second, tb.first,
+                                               left, right);
+                s.prepareToSearch      (left,  right,     tb.second, radius);
+                s.searchForBackwardsSPR(left,  tb.second, radius,    parsimony_score);
+                s.prepareToSearch      (right, left,      tb.second, radius);
+                s.searchForBackwardsSPR(right, tb.second, radius,    parsimony_score);
+            }
+    }; //ParsimonySPRMove
+}; //namespace
 
 void PhyloTree::doParsimonySPR() {
     size_t   max_iterations  = params->parsimony_spr_iterations; //assumed >0
+    bool     lazy_mode       = params->use_lazy_parsimony_spr;
+    auto     radius          = params->sprDist;
     intptr_t branch_count    = leafNum * 2 - 3;                  //assumed > 3
     int      index_parsimony = 0;
-
+ 
     TimeKeeper initializing ("initializing");
     TimeKeeper rescoring    ("rescoring parsimony");
     TimeKeeper evaluating   ("evaluating SPR moves");
@@ -297,6 +469,7 @@ void PhyloTree::doParsimonySPR() {
                  "Looking for parsimony SPR moves", "", "");
 
     initializing.start();
+    
     bool zeroNumThreadsWhenDone = false;
     if (num_threads<1) {
         zeroNumThreadsWhenDone = true;
@@ -310,13 +483,26 @@ void PhyloTree::doParsimonySPR() {
         }
         ASSERT(0 < num_threads);
     }
+    size_t path_overhead = num_threads * (radius+1);
+    std::vector< std::vector<UINT*> > per_thread_path_parsimony;
+    
     deleteAllPartialLhAndParsimony();
     initializeTree(); //to ensure all branches are properly numbered
-    ensureCentralPartialParsimonyIsAllocated(branch_count);
+    ensureCentralPartialParsimonyIsAllocated(branch_count + path_overhead);
     initializeAllPartialPars(index_parsimony);
     BlockAllocator          block_allocator(*this, index_parsimony);
     ParsimonyCostCalculator calculator(isUsingSankoffParsimony());
     TargetBranchRange       targets(*this, &block_allocator, &calculator, true);
+    
+    //Allocate per-thread parsimony vector work areas used to calculate
+    //modified parsimony scores along the path between the
+    //pruning and regrafting points.
+    per_thread_path_parsimony.resize(num_threads);
+    for (int thread=0; thread<num_threads; ++thread) {
+        block_allocator.allocateVectorOfParsimonyBlocks
+            ( radius+1, per_thread_path_parsimony[thread]);
+    }
+    
     initializing.stop();
     
     size_t  spr_moves_applied    = 0;
@@ -327,9 +513,9 @@ void PhyloTree::doParsimonySPR() {
         int parsimony_score = computeParsimony("Determining two-way parsimony", true, true );
         rescoring.stop();
         if (iteration==1) {
-        LOG_LINE(VB_DEBUG, "Parsimony score before parsimony SPR"
-                 << " iteration " << iteration
-                 << " was " << parsimony_score);
+            LOG_LINE(VB_DEBUG, "Parsimony score before parsimony SPR"
+                     << " iteration " << iteration
+                     << " was " << parsimony_score);
         } else {
             LOG_LINE(VB_MIN, "Applied " << spr_moves_applied << " move"
                          << ((1==spr_moves_applied) ? "" : "s")
@@ -362,18 +548,27 @@ void PhyloTree::doParsimonySPR() {
         for (intptr_t i=0; i<branch_count; ++i) {
             TargetBranch&     tb   = targets[i];
             ParsimonySPRMove& move = moves[i];
-            move.initialize(i);
+            move.initialize(i, lazy_mode);
             BenefitPair benefit = tb.getPartialDisconnectionBenefit(*this, targets);
             //LOG_LINE(VB_MIN, "for s=" << i << " bf=" << benefit.forwardBenefit
             //         << ", bb=" << benefit.backwardBenefit);
-            
+#ifdef _OPENMP
+            int thread = omp_get_thread_num();
+            ASSERT(0<=thread && thread<num_threads);
+#else
+            int thread = 0;
+#endif
             if (tb.first->isInterior()) {
-                move.findForwardSPR(*this, targets, params->sprDist,
-                                    benefit.forwardBenefit);
+                move.findForwardSPR(*this, targets, radius,
+                                    benefit.forwardBenefit,
+                                    per_thread_path_parsimony[thread],
+                                    parsimony_score);
             }
             if (tb.second->isInterior()) {
-                move.findBackwardSPR(*this, targets, params->sprDist,
-                                     benefit.backwardBenefit);
+                move.findBackwardSPR(*this, targets, radius,
+                                     benefit.backwardBenefit,
+                                     per_thread_path_parsimony[thread],
+                                     parsimony_score);
             }
             LOG_LINE(VB_DEBUG, "move s=" << i << ", d=" << move.target_branch_id
                      << ", f=" << move.isForward << ", b=" << move.benefit);
@@ -394,7 +589,7 @@ void PhyloTree::doParsimonySPR() {
         sorting.start();
         auto first         = moves.begin();
         auto firstNegative = std::partition(first, moves.end(),
-                                            [](const ParsimonySPRMove& move){ return 0 < move.benefit; } );
+                                            [](const ParsimonyLazySPRMove& move) { return 0 < move.benefit; } );
         std::sort(first, firstNegative);
         sorting.stop();
         
@@ -427,14 +622,35 @@ void PhyloTree::doParsimonySPR() {
                          << " is no longer possible.");
                 continue;
             }
-            double benefit = move.recalculateBenefit(*this, targets, dummyBlocks) ;
-            if ( benefit <= 0) {
-                LOG_LINE(VB_DEBUG, "Best move for branch " << move.source_branch_id
-                         << " is no longer beneficial (net cost delta now " << benefit  << ").");
-                continue;
+            double benefit = move.getBenefit();
+            if (lazy_mode) {
+                double benefit = move.recalculateBenefit(*this, targets, dummyBlocks) ;
+                if ( benefit <= 0) {
+                    LOG_LINE(VB_DEBUG, "Best move for branch " << move.source_branch_id
+                             << " is no probably longer beneficial"
+                             << " (net cost delta now " << benefit  << ").");
+                    continue;
+                }
+            }
+            else {
+                //If we're not running in lazy mode, we'll just apply the move
+                //(since figuring out what the benefit would really be takes
+                //so long we might as well do it and see what is after we've
+                //done it!). If it were re-evaluated properly, and then done,
+                //that'd mean calculating new parsimony views twice (and we'd
+                //never back out).
+                //But if it is *not* re-evaluated properly, but just done, parsimony
+                //views are calculated ONCE unless the move is not an improvement
+                //(in which case it gets re-evaluated when backing out).
+                //Admittedly more parsimony views get marked as out of date,
+                //for SPR moves that turned out not to be beneficial, this
+                //way, but after the first iteration, almost all SPR moves we
+                //try here turn out to be beneficial.
+                //So: not only is not re-evaluating the move simpler, it's more
+                //efficient (in terms of CPU cost), on average.
             }
             LOG_LINE(VB_MAX, "Applying SPR move " << i
-                     << " with original benefit " << move.benefit
+                     << " with original benefit " << move.getBenefit()
                      << " and current benefit " << benefit
                      << " linking branch " << move.source_branch_id
                      << ((move.isForward) ? " forward" : " backward" )
@@ -461,22 +677,21 @@ void PhyloTree::doParsimonySPR() {
         }
     }
     doneProgress();
-    
-
 
     initializing.start();
     deleteAllPartialParsimony();
     initializing.stop();
 
     rescoring.start();
-    double parsimony_score = computeParsimony("Recalculating one-way parsimony", false, true);
+    double parsimony_score = computeParsimony("Recalculating one-way parsimony",
+                                              false, true);
     
     LOG_LINE(VB_MIN, "Applied " << spr_moves_applied << " move"
                  << ((1==spr_moves_applied) ? "" : "s")
                  << " (out of " << spr_moves_considered << ")"
                  << " in last iteration "
                  << " (parsimony now " << parsimony_score << ")"
-                << " (total SPR moves examined " << positions_considered << ")");
+                 << " (total SPR moves examined " << positions_considered << ")");
     rescoring.stop();
     if (zeroNumThreadsWhenDone) {
         num_threads = 0;
