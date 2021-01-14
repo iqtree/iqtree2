@@ -1385,7 +1385,6 @@ void PhyloTree::doLikelihoodMapping() {
     // vector<SeqQuartetInfo> lmap_seq_quartet_info;
     // int areacount[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     // int cornercount[4] = {0, 0, 0, 0};
-    int64_t resolved, partly, unresolved;
     int64_t qid;
     ofstream out;
     string filename;
@@ -1509,11 +1508,12 @@ void PhyloTree::doLikelihoodMapping() {
 //        PhyloTree::reportLikelihoodMapping(out);
     }
     
-    resolved   = areacount[0] + areacount[1] + areacount[2];
-    partly     = areacount[3] + areacount[4] + areacount[5];
-    unresolved = areacount[6];
-	
 #if 0  // for debugging purposes only (HAS)
+    
+    int64_t resolved   = areacount[0] + areacount[1] + areacount[2];
+    int64_t partly     = areacount[3] + areacount[4] + areacount[5];
+    int64_t unresolved = areacount[6];
+
     out << endl << "LIKELIHOOD MAPPING SUMMARY" << endl << endl;
     out << "Number of quartets: " << (resolved+partly+unresolved)
         << " (randomly drawn with replacement)" << endl << endl;
