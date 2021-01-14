@@ -85,17 +85,17 @@ void GlobalLikelihoodPlacementOptimizer::optimizeAfterPlacement(PhyloTree& tree)
 }
 
 TaxonPlacementOptimizer* TaxonPlacementOptimizer::getNewTaxonPlacementOptimizer() {
-    auto localCleanup = Placement::getLocalOptimizationAlgorithm();
+    //auto localCleanup = Placement::getLocalOptimizationAlgorithm();
     return new TaxonPlacementOptimizer();
 }
 
 BatchPlacementOptimizer* BatchPlacementOptimizer::getNewBatchPlacementOptimizer() {
-    auto batchCleanup = Placement::getBatchOptimizationAlgorithm();
+    //auto batchCleanup = Placement::getBatchOptimizationAlgorithm();
     return new BatchPlacementOptimizer();
 }
 
 GlobalPlacementOptimizer* GlobalPlacementOptimizer::getNewGlobalPlacementOptimizer(bool useLikelihood) {
-    auto globalCleanup = Placement::getGlobalOptimizationAlgorithm();    
+    //auto globalCleanup = Placement::getGlobalOptimizationAlgorithm();
     return useLikelihood ? new GlobalLikelihoodPlacementOptimizer()
                          : new GlobalPlacementOptimizer();
 }

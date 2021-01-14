@@ -217,7 +217,6 @@ void PlacementRun::logSubtreesNearAddedTaxa() const {
             PhyloNeighbor* upLink    = leaf->firstNeighbor();
             PhyloNode*     upNode    = upLink->getNode();
             PhyloNeighbor* leftLink  = nullptr;
-            PhyloNeighbor* rightLink = nullptr;
             double leftLength  = -1;
             double rightLength = -1;
             FOR_EACH_PHYLO_NEIGHBOR(upNode, leaf, itNei, nei) {
@@ -225,7 +224,6 @@ void PlacementRun::logSubtreesNearAddedTaxa() const {
                     leftLink   = nei;
                     leftLength = nei->length;
                 } else {
-                    rightLink   = nei;
                     rightLength = nei->length;
                 }
             }
