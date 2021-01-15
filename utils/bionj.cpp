@@ -538,7 +538,7 @@ void Finish(float **delta, int n, POINTERS *trees, FILE *output)
   char *str;
   WORD *bidon;
   WORD *ele;
-  int last[3];                            /* the last three subtrees     */
+  int last[3] = {0,  0, 0 };                            /* the last three subtrees     */
 
   str=(char *)calloc(LEN,sizeof(char));
 
