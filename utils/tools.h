@@ -733,6 +733,7 @@ public:
     bool   use_lazy_parsimony_spr;
     int    parsimony_tbr_iterations;
     bool   use_lazy_parsimony_tbr;
+    bool   optimize_ml_tree_with_parsimony;
 
 	/**
 	 *  New search heuristics (DEFAULT: ON)

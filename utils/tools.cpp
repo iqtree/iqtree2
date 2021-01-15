@@ -913,9 +913,10 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.parsimony_nni_iterations = 0;
     params.use_lazy_parsimony_spr   = false;
     params.parsimony_spr_iterations = 0;
-    params.parsimony_pll_spr        = true;
+    params.parsimony_pll_spr        = false;
     params.parsimony_tbr_iterations = 0;
     params.use_lazy_parsimony_tbr   = false;
+    params.optimize_ml_tree_with_parsimony = false;
     params.nni5 = true;
     params.nni5_num_eval = 1;
     params.brlen_num_traversal = 1;
@@ -1438,9 +1439,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.additional_alignment_files.emplace_back(alignment_file);            
                 continue;
             }
-            
-            if (strcmp(argv[cnt], "-dist") == 0
-                || strcmp(argv[cnt], "-d") == 0) {
+            if (arg=="-dist" || arg=="-d") {
                 // calculate distance matrix from the tree
                 params.run_mode = CALC_DIST;
                 cnt++;
@@ -1449,7 +1448,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.dist_file = argv[cnt];
                 continue;
             }
-            if (strcmp(argv[cnt], "-djc") == 0) {
+            if (arg=="-djc") {
                 params.compute_ml_dist = false;
                 continue;
             }
@@ -1457,17 +1456,19 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.compute_ml_tree_only = true;
                 continue;
             }
-            if (strcmp(argv[cnt], "-dobs") == 0) {
+            if (arg=="-dobs") {
                 params.compute_obs_dist = true;
                 continue;
             }
-            if (strcmp(argv[cnt], "-cud") == 0) {
+            if (arg=="-cud") {
                 params.count_unknown_as_different = true;
                 continue;
             }
-            if (strcmp(argv[cnt], "-experimental") == 0
-                || strcmp(argv[cnt], "--experimental") == 0) {
-                params.parsimony_pll_spr = false;
+            if (arg=="-pll-spr") {
+                params.parsimony_pll_spr = true;
+                continue;
+            }
+            if (arg=="-experimental" || arg=="--experimental") {
                 params.use_compute_parsimony_tree_new = true;
                 continue;
             }
@@ -1549,8 +1550,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 else
                     throw "wrong --rand option";
                 continue;
-            }
-            
+            }            
             if (strcmp(argv[cnt], "--keep-ident") == 0 || strcmp(argv[cnt], "-keep-ident") == 0) {
                 params.ignore_identical_seqs = false;
                 continue;
@@ -2372,6 +2372,10 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
             if (arg=="-lazy-spr") {
                 params.use_lazy_parsimony_spr = true;
+                continue;
+            }
+            if (arg=="-optimize-ml-tree-with-parsimony") {
+                params.optimize_ml_tree_with_parsimony = true;
                 continue;
             }
             if (arg=="-lazy-tbr") {

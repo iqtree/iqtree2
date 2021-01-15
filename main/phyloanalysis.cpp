@@ -2401,6 +2401,9 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
                     cout << "Wall-clock time spent creating initial tree was "
                     << getRealTime() - start_bionj << " seconds" << endl;
                 }
+                if (params.optimize_ml_tree_with_parsimony) {
+                    iqtree->optimizeConstructedTree();
+                }
                 wasMLDistanceWrittenToFile  = !params.dist_file;
                 if (params.compute_ml_tree_only) {
                     iqtree->initializeAllPartialPars();
