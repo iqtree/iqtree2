@@ -128,13 +128,11 @@ void Checkpoint::setDumpInterval(double interval) {
 void Checkpoint::dump(ostream &out) {
     string local_struct_name;
     size_t pos;
-    int listid = 0;
     for (iterator i = begin(); i != end(); i++) {
         if ((pos = i->first.find(CKP_SEP)) != string::npos) {
             if (local_struct_name != i->first.substr(0, pos)) {
                 local_struct_name = i->first.substr(0, pos);
                 out << local_struct_name << ':' << endl;
-                listid = 0;
             }
             // check if key is a collection
             out << ' ' << i->first.substr(pos+1) << ": " << i->second << endl;
