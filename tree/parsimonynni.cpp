@@ -209,12 +209,14 @@ void PhyloTree::doParsimonyNNI() {
                 LOG_LINE(VB_DEBUG, "branch " << x.branch_number << ","
                          << " swap cost "    << swap_cost << ","
                          << " no-swap cost " << noswap_cost );
-                if (swap_cost < noswap_cost) {
+                double improvement = noswap_cost - swap_cost;
+                if (0<improvement) {
                     LOG_LINE(VB_MAX, "branch " << x.branch_number
                              << " had predicted delta " << x.delta
                              << ", swap cost " << swap_cost
                              << ", and no-swap cost " << noswap_cost);
-                    actual_delta += noswap_cost - swap_cost;
+                    actual_delta    += improvement;
+                    parsimony_score -= improvement;
                     ++count_exchanged;
                     //Swap inward neighbours
                     x.left->updateNeighbor (x.middle.first,  x.middle.second);
@@ -238,10 +240,29 @@ void PhyloTree::doParsimonyNNI() {
                     PhyloNeighbor* nei_to_right = x.middle.first->findNeighbor(x.middle.second);
                     std::swap(nei_to_right->partial_pars, buffer2[0]);
                     nei_to_right->setParsimonyComputed(true);
-                                        
+                    
                     //Mark inward views as out of date
                     x.middle.first->clearReversePartialParsimony (x.middle.second);
                     x.middle.second->clearReversePartialParsimony(x.middle.first);
+                    
+                    struct Adjuster {
+                        void setParsimonyLength(PhyloTree* tree, double parsimony, PhyloNode* node1) {
+                            FOR_EACH_ADJACENT_PHYLO_NODE(node1, nullptr, it, node2) {
+                                PhyloNeighbor* leftNei  = node1->findNeighbor(node2);
+                                PhyloNeighbor* rightNei = node2->findNeighbor(node1);
+                                double branch_cost = parsimony
+                                                   - tree->getSubTreeParsimony(leftNei, node1)
+                                                   - tree->getSubTreeParsimony(rightNei, node2);
+                                if (branch_cost<1) {
+                                    branch_cost = 1;
+                                }
+                                double branch_length = branch_cost / tree->getAlnNSite();
+                                leftNei->length = rightNei->length = branch_length;
+                            }
+                        }
+                    } adj;
+                    adj.setParsimonyLength(this, parsimony_score, x.middle.first);
+                    adj.setParsimonyLength(this, parsimony_score, x.middle.second);
                 }
             }
         }
