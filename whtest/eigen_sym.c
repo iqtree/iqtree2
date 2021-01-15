@@ -201,7 +201,7 @@ int eigen_sym_core(double *mat, int n, double *eval) {
 	a = (double **) malloc(n * sizeof(double*));
 	for (i = 0; i < n; i++)
 		a[i] = (double *) calloc(n, sizeof(double));
-	off_diag = (double *) malloc(n * sizeof(double*));
+	off_diag = (double *) malloc(n * sizeof(double));
 	
 	for (i = 0; i < n; i++)
 		for (j = 0; j < n; j++)
