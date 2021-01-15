@@ -182,8 +182,9 @@ void reportModelSelection(ofstream &out, Params &params, ModelCheckpoint *model_
     out << "Best-fit model according to " << criterionName(params.model_test_criterion) << ": ";
 //    ModelCheckpoint::iterator it;
     string best_model;
-    PhyloSuperTree *stree = (tree->isSuperTree()) ? ((PhyloSuperTree*)tree) : NULL;
+    PhyloSuperTree *stree = nullptr;
     if (tree->isSuperTree()) {
+        stree = (PhyloSuperTree*)tree;
         SuperAlignment *saln = (SuperAlignment*)stree->aln;
         for (int part = 0; part != stree->size(); part++) {
             if (part != 0)
@@ -449,7 +450,6 @@ void reportModel(ofstream &out, PhyloTree &tree) {
 //        out << "Full name: " << tree.getModelName() << endl;
         ModelSubst *mmodel = tree.getModel();
         out << endl << "  No  Component      Rate    Weight   Parameters" << endl;
-        i = 0;
         int nmix = mmodel->getNMixtures();
         for (i = 0; i < nmix; i++) {
             ModelMarkov *m = (ModelMarkov*)mmodel->getMixtureClass(i);
