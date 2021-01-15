@@ -29,7 +29,7 @@ PhyloNodeVector PhyloTree::getTaxaNodesInIDOrder() const {
 }
 
 namespace {
-    struct Parsimon yLazySPRMove {
+    struct ParsimonyLazySPRMove {
     public:
         typedef  ParsimonyLazySPRMove this_type;
 
