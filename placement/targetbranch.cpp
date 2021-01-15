@@ -527,3 +527,14 @@ double TargetBranch::getBackwardConnectionCost(const PhyloTree& phylo_tree,
     
     return (double)updatedCDCost;
 }
+
+void TargetBranch::setParsimonyLength(PhyloTree& tree) {
+    auto nei        = first->findNeighbor(second);
+    auto backnei    = second->findNeighbor(first);
+    double parsimony_length = branch_cost / tree.getAlnNSite();
+    if (parsimony_length == 0.0) {
+        parsimony_length = tree.params->min_branch_length;
+    }
+    nei->length     = parsimony_length;
+    backnei->length = parsimony_length;
+}

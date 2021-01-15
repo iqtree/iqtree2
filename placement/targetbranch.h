@@ -137,6 +137,9 @@ public:
     double      getBackwardConnectionCost(const PhyloTree& phylo_tree,
                                           const TargetBranch& other_branch) const;
     bool        isExternalBranch() const;
+    
+    void        setParsimonyLength(PhyloTree& tree); //set parsimony length on
+                                                     //PhyloNeighbor instances that correspond
 };
 
 class TargetBranchRef;
