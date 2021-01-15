@@ -532,7 +532,11 @@ int PhyloTree::setParsimonyBranchLengths() {
     }
     ASSERT(subst == branch_subst);
     sum_score += subst;
-    fixOneNegativeBranch(correctBranchLengthF81(subst*persite, alpha), dad_branch, dad);
+    double branch_length = correctBranchLengthF81(subst*persite, alpha);
+    if (branch_length <= 0.0) {
+        branch_length = params->min_branch_length;
+    }
+    fixOneNegativeBranch(branch_length, dad_branch, dad);
     
     // walking down the tree to assign node states
     for (int id = 1; id < nodes1.size(); id++) {
@@ -586,7 +590,11 @@ int PhyloTree::setParsimonyBranchLengths() {
                 subst += aln->singleton_parsimony_states[node->id];
             }
         }
-        fixOneNegativeBranch(correctBranchLengthF81(subst*persite, alpha), dad_branch, dad);
+        double branch_length = correctBranchLengthF81(subst*persite, alpha);
+        if (branch_length <= 0.0) {
+            branch_length = params->min_branch_length;
+        }
+        fixOneNegativeBranch(branch_length, dad_branch, dad);
         sum_score += subst;
     }
     ASSERT(pars_score == sum_score);
