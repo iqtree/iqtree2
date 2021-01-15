@@ -4404,18 +4404,16 @@ int PhyloTree::fixNegativeBranch(bool force, PhyloNode *node, PhyloNode *dad) {
         if (nei->length < 0.0 || force) { // negative branch length detected
             int branch_subst;
             int pars_score = computeParsimonyBranch(nei, node, &branch_subst);
-            // first compute the observed parsimony distance
-            double branch_length = (branch_subst > 0) ? ((double) branch_subst / getAlnNSite()) : (1.0 / getAlnNSite());
-
-            branch_length = correctBranchLengthF81(branch_length, alpha);
-            
-    //        if (verbose_mode >= VB_DEBUG)
-    //            cout << "Negative branch length " << (*it)->length << " was set to ";
-            //nei->length = fixed_length;
-            //nei->length = random_double()+0.1;
+            if (branch_subst < 1) {
+                branch_subst = 1;
+            }
+            double observed_parsimony_distance = (double) branch_subst / getAlnNSite();
+            double branch_length = correctBranchLengthF81(observed_parsimony_distance, alpha);
+            if (branch_length <= 0) {
+                branch_length = params->min_branch_length;
+            }
             fixOneNegativeBranch(branch_length, nei, node);
-            if (verbose_mode >= VB_DEBUG)
-                cout << branch_length << " parsimony = " << pars_score << endl;
+            LOG_LINE( VB_DEBUG, branch_length << " parsimony = " << pars_score);
             fixed++;
         }
         if (nei->length <= 0.0 && (!rooted || node != root)) {
