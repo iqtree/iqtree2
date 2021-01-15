@@ -29,7 +29,7 @@ PhyloNodeVector PhyloTree::getTaxaNodesInIDOrder() const {
 }
 
 namespace {
-    struct ParsimonyLazySPRMove {
+    struct Parsimon yLazySPRMove {
     public:
         typedef  ParsimonyLazySPRMove this_type;
 
@@ -252,7 +252,6 @@ namespace {
         //
         double apply(PhyloTree& tree, LikelihoodBlockPairs blocks,
                      TargetBranchRange& branches) {
-            
             TargetBranch& source     = branches[source_branch_id];
             TargetBranch& target     = branches[target_branch_id];
             PhyloNode*    moved_node = isForward ? source.first : source.second;
@@ -299,6 +298,11 @@ namespace {
             right_branch  .computeState (tree, snip_right_id,    blocks);
             target        .computeState (tree, target_branch_id, blocks);
             score = source.computeState (tree, source_branch_id, blocks);
+            
+            left_branch.setParsimonyLength(tree);
+            right_branch.setParsimonyLength(tree);
+            target.setParsimonyLength(tree);
+            source.setParsimonyLength(tree);
 
             TREE_LOG_LINE(tree, VB_MAX, "Updated parsimony score"
                           << " after applying SPR move was " << score);
@@ -702,14 +706,15 @@ void PhyloTree::doParsimonySPR() {
     rescoring.start();
     double parsimony_score = computeParsimony("Recalculating one-way parsimony",
                                               false, true);
-    
+    rescoring.stop();
+
     LOG_LINE(VB_MIN, "Applied " << spr_moves_applied << " move"
                  << ((1==spr_moves_applied) ? "" : "s")
                  << " (out of " << spr_moves_considered << ")"
                  << " in last iteration "
                  << " (parsimony now " << parsimony_score << ")"
                  << " (total SPR moves examined " << positions_considered << ")");
-    rescoring.stop();
+    
     if (zeroNumThreadsWhenDone) {
         num_threads = 0;
     }
