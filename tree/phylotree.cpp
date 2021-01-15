@@ -77,13 +77,13 @@ void PhyloTree::init() {
     aln = NULL;
     model = NULL;
     site_rate = NULL;
-    optimize_by_newton = true;
+    optimize_by_newton              = true;
     central_partial_lh              = nullptr;
     lh_block_size                   = 0; //will be set, later, by determineBlockSizes()
-    nni_partial_lh = NULL;
-    tip_partial_lh = NULL;
-    tip_partial_lh_computed = 0;
-    ptn_freq_computed = false;
+    nni_partial_lh                  = nullptr;
+    tip_partial_lh                  = nullptr;
+    tip_partial_lh_computed         = 0;
+    ptn_freq_computed               = false;
     central_scale_num               = nullptr;
     scale_block_size                = 0;
     central_scale_num_size_in_bytes = 0; //will be set, later, by determineBlockSizes()
@@ -2154,11 +2154,11 @@ double PhyloTree::computePatternLhCat(SiteLoglType wsl) {
 void PhyloTree::computePatternStateFreq(double *ptn_state_freq) {
     ASSERT(getModel()->isMixture());
     computePatternLhCat(WSL_MIXTURE);
-    double*  lh_cat = tree_buffers._pattern_lh_cat;
-    intptr_t nptn = getAlnNPattern();
+    double*  lh_cat   = tree_buffers._pattern_lh_cat;
+    intptr_t nptn     = getAlnNPattern();
     int      nmixture = getModel()->getNMixtures();
-    double*  ptn_freq = ptn_state_freq;
-    int      nstates = aln->num_states;
+    double*  freq_ptr = ptn_state_freq;
+    int      nstates  = aln->num_states;
 //    ModelMixture *models = (ModelMixture*)model;
     
     if (params->print_site_state_freq == WSF_POSTERIOR_MEAN) {
@@ -2181,12 +2181,12 @@ void PhyloTree::computePatternStateFreq(double *ptn_state_freq) {
                 double freq = 0;
                 for (int m = 0; m < nmixture; ++m)
                     freq += model->getMixtureClass(m)->state_freq[state] * lh_cat[m];
-                ptn_freq[state] = freq;
+                freq_ptr[state] = freq;
             }
             
             // increase the pointers
-            lh_cat += nmixture;
-            ptn_freq += nstates;
+            lh_cat   += nmixture;
+            freq_ptr += nstates;
         }
     } else if (params->print_site_state_freq == WSF_POSTERIOR_MAX) {
         cout << "Computing posterior max site frequencies...." << endl;
@@ -2200,11 +2200,11 @@ void PhyloTree::computePatternStateFreq(double *ptn_state_freq) {
                 }
             
             // now compute state frequencies
-            memcpy(ptn_freq, model->getMixtureClass(max_comp)->state_freq, static_cast<int>(nstates*sizeof(double)));
+            memcpy(freq_ptr, model->getMixtureClass(max_comp)->state_freq, static_cast<int>(nstates*sizeof(double)));
             
             // increase the pointers
             lh_cat += nmixture;
-            ptn_freq += nstates;
+            freq_ptr += nstates;
         }
     }
 }
