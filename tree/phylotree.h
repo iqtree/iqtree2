@@ -112,7 +112,7 @@ const int SPR_DEPTH = 2;
     } else 0
 #else
     #define LOG_LINE(lev,text) \
-    if (1) { \
+    if (verbose_mode >= (lev) || (lev)<VB_DEBUG) { \
         std::stringstream xsx; \
         xsx << text; \
         if (verbose_mode >= (lev)) { \
@@ -124,7 +124,7 @@ const int SPR_DEPTH = 2;
     else (0)
 
     #define TREE_LOG_LINE(xtree, xlev, xtext) \
-    if (1) { \
+    if (verbose_mode >= (xlev) || (xlev)<VB_DEBUG) { \
         std::stringstream xsx; \
         xsx << xtext; \
         if (verbose_mode >= (xlev)) { \

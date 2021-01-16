@@ -3374,10 +3374,12 @@ void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2,
     current_it->length      = new_len;
     current_it_back->length = new_len;
     curScore = computeLikelihoodFromBuffer();
-    LOG_LINE(VB_MAX, "  branch=" << current_it->id 
-        << ", old_len=" << original_len << ", new_len=" << new_len
-        << ", old_lh="  << original_lh  << ", new_lh="  << curScore
-        << ", delta="   << (curScore - original_lh));
+    if (curScore != original_lh) {
+        LOG_LINE(VB_MAX, "  branch=" << current_it->id
+            << ", old_len=" << original_len << ", new_len=" << new_len
+            << ", old_lh=" << original_lh << ", new_lh=" << curScore
+            << ", delta=" << (curScore - original_lh));
+    }
     if (optimize_by_newton && new_len > params->max_branch_length*0.95 && !isSuperTree()) {
         if (original_lh > curScore) {
             current_it->length      = original_len;
@@ -4413,7 +4415,6 @@ int PhyloTree::fixNegativeBranch(bool force, PhyloNode *node, PhyloNode *dad) {
                 branch_length = params->min_branch_length;
             }
             fixOneNegativeBranch(branch_length, nei, node);
-            LOG_LINE( VB_DEBUG, branch_length << " parsimony = " << pars_score);
             fixed++;
         }
         if (nei->length <= 0.0 && (!rooted || node != root)) {

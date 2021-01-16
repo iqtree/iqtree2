@@ -136,10 +136,12 @@ namespace {
         }
         void finalize(PhyloTree& tree, const TargetBranch& source,
                       const TargetBranch& target) {
-            TREE_LOG_LINE(tree, VB_DEBUG, "move s=" << source_branch_id
-                          << ",d=" << target_branch_id
-                          << ", f=" << isForward
-                          << ", b=" << benefit);
+            if (0 < benefit) {
+                TREE_LOG_LINE(tree, VB_DEBUG, "move s=" << source_branch_id
+                    << ",d=" << target_branch_id
+                    << ", f=" << isForward
+                    << ", b=" << benefit);
+            }
             source_first  = source.first;
             source_second = source.second;
             target_first  = (0<benefit) ? target.first  : nullptr;
@@ -596,8 +598,10 @@ void PhyloTree::doParsimonySPR() {
                                      per_thread_path_parsimony[thread],
                                      parsimony_score);
             }
-            const TargetBranch& target = targets[move.target_branch_id];
-            move.finalize(*this, source, target);
+            if (0 < move.target_branch_id) {
+                const TargetBranch& target = targets[move.target_branch_id];
+                move.finalize(*this, source, target);
+            }
             if (i%100 == 99) {
                 trackProgress(100.0);
             }
