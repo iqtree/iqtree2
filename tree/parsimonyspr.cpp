@@ -576,7 +576,6 @@ void PhyloTree::doParsimonySPR() {
         for (intptr_t i=0; i<branch_count; ++i) {
             TargetBranch&     source = targets[i];
             ParsimonySPRMove& move   = moves[i];
-            move.initialize(i, lazy_mode);
             BenefitPair benefit = source.getPartialDisconnectionBenefit(*this, targets);
             //LOG_LINE(VB_MIN, "for s=" << i << " bf=" << benefit.forwardBenefit
             //         << ", bb=" << benefit.backwardBenefit);
@@ -586,6 +585,7 @@ void PhyloTree::doParsimonySPR() {
 #else
             int thread = 0;
 #endif
+            move.initialize(i, lazy_mode);
             if (source.first->isInterior()) {
                 move.findForwardSPR(*this, targets, radius,
                                     benefit.forwardBenefit,
@@ -701,15 +701,13 @@ void PhyloTree::doParsimonySPR() {
             break;
         }
     }
-    doneProgress();
 
     initializing.start();
     deleteAllPartialParsimony();
     initializing.stop();
 
     rescoring.start();
-    double parsimony_score = computeParsimony("Recalculating one-way parsimony",
-                                              false, true);
+    double parsimony_score = computeParsimony();
     rescoring.stop();
 
     LOG_LINE(VB_MIN, "Applied " << spr_moves_applied << " move"
@@ -718,7 +716,9 @@ void PhyloTree::doParsimonySPR() {
                  << " in last iteration "
                  << " (parsimony now " << parsimony_score << ")"
                  << " (total SPR moves examined " << positions_considered << ")");
-    
+
+    doneProgress();
+
     if (zeroNumThreadsWhenDone) {
         num_threads = 0;
     }
