@@ -982,6 +982,7 @@ void reroot_acceptable(Tree* t) {
 	}
 	if(nb_trifurcated == 0) {
 	  fprintf(stderr,"Warning: %s was not able to find a trifurcated node! No rerooting.\n", __FUNCTION__);
+        free(mytable);
 		return; }
 	else {
 		myrandom = rand_to(nb_trifurcated); /* between 0 and nb_trifurcated excluded */
@@ -2007,8 +2008,9 @@ Tree * gen_rand_tree(int nbr_taxa, char **taxa_names){
 
   shuffle(indices, nbr_taxa, sizeof(int));
   
+  char **local_taxa_names = NULL;
   if(taxa_names == NULL){
-    taxa_names = (char**) calloc(nbr_taxa, sizeof(char*));
+    taxa_names=local_taxa_names = (char**) calloc(nbr_taxa, sizeof(char*));
     for(taxon = 0; taxon < nbr_taxa; taxon++) {
       taxa_names[taxon] = (char*) calloc((int)(log10(nbr_taxa)+2), sizeof(char));
       sprintf(taxa_names[taxon],"%d",taxon+1); /* names taxa by a mere integer, starting with "1" */
@@ -2026,7 +2028,14 @@ Tree * gen_rand_tree(int nbr_taxa, char **taxa_names){
     edge_ind = rand_to(my_tree->nb_edges); /* outputs something between 0 and (nb_edges) exclusive */
     graft_new_node_on_branch(my_tree->a_edges[edge_ind], my_tree, 0.5, 1.0, taxa_names[indices[nb_inserted_taxa++]]);
   } /* end looping on the taxa, tree is full */
-  
+    
+  if (local_taxa_names!=NULL) {
+    for(taxon = 0; taxon < nbr_taxa; taxon++) {
+        free(local_taxa_names[taxon]);
+    }
+    free(local_taxa_names);
+  }
+    
   /* here we need to re-root the tree on a trifurcated node, not on a leaf, before we write it in NH format */
   reroot_acceptable(my_tree);
 

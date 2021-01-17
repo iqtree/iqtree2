@@ -38,7 +38,10 @@ id_hash_table_t* create_id_hash_table(int size)
 
     /* Attempt to allocate and initialize to 0 the memory for the bitfield  */
     if ((new_table->bitarray = (bfield_t) calloc(nbchunks_bitarray, sizeof(unsigned long))) == NULL)
+    {
+        free(new_table);
         return NULL;
+    }
     else
     	return new_table;
 }

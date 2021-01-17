@@ -31,7 +31,7 @@ bitset_hashmap* new_bitset_hashmap(int size, float loadfactor) {
   bh->capacity = size;
   bh->loadfactor = loadfactor;
   bh->total = 0;
-  bh->map_array = malloc(size*sizeof(bitset_bucket));
+  bh->map_array = (bitset_bucket**)malloc(size*sizeof(bitset_bucket*));
   for(i=0;i<size;i++){
     bh->map_array[i]=NULL;
   }
