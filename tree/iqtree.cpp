@@ -3231,8 +3231,8 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI, const char* context) {
                 LOG_LINE(VB_MED, "Post-NNI Likelihood score (" << dodgy_score << ")"
                     << " was less than expected (" << expected_score << ")"
                     << " by more (" << (expected_score - dodgy_score) << ")"
-                    << " than epsilon (" << params->loglh_epsilon << ")."
-                    << " After applying only the 1st NNI"
+                    << " than epsilon (" << params->loglh_epsilon << ").");
+                LOG_LINE(VB_MED, " After applying only the 1st NNI"
                     << " (around branch " << branch_id << ")."
                     << " Likelihood score is now: " << curScore << "."
                     << " Previously it was: " << previous_score);
@@ -4379,25 +4379,22 @@ void IQTree::initializePLLIfNecessary() {
 }
 
 void IQTree::optimizeConstructedTree() {
-    if (0<params->parsimony_nni_iterations) {
-        doParsimonyNNI();
-    }
     //Note: this should not be called if start_tree is STT_PLL_PARSIMONY
     //(as parsimony spr iterations will already have been done).
-    if (params->parsimony_spr_iterations == 0) {
-        return;
-    }
-    if (0==params->parsimony_nni_iterations) {
+    if (params->parsimony_spr_iterations != 0) {
         initializeAllPartialPars();
         auto initial_parsimony = computeParsimony("Computing initial parsimony");
         LOG_LINE(VB_MIN, "Before doing (up to) "
             << params->parsimony_spr_iterations << " rounds of parsimony SPR,"
             << " parsimony score was " << initial_parsimony);
+        if (params->parsimony_pll_spr) {
+            doPLLParsimonySPR();
+        } else {
+            doParsimonySPR();
+        }
     }
-    if (params->parsimony_pll_spr) {
-        doPLLParsimonySPR();
-    } else {
-        doParsimonySPR();
+    if (0<params->parsimony_nni_iterations) {
+        doParsimonyNNI();
     }
 }
 
