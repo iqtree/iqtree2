@@ -178,7 +178,8 @@ double TargetBranch::computeState(PhyloTree& phylo_tree,
 
 void TargetBranch::updateMapping(intptr_t branch_id,
                                  PhyloNode* updated_first,
-                                 PhyloNode* updated_second) {
+                                 PhyloNode* updated_second,
+                                 bool forceClearOfReversePartialParsimony) {
     first  = updated_first;
     second = updated_second;
     PhyloNeighbor* first_nei  = first->findNeighbor(second);
@@ -187,8 +188,10 @@ void TargetBranch::updateMapping(intptr_t branch_id,
     second_nei->setParsimonyComputed(false);
     first_nei ->id = static_cast<int>(branch_id);
     second_nei->id = static_cast<int>(branch_id);
-    first->clearReversePartialParsimony(second);
-    second->clearReversePartialParsimony(first);
+    if (forceClearOfReversePartialParsimony) {
+        first->clearReversePartialParsimony(second);
+        second->clearReversePartialParsimony(first);
+    }
 }
 
 void TargetBranch::forgetState() const {
@@ -538,3 +541,14 @@ void TargetBranch::setParsimonyLength(PhyloTree& tree) {
     nei->length     = parsimony_length;
     backnei->length = parsimony_length;
 }
+
+TargetBranch::operator PhyloBranch() const {
+    return PhyloBranch(first, second);
+}
+
+TargetBranch& TargetBranch::clearReverseParsimony() {
+    first->clearReversePartialParsimony(second);
+    second->clearReversePartialParsimony(first);
+    return *this;
+}
+

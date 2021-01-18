@@ -5,11 +5,10 @@
 //  Created by James Barbetti on 8/12/20.
 //
 
-#include "phylotree.h"
-#include "iqtree.h"
+#include "parsimonymove.h"
 #include <placement/targetbranch.h>            //for TargetBranchRange
 #include <placement/placementcostcalculator.h> //for ParsimonyCostCalculator
-#include <utils/timekeeper.h>
+#include <utils/timekeeper.h>                  //for TimeKeeper
 
 PhyloNodeVector PhyloTree::getTaxaNodesInIDOrder() const {
     PhyloNodeVector taxa;
@@ -29,13 +28,11 @@ PhyloNodeVector PhyloTree::getTaxaNodesInIDOrder() const {
 }
 
 namespace {
-    struct ParsimonyLazySPRMove {
+    struct ParsimonyLazySPRMove : public ParsimonyMove {
     public:
         typedef  ParsimonyLazySPRMove this_type;
+        typedef  ParsimonyMove        super;
 
-        bool     lazy;
-        double   benefit;
-        intptr_t source_branch_id;
         intptr_t target_branch_id;
         bool     isForward;        //branch.first moves, branch.second does not
         
@@ -48,20 +45,11 @@ namespace {
         PhyloNode* target_second;
         
     public:
-        int64_t positions_considered;
         
         ParsimonyLazySPRMove(const this_type& rhs) = default;
         
         ParsimonyLazySPRMove& operator=(const this_type& rhs) = default;
         
-        bool operator < (const this_type& rhs) const {
-            return benefit < rhs.benefit;
-        }
-        
-        bool operator <= (const this_type& rhs) const {
-            return benefit <= rhs.benefit;
-        }
-
         struct LazySPRSearch {
             public:
             const PhyloTree&         tree;
@@ -119,10 +107,10 @@ namespace {
             }
         };
     public:
-        ParsimonyLazySPRMove() {
+        ParsimonyLazySPRMove(): super() {
             initialize(0, true);
         }
-        void initialize(intptr_t source_branch, bool beLazy) {
+        virtual void initialize(intptr_t source_branch, bool beLazy) {
             lazy             = beLazy;
             benefit          = -1.0;
             source_branch_id = source_branch;
@@ -134,16 +122,21 @@ namespace {
             target_second    = nullptr;
             positions_considered = 0;
         }
-        void finalize(PhyloTree& tree, const TargetBranch& source,
-                      const TargetBranch& target) {
+        virtual void finalize(PhyloTree& tree,
+                      const TargetBranchRange& branches) {
+            if (target_branch_id < 0) {
+                return;
+            }
             if (0 < benefit) {
                 TREE_LOG_LINE(tree, VB_DEBUG, "move s=" << source_branch_id
                     << ",d=" << target_branch_id
                     << ", f=" << isForward
                     << ", b=" << benefit);
             }
+            auto source   = branches[source_branch_id];
             source_first  = source.first;
             source_second = source.second;
+            auto target   = branches[target_branch_id];
             target_first  = (0<benefit) ? target.first  : nullptr;
             target_second = (0<benefit) ? target.second : nullptr;
         }
@@ -169,52 +162,7 @@ namespace {
             s.searchForBackwardsSPR(left,  tb.second, radius);
             s.searchForBackwardsSPR(right, tb.second, radius);
         }
-        double getBenefit() const {
-            return benefit;
-        }
-        bool isAConnectedThroughBToC(PhyloNode* a, PhyloNode* b,
-                                     PhyloNode* c, PhyloBranchVector& path) const {
-            //Note: This uses a breadth-first search, because the
-            //SPR radius is likely to be low (and a depth-first
-            //search would have an expected running time proportional
-            //to the size of the tree) (though it would be prettier!).
-            std::vector<PhyloBranch> this_layer;
-            std::vector<PhyloBranch> previous_layers;
-            this_layer.push_back(PhyloBranch(a,b));
-            do
-            {
-                std::vector<PhyloBranch> next_layer;
-                for (auto it=this_layer.begin(); it!=this_layer.end(); ++it) {
-                    PhyloBranch branch(*it);
-                    FOR_EACH_ADJACENT_PHYLO_NODE(branch.second, branch.first, itNode, x) {
-                        if (x==c) {
-                            //Reconstruct the pathway, all the way back to a,
-                            //from what is in previous_layers.
-                            path.emplace_back(branch.second, x);
-                            path.emplace_back(branch);
-                            PhyloNode* hunting = branch.first;
-                            for (auto rev=previous_layers.rbegin();
-                                 rev!=previous_layers.rend(); ++rev) {
-                                PhyloBranch way_back(*rev);
-                                if (way_back.second==hunting) {
-                                    path.emplace_back(way_back);
-                                    hunting = way_back.first;
-                                }
-                            }
-                            path.reverseAll();
-                            return true;
-                        }
-                        else {
-                            next_layer.emplace_back(branch.second, x);
-                        }
-                    }
-                    previous_layers.emplace_back(branch);
-                }
-                std::swap(this_layer, next_layer);
-            } while ( ! this_layer.empty());
-            return false;
-        }
-        bool isStillPossible(const TargetBranchRange& branches,
+        virtual bool isStillPossible(const TargetBranchRange& branches,
                              PhyloBranchVector& path) const {
             path.clear();
             const TargetBranch& source = branches[source_branch_id];
@@ -229,11 +177,7 @@ namespace {
                 return isAConnectedThroughBToC(source.first, source.second, target.first, path);
             }
         }
-        bool isNoLongerPossible(const TargetBranchRange& branches,
-                                PhyloBranchVector& path) const {
-            return !isStillPossible(branches, path);
-        }
-        double recalculateBenefit(PhyloTree& tree, TargetBranchRange& branches,
+        virtual double recalculateBenefit(PhyloTree& tree, TargetBranchRange& branches,
                                   LikelihoodBlockPairs &blocks) {
             TargetBranch& source = branches[source_branch_id];
             TargetBranch& target = branches[target_branch_id];
@@ -252,7 +196,7 @@ namespace {
         //      reverse the changes that calling it the first time
         //      made).
         //
-        double apply(PhyloTree& tree, LikelihoodBlockPairs blocks,
+        virtual double apply(PhyloTree& tree, LikelihoodBlockPairs blocks,
                      TargetBranchRange& branches) {
             TargetBranch& source     = branches[source_branch_id];
             TargetBranch& target     = branches[target_branch_id];
@@ -282,12 +226,12 @@ namespace {
             new_right ->updateNeighbor(new_left,   moved_node);
             
             TargetBranch& left_branch  = branches[snip_left_id];
-            left_branch.updateMapping(snip_left_id, new_left, moved_node);
+            left_branch.updateMapping(snip_left_id, new_left, moved_node, true);
                     
             TargetBranch& right_branch = branches[snip_right_id];
-            right_branch.updateMapping(snip_right_id, new_right, moved_node);
+            right_branch.updateMapping(snip_right_id, new_right, moved_node, true);
             
-            target.updateMapping(target_branch_id, snip_left, snip_right);
+            target.updateMapping(target_branch_id, snip_left, snip_right, true);
             //Note: The branch that target_branch_id now refers to,
             //      is the branch that, were we reversing the SPR,
             //      would be the "new" target branch (it's the branch
@@ -598,10 +542,7 @@ void PhyloTree::doParsimonySPR() {
                                      per_thread_path_parsimony[thread],
                                      parsimony_score);
             }
-            if (0 < move.target_branch_id) {
-                const TargetBranch& target = targets[move.target_branch_id];
-                move.finalize(*this, source, target);
-            }
+            move.finalize(*this, targets);
             if (i%100 == 99) {
                 trackProgress(100.0);
             }
@@ -649,7 +590,7 @@ void PhyloTree::doParsimonySPR() {
             }
             double benefit = move.getBenefit();
             if (lazy_mode) {
-                double benefit = move.recalculateBenefit(*this, targets, dummyBlocks) ;
+                benefit = move.recalculateBenefit(*this, targets, dummyBlocks) ;
                 if ( benefit <= 0) {
                     LOG_LINE(VB_DEBUG, "Best move for branch " << move.source_branch_id
                              << " is no probably longer beneficial"
@@ -701,7 +642,6 @@ void PhyloTree::doParsimonySPR() {
             break;
         }
     }
-
     initializing.start();
     deleteAllPartialParsimony();
     initializing.stop();

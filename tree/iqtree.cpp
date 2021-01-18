@@ -4381,6 +4381,14 @@ void IQTree::initializePLLIfNecessary() {
 void IQTree::optimizeConstructedTree() {
     //Note: this should not be called if start_tree is STT_PLL_PARSIMONY
     //(as parsimony spr iterations will already have been done).
+    if (params->parsimony_tbr_iterations != 0) {
+        initializeAllPartialPars();
+        auto initial_parsimony = computeParsimony("Computing initial parsimony");
+        LOG_LINE(VB_MIN, "Before doing (up to) "
+            << params->parsimony_spr_iterations << " rounds of parsimony TBR,"
+            << " parsimony score was " << initial_parsimony);
+        doParsimonyTBR();
+    }    
     if (params->parsimony_spr_iterations != 0) {
         initializeAllPartialPars();
         auto initial_parsimony = computeParsimony("Computing initial parsimony");

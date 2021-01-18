@@ -87,7 +87,8 @@ public:
                          PhyloTree& phylo_tree, PhyloNeighbor* nei) const;
     void   updateMapping(intptr_t branch_id,
                          PhyloNode* updated_first,
-                         PhyloNode* updated_second);
+                         PhyloNode* updated_second,
+                         bool clearReverseParsimony);
     void forgetState()            const;
     bool isUsedUp()               const;
     void handOverComputedStateTo(PhyloNeighbor* nei) ;
@@ -140,6 +141,10 @@ public:
     
     void        setParsimonyLength(PhyloTree& tree); //set parsimony length on
                                                      //PhyloNeighbor instances that correspond
+    
+    operator PhyloBranch() const;
+    TargetBranch& clearReverseParsimony();
+    
 };
 
 class TargetBranchRef;
