@@ -616,7 +616,7 @@ protected:
         best.value = infiniteDistance;
         for (size_t r=0; r<n; ++r) {
             Position<T> & here = rowMinima[r];
-            if (here.value < best.value) {
+            if (here.value < best.value && here.row != here.column) {
                 best = here;
             }
         }
