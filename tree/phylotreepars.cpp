@@ -1467,9 +1467,9 @@ int PhyloTree::computeParsimonyTreeNew(const char *out_prefix,
 
         PhyloNeighbor* leafNei = leaf->findNeighbor(newInterior);
         block_allocator.allocateMemoryFor(leafNei);
-        
-        leafNei->setParsimonyComputed(true);
+        leafNei->setParsimonyComputed(false);
         newInterior->clearReversePartialParsimony(leaf);
+        leaf->clearReversePartialParsimony(newInterior);
         
         branches.emplace_back(b.second, newInterior);
         branches.emplace_back(newInterior, leaf);

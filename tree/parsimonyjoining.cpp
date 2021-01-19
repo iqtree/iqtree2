@@ -1,8 +1,6 @@
 //
 //  parsimonyjoining.cpp
-//  alignment
-//
-//  Created by James Barbetti on 31/10/20.
+//  Created by James Barbetti on 31-Oct-2020.
 //
 
 #include "phylotree.h"

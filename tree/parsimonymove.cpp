@@ -1,8 +1,6 @@
 //
 //  parsimonymove.cpp
-//  alignment
-//
-//  Created by James Barbetti on 18/1/21.
+//  Created by James Barbetti on 18-Jan-2021.
 //
 
 #include "parsimonymove.h"

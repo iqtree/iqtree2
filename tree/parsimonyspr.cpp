@@ -1,8 +1,7 @@
 //
 //  parsimonyspr.cpp
 //  Parsimony SPR implementation
-//
-//  Created by James Barbetti on 8/12/20.
+//  Created by James Barbetti on 8-Dec-2020.
 //
 
 #include "parsimonymove.h"

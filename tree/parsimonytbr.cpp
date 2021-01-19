@@ -1,13 +1,14 @@
 //
 //  parsimonytbr.cpp
-//
-//  Created by James Barbetti on 8/12/20.
+//  (Draft) Parsimony TBR implementation
+//  Created by James Barbetti on 08-Dec-2020 (as a stub).
+//  (First implementation using lazy TBR, 18-Jan-2021).
 //
 
 #include "phylotree.h"
 #include "parsimonymove.h"
-#include <placement/placementcostcalculator.h> //for ParsimonyCostCalculator
-#include <utils/timekeeper.h>                  //for TimeKeeper
+#include <placement/placementcostcalculator.h>     //for ParsimonyCostCalculator
+#include <utils/timekeeper.h>                      //for TimeKeeper
 
 namespace {
 struct ParsimonyLazyTBRMove : public ParsimonyMove {
@@ -28,6 +29,7 @@ public:
     ParsimonyLazyTBRMove(): super() {
         initialize(0, true);
     }
+    
     virtual void initialize(intptr_t first_branch_id, bool beLazy) {
         lazy                    = beLazy;
         benefit                 = -1.0;
@@ -40,6 +42,7 @@ public:
         positions_considered    = 0;
         better_positions        = 0;
     }
+    
     virtual void finalize(PhyloTree& tree,
                   const TargetBranchRange& branches) {
         if (source_branch_id < 0 || second_target_branch_id < 0) {
@@ -55,6 +58,7 @@ public:
             copy_of_second_target = branches[second_target_branch_id];
         }
     }
+    
     bool doBranchesTouch(const TargetBranchRange& branches,
                          intptr_t id_1, intptr_t id_2) const {
         const TargetBranch branch_1 = branches[id_1];
@@ -71,6 +75,7 @@ public:
         }
         return false;
     }
+    
     virtual bool isStillPossible(const TargetBranchRange& branches,
                          PhyloBranchVector& path) const {
         path.clear();
@@ -190,6 +195,7 @@ public:
         }
         return best;
     }
+    
     void findBestMoveWithFirstTarget(PhyloTree& tree, TargetBranchRange& branches,
                                      int max_radius, intptr_t first_target_id,
                                      bool lazy_mode) {
@@ -220,6 +226,7 @@ public:
         }
         finalize(tree, branches);
     }
+    
     void getOtherNeighbors(PhyloNode* of, PhyloNode* but_not,
                            PhyloNode** put_here, intptr_t* branch_ids) {
         ASSERT( of->degree() == 3);
@@ -230,6 +237,7 @@ public:
             ++branch_ids;
         }
     }
+    
     void getBranchNodes(const TargetBranch& b, PhyloNode** put_here) {
         put_here[0] = b.first;
         put_here[1] = b.second;
@@ -258,6 +266,7 @@ public:
         third->updateNeighbor(old_first,  first);
         third->updateNeighbor(old_second, second);
     }
+    
     void updateBranch(TargetBranchRange& branches, intptr_t id,
                       PhyloNode* left, PhyloNode* right) {
         TargetBranch& branch = branches[id];
@@ -312,14 +321,13 @@ public:
         updateBranch ( branches, branch_ids[4], nodes[8], nodes[3]); //ED becomes ID
         updateBranch ( branches, branch_ids[5], nodes[9], nodes[3]); //FD becomes JD
 
+        double score;
         for (int i=0; i<7; ++i) {
             auto id = branch_ids[i];
             TargetBranch& branch = branches[branch_ids[i]];
-            branch.computeState(tree, id, blocks);
+            score = branch.computeState(tree, id, blocks);
             branch.setParsimonyLength(tree);
         }
-
-        double score = tree.computeParsimony();
         TREE_LOG_LINE(tree, VB_MAX, "Updated parsimony score"
                       << " after applying TBR move was " << score);
         return score;
@@ -508,6 +516,4 @@ void PhyloTree::doParsimonyTBR() {
         applying.report();
         showProgress();
     }
-
 }
-

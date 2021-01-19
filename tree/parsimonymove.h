@@ -1,7 +1,5 @@
 //
-//  parsimonymove.hpp
-//  alignment
-//
+//  parsimonymove.h
 //  Created by James Barbetti on 18/1/21.
 //
 

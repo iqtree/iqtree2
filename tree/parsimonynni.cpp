@@ -1,8 +1,7 @@
 //
 //  parsimonynni.cpp
 //  Parsimony NNI implementation.
-//
-//  Created by James Barbetti on 30/11/20.
+//  Created by James Barbetti on 30-Nov-2020.
 //
 
 #include <placement/blockallocator.h>
