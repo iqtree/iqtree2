@@ -53,6 +53,7 @@
 #include "alignedalloc.h"
 #include "likelihoodbufferset.h"
 #include "nnimove.h"
+#include "parsimonysearchparameters.h"
 
 class AlignmentPairwise;
 
@@ -1683,6 +1684,9 @@ public:
     void doParsimonySPR();
     
     void doParsimonyTBR();
+    
+    template <class Move>
+    void doParsimonySearch(const ParsimonySearchParameters& s);
     
     /****************************************************************************
             Branch length optimization by maximum likelihood

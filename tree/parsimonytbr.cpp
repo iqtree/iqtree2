@@ -7,6 +7,7 @@
 
 #include "phylotree.h"
 #include "parsimonymove.h"
+#include "parsimonysearch.h"
 #include <placement/placementcostcalculator.h>     //for ParsimonyCostCalculator
 #include <utils/timekeeper.h>                      //for TimeKeeper
 
@@ -41,6 +42,14 @@ public:
         copy_of_second_target   = PhyloBranch(nullptr, nullptr);
         positions_considered    = 0;
         better_positions        = 0;
+    }
+    
+    virtual std::string getDescription() const {
+        std::stringstream s;
+        s << " linking branch " << first_target_branch_id
+          << " to branch " << second_target_branch_id
+          << " at the expense of branch " << source_branch_id;
+        return s.str();
     }
     
     virtual void finalize(PhyloTree& tree,
@@ -149,9 +158,10 @@ public:
         }
     };
     
-    TBRState searchForMove(PhyloTree& tree, const TargetBranchRange& branches,
-                       PhyloNode* here, PhyloNode* prev,
-                       SnipList& list, int radius, int max_radius) {
+    TBRState searchForMove(const PhyloTree& tree,
+                           const TargetBranchRange& branches,
+                           PhyloNode* here, PhyloNode* prev,
+                           SnipList& list, int radius, int max_radius) {
         ++positions_considered;
         bool messed_with_path = false;
         if (4<radius) {
@@ -196,10 +206,10 @@ public:
         return best;
     }
     
-    void findBestMoveWithFirstTarget(PhyloTree& tree, TargetBranchRange& branches,
+    void findBestMoveWithFirstTarget(const PhyloTree& tree,
+                                     const TargetBranchRange& branches,
                                      int max_radius, intptr_t first_target_id,
                                      bool lazy_mode) {
-        initialize(first_target_id, lazy_mode);
         auto t1 = branches[first_target_id];
         SnipList list;
         list.resize(max_radius+1);
@@ -224,7 +234,15 @@ public:
             source_branch_id        = best.bisection_branch_id;
             benefit                 = best_score;
         }
-        finalize(tree, branches);
+    }
+    
+    virtual void findMove(const PhyloTree& tree,
+                          const TargetBranchRange& branches,
+                          int radius, double disconnection_benefit,
+                          std::vector<UINT*> &path_parsimony,
+                          double parsimony_score) {
+        findBestMoveWithFirstTarget(tree, branches, radius,
+                                    first_target_branch_id, lazy);
     }
     
     void getOtherNeighbors(PhyloNode* of, PhyloNode* but_not,
@@ -338,182 +356,16 @@ public:
 
 
 void PhyloTree::doParsimonyTBR() {
-    size_t max_iterations = params->parsimony_tbr_iterations; //asumed >0
-    bool     lazy_mode       = params->use_lazy_parsimony_tbr;
-    auto     radius          = params->sprDist; //no tbrDist member (yet)
-    PhyloBranchVector branches;
-    getBranches(branches);
-    intptr_t branch_count = branches.size();
-    if (branch_count<6) {
+    if (leafNum<6) {
         return;
-    }    
-    
-    int      index_parsimony = 0;
-
-    TimeKeeper initializing ("initializing");
-    TimeKeeper rescoring    ("rescoring parsimony");
-    TimeKeeper evaluating   ("evaluating TBR moves");
-    TimeKeeper sorting      ("sorting TBR moves");
-    TimeKeeper applying     ("applying TBR moves");
-
-    double work_estimate = (double)branch_count * ((double)max_iterations * 2.0 + 1.0);
-    initProgress(work_estimate,
-                "Looking for parsimony TBR moves", "", "");
-
-    initializing.start();
-
-    deleteAllPartialLhAndParsimony();
-    initializeTree(); //to ensure all branches are properly numbered
-    ensureCentralPartialParsimonyIsAllocated(branch_count);
-    initializeAllPartialPars(index_parsimony);
-    BlockAllocator          block_allocator(*this, index_parsimony);
-    ParsimonyCostCalculator calculator(isUsingSankoffParsimony());
-    TargetBranchRange       targets(*this, &block_allocator, &calculator, true);
-
-    initializing.stop();
-    
-    size_t  tbr_moves_applied    = 0;
-    size_t  tbr_moves_considered = 0;
-    int64_t positions_considered = 0;
-    for (size_t iteration=1; iteration<=max_iterations;++iteration) {
-        rescoring.start();
-        int parsimony_score = computeParsimony("Determining two-way parsimony", true, true );
-        rescoring.stop();
-        if (iteration==1) {
-            LOG_LINE(VB_DEBUG, "Parsimony score before parsimony TBR"
-                     << " iteration " << iteration
-                     << " was " << parsimony_score);
-        } else {
-            LOG_LINE(VB_MIN, "Applied " << tbr_moves_applied << " move"
-                         << ((1==tbr_moves_applied) ? "" : "s")
-                         << " (out of " << tbr_moves_considered << ")"
-                         << " in iteration " << (iteration-1)
-                         << " (parsimony now " << parsimony_score << ")");
-        }
-
-        evaluating.start();
-        LikelihoodBlockPairs dummyBlocks;
-
-        LOG_LINE(VB_DEBUG, "Computing branch initial states");
-        #ifdef _OPENMP
-        #pragma omp parallel for
-        #endif
-        for (intptr_t i=0; i<branch_count; ++i) {
-            TargetBranch&     tb   = targets[i];
-            tb.computeState(*this, i, dummyBlocks);
-            LOG_LINE(VB_DEBUG, "Branch " << i
-                     << " has branch cost " << tb.getBranchCost()
-                     << " and connection_cost " << tb.getConnectionCost() );
-        }
-        LOG_LINE(VB_DEBUG, "finding best TBR move for each branch");
-        std::vector<ParsimonyLazyTBRMove> moves;
-        moves.resize(branch_count);
-        
-        #ifdef _OPENMP
-        #pragma omp parallel for num_threads(num_threads) reduction(+:positions_considered)
-        #endif
-        for (intptr_t i=0; i<branch_count; ++i) {
-            ParsimonyLazyTBRMove& move = moves[i];
-            move.findBestMoveWithFirstTarget(*this, targets, radius, i, lazy_mode);
-            if (i%100 == 99) {
-                trackProgress(100.0);
-            }
-            positions_considered += move.positions_considered;
-        }
-        trackProgress(static_cast<double>(branch_count % 100));
-        evaluating.stop();
-        
-        LOG_LINE(VB_DEBUG, "sorting TBR moves");
-        sorting.start();
-        auto first         = moves.begin();
-        auto firstNegative = std::partition(first, moves.end(),
-                                            [](const ParsimonyLazyTBRMove& move) { return 0 < move.benefit; } );
-        std::sort(first, firstNegative);
-        sorting.stop();
-        
-        applying.start();
-        tbr_moves_considered=firstNegative-first;
-        LOG_LINE(VB_MAX, "Considering " << tbr_moves_considered
-                 << " potentially beneficial TBR moves");
-        tbr_moves_applied=0;
-
-        size_t i=tbr_moves_considered;
-        while (0<i) {
-            --i;
-            ParsimonyLazyTBRMove& move = moves[i];
-            LOG_LINE(VB_DEBUG, "considering TBR move " << i
-                     << " with benefit " << move.benefit
-                     << " removing branch " << move.source_branch_id
-                     << " and connecting branches " << move.first_target_branch_id
-                     << " and " << move.second_target_branch_id);
-            if ( move.getBenefit() <= 0 ) {
-                break;
-            }
-            PhyloBranchVector path;
-            if ( move.isNoLongerPossible(targets, path) ) {
-                LOG_LINE(VB_DEBUG, "Best move for branch " << move.source_branch_id
-                         << " is no longer possible.");
-                continue;
-            }
-            double benefit = move.recalculateBenefit(*this, targets, dummyBlocks) ;
-            if ( benefit <= 0) {
-                LOG_LINE(VB_DEBUG, "Best move for branch " << move.source_branch_id
-                         << " is no probably longer beneficial"
-                         << " (net cost delta now " << benefit  << ").");
-                continue;
-            }
-            LOG_LINE(VB_MAX, "Applying TBR move " << i
-                     << " with original benefit " << move.getBenefit()
-                     << " and current benefit " << benefit
-                     << " removing branch " << move.source_branch_id
-                     << " and connecting branches " << move.first_target_branch_id
-                     << " and " << move.second_target_branch_id);
-            double revised_score = move.apply(*this, dummyBlocks, targets);
-            if (parsimony_score <= revised_score) {
-                const char* same_or_worse = (parsimony_score < revised_score)
-                    ? " a worse " : " the same ";
-                LOG_LINE(VB_MAX, "Reverting TBR move; as it resulted in"
-                         << same_or_worse << "parsimony score"
-                         << " (" << revised_score << ")");
-                //ParsimonyMove::apply() is its own inverse.  Calling it again
-                //with the same parameters, reverses what it did.
-                revised_score = move.apply(*this, dummyBlocks, targets);
-                ASSERT( revised_score == parsimony_score );
-            } else {
-                parsimony_score = revised_score;
-                ++tbr_moves_applied;
-            }
-        }
-        applying.stop();
-        if (tbr_moves_applied==0) {
-            break;
-        }
     }
-    initializing.start();
-    deleteAllPartialParsimony();
-    initializing.stop();
+    ParsimonySearchParameters s;
+        
+    s.name                      = "TBR";
+    s.iterations                = params->parsimony_tbr_iterations;
+    s.path_over_head_per_thread = 0;
+    s.lazy_mode                 = params->use_lazy_parsimony_tbr;
+    s.radius                    = params->sprDist; //no tbrDist member (yet)
 
-    rescoring.start();
-    double parsimony_score = computeParsimony();
-    rescoring.stop();
-
-    LOG_LINE(VB_MIN, "Applied " << tbr_moves_applied << " move"
-                 << ((1==tbr_moves_applied) ? "" : "s")
-                 << " (out of " << tbr_moves_considered << ")"
-                 << " in last iteration "
-                 << " (parsimony now " << parsimony_score << ")"
-                 << " (total TBR moves examined " << positions_considered << ")");
-
-    doneProgress();
-
-    if (VB_MED <= verbose_mode) {
-        hideProgress();
-        std::cout.precision(4);
-        initializing.report();
-        rescoring.report();
-        evaluating.report();
-        sorting.report();
-        applying.report();
-        showProgress();
-    }
+    doParsimonySearch<ParsimonyLazyTBRMove>(s);
 }

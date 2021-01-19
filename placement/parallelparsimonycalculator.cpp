@@ -2,7 +2,7 @@
 // parallelparsimonycalculator.cpp
 //
 // Parallel calculation of parsimony (parallelizes across nodes a given
-// "distance" from the branch for which parsimny is being calculated)
+// "distance" from the branch for which parsimony is being calculated)
 // (so, in large trees, close-to-linear scaling should be possible,
 // regardless of the number of threads of execution).
 //

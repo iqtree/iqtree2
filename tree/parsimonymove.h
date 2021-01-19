@@ -28,6 +28,15 @@ public:
     double getBenefit() const;
 
     virtual void   initialize(intptr_t source_branch, bool beLazy) = 0;
+    virtual void   findMove(const PhyloTree& tree,
+                            const TargetBranchRange& branches,
+                            int radius, double disconnection_benefit,
+                            std::vector<UINT*> &path_parsimony,
+                            double parsimony_score) = 0;
+    virtual std::string getDescription() const = 0;
+    virtual void   finalize(PhyloTree& tree,
+                            const TargetBranchRange& branches) = 0;
+
     virtual bool   isStillPossible(const TargetBranchRange& branches,
                                  PhyloBranchVector& path) const = 0;
     virtual double recalculateBenefit(PhyloTree& tree,
@@ -35,8 +44,6 @@ public:
                                       LikelihoodBlockPairs &blocks) = 0;
     virtual double apply(PhyloTree& tree, LikelihoodBlockPairs blocks,
                          TargetBranchRange& branches) = 0;
-    virtual void   finalize(PhyloTree& tree,
-                            const TargetBranchRange& branches) = 0;
 
     bool isNoLongerPossible(const TargetBranchRange& branches,
                             PhyloBranchVector& path) const;

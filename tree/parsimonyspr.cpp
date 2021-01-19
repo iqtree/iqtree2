@@ -7,7 +7,7 @@
 #include "parsimonymove.h"
 #include <placement/targetbranch.h>            //for TargetBranchRange
 #include <placement/placementcostcalculator.h> //for ParsimonyCostCalculator
-#include <utils/timekeeper.h>                  //for TimeKeeper
+#include "parsimonysearch.h"
 
 PhyloNodeVector PhyloTree::getTaxaNodesInIDOrder() const {
     PhyloNodeVector taxa;
@@ -120,6 +120,13 @@ namespace {
             target_first     = nullptr;
             target_second    = nullptr;
             positions_considered = 0;
+        }
+        virtual std::string getDescription() const {
+            std::stringstream s;
+            s << " linking branch " << source_branch_id
+              << ((isForward) ? " forward" : " backward" )
+              << " to branch " << target_branch_id;
+            return s.str();
         }
         virtual void finalize(PhyloTree& tree,
                       const TargetBranchRange& branches) {
@@ -419,259 +426,34 @@ namespace {
                 s.prepareToSearch      (right, left,      tb.second, radius);
                 s.searchForBackwardsSPR(right, tb.second, radius,    parsimony_score);
             }
+            virtual void findMove(const PhyloTree& tree,
+                                  const TargetBranchRange& branches,
+                                  int radius, double disconnection_benefit,
+                                  std::vector<UINT*> &path_parsimony,
+                                  double parsimony_score) {
+                auto source = branches[source_branch_id];
+                if (source.first->isInterior()) {
+                    findForwardSPR(tree, branches, radius,disconnection_benefit,
+                                   path_parsimony, parsimony_score);
+                }
+                if (source.second->isInterior()) {
+                    findBackwardSPR(tree, branches, radius, disconnection_benefit,
+                                    path_parsimony, parsimony_score);
+                }
+            }
     }; //ParsimonySPRMove
 }; //namespace
 
 void PhyloTree::doParsimonySPR() {
-    size_t   max_iterations  = params->parsimony_spr_iterations; //assumed >0
-    bool     lazy_mode       = params->use_lazy_parsimony_spr;
-    auto     radius          = params->sprDist;
-    intptr_t branch_count    = leafNum * 2 - 3;                  //assumed > 3
-    int      index_parsimony = 0;
- 
-    TimeKeeper initializing ("initializing");
-    TimeKeeper rescoring    ("rescoring parsimony");
-    TimeKeeper evaluating   ("evaluating SPR moves");
-    TimeKeeper sorting      ("sorting SPR moves");
-    TimeKeeper applying     ("applying SPR moves");
-
-    double work_estimate = (double)branch_count * ((double)max_iterations * 2.0 + 1.0);
-    initProgress(work_estimate,
-                 "Looking for parsimony SPR moves", "", "");
-
-    initializing.start();
-    
-    bool zeroNumThreadsWhenDone = false;
-    if (num_threads<1) {
-        zeroNumThreadsWhenDone = true;
-        num_threads = params->num_threads;
-        if (num_threads==0) {
-            #ifdef _OPENMP
-                num_threads = omp_get_max_threads();
-            #else
-                num_threads = 1;
-            #endif
-        }
-        ASSERT(0 < num_threads);
-    }
-    size_t path_overhead = num_threads * (radius+1);
-    std::vector< std::vector<UINT*> > per_thread_path_parsimony;
-    
-    deleteAllPartialLhAndParsimony();
-    initializeTree(); //to ensure all branches are properly numbered
-    ensureCentralPartialParsimonyIsAllocated(branch_count + path_overhead);
-    initializeAllPartialPars(index_parsimony);
-    BlockAllocator          block_allocator(*this, index_parsimony);
-    ParsimonyCostCalculator calculator(isUsingSankoffParsimony());
-    TargetBranchRange       targets(*this, &block_allocator, &calculator, true);
-    
-    //Allocate per-thread parsimony vector work areas used to calculate
-    //modified parsimony scores along the path between the
-    //pruning and regrafting points.
-    per_thread_path_parsimony.resize(num_threads);
-    for (int thread=0; thread<num_threads; ++thread) {
-        block_allocator.allocateVectorOfParsimonyBlocks
-            ( radius+1, per_thread_path_parsimony[thread]);
-    }
-    
-    initializing.stop();
-    
-    size_t  spr_moves_applied    = 0;
-    size_t  spr_moves_considered = 0;
-    int64_t positions_considered = 0;
-    for (size_t iteration=1; iteration<=max_iterations;++iteration) {
-        rescoring.start();
-        int parsimony_score = computeParsimony("Determining two-way parsimony", true, true );
-        rescoring.stop();
-        if (iteration==1) {
-            LOG_LINE(VB_DEBUG, "Parsimony score before parsimony SPR"
-                     << " iteration " << iteration
-                     << " was " << parsimony_score);
-        } else {
-            LOG_LINE(VB_MIN, "Applied " << spr_moves_applied << " move"
-                         << ((1==spr_moves_applied) ? "" : "s")
-                         << " (out of " << spr_moves_considered << ")"
-                         << " in iteration " << (iteration-1)
-                         << " (parsimony now " << parsimony_score << ")");
-        }
-
-        evaluating.start();
-        LikelihoodBlockPairs dummyBlocks;
-
-        LOG_LINE(VB_DEBUG, "Computing branch initial states");
-        #ifdef _OPENMP
-        #pragma omp parallel for
-        #endif
-        for (intptr_t i=0; i<branch_count; ++i) {
-            TargetBranch&     tb   = targets[i];
-            tb.computeState(*this, i, dummyBlocks);
-            LOG_LINE(VB_DEBUG, "Branch " << i
-                     << " has branch cost " << tb.getBranchCost()
-                     << " and connection_cost " << tb.getConnectionCost() );
-        }
-        LOG_LINE(VB_DEBUG, "finding best SPR move for each branch");
-        std::vector<ParsimonySPRMove> moves;
-        moves.resize(branch_count);
-                
-        #ifdef _OPENMP
-        #pragma omp parallel for num_threads(num_threads) reduction(+:positions_considered)
-        #endif
-        for (intptr_t i=0; i<branch_count; ++i) {
-            TargetBranch&     source = targets[i];
-            ParsimonySPRMove& move   = moves[i];
-            BenefitPair benefit = source.getPartialDisconnectionBenefit(*this, targets);
-            //LOG_LINE(VB_MIN, "for s=" << i << " bf=" << benefit.forwardBenefit
-            //         << ", bb=" << benefit.backwardBenefit);
-#ifdef _OPENMP
-            int thread = omp_get_thread_num();
-            ASSERT(0<=thread && thread<num_threads);
-#else
-            int thread = 0;
-#endif
-            move.initialize(i, lazy_mode);
-            if (source.first->isInterior()) {
-                move.findForwardSPR(*this, targets, radius,
-                                    benefit.forwardBenefit,
-                                    per_thread_path_parsimony[thread],
-                                    parsimony_score);
-            }
-            if (source.second->isInterior()) {
-                move.findBackwardSPR(*this, targets, radius,
-                                     benefit.backwardBenefit,
-                                     per_thread_path_parsimony[thread],
-                                     parsimony_score);
-            }
-            move.finalize(*this, targets);
-            if (i%100 == 99) {
-                trackProgress(100.0);
-            }
-            positions_considered += move.positions_considered;
-        }
-        trackProgress(static_cast<double>(branch_count % 100));
-        evaluating.stop();
-    
-        LOG_LINE(VB_DEBUG, "sorting SPR moves");
-        sorting.start();
-        auto first         = moves.begin();
-        auto firstNegative = std::partition(first, moves.end(),
-                                            [](const ParsimonyLazySPRMove& move) { return 0 < move.benefit; } );
-        std::sort(first, firstNegative);
-        sorting.stop();
+    ParsimonySearchParameters s;
         
-        applying.start();
-        spr_moves_considered=firstNegative-first;
-        LOG_LINE(VB_MAX, "Considering " << spr_moves_considered << " potentially beneficial SPR moves");
-        spr_moves_applied=0;
+    s.name                      = "SPR";
+    s.iterations                = params->parsimony_spr_iterations;
+    s.path_over_head_per_thread = params->sprDist + 1;
+    s.lazy_mode                 = params->use_lazy_parsimony_spr;
+    s.radius                    = params->sprDist;
 
-        size_t i=spr_moves_considered;
-        while (0<i) {
-            --i;
-            ParsimonySPRMove& move = moves[i];
-            LOG_LINE(VB_DEBUG, "considering SPR move " << i
-                     << " with benefit " << move.benefit
-                     << " linking branch " << move.source_branch_id
-                     << ((move.isForward) ? " forward" : " backward" )
-                     << " to branch " << move.target_branch_id);
-            if ( move.getBenefit() <= 0 ) {
-                break;
-            }
-            PhyloBranchVector path;
-            if ( move.isNoLongerPossible(targets, path) ) {
-                //The tree topology has changed and this SPR move
-                //is no longer legal (source doesn't exist, target
-                //branch doesn't exist, or target branch is now on
-                //"the wrong side"of the source branch (so connecting
-                //to it would create a disconnected subtree and introduce
-                //a cycle containing the source branch).
-                LOG_LINE(VB_DEBUG, "Best move for branch " << move.source_branch_id
-                         << " is no longer possible.");
-                continue;
-            }
-            double benefit = move.getBenefit();
-            if (lazy_mode) {
-                benefit = move.recalculateBenefit(*this, targets, dummyBlocks) ;
-                if ( benefit <= 0) {
-                    LOG_LINE(VB_DEBUG, "Best move for branch " << move.source_branch_id
-                             << " is no probably longer beneficial"
-                             << " (net cost delta now " << benefit  << ").");
-                    continue;
-                }
-            }
-            else {
-                //If we're not running in lazy mode, we'll just apply the move
-                //(since figuring out what the benefit would really be takes
-                //so long we might as well do it and see what is after we've
-                //done it!). If it were re-evaluated properly, and then done,
-                //that'd mean calculating new parsimony views twice (and we'd
-                //never back out).
-                //But if it is *not* re-evaluated properly, but just done, parsimony
-                //views are calculated ONCE unless the move is not an improvement
-                //(in which case it gets re-evaluated when backing out).
-                //Admittedly more parsimony views get marked as out of date,
-                //for SPR moves that turned out not to be beneficial, this
-                //way, but after the first iteration, almost all SPR moves we
-                //try here turn out to be beneficial.
-                //So: not only is not re-evaluating the move simpler, it's more
-                //efficient (in terms of CPU cost), on average.
-            }
-            LOG_LINE(VB_MAX, "Applying SPR move " << i
-                     << " with original benefit " << move.getBenefit()
-                     << " and current benefit " << benefit
-                     << " linking branch " << move.source_branch_id
-                     << ((move.isForward) ? " forward" : " backward" )
-                     << " to branch " << move.target_branch_id);
-            double revised_score = move.apply(*this, dummyBlocks, targets);
-            if (parsimony_score <= revised_score) {
-                const char* same_or_worse = (parsimony_score < revised_score)
-                    ? " a worse " : " the same ";
-                LOG_LINE(VB_MAX, "Reverting SPR move; as it resulted in"
-                         << same_or_worse << "parsimony score"
-                         << " (" << revised_score << ")");
-                //ParsimonyMove::apply() is its own inverse.  Calling it again
-                //with the same parameters, reverses what it did.
-                revised_score = move.apply(*this, dummyBlocks, targets);
-                ASSERT( revised_score == parsimony_score );
-            } else {
-                parsimony_score = revised_score;
-                ++spr_moves_applied;
-            }
-        }
-        applying.stop();
-        if (spr_moves_applied==0) {
-            break;
-        }
-    }
-    initializing.start();
-    deleteAllPartialParsimony();
-    initializing.stop();
-
-    rescoring.start();
-    double parsimony_score = computeParsimony();
-    rescoring.stop();
-
-    LOG_LINE(VB_MIN, "Applied " << spr_moves_applied << " move"
-                 << ((1==spr_moves_applied) ? "" : "s")
-                 << " (out of " << spr_moves_considered << ")"
-                 << " in last iteration "
-                 << " (parsimony now " << parsimony_score << ")"
-                 << " (total SPR moves examined " << positions_considered << ")");
-
-    doneProgress();
-
-    if (zeroNumThreadsWhenDone) {
-        num_threads = 0;
-    }
-
-    if (VB_MED <= verbose_mode) {
-        hideProgress();
-        std::cout.precision(4);
-        initializing.report();
-        rescoring.report();
-        evaluating.report();
-        sorting.report();
-        applying.report();
-        showProgress();
-    }
+    doParsimonySearch<ParsimonySPRMove>(s);
 }
 
 void IQTree::doPLLParsimonySPR() {

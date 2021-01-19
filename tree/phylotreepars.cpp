@@ -1329,7 +1329,6 @@ int PhyloTree::computeParsimonyTreeNew(const char *out_prefix,
         LOG_LINE(VB_DEBUG, "Initial node " << aln->getSeqName(taxon_order[i]));
     }
     
-    
     bool zeroNumThreadsWhenDone = false;
     if (num_threads<1) {
         zeroNumThreadsWhenDone = true;
@@ -1764,7 +1763,5 @@ void PhyloTree::extractBifurcatingSubTree(PhyloNeighborVec& removed_nei,
         node->neighbors[2] = node->neighbors[id[2]];
         node->neighbors.resize(3);
     }
-    
     leafNum = getNumTaxa();
-    
 }

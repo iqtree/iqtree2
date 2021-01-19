@@ -15,7 +15,8 @@ public:
     mutable std::string activity;
     mutable double elapsed_wallclock_time;
     mutable double elapsed_cpu_time;
-    TimeKeeper(const char* activity_name);
+    explicit TimeKeeper(const char* activity_name);
+    explicit TimeKeeper(std::string name);
     ~TimeKeeper();
     void start()  const;
     void stop()   const;
