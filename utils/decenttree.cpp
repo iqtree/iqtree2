@@ -563,7 +563,6 @@ bool prepInput(const std::string& alignmentInputFilePath,
                bool  reportProgress,
                const std::string& distanceOutputFilePath,
                Sequences& sequences, FlatMatrix& m) {
-    bool succeeded = false;
     if (!alignmentInputFilePath.empty()) {
         Sequences sequences;
         std::vector<char> is_site_variant;
