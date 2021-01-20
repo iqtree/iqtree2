@@ -245,7 +245,9 @@ int Checkpoint::keepKeyPrefix(string key_prefix) {
 
 bool Checkpoint::getBool(string key, bool &ret) {
     string value;
-    if (!get(key, value)) return false;
+    if (!get(key, value)) {
+        return false;
+    }
 	if (value == "true") 
         ret = true;
     else if (value == "false") 
@@ -256,7 +258,7 @@ bool Checkpoint::getBool(string key, bool &ret) {
 }
 
 bool Checkpoint::getBool(string key) {
-    bool ret;
+    bool ret = false;
     if (!getBool(key, ret))
         return false;
     return ret;
