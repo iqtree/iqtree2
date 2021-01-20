@@ -374,7 +374,9 @@ int PhyloTree::computeParsimonyOutOfTreeFast(const UINT* dad_partial_pars,
     UINT   score           = sum_end_node;
 
     UINT lower_bound = best_pars_score;
-    if (branch_subst) lower_bound = INT_MAX;
+    if (branch_subst) {
+        lower_bound = INT_MAX;
+    }
     switch (nstates) {
     case 4:
         #ifdef _OPENMP
@@ -906,6 +908,11 @@ void PhyloTree::computePartialParsimonySankoff(PhyloNeighbor *dad_branch,
             score += here;
         }
         partial_pars[total_index] = score;
+        return;
+    }
+    ASSERT(left!=nullptr);
+    ASSERT(right!=nullptr);
+    if (left==nullptr || right==nullptr) {
         return;
     }
     if (!left->node->isLeaf() && right->node->isLeaf()) {
