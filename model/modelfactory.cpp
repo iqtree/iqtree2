@@ -115,9 +115,9 @@ ModelsBlock *readModelsDefinition(Params &params) {
         ASSERT(0 && "predefined protein models not initialized");
     }
 
-    if (params.model_def_file) {
+    if (!params.model_def_file.empty()) {
         cout << "Reading model definition file " << params.model_def_file << " ... ";
-        MyReader nexus(params.model_def_file);
+        MyReader nexus(params.model_def_file.c_str());
         nexus.Add(models_block);
         MyToken token(nexus.inf);
         nexus.Execute(token);

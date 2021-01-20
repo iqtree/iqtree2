@@ -1515,6 +1515,11 @@ public:
             name of the substitution model (e.g., HKY, GTR, TN+I+G, JC+G, etc.)
      */
     string model_name;
+    
+    /**
+            path of the (YAML format) model definition file
+     */
+    string model_file;
 
     /** model name to initialize GTR20 or NONREV protein model */
     char* model_name_init;
@@ -1540,9 +1545,9 @@ public:
     /** all models with score worse than the best score + this threshold will be ignored */
     double score_diff_thres;
     
-    /** model defition file */
-    char *model_def_file;
-
+    /** model defition file (nexus format) */
+    std::string model_def_file;
+    
     /** TRUE to perform ModelOMatic method of Whelan et al. 2015 */
     bool modelomatic;
     

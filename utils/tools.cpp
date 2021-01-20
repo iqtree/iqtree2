@@ -944,7 +944,6 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.state_freq_set = NULL;
     params.ratehet_set = "AUTO";
     params.score_diff_thres = 10.0;
-    params.model_def_file = NULL;
     params.modelomatic = false;
     params.model_test_again = false;
     params.model_test_and_tree = 0;
@@ -1410,8 +1409,9 @@ void parseArg(int argc, char *argv[], Params &params) {
             std::string arg = argv[cnt];
             //Todo; move this up, use == rather than strcmp elsewhere, too.
             if (arg=="-dist-format") {
-                std::string nextArg = next_argument(argc, argv, "<distance_file_format>", cnt);
-                params.dist_format = string_to_lower(nextArg.c_str());
+                std::string format = next_argument(argc, argv,
+                                                   "distance_file_format", cnt);
+                params.dist_format = string_to_lower(format.c_str());
                 params.dist_compression_level
                     = strip_number_suffix(params.dist_format,
                                           params.dist_compression_level);
@@ -1430,12 +1430,14 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
             if (arg=="-update") {
                 params.incremental = true;
-                std::string method = next_argument(argc, argv, "incremental method", cnt);
+                std::string method = next_argument(argc, argv,
+                                                   "incremental_method", cnt);
                 params.incremental_method = string_to_upper(method.c_str());
                 continue;
             }
             if (arg=="-merge") {
-                std::string alignment_file = next_argument(argc, argv, "alignment file (to merge)", cnt);
+                std::string alignment_file = next_argument(argc, argv,
+                                                           "alignment_file_to_merge", cnt);
                 params.additional_alignment_files.emplace_back(alignment_file);            
                 continue;
             }
@@ -2360,14 +2362,16 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
             if (arg=="-max-spr") {
                 // subtree pruning and regrafting 
-                std::string nextArg       = next_argument(argc, argv, "<max_spr_iterations>", cnt);
-                params.tree_spr           = true; //but this turns on ML spr too.
-                params.max_spr_iterations = atoi(nextArg.c_str());
+                std::string next_arg = next_argument(argc, argv,
+                                                     "max_spr_iterations", cnt);
+                params.tree_spr      = true; //but this turns on ML spr too.
+                params.max_spr_iterations = atoi(next_arg.c_str());
                 continue;
             }
             if (arg=="-parsimony-spr") {
-                std::string nextArg       = next_argument(argc, argv, "<max_parsimony_spr_iterations>", cnt);
-                params.parsimony_spr_iterations = atoi(nextArg.c_str());
+                std::string next_arg = next_argument(argc, argv,
+                                                     "max_parsimony_spr_iterations", cnt);
+                params.parsimony_spr_iterations = atoi(next_arg.c_str());
                 continue;
             }
             if (arg=="-lazy-spr") {
@@ -2383,8 +2387,9 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             if (arg=="-parsimony-tbr") {
-                std::string nextArg       = next_argument(argc, argv, "<max_parsimony_tbr_iterations>", cnt);
-                params.parsimony_tbr_iterations = atoi(nextArg.c_str());
+                std::string next_arg = next_argument(argc, argv,
+                                                     "max_parsimony_tbr_iterations", cnt);
+                params.parsimony_tbr_iterations = atoi(next_arg.c_str());
                 continue;
             }
 			if (strcmp(argv[cnt], "-krep") == 0) {
@@ -2448,6 +2453,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.model_name = argv[cnt];
 				continue;
 			}
+            if (arg=="--model-file" || arg=="-mf") {
+                params.model_file = next_argument(argc, argv,
+                                                  "model_name", cnt);
+                continue;
+            }
             if (strcmp(argv[cnt], "--init-model") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -3295,8 +3305,9 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
             if (arg=="-parsimony-nni") {
-                std::string nextArg       = next_argument(argc, argv, "<max_parsimony_nni_iterations>", cnt);
-                params.parsimony_nni_iterations = atoi(nextArg.c_str());
+                std::string next_arg = next_argument(argc, argv,
+                                                     "max_parsimony_nni_iterations", cnt);
+                params.parsimony_nni_iterations = atoi(next_arg.c_str());
                 continue;
             }
 			if (strcmp(argv[cnt], "-plog") == 0) {
