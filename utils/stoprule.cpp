@@ -200,7 +200,7 @@ void StopRule::addImprovedIteration(int iteration) {
 	time_vec.insert(time_vec.begin(), iteration);
 //	nTime_++;
 	if (stop_condition != SC_WEIBULL) return;
-	double upperTime;
+	double upperTime = 0;
 	if (predict(upperTime) == 0) return;
 	predicted_iteration = static_cast<int>(upperTime);
 	if (stop_condition == SC_WEIBULL && predicted_iteration > max_iteration)
