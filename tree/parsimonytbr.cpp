@@ -248,6 +248,8 @@ public:
     void getOtherNeighbors(PhyloNode* of, PhyloNode* but_not,
                            PhyloNode** put_here, intptr_t* branch_ids) {
         ASSERT( of->degree() == 3);
+        put_here[0] = nullptr;
+        put_here[1] = nullptr;
         FOR_EACH_ADJACENT_PHYLO_NODE(of, but_not, it, node) {
             *put_here   = node;
             ++put_here;
