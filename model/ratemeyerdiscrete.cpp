@@ -157,6 +157,7 @@ double RunKMeans1D(int n, int k, double *points_orig, int *weights, double *cent
         }
         i=t;
     }
+    delete [] index;
 	
     delete [] points;
 	for (int i=n; i>=0; i--) delete [] trace[i];
