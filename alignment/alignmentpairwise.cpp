@@ -96,7 +96,7 @@ void AlignmentPairwise::setSequenceNumbers(int seq1, int seq2) {
     }
     memset(pair_freq, 0, sizeof(double)*total_size);
     if (tree->hasMatrixOfConvertedSequences()
-         && rate->getPtnCat(0) < 0 ) {
+         && (rate==nullptr || rate->getPtnCat(0) < 0 ) ) {
         auto sequence1        = tree->getConvertedSequenceByNumber(seq1);
         auto sequence2        = tree->getConvertedSequenceByNumber(seq2);
         auto frequencies      = tree->getConvertedSequenceFrequencies();
@@ -123,7 +123,7 @@ void AlignmentPairwise::setSequenceNumbers(int seq1, int seq2) {
         }
         //Todo: Handle the multiple category case here
         return;
-    } else if (tree->getRate()->getPtnCat(0) >= 0) {
+    } else if (rate!=nullptr && rate->getPtnCat(0) >= 0) {
         int i = 0;
         for (auto it = tree->aln->begin(); it != tree->aln->end(); it++, i++) {
             int state1 = tree->aln->convertPomoState((*it)[seq_id1]);
