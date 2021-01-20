@@ -1443,7 +1443,7 @@ void IQTree::reinsertLeavesByParsimony(PhyloNodeVector &del_leaves) {
 void IQTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
 
     //int num_del_leaves = del_leaves.size();
-    ASSERT(root->isLeaf());
+    ASSERT(root!=nullptr && root->isLeaf());
 
     for (auto it_leaf = del_leaves.begin(); it_leaf != del_leaves.end(); it_leaf++) {
         LOG_LINE(VB_DEBUG, "Reinserting " << (*it_leaf)->name << " (" << (*it_leaf)->id << ")");
