@@ -889,7 +889,8 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 //        dad_branch->lh_scale_factor += sum_scale;
                 
         // end multifurcating treatment
-    } else if (left->node->isLeaf() && right->node->isLeaf()) {
+    } else if (left!=nullptr && left->node->isLeaf()
+               && right!=nullptr && right->node->isLeaf()) {
 
         //--------------------- TIP-TIP (cherry) case ------------------//
 
@@ -942,7 +943,8 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
                 partial_lh += nstates;
 			}
 		}
-	} else if (left->node->isLeaf() && !right->node->isLeaf()) {
+	} else if (left!=nullptr && left->node->isLeaf()
+               && right!=nullptr && !right->node->isLeaf()) {
 
         //--------------------- TIP-INTERNAL NODE case ------------------//
 
