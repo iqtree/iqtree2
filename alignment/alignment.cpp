@@ -4516,7 +4516,10 @@ double Alignment::readDist(igzstream &in, bool is_incremental, double *dist_mat)
     if (!is_incremental && nseqs != getNSeq()) {
         throw "Distance file has different number of taxa";
     }
-    double *tmp_dist_mat = new double[nseqs * nseqs];
+    std::vector<double> temporary_distance_matrix;
+    temporary_distance_matrix.resize(nseqs * nseqs, 0);
+    double *tmp_dist_mat = temporary_distance_matrix.data();
+    
     bool lower = false; //becomes true if lower-triangle format identified
     bool upper = false; //becomes true if upper-triangle format identified
     std::map< string, int > map_seqName_ID;
@@ -4625,7 +4628,9 @@ double Alignment::readDist(igzstream &in, bool is_incremental, double *dist_mat)
     // as in the alignment
     
     size_t missingSequences = 0; //count of sequences missing from temporary matrix
-    int* actualToTemp = new int[nseqs];
+    std::vector<int> actual_to_temp_vector;
+    actual_to_temp_vector.resize(nseqs, 0);
+    int* actualToTemp = actual_to_temp_vector.data();
     for (int seq1 = 0; seq1 < static_cast<int>(nseqs); ++seq1) {
         string seq1Name = getSeqName(seq1);
         int seq1_tmp_id = -1;
@@ -4677,9 +4682,9 @@ double Alignment::readDist(igzstream &in, bool is_incremental, double *dist_mat)
             }
         }
     }
-    delete [] actualToTemp;
-    delete [] tmp_dist_mat;
-
+    temporary_distance_matrix.clear();
+    tmp_dist_mat = nullptr;
+    
     /*
     pos = 0;
     for (size_t seq1 = 0; seq1 < nseqs; seq1++) {
