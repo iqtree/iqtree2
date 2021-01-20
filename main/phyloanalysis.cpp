@@ -3569,13 +3569,16 @@ void doSymTest(Alignment *alignment, Params &params) {
             cout << " " << (i+1)*100 / params.symtest_shuffle << "%";
             cout.flush();
         }
-        if (!stats)
+        if (stats==nullptr) {
             continue;
-        for (auto it = stats->begin(); it != stats->end(); it++) {
-            *out_stat << it->part << ',' << it->seq1 << ',' << it->seq2 << ','
-            << it->chi2_sym << ',' << it->pval_sym << ','
-            << it->chi2_marsym << ',' << it->pval_marsym << ','
-            << it->chi2_intsym << ',' << it->pval_intsym << endl;
+        }
+        if (out_stat!=nullptr) {
+            for (auto it = stats->begin(); it != stats->end(); it++) {
+                *out_stat << it->part << ',' << it->seq1 << ',' << it->seq2 << ','
+                << it->chi2_sym << ',' << it->pval_sym << ','
+                << it->chi2_marsym << ',' << it->pval_marsym << ','
+                << it->chi2_intsym << ',' << it->pval_intsym << endl;
+            }
         }
         delete stats;
     }
@@ -4271,9 +4274,12 @@ void assignBootstrapSupport(const char *input_trees, int burnin, int max_count,
         for (StrVector::iterator sit = sgtaxname.begin();
                 sit != sgtaxname.end(); sit++, i++) {
             Node *leaf = mytree.findLeafName(*sit);
-            if (!leaf)
+            if (leaf==nullptr) {
                 outError("Tree does not contain taxon ", *sit);
-            leaf->id = i;
+            }
+            else {
+                leaf->id = i;
+            }
         }
         scale /= sg.maxWeight();
     } else {
