@@ -3,6 +3,12 @@
 //  (Draft) Parsimony TBR implementation
 //  Created by James Barbetti on 08-Dec-2020 (as a stub).
 //  (First implementation using lazy TBR, 18-Jan-2021).
+//  Note: ParsimonyLazyTBRMove's "benefit estimates"
+//  are so bad that it isn't of any real use.  But a proper
+//  TBR implementation could be based on it (or perhaps if
+//  its estimates were better, it would be worth using).
+//  (ParsimonyLazyTBRMove::apply() works, all it needs is
+//  better benefit estimates).
 //
 
 #include "phylotree.h"

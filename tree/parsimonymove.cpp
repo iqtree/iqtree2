@@ -1,5 +1,13 @@
 //
 //  parsimonymove.cpp
+//  Class for:
+//  (a) finding a tree rearrangement (lazy SPR, SPR, or TBR)
+//      that has a fixed branch (e.g. for SPR, the branch at the "top"
+//      of the subtree that is to be pruned and regrafted),
+//      without modifying the tree.
+//  (b) checking whether a tree rearrangement is still valid
+//  (c) making (or reversing) a tree rearrangement.
+//
 //  Created by James Barbetti on 18-Jan-2021.
 //
 

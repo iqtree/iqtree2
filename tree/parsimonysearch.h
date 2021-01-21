@@ -4,6 +4,7 @@
 //
 
 #include "phylotree.h"
+#include "phylotreethreadingcontext.h"
 #include "parsimonysearchparameters.h"
 #include <utils/timekeeper.h>                  //for TimeKeeper
 #include <placement/targetbranch.h>            //for TargetBranchRange
@@ -26,20 +27,7 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
 
     initializing.start();
     
-    bool zeroNumThreadsWhenDone = false;
-    if (num_threads<1) {
-        zeroNumThreadsWhenDone = true;
-        num_threads = params->num_threads;
-        if (num_threads==0) {
-            #ifdef _OPENMP
-                num_threads = omp_get_max_threads();
-            #else
-                num_threads = 1;
-            #endif
-        }
-        ASSERT(0 < num_threads);
-    }
-
+    PhyloTreeThreadingContext context(*this, params->parsimony_uses_max_threads);
     std::vector< std::vector<UINT*> > per_thread_path_parsimony;
     intptr_t pv_per_thread = Move::getParsimonyVectorSize(s.radius);
     intptr_t path_overhead = num_threads * pv_per_thread;
@@ -109,12 +97,7 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
             BenefitPair   benefit = source.getPartialDisconnectionBenefit(*this, targets);
             //LOG_LINE(VB_MIN, "for s=" << i << " bf=" << benefit.forwardBenefit
             //         << ", bb=" << benefit.backwardBenefit);
-#ifdef _OPENMP
-            int thread = omp_get_thread_num();
-            ASSERT(0<=thread && thread<num_threads);
-#else
-            int thread = 0;
-#endif
+            int thread = context.getThreadNumber();
             move.initialize(i, s.lazy_mode);
             move.findMove(*this, targets, s.radius,
                           benefit.forwardBenefit,
@@ -235,10 +218,6 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
              << positions_considered << ")");
     
     doneProgress();
-    
-    if (zeroNumThreadsWhenDone) {
-        num_threads = 0;
-    }
     
     if (VB_MED <= verbose_mode) {
         hideProgress();

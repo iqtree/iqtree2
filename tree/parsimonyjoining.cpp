@@ -1,13 +1,17 @@
 //
 //  parsimonyjoining.cpp
+//  This is a Neighbour Joining algorithm, that uses parsimony
+//  cost (for joining parsimony subtrees).
 //  Created by James Barbetti on 31-Oct-2020.
 //
 
 #include "phylotree.h"
 #include <placement/parallelparsimonycalculator.h>
+#include "phylotreethreadingcontext.h"
 #include <utils/rapidnj.h>
 #include <utils/auctionmatrix.h>
 #include <utils/timekeeper.h>
+
 
 class ParsimonyMatrix: public StartTree::NJMatrix<NJFloat> {
 protected:
@@ -239,7 +243,8 @@ int PhyloTree::joinParsimonyTree(const char *out_prefix,
     if (nseq < 3) {
         outError(ERR_FEW_TAXA);
     }
-
+    PhyloTreeThreadingContext context(*this, params->parsimony_uses_max_threads);
+    
     ParsimonyJoiningMatrixType pjm(*this);
     pjm.join();
     deleteAllPartialParsimony();

@@ -20,6 +20,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "phylotree.h"
+#include "phylotreethreadingcontext.h"
 #include "utils/starttree.h"
 #include "utils/progress.h"  //for progress_display
 //#include "rateheterogeneity.h"
@@ -562,7 +563,7 @@ void PhyloTree::logTaxaToBeRemoved(const map<string, Node*>& mapNameToNode) {
                 leftLength = nei->length;
             } else {
                 rightLink   = nei;
-                rightLength = nei->length;
+                rightLength = rightLink->length;
             }
         }
         LOG_LINE ( VB_MED, "Before deletion, " << it->second->name
@@ -570,7 +571,6 @@ void PhyloTree::logTaxaToBeRemoved(const map<string, Node*>& mapNameToNode) {
                   << " (left branch " << leftLength
                   << ", and right branch " << rightLength << ")");
     }
-
 }
 
 bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
@@ -2922,6 +2922,13 @@ set<int> PhyloTree::computeNodeBranchDists(Node *node, Node *dad) {
     FOR_NEIGHBOR_IT(node, dad, it) {
         if (!left) left = (*it)->node; else right = (*it)->node;
     }
+    ASSERT(left!=nullptr);
+    ASSERT(right!=nullptr);
+    if (left==nullptr || right==nullptr) {
+        set<int> res;
+        res.insert(node->id);
+        return res;
+    }
     set<int> resl = computeNodeBranchDists(left, node);
     set<int> resr = computeNodeBranchDists(right, node);
     for (i = resl.begin(); i != resl.end(); i++)
@@ -3507,16 +3514,20 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance,
 
 void PhyloTree::moveRoot(Node *node1, Node *node2) {
     // unplug root from tree
-    Node *root_dad = root->neighbors[0]->node;
-    Node *root_nei1 = NULL, *root_nei2 = NULL;
+    PhyloNode* root_dad  = getRoot()->firstNeighbor()->getNode();
+    PhyloNode* root_nei1 = nullptr;
+    PhyloNode* root_nei2 = nullptr;
     double len = 0.0;
-    FOR_NEIGHBOR_IT(root_dad, root, it) {
-        if (!root_nei1)
-            root_nei1 = (*it)->node;
-        else if (!root_nei2)
-            root_nei2 = (*it)->node;
-        else
+    FOR_EACH_ADJACENT_PHYLO_NODE(root_dad, root, it, node) {
+        if (root_nei1==nullptr) {
+            root_nei1 = node;
+        }
+        else if (root_nei2==nullptr) {
+            root_nei2 = node;
+        }
+        else {
             outError("Cannot move multifurcating root branch");
+        }
         len += (*it)->length;
     }
     root_nei1->updateNeighbor(root_dad, root_nei2, len);
@@ -3837,7 +3848,8 @@ double PhyloTree::computeDist(int seq1, int seq2, double initial_dist, double &d
     // if no model or site rate is specified, return JC distance
     if (initial_dist == 0.0) {
         if (params->compute_obs_dist) {
-            return (initial_dist = aln->computeObsDist(seq1, seq2));
+            initial_dist = aln->computeObsDist(seq1, seq2);
+            return initial_dist;
         } else {
             initial_dist = aln->computeDist(seq1, seq2);
         }
@@ -4009,6 +4021,7 @@ template <class L, class F> double computeDistanceMatrix
 
 double PhyloTree::computeDistanceMatrix_Experimental() {
     EX_START;
+    PhyloTreeThreadingContext context(*this, params->distance_uses_max_threads);
     if (model_factory!=nullptr && site_rate!=nullptr) {
         return computeDistanceMatrix();
     }

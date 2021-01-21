@@ -727,6 +727,8 @@ public:
 
     bool   use_compute_parsimony_tree_new;
     
+    bool   distance_uses_max_threads;
+    bool   parsimony_uses_max_threads;
     int    parsimony_nni_iterations;
     bool   parsimony_pll_spr;
     int    parsimony_spr_iterations;
@@ -1519,7 +1521,7 @@ public:
     /**
             path of the (YAML format) model definition file
      */
-    string model_file;
+    string yaml_model_file;
 
     /** model name to initialize GTR20 or NONREV protein model */
     char* model_name_init;

@@ -9,6 +9,7 @@
 #include <placement/parallelparsimonycalculator.h>
 #include <utils/timekeeper.h>
 #include "phylonode.h" //for GET_OTHER_ADJACENT_PHYLO_NODES
+#include "phylotreethreadingcontext.h"
 
 class PossibleExchange {
 public:
@@ -16,7 +17,8 @@ public:
     PhyloNode*  left;
     PhyloBranch middle;
     PhyloNode*  right;
-    double delta; //change in parsimony score.  The lower the better!
+    double      delta; //change in parsimony score.  The lower the better!
+                       //-ve indicates a reduction
     PossibleExchange(): left(nullptr), middle(nullptr, nullptr)
                       , right(nullptr), delta(0) {
     }
@@ -60,20 +62,7 @@ void PhyloTree::doParsimonyNNI() {
     PhyloBranchVector branches;
     getBranches(branches);
     intptr_t branch_count = branches.size();
-    
-    bool zeroNumThreads = false;
-    if (num_threads==0) {
-        if (0<params->num_threads) {
-            num_threads = params->num_threads;
-        } else {
-            #ifdef _OPENMP
-            num_threads = omp_get_max_threads();
-            #else
-            num_threads = 0;
-            #endif
-        }
-        zeroNumThreads = true;
-    }
+    PhyloTreeThreadingContext context(*this, params->parsimony_uses_max_threads);
     
     deleteAllPartialParsimony();
     setParsimonyKernel(params->SSE);
@@ -139,12 +128,7 @@ void PhyloTree::doParsimonyNNI() {
         for (int i=0; i<branch_count; ++i) {
             PhyloBranch tb(branches[i]);
             if ( tb.first->degree()==3 && tb.second->degree()==3 ) {
-                int t;
-                #ifdef _OPENMP
-                    t = omp_get_thread_num();
-                #else
-                    t = 0;
-                #endif
+                int t = context.getThreadNumber();
                 
                 PhyloNode* left1;
                 PhyloNode* left2;
@@ -217,6 +201,9 @@ void PhyloTree::doParsimonyNNI() {
                     actual_delta    += improvement;
                     parsimony_score -= improvement;
                     ++count_exchanged;
+                    
+                    
+                    
                     //Swap inward neighbours
                     x.left->updateNeighbor (x.middle.first,  x.middle.second);
                     x.right->updateNeighbor(x.middle.second, x.middle.first);
@@ -294,9 +281,4 @@ void PhyloTree::doParsimonyNNI() {
     }
     
     deleteAllPartialParsimony();
-    
-    if (zeroNumThreads) {
-        num_threads = 0;
-    }
-    
 }

@@ -30,8 +30,8 @@ phylosupertreeplen.cpp
 phylosupertreeplen.h
 phylosupertreeunlinked.cpp
 phylosupertreeunlinked.h
-phylotree.cpp
-phylotree.h
+phylotree.cpp phylotreethreadingcontext.cpp
+phylotree.h   phylotreethreadingcontext.h
 phylotreemixlen.cpp
 phylotreemixlen.h
 phylotreepars.cpp parsimonyjoining.cpp

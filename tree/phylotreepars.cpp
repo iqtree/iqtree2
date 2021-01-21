@@ -8,7 +8,7 @@
  */
 
 #include "phylotree.h"
-//#include "vectorclass/vectorclass.h"
+#include "phylotreethreadingcontext.h"
 #include "phylosupertree.h"
 #include <placement/taxontoplace.h>
 #include <placement/blockallocator.h>
@@ -1336,19 +1336,7 @@ int PhyloTree::computeParsimonyTreeNew(const char *out_prefix,
         LOG_LINE(VB_DEBUG, "Initial node " << aln->getSeqName(taxon_order[i]));
     }
     
-    bool zeroNumThreadsWhenDone = false;
-    if (num_threads<1) {
-        zeroNumThreadsWhenDone = true;
-        num_threads = params->num_threads;
-        if (num_threads==0) {
-            #ifdef _OPENMP
-                num_threads = omp_get_max_threads();
-            #else
-                num_threads = 1;
-            #endif
-        }
-        ASSERT(0 < num_threads);
-    }
+    PhyloTreeThreadingContext context(*this, params->parsimony_uses_max_threads);
     setParsimonyKernel(params->SSE);
     ensureCentralPartialParsimonyIsAllocated(num_threads);
     int index_parsimony = 0;
@@ -1406,12 +1394,7 @@ int PhyloTree::computeParsimonyTreeNew(const char *out_prefix,
         #pragma omp parallel for num_threads(num_threads)
         #endif
         for (intptr_t j=0; j<branch_count; ++j) {
-            int t;
-            #ifdef _OPENMP
-                t = omp_get_thread_num();
-            #else
-                t = 0;
-            #endif
+            int t = context.getThreadNumber();
             PhyloBranch b(branches[j]);
             PhyloNeighbor* nei1 = b.getLeftNeighbor();
             PhyloNeighbor* nei2 = b.getRightNeighbor();
@@ -1499,9 +1482,7 @@ int PhyloTree::computeParsimonyTreeNew(const char *out_prefix,
         PhyloNeighbor* rootNei = r->firstNeighbor();
         parsimony_score = ppc.computeParsimonyBranch(rootNei, r);
     }
-    if (zeroNumThreadsWhenDone) {
-        num_threads = 0;
-    }
+    
     bool orig_rooted = rooted;
     rooted = false;
     setAlignment(alignment);

@@ -910,6 +910,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.loglh_epsilon = 0.001;
     params.numSmoothTree = 1;
     params.use_compute_parsimony_tree_new = false;
+    params.distance_uses_max_threads  = false;
+    params.parsimony_uses_max_threads = false;
     params.parsimony_nni_iterations = 0;
     params.use_lazy_parsimony_spr   = false;
     params.parsimony_spr_iterations = 0;
@@ -2386,6 +2388,20 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.use_lazy_parsimony_tbr = true;
                 continue;
             }
+            if (arg=="-distance-uses-max-threads") {
+                params.distance_uses_max_threads = true;
+                continue;
+            }
+            if (arg=="-parsimony-uses-max-threads") {
+                params.parsimony_uses_max_threads = true;
+                continue;
+            }
+            if (arg=="-parsimony-nni") {
+                std::string next_arg = next_argument(argc, argv,
+                                                     "max_parsimony_nni_iterations", cnt);
+                params.parsimony_nni_iterations = atoi(next_arg.c_str());
+                continue;
+            }
             if (arg=="-parsimony-tbr") {
                 std::string next_arg = next_argument(argc, argv,
                                                      "max_parsimony_tbr_iterations", cnt);
@@ -2454,7 +2470,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
             if (arg=="--model-file" || arg=="-mf") {
-                params.model_file = next_argument(argc, argv,
+                params.yaml_model_file = next_argument(argc, argv,
                                                   "model_name", cnt);
                 continue;
             }
@@ -3304,12 +3320,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.nni_sort = true;
 				continue;
 			}
-            if (arg=="-parsimony-nni") {
-                std::string next_arg = next_argument(argc, argv,
-                                                     "max_parsimony_nni_iterations", cnt);
-                params.parsimony_nni_iterations = atoi(next_arg.c_str());
-                continue;
-            }
 			if (strcmp(argv[cnt], "-plog") == 0) {
 				params.gene_pvalue_loga = true;
 				continue;

@@ -1,6 +1,14 @@
 //
 //  parsimonyspr.cpp
 //  Parsimony SPR implementation
+//  (ParsimonyLazySPRMove scores possible SPR moves by considering
+//   only the length of the moving branch before and after a  move,
+//   ParsimonySPRMove scores them by properly calculating the
+//   parsimony score that will obtain if a move is done)
+//  (In practice ParsimonySPRMove is a lot more useful, because
+//   ParsimonyLazySPRMove suggests too many moves that don't really
+//   result in a benefit) (but with a better heuristic
+//   ParsimonyLazySPRMove might be competitive!)
 //  Created by James Barbetti on 8-Dec-2020.
 //
 
