@@ -197,7 +197,7 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
                      << " with original benefit " << move.getBenefit()
                      << " and current benefit " << benefit
                      << move.getDescription());
-            double revised_score = move.apply(*this, dummyBlocks, targets);
+            double revised_score = move.apply(*this, targets, dummyBlocks);
             if (parsimony_score <= revised_score) {
                 const char* same_or_worse = (parsimony_score < revised_score)
                 ? " a worse " : " the same ";
@@ -206,7 +206,7 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
                          << " (" << revised_score << ")");
                 //ParsimonyMove::apply() is its own inverse.  Calling it again
                 //with the same parameters, reverses what it did.
-                revised_score = move.apply(*this, dummyBlocks, targets);
+                revised_score = move.apply(*this, targets, dummyBlocks);
                 ASSERT( revised_score == parsimony_score );
             } else {
                 parsimony_score = revised_score;
