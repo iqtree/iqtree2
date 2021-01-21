@@ -31,6 +31,10 @@ public:
         initialize(0, true);
     }
     
+    static intptr_t getParsimonyVectorSize(intptr_t radius) {
+        return 0;
+    }
+    
     virtual void initialize(intptr_t first_branch_id, bool beLazy) {
         lazy                    = beLazy;
         benefit                 = -1.0;
@@ -124,7 +128,7 @@ public:
         return false;
     }
     virtual double recalculateBenefit(PhyloTree& tree, TargetBranchRange& branches,
-                              LikelihoodBlockPairs &blocks) {
+                              LikelihoodBlockPairs &blocks) const {
         
         auto t1 = branches[first_target_branch_id];
         auto t2 = branches[second_target_branch_id];
@@ -293,8 +297,9 @@ public:
         branch.updateMapping(id, left, right, false);
     }
     
-    virtual double apply(PhyloTree& tree, LikelihoodBlockPairs blocks,
-                 TargetBranchRange& branches) {
+    virtual double apply(PhyloTree& tree,
+                         TargetBranchRange& branches,
+                         LikelihoodBlockPairs blocks) {
         //
         //Apply a TBR move (letters are indicative):
         //  A   B  G-H       A-B G   H
@@ -365,7 +370,6 @@ void PhyloTree::doParsimonyTBR() {
         
     s.name                      = "TBR";
     s.iterations                = params->parsimony_tbr_iterations;
-    s.path_over_head_per_thread = 0;
     s.lazy_mode                 = params->use_lazy_parsimony_tbr;
     s.radius                    = params->sprDist; //no tbrDist member (yet)
 

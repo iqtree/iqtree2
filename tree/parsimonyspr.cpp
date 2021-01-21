@@ -109,6 +109,9 @@ namespace {
         ParsimonyLazySPRMove(): super() {
             initialize(0, true);
         }
+        static intptr_t getParsimonyVectorSize(intptr_t radius) {
+            return 0;
+        }
         virtual void initialize(intptr_t source_branch, bool beLazy) {
             lazy             = beLazy;
             benefit          = -1.0;
@@ -184,17 +187,17 @@ namespace {
             }
         }
         virtual double recalculateBenefit(PhyloTree& tree, TargetBranchRange& branches,
-                                  LikelihoodBlockPairs &blocks) {
+                                  LikelihoodBlockPairs &blocks) const {
             TargetBranch& source = branches[source_branch_id];
             TargetBranch& target = branches[target_branch_id];
             source.computeState(tree, source_branch_id, blocks);
             target.computeState(tree, target_branch_id, blocks);
             BenefitPair benefitPair = source.getPartialDisconnectionBenefit(tree, branches);
-            double   benefit = isForward ? benefitPair.forwardBenefit : benefitPair.backwardBenefit;
-            double   cost    = isForward
-                             ? source.getForwardConnectionCost(tree, target)
-                             : source.getBackwardConnectionCost(tree, target);
-            return benefit - cost;
+            double updated_benefit  = isForward ? benefitPair.forwardBenefit : benefitPair.backwardBenefit;
+            double updated_cost     = isForward
+                                    ? source.getForwardConnectionCost(tree, target)
+                                    : source.getBackwardConnectionCost(tree, target);
+            return updated_benefit - updated_cost;
         }
         //Note: callers may assume that ParsimonyLazySPRMove::apply
         //      is its own inverse (that calling it a second time,
@@ -202,8 +205,9 @@ namespace {
         //      reverse the changes that calling it the first time
         //      made).
         //
-        virtual double apply(PhyloTree& tree, LikelihoodBlockPairs blocks,
-                     TargetBranchRange& branches) {
+        virtual double apply(PhyloTree& tree,
+                             TargetBranchRange& branches,
+                             LikelihoodBlockPairs blocks) {
             TargetBranch& source     = branches[source_branch_id];
             TargetBranch& target     = branches[target_branch_id];
             PhyloNode*    moved_node = isForward ? source.first : source.second;
@@ -269,7 +273,11 @@ namespace {
             ParsimonySPRMove(const this_type& rhs) = default;
             ParsimonySPRMove& operator=(const this_type& rhs) = default;
             ParsimonySPRMove() = default;
-        
+
+            static intptr_t getParsimonyVectorSize(intptr_t radius) {
+                return radius + 1;
+            }
+
             struct ProperSPRSearch: public LazySPRSearch {
                 public:
                 typedef LazySPRSearch super;
@@ -282,10 +290,9 @@ namespace {
                     //vector of the view, from x, towards the subtree
                     //containing left, OR the parsimony vector of the view
                     //from x, towards the subtree containing right.
-                    //The others are all "private" to the search and will
-                    //be calculated (and repeatedly overwritten) during the
-                    //search.                
-                
+                    //The other radius + 1 entries are all "private" to the
+                    //search and will be calculated (and repeatedly overwritten)
+                    //during the search.                
                 ProperSPRSearch(const PhyloTree& phylo_tree,
                           const TargetBranchRange& target_branches,
                           double disconnection_benefit,
@@ -449,7 +456,6 @@ void PhyloTree::doParsimonySPR() {
         
     s.name                      = "SPR";
     s.iterations                = params->parsimony_spr_iterations;
-    s.path_over_head_per_thread = params->sprDist + 1;
     s.lazy_mode                 = params->use_lazy_parsimony_spr;
     s.radius                    = params->sprDist;
 

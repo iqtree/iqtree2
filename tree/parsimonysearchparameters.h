@@ -13,7 +13,6 @@ class ParsimonySearchParameters
 public:
     std::string name;
     intptr_t    iterations;
-    intptr_t    path_over_head_per_thread;
     bool        lazy_mode;
     intptr_t    radius;
 };

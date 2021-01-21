@@ -41,7 +41,8 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
     }
 
     std::vector< std::vector<UINT*> > per_thread_path_parsimony;
-    size_t path_overhead = num_threads * (s.radius+1);
+    intptr_t pv_per_thread = Move::getParsimonyVectorSize(s.radius);
+    intptr_t path_overhead = num_threads * pv_per_thread;
         
     deleteAllPartialLhAndParsimony();
     initializeTree(); //to ensure all branches are properly numbered
@@ -57,7 +58,7 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
     per_thread_path_parsimony.resize(num_threads);
     for (int thread=0; thread<num_threads; ++thread) {
         block_allocator.allocateVectorOfParsimonyBlocks
-        ( s.radius+1, per_thread_path_parsimony[thread]);
+        (pv_per_thread, per_thread_path_parsimony[thread]);
     }
         
     initializing.stop();

@@ -11,6 +11,11 @@ ParsimonyMove::ParsimonyMove(): lazy(false), benefit(-1.0)
                               , positions_considered(0) {
 }
 
+intptr_t ParsimonyMove::getParsimonyVectorSize(intptr_t radius) {
+    ASSERT(0 && "getParsimonyVectorSize implementation not provided");
+    return 0;
+}
+
 bool ParsimonyMove::operator < (const ParsimonyMove& rhs) const {
     return benefit < rhs.benefit;
 }
