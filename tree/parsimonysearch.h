@@ -12,6 +12,32 @@
 
 template <class Move>
 void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
+    //
+    //The "big picture" steps, after initialization is done
+    //  1. Evaluation (scoring possible moves) (in parallel).
+    //     Moves for each "starting point") (e.g. the "connecting"
+    //     branch of a subtree to be pruned and regrafted, in SPR)
+    //     are considered *sequentially*, but every thread can run
+    //     a sequential search for a different "starting point",
+    //     independently of all the other threads. Each search
+    //     finds the most beneficial move (if any) with a given
+    //     starting point.
+    //  2. Sorting (of beneficial moves) (sequential).
+    //     Moves that aren't beneficial are filtered out.
+    //     Moves that are beneficial are sorted by *ascending*
+    //     benefit.
+    //  3. Applying (of the most beneficial moves) (sequential).
+    //     The beneficial moves are considered from right to left
+    //     (order of decreasing benefit).  They are (perhaps
+    //     re-evaluated) and applied (and tree parsimony
+    //     recalculated). Those that increased the parsimony score
+    //     (required more evolution) and backed out of
+    //     (taking advantage of the way that immediately calling
+    //     ParsimonyMove::apply again is *required* to back out of
+    //     the move that was just applied).
+    //
+    
+    
     intptr_t branch_count    = leafNum * 2 - 3; //assumed > 3
     int      index_parsimony = 0;
     
@@ -51,8 +77,9 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
         
     initializing.stop();
     
-    size_t  moves_applied    = 0;
-    size_t  moves_considered = 0;
+    size_t  moves_considered     = 0;
+    size_t  moves_still_possible = 0;
+    size_t  moves_applied        = 0;
     int64_t positions_considered = 0;
     for (size_t iteration=1; iteration<=s.iterations;++iteration) {
         rescoring.start();
@@ -66,6 +93,7 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
             LOG_LINE(VB_MIN, "Applied " << moves_applied << " move"
                      << ((1==moves_applied) ? "" : "s")
                      << " (out of " << moves_considered << ")"
+                     << " (" << moves_still_possible << " still posible)"
                      << " in iteration " << (iteration-1)
                      << " (parsimony now " << parsimony_score << ")");
         }
@@ -126,6 +154,7 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
         LOG_LINE(VB_MAX, "Considering " << moves_considered
                  << " potentially beneficial " << s.name << " moves");
         moves_applied=0;
+        moves_still_possible=0;
         
         size_t i=moves_considered;
         while (0<i) {
@@ -134,9 +163,7 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
             LOG_LINE(VB_DEBUG, "considering " << s.name << " move " << i
                      << " with benefit " << move.benefit
                      << move.getDescription() );
-            if ( move.getBenefit() <= 0 ) {
-                break;
-            }
+            
             PhyloBranchVector path;
             if ( move.isNoLongerPossible(targets, path) ) {
                 //The tree topology has changed and this move
@@ -149,6 +176,7 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
                          << " is no longer possible.");
                 continue;
             }
+            ++moves_still_possible;
             double benefit = move.getBenefit();
             if (s.lazy_mode) {
                 benefit = move.recalculateBenefit(*this, targets, dummyBlocks) ;
@@ -212,6 +240,7 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
     LOG_LINE(VB_MIN, "Applied " << moves_applied << " move"
              << ((1==moves_applied) ? "" : "s")
              << " (out of " << moves_considered << ")"
+             << " (" << moves_still_possible << " still posible)"
              << " in last iteration "
              << " (parsimony now " << parsimony_score << ")"
              << " (total " << s.name << " moves examined "

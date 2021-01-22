@@ -42,12 +42,28 @@ bool ParsimonyMove::isNoLongerPossible(const TargetBranchRange& branches,
 }
 
 bool ParsimonyMove::isAConnectedThroughBToC
-     ( PhyloNode* a, PhyloNode* b,
+     ( const PhyloTree& tree, PhyloNode* a, PhyloNode* b,
        PhyloNode* c, PhyloBranchVector& path) const {
     //Note: This uses a breadth-first search, because the
     //SPR radius is likely to be low (and a depth-first
     //search would have an expected running time proportional
     //to the size of the tree) (though it would be prettier!).
+         
+    //
+    //Note 1: it would be faster, to search from *both* ends
+    //        with a second search radiating outward from c
+    //        if (c connects to a before b connects to c, return
+    //        false, no such path). Though, that would
+    //        be more complicated and you'd need a BoolVector
+    //        to keep track of which nodes had been reached, to know
+    //        when a successful path.
+    //        (first half:  from a, through b to x)
+    //        (second half: from c to x)
+    //Note 2: there doesn't seem to be much point making it
+    //        faster, because checking nodes are still connected
+    //        is ony a small
+        
+         
     std::vector<PhyloBranch> this_layer;
     std::vector<PhyloBranch> previous_layers;
     this_layer.push_back(PhyloBranch(a,b));

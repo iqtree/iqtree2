@@ -180,7 +180,7 @@ namespace {
             s.searchForBackwardsSPR(right, tb.second, radius);
         }
         virtual bool isStillPossible(const TargetBranchRange& branches,
-                             PhyloBranchVector& path) const {
+                                     PhyloBranchVector& path) const {
             path.clear();
             const TargetBranch& source = branches[source_branch_id];
             if (source.first  != source_first)   return false;
@@ -189,9 +189,9 @@ namespace {
             if (target.first  != target_first)   return false;
             if (target.second != target_second) return false;
             if (isForward) {
-                return isAConnectedThroughBToC(source.second, source.first, target.first, path);
+                return isAConnectedThroughBToC(tree, source.second, source.first, target.first, path);
             } else {
-                return isAConnectedThroughBToC(source.first, source.second, target.first, path);
+                return isAConnectedThroughBToC(tree, source.first, source.second, target.first, path);
             }
         }
         virtual double recalculateBenefit(PhyloTree& tree, TargetBranchRange& branches,

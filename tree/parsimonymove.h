@@ -84,18 +84,18 @@ public:
                             const TargetBranchRange& branches) = 0;
     
     /** determines whether the most beneficial move (if there was one) is still
-     * possible.  This should always return false if no beneficial move was found
-     * @param branches an up-to-date vector of TargetBranch instances
-     *        that correspond 1:1 with the branches in the tree.
-     * @param path a PhyloBranchVector into which the "certifying path"
-     *        (that proves the move is still possible) is to be written.
-     *        (cleared if the return the move is no longer possible)
-     * @return true if the move is still possible
-     * @note I'm not sure that the path parameter is really needed by any caller.
-     *       it might be worth removing it. -James B. 21-Jan-2021
+     *  possible.  This should always return false if no beneficial move was found
+     *  @param branches an up-to-date vector of TargetBranch instances
+     *         that correspond 1:1 with the branches in the tree.
+     *  @param path a PhyloBranchVector into which the "certifying path"
+     *         (that proves the move is still possible) is to be written.
+     *         (cleared if the return the move is no longer possible)
+     *  @return true if the move is still possible
+     *  @note I'm not sure that the path parameter is really needed by any caller.
+     *        it might be worth removing it. -James B. 21-Jan-2021
      */
     virtual bool   isStillPossible(const TargetBranchRange& branches,
-                                 PhyloBranchVector& path) const = 0;
+                                   PhyloBranchVector& path) const = 0;
 
     /** Recalculate the net benefit of a move
      * @param tree the phylo tree
@@ -148,8 +148,9 @@ public:
     
     /** Indicates whether there is a path from node a to node c, through node b,
      *  and if there is one, returns it in path.  If there isn't path is cleared.
+     *  @param tree the phylo tree
      *  @param a the starting node
-     *  @param b a node that must be on the path
+     *  @param b a node that must be on the path adjacent to a
      *  @param c the destination node
      *  @param path the first path found (and, we can hope, the only path)
      *  @return true if there is a path
@@ -159,8 +160,9 @@ public:
      *  on average, return much more quickly than a *successful* depth-first
      *  search would) (performance in the "not connected case" is less important).
      */
-    bool isAConnectedThroughBToC(PhyloNode* a, PhyloNode* b,
-                                 PhyloNode* c, PhyloBranchVector& path) const;
+    bool isAConnectedThroughBToC(const PhyloTree& tree, PhyloNode* a,
+                                         PhyloNode* b, PhyloNode* c,
+                                         PhyloBranchVector& path) const;
 };
 
 #endif /* parsimonymove_hpp */
