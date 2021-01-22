@@ -96,7 +96,7 @@ public:
     }
     
     virtual bool isStillPossible(const TargetBranchRange& branches,
-                         PhyloBranchVector& path) const {
+                                 PhyloBranchVector& path) const {
         path.clear();
         if (branches[source_branch_id] != copy_of_source) {
             return false;
@@ -116,22 +116,30 @@ public:
         if (doBranchesTouch(branches, first_target_branch_id, second_target_branch_id)) {
             return false;
         }
-        PhyloNode* a  = copy_of_first_target.first;
-        PhyloNode* b  = copy_of_source.first;
-        PhyloNode* c  = copy_of_second_target.first;
-        bool connected = isAConnectedThroughBToC(a,b,c, path);
-        if (!connected) {
+        PhyloNode* front       = copy_of_source.first;  //front of moving branch
+                                                        //(looking forward)
+        PhyloNode* back        = copy_of_source.second; //back of moving branch
+        PhyloNode* x           = copy_of_first_target.first;
+        PhyloBranchVector        pathLeft;  //path to first target branch
+        PhyloBranchVector        pathRight; //path to second target branch
+        bool x_front_connected = isAConnectedThroughBToC(back,front,x, pathLeft);
+        PhyloNode* y           = copy_of_second_target.first;
+        bool y_back_connected  = isAConnectedThroughBToC(front, back, y, pathRight);
+        if (x_front_connected!=y_back_connected) {
             return false;
         }
-        //There's more to it! The path must go *through* the source
-        //branch (the branch that will move), not just touch it.
-        PhyloNode* b2 = copy_of_source.second;
-        for (PhyloBranch branch : path) {
-            if (branch.first==b && branch.second==b2) return true;
-            if (branch.first==b2 && branch.second==b) return true;
+        if (x_front_connected) {
+            std::swap(pathLeft, path);
+        } else {
+            ASSERT(isAConnectedThroughBToC(front, back,  x, pathLeft));
+            ASSERT(isAConnectedThroughBToC(back,  front, y, path));
         }
-        path.clear();
-        return false;
+        path.reverseAll();
+        path.pop_back();
+        for (auto branch : pathLeft) {
+            path.push_back(branch);
+        }
+        return true;
     }
     virtual double recalculateBenefit(PhyloTree& tree, TargetBranchRange& branches,
                               LikelihoodBlockPairs &blocks) const {

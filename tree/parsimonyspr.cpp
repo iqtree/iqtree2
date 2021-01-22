@@ -189,9 +189,9 @@ namespace {
             if (target.first  != target_first)   return false;
             if (target.second != target_second) return false;
             if (isForward) {
-                return isAConnectedThroughBToC(tree, source.second, source.first, target.first, path);
+                return isAConnectedThroughBToC(source.second, source.first, target.first, path);
             } else {
-                return isAConnectedThroughBToC(tree, source.first, source.second, target.first, path);
+                return isAConnectedThroughBToC(source.first, source.second, target.first, path);
             }
         }
         virtual double recalculateBenefit(PhyloTree& tree, TargetBranchRange& branches,

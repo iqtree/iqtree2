@@ -148,7 +148,6 @@ public:
     
     /** Indicates whether there is a path from node a to node c, through node b,
      *  and if there is one, returns it in path.  If there isn't path is cleared.
-     *  @param tree the phylo tree
      *  @param a the starting node
      *  @param b a node that must be on the path adjacent to a
      *  @param c the destination node
@@ -160,9 +159,9 @@ public:
      *  on average, return much more quickly than a *successful* depth-first
      *  search would) (performance in the "not connected case" is less important).
      */
-    bool isAConnectedThroughBToC(const PhyloTree& tree, PhyloNode* a,
-                                         PhyloNode* b, PhyloNode* c,
-                                         PhyloBranchVector& path) const;
+    bool isAConnectedThroughBToC(PhyloNode* a,
+                                 PhyloNode* b, PhyloNode* c,
+                                 PhyloBranchVector& path) const;
 };
 
 #endif /* parsimonymove_hpp */

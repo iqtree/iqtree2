@@ -42,7 +42,7 @@ bool ParsimonyMove::isNoLongerPossible(const TargetBranchRange& branches,
 }
 
 bool ParsimonyMove::isAConnectedThroughBToC
-     ( const PhyloTree& tree, PhyloNode* a, PhyloNode* b,
+     ( PhyloNode* a, PhyloNode* b,
        PhyloNode* c, PhyloBranchVector& path) const {
     //Note: This uses a breadth-first search, because the
     //SPR radius is likely to be low (and a depth-first
