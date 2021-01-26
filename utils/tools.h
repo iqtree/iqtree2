@@ -686,7 +686,7 @@ public:
 	/**
 	 *  SPR distance (radius) for parsimony tree
 	 */
-	int sprDist;
+	int spr_radius;
 
     /** cost matrix file for Sankoff parsimony */
     char *sankoff_cost_file;
@@ -733,10 +733,17 @@ public:
     bool   parsimony_pll_spr;
     int    parsimony_spr_iterations;
     bool   use_lazy_parsimony_spr;
-    int    parsimony_tbr_iterations;
-    bool   use_lazy_parsimony_tbr;
-    bool   optimize_ml_tree_with_parsimony;
+    
+    /**
+     *  TBR distance (radius) for parsimony tree
+     */
+    int   tbr_radius;
 
+    int    parsimony_tbr_iterations;
+
+    bool   use_lazy_parsimony_tbr;
+
+    bool   optimize_ml_tree_with_parsimony;
 	/**
 	 *  New search heuristics (DEFAULT: ON)
 	 */

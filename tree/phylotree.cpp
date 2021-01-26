@@ -4881,7 +4881,7 @@ double PhyloTree::swapSPR_old(double cur_score,      int cur_depth,
         // add to candidate SPR moves
         spr_moves.add(SPRMove(node1, dad1, node2, dad2, score));
     }
-    if (cur_depth >= spr_radius)
+    if (cur_depth >= params->spr_radius)
     {
         return cur_score;
     }
@@ -5106,7 +5106,7 @@ double PhyloTree::swapSPR(double cur_score, int cur_depth, PhyloNode *node1, Phy
         // Tung : why adding negative SPR move ?
         spr_moves.add(SPRMove(node1, dad1, node2, dad2, score));
     }
-    if (cur_depth >= spr_radius) {
+    if (cur_depth >= params->spr_radius) {
         return cur_score;
     }
     spr_path.push_back(node2_nei);
@@ -5210,7 +5210,6 @@ double PhyloTree::assessSPRMove(double cur_score, const SPRMove &spr) {
 double PhyloTree::optimizeSPR() {
     fixNegativeBranch();
     double cur_score = computeLikelihood();
-    spr_radius = params->sprDist;
     for (int i = 0; i < 100; i++) {
         cout << "i = " << i << endl;
         spr_moves.clear();

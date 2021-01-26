@@ -23,6 +23,7 @@ public:
     typedef  ParsimonyLazyTBRMove this_type;
     typedef  ParsimonyMove        super;
 
+    double   disconnection_benefit; //benefit of snipping the source branch
     intptr_t first_target_branch_id;
     intptr_t second_target_branch_id;
     intptr_t better_positions;
@@ -31,6 +32,11 @@ public:
     PhyloBranch copy_of_first_target;
     PhyloBranch copy_of_second_target;
     
+    int depth; //search depth is used for tie breaks
+               //when two TBR moves have equal benefit. Short range
+               //tbr moves mess up less of the tree, and are to
+               //be preferred over long-range moves, for that reason.
+
     ParsimonyLazyTBRMove(const this_type& rhs)            = default;
     ParsimonyLazyTBRMove& operator=(const this_type& rhs) = default;
     ParsimonyLazyTBRMove(): super() {
@@ -41,11 +47,11 @@ public:
         return 0;
     }
     
-    virtual void initialize(intptr_t first_branch_id, bool beLazy) {
+    virtual void initialize(intptr_t id_of_source_branch, bool beLazy) {
         lazy                    = beLazy;
         benefit                 = -1.0;
-        source_branch_id        = -1;
-        first_target_branch_id  = first_branch_id;
+        source_branch_id        = id_of_source_branch;
+        first_target_branch_id  = -1;
         second_target_branch_id = -1;
         copy_of_source          = PhyloBranch(nullptr, nullptr);
         copy_of_first_target    = PhyloBranch(nullptr, nullptr);
@@ -64,7 +70,7 @@ public:
     
     virtual void finalize(PhyloTree& tree,
                   const TargetBranchRange& branches) {
-        if (source_branch_id < 0 || second_target_branch_id < 0) {
+        if (first_target_branch_id < 0 || second_target_branch_id < 0) {
             return;
         }
         if (0<benefit) {
@@ -153,114 +159,117 @@ public:
         return branches[source_branch_id].getBranchCost() - reconnect_cost;
     }
     
-    struct TBRSnip {
+    class LazyTBRSearch {
     public:
-        intptr_t bisection_branch_id;
-        double   bisection_benefit;
-        TBRSnip(): bisection_branch_id(-1), bisection_benefit(0.0) {}
-        TBRSnip& operator = (const TBRSnip& rhs) = default;
-        bool operator < (const TBRSnip& rhs) const {
-            return bisection_benefit < rhs.bisection_benefit;
+        const PhyloTree&         tree;
+        const TargetBranchRange& branches;
+        int                      max_radius;
+        std::vector<UINT*>&      path_parsimony;
+        double                   parsimony_score; //of the tree as it is *before* any TBR move
+        ParsimonyLazyTBRMove&    move;
+        PhyloNode*               front;
+        PhyloNode*               back;
+        intptr_t                 first_id;
+        int                      first_depth;
+        
+        LazyTBRSearch(const PhyloTree& t, const TargetBranchRange& b, int r,
+                  std::vector<UINT*>& p, double s, ParsimonyLazyTBRMove& m )
+            : tree(t), branches(b), max_radius(r)
+            , path_parsimony(p), parsimony_score(s), move(m) {
+            auto source = branches[m.source_branch_id];
+            front       = source.first;
+            back        = source.second;
         }
-    };
-    typedef std::vector<TBRSnip> SnipList;
-    
-    struct TBRState: public TBRSnip {
-    public:
-        intptr_t reconnection_branch_id;
-        double   reconnection_cost;
-        TBRState(): reconnection_branch_id(-1), reconnection_cost(0.0) {}
-        bool operator < (const TBRState& rhs) const {
-            return bisection_benefit - reconnection_cost
-            <  rhs.bisection_benefit - rhs.reconnection_cost;
-        }
-    };
-    
-    TBRState searchForMove(const PhyloTree& tree,
-                           const TargetBranchRange& branches,
-                           PhyloNode* here, PhyloNode* prev,
-                           SnipList& list, int radius, int max_radius) {
-        ++positions_considered;
-        bool messed_with_path = false;
-        if (4<radius) {
-            if (list[radius-3] < list[radius-4]) {
-                messed_with_path = true;
-                std::swap(list[radius-4], list[radius-3]);
+         /**
+          * @param from    where we are
+          * @param prev    where we were
+          * @param depth  how far we have gone (0 if we are on a branch adjacent
+          *              to the source branch).
+          * @note  this should not be declared virtual, as it has the same name
+          *        as a member function of one of its subclasses and we want
+          *        LazyTBRSearch::findMove to see *this* function, not the version
+          *        in the subclass.
+          */
+        void searchPart1(PhyloNode* from, PhyloNode* prev, int depth) {
+            if (depth<max_radius-3) {
+                FOR_EACH_ADJACENT_PHYLO_NODE(from, prev, it, node) {
+                    searchPart1(node, from, depth+1);
+                }
             }
-        }
-        TBRState            best;
-        if (1<radius) {
-            intptr_t            branch_id    = here->findNeighbor(prev)->id;
-            const TargetBranch& branch       = branches[branch_id];
-            list[radius].bisection_branch_id = branch_id;
-            list[radius].bisection_benefit   = branch.getBranchCost();
-            if (4<radius) {
-                int  connection_cost         = 0;
-                auto start_branch            = branches[first_target_branch_id];
-                tree.computeParsimonyOutOfTree(start_branch.getParsimonyBlock(),
-                                               branch.getParsimonyBlock(),
-                                               &connection_cost);
-                TBRSnip& snip                = list[radius-3];
-                best.bisection_branch_id     = snip.bisection_branch_id;
-                best.bisection_benefit       = snip.bisection_benefit;
-                best.reconnection_branch_id  = branch_id;
-                best.reconnection_cost       = connection_cost;
-                connection_cost = 0;
-                better_positions += (best.bisection_benefit > connection_cost ) ? 1 : 0;
-            }
-        }
-        if (radius<max_radius) {
-            FOR_EACH_ADJACENT_PHYLO_NODE(here, prev, it, next) {
-                auto move = searchForMove(tree, branches, next, here,
-                                          list, radius+1, max_radius);
-                if (best < move) {
-                    best = move;
+            if (1<depth) {
+                first_id    = prev->findNeighbor(from)->id;
+                first_depth = depth;
+                FOR_EACH_ADJACENT_PHYLO_NODE(back, front , it, node) {
+                    searchPart2(node, back, depth+1);
                 }
             }
         }
-        if (messed_with_path) {
-            std::swap(list[radius-4], list[radius-3]);
-        }
-        return best;
-    }
-    
-    void findBestMoveWithFirstTarget(const PhyloTree& tree,
-                                     const TargetBranchRange& branches,
-                                     int max_radius, intptr_t first_target_id,
-                                     bool lazy_mode) {
-        auto t1 = branches[first_target_id];
-        SnipList list;
-        list.resize(max_radius+1);
-        TBRState best;
-        FOR_EACH_ADJACENT_PHYLO_NODE(t1.first, t1.second, it, node) {
-            TBRState state = searchForMove(tree, branches, t1.first,
-                                           node, list, 0, max_radius);
-            if (best<state) {
-                best=state;
+        /**
+         * @param from    where we are
+         * @param prev    where we were
+         * @param depth  how far we have searched on both sides of the
+         *              source branch (==first_depth+1, if we are looking at
+         *              a branch adjacent to the "back" end of the source branch).
+         * @note  this should not be declared virtual, as it has the same name
+         *        as a member function of one of its subclasses and we want
+         *        LazyTBRSearch::findMove to see *this* function, not the version
+         *        in the subclass.
+         */
+        void searchPart2(PhyloNode* from, PhyloNode* prev,
+                         int depth) {
+            if (depth<max_radius-1) {
+                FOR_EACH_ADJACENT_PHYLO_NODE(from, prev, it, node) {
+                    searchPart2(node, from, depth+1);
+                }
+            }
+            if (first_depth+2<depth) {
+                intptr_t second_id  = from->findNeighbor(prev)->id;
+                auto branch_one     = branches[first_id];
+                auto branch_two     = branches[second_id];
+                int  reconnect_cost = 0;
+                tree.computeParsimonyOutOfTree(branch_one.getParsimonyBlock(),
+                                               branch_two.getParsimonyBlock(),
+                                               &reconnect_cost);
+                double gain = move.disconnection_benefit - reconnect_cost;
+                considerMove(first_id, second_id, gain, depth);
             }
         }
-        FOR_EACH_ADJACENT_PHYLO_NODE(t1.second, t1.first, it, node) {
-            TBRState state = searchForMove(tree, branches, t1.second,
-                                           node, list, 0, max_radius);
-            if (best<state) {
-                best=state;
+        void considerMove(intptr_t first_id, intptr_t second_id,
+                          double gain, int depth) {
+            ++move.positions_considered;
+            if (gain > move.benefit ||
+                (gain==move.benefit && depth<move.depth)) {
+                move.first_target_branch_id  = first_id;
+                move.second_target_branch_id = second_id;
+                move.benefit                 = gain;
+                move.depth                   = depth;
             }
+
         }
-        auto best_score = best.bisection_benefit - best.reconnection_cost;
-        if ( 0 < best_score ) {
-            second_target_branch_id = best.reconnection_branch_id;
-            source_branch_id        = best.bisection_branch_id;
-            benefit                 = best_score;
-        }
-    }
+    };
     
     virtual void findMove(const PhyloTree& tree,
                           const TargetBranchRange& branches,
                           int radius, double disconnection_benefit,
-                          std::vector<UINT*> &path_parsimony,
+                          std::vector<UINT*>& path_parsimony,
                           double parsimony_score) {
-        findBestMoveWithFirstTarget(tree, branches, radius,
-                                    first_target_branch_id, lazy);
+        auto source_branch    = branches[source_branch_id];
+        PhyloNode* front      = source_branch.first;
+        PhyloNode* back       = source_branch.second;
+        
+        if (front->isLeaf()) {
+            return;
+        }
+        if (back->isLeaf()) {
+            return;
+        }
+        disconnection_benefit = source_branch.getBranchCost();
+        depth                 = radius;
+        LazyTBRSearch s(tree, branches, radius,
+                    path_parsimony, parsimony_score, *this);
+        FOR_EACH_ADJACENT_PHYLO_NODE(front, back, it, node) {
+            s.searchPart1(node, front, 0);
+        }
     }
     
     void getOtherNeighbors(PhyloNode* of, PhyloNode* but_not,
@@ -363,7 +372,7 @@ public:
         double score;
         for (int i=0; i<7; ++i) {
             auto id = branch_ids[i];
-            TargetBranch& branch = branches[branch_ids[i]];
+            TargetBranch& branch = branches[id];
             score = branch.computeState(tree, id, blocks);
             branch.setParsimonyLength(tree);
         }
@@ -371,10 +380,157 @@ public:
                       << " after applying TBR move was " << score);
         return score;
     }
-    
 }; //ParsimonyLazyTBRMove
-}; //namespace
 
+
+struct ProperParsimonyTBRMove : public ParsimonyLazyTBRMove {
+public:
+    typedef ParsimonyLazyTBRMove super;
+    static intptr_t getParsimonyVectorSize(intptr_t radius) {
+        return radius+1;
+    }
+    class ProperTBRSearch: public LazyTBRSearch {
+    public:
+        typedef LazyTBRSearch super;
+        std::vector<PhyloNode*> path;
+        UINT*  front_parsimony;
+        double front_score;
+        UINT*  back_parsimony;
+        double back_score;
+        ProperTBRSearch(const PhyloTree& t, const TargetBranchRange& b, int r,
+                  std::vector<UINT*>& p, double s, ParsimonyLazyTBRMove& m )
+            : super(t, b, r, p, s, m), front_parsimony(nullptr)
+            , back_parsimony(nullptr) {
+            path.resize(max_radius, nullptr);
+        }
+        inline UINT* offPathParsimony(PhyloNode* a, PhyloNode* b, PhyloNode* c ) {
+            //parsimony, viewed from a, to its non-b, non-c neighbor
+            //ASSERT(a!=nullptr && b!=nullptr && c!=nullptr && b!=c && a!=b && a!=c);
+            FOR_EACH_PHYLO_NEIGHBOR(a, b, it, nei) {
+                if (nei->getNode() != c) {
+                    return nei->get_partial_pars();
+                }
+            }
+            ASSERT(false && "could not find third adjacent node");
+            return nullptr;
+        }
+        
+        /**
+         * @param from    where we are
+         * @param prev    where we were
+         * @param depth  how far we have gone (0 if we are on a branch adjacent
+         *              to the source branch).
+         * @note  path_parsimony[max_radius-1] is the calculated vector
+         *        for the view of the subtree from the first target branch.
+         *        path[0..depth-1] are the nodes visited in the path to "prev".
+         */
+        void searchPart1(PhyloNode* from, PhyloNode* prev, int depth) {
+            path[depth] = prev;
+            if (0==depth) {
+                front_parsimony = offPathParsimony(front, from, back);
+            }
+            else {
+                UINT* on_path     = (depth>1) ? path_parsimony[depth-2]: front_parsimony;
+                UINT* off_path    = offPathParsimony ( prev, from, path[depth-1] );
+                tree.computePartialParsimonyOutOfTree(off_path, on_path,
+                                                          path_parsimony[depth-1]);
+                if (1<depth) {
+                    PhyloNeighbor* nei = prev->findNeighbor(from);
+                    front_score        = tree.computePartialParsimonyOutOfTree
+                                         ( path_parsimony[depth-1],
+                                           nei->get_partial_pars(),
+                                           path_parsimony[max_radius-1]);
+                    first_id           = nei->id;
+                    first_depth        = depth;
+                    FOR_EACH_ADJACENT_PHYLO_NODE(back, front , it, node) {
+                        searchPart2(node, back, depth+1);
+                    }
+                }
+            }
+            if (depth<max_radius-3) {
+                FOR_EACH_ADJACENT_PHYLO_NODE(from, prev, it, node) {
+                    searchPart1(node, from, depth+1);
+                }
+            }
+        }
+        /**
+         * @param from    where we are (on the back side of the source branch)
+         * @param prev    where we were
+         * @param depth  how far we have searched on both sides of the
+         *              source branch (==first_depth+1, if we are looking at
+         *              a branch adjacent to the "back" end of the source branch).
+         * @note  path_parsimony[max_radius] is the calculated vector
+         *        for the view of the subtree from the second target branch.
+         *        path[0..first_depth]] are the nodes visited in the path from
+         *        front to the first target branch.
+         *        path[first_depth+1..depth-1] are the nodes visited in the path
+         *        from back to where we are search now.
+         */
+        void searchPart2(PhyloNode* from, PhyloNode* prev,
+                         int depth) {
+            path[depth] = prev;
+            if ( first_depth + 1 == depth ) {
+                back_parsimony = offPathParsimony(back, from, front);
+            }
+            else {
+                UINT* on_path     = (first_depth+2<depth) ? path_parsimony[depth-2]: back_parsimony;
+                UINT* off_path    = offPathParsimony(prev, from, path[depth-1]);
+                tree.computePartialParsimonyOutOfTree(off_path, on_path,
+                                                      path_parsimony[depth-1]);
+                if ( first_depth + 2 < depth ) {
+                    PhyloNeighbor* nei = prev->findNeighbor(from);
+                    back_score         = tree.computePartialParsimonyOutOfTree
+                                         ( path_parsimony[depth-1],
+                                           nei->get_partial_pars(),
+                                           path_parsimony[max_radius] );
+                    int reconnect_cost = 0;
+                    double move_score  = tree.computeParsimonyOutOfTree
+                                         ( path_parsimony[max_radius-1],
+                                           path_parsimony[max_radius],
+                                           &reconnect_cost );
+                    double gain        = parsimony_score - front_score
+                                       - back_score - reconnect_cost;
+                    considerMove(first_id, nei->id, gain, depth);
+                }
+            }
+            if ( depth+1 < max_radius ) {
+                FOR_EACH_ADJACENT_PHYLO_NODE(from, prev, it, node) {
+                    searchPart2(node, from, depth+1);
+                }
+            }
+        }
+    };
+    
+    virtual void findMove(const PhyloTree& tree,
+                          const TargetBranchRange& branches,
+                          int radius, double disconnection_benefit,
+                          std::vector<UINT*>& path_parsimony,
+                          double parsimony_score) {
+        if (lazy) {
+            super::findMove(tree, branches, radius,
+                            disconnection_benefit,
+                            path_parsimony, parsimony_score);
+            return;
+        }
+        auto source_branch    = branches[source_branch_id];
+        PhyloNode* front      = source_branch.first;
+        PhyloNode* back       = source_branch.second;
+        if (front->isLeaf()) {
+            return;
+        }
+        if (back->isLeaf()) {
+            return;
+        }
+        disconnection_benefit = source_branch.getBranchCost();
+        depth                 = radius;
+        ProperTBRSearch s(tree, branches, radius,
+                    path_parsimony, parsimony_score, *this);
+        FOR_EACH_ADJACENT_PHYLO_NODE(front, back, it, node) {
+            s.searchPart1(node, front, 0);
+        }
+    }
+}; //ProperParsimonyTBRMove
+}; //namespace
 
 void PhyloTree::doParsimonyTBR() {
     if (leafNum<6) {
@@ -385,7 +541,11 @@ void PhyloTree::doParsimonyTBR() {
     s.name                      = "TBR";
     s.iterations                = params->parsimony_tbr_iterations;
     s.lazy_mode                 = params->use_lazy_parsimony_tbr;
-    s.radius                    = params->sprDist; //no tbrDist member (yet)
+    s.radius                    = params->tbr_radius; 
 
-    doParsimonySearch<ParsimonyLazyTBRMove>(s);
+    if (s.lazy_mode) {
+        doParsimonySearch<ParsimonyLazyTBRMove>(s);
+    } else {
+        doParsimonySearch<ProperParsimonyTBRMove>(s);
+    }
 }

@@ -37,7 +37,7 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
     //     the move that was just applied).
     //
     
-    
+    best_pars_score          = UINT_MAX;
     intptr_t branch_count    = leafNum * 2 - 3; //assumed > 3
     int      index_parsimony = 0;
     
@@ -47,7 +47,16 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
     TimeKeeper sorting      ("sorting " + s.name + " moves");
     TimeKeeper applying     ("applying " + s.name + " moves");
 
-    double work_estimate = (double)branch_count * ((double)s.iterations * 2.0 + 1.0);
+    double work_estimate = (double)branch_count * ((double)s.iterations * 2.5 + 1.0);
+    //assumes that:
+    // A. rescoring parsimony costs 1 (per source branch)
+    // B. searching for possible moves costs 1 (per source branch)
+    // C. applying moves costs 0.5 (per source branch) (probably a high estimate)
+    //    (although only a small fraction of moves are applied, the
+    //     partial rescoring necessary to calculate updated parsimony
+    //     costs is surprisingly expensive).
+    //
+    
     initProgress(work_estimate,
                  "Looking for parsimony " + s.name + " moves", "", "");
 
@@ -81,9 +90,10 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
     size_t  moves_still_possible = 0;
     size_t  moves_applied        = 0;
     int64_t positions_considered = 0;
-    for (size_t iteration=1; iteration<=s.iterations;++iteration) {
+    int     parsimony_score;
+    for (size_t iteration=1; iteration<=s.iterations; ++iteration) {
         rescoring.start();
-        int parsimony_score = computeParsimony("Determining two-way parsimony", true, true );
+        parsimony_score = computeParsimony("Determining two-way parsimony", true, true );
         rescoring.stop();
         if (iteration==1) {
             LOG_LINE(VB_DEBUG, "Parsimony score before parsimony " << s.name
@@ -93,11 +103,10 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
             LOG_LINE(VB_MIN, "Applied " << moves_applied << " move"
                      << ((1==moves_applied) ? "" : "s")
                      << " (out of " << moves_considered << ")"
-                     << " (" << moves_still_possible << " still posible)"
+                     << " (" << moves_still_possible << " still possible)"
                      << " in iteration " << (iteration-1)
                      << " (parsimony now " << parsimony_score << ")");
         }
-        
         evaluating.start();
         LikelihoodBlockPairs dummyBlocks;
         
@@ -157,6 +166,10 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
         moves_still_possible=0;
         
         size_t i=moves_considered;
+        double work_step = 0;
+        if (0<moves_considered) {
+            work_step = (double) branch_count / (double) moves_considered * 0.1;
+        }
         while (0<i) {
             --i;
             Move& move = moves[i];
@@ -211,18 +224,19 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
             double revised_score = move.apply(*this, targets, dummyBlocks);
             if (parsimony_score <= revised_score) {
                 const char* same_or_worse = (parsimony_score < revised_score)
-                ? " a worse " : " the same ";
+                    ? " a worse " : " the same ";
                 LOG_LINE(VB_MAX, "Reverting " << s.name << " move; as it resulted in"
                          << same_or_worse << "parsimony score"
                          << " (" << revised_score << ")");
                 //ParsimonyMove::apply() is its own inverse.  Calling it again
                 //with the same parameters, reverses what it did.
-                revised_score = move.apply(*this, targets, dummyBlocks);
-                ASSERT( revised_score == parsimony_score );
+                double reverted_score = move.apply(*this, targets, dummyBlocks);
+                ASSERT( reverted_score == parsimony_score );
             } else {
                 parsimony_score = revised_score;
                 ++moves_applied;
             }
+            trackProgress(work_step);
         }
         applying.stop();
         if (moves_applied==0) {
@@ -234,13 +248,13 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
     initializing.stop();
     
     rescoring.start();
-    double parsimony_score = computeParsimony();
+    parsimony_score = computeParsimony();
     rescoring.stop();
     
     LOG_LINE(VB_MIN, "Applied " << moves_applied << " move"
              << ((1==moves_applied) ? "" : "s")
              << " (out of " << moves_considered << ")"
-             << " (" << moves_still_possible << " still posible)"
+             << " (" << moves_still_possible << " still possible)"
              << " in last iteration "
              << " (parsimony now " << parsimony_score << ")"
              << " (total " << s.name << " moves examined "

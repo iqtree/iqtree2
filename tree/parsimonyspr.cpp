@@ -292,7 +292,7 @@ namespace {
                 std::vector<UINT*>& path_parsimony;
                     //This is a vector of size at least radius + 2, for any
                     //radius passed to searchForForwardsSPR or to
-                    //searchForBackwardsSPR.  The [tree->params->sprDist+1]
+                    //searchForBackwardsSPR.  The [tree->params->spr_radius+1]
                     //entry in the vector can be a copy (when disconnecting
                     //x from left and right), it is either the parsimony
                     //vector of the view, from x, towards the subtree
@@ -465,7 +465,7 @@ void PhyloTree::doParsimonySPR() {
     s.name                      = "SPR";
     s.iterations                = params->parsimony_spr_iterations;
     s.lazy_mode                 = params->use_lazy_parsimony_spr;
-    s.radius                    = params->sprDist;
+    s.radius                    = params->spr_radius;
 
     doParsimonySearch<ParsimonySPRMove>(s);
 }
@@ -498,7 +498,7 @@ void IQTree::doPLLParsimonySPR() {
     double opt_start = getRealTime();
     int iterations = pllOptimizeWithParsimonySPR(pllInst, pllPartitions,
         params->parsimony_spr_iterations,  
-        params->sprDist);
+        params->spr_radius);
     double read_start = getRealTime();
     pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions,
         pllInst->start->back, PLL_FALSE, PLL_TRUE, PLL_FALSE,

@@ -2648,11 +2648,6 @@ protected:
      */
     SPRMoves spr_moves;
 
-    /**
-            SPR radius
-     */
-    int spr_radius;
-
 
     /**
             the main memory storing all partial likelihoods for all neighbors of the tree.

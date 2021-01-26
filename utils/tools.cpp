@@ -1095,8 +1095,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.tabu = false;
     params.adaptPertubation = false;
     params.numSupportTrees = 20;
-//    params.sprDist = 20;
-    params.sprDist = 6;
+    params.spr_radius = 20;
+    params.tbr_radius = 10;
     params.sankoff_cost_file = NULL;
     params.numNNITrees = 20;
     params.avh_test = 0;
@@ -2400,6 +2400,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                 std::string next_arg = next_argument(argc, argv,
                                                      "max_parsimony_nni_iterations", cnt);
                 params.parsimony_nni_iterations = atoi(next_arg.c_str());
+                continue;
+            }
+            if (arg=="-tbr-radius") {
+                string next_arg = next_argument(argc, argv, "tbr_radius", cnt);
+                params.tbr_radius = convert_int(next_arg.c_str());
                 continue;
             }
             if (arg=="-parsimony-tbr") {
@@ -4037,14 +4042,14 @@ void parseArg(int argc, char *argv[], Params &params) {
             	params.count_trees = true;
             	continue;
 			}
-			if (strcmp(argv[cnt], "--sprrad") == 0 || strcmp(argv[cnt], "--radius") == 0) {
+			if (strcmp(argv[cnt], "--sprrad") == 0
+                || strcmp(argv[cnt], "--radius") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -sprrad <SPR radius used in parsimony search>";
-				params.sprDist = convert_int(argv[cnt]);
+				params.spr_radius = convert_int(argv[cnt]);
 				continue;
 			}
-            
             if (strcmp(argv[cnt], "--mpcost") == 0) {
                 cnt++;
                 if (cnt >= argc)

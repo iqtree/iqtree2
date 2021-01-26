@@ -644,7 +644,7 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
         case STT_PLL_PARSIMONY:
             logLine("\nCreate initial parsimony tree by phylogenetic likelihood library (PLL)... ");
             pllInst->randomNumberSeed = params->ran_seed + MPIHelper::getInstance().getProcessID();
-            pllComputeRandomizedStepwiseAdditionParsimonyTree(pllInst, pllPartitions, params->sprDist);
+            pllComputeRandomizedStepwiseAdditionParsimonyTree(pllInst, pllPartitions, params->spr_radius);
             resetBranches(pllInst);
             pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back,
                     PLL_FALSE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
@@ -786,7 +786,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
             /********* Create parsimony tree using PLL *********/
             if (params->start_tree == STT_PLL_PARSIMONY) {
                 pllInst->randomNumberSeed = parRandSeed;
-                pllComputeRandomizedStepwiseAdditionParsimonyTree(pllInst, pllPartitions, params->sprDist);
+                pllComputeRandomizedStepwiseAdditionParsimonyTree(pllInst, pllPartitions, params->spr_radius);
                 resetBranches(pllInst);
                 pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions,
                                 pllInst->start->back, PLL_FALSE, PLL_TRUE, PLL_FALSE,
@@ -953,7 +953,8 @@ string IQTree::generateParsimonyTree(int randomSeed) {
     if (params->start_tree == STT_PLL_PARSIMONY) {
         pllInst->randomNumberSeed = randomSeed;
         pllComputeRandomizedStepwiseAdditionParsimonyTree(pllInst,
-                                                          pllPartitions, params->sprDist);
+                                                          pllPartitions,
+                                                          params->spr_radius);
         resetBranches(pllInst);
         pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions,
                         pllInst->start->back, PLL_FALSE, PLL_TRUE, PLL_FALSE,
@@ -4381,17 +4382,9 @@ void IQTree::initializePLLIfNecessary() {
 void IQTree::optimizeConstructedTree() {
     //Note: this should not be called if start_tree is STT_PLL_PARSIMONY
     //(as parsimony spr iterations will already have been done).
-    if (params->parsimony_tbr_iterations != 0) {
-        initializeAllPartialPars();
-        auto initial_parsimony = computeParsimony("Computing initial parsimony");
-        LOG_LINE(VB_MIN, "Before doing (up to) "
-            << params->parsimony_spr_iterations << " rounds of parsimony TBR,"
-            << " parsimony score was " << initial_parsimony);
-        doParsimonyTBR();
-    }    
     if (params->parsimony_spr_iterations != 0) {
         initializeAllPartialPars();
-        auto initial_parsimony = computeParsimony("Computing initial parsimony");
+        auto initial_parsimony = computeParsimony("Computing pre-SPR parsimony");
         LOG_LINE(VB_MIN, "Before doing (up to) "
             << params->parsimony_spr_iterations << " rounds of parsimony SPR,"
             << " parsimony score was " << initial_parsimony);
@@ -4400,6 +4393,14 @@ void IQTree::optimizeConstructedTree() {
         } else {
             doParsimonySPR();
         }
+    }
+    if (params->parsimony_tbr_iterations != 0) {
+        initializeAllPartialPars();
+        auto initial_parsimony = computeParsimony("Computing pre-TBR parsimony");
+        LOG_LINE(VB_MIN, "Before doing (up to) "
+            << params->parsimony_spr_iterations << " rounds of parsimony TBR,"
+            << " parsimony score was " << initial_parsimony);
+        doParsimonyTBR();
     }
     if (0<params->parsimony_nni_iterations) {
         doParsimonyNNI();
