@@ -32,7 +32,7 @@ public:
         @param vectorSize number of blocks to allocate
         @param[out] vector of parsimony blocks to append the
                     allocated block addresses to*/
-    void         allocateVectorOfParsimonyBlocks(int vectorSize,
+    void         allocateVectorOfParsimonyBlocks(intptr_t vectorSize,
         std::vector<UINT*>& buffers);
 
     /** allocate partial parsimony (and perhaps likelihood and scalenum) blocks

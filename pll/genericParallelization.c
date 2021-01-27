@@ -988,24 +988,33 @@ static void collectDouble(double *dst, double *src, pllInstance *tr, partitionLi
     @param tr library instance
     @param tid worker id 
  */
-static void broadCastAlpha(partitionList *localPr, partitionList *pr)
-{
-  int  i, 
-    model; 
+static void broadCastAlpha(partitionList *localPr, partitionList *pr) {
 
-#if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
-    int bufSize = localPr->numberOfPartitions * 4 * sizeof(double);
-    char bufDbl[bufSize];
-    char *bufPtrDbl = bufDbl;
-#endif
+    #if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
+        int bufSize = localPr->numberOfPartitions * 4 * sizeof(double);
+        #ifndef _MSC_VER
+            char bufDbl[bufSize];
+        #else
+            char* bufDbl = (char*)malloc(bufSize);
+        #endif
+        char *bufPtrDbl = bufDbl;
+    #endif
 
-  RECV_BUF(bufDbl, bufSize, MPI_BYTE); 
+    RECV_BUF(bufDbl, bufSize, MPI_BYTE); 
 
-  for(model = 0; model < localPr->numberOfPartitions; model++)
-    for(i = 0; i < 4; ++i)
-      ASSIGN_BUF_DBL(localPr->partitionData[model]->gammaRates[i], pr->partitionData[model]->gammaRates[i]);
+    for (int model = 0; model < localPr->numberOfPartitions; model++) {
+        for (int i = 0; i < 4; ++i) {
+            ASSIGN_BUF_DBL(localPr->partitionData[model]->gammaRates[i], pr->partitionData[model]->gammaRates[i]);
+        }
+    }
   
-  SEND_BUF(bufDbl, bufSize, MPI_BYTE);  
+    SEND_BUF(bufDbl, bufSize, MPI_BYTE);  
+
+    #if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
+        #ifdef _MSC_VER
+            free(bufDbl);
+        #endif
+    #endif
 }
 
 /** @brief broadcast new LG4X weights
@@ -1015,22 +1024,31 @@ static void broadCastAlpha(partitionList *localPr, partitionList *pr)
  */
 static void broadCastLg4xWeights(partitionList *localPr, partitionList *pr)
 {
-  int  i,
-    model;
+    #if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
+        int bufSize = localPr->numberOfPartitions * 4 * sizeof(double);
+        #ifndef _MSC_VER
+            char bufDbl[bufSize];
+        #else
+            char* bufDbl = (char*)malloc(bufSize);
+        #endif
+        char *bufPtrDbl = bufDbl;
+    #endif
 
-#if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
-    int bufSize = localPr->numberOfPartitions * 4 * sizeof(double);
-    char bufDbl[bufSize];
-    char *bufPtrDbl = bufDbl;
-#endif
+    RECV_BUF(bufDbl, bufSize, MPI_BYTE);
 
-  RECV_BUF(bufDbl, bufSize, MPI_BYTE);
+    for (int model = 0; model < localPr->numberOfPartitions; model++) {
+        for (int i = 0; i < 4; ++i) {
+            ASSIGN_BUF_DBL(localPr->partitionData[model]->lg4x_weights[i], pr->partitionData[model]->lg4x_weights[i]);
+        }
+    }
 
-  for(model = 0; model < localPr->numberOfPartitions; model++)
-    for(i = 0; i < 4; ++i)
-      ASSIGN_BUF_DBL(localPr->partitionData[model]->lg4x_weights[i], pr->partitionData[model]->lg4x_weights[i]);
+    SEND_BUF(bufDbl, bufSize, MPI_BYTE);
 
-  SEND_BUF(bufDbl, bufSize, MPI_BYTE);
+    #if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
+        #ifdef _MSC_VER
+            free(bufDbl);
+        #endif
+    #endif
 }
 
 static void copyLG4(partitionList *localPr, partitionList *pr)
@@ -1051,7 +1069,11 @@ static void copyLG4(partitionList *localPr, partitionList *pr)
     #endif
 
     #if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
-    char bufDbl[bufSize];
+        #ifndef _MSC_VER
+            char bufDbl[bufSize];
+        #else
+            char* bufDbl = (char*)malloc(bufSize);
+        #endif
     char *bufPtrDbl = bufDbl;
     #endif
 
@@ -1094,6 +1116,12 @@ static void copyLG4(partitionList *localPr, partitionList *pr)
         }
     }
     SEND_BUF(bufDbl, bufSize, MPI_BYTE); /*  */
+
+    #if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
+        #ifdef _MSC_VER
+            free(bufDbl);
+        #endif
+    #endif
 }
 
 /** @brief Master broadcasts rates.
@@ -1102,49 +1130,58 @@ static void copyLG4(partitionList *localPr, partitionList *pr)
     @param tr library instance
     @param tid worker id     
  */ 
-static void broadCastRates(partitionList *localPr, partitionList *pr)
-{
-  int 
-    model;
+static void broadCastRates(partitionList *localPr, partitionList *pr) {
+    #if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
+    
+        /* determine size of buffer needed first */
+        int bufSize = 0;
+    #endif
+    
+    #ifdef _FINE_GRAIN_MPI
+        for(model = 0; model < localPr->numberOfPartitions; ++model )
+        {
+            const partitionLengths *pl = getPartitionLengths(pr->partitionData[model]); /* this is constant, isnt it?  */
+            bufSize += (pl->eignLength + pl->evLength + pl->eiLength + pl->tipVectorLength) * sizeof(double) ;
+        }
+    #endif
 
-#if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
+    #if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
+        #ifndef _MSC_VER
+            char bufDbl[bufSize];
+        #else
+            char* bufDbl = (char*)malloc(bufSize);
+        #endif
+        char *bufPtrDbl = bufDbl;
+    #endif
     
-    /* determine size of buffer needed first */
-    int bufSize = 0;
-#endif
-    
-#ifdef _FINE_GRAIN_MPI
-    for(model = 0; model < localPr->numberOfPartitions; ++model )
-    {
-        const partitionLengths *pl = getPartitionLengths(pr->partitionData[model]); /* this is constant, isnt it?  */
-        bufSize += (pl->eignLength + pl->evLength + pl->eiLength + pl->tipVectorLength) * sizeof(double) ;
+    RECV_BUF(bufDbl, bufSize, MPI_BYTE);
+
+    for (int model = 0; model < localPr->numberOfPartitions; model++) {
+        const partitionLengths* pl = getPartitionLengths(pr->partitionData[model]); /* this is constant, isnt it?  */
+
+        for (int i = 0; i < pl->eignLength; ++i) {
+            ASSIGN_BUF_DBL(localPr->partitionData[model]->EIGN[i], pr->partitionData[model]->EIGN[i]);
+        }
+        for (int i = 0; i < pl->evLength; ++i) {
+            ASSIGN_BUF_DBL(localPr->partitionData[model]->EV[i], pr->partitionData[model]->EV[i]);
+        }
+        for (int i = 0; i < pl->eiLength; ++i) {
+            ASSIGN_BUF_DBL(localPr->partitionData[model]->EI[i], pr->partitionData[model]->EI[i]);
+        }
+        for (int i = 0; i < pl->tipVectorLength; ++i) {
+            ASSIGN_BUF_DBL(localPr->partitionData[model]->tipVector[i], pr->partitionData[model]->tipVector[i]);
+        }
     }
-#endif
 
-#if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
-    char bufDbl[bufSize];
-    char *bufPtrDbl = bufDbl;
-#endif
-    
-  RECV_BUF(bufDbl, bufSize, MPI_BYTE);
-  int i ; 
+    SEND_BUF(bufDbl, bufSize, MPI_BYTE); /*  */
 
-  for(model = 0; model < localPr->numberOfPartitions; model++)
-    {
-      const partitionLengths *pl = getPartitionLengths(pr->partitionData[model]); /* this is constant, isnt it?  */
+    #if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
+        #ifdef _MSC_VER
+            free(bufDbl);
+        #endif
+    #endif
 
-      for(i = 0; i < pl->eignLength; ++i)
-	ASSIGN_BUF_DBL(localPr->partitionData[model]->EIGN[i], pr->partitionData[model]->EIGN[i]);
-      for(i = 0; i < pl->evLength; ++i)
-	ASSIGN_BUF_DBL(localPr->partitionData[model]->EV[i],pr->partitionData[model]->EV[i]);
-      for(i = 0; i  < pl->eiLength; ++i)
-	ASSIGN_BUF_DBL(localPr->partitionData[model]->EI[i], pr->partitionData[model]->EI[i]);
-      for(i = 0; i < pl->tipVectorLength; ++i)
-	ASSIGN_BUF_DBL(localPr->partitionData[model]->tipVector[i],   pr->partitionData[model]->tipVector[i]);
-    }
-  SEND_BUF(bufDbl, bufSize, MPI_BYTE); /*  */
-
-  copyLG4(localPr, pr);
+    copyLG4(localPr, pr);
 }
 
 /** @brief Evaluate the likelihood of this topology (PThreads/MPI implementation)
@@ -1589,13 +1626,16 @@ static pllBoolean execFunction(pllInstance *tr, pllInstance *localTree, partitio
 	*/
 
 
-	if( localTree->rateHetModel == PLL_CAT) /* TRICKY originally this should only be executed by workers  */
-	  {
-#if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
-	    int bufSize = 2 * localTree->originalCrunchedLength * sizeof(double); 
-	    char bufDbl[bufSize], 
-	      *bufPtrDbl = bufDbl; 
-#endif
+	if( localTree->rateHetModel == PLL_CAT) /* TRICKY originally this should only be executed by workers  */ {
+        #if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
+	            int bufSize = 2 * localTree->originalCrunchedLength * sizeof(double); 
+                #ifndef _MSC_VER
+                        char bufDbl[bufSize];
+                #else
+                        char* bufDbl = (char*)malloc(bufSize);
+                #endif
+                char *bufPtrDbl = bufDbl;
+        #endif
 
 	    RECV_BUF(bufDbl, bufSize,MPI_BYTE); 
 
@@ -1612,6 +1652,12 @@ static pllBoolean execFunction(pllInstance *tr, pllInstance *localTree, partitio
 	      }
 
 	    SEND_BUF(bufDbl, bufSize, MPI_BYTE); 
+        #if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
+            #ifdef _MSC_VER
+                free(bufDbl);
+            #endif
+        #endif  
+
 	  }
       } 
       break;    
@@ -1648,11 +1694,15 @@ static pllBoolean execFunction(pllInstance *tr, pllInstance *localTree, partitio
 	  /* assertCtr = 0,  */
 	  dblBufSize = 0; 
 
-#if defined(FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
-	int bufSize = localPr->numberOfPartitions * sizeof(int); 
-	char buf[bufSize]; 
-	char *bufPtr = buf; 
-#endif
+    #if defined(FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
+	    int bufSize = localPr->numberOfPartitions * sizeof(int); 
+        #ifndef _MSC_VER
+            char buf[bufSize];
+        #else
+            char* buf = (char*)malloc(bufSize);
+        #endif
+        char *bufPtr = buf;
+    #endif
      
 	RECV_BUF(buf, bufSize, MPI_BYTE);
 
@@ -1664,13 +1714,22 @@ static pllBoolean execFunction(pllInstance *tr, pllInstance *localTree, partitio
 
 	SEND_BUF(buf, bufSize, MPI_BYTE); 
 
+    #if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
+        #ifdef _MSC_VER
+            free(buf);
+        #endif
+    #endif  
 
 	dblBufSize += 2 * localTree->originalCrunchedLength * sizeof(double); 
 
-#if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
-	char bufDbl[dblBufSize],
-	  *bufPtrDbl = bufDbl;
-#endif
+    #if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
+        #ifndef _MSC_VER
+            char bufDbl[bufSize];
+        #else
+            char* bufDbl = (char*)malloc(bufSize);
+        #endif
+        char *bufPtrDbl = bufDbl;
+    #endif
 
 	RECV_BUF(bufDbl, dblBufSize, MPI_BYTE); 
 
@@ -1686,6 +1745,11 @@ static pllBoolean execFunction(pllInstance *tr, pllInstance *localTree, partitio
 
 	SEND_BUF(bufDbl, dblBufSize, MPI_BYTE); 
 
+    #if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
+        #ifdef _MSC_VER
+            free(bufDbl);
+        #endif
+    #endif  
 
 	/* lets test, if it is a good idea to send around the basic categories  */
 #ifdef _FINE_GRAIN_MPI
@@ -2120,64 +2184,66 @@ static void assignAndInitPart1(pllInstance *localTree, pllInstance *tr, partitio
     @param localPr
       Local list of partitions structure for the current thread
  */ 
-static void distributeYVectors(pllInstance *localTree, pllInstance *tr, partitionList *localPr)
+static void distributeYVectors(pllInstance* localTree, pllInstance* tr, partitionList* localPr)
 {
-  size_t 
-    i,
-    n = localTree->numberOfThreads,
-    globalCounter = 0,
-    localCounter = 0,
-    j; 
-  int model = 0;
-  int tid = localTree->threadID; 
-  
-
-  /* distribute the y-vectors */
-  for(j = 1 ; j <= (size_t)localTree->mxtips; j++)	
-    {
-#if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
-      unsigned char yBuf[tr->originalCrunchedLength]; 	  
-      if (MASTER_P) {
-          memcpy(yBuf, tr->yVector[j], tr->originalCrunchedLength * sizeof(unsigned char));
-      }
-      MPI_Bcast(  yBuf, tr->originalCrunchedLength, MPI_UNSIGNED_CHAR,0,MPI_COMM_WORLD); 
-#endif	  
-
-      for(model = 0, globalCounter = 0; model < (size_t)localPr->numberOfPartitions; model++)
-	{
-	  if(tr->manyPartitions)
-	    {
-	      if(isThisMyPartition(localPr, tid, model))
-		{
-		  assert(localPr->partitionData[model]->upper - localPr->partitionData[model]->lower == localPr->partitionData[model]->width);
-		  for(localCounter = 0, i = (size_t)localPr->partitionData[model]->lower;  i < (size_t)localPr->partitionData[model]->upper; i++, localCounter++, globalCounter++)
-#ifdef _USE_PTHREADS
-		    localPr->partitionData[model]->yVector[j][localCounter] = tr->yVector[j][globalCounter];
-#else 
-		  localPr->partitionData[model]->yVector[j][localCounter] = yBuf[globalCounter];
-#endif
+    size_t
+        i,
+        n = localTree->numberOfThreads,
+        globalCounter = 0,
+        localCounter = 0,
+        j;
+    int model = 0;
+    int tid = localTree->threadID;
 
 
-		}
-	      else
-		globalCounter += (localPr->partitionData[model]->upper - localPr->partitionData[model]->lower);
-	    }
-	  else 
-	    {
-	      for(localCounter = 0, i = (size_t)localPr->partitionData[model]->lower;  i < (size_t)localPr->partitionData[model]->upper; i++, globalCounter++)
-		{
-		  if(i % (size_t)n == (size_t)tid)
-		    {
-#ifdef _USE_PTHREADS
-		      localPr->partitionData[model]->yVector[j][localCounter] = tr->yVector[j][globalCounter];
-#else 
-		      localPr->partitionData[model]->yVector[j][localCounter] = yBuf[globalCounter];
-#endif
-		      ++localCounter; 
-		    }
-		}	   
-	    }
-	}
+    /* distribute the y-vectors */
+    for (j = 1; j <= (size_t)localTree->mxtips; j++) {
+        #if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
+            #ifndef _MSC_VER
+                    unsigned char yBuf[tr->originalCrunchedLength];
+            #else
+                    unsigned char* yBuf = malloc(tr->originalCrunchedLength);
+            #endif
+            if (MASTER_P) {
+                memcpy(yBuf, tr->yVector[j], tr->originalCrunchedLength * sizeof(unsigned char));
+            }
+            MPI_Bcast(yBuf, tr->originalCrunchedLength, MPI_UNSIGNED_CHAR, 0, MPI_COMM_WORLD);
+            #ifdef _MSC_VER
+                free(yBuf);
+            #endif
+        #endif	  
+
+        for (model = 0, globalCounter = 0; model < (size_t)localPr->numberOfPartitions; model++) {
+            if (tr->manyPartitions) {
+                if (isThisMyPartition(localPr, tid, model)) {
+                    assert(localPr->partitionData[model]->upper - localPr->partitionData[model]->lower == localPr->partitionData[model]->width);
+                    for (localCounter = 0, i = (size_t)localPr->partitionData[model]->lower;
+                        i < (size_t)localPr->partitionData[model]->upper; i++, localCounter++, globalCounter++) {
+                        #ifdef _USE_PTHREADS
+                            localPr->partitionData[model]->yVector[j][localCounter] = tr->yVector[j][globalCounter];
+                        #else 
+                            localPr->partitionData[model]->yVector[j][localCounter] = yBuf[globalCounter];
+                        #endif
+                    }
+                }
+                else {
+                    globalCounter += (localPr->partitionData[model]->upper - localPr->partitionData[model]->lower);
+                }
+            }
+            else {
+                for (localCounter = 0, i = (size_t)localPr->partitionData[model]->lower;
+                    i < (size_t)localPr->partitionData[model]->upper; i++, globalCounter++) {
+                    if (i % (size_t)n == (size_t)tid) {
+                        #ifdef _USE_PTHREADS
+                            localPr->partitionData[model]->yVector[j][localCounter] = tr->yVector[j][globalCounter];
+                        #else 
+                            localPr->partitionData[model]->yVector[j][localCounter] = yBuf[globalCounter];
+                        #endif
+                        ++localCounter;
+                    }
+                }
+            }
+        }
     }
 }
 

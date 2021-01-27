@@ -12,7 +12,13 @@ int make_new_seed()
   static unsigned int temp4 = 0xe0e1;
   
   time(&tp);
+#ifndef _MSC_VER
   temp = localtime(&tp);
+#else
+  struct tm tm_struct;
+  localtime_s(&tm_struct, &tp);
+  temp = &tm_struct;
+#endif
   
   temp2 = (temp->tm_sec<<26)+(temp->tm_min<<20)+(temp->tm_hour<<15)+
     (temp->tm_mday<<10)+(temp->tm_mon<<6);

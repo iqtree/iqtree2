@@ -104,7 +104,7 @@ bool MPIHelper::gotMessage() {
 #ifdef _IQTREE_MPI
 void MPIHelper::sendString(string &str, int dest, int tag) {
     const char *buf = str.c_str();
-    MPI_Send(buf, str.length()+1, MPI_CHAR, dest, tag, MPI_COMM_WORLD);
+    MPI_Send(buf, static_cast<int>(str.length()+1), MPI_CHAR, dest, tag, MPI_COMM_WORLD);
 }
 
 void MPIHelper::sendCheckpoint(Checkpoint *ckp, int dest) {
@@ -143,7 +143,7 @@ void MPIHelper::broadcastCheckpoint(Checkpoint *ckp) {
     if (isMaster()) {
         ckp->dump(ss);
         str = ss.str();
-        msgCount = str.length()+1;
+        msgCount = static_cast<int>(str.length()+1);
     }
 
     // broadcast the count for workers
@@ -168,7 +168,7 @@ void MPIHelper::gatherCheckpoint(Checkpoint *ckp) {
     stringstream ss;
     ckp->dump(ss);
     string str = ss.str();
-    int msgCount = str.length();
+    int msgCount = static_cast<int>(str.length());
 
     // first send the counts to MASTER
     int *msgCounts = NULL, *displ = NULL;

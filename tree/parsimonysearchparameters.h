@@ -14,7 +14,7 @@ public:
     std::string name;
     intptr_t    iterations;
     bool        lazy_mode;
-    intptr_t    radius;
+    int         radius;
 };
 
 #endif /* parsimonysearchparameters_h */

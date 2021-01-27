@@ -380,7 +380,19 @@ void initeps(FILE *ofp, QuartetGroups &LMGroups)
 #	endif
 #endif
 	fprintf(ofp, "%%%%Title: Likelihood Mapping Analysis\n");
+#ifndef _MSC_VER
 	fprintf(ofp, "%%%%CreationDate: %s", asctime(localtime(&Starttime)) );
+#else
+    //An annoying thing here is that C++23's version of localtime_s takes
+    //&Starttime as its first parameter, &tm_struct as its second, and returns
+    //&tm_struct (rather than an error number).  Very different signature!
+    struct tm tm_struct;
+    char time_buf[26];
+    if (localtime_s(&tm_struct, &Starttime) == 0) {
+        asctime_s(time_buf, sizeof(time_buf), &tm_struct);
+        fprintf(ofp, "%%%%CreationDate: %s", time_buf);
+    }
+#endif
 	fprintf(ofp, "%%%%DocumentFonts: Helvetica\n");
 	fprintf(ofp, "%%%%DocumentNeededFonts: Helvetica\n");
 	fprintf(ofp, "%%%%EndComments\n");

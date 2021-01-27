@@ -90,8 +90,8 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
     size_t  moves_still_possible = 0;
     size_t  moves_applied        = 0;
     int64_t positions_considered = 0;
-    int     parsimony_score;
-    for (size_t iteration=1; iteration<=s.iterations; ++iteration) {
+    double  parsimony_score;
+    for (intptr_t iteration=1; iteration<=s.iterations; ++iteration) {
         rescoring.start();
         parsimony_score = computeParsimony("Determining two-way parsimony", true, true );
         rescoring.stop();

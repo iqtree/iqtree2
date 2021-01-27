@@ -30,8 +30,13 @@ extern "C" {
 #endif
 
 void addArg(int &argc, char **argv, const char *arg) {
-	argv[argc] = new char[strlen(arg)+1];
+	size_t len = strlen(arg);
+	argv[argc] = new char[len+1];
+#ifndef _MSC_VER
 	strcpy(argv[argc], arg);
+#else
+	strcpy_s(argv[argc], len + 1, arg);
+#endif
 	argc++;
 }
 

@@ -1992,7 +1992,6 @@ bool Alignment::constructPatterns(int nseq, int nsite,
         progress_here = progress = nullptr;
     }
 
-
     std::stringstream err_str;
     //2. Now handle warnings and errors, and compress patterns, sequentially
 
@@ -2776,8 +2775,12 @@ int Alignment::readCountsFormat(const char* filename, const char* sequence_type)
             	if (*it != 0) {
                     // `i - values.begin()` ranges from 0 to 3 and
                     // determines the nucleotide or allele type.
-            		if (id1 == -1) id1 = it - values.begin();
-            		else id2 = it - values.begin();
+                    if (id1 == -1) {
+                        id1 = static_cast<int>(it - values.begin());
+                    }
+                    else {
+                        id2 = static_cast<int>(it - values.begin());
+                    }
             		count++;
                 	sum += *it;
             	}
@@ -2851,7 +2854,8 @@ int Alignment::readCountsFormat(const char* filename, const char* sequence_type)
                     uint32_t pomo_state = (id1 | (values[id1]) << 2) | ((id2 | (values[id2]<<2))<<16);
                     IntIntMap::iterator pit = pomo_sampled_states_index.find(pomo_state);
                     if (pit == pomo_sampled_states_index.end()) { // not found
-                        state = pomo_sampled_states_index[pomo_state] = pomo_sampled_states.size();
+                        uint32_t s = static_cast<uint32_t>(pomo_sampled_states.size());
+                        state = pomo_sampled_states_index[pomo_state] = s;
                         pomo_sampled_states.push_back(pomo_state);
                     } else {
                         state = pit->second;
@@ -3930,7 +3934,8 @@ void Alignment::createBootstrapAlignment(int *pattern_freq, const char *spec, in
         intptr_t nptn = getNPattern();
         if (nsite/8 < nptn || Params::getInstance().jackknife_prop > 0.0) {
             IntVector sample;
-            random_resampling(nsite, sample, rstream);
+            ASSERT(nsite < std::numeric_limits<int>::max());
+            random_resampling(static_cast<int>(nsite), sample, rstream);
             for (intptr_t site = 0; site < nsite; site++) {
                 for (int rep = 0; rep < sample[site]; rep++) {
                     int ptn_id = getPatternID(site);
@@ -3943,7 +3948,11 @@ void Alignment::createBootstrapAlignment(int *pattern_freq, const char *spec, in
             for (intptr_t ptn = 0; ptn < nptn; ++ptn) {
                 prob[ptn] = at(ptn).frequency;
             }
-            gsl_ran_multinomial(nptn, nsite, prob, (unsigned int*)pattern_freq, rstream);
+            ASSERT(nsite < std::numeric_limits<unsigned int>::max());
+            gsl_ran_multinomial(static_cast<const size_t>(nptn),
+                                static_cast<const unsigned int>(nsite), prob, 
+                                reinterpret_cast<unsigned int*>(pattern_freq), 
+                                rstream);
             int sum = 0;
             for (intptr_t ptn = 0; ptn < nptn; ++ptn) {
                 sum += pattern_freq[ptn];
@@ -4127,8 +4136,8 @@ void Alignment::concatenateAlignment(Alignment *aln) {
     if (seq_type != aln->seq_type) {
         outError("Different data type in two alignments");
     }
-    size_t nsite = aln->getNSite();
-    size_t cur_sites = getNSite();
+    intptr_t nsite     = aln->getNSite();
+    size_t   cur_sites = getNSite();
     site_pattern.resize(cur_sites + nsite , -1);
     IntVector name_map;
     for (StrVector::iterator it = seq_names.begin(); it != seq_names.end(); it++) {
@@ -4259,8 +4268,10 @@ bool Alignment::updateFrom(const Alignment* other,
             progress->incrementBy(1.0);
         }
     }
-    intptr_t nsite = getNSite();
-    bool     rc    = constructPatterns(nseq, nsite, sequences, progress);
+    int  nsite = getNSite32();
+    ASSERT(nseq < std::numeric_limits<int>::max());
+    bool rc    = constructPatterns(static_cast<int>(nseq),
+                                   nsite, sequences, progress);
     orderPatternByNumChars(PAT_VARIANT);
     return rc;
 }

@@ -46,7 +46,11 @@ Node::Node(int aid) {
 Node::Node(int aid, int aname) {
     id = aid;
     char str[20];
+#ifndef _MSC_VER
     sprintf(str, "%d", aname);
+#else
+    sprintf_s(str, sizeof(str), "%d", aname);
+#endif
     name = str;
     height = -1;
     is_floating_interior = false;

@@ -690,7 +690,7 @@ void MTreeSet::computeRFDist(double *rfdist, MTreeSet *treeset2, bool k_by_k,
 						nodes_vec[id][i]->name = "-" + nodes_vec[id][i]->name;*/
 				} 
 			}
-			double rf_val = (*hsit)->size() + static_cast<int>((*hsit2)->size()) - 2*common_splits;
+			double rf_val = (double)(*hsit)->size() + static_cast<int>((*hsit2)->size()) - 2*common_splits;
             if (Params::getInstance().normalize_tree_dist) {
                 int non_trivial = static_cast<int>((*hsit)->size()) - (*hsit)->getNTrivialSplits();
                 non_trivial += static_cast<int>((*hsit2)->size()) - static_cast<int>(((*hsit2)->begin())->first->getNTaxa());

@@ -25,9 +25,9 @@ void BlockAllocator::allocateParsimonyBlock(UINT*& partial_pars) {
     ASSERT( partial_pars < phylo_tree.tip_partial_pars );
     ++index_parsimony;
 }
-void BlockAllocator::allocateVectorOfParsimonyBlocks(int vectorSize,
+void BlockAllocator::allocateVectorOfParsimonyBlocks(intptr_t vectorSize,
     std::vector<UINT*>& buffers) {
-    for (int i = 0; i < vectorSize; ++i) {
+    for (intptr_t i = 0; i < vectorSize; ++i) {
         size_t offset = index_parsimony * phylo_tree.pars_block_size;
         buffers.push_back(phylo_tree.central_partial_pars + offset);
         ASSERT(buffers.back() < phylo_tree.tip_partial_pars);

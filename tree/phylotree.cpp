@@ -845,7 +845,7 @@ void PhyloTree::mergeAlignment(const Alignment* new_aln) {
                     LOG_LINE(VB_MIN, "Sequence " << new_name
                              << " will be added from " << path);
                 }
-                int merged_seq_id = old_count + added_sequences.size();
+                int merged_seq_id = old_count + static_cast<int>(added_sequences.size());
                 name_to_id[new_name] = merged_seq_id;
             }
         } else {
@@ -916,7 +916,7 @@ void PhyloTree::mergeAlignment(const Alignment* new_aln) {
                         LOG_LINE(VB_MIN, "Sequence " << new_name
                                  << " will be added from " << path);
                     }
-                    int merged_seq_id = old_count + added_sequences.size();
+                    int merged_seq_id = old_count + static_cast<int>(added_sequences.size());
                     name_to_id[new_name] = merged_seq_id;
                 }
             } else {

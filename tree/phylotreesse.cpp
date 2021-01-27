@@ -40,7 +40,8 @@
 
 #define PACKETS_PER_THREAD 2
 void PhyloTree::setNumThreads(int threadCount) {
-    if (!isSuperTree() && aln!=nullptr && threadCount > 1 && threadCount > aln->getNPattern()/8) {
+    if (!isSuperTree() && aln!=nullptr && threadCount > 1 
+        && threadCount > aln->getNPattern()/8) {
         if (!warnedAboutThreadCount) {
             hideProgress();
             outWarning(convertIntToString(threadCount) + " threads for alignment length " +
@@ -48,10 +49,18 @@ void PhyloTree::setNumThreads(int threadCount) {
             showProgress();
             warnedAboutThreadCount = true;
         }
-        threadCount = aln->getNPattern()/8;
+#ifdef _OPENMP
+        threadCount = static_cast<int>(aln->getNPattern()/8);
+        auto max_thread_count = omp_get_max_threads();
+        if (max_thread_count < threadCount) {
+            threadCount = max_thread_count;
+        }
         if (threadCount==0) {
             threadCount = 1;
         }
+#else
+        threadCount = 1;
+#endif
     }
     this->num_threads = threadCount;
     this->num_packets = (num_threads==1) ? 1 : (num_threads*PACKETS_PER_THREAD);

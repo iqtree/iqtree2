@@ -25,7 +25,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <limits.h>
-#define NDEBUG
+#ifndef NDEBUG
+    #define NDEBUG
+#endif
 #include <assert.h>
 #include "memory.h"
 #include "interface.h"
@@ -482,8 +484,11 @@ char **buffer;
     return 0;
   }
   
-  
+#ifndef _MSC_VER  
   strcpy((char *)p,q->gentype);
+#else
+  strcpy_s((char*)p, size, q->gentype);
+#endif
   p += strlen(q->gentype)+1;
   p += store_int(q->stream_number,4,p);
   p += store_int(q->nstreams,4,p);

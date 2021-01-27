@@ -1652,7 +1652,9 @@ void MTree::scaleCladeSupport(double norm, bool make_int, Node *node, Node *dad)
         if (make_int)
             supp = round(supp);
         node->name = "";
-        node->name += supp;
+        std::stringstream s;
+        s << supp;
+        node->name += s.str();
     }
 
     FOR_NEIGHBOR_IT(node, dad, it) {

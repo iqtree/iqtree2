@@ -1472,7 +1472,13 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
         time(&cur_time);
 
         char *date_str;
+#ifndef _MSC_VER
         date_str = ctime(&cur_time);
+#else   
+        char date_buffer[26];
+        ctime_s(date_buffer, sizeof(date_buffer), &cur_time);
+        date_str = date_buffer;
+#endif
         out.unsetf(ios_base::fixed);
         out << "TIME STAMP" << endl << "----------" << endl << endl
                 << "Date and time: " << date_str << "Total CPU time used: "

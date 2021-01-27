@@ -4174,7 +4174,7 @@ void IQTree::syncCandidateTrees(int nTrees, bool updateStopRule) {
             cset.restoreCheckpoint();
             for (CandidateSet::iterator it = cset.begin(); it != cset.end(); it++)
                 addTreeToCandidateSet(it->second.tree, it->second.score, updateStopRule, worker);
-            trees += ckp->size();
+            trees += static_cast<int>(ckp->size());
             ckp->clear();
         }
         LOG_LINE(VB_QUIET, "Master: " << trees << " candidate trees gathered from workers");
@@ -4289,7 +4289,7 @@ void IQTree::syncCurrentTree() {
             cset.restoreCheckpoint();
             for (CandidateSet::iterator it = cset.begin(); it != cset.end(); it++)
                 addTreeToCandidateSet(it->second.tree, it->second.score, false, MPIHelper::getInstance().getProcessID());
-            MPIHelper::getInstance().increaseTreeReceived(cset.size());
+            MPIHelper::getInstance().increaseTreeReceived(static_cast<int>(cset.size()));
             if (boot_samples.size() > 0)
                 CKP_RESTORE(logl_cutoff);
         }
