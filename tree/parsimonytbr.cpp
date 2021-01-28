@@ -484,12 +484,12 @@ public:
                                            nei->get_partial_pars(),
                                            path_parsimony[max_radius] );
                     int reconnect_cost = 0;
-                    double move_score  = tree.computeParsimonyOutOfTree
-                                         ( path_parsimony[max_radius-1],
-                                           path_parsimony[max_radius],
-                                           &reconnect_cost );
+                    tree.computeParsimonyOutOfTree(path_parsimony[max_radius-1],
+                                                   path_parsimony[max_radius],
+                                                   &reconnect_cost );
                     double gain        = parsimony_score - front_score
                                        - back_score - reconnect_cost;
+                    
                     considerMove(first_id, nei->id, gain, depth);
                 }
             }
