@@ -22,6 +22,7 @@
 #include "superalignment.h"
 #include "nclextra/msetsblock.h"
 #include "nclextra/myreader.h"
+#include <model/modelinfo.h>
 #include "main/phylotesting.h"
 #include "utils/timeutil.h" //for getRealTime()
 #include "utils/safe_io.h"  //for safeGetLine()
@@ -337,8 +338,9 @@ void SuperAlignment::readPartitionRaxml(Params &params) {
                 info.model_name += "+F";
             else if (freq == FREQ_ESTIMATE)
                 info.model_name += "+FO";
-            if (is_ASC)
+            if (is_ASC) {
                 info.model_name += "+ASC";
+            }
             info.model_name += rate_type;
             
             getline(in, info.name, '=');
@@ -756,7 +758,10 @@ void SuperAlignment::printBestPartitionRaxml(const char *filename) {
         for (part = 0; part < partitions.size(); part++) {
             string name = partitions[part]->name;
             replace(name.begin(), name.end(), '+', '_');
-            if (partitions[part]->model_name.find("+ASC") != string::npos)
+            ModelInfoFromName info(partitions[part]->model_name);
+            
+            
+            if (info.hasAscertainmentBiasCorrection())
                 out << "ASC_";
             switch (partitions[part]->seq_type) {
                 case SEQ_DNA: out << "DNA"; break;
@@ -1384,7 +1389,9 @@ void SuperAlignment::createBootstrapAlignment(int *pattern_freq, const char *spe
 			part_pos.push_back(static_cast<int>(nptn));
 			nptn += (*it)->getNPattern();
 		}
-		memset(pattern_freq, 0, nptn * sizeof(int));
+        for (int i=0; i<nptn; ++i) {
+            pattern_freq[i] = 0;
+        }
         IntVector gene_freq;
         random_resampling(static_cast<int>(partitions.size()), gene_freq, rstream);
 		for (int part = 0; part < partitions.size(); part++)
