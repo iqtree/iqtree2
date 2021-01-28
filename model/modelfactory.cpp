@@ -72,12 +72,6 @@ string::size_type findSubStr(string &name, string sub1, string sub2) {
         return pos2;
 }
 
-
-string::size_type posRateFree(string &model_name) {
-    return findSubStr(model_name, "+R", "*R");
-}
-
-
 ModelsBlock *readModelsDefinition(Params &params) {
 
     ModelsBlock *models_block = new ModelsBlock;
@@ -145,7 +139,8 @@ size_t findCloseBracket(string &str, size_t start_pos) {
     return string::npos;
 }
 
-ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, ModelsBlock *models_block) : CheckpointFactory() {
+ModelFactory::ModelFactory(Params &params, string &model_name,
+                           PhyloTree *tree, ModelsBlock *models_block) : CheckpointFactory() {
     store_trans_matrix = params.store_trans_matrix;
     is_storing = false;
     joint_optimize = params.optimize_model_rate_joint;
@@ -186,8 +181,9 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
             break;
         mix_pos = next_mix_pos;
     }
-    if (new_model_str != model_str)
+    if (new_model_str != model_str) {
         cout << "Model " << model_str << " is alias for " << new_model_str << endl;
+    }
     model_str = new_model_str;
 
     //    nxsmodel = models_block->findModel(model_str);
@@ -199,11 +195,12 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
     // Detect PoMo and throw error if sequence type is PoMo but +P is
     // not given.  This makes the model string cleaner and
     // compareable.
-        bool pomo = ModelInfoFromName(model_str).isPolymorphismAware();
+    bool pomo = ModelInfoFromName(model_str).isPolymorphismAware();
 
     if (!pomo &&
-        (tree->aln->seq_type == SEQ_POMO))
+        (tree->aln->seq_type == SEQ_POMO)) {
         outError("Provided alignment is exclusively used by PoMo but model string does not contain, e.g., \"+P\".");
+    }
 
     // Decompose model string into model_str and rate_str string.
     size_t spec_pos = model_str.find_first_of("{+*");
@@ -299,18 +296,23 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
             + rate_str.substr(s_pos+2);
     }
 
+    ModelInfoFromName rate_info(rate_str);
     // In case of PoMo, check that only supported flags are given.
     if (pomo) {
-        if (rate_str.find("+ASC") != string::npos)
+        if (rate_info.hasAscertainmentBiasCorrection()) {
             // TODO DS: This is an important feature, because then,
             // PoMo can be applied to SNP data only.
             outError("PoMo does not yet support ascertainment bias correction (+ASC).");
-        if (posRateFree(rate_str) != string::npos)
+        }
+        if (rate_info.isFreeRate()) {
             outError("PoMo does not yet support free rate models (+R).");
-        if (rate_str.find("+FMIX") != string::npos)
+        }
+        if (rate_info.isFrequencyMixture()) {
             outError("PoMo does not yet support frequency mixture models (+FMIX).");
-        if (ModelInfoFromName(rate_str).hasRateHeterotachy())
+        }
+        if (rate_info.hasRateHeterotachy()) {
             outError("PoMo does not yet support heterotachy models (+H).");
+        }
     }
 
     // PoMo. The +P{}, +GXX and +I flags are interpreted during model creation.
@@ -318,9 +320,8 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
     // mixture model, move +P{}, +GXX and +I flags to model string. For mixture
     // models, the heterozygosity can be set separately for each model and the
     // +P{}, +GXX and +I flags should already be inside the model definition.
-    if (model_str.substr(0, 3) != "MIX" && pomo) {
-      // +P{} flag.
-        ModelInfoFromName rate_info(rate_str);
+        if ( !ModelInfoFromName(model_str).isMixtureModel() && pomo) {
+        // +P{} flag.
         if (rate_info.isPolymorphismAware()) {
             std::string pomo_heterozygosity = rate_info.extractPolymorphicHeterozygosity(rate_str);
             if (!pomo_heterozygosity.empty()) {
@@ -510,19 +511,17 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         }
 
     /******************** initialize model ****************************/
-
+    ModelInfoFromName model_info(model_str);
+    bool is_mixture_model = model_info.isMixtureModel();
+        
     if (tree->aln->site_state_freq.empty()) {
-        if (model_str.substr(0, 3) == "MIX" || freq_type == FREQ_MIXTURE) {
+        if (is_mixture_model || freq_type == FREQ_MIXTURE) {
             string model_list;
-            if (model_str.substr(0, 3) == "MIX") {
-                if (model_str[3] != OPEN_BRACKET)
-                    outError("Mixture model name must start with 'MIX{'");
-                if (model_str.rfind(CLOSE_BRACKET) != model_str.length()-1)
-                    outError("Close bracket not found at the end of ", model_str);
-                model_list = model_str.substr(4, model_str.length()-5);
-                model_str = model_str.substr(0, 3);
+            if (is_mixture_model) {
+                model_list = model_info.extractMixtureModelList(model_str);
             }
-            model = new ModelMixture(model_name, model_str, model_list, models_block, freq_type, freq_params, tree, optimize_mixmodel_weight);
+            model = new ModelMixture(model_name, model_str, model_list, models_block,
+                                     freq_type, freq_params, tree, optimize_mixmodel_weight);
         } else {
             //            string model_desc;
             //            NxsModel *nxsmodel = models_block->findModel(model_str);
@@ -568,248 +567,163 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         models->decomposeRateMatrix();
     }
 
-//    if (model->isMixture())
-//        cout << "Mixture model with " << model->getNMixtures() << " components!" << endl;
-
     /******************** initialize ascertainment bias correction model ****************************/
 
-    string::size_type posasc;
+    rate_info.updateName(rate_str);
 
-    if ((posasc = rate_str.find("+ASC_INF")) != string::npos) {
-        // ascertainment bias correction
-        ASC_type = ASC_INFORMATIVE;
-        tree->aln->getUnobservedConstPatterns(ASC_type, unobserved_ptns);
-        
-        // rebuild the seq_states to contain states of unobserved constant patterns
-        //tree->aln->buildSeqStates(model->seq_states, true);
-        if (tree->aln->num_informative_sites != tree->getAlnNSite()) {
-            if (!params.partition_file) {
-                string infsites_file = ((string)params.out_prefix + ".infsites.phy");
-                tree->aln->printAlignment(params.aln_output_format, infsites_file.c_str(), false, NULL, EXCLUDE_UNINF);
-                cerr << "For your convenience alignment with parsimony-informative sites printed to " << infsites_file << endl;
+    if (rate_info.hasAscertainmentBiasCorrection()) {
+        ASC_type = rate_info.extractASCType(rate_str);
+        rate_info.updateName(rate_str);
+        if (ASC_type == ASC_INFORMATIVE) {
+            // ascertainment bias correction
+            tree->aln->getUnobservedConstPatterns(ASC_type, unobserved_ptns);
+            
+            // rebuild the seq_states to contain states of unobserved constant patterns
+            //tree->aln->buildSeqStates(model->seq_states, true);
+            if (tree->aln->num_informative_sites != tree->getAlnNSite()) {
+                if (!params.partition_file) {
+                    string infsites_file = ((string)params.out_prefix + ".infsites.phy");
+                    tree->aln->printAlignment(params.aln_output_format, infsites_file.c_str(), false, NULL, EXCLUDE_UNINF);
+                    cerr << "For your convenience alignment with parsimony-informative sites printed to " << infsites_file << endl;
+                }
+                int useless_sites = static_cast<int>(tree->getAlnNSite()) - tree->aln->num_informative_sites;
+                outError("Invalid use of +ASC_INF because of " + convertIntToString(useless_sites) +
+                         " parsimony-uninformative sites in the alignment");
             }
-            int useless_sites = static_cast<int>(tree->getAlnNSite()) - tree->aln->num_informative_sites;
-            outError("Invalid use of +ASC_INF because of " + convertIntToString(useless_sites) +
-                     " parsimony-uninformative sites in the alignment");
-        }
-        if (verbose_mode >= VB_MED)
-            cout << "Ascertainment bias correction: " << unobserved_ptns.size() << " unobservable uninformative patterns"<< endl;
-        rate_str = rate_str.substr(0, posasc) + rate_str.substr(posasc+8);
-    } else if ((posasc = rate_str.find("+ASC_MIS")) != string::npos) {
-        // initialize Holder's ascertainment bias correction model
-        ASC_type = ASC_VARIANT_MISSING;
-        tree->aln->getUnobservedConstPatterns(ASC_type, unobserved_ptns);
-        // rebuild the seq_states to contain states of unobserved constant patterns
-        //tree->aln->buildSeqStates(model->seq_states, true);
-        if (tree->aln->frac_invariant_sites > 0) {
-            if (!params.partition_file) {
-                string varsites_file = ((string)params.out_prefix + ".varsites.phy");
-                tree->aln->printAlignment(params.aln_output_format, varsites_file.c_str(), false, NULL, EXCLUDE_INVAR);
-                cerr << "For your convenience alignment with variable sites printed to " << varsites_file << endl;
+            if (verbose_mode >= VB_MED)
+                cout << "Ascertainment bias correction: " << unobserved_ptns.size() << " unobservable uninformative patterns"<< endl;
+        } else if (ASC_type == ASC_VARIANT_MISSING) {
+            // initialize Holder's ascertainment bias correction model
+            tree->aln->getUnobservedConstPatterns(ASC_type, unobserved_ptns);
+            // rebuild the seq_states to contain states of unobserved constant patterns
+            //tree->aln->buildSeqStates(model->seq_states, true);
+            if (tree->aln->frac_invariant_sites > 0) {
+                if (!params.partition_file) {
+                    string varsites_file = ((string)params.out_prefix + ".varsites.phy");
+                    tree->aln->printAlignment(params.aln_output_format, varsites_file.c_str(), false, NULL, EXCLUDE_INVAR);
+                    cerr << "For your convenience alignment with variable sites printed to " << varsites_file << endl;
+                }
+                double  fraction    = tree->aln->frac_invariant_sites;
+                double  site_count  = static_cast<double>(tree->aln->getNSite());
+                double  estimate    = floor(fraction * site_count + .5);
+                int64_t invar_count = static_cast<int64_t> (estimate);
+                outError("Invalid use of +ASC_MIS because of " + convertInt64ToString(invar_count) +
+                         " invariant sites in the alignment");
             }
-            double  fraction    = tree->aln->frac_invariant_sites;
-            double  site_count  = static_cast<double>(tree->aln->getNSite());
-            double  estimate    = floor(fraction * site_count + .5);
-            int64_t invar_count = static_cast<int64_t> (estimate);
-            outError("Invalid use of +ASC_MIS because of " + convertInt64ToString(invar_count) +
-                     " invariant sites in the alignment");
-        }
-        if (verbose_mode >= VB_MED) {
-            cout << "Holder's ascertainment bias correction: " << unobserved_ptns.size() << " unobservable constant patterns" << endl;
-        }
-        rate_str = rate_str.substr(0, posasc) + rate_str.substr(posasc+8);
-    } else if ((posasc = rate_str.find("+ASC")) != string::npos) {
-        // ascertainment bias correction
-        ASC_type = ASC_VARIANT;
-        tree->aln->getUnobservedConstPatterns(ASC_type, unobserved_ptns);
-        
-        // delete rarely observed state
-        for (intptr_t i = static_cast<intptr_t>(unobserved_ptns.size())-1; i >= 0; i--)
-            if (model->state_freq[(int)unobserved_ptns[i][0]] < 1e-8)
-                unobserved_ptns.erase(unobserved_ptns.begin() + i);
-                
-        // rebuild the seq_states to contain states of unobserved constant patterns
-        //tree->aln->buildSeqStates(model->seq_states, true);
-//        if (unobserved_ptns.size() <= 0)
-//            outError("Invalid use of +ASC because all constant patterns are observed in the alignment");
-        if (tree->aln->frac_invariant_sites > 0) {
-//            cerr << tree->aln->frac_invariant_sites*tree->aln->getNSite() << " invariant sites observed in the alignment" << endl;
-//            for (Alignment::iterator pit = tree->aln->begin(); pit != tree->aln->end(); pit++)
-//                if (pit->isInvariant()) {
-//                    string pat_str = "";
-//                    for (Pattern::iterator it = pit->begin(); it != pit->end(); it++)
-//                        pat_str += tree->aln->convertStateBackStr(*it);
-//                    cerr << pat_str << " is invariant site pattern" << endl;
-//                }
-            if (!params.partition_file) {
-                string varsites_file = ((string)params.out_prefix + ".varsites.phy");
-                tree->aln->printAlignment(params.aln_output_format, varsites_file.c_str(), false, NULL, EXCLUDE_INVAR);
-                cerr << "For your convenience alignment with variable sites printed to " << varsites_file << endl;
+            if (verbose_mode >= VB_MED) {
+                cout << "Holder's ascertainment bias correction: " << unobserved_ptns.size() << " unobservable constant patterns" << endl;
             }
-            double  fraction    = tree->aln->frac_invariant_sites;
-            double  site_count  = static_cast<double>(tree->aln->getNSite());
-            double  estimate    = floor(fraction * site_count + .5);
-            int64_t invar_count = static_cast<int64_t> (estimate);
-            outError("Invalid use of +ASC because of " + convertInt64ToString(invar_count) +
-                " invariant sites in the alignment");
+        } else {
+            // ascertainment bias correction
+            ASC_type = ASC_VARIANT;
+            tree->aln->getUnobservedConstPatterns(ASC_type, unobserved_ptns);
+            
+            // delete rarely observed state
+            for (intptr_t i = static_cast<intptr_t>(unobserved_ptns.size())-1; i >= 0; i--)
+                if (model->state_freq[(int)unobserved_ptns[i][0]] < 1e-8)
+                    unobserved_ptns.erase(unobserved_ptns.begin() + i);
+            
+            // rebuild the seq_states to contain states of unobserved constant patterns
+            //tree->aln->buildSeqStates(model->seq_states, true);
+            //        if (unobserved_ptns.size() <= 0)
+            //            outError("Invalid use of +ASC because all constant patterns are observed in the alignment");
+            if (tree->aln->frac_invariant_sites > 0) {
+                //            cerr << tree->aln->frac_invariant_sites*tree->aln->getNSite() << " invariant sites observed in the alignment" << endl;
+                //            for (Alignment::iterator pit = tree->aln->begin(); pit != tree->aln->end(); pit++)
+                //                if (pit->isInvariant()) {
+                //                    string pat_str = "";
+                //                    for (Pattern::iterator it = pit->begin(); it != pit->end(); it++)
+                //                        pat_str += tree->aln->convertStateBackStr(*it);
+                //                    cerr << pat_str << " is invariant site pattern" << endl;
+                //                }
+                if (!params.partition_file) {
+                    string varsites_file = ((string)params.out_prefix + ".varsites.phy");
+                    tree->aln->printAlignment(params.aln_output_format, varsites_file.c_str(), false, NULL, EXCLUDE_INVAR);
+                    cerr << "For your convenience alignment with variable sites printed to " << varsites_file << endl;
+                }
+                double  fraction    = tree->aln->frac_invariant_sites;
+                double  site_count  = static_cast<double>(tree->aln->getNSite());
+                double  estimate    = floor(fraction * site_count + .5);
+                int64_t invar_count = static_cast<int64_t> (estimate);
+                outError("Invalid use of +ASC because of " + convertInt64ToString(invar_count) +
+                         " invariant sites in the alignment");
+            }
+            if (verbose_mode >= VB_MED)
+                cout << "Ascertainment bias correction: " << unobserved_ptns.size() << " unobservable constant patterns"<< endl;
         }
-        if (verbose_mode >= VB_MED)
-            cout << "Ascertainment bias correction: " << unobserved_ptns.size() << " unobservable constant patterns"<< endl;
-		rate_str = rate_str.substr(0, posasc) + rate_str.substr(posasc+4);
-    } else {
-        //tree->aln->buildSeqStates(model->seq_states, false);
     }
 
     /******************** initialize site rate heterogeneity ****************************/
 
-    string::size_type posI = rate_str.find("+I");
-    string::size_type posG = rate_str.find("+G");
-    string::size_type posG2 = rate_str.find("*G");
-    if (posG != string::npos && posG2 != string::npos) {
-        cout << "NOTE: both +G and *G were specified, continue with "
-            << ((posG < posG2)? rate_str.substr(posG,2) : rate_str.substr(posG2,2)) << endl;
-    }
-    if (posG2 != string::npos && posG2 < posG) {
-        posG = posG2;
-        fused_mix_rate = true;
-    }
+        
+    bool isFreeRate          = rate_info.isFreeRate();
+    bool isGammaModel        = rate_info.isGammaModel();
+    bool isHeterotarchicRate = rate_info.hasRateHeterotachy();
+    bool isInvariantModel    = rate_info.isInvariantModel();
 
-    string::size_type posR = rate_str.find("+R"); // FreeRate model
-    string::size_type posR2 = rate_str.find("*R"); // FreeRate model
-
-    if (posG != string::npos && (posR != string::npos || posR2 != string::npos)) {
+    if (isGammaModel && isFreeRate) {
         outWarning("Both Gamma and FreeRate models were specified, continue with FreeRate model");
-        posG = string::npos;
+        isGammaModel   = false;
         fused_mix_rate = false;
     }
 
-    if (posR != string::npos && posR2 != string::npos) {
-        cout << "NOTE: both +R and *R were specified, continue with "
-            << ((posR < posR2)? rate_str.substr(posR,2) : rate_str.substr(posR2,2)) << endl;
-    }
-
-    if (posR2 != string::npos && posR2 < posR) {
-        posR = posR2;
-        fused_mix_rate = true;
-    }
-
-    string::size_type posH = rate_str.find("+H"); // heterotachy model
-    string::size_type posH2 = rate_str.find("*H"); // heterotachy model
-
-    if (posG != string::npos && (posH != string::npos || posH2 != string::npos)) {
+    if (isGammaModel && isHeterotarchicRate) {
         outWarning("Both Gamma and heterotachy models were specified, continue with heterotachy model");
-        posG = string::npos;
+        isGammaModel   = false;
         fused_mix_rate = false;
     }
 
-    if (posR != string::npos && (posH != string::npos || posH2 != string::npos)) {
+    if (isFreeRate && isHeterotarchicRate) {
         outWarning("Both FreeRate and heterotachy models were specified, continue with heterotachy model");
-        posR = string::npos;
+        isFreeRate = false;
         fused_mix_rate = false;
-    }
-
-    if (posH != string::npos && posH2 != string::npos) {
-        cout << "NOTE: both +H and *H were specified, continue with "
-            << ((posH < posH2)? rate_str.substr(posH,2) : rate_str.substr(posH2,2)) << endl;
-    }
-    if (posH2 != string::npos && posH2 < posH) {
-        posH = posH2;
-        fused_mix_rate = true;
     }
 
     string::size_type posX;
     /* create site-rate heterogeneity */
     int num_rate_cats = params.num_rate_cats;
-    if (fused_mix_rate && model->isMixture()) num_rate_cats = model->getNMixtures();
-    double gamma_shape = params.gamma_shape;
-    double p_invar_sites = params.p_invar_sites;
+    if (fused_mix_rate && model->isMixture()) {
+        num_rate_cats = model->getNMixtures();
+    }
+        
+    double p_invar_sites  = params.p_invar_sites;
+    if (isInvariantModel) {
+        p_invar_sites = rate_info.getProportionOfInvariantSites();
+    }
+        
+    double gamma_shape    = params.gamma_shape;
+    if (isGammaModel) {
+        rate_info.getGammaParameters(num_rate_cats, gamma_shape);
+    }
+        
     string freerate_params = "";
-    if (posI != string::npos) {
-        // invariable site model
-        if (rate_str.length() > posI+2 && rate_str[posI+2] == OPEN_BRACKET) {
-            close_bracket = rate_str.find(CLOSE_BRACKET, posI);
-            if (close_bracket == string::npos)
-                outError("Close bracket not found in ", rate_str);
-            p_invar_sites = convert_double(rate_str.substr(posI+3, close_bracket-posI-3).c_str());
-            if (p_invar_sites < 0 || p_invar_sites >= 1)
-                outError("p_invar must be in [0,1)");
-        } else if (rate_str.length() > posI+2 && rate_str[posI+2] != '+' && rate_str[posI+2] != '*')
-            outError("Wrong model name ", rate_str);
+    if (isFreeRate) {
+        freerate_params = rate_info.getFreeRateParameters(num_rate_cats,
+                                                          fused_mix_rate);
     }
-    if (posG != string::npos) {
-        // Gamma rate model
-        int end_pos = 0;
-        if (rate_str.length() > posG+2 && isdigit(rate_str[posG+2])) {
-            num_rate_cats = convert_int(rate_str.substr(posG+2).c_str(), end_pos);
-            if (num_rate_cats < 1) outError("Wrong number of rate categories");
-        }
-        if (rate_str.length() > posG+2+end_pos && rate_str[posG+2+end_pos] == OPEN_BRACKET) {
-            close_bracket = rate_str.find(CLOSE_BRACKET, posG);
-            if (close_bracket == string::npos)
-                outError("Close bracket not found in ", rate_str);
-            gamma_shape = convert_double(rate_str.substr(posG+3+end_pos, close_bracket-posG-3-end_pos).c_str());
-//            if (gamma_shape < MIN_GAMMA_SHAPE || gamma_shape > MAX_GAMMA_SHAPE) {
-//                stringstream str;
-//                str << "Gamma shape parameter " << gamma_shape << "out of range ["
-//                        << MIN_GAMMA_SHAPE << ',' << MAX_GAMMA_SHAPE << "]" << endl;
-//                outError(str.str());
-//            }
-        } else if (rate_str.length() > posG+2+end_pos && rate_str[posG+2+end_pos] != '+')
-            outError("Wrong model name ", rate_str);
-    }
-    if (posR != string::npos) {
-        // FreeRate model
-        int end_pos = 0;
-        if (rate_str.length() > posR+2 && isdigit(rate_str[posR+2])) {
-            num_rate_cats = convert_int(rate_str.substr(posR+2).c_str(), end_pos);
-                if (num_rate_cats < 1) outError("Wrong number of rate categories");
-            }
-        if (rate_str.length() > posR+2+end_pos && rate_str[posR+2+end_pos] == OPEN_BRACKET) {
-            close_bracket = rate_str.find(CLOSE_BRACKET, posR);
-            if (close_bracket == string::npos)
-                outError("Close bracket not found in ", rate_str);
-            freerate_params = rate_str.substr(posR+3+end_pos, close_bracket-posR-3-end_pos).c_str();
-        } else if (rate_str.length() > posR+2+end_pos && rate_str[posR+2+end_pos] != '+')
-            outError("Wrong model name ", rate_str);
-    }
-
+        
     string heterotachy_params = "";
-    if (posH != string::npos) {
-        // Heterotachy model
-        int end_pos = 0;
-        if (rate_str.length() > posH+2 && isdigit(rate_str[posH+2])) {
-            num_rate_cats = convert_int(rate_str.substr(posH+2).c_str(), end_pos);
-                if (num_rate_cats < 1) outError("Wrong number of rate categories");
-        } else {
-            if (!model->isMixture() || !fused_mix_rate)
-                outError("Please specify number of heterotachy classes (e.g., +H2)");
-        }
-        if (rate_str.length() > posH+2+end_pos && rate_str[posH+2+end_pos] == OPEN_BRACKET) {
-            close_bracket = rate_str.find(CLOSE_BRACKET, posH);
-            if (close_bracket == string::npos)
-                outError("Close bracket not found in ", rate_str);
-            heterotachy_params = rate_str.substr(posH+3+end_pos, close_bracket-posH-3-end_pos).c_str();
-        } else if (rate_str.length() > posH+2+end_pos && rate_str[posH+2+end_pos] != '+')
-            outError("Wrong model name ", rate_str);
+    if (isHeterotarchicRate) {
+        heterotachy_params = rate_info.getHeterotachyParameters(model->isMixture(),
+                                                                num_rate_cats,fused_mix_rate);
     }
-
 
     if (rate_str.find('+') != string::npos || rate_str.find('*') != string::npos) {
         //string rate_str = model_str.substr(pos);
-        if (posI != string::npos && posH != string::npos) {
+        if (isInvariantModel && isHeterotarchicRate) {
             site_rate = new RateHeterotachyInvar(num_rate_cats, heterotachy_params, p_invar_sites, tree);
-        } else if (posH != string::npos) {
+        } else if (isHeterotarchicRate) {
             site_rate = new RateHeterotachy(num_rate_cats, heterotachy_params, tree);
-        } else if (posI != string::npos && posG != string::npos) {
+        } else if (isInvariantModel && isGammaModel) {
             site_rate = new RateGammaInvar(num_rate_cats, gamma_shape, params.gamma_median,
                     p_invar_sites, params.optimize_alg_gammai, tree, false);
-        } else if (posI != string::npos && posR != string::npos) {
+        } else if (isInvariantModel && isFreeRate) {
             site_rate = new RateFreeInvar(num_rate_cats, gamma_shape, freerate_params, !fused_mix_rate, p_invar_sites, params.optimize_alg_freerate, tree);
-        } else if (posI != string::npos) {
+        } else if (isInvariantModel) {
             site_rate = new RateInvar(p_invar_sites, tree);
-        } else if (posG != string::npos) {
+        } else if (isGammaModel) {
             site_rate = new RateGamma(num_rate_cats, gamma_shape, params.gamma_median, tree);
-        } else if (posR != string::npos) {
+        } else if (isFreeRate) {
             site_rate = new RateFree(num_rate_cats, gamma_shape, freerate_params, !fused_mix_rate, params.optimize_alg_freerate, tree);
 //        } else if ((posX = rate_str.find("+M")) != string::npos) {
 //            tree->setLikelihoodKernel(LK_NORMAL);

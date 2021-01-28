@@ -33,12 +33,6 @@ const double MAX_BRLEN_SCALE = 100.0;
 ModelsBlock *readModelsDefinition(Params &params);
 
 
-/**
-    return the position of +R or *R in the model name
-    @param model_name model name string
-    @return position of +R or *R in the model string, string::npos if not found
-*/
-string::size_type posRateFree(string &model_name);
 
 
 /**
