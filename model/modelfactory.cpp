@@ -31,6 +31,7 @@
 #include "modelpomo.h"
 #include "modelset.h"
 #include "modelmixture.h"
+#include "modelinfo.h"
 #include "ratemeyerhaeseler.h"
 #include "ratemeyerdiscrete.h"
 #include "ratekategory.h"
@@ -71,17 +72,11 @@ string::size_type findSubStr(string &name, string sub1, string sub2) {
         return pos2;
 }
 
-string::size_type posRateHeterotachy(string model_name) {
-    return findSubStr(model_name, "+H", "*H");
-}
 
 string::size_type posRateFree(string &model_name) {
     return findSubStr(model_name, "+R", "*R");
 }
 
-string::size_type posPOMO(string &model_name) {
-    return findSubStr(model_name, "+P", "*P");
-}
 
 ModelsBlock *readModelsDefinition(Params &params) {
 
@@ -204,10 +199,9 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
     // Detect PoMo and throw error if sequence type is PoMo but +P is
     // not given.  This makes the model string cleaner and
     // compareable.
-    string::size_type p_pos = posPOMO(model_str);
-    bool pomo = (p_pos != string::npos);
+        bool pomo = ModelInfoFromName(model_str).isPolymorphismAware();
 
-    if ((p_pos == string::npos) &&
+    if (!pomo &&
         (tree->aln->seq_type == SEQ_POMO))
         outError("Provided alignment is exclusively used by PoMo but model string does not contain, e.g., \"+P\".");
 
@@ -315,7 +309,7 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
             outError("PoMo does not yet support free rate models (+R).");
         if (rate_str.find("+FMIX") != string::npos)
             outError("PoMo does not yet support frequency mixture models (+FMIX).");
-        if (posRateHeterotachy(rate_str) != string::npos)
+        if (ModelInfoFromName(rate_str).hasRateHeterotachy())
             outError("PoMo does not yet support heterotachy models (+H).");
     }
 
@@ -326,23 +320,16 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
     // +P{}, +GXX and +I flags should already be inside the model definition.
     if (model_str.substr(0, 3) != "MIX" && pomo) {
       // +P{} flag.
-      p_pos = posPOMO(rate_str);
-      if (p_pos != string::npos) {
-        if (rate_str[p_pos+2] == '{') {
-          string::size_type close_bracket = rate_str.find("}");
-          if (close_bracket == string::npos)
-            outError("No closing bracket in PoMo parameters.");
-          else {
-            string pomo_heterozygosity = rate_str.substr(p_pos+3,close_bracket-p_pos-3);
-            rate_str = rate_str.substr(0, p_pos) + rate_str.substr(close_bracket+1);
-            model_str += "+P{" + pomo_heterozygosity + "}";
-          }
+        ModelInfoFromName rate_info(rate_str);
+        if (rate_info.isPolymorphismAware()) {
+            std::string pomo_heterozygosity = rate_info.extractPolymorphicHeterozygosity(rate_str);
+            if (!pomo_heterozygosity.empty()) {
+                model_str += "+P{" + pomo_heterozygosity + "}";
+            }
+            else {
+                model_str += "+P";
+            }
         }
-        else {
-          rate_str = rate_str.substr(0, p_pos) + rate_str.substr(p_pos + 2);
-          model_str += "+P";
-        }
-      }
 
       // +G flag.
       size_t pomo_rate_start_pos;

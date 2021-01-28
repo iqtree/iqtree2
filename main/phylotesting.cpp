@@ -42,10 +42,11 @@
 #include "model/modelmixture.h"
 #include "model/modelliemarkov.h"
 #include "model/modelpomo.h"
-#include "utils/timeutil.h"
 #include "model/modelfactorymixlen.h"
+#include "model/modelinfo.h"
 #include "tree/phylosupertreeplen.h"
 #include "tree/phylosupertreeunlinked.h"
+#include "utils/timeutil.h"
 
 #include "phyloanalysis.h"
 #include "gsl/mygsl.h"
@@ -587,7 +588,7 @@ string computeFastMLTree(Params &params, Alignment *aln,
             saved_model_names.push_back(saln->partitions[part]->model_name);
             saln->partitions[part]->model_name = subst_names[part] + rate_names[part];
         }
-    } else if (posRateHeterotachy(rate_names[0]) != string::npos) {
+    } else if (ModelInfoFromName(rate_names[0]).hasRateHeterotachy()) {
         iqtree = new PhyloTreeMixlen(aln, 0);
     } else {
         iqtree = new IQTree(aln);
@@ -750,11 +751,10 @@ void transferModelFinderParameters(IQTree *iqtree, Checkpoint *target) {
     source->transferSubCheckpoint(target, "PhyloTree");
 }
 
-void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
-{
-    //    iqtree.setCurScore(-DBL_MAX);
-    bool test_only = (params.model_name.find("ONLY") != string::npos) ||
-        (params.model_name.substr(0,2) == "MF" && params.model_name.substr(0,3) != "MFP");
+void runModelFinder(Params &params, IQTree &iqtree,
+                    ModelCheckpoint &model_checkpoint) {
+    ModelInfoFromName model_info(params.model_name);
+    bool test_only = model_info.isModelFinderOnly();
     
     bool empty_model_found = params.model_name.empty() && !iqtree.isSuperTree();
     
@@ -772,8 +772,9 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
         empty_model_found = false;
 
     // Model already specifed, nothing to do here
-    if (!empty_model_found && params.model_name.substr(0, 4) != "TEST" && params.model_name.substr(0, 2) != "MF")
+    if (!model_info.isModelFinder()) {
         return;
+    }
     if (MPIHelper::getInstance().getNumProcesses() > 1)
         outError("Please use only 1 MPI process! We are currently working on the MPI parallelization of model selection.");
     // TODO: check if necessary
@@ -781,32 +782,32 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
     //            ((PhyloSuperTree*) &iqtree)->mapTrees();
     double cpu_time = getCPUTime();
     double real_time = getRealTime();
-    model_info.setFileName((string)params.out_prefix + ".model.gz");
-    model_info.setDumpInterval(params.checkpoint_dump_interval);
+    model_checkpoint.setFileName((string)params.out_prefix + ".model.gz");
+    model_checkpoint.setDumpInterval(params.checkpoint_dump_interval);
     
     bool ok_model_file = false;
     if (!params.model_test_again) {
-        ok_model_file = model_info.load();
+        ok_model_file = model_checkpoint.load();
     }
     
     cout << endl;
     
-    ok_model_file &= model_info.size() > 0;
+    ok_model_file &= model_checkpoint.size() > 0;
     if (ok_model_file)
-        cout << "NOTE: Restoring information from model checkpoint file " << model_info.getFileName() << endl;
+        cout << "NOTE: Restoring information from model checkpoint file " << model_checkpoint.getFileName() << endl;
     
     
     Checkpoint *orig_checkpoint = iqtree.getCheckpoint();
-    iqtree.setCheckpoint(&model_info);
+    iqtree.setCheckpoint(&model_checkpoint);
     iqtree.restoreCheckpoint();
     
     int partition_type;
-    if (CKP_RESTORE2((&model_info), partition_type)) {
+    if (CKP_RESTORE2((&model_checkpoint), partition_type)) {
         if (partition_type != params.partition_type)
             outError("Mismatch partition type between checkpoint and partition file command option\nRerun with -mredo to ignore .model.gz checkpoint file");
     } else {
         partition_type = params.partition_type;
-        CKP_SAVE2((&model_info), partition_type);
+        CKP_SAVE2((&model_checkpoint), partition_type);
     }
     
     ModelsBlock *models_block = readModelsDefinition(params);
@@ -814,7 +815,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
     // compute initial tree
     if (params.modelfinder_ml_tree) {
         // 2019-09-10: Now perform NNI on the initial tree
-        string tree_str = computeFastMLTree(params, iqtree.aln, model_info,
+        string tree_str = computeFastMLTree(params, iqtree.aln, model_checkpoint,
             models_block, params.num_threads, params.partition_type, iqtree.dist_file);
         iqtree.restoreCheckpoint();
     } else {
@@ -824,9 +825,9 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
             PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
             int part = 0;
             for (auto it = stree->begin(); it != stree->end(); it++, part++) {
-                model_info.startStruct((*it)->aln->name);
+                model_checkpoint.startStruct((*it)->aln->name);
                 (*it)->saveCheckpoint();
-                model_info.endStruct();
+                model_checkpoint.endStruct();
             }
         } else {
             iqtree.saveCheckpoint();
@@ -862,7 +863,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
     if (iqtree.isSuperTree()) {
         // partition model selection
         PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
-        testPartitionModel(params, stree, model_info, models_block, params.num_threads);
+        testPartitionModel(params, stree, model_checkpoint, models_block, params.num_threads);
         stree->mapTrees();
         string res_models = "";
         for (auto it = stree->begin(); it != stree->end(); it++) {
@@ -875,13 +876,15 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
         CandidateModel best_model;
         if (params.openmp_by_model)
             best_model = CandidateModelSet().evaluateAll(params, &iqtree,
-                model_info, models_block, params.num_threads, BRLEN_OPTIMIZE);
+                model_checkpoint, models_block,
+                params.num_threads, BRLEN_OPTIMIZE);
         else
             best_model = CandidateModelSet().test(params, &iqtree,
-                model_info, models_block, params.num_threads, BRLEN_OPTIMIZE);
+                model_checkpoint, models_block,
+                params.num_threads, BRLEN_OPTIMIZE);
         iqtree.aln->model_name = best_model.getName();
         
-        Checkpoint *checkpoint = &model_info;
+        Checkpoint *checkpoint = &model_checkpoint;
         string best_model_AIC, best_model_AICc, best_model_BIC;
         CKP_RESTORE(best_model_AIC);
         CKP_RESTORE(best_model_AICc);
@@ -896,7 +899,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
     delete models_block;
     
     // force to dump all checkpointing information
-    model_info.dump(true);
+    model_checkpoint.dump(true);
     
     // transfer models parameters
     transferModelFinderParameters(&iqtree, orig_checkpoint);
@@ -907,9 +910,12 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
     cpu_time = getCPUTime() - cpu_time;
     real_time = getRealTime() - real_time;
     cout << endl;
-    cout << "All model information printed to " << model_info.getFileName() << endl;
-    cout << "CPU time for ModelFinder: " << cpu_time << " seconds (" << convert_time(cpu_time) << ")" << endl;
-    cout << "Wall-clock time for ModelFinder: " << real_time << " seconds (" << convert_time(real_time) << ")" << endl;
+    cout << "All model information printed to "
+         << model_checkpoint.getFileName() << endl;
+    cout << "CPU time for ModelFinder: " << cpu_time << " seconds"
+         << " (" << convert_time(cpu_time) << ")" << endl;
+    cout << "Wall-clock time for ModelFinder: " << real_time << " seconds"
+         << " (" << convert_time(real_time) << ")" << endl;
     
     //        alignment = iqtree.aln;
     if (test_only) {
@@ -1547,7 +1553,7 @@ string CandidateModel::evaluate(Params &params,
         ASSERT(subst_names.size() == rate_names.size());
         for (int part = 0; part != subst_names.size(); part++)
             saln->partitions[part]->model_name = subst_names[part]+rate_names[part];
-    } else if (posRateHeterotachy(getName()) != string::npos)
+    } else if (ModelInfoFromName(getName()).hasRateHeterotachy())
         iqtree = new PhyloTreeMixlen(in_aln, 0);
     else
         iqtree = new IQTree(in_aln);

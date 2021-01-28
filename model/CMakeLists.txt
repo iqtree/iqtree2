@@ -7,6 +7,7 @@ modelfactory.cpp modelfactory.h
 modelprotein.cpp modelprotein.h
 modelset.cpp modelset.h
 modelsubst.cpp modelsubst.h
+modelinfo.cpp modelinfo.h
 partitionmodel.cpp partitionmodel.h
 partitionmodelplen.cpp partitionmodelplen.h
 rategamma.cpp rategamma.h

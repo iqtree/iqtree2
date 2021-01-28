@@ -32,12 +32,6 @@ const double MAX_BRLEN_SCALE = 100.0;
 
 ModelsBlock *readModelsDefinition(Params &params);
 
-/**
-    return the position of +H or *H in the model name
-    @param model_name model name string
-    @return position of +H or *H in the model string, string::npos if not found
-*/
-string::size_type posRateHeterotachy(string model_name);
 
 /**
     return the position of +R or *R in the model name
@@ -46,12 +40,6 @@ string::size_type posRateHeterotachy(string model_name);
 */
 string::size_type posRateFree(string &model_name);
 
-/**
-    return the position of +P or *P in the model name
-    @param model_name model name string
-    @return position of +P or *P in the model string, string::npos if not found
-*/
-string::size_type posPOMO(string &model_name);
 
 /**
 Store the transition matrix corresponding to evolutionary time so that one must not compute again. 

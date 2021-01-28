@@ -15,6 +15,7 @@
 #include "modelset.h"
 #include "modelmixture.h"
 #include "modelpomo.h"
+#include "modelinfo.h"
 //#include "phylokernelmixture.h"
 #include "modelpomomixture.h"
 
@@ -1069,37 +1070,23 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block,
                         StateFreqType freq_type, string freq_params,
                         PhyloTree* tree)
 {
-	ModelSubst *model = NULL;
-	//cout << "Numstates: " << tree->aln->num_states << endl;
-	string model_params;
+    ModelSubst *model = NULL;
+    string model_params;
     NxsModel *nxsmodel = models_block->findModel(model_str);
-	if (nxsmodel) model_params = nxsmodel->description;
+    if (nxsmodel) model_params = nxsmodel->description;
 
     // PoMo.
-    bool pomo = false;
-    string pomo_rate_str = "";
-    string pomo_heterozygosity = "";
-    string::size_type p_pos = posPOMO(model_str);
-    pomo = (p_pos != string::npos);
+    string pomo_rate_str;
+    string pomo_heterozygosity;
+    ModelInfoFromName model_info(model_str);
+    bool   pomo = model_info.isPolymorphismAware();
 
     if (pomo) {
-        if (model_str[p_pos+2] == '{') {
-            string::size_type close_bracket = model_str.find("}", p_pos);
-            if (close_bracket == string::npos) {
-                cout << "Model string: " << model_str << endl;
-                outError("No closing bracket in PoMo parameters.");
-            }
-            else {
-                pomo_heterozygosity = model_str.substr(p_pos+3,close_bracket-p_pos-3);
-                model_str = model_str.substr(0, p_pos) + model_str.substr(close_bracket+1);
-            }
-        }
-        else {
-            model_str = model_str.substr(0, p_pos) + model_str.substr(p_pos + 2);
-        }
+        pomo_heterozygosity = model_info.extractPolymorphicHeterozygosity(model_str);
+        model_info.updateName(model_str);
 
-        size_t pomo_rate_start_pos;
-        if ((pomo_rate_start_pos = model_str.find("+G")) != string::npos) {
+        size_t pomo_rate_start_pos = model_str.find("+G");
+        if (pomo_rate_start_pos != string::npos) {
             size_t pomo_rate_end_pos = model_str.find_first_of("+*", pomo_rate_start_pos+1);
             if (pomo_rate_end_pos == string::npos) {
                 pomo_rate_str = model_str.substr(pomo_rate_start_pos, model_str.length() - pomo_rate_start_pos);
@@ -1108,6 +1095,7 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block,
                 pomo_rate_str = model_str.substr(pomo_rate_start_pos, pomo_rate_end_pos - pomo_rate_start_pos);
                 model_str = model_str.substr(0, pomo_rate_start_pos) + model_str.substr(pomo_rate_end_pos);
             }
+            model_info.updateName(model_str);
         }
     }
 
@@ -1137,16 +1125,6 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block,
 		model_str = model_str.substr(0, pos);
     }
 
-	/*
-	if ((model_str == "JC" && tree->aln->seq_type == SEQ_DNA) ||
-		(model_str == "POISSON" && tree->aln->seq_type == SEQ_PROTEIN) ||
-		(model_str == "JC2" && tree->aln->seq_type == SEQ_BINARY) ||
-		(model_str == "JCC" && tree->aln->seq_type == SEQ_CODON) ||
-		(model_str == "MK" && tree->aln->seq_type == SEQ_MORPH))
-	{
-		model = new ModelSubst(tree->aln->num_states);
-	} else */
-
     if ((pomo) || (tree->aln->seq_type == SEQ_POMO)) {
         if (pomo_rate_str == "")
             model = new ModelPoMo(model_str.c_str(), model_params, freq_type, freq_params, tree, pomo_heterozygosity);
@@ -1154,16 +1132,6 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block,
             model = new ModelPoMoMixture(model_str.c_str(), model_params, freq_type, freq_params, tree, pomo_heterozygosity, pomo_rate_str);
         if (model->isMixture() && verbose_mode >= VB_MED)
             cout << "PoMo mixture model for Gamma rate heterogeneity." << endl;
-//	else if ((model_str == "GTR" && tree->aln->seq_type == SEQ_DNA) ||
-//             (model_str == "GTR2" && tree->aln->seq_type == SEQ_BINARY) ||
-//             (model_str == "GTR20" && tree->aln->seq_type == SEQ_PROTEIN)) {
-//		model = new ModelGTR(tree, count_rates);
-//		if (freq_params != "")
-//			((ModelGTR*)model)->readStateFreq(freq_params);
-//		if (model_params != "")
-//			((ModelGTR*)model)->readRates(model_params);
-//		((ModelGTR*)model)->init(freq_type);
-//	} else
 	} else if (ModelMarkov::validModelName(model_str)) {
 	        model = ModelMarkov::getModelByName(model_str, tree, model_params, freq_type, freq_params);
 	} else if (tree->aln->seq_type == SEQ_BINARY) {

@@ -29,8 +29,7 @@
 #include "utils/timeutil.h"
 #include "model/modelmarkov.h"
 #include "model/rategamma.h"
-//#include "phylotreemixlen.h"
-//#include "model/modelfactorymixlen.h"
+#include "model/modelinfo.h"
 #include <numeric>
 #include "utils/tools.h"
 #include "utils/MPIHelper.h"
@@ -2769,10 +2768,10 @@ void IQTree::refineBootTrees() {
             }
         } else {
             // allocate heterotachy tree if neccessary
-            auto pos = posRateHeterotachy(aln->model_name);            
+            ModelInfoFromName model_info(aln->model_name);
             if (params->num_mixlen > 1) {
                 boot_tree = new PhyloTreeMixlen(bootstrap_alignment, params->num_mixlen);
-            } else if (pos != string::npos) {
+            } else if (model_info.hasRateHeterotachy()) {
                 boot_tree = new PhyloTreeMixlen(bootstrap_alignment, 0);
             } else
                 boot_tree = new IQTree(bootstrap_alignment);
