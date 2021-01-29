@@ -443,16 +443,18 @@ namespace {
             }
             virtual void findMove(const PhyloTree& tree,
                                   const TargetBranchRange& branches,
-                                  int radius, double disconnection_benefit,
+                                  int radius,
                                   std::vector<UINT*> &path_parsimony,
                                   double parsimony_score) {
                 auto source = branches[source_branch_id];
+                BenefitPair   benefit = source.getPartialDisconnectionBenefit(tree, branches);
+
                 if (source.first->isInterior()) {
-                    findForwardSPR(tree, branches, radius,disconnection_benefit,
+                    findForwardSPR(tree, branches, radius, benefit.forwardBenefit,
                                    path_parsimony, parsimony_score);
                 }
                 if (source.second->isInterior()) {
-                    findBackwardSPR(tree, branches, radius, disconnection_benefit,
+                    findBackwardSPR(tree, branches, radius, benefit.backwardBenefit,
                                     path_parsimony, parsimony_score);
                 }
             }

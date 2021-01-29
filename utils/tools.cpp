@@ -4042,8 +4042,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             	params.count_trees = true;
             	continue;
 			}
-			if (strcmp(argv[cnt], "--sprrad") == 0
-                || strcmp(argv[cnt], "--radius") == 0) {
+			if (arg== "--sprrad" || arg== "--radius" || arg=="-spr-radius" ) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -sprrad <SPR radius used in parsimony search>";

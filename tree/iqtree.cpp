@@ -4397,7 +4397,7 @@ void IQTree::optimizeConstructedTree() {
         initializeAllPartialPars();
         auto initial_parsimony = computeParsimony("Computing pre-TBR parsimony");
         LOG_LINE(VB_MIN, "Before doing (up to) "
-            << params->parsimony_spr_iterations << " rounds of parsimony TBR,"
+            << params->parsimony_tbr_iterations << " rounds of parsimony TBR,"
             << " parsimony score was " << initial_parsimony);
         doParsimonyTBR();
     }

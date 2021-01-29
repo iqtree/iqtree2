@@ -46,7 +46,8 @@ public:
      @param be_lazy true, if the search is to be lazy (is to skimp on
      parsimony scoring, and use heuristic cost/benefit functions instead).
      */
-    virtual void   initialize(intptr_t source_branch_id, bool be_lazy) = 0;
+    virtual void   initialize(intptr_t source_branch_id,
+                              bool be_lazy) = 0;
     /** search for a partial tree rearrangement (or move).
      @param tree a phylo tree
      @param branches an up-to-date (synchronized) vector of TargetBranch
@@ -55,7 +56,6 @@ public:
             The implementation may assume that computeState has been called
             on each branch *since* the last time the tree structure was changed.
      @param radius the search radius
-     @param disconnection_benefit
      @param path_parsimony a vector (private to the currently executing thread
             that is large enough to store the partial parsimony information (if any)
             that is being calculated during local tree traversal.  how large, "large
@@ -64,7 +64,7 @@ public:
      */
     virtual void   findMove(const PhyloTree& tree,
                             const TargetBranchRange& branches,
-                            int radius, double disconnection_benefit,
+                            int radius,
                             std::vector<UINT*> &path_parsimony,
                             double parsimony_score) = 0;
     /** return a description of the most beneficial move found

@@ -129,15 +129,10 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
 #pragma omp parallel for num_threads(num_threads) reduction(+:positions_considered)
 #endif
         for (intptr_t i=0; i<branch_count; ++i) {
-            TargetBranch& source = targets[i];
             Move&         move   = moves[i];
-            BenefitPair   benefit = source.getPartialDisconnectionBenefit(*this, targets);
-            //LOG_LINE(VB_MIN, "for s=" << i << " bf=" << benefit.forwardBenefit
-            //         << ", bb=" << benefit.backwardBenefit);
             int thread = context.getThreadNumber();
             move.initialize(i, s.lazy_mode);
             move.findMove(*this, targets, s.radius,
-                          benefit.forwardBenefit,
                           per_thread_path_parsimony[thread],
                           parsimony_score);
             

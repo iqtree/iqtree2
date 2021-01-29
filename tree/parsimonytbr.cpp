@@ -191,16 +191,16 @@ public:
           *        in the subclass.
           */
         void searchPart1(PhyloNode* from, PhyloNode* prev, int depth) {
-            if (depth<max_radius-3) {
-                FOR_EACH_ADJACENT_PHYLO_NODE(from, prev, it, node) {
-                    searchPart1(node, from, depth+1);
-                }
-            }
             if (1<depth) {
                 first_id    = prev->findNeighbor(from)->id;
                 first_depth = depth;
                 FOR_EACH_ADJACENT_PHYLO_NODE(back, front , it, node) {
                     searchPart2(node, back, depth+1);
+                }
+            }
+            if (depth<max_radius-3) {
+                FOR_EACH_ADJACENT_PHYLO_NODE(from, prev, it, node) {
+                    searchPart1(node, from, depth+1);
                 }
             }
         }
@@ -217,11 +217,6 @@ public:
          */
         void searchPart2(PhyloNode* from, PhyloNode* prev,
                          int depth) {
-            if (depth<max_radius-1) {
-                FOR_EACH_ADJACENT_PHYLO_NODE(from, prev, it, node) {
-                    searchPart2(node, from, depth+1);
-                }
-            }
             if (first_depth+2<depth) {
                 intptr_t second_id  = from->findNeighbor(prev)->id;
                 auto branch_one     = branches[first_id];
@@ -232,6 +227,11 @@ public:
                                                &reconnect_cost);
                 double gain = move.disconnection_benefit - reconnect_cost;
                 considerMove(first_id, second_id, gain, depth);
+            }
+            if (depth<max_radius-1) {
+                FOR_EACH_ADJACENT_PHYLO_NODE(from, prev, it, node) {
+                    searchPart2(node, from, depth+1);
+                }
             }
         }
         void considerMove(intptr_t first_id, intptr_t second_id,
@@ -250,7 +250,7 @@ public:
     
     virtual void findMove(const PhyloTree& tree,
                           const TargetBranchRange& branches,
-                          int radius, double disconnection_benefit,
+                          int radius,
                           std::vector<UINT*>& path_parsimony,
                           double parsimony_score) {
         auto source_branch    = branches[source_branch_id];
@@ -503,12 +503,11 @@ public:
     
     virtual void findMove(const PhyloTree& tree,
                           const TargetBranchRange& branches,
-                          int radius, double disconnection_benefit,
+                          int radius,
                           std::vector<UINT*>& path_parsimony,
                           double parsimony_score) {
         if (lazy) {
             super::findMove(tree, branches, radius,
-                            disconnection_benefit,
                             path_parsimony, parsimony_score);
             return;
         }
