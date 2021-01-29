@@ -2667,7 +2667,8 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 }
 
 void handleGammaInvariantOptions(Params &params, IQTree &iqtree) {
-    if (iqtree.getRate()->name.find("+I+G") != string::npos) {
+    ModelInfoFromName rate_info(iqtree.getRate()->name);
+    if (rate_info.isGammaModel() && rate_info.isInvariantModel()) {
         if (params.alpha_invar_file != NULL) { // COMPUTE TREE LIKELIHOOD BASED ON THE INPUT ALPHA AND P_INVAR VALUE
             computeLoglFromUserInputGAMMAInvar(params, iqtree);
             exit(0);

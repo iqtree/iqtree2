@@ -17,6 +17,12 @@ public:
     
     virtual std::string getFreeRateParameters(int& num_rate_cats,
                                               bool &fused_mix_rate) const = 0;
+    virtual std::string getFrequencyMixtureParams(std::string& freq_str) const  = 0;
+    virtual void getFrequencyOptions(std::string& freq_str,
+                                     StateFreqType& freq_type,
+                                     std::string& freq_params,
+                                     bool& optimize_mixmodel_weight) const = 0;
+
     virtual void   getGammaParameters(int& num_rate_cats,
                                       double& gamma_shape) const = 0;
     virtual std::string getHeterotachyParameters(bool is_mixture_model,
@@ -48,8 +54,13 @@ public:
     
     virtual std::string getFreeRateParameters(int& num_rate_cats,
                                               bool &fused_mix_rate) const;
-    virtual void   getGammaParameters(int& num_rate_cats,
-                                      double& gamma_shape) const;
+    virtual std::string getFrequencyMixtureParams(std::string& freq_str) const;
+    virtual void        getFrequencyOptions(std::string& freq_str,
+                                            StateFreqType& freq_type,
+                                            std::string& freq_params,
+                                            bool& optimize_mixmodel_weight) const;
+    virtual void        getGammaParameters(int& num_rate_cats,
+                                           double& gamma_shape) const;
     virtual std::string getHeterotachyParameters(bool is_mixture_model,
                                                  int& num_rate_cats,
                                                  bool& fused_mix_rate) const;
