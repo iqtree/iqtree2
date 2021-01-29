@@ -194,7 +194,11 @@ set_target_properties(${terraces_targets} PROPERTIES CXX_STANDARD 11 CXX_STANDAR
 #####################################################################
 if(("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC") OR CLANG_UNDER_VS)
 	set(TERRAPHAST_PLATFORM_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/lib/cl")
-	set(TERRAPHAST_COMPILE_FLAGS -Oi -W4)
+    if(CLANG_UNDER_VS)
+	    set(TERRAPHAST_COMPILE_FLAGS -Oi -W4)
+    else()
+        set(TERRAPHAST_COMPILE_FLAGS -Oi)
+    endif()
 
 	# Most of our files only compile with disabled language extensions for VC++
 	# Unfortunately, Catch uses some windows-specific features, so we have to
