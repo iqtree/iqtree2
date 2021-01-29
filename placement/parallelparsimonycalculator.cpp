@@ -1,6 +1,6 @@
 //
 // parallelparsimonycalculator.cpp
-//
+// ===============================
 // Parallel calculation of parsimony (parallelizes across nodes a given
 // "distance" from the branch for which parsimony is being calculated)
 // (so, in large trees, close-to-linear scaling should be possible,
@@ -126,9 +126,12 @@ void ParallelParsimonyCalculator::computeReverseParsimony(PhyloNode* first,
             PhyloBranch*   item = firstItem + i;
             PhyloNeighbor* nei  = item->first->findNeighbor(item->second);
             tree.computePartialParsimony(nei, item->first);
+            if (report_progress_to_tree && (i%1000) == 999) {
+                tree.trackProgress(1000.0);
+            }
         }
         if (report_progress_to_tree) {
-            tree.trackProgress(static_cast<double>(r));
+            tree.trackProgress(static_cast<double>(w%1000));
         }
         std::swap(stuffToDo, stuffToDoNext);
     }
@@ -180,9 +183,15 @@ void ParallelParsimonyCalculator::calculate(intptr_t start_index,
         PhyloNeighbor* dad_branch = item->first;
         PhyloNode*     dad        = item->second;
         tree.computePartialParsimony(dad_branch, dad);
+        if (task_in_progress != nullptr || report_progress_to_tree) {
+            int j = i - start_index;
+            if ((j%1000)==999) {
+                tree.trackProgress(1000.0);
+            }
+        }
     }
     if (task_in_progress != nullptr || report_progress_to_tree) {
-        double work_done = (double)stop_index - (double)start_index;
+        double work_done = (double)((stop_index - start_index)%1000);
         tree.trackProgress(work_done);
     }
     workToDo.resize(start_index);
