@@ -206,8 +206,8 @@ void lbfgsb(int n, int m, double *x, double *l, double *u, int *nbd,
 	*fail = 0;
 	g = (double*) malloc (n * sizeof(double));
 	/* this needs to be zeroed for snd in mainlb to be zeroed */
-	wa = (double *) malloc((2*m*n+4*n+11*m*m+8*m) * sizeof(double));
-	iwa = (int *) malloc(3*n * sizeof(int));
+	wa = (double *) malloc((2*(size_t)m*(size_t)n+4*(size_t)n+11*(size_t)m*(size_t)m+8*(size_t)m) * sizeof(double));
+	iwa = (int *) malloc(3*(size_t)n * sizeof(int));
 #ifdef _MSC_VER
 	strcpy_s(task, sizeof(task), "START");
 #else

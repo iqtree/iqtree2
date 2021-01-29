@@ -202,7 +202,7 @@ void WHT_getResults(double *delta, double *delta_quantile, double *p_value) {
 void SetMLDistance() {
 	int i;
 	for (i=0; i < taxa; i++)
-		memcpy(distance[i], ml_distance + (i*taxa), sizeof(double)*taxa);
+		memcpy(distance[i], ml_distance + ((size_t)i*(size_t)taxa), sizeof(double)*(size_t)taxa);
 }
 
 void usage(char *prog_name) {
@@ -532,7 +532,7 @@ int WHTest_run ( int argc,char **argv ) {
 	ComputeNeighborJoiningTree();
 
 	if (isMasterProc()) {
-		Save_Tree ( baum + ( 2*taxa-2 ) );
+		Save_Tree ( baum + ( 2*(size_t)taxa-2 ) );
 		printf("\nStart %d simulations\n", simulation);
 	}
 
