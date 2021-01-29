@@ -329,7 +329,15 @@ void parseArg( int argc,char **argv ) {
 }
 
 void StartReport() {
-	FILE *fps = fopen( ausgabe_report, "w" );
+	FILE* fps;
+#ifndef _MSC_VER
+	fps = fopen( ausgabe_report, "w" );
+#else
+	if (fopen_s(&fps, ausgabe_report, "w") != 0) {	
+		fprintf(stderr, "ERROR: Could not open report file: %s", ausgabe_report);
+		return;
+	}
+#endif
 	fprintf(fps, "WH-TEST\n\n");
 	fprintf(fps, "G. Weiss and A. von Haeseler (2003) Testing substitution models\n");
 	fprintf(fps, "within a phylogenetic tree. Mol. Biol. Evol, 20(4):572-578\n\n");
@@ -344,14 +352,30 @@ void StartReport() {
 }
 
 void FinishReport(time_t begin_time) {
-	FILE *fps = fopen( ausgabe_report, "a" );
+	FILE* fps;
+#ifndef _MSC_VER
+	fps = fopen(ausgabe_report, "a");
+#else
+	if (fopen_s(&fps, ausgabe_report, "a") != 0) {
+		fprintf(stderr, "ERROR: Could not append report file: %s", ausgabe_report);
+		return;
+	}
+#endif
 	char *finishedDate_;
 	int prog_time;
 	int nHour_, nMin_, nSec_;
 
 	time_t end_time;
 	time(&end_time);
+#ifndef _MSC_VER
 	finishedDate_ = ctime(&end_time);
+#else
+	char buffer[26];
+	if (ctime_s(buffer, sizeof(buffer), &end_time) != 0) {
+		strcpy_s(buffer, sizeof(buffer), "Invalid Time");
+	}
+	finishedDate_ = &buffer[0];
+#endif
 
 	prog_time = (int)(difftime (end_time, begin_time));
 
@@ -370,9 +394,15 @@ void FinishReport(time_t begin_time) {
 }
 
 void ReportResults(double delta_data, double delta_95quantile, double p_value) {
-
-	FILE *fps = fopen( ausgabe_report, "a" );
-
+	FILE* fps;
+#ifndef _MSC_VER
+	fps = fopen(ausgabe_report, "a");
+#else
+	if (fopen_s(&fps, ausgabe_report, "a") != 0) {
+		fprintf(stderr, "ERROR: Could not append report file: %s", ausgabe_report);
+		return;
+	}
+#endif
 	fprintf(fps, "\nTEST OF HOMOGENEITY ASSUMPTION OVER BRANCHES\n\n");
 
 	fprintf(fps, "Delta of data:                       %f\n", delta_data);
@@ -595,11 +625,18 @@ int WHTest_run ( int argc,char **argv ) {
 	}
 
 
-	if (isMasterProc() && write_sim_result) {
+	if (isMasterProc() && write_sim_result) {		
+#ifndef _MSC_VER
 		delta_file = fopen(ausgabe_sim_result, "w");
-		if (!delta_file) {
-			printf ( "\nERROR: Cannot write to file %s!\n", ausgabe_sim_result );
-		} else {
+		if (delta_file == NULL) {
+			printf("\nERROR: Cannot write to file %s!\n", ausgabe_sim_result);
+		}
+#else
+		if (fopen_s(&delta_file, ausgabe_sim_result, "w") != 0) {
+			fprintf(stderr, "ERROR: Could not open result file: %s", ausgabe_sim_result);
+		}
+#endif		
+		if (delta_file!=NULL) {
 			fprintf(delta_file, "Sim.    Delta   Valid_Qs\n");
 			for (i = 0, count_sim = 1; i < simulation; i++)
 				if (delta_sim[i] != 0.0) {
