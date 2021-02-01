@@ -144,7 +144,8 @@ void ModelDNAError::computeTipLikelihood(PML::StateType state, double *state_lk)
         state_lk[i] = observed[i] ? observed_lk : unobserved_lk;
 }
 
-void ModelDNAError::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
+void ModelDNAError::setBounds(double *lower_bound, double *upper_bound,
+                              bool *bound_check) {
     ModelDNA::setBounds(lower_bound, upper_bound, bound_check);
     if (!fix_epsilon) {
         int id = ModelDNA::getNDim()+1;

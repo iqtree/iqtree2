@@ -16,10 +16,12 @@
 #include <boost/scoped_array.hpp>
 #endif
 
-ModelFactoryMixlen::ModelFactoryMixlen(Params &params, string &model_name, PhyloTree *tree, ModelsBlock *models_block) :
+ModelFactoryMixlen::ModelFactoryMixlen(Params &params, string &model_name,
+                                       PhyloTree *tree, ModelsBlock *models_block) :
     ModelFactory(params, model_name, tree, models_block) {
     if (!tree->isMixlen()) {
-        cerr << "Please add '-mixlen " << site_rate->getNRate() << "' option into the command line" << endl;
+        cerr << "Please add '-mixlen " << site_rate->getNRate()
+             << "' option into the command line" << endl;
         outError("Sorry for the inconvience, please rerun IQ-TREE with option above");
     }
     if (tree->getMixlen() != site_rate->getNRate()) {
@@ -49,14 +51,16 @@ ModelFactoryMixlen::ModelFactoryMixlen(Params &params, string &model_name, Phylo
     }
 }
 
-double ModelFactoryMixlen::optimizeParameters(int fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
+double ModelFactoryMixlen::optimizeParameters(int fixed_len, bool write_info,
+                                              double logl_epsilon, double gradient_epsilon) {
 
 	PhyloTreeMixlen *tree = (PhyloTreeMixlen*)site_rate->getTree();
 	ASSERT(tree);
     
     tree->initializeMixlen(logl_epsilon, write_info);
 
-    double score = ModelFactory::optimizeParameters(fixed_len, write_info, logl_epsilon, gradient_epsilon);
+    double score = ModelFactory::optimizeParameters(fixed_len, write_info,
+                                                    logl_epsilon, gradient_epsilon);
 
     return score;
 }
@@ -98,9 +102,11 @@ string ModelFactoryMixlen::sortClassesByTreeLength() {
         cout << "Reordering classes by tree lengths" << endl;
         DoubleVector sorted_brlen;
         sorted_brlen.resize(brlen.size());
-        for (i = 0; i < tree->branchNum; i++)
-            for (j = 0; j < tree->mixlen; j++)
+        for (i = 0; i < tree->branchNum; i++) {
+            for (j = 0; j < tree->mixlen; j++) {
                 sorted_brlen[i*tree->mixlen + j] = brlen[i*tree->mixlen + index[j]];
+            }
+        }
         tree->restoreBranchLengths(sorted_brlen);
 
         ASSERT(tree->mixlen == site_rate->getNRate());
@@ -141,11 +147,15 @@ string ModelFactoryMixlen::sortClassesByTreeLength() {
             // assigning memory for individual models
             int m = 0;
             int num_states = model->num_states;
+            int states_squared = num_states*num_states;
             for (m = 0; m < nmix; m++) {
-                ((ModelMarkov*)model->getMixtureClass(m))->setEigenvalues(&model->getEigenvalues()[m*num_states]);
-                ((ModelMarkov*)model->getMixtureClass(m))->setEigenvectors(&model->getEigenvectors()[m*num_states*num_states]);
-                ((ModelMarkov*)model->getMixtureClass(m))->setInverseEigenvectors(&model->getInverseEigenvectors()[m*num_states*num_states]);
-                ((ModelMarkov*)model->getMixtureClass(m))->setInverseEigenvectorsTransposed(&model->getInverseEigenvectorsTransposed()[m*num_states*num_states]);
+                auto mix_class = ((ModelMarkov*)model->getMixtureClass(m));
+                mix_class->setEigenvalues(&model->getEigenvalues()[m*num_states]);
+                mix_class->setEigenvectors(&model->getEigenvectors()[m*states_squared]);
+                auto i_evec = &model->getInverseEigenvectors()[m*states_squared];
+                mix_class->setInverseEigenvectors(i_evec);
+                auto i_evec_t = &model->getInverseEigenvectorsTransposed()[m*states_squared];
+                mix_class->setInverseEigenvectorsTransposed(i_evec_t);
             }
             model->decomposeRateMatrix();
             site_rate->writeInfo(cout);
@@ -169,7 +179,8 @@ string ModelFactoryMixlen::sortClassesByTreeLength() {
 int ModelFactoryMixlen::getNParameters(int brlen_type) {
 	int df = ModelFactory::getNParameters(brlen_type);
     if (brlen_type == BRLEN_OPTIMIZE) {
-        df += site_rate->phylo_tree->branchNum * (site_rate->phylo_tree->getMixlen() - 1);
+        df += site_rate->phylo_tree->branchNum
+           * (site_rate->phylo_tree->getMixlen() - 1);
     }
     else if (brlen_type == BRLEN_SCALE) {
         df += (site_rate->phylo_tree->getMixlen() - 1);

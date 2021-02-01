@@ -130,6 +130,8 @@ void ModelSubst::getStateFrequency(double *state_frequency_array, int mixture) {
 }
 
 void ModelSubst::setStateFrequency(double *state_frequency_array) {
+    ASSERT(state_freq != nullptr);
+    ASSERT(state_frequency_array != nullptr);
     memcpy(this->state_freq, state_frequency_array, sizeof(double)*num_states);
 }
 

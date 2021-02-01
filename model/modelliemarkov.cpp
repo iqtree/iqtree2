@@ -655,7 +655,8 @@ string ModelLieMarkov::getName() {
  * Technically bounds are +/- 1, but on the boundaries there will be
  * mutation rates equal to zero, which may cause problems later.
  */
-void ModelLieMarkov::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
+void ModelLieMarkov::setBounds(double *lower_bound, double *upper_bound,
+                               bool *bound_check) {
 	int i, ndim = getNDim();
 
 	for (i = 1; i <= ndim; i++) {
@@ -682,9 +683,11 @@ void ModelLieMarkov::setVariables(double *variables) {
 	if (nrate > 0)
 		memcpy(variables+1, rates, nrate*sizeof(double));
 	if (freq_type == FREQ_ESTIMATE) {
-        // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
+        // 2015-09-07: relax the sum of state_freq to be 1,
+        // this will be done at the end of optimization
 		int ndim = getNDim();
-		memcpy(variables+(ndim-num_states+2), state_freq, (num_states-1)*sizeof(double));
+		memcpy(variables+(ndim-num_states+2), state_freq,
+               (num_states-1)*sizeof(double));
     }
 }
 
@@ -712,12 +715,15 @@ bool ModelLieMarkov::getVariables(double *variables) {
 	}
 
 	if (freq_type == FREQ_ESTIMATE) {
-        // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
-        // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
+        // 2015-09-07: relax the sum of state_freq to be 1,
+        //             this will be done at the end of optimization
+        // 2015-09-07: relax the sum of state_freq to be 1,
+        //             this will be done at the end of optimization
 		int ndim = getNDim();
 		for (i = 0; i < num_states-1; i++)
 			changed |= (state_freq[i] != variables[i+ndim-num_states+2]);
-		memcpy(state_freq, variables+(ndim-num_states+2), (num_states-1)*sizeof(double));
+		memcpy(state_freq, variables+(ndim-num_states+2),
+               (num_states-1)*sizeof(double));
 
 
 	}
@@ -747,7 +753,8 @@ bool ModelLieMarkov::getVariables(double *variables) {
  * local optimum.)
  */
 const int MAX_ITER = 5;
-bool ModelLieMarkov::restartParameters(double guess[], int ndim, double lower[], double upper[], bool bound_check[], int iteration) {
+bool ModelLieMarkov::restartParameters(double guess[], int ndim, double lower[],
+                                       double upper[], bool bound_check[], int iteration) {
     int i;
     bool restart = false;
     if (iteration <= MAX_ITER) {
@@ -920,7 +927,8 @@ void ModelLieMarkov::setBasis() {
       tauToPi(tau,eqbm,symmetry);
       char buffer[200];
       snprintf(buffer,200,"Model %s cannot achieve requested equilibrium base frequencies\n(%5.3f,%5.3f,%5.3f,%5.3f).\nInstead it will use equilibrium base frequencies (%5.3f,%5.3f,%5.3f,%5.3f).\n",
-	       name.c_str(),state_freq[0],state_freq[1],state_freq[2],state_freq[3],eqbm[0],eqbm[1],eqbm[2],eqbm[3]);
+               name.c_str(),state_freq[0],state_freq[1],state_freq[2],
+               state_freq[3],eqbm[0],eqbm[1],eqbm[2],eqbm[3]);
       outWarning(buffer);
     }
 
@@ -928,12 +936,14 @@ void ModelLieMarkov::setBasis() {
     for (int i=0;i<=num_params;i++) {
       int basisIndex = BASES[model_num][i];
       double unpermuted_rates[NUM_RATES];
-      memcpy(unpermuted_rates, LM_BASIS_MATRICES[basisIndex], NUM_RATES* sizeof(double));
+      memcpy(unpermuted_rates, LM_BASIS_MATRICES[basisIndex],
+             NUM_RATES* sizeof(double));
       for (int tauIndex=0; tauIndex<3; tauIndex++) {
         const double* transformationMatrix = BASIS_TRANSFORM[basisIndex][tauIndex];
 	    if (tau[tauIndex]!=0 && transformationMatrix != NULL) {
           for (int rate=0; rate<NUM_RATES; rate++) {
-	        unpermuted_rates[rate] = unpermuted_rates[rate]+tau[tauIndex]*transformationMatrix[rate];
+	        unpermuted_rates[rate] = unpermuted_rates[rate]
+                                   + tau[tauIndex]*transformationMatrix[rate];
 	      } // for rate
 	    } // if tau && !=NULL
       } // for tauIndex
@@ -965,7 +975,8 @@ void ModelLieMarkov::setBasis() {
  */
 void ModelLieMarkov::setRates() {
     memset(rates, 0, NUM_RATES*sizeof(double));  // rates = 0
-    double* aprime = basis[0]; // the only basis matrix with all offdiagonals non-negative, and trace non-zero
+    double* aprime = basis[0]; // the only basis matrix with all off-diagonals
+                               // non-negative, and trace non-zero
     double max_abs = 0;
     for (int param=0; param<num_params; param++) {
         // COMMENT: is this abs() or fabs()? abs is for int type, whereas fabs for double 
@@ -1022,7 +1033,8 @@ void ModelLieMarkov::decomposeRateMatrixEigen3lib() {
     evec = eigensolver.eigenvectors();
     if (abs(evec.determinant())<1e-10) {
       // limit of 1e-10 is something of a guess. 1e-12 was too restrictive.
-      nondiagonalizable = true; // will use scaled squaring instead of eigendecomposition for matrix exponentiation
+      nondiagonalizable = true; // will use scaled squaring instead of
+                                // eigendecomposition for matrix exponentiation
       return;
     }
     Map<Matrix4cd,Aligned> inv_evec(cinv_evec);
@@ -1467,7 +1479,10 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			deno = 1/deno;
 			/******** eigenvalues *********/
 			//Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2 - I c), -2 (2 a + a2 + I c)}
-			ceval[0] = 0.0; ceval[1] = -4.0*(a-a2); ceval[2] = complex<double> (-2. *(2.* a + a2), -2.*c); ceval[3] = complex<double>  (-2.*(2.*a + a2), 2.*c);
+			ceval[0] = 0.0;
+            ceval[1] = -4.0*(a-a2);
+            ceval[2] = complex<double> (-2. *(2.* a + a2), -2.*c);
+            ceval[3] = complex<double>  (-2.*(2.*a + a2), 2.*c);
 
 			/******** right eigenvectors *********/
 			// {{1, 1, 1, 1}, {-((a - a2 - d)/(a - a2 + d)), 1, -((a - a2 - d)/(a - a2 + d)), 1},
@@ -1545,7 +1560,10 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			cevec[14] = 1.0;
 			cevec[15] = 0.0;
 			/*INVERSE*/
-			double deno = 0.5/(2.*a + a2); double auxe1 = e1*deno; double auxe2 = e2*deno; double auxd = d*0.25/(a-a2);
+			double deno = 0.5/(2.*a + a2);
+            double auxe1 = e1*deno;
+            double auxe2 = e2*deno;
+            double auxd = d*0.25/(a-a2);
 			cinv_evec[1] = cinv_evec[9] = -0.25 - auxd;
 			cinv_evec[5] = cinv_evec[13] = - cinv_evec[1];
 			cinv_evec[2] =  -auxe1;
@@ -1580,7 +1598,10 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			/*cout <<"Los parametros son a = " << a << " e1 =  " << e1 << "e2 = " << e2 << " a2 =  " << a2 << " b = " << b << endl;*/
 			/******** eigenvalues *********/
 			//Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2 - b), -2 (2 a + a2 + b)}
-			ceval[0] = 0.0; ceval[1] = -4.0*(a - a2); ceval[2] = -2.0*(2.0*a + a2 - b); ceval[3] = ceval[2]-4.0*b;
+			ceval[0] = 0.0;
+            ceval[1] = -4.0*(a - a2);
+            ceval[2] = -2.0*(2.0*a + a2 - b);
+            ceval[3] = ceval[2]-4.0*b;
 
 			/******** right eigenvectors *********/
 			// {{1, 1, 1, 1},
@@ -1638,7 +1659,10 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			/******** eigenvalues *********/
 
 			//Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2 - b), -2 (2 a + a2 + b)}
-			ceval[0] = 0.0; ceval[1] = -4.0*(a - a2); ceval[2] = -2.0*(2.0*a + a2 - b); ceval[3] = ceval[2] - 4.0*b;
+			ceval[0] = 0.0;
+            ceval[1] = -4.0*(a - a2);
+            ceval[2] = -2.0*(2.0*a + a2 - b);
+            ceval[3] = ceval[2] - 4.0*b;
 
 			/******** right eigenvectors *********/
 			// {{1, 1, 1, 1},
@@ -1695,7 +1719,10 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			nondiagonalizable = false;
 			 deno57bl = 1./deno57bl;
 			//Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2 - b), -2 (2 a + a2 + b)}
-			ceval[0] = 0.0; ceval[1] = -4.0*(a - a2); ceval[2] = -2.0*(2.0*a + a2 - b); ceval[3] = ceval[2] - 4.0*b;
+			ceval[0] = 0.0;
+            ceval[1] = -4.0*(a - a2);
+            ceval[2] = -2.0*(2.0*a + a2 - b);
+            ceval[3] = ceval[2] - 4.0*b;
 
 			/******** right eigenvectors *********/
 			// {{1, 1, 1, 1},
@@ -1757,7 +1784,10 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			nondiagonalizable = false;
 			/******** eigenvalues REPASAR *********/
 			//Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2 - d1), -2 (2 a + a2 + d1)}
-			ceval[0] = 0.0; ceval[1] = -4.0*(a - a2); ceval[2] = -2.0*(2.0*a + a2 - d1); ceval[3] = ceval[2] - 4.*d1;
+			ceval[0] = 0.0;
+            ceval[1] = -4.0*(a - a2);
+            ceval[2] = -2.0*(2.0*a + a2 - d1);
+            ceval[3] = ceval[2] - 4.*d1;
 
 			/******** right eigenvectors *********/
 			//{{1, 1, 1, 1},
@@ -1811,7 +1841,10 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			nondiagonalizable = false;
 			/******** eigenvalues *********/
 			//Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2 - d1), -2 (2 a + a2 + d1)}
-			ceval[0] = 0.0; ceval[1] = -4.0*(a - a2); ceval[2] = -2.0*(2.0*a + a2 - d1); ceval[3] = ceval[2] - 4.0*d1;
+			ceval[0] = 0.0;
+            ceval[1] = -4.0*(a - a2);
+            ceval[2] = -2.0*(2.0*a + a2 - d1);
+            ceval[3] = ceval[2] - 4.0*d1;
 
 			/******** right eigenvectors  *********/
 			// {{1, 1, 1, 1},
@@ -1862,7 +1895,8 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		double auxdeno2 = auxnum1 + 2.*g2;
 		double deno2 = 3.*a2 - d1;
 		double deno3 = 3.*a2 + d1;
-		if (abs(auxdeno1) < 1.0e-7 || abs(auxdeno2) < 1.0e-7 || abs(deno2) < 1.0e-7 || abs(deno3) < 1.0e-7) {
+		if (abs(auxdeno1) < 1.0e-7 || abs(auxdeno2) < 1.0e-7
+            || abs(deno2) < 1.0e-7 || abs(deno3) < 1.0e-7) {
 			nondiagonalizable = true;
 		} else {
 			nondiagonalizable = false;
@@ -2058,7 +2092,8 @@ void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix, int m
                 sum += (trans_matrix[i*4+j]);
             ASSERT(fabs(sum-1.0) < 1e-4);
         }
-    } else if (technique == MET_EIGEN3LIB_DECOMPOSITION || technique == MET_LIE_MARKOV_DECOMPOSITION) {
+    } else if (technique == MET_EIGEN3LIB_DECOMPOSITION
+     //        || technique == MET_LIE_MARKOV_DECOMPOSITION) {
     // and nondiagonalizable == false, else we used scaled squaring
         int i;
         Vector4cd ceval_exp;
@@ -2072,32 +2107,30 @@ void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix, int m
 	// nondiagonalizable in ModelLieMarkov::decomposeRateMatrixEigen3lib()
         if (technique == MET_EIGEN3LIB_DECOMPOSITION) {
 			for (i = 0; i < 4; i++) {
+                auto row = trans_matrix + i*4;
 				for (int j = 0; j < 4; j++) {
-					trans_matrix[i*4+j] = res(j, i).real();
+					row[j] = res(j, i).real();
 					ASSERT(fabs(res(j,i).imag()) < 1e-6);
-					ASSERT(trans_matrix[i*4+j] >= -0.000001);
-					ASSERT(trans_matrix[i*4+j] <=  1.000001);
-					if (trans_matrix[i*4+j] < 0)
-						trans_matrix[i*4+j] = 0.0;
-					if (trans_matrix[i*4+j] > 1)
-						trans_matrix[i*4+j] = 1.0;
+					ASSERT(row[j] >= -0.000001);
+					ASSERT(row[j] <=  1.000001);
+					if (row[j] < 0.0) row[j] = 0.0;
+					if (row[j] > 1.0) row[j] = 1.0;
 				}
-
-				ASSERT(fabs(trans_matrix[i*4]+trans_matrix[i*4+1]+trans_matrix[i*4+2]+trans_matrix[i*4+3]-1.0) < 1e-4);
+                auto row = trans_matrix + i*4;
+				ASSERT(fabs(row[0]+row[1]+row[2]+row[3]-1.0) < 1e-4);
 			}
         } else {
         	for (i = 0; i < 4; i++) {
+                auto row = trans_matrix + i*4;
 				for (int j = 0; j < 4; j++) {
-					trans_matrix[i*4+j] = res(i,j).real();
+					row[j] = res(i,j).real();
 					ASSERT(fabs(res(j,i).imag()) < 1e-6);
-					ASSERT(trans_matrix[i*4+j] >= -0.000001);
-					ASSERT(trans_matrix[i*4+j] <=  1.000001);
-					if (trans_matrix[i*4+j] < 0)
-						trans_matrix[i*4+j] = 0.0;
-					if (trans_matrix[i*4+j] > 1)
-						trans_matrix[i*4+j] = 1.0;
+					ASSERT(row[j] >= -0.000001);
+					ASSERT(row[j] <=  1.000001);
+					if (row[j] < 0.0) row[j] = 0.0;
+					if (row[j] > 1.0) row[j] = 1.0;
 				}
-				ASSERT(fabs(trans_matrix[i*4]+trans_matrix[i*4+1]+trans_matrix[i*4+2]+trans_matrix[i*4+3]-1.0) < 1e-4);
+				ASSERT(fabs(row[0]+row[1]+row[2]+row[3]-1.0) < 1e-4);
 			}
         }
 

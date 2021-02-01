@@ -249,12 +249,6 @@ public:
 	*/
 	virtual void getStateFrequency(double *state_freq, int mixture = 0);
 
-	/**
-		set the state frequency vector
-		@param state_freq (IN) state frequency vector. Assume state_freq has size of num_states
-	*/
-	virtual void setStateFrequency(double *state_freq);
-
     /**
      set the state frequency vector
      @param state_freq (IN) state frequency vector. Assume state_freq has size of num_states

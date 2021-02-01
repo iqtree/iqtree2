@@ -45,33 +45,6 @@
 #include "nclextra/myreader.h"
 #include <sstream>
 
-string::size_type findSubStr(string &name, string sub1, string sub2) {
-    string::size_type pos1, pos2;
-    for (pos1 = 0; pos1 != string::npos; pos1++) {
-        pos1 = name.find(sub1, pos1);
-        if (pos1 == string::npos)
-            break;
-        if (pos1+2 >= name.length() || !isalpha(name[pos1+2])) {
-            break;
-        }
-    }
-    
-    for (pos2 = 0; pos2 != string::npos; pos2++) {
-        pos2 = name.find(sub2, pos2);
-        if (pos2 == string::npos)
-            break;
-        if (pos2+2 >= name.length() ||!isalpha(name[pos2+2]))
-            break;
-    }
-    
-    if (pos1 != string::npos && pos2 != string::npos) {
-        return min(pos1, pos2);
-    } else if (pos1 != string::npos)
-        return pos1;
-    else
-        return pos2;
-}
-
 ModelsBlock *readModelsDefinition(Params &params) {
 
     ModelsBlock *models_block = new ModelsBlock;
@@ -418,8 +391,9 @@ ModelFactory::ModelFactory(Params &params, string &model_name,
 //        fused_mix_rate &= model->isMixture() && site_rate->getNRate() > 1;
     } else {
         // site-specific model
-        if (model_str == "JC" || model_str == "POISSON")
+        if (model_str == "JC" || model_str == "POISSON") {
             outError("JC is not suitable for site-specific model");
+        }
         model = new ModelSet(model_str.c_str(), tree);
         ModelSet *models = (ModelSet*)model; // assign pointer for convenience
         models->init((params.freq_type != FREQ_UNKNOWN) ? params.freq_type : FREQ_EMPIRICAL);
@@ -470,15 +444,20 @@ ModelFactory::ModelFactory(Params &params, string &model_name,
             if (tree->aln->num_informative_sites != tree->getAlnNSite()) {
                 if (!params.partition_file) {
                     string infsites_file = ((string)params.out_prefix + ".infsites.phy");
-                    tree->aln->printAlignment(params.aln_output_format, infsites_file.c_str(), false, NULL, EXCLUDE_UNINF);
-                    cerr << "For your convenience alignment with parsimony-informative sites printed to " << infsites_file << endl;
+                    tree->aln->printAlignment(params.aln_output_format, infsites_file.c_str(),
+                                              false, NULL, EXCLUDE_UNINF);
+                    cerr << "For your convenience alignment"
+                         << " with parsimony-informative sites"
+                         << " printed to " << infsites_file << endl;
                 }
                 int useless_sites = static_cast<int>(tree->getAlnNSite()) - tree->aln->num_informative_sites;
-                outError("Invalid use of +ASC_INF because of " + convertIntToString(useless_sites) +
+                outError("Invalid use of +ASC_INF"
+                         " because of " + convertIntToString(useless_sites) +
                          " parsimony-uninformative sites in the alignment");
             }
             if (verbose_mode >= VB_MED)
-                cout << "Ascertainment bias correction: " << unobserved_ptns.size() << " unobservable uninformative patterns"<< endl;
+                cout << "Ascertainment bias correction: " << unobserved_ptns.size()
+                << " unobservable uninformative patterns"<< endl;
         } else if (ASC_type == ASC_VARIANT_MISSING) {
             // initialize Holder's ascertainment bias correction model
             tree->aln->getUnobservedConstPatterns(ASC_type, unobserved_ptns);
@@ -487,18 +466,23 @@ ModelFactory::ModelFactory(Params &params, string &model_name,
             if (tree->aln->frac_invariant_sites > 0) {
                 if (!params.partition_file) {
                     string varsites_file = ((string)params.out_prefix + ".varsites.phy");
-                    tree->aln->printAlignment(params.aln_output_format, varsites_file.c_str(), false, NULL, EXCLUDE_INVAR);
-                    cerr << "For your convenience alignment with variable sites printed to " << varsites_file << endl;
+                    tree->aln->printAlignment(params.aln_output_format, varsites_file.c_str(),
+                                              false, NULL, EXCLUDE_INVAR);
+                    cerr << "For your convenience alignment"
+                         << " with variable sites printed to " << varsites_file << endl;
                 }
                 double  fraction    = tree->aln->frac_invariant_sites;
                 double  site_count  = static_cast<double>(tree->aln->getNSite());
                 double  estimate    = floor(fraction * site_count + .5);
                 int64_t invar_count = static_cast<int64_t> (estimate);
-                outError("Invalid use of +ASC_MIS because of " + convertInt64ToString(invar_count) +
+                outError("Invalid use of +ASC_MIS"
+                         " because of " + convertInt64ToString(invar_count) +
                          " invariant sites in the alignment");
             }
             if (verbose_mode >= VB_MED) {
-                cout << "Holder's ascertainment bias correction: " << unobserved_ptns.size() << " unobservable constant patterns" << endl;
+                cout << "Holder's ascertainment bias correction: "
+                     << unobserved_ptns.size()
+                     << " unobservable constant patterns" << endl;
             }
         } else {
             // ascertainment bias correction
@@ -525,8 +509,11 @@ ModelFactory::ModelFactory(Params &params, string &model_name,
                 //                }
                 if (!params.partition_file) {
                     string varsites_file = ((string)params.out_prefix + ".varsites.phy");
-                    tree->aln->printAlignment(params.aln_output_format, varsites_file.c_str(), false, NULL, EXCLUDE_INVAR);
-                    cerr << "For your convenience alignment with variable sites printed to " << varsites_file << endl;
+                    tree->aln->printAlignment(params.aln_output_format,
+                                              varsites_file.c_str(), false,
+                                              NULL, EXCLUDE_INVAR);
+                    cerr << "For your convenience alignment"
+                         << " with variable sites printed to " << varsites_file << endl;
                 }
                 double  fraction    = tree->aln->frac_invariant_sites;
                 double  site_count  = static_cast<double>(tree->aln->getNSite());
@@ -536,7 +523,9 @@ ModelFactory::ModelFactory(Params &params, string &model_name,
                          " invariant sites in the alignment");
             }
             if (verbose_mode >= VB_MED)
-                cout << "Ascertainment bias correction: " << unobserved_ptns.size() << " unobservable constant patterns"<< endl;
+                cout << "Ascertainment bias correction: "
+                    << unobserved_ptns.size()
+                    << " unobservable constant patterns"<< endl;
         }
     }
 
@@ -674,12 +663,14 @@ ModelFactory::ModelFactory(Params &params, string &model_name,
     if (fused_mix_rate) {
         if (!model->isMixture()) {
             if (verbose_mode >= VB_MED)
-                cout << endl << "NOTE: Using mixture model with unlinked " << model_str << " parameters" << endl;
+                cout << endl << "NOTE: Using mixture model"
+                     << " with unlinked " << model_str << " parameters" << endl;
             string model_list = model_str;
             delete model;
             for (int i = 1; i < site_rate->getNRate(); i++)
                 model_list += "," + model_str;
-            model = new ModelMixture(model_name, model_str, model_list, models_block, freq_type, freq_params, tree, optimize_mixmodel_weight);
+            model = new ModelMixture(model_name, model_str, model_list, models_block,
+                                     freq_type, freq_params, tree, optimize_mixmodel_weight);
         }
         if (model->getNMixtures() != site_rate->getNRate()) {
             outError("Mixture model and site rate model do not have the same number of categories");
@@ -1029,9 +1020,10 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
     return tree->getCurScore();
 }
 
-vector<double> ModelFactory::optimizeGammaInvWithInitValue(int fixed_len, double logl_epsilon, double gradient_epsilon,
-                                                 double initPInv, double initAlpha,
-                                                 DoubleVector &lenvec, Checkpoint *model_ckp) {
+vector<double> ModelFactory::optimizeGammaInvWithInitValue(int fixed_len, double logl_epsilon,
+                                                           double gradient_epsilon,
+                                                           double initPInv, double initAlpha,
+                                                           DoubleVector &lenvec, Checkpoint *model_ckp) {
     PhyloTree *tree = site_rate->getTree();
     tree->restoreBranchLengths(lenvec);
 
@@ -1069,7 +1061,8 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
     ASSERT(tree);
 
     double estimatedIterations = tree->params->num_param_iterations; //for now
-    tree->initProgress(estimatedIterations, "Optimizing Model Parameters", "finished", "iteration", true );
+    tree->initProgress(estimatedIterations, "Optimizing Model Parameters",
+                       "finished", "iteration", true );
     
     stopStoringTransMatrix();
     // modified by Thomas Wong on Sept 11, 15
@@ -1130,15 +1123,18 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
     for (i = 2; i < tree->params->num_param_iterations; i++) {
         double new_lh;
 
-        // changed to optimise edge length first, and then Q,W,R inside the loop by Thomas on Sept 11, 15
+        // changed to optimise edge length first,
+        // and then Q,W,R inside the loop by Thomas on Sept 11, 15
         if (fixed_len == BRLEN_OPTIMIZE) {
             TREE_LOG_LINE(*tree, VB_MAX, "Optimizing branch lengths");
-            new_lh = tree->optimizeAllBranches(min(i, 3), logl_epsilon);  // loop only 3 times in total (previously in v0.9.6 5 times)
+            new_lh = tree->optimizeAllBranches(min(i, 3), logl_epsilon);
+                // loop only 3 times in total (previously in v0.9.6 5 times)
         }
         else if (fixed_len == BRLEN_SCALE) {
             double scaling = 1.0;
             TREE_LOG_LINE(*tree, VB_MAX, "Optimizing branch scaling");
-            new_lh = tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling, MAX_BRLEN_SCALE, gradient_epsilon);
+            new_lh = tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling,
+                                                     MAX_BRLEN_SCALE, gradient_epsilon);
         } else {
             new_lh = cur_lh;
         }
@@ -1237,7 +1233,8 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
     double elapsed_secs = getRealTime() - begin_time;
     if (write_info) {
         tree->hideProgress();
-        cout << "Parameters optimization took " << i-1 << " rounds (" << elapsed_secs << " sec)" << endl;
+        cout << "Parameters optimization took " << i-1 << " rounds"
+             << " (" << elapsed_secs << " sec)" << endl;
         tree->showProgress();
     }
     startStoringTransMatrix();
@@ -1278,7 +1275,8 @@ double ModelFactory::computeTrans(double time, int state1, int state2) {
     return model->computeTrans(time, state1, state2);
 }
 
-double ModelFactory::computeTrans(double time, int state1, int state2, double &derv1, double &derv2) {
+double ModelFactory::computeTrans(double time, int state1, int state2,
+                                  double &derv1, double &derv2) {
     return model->computeTrans(time, state1, state2, derv1, derv2);
 }
 
@@ -1315,11 +1313,13 @@ void ModelFactory::computeTransDerv(double time, double *trans_matrix,
         // allocate memory for 3 matricies
         double *trans_entry = new double[mat_size * 3];
         trans_entry[mat_size] = trans_entry[mat_size+1] = 0.0;
-        model->computeTransDerv(time, trans_entry, trans_entry+mat_size, trans_entry+(mat_size*2), mixture);
+        model->computeTransDerv(time, trans_entry, trans_entry+mat_size,
+                                trans_entry+(mat_size*2), mixture);
         ass_it = insert(value_type(static_cast<int>(round(time * 1e6)), trans_entry)).first;
     } else if (ass_it->second[mat_size] == 0.0 && ass_it->second[mat_size+1] == 0.0) {
         double *trans_entry = ass_it->second;
-        model->computeTransDerv(time, trans_entry, trans_entry+mat_size, trans_entry+(mat_size*2), mixture);
+        model->computeTransDerv(time, trans_entry, trans_entry+mat_size,
+                                trans_entry+(mat_size*2), mixture);
     }
     memcpy(trans_matrix, ass_it->second, mat_size * sizeof(double));
     memcpy(trans_derv1, ass_it->second + mat_size, mat_size * sizeof(double));

@@ -472,9 +472,11 @@ bool ModelDNA::getVariables(double *variables) {
    
     }
 	if (freq_type == FREQ_ESTIMATE) {
-        // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
+        // 2015-09-07: relax the sum of state_freq to be 1,
+        // this will be done at the end of optimization
 		int ndim = getNDim();
-		changed |= memcmpcpy(state_freq, variables+(ndim-num_states+2), (num_states-1)*sizeof(double));
+		changed |= memcmpcpy(state_freq, variables+(ndim-num_states+2),
+                             (num_states-1)*sizeof(double));
 //                double sum = 0;
 //                for (i = 0; i < num_states-1; i++)
 //                        sum += state_freq[i];
@@ -524,9 +526,11 @@ void ModelDNA::setVariables(double *variables) {
     // and copy parameters for base frequencies
 
 	if (freq_type == FREQ_ESTIMATE) {
-        // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
+        // 2015-09-07: relax the sum of state_freq to be 1,
+        // this will be done at the end of optimization
 		int ndim = getNDim();
-		memcpy(variables+(ndim-num_states+2), state_freq, (num_states-1)*sizeof(double));
+		memcpy(variables+(ndim-num_states+2), state_freq,
+               (num_states-1)*sizeof(double));
     } else {
         paramsFromFreqs(variables+num_params+1, state_freq, freq_type);
     }

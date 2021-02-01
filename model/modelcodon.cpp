@@ -268,38 +268,19 @@ void ModelCodon::startCheckpoint() {
 
 void ModelCodon::saveCheckpoint() {
     startCheckpoint();
-//    CKP_ARRAY_SAVE(12, ntfreq);
     CKP_SAVE(omega);
-//    CKP_SAVE(fix_omega);
-//    int codon_kappa_style = this->codon_kappa_style;
-//    CKP_SAVE(codon_kappa_style);
     CKP_SAVE(kappa);
-//    CKP_SAVE(fix_kappa);
     CKP_SAVE(kappa2);
-//    CKP_SAVE(fix_kappa2);
-//    int codon_freq_style = this->codon_freq_style;
-//    CKP_SAVE(codon_freq_style);
     endCheckpoint();
-
     ModelMarkov::saveCheckpoint();
 }
 
 void ModelCodon::restoreCheckpoint() {
     ModelMarkov::restoreCheckpoint();
     startCheckpoint();
-//    CKP_ARRAY_RESTORE(12, ntfreq);
     CKP_RESTORE(omega);
-//    CKP_RESTORE(fix_omega);
-//    int codon_kappa_style;
-//    CKP_RESTORE(codon_kappa_style);
-//    this->codon_kappa_style = (CodonKappaStyle)codon_kappa_style;
     CKP_RESTORE(kappa);
-//    CKP_RESTORE(fix_kappa);
     CKP_RESTORE(kappa2);
-//    CKP_RESTORE(fix_kappa2);
-//    int codon_freq_style;
-//    CKP_RESTORE(codon_freq_style);
-//    this->codon_freq_style = (CodonFreqStyle)codon_freq_style;
     endCheckpoint();
 
     decomposeRateMatrix();
@@ -890,8 +871,6 @@ double ModelCodon::computeEmpiricalOmega() {
     }
     return (dn/ds)*(0.21/0.79);
 }
-    
-
 
 bool ModelCodon::getVariables(double *variables) {
 	int j;
@@ -980,10 +959,7 @@ void ModelCodon::setBounds(double *lower_bound, double *upper_bound, bool *bound
 
 	if (freq_type == FREQ_ESTIMATE) {
 		for (i = ndim-num_states+2; i <= ndim; i++) {
-//            lower_bound[i] = MIN_FREQUENCY/state_freq[highest_freq_state];
-//			upper_bound[i] = state_freq[highest_freq_state]/MIN_FREQUENCY;
             lower_bound[i]  = Params::getInstance().min_state_freq;
-//            upper_bound[i] = 100.0;
             upper_bound[i] = 1.0;
             bound_check[i] = false;
         }
@@ -1000,10 +976,10 @@ double ModelCodon::optimizeParameters(double gradient_epsilon) {
         return 0.0;
     }    
     TREE_LOG_LINE(*phylo_tree, VB_MAX, "Optimizing " << name << " model parameters...");
-	double *variables = new double[ndim+1];
-	double *upper_bound = new double[ndim+1];
-	double *lower_bound = new double[ndim+1];
-	bool *bound_check = new bool[ndim+1];
+	double* variables   = new double[ndim+1];
+	double* upper_bound = new double[ndim+1];
+	double* lower_bound = new double[ndim+1];
+	bool*   bound_check = new bool[ndim+1];
 	double score;
 
     for (int i = 0; i < num_states; i++) {
