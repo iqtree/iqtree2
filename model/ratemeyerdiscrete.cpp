@@ -27,7 +27,8 @@
 	Huy's k-means dynamic programming algorithm
 ************************************************/
 
-void quicksort(double arr[], int weight[], int index[], int left, int right) {
+void quicksort(double arr[], int weight[], int index[],
+               int left, int right) {
       int i = left, j = right, tmp2;
       double tmp;
       double pivot = arr[(left + right) / 2];
@@ -72,8 +73,6 @@ double mean_sum(int l, int r, double *sumA, double *sumAsquare, int *sumW) {
 	return sumAsquare[r]-sumAsquare[l-1]- 2*(sumA[r]- sumA[l-1])*mean + mean*mean*(r-l+1);*/
 }
 
-
-
 // Runs k-means on the given set of points.
 //   - n: The number of points in the data set
 //   - k: The number of clusters to look for
@@ -90,7 +89,8 @@ double mean_sum(int l, int r, double *sumA, double *sumAsquare, int *sumW) {
 //                  and k-1 inclusive).
 // The final cost of the clustering is also returned.
 
-double RunKMeans1D(int n, int k, double *points_orig, int *weights, double *centers, int *assignments) {
+double RunKMeans1D(int n, int k, double *points_orig, int *weights,
+                   double *centers, int *assignments) {
 	double *sumA;
 	double *sumAsquare;
 	int *sumW;
@@ -171,12 +171,13 @@ double RunKMeans1D(int n, int k, double *points_orig, int *weights, double *cent
 
 	return min_cost;
 }
-     
 
 /************************************************
 	RateMeyerDiscrete
 ************************************************/
-RateMeyerDiscrete::RateMeyerDiscrete(int ncat, int cat_type, char *file_name, PhyloTree *tree, bool rate_type)
+RateMeyerDiscrete::RateMeyerDiscrete(int ncat, int cat_type,
+                                     char *file_name, PhyloTree *tree,
+                                     bool rate_type)
  : RateMeyerHaeseler(file_name, tree, rate_type)
 {
 	ncategory = ncat;
@@ -188,9 +189,10 @@ RateMeyerDiscrete::RateMeyerDiscrete(int ncat, int cat_type, char *file_name, Ph
 		rates = new double[ncategory];
 		memset(rates, 0, sizeof(double) * ncategory);
 	}
-	name += convertIntToString(ncategory);
+    string cat_num = convertIntToString(ncategory);
+	name += cat_num;
 	if (ncategory > 0)
-		full_name += " with " + convertIntToString(ncategory) + " categories";
+		full_name += " with " + cat_num + " categories";
 	else
 		full_name += "auto-detect #categories";
 }
@@ -205,7 +207,6 @@ RateMeyerDiscrete::RateMeyerDiscrete() {
 	name = full_name = "";
 	rate_mh = true;
 }
-
 
 RateMeyerDiscrete::~RateMeyerDiscrete()
 {
@@ -240,24 +241,17 @@ double RateMeyerDiscrete::getPtnRate(int ptn) {
 	return rates[ptn_cat[ptn]];
 }
 
-int RateMeyerDiscrete::computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat) {
+int RateMeyerDiscrete::computePatternRates(DoubleVector &pattern_rates,
+                                           IntVector &pattern_cat) {
 	pattern_rates.insert(pattern_rates.begin(), begin(), end());
 	pattern_cat.insert(pattern_cat.begin(), ptn_cat, ptn_cat + size());
     return ncategory;
 }
 
-/*double RateMeyerDiscrete::optimizeParameters() {
-	if (is_categorized) {
-		is_categorized = false;
-		phylo_tree->clearAllPartialLh();
-		return phylo_tree->computeLikelihood();
-	}
-	double tree_lh = RateMeyerHaeseler::optimizeParameters();
-	return tree_lh;
-}*/
-
 double RateMeyerDiscrete::optimizeParameters(double epsilon) {
-	if (!is_categorized) return RateMeyerHaeseler::optimizeParameters(epsilon);
+    if (!is_categorized) {
+        return RateMeyerHaeseler::optimizeParameters(epsilon);
+    }
 	phylo_tree->calcDist(dist_mat);
 	for (int i = 0; i < ncategory; i++)
 		optimizeCatRate(i);
@@ -267,9 +261,10 @@ double RateMeyerDiscrete::optimizeParameters(double epsilon) {
 	//return phylo_tree->optimizeAllBranches(2);
 }
 
-
 double RateMeyerDiscrete::computeFunction(double value) {
-	if (!is_categorized) return RateMeyerHaeseler::computeFunction(value);
+    if (!is_categorized) {
+        return RateMeyerHaeseler::computeFunction(value);
+    }
 	if (!rate_mh) {
 		if (value != cur_scale) {
 			ptn_tree->scaleLength(value/cur_scale);
@@ -408,7 +403,6 @@ void RateMeyerDiscrete::computeFuncDerv(double value, double &df, double &ddf) {
     delete [] trans_mat;
 }
 
-
 double RateMeyerDiscrete::optimizeCatRate(int cat) {
 	optimizing_cat = cat;
 	double negative_lh;
@@ -425,29 +419,40 @@ double RateMeyerDiscrete::optimizeCatRate(int cat) {
 
     if (phylo_tree->optimize_by_newton && rate_mh) // Newton-Raphson method 
 	{
-    	optx = minimizeNewtonSafeMode(MIN_SITE_RATE, current_rate, MAX_SITE_RATE, TOL_SITE_RATE, negative_lh);
+    	optx = minimizeNewtonSafeMode(MIN_SITE_RATE, current_rate,
+                                      MAX_SITE_RATE, TOL_SITE_RATE, negative_lh);
     }
     else {
-		optx = minimizeOneDimen(MIN_SITE_RATE, current_rate, MAX_SITE_RATE, TOL_SITE_RATE, &negative_lh, &ferror);
-		double fnew;
-		if ((optx < MAX_SITE_RATE) && (fnew = computeFunction(MAX_SITE_RATE)) <= negative_lh+TOL_SITE_RATE) {
-			optx = MAX_SITE_RATE;
-			negative_lh = fnew;
-		}
-		if ((optx > MIN_SITE_RATE) && (fnew = computeFunction(MIN_SITE_RATE)) <= negative_lh+TOL_SITE_RATE) {
-			optx = MIN_SITE_RATE;
-			negative_lh = fnew;
-		}
-	}
-	//negative_lh = brent(MIN_SITE_RATE, current_rate, max_rate, 1e-3, &optx);
-	if (optx > MAX_SITE_RATE*0.99) optx = MAX_SITE_RATE;
-	if (optx < MIN_SITE_RATE*2) optx = MIN_SITE_RATE;
-	rates[cat] = optx;
-//#ifndef NDEBUG		
-//#endif
-
-	if (!rate_mh) completeRateML();
-	return optx;	
+		optx = minimizeOneDimen(MIN_SITE_RATE, current_rate,
+                                MAX_SITE_RATE, TOL_SITE_RATE,
+                                &negative_lh, &ferror);
+        if (optx < MAX_SITE_RATE) {
+            double fnew = computeFunction(MAX_SITE_RATE);
+            if (fnew<= negative_lh+TOL_SITE_RATE) {
+                optx = MAX_SITE_RATE;
+                negative_lh = fnew;
+            }
+        }
+        if (optx > MIN_SITE_RATE) {
+            double fnew = computeFunction(MIN_SITE_RATE);
+            if (fnew<= negative_lh+TOL_SITE_RATE) {
+                optx = MIN_SITE_RATE;
+                negative_lh = fnew;
+            }
+        }
+    }
+    //negative_lh = brent(MIN_SITE_RATE, current_rate, max_rate, 1e-3, &optx);
+    if (optx > MAX_SITE_RATE*0.99) {
+        optx = MAX_SITE_RATE;
+    }
+    if (optx < MIN_SITE_RATE*2) {
+        optx = MIN_SITE_RATE;
+    }
+    rates[cat] = optx;
+    if (!rate_mh) {
+        completeRateML();
+    }
+    return optx;
 }
 
 void RateMeyerDiscrete::normalizeRates() {
@@ -506,13 +511,22 @@ double RateMeyerDiscrete::classifyRatesKMeans() {
 	}
 	memset(rates, 0, sizeof(double) * ncategory);
 
-	//double cost = RunKMeansPlusPlus(nptn, ncategory, 1, points, sqrt(nptn), rates, ptn_cat);
-	double cost = RunKMeans1D(nptn, ncategory, points, weights, rates, ptn_cat);
-	// assign the categorized rates
-	if  (mcat_type & MCAT_LOG) 
-		for (i = 0; i < ncategory; i++) rates[i] = exp(rates[i]);
-	if (rates[0] < MIN_SITE_RATE) rates[0] = MIN_SITE_RATE;
-	if (rates[ncategory-1] > MAX_SITE_RATE - 1e-6) rates[ncategory-1] = MAX_SITE_RATE;
+	//double cost = RunKMeansPlusPlus(nptn, ncategory, 1, points,
+    //                                sqrt(nptn), rates, ptn_cat);
+    double cost = RunKMeans1D(nptn, ncategory, points,
+                              weights, rates, ptn_cat);
+    // assign the categorized rates
+    if  (mcat_type & MCAT_LOG) {
+        for (i = 0; i < ncategory; i++) {
+            rates[i] = exp(rates[i]);
+        }
+    }
+    if (rates[0] < MIN_SITE_RATE) {
+        rates[0] = MIN_SITE_RATE;
+    }
+    if (rates[ncategory-1] > MAX_SITE_RATE - 1e-6) {
+        rates[ncategory-1] = MAX_SITE_RATE;
+    }
 	if (verbose_mode >= VB_MED) {
 		cout << "K-means cost: " << cost << endl;
 		for (i = 0; i < ncategory; i++) cout << rates[i] << " ";
@@ -526,10 +540,13 @@ double RateMeyerDiscrete::classifyRatesKMeans() {
 	delete [] weights;
 	delete [] points;
 	
-	if (mcat_type & MCAT_MEAN)
-		return cur_lh;
+    if (mcat_type & MCAT_MEAN)
+    {
+        return cur_lh;
+    }
 
-	return phylo_tree->getModelFactory()->optimizeParameters(false,false, TOL_LIKELIHOOD);
+    ModelFactory* factory = phylo_tree->getModelFactory();
+	return factory->optimizeParameters(false,false, TOL_LIKELIHOOD);
 
 	// optimize category rates again by ML
 /*	for (int k = 0; k < 100; k++) {
@@ -557,17 +574,19 @@ double RateMeyerDiscrete::classifyRates(double tree_lh) {
 
 	double new_tree_lh;
 	is_categorized = true;
-	if (ncategory > 0) {
-		cout << endl << "Classifying rates into " << ncategory << " categories..." << endl;
-		return classifyRatesKMeans();
-	}
+    if (ncategory > 0) {
+        cout << endl << "Classifying rates into "
+        << ncategory << " categories..." << endl;
+        return classifyRatesKMeans();
+    }
 
 	// identifying proper number of categories
 	int nptn = static_cast<int>(phylo_tree->aln->getNPattern());
 	rates = new double[nptn];
 
 	for (ncategory = 2; ; ncategory++) {
-		cout << endl << "Classifying rates into " << ncategory << " categories..." << endl;
+        cout << endl << "Classifying rates into "
+             << ncategory << " categories..." << endl;
 		new_tree_lh = classifyRatesKMeans();
 		new_tree_lh = phylo_tree->optimizeAllBranches();
 		cout << "For " << ncategory << " categories, LogL = " << new_tree_lh;
@@ -583,9 +602,6 @@ double RateMeyerDiscrete::classifyRates(double tree_lh) {
 	cout << endl << "Number of categories is set to " << ncategory << endl;
 	return new_tree_lh;
 }
-
-
-
 
 void RateMeyerDiscrete::writeInfo(ostream &out) {
 	//out << "Number of categories: " << ncategory << endl;

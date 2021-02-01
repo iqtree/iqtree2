@@ -25,8 +25,9 @@ PartitionModelPlen::PartitionModelPlen()
     //    optimizing_part = -1;
 }
 
-PartitionModelPlen::PartitionModelPlen(Params &params, PhyloSuperTreePlen *tree, ModelsBlock *models_block)
-: PartitionModel(params, tree, models_block)
+PartitionModelPlen::PartitionModelPlen(Params &params, PhyloSuperTreePlen *tree,
+                                       ModelsBlock *models_block)
+    : PartitionModel(params, tree, models_block)
 {
     //    optimizing_part = -1;
 }
@@ -74,7 +75,8 @@ void PartitionModelPlen::restoreCheckpoint() {
 }
 
 
-double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
+double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info,
+                                              double logl_epsilon, double gradient_epsilon) {
     PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
     double tree_lh = 0.0, cur_lh = 0.0;
     int ntrees = static_cast<int>(tree->size());
@@ -119,7 +121,8 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info, do
             double mean_rate = tree->at(part)->getRate()->rescaleRates();
             if (fabs(mean_rate-1.0) > 1e-6) {
                 if (tree->fixed_rates) {
-                    outError("Unsupported -spj. Please use proportion edge-linked partition model (-spp)");
+                    outError("Unsupported -spj."
+                             " Please use proportion edge-linked partition model (-spp)");
                 }
                 tree->at(part)->scaleLength(mean_rate);
                 tree->part_info[part].part_rate *= mean_rate;
@@ -166,7 +169,8 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info, do
             cur_lh = new_lh;
         } else if (fixed_len == BRLEN_SCALE) {
             double scaling = 1.0;
-            double new_lh = tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling, MAX_BRLEN_SCALE, gradient_epsilon);
+            double new_lh = tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling,
+                                                            MAX_BRLEN_SCALE, gradient_epsilon);
             ASSERT(new_lh > cur_lh - 1.0);
             cur_lh = new_lh;
         }
@@ -189,13 +193,16 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info, do
             it->second->writeInfo(cout);
     }
 
-    cout << "Parameters optimization took " << i-1 << " rounds (" << getRealTime()-begin_time << " sec)" << endl << endl;
+    cout << "Parameters optimization took " << i-1 << " rounds"
+        << " (" << getRealTime()-begin_time << " sec)" << endl << endl;
     
     return tree_lh;
 }
 
-double PartitionModelPlen::optimizeParametersGammaInvar(int fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
-    outError("Thorough I+G parameter optimization does not work with edge-linked partition model yet");
+double PartitionModelPlen::optimizeParametersGammaInvar(int fixed_len, bool write_info,
+                                                        double logl_epsilon, double gradient_epsilon) {
+    outError("Thorough I+G parameter optimization does not work"
+             " with edge-linked partition model yet");
     return 0.0;
 }
 
@@ -258,8 +265,10 @@ double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
     sum /= nsite;
     
     if (sum > tree->params->max_branch_length / max_brlen) {
-        outWarning("Too high (saturated) partition rates for proportional partition model!");
-//        outWarning("Please switch to the edge-equal partition model via -q option instead of -spp");
+        outWarning("Too high (saturated) partition rates"
+                   " for proportional partition model!");
+//        outWarning("Please switch to the edge-equal"
+//                   " partition model via -q option instead of -spp");
 //        exit(EXIT_FAILURE);
     }
     tree->scaleLength(sum);

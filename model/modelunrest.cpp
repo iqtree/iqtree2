@@ -17,7 +17,8 @@ ModelUnrest::ModelUnrest(PhyloTree *tree, string model_params)
         rates[i] = 1.0;
     }
 	if (model_params != "") {
-		cout << "WARNING: Supplying model params to constructor not yet properly implemented -- ignored" << endl;
+		cout << "WARNING: Supplying model params to constructor"
+             << " not yet properly implemented -- ignored" << endl;
 		// TODO: parse model_params into model_parameters, then call setRates().
 	}
     name = "UNREST";
@@ -29,7 +30,8 @@ ModelUnrest::ModelUnrest(PhyloTree *tree, string model_params)
 	return (model_name == "UNREST");
 }
 
-void ModelUnrest::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
+void ModelUnrest::setBounds(double *lower_bound, double *upper_bound,
+                            bool *bound_check) {
 	int i, ndim = getNDim();
 
 	for (i = 1; i <= ndim; i++) {

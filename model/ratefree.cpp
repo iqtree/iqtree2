@@ -23,7 +23,9 @@ const double TOL_FREE_RATE = 0.0001;
 const double MIN_FREE_RATE_PROP = 0.001;
 const double MAX_FREE_RATE_PROP = 1000;
 
-RateFree::RateFree(int ncat, double start_alpha, string params, bool sorted_rates, string opt_alg, PhyloTree *tree) : RateGamma(ncat, start_alpha, false, tree) {
+RateFree::RateFree(int ncat, double start_alpha, string params,
+                   bool sorted_rates, string opt_alg, PhyloTree *tree)
+    : RateGamma(ncat, start_alpha, false, tree) {
 	fix_params = 0;
 	prop = NULL;
     this->sorted_rates = sorted_rates;
@@ -239,9 +241,11 @@ double RateFree::optimizeParameters(double gradient_epsilon) {
     if (ndim == 0) {
         return phylo_tree->computeLikelihood();
     }
-    TREE_LOG_LINE(*phylo_tree, VB_MED, "Optimizing " << name << " model parameters by " << optimize_alg << " algorithm...");
+    TREE_LOG_LINE(*phylo_tree, VB_MED, "Optimizing " << name
+                  << " model parameters by " << optimize_alg << " algorithm...");
     // TODO: turn off EM algorithm for +ASC model
-    if ((optimize_alg.find("EM") != string::npos && phylo_tree->getModelFactory()->unobserved_ptns.empty())) {
+    if ((optimize_alg.find("EM") != string::npos
+         && phylo_tree->getModelFactory()->unobserved_ptns.empty())) {
         if (fix_params == 0) {
             return optimizeWithEM();
         }
@@ -276,9 +280,11 @@ double RateFree::optimizeParameters(double gradient_epsilon) {
 //            score = optimizeWeights();
 //        else 
         if (optimize_alg.find("BFGS-B") != string::npos)
-            score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_FREE_RATE));
+            score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1,
+                              max(gradient_epsilon, TOL_FREE_RATE));
         else
-            score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_FREE_RATE));
+            score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound,
+                                        bound_check, max(gradient_epsilon, TOL_FREE_RATE));
 
         getVariables(variables);
         // sort the rates in increasing order
@@ -297,7 +303,8 @@ double RateFree::optimizeParameters(double gradient_epsilon) {
 	return score;
 }
 
-void RateFree::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
+void RateFree::setBounds(double *lower_bound, double *upper_bound,
+                         bool *bound_check) {
 	if (getNDim() == 0) return;
 	int i;
     if (optimizing_params == 2) {
@@ -515,7 +522,8 @@ double RateFree::optimizeWithEM() {
     for (int step = 0; step < ncategory; step++) {
         // first compute _pattern_lh_cat
         double score = phylo_tree->computePatternLhCat(WSL_RATECAT);
-        TREE_LOG_LINE(*phylo_tree, VB_DEBUG, "At start of EM step " << step << " likelihood score is " << score);
+        TREE_LOG_LINE(*phylo_tree, VB_DEBUG, "At start of EM step " << step
+                      << " likelihood score is " << score);
         if (score > 0.0) {
             phylo_tree->printTree(cout, WT_BR_LEN+WT_NEWLINE);
             writeInfo(cout);
@@ -537,7 +545,8 @@ double RateFree::optimizeWithEM() {
         old_score = score;
         
         // E-step
-        // decoupled weights (prop) from _pattern_lh_cat to obtain L_ci and compute pattern likelihood L_i
+        // decoupled weights (prop) from _pattern_lh_cat
+        // to obtain L_ci and compute pattern likelihood L_i
         memset(new_prop, 0, nmix*sizeof(double));
         for (intptr_t ptn = 0; ptn < nptn; ptn++) {
             double *this_lk_cat = phylo_tree->tree_buffers._pattern_lh_cat + ptn*nmix;
@@ -607,14 +616,19 @@ double RateFree::optimizeWithEM() {
         for (int c = 0; c < nmix; c++) {
             tree->copyPhyloTree(phylo_tree, true);
             ModelMarkov *subst_model;
-            if (phylo_tree->getModel()->isMixture() && phylo_tree->getModelFactory()->fused_mix_rate)
-                subst_model = (ModelMarkov*)phylo_tree->getModel()->getMixtureClass(c);
-            else
+            if (phylo_tree->getModel()->isMixture()
+                && phylo_tree->getModelFactory()->fused_mix_rate) {
+                auto model  = phylo_tree->getModel();
+                subst_model = (ModelMarkov*)model->getMixtureClass(c);
+            }
+            else {
                 subst_model = (ModelMarkov*)phylo_tree->getModel();
+            }
             tree->setModel(subst_model);
             subst_model->setTree(tree);
             model_fac->model = subst_model;
-            if (subst_model->isMixture() || subst_model->isSiteSpecificModel()
+            if (subst_model->isMixture()
+                || subst_model->isSiteSpecificModel()
                 || !subst_model->isReversible()) {
                 tree->setLikelihoodKernel(phylo_tree->sse);
             }

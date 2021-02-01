@@ -7,8 +7,11 @@
 
 #include "ratefreeinvar.h"
 
-RateFreeInvar::RateFreeInvar(int ncat, double start_alpha, string params, bool sorted_rates, double p_invar_sites, string opt_alg, PhyloTree *tree)
-: RateInvar(p_invar_sites, tree), RateFree(ncat, start_alpha, params, sorted_rates, opt_alg, tree)
+RateFreeInvar::RateFreeInvar(int ncat, double start_alpha, string params,
+                             bool sorted_rates, double p_invar_sites,
+                             string opt_alg, PhyloTree *tree)
+    : RateInvar(p_invar_sites, tree)
+    , RateFree(ncat, start_alpha, params, sorted_rates, opt_alg, tree)
 {
 	cur_optimize = 0;
 	name = "+I" + name;
@@ -61,7 +64,8 @@ void RateFreeInvar::writeParameters(ostream &out) {
 	RateFree::writeParameters(out);
 }
 
-void RateFreeInvar::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
+void RateFreeInvar::setBounds(double *lower_bound, double *upper_bound,
+                              bool *bound_check) {
 	RateFree::setBounds(lower_bound, upper_bound, bound_check);
 	if (RateInvar::getNDim() == 0) return;
 	int ndim = getNDim()-1;

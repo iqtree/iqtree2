@@ -141,7 +141,8 @@ double RateHeterotachy::optimizeParameters(double gradient_epsilon) {
     if (fix_params) {
         return phylo_tree->computeLikelihood();
     }
-    TREE_LOG_LINE(*phylo_tree, VB_MED, "Optimizing " << name << " model parameters by EM algorithm...");
+    TREE_LOG_LINE(*phylo_tree, VB_MED, "Optimizing " << name
+                  << " model parameters by EM algorithm...");
     return optimizeWithEM();
 }
 
@@ -192,7 +193,8 @@ double RateHeterotachy::optimizeWithEM() {
             converged = converged && (fabs(prop[c]-new_prop[c]) < 1e-4);
             ratio_prop[c] = new_prop[c] / prop[c];
             if (std::isnan(ratio_prop[c])) {
-                cerr << "BUG: " << new_prop[c] << " " << prop[c] << " " << ratio_prop[c] << endl;
+                cerr << "BUG: " << new_prop[c] << " "
+                     << prop[c] << " " << ratio_prop[c] << endl;
             }
             prop[c] = new_prop[c];
             new_pinvar += prop[c];
@@ -233,7 +235,8 @@ double RateHeterotachy::optimizeWithEM() {
     memset(new_prop, 0, nmix*sizeof(double));
             
     // E-step
-    // decoupled weights (prop) from _pattern_lh_cat to obtain L_ci and compute pattern likelihood L_i
+    // decoupled weights (prop) from _pattern_lh_cat
+    // to obtain L_ci and compute pattern likelihood L_i
     for (ptn = 0; ptn < nptn; ptn++) {
         double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
         double lk_ptn = phylo_tree->ptn_invar[ptn];

@@ -22,8 +22,10 @@
 #include "rategammainvar.h"
 
 RateGammaInvar::RateGammaInvar(int ncat, double shape, bool median,
-		double p_invar_sites, string optimize_alg, PhyloTree *tree, bool testParamDone) :
-		RateInvar(p_invar_sites, tree), RateGamma(ncat, shape, median, tree) {
+                               double p_invar_sites, string optimize_alg,
+                               PhyloTree *tree, bool testParamDone) :
+		RateInvar(p_invar_sites, tree),
+        RateGamma(ncat, shape, median, tree) {
 	name = "+I" + name;
 	full_name = "Invar+" + full_name;
     this->optimize_alg = optimize_alg;
@@ -122,7 +124,8 @@ double RateGammaInvar::targetFunk(double x[]) {
 	return -phylo_tree->computeLikelihood();
 }
 
-void RateGammaInvar::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
+void RateGammaInvar::setBounds(double *lower_bound, double *upper_bound,
+                               bool *bound_check) {
 	int gid = RateGamma::getNDim();
 	RateGamma::setBounds(lower_bound, upper_bound, bound_check);
 	RateInvar::setBounds(lower_bound+gid, upper_bound+gid, bound_check+gid);
@@ -136,11 +139,13 @@ double RateGammaInvar::optimizeParameters(double gradient_epsilon) {
     if (ndim == 0) {
         return phylo_tree->computeLikelihood();
     }
-    TREE_LOG_LINE(*phylo_tree, VB_MED, "Optimizing " << name << " model parameters by " << optimize_alg << " algorithm...");
+    TREE_LOG_LINE(*phylo_tree, VB_MED, "Optimizing " << name
+                  << " model parameters by " << optimize_alg << " algorithm...");
 
 	if (optimize_alg.find("EM_RR") != string::npos) {
         return randomRestartOptimization(gradient_epsilon);
-    } else if (optimize_alg.find("Brent") != string::npos || phylo_tree->aln->frac_const_sites == 0.0 || isFixPInvar() || isFixGammaShape()) {
+    } else if (optimize_alg.find("Brent") != string::npos
+               || phylo_tree->aln->frac_const_sites == 0.0 || isFixPInvar() || isFixGammaShape()) {
 		double lh = phylo_tree->computeLikelihood();
 		cur_optimize = 0;
 		double gamma_lh = RateGamma::optimizeParameters(gradient_epsilon);
@@ -165,7 +170,8 @@ double RateGammaInvar::optimizeParameters(double gradient_epsilon) {
         setVariables(variables);
         setBounds(lower_bound, upper_bound, bound_check);
 
-        score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_GAMMA_SHAPE));
+        score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound,
+                                    bound_check, max(gradient_epsilon, TOL_GAMMA_SHAPE));
 
         getVariables(variables);
 
@@ -186,7 +192,8 @@ double RateGammaInvar::optimizeParameters(double gradient_epsilon) {
 }
 
 
-int RateGammaInvar::computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat) {
+int RateGammaInvar::computePatternRates(DoubleVector &pattern_rates,
+                                        IntVector &pattern_cat) {
 	//cout << "Computing Gamma site rates by empirical Bayes..." << endl;
 
 	phylo_tree->computePatternLhCat(WSL_RATECAT);
@@ -203,7 +210,8 @@ int RateGammaInvar::computePatternRates(DoubleVector &pattern_rates, IntVector &
 		for (int c = 0; c < ncategory; c++) {
 			sum_rate += rates[c] * lh_cat[c];
 			sum_lh += lh_cat[c];
-			if (lh_cat[c] > best_lh || (lh_cat[c] == best_lh && random_double()<0.5)) { // break tie at random
+			if (lh_cat[c] > best_lh
+                || (lh_cat[c] == best_lh && random_double()<0.5)) { // break tie at random
                 best = c+1;
                 best_lh = lh_cat[c];
             }
@@ -229,7 +237,8 @@ double RateGammaInvar::optimizeWithEM(double gradient_epsilon) {
     intptr_t nptn = phylo_tree->aln->getNPattern();
     size_t nSites = phylo_tree->aln->getNSite();
 
-    // Compute the pattern likelihood for each category (invariable and variable category)
+    // Compute the pattern likelihood for each category
+    // (invariable and variable category)
     phylo_tree->computePatternLhCat(WSL_RATECAT);
     phylo_tree->computePtnInvar();
 
@@ -271,7 +280,8 @@ double RateGammaInvar::randomRestartOptimization(double gradient_epsilon) {
     while (initPInv <= frac_const) {
         if (verbose_mode >= VB_MED) {
             cout << endl;
-            cout << "Testing with init. pinv = " << initPInv << " / init. alpha = " << initAlpha << endl;
+            cout << "Testing with init. pinv = " << initPInv
+                 << " / init. alpha = " << initAlpha << endl;
         }
         setPInvar(initPInv);
         setGammaShape(initAlpha);
@@ -295,8 +305,9 @@ double RateGammaInvar::randomRestartOptimization(double gradient_epsilon) {
     }
 
     if (verbose_mode >= VB_MED) {
-        cout << "Best gamma shape: " << bestAlpha << " / best p_inv: " << bestPInvar
-        << " / logl: " << bestLogl << endl;
+        cout << "Best gamma shape: " << bestAlpha
+             << " / best p_inv: " << bestPInvar
+             << " / logl: " << bestLogl << endl;
     }
 
     setPInvar(bestPInvar);

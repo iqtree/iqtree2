@@ -66,7 +66,8 @@ void RateHeterotachyInvar::writeParameters(ostream &out) {
 	RateHeterotachy::writeParameters(out);
 }
 
-void RateHeterotachyInvar::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
+void RateHeterotachyInvar::setBounds(double *lower_bound, double *upper_bound,
+                                     bool *bound_check) {
 	RateHeterotachy::setBounds(lower_bound, upper_bound, bound_check);
 	if (RateInvar::getNDim() == 0) return;
 	int ndim = getNDim()-1;

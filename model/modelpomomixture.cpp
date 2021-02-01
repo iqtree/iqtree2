@@ -212,7 +212,8 @@ double ModelPoMoMixture::optimizeParameters(double gradient_epsilon) {
         if (verbose_mode >= VB_MIN) {
           double shape = ratehet->getGammaShape();
           if (shape <= POMO_GAMMA_MIN)
-            outWarning("The shape parameter of the gamma rate heterogeneity is hitting the lower boundary.");
+            outWarning("The shape parameter of the gamma rate heterogeneity"
+                       " is hitting the lower boundary.");
           ratehet->writeInfo(cout);
         }
         opt_mode = OPT_NONE;
@@ -237,8 +238,8 @@ int ModelPoMoMixture::get_num_states_total() {
   return num_states * getNMixtures();
 }
 
-void ModelPoMoMixture::update_eigen_pointers(double *eval, double *evec
-                                             , double *inv_evec, double* inv_evec_transposed) {
+void ModelPoMoMixture::update_eigen_pointers(double *eval, double *evec,
+                                             double *inv_evec, double* inv_evec_transposed) {
     eigenvalues = eval;
     eigenvectors = evec;
     inv_eigenvectors = inv_evec;
@@ -269,11 +270,12 @@ bool ModelPoMoMixture::isUnstableParameters() {
 
 // I had to write this function because of a compiler error. ModelPoMoMixture is
 // inheriting functions from ModelMixture and from ModelPoMo. I defined
-// computeTransMatrix for ModelPoMo because I thought that the Modelmarkov
+// computeTransMatrix for ModelPoMo because I thought that the ModelMarkov
 // version did not work for non-reversible substitution models. However, this
 // led to a clash because then computeTransMatrix is defined in both,
 // ModelMixture and ModelPoMo and inheritance is flawed.
-void ModelPoMoMixture::computeTransMatrix(double time, double *trans_matrix, int mixture) {
+void ModelPoMoMixture::computeTransMatrix(double time, double *trans_matrix,
+                                          int mixture) {
   ASSERT(mixture < getNMixtures());
   at(mixture)->computeTransMatrix(time, trans_matrix);
 }

@@ -167,7 +167,8 @@ void RateKategory::writeInfo(ostream& out)
 	for (int i = 0; i < ncategory; i++)
 		out << " " << rates[i];
 	out << endl;
-	out << "BIC: " << -2 * phylo_tree->computeLikelihood() + getNDim() * log(phylo_tree->getAlnNSite()) << endl;
+	out << "BIC: " << -2 * phylo_tree->computeLikelihood()
+        + getNDim() * log(phylo_tree->getAlnNSite()) << endl;
 }
 
 void RateKategory::writeParameters(ostream& out)

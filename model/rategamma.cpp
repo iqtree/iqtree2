@@ -189,7 +189,8 @@ double RateGamma::targetFunk(double x[]) {
 	return -phylo_tree->computeLikelihood();
 }
 
-void RateGamma::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
+void RateGamma::setBounds(double *lower_bound, double *upper_bound,
+                          bool *bound_check) {
 	if (getNDim() == 0) return;
 	lower_bound[1] = phylo_tree->params->min_gamma_shape;
 	upper_bound[1] = MAX_GAMMA_SHAPE;
@@ -210,7 +211,8 @@ bool RateGamma::getVariables(double *variables) {
     return changed;
 }
 
-double RateGamma::optimizeParameters(double gradient_epsilon, double min_gamma, double max_gamma) {
+double RateGamma::optimizeParameters(double gradient_epsilon,
+                                     double min_gamma, double max_gamma) {
 	if (fix_gamma_shape) {
 		return phylo_tree->computeLikelihood();
 	}
@@ -218,7 +220,9 @@ double RateGamma::optimizeParameters(double gradient_epsilon, double min_gamma, 
 	double negative_lh;
 	double current_shape = gamma_shape;
 	double ferror, optx;
-	optx = minimizeOneDimen(min_gamma, current_shape, max_gamma, max(gradient_epsilon, TOL_GAMMA_SHAPE), &negative_lh, &ferror);
+	optx = minimizeOneDimen(min_gamma, current_shape, max_gamma,
+                            max(gradient_epsilon, TOL_GAMMA_SHAPE),
+                            &negative_lh, &ferror);
 //	if (gamma_shape != optx) {
 //		gamma_shape = optx;
 //		computeRates();
@@ -235,7 +239,10 @@ double RateGamma::optimizeParameters(double gradient_epsilon) {
 	double negative_lh;
 	double current_shape = gamma_shape;
 	double ferror, optx;
-	optx = minimizeOneDimen(phylo_tree->params->min_gamma_shape, current_shape, MAX_GAMMA_SHAPE, max(gradient_epsilon, TOL_GAMMA_SHAPE), &negative_lh, &ferror);
+	optx = minimizeOneDimen(phylo_tree->params->min_gamma_shape,
+                            current_shape, MAX_GAMMA_SHAPE,
+                            max(gradient_epsilon, TOL_GAMMA_SHAPE),
+                            &negative_lh, &ferror);
 //	gamma_shape = optx;
 //	computeRates();
 //	phylo_tree->clearAllPartialLH();
@@ -245,7 +252,8 @@ double RateGamma::optimizeParameters(double gradient_epsilon) {
 
 void RateGamma::writeInfo(ostream &out) {
 	out << "Gamma shape alpha: " << gamma_shape << endl;
-	//out << " (" << (cut_median ? "median" : "mean") << " rate per category)" << endl;
+	//out << " (" << (cut_median ? "median" : "mean")
+    //    << " rate per category)" << endl;
 	//out << "Number of categories: " << ncategory << endl;
 }
 
@@ -253,7 +261,8 @@ void RateGamma::writeParameters(ostream &out) {
 	out << "\t" << gamma_shape;
 }
 
-int RateGamma::computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat) {
+int RateGamma::computePatternRates(DoubleVector &pattern_rates,
+                                   IntVector &pattern_cat) {
 	//cout << "Computing Gamma site rates by empirical Bayes..." << endl;
 
 	phylo_tree->computePatternLhCat(WSL_RATECAT);
@@ -269,7 +278,8 @@ int RateGamma::computePatternRates(DoubleVector &pattern_rates, IntVector &patte
 		for (int c = 0; c < ncategory; c++) {
 			sum_rate += rates[c] * lh_cat[c];
 			sum_lh += lh_cat[c];
-			if (lh_cat[c] > lh_cat[best] || (lh_cat[c] == lh_cat[best] && random_double()<0.5))  // break tie at random
+			if (lh_cat[c] > lh_cat[best]
+                || (lh_cat[c] == lh_cat[best] && random_double()<0.5))  // break tie at random
                 best = c;
 		}
 		pattern_rates[i] = sum_rate / sum_lh;
@@ -320,7 +330,8 @@ double RateGamma::cmpLnGamma (double alpha) {
 } //end of function cmpLnGamma
 
 //----------------------------------------------------------------------------------------
-double RateGamma::cmpIncompleteGamma (double x, double alpha, double ln_gamma_alpha) {
+double RateGamma::cmpIncompleteGamma (double x, double alpha,
+                                      double ln_gamma_alpha) {
 	/* returns the incomplete gamma ratio I(x,alpha) where x is the upper
 		   limit of the integration and alpha is the shape parameter.
 	   returns (-1) if in error
