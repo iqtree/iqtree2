@@ -1984,7 +1984,7 @@ public:
     void printDistanceFile() const;
     
     /**
-            compute distance and variance matrices (dist_matrix and var_matrix)
+            compute distance matrix (dist_matrix)
             @return the longest distance
      */
     double computeDistanceMatrix();
@@ -2007,7 +2007,7 @@ public:
      */
     double computeDistanceMatrix(Params &params, Alignment *alignment);
 
-    void ensureDistanceMatrixAllocated(size_t minimum_rank, bool allocate_variance_matrix_too);
+    void ensureDistanceMatrixAllocated(size_t minimum_rank);
 
     /**
             compute observed distance matrix, allocating memory if necessary
@@ -2316,11 +2316,6 @@ public:
      * Distance matrix
      */
     double *dist_matrix;
-
-    /**
-     * Variance matrix
-     */
-    double *var_matrix;
 
     /*
     * Rank (number of rows, also number of columns) of the allocated distance matrix

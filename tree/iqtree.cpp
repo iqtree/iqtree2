@@ -50,7 +50,6 @@ void IQTree::init() {
     k_delete = k_delete_min = k_delete_max = k_delete_stay = 0;
     dist_matrix = nullptr;
     dist_matrix_rank = 0;
-    var_matrix  = nullptr;
 //    curScore = 0.0; // Current score of the tree
     cur_pars_score = -1;
 //    enable_parsimony = false;

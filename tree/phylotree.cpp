@@ -110,7 +110,6 @@ void PhyloTree::init() {
     dist_matrix = nullptr;
     dist_matrix_rank = 0;
     is_dist_file_read = false;
-    var_matrix = NULL;
     params = NULL;
     setLikelihoodKernel(LK_SSE2);  // FOR TUNG: you forgot to initialize this variable!
     setNumThreads(1);
@@ -237,9 +236,6 @@ PhyloTree::~PhyloTree() {
     delete[] dist_matrix;
     dist_matrix = nullptr;
     dist_matrix_rank = 0;
-
-    delete[] var_matrix;
-    var_matrix = nullptr;
 
     if (pllPartitions!=nullptr) {
         myPartitionsDestroy(pllPartitions);
@@ -2551,9 +2547,6 @@ double PhyloTree::optimizeOneBranchLS(PhyloNode *node1, PhyloNode *node2) {
     if (!subTreeDistComputed) {
         if (params->ls_var_type == WLS_PAUPLIN) {
             computeNodeBranchDists();
-            for (int i = 0; i < static_cast<int>(leafNum); i++)
-                for (int j = 0; j < static_cast<int>(leafNum); j++)
-                    var_matrix[i*leafNum+j] = pow(2.0,nodeBranchDists[i*nodeNum+j]);
         }
         computeSubtreeDists();
     }
@@ -2825,8 +2818,9 @@ void PhyloTree::computeSubtreeDists() {
     subTreeDistComputed = true;
 }
 
-void PhyloTree::computeAllSubtreeDistForOneNode(PhyloNode* source, PhyloNode* source_nei1, PhyloNode* source_nei2,
-        PhyloNode* node, PhyloNode* dad) {
+void PhyloTree::computeAllSubtreeDistForOneNode(PhyloNode* source, PhyloNode* source_nei1,
+                                                PhyloNode* source_nei2,
+                                                PhyloNode* node, PhyloNode* dad) {
     string key = getBranchID(source, dad);
     double dist, weight;
     if (markedNodeList.find(dad->id) != markedNodeList.end()) {
@@ -2834,13 +2828,12 @@ void PhyloTree::computeAllSubtreeDistForOneNode(PhyloNode* source, PhyloNode* so
     } else if (source->isLeaf() && dad->isLeaf()) {
         ASSERT(dist_matrix);
         size_t nseq = aln->getNSeq();
-        if (params->ls_var_type == OLS) {
-            dist = dist_matrix[dad->id * nseq + source->id];
-            weight = 1.0;
-        } else {
+        dist        = dist_matrix[dad->id * nseq + source->id];
+        weight      = 1.0;
+        if (params->ls_var_type != OLS && 0.0 != dist) {
             // this will take into account variances, also work for OLS since var = 1
-            weight = 1.0/var_matrix[dad->id * nseq + source->id];
-            dist = dist_matrix[dad->id * nseq + source->id] * weight;
+            weight = 1.0/dist/dist;
+            dist  *= weight;
         }
         subTreeDists.insert(StringDoubleMap::value_type(key, dist));
         subTreeWeights.insert(StringDoubleMap::value_type(key, weight));
@@ -3896,12 +3889,12 @@ template <class L, class F> double computeDistanceMatrix
     , L unknown, const L* sequenceMatrix, intptr_t nseqs, size_t seqLen
     , double denominator, const F* frequencyVector
     , bool uncorrected, double num_states
-    , double *dist_mat, double *var_mat)
+    , double *dist_mat)
 {
     //
     //L is the character type
     //sequenceMatrix is nseqs rows of seqLen characters
-    //dist_mat and var_mat are as in computeDist
+    //dist_mat is as in computeDist
     //F is the frequency count type
     //
     
@@ -3925,12 +3918,10 @@ template <class L, class F> double computeDistanceMatrix
         //"all by itsef" for as long.
         size_t   rowOffset     = nseqs * seq1;
         double*  distRow       = dist_mat       + rowOffset;
-        double*  varRow        = var_mat        + rowOffset;
         const L* thisSequence  = sequenceMatrix + seq1 * seqLen;
         const L* otherSequence = thisSequence   + seqLen;
         double maxDistanceInRow = 0.0;
         for (intptr_t seq2 = seq1 + 1; seq2 < nseqs; ++seq2) {
-            double d2l      = varRow[seq2];
             double distance = distRow[seq2];
             if ( 0.0 == distance ) {
                 double unknownFreq = 0;
@@ -3952,11 +3943,6 @@ template <class L, class F> double computeDistanceMatrix
                 }
                 distRow[seq2] = distance;
             }
-            if      (vartype == OLS)                  varRow[seq2] = 1.0;
-            else if (vartype == WLS_PAUPLIN)          varRow[seq2] = 0.0;
-            else if (vartype == WLS_FIRST_TAYLOR)     varRow[seq2] = distance;
-            else if (vartype == WLS_FITCH_MARGOLIASH) varRow[seq2] = distance * distance;
-            else if (vartype == WLS_SECOND_TAYLOR)    varRow[seq2] = -1.0 / d2l;
             if ( maxDistanceInRow < distance )
             {
                 maxDistanceInRow = distance;
@@ -4000,15 +3986,11 @@ template <class L, class F> double computeDistanceMatrix
         intptr_t seq1      = nseqs - 1 - back_seq;
         intptr_t rowOffset = nseqs * seq1;
         double*  distRow   = dist_mat + rowOffset;
-        double*  varRow    = var_mat  + rowOffset;
         double*  distCol   = dist_mat + seq1; //current entries in the columns
-        double*  varCol    = var_mat  + seq1; //...that we are reading down.
-        for ( intptr_t seq2 = 0; seq2 < seq1; ++seq2, distCol+=nseqs, varCol+=nseqs ) {
+        for ( intptr_t seq2 = 0; seq2 < seq1; ++seq2, distCol+=nseqs ) {
             distRow [ seq2 ] = *distCol;
-            varRow  [ seq2 ] = *varCol;
         }
         distRow [ seq1 ] = 0.0;
-        varRow  [ seq1 ] = 0.0;
         progress2 += seq1;
     }
     progress2.done();
@@ -4101,7 +4083,7 @@ double PhyloTree::computeDistanceMatrix_Experimental() {
         ( params->ls_var_type, static_cast<char>(aln->STATE_UNKNOWN)
          , s.getSequenceMatrix(), s.getSequenceCount(), s.getSequenceLength()
          , denominator, frequencies, aln->num_states
-         , uncorrected, dist_matrix, var_matrix);
+         , uncorrected, dist_matrix);
     EX_TRACE("Longest distance was " << longest);
     return longest;
 }
@@ -4128,18 +4110,8 @@ double PhyloTree::computeDistanceMatrix() {
         size_t rowStartPos = seq1 * nseqs;
         for (int seq2=seq1+1; seq2 < nseqs; ++seq2) {
             size_t sym_pos = rowStartPos + seq2;
-            double d2l = var_matrix[sym_pos]; // moved here for thread-safe (OpenMP)
+            double d2l = 0;
             dist_matrix[sym_pos] = processor->recomputeDist(seq1, seq2, dist_matrix[sym_pos], d2l);
-            if (params->ls_var_type == OLS)
-                var_matrix[sym_pos] = 1.0;
-            else if (params->ls_var_type == WLS_PAUPLIN)
-                var_matrix[sym_pos] = 0.0;
-            else if (params->ls_var_type == WLS_FIRST_TAYLOR)
-                var_matrix[sym_pos] = dist_matrix[sym_pos];
-            else if (params->ls_var_type == WLS_FITCH_MARGOLIASH)
-                var_matrix[sym_pos] = dist_matrix[sym_pos] * dist_matrix[sym_pos];
-            else if (params->ls_var_type == WLS_SECOND_TAYLOR)
-                var_matrix[sym_pos] = -1.0 / d2l;
         }
         progress += static_cast<double>(nseqs - seq1 - 1);
     }
@@ -4156,13 +4128,11 @@ double PhyloTree::computeDistanceMatrix() {
         for (size_t rowPos = rowStartPos; rowPos<rowStopPos; ++rowPos, colPos+=nseqs) {
             auto d = dist_matrix[colPos];
             dist_matrix [ rowPos ] = d;
-            var_matrix  [ rowPos ] = var_matrix [ colPos ];
             if (d > longest_dist) {
                 longest_dist = d;
             }
         }
         dist_matrix [ rowStopPos] = 0.0;
-        var_matrix  [ rowStopPos] = 0.0;
         progress2 += seq1;
     }
     progress2.done();
@@ -4188,13 +4158,10 @@ void PhyloTree::decideDistanceFilePath(Params& params) {
         dist_file += ".mldist";
 }
 
-void PhyloTree::ensureDistanceMatrixAllocated(size_t minimum_rank, 
-                                              bool allocate_variance_matrix_too) {
+void PhyloTree::ensureDistanceMatrixAllocated(size_t minimum_rank) {
     if (this->dist_matrix_rank < minimum_rank) {
         delete[] dist_matrix;
-        delete[] var_matrix;
         dist_matrix = nullptr;
-        var_matrix = nullptr;
     }
     intptr_t nSquared = static_cast<size_t>(minimum_rank) 
                       * static_cast<size_t>(minimum_rank);
@@ -4204,15 +4171,6 @@ void PhyloTree::ensureDistanceMatrixAllocated(size_t minimum_rank,
         memset(dist_matrix, 0, sizeof(double) * nSquared);
         is_dist_file_read = false;
     }
-    if (this->var_matrix == nullptr && allocate_variance_matrix_too) {
-        var_matrix = new double[nSquared];
-        #ifdef _OPENMP
-        #pragma omp parallel for
-        #endif
-        for (intptr_t i = 0; i < nSquared; i++) {
-            var_matrix[i] = 1.0;
-        }
-    }
 }
 
 double PhyloTree::computeDistanceMatrix(Params &params, Alignment *alignment) {
@@ -4221,7 +4179,7 @@ double PhyloTree::computeDistanceMatrix(Params &params, Alignment *alignment) {
     aln = alignment;
 
     size_t n = alignment->getNSeq();
-    ensureDistanceMatrixAllocated(n, true);
+    ensureDistanceMatrixAllocated(n);
     if (params.dist_file && !is_dist_file_read) {
         longest_dist = alignment->readDist(params.dist_file, params.incremental, dist_matrix);
         dist_file = params.dist_file;
@@ -4247,7 +4205,7 @@ void PhyloTree::printDistanceFile() const {
 
 double PhyloTree::computeObservedDistanceMatrix() {
     int nseqs = aln->getNSeq32();
-    ensureDistanceMatrixAllocated(nseqs, false);
+    ensureDistanceMatrixAllocated(nseqs);
     double longest_dist = 0.0;
     #ifdef _OPENMP
     #pragma omp parallel for schedule(dynamic)
