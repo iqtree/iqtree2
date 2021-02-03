@@ -79,8 +79,9 @@ public:
     TargetBranch& operator= (const TargetBranch& rhs);
     TargetBranch(BlockAllocator* allocator,
                  PhyloNode* node1, PhyloNode* node2,
-                 bool likelihood_wanted);
+                 bool parsimony_wanted, bool likelihood_wanted);
     double computeState (PhyloTree& phylo_tree,
+                         double tree_parsimony_score,
                          intptr_t target_branch_index,
                          LikelihoodBlockPairs &blocks);
     void   dumpNeighbor (VerboseMode level, const char* prefix,

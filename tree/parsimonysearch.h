@@ -69,11 +69,20 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
         
     deleteAllPartialLhAndParsimony();
     initializeTree(); //to ensure all branches are properly numbered
-    ensureCentralPartialParsimonyIsAllocated(branch_count + path_overhead);
+    auto count_of_branch_vectors_needed =
+        ( s.calculate_connection_costs ? branch_count : 0 )
+        + path_overhead;
+    ensureCentralPartialParsimonyIsAllocated(count_of_branch_vectors_needed);
     initializeAllPartialPars(index_parsimony);
-    BlockAllocator          block_allocator(*this, index_parsimony);
-    ParsimonyCostCalculator calculator(isUsingSankoffParsimony());
-    TargetBranchRange       targets(*this, &block_allocator, &calculator, true);
+    BlockAllocator           block_allocator(*this, index_parsimony);
+    PlacementCostCalculator  dumb_calculator;
+    ParsimonyCostCalculator  fancy_calculator(isUsingSankoffParsimony());
+    PlacementCostCalculator* calculator = &dumb_calculator;
+    if (s.calculate_connection_costs) {
+        calculator = &fancy_calculator;
+    }
+    TargetBranchRange       targets(*this, &block_allocator,
+                                    calculator, true);
         
     //Allocate per-thread parsimony vector work areas used to calculate
     //modified parsimony scores along the path between the
@@ -116,7 +125,7 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
 #endif
         for (intptr_t i=0; i<branch_count; ++i) {
             TargetBranch&     tb   = targets[i];
-            tb.computeState(*this, i, dummyBlocks);
+            tb.computeState(*this, parsimony_score, i, dummyBlocks);
             LOG_LINE(VB_DEBUG, "Branch " << i
                      << " has branch cost " << tb.getBranchCost()
                      << " and connection_cost " << tb.getConnectionCost() );
@@ -187,7 +196,8 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
             ++moves_still_possible;
             double benefit = move.getBenefit();
             if (s.lazy_mode) {
-                benefit = move.recalculateBenefit(*this, targets, dummyBlocks) ;
+                benefit = move.recalculateBenefit(*this, parsimony_score,
+                                                  targets, dummyBlocks) ;
                 if ( benefit <= 0) {
                     LOG_LINE(VB_DEBUG, "Best move for branch " << move.source_branch_id
                              << " is no probably longer beneficial"

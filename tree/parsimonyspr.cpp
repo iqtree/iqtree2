@@ -194,12 +194,13 @@ namespace {
                 return isAConnectedThroughBToC(source.first, source.second, target.first, path);
             }
         }
-        virtual double recalculateBenefit(PhyloTree& tree, TargetBranchRange& branches,
-                                  LikelihoodBlockPairs &blocks) const {
+        virtual double recalculateBenefit(PhyloTree& tree, double parsimony_score,
+                                          TargetBranchRange& branches,
+                                          LikelihoodBlockPairs &blocks) const {
             TargetBranch& source = branches[source_branch_id];
             TargetBranch& target = branches[target_branch_id];
-            source.computeState(tree, source_branch_id, blocks);
-            target.computeState(tree, target_branch_id, blocks);
+            source.computeState(tree, parsimony_score, source_branch_id, blocks);
+            target.computeState(tree, parsimony_score, target_branch_id, blocks);
             BenefitPair benefitPair = source.getPartialDisconnectionBenefit(tree, branches);
             double updated_benefit  = isForward ? benefitPair.forwardBenefit : benefitPair.backwardBenefit;
             double updated_cost     = isForward
@@ -257,11 +258,11 @@ namespace {
             //      It has to be this way, if apply() is to be its own
             //      inverse.
             
-            double score;
-            left_branch   .computeState (tree, snip_left_id,     blocks);
-            right_branch  .computeState (tree, snip_right_id,    blocks);
-            target        .computeState (tree, target_branch_id, blocks);
-            score = source.computeState (tree, source_branch_id, blocks);
+            double score=-1;
+            score = left_branch .computeState (tree, score, snip_left_id,     blocks);
+            score = right_branch.computeState (tree, score, snip_right_id,    blocks);
+            score = target      .computeState (tree, score, target_branch_id, blocks);
+            score = source      .computeState (tree, score, source_branch_id, blocks);
             
             left_branch.setParsimonyLength(tree);
             right_branch.setParsimonyLength(tree);
@@ -464,10 +465,11 @@ namespace {
 void PhyloTree::doParsimonySPR() {
     ParsimonySearchParameters s;
         
-    s.name                      = "SPR";
-    s.iterations                = params->parsimony_spr_iterations;
-    s.lazy_mode                 = params->use_lazy_parsimony_spr;
-    s.radius                    = params->spr_radius;
+    s.name                       = "SPR";
+    s.iterations                 = params->parsimony_spr_iterations;
+    s.lazy_mode                  = params->use_lazy_parsimony_spr;
+    s.radius                     = params->spr_radius;
+    s.calculate_connection_costs = s.lazy_mode;
 
     doParsimonySearch<ParsimonySPRMove>(s);
 }

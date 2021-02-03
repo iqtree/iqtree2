@@ -99,6 +99,8 @@ public:
 
     /** Recalculate the net benefit of a move
      * @param tree the phylo tree
+     * @param tree_parsimony_score the current parsimony score of the
+     *        tree (or -1 if that is not known).
      * @param branches an up-to-date vector of TargetBranch instances
      *        that correspond 1:1 with the branches in the tree.
      * @param blocks LikelihoodBlockPairs the might be needed to
@@ -112,6 +114,7 @@ public:
      * @return the net benefit of the move, if it were applied to the tree as it now is
      */
     virtual double recalculateBenefit(PhyloTree& tree,
+                                      double tree_parsimony_score,
                                       TargetBranchRange& branches,
                                       LikelihoodBlockPairs &blocks) const = 0;
 

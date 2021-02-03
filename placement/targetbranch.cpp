@@ -59,14 +59,18 @@ TargetBranch& TargetBranch::operator= (const TargetBranch& rhs) {
 
 TargetBranch::TargetBranch(BlockAllocator* allocator,
                PhyloNode* node1, PhyloNode* node2,
-               bool likelihood_wanted)
+               bool parsimony_wanted, bool likelihood_wanted)
     : super(node1, node2), blocker(allocator), partial_pars(nullptr)
     , connection_cost(0), branch_cost(0)
     , partial_lh(nullptr), scale_num(nullptr)
     , branch_lh_scale_factor(0), used(false)
     , replacements(nullptr) {
-    blocker->allocateParsimonyBlock(partial_pars);
-    blocker->allocateLikelihoodBlocks(partial_lh, scale_num);
+    if (parsimony_wanted) {
+        blocker->allocateParsimonyBlock(partial_pars);
+    }
+    if (likelihood_wanted) {
+        blocker->allocateLikelihoodBlocks(partial_lh, scale_num);
+    }
     used  = false;
 }
 
@@ -105,6 +109,7 @@ void TargetBranch::dumpNeighbor(VerboseMode level, const char* name,
 }
 
 double TargetBranch::computeState(PhyloTree& phylo_tree,
+                                  double tree_parsimony_score,
                                   intptr_t target_branch_index,
                                   LikelihoodBlockPairs &blocks) {
     PhyloNeighbor* neigh1 = first->findNeighbor(second);
@@ -113,12 +118,22 @@ double TargetBranch::computeState(PhyloTree& phylo_tree,
     c.schedulePartialParsimony(neigh1, first);
     c.schedulePartialParsimony(neigh2, second);
     c.calculate();
-    connection_cost     = phylo_tree.computePartialParsimonyOutOfTree
-                          (neigh1->partial_pars, neigh2->partial_pars,
-                           partial_pars);
     int second_subtree_cost = phylo_tree.getSubTreeParsimony(neigh1, first);
     int first_subtree_cost  = phylo_tree.getSubTreeParsimony(neigh2, second);
-    branch_cost         = connection_cost - first_subtree_cost - second_subtree_cost;
+    if ( partial_pars != nullptr ) {
+        connection_cost = phylo_tree.computePartialParsimonyOutOfTree
+                          (neigh1->partial_pars, neigh2->partial_pars,
+                           partial_pars);
+    } else {
+        if (tree_parsimony_score==-1) {
+            int branch_cost_dummy = 0;
+            tree_parsimony_score = phylo_tree.computeParsimonyOutOfTree
+                                   ( neigh1->partial_pars, neigh2->partial_pars,
+                                    &branch_cost_dummy);
+        }
+        connection_cost = tree_parsimony_score;
+    }
+    branch_cost             = connection_cost - first_subtree_cost - second_subtree_cost;
     if (phylo_tree.leafNum < 50) {
         TREE_LOG_LINE(phylo_tree, VB_MAX, "TB Parsimony (net) was "
                       << connection_cost << " (" << branch_cost << ")"
@@ -259,7 +274,7 @@ TargetBranchRange::TargetBranchRange(PhyloTree& phylo_tree, BlockAllocator* b,
         phylo_tree.logLine(s1.str());
     }
     for (int i=0; i<v1.size(); ++i) {
-        emplace_back(b, v1[i], v2[i], calculator->usesLikelihood());
+        emplace_back(b, v1[i], v2[i], calculator->usesParsimony(), calculator->usesLikelihood());
     }
 }
 
@@ -321,8 +336,8 @@ TargetBranchRef TargetBranchRange::addNewRef(BlockAllocator& allocator,
                                              PhyloNode* node1, PhyloNode* node2,
                                              bool likelihood_wanted) {
     size_t index /*of added target branch*/ = size();
-    emplace_back(&allocator, node1, node2, likelihood_wanted);
-    back().computeState(allocator.getTree(), index, blocks);
+    emplace_back(&allocator, node1, node2, true, likelihood_wanted);
+    back().computeState(allocator.getTree(), -1, index, blocks);
     return TargetBranchRef(this, index);
 }
 

@@ -15,6 +15,7 @@ public:
     intptr_t    iterations;
     bool        lazy_mode;
     int         radius;
+    bool        calculate_connection_costs;
 };
 
 #endif /* parsimonysearchparameters_h */

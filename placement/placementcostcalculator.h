@@ -27,8 +27,14 @@ public:
      @param taxon The taxon to be placed
      @param p A place it might go*/
     virtual void assessPlacementCost(PhyloTree& tree, const TaxonToPlace& taxon,
-                                     PossiblePlacement& p) const = 0;
+                                     PossiblePlacement& p) const;
 
+    /** Indicate whether this placement cost calculator does parsimony calculations
+     (and needs PhyloNeighbor instances, for example, to have partial parsimony vectors allocated)
+     @returns true if it does parsimony calculations, false if not
+     */
+    virtual bool usesParsimony();
+    
     /** Indicate whether this placement cost calculator does likelihood calculations
      (and needs PhyloNeighbor instances, for example, to have partial likelihood vectors allocated)
      @returns true if it does likelihood calculations, false if not
@@ -55,6 +61,7 @@ private:
     bool sankoff;
 public:
     ParsimonyCostCalculator(bool usesSankoff);
+    virtual bool usesParsimony();
     virtual bool usesSankoffParsimony();
     virtual void assessPlacementCost(PhyloTree& phylo_tree,
                                      const TaxonToPlace& taxon,

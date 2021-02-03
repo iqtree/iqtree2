@@ -14,12 +14,25 @@ PlacementCostCalculator::~PlacementCostCalculator() = default;
 
 bool PlacementCostCalculator::usesLikelihood()       { return false; }
 
+bool PlacementCostCalculator::usesParsimony()        { return false; }
+
 bool PlacementCostCalculator::usesSankoffParsimony() { return false; }
 
+void PlacementCostCalculator::assessPlacementCost(PhyloTree& phylo_tree,
+                                                  const TaxonToPlace& taxon,
+                                                  PossiblePlacement& placement)  const {
+    auto target = placement.getTarget();
+    placement.parsimony_score = -1;
+    placement.score = -1;
+    placement.lenToNode1 = target->first->findNeighbor(target->second)->length * 0.5;
+    placement.lenToNode2 = placement.lenToNode1;
+}
 
 ParsimonyCostCalculator::ParsimonyCostCalculator(bool useSankoff)
 : sankoff(useSankoff) {
 }
+
+bool ParsimonyCostCalculator::usesParsimony()        { return true; }
 
 bool ParsimonyCostCalculator::usesSankoffParsimony() { return sankoff; }
 

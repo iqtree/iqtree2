@@ -147,8 +147,9 @@ public:
         }
         return true;
     }
-    virtual double recalculateBenefit(PhyloTree& tree, TargetBranchRange& branches,
-                              LikelihoodBlockPairs &blocks) const {
+    virtual double recalculateBenefit(PhyloTree& tree, double parsimony_score,
+                                      TargetBranchRange& branches,
+                                      LikelihoodBlockPairs &blocks) const {
         
         auto t1 = branches[first_target_branch_id];
         auto t2 = branches[second_target_branch_id];
@@ -369,11 +370,11 @@ public:
         updateBranch ( branches, branch_ids[4], nodes[8], nodes[3]); //ED becomes ID
         updateBranch ( branches, branch_ids[5], nodes[9], nodes[3]); //FD becomes JD
 
-        double score;
+        double score = -1;
         for (int i=0; i<7; ++i) {
             auto id = branch_ids[i];
             TargetBranch& branch = branches[id];
-            score = branch.computeState(tree, id, blocks);
+            score = branch.computeState(tree, score, id, blocks);
             branch.setParsimonyLength(tree);
         }
         TREE_LOG_LINE(tree, VB_MAX, "Updated parsimony score"
@@ -537,10 +538,11 @@ void PhyloTree::doParsimonyTBR() {
     }
     ParsimonySearchParameters s;
         
-    s.name                      = "TBR";
-    s.iterations                = params->parsimony_tbr_iterations;
-    s.lazy_mode                 = params->use_lazy_parsimony_tbr;
-    s.radius                    = params->tbr_radius; 
+    s.name                       = "TBR";
+    s.iterations                 = params->parsimony_tbr_iterations;
+    s.lazy_mode                  = params->use_lazy_parsimony_tbr;
+    s.radius                     = params->tbr_radius;
+    s.calculate_connection_costs = s.lazy_mode;
 
     if (s.lazy_mode) {
         doParsimonySearch<ParsimonyLazyTBRMove>(s);

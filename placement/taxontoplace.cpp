@@ -230,7 +230,7 @@ void TaxonToPlace::assessNewTargetBranches(PhyloTree& phylo_tree,
             } else {
                 PossiblePlacement p;
                 p.setTargetBranch(*it);
-                p.getTarget()->computeState(phylo_tree, p.getTargetIndex(), blocks);
+                p.getTarget()->computeState(phylo_tree, -1, p.getTargetIndex(), blocks);
                 calculator.assessPlacementCost(phylo_tree, *this, p);
                 scores.emplace_back(p);
             }

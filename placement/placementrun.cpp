@@ -92,7 +92,7 @@ void PlacementRun::prepareForBatch() {
     LikelihoodBlockPairs blocks(2);
     for (int t=0; t<targets; ++t) {
         TargetBranch* target = targets.getTargetBranch(t);
-        target->computeState(phylo_tree, t, blocks);
+        target->computeState(phylo_tree, -1, t, blocks);
     }
     refreshTime += getRealTime() - refreshStart;
 
@@ -119,7 +119,7 @@ void PlacementRun::prepareForBatch() {
         }
         
         double computeStart = getRealTime();
-        target->computeState(phylo_tree, t, blocks);
+        target->computeState(phylo_tree, -1, t, blocks);
         refreshTime += getRealTime() - computeStart;
         
         target->costPlacementOfTaxa(phylo_tree,
