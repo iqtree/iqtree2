@@ -1,12 +1,13 @@
 //
 //  stringfunctions.cpp
-//  Created by James Barbetti on 5/2/21.
-//  Unless tagged otherwise, functions here came from tools.cpp
+//  Created by James Barbetti on 05-Feb-2021.
+//  (But most functions written by others, notably Minh Bui and Tung)
+//  Unless tagged otherwise, functions here came from tools.cpp.
 //
-
 #include "stringfunctions.h"
-#include <sstream> //for std::stringstream
-#include <math.h>  //for HUGE_VALL symbol and abs() function
+#include <sstream>   //for std::stringstream
+#include <math.h>    //for HUGE_VALL symbol and abs() function
+#include <algorithm> //for std::transform (needed on Windows)
 
 int convert_int(const char *str) {
     char *endptr;
