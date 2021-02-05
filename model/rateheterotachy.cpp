@@ -6,8 +6,10 @@
 //
 //
 
-#include "tree/phylotree.h"
 #include "rateheterotachy.h"
+#include <tree/phylotree.h>
+#include <utils/stringfunctions.h> //for convert_double_vec
+
 
 RateHeterotachy::RateHeterotachy(int ncat, string params, PhyloTree *tree) : RateHeterogeneity() {
     phylo_tree = tree;

@@ -19,6 +19,7 @@
 #include "modelinfo.h"
 //#include "phylokernelmixture.h"
 #include "modelpomomixture.h"
+#include <utils/stringfunctions.h> //for convert_double
 
 #ifdef _MSC_VER
 #include <boost/scoped_array.hpp>

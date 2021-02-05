@@ -6,8 +6,10 @@
 //
 
 #include "phylosupertreeunlinked.h"
-#include "utils/MPIHelper.h"
-#include "utils/timeutil.h"
+#include <utils/MPIHelper.h>
+#include <utils/stringfunctions.h> //for convert_time
+#include <utils/timeutil.h>
+
 
 #ifdef _MSC_VER
 #include <boost/scoped_array.hpp>

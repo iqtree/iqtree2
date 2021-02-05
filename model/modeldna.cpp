@@ -19,6 +19,7 @@
  ***************************************************************************/
 #include "modeldna.h"
 #include "modelliemarkov.h"
+#include <utils/stringfunctions.h> //for string_to_upper, convert_double
 
 ModelDNA::ModelDNA(PhyloTree *tree)
 : ModelMarkov(tree)
@@ -31,131 +32,86 @@ ModelDNA::ModelDNA(const char *model_name, string model_params, StateFreqType fr
   init(model_name, model_params, freq, freq_params);
 }
 
+namespace {
+    const struct dna_model_alias {
+        public: const char* from, *to;
+    } dna_model_aliases [] =
+    {
+        { "JC69",  "JC" },   { "K80",    "K2P"   }, { "HKY85",  "HKY"   },
+        { "K81",   "K3P" },  { "TPM1",   "K3P"   },
+        { "K81UF", "K3Pu" }, { "K81U",   "K3Pu"  }, { "K3PU",   "K3Pu"  },
+        { "K3PUF", "K3Pu" }, { "TPM1UF", "K3Pu"  }, { "TPM1U",  "K3Pu"  },
+        { "TRN",   "TN" },   { "TN93",   "TN"    },
+        { "TNEF",  "TNe" },  { "TRNEF",  "TNe"   }, { "TNE",    "TNe"   },
+        { "TRNE",  "TNe" },  { "TPM2U",  "TPM2u" }, { "TPM2UF", "TPM2u" },
+        { "TPM3U", "TPM3u"}, { "TPM3UF", "TPM3u" }, { "TIM1",   "TIM"   },
+        { "TIMEF", "TIMe" }, { "TIME",   "TIMe"  }, { "TIM1EF", "TIMe"  },
+        { "TIM1E", "TIMe" }, { "TIM2EF", "TIM2e" }, { "TIM2E",  "TIM2e" },
+        { "TIM3EF","TIM3e"}, { "TIM3E",  "TIM3e" },
+        { "TVMEF", "TVMe" }, { "TVME",   "TVMe" },  { "REV",    "GTR"   },
+    };
+    const struct freq_lookup  {
+    public: const char* name;
+            const char* rate_type;
+            StateFreqType def_freq;
+            const char* full_name;
+    } dna_model_lookups [] =
+    {
+        { "JC",    "000000", FREQ_EQUAL,    "JC (Juke and Cantor, 1969)"},
+        { "F81",   "000000", FREQ_ESTIMATE, "F81 (Felsenstein, 1981)"},
+        { "K2P",   "010010", FREQ_EQUAL,    "K2P (Kimura, 1980)"},
+        { "HKY",   "010010", FREQ_ESTIMATE, "HKY (Hasegawa, Kishino and Yano, 1985)"},
+        { "K3P",   "012210", FREQ_EQUAL,    "K3P (Kimura, 1981)" },
+        { "K3Pu",  "012210", FREQ_ESTIMATE, "K3P unequal frequencies (Kimura, 1981)"},
+        { "TN",    "010020", FREQ_ESTIMATE, "TN (Tamura and Nei, 1993)"},
+        { "TNe",   "010020", FREQ_EQUAL,    "TN equal frequencies (Tamura and Nei, 1993)"},
+        { "TPM2",  "121020", FREQ_ESTIMATE, "TPM2 ()"},
+        { "TPM2u", "121020", FREQ_ESTIMATE, "TPM2 unequal frequencies ()"},
+        { "TPM3",  "120120", FREQ_ESTIMATE, "TPM3 ()"}, //You would think, FREQ_EQUAL. Why not? James B.
+        { "TPM3u", "120120", FREQ_ESTIMATE, "TPM3 unequal frequencies ()"},
+        { "TIM",   "012230", FREQ_ESTIMATE, "TIM ()"},
+        { "TIMe",  "012230", FREQ_EQUAL,    "TIM equal frequencies"},
+        { "TIM2",  "121030", FREQ_ESTIMATE, "TIM2 ()"},
+        { "TIM2e", "121030", FREQ_EQUAL,    "TIM2 equal frequencies"},
+        { "TIM3",  "120130", FREQ_ESTIMATE, "TIM3 ()"},
+        { "TIM3e", "120130", FREQ_EQUAL,    "TIM3 equal frequencies"},
+        { "TVM",   "412310", FREQ_ESTIMATE, "TVM"},
+        { "TVMe",  "412310", FREQ_EQUAL,    "TVM equal frequencies"},
+        { "SYM",   "123450", FREQ_EQUAL,    "SYM (Zharkihk, 1994)"},
+        { "GTR",   "123450", FREQ_ESTIMATE, "GTR (Tavare, 1986)"},
+    };
+};
+
 string getDNAModelInfo(string model_name, string &full_name, string &rate_type, StateFreqType &def_freq) {
-	string name_upper = model_name;
-	for (string::iterator it = name_upper.begin(); it != name_upper.end(); it++)
-		(*it) = toupper(*it);
-	string name = model_name;
-	full_name = name;
-	rate_type = "";
-	def_freq = FREQ_UNKNOWN;
-	if (name_upper == "JC" || name_upper == "JC69") {
-		name = "JC";
-		rate_type = "000000";
-		def_freq = FREQ_EQUAL;
-		full_name = "JC (Juke and Cantor, 1969)";
-	} else if (name_upper == "F81") {
-		name = "F81";
-		rate_type = "000000";
-		def_freq = FREQ_ESTIMATE;
-		full_name = "F81 (Felsenstein, 1981)";
-	} else if (name_upper == "K2P" || name_upper == "K80") {
-		name = "K2P";
-		rate_type = "010010";
-		def_freq = FREQ_EQUAL;
-		full_name = "K2P (Kimura, 1980)";
-	} else if (name_upper == "HKY" || name_upper == "HKY85") {
-		name = "HKY";
-		rate_type = "010010";
-		def_freq = FREQ_ESTIMATE;
-		full_name = "HKY (Hasegawa, Kishino and Yano, 1985)";
-	} else if (name_upper == "K3P" || name_upper == "K81" || name_upper=="TPM1") {
-		name = "K3P";
-		rate_type = "012210";
-		def_freq = FREQ_EQUAL;
-		full_name = "K3P (Kimura, 1981)";
-	} else if (name_upper == "K81UF" || name_upper == "K81U" || name_upper == "K3PU" ||
-			name_upper == "K3PUF" || name_upper=="TPM1UF" || name_upper=="TPM1U") {
-		name = "K3Pu";
-		rate_type = "012210";
-		def_freq = FREQ_ESTIMATE;
-		full_name = "K3P unequal frequencies (Kimura, 1981)";
-	} else if (name_upper == "TN" || name_upper == "TRN" || name_upper == "TN93") {
-		name = "TN";
-		rate_type = "010020";
-		def_freq = FREQ_ESTIMATE;
-		full_name = "TN (Tamura and Nei, 1993)";
-	} else if (name_upper == "TNEF" || name_upper == "TRNEF" || name_upper == "TNE" || name_upper == "TRNE") {
-		name = "TNe";
-		rate_type = "010020";
-		def_freq = FREQ_EQUAL;
-		full_name = "TN equal frequencies (Tamura and Nei, 1993)";
-	} else if (name_upper == "TPM2") {
-		name = "TPM2";
-		rate_type = "121020";
-		def_freq = FREQ_ESTIMATE;
-		full_name = "TPM2 ()";
-	} else if (name_upper == "TPM2U" || name_upper == "TPM2UF") {
-		name = "TPM2u";
-		rate_type = "121020";
-		def_freq = FREQ_ESTIMATE;
-		full_name = "TPM2 unequal frequencies ()";
-	} else if (name_upper == "TPM3") {
-		name = "TPM3";
-		rate_type = "120120";
-		def_freq = FREQ_ESTIMATE;
-		full_name = "TPM3 ()";
-	} else if (name_upper == "TPM3U" || name_upper == "TPM3UF") {
-		name = "TPM3u";
-		rate_type = "120120";
-		def_freq = FREQ_ESTIMATE;
-		full_name = "TPM3 unequal frequencies ()";
-	} else if (name_upper == "TIM" || name_upper == "TIM1") {
-		name = "TIM";
-		rate_type = "012230";
-		def_freq = FREQ_ESTIMATE;
-		full_name = "TIM ()";
-	} else if (name_upper == "TIMEF" || name_upper == "TIME" || name_upper == "TIM1EF" || name_upper == "TIM1E") {
-		name = "TIMe";
-		rate_type = "012230";
-		def_freq = FREQ_EQUAL;
-		full_name = "TIM equal frequencies";
-	} else if (name_upper == "TIM2") {
-		name = "TIM2";
-		rate_type = "121030";
-		def_freq = FREQ_ESTIMATE;
-		full_name = "TIM2 ()";
-	} else if (name_upper == "TIM2EF" || name_upper == "TIM2E") {
-		name = "TIM2e";
-		rate_type = "121030";
-		def_freq = FREQ_EQUAL;
-		full_name = "TIM2 equal frequencies";
-	} else if (name_upper == "TIM3") {
-		name = "TIM3";
-		rate_type = "120130";
-		def_freq = FREQ_ESTIMATE;
-		full_name = "TIM3 ()";
-	} else if (name_upper == "TIM3EF" || name_upper == "TIM3E") {
-		name = "TIM3e";
-		rate_type = "120130";
-		def_freq = FREQ_EQUAL;
-		full_name = "TIM3 equal frequencies";
-	} else if (name_upper == "TVM") {
-		name = "TVM";
-		rate_type = "412310";
-		def_freq = FREQ_ESTIMATE;
-		full_name = "TVM";
-	} else if (name_upper == "TVMEF" || name_upper == "TVME") {
-		name = "TVMe";
-		rate_type = "412310";
-		def_freq = FREQ_EQUAL;
-		full_name = "TVM equal frequencies";
-	} else if (name_upper == "SYM") {
-		name = "SYM";
-		rate_type = "123450";
-		def_freq = FREQ_EQUAL;
-		full_name = "SYM (Zharkihk, 1994)";
-	} else if (name_upper == "GTR" || name_upper == "REV") {
-		name = "GTR";
-		rate_type = "123450";
-		def_freq = FREQ_ESTIMATE;
-		full_name = "GTR (Tavare, 1986)";
-	} else {
-		name = "";
-		rate_type = "";
-		full_name = "";
-	}
-	return name;
+    string name_upper = model_name;
+    for (string::iterator it = name_upper.begin(); it != name_upper.end(); it++)
+        (*it) = toupper(*it);
+    string name = model_name;
+    full_name = name;
+    rate_type = "";
+    def_freq = FREQ_UNKNOWN;
+    
+    std::string search = name_upper;
+    for (int i=0; i<sizeof(dna_model_aliases)/sizeof(dna_model_aliases[0]); ++i) {
+        if (dna_model_aliases[i].from == search) {
+            search = dna_model_aliases[i].to;
+            break;
+        }
+    }
+    name      = "";
+    rate_type = "";
+    full_name = "";
+    for (int i=0; i<sizeof(dna_model_lookups)/sizeof(dna_model_lookups[0]); ++i) {
+        std::string found = string_to_upper(dna_model_lookups[i].name);
+        if (found == search) {
+            name      = dna_model_lookups[i].name;
+            rate_type = dna_model_lookups[i].rate_type;
+            def_freq  = dna_model_lookups[i].def_freq;
+            full_name = dna_model_lookups[i].full_name;
+            break;
+        }
+    }
+    return name;
 }
 
 

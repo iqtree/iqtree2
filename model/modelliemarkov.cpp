@@ -18,6 +18,7 @@
  * Would be more efficient to apply it just once to basis in constructor.
  */
 #include <Eigen/Dense>
+#include <utils/stringfunctions.h> //for convert_double, convert_int
 #include <unsupported/Eigen/MatrixFunctions>
 using namespace Eigen;
 #include "modelliemarkov.h"
@@ -538,7 +539,7 @@ bool  ModelLieMarkov::validFreqType() {
         return (bdf==1 && symmetry==0);
     case FREQ_DNA_1221: return("+F1221");
         return (bdf==1 && symmetry==1);
-    default: throw("Unrecoginzed freq_type in validFreqType - can't happen");
+    default: throw("Unrecognized freq_type in validFreqType - can't happen");
     }
 }
 

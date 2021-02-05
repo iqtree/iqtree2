@@ -9,18 +9,19 @@
 // Copyright: See COPYING file that comes with this distribution
 //
 //
-#include "utils/tools.h"
 #include "alignment.h"
 #include "nclextra/myreader.h"
 #include <numeric>
 #include <sstream>
 #include "model/rategamma.h"
 #include "gsl/mygsl.h"
-#include "utils/gzstream.h"
-#include "utils/timeutil.h"        //for getRealTime()
-#include "utils/progress.h"        //for progress_display
-#include "utils/hammingdistance.h" //for sumForUnknownCharacters
-#include "utils/safe_io.h"         //for safeGetLine
+#include <utils/gzstream.h>
+#include <utils/hammingdistance.h> //for sumForUnknownCharacters
+#include <utils/progress.h>        //for progress_display
+#include <utils/safe_io.h>         //for safeGetLine
+#include <utils/stringfunctions.h> //for convert_int, etc.
+#include <utils/timeutil.h>        //for getRealTime()
+#include <utils/tools.h>
 #include "alignmentsummary.h"
 
 #include <Eigen/LU>
@@ -1743,25 +1744,6 @@ int getMorphStates(StrVector &sequences) {
 	return 0;
 }
 
-SeqType Alignment::getSeqType(const char *sequence_type) {
-    SeqType user_seq_type = SEQ_UNKNOWN;
-    if (strcmp(sequence_type, "BIN") == 0) {
-        user_seq_type = SEQ_BINARY;
-    } else if (strcmp(sequence_type, "NT") == 0 || strcmp(sequence_type, "DNA") == 0) {
-        user_seq_type = SEQ_DNA;
-    } else if (strcmp(sequence_type, "AA") == 0 || strcmp(sequence_type, "PROT") == 0) {
-        user_seq_type = SEQ_PROTEIN;
-    } else if (strncmp(sequence_type, "NT2AA", 5) == 0) {
-        user_seq_type = SEQ_PROTEIN;
-    } else if (strcmp(sequence_type, "NUM") == 0 || strcmp(sequence_type, "MORPH") == 0) {
-        user_seq_type = SEQ_MORPH;
-    } else if (strcmp(sequence_type, "TINA") == 0 || strcmp(sequence_type, "MULTI") == 0) {
-        user_seq_type = SEQ_MULTISTATE;
-    } else if (strncmp(sequence_type, "CODON", 5) == 0) {
-        user_seq_type = SEQ_CODON;
-    }
-    return user_seq_type;
-}
 
 bool Alignment::buildPattern(StrVector &sequences, const char *sequence_type, int nseq, int nsite) {
     codon_table    = nullptr;

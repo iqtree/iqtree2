@@ -26,15 +26,16 @@
 #include "model/partitionmodelplen.h"
 #include "model/modelfactorymixlen.h"
 #include "mexttree.h"
-#include "utils/timeutil.h"
 #include "model/modelmarkov.h"
 #include "model/rategamma.h"
 #include "model/modelinfo.h"
 #include <numeric>
-#include "utils/tools.h"
-#include "utils/MPIHelper.h"
-#include "utils/pllnni.h"
-#include "utils/timekeeper.h"
+#include <utils/stringfunctions.h> //for convert_time, convert_string_vec
+#include <utils/timeutil.h>
+#include <utils/tools.h>
+#include <utils/MPIHelper.h>
+#include <utils/pllnni.h>
+#include <utils/timekeeper.h>
 
 Params *globalParams;
 Alignment *globalAlignment;

@@ -11,7 +11,8 @@
 
 #include "model/modelfactory.h"
 #include "model/modelmixture.h"
-#include "utils/timeutil.h" //temporary : for time log-lining
+#include <utils/stringfunctions.h> //for convert_double_vec
+#include <utils/timeutil.h> //temporary : for time log-lining
 
 const double MIN_FREE_RATE = 0.001;
 const double MAX_FREE_RATE = 1000.0;

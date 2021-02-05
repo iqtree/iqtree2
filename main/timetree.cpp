@@ -12,6 +12,7 @@
 
 #include "timetree.h"
 #include <utils/safe_io.h> //for safeGetLine
+#include <utils/stringfunctions.h> //for convert_string_vec, convert_double, etc.
 
 #ifdef USE_LSD2
 #include "lsd2/src/lsd.h"

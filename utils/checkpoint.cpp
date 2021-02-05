@@ -6,8 +6,8 @@
  */
 
 #include "checkpoint.h"
-//#include "tools.h"
 #include "safe_io.h"   //for safeGetLine
+#include "stringfunctions.h" //for convertIntToString
 #include "timeutil.h"
 #include "gzstream.h"
 #include <cstdio>

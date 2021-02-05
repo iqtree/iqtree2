@@ -23,7 +23,10 @@
 #include <iterator>
 //#include <mtree.h>
 #include "pda/splitgraph.h"
-#include "utils/tools.h"
+
+#include <utils/stringfunctions.h> //for convert_double, convert_double_vec
+#include <utils/tools.h>
+
 #include "mtreeset.h"
 using namespace std;
 

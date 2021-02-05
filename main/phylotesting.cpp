@@ -174,19 +174,6 @@ const double TOL_GRADIENT_MODELTEST   = 0.0001;
 extern double RunKMeans1D(int n, int k, double *points, int *weights, double *centers, int *assignments);
 
 
-string getSeqTypeName(SeqType seq_type) {
-    switch (seq_type) {
-        case SEQ_BINARY: return "binary";
-        case SEQ_DNA: return "DNA";
-        case SEQ_PROTEIN: return "protein";
-        case SEQ_CODON: return "codon";
-        case SEQ_MORPH: return "morphological";
-        case SEQ_POMO: return "PoMo";
-        case SEQ_UNKNOWN: return "unknown";
-        case SEQ_MULTISTATE: return "MultiState";
-        default: return "unknown";
-    }
-}
 
 string getUsualModelSubst(SeqType seq_type) {
     switch (seq_type) {

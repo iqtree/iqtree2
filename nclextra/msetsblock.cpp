@@ -18,6 +18,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "msetsblock.h"
+#include "utils/stringfunctions.h" //for convert_double
 #include "utils/tools.h"
 
 MSetsBlock::MSetsBlock()

@@ -40,7 +40,9 @@
 #include "rateheterotachy.h"
 #include "rateheterotachyinvar.h"
 #include <string>
-#include "utils/timeutil.h"
+#include <utils/stringfunctions.h> //for convert_int
+#include <utils/timeutil.h>
+
 #include "nclextra/myreader.h"
 #include <sstream>
 

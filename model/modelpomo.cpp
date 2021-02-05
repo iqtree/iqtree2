@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <utils/stringfunctions.h> //for convert_double
 
 #include <Eigen/Dense>
 #include <unsupported/Eigen/MatrixFunctions>

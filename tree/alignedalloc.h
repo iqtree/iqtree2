@@ -13,6 +13,7 @@
 #ifndef alignedalloc_h
 #define alignedalloc_h
 
+#include <utils/stringfunctions.h> //for convertInt64ToString
 #include <utils/tools.h>    //for Params::getInstance()
 
 #ifndef ROUND_UP_TO_MULTIPLE

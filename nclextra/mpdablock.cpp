@@ -20,6 +20,7 @@
 #include "mpdablock.h"
 #include "pda/split.h"
 #include "pda/splitgraph.h"
+#include <utils/stringfunctions.h> //for convert_double
 
 MPdaBlock::MPdaBlock(SplitGraph *asgraph)
  : NxsBlock()

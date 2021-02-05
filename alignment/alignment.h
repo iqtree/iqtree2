@@ -131,9 +131,6 @@ public:
             input alignment reader
      ****************************************************************************/
 
-    /** get the SeqType for a given string */
-    static SeqType getSeqType(const char *sequence_type);
-
       /**
                add a pattern into the alignment
                @param pat the pattern

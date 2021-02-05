@@ -27,6 +27,8 @@
 #include <unsupported/Eigen/MatrixFunctions>
 using namespace Eigen;
 
+#include <utils/stringfunctions.h> //for convert_double
+
 #include <vectorclass/vectormath_exp.h>
 #include <vectorclass/vectorclass.h>
 
@@ -199,52 +201,7 @@ void ModelMarkov::setTree(PhyloTree *tree) {
 	phylo_tree = tree;
 }
 
-/*
- * For freq_type, return a "+F" string specifying that freq_type.
- * Note not all freq_types accomodated.
- * Inverse of this occurs in ModelFactory::ModelFactory, 
- * where +F... suffixes on model names get parsed.
- */
-string freqTypeString(StateFreqType freq_type,
-                      SeqType seq_type, bool full_str) {
-    switch(freq_type) {
-    case FREQ_UNKNOWN:    return("");
-    case FREQ_USER_DEFINED:
-        if (seq_type == SEQ_PROTEIN)
-            return "";
-        else
-            return "+FU";
-    case FREQ_EQUAL:
-        if (seq_type == SEQ_DNA && !full_str)
-            return "";
-        else
-            return "+FQ";
-    case FREQ_EMPIRICAL:  return "+F";
-    case FREQ_ESTIMATE:
-        return "+FO";
-    case FREQ_CODON_1x4:  return("+F1X4");
-    case FREQ_CODON_3x4:  return("+F3X4");
-    case FREQ_CODON_3x4C: return("+F3X4C");
-    case FREQ_MIXTURE:  return(""); // no idea what to do here - MDW
-    case FREQ_DNA_RY:   return("+FRY");
-    case FREQ_DNA_WS:   return("+FWS");
-    case FREQ_DNA_MK:   return("+FMK");
-    case FREQ_DNA_1112: return("+F1112");
-    case FREQ_DNA_1121: return("+F1121");
-    case FREQ_DNA_1211: return("+F1211");
-    case FREQ_DNA_2111: return("+F2111");
-    case FREQ_DNA_1122: return("+F1122");
-    case FREQ_DNA_1212: return("+F1212");
-    case FREQ_DNA_1221: return("+F1221");
-    case FREQ_DNA_1123: return("+F1123");
-    case FREQ_DNA_1213: return("+F1213");
-    case FREQ_DNA_1231: return("+F1231");
-    case FREQ_DNA_2113: return("+F2113");
-    case FREQ_DNA_2131: return("+F2131");
-    case FREQ_DNA_2311: return("+F2311");
-    default: throw("Unrecoginzed freq_type in freqTypeString - can't happen");
-    }
-}
+
 
 string ModelMarkov::getName() {
   // MDW note to Minh for code review: I don't really understand what getName()

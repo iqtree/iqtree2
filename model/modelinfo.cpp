@@ -5,8 +5,9 @@
 
 #include "modelinfo.h"
 #include "modelsubst.h"      //for OPEN_BRACKET and CLOSE_BRACKET
-#include <utils/tools.h>     //for outError
 #include <utils/my_assert.h> //for ASSERT macro
+#include <utils/stringfunctions.h> //for convert_int
+#include <utils/tools.h>     //for outError
 
 ModelInfoFromName::ModelInfoFromName(std::string name): model_name(name) {}
 ModelInfoFromName::ModelInfoFromName(const char* name): model_name(name) {}

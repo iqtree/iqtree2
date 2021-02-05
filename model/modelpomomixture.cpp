@@ -8,7 +8,10 @@
 
 #include "modelpomomixture.h"
 #include "rategamma.h"
-#include "utils/tools.h"
+#include <utils/tools.h>
+#include <utils/stringfunctions.h> //for convert_int
+
+
 
 #ifdef _MSC_VER
 #include <boost/scoped_array.hpp>

@@ -15,6 +15,8 @@ stitchup.cpp
 upgma.h nj.h rapidnj.h auctionmatrix.h
 clustertree.h distancematrix.h heapsort.h
 progress.cpp progress.h
+statefrequency.cpp statefrequency.h
+stringfunctions.cpp stringfunctions.h
 timekeeper.cpp timekeeper.h
 timeutil.h hammingdistance.h safe_io.h
 operatingsystem.cpp operatingsystem.h my_assert.h)

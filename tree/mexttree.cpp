@@ -18,7 +18,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "mexttree.h"
-#include "alignment/alignment.h"
+#include <alignment/alignment.h>
+#include <utils/stringfunctions.h> //for convert_double_vec
 
 void MExtTree::generateRandomTree(TreeGenType tree_type, Params &params, bool binary) {
 	Alignment *alignment = NULL;

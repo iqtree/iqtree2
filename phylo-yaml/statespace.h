@@ -30,9 +30,6 @@ typedef uint32_t StateType;
 
 typedef vector<StateType> StateVector;
 
-enum SeqType {
-    SEQ_DNA, SEQ_PROTEIN, SEQ_BINARY, SEQ_MORPH, SEQ_MULTISTATE, SEQ_CODON, SEQ_POMO, SEQ_UNKNOWN
-};
 
 // IMPORTANT: refactor STATE_UNKNOWN
 //const char STATE_UNKNOWN = 126;

@@ -12,6 +12,7 @@
 #include "tree/mtreeset.h"
 #include "ecopdmtreeset.h"
 #include "graph.h"
+#include <utils/stringfunctions.h> //for convertIntToString
 
 
 

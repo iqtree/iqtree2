@@ -8,8 +8,11 @@
 // Created by James Barbetti on 08-Oct-2020.
 //
 
-#include <tree/phylotree.h>
 #include "placement.h"
+#include <tree/phylotree.h>
+#include <utils/stringfunctions.h> //for convert_int_nothrow
+                                   //and convert_double_nothrow
+
 
 namespace Placement {
 

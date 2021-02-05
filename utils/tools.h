@@ -47,8 +47,8 @@
 #define SPRNG
 #include "sprng/sprng.h"
 #include "my_assert.h"
-
-
+#include "statefrequency.h" //for StateFreqType enumerated type
+#include "vectortypes.h"
 
 #define USE_HASH_MAP
 
@@ -182,113 +182,6 @@ private:
     double m_a, m_b, m_coeff;
 };
 
-/**
-        vector of double number
- */
-typedef vector<double> DoubleVector;
-
-/**
-        vector of int
- */
-typedef vector<int> IntList;
-
-
-/**
-        vector of int
- */
-typedef vector<int> IntVector;
-
-/**
-        vector of bool
- */
-
-
-template <class T, class S> class CastingVector: public S {
-    //
-    //A subclass of vector (or other container) class S,
-    //where the entries in S are treated as though
-    //they are of type T (via implicit casting).
-    //
-public:
-    typedef S super;
-    typedef typename S::size_type size_type;
-    typedef CastingVector<T,S> this_type;
-    
-    CastingVector(): super() {}
-    explicit CastingVector(size_type initialSize): super(initialSize) {}
-    CastingVector(size_type initialSize, const T initialValue)
-        : super(initialSize, initialValue) {}
-    CastingVector(const CastingVector& rhs): super(rhs) {}
-    
-    class const_iterator: public super::const_iterator {
-        public:
-            const_iterator( typename super::const_iterator i) : super::const_iterator(i) {};
-            inline T operator*() { return super::const_iterator::operator*(); }
-    };
-
-    class iterator : public super::iterator {
-        public:
-            iterator( typename super::iterator i) : super::iterator(i) {};
-            inline T operator*() { return super::iterator::operator*(); }
-    };
-    
-    const_iterator begin() const { return const_iterator ( super::begin() ); }
-    iterator       begin()       { return iterator( super::begin() ); }
-    const_iterator end()   const { return const_iterator ( super::end() ); }
-    iterator       end()         { return iterator( super::end() ); }
-    inline T operator[] (typename super::size_type i) const {
-        return super::operator[] (i);
-    }
-    
-    class reference {
-        private:
-            S& to_vector;
-            size_type at_index;
-        public:
-            reference(S& vector, size_type index):
-                to_vector(vector), at_index(index) {}
-            operator T() { return to_vector[at_index]; }
-            reference& operator= (const T new_value) {
-                to_vector[at_index] = new_value;
-                return *this;
-            }
-            reference& operator= (const reference& elsewhere) {
-                to_vector[at_index] = elsewhere.to_vector[elsewhere.at_index];
-                return *this;
-            }
-    };
-    inline reference operator[] (typename super::size_type i) {
-        return reference(*(dynamic_cast<S*>(this)), i);
-    }
-    this_type& reverseAll() {
-        std::reverse ( super::begin(), super::end());
-        return *this;
-    }
-};
-
-typedef CastingVector<bool, std::vector<char>> BoolVector;
-
-/**
-        vector of char
- */
-typedef vector<char> CharVector;
-
-/**
-        vector of string
- */
-typedef vector<string> StrVector;
-
-
-/**
-        matrix of double number
- */
-#define mmatrix(T) vector< vector<T> >
-
-/**
-        matrix of double
- */
-
-typedef mmatrix(double) DoubleMatrix;
 
 typedef unsigned int UINT;
 
@@ -417,23 +310,6 @@ enum TestType {
     TEST_NONE, TEST_COMPATIBLE, TEST_CIRCULAR, TEST_WEAKLY_COMPATIBLE, TEST_K_COMPATIBLE
 };
 
-/**
-        State frequency type
- */
-enum StateFreqType {
-    FREQ_UNKNOWN, FREQ_USER_DEFINED, FREQ_EQUAL, FREQ_EMPIRICAL, FREQ_ESTIMATE,
-    FREQ_CODON_1x4, FREQ_CODON_3x4, FREQ_CODON_3x4C, // special frequency for codon model
-    FREQ_MIXTURE, // mixture-frequency model
-    // FREQ_DNA_RY has pi_A+pi_G = 0.5 = pi_C+pi_T. Similarly WS pairs (AT)(CG),
-    // MK pairs (AC)(GT) in same way.
-    FREQ_DNA_RY, FREQ_DNA_WS, FREQ_DNA_MK,
-    // in following, digits indicate which frequencies must equal each other
-    // (in ACGT order), e.g. 2131 means pi_C=pi_T (pi_A, pi_G unconstrained)
-    FREQ_DNA_1112, FREQ_DNA_1121, FREQ_DNA_1211, FREQ_DNA_2111,
-    FREQ_DNA_1122, FREQ_DNA_1212, FREQ_DNA_1221, 
-    FREQ_DNA_1123, FREQ_DNA_1213, FREQ_DNA_1231, 
-    FREQ_DNA_2113, FREQ_DNA_2131, FREQ_DNA_2311, 
-};
 
 /*
     outfile file format
@@ -2515,22 +2391,7 @@ const char ERR_INTERNAL[] = "Internal error, pls contact authors!";
 /*--------------------------------------------------------------*/
 /*--------------------------------------------------------------*/
 
-/**
- * convert int to string
- * @param int
- * @return string
- */
-string convertIntToString(int number);
-string convertInt64ToString(int64_t number);
-
-string convertDoubleToString(double number);
-
-/**
- case-insensitive comparison between two strings
- @return true if two strings are equal.
- */
-bool iEquals(const string a, const string b);
-    
+   
 /**
  *
  * @param SRC
@@ -2560,123 +2421,11 @@ int isDirectory(const char *path);
 size_t getFilesInDir(const char *path, StrVector &filenames);
 
 /**
-        convert string to int, with error checking
-        @param str original string
-        @return the number
- */
-int convert_int(const char *str);
-
-/**
-       convert string to int, with error checking (but not throwing on error)
-       @param str original string
-       @param defaultValue value to return if the string isn't numeric
-       @return the number
-*/
-int convert_int_nothrow(const char* str, int defaultValue) throw();
-
-/**
-    convert string to int64, with error checking
-    @param str original string
-    @return the number
- */
-int64_t convert_int64(const char *str);
-
-/**
-        convert string to int, with error checking
-        @param str original string
-        @param end_pos end position
-        @return the number
- */
-int convert_int(const char *str, int &end_pos);
-
-/**
-        convert comma-separated string to integer vector, with error checking
-        @param str original string with integers separated by comma
-        @param vec (OUT) integer vector
- */
-void convert_int_vec(const char *str, IntVector &vec);
-
-/**
-        convert string to int64_t, with error checking
-        @param str original string
-        @return the number
- */
-int64_t convert_int64(const char *str);
-
-/**
-        convert string to int64_t, with error checking
-        @param str original string
-        @param end_pos end position
-        @return the number
- */
-int64_t convert_int64(const char *str, int &end_pos);
-
-/**
-        convert string to double, with error checking
-        @param str original string
-        @return the double
- */
-double convert_double(const char *str);
-
-/**
-        convert string to double, with error checking
-        @param str original string
-        @param end_pos end position
-        @return the double
- */
-double convert_double(const char *str, int &end_pos);
-
-/**
-       convert string to double, with error checking (but not throwing on error)
-       @param str original string
-       @param defaultValue value to return if the string isn't numeric
-       @return the number
-*/
-double convert_double_nothrow(const char* str, double defaultValue) throw();
-
-
-/**
-        convert comma-separated string to integer vector, with error checking
-        @param str original string with integers separated by comma
-        @param vec (OUT) integer vector
-        @param separator char separating elements
- */
-void convert_double_vec(const char *str, DoubleVector &vec, char separator = ',');
-
-/**
- * Convert seconds to hour, minute, second
- * @param sec
- * @return string represent hour, minute, second
- */
-string convert_time(const double sec);
-
-
-/**
-        convert a string to to range lower:upper:step_size with error checking
-        @param str original string
-        @param lower (OUT) lower bound of the range
-        @param upper (OUT) upper bound of the range
-        @param step_size (OUT) step size of the range
- */
-void convert_range(const char *str, int &lower, int &upper, int &step_size);
-
-/**
-        convert a string to to range lower:upper:step_size with error checking
-        @param str original string
-        @param lower (OUT) lower bound of the range
-        @param upper (OUT) upper bound of the range
-        @param step_size (OUT) step size of the range
- */
-void convert_range(const char *str, double &lower, double &upper, double &step_size);
-
-void convert_string_vec(const char *str, StrVector &str_vec, char separator = ',');
-
-/**
     change unusual character in names into underscore (_)
     @param[in/out] name string name
     @return true if renamed, false otherwise
  */
-bool renameString(string &name);
+bool renameString(std::string &name);
 
 /**
         read the file containing branch/split scaling factor and taxa weights
@@ -3067,72 +2816,6 @@ bool memcmpcpy(void * destination, const void * source, size_t num);
  */
 int pairInteger(int int1, int int2);
 
-/*
- * Given a model name, look in it for "+F..." and 
- * determine the StateFreqType. Returns FREQ_UNKNOWN if
- * unable to find a good +F... specifier
- */
-StateFreqType parseStateFreqFromPlusF(string model_name);
-
-/*
- * Given a string of 4 digits, return a StateFreqType according to
- * equality constraints expressed by those digits.
- * E.g. "1233" constrains pi_G=pi_T (ACGT order, 3rd and 4th equal)
- * which results in FREQ_DNA_2311. "5288" would give the same result.
- */
-StateFreqType parseStateFreqDigits(string digits);
-
-/*
- * All params in range [0,1] 
- * returns true if base frequencies have changed as a result of this call
- */
-bool freqsFromParams(double *freq_vec, double *params, StateFreqType freq_type);
-
-/*
- * For given freq_type, derives frequency parameters from freq_vec
- * All parameters are in range [0,1] (assuming freq_vec is valid)
- */
-void paramsFromFreqs(double *params, double *freq_vec, StateFreqType freq_type);
-
-/* 
- * Given a DNA freq_type and a base frequency vector, alter the
- * base freq vector to conform with the constraints of freq_type
- */
-void forceFreqsConform(double *base_freq, StateFreqType freq_type);
-
-/*
- * For given freq_type, how many parameters are needed to
- * determine frequenc vector?
- * BQM 2017-04-28: works for DNA and other data types
- */
- int nFreqParams(StateFreqType freq_type);
-
-/*
- * For freq_type, and given every base must have frequency >= min_freq, set upper
- * and lower bounds for parameters.
- */
- void setBoundsForFreqType(double *lower_bound, 
-                           double *upper_bound, 
-                           bool *bound_check, 
-                           double min_freq, 
-                           StateFreqType freq_type);
-
-template <typename T>
-string NumberToString ( T Number )
-{
-    ostringstream ss;
-    ss << Number;
-    return ss.str();
-}
-
-template <typename T>
-T StringToNumber ( const string &Text )
-{
-    istringstream ss(Text);
-    T result;
-    return ss >> result ? result : 0;
-}
-
 // Calculate logarithm of binomial coefficient N choose i.
 double binomial_coefficient_log(unsigned int N, unsigned int i);
 
@@ -3147,6 +2830,5 @@ double hypergeometric_dist(unsigned int k, unsigned int n, unsigned int K, unsig
 // Calculate the Frobenius norm of an N x N matrix M (flattened, rows
 // concatenated) and linearly scaled by SCALE.
 double frob_norm (double m[], int n, double scale=1.0);
-
 
 #endif

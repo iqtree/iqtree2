@@ -6,6 +6,8 @@
 //
 
 #include "modeldnaerror.h"
+#include <utils/stringfunctions.h> //for convert_double
+
 
 // Bound for sequencing error probability (epsilon)
 #define MIN_EPSILON 0.0001
