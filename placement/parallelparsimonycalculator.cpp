@@ -184,7 +184,7 @@ void ParallelParsimonyCalculator::calculate(intptr_t start_index,
         PhyloNode*     dad        = item->second;
         tree.computePartialParsimony(dad_branch, dad);
         if (task_in_progress != nullptr || report_progress_to_tree) {
-            int j = i - start_index;
+            intptr_t j = i - start_index;
             if ((j%1000)==999) {
                 tree.trackProgress(1000.0);
             }
