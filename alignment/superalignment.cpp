@@ -470,7 +470,7 @@ void SuperAlignment::readPartitionNexus(Params &params) {
             trimString((*it)->sequence_type);
             //            cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" <<
             //                info.aln_file << ", seq=" << info.sequence_type << ", pos=" << ((info.position_spec.length() >= 20) ? info.position_spec.substr(0,20)+"..." : info.position_spec) << ") ..." << endl;
-            if ((*it)->sequence_type != "" && Alignment::getSeqType((*it)->sequence_type.c_str()) == SEQ_UNKNOWN)
+            if ((*it)->sequence_type != "" && getSeqType((*it)->sequence_type.c_str()) == SEQ_UNKNOWN)
                 outError("Unknown sequence type " + (*it)->sequence_type);
 
             // TODO move to supertree
@@ -1151,17 +1151,17 @@ void SuperAlignment::printSiteInfo(const char* filename) {
 
 void SuperAlignment::computeDivergenceMatrix(double *pair_freq, double *state_freq, bool normalize) {
     int nstates = partitions[0]->num_states;
-    int nstates2 = nstates*nstates;
-    memset(pair_freq, 0, sizeof(double)*nstates2);
+    int square  = nstates*nstates;
+    memset(pair_freq, 0, sizeof(double)*square);
     memset(state_freq, 0, sizeof(double)*nstates);
     
-    double *part_pair_freq = new double[nstates2];
+    double *part_pair_freq = new double[square];
     double *part_state_freq = new double[nstates];
     int i, j;
     
     for (auto it = partitions.begin(); it != partitions.end(); it++) {
         (*it)->computeDivergenceMatrix(part_pair_freq, part_state_freq, false);
-        for (i = 0; i < nstates2; i++)
+        for (i = 0; i < square; i++)
             pair_freq[i] += part_pair_freq[i];
         for (i = 0; i < nstates; i++)
             state_freq[i] += part_state_freq[i];
