@@ -559,7 +559,13 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
         aln->orderPatternByNumChars(PAT_VARIANT);
     }
     setParsimonyKernel(kernel);
+    
+    #ifdef USE_PROGRESS_DISPLAY
     bool noisy = !progress_display::getProgressDisplay();
+    #else
+    const bool noisy = false;
+    #endif
+    
     if (!params->user_file.empty()) {
         // start the search with user-defined tree
         std::stringstream msg;
@@ -732,7 +738,12 @@ int IQTree::addTreeToCandidateSet(string treeString, double score, bool updateSt
 }
 
 void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
-    if (nParTrees > 0 && !progress_display::getProgressDisplay()) {
+    #ifdef USE_PROGRESS_DISPLAY
+        bool noisy = !progress_display::getProgressDisplay();
+    #else
+        const bool noisy = false;
+    #endif
+    if (nParTrees > 0 && noisy) {
         if (params->start_tree == STT_RANDOM_TREE) {
             LOG_LINE(VB_QUIET, "Generating " << nParTrees  << " random trees... ");
             cout.flush();
@@ -833,7 +844,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         }
         doneProgress();
     }
-    if (!progress_display::getProgressDisplay()) {
+    if (noisy) {
         LOG_LINE( VB_QUIET, whatAmIDoingHere
                  << " took " << getRealTime() - startTime << " wall-clock seconds");
     }
@@ -845,8 +856,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     candidateTrees.clear();
     
     size_t candidateCount = initTreeStrings.size();
-    bool   sayHowLong     = init_size < initTreeStrings.size()
-                            && !progress_display::getProgressDisplay();
+    bool   sayHowLong     = init_size < initTreeStrings.size() && noisy;
     if (sayHowLong) {
         LOG_LINE(VB_QUIET, "Computing log-likelihood of "
                  << initTreeStrings.size() - init_size << " initial trees ... ");
@@ -893,7 +903,8 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 
     //(c) Run NNI search on candidate trees
     size_t initialTreeCount = bestInitTrees.size();
-    if (!progress_display::getProgressDisplay()) {
+
+    if (noisy) {
         LOG_LINE(VB_QUIET, "Do NNI search on " << initialTreeCount
                  << " best initial trees");
     }
@@ -3089,7 +3100,12 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI, const char* context) {
         if (save_all_trees == 2) {
             saveCurrentTree(curScore); // BQM: for new bootstrap
         }
-        if (verbose_mode >= VB_DEBUG && !progress_display::getProgressDisplay()) {
+        #ifdef USE_PROGRESS_DISPLAY
+            bool noisy = !progress_display::getProgressDisplay();
+        #else
+            const bool noisy = false;
+        #endif
+        if ( noisy && verbose_mode >= VB_DEBUG ) {
             LOG_LINE(VB_DEBUG, "Doing NNI round " << numSteps);
             if (isSuperTree()) {
                 ((PhyloSuperTree*) this)->printMapInfo();

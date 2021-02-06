@@ -61,7 +61,7 @@ private:
     
     int flush_buffer();
     
-    progress_display* progress;
+    progress_display_ptr progress;
     
 public:
     gzstreambuf() : opened(0), compressed_length(0), compressed_position(0), progress(nullptr) {
@@ -82,7 +82,10 @@ public:
 
     size_t getCompressedLength()   const;
     size_t getCompressedPosition() const;
-    void setProgress(progress_display* p);
+    
+    #ifdef USE_PROGRESS_DISPLAY
+    void setProgress(progress_display_ptr p);
+    #endif
 };
 
 class gzstreambase : virtual public std::ios {
@@ -129,7 +132,7 @@ public:
 class pigzstream: public igzstream {
 protected:
     std::string format_name;
-    progress_display* progress;
+    progress_display_ptr progress;
 public:
     typedef igzstream super;
     pigzstream(const char* format);

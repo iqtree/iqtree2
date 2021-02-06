@@ -13,9 +13,10 @@
 //
 
 #include "parsimonymove.h"
+#include "parsimonysearch.h"
 #include <placement/targetbranch.h>            //for TargetBranchRange
 #include <placement/placementcostcalculator.h> //for ParsimonyCostCalculator
-#include "parsimonysearch.h"
+#include <utils/timeutil.h>                    //for getRealTime
 
 PhyloNodeVector PhyloTree::getTaxaNodesInIDOrder() const {
     PhyloNodeVector taxa;

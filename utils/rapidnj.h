@@ -71,7 +71,8 @@
 #define rapidnj_h
 
 #include "nj.h"
-#include "heapsort.h"                //for mirroredHeapsort, used to sort
+#include "heapsort.h"  //for mirroredHeapsort, used to sort
+#include "timeutil.h"  //for getRealTime
 
 namespace StartTree
 {
@@ -164,9 +165,13 @@ public:
         rowScanOrder.resize(row_count);
 
         {
-            const char* taskName = silent 
+            #if USES_PROGRESS_DISPLAY
+            const char* taskName = silent
                 ? "" :  "Setting up auxiliary I and S matrices";
             progress_display setupProgress(row_count, taskName, "sorting", "row");
+            #else
+            double setupProgress = 0.0;
+            #endif
             //2. Set up the matrix with row sorted by distance
             //   And the matrix that tracks which distance is
             //   to which cluster (the S and I matrices, in the
@@ -190,8 +195,12 @@ public:
             if (silent) {
                 taskName = "";
             }
+            #ifdef USE_PROGRESS_DISPLAY
             double triangle = row_count * (row_count + 1.0) * 0.5;
             progress_display show_progress(triangle, taskName.c_str(), "", "");
+            #else
+            double show_progress = 0;
+            #endif
             while (3<row_count) {
                 Position<T> best;
                 super::getMinimumEntry(best);
@@ -207,7 +216,9 @@ public:
                 }
                 show_progress+=row_count;
             }
+            #ifdef USE_PROGRESS_DISPLAY
             show_progress.done();
+            #endif
             finishClustering();
         }
         return true;

@@ -8,6 +8,7 @@
 
 #include "placement.h"
 #include "placementoptimizer.h"
+#include <utils/timeutil.h>
 
 TaxonPlacementOptimizer::TaxonPlacementOptimizer() = default;
 TaxonPlacementOptimizer::~TaxonPlacementOptimizer() = default;

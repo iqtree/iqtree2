@@ -70,8 +70,12 @@ public:
         calculator.calculate(0, "Calculating leaf parsimony vectors");
     }
     virtual void calculateLeafParsimonyDistances() {
+        #ifdef USE_PROGRESS_DISPLAY
         progress_display progress(row_count*(row_count-1)/2,
                                   "Constructing leaf-leaf parsimony distance matrix");
+        #else
+        double progress = 0.0;
+        #endif
         #if _OPENMP
         #pragma omp parallel for schedule(dynamic)
         #endif
@@ -86,7 +90,10 @@ public:
             }
             progress += (row_count - r);
         }
+        #ifdef USE_PROGRESS_DISPLAY
         progress.done();
+        #endif
+        
         #if _OPENMP
         #pragma omp parallel for
         #endif

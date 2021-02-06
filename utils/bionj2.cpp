@@ -68,13 +68,19 @@ void addBioNJ2020TreeBuilders(Factory& f) {
     ADVERTISE(UNJMatrix<NJFloat>,   "UNJ",     "Unweighted Neighbour Joining (Gascel [1997])");
     ADVERTISE(RapidNJ,              "NJ-R",    "Rapid Neighbour Joining"
                                                " (Simonsen, Mailund, Pedersen [2011])");
+#ifdef DECENTTREE_USES_VECTORCLASS_LIBRARY
     ADVERTISE(VectorNJ,             "NJ-V",    "Vectorized Neighbour Joining (Saitou, Nei [1987])");
+#endif
     ADVERTISE(BIONJMatrix<NJFloat>, "BIONJ",   "BIONJ (Gascuel, Cong [2009])");
     ADVERTISE(RapidBIONJ,           "BIONJ-R", "Rapid BIONJ (Saitou, Nei [1987], Gascuel [2009],"
                                                " Simonson Mailund Pedersen [2011])");
+#ifdef DECENTTREE_USES_VECTORCLASS_LIBRARY
     ADVERTISE(VectorBIONJ,          "BIONJ-V", "Vectorized BIONJ (Gascuel, Cong [2009])");
+#endif
     ADVERTISE(UPGMA_Matrix<NJFloat>,"UPGMA",   "UPGMA (Sokal, Michener [1958])");
+#ifdef DECENTTREE_USES_VECTORCLASS_LIBRARY
     ADVERTISE(VectorizedUPGMA_Matrix<NJFloat>, "UPGMA-V", "Vectorized UPGMA (Sokal, Michener [1958])");
+#endif
     ADVERTISE(BoundingMatrix<double>,"NJ-R-D", "Double precision Rapid Neighbour Joining");
     ADVERTISE(RapidNJ,           defaultName,  "Rapid Neighbour Joining (Simonsen, Mailund, Pedersen [2011]) (default)");
     f.setNameOfDefaultTreeBuilder(defaultName);

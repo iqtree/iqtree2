@@ -6,7 +6,8 @@
 //
 
 #include "placementrun.h"
-#include "placementcostcalculator.h" //for
+#include "placementcostcalculator.h"
+#include <utils/timeutil.h>          //for getRealTime()
 
 PlacementRun::PlacementRun(PhyloTree& tree, const IntVector& taxaIdsToAdd)
     : phylo_tree(tree), taxa_ids_to_add(taxaIdsToAdd)

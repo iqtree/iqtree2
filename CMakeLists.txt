@@ -331,7 +331,6 @@ if (IQTREE_FLAGS MATCHES "mpi")
                 #Under Visual Studio, the MPI package isn't found, if you haven't installed FORTRAN
                 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /I${MPI_DIR}/Include")
                 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /I${MPI_DIR}/Include")
-                #Zork. Linker
                 #message("MPI DIR was ${MPI_DIR}")
                 if (BINARY32)
                     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /LIBPATH:${MPI_DIR}\\lib\\x86 msmpi.lib /PROFILE")
@@ -612,6 +611,9 @@ else(ZLIB_FOUND)
   include_directories("${PROJECT_BINARY_DIR}/zlib-1.2.7" "${PROJECT_SOURCE_DIR}/zlib-1.2.7")
   add_subdirectory(zlib-1.2.7)
 endif(ZLIB_FOUND)
+
+add_compile_definitions(USE_PROGRESS_DISPLAY=1)
+add_compile_definitions(USE_VECTORCLASS_LIBRARY=1)
 
 ##################################################################
 # subdirectories containing necessary libraries for the build

@@ -52,7 +52,7 @@ public:
     size_t      getSequenceLength() const;
     size_t      getStateCount() const;
     bool        constructSequenceMatrix ( bool treatAllAmbiguousStatesAsUnknown,
-                                          progress_display *progress = nullptr);
+                                          progress_display_ptr progress = nullptr);
     bool        constructSequenceMatrixNoisily ( bool treatAllAmbiguousStatesAsUnknown,
                                                  const char* taskName, const char* verb);
 };

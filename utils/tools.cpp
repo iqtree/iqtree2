@@ -451,7 +451,9 @@ namespace {
 
 void parseArg(int argc, char *argv[], Params &params) {
     int cnt;
+    #ifdef USE_PROGRESS_DISPLAY
     progress_display::setProgressDisplay(false);
+    #endif
     verbose_mode = VB_MIN;
     params.tree_gen = NONE;
     params.constraint_tree_file = NULL;
@@ -4054,7 +4056,9 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             if (arg=="-progress-bar" || arg=="--progress-bar" || arg=="-bar") {
+                #ifdef USE_PROGRESS_DISPLAY
                 progress_display::setProgressDisplay(true);
+                #endif
                 continue;
             }
 

@@ -2756,7 +2756,7 @@ protected:
         /** Is set if/when a distance file has been written*/
 
     /** stack of tasks in progress (top of stack is innermost task) */
-    progress_display* progress;
+    progress_display_ptr progress;
     int  progressStackDepth;
     bool isShowingProgressDisabled;
     

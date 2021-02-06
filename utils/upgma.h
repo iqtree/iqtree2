@@ -14,15 +14,18 @@
                                      //See [SMP2011], section 2.5.
 #include <vector>                    //for std::vector
 #include <string>                    //sequence names stored as std::string
-#include <vectorclass/vectorclass.h> //for Vec4d and Vec4db vector classes
 #include "progress.h"                //for progress_display
-#include "my_assert.h"                   //for ASSERT macro
+#include "my_assert.h"               //for ASSERT macro
 
 typedef float    NJFloat;
-typedef Vec8f    FloatVector;
-typedef Vec8fb   FloatBoolVector;
 const   NJFloat  infiniteDistance = (NJFloat)(1e+36);
 const   intptr_t notMappedToRow = -1;
+
+#ifdef   DECENTTREE_USES_VECTORCLASS_LIBRARY
+#include <vectorclass/vectorclass.h> //for Vec4d and Vec4db vector classes
+typedef  Vec8f    FloatVector;
+typedef  Vec8fb   FloatBoolVector;
+#endif
 
 namespace StartTree
 {
@@ -118,15 +121,21 @@ public:
         if (silent) {
             taskName="";
         }
+        #if USES_PROGRESS_DISPLAY
         double triangle = row_count * (row_count + 1.0) * 0.5;
         progress_display show_progress(triangle, taskName.c_str(), "", "");
+        #else
+        double show_progress = 0;
+        #endif
         while ( 3 < row_count ) {
             getMinimumEntry(best);
             cluster(best.column, best.row);
             show_progress += row_count;
         }
         finishClustering();
+        #if USES_PROGRESS_DISPLAY
         show_progress.done();
+        #endif
         return true;
     }
     virtual void setZippedOutput(bool zipIt) {
@@ -226,6 +235,7 @@ protected:
     }
 };
 
+#ifdef DECENTTREE_USES_VECTORCLASS_LIBRARY
 template <class T=NJFloat, class V=FloatVector, class VB=FloatBoolVector>
 class VectorizedUPGMA_Matrix: public UPGMA_Matrix<T>
 {
@@ -289,6 +299,7 @@ public:
         }
     }
 };
+#endif //DECENTTREE_USES_VECTORCLASS_LIBRARY
 
 }
 

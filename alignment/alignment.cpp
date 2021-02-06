@@ -390,7 +390,7 @@ int Alignment::checkIdenticalSeq()
 	return num_identical;
 }
 
-vector<size_t> Alignment::getSequenceHashes(progress_display* progress) const {
+vector<size_t> Alignment::getSequenceHashes(progress_display_ptr progress) const {
     auto startHash = getRealTime();
     auto n = getNSeq();
     vector<size_t> hashes;
@@ -405,20 +405,27 @@ vector<size_t> Alignment::getSequenceHashes(progress_display* progress) const {
         }
         hashes[seq1] = hash;
         if (progress!=nullptr && (n%100)==99) {
-            progress->incrementBy(100.0);
+            (*progress) += (100.0);
         }
     }
     if (progress!=nullptr) {
-        progress->incrementBy(n%100);
+        (*progress) += (n%100);
     }
-    if (verbose_mode >= VB_MED && !progress_display::getProgressDisplay()) {
+    
+#ifdef USE_PROGRESS_DISPLAY
+    bool displaying_progress = progress_display::getProgressDisplay();
+#else
+    const bool displaying_progress = false;
+#endif
+    
+    if (verbose_mode >= VB_MED && !displaying_progress) {
         auto hashTime = getRealTime() - startHash;
         cout << "Hashing sequences took " << hashTime << " wall-clock seconds" << endl;
     }
     return hashes;
 }
 
-vector<size_t> Alignment::getPatternIndependentSequenceHashes(progress_display* progress) const {
+vector<size_t> Alignment::getPatternIndependentSequenceHashes(progress_display_ptr progress) const {
     auto n = getNSeq();
     vector<size_t> hashes;
     hashes.resize(n, 0);
@@ -435,7 +442,7 @@ vector<size_t> Alignment::getPatternIndependentSequenceHashes(progress_display* 
         }
         hashes[seq1] = hash;
         if (progress!=nullptr && (n%100)==99) {
-            progress->incrementBy(100.0);
+            (*progress) += 100.0;
         }
     }
     return hashes;
@@ -447,7 +454,12 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
     BoolVector isSequenceChecked(n, false);
     BoolVector isSequenceRemoved(n, false);
     
+#ifdef USE_PROGRESS_DISPLAY
     progress_display progress(n*2, isShowingProgressDisabled ? "" :  "Checking for duplicate sequences");
+#else
+    double progress = 0.0;
+#endif
+    
     vector<size_t> hashes = getSequenceHashes(&progress);
 
     bool listIdentical = !Params::getInstance().suppress_duplicate_sequence_warnings;
@@ -475,9 +487,13 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
                 isSequenceRemoved[seq2] = true;
             } else {
                 if (listIdentical) {
+                    #ifdef USE_PROGRESS_DISPLAY
                     progress.hide();
+                    #endif
                     cout << "NOTE: " << getSeqName(seq2) << " is identical to " << getSeqName(seq1) << " but kept for subsequent analysis" << endl;
+                    #ifdef USE_PROGRESS_DISPLAY
                     progress.show();
+                    #endif
                 }
             }
             isSequenceChecked[seq2] = true;
@@ -486,12 +502,19 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
         isSequenceChecked[seq1] = true;
         ++progress;
     }
-    if (verbose_mode >= VB_MED && !progress_display::getProgressDisplay()) {
+    #ifdef USE_PROGRESS_DISPLAY
+        bool displaying_progress = progress_display::getProgressDisplay();
+    #else
+        const bool displaying_progress = false;
+    #endif
+    if (verbose_mode >= VB_MED && !displaying_progress) {
         auto checkTime = getRealTime() - startCheck;
         cout << "Checking for duplicate sequences took " << checkTime
             << " wall-clock seconds" << endl;
     }
+    #ifdef USE_PROGRESS_DISPLAY
     progress.done();
+    #endif
     if (removed_seqs.size() > 0) {
         double removeDupeStart = getRealTime();
         if (removed_seqs.size() + 3 >= getNSeq()) {
@@ -1863,7 +1886,7 @@ bool Alignment::buildPattern(StrVector &sequences, const char *sequence_type, in
 
 bool Alignment::constructPatterns(int nseq, int nsite,
                                   const StrVector& sequences,
-                                  progress_display* progress) {
+                                  progress_display_ptr progress) {
     //initStateSpace(seq_type);
     // now convert to patterns
     char char_to_state[NUM_CHAR];
@@ -1899,15 +1922,18 @@ bool Alignment::constructPatterns(int nseq, int nsite,
     };
     std::vector<PatternInfo> patternInfo;
     patternInfo.resize((nsite + (step-1)) / step);
-    progress_display* progress_here = nullptr;
+    progress_display_ptr progress_here = nullptr;
     if (progress==nullptr && !isShowingProgressDisabled) {
+        #if USE_PROGRESS_DISPLAY
         progress_here = new progress_display( (double) nsite, "Constructing alignment",
                                               "examined", "site");
         progress = progress_here;
+        #endif
     }
-#ifdef _OPENMP
-#pragma omp parallel for
-#endif
+    
+    #ifdef _OPENMP
+    #pragma omp parallel for
+    #endif
     for (int site = 0; site < nsite; site+=step) {
         PatternInfo& info = patternInfo[site/step];
         Pattern& pat = at(site / step);
@@ -1965,23 +1991,27 @@ bool Alignment::constructPatterns(int nseq, int nsite,
             info.isAllGaps = pat.isAllGaps(STATE_UNKNOWN);
         }
         if (progress!=nullptr) {
-            progress->incrementBy((double)step);
+            (*progress) += (double)step;
         }
     }
     if (progress_here!=nullptr) {
+        #ifdef USE_PROGRESS_DISPLAY
         progress_here->done();
         delete progress_here;
+        #endif
         progress_here = progress = nullptr;
     }
 
     std::stringstream err_str;
     //2. Now handle warnings and errors, and compress patterns, sequentially
 
+    #ifdef USE_PROGRESS_DISPLAY
     if (progress==nullptr && !isShowingProgressDisabled) {
         progress_here = new progress_display((double)nsite, "Compressing patterns",
                                              "processed", "site");
         progress = progress_here;
     }
+    #endif
 
     int num_gaps_only = 0;
     int w = 0;
@@ -1990,9 +2020,13 @@ bool Alignment::constructPatterns(int nseq, int nsite,
         PatternInfo& info = patternInfo[r];
         std::string warnings = info.warnings.str();
         if (!warnings.empty()) {
+            #ifdef USE_PROGRESS_DISPLAY
             if (progress!=nullptr) { progress->hide(); }
+            #endif
             cout << warnings;
+            #ifdef USE_PROGRESS_DISPLAY
             if (progress!=nullptr) { progress->show(); }
+            #endif
         }
         std::string errors = info.errors.str();
         if (!errors.empty()) {
@@ -2017,19 +2051,25 @@ bool Alignment::constructPatterns(int nseq, int nsite,
             }
         }
         if (progress!=nullptr) {
-            progress->incrementBy((double)step);
+            (*progress) += ((double)step);
         }
     }
     resize(w);
     if (progress_here!=nullptr) {
+        #ifdef USE_PROGRESS_DISPLAY
         progress_here->done();
+        #endif
         delete progress_here;
         progress_here = progress = nullptr;
     }
     if (num_gaps_only) {
+        #ifdef USE_PROGRESS_DISPLAY
         if (progress!=nullptr) { progress->hide(); }
+        #endif
         cout << "WARNING: " << num_gaps_only << " sites contain only gaps or ambiguous characters." << endl;
+        #ifdef USE_PROGRESS_DISPLAY
         if (progress!=nullptr) { progress->show(); }
+        #endif
     }
     if (err_str.str() != "") {
         throw err_str.str();
@@ -2223,8 +2263,13 @@ int Alignment::readFasta(const char *filename, const char *sequence_type) {
     in.exceptions(ios::badbit);
 
     {
+        #ifdef USE_PROGRESS_DISPLAY
         const char* task = isShowingProgressDisabled ? "" : "Reading fasta file";
         progress_display progress(in.getCompressedLength(), task, "", "");
+        #else
+        double progress = 0.0;
+        #endif
+        
         for (; !in.eof(); line_num++) {
             safeGetLine(in, line);
             if (line == "") {
@@ -2245,7 +2290,9 @@ int Alignment::readFasta(const char *filename, const char *sequence_type) {
             processSeq(sequences.back(), line, line_num);
             progress = (double)in.getCompressedPosition();
         }
+        #ifdef USE_PROGRESS_DISPLAY
         progress.done();
+        #endif
     }
 
     in.clear();
@@ -3073,7 +3120,13 @@ void Alignment::getAllSequences(const char* task_description, StrVector& seq_dat
     intptr_t seq_count = seq_names.size();
     seq_data.clear();
     seq_data.resize(seq_count);
+    
+    #ifdef USE_PROGRESS_DISPLAY
     progress_display contentProgress(seq_count, task_description);
+    #else
+    double contentProgress = 0;
+    #endif
+    
     #ifdef _OPENMP
     #pragma omp parallel for
     #endif
@@ -3084,7 +3137,9 @@ void Alignment::getAllSequences(const char* task_description, StrVector& seq_dat
         }
     }
     contentProgress += seq_count % 100;
+    #ifdef USE_PROGRESS_DISPLAY
     contentProgress.done();
+    #endif
 }
 
 void Alignment::printPhylip(ostream &out, bool append, const char *aln_site_list,
@@ -3099,13 +3154,18 @@ void Alignment::printPhylip(ostream &out, bool append, const char *aln_site_list
     if (print_taxid) max_len = 10;
     if (max_len < 10) max_len = 10;
 
-    auto seq_count = seq_names.size();
 
 
     StrVector seq_data;
     getAllSequences("Calculating content to write to Phylip file", seq_data);
     
+    #ifdef USE_PROGRESS_DISPLAY
+    auto seq_count = seq_names.size();
     progress_display writeProgress(seq_count, "Writing Phylip file");
+    #else
+    double writeProgress = 0.0;
+    #endif
+    
     for (size_t seq_id = 0; seq_id < seq_names.size(); seq_id++) {
         out.width(max_len);
         if (print_taxid) {
@@ -3119,7 +3179,9 @@ void Alignment::printPhylip(ostream &out, bool append, const char *aln_site_list
         out.write(str.c_str(), str.length());
         ++writeProgress;
     }
+    #ifdef USE_PROGRESS_DISPLAY
     writeProgress.done();
+    #endif
 }
 
 void Alignment::printFasta(ostream &out, bool append, const char *aln_site_list,
@@ -3262,9 +3324,11 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
     VerboseMode save_mode = verbose_mode;
     verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
     
-    progress_display* progress = nullptr;
+    progress_display_ptr progress = nullptr;
     if (!isShowingProgressDisabled) {
-        progress = new progress_display(aln->getNSite(), "Identifying sites to remove", "examined", "site");
+        #ifdef USE_PROGRESS_DISPLAY
+            progress = new progress_display(aln->getNSite(), "Identifying sites to remove", "examined", "site");
+        #endif
     }
     size_t oldPatternCount = size(); //JB 27-Jul-2020 Parallelized
     int    siteMod = 0; //site # modulo 100.
@@ -3285,14 +3349,16 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
         }
         if (progress!=nullptr) {
             if (siteMod == 100 ) {
-                progress->incrementBy(100.0);
+                (*progress) += 100.0;
                 siteMod  = 0;
             }
             ++siteMod;
         }
     }
     if (progress!=nullptr) {
+        #ifdef USE_PROGRESS_DISPLAY
         progress->done();
+        #endif
         progress = nullptr;
     }
     updatePatterns(oldPatternCount); //JB 27-Jul-2020 Parallelized
@@ -4201,7 +4267,7 @@ bool Alignment::isCompatible(const Alignment* other, std::string& whyNot) const 
 bool Alignment::updateFrom(const Alignment* other,
                            const std::vector<std::pair<int,int>>& updated_sequences,
                            const IntVector& added_sequences,
-                           progress_display* progress) {
+                           progress_display_ptr progress) {
     std::string why_not;
     if (!isCompatible(other, why_not)) {
         return false;
@@ -4229,7 +4295,7 @@ bool Alignment::updateFrom(const Alignment* other,
         other->getOneSequence(stateStrings, source_id, replacement);
         sequences[dest_id] = replacement;
         if (progress!=nullptr) {
-            progress->incrementBy(1.0);
+            (*progress) += 1.0;
         }
     }
     
@@ -4247,7 +4313,7 @@ bool Alignment::updateFrom(const Alignment* other,
         seq_names[w]        = other->getSeqName(other_seq_id);
         other->getOneSequence(stateStrings, other_seq_id, sequences[w] );
         if (progress!=nullptr) {
-            progress->incrementBy(1.0);
+            (*progress) = 1.0;
         }
     }
     int  nsite = getNSite32();
@@ -4516,7 +4582,11 @@ double Alignment::readDist(igzstream &in, bool is_incremental, double *dist_mat)
     bool lower = false; //becomes true if lower-triangle format identified
     bool upper = false; //becomes true if upper-triangle format identified
     std::map< string, int > map_seqName_ID;
+    #ifdef USE_PROGRESS_DISPLAY
     progress_display readProgress(nseqs*nseqs, "Reading distance matrix from file");
+    #else
+    double readProgress = 0.0;
+    #endif
     // read in distances to a temporary array
         
     for (size_t seq1 = 0; seq1 < nseqs; seq1++)  {
@@ -4569,17 +4639,21 @@ double Alignment::readDist(igzstream &in, bool is_incremental, double *dist_mat)
                 //Implied lower-triangle format
                 tmp_dist_mat[0] = 0.0;
                 if (verbose_mode >= VB_MED) {
+                    #ifdef USE_PROGRESS_DISPLAY
                     readProgress.hide();
                     std::cout << "Distance matrix file is in lower-triangle format" << std::endl;
                     readProgress.show();
+                    #endif
                 }
                 lower  = true;
             }
             else if (seq1==0 && seq2+1==rowStop) {
                 if (verbose_mode >= VB_MED) {
+                    #ifdef USE_PROGRESS_DISPLAY
                     readProgress.hide();
                     std::cout << "Distance matrix file is in upper-triangle format" << std::endl;
                     readProgress.show();
+                    #endif
                 }
                 upper  = true;
                 for (; 0<seq2; --seq2) {
@@ -4615,7 +4689,9 @@ double Alignment::readDist(igzstream &in, bool is_incremental, double *dist_mat)
             }
         }
     }
+    #ifdef USE_PROGRESS_DISPLAY
     readProgress.done();
+    #endif
     
     // Now initialize the internal distance matrix, in which the sequence order is the same
     // as in the alignment

@@ -241,10 +241,14 @@ template <class T=double> struct StitchupGraph {
     }
     void removeThroughThroughNodes() {
         //Removes any "through-through" interior nodes of degree 2.
-        const char* taskDescription = silent 
+        #ifdef USE_PROGRESS_DISPLAY
+        const char* taskDescription = silent
             ? "" : "Removing degree-2 nodes from stitchup graph";
         progress_display progress ( stitches.size()*2,
                                     taskDescription, "", "");
+        #else
+        double progress = 0.0;
+        #endif
         std::vector<intptr_t> replacements;
         std::vector<T>        replacementLengths;
         replacements.reserve(nodeCount);
@@ -295,7 +299,9 @@ template <class T=double> struct StitchupGraph {
             }
             ++progress;
         }
+        #ifdef USE_PROGRESS_DISPLAY
         progress.done();
+        #endif
     }
     template <class F>
     void dumpTreeToFile ( const std::string &treeFilePath, F& out ) const {
@@ -315,7 +321,7 @@ template <class T=double> struct StitchupGraph {
     }
     template <class F>
     bool writeTreeToOpenFile (int precision, 
-                              progress_display& progress, 
+                              progress_display_ptr progress,
                               F& out) const {
         out.precision(precision);
         auto lastEdge = stitches.end();
@@ -345,11 +351,15 @@ template <class T=double> struct StitchupGraph {
         bool success = false;
         std::string desc = "Writing STITCH tree to ";
         desc+=treeFilePath;
+        #ifdef USE_PROGRESS_DISPLAY
         progress_display progress(stitches.size(), desc.c_str(), "wrote", "edge");
+        #else
+        double progress = 0.0;
+        #endif
         out.exceptions(std::ios::failbit | std::ios::badbit);
         try {
             out.open(treeFilePath.c_str(), std::ios_base::out);
-            success = writeTreeToOpenFile(precision, progress, out);
+            success = writeTreeToOpenFile(precision, &progress, out);
         } catch (std::ios::failure &) {
             std::cerr << "IO error"
             << " opening/writing file: " << treeFilePath << std::endl;
@@ -362,14 +372,16 @@ template <class T=double> struct StitchupGraph {
             return false;
         }
         out.close();
+        #ifdef USE_PROGRESS_DISPLAY
         progress.done();
+        #endif
         return success;
     }
     template <class F>
     void writeSubtree ( const std::vector<Stitch<T>> stitchVector, 
                         std::vector<size_t>  nodeToEdge,
                         const Stitch<T>* backstop, size_t nodeIndex,
-                        progress_display &progress, F& out) const {
+                        progress_display_ptr progress, F& out) const {
         bool isLeaf = ( nodeIndex < leafNames.size() );
         if (isLeaf) {
             out << leafNames [ nodeIndex ] ;
@@ -398,8 +410,12 @@ template <class T=double> struct StitchupGraph {
     bool writeTreeFile(bool zipIt, int precision, 
                        const std::string &treeFilePath) const {
         if (treeFilePath == "STDOUT") {
+            #ifdef USE_PROGRESS_DISPLAY
             progress_display progress(stitches.size(), "", "", "");
-            return writeTreeToOpenFile(precision, progress, std::cout);
+            #else
+            double progress=0;
+            #endif
+            return writeTreeToOpenFile(precision, &progress, std::cout);
         } else if (zipIt) {
             ogzstream out;
             return writeTreeToFile(precision, treeFilePath, out);
@@ -469,9 +485,13 @@ public:
             heap ( stitches.data(), stitches.size()
                  , silent ? "" : "Constructing min-heap of possible edges" );
         size_t iterations = 0;
+        #ifdef USE_PROGRESS_DISPLAY
         double row_count_triangle = 0.5*(double)row_count*(double)(row_count+1);
         const char* task_name = silent ? "" : "Assembling Stitch-up Graph";
         progress_display progress(row_count_triangle, task_name );
+        #else
+        double progress = 0.0;
+        #endif
         std::cout.precision(12);
         for (intptr_t join = 0; join + 1 < row_count; ++join) {
             LengthSortedStitch<T> shortest;
@@ -486,7 +506,9 @@ public:
             graph.staple(source, dest, shortest.length);
             progress += (join+1);
         }
+        #ifdef USE_PROGRESS_DISPLAY
         progress.done();
+        #endif
         graph.removeThroughThroughNodes();
         return true;
     }
@@ -555,8 +577,13 @@ public:
             heap ( edges.data(), edges.size()
                  , silent ? "" : "Constructing min-heap of possible edges" );
         size_t iterations = 0;
+        
+        #ifdef USE_PROGRESS_DISPLAY
         const char* task_name = silent ? "" : "Assembling NTCJ Tree";
         progress_display progress(row_count_triangle, task_name );
+        #else
+        double progress = 0.0;
+        #endif
 
         intptr_t taxon_count = row_count;
         std::vector<size_t> taxonToRow;
@@ -590,10 +617,12 @@ public:
                     tr[t] = r2;
                 }
             }
-            progress.incrementBy(taxon_count-row_count);
+            progress += (taxon_count-row_count);
         }
         finishClustering();
+        #ifdef USE_DISPLAY_PROGRESS
         progress.done();
+        #endif
         return true;
     }
 };

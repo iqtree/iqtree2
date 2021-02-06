@@ -15,6 +15,7 @@
 #include <placement/placementoptimizer.h>
 #include <placement/placementrun.h>
 #include <utils/timekeeper.h>
+#include <utils/timeutil.h>    //for getRealTime
 
 /****************************************************************************
  Stepwise addition (greedy) by maximum likelihood
@@ -343,11 +344,13 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
         pr.donePass(candidates, batchStart, targets);
         optoTime.stop();
 
+        #if USE_PROGRESS_DISPLAY
         auto workLeft   = taxaAdditionWorkEstimate
                           ( newTaxaCount, pr.taxa_per_batch, pr.inserts_per_batch );
         if (progress!=nullptr) {
             progress->setWorkRemaining(workLeft);
         }
+        #endif
     }
     doneProgress();
 

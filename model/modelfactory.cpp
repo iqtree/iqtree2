@@ -942,9 +942,13 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
         whatIAmDoing << "Thoroughly optimizing +I+G parameters from "
             << numberOfStartValues << " start values";
         if (write_info) {
+            #if USE_PROGRESS_DISPLAY
             if (!progress_display::getProgressDisplay()) {
                 cout << whatIAmDoing.str() << "..." << endl;
             }
+            #else
+            cout << whatIAmDoing.str() << "..." << endl;
+            #endif
         }
         tree->initProgress(static_cast<double>(numberOfStartValues),
                            whatIAmDoing.str(),

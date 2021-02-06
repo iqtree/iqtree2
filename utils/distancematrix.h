@@ -24,14 +24,13 @@
 #ifndef distancematrix_h
 #define distancematrix_h
 
-#include "gzstream.h"                //for igzstream
+#include "gzstream.h"  //for igzstream
 #include <fstream>
-#include <iostream>                  //for std::istream
-#include <sstream>                   //for std::stringstream
-#include <vector>                    //for std::vector
-#include "safe_io.h"                      //for safeGetTrimmedLineAsStream
-#include "progress.h"                //for progress_display
-
+#include <iostream>    //for std::istream
+#include <sstream>     //for std::stringstream
+#include <vector>      //for std::vector
+#include "safe_io.h"   //for safeGetTrimmedLineAsStream
+#include "progress.h"  //for progress_display
 
 #define MATRIX_ALIGNMENT 64
     //MUST be a power of 2 (else x & MATRIX_ALIGNMENT_MASK
@@ -373,8 +372,12 @@ template <class M> bool loadDistanceMatrixInto
         safeGetTrimmedLineAsStream(in, first_line);
         first_line >> rank;
         matrix.setSize(rank);
+        #ifdef USE_PROGRESS_DISPLAY
         const char* taskDescription = reportProgress ? "Loading distance matrix" : "";
         progress_display progress(rank, taskDescription, "loaded", "row");
+        #else
+        double progress = 0.0;
+        #endif
         for (size_t r=0; r<matrix.getSize(); ++r) {
             std::stringstream line;
             safeGetTrimmedLineAsStream(in, line);
@@ -412,17 +415,22 @@ template <class M> bool loadDistanceMatrixInto
                     //Implied lower-triangle format
                     square = false;
                     lower  = true;
+                    
+                    #ifdef USE_PROGRESS_DISPLAY
                     progress.hide();
                     std::cout << "Input appears to be in lower-triangle format" << std::endl;
                     progress.show();
+                    #endif
                 }
                 else if (square && r==0 && c+1==cStop) {
                     //Implied upper-triangle format
                     square = false;
                     upper  = true;
+                    #ifdef USE_PROGRESS_DISPLAY
                     progress.hide();
                     std::cout << "Input appears to be in upper-triangle format" << std::endl;
                     progress.show();
+                    #endif
                     for (size_t shift=cStop-1; 0<shift; --shift) {
                         matrix.cell(0,shift) = matrix.cell(0, shift-1);
                     }

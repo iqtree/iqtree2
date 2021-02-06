@@ -3908,7 +3908,12 @@ template <class L, class F> double computeDistanceMatrix
     bool count_unknown_as_different = Params::getInstance().count_unknown_as_different;
         //Unknown counts as 50% different.
     
+    #ifdef USE_PROGRESS_DISPLAY
     progress_display progress(nseqs*(nseqs-1)/2, "Calculating observed distances");
+    #else
+    double progress = 0;
+    #endif
+    
     #ifdef _OPENMP
     #pragma omp parallel for schedule(dynamic)
     #endif
@@ -3953,7 +3958,9 @@ template <class L, class F> double computeDistanceMatrix
         rowMaxDistance[seq1] = maxDistanceInRow;
         progress += (nseqs - 1 - seq1);
     }
+    #if USE_PROGRESS_DISPLAY
     progress.done();
+    #endif
     
     //
     //Determine the longest distance
@@ -3976,10 +3983,16 @@ template <class L, class F> double computeDistanceMatrix
     //Copy upper-triangle into lower-triangle and write
     //zeroes to the diagonal.
     //
+    
+    #if USE_PROGRESS_DISPLAY
     const char* taskReflect = "Determining distance matrix lower triangle from upper";
     if (verbose_mode<VB_MED) taskReflect="";
     double work_to_do = (double)nseqs * ((double)nseqs - 1.0) * 0.5;
     progress_display progress2(work_to_do, taskReflect);
+    #else
+    double progress2 = 0.0;
+    #endif
+    
     #ifdef _OPENMP
     #pragma omp parallel for schedule(dynamic)
     #endif
@@ -3994,7 +4007,9 @@ template <class L, class F> double computeDistanceMatrix
         distRow [ seq1 ] = 0.0;
         progress2 += seq1;
     }
+    #if USE_PROGRESS_DISPLAY
     progress2.done();
+    #endif
     return longest_dist;
 }
 
@@ -4095,8 +4110,14 @@ double PhyloTree::computeDistanceMatrix() {
     double longest_dist = 0.0;
     cout.precision(6);
     double baseTime = getRealTime();
-    double work_estimate = static_cast<double>(nseqs) * static_cast<double>(nseqs) * 0.5;
-    progress_display progress(work_estimate, "Calculating distance matrix");
+    
+    #ifdef USE_PROGRESS_DISPLAY
+        double work_estimate = static_cast<double>(nseqs) * static_cast<double>(nseqs) * 0.5;
+        progress_display progress(work_estimate, "Calculating distance matrix");
+    #else
+        double progress = 0.0;
+    #endif
+    
     //compute the upper-triangle of distance matrix
     #ifdef _OPENMP
     #pragma omp parallel for schedule(dynamic)
@@ -4116,10 +4137,15 @@ double PhyloTree::computeDistanceMatrix() {
         }
         progress += static_cast<double>(nseqs - seq1 - 1);
     }
+    #if USE_PROGRESS_DISPLAY
     progress.done();
     const char* taskReflect = "Determining distance matrix lower triangle from upper";
     if (verbose_mode<VB_MED) taskReflect="";    
     progress_display progress2(work_estimate, taskReflect);
+    #else
+    double progress2 = 0.0;
+    #endif
+
     //cout << (getRealTime()-baseTime) << "s Copying to lower triangle" << endl;
     //copy upper-triangle into lower-triangle and set diagonal = 0
     for (size_t seq1 = 1; seq1 < nseqs; ++seq1) {
@@ -4136,7 +4162,9 @@ double PhyloTree::computeDistanceMatrix() {
         dist_matrix [ rowStopPos] = 0.0;
         progress2 += seq1;
     }
+    #ifdef USE_PROGRESS_DISPLAY
     progress2.done();
+    #endif
     doneComputingDistances();
 
     /*
@@ -6507,47 +6535,59 @@ void PhyloTree::initProgress(double size, std::string name,
                              bool isUpperBound) {
     ++progressStackDepth;
     if (progressStackDepth==1 && !isShowingProgressDisabled) {
+        #if USE_PROGRESS_DISPLAY
         progress = new progress_display(size, name.c_str(), verb, noun);
         if (isUpperBound) {
             progress->setIsEstimateABound(true);
         }
+        #endif
     }
 }
     
 void PhyloTree::trackProgress(double amount) {
-    if (!isShowingProgressDisabled && progressStackDepth==1) {
+    #if USE_PROGRESS_DISPLAY
+    if (!isShowingProgressDisabled && progressStackDepth==1 && progress!=nullptr) {
         (*progress) += amount;
     }
+    #endif
 }
 
 void PhyloTree::hideProgress() const {
+    #if USE_PROGRESS_DISPLAY
     if (!isShowingProgressDisabled && progressStackDepth>0 && progress!=nullptr) {
         progress->hide();
     }
+    #endif
 }
 
 void PhyloTree::showProgress() const {
+    #if USE_PROGRESS_DISPLAY
     if (!isShowingProgressDisabled && progressStackDepth>0 && progress!=nullptr) {
         progress->show();
     }
+    #endif
 }
 
 void PhyloTree::doneProgress() {
     --progressStackDepth;
     if (progressStackDepth==0) {
+        #if USE_PROGRESS_DISPLAY
         if (progress!=nullptr) {
             progress->done();
         }
         delete progress;
+        #endif
         progress = nullptr;
     }
 }
     
 void PhyloTree::showNoProgress() {
+    #if USE_PROGRESS_DISPLAY
     if (progress!=nullptr) {
         delete progress;
         progress = nullptr;
     }
+    #endif
     isShowingProgressDisabled = true;
 }
 

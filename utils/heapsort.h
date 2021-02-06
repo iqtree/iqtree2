@@ -35,12 +35,14 @@
 #ifndef heapsort_h
 #define heapsort_h
 
+#include <stddef.h>   //for ptrdiff_t
 #include "progress.h"
 
 template <class V>
 void constructMinHeapLayer ( V* valueArray, ptrdiff_t start,
-                        ptrdiff_t layerStart, ptrdiff_t layerStop,
-                        ptrdiff_t stop, progress_display* progress ) {
+                            ptrdiff_t layerStart, ptrdiff_t layerStop,
+                            ptrdiff_t stop,
+                            progress_display_ptr progress = nullptr ) {
     //
     //Note: For lower levels in the heap, it would be better (due to the
     //      much better temporal locality of reference), to construct the
@@ -80,7 +82,7 @@ void constructMinHeapLayer ( V* valueArray, ptrdiff_t start,
         }
         valueArray[i] = v;
         if ( progress!=nullptr && (h&1023)==0 ) {
-            progress->incrementBy(1024.0);
+            *progress += 1024.0;
         }
     }
 }
@@ -96,11 +98,17 @@ void constructMinHeap ( V* valueArray, ptrdiff_t start, ptrdiff_t stop
     if (task_name==nullptr || *task_name=='\0') {
         constructMinHeapLayer(valueArray, start, start, start+2, stop, nullptr);
     } else {
+        #ifdef USE_PROGRESS_DISPLAY
         progress_display progress(count/2, task_name);
+        #else
+        double progress = 0.0;
+        #endif
         if (2<count) {
             constructMinHeapLayer(valueArray, start, start, start+2, stop, &progress);
         }
+        #ifdef USE_PROGRESS_DISPLAY
         progress.done();
+        #endif
     }
 }
 

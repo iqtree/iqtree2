@@ -13,6 +13,7 @@
 #include <placement/taxontoplace.h>
 #include <placement/blockallocator.h>
 #include <placement/parallelparsimonycalculator.h>
+#include <utils/timeutil.h> //for getRealTime
 
 #if defined (__GNUC__) || defined(__clang__)
 #define vml_popcnt __builtin_popcount

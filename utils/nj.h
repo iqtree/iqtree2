@@ -387,6 +387,7 @@ public:
     }
 };
 
+#ifdef DECENTTREE_USES_VECTORCLASS_LIBRARY
 template <class T=NJFloat, class SUPER=BIONJMatrix<T>, 
           class V=FloatVector, class VB=FloatBoolVector>
 class VectorizedMatrix: public SUPER
@@ -482,6 +483,7 @@ public:
 
     typedef VectorizedMatrix<NJFloat, NJMatrix<NJFloat>>    VectorNJ;
     typedef VectorizedMatrix<NJFloat, BIONJMatrix<NJFloat>> VectorBIONJ;
+#endif
 }
 
 #endif /* nj_h */

@@ -225,8 +225,12 @@ bool loadSequenceDistancesIntoMatrix(Sequences& sequences,
     memset(unk_buffer, 0, unkLen * rank);
     
     {
+        #ifdef USE_PROGRESS_DISPLAY
         const char* task = report_progress ? "Extracting variant sites": "";
         progress_display extract_progress(rank, task, "extracted from", "sequence");
+        #else
+        double extract_progress = 0.0;
+        #endif
         #ifdef _OPENMP
         #pragma omp parallel for
         #endif
@@ -269,7 +273,9 @@ bool loadSequenceDistancesIntoMatrix(Sequences& sequences,
                 extract_progress += 100.0;
             }
         }
+        #if USE_PROGRESS_DISPLAY
         extract_progress.done();
+        #endif
     }
     
     //Determine the number of states (needed for correcting distances)
@@ -296,8 +302,12 @@ bool loadSequenceDistancesIntoMatrix(Sequences& sequences,
     }
     
     {
+        #ifdef USE_PROGRESS_DISPLAY
         const char* task = report_progress ? "Calculating distances": "";
         progress_display progress( rank*(rank-1)/2, task );
+        #else
+        double progress = 0.0;
+        #endif
         #ifdef _OPENMP
         #pragma omp parallel for schedule(dynamic)
         #endif
@@ -338,7 +348,9 @@ bool loadSequenceDistancesIntoMatrix(Sequences& sequences,
             }
             progress += (rank-row);
         }
+        #if USE_PROGRESS_DISPLAY
         progress.done();
+        #endif
     }
     delete [] unknown_data;
     delete [] unk_buffer;
@@ -598,7 +610,9 @@ bool prepInput(const std::string& alignmentInputFilePath,
 
 int main(int argc, char* argv[]) {
     std::stringstream problems;
+    #ifdef USE_PROGRESS_DISPLAY
     progress_display::setProgressDisplay(true); //Displaying progress bars
+    #endif
     std::string algorithmName  = StartTree::Factory::getNameOfDefaultTreeBuilder();
     std::string alignmentFilePath; //only .fasta format is supported
     std::string inputFilePath;     //phylip distance matrix formats are supported

@@ -774,8 +774,12 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
         cout << "INFO: Number of quartets is reduced to all unique quartets " << LMGroups.uniqueQuarts << endl;
     }
     
-    bool showingProgressBars = progress_display::getProgressDisplay();
-    if (!showingProgressBars) {
+#if USE_DISPLAY_PROGRESS
+    bool noisy = !progress_display::getProgressDisplay();
+#else
+    const bool noisy = true;
+#endif
+    if (noisy) {
         cout << "Computing " << params->lmap_num_quartets
         << " quartet likelihoods (one dot represents 100 quartets)." << endl << endl;
     }
@@ -862,7 +866,9 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
 #pragma omp for schedule(guided)
 #endif
         for (int64_t qid = 0; qid < params->lmap_num_quartets; ++qid) { /*** draw lmap_num_quartets quartets randomly ***/
+            #if USE_PROGRESS_DISPLAY
             progress_display::setProgressDisplay(false);
+            #endif
             // fprintf(stderr, "%I64d\n", qid);
             // uniformly draw 4 taxa
             // (a) sample taxon 1
@@ -1155,11 +1161,15 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
 #pragma omp critical
 #endif
             {
-                progress_display::setProgressDisplay(showingProgressBars);
+                #if USE_PROGRESS_DISPLAY
+                progress_display::setProgressDisplay(!noisy);
+                #endif
                 trackProgress(1.0);
+                #if USE_PROGRESS_DISPLAY
                 progress_display::setProgressDisplay(false);
+                #endif
             }
-            if (!showingProgressBars)
+            if (noisy)
             {
                 int64_t count = (qid+1);
                 if ((count % 100) == 0) {
@@ -1177,10 +1187,12 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
         finish_random(rstream);
     }
 #endif
-    progress_display::setProgressDisplay(showingProgressBars);
+    #if USE_PROGRESS_DISPLAY
+    progress_display::setProgressDisplay(!noisy);
+    #endif
     doneProgress();
     
-    if (!showingProgressBars) {
+    if (noisy) {
         if ((params->lmap_num_quartets % 5000) != 0) {
             cout << ". : " << params->lmap_num_quartets << flush << endl << endl;
         } else {

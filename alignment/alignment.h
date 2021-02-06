@@ -199,7 +199,7 @@ public:
     
     bool constructPatterns(int nseq, int nsite,
                            const StrVector& sequences,
-                           progress_display* progress);
+                           progress_display_ptr progress);
 
     /**
             read the alignment in PHYLIP format (interleaved)
@@ -489,7 +489,7 @@ public:
      * @param progress - progress_display instance against which progress is to be reported
      * @return a vector ( vector<size_t> ) of the hashes of all the sequences
      */
-    vector<size_t> getSequenceHashes(progress_display* progress) const;
+    vector<size_t> getSequenceHashes(progress_display_ptr progress) const;
 
     /**
      * calclulate hashes of all the sequences (these hashes are independent of the patterns,
@@ -498,7 +498,7 @@ public:
      * @return a vector ( vector<size_t> ) of the hashes of all the sequences
      */
 
-    vector<size_t> getPatternIndependentSequenceHashes(progress_display* progress) const;
+    vector<size_t> getPatternIndependentSequenceHashes(progress_display_ptr progress) const;
 
     /**
      * calculating hashes for sequences
@@ -625,7 +625,7 @@ public:
     bool updateFrom(const Alignment* other,
                     const std::vector<std::pair<int,int>>& updated_sequences,
                     const IntVector& added_sequences,
-                    progress_display* progress);
+                    progress_display_ptr progress);
     
     /** Check if this alignment can be updated from another (called from: updateFrom())
      *  @param other - the source alignment (may not be == this)

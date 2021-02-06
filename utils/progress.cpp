@@ -21,6 +21,9 @@
 //* 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //
 
+#ifndef  USE_PROGRESS_DISPLAY
+#define  USE_PROGRESS_DISPLAY
+#endif
 #include "progress.h"
 #include <sstream>  //for std::ostringstream
 #include <iostream> //for std::cout

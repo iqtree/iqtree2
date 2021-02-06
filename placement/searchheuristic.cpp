@@ -5,11 +5,11 @@
 // Created by James Barbetti on 08-Oct-2020.
 //
 
+#include <utils/heapsort.h>
 #include "searchheuristic.h"
 #include "targetbranch.h"
 #include "placementcostcalculator.h"
 #include "taxontoplace.h"             //for TaxaToPlace
-#include <utils/heapsort.h>
 
 SearchHeuristic::~SearchHeuristic() = default;
 

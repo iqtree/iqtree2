@@ -8,6 +8,9 @@
 #ifndef progress_h
 #define progress_h
 
+#ifdef   USE_PROGRESS_DISPLAY
+
+
 #include <string>       //for std::string
 #include <fstream>      //for std::fstream
 #include "timeutil.h"
@@ -55,6 +58,13 @@ protected:
     int    hidden;               //How many more times has hide() been called than show()
     std::fstream termout;        //Terminal output stream (not standard output!)
 };
+
+typedef progress_display* progress_display_ptr;
+
+#else
+typedef double* progress_display_ptr;
+
+#endif
 
 
 #endif /* progress_hpp */

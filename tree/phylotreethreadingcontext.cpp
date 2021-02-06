@@ -6,6 +6,7 @@
 //
 
 #include "phylotreethreadingcontext.h"
+#include <omp.h> //for omp_get_num_threads and omp_get_num_procs
 
 PhyloTreeThreadingContext::PhyloTreeThreadingContext(PhyloTree& phylo_tree,
                                                      bool force_use_of_all_threads)

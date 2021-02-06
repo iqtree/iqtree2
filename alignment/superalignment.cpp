@@ -935,7 +935,7 @@ void SuperAlignment::removePartitions(set<int> &removed_id) {
     buildPattern();
 }
 
-std::vector<size_t> SuperAlignment::getSequenceHashes(progress_display* progress) const {
+std::vector<size_t> SuperAlignment::getSequenceHashes(progress_display_ptr progress) const {
     //JB2020-06-23 Begin : Determine hashes for all the sequences
     auto startHash = getRealTime();
     auto n         = getNSeq();
@@ -974,7 +974,12 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, 
     BoolVector isSequenceChecked(n, false);
     BoolVector isSequenceRemoved(n, false);
 
+    #ifdef USE_PROGRESS_DISPLAY
     progress_display progress(n*2, isShowingProgressDisabled ? "" :  "Checking for duplicate sequences");
+    #else
+    double progress = 0.0;
+    #endif
+    
     vector<size_t> hashes = getSequenceHashes(&progress);
     
     bool listIdentical = !Params::getInstance().suppress_duplicate_sequence_warnings;
@@ -1025,10 +1030,14 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, 
                 isSequenceRemoved[seq2] = true;
             } else {
                 if (listIdentical) {
+                    #ifdef USE_PROGRESS_DISPLAY
                     progress.hide();
+                    #endif
                     cout << "NOTE: " << getSeqName(seq2) << " is identical to " << getSeqName(seq1)
                         << " but kept for subsequent analysis" << endl;
+                    #ifdef USE_PROGRESS_DISPLAY
                     progress.show();
+                    #endif
                 }
             }
             isSequenceChecked[seq2] = true;
@@ -1036,7 +1045,10 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, 
 		}
 		isSequenceChecked[seq1] = true;
 	}
+    #ifdef USE_PROGRESS_DISPLAY
     progress.done();
+    #endif
+    
     if (verbose_mode >= VB_MED) {
         auto checkTime = getRealTime() - startCheck;
         cout << "Checking for identical sequences took " << checkTime << " wall-clock seconds" << endl;

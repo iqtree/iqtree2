@@ -176,7 +176,7 @@ public:
      @param progress pointer to a progress_display instance to report  progress against
      @return a vector of the hashes of the sequences in the alignment
      */
-    virtual std::vector<size_t> getSequenceHashes(progress_display* progress) const;
+    virtual std::vector<size_t> getSequenceHashes(progress_display_ptr progress) const;
 
 
     /*
