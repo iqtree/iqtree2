@@ -29,7 +29,9 @@
 #include "flatmatrix.h"      //for FlatMatrix
 #include "distancematrix.h"  //for loadDistanceMatrixInto
 #include "hammingdistance.h" //for hammingDistance
+#ifdef   USE_GZSTREAM
 #include "gzstream.h"
+#endif
 
 #define PROBLEM(x) if (1) problems << x << ".\n"; else 0
 
@@ -383,7 +385,11 @@ bool loadAlignment(const std::string& alignmentFilePath,
                    bool report_progress, Sequences &sequences,
                    std::vector<char>& is_site_variant)
 {
-    pigzstream in(report_progress ? "fasta" : "");
+    #ifdef USE_GZSTREAM
+    pigzstream    in(report_progress ? "fasta" : "");
+    #else
+    std::ifstream in;
+    #endif
     in.open(alignmentFilePath.c_str(), std::ios::binary | std::ios::in);
     if (!in.is_open()) {
         std::cerr << "Unable to open alignment file " 

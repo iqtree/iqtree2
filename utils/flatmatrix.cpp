@@ -32,7 +32,11 @@
 #include <math.h>       //for log10
 #include <iostream>     //for std::fstream
 #include <sstream>      //for std::stringstream
+#ifdef   USE_GZSTREAM
 #include "gzstream.h"   //for ogzstream
+#else
+#include <fstream>      //for std::ofstream
+#endif
 
 FlatMatrix::FlatMatrix(): rowCount(0), distanceMatrix(nullptr), borrowed(false) {
 }
@@ -106,9 +110,17 @@ bool FlatMatrix::writeToDistanceFile(const std::string& format,
             out.close();
         } else {
             //Todo: Decide. Should we be insisting the file name ends with .gz too?
+            #ifdef USE_GZSTREAM
             ogzstream out;
+            #else
+            std::ofstream out;
+            #endif
             out.exceptions(std::ios::failbit | std::ios::badbit);
+            #ifdef USE_GZSTREAM
             out.open(file_name.c_str(), std::ios::out, compression_level);
+            #else
+            out.open(file_name.c_str(), std::ios::out);
+            #endif
             writeDistancesToOpenFile(format, precision, out);
             out.close();
         }

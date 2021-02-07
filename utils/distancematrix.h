@@ -24,11 +24,14 @@
 #ifndef distancematrix_h
 #define distancematrix_h
 
-#include "gzstream.h"  //for igzstream
-#include <fstream>
 #include <iostream>    //for std::istream
 #include <sstream>     //for std::stringstream
 #include <vector>      //for std::vector
+#ifdef   USE_GZSTREAM
+#include "gzstream.h"  //for igzstream and pigzstream
+#else
+#include <fstream>     //for std::ifstream
+#endif
 #include "safe_io.h"   //for safeGetTrimmedLineAsStream
 #include "progress.h"  //for progress_display
 
@@ -360,8 +363,14 @@ public:
     
 template <class M> bool loadDistanceMatrixInto
     (const std::string distanceMatrixFilePath, bool reportProgress, M& matrix) {
+        
+    #ifdef   USE_GZSTREAM
+    igzstream     in;
+    #else
+    std::ifstream in;
+    #endif
+        
     size_t rank;
-    igzstream in;
     bool lower  = false;
     bool upper  = false;
     bool square = true;

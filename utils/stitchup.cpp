@@ -417,7 +417,11 @@ template <class T=double> struct StitchupGraph {
             #endif
             return writeTreeToOpenFile(precision, &progress, std::cout);
         } else if (zipIt) {
-            ogzstream out;
+            #ifdef USE_GZSTREAM
+            ogzstream     out;
+            #else
+            std::ofstream out;
+            #endif
             return writeTreeToFile(precision, treeFilePath, out);
         } else {
             std::fstream out;

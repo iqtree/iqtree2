@@ -21,8 +21,12 @@
 #ifndef hammingdistance_h
 #define hammingdistance_h
 
-#define HAMMING_VECTOR (1)
+#ifdef USE_VECTORCLASS_LIBRARY
+#define  HAMMING_VECTOR (1)
 #include <vectorclass/vectorclass.h> //For Vec32c and Vec32cb classes
+#else
+#define  HAMMING_VECTOR (0)
+#endif
 
 //
 //Note 1: L is a template parameter so that, when the state range
@@ -122,6 +126,7 @@ inline double hammingDistance
     frequencyOfUnknowns = freqUnknown;
     return distance;
 }
+#endif
 
 inline size_t conventionalHammingDistance(char unknown,
                                             const char* sequenceA,
@@ -159,7 +164,15 @@ inline size_t conventionalCountBitsSetInEither(uint64_t* a, uint64_t* b,
     return bits_set;
 }
 
-#if (INSTRSET >= 2)
+#if (!HAMMING_VECTOR)
+inline uint64_t vectorHammingDistance(char unknown, const char* sequenceA,
+                                      const char* sequenceB, size_t seqLen ) {
+    return conventionalHammingDistance(unknown, sequenceA, sequenceB, seqLen);
+}
+inline size_t countBitsSetInEither(uint64_t* a, uint64_t* b, size_t count) {
+    return conventionalCountBitsSetInEither(a, b, count);
+}
+#else
 
 #ifdef _MSC_VER
     #define ALIGN_32(x) __declspec(align(32)) x
@@ -252,7 +265,6 @@ size_t countBitsSetInEitherTemplate(uint64_t* a, uint64_t* b,
     }
     return horizontal_add(count_vector);
 }
-#endif
 
 #if (INSTRSET >= 7)
     inline uint64_t vectorHammingDistance(char unknown, const char* sequenceA,
@@ -284,10 +296,6 @@ size_t countBitsSetInEitherTemplate(uint64_t* a, uint64_t* b,
         return conventionalCountBitsSetInEither(a,b,count);
     }
 #endif
-
-inline size_t countBitsSetIn(uint64_t* a, size_t count) {
-    return countBitsSetInEither(a,a,count);
-}
 
 inline size_t sumForUnknownCharacters
     ( char boundaryChar, const char* sequence, intptr_t seqLen, const int* frequencyVector) {
@@ -323,5 +331,8 @@ inline size_t sumForUnknownCharacters
 
 #endif
 
+inline size_t countBitsSetIn(uint64_t* a, size_t count) {
+    return countBitsSetInEither(a,a,count);
+}
 
 #endif /* hammingdistance_h */

@@ -21,7 +21,7 @@ typedef float    NJFloat;
 const   NJFloat  infiniteDistance = (NJFloat)(1e+36);
 const   intptr_t notMappedToRow = -1;
 
-#ifdef   DECENTTREE_USES_VECTORCLASS_LIBRARY
+#ifdef   USE_VECTORCLASS_LIBRARY
 #include <vectorclass/vectorclass.h> //for Vec4d and Vec4db vector classes
 typedef  Vec8f    FloatVector;
 typedef  Vec8fb   FloatBoolVector;
@@ -235,7 +235,7 @@ protected:
     }
 };
 
-#ifdef DECENTTREE_USES_VECTORCLASS_LIBRARY
+#ifdef USE_VECTORCLASS_LIBRARY
 template <class T=NJFloat, class V=FloatVector, class VB=FloatBoolVector>
 class VectorizedUPGMA_Matrix: public UPGMA_Matrix<T>
 {
@@ -299,7 +299,7 @@ public:
         }
     }
 };
-#endif //DECENTTREE_USES_VECTORCLASS_LIBRARY
+#endif //USE_VECTORCLASS_LIBRARY
 
 }
 
