@@ -953,6 +953,10 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
 
     if (pllUFBootDataPtr->boot_samples){
         free(pattern_lh);
+        free(tree_str);       //James B. 14-Jan-2021 (memory leak)
+        free(item_ptr->data); //James B. 14-Jan-2021 (memory leak)
+        free(item_ptr);       //James B. 14-Jan-2021 (memory leak)
+
         pllUFBootDataPtr->treels_ptnlh[tree_index] = NULL;
     }
 }
@@ -986,18 +990,26 @@ void pllResizeUFBootData(){
 
     double * rtreels_logl =
             (double *) malloc(2 * count * (sizeof(double)));
-    if(!rtreels_logl) outError("Not enough dynamic memory!");
-    memcpy(rtreels_logl, pllUFBootDataPtr->treels_logl, count * sizeof(double));
-    free(pllUFBootDataPtr->treels_logl);
-    pllUFBootDataPtr->treels_logl = rtreels_logl;
+    if (rtreels_logl==nullptr) {
+        outError("Not enough dynamic memory!");
+    }
+    else {
+        memcpy(rtreels_logl, pllUFBootDataPtr->treels_logl, count * sizeof(double));
+        free(pllUFBootDataPtr->treels_logl);
+        pllUFBootDataPtr->treels_logl = rtreels_logl;
+    }
 
     double ** rtreels_ptnlh =
         (double **) malloc(2 * count * (sizeof(double *)));
-    if(!rtreels_ptnlh) outError("Not enough dynamic memory!");
-    memset(rtreels_ptnlh, 0, 2 * count * sizeof(double *));
-    memcpy(rtreels_ptnlh, pllUFBootDataPtr->treels_ptnlh, count * sizeof(double *));
-    free(pllUFBootDataPtr->treels_ptnlh);
-    pllUFBootDataPtr->treels_ptnlh = rtreels_ptnlh;
+    if(rtreels_ptnlh==nullptr) {
+        outError("Not enough dynamic memory!");
+    }
+    else {
+        memset(rtreels_ptnlh, 0, 2 * count * sizeof(double *));
+        memcpy(rtreels_ptnlh, pllUFBootDataPtr->treels_ptnlh, count * sizeof(double *));
+        free(pllUFBootDataPtr->treels_ptnlh);
+        pllUFBootDataPtr->treels_ptnlh = rtreels_ptnlh;
+    }
 }
 
 
