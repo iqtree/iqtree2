@@ -26,7 +26,7 @@
 #ifndef clustertree_h
 #define clustertree_h
 
-#ifdef   USE_GZSTREAM
+#if      USE_GZSTREAM
 #include "gzstream.h"                //for igzstream
 #endif
 #include <fstream>
@@ -188,7 +188,7 @@ public:
         if (treeFilePath == "STDOUT") {
             return writeTreeToOpenFile(precision, std::cout);
         } else if (zipIt) {
-            #ifdef USE_GZSTREAM
+            #if USE_GZSTREAM
             ogzstream     out;
             #else
             std::ofstream out;

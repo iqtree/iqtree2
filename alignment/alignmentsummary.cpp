@@ -148,7 +148,7 @@ size_t AlignmentSummary::getSequenceLength() const {
 
 bool AlignmentSummary::constructSequenceMatrixNoisily(bool treatAllAmbiguousStatesAsUnknown
     , const char* taskName, const char* verb) {
-    #ifdef USE_PROGRESS_DISPLAY
+    #if USE_PROGRESS_DISPLAY    
     progress_display progress(static_cast<double>(sequenceCount), taskName, verb, "sequence");
     #else
     double progress = 0.0;

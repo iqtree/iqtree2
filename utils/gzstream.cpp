@@ -187,7 +187,7 @@ size_t gzstreambuf::getCompressedPosition() const {
     return compressed_position;
 }
 
-#ifdef USE_PROGRESS_DISPLAY
+#if USE_PROGRESS_DISPLAY
 void  gzstreambuf::setProgress(progress_display_ptr p) {
     progress = p;
 }
@@ -236,7 +236,7 @@ void pigzstream::open( const char* name, int open_mode) {
     if (name!=nullptr && name[0]!='\0') {
         std::stringstream task;
         task << "Reading " << format_name << " file " << name;
-        #ifdef USE_PROGRESS_DISPLAY
+        #if USE_PROGRESS_DISPLAY
             progress = new progress_display((double)getCompressedLength(),
                                             task.str().c_str(), "", "" );
             buf.setProgress(progress);
@@ -251,7 +251,7 @@ void pigzstream::close() {
 
 void pigzstream::done() {
     if (progress!=nullptr) {
-        #if USES_PROGRESS_DISPLAY
+        #if USE_PROGRESS_DISPLAY
         progress->done();
         delete progress;
         #endif
@@ -269,7 +269,7 @@ gzstreambuf* pigzstream::rdbuf() {
 }
 
 void pigzstream::hideProgress() const {
-    #if USES_PROGRESS_DISPLAY
+    #if USE_PROGRESS_DISPLAY
     if (progress==nullptr) {
         return;
     }
@@ -277,7 +277,7 @@ void pigzstream::hideProgress() const {
     #endif
 }
 void pigzstream::showProgress() const {
-    #if USES_PROGRESS_DISPLAY
+    #if USE_PROGRESS_DISPLAY
     if (progress==nullptr) {
         return;
     }

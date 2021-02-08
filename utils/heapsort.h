@@ -98,7 +98,7 @@ void constructMinHeap ( V* valueArray, ptrdiff_t start, ptrdiff_t stop
     if (task_name==nullptr || *task_name=='\0') {
         constructMinHeapLayer(valueArray, start, start, start+2, stop, nullptr);
     } else {
-        #ifdef USE_PROGRESS_DISPLAY
+        #if USE_PROGRESS_DISPLAY
         progress_display progress(count/2, task_name);
         #else
         double progress = 0.0;
@@ -106,7 +106,7 @@ void constructMinHeap ( V* valueArray, ptrdiff_t start, ptrdiff_t stop
         if (2<count) {
             constructMinHeapLayer(valueArray, start, start, start+2, stop, &progress);
         }
-        #ifdef USE_PROGRESS_DISPLAY
+        #if USE_PROGRESS_DISPLAY
         progress.done();
         #endif
     }

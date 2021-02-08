@@ -29,7 +29,7 @@
 #include "flatmatrix.h"      //for FlatMatrix
 #include "distancematrix.h"  //for loadDistanceMatrixInto
 #include "hammingdistance.h" //for hammingDistance
-#ifdef   USE_GZSTREAM
+#if USE_GZSTREAM
 #include "gzstream.h"
 #endif
 
@@ -227,7 +227,7 @@ bool loadSequenceDistancesIntoMatrix(Sequences& sequences,
     memset(unk_buffer, 0, unkLen * rank);
     
     {
-        #ifdef USE_PROGRESS_DISPLAY
+        #if USE_PROGRESS_DISPLAY
         const char* task = report_progress ? "Extracting variant sites": "";
         progress_display extract_progress(rank, task, "extracted from", "sequence");
         #else
@@ -304,7 +304,7 @@ bool loadSequenceDistancesIntoMatrix(Sequences& sequences,
     }
     
     {
-        #ifdef USE_PROGRESS_DISPLAY
+        #if USE_PROGRESS_DISPLAY
         const char* task = report_progress ? "Calculating distances": "";
         progress_display progress( rank*(rank-1)/2, task );
         #else
@@ -385,7 +385,7 @@ bool loadAlignment(const std::string& alignmentFilePath,
                    bool report_progress, Sequences &sequences,
                    std::vector<char>& is_site_variant)
 {
-    #ifdef USE_GZSTREAM
+    #if USE_GZSTREAM
     pigzstream    in(report_progress ? "fasta" : "");
     #else
     std::ifstream in;
@@ -616,7 +616,7 @@ bool prepInput(const std::string& alignmentInputFilePath,
 
 int main(int argc, char* argv[]) {
     std::stringstream problems;
-    #ifdef USE_PROGRESS_DISPLAY
+    #if USE_PROGRESS_DISPLAY
     progress_display::setProgressDisplay(true); //Displaying progress bars
     #endif
     std::string algorithmName  = StartTree::Factory::getNameOfDefaultTreeBuilder();

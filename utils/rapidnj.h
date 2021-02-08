@@ -165,7 +165,7 @@ public:
         rowScanOrder.resize(row_count);
 
         {
-            #if USES_PROGRESS_DISPLAY
+            #if USE_PROGRESS_DISPLAY
             const char* taskName = silent
                 ? "" :  "Setting up auxiliary I and S matrices";
             progress_display setupProgress(row_count, taskName, "sorting", "row");
@@ -195,7 +195,7 @@ public:
             if (silent) {
                 taskName = "";
             }
-            #ifdef USE_PROGRESS_DISPLAY
+            #if USE_PROGRESS_DISPLAY
             double triangle = row_count * (row_count + 1.0) * 0.5;
             progress_display show_progress(triangle, taskName.c_str(), "", "");
             #else
@@ -216,7 +216,7 @@ public:
                 }
                 show_progress+=row_count;
             }
-            #ifdef USE_PROGRESS_DISPLAY
+            #if USE_PROGRESS_DISPLAY
             show_progress.done();
             #endif
             finishClustering();

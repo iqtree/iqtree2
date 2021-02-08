@@ -121,7 +121,7 @@ public:
         if (silent) {
             taskName="";
         }
-        #if USES_PROGRESS_DISPLAY
+        #if USE_PROGRESS_DISPLAY
         double triangle = row_count * (row_count + 1.0) * 0.5;
         progress_display show_progress(triangle, taskName.c_str(), "", "");
         #else
@@ -133,7 +133,7 @@ public:
             show_progress += row_count;
         }
         finishClustering();
-        #if USES_PROGRESS_DISPLAY
+        #if USE_PROGRESS_DISPLAY
         show_progress.done();
         #endif
         return true;

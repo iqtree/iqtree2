@@ -3908,7 +3908,7 @@ template <class L, class F> double computeDistanceMatrix
     bool count_unknown_as_different = Params::getInstance().count_unknown_as_different;
         //Unknown counts as 50% different.
     
-    #ifdef USE_PROGRESS_DISPLAY
+    #if USE_PROGRESS_DISPLAY
     progress_display progress(nseqs*(nseqs-1)/2, "Calculating observed distances");
     #else
     double progress = 0;
@@ -4111,7 +4111,7 @@ double PhyloTree::computeDistanceMatrix() {
     cout.precision(6);
     double baseTime = getRealTime();
     
-    #ifdef USE_PROGRESS_DISPLAY
+    #if USE_PROGRESS_DISPLAY
         double work_estimate = static_cast<double>(nseqs) * static_cast<double>(nseqs) * 0.5;
         progress_display progress(work_estimate, "Calculating distance matrix");
     #else
@@ -4162,7 +4162,7 @@ double PhyloTree::computeDistanceMatrix() {
         dist_matrix [ rowStopPos] = 0.0;
         progress2 += seq1;
     }
-    #ifdef USE_PROGRESS_DISPLAY
+    #if USE_PROGRESS_DISPLAY
     progress2.done();
     #endif
     doneComputingDistances();

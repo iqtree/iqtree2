@@ -412,7 +412,7 @@ vector<size_t> Alignment::getSequenceHashes(progress_display_ptr progress) const
         (*progress) += (n%100);
     }
     
-#ifdef USE_PROGRESS_DISPLAY
+#if USE_PROGRESS_DISPLAY
     bool displaying_progress = progress_display::getProgressDisplay();
 #else
     const bool displaying_progress = false;
@@ -454,7 +454,7 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
     BoolVector isSequenceChecked(n, false);
     BoolVector isSequenceRemoved(n, false);
     
-#ifdef USE_PROGRESS_DISPLAY
+#if USE_PROGRESS_DISPLAY
     progress_display progress(n*2, isShowingProgressDisabled ? "" :  "Checking for duplicate sequences");
 #else
     double progress = 0.0;
@@ -487,11 +487,11 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
                 isSequenceRemoved[seq2] = true;
             } else {
                 if (listIdentical) {
-                    #ifdef USE_PROGRESS_DISPLAY
+                    #if USE_PROGRESS_DISPLAY
                     progress.hide();
                     #endif
                     cout << "NOTE: " << getSeqName(seq2) << " is identical to " << getSeqName(seq1) << " but kept for subsequent analysis" << endl;
-                    #ifdef USE_PROGRESS_DISPLAY
+                    #if USE_PROGRESS_DISPLAY
                     progress.show();
                     #endif
                 }
@@ -502,7 +502,7 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
         isSequenceChecked[seq1] = true;
         ++progress;
     }
-    #ifdef USE_PROGRESS_DISPLAY
+    #if USE_PROGRESS_DISPLAY
         bool displaying_progress = progress_display::getProgressDisplay();
     #else
         const bool displaying_progress = false;
@@ -512,7 +512,7 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
         cout << "Checking for duplicate sequences took " << checkTime
             << " wall-clock seconds" << endl;
     }
-    #ifdef USE_PROGRESS_DISPLAY
+    #if USE_PROGRESS_DISPLAY
     progress.done();
     #endif
     if (removed_seqs.size() > 0) {
@@ -1995,7 +1995,7 @@ bool Alignment::constructPatterns(int nseq, int nsite,
         }
     }
     if (progress_here!=nullptr) {
-        #ifdef USE_PROGRESS_DISPLAY
+        #if USE_PROGRESS_DISPLAY
         progress_here->done();
         delete progress_here;
         #endif
@@ -2005,7 +2005,7 @@ bool Alignment::constructPatterns(int nseq, int nsite,
     std::stringstream err_str;
     //2. Now handle warnings and errors, and compress patterns, sequentially
 
-    #ifdef USE_PROGRESS_DISPLAY
+    #if USE_PROGRESS_DISPLAY
     if (progress==nullptr && !isShowingProgressDisabled) {
         progress_here = new progress_display((double)nsite, "Compressing patterns",
                                              "processed", "site");
@@ -2020,11 +2020,11 @@ bool Alignment::constructPatterns(int nseq, int nsite,
         PatternInfo& info = patternInfo[r];
         std::string warnings = info.warnings.str();
         if (!warnings.empty()) {
-            #ifdef USE_PROGRESS_DISPLAY
+            #if USE_PROGRESS_DISPLAY
             if (progress!=nullptr) { progress->hide(); }
             #endif
             cout << warnings;
-            #ifdef USE_PROGRESS_DISPLAY
+            #if USE_PROGRESS_DISPLAY
             if (progress!=nullptr) { progress->show(); }
             #endif
         }
@@ -2056,18 +2056,18 @@ bool Alignment::constructPatterns(int nseq, int nsite,
     }
     resize(w);
     if (progress_here!=nullptr) {
-        #ifdef USE_PROGRESS_DISPLAY
+        #if USE_PROGRESS_DISPLAY
         progress_here->done();
         #endif
         delete progress_here;
         progress_here = progress = nullptr;
     }
     if (num_gaps_only) {
-        #ifdef USE_PROGRESS_DISPLAY
+        #if USE_PROGRESS_DISPLAY
         if (progress!=nullptr) { progress->hide(); }
         #endif
         cout << "WARNING: " << num_gaps_only << " sites contain only gaps or ambiguous characters." << endl;
-        #ifdef USE_PROGRESS_DISPLAY
+        #if USE_PROGRESS_DISPLAY
         if (progress!=nullptr) { progress->show(); }
         #endif
     }
@@ -2263,7 +2263,7 @@ int Alignment::readFasta(const char *filename, const char *sequence_type) {
     in.exceptions(ios::badbit);
 
     {
-        #ifdef USE_PROGRESS_DISPLAY
+        #if USE_PROGRESS_DISPLAY
         const char* task = isShowingProgressDisabled ? "" : "Reading fasta file";
         progress_display progress(in.getCompressedLength(), task, "", "");
         #else
@@ -2290,7 +2290,7 @@ int Alignment::readFasta(const char *filename, const char *sequence_type) {
             processSeq(sequences.back(), line, line_num);
             progress = (double)in.getCompressedPosition();
         }
-        #ifdef USE_PROGRESS_DISPLAY
+        #if USE_PROGRESS_DISPLAY
         progress.done();
         #endif
     }
@@ -3121,7 +3121,7 @@ void Alignment::getAllSequences(const char* task_description, StrVector& seq_dat
     seq_data.clear();
     seq_data.resize(seq_count);
     
-    #ifdef USE_PROGRESS_DISPLAY
+    #if USE_PROGRESS_DISPLAY
     progress_display contentProgress(seq_count, task_description);
     #else
     double contentProgress = 0;
@@ -3137,7 +3137,7 @@ void Alignment::getAllSequences(const char* task_description, StrVector& seq_dat
         }
     }
     contentProgress += seq_count % 100;
-    #ifdef USE_PROGRESS_DISPLAY
+    #if USE_PROGRESS_DISPLAY
     contentProgress.done();
     #endif
 }
@@ -3159,7 +3159,7 @@ void Alignment::printPhylip(ostream &out, bool append, const char *aln_site_list
     StrVector seq_data;
     getAllSequences("Calculating content to write to Phylip file", seq_data);
     
-    #ifdef USE_PROGRESS_DISPLAY
+    #if USE_PROGRESS_DISPLAY
     auto seq_count = seq_names.size();
     progress_display writeProgress(seq_count, "Writing Phylip file");
     #else
@@ -3179,7 +3179,7 @@ void Alignment::printPhylip(ostream &out, bool append, const char *aln_site_list
         out.write(str.c_str(), str.length());
         ++writeProgress;
     }
-    #ifdef USE_PROGRESS_DISPLAY
+    #if USE_PROGRESS_DISPLAY
     writeProgress.done();
     #endif
 }
@@ -3326,7 +3326,7 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
     
     progress_display_ptr progress = nullptr;
     if (!isShowingProgressDisabled) {
-        #ifdef USE_PROGRESS_DISPLAY
+        #if USE_PROGRESS_DISPLAY
             progress = new progress_display(aln->getNSite(), "Identifying sites to remove", "examined", "site");
         #endif
     }
@@ -3356,7 +3356,7 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
         }
     }
     if (progress!=nullptr) {
-        #ifdef USE_PROGRESS_DISPLAY
+        #if USE_PROGRESS_DISPLAY
         progress->done();
         #endif
         progress = nullptr;
@@ -4582,7 +4582,7 @@ double Alignment::readDist(igzstream &in, bool is_incremental, double *dist_mat)
     bool lower = false; //becomes true if lower-triangle format identified
     bool upper = false; //becomes true if upper-triangle format identified
     std::map< string, int > map_seqName_ID;
-    #ifdef USE_PROGRESS_DISPLAY
+    #if USE_PROGRESS_DISPLAY
     progress_display readProgress(nseqs*nseqs, "Reading distance matrix from file");
     #else
     double readProgress = 0.0;
@@ -4639,7 +4639,7 @@ double Alignment::readDist(igzstream &in, bool is_incremental, double *dist_mat)
                 //Implied lower-triangle format
                 tmp_dist_mat[0] = 0.0;
                 if (verbose_mode >= VB_MED) {
-                    #ifdef USE_PROGRESS_DISPLAY
+                    #if USE_PROGRESS_DISPLAY
                     readProgress.hide();
                     std::cout << "Distance matrix file is in lower-triangle format" << std::endl;
                     readProgress.show();
@@ -4649,7 +4649,7 @@ double Alignment::readDist(igzstream &in, bool is_incremental, double *dist_mat)
             }
             else if (seq1==0 && seq2+1==rowStop) {
                 if (verbose_mode >= VB_MED) {
-                    #ifdef USE_PROGRESS_DISPLAY
+                    #if USE_PROGRESS_DISPLAY
                     readProgress.hide();
                     std::cout << "Distance matrix file is in upper-triangle format" << std::endl;
                     readProgress.show();
@@ -4689,7 +4689,7 @@ double Alignment::readDist(igzstream &in, bool is_incremental, double *dist_mat)
             }
         }
     }
-    #ifdef USE_PROGRESS_DISPLAY
+    #if USE_PROGRESS_DISPLAY
     readProgress.done();
     #endif
     

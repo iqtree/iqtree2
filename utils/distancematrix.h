@@ -27,7 +27,7 @@
 #include <iostream>    //for std::istream
 #include <sstream>     //for std::stringstream
 #include <vector>      //for std::vector
-#ifdef   USE_GZSTREAM
+#if USE_GZSTREAM
 #include "gzstream.h"  //for igzstream and pigzstream
 #else
 #include <fstream>     //for std::ifstream
@@ -360,110 +360,114 @@ public:
     virtual void addCluster(const std::string &name) {
     }
 };
-    
+
+template <class F=std::stringstream, class M> void loadDistanceMatrixFromOpenFile
+(F& in, bool reportProgress, M& matrix) {
+    size_t rank;
+    bool lower = false;
+    bool upper = false;
+    bool square = true;
+    std::stringstream first_line;
+    safeGetTrimmedLineAsStream<F>(in, first_line);
+    first_line >> rank;
+    matrix.setSize(rank);
+#if USE_PROGRESS_DISPLAY
+    const char* taskDescription = reportProgress ? "Loading distance matrix" : "";
+    progress_display progress(rank, taskDescription, "loaded", "row");
+#else
+    double progress = 0.0;
+#endif
+    for (size_t r = 0; r < matrix.getSize(); ++r) {
+        std::stringstream line;
+        safeGetTrimmedLineAsStream(in, line);
+        std::string name;
+        line >> name;
+        matrix.addCluster(name);
+        if (upper) {
+            //Copy column r from upper triangle (above the diagonal)
+            //to the left part of row r (which is in the lower triangle).
+            for (size_t c = 0; c < r; ++c) {
+                matrix.cell(r, c) = matrix.cell(c, r);
+            }
+            matrix.cell(r, r) = 0;
+        }
+        size_t cStart = (upper) ? (r + 1) : 0;
+        size_t cStop = (lower) ? r : matrix.getSize();
+        size_t c = cStart;
+        for (; line.tellg() != -1 && c < cStop; ++c) {
+            line >> matrix.cell(r, c);
+            //Ensure matrix is symmetric (as it is read!)
+            //Note: I'd rather throw if there's a disagreement!
+            //But I want backwards compatibility with BIONJ2009.
+            if (square && c < r && matrix.cell(r, c) != matrix.cell(c, r)) {
+                //If loading from a square matrix file,
+                //and in lower triangle, and the corresponding entry
+                //in the upper triangle was different, average them both.
+                typename M::cell_type v = (matrix.cell(r, c) + matrix.cell(c, r)) * (typename M::cell_type)0.5;
+                matrix.cell(c, r) = v; //U-R
+                matrix.cell(r, c) = v;
+            }
+        }
+        if (line.tellg() == -1 && c < cStop)
+        {
+            if (square && r == 0 && c == 0) {
+                //Implied lower-triangle format
+                square = false;
+                lower = true;
+
+#if USE_PROGRESS_DISPLAY
+                progress.hide();
+                std::cout << "Input appears to be in lower-triangle format" << std::endl;
+                progress.show();
+#endif
+            }
+            else if (square && r == 0 && c + 1 == cStop) {
+                //Implied upper-triangle format
+                square = false;
+                upper = true;
+#if USE_PROGRESS_DISPLAY
+                progress.hide();
+                std::cout << "Input appears to be in upper-triangle format" << std::endl;
+                progress.show();
+#endif
+                for (size_t shift = cStop - 1; 0 < shift; --shift) {
+                    matrix.cell(0, shift) = matrix.cell(0, shift - 1);
+                }
+                matrix.cell(0, 0) = 0;
+            }
+        }
+        else if (line.tellg() != -1) {
+            std::stringstream problem;
+            problem << "Expected to see columns [" << (cStart + 1) << ".." << cStop << "]"
+                << " in row " << r << " of the distance matrix,"
+                << " but there were more distances.";
+            throw problem.str();
+        }
+        ++progress;
+    }
+    if (lower) {
+        size_t n = matrix.getSize();
+        for (size_t r = 0; r < n; ++r) {
+            for (size_t c = r + 1; c < n; ++c) {
+                matrix.cell(r, c) = matrix.cell(c, r);
+            }
+        }
+    }
+}
+
 template <class M> bool loadDistanceMatrixInto
-    (const std::string distanceMatrixFilePath, bool reportProgress, M& matrix) {
-        
-    #ifdef   USE_GZSTREAM
+    (const std::string distanceMatrixFilePath, bool reportProgress, M& matrix) {        
+    #if USE_GZSTREAM
     igzstream     in;
     #else
     std::ifstream in;
-    #endif
-        
-    size_t rank;
-    bool lower  = false;
-    bool upper  = false;
-    bool square = true;
+    #endif        
     try {
         in.exceptions(std::ios::failbit | std::ios::badbit);
         in.open(distanceMatrixFilePath.c_str(), std::ios_base::in);
-        std::stringstream first_line;
-        safeGetTrimmedLineAsStream(in, first_line);
-        first_line >> rank;
-        matrix.setSize(rank);
-        #ifdef USE_PROGRESS_DISPLAY
-        const char* taskDescription = reportProgress ? "Loading distance matrix" : "";
-        progress_display progress(rank, taskDescription, "loaded", "row");
-        #else
-        double progress = 0.0;
-        #endif
-        for (size_t r=0; r<matrix.getSize(); ++r) {
-            std::stringstream line;
-            safeGetTrimmedLineAsStream(in, line);
-            std::string name;
-            line >> name;
-            matrix.addCluster(name);
-            if (upper) {
-                //Copy column r from upper triangle (above the diagonal)
-                //to the left part of row r (which is in the lower triangle).
-                for (size_t c=0; c<r; ++c) {
-                    matrix.cell(r,c) = matrix.cell(c,r);
-                }
-                matrix.cell(r,r) = 0;
-            }
-            size_t cStart = (upper) ? (r+1) : 0;
-            size_t cStop  = (lower) ? r     : matrix.getSize();
-            size_t c = cStart;
-            for (; line.tellg()!=-1 && c<cStop; ++c) {
-                line >> matrix.cell(r,c);
-                //Ensure matrix is symmetric (as it is read!)
-                //Note: I'd rather throw if there's a disagreement!
-                //But I want backwards compatibility with BIONJ2009.
-                if (square && c<r && matrix.cell(r,c) != matrix.cell(c,r)) {
-                    //If loading from a square matrix file,
-                    //and in lower triangle, and the corresponding entry
-                    //in the upper triangle was different, average them both.
-                    typename M::cell_type v = ( matrix.cell(r,c) + matrix.cell(c,r) ) * (typename M::cell_type)0.5;
-                    matrix.cell(c,r) = v; //U-R
-                    matrix.cell(r,c) = v;
-                }
-            }
-            if (line.tellg()==-1 && c<cStop)
-            {
-                if (square && r==0 && c==0) {
-                    //Implied lower-triangle format
-                    square = false;
-                    lower  = true;
-                    
-                    #ifdef USE_PROGRESS_DISPLAY
-                    progress.hide();
-                    std::cout << "Input appears to be in lower-triangle format" << std::endl;
-                    progress.show();
-                    #endif
-                }
-                else if (square && r==0 && c+1==cStop) {
-                    //Implied upper-triangle format
-                    square = false;
-                    upper  = true;
-                    #ifdef USE_PROGRESS_DISPLAY
-                    progress.hide();
-                    std::cout << "Input appears to be in upper-triangle format" << std::endl;
-                    progress.show();
-                    #endif
-                    for (size_t shift=cStop-1; 0<shift; --shift) {
-                        matrix.cell(0,shift) = matrix.cell(0, shift-1);
-                    }
-                    matrix.cell(0,0)=0;
-                }
-            }
-            else if (line.tellg()!=-1) {
-                std::stringstream problem;
-                problem << "Expected to see columns [" << (cStart+1) << ".." << cStop << "]"
-                    << " in row " << r << " of the distance matrix,"
-                    << " but there were more distances.";
-                throw problem.str();
-            }
-            ++progress;
-        }
-        if (lower) {
-            size_t n = matrix.getSize();
-            for (size_t r=0; r<n; ++r) {
-                for (size_t c=r+1; c<n; ++c) {
-                    matrix.cell(r,c) = matrix.cell(c,r);
-                }
-            }
-        }
+        loadDistanceMatrixFromOpenFile(in, reportProgress, matrix);
         in.close();
+        return true;
     } catch (std::ios::failure &) {
         std::cerr << "Load matrix failed: IO error"
             << " reading file: " << distanceMatrixFilePath << std::endl;

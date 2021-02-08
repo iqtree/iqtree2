@@ -144,7 +144,7 @@ inline size_t conventionalHammingDistance(char unknown,
     return distance;
 }
 
-#if defined(CLANG_UNDER_VS) && !defined(_mm_popcnt_u64)
+#if (defined(CLANG_UNDER_VS) || defined(_MSC_VER)) && !defined(_mm_popcnt_u64)
 #   define _mm_popcnt_u64 __popcnt64
 #endif
 

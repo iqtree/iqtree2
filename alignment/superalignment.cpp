@@ -974,7 +974,7 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, 
     BoolVector isSequenceChecked(n, false);
     BoolVector isSequenceRemoved(n, false);
 
-    #ifdef USE_PROGRESS_DISPLAY
+    #if USE_PROGRESS_DISPLAY
     progress_display progress(n*2, isShowingProgressDisabled ? "" :  "Checking for duplicate sequences");
     #else
     double progress = 0.0;
@@ -1030,12 +1030,12 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, 
                 isSequenceRemoved[seq2] = true;
             } else {
                 if (listIdentical) {
-                    #ifdef USE_PROGRESS_DISPLAY
+                    #if USE_PROGRESS_DISPLAY
                     progress.hide();
                     #endif
                     cout << "NOTE: " << getSeqName(seq2) << " is identical to " << getSeqName(seq1)
                         << " but kept for subsequent analysis" << endl;
-                    #ifdef USE_PROGRESS_DISPLAY
+                    #if USE_PROGRESS_DISPLAY
                     progress.show();
                     #endif
                 }
@@ -1045,7 +1045,7 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, 
 		}
 		isSequenceChecked[seq1] = true;
 	}
-    #ifdef USE_PROGRESS_DISPLAY
+    #if USE_PROGRESS_DISPLAY
     progress.done();
     #endif
     

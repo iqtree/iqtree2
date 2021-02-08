@@ -30,7 +30,8 @@
 #include <string>  //for std::string
 #include <sstream> //for std::stringstream
 
-template <class S> S& safeGetLine(S& is, std::string& t)
+template <class S=std::istringstream> 
+S& safeGetLine(S& is, std::string& t)
 {
     t.clear();
 
@@ -63,7 +64,8 @@ template <class S> S& safeGetLine(S& is, std::string& t)
     }
 }
 
-template <class S> S& safeGetTrimmedLine(S& is, std::string& line) {
+template <class S=std::istringstream> 
+S& safeGetTrimmedLine(S& is, std::string& line) {
     safeGetLine(is, line);
     size_t start = 0;
     size_t stop  = line.length();
@@ -92,9 +94,10 @@ template <class S> S& safeGetTrimmedLine(S& is, std::string& line) {
     return is;
 }
 
-template <class S> S& safeGetTrimmedLineAsStream(S& is, std::stringstream& lineStream) {
+template <class S=std::istringstream> 
+S& safeGetTrimmedLineAsStream(S& is, std::stringstream& lineStream) {
     std::string lineString;
-    safeGetTrimmedLine(is, lineString);
+    safeGetTrimmedLine<S>(is, lineString);
     lineStream.str(lineString);
     return is;
 }

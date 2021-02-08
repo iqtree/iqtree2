@@ -1,5 +1,5 @@
 //
-//  progress.hpp
+//  progress.h
 //  alignment
 //
 //  Created by James Barbetti on 28/7/20.
@@ -8,8 +8,7 @@
 #ifndef progress_h
 #define progress_h
 
-#ifdef   USE_PROGRESS_DISPLAY
-
+#if USE_PROGRESS_DISPLAY
 
 #include <string>       //for std::string
 #include <fstream>      //for std::fstream
@@ -67,4 +66,4 @@ typedef double* progress_display_ptr;
 #endif
 
 
-#endif /* progress_hpp */
+#endif /* progress_h */

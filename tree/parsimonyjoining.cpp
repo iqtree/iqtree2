@@ -70,7 +70,7 @@ public:
         calculator.calculate(0, "Calculating leaf parsimony vectors");
     }
     virtual void calculateLeafParsimonyDistances() {
-        #ifdef USE_PROGRESS_DISPLAY
+        #if USE_PROGRESS_DISPLAY
         progress_display progress(row_count*(row_count-1)/2,
                                   "Constructing leaf-leaf parsimony distance matrix");
         #else
@@ -90,7 +90,7 @@ public:
             }
             progress += (row_count - r);
         }
-        #ifdef USE_PROGRESS_DISPLAY
+        #if USE_PROGRESS_DISPLAY
         progress.done();
         #endif
         

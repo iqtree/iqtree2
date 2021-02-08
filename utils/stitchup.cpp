@@ -241,7 +241,7 @@ template <class T=double> struct StitchupGraph {
     }
     void removeThroughThroughNodes() {
         //Removes any "through-through" interior nodes of degree 2.
-        #ifdef USE_PROGRESS_DISPLAY
+        #if USE_PROGRESS_DISPLAY
         const char* taskDescription = silent
             ? "" : "Removing degree-2 nodes from stitchup graph";
         progress_display progress ( stitches.size()*2,
@@ -299,7 +299,7 @@ template <class T=double> struct StitchupGraph {
             }
             ++progress;
         }
-        #ifdef USE_PROGRESS_DISPLAY
+        #if USE_PROGRESS_DISPLAY
         progress.done();
         #endif
     }
@@ -351,7 +351,7 @@ template <class T=double> struct StitchupGraph {
         bool success = false;
         std::string desc = "Writing STITCH tree to ";
         desc+=treeFilePath;
-        #ifdef USE_PROGRESS_DISPLAY
+        #if USE_PROGRESS_DISPLAY
         progress_display progress(stitches.size(), desc.c_str(), "wrote", "edge");
         #else
         double progress = 0.0;
@@ -372,7 +372,7 @@ template <class T=double> struct StitchupGraph {
             return false;
         }
         out.close();
-        #ifdef USE_PROGRESS_DISPLAY
+        #if USE_PROGRESS_DISPLAY
         progress.done();
         #endif
         return success;
@@ -410,14 +410,14 @@ template <class T=double> struct StitchupGraph {
     bool writeTreeFile(bool zipIt, int precision, 
                        const std::string &treeFilePath) const {
         if (treeFilePath == "STDOUT") {
-            #ifdef USE_PROGRESS_DISPLAY
+            #if USE_PROGRESS_DISPLAY
             progress_display progress(stitches.size(), "", "", "");
             #else
             double progress=0;
             #endif
             return writeTreeToOpenFile(precision, &progress, std::cout);
         } else if (zipIt) {
-            #ifdef USE_GZSTREAM
+            #if USE_GZSTREAM
             ogzstream     out;
             #else
             std::ofstream out;
@@ -489,7 +489,7 @@ public:
             heap ( stitches.data(), stitches.size()
                  , silent ? "" : "Constructing min-heap of possible edges" );
         size_t iterations = 0;
-        #ifdef USE_PROGRESS_DISPLAY
+        #if USE_PROGRESS_DISPLAY
         double row_count_triangle = 0.5*(double)row_count*(double)(row_count+1);
         const char* task_name = silent ? "" : "Assembling Stitch-up Graph";
         progress_display progress(row_count_triangle, task_name );
@@ -510,7 +510,7 @@ public:
             graph.staple(source, dest, shortest.length);
             progress += (join+1);
         }
-        #ifdef USE_PROGRESS_DISPLAY
+        #if USE_PROGRESS_DISPLAY
         progress.done();
         #endif
         graph.removeThroughThroughNodes();
@@ -582,7 +582,7 @@ public:
                  , silent ? "" : "Constructing min-heap of possible edges" );
         size_t iterations = 0;
         
-        #ifdef USE_PROGRESS_DISPLAY
+        #if USE_PROGRESS_DISPLAY
         const char* task_name = silent ? "" : "Assembling NTCJ Tree";
         progress_display progress(row_count_triangle, task_name );
         #else
@@ -624,7 +624,7 @@ public:
             progress += (taxon_count-row_count);
         }
         finishClustering();
-        #ifdef USE_DISPLAY_PROGRESS
+        #if USE_PROGRESS_DISPLAY
         progress.done();
         #endif
         return true;

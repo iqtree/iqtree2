@@ -560,7 +560,7 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
     }
     setParsimonyKernel(kernel);
     
-    #ifdef USE_PROGRESS_DISPLAY
+    #if USE_PROGRESS_DISPLAY
     bool noisy = !progress_display::getProgressDisplay();
     #else
     const bool noisy = false;
@@ -738,7 +738,7 @@ int IQTree::addTreeToCandidateSet(string treeString, double score, bool updateSt
 }
 
 void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
-    #ifdef USE_PROGRESS_DISPLAY
+    #if USE_PROGRESS_DISPLAY
         bool noisy = !progress_display::getProgressDisplay();
     #else
         const bool noisy = false;
@@ -3100,7 +3100,7 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI, const char* context) {
         if (save_all_trees == 2) {
             saveCurrentTree(curScore); // BQM: for new bootstrap
         }
-        #ifdef USE_PROGRESS_DISPLAY
+        #if USE_PROGRESS_DISPLAY
             bool noisy = !progress_display::getProgressDisplay();
         #else
             const bool noisy = false;
