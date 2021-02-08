@@ -2489,7 +2489,6 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         iqtree->candidateTrees.saveCheckpoint();
         /* do SPR with likelihood function */
         if (params.tree_spr) {
-            //tree.optimizeSPRBranches();
             cout << "Doing SPR Search" << endl;
             cout << "Start tree.optimizeSPR()" << endl;
             double spr_score = iqtree->optimizeSPR();

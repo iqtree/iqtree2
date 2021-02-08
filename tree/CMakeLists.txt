@@ -38,6 +38,7 @@ phylotreepars.cpp parsimonyjoining.cpp
 parsimonysearchparameters.h parsimonysearch.h
 parsimonymove.cpp parsimonymove.h
 parsimonynni.cpp parsimonyspr.cpp parsimonytbr.cpp
+likelihoodspr.cpp
 phylotreesse.cpp
 placement.cpp
 quartet.cpp

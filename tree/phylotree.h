@@ -93,7 +93,6 @@ const double TOL_LIKELIHOOD_PARAMOPT = 0.001; // BQM: newly introduced for Model
 #define SIMD_BITS 256
 #endif
 
-const int SPR_DEPTH = 2;
 
 //using namespace Eigen;
 
@@ -163,35 +162,6 @@ typedef std::map< int, PhyloNode* > IntPhyloNodeMap;
 #define MappedVecDyn(NSTATES) Map<Matrix<double, Dynamic, NSTATES> >
 */
 
-const int MAX_SPR_MOVES = 20;
-
-
-/**
-        an SPR move.
- */
-struct SPRMove {
-    PhyloNode* prune_node;
-    PhyloNode* prune_dad;
-    PhyloNode* regraft_node;
-    PhyloNode* regraft_dad;
-    double     score;
-    inline SPRMove(PhyloNode* pruneNode, PhyloNode* pruneDad,
-                   PhyloNode* graftDad,  PhyloNode* graftNode, double sprScore)
-        : prune_node(pruneNode),   prune_dad(pruneDad)
-        , regraft_node(graftNode), regraft_dad(graftDad)
-        , score(sprScore) {}
-};
-
-struct SPR_compare {
-    bool operator()(const SPRMove& s1, const SPRMove& s2) const {
-        return s1.score > s2.score;
-    }
-};
-
-class SPRMoves : public set<SPRMove, SPR_compare> {
-public:
-    void add(const SPRMove& move);
-};
 
 /*
 left_node-----------dad-----------right_node
@@ -334,6 +304,9 @@ public:
 // END traversal information
 // ********************************************
 
+struct SPRMove;
+class SPRMoves;
+        
 /**
 Phylogenetic Tree class
 
@@ -2114,39 +2087,36 @@ public:
     double optimizeSPR();
 
     /**
-            search by Subtree pruning and regrafting, then optimize branch lengths. Iterative until
-            no tree improvement found.
-            @return the likelihood of the tree
-     */
-    double optimizeSPRBranches();
-
-    /**
             search by Subtree pruning and regrafting at a current subtree
             @param cur_score current likelihood score
             @param node the current node
             @param dad dad of the node, used to direct the search
             @return the likelihood of the tree
      */
-    double optimizeSPR(double cur_score, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    double optimizeSPR(double cur_score, PhyloNode *node,
+                       PhyloNode *dad, SPRMoves& spr_moves);
 
     /**
      *  original implementation by Minh
      */
-    double optimizeSPR_old(double cur_score, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    double optimizeSPR_old(double cur_score, PhyloNode *node, PhyloNode *dad,
+                           class SPRMoves& spr_moves);
 
     /**
      *  original implementation by Minh
      */
     double swapSPR_old(double cur_score, int cur_depth, PhyloNode *node1, PhyloNode *dad1,
-            PhyloNode *orig_node1, PhyloNode *orig_node2,
-            PhyloNode *node2, PhyloNode *dad2, PhyloNeighborVec &spr_path);
+                       PhyloNode *orig_node1, PhyloNode *orig_node2,
+                       PhyloNode *node2, PhyloNode *dad2, PhyloNeighborVec &spr_path,
+                       SPRMoves& spr_moves);
 
     /**
             move the subtree (dad1-node1) to the branch (dad2-node2)
      */
     double swapSPR(double cur_score, int cur_depth, PhyloNode *node1, PhyloNode *dad1,
-            PhyloNode *orig_node1, PhyloNode *orig_node2,
-            PhyloNode *node2, PhyloNode *dad2, PhyloNeighborVec &spr_path);
+                   PhyloNode *orig_node1, PhyloNode *orig_node2,
+                   PhyloNode *node2, PhyloNode *dad2, PhyloNeighborVec &spr_path,
+                   SPRMoves& spr_moves);
 
     double assessSPRMove(double cur_score, const SPRMove &spr);
 
@@ -2637,11 +2607,6 @@ protected:
 
     /** current scaling factor for optimizeTreeLengthScaling() */
     double current_scaling;
-
-    /**
-            spr moves
-     */
-    SPRMoves spr_moves;
 
 
     /**
