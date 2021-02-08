@@ -64,8 +64,9 @@ private:
     progress_display_ptr progress;
     
 public:
-    gzstreambuf() : opened(0), compressed_length(0), compressed_position(0)
-                  , progress(nullptr), file(nullptr), mode(0) {
+    gzstreambuf() : file(nullptr), opened(0), mode(0)
+                  , compressed_length(0), compressed_position(0)
+                  , progress(nullptr) {
         setp( buffer, buffer + (bufferSize-1));
         setg( buffer + 4,     // beginning of putback area
               buffer + 4,     // read position
