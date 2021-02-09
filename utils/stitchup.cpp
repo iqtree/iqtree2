@@ -447,7 +447,7 @@ public:
     virtual void addCluster(const std::string &name) {
         graph.addLeaf(name);
     }
-    bool loadMatrixFromFile(const std::string &distanceMatrixFilePath) {
+    virtual bool loadMatrixFromFile(const std::string &distanceMatrixFilePath) {
         graph.clear();
         return loadDistanceMatrixInto(distanceMatrixFilePath, true, *this);
     }

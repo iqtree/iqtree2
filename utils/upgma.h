@@ -1,8 +1,77 @@
 //
 //  upgma.h
-//  iqtree
-//
+//  UPGMA_Matrix template class.
+//  Implementation of the UPGMA algorithm of Rober R. Sokal, and
+//  Charles D. Michener (1958), "Evaluating Systematic Relationships"
+//  (in the University of Kansas Science Bulletin).
+//  UPGMA is (slightly) simpler than NJ,BIONJ, and UNJ.
 //  Created by James Barbetti on 31/10/20.
+//
+//  UPGMA_Matrix extends SquareMatrix like so:
+//  1. It maintains a mapping between row numbers (the rows
+//     for clusters still being considered) and cluster numbers,
+//     in its rowToCluster member.  That's initialized in setSize().
+//  2. It keeps track of the clusters that have been created
+//     thus far, in its cluster member. Each single taxon is
+//     considered a cluster (and to begin with, row i corresponds
+//     to cluster i, for each of the rank rows in the V matrix).
+//     The first rank clusters are added to the vector in setSize().
+//  3. It keeps track of the best candidate "join" found looking
+//     at each row in the V matrix.  In a rowMinima vector.
+//  4. It defines a number of public member functions that are
+//     overridden in its subclasses:
+//     (a) loadMatrixFromFile
+//     (b) loadMatrix
+//     (c) constructTree
+//     (d) writeTreeFile
+//  5. It defines a number of protected member functions that are
+//     overridden in its subclasses:
+//     (a) getMinimumEntry() - identify the the row an column that
+//                             correspond to the next two clusters
+//                             to be joined.
+//     (b) getRowMinima()    - find, for each row in the matrix,
+//                             which column (corresponding to another
+//                             clusters) corresponds to the cluster
+//                             that is most "cheaply" joined with the
+//                             cluster corresponding to the row.
+//                             Write the answers in rowMinima.
+//     (c) getImbalance      - determine, for two clusters that might
+//                             be joined "how out of balance" the sizes
+//                             of the clusters are.  This is used for
+//                             tie-breaking, and to try to avoid
+//                             degenerate trees when many taxa are
+//                             identical.
+//     (d) cluster           - given two row/column numbers a and b
+//                             (where a is less), for rows that
+//                             correspond to clusters to be joined,
+//                             record that they have been joined,
+//                             calculate a new row for the joined
+//                             cluster, write that over the top of row a,
+//                             and remove row b via removeRowAndColumn
+//                             (which writes the content of the last row
+//                              in the matrix over the top of b, and then
+//                              removes the last row from the matrix).
+//     (e) finishClustering  - join up the last three clusters
+//
+//  Notes:
+//  A. rowMinima could be defined in constructTree() and passed
+//     down to getMinimumEntry() and rowMinima(), but declaring it as a
+//     member function of the class makes it easier to look at it in a
+//     debugger (and saves on some passing around of pointers between
+//     member functions).
+//  B. The convention is that column numbers are less than row numbers.
+//     (it is assumed that the matrix is symmetric around its diagonal).
+//  C. Rows are *swapped* (and the last row/column removed from the
+//     matrix, because this approach avoids keeping track of which rows
+//     or columns are "out of use") (all are in use, all the time!),
+//     and reduces the number of memory accesses by a factor of about 3
+//     because, asymptotically, the sum of the squares of the numbers
+//     up to N is N*(N+1)*(2*N+1)/6.  But the real benefit is avoiding the
+//     pipeline stalls that would result from mispredicted branches for
+//     *if* statements that would otherwise be required, for the checks
+//     whether a given row is in use.  Row processing is also more easily
+//     vectorized but, in terms of performance, that matters less
+//     (Vectorization is... x2 or so, avoiding the ifs is... x5 or more).
 //
 
 #ifndef upgma_h
@@ -10,8 +79,6 @@
 
 #include "distancematrix.h"          //for Matrix template class
 #include "clustertree.h"             //for ClusterTree template class
-                                     //rows of the S and I matrices
-                                     //See [SMP2011], section 2.5.
 #include <vector>                    //for std::vector
 #include <string>                    //sequence names stored as std::string
 #include "progress.h"                //for progress_display
@@ -31,9 +98,9 @@ namespace StartTree
 {
 template <class T=NJFloat> struct Position
 {
-    //A position (row, column) in an NJ matrix
-    //Note that column is always less than row.
-    //(Because that's the convention in RapidNJ).
+    //A position (row, column) in an UPGMA or NJ matrix
+    //Note that column should be strictly less than row.
+    //(Because that is the convention in RapidNJ).
 public:
     intptr_t row;
     intptr_t column;
@@ -97,12 +164,13 @@ public:
     virtual void addCluster(const std::string &name) {
         clusters.addCluster(name);
     }
-    bool loadMatrixFromFile(const std::string &distanceMatrixFilePath) {
+    virtual bool loadMatrixFromFile(const std::string &distanceMatrixFilePath) {
         bool rc = loadDistanceMatrixInto(distanceMatrixFilePath, true, *this);
         calculateRowTotals();
         return rc;
     }
-    virtual bool loadMatrix(const std::vector<std::string>& names, const double* matrix) {
+    virtual bool loadMatrix(const std::vector<std::string>& names,
+                            const double* matrix) {
         //Assumptions: 2 < names.size(), all names distinct
         //  matrix is symmetric, with matrix[row*names.size()+col]
         //  containing the distance between taxon row and taxon col.
