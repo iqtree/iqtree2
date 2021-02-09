@@ -3948,7 +3948,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 
     //NNIMove nniMoves[2];
     bool newNNIMoves = false;
-    if (nniMoves!=nullptr) {
+    if (nniMoves==nullptr) {
         //   Initialize the 2 NNI moves
         newNNIMoves = true;
         nniMoves = new NNIMove[2];
