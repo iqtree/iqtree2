@@ -156,8 +156,8 @@ public:
 
 
 
-typedef SubclassPointerVector<SuperNode,     PhyloNodeVector>  SuperNodeVector;
-typedef SubclassPointerVector<SuperNeighbor, PhyloNeighborVec> SuperNeighborVec;
+typedef SubclassPointerVector<SuperNode,     NodeVector>  SuperNodeVector;
+typedef SubclassPointerVector<SuperNeighbor, NeighborVec> SuperNeighborVec;
 
 class SuperBranch : public pair<SuperNode*, SuperNode*> {
 public:
