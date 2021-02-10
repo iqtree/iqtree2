@@ -232,7 +232,8 @@ double PhyloSuperTreePlen::optimizeAllBranches(int my_iterations, double toleran
                                           maxNRStep, were_lengths_consistent);
 }
 
-void PhyloSuperTreePlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH, int maxNRStep) {
+void PhyloSuperTreePlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2,
+                                           bool clearLH, int maxNRStep) {
 	if (rooted && (node1 == root || node2 == root))
 	{
 		return; // does not optimize virtual branch from root
@@ -255,10 +256,11 @@ void PhyloSuperTreePlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, b
         at(part)->tree_buffers.theta_computed = false;
 	}
 
-	//this->clearAllPartialLH();
 	PhyloTree::optimizeOneBranch(node1, node2, false, maxNRStep);
 
-    if (part_order.empty()) computePartitionOrder();
+    if (part_order.empty()) {
+        computePartitionOrder();
+    }
 	// bug fix: assign cur_score into part_info
 	int part_count = static_cast<int>(size());
     #ifdef _OPENMP
@@ -362,31 +364,34 @@ void PhyloSuperTreePlen::computeFuncDerv(double value, double &df_ret, double &d
 	SuperNeighbor *nei2 = (SuperNeighbor*)current_it->node->findNeighbor(current_it_back->node);
 	ASSERT(nei1 && nei2);
 
-    if (part_order.empty()) computePartitionOrder();
+    if (part_order.empty()) {
+        computePartitionOrder();
+    }
     #ifdef _OPENMP
     #pragma omp parallel for reduction(+: df, ddf) schedule(dynamic) if(num_threads > 1)
     #endif    
 	for (int partid = 0; partid < ntrees; partid++) {
         int part = part_order_by_nptn[partid];
-        double df_aux, ddf_aux;
         PhyloNeighbor *nei1_part = nei1->link_neighbors[part];
         PhyloNeighbor *nei2_part = nei2->link_neighbors[part];
         if (nei1_part && nei2_part) {
-            at(part)->current_it = nei1_part;
+            at(part)->current_it      = nei1_part;
             at(part)->current_it_back = nei2_part;
+            auto delta = lambda*part_info[part].part_rate;
             
-            nei1_part->length += lambda*part_info[part].part_rate;
-            nei2_part->length += lambda*part_info[part].part_rate;
+            nei1_part->length += delta;
+            nei2_part->length += delta;
             if(nei1_part->length<-1e-4) {
                 cout<<"lambda = "<<lambda<<endl;
                 cout<<"NEGATIVE BRANCH len = "<<nei1_part->length<<endl<<" rate = "<<part_info[part].part_rate<<endl;
                 ASSERT(0);
                 outError("shit!!   ",__func__);
             }
+            double df_aux, ddf_aux;
             at(part)->computeLikelihoodDerv(nei2_part, nei1_part->getNode(),
                                             &df_aux, &ddf_aux,
                                             tree_buffers);
-            df += part_info[part].part_rate*df_aux;
+            df  += part_info[part].part_rate*df_aux;
             ddf += part_info[part].part_rate*part_info[part].part_rate*ddf_aux;
         }
         else {
@@ -1476,25 +1481,33 @@ bool PhyloSuperTreePlen::checkBranchLen(){
 
 void PhyloSuperTreePlen::mapBranchLen()
 {
-	SuperNodeVector nodes1,nodes2;
-	int i;
-	getBranches(nodes1, nodes2);
-	double *checkVAL = new double[branchNum];
-	for(int part = 0; part < size(); part++){
-		memset(checkVAL,0,at(part)->branchNum*sizeof(double));
-		for (i = 0; i < nodes1.size(); i++){
-			if((nodes1[i]->findNeighbor(nodes2[i]))->link_neighbors[part])
-				checkVAL[(nodes1[i]->findNeighbor(nodes2[i]))->link_neighbors[part]->id] +=
-						nodes1[i]->findNeighbor(nodes2[i])->length * part_info[part].part_rate;
-		}
-		SuperNodeVector nodes1_sub, nodes2_sub;
-		at(part)->getBranches(nodes1_sub, nodes2_sub);
-		for(int j = 0; j<nodes1_sub.size();j++){
-			nodes1_sub[j]->findNeighbor(nodes2_sub[j])->length = checkVAL[nodes1_sub[j]->findNeighbor(nodes2_sub[j])->id];
-			nodes2_sub[j]->findNeighbor(nodes1_sub[j])->length = checkVAL[nodes1_sub[j]->findNeighbor(nodes2_sub[j])->id];
-		}
-	}
-	delete [] checkVAL;
+    SuperNodeVector nodes1,nodes2;
+    int i;
+    getBranches(nodes1, nodes2);
+    double *checkVAL = new double[branchNum];
+    for(int part = 0; part < size(); part++){
+        memset(checkVAL,0,at(part)->branchNum*sizeof(double));
+        for (i = 0; i < nodes1.size(); i++){
+            auto nei1 = nodes1[i]->findNeighbor(nodes2[i]);
+            if (nei1->link_neighbors[part]) {
+                checkVAL[(nei1)->link_neighbors[part]->id] +=
+                    nei1->length * part_info[part].part_rate;
+            }
+        }
+        PhyloNodeVector nodes1_sub, nodes2_sub;
+        at(part)->getBranches(nodes1_sub, nodes2_sub);
+        for(int j = 0; j<nodes1_sub.size();j++){
+            PhyloNode*     nodeA     = nodes1_sub[j];
+            PhyloNode*     nodeB     = nodes2_sub[j];
+            PhyloNeighbor* nei1      = nodeA->findNeighbor(nodeB);
+            int            branch_id = nei1->id;
+            nei1->length             = checkVAL[branch_id];
+            
+            PhyloNeighbor* nei2      = nodeB->findNeighbor(nodeA);
+            nei2->length             = checkVAL[branch_id];
+        }
+    }
+    delete [] checkVAL;
 }
 
 void PhyloSuperTreePlen::mapBranchLen(int part)
