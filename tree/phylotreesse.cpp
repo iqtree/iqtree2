@@ -236,11 +236,13 @@ void PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad,
 double PhyloTree::computeLikelihoodFromBuffer() {
     ASSERT(current_it && current_it_back);
     // TODO: buffer stuff for mixlen model
-    if (computeLikelihoodFromBufferPointer && optimize_by_newton)
+    if (computeLikelihoodFromBufferPointer
+        && optimize_by_newton
+        && tree_buffers.theta_computed)
         return (this->*computeLikelihoodFromBufferPointer)(tree_buffers);
     else {
-        return (this->*computeLikelihoodBranchPointer)(current_it, current_it_back->getNode(),
-                                                       tree_buffers);
+        return (this->*computeLikelihoodBranchPointer)
+               (current_it, current_it_back->getNode(), tree_buffers);
     }
 }
 
