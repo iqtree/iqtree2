@@ -3779,6 +3779,93 @@ void IQTree::summarizeBootstrap(SplitGraph &sg) {
     trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1, NULL, false); // do not sort taxa
 }
 
+void IQTree::computeRootstrap(StrVector &rooted_trees) {
+    ASSERT(rooted);
+    ASSERT(root->name == ROOT_NAME);
+    MTreeSet trees;
+    trees.init(rooted_trees, rooted);
+    
+    // convert each tree into a split graph
+    vector<SplitIntMap> ssvec;
+    ssvec.resize(trees.size());
+    vector<string> taxname;
+    int i;
+    for (i = 0; i < leafNum; i++)
+        taxname.push_back(convertIntToString(i));
+    for (i = 0; i < trees.size(); i++) {
+        ASSERT(trees[i]->rooted);
+        SplitGraph sg;
+        trees[i]->convertSplits(taxname, sg);
+        for (auto split : sg) {
+            Split *sp = new Split(*split);
+            ssvec[i].insertSplit(sp, 1.0);
+        }
+    }
+    BranchVector branches;
+    SplitGraph sg;
+    Split sp(leafNum);
+    convertSplits(sg, &sp, &branches);
+    // iterator over all branch and compute rootstrap supports
+    ASSERT(branches.size() == sg.getNSplits());
+    for (i = 0; i < branches.size(); i++) {
+        Branch branch = branches[i];
+        int rootstrap = 0;
+        if (branch.first != root && branch.second != root) {
+            /* non-root branch */
+            
+            // get the other split
+            Split other = *sg[i];
+            if (other.containTaxon(root->id))
+                other.removeTaxon(root->id);
+            else
+                other.addTaxon(root->id);
+            if (other.shouldInvert())
+                other.invert();
+            // count how often both splits occur in the tree set
+            for (auto splits : ssvec) {
+                if (splits.findSplit(sg[i]) && splits.findSplit(&other)) {
+                    rootstrap++;
+                }
+            }
+
+        } else {
+            /* root branch */
+            // make sure that first of pair is the root
+            if (branch.first != root) {
+                cout << "Root branch swapped" << endl;
+                auto tmp = branch.first;
+                branch.first = branch.second;
+                branch.second = tmp;
+            }
+            Split *split = sg[i];
+            ASSERT(split->countTaxa() == 1);
+            Split top = *split;
+            Split *left = nullptr, *right = nullptr;
+            // get the two branches from root
+            FOR_NEIGHBOR_IT(branch.second, branch.first, it) {
+                if (left == nullptr)
+                    left = _getSplit(branch.second, (*it)->node);
+                else
+                    right = _getSplit(branch.second, (*it)->node);
+            }
+            
+            // count how often both splits occur in the tree set
+            for (auto splits : ssvec) {
+                if (splits.findSplit(left) && splits.findSplit(right)) {
+                    rootstrap++;
+                }
+            }
+        }
+        
+        double rootstrap_dbl = (double)rootstrap*100.0 / trees.size();
+        //branch.first->findNeighbor(branch.second)->putAttr("rootstrap", rootstrap_dbl);
+        branch.second->findNeighbor(branch.first)->putAttr("rootstrap", rootstrap_dbl);
+    }
+    string filename = (string)params->out_prefix + ".rootstrap.nex";
+    printNexus(filename, WT_BR_LEN, "This file is best viewed in FigTree.");
+    cout << "Annotated tree (best viewed in FigTree) written to " << filename << endl;
+}
+
 void IQTree::pllConvertUFBootData2IQTree(){
     // duplication_counter
     duplication_counter = pllUFBootDataPtr->duplication_counter;

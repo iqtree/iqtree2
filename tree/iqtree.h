@@ -815,6 +815,11 @@ public:
     /** @return bootstrap correlation coefficient for assessing convergence */
     double computeBootstrapCorrelation();
 
+    /**
+        compute rootstrap supports for rooted tree, 2021-01-19 for Suha's paper
+     */
+    void computeRootstrap(StrVector &rooted_trees);
+    
     int getDelete() const;
     void setDelete(int _delete);
 

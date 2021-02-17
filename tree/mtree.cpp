@@ -1375,6 +1375,32 @@ void MTree::convertSplits(SplitGraph &sg, Split *resp, NodeVector *nodes, Node *
         resp->addTaxon(node->id);
 }
 
+void MTree::convertSplits(SplitGraph &sg, Split *resp, BranchVector *branches, Node *node, Node *dad) {
+    if (!node) node = root;
+    ASSERT(resp->getNTaxa() == leafNum);
+    bool has_child = false;
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        //vector<int> taxa;
+        //getTaxaID((*it)->node, node, taxa);
+
+        Split *sp = new Split(leafNum, (*it)->length);
+        convertSplits(sg, sp, branches, (*it)->node, node);
+        *resp += *sp;
+        if (sp->shouldInvert())
+            sp->invert();
+         /* ignore nodes with degree of 2 because such split will be added before */
+        if (node->degree() != 2) {
+            sg.push_back(sp);
+            if (branches) {
+                branches->push_back(make_pair(node, (*it)->node));
+            }
+        }
+        has_child = true;
+    }
+    if (!has_child)
+        resp->addTaxon(node->id);
+}
+
 void MTree::convertSplits(vector<string> &taxname, SplitGraph &sg, NodeVector *nodes, Node *node, Node *dad) {
     if (!sg.taxa) {
         sg.taxa = new NxsTaxaBlock();

@@ -866,6 +866,10 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
         if (!tree.isSuperTreeUnlinked())
             cout << "  Split support values:          " << params.out_prefix << ".splits.nex" << endl
              << "  Consensus tree:                " << params.out_prefix << ".contree" << endl;
+        if (tree.rooted) {
+            cout << "  ML tree with rootstrap:        " << params.out_prefix << ".rootstrap.nex" << endl;
+
+        }
         if (params.print_ufboot_trees)
         cout << "  UFBoot trees:                  " << params.out_prefix << ".ufboot" << endl;
 
@@ -2651,6 +2655,13 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     if (params.gbo_replicates && params.online_bootstrap && params.print_ufboot_trees)
         iqtree->writeUFBootTrees(params);
 
+    if (iqtree->rooted && params.gbo_replicates && params.online_bootstrap) {
+        cout << "Computing rootstrap supports..." << endl;
+        string saved = iqtree->getTreeString();
+        iqtree->computeRootstrap(iqtree->boot_trees);
+        iqtree->readTreeString(saved);
+    }
+    
     if (params.gbo_replicates && params.online_bootstrap && !iqtree->isSuperTreeUnlinked()) {
         
         cout << endl << "Computing " << RESAMPLE_NAME << " consensus tree..." << endl;
