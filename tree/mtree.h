@@ -519,7 +519,7 @@ public:
             @param nodes (OUT) vector of one end node of branch
             @param nodes2 (OUT) vector of the other end node of branch
      */
-    void getBranchesInIDOrder(NodeVector &nodes, NodeVector &nodes2);
+    void getBranchesInIDOrder(NodeVector &nodes, NodeVector &nodes2) const;
 
     /**
      get all descending branches below the node not further away from max_dist

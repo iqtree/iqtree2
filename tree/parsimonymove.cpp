@@ -24,6 +24,10 @@ intptr_t ParsimonyMove::getParsimonyVectorSize(intptr_t radius) {
     return 0;
 }
 
+intptr_t ParsimonyMove::getMinimumPathVectorCount() {
+    return 1;
+}
+
 bool ParsimonyMove::operator < (const ParsimonyMove& rhs) const {
     return benefit < rhs.benefit;
 }

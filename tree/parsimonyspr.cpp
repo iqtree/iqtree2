@@ -122,9 +122,9 @@ namespace {
             return 0;
         }
         virtual void initialize(intptr_t source_branch, bool beLazy) {
+            source_branch_id = source_branch;
             lazy             = beLazy;
             benefit          = -1.0;
-            source_branch_id = source_branch;
             target_branch_id = -1;
             isForward        = false;
             source_first     = nullptr;
@@ -195,9 +195,11 @@ namespace {
                 return isAConnectedThroughBToC(source.first, source.second, target.first, path);
             }
         }
-        virtual double recalculateBenefit(PhyloTree& tree, double parsimony_score,
-                                          TargetBranchRange& branches,
-                                          LikelihoodBlockPairs &blocks) const {
+        virtual double recalculateBenefit
+                       ( PhyloTree& tree, double parsimony_score,
+                         TargetBranchRange& branches,
+                         LikelihoodBlockPairs &blocks,
+                         std::vector< std::vector<UINT*> >& parsimony_path_vectors) const {
             TargetBranch& source = branches[source_branch_id];
             TargetBranch& target = branches[target_branch_id];
             source.computeState(tree, parsimony_score, source_branch_id, blocks);
@@ -216,8 +218,10 @@ namespace {
         //      made).
         //
         virtual double apply(PhyloTree& tree,
+                             double parsimony_score,
                              TargetBranchRange& branches,
-                             LikelihoodBlockPairs blocks) {
+                             LikelihoodBlockPairs blocks,
+                             std::vector< std::vector<UINT*> >& parsimony_path_vectors) {
             TargetBranch& source     = branches[source_branch_id];
             TargetBranch& target     = branches[target_branch_id];
             PhyloNode*    moved_node = isForward ? source.first : source.second;

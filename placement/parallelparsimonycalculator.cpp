@@ -56,10 +56,10 @@ double ParallelParsimonyCalculator::parsimonyLink4Cost(PhyloNode* a, PhyloNode* 
     std::vector<UINT*> inputs;
     PhyloNeighborVec neighbors;
     for (int i=0; i<4; ++i) {
-        PhyloBranch b (branches[i]);
-        ASSERT(b.first != nullptr && b.second != nullptr);
-        PhyloNeighbor* nei = b.first->findNeighbor(b.second);
-        computes += schedulePartialParsimony(nei, b.first);
+        PhyloBranch branch (branches[i]);
+        ASSERT(branch.first != nullptr && branch.second != nullptr);
+        PhyloNeighbor* nei = branch.first->findNeighbor(branch.second);
+        computes += schedulePartialParsimony(nei, branch.first);
         inputs.push_back(nei->get_partial_pars());
     }
     if (0<computes) {
@@ -73,6 +73,35 @@ double ParallelParsimonyCalculator::parsimonyLink4Cost(PhyloNode* a, PhyloNode* 
     score += branchCost;
     return score;
 }
+
+double ParallelParsimonyCalculator::parsimonyLink4CostOutOfTree
+       ( const PhyloTree& tree, PhyloNode* a, PhyloNode* b, PhyloNode* c,
+         PhyloNode* d, PhyloNode* e, PhyloNode* f,
+         UINT* buffer1, UINT* buffer2) {
+    std::vector<UINT*> inputs;
+    inputs.resize(4, nullptr);
+
+    FOR_EACH_ADJACENT_PHYLO_NODE(c, d, it, x) {
+        if      (x==a) inputs[0] = c->findNeighbor(a)->get_partial_pars();
+        else if (x==b) inputs[1] = c->findNeighbor(b)->get_partial_pars();
+        else if (x==e) inputs[2] = c->findNeighbor(e)->get_partial_pars();
+        else if (x==f) inputs[3] = c->findNeighbor(f)->get_partial_pars();
+    }
+    FOR_EACH_ADJACENT_PHYLO_NODE(d, c, it, x) {
+       if      (x==a) inputs[0] = d->findNeighbor(a)->get_partial_pars();
+       else if (x==b) inputs[1] = d->findNeighbor(b)->get_partial_pars();
+       else if (x==e) inputs[2] = d->findNeighbor(e)->get_partial_pars();
+       else if (x==f) inputs[3] = d->findNeighbor(f)->get_partial_pars();
+    }
+    double score = 0;
+    score += tree.computePartialParsimonyOutOfTree(inputs[0], inputs[1], buffer1);
+    score += tree.computePartialParsimonyOutOfTree(inputs[2], inputs[3], buffer2);
+    int branchCost;
+    tree.computeParsimonyOutOfTree(buffer1, buffer2, &branchCost);
+    score += branchCost;
+    return score;
+}
+
 
 int  ParallelParsimonyCalculator::computeParsimonyBranch
     ( PhyloNeighbor* dad_branch, PhyloNode* dad,

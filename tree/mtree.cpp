@@ -1205,7 +1205,7 @@ void MTree::getBranches(BranchVector& branches, Node *node, Node *dad, bool post
     }
 }
 
-void MTree::getBranchesInIDOrder(NodeVector& v1, NodeVector& v2) {
+void MTree::getBranchesInIDOrder(NodeVector& v1, NodeVector& v2) const {
     size_t branch_count = leafNum * 2 - 3;
     v1.resize(branch_count, nullptr);
     v2.resize(branch_count, nullptr);

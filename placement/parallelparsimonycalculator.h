@@ -105,6 +105,12 @@ public:
     double parsimonyLink4Cost(PhyloNode* a, PhyloNode* b, PhyloNode* c,
                               PhyloNode* d, PhyloNode* e, PhyloNode* f,
                               UINT* buffer1, UINT* buffer2);
+    
+    static double parsimonyLink4CostOutOfTree
+                  ( const PhyloTree& tree, PhyloNode* a, PhyloNode* b, PhyloNode* c,
+                    PhyloNode* d, PhyloNode* e, PhyloNode* f,
+                    UINT* buffer1, UINT* buffer2);
+    
 };
 
 

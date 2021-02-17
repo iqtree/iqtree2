@@ -1,6 +1,16 @@
 //
 //  parsimonymove.h
-//  Created by James Barbetti on 18/1/21.
+//  Describes a possible parsimony move (in practice, one
+//  found during parsimony SPR or parsimony TBR).
+//
+//  Created by James Barbetti on 18-Jan-2021.
+//
+//  Note: The reason that Parsimony NNI doesn't make use of
+//  the same "framework" is that I "factored" it out of the
+//  Parsimony SPR code, when I realized how much the Parsimony
+//  TBR code had in common with it.   If I had worked on SPR
+//  and TBR first, the parsimony NNI code would probably make
+//  use of ParsimonyMove too.  I might still retrofit.
 //
 
 #ifndef parsimonymove_h
@@ -35,9 +45,10 @@ public:
      
         This needs to be replaced in your implementation.  The version
         in ParsimonyMove will generate an assertion failure via ASSERT(0).
-     
      */
     static intptr_t getParsimonyVectorSize(intptr_t radius);
+
+    static intptr_t getMinimumPathVectorCount();
     
     /** set up to search for a partial tree rearrangement (or move),
         involving the specified brach
@@ -113,10 +124,12 @@ public:
      *
      * @return the net benefit of the move, if it were applied to the tree as it now is
      */
-    virtual double recalculateBenefit(PhyloTree& tree,
-                                      double tree_parsimony_score,
-                                      TargetBranchRange& branches,
-                                      LikelihoodBlockPairs &blocks) const = 0;
+    virtual double recalculateBenefit
+                   ( PhyloTree& tree,
+                     double tree_parsimony_score,
+                     TargetBranchRange& branches,
+                     LikelihoodBlockPairs &blocks,
+                     std::vector< std::vector<UINT*> >& parsimony_path_vectors) const = 0;
 
     /** Apply a move to the tree (updating branches to match), in such a way
      *  that calling apply() a second time, with the same parameters, immediately
@@ -134,8 +147,10 @@ public:
      *         take account of and update likelihood)
      */
     virtual double apply(PhyloTree& tree,
+                         double parsimony_score,
                          TargetBranchRange& branches,
-                         LikelihoodBlockPairs blocks) = 0;
+                         LikelihoodBlockPairs blocks,
+                         std::vector< std::vector<UINT*> >& parsimony_path_vectors) = 0;
 
     /** Indicates whether a move can be applied (returns the true/false opposite
      *  of isStillPossible().

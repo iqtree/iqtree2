@@ -147,9 +147,11 @@ public:
         }
         return true;
     }
-    virtual double recalculateBenefit(PhyloTree& tree, double parsimony_score,
-                                      TargetBranchRange& branches,
-                                      LikelihoodBlockPairs &blocks) const {
+    virtual double recalculateBenefit
+                   ( PhyloTree& tree, double parsimony_score,
+                     TargetBranchRange& branches,
+                     LikelihoodBlockPairs &blocks,
+                     std::vector< std::vector<UINT*> >& parsimony_path_vectors) const {
         
         auto t1 = branches[first_target_branch_id];
         auto t2 = branches[second_target_branch_id];
@@ -322,8 +324,10 @@ public:
     }
     
     virtual double apply(PhyloTree& tree,
+                         double parsimony_score,
                          TargetBranchRange& branches,
-                         LikelihoodBlockPairs blocks) {
+                         LikelihoodBlockPairs blocks,
+                         std::vector< std::vector<UINT*> >& parsimony_path_vectors) {
         //
         //Apply a TBR move (letters are indicative):
         //  A   B  G-H       A-B G   H

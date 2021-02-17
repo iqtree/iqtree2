@@ -192,7 +192,8 @@ class PhyloNeighbor : public Neighbor {
     friend class PlacementTraversalInfo;
     friend class ParsimonyMatrix;
     friend class NNIContext;
-
+    friend class ParsimonyNNIMove;
+    
 public:
     friend class TinaTree;
     friend class PhyloSuperTreePlen;

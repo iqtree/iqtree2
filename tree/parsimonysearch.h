@@ -64,8 +64,11 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
     
     PhyloTreeThreadingContext context(*this, params->parsimony_uses_max_threads);
     std::vector< std::vector<UINT*> > per_thread_path_parsimony;
-    intptr_t pv_per_thread = Move::getParsimonyVectorSize(s.radius);
-    intptr_t path_overhead = num_threads * pv_per_thread;
+    intptr_t pv_per_thread    = Move::getParsimonyVectorSize(s.radius);
+    intptr_t min_thread_count = Move::getMinimumPathVectorCount();
+    intptr_t num_path_vectors = (num_threads < min_thread_count)
+                              ? min_thread_count : num_threads;
+    intptr_t path_overhead    = num_path_vectors * pv_per_thread;
         
     deleteAllPartialLhAndParsimony();
     initializeTree(); //to ensure all branches are properly numbered
@@ -88,9 +91,9 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
     //modified parsimony scores along the path between the
     //pruning and regrafting points.
     per_thread_path_parsimony.resize(num_threads);
-    for (int thread=0; thread<num_threads; ++thread) {
+    for (int vector=0; vector<num_path_vectors; ++vector) {
         block_allocator.allocateVectorOfParsimonyBlocks
-        (pv_per_thread, per_thread_path_parsimony[thread]);
+        (pv_per_thread, per_thread_path_parsimony[vector]);
     }
         
     initializing.stop();
@@ -197,7 +200,8 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
             double benefit = move.getBenefit();
             if (s.lazy_mode) {
                 benefit = move.recalculateBenefit(*this, parsimony_score,
-                                                  targets, dummyBlocks) ;
+                                                  targets, dummyBlocks,
+                                                  per_thread_path_parsimony) ;
                 if ( benefit <= 0) {
                     LOG_LINE(VB_DEBUG, "Best move for branch " << move.source_branch_id
                              << " is no probably longer beneficial"
@@ -226,7 +230,9 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
                      << " with original benefit " << move.getBenefit()
                      << " and current benefit " << benefit
                      << move.getDescription());
-            double revised_score = move.apply(*this, targets, dummyBlocks);
+            double revised_score = move.apply(*this, parsimony_score,
+                                              targets, dummyBlocks,
+                                              per_thread_path_parsimony);
             if (parsimony_score <= revised_score) {
                 const char* same_or_worse = (parsimony_score < revised_score)
                     ? " a worse " : " the same ";
@@ -235,7 +241,9 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
                          << " (" << revised_score << ")");
                 //ParsimonyMove::apply() is its own inverse.  Calling it again
                 //with the same parameters, reverses what it did.
-                double reverted_score = move.apply(*this, targets, dummyBlocks);
+                double reverted_score = move.apply(*this, parsimony_score,
+                                                   targets, dummyBlocks,
+                                                   per_thread_path_parsimony);
                 ASSERT( reverted_score == parsimony_score );
             } else {
                 parsimony_score = revised_score;
@@ -253,7 +261,7 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
     initializing.stop();
     
     rescoring.start();
-    parsimony_score = computeParsimony();
+    parsimony_score = computeParsimony("Determining one-way parsimony", false, true);
     rescoring.stop();
     
     LOG_LINE(VB_MIN, "Applied " << moves_applied << " move"

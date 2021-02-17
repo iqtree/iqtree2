@@ -53,7 +53,7 @@ public:
     bool   hasBackwardBenefit;
     double backwardBenefit;
     BenefitPair(): hasForwardBenefit(false),  forwardBenefit(0)
-              , hasBackwardBenefit(false), backwardBenefit(0) {}
+                 , hasBackwardBenefit(false), backwardBenefit(0) {}
 };
 
 class TargetBranch : public std::pair<PhyloNode*, PhyloNode*> {
@@ -71,6 +71,7 @@ class TargetBranch : public std::pair<PhyloNode*, PhyloNode*> {
     bool            used;
     ReplacementBranchList* replacements;
     friend class TargetBranchRef;
+    friend class TargetBranchRange;
 public:
     typedef std::pair<PhyloNode*, PhyloNode*> super;
     TargetBranch();
@@ -164,6 +165,7 @@ public:
                               LikelihoodBlockPairs& blocks,
                               PhyloNode* node1, PhyloNode* node2,
                               bool likelihood_wanted);
+    void reload(const PhyloTree& phylo_tree);
 };
 
 #endif /* targetbranch_h */

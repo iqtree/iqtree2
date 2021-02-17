@@ -289,6 +289,25 @@ void TargetBranchRange::removeUsed() {
     resize(w);
 }
 
+void TargetBranchRange::reload(const PhyloTree& phylo_tree) {
+    PhyloNodeVector first_node;
+    PhyloNodeVector second_node;
+    phylo_tree.getBranchesInIDOrder(first_node, second_node);
+    size_t branch_count = first_node.size();
+    resize(branch_count);
+    for (int b=0; b<branch_count; ++b) {
+        TargetBranch& tb(at(b));
+        tb.first  = first_node[b];
+        tb.second = second_node[b];
+        tb.connection_cost = 0;
+        tb.branch_cost = 0;
+        tb.used = false;
+        if (tb.replacements!=nullptr) {
+            delete tb.replacements;
+        }
+    }
+}
+
 TargetBranchRef::TargetBranchRef(): target_range(nullptr), target_index(0) {}
 
 TargetBranchRef::TargetBranchRef(const TargetBranchRef& r)
