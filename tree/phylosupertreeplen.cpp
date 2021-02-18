@@ -124,19 +124,18 @@ void PhyloSuperTreePlen::deleteAllPartialLh() {
 
 PhyloSuperTreePlen::~PhyloSuperTreePlen()
 {
-	for (iterator it = begin(); it != end(); it++) {
-		// reset these pointers so that they are not deleted
-		(*it)->central_partial_lh = NULL;
-		(*it)->central_scale_num = NULL;
-//		(*it)->central_partial_pars = NULL;
+    for (iterator it = begin(); it != end(); it++) {
+        // reset these pointers so that they are not deleted
+        (*it)->central_partial_lh   = nullptr;
+        (*it)->central_scale_num    = nullptr;
         (*it)->tree_buffers.forget();
-		(*it)->ptn_freq = NULL;
-		(*it)->ptn_freq_computed = false;
-        (*it)->ptn_freq_pars = NULL;
-		(*it)->ptn_invar = NULL;
-        (*it)->nni_partial_lh = NULL;
-        (*it)->nni_scale_num = NULL;
-	}
+        (*it)->ptn_freq             = nullptr;
+        (*it)->ptn_freq_computed    = false;
+        (*it)->ptn_freq_pars        = nullptr;
+        (*it)->ptn_invar            = nullptr;
+        (*it)->nni_partial_lh       = nullptr;
+        (*it)->nni_scale_num        = nullptr;
+    }
 }
 
 void PhyloSuperTreePlen::saveCheckpoint() {
@@ -346,18 +345,16 @@ double PhyloSuperTreePlen::computeLikelihoodFromBuffer() {
 	return score;
 }
 
-void PhyloSuperTreePlen::computeFuncDerv(double value, double &df_ret, double &ddf_ret) {
-//	double tree_lh = 0.0;
-	double df = 0.0;
-	double ddf = 0.0;
-
-	int ntrees = static_cast<int>(size());
-
+void PhyloSuperTreePlen::computeFuncDerv(double value, double &df_ret,
+                                         double &ddf_ret) {
+	double df     = 0.0;
+	double ddf    = 0.0;
+	int    ntrees = static_cast<int>(size());
+	double lambda = value-current_it->length;
     if (!central_partial_lh) {
         initializeAllPartialLh();
     }
-	double lambda = value-current_it->length;
-	current_it->length = value;
+	current_it->length      = value;
     current_it_back->length = value;
 
 	SuperNeighbor *nei1 = (SuperNeighbor*)current_it_back->node->findNeighbor(current_it->node);
@@ -380,13 +377,25 @@ void PhyloSuperTreePlen::computeFuncDerv(double value, double &df_ret, double &d
             auto delta = lambda*part_info[part].part_rate;
             
             nei1_part->length += delta;
-            nei2_part->length += delta;
             if(nei1_part->length<-1e-4) {
-                cout<<"lambda = "<<lambda<<endl;
-                cout<<"NEGATIVE BRANCH len = "<<nei1_part->length<<endl<<" rate = "<<part_info[part].part_rate<<endl;
-                ASSERT(0);
-                outError("shit!!   ",__func__);
+                std::stringstream complaint;
+                LOG_LINE(VB_MED, "Problem: value " << value
+                         << " lambda = " << lambda << endl
+                         << "NEGATIVE BRANCH len = " << nei1_part->length
+                         << " rate = "<<part_info[part].part_rate);
+                nei1_part->length = 0;
             }
+            
+            nei2_part->length += delta;
+            if(nei2_part->length<-1e-4) {
+                std::stringstream complaint;
+                LOG_LINE(VB_MED, "Problem: value " << value
+                         << " lambda = " << lambda << endl
+                         << "NEGATIVE BRANCH len = " << nei2_part->length
+                         << " rate = "<<part_info[part].part_rate);
+                nei2_part->length = 0;
+            }
+            
             double df_aux, ddf_aux;
             at(part)->computeLikelihoodDerv(nei2_part, nei1_part->getNode(),
                                             &df_aux, &ddf_aux,
@@ -809,7 +818,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 				*sub_saved_it[part * 6 + id] = newNei;
                 if (saved_nei[id]->link_neighbors[part]->partial_lh) {					
                     newNei->partial_lh = nni_partial_lh + (mem_id*total_block_size + lh_addr);
-                    newNei->scale_num = nni_scale_num + (mem_id*total_scale_block_size + scale_addr);
+                    newNei->scale_num  = nni_scale_num  + (mem_id*total_scale_block_size + scale_addr);
                     mem_id++;
                 }
 				// update link_neighbor[part]: for New SuperNeighbor we set the corresponding new PhyloNeighbor on partition part
@@ -1690,12 +1699,12 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
 
 //    size_t IT_NUM = (params->nni5) ? 6 : 2;
     size_t IT_NUM = 2;
-    if (!nni_partial_lh) {
+    if ( nni_partial_lh == nullptr ) {
         nni_partial_lh = aligned_alloc<double>(IT_NUM*total_block_size);
     }
     at(part_order[0])->nni_partial_lh = nni_partial_lh;
     
-    if (!nni_scale_num) {
+    if ( nni_scale_num == nullptr ) {
         nni_scale_num = aligned_alloc<UBYTE>(IT_NUM*total_scale_block_size);
     }
     at(part_order[0])->nni_scale_num = nni_scale_num;
@@ -1712,12 +1721,12 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
         (*it)->tree_buffers.theta_borrowed   = true;
         (*it)->tree_buffers.borrowScaleAll((*prev_it)->tree_buffers.buffer_scale_all + mem_size[part], mem_size[here]);
         (*it)->tree_buffers.borrowPartialLh((*prev_it)->tree_buffers.buffer_partial_lh + buffer_size[part], buffer_size[here]);
-		(*it)->ptn_freq = (*prev_it)->ptn_freq + mem_size[part];
-        (*it)->ptn_freq_pars = (*prev_it)->ptn_freq_pars + mem_size[part];
+		(*it)->ptn_freq       = (*prev_it)->ptn_freq + mem_size[part];
+        (*it)->ptn_freq_pars  = (*prev_it)->ptn_freq_pars + mem_size[part];
 		(*it)->ptn_freq_computed = false;
-		(*it)->ptn_invar = (*prev_it)->ptn_invar + mem_size[part];
+		(*it)->ptn_invar      = (*prev_it)->ptn_invar + mem_size[part];
         (*it)->nni_partial_lh = (*prev_it)->nni_partial_lh + IT_NUM*block_size[part];
-        (*it)->nni_scale_num = (*prev_it)->nni_scale_num + IT_NUM*scale_block_size[part];
+        (*it)->nni_scale_num  = (*prev_it)->nni_scale_num + IT_NUM*scale_block_size[part];
 	}
 
 	// compute total memory for all partitions

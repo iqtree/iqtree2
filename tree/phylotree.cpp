@@ -1448,7 +1448,7 @@ void PhyloTree::initializeAllPartialPars(int &index, PhyloNode *node, PhyloNode 
         PhyloNeighbor* nei     = dad->findNeighbor(node);
         nei->partial_pars      = central_partial_pars + ((index + 1) * pars_block_size);
         index                 += 2;
-        ASSERT( nei->partial_pars < tip_partial_pars );
+        ASSERT( tip_partial_pars==nullptr || nei->partial_pars < tip_partial_pars );
     }
     FOR_EACH_ADJACENT_PHYLO_NODE(node, dad, it, child) {
         initializeAllPartialPars(index, child, node);
@@ -1800,13 +1800,16 @@ void PhyloTree::determineBlockSizes() {
     size_t mod_states = (model==nullptr) ? aln->num_states : model->num_states;
     lh_block_size     = scale_block_size * mod_states;
 
-    if (old_scale_block_size < scale_block_size && this->central_scale_num != nullptr) {
+    if (0 < old_scale_block_size && old_scale_block_size < scale_block_size
+        && this->central_scale_num != nullptr) {
         deleteAllPartialLh();
     }
-    else if (old_lh_block_size < lh_block_size && this->central_partial_lh != nullptr) {
+    else if (0 < old_lh_block_size && old_lh_block_size < lh_block_size
+             && this->central_partial_lh != nullptr) {
         deleteAllPartialLh();
     }
-    if (old_pars_block_size < pars_block_size && this->central_partial_pars != nullptr) {
+    if (0 < old_pars_block_size && old_pars_block_size < pars_block_size
+        && this->central_partial_pars != nullptr) {
         deleteAllPartialParsimony();
     }
 }
@@ -4690,12 +4693,9 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
     context.restore();
 
     LOG_LINE(VB_MAX, "NNI scores were " << nniMoves[0].newloglh << " and " << nniMoves[1].newloglh);
-    NNIMove res;
-    if (nniMoves[0].newloglh > nniMoves[1].newloglh) {
-        res = nniMoves[0];
-    } else {
-        res = nniMoves[1];
-    }
+    
+    bool     takeFirst = nniMoves[0].newloglh > nniMoves[1].newloglh;
+    NNIMove& res       = nniMoves[ takeFirst ? 0 : 1 ];
     LOG_LINE(VB_MAX, "  Node1<->Node2 branch has id " << res.node1->findNeighbor(res.node2)->id << ", new len " << res.newLen);
     LOG_LINE(VB_MAX, "  Swapped branch 1 has id " << (*res.node1Nei_it)->id << " and length " << (*res.node1Nei_it)->length);
     LOG_LINE(VB_MAX, "  Swapped branch 2 has id " << (*res.node2Nei_it)->id << " and length " << (*res.node2Nei_it)->length);
