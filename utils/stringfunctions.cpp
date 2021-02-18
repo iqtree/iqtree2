@@ -308,6 +308,13 @@ std::string string_to_lower(const char* input) {
     return answer;
 }
 
+std::string string_to_upper(const std::string& input_string) {
+    std::string answer = input_string;
+    std::transform(answer.begin(), answer.end(), answer.begin(),
+                   []( char c){ return std::toupper(c); });
+    return answer;
+}
+
 std::string string_to_upper(const char* input) {
     std::string answer = input;
     std::transform(answer.begin(), answer.end(), answer.begin(),

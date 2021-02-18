@@ -143,6 +143,8 @@ bool iEquals(const std::string& a, const std::string& b);
 
 std::string string_to_lower(const char* input); //was only in tools.cpp
 
+std::string string_to_upper(const std::string& input_string); //added 18-Feb-2021
+
 std::string string_to_upper(const char* input); //was only in tools.cpp
 
 std::string next_argument(int argc, char* argv[],
