@@ -3960,6 +3960,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 }
                 params.min_iterations = 0;
                 params.stop_condition = SC_FIXED_ITERATION;
+                continue;
             }
                 
             if (strcmp(argv[cnt], "-g") == 0) {
