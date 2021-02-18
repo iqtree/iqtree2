@@ -8,7 +8,7 @@
 // Each instance of PhyloTree has its own LikelihoodBufferSet (tree_buffers),
 // (and that is what is used, most of the time).
 //
-// But, during likelihod placement, likelihoodfs for many possible candidate
+// But, during likelihod placement, likelihoods for many possible candidate
 // subtrees (that differ only in one leaf and one interior node), potentially
 // connected to the tree at the same point, are calculated, possibly in parallel.
 // Each such calculation (for a different potential subtree) needs its own
@@ -17,8 +17,9 @@
 // See in particular, LikelihoodCostCalculator::assessPlacementCost,
 // in placement/placementcostcalculator.cpp.
 //
-//
-// Created by James Barbetti on 9/10/20.
+// Created by James Barbetti on 09-Oct-2020.
+// (but the members of this class were all members of
+//  the PhyloTree class, defined in phylotree.h, until then)
 //
 
 #ifndef likelihoodbufferset_h
