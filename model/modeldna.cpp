@@ -37,18 +37,16 @@ namespace {
         public: const char* from, *to;
     } dna_model_aliases [] =
     {
-        { "JC69",  "JC" },   { "K80",    "K2P"   }, { "HKY85",  "HKY"   },
-        { "K81",   "K3P" },  { "TPM1",   "K3P"   },
-        { "K81UF", "K3Pu" }, { "K81U",   "K3Pu"  }, { "K3PU",   "K3Pu"  },
-        { "K3PUF", "K3Pu" }, { "TPM1UF", "K3Pu"  }, { "TPM1U",  "K3Pu"  },
-        { "TRN",   "TN" },   { "TN93",   "TN"    },
-        { "TNEF",  "TNe" },  { "TRNEF",  "TNe"   }, { "TNE",    "TNe"   },
-        { "TRNE",  "TNe" },  { "TPM2U",  "TPM2u" }, { "TPM2UF", "TPM2u" },
-        { "TPM3U", "TPM3u"}, { "TPM3UF", "TPM3u" }, { "TIM1",   "TIM"   },
-        { "TIMEF", "TIMe" }, { "TIME",   "TIMe"  }, { "TIM1EF", "TIMe"  },
-        { "TIM1E", "TIMe" }, { "TIM2EF", "TIM2e" }, { "TIM2E",  "TIM2e" },
-        { "TIM3EF","TIM3e"}, { "TIM3E",  "TIM3e" },
-        { "TVMEF", "TVMe" }, { "TVME",   "TVMe" },  { "REV",    "GTR"   },
+        { "JC69",   "JC" },    { "K80",    "K2P"   }, { "HKY85",  "HKY"   },
+        { "K81",    "K3P" },   { "TPM1",   "K3P"   },
+        { "K81UF",  "K3PU" },  { "K81U",   "K3PU"  }, { "K3PUF",  "K3PU"  },
+        { "TPM1UF", "K3PU"  }, { "TPM1U",  "K3PU"  },
+        { "TRN",    "TN" },    { "TN93",   "TN"    },
+        { "TNEF",   "TNE" },   { "TRNEF",  "TNE"   }, { "TRNE",   "TNE"   },
+        { "TPM2UF", "TPM2U" }, { "TPM3UF", "TPM3U" }, { "TIM1",   "TIM"   },
+        { "TIMEF",  "TIME" },  { "TIM1EF", "TIME"  }, { "TIM1E",  "TIME"  },
+        { "TIM2EF", "TIM2E" }, { "TIM3EF", "TIM3E" },
+        { "TVMEF",  "TVME" },  { "REV",    "GTR"   },
     };
     const struct freq_lookup  {
     public: const char* name;
@@ -83,12 +81,10 @@ namespace {
 };
 
 string getDNAModelInfo(string model_name, string &full_name, string &rate_type, StateFreqType &def_freq) {
-    string name_upper = model_name;
-    for (string::iterator it = name_upper.begin(); it != name_upper.end(); it++)
-        (*it) = toupper(*it);
-    string name = model_name;
-    full_name = name;
-    rate_type = "";
+    string name_upper = string_to_upper(model_name);
+    string name       = model_name;
+    full_name         = name;
+    rate_type         = "";
     def_freq = FREQ_UNKNOWN;
     
     std::string search = name_upper;
@@ -102,8 +98,8 @@ string getDNAModelInfo(string model_name, string &full_name, string &rate_type, 
     rate_type = "";
     full_name = "";
     for (int i=0; i<sizeof(dna_model_lookups)/sizeof(dna_model_lookups[0]); ++i) {
-        std::string found = string_to_upper(dna_model_lookups[i].name);
-        if (found == search) {
+        std::string this_one = string_to_upper(dna_model_lookups[i].name);
+        if (this_one == search) {
             name      = dna_model_lookups[i].name;
             rate_type = dna_model_lookups[i].rate_type;
             def_freq  = dna_model_lookups[i].def_freq;
