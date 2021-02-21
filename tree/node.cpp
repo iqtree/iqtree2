@@ -183,15 +183,21 @@ double Node::longestPath2(Node* &node1, Node* &node2) {
 }
 
 Neighbor *Node::findNeighbor(Node *node) {
+    if (node==nullptr) {
+        cout << "ERROR : Could not find null neighbor of node " << node->id << endl;
+        ASSERT(0);
+        return nullptr;
+    }
 	int size = static_cast<int>(neighbors.size());
     for (int i = 0; i < size; i++) {
         if (neighbors[i]->node == node) {
             return neighbors[i];
         }
     }
-    cout << "ERROR : Could not find neighbors of node " << node->id << endl;
+    cout << "ERROR : Could not find node " << node->id
+         << " as a neighbor of node " << id << endl;
     ASSERT(0);
-    return NULL;
+    return nullptr;
 }
 
 Neighbor *Node::firstNeighbor() const {
