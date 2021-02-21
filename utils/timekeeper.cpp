@@ -8,6 +8,8 @@
 #include "timekeeper.h"
 #include "timeutil.h"    //for getRealTime() and getCPUTime()
 #include <iostream>
+#include <math.h>        //for floor()
+#include <sstream>       //for std::stringstream
 
 TimeKeeper::TimeKeeper(const char* activity_name)
     : activity(activity_name)
@@ -30,9 +32,15 @@ void TimeKeeper::stop()   const {
 }
 
 void TimeKeeper::report() const {
+    std::stringstream percent;
+    if (0<elapsed_wallclock_time) {
+        percent.precision(4);
+        percent << "(" << floor(elapsed_cpu_time * 100.0 / elapsed_wallclock_time + .5)
+                << "%)";
+    }
     std::cout << activity << " took " << elapsed_wallclock_time
         << " seconds of wall-clock time and " << elapsed_cpu_time
-        << " seconds of CPU time" << std::endl;
+        << " seconds of CPU time" << percent.str() << "." << std::endl;
 }
 
 TimeKeeper::~TimeKeeper() = default;
