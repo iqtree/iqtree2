@@ -531,8 +531,11 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
         //cout << "NOTE: Identified " << removed_seqs.size()
         //  << " sequences as duplicates." << endl;
         if (verbose_mode >= VB_MED) {
-            cout << "Removing " << removed_seqs.size() << " duplicated sequences took "
-            << (getRealTime() - removeDupeStart) << " sec." << endl;
+            std::stringstream msg;
+            msg.precision(4);
+            msg << "Removing " << removed_seqs.size() << " duplicated sequences took "
+                << (getRealTime() - removeDupeStart) << " sec.";
+            std::cout << msg.str() << std::endl;
         }
         return aln;
     } else return this;
@@ -3290,9 +3293,12 @@ void Alignment::printAlignment(InputType format, ostream &out, const char* file_
             ASSERT(0 && "Unsupported alignment output format");
     }
     if (verbose_mode >= VB_MED) {
-        std::cout << "Printing alignment to " << formatName << " file "
+        std::stringstream msg;
+        msg.precision(4);
+        msg << "Printing alignment to " << formatName << " file "
             << file_name << " took " << (getRealTime()-printStart)
-            << " sec" << std::endl;
+            << " sec";
+        std::cout << msg.str() << std::endl;
     }
 }
 
