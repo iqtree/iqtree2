@@ -600,6 +600,11 @@ int PhyloTree::setParsimonyBranchLengths() {
         fixOneNegativeBranch(branch_length, dad_branch, dad);
         sum_score += subst;
     }
+    if (pars_score!=sum_score) {
+        hideProgress();
+        LOG_LINE(VB_MIN, "pars_score " << pars_score << " but sum_score " << sum_score);
+        showProgress();
+    }
     ASSERT(pars_score == sum_score);
     return static_cast<int>(nodes1.size());
 }
@@ -1160,38 +1165,39 @@ int PhyloTree::computeParsimonyOutOfTreeSankoff(const UINT* dad_partial_pars,
  Stepwise addition (greedy) by maximum parsimony
  ****************************************************************************/
 
-// random generator function:
-//ptrdiff_t myrandom(ptrdiff_t i) {
-//    return random_int(i);
-//}
-
-// pointer object to it:
-//ptrdiff_t (*p_myrandom)(ptrdiff_t) = myrandom;
-
-void PhyloTree::create3TaxonTree(IntVector &taxon_order, int *rand_stream) {
-    freeNode();
+void PhyloTree::randomizeTaxonOrder(int* rand_stream,
+                                    IntVector& taxon_order) {
     int nseq = aln->getNSeq32();
     taxon_order.resize(nseq);
     for (int i = 0; i < nseq; ++i) {
         taxon_order[i] = static_cast<int>(i);
     }
     // randomize the addition order
-    my_random_shuffle(taxon_order.begin(), taxon_order.end(), rand_stream);
-    
-    root = newNode(nseq);
-    
+    my_random_shuffle(taxon_order.begin(), taxon_order.end(),
+                      rand_stream);
+}
+
+void PhyloTree::create3TaxonTree(IntVector &taxon_order,
+                                 int *rand_stream) {
+    freeNode();
+    randomizeTaxonOrder(rand_stream, taxon_order);
+    root = newNode(aln->getNSeq32());
+
     // create star tree
     for (leafNum = 0; leafNum < 3; ++leafNum) {
-        if (leafNum < 3 && verbose_mode >= VB_MAX)
-            cout << "Add " << aln->getSeqName(taxon_order[leafNum]) << " to the tree" << endl;
-        Node *new_taxon = newNode(taxon_order[leafNum], aln->getSeqName(taxon_order[leafNum]).c_str());
+        auto name = aln->getSeqName(taxon_order[leafNum]);
+        if (leafNum < 3 && verbose_mode >= VB_MAX) {
+            cout << "Add " << name << " to the tree" << endl;
+        }
+        Node *new_taxon = newNode(taxon_order[leafNum], name.c_str());
         root->addNeighbor(new_taxon, -1.0);
         new_taxon->addNeighbor(root, -1.0);
     }
     root = root->neighbors[0]->node;
 }
 
-void PhyloTree::copyConstraintTree(MTree *tree, IntVector &taxon_order, int *rand_stream) {
+void PhyloTree::copyConstraintTree(MTree *tree, IntVector &taxon_order,
+                                   int *rand_stream) {
     MTree::copyTree(tree);
     // assign proper taxon IDs
     NodeVector nodes;

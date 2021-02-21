@@ -1614,6 +1614,12 @@ public:
     void create3TaxonTree(IntVector &taxon_order, int *rand_stream);
 
     /**
+        generate a random taxon order
+        @param[out] taxon_order random taxon order
+     */
+    void randomizeTaxonOrder(int *rand_stream, IntVector &taxon_order);
+    
+    /**
      Extract a bifurcating subtree and return randomly removed Neighbor
      If the tree is bifurcating, nothing change
      @param[out] removed_nei vector of removed Neighbor
