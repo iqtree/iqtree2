@@ -35,7 +35,7 @@ void TimeKeeper::report() const {
     std::stringstream percent;
     if (0<elapsed_wallclock_time) {
         percent.precision(4);
-        percent << "(" << floor(elapsed_cpu_time * 100.0 / elapsed_wallclock_time + .5)
+        percent << " (" << floor(elapsed_cpu_time * 100.0 / elapsed_wallclock_time + .5)
                 << "%)";
     }
     std::cout << activity << " took " << elapsed_wallclock_time
