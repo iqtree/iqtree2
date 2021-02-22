@@ -41,6 +41,9 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
     intptr_t branch_count    = leafNum * 2 - 3; //assumed > 3
     int      index_parsimony = 0;
     
+    std::string task_name = "Looking for parsimony " + s.name + " moves";
+
+    TimeKeeper overall      (task_name.c_str());
     TimeKeeper initializing ("initializing");
     TimeKeeper rescoring    ("rescoring parsimony");
     TimeKeeper evaluating   ("evaluating " + s.name + " moves");
@@ -57,9 +60,10 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
     //     costs is surprisingly expensive).
     //
     
-    initProgress(work_estimate,
-                 "Looking for parsimony " + s.name + " moves", "", "");
+    
+    initProgress(work_estimate, task_name.c_str(), "", "");
 
+    overall.start();
     initializing.start();
     
     PhyloTreeThreadingContext context(*this, params->parsimony_uses_max_threads);
@@ -274,10 +278,14 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
              << positions_considered << ")");
     
     doneProgress();
+    overall.stop();
     
     if (VB_MED <= verbose_mode) {
         hideProgress();
         std::cout.precision(4);
+        if (!progress_display::getProgressDisplay()) {
+            overall.report();
+        }
         initializing.report();
         rescoring.report();
         evaluating.report();
