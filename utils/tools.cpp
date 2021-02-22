@@ -1143,7 +1143,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.dist_file = argv[cnt];
                 continue;
             }
-            if (arg=="-djc") {
+            if (arg=="-djc" || arg=="-no-ml-dist") {
                 params.compute_ml_dist = false;
                 continue;
             }
