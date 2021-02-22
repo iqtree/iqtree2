@@ -9,6 +9,7 @@
 
 #include <string>
 #include <sstream>
+#include <algorithm>     //for std::reverse
 #include "vectortypes.h" //for IntVector, DoubleVector, StrVector
 
 /**

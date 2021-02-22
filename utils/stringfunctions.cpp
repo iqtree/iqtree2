@@ -8,6 +8,7 @@
 #include <sstream>   //for std::stringstream
 #include <math.h>    //for HUGE_VALL symbol and abs() function
 #include <algorithm> //for std::transform (needed on Windows)
+#include <cstring>   //for std::strchr
 
 int convert_int(const char *str) {
     char *endptr;
@@ -254,7 +255,7 @@ void convert_string_vec(const char *str, StrVector &vec, char separator) {
     vec.clear();
     std::string elem;
     do {
-        endptr = strchr(beginptr, separator);
+        endptr = std::strchr(beginptr, separator);
         if (!endptr) {
             elem.assign(beginptr);
             vec.push_back(elem);
