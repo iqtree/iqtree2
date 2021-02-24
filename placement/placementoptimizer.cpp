@@ -54,7 +54,8 @@ void GlobalPlacementOptimizer::optimizeAfterPlacement(PhyloTree& tree) {
         << ", of branches " << tree.branchNum);
 
     //First, recompute parsimony
-    int parsimony_score = tree.computeParsimony("Computing parsimony (after adding taxa)");
+    int parsimony_score = tree.computeParsimony("Computing parsimony (after adding taxa)",
+                                                true, false);
     TREE_LOG_LINE(tree, VB_MIN, "Parsimony score after adding taxa was " << parsimony_score);
 
     if (tree.params->compute_ml_dist) {
