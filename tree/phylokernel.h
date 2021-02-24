@@ -1836,7 +1836,7 @@ double PhyloTree::computePartialParsimonyOutOfTreeSIMD(const UINT* left_partial_
 }
 
 template <class VectorClass>
-int PhyloTree::getSubTreeParsimonyFastSIMD(PhyloNeighbor* dad_branch, PhyloNode* dad) const {
+int PhyloTree::getSubTreeParsimonyFastSIMD(PhyloNeighbor* dad_branch) const {
     //Must agree with how computePartialParsimonyOutOfTreeSIMD
     //records total subtree parsimony
     const size_t NUM_BITS   = VectorClass::size() * UINT_BITS;
@@ -2196,7 +2196,7 @@ double PhyloTree::computePartialParsimonyOutOfTreeSankoffSIMD
 }
 
 template<class VectorClass>
-int PhyloTree::getSubTreeParsimonySankoffSIMD(PhyloNeighbor* dad_branch, PhyloNode* dad) const {
+int PhyloTree::getSubTreeParsimonySankoffSIMD(PhyloNeighbor* dad_branch) const {
     if (dad_branch->partial_pars==nullptr) {
         return 0;
     }

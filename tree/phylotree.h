@@ -721,7 +721,7 @@ public:
     typedef void (PhyloTree::*ComputePartialParsimonyType)(PhyloNeighbor *, PhyloNode *);
     ComputePartialParsimonyType computePartialParsimonyPointer;
     
-    typedef int (PhyloTree::*GetSubtreeParsimonyType)(PhyloNeighbor *, PhyloNode *) const;
+    typedef int (PhyloTree::*GetSubtreeParsimonyType)(PhyloNeighbor *) const;
     GetSubtreeParsimonyType getSubTreeParsimonyPointer;
     
     typedef double (PhyloTree::*ComputePartialParsimonyOutOfTreeType)(const UINT* left_partial_pars,
@@ -743,7 +743,7 @@ public:
     double computePartialParsimonyOutOfTreeFast(const UINT* left_partial_pars,
                                                 const UINT* right_partial_pars,
                                                 UINT* dad_partial_pars) const;
-    int getSubTreeParsimonyFast(PhyloNeighbor* dad_branch, PhyloNode* dad) const;
+    int getSubTreeParsimonyFast(PhyloNeighbor* dad_branch) const;
 
     template<class VectorClass>
     void computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
@@ -758,7 +758,7 @@ public:
                                               UINT* dad_partial_pars) const;
     
     template <class VectorClass>
-    int getSubTreeParsimonyFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad) const;
+    int getSubTreeParsimonyFastSIMD(PhyloNeighbor *dad_branch) const;
     
     template<class VectorClass>
     void computePartialParsimonySankoffSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
@@ -769,7 +769,7 @@ public:
                                                      UINT*       dad_partial_pars) const;
 
     template<class VectorClass>
-    int getSubTreeParsimonySankoffSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad) const;
+    int getSubTreeParsimonySankoffSIMD(PhyloNeighbor *dad_branch) const;
     
     void computeReversePartialParsimony(PhyloNode *node, PhyloNode *dad);
 
@@ -793,7 +793,7 @@ public:
                                           const UINT* node_partial_pars,
                                           int* branch_subst = nullptr) const;
     
-    virtual int getSubTreeParsimony(PhyloNeighbor *dad_branch, PhyloNode *dad) const;
+    virtual int getSubTreeParsimony(PhyloNeighbor *dad_branch) const;
     
 //    int computeParsimonyBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
     int computeParsimonyBranchFast(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
@@ -861,7 +861,7 @@ public:
                                                    const UINT* right_partial_pars,
                                                    UINT* dad_partial_pars) const;
     
-    int getSubTreeParsimonySankoff(PhyloNeighbor* dad_branch, PhyloNode* dad) const;
+    int getSubTreeParsimonySankoff(PhyloNeighbor* dad_branch) const;
     
     /**
      compute tree parsimony score based on a particular branch
@@ -2380,8 +2380,7 @@ public:
     /**
      * initialize partition information for super tree
      */
-    virtual void initPartitionInfo() {
-    }
+    virtual void initPartitionInfo();
 
     /**
      * print transition matrix for all branches
@@ -2418,39 +2417,23 @@ public:
 
     void approxAllBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
-    double getCurScore() {
-		return curScore;
-	}
+    double getCurScore();
 
-	void setCurScore(double score) {
-		this->curScore = score;
-	}
-
+    void setCurScore(double score);
 	/**
 	 * This will invalidate curScore variable, used whenever reading a tree!
 	 */
-	void resetCurScore(double score = 0.0) {
-        if (score != 0.0)
-            curScore = score;
-        else
-		    curScore = -DBL_MAX;
-        if (model) {
-            initializeAllPartialLh();
-        }
-	}
+    void resetCurScore(double score = 0.0);
     
     /**
      * LikelihoodCostCalculator needs to see this (and I don't want to declare it a friend - James).
      */
-    inline double getGammaShape() const {
-        return site_rate ? site_rate->getGammaShape() : 1.0;
-    }
+    double getGammaShape() const;
 
     void computeSeqIdentityAlongTree(Split &resp, Node *node = NULL, Node *dad = NULL);
     void computeSeqIdentityAlongTree();
 
-    double *getPatternLhCatPointer() { return tree_buffers._pattern_lh_cat; }
-    
+    double *getPatternLhCatPointer();
     /**
      * for rooted tree update direction for all branches
      */

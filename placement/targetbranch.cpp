@@ -118,8 +118,8 @@ double TargetBranch::computeState(PhyloTree& phylo_tree,
     c.schedulePartialParsimony(neigh1, first);
     c.schedulePartialParsimony(neigh2, second);
     c.calculate();
-    int second_subtree_cost = phylo_tree.getSubTreeParsimony(neigh1, first);
-    int first_subtree_cost  = phylo_tree.getSubTreeParsimony(neigh2, second);
+    int second_subtree_cost = phylo_tree.getSubTreeParsimony(neigh1);
+    int first_subtree_cost  = phylo_tree.getSubTreeParsimony(neigh2);
     if ( partial_pars != nullptr ) {
         connection_cost = phylo_tree.computePartialParsimonyOutOfTree
                           (neigh1->partial_pars, neigh2->partial_pars,

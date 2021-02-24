@@ -542,6 +542,35 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
     }
 }
 
+PhyloNode* IQTree::generateRandomBalancedTree(const IntVector& order,
+                                              size_t start, size_t stop,
+                                              size_t degree,
+                                              PhyloNodeVector& nodes) {
+    size_t count = stop - start;
+    if (count==0) return nullptr;
+    if (count==1) {
+        int taxon_id = order[start];
+        std::string name = aln->getSeqName(taxon_id);
+        PhyloNode*  leaf = newNode(taxon_id,name.c_str());
+        nodes[taxon_id]  = leaf;
+        return leaf;
+    }
+    PhyloNode* interior = newNode(-1);
+    size_t step = (count + degree - 1 ) / degree;
+    if (step<1) step=1;
+    for (; start<stop; start += step) {
+        size_t end_subtree = start + step;
+        if (stop <= end_subtree) {
+            end_subtree = stop;
+        }
+        PhyloNode* child = generateRandomBalancedTree(order, start, end_subtree, 2, nodes);
+        ASSERT(child!=nullptr);
+        interior->addNeighbor(child, -1);
+        child->addNeighbor(interior, -1);
+    }
+    return interior;
+}
+
 void IQTree::computeInitialTree(LikelihoodKernel kernel) {
     double start = getRealTime();
     string initTree;
@@ -586,15 +615,22 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
         } else {
             setAlignment(aln);
         }
-        if (isSuperTree()) {
-            wrapperFixNegativeBranch(params->fixed_branch_length == BRLEN_OPTIMIZE &&
-                                     params->partition_type == BRLEN_OPTIMIZE);
+        if (params->compute_ml_dist) {
+            if (isSuperTree()) {
+                wrapperFixNegativeBranch(params->fixed_branch_length == BRLEN_OPTIMIZE &&
+                                         params->partition_type == BRLEN_OPTIMIZE);
+            }
+            else {
+                fixed_number = wrapperFixNegativeBranch(false);
+            }
         }
-        else {
-            fixed_number = wrapperFixNegativeBranch(false);
+        if ( params->parsimony_spr_iterations != 0 ||
+             params->parsimony_tbr_iterations != 0 ||
+             params->parsimony_tbr_iterations != 0 ) {
+            optimizeConstructedTree();
         }
         params->numInitTrees = 1;
-        params->numNNITrees = 1;
+        params->numNNITrees  = 1;
         if (params->pll) {
             pllReadNewick(getTreeString());
         }
@@ -646,6 +682,40 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
             break;
 
         case STT_RANDOM_TREE:
+            if (params->start_tree_subtype_name=="RBT") {
+                logLine("Creating random balanced tree ...");
+                start = getRealTime();
+                freeNode();
+                IntVector       order;
+                PhyloNodeVector nodes;
+                {
+                    int* rand_stream = init_sprng(0, 1, params->ran_seed,
+                                                  SPRNG_DEFAULT);
+                    randomizeTaxonOrder(rand_stream, order);
+                    free_sprng(rand_stream);
+                }
+                nodes.resize(aln->getNSeq(), nullptr);
+                generateRandomBalancedTree(order, 0, order.size(), 3, nodes);
+                root     = nodes[0];
+                leafNum  = aln->getNSeq32();
+                rooted   = false;
+                setAlignment(aln);
+                initializeTree();
+                LOG_LINE(VB_QUIET, "Random tree creation took "
+                         << getRealTime() - start << " seconds");
+                params->numInitTrees = 1;
+                if (params->compute_ml_dist) {
+                    if (isSuperTree()) {
+                        wrapperFixNegativeBranch(true);
+                    } else {
+                        fixed_number = wrapperFixNegativeBranch(false);
+                    }
+                }
+                optimizeConstructedTree();
+                break;
+            }
+            //else, fall through
+                
         case STT_PLL_PARSIMONY:
             logLine("\nCreate initial parsimony tree by phylogenetic likelihood library (PLL)... ");
             pllInst->randomNumberSeed = params->ran_seed + MPIHelper::getInstance().getProcessID();
@@ -675,10 +745,12 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
                          << " wall-clock seconds");
             }
             params->numInitTrees = 1;
-            if (isSuperTree()) {
-                wrapperFixNegativeBranch(true);
-            } else {
-                fixed_number = wrapperFixNegativeBranch(false);
+            if (params->compute_ml_dist) {
+                if (isSuperTree()) {
+                    wrapperFixNegativeBranch(true);
+                } else {
+                    fixed_number = wrapperFixNegativeBranch(false);
+                }
             }
             optimizeConstructedTree();
             break;
@@ -2795,22 +2867,22 @@ void IQTree::refineBootTrees() {
         if (!constraintTree.empty()) {
             boot_tree->constraintTree.readConstraint(constraintTree);
         }
-
         boot_tree->setParams(params);
 
         // 2019-06-03: bug fix setting part_info properly
-        if (boot_tree->isSuperTree())
+        if (boot_tree->isSuperTree()) {
             ((PhyloSuperTree*)boot_tree)->setPartInfo((PhyloSuperTree*)this);
-
+        }
         // copy model
         // BQM 2019-05-31: bug fix with -bsam option
         boot_tree->initializeModel(*params, aln->model_name, models_block);
         boot_tree->getModelFactory()->setCheckpoint(getCheckpoint());
-        if (isSuperTree())
+        if (isSuperTree()) {
             ((PartitionModel*)boot_tree->getModelFactory())->PartitionModel::restoreCheckpoint();
-        else
+        }
+        else {
             boot_tree->getModelFactory()->restoreCheckpoint();
-
+        }
         // set likelihood kernel
         boot_tree->setParams(params);
         boot_tree->setLikelihoodKernel(sse);
@@ -4389,7 +4461,8 @@ void IQTree::initializePLLIfNecessary() {
         return;
     }
     if (params->start_tree == STT_PLL_PARSIMONY 
-        || params->start_tree == STT_RANDOM_TREE || params->pll) {
+        || ( params->start_tree == STT_RANDOM_TREE && params->start_tree_subtype_name != "RBT")
+        || params->pll) {
         initializePLL(*params);
     }
 }

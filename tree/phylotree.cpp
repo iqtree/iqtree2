@@ -581,8 +581,12 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
         string seq_name = aln->getSeqName(seq);
         auto   it       = mapNameToNode.find(seq_name);
         if (it==mapNameToNode.end()) {
-            LOG_LINE( VB_MED, "Could not find sequence " << seq << " " << seq_name
-                     << " in the tree.  It will be added.");
+            if ( !params->suppress_list_of_sequences
+                 || VB_MAX<=verbose_mode ) {
+            LOG_LINE( VB_MED, "Could not find sequence " << seq
+                     << " " << seq_name << " in the tree."
+                     << " It will be added.");
+            }
             taxaIdsToAdd.push_back((int)seq);
         } else {
             (*it).second->id = seq;
@@ -620,11 +624,15 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
         for (auto it=mapNameToNode.begin(); it!=mapNameToNode.end(); ++it) {
             taxaToRemove.push_back(it->first);
         }
-        logTaxaToBeRemoved(mapNameToNode);
+        if ( !params->suppress_list_of_sequences ||
+            VB_MAX <= verbose_mode ) {
+            logTaxaToBeRemoved(mapNameToNode);
+        }
         mapNameToNode.clear();
         
         prepareForDeletes();
-        auto countRemoved = removeTaxa(taxaToRemove, !will_add, "Removing deleted taxa from tree");
+        auto countRemoved = removeTaxa(taxaToRemove, !will_add,
+                                       "Removing deleted taxa from tree");
         //Todo: Carry out any requested "after-each-delete" local tidy-up of the tree
         //      (via an extra parameter to removeTaxa, perhaps?)
         doneDeletes(countRemoved, will_add);
@@ -1468,16 +1476,16 @@ void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *da
     (this->*computePartialParsimonyPointer)(dad_branch, dad);
 }
 
-int PhyloTree::getSubTreeParsimony(PhyloNeighbor* dad_branch, PhyloNode* dad) const {
-    return (this->*getSubTreeParsimonyPointer)(dad_branch, dad);
+int PhyloTree::getSubTreeParsimony(PhyloNeighbor* dad_branch) const {
+    return (this->*getSubTreeParsimonyPointer)(dad_branch);
 }
 
 int PhyloTree::computeMarginalParsimony(PhyloNeighbor* dad_branch, PhyloNode* dad) {
     PhyloNode* node = dad_branch->getNode();
     computePartialParsimony(dad_branch, dad);
-    int cost = this->getSubTreeParsimony(dad_branch, dad);
+    int cost = this->getSubTreeParsimony(dad_branch);
     FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, nei) {
-        cost -= this->getSubTreeParsimony(nei, node);
+        cost -= this->getSubTreeParsimony(nei);
     }
     return cost;
 }
@@ -5797,7 +5805,6 @@ void PhyloTree::reorientPartialLh(PhyloNeighbor* dad_branch,
 
 bool PhyloTree::computeTraversalInfo(PhyloNeighbor* dad_branch,
                                      PhyloNode* dad, double* &buffer) {
-
     size_t     nstates = aln->num_states;
     PhyloNode* node    = dad_branch->getNode();
 
@@ -6101,4 +6108,35 @@ void PhyloTree::computePatternPacketBounds(int v_size, int threads, int packets,
         else
             outError("Too many threads may slow down analysis [-nt option]. Reduce threads or use -nt AUTO to automatically determine it");
     }
+}
+
+double PhyloTree::getCurScore() {
+    return curScore;
+}
+
+void PhyloTree::setCurScore(double score) {
+    this->curScore = score;
+}
+
+void PhyloTree::resetCurScore(double score) {
+    if (score != 0.0) {
+        curScore = score;
+    }
+    else {
+        curScore = -DBL_MAX;
+    }
+    if (model && this->tree_buffers.buffer_partial_lh != nullptr) {
+        initializeAllPartialLh();
+    }
+}
+
+double PhyloTree::getGammaShape() const {
+    return site_rate ? site_rate->getGammaShape() : 1.0;
+}
+
+double* PhyloTree::getPatternLhCatPointer() {
+    return tree_buffers._pattern_lh_cat;
+}
+
+void PhyloTree::initPartitionInfo() {
 }

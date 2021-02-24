@@ -39,8 +39,10 @@ void GlobalPlacementOptimizer::optimizeAfterPlacement(PhyloTree& tree) {
     tree.initializeTree(); //Make sure branch numbers et cetera are set.
     tree.deleteAllPartialLh();
 
-    if (tree.isUsingSankoffParsimony() && !tree.params->sankoff_cost_file) {
-        tree.deleteAllPartialParsimony();
+    bool turnOffSankoff = tree.isUsingSankoffParsimony()
+                          && !tree.params->sankoff_cost_file;
+    tree.deleteAllPartialParsimony();
+    if (turnOffSankoff) {
         tree.stopUsingSankoffParsimony();
         tree.setParsimonyKernel(tree.params->SSE);
     }
@@ -55,19 +57,38 @@ void GlobalPlacementOptimizer::optimizeAfterPlacement(PhyloTree& tree) {
     int parsimony_score = tree.computeParsimony("Computing parsimony (after adding taxa)");
     TREE_LOG_LINE(tree, VB_MIN, "Parsimony score after adding taxa was " << parsimony_score);
 
-    //Then, fix any negative branches
-    tree.initializeAllPartialLh();
-    double negativeStart = getRealTime();
-    tree.fixNegativeBranch();
-    double negativeElapsed = getRealTime() - negativeStart;
-    TREE_LOG_LINE(tree, VB_MED, "Fixing negative branches took " << negativeElapsed << " wall-clock seconds");
+    if (tree.params->compute_ml_dist) {
+        //Then, fix any negative branches
+        tree.initializeAllPartialLh();
+        double negativeStart = getRealTime();
+        tree.fixNegativeBranch();
+        double negativeElapsed = getRealTime() - negativeStart;
+        TREE_LOG_LINE(tree, VB_MED, "Fixing negative branches took " << negativeElapsed << " wall-clock seconds");
 
-    //And, at last, compute the tree likelihood
-    double likelyStart   = getRealTime();
-    double likelihood    = tree.computeLikelihood();
-    double likelyElapsed = getRealTime() - likelyStart;
-    TREE_LOG_LINE(tree, VB_MIN, "Likelihood score after adding taxa was " << likelihood
-        << " (and took " << likelyElapsed << " wall-clock seconds to calculate)");
+        //And, at last, compute the tree likelihood
+        double likelyStart   = getRealTime();
+        double likelihood    = tree.computeLikelihood();
+        double likelyElapsed = getRealTime() - likelyStart;
+        TREE_LOG_LINE(tree, VB_MIN, "Likelihood score after adding taxa was " << likelihood
+            << " (and took " << likelyElapsed << " wall-clock seconds to calculate)");
+    } else {
+        //Set all lengths based on parsimony
+        PhyloBranchVector branches;
+        tree.getBranches(branches);
+        for (auto branch: branches) {
+            auto nei        = branch.first->findNeighbor(branch.second);
+            auto backnei    = branch.second->findNeighbor(branch.first);
+            double branch_cost = parsimony_score
+                               - tree.getSubTreeParsimony(nei)
+                               - tree.getSubTreeParsimony(backnei);
+            double parsimony_length = branch_cost / tree.getAlnNSite();
+            if (parsimony_length == 0.0) {
+                parsimony_length = tree.params->min_branch_length;
+            }
+            nei->length     = parsimony_length;
+            backnei->length = parsimony_length;
+        }
+    }
 }
 
 GlobalLikelihoodPlacementOptimizer::GlobalLikelihoodPlacementOptimizer()  = default;

@@ -214,8 +214,8 @@ public:
                     PhyloNeighbor* leftNei  = node1->findNeighbor(node2);
                     PhyloNeighbor* rightNei = node2->findNeighbor(node1);
                     double branch_cost = parsimony
-                                       - tree.getSubTreeParsimony(leftNei, node1)
-                                       - tree.getSubTreeParsimony(rightNei, node2);
+                                       - tree.getSubTreeParsimony(leftNei)
+                                       - tree.getSubTreeParsimony(rightNei);
                     if (branch_cost<1) {
                         branch_cost = 1;
                     }

@@ -48,16 +48,16 @@ void PlacementRun::prepareForPlacementRun() {
         TREE_LOG_LINE(phylo_tree, VB_MED, "After overallocating lh blocks, index_lh was "
             << block_allocator->getLikelihoodBlockCount());
     }
-    if (VB_MED <= verbose_mode) {
+    if (VB_MED <= verbose_mode && (phylo_tree.params->compute_ml_dist || use_likelihood) ) {
         double curScore = phylo_tree.computeLikelihood();
         TREE_LOG_LINE(phylo_tree, VB_MED, "Likelihood score before insertions was " << curScore);
 #if (0)
         curScore = phylo_tree.optimizeAllBranches(2);
         LOG_LINE(phylo_tree, VB_MED, "Optimized likelihood score before insertions was " << curScore);
 #endif
-        if (!use_likelihood) {
-            phylo_tree.deleteAllPartialLh();
-        }
+    }
+    if (!use_likelihood) {
+        phylo_tree.deleteAllPartialLh();
     }
     TREE_LOG_LINE ( phylo_tree, VB_MED, "Batch size is " << taxa_per_batch
               << " and the number of inserts per batch is " << inserts_per_batch);
@@ -175,7 +175,7 @@ void PlacementRun::insertTaxon(TaxaToPlace& taxa, size_t taxon_index,
     }
     
     if (( verbose_mode >= VB_MIN && !phylo_tree.params->suppress_list_of_sequences)
-        || verbose_mode >= VB_MED ) {
+        || verbose_mode >= VB_MAX ) {
         const PossiblePlacement& p = c.getBestPlacement();
         stringstream s;
         s << taxa_inserted_in_total << ". " << verb << " "

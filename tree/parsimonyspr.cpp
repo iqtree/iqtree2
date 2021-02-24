@@ -329,8 +329,8 @@ namespace {
                     //snipped, of the subtree containing right.
                     path_parsimony.resize(radius+2, nullptr);
                     path_parsimony[radius+1] = snipped->findNeighbor(right)->get_partial_pars();
-                    discon = tree.getSubTreeParsimony(left->findNeighbor(snipped), left)
-                           - tree.getSubTreeParsimony(snipped->findNeighbor(right), snipped);
+                    discon = tree.getSubTreeParsimony(left->findNeighbor(snipped))
+                           - tree.getSubTreeParsimony(snipped->findNeighbor(right));
                 }
                 void searchForForwardsSPR(PhyloNode* current, PhyloNode* prev,
                                           int radius, double parsimony) {
@@ -356,9 +356,8 @@ namespace {
                             ( path_parsimony[0]
                             , source.first->findNeighbor(source.second)->get_partial_pars()
                             , &new_branch_cost );
-                        double subtree_cost = tree.getSubTreeParsimony
-                                              ( source.first->findNeighbor(source.second),
-                                                source.first );
+                        auto   subtree_root_nei = source.first->findNeighbor(source.second);
+                        double subtree_cost = tree.getSubTreeParsimony(subtree_root_nei);
                         double benefit = parsimony       - pruned_tree_score
                                        - new_branch_cost - subtree_cost;
                         
@@ -392,9 +391,8 @@ namespace {
                             ( path_parsimony[0]
                             , source.second->findNeighbor(source.first)->get_partial_pars()
                             , &new_branch_cost );
-                        double subtree_cost = tree.getSubTreeParsimony
-                                              ( source.second->findNeighbor(source.first),
-                                                source.second );
+                        auto   subtree_root_nei = source.second->findNeighbor(source.first);
+                        double subtree_cost = tree.getSubTreeParsimony(subtree_root_nei);
                         double benefit = parsimony       - pruned_tree_score
                                        - new_branch_cost - subtree_cost;
                         

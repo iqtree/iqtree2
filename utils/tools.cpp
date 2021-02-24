@@ -447,6 +447,28 @@ namespace {
         stripMe = stripMe.substr(0, c);
         return rv;
     }
+
+    bool parseTreeName(const char* name, Params& params) {
+        std::string tree_name = name;
+        if (tree_name == "PARS")
+            params.start_tree = STT_PARSIMONY;
+        else if (tree_name == "PJ")
+            params.start_tree = STT_PARSIMONY_JOINING;
+        else if (tree_name == "PLLPARS")
+            params.start_tree = STT_PLL_PARSIMONY;
+        else if (tree_name == "RAND" || tree_name=="RANDOM"
+                 || tree_name == "RBT") {
+            params.start_tree_subtype_name = tree_name;
+            params.start_tree = STT_RANDOM_TREE;
+        }
+        else if (START_TREE_RECOGNIZED(tree_name)) {
+            params.start_tree_subtype_name = tree_name;
+            params.start_tree = STT_BIONJ;
+        } else {
+            return false;
+        }
+        return true;
+    }
 };
 
 void parseArg(int argc, char *argv[], Params &params) {
@@ -1943,24 +1965,16 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
             
-			if (strcmp(argv[cnt], "-starttree") == 0) {
-				cnt++;
-				if (cnt >= argc)
-					throw "Use -starttree BIONJ|PARS|PLLPARS|PJ";
-                else if (strcmp(argv[cnt], "PARS") == 0)
-					params.start_tree = STT_PARSIMONY;
-                else if (strcmp(argv[cnt], "PJ") == 0)
-                    params.start_tree = STT_PARSIMONY_JOINING;
-				else if (strcmp(argv[cnt], "PLLPARS") == 0)
-					params.start_tree = STT_PLL_PARSIMONY;
-                else if (START_TREE_RECOGNIZED(argv[cnt])) {
-                    params.start_tree_subtype_name = argv[cnt];
-                    params.start_tree = STT_BIONJ;
+            if (strcmp(argv[cnt], "-starttree") == 0) {
+                cnt++;
+                if (cnt >= argc) {
+                    throw "Use -starttree BIONJ|PARS|PLLPARS|PJ";
                 }
-                else
-					throw "Invalid option, please use -starttree with BIONJ or PARS or PLLPARS";
-				continue;
-			}
+                else if (!parseTreeName(argv[cnt], params)) {
+                    throw "Invalid option, please use -starttree with BIONJ or PARS or PLLPARS";
+                }
+                continue;
+            }
 
 			if (strcmp(argv[cnt], "-ao") == 0 || strcmp(argv[cnt], "--out-alignment") == 0 || strcmp(argv[cnt], "--out-aln") == 0) {
 				cnt++;
@@ -3771,27 +3785,18 @@ void parseArg(int argc, char *argv[], Params &params) {
                     params.min_iterations = 0;
                     params.stop_condition = SC_FIXED_ITERATION;
                 }
-				cnt++;
-				if (cnt >= argc)
-					throw "Use -t,-te <start_tree | BIONJ | PARS | PLLPARS | PJ | RANDOM>";
-				else if (strcmp(argv[cnt], "PARS") == 0)
-					params.start_tree = STT_PARSIMONY;
-                else if (strcmp(argv[cnt], "PJ") == 0)
-                    params.start_tree = STT_PARSIMONY_JOINING;
-				else if (strcmp(argv[cnt], "PLLPARS") == 0)
-					params.start_tree = STT_PLL_PARSIMONY;
-                else if (strcmp(argv[cnt], "RANDOM") == 0 || strcmp(argv[cnt], "RAND") == 0)
-					params.start_tree = STT_RANDOM_TREE;
-                else if (START_TREE_RECOGNIZED(argv[cnt])) {
-                    params.start_tree_subtype_name = argv[cnt];
-                    params.start_tree = STT_BIONJ;
-                } else {
-                    params.user_file = argv[cnt];
-                    if (params.min_iterations == 0)
-                        params.start_tree = STT_USER_TREE;
+                cnt++;
+                if (cnt >= argc) {
+                    throw "Use -t,-te <start_tree | BIONJ | PARS | PLLPARS | PJ | RANDOM>";
                 }
-				continue;
-			}
+                else if (!parseTreeName(argv[cnt], params)) {
+                    params.user_file = argv[cnt];
+                    if (params.min_iterations == 0) {
+                        params.start_tree = STT_USER_TREE;
+                    }
+                }
+                continue;
+            }
             
             if (strcmp(argv[cnt], "--no-ml-tree") == 0) {
                 params.modelfinder_ml_tree = false;

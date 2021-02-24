@@ -697,17 +697,6 @@ void MTree::readTree(const char *infile, bool &is_rooted) {
     }
 }
 
-/*
-void MTree::readTreeString(string tree_string, bool is_rooted) {
-	stringstream str;
-	str << tree_string;
-	str.seekg(0, ios::beg);
-	freeNode();
-	readTree(str, is_rooted);
-}
-*/
-
-
 void MTree::readTree(istream &in, bool &is_rooted)
 {
     in_line = 1;

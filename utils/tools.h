@@ -2202,13 +2202,13 @@ public:
     /** z-score for detecting outlier nodes */
     double date_outlier;
 
-    /** supress the list of sequences */
+    /** suppress the list of sequences */
     double suppress_list_of_sequences;
 
-    /** supress warnings about low or zero distances */
+    /** suppress warnings about low or zero distances */
     double suppress_zero_distance_warnings;
 
-    /** supress notes about duplicate sequences */
+    /** suppress notes about duplicate sequences */
     double suppress_duplicate_sequence_warnings;
     
     /** format to use when writing (.mldist) distance matrix files */

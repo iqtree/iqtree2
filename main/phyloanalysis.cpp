@@ -2259,8 +2259,10 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     // UpperBounds analysis. Here, to analyse the initial tree without any tree search or optimization
     /*
     if (params.upper_bound) {
-        iqtree.setCurScore(iqtree.computeLikelihood());
-        cout<<iqtree.getCurScore()<<endl;
+         if (iqtree->tree_buffers.buffer_partial_lh != nullptr)
+            iqtree.setCurScore(iqtree.computeLikelihood());
+            cout<<iqtree.getCurScore()<<endl;
+         }
         UpperBounds(&params, iqtree.aln, iqtree);
         exit(0);
     }
@@ -2331,17 +2333,21 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     //(we cannot do it until we *have* that).
     if (!params.compute_ml_tree_only) {
         iqtree->ensureNumberOfThreadsIsSet(&params, false);
-        iqtree->initializeAllPartialLh();
-        handleGammaInvariantOptions(params, *iqtree);
-        
-        // Optimize model parameters and branch lengths using ML for the initial tree
-        iqtree->clearAllPartialLH();
-        initTree = iqtree->ensureModelParametersAreSet(initEpsilon);
-        handleQuartetLikelihoodMapping(params, *iqtree);
-        finishedInitTree = iqtree->getCheckpoint()->getBool("finishedInitTree");
-        
+        if (params.compute_ml_dist) {
+            iqtree->initializeAllPartialLh();
+            handleGammaInvariantOptions(params, *iqtree);
+            
+            // Optimize model parameters and branch lengths using ML for the initial tree
+            iqtree->clearAllPartialLH();
+            initTree = iqtree->ensureModelParametersAreSet(initEpsilon);
+            handleQuartetLikelihoodMapping(params, *iqtree);
+            finishedInitTree = iqtree->getCheckpoint()->getBool("finishedInitTree");
+        } else {
+            initTree = iqtree->getTreeString();
+        }
         // now overwrite with random tree
-        if (params.start_tree == STT_RANDOM_TREE && !finishedInitTree) {
+        if (params.start_tree == STT_RANDOM_TREE && !finishedInitTree
+            && params.start_tree_subtype_name != "RBT" ) {
             cout << "Generate random initial Yule-Harding tree..." << endl;
             iqtree->generateRandomTree(YULE_HARDING);
             iqtree->wrapperFixNegativeBranch(true);
@@ -2366,16 +2372,19 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         }
         
         if (params.min_iterations && !iqtree->isBifurcating()) {
-            outError("Tree search does not work with initial multifurcating tree. Please specify `-n 0` to avoid this.");
+            outError("Tree search does not work with initial multifurcating tree."
+                     " Please specify `-n 0` to avoid this.");
         }
         
         // Compute maximum likelihood distance
         // ML distance is only needed for NNI/IQP
         
-        if ((params.min_iterations <= 1 || params.numInitTrees <= 1) && params.start_tree != STT_BIONJ) {
+        if ((params.min_iterations <= 1 || params.numInitTrees <= 1)
+            && params.start_tree != STT_BIONJ) {
             params.compute_ml_dist = false;
         }
-        if ((!params.user_file.empty() || params.start_tree == STT_RANDOM_TREE) && params.snni && !params.iqp) {
+        if ((!params.user_file.empty() || params.start_tree == STT_RANDOM_TREE)
+            && params.snni && !params.iqp) {
             params.compute_ml_dist = false;
         }
         if (params.constraint_tree_file) {
@@ -2516,8 +2525,10 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         cout << endl;
     }
     if (!params.final_model_opt) {
-        iqtree->setCurScore(iqtree->computeLikelihood());
-    } else if (params.min_iterations) {
+        if (iqtree->tree_buffers.buffer_partial_lh != nullptr) {
+          iqtree->setCurScore(iqtree->computeLikelihood());
+        }
+    } else if ( 0 != params.min_iterations ) {
         iqtree->readTreeString(iqtree->getBestTrees()[0]);
         iqtree->initializeAllPartialLh();
         iqtree->clearAllPartialLH();
@@ -2526,7 +2537,9 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         cout << "--------------------------------------------------------------------" << endl;
 
         if (iqtree->getCheckpoint()->getBool("finishedModelFinal")) {
-            iqtree->setCurScore(iqtree->computeLikelihood());
+            if (iqtree->tree_buffers.buffer_partial_lh != nullptr) {
+                iqtree->setCurScore(iqtree->computeLikelihood());
+            }
             cout << "CHECKPOINT: Final model parameters restored" << endl;
         } else {
             cout << "Performs final model parameters optimization" << endl;
@@ -2545,14 +2558,17 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         ((PhyloSuperTree*) iqtree)->printBestPartitionParams((string(params.out_prefix) + ".best_model.nex").c_str());
     }
 
-    cout << "BEST SCORE FOUND : " << iqtree->getCurScore() << endl;
+    if (iqtree->tree_buffers.buffer_partial_lh != nullptr ) {
+        cout << "BEST SCORE FOUND : " << iqtree->getCurScore() << endl;
+    }
 
     if (params.write_candidate_trees) {
         printTrees(iqtree->getBestTrees(), params, ".imd_trees");
     }
 
-    if (params.pll)
+    if (params.pll) {
         iqtree->inputModelPLL2IQTree();
+    }
 
     /* root the tree at the first sequence */
     // BQM: WHY SETTING THIS ROOT NODE????
@@ -2560,15 +2576,15 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 //    assert(iqtree->root);
     iqtree->setRootNode(params.root);
 
-
-    if (!params.pll) {
-        iqtree->computeLikelihood(pattern_lh);
-        // compute logl variance
-        iqtree->logl_variance = iqtree->computeLogLVariance();
+    if (iqtree->tree_buffers.buffer_partial_lh != nullptr) {
+        if (!params.pll) {
+            iqtree->computeLikelihood(pattern_lh);
+            // compute logl variance
+            iqtree->logl_variance = iqtree->computeLogLVariance();
+        }
+        printMiscInfo(params, *iqtree, pattern_lh);
     }
-
-    printMiscInfo(params, *iqtree, pattern_lh);
-
+    
     if (params.root_test) {
         cout << "Testing root positions..." << endl;
         iqtree->testRootPosition(true, params.loglh_epsilon);

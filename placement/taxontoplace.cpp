@@ -48,6 +48,7 @@ void TaxonToPlace::initialize(BlockAllocator* ba, int id,
 }
 
 void TaxonToPlace::computeParsimony(PhyloTree* tree) {
+    //Assumes new_leaf is the first neighbor of new_interior
     PhyloNeighbor* nei = new_interior->firstNeighbor();
     tree->computePartialParsimony(nei, new_interior);
 }

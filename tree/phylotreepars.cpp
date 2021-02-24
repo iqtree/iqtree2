@@ -252,7 +252,7 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
                     PhyloNode*     stack_node = things_to_do[i].second;
                     computePartialParsimonyFast(stack_nei, stack_node);
                     //LOG_LINE(VB_MIN, "To do " << i
-                    //         << " set score " << getSubTreeParsimonyFast(stack_nei, stack_node));
+                    //         << " set score " << getSubTreeParsimonyFast(stack_nei));
                 }
                 things_to_do.resize(start_index);
             }
@@ -333,7 +333,7 @@ double PhyloTree::computePartialParsimonyOutOfTreeFast(const UINT* left_partial_
     return  dad_partial_pars[total];
 }
 
-int PhyloTree::getSubTreeParsimonyFast(PhyloNeighbor* dad_branch, PhyloNode* dad) const {
+int PhyloTree::getSubTreeParsimonyFast(PhyloNeighbor* dad_branch) const {
     //Must agree with how computePartialParsimonyOutOfTreeFast
     //records total subtree parsimony
     size_t bits_per_state  = max(aln->size(), (size_t)aln->num_variant_sites);
@@ -1034,13 +1034,12 @@ double PhyloTree::computePartialParsimonyOutOfTreeSankoff(const UINT* left_parti
     return score;
 }
 
-int PhyloTree::getSubTreeParsimonySankoff(PhyloNeighbor* dad_branch,
-                                          PhyloNode* dad) const {
+int PhyloTree::getSubTreeParsimonySankoff(PhyloNeighbor* dad_branch) const {
     if (dad_branch->partial_pars==nullptr) {
         return 0;
     }
     size_t nstates     = aln->num_states;
-    intptr_t ptnCount    = aln->ordered_pattern.size();
+    intptr_t ptnCount  = aln->ordered_pattern.size();
     size_t totalOffset = nstates * ptnCount;
     return dad_branch->partial_pars[totalOffset];
 }

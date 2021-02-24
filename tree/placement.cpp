@@ -293,7 +293,8 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
     LOG_LINE ( VB_DEBUG, "After allocating TargetBranchRange"
               << ", index_lh was " << pr.block_allocator->getLikelihoodBlockCount()
               << ", index_pars was " << pr.block_allocator->getParsimonyBlockCount());
-    LOG_LINE ( VB_MIN, "Set up time was " << (getRealTime() - setUpStartTime) << " sec");
+    LOG_LINE ( VB_MIN, "Placement set-up time was "
+              << (getRealTime() - setUpStartTime) << " sec");
         
     double estimate = taxaAdditionWorkEstimate
     ( newTaxaCount, pr.taxa_per_batch, pr.inserts_per_batch );

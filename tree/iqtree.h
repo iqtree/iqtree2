@@ -723,6 +723,14 @@ public:
      */
     void initCandidateTreeSet(int nParTrees, int nNNITrees);
 
+    /*
+     * Generate a random tree
+     */
+    
+    PhyloNode* generateRandomBalancedTree(const IntVector& order,
+                                          size_t start, size_t stop,
+                                          size_t degree, PhyloNodeVector& nodes);
+    
     /**
      * Generate the initial tree (usually used for model parameter estimation)
      */

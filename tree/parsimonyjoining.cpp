@@ -7,11 +7,13 @@
 
 #include "phylotree.h"
 #include <placement/parallelparsimonycalculator.h>
+#include <placement/blockallocator.h>
+#include <placement/taxontoplace.h>
 #include "phylotreethreadingcontext.h"
 #include <utils/rapidnj.h>
 #include <utils/auctionmatrix.h>
 #include <utils/timekeeper.h>
-
+#include <sprng/sprng.h>
 
 class ParsimonyMatrix: public StartTree::NJMatrix<NJFloat> {
 protected:
@@ -71,8 +73,10 @@ public:
     }
     virtual void calculateLeafParsimonyDistances() {
         #if USE_PROGRESS_DISPLAY
-        progress_display progress(row_count*(row_count-1)/2,
-                                  "Constructing leaf-leaf parsimony distance matrix");
+        double work_estimate = row_count*(row_count-1)/2;
+        const char* task_name = "Constructing leaf-leaf"
+                                " parsimony distance matrix";
+        progress_display progress(work_estimate, task_name);
         #else
         double progress = 0.0;
         #endif
@@ -143,7 +147,8 @@ public:
             neighborB->getNode()->addNeighbor(topNodeInCluster, -1);
             
             tree->computePartialParsimonyOutOfTree
-                ( neighborA->partial_pars, neighborB->partial_pars, neighToCluster->partial_pars );
+                ( neighborA->partial_pars, neighborB->partial_pars,
+                  neighToCluster->partial_pars );
         }
         auto abVector = neighToCluster->partial_pars;
         
@@ -243,6 +248,312 @@ public:
 
 typedef RapidParsimonyMatrix ParsimonyJoiningMatrixType;
 
+class RoutedTaxon: public TaxonToPlace {
+public:
+    int best_branch;
+    int best_score;
+    bool operator < (const RoutedTaxon& r) const {
+        return best_branch < r.best_branch;
+    }
+    bool operator <= (const RoutedTaxon& r) const {
+        return best_branch <= r.best_branch;
+    }
+};
+
+class ParsimonyRouter {
+    //Todo: allow caller to pass in rand_stream
+public:
+    PhyloTree& tree;
+    PhyloTreeThreadingContext context;
+    int*              rand_stream;
+    PhyloBranchVector branches;     //branches added to tree
+    IntVector         sample;       //indicates indices of branches in sample
+
+
+    ParsimonyRouter(PhyloTree& tree_to_route,
+                    PhyloTreeThreadingContext &context_to_use)
+        : tree(tree_to_route), context(context_to_use) {
+        rand_stream = init_sprng(0, 1, tree.params->ran_seed,
+                                 SPRNG_DEFAULT);
+    }
+    virtual ~ParsimonyRouter() {
+        free_sprng(rand_stream);
+    }
+    void selectSample(int sample_size, int branch_count) {
+        if (sample_size==branch_count) {
+            sample.resize(branch_count);
+            for (size_t i=0; i<branch_count; ++i) {
+                sample[i] = i;
+            }
+            return;
+        }
+        sample.resize(sample_size);
+        int g = 0;
+        do {
+            //This is a junk way to choose a sample
+            //but it's adequate if sample_size is
+            //significantly smaller than branch_count.
+            for (size_t i = g; i<sample_size; ++i) {
+                sample[i] = random_int(branch_count);
+            }
+            std::sort(sample.begin(), sample.end());
+            //keep unique values, and count them (with g)
+            g = 1;
+            for (int h=1; h<sample_size; ++h) {
+                if (sample[h-1]<sample[h]) {
+                    sample[g]=sample[h];
+                    ++g;
+                }
+            }
+            //g now, index after last non-duplicate value
+        } while (g<sample_size);
+    }
+    void bestSampleBranch(RoutedTaxon& candidate,
+                          UINT* scratch_vector) const {
+        auto pars        = candidate.getParsimonyBlock();
+        for (intptr_t s = 0; s<sample.size(); ++s) {
+            PhyloBranch    b(branches[sample[s]]);
+            PhyloNeighbor* nei1 = b.getLeftNeighbor();
+            PhyloNeighbor* nei2 = b.getRightNeighbor();
+            tree.computePartialParsimonyOutOfTree(nei1->get_partial_pars(),
+                                                  nei2->get_partial_pars(),
+                                                  scratch_vector);
+            int branch_score = 0;
+            tree.computeParsimonyOutOfTree(pars, scratch_vector,
+                                           &branch_score);
+            if ( s == 0 || branch_score<candidate.best_score) {
+                candidate.best_score  = branch_score;
+                candidate.best_branch = sample[s];
+            }
+        }
+        /*TREE_LOG_LINE(tree, VB_MIN, "C Taxon " << candidate.new_leaf->id
+                      << " @ Branch " << best_branch
+                      << " with score " << best_branch_score );*/
+    }
+    inline static bool doesFirstTouch(const PhyloBranch& b1,
+                                      const PhyloBranch& b2) {
+        return (b1.first == b2.first || b1.first == b2.second);
+    }
+    int routeCandidate(RoutedTaxon& taxon, UINT* scratch_vector) const {
+        int prev_branch = -1;
+        int dest_branch_id = taxon.best_branch;
+        
+        auto pars = taxon.getParsimonyBlock();
+        for (;;) {
+            int best_branch_id = dest_branch_id;
+            PhyloBranch target = branches[dest_branch_id];
+            IntVector neighboring_branch_ids;
+            FOR_EACH_PHYLO_NEIGHBOR(target.first,  target.second, it, nei) {
+                if (nei->id != prev_branch) {
+                    neighboring_branch_ids.push_back(nei->id);
+                }
+            }
+            FOR_EACH_PHYLO_NEIGHBOR(target.second, target.first,  it, nei) {
+                if (nei->id != prev_branch) {
+                    neighboring_branch_ids.push_back(nei->id);
+                }
+            }
+            int equal_scores       = 0;
+            int best_subtree_score = -1;
+            for (auto id : neighboring_branch_ids) {
+                PhyloBranch    b    = branches[id];
+                PhyloNeighbor* nei1 = b.getLeftNeighbor();
+                PhyloNeighbor* nei2 = b.getRightNeighbor();
+                tree.computePartialParsimonyOutOfTree(nei1->get_partial_pars(),
+                                                      nei2->get_partial_pars(),
+                                                      scratch_vector);
+                int branch_score = 0;
+                tree.computeParsimonyOutOfTree(pars, scratch_vector, &branch_score);
+                auto touching_nei = doesFirstTouch(b, target) ? nei1 : nei2;
+                int subtree_score = tree.getSubTreeParsimony(touching_nei);
+                if (branch_score<taxon.best_score) {
+                    taxon.best_score   = branch_score;
+                    best_subtree_score = subtree_score;
+                    best_branch_id     = id;
+                    equal_scores       = 0;
+                    /*TREE_LOG_LINE(tree, VB_MIN, "I Taxon " << taxon.new_leaf->id
+                                  << " @ Branch " << best_branch_id
+                                  << " with score " << best_score );*/
+                } else if (branch_score==taxon.best_score) {
+                    if (subtree_score < best_subtree_score ||
+                        best_subtree_score == -1) {
+                        best_branch_id     = id;
+                        best_subtree_score = subtree_score;
+                    }
+                    ++equal_scores;
+                }
+            }
+            if (best_branch_id == dest_branch_id || 1 < equal_scores) {
+                return best_branch_id;
+            }
+            prev_branch    = dest_branch_id;
+            dest_branch_id = best_branch_id;
+        }
+    }
+    void updateBranch(int branch_id) {
+        PhyloBranch    branch = branches[branch_id];
+        PhyloNeighbor* front  = branch.first->findNeighbor(branch.second);
+        front->id             = branch_id;
+        PhyloNeighbor* back   = branch.second->findNeighbor(branch.first);
+        back->id              = branch_id;
+    }
+    void insertCandidate(RoutedTaxon& taxon,
+                         BlockAllocator& block_allocator) {
+        PhyloBranch target = branches[taxon.best_branch];
+        taxon.new_interior->addNeighbor(target.first, -1);
+        taxon.new_interior->addNeighbor(target.second, -1);
+        target.first->updateNeighbor(target.second, taxon.new_interior, -1);
+        target.second->updateNeighbor(target.first, taxon.new_interior, -1);
+        //
+        // A
+        //  \
+        //   C--D  (where C is taxon.new_interior, D is taxon.new_leaf)
+        //  /
+        // B
+        //
+        PhyloNeighbor* AC = target.first->findNeighbor(taxon.new_interior);
+        PhyloNeighbor* CB = taxon.new_interior->findNeighbor(target.second);
+        block_allocator.allocateMemoryFor(CB);
+        std::swap(AC->partial_pars, CB->partial_pars);
+        CB->setParsimonyComputed(AC->isParsimonyComputed());
+
+        PhyloNeighbor* BC = target.second->findNeighbor(taxon.new_interior);
+        PhyloNeighbor* CA = taxon.new_interior->findNeighbor(target.first);
+        block_allocator.allocateMemoryFor(CA);
+        std::swap(BC->partial_pars, CA->partial_pars);
+        CA->setParsimonyComputed(BC->isParsimonyComputed());
+        
+        PhyloNeighbor* DC = taxon.new_leaf->findNeighbor(taxon.new_interior);
+        block_allocator.allocateMemoryFor(DC);
+        DC->setParsimonyComputed(false);
+
+        taxon.new_interior->clearReversePartialParsimony(taxon.new_leaf);
+        taxon.new_leaf->clearReversePartialParsimony(taxon.new_interior);
+                
+        branches.emplace_back(target.first,  taxon.new_interior);
+        updateBranch(branches.size()-1);
+        
+        branches.emplace_back(target.second, taxon.new_interior);
+        updateBranch(branches.size()-1);
+        
+        target.first  = taxon.new_leaf;
+        target.second = taxon.new_interior;
+        branches[taxon.best_branch] = target;
+        updateBranch(taxon.best_branch);
+        
+        tree.nodeNum   += 2;
+        tree.branchNum += 2;
+        ++tree.leafNum;
+    }
+    void constructTree() {
+        int nseq = tree.aln->getNSeq32();
+        double work_estimate = (double)nseq * sqrt((nseq) + 12);
+        const char* task = "Constructing tree with Parsimony Routing";
+        tree.initProgress(work_estimate, task, "", "");
+
+        TimeKeeper initializing ("Initializing");
+        initializing.start();
+        
+        tree.freeNode();
+        tree.deleteAllPartialLhAndParsimony();
+        IntVector taxon_order;
+        tree.create3TaxonTree(taxon_order, rand_stream);
+        tree.initializeTree();
+        tree.setParsimonyKernel(tree.params->SSE);
+        tree.ensureCentralPartialParsimonyIsAllocated(tree.num_threads);
+        int index_parsimony = 0;
+        tree.initializeAllPartialPars(index_parsimony);
+        BlockAllocator block_allocator(tree, index_parsimony);
+        std::vector<UINT*> buffer;
+        block_allocator.allocateVectorOfParsimonyBlocks(tree.num_threads, buffer);
+
+
+        double parsimony_score = tree.computeParsimony("Computing pre-PR parsimony",
+                                                       true, false);
+        
+        PhyloNodeVector v1, v2;
+        tree.getBranchesInIDOrder(v1, v2);
+        int branch_count = v1.size();
+        for (size_t i=0; i<branch_count; ++i) {
+            branches.emplace_back(v1[i], v2[i]);
+        }
+        
+        TypedTaxaToPlace<RoutedTaxon> candidates;
+        candidates.resize(nseq);
+        for (intptr_t i=3; i<nseq; ++i) {
+            int         taxonId   = taxon_order[i];
+            std::string taxonName = tree.aln->getSeqName(taxonId);
+            candidates[i].initialize(&block_allocator, taxonId, taxonName);
+            candidates[i].new_interior->id = i + nseq - 2;
+        }
+        
+        initializing.stop();
+
+        TimeKeeper sampling ("Sampling branches");
+        TimeKeeper rescoring("Rescoring parsimony");
+        TimeKeeper searching("Searching for taxa insertion positions");
+        TimeKeeper inserting("Inserting taxa");
+
+        int sample_count = 2;
+        double total_work = 0;
+        for (int stop_batch=3; stop_batch<nseq; ) {
+            
+            sampling.start();
+            ++sample_count;
+            selectSample(sample_count, branches.size());
+            sampling.stop();
+            
+            int start_batch = stop_batch;
+            stop_batch += sample_count/4 + 1;
+            if (nseq < stop_batch) {
+                stop_batch = nseq;
+            }
+            searching.start();
+            #ifdef _OPENMP
+            #pragma omp parallel for
+            #endif
+            for (int i=start_batch;i<stop_batch;++i) {
+                candidates[i].computeParsimony(&tree);
+                int  t = context.getThreadNumber();
+                bestSampleBranch(candidates[i], buffer[t]);
+                routeCandidate(candidates[i], buffer[t]);
+            }
+            searching.stop();
+            inserting.start();
+            std::sort(candidates.begin()+start_batch,
+                      candidates.begin()+stop_batch);
+            
+            for (int j=start_batch; j<stop_batch; ++j) {
+                insertCandidate(candidates[j], block_allocator);
+            }
+            inserting.stop();
+            double work_done = (double)(stop_batch - start_batch)
+                             * (double) (sample_count+2);
+            tree.trackProgress(work_done);
+            total_work += work_done;
+            
+            rescoring.start();
+            parsimony_score = tree.computeParsimony("Computing post-batch parsimony",
+                                                    true, false);
+            rescoring.stop();
+        }
+        
+        TREE_LOG_LINE(tree, VB_MIN, "Score " << parsimony_score
+                      << " total_work " << total_work);
+        if (VB_MED <= verbose_mode) {
+            tree.hideProgress();
+            std::cout.precision(4);
+            initializing.report();
+            sampling.report();
+            rescoring.report();
+            searching.report();
+            inserting.report();
+            tree.showProgress();
+        }
+        tree.doneProgress();
+    }
+};
+
 int PhyloTree::joinParsimonyTree(const char *out_prefix,
                                  Alignment *alignment) {
     aln = alignment;
@@ -251,9 +562,14 @@ int PhyloTree::joinParsimonyTree(const char *out_prefix,
         outError(ERR_FEW_TAXA);
     }
     PhyloTreeThreadingContext context(*this, params->parsimony_uses_max_threads);
-    
-    ParsimonyJoiningMatrixType pjm(*this);
-    pjm.join();
+
+    if (1) {
+        ParsimonyJoiningMatrixType pjm(*this);
+        pjm.join();
+    } else {
+        ParsimonyRouter pr(*this, context);
+        pr.constructTree();
+    }
     deleteAllPartialParsimony();
 
     /* how long does this take?! */
@@ -272,7 +588,5 @@ int PhyloTree::joinParsimonyTree(const char *out_prefix,
     
     deleteAllPartialParsimony();
     initializeAllPartialPars();
-    return computeParsimony();
+    return computeParsimony("Computing post PJ parsimony");
 }
-
-
