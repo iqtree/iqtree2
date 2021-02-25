@@ -623,6 +623,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.loglh_epsilon = 0.001;
     params.numSmoothTree = 1;
     params.use_compute_parsimony_tree_new = false;
+    params.use_batch_parsimony_addition = false;
     params.distance_uses_max_threads  = false;
     params.parsimony_uses_max_threads = false;
     params.parsimony_nni_iterations = 0;
@@ -1183,6 +1184,10 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
             if (arg=="-pll-spr") {
                 params.parsimony_pll_spr = true;
+                continue;
+            }
+            if (arg=="-parsimony-batch") {
+                params.use_batch_parsimony_addition = true;
                 continue;
             }
             if (arg=="-experimental" || arg=="--experimental") {

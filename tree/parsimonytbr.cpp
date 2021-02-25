@@ -536,9 +536,9 @@ public:
 }; //ProperParsimonyTBRMove
 }; //namespace
 
-void PhyloTree::doParsimonyTBR() {
+int PhyloTree::doParsimonyTBR() {
     if (leafNum<6) {
-        return;
+        return computeParsimony();
     }
     ParsimonySearchParameters s;
         
@@ -549,8 +549,8 @@ void PhyloTree::doParsimonyTBR() {
     s.calculate_connection_costs = s.lazy_mode;
 
     if (s.lazy_mode) {
-        doParsimonySearch<ParsimonyLazyTBRMove>(s);
+        return doParsimonySearch<ParsimonyLazyTBRMove>(s);
     } else {
-        doParsimonySearch<ProperParsimonyTBRMove>(s);
+        return doParsimonySearch<ProperParsimonyTBRMove>(s);
     }
 }

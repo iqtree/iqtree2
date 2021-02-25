@@ -602,6 +602,7 @@ public:
     double modelfinder_eps;
 
     bool   use_compute_parsimony_tree_new;
+    bool   use_batch_parsimony_addition;
     
     bool   distance_uses_max_threads;
     bool   parsimony_uses_max_threads;

@@ -23,6 +23,7 @@ struct PlacementRun {
 public:
     PhyloTree&                phylo_tree;
     IntVector                 taxa_ids_to_add;   //id numbers of taxa to add
+    bool                      be_quiet;
     size_t                    taxa_per_batch;    //Must be 1 or more
     size_t                    inserts_per_batch; //Must be 1 or more
     BlockAllocator*           block_allocator;   //
@@ -39,7 +40,7 @@ public:
     size_t                    taxa_inserted_nearby;   //taxa that couldn't be inserted at their
                                                       //preferred branch, but were inserted nearby
 
-    PlacementRun(PhyloTree& tree, const IntVector& taxaIdsToAdd);
+    PlacementRun(PhyloTree& tree, const IntVector& taxaIdsToAdd, bool be_silent);
     
     void setUpAllocator(int extra_parsimony_blocks, bool trackLikelihood=false,
                         int extra_lh_blocks=0) ;

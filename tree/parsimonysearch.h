@@ -11,7 +11,7 @@
 #include <placement/placementcostcalculator.h> //for ParsimonyCostCalculator
 
 template <class Move>
-void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
+int PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
     //
     //The "big picture" steps, after initialization is done
     //  1. Evaluation (scoring possible moves) (in parallel).
@@ -115,7 +115,7 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
             LOG_LINE(VB_DEBUG, "Parsimony score before parsimony " << s.name
                      << " iteration " << iteration
                      << " was " << parsimony_score);
-        } else {
+        } else if (!s.be_quiet) {
             LOG_LINE(VB_MIN, "Applied " << moves_applied << " move"
                      << ((1==moves_applied) ? "" : "s")
                      << " (out of " << moves_considered << ")"
@@ -268,19 +268,21 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
     parsimony_score = computeParsimony("Determining one-way parsimony", false, true);
     rescoring.stop();
     
-    LOG_LINE(VB_MIN, "Applied " << moves_applied << " move"
-             << ((1==moves_applied) ? "" : "s")
-             << " (out of " << moves_considered << ")"
-             << " (" << moves_still_possible << " still possible)"
-             << " in last iteration "
-             << " (parsimony now " << parsimony_score << ")"
-             << " (total " << s.name << " moves examined "
-             << positions_considered << ")");
+    if (!s.be_quiet) {
+        LOG_LINE(VB_MIN, "Applied " << moves_applied << " move"
+                 << ((1==moves_applied) ? "" : "s")
+                 << " (out of " << moves_considered << ")"
+                 << " (" << moves_still_possible << " still possible)"
+                 << " in last iteration "
+                 << " (parsimony now " << parsimony_score << ")"
+                 << " (total " << s.name << " moves examined "
+                 << positions_considered << ")");
+    }
     
     doneProgress();
     overall.stop();
     
-    if (VB_MED <= verbose_mode) {
+    if (VB_MED <= verbose_mode && !s.be_quiet) {
         hideProgress();
         std::cout.precision(4);
         if (!progress_display::getProgressDisplay()) {
@@ -293,4 +295,6 @@ void PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
         applying.report();
         showProgress();
     }
+    
+    return parsimony_score;
 }

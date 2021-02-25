@@ -465,17 +465,27 @@ namespace {
     }; //ParsimonySPRMove
 }; //namespace
 
-void PhyloTree::doParsimonySPR() {
+int PhyloTree::doParsimonySPR() {
+    return doParsimonySPR(params->parsimony_spr_iterations,
+                          params->use_lazy_parsimony_spr,
+                          params->spr_radius, false);
+}
+
+
+int PhyloTree::doParsimonySPR(intptr_t iterations, bool lazy,
+                               int radius, bool quiet) {
     ParsimonySearchParameters s;
         
     s.name                       = "SPR";
-    s.iterations                 = params->parsimony_spr_iterations;
-    s.lazy_mode                  = params->use_lazy_parsimony_spr;
-    s.radius                     = params->spr_radius;
-    s.calculate_connection_costs = s.lazy_mode;
+    s.iterations                 = iterations;
+    s.lazy_mode                  = lazy;
+    s.radius                     = radius;
+    s.calculate_connection_costs = lazy;
+    s.be_quiet                   = quiet;
 
-    doParsimonySearch<ParsimonySPRMove>(s);
+    return doParsimonySearch<ParsimonySPRMove>(s);
 }
+
 
 void IQTree::doPLLParsimonySPR() {
     double init_start = getRealTime();

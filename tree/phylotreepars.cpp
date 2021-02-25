@@ -1312,6 +1312,53 @@ void PhyloTree::insertNode2Branch(PhyloNode* added_node,
     ass_node->clearReversePartialParsimony(added_node);
 }
 
+int PhyloTree::computeParsimonyTreeBatch(const char *out_prefix,
+                                         Alignment *alignment,
+                                         int *rand_stream) {
+    IntVector taxon_order;
+    create3TaxonTree(taxon_order, rand_stream);
+    int parsimony_score = computeParsimony();
+
+    IntVector sizes;
+    intptr_t growth_rate = 10;
+    for (intptr_t taxon_count = taxon_order.size();
+         3 < taxon_count; taxon_count /= growth_rate ) {
+        sizes.push_back(taxon_count);
+    }
+    
+    intptr_t n           = 3;
+    do {
+        intptr_t p = sizes.back();
+        sizes.pop_back();
+        IntVector taxa_this_time;
+        taxa_this_time.resize(p-n);
+        for (int i=n; i<p; ++i) {
+            taxa_this_time[i-n]=taxon_order[i];
+        }
+        LOG_LINE(VB_MIN, "Expanding tree to " << p << " taxa");
+        addNewTaxaToTree(taxa_this_time, true);
+        int radius = 1 + (int) floor( log(p) );
+        parsimony_score = doParsimonySPR(3, false, radius, true);
+        n = p;
+        p = n * growth_rate;
+    }
+    while ( n < taxon_order.size() );
+
+    bool orig_rooted = rooted;
+    rooted = false;
+    setAlignment(alignment);
+    fixNegativeBranch(true);
+    if (orig_rooted) {
+        convertToRooted();
+    }
+    if (out_prefix) {
+        string file_name = out_prefix;
+        file_name += ".parstree";
+        printTree(file_name.c_str(), WT_NEWLINE + WT_BR_LEN);
+    }
+    return parsimony_score;
+}
+
 int PhyloTree::computeParsimonyTreeNew(const char *out_prefix,
                                        Alignment *alignment,
                                        int *rand_stream) {

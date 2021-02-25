@@ -17,12 +17,12 @@ void TaxonPlacementOptimizer::optimizeAfterTaxonPlacement(TaxaToPlace& taxa,
                                                          TargetBranchRange& targets,
                                                          PhyloTree& tree) {}
 
-BatchPlacementOptimizer::BatchPlacementOptimizer() = default;
+BatchPlacementOptimizer::BatchPlacementOptimizer(bool shut_up): be_quiet(shut_up) {}
 void BatchPlacementOptimizer::optimizeAfterBatch(TaxaToPlace& taxa,
                                                 intptr_t firstTaxon, intptr_t lastTaxon,
                                                 TargetBranchRange& targets,
                                                 PhyloTree& tree) {
-    if (VB_MIN <= verbose_mode) {
+    if (VB_MIN <= verbose_mode && !be_quiet) {
         std::stringstream s;
         s << "Processed batch of "
           << (lastTaxon - firstTaxon) << " taxa";
@@ -32,7 +32,7 @@ void BatchPlacementOptimizer::optimizeAfterBatch(TaxaToPlace& taxa,
 
 BatchPlacementOptimizer::~BatchPlacementOptimizer() = default;
 
-GlobalPlacementOptimizer::GlobalPlacementOptimizer() = default;
+GlobalPlacementOptimizer::GlobalPlacementOptimizer(bool be_silent) : be_quiet(be_silent) {}
 GlobalPlacementOptimizer::~GlobalPlacementOptimizer() = default;
 
 void GlobalPlacementOptimizer::optimizeAfterPlacement(PhyloTree& tree) {
@@ -48,16 +48,13 @@ void GlobalPlacementOptimizer::optimizeAfterPlacement(PhyloTree& tree) {
     }
     tree.determineBlockSizes();
 
-    TREE_LOG_LINE(tree, VB_MED, 
-        "Number of leaves " << tree.leafNum
-        << ", of nodes "    << tree.nodeNum
-        << ", of branches " << tree.branchNum);
-
     //First, recompute parsimony
     int parsimony_score = tree.computeParsimony("Computing parsimony (after adding taxa)",
                                                 true, false);
-    TREE_LOG_LINE(tree, VB_MIN, "Parsimony score after adding taxa was " << parsimony_score);
-
+    if (!be_quiet) {
+        TREE_LOG_LINE(tree, VB_MIN, "Parsimony score after adding taxa was " << parsimony_score);
+    }
+    
     if (tree.params->compute_ml_dist) {
         //Then, fix any negative branches
         tree.initializeAllPartialLh();
@@ -92,7 +89,8 @@ void GlobalPlacementOptimizer::optimizeAfterPlacement(PhyloTree& tree) {
     }
 }
 
-GlobalLikelihoodPlacementOptimizer::GlobalLikelihoodPlacementOptimizer()  = default;
+GlobalLikelihoodPlacementOptimizer::GlobalLikelihoodPlacementOptimizer
+    (bool be_silent): super(be_silent) {}
 
 GlobalLikelihoodPlacementOptimizer::~GlobalLikelihoodPlacementOptimizer() = default;
 
@@ -112,15 +110,16 @@ TaxonPlacementOptimizer* TaxonPlacementOptimizer::getNewTaxonPlacementOptimizer(
     return new TaxonPlacementOptimizer();
 }
 
-BatchPlacementOptimizer* BatchPlacementOptimizer::getNewBatchPlacementOptimizer() {
+BatchPlacementOptimizer* BatchPlacementOptimizer::getNewBatchPlacementOptimizer(bool be_quiet) {
     //auto batchCleanup = Placement::getBatchOptimizationAlgorithm();
-    return new BatchPlacementOptimizer();
+    return new BatchPlacementOptimizer(be_quiet);
 }
 
-GlobalPlacementOptimizer* GlobalPlacementOptimizer::getNewGlobalPlacementOptimizer(bool useLikelihood) {
+GlobalPlacementOptimizer* GlobalPlacementOptimizer::getNewGlobalPlacementOptimizer
+    (bool useLikelihood, bool be_silent) {
     //auto globalCleanup = Placement::getGlobalOptimizationAlgorithm();
-    return useLikelihood ? new GlobalLikelihoodPlacementOptimizer()
-                         : new GlobalPlacementOptimizer();
+    return useLikelihood ? new GlobalLikelihoodPlacementOptimizer(be_silent)
+                         : new GlobalPlacementOptimizer(be_silent);
 }
 
 

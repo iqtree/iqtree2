@@ -652,17 +652,21 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
         if (!constraintTree.empty()) {
             start_tree = STT_PARSIMONY;
         }
+        auto prefix = params->out_prefix.c_str();
         switch (start_tree) {
         case STT_PARSIMONY:
             //initCostMatrix(CM_UNIFORM);
             // Create parsimony tree using IQ-Tree kernel
             logLine("Creating fast initial parsimony tree by random order stepwise addition...");
             start = getRealTime();
-            if (params->use_compute_parsimony_tree_new) {
-                score = computeParsimonyTreeNew(params->out_prefix.c_str(), aln, randstream);
+            if (params->use_batch_parsimony_addition) {
+                score = computeParsimonyTreeBatch(prefix, aln, randstream);
+            }
+            else if (params->use_compute_parsimony_tree_new) {
+                score = computeParsimonyTreeNew(prefix, aln, randstream);
             }
             else {
-                score = computeParsimonyTree(params->out_prefix.c_str(), aln, randstream);
+                score = computeParsimonyTree(prefix, aln, randstream);
             }
             LOG_LINE(VB_QUIET, "Step-wise parsimony addition"
                      << " took " << getRealTime() - start << " seconds"

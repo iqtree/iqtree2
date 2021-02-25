@@ -492,12 +492,9 @@ public:
      but not in the tree, and assigning them taxa ids according to their
      position in the alignment
      @param taxaIdsToAdd
-     @param index_parsimony indicates how many partial parsimony blocks
-      have been allocated to nodes already in the tree
-     @param index_lh indicates how many partial likelhood blocks
-     have been allocated to nodes already in the tree
      */
-    void addNewTaxaToTree(const IntVector& taxaIdsToAdd);
+    void addNewTaxaToTree(const IntVector& taxaIdsToAdd,
+                          bool quiet = false);
     
     void reinsertTaxaViaStepwiseParsimony(const IntVector& taxaIdsToAdd);
     
@@ -1648,7 +1645,18 @@ public:
      * @param rand_stream random stream
      * @return parsimony score
      */
-    virtual int computeParsimonyTreeNew(const char *out_prefix, Alignment *alignment, int *rand_stream);
+    virtual int computeParsimonyTreeNew(const char *out_prefix,
+                                        Alignment *alignment, int *rand_stream);
+    
+    /**
+     * EVEN FASTER VERSION: compute parsimony tree by step-wise addition
+     * @param out_prefix prefix for .parstree file
+     * @param alignment input alignment
+     * @param rand_stream random stream
+     * @return parsimony score
+     */
+    virtual int computeParsimonyTreeBatch(const char *out_prefix,
+                                          Alignment* alignment, int *rand_stream);
 
     /**
      * FAST VERSION: compute parsimony tree by parsimony joining
@@ -1658,14 +1666,17 @@ public:
      */
     virtual int joinParsimonyTree(const char *out_prefix, Alignment *alignment);
         
-    void doParsimonyNNI();
+    int  doParsimonyNNI();
     
-    void doParsimonySPR();
+    int  doParsimonySPR();
     
-    void doParsimonyTBR();
+    int  doParsimonySPR(intptr_t iterations, bool lazy,
+                        int radius, bool quiet);
+    
+    int  doParsimonyTBR();
     
     template <class Move>
-    void doParsimonySearch(const ParsimonySearchParameters& s);
+    int doParsimonySearch(const ParsimonySearchParameters& s);
     
     /****************************************************************************
             Branch length optimization by maximum likelihood

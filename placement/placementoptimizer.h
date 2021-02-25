@@ -32,8 +32,10 @@ public:
 };
 
 class BatchPlacementOptimizer {
+protected:
+    bool be_quiet;
 public:
-    BatchPlacementOptimizer();
+    BatchPlacementOptimizer(bool be_quiet);
     virtual ~BatchPlacementOptimizer();
     virtual void optimizeAfterBatch(TaxaToPlace& taxa,
                                    intptr_t start_taxon_index,
@@ -43,26 +45,29 @@ public:
     
     /** allocate a new BatchPlacementOptimizer that matches what
         has been asked for in the -incremental parameter
+        @params be_silent if true, don't log anything
         @return a new BatchPlacementOptimizer instance (it is up to the caller to delete it) */
-    static BatchPlacementOptimizer* getNewBatchPlacementOptimizer();
+    static BatchPlacementOptimizer* getNewBatchPlacementOptimizer(bool be_silent);
 };
 
 class GlobalPlacementOptimizer {
+protected:
+    bool be_quiet;
 public:
-    GlobalPlacementOptimizer();
+    GlobalPlacementOptimizer(bool be_silent);
     virtual ~GlobalPlacementOptimizer();
     virtual void optimizeAfterPlacement(PhyloTree& tree);
     
     /** allocate a new GlobalPlacementOptimizer that matches what
         has been asked for in the -incremental parameter
         @return a new GlobalPlacementOptimizer instance (it is up to the caller to delete it) */
-    static GlobalPlacementOptimizer* getNewGlobalPlacementOptimizer(bool use_likelihood);
+    static GlobalPlacementOptimizer* getNewGlobalPlacementOptimizer(bool use_likelihood, bool be_silent);
 };
 
 class GlobalLikelihoodPlacementOptimizer: public GlobalPlacementOptimizer {
 public:
     typedef GlobalPlacementOptimizer super;
-    GlobalLikelihoodPlacementOptimizer();
+    GlobalLikelihoodPlacementOptimizer(bool be_silent);
     virtual ~GlobalLikelihoodPlacementOptimizer();
     virtual void optimizeAfterPlacement(PhyloTree& tree);
 };

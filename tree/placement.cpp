@@ -221,11 +221,12 @@ void PhyloTree::reinsertTaxaViaStepwiseParsimony(const IntVector& taxaIdsToAdd) 
 typedef TaxonToPlace TaxonTypeInUse;
 //typedef LessFussyTaxon TaxonTypeInUse;
 
-void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
+void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
+                                 bool be_quiet) {
     //
     //Assumes: The tree is rooted.
     //
-    PlacementRun pr(*this, taxaIdsToAdd);
+    PlacementRun pr(*this, taxaIdsToAdd, be_quiet);
     deleteAllPartialLhAndParsimony();
     
     bool trackLikelihood      = shouldPlacementUseLikelihood();
@@ -286,15 +287,17 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
         candidates.emplace_back(pr.block_allocator, taxonId, taxonName);
     }
     LOG_LINE ( VB_DEBUG, "After allocating TaxonToPlace"
-              << ", index_lh was " << pr.block_allocator->getLikelihoodBlockCount()
-              << ", index_pars was " << pr.block_allocator->getParsimonyBlockCount());
+               << ", index_lh was " << pr.block_allocator->getLikelihoodBlockCount()
+               << ", index_pars was " << pr.block_allocator->getParsimonyBlockCount());
 
     TargetBranchRange targets(*this, pr.block_allocator, pr.calculator, false);
     LOG_LINE ( VB_DEBUG, "After allocating TargetBranchRange"
-              << ", index_lh was " << pr.block_allocator->getLikelihoodBlockCount()
-              << ", index_pars was " << pr.block_allocator->getParsimonyBlockCount());
-    LOG_LINE ( VB_MIN, "Placement set-up time was "
-              << (getRealTime() - setUpStartTime) << " sec");
+               << ", index_lh was " << pr.block_allocator->getLikelihoodBlockCount()
+               << ", index_pars was " << pr.block_allocator->getParsimonyBlockCount());
+    if (!be_quiet) {
+        LOG_LINE ( VB_MIN, "Placement set-up time was "
+                   << (getRealTime() - setUpStartTime) << " sec");
+    }
         
     double estimate = taxaAdditionWorkEstimate
     ( newTaxaCount, pr.taxa_per_batch, pr.inserts_per_batch );
@@ -355,16 +358,18 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd) {
     }
     doneProgress();
 
-    LOG_LINE ( VB_MIN, "Total number of blocked inserts was "  << pr.taxa_inserted_nearby );
-    LOG_LINE ( VB_MED, "At the end of addNewTaxaToTree, index_lhs was "
-              << pr.block_allocator->getLikelihoodBlockCount() << ", index_pars was "
-              << pr.block_allocator->getParsimonyBlockCount() << ".");
+    if (!be_quiet) {
+        LOG_LINE ( VB_MED, "Total number of blocked inserts was "  << pr.taxa_inserted_nearby );
+        LOG_LINE ( VB_MED, "At the end of addNewTaxaToTree, index_lhs was "
+                  << pr.block_allocator->getLikelihoodBlockCount() << ", index_pars was "
+                  << pr.block_allocator->getParsimonyBlockCount() << ".");
+    }
         
     optoTime.start();
     pr.donePlacement();
     optoTime.stop();
     
-    if (VB_MIN <= verbose_mode) {
+    if (VB_MIN <= verbose_mode && !be_quiet) {
         hideProgress();
         std::cout.precision(4);
         refreshTime.report();

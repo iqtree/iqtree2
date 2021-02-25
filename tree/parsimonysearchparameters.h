@@ -16,6 +16,8 @@ public:
     bool        lazy_mode;
     int         radius;
     bool        calculate_connection_costs;
+    bool        be_quiet;
+    ParsimonySearchParameters() : be_quiet(false) {}
 };
 
 #endif /* parsimonysearchparameters_h */

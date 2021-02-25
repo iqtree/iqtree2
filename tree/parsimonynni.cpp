@@ -241,7 +241,7 @@ public:
     }
 };
 
-void PhyloTree::doParsimonyNNI() {
+int PhyloTree::doParsimonyNNI() {
     ParsimonySearchParameters s;
         
     s.name                       = "NNI";
@@ -249,5 +249,5 @@ void PhyloTree::doParsimonyNNI() {
     s.lazy_mode                  = false;
     s.radius                     = -1;
     s.calculate_connection_costs = false;
-    doParsimonySearch<ParsimonyNNIMove>(s);
+    return doParsimonySearch<ParsimonyNNIMove>(s);
 }

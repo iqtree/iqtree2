@@ -9,8 +9,8 @@
 #include "placementcostcalculator.h"
 #include <utils/timeutil.h>          //for getRealTime()
 
-PlacementRun::PlacementRun(PhyloTree& tree, const IntVector& taxaIdsToAdd)
-    : phylo_tree(tree), taxa_ids_to_add(taxaIdsToAdd)
+PlacementRun::PlacementRun(PhyloTree& tree, const IntVector& taxaIdsToAdd, bool be_silent)
+    : phylo_tree(tree), taxa_ids_to_add(taxaIdsToAdd), be_quiet(be_silent)
     , taxa_per_batch(Placement::getTaxaPerBatch(taxaIdsToAdd.size()))
     , inserts_per_batch(Placement::getInsertsPerBatch(taxa_ids_to_add.size(), taxa_per_batch))
     , block_allocator(nullptr)
@@ -18,8 +18,8 @@ PlacementRun::PlacementRun(PhyloTree& tree, const IntVector& taxaIdsToAdd)
     , calculator(PlacementCostCalculator::getNewCostCalculator())
     , use_likelihood(heuristic->usesLikelihood() || calculator->usesLikelihood())
     , taxon_placement_optimizer(TaxonPlacementOptimizer::getNewTaxonPlacementOptimizer())
-    , batch_placement_optimizer(BatchPlacementOptimizer::getNewBatchPlacementOptimizer())
-    , global_placement_optimizer(GlobalPlacementOptimizer::getNewGlobalPlacementOptimizer(use_likelihood))
+    , batch_placement_optimizer(BatchPlacementOptimizer::getNewBatchPlacementOptimizer(be_silent))
+    , global_placement_optimizer(GlobalPlacementOptimizer::getNewGlobalPlacementOptimizer(use_likelihood, be_silent))
     , taxa_inserted_this_batch(0), taxa_inserted_in_total(0), taxa_inserted_nearby(0) {
     if (use_likelihood) {
         phylo_tree.prepareToComputeDistances(); //Set up state look-up vectors
@@ -59,8 +59,10 @@ void PlacementRun::prepareForPlacementRun() {
     if (!use_likelihood) {
         phylo_tree.deleteAllPartialLh();
     }
-    TREE_LOG_LINE ( phylo_tree, VB_MED, "Batch size is " << taxa_per_batch
-              << " and the number of inserts per batch is " << inserts_per_batch);
+    if (!be_quiet) {
+        TREE_LOG_LINE ( phylo_tree, VB_MED, "Batch size is " << taxa_per_batch
+                        << " and the number of inserts per batch is " << inserts_per_batch);
+    }
     if (calculator->usesSankoffParsimony()) {
         phylo_tree.computeTipPartialParsimony();
     }
@@ -196,9 +198,10 @@ void PlacementRun::insertTaxon(TaxaToPlace& taxa, size_t taxon_index,
 void PlacementRun::doneBatch(TaxaToPlace& candidates,
                              intptr_t batchStart, intptr_t batchStop,
                              TargetBranchRange& targets) {
-    if ( 1 < batchStop - batchStart ) {
+    auto batch_size = batchStop - batchStart;
+    if ( taxa_inserted_this_batch < batch_size && !be_quiet ) {
         TREE_LOG_LINE ( phylo_tree, VB_MED,  "Inserted " << (taxa_inserted_this_batch)
-                  << " out of a batch of " << (batchStop - batchStart) << "." );
+                  << " out of a batch of " << batch_size << "." );
     }
     batch_placement_optimizer->optimizeAfterBatch(candidates, batchStart, batchStop, targets, phylo_tree);
     if (calculator->usesLikelihood()) {
@@ -245,7 +248,9 @@ void PlacementRun::donePlacement() {
         logSubtreesNearAddedTaxa();
     }
 
-    TREE_LOG_LINE(phylo_tree, VB_MED, "Tidying up tree after inserting taxa.");
+    if (!be_quiet) {
+        TREE_LOG_LINE(phylo_tree, VB_MED, "Tidying up tree after inserting taxa.");
+    }
     global_placement_optimizer->optimizeAfterPlacement(phylo_tree);
 
     if (VB_MED <= verbose_mode && use_likelihood) {
