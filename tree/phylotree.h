@@ -2631,9 +2631,9 @@ protected:
             the main memory storing all partial parsimony states for all neighbors of the tree.
             The variable partial_pars in PhyloNeighbor will be assigned to a region inside this variable.
      */
-    UINT*  central_partial_pars;
-    size_t pars_block_size;          //in UINTs
-    size_t total_parsimony_mem_size; //in UINTs
+    UINT*    central_partial_pars;
+    uint64_t pars_block_size;          //in UINTs
+    uint64_t total_parsimony_mem_size; //in UINTs
 
     virtual void reorientPartialLh(PhyloNeighbor* dad_branch, PhyloNode *dad);
     

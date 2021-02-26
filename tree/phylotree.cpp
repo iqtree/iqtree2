@@ -1416,7 +1416,9 @@ void PhyloTree::ensureCentralPartialParsimonyIsAllocated(size_t extra_vector_cou
     }
     determineBlockSizes();
     uint64_t tip_partial_pars_size = get_safe_upper_limit_float(aln->num_states * (aln->STATE_UNKNOWN+1));
-    size_t   vector_count          = aln->getNSeq() * 4 - 6 + extra_vector_count;
+    uint64_t vector_count          = aln->getNSeq() * 4 - 4 + extra_vector_count;
+    //2N-3 branches in an unrooted tree, 2N-2 in a rooted tree, and each branch needs
+    //two vectors, so allocate 4N-4, just in case the tree is rooted.
     total_parsimony_mem_size       = vector_count * pars_block_size + tip_partial_pars_size;
 
     LOG_LINE(VB_DEBUG, "Allocating " << total_parsimony_mem_size * sizeof(UINT)
@@ -1452,9 +1454,9 @@ void PhyloTree::initializeAllPartialPars(int &index, PhyloNode *node, PhyloNode 
     if (dad) {
         // assign blocks in central_partial_lh to both Neighbors (dad->node, and node->dad)
         PhyloNeighbor* backNei = node->findNeighbor(dad);
-        backNei->partial_pars  = central_partial_pars + (index * pars_block_size);
-        PhyloNeighbor* nei     = dad->findNeighbor(node);
-        nei->partial_pars      = central_partial_pars + ((index + 1) * pars_block_size);
+        backNei->partial_pars = central_partial_pars + (index * pars_block_size);
+        PhyloNeighbor* nei = dad->findNeighbor(node);
+        nei->partial_pars = central_partial_pars + ((index + 1) * pars_block_size);
         index                 += 2;
         ASSERT( tip_partial_pars==nullptr || nei->partial_pars < tip_partial_pars );
     }

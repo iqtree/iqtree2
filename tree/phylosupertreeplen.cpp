@@ -1750,24 +1750,16 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
         	outError("Not enough memory for partial likelihood vectors (bad_alloc)");
         }
 	}
-//    if (!central_partial_pars) {
-//        try {
-//        	central_partial_pars = aligned_alloc<UINT>(total_partial_pars_entries);
-//        } catch (std::bad_alloc &ba) {
-//        	outError("Not enough memory for partial parsimony vectors (bad_alloc)");
-//        }
-//    }
 
     // assign individual chunk just to prevent reallocation of memory, they will not be used
 	for (it = begin(); it != end(); it++) {
 		(*it)->central_partial_lh = central_partial_lh;
 		(*it)->central_scale_num = central_scale_num;
-//		(*it)->central_partial_pars = central_partial_pars;
 	}
 
-	double *lh_addr = central_partial_lh;
-	UBYTE *scale_addr = central_scale_num;
-	UINT *pars_addr = central_partial_pars;
+	double* lh_addr    = central_partial_lh;
+	UBYTE*  scale_addr = central_scale_num;
+	UINT*   pars_addr  = central_partial_pars;
 	clearAllPartialLH(true);
 
 	initializeAllPartialLh(lh_addr, scale_addr, pars_addr);
@@ -1809,7 +1801,6 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
             scale_addr              = scale_addr + scale_block_size[part];
         }
     }
-
 }
 
 void PhyloSuperTreePlen::initializeAllPartialLh(double* &lh_addr, UBYTE* &scale_addr, UINT* &pars_addr, PhyloNode *node, PhyloNode *dad) {
