@@ -242,8 +242,8 @@ void TaxonToPlace::assessNewTargetBranches(PhyloTree& phylo_tree,
 
 LessFussyTaxon::LessFussyTaxon() : super() { }
 LessFussyTaxon::LessFussyTaxon(const LessFussyTaxon& rhs) = default; //copy everything!
-LessFussyTaxon::LessFussyTaxon(BlockAllocator* ba, int id, std::string name)
-    : super(ba, id, name) {
+LessFussyTaxon::LessFussyTaxon(BlockAllocator* ba, int id, std::string name, bool delay)
+    : super(ba, id, name, delay) {
 }
 size_t LessFussyTaxon::considerPlacements(const PossiblePlacement* placements, size_t count) {
     placementStore.clear();

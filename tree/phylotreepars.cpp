@@ -1321,9 +1321,10 @@ int PhyloTree::computeParsimonyTreeBatch(const char *out_prefix,
 
     IntVector sizes;
     intptr_t growth_rate = 10;
-    for (intptr_t taxon_count = taxon_order.size();
-         3 < taxon_count; taxon_count /= growth_rate ) {
-        sizes.push_back(taxon_count);
+    for (intptr_t n = taxon_order.size();
+         3 < n; n /= growth_rate ) {
+        sizes.push_back(n);
+//        growth_rate = (int) floor ( sqrt ( n ) + 2.0 );
     }
     
     intptr_t n           = 3;
@@ -1413,7 +1414,7 @@ int PhyloTree::computeParsimonyTreeNew(const char *out_prefix,
     for (intptr_t i=0; i<count_to_add; ++i) {
         int         taxonId   = taxon_order[i+leafNum];
         std::string taxonName = aln->getSeqName(taxonId);
-        candidates[i].initialize(&block_allocator, taxonId, taxonName);
+        candidates[i].initialize(&block_allocator, taxonId, taxonName, true);
     }
     #ifdef _OPENMP
     #pragma omp parallel for

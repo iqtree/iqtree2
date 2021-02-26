@@ -173,23 +173,6 @@ void PhyloTree::removeSampleTaxaIfRequested() {
     }
 }
 
-double PhyloTree::taxaAdditionWorkEstimate(size_t newTaxaCount,
-                                           size_t taxaPerBatch,
-                                           size_t insertsPerBatch) {
-    if ( newTaxaCount <= taxaPerBatch || taxaPerBatch == 0 ) {
-        if ( newTaxaCount <= insertsPerBatch || insertsPerBatch == 0 ) {
-            return 3.0 * newTaxaCount * leafNum;
-        }
-        return 3.0 * newTaxaCount * leafNum
-                   * newTaxaCount / insertsPerBatch;
-    }
-    size_t batchesThisPass  = newTaxaCount / taxaPerBatch;
-    double workThisPass     = static_cast<double>(batchesThisPass * taxaPerBatch * leafNum);
-    double progressThisPass = static_cast<double>(batchesThisPass * insertsPerBatch);
-    //Optimistic if inserts = 100% and batches are large.
-    return (3.0 * workThisPass / progressThisPass) * newTaxaCount;
-}
-
 bool PhyloTree::shouldPlacementUseSankoffParsimony() const {
     return Placement::doesPlacementUseSankoffParsimony();
 }
@@ -271,21 +254,36 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
         //each addition of a taxon later creates 3 *new* target branches
         //(each of which needs its own lh block)
     
+    size_t newTaxaCount = taxaIdsToAdd.size();
+    double estimate     = newTaxaCount * 3.0;
+    initProgress(estimate, "Adding new taxa to tree", "", "");
+
     pr.prepareForPlacementRun();
     pr.setUpAllocator(extra_parsimony_blocks, trackLikelihood, extra_lh_blocks);
     
     double setUpStartTime = getRealTime();
-    size_t newTaxaCount = taxaIdsToAdd.size();
     
-    TypedTaxaToPlace<TaxonTypeInUse> candidates(newTaxaCount);
     LOG_LINE ( VB_DEBUG, "Before allocating TaxonToPlace array"
               << ", index_lh was "
               << pr.block_allocator->getLikelihoodBlockCount() );
-    for (size_t i=0; i<newTaxaCount; ++i) {
+    
+    TypedTaxaToPlace<TaxonTypeInUse> candidates(newTaxaCount);
+    for (intptr_t i=0; i<newTaxaCount; ++i) {
         int         taxonId   = taxaIdsToAdd[i];
         std::string taxonName = aln->getSeqName(taxonId);
-        candidates.emplace_back(pr.block_allocator, taxonId, taxonName);
+        candidates.emplace_back(pr.block_allocator, taxonId, taxonName, true);
     }
+    #ifdef _OPENMP
+    #pragma omp parallel for
+    #endif
+    for (intptr_t i=0; i<newTaxaCount; ++i) {
+        candidates[i].computeParsimony(this);
+        if ((i%1000) == 0) {
+            trackProgress(1000.0);
+        }
+    }
+    trackProgress(newTaxaCount % 1000);
+
     LOG_LINE ( VB_DEBUG, "After allocating TaxonToPlace"
                << ", index_lh was " << pr.block_allocator->getLikelihoodBlockCount()
                << ", index_pars was " << pr.block_allocator->getParsimonyBlockCount());
@@ -294,13 +292,11 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
     LOG_LINE ( VB_DEBUG, "After allocating TargetBranchRange"
                << ", index_lh was " << pr.block_allocator->getLikelihoodBlockCount()
                << ", index_pars was " << pr.block_allocator->getParsimonyBlockCount());
+    
     if (!be_quiet) {
         LOG_LINE ( VB_MIN, "Placement set-up time was "
                    << (getRealTime() - setUpStartTime) << " sec");
     }
-        
-    double estimate = taxaAdditionWorkEstimate
-    ( newTaxaCount, pr.taxa_per_batch, pr.inserts_per_batch );
     
     TimeKeeper refreshTime("Refresh");
     TimeKeeper searchTime("Search");
@@ -309,7 +305,6 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
     TimeKeeper optoTime("Post-Batch Optimization");
         
     LikelihoodBlockPairs spare_blocks(2);
-    initProgress(estimate, "Adding new taxa to tree", "", "");
     for (; 0<newTaxaCount; newTaxaCount = candidates.size() ) {
         if (newTaxaCount<pr.taxa_per_batch) {
             pr.taxa_per_batch = newTaxaCount;
@@ -322,12 +317,12 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
             refreshTime.stop();
 
             searchTime.start();
-            size_t batchStop      = batchStart + pr.taxa_per_batch;
+            size_t batchStop  = batchStart + pr.taxa_per_batch;
             pr.doBatchPlacementCosting(candidates, batchStart, batchStop, targets);
             searchTime.stop();
             
             rankingTime.start();
-            size_t insertStop    = batchStart;
+            size_t insertStop = batchStart;
             pr.selectPlacementsForInsertion( candidates, batchStart, batchStop, insertStop);
             rankingTime.stop();
             
@@ -335,7 +330,11 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
             pr.startBatchInsert();
             for ( size_t i = batchStart; i<insertStop; ++i) {
                 pr.insertTaxon(candidates, i, targets, spare_blocks);
+                if ((pr.taxa_inserted_in_total % 1000) == 0) {
+                    trackProgress(1000.0);
+                }
             }
+
             insertTime.stop();
             
             optoTime.start();
@@ -347,14 +346,6 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
         optoTime.start();
         pr.donePass(candidates, batchStart, targets);
         optoTime.stop();
-
-        #if USE_PROGRESS_DISPLAY
-        auto workLeft   = taxaAdditionWorkEstimate
-                          ( newTaxaCount, pr.taxa_per_batch, pr.inserts_per_batch );
-        if (progress!=nullptr) {
-            progress->setWorkRemaining(workLeft);
-        }
-        #endif
     }
     doneProgress();
 

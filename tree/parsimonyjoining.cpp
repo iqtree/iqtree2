@@ -467,7 +467,6 @@ public:
         std::vector<UINT*> buffer;
         block_allocator.allocateVectorOfParsimonyBlocks(tree.num_threads, buffer);
 
-
         double parsimony_score = tree.computeParsimony("Computing pre-PR parsimony",
                                                        true, false);
         
@@ -483,8 +482,14 @@ public:
         for (intptr_t i=3; i<nseq; ++i) {
             int         taxonId   = taxon_order[i];
             std::string taxonName = tree.aln->getSeqName(taxonId);
-            candidates[i].initialize(&block_allocator, taxonId, taxonName);
+            candidates[i].initialize(&block_allocator, taxonId, taxonName, false);
             candidates[i].new_interior->id = i + nseq - 2;
+        }
+        #ifdef _OPENMP
+        #pragma omp parallel for
+        #endif
+        for (intptr_t i=3; i<nseq; ++i) {
+            candidates[i].computeParsimony(&tree);
         }
         
         initializing.stop();

@@ -384,8 +384,6 @@ void TargetBranch::costPlacementOfTaxa
             candidate.considerAdditionalPlacement(p);
         }
     }
-    double work_done = (double)candidateStopIndex - (double)candidateStartIndex;
-    phylo_tree.trackProgress(work_done);
 }
 
 bool TargetBranch::isExternalBranch() const {

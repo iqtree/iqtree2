@@ -44,8 +44,8 @@ public:
     
     TaxonToPlace();
     TaxonToPlace(const TaxonToPlace& rhs); //copy everything!
-    TaxonToPlace(BlockAllocator* ba, int id, std::string name, bool delayCompute=false);
-    void initialize(BlockAllocator* ba, int id, std::string name, bool delayCompute=false);
+    TaxonToPlace(BlockAllocator* ba, int id, std::string name, bool delayCompute);
+    void initialize(BlockAllocator* ba, int id, std::string name, bool delayCompute);
     void computeParsimony(PhyloTree* tree);
 
     virtual      ~TaxonToPlace();
@@ -188,7 +188,7 @@ public:
     typedef TaxonToPlace super;
     LessFussyTaxon ( );
     LessFussyTaxon ( const LessFussyTaxon& rhs );
-    LessFussyTaxon ( BlockAllocator* ba, int id, std::string name);
+    LessFussyTaxon ( BlockAllocator* ba, int id, std::string name, bool delay);
     virtual size_t considerPlacements(const PossiblePlacement* placements,
                                       size_t count);
     virtual bool   considerAdditionalPlacement(const PossiblePlacement& placement);

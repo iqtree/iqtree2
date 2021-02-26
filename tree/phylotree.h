@@ -497,9 +497,7 @@ public:
                           bool quiet = false);
     
     void reinsertTaxaViaStepwiseParsimony(const IntVector& taxaIdsToAdd);
-    
-    double taxaAdditionWorkEstimate(size_t newTaxaCount, size_t taxaPerBatch, size_t insertsPerBatch);
-    
+        
     virtual PhyloNode* findFarthestLeaf(PhyloNode *node = nullptr,
                                        PhyloNode *dad = nullptr);
     

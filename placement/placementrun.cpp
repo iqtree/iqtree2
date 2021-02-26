@@ -78,9 +78,9 @@ void PlacementRun::prepareForBatch() {
     phylo_tree.clearAllPartialParsimony(false);
 }
 
- double PlacementRun::doBatchPlacementCosting(TaxaToPlace& candidates,
-                                              size_t batchStart, size_t batchStop,
-                                              TargetBranchRange& targets) {
+double PlacementRun::doBatchPlacementCosting(TaxaToPlace& candidates,
+                                             size_t batchStart, size_t batchStop,
+                                             TargetBranchRange& targets) {
     ASSERT( !candidates.isEmpty() );
     ASSERT( !targets.empty() );
     
@@ -108,12 +108,19 @@ void PlacementRun::prepareForBatch() {
         TREE_LOG_LINE(phylo_tree, VB_DEBUG, "Scored " << p.score << " for placement"
                       << " of " << c.taxonName << " with lengths "
                  << p.lenToNode1 << ", " << p.lenToNode2 << ", " << p.lenToNewTaxon);
+        if ((i-batchStart) % 1000 ) == 0 ) {
+            phylo_tree.trackProgress(1000.0);
+        }
     }
-     
 #else //TARGET_BRANCH_MAJOR
     LikelihoodBlockPairs blocks(2);
     size_t tStep = 1;
-    while (tStep * 100 <= targetCount) tStep *= 10;
+    while (tStep * 100 <= targetCount) {
+        tStep *= 10;
+    }
+    double workStep = (double)( batchStop - batchStart ) / (double)targetCount;
+    double workDone = 0;
+    
     for (size_t t = 0; t < targetCount; ++t ) {
         TargetBranch* target = targets.getTargetBranch(t);
         if ((t & tStep) == 0) {
@@ -134,6 +141,11 @@ void PlacementRun::prepareForBatch() {
         double forgetStart = getRealTime();
         target->forgetState();
         refreshTime += getRealTime() - forgetStart;
+        workDone += workStep;
+        if (workDone > 1000.0) {
+            workDone -= 1000.0;
+            phylo_tree.trackProgress(1000.0);
+        }
     }
 
 #endif
