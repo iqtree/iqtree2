@@ -2346,8 +2346,9 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
             initTree = iqtree->getTreeString();
         }
         // now overwrite with random tree
-        if (params.start_tree == STT_RANDOM_TREE && !finishedInitTree
-            && params.start_tree_subtype_name != "RBT" ) {
+        if (params.start_tree == STT_RANDOM_TREE && !finishedInitTree &&
+            params.start_tree_subtype_name != "RBT" &&
+            params.start_tree_subtype_name != "QDT") {
             cout << "Generate random initial Yule-Harding tree..." << endl;
             iqtree->generateRandomTree(YULE_HARDING);
             iqtree->wrapperFixNegativeBranch(true);

@@ -1324,7 +1324,13 @@ int PhyloTree::computeParsimonyTreeBatch(const char *out_prefix,
     for (intptr_t n = taxon_order.size();
          3 < n; n /= growth_rate ) {
         sizes.push_back(n);
-//        growth_rate = (int) floor ( sqrt ( n ) + 2.0 );
+        //note: growth_rate should be approximately
+        //      pow(n, 1/3.0).  If placement "tiebreaking"
+        //      were more efficient (e.g. recursively
+        //      defined), then growth_rate should be ~
+        //      approximately proportional to
+        //      pow(n, phi-1), where phi's the golden mean,
+        //      phi = (1.0 + sqrt(5.0))/2.0.
     }
     
     intptr_t n           = 3;
@@ -1339,6 +1345,9 @@ int PhyloTree::computeParsimonyTreeBatch(const char *out_prefix,
         LOG_LINE(VB_MIN, "Expanding tree to " << p << " taxa");
         addNewTaxaToTree(taxa_this_time, true);
         int radius = 1 + (int) floor( log(p) );
+        //Eventually, radius should probably be
+        //(phi-1)*log(p)/log(2) or less,
+        //(so that parsimony SPR won't dominate).
         parsimony_score = doParsimonySPR(3, false, radius, true);
         n = p;
         p = n * growth_rate;

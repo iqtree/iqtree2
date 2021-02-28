@@ -730,7 +730,14 @@ public:
     PhyloNode* generateRandomBalancedTree(const IntVector& order,
                                           size_t start, size_t stop,
                                           size_t degree, PhyloNodeVector& nodes);
-    
+
+    /*
+     * Generate a proximity tree
+     */
+    PhyloNode* generateProximityTree(IntVector& order,
+                                     size_t start, size_t stop,
+                                     size_t degree, PhyloNodeVector& nodes);
+
     /**
      * Generate the initial tree (usually used for model parameter estimation)
      */

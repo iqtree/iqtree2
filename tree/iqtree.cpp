@@ -36,6 +36,8 @@
 #include <utils/MPIHelper.h>
 #include <utils/pllnni.h>
 #include <utils/timekeeper.h>
+#include <utils/hammingdistance.h> //for hammingDistance
+#include <utils/heapsort.h>        //for mirroredHeapsort
 
 Params *globalParams;
 Alignment *globalAlignment;
@@ -546,6 +548,9 @@ PhyloNode* IQTree::generateRandomBalancedTree(const IntVector& order,
                                               size_t start, size_t stop,
                                               size_t degree,
                                               PhyloNodeVector& nodes) {
+    //
+    //Note: it is assumed that degree is always either 2 or 3
+    //
     size_t count = stop - start;
     if (count==0) return nullptr;
     if (count==1) {
@@ -568,6 +573,70 @@ PhyloNode* IQTree::generateRandomBalancedTree(const IntVector& order,
         interior->addNeighbor(child, -1);
         child->addNeighbor(interior, -1);
     }
+    return interior;
+}
+
+PhyloNode* IQTree::generateProximityTree(IntVector& order,
+                                         size_t start, size_t stop,
+                                         size_t degree,
+                                         PhyloNodeVector& nodes) {
+    size_t count = stop - start;
+    if (count<degree) {
+        return generateRandomBalancedTree(order, start, stop,
+                                          degree, nodes);
+    }
+    std::vector<const char*> seq;
+    CharVector subtree;
+    subtree.resize(count);
+    for (int i=0; i<degree; ++i) {
+        seq.push_back(getConvertedSequenceByNumber(order[start+i]));
+        subtree[i]=i;
+    }
+    char     unk         = static_cast<char>(aln->STATE_UNKNOWN);
+    auto     freq_vector = getConvertedSequenceFrequencies();
+    intptr_t seq_len     = getConvertedSequenceLength();
+    double   denominator = aln->getNSite();
+
+    //Decide on subtree for each node
+    #ifdef _OPENMP
+    #pragma omp parallel for if(num_threads<=count)
+    #endif
+    for (int j=degree; j<count; ++j) {
+        const char* this_seq = getConvertedSequenceByNumber(order[start+j]);
+        int    k             = 0;
+        double unknown_freq  = 0;
+        double best_d        = hammingDistance(unk, this_seq, seq[0],
+                                               seq_len, freq_vector, unknown_freq);
+        best_d /= (denominator - unknown_freq);
+        for (int i=1; i<degree; ++i) {
+            double d = hammingDistance(unk, this_seq, seq[i],
+                                    seq_len, freq_vector, unknown_freq);
+            d /= (denominator - unknown_freq);
+            if (d<best_d) {
+                best_d = d;
+                k      = i;
+            }
+        }
+        subtree[j] = k;
+    }
+    mirroredHeapsort(subtree.data(), 0, count, order.data()+start);
+    PhyloNode* interior = newNode(-1);
+    int which_tree = 0;
+    int subtree_start = start;
+    for (int j = 0; j<count; ++j) {
+        if (which_tree<subtree[j]) {
+            PhyloNode* child = generateProximityTree(order, subtree_start, start+j, 2, nodes);
+            ASSERT(child!=nullptr);
+            interior->addNeighbor(child, -1);
+            child->addNeighbor(interior, -1);
+            subtree_start = start + j;
+            which_tree = subtree[j];
+        }
+    }
+    PhyloNode* child = generateProximityTree(order, subtree_start, stop, 2, nodes);
+    ASSERT(child!=nullptr);
+    interior->addNeighbor(child, -1);
+    child->addNeighbor(interior, -1);
     return interior;
 }
 
@@ -686,8 +755,10 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
             break;
 
         case STT_RANDOM_TREE:
-            if (params->start_tree_subtype_name=="RBT") {
-                logLine("Creating random balanced tree ...");
+            if (params->start_tree_subtype_name=="RBT" ||
+                params->start_tree_subtype_name=="QDT" ) {
+                logLine("Creating " + params->start_tree_subtype_name +
+                        " tree ...");
                 start = getRealTime();
                 freeNode();
                 IntVector       order;
@@ -699,7 +770,14 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
                     free_sprng(rand_stream);
                 }
                 nodes.resize(aln->getNSeq(), nullptr);
-                generateRandomBalancedTree(order, 0, order.size(), 3, nodes);
+                if (params->start_tree_subtype_name=="QDT") {
+                    this->prepareToComputeDistances();
+                    generateProximityTree(order, 0, order.size(), 3, nodes);
+                    this->doneComputingDistances();
+                }
+                else {
+                    generateRandomBalancedTree(order, 0, order.size(), 3, nodes);
+                }
                 root     = nodes[0];
                 leafNum  = aln->getNSeq32();
                 rooted   = false;
@@ -4464,8 +4542,12 @@ void IQTree::initializePLLIfNecessary() {
     if (isInitializedPLL()) {
         return;
     }
+    
+    
     if (params->start_tree == STT_PLL_PARSIMONY 
-        || ( params->start_tree == STT_RANDOM_TREE && params->start_tree_subtype_name != "RBT")
+        || ( params->start_tree == STT_RANDOM_TREE &&
+             params->start_tree_subtype_name != "RBT" &&
+             params->start_tree_subtype_name != "QDT")
         || params->pll) {
         initializePLL(*params);
     }
