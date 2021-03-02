@@ -125,7 +125,8 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info,
                 if (child->node->isLeaf()) {
                     // external node
                     // load data for tip
-                    auto childStateRow = this->getConvertedSequenceByNumber(child->node->id);
+                    auto childStateRow = (child->node->id < aln->getNSeq32())
+                        ? this->getConvertedSequenceByNumber(child->node->id) : nullptr;
                     auto unknown  = aln->STATE_UNKNOWN;
                     for (int x = 0; x < VectorClass::size(); x++) {
                         int state;
@@ -262,7 +263,8 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info,
         memset(dad_branch->scale_num + (SAFE_NUMERIC ? ptn_lower*ncat_mix : ptn_lower), 0, scale_size * sizeof(UBYTE));
         
         if (isRootLeaf(left->node)) {
-            auto rightStateRow = this->getConvertedSequenceByNumber(right->node->id);
+            auto rightStateRow = (right->node->id < aln->getNSeq32())
+                ? this->getConvertedSequenceByNumber(right->node->id) : nullptr;
             auto unknown  = aln->STATE_UNKNOWN;
             for (intptr_t ptn = ptn_lower; ptn < ptn_upper; ptn+=VectorClass::size()) {
                 double *vright = dad_branch->partial_lh + ptn*block;
@@ -294,8 +296,10 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info,
                     partial_lh[i] *= partial_lh_left[i];
             }
         } else {
-            auto leftStateRow  = this->getConvertedSequenceByNumber(left->node->id);
-            auto rightStateRow = this->getConvertedSequenceByNumber(right->node->id);
+            auto leftStateRow  = (left->node->id < aln->getNSeq32())
+                ? this->getConvertedSequenceByNumber(left->node->id) : nullptr;
+            auto rightStateRow = (right->node->id < aln->getNSeq32())
+                ? this->getConvertedSequenceByNumber(right->node->id) : nullptr;
             bool flat = (leftStateRow!=nullptr && rightStateRow!=nullptr);
             auto unknown  = aln->STATE_UNKNOWN;
             for (intptr_t ptn = ptn_lower; ptn < ptn_upper; ptn+=VectorClass::size()) {
@@ -388,7 +392,8 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info,
         
         double *partial_lh_left = partial_lh_leaves;
         double *vec_left = buffer_partial_lh_ptr + (block*2)*VectorClass::size() * packet_id;
-        auto leftStateRow  = this->getConvertedSequenceByNumber(left->node->id);
+        auto leftStateRow  = (left->node->id < aln->getNSeq32())
+            ? this->getConvertedSequenceByNumber(left->node->id) : nullptr;
         auto unknown  = aln->STATE_UNKNOWN;
         for (intptr_t ptn = ptn_lower; ptn < ptn_upper; ptn+=VectorClass::size()) {
             VectorClass *partial_lh = (VectorClass*)(dad_branch->partial_lh + ptn*block);
