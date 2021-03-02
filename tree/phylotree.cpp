@@ -1419,9 +1419,9 @@ void PhyloTree::ensureCentralPartialParsimonyIsAllocated(size_t extra_vector_cou
     }
     determineBlockSizes();
     uint64_t tip_partial_pars_size = get_safe_upper_limit_float(aln->num_states * (aln->STATE_UNKNOWN+1));
-    uint64_t vector_count          = aln->getNSeq() * 4 - 4 + extra_vector_count;
-    //2N-3 branches in an unrooted tree, 2N-2 in a rooted tree, and each branch needs
-    //two vectors, so allocate 4N-4, just in case the tree is rooted.
+    uint64_t vector_count          = aln->getNSeq() * 4 - 2 + extra_vector_count;
+    //2N-3 branches in an unrooted tree, 2N-1 in a rooted tree, and each branch needs
+    //two vectors, so allocate 4N-2, just in case the tree is rooted.
     total_parsimony_mem_size       = vector_count * pars_block_size + tip_partial_pars_size;
 
     LOG_LINE(VB_DEBUG, "Allocating " << total_parsimony_mem_size * sizeof(UINT)
