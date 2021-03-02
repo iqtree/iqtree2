@@ -733,7 +733,7 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch
                 computePartialLikelihood(*it, ptn_lower, ptn_upper, packet_id, buffers);
             }
             double *vec_tip = buffer_partial_lh_ptr + block*3*VectorClass::size() * packet_id;
-            auto dadStateRow  = this->getConvertedSequenceByNumber(dad->id);
+            auto dadStateRow  = (dad->id < aln->getNSeq32()) ? this->getConvertedSequenceByNumber(dad->id) : nullptr;
             auto unknown  = aln->STATE_UNKNOWN;
 
             for (intptr_t ptn = ptn_lower; ptn < ptn_upper; ptn+=VectorClass::size()) {
@@ -1182,7 +1182,7 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
             memset(buffers._pattern_lh_cat+ptn_lower*ncat_mix, 0, sizeof(double)*(ptn_upper-ptn_lower)*ncat_mix);
 
             double *vec_tip = buffer_partial_lh_ptr + block*VectorClass::size() * packet_id;
-            auto dadStateRow  = this->getConvertedSequenceByNumber(dad->id);
+            auto dadStateRow = (dad->id < aln->getNSeq32()) ? this->getConvertedSequenceByNumber(dad->id) : nullptr;
             auto unknown  = aln->STATE_UNKNOWN;
 
             for (intptr_t ptn = ptn_lower; ptn < ptn_upper; ptn+=VectorClass::size()) {
