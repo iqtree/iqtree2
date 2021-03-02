@@ -432,8 +432,8 @@ void PhyloTree::setAlignment(Alignment *alignment) {
     */
 }
 
-void PhyloTree::configureLikelihoodKernel(const Params& params) {
-    if (computeLikelihoodBranchPointer==nullptr)
+void PhyloTree::configureLikelihoodKernel(const Params& params, bool force) {
+    if (computeLikelihoodBranchPointer==nullptr || force)
     {
         setLikelihoodKernel(params.SSE);
         optimize_by_newton = params.optimize_by_newton;
@@ -526,7 +526,7 @@ void PhyloTree::prepareForPlacement() {
             aln->orderPatternByNumChars(PAT_VARIANT);
         }
     }
-    configureLikelihoodKernel(*params);
+    configureLikelihoodKernel(*params, true);
     configureModel(*params);
     setParsimonyKernel(params->SSE);
 }

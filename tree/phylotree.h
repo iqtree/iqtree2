@@ -441,7 +441,7 @@ public:
      */
     virtual void setAlignment(Alignment* alignment);
 
-    void configureLikelihoodKernel(const Params& params);
+    void configureLikelihoodKernel(const Params& params, bool force);
     
     void configureModel(Params& params);
     

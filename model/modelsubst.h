@@ -328,11 +328,11 @@ public:
     virtual void report(ostream &out) {}
 
 	virtual double *getEigenvalues() const {
-		return NULL;
+		return nullptr;
 	}
 
 	virtual double *getEigenvectors() const {
-		return NULL;
+		return nullptr;
 	}
 
 	virtual double *getInverseEigenvectors() const {

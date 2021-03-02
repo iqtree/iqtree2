@@ -394,8 +394,9 @@ void ModelLieMarkov::restoreCheckpoint() {
     endCheckpoint();
     setRates();                        // updates rate matrix
     decomposeRateMatrix();             // updates eigen system.
-    if (phylo_tree)
+    if (phylo_tree) {
         phylo_tree->clearAllPartialLH();
+    }
 }
 
 void ModelLieMarkov::writeInfo(ostream &out) {
@@ -868,7 +869,7 @@ void ModelLieMarkov::setBasis() {
 
   // BQM 2017-05-02: set reversibility
   // TODO: crash when setting reversible to true
-  //setReversible(TIME_REVERSIBLE[model_num]);
+  // setReversible(TIME_REVERSIBLE[model_num]);
   setReversible(false);
 
   // if not otherwise specified, use FREQ_ESTIMATE.
@@ -1101,7 +1102,9 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
     if (name.find("1.1") != string::npos) {
     	a = 1./3.;
     	//Eigenvalues = {0, -4*a, -4*a, -4*a}
-		ceval[0] = 0.0; ceval[1] = ceval[2] = ceval[3] = -4.0*a;
+        ceval[0] = 0.0;
+        ceval[1] = ceval[2] = ceval[3] = -4.0*a;
+        
 		//v0 = {1, 1, 1, 1}
 		cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
 		//v1 = {-1, 0, 0, 1}
@@ -1131,7 +1134,6 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
     	a = 1./3.;
         a2 = -rate_matrix[1] + a;
         ceval[0] = 0.0; ceval[1] = -4.0*(a - a2); ceval[2] = ceval[3] = -2.0*(2.0*a + a2);
-        /*ceval[0] = 0.0; ceval[1] = 0.0; ceval[2] = ceval[3] = 0.0;*/
 
         /******** right eigenvectors *********/
 		// {{1, 1, 1, 1}, {-1, 1, -1, 1}, {0, -1, 0, 1}, {-1, 0, 1, 0}}
@@ -1168,7 +1170,10 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
         b = rate_matrix[1] + a2 - a;
         /******** eigenvalues *********/
 		//Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2 - b), -2 (2 a + a2 + b)}
-		ceval[0] = 0.0; ceval[1] = -4.0*(a - a2); ceval[2] = -2.0*(2.0*a + a2 - b); ceval[3] = ceval[2] -4.0*b;
+		ceval[0] = 0.0;
+        ceval[1] = -4.0*(a - a2);
+        ceval[2] = -2.0*(2.0*a + a2 - b);
+        ceval[3] = ceval[2] -4.0*b;
 
 		/******** right eigenvectors  *********/
 		// {{1, 1, 1, 1}, {-1, 1, -1, 1}, {-1, -1, 1, 1}, {1, -1, -1, 1}}
@@ -1205,9 +1210,10 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 
 		/******** eigenvalues *********/
 		//{0, -4 (a - a2), -2 (2 a + a2 - I c), -2 (2 a + a2 + I c)} std::sqrt()
-		ceval[0] = 0.0; ceval[1] = -4.0*(a - a2);
-		ceval[2] = complex<double> (-2.0*(2.0*a + a2), -2.0* c);
-		ceval[3] = complex<double> (-2.0*(2.0*a + a2), 2.0* c);
+        ceval[0] = 0.0;
+        ceval[1] = -4.0*(a - a2);
+        ceval[2] = complex<double> (-2.0*(2.0*a + a2), -2.0* c);
+        ceval[3] = complex<double> (-2.0*(2.0*a + a2), 2.0* c);
 		/******** right eigenvectors *********/
 		// {{1, 1, 1, 1}, {-1, 1, -1, 1}, {I, -1, -I, 1}, {-I, -1, I, 1}}
 
@@ -1240,7 +1246,10 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		a2 = -rate_matrix[1] + a;
 		/******** eigenvalues *********/
 		//Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2), -2 (2 a + a2)}
-		ceval[0] = 0.0; ceval[1] = -4.0*(a - a2); ceval[2] = -2.0*(2.0*a + a2 - d1); ceval[3] = -2.0*(2.0*a + a2 + d1);
+        ceval[0] = 0.0;
+        ceval[1] = -4.0*(a - a2);
+        ceval[2] = -2.0*(2.0*a + a2 - d1);
+        ceval[3] = -2.0*(2.0*a + a2 + d1);
 
 		/******** right eigenvectors *********/
 		// {{1, 1, 1, 1}, {-((a - a2 - d)/(a - a2 + d)), 1, -((a - a2 - d)/(a - a2 + d)), 1}, {0, -1, 0, 1}, {-1, 0, 1, 0}}
@@ -1284,7 +1293,9 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			nondiagonalizable = false;
 			/******** eigenvalues *********/
 			//Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2), -2 (2 a + a2)}
-			ceval[0] = 0.0; ceval[1] = -4.0*(a - a2); ceval[2] = ceval[3] = -2.0*(2.0*a + a2);
+            ceval[0] = 0.0;
+            ceval[1] = -4.0*(a - a2);
+            ceval[2] = ceval[3] = -2.0*(2.0*a + a2);
 
 			/******** right eigenvectors *********/
 			// {{1, 1, 1, 1}, {-((a - a2 - d)/(a - a2 + d)), 1, -((a - a2 - d)/(a - a2 + d)), 1}, {0, -1, 0, 1}, {-1, 0, 1, 0}}
@@ -1534,7 +1545,9 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			nondiagonalizable = false;
 		   /******** eigenvalues *********/
 			//Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2), -2 (2 a + a2)}
-			ceval[0] = 0.0; ceval[1] = -4.0*(a - a2); ceval[2] = ceval[3] =-2.0*(2.0*a + a2);
+			ceval[0] = 0.0;
+            ceval[1] = -4.0*(a - a2);
+            ceval[2] = ceval[3] =-2.0*(2.0*a + a2);
 
 			/******** right eigenvectors *********/
 			// {{1, 1, 1, 1},
@@ -1720,7 +1733,7 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			nondiagonalizable = false;
 			 deno57bl = 1./deno57bl;
 			//Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2 - b), -2 (2 a + a2 + b)}
-			ceval[0] = 0.0;
+            ceval[0] = 0.0;
             ceval[1] = -4.0*(a - a2);
             ceval[2] = -2.0*(2.0*a + a2 - b);
             ceval[3] = ceval[2] - 4.0*b;
@@ -1785,7 +1798,7 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			nondiagonalizable = false;
 			/******** eigenvalues REPASAR *********/
 			//Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2 - d1), -2 (2 a + a2 + d1)}
-			ceval[0] = 0.0;
+            ceval[0] = 0.0;
             ceval[1] = -4.0*(a - a2);
             ceval[2] = -2.0*(2.0*a + a2 - d1);
             ceval[3] = ceval[2] - 4.*d1;
@@ -1842,7 +1855,7 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			nondiagonalizable = false;
 			/******** eigenvalues *********/
 			//Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2 - d1), -2 (2 a + a2 + d1)}
-			ceval[0] = 0.0;
+            ceval[0] = 0.0;
             ceval[1] = -4.0*(a - a2);
             ceval[2] = -2.0*(2.0*a + a2 - d1);
             ceval[3] = ceval[2] - 4.0*d1;
@@ -1905,7 +1918,10 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			/*cout <<"The parameters are a = " << a << " a2 =  " << a2 << " d1 = " << d1 << " g1 = " << g1 << "  g2 = " << g2 << endl;*/
 			/******** eigenvalues *********/
 			//Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2 - d1), -2 (2 a + a2 + d1)}
-			ceval[0] = 0.0; ceval[1] = -4.0*(a - a2); ceval[2] = -2.0*(2.0*a + a2 - d1); ceval[3] = ceval[2] - 4.0*d1;
+            ceval[0] = 0.0;
+            ceval[1] = -4.0*(a - a2);
+            ceval[2] = -2.0*(2.0*a + a2 - d1);
+            ceval[3] = ceval[2] - 4.0*d1;
 
 			/******** right eigenvectors *********/
 			// {{1, 1, 1, 1},
@@ -1962,7 +1978,10 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			/*cout <<"The parameters are a = " << a << " a2 =  " << a2 << " d = " << d << " g1 = " << g1 << "  g2 = " << g2 << endl;*/
 			/******** eigenvalues *********/
 			//Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2), -2 (2 a + a2)}
-			ceval[0] = 0.0; ceval[1] = -4.0*(a - a2); ceval[2] = -2.0*(2.0*a + a2); ceval[3] = ceval[2];
+            ceval[0] = 0.0;
+            ceval[1] = -4.0*(a - a2);
+            ceval[2] = -2.0*(2.0*a + a2);
+            ceval[3] = ceval[2];
 
 			/******** right eigenvectors *********/
 			// {{1, 1, 1, 1},
@@ -2026,8 +2045,6 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 				}
 			}
 		}
-
-
 
 		for (i = 0; i < num_states; i++) {
 			for (j = 0, zero = 0.0; j < num_states; j++) {

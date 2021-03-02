@@ -1144,7 +1144,7 @@ void PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode 
     }
 
     double *eval = model->getEigenvalues();
-    assert(eval);
+    ASSERT(eval);
 
     assert(buffers.theta_all);
     if (!buffers.theta_computed) {
@@ -1348,7 +1348,7 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
     int denom = (model_factory->fused_mix_rate) ? 1 : ncat;
 
     double *eval = model->getEigenvalues();
-    assert(eval);
+    ASSERT(eval);
 
     double *val = new double[block];
     for (int c = 0; c < ncat_mix; c++) {

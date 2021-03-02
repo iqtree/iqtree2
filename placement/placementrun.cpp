@@ -50,6 +50,7 @@ void PlacementRun::prepareForPlacementRun() {
     }
     if (VB_MED <= verbose_mode &&
         (phylo_tree.params->compute_likelihood || use_likelihood) ) {
+        phylo_tree.configureLikelihoodKernel(*phylo_tree.params, true);
         double curScore = phylo_tree.computeLikelihood();
         TREE_LOG_LINE(phylo_tree, VB_MED, "Likelihood score before insertions was " << curScore);
         if (use_likelihood) {

@@ -655,7 +655,7 @@ void PhyloTree::computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloN
     size_t denom = (model_factory->fused_mix_rate) ? 1 : ncat;
 
     double *eval = model->getEigenvalues();
-    assert(eval);
+    ASSERT(eval);
 
     VectorClass *vc_val0 = (VectorClass*)aligned_alloc<double>(block);
     VectorClass *vc_val1 = (VectorClass*)aligned_alloc<double>(block);
@@ -914,7 +914,7 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
     intptr_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
     maxptn           = max(maxptn, static_cast<intptr_t>(aln->size()+((model_factory->unobserved_ptns.size()+VCSIZE-1)/VCSIZE)*VCSIZE));
     double* eval     = model->getEigenvalues();
-    assert(eval);
+    ASSERT(eval);
 
     VectorClass *vc_val = (VectorClass*)aligned_alloc<double>(block);
 
@@ -1294,7 +1294,7 @@ double PhyloTree::computeLikelihoodFromBufferEigenSIMD(LikelihoodBufferSet& buff
     intptr_t nptn = aln->size()+model_factory->unobserved_ptns.size();
 //    intptr_t maxptn  = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
     double *eval     = model->getEigenvalues();
-    assert(eval);
+    ASSERT(eval);
 
     VectorClass *vc_val0 = (VectorClass*)aligned_alloc<double>(block);
 
