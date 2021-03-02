@@ -73,7 +73,7 @@ public:
     }
     virtual void calculateLeafParsimonyDistances() {
         #if USE_PROGRESS_DISPLAY
-        double work_estimate = row_count*(row_count-1)/2;
+        double work_estimate  = (double)row_count*(double)(row_count-1)/2.0;
         const char* task_name = "Constructing leaf-leaf"
                                 " parsimony distance matrix";
         progress_display progress(work_estimate, task_name);
@@ -282,7 +282,7 @@ public:
     void selectSample(int sample_size, int branch_count) {
         if (sample_size==branch_count) {
             sample.resize(branch_count);
-            for (size_t i=0; i<branch_count; ++i) {
+            for (int i=0; i<branch_count; ++i) {
                 sample[i] = i;
             }
             return;
@@ -310,8 +310,9 @@ public:
     }
     void bestSampleBranch(RoutedTaxon& candidate,
                           UINT* scratch_vector) const {
-        auto pars        = candidate.getParsimonyBlock();
-        for (intptr_t s = 0; s<sample.size(); ++s) {
+        auto     pars        = candidate.getParsimonyBlock();
+        intptr_t sample_size = sample.size();
+        for (intptr_t s = 0; sample_size; ++s) {
             PhyloBranch    b(branches[sample[s]]);
             PhyloNeighbor* nei1 = b.getLeftNeighbor();
             PhyloNeighbor* nei2 = b.getRightNeighbor();
@@ -390,12 +391,12 @@ public:
             dest_branch_id = best_branch_id;
         }
     }
-    void updateBranch(int branch_id) {
+    void updateBranch(intptr_t branch_id) {
         PhyloBranch    branch = branches[branch_id];
         PhyloNeighbor* front  = branch.first->findNeighbor(branch.second);
-        front->id             = branch_id;
+        front->id             = static_cast<int>(branch_id);
         PhyloNeighbor* back   = branch.second->findNeighbor(branch.first);
-        back->id              = branch_id;
+        back->id              = static_cast<int>(branch_id);
     }
     void insertCandidate(RoutedTaxon& taxon,
                          BlockAllocator& block_allocator) {
@@ -430,11 +431,13 @@ public:
         taxon.new_interior->clearReversePartialParsimony(taxon.new_leaf);
         taxon.new_leaf->clearReversePartialParsimony(taxon.new_interior);
                 
+        intptr_t next_branch_id = static_cast<intptr_t>(branches.size());
         branches.emplace_back(target.first,  taxon.new_interior);
-        updateBranch(branches.size()-1);
+        updateBranch(next_branch_id);
         
+        ++next_branch_id;
         branches.emplace_back(target.second, taxon.new_interior);
-        updateBranch(branches.size()-1);
+        updateBranch(next_branch_id);
         
         target.first  = taxon.new_leaf;
         target.second = taxon.new_interior;
@@ -472,8 +475,8 @@ public:
         
         PhyloNodeVector v1, v2;
         tree.getBranchesInIDOrder(v1, v2);
-        int branch_count = v1.size();
-        for (size_t i=0; i<branch_count; ++i) {
+        intptr_t branch_count = v1.size();
+        for (intptr_t i=0; i<branch_count; ++i) {
             branches.emplace_back(v1[i], v2[i]);
         }
         
@@ -483,7 +486,7 @@ public:
             int         taxonId   = taxon_order[i];
             std::string taxonName = tree.aln->getSeqName(taxonId);
             candidates[i].initialize(&block_allocator, taxonId, taxonName, false);
-            candidates[i].new_interior->id = i + nseq - 2;
+            candidates[i].new_interior->id = static_cast<int>(i + nseq - 2);
         }
         #ifdef _OPENMP
         #pragma omp parallel for
@@ -505,7 +508,7 @@ public:
             
             sampling.start();
             ++sample_count;
-            selectSample(sample_count, branches.size());
+            selectSample(sample_count, (int)branches.size());
             sampling.stop();
             
             int start_batch = stop_batch;

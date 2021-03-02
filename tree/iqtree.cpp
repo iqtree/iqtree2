@@ -580,7 +580,7 @@ PhyloNode* IQTree::generateProximityTree(IntVector& order,
                                          size_t start, size_t stop,
                                          size_t degree,
                                          PhyloNodeVector& nodes) {
-    size_t count = stop - start;
+    intptr_t count = static_cast<intptr_t>(stop) - static_cast<intptr_t>(start);
     if (count<degree) {
         return generateRandomBalancedTree(order, start, stop,
                                           degree, nodes);
@@ -595,23 +595,28 @@ PhyloNode* IQTree::generateProximityTree(IntVector& order,
     char     unk         = static_cast<char>(aln->STATE_UNKNOWN);
     auto     freq_vector = getConvertedSequenceFrequencies();
     intptr_t seq_len     = getConvertedSequenceLength();
-    double   denominator = aln->getNSite();
+    double   denominator = (double)aln->getNSite();
 
     //Decide on subtree for each node
     #ifdef _OPENMP
     #pragma omp parallel for if(num_threads<=count)
     #endif
-    for (int j=degree; j<count; ++j) {
+    for (intptr_t j=degree; j<count; ++j) {
         const char* this_seq = getConvertedSequenceByNumber(order[start+j]);
         int    k             = 0;
         double unknown_freq  = 0;
         double best_d        = hammingDistance(unk, this_seq, seq[0],
                                                seq_len, freq_vector, unknown_freq);
-        best_d /= (denominator - unknown_freq);
+        if (unknown_freq < denominator) {
+            best_d /= (denominator - unknown_freq);
+        }
         for (int i=1; i<degree; ++i) {
+            unknown_freq = 0;
             double d = hammingDistance(unk, this_seq, seq[i],
-                                    seq_len, freq_vector, unknown_freq);
-            d /= (denominator - unknown_freq);
+                                       seq_len, freq_vector, unknown_freq);
+            if (unknown_freq < denominator) {
+                d /= (denominator - unknown_freq);
+            }
             if (d<best_d) {
                 best_d = d;
                 k      = i;
@@ -620,9 +625,9 @@ PhyloNode* IQTree::generateProximityTree(IntVector& order,
         subtree[j] = k;
     }
     mirroredHeapsort(subtree.data(), 0, count, order.data()+start);
-    PhyloNode* interior = newNode(-1);
-    int which_tree = 0;
-    int subtree_start = start;
+    PhyloNode* interior  = newNode(-1);
+    int    which_tree    = 0;
+    size_t subtree_start = start;
     for (int j = 0; j<count; ++j) {
         if (which_tree<subtree[j]) {
             PhyloNode* child = generateProximityTree(order, subtree_start, start+j, 2, nodes);
@@ -630,7 +635,7 @@ PhyloNode* IQTree::generateProximityTree(IntVector& order,
             interior->addNeighbor(child, -1);
             child->addNeighbor(interior, -1);
             subtree_start = start + j;
-            which_tree = subtree[j];
+            which_tree    = subtree[j];
         }
     }
     PhyloNode* child = generateProximityTree(order, subtree_start, stop, 2, nodes);

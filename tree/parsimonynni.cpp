@@ -45,7 +45,7 @@ public:
         s << " exchanging neighbours of branch " << source_branch_id;
         return s.str();
     }
-    void consider(int branch_id, PhyloNode* leftNode,
+    void consider(intptr_t branch_id, PhyloNode* leftNode,
                   const PhyloBranch& middleBranch,
                   PhyloNode* rightNode, double move_benefit) {
         if (benefit < move_benefit) {

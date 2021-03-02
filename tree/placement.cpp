@@ -254,8 +254,8 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
         //each addition of a taxon later creates 3 *new* target branches
         //(each of which needs its own lh block)
     
-    size_t newTaxaCount = taxaIdsToAdd.size();
-    double estimate     = newTaxaCount * 3.0;
+    intptr_t newTaxaCount = taxaIdsToAdd.size();
+    double   estimate     = newTaxaCount * 3.0;
     initProgress(estimate, "Adding new taxa to tree", "", "");
 
     pr.prepareForPlacementRun();
@@ -282,7 +282,7 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
             trackProgress(1000.0);
         }
     }
-    trackProgress(newTaxaCount % 1000);
+    trackProgress((double)(newTaxaCount % 1000));
 
     LOG_LINE ( VB_DEBUG, "After allocating TaxonToPlace"
                << ", index_lh was " << pr.block_allocator->getLikelihoodBlockCount()
@@ -306,11 +306,11 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
         
     LikelihoodBlockPairs spare_blocks(2);
     for (; 0<newTaxaCount; newTaxaCount = candidates.size() ) {
-        if (newTaxaCount<pr.taxa_per_batch) {
+        if (newTaxaCount<static_cast<intptr_t>(pr.taxa_per_batch)) {
             pr.taxa_per_batch = newTaxaCount;
         }
         size_t batchStart=0;
-        for (; batchStart+pr.taxa_per_batch <= newTaxaCount
+        for (; static_cast<intptr_t>(batchStart+pr.taxa_per_batch) <= newTaxaCount
              ; batchStart+=pr.taxa_per_batch) {
             refreshTime.start();
             pr.prepareForBatch();

@@ -1710,7 +1710,7 @@ uint64_t PhyloTree::getMemoryRequired(size_t ncategory, bool full_mem) {
     int64_t lh_scale_size = block_size * sizeof(double) + scale_block_size * sizeof(UBYTE);
 
     int64_t max_leaves = leafNum;
-    if (aln!=nullptr && max_leaves<aln->getNSeq()+1) {
+    if (aln!=nullptr && max_leaves<static_cast<int64_t>(aln->getNSeq())+1) {
         //If -mlnj-only has been supplied, then it is possible
         //this function might have been called before a tree
         //has been constructed, in which case leafNum will still
@@ -1791,7 +1791,7 @@ void PhyloTree::getMemoryRequired(uint64_t &partial_lh_entries,
     uint64_t tip_partial_pars_size = aln->num_states * (aln->STATE_UNKNOWN+1);
 
     int64_t max_leaves = leafNum;
-    if (aln!=nullptr && max_leaves<aln->getNSeq()+1) {
+    if (aln!=nullptr && max_leaves<static_cast<int64_t>(aln->getNSeq())+1) {
         //If -mlnj-only has been supplied, then it is possible
         //this function might have been called before a tree
         //has been constructed, in which case leafNum will still

@@ -213,8 +213,8 @@ void PlacementRun::insertTaxon(TaxaToPlace& taxa, size_t taxon_index,
 void PlacementRun::doneBatch(TaxaToPlace& candidates,
                              intptr_t batchStart, intptr_t batchStop,
                              TargetBranchRange& targets) {
-    auto batch_size = batchStop - batchStart;
-    if ( taxa_inserted_this_batch < batch_size && !be_quiet ) {
+    intptr_t batch_size = batchStop - batchStart;
+    if ( static_cast<intptr_t>(taxa_inserted_this_batch) < batch_size && !be_quiet ) {
         TREE_LOG_LINE ( phylo_tree, VB_MED,  "Inserted " << (taxa_inserted_this_batch)
                   << " out of a batch of " << batch_size << "." );
     }

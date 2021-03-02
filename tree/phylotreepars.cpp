@@ -1319,7 +1319,7 @@ int PhyloTree::computeParsimonyTreeBatch(const char *out_prefix,
     create3TaxonTree(taxon_order, rand_stream);
     int parsimony_score = computeParsimony();
 
-    IntVector sizes;
+    std::vector<intptr_t> sizes;
     intptr_t growth_rate = 10;
     for (intptr_t n = taxon_order.size();
          3 < n; n /= growth_rate ) {
@@ -1334,12 +1334,13 @@ int PhyloTree::computeParsimonyTreeBatch(const char *out_prefix,
     }
     
     intptr_t n           = 3;
+    intptr_t taxon_count = taxon_order.size();
     do {
         intptr_t p = sizes.back();
         sizes.pop_back();
         IntVector taxa_this_time;
         taxa_this_time.resize(p-n);
-        for (int i=n; i<p; ++i) {
+        for (intptr_t i=n; i<p; ++i) {
             taxa_this_time[i-n]=taxon_order[i];
         }
         LOG_LINE(VB_MIN, "Expanding tree to " << p << " taxa");
@@ -1352,7 +1353,7 @@ int PhyloTree::computeParsimonyTreeBatch(const char *out_prefix,
         n = p;
         p = n * growth_rate;
     }
-    while ( n < taxon_order.size() );
+    while ( n < taxon_count );
 
     bool orig_rooted = rooted;
     rooted = false;

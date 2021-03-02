@@ -296,5 +296,5 @@ int PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
         showProgress();
     }
     
-    return parsimony_score;
+    return (int)floor(parsimony_score);
 }
