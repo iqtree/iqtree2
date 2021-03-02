@@ -2675,26 +2675,26 @@ void pllNewviewIterative (pllInstance *tr, partitionList *pr, int startIndex)
 
         size_t
 #if (defined(__SSE3) || defined(__AVX))
-          gapOffset = 0,
+            gapOffset = 0,
 #endif
-          rateHet = discreteRateCategories(tr->rateHetModel),
-          ascWidth = (size_t)pr->partitionData[model]->states,
+            rateHet = discreteRateCategories(tr->rateHetModel),
+            ascWidth = (size_t)pr->partitionData[model]->states;
 
           /* get the number of states in the data stored in partition model */
           
-          states = pr->partitionData[model]->states,
-          
-          /* get the length of the current likelihood array stored at node p. This is 
-             important mainly for the SEV-based memory saving option described in here:
-             
-             F. Izquierdo-Carrasco, S.A. Smith, A. Stamatakis: "Algorithms, Data Structures, and Numerics for Likelihood-based Phylogenetic Inference of Huge Trees".
-             
-             So pr->partitionData[model]->xSpaceVector[i] provides the length of the allocated conditional array of partition model
-             and node i 
-          */
-          
-          availableLength = pr->partitionData[model]->xSpaceVector[p_slot],
-          requiredLength = 0;        
+          int states = pr->partitionData[model]->states;
+
+            /* get the length of the current likelihood array stored at node p. This is
+               important mainly for the SEV-based memory saving option described in here:
+
+               F. Izquierdo-Carrasco, S.A. Smith, A. Stamatakis: "Algorithms, Data Structures, and Numerics for Likelihood-based Phylogenetic Inference of Huge Trees".
+
+               So pr->partitionData[model]->xSpaceVector[i] provides the length of the allocated conditional array of partition model
+               and node i
+            */
+
+          size_t availableLength = pr->partitionData[model]->xSpaceVector[p_slot];
+          size_t requiredLength = 0;        
         
         /* figure out what kind of rate heterogeneity approach we are using */
 
@@ -3684,8 +3684,8 @@ void newviewAncestralIterative(pllInstance *tr, partitionList *pr)
   for(model = 0; model < pr->numberOfPartitions; model++)
     {
       /* number of sites in this partition */
-      size_t            
-        width  = (size_t)pr->partitionData[model]->width;
+      int
+        width  = pr->partitionData[model]->width;
 
       /* this conditional statement is exactly identical to what we do in pllEvaluateIterative */
 
@@ -3701,8 +3701,9 @@ void newviewAncestralIterative(pllInstance *tr, partitionList *pr)
           int
             categories;
         
-          size_t                  
-            states = (size_t)pr->partitionData[model]->states,
+          int
+            states = pr->partitionData[model]->states;
+          size_t 
             availableLength = pr->partitionData[model]->xSpaceVector[p_slot],
             requiredLength = 0,
             rateHet = discreteRateCategories(tr->rateHetModel);   
@@ -3778,7 +3779,7 @@ int pllGetCLV (pllInstance * tr, partitionList * pr, nodeptr p, int partition, d
   if (tr->rateHetModel != PLL_GAMMA) return (PLL_FALSE);
 
   int p_slot;
-  size_t states = (size_t)pr->partitionData[partition]->states;
+  int states = pr->partitionData[partition]->states;
 
   double
     *term = (double*)rax_malloc(sizeof(double) * states);
@@ -3788,11 +3789,11 @@ int pllGetCLV (pllInstance * tr, partitionList * pr, nodeptr p, int partition, d
   else
     p_slot = p->number - tr->mxtips - 1;
 
-  size_t width = (size_t) pr->partitionData[partition]->width;
+  int      width = (size_t) pr->partitionData[partition]->width;
   double * diagptable = NULL;
   double * rateCategories = pr->partitionData[partition]->gammaRates;
   double * x3 = pr->partitionData[partition]->xVector[p_slot];
-  size_t categories = 4;
+  int      categories = 4;
 
   rax_posix_memalign ((void **)&diagptable, PLL_BYTE_ALIGNMENT, categories * states * states * sizeof (double));
 
