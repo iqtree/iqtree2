@@ -201,7 +201,7 @@ public:
 	/**
 	 *		@return number of alignment sites
 	*/
-	virtual size_t getAlnNSite();
+	virtual size_t getAlnNSite() const;
 
     /**
             compute the distance between 2 sequences.

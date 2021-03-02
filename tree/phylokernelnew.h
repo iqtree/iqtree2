@@ -2647,7 +2647,6 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
     PhyloNeighbor* node_branch = node->findNeighbor(dad);
     
     if (central_partial_lh==nullptr) {
-        determineBlockSizes();
         initializeAllPartialLh();
     }
     if (node->isLeaf() ) {
@@ -2660,9 +2659,9 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
 #else
     computeTraversalInfo<VectorClass>(node, dad, buffers, false);
 #endif
-    double tree_lh       = 0.0;
+    double tree_lh         = 0.0;
 #ifndef KERNEL_FIX_STATES
-    size_t nstates       = aln->num_states;
+    size_t nstates         = aln->num_states;
 #endif
     int      ncat          = site_rate->getNRate();
     int      ncat_mix      = (model_factory->fused_mix_rate) ? ncat : ncat*model->getNMixtures();

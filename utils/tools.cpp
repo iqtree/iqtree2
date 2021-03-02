@@ -512,6 +512,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.compute_jc_dist = true;
     params.use_alignment_summary_for_distance_calculation = true;
     params.use_custom_matrix_diagonal_math = true;
+    params.compute_likelihood = true;
     params.compute_ml_dist = true;
     params.compute_ml_tree = true;
     params.compute_ml_tree_only = false;
@@ -836,6 +837,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	// params.pomo_counts_file_flag = false;
 	params.pomo_pop_size = 9;
 	params.print_branch_lengths = false;
+    params.max_mem_is_in_bytes = false;
 	params.lh_mem_save = LM_PER_NODE; // auto detect
     params.buffer_mem_save = false;
 	params.start_tree = STT_PLL_PARSIMONY;
@@ -1033,6 +1035,9 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
 
             if (strcmp(argv[cnt], "--root-test") == 0) {
+                if (!params.compute_likelihood) {
+                    throw "Cannot combine --root-test and -no-ml parameters";
+                }
                 params.root_test = true;
                 continue;
             }
@@ -1170,7 +1175,33 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.compute_ml_dist = false;
                 continue;
             }
+            if (arg=="-no-ml") {
+                if (params.compute_ml_tree_only) {
+                    throw "-no-ml and -mlnj-only cannot be used together";
+                }
+                if (params.iqp_assess_quartet == IQP_BOOTSTRAP) {
+                    throw "Cannot combine the -nb and -no-ml options";
+                }
+                if (!params.treeset_file.empty()) {
+                    throw "Cannot combine the -z (or --trees) and -no-ml options";
+                }
+                if (params.bayes_branch_length) {
+                    throw "cannot combine -bayesbran and -no-ml options";
+                }
+                if (params.root_test) {
+                    throw "Cannot combine --root-test and -no-ml parameters";
+                }
+                params.compute_likelihood = false;
+                params.compute_ml_dist    = false;
+                params.compute_ml_tree    = false;
+                params.model_name         = "JC";
+                params.min_iterations     = 0;
+                continue;
+            }
             if (arg=="-mlnj-only" || arg=="--mlnj-only") {
+                if (!params.compute_likelihood) {
+                    throw "-no-ml and -mlnj-only cannot be used together";
+                }
                 params.compute_ml_tree_only = true;
                 continue;
             }
@@ -1722,8 +1753,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 
             if (strcmp(argv[cnt], "-z") == 0 || strcmp(argv[cnt], "--trees") == 0) {
 				cnt++;
-				if (cnt >= argc)
+                if (cnt >= argc) {
 					throw "Use -z <user_trees_file>";
+                }
+                if (!params.compute_likelihood) {
+                    throw "-z or --trees cannot be used with -no-ml";
+                }
 				params.treeset_file = argv[cnt];
 				continue;
 			}
@@ -2169,9 +2204,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 
 			if (strcmp(argv[cnt], "-nb") == 0) {
+                if (!params.compute_likelihood) {
+                    throw "Cannot combine the -nb and -no-ml options";
+                }
 				cnt++;
-				if (cnt >= argc)
+                if (cnt >= argc) {
 					throw "Use -nb <#bootstrap_replicates>";
+                }
 				params.min_iterations = convert_int(argv[cnt]);
 				params.iqp_assess_quartet = IQP_BOOTSTRAP;
 //				params.avoid_duplicated_trees = true;
@@ -2640,10 +2679,12 @@ void parseArg(int argc, char *argv[], Params &params) {
                 strcmp(argv[cnt], "-j") == 0 || strcmp(argv[cnt], "--jack") == 0 ||
                 strcmp(argv[cnt], "-bo") == 0 || strcmp(argv[cnt], "--bonly") == 0) {
 				params.multi_tree = true;
-				if (strcmp(argv[cnt], "-bo") == 0 || strcmp(argv[cnt], "--bonly") == 0)
+                if (strcmp(argv[cnt], "-bo") == 0 || strcmp(argv[cnt], "--bonly") == 0) {
 					params.compute_ml_tree = false;
-				else
+                }
+                else {
 					params.consensus_type = CT_CONSENSUS_TREE;
+                }
                 if ((strcmp(argv[cnt], "-j") == 0 || strcmp(argv[cnt], "--jack") == 0) && params.jackknife_prop == 0.0)
                     params.jackknife_prop = 0.5;
 				cnt++;
@@ -2704,8 +2745,9 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.num_bootstrap_samples = convert_int(argv[cnt]);
 				if (params.num_bootstrap_samples < 1)
 					throw "Wrong number of bootstrap samples";
-				if (params.num_bootstrap_samples > 1)
+                if (params.num_bootstrap_samples > 1) {
 					params.consensus_type = CT_CONSENSUS_TREE;
+                }
 				continue;
 			}
 			if (strcmp(argv[cnt], "-iqppars") == 0) {
@@ -3251,15 +3293,21 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "-mem must be non-negative";
                 if (argv[cnt][end_pos] == 'G') {
                     params.max_mem_size = mem * 1073741824.0;
+                    params.max_mem_is_in_bytes = true;
                 } else if (argv[cnt][end_pos] == 'M') {
                     params.max_mem_size = mem * 1048576.0;
+                    params.max_mem_is_in_bytes = true;
                 } else if (argv[cnt][end_pos] == '%'){
                     params.max_mem_size = mem * 0.01;
-                    if (params.max_mem_size > 1)
+                    params.max_mem_is_in_bytes = false;
+                    if (params.max_mem_size > 1) {
                         throw "-mem percentage must be between 0 and 100";
+                    }
                 } else {
-                    if (mem > 1)
-                        throw "Invalid -mem option. Example: -mem 200M, -mem 10G";
+                    if (mem > 1) {
+                        throw "Invalid -mem option. Example: -mem 200M, -mem 10G -mem 50% -mem 0.5";
+                    }
+                    params.max_mem_is_in_bytes = false;
                     params.max_mem_size = mem;
                 }
 				continue;
@@ -3552,9 +3600,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 			if (strcmp(argv[cnt], "-bayesbran") == 0) {
-				params.bayes_branch_length = true;
-				continue;
-			}
+                if (!params.compute_likelihood) {
+                    throw "cannot combine -bayesbran and -no-ml options";
+                }
+                params.bayes_branch_length = true;
+                continue;
+            }
 			if (strcmp(argv[cnt], "-fivebran") == 0
 					|| strcmp(argv[cnt], "-nni5") == 0) {
 				params.nni5 = true;

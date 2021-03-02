@@ -70,22 +70,7 @@ void GlobalPlacementOptimizer::optimizeAfterPlacement(PhyloTree& tree) {
         TREE_LOG_LINE(tree, VB_MIN, "Likelihood score after adding taxa was " << likelihood
             << " (and took " << likelyElapsed << " wall-clock seconds to calculate)");
     } else {
-        //Set all lengths based on parsimony
-        PhyloBranchVector branches;
-        tree.getBranches(branches);
-        for (auto branch: branches) {
-            auto nei        = branch.first->findNeighbor(branch.second);
-            auto backnei    = branch.second->findNeighbor(branch.first);
-            double branch_cost = parsimony_score
-                               - tree.getSubTreeParsimony(nei)
-                               - tree.getSubTreeParsimony(backnei);
-            double parsimony_length = branch_cost / tree.getAlnNSite();
-            if (parsimony_length == 0.0) {
-                parsimony_length = tree.params->min_branch_length;
-            }
-            nei->length     = parsimony_length;
-            backnei->length = parsimony_length;
-        }
+        tree.setAllBranchLengthsFromParsimony(false, parsimony_score);
     }
 }
 

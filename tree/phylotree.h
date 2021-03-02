@@ -628,7 +628,7 @@ public:
     /**
      *		@return number of alignment sites
      */
-    virtual size_t getAlnNSite() {
+    virtual size_t getAlnNSite() const {
         return aln->getNSite();
     }
 
@@ -1396,9 +1396,10 @@ public:
 
     void computeAllSubtreeDistForOneNode(PhyloNode* source, PhyloNode* nei1, PhyloNode* nei2, PhyloNode* node, PhyloNode* dad);
 
-    double correctBranchLengthF81(double observedBran, double alpha);
+    double correctBranchLengthF81(double observedBran, double alpha) const;
 
-    double computeCorrectedBayesianBranchLength(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    double computeCorrectedBayesianBranchLength(PhyloNeighbor *dad_branch,
+                                                PhyloNode *dad);
 
     /**
             Compute the variance in log-likelihood difference
@@ -1455,6 +1456,27 @@ public:
      */
     virtual int wrapperFixNegativeBranch(bool force_change);
 
+    /**
+     * Assign branch lengths for branches that have zero or negative length
+     * @param recalculate_parsimony if true, recalculate tree parsimony first
+     * @param tree_parsimony if recalculate_parsimony is false, the tree parsimony
+     * @return number of branches fixed
+     */
+    virtual int setAllBranchLengthsFromParsimony(bool recalculate_parsimony,
+                                                 double tree_parsimony);
+    
+    /**
+     * Assign branch length for branches that have zero or negative length.  Note: assumes
+     * that the parsimony vectors are up to date, will throw an ASSERT failure if they are not.
+     * @param tree_parsimony the parsimony of the whole tree
+     * @param node1 node on one end of the branch
+     * @param node2 node on the other end of the branch
+     * @return 1 if the branch had zero or negative length
+     */
+    virtual int setOneBranchLengthFromParsimony(double parsimony,
+                                                PhyloNode* node1,
+                                                PhyloNode* node2 ) const;
+    
     /**
      * Read the newick string into PLL kernel
      * @param newickTree
@@ -2047,7 +2069,7 @@ public:
      @param alpha shape of Gamma distribution
      @return corrected JC distance
      */
-    double JukesCantorCorrection(double dist, double alpha);
+    double jukesCantorCorrection(double dist, double alpha) const;
                                             
     /**
      set all branch lengths using parsimony
@@ -2063,8 +2085,8 @@ public:
 //    int assignRandomBranchLengths(bool force = false, Node *node = NULL, Node *dad = NULL);
 
     /* compute Bayesian branch lengths based on ancestral sequence reconstruction */
-    void computeAllBayesianBranchLengths(PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
-
+    void computeAllBayesianBranchLengths();
+    
     /**
         generate random tree
     */
@@ -2658,12 +2680,12 @@ protected:
 //    double *tmp_partial_lh2;
 
     /**
-     *  Temporary array containing anscentral states.
+     *  Temporary array containing ancestral states.
      *  Used to avoid calling malloc
      */
 
-//    double *tmp_anscentral_state_prob1;
-//    double *tmp_anscentral_state_prob2;
+//    double *tmp_ancestral_state_prob1;
+//    double *tmp_ancestral_state_prob2;
     /** pattern-specific rates */
     //double *tmp_ptn_rates;
 

@@ -164,11 +164,14 @@ Node* NCBITree::readNCBITree(istream &in, int root_id, const char* taxon_level, 
         cout << ignored << " branches are set to zero because of " << ignore_level << endl;
 
     rooted = true;
-    if (!nodes[root_id]) throw "Root node not available";
+    if (!nodes[root_id]) {
+        throw "Root node not available";
+    }
     root = nodes[root_id];
 
     if (taxon_level) {
-        int pruned = pruneTaxa(node_levels, taxon_level, root, nodes[static_cast<int>(root->height)]);
+        int pruned = pruneTaxa(node_levels, taxon_level, root,
+                               nodes[static_cast<int>(root->height)]);
         cout << pruned << " nodes below " << taxon_level << " are pruned" << endl;
     }
 
@@ -191,7 +194,8 @@ Node* NCBITree::readNCBITree(istream &in, int root_id, const char* taxon_level, 
     return nodes[static_cast<int>(nodes[root_id]->height)];
 }
 
-int NCBITree::pruneTaxa(StrVector &node_levels, const char* taxon_level, Node *node, Node *dad) {
+int NCBITree::pruneTaxa(StrVector &node_levels, const char* taxon_level,
+                        Node *node, Node *dad) {
     int num_nodes = 0;
     //if (node_levels[node->id].find(taxon_level) != string::npos) {
     if (node_levels[node->id] == taxon_level) {

@@ -368,11 +368,12 @@ size_t PhyloSuperTree::getAlnNPattern() const {
 	return num;
 }
 
-size_t PhyloSuperTree::getAlnNSite() {
-	size_t num = 0;
-	for (iterator it = begin(); it != end(); it++)
-		num += (*it)->getAlnNSite();
-	return num;
+size_t PhyloSuperTree::getAlnNSite() const {
+    size_t num = 0;
+    for (const_iterator it = begin(); it != end(); it++) {
+        num += (*it)->getAlnNSite();
+    }
+    return num;
 }
 
 double PhyloSuperTree::computeDist(int seq1, int seq2, double initial_dist, double &var) {

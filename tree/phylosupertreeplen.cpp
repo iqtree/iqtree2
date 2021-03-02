@@ -315,8 +315,9 @@ double PhyloSuperTreePlen::computeFunction(double value) {
 				at(part)->current_it_back = nei2_part;
 				nei1_part->length += lambda*part_info[part].part_rate;
 				nei2_part->length += lambda*part_info[part].part_rate;
-				part_info[part].cur_score = at(part)->computeLikelihoodBranch(nei2_part,nei1_part->getNode(),
-                                                                              tree_buffers);
+				part_info[part].cur_score =
+                    at(part)->computeLikelihoodBranch
+                    ( nei2_part, nei1_part->getNode(), tree_buffers);
 				tree_lh += part_info[part].cur_score;
 			} else {
 				if (part_info[part].cur_score == 0.0)
@@ -327,7 +328,8 @@ double PhyloSuperTreePlen::computeFunction(double value) {
     return -tree_lh;
 }
 
-double PhyloSuperTreePlen::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad,
+double PhyloSuperTreePlen::computeLikelihoodBranch(PhyloNeighbor* dad_branch,
+                                                   PhyloNode*     dad,
                                                    LikelihoodBufferSet& buffers) {
     current_it      = dad_branch;
     current_it_back = dad_branch->getNode()->findNeighbor(dad);

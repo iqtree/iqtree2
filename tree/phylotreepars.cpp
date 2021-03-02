@@ -442,7 +442,7 @@ void PhyloTree::computeAllPartialPars(PhyloNode *node, PhyloNode *dad) {
     }
 }
 
-double PhyloTree::JukesCantorCorrection(double dist, double alpha) {
+double PhyloTree::jukesCantorCorrection(double dist, double alpha) const {
     double z = (double) aln->num_states / (aln->num_states - 1);
     double x = 1.0 - (z * dist);
     if (x > 0) {
@@ -1815,4 +1815,54 @@ void PhyloTree::extractBifurcatingSubTree(PhyloNeighborVec& removed_nei,
         node->neighbors.resize(3);
     }
     leafNum = getNumTaxa();
+}
+
+int PhyloTree::setAllBranchLengthsFromParsimony(bool   recalculate_parsimony,
+                                                double tree_parsimony) {
+    if (recalculate_parsimony) {
+        initializeAllPartialPars();
+        tree_parsimony = computeParsimony("Recalculating tree parsimony"
+                                          " to determine branch lengths",
+                                          true, false);
+    }
+    PhyloNodeVector nodes1;
+    PhyloNodeVector nodes2;
+    getBranches(nodes1, nodes2);
+    intptr_t branch_count = nodes1.size();
+    int fixes = 0;
+//    #ifdef _OPENMP
+//    #pragma omp parallel for reduction(+:fixes)
+//    #endif
+    for (intptr_t b = 0; b < branch_count; ++b) {
+        PhyloNode* left  = nodes1[b];
+        PhyloNode* right = nodes2[b];
+        fixes += setOneBranchLengthFromParsimony(tree_parsimony,
+                                                 left, right);
+    }
+    return fixes;
+}
+
+int PhyloTree::setOneBranchLengthFromParsimony(double tree_parsimony,
+                                               PhyloNode* node1,
+                                               PhyloNode* node2 ) const {
+    PhyloNeighbor* leftNei  = node1->findNeighbor(node2);
+    PhyloNeighbor* rightNei = node2->findNeighbor(node1);
+    ASSERT(leftNei->isParsimonyComputed());
+    ASSERT(rightNei->isParsimonyComputed());
+    int one_if_corrected = (leftNei->length <= 0 ||
+                            rightNei->length<=0) ? 1 : 0;
+    double branch_cost = tree_parsimony
+                       - getSubTreeParsimony(leftNei)
+                       - getSubTreeParsimony(rightNei);
+    if (branch_cost<1) {
+        branch_cost = 1;
+    }
+    double branch_length = branch_cost / getAlnNSite();
+    double alpha = (site_rate) ? site_rate->getGammaShape() : 1.0;
+    double corrected_length = correctBranchLengthF81(branch_length, alpha);
+    if (corrected_length < params->min_branch_length) {
+        corrected_length = params->min_branch_length;
+    }
+    leftNei->length = rightNei->length = corrected_length;
+    return one_if_corrected;
 }

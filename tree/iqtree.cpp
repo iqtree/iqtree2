@@ -684,7 +684,12 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
         } else {
             setAlignment(aln);
         }
-        if (params->compute_ml_dist) {
+        if ( params->parsimony_spr_iterations != 0 ||
+             params->parsimony_tbr_iterations != 0 ||
+             params->parsimony_tbr_iterations != 0 ) {
+            optimizeConstructedTree();
+        }
+        if (params->compute_likelihood) {
             if (isSuperTree()) {
                 wrapperFixNegativeBranch(params->fixed_branch_length == BRLEN_OPTIMIZE &&
                                          params->partition_type == BRLEN_OPTIMIZE);
@@ -692,11 +697,6 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
             else {
                 fixed_number = wrapperFixNegativeBranch(false);
             }
-        }
-        if ( params->parsimony_spr_iterations != 0 ||
-             params->parsimony_tbr_iterations != 0 ||
-             params->parsimony_tbr_iterations != 0 ) {
-            optimizeConstructedTree();
         }
         params->numInitTrees = 1;
         params->numNNITrees  = 1;
@@ -786,14 +786,14 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
                 LOG_LINE(VB_QUIET, "Random tree creation took "
                          << getRealTime() - start << " seconds");
                 params->numInitTrees = 1;
-                if (params->compute_ml_dist) {
+                optimizeConstructedTree();
+                if (params->compute_likelihood) {
                     if (isSuperTree()) {
                         wrapperFixNegativeBranch(true);
                     } else {
                         fixed_number = wrapperFixNegativeBranch(false);
                     }
                 }
-                optimizeConstructedTree();
                 break;
             }
             //else, fall through
@@ -827,14 +827,14 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
                          << " wall-clock seconds");
             }
             params->numInitTrees = 1;
-            if (params->compute_ml_dist) {
+            optimizeConstructedTree();
+            if (params->compute_likelihood) {
                 if (isSuperTree()) {
                     wrapperFixNegativeBranch(true);
                 } else {
                     fixed_number = wrapperFixNegativeBranch(false);
                 }
             }
-            optimizeConstructedTree();
             break;
 
         case STT_USER_TREE:
@@ -2675,201 +2675,6 @@ double IQTree::doTreeSearch() {
     return candidateTrees.getBestScore();
 }
 
-
-/*
-void IQTree::refineBootTrees(){
-    on_refine_btree = true;
-    int num_boot_rep = params->gbo_replicates;
-    params->gbo_replicates = 0;
-    save_all_trees = 0;
-
-    NNI_Type saved_nni_type = params->nni_type;
-    if(params->u2c_nni5 == false){
-        params->nni5 = false;
-        params->nni_type = NNI1;
-    }else{
-        params->nni5 = true;
-        params->nni_type = NNI5;
-    }
-
-    string saved_tree = getTreeString();
-    saved_aln_on_refine_btree = aln;
-
-    int nptn = getAlnNPattern();
-    LOG_LINE(VB_QUIET, "npn = " << nptn);
-
-    string tree;
-    Alignment * bootstrap_aln;
-
-    int *saved_randstream = randstream;
-    init_random(params->ran_seed);
-
-    string file_name = params->out_prefix;
-    file_name += ".binfo";
-    ofstream binfo(file_name.c_str());
-
-    file_name = params->out_prefix;
-    file_name += ".btree.pre";
-    ofstream btreep(file_name.c_str(), ios::app);
-
-    file_name = params->out_prefix;
-    file_name += ".btree.aft";
-    ofstream btreea(file_name.c_str(), ios::app);
-
-    file_name = params->out_prefix;
-    file_name += ".btree.pre.brlen";
-    ofstream btreep_brlen(file_name.c_str(), ios::app);
-
-    file_name = params->out_prefix;
-    file_name += ".btree.aft.brlen";
-    ofstream btreea_brlen(file_name.c_str(), ios::app);
-
-    file_name = params->out_prefix;
-    file_name += ".refine.aln";
-    ofstream refine_aln(file_name.c_str(), ios::app);
-
-
-    if(!isSuperTree()){
-        getModelFactory()->model->writeInfo(binfo);
-        getModelFactory()->site_rate->writeInfo(binfo);
-    }else{
-        ((PhyloSuperTree *)this)->at(0)->getModelFactory()->model->writeInfo(binfo);
-        ((PhyloSuperTree *)this)->at(0)->getModelFactory()->site_rate->writeInfo(binfo);
-    }
-
-    PhyloSuperTree *stree = (isSuperTree()) ? (PhyloSuperTree*)this : NULL;
-
-    for(int sample = 0; sample < num_boot_rep; sample++){
-        if ((sample+1) % 100 == 0)
-            LOG_LINE(VB_QUIET, sample+1 << " replicates done");
-
-        if (saved_aln_on_refine_btree->isSuperAlignment())
-            bootstrap_aln = new SuperAlignment;
-        else
-            bootstrap_aln = new Alignment;
-
-//        bootstrap_aln->buildFromPatternFreq(*saved_aln_on_refine_btree, boot_samples_int[sample]);
-        IntVector this_sample;
-        bootstrap_aln->createBootstrapAlignment(saved_aln_on_refine_btree, &this_sample, params->bootstrap_spec);
-
-        if (isSuperTree())
-            stree->setSuperAlignment(bootstrap_aln);
-        else
-            setAlignment(bootstrap_aln);
-
-        for(int k = 0; k < nptn; k++){
-            if(boot_samples_int[sample][k] != this_sample[k]){
-                assert(0 && "Not identical");
-            }
-        }
-
-//        bootstrap_aln->createBootstrapAlignment(saved_aln_on_refine_btree, NULL, params->bootstrap_spec);
-        ptn_freq_computed = false;
-        computePtnFreq();
-        if (isSuperTree()) {
-            for (auto it = stree->begin(); it != stree->end(); it++) {
-                (*it)->ptn_freq_computed = false;
-                (*it)->computePtnFreq();
-            }
-        }
-
-
-        tree = boot_trees[sample];
-        // Read the bootstrap tree
-//        logLine( tree );
-
-        readTreeString(tree);
-
-
-        if(!isSuperTree())
-            aln->printPhylip(refine_aln, true);
-        else
-            ((SuperAlignment *) aln)->printCombinedAlignment(refine_aln, true);
-
-        setRootNode(params->root);
-
-        if (isSuperTree()){
-            wrapperFixNegativeBranch(true);
-            ((PhyloSuperTree*) this)->mapTrees();
-        }
-        else{
-            initializeAllPartialLh();
-            clearAllPartialLH();
-            wrapperFixNegativeBranch(false);
-        }
-
-
-//        printTree(cout);
-//        logLine("");
-        optimizeBranches();
-//        printTree(cout);
-//        logLine("");
-
-        curScore = computeLogL();
-        binfo << sample << "\t" << curScore;
-
-        printTree(btreep, WT_NEWLINE | WT_SORT_TAXA);
-        printTree(btreep_brlen, WT_NEWLINE | WT_SORT_TAXA | WT_BR_LEN);
-
-        pair<int, int> nniInfos; // <num_NNIs, num_steps>
-        nniInfos = doNNISearch(true, "");
-        curScore = computeLogL();
-        binfo << "\t" << curScore << endl;
-
-        stringstream ostr;
-        printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
-        tree = ostr.str();
-        boot_trees[sample] = getTreeString();
-        boot_logl[sample] = curScore;
-
-        printTree(btreea, WT_NEWLINE | WT_SORT_TAXA);
-        printTree(btreea_brlen, WT_NEWLINE | WT_SORT_TAXA | WT_BR_LEN);
-        delete aln;
-    }
-
-    binfo.close();
-    btreep.close();
-    btreea.close();
-
-    // restore randstream
-    finish_random();
-    randstream = saved_randstream;
-
-    // Recover the last status of IQTREE
-
-    params->gbo_replicates = num_boot_rep;
-
-    if (isSuperTree())
-        stree->setSuperAlignment(saved_aln_on_refine_btree);
-    else
-        setAlignment(saved_aln_on_refine_btree);
-
-    readTreeString(saved_tree);
-
-    ptn_freq_computed = false;
-    computePtnFreq();
-    if (isSuperTree()) {
-        for (auto it = stree->begin(); it != stree->end(); it++) {
-            (*it)->ptn_freq_computed = false;
-            (*it)->computePtnFreq();
-        }
-    }
-
-    if(params->u2c_nni5 == false){
-        params->nni_type = saved_nni_type;
-        if(params->nni_type == NNI5)
-            params->nni5 = true;
-    }
-
-    initializeAllPartialLh();
-    clearAllPartialLH();
-    curScore = optimizeAllBranches();
-
-    save_all_trees = 2;
-    on_refine_btree = false;
-}
-*/
-
 /**********************************************************
  * STANDARD NON-PARAMETRIC BOOTSTRAP
  ***********************************************************/
@@ -4586,6 +4391,12 @@ int PhyloTree::testNumThreads() {
     return 1;
 #else
 	int max_procs = min(countPhysicalCPUCores()/MPIHelper::getInstance().countSameHost(), params->num_threads_max);
+    if (!params->compute_likelihood) {
+        omp_set_num_threads(max_procs);
+        setNumThreads(max_procs);
+        return max_procs;
+    }
+    
     LOG_LINE(VB_QUIET,"Measuring multi-threading efficiency up to " << max_procs << " CPU cores");
     DoubleVector runTimes;
     int bestProc = 0;

@@ -1194,8 +1194,9 @@ void evaluateTrees(string treeset_file, Params &params, IQTree *tree, vector<Tre
         }
         tree->setAlignment(tree->aln);
         tree->setRootNode(params.root);
-        if (tree->isSuperTree())
+        if (tree->isSuperTree()) {
             ((PhyloSuperTree*) tree)->mapTrees();
+        }
         
         tree->initializeAllPartialLh();
         tree->fixNegativeBranch(false);

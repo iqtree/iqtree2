@@ -1098,6 +1098,11 @@ public:
             TRUE to compute the maximum-likelihood distances
      */
     bool compute_ml_dist;
+    
+    /**
+            defaults to true. if false, do not calculate likelihood.
+     */
+    bool compute_likelihood;
 
     /**
             TRUE to compute the maximum-likelihood tree
@@ -2107,6 +2112,12 @@ public:
     /** maximum size of memory allowed to use */
     double max_mem_size;
 
+    /** if true, maximum size of memory allowed to use is measured in bytes,
+     * if false, it is a fraction (indicating what the number of blocks is,
+     * as a fraction of the number of nodes in the tree.
+     */
+    bool max_mem_is_in_bytes;
+    
 	/* TRUE to print .splits file in star-dot format */
 	bool print_splits_file;
     

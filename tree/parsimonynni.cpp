@@ -206,26 +206,14 @@ public:
         //Mark inward views as out of date
         middle.first->clearReversePartialParsimony (middle.second);
         middle.second->clearReversePartialParsimony(middle.first);
+                
+        FOR_EACH_ADJACENT_PHYLO_NODE(middle.first, nullptr, it, node) {
+            tree.setOneBranchLengthFromParsimony(parsimony_score, middle.first, node);
+        }
         
-        
-        struct Adjuster {
-            void setParsimonyLength(PhyloTree& tree, double parsimony, PhyloNode* node1) {
-                FOR_EACH_ADJACENT_PHYLO_NODE(node1, nullptr, it, node2) {
-                    PhyloNeighbor* leftNei  = node1->findNeighbor(node2);
-                    PhyloNeighbor* rightNei = node2->findNeighbor(node1);
-                    double branch_cost = parsimony
-                                       - tree.getSubTreeParsimony(leftNei)
-                                       - tree.getSubTreeParsimony(rightNei);
-                    if (branch_cost<1) {
-                        branch_cost = 1;
-                    }
-                    double branch_length = branch_cost / tree.getAlnNSite();
-                    leftNei->length = rightNei->length = branch_length;
-                }
-            }
-        } adj;
-        adj.setParsimonyLength(tree, parsimony_score, middle.first);
-        adj.setParsimonyLength(tree, parsimony_score, middle.second);
+        FOR_EACH_ADJACENT_PHYLO_NODE(middle.second, middle.first, it, node) {
+            tree.setOneBranchLengthFromParsimony(parsimony_score, middle.second, node);
+        }
         
         std::swap(left, right);
         

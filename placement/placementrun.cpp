@@ -48,13 +48,15 @@ void PlacementRun::prepareForPlacementRun() {
         TREE_LOG_LINE(phylo_tree, VB_MED, "After overallocating lh blocks, index_lh was "
             << block_allocator->getLikelihoodBlockCount());
     }
-    if (VB_MED <= verbose_mode && (phylo_tree.params->compute_ml_dist || use_likelihood) ) {
+    if (VB_MED <= verbose_mode &&
+        (phylo_tree.params->compute_likelihood || use_likelihood) ) {
         double curScore = phylo_tree.computeLikelihood();
         TREE_LOG_LINE(phylo_tree, VB_MED, "Likelihood score before insertions was " << curScore);
-#if (0)
-        curScore = phylo_tree.optimizeAllBranches(2);
-        LOG_LINE(phylo_tree, VB_MED, "Optimized likelihood score before insertions was " << curScore);
-#endif
+        if (use_likelihood) {
+            curScore = phylo_tree.optimizeAllBranches(2);
+            TREE_LOG_LINE(phylo_tree, VB_MED, "Optimized likelihood score"
+                          " before insertions was " << curScore);
+        }
     }
     if (!use_likelihood) {
         phylo_tree.deleteAllPartialLh();
