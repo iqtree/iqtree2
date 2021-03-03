@@ -312,7 +312,7 @@ public:
                           UINT* scratch_vector) const {
         auto     pars        = candidate.getParsimonyBlock();
         intptr_t sample_size = sample.size();
-        for (intptr_t s = 0; sample_size; ++s) {
+        for (intptr_t s = 0; s<sample_size; ++s) {
             PhyloBranch    b(branches[sample[s]]);
             PhyloNeighbor* nei1 = b.getLeftNeighbor();
             PhyloNeighbor* nei2 = b.getRightNeighbor();
