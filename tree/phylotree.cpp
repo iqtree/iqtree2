@@ -3100,7 +3100,8 @@ double PhyloTree::computeBayesianBranchLength(PhyloNeighbor*          dad_branch
     // now combine likelihood at the branch
     const int        nstates = aln->num_states;
     const int        numCat  = site_rate->getNRate();
-    const size_t     block   = numCat * nstates;
+    const size_t     line    = nstates * vector_size;
+    const size_t     block   = numCat  * line;
     const intptr_t   nptn    = aln->size();
     //const intptr_t max_orig_nptn = roundUpToMultiple(nptn, vector_size);
     //const size_t   tip_mem_size  = max_orig_nptn * nstates;
@@ -3113,12 +3114,12 @@ double PhyloTree::computeBayesianBranchLength(PhyloNeighbor*          dad_branch
 
     model->getStateFrequency(tmp_state_freq);
 
-
-    for (intptr_t ptn = 0; ptn < nptn; ptn++) {
+    for (intptr_t ptn = 0; ptn < nptn; ++ptn) {
         // Compute the probability of each state for the current site
-        double  sum_prob1 = 0.0;
-        double  sum_prob2 = 0.0;
-        size_t  offset = ptn * block;
+        double  sum_prob1        = 0.0;
+        double  sum_prob2        = 0.0;
+        size_t  offset           = (ptn / vector_size) * block +
+                                   (ptn % vector_size);
         double* partial_lh_site  = node_branch->partial_lh + (offset);
         double* partial_lh_child = dad_branch->partial_lh  + (offset);
         size_t  leaf_state = node->isLeaf() ? aln->at(ptn)[node->id] : 0;
@@ -3128,17 +3129,20 @@ double PhyloTree::computeBayesianBranchLength(PhyloNeighbor*          dad_branch
             tmp_ancestral_state_prob1[state] = 0.0;
             tmp_ancestral_state_prob2[state] = 0.0;
             if (node->isInterior()) {
-                for (size_t cat = 0; cat < numCat; cat++) {
-                    tmp_ancestral_state_prob1[state] += partial_lh_site [nstates * cat + state];
-                    tmp_ancestral_state_prob2[state] += partial_lh_child[nstates * cat + state];
+                for (size_t cat_offset = 0; cat_offset < block; cat_offset += line) {
+                    tmp_ancestral_state_prob1[state]
+                        += partial_lh_site [cat_offset + state * vector_size];
+                    tmp_ancestral_state_prob2[state]
+                        += partial_lh_child[cat_offset + state * vector_size];
                 }
             }
             else {
                 //double* tip_partial_lh_child = (site_model)
                 //   ? &tip_partial_lh[node->id*tip_mem_size + ptn*nstates]
                 //   : pti.partial_lh_leaves;
-                for (size_t cat = 0; cat < numCat; cat++) {
-                    tmp_ancestral_state_prob1[state] += partial_lh_site [nstates * cat + state];
+                for (size_t cat_offset = 0; cat_offset < block; cat_offset += line) {
+                    tmp_ancestral_state_prob1[state]
+                        += partial_lh_site [cat_offset + state * vector_size];
                 }
                 tmp_ancestral_state_prob2[state] = (leaf_state == state) ? 1.0 : no_match;
             }
@@ -3148,7 +3152,8 @@ double PhyloTree::computeBayesianBranchLength(PhyloNeighbor*          dad_branch
             sum_prob2 += tmp_ancestral_state_prob2[state];
         }
         bool sameState = false;
-        int state1 = 0, state2 = 0;
+        int  state1 = 0;
+        int  state2 = 0;
         double cutoff = 1.0/nstates;
         for (int state = 0; state < nstates; state++) {
             tmp_ancestral_state_prob1[state] /= sum_prob1;
@@ -3158,8 +3163,9 @@ double PhyloTree::computeBayesianBranchLength(PhyloNeighbor*          dad_branch
             if (tmp_ancestral_state_prob2[state] > tmp_ancestral_state_prob2[state2])
                 state2 = state;
             if (tmp_ancestral_state_prob1[state] > cutoff &&
-                tmp_ancestral_state_prob2[state] > cutoff)
+                tmp_ancestral_state_prob2[state] > cutoff) {
                 sameState = true;
+            }
         }
         sameState = sameState || (state1 == state2);
         if (!sameState) {
@@ -3174,9 +3180,9 @@ double PhyloTree::computeBayesianBranchLength(PhyloNeighbor*          dad_branch
     delete[] tmp_ancestral_state_prob1;
     delete[] tmp_state_freq;
 
-//    LOG_LINE(VB_DEBUG, "Was " << node_branch->length << ","
-//             << " now " << obsLen
-//             << " node was leaf " << node->isLeaf() );
+    LOG_LINE(VB_MIN, "Was " << node_branch->length << ","
+             << " now " << obsLen
+             << " node was leaf " << node->isLeaf() );
     return obsLen;
 }
 
@@ -3220,7 +3226,9 @@ double PhyloTree::computeCorrectedBayesianBranchLength(PhyloNeighbor* dad_branch
 }
 
 void PhyloTree::computeAllBayesianBranchLengths() {
-    
+    if (!progress_display::getProgressDisplay()) {
+        cout << "Computing Bayesian branch lengths..." << endl;
+    }
     PhyloNodeVector nodes, nodes2;
     computeBestTraversal(nodes, nodes2);
     initProgress((double)nodes.size(),
