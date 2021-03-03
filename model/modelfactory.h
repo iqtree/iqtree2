@@ -57,6 +57,10 @@ public:
 	*/
 	ModelFactory(Params &params, string &model_name, PhyloTree *tree, ModelsBlock *models_block);
 
+    string getDefaultModelName(PhyloTree *tree, Params &params);
+    
+    StateFreqType getDefaultFrequencyTypeForSequenceType(SeqType seq_type);
+
 	/**
 		blank constructor
 	*/
@@ -263,8 +267,10 @@ protected:
 	*/
 	virtual bool getVariables(double *variables);
 
-    vector<double> optimizeGammaInvWithInitValue(int fixed_len, double logl_epsilon, double gradient_epsilon,
-                                       double initPInv, double initAlpha, DoubleVector &lenvec, Checkpoint *model_ckp);
+    DoubleVector optimizeGammaInvWithInitValue(int fixed_len, double logl_epsilon,
+                                               double gradient_epsilon,
+                                               double initPInv, double initAlpha,
+                                               DoubleVector &lenvec, Checkpoint *model_ckp);
 };
 
 #endif
