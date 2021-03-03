@@ -216,7 +216,7 @@ void ECOpd::readDAG(istream &in) {
 //Rescaling the diet if necessary --------------------------------------------------------------
 	if(weighted){
 		int dietReScaled = 0;
-		vector<double> colsum;
+		DoubleVector colsum;
 		//cout<<"Food web is weighted."<<endl;
 		for(j=0;j<SpeciesNUM;j++){
 
@@ -245,7 +245,7 @@ void ECOpd::readDAG(istream &in) {
 
 // Technical: in case of rooted trees, we check which species are basal ones, i.e. for which check = 0, and set them to "feed on" root M[i,j] = 1
 	if(rooted){
-		vector<double> check;
+		DoubleVector check;
 		for(j=0;j<SpeciesNUM-1;j++){
 			check.push_back(0);
 			for(i=0;i<SpeciesNUM-1;i++)

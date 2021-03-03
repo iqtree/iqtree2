@@ -3968,7 +3968,7 @@ template <class L, class F> double computeDistanceMatrix
     //F is the frequency count type
     //
     
-    std::vector<double> rowMaxDistance;
+    DoubleVector rowMaxDistance;
     rowMaxDistance.resize(nseqs, 0.0);
     double z = num_states / (num_states - 1.0);
     //Compute the upper-triangle of the distance matrix
@@ -4103,7 +4103,7 @@ double PhyloTree::computeDistanceMatrix_Experimental() {
     //matrix (ick) has already been initialized and there's no
     //point doing all the following.
     {
-        std::vector<double> rowMaxDistance;
+        DoubleVector rowMaxDistance;
         rowMaxDistance.resize(seqCount, 0.0);
         #pragma omp parallel for
         for (int seq1=0; seq1<seqCount; ++seq1) {

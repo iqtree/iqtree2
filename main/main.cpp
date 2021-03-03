@@ -302,9 +302,9 @@ void summarizeFooter(ostream &out, Params &params) {
 }
 
 
-int getMaxNameLen(vector<string> &setName) {
+int getMaxNameLen(StrVector &setName) {
     int len = 0;
-    for (vector<string>::iterator it = setName.begin(); it != setName.end(); it++) {
+    for (auto it = setName.begin(); it != setName.end(); it++) {
         int lenHere = static_cast<int>((*it).length());
         if (len < lenHere) {
             len = lenHere;
@@ -1123,7 +1123,7 @@ void runPDSplit(Params &params) {
             MTreeSet *mtrees = sg.getMTrees();
             if (mtrees->size() < 100)
                 cout << "WARNING: bootstrap may be unstable with less than 100 trees" << endl;
-            vector<string> taxname;
+            StrVector taxname;
             sg.getTaxaName(taxname);
             i = 1;
             for (MTreeSet::iterator it = mtrees->begin(); it != mtrees->end(); it++, i++) {
@@ -1251,7 +1251,7 @@ void calcTreeCluster(Params &params) {
 
 void printTaxa(Params &params) {
     MTree mytree(params.user_file, params.is_rooted);
-    vector<string> taxname;
+    StrVector taxname;
     taxname.resize(mytree.leafNum);
     mytree.getTaxaName(taxname);
     sort(taxname.begin(), taxname.end());
@@ -1263,8 +1263,10 @@ void printTaxa(Params &params) {
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
         out.open(filename.c_str());
-        for (vector<string>::iterator it = taxname.begin(); it != taxname.end(); it++) {
-            if ((*it) != ROOT_NAME) out << (*it);
+        for (auto it = taxname.begin(); it != taxname.end(); it++) {
+            if ((*it) != ROOT_NAME) {
+                out << (*it);
+            }
             out << endl;
         }
         out.close();

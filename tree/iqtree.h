@@ -636,7 +636,7 @@ protected:
     /**
      *  Vector contains approximated improvement pro NNI at each iterations
      */
-    vector<double> vecImpProNNI;
+    DoubleVector vecImpProNNI;
 
     /**
         Optimal branch lengths
@@ -1002,7 +1002,7 @@ public:
      *  @return
      *      A string vector of trees
      */
-    vector<string> getBestTrees(int numTrees = 0);
+    StrVector getBestTrees(int numTrees = 0);
 
     /**
      *  Print the iteration number and the tree score

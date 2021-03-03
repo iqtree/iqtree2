@@ -135,7 +135,7 @@ public:
      *  @return
      *  	Vector containing \a numBestScore best scores
      */
-    vector<double> getBestScores(int numBestScores = 0);
+    DoubleVector getBestScores(int numBestScores = 0);
 
     /**
      * Get best score
@@ -152,7 +152,7 @@ public:
      *  @return
      *  	Vector of current best trees
      */
-    vector<string> getBestTreeStrings(int numTree = 0);
+    StrVector getBestTreeStrings(int numTree = 0);
 
     /**
      *  Get \a numTree top scoring trees for this MPI process. Also work for sequential version.
@@ -162,7 +162,7 @@ public:
      *  @return
      *  	Vector of current best trees
      */
-    vector<string> getBestTreeStringsForProcess(int totalNumTree);
+    StrVector getBestTreeStringsForProcess(int totalNumTree);
 
     /**
      *  Return a set of trees and a set of scores
@@ -171,7 +171,7 @@ public:
      *  @param scores vector of tree scores
      *  @param treeFormat the NEWICK format used for tree string (WT_TAXON_ID, WT_BR_LEN, ..)
      */
-    void getAllTrees(vector<string> &trees, vector<double> &scores, int treeFormat = -1);
+    void getAllTrees(StrVector& trees, DoubleVector& scores, int treeFormat = -1);
 
     /**
      * destructor

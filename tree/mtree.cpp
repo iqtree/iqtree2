@@ -71,7 +71,7 @@ MTree::MTree(MTree &tree) {
     init(tree);
 }
 
-MTree::MTree(string& treeString, vector<string>& taxaNames, bool isRooted) {
+MTree::MTree(string& treeString, StrVector& taxaNames, bool isRooted) {
     stringstream str;
     str << treeString;
     str.seekg(0, ios::beg);
@@ -101,7 +101,7 @@ void MTree::init(MTree &tree) {
     fig_char = tree.fig_char;
 }
 
-void MTree::assignIDs(vector<string>& taxaNames) {
+void MTree::assignIDs(StrVector& taxaNames) {
     bool err = false;
     int nseq = static_cast<int>(taxaNames.size());
     for (int seq = 0; seq < nseq; seq++) {
@@ -122,7 +122,7 @@ void MTree::assignIDs(vector<string>& taxaNames) {
     getTaxaName(taxname);
     for (StrVector::iterator it = taxname.begin(); it != taxname.end(); it++) {
         bool foundTaxa = false;
-        for (vector<string>::iterator it2 = taxaNames.begin(); it2 != taxaNames.end(); it2++) {
+        for (auto it2 = taxaNames.begin(); it2 != taxaNames.end(); it2++) {
             if ( *it == *it2 ) {
                 foundTaxa = true;
                 break;
@@ -1289,7 +1289,7 @@ void MTree::getOrderedTaxa(NodeVector &taxa, Node *node, Node *dad) {
     }
 }
 
-void MTree::getTaxaName(vector<string> &taxname, Node *node, Node *dad) {
+void MTree::getTaxaName(StrVector &taxname, Node *node, Node *dad) {
     if (!node) {
         node = root;
     }
@@ -1345,7 +1345,7 @@ void MTree::getNodeName(set<string> &nodename, Node *node, Node *dad) {
     }
 }
 
-void MTree::getUnorderedTaxaName(vector<string> &taxname, Node *node, Node *dad) {
+void MTree::getUnorderedTaxaName(StrVector &taxname, Node *node, Node *dad) {
     if (!node) node = root;
     if (node->isLeaf()) {
     	taxname.push_back(node->name);
@@ -1419,10 +1419,11 @@ void MTree::convertSplits(SplitGraph &sg, Split *resp, NodeVector *nodes, Node *
         resp->addTaxon(node->id);
 }
 
-void MTree::convertSplits(vector<string> &taxname, SplitGraph &sg, NodeVector *nodes, Node *node, Node *dad) {
+void MTree::convertSplits(StrVector &taxname, SplitGraph &sg,
+                          NodeVector *nodes, Node *node, Node *dad) {
     if (!sg.taxa) {
         sg.taxa = new NxsTaxaBlock();
-        for (vector<string>::iterator it = taxname.begin(); it != taxname.end(); it++)
+        for (auto it = taxname.begin(); it != taxname.end(); it++)
             sg.taxa->AddTaxonLabel(NxsString(it->c_str()));
     }
     if (!sg.splits)
@@ -1440,7 +1441,7 @@ void MTree::convertSplits(vector<string> &taxname, SplitGraph &sg, NodeVector *n
 void MTree::convertSplits(SplitGraph &sg, NodeVector *nodes, Node *node, Node *dad) {
 
     // make the taxa name
-    vector<string> taxname;
+    StrVector taxname;
     taxname.resize(leafNum);
     getTaxaName(taxname);
 
@@ -1998,7 +1999,7 @@ bool MTree::equalTopology(MTree *tree) {
 }
 
 void MTree::calcDist(char *filename) {
-    vector<string> taxname;
+    StrVector taxname;
     int i, j;
 
     // allocate memory
@@ -2548,7 +2549,7 @@ void MTree::computeRFDist(istream &in, DoubleVector &dist, int assign_sup, bool 
 
 }
 
-void MTree::reportDisagreedTrees(vector<string> &taxname, MTreeSet &trees, Split &mysplit) {
+void MTree::reportDisagreedTrees(StrVector &taxname, MTreeSet &trees, Split &mysplit) {
 	for (MTreeSet::iterator it = trees.begin(); it != trees.end(); it++) {
 		MTree *tree = (*it);
 		SplitGraph sg;
@@ -2561,7 +2562,7 @@ void MTree::reportDisagreedTrees(vector<string> &taxname, MTreeSet &trees, Split
 }
 
 
-void MTree::createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, SplitIntMap &hash_ss,
+void MTree::createBootstrapSupport(StrVector &taxname, MTreeSet &trees, SplitIntMap &hash_ss,
     char *tag, Node *node, Node *dad) {
 	if (!node) node = root;	
 	FOR_NEIGHBOR_IT(node, dad, it) {

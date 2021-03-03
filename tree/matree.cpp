@@ -86,7 +86,7 @@ void MaTree::comparedTo (MTreeSet &trees, DoubleMatrix &brLenMatrix, IntVector &
     	}*/
 
     // get the taxa name
-    vector<string> taxname;
+    StrVector taxname;
     taxname.resize(leafNum);
     getTaxaName(taxname);
 
@@ -101,25 +101,28 @@ void MaTree::comparedTo (MTreeSet &trees, DoubleMatrix &brLenMatrix, IntVector &
 //		outError("Rooted and unrooted trees are mixed up");
     if (tree->leafNum != leafNum)
         outError("Tree has different number of taxa!");
-    vector<string> taxname1;
+    StrVector taxname1;
     taxname1.resize(leafNum);
     tree->getTaxaName(taxname1);
 
-    vector<string>::iterator strit;
-    for (strit = taxname1.begin(), i = 0; strit != taxname1.end(); strit++, i++) {
-        if ((*strit) != taxname[i])
+    i = 0;
+    for (auto strit = taxname1.begin();
+         strit != taxname1.end(); ++strit, ++i) {
+        if ((*strit) != taxname[i]) {
             outError("Tree has different taxa names!");
+        }
     }
 
-    MTreeSet::iterator tit;
-    for ( tit = trees.begin(), i=0; tit != trees.end(); tit++, i++ )
+    i = 0;
+    for ( auto tit = trees.begin();
+         tit != trees.end(); ++tit, ++i )
     {
         DoubleVector brVec(nodeNum,-2);
         SplitGraph *sg = new SplitGraph;
         SplitIntMap *hs = new SplitIntMap;
         (*tit)->convertSplits(taxname,*sg);
         // make sure that taxon 0 is included
-        for (SplitGraph::iterator sit = sg->begin(); sit != sg->end(); sit++) {
+        for (auto sit = sg->begin(); sit != sg->end(); sit++) {
             if (!(*sit)->containTaxon(0)) (*sit)->invert();
             //	(*sit)->report(cout);
             hs->insertSplit((*sit), 1);
@@ -128,7 +131,7 @@ void MaTree::comparedTo (MTreeSet &trees, DoubleMatrix &brLenMatrix, IntVector &
         int rf = 0;
         double bsd = 0;
         //go through each split in this tree (not the compared tree)
-        for ( SplitIntMap::iterator tsit = sim.begin(); tsit != sim.end(); tsit++ )
+        for ( auto tsit = sim.begin(); tsit != sim.end(); tsit++ )
         {
             Split* fSplit = hs->findSplit(tsit->first); // check whether the compared tree contains this split
             if (fSplit) { //yes
@@ -142,7 +145,7 @@ void MaTree::comparedTo (MTreeSet &trees, DoubleMatrix &brLenMatrix, IntVector &
             }
         }
         //go through each split in the compared tree
-        for ( SplitIntMap::iterator fsit = hs->begin(); fsit != hs->end(); fsit++ )
+        for ( auto fsit = hs->begin(); fsit != hs->end(); fsit++ )
         {
             Split* fSplit = sim.findSplit(fsit->first);
             if (!fSplit) {
@@ -161,7 +164,8 @@ void MaTree::comparedTo (MTreeSet &trees, DoubleMatrix &brLenMatrix, IntVector &
 
 //void MaTree::convertSplitIntMap(SplitIntMap &sim){}
 
-void MaTree::convertSplitIntMap(SplitIntMap &sim, Split *resp, const int taxonID, Node *node, Node *dad) {
+void MaTree::convertSplitIntMap(SplitIntMap &sim, Split *resp,
+                                const int taxonID, Node *node, Node *dad) {
     if (!node) {
         node = root;
     }

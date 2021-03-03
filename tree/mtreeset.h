@@ -67,7 +67,7 @@ public:
 	 *  @param taxonNames vector containing taxon names. The order of each taxon is used to assign its ID
 	 *  @param is_rooted specify whether the tree is rooted or not
 	 */
-	void init(vector<string> &trees, vector<string> &taxonNames, bool &is_rooted);
+	void init(StrVector& trees, StrVector& taxonNames, bool &is_rooted);
 
 
 	/**
@@ -131,8 +131,10 @@ public:
         @param tag_str TRUE to tag for each split, which trees it appears.
 		@param sort_taxa TRUE to sort taxa alphabetically
 	*/
-	void convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMap &hash_ss, 
-		int weighting_type, double weight_threshold, char *tag_str, bool sort_taxa = true);
+	void convertSplits(StrVector& taxname, SplitGraph &sg,
+                       SplitIntMap &hash_ss,
+                       int weighting_type, double weight_threshold,
+                       char *tag_str, bool sort_taxa = true);
 
 	/**
 		convert all trees into the split system

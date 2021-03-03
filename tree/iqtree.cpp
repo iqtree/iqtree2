@@ -1011,7 +1011,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
                           Compute logl of all initial trees
     *****************************************************************************************/
 
-    vector<string> initTreeStrings = candidateTrees.getBestTreeStrings();
+    StrVector initTreeStrings = candidateTrees.getBestTreeStrings();
     candidateTrees.clear();
     
     size_t candidateCount = initTreeStrings.size();
@@ -1055,7 +1055,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     //---- BLOCKING COMMUNICATION
     syncCandidateTrees(nNNITrees, false);
 
-    vector<string> bestInitTrees; // Set of best initial trees for doing NNIs
+    StrVector bestInitTrees; // Set of best initial trees for doing NNIs
     bestInitTrees = candidateTrees.getBestTreeStringsForProcess(nNNITrees);
 
     logLine("");
@@ -2381,9 +2381,9 @@ string IQTree::ensureModelParametersAreSet(double initEpsilon) {
 }
 
 void IQTree::printBestScores() {
-    vector<double> bestScores = candidateTrees.getBestScores(params->popSize);
+    DoubleVector bestScores = candidateTrees.getBestScores(params->popSize);
     std::stringstream msg;
-    for (vector<double>::iterator it = bestScores.begin(); it != bestScores.end(); it++) {
+    for (auto it = bestScores.begin(); it != bestScores.end(); it++) {
         msg << (*it) << " ";
     }
     logLine(msg.str());
@@ -3800,7 +3800,7 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
     SplitGraph sg;
     SplitIntMap hash_ss;
     // make the taxa name
-    vector<string> taxname;
+    StrVector taxname;
     taxname.resize(leafNum);
     if (boot_splits.empty()) {
         getTaxaName(taxname);
@@ -3906,7 +3906,7 @@ void IQTree::summarizeBootstrap(SplitGraph &sg) {
     trees.init(boot_trees, rooted);
     SplitIntMap hash_ss;
     // make the taxa name
-    vector<string> taxname;
+    StrVector taxname;
     taxname.resize(leafNum);
     getTaxaName(taxname);
 
@@ -4125,7 +4125,7 @@ double IQTree::getBestScore() {
     return candidateTrees.getBestScore();
 }
 
-vector<string> IQTree::getBestTrees(int numTrees) {
+StrVector IQTree::getBestTrees(int numTrees) {
     return candidateTrees.getBestTreeStrings(numTrees);
 }
 

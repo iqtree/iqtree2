@@ -262,7 +262,7 @@ public:
 		return taxa;
 	}
 
-	void getTaxaName(vector<string> &taxname);
+	void getTaxaName(StrVector& taxname);
 
 	/**
 		@return splits block

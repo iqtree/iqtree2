@@ -1330,7 +1330,7 @@ void PhyloTree::readLikelihoodMappingGroups(char *filename, QuartetGroups &LMGro
 		LMGroups.GroupX.resize(numtax);
 		cout << "Cluster \"" << LMGroups.Name[4] << "\" lists " << (*i)->taxlist.size() << " sequences to be ignored:" << endl;
 		int t = 0;
-		for (vector<string>::iterator it = (*i)->taxlist.begin(); it != (*i)->taxlist.end(); it++) {
+		for (auto it = (*i)->taxlist.begin(); it != (*i)->taxlist.end(); it++) {
 			auto taxid = aln->getSeqID(*it);
 			if (taxid < 0) {
 				cout << "WARNING: unknown sequence name \"" << (*it) << "\"! Will be ignored." << endl;
@@ -1367,7 +1367,7 @@ void PhyloTree::readLikelihoodMappingGroups(char *filename, QuartetGroups &LMGro
 		cout << "Cluster " << n+1 << " \"" << LMGroups.Name[n] << "\" lists " << (*i)->taxlist.size() << " sequences: " << endl;
 
 		int t = 0;
-		for (vector<string>::iterator it = (*i)->taxlist.begin(); it != (*i)->taxlist.end(); it++) {
+		for (auto it = (*i)->taxlist.begin(); it != (*i)->taxlist.end(); it++) {
 			auto taxid = aln->getSeqID(*it);
 			if (taxid < 0) {
 				cout << "WARNING: sequence name \"" << (*it) << "\"! Will be ignored." << endl;

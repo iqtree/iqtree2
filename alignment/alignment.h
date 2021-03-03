@@ -439,7 +439,7 @@ public:
      *  Get a vector containing all the sequence names
      *  @return vector containing the sequence names
      */
-    const vector<string>& getSeqNames() const;
+    const StrVector& getSeqNames() const;
 
     /**
             @param seq_name sequence name
@@ -1011,7 +1011,7 @@ protected:
     /**
             sequence names
      */
-    vector<string> seq_names;
+    StrVector seq_names;
 
     /**
             Site to pattern index

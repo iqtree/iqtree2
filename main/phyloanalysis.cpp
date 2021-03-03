@@ -2114,10 +2114,10 @@ void printFinalSearchInfo(Params &params, IQTree &iqtree, double search_cpu_time
 
 }
 
-void printTrees(vector<string> trees, Params &params, string suffix) {
+void printTrees(const StrVector& trees, Params &params, string suffix) {
     ofstream treesOut((string(params.out_prefix) + suffix).c_str(),
             ofstream::out);
-    for (vector<string>::iterator it = trees.begin(); it != trees.end(); it++) {
+    for (auto it = trees.begin(); it != trees.end(); it++) {
         treesOut << (*it);
         treesOut << endl;
     }
@@ -2943,7 +2943,7 @@ void computeLoglFromUserInputGAMMAInvar(Params &params, IQTree &iqtree) {
     RateHeterogeneity *site_rates = iqtree.getRate();
     site_rates->setFixPInvar(true);
     site_rates->setFixGammaShape(true);
-    vector<double> alphas, p_invars, logl;
+    DoubleVector alphas, p_invars, logl;
     ifstream aiFile;
     aiFile.open(params.alpha_invar_file, ios_base::in);
     if (aiFile.good()) {
@@ -2989,7 +2989,7 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
         iqtree.setCurScore(iqtree.computeLikelihood());
     RateHeterogeneity* site_rates = (iqtree.getRate());
     double values[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0 };
-    vector<double> initAlphas;
+    DoubleVector initAlphas;
     if (Params::getInstance().randomAlpha) {
         while (initAlphas.size() < 10) {
             double initAlpha = random_double();
@@ -3079,8 +3079,6 @@ void exhaustiveSearchGAMMAInvar(Params &params, IQTree &iqtree) {
          << " AND " << " p-invar=" << p_invarMin << ".." << p_invarMax
          << " (epsilon: " << params.modelEps << ")" << endl;
 
-//    vector<string> results;
-//    results.reserve((unsigned long) (numAlpha * numInvar));
     DoubleVector lenvec;
     iqtree.saveBranchLengths(lenvec);
 
@@ -3110,9 +3108,7 @@ void exhaustiveSearchGAMMAInvar(Params &params, IQTree &iqtree) {
             iqtree.restoreBranchLengths(lenvec);
         }
     }
-//    for (vector<string>::iterator it = results.begin(); it != results.end(); it++) {
-//                aiFileResults << (*it) << endl;
-//            }
+    
     aiFileResults.close();
     cout << "Results were written to: " << aiResultsFileName << endl;
     cout << "Wall clock time used: " << getRealTime() - params.start_real_time << endl;
@@ -4302,7 +4298,7 @@ void assignBootstrapSupport(const char *input_trees, int burnin, int max_count,
     SplitGraph sg;
     SplitIntMap hash_ss;
     // make the taxa name
-    vector<string> taxname;
+    StrVector taxname;
     taxname.resize(mytree.leafNum);
     mytree.getTaxaName(taxname);
 
@@ -4410,10 +4406,6 @@ void computeConsensusTree(const char *input_trees, int burnin, int max_count,
     //sg.report(cout);
     SplitGraph sg;
     SplitIntMap hash_ss;
-    // make the taxa name
-    //vector<string> taxname;
-    //taxname.resize(mytree.leafNum);
-    //mytree.getTaxaName(taxname);
 
     // read the bootstrap tree file
     double scale = 100.0;

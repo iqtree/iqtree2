@@ -142,9 +142,10 @@ void MTreeSet::init(StrVector &treels, bool &is_rooted) {
 	//tree_weights.resize(size(), 1);
 }
 
-void MTreeSet::init(vector<string> &trees, vector<string> &taxonNames, bool &is_rooted) {
+void MTreeSet::init(StrVector& trees, StrVector& taxonNames,
+                    bool& is_rooted) {
 	int count = 0;
-	for (vector<string>::iterator it = trees.begin(); it != trees.end(); it++) {
+	for (auto it = trees.begin(); it != trees.end(); it++) {
 		MTree *tree = newTree();
 		stringstream ss(*it);
 		tree->readTree(ss, is_rooted);
@@ -402,7 +403,7 @@ void MTreeSet::convertSplits(SplitGraph &sg, double split_threshold, int weighti
 
 
 void MTreeSet::convertSplits(SplitGraph &sg, SplitIntMap &hash_ss, int weighting_type, double weight_threshold) {
-	vector<string> taxname(front()->leafNum);
+	StrVector taxname(front()->leafNum);
 	// make sure that the split system contains at least 1 split
 	if (size() == 0)
 		return;
@@ -411,8 +412,10 @@ void MTreeSet::convertSplits(SplitGraph &sg, SplitIntMap &hash_ss, int weighting
 	convertSplits(taxname, sg, hash_ss, weighting_type, weight_threshold, NULL);
 }
 
-void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMap &hash_ss, 
-	int weighting_type, double weight_threshold, char *tag_str, bool sort_taxa) {
+void MTreeSet::convertSplits(StrVector &taxname, SplitGraph &sg,
+                             SplitIntMap &hash_ss,
+                             int weighting_type, double weight_threshold,
+                             char *tag_str, bool sort_taxa) {
 
 	if (verbose_mode >= VB_MED) {
 	#ifdef USE_HASH_MAP
@@ -423,8 +426,6 @@ void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMa
 
 		cout << "Converting collection of tree(s) into split system..." << endl;
 	}
-	SplitGraph::iterator itg;
-	vector<string>::iterator its;
 /*
 	for (its = taxname.begin(); its != taxname.end(); its++)
 		if (*its == ROOT_NAME) {	
@@ -433,7 +434,7 @@ void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMa
 		}*/
 	if (sort_taxa) sort(taxname.begin(), taxname.end());
 	sg.createBlocks();
-	for (its = taxname.begin(); its != taxname.end(); its++)
+	for (auto its = taxname.begin(); its != taxname.end(); its++)
 		sg.getTaxa()->AddTaxonLabel(NxsString(its->c_str()));
 /*
 	if (size() == 1 && weighting_type != SW_COUNT) {
@@ -470,7 +471,7 @@ void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMa
 		tree->convertSplits(taxname, *isg);
 		//isg->getTaxa()->Report(cout);
 		//isg->report(cout);
-		for (itg = isg->begin(); itg != isg->end(); itg++) {
+		for (auto itg = isg->begin(); itg != isg->end(); itg++) {
 			//SplitIntMap::iterator ass_it = hash_ss.find(*itg);
 			int value;
 			//if ((*itg)->getWeight()==0.0) cout << "zero weight!" << endl;
@@ -502,29 +503,30 @@ void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMa
 	}
 
 	if (weighting_type == SW_AVG_PRESENT) {
-		for (itg = sg.begin(); itg != sg.end(); itg++) {
+		for (auto itg = sg.begin(); itg != sg.end(); itg++) {
 			int value = 0;
 			if (!hash_ss.findSplit(*itg, value))
 				outError("Internal error ", __func__);
 			(*itg)->setWeight((*itg)->getWeight() / value);
 		}
 	} else if (weighting_type == SW_AVG_ALL) {
-		for (itg = sg.begin(); itg != sg.end(); itg++) {
+		for (auto itg = sg.begin(); itg != sg.end(); itg++) {
 			(*itg)->setWeight((*itg)->getWeight() / tree_weights.size());
 		}
 	}
 
 	int discarded = 0;	
-	for (itg = sg.begin(); itg != sg.end(); )  {
+	for (auto itg = sg.begin(); itg != sg.end(); )  {
 		if ((*itg)->getWeight() <= weight_threshold) {
 			discarded++;
 			delete (*itg);
 			(*itg) = sg.back();
 			sg.pop_back(); 
-		} else itg++;
+		} else ++itg;
 	}
-	if (discarded)
-		cout << discarded << " split(s) discarded because weight <= " << weight_threshold << endl;
+    if (discarded) {
+        cout << discarded << " split(s) discarded because weight <= " << weight_threshold << endl;
+    }
 	//sg.report(cout);
 }
 
@@ -550,7 +552,7 @@ void MTreeSet::computeRFDist(double *rfdist, int mode, double weight_threshold) 
 #endif
 	cout << "Computing Robinson-Foulds distance..." << endl;
 
-	vector<string> taxname(front()->leafNum);
+    StrVector taxname(front()->leafNum);
 	vector<SplitIntMap*> hs_vec;
 	vector<SplitGraph*> sg_vec;
 
@@ -620,7 +622,7 @@ void MTreeSet::computeRFDist(double *rfdist, MTreeSet *treeset2, bool k_by_k,
 	if (tree_file) otree.open(tree_file);
 	if (incomp_splits) memset(incomp_splits, 0, size()*treeset2->size()*sizeof(double));
 
-	vector<string> taxname(front()->leafNum);
+	StrVector taxname(front()->leafNum);
 	vector<SplitIntMap*> hs_vec;
 	vector<SplitGraph*> sg_vec;
 	vector<NodeVector> nodes_vec;
@@ -774,67 +776,3 @@ int MTreeSet::categorizeDistinctTrees(IntVector &category) {
 	}
 	return ncat;
 }
-
-
-/*int MTreeSet::categorizeDistinctTrees(IntVector &category) {
-	// exit if less than 2 trees
-	if (empty()) return 0;
-	if (size() == 1) {
-		category.resize(1,0);
-		return 1;
-	}
-#ifdef USE_HASH_MAP
-	cout << "Using hash_map" << endl;
-#else
-	cout << "Using map" << endl;
-#endif
-	cout << "Checking duplicated trees..." << endl;
-
-	vector<string> taxname(front()->leafNum);
-	vector<SplitIntMap*> hs_vec;
-	vector<SplitGraph*> sg_vec;
-
-	front()->getTaxaName(taxname);
-
-
-	// converting trees into split system then stored in SplitIntMap for efficiency
-	for (iterator it = begin(); it != end(); it++) {
-		SplitGraph *sg = new SplitGraph();
-		SplitIntMap *hs = new SplitIntMap();
-
-		(*it)->convertSplits(taxname, *sg);
-		// make sure that taxon 0 is included
-		for (SplitGraph::iterator sit = sg->begin(); sit != sg->end(); sit++) {
-			if (!(*sit)->containTaxon(0)) (*sit)->invert();
-			hs->insertSplit((*sit), 1);
-		}
-		hs_vec.push_back(hs);
-		sg_vec.push_back(sg);
-	}
-
-	// now start the RF computation
-	int id = 0, ncat = 0;
-	category.resize(size(),-1);
-	for (vector<SplitIntMap*>::iterator hsit = hs_vec.begin(); hsit != hs_vec.end(); hsit++, id++) 
-	if (category[id] < 0) {
-		category[id] = ncat;
-		int id2 = id+1;
-		for (vector<SplitIntMap*>::iterator hsit2 = hsit+1; hsit2 != hs_vec.end(); hsit2++, id2++) 
-		if (category[id2] < 0) {
-			bool equal = true;
-			for (SplitIntMap::iterator spit = (*hsit2)->begin(); spit != (*hsit2)->end(); spit++) {
-				if (!(*hsit)->findSplit(spit->first)) { equal = false; break; }
-			}
-			if (equal) category[id2] = ncat;
-		}
-		ncat++;
-	}
-	// delete memory 
-	for (id = size()-1; id >= 0; id--) {
-		delete hs_vec[id];
-		delete sg_vec[id];
-	}
-	return ncat;
-}
-
-*/

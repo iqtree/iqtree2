@@ -198,8 +198,8 @@ topol *_setupTopol(pllInstance* tr) {
 	return tree;
 }
 
-vector<string> getAffectedBranches(pllInstance* tr, nodeptr p) {
-	vector<string> res;
+StrVector getAffectedBranches(pllInstance* tr, nodeptr p) {
+	StrVector res;
 	res.push_back(getBranString(p));
 	nodeptr q = p->back;
 	nodeptr p_nei = p->next;
@@ -347,7 +347,7 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 			/* do the topological change */
 			doOneNNI(tr, pr, (*it).p, (*it).nniType, TOPO_ONLY);
 			if (globalParams->speednni) {
-				vector<string> aBranches = getAffectedBranches(tr, (*it).p);
+				StrVector aBranches = getAffectedBranches(tr, (*it).p);
 				searchinfo.aBranches.insert(aBranches.begin(), aBranches.end());
 			}
 			updateBranchLengthForNNI(tr, pr, (*it));

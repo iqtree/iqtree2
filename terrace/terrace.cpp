@@ -30,7 +30,7 @@ Terrace::Terrace(PhyloTree &tree, SuperAlignment* saln) :
 
     terraces::bitmatrix coverage_matrix{rows, cols};
 
-    vector<string> labels = tree.aln->getSeqNames();
+    StrVector labels = tree.aln->getSeqNames();
 
     names.resize(labels.size());
 

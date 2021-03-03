@@ -2238,7 +2238,7 @@ struct PDRelatedMeasures {
     /**
             names of areas
      */
-    vector<string> setName;
+    StrVector setName;
 
     /**
             pd scores of areas

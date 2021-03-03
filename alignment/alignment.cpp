@@ -97,7 +97,7 @@ void Alignment::setSeqName(int i, string name_to_use) {
 }
 
 
-const vector<string>& Alignment::getSeqNames() const {
+const StrVector& Alignment::getSeqNames() const {
 	return seq_names;
 }
 
@@ -4774,7 +4774,7 @@ double Alignment::readDist(igzstream &in, bool is_incremental,
     if (!is_incremental && nseqs != getNSeq()) {
         throw "Distance file has different number of taxa";
     }
-    std::vector<double> temporary_distance_matrix;
+    DoubleVector temporary_distance_matrix;
     temporary_distance_matrix.resize(nseqs * nseqs, 0);
     double *tmp_dist_mat = temporary_distance_matrix.data();
     

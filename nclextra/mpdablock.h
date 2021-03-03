@@ -140,7 +140,7 @@ protected:
 	/**
 		cost of each taxon
 	*/
-	vector<double> costs;
+	DoubleVector costs;
 
 	/**
 		main method to read block from file

@@ -97,7 +97,7 @@ void BaseballSearchHeuristic::prepareToFilter(PhyloTree& tree, TargetBranchRange
     #pragma omp parallel for
     #endif
     for (intptr_t c = 0; c<taxon_count; ++c ) { //candidate taxon (0-based)
-        std::vector<double> scoresForTaxon;
+        DoubleVector scoresForTaxon;
         scores.appendColumnToVector(c, scoresForTaxon);
         std::vector<intptr_t> targetIndices;
         for (intptr_t b = 0; b < target_count ; ++b ) {

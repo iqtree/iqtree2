@@ -237,7 +237,7 @@ public:
 	/*
 	 * for each predator the diet proportional conserved
 	 */
-	vector<double> dietVAL;
+	DoubleVector dietVAL;
 
 	/*
 	 * print the results

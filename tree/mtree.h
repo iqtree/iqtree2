@@ -64,7 +64,7 @@ public:
      *      Constructor, read tree from string.
      *      Taxa IDs are assigned according to the order in taxaNames
      */
-    MTree(string& treeString, vector<string>& taxaNames, bool isRooted);
+    MTree(string& treeString, StrVector& taxaNames, bool isRooted);
 
     /**
      *  Read tree from string assuming that the taxa names are numeric numbers
@@ -75,7 +75,7 @@ public:
     /**
      *   Assign taxa IDs according to the order in taxaNames
      */
-    void assignIDs(vector<string>& taxaNames);
+    void assignIDs(StrVector& taxaNames);
 
     /**
             constructor
@@ -436,7 +436,7 @@ public:
             @param dad dad of the node, used to direct the search
             @param[out] taxname taxa name, with size equal leafNum and ordered with taxon ID
      */
-    void getTaxaName(vector<string> &taxname, Node *node = nullptr, Node *dad = nullptr);
+    void getTaxaName(StrVector& taxname, Node *node = nullptr, Node *dad = nullptr);
 
     /**
             get the descending taxa names below the node, and map each
@@ -475,7 +475,7 @@ public:
             @param dad dad of the node, used to direct the search
             @param[out] taxname taxa name
      */
-    void getUnorderedTaxaName(vector<string> &taxname, Node *node, Node *dad);
+    void getUnorderedTaxaName(StrVector& taxname, Node *node, Node *dad);
 
     /**
             get the descending internal nodes below \a node
@@ -675,7 +675,9 @@ public:
             @param taxname certain taxa name
             @param sg (OUT) resulting split graph
      */
-	void convertSplits(vector<string> &taxname, SplitGraph &sg, NodeVector *nodes = nullptr, Node *node = nullptr, Node *dad = nullptr);
+	void convertSplits(StrVector& taxname, SplitGraph &sg,
+                       NodeVector *nodes = nullptr, Node *node = nullptr,
+                       Node *dad = nullptr);
 
     /**
             convert the tree into the split system, iterative procedure
@@ -684,7 +686,9 @@ public:
             @param node the starting node, nullptr to start from the root
             @param dad dad of the node, used to direct the search
      */
-    void convertSplits(SplitGraph &sg, Split *resp, NodeVector *nodes = nullptr, Node *node = nullptr, Node *dad = nullptr);
+    void convertSplits(SplitGraph &sg, Split *resp,
+                       NodeVector *nodes = nullptr, Node *node = nullptr,
+                       Node *dad = nullptr);
 
     /**
      * Initialize the hash stable splitBranchMap which contain mapping from split to branch
@@ -909,10 +913,11 @@ public:
 		@param taxname vector of taxa names
 		@param trees set of trees
 	*/
-	void createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, SplitIntMap &hash_ss, char *tag,
-		Node *node = nullptr, Node *dad = nullptr);
+	void createBootstrapSupport(StrVector& taxname, MTreeSet &trees,
+                                SplitIntMap &hash_ss, char *tag,
+                                Node *node = nullptr, Node *dad = nullptr);
 
-	void reportDisagreedTrees(vector<string> &taxname, MTreeSet &trees, Split &mysplit);
+	void reportDisagreedTrees(StrVector& taxname, MTreeSet &trees, Split &mysplit);
 
 
     /********************************************************

@@ -45,14 +45,15 @@ MSetsBlock::~MSetsBlock()
 
 void MSetsBlock::Report(ostream &out)
 {
-	int nsets = static_cast<int>(getNSets());
-	out << "Number of sets: " << nsets << endl;
-	for (TaxaSetNameVector::iterator i = sets.begin(); i != sets.end(); i++) {
-		out << "Set " << (*i)->name << " contains: ";
-		for (vector<string>::iterator it = (*i)->taxlist.begin(); it != (*i)->taxlist.end(); it++)
-			out << (*it) << "  ";
-		out << endl;
-	}
+    int nsets = static_cast<int>(getNSets());
+    out << "Number of sets: " << nsets << endl;
+    for (TaxaSetNameVector::iterator i = sets.begin(); i != sets.end(); i++) {
+        out << "Set " << (*i)->name << " contains: ";
+        for (auto it = (*i)->taxlist.begin(); it != (*i)->taxlist.end(); it++) {
+            out << (*it) << "  ";
+        }
+        out << endl;
+    }
 }
 
 void MSetsBlock::Reset()
