@@ -1863,7 +1863,7 @@ void runApproximateBranchLengths(Params &params, IQTree &iqtree) {
     }
 
     if (params.bayes_branch_length) {
-        cout << endl << "Computing Bayesian branch lengths..." << endl;
+        cout << endl;
         iqtree.computeAllBayesianBranchLengths();
         iqtree.clearAllPartialLH();
         iqtree.setCurScore(iqtree.computeLikelihood());
