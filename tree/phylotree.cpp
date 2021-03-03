@@ -3180,9 +3180,11 @@ double PhyloTree::computeBayesianBranchLength(PhyloNeighbor*          dad_branch
     delete[] tmp_ancestral_state_prob1;
     delete[] tmp_state_freq;
 
+#if (0)
     LOG_LINE(VB_MIN, "Was " << node_branch->length << ","
              << " now " << obsLen
              << " node was leaf " << node->isLeaf() );
+#endif
     return obsLen;
 }
 
