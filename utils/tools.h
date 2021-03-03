@@ -128,7 +128,7 @@ public:
 
         // calculate the averages of arrays x and y
         double xa = 0, ya = 0;
-        for (int i = 0; i < n; i++) {
+        for (int i = 0; i < n; ++i) {
             xa += x[i];
             ya += y[i];
         }
@@ -137,7 +137,7 @@ public:
 
         // calculate auxiliary sums
         double xx = 0, yy = 0, xy = 0;
-        for (int i = 0; i < n; i++) {
+        for (int i = 0; i < n; ++i) {
             double tmpx = x[i] - xa, tmpy = y[i] - ya;
             xx += tmpx * tmpx;
             yy += tmpy * tmpy;
@@ -2647,10 +2647,12 @@ void quicksort_index(T* arr, int* index, int left, int right) {
 
     /* partition */
     while (i <= j) {
-        while (arr[i] < pivot)
-            i++;
-        while (pivot < arr[j])
-            j--;
+        while (arr[i] < pivot) {
+            ++i;
+        }
+        while (pivot < arr[j]) {
+            --j;
+        }
         if (i <= j) {
             tmp = arr[i];
             arr[i] = arr[j];
@@ -2658,8 +2660,8 @@ void quicksort_index(T* arr, int* index, int left, int right) {
             tmp2 = index[i];
             index[i] = index[j];
             index[j] = tmp2;
-            i++;
-            j--;
+            ++i;
+            --j;
         }
     };
 
@@ -2681,7 +2683,7 @@ void sort_index(T* first, T* last, int *index) {
     T* x;
     int i;
     T* arr = new T[last - first];
-    for (x = first, i = 0; x != last; x++, i++) {
+    for (x = first, i = 0; x != last; ++x, ++i) {
         index[i] = i;
         arr[i] = *x;
     }
@@ -2725,10 +2727,12 @@ void quicksort(T1* arr, int left, int right, T2* arr2 = NULL) {
 
       /* partition */
       while (i <= j) {
-            while (arr[i] < pivot)
-                  i++;
-            while (arr[j] > pivot)
-                  j--;
+          while (arr[i] < pivot) {
+                  ++i;
+          }
+          while (arr[j] > pivot) {
+                  --j;
+          }
             if (i <= j) {
                   T1 tmp = arr[i];
                   arr[i] = arr[j];
@@ -2738,8 +2742,8 @@ void quicksort(T1* arr, int left, int right, T2* arr2 = NULL) {
                       arr2[i] = arr2[j];
                       arr2[j] = tmp2;
                   }
-                  i++;
-                  j--;
+                  ++i;
+                  --j;
             }
       };
 
@@ -2800,7 +2804,7 @@ inline uint32_t popcount_lauradoux(unsigned *buf, int n) {
   // "Counting bits set, in parallel" from the "Bit Twiddling Hacks",
   // the code uses wikipedia's 64-bit popcount_3() implementation:
   // http://en.wikipedia.org/wiki/Hamming_weight#Efficient_implementation
-  for (i = 0; i < size - limit30; i++) {
+  for (i = 0; i < size - limit30; ++i) {
     x = data[i];
     x =  x       - ((x >> 1)  & m1);
     x = (x & m2) + ((x >> 2)  & m2);

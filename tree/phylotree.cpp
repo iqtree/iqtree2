@@ -275,9 +275,8 @@ void PhyloTree::readTree(istream &in, bool &is_rooted) {
             left->updateNeighbor((*it), right, len);
             right->updateNeighbor((*it), left, len);
             delete (*it);
-            num_collapsed++;
-            if (verbose_mode >= VB_MED)
-            {
+            ++num_collapsed;
+            if (verbose_mode >= VB_MED) {
                 cout << "Node of degree 2 collapsed" << endl;
             }
         }
@@ -2565,11 +2564,13 @@ void PhyloTree::getUnmarkedNodes(PhyloNodeVector& unmarkedNodes, PhyloNode* node
     if (markedNodeList.find(node->id) == markedNodeList.end()) {
         int numUnmarkedNei = 0;
         for (NeighborVec::iterator it = (node)->neighbors.begin(); it != (node)->neighbors.end(); it++) {
-            if (markedNodeList.find((*it)->node->id) == markedNodeList.end())
-                numUnmarkedNei++;
+            if (markedNodeList.find((*it)->node->id) == markedNodeList.end()) {
+                ++numUnmarkedNei;
+            }
         }
-        if (numUnmarkedNei == 1)
+        if (numUnmarkedNei == 1) {
             unmarkedNodes.push_back(node);
+        }
     }
     FOR_EACH_ADJACENT_PHYLO_NODE(node, dad, it, child) {
         getUnmarkedNodes(unmarkedNodes, child, node);
@@ -3640,7 +3641,7 @@ double PhyloTree::optimizeRootPosition(int root_dist, bool write_info, double lo
             nodes1.pop_back();
             nodes2.pop_back();
         } else {
-            i++;
+            ++i;
         }
     }
 
@@ -3703,7 +3704,7 @@ double PhyloTree::testRootPosition(bool write_info, double logl_epsilon) {
             branches[i] = branches[branches.size()-1];
             branches.pop_back();
         } else {
-            i++;
+            ++i;
         }
     branches.push_back(root_br);
         
@@ -4439,7 +4440,7 @@ int PhyloTree::setNegativeBranch(bool force, double newlen, Node *node, Node *da
             (*it)->length = newlen;
             // set the backward branch length
             (*it)->node->findNeighbor(node)->length = (*it)->length;
-            fixed++;
+            ++fixed;
         }
         fixed += setNegativeBranch(force, newlen, (*it)->node, node);
     }
@@ -4484,7 +4485,7 @@ int PhyloTree::fixNegativeBranch(bool force, PhyloNode *node, PhyloNode *dad) {
                 branch_length = params->min_branch_length;
             }
             fixOneNegativeBranch(branch_length, nei, node);
-            fixed++;
+            ++fixed;
         }
         if (nei->length <= 0.0 && (!rooted || node != root)) {
             nei->length = params->min_branch_length;
@@ -4510,7 +4511,7 @@ int PhyloTree::fixNegativeBranch(bool force, PhyloNode *node, PhyloNode *dad) {
 //            cout << (*it)->length << endl;
 //            // set the backward branch length
 //            (*it)->node->findNeighbor(node)->length = (*it)->length;
-//            fixed++;
+//            ++fixed;
 //        }
 //        if ((*it)->length <= 0.0) {
 //            (*it)->length = 1e-6;
@@ -4551,7 +4552,7 @@ void PhyloTree::doOneRandomNNI(Branch branch) {
             nni.node2Nei_it = node2NeiIt;
             break;
         } else {
-            cnt++;
+            ++cnt;
         }
     }
     assert(*nni.node1Nei_it != NULL && *nni.node2Nei_it != NULL);
@@ -4586,7 +4587,7 @@ NNIMove PhyloTree::getRandomNNI(Branch &branch) {
             nni.node2Nei_it = node2NeiIt;
             break;
         } else {
-            cnt++;
+            ++cnt;
         }
     }
     ASSERT(*nni.node1Nei_it != NULL && *nni.node2Nei_it != NULL);
@@ -5227,8 +5228,9 @@ double PhyloTree::testOneBranch(double best_score, double *pattern_lh, int reps,
 #else
         resampleLh(pat_lh, lh_new, randstream);
 #endif
-        if (lh_new[0] > lh_new[1] && lh_new[0] > lh_new[2])
-            lbp_support_int++;
+        if (lh_new[0] > lh_new[1] && lh_new[0] > lh_new[2]) {
+            ++lbp_support_int;
+        }
         double cs[NUM_NNI], cs_best, cs_2nd_best;
         cs[0] = lh_new[0] - lh[0];
         cs[1] = lh_new[1] - lh[1];
@@ -5252,8 +5254,9 @@ double PhyloTree::testOneBranch(double best_score, double *pattern_lh, int reps,
             else
                 cs_2nd_best = cs[1];
         }
-        if (aLRT > (cs_best - cs_2nd_best) + 0.05)
-            SH_aLRT_support++;
+        if (aLRT > (cs_best - cs_2nd_best) + 0.05) {
+            ++SH_aLRT_support;
+        }
     }
 #ifdef _OPENMP
     finish_random(rstream);
@@ -5429,10 +5432,11 @@ int PhyloTree::collapseStableClade(int min_support, NodeVector &pruned_taxa,
                 linked_taxid[pruned_taxon->id] = stayed_taxon->id;
                 pruned_taxa.push_back(pruned_taxon);
                 linked_name.push_back(stayed_taxon->name);
-                num_pruned_taxa++;
+                ++num_pruned_taxa;
                 // do not prune more than n-4 taxa
-                if (pruned_taxa.size() >= ntaxa - 4)
+                if (pruned_taxa.size() >= ntaxa - 4) {
                     break;
+                }
             }
     } while (num_pruned_taxa && pruned_taxa.size() < ntaxa - 4);
 
@@ -5489,7 +5493,7 @@ int PhyloTree::restoreStableClade(Alignment *original_aln, NodeVector &pruned_ta
         Node *linked_taxon = findNodeName((*linked_it));
         ASSERT(linked_taxon);
         ASSERT(linked_taxon->isLeaf());
-        leafNum++;
+        ++leafNum;
         reinsertLeaf((*tax_it), linked_taxon, linked_taxon->neighbors[0]->node);
     }
     ASSERT(leafNum == original_aln->getNSeq());
@@ -5791,7 +5795,7 @@ void PhyloTree::convertToRooted() {
     Node *root_int = newNode();
     root->addNeighbor(root_int, 0.0);
     root_int->addNeighbor(root, 0.0);
-    leafNum++;
+    ++leafNum;
     //double newlen = node->findNeighbor(dad)->length/2.0;
     node->updateNeighbor(dad, root_int, node_len);
     root_int->addNeighbor(node, node_len);
@@ -6065,14 +6069,15 @@ void PhyloTree::writeSiteRates(ostream &out, bool bayes, int partid) {
                     cat_rate = site_rate->getRate(pattern_cat[ptn]-1);
             }
             out << "\t" << site_cat << "\t" << cat_rate;
-            count[pattern_cat[ptn]]++;
+            ++(count[pattern_cat[ptn]]);
         }
         out << endl;
     }
     if (bayes) {
         cout << "Empirical proportions for each category:";
-        for (size_t i = 0; i < count.size(); ++i)
+        for (size_t i = 0; i < count.size(); ++i) {
             cout << " " << ((double)count[i])/nsite;
+        }
         cout << endl;
     }
 }

@@ -62,7 +62,7 @@ void convert_int_vec(const char *str, IntVector &vec) {
         }
         vec.push_back(i);
         if (*endptr == ',') {
-            endptr++;
+            ++endptr;
         }
         beginptr = endptr;
     } while (*endptr != 0);
@@ -148,7 +148,7 @@ void convert_double_vec(const char *str, DoubleVector &vec, char separator) {
         }
         vec.push_back(d);
         if (*endptr == separator) {
-            endptr++;
+            ++endptr;
         }
         beginptr = endptr;
     } while (*endptr != 0);
@@ -324,7 +324,7 @@ std::string string_to_upper(const char* input) {
 }
 
 std::string next_argument(int argc, char* argv[], const char* desc, int& cnt ) {
-    cnt++;
+    ++cnt;
     if (cnt >= argc) {
         std::string problem = std::string("Use ") + argv[cnt-1] + " <" + desc + ">";
         throw problem;

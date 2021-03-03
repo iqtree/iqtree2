@@ -352,10 +352,12 @@ void IQTree::initSettings(Params &params) {
         sample_end = static_cast<int>(boot_samples.size());
 
         // compute the sample_start and sample_end
-        if (MPIHelper::getInstance().getNumProcesses() > 1) {
-            int num_samples = static_cast<int>(boot_samples.size()) / MPIHelper::getInstance().getNumProcesses();
-            if (boot_samples.size() % MPIHelper::getInstance().getNumProcesses() != 0)
-                num_samples++;
+        int num_processes = MPIHelper::getInstance().getNumProcesses();
+        if ( num_processes > 1) {
+            int num_samples = static_cast<int>(boot_samples.size()) / num_processes;
+            if (boot_samples.size() % num_processes != 0) {
+                ++num_samples;
+            }
             sample_start = MPIHelper::getInstance().getProcessID() * num_samples;
             sample_end = sample_start + num_samples;
             if (sample_end > boot_samples.size()) {
@@ -465,7 +467,7 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
             
             // prepare proper partition file 
             for (PhyloSuperTree::iterator it = siqtree->begin(); it != siqtree->end(); it++) {
-                i++;
+                ++i;
                 intptr_t curLen = ((*it)->aln->seq_type == SEQ_CODON) ? (*it)->getAlnNSite()*3 : (*it)->getAlnNSite();
                 if ((*it)->aln->seq_type == SEQ_DNA || (*it)->aln->seq_type == SEQ_CODON) {
                     pllPartitionFileHandle << "DNA";
@@ -1265,9 +1267,10 @@ void IQTree::increaseKDelete() {
     if (k_delete >= k_delete_max)
         return;
     k_delete_stay--;
-    if (k_delete_stay > 0)
+    if (k_delete_stay > 0) {
         return;
-    k_delete++;
+    }
+    ++k_delete;
     k_delete_stay = static_cast<int>(ceil(leafNum / k_delete));
     LOG_LINE(VB_MED, "Increase k_delete to " << k_delete);
 }
@@ -1328,7 +1331,7 @@ RepresentLeafSet* IQTree::findRepresentLeaves(vector<RepresentLeafSet*> &leaves_
                 break;
             ASSERT(id < 2 && id >= 0);
             leaves->insert(new RepLeaf((*lit[id])->leaf, (*lit[id])->height + 1));
-            lit[id]++;
+            ++(lit[id]);
         }
     }
     ASSERT(!leaves->empty());
@@ -1400,8 +1403,8 @@ void IQTree::deleteNonCherryLeaves(PhyloNodeVector &del_leaves) {
             PhyloNode *taxon = cherry_taxa[indices_cherry[j]];
             del_leaves.push_back(taxon);
             deleteLeaf(taxon);
-            i++;
-            j++;
+            ++i;
+            ++j;
         }
     }
     root = cherry_taxa[j];
@@ -1423,10 +1426,12 @@ void IQTree::deleteLeaves(PhyloNodeVector &del_leaves) {
     // now try to randomly delete some taxa of the probability of p_delete
     for (i = 0; i < num_delete;) {
         int id = random_int(taxa_count);
-        if (!taxa[id])
+        if (!taxa[id]) {
             continue;
-        else
-            i++;
+        }
+        else {
+            ++i;
+        }
         PhyloNode *taxon = taxa[id];
         del_leaves.push_back(taxon);
         deleteLeaf(taxon);
@@ -1554,7 +1559,7 @@ void IQTree::assessQuartets(vector<RepresentLeafSet*> &leaves_vec, PhyloNode *cu
 
     FOR_NEIGHBOR_IT(cur_root, NULL, it){
     leaves[cnt] = findRepresentLeaves(leaves_vec, cnt, cur_root);
-    cnt++;
+    ++cnt;
 }
     for (RepresentLeafSet::iterator i0 = leaves[0]->begin(); i0 != leaves[0]->end(); i0++)
         for (RepresentLeafSet::iterator i1 = leaves[1]->begin(); i1 != leaves[1]->end(); i1++)
@@ -1830,7 +1835,7 @@ string IQTree::perturbStableSplits(double suppValue) {
         getCompatibleNNIs(randomNNIs, compatibleNNIs);
         for (vector<NNIMove>::iterator it = compatibleNNIs.begin(); it != compatibleNNIs.end(); it++) {
             doNNI(*it);
-            numRandNNI++;
+            ++numRandNNI;
 //            Split *sp = getSplit(it->node1, it->node2);
 //            Split *tabuSplit = new Split(*sp);
 //            if (tabuSplit->shouldInvert()) {
@@ -1898,7 +1903,7 @@ string IQTree::doRandomNNIs(bool storeTabu) {
                 initTabuSplits.insertSplit(tabuSplit, 1);
             }
         }
-        cntNNI++;
+        ++cntNNI;
     }
     LOG_LINE(VB_MAX, "Tree perturbation: number of random NNI performed = " << cntNNI);
     setAlignment(aln);
@@ -2433,7 +2438,7 @@ double IQTree::doTreeSearch() {
     int treesPerProc = (params->numInitTrees) / MPIHelper::getInstance().getNumProcesses() 
                      - static_cast<int>(candidateTrees.size());
     if (params->numInitTrees % MPIHelper::getInstance().getNumProcesses() != 0) {
-        treesPerProc++;
+        ++treesPerProc;
     }
     if (treesPerProc < 0) {
         treesPerProc = 0;
@@ -2812,7 +2817,7 @@ void IQTree::refineBootTrees() {
         string context = sampleDescription.str();
         auto num_nnis = boot_tree->doNNISearch(true, context.c_str());
         if (num_nnis.second != 0) {
-            refined_trees++;
+            ++refined_trees;
         }
         LOG_LINE(VB_MED, "UFBoot tree " << sample+1 << ": " << boot_logl[sample]
                  << " -> " << boot_tree->getCurScore());
@@ -2969,7 +2974,7 @@ double IQTree::doTreePerturbation() {
                 pllTreeCounter[perturb_tree_topo] = 1;
             } else {
                 // found in hash_map
-                pllTreeCounter[perturb_tree_topo]++;
+                ++(pllTreeCounter[perturb_tree_topo]);
             }
         }
         //optimizeBranches(1);
@@ -3649,10 +3654,11 @@ void IQTree::estimateNNICutoff(Params* params) {
 
 void IQTree::saveCurrentTree(double cur_logl) {
 
-    if (logl_cutoff != 0.0 && cur_logl < logl_cutoff - 1.0)
+    if (logl_cutoff != 0.0 && cur_logl < logl_cutoff - 1.0) {
         return;
+    }
 //    treels_logl.push_back(cur_logl);
-//    num_trees_for_rell++;
+//    ++num_trees_for_rell;
 
     if (Params::getInstance().write_intermediate_trees) {
         printTree(out_treels, WT_NEWLINE | WT_BR_LEN);
@@ -3719,7 +3725,7 @@ void IQTree::saveCurrentTree(double cur_logl) {
             }
             if (better) {
                 if (rell <= boot_logl[sample] + params->ufboot_epsilon) {
-                    boot_counts[sample]++;
+                    ++(boot_counts[sample]);
                 } else {
                     boot_counts[sample] = 1;
                 }

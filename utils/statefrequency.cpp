@@ -12,15 +12,15 @@
 //This function came from main/phylotesting.cpp
 std::string getSeqTypeName(SeqType seq_type) {
     switch (seq_type) {
-        case SEQ_BINARY: return "binary";
-        case SEQ_DNA: return "DNA";
-        case SEQ_PROTEIN: return "protein";
-        case SEQ_CODON: return "codon";
-        case SEQ_MORPH: return "morphological";
-        case SEQ_POMO: return "PoMo";
-        case SEQ_UNKNOWN: return "unknown";
+        case SEQ_BINARY:     return "binary";
+        case SEQ_DNA:        return "DNA";
+        case SEQ_PROTEIN:    return "protein";
+        case SEQ_CODON:      return "codon";
+        case SEQ_MORPH:      return "morphological";
+        case SEQ_POMO:       return "PoMo";
+        case SEQ_UNKNOWN:    return "unknown";
         case SEQ_MULTISTATE: return "MultiState";
-        default: return "unknown";
+        default:             return "unknown";
     }
 }
 
@@ -92,6 +92,41 @@ StateFreqType parseStateFreqFromPlusF(std::string model_name) {
     return(freq_type);
 }
 
+bool parseStateFrequencyTypeName(const std::string& name,
+                                 StateFreqType& freq) {
+    if (name=="q" || name=="EQ") {
+        freq = FREQ_EQUAL;
+    }
+    else if (name=="c" || name=="EM") {
+        freq = FREQ_EMPIRICAL;
+    }
+    else if (name=="o" || name=="ES") {
+        freq = FREQ_ESTIMATE;
+    }
+    else if (name=="u" || name=="UD") {
+        freq = FREQ_USER_DEFINED;
+    }
+    else if (name=="ry" || name=="RY") {
+        freq = FREQ_DNA_RY;
+    }
+    else if (name=="ws" || name=="WS") {
+        freq = FREQ_DNA_WS;
+    }
+    else if (name=="mk" || name=="MK") {
+        freq = FREQ_DNA_MK;
+    }
+    else {
+        return false;
+    }
+    return true;
+}
+
+bool parseStateFrequencyTypeName(const char* name,
+                                 StateFreqType& freq) {
+    std::string str(name);
+    return parseStateFrequencyTypeName(str, freq);
+}
+
 /*
  * Given a string of 4 digits, return a StateFreqType according to
  * equality constraints expressed by those digits.
@@ -107,7 +142,7 @@ StateFreqType parseStateFreqDigits(std::string digits) {
         // Convert digits to canonical form, first occuring digit becomes 1 etc.
         int digit_order[] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
         int first_found = 0;
-        for (int i=0; i<4; i++) {
+        for (int i=0; i<4; ++i) {
             int digit = digits[i]-'0';
             if (digit<0 || digit>9) {
     good = false; // found a non-digit

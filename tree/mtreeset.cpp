@@ -86,7 +86,7 @@ void MTreeSet::init(StringIntMap &treels, bool &is_rooted, IntVector &weights) {
 
 	for (StringIntMap::iterator it = treels.begin(); it != treels.end(); it++) 
 	if (weights[it->second]) {
-		count++;
+		++count;
 		MTree *tree = newTree();
 		stringstream ss(it->first);
 		bool myrooted = is_rooted;
@@ -116,7 +116,7 @@ void MTreeSet::init(StrVector &treels, bool &is_rooted) {
 	for (StrVector::iterator it = treels.begin(); it != treels.end(); it++)
     if (!it->empty())
 	{
-		count++;
+		++count;
 		MTree *tree = newTree();
 		stringstream ss(*it);
 		bool myrooted = is_rooted;
@@ -157,12 +157,12 @@ void MTreeSet::init(StrVector& trees, StrVector& taxonNames,
 	        ASSERT(node);
 	        ASSERT(node->isLeaf());
 	        node->id = seq;
-	    }
-		push_back(tree);
-		tree_weights.push_back(1);
-		count++;
-	}
-	cout << count << " tree(s) converted" << endl;
+        }
+        push_back(tree);
+        tree_weights.push_back(1);
+        ++count;
+    }
+    cout << count << " tree(s) converted" << endl;
 }
 
 void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin, int max_count,
@@ -189,7 +189,9 @@ void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin, int ma
 			while (cnt < burnin && !in->eof()) {
 				char ch;
 				(*in) >> ch;
-				if (ch == ';') cnt++;
+                if (ch == ';') {
+                    ++cnt;
+                }
 			}
 			cout << cnt << " beginning tree(s) discarded" << endl;
 			if (in->eof())
@@ -217,7 +219,7 @@ void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin, int ma
 					if (!((*in) >> ch)) break;
 					if (ch == ';') break;
 				}
-				omitted++;
+				++omitted;
 			} 
 			char ch;
 			in->exceptions(ios::goodbit);
@@ -303,9 +305,11 @@ bool MTreeSet::isRooted() {
 
 int MTreeSet::countRooted() {
     int count = 0;
-    for (auto tree = begin(); tree != end(); tree++)
-        if ((*tree)->rooted)
-            count++;
+    for (auto tree = begin(); tree != end(); ++tree) {
+        if ((*tree)->rooted) {
+            ++count;
+        }
+    }
     return count;
 }
 
@@ -358,9 +362,9 @@ void MTreeSet::convertSplits(SplitGraph &sg, double split_threshold, int weighti
 
 	double threshold = split_threshold * size();
 //	cout << "threshold = " << threshold << endl;
-	int count=0;
-	for (SplitGraph::iterator it = sg.begin(); it != sg.end(); ) {
-		count++;
+    int count=0;
+    for (SplitGraph::iterator it = sg.begin(); it != sg.end(); ) {
+        ++count;
 		//SplitIntMap::iterator ass_it = hash_ss.find(*it);
 		int freq_value;
 		Split *sp = hash_ss.findSplit(*it, freq_value);
@@ -381,11 +385,10 @@ void MTreeSet::convertSplits(SplitGraph &sg, double split_threshold, int weighti
 			sg.pop_back();
 			if (it == sg.end()) break;
 			hash_ss.insertSplit(*it, num);
-		} else {
-			//sg.push_back(new Split(*sp));
-			it++;
-		}
-	}
+        } else {
+            ++it;
+        }
+    }
 	/*
 	sg.taxa = temp.taxa;
 	sg.splits = temp.splits;
@@ -518,7 +521,7 @@ void MTreeSet::convertSplits(StrVector &taxname, SplitGraph &sg,
 	int discarded = 0;	
 	for (auto itg = sg.begin(); itg != sg.end(); )  {
 		if ((*itg)->getWeight() <= weight_threshold) {
-			discarded++;
+			++discarded;
 			delete (*itg);
 			(*itg) = sg.back();
 			sg.pop_back(); 
@@ -584,10 +587,16 @@ void MTreeSet::computeRFDist(double *rfdist, int mode, double weight_threshold) 
 			int diff_splits = 0;
 			SplitIntMap::iterator spit;
 			for (spit = (*hsit2)->begin(); spit != (*hsit2)->end(); spit++) {
-				if (spit->first->getWeight() >= weight_threshold && !(*hsit)->findSplit(spit->first)) diff_splits++;
+                if (spit->first->getWeight() >= weight_threshold &&
+                    !(*hsit)->findSplit(spit->first)) {
+                    ++diff_splits;
+                }
 			}
 			for (spit = (*hsit)->begin(); spit != (*hsit)->end(); spit++) {
-				if (spit->first->getWeight() >= weight_threshold && !(*hsit2)->findSplit(spit->first)) diff_splits++;
+                if (spit->first->getWeight() >= weight_threshold &&
+                    !(*hsit2)->findSplit(spit->first)) {
+                    ++diff_splits;
+                }
 			}
 			//int rf_val = (*hsit)->size() + (*hsit2)->size() - 2*common_splits;
 			int rf_val = diff_splits;
@@ -683,11 +692,15 @@ void MTreeSet::computeRFDist(double *rfdist, MTreeSet *treeset2, bool k_by_k,
 			int common_splits = 0;
 			int i = 0;
 			for (SplitGraph::iterator spit = (*hsit)->begin(); spit != (*hsit)->end(); spit++, i++) {
-				if ((*hsit2)->findSplit(*spit)) {
-					common_splits++;
-					if (info_file && (*spit)->trivial()<0) oinfo << " " << nodes_vec[id][i]->name;
-				} else {
-					if (info_file && (*spit)->trivial()<0) oinfo << " -" << nodes_vec[id][i]->name;
+                if ((*hsit2)->findSplit(*spit)) {
+                    ++common_splits;
+                    if (info_file && (*spit)->trivial()<0) {
+                        oinfo << " " << nodes_vec[id][i]->name;
+                    }
+                } else {
+                    if (info_file && (*spit)->trivial()<0) {
+                        oinfo << " -" << nodes_vec[id][i]->name;
+                    }
 					nodes_vec[id][i]->name = "-" + nodes_vec[id][i]->name;
 					/*if (incomp_splits && !sg_vec[id2+size()]->compatible(*spit))
 						nodes_vec[id][i]->name = "-" + nodes_vec[id][i]->name;*/
@@ -714,14 +727,19 @@ void MTreeSet::computeRFDist(double *rfdist, MTreeSet *treeset2, bool k_by_k,
 		for (vector<SplitGraph*>::iterator hsit3 = sg_vec.begin()+size(); hsit3 != sg_vec.end(); hsit3++, id2++) {
 			int num_incomp = 0;
 			SplitGraph::iterator spit;
-			for (spit = (*hsit)->begin(); spit != (*hsit)->end(); spit++) 
-				if (!(*hsit3)->compatible(*spit)) num_incomp++;
-			for (spit = (*hsit3)->begin(); spit != (*hsit3)->end(); spit++) 
-				if (!(*hsit)->compatible(*spit)) num_incomp++;
-					
-			incomp_splits[id*col_size + id2] = num_incomp;
-		}
-	}
+            for (spit = (*hsit)->begin(); spit != (*hsit)->end(); ++spit) {
+                if (!(*hsit3)->compatible(*spit)) {
+                    ++num_incomp;
+                }
+            }
+            for (spit = (*hsit3)->begin(); spit != (*hsit3)->end(); ++spit) {
+                if (!(*hsit)->compatible(*spit)) {
+                    ++num_incomp;
+                }
+            }
+            incomp_splits[id*col_size + id2] = num_incomp;
+        }
+    }
 	// delete memory 
 	for (id = static_cast<int>(hs_vec.size())-1; id >= 0; id--) {
 		delete hs_vec[id];
@@ -746,33 +764,35 @@ int MTreeSet::sumTreeWeights() {
 }
 
 int MTreeSet::categorizeDistinctTrees(IntVector &category) {
-	if (empty()) return 0;
-	if (size() == 1) {
-		category.resize(1,0);
-		return 1;
-	}
-	StringIntMap tree_cat_map;
-	string root_name = front()->root->name;
-	int ncat = 0;
-	category.resize(size(),-1);
+    if (empty()) {
+        return 0;
+    }
+    if (size() == 1) {
+        category.resize(1,0);
+        return 1;
+    }
+    StringIntMap tree_cat_map;
+    string root_name = front()->root->name;
+    int ncat = 0;
+    category.resize(size(),-1);
 
-	int id = 0;
-	for (iterator it = begin(); it != end(); it++, id++) {
-		(*it)->root = (*it)->findNodeName(root_name);
-		if (!(*it)->root || !(*it)->root->isLeaf()) 
-			outError("Internal error ", __func__);
-		stringstream ostr;
-		(*it)->printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
-		string str = ostr.str();
-		//cout << str << endl;
-		StringIntMap::iterator map_it = tree_cat_map.find(str);
-		if (map_it == tree_cat_map.end()) { // not found
-			category[id] = ncat;
-			tree_cat_map[str] = ncat;
-			ncat++;
-		} else {
-			category[id] = map_it->second;
-		}
-	}
-	return ncat;
+    int id = 0;
+    for (iterator it = begin(); it != end(); it++, id++) {
+        (*it)->root = (*it)->findNodeName(root_name);
+        if (!(*it)->root || !(*it)->root->isLeaf())
+            outError("Internal error ", __func__);
+        stringstream ostr;
+        (*it)->printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
+        string str = ostr.str();
+        //cout << str << endl;
+        StringIntMap::iterator map_it = tree_cat_map.find(str);
+        if (map_it == tree_cat_map.end()) { // not found
+            category[id] = ncat;
+            tree_cat_map[str] = ncat;
+            ++ncat;
+        } else {
+            category[id] = map_it->second;
+        }
+    }
+    return ncat;
 }

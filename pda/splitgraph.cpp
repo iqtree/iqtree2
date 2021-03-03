@@ -357,18 +357,22 @@ double SplitGraph::calcWeight(Split &taxa_set)
 int SplitGraph::countSplits(Split &taxa_set)
 {
     int cnt = 0;
-    for (iterator it = begin(); it != end(); it++)
-        if ((*it)->preserved(taxa_set))
-            cnt++;
+    for (iterator it = begin(); it != end(); it++) {
+        if ((*it)->preserved(taxa_set)) {
+            ++cnt;
+        }
+    }
     return cnt;
 }
 
 int SplitGraph::countInternalSplits(Split &taxa_set)
 {
     int cnt = 0;
-    for (iterator it = begin(); it != end(); it++)
-        if ((*it)->trivial() < 0 && (*it)->preserved(taxa_set))
-            cnt++;
+    for (iterator it = begin(); it != end(); it++) {
+        if ((*it)->trivial() < 0 && (*it)->preserved(taxa_set)) {
+            ++cnt;
+        }
+    }
     return cnt;
 }
 

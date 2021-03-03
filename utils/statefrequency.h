@@ -47,6 +47,12 @@ enum StateFreqType {
  */
 StateFreqType parseStateFreqFromPlusF(std::string model_name);
 
+bool parseStateFrequencyTypeName(const std::string& name,
+                                 StateFreqType& freq);
+
+bool parseStateFrequencyTypeName(const char* name,
+                                 StateFreqType& freq);
+
 /*
  * Given a string of 4 digits, return a StateFreqType according to
  * equality constraints expressed by those digits.

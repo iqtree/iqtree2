@@ -98,7 +98,7 @@ bool processSequenceLine(const std::vector<int> &in_alphabet,
     //Note: this is based on processSeq from IQTree's alignment/ alignment.cpp
     //(except it returns false rather than throwing exceptions), and writes
     //errors to std::cerr.
-    for (auto it = line.begin(); it != line.end(); it++) {
+    for (auto it = line.begin(); it != line.end(); ++it) {
         if ((*it) <= ' ') continue;
         if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.' 
             || (*it) == '*' || (*it) == '~') {
@@ -402,7 +402,7 @@ bool loadAlignment(const std::string& alignmentFilePath,
     for (auto alpha=alphabet.begin(); alpha!=alphabet.end(); ++alpha) {
         in_alphabet[*alpha] = 1;
     }
-    for (; !in.eof(); line_num++) {
+    for (; !in.eof(); ++line_num) {
         std::string line;
         safeGetLine(in, line);
         if (line == "") {

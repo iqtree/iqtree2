@@ -452,7 +452,7 @@ NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2
 					//   Initialize the 2 NNI moves
 					nniMoves[cnt].node1Nei_it = node1_it; // the same neighbor of node1 for cnt = 0 and cnt = 1
 					nniMoves[cnt].node2Nei_it = node2_it;
-					cnt++;
+					++cnt;
 				}
 				break;
 			}
@@ -507,12 +507,12 @@ void PhyloSuperTreePlen::getNNIType(PhyloNode *node1, PhyloNode *node2, vector<N
 		nni_type[part] = NNI_NO_EPSILON;
 		int epsilon_cnt = 0;
 
-		FOR_SUPER_NEIGHBOR_DECLARE(node1,NULL,nit){
-			if(!(*nit)->link_neighbors[part]) { epsilon_cnt++; }
-		}
-		FOR_SUPER_NEIGHBOR(node2, node1, nit) {
-			if(!(*nit)->link_neighbors[part]) { epsilon_cnt++; }
-		}
+        FOR_SUPER_NEIGHBOR_DECLARE(node1,NULL,nit){
+            if(!(*nit)->link_neighbors[part]) { ++epsilon_cnt; }
+        }
+        FOR_SUPER_NEIGHBOR(node2, node1, nit) {
+            if(!(*nit)->link_neighbors[part]) { ++epsilon_cnt; }
+        }
 		if(epsilon_cnt == 0){
 			nni_type[part]=NNI_NO_EPSILON;
 		}else if(epsilon_cnt == 1){

@@ -164,7 +164,7 @@ void FlatMatrix::writeDistancesToOpenFile(const std::string& format,
 size_t FlatMatrix::getMaxSeqNameLength() const {
     size_t len   = 0;
     size_t nseqs = sequenceNames.size();
-    for (size_t i = 0; i < nseqs; i++) {
+    for (size_t i = 0; i < nseqs; ++i) {
         if (sequenceNames[i].length() > len) {
             len = sequenceNames[i].length();
         }

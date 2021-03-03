@@ -321,7 +321,7 @@ double PhyloTree::optimizeSPR(double cur_score, PhyloNode *node,
  move the subtree (dad1-node1) to the branch (dad2-node2)
  */
 double PhyloTree::swapSPR(double cur_score, int cur_depth,
-                          PhyloNode *node1, PhyloNode *dad1, PhyloNode *orig_node1,
+                          PhyloNode *node1,      PhyloNode *dad1,  PhyloNode *orig_node1,
                           PhyloNode *orig_node2, PhyloNode *node2, PhyloNode *dad2,
                           PhyloNeighborVec &spr_path, SPRMoves& spr_moves) {
 
@@ -378,7 +378,7 @@ double PhyloTree::swapSPR(double cur_score, int cur_depth,
 
         //Save the partial likelihood from the removal point to the insertion point
         vector<double*> saved_partial_lhs(spr_path.size());
-        for (auto it2 = spr_path.begin(); it2 != spr_path.end(); it2++) {
+        for (auto it2 = spr_path.begin(); it2 != spr_path.end(); ++it2) {
             saved_partial_lhs.push_back((*it2)->partial_lh);
             (*it2)->partial_lh = newPartialLh();
             (*it2)->clearPartialLh();
@@ -423,11 +423,11 @@ double PhyloTree::swapSPR(double cur_score, int cur_depth,
         node1_nei->length = node1_dad1_len;
         dad1_nei->length = node1_dad1_len;
         int index = 0;
-        for (auto it2 = spr_path.begin(); it2 != spr_path.end(); it2++) {
+        for (auto it2 = spr_path.begin(); it2 != spr_path.end(); ++it2) {
             aligned_free((*it2)->partial_lh); //James B. 07-Oct-2020 (not delete[]).
             (*it2)->partial_lh = saved_partial_lhs.at(index);
             (*it2)->unclearPartialLh();
-            index++;
+            ++index;
         }
 
         // add to candiate SPR moves
@@ -540,7 +540,7 @@ double PhyloTree::optimizeSPR() {
     fixNegativeBranch();
     SPRMoves spr_moves;
     double cur_score = computeLikelihood();
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 100; ++i) {
         cout << "i = " << i << endl;
         spr_moves.clear();
         double score = optimizeSPR_old(cur_score, getRoot()->firstNeighbor()->getNode(),
@@ -549,7 +549,7 @@ double PhyloTree::optimizeSPR() {
         clearAllPartialParsimony(false);
         // why this?
         if (score <= cur_score) {
-            for (SPRMoves::iterator it = spr_moves.begin(); it != spr_moves.end(); it++) {
+            for (auto it = spr_moves.begin(); it != spr_moves.end(); ++it) {
                 //cout << (*it).score << endl;
                 score = assessSPRMove(cur_score, *it);
                 // if likelihood score improves, apply to SPR
