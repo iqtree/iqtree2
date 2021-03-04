@@ -207,12 +207,15 @@ public:
         middle.first->clearReversePartialParsimony (middle.second);
         middle.second->clearReversePartialParsimony(middle.first);
                 
-        FOR_EACH_ADJACENT_PHYLO_NODE(middle.first, nullptr, it, node) {
-            tree.setOneBranchLengthFromParsimony(parsimony_score, middle.first, node);
+        ParallelParsimonyCalculator ppc(tree, false);
+        FOR_EACH_PHYLO_NEIGHBOR(middle.first, nullptr, it, nei) {
+            ppc.computeParsimonyBranch(nei, middle.first);
+            tree.setOneBranchLengthFromParsimony(parsimony_score, middle.first, nei->getNode());
         }
         
-        FOR_EACH_ADJACENT_PHYLO_NODE(middle.second, middle.first, it, node) {
-            tree.setOneBranchLengthFromParsimony(parsimony_score, middle.second, node);
+        FOR_EACH_PHYLO_NEIGHBOR(middle.second, middle.first, it, nei) {
+            ppc.computeParsimonyBranch(nei, middle.second);
+            tree.setOneBranchLengthFromParsimony(parsimony_score, middle.second, nei->getNode());
         }
         
         std::swap(left, right);
