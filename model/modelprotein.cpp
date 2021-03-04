@@ -800,7 +800,9 @@ end;
 )";
 }
 
-ModelProtein::ModelProtein(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree, ModelsBlock* models_block)
+ModelProtein::ModelProtein(const char *model_name, string model_params,
+                           StateFreqType freq, string freq_params,
+                           PhyloTree *tree, ModelsBlock* models_block)
  : ModelMarkov(tree, true, false)
 {
     this->models_block = models_block;
@@ -808,71 +810,76 @@ ModelProtein::ModelProtein(const char *model_name, string model_params, StateFre
 }
 
 void rescaleRates(double *rates, int nrates) {
-    int i;
-
     double max_rate = 0.0;
-
-    for (i = 0; i < nrates; i++)
+    for (int i = 0; i < nrates; i++) {
         max_rate = max(max_rate, rates[i]);
-
+    }
     const double AA_SCALE = 10.0;
     double scaler = AA_SCALE / max_rate;
 
     /* SCALING HAS BEEN RE-INTRODUCED TO RESOLVE NUMERICAL  PROBLEMS */   
-
-    for (i = 0; i < nrates; i++)
+    for (int i = 0; i < nrates; i++) {
         rates[i] *= scaler;
+    }
 }
 
-void ModelProtein::init(const char *model_name, string model_params, StateFreqType freq, string freq_params) {
-	ASSERT(num_states == 20);
+void ModelProtein::init(const char *model_name, string model_params,
+                        StateFreqType freq, string freq_params) {
+    ASSERT(num_states == 20);
     ASSERT(models_block && "models_block uninitialized");
-	name = model_name;
-
-	string name_upper = model_name;
-	for (string::iterator it = name_upper.begin(); it != name_upper.end(); it++)
-		(*it) = toupper(*it);
+    name = model_name;
+    const char* name_init = Params::getInstance().model_name_init;
+    
+    string name_upper = model_name;
+    for (auto it = name_upper.begin(); it != name_upper.end(); it++) {
+        (*it) = toupper(*it);
+    }
 
     NxsModel *nxs_model = models_block->findModel(name_upper);
     if (nxs_model) {
-        if (nxs_model->flag != NM_ATOMIC)
+        if (nxs_model->flag != NM_ATOMIC) {
             outError("Invalid protein model name ", model_name);
-
+        }
         readParametersString(nxs_model->description);
         rescaleRates(rates, getNumRateEntries());
 
-        int i;
-		double sum = 0.0;
-		for (i = 0; i < num_states; i++)
-			sum += (double) state_freq[i];
-		if (fabs(sum-1.0) > 1e-7) {
-			cout.precision(7);
-			cout << "WARNING: " <<  name_upper << " state frequencies do not sum up to 1: " << sum << endl;
-		}
+        double sum = 0.0;
+        for (int i = 0; i < num_states; i++) {
+            sum += (double) state_freq[i];
+        }
+        if (fabs(sum-1.0) > 1e-7) {
+            cout.precision(7);
+            cout << "WARNING: " <<  name_upper << " state frequencies"
+                 << " do not sum up to 1: " << sum << endl;
+        }
         num_params = 0;
 
-	} else if (!model_params.empty()) {
+    } else if (!model_params.empty()) {
         readParametersString(model_params);
         rescaleRates(rates, getNumRateEntries());
         num_params = 0;
     } else if (name_upper == "GTR20") {
         if (!Params::getInstance().link_model) {
-            outWarning("GTR20 model will estimate 189 substitution rates that might be overfitting!");
-            outWarning("Please only use GTR20 with very large data and always test for model fit!");
+            outWarning("GTR20 model will estimate 189 substitution rates"
+                       " that might be overfitting!");
+            outWarning("Please only use GTR20 with very large data"
+                       " and always test for model fit!");
         }
-        if (freq == FREQ_UNKNOWN)
+        if (freq == FREQ_UNKNOWN) {
             freq = FREQ_EMPIRICAL;
-        if (Params::getInstance().model_name_init) {
-            nxs_model = models_block->findModel(Params::getInstance().model_name_init);
+        }
+        if (name_init!=nullptr) {
+            nxs_model = models_block->findModel(name_init);
             if (nxs_model) {
                 readParametersString(nxs_model->description, false);
             } else {
                 // initialize with custom model file
-                readParameters(Params::getInstance().model_name_init, false);
+                readParameters(name_init, false);
             }
             rescaleRates(rates, getNumRateEntries());
-            if (!isReversible())
+            if (!isReversible()) {
                 outError("Cannot initialize from non-reversible model");
+            }
         } else {
             // initialize rate matrix with LG
             nxs_model = models_block->findModel("LG");
@@ -884,22 +891,26 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
         num_params = getNumRateEntries()-1;
     } else if (name_upper == "NONREV") {
         if (!Params::getInstance().link_model) {
-            outWarning("NONREV model will estimate 379 substitution rates that might be overfitting!");
-            outWarning("Please only use NONREV with very large data and always test for model fit!");
+            outWarning("NONREV model will estimate 379 substitution rates"
+                       " that might be overfitting!");
+            outWarning("Please only use NONREV with very large data"
+                       " and always test for model fit!");
         }
-        if (freq == FREQ_UNKNOWN)
+        if (freq == FREQ_UNKNOWN) {
             freq = FREQ_ESTIMATE;
-        if (Params::getInstance().model_name_init) {
-            nxs_model = models_block->findModel(Params::getInstance().model_name_init);
+        }
+        if (name_init!=nullptr) {
+            nxs_model = models_block->findModel(name_init);
             if (nxs_model) {
                 readParametersString(nxs_model->description, false);
             } else {
                 // initialize with custom model file
-                readParameters(Params::getInstance().model_name_init, false);
+                readParameters(name_init, false);
             }
             rescaleRates(rates, getNumRateEntries());
-            if (isReversible())
+            if (isReversible()) {
                 setReversible(false);
+            }
         } else {
             // initialize rate matrix with LG
             nxs_model = models_block->findModel("LG");
@@ -909,26 +920,25 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
             setReversible(false);
         }
         num_params = getNumRateEntries()-1;
-	} else {
-		// if name does not match, read the user-defined model
-		readParameters(model_name);
+    } else {
+        // if name does not match, read the user-defined model
+        readParameters(model_name);
         rescaleRates(rates, getNumRateEntries());
         num_params = 0;
-	}
-	if (freq_params != "") {
-//		stringstream ss(freq_params);
-		readStateFreq(freq_params);
-	}
-
-	//assert(freq != FREQ_ESTIMATE);
-	if (freq == FREQ_UNKNOWN) freq = FREQ_USER_DEFINED;
-	ModelMarkov::init(freq);
+    }
+    if (freq_params != "") {
+        readStateFreq(freq_params);
+    }
+    //assert(freq != FREQ_ESTIMATE);
+    if (freq == FREQ_UNKNOWN) {
+        freq = FREQ_USER_DEFINED;
+    }
+    ModelMarkov::init(freq);
 }
 
 void ModelProtein::startCheckpoint() {
     checkpoint->startStruct("ModelProtein");
 }
-
 
 void ModelProtein::saveCheckpoint() {
     if (num_params > 0 && !fixed_parameters) {
@@ -947,16 +957,18 @@ void ModelProtein::restoreCheckpoint() {
         CKP_ARRAY_RESTORE(getNumRateEntries(), rates);
         endCheckpoint();
         decomposeRateMatrix();
-        if (phylo_tree)
+        if (phylo_tree) {
             phylo_tree->clearAllPartialLH();
+        }
     }
 }
 
 void ModelProtein::readRates(istream &in) THROW_SPEC_2(const char*, string) {
-	int nrates = getNumRateEntries();
-	int row = 1, col = 0;
+    int nrates = getNumRateEntries();
+    int row = 1, col = 0;
     if (is_reversible) {
-        // since states for protein is stored in lower-triangle, special treatment is needed
+        // since states for protein is stored in lower-triangle,
+        // special treatment is needed
         for (int i = 0; i < nrates; i++, col++) {
             if (col == row) {
                 row++; col = 0;
@@ -966,11 +978,14 @@ void ModelProtein::readRates(istream &in) THROW_SPEC_2(const char*, string) {
             if (id >= nrates) {
                 cout << row << " " << col << endl;
             }
-            ASSERT(id < nrates && id >= 0); // make sure that the conversion is correct
-            if (!(in >> rates[id]))
+            // make sure that the conversion is correct
+            ASSERT(id < nrates && id >= 0);
+            if (!(in >> rates[id])) {
                 throw name+string(": Rate entries could not be read");
-            if (rates[id] < 0.0)
+            }
+            if (rates[id] < 0.0) {
                 throw "Negative rates found";
+            }
         }
     } else {
         // non-reversible model, read the whole rate matrix
@@ -979,10 +994,12 @@ void ModelProtein::readRates(istream &in) THROW_SPEC_2(const char*, string) {
             double row_sum = 0.0;
             for (col = 0; col < num_states; col++) {
                 if (row != col) {
-                    if (!(in >> rates[i]))
+                    if (!(in >> rates[i])) {
                         throw name+string(": Rate entries could not be read");
-                    if (rates[i] < 0.0)
+                    }
+                    if (rates[i] < 0.0) {
                         throw "Negative rates found";
+                    }
                     row_sum += rates[i];
                     i++;
                 } else {
@@ -991,38 +1008,41 @@ void ModelProtein::readRates(istream &in) THROW_SPEC_2(const char*, string) {
                     row_sum += d;
                 }
             }
-            if (fabs(row_sum) > 1e-3)
+            if (fabs(row_sum) > 1e-3) {
                 throw "Row " + convertIntToString(row) + " does not sum to 0";
+            }
         }
     }
 }
-
 
 string ModelProtein::getNameParams() {
     ostringstream retname;
     retname << name;
     retname << freqTypeString(freq_type, phylo_tree->aln->seq_type, true);
     
-    if (fixed_parameters)
+    if (fixed_parameters) {
         return retname.str();
-
+    }
     if (freq_type == FREQ_ESTIMATE) {
         retname << "{" << state_freq[0];
-        for (int i = 1; i < num_states; i++)
+        for (int i = 1; i < num_states; i++) {
             retname << "," << state_freq[i];
+        }
         retname << "}";
     }
     return retname.str();
 }
 
-void ModelProtein::computeTipLikelihood(PML::StateType state, double *state_lk) {
-    int ambi_aa[] = {
+void ModelProtein::computeTipLikelihood(PML::StateType state,
+                                        double *state_lk) {
+    const int ambi_aa[] = {
         2, 3, //4+8, // B = N or D
         5, 6, //32+64, // Z = Q or E
         9, 10 //512+1024 // U = I or L
     };
+    int ambi_rows = sizeof(ambi_aa)/sizeof(int)/2;
     if (static_cast<int>(state) < num_states 
-        || static_cast<int>(state) >= num_states + sizeof(ambi_aa)/sizeof(int)/2) {
+        || static_cast<int>(state) >= num_states + ambi_rows ) {
         ModelSubst::computeTipLikelihood(state, state_lk);
         return;
     }
@@ -1033,4 +1053,3 @@ void ModelProtein::computeTipLikelihood(PML::StateType state, double *state_lk) 
     state_lk[ambi_aa[cstate*2]] = 1.0;
     state_lk[ambi_aa[cstate*2+1]] = 1.0;
 }
-

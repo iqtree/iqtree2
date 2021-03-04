@@ -1548,51 +1548,59 @@ void ModelMarkov::readRates(string str) THROW_SPEC(const char*) {
 }
 
 void ModelMarkov::readStateFreq(istream &in) THROW_SPEC(const char*) {
-	int i;
-	for (i = 0; i < num_states; i++) {
-		if (!(in >> state_freq[i])) 
-			throw "State frequencies could not be read";
-		if (state_freq[i] < 0.0)
-			throw "Negative state frequencies found";
-	}
-	double sum = 0.0;
-	for (i = 0; i < num_states; i++) sum += state_freq[i];
-	if (fabs(sum-1.0) > 1e-2)
-		throw "State frequencies do not sum up to 1.0";
+    int i;
+    for (i = 0; i < num_states; i++) {
+        if (!(in >> state_freq[i])) {
+            throw "State frequencies could not be read";
+        }
+        if (state_freq[i] < 0.0) {
+            throw "Negative state frequencies found";
+        }
+    }
+    double sum = 0.0;
+    for (i = 0; i < num_states; i++) sum += state_freq[i];
+    if (fabs(sum-1.0) > 1e-2) {
+        throw "State frequencies do not sum up to 1.0";
+    }
     sum = 1.0/sum;
-    for (i = 0; i < num_states; i++)
+    for (i = 0; i < num_states; i++) {
         state_freq[i] *= sum;
+    }
 }
 
 void ModelMarkov::readStateFreq(string str) THROW_SPEC(const char*) {
-	int i;
-	int end_pos = 0;
-	for (i = 0; i < num_states; i++) {
-		int new_end_pos;
-		state_freq[i] = convert_double(str.substr(end_pos).c_str(), new_end_pos);
-		end_pos += new_end_pos;
-		//cout << i << " " << state_freq[i] << endl;
-		if (state_freq[i] < 0.0 || state_freq[i] > 1)
-			outError("State frequency must be in [0,1] in ", str);
-		if (i == num_states-1 && end_pos < str.length())
-			outError("Unexpected end of string ", str);
-		if (end_pos < str.length() && str[end_pos] != ',' && str[end_pos] != ' ')
-			outError("Comma/Space to separate state frequencies not found in ", str);
-		end_pos++;
-	}
-	double sum = 0.0;
-	for (i = 0; i < num_states; i++) sum += state_freq[i];
-	if (fabs(sum-1.0) > 1e-2)
-		outError("State frequencies do not sum up to 1.0 in ", str);
+    int i;
+    int end_pos = 0;
+    for (i = 0; i < num_states; i++) {
+        int new_end_pos;
+        state_freq[i] = convert_double(str.substr(end_pos).c_str(), new_end_pos);
+        end_pos += new_end_pos;
+        //cout << i << " " << state_freq[i] << endl;
+        if (state_freq[i] < 0.0 || state_freq[i] > 1) {
+            outError("State frequency must be in [0,1] in ", str);
+        }
+        if (i == num_states-1 && end_pos < str.length()) {
+            outError("Unexpected end of string ", str);
+        }
+        if (end_pos < str.length() && str[end_pos] != ',' && str[end_pos] != ' ') {
+            outError("Comma/Space to separate state frequencies not found in ", str);
+        }
+        end_pos++;
+    }
+    double sum = 0.0;
+    for (i = 0; i < num_states; i++) sum += state_freq[i];
+    if (fabs(sum-1.0) > 1e-2) {
+        outError("State frequencies do not sum up to 1.0 in ", str);
+    }
     sum = 1.0/sum;
     for (i = 0; i < num_states; i++)
         state_freq[i] *= sum;
 }
 
 void ModelMarkov::readParameters(const char *file_name, bool adapt_tree) {
-    if (!fileExists(file_name))
+    if (!fileExists(file_name)) {
         outError("File not found ", file_name);
-
+    }
     cout << "Reading model parameters from file " << file_name << endl;
 
     // if detect if reading full matrix or half matrix by the first entry
@@ -1602,8 +1610,9 @@ void ModelMarkov::readParameters(const char *file_name, bool adapt_tree) {
         in >> d;
         if (d < 0) {
             setReversible(false, adapt_tree);
-        } else
+        } else {
             setReversible(true, adapt_tree);
+        }
         in.close();
     }
 	catch (...) {
@@ -1673,17 +1682,18 @@ void ModelMarkov::readParametersString(string &model_str, bool adapt_tree) {
 #endif
         memcpy(&saved_state_freq[0], state_freq, sizeof(double)*num_states);
         decomposeRateMatrix();
-        for (int i = 0; i < num_states; i++)
-            if (fabs(state_freq[i] - saved_state_freq[i]) > 1e-3)
+        for (int i = 0; i < num_states; i++) {
+            if (fabs(state_freq[i] - saved_state_freq[i]) > 1e-3) {
                 cout << "WARNING: State " << i << " frequency " << state_freq[i]
                      << " does not match " << saved_state_freq[i] << endl;
+            }
+        }
     }
 }
 
-
 ModelMarkov::~ModelMarkov() {
     // mem space pointing to target model and thus avoid double free here
-	internalFreeMem();
+    internalFreeMem();
 }
 
 void ModelMarkov::internalFreeMem() {

@@ -60,7 +60,7 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree,
     if (params.model_name_init
         && strcmp(params.model_name_init, "DIVMAT") == 0) {
         init_by_divmat = true;
-        params.model_name_init = NULL;
+        params.model_name_init = nullptr;
     }
     for (it = tree->begin(), part = 0; it != tree->end(); it++, part++) {
         ASSERT(!((*it)->getModelFactory()));

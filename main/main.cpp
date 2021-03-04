@@ -1702,7 +1702,8 @@ void compare(Params &params){
 /**MINH ANH: to compute 'guided bootstrap' alignment*/
 void guidedBootstrap(Params &params)
 {
-    MaAlignment inputAlign(params.aln_file,params.sequence_type, params.intype, params.model_name);
+    MaAlignment inputAlign(params.aln_file,params.sequence_type,
+                           params.intype, params.model_name);
     inputAlign.readLogLL(params.siteLL_file);
 
     string outFre_name = params.out_prefix;
@@ -1740,8 +1741,10 @@ void guidedBootstrap(Params &params)
 /**MINH ANH: to compute the probability of an alignment given the multinomial distribution of patterns frequencies derived from a reference alignment*/
 void computeMulProb(Params &params)
 {
-    Alignment refAlign(params.second_align, params.sequence_type, params.intype, params.model_name);
-    Alignment inputAlign(params.aln_file, params.sequence_type, params.intype, params.model_name);
+    Alignment refAlign(params.second_align, params.sequence_type,
+                       params.intype, params.model_name);
+    Alignment inputAlign(params.aln_file, params.sequence_type,
+                         params.intype, params.model_name);
     double prob;
     inputAlign.multinomialProb(refAlign,prob);
     //Printing
@@ -1757,8 +1760,10 @@ void computeMulProb(Params &params)
     } catch (ios::failure) {
         outError(ERR_WRITE_OUTPUT, outProb_name);
     }
-    cout << "Probability of alignment " << params.aln_file << " given alignment " << params.second_align << " is: " << prob << endl;
-    cout << "The probability is printed to: " << outProb_name << endl;
+    cout << "Probability of alignment " << params.aln_file
+         << " given alignment " << params.second_align
+         << " is: " << prob << endl
+         << "The probability is printed to: " << outProb_name << endl;
 }
 
 void processNCBITree(Params &params) {
@@ -1811,10 +1816,12 @@ protected:
 };
 
 outstreambuf* outstreambuf::open( const char* name, ios::openmode mode) {
-    if (!(Params::getInstance().suppress_output_flags & OUT_LOG) && MPIHelper::getInstance().isMaster()) {
+    if (!(Params::getInstance().suppress_output_flags & OUT_LOG) &&
+        MPIHelper::getInstance().isMaster()) {
         fout.open(name, mode);
         if (!fout.is_open()) {
-            cerr << "ERROR: Could not open " << name << " for logging" << endl;
+            cerr << "ERROR: Could not open " << name
+                 << " for logging" << endl;
             exit(EXIT_FAILURE);
             return NULL;
         }
@@ -1840,13 +1847,21 @@ outstreambuf* outstreambuf::close() {
 }
 
 int outstreambuf::overflow( int c) { // used for output buffer only
-    if ((verbose_mode >= VB_MIN && MPIHelper::getInstance().isMaster()) || verbose_mode >= VB_MED)
-        if (cout_buf->sputc(c) == EOF) return EOF;
-    if (Params::getInstance().suppress_output_flags & OUT_LOG)
+    if ((verbose_mode >= VB_MIN && MPIHelper::getInstance().isMaster()) ||
+        verbose_mode >= VB_MED) {
+        if (cout_buf->sputc(c) == EOF) {
+            return EOF;
+        }
+    }
+    if (Params::getInstance().suppress_output_flags & OUT_LOG) {
         return c;
-    if (!MPIHelper::getInstance().isMaster())
+    }
+    if (!MPIHelper::getInstance().isMaster()) {
         return c;
-    if (fout_buf->sputc(c) == EOF) return EOF;
+    }
+    if (fout_buf->sputc(c) == EOF) {
+        return EOF;
+    }
     return c;
 }
 

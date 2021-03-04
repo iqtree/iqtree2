@@ -652,7 +652,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.stop_confidence = 0.95;
     params.num_runs = 1;
     params.model_name = "";
-    params.model_name_init = NULL;
+    params.model_name_init = nullptr;
     params.model_opt_steps = 10;
     params.model_set = "ALL";
     params.model_extra_set = NULL;
@@ -2318,7 +2318,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
             if (arg=="--model-file" || arg=="-mf") {
                 params.yaml_model_file = next_argument(argc, argv,
-                                                       "model_name", cnt);
+                                                       "model_filepath", cnt);
                 continue;
             }
             if (arg=="--init-model") {

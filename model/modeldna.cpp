@@ -26,7 +26,8 @@ ModelDNA::ModelDNA(PhyloTree *tree)
 {
 }
 
-ModelDNA::ModelDNA(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree)
+ModelDNA::ModelDNA(const char *model_name, string model_params,
+                   StateFreqType freq, string freq_params, PhyloTree *tree)
 : ModelMarkov(tree)
 {
   init(model_name, model_params, freq, freq_params);
@@ -80,7 +81,8 @@ namespace {
     };
 };
 
-string getDNAModelInfo(string model_name, string &full_name, string &rate_type, StateFreqType &def_freq) {
+string getDNAModelInfo(string model_name, string &full_name,
+                       string &rate_type, StateFreqType &def_freq) {
     string name_upper = string_to_upper(model_name);
     string name       = model_name;
     full_name         = name;
@@ -110,8 +112,8 @@ string getDNAModelInfo(string model_name, string &full_name, string &rate_type, 
     return name;
 }
 
-
-void ModelDNA::init(const char *model_name, string model_params, StateFreqType freq, string freq_params)
+void ModelDNA::init(const char *model_name, string model_params,
+                    StateFreqType freq, string freq_params)
 {
 	ASSERT(num_states == 4); // make sure that you create model for DNA
 	StateFreqType def_freq = FREQ_UNKNOWN;
@@ -122,14 +124,15 @@ void ModelDNA::init(const char *model_name, string model_params, StateFreqType f
 	    // Second try: Lie Markov models. (Note, we're still missing UNREST 
 	    // model. 12.12 is equivalent, but user may not realize that.)
 	    int model_num, symmetry; // returned by getLieMarkovModelInfo, but not used here
-	    ModelLieMarkov::getLieMarkovModelInfo((string)model_name, name, full_name, model_num, symmetry, def_freq);
+	    ModelLieMarkov::getLieMarkovModelInfo((string)model_name, name, full_name,
+                                              model_num, symmetry, def_freq);
 	}
 
 	if (name != "") {
 		setRateType(rate_type.c_str());
 	} else {
 		//cout << "User-specified model "<< model_name << endl;
-	        if (setRateType(model_name)) {
+        if (setRateType(model_name)) {
 		    // model was six digits (e.g. 010010 for K2P/HKY)
 		    name = model_name;
 		    full_name = "Time reversible ("+name+")";
@@ -179,12 +182,15 @@ void ModelDNA::restoreCheckpoint() {
     endCheckpoint();
 //    getVariables(model_parameters);       // updates rates and state_freq
     string rate_spec = param_spec;
-    for (auto i = rate_spec.begin(); i != rate_spec.end(); i++)
+    for (auto i = rate_spec.begin(); i != rate_spec.end(); ++i) {
         *i = *i + '0';
+    }
     
-    if (!rate_spec.empty())
-        if (!setRateType(rate_spec))
+    if (!rate_spec.empty()) {
+        if (!setRateType(rate_spec)) {
             ASSERT(0 && "Cannot set rate_spec");
+        }
+    }
 
     decomposeRateMatrix();
     if (phylo_tree)
@@ -192,54 +198,60 @@ void ModelDNA::restoreCheckpoint() {
 }
 
 void ModelDNA::readRates(string str) THROW_SPEC(const char*) {
-	int nrates = *max_element(param_spec.begin(), param_spec.end());
-	int end_pos = 0;
-	int i, j;
-	for (j = 0; j < param_spec.length(); j++)
-		rates[j] = 1.0;
-	num_params = 0;
-	for (i = 0; i <= nrates && end_pos < str.length(); i++) {
-		int new_end_pos;
-		double rate = 0;
+    int nrates = *max_element(param_spec.begin(), param_spec.end());
+    int end_pos = 0;
+    int i, j;
+    for (j = 0; j < param_spec.length(); ++j) {
+        rates[j] = 1.0;
+    }
+    num_params = 0;
+    for (i = 0; i <= nrates && end_pos < str.length(); ++i) {
+        int new_end_pos;
+        double rate = 0;
         int id = (i < nrates) ? i+1 : 0;
-		if (str[end_pos] == '?') {
-			param_fixed[id] = false;
-			end_pos++;
-			rate = 1.0;
-			num_params++;
-		} else {
+        if (str[end_pos] == '?') {
+            param_fixed[id] = false;
+            end_pos++;
+            rate = 1.0;
+            num_params++;
+        } else {
             if (Params::getInstance().optimize_rate_matrix) {
                 num_params++;
                 param_fixed[id] = false;
             } else
-	        if (Params::getInstance().optimize_from_given_params) {
+                if (Params::getInstance().optimize_from_given_params) {
                     num_params++;
                     param_fixed[id] = false;
-	        } else {
-	            param_fixed[id] = true;
-	        }
-			try {
-				rate = convert_double(str.substr(end_pos).c_str(), new_end_pos);
-			} catch (string str) {
-				outError(str);
-			}
-			end_pos += new_end_pos;
-		}
-		if (rate < 0.0)
-			outError("Negative rates found");
-		if (i == nrates && end_pos < str.length())
-			outError("More than " + convertIntToString(nrates) + " rate parameters specified in " + str);
-		if (i < nrates-1 && end_pos >= str.length())
-			outError("Unexpected end of string ", str);
-		if (end_pos < str.length() && str[end_pos] != ',')
-			outError("Comma to separate rates not found in ", str);
-		end_pos++;
-		for (j = 0; j < param_spec.length(); j++)
-			if (param_spec[j] == id)
-				rates[j] = rate;
-	}
+                } else {
+                    param_fixed[id] = true;
+                }
+            try {
+                rate = convert_double(str.substr(end_pos).c_str(), new_end_pos);
+            } catch (string str) {
+                outError(str);
+            }
+            end_pos += new_end_pos;
+        }
+        if (rate < 0.0) {
+            outError("Negative rates found");
+        }
+        if (i == nrates && end_pos < str.length()) {
+            outError("More than " + convertIntToString(nrates) + " rate parameters specified in " + str);
+        }
+        if (i < nrates-1 && end_pos >= str.length()) {
+            outError("Unexpected end of string ", str);
+        }
+        if (end_pos < str.length() && str[end_pos] != ',') {
+            outError("Comma to separate rates not found in ", str);
+        }
+        end_pos++;
+        for (j = 0; j < param_spec.length(); ++j) {
+            if (param_spec[j] == id) {
+                rates[j] = rate;
+            }
+        }
+    }
 }
-
 
 string ModelDNA::getNameParams() {
 	if (num_params == 0) return name;
@@ -274,8 +286,11 @@ bool ModelDNA::setRateType(string rate_str) {
 		return false;
 	}
 	// only accept string of digits
-	for (i = 0; i < num_ch; i++)
-		if (!isdigit(rate_str[i])) return false;
+    for (i = 0; i < num_ch; ++i) {
+        if (!isdigit(rate_str[i])) {
+            return false;
+        }
+    }
 	/*
 	if (rate_str[num_ch-1] != '0') {
 		//outError("Model specification must end with '0'");
@@ -296,55 +311,62 @@ bool ModelDNA::setRateType(string rate_str) {
 		param_spec.push_back(rate_str[i]-first_type);
 	}*/
 
-	map<char,char> param_k;
-	num_params = 0;
-	param_spec = "";
-	// last entry get ID of 0 for easy management
-	param_k[rate_str[num_ch-1]] = 0;
-	for (i = 0; i < num_ch; i++) {
-		if (param_k.find(rate_str[i]) == param_k.end()) {
-			num_params++;
-			param_k[rate_str[i]] = (char)num_params;
-			param_spec.push_back(num_params);
-		} else {
-			param_spec.push_back(param_k[rate_str[i]]);
-		}
-	}
+    map<char,char> param_k;
+    num_params = 0;
+    param_spec = "";
+    // last entry get ID of 0 for easy management
+    param_k[rate_str[num_ch-1]] = 0;
+    for (i = 0; i < num_ch; ++i) {
+        if (param_k.find(rate_str[i]) == param_k.end()) {
+            num_params++;
+            param_k[rate_str[i]] = (char)num_params;
+            param_spec.push_back(num_params);
+        } else {
+            param_spec.push_back(param_k[rate_str[i]]);
+        }
+    }
 
 	ASSERT(param_spec.length() == num_ch);
 	double *avg_rates = new double[num_params+1];
 	int *num_rates = new int[num_params+1];
 	memset(avg_rates, 0, sizeof(double) * (num_params+1));
 	memset(num_rates, 0, sizeof(int) * (num_params+1));
-	for (i = 0; i < param_spec.size(); i++) {
+	for (i = 0; i < param_spec.size(); ++i) {
 		avg_rates[(int)param_spec[i]] += rates[i];
 		num_rates[(int)param_spec[i]]++;
 	}
-	for (i = 0; i <= num_params; i++)
-		avg_rates[i] /= num_rates[i];
-	for (i = 0; i < param_spec.size(); i++) {
-        if (avg_rates[0] > 0.0)
+    for (i = 0; i <= num_params; ++i) {
+        avg_rates[i] /= num_rates[i];
+    }
+	for (i = 0; i < param_spec.size(); ++i) {
+        if (avg_rates[0] > 0.0) {
             rates[i] = avg_rates[(int)param_spec[i]] / avg_rates[0];
-        else
+        }
+        else {
             rates[i] = avg_rates[(int)param_spec[i]];
+        }
 	}
 	if (verbose_mode >= VB_DEBUG) {
 		cout << "Initialized rates: ";
-		for (i = 0; i < param_spec.size(); i++) 
+        for (i = 0; i < param_spec.size(); ++i) {
 			cout << rates[i] << " ";
+        }
 		cout << endl;
 	}
     if (param_fixed.size() == num_params + 1) {
         num_params = 0;
-        for (auto p : param_fixed)
-            if (!p) num_params++;
+        for (auto p : param_fixed) {
+            if (!p) {
+                num_params++;
+            }
+        }
     } else {
         param_fixed.resize(num_params+1, false);
         param_fixed[0] = true; // fix the last entry
     }
-	delete [] num_rates;
-	delete [] avg_rates;
-	return true;
+    delete [] num_rates;
+    delete [] avg_rates;
+    return true;
 }
 
 
@@ -370,22 +392,22 @@ int ModelDNA::getNDim() {
 }
 
 void ModelDNA::writeParameters(ostream& out) {
-	int i;
-	if (freq_type == FREQ_ESTIMATE) {
-		for (i = 0; i < num_states; i++)
-			out << "\t" << state_freq[i];
-	}
-	if (num_params == 0) {
-		return;
-	}
-	if (num_params <= 1) {
-		out << "\t" << rates[1];
-	}
-	else {
-		int nrateout = getNumRateEntries() - 1;
-		for (i = 0; i < nrateout; i++)
-			out << "\t" << rates[i];
-	}
+    int i;
+    if (freq_type == FREQ_ESTIMATE) {
+        for (i = 0; i < num_states; ++i)
+            out << "\t" << state_freq[i];
+    }
+    if (num_params == 0) {
+        return;
+    }
+    if (num_params <= 1) {
+        out << "\t" << rates[1];
+    }
+    else {
+        int nrateout = getNumRateEntries() - 1;
+        for (i = 0; i < nrateout; ++i)
+            out << "\t" << rates[i];
+    }
 }
 
 void ModelDNA::computeTipLikelihood(PML::StateType state, double *state_lk) {
@@ -393,7 +415,6 @@ void ModelDNA::computeTipLikelihood(PML::StateType state, double *state_lk) {
         ModelSubst::computeTipLikelihood(state, state_lk);
         return;
     }
-
     // special treatment for ambiguous (polymorphic) state
     memset(state_lk, 0, num_states*sizeof(double));
     int cstate = state-num_states+1;
@@ -413,15 +434,16 @@ bool ModelDNA::getVariables(double *variables) {
     if (num_params > 0) {
         int num_all = static_cast<int>(param_spec.length());
         if (verbose_mode >= VB_MAX) {
-            for (i = 1; i <= num_params; i++)
+            for (i = 1; i <= num_params; i++) {
                 cout << "  estimated variables[" << i << "] = " << variables[i] << endl;
+            }
         }
-        for (i = 0; i < num_all; i++)
+        for (i = 0; i < num_all; i++) {
             if (!param_fixed[param_spec[i]]) {
                 changed |= (rates[i] != variables[(int)param_spec[i]]);
                             rates[i]  = variables[(int)param_spec[i]];
              }
-   
+        }
     }
 	if (freq_type == FREQ_ESTIMATE) {
         // 2015-09-07: relax the sum of state_freq to be 1,
@@ -471,9 +493,11 @@ bool ModelDNA::getVariables(double *variables) {
 void ModelDNA::setVariables(double *variables) {
     if (num_params > 0) {
         int num_all = static_cast<int>(param_spec.length());
-        for (int i = 0; i < num_all; i++)
-            if (!param_fixed[param_spec[i]])
+        for (int i = 0; i < num_all; i++) {
+            if (!param_fixed[param_spec[i]]) {
                 variables[(int)param_spec[i]] = rates[i];
+            }
+        }
     }
     // and copy parameters for base frequencies
 
