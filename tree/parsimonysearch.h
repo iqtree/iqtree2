@@ -37,6 +37,7 @@ int PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
     //     the move that was just applied).
     //
     
+
     best_pars_score          = UINT_MAX;
     intptr_t branch_count    = leafNum * 2 - 3; //assumed > 3
     int      index_parsimony = 0;
@@ -59,7 +60,6 @@ int PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
     //     partial rescoring necessary to calculate updated parsimony
     //     costs is surprisingly expensive).
     //
-    
     
     initProgress(work_estimate, task_name.c_str(), "", "");
 
@@ -106,15 +106,15 @@ int PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
     size_t  moves_still_possible = 0;
     size_t  moves_applied        = 0;
     int64_t positions_considered = 0;
-    double  parsimony_score;
+    double parsimony_score;
     for (intptr_t iteration=1; iteration<=s.iterations; ++iteration) {
         rescoring.start();
         parsimony_score = computeParsimony("Determining two-way parsimony", true, true );
         rescoring.stop();
         if (iteration==1) {
-            LOG_LINE(VB_DEBUG, "Parsimony score before parsimony " << s.name
-                     << " iteration " << iteration
-                     << " was " << parsimony_score);
+            LOG_LINE(VB_MIN, "Before doing (up to) "
+                     << s.iterations << " rounds of parsimony " << s.name << ","
+                     << " parsimony score was " << parsimony_score);
         } else if (!s.be_quiet) {
             LOG_LINE(VB_MIN, "Applied " << moves_applied << " move"
                      << ((1==moves_applied) ? "" : "s")

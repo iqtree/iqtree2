@@ -610,6 +610,7 @@ public:
     bool   parsimony_pll_spr;
     int    parsimony_spr_iterations;
     bool   use_lazy_parsimony_spr;
+    int    parsimony_hybrid_iterations;
     
     /**
      *  TBR distance (radius) for parsimony tree

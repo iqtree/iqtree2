@@ -623,15 +623,16 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.loglh_epsilon = 0.001;
     params.numSmoothTree = 1;
     params.use_compute_parsimony_tree_new = false;
-    params.use_batch_parsimony_addition = false;
-    params.distance_uses_max_threads  = false;
-    params.parsimony_uses_max_threads = false;
-    params.parsimony_nni_iterations = 0;
-    params.use_lazy_parsimony_spr   = false;
-    params.parsimony_spr_iterations = 0;
-    params.parsimony_pll_spr        = false;
-    params.parsimony_tbr_iterations = 0;
-    params.use_lazy_parsimony_tbr   = false;
+    params.use_batch_parsimony_addition   = false;
+    params.distance_uses_max_threads      = false;
+    params.parsimony_uses_max_threads     = false;
+    params.parsimony_nni_iterations       = 0;
+    params.use_lazy_parsimony_spr         = false;
+    params.parsimony_spr_iterations       = 0;
+    params.parsimony_pll_spr              = false;
+    params.parsimony_tbr_iterations       = 0;
+    params.use_lazy_parsimony_tbr         = false;
+    params.parsimony_hybrid_iterations    = 0;
     params.optimize_ml_tree_with_parsimony = false;
     params.nni5 = true;
     params.nni5_num_eval = 1;
@@ -2218,6 +2219,15 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.use_lazy_parsimony_tbr = true;
                 continue;
             }
+            if (arg=="-parsimony-hybrid") {
+                std::string next_arg = next_argument(argc, argv,
+                                                     "max_parsimony_iterations", cnt);
+                params.parsimony_hybrid_iterations = atoi(next_arg.c_str());
+                continue;
+
+            }
+            
+            
             if (arg=="-distance-uses-max-threads") {
                 params.distance_uses_max_threads = true;
                 continue;

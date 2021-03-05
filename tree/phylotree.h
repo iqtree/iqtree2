@@ -1695,6 +1695,8 @@ public:
     
     int  doParsimonyTBR();
     
+    int  doParsimonyHybrid();
+    
     template <class Move>
     int doParsimonySearch(const ParsimonySearchParameters& s);
     
