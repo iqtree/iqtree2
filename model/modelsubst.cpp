@@ -117,10 +117,11 @@ void ModelSubst::getRateMatrix(double *rate_mat) {
 }
 
 void ModelSubst::getQMatrix(double *q_mat) {
-	int i, j, k;
-	for (i = 0, k = 0; i < num_states; i++)
-		for (j = 0; j < num_states; j++, k++)
-			if (i == j) q_mat[k] = -1.0; else q_mat[k] = 1.0/3;
+    for (int i = 0, k = 0; i < num_states; i++) {
+        for (int j = 0; j < num_states; j++, k++) {
+            if (i == j) q_mat[k] = -1.0; else q_mat[k] = 1.0/3;
+        }
+    }
 }
 
 void ModelSubst::getStateFrequency(double *state_frequency_array, int mixture) {
