@@ -68,22 +68,17 @@ int abyx (double a, double x[], int n)
 int xtoy (double x[], double y[], int n)
 { for (int i=0; i<n; y[i]=x[i],i++) {}  return(0); }
 
-void matAbyBisC (double A[], double B[], int n, double C[])
-{ 
-	int i, j, k;
-	
-	for( i = 0; i < n*n; i++)
-	C[i] = 0;
-	
-	for( i = 0; i < n; i++)
-	{
-		for( j = 0; j < n; j++)
-		{
-			for( k = 0; k < n; k++)
-			C[i*n+j] += A[i*n+k] * B[k*n+j];
-		}
-	}
-
+void matAbyBisC (double A[], double B[], int n, double C[]) {
+    for ( int i = 0; i < n*n; i++) {
+        C[i] = 0;
+    }
+    for ( int i = 0; i < n; i++) {
+        for ( int j = 0; j < n; j++) {
+            for ( int k = 0; k < n; k++) {
+                C[i*n+j] += A[i*n+k] * B[k*n+j];
+            }
+        }
+    }
 }
 
 int matinv( double x[], int n, int m, double space[])
