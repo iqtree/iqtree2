@@ -15,37 +15,42 @@ ModelMorphology::ModelMorphology(const char *model_name, string model_params, St
 
 void ModelMorphology::init(const char *model_name, string model_params, StateFreqType freq, string freq_params)
 {
-	name = model_name;
-	full_name = model_name;
-	if (name == "MK") {
-		// all were initialized
+    name = model_name;
+    full_name = model_name;
+    if (name == "MK") {
+        // all were initialized
         num_params = 0;
-	} else if (name == "ORDERED") {
-		int i, j, k = 0;
-		// only allow for substitution from state i to state i+1 and back.
-		for (i = 0; i < num_states-1; i++) {
-			rates[k++] = 1.0;
-			for (j = i+2; j < num_states; j++, k++)
-				rates[k] = 0.0;
-		}
+    } else if (name == "ORDERED") {
+        // only allow for substitution from state i to state i+1 and back.
+        int k = 0;
+        for (int i = 0; i < num_states-1; i++) {
+            rates[k++] = 1.0;
+            for (int j = i+2; j < num_states; j++, k++) {
+                rates[k] = 0.0;
+            }
+        }
         num_params = 0;
     } else if (name == "GTR" || name == "GTRX") {
-        outWarning("GTRX multistate model will estimate " + convertIntToString(getNumRateEntries()-1) + " substitution rates that might be overfitting!");
-        outWarning("Please only use GTRX with very large data and always test for model fit!");
+        outWarning("GTRX multistate model will estimate " +
+                   convertIntToString(getNumRateEntries()-1) +
+                   " substitution rates that might be overfitting!");
+        outWarning("Please only use GTRX with very large data"
+                   " and always test for model fit!");
         name = "GTRX";
-	} else {
-		// if name does not match, read the user-defined model
-		readParameters(model_name);
+    } else {
+        // if name does not match, read the user-defined model
+        readParameters(model_name);
         num_params = 0;
         freq = FREQ_USER_DEFINED;
-	}
-	ModelMarkov::init(freq);
+    }
+    ModelMarkov::init(freq);
 }
 
 void ModelMorphology::readRates(istream &in) THROW_SPEC_2(const char*, string) {
 	int nrates = getNumRateEntries();
 	int row = 1, col = 0;
-	// since states for protein is stored in lower-triangle, special treatment is needed
+	//since states for protein is stored in lower-triangle,
+    //special treatment is needed
 	for (int i = 0; i < nrates; i++, col++) {
 		if (col == row) {
 			row++; col = 0;
@@ -111,29 +116,34 @@ string ModelMorphology::getNameParams() {
 }
 
 void ModelMorphology::writeParameters(ostream &out) {
-    int i;
     if (freq_type == FREQ_ESTIMATE) {
-        for (i = 0; i < num_states; i++)
+        for (int i = 0; i < num_states; i++) {
             out << "\t" << state_freq[i];
+        }
     }
-    if (num_params == 0) return;
+    if (num_params == 0) {
+        return;
+    }
     int nrateout = getNumRateEntries() - 1;
-    for (i = 0; i < nrateout; i++)
+    for (int i = 0; i < nrateout; i++) {
         out << "\t" << rates[i];
+    }
 }
 
 void ModelMorphology::writeInfo(ostream &out) {
     if (num_params > 0) {
         out << "Rate parameters:";
         int nrate = getNumRateEntries();
-        for (int i = 0; i < nrate; i++)
+        for (int i = 0; i < nrate; i++) {
             out << " " << rates[i];
+        }
         out << endl;
     }
     if (freq_type != FREQ_EQUAL) {
         out << "State frequencies:";
-        for (int i = 0; i < num_states; i++)
+        for (int i = 0; i < num_states; i++) {
             out << " " << state_freq[i];
+        }
         out << endl;
     }
 }
