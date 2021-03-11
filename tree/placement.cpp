@@ -231,7 +231,7 @@ void PhyloTree::optimizePlacementRegion(const ParsimonySearchParameters& s,
     //   This takes time proportional to B (the number of
     //   branches that will be in local_targets).
     //
-    std::vector<size_t> fake_to_real_branch_id;
+    std::vector<size_t> fake_to_real_branch_id; 
     TargetBranch&  tb = targets[region_target_index];
     targets.getFinalReplacementBranchIndexes(region_target_index, fake_to_real_branch_id);
     TargetBranchRange local_targets(targets, fake_to_real_branch_id);
@@ -334,14 +334,14 @@ void PhyloTree::optimizePlacementRegion(const ParsimonySearchParameters& s,
         //Copy state for nodes in the *interior* of the subtree
         PhyloNode* fake = &fake_nodes[fake_node_index];
         PhyloNode* real = map_to_real_node[fake->id];
-        int   nei_count = real->neighbors.size();
+        int   nei_count = static_cast<int>(real->neighbors.size());
         ASSERT(nei_count == fake->neighbors.size());
         for (int nei_no = 0; nei_no < nei_count; ++nei_no) {
             PhyloNeighbor* fake_nei = fake->getNeighborByIndex(nei_no);
             PhyloNeighbor* real_nei = real->getNeighborByIndex(nei_no);
             real_nei->copyComputedState(fake_nei);
             real_nei->node = map_to_real_node[fake_nei->node->id];
-            real_nei->id   = fake_to_real_branch_id[fake_nei->id];
+            real_nei->id   = static_cast<int>(fake_to_real_branch_id[fake_nei->id]);
         }
     }
     //2. Copy for the 2 boundary nodes.
@@ -363,7 +363,7 @@ void PhyloTree::optimizePlacementRegion(const ParsimonySearchParameters& s,
                 //region of interest.  And this one must be it!
                 real_phylo_nei->copyComputedState(fake_nei);
                 real_phylo_nei->node = map_to_real_node[fake_adjacent->id];
-                real_phylo_nei->id   = fake_to_real_branch_id[fake_nei->id];
+                real_phylo_nei->id   = static_cast<int>(fake_to_real_branch_id[fake_nei->id]);
             }
         }
     }
@@ -375,10 +375,11 @@ int  PhyloTree::renumberInternalNodes() {
     NodeVector pnv;
     this->getInternalNodes(pnv);
     int first_old_interior_id = aln->getNSeq32();
+    int node_count = static_cast<int>(pnv.size());
     #ifdef _OPENMP
     #pragma omp parallel for
     #endif
-    for (intptr_t i=0; i<pnv.size(); ++i) {
+    for (int i=0; i<node_count; ++i) {
         pnv[i]->id = first_old_interior_id + i;
     }
     return first_old_interior_id + static_cast<int>(pnv.size());
@@ -477,7 +478,7 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
     
     TypedTaxaToPlace<TaxonTypeInUse> candidates(newTaxaCount);
     int first_new_interior_id = renumberInternalNodes();
-    for (intptr_t i=0; i<newTaxaCount; ++i) {
+    for (int i=0; i<newTaxaCount; ++i) {
         int         taxonId   = taxaIdsToAdd[i];
         std::string taxonName = aln->getSeqName(taxonId);        
         candidates.emplace_back(pr.block_allocator, first_new_interior_id+i,
@@ -559,7 +560,7 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
             };
             std::vector<Insert> inserts;
             inserts.resize(insertStop-batchStart);
-            for ( int i = batchStart; i < insertStop; ++i) {
+            for ( size_t i = batchStart; i < insertStop; ++i) {
                 Insert& insert         = inserts[i-batchStart];
                 insert.candidate_index = i;
                 insert.placement       = &candidates[i].getBestPlacement();

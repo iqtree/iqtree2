@@ -483,7 +483,7 @@ public:
         TypedTaxaToPlace<RoutedTaxon> candidates;
         candidates.resize(nseq);
         int first_new_interior_id = tree.renumberInternalNodes();
-        for (intptr_t i=3; i<nseq; ++i) {
+        for (int i=3; i<nseq; ++i) {
             int         taxonId   = taxon_order[i];
             std::string taxonName = tree.aln->getSeqName(taxonId);
             candidates[i].initialize(&block_allocator, first_new_interior_id+i-3, taxonId, taxonName, false);
