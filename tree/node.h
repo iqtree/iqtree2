@@ -86,6 +86,7 @@ public:
         @param alength length of branch
      */
     Neighbor(Node *anode, double alength) {
+        ASSERT(anode!=nullptr);
         node = anode;
         length = alength;
         id = -1;
@@ -99,6 +100,7 @@ public:
         @param id branch ID
      */
     Neighbor(Node *anode, double alength, int aid) {
+        ASSERT(anode!=nullptr);
         node = anode;
         length = alength;
         id = aid;
@@ -110,6 +112,7 @@ public:
         @param nei another Neighbor
      */
     Neighbor(const Neighbor& nei) {
+        ASSERT(nei.node!=nullptr);
         node = nei.node;
         length = nei.length;
         id = nei.id;
@@ -132,7 +135,7 @@ public:
     virtual ~Neighbor() {
     }
     
-    virtual Node* getNode() const {
+    Node* getNode() const {
         return this->node;
     }
 
@@ -213,8 +216,9 @@ public:
     template<class T>
     bool getAttr(string key, T& value) {
         map<string,string>::iterator it = attributes.find(key);
-        if (it == attributes.end())
+        if (it == attributes.end()) {
             return false;
+        }
         stringstream ss(it->second);
         ss >> value;
         return true;
@@ -232,7 +236,6 @@ public:
         ss << value;
         attributes[key] = ss.str();
     }
-
 };
 
 #define PUT_ATTR(branch, value) branch->putAttr(#value, value)
@@ -387,6 +390,11 @@ public:
     Neighbor* firstNeighbor() const;
 
     /**
+        @return the last neighbor of the node
+     */
+    Neighbor* lastNeighbor() const;
+    
+    /**
      * @brief check whether the two nodes are neighbors
      * @param[in] node the other node
      */
@@ -458,7 +466,7 @@ public:
         @param length branch length
         @param id branch ID
      */
-    virtual void addNeighbor(Node *node, DoubleVector &length, int id = -1);
+    void addNeighbor(Node *node, DoubleVector &length, int id = -1);
 
 };
 /*

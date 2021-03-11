@@ -29,7 +29,10 @@ void PossiblePlacement::setTargetBranch(TargetBranchRef& branch_ref) {
 bool PossiblePlacement::canStillUse() const {
     return !target_branch.isUsedUp();
 }
-TargetBranch* PossiblePlacement::getTarget() const {
+const TargetBranch* PossiblePlacement::getTarget() const {
+    return target_branch.getTarget();
+}
+TargetBranch* PossiblePlacement::getTarget() {
     return target_branch.getTarget();
 }
 size_t PossiblePlacement::getTargetIndex() const {

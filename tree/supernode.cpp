@@ -38,11 +38,18 @@ SuperNeighbor* SuperNode::findNeighbor(Node* node) {
 	return (SuperNeighbor*)Node::findNeighbor(node);
 }
 
-SuperNeighbor* SuperNode::firstNeighbor() {
-	if (neighbors.size() == 0) {
-		return nullptr;
-	}
-	return (SuperNeighbor*)neighbors[0];
+SuperNeighbor* SuperNode::firstNeighbor() const {
+    if (neighbors.size() == 0) {
+        return nullptr;
+    }
+    return (SuperNeighbor*)neighbors[0];
+}
+
+SuperNeighbor* SuperNode::lastNeighbor() const {
+    if (neighbors.size() == 0) {
+        return nullptr;
+    }
+    return (SuperNeighbor*) neighbors[neighbors.size()-1];
 }
 
 SuperNeighbor* SuperNode::getNeighborByIndex(size_t index) {

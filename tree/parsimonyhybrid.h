@@ -104,7 +104,7 @@ public:
     virtual double recalculateBenefit(PhyloTree& tree, double tree_parsimony_score,
                                       TargetBranchRange& branches,
                                       LikelihoodBlockPairs &blocks,
-                                      std::vector< std::vector<UINT*> >& parsimony_path_vectors) const {
+                                      ParsimonyPathVector& parsimony_path_vectors) const {
         return alpha_move_was_better
             ? alpha_move.recalculateBenefit(tree, tree_parsimony_score,
                                             branches, blocks,
@@ -118,7 +118,7 @@ public:
                          double parsimony_score,
                          TargetBranchRange& branches,
                          LikelihoodBlockPairs blocks,
-                         std::vector< std::vector<UINT*> >& parsimony_path_vectors) {
+                         ParsimonyPathVector& parsimony_path_vectors) {
         return (alpha_move_was_better)
             ? alpha_move.apply(tree, parsimony_score, branches, blocks, parsimony_path_vectors)
             : beta_move.apply (tree, parsimony_score, branches, blocks, parsimony_path_vectors);

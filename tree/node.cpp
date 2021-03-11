@@ -200,18 +200,29 @@ Neighbor *Node::findNeighbor(Node *node) {
     return nullptr;
 }
 
-Neighbor *Node::firstNeighbor() const {
-    int size = static_cast<int>(neighbors.size());
-    if (size==0) {
+Neighbor* Node::firstNeighbor() const {
+    int nei_size = static_cast<int>(neighbors.size());
+    if (nei_size==0) {
         return nullptr;
     }
     return neighbors[0];
 }
 
+Neighbor* Node::lastNeighbor() const {
+    int nei_size = static_cast<int>(neighbors.size());
+    if (nei_size==0) {
+        return nullptr;
+    }
+    return neighbors[nei_size-1];
+}
+
 bool Node::isNeighbor(Node* node) {
     int size = static_cast<int>(neighbors.size());
-    for (int i = 0; i < size; i++)
-        if (neighbors[i]->node == node) return true;
+    for (int i = 0; i < size; i++) {
+        if (neighbors[i]->node == node) {
+            return true;
+        }
+    }
     return false;
 }
 
@@ -227,6 +238,7 @@ NeighborVec::iterator Node::findNeighborIt(Node *node) {
 }
 
 void Node::addNeighbor(Node *node, double length, int branch_id) {
+    ASSERT(node!=nullptr);
     neighbors.push_back(new Neighbor(node, length, branch_id));
 }
 
@@ -240,11 +252,15 @@ void Node::addNeighbor(Node *node, DoubleVector &length, int branch_id) {
 
 void Node::updateNeighbor(NeighborVec::iterator nei_it, Neighbor *newnei) {
     ASSERT(nei_it != neighbors.end());
+    ASSERT(newnei!=nullptr);
+    ASSERT(newnei->node!=nullptr);
     *nei_it = newnei;
 }
 
 void Node::updateNeighbor(NeighborVec::iterator nei_it, Neighbor *newnei, double newlen) {
     ASSERT(nei_it != neighbors.end());
+    ASSERT(newnei!=nullptr);
+    ASSERT(newnei->node!=nullptr);
     *nei_it = newnei;
     newnei->length = newlen;
 }
@@ -252,17 +268,23 @@ void Node::updateNeighbor(NeighborVec::iterator nei_it, Neighbor *newnei, double
 void Node::updateNeighbor(Node *node, Neighbor *newnei) {
     NeighborVec::iterator nei_it = findNeighborIt(node);
     ASSERT(nei_it != neighbors.end());
+    ASSERT(newnei!=nullptr);
+    ASSERT(newnei->node!=nullptr);
     *nei_it = newnei;
 }
 
 void Node::updateNeighbor(Node *node, Neighbor *newnei, double newlen) {
     NeighborVec::iterator nei_it = findNeighborIt(node);
     ASSERT(nei_it != neighbors.end());
+    ASSERT(newnei!=nullptr);
+    ASSERT(newnei->node!=nullptr);
     *nei_it = newnei;
     newnei->length = newlen;
 }
 
 void Node::updateNeighbor(Node* node, Node *newnode, double newlen) {
+    ASSERT(node!=nullptr);
+    ASSERT(newnode!=nullptr);
     for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it++)
         if ((*it)->node == node) {
             (*it)->node = newnode;
@@ -272,6 +294,8 @@ void Node::updateNeighbor(Node* node, Node *newnode, double newlen) {
 }
 
 double Node::updateNeighbor(Node* node, Node *newnode) {
+    ASSERT(node!=nullptr);
+    ASSERT(newnode!=nullptr);
     for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it++)
         if ((*it)->node == node) {
             (*it)->node = newnode;

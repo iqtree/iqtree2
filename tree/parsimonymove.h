@@ -21,6 +21,19 @@
 #include "iqtree.h"
 #include <placement/targetbranch.h> //for TargetBranchRange
 
+class ParsimonyPathVector: public std::vector< std::vector<UINT*> > {
+    intptr_t pv_per_thread;
+    intptr_t min_thread_count;
+    intptr_t thread_count;
+public:
+    ParsimonyPathVector() = delete;
+    ParsimonyPathVector(intptr_t blocks, intptr_t min_threads, intptr_t threads_to_use);
+    ~ParsimonyPathVector() = default;
+    intptr_t getBlocksPerThread() const;
+    intptr_t getNumberOfPathsRequired() const;
+    intptr_t getTotalNumberOfBlocksRequired() const;
+};
+
 class ParsimonyMove {
 public:
     bool     lazy;
@@ -129,7 +142,7 @@ public:
                      double tree_parsimony_score,
                      TargetBranchRange& branches,
                      LikelihoodBlockPairs &blocks,
-                     std::vector< std::vector<UINT*> >& parsimony_path_vectors) const = 0;
+                     ParsimonyPathVector& parsimony_path_vectors) const = 0;
 
     /** Apply a move to the tree (updating branches to match), in such a way
      *  that calling apply() a second time, with the same parameters, immediately
@@ -150,7 +163,7 @@ public:
                          double parsimony_score,
                          TargetBranchRange& branches,
                          LikelihoodBlockPairs blocks,
-                         std::vector< std::vector<UINT*> >& parsimony_path_vectors) = 0;
+                         ParsimonyPathVector& parsimony_path_vectors) = 0;
 
     /** Indicates whether a move can be applied (returns the true/false opposite
      *  of isStillPossible().

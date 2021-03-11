@@ -131,7 +131,7 @@ double ParsimonyLazyTBRMove::recalculateBenefit
                ( PhyloTree& tree, double parsimony_score,
                  TargetBranchRange& branches,
                  LikelihoodBlockPairs &blocks,
-                 std::vector< std::vector<UINT*> >& parsimony_path_vectors) const {
+                 ParsimonyPathVector& parsimony_path_vectors) const {
     
     auto t1 = branches[first_target_branch_id];
     auto t2 = branches[second_target_branch_id];
@@ -275,8 +275,8 @@ void ParsimonyLazyTBRMove::updateBranch
 
 double ParsimonyLazyTBRMove::apply
     ( PhyloTree& tree, double parsimony_score,
-     TargetBranchRange& branches, LikelihoodBlockPairs blocks,
-     std::vector< std::vector<UINT*> >& parsimony_path_vectors) {
+      TargetBranchRange& branches, LikelihoodBlockPairs blocks,
+      ParsimonyPathVector& parsimony_path_vectors) {
     //
     //Apply a TBR move (letters are indicative):
     //  A   B  G-H       A-B G   H

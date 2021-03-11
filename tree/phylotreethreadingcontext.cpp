@@ -64,6 +64,18 @@ int PhyloTreeThreadingContext::getThreadNumber() const {
     #endif
 }
 
+int PhyloTreeThreadingContext::getThreadCount() const {
+    return tree.num_threads;
+}
+
+/*static*/ int PhyloTreeThreadingContext::getMaximumThreadCount() {
+    #ifdef _OPENMP
+        return omp_get_max_threads();
+    #else
+        return 0;
+    #endif
+}
+
 PhyloTreeThreadingContext::~PhyloTreeThreadingContext() {
     if (old_num_threads != tree.num_threads) {
         tree.num_threads = old_num_threads;

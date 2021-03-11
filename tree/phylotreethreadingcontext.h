@@ -19,6 +19,8 @@ public:
     
     PhyloTreeThreadingContext(PhyloTree& tree, bool force_use_of_all_threads);
     int getThreadNumber() const;
+    int getThreadCount()  const;
+    static int getMaximumThreadCount();
 
     ~PhyloTreeThreadingContext();
 };

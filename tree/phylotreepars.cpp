@@ -1427,10 +1427,12 @@ int PhyloTree::computeParsimonyTreeNew(const char *out_prefix,
         
     TypedTaxaToPlace<TaxonToPlace> candidates;
     candidates.resize(count_to_add);
+    int first_new_interior_id = renumberInternalNodes();
     for (intptr_t i=0; i<count_to_add; ++i) {
         int         taxonId   = taxon_order[i+leafNum];
         std::string taxonName = aln->getSeqName(taxonId);
-        candidates[i].initialize(&block_allocator, taxonId, taxonName, true);
+        candidates[i].initialize(&block_allocator, first_new_interior_id+i,
+                                 taxonId, taxonName, true);
     }
     #ifdef _OPENMP
     #pragma omp parallel for

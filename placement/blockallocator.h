@@ -16,7 +16,7 @@ protected:
     PhyloTree& phylo_tree;           //the tree that owns the memory (BlockAllocator
                                      //doesn't own any memory)
     int        index_parsimony;      //the number of parsimony blocks allocated thus far
-    size_t     nptn;                 //
+    int        parsimony_index_bound;//the maximimum number of same that can be allocated
     std::vector<UINT*> uint_blocks;  //blocks of locally-allocated unsigned integer to release
 
 public:

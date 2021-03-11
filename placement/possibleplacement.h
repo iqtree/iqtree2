@@ -27,15 +27,16 @@ public:
                                      //target_child and added_node
     
     PossiblePlacement();
-    PossiblePlacement& operator =  ( const PossiblePlacement& rhs );
-    bool               operator <  ( const PossiblePlacement& rhs ) const;
-    bool               operator <= ( const PossiblePlacement& rhs ) const;
-    void               setTargetBranch(TargetBranchRange* targetRange, size_t index);
-    void               setTargetBranch(TargetBranchRef& branch_ref);
-    bool               canStillUse()    const;
-    TargetBranch*      getTarget()      const;
-    size_t             getTargetIndex() const;
-    void               forget();
+    PossiblePlacement&  operator =  ( const PossiblePlacement& rhs );
+    bool                operator <  ( const PossiblePlacement& rhs ) const;
+    bool                operator <= ( const PossiblePlacement& rhs ) const;
+    void                setTargetBranch(TargetBranchRange* targetRange, size_t index);
+    void                setTargetBranch(TargetBranchRef& branch_ref);
+    bool                canStillUse()    const;
+    const TargetBranch* getTarget()      const;
+    TargetBranch*       getTarget();
+    size_t              getTargetIndex() const;
+    void                forget();
 };
 
 #include <stdio.h>

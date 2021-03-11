@@ -164,7 +164,7 @@ bool ParsimonyLazySPRMove::isStillPossible(const TargetBranchRange& branches,
 double ParsimonyLazySPRMove::recalculateBenefit
     ( PhyloTree& tree, double parsimony_score,
       TargetBranchRange& branches, LikelihoodBlockPairs &blocks,
-      std::vector< std::vector<UINT*> >& parsimony_path_vectors) const {
+      ParsimonyPathVector& parsimony_path_vectors) const {
     TargetBranch& source = branches[source_branch_id];
     TargetBranch& target = branches[target_branch_id];
     source.computeState(tree, parsimony_score, source_branch_id, blocks);
@@ -184,7 +184,7 @@ double ParsimonyLazySPRMove::recalculateBenefit
 //
 double ParsimonyLazySPRMove::apply(PhyloTree& tree,  double parsimony_score,
                                    TargetBranchRange& branches, LikelihoodBlockPairs blocks,
-                                   std::vector< std::vector<UINT*> >& parsimony_path_vectors) {
+                                   ParsimonyPathVector& parsimony_path_vectors) {
     TargetBranch& source     = branches[source_branch_id];
     TargetBranch& target     = branches[target_branch_id];
     PhyloNode*    moved_node = isForward ? source.first : source.second;

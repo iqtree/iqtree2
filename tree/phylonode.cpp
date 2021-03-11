@@ -26,6 +26,14 @@ void PhyloNeighbor::clearForwardPartialLh(PhyloNode* dad) {
     }
 }
 
+void PhyloNeighbor::copyComputedState(const PhyloNeighbor* donor) {
+    this->partial_lh          = donor->partial_lh;
+    this->scale_num           = donor->scale_num;
+    this->partial_lh_computed = donor->partial_lh_computed;
+    this->partial_pars        = donor->partial_pars;
+    this->length              = donor->length;
+}
+
 void PhyloNode::clearReversePartialLh(PhyloNode *dad) {
     FOR_EACH_ADJACENT_PHYLO_NODE(this, dad, it, node) {
         PhyloNeighbor* backNei = node->findNeighbor(this);
@@ -171,11 +179,18 @@ bool PhyloNode::hasNeighbor(PhyloNode* node) {
     return false;
 }
 
-PhyloNeighbor* PhyloNode::firstNeighbor() {
+PhyloNeighbor* PhyloNode::firstNeighbor() const {
     if (neighbors.empty()) {
         return nullptr;
     }
     return (PhyloNeighbor*) neighbors[0];
+}
+
+PhyloNeighbor* PhyloNode::lastNeighbor() const {
+    if (neighbors.empty()) {
+        return nullptr;
+    }
+    return (PhyloNeighbor*) neighbors[neighbors.size()-1];
 }
 
 PhyloNeighbor* PhyloNode::getNeighborByIndex(size_t index) {

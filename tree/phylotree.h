@@ -57,6 +57,15 @@
 
 class AlignmentPairwise;
 
+//Classes passed to PhyloTree::optimizeSubtreeParsimony
+//(need to be forward declared before that member
+// function).
+class ParsimonySearchParameters;
+class TargetBranchRange;
+class ParsimonyPathVector;
+class PhyloTreeThreadingContext;
+class TimeKeeper;
+
 #define BOOT_VAL_FLOAT
 #define BootValType float
 //#define BootValType double
@@ -496,6 +505,8 @@ public:
     void addNewTaxaToTree(const IntVector& taxaIdsToAdd,
                           bool quiet = false);
     
+    int renumberInternalNodes();
+    
     void reinsertTaxaViaStepwiseParsimony(const IntVector& taxaIdsToAdd);
         
     virtual PhyloNode* findFarthestLeaf(PhyloNode *node = nullptr,
@@ -708,10 +719,14 @@ public:
             compute the tree parsimony score
      @param  taskDescription - how to describe what is happening
      @param  bidirectional - if true, calculate parsimony in both directions
+     @param  report_progress - if true, report progress
+     @param  neighbor - if not supplied, getRoot()->getFirstNeighbor() will be used
+     @param  startin_node - if not supplied, getRoot() will be used
      @return parsimony score of the tree
      */
     int computeParsimony(const char* taskDescription = "", bool bidirectional=false,
-                         bool report_progress=false);
+                         bool report_progress=false, PhyloNeighbor* neighbor=nullptr,
+                         PhyloNode* starting_node=nullptr);
 
     typedef void (PhyloTree::*ComputePartialParsimonyType)(PhyloNeighbor *, PhyloNode *);
     ComputePartialParsimonyType computePartialParsimonyPointer;
@@ -1699,6 +1714,23 @@ public:
     
     template <class Move>
     int doParsimonySearch(const ParsimonySearchParameters& s);
+    
+    
+    template <class Move>
+    int optimizeSubtreeParsimony(const ParsimonySearchParameters& s,
+                                 TargetBranchRange& targets,
+                                 ParsimonyPathVector& per_thread_path_parsimony,
+                                 PhyloTreeThreadingContext& context,
+                                 TimeKeeper& overall,
+                                 TimeKeeper& initializing);
+    
+    void optimizePlacementRegion(const ParsimonySearchParameters& s,
+                                TargetBranchRange& targets,
+                                size_t region_target_index,
+                                ParsimonyPathVector& per_thread_path_parsimony,
+                                PhyloTreeThreadingContext& context);
+
+    
     
     /****************************************************************************
             Branch length optimization by maximum likelihood

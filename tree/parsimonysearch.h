@@ -37,19 +37,14 @@ int PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
     //     the move that was just applied).
     //
     
-
     best_pars_score          = UINT_MAX;
-    intptr_t branch_count    = leafNum * 2 - 3; //assumed > 3
+    intptr_t branch_count    = leafNum * 2 - 3; //assumed leafNum > 3
     int      index_parsimony = 0;
     
-    std::string task_name = "Looking for parsimony " + s.name + " moves";
+    std::string task_name    = "Looking for parsimony " + s.name + " moves";
 
     TimeKeeper overall      (task_name.c_str());
     TimeKeeper initializing ("initializing");
-    TimeKeeper rescoring    ("rescoring parsimony");
-    TimeKeeper evaluating   ("evaluating " + s.name + " moves");
-    TimeKeeper sorting      ("sorting " + s.name + " moves");
-    TimeKeeper applying     ("applying " + s.name + " moves");
 
     double work_estimate = (double)branch_count * ((double)s.iterations * 2.5 + 1.0);
     //assumes that:
@@ -67,15 +62,18 @@ int PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
     initializing.start();
     
     PhyloTreeThreadingContext context(*this, params->parsimony_uses_max_threads);
-    std::vector< std::vector<UINT*> > per_thread_path_parsimony;
-    intptr_t pv_per_thread    = Move::getParsimonyVectorSize(s.radius);
-    intptr_t min_thread_count = Move::getMinimumPathVectorCount();
-    intptr_t num_path_vectors = (num_threads < min_thread_count)
-                              ? min_thread_count : num_threads;
-    intptr_t path_overhead    = num_path_vectors * pv_per_thread;
-        
     deleteAllPartialLhAndParsimony();
     initializeTree(); //to ensure all branches are properly numbered
+    
+    intptr_t blocks_per_thread = Move::getParsimonyVectorSize(s.radius);
+    intptr_t min_threads       = Move::getMinimumPathVectorCount();
+    intptr_t thread_count      = num_threads;
+    
+    ParsimonyPathVector per_thread_path_parsimony(blocks_per_thread, min_threads, thread_count);
+    
+    intptr_t num_path_vectors  = per_thread_path_parsimony.getNumberOfPathsRequired();
+    intptr_t path_overhead     = per_thread_path_parsimony.getTotalNumberOfBlocksRequired();
+        
     auto count_of_branch_vectors_needed =
         ( s.calculate_connection_costs ? branch_count : 0 )
         + path_overhead;
@@ -94,13 +92,32 @@ int PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
     //Allocate per-thread parsimony vector work areas used to calculate
     //modified parsimony scores along the path between the
     //pruning and regrafting points.
-    per_thread_path_parsimony.resize(num_threads);
+    per_thread_path_parsimony.resize(num_path_vectors);
     for (int vector=0; vector<num_path_vectors; ++vector) {
         block_allocator.allocateVectorOfParsimonyBlocks
-        (pv_per_thread, per_thread_path_parsimony[vector]);
+            (per_thread_path_parsimony.getBlocksPerThread(),
+            per_thread_path_parsimony[vector]);
     }
         
     initializing.stop();
+    return optimizeSubtreeParsimony<Move>
+           (s, targets, per_thread_path_parsimony,
+            context, overall, initializing);
+}
+
+template <class Move>
+int PhyloTree::optimizeSubtreeParsimony(const ParsimonySearchParameters& s,
+                                        TargetBranchRange& targets,
+                                        ParsimonyPathVector& per_thread_path_parsimony,
+                                        PhyloTreeThreadingContext& context,
+                                        TimeKeeper& overall,
+                                        TimeKeeper& initializing) {
+    TimeKeeper rescoring    ("rescoring parsimony");
+    TimeKeeper evaluating   ("evaluating " + s.name + " moves");
+    TimeKeeper sorting      ("sorting " + s.name + " moves");
+    TimeKeeper applying     ("applying " + s.name + " moves");
+
+    intptr_t branch_count        = targets.size();
     
     size_t  moves_considered     = 0;
     size_t  moves_still_possible = 0;
@@ -109,19 +126,23 @@ int PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
     double parsimony_score;
     for (intptr_t iteration=1; iteration<=s.iterations; ++iteration) {
         rescoring.start();
-        parsimony_score = computeParsimony("Determining two-way parsimony", true, true );
+        parsimony_score = computeParsimony("Determining two-way parsimony", true, true,
+                                           targets[0].first->findNeighbor(targets[0].second),
+                                           targets[0].first);
         rescoring.stop();
-        if (iteration==1) {
-            LOG_LINE(VB_MIN, "Before doing (up to) "
-                     << s.iterations << " rounds of parsimony " << s.name << ","
-                     << " parsimony score was " << parsimony_score);
-        } else if (!s.be_quiet) {
-            LOG_LINE(VB_MIN, "Applied " << moves_applied << " move"
-                     << ((1==moves_applied) ? "" : "s")
-                     << " (out of " << moves_considered << ")"
-                     << " (" << moves_still_possible << " still possible)"
-                     << " in iteration " << (iteration-1)
-                     << " (parsimony now " << parsimony_score << ")");
+        if (!s.be_quiet) {
+            if (iteration==1) {
+                LOG_LINE(VB_MIN, "Before doing (up to) "
+                         << s.iterations << " rounds of parsimony " << s.name << ","
+                         << " parsimony score was " << parsimony_score);
+            } else if (!s.be_quiet) {
+                LOG_LINE(VB_MIN, "Applied " << moves_applied << " move"
+                         << ((1==moves_applied) ? "" : "s")
+                         << " (out of " << moves_considered << ")"
+                         << " (" << moves_still_possible << " still possible)"
+                         << " in iteration " << (iteration-1)
+                         << " (parsimony now " << parsimony_score << ")");
+            }
         }
         evaluating.start();
         LikelihoodBlockPairs dummyBlocks;
@@ -265,7 +286,9 @@ int PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
     initializing.stop();
     
     rescoring.start();
-    parsimony_score = computeParsimony("Determining one-way parsimony", false, true);
+    parsimony_score = computeParsimony("Determining one-way parsimony", false, true,
+                                       targets[0].first->findNeighbor(targets[0].second),
+                                       targets[0].first);
     rescoring.stop();
     
     if (!s.be_quiet) {

@@ -1752,9 +1752,9 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                 dad_branch->partial_pars[total] = onesuch_site_count;
             }
         }
-
-        if (!aln->isSuperAlignment())
+        if (!aln->isSuperAlignment()) {
             delete partitions;
+        }
     } else {
         // internal node
         ASSERT(node->degree() == 3 || (dad==nullptr && 1<node->degree())  ); // it works only for strictly bifurcating tree

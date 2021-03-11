@@ -47,14 +47,62 @@
 	for (; it != (mynode)->neighbors.end(); it++) \
 		if ((*it)->node != (mydad))
 
+class SuperNode;
 
-class SuperNeighbor;
+/**
+A neighbor in a phylogenetic SUPER tree
+
+    @author BUI Quang Minh <minh.bui@univie.ac.at>
+*/
+class SuperNeighbor : public PhyloNeighbor {
+
+    friend class SuperNode;
+    friend class PhyloSuperTree;
+
+public:
+    /**
+        construct class with a node and length
+        @param anode the other end of the branch
+        @param alength length of branch
+    */
+    SuperNeighbor(Node *anode, double alength);
+
+    /**
+        construct class with a node and length
+        @param anode the other end of the branch
+        @param alength length of branch
+        @param aid branch ID
+    */
+    SuperNeighbor(Node *anode, double alength, int aid);
+
+    /**
+     construct class with another Neighbor
+     @param nei another Neighbor
+     */
+    SuperNeighbor(const SuperNeighbor& nei);
+    
+    SuperNode* getNode() const;
+    
+    /**
+     allocate a new Neighbor by just copying from this one
+     @return pointer to newly created Neighbor
+     */
+    SuperNeighbor* newNeighbor() const;
+
+    /**
+        vector of size m (m = #partitions)
+    */
+    PhyloNeighborVec link_neighbors;
+};
+
+
 
 /**
 Node of a super tree
 
     @author BUI Quang Minh <minh.bui@univie.ac.at>
 */
+
 class SuperNode : public PhyloNode
 {
     friend class PhyloSuperTree;
@@ -100,58 +148,13 @@ public:
 
     virtual SuperNeighbor* findNeighbor(Node* node);
 
-    virtual SuperNeighbor* firstNeighbor();
+    virtual SuperNeighbor* firstNeighbor() const;
+    
+    virtual SuperNeighbor* lastNeighbor() const;
 
     virtual SuperNeighbor* getNeighborByIndex(size_t index);
     
     ~SuperNode();
-
-};
-/**
-A neighbor in a phylogenetic SUPER tree
-
-	@author BUI Quang Minh <minh.bui@univie.ac.at>
-*/
-class SuperNeighbor : public PhyloNeighbor {
-
-	friend class SuperNode;
-	friend class PhyloSuperTree;
-
-public:
-	/**
-		construct class with a node and length
-		@param anode the other end of the branch
-		@param alength length of branch
-	*/
-    SuperNeighbor(Node *anode, double alength);
-
-	/**
-		construct class with a node and length
-		@param anode the other end of the branch
-		@param alength length of branch
-		@param aid branch ID
-	*/
-    SuperNeighbor(Node *anode, double alength, int aid);
-
-    /**
-     construct class with another Neighbor
-     @param nei another Neighbor
-     */
-    SuperNeighbor(const SuperNeighbor& nei);
-    
-    virtual SuperNode* getNode() const;
-    
-    /**
-     allocate a new Neighbor by just copying from this one
-     @return pointer to newly created Neighbor
-     */
-    virtual SuperNeighbor* newNeighbor() const;
-
-	/**
-		vector of size m (m = #partitions)
-	*/
-	PhyloNeighborVec link_neighbors;
-
 };
 
 

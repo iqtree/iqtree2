@@ -50,7 +50,7 @@ public:
                    ( PhyloTree& tree, double parsimony_score,
                      TargetBranchRange& branches,
                      LikelihoodBlockPairs &blocks,
-                    std::vector< std::vector<UINT*> >& parsimony_path_vectors) const;
+                     ParsimonyPathVector& parsimony_path_vectors) const;
     
     class LazyTBRSearch {
     public:
@@ -118,7 +118,7 @@ public:
                          double parsimony_score,
                          TargetBranchRange& branches,
                          LikelihoodBlockPairs blocks,
-                         std::vector< std::vector<UINT*> >& parsimony_path_vectors);
+                         ParsimonyPathVector& parsimony_path_vectors);
 };
 
 struct ProperParsimonyTBRMove : public ParsimonyLazyTBRMove {

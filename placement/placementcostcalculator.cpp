@@ -83,12 +83,12 @@ void LikelihoodCostCalculator::assessPlacementCost(PhyloTree& tree, const TaxonT
     
     super::assessPlacementCost(tree, taxon, placement);
     
-    TargetBranch* target     = placement.getTarget();
-    double score             = (placement.parsimony_score > 1) ? placement.parsimony_score : 1;
-    double normalized        = score / tree.getAlnNSite();
-    double alpha             = tree.getGammaShape();
-    double parsimony_length  = tree.correctBranchLengthF81( normalized, alpha );
-    placement.lenToNewTaxon = parsimony_length;
+    const TargetBranch* target = placement.getTarget();
+    double score               = (placement.parsimony_score > 1) ? placement.parsimony_score : 1;
+    double normalized          = score / tree.getAlnNSite();
+    double alpha               = tree.getGammaShape();
+    double parsimony_length    = tree.correctBranchLengthF81( normalized, alpha );
+    placement.lenToNewTaxon    = parsimony_length;
             
     PhyloNode fakeInterior;
     fakeInterior.is_floating_interior = true;
@@ -218,7 +218,7 @@ void LikelihoodCostCalculator::assessPlacementCost(PhyloTree& tree, const TaxonT
     };
     LikelihoodOptimizer opt(tree, &fakeLeaf, neighUp, neighDown);
     opt.optimize(placement);
-    target->setLhScaleFactor(neighUp->lh_scale_factor);
+    const_cast<TargetBranch*>(target)->setLhScaleFactor(neighUp->lh_scale_factor);
     
     TREE_LOG_LINE(tree, VB_MED, taxon.taxonName
                   << " (taxon " << taxon.taxonId << ")"

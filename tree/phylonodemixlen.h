@@ -175,7 +175,7 @@ public:
         @param length branch length
         @param id branch ID
      */
-    virtual void addNeighbor(Node *node, double length, int id = -1);
+    void addNeighbor(Node *node, double length, int id = -1);
 
     /**
         add a neighbor for heterotachy model
@@ -183,7 +183,7 @@ public:
         @param length branch length
         @param id branch ID
      */
-    virtual void addNeighbor(Node *node, DoubleVector &length, int id = -1);
+    void addNeighbor(Node *node, DoubleVector &length, int id = -1);
 
 protected:
 };

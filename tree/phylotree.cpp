@@ -1456,9 +1456,9 @@ void PhyloTree::initializeAllPartialPars(int &index, PhyloNode *node, PhyloNode 
     if (dad) {
         // assign blocks in central_partial_lh to both Neighbors (dad->node, and node->dad)
         PhyloNeighbor* backNei = node->findNeighbor(dad);
-        backNei->partial_pars = central_partial_pars + (index * pars_block_size);
-        PhyloNeighbor* nei = dad->findNeighbor(node);
-        nei->partial_pars = central_partial_pars + ((index + 1) * pars_block_size);
+        backNei->partial_pars  = central_partial_pars + (index * pars_block_size);
+        PhyloNeighbor* nei     = dad->findNeighbor(node);
+        nei->partial_pars      = central_partial_pars + ((index + 1) * pars_block_size);
         index                 += 2;
         ASSERT( tip_partial_pars==nullptr || nei->partial_pars < tip_partial_pars );
     }
@@ -1474,7 +1474,6 @@ size_t PhyloTree::getBitsBlockSize() {
 UINT *PhyloTree::newBitsBlock() {
     return aligned_alloc<UINT>(pars_block_size);
 }
-
 
 void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *dad) {
     (this->*computePartialParsimonyPointer)(dad_branch, dad);
@@ -1527,21 +1526,23 @@ int PhyloTree::computeParsimonyOutOfTree(const UINT* dad_partial_pars,
 }
 
 int PhyloTree::computeParsimony(const char* taskDescription,
-                                bool bidirectional,
-                                bool countProgress) {
+                                bool bidirectional, bool countProgress,
+                                PhyloNeighbor* neighbor,
+                                PhyloNode* starting_node) {
     if (central_partial_pars == nullptr) {
         initializeAllPartialPars();
     }
-    PhyloNode* r = getRoot();
+    PhyloNode*     r   = (starting_node!=nullptr) ? starting_node : getRoot();
+    PhyloNeighbor* nei = (neighbor!=nullptr)      ? neighbor : r->firstNeighbor();
     if (taskDescription==nullptr || taskDescription[0]=='\0') {
         return computeParsimonyBranch(r->firstNeighbor(), r);
     }
     ParallelParsimonyCalculator calculator(*this, countProgress);
     if (bidirectional) {
-        return calculator.computeAllParsimony(r->firstNeighbor(), r);
+        return calculator.computeAllParsimony(nei, r);
     }
     return calculator.computeParsimonyBranch
-           ( r->firstNeighbor(), r, taskDescription );
+           ( nei, r, taskDescription );
 }
 
 
@@ -4420,14 +4421,14 @@ void PhyloTree::computeBioNJ(Params &params) {
                 << (getRealTime()-start_time) << " sec." << endl;
         }
     }
-    bool non_empty_tree = (root != NULL);
     double tree_load_start_time = getRealTime();
     readTreeFile(bionj_file.c_str());
     if (verbose_mode >= VB_MED) {
         cout << "Loading tree (from file " << bionj_file << ") took "
-            << (getRealTime()-tree_load_start_time) << " sec." << endl;
+             << (getRealTime()-tree_load_start_time) << " sec." << endl;
     }
-    if (non_empty_tree) {
+    bool non_empty_tree = (root != nullptr);
+    if (non_empty_tree && params.compute_likelihood) {
         initializeAllPartialLh();
     }
 }

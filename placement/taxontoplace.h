@@ -44,8 +44,10 @@ public:
     
     TaxonToPlace();
     TaxonToPlace(const TaxonToPlace& rhs); //copy everything!
-    TaxonToPlace(BlockAllocator* ba, int id, std::string name, bool delayCompute);
-    void initialize(BlockAllocator* ba, int id, std::string name, bool delayCompute);
+    TaxonToPlace(BlockAllocator* ba, int interior_id, int leaf_id,
+                 std::string name, bool delayCompute);
+    void initialize(BlockAllocator* ba, int interior_id, int leaf_id,
+                    std::string name, bool delayCompute);
     void computeParsimony(PhyloTree* tree);
 
     virtual      ~TaxonToPlace();
@@ -142,7 +144,7 @@ public:
      unused replacement target branch.*/
     void assessNewTargetBranches ( PhyloTree& phylo_tree,
                                    PlacementCostCalculator& calculator,
-                                   TargetBranch* tb,
+                                   const TargetBranch* tb,
                                    std::vector<PossiblePlacement>& placements);
 };
 
@@ -188,7 +190,8 @@ public:
     typedef TaxonToPlace super;
     LessFussyTaxon ( );
     LessFussyTaxon ( const LessFussyTaxon& rhs );
-    LessFussyTaxon ( BlockAllocator* ba, int id, std::string name, bool delay);
+    LessFussyTaxon ( BlockAllocator* ba, int interior_id, int leaf_id,
+                     std::string name, bool delay);
     virtual size_t considerPlacements(const PossiblePlacement* placements,
                                       size_t count);
     virtual bool   considerAdditionalPlacement(const PossiblePlacement& placement);

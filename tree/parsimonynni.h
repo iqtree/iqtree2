@@ -36,12 +36,12 @@ public:
                    ( PhyloTree& tree, double tree_parsimony_score,
                      TargetBranchRange& branches,
                      LikelihoodBlockPairs &blocks,
-                     std::vector< std::vector<UINT*> >& parsimony_path_vectors) const;
+                     ParsimonyPathVector& parsimony_path_vectors) const;
     virtual double apply(PhyloTree& tree,
                          double parsimony_score,
                          TargetBranchRange& branches,
                          LikelihoodBlockPairs blocks,
-                         std::vector< std::vector<UINT*> >& parsimony_path_vectors);
+                         ParsimonyPathVector& parsimony_path_vectors);
 protected:
     void consider(intptr_t branch_id, PhyloNode* leftNode,
                   const PhyloBranch& middleBranch,

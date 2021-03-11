@@ -22,7 +22,12 @@
 
 class TargetBranch;
 class TargetBranchRange;
+
 class TargetBranchRef {
+    //A reference to a branch in a TargetBranchRange (a pointer to the
+    //range and an index *into* that range).  This class exists to make it
+    //possible to refer to target branches in a *growing* target branch
+    //range (without needing to do keep track of allocated branches).
 private:
     TargetBranchRange* target_range;
     size_t             target_index;
@@ -31,10 +36,35 @@ public:
     TargetBranchRef ( const TargetBranchRef& r );
     TargetBranchRef ( TargetBranchRange* range, size_t index );
     TargetBranchRef& operator= ( const TargetBranchRef& r );
+    
+    /**
+     Indicates whether a target branch has been replaced (due to a taxon,
+     or multiple taxa, being added, with its interior node replacing this
+     branch (if this returns true, this branch is merely "historical"; it
+     no longer corresponds to a branch in the actual tree)
+     @return true if this branch has been replaced
+     */
     bool          isUsedUp()       const;
+    /**
+     @return the first "or front" node this branch connects
+     */
     PhyloNode*    getFirst()       const;
+    /**
+     @return the second "or back" node this branch connects
+     */
     PhyloNode*    getSecond()      const;
-    TargetBranch* getTarget()      const;
+    /**
+     @return the TargetBranch instance referred to (const version)
+     */
+    const TargetBranch* getTarget() const;
+    /**
+     @return the TargetBranch instance referred to
+     */
+    TargetBranch* getTarget();
+    /**
+     @return the index (into the TargetBranchRange) of the
+             TargetBranch that his TargetBranchRef refers to.
+     */
     size_t        getTargetIndex() const;
 };
 
@@ -111,7 +141,7 @@ public:
                              bool isFirstTargetBranch) const;
     
     void takeOwnershipOfReplacementVector(ReplacementBranchList* branches);
-    ReplacementBranchList* getReplacements();
+    ReplacementBranchList* getReplacements() const;
     
     //The following functions are used for parsimony rearrangement
     
@@ -154,18 +184,23 @@ class TargetBranchRef;
 class TargetBranchRange : public vector<TargetBranch> {
 public:
     typedef  vector<TargetBranch> super;
+    TargetBranchRange(const TargetBranchRange& tbr,
+                      const std::vector<size_t>& indicesOfSubset);
     TargetBranchRange(PhyloTree& phylo_tree, BlockAllocator* b,
                       PlacementCostCalculator* calculator,
                       bool match_branch_numbers);
     TargetBranch* getTargetBranch(size_t i) {
         return &at(i);
     }
+    void getNodes(NodeVector& vec) const;
     void removeUsed();
     TargetBranchRef addNewRef(BlockAllocator& allocator,
                               LikelihoodBlockPairs& blocks,
                               PhyloNode* node1, PhyloNode* node2,
                               bool likelihood_wanted);
     void reload(const PhyloTree& phylo_tree);
+    void getFinalReplacementBranchIndexes(intptr_t top_index,
+                                          std::vector<size_t> &ids) const;
 };
 
 #endif /* targetbranch_h */

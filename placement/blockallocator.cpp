@@ -12,6 +12,9 @@ BlockAllocator::BlockAllocator(PhyloTree& tree,
                int parsimonyIndex)
     : phylo_tree(tree), index_parsimony(parsimonyIndex) {
         tree.determineBlockSizes();
+    parsimony_index_bound =
+        ( phylo_tree.tip_partial_pars - phylo_tree.central_partial_pars)
+        / phylo_tree.pars_block_size;
 }
 BlockAllocator::~BlockAllocator() {
     //C++17 or later, merely: for ( block : uint_blocks ) aligned_free(block);
@@ -20,19 +23,24 @@ BlockAllocator::~BlockAllocator() {
     }
 }
 void BlockAllocator::allocateParsimonyBlock(UINT*& partial_pars) {
+    ASSERT(index_parsimony < parsimony_index_bound);
     partial_pars = phylo_tree.central_partial_pars
                    + (index_parsimony * phylo_tree.pars_block_size);
-    ASSERT( partial_pars < phylo_tree.tip_partial_pars );
     ++index_parsimony;
 }
 void BlockAllocator::allocateVectorOfParsimonyBlocks(intptr_t vectorSize,
     std::vector<UINT*>& buffers) {
     for (intptr_t i = 0; i < vectorSize; ++i) {
+        ASSERT(index_parsimony < parsimony_index_bound);
         size_t offset = index_parsimony * phylo_tree.pars_block_size;
         buffers.push_back(phylo_tree.central_partial_pars + offset);
-        ASSERT(buffers.back() < phylo_tree.tip_partial_pars);
         ++index_parsimony;
     }
+    //int leftover = parsimony_index_bound - index_parsimony;
+    //TREE_LOG_LINE(phylo_tree, VB_MIN,
+    //              "pv used " << vectorSize
+    //              << ", index_parsimony now " << index_parsimony
+    //              << " (left: " << leftover << ")");
 }
 void BlockAllocator::allocateMemoryFor(PhyloNeighbor* nei) {
     if (nei->partial_pars==nullptr) {
@@ -57,7 +65,8 @@ void BlockAllocator::handOverComputedState(PhyloNeighbor* from_nei, PhyloNeighbo
 int BlockAllocator::getLikelihoodBlockCount() const {
     return 0;
 }
-void BlockAllocator::allocateLikelihoodBlocks(double*& partial_lh, UBYTE*& scale_num) {
+void BlockAllocator::allocateLikelihoodBlocks(double*& partial_lh,
+                                              UBYTE*& scale_num) {
     //Don't!
 }
 bool BlockAllocator::usesLikelihood() {
@@ -98,8 +107,11 @@ LikelihoodBlockPair& LikelihoodBlockPair::operator = (const LikelihoodBlockPair&
     return *this;
 }
 
-LikelihoodBlockPair::LikelihoodBlockPair(double* lh, UBYTE* scale, bool takeOwnership)
-    : partial_lh(lh), scale_num(scale), blocks_are_owned(takeOwnership) {}
+LikelihoodBlockPair::LikelihoodBlockPair(double* lh, UBYTE* scale,
+                                         bool takeOwnership)
+    : partial_lh(lh), scale_num(scale),
+      blocks_are_owned(takeOwnership) {
+}
 
 void LikelihoodBlockPair::clear() {
     if (blocks_are_owned) {
@@ -117,15 +129,18 @@ LikelihoodBlockPair::~LikelihoodBlockPair() {
     clear();
 }
 
-void    LikelihoodBlockPair::copyFrom(PhyloTree& tree, PhyloNeighbor* source) {
+void    LikelihoodBlockPair::copyFrom(PhyloTree& tree,
+                                      PhyloNeighbor* source) {
     allocate(tree);
     if (source->partial_lh != nullptr) {
-        memcpy(partial_lh, source->partial_lh, tree.lh_block_size * sizeof(partial_lh[0]));
+        memcpy(partial_lh, source->partial_lh,
+               tree.lh_block_size * sizeof(partial_lh[0]));
     } else {
         memset(partial_lh, 0, tree.lh_block_size * sizeof(partial_lh[0]) );
     }
     if (source->scale_num != nullptr) {
-        memcpy(scale_num, source->scale_num, tree.scale_block_size * sizeof(scale_num[0]));
+        memcpy(scale_num, source->scale_num,
+               tree.scale_block_size * sizeof(scale_num[0]));
     } else {
         memset(scale_num, 0, tree.scale_block_size * sizeof(scale_num[0]) );
     }
@@ -269,10 +284,10 @@ void LikelihoodBlockAllocator::makeTreeReady(PhyloNode* first,
         //remove unused blocks from newly useless
         //PhyloNeighbor instances (that weren't recycled above)
         //so they will be available for recycling, if when needed
-        PhyloNeighbor* donor     = useless_outputs[i];
+        PhyloNeighbor* donor = useless_outputs[i];
         spare_block_pairs.emplace_back(donor->partial_lh, donor->scale_num);
-        donor->partial_lh = nullptr;
-        donor->scale_num  = nullptr;
+        donor->partial_lh    = nullptr;
+        donor->scale_num     = nullptr;
         donor->setLikelihoodComputed(false);
     }
 }

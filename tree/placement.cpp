@@ -16,7 +16,13 @@
 #include <placement/placementrun.h>
 #include <utils/timekeeper.h>
 #include <utils/timeutil.h>    //for getRealTime
+#include "parsimonyspr.h"   //for ParsimonySPRMove
 
+#define OPTIMIZE_PLACEMENT_SUBTREES (0)
+#if (OPTIMIZE_PLACEMENT_SUBTREES)
+    #include "parsimonymove.h"  //for ParsimonyPathVector
+    #include "phylotreethreadingcontext.h" //for PhyloTreeThreadingContext
+#endif
 /****************************************************************************
  Stepwise addition (greedy) by maximum likelihood
  ****************************************************************************/
@@ -204,6 +210,180 @@ void PhyloTree::reinsertTaxaViaStepwiseParsimony(const IntVector& taxaIdsToAdd) 
 typedef TaxonToPlace TaxonTypeInUse;
 //typedef LessFussyTaxon TaxonTypeInUse;
 
+void PhyloTree::optimizePlacementRegion(const ParsimonySearchParameters& s,
+                                        TargetBranchRange& targets,
+                                        size_t region_target_index,
+                                        ParsimonyPathVector& per_thread_path_parsimony,
+                                        PhyloTreeThreadingContext& context) {
+    TimeKeeper overall("optimizing");
+    TimeKeeper initializing("initializing");
+    
+    initializing.start();
+    //Clone all the nodes that correspond to the placement region,
+    //and build a map from the node (ids) back to those nodes
+    //(that's map_to_real_node).
+    //Clone all the target branches too (but with new branch numbers,
+    //between the cloned nodes and cloned branches)
+    //and construct a mapping to the IDs of targets in
+    //TargetBranchRange (that's fake_to_real_branch_id).
+    
+    //1. Set up local_targets (subset copy of targets)
+    //   This takes time proportional to B (the number of
+    //   branches that will be in local_targets).
+    //
+    std::vector<size_t> fake_to_real_branch_id;
+    TargetBranch&  tb = targets[region_target_index];
+    targets.getFinalReplacementBranchIndexes(region_target_index, fake_to_real_branch_id);
+    TargetBranchRange local_targets(targets, fake_to_real_branch_id);
+
+    //2. Find out which nodes are referenced by local_targets.
+    //   (and bring the boundary nodes to the front! of the array!)
+    //   This ought to be *very* quick indeed.
+    //
+    NodeVector real_nodes;
+    local_targets.getNodes(real_nodes);
+    std::partition(real_nodes.begin(), real_nodes.end(),
+                   [tb](Node* n) { return n==tb.first || n==tb.second; });
+
+    //3. Set up mappings (id #s to nodes), set up
+    //   local nodes (they point to entries in a sequential
+    //   array, fake_nodes).  This does 2N inserts into maps.
+    std::map<int, PhyloNode*> map_to_real_node;
+    std::map<int, PhyloNode*> map_to_fake_node;
+    std::vector<PhyloNode> fake_nodes;
+    intptr_t node_count = real_nodes.size();
+    fake_nodes.resize(node_count);
+    for (intptr_t i=0; i<node_count; ++i) {
+        int node_id               = real_nodes[i]->id;
+        map_to_real_node[node_id] = (PhyloNode*)real_nodes[i];
+        map_to_fake_node[node_id] = &fake_nodes[i];
+        fake_nodes[i].id          = node_id;
+    }
+    
+    //4. Copy subtree structure (neighbor relationships)
+    //   from the nodes in the target region in the
+    //   original tree (EXCEPT those referring to nodes
+    //   that are *outside* the region of interest).
+    //   (the "EXCEPT" leaves any local copy, of a boundary
+    //   node that was an interior node (in the tree),
+    //   into an exterior node (in the sub-region copy).
+    //
+    //   This does N node map lookups (ouch!) but they can
+    //   be done in parallel, because each each "i" only adds
+    //   neighbors to the ith fake node (that match the ith
+    //   real one).  And read-only map lookups may execute
+    //   in parallel.
+    //
+    #ifdef _OPENMP
+    #pragma omp parallel for
+    #endif
+    for (intptr_t i=0; i<node_count; ++i) {
+        FOR_EACH_PHYLO_NEIGHBOR(real_nodes[i], nullptr, it, real_nei) {
+            PhyloNode* real_adjacent = real_nei->getNode();
+            auto fake_it = map_to_fake_node.find(real_adjacent->id);
+            if (fake_it != map_to_fake_node.end()) {
+                fake_nodes[i].addNeighbor(fake_it->second, real_nei->length);
+                PhyloNeighbor* fake_nei = fake_nodes[i].lastNeighbor();
+                fake_nei->copyComputedState(real_nei);
+            }
+        }
+    }
+    
+    //5. Remap node references from local_targets to fake nodes
+    //   And, remap all branch numbers, between fake nodes,
+    //   so that they are now mapped back to branch ids in
+    //   local_targets.
+    //
+    //   This does 2B node map lookups (ouch!),
+    //   but it can do them in parallel, because the
+    //   *writes* are to the ids of the neighbors
+    //   between the bth branch's nodes (no overlaps!).
+    //
+    intptr_t branch_count = local_targets.size();
+    #ifdef _OPENMP
+    #pragma omp parallel for
+    #endif
+    for (intptr_t b=0; b<branch_count; ++b) {
+        TargetBranch& branch = local_targets.at(b);
+        branch.first  = map_to_fake_node[branch.first->id];
+        branch.second = map_to_fake_node[branch.second->id];
+        PhyloNeighbor* left_nei  = branch.first->findNeighbor(branch.second);
+        PhyloNeighbor* right_nei = branch.second->findNeighbor(branch.first);
+        left_nei->id = right_nei->id = static_cast<int>(b);
+    }
+    initializing.stop();
+
+    optimizeSubtreeParsimony<ParsimonySPRMove>(s, local_targets,
+                                               per_thread_path_parsimony,
+                                               context, overall, initializing);
+
+    TimeKeeper copying("copying subtree back");
+    copying.start();
+    //Copy subtree state back!  Most of this can be done in parallel (!)
+    //1. Copy for all (N-2) nodes that aren't boundary nodes.
+    //This requires (N-2)+2B look-ups of real nodes (via map_to_real_node)
+    //((N-2) for the nodes, 2B for the neighbors at each end of each branch),
+    //but the look-ups are done in parallel.
+    //
+    intptr_t fake_node_count = map_to_fake_node.size();
+    #ifdef _OPENMP
+    #pragma omp parallel for
+    #endif
+    for (intptr_t fake_node_index = 2; fake_node_index < fake_node_count;
+         ++fake_node_index) {
+        //Copy state for nodes in the *interior* of the subtree
+        PhyloNode* fake = &fake_nodes[fake_node_index];
+        PhyloNode* real = map_to_real_node[fake->id];
+        int   nei_count = real->neighbors.size();
+        ASSERT(nei_count == fake->neighbors.size());
+        for (int nei_no = 0; nei_no < nei_count; ++nei_no) {
+            PhyloNeighbor* fake_nei = fake->getNeighborByIndex(nei_no);
+            PhyloNeighbor* real_nei = real->getNeighborByIndex(nei_no);
+            real_nei->copyComputedState(fake_nei);
+            real_nei->node = map_to_real_node[fake_nei->node->id];
+            real_nei->id   = fake_to_real_branch_id[fake_nei->id];
+        }
+    }
+    //2. Copy for the 2 boundary nodes.
+    //   This requires (at most) 8 node lookups (it requires only 6
+    //   if one of the boundary nodes is, in the real tree, a leaf node)
+    for (intptr_t fake_node_index =0; fake_node_index < 2; ++fake_node_index) {
+        //Copy state for subtree *boundary* nodes
+        PhyloNode*     fake          = &fake_nodes[fake_node_index];
+        PhyloNode*     real          = map_to_real_node[fake->id];
+        PhyloNeighbor* fake_nei      = fake->firstNeighbor();
+        PhyloNode*     fake_adjacent = fake_nei->getNode();
+        for (Neighbor* real_nei : real->neighbors) {
+            PhyloNeighbor* real_phylo_nei = (PhyloNeighbor*)real_nei;
+            PhyloNode*     real_adjacent  = real_phylo_nei->getNode();
+            if ( map_to_real_node.find(real_adjacent->id) !=
+                 map_to_real_node.end() ) {
+                //Each boundary node might have 3 neighbors
+                //but only one will correspond to a node in the
+                //region of interest.  And this one must be it!
+                real_phylo_nei->copyComputedState(fake_nei);
+                real_phylo_nei->node = map_to_real_node[fake_adjacent->id];
+                real_phylo_nei->id   = fake_to_real_branch_id[fake_nei->id];
+            }
+        }
+    }
+    copying.stop();
+}
+
+int  PhyloTree::renumberInternalNodes() {
+    //Reassign ids of internal nodes
+    NodeVector pnv;
+    this->getInternalNodes(pnv);
+    int first_old_interior_id = aln->getNSeq32();
+    #ifdef _OPENMP
+    #pragma omp parallel for
+    #endif
+    for (intptr_t i=0; i<pnv.size(); ++i) {
+        pnv[i]->id = first_old_interior_id + i;
+    }
+    return first_old_interior_id + static_cast<int>(pnv.size());
+}
+
 void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
                                  bool be_quiet) {
     //
@@ -245,6 +425,15 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
         //          L       R
         //           x(-2)-x
     
+#if (OPTIMIZE_PLACEMENT_SUBTREES)
+    intptr_t spr_radius = 10;
+    intptr_t blocksPerThread = ParsimonySPRMove::getParsimonyVectorSize(spr_radius);
+    intptr_t threadsNeeded   = ParsimonySPRMove::getMinimumPathVectorCount();
+    intptr_t threadCount     = PhyloTreeThreadingContext::getMaximumThreadCount();
+    ParsimonyPathVector pv(blocksPerThread, threadsNeeded, threadCount);
+    intptr_t spr_blocks      = pv.getTotalNumberOfBlocksRequired();
+    extra_parsimony_blocks  += spr_blocks;
+#endif
     
     int extra_lh_blocks = trackLikelihood
                           ? (target_branch_count + additional_sequences * 4)
@@ -258,9 +447,28 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
     double   estimate     = newTaxaCount * 3.0;
     initProgress(estimate, "Adding new taxa to tree", "", "");
 
+    TimeKeeper overall      ("optimizing");
+    TimeKeeper initializing ("initializing");
+    
+    overall.start();
+    initializing.start();
     pr.prepareForPlacementRun();
     pr.setUpAllocator(extra_parsimony_blocks, trackLikelihood, extra_lh_blocks);
     
+    #if (OPTIMIZE_PLACEMENT_SUBTREES)
+        TimeKeeper optimizing("optimizing");
+        //Allocate per-thread parsimony vector work areas used to calculate
+        //modified parsimony scores along the path between the
+        //pruning and regrafting points.
+        auto num_path_vectors = pv.getNumberOfPathsRequired();
+        pv.resize(num_path_vectors);
+        for (int vector=0; vector<num_path_vectors; ++vector) {
+            pr.block_allocator->allocateVectorOfParsimonyBlocks
+                (blocksPerThread, pv[vector]);
+        }
+    #endif
+    initializing.stop();
+
     double setUpStartTime = getRealTime();
     
     LOG_LINE ( VB_DEBUG, "Before allocating TaxonToPlace array"
@@ -268,17 +476,19 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
               << pr.block_allocator->getLikelihoodBlockCount() );
     
     TypedTaxaToPlace<TaxonTypeInUse> candidates(newTaxaCount);
+    int first_new_interior_id = renumberInternalNodes();
     for (intptr_t i=0; i<newTaxaCount; ++i) {
         int         taxonId   = taxaIdsToAdd[i];
-        std::string taxonName = aln->getSeqName(taxonId);
-        candidates.emplace_back(pr.block_allocator, taxonId, taxonName, true);
+        std::string taxonName = aln->getSeqName(taxonId);        
+        candidates.emplace_back(pr.block_allocator, first_new_interior_id+i,
+                                taxonId, taxonName, true);
     }
     #ifdef _OPENMP
     #pragma omp parallel for
     #endif
     for (intptr_t i=0; i<newTaxaCount; ++i) {
         candidates[i].computeParsimony(this);
-        if ((i%1000) == 0) {
+        if ((i%1000) == 999) {
             trackProgress(1000.0);
         }
     }
@@ -328,14 +538,73 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
             
             insertTime.start();
             pr.startBatchInsert();
-            for ( size_t i = batchStart; i<insertStop; ++i) {
-                pr.insertTaxon(candidates, i, targets, spare_blocks);
-                if ((pr.taxa_inserted_in_total % 1000) == 0) {
-                    trackProgress(1000.0);
-                }
-            }
 
-            insertTime.stop();
+            //Group inserts by target branch (the cache
+            //works better, if they're grouped in this way!).
+            class Insert {
+            public:
+                size_t                   candidate_index; //which one
+                size_t                   target_index;    //goes where
+                const PossiblePlacement* placement;       //with what score
+                bool operator < ( const Insert& rhs) const {
+                    if (target_index < rhs.target_index) return true;
+                    if (rhs.target_index < target_index) return false;
+                    return (*placement < *rhs.placement);
+                }
+                bool operator <= ( const Insert& rhs) const {
+                    if (target_index < rhs.target_index) return true;
+                    if (rhs.target_index < target_index) return false;
+                    return (*placement <= *rhs.placement);
+                }
+            };
+            std::vector<Insert> inserts;
+            inserts.resize(insertStop-batchStart);
+            for ( int i = batchStart; i < insertStop; ++i) {
+                Insert& insert         = inserts[i-batchStart];
+                insert.candidate_index = i;
+                insert.placement       = &candidates[i].getBestPlacement();
+                insert.target_index    = insert.placement->getTargetIndex();
+            }
+            std::sort(inserts.begin(), inserts.end());
+            size_t j = 0;
+            while ( j < inserts.size() ) {
+                size_t h = j;
+                for (++j; j<inserts.size(); ++j) {
+                    if (inserts[j-1].target_index != inserts[j].target_index) {
+                        break;
+                    }
+                }
+                //Insert candidates h through j-1
+                for (size_t i=h; i<j; ++i) {
+                    Insert& insert = inserts[i];
+                    pr.insertTaxon(candidates, insert.candidate_index,
+                                   targets, spare_blocks);
+                    if ((pr.taxa_inserted_in_total % 1000) == 0) {
+                        trackProgress(1000.0);
+                    }
+                }
+                #if (OPTIMIZE_PLACEMENT_SUBTREES)
+                if (1<j-h) {
+                    optimizing.start();
+                    //Run SPR optimization on all of the taxa that
+                    //targeted the same branch (between front and back)
+                    ParsimonySearchParameters s;
+                    s.name                       = "SPR";
+                    s.iterations                 = 3;
+                    s.lazy_mode                  = false;
+                    s.radius                     = spr_radius;
+                    s.calculate_connection_costs = true;
+                    s.be_quiet                   = true;
+                    auto max_out_threads = params->parsimony_uses_max_threads;
+                    PhyloTreeThreadingContext context(*this, max_out_threads);
+                    optimizePlacementRegion(s, targets,
+                                            inserts[h].target_index,
+                                            pv, context);
+                    optimizing.stop();
+                }
+                #endif
+            }
+            insertTime.stop(); //includes optimisation time
             
             optoTime.start();
             pr.doneBatch(candidates, batchStart, batchStop, targets);

@@ -14,6 +14,26 @@
 #include "parsimonymove.h"
 
 
+ParsimonyPathVector::ParsimonyPathVector
+    ( intptr_t blocks, intptr_t min_threads, intptr_t threads_to_use )
+    : pv_per_thread(blocks), min_thread_count(min_threads), thread_count(threads_to_use) {
+    ASSERT(0<=pv_per_thread);
+    ASSERT(1<=min_threads);
+    ASSERT(1<=threads_to_use);
+}
+
+intptr_t ParsimonyPathVector::getBlocksPerThread() const {
+    return pv_per_thread;
+}
+
+intptr_t ParsimonyPathVector::getNumberOfPathsRequired() const {
+    return (thread_count < min_thread_count) ? min_thread_count : thread_count;
+}
+
+intptr_t ParsimonyPathVector::getTotalNumberOfBlocksRequired() const {
+    return getNumberOfPathsRequired() * pv_per_thread;
+}
+
 ParsimonyMove::ParsimonyMove(): lazy(false), benefit(-1.0)
                               , source_branch_id(-1)
                               , positions_considered(0) {

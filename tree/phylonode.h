@@ -163,7 +163,9 @@ public:
 
     bool hasNeighbor(PhyloNode* node);
     
-    PhyloNeighbor* firstNeighbor();
+    virtual PhyloNeighbor* firstNeighbor() const;
+    
+    virtual PhyloNeighbor* lastNeighbor() const;
 
     PhyloNeighbor* getNeighborByIndex(size_t index);
     
@@ -271,12 +273,12 @@ public:
         @param dad dad of this neighbor
      */
     void clearForwardPartialLh(PhyloNode *dad);
-
+    
 	/**
 	* For Upper Bounds analysis: get partial likelihood and lh scale factor
 	*/
 	double* get_partial_lh(){
-	return partial_lh;
+        return partial_lh;
 	}
 
 	double get_lh_scale_factor(){
@@ -299,7 +301,7 @@ public:
         return size;
     }
     
-    virtual PhyloNode* getNode() const {
+    PhyloNode* getNode() const {
         return (PhyloNode*)node;
     }
     
@@ -335,6 +337,13 @@ public:
     void clearComputedFlags() {
         partial_lh_computed = 0;
     }
+
+    /**
+     copy partial likelihood and partial parsimony information
+     from another PhyloNeighbor.
+     */
+    void copyComputedState(const PhyloNeighbor* donor);
+
 
 
 private:

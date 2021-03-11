@@ -253,7 +253,7 @@ void TargetBranch::takeOwnershipOfReplacementVector(ReplacementBranchList* branc
     replacements = branches;
 }
 
-ReplacementBranchList* TargetBranch::getReplacements() {
+ReplacementBranchList* TargetBranch::getReplacements() const {
     return replacements;
 }
 
@@ -274,7 +274,44 @@ TargetBranchRange::TargetBranchRange(PhyloTree& phylo_tree, BlockAllocator* b,
         phylo_tree.logLine(s1.str());
     }
     for (int i=0; i<v1.size(); ++i) {
-        emplace_back(b, v1[i], v2[i], calculator->usesParsimony(), calculator->usesLikelihood());
+        emplace_back(b, v1[i], v2[i],
+                     calculator->usesParsimony(),
+                     calculator->usesLikelihood());
+    }
+}
+
+TargetBranchRange::TargetBranchRange(const TargetBranchRange& tbr,
+                                     const std::vector<size_t>& indicesOfSubset) {
+    for (size_t i : indicesOfSubset) {
+        emplace_back(tbr.at(i));
+    }
+    for (TargetBranch& b : *this) {
+        if (b.replacements != nullptr ) {
+            //it's a pointer to a vector of TargetBranchRef
+            //instances, which will return to tbr, which we
+            //don't want.  Besides which, the indices are into tbr
+            //rather than into (this).  Ditch all that!  Or, better yet,
+            //throw.  Since it shouldn't ever happen.
+            ASSERT(0 && "replaced branches shouldn't be copied between ranges");
+            delete b.replacements;
+            b.replacements = nullptr;
+        }
+        b.used = false;
+    }
+}
+
+
+void TargetBranchRange::getNodes(NodeVector& vec) const {
+    std::set<PhyloNode*> seen;
+    for (int r = 0; r < size(); ++r ) {
+        PhyloNode* first = at(r).first;
+        if (seen.insert(first).second) {
+            vec.push_back(first);
+        }
+        PhyloNode* second = at(r).second;
+        if (seen.insert(second).second) {
+            vec.push_back(second);
+        }
     }
 }
 
@@ -308,6 +345,36 @@ void TargetBranchRange::reload(const PhyloTree& phylo_tree) {
     }
 }
 
+void TargetBranchRange::getFinalReplacementBranchIndexes(intptr_t top_index,
+                                                     std::vector<size_t> &ids) const {
+    ids.clear();
+    const TargetBranch& top = at(top_index);
+    if (top.getReplacements() == nullptr) {
+        return;
+    }
+    ReplacementBranchList next_layer;
+    for (TargetBranchRef& branch : *(top.getReplacements())) {
+        next_layer.push_back(branch);
+    }
+    while (!next_layer.empty()) {
+        ReplacementBranchList current_layer;
+        std::swap(current_layer, next_layer);
+        for (TargetBranchRef& branch : current_layer) {
+            TargetBranch* b = branch.getTarget();
+            ReplacementBranchList* reps = b->getReplacements();
+            if (reps==nullptr) {
+                ids.push_back(branch.getTargetIndex());
+            } else {
+                ASSERT(!reps->empty());
+                for (TargetBranchRef& rep_branch : *reps) {
+                    next_layer.push_back(rep_branch);
+                }
+            }
+        }
+    }
+}
+
+
 TargetBranchRef::TargetBranchRef(): target_range(nullptr), target_index(0) {}
 
 TargetBranchRef::TargetBranchRef(const TargetBranchRef& r)
@@ -339,7 +406,14 @@ PhyloNode* TargetBranchRef::getSecond() const {
     return target_range->at(target_index).second;
 }
 
-TargetBranch* TargetBranchRef::getTarget() const {
+const TargetBranch* TargetBranchRef::getTarget() const {
+    if (target_range == nullptr) {
+        return nullptr;
+    }
+    return &target_range->at(target_index);
+}
+
+TargetBranch* TargetBranchRef::getTarget() {
     if (target_range == nullptr) {
         return nullptr;
     }
@@ -355,7 +429,8 @@ TargetBranchRef TargetBranchRange::addNewRef(BlockAllocator& allocator,
                                              PhyloNode* node1, PhyloNode* node2,
                                              bool likelihood_wanted) {
     size_t index /*of added target branch*/ = size();
-    emplace_back(&allocator, node1, node2, true, likelihood_wanted);
+    emplace_back(&allocator, node1, node2, true,
+                 likelihood_wanted);
     back().computeState(allocator.getTree(), -1, index, blocks);
     return TargetBranchRef(this, index);
 }
