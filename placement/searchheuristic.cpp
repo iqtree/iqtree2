@@ -77,8 +77,9 @@ void BaseballSearchHeuristic::prepareToFilter(PhyloTree& tree, TargetBranchRange
     Matrix<double> scores;
     scores.setDimensions( stopTarget-startTarget, stopTaxon-startTaxon);
     LikelihoodBlockPairs blocks(2);
+    double parsimony_score = -1.0;
     for (intptr_t t = startTarget; t<stopTarget; ++t ) { //branch
-        targets.getTargetBranch(t)->computeState(tree, -1, t, blocks);
+        targets.getTargetBranch(t)->computeState(tree, parsimony_score, t, blocks);
         double* scoreRow = scores.getRow(t-startTarget);
         #ifdef _OPENMP
         #pragma omp parallel for

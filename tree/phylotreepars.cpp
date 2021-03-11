@@ -1326,20 +1326,12 @@ int PhyloTree::computeParsimonyTreeBatch(const char *out_prefix,
     int parsimony_score = computeParsimony();
 
     std::vector<intptr_t> sizes;
-    intptr_t growth_rate = 10;
-    for (intptr_t n = taxon_order.size();
-         3 < n; n /= growth_rate ) {
+    intptr_t n = taxon_order.size();
+    while (3 < n ) {
         sizes.push_back(n);
-        //note: growth_rate should be approximately
-        //      pow(n, 1/3.0).  If placement "tiebreaking"
-        //      were more efficient (e.g. recursively
-        //      defined), then growth_rate should be ~
-        //      approximately proportional to
-        //      pow(n, phi-1), where phi's the golden mean,
-        //      phi = (1.0 + sqrt(5.0))/2.0.
+        n = (intptr_t)floor(sqrt(n));
     }
-    
-    intptr_t n           = 3;
+    n = 3;
     intptr_t taxon_count = taxon_order.size();
     do {
         intptr_t p = sizes.back();
@@ -1357,7 +1349,6 @@ int PhyloTree::computeParsimonyTreeBatch(const char *out_prefix,
         //(so that parsimony SPR won't dominate).
         parsimony_score = doParsimonySPR(3, false, radius, true);
         n = p;
-        p = n * growth_rate;
     }
     while ( n < taxon_count );
 

@@ -95,6 +95,7 @@ class TargetBranch : public std::pair<PhyloNode*, PhyloNode*> {
     double          connection_cost;     //The cost of adding a node in the middle of the branch
     double          branch_cost;         //The branch cost (typically, the parsimony score) of
                                          //the first<-->second branch).
+    int             parsimony_dirtiness; //becomes >0 if connection_cost needs to be recalculated
     double*         partial_lh;
     UBYTE*          scale_num;
     mutable double  branch_lh_scale_factor;
@@ -112,7 +113,7 @@ public:
                  PhyloNode* node1, PhyloNode* node2,
                  bool parsimony_wanted, bool likelihood_wanted);
     double computeState (PhyloTree& phylo_tree,
-                         double tree_parsimony_score,
+                         double& tree_parsimony_score,
                          intptr_t target_branch_index,
                          LikelihoodBlockPairs &blocks);
     void   dumpNeighbor (VerboseMode level, const char* prefix,

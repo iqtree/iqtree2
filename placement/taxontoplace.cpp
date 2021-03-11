@@ -162,7 +162,7 @@ void TaxonToPlace::insertIntoTree(PhyloTree& phylo_tree, BlockAllocator& b,
     down->length         = bestPlacement.lenToNewTaxon;
     PhyloNeighbor* up    = new_leaf->findNeighbor(new_interior);
     up->length           = bestPlacement.lenToNewTaxon;
-    target->handOverComputedStateTo( up);
+    target->handOverComputedStateTo(up);
     up->clearComputedFlags();
 
     new_interior->addNeighbor(node_2, bestPlacement.lenToNode2 );
@@ -222,6 +222,7 @@ void TaxonToPlace::assessNewTargetBranches(PhyloTree& phylo_tree,
     std::vector< ReplacementBranchList* > stack;
     stack.push_back(reps);
     LikelihoodBlockPairs blocks(2);
+    double parsimony_score = -1.0;
     while (!stack.empty()) {
         reps = stack.back();
         stack.pop_back();
@@ -231,14 +232,20 @@ void TaxonToPlace::assessNewTargetBranches(PhyloTree& phylo_tree,
             } else {
                 PossiblePlacement p;
                 p.setTargetBranch(*it);
-                it->getTarget()->computeState(phylo_tree, -1, p.getTargetIndex(), blocks);
-                calculator.assessPlacementCost(phylo_tree, *this, p);
+                it->getTarget()->computeState(phylo_tree, parsimony_score,
+                                              p.getTargetIndex(), blocks);
                 scores.emplace_back(p);
             }
         }
     }
+    intptr_t score_count = scores.size();
+    #ifdef _OPENMP
+    #pragma omp parallel for
+    #endif
+    for (intptr_t t = 0 ; t < score_count; ++ t) {
+        calculator.assessPlacementCost(phylo_tree, *this, scores[t]);
+    }
 }
-
 
 LessFussyTaxon::LessFussyTaxon() : super() { }
 LessFussyTaxon::LessFussyTaxon(const LessFussyTaxon& rhs) = default; //copy everything!

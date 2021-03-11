@@ -323,16 +323,16 @@ double ParsimonyLazyTBRMove::apply
     updateBranch ( branches, branch_ids[4], nodes[8], nodes[3]); //ED becomes ID
     updateBranch ( branches, branch_ids[5], nodes[9], nodes[3]); //FD becomes JD
 
-    double score = -1;
+    parsimony_score = -1;
     for (int i=0; i<7; ++i) {
         auto id = branch_ids[i];
         TargetBranch& branch = branches[id];
-        score = branch.computeState(tree, score, id, blocks);
+        branch.computeState(tree, parsimony_score, id, blocks);
         branch.setParsimonyLength(tree);
     }
     TREE_LOG_LINE(tree, VB_MAX, "Updated parsimony score"
-                  << " after applying TBR move was " << score);
-    return score;
+                  << " after applying TBR move was " << parsimony_score);
+    return parsimony_score;
 }
 /*static*/ intptr_t ProperParsimonyTBRMove::getParsimonyVectorSize(intptr_t radius) {
     return radius+1;

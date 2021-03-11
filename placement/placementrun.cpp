@@ -91,6 +91,7 @@ double PlacementRun::doBatchPlacementCosting(TaxaToPlace& candidates,
     size_t targetCount = targets.size();
     heuristic->prepareToFilter(phylo_tree, targets, 0, targetCount ,
                                candidates, batchStart, batchStop);
+    double parsimony_score = -1;
 
 #if (NEW_TAXON_MAJOR)
      
@@ -98,7 +99,7 @@ double PlacementRun::doBatchPlacementCosting(TaxaToPlace& candidates,
     LikelihoodBlockPairs blocks(2);
     for (int t=0; t<targets; ++t) {
         TargetBranch* target = targets.getTargetBranch(t);
-        target->computeState(phylo_tree, -1, t, blocks);
+        target->computeState(phylo_tree, parsimony_score, t, blocks);
     }
     refreshTime += getRealTime() - refreshStart;
 
@@ -132,7 +133,7 @@ double PlacementRun::doBatchPlacementCosting(TaxaToPlace& candidates,
         }
         
         double computeStart = getRealTime();
-        target->computeState(phylo_tree, -1, t, blocks);
+        target->computeState(phylo_tree, parsimony_score, t, blocks);
         refreshTime += getRealTime() - computeStart;
         
         target->costPlacementOfTaxa(phylo_tree,
