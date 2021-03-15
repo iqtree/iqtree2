@@ -64,7 +64,6 @@ class ParsimonySearchParameters;
 class TargetBranchRange;
 class ParsimonyPathVector;
 class PhyloTreeThreadingContext;
-class TimeKeeper;
 
 #define BOOT_VAL_FLOAT
 #define BootValType float
@@ -1713,18 +1712,16 @@ public:
     int  doParsimonyHybrid();
     
     template <class Move>
-    int doParsimonySearch(const ParsimonySearchParameters& s);
+    int doParsimonySearch(ParsimonySearchParameters& s);
     
     
     template <class Move>
-    int optimizeSubtreeParsimony(const ParsimonySearchParameters& s,
+    int optimizeSubtreeParsimony(ParsimonySearchParameters& s,
                                  TargetBranchRange& targets,
                                  ParsimonyPathVector& per_thread_path_parsimony,
-                                 PhyloTreeThreadingContext& context,
-                                 TimeKeeper& overall,
-                                 TimeKeeper& initializing);
+                                 PhyloTreeThreadingContext& context);
     
-    void optimizePlacementRegion(const ParsimonySearchParameters& s,
+    void optimizePlacementRegion(ParsimonySearchParameters& s,
                                 TargetBranchRange& targets,
                                 size_t region_target_index,
                                 ParsimonyPathVector& per_thread_path_parsimony,

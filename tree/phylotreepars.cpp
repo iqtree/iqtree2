@@ -1343,11 +1343,6 @@ int PhyloTree::computeParsimonyTreeBatch(const char *out_prefix,
         }
         LOG_LINE(VB_MIN, "Expanding tree to " << p << " taxa");
         addNewTaxaToTree(taxa_this_time, true);
-        int radius = 1 + (int) floor( log(p) );
-        //Eventually, radius should probably be
-        //(phi-1)*log(p)/log(2) or less,
-        //(so that parsimony SPR won't dominate).
-        parsimony_score = doParsimonySPR(3, false, radius, true);
         n = p;
     }
     while ( n < taxon_count );
@@ -1568,7 +1563,6 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix,
     if (nseq < 3) {
         outError(ERR_FEW_TAXA);
     }
-
     IntVector taxon_order;
     taxon_order.reserve(aln->getNSeq());
     
@@ -1588,7 +1582,7 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix,
         // first copy the constraint tree
         double copyStart = getRealTime();
         copyConstraintTree(&constraintTree, taxon_order, rand_stream);
-        LOG_LINE( VB_MED, "Time to copy constraint tree "
+        LOG_LINE(VB_MED, "Time to copy constraint tree "
                  << (getRealTime()-copyStart) << " secs");
         
         newNodeID = nodeNum + static_cast<int>(nseq-leafNum);
@@ -1767,9 +1761,9 @@ void PhyloTree::extractBifurcatingSubTree(PhyloNeighborVec& removed_nei,
                                           int *rand_stream) {
     PhyloNodeVector nodes;
     getMultifurcatingNodes(nodes);
-    if (nodes.empty())
+    if (nodes.empty()) {
         return;
-    
+    }
     int i;
     
     computeBranchDirection();

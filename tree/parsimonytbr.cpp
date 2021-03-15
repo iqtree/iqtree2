@@ -450,9 +450,8 @@ int PhyloTree::doParsimonyTBR() {
     if (leafNum<6) {
         return computeParsimony();
     }
-    ParsimonySearchParameters s;
+    ParsimonySearchParameters s("TBR");
         
-    s.name                       = "TBR";
     s.iterations                 = params->parsimony_tbr_iterations;
     s.lazy_mode                  = params->use_lazy_parsimony_tbr;
     s.radius                     = params->tbr_radius;

@@ -122,7 +122,6 @@ public:
                          PhyloNode* updated_first,
                          PhyloNode* updated_second,
                          bool clearReverseParsimony);
-    void forgetState()            const;
     bool isUsedUp()               const;
     void handOverComputedStateTo(PhyloNeighbor* nei) ;
     UINT*   getParsimonyBlock()   const;
@@ -198,6 +197,7 @@ public:
     TargetBranchRef addNewRef(BlockAllocator& allocator,
                               LikelihoodBlockPairs& blocks,
                               PhyloNode* node1, PhyloNode* node2,
+                              double& parsimony_score,
                               bool likelihood_wanted);
     void reload(const PhyloTree& phylo_tree);
     void getFinalReplacementBranchIndexes(intptr_t top_index,

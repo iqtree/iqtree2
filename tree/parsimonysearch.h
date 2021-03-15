@@ -11,7 +11,7 @@
 #include <placement/placementcostcalculator.h> //for ParsimonyCostCalculator
 
 template <class Move>
-int PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
+int PhyloTree::doParsimonySearch(ParsimonySearchParameters& s) {
     //
     //The "big picture" steps, after initialization is done
     //  1. Evaluation (scoring possible moves) (in parallel).
@@ -42,9 +42,9 @@ int PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
     int      index_parsimony = 0;
     
     std::string task_name    = "Looking for parsimony " + s.name + " moves";
-
-    TimeKeeper overall      (task_name.c_str());
-    TimeKeeper initializing ("initializing");
+    if (s.overall.activity.empty()) {
+        s.overall.activity = task_name.c_str();
+    }
 
     double work_estimate = (double)branch_count * ((double)s.iterations * 2.5 + 1.0);
     //assumes that:
@@ -58,8 +58,8 @@ int PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
     
     initProgress(work_estimate, task_name.c_str(), "", "");
 
-    overall.start();
-    initializing.start();
+    s.overall.start();
+    s.initializing.start();
     
     PhyloTreeThreadingContext context(*this, params->parsimony_uses_max_threads);
     deleteAllPartialLhAndParsimony();
@@ -99,23 +99,18 @@ int PhyloTree::doParsimonySearch(const ParsimonySearchParameters& s) {
             per_thread_path_parsimony[vector]);
     }
         
-    initializing.stop();
-    return optimizeSubtreeParsimony<Move>
-           (s, targets, per_thread_path_parsimony,
-            context, overall, initializing);
+    s.initializing.stop();
+    int rc = optimizeSubtreeParsimony<Move>
+           (s, targets, per_thread_path_parsimony, context);
+    doneProgress();
+    return rc;
 }
 
 template <class Move>
-int PhyloTree::optimizeSubtreeParsimony(const ParsimonySearchParameters& s,
+int PhyloTree::optimizeSubtreeParsimony(ParsimonySearchParameters& s,
                                         TargetBranchRange& targets,
                                         ParsimonyPathVector& per_thread_path_parsimony,
-                                        PhyloTreeThreadingContext& context,
-                                        TimeKeeper& overall,
-                                        TimeKeeper& initializing) {
-    TimeKeeper rescoring    ("rescoring parsimony");
-    TimeKeeper evaluating   ("evaluating " + s.name + " moves");
-    TimeKeeper sorting      ("sorting " + s.name + " moves");
-    TimeKeeper applying     ("applying " + s.name + " moves");
+                                        PhyloTreeThreadingContext& context) {
 
     intptr_t branch_count        = targets.size();
     
@@ -125,11 +120,11 @@ int PhyloTree::optimizeSubtreeParsimony(const ParsimonySearchParameters& s,
     int64_t positions_considered = 0;
     double parsimony_score;
     for (intptr_t iteration=1; iteration<=s.iterations; ++iteration) {
-        rescoring.start();
+        s.rescoring.start();
         parsimony_score = computeParsimony("Determining two-way parsimony", true, true,
                                            targets[0].first->findNeighbor(targets[0].second),
                                            targets[0].first);
-        rescoring.stop();
+        s.rescoring.stop();
         if (!s.be_quiet) {
             if (iteration==1) {
                 LOG_LINE(VB_MIN, "Before doing (up to) "
@@ -144,7 +139,7 @@ int PhyloTree::optimizeSubtreeParsimony(const ParsimonySearchParameters& s,
                          << " (parsimony now " << parsimony_score << ")");
             }
         }
-        evaluating.start();
+        s.evaluating.start();
         LikelihoodBlockPairs dummyBlocks;
         
         LOG_LINE(VB_DEBUG, "Computing branch initial states");
@@ -180,17 +175,17 @@ int PhyloTree::optimizeSubtreeParsimony(const ParsimonySearchParameters& s,
             positions_considered += move.positions_considered;
         }
         trackProgress(static_cast<double>(branch_count % 100));
-        evaluating.stop();
+        s.evaluating.stop();
         
         LOG_LINE(VB_DEBUG, "sorting " << s.name << " moves");
-        sorting.start();
+        s.sorting.start();
         auto first         = moves.begin();
         auto firstNegative = std::partition(first, moves.end(),
                                             [](const Move& move) { return 0 < move.benefit; } );
         std::sort(first, firstNegative);
-        sorting.stop();
+        s.sorting.stop();
         
-        applying.start();
+        s.applying.start();
         moves_considered=firstNegative-first;
         LOG_LINE(VB_MAX, "Considering " << moves_considered
                  << " potentially beneficial " << s.name << " moves");
@@ -274,22 +269,24 @@ int PhyloTree::optimizeSubtreeParsimony(const ParsimonySearchParameters& s,
                 parsimony_score = revised_score;
                 ++moves_applied;
             }
-            trackProgress(work_step);
+            if (!s.be_quiet) {
+                trackProgress(work_step);
+            }
         }
-        applying.stop();
+        s.applying.stop();
         if (moves_applied==0) {
             break;
         }
     }
-    initializing.start();
-    deleteAllPartialParsimony();
-    initializing.stop();
+    s.initializing.start();
+    clearAllPartialParsimony(false);
+    s.initializing.stop();
     
-    rescoring.start();
+    s.rescoring.start();
     parsimony_score = computeParsimony("Determining one-way parsimony", false, true,
                                        targets[0].first->findNeighbor(targets[0].second),
                                        targets[0].first);
-    rescoring.stop();
+    s.rescoring.stop();
     
     if (!s.be_quiet) {
         LOG_LINE(VB_MIN, "Applied " << moves_applied << " move"
@@ -301,23 +298,10 @@ int PhyloTree::optimizeSubtreeParsimony(const ParsimonySearchParameters& s,
                  << " (total " << s.name << " moves examined "
                  << positions_considered << ")");
     }
-    
-    doneProgress();
-    overall.stop();
-    
-    if (VB_MED <= verbose_mode && !s.be_quiet) {
-        hideProgress();
-        std::cout.precision(4);
-        if (!progress_display::getProgressDisplay()) {
-            overall.report();
-        }
-        initializing.report();
-        rescoring.report();
-        evaluating.report();
-        sorting.report();
-        applying.report();
-        showProgress();
-    }
-    
+    s.overall.stop();
+    hideProgress();
+    s.report();
+    showProgress();
+
     return (int)floor(parsimony_score);
 }

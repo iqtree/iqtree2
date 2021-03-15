@@ -117,6 +117,18 @@ public:
     
     virtual void forgetGazumpedPlacements();
     
+    /** examine places where this taxon could go into the tree,
+        NEAR its preferred location.
+     @param phylo_tree the phylo tree
+     @param b the BlockAllocator (needed, when adding new branches
+     @param blocks [Todo: explain]
+     @param dest the target branch range (new target branches)
+     @param calculator the PlacementCostCalculator (at present, only asked if uses likelihood!)*/
+    void findNewPlacement ( PhyloTree& phylo_tree, BlockAllocator& b,
+                            LikelihoodBlockPairs& blocks,
+                            TargetBranchRange& dest,
+                            PlacementCostCalculator& calculator );
+
     /** insert this taxon into the tree, NEAR its preferred location, marking the
         target branch of the chosen location as used, and add additional
         target branches (corresponding to each of the branches that are being

@@ -214,10 +214,6 @@ void TargetBranch::updateMapping(intptr_t branch_id,
     }
 }
 
-void TargetBranch::forgetState() const {
-    //Todo: Ditch partial_lh and scale_num, if this instance owns them.
-}
-
 bool TargetBranch::isUsedUp() const {
     return used;
 }
@@ -432,12 +428,13 @@ size_t TargetBranchRef::getTargetIndex() const {
 TargetBranchRef TargetBranchRange::addNewRef(BlockAllocator& allocator,
                                              LikelihoodBlockPairs& blocks,
                                              PhyloNode* node1, PhyloNode* node2,
+                                             double& parsimony_score,
                                              bool likelihood_wanted) {
     size_t index /*of added target branch*/ = size();
     emplace_back(&allocator, node1, node2, true,
                  likelihood_wanted);
-    double parsimony_score = -1;
     back().computeState(allocator.getTree(), parsimony_score, index, blocks);
+    back().setParsimonyLength(allocator.getTree());
     return TargetBranchRef(this, index);
 }
 

@@ -15,9 +15,23 @@
 #include "searchheuristic.h"         //for SearchHeuristic
 #include "placementoptimizer.h"      //for TaxonPlacementOptimizer (and others)
 #include "placementcostcalculator.h" //for PlacementCostCalculator
+#include <utils/timekeeper.h>        //for TimeKeeper
 
 #define NEW_TAXON_MAJOR     (0)
 #define TARGET_BRANCH_MAJOR (1)
+
+class TaxonPlacement {
+    //Used to group inserts by target branch (the cache
+    //works better, if they're grouped in this way!).
+public:
+    size_t                   candidate_index; //which one
+    size_t                   target_index;    //goes where
+    const PossiblePlacement* placement;       //with what score
+    bool operator <  ( const TaxonPlacement& rhs) const;
+    bool operator <= ( const TaxonPlacement& rhs) const;
+    TaxonPlacement();
+    TaxonPlacement(const TaxonPlacement& rhs) = default;
+};
 
 struct PlacementRun {
 public:
@@ -40,6 +54,14 @@ public:
     size_t                    taxa_inserted_nearby;   //taxa that couldn't be inserted at their
                                                       //preferred branch, but were inserted nearby
 
+    TimeKeeper overall;
+    TimeKeeper initializing;
+    TimeKeeper refreshTime;
+    TimeKeeper searchTime;
+    TimeKeeper rankingTime;
+    TimeKeeper insertTime;
+    TimeKeeper optoTime;
+
     PlacementRun(PhyloTree& tree, const IntVector& taxaIdsToAdd, bool be_silent);
     
     void setUpAllocator(int extra_parsimony_blocks, bool trackLikelihood=false,
@@ -53,10 +75,12 @@ public:
      @param candidates the taxa being added to the tree
      @param batchStart  the taxon index (index into candidates) for the first taxon in this batch
      @param batchStop one more than the taxon index for the last taxon in this batch
-     @return how long it took (in wall-clock seconds)*/
-    double doBatchPlacementCosting(TaxaToPlace& candidates,
+     @param refreshTime time spent refreshing parsimony (or likelihood)
+                        information will be recorded against this TimeKeeper instance
+     @param evaluationTime time spent evaluating placements will be recorded against this one */
+    void doBatchPlacementCosting(TaxaToPlace& candidates,
                                    size_t batchStart, size_t batchStop,
-                                   TargetBranchRange& targets);
+                                   TargetBranchRange& targets );
     
     /** decide which, of the taxa in a batch are to be inserted, and move them
        to the front of the batch.
@@ -69,6 +93,23 @@ public:
                                      size_t  batchStart, size_t batchStop,
                                      size_t& insertStop);
     void startBatchInsert();
+    
+    void doBatchInsert(TaxaToPlace& candidates,
+                       size_t  batchStart, size_t insertStop,
+                       LikelihoodBlockPairs& spare_blocks,
+                       double estimate_per_placement,
+                       TargetBranchRange& targets,
+                       ParsimonySearchParameters &s,
+                       ParsimonyPathVector &pv);
+    
+    void doPartOfBatchInsert(TaxaToPlace& candidates,
+                             std::vector<TaxonPlacement>& inserts,
+                             size_t  insertStart, size_t insertStop,
+                             LikelihoodBlockPairs& spare_blocks,
+                             double estimate_per_placement,
+                             TargetBranchRange& targets,
+                             ParsimonySearchParameters &s,
+                             ParsimonyPathVector &pv);
     
     /** insert a single taxon
      @param taxa the taxa being added to the tree
@@ -104,6 +145,7 @@ public:
     template <class T>
     void donePass(TypedTaxaToPlace<T>& candidates, size_t batchStart,
                   TargetBranchRange& targets) {
+        optoTime.start();
         targets.removeUsed();
         //Remove all the candidates that we were able to place
         TypedTaxaToPlace<T> oldCandidates;
@@ -126,12 +168,14 @@ public:
         TREE_LOG_LINE ( phylo_tree, VB_MAX, "At the end of this pass, index_lhs was "
                   << block_allocator->getLikelihoodBlockCount() << ", index_pars was "
                   << block_allocator->getParsimonyBlockCount());
+        optoTime.stop();
     }
 
     /** Log tree structures *near* the newly added taxa*/
     void logSubtreesNearAddedTaxa() const;
 
     void donePlacement();
+    void reportActivity() const;
 
     ~PlacementRun();
 };

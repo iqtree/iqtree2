@@ -16,13 +16,10 @@
 #include <placement/placementrun.h>
 #include <utils/timekeeper.h>
 #include <utils/timeutil.h>    //for getRealTime
-#include "parsimonyspr.h"   //for ParsimonySPRMove
+#include "parsimonyspr.h"      //for ParsimonySPRMove
+#include "parsimonymove.h"             //for ParsimonyPathVector
+#include "phylotreethreadingcontext.h" //for PhyloTreeThreadingContext
 
-#define OPTIMIZE_PLACEMENT_SUBTREES (0)
-#if (OPTIMIZE_PLACEMENT_SUBTREES)
-    #include "parsimonymove.h"  //for ParsimonyPathVector
-    #include "phylotreethreadingcontext.h" //for PhyloTreeThreadingContext
-#endif
 /****************************************************************************
  Stepwise addition (greedy) by maximum likelihood
  ****************************************************************************/
@@ -210,15 +207,14 @@ void PhyloTree::reinsertTaxaViaStepwiseParsimony(const IntVector& taxaIdsToAdd) 
 typedef TaxonToPlace TaxonTypeInUse;
 //typedef LessFussyTaxon TaxonTypeInUse;
 
-void PhyloTree::optimizePlacementRegion(const ParsimonySearchParameters& s,
+void PhyloTree::optimizePlacementRegion(ParsimonySearchParameters& s,
                                         TargetBranchRange& targets,
                                         size_t region_target_index,
                                         ParsimonyPathVector& per_thread_path_parsimony,
                                         PhyloTreeThreadingContext& context) {
-    TimeKeeper overall("optimizing");
-    TimeKeeper initializing("initializing");
-    
-    initializing.start();
+    //TimeKeeper copyingIn("Copying in");
+    //copyingIn.start();
+    s.initializing.start();
     //Clone all the nodes that correspond to the placement region,
     //and build a map from the node (ids) back to those nodes
     //(that's map_to_real_node).
@@ -311,14 +307,25 @@ void PhyloTree::optimizePlacementRegion(const ParsimonySearchParameters& s,
         PhyloNeighbor* right_nei = branch.second->findNeighbor(branch.first);
         left_nei->id = right_nei->id = static_cast<int>(b);
     }
-    initializing.stop();
+    //copyingIn.stop();
+    s.initializing.stop();
 
+    s.rescoring.start();
+    PhyloNode*     firstNode  = local_targets[0].first;
+    PhyloNode*     secondNode = local_targets[0].second;
+    PhyloNeighbor* firstNeigh = firstNode->findNeighbor(secondNode);
+    computeParsimony("Rescoring parsimony for subtree", true, false, firstNeigh, firstNode);
+    s.rescoring.stop();
+    
+    //TimeKeeper optimizing("optimizing");
+    //optimizing.start();
     optimizeSubtreeParsimony<ParsimonySPRMove>(s, local_targets,
                                                per_thread_path_parsimony,
-                                               context, overall, initializing);
-
-    TimeKeeper copying("copying subtree back");
-    copying.start();
+                                               context);
+    //optimizing.stop();
+    
+    //TimeKeeper copyingOut("copying subtree back");
+    //copyingOut.start();
     //Copy subtree state back!  Most of this can be done in parallel (!)
     //1. Copy for all (N-2) nodes that aren't boundary nodes.
     //This requires (N-2)+2B look-ups of real nodes (via map_to_real_node)
@@ -367,7 +374,14 @@ void PhyloTree::optimizePlacementRegion(const ParsimonySearchParameters& s,
             }
         }
     }
-    copying.stop();
+    //copyingOut.stop();
+    /*
+    LOG_LINE(VB_MIN, "Opt " << branch_count << " branches "
+             << "In "  << copyingIn.elapsed_wallclock_time << " " << copyingIn.elapsed_cpu_time
+             << "Opt " << optimizing.elapsed_wallclock_time << " " << optimizing.elapsed_cpu_time
+             << "Out " << copyingOut.elapsed_wallclock_time << " " << copyingOut.elapsed_cpu_time
+             );
+    */
 }
 
 int  PhyloTree::renumberInternalNodes() {
@@ -384,6 +398,8 @@ int  PhyloTree::renumberInternalNodes() {
     }
     return first_old_interior_id + static_cast<int>(pnv.size());
 }
+
+
 
 void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
                                  bool be_quiet) {
@@ -426,15 +442,13 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
         //          L       R
         //           x(-2)-x
     
-#if (OPTIMIZE_PLACEMENT_SUBTREES)
-    intptr_t spr_radius = 10;
+    intptr_t spr_radius      = 3;
     intptr_t blocksPerThread = ParsimonySPRMove::getParsimonyVectorSize(spr_radius);
     intptr_t threadsNeeded   = ParsimonySPRMove::getMinimumPathVectorCount();
     intptr_t threadCount     = PhyloTreeThreadingContext::getMaximumThreadCount();
     ParsimonyPathVector pv(blocksPerThread, threadsNeeded, threadCount);
     intptr_t spr_blocks      = pv.getTotalNumberOfBlocksRequired();
     extra_parsimony_blocks  += spr_blocks;
-#endif
     
     int extra_lh_blocks = trackLikelihood
                           ? (target_branch_count + additional_sequences * 4)
@@ -444,34 +458,33 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
         //each addition of a taxon later creates 3 *new* target branches
         //(each of which needs its own lh block)
     
-    intptr_t newTaxaCount = taxaIdsToAdd.size();
-    double   estimate     = newTaxaCount * 3.0;
+    intptr_t newTaxaCount           = taxaIdsToAdd.size();
+    double   estimate_per_placement = 1.0 + floor(newTaxaCount / leafNum / 2.0);
+    double   estimate               = newTaxaCount * (2.0 + estimate_per_placement);
     initProgress(estimate, "Adding new taxa to tree", "", "");
 
-    TimeKeeper overall      ("optimizing");
-    TimeKeeper initializing ("initializing");
+
     
-    overall.start();
-    initializing.start();
+    
+    pr.overall.start();
+    pr.initializing.start();
     pr.prepareForPlacementRun();
     pr.setUpAllocator(extra_parsimony_blocks, trackLikelihood, extra_lh_blocks);
     
-    #if (OPTIMIZE_PLACEMENT_SUBTREES)
-        TimeKeeper optimizing("optimizing");
-        //Allocate per-thread parsimony vector work areas used to calculate
-        //modified parsimony scores along the path between the
-        //pruning and regrafting points.
-        auto num_path_vectors = pv.getNumberOfPathsRequired();
-        pv.resize(num_path_vectors);
-        for (int vector=0; vector<num_path_vectors; ++vector) {
-            pr.block_allocator->allocateVectorOfParsimonyBlocks
-                (blocksPerThread, pv[vector]);
-        }
-    #endif
-    initializing.stop();
+    //TimeKeeper optimizing("optimizing");
+    //Allocate per-thread parsimony vector work areas used to calculate
+    //modified parsimony scores along the path between the
+    //pruning and regrafting points.
+    auto num_path_vectors = pv.getNumberOfPathsRequired();
+    pv.resize(num_path_vectors);
+    for (int vector=0; vector<num_path_vectors; ++vector) {
+        pr.block_allocator->allocateVectorOfParsimonyBlocks
+            (blocksPerThread, pv[vector]);
+    }
+    pr.initializing.stop();
 
     double setUpStartTime = getRealTime();
-    
+    pr.searchTime.start();
     LOG_LINE ( VB_DEBUG, "Before allocating TaxonToPlace array"
               << ", index_lh was "
               << pr.block_allocator->getLikelihoodBlockCount() );
@@ -494,6 +507,7 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
         }
     }
     trackProgress((double)(newTaxaCount % 1000));
+    pr.searchTime.stop();
 
     LOG_LINE ( VB_DEBUG, "After allocating TaxonToPlace"
                << ", index_lh was " << pr.block_allocator->getLikelihoodBlockCount()
@@ -509,12 +523,14 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
                    << (getRealTime() - setUpStartTime) << " sec");
     }
     
-    TimeKeeper refreshTime("Refresh");
-    TimeKeeper searchTime("Search");
-    TimeKeeper rankingTime("Ranking");
-    TimeKeeper insertTime("Insert");
-    TimeKeeper optoTime("Post-Batch Optimization");
-        
+
+    ParsimonySearchParameters s("SPR");
+    s.iterations                 = 3;
+    s.lazy_mode                  = false;
+    s.radius                     = spr_radius;
+    s.calculate_connection_costs = true;
+    s.be_quiet                   = true;
+
     LikelihoodBlockPairs spare_blocks(2);
     for (; 0<newTaxaCount; newTaxaCount = candidates.size() ) {
         if (newTaxaCount<static_cast<intptr_t>(pr.taxa_per_batch)) {
@@ -523,120 +539,41 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
         size_t batchStart=0;
         for (; static_cast<intptr_t>(batchStart+pr.taxa_per_batch) <= newTaxaCount
              ; batchStart+=pr.taxa_per_batch) {
-            refreshTime.start();
             pr.prepareForBatch();
-            refreshTime.stop();
 
-            searchTime.start();
             size_t batchStop  = batchStart + pr.taxa_per_batch;
             pr.doBatchPlacementCosting(candidates, batchStart, batchStop, targets);
-            searchTime.stop();
-            
-            rankingTime.start();
+
             size_t insertStop = batchStart;
-            pr.selectPlacementsForInsertion( candidates, batchStart, batchStop, insertStop);
-            rankingTime.stop();
-            
-            insertTime.start();
+            pr.selectPlacementsForInsertion(candidates, batchStart, batchStop,
+                                            insertStop);
+
             pr.startBatchInsert();
-
-            //Group inserts by target branch (the cache
-            //works better, if they're grouped in this way!).
-            class Insert {
-            public:
-                size_t                   candidate_index; //which one
-                size_t                   target_index;    //goes where
-                const PossiblePlacement* placement;       //with what score
-                bool operator < ( const Insert& rhs) const {
-                    if (target_index < rhs.target_index) return true;
-                    if (rhs.target_index < target_index) return false;
-                    return (*placement < *rhs.placement);
-                }
-                bool operator <= ( const Insert& rhs) const {
-                    if (target_index < rhs.target_index) return true;
-                    if (rhs.target_index < target_index) return false;
-                    return (*placement <= *rhs.placement);
-                }
-            };
-            std::vector<Insert> inserts;
-            inserts.resize(insertStop-batchStart);
-            for ( size_t i = batchStart; i < insertStop; ++i) {
-                Insert& insert         = inserts[i-batchStart];
-                insert.candidate_index = i;
-                insert.placement       = &candidates[i].getBestPlacement();
-                insert.target_index    = insert.placement->getTargetIndex();
-            }
-            std::sort(inserts.begin(), inserts.end());
-            size_t j = 0;
-            while ( j < inserts.size() ) {
-                size_t h = j;
-                for (++j; j<inserts.size(); ++j) {
-                    if (inserts[j-1].target_index != inserts[j].target_index) {
-                        break;
-                    }
-                }
-                //Insert candidates h through j-1
-                for (size_t i=h; i<j; ++i) {
-                    Insert& insert = inserts[i];
-                    pr.insertTaxon(candidates, insert.candidate_index,
-                                   targets, spare_blocks);
-                    if ((pr.taxa_inserted_in_total % 1000) == 0) {
-                        trackProgress(1000.0);
-                    }
-                }
-                #if (OPTIMIZE_PLACEMENT_SUBTREES)
-                if (1<j-h) {
-                    optimizing.start();
-                    //Run SPR optimization on all of the taxa that
-                    //targeted the same branch (between front and back)
-                    ParsimonySearchParameters s;
-                    s.name                       = "SPR";
-                    s.iterations                 = 3;
-                    s.lazy_mode                  = false;
-                    s.radius                     = spr_radius;
-                    s.calculate_connection_costs = true;
-                    s.be_quiet                   = true;
-                    auto max_out_threads = params->parsimony_uses_max_threads;
-                    PhyloTreeThreadingContext context(*this, max_out_threads);
-                    optimizePlacementRegion(s, targets,
-                                            inserts[h].target_index,
-                                            pv, context);
-                    optimizing.stop();
-                }
-                #endif
-            }
-            insertTime.stop(); //includes optimisation time
-            
-            optoTime.start();
+            pr.doBatchInsert(candidates, batchStart, insertStop, spare_blocks,
+                             estimate_per_placement, targets,
+                             s, pv);
             pr.doneBatch(candidates, batchStart, batchStop, targets);
-            optoTime.stop();
-
         } //batches of items
         
-        optoTime.start();
         pr.donePass(candidates, batchStart, targets);
-        optoTime.stop();
     }
     doneProgress();
-
+    
     if (!be_quiet) {
         LOG_LINE ( VB_MED, "Total number of blocked inserts was "  << pr.taxa_inserted_nearby );
         LOG_LINE ( VB_MED, "At the end of addNewTaxaToTree, index_lhs was "
                   << pr.block_allocator->getLikelihoodBlockCount() << ", index_pars was "
                   << pr.block_allocator->getParsimonyBlockCount() << ".");
     }
+    
+    pr.refreshTime.start();
+    clearAllPartialParsimony(false);
+    clearAllPartialLH();
+    pr.refreshTime.stop();
         
-    optoTime.start();
     pr.donePlacement();
-    optoTime.stop();
     
     if (VB_MIN <= verbose_mode && !be_quiet) {
-        hideProgress();
-        std::cout.precision(4);
-        refreshTime.report();
-        searchTime.report();
-        insertTime.report();
-        optoTime.report();
-        showProgress();
+        pr.reportActivity();
     }
 }

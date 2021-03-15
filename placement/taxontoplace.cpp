@@ -86,6 +86,10 @@ size_t TaxonToPlace::considerPlacements(const PossiblePlacement* placements,
 bool TaxonToPlace::considerAdditionalPlacement(const PossiblePlacement& placement) {
     bool best = (!bestPlacement.canStillUse()
                  || placement.score < bestPlacement.score);
+    #if (0)
+        std::cout << "  xplace " << placement.getTargetIndex()
+                  << " score "   << placement.score << std::endl;
+    #endif
     if (best) {
         bestPlacement = placement;
     }
@@ -163,7 +167,6 @@ void TaxonToPlace::insertIntoTree(PhyloTree& phylo_tree, BlockAllocator& b,
     PhyloNeighbor* up    = new_leaf->findNeighbor(new_interior);
     up->length           = bestPlacement.lenToNewTaxon;
     target->handOverComputedStateTo(up);
-    up->clearComputedFlags();
 
     new_interior->addNeighbor(node_2, bestPlacement.lenToNode2 );
     b.handOverComputedState  (node_1->findNeighbor(node_2), new_interior->findNeighbor(node_2) );
@@ -176,12 +179,18 @@ void TaxonToPlace::insertIntoTree(PhyloTree& phylo_tree, BlockAllocator& b,
     node_1->findNeighbor     (new_interior)->clearComputedFlags();
 
     inserted                    = true;
-    bool likelihood_needed      = calculator.usesLikelihood();
+    double score                = -1.0;
+    bool   lh_needed            = calculator.usesLikelihood();
     ReplacementBranchList* reps = new ReplacementBranchList;
-    reps->emplace_back ( dest.addNewRef(b, blocks, new_interior, node_1  , likelihood_needed) );
-    reps->emplace_back ( dest.addNewRef(b, blocks, new_interior, node_2  , likelihood_needed) );
-    reps->emplace_back ( dest.addNewRef(b, blocks, new_interior, new_leaf, likelihood_needed) );
+    reps->emplace_back ( dest.addNewRef(b, blocks, new_interior, node_1  , score, lh_needed) );
+    reps->emplace_back ( dest.addNewRef(b, blocks, new_interior, node_2  , score, lh_needed) );
+    reps->emplace_back ( dest.addNewRef(b, blocks, new_interior, new_leaf, score, lh_needed) );
     bestPlacement.target_branch.getTarget()->takeOwnershipOfReplacementVector(reps);
+    //Set this information in case it's logged higher up
+    //in the call stack (because... it might well be).
+    bestPlacement.lenToNode1    = new_interior->findNeighbor(node_1)->length;
+    bestPlacement.lenToNode2    = new_interior->findNeighbor(node_2)->length;
+    bestPlacement.lenToNewTaxon = new_interior->findNeighbor(new_leaf)->length;
     
     ++phylo_tree.leafNum;
     phylo_tree.branchNum += 2;
@@ -190,10 +199,10 @@ void TaxonToPlace::insertIntoTree(PhyloTree& phylo_tree, BlockAllocator& b,
 void TaxonToPlace::forgetGazumpedPlacements() {
     bestPlacement.forget();
 }
-bool TaxonToPlace::insertNearby(PhyloTree& phylo_tree, BlockAllocator& b,
-                                LikelihoodBlockPairs& blocks,
-                                TargetBranchRange& dest,
-                                PlacementCostCalculator& calculator ) {
+void TaxonToPlace::findNewPlacement(PhyloTree& phylo_tree, BlockAllocator& b,
+                                     LikelihoodBlockPairs& blocks,
+                                     TargetBranchRange& dest,
+                                     PlacementCostCalculator& calculator ) {
     const TargetBranch* blocked_target = bestPlacement.getTarget();
     forgetGazumpedPlacements();
     std::vector<PossiblePlacement> placements;
@@ -202,6 +211,12 @@ bool TaxonToPlace::insertNearby(PhyloTree& phylo_tree, BlockAllocator& b,
     for (auto it = placements.begin(); it != placements.end(); ++it) {
         considerAdditionalPlacement(*it);
     }
+}
+bool TaxonToPlace::insertNearby(PhyloTree& phylo_tree, BlockAllocator& b,
+                                LikelihoodBlockPairs& blocks,
+                                TargetBranchRange& dest,
+                                PlacementCostCalculator& calculator ) {
+    findNewPlacement(phylo_tree, b, blocks, dest, calculator);
     if (!canInsert()) {
         return false;
     }

@@ -1545,7 +1545,6 @@ int PhyloTree::computeParsimony(const char* taskDescription,
            ( nei, r, taskDescription );
 }
 
-
 /****************************************************************************
  likelihood function
  ****************************************************************************/

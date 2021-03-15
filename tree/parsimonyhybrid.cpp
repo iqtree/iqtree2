@@ -10,9 +10,8 @@ int PhyloTree::doParsimonyHybrid() {
     if (leafNum<6) {
         return computeParsimony();
     }
-    ParsimonySearchParameters s;
+    ParsimonySearchParameters s("Hybrid");
         
-    s.name                       = "Hybrid";
     s.iterations                 = params->parsimony_hybrid_iterations;
     s.lazy_mode                  = false;
     s.radius                     = params->spr_radius;

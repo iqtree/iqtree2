@@ -410,9 +410,9 @@ int PhyloTree::doParsimonySPR() {
 
 int PhyloTree::doParsimonySPR(intptr_t iterations, bool lazy,
                                int radius, bool quiet) {
-    ParsimonySearchParameters s;
+
+    ParsimonySearchParameters s("SPR");
         
-    s.name                       = "SPR";
     s.iterations                 = iterations;
     s.lazy_mode                  = lazy;
     s.radius                     = radius;

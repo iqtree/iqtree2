@@ -223,7 +223,7 @@ double ParsimonyNNIMove::apply(PhyloTree& tree,
 }
 
 int PhyloTree::doParsimonyNNI() {
-    ParsimonySearchParameters s;
+    ParsimonySearchParameters s("NNI");
         
     s.name                       = "NNI";
     s.iterations                 = params->parsimony_nni_iterations;
