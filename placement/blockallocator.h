@@ -100,7 +100,11 @@ class LikelihoodBlockPair {
         void    lendTo(PhyloNeighbor* borrower);
 };
 
-typedef std::vector<LikelihoodBlockPair> LikelihoodBlockPairs;
+class LikelihoodBlockPairs : public std::vector<LikelihoodBlockPair> {
+public:
+    typedef std::vector<LikelihoodBlockPair> super;
+    explicit LikelihoodBlockPairs(size_t size);
+};
 
 class LikelihoodBlockAllocator: public BlockAllocator {
 protected:

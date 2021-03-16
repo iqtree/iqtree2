@@ -170,6 +170,10 @@ void    LikelihoodBlockPair::lendTo(PhyloNeighbor* borrower) {
     borrower->setLikelihoodComputed(false);
 }
 
+LikelihoodBlockPairs::LikelihoodBlockPairs(size_t size): super() {
+    reserve(size);
+}
+
 
 LikelihoodBlockAllocator::LikelihoodBlockAllocator(PhyloTree& tree,
                                                    int parsimonyIndex,

@@ -251,8 +251,10 @@ void PlacementRun::doPartOfBatchInsert
         if (true) /*(insertCount<256)*/ {
             //Insert candidates h through j-1
             insertTime.start();
+#if (0)
             TimeKeeper icky("inserting");
             icky.start();
+#endif
             for (size_t i=h; i<j; ++i) {
                 TaxonPlacement& insert    = inserts[i];
                 //TaxonToPlace&   candidate = candidates.getTaxonByIndex
@@ -270,15 +272,15 @@ void PlacementRun::doPartOfBatchInsert
                               << " (check " << check_index << ") done");
 #endif
             }
-            icky.stop();
-            insertTime.stop();
 #if (0)
+            icky.stop();
             TREE_LOG_LINE(phylo_tree, VB_MIN, "Inserting I " << h
                           << " thru " << (j-1)
                           << " at T " << inserts[h].target_index << " took "
                           << icky.elapsed_wallclock_time << " wall, "
                           << icky.elapsed_cpu_time << " cpu");
 #endif
+            insertTime.stop();
         } else {
             //The recursive bit!  Currently disabled, because it crashes!
             size_t sampleCount = (size_t)floor(sqrt(insertCount));
@@ -321,7 +323,8 @@ void PlacementRun::doPartOfBatchInsert
             //targeted the same branch (between front and back)
             auto max_out_threads = phylo_tree.params->parsimony_uses_max_threads;
             PhyloTreeThreadingContext context(phylo_tree, max_out_threads);
-            phylo_tree.optimizePlacementRegion(s, targets, t, pv, context);
+            phylo_tree.optimizePlacementRegion(s, targets, t, pv,
+                                               context, spare_blocks);
             optoTime.stop();
         }
     }

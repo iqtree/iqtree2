@@ -140,7 +140,7 @@ int PhyloTree::optimizeSubtreeParsimony(ParsimonySearchParameters& s,
             }
         }
         s.evaluating.start();
-        LikelihoodBlockPairs dummyBlocks;
+        LikelihoodBlockPairs dummyBlocks(0);
         
         LOG_LINE(VB_DEBUG, "Computing branch initial states");
 #ifdef _OPENMP

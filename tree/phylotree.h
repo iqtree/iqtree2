@@ -64,6 +64,7 @@ class ParsimonySearchParameters;
 class TargetBranchRange;
 class ParsimonyPathVector;
 class PhyloTreeThreadingContext;
+class LikelihoodBlockPairs;
 
 #define BOOT_VAL_FLOAT
 #define BootValType float
@@ -1725,7 +1726,8 @@ public:
                                 TargetBranchRange& targets,
                                 size_t region_target_index,
                                 ParsimonyPathVector& per_thread_path_parsimony,
-                                PhyloTreeThreadingContext& context);
+                                PhyloTreeThreadingContext& context,
+                                LikelihoodBlockPairs &blocks);
 
     
     

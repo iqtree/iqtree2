@@ -4426,10 +4426,6 @@ void PhyloTree::computeBioNJ(Params &params) {
         cout << "Loading tree (from file " << bionj_file << ") took "
              << (getRealTime()-tree_load_start_time) << " sec." << endl;
     }
-    bool non_empty_tree = (root != nullptr);
-    if (non_empty_tree && params.compute_likelihood) {
-        initializeAllPartialLh();
-    }
 }
 
 int PhyloTree::setNegativeBranch(bool force, double newlen, Node *node, Node *dad) {

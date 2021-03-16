@@ -211,7 +211,8 @@ void PhyloTree::optimizePlacementRegion(ParsimonySearchParameters& s,
                                         TargetBranchRange& targets,
                                         size_t region_target_index,
                                         ParsimonyPathVector& per_thread_path_parsimony,
-                                        PhyloTreeThreadingContext& context) {
+                                        PhyloTreeThreadingContext& context,
+                                        LikelihoodBlockPairs &blocks) {
     //TimeKeeper copyingIn("Copying in");
     //copyingIn.start();
     s.initializing.start();
@@ -240,6 +241,8 @@ void PhyloTree::optimizePlacementRegion(ParsimonySearchParameters& s,
     local_targets.getNodes(real_nodes);
     std::partition(real_nodes.begin(), real_nodes.end(),
                    [tb](Node* n) { return n==tb.first || n==tb.second; });
+    LOG_LINE(VB_MIN, "first->id " << tb.first->id
+             << " and second->id " << tb.second->id);
 
     //3. Set up mappings (id #s to nodes), set up
     //   local nodes (they point to entries in a sequential
@@ -281,6 +284,9 @@ void PhyloTree::optimizePlacementRegion(ParsimonySearchParameters& s,
                 fake_nodes[i].addNeighbor(fake_it->second, real_nei->length);
                 PhyloNeighbor* fake_nei = fake_nodes[i].lastNeighbor();
                 fake_nei->copyComputedState(real_nei);
+            } else {
+                //This is a neighbor, referring to a node that is outside
+                //of the region of interest, that we don't want to copy.
             }
         }
     }
@@ -301,11 +307,37 @@ void PhyloTree::optimizePlacementRegion(ParsimonySearchParameters& s,
     #endif
     for (intptr_t b=0; b<branch_count; ++b) {
         TargetBranch& branch = local_targets.at(b);
+        //BEGIN: workaround for "outward" parsimony not computed
+        bool left_nei_computed = false;
+        if (branch.second==tb.first || branch.second==tb.second) {
+            PhyloNeighbor* checkNei = branch.first->findNeighbor(branch.second);
+            if (!checkNei->isParsimonyComputed()) {
+                computeParsimonyBranch(checkNei, branch.first);
+                left_nei_computed = true;
+            }
+        }
+        bool right_nei_computed = false;
+        if (branch.first==tb.first || branch.first==tb.second ) {
+            PhyloNeighbor* checkNei = branch.second->findNeighbor(branch.first);
+            if (!checkNei->isParsimonyComputed()) {
+                computeParsimonyBranch(checkNei, branch.second);
+                right_nei_computed = true;
+            }
+        }
+        //FINISH: workaround
         branch.first  = map_to_fake_node[branch.first->id];
         branch.second = map_to_fake_node[branch.second->id];
         PhyloNeighbor* left_nei  = branch.first->findNeighbor(branch.second);
         PhyloNeighbor* right_nei = branch.second->findNeighbor(branch.first);
         left_nei->id = right_nei->id = static_cast<int>(b);
+        //BEGIN: workaround for "outward" parsimony not computed
+        if (left_nei_computed) {
+            left_nei->setParsimonyComputed(true);
+        }
+        if (right_nei_computed) {
+            right_nei->setParsimonyComputed(true);
+        }
+        //FINISH: workaround
     }
     //copyingIn.stop();
     s.initializing.stop();
@@ -523,7 +555,6 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
                    << (getRealTime() - setUpStartTime) << " sec");
     }
     
-
     ParsimonySearchParameters s("SPR");
     s.iterations                 = 3;
     s.lazy_mode                  = false;
