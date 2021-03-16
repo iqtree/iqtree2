@@ -91,6 +91,7 @@ protected:
     using super::clusters;
     using super::silent;
     using super::finishClustering;
+    using super::clusterDuplicates;
     //
     //Note 1: mutable members are calculated repeatedly, from
     //        others, in member functions marked as const.
@@ -189,6 +190,7 @@ public:
                 //into ascending order.
             }
         }
+        clusterDuplicates();
         {
             size_t nextPurge = (row_count+row_count)/3;
             std::string taskName = "Constructing " + getAlgorithmName() + " tree";
