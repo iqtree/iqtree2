@@ -241,9 +241,11 @@ void PhyloTree::optimizePlacementRegion(ParsimonySearchParameters& s,
     local_targets.getNodes(real_nodes);
     std::partition(real_nodes.begin(), real_nodes.end(),
                    [tb](Node* n) { return n==tb.first || n==tb.second; });
+#if (0)
     LOG_LINE(VB_MIN, "first->id " << tb.first->id
              << " and second->id " << tb.second->id);
-
+#endif
+    
     //3. Set up mappings (id #s to nodes), set up
     //   local nodes (they point to entries in a sequential
     //   array, fake_nodes).  This does 2N inserts into maps.
