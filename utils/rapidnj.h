@@ -33,7 +33,10 @@
 //        I = the cluster indices that corresponded to each of
 //            the cells in S.
 //
-//        Rows of S and I are sorted by mirroredHeapsort.
+//        Rows of S and I are sorted via a mergesort.
+//        (During matrix set up, a sequential mergesort, because
+//         row construction is parallelized; later, during
+//         clustering, a parallel one).
 //        (S is sorted, I is permuted to match).
 //        (S and I are the names of these matrices in [SMP2011]).
 //
@@ -71,7 +74,7 @@
 #define rapidnj_h
 
 #include "nj.h"
-#include "heapsort.h"  //for mirroredHeapsort, used to sort
+#include "parallel_mergesort.h"
 #include "timeutil.h"  //for getRealTime
 
 namespace StartTree
@@ -82,6 +85,7 @@ class BoundingMatrix: public SUPER
 {
 public:
     typedef SUPER super;
+    typedef MirrorMergeSorter<T, int> Sorter;
 protected:
     using super::rows;
     using super::row_count;
@@ -133,16 +137,24 @@ protected:
     SquareMatrix<int> entryToCluster;//The I matrix: for each entry in S, which
                                      //cluster the row (that the entry came from)
                                      //was mapped to (at the time).
-    double rowSortingTime;
     int    threadCount;
+    std::vector<Sorter> sorters;
     
 public:
     typedef T distance_type;
-    BoundingMatrix() : super(), rowSortingTime(0) {
+    BoundingMatrix() : super() {
         #ifdef _OPENMP
             threadCount = omp_get_max_threads();
         #else
             threadCount = 1;
+        #endif
+        sorters.resize(threadCount);
+    }
+    int getThreadNumber() {
+        #ifdef _OPENMP
+            return omp_get_thread_num();
+        #else
+            return 0;
         #endif
     }
     virtual std::string getAlgorithmName() const {
@@ -183,7 +195,7 @@ public:
             #pragma omp parallel for schedule(dynamic)
             #endif
             for (intptr_t r=0; r<row_count; ++r) {
-                sortRow(r,r,false);
+                sortRow(r,r,false,sorters[getThreadNumber()]);
                 ++setupProgress;
                 //copies the "left of the diagonal" portion of
                 //row r from the D matrix and sorts it
@@ -226,7 +238,7 @@ public:
         return true;
     }
     void sortRow(size_t r /*row index*/, size_t c /*upper bound on cluster index*/
-        , bool inParallel) {
+        ,  bool parallel, Sorter& sorter) {
         //1. copy data from a row of the D matrix into the S matrix
         //   (and write the cluster identifiers that correspond to
         //    the values in the D row into the same-numbered
@@ -250,12 +262,10 @@ public:
         
         //2. Sort the row in the S matrix and mirror the sort
         //   on the same row of the I matrix.
-        if ( inParallel ) {
-            double now = getRealTime();
-            mirroredHeapsort(values, 0, w, clusterIndices);
-            rowSortingTime += (getRealTime() - now);
+        if (parallel) {
+            sorter.parallel_mirror_sort(values, w, clusterIndices);
         } else {
-            mirroredHeapsort(values, 0, w, clusterIndices);
+            sorter.single_thread_mirror_sort(values, w, clusterIndices);
         }
     }
     void purgeRow(intptr_t r /*row index*/) const {
@@ -320,7 +330,7 @@ public:
             size_t cluster = rowToCluster[r];
             clusterTotals[cluster] = rowTotals[r];
         }
-        sortRow(a, clusterC, true);
+        sortRow(a, clusterC, true, sorters[0]);
     }
     void decideOnRowScanningOrder(T& qBest) const {
         intptr_t rSize = rowMinima.size();

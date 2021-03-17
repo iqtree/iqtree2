@@ -14,6 +14,7 @@ bionj2.cpp bionj2.h
 stitchup.cpp
 upgma.h nj.h rapidnj.h auctionmatrix.h
 clustertree.h distancematrix.h heapsort.h
+parallel_sort.h parallel_mergesort.h
 progress.cpp progress.h
 statefrequency.cpp statefrequency.h
 stringfunctions.cpp stringfunctions.h
