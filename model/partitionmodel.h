@@ -66,6 +66,12 @@ public:
     virtual void restoreCheckpoint();
 
     /**
+            return true if model is reversible, false otherwise
+     */
+    virtual bool isReversible();
+    
+
+    /**
      * @param brlen_type either BRLEN_OPTIMIZE, BRLEN_FIX or BRLEN_SCALE
      * @return #parameters of the model + # branches
      */

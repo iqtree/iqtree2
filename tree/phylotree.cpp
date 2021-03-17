@@ -2945,16 +2945,17 @@ double PhyloTree::testRootPosition(bool write_info, double logl_epsilon) {
     branches.push_back(root_br);
         
     // get all trees
-//    for (i = 0; i != nodes1.size(); i++) {
-//        moveRoot(nodes1[i], nodes2[i]);
-//        trees.push_back(getTreeString());
-//    }
-//
-    // optimize branch lengths for all trees
+    StrVector trees;
     for (i = 0; i != branches.size(); i++) {
-//    for (auto t = trees.begin()+1; t != trees.end(); t++) {
         moveRoot(branches[i].first, branches[i].second);
-//        readTreeString(*t);
+        trees.push_back(getTreeString());
+    }
+
+    // optimize branch lengths for all trees
+//    for (i = 0; i != branches.size(); i++) {
+    for (auto t = trees.begin(); t != trees.end(); t++) {
+//        moveRoot(branches[i].first, branches[i].second);
+        readTreeString(*t);
         optimizeAllBranches(100, logl_epsilon);
         stringstream ss;
         printTree(ss);

@@ -1154,14 +1154,16 @@ void evaluateTrees(string treeset_file, Params &params, IQTree *tree, vector<Tre
             outError("Taxon " + tree->aln->getSeqName(0) + " not found in tree");
         }
         
-        if (tree->rooted && tree->getModel()->isReversible()) {
+        if (tree->rooted && tree->getModelFactory()->isReversible()) {
             if (tree->leafNum != tree->aln->getNSeq()+1)
                 outError("Tree does not have same number of taxa as alignment");
             tree->convertToUnrooted();
-        } else if (!tree->rooted && !tree->getModel()->isReversible()) {
+//            cout << "convertToUnrooted" << endl;
+        } else if (!tree->rooted && !tree->getModelFactory()->isReversible()) {
             if (tree->leafNum != tree->aln->getNSeq())
                 outError("Tree does not have same number of taxa as alignment");
             tree->convertToRooted();
+//            cout << "convertToRooted" << endl;
         }
         tree->setAlignment(tree->aln);
         tree->setRootNode(params.root);
