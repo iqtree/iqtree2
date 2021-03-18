@@ -230,9 +230,10 @@ void LikelihoodCostCalculator::assessPlacementCost(PhyloTree& tree, const TaxonT
                   << ", len "    << placement.lenToNewTaxon);
 }
 
-PlacementCostCalculator* PlacementCostCalculator::getNewCostCalculator() {
+PlacementCostCalculator* PlacementCostCalculator::getNewCostCalculator
+                         (const PlacementParameters& params) {
     
-    auto cf = Placement::getIncrementalParameter('C', "MP");
+    auto cf = params.getIncrementalParameter('C', "MP");
     if (cf=="ML") {
         return new LikelihoodCostCalculator(true);
     } else if (cf=="FML") {

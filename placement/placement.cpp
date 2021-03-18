@@ -13,11 +13,17 @@
 #include <utils/stringfunctions.h> //for convert_int_nothrow
                                    //and convert_double_nothrow
 
+PlacementParameters::PlacementParameters()
+    : incremental_method(Params::getInstance().incremental_method){    
+}
 
-namespace Placement {
+PlacementParameters::PlacementParameters(const char* incremental_method_text)
+    : incremental_method(incremental_method_text) {
+}
 
-std::string getIncrementalParameter(const char letter, const char* defaultValue) {
-    const std::string& inc = Params::getInstance().incremental_method;
+std::string PlacementParameters::getIncrementalParameter
+            (const char letter, const char* defaultValue) const {
+    const std::string& inc = incremental_method;
     std::string answer = defaultValue;
     int braceLevel = 0;
     int i;
@@ -54,7 +60,8 @@ std::string getIncrementalParameter(const char letter, const char* defaultValue)
     return answer;
 }
 
-size_t getIncrementalSizeParameter(const char letter, size_t defaultValue) {
+size_t  PlacementParameters::getIncrementalSizeParameter
+        (const char letter, size_t defaultValue) const {
     auto s = getIncrementalParameter(letter, "");
     if (s.empty()) {
         return defaultValue;
@@ -65,7 +72,8 @@ size_t getIncrementalSizeParameter(const char letter, size_t defaultValue) {
     }
     return static_cast<size_t>(i);
 }
-size_t getNumberOfTaxaToRemoveAndReinsert(size_t countOfTaxa) {
+size_t  PlacementParameters::getNumberOfTaxaToRemoveAndReinsert
+        (size_t countOfTaxa) const {
     if (countOfTaxa<4) {
         return 0;
     }
@@ -93,31 +101,33 @@ size_t getNumberOfTaxaToRemoveAndReinsert(size_t countOfTaxa) {
     return numberToRemove;
 }
 
-bool doesPlacementUseLikelihood() {
+bool  PlacementParameters::doesPlacementUseLikelihood() const {
     auto cf = getIncrementalParameter('C', "MP");
     return cf.find("ML") != std::string::npos;
 }
 
-bool doesPlacementUseParsimony() {
+bool  PlacementParameters::doesPlacementUseParsimony() const {
     auto cf = getIncrementalParameter('C', "MP");
-    auto heuristic = Placement::getIncrementalParameter('H', "");
+    auto heuristic = getIncrementalParameter('H', "");
     return cf.find("MP") != std::string::npos
         || heuristic.find("MP") != std::string::npos;
 }
 
-bool doesPlacementUseSankoffParsimony() {
+bool  PlacementParameters::doesPlacementUseSankoffParsimony() const {
     auto cf = getIncrementalParameter('C', "MP");
-    auto heuristic = Placement::getIncrementalParameter('H', "");
+    auto heuristic = getIncrementalParameter('H', "");
 
     return (cf == "SMP" || heuristic == "SMP");
 }
 
 
-LocalOptimization getLocalOptimizationAlgorithm() {
+PlacementParameters::LocalOptimization
+PlacementParameters::getLocalOptimizationAlgorithm() const {
     auto f = getIncrementalParameter('L', "");
     return NO_LOCAL_OPTIMIZATION;
 }
-size_t getTaxaPerBatch(size_t totalTaxa) {
+
+size_t  PlacementParameters::getTaxaPerBatch(size_t totalTaxa) const {
     size_t taxaPerBatch = getIncrementalSizeParameter('B', 0);
     if ( taxaPerBatch == 0 ) {
         taxaPerBatch = totalTaxa;
@@ -127,7 +137,9 @@ size_t getTaxaPerBatch(size_t totalTaxa) {
     }
     return taxaPerBatch;
 }
-size_t getInsertsPerBatch(size_t totalTaxa, size_t taxaPerBatch) {
+
+size_t  PlacementParameters::getInsertsPerBatch
+        (size_t totalTaxa, size_t taxaPerBatch) const {
     string insertString = getIncrementalParameter('I', "");
     size_t len = insertString.length();
     if (len==0) {
@@ -154,14 +166,14 @@ size_t getInsertsPerBatch(size_t totalTaxa, size_t taxaPerBatch) {
     }
     return numberToInsert;
 }
-BatchOptimization getBatchOptimizationAlgorithm() {
+PlacementParameters::BatchOptimization
+PlacementParameters::getBatchOptimizationAlgorithm() const {
     auto f = getIncrementalParameter('A', "");
     return NO_BATCH_OPTIMIZATION;
 }
-GlobalOptimization getGlobalOptimizationAlgorithm() {
+PlacementParameters::GlobalOptimization
+PlacementParameters::getGlobalOptimizationAlgorithm() const {
     auto f = getIncrementalParameter('T', "");
     return NO_GLOBAL_OPTIMIZATION;
 }
 
-
-}

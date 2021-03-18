@@ -36,8 +36,9 @@ bool SearchHeuristic::isPlacementWorthTrying(const TaxonToPlace& taxon,
 void SearchHeuristic::doneFiltering() {
 }
 
-SearchHeuristic* SearchHeuristic::getSearchHeuristic() {
-    auto heuristic = Placement::getIncrementalParameter('H', "");
+SearchHeuristic* SearchHeuristic::getSearchHeuristic
+                 (const PlacementParameters &placement_params) {
+    auto heuristic = placement_params.getIncrementalParameter('H', "");
     if (heuristic=="" || heuristic=="0") {
         return new SearchHeuristic;
     }

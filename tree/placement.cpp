@@ -6,6 +6,7 @@
 //  2. addTaxonML likewise (and was the work of BUI Quang Minh)
 //
 #include <tree/phylotree.h>
+#include <placement/placement.h> //for PlacementParameters
 #include <placement/blockallocator.h>
 #include <placement/placement.h>
 #include <placement/searchheuristic.h>
@@ -144,7 +145,7 @@ double PhyloTree::addTaxonML(PhyloNode* added_taxon,     PhyloNode *added_node,
 
 void PhyloTree::removeSampleTaxaIfRequested() {
     int nseq = static_cast<int>(aln->getNSeq());
-    size_t countOfTaxaToRemove = Placement::getNumberOfTaxaToRemoveAndReinsert(nseq);
+    size_t countOfTaxaToRemove = PlacementParameters().getNumberOfTaxaToRemoveAndReinsert(nseq);
     if (0<countOfTaxaToRemove) {
         LOG_LINE(VB_DEBUG, "Will mark " << countOfTaxaToRemove << " (out of " << nseq
                     << ") sequences, to be removed.");
@@ -177,11 +178,11 @@ void PhyloTree::removeSampleTaxaIfRequested() {
 }
 
 bool PhyloTree::shouldPlacementUseSankoffParsimony() const {
-    return Placement::doesPlacementUseSankoffParsimony();
+    return PlacementParameters().doesPlacementUseSankoffParsimony();
 }
 
 bool PhyloTree::shouldPlacementUseLikelihood() const {
-    return Placement::doesPlacementUseLikelihood();
+    return PlacementParameters().doesPlacementUseLikelihood();
 }
 
 void PhyloTree::reinsertTaxaViaStepwiseParsimony(const IntVector& taxaIdsToAdd) {
@@ -449,11 +450,16 @@ int  PhyloTree::renumberInternalNodes() {
 
 void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
                                  const char* description,
+                                 const char* placement_parameter_string,
                                  bool be_quiet) {
     //
     //Assumes: The tree is rooted.
     //
-    PlacementRun pr(*this, taxaIdsToAdd, be_quiet);
+    if (0==strlen(placement_parameter_string)) {
+        placement_parameter_string = Params::getInstance().incremental_method.c_str();
+    }
+    PlacementParameters place_params(placement_parameter_string);
+    PlacementRun pr(*this, place_params, taxaIdsToAdd, be_quiet);
     deleteAllPartialLhAndParsimony();
     
     bool trackLikelihood      = shouldPlacementUseLikelihood();
@@ -495,13 +501,13 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
         //          L       R
         //           x(-2)-x
     
-    intptr_t spr_radius      = 3;
-    intptr_t blocksPerThread = ParsimonySPRMove::getParsimonyVectorSize(spr_radius);
-    intptr_t threadsNeeded   = ParsimonySPRMove::getMinimumPathVectorCount();
-    intptr_t threadCount     = PhyloTreeThreadingContext::getMaximumThreadCount();
+    intptr_t fixed_spr_radius = 3;
+    intptr_t blocksPerThread  = ParsimonySPRMove::getParsimonyVectorSize(fixed_spr_radius);
+    intptr_t threadsNeeded    = ParsimonySPRMove::getMinimumPathVectorCount();
+    intptr_t threadCount      = PhyloTreeThreadingContext::getMaximumThreadCount();
     ParsimonyPathVector pv(blocksPerThread, threadsNeeded, threadCount);
-    intptr_t spr_blocks      = pv.getTotalNumberOfBlocksRequired();
-    extra_parsimony_blocks  += static_cast<int>(spr_blocks);
+    intptr_t spr_blocks       = pv.getTotalNumberOfBlocksRequired();
+    extra_parsimony_blocks   += static_cast<int>(spr_blocks);
     
     int extra_lh_blocks = trackLikelihood
                           ? (target_branch_count + additional_sequences * 4)
@@ -576,7 +582,7 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
     ParsimonySearchParameters s("SPR");
     s.iterations                 = 3;
     s.lazy_mode                  = false;
-    s.radius                     = static_cast<int>(spr_radius);
+    s.radius                     = static_cast<int>(fixed_spr_radius);
     s.calculate_connection_costs = true;
     s.be_quiet                   = true;
 

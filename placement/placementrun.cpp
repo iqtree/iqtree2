@@ -19,19 +19,22 @@ bool TaxonPlacement::operator < ( const TaxonPlacement& rhs) const {
     if (rhs.target_index < target_index) return false;
     return (*placement < *rhs.placement);
 }
+
 bool TaxonPlacement::operator <= ( const TaxonPlacement& rhs) const {
     if (target_index < rhs.target_index) return true;
     if (rhs.target_index < target_index) return false;
     return (*placement <= *rhs.placement);
 }
 
-PlacementRun::PlacementRun(PhyloTree& tree, const IntVector& taxaIdsToAdd, bool be_silent)
-    : phylo_tree(tree), taxa_ids_to_add(taxaIdsToAdd), be_quiet(be_silent)
-    , taxa_per_batch(Placement::getTaxaPerBatch(taxaIdsToAdd.size()))
-    , inserts_per_batch(Placement::getInsertsPerBatch(taxa_ids_to_add.size(), taxa_per_batch))
+PlacementRun::PlacementRun(PhyloTree& tree, const PlacementParameters& parameters,
+                           const IntVector& taxaIdsToAdd, bool be_silent)
+    : phylo_tree(tree), placement_params(parameters)
+    , taxa_ids_to_add(taxaIdsToAdd), be_quiet(be_silent)
+    , taxa_per_batch(placement_params.getTaxaPerBatch(taxaIdsToAdd.size()))
+    , inserts_per_batch(placement_params.getInsertsPerBatch(taxa_ids_to_add.size(), taxa_per_batch))
     , block_allocator(nullptr)
-    , heuristic(SearchHeuristic::getSearchHeuristic())
-    , calculator(PlacementCostCalculator::getNewCostCalculator())
+    , heuristic(SearchHeuristic::getSearchHeuristic(placement_params))
+    , calculator(PlacementCostCalculator::getNewCostCalculator(placement_params))
     , use_likelihood(heuristic->usesLikelihood() || calculator->usesLikelihood())
     , taxon_placement_optimizer(TaxonPlacementOptimizer::getNewTaxonPlacementOptimizer())
     , batch_placement_optimizer(BatchPlacementOptimizer::getNewBatchPlacementOptimizer(be_silent))
@@ -48,8 +51,8 @@ PlacementRun::PlacementRun(PhyloTree& tree, const IntVector& taxaIdsToAdd, bool 
 void PlacementRun::setUpAllocator(int extra_parsimony_blocks,
                                   bool trackLikelihood,
                                   int extra_lh_blocks) {
-    int      index_parsimony        = 0;
-    int      index_lh               = 0;
+    int      index_parsimony = 0;
+    int      index_lh        = 0;
     phylo_tree.deleteAllPartialLhAndParsimony(); 
     if (trackLikelihood) {
         phylo_tree.ensurePartialLHIsAllocated(extra_parsimony_blocks, extra_lh_blocks);
@@ -180,7 +183,7 @@ void PlacementRun::selectPlacementsForInsertion(TaxaToPlace& candidates,
                                   size_t  batchStart, size_t batchStop,
                                   size_t& insertStop) {
     rankingTime.start();
-    inserts_per_batch = Placement::getInsertsPerBatch(taxa_ids_to_add.size(), batchStop-batchStart);
+    inserts_per_batch = placement_params.getInsertsPerBatch(taxa_ids_to_add.size(), batchStop-batchStart);
     insertStop        = batchStart + inserts_per_batch;
     candidates.sortBatch( batchStart, batchStop);
     if (batchStop <= insertStop) {

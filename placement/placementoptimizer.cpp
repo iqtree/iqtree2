@@ -48,7 +48,6 @@ void GlobalPlacementOptimizer::optimizeAfterPlacement(PhyloTree& tree) {
     }
     tree.determineBlockSizes();
 
-    
     if (tree.params->compute_ml_dist && tree.hasModel() ) {
         //First, recompute parsimony
         int parsimony_score = tree.computeParsimony("Computing parsimony (after adding taxa)",
@@ -108,7 +107,6 @@ BatchPlacementOptimizer* BatchPlacementOptimizer::getNewBatchPlacementOptimizer(
 
 GlobalPlacementOptimizer* GlobalPlacementOptimizer::getNewGlobalPlacementOptimizer
     (bool useLikelihood, bool be_silent) {
-    //auto globalCleanup = Placement::getGlobalOptimizationAlgorithm();
     return useLikelihood ? new GlobalLikelihoodPlacementOptimizer(be_silent)
                          : new GlobalPlacementOptimizer(be_silent);
 }

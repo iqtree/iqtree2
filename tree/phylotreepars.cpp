@@ -1331,7 +1331,7 @@ int PhyloTree::computeParsimonyTreeBatch(const char *out_prefix,
     intptr_t n = taxon_order.size();
     while (3 < n ) {
         sizes.push_back(n);
-        n = (intptr_t)floor(sqrt(n));
+        n = (intptr_t)floor(pow(n,1.0/3.0)); //pow(n,1.0/3.0)
     }
     n = 3;
     intptr_t taxon_count = taxon_order.size();
@@ -1345,7 +1345,10 @@ int PhyloTree::computeParsimonyTreeBatch(const char *out_prefix,
         }        
         std::stringstream desc;
         desc << "Expanding tree to " << p << " taxa";
-        addNewTaxaToTree(taxa_this_time, desc.str().c_str(), true);
+        addNewTaxaToTree(taxa_this_time, desc.str().c_str(), "C{MP}", true);
+        if (p < taxon_count) {
+            doParsimonySPR(3, false, 3, true );
+        }
         n = p;
     }
     while ( n < taxon_count );

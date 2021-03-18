@@ -13,6 +13,7 @@
 
 #include <stdlib.h>
 #include <utils/distancematrix.h>
+#include "placement.h" //for PlacementParameters
 
 class TaxonToPlace;
 class TargetBranchRef;
@@ -52,7 +53,7 @@ public:
         until after prepareToFilter is called again (an opportunity for the SearchHeuristic
         to deallocate any resources it allocated when prepareToFilter was called.*/
     virtual void doneFiltering();
-    static SearchHeuristic* getSearchHeuristic();
+    static SearchHeuristic* getSearchHeuristic(const PlacementParameters &placement_params);
 };
 
 class PlacementCostCalculator;

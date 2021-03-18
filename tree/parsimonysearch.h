@@ -262,10 +262,14 @@ int PhyloTree::optimizeSubtreeParsimony(ParsimonySearchParameters& s,
                          << " (" << revised_score << ")");
                 //ParsimonyMove::apply() is its own inverse.  Calling it again
                 //with the same parameters, reverses what it did.
-                double reverted_score = move.apply(*this, parsimony_score,
-                                                   targets, dummyBlocks,
-                                                   per_thread_path_parsimony);
-                //ASSERT( reverted_score == parsimony_score );
+                parsimony_score = move.apply(*this, parsimony_score,
+                                             targets, dummyBlocks,
+                                             per_thread_path_parsimony);
+                //Was:
+                //    double reverted_score = move.apply ... etc ...
+                //    ASSERT( reverted_score == parsimony_score );
+                //But:
+                //    can't use that for now.
             } else {
                 parsimony_score = revised_score;
                 ++moves_applied;

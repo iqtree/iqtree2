@@ -11,7 +11,7 @@
 
 #include <tree/phylotree.h>          //for PhyloTree
 #include "blockallocator.h"          //for BlockAllocator
-#include "placement.h"               //for Placement::CostFunction
+#include "placement.h"               //for PlacementParameters
 #include "searchheuristic.h"         //for SearchHeuristic
 #include "placementoptimizer.h"      //for TaxonPlacementOptimizer (and others)
 #include "placementcostcalculator.h" //for PlacementCostCalculator
@@ -23,6 +23,7 @@
 class TaxonPlacement {
     //Used to group inserts by target branch (the cache
     //works better, if they're grouped in this way!).
+    //This class declared here because only PlacementRun uses it.
 public:
     size_t                   candidate_index; //which one
     size_t                   target_index;    //goes where
@@ -33,26 +34,28 @@ public:
     TaxonPlacement(const TaxonPlacement& rhs) = default;
 };
 
+
 struct PlacementRun {
 public:
-    PhyloTree&                phylo_tree;
-    IntVector                 taxa_ids_to_add;   //id numbers of taxa to add
-    bool                      be_quiet;
-    size_t                    taxa_per_batch;    //Must be 1 or more
-    size_t                    inserts_per_batch; //Must be 1 or more
-    BlockAllocator*           block_allocator;   //
-    SearchHeuristic*          heuristic;         //global? or localized?
-    PlacementCostCalculator*  calculator;        //
-    bool                      use_likelihood;    //true if heuristic or calculator do
+    PhyloTree&                 phylo_tree;
+    const PlacementParameters& placement_params;
+    IntVector                  taxa_ids_to_add;   //id numbers of taxa to add
+    bool                       be_quiet;
+    size_t                     taxa_per_batch;    //Must be 1 or more
+    size_t                     inserts_per_batch; //Must be 1 or more
+    BlockAllocator*            block_allocator;   //
+    SearchHeuristic*           heuristic;         //global? or localized?
+    PlacementCostCalculator*   calculator;        //
+    bool                       use_likelihood;    //true if heuristic or calculator do
 
-    TaxonPlacementOptimizer* taxon_placement_optimizer;
-    BatchPlacementOptimizer* batch_placement_optimizer;
-    GlobalPlacementOptimizer* global_placement_optimizer;
+    TaxonPlacementOptimizer*   taxon_placement_optimizer;
+    BatchPlacementOptimizer*   batch_placement_optimizer;
+    GlobalPlacementOptimizer*  global_placement_optimizer;
 
-    size_t                    taxa_inserted_this_batch;
-    size_t                    taxa_inserted_in_total; //for a given pass
-    size_t                    taxa_inserted_nearby;   //taxa that couldn't be inserted at their
-                                                      //preferred branch, but were inserted nearby
+    size_t                     taxa_inserted_this_batch;
+    size_t                     taxa_inserted_in_total; //for a given pass
+    size_t                     taxa_inserted_nearby;   //taxa that couldn't be inserted at their
+                                                       //preferred branch, but were inserted nearby
 
     TimeKeeper overall;
     TimeKeeper initializing;
@@ -62,7 +65,8 @@ public:
     TimeKeeper insertTime;
     TimeKeeper optoTime;
 
-    PlacementRun(PhyloTree& tree, const IntVector& taxaIdsToAdd, bool be_silent);
+    PlacementRun(PhyloTree& tree, const PlacementParameters& parameters,
+                 const IntVector& taxaIdsToAdd, bool be_silent);
     
     void setUpAllocator(int extra_parsimony_blocks, bool trackLikelihood=false,
                         int extra_lh_blocks=0) ;
@@ -164,7 +168,7 @@ public:
                 candidates.emplace_back(oldCandidates[r]);
             }
         }
-        inserts_per_batch = Placement::getInsertsPerBatch(taxa_ids_to_add.size(), taxa_per_batch);
+        inserts_per_batch = placement_params.getInsertsPerBatch(taxa_ids_to_add.size(), taxa_per_batch);
         TREE_LOG_LINE ( phylo_tree, VB_MAX, "At the end of this pass, index_lhs was "
                   << block_allocator->getLikelihoodBlockCount() << ", index_pars was "
                   << block_allocator->getParsimonyBlockCount());

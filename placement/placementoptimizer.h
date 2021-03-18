@@ -60,7 +60,8 @@ public:
     
     /** allocate a new GlobalPlacementOptimizer that matches what
         has been asked for in the -incremental parameter
-        @return a new GlobalPlacementOptimizer instance (it is up to the caller to delete it) */
+        @return a new GlobalPlacementOptimizer instance
+                (it is up to the caller to delete it) */
     static GlobalPlacementOptimizer* getNewGlobalPlacementOptimizer(bool use_likelihood, bool be_silent);
 };
 

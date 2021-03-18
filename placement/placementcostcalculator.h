@@ -53,7 +53,7 @@ public:
      @return the placement cost calculator to use, allocated via new
              (it is up to the caller to delete it)
      */
-    static PlacementCostCalculator* getNewCostCalculator();
+    static PlacementCostCalculator* getNewCostCalculator(const PlacementParameters &params);
 };
 
 class ParsimonyCostCalculator : public PlacementCostCalculator {

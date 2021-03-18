@@ -504,6 +504,7 @@ public:
      */
     void addNewTaxaToTree(const IntVector& taxaIdsToAdd,
                           const char* description,
+                          const char* placement_parameter_string,
                           bool quiet = false);
     
     int renumberInternalNodes();
