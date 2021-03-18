@@ -1935,7 +1935,8 @@ void runApproximateBranchLengths(Params &params, IQTree &iqtree) {
             iqtree.clearAllPartialLH();
             iqtree.setCurScore(iqtree.computeLikelihood());
         } else {
-            fixup_count = iqtree.setAllBranchLengthsFromParsimony(true, 0.0);
+            double parsimony_score = 0.0;
+            fixup_count = iqtree.setAllBranchLengthsFromParsimony(true, parsimony_score);
         }
         cout << "Corrected " << fixup_count
              << " branches that had zero or -ve length." << endl;

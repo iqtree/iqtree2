@@ -119,8 +119,8 @@ int  ParallelParsimonyCalculator::computeParsimonyBranch
 int  ParallelParsimonyCalculator::computeAllParsimony
     ( PhyloNeighbor* dad_branch, PhyloNode* dad,
       const char* task_description ) {
-    int result = computeParsimonyBranch(dad_branch, dad, task_description);
-    PhyloNode*     node     = dad_branch->getNode();
+    int        result = computeParsimonyBranch(dad_branch, dad, task_description);
+    PhyloNode* node   = dad_branch->getNode();
     computeReverseParsimony(dad, node);
     return result;
 }
@@ -211,7 +211,9 @@ void ParallelParsimonyCalculator::calculate(intptr_t start_index,
         WorkItem*      item       = item_data + i;
         PhyloNeighbor* dad_branch = item->first;
         PhyloNode*     dad        = item->second;
+        
         tree.computePartialParsimony(dad_branch, dad);
+        
         if (task_in_progress != nullptr || report_progress_to_tree) {
             intptr_t j = i - start_index;
             if ((j%1000)==999) {

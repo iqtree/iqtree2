@@ -50,8 +50,9 @@ void ConstraintTree::readConstraint(const char *constraint_file, const StrVector
 }
 
 void ConstraintTree::initFromTree() {
-    if (leafNum <= 3)
+    if (leafNum < 4) {
         outError("Constraint tree must contain at least 4 taxa");
+    }
     if (rooted) {
         outWarning("Rooted constraint tree will be treated as unrooted tree");
         convertToUnrooted();

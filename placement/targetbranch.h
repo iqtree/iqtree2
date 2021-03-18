@@ -86,7 +86,8 @@ public:
                  , hasBackwardBenefit(false), backwardBenefit(0) {}
 };
 
-class TargetBranch : public std::pair<PhyloNode*, PhyloNode*> {
+class TargetBranch : public PhyloBranch {
+private:
     //A place where a node could be inserted, with likelihood and
     //partial parsimony determined, looking into the tree from the
     //insertion point.
@@ -104,7 +105,7 @@ class TargetBranch : public std::pair<PhyloNode*, PhyloNode*> {
     friend class TargetBranchRef;
     friend class TargetBranchRange;
 public:
-    typedef std::pair<PhyloNode*, PhyloNode*> super;
+    typedef PhyloBranch super;
     TargetBranch();
     ~TargetBranch();
     TargetBranch(const TargetBranch& rhs);
@@ -112,6 +113,7 @@ public:
     TargetBranch(BlockAllocator* allocator,
                  PhyloNode* node1, PhyloNode* node2,
                  bool parsimony_wanted, bool likelihood_wanted);
+    void   copyComputedState(const TargetBranch& rhs);
     double computeState (PhyloTree& phylo_tree,
                          double& tree_parsimony_score,
                          intptr_t target_branch_index,
@@ -173,8 +175,8 @@ public:
     
     void        setParsimonyLength(PhyloTree& tree); //set parsimony length on
                                                      //PhyloNeighbor instances that correspond
-    
-    operator PhyloBranch() const;
+    bool        isOutOfDate();
+
     TargetBranch& clearReverseParsimony();
     
 };

@@ -580,13 +580,11 @@ int PhyloTree::joinParsimonyTree(const char *out_prefix,
         pr.constructTree();
     }
     deleteAllPartialParsimony();
+    initializeAllPartialPars();
 
     /* how long does this take?! */
-    TimeKeeper fixing("Fixing Negative Branches");
-    fixing.start();
-    fixNegativeBranch(true);
-    fixing.stop();
-    fixing.report();
+    double parsimony_score = computeParsimony("Computing post PJ parsimony", true, false);
+    setAllBranchLengthsFromParsimony(false, parsimony_score);
     
     // convert to rooted tree if originally so
     if (out_prefix) {
@@ -594,8 +592,5 @@ int PhyloTree::joinParsimonyTree(const char *out_prefix,
         file_name += ".parstree";
         printTree(file_name.c_str(), WT_NEWLINE + WT_BR_LEN);
     }
-    
-    deleteAllPartialParsimony();
-    initializeAllPartialPars();
-    return computeParsimony("Computing post PJ parsimony");
+    return parsimony_score;
 }

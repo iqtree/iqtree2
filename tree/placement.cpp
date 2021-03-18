@@ -242,8 +242,10 @@ void PhyloTree::optimizePlacementRegion(ParsimonySearchParameters& s,
     std::partition(real_nodes.begin(), real_nodes.end(),
                    [tb](Node* n) { return n==tb.first || n==tb.second; });
 #if (0)
-    LOG_LINE(VB_MIN, "first->id " << tb.first->id
-             << " and second->id " << tb.second->id);
+    LOG_LINE(VB_MIN, "targ bran " << region_target_index
+             << " and first->id " << tb.first->id
+             << " and second->id " << tb.second->id
+             << " node count " << real_nodes.size());
 #endif
     
     //3. Set up mappings (id #s to nodes), set up
@@ -344,20 +346,23 @@ void PhyloTree::optimizePlacementRegion(ParsimonySearchParameters& s,
     //copyingIn.stop();
     s.initializing.stop();
 
-    s.rescoring.start();
-    PhyloNode*     firstNode  = local_targets[0].first;
-    PhyloNode*     secondNode = local_targets[0].second;
-    PhyloNeighbor* firstNeigh = firstNode->findNeighbor(secondNode);
-    computeParsimony("Rescoring parsimony for subtree", true, false, firstNeigh, firstNode);
-    s.rescoring.stop();
+    for (int step=0; step<2; ++step) {
+        s.rescoring.start();
+        PhyloNode*     firstNode  = local_targets[0].first;
+        PhyloNode*     secondNode = local_targets[0].second;
+        PhyloNeighbor* firstNeigh = firstNode->findNeighbor(secondNode);
+        computeParsimony("Rescoring parsimony for subtree", true, false, firstNeigh, firstNode);
+        s.rescoring.stop();
     
-    //TimeKeeper optimizing("optimizing");
-    //optimizing.start();
-    optimizeSubtreeParsimony<ParsimonySPRMove>(s, local_targets,
-                                               per_thread_path_parsimony,
-                                               context);
-    //optimizing.stop();
-    
+        if (0<step) continue;
+        TimeKeeper optimizing("optimizing");
+        optimizing.start();
+        optimizeSubtreeParsimony<ParsimonySPRMove>(s, local_targets,
+                                                   per_thread_path_parsimony,
+                                                   context, false);
+        optimizing.stop();
+    }
+
     //TimeKeeper copyingOut("copying subtree back");
     //copyingOut.start();
     //Copy subtree state back!  Most of this can be done in parallel (!)
@@ -391,22 +396,29 @@ void PhyloTree::optimizePlacementRegion(ParsimonySearchParameters& s,
     for (intptr_t fake_node_index =0; fake_node_index < 2; ++fake_node_index) {
         //Copy state for subtree *boundary* nodes
         PhyloNode*     fake          = &fake_nodes[fake_node_index];
+        ASSERT(fake->neighbors.size()==1);
         PhyloNode*     real          = map_to_real_node[fake->id];
         PhyloNeighbor* fake_nei      = fake->firstNeighbor();
         PhyloNode*     fake_adjacent = fake_nei->getNode();
         for (Neighbor* real_nei : real->neighbors) {
             PhyloNeighbor* real_phylo_nei = (PhyloNeighbor*)real_nei;
             PhyloNode*     real_adjacent  = real_phylo_nei->getNode();
-            if ( map_to_real_node.find(real_adjacent->id) !=
-                 map_to_real_node.end() ) {
+            if ( real_adjacent->id == fake_adjacent->id ) {
                 //Each boundary node might have 3 neighbors
                 //but only one will correspond to a node in the
                 //region of interest.  And this one must be it!
                 real_phylo_nei->copyComputedState(fake_nei);
-                real_phylo_nei->node = map_to_real_node[fake_adjacent->id];
-                real_phylo_nei->id   = static_cast<int>(fake_to_real_branch_id[fake_nei->id]);
             }
         }
+    }
+    for (intptr_t fake_branch_index = 0;
+         fake_branch_index < branch_count; ++fake_branch_index) {
+        TargetBranch& fake_branch = local_targets[fake_branch_index];
+        auto real_branch_id = fake_to_real_branch_id[fake_branch_index];
+        TargetBranch& real_branch = targets[real_branch_id];
+        real_branch.first  = map_to_real_node[fake_branch.first->id];
+        real_branch.second = map_to_real_node[fake_branch.second->id];
+        real_branch.copyComputedState(fake_branch);
     }
     //copyingOut.stop();
     /*
@@ -436,6 +448,7 @@ int  PhyloTree::renumberInternalNodes() {
 
 
 void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
+                                 const char* description,
                                  bool be_quiet) {
     //
     //Assumes: The tree is rooted.
@@ -448,7 +461,13 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
 
     //Todo: Change how the caller selects step-wise parsimony!
     if ( pr.taxa_per_batch == 1 && pr.heuristic->isGlobalSearch()  &&
-         !pr.calculator->usesLikelihood() && !trackLikelihood ) {
+         !pr.calculator->usesLikelihood() && !trackLikelihood &&
+         3 < leafNum ) {
+        //The minimum for leafNum is because ConstraintTree::initFromTree
+        //(called from ConstraintTree::readConstraint, called from
+        //reinsertTaxViaStepwiseParsimony(), refuses to run if leafNum
+        //is less than 4).
+        
         pr.setUpAllocator(additional_sequences*4, false, 0);
         reinsertTaxaViaStepwiseParsimony(taxaIdsToAdd);
         pr.donePlacement();
@@ -495,11 +514,8 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
     intptr_t newTaxaCount           = taxaIdsToAdd.size();
     double   estimate_per_placement = 1.0 + floor(newTaxaCount / leafNum / 2.0);
     double   estimate               = newTaxaCount * (2.0 + estimate_per_placement);
-    initProgress(estimate, "Adding new taxa to tree", "", "");
+    initProgress(estimate, description, "", "");
 
-
-    
-    
     pr.overall.start();
     pr.initializing.start();
     pr.prepareForPlacementRun();

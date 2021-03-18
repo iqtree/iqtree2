@@ -53,13 +53,13 @@ PhyloTree& BlockAllocator::getTree() {
 int BlockAllocator::getParsimonyBlockCount() const {
     return index_parsimony;
 }
-void BlockAllocator::handOverComputedState(PhyloNeighbor* from_nei, PhyloNeighbor* to_nei) {
+void BlockAllocator::handOverComputedState(PhyloNeighbor* from_nei,
+                                           PhyloNeighbor* to_nei) {
     std::swap(to_nei->partial_lh         , from_nei->partial_lh);
     std::swap(to_nei->partial_pars       , from_nei->partial_pars);
     std::swap(to_nei->scale_num          , from_nei->scale_num);
     std::swap(to_nei->partial_lh_computed, from_nei->partial_lh_computed);
     allocateMemoryFor(from_nei);
-    to_nei->partial_lh_computed = from_nei->partial_lh_computed;
     from_nei->clearComputedFlags();
 }
 int BlockAllocator::getLikelihoodBlockCount() const {
@@ -208,16 +208,6 @@ void LikelihoodBlockAllocator::allocateMemoryFor(PhyloNeighbor* nei) {
         allocateLikelihoodBlocks(ph, nei->scale_num);
         nei->partial_lh = ph;
     }
-}
-void LikelihoodBlockAllocator::handOverComputedState(PhyloNeighbor* from_nei,
-                                                     PhyloNeighbor* to_nei) {
-    std::swap(to_nei->partial_lh         , from_nei->partial_lh);
-    std::swap(to_nei->partial_pars       , from_nei->partial_pars);
-    std::swap(to_nei->scale_num          , from_nei->scale_num);
-    std::swap(to_nei->partial_lh_computed, from_nei->partial_lh_computed);
-    allocateMemoryFor(from_nei);
-    to_nei->partial_lh_computed = from_nei->partial_lh_computed;
-    from_nei->clearComputedFlags();
 }
 bool LikelihoodBlockAllocator::usesLikelihood() {
     return true;

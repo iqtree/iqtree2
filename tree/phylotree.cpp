@@ -638,7 +638,7 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
         doneDeletes(countRemoved, will_add);
     }
     if (will_add) {
-        addNewTaxaToTree(taxaIdsToAdd);
+        addNewTaxaToTree(taxaIdsToAdd, "Adding new taxa to tree");
         //Note: If the Sankoff cost matrix isn't wanted after placement, it
         //      will be deallocated (switching back to regular parsimony)
         //      in GlobalPlacementOptimizer::optimizeAfterPlacement.
@@ -984,7 +984,7 @@ void PhyloTree::mergeAlignment(const Alignment* new_aln) {
             ++old_count;
         }
         dupe_to_twin.getKeysAndValues(removed_seqs, twin_seqs);
-        addNewTaxaToTree(ids_of_sequences_to_place);
+        addNewTaxaToTree(ids_of_sequences_to_place, "Adding new taxa to tree");
     }
 }
 
@@ -1219,6 +1219,10 @@ void PhyloTree::setModelFactory(ModelFactory *model_fac) {
 
 bool PhyloTree::hasModelFactory() const {
     return model_factory != nullptr;
+}
+
+bool PhyloTree::hasModel() const {
+    return model != nullptr;
 }
 
 void PhyloTree::setRate(RateHeterogeneity *rate) {

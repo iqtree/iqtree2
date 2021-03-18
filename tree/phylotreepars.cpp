@@ -1299,23 +1299,25 @@ void getNeiBranches(PhyloNeighborVec &removed_nei,
 void PhyloTree::insertNode2Branch(PhyloNode* added_node,
                                   PhyloNode* target_node,
                                   PhyloNode* target_dad) {
-    target_node->updateNeighbor(target_dad, added_node, -1.0);
-    target_dad->updateNeighbor(target_node, added_node, -1.0);
-    added_node->updateNeighbor(DUMMY_NODE_1, target_node, -1.0);
-    added_node->updateNeighbor(DUMMY_NODE_2, target_dad, -1.0);
-    added_node->findNeighbor(target_node)->partial_pars =
-    target_dad->findNeighbor(added_node)->partial_pars;
-    added_node->findNeighbor(target_dad)->partial_pars =
-    target_node->findNeighbor(added_node)->partial_pars;
+    target_node->updateNeighbor(target_dad,   added_node,  -1.0);
+    target_dad->updateNeighbor (target_node,  added_node,  -1.0);
+    added_node->updateNeighbor (DUMMY_NODE_1, target_node, -1.0);
+    added_node->updateNeighbor (DUMMY_NODE_2, target_dad,  -1.0);
     
-    added_node->findNeighbor(target_node)->partial_lh_computed =
-    target_dad->findNeighbor(added_node)->partial_lh_computed;
-    added_node->findNeighbor(target_dad)->partial_lh_computed =
-    target_node->findNeighbor(added_node)->partial_lh_computed;
+    PhyloNeighbor* down       = added_node->findNeighbor (target_node);
+    PhyloNeighbor* old_down   = target_dad->findNeighbor (added_node);
+    PhyloNeighbor* up         = added_node->findNeighbor (target_dad);
+    PhyloNeighbor* old_up     = target_node->findNeighbor(added_node);
+    
+    down->partial_pars        = old_down->partial_pars;
+    up->partial_pars          = old_up->partial_pars;
+    
+    down->partial_lh_computed = old_down->partial_lh_computed;
+    up->partial_lh_computed   = old_up->partial_lh_computed;
 
-    PhyloNode* ass_node = added_node->firstNeighbor()->getNode();
-    ass_node->findNeighbor(added_node)->clearPartialLh();
-    ass_node->clearReversePartialParsimony(added_node);
+    PhyloNode* leaf = added_node->firstNeighbor()->getNode();
+    leaf->findNeighbor(added_node)->setParsimonyComputed(false);
+    leaf->clearReversePartialParsimony(added_node);
 }
 
 int PhyloTree::computeParsimonyTreeBatch(const char *out_prefix,
@@ -1340,23 +1342,31 @@ int PhyloTree::computeParsimonyTreeBatch(const char *out_prefix,
         taxa_this_time.resize(p-n);
         for (intptr_t i=n; i<p; ++i) {
             taxa_this_time[i-n]=taxon_order[i];
-        }
-        LOG_LINE(VB_MIN, "Expanding tree to " << p << " taxa");
-        addNewTaxaToTree(taxa_this_time, true);
+        }        
+        std::stringstream desc;
+        desc << "Expanding tree to " << p << " taxa";
+        addNewTaxaToTree(taxa_this_time, desc.str().c_str(), true);
         n = p;
     }
     while ( n < taxon_count );
 
     bool orig_rooted = rooted;
     rooted = false;
+    deleteAllPartialParsimony();
     setAlignment(alignment);
-    fixNegativeBranch(true);
+    initializeAllPartialPars();
+    double score = 0;
+    LOG_LINE(VB_MED, "Setting parsimony branch lengths");
+
+    setAllBranchLengthsFromParsimony(true, score);
+    parsimony_score = static_cast<int>(floor(score));
     if (orig_rooted) {
         convertToRooted();
     }
     if (out_prefix) {
         string file_name = out_prefix;
         file_name += ".parstree";
+        LOG_LINE(VB_MED, "Writing parsimony tree to " << file_name);
         printTree(file_name.c_str(), WT_NEWLINE + WT_BR_LEN);
     }
     return parsimony_score;
@@ -1543,8 +1553,11 @@ int PhyloTree::computeParsimonyTreeNew(const char *out_prefix,
     
     bool orig_rooted = rooted;
     rooted = false;
+    deleteAllPartialParsimony();
     setAlignment(alignment);
-    fixNegativeBranch(true);
+    double score = 0;
+    setAllBranchLengthsFromParsimony(true, score);
+    parsimony_score = static_cast<int>(floor(score));
     if (orig_rooted) {
         convertToRooted();
     }
@@ -1572,6 +1585,9 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix,
     int    newNodeID;
     size_t index;
 
+    PhyloTreeThreadingContext context(*this, params->parsimony_uses_max_threads);
+    setParsimonyKernel(params->SSE);
+    
     if (constraintTree.empty()) {
         create3TaxonTree(taxon_order, rand_stream);
         ASSERT(leafNum == 3);
@@ -1615,7 +1631,7 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix,
     }
     
     // stepwise adding the next taxon for the remaining taxa
-    double usefulTime = 0;
+    TimeKeeper usefulTime("inserting nodes");
     double fudge      = (double)leafNum * (double)leafNum * 0.01;
     double work_to_do = fudge + (double)leafNum * 2
         + (double)nseq * (double)(nseq + 1)
@@ -1632,6 +1648,7 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix,
         // create a new node attached to new taxon or removed node
         PhyloNode *added_node = newNode(newNodeID++);
         PhyloNode *new_taxon;
+        auto seq_name = aln->getSeqName(taxon_order[leafNum]);
 
         if (step < static_cast<intptr_t>(removed_nei.size())) {
             // add the removed_nei (from constraint tree) back to the tree
@@ -1642,15 +1659,10 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix,
             added_nodes.push_back(added_node);
         } else {
             // add new taxon to the tree
-            if (verbose_mode >= VB_MAX) {
-                hideProgress();
-                cout << "Adding " << aln->getSeqName(taxon_order[leafNum]) << " to the tree..." << endl;
-                showProgress();
-            }
             getBranches(nodes1, nodes2);
 
             // allocate a new taxon
-            new_taxon = newNode(taxon_order[leafNum], aln->getSeqName(taxon_order[leafNum]).c_str());
+            new_taxon = newNode(taxon_order[leafNum], seq_name.c_str());
             
             // link new_taxon and added_node
             added_node->addNeighbor(new_taxon, -1.0);
@@ -1664,22 +1676,21 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix,
         added_node->addNeighbor(DUMMY_NODE_1, -1.0);
         added_node->addNeighbor(DUMMY_NODE_2, -1.0);
 
-        usefulTime -= getRealTime();
+        usefulTime.start();
         for (int branch_num = 0; branch_num < nodes1.size(); branch_num++) {
-            UINT score = addTaxonMPFast(new_taxon, added_node, nodes1[branch_num], nodes2[branch_num]);
+            UINT score = addTaxonMPFast(new_taxon, added_node,
+                                        nodes1[branch_num], nodes2[branch_num]);
             if (branch_num == 0 || score < best_pars_score) {
                 best_pars_score = score;
                 target_node = nodes1[branch_num];
                 target_dad  = nodes2[branch_num];
             }
         }
-        usefulTime += getRealTime();
+        usefulTime.stop();
         
-        if (verbose_mode >= VB_MAX) {
-            hideProgress();
-            cout << ", score = " << best_pars_score << endl;
-            showProgress();
-        }
+        LOG_LINE(VB_MAX, "Added " << seq_name << " to the tree"
+                 << ", score " << best_pars_score );
+
         // now insert the new node in the middle of the branch node-dad
         insertNode2Branch(added_node, target_node, target_dad);
 
@@ -1706,13 +1717,19 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix,
 
     nodeNum = 2 * leafNum - 2;
     initializeTree();
+    
     // parsimony tree is always unrooted
     bool orig_rooted = rooted;
     rooted = false;
     setAlignment(alignment);
-    fixNegativeBranch(true);
-    // convert to rooted tree if originally so
+    if (params->compute_likelihood) {
+        fixNegativeBranch(true);
+    } else {
+        double score = best_pars_score;
+        setAllBranchLengthsFromParsimony(true, score);
+    }
     if (orig_rooted) {
+        // convert to rooted tree if originally so
         convertToRooted();
     }
     if (out_prefix) {
@@ -1733,7 +1750,8 @@ UINT PhyloTree::addTaxonMPFast(PhyloNode *added_taxon, PhyloNode* added_node,
     insertNode2Branch(added_node, node, dad);
 
     // compute the parsimony score
-    UINT score = computeParsimonyBranch(added_taxon->findNeighbor(added_node), added_taxon);
+    PhyloNeighbor* nei_down = added_taxon->findNeighbor(added_node);
+    UINT score = computeParsimonyBranch(nei_down, added_taxon);
 
     //Would have preferred...
     //  ParallelParsimonyCalculator c(*this);
@@ -1743,17 +1761,16 @@ UINT PhyloTree::addTaxonMPFast(PhyloNode *added_taxon, PhyloNode* added_node,
     //so there is nothing to gain by parallelizing the computation.
 
     // remove the added node
-    node->updateNeighbor(added_node, dad);
-    dad->updateNeighbor(added_node, node);
-    added_node->updateNeighbor(node, DUMMY_NODE_1);
-    added_node->updateNeighbor(dad, DUMMY_NODE_2);
+    node->updateNeighbor      (added_node, dad);
+    dad->updateNeighbor       (added_node, node);
+    added_node->updateNeighbor(node,       DUMMY_NODE_1);
+    added_node->updateNeighbor(dad,        DUMMY_NODE_2);
 
     // set partial_pars to COMPUTED
-    node->findNeighbor(dad)->setParsimonyComputed(true);
-    dad->findNeighbor(node)->setParsimonyComputed(true);
+    //node->findNeighbor(dad)->setParsimonyComputed(true);
+    //dad->findNeighbor(node)->setParsimonyComputed(true);
 
     return score;
-
 }
 
 void PhyloTree::extractBifurcatingSubTree(PhyloNeighborVec& removed_nei,
@@ -1811,8 +1828,8 @@ void PhyloTree::extractBifurcatingSubTree(PhyloNeighborVec& removed_nei,
     leafNum = getNumTaxa();
 }
 
-int PhyloTree::setAllBranchLengthsFromParsimony(bool   recalculate_parsimony,
-                                                double tree_parsimony) {
+int PhyloTree::setAllBranchLengthsFromParsimony(bool    recalculate_parsimony,
+                                                double& tree_parsimony) {
     if (recalculate_parsimony) {
         initializeAllPartialPars();
         tree_parsimony = computeParsimony("Recalculating tree parsimony"

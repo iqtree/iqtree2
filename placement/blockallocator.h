@@ -120,7 +120,6 @@ public:
     int          getLikelihoodBlockCount() const;
     virtual void allocateLikelihoodBlocks(double*& partial_lh, UBYTE*& scale_num);
     virtual void allocateMemoryFor(PhyloNeighbor* nei);
-    virtual void handOverComputedState(PhyloNeighbor* from_nei, PhyloNeighbor* to_nei);
 
     /** indicates if this block allocator is keeping track of
         likelihood and scalenum vectors

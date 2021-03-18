@@ -48,20 +48,22 @@ void GlobalPlacementOptimizer::optimizeAfterPlacement(PhyloTree& tree) {
     }
     tree.determineBlockSizes();
 
-    //First, recompute parsimony
-    int parsimony_score = tree.computeParsimony("Computing parsimony (after adding taxa)",
-                                                true, false);
-    if (!be_quiet) {
-        TREE_LOG_LINE(tree, VB_MIN, "Parsimony score after adding taxa was " << parsimony_score);
-    }
     
-    if (tree.params->compute_ml_dist) {
+    if (tree.params->compute_ml_dist && tree.hasModel() ) {
+        //First, recompute parsimony
+        int parsimony_score = tree.computeParsimony("Computing parsimony (after adding taxa)",
+                                                    true, false);
+        if (!be_quiet) {
+            TREE_LOG_LINE(tree, VB_MIN, "Parsimony score after adding taxa was " << parsimony_score);
+        }
         //Then, fix any negative branches
         tree.initializeAllPartialLh();
         double negativeStart = getRealTime();
-        tree.fixNegativeBranch();
+        auto   fixed = tree.fixNegativeBranch();
         double negativeElapsed = getRealTime() - negativeStart;
-        TREE_LOG_LINE(tree, VB_MED, "Fixing negative branches took " << negativeElapsed << " wall-clock seconds");
+        TREE_LOG_LINE(tree, VB_MED, "Fixing " << fixed
+                      << " negative branches took " << negativeElapsed
+                      << " wall-clock seconds");
 
         //And, at last, compute the tree likelihood
         double likelyStart   = getRealTime();
@@ -70,7 +72,11 @@ void GlobalPlacementOptimizer::optimizeAfterPlacement(PhyloTree& tree) {
         TREE_LOG_LINE(tree, VB_MIN, "Likelihood score after adding taxa was " << likelihood
             << " (and took " << likelyElapsed << " wall-clock seconds to calculate)");
     } else {
-        tree.setAllBranchLengthsFromParsimony(false, parsimony_score);
+        double score;
+        tree.setAllBranchLengthsFromParsimony(true, score);
+        if (!be_quiet) {
+            TREE_LOG_LINE(tree, VB_MIN, "Parsimony score after adding taxa was " << score);
+        }
     }
 }
 

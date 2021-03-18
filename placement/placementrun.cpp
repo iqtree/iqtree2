@@ -68,7 +68,8 @@ void PlacementRun::prepareForPlacementRun() {
             << block_allocator->getLikelihoodBlockCount());
     }
     if (VB_MED <= verbose_mode &&
-        (phylo_tree.params->compute_likelihood || use_likelihood) ) {
+        (phylo_tree.params->compute_likelihood || use_likelihood) &&
+        phylo_tree.hasModel()) {
         phylo_tree.configureLikelihoodKernel(*phylo_tree.params, true);
         double curScore = phylo_tree.computeLikelihood();
         TREE_LOG_LINE(phylo_tree, VB_MED, "Likelihood score before insertions was " << curScore);
@@ -223,7 +224,6 @@ void PlacementRun::doPartOfBatchInsert
          LikelihoodBlockPairs& spare_blocks, double estimate_per_placement,
          TargetBranchRange& targets,
          ParsimonySearchParameters &s, ParsimonyPathVector &pv) {
-   
     size_t j = insertStart;
     while ( j < insertStop ) {
         size_t h = j;
@@ -233,22 +233,32 @@ void PlacementRun::doPartOfBatchInsert
                 break;
             }
         }
+        
+        if (targets[t].isOutOfDate()) {
 #if (0)
-        TimeKeeper icky2("rescoring target");
-        icky2.start();
-        double parsimony_score = -1.0;
-        targets[t].computeState(phylo_tree, parsimony_score,
-                                t, spare_blocks);
-        icky2.stop();
-        TREE_LOG_LINE(phylo_tree, VB_MIN, "Rescoring took "
-              << icky2.elapsed_wallclock_time << " wall, "
-              << icky2.elapsed_cpu_time << " cpu");
+            TimeKeeper icky2("rescoring target");
+            icky2.start();
 #endif
-        targets[t].first->findNeighbor(targets[t].second)->setParsimonyComputed(true);
-        targets[t].second->findNeighbor(targets[t].first)->setParsimonyComputed(true);
+            double parsimony_score = -1.0;
+            targets[t].computeState(phylo_tree, parsimony_score,
+                                    t, spare_blocks);
+            ASSERT(targets[t].getLeftNeighbor()->isParsimonyComputed());
+            ASSERT(targets[t].getRightNeighbor()->isParsimonyComputed());
+#if (0)
+            icky2.stop();
+            TREE_LOG_LINE(phylo_tree, VB_MIN,
+                          "Rescoring target " << t
+                          << " for insert " << h << " took "
+                          << icky2.elapsed_wallclock_time << " wall, "
+                          << icky2.elapsed_cpu_time << " cpu");
+        } else {
+            TREE_LOG_LINE(phylo_tree, VB_MIN, "Target " << t
+                          << " for insert " << h << " already up to date ");
+#endif
+        }
         
         size_t insertCount = j - h;
-        if (true) /*(insertCount<256)*/ {
+        if (insertCount<256) {
             //Insert candidates h through j-1
             insertTime.start();
 #if (0)
@@ -257,9 +267,11 @@ void PlacementRun::doPartOfBatchInsert
 #endif
             for (size_t i=h; i<j; ++i) {
                 TaxonPlacement& insert    = inserts[i];
-                //TaxonToPlace&   candidate = candidates.getTaxonByIndex
-                //                            (insert.candidate_index);
-                //auto check_index = candidate.getBestPlacement().getTargetIndex();
+#if (0)
+                TaxonToPlace&   candidate = candidates.getTaxonByIndex
+                                            (insert.candidate_index);
+                auto check_index = candidate.getBestPlacement().getTargetIndex();
+#endif
                 insertTaxon(candidates, insert.candidate_index,
                             targets, spare_blocks);
                 if ((taxa_inserted_in_total % 1000) == 0) {
@@ -282,11 +294,15 @@ void PlacementRun::doPartOfBatchInsert
 #endif
             insertTime.stop();
         } else {
-            //The recursive bit!  Currently disabled, because it crashes!
+            //The recursive bit!
             size_t sampleCount = (size_t)floor(sqrt(insertCount));
             size_t sampleStop  = h + sampleCount;
+            double inside_estimate = (double)insertCount
+                                   / (double)(sampleCount + insertCount)
+                                   * estimate_per_placement;
+            
             doPartOfBatchInsert(candidates, inserts, h, sampleStop,
-                                spare_blocks, estimate_per_placement,
+                                spare_blocks, inside_estimate,
                                 targets, s, pv);
             for (size_t i=sampleStop; i<j; ++i) {
                 TaxonPlacement& insert    = inserts[i];
@@ -314,7 +330,7 @@ void PlacementRun::doPartOfBatchInsert
 #endif
             rankingTime.stop();
             doPartOfBatchInsert(candidates, inserts, sampleStop, j,
-                                spare_blocks, estimate_per_placement,
+                                spare_blocks, inside_estimate,
                                 targets, s, pv);
         }
         if (1<j-h) {

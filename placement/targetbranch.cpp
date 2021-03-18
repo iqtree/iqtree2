@@ -26,8 +26,7 @@ TargetBranch::~TargetBranch() {
     delete replacements;
 }
 
-TargetBranch::TargetBranch(const TargetBranch& rhs): super(rhs) {
-    blocker                = rhs.blocker;
+void TargetBranch::copyComputedState(const TargetBranch& rhs) {
     partial_pars           = rhs.partial_pars;
     connection_cost        = rhs.connection_cost;
     branch_cost            = rhs.branch_cost;
@@ -35,26 +34,25 @@ TargetBranch::TargetBranch(const TargetBranch& rhs): super(rhs) {
     partial_lh             = rhs.partial_lh;
     scale_num              = rhs.scale_num;
     branch_lh_scale_factor = rhs.branch_lh_scale_factor;
+}
+
+TargetBranch::TargetBranch(const TargetBranch& rhs): super(rhs) {
+    blocker                = rhs.blocker;
     used                   = rhs.used;
     replacements           = (rhs.replacements==nullptr) ? nullptr
                            : new ReplacementBranchList(*rhs.replacements);
+    copyComputedState(rhs);
 }
 
 TargetBranch& TargetBranch::operator= (const TargetBranch& rhs) {
     if (this!=&rhs) {
         super::operator=(rhs);
         blocker                = rhs.blocker;
-        partial_pars           = rhs.partial_pars;
-        connection_cost        = rhs.connection_cost;
-        branch_cost            = rhs.branch_cost;
-        parsimony_dirtiness    = rhs.parsimony_dirtiness;
-        partial_lh             = rhs.partial_lh;
-        scale_num              = rhs.scale_num;
-        branch_lh_scale_factor = rhs.branch_lh_scale_factor;
         used                   = rhs.used;
         delete replacements;
         replacements           = (rhs.replacements==nullptr) ? nullptr
                                : new ReplacementBranchList(*rhs.replacements);
+        copyComputedState(rhs);
     }
     return *this;
 }
@@ -114,11 +112,11 @@ double TargetBranch::computeState(PhyloTree& phylo_tree,
                                   double& tree_parsimony_score,
                                   intptr_t target_branch_index,
                                   LikelihoodBlockPairs &blocks) {
-    PhyloNeighbor* neigh1 = first->findNeighbor(second);
-    PhyloNeighbor* neigh2 = second->findNeighbor(first);
+    PhyloNeighbor* neigh1   = getLeftNeighbor();
+    PhyloNeighbor* neigh2   = getRightNeighbor();
     ParallelParsimonyCalculator c(phylo_tree, false);
-    parsimony_dirtiness += c.schedulePartialParsimony(neigh1, first);
-    parsimony_dirtiness += c.schedulePartialParsimony(neigh2, second);
+    parsimony_dirtiness    += c.schedulePartialParsimony(neigh1, first);
+    parsimony_dirtiness    += c.schedulePartialParsimony(neigh2, second);
     c.calculate();
     int second_subtree_cost = phylo_tree.getSubTreeParsimony(neigh1);
     int first_subtree_cost  = phylo_tree.getSubTreeParsimony(neigh2);
@@ -131,9 +129,9 @@ double TargetBranch::computeState(PhyloTree& phylo_tree,
     } else {
         if (tree_parsimony_score==-1) {
             int branch_cost_dummy = 0;
-            tree_parsimony_score = phylo_tree.computeParsimonyOutOfTree
-                                   ( neigh1->partial_pars, neigh2->partial_pars,
-                                    &branch_cost_dummy);
+            tree_parsimony_score  = phylo_tree.computeParsimonyOutOfTree
+                                    ( neigh1->partial_pars, neigh2->partial_pars,
+                                      &branch_cost_dummy);
         }
         connection_cost = tree_parsimony_score;
     }
@@ -652,8 +650,9 @@ void TargetBranch::setParsimonyLength(PhyloTree& tree) {
     backnei->length = parsimony_length;
 }
 
-TargetBranch::operator PhyloBranch() const {
-    return PhyloBranch(first, second);
+bool TargetBranch::isOutOfDate() {
+    return getLeftNeighbor()->isParsimonyComputed() &&
+           getRightNeighbor()->isParsimonyComputed();
 }
 
 TargetBranch& TargetBranch::clearReverseParsimony() {

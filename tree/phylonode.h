@@ -12,6 +12,7 @@
 #ifndef PHYLONODE_H
 #define PHYLONODE_H
 
+
 #include "node.h"
 
 #define FOR_EACH_ADJACENT_PHYLO_NODE(mynode, mydad, it, mychild) \
@@ -209,7 +210,7 @@ public:
     PhyloNeighbor(Node *anode, double alength) : Neighbor(anode, alength) {
         partial_lh = NULL;
         scale_num = NULL;
-        partial_lh_computed = 0;
+        partial_lh_computed = NOTHING_IS_COMPUTED;
         lh_scale_factor = 0.0;
         partial_pars = NULL;
         direction = UNDEFINED_DIRECTION;
@@ -225,7 +226,7 @@ public:
     PhyloNeighbor(Node *anode, double alength, int aid) : Neighbor(anode, alength, aid) {
         partial_lh = NULL;
         scale_num = NULL;
-        partial_lh_computed = 0;
+        partial_lh_computed = NOTHING_IS_COMPUTED;
         lh_scale_factor = 0.0;
         partial_pars = NULL;
         direction = UNDEFINED_DIRECTION;
@@ -239,7 +240,7 @@ public:
     PhyloNeighbor(const PhyloNeighbor& nei) : Neighbor(nei) {
         partial_lh = nullptr;
         scale_num = nullptr;
-        partial_lh_computed = 0;
+        partial_lh_computed = NOTHING_IS_COMPUTED;
         lh_scale_factor = 0.0;
         partial_pars = nullptr;
         direction = nei.direction;
@@ -258,14 +259,14 @@ public:
         tell that the partial likelihood vector is not computed
      */
     inline void clearPartialLh() {
-        partial_lh_computed = 0;
+        partial_lh_computed &= ~LIKELIHOOD_IS_COMPUTED;
     }
 
     /**
      *  tell that the partial likelihood vector is computed
      */
     inline void unclearPartialLh() {
-        partial_lh_computed = 1;
+        partial_lh_computed |= LIKELIHOOD_IS_COMPUTED;
     }
 
     /**
@@ -286,7 +287,7 @@ public:
 	}
 
 	int get_partial_lh_computed(){
-	return partial_lh_computed;
+        return partial_lh_computed;
 	}
 
 	/**
@@ -305,46 +306,23 @@ public:
         return (PhyloNode*)node;
     }
     
-    bool isLikelihoodComputed() const {
-        return ( partial_lh_computed & LIKELIHOOD_IS_COMPUTED ) != 0;
-    }
+    bool isLikelihoodComputed() const;
     
-    void setLikelihoodComputed(bool set) {
-        if (set) {
-            partial_lh_computed |= LIKELIHOOD_IS_COMPUTED;
-        } else {
-            partial_lh_computed &= ~LIKELIHOOD_IS_COMPUTED;
-        }
-    }
+    void setLikelihoodComputed(bool set);
     
-    bool isParsimonyComputed() const {
-       return ( partial_lh_computed & PARSIMONY_IS_COMPUTED ) != 0;
-    }
+    bool isParsimonyComputed() const;
            
-    void setParsimonyComputed(bool set) {
-        if (set) {
-            partial_lh_computed |= PARSIMONY_IS_COMPUTED;
-        } else {
-            partial_lh_computed &= ~PARSIMONY_IS_COMPUTED;
-        }
-    }
+    void setParsimonyComputed(bool set);
     
-    UINT* get_partial_pars() {
-        return partial_pars;
-    }
-
+    UINT* get_partial_pars();
     
-    void clearComputedFlags() {
-        partial_lh_computed = 0;
-    }
+    void clearComputedFlags();
 
     /**
      copy partial likelihood and partial parsimony information
      from another PhyloNeighbor.
      */
     void copyComputedState(const PhyloNeighbor* donor);
-
-
 
 private:
 
@@ -354,6 +332,7 @@ private:
      */
     int partial_lh_computed;
     
+    static const int NOTHING_IS_COMPUTED = 0;
     static const int LIKELIHOOD_IS_COMPUTED = 1;
     static const int PARSIMONY_IS_COMPUTED  = 2;
 
@@ -488,6 +467,7 @@ struct PhyloBranch: public pair<PhyloNode*, PhyloNode*> {
     int getBranchID() const;
     PhyloNeighbor* getLeftNeighbor()  const;
     PhyloNeighbor* getRightNeighbor() const;
+    bool stillExists() const;
 };
 
 typedef CastingVector<PhyloBranch, BranchVector> PhyloBranchVector;

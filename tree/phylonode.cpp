@@ -26,6 +26,38 @@ void PhyloNeighbor::clearForwardPartialLh(PhyloNode* dad) {
     }
 }
 
+bool PhyloNeighbor::isLikelihoodComputed() const {
+    return ( partial_lh_computed & LIKELIHOOD_IS_COMPUTED ) != 0;
+}
+
+void PhyloNeighbor::setLikelihoodComputed(bool set) {
+    if (set) {
+        partial_lh_computed |= LIKELIHOOD_IS_COMPUTED;
+    } else {
+        partial_lh_computed &= ~LIKELIHOOD_IS_COMPUTED;
+    }
+}
+
+bool PhyloNeighbor::isParsimonyComputed() const {
+   return ( partial_lh_computed & PARSIMONY_IS_COMPUTED ) != 0;
+}
+       
+void PhyloNeighbor::setParsimonyComputed(bool set) {
+    if (set) {
+        partial_lh_computed |= PARSIMONY_IS_COMPUTED;
+    } else {
+        partial_lh_computed &= ~PARSIMONY_IS_COMPUTED;
+    }
+}
+
+UINT* PhyloNeighbor::get_partial_pars() {
+    return partial_pars;
+}
+
+void PhyloNeighbor::clearComputedFlags() {
+    partial_lh_computed = 0;
+}
+
 void PhyloNeighbor::copyComputedState(const PhyloNeighbor* donor) {
     this->partial_lh          = donor->partial_lh;
     this->scale_num           = donor->scale_num;
@@ -222,6 +254,11 @@ PhyloNeighbor* PhyloBranch::getLeftNeighbor() const {
 
 PhyloNeighbor* PhyloBranch::getRightNeighbor() const {
     return second->findNeighbor(first);
+}
+
+bool PhyloBranch::stillExists() const {
+    return first->hasNeighbor(second) &&
+           second->hasNeighbor(first);
 }
 
 

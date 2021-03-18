@@ -101,7 +101,7 @@ int PhyloTree::doParsimonySearch(ParsimonySearchParameters& s) {
         
     s.initializing.stop();
     int rc = optimizeSubtreeParsimony<Move>
-           (s, targets, per_thread_path_parsimony, context);
+           (s, targets, per_thread_path_parsimony, context, true);
     doneProgress();
     return rc;
 }
@@ -110,7 +110,8 @@ template <class Move>
 int PhyloTree::optimizeSubtreeParsimony(ParsimonySearchParameters& s,
                                         TargetBranchRange& targets,
                                         ParsimonyPathVector& per_thread_path_parsimony,
-                                        PhyloTreeThreadingContext& context) {
+                                        PhyloTreeThreadingContext& context,
+                                        bool rescore_when_done) {
 
     intptr_t branch_count        = targets.size();
     
@@ -264,7 +265,7 @@ int PhyloTree::optimizeSubtreeParsimony(ParsimonySearchParameters& s,
                 double reverted_score = move.apply(*this, parsimony_score,
                                                    targets, dummyBlocks,
                                                    per_thread_path_parsimony);
-                ASSERT( reverted_score == parsimony_score );
+                //ASSERT( reverted_score == parsimony_score );
             } else {
                 parsimony_score = revised_score;
                 ++moves_applied;
@@ -278,15 +279,18 @@ int PhyloTree::optimizeSubtreeParsimony(ParsimonySearchParameters& s,
             break;
         }
     }
-    s.initializing.start();
-    clearAllPartialParsimony(false);
-    s.initializing.stop();
     
-    s.rescoring.start();
-    parsimony_score = computeParsimony("Determining one-way parsimony", false, true,
-                                       targets[0].first->findNeighbor(targets[0].second),
-                                       targets[0].first);
-    s.rescoring.stop();
+    if (rescore_when_done) {
+        s.initializing.start();
+        clearAllPartialParsimony(false);
+        s.initializing.stop();
+        
+        s.rescoring.start();
+        parsimony_score = computeParsimony("Determining one-way parsimony", false, true,
+                                           targets[0].first->findNeighbor(targets[0].second),
+                                           targets[0].first);
+        s.rescoring.stop();
+    }
     
     if (!s.be_quiet) {
         LOG_LINE(VB_MIN, "Applied " << moves_applied << " move"

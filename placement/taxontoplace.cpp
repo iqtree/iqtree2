@@ -192,6 +192,11 @@ void TaxonToPlace::insertIntoTree(PhyloTree& phylo_tree, BlockAllocator& b,
     bestPlacement.lenToNode2    = new_interior->findNeighbor(node_2)->length;
     bestPlacement.lenToNewTaxon = new_interior->findNeighbor(new_leaf)->length;
     
+    FOR_EACH_ADJACENT_PHYLO_NODE(new_interior, nullptr, it, node) {
+        ASSERT(node->findNeighbor(new_interior)->isParsimonyComputed());
+        ASSERT(new_interior->findNeighbor(node)->isParsimonyComputed());
+    }
+    
     ++phylo_tree.leafNum;
     phylo_tree.branchNum += 2;
     phylo_tree.nodeNum   += 2;
@@ -247,7 +252,9 @@ void TaxonToPlace::assessNewTargetBranches(PhyloTree& phylo_tree,
             } else {
                 PossiblePlacement p;
                 p.setTargetBranch(*it);
-                it->getTarget()->computeState(phylo_tree, parsimony_score,
+                TargetBranch* tb = it->getTarget();
+                ASSERT(tb->stillExists());
+                tb->computeState(phylo_tree, parsimony_score,
                                               p.getTargetIndex(), blocks);
                 scores.emplace_back(p);
             }

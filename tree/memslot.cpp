@@ -192,7 +192,7 @@ void MemSlotVector::cleanup() {
     unordered_map<PhyloNeighbor*, iterator> new_map;
     for (auto it = nei_id_map.begin(); it != nei_id_map.end(); it++)
         if (it->first != it->second->nei) {
-            it->first->partial_lh_computed &= ~1; // clear bit
+            it->first->setLikelihoodComputed(false); // clear bit
             it->first->partial_lh = NULL;
             it->first->scale_num = NULL;
         } else {
@@ -209,7 +209,7 @@ void MemSlotVector::takeover(PhyloNeighbor *nei, PhyloNeighbor *taken_nei) {
     nei->scale_num = taken_nei->scale_num;
     taken_nei->partial_lh = NULL;
     taken_nei->scale_num = NULL;
-    taken_nei->partial_lh_computed &= ~1; // clear bit
+    taken_nei->setLikelihoodComputed(false); // clear bit
     if (Params::getInstance().lh_mem_save != LM_MEM_SAVE)
         return;
     iterator id = findNei(taken_nei);

@@ -503,6 +503,7 @@ public:
      @param taxaIdsToAdd
      */
     void addNewTaxaToTree(const IntVector& taxaIdsToAdd,
+                          const char* description,
                           bool quiet = false);
     
     int renumberInternalNodes();
@@ -537,6 +538,11 @@ public:
      */
     bool hasModelFactory() const;
     
+    /**
+            indicates whether there is a model
+            @return true if there is an associated model
+     */
+    bool hasModel() const;
     /**
             set rate heterogeneity, important to compute the likelihood
             @param rate associated rate heterogeneity class
@@ -1477,8 +1483,8 @@ public:
      * @param tree_parsimony if recalculate_parsimony is false, the tree parsimony
      * @return number of branches fixed
      */
-    virtual int setAllBranchLengthsFromParsimony(bool recalculate_parsimony,
-                                                 double tree_parsimony);
+    virtual int setAllBranchLengthsFromParsimony(bool    recalculate_parsimony,
+                                                 double& tree_parsimony);
     
     /**
      * Assign branch length for branches that have zero or negative length.  Note: assumes
@@ -1720,7 +1726,8 @@ public:
     int optimizeSubtreeParsimony(ParsimonySearchParameters& s,
                                  TargetBranchRange& targets,
                                  ParsimonyPathVector& per_thread_path_parsimony,
-                                 PhyloTreeThreadingContext& context);
+                                 PhyloTreeThreadingContext& context,
+                                 bool rescore_when_done);
     
     void optimizePlacementRegion(ParsimonySearchParameters& s,
                                 TargetBranchRange& targets,
