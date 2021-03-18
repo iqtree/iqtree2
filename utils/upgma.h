@@ -82,6 +82,7 @@
 #include <vector>                    //for std::vector
 #include <string>                    //sequence names stored as std::string
 #include <functional>                //for std::hash
+#include <algorithm>                 //for std::sort
 #include "progress.h"                //for progress_display
 #include "my_assert.h"               //for ASSERT macro
 
@@ -431,8 +432,9 @@ protected:
             dupes_removed += vc.size();
             --dupes_removed;
             while (vc.size()>1) {
-                int second_half = vc.size()-vc.size()/2;
-                for (intptr_t i=0; i<vc.size()/2; ++i) {
+                intptr_t first_half = vc.size() / 2;
+                intptr_t second_half = vc.size()-first_half;
+                for (intptr_t i=0; i<first_half; ++i) {
                     intptr_t cluster_a = vc[i];
                     intptr_t row_a     = cluster_to_row[cluster_a];
                     intptr_t cluster_b = vc[i+second_half];
@@ -443,14 +445,14 @@ protected:
                     }
                     cluster(row_a, row_b);
                     vc[i] = cluster_c;
-                    //rowToCluster[a] = clusters.size()-1;
-                    //rowToCluster[b] = rowToCluster[row_count-1];
                     cluster_to_row.push_back(row_a);
                     if (row_b < row_count) {
                         cluster_to_row[rowToCluster[row_b]] = row_b;
                     }
                 }
                 vc.resize(second_half);
+                //Not first_half (rounded down), second_half (rounded up), 
+                //because, if there was an odd cluster, this keeps it
             }
             work_done += work_here;
             if (work_done > 1000.0) {

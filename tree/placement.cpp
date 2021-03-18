@@ -501,7 +501,7 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
     intptr_t threadCount     = PhyloTreeThreadingContext::getMaximumThreadCount();
     ParsimonyPathVector pv(blocksPerThread, threadsNeeded, threadCount);
     intptr_t spr_blocks      = pv.getTotalNumberOfBlocksRequired();
-    extra_parsimony_blocks  += spr_blocks;
+    extra_parsimony_blocks  += static_cast<int>(spr_blocks);
     
     int extra_lh_blocks = trackLikelihood
                           ? (target_branch_count + additional_sequences * 4)
@@ -576,7 +576,7 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
     ParsimonySearchParameters s("SPR");
     s.iterations                 = 3;
     s.lazy_mode                  = false;
-    s.radius                     = spr_radius;
+    s.radius                     = static_cast<int>(spr_radius);
     s.calculate_connection_costs = true;
     s.be_quiet                   = true;
 

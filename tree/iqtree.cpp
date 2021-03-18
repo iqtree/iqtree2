@@ -612,7 +612,7 @@ PhyloNode* IQTree::generateProximityTree(IntVector& order,
                                          PhyloNodeVector& nodes) {
     intptr_t count = static_cast<intptr_t>(stop)
                    - static_cast<intptr_t>(start);
-    if (count<degree) {
+    if (count<static_cast<intptr_t>(degree)) {
         return generateRandomBalancedTree(order, start, stop,
                                           degree, nodes);
     }
