@@ -1107,6 +1107,12 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.suppress_list_of_sequences = false;
     params.suppress_zero_distance_warnings = false;
     params.suppress_duplicate_sequence_warnings = false;
+    
+    params.alisim_active = false;
+    params.alisim_sequence_length = 1000;
+    params.alisim_dataset_num = 1;
+    params.alisim_ancestral_sequence = -1;
+    
 
     for (cnt = 1; cnt < argc; cnt++) {
         try {
@@ -4182,6 +4188,51 @@ void parseArg(int argc, char *argv[], Params &params) {
                 progress_display::setProgressDisplay(true);
                 continue;
             }
+            
+            if (strcmp(argv[cnt], "--alisim") == 0) {
+                params.alisim_active = true;
+                
+                cnt++;
+                if (cnt >= argc || argv[cnt][0] == '-')
+                    throw "Use --alisim <OUTPUT_FILENAME>";
+                params.alisim_output_filename = argv[cnt];
+                
+                // set default seq_type
+                if (!params.sequence_type)
+                    params.sequence_type = (char *) "DNA";
+                
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "--length") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --length <SEQUENCE_LENGTH>";
+                params.alisim_sequence_length = convert_int(argv[cnt]);
+                if (params.alisim_sequence_length < 1)
+                    throw "Positive --length please";
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "--num-alignments") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --num-alignments <NUMBER_OF_DATASETS>";
+                params.alisim_dataset_num = convert_int(argv[cnt]);
+                if (params.alisim_dataset_num < 1)
+                    throw "Positive --num-alignments please";
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "--root-seq") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --root-seq <ANCESTRAL_SEQUENCE_NUMBER>";
+                params.alisim_ancestral_sequence = convert_int(argv[cnt]);
+                if (params.alisim_ancestral_sequence < 0)
+                    throw "Non-Negative --root-seq please";
+                continue;
+            }
 
             if (argv[cnt][0] == '-') {
                 string err = "Invalid \"";
@@ -4309,7 +4360,16 @@ void parseArg(int argc, char *argv[], Params &params) {
     if (params.model_name.find("LINK") != string::npos || params.model_name.find("MERGE") != string::npos)
         if (params.partition_merge == MERGE_NONE)
             params.partition_merge = MERGE_RCLUSTERF;
-
+    
+    if (params.alisim_active && !params.user_file)
+        outError("A tree filepath is a mandatory input to execute AliSim. Use -t <TREE_FILEPATH>");
+    
+    if (params.alisim_active && params.model_name.empty())
+        outError("A model name is a mandatory input to execute AliSim. Use -m <MODEL>");
+    
+    if (params.alisim_ancestral_sequence > -1 && !params.aln_file)
+        outError("An alignment input file must be provided when root sequence is set. Use -s <ALIGNMENT>");
+    
     //    if (MPIHelper::getInstance().isWorker()) {
     // BUG: setting out_prefix this way cause access to stack, which is cleaned up after returning from this function
 //        string newPrefix = string(params.out_prefix) + "."  + NumberToString(MPIHelper::getInstance().getProcessID()) ;

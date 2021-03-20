@@ -2228,6 +2228,31 @@ public:
     /** supress notes about duplicate sequences */
     double suppress_duplicate_sequence_warnings;
     
+    /**
+    *  TRUE to execute alisim
+    */
+    bool alisim_active;
+    
+    /**
+    *  output filename
+    */
+    string alisim_output_filename;
+    
+    /**
+    *  length of output sequences of alisim
+    */
+    int alisim_sequence_length;
+    
+    /**
+    *  number of output datasets of alisim
+    */
+    int alisim_dataset_num;
+    
+    /**
+    *  position of the ancestral sequence of alisim
+    */
+    int alisim_ancestral_sequence;
+    
 };
 
 /**
@@ -2832,7 +2857,8 @@ void print_stacktrace(ostream &out, unsigned int max_frames = 63);
 */
 template<class T1, class T2>
 void quicksort(T1* arr, int left, int right, T2* arr2 = NULL) {
-      ASSERT(left <= right);
+    if (left > right) return;
+    ASSERT(left <= right);
       int i = left, j = right;
       T1 pivot = arr[(left + right) / 2];
 

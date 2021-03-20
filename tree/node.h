@@ -266,6 +266,11 @@ public:
         node name
      */
     string name;
+    
+    /**
+        sequence
+     */
+    IntVector sequence;
 
     /**
         list of neighbors

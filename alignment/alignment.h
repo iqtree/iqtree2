@@ -404,6 +404,11 @@ public:
             @return sequence name
      */
     string &getSeqName(int i);
+    
+    /**
+            @param seq_name sequence name
+     */
+    void addSeqName(string seq_name);
 
     /**
      *  Get a list of all sequence names

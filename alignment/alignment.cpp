@@ -81,6 +81,15 @@ string &Alignment::getSeqName(int i) {
     return seq_names[i];
 }
 
+void Alignment::addSeqName(string seq_name)
+{
+    if (!seq_name.empty())
+    {
+        seq_names.resize(seq_names.size()+1);
+        seq_names[seq_names.size()-1] = seq_name;
+    }
+}
+
 vector<string>& Alignment::getSeqNames() {
 	return seq_names;
 }

@@ -50,6 +50,7 @@
 #include "nclextra/msetsblock.h"
 #include "nclextra/myreader.h"
 #include "phyloanalysis.h"
+#include "alisim.h"
 #include "tree/matree.h"
 #include "obsolete/parsmultistate.h"
 #include "alignment/maalignment.h" //added by MA
@@ -2606,7 +2607,9 @@ int main(int argc, char *argv[]) {
         }
     } else
     // call the main function
-    if (Params::getInstance().tree_gen != NONE) {
+    if (Params::getInstance().alisim_active) {
+        runAliSim(Params::getInstance());
+    } else if (Params::getInstance().tree_gen != NONE) {
         generateRandomTree(Params::getInstance());
     } else if (Params::getInstance().do_pars_multistate) {
         doParsMultiState(Params::getInstance());
