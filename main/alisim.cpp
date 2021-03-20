@@ -111,7 +111,7 @@ void generateSingleDatasetFromSingleTree(Params params, IQTree *tree, string out
     tree->MTree::root->sequence = ancestral_sequence;
     
     // simulate the sequence for each node in the tree by DFS
-    simulateSequencesForATreeByDFS(params.alisim_sequence_length, tree->getModel(), tree->aln->getMaxNumStates(), tree->MTree::root, tree->MTree::root);
+    simulateSeqsForTree(params.alisim_sequence_length, tree);
     
     // write output to file
     writeSequencesToFile(output_filepath, tree, params.alisim_sequence_length);
@@ -165,7 +165,7 @@ IntVector generateRandomSequence(int sequence_length, IQTree *tree)
         
         // randomly generate each site in the sequence follows the base frequencies defined by the user
         for (int i = 0; i < sequence_length; i++)
-        sequence[i] =  getRandomStateWithProbabilityMatrix(state_freq, 0, max_num_states);
+        sequence[i] =  getRandomItemWithProbabilityMatrix(state_freq, 0, max_num_states);
         
         // delete state_freq
         delete []  state_freq;
@@ -174,14 +174,14 @@ IntVector generateRandomSequence(int sequence_length, IQTree *tree)
     return sequence;
 }
 
-int getRandomStateWithProbabilityMatrix(double *probability_maxtrix, int starting_index, int max_num_states)
+int getRandomItemWithProbabilityMatrix(double *probability_maxtrix, int starting_index, int num_items)
 {
     // generate a random number
     double random_number = random_double();
     
     // select the current state, considering the random_number, and the probability_matrix
     double accummulated_probability = 0;
-    for (int i = 0; i < max_num_states; i++)
+    for (int i = 0; i < num_items; i++)
     {
         accummulated_probability += probability_maxtrix[starting_index+i];
         if (random_number <= accummulated_probability)
@@ -189,43 +189,160 @@ int getRandomStateWithProbabilityMatrix(double *probability_maxtrix, int startin
     }
 }
 
-void simulateSequencesForATreeByDFS(int sequence_length, ModelSubst *model, int max_num_states, Node *node, Node *dad)
+void simulateSeqsForTree(int sequence_length, IQTree *tree)
+{
+    string rate_name = tree->getRateName();
+    double invariant_proportion = tree->getRate()->getPInvar();
+    
+    // simulate Sequences
+    // case 1: without rate heterogeneity (Gamma/FreeRate model)
+    if ((rate_name.find("+G") == std::string::npos) && (rate_name.find("+R") == std::string::npos))
+    {
+        simulateSeqsWithoutRH(sequence_length, tree->getModel(), tree->aln->getMaxNumStates(), tree->MTree::root, tree->MTree::root, invariant_proportion);
+    }
+    else // case 2: with rate heterogeneity (Gamma/FreeRate model)
+    {
+        simulateSeqsWithRH(sequence_length, tree->getModel(), tree->getRate(), tree->aln->getMaxNumStates(), tree->MTree::root, tree->MTree::root, invariant_proportion);
+    }
+}
+
+void simulateSeqsWithoutRH(int sequence_length, ModelSubst *model, int max_num_states, Node *node, Node *dad, double invariant_proportion)
 {
     // process its neighbors/children
     NeighborVec::iterator it;
     FOR_NEIGHBOR(node, dad, it) {
+        
         // compute the transition probability matrix
         double *trans_matrix = new double[max_num_states*max_num_states];
         model->computeTransMatrix((*it)->length, trans_matrix);
         
         // estimate the sequence for the current neighbor
-        (*it)->node->sequence = estimateSequenceOfANode(trans_matrix, max_num_states, sequence_length, node->sequence);
+        // (case 1: without rate heterogeneity (Gamma/FreeRate model)
+        // case 1.1: with invariant sites
+        if (invariant_proportion > 0)
+            (*it)->node->sequence = estimateSeqWithoutRHWithIS(trans_matrix, max_num_states, sequence_length, node->sequence, invariant_proportion);
+        else // case 1.2: without invariant sites
+            (*it)->node->sequence = estimateSeqWithoutRHWithoutIS(trans_matrix, max_num_states, sequence_length, node->sequence);
         
         // delete trans_matrix array
         delete[] trans_matrix;
         
         // browse 1-step deeper to the neighbor node
-        simulateSequencesForATreeByDFS(sequence_length, model, max_num_states, (*it)->node, node);
+        simulateSeqsWithoutRH(sequence_length, model, max_num_states, (*it)->node, node, invariant_proportion);
     }
 }
 
-IntVector estimateSequenceOfANode(double *trans_matrix, int max_num_states, int sequence_length, IntVector dad_sequence)
+IntVector estimateSeqWithoutRHWithoutIS(double *trans_matrix, int max_num_states, int sequence_length, IntVector dad_sequence)
 {
     IntVector sequence;
     sequence.resize(sequence_length);
     
     for (int i = 0; i < sequence_length; i++)
     {
-        // get corresponding state of dad
-        int dad_state = dad_sequence[i];
-        
-        // calculate the starting index to search in the array
-        int starting_index = dad_state*max_num_states;
-        
-        // iteratively select the state for each site for the current node, considering it's dad states, the random_number, and the transition_probability_matrix
-        sequence[i] = getRandomStateWithProbabilityMatrix(trans_matrix, starting_index, max_num_states);
+        // iteratively select the state for each site for the current node, considering it's dad states, and the transition_probability_matrix
+        int starting_index = dad_sequence[i]*max_num_states;
+        sequence[i] = getRandomItemWithProbabilityMatrix(trans_matrix, starting_index, max_num_states);
     }
     return sequence;
+}
+
+IntVector estimateSeqWithoutRHWithIS(double *trans_matrix, int max_num_states, int sequence_length, IntVector dad_sequence, double invariant_proportion)
+{
+    IntVector sequence;
+    sequence.resize(sequence_length);
+    
+    for (int i = 0; i < sequence_length; i++)
+    {
+        // generate a random number
+        double random_number = random_double();
+        
+        // if this site is invariant -> preserve the dad's state
+        if (random_number <= invariant_proportion)
+            sequence[i] = dad_sequence[i];
+        else // otherwise, randomly select the state, considering it's dad states, and the transition_probability_matrix
+        {
+            int starting_index = dad_sequence[i]*max_num_states;
+            sequence[i] = getRandomItemWithProbabilityMatrix(trans_matrix, starting_index, max_num_states);
+        }
+        
+    }
+    return sequence;
+}
+
+void simulateSeqsWithRH(int sequence_length, ModelSubst *model, RateHeterogeneity *rate_heterogeneity, int max_num_states, Node *node, Node *dad, double invariant_proportion)
+{
+    // process its neighbors/children
+    NeighborVec::iterator it;
+    FOR_NEIGHBOR(node, dad, it) {
+        
+        // initialize transition probability matrix
+        double *trans_matrix = new double[max_num_states*max_num_states];
+        
+        // initialize the probability array of rate categories
+        double *category_probability_matrix = new double[rate_heterogeneity->getNDiscreteRate()];
+        for (int i = 0; i < rate_heterogeneity->getNDiscreteRate(); i++)
+        category_probability_matrix[i] = rate_heterogeneity->getProp(i);
+        
+        // estimate the sequence for the current neighbor
+        // (case 2: with rate heterogeneity (Gamma/FreeRate model)
+        // case 2.1: with invariant sites
+        if (invariant_proportion > 0)
+            (*it)->node->sequence = estimateSeqWithRHWithIS(model, rate_heterogeneity, category_probability_matrix, trans_matrix, max_num_states, sequence_length, (*it)->length, node->sequence, invariant_proportion);
+        else // case 2.2: without invariant sites
+            (*it)->node->sequence = estimateSeqWithRHWithoutIS(model, rate_heterogeneity, category_probability_matrix, trans_matrix, max_num_states, sequence_length, (*it)->length, node->sequence);
+        
+        // delete trans_matrix array, and the probability array of rate categories
+        delete[] trans_matrix;
+        delete[] category_probability_matrix;
+        
+        // browse 1-step deeper to the neighbor node
+        simulateSeqsWithoutRH(sequence_length, model, max_num_states, (*it)->node, node, invariant_proportion);
+    }
+}
+
+IntVector estimateSeqWithRHWithoutIS(ModelSubst *model, RateHeterogeneity *rate_heterogeneity, double *category_probability_matrix, double *trans_matrix, int max_num_states, int sequence_length, double branch_length, IntVector dad_sequence)
+{
+    IntVector sequence;
+    sequence.resize(sequence_length);
+    
+    for (int i = 0; i < sequence_length; i++)
+    {
+        sequence[i] = estimateStateWithRH(model, rate_heterogeneity, category_probability_matrix, trans_matrix, max_num_states, branch_length, dad_sequence[i]);
+    }
+    return sequence;
+}
+
+IntVector estimateSeqWithRHWithIS(ModelSubst *model, RateHeterogeneity *rate_heterogeneity, double *category_probability_matrix, double *trans_matrix, int max_num_states, int sequence_length, double branch_length, IntVector dad_sequence, double invariant_proportion)
+{
+    IntVector sequence;
+    sequence.resize(sequence_length);
+    
+    for (int i = 0; i < sequence_length; i++)
+    {
+        // generate a random number
+        double random_number = random_double();
+        
+        // if this site is invariant -> preserve the dad's state
+        if (random_number <= invariant_proportion)
+            sequence[i] = dad_sequence[i];
+        else // otherwise, randomly select the state, considering it's dad states, and the transition_probability_matrix
+            sequence[i] = estimateStateWithRH(model, rate_heterogeneity, category_probability_matrix, trans_matrix, max_num_states, branch_length, dad_sequence[i]);
+    }
+    return sequence;
+}
+
+int estimateStateWithRH(ModelSubst *model, RateHeterogeneity *rate_heterogeneity, double *category_probability_matrix, double *trans_matrix, int max_num_states, double branch_length, int dad_state)
+{
+    // randomly select a rate from the set of rate categories, considering its probability array.
+    int rate_category = getRandomItemWithProbabilityMatrix(category_probability_matrix, 0, rate_heterogeneity->getNDiscreteRate());
+    double rate = rate_heterogeneity->getRate(rate_category);
+    
+    // compute the transition matrix
+    model->computeTransMatrix(branch_length*rate, trans_matrix);
+    
+    // iteratively select the state, considering it's dad states, and the transition_probability_matrix
+    int starting_index = dad_state*max_num_states;
+    return getRandomItemWithProbabilityMatrix(trans_matrix, starting_index, max_num_states);
 }
 
 void writeSequencesToFile(string file_path, IQTree *tree, int sequence_length)
