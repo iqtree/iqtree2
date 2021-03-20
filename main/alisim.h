@@ -70,34 +70,22 @@ IntVector generateRandomSequence(int sequence_length, IQTree *tree);
 void simulateSeqsForTree(int sequence_length, IQTree *tree);
 
 /**
-*  simulate sequences for all nodes in the tree in the case WITHOUT Rate Heterogeneity (Gamma/FreeRate Model)
+*  simulate sequences for all nodes in the tree
+*  case 1: without rate heterogeneity
 */
-void simulateSeqsWithoutRH(int sequence_length, ModelSubst *model, int max_num_states, Node *node, Node *dad, double invariant_proportion);
+void simulateSeqsWithoutRH(int sequence_length, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad);
 
 /**
-*  simulate the sequence for the current node in the case WITHOUT Rate Heterogeneity (Gamma/FreeRate Model) WITHOUT Invariant sites
+*  simulate sequences for all nodes in the tree
+*  case 2.1: with rate heterogeneity (gamma/freerate model with/without invariant sites)
 */
-IntVector estimateSeqWithoutRHWithoutIS(double *trans_matrix, int max_num_states, int sequence_length, IntVector dad_sequence);
+void simulateSeqsWithRateHeterogeneity(int sequence_length, ModelSubst *model, double *trans_matrix, RateHeterogeneity *rate_heterogeneity, double *category_probability_matrix, int max_num_states, Node *node, Node *dad);
 
 /**
-*  simulate the sequence for the current node in the case WITHOUT Rate Heterogeneity (Gamma/FreeRate Model) WITH Invariant sites
+*  simulate sequences for all nodes in the tree
+*  case 2.2: with only invariant sites
 */
-IntVector estimateSeqWithoutRHWithIS(double *trans_matrix, int max_num_states, int sequence_length, IntVector dad_sequence, double invariant_proportion);
-
-/**
-*  simulate sequences for all nodes in the tree in the case WITH Rate Heterogeneity (Gamma/FreeRate Model)
-*/
-void simulateSeqsWithRH(int sequence_length, ModelSubst *model, RateHeterogeneity *rate_heterogeneity, int max_num_states, Node *node, Node *dad, double invariant_proportion);
-
-/**
-*  simulate the sequence for the current node in the case WITH Rate Heterogeneity (Gamma/FreeRate Model) WITHOUT Invariant sites
-*/
-IntVector estimateSeqWithRHWithoutIS(ModelSubst *model, RateHeterogeneity *rate_heterogeneity, double *category_probability_matrix, double *trans_matrix, int max_num_states, int sequence_length, double branch_length, IntVector dad_sequence);
-
-/**
-*  simulate the sequence for the current node in the case WITH Rate Heterogeneity (Gamma/FreeRate Model) WITH Invariant sites
-*/
-IntVector estimateSeqWithRHWithIS(ModelSubst *model, RateHeterogeneity *rate_heterogeneity, double *category_probability_matrix, double *trans_matrix, int max_num_states, int sequence_length, double branch_length, IntVector dad_sequence, double invariant_proportion);
+void simulateSeqsWithOnlyInvariantSites(int sequence_length, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, double invariant_proportion);
 
 /**
 *  estimate the state for the current site of a node in the case WITH Rate Heterogeneity (Gamma/FreeRate Model)

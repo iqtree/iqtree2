@@ -187,154 +187,142 @@ int getRandomItemWithProbabilityMatrix(double *probability_maxtrix, int starting
         if (random_number <= accummulated_probability)
             return i;
     }
+    
+    // if not found, return -1
+    return -1;
 }
 
 void simulateSeqsForTree(int sequence_length, IQTree *tree)
 {
+    // get variables
     string rate_name = tree->getRateName();
     double invariant_proportion = tree->getRate()->getPInvar();
+    ModelSubst *model = tree->getModel();
+    int max_num_states = tree->aln->getMaxNumStates();
+    
+    // initialize trans_matrix
+    double *trans_matrix = new double[max_num_states*max_num_states];
     
     // simulate Sequences
-    // case 1: without rate heterogeneity (Gamma/FreeRate model)
-    if ((rate_name.find("+G") == std::string::npos) && (rate_name.find("+R") == std::string::npos))
+    // case 1: without rate heterogeneity
+    if (rate_name.empty())
     {
-        simulateSeqsWithoutRH(sequence_length, tree->getModel(), tree->aln->getMaxNumStates(), tree->MTree::root, tree->MTree::root, invariant_proportion);
+        simulateSeqsWithoutRH(sequence_length, model, trans_matrix, max_num_states, tree->MTree::root, tree->MTree::root);
     }
-    else // case 2: with rate heterogeneity (Gamma/FreeRate model)
+    // case 2: with rate heterogeneity
+    else if((rate_name.find("+G") != std::string::npos) || (rate_name.find("+R") != std::string::npos))
     {
-        simulateSeqsWithRH(sequence_length, tree->getModel(), tree->getRate(), tree->aln->getMaxNumStates(), tree->MTree::root, tree->MTree::root, invariant_proportion);
+        RateHeterogeneity *rate_heterogeneity = tree->getRate();
+        int num_rate_categories = rate_heterogeneity->getNDiscreteRate();
+        
+        // initialize the probability array of rate categories
+        double *category_probability_matrix = new double[num_rate_categories];
+        for (int i = 0; i < num_rate_categories; i++)
+            category_probability_matrix[i] = rate_heterogeneity->getProp(i);
+        
+        // case 2.1: with rate heterogeneity (gamma/freerate model with/without invariant sites)
+        simulateSeqsWithRateHeterogeneity(sequence_length, model, trans_matrix, rate_heterogeneity, category_probability_matrix, max_num_states, tree->MTree::root, tree->MTree::root);
+        
+        // delete the probability array of rate categories
+        delete[] category_probability_matrix;
     }
+    // case 2.2: with only invariant sites
+    else if (rate_name.find("+I") != std::string::npos)
+    {
+        simulateSeqsWithOnlyInvariantSites(sequence_length, model, trans_matrix, max_num_states, tree->MTree::root, tree->MTree::root, invariant_proportion);
+    }
+    
+    // delete trans_matrix array
+    delete[] trans_matrix;
 }
 
-void simulateSeqsWithoutRH(int sequence_length, ModelSubst *model, int max_num_states, Node *node, Node *dad, double invariant_proportion)
+// case 1: without rate heterogeneity
+void simulateSeqsWithoutRH(int sequence_length, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad)
 {
     // process its neighbors/children
     NeighborVec::iterator it;
     FOR_NEIGHBOR(node, dad, it) {
         
         // compute the transition probability matrix
-        double *trans_matrix = new double[max_num_states*max_num_states];
         model->computeTransMatrix((*it)->length, trans_matrix);
         
         // estimate the sequence for the current neighbor
-        // (case 1: without rate heterogeneity (Gamma/FreeRate model)
-        // case 1.1: with invariant sites
-        if (invariant_proportion > 0)
-            (*it)->node->sequence = estimateSeqWithoutRHWithIS(trans_matrix, max_num_states, sequence_length, node->sequence, invariant_proportion);
-        else // case 1.2: without invariant sites
-            (*it)->node->sequence = estimateSeqWithoutRHWithoutIS(trans_matrix, max_num_states, sequence_length, node->sequence);
-        
-        // delete trans_matrix array
-        delete[] trans_matrix;
-        
-        // browse 1-step deeper to the neighbor node
-        simulateSeqsWithoutRH(sequence_length, model, max_num_states, (*it)->node, node, invariant_proportion);
-    }
-}
-
-IntVector estimateSeqWithoutRHWithoutIS(double *trans_matrix, int max_num_states, int sequence_length, IntVector dad_sequence)
-{
-    IntVector sequence;
-    sequence.resize(sequence_length);
-    
-    for (int i = 0; i < sequence_length; i++)
-    {
-        // iteratively select the state for each site for the current node, considering it's dad states, and the transition_probability_matrix
-        int starting_index = dad_sequence[i]*max_num_states;
-        sequence[i] = getRandomItemWithProbabilityMatrix(trans_matrix, starting_index, max_num_states);
-    }
-    return sequence;
-}
-
-IntVector estimateSeqWithoutRHWithIS(double *trans_matrix, int max_num_states, int sequence_length, IntVector dad_sequence, double invariant_proportion)
-{
-    IntVector sequence;
-    sequence.resize(sequence_length);
-    
-    for (int i = 0; i < sequence_length; i++)
-    {
-        // generate a random number
-        double random_number = random_double();
-        
-        // if this site is invariant -> preserve the dad's state
-        if (random_number <= invariant_proportion)
-            sequence[i] = dad_sequence[i];
-        else // otherwise, randomly select the state, considering it's dad states, and the transition_probability_matrix
+        (*it)->node->sequence.resize(sequence_length);
+        for (int i = 0; i < sequence_length; i++)
         {
-            int starting_index = dad_sequence[i]*max_num_states;
-            sequence[i] = getRandomItemWithProbabilityMatrix(trans_matrix, starting_index, max_num_states);
+            // iteratively select the state for each site of the child node, considering it's dad states, and the transition_probability_matrix
+            int starting_index = node->sequence[i]*max_num_states;
+            (*it)->node->sequence[i] = getRandomItemWithProbabilityMatrix(trans_matrix, starting_index, max_num_states);
         }
         
+        // browse 1-step deeper to the neighbor node
+        simulateSeqsWithoutRH(sequence_length, model, trans_matrix, max_num_states, (*it)->node, node);
     }
-    return sequence;
 }
 
-void simulateSeqsWithRH(int sequence_length, ModelSubst *model, RateHeterogeneity *rate_heterogeneity, int max_num_states, Node *node, Node *dad, double invariant_proportion)
+// case 2.1: with rate heterogeneity (gamma/freerate model with/without invariant sites)
+void simulateSeqsWithRateHeterogeneity(int sequence_length, ModelSubst *model, double *trans_matrix, RateHeterogeneity *rate_heterogeneity, double *category_probability_matrix, int max_num_states, Node *node, Node *dad)
 {
     // process its neighbors/children
     NeighborVec::iterator it;
     FOR_NEIGHBOR(node, dad, it) {
         
-        // initialize transition probability matrix
-        double *trans_matrix = new double[max_num_states*max_num_states];
-        
-        // initialize the probability array of rate categories
-        double *category_probability_matrix = new double[rate_heterogeneity->getNDiscreteRate()];
-        for (int i = 0; i < rate_heterogeneity->getNDiscreteRate(); i++)
-        category_probability_matrix[i] = rate_heterogeneity->getProp(i);
-        
         // estimate the sequence for the current neighbor
-        // (case 2: with rate heterogeneity (Gamma/FreeRate model)
-        // case 2.1: with invariant sites
-        if (invariant_proportion > 0)
-            (*it)->node->sequence = estimateSeqWithRHWithIS(model, rate_heterogeneity, category_probability_matrix, trans_matrix, max_num_states, sequence_length, (*it)->length, node->sequence, invariant_proportion);
-        else // case 2.2: without invariant sites
-            (*it)->node->sequence = estimateSeqWithRHWithoutIS(model, rate_heterogeneity, category_probability_matrix, trans_matrix, max_num_states, sequence_length, (*it)->length, node->sequence);
+        (*it)->node->sequence.resize(sequence_length);
         
-        // delete trans_matrix array, and the probability array of rate categories
-        delete[] trans_matrix;
-        delete[] category_probability_matrix;
+        for (int i = 0; i < sequence_length; i++)
+        {
+            (*it)->node->sequence[i] = estimateStateWithRH(model, rate_heterogeneity, category_probability_matrix, trans_matrix, max_num_states, (*it)->length, node->sequence[i]);
+        }
         
         // browse 1-step deeper to the neighbor node
-        simulateSeqsWithoutRH(sequence_length, model, max_num_states, (*it)->node, node, invariant_proportion);
+        simulateSeqsWithRateHeterogeneity(sequence_length, model, trans_matrix, rate_heterogeneity, category_probability_matrix, max_num_states, (*it)->node, node);
     }
 }
 
-IntVector estimateSeqWithRHWithoutIS(ModelSubst *model, RateHeterogeneity *rate_heterogeneity, double *category_probability_matrix, double *trans_matrix, int max_num_states, int sequence_length, double branch_length, IntVector dad_sequence)
+// case 2.2: with only invariant sites
+void simulateSeqsWithOnlyInvariantSites(int sequence_length, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, double invariant_proportion)
 {
-    IntVector sequence;
-    sequence.resize(sequence_length);
-    
-    for (int i = 0; i < sequence_length; i++)
-    {
-        sequence[i] = estimateStateWithRH(model, rate_heterogeneity, category_probability_matrix, trans_matrix, max_num_states, branch_length, dad_sequence[i]);
-    }
-    return sequence;
-}
-
-IntVector estimateSeqWithRHWithIS(ModelSubst *model, RateHeterogeneity *rate_heterogeneity, double *category_probability_matrix, double *trans_matrix, int max_num_states, int sequence_length, double branch_length, IntVector dad_sequence, double invariant_proportion)
-{
-    IntVector sequence;
-    sequence.resize(sequence_length);
-    
-    for (int i = 0; i < sequence_length; i++)
-    {
-        // generate a random number
-        double random_number = random_double();
+    // process its neighbors/children
+    NeighborVec::iterator it;
+    FOR_NEIGHBOR(node, dad, it) {
         
-        // if this site is invariant -> preserve the dad's state
-        if (random_number <= invariant_proportion)
-            sequence[i] = dad_sequence[i];
-        else // otherwise, randomly select the state, considering it's dad states, and the transition_probability_matrix
-            sequence[i] = estimateStateWithRH(model, rate_heterogeneity, category_probability_matrix, trans_matrix, max_num_states, branch_length, dad_sequence[i]);
+        // compute the transition probability matrix
+        model->computeTransMatrix((*it)->length, trans_matrix);
+        
+        // estimate the sequence for the current neighbor
+        (*it)->node->sequence.resize(sequence_length);
+        
+        for (int i = 0; i < sequence_length; i++)
+        {
+            // generate a random number
+            double random_number = random_double();
+            
+            // if this site is invariant -> preserve the dad's state
+            if (random_number <= invariant_proportion)
+                (*it)->node->sequence[i] = node->sequence[i];
+            else // otherwise, randomly select the state, considering it's dad states, and the transition_probability_matrix
+            {
+                int starting_index = node->sequence[i]*max_num_states;
+                (*it)->node->sequence[i] = getRandomItemWithProbabilityMatrix(trans_matrix, starting_index, max_num_states);
+            }
+            
+        }
+        
+        // browse 1-step deeper to the neighbor node
+        simulateSeqsWithOnlyInvariantSites(sequence_length, model, trans_matrix, max_num_states, (*it)->node, node, invariant_proportion);
     }
-    return sequence;
 }
 
 int estimateStateWithRH(ModelSubst *model, RateHeterogeneity *rate_heterogeneity, double *category_probability_matrix, double *trans_matrix, int max_num_states, double branch_length, int dad_state)
 {
     // randomly select a rate from the set of rate categories, considering its probability array.
     int rate_category = getRandomItemWithProbabilityMatrix(category_probability_matrix, 0, rate_heterogeneity->getNDiscreteRate());
+    
+    // if rate_category == -1 <=> this site is invariant -> return dad's state
+    if (rate_category == -1)
+        return dad_state;
+    // otherwise, get the rate of that rate_category
     double rate = rate_heterogeneity->getRate(rate_category);
     
     // compute the transition matrix
