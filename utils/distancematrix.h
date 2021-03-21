@@ -27,6 +27,7 @@
 #include <iostream>    //for std::istream
 #include <sstream>     //for std::stringstream
 #include <vector>      //for std::vector
+#include <math.h>      //for floor()
 #if USE_GZSTREAM
 #include "gzstream.h"  //for igzstream and pigzstream
 #else
