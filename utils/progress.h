@@ -12,6 +12,7 @@
 
 #include <string>       //for std::string
 #include <fstream>      //for std::fstream
+#include <math.h>       //for floor()
 #include "timeutil.h"
 
 class progress_display {
