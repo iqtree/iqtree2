@@ -65,5 +65,34 @@ typedef double* progress_display_ptr;
 
 #endif
 
+template <class S>
+void appendTimeDescription(double elapsed_time, S &s) {
+    if (elapsed_time < 60.0) /* less than a minute */ {
+        s.precision(4);
+        s << elapsed_time << " secs";
+    }
+    else {
+        int64_t seconds = (int)floor(elapsed_time);
+        int64_t minutes = seconds / 60;
+        int64_t hours   = minutes / 60;
+        int64_t days    = hours / 24;
+        seconds -= minutes * 60;
+        minutes -= hours * 60;
+        hours   -= days * 24;
+        if (28<days) {
+            s << (days/7) << " weeks ";
+            days = days % 7;
+        }
+        if (0<days) {
+            s << days << " days ";
+        }
+        if (0<hours) {
+            s << hours << " hrs ";
+        }
+        s << minutes << " min "
+          << seconds << " sec";
+    }
+}
+
 
 #endif /* progress_h */

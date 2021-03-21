@@ -32,7 +32,6 @@
 #include <math.h>   //for floor
 #include "operatingsystem.h" //for isStandardOutputATerminal and CONSOLE_FILE
 
-
 namespace {
     bool displayingProgress = true;
         //You can turn off progress displays via progress_display::setProgressDisplay.
@@ -149,26 +148,9 @@ void progress_display::reportProgress(double time, double cpu, bool newline) {
         progress.precision(3);
         progress << " " << percentDone << "% done";
     }
-    if (elapsedTime < 60.0) /* less than a minute */ {
-        progress.precision(6);
-        progress << " in " << elapsedTime << " secs";
-    } else {
-        int64_t seconds = (int)floor(elapsedTime);
-        int64_t minutes = seconds / 60;
-        int64_t hours   = minutes / 60;
-        int64_t days    = hours / 24;
-        seconds -= minutes * 60;
-        minutes -= hours * 60;
-        hours   -= days * 24;
-        progress << " in ";
-        if (0<days) {
-            progress << days << "day ";
-        }
-        if (0<hours) {
-            progress << hours << " hr ";
-        }
-        progress << minutes << " min " << seconds << " sec";
-    }
+    progress << " in ";
+    appendTimeDescription(elapsedTime, progress);
+    
     if (0<elapsedTime && lastReportedCPUTime < cpu) {
         progress.precision(4);
         double percentCPU = 100.0 * ( (cpu-startCPUTime) / elapsedTime);
@@ -177,20 +159,10 @@ void progress_display::reportProgress(double time, double cpu, bool newline) {
     double estimatedTime = 0.0; //Estimated work still to do in seconds
     if (0.0 < workDone && 0.0 < elapsedTime && workDone < totalWorkToDo ) {
         estimatedTime = ((totalWorkToDo - workDone) / workDone) * elapsedTime;
-        if (estimatedTime < 10.0) {
-            progress.precision(5);
-        } else if (estimatedTime < 100.0) {
-            progress.precision(4);
-        }
         const char* leadIn = ( atMost && !verbed) ? " (at most " : " (";
-        if (estimatedTime < 600.0 ) {
-            progress << leadIn << estimatedTime << " secs to go)";
-        } else if (estimatedTime < 7200.0 ) {
-            progress << leadIn << (size_t)(floor(estimatedTime/60.0)) << " min to go)";
-        } else {
-            progress << leadIn  << (size_t)(floor(estimatedTime/3600.0)) << " hrs, "
-                << (((size_t)(floor(estimatedTime/60.0)))%60) << " min to go)";
-        }
+        progress << leadIn;
+        appendTimeDescription(estimatedTime, progress);
+        progress << " to go)";
     }
     std::string message = progress.str();
     #if _OPENMP

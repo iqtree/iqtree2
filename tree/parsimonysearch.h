@@ -42,8 +42,8 @@ int PhyloTree::doParsimonySearch(ParsimonySearchParameters& s) {
     int      index_parsimony = 0;
     
     std::string task_name    = "Looking for parsimony " + s.name + " moves";
-    if (s.overall.activity.empty()) {
-        s.overall.activity = task_name.c_str();
+    if (s.overall.getActivity().empty()) {
+        s.overall.setActivity(task_name.c_str());
     }
 
     double work_estimate = (double)branch_count * ((double)s.iterations * 2.5 + 1.0);
@@ -113,6 +113,7 @@ int PhyloTree::optimizeSubtreeParsimony(ParsimonySearchParameters& s,
                                         PhyloTreeThreadingContext& context,
                                         bool rescore_when_done) {
 
+    TimeKeeper timeSpent("optimizing");
     intptr_t branch_count        = targets.size();
     
     size_t  moves_considered     = 0;
@@ -120,6 +121,7 @@ int PhyloTree::optimizeSubtreeParsimony(ParsimonySearchParameters& s,
     size_t  moves_applied        = 0;
     int64_t positions_considered = 0;
     double parsimony_score;
+    timeSpent.start();
     for (intptr_t iteration=1; iteration<=s.iterations; ++iteration) {
         s.rescoring.start();
         parsimony_score = computeParsimony("Determining two-way parsimony", true, true,
@@ -137,7 +139,8 @@ int PhyloTree::optimizeSubtreeParsimony(ParsimonySearchParameters& s,
                          << " (out of " << moves_considered << ")"
                          << " (" << moves_still_possible << " still possible)"
                          << " in iteration " << (iteration-1)
-                         << " (parsimony now " << parsimony_score << ")");
+                         << " (parsimony now " << parsimony_score << ")"
+                         << " after " << timeSpent.getElapsedDescription() );
             }
         }
         s.evaluating.start();

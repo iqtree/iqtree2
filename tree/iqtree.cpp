@@ -634,7 +634,7 @@ PhyloNode* IQTree::generateProximityTree(IntVector& order,
     #endif
     for (intptr_t j=degree; j<count; ++j) {
         const char* this_seq = getConvertedSequenceByNumber(order[start+j]);
-        int    k             = 0;
+        int    k             = 0; //best subtree
         double unknown_freq  = 0;
         double best_d        = hammingDistance(unk, this_seq, seq[0],
                                                seq_len, freq_vector, unknown_freq);
