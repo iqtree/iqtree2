@@ -117,7 +117,7 @@ const char *dna_model_names_lie_markov_strsym[] = {
 
 
 /****** Protein model set ******/
-const char* aa_model_names[] = {"LG", "WAG", "JTT", "JTTDCMut", "DCMut", "VT", "PMB", "Blosum62", "Dayhoff",
+const char* aa_model_names[] = {"LG", "WAG", "JTT", "Q.pfam", "Q.bird", "Q.mammal", "Q.insect", "Q.plant", "Q.yeast", "JTTDCMut", "DCMut", "VT", "PMB", "Blosum62", "Dayhoff",
         "mtREV", "mtART", "mtZOA", "mtMet" , "mtVer" , "mtInv", "mtMAM",
 		"HIVb", "HIVw", "FLU", "rtREV", "cpREV"};
         
@@ -139,7 +139,7 @@ const char* aa_model_names_modelomatic[] = {"LG", "WAG", "JTT", "VT", "Blosum62"
         "mtART", "mtMAM", "mtREV",
         "HIVb", "HIVw", "rtREV", "cpREV"};
 
-const char *aa_model_names_nuclear[] = {"LG", "WAG", "JTT", "JTTDCMut","DCMut", "VT", "PMB", "Blosum62", "Dayhoff"};
+const char *aa_model_names_nuclear[] = {"LG", "WAG", "JTT", "Q.pfam", "JTTDCMut","DCMut", "VT", "PMB", "Blosum62", "Dayhoff"};
 
 const char *aa_model_names_mitochondrial[] = {"mtREV", "mtART", "mtZOA", "mtMet" , "mtVer" , "mtInv", "mtMAM"};
 
