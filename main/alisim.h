@@ -10,6 +10,7 @@
 #include "utils/tools.h"
 #include "tree/node.h"
 #include "model/modelmarkov.h"
+#include "model/ratecontinuousgammainvar.h"
 #include "tree/iqtree.h"
 #include <random>
 
@@ -69,16 +70,6 @@ IntVector generateRandomSequence(int sequence_length, IQTree *tree);
 *  generate site-specific rates based on discrete gamma distribution
 */
 void initializeDiscreteRates(double *site_specific_rates, RateHeterogeneity *rate_heterogeneity, int sequence_length);
-
-/**
-*  generate site-specific rates based on continuous gamma distribution with invariant sites
-*/
-void initializeContinuousGammaRates(double *site_specific_rates, default_random_engine generator, gamma_distribution<double> distribution, int sequence_length, double invariant_proportion);
-
-/**
-*  generate site-specific rates based on continuous gamma distribution
-*/
-void initializeContinuousGammaRates(double *site_specific_rates, default_random_engine generator, gamma_distribution<double> distribution, int sequence_length);
 
 /**
 *  simulate sequences for all nodes in the tree

@@ -42,6 +42,12 @@ public:
 		@param tree associated phylogenetic tree
 	*/
 	RateInvar(double p_invar_sites, PhyloTree *tree);
+    
+    /**
+        constructor
+        @param p_invar_sites proportion of invariable sites
+    */
+    RateInvar(double p_invar_sites);
 
     /**
         start structure for checkpointing

@@ -203,54 +203,6 @@ void initializeDiscreteRates(double *site_specific_rates, RateHeterogeneity *rat
     delete[] category_probability_matrix;
 }
 
-void initializeContinuousGammaRates(double *site_specific_rates, default_random_engine generator, gamma_distribution<double> distribution, int sequence_length, double invariant_proportion)
-{
-    double sum_rate = 0;
-    
-    for (int i = 0; i < sequence_length; i++)
-    {
-        // if this site is invariant -> its rate is zero
-        if (random_double() <= invariant_proportion)
-            site_specific_rates[i] = 0;
-        else
-            site_specific_rates[i] = distribution(generator);
-        
-        // update sum_rate
-        sum_rate += site_specific_rates[i];
-    }
-    
-    // compute mean_rate
-    double mean_rate = sum_rate/sequence_length;
-    
-    // normalize the rates
-    for (int i = 0; i < sequence_length; i++)
-    {
-        site_specific_rates[i] /= mean_rate;
-    }
-}
-
-void initializeContinuousGammaRates(double *site_specific_rates, default_random_engine generator, gamma_distribution<double> distribution, int sequence_length)
-{
-    double sum_rate = 0;
-    
-    for (int i = 0; i < sequence_length; i++)
-    {
-        site_specific_rates[i] = distribution(generator);
-        
-        // update sum_rate
-        sum_rate += site_specific_rates[i];
-    }
-    
-    // compute mean_rate
-    double mean_rate = sum_rate/sequence_length;
-    
-    // normalize the rates
-    for (int i = 0; i < sequence_length; i++)
-    {
-        site_specific_rates[i] /= mean_rate;
-    }
-}
-
 int getRandomItemWithProbabilityMatrix(double *probability_maxtrix, int starting_index, int num_items)
 {
     // generate a random number
@@ -337,14 +289,12 @@ void simulateSeqsForTree(Params params, IQTree *tree)
         // initalize rates based on continuous gamma distribution
         if ((rate_name.find("+G") != std::string::npos) && params.alisim_continuous_gamma)
         {
-            // initialize gamma distribution
-            default_random_engine generator;
-            generator.seed(params.ran_seed);
-            gamma_distribution<double> distribution(rate_heterogeneity->getGammaShape(),rate_heterogeneity->getGammaShape());
+            RateContinuousGamma *rate_continuous_gamma = new RateContinuousGamma(rate_heterogeneity->getGammaShape(), params.ran_seed);
             
             if (invariant_proportion > 0)
-                initializeContinuousGammaRates(site_specific_rates, generator, distribution, sequence_length, invariant_proportion);
-            else initializeContinuousGammaRates(site_specific_rates, generator, distribution, rate_heterogeneity->getGammaShape(), sequence_length);
+                rate_continuous_gamma = new RateContinuousGammaInvar(rate_heterogeneity->getGammaShape(), params.ran_seed, invariant_proportion);
+            
+            rate_continuous_gamma->getSiteSpecificRates(site_specific_rates, sequence_length);
         }
         // initalize rates based on discrete distribution (gamma/freerate)
         else
