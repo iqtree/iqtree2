@@ -2253,6 +2253,11 @@ public:
     */
     int alisim_ancestral_sequence;
     
+    /**
+    *  true if using continuous gamma model
+    */
+    bool alisim_continuous_gamma;
+    
 };
 
 /**

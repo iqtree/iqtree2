@@ -1112,6 +1112,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_sequence_length = 1000;
     params.alisim_dataset_num = 1;
     params.alisim_ancestral_sequence = -1;
+    params.alisim_continuous_gamma = false;
     
 
     for (cnt = 1; cnt < argc; cnt++) {
@@ -2304,7 +2305,19 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use --model <model_name>";
-				params.model_name = argv[cnt];
+                
+                params.model_name = argv[cnt];
+                // handle continuous gamma model
+                if (params.model_name.find("+GC") != std::string::npos) {
+                    params.alisim_continuous_gamma = true;
+                    // remove 'C' from model_name to make sure it doesn't cause error when parsing model
+                    std::string tmp_model_name(1, params.model_name[0]);
+                    for (int c_index = 1; c_index < params.model_name.length(); c_index++)
+                        if (!(params.model_name[c_index-1]=='G' && params.model_name[c_index]=='C'))
+                            tmp_model_name = tmp_model_name + params.model_name[c_index];
+                    params.model_name = tmp_model_name;
+                            
+                }
 				continue;
 			}
             if (strcmp(argv[cnt], "--init-model") == 0) {

@@ -111,7 +111,7 @@ void generateSingleDatasetFromSingleTree(Params params, IQTree *tree, string out
     tree->MTree::root->sequence = ancestral_sequence;
     
     // simulate the sequence for each node in the tree by DFS
-    simulateSeqsForTree(params.alisim_sequence_length, tree);
+    simulateSeqsForTree(params, tree);
     
     // write output to file
     writeSequencesToFile(output_filepath, tree, params.alisim_sequence_length);
@@ -174,6 +174,80 @@ IntVector generateRandomSequence(int sequence_length, IQTree *tree)
     return sequence;
 }
 
+void initializeDiscreteRates(double *site_specific_rates, RateHeterogeneity *rate_heterogeneity, int sequence_length)
+{
+    int num_rate_categories = rate_heterogeneity->getNDiscreteRate();
+    
+    // initialize the probability array of rate categories
+    double *category_probability_matrix = new double[num_rate_categories];
+    for (int i = 0; i < num_rate_categories; i++)
+        category_probability_matrix[i] = rate_heterogeneity->getProp(i);
+    
+    // initialize the site-specific rates
+    for (int i = 0; i < sequence_length; i++)
+    {
+        // randomly select a rate from the set of rate categories, considering its probability array.
+        int rate_category = getRandomItemWithProbabilityMatrix(category_probability_matrix, 0, num_rate_categories);
+        
+        // if rate_category == -1 <=> this site is invariant -> return dad's state
+        if (rate_category == -1)
+            site_specific_rates[i] = 0;
+        else // otherwise, get the rate of that rate_category
+            site_specific_rates[i] = rate_heterogeneity->getRate(rate_category);
+    }
+    
+    // delete the probability array of rate categories
+    delete[] category_probability_matrix;
+}
+
+void initializeContinuousGammaRates(double *site_specific_rates, default_random_engine generator, gamma_distribution<double> distribution, int sequence_length, double invariant_proportion)
+{
+    double sum_rate = 0;
+    
+    for (int i = 0; i < sequence_length; i++)
+    {
+        // if this site is invariant -> its rate is zero
+        if (random_double() <= invariant_proportion)
+            site_specific_rates[i] = 0;
+        else
+            site_specific_rates[i] = distribution(generator);
+        
+        // update sum_rate
+        sum_rate += site_specific_rates[i];
+    }
+    
+    // compute mean_rate
+    double mean_rate = sum_rate/sequence_length;
+    
+    // normalize the rates
+    for (int i = 0; i < sequence_length; i++)
+    {
+        site_specific_rates[i] /= mean_rate;
+    }
+}
+
+void initializeContinuousGammaRates(double *site_specific_rates, default_random_engine generator, gamma_distribution<double> distribution, int sequence_length)
+{
+    double sum_rate = 0;
+    
+    for (int i = 0; i < sequence_length; i++)
+    {
+        site_specific_rates[i] = distribution(generator);
+        
+        // update sum_rate
+        sum_rate += site_specific_rates[i];
+    }
+    
+    // compute mean_rate
+    double mean_rate = sum_rate/sequence_length;
+    
+    // normalize the rates
+    for (int i = 0; i < sequence_length; i++)
+    {
+        site_specific_rates[i] /= mean_rate;
+    }
+}
+
 int getRandomItemWithProbabilityMatrix(double *probability_maxtrix, int starting_index, int num_items)
 {
     // generate a random number
@@ -192,9 +266,10 @@ int getRandomItemWithProbabilityMatrix(double *probability_maxtrix, int starting
     return -1;
 }
 
-void simulateSeqsForTree(int sequence_length, IQTree *tree)
+void simulateSeqsForTree(Params params, IQTree *tree)
 {
     // get variables
+    int sequence_length = params.alisim_sequence_length;
     string rate_name = tree->getRateName();
     double invariant_proportion = tree->getRate()->getPInvar();
     ModelSubst *model = tree->getModel();
@@ -213,29 +288,26 @@ void simulateSeqsForTree(int sequence_length, IQTree *tree)
     else if((rate_name.find("+G") != std::string::npos) || (rate_name.find("+R") != std::string::npos))
     {
         RateHeterogeneity *rate_heterogeneity = tree->getRate();
-        int num_rate_categories = rate_heterogeneity->getNDiscreteRate();
         
-        // initialize the probability array of rate categories
-        double *category_probability_matrix = new double[num_rate_categories];
-        for (int i = 0; i < num_rate_categories; i++)
-            category_probability_matrix[i] = rate_heterogeneity->getProp(i);
-        
-        // initialize the site-specific rates
+        // initialize site-specific rates
         double *site_specific_rates = new double[sequence_length];
-        for (int i = 0; i < sequence_length; i++)
+        // initalize rates based on continuous gamma distribution
+        if ((rate_name.find("+G") != std::string::npos) && params.alisim_continuous_gamma)
         {
-            // randomly select a rate from the set of rate categories, considering its probability array.
-            int rate_category = getRandomItemWithProbabilityMatrix(category_probability_matrix, 0, rate_heterogeneity->getNDiscreteRate());
+            // initialize gamma distribution
+            default_random_engine generator;
+            generator.seed(params.ran_seed);
+            gamma_distribution<double> distribution(rate_heterogeneity->getGammaShape(),2.0);
             
-            // if rate_category == -1 <=> this site is invariant -> return dad's state
-            if (rate_category == -1)
-                site_specific_rates[i] = 0;
-            else // otherwise, get the rate of that rate_category
-                site_specific_rates[i] = rate_heterogeneity->getRate(rate_category);
+            if (invariant_proportion > 0)
+                initializeContinuousGammaRates(site_specific_rates, generator, distribution, sequence_length, invariant_proportion);
+            else initializeContinuousGammaRates(site_specific_rates, generator, distribution, rate_heterogeneity->getGammaShape(), sequence_length);
         }
-        
-        // delete the probability array of rate categories
-        delete[] category_probability_matrix;
+        // initalize rates based on discrete distribution (gamma/freerate)
+        else
+        {
+            initializeDiscreteRates(site_specific_rates, rate_heterogeneity, sequence_length);
+        }
         
         // simulate sequences with rate heterogeneity
         // case 2.1: with rate heterogeneity (gamma/freerate model with invariant sites)
@@ -252,18 +324,15 @@ void simulateSeqsForTree(int sequence_length, IQTree *tree)
         // delete the site-specific rates
         delete[] site_specific_rates;
     }
-    // case 2.3: with only invariant sites
+    // case 2.3: without gamma/freerate model with only invariant sites
     else if (rate_name.find("+I") != std::string::npos)
     {
         // initialize the site-specific rates
         double *site_specific_rates = new double[sequence_length];
         for (int i = 0; i < sequence_length; i++)
         {
-            // generate a random number
-            double random_number = random_double();
-            
             // if this site is invariant -> preserve the dad's state
-            if (random_number <= invariant_proportion)
+            if (random_double() <= invariant_proportion)
                 site_specific_rates[i] = 0;
             else
                 site_specific_rates[i] = 1;
