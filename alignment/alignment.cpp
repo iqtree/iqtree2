@@ -474,24 +474,40 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two,
     BoolVector isSequenceRemoved(n, false);
     
 #if USE_PROGRESS_DISPLAY
-    progress_display progress(n*2, isShowingProgressDisabled ? "" :  "Checking for duplicate sequences");
+    progress_display progress(n*1.1, isShowingProgressDisabled ? "" :  "Checking for duplicate sequences");
 #else
     double progress = 0.0;
 #endif
     
     vector<size_t> hashes = getSequenceHashes(&progress);
+    std::map<size_t, size_t> hash_counts;
+    for (int i=0; i<getNSeq32(); ++i) {
+        auto it = hash_counts.find(i);
+        if (it==hash_counts.end()) {
+            hash_counts[hashes[i]] = 1;
+        } else {
+            ++hash_counts[hashes[i]];
+        }
+    }
 
     bool listIdentical = !Params::getInstance().suppress_duplicate_sequence_warnings;
 
     auto startCheck = getRealTime();
     for (int seq1 = 0; seq1 < getNSeq32(); ++seq1) {
-        if ( isSequenceChecked[seq1] ) {
+        if ((seq1%1000)==999) {
+            progress += 100.0;
+        }
+        if ( isSequenceChecked[seq1] || hash_counts[hashes[seq1]] == 1) {
             continue;
         }
         bool first_ident_seq = true;
         for (int seq2 = seq1+1; seq2 < getNSeq32(); ++seq2) {
-            if ( getSeqName(seq2) == not_remove || isSequenceRemoved[seq2] ) continue;
-            if (hashes[seq1] != hashes[seq2]) continue; //JB2020-06-17
+            if ( getSeqName(seq2) == not_remove || isSequenceRemoved[seq2] ) {
+                continue;
+            }
+            if (hashes[seq1] != hashes[seq2]) {
+                continue; //JB2020-06-17
+            }
             bool equal_seq = true;
             for (iterator it = begin(); it != end(); it++) {
                 if  ((*it)[seq1] != (*it)[seq2]) {
@@ -500,7 +516,8 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two,
                 }
             }
             if (!equal_seq) continue;
-            if (removed_seqs.size()+3 < getNSeq() && (!keep_two || !first_ident_seq)) {
+            if (removed_seqs.size()+3 < getNSeq() &&
+                (!keep_two || !first_ident_seq)) {
                 removed_seqs.push_back(getSeqName(seq2));
                 target_seqs.push_back(getSeqName(seq1));
                 isSequenceRemoved[seq2] = true;
@@ -521,7 +538,6 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two,
             first_ident_seq = false;
         }
         isSequenceChecked[seq1] = true;
-        ++progress;
     }
     #if USE_PROGRESS_DISPLAY
         bool displaying_progress = progress_display::getProgressDisplay();
