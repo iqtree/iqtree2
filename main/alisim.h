@@ -120,6 +120,21 @@ int estimateStateWithRH(ModelSubst *model, double rate, double *trans_matrix, in
 int getRandomItemWithProbabilityMatrix(double *probability_maxtrix, int starting_index, int num_items);
 
 /**
+*  get a random item from a set of items with an accumulated probability array by binary search
+*/
+int getRandomItemWithAccumulatedProbabilityMatrix(double *accumulated_probability_maxtrix, int starting_index, int num_columns);
+
+/**
+*  convert an probability matrix into an accumulated probability matrix
+*/
+void convertProMatrixIntoAccumulatedProMatrix(double *probability_maxtrix, int num_rows, int num_columns);
+
+/**
+*  binary search an item from a set with accumulated probability array
+*/
+int binarysearchItemWithAccumulatedProbabilityMatrix(double *accumulated_probability_maxtrix, double random_number, int start, int end, int first);
+
+/**
 *  write all sequences of a tree to an output file
 */
 void writeSequencesToFile(string file_path, IQTree *tree, int sequence_length);

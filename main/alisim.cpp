@@ -183,11 +183,14 @@ void initializeDiscreteRates(double *site_specific_rates, RateHeterogeneity *rat
     for (int i = 0; i < num_rate_categories; i++)
         category_probability_matrix[i] = rate_heterogeneity->getProp(i);
     
+    // convert the probability matrix of rate categories into an accumulated probability matrix of rate categories
+    convertProMatrixIntoAccumulatedProMatrix(category_probability_matrix, 1, num_rate_categories);
+    
     // initialize the site-specific rates
     for (int i = 0; i < sequence_length; i++)
     {
         // randomly select a rate from the set of rate categories, considering its probability array.
-        int rate_category = getRandomItemWithProbabilityMatrix(category_probability_matrix, 0, num_rate_categories);
+        int rate_category = getRandomItemWithAccumulatedProbabilityMatrix(category_probability_matrix, 0, num_rate_categories);
         
         // if rate_category == -1 <=> this site is invariant -> return dad's state
         if (rate_category == -1)
@@ -266,6 +269,46 @@ int getRandomItemWithProbabilityMatrix(double *probability_maxtrix, int starting
     return -1;
 }
 
+void convertProMatrixIntoAccumulatedProMatrix(double *probability_maxtrix, int num_rows, int num_columns)
+{
+    for (int r = 0; r < num_rows; r++)
+    {
+        for (int c = 1; c < num_columns; c++)
+        probability_maxtrix[r*num_rows+c] = probability_maxtrix[r*num_rows+c] + probability_maxtrix[r*num_rows+c-1];
+    }
+            
+}
+
+int getRandomItemWithAccumulatedProbabilityMatrix(double *accumulated_probability_maxtrix, int starting_index, int num_columns)
+{
+    // generate a random number
+    double random_number = random_double();
+    
+    return binarysearchItemWithAccumulatedProbabilityMatrix(accumulated_probability_maxtrix, random_number, starting_index, starting_index+(num_columns-1), starting_index)-starting_index;
+}
+
+int binarysearchItemWithAccumulatedProbabilityMatrix(double *accumulated_probability_maxtrix, double random_number, int start, int end, int first)
+{
+    // check search range
+    if (start > end)
+        return -1; // return -1 ~ not found
+    
+    // compute the center index
+    int center = (start + end)/2;
+    
+    // if item is found at the center index -> return result
+    if ((random_number <= accumulated_probability_maxtrix[center])
+        && ((center == first)
+            || (random_number > accumulated_probability_maxtrix[center - 1])))
+        return center;
+    
+    // otherwise, search in the left/right side.
+    if (random_number <= accumulated_probability_maxtrix[center])
+        return binarysearchItemWithAccumulatedProbabilityMatrix(accumulated_probability_maxtrix, random_number, start, center - 1, first);
+    else
+        return binarysearchItemWithAccumulatedProbabilityMatrix(accumulated_probability_maxtrix, random_number, center + 1, end, first);
+}
+
 void simulateSeqsForTree(Params params, IQTree *tree)
 {
     // get variables
@@ -297,7 +340,7 @@ void simulateSeqsForTree(Params params, IQTree *tree)
             // initialize gamma distribution
             default_random_engine generator;
             generator.seed(params.ran_seed);
-            gamma_distribution<double> distribution(rate_heterogeneity->getGammaShape(),2.0);
+            gamma_distribution<double> distribution(rate_heterogeneity->getGammaShape(),rate_heterogeneity->getGammaShape());
             
             if (invariant_proportion > 0)
                 initializeContinuousGammaRates(site_specific_rates, generator, distribution, sequence_length, invariant_proportion);
@@ -359,13 +402,16 @@ void simulateSeqsWithoutRH(int sequence_length, ModelSubst *model, double *trans
         // compute the transition probability matrix
         model->computeTransMatrix((*it)->length, trans_matrix);
         
+        // convert the probability matrix into an accumulated probability matrix
+        convertProMatrixIntoAccumulatedProMatrix(trans_matrix, max_num_states, max_num_states);
+        
         // estimate the sequence for the current neighbor
         (*it)->node->sequence.resize(sequence_length);
         for (int i = 0; i < sequence_length; i++)
         {
             // iteratively select the state for each site of the child node, considering it's dad states, and the transition_probability_matrix
             int starting_index = node->sequence[i]*max_num_states;
-            (*it)->node->sequence[i] = getRandomItemWithProbabilityMatrix(trans_matrix, starting_index, max_num_states);
+            (*it)->node->sequence[i] = getRandomItemWithAccumulatedProbabilityMatrix(trans_matrix, starting_index, max_num_states);
         }
         
         // browse 1-step deeper to the neighbor node
@@ -430,6 +476,9 @@ void simulateSeqsWithOnlyInvariantSites(int sequence_length, ModelSubst *model, 
         // compute the transition probability matrix
         model->computeTransMatrix((*it)->length, trans_matrix);
         
+        // convert the probability matrix into an accumulated probability matrix
+        convertProMatrixIntoAccumulatedProMatrix(trans_matrix, max_num_states, max_num_states);
+        
         // estimate the sequence for the current neighbor
         (*it)->node->sequence.resize(sequence_length);
         
@@ -442,7 +491,7 @@ void simulateSeqsWithOnlyInvariantSites(int sequence_length, ModelSubst *model, 
             else // otherwise, randomly select the state, considering it's dad states, and the transition_probability_matrix
             {
                 int starting_index = node->sequence[i]*max_num_states;
-                (*it)->node->sequence[i] = getRandomItemWithProbabilityMatrix(trans_matrix, starting_index, max_num_states);
+                (*it)->node->sequence[i] = getRandomItemWithAccumulatedProbabilityMatrix(trans_matrix, starting_index, max_num_states);
             }
             
         }
