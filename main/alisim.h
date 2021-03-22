@@ -77,20 +77,26 @@ void simulateSeqsWithoutRH(int sequence_length, ModelSubst *model, double *trans
 
 /**
 *  simulate sequences for all nodes in the tree
-*  case 2.1: with rate heterogeneity (gamma/freerate model with/without invariant sites)
+*  case 2.1: with rate heterogeneity (gamma/freerate model with invariant sites)
 */
-void simulateSeqsWithRateHeterogeneity(int sequence_length, ModelSubst *model, double *trans_matrix, RateHeterogeneity *rate_heterogeneity, double *category_probability_matrix, int max_num_states, Node *node, Node *dad);
+void simulateSeqsWithRateHeterogeneityWithInvariantSites(int sequence_length, ModelSubst *model, double *trans_matrix, double *site_specific_rates, int max_num_states, Node *node, Node *dad);
 
 /**
 *  simulate sequences for all nodes in the tree
-*  case 2.2: with only invariant sites
+*  case 2.2: with rate heterogeneity (gamma/freerate model without invariant sites)
 */
-void simulateSeqsWithOnlyInvariantSites(int sequence_length, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, double invariant_proportion);
+void simulateSeqsWithRateHeterogeneityWithoutInvariantSites(int sequence_length, ModelSubst *model, double *trans_matrix, double *site_specific_rates, int max_num_states, Node *node, Node *dad);
+
+/**
+*  simulate sequences for all nodes in the tree
+*  case 2.3: with only invariant sites
+*/
+void simulateSeqsWithOnlyInvariantSites(int sequence_length, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, double *site_specific_rates);
 
 /**
 *  estimate the state for the current site of a node in the case WITH Rate Heterogeneity (Gamma/FreeRate Model)
 */
-int estimateStateWithRH(ModelSubst *model, RateHeterogeneity *rate_heterogeneity, double *category_probability_matrix, double *trans_matrix, int max_num_states, double branch_length, int dad_state);
+int estimateStateWithRH(ModelSubst *model, double rate, double *trans_matrix, int max_num_states, double branch_length, int dad_state);
 
 /**
 *  get a random item from a set of items with a probability array
