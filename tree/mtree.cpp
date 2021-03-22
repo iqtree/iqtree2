@@ -468,6 +468,18 @@ void MTree::printBranchLength(ostream &out, int brtype, bool print_slash, Neighb
     if (brtype & WT_BR_LEN_SHORT) prec = 6;
     if (brtype & WT_BR_LEN_ROUNDING) length = round(length);
     out.precision(prec);
+    
+    if (brtype & WT_BR_LEN) {
+        if (brtype & WT_BR_LEN_FIXED_WIDTH)
+            out << ":" << fixed << length;
+        else
+            out << ":" << length;
+    } else if (brtype & WT_BR_CLADE && length_nei->node->name != ROOT_NAME) {
+    	if (print_slash)
+    		out << "/";
+        out << length;
+    }
+
     if ((brtype & WT_BR_ATTR) && !length_nei->attributes.empty()) {
         // print branch attributes
         out << "[&";
@@ -479,17 +491,6 @@ void MTree::printBranchLength(ostream &out, int brtype, bool print_slash, Neighb
             first = false;
         }
         out << "]";
-    }
-    
-    if (brtype & WT_BR_LEN) {
-        if (brtype & WT_BR_LEN_FIXED_WIDTH)
-            out << ":" << fixed << length;
-        else
-            out << ":" << length;
-    } else if (brtype & WT_BR_CLADE && length_nei->node->name != ROOT_NAME) {
-    	if (print_slash)
-    		out << "/";
-        out << length;
     }
 }
 
