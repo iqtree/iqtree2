@@ -3859,7 +3859,9 @@ void IQTree::computeRootstrap(StrVector &rooted_trees) {
         
         double rootstrap_dbl = (double)rootstrap*100.0 / trees.size();
         //branch.first->findNeighbor(branch.second)->putAttr("rootstrap", rootstrap_dbl);
-        branch.second->findNeighbor(branch.first)->putAttr("rootstrap", rootstrap_dbl);
+        Neighbor *nei = branch.second->findNeighbor(branch.first);
+        nei->putAttr("rootstrap", rootstrap_dbl);
+        nei->putAttr("id", nei->id);
     }
     string filename = (string)params->out_prefix + ".rootstrap.nex";
     printNexus(filename, WT_BR_LEN, "This file is best viewed in FigTree.");

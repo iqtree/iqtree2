@@ -2607,7 +2607,14 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
     if (params.root_test) {
         cout << "Testing root positions..." << endl;
-        iqtree->testRootPosition(true, params.loglh_epsilon);
+        string out_file = (string)params.out_prefix + ".rooted_trees";
+        IntVector branch_ids;
+        iqtree->testRootPosition(true, params.loglh_epsilon, branch_ids, out_file);
+        vector<TreeInfo> info;
+        IntVector distinct_ids;
+        evaluateTrees(out_file, params, iqtree, info, distinct_ids);
+        out_file = out_file + ".csv";
+        printTreeTestResults(info, distinct_ids, branch_ids, out_file);
     }
     
     /****** perform SH-aLRT test ******************/

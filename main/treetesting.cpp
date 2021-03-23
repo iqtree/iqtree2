@@ -431,57 +431,64 @@ void printSiteStateFreq(const char* filename, Alignment *aln) {
     }
 }
 
-int countDistinctTrees(const char *filename, bool rooted, IQTree *tree, IntVector &distinct_ids, bool exclude_duplicate) {
+int countDistinctTrees(istream &in, bool rooted, IQTree *tree, IntVector &distinct_ids, bool exclude_duplicate) {
     StringIntMap treels;
-    try {
-        ifstream in;
-        in.exceptions(ios::failbit | ios::badbit);
-        in.open(filename);
-        // remove the failbit
-        in.exceptions(ios::badbit);
-        int tree_id;
-        for (tree_id = 0; !in.eof(); tree_id++) {
-            if (exclude_duplicate) {
-                tree->freeNode();
-                tree->readTree(in, rooted);
-                tree->setAlignment(tree->aln);
-                tree->setRootNode(tree->params->root);
-                StringIntMap::iterator it = treels.end();
-                ostringstream ostr;
-                tree->printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
-                it = treels.find(ostr.str());
-                if (it != treels.end()) { // already in treels
-                    distinct_ids.push_back(it->second);
-                } else {
-                    distinct_ids.push_back(-1);
-                    treels[ostr.str()] = tree_id;
-                }
+    int tree_id;
+    for (tree_id = 0; !in.eof(); tree_id++) {
+        if (exclude_duplicate) {
+            tree->freeNode();
+            tree->readTree(in, rooted);
+            tree->setAlignment(tree->aln);
+            tree->setRootNode(tree->params->root);
+            StringIntMap::iterator it = treels.end();
+            ostringstream ostr;
+            tree->printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
+            it = treels.find(ostr.str());
+            if (it != treels.end()) { // already in treels
+                distinct_ids.push_back(it->second);
             } else {
-                // ignore tree
-                char ch;
-                do {
-                    in >> ch;
-                } while (!in.eof() && ch != ';');
                 distinct_ids.push_back(-1);
+                treels[ostr.str()] = tree_id;
             }
+        } else {
+            // ignore tree
             char ch;
-            in.exceptions(ios::goodbit);
-            (in) >> ch;
-            if (in.eof()) break;
-            in.unget();
-            in.exceptions(ios::failbit | ios::badbit);
-            
+            do {
+                in >> ch;
+            } while (!in.eof() && ch != ';');
+            distinct_ids.push_back(-1);
         }
-        in.close();
-    } catch (ios::failure) {
-        outError("Cannot read file ", filename);
+        char ch;
+        in.exceptions(ios::goodbit);
+        (in) >> ch;
+        if (in.eof()) break;
+        in.unget();
+        in.exceptions(ios::failbit | ios::badbit);
     }
+    in.clear();
     if (exclude_duplicate)
         return treels.size();
     else
         return distinct_ids.size();
 }
 
+int countDistinctTrees(const char *filename, bool rooted, IQTree *tree, IntVector &distinct_ids, bool exclude_duplicate)
+{
+    try {
+        ifstream in;
+        in.exceptions(ios::failbit | ios::badbit);
+        in.open(filename);
+        // remove the failbit
+        in.exceptions(ios::badbit);
+        
+        int res = countDistinctTrees(in, rooted, tree, distinct_ids, exclude_duplicate);
+        in.close();
+        return res;
+    } catch (ios::failure) {
+        outError("Cannot read file ", filename);
+        return 0;
+    }
+}
 //const double TOL_RELL_SCORE = 0.01;
 
 /*
@@ -1021,21 +1028,18 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
 }
 
 
-void evaluateTrees(string treeset_file, Params &params, IQTree *tree, vector<TreeInfo> &info, IntVector &distinct_ids)
+void evaluateTrees(istream &in, Params &params, IQTree *tree, vector<TreeInfo> &info, IntVector &distinct_ids)
 {
-    if (treeset_file.empty())
-        return;
     cout << endl;
     //MTreeSet trees(treeset_file, params.is_rooted, params.tree_burnin, params.tree_max_count);
-    cout << "Reading trees in " << treeset_file << " ..." << endl;
-    size_t ntrees = countDistinctTrees(treeset_file.c_str(), params.is_rooted, tree, distinct_ids, params.distinct_trees);
+    size_t ntrees = countDistinctTrees(in, params.is_rooted, tree, distinct_ids, params.distinct_trees);
+    in.seekg(0);
     if (ntrees < distinct_ids.size()) {
         cout << "WARNING: " << distinct_ids.size() << " trees detected but only " << ntrees << " distinct trees will be evaluated" << endl;
     } else {
         cout << ntrees << (params.distinct_trees ? " distinct" : "") << " trees detected" << endl;
     }
     if (ntrees == 0) return;
-    ifstream in(treeset_file);
     
     //if (trees.size() == 1) return;
     //string tree_file = treeset_file;
@@ -1135,6 +1139,8 @@ void evaluateTrees(string treeset_file, Params &params, IQTree *tree, vector<Tre
     }
     int tree_index, tid, tid2;
     info.resize(ntrees);
+    string saved_tree;
+    saved_tree = tree->getTreeString();
     //for (MTreeSet::iterator it = trees.begin(); it != trees.end(); it++, tree_index++) {
     for (tree_index = 0, tid = 0; tree_index < distinct_ids.size(); tree_index++) {
         
@@ -1462,18 +1468,107 @@ void evaluateTrees(string treeset_file, Params &params, IQTree *tree, vector<Tre
     }
     
     treeout.close();
-    in.close();
+    
+    // restore the tree
+    tree->readTreeString(saved_tree);
     
     cout << "Time for evaluating all trees: " << getRealTime() - time_start << " sec." << endl;
     
 }
 
-
-void evaluateTrees(string treeset_file, Params &params, IQTree *tree) {
-    vector<TreeInfo> info;
-    IntVector distinct_ids;
-    evaluateTrees(treeset_file, params, tree, info, distinct_ids);
+void evaluateTrees(string treeset_file, Params &params, IQTree *tree,
+                   vector<TreeInfo> &info, IntVector &distinct_ids)
+{
+    cout << "Reading trees in " << treeset_file << " ..." << endl;
+    ifstream in(treeset_file);
+    evaluateTrees(in, params, tree, info, distinct_ids);
+    in.close();
 }
 
+void printTreeTestResults(vector<TreeInfo> &info, IntVector &distinct_trees,
+                          IntVector &branch_ids, ostream &out, string out_file)
+{
 
+    // print header
+    out << "# Test results for rooting positions on every branch" << endl;
+    out << "# This file can be read in MS Excel or in R with command:" << endl;
+    out << "#    dat=read.csv('" << out_file << "',comment.char='#')" << endl;
+    out << "# Columns are comma-separated with following meanings:" << endl;
+    out << "#    ID:      Branch ID" << endl;
+    out << "#    logL:    Log-likelihood of the tree rooted at this branch" << endl;
+    out << "#    deltaL:  logL difference from the maximal logl" << endl;
+    if (Params::getInstance().topotest_replicates && info.size() > 1) {
+        out
+        << "#    bp-RELL: bootstrap proportion using RELL method (Kishino et al. 1990)" << endl
+        << "#    p-KH:    p-value of one sided Kishino-Hasegawa test (1989)" << endl
+        << "#    p-SH:    p-value of Shimodaira-Hasegawa test (2000)" << endl;
+        if (Params::getInstance().do_weighted_test) {
+            out
+            << "#    p-WKH:   p-value of weighted KH test" << endl
+            << "#    p-WSH:   p-value of weighted SH test." << endl;
+        }
+        out << "#    c-ELW:   Expected Likelihood Weight (Strimmer & Rambaut 2002)" << endl;
+        if (Params::getInstance().do_au_test) {
+            out
+            << "#    p-AU:    p-value of approximately unbiased (AU) test (Shimodaira, 2002)" << endl;
+        }
+    }
 
+    out << "ID,logL,deltaL";
+    if (Params::getInstance().topotest_replicates && info.size() > 1) {
+        out << ",bp-RELL,p-KH,p-SH";
+        if (Params::getInstance().do_weighted_test)
+            out << ",p-WKH,p-WSH";
+        out << ",c-ELW";
+        if (Params::getInstance().do_au_test)
+            out << ",p-AU";
+    }
+    out << endl;
+    
+    double maxL = -DBL_MAX;
+    int tid, orig_id;
+    for (tid = 0; tid < info.size(); tid++)
+        if (info[tid].logl > maxL) maxL = info[tid].logl;
+    out.precision(10);
+    for (orig_id = 0, tid = 0; orig_id < distinct_trees.size(); orig_id++) {
+        if (distinct_trees[orig_id] >= 0) {
+            continue;
+        }
+        out << branch_ids[orig_id];
+        out << "," << info[tid].logl;
+        out << "," << maxL - info[tid].logl;
+        if (!Params::getInstance().topotest_replicates || info.size() <= 1) {
+            out << endl;
+            tid++;
+            continue;
+        }
+        out << "," << info[tid].rell_bp;
+        out << "," << info[tid].kh_pvalue;
+        out << "," << info[tid].sh_pvalue;
+
+        if (Params::getInstance().do_weighted_test) {
+            out << "," << info[tid].wkh_pvalue;
+            out << "," << info[tid].wsh_pvalue;
+        }
+        out << "," << info[tid].elw_value;
+
+        if (Params::getInstance().do_au_test) {
+            out << "," << info[tid].au_pvalue;
+        }
+        out << endl;
+        tid++;
+    }
+    out << endl;
+
+}
+
+void printTreeTestResults(vector<TreeInfo> &info, IntVector &distinct_ids, IntVector &branch_ids, string out_file) {
+    try {
+        ofstream out(out_file);
+        printTreeTestResults(info, distinct_ids, branch_ids, out, out_file);
+        out.close();
+        cout << "Tree test results printed to " << out_file << endl;
+    } catch (...) {
+        outError(ERR_WRITE_OUTPUT, out_file);
+    }
+}

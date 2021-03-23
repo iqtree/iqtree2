@@ -1408,7 +1408,7 @@ public:
      @param write_info true to write information to cout
      @param logl_epsilon epsilon of log-likelihood to consider as better
      */
-    virtual double testRootPosition(bool write_info, double logl_epsilon);
+    virtual double testRootPosition(bool write_info, double logl_epsilon, IntVector &branch_ids, string out_file);
 
     /**
             inherited from Optimization class, to return to likelihood of the tree

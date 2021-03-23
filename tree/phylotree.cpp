@@ -2913,7 +2913,7 @@ double PhyloTree::optimizeRootPosition(int root_dist, bool write_info, double lo
     return curScore;
 }
 
-double PhyloTree::testRootPosition(bool write_info, double logl_epsilon) {
+double PhyloTree::testRootPosition(bool write_info, double logl_epsilon, IntVector &branch_ids, string out_file) {
     if (!rooted)
         return curScore;
     
@@ -2932,7 +2932,7 @@ double PhyloTree::testRootPosition(bool write_info, double logl_epsilon) {
     
     double best_score = curScore, orig_score = curScore;
     
-    multimap<double, string> logl_trees;
+    multimap<double, pair<int,string> > logl_trees;
     
     // ignore branches directly descended from root branch
     for (i = 0; i != branches.size(); )
@@ -2946,20 +2946,20 @@ double PhyloTree::testRootPosition(bool write_info, double logl_epsilon) {
         
     // get all trees
     StrVector trees;
+    branch_ids.clear();
     for (i = 0; i != branches.size(); i++) {
+        branch_ids.push_back(branches[i].first->findNeighbor(branches[i].second)->id);
         moveRoot(branches[i].first, branches[i].second);
         trees.push_back(getTreeString());
     }
 
     // optimize branch lengths for all trees
-//    for (i = 0; i != branches.size(); i++) {
-    for (auto t = trees.begin(); t != trees.end(); t++) {
-//        moveRoot(branches[i].first, branches[i].second);
-        readTreeString(*t);
+    for (i = 0; i != trees.size(); i++) {
+        readTreeString(trees[i]);
         optimizeAllBranches(100, logl_epsilon);
         stringstream ss;
         printTree(ss);
-        logl_trees.insert({curScore, ss.str()});
+        logl_trees.insert({curScore, make_pair(branch_ids[i], ss.str())});
         if (verbose_mode >= VB_MED) {
             cout << "Root pos " << i+1 << ": " << curScore << endl;
             if (verbose_mode >= VB_DEBUG)
@@ -2980,16 +2980,15 @@ double PhyloTree::testRootPosition(bool write_info, double logl_epsilon) {
         cout << "UPDATE BEST SCORE: " << curScore << endl;
     
     ofstream out;
-    string out_file = (string)params->out_prefix + ".rooted_trees";
     out.open(out_file);
     out.precision(10);
+    branch_ids.clear();
     for (auto lt = logl_trees.rbegin(); lt != logl_trees.rend(); lt++) {
-        out << "[ lh=" << lt->first << " ]" << lt->second << endl;
+        branch_ids.push_back(lt->second.first);
+        out << "[ branchID=" << lt->second.first << " lh=" << lt->first << " ]" << lt->second.second << endl;
     }
     out.close();
     cout << "Rooted trees with log-likelihoods printed to " << out_file << endl;
-    if (params->treeset_file.empty())
-        params->treeset_file = out_file;
 
     // convert logL to weight based on the best score
 //    ASSERT(logLs.size() == nodes1.size());
