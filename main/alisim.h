@@ -7,15 +7,6 @@
 
 #ifndef alisim_h
 #define alisim_h
-/*#include "utils/tools.h"
-#include "tree/node.h"
-#include "model/modelmarkov.h"
-#include "model/ratecontinuousgammainvar.h"
-#include "tree/iqtree.h"
-#include "alignment/alisimulatorinvar.h"
-#include "alignment/alisimulatorheterogeneityinvar.h"
-
-using namespace std;*/
 
 #include "utils/tools.h"
 #include "alignment/alisimulatorinvar.h"

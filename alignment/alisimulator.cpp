@@ -187,17 +187,44 @@ IntVector AliSimulator::generateRandomSequence(int sequence_length)
     {
         // get the base frequencies
         double *state_freq = new double[max_num_states];
-        tree->getModel()->getStateFrequency(state_freq);
+        
+        // get user-defined base frequencies (if any)
+        if (tree->getModel()->getFreqType() == FREQ_USER_DEFINED)
+            tree->getModel()->getStateFrequency(state_freq);
+        else // otherwise, randomly generate the base frequencies
+            generateRandomBaseFrequencies(state_freq, max_num_states);
+        
+        // convert the probability matrix into an accumulated probability matrix
+        convertProMatrixIntoAccumulatedProMatrix(state_freq, 1, max_num_states);
         
         // randomly generate each site in the sequence follows the base frequencies defined by the user
         for (int i = 0; i < sequence_length; i++)
-        sequence[i] =  getRandomItemWithProbabilityMatrix(state_freq, 0, max_num_states);
+        sequence[i] =  getRandomItemWithAccumulatedProbabilityMatrix(state_freq, 0, max_num_states);
         
         // delete state_freq
         delete []  state_freq;
     }
     
     return sequence;
+}
+
+/**
+*  randomly generate the base frequencies
+*/
+void AliSimulator::generateRandomBaseFrequencies(double *base_frequencies, int max_num_bases)
+{
+    double sum = 0;
+    
+    // randomly generate the frequencies
+    for (int i = 0; i < max_num_bases; i++)
+    {
+        base_frequencies[i] = random_double();
+        sum += base_frequencies[i];
+    }
+    
+    // normalize the frequencies so that sum of them is 1
+    for (int i = 0; i < max_num_bases; i++)
+    base_frequencies[i] /= sum;
 }
 
 /**

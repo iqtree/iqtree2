@@ -59,6 +59,11 @@ protected:
     IntVector generateRandomSequence(int sequence_length);
     
     /**
+    *  randomly generate the base frequencies
+    */
+    void generateRandomBaseFrequencies(double *base_frequencies, int max_num_bases);
+    
+    /**
     *  get a random item from a set of items with a probability array
     */
     int getRandomItemWithProbabilityMatrix(double *probability_maxtrix, int starting_index, int num_items);
