@@ -4214,6 +4214,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (!params.sequence_type)
                     params.sequence_type = (char *) "DNA";
                 
+                // set default model_name
+                if (params.model_name.empty())
+                    params.model_name = "JC";
+                
                 continue;
             }
             
@@ -4376,9 +4380,6 @@ void parseArg(int argc, char *argv[], Params &params) {
     
     if (params.alisim_active && !params.user_file)
         outError("A tree filepath is a mandatory input to execute AliSim. Use -t <TREE_FILEPATH>");
-    
-    if (params.alisim_active && params.model_name.empty())
-        outError("A model name is a mandatory input to execute AliSim. Use -m <MODEL>");
     
     if (params.alisim_ancestral_sequence > -1 && !params.aln_file)
         outError("An alignment input file must be provided when root sequence is set. Use -s <ALIGNMENT>");
