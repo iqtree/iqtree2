@@ -157,19 +157,70 @@ StateFreqType ModelFactory::getDefaultFrequencyTypeForSequenceType(SeqType seq_t
 ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree,
                            ModelsBlock *models_block): CheckpointFactory() {
     store_trans_matrix = params.store_trans_matrix;
-    is_storing = false;
-    joint_optimize = params.optimize_model_rate_joint;
-    fused_mix_rate = false;
-    ASC_type = ASC_NONE;
-    string model_str = model_name;
+    is_storing         = false;
+    joint_optimize     = params.optimize_model_rate_joint;
+    fused_mix_rate     = false;
+    ASC_type           = ASC_NONE;
+    string model_str   = model_name;
     string rate_str;
 
     try {
+        if (model_str == "") {
+            model_str = getDefaultModelName(tree, params);
+        }
+        
+        initializeModelAlias(models_block, model_str);
 
-    if (model_str == "") {
-        model_str = getDefaultModelName(tree, params);
+        // Detect PoMo and throw error if sequence type is PoMo but +P is
+        // not given.  This makes the model string cleaner and
+        // comparable.
+        bool pomo = ModelInfoFromName(model_str).isPolymorphismAware();
+
+        if (!pomo &&
+            (tree->aln->seq_type == SEQ_POMO)) {
+            outError("Provided alignment is exclusively used by PoMo"
+                     " but model string does not contain, e.g., \"+P\".");
+        }
+
+        moveRateParameters(model_str, rate_str);
+    
+        string freq_str = "";
+        moveFrequencyParameters(rate_str, model_str, freq_str);
+        
+        moveErrorModelParameter(rate_str, model_str);
+        removeSamplingParametersFromRateString(pomo, rate_str);
+        
+        ModelInfoFromName rate_info(rate_str);
+        
+        initializePoMo(pomo, rate_info, rate_str, model_str);
+
+        //nxsmodel = models_block->findModel(model_str);
+        //if (nxsmodel && nxsmodel->description.find("MIX") != string::npos) {
+        //    cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
+        //    model_str = nxsmodel->description;
+        //}
+
+        std::string freq_params;
+        StateFreqType freq_type;
+        bool optimize_mixmodel_weight;
+        initializeFrequency(params, tree, freq_str, freq_params,
+                            freq_type, optimize_mixmodel_weight);
+        ModelInfoFromName model_info(model_str);
+        initializeModel(model_name, models_block, model_info,
+                        model_str, params.freq_type, freq_params,
+                        optimize_mixmodel_weight, tree);
+        initializeAscertainmentCorrection(rate_info, rate_str, tree);
+        initializeRateHeterogeneity(rate_info, rate_str, params, tree);
+        initializeFusedMixRate(models_block, model_name, model_str, freq_params,
+                                freq_type, optimize_mixmodel_weight, tree);
+        tree->discardSaturatedSite(params.discard_saturated_site);
+    } catch (const char* str) {
+        outError(str);
     }
+}
 
+void ModelFactory::initializeModelAlias(ModelsBlock *models_block,
+                                        string& model_str) {
     /********* preprocessing model string ****************/
     NxsModel *nxsmodel  = NULL;
 
@@ -179,36 +230,28 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree,
         size_t next_mix_pos = model_str.find_first_of("+*", mix_pos);
         string sub_model_str = model_str.substr(mix_pos, next_mix_pos-mix_pos);
         nxsmodel = models_block->findMixModel(sub_model_str);
-        if (nxsmodel) sub_model_str = nxsmodel->description;
+        if (nxsmodel) {
+            sub_model_str = nxsmodel->description;
+        }
         new_model_str += sub_model_str;
-        if (next_mix_pos != string::npos)
-            new_model_str += model_str[next_mix_pos];
-        else
+        if (next_mix_pos == string::npos) {
             break;
-        mix_pos = next_mix_pos;
+        }
+        new_model_str += model_str[next_mix_pos];
+        mix_pos        = next_mix_pos;
     }
     if (new_model_str != model_str) {
         cout << "Model " << model_str << " is alias for " << new_model_str << endl;
     }
     model_str = new_model_str;
-
     //    nxsmodel = models_block->findModel(model_str);
     //    if (nxsmodel && nxsmodel->description.find_first_of("+*") != string::npos) {
     //        cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
     //        model_str = nxsmodel->description;
     //    }
+}
 
-    // Detect PoMo and throw error if sequence type is PoMo but +P is
-    // not given.  This makes the model string cleaner and
-    // comparable.
-    bool pomo = ModelInfoFromName(model_str).isPolymorphismAware();
-
-    if (!pomo &&
-        (tree->aln->seq_type == SEQ_POMO)) {
-        outError("Provided alignment is exclusively used by PoMo"
-                 " but model string does not contain, e.g., \"+P\".");
-    }
-
+void ModelFactory::moveRateParameters(string& model_str, string& rate_str) {
     // Decompose model string into model_str and rate_str string.
     size_t spec_pos = model_str.find_first_of("{+*");
     if (spec_pos != string::npos) {
@@ -224,9 +267,12 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree,
             model_str = model_str.substr(0, spec_pos);
         }
     }
-    
+}
+
+void ModelFactory::moveFrequencyParameters(string& rate_str, string& model_str,
+                                           string& freq_str) {
     // decompose +F from rate_str
-    string freq_str = "";
+    size_t spec_pos;
     while ((spec_pos = rate_str.find("+F")) != string::npos) {
         size_t end_pos = rate_str.find_first_of("+*", spec_pos+1);
         if (end_pos == string::npos) {
@@ -254,9 +300,12 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree,
             }
         }
     }
-        
+}
+
+void ModelFactory::moveErrorModelParameter(string rate_str, string model_str) {
     // move error model +E from rate_str to model_str
     //string seqerr_str = "";
+    size_t spec_pos;
     while ((spec_pos = rate_str.find("+E")) != string::npos) {
         size_t end_pos = rate_str.find_first_of("+*", spec_pos+1);
         if (end_pos == string::npos) {
@@ -267,7 +316,10 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree,
             rate_str = rate_str.substr(0, spec_pos) + rate_str.substr(end_pos);
         }
     }
+}
 
+void ModelFactory::removeSamplingParametersFromRateString(bool pomo,
+                                                          std::string rate_str) {
     // PoMo; +NXX and +W or +S because those flags are handled when
     // reading in the data.  Set PoMo parameters (heterozygosity).
     size_t n_pos_start = rate_str.find("+N");
@@ -305,8 +357,11 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree,
         rate_str = rate_str.substr(0, s_pos)
             + rate_str.substr(s_pos+2);
     }
+}
 
-    ModelInfoFromName rate_info(rate_str);
+void ModelFactory::initializePoMo(bool pomo, ModelInfo& rate_info,
+                                  std::string& rate_str,
+                                  std::string& model_str) {
     // In case of PoMo, check that only supported flags are given.
     if (pomo) {
         if (rate_info.hasAscertainmentBiasCorrection()) {
@@ -333,7 +388,8 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree,
         if ( !ModelInfoFromName(model_str).isMixtureModel() && pomo) {
         // +P{} flag.
         if (rate_info.isPolymorphismAware()) {
-            std::string pomo_heterozygosity = rate_info.extractPolymorphicHeterozygosity(rate_str);
+            std::string pomo_heterozygosity =
+                rate_info.extractPolymorphicHeterozygosity(rate_str);
             if (!pomo_heterozygosity.empty()) {
                 model_str += "+P{" + pomo_heterozygosity + "}";
             }
@@ -375,100 +431,107 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree,
       //     model_str += pomo_irate_str;
       //   }
     }
+}
 
-    //    nxsmodel = models_block->findModel(model_str);
-    //    if (nxsmodel && nxsmodel->description.find("MIX") != string::npos) {
-    //        cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
-    //        model_str = nxsmodel->description;
-    //    }
-
+void ModelFactory::initializeFrequency(const Params& params, PhyloTree* tree,
+                                       string& freq_str, string& freq_params,
+                                       StateFreqType &freq_type,
+                                       bool& optimize_mixmodel_weight) {
     /******************** initialize state frequency ****************************/
 
-    StateFreqType freq_type = params.freq_type;
+    freq_type = params.freq_type;
     if (freq_type == FREQ_UNKNOWN) {
         freq_type = getDefaultFrequencyTypeForSequenceType(tree->aln->seq_type);
     }
 
     ModelInfoFromName freq_info(freq_str);
-    std::string freq_params;
     if (freq_info.isFrequencyMixture()) {
         freq_params = freq_info.getFrequencyMixtureParams(freq_str);
         freq_type = FREQ_MIXTURE;
         freq_info.updateName(freq_str);
     }
-    bool optimize_mixmodel_weight = params.optimize_mixmodel_weight;
+    optimize_mixmodel_weight = params.optimize_mixmodel_weight;
     freq_info.getFrequencyOptions(freq_str, freq_type, freq_params,
                                   optimize_mixmodel_weight);
     freq_info.updateName(freq_str);
+}
 
-    /******************** initialize model ****************************/
-    ModelInfoFromName model_info(model_str);
-    bool is_mixture_model = model_info.isMixtureModel();
-        
-    if (tree->aln->site_state_freq.empty()) {
-        if (is_mixture_model || freq_type == FREQ_MIXTURE) {
-            string model_list;
-            if (is_mixture_model) {
-                model_list = model_info.extractMixtureModelList(model_str);
-            }
-            model = new ModelMixture(model_name, model_str, model_list,
-                                     models_block, freq_type, freq_params,
-                                     tree, optimize_mixmodel_weight);
-        } else {
-            //            string model_desc;
-            //            NxsModel *nxsmodel = models_block->findModel(model_str);
-            //            if (nxsmodel) model_desc = nxsmodel->description;
-            model = createModel(model_str, models_block, freq_type, freq_params, tree);
-        }
-//        fused_mix_rate &= model->isMixture() && site_rate->getNRate() > 1;
-    } else {
-        // site-specific model
-        if (model_str == "JC" || model_str == "POISSON") {
-            outError("JC is not suitable for site-specific model");
-        }
-        model = new ModelSet(model_str.c_str(), tree);
-        ModelSet *models = (ModelSet*)model; // assign pointer for convenience
-        models->init((params.freq_type != FREQ_UNKNOWN) ? params.freq_type : FREQ_EMPIRICAL);
-        models->pattern_model_map.resize(tree->aln->getNPattern(), -1);
-        for (size_t i = 0; i < tree->aln->getNSite(); ++i) {
-            models->pattern_model_map[tree->aln->getPatternID(i)] = tree->aln->site_model[i];
-            //cout << "site " << i << " ptn " << tree->aln->getPatternID(i)
-            //     << " -> model " << site_model[i] << endl;
-        }
-        double *state_freq = new double[model->num_states];
-        double *rates = new double[model->getNumRateEntries()];
-        for (size_t i = 0; i < tree->aln->site_state_freq.size(); ++i) {
-            ModelMarkov *modeli;
-            if (i == 0) {
-                auto f_type = (params.freq_type != FREQ_UNKNOWN)
-                            ? params.freq_type : FREQ_EMPIRICAL;
-                modeli = (ModelMarkov*)createModel(model_str, models_block,
-                                                   f_type, "", tree);
-                modeli->getStateFrequency(state_freq);
-                modeli->getRateMatrix(rates);
+void ModelFactory::initializeModel(const std::string& model_name,
+                                   ModelsBlock *models_block,
+                                   ModelInfo& model_info, string& model_str,
+                                   StateFreqType freq_type, string& freq_params,
+                                   bool optimize_mixmodel_weight,
+                                   PhyloTree* tree) {
+        /******************** initialize model ****************************/
+        bool is_mixture_model = model_info.isMixtureModel();
+            
+        if (tree->aln->site_state_freq.empty()) {
+            if (is_mixture_model || freq_type == FREQ_MIXTURE) {
+                string model_list;
+                if (is_mixture_model) {
+                    model_list = model_info.extractMixtureModelList(model_str);
+                }
+                model = new ModelMixture(model_name, model_str, model_list,
+                                         models_block, freq_type, freq_params,
+                                         tree, optimize_mixmodel_weight);
             } else {
-                modeli = (ModelMarkov*)createModel(model_str, models_block,
-                                                   FREQ_EQUAL, "", tree);
-                modeli->setStateFrequency(state_freq);
-                modeli->setRateMatrix(rates);
+                //            string model_desc;
+                //            NxsModel *nxsmodel = models_block->findModel(model_str);
+                //            if (nxsmodel) model_desc = nxsmodel->description;
+                model = createModel(model_str, models_block, freq_type, freq_params, tree);
             }
-            if (tree->aln->site_state_freq[i])
-                modeli->setStateFrequency (tree->aln->site_state_freq[i]);
+    //        fused_mix_rate &= model->isMixture() && site_rate->getNRate() > 1;
+        } else {
+            // site-specific model
+            if (model_str == "JC" || model_str == "POISSON") {
+                outError("JC is not suitable for site-specific model");
+            }
+            model = new ModelSet(model_str.c_str(), tree);
+            ModelSet *models = (ModelSet*)model; // assign pointer for convenience
+            models->init((freq_type != FREQ_UNKNOWN) ? freq_type : FREQ_EMPIRICAL);
+            models->pattern_model_map.resize(tree->aln->getNPattern(), -1);
+            for (size_t i = 0; i < tree->aln->getNSite(); ++i) {
+                models->pattern_model_map[tree->aln->getPatternID(i)] = tree->aln->site_model[i];
+                //cout << "site " << i << " ptn " << tree->aln->getPatternID(i)
+                //     << " -> model " << site_model[i] << endl;
+            }
+            double *state_freq = new double[model->num_states];
+            double *rates = new double[model->getNumRateEntries()];
+            for (size_t i = 0; i < tree->aln->site_state_freq.size(); ++i) {
+                ModelMarkov *modeli;
+                if (i == 0) {
+                    auto f_type = (freq_type != FREQ_UNKNOWN)
+                                ? freq_type : FREQ_EMPIRICAL;
+                    modeli = (ModelMarkov*)createModel(model_str, models_block,
+                                                       f_type, "", tree);
+                    modeli->getStateFrequency(state_freq);
+                    modeli->getRateMatrix(rates);
+                } else {
+                    modeli = (ModelMarkov*)createModel(model_str, models_block,
+                                                       FREQ_EQUAL, "", tree);
+                    modeli->setStateFrequency(state_freq);
+                    modeli->setRateMatrix(rates);
+                }
+                if (tree->aln->site_state_freq[i])
+                    modeli->setStateFrequency (tree->aln->site_state_freq[i]);
 
-            modeli->init(FREQ_USER_DEFINED);
-            models->push_back(modeli);
+                modeli->init(FREQ_USER_DEFINED);
+                models->push_back(modeli);
+            }
+            delete [] rates;
+            delete [] state_freq;
+
+            models->joinEigenMemory();
+            models->decomposeRateMatrix();
         }
-        delete [] rates;
-        delete [] state_freq;
+}
 
-        models->joinEigenMemory();
-        models->decomposeRateMatrix();
-    }
-
+void ModelFactory::initializeAscertainmentCorrection(ModelInfo& rate_info,
+                                                     std::string &rate_str,
+                                                     PhyloTree* tree) {
     /******************** initialize ascertainment bias correction model ****************************/
-
+    Params& params = *(tree->params);
     rate_info.updateName(rate_str);
-
     if (rate_info.hasAscertainmentBiasCorrection()) {
         ASC_type = rate_info.extractASCType(rate_str);
         rate_info.updateName(rate_str);
@@ -570,7 +633,12 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree,
                           << " unobservable constant patterns");
         }
     }
+}
 
+void ModelFactory::initializeRateHeterogeneity(const ModelInfo& rate_info,
+                                               std::string& rate_str,
+                                               const Params& params,
+                                               PhyloTree* tree) {
     /******************** initialize site rate heterogeneity ****************************/
         
     bool isFreeRate          = rate_info.isFreeRate();
@@ -712,7 +780,15 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree,
         site_rate = new RateHeterogeneity();
         site_rate->setTree(tree);
     }
+}
 
+void ModelFactory::initializeFusedMixRate(ModelsBlock *models_block,
+                                          const std::string& model_name,
+                                          const std::string& model_str,
+                                          const std::string& freq_params,
+                                          StateFreqType freq_type,
+                                          bool optimize_mixmodel_weight,
+                                          PhyloTree *tree) {
     if (fused_mix_rate) {
         if (!model->isMixture()) {
             TREE_LOG_LINE(*tree, VB_MED,
@@ -740,18 +816,13 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree,
             model->setMixtureWeight(mix, 1.0);
         }
         model->decomposeRateMatrix();
-//        } else {
-//            site_rate->setFixParams(1);
-//            int c, ncat = site_rate->getNRate();
-//            for (c = 0; c < ncat; c++)
-//                site_rate->setProp(c, 1.0);
-//        }
-    }
-
-    tree->discardSaturatedSite(params.discard_saturated_site);
-
-    } catch (const char* str) {
-        outError(str);
+        //} else {
+        //    site_rate->setFixParams(1);
+        //    int c, ncat = site_rate->getNRate();
+        //    for (c = 0; c < ncat; c++) {
+        //        site_rate->setProp(c, 1.0);
+        //        }
+        //}
     }
 }
 

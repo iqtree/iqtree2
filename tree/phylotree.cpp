@@ -455,9 +455,11 @@ void PhyloTree::configureModel(Params& params) {
     }
 }
 
-void PhyloTree::initializeModel(Params &params, string model_name, ModelsBlock *models_block) {
+void PhyloTree::initializeModel(Params &params, string model_name,
+                                ModelsBlock *models_block) {
     //Must be overridden in IQTree etc.
-    throw "Uh-oh!  Called initializeModel on PhyloTree rather than a subclass";
+    throw "Uh-oh!  Called initializeModel"
+          " on PhyloTree rather than a subclass";
 }
 
 void PhyloTree::prepareForDeletes() {

@@ -828,7 +828,7 @@ void ModelProtein::init(const char *model_name, string model_params,
     ASSERT(num_states == 20);
     ASSERT(models_block && "models_block uninitialized");
     name = model_name;
-    const char* name_init = Params::getInstance().model_name_init;
+    const char* name_init = Params::getInstance().model_name_init.c_str();
     
     string name_upper = model_name;
     for (auto it = name_upper.begin(); it != name_upper.end(); it++) {

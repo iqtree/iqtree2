@@ -141,7 +141,8 @@ public:
     
     void doPLLParsimonySPR();
     
-    virtual void initializeModel(Params &params, string model_name, ModelsBlock *models_block);
+    virtual void initializeModel(Params &params, string model_name,
+                                 ModelsBlock *models_block);
 
     /**
             print tree to .treefile

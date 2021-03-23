@@ -188,9 +188,11 @@ void reportModelSelection(ofstream &out, Params &params, ModelCheckpoint *model_
         stree = (PhyloSuperTree*)tree;
         SuperAlignment *saln = (SuperAlignment*)stree->aln;
         for (int part = 0; part != stree->size(); part++) {
-            if (part != 0)
+            if (part != 0) {
                 out << ",";
-            out << saln->partitions[part]->model_name << ":" << saln->partitions[part]->name;
+            }
+            out << saln->partitions[part]->model_name << ":"
+                << saln->partitions[part]->name;
         }
 //        string set_name = "";
 //        for (it = model_info.begin(); it != model_info.end(); it++) {
@@ -1805,9 +1807,10 @@ void initializeParams(Params &params, IQTree &iqtree)
     ModelInfoFromName model_info(iqtree.aln->model_name);
 
     if (model_info.isWeissAndVonHaeselerTest()) {
-        if (iqtree.aln->seq_type != SEQ_DNA)
+        if (iqtree.aln->seq_type != SEQ_DNA) {
             outError("Weiss & von Haeseler test"
                      " of model homogeneity only works for DNA");
+        }
         iqtree.aln->model_name = "GTR+G";
         model_info.updateName(iqtree.aln->model_name);
     }
@@ -2602,7 +2605,8 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     ModelInfoFromName model_info_params(params.model_name);
     
     if (model_info_params.isWeissAndVonHaeselerTest()) {
-        cout << endl << "Testing model homogeneity by Weiss & von Haeseler (2003)..." << endl;
+        cout << endl << "Testing model homogeneity"
+             << " by Weiss & von Haeseler (2003)..." << endl;
         WHTest(params, *iqtree);
     }
     NodeVector pruned_taxa;
@@ -3328,7 +3332,8 @@ void runStandardBootstrap(Params &params, Alignment *alignment, IQTree *tree) {
                 boot_tree = new IQTree(bootstrap_alignment);
         }
         if (params.print_bootaln && MPIHelper::getInstance().isMaster()) {
-            bootstrap_alignment->printAlignment(params.aln_output_format, bootaln_name.c_str(), true);
+            bootstrap_alignment->printAlignment(params.aln_output_format,
+                                                bootaln_name.c_str(), true);
         }
 
         if (params.print_boot_site_freq && MPIHelper::getInstance().isMaster()) {
@@ -3512,14 +3517,16 @@ void convertAlignment(Params &params, IQTree *iqtree) {
         Alignment out_aln;
         Alignment masked_aln(params.gap_masked_aln, params.sequence_type, params.intype, params.model_name);
         out_aln.createGapMaskedAlignment(&masked_aln, alignment);
-        out_aln.printAlignment(params.aln_output_format, params.aln_output, false, params.aln_site_list,
-                exclude_sites, params.ref_seq_name);
+        out_aln.printAlignment(params.aln_output_format, params.aln_output,
+                               false, params.aln_site_list,
+                               exclude_sites, params.ref_seq_name);
         string str = params.gap_masked_aln;
         str += ".sitegaps";
         out_aln.printSiteGaps(str.c_str());
     } else  {
-        alignment->printAlignment(params.aln_output_format, params.aln_output, false, params.aln_site_list,
-                exclude_sites, params.ref_seq_name);
+        alignment->printAlignment(params.aln_output_format, params.aln_output,
+                                  false, params.aln_site_list,
+                                  exclude_sites, params.ref_seq_name);
     }
 }
 
@@ -3527,8 +3534,8 @@ void convertAlignment(Params &params, IQTree *iqtree) {
     2016-08-04: compute a site frequency model for profile mixture model
 */
 void computeSiteFrequencyModel(Params &params, Alignment *alignment) {
-
-    cout << endl << "===> COMPUTING SITE FREQUENCY MODEL BASED ON TREE FILE " << params.tree_freq_file << endl;
+    cout << endl << "===> COMPUTING SITE FREQUENCY MODEL BASED ON TREE FILE "
+         << params.tree_freq_file << endl;
     ASSERT(params.tree_freq_file);
     PhyloTree *tree = new PhyloTree(alignment);
     tree->setParams(&params);
@@ -3537,8 +3544,10 @@ void computeSiteFrequencyModel(Params &params, Alignment *alignment) {
     tree->setAlignment(alignment);
     tree->setRootNode(params.root);
     
-    ModelsBlock *models_block = readModelsDefinition(params);
-    tree->setModelFactory(new ModelFactory(params, alignment->model_name, tree, models_block));
+    ModelsBlock*  models_block  = readModelsDefinition(params);
+    ModelFactory* model_factory = new ModelFactory(params, alignment->model_name,
+                                                   tree, models_block);
+    tree->setModelFactory(model_factory);
     delete models_block;
     tree->setModel(tree->getModelFactory()->model);
     tree->setRate(tree->getModelFactory()->site_rate);
@@ -3549,7 +3558,8 @@ void computeSiteFrequencyModel(Params &params, Alignment *alignment) {
         outError("No mixture model was specified!");
     uint64_t mem_size = tree->getMemoryRequired();
     uint64_t total_mem = getMemorySize();
-    cout << "NOTE: " << (mem_size / 1024) / 1024 << " MB RAM is required!" << endl;
+    cout << "NOTE: " << (mem_size / 1024) / 1024
+         << " MB RAM is required!" << endl;
     if (mem_size >= total_mem) {
         outError("Memory required exceeds your computer RAM size!");
     }
@@ -3562,8 +3572,10 @@ void computeSiteFrequencyModel(Params &params, Alignment *alignment) {
     tree->ensureNumberOfThreadsIsSet(nullptr, false);
 
     tree->initializeAllPartialLh();
-    // 2017-12-07: Increase espilon ten times (0.01 -> 0.1) to speedup PMSF computation
-    tree->getModelFactory()->optimizeParameters(params.fixed_branch_length, true, params.modelEps*10);
+    // 2017-12-07: Increase espilon ten times (0.01 -> 0.1)
+    // to speed up PMSF computation
+    tree->getModelFactory()->optimizeParameters(params.fixed_branch_length,
+                                                true, params.modelEps*10);
 
     intptr_t nptn    = alignment->getNPattern();
     intptr_t nstates = alignment->num_states;
@@ -3576,13 +3588,15 @@ void computeSiteFrequencyModel(Params &params, Alignment *alignment) {
         alignment->site_state_freq[ptn] = f;
     }
     alignment->getSitePatternIndex(alignment->site_model);
-    printSiteStateFreq(((string)params.out_prefix+".sitefreq").c_str(), tree, ptn_state_freq);
+    auto sitefreq_path = params.out_prefix+".sitefreq";
+    printSiteStateFreq(sitefreq_path.c_str(), tree, ptn_state_freq);
     params.print_site_state_freq = WSF_NONE;
     
     delete [] ptn_state_freq;
     delete tree;
     
-    cout << endl << "===> CONTINUE ANALYSIS USING THE INFERRED SITE FREQUENCY MODEL" << endl;
+    cout << endl << "===> CONTINUE ANALYSIS"
+         << " USING THE INFERRED SITE FREQUENCY MODEL" << endl;
 }
 
 
@@ -3605,7 +3619,8 @@ IQTree *newIQTree(Params &params, Alignment *alignment) {
         // this alignment will actually be of type SuperAlignment
         //        alignment = tree->aln;
         if (((PhyloSuperTree*)tree)->rescale_codon_brlen)
-            cout << "NOTE: Mixed codon and other data, branch lengths of codon partitions are rescaled by 3!" << endl;
+            cout << "NOTE: Mixed codon and other data, branch lengths"
+                 << " of codon partitions are rescaled by 3!" << endl;
         
     } else {
         // allocate heterotachy tree if neccessary
@@ -3641,15 +3656,16 @@ void getSymTestID(vector<SymTestResult> &res, set<int> &id, bool bad_res) {
         }
     } else {
         // get non-significant test ID
+        auto cutoff = Params::getInstance().symtest_pcutoff;
         switch (Params::getInstance().symtest) {
             case SYMTEST_BINOM:
                 for (auto i = res.begin(); i != res.end(); i++)
-                    if (i->pvalue_binom >= Params::getInstance().symtest_pcutoff)
+                    if (i->pvalue_binom >= cutoff)
                         id.insert(static_cast<int>(i - res.begin()));
                 break;
             case SYMTEST_MAXDIV:
                 for (auto i = res.begin(); i != res.end(); i++)
-                    if (i->pvalue_maxdiv >= Params::getInstance().symtest_pcutoff)
+                    if (i->pvalue_maxdiv >= cutoff)
                         id.insert(static_cast<int>(i - res.begin()));
                 break;
             default:

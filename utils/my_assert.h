@@ -34,7 +34,12 @@ inline void _my_assert(const char* expression, const char *func, const char* fil
         << ": Assertion `" << expression << "' failed." << std::endl;
     abort();
 }
- 
+
+inline void _my_assert(std::string str_expression, const char *func, const char* file, int line) {
+    _my_assert(str_expression.c_str(), func, file, line);
+}
+
+
 #ifdef NDEBUG
 #define ASSERT(EXPRESSION) ((void)0)
 #else
@@ -43,6 +48,16 @@ inline void _my_assert(const char* expression, const char *func, const char* fil
     #else
         #define ASSERT(EXPRESSION) ((EXPRESSION) ? (void)0 : _my_assert(#EXPRESSION, __func__, __FILE__, __LINE__))
     #endif
+#endif
+
+#if defined(__GNUC__) || defined(__clang__)
+    #define FUNCTION_NOT_IMPLEMENTED \
+        _my_assert(std::string(__PRETTY_FUNCTION__) + " is not implemented", \
+                  __PRETTY_FUNCTION__, __FILE__, __LINE__)
+#else
+    #define FUNCTION_NOT_IMPLEMENTED \
+        _my_assert(std::string(__func__) + " is not implemented", \
+                  __func__, __FILE__, __LINE__)
 #endif
 
 #endif /* assert_h */

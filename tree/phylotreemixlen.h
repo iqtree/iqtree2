@@ -82,7 +82,8 @@ public:
      */
     virtual void readTreeString(const string &tree_string);
 
-    virtual void initializeModel(Params &params, string model_name, ModelsBlock *models_block);
+    virtual void initializeModel(Params &params, string model_name,
+                                 ModelsBlock *models_block);
 
     /**
         @return true if this is a tree with mixture branch lengths, default: false

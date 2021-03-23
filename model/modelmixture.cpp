@@ -1166,15 +1166,16 @@ ModelMixture::ModelMixture(PhyloTree *tree) : ModelMarkov(tree) {
 	optimizing_submodels = false;
 }
 
-ModelMixture::ModelMixture(string orig_model_name, string model_name, string model_list, ModelsBlock *models_block,
-		StateFreqType freq, string freq_params, PhyloTree *tree, bool optimize_weights)
-	: ModelMarkov(tree)
+ModelMixture::ModelMixture(string orig_model_name, string model_name,
+                           string model_list, ModelsBlock *models_block,
+                           StateFreqType freq, string freq_params, PhyloTree *tree,
+                           bool optimize_weights) : ModelMarkov(tree)
 {
-	prop = NULL;
-	fix_prop = true;
-	optimizing_submodels = false;
+    prop = NULL;
+    fix_prop = true;
+    optimizing_submodels = false;
     optimize_steps = 0;
-	initMixture(orig_model_name, model_name, model_list, models_block, freq, freq_params, tree, optimize_weights);
+    initMixture(orig_model_name, model_name, model_list, models_block, freq, freq_params, tree, optimize_weights);
 }
 
 void ModelMixture::initMixture(string orig_model_name, string model_name, string model_list, ModelsBlock *models_block,

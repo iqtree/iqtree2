@@ -37,19 +37,19 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree,
                                ModelsBlock *models_block)
         : ModelFactory()
 {
-	store_trans_matrix = params.store_trans_matrix;
-	is_storing = false;
-	joint_optimize = params.optimize_model_rate_joint;
-	fused_mix_rate = false;
-    linked_alpha = -1.0;
+    store_trans_matrix = params.store_trans_matrix;
+    is_storing      = false;
+    joint_optimize  = params.optimize_model_rate_joint;
+    fused_mix_rate  = false;
+    linked_alpha    = -1.0;
     opt_gamma_invar = false;
 
-	// create dummy model
-	model = new ModelSubst(tree->aln->num_states);
-	site_rate = new RateHeterogeneity();
-	site_rate->setTree(tree);
+    // create dummy model
+    model     = new ModelSubst(tree->aln->num_states);
+    site_rate = new RateHeterogeneity();
+    site_rate->setTree(tree);
 
-//    string model_name = params.model_name;
+    //string model_name = params.model_name;
     PhyloSuperTree::iterator it;
     int part;
     if (params.link_alpha) {
@@ -57,16 +57,19 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree,
         linked_alpha = params.gamma_shape;
     }
     double init_by_divmat = false;
-    if (params.model_name_init
-        && strcmp(params.model_name_init, "DIVMAT") == 0) {
+    if (!params.model_name_init.empty()
+        && params.model_name_init == "DIVMAT") {
         init_by_divmat = true;
-        params.model_name_init = nullptr;
+        params.model_name_init = "";
     }
-    for (it = tree->begin(), part = 0; it != tree->end(); it++, part++) {
+    for (it = tree->begin(), part = 0;
+         it != tree->end(); it++, part++) {
         ASSERT(!((*it)->getModelFactory()));
         string model_name = (*it)->aln->model_name;
-        if (model_name == "") // if empty, take model name from command option
-        	model_name = params.model_name;
+        if (model_name == "") {
+            // if empty, take model name from command option
+            model_name = params.model_name;
+        }
         (*it)->setModelFactory(new ModelFactory(params, model_name,
                                                 (*it), models_block));
         (*it)->setModel((*it)->getModelFactory()->model);
@@ -82,12 +85,12 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree,
                    && params.partition_type != TOPO_UNLINKED
                    && (*it)->getModel()->freq_type == FREQ_EMPIRICAL
                    && (*it)->aln->seq_type != SEQ_CODON) {
-        	// modify state_freq to account for empty sequences
+            // modify state_freq to account for empty sequences
             auto nsites = (*it)->aln->getNSite();
             auto nseqs  = tree->aln->getNSeq();
-        	(*it)->aln->computeStateFreq((*it)->getModel()->state_freq,
+            (*it)->aln->computeStateFreq((*it)->getModel()->state_freq,
                                          ( nsites - 1 ) *nseqs);
-        	(*it)->getModel()->decomposeRateMatrix();
+            (*it)->getModel()->decomposeRateMatrix();
         }
         
         //string taxa_set = ((SuperAlignment*)tree->aln)->getPattern(part);
@@ -125,18 +128,21 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree,
         for (it = stree->begin(); it != stree->end(); it++) {
             if ((*it)->getModel()->getName() == mit->second->getName()) {
                 num_parts++;
-                if ((*it)->aln->seq_type == SEQ_CODON)
+                if ((*it)->aln->seq_type == SEQ_CODON) {
                     outError("Linking codon models not supported");
-                if ((*it)->aln->seq_type == SEQ_POMO)
+                }
+                if ((*it)->aln->seq_type == SEQ_POMO) {
                     outError("Linking POMO models not supported");
+                }
 #ifndef _MSC_VER
                 size_t state_counts[(*it)->aln->STATE_UNKNOWN+1];
 #else
                 boost::scoped_array<size_t> state_counts(new size_t[(*it)->aln->STATE_UNKNOWN + 1]);
 #endif
                 size_t unknown_states = 0;
-                if( params.partition_type != TOPO_UNLINKED)
+                if( params.partition_type != TOPO_UNLINKED) {
                     unknown_states = (*it)->aln->getNSite() * (tree->aln->getNSeq() - (*it)->aln->getNSeq());
+                }
                 (*it)->aln->countStates(&state_counts[0], unknown_states);
                 if (!sum_state_counts) {
                     sum_state_counts = new size_t[(*it)->aln->STATE_UNKNOWN+1];
@@ -171,20 +177,22 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree,
         cout << endl;
         cout.precision(prec);
 
-        for (it = stree->begin(); it != stree->end(); it++)
+        for (it = stree->begin(); it != stree->end(); it++) {
             if ((*it)->getModel()->getName() == mit->second->getName()) {
                 ((ModelMarkov*)(*it)->getModel())->adaptStateFrequency(&sum_state_freq[0]);
                 (*it)->getModel()->decomposeRateMatrix();
             }
+        }
         delete [] sum_state_counts;
     }
 }
 
 void PartitionModel::setCheckpoint(Checkpoint *checkpoint) {
-	ModelFactory::setCheckpoint(checkpoint);
+    ModelFactory::setCheckpoint(checkpoint);
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
-    for (PhyloSuperTree::iterator it = tree->begin(); it != tree->end(); it++)
-		(*it)->getModelFactory()->setCheckpoint(checkpoint);
+    for (PhyloSuperTree::iterator it = tree->begin(); it != tree->end(); it++) {
+        (*it)->getModelFactory()->setCheckpoint(checkpoint);
+    }
 }
 
 void PartitionModel::startCheckpoint() {

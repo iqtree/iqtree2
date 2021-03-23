@@ -26,14 +26,12 @@
 #include "nclextra/modelsblock.h"
 #include "utils/checkpoint.h"
 #include "alignment/alignment.h"
+#include "modelinfo.h" //for ModelInfo class
 
 const double MIN_BRLEN_SCALE = 0.01;
 const double MAX_BRLEN_SCALE = 100.0;
 
 ModelsBlock *readModelsDefinition(Params &params);
-
-
-
 
 /**
 Store the transition matrix corresponding to evolutionary time so that one must not compute again. 
@@ -61,12 +59,48 @@ public:
     
     StateFreqType getDefaultFrequencyTypeForSequenceType(SeqType seq_type);
 
-	/**
-		blank constructor
-	*/
-	
-	ModelFactory();
-
+    /**
+     blank constructor
+     */
+    
+    ModelFactory();
+    
+    
+    void initializeModelAlias(ModelsBlock *models_block,
+                              string& model_str);
+    void moveRateParameters(string& model_str, string& rate_str);
+    void moveFrequencyParameters(string& rate_str, string& model_str,
+                                 string& freq_str);
+    void moveErrorModelParameter(string rate_str, string model_str);
+    void removeSamplingParametersFromRateString(bool pomo,
+                                                std::string rate_str);
+    void initializePoMo(bool pomo, ModelInfo& rate_info,
+                        std::string& rate_str, std::string& model_str);
+    void initializeFrequency(const Params& params, PhyloTree* tree,
+                             string& freq_str, string& freq_params,
+                             StateFreqType &freq_type,
+                             bool& optimize_mixmodel_weight);
+    void initializeModel(const std::string& model_name,
+                         ModelsBlock *models_block,
+                         ModelInfo& model_info, string& model_str,
+                         StateFreqType freq_type, string& freq_params,
+                         bool optimize_mixmodel_weight,
+                         PhyloTree* tree);
+    void initializeAscertainmentCorrection(ModelInfo& rate_info,
+                                           std::string &rate_str,
+                                           PhyloTree* tree);
+    void initializeRateHeterogeneity(const ModelInfo& rate_info,
+                                     std::string& rate_str,
+                                     const Params& params,
+                                     PhyloTree* tree);
+    void initializeFusedMixRate(ModelsBlock *models_block,
+                                const std::string& model_name,
+                                const std::string& model_str,
+                                const std::string& freq_params,
+                                const StateFreqType freq_type,
+                                bool optimize_mixmodel_weight,
+                                PhyloTree *tree);
+    
     /**
         set checkpoint object
         @param checkpoint

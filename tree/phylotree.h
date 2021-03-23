@@ -454,7 +454,8 @@ public:
     
     void configureModel(Params& params);
     
-    virtual void initializeModel(Params &params, string model_name, ModelsBlock *models_block);
+    virtual void initializeModel(Params &params, string model_name,
+                                 ModelsBlock *models_block);
     
     /*
      Modify the tree by marking a subset of the taxa as

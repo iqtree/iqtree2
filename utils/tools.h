@@ -1414,7 +1414,7 @@ public:
     string yaml_model_file;
 
     /** model name to initialize GTR20 or NONREV protein model */
-    char* model_name_init;
+    string model_name_init;
 
     /** number of steps for linked model optimisation, default: 1 */
     int model_opt_steps;

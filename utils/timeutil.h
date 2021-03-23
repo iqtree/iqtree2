@@ -35,6 +35,7 @@
 #include <errno.h>
 #include <string.h>
 #include <stdint.h>
+#include <math.h>    //for floor()
 #if !defined(_MSC_VER)
 #include <sys/time.h>
 #endif
@@ -67,38 +68,42 @@
  * gettimeofday()
  ********************************************/
 #ifndef HAVE_GETTIMEOFDAY
-	#if defined WIN32 || defined _WIN32 || defined __WIN32__
-	#include <sys/timeb.h>
-	#include <sys/types.h>
-	#include <winsock.h>
+    #if defined WIN32 || defined _WIN32 || defined __WIN32__
+        #include <sys/timeb.h>
+        #include <sys/types.h>
+        #include <winsock.h>
 
-	struct timezone {
-		char dummy;
-	};
+        struct timezone {
+            char dummy;
+        };
 
-	__inline void gettimeofday(struct timeval* t, void* timezone)
-	{       
-		#ifdef _MSC_VER
-			struct __timeb64 timebuffer;
-			_ftime64_s(&timebuffer);
-			t->tv_sec = (long)timebuffer.time;
-			t->tv_usec = 1000 * timebuffer.millitm;
-		#else
-			struct _timeb timebuffer;
-			_ftime( &timebuffer );
-			t->tv_sec = (long)timebuffer.time;
-			t->tv_usec = 1000 * timebuffer.millitm;
-		#endif
-	}
-	#else /* UNIX */
-	#include <sys/time.h>
-	__inline void gettimeofday(struct timeval* t, void* timezone) {
-		time_t cur_time;
-		time(&cur_time);
-		t->tv_sec = cur_time;
-		t->tv_usec = 0;
-	}
-	#endif
+        __inline int my_gettimeofday(struct timeval* t, void* timezone)
+        {
+        #ifdef _MSC_VER
+            struct __timeb64 timebuffer;
+            _ftime64_s(&timebuffer);
+            t->tv_sec = (long)timebuffer.time;
+            t->tv_usec = 1000 * timebuffer.millitm;
+        #else
+            struct _timeb timebuffer;
+            _ftime( &timebuffer );
+            t->tv_sec = (long)timebuffer.time;
+            t->tv_usec = 1000 * timebuffer.millitm;
+        #endif
+            return 0;
+        }
+    #else /* UNIX */
+        #include <sys/time.h>
+        __inline int my_gettimeofday(struct timeval* t, void* timezone) {
+            time_t cur_time;
+            time(&cur_time);
+            t->tv_sec = cur_time;
+            t->tv_usec = 0;
+            return 0;
+        }
+    #endif
+    #define gettimeofday my_gettimeofday
+    #define HAVE_GETTIMEOFDAY (1)
 #endif /* HAVE_GETTIMEOFDAY */
 
 
@@ -298,7 +303,6 @@ __inline uint64_t getMemorySize( )
 	return 0L;			/* Unknown OS. */
 #endif
 }
-
 
 #define HOW_LONG(x) \
 { std::cout.precision(6); double startTime = getRealTime(); \

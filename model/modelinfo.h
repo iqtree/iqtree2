@@ -42,6 +42,11 @@ public:
     virtual bool isModelFinderOnly()               const = 0;
     virtual bool isPolymorphismAware()             const = 0;
     virtual bool isWeissAndVonHaeselerTest()       const = 0;
+    
+    virtual ASCType     extractASCType(std::string& leftover_name) const = 0;
+    virtual std::string extractMixtureModelList(std::string& leftover_name) const = 0;
+    virtual std::string extractPolymorphicHeterozygosity(std::string& leftover_name) const = 0;
+    virtual void        updateName(const std::string& name) = 0;
 };
 
 class ModelInfoFromName: public ModelInfo {
@@ -50,7 +55,7 @@ private:
 public:
     explicit ModelInfoFromName(std::string name);
     explicit ModelInfoFromName(const char* name);
-    virtual ~ModelInfoFromName();
+    virtual ~ModelInfoFromName() = default;
     
     virtual std::string getFreeRateParameters(int& num_rate_cats,
                                               bool &fused_mix_rate) const;
@@ -84,5 +89,70 @@ public:
     std::string extractPolymorphicHeterozygosity(std::string& leftover_name) const;
     void        updateName(const std::string& name);
 };
+
+class ModelInfoFromYAMLFile: public ModelInfo {
+private:
+    std::string model_name;
+    std::string model_file_path;
+public:
+    explicit ModelInfoFromYAMLFile(const std::string& file_path);
+    ~ModelInfoFromYAMLFile() = default;
+    
+    virtual std::string getFreeRateParameters(int& num_rate_cats,
+                                              bool &fused_mix_rate) const {
+        FUNCTION_NOT_IMPLEMENTED;
+        return "";
+    }
+    virtual std::string getFrequencyMixtureParams(std::string& freq_str) const {
+        FUNCTION_NOT_IMPLEMENTED;
+        return "";
+    }
+    virtual void        getFrequencyOptions(std::string& freq_str,
+                                            StateFreqType& freq_type,
+                                            std::string& freq_params,
+                                            bool& optimize_mixmodel_weight) const {
+        FUNCTION_NOT_IMPLEMENTED;
+    }
+    virtual void        getGammaParameters(int& num_rate_cats,
+                                           double& gamma_shape) const {
+        FUNCTION_NOT_IMPLEMENTED;
+    }
+    virtual std::string getHeterotachyParameters(bool is_mixture_model,
+                                                 int& num_rate_cats,
+                                                 bool& fused_mix_rate) const {
+        FUNCTION_NOT_IMPLEMENTED;
+        return "";
+    }
+    
+    virtual double getProportionOfInvariantSites() const { return 0.0; /*stub*/ }
+
+    virtual bool hasAscertainmentBiasCorrection()  const { return false; /*stub*/ }
+    virtual bool hasRateHeterotachy()              const { return false; /*stub*/ }
+    
+    virtual bool isFreeRate()                      const { return false; /*stub*/ }
+    virtual bool isFrequencyMixture()              const { return false; /*stub*/ }
+    virtual bool isGammaModel()                    const { return false; /*stub*/ }
+    virtual bool isInvariantModel()                const { return false; /*stub*/ }
+    virtual bool isMixtureModel()                  const { return false; /*stub*/ }
+    virtual bool isModelFinder()                   const { return false; /*stub*/ }
+    virtual bool isModelFinderOnly()               const { return false; /*stub*/ }
+    virtual bool isPolymorphismAware()             const { return false; /*stub*/ }
+    virtual bool isWeissAndVonHaeselerTest()       const { return false; /*stub*/ }
+
+    ASCType     extractASCType(std::string& leftover_name) const {
+        FUNCTION_NOT_IMPLEMENTED;
+        return ASC_VARIANT;
+    }
+    std::string extractMixtureModelList(std::string& leftover_name) const {
+        FUNCTION_NOT_IMPLEMENTED;
+        return "";
+    }
+    std::string extractPolymorphicHeterozygosity(std::string& leftover_name) const {
+        FUNCTION_NOT_IMPLEMENTED;
+        return "";
+    }
+    void        updateName(const std::string& name);
+};
+
 
 #endif /* modelinfo_hpp */
