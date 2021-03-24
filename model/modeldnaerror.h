@@ -23,7 +23,7 @@ public:
         constructor
         @param tree associated tree for the model
     */
-    ModelDNAError(PhyloTree *tree);
+    ModelDNAError(PhyloTree *tree, PhyloTree* report_to_tree);
 
     /**
         constructor
@@ -31,7 +31,9 @@ public:
         @param freq state frequency type
         @param tree associated phylogenetic tree
     */
-    ModelDNAError(const char *model_name, string model_params, StateFreqType freq, string freq_params, string seqerr, PhyloTree *tree);
+    ModelDNAError(const char *model_name, string model_params, StateFreqType freq,
+                  string freq_params, string seqerr,
+                  PhyloTree *tree, PhyloTree* report_to_tree);
 
     /**
         start structure for checkpointing

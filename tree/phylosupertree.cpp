@@ -769,32 +769,39 @@ void PhyloSuperTree::computePatternLikelihood(double *pattern_lh, double *cur_lo
 }
 
 void PhyloSuperTree::computePatternProbabilityCategory(double *ptn_prob_cat, SiteLoglType wsl) {
-	size_t offset = 0;
-	for (iterator it = begin(); it != end(); it++) {
+    size_t offset = 0;
+    for (iterator it = begin(); it != end(); it++) {
         (*it)->computePatternProbabilityCategory(ptn_prob_cat + offset, wsl);
         offset += (*it)->aln->getNPattern() * (*it)->getNumLhCat(wsl);
-	}
+    }
 }
 
 double PhyloSuperTree::optimizeAllBranches(int my_iterations, double tolerance,
-                                           int maxNRStep, bool were_lengths_consistent) {
+                                           int maxNRStep, bool were_lengths_consistent,
+                                           PhyloTree* report_to_tree) {
+    if (report_to_tree==nullptr) {
+        report_to_tree = this;
+    }
 	double tree_lh = 0.0;
 	int ntrees = static_cast<int>(size());
-    if (part_order.empty()) computePartitionOrder();
+    if (part_order.empty()) {
+        computePartitionOrder();
+    }
 	#ifdef _OPENMP
 	#pragma omp parallel for reduction(+: tree_lh) schedule(dynamic) if(num_threads > 1)
 	#endif
 	for (int j = 0; j < ntrees; j++) {
         int i = part_order[j];
         part_info[i].cur_score = at(i)->optimizeAllBranches(my_iterations, tolerance/min(ntrees,10),
-                                                            maxNRStep, were_lengths_consistent);
-		tree_lh += part_info[i].cur_score;
-		if (verbose_mode >= VB_MAX)
-			at(i)->printTree(cout, WT_BR_LEN + WT_NEWLINE);
-	}
-
-	if (my_iterations >= 100) computeBranchLengths();
-	return tree_lh;
+                                                            maxNRStep, were_lengths_consistent,
+                                                            report_to_tree);
+        tree_lh += part_info[i].cur_score;
+        if (verbose_mode >= VB_MAX)
+            at(i)->printTree(cout, WT_BR_LEN + WT_NEWLINE);
+    }
+    
+    if (my_iterations >= 100) computeBranchLengths();
+    return tree_lh;
 }
 
 PhyloSuperTree::~PhyloSuperTree()

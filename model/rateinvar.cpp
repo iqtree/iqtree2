@@ -93,7 +93,8 @@ void RateInvar::setBounds(double *lower_bound, double *upper_bound,
 	bound_check[1] = false;
 }
 
-double RateInvar::optimizeParameters(double gradient_epsilon) {
+double RateInvar::optimizeParameters(double gradient_epsilon,
+                                     PhyloTree* report_to_tree) {
     if (phylo_tree->aln->frac_const_sites == 0.0) {
         return -computeFunction(0.0);
     }

@@ -17,16 +17,15 @@
 #include <boost/scoped_array.hpp>
 #endif
 
-ModelPoMoMixture::ModelPoMoMixture(const char *model_name,
-                     string model_params,
-                     StateFreqType freq_type,
-                     string freq_params,
-                     PhyloTree *tree,
-                     string pomo_params, string pomo_rate_str)
+ModelPoMoMixture::ModelPoMoMixture(const char *model_name, string model_params,
+                                   StateFreqType freq_type, string freq_params,
+                                   PhyloTree *tree, string pomo_params,
+                                   string pomo_rate_str, PhyloTree* report_to_tree)
 	:
         ModelMarkov(tree),
-        ModelPoMo(model_name, model_params, freq_type, freq_params, tree, pomo_params),
-        ModelMixture(tree)
+        ModelPoMo(model_name, model_params, freq_type,
+                  freq_params, tree, pomo_params, report_to_tree),
+        ModelMixture(tree, report_to_tree)
 
 {
     opt_mode = OPT_NONE;
@@ -54,7 +53,7 @@ ModelPoMoMixture::ModelPoMoMixture(const char *model_name,
     // creating mixture components
     for (m = 0; m < num_rate_cats; m++) {
         ModelMarkov* model = new ModelMarkov(tree);
-        model->init(FREQ_USER_DEFINED);
+        model->init(FREQ_USER_DEFINED, report_to_tree);
 //        model->total_num_subst = ratehet->getRate(m);
         push_back(model);
         prop[m] = ratehet->getProp(m);
@@ -64,7 +63,7 @@ ModelPoMoMixture::ModelPoMoMixture(const char *model_name,
     initMem();
 
     // TODO: why calling this here?
-    ModelMarkov::init(freq_type);
+    ModelMarkov::init(freq_type, report_to_tree);
 
 }
 
@@ -201,17 +200,20 @@ bool ModelPoMoMixture::getVariables(double *variables) {
 }
 
 
-double ModelPoMoMixture::optimizeParameters(double gradient_epsilon) {
+double ModelPoMoMixture::optimizeParameters(double gradient_epsilon,
+                                            PhyloTree* report_to_tree) {
 
     // first optimize pomo model parameters
     opt_mode = OPT_POMO;
-    double score = ModelPoMo::optimizeParameters(gradient_epsilon);
+    double score = ModelPoMo::optimizeParameters(gradient_epsilon,
+                                                 report_to_tree);
     opt_mode = OPT_NONE;
 
     // then optimize rate heterogeneity
     if (ratehet->getNDim() > 0) {
         opt_mode = OPT_RATEHET;
-        double score_ratehet = ModelPoMo::optimizeParameters(gradient_epsilon);
+        double score_ratehet = ModelPoMo::optimizeParameters(gradient_epsilon,
+                                                             report_to_tree);
         if (verbose_mode >= VB_MIN) {
           double shape = ratehet->getGammaShape();
           if (shape <= POMO_GAMMA_MIN)

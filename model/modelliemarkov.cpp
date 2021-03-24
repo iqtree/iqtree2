@@ -320,12 +320,17 @@ const static int NUM_RATES = 12;
 const double MIN_LIE_WEIGHT = -0.98;
 const double MAX_LIE_WEIGHT =  0.98;
 
-ModelLieMarkov::ModelLieMarkov(string model_name, PhyloTree *tree, string model_params, StateFreqType freq_type, string freq_params)
+ModelLieMarkov::ModelLieMarkov(string model_name, PhyloTree *tree,
+                               string model_params, StateFreqType freq_type,
+                               string freq_params, PhyloTree* report_to_tree)
 	: ModelMarkov(tree, false) {
-  init(model_name.c_str(), model_params, freq_type, freq_params);
+  init(model_name.c_str(), model_params, freq_type, freq_params,
+       report_to_tree);
 }
 
-void ModelLieMarkov::init(const char *model_name, string model_params, StateFreqType freq, string freq_params)
+void ModelLieMarkov::init(const char *model_name, string model_params,
+                          StateFreqType freq, string freq_params,
+                          PhyloTree* report_to_tree)
 {
     // TODO: why is freq_params not handled here?
 
@@ -340,7 +345,7 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
         abort();
     }
 
-    setBasis(); // sets basis and num_params
+    setBasis(report_to_tree); // sets basis and num_params
 
 //    if (model_parameters)
 //        delete[] model_parameters;
@@ -364,7 +369,7 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
     }
 
     if (freq_type == FREQ_UNKNOWN || expected_freq_type == FREQ_EQUAL) freq_type = expected_freq_type;
-    ModelMarkov::init(freq_type);
+    ModelMarkov::init(freq_type, report_to_tree);
 }
 
 // Note to Minh: I see ModelUnrest also lacks checkpointing.
@@ -865,7 +870,7 @@ static void tauToPi(double* tau, double* pi, int sym) {
  * Uses model_num, symmetry to populate 'basis' array.
  */
 
-void ModelLieMarkov::setBasis() {
+void ModelLieMarkov::setBasis(PhyloTree* report_to_tree) {
 
   // BQM 2017-05-02: set reversibility
   // TODO: crash when setting reversible to true
@@ -899,7 +904,7 @@ void ModelLieMarkov::setBasis() {
     num_params = MODEL_PARAMS[model_num]-bdf;
     // This populates field state_freq. (TODO: this call might be redundant - check)
 
-    init_state_freq(getFreqType());
+    init_state_freq(getFreqType(), report_to_tree);
     // state_freq is in order {pi_A, pi_C, pi_G, pi_T}
     double tau[3];
     piToTau(state_freq,tau,symmetry);

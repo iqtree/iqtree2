@@ -157,12 +157,14 @@ public:
 		optimize parameters. Default is to optimize gamma shape
 		@return the best likelihood
 	*/
-	virtual double optimizeParameters(double gradient_epsilon);
+	virtual double optimizeParameters(double gradient_epsilon,
+                                      PhyloTree* report_to_tree);
 
     /**
      *  Same as above but add parameters to control gamma bounds
      */
-	virtual double optimizeParameters(double gradient_epsilon, double min_gamma, double max_gamma);
+	virtual double optimizeParameters(double gradient_epsilon, double min_gamma,
+                                      double max_gamma, PhyloTree* report_to_tree);
 
 	/**
 		override function from Optimization class, used by the minimizeOneDimen() to optimize

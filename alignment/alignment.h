@@ -25,6 +25,8 @@ const double MIN_FREQUENCY_DIFF     = 0.00001;
 const int NUM_CHAR = 256;
 typedef bitset<NUM_CHAR> StateBitset;
 
+class PhyloTree;
+
 /** class storing results of symmetry tests */
 class SymTestResult {
 public:
@@ -770,8 +772,12 @@ public:
             @param state_freq (OUT) is filled with state frequencies, assuming state_freq was allocated with 
                     at least num_states entries.
             @param num_unknown_states number of unknown states e.g. for missing data
+            @param report_to_tree (the tree, if any, corresponding to the alignment,
+                    for which state frequencies are being calculated)
      */
-    virtual void computeStateFreq(double *state_freq, size_t num_unknown_states = 0);
+    virtual void computeStateFreq(double *state_freq,
+                                  size_t num_unknown_states,
+                                  PhyloTree* report_to_tree);
 
     int convertPomoState(int state);
 

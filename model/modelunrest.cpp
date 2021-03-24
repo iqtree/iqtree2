@@ -7,7 +7,8 @@
 
 #include "modelunrest.h"
 
-ModelUnrest::ModelUnrest(PhyloTree *tree, string model_params)
+ModelUnrest::ModelUnrest(PhyloTree *tree, string model_params,
+                         PhyloTree* report_to_tree)
 	: ModelMarkov(tree, false)
 {
     num_params = getNumRateEntries() - 1;
@@ -23,7 +24,7 @@ ModelUnrest::ModelUnrest(PhyloTree *tree, string model_params)
 	}
     name = "UNREST";
     full_name = "Unrestricted model (non-reversible)";
-    ModelMarkov::init(FREQ_ESTIMATE);
+    ModelMarkov::init(FREQ_ESTIMATE, report_to_tree);
 }
 
 /* static */ bool ModelUnrest::validModelName(string model_name) {

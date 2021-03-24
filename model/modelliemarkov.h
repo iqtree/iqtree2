@@ -12,7 +12,9 @@
 
 class ModelLieMarkov: public ModelMarkov {
 public:
-        ModelLieMarkov(string model_name, PhyloTree *tree, string model_params, StateFreqType freq_type, string freq_params);
+        ModelLieMarkov(string model_name, PhyloTree *tree,
+                       string model_params, StateFreqType freq_type,
+                       string freq_params, PhyloTree* report_to_tree);
         virtual ~ModelLieMarkov();
 
 	/**
@@ -20,7 +22,9 @@ public:
 		@param model_name name of the model
 		@param freq_type state frequency type, can be FREQ_USER_DEFINED, FREQ_EQUAL, FREQ_EMPIRICAL, or FREQ_ESTIMATE
 	*/
-	virtual void init(const char *model_name, string model_params, StateFreqType freq, string freq_params);
+	virtual void init(const char *model_name, string model_params,
+                      StateFreqType freq, string freq_params,
+                      PhyloTree* report_to_tree);
 
         /**
              start structure for checkpointing
@@ -100,7 +104,7 @@ protected:
 	double **basis;
 	int symmetry; // RY->0, WS->1, MK->2
 	int model_num; // 0->1.1, etc to 36->12.12
-	void setBasis();
+	void setBasis(PhyloTree* report_to_tree);
 	virtual void setRates();
 
     /**

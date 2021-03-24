@@ -19,13 +19,17 @@
  ***************************************************************************/
 #include "modelbin.h"
 
-ModelBIN::ModelBIN(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree)
-: ModelMarkov(tree)
+ModelBIN::ModelBIN(const char *model_name, string model_params,
+                   StateFreqType freq, string freq_params,
+                   PhyloTree *tree, PhyloTree* report_to_tree)
+: ModelMarkov(tree, report_to_tree)
 {
-	init(model_name, model_params, freq, freq_params);
+	init(model_name, model_params, freq, freq_params, report_to_tree);
 }
 
-void ModelBIN::init(const char *model_name, string model_params, StateFreqType freq, string freq_params)
+void ModelBIN::init(const char *model_name, string model_params,
+                    StateFreqType freq, string freq_params,
+                    PhyloTree* report_to_tree)
 {
 	ASSERT(num_states == 2); // make sure that you create model for Binary data
 	StateFreqType def_freq = FREQ_UNKNOWN;
@@ -36,16 +40,16 @@ void ModelBIN::init(const char *model_name, string model_params, StateFreqType f
 	} else if (name == "GTR2") {
 		def_freq = FREQ_ESTIMATE;
 	} else {
-		readParameters(model_name);
+		readParameters(model_name, true, report_to_tree);
 	}
     if (freq_params != "") {
-        readStateFreq(freq_params);
+        readStateFreq(freq_params, report_to_tree);
     }
     if (model_params != "") {
       readRates(model_params);
     }
 	if (freq == FREQ_UNKNOWN || def_freq == FREQ_EQUAL) freq = def_freq;
-	ModelMarkov::init(freq);
+	ModelMarkov::init(freq, report_to_tree);
 }
 
 void ModelBIN::startCheckpoint() {

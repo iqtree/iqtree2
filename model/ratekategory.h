@@ -81,7 +81,8 @@ public:
 		optimize model parameters
 		@return the best likelihood 
 	*/
-	virtual double optimizeParameters(double epsilon);
+	virtual double optimizeParameters(double epsilon,
+                                      PhyloTree* report_to_tree);
 
 	/**
 		return the number of dimensions

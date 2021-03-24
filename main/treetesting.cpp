@@ -1203,7 +1203,8 @@ void evaluateTrees(string treeset_file, Params &params, IQTree *tree, vector<Tre
         if (params.fixed_branch_length) {
             tree->setCurScore(tree->computeLikelihood());
         } else if (params.topotest_optimize_model) {
-            tree->getModelFactory()->optimizeParameters(BRLEN_OPTIMIZE, false, params.modelEps);
+            tree->getModelFactory()->optimizeParameters(BRLEN_OPTIMIZE, false,
+                                                        params.modelEps, 0.0001, tree);
             tree->setCurScore(tree->computeLikelihood());
         } else {
             tree->setCurScore(tree->optimizeAllBranches(100, 0.001));

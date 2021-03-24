@@ -201,7 +201,8 @@ double PhyloSuperTreeUnlinked::treeLengthInternal( double epsilon, Node *node, N
     return len;
 }
 
-pair<int, int> PhyloSuperTreeUnlinked::doNNISearch(bool write_info, const char* context) {
+pair<int, int> PhyloSuperTreeUnlinked::doNNISearch(bool write_info, const char* context,
+                                                   PhyloTree* report_to_tree) {
     int NNIs = 0, NNI_steps = 0;
     double score = 0.0;
 #pragma omp parallel for schedule(dynamic) num_threads(num_threads) if (num_threads > 1) reduction(+: NNIs, NNI_steps, score)
@@ -210,7 +211,7 @@ pair<int, int> PhyloSuperTreeUnlinked::doNNISearch(bool write_info, const char* 
         Checkpoint *ckp = new Checkpoint;
         getCheckpoint()->getSubCheckpoint(ckp, part_tree->aln->name);
         part_tree->setCheckpoint(ckp);
-        auto num_NNIs = part_tree->doNNISearch(false, context);
+        auto num_NNIs = part_tree->doNNISearch(false, context, report_to_tree);
         NNIs += num_NNIs.first;
         NNI_steps += num_NNIs.second;
         score += part_tree->getCurScore();

@@ -452,10 +452,11 @@ public:
 
     void configureLikelihoodKernel(const Params& params, bool force);
     
-    void configureModel(Params& params);
+    void configureModel(Params& params, PhyloTree* report_to_tree);
     
     virtual void initializeModel(Params &params, string model_name,
-                                 ModelsBlock *models_block);
+                                 ModelsBlock *models_block,
+                                 PhyloTree* report_to_tree);
     
     /*
      Modify the tree by marking a subset of the taxa as
@@ -1793,7 +1794,8 @@ public:
             @return the likelihood of the tree
      */
     virtual double optimizeAllBranches(int my_iterations = 100, double tolerance = TOL_LIKELIHOOD,
-                                       int maxNRStep = 100, bool were_lengths_consistent = true);
+                                       int maxNRStep = 100, bool were_lengths_consistent = true,
+                                       PhyloTree* report_to_tree = nullptr);
 
     void moveRoot(Node *node1, Node *node2);
 

@@ -13,16 +13,17 @@
 #define MIN_EPSILON 0.0001
 #define MAX_EPSILON 0.5
 
-ModelDNAError::ModelDNAError(PhyloTree *tree)
-: ModelDNA(tree)
+ModelDNAError::ModelDNAError(PhyloTree *tree, PhyloTree* report_to_tree)
+: ModelDNA(tree, report_to_tree)
 {
     epsilon = 0.05;
     fix_epsilon = false;
 }
 
 ModelDNAError::ModelDNAError(const char *model_name, string model_params,
-                             StateFreqType freq, string freq_params, string seqerr, PhyloTree *tree)
-: ModelDNA(model_name, model_params, freq, freq_params, tree)
+                             StateFreqType freq, string freq_params, string seqerr,
+                             PhyloTree *tree, PhyloTree* report_to_tree)
+: ModelDNA(model_name, model_params, freq, freq_params, tree, report_to_tree)
 {
     epsilon = 0.05;
     fix_epsilon = false;

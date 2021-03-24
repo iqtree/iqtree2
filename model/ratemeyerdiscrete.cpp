@@ -248,9 +248,10 @@ int RateMeyerDiscrete::computePatternRates(DoubleVector &pattern_rates,
     return ncategory;
 }
 
-double RateMeyerDiscrete::optimizeParameters(double epsilon) {
+double RateMeyerDiscrete::optimizeParameters(double epsilon,
+                                             PhyloTree* report_to_tree) {
     if (!is_categorized) {
-        return RateMeyerHaeseler::optimizeParameters(epsilon);
+        return RateMeyerHaeseler::optimizeParameters(epsilon, report_to_tree);
     }
 	phylo_tree->calcDist(dist_mat);
 	for (int i = 0; i < ncategory; i++)
@@ -491,7 +492,7 @@ void RateMeyerDiscrete::normalizeRates() {
     }
 }
 
-double RateMeyerDiscrete::classifyRatesKMeans() {
+double RateMeyerDiscrete::classifyRatesKMeans(PhyloTree* report_to_tree) {
 
 	ASSERT(ncategory > 0);
 	int nptn = static_cast<int>(size()); 
@@ -546,7 +547,8 @@ double RateMeyerDiscrete::classifyRatesKMeans() {
     }
 
     ModelFactory* factory = phylo_tree->getModelFactory();
-	return factory->optimizeParameters(false,false, TOL_LIKELIHOOD);
+	return factory->optimizeParameters(false,false, TOL_LIKELIHOOD,
+                                       0.0001, report_to_tree);
 
 	// optimize category rates again by ML
 /*	for (int k = 0; k < 100; k++) {
@@ -569,15 +571,16 @@ double RateMeyerDiscrete::classifyRatesKMeans() {
 }
 
 
-double RateMeyerDiscrete::classifyRates(double tree_lh) {
+double RateMeyerDiscrete::classifyRates(double tree_lh,
+                                        PhyloTree* report_to_tree) {
 	if (is_categorized) return tree_lh;
 
 	double new_tree_lh;
 	is_categorized = true;
     if (ncategory > 0) {
-        cout << endl << "Classifying rates into "
-        << ncategory << " categories..." << endl;
-        return classifyRatesKMeans();
+        TREE_LOG_LINE(*report_to_tree, VB_QUIET,
+                      "\nClassifying rates into " << ncategory << " categories...");
+        return classifyRatesKMeans(report_to_tree);
     }
 
 	// identifying proper number of categories
@@ -587,7 +590,7 @@ double RateMeyerDiscrete::classifyRates(double tree_lh) {
 	for (ncategory = 2; ; ncategory++) {
         cout << endl << "Classifying rates into "
              << ncategory << " categories..." << endl;
-		new_tree_lh = classifyRatesKMeans();
+		new_tree_lh = classifyRatesKMeans(report_to_tree);
 		new_tree_lh = phylo_tree->optimizeAllBranches();
 		cout << "For " << ncategory << " categories, LogL = " << new_tree_lh;
 		double lh_diff = 2*(tree_lh - new_tree_lh);

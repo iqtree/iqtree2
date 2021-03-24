@@ -23,6 +23,8 @@ using namespace std;
 const char OPEN_BRACKET = '{';
 const char CLOSE_BRACKET = '}';
 
+class PhyloTree;
+
 /**
 Substitution model abstract class
 
@@ -308,7 +310,10 @@ public:
 		@param epsilon accuracy of the parameters during optimization
 		@return the best likelihood 
 	*/
-	virtual double optimizeParameters(double gradient_epsilon) { return 0.0; }
+	virtual double optimizeParameters(double gradient_epsilon,
+                                      PhyloTree* report_to_tree) {
+        return 0.0;        
+    }
 
 	/**
 	 * @return TRUE if parameters are at the boundary that may cause numerical unstability

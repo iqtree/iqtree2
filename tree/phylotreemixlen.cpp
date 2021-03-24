@@ -125,15 +125,18 @@ void PhyloTreeMixlen::readTreeString(const string &tree_string) {
 }
 
 void PhyloTreeMixlen::initializeModel(Params &params, string model_name,
-                                      ModelsBlock *models_block) {
+                                      ModelsBlock *models_block,
+                                      PhyloTree* report_to_tree) {
     try {
         if (!getModelFactory()) {
-            setModelFactory(new ModelFactoryMixlen(params, model_name, this, models_block));
+            setModelFactory(new ModelFactoryMixlen(params, model_name, this,
+                                                   models_block, report_to_tree));
         }
     } catch (string & str) {
         outError(str);
     }
-    IQTree::initializeModel(params, model_name, models_block);
+    IQTree::initializeModel(params, model_name,
+                            models_block, report_to_tree);
 }
 
 void PhyloTreeMixlen::treeLengths(DoubleVector &lenvec, Node *node, Node *dad) {
@@ -214,7 +217,8 @@ void PhyloTreeMixlen::assignMeanMixBranches(Node *node, Node *dad) {
     }
 }
 
-void PhyloTreeMixlen::initializeMixlen(double tolerance, bool write_info) {
+void PhyloTreeMixlen::initializeMixlen(double tolerance, bool write_info,
+                                       PhyloTree* report_to_tree) {
     // initialize mixture branch lengths if empty
 
     if (initializing_mixlen)
@@ -255,16 +259,18 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance, bool write_info) {
         }
 
         // optimize rate model
-        /*double tree_lh =*/ (void) relative_rate->optimizeParameters(tolerance);
+        /*double tree_lh =*/ (void) relative_rate->optimizeParameters
+                                    (tolerance, report_to_tree);
 
-//        model_factory->optimizeParameters(params->fixed_branch_length, false, tolerance);
+        //model_factory->optimizeParameters(params->fixed_branch_length,
+        //                                  false, tolerance, PhyloTree* report_to_tree);
 
-//        optimizeModelParameters();
+        //optimizeModelParameters();
 
         // 2016-07-22: BUGFIX should rescale rates
         double mean_rate = relative_rate->rescaleRates();
         if (fabs(mean_rate-1.0) > 1e-6 && params->fixed_branch_length != BRLEN_FIX) {
-            scaleLength(mean_rate);
+//            scaleLength(mean_rate);
         }
         if (write_info) {
             cout << "Initial LogL: " << curScore << ", ";
@@ -603,14 +609,18 @@ void PhyloTreeMixlen::computeFuncDervMulti(double *value, double *df, double *dd
 }
 
 double PhyloTreeMixlen::optimizeAllBranches(int my_iterations, double tolerance,
-                                            int maxNRStep, bool were_lengths_consistent) {
-
-	initializeMixlen(tolerance, false);
+                                            int maxNRStep, bool were_lengths_consistent,
+                                            PhyloTree* report_to_tree) {
+    if (report_to_tree==nullptr) {
+        report_to_tree = this;
+    }
+	initializeMixlen(tolerance, false, report_to_tree);
     clearAllPartialLH();
     clearAllPartialParsimony(false);
     
     double tree_lh = PhyloTree::optimizeAllBranches(my_iterations, tolerance,
-                                                    maxNRStep, were_lengths_consistent);
+                                                    maxNRStep, were_lengths_consistent,
+                                                    report_to_tree);
 
     if (!initializing_mixlen)
         assignMeanMixBranches();

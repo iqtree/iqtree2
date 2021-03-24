@@ -23,8 +23,11 @@ public:
      model_name, num_rate_cats, freq_type, store_trans_matrix
      @param params program parameters
      @param tree associated phylogenetic super-tree
+     @param report_to_tree tree to report to
      */
-    PartitionModelPlen(Params &params, PhyloSuperTreePlen *tree, ModelsBlock *models_block);
+    PartitionModelPlen(Params &params, PhyloSuperTreePlen *tree,
+                       ModelsBlock *models_block,
+                       PhyloTree* report_to_tree);
     
     ~PartitionModelPlen();
     
@@ -64,10 +67,12 @@ public:
      @param write_info TRUE to write model parameters every optimization step, FALSE to only print at the end
      @param logl_epsilon log-likelihood epsilon to stop
      @param gradient_epsilon gradient (derivative) epsilon to stop
+     @param report_to_tree a tree to report progress to
      @return the best likelihood
      */
     virtual double optimizeParameters(int fixed_len = BRLEN_OPTIMIZE, bool write_info = true,
-                                      double logl_epsilon = 0.1, double gradient_epsilon = 0.0001);
+                                      double logl_epsilon = 0.1, double gradient_epsilon = 0.0001,
+                                      PhyloTree* report_to_tree = nullptr);
     
     
     /**
@@ -76,7 +81,11 @@ public:
      * 	@param fixed_len TRUE to fix branch lengths, default is false
      *	@return the best likelihood
      */
-    virtual double optimizeParametersGammaInvar(int fixed_len = BRLEN_OPTIMIZE, bool write_info = true, double logl_epsilon = 0.1, double gradient_epsilon = 0.0001);
+    virtual double optimizeParametersGammaInvar(int fixed_len = BRLEN_OPTIMIZE,
+                                                bool write_info = true,
+                                                double logl_epsilon = 0.1,
+                                                double gradient_epsilon = 0.0001,
+                                                PhyloTree* report_to_tree = nullptr);
     
     double optimizeGeneRate(double tol);
     

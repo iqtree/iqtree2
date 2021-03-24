@@ -546,8 +546,9 @@ double computeAdapter(Alignment *orig_aln, Alignment *newaln, int &adjusted_df) 
  @return the tree string
  */
 string computeFastMLTree(Params &params, Alignment *aln,
-                       ModelCheckpoint &model_info, ModelsBlock *models_block,
-                       int &num_threads, int brlen_type, string dist_file) {
+                         ModelCheckpoint &model_info, ModelsBlock *models_block,
+                         int &num_threads, int brlen_type, string dist_file,
+                         PhyloTree* report_to_tree) {
     //string model_name;
     CandidateModel usual_model(aln);
     StrVector subst_names;
@@ -592,7 +593,8 @@ string computeFastMLTree(Params &params, Alignment *aln,
     iqtree->restoreCheckpoint();
     
     //ASSERT(iqtree->root);
-    iqtree->initializeModel(params, usual_model.getName(), models_block);
+    iqtree->initializeModel(params, usual_model.getName(),
+                            models_block, report_to_tree);
     if (!iqtree->getModel()->isMixture() || aln->seq_type == SEQ_POMO) {
         usual_model.subst_name = iqtree->getSubstName();
         usual_model.rate_name = iqtree->getRateName();
@@ -623,14 +625,15 @@ string computeFastMLTree(Params &params, Alignment *aln,
         bool saved_opt_gammai = params.opt_gammai;
         // disable thorough I+G optimization
         params.opt_gammai = false;
-        initTree = iqtree->optimizeModelParameters(false, params.modelEps*50.0);
+        initTree = iqtree->optimizeModelParameters(false, params.modelEps*50.0,
+                                                   report_to_tree);
         if (iqtree->isMixlen())
             initTree = ((ModelFactoryMixlen*)iqtree->getModelFactory())->sortClassesByTreeLength();
 
         // do quick NNI search
         if (params.start_tree != STT_USER_TREE) {
             cout << "Perform nearest neighbor interchange..." << endl;
-            iqtree->doNNISearch(true, "");
+            iqtree->doNNISearch(true, "", report_to_tree);
             initTree = iqtree->getTreeString();
         }
         params.opt_gammai = saved_opt_gammai;
@@ -803,7 +806,7 @@ void runModelFinder(Params &params, IQTree &iqtree,
     if (params.modelfinder_ml_tree) {
         // 2019-09-10: Now perform NNI on the initial tree
         string tree_str = computeFastMLTree(params, iqtree.aln, model_checkpoint,
-            models_block, params.num_threads, params.partition_type, iqtree.dist_file);
+            models_block, params.num_threads, params.partition_type, iqtree.dist_file, &iqtree);
         iqtree.restoreCheckpoint();
     } else {
         iqtree.computeInitialTree(params.SSE);
@@ -861,14 +864,16 @@ void runModelFinder(Params &params, IQTree &iqtree,
     } else {
         // single model selection
         CandidateModel best_model;
-        if (params.openmp_by_model)
+        if (params.openmp_by_model) {
             best_model = CandidateModelSet().evaluateAll(params, &iqtree,
                 model_checkpoint, models_block,
                 params.num_threads, BRLEN_OPTIMIZE);
-        else
+        }
+        else {
             best_model = CandidateModelSet().test(params, &iqtree,
                 model_checkpoint, models_block,
                 params.num_threads, BRLEN_OPTIMIZE);
+        }
         iqtree.aln->model_name = best_model.getName();
         
         Checkpoint *checkpoint = &model_checkpoint;
@@ -1520,26 +1525,30 @@ void fixPartitions(PhyloSuperTree* super_tree) {
 }
 
 string CandidateModel::evaluate(Params &params,
-    ModelCheckpoint &in_model_info, ModelCheckpoint &out_model_info,
-    ModelsBlock *models_block,
-    int &num_threads, int brlen_type)
+                                ModelCheckpoint &in_model_info, ModelCheckpoint &out_model_info,
+                                ModelsBlock *models_block,
+                                int &num_threads, int brlen_type,
+                                PhyloTree* report_to_tree)
 {
     //string model_name = name;
     Alignment *in_aln = aln;
     IQTree *iqtree = NULL;
     if (in_aln->isSuperAlignment()) {
         SuperAlignment *saln = (SuperAlignment*)in_aln;
-        if (params.partition_type == BRLEN_OPTIMIZE)
+        if (params.partition_type == BRLEN_OPTIMIZE) {
             iqtree = new PhyloSuperTree(saln);
-        else
+        }
+        else {
             iqtree = new PhyloSuperTreePlen(saln, brlen_type);
+        }
         StrVector subst_names;
         StrVector rate_names;
         convert_string_vec(subst_name.c_str(), subst_names);
         convert_string_vec(rate_name.c_str(), rate_names);
         ASSERT(subst_names.size() == rate_names.size());
-        for (int part = 0; part != subst_names.size(); part++)
+        for (int part = 0; part != subst_names.size(); part++) {
             saln->partitions[part]->model_name = subst_names[part]+rate_names[part];
+        }
     } else if (ModelInfoFromName(getName()).hasRateHeterotachy())
         iqtree = new PhyloTreeMixlen(in_aln, 0);
     else
@@ -1556,13 +1565,12 @@ string CandidateModel::evaluate(Params &params,
 #endif
     iqtree->restoreCheckpoint();
     ASSERT(iqtree->root);
-    iqtree->initializeModel(params, getName(), models_block);
+    iqtree->initializeModel(params, getName(),
+                            models_block, report_to_tree);
     if (!iqtree->getModel()->isMixture() || in_aln->seq_type == SEQ_POMO) {
         subst_name = iqtree->getSubstName();
         rate_name = iqtree->getRateName();
     }
-
-
     if (restoreCheckpoint(&in_model_info)) {
         delete iqtree;
         return "";
@@ -1588,9 +1596,9 @@ string CandidateModel::evaluate(Params &params,
         params.num_bootstrap_samples = 0;
         params.gbo_replicates = 0;
         STOP_CONDITION orig_stop_condition = params.stop_condition;
-        if (params.stop_condition == SC_BOOTSTRAP_CORRELATION)
+        if (params.stop_condition == SC_BOOTSTRAP_CORRELATION) {
             params.stop_condition = SC_UNSUCCESS_ITERATION;
-
+        }
         iqtree->aln->model_name = getName();
         
         cout << endl << "===> Testing model " << getName() << endl;
@@ -1601,7 +1609,6 @@ string CandidateModel::evaluate(Params &params,
             iqtree->getCheckpoint()->put("initTree", initTree);
             iqtree->saveCheckpoint();
         }
-
         iqtree->ensureNumberOfThreadsIsSet(nullptr, true);
 
         runTreeReconstruction(params, iqtree);
@@ -1621,14 +1628,16 @@ string CandidateModel::evaluate(Params &params,
 
     } else {
         //--- FIX TREE TOPOLOGY AND ESTIMATE MODEL PARAMETERS ----//
-        TREE_LOG_LINE(*iqtree, VB_MED, "Optimizing model " << getName());
+        TREE_LOG_LINE(*report_to_tree, VB_MED, "Optimizing model " << getName());
 
         iqtree->ensureNumberOfThreadsIsSet(nullptr, true);
         iqtree->initializeAllPartialLh();
 
         for (int step = 0; step < 2; step++) {
             new_logl = iqtree->getModelFactory()->optimizeParameters(brlen_type, false,
-                params.modelfinder_eps, TOL_GRADIENT_MODELTEST);
+                                                                     params.modelfinder_eps,
+                                                                     TOL_GRADIENT_MODELTEST,
+                                                                     report_to_tree);
             tree_len = iqtree->treeLength();
             iqtree->getModelFactory()->saveCheckpoint();
             iqtree->saveCheckpoint();
@@ -1714,7 +1723,8 @@ public:
             if (!overlap.empty()) continue;
 
             // take the union
-            part_ids.insert(it->second.merged_set.begin(), it->second.merged_set.end());
+            part_ids.insert(it->second.merged_set.begin(),
+                            it->second.merged_set.end());
 
             // put the compatible pair to the set
             res.insertPair(it->second);
@@ -1724,8 +1734,9 @@ public:
 };
 
 string CandidateModel::evaluateConcatenation(Params &params, SuperAlignment *super_aln,
-    ModelCheckpoint &model_info, ModelsBlock *models_block, int num_threads)
-{
+                                             ModelCheckpoint &model_info,
+                                             ModelsBlock *models_block, int num_threads,
+                                             PhyloTree* report_to_tree) {
     aln = super_aln->concatenateAlignments();
     size_t ssize = getUsualModel(aln);
 
@@ -1733,7 +1744,7 @@ string CandidateModel::evaluateConcatenation(Params &params, SuperAlignment *sup
 
     cout << "Testing " << getName() << " on supermatrix..." << endl;
     concat_tree = evaluate(params, model_info, model_info,
-        models_block, num_threads, BRLEN_OPTIMIZE);
+        models_block, num_threads, BRLEN_OPTIMIZE, report_to_tree);
 
     computeICScores(ssize);
 
@@ -1769,7 +1780,8 @@ double doKmeansClustering(Params &params, PhyloSuperTree *in_tree,
 
     double lhsum = 0.0;
     int dfsum = 0;
-    if (params.partition_type == BRLEN_FIX || params.partition_type == BRLEN_SCALE) {
+    if (params.partition_type == BRLEN_FIX ||
+        params.partition_type == BRLEN_SCALE) {
         dfsum = in_tree->getNBranchParameters(BRLEN_OPTIMIZE);
         if (params.partition_type == BRLEN_SCALE)
             dfsum -= 1;
@@ -1819,8 +1831,8 @@ double doKmeansClustering(Params &params, PhyloSuperTree *in_tree,
             tree->saveCheckpoint();
             }
             best_model = CandidateModelSet().test(params, tree, part_model_info, models_block,
-                params.model_test_and_tree ? num_threads : 1, params.partition_type,
-                set_name, "", true);
+                                                  params.model_test_and_tree ? num_threads : 1,
+                                                  params.partition_type, set_name, "", true);
             best_model.restoreCheckpoint(&part_model_info);
             model_names.push_back(best_model.getName());
             delete tree;
@@ -1844,8 +1856,10 @@ double doKmeansClustering(Params &params, PhyloSuperTree *in_tree,
     }
     
     size_t sample_size = in_tree->getAlnNSite();
-    double score = computeInformationScore(lhsum, dfsum, sample_size, params.model_test_criterion);
-    cout << "k-means score for " << ncluster << " partitions: " << score << " (LnL: " << lhsum << "  " << "df: " << dfsum << ")" << endl;
+    double score = computeInformationScore(lhsum, dfsum, sample_size,
+                                           params.model_test_criterion);
+    cout << "k-means score for " << ncluster << " partitions: "
+         << score << " (LnL: " << lhsum << "  " << "df: " << dfsum << ")" << endl;
 
     delete [] centers;
     delete [] clusters;
@@ -1869,9 +1883,9 @@ bool comparePartition(const pair<int,double> &a, const pair<int, double> &b) {
 /**
  find k-closest partition pairs for rcluster algorithm
  */
-void findClosestPairs(SuperAlignment *super_aln, DoubleVector &lenvec, vector<set<int> > &gene_sets,
-                      double log_transform, vector<SubsetPair> &closest_pairs) {
-    
+void findClosestPairs(SuperAlignment *super_aln, DoubleVector &lenvec,
+                      vector<set<int> > &gene_sets, double log_transform,
+                      vector<SubsetPair> &closest_pairs) {
     for (int part1 = 0; part1 < lenvec.size()-1; part1++)
         for (int part2 = part1+1; part2 < lenvec.size(); part2++)
             if (super_aln->partitions[*gene_sets[part1].begin()]->seq_type == super_aln->partitions[*gene_sets[part2].begin()]->seq_type &&
@@ -1901,11 +1915,18 @@ void findClosestPairs(SuperAlignment *super_aln, DoubleVector &lenvec, vector<se
  */
 void mergePairs(vector<SubsetPair> &dest, vector<SubsetPair> &src) {
     unordered_set<string> dest_set;
-    for (SubsetPair s: dest)
-        dest_set.insert(convertIntToString(s.first) + "-" + convertIntToString(s.second));
-    for (SubsetPair s: src)
-        if (dest_set.find(convertIntToString(s.first) + "-" + convertIntToString(s.second)) == dest_set.end())
+    for (SubsetPair s: dest) {
+        string range = convertIntToString(s.first)
+                     + "-" + convertIntToString(s.second);
+        dest_set.insert(range);
+    }
+    for (SubsetPair s: src) {
+        string range = convertIntToString(s.first)
+                     + "-" + convertIntToString(s.second);
+        if (dest_set.find(range) == dest_set.end()) {
             dest.push_back(s);
+        }
+    }
 }
 
 /**
@@ -1913,8 +1934,9 @@ void mergePairs(vector<SubsetPair> &dest, vector<SubsetPair> &src) {
  * @param[in,out] model_info (IN/OUT) all model information
  * @return total number of parameters
  */
-void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint &model_info,
-    ModelsBlock *models_block, int num_threads)
+void testPartitionModel(Params &params, PhyloSuperTree* in_tree,
+                        ModelCheckpoint &model_info,
+                        ModelsBlock *models_block, int num_threads)
 {
 //    params.print_partition_info = true;
 //    params.print_conaln = true;
@@ -1924,7 +1946,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     DoubleVector lenvec; // tree length for each partition
 	double lhsum = 0.0;
 	int dfsum = 0;
-    if (params.partition_type == BRLEN_FIX || params.partition_type == BRLEN_SCALE) {
+    if (params.partition_type == BRLEN_FIX ||
+        params.partition_type == BRLEN_SCALE) {
         dfsum = in_tree->getNBranchParameters(BRLEN_OPTIMIZE);
         if (params.partition_type == BRLEN_SCALE)
             dfsum -= 1;
@@ -1964,13 +1987,15 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 
 	SuperAlignment *super_aln = ((SuperAlignment*)in_tree->aln);
 
-	cout << "Selecting individual models for " << in_tree->size() << " charsets using " << criterionName(params.model_test_criterion) << "..." << endl;
+    cout << "Selecting individual models for "
+         << in_tree->size() << " charsets using "
+         << criterionName(params.model_test_criterion) << "..." << endl;
 	//cout << " No. AIC         AICc        BIC         Charset" << endl;
 	cout << " No. Model        Score       TreeLen     Charset" << endl;
 
-	lhvec.resize(in_tree->size());
-	dfvec.resize(in_tree->size());
-	lenvec.resize(in_tree->size());
+    lhvec.resize(in_tree->size());
+    dfvec.resize(in_tree->size());
+    lenvec.resize(in_tree->size());
 
     // sort partition by computational cost for OpenMP effciency
     vector<pair<int,double> > partitionID;
@@ -1988,10 +2013,13 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     if (brlen_type == TOPO_UNLINKED) {
         brlen_type = BRLEN_OPTIMIZE;
     }
-    bool test_merge = (params.partition_merge != MERGE_NONE) && params.partition_type != TOPO_UNLINKED && (in_tree->size() > 1);
+    bool test_merge = params.partition_merge != MERGE_NONE &&
+                      params.partition_type != TOPO_UNLINKED &&
+                      in_tree->size() > 1;
     
 #ifdef _OPENMP
-    parallel_over_partitions = !params.model_test_and_tree && (in_tree->size() >= num_threads);
+    parallel_over_partitions = !params.model_test_and_tree &&
+                               (in_tree->size() >= num_threads);
 #pragma omp parallel for schedule(dynamic) reduction(+: lhsum, dfsum) if(parallel_over_partitions)
 #endif
 	for (int j = 0; j < in_tree->size(); j++) {
@@ -2005,8 +2033,11 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
         if (params.model_name.empty())
             part_model_name = this_tree->aln->model_name;
         CandidateModel best_model;
-		best_model = CandidateModelSet().test(params, this_tree, part_model_info, models_block,
-            (parallel_over_partitions ? 1 : num_threads), brlen_type, this_tree->aln->name, part_model_name, test_merge);
+        best_model = CandidateModelSet().test(params, this_tree, part_model_info,
+                                              models_block,
+                                              (parallel_over_partitions ? 1 : num_threads),
+                                              brlen_type, this_tree->aln->name,
+                                              part_model_name, test_merge);
 
         bool check = (best_model.restoreCheckpoint(&part_model_info));
         ASSERT(check);
@@ -2033,7 +2064,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             cout << best_model.tree_len << " ";
             cout << this_tree->aln->name;
             if (num_model >= 10) {
-                double remain_time = (total_num_model-num_model)*(getRealTime()-start_time)/num_model;
+                double remain_time = (total_num_model-num_model)
+                                   * (getRealTime()-start_time) / num_model;
                 cout << "\t" << convert_time(getRealTime()-start_time) << " (" 
                     << convert_time(remain_time) << " left)";
             }
@@ -2046,8 +2078,9 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     // in case ModelOMatic change the alignment
     fixPartitions(in_tree);
     
-	double inf_score = computeInformationScore(lhsum, dfsum, ssize, params.model_test_criterion);
-	cout << "Full partition model " << criterionName(params.model_test_criterion)
+    double inf_score = computeInformationScore(lhsum, dfsum, ssize,
+                                               params.model_test_criterion);
+    cout << "Full partition model " << criterionName(params.model_test_criterion)
          << " score: " << inf_score << " (LnL: " << lhsum << "  df:" << dfsum << ")" << endl;
 
 	if (!test_merge) {
@@ -2089,7 +2122,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             }
         }
     } else {
-        cout << "Merging models to increase model fit (about " << total_num_model << " total partition schemes)..." << endl;
+        cout << "Merging models to increase model fit (about "
+             << total_num_model << " total partition schemes)..." << endl;
     }
 
     /* following implements the greedy algorithm of Lanfear et al. (2012) */
@@ -2104,11 +2138,13 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
         ASSERT(gene_sets.size() == lenvec.size());
         // find closest partition pairs
         vector<SubsetPair> closest_pairs;
-        findClosestPairs(super_aln, lenvec, gene_sets, false, closest_pairs);
+        findClosestPairs(super_aln, lenvec, gene_sets,
+                         false, closest_pairs);
         if (params.partfinder_log_rate) {
             // additional consider pairs by log-rate
             vector<SubsetPair> log_closest_pairs;
-            findClosestPairs(super_aln, lenvec, gene_sets, true, log_closest_pairs);
+            findClosestPairs(super_aln, lenvec, gene_sets,
+                             true, log_closest_pairs);
             mergePairs(closest_pairs, log_closest_pairs);
         }
         // sort partition by computational cost for OpenMP effciency
@@ -2165,7 +2201,9 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
                 cur_tree_len = tree->treeLength();
                 tree->setAlignment(aln);
                 extractModelInfo(cur_pair.set_name, model_info, part_model_info);
-                transferModelParameters(in_tree, model_info, part_model_info, gene_sets[cur_pair.part1], gene_sets[cur_pair.part2]);
+                transferModelParameters(in_tree, model_info, part_model_info,
+                                        gene_sets[cur_pair.part1],
+                                        gene_sets[cur_pair.part2]);
                 tree->num_precision = in_tree->num_precision;
                 tree->setParams(&params);
                 tree->sse = params.SSE;
@@ -2177,8 +2215,11 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
                     tree->restoreCheckpoint();
                     tree->saveCheckpoint();
                 }
-                best_model = CandidateModelSet().test(params, tree, part_model_info, models_block,
-                    params.model_test_and_tree ? num_threads : 1, params.partition_type, cur_pair.set_name, "", true);
+                auto threads = params.model_test_and_tree ? num_threads : 1;
+                best_model = CandidateModelSet().test(params, tree, part_model_info,
+                                                      models_block, threads,
+                                                      params.partition_type,
+                                                      cur_pair.set_name, "", true);
                 best_model.restoreCheckpoint(&part_model_info);
                 delete tree;
                 delete aln;
@@ -2187,9 +2228,13 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             cur_pair.df = best_model.df;
             cur_pair.model_name = best_model.getName();
             cur_pair.tree_len = best_model.tree_len;
-            double lhnew = lhsum - lhvec[cur_pair.part1] - lhvec[cur_pair.part2] + best_model.logl;
-            int dfnew = static_cast<int>(floor(dfsum - dfvec[cur_pair.part1] - dfvec[cur_pair.part2] + best_model.df));
-            cur_pair.score = computeInformationScore(lhnew, dfnew, ssize, params.model_test_criterion);
+            double lhnew = lhsum - lhvec[cur_pair.part1] - lhvec[cur_pair.part2]
+                         + best_model.logl;
+            int dfnew = static_cast<int>(floor(dfsum
+                      - dfvec[cur_pair.part1] - dfvec[cur_pair.part2]
+                      + best_model.df));
+            cur_pair.score = computeInformationScore(lhnew, dfnew, ssize,
+                                                     params.model_test_criterion);
 #ifdef _OPENMP
 #pragma omp critical
 #endif
@@ -2227,7 +2272,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             cout << compatible_pairs.size() << " compatible better partition pairs found" << endl;
 
         // 2017-12-21: simultaneously merging better pairs
-        for (auto it_pair = compatible_pairs.begin(); it_pair != compatible_pairs.end(); it_pair++) {
+        for (auto it_pair = compatible_pairs.begin();
+             it_pair != compatible_pairs.end(); it_pair++) {
             ModelPair opt_pair = it_pair->second;
 
             lhsum = lhsum - lhvec[opt_pair.part1] - lhvec[opt_pair.part2] + opt_pair.logl;
@@ -2314,7 +2360,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
         for (int j = 0; j < in_tree->size(); j++) {
             int i = partitionID[j].first;
             PhyloTree *this_tree = in_tree->at(i);
-            // scan through models for this partition, assuming the information occurs consecutively
+            //scan through models for this partition,
+            //assuming the information occurs consecutively
             ModelCheckpoint part_model_info;
             extractModelInfo(this_tree->aln->name, model_info, part_model_info);
             // do the computation
@@ -2322,9 +2369,12 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             if (params.model_name.empty())
                 part_model_name = this_tree->aln->model_name;
             CandidateModel best_model;
-            best_model = CandidateModelSet().test(params, this_tree, part_model_info, models_block,
-                (parallel_over_partitions ? 1 : num_threads), brlen_type,
-                this_tree->aln->name, part_model_name, false);
+            int threads = parallel_over_partitions ? 1 : num_threads;
+            best_model = CandidateModelSet().test(params, this_tree,
+                                                  part_model_info, models_block,
+                                                  threads, brlen_type,
+                                                  this_tree->aln->name,
+                                                  part_model_name, false);
             
             bool check = (best_model.restoreCheckpoint(&part_model_info));
             ASSERT(check);
@@ -2348,22 +2398,28 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             cout.width(11);
             cout << score << " " << this_tree->aln->name;
             if (num_model >= 10) {
-                double remain_time = (total_num_model-num_model)*(getRealTime()-start_time)/num_model;
-                cout << "\t" << convert_time(getRealTime()-start_time) << " ("
+                double remain_time = (total_num_model - num_model)
+                                   * (getRealTime() - start_time) / num_model;
+                double elapsed = getRealTime() - start_time;
+                cout << "\t" << convert_time(elapsed) << " ("
                 << convert_time(remain_time) << " left)";
             }
             cout << endl;
-            replaceModelInfo(this_tree->aln->name, model_info, part_model_info);
+            replaceModelInfo(this_tree->aln->name, model_info,
+                             part_model_info);
             model_info.dump();
             }
         }
     }
 
-    inf_score = computeInformationScore(lhsum, dfsum, ssize, params.model_test_criterion);
-    cout << "Best partition model " << criterionName(params.model_test_criterion) << " score: " << inf_score << " (LnL: " << lhsum << "  df:" << dfsum << ")" << endl;
-
-    ((SuperAlignment*)in_tree->aln)->printBestPartition((string(params.out_prefix) + ".best_scheme.nex").c_str());
-	((SuperAlignment*)in_tree->aln)->printBestPartitionRaxml((string(params.out_prefix) + ".best_scheme").c_str());
+    inf_score = computeInformationScore(lhsum, dfsum, ssize,
+                                        params.model_test_criterion);
+    cout << "Best partition model " << criterionName(params.model_test_criterion)
+         << " score: " << inf_score << " (LnL: " << lhsum
+         << "  df:" << dfsum << ")" << endl;
+    super_aln = (SuperAlignment*)in_tree->aln;
+    super_aln->printBestPartition((string(params.out_prefix) + ".best_scheme.nex").c_str());
+	super_aln->printBestPartitionRaxml((string(params.out_prefix) + ".best_scheme").c_str());
     model_info.dump();
 }
 
@@ -2445,9 +2501,12 @@ int CandidateModelSet::filterSubst(int finished_model) {
     return countFilteredOut;
 }
 
-CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
-    ModelsBlock *models_block, int num_threads, int brlen_type,
-    string set_name, string in_model_name, bool merge_phase)
+CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree,
+                                       ModelCheckpoint &model_info,
+                                       ModelsBlock *models_block,
+                                       int num_threads, int brlen_type,
+                                       string set_name, string in_model_name,
+                                       bool merge_phase)
 {
     ModelCheckpoint *checkpoint = &model_info;
 
@@ -2455,8 +2514,9 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
     
     // for ModelOMatic
     Alignment *prot_aln = NULL;
-    Alignment *dna_aln = NULL;
-    bool do_modelomatic = params.modelomatic && in_tree->aln->seq_type == SEQ_CODON;
+    Alignment *dna_aln  = NULL;
+    bool do_modelomatic = params.modelomatic &&
+                          in_tree->aln->seq_type == SEQ_CODON;
 
     if (in_model_name.empty()) {
         generate(params, in_tree->aln, params.model_test_separate_rate, merge_phase);
@@ -2466,10 +2526,13 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
             prot_aln = in_tree->aln->convertCodonToAA();
             int adjusted_df;
             double adjusted_logl = computeAdapter(in_tree->aln, prot_aln, adjusted_df);
-            if (set_name.empty())
-                cout << "Adjusted LnL: " << adjusted_logl << "  df: " << adjusted_df << endl;
+            if (set_name.empty()) {
+                cout << "Adjusted LnL: " << adjusted_logl
+                     << "  df: " << adjusted_df << endl;
+            }
             size_t start = size();
-            generate(params, prot_aln, params.model_test_separate_rate, merge_phase);
+            generate(params, prot_aln, params.model_test_separate_rate,
+                     merge_phase);
             size_t i;
             for (i = start; i < size(); i++) {
                 at(i).logl = adjusted_logl;
@@ -2479,7 +2542,8 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
             // generate models for DNA
             dna_aln = in_tree->aln->convertCodonToDNA();
             start = size();
-            generate(params, dna_aln, params.model_test_separate_rate, merge_phase);
+            generate(params, dna_aln, params.model_test_separate_rate,
+                     merge_phase);
             for (i = start; i < size(); i++) {
                 at(i).setFlag(MF_SAMPLE_SIZE_TRIPLE);
             }
@@ -2525,18 +2589,24 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
     CKP_RESTORE(best_tree_BIC);
 
     // detect rate hetegeneity automatically or not
-    bool auto_rate  = merge_phase ? iEquals(params.merge_rates, "AUTO") : iEquals(params.ratehet_set, "AUTO");
-    bool auto_subst = merge_phase ? iEquals(params.merge_models, "AUTO") : iEquals(params.model_set, "AUTO");
+    bool auto_rate  = merge_phase
+                    ? iEquals(params.merge_rates, "AUTO")
+                    : iEquals(params.ratehet_set, "AUTO");
+    bool auto_subst = merge_phase
+                    ? iEquals(params.merge_models, "AUTO")
+                    : iEquals(params.model_set, "AUTO");
     int rate_block  = static_cast<int>(size());
     if (auto_rate) {
         for (rate_block = 0; rate_block < size(); rate_block++)
-            if (rate_block+1 < size() && at(rate_block+1).subst_name != at(rate_block).subst_name)
+            if (rate_block+1 < size() &&
+                at(rate_block+1).subst_name != at(rate_block).subst_name)
                 break;
     }
     
     int subst_block = static_cast<int>(size());
     if (auto_subst) {
-        for (subst_block = static_cast<int>(size())-1; subst_block >= 0; subst_block--)
+        for (subst_block = static_cast<int>(size())-1;
+             subst_block >= 0; subst_block--)
             if (at(subst_block).rate_name == at(0).rate_name)
                 break;
     }
@@ -2547,7 +2617,8 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
     
     //------------- MAIN FOR LOOP GOING THROUGH ALL MODELS TO BE TESTED ---------//
     
-    in_tree->initProgress(static_cast<double>(modelsToTest), "Testing models", "tested (or skipped)", "model");
+    in_tree->initProgress(static_cast<double>(modelsToTest),
+                          "Testing models", "tested (or skipped)", "model");
     for (int model = 0; model < size(); ++model) {
         if (model == rate_block+1) {
             in_tree->trackProgress(filterRates(rate_block)); // auto filter rate models
@@ -2580,18 +2651,20 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
             at(model).subst_name = at(best_model).subst_name;
         }
 
-		// optimize model parameters
+        //optimize model parameters
         string orig_model_name = at(model).getName();
-        // keep separate output model_info to only update model_info if better model found
+        //keep separate output model_info to
+        //only update model_info if better model found
         ModelCheckpoint out_model_info;
-		//CandidateModel info;
-		//info.set_name = set_name;
+        //CandidateModel info;
+        //info.set_name = set_name;
         at(model).set_name = set_name;
         string tree_string;
 
         /***** main call to estimate model parameters ******/
-        tree_string = at(model).evaluate(params,
-            model_info, out_model_info, models_block, num_threads, brlen_type);
+        tree_string = at(model).evaluate(params, model_info, out_model_info,
+                                         models_block, num_threads, brlen_type,
+                                         in_tree);
 
         at(model).computeICScores(ssize);
         at(model).setFlag(MF_DONE);
@@ -2711,7 +2784,8 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
             }
             if (posR != std::string::npos) {
                 string first_part = orig_model_name.substr(0, posR + 2);
-                for (int next = model + 1; next < size() && at(next).getName().substr(0, posR + 2) == first_part; next++) {
+                for (int next = model + 1; next < size() &&
+                     at(next).getName().substr(0, posR + 2) == first_part; next++) {
                     //Count later models that we're going to skip as skipped (now)
                     //(if they hadn't already been skipped).
                     if (at(next).setFlag(MF_IGNORED)) {
@@ -2805,7 +2879,8 @@ int64_t CandidateModelSet::getNextModel() {
     else if (current_model == -1)
         next_model = 0;
     else {
-        for (next_model = current_model+1; next_model != current_model; next_model++) {
+        for (next_model = current_model+1;
+             next_model != current_model; next_model++) {
             if (next_model == size()) {
                 next_model = 0;
             }
@@ -2823,32 +2898,41 @@ int64_t CandidateModelSet::getNextModel() {
         return -1;
 }
 
-CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
-                                    ModelsBlock *models_block, int num_threads, int brlen_type,
-                                    string in_model_name, bool merge_phase, bool write_info)
+CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree,
+                                              ModelCheckpoint &model_info,
+                                              ModelsBlock *models_block, int num_threads,
+                                              int brlen_type, string in_model_name,
+                                              bool merge_phase, bool write_info)
 {
     //ModelCheckpoint *checkpoint = &model_info;
 
     in_tree->params = &params;
     
-    Alignment *prot_aln = NULL;
-    Alignment *dna_aln = NULL;
-    bool do_modelomatic = params.modelomatic && in_tree->aln->seq_type == SEQ_CODON;
+    Alignment *prot_aln = nullptr;
+    Alignment *dna_aln  = nullptr;
+    bool do_modelomatic = params.modelomatic &&
+                          in_tree->aln->seq_type == SEQ_CODON;
     
     
     
     if (in_model_name.empty()) {
-        generate(params, in_tree->aln, params.model_test_separate_rate, merge_phase);
+        generate(params, in_tree->aln,
+                 params.model_test_separate_rate,
+                 merge_phase);
         if (do_modelomatic) {
             // generate models for protein
             // adapter coefficient according to Whelan et al. 2015
             prot_aln = in_tree->aln->convertCodonToAA();
             int adjusted_df;
-            double adjusted_logl = computeAdapter(in_tree->aln, prot_aln, adjusted_df);
-            if (write_info)
-                cout << "Adjusted LnL: " << adjusted_logl << "  df: " << adjusted_df << endl;
+            double adjusted_logl = computeAdapter(in_tree->aln,
+                                                  prot_aln, adjusted_df);
+            if (write_info) {
+                cout << "Adjusted LnL: " << adjusted_logl
+                     << "  df: " << adjusted_df << endl;
+            }
             size_t start = size();
-            generate(params, prot_aln, params.model_test_separate_rate, merge_phase);
+            generate(params, prot_aln, params.model_test_separate_rate,
+                     merge_phase);
             size_t i;
             for (i = start; i < size(); i++) {
                 at(i).logl = adjusted_logl;
@@ -2858,7 +2942,8 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
             // generate models for DNA
             dna_aln = in_tree->aln->convertCodonToDNA();
             start = size();
-            generate(params, dna_aln, params.model_test_separate_rate, merge_phase);
+            generate(params, dna_aln, params.model_test_separate_rate,
+                     merge_phase);
             for (i = start; i < size(); i++) {
                 at(i).setFlag(MF_SAMPLE_SIZE_TRIPLE);
             }
@@ -2869,33 +2954,42 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
 
     if (write_info) {
         cout << "ModelFinder will test " << size() << " ";
-        if (do_modelomatic)
+        if (do_modelomatic) {
             cout << "codon/AA/DNA";
-        else
+        }
+        else {
             cout << getSeqTypeName(in_tree->aln->seq_type);
-        cout << " models (sample size: " << in_tree->aln->getNSite() << ") ..." << endl;
+        }
+        cout << " models (sample size: "
+             << in_tree->aln->getNSite() << ") ..." << endl;
         cout << " No. Model         -LnL         df  AIC          AICc         BIC" << endl;
     }
 
     double best_score = DBL_MAX;
 
     // detect rate hetegeneity automatically or not
-    bool auto_rate = merge_phase ? iEquals(params.merge_rates, "AUTO") : iEquals(params.ratehet_set, "AUTO");
-    bool auto_subst = merge_phase ? iEquals(params.merge_models, "AUTO") : iEquals(params.model_set, "AUTO");
+    bool auto_rate = merge_phase
+                   ? iEquals(params.merge_rates, "AUTO")
+                   : iEquals(params.ratehet_set, "AUTO");
+    bool auto_subst = merge_phase
+                    ? iEquals(params.merge_models, "AUTO")
+                    : iEquals(params.model_set, "AUTO");
     int rate_block = static_cast<int>(size());
     if (auto_rate) {
-        for (rate_block = 0; rate_block < static_cast<int>(size()); rate_block++)
-            if (rate_block+1 < size() && at(rate_block+1).subst_name != at(rate_block).subst_name)
+        for (rate_block = 0; rate_block + 1 < static_cast<int>(size()); rate_block++) {
+            if (at(rate_block+1).subst_name != at(rate_block).subst_name) {
                 break;
+            }
+        }
     }
-    
     int subst_block = static_cast<int>(size());
     if (auto_subst) {
-        for (subst_block = static_cast<int>(size())-1; subst_block >= 0; subst_block--)
-            if (at(subst_block).rate_name == at(0).rate_name)
+        for (subst_block = static_cast<int>(size())-1; subst_block >= 0; subst_block--) {
+            if (at(subst_block).rate_name == at(0).rate_name) {
                 break;
+            }
+        }
     }
-
     int64_t num_models = size();
 #ifdef _OPENMP
 #pragma omp parallel num_threads(num_threads)
@@ -2909,14 +3003,16 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
 
         // optimize model parameters
         string orig_model_name = at(model).getName();
-        // keep separate output model_info to only update model_info if better model found
+        // keep separate output model_info
+        // to only update model_info if better model found
         ModelCheckpoint out_model_info;
         at(model).set_name = at(model).aln->name;
         string tree_string;
         
         // main call to estimate model parameters
         tree_string = at(model).evaluate(params, model_info, out_model_info,
-                                         models_block, num_threads, brlen_type);
+                                         models_block, num_threads, brlen_type,
+                                         in_tree);
         at(model).computeICScores();
         at(model).setFlag(MF_DONE);
         
@@ -2927,7 +3023,6 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
                 higher_model = getHigherKModel(static_cast<int>(higher_model))) {
                 at(higher_model).setFlag(MF_IGNORED);
             }
-            
         }
 #ifdef _OPENMP
 #pragma omp critical
@@ -2936,7 +3031,8 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
         if (best_score > at(model).getScore()) {
             best_score = at(model).getScore();
             if (!tree_string.empty()) {
-                //model_info.put("best_tree_" + criterionName(params.model_test_criterion), tree_string);
+                //model_info.put("best_tree_" +
+                //               criterionName(params.model_test_criterion), tree_string);
             }
             // only update model_info with better model
             model_info.putSubCheckpoint(&out_model_info, "");
@@ -2959,7 +3055,6 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
             cout.width(12);
             cout << at(model).AICc_score << " " << at(model).BIC_score;
             cout << endl;
-
         }
         if (model >= rate_block) {
             filterRates(static_cast<int>(model)); // auto filter rate models
@@ -2981,7 +3076,6 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
         model_info.put("best_model_" + criterionName(mtc), at(best_model).getName());
     }
     
-    
     /* sort models by their scores */
     multimap<double,int> model_sorted;
     for (int64_t model = 0; model < num_models; model++)
@@ -2990,8 +3084,9 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
         }
     string model_list;
     for (auto it = model_sorted.begin(); it != model_sorted.end(); it++) {
-        if (it != model_sorted.begin())
+        if (it != model_sorted.begin()) {
             model_list += " ";
+        }
         model_list += at(it->second).getName();
     }
     
@@ -3003,16 +3098,22 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
     if (at(best_model).aln != in_tree->aln) {
         delete in_tree->aln;
         in_tree->aln = at(best_model).aln;
-        if (in_tree->aln == prot_aln)
-            prot_aln = NULL;
-        else
-            dna_aln = NULL;
+        if (in_tree->aln == prot_aln) {
+            prot_aln = nullptr;
+        }
+        else {
+            dna_aln = nullptr;
+        }
     }
     
-    if (dna_aln)
+    if (dna_aln!=nullptr) {
         delete dna_aln;
-    if (prot_aln)
+        dna_aln=nullptr;
+    }
+    if (prot_aln!=nullptr) {
         delete prot_aln;
+        prot_aln=nullptr;
+    }
 
     return at(best_model);
 }

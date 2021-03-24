@@ -442,11 +442,12 @@ void PhyloTree::configureLikelihoodKernel(const Params& params, bool force) {
     }
 }
 
-void PhyloTree::configureModel(Params& params) {
+void PhyloTree::configureModel(Params& params, PhyloTree* report_to_tree) {
     if (model==nullptr) {
         ModelsBlock *models_block = readModelsDefinition(params);
         if (model_factory==nullptr && aln!=nullptr) {
-            initializeModel(params, aln->model_name, models_block);
+            initializeModel(params, aln->model_name,
+                            models_block, report_to_tree);
         }
         if (getRate()->isHeterotachy() && !isMixlen()) {
             ASSERT(0 && "Heterotachy tree not properly created");
@@ -456,7 +457,8 @@ void PhyloTree::configureModel(Params& params) {
 }
 
 void PhyloTree::initializeModel(Params &params, string model_name,
-                                ModelsBlock *models_block) {
+                                ModelsBlock *models_block,
+                                PhyloTree* report_to_tree) {
     //Must be overridden in IQTree etc.
     throw "Uh-oh!  Called initializeModel"
           " on PhyloTree rather than a subclass";
@@ -528,7 +530,7 @@ void PhyloTree::prepareForPlacement() {
         }
     }
     configureLikelihoodKernel(*params, true);
-    configureModel(*params);
+    configureModel(*params, this);
     setParsimonyKernel(params->SSE);
 }
 
@@ -3517,18 +3519,24 @@ void PhyloTree::computeBestTraversal(NodeVector &nodes, NodeVector &nodes2) {
 }
 
 double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance,
-                                      int maxNRStep, bool were_lengths_consistent) {
-    LOG_LINE(VB_MAX, "Optimizing branch lengths (max " << my_iterations << " loops)...");
+                                      int maxNRStep, bool were_lengths_consistent,
+                                      PhyloTree* report_to_tree) {
+    if (report_to_tree==nullptr) {
+        report_to_tree = this;
+    }
+    TREE_LOG_LINE(*report_to_tree, VB_MAX,
+                  "Optimizing branch lengths (max " << my_iterations << " loops)...");
     PhyloNodeVector nodes, nodes2;
     computeBestTraversal(nodes, nodes2);
     PhyloNode*     firstNode      = nodes[0];
     PhyloNeighbor* firstNeighbor  = firstNode->findNeighbor(nodes2[0]);
     double         previous_score = computeLikelihoodBranch(firstNeighbor, firstNode,
                                                             tree_buffers);
-    LOG_LINE(VB_MAX, "Initial tree log-likelihood: " << previous_score);
+    TREE_LOG_LINE(*report_to_tree, VB_MAX,
+                  "Initial tree log-likelihood: " << previous_score);
     DoubleVector lenvec;
     double work_estimate = (double)my_iterations * (double)nodes.size();
-    initProgress(work_estimate, "Optimizing branch lengths", "", "", true);
+    report_to_tree->initProgress(work_estimate, "Optimizing branch lengths", "", "", true);
     for (int i = 0; i < my_iterations; i++) {
         LOG_LINE(VB_MAX, "Likelihood before iteration " << i + 1 << " : " << previous_score);
         saveBranchLengths(lenvec);
@@ -3536,19 +3544,22 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance,
             optimizeOneBranch(nodes[j], nodes2[j]);
             //LOG_LINE(VB_MAX, "Branch " << nodes[j]->id << " " << nodes2[j]->id << ": " << computeLikelihoodFromBuffer());
             if ( (j % 100) == 99) {
-                trackProgress(100.0);
+                report_to_tree->trackProgress(100.0);
             }
         }        
-        trackProgress(static_cast<double>(nodes.size() % 100));
+        report_to_tree->trackProgress(static_cast<double>(nodes.size() % 100));
 
         curScore = computeLikelihoodFromBuffer();
-        LOG_LINE(VB_MAX, "Likelihood after iteration " << i + 1 << " : " << curScore);
+        TREE_LOG_LINE(*report_to_tree,VB_MAX,
+                      "Likelihood after iteration " << i + 1 << " : " << curScore);
 
         if (were_lengths_consistent && curScore < previous_score - tolerance*0.1) {
             // IN RARE CASE: tree log-likelihood decreases, revert the branch length and stop
-            LOG_LINE(VB_MED, "NOTE: Restoring branch lengths"
-                << " as tree log-likelihood decreases after branch length optimization: "
-                << previous_score << " -> " << curScore);
+            TREE_LOG_LINE(*report_to_tree,VB_MED,
+                          "NOTE: Restoring branch lengths"
+                          << " as tree log-likelihood decreases"
+                          << " after branch length optimization: "
+                          << previous_score << " -> " << curScore);
 
             clearAllPartialLH();
             restoreBranchLengths(lenvec);
@@ -3559,18 +3570,21 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance,
             // Different max delta if (aln->seq_type == SEQ_CODON) ?!
             curScore = computeLikelihood();
             if (fabs(curScore - previous_score) > max_delta_lh) {
-                hideProgress();
+                report_to_tree->hideProgress();
                 printTree(cout);
                 cout << endl;
-                showProgress();
-                LOG_LINE(VB_QUIET, "new_tree_lh: " << curScore << " previous_tree_lh: " << previous_score);
+                report_to_tree->showProgress();
+                TREE_LOG_LINE(*report_to_tree,VB_QUIET,
+                              "new_tree_lh: " << curScore <<
+                              " previous_tree_lh: " << previous_score);
                 if (!params->ignore_any_errors) {
                     ASSERT(fabs(curScore - previous_score) < max_delta_lh);
                 }
             }
             break;
         }
-        // only return if the new_tree_lh >= tree_lh! (in rare case that likelihood decreases, continue the loop)
+        // only return if the new_tree_lh >= tree_lh!
+        // (in rare case that likelihood decreases, continue the loop)
         if (previous_score <= curScore && curScore <= previous_score + tolerance) {
             break;
         }
@@ -3578,7 +3592,7 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance,
         previous_score = curScore;
         were_lengths_consistent = true;
     }
-    doneProgress();
+    report_to_tree->doneProgress();
     return curScore;
 }
 

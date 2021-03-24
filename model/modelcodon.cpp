@@ -225,8 +225,10 @@ AAG AGT AGC AGA AGG GTT GTC GTA GTG GCT GCC GCA GCG GAT GAC GAA GAG GGT GGC GGA 
 GGG";
 
 
-ModelCodon::ModelCodon(const char *model_name, string model_params, StateFreqType freq, string freq_params,
-		PhyloTree *tree) : ModelMarkov(tree)
+ModelCodon::ModelCodon(const char *model_name, string model_params,
+                       StateFreqType freq, string freq_params,
+                       PhyloTree *tree, PhyloTree* report_to_tree)
+    : ModelMarkov(tree, report_to_tree)
 {
     half_matrix = false;
     omega = kappa = kappa2 = 1.0;
@@ -244,7 +246,7 @@ ModelCodon::ModelCodon(const char *model_name, string model_params, StateFreqTyp
     rate_attr = NULL;
     computeRateAttributes();
 
-   	init(model_name, model_params, freq, freq_params);
+   	init(model_name, model_params, freq, freq_params, report_to_tree);
 }
 
 ModelCodon::~ModelCodon() {
@@ -340,7 +342,9 @@ StateFreqType ModelCodon::initCodon(const char *model_name, StateFreqType freq, 
 	return FREQ_UNKNOWN;
 }
 
-void ModelCodon::init(const char *model_name, string model_params, StateFreqType freq, string freq_params)
+void ModelCodon::init(const char *model_name, string model_params,
+                      StateFreqType freq, string freq_params,
+                      PhyloTree* report_to_tree)
 {
     int i, j;
 	for (i = 0; i < 12; i++)
@@ -355,7 +359,8 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
         }
         for (j = 0; j < num_states; j++) {
             int attr = this_rate_attr[j];
-            if (attr & (CA_STOP_CODON+CA_MULTI_NT)) { // stop codon or multiple nt substitutions
+            if (attr & (CA_STOP_CODON+CA_MULTI_NT)) {
+                // stop codon or multiple nt substitutions
                 this_emp_rate[j] = 0.0;
             } else {
                 this_emp_rate[j] = 1.0;
@@ -385,7 +390,7 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
     num_params = (!fix_omega) + (!fix_kappa) + (!fix_kappa2);
 
 	if (freq_params != "") {
-		readStateFreq(freq_params);
+		readStateFreq(freq_params, report_to_tree);
 	}
 	if (model_params != "") {
 		readRates(model_params);
@@ -397,7 +402,7 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
 		//ntfreq = new double[12];
 		phylo_tree->aln->computeCodonFreq(freq, state_freq, ntfreq);
 	}
-	ModelMarkov::init(freq);
+	ModelMarkov::init(freq, report_to_tree);
 }
 
 StateFreqType ModelCodon::initMG94(bool should_fix_kappa, StateFreqType freq, CodonKappaStyle kappa_style) {
@@ -966,7 +971,8 @@ void ModelCodon::setBounds(double *lower_bound, double *upper_bound, bool *bound
 	}
 }
 
-double ModelCodon::optimizeParameters(double gradient_epsilon) {    
+double ModelCodon::optimizeParameters(double gradient_epsilon,
+                                      PhyloTree* report_to_tree) {    
     if (fixed_parameters) {
         return 0.0;
     }    
@@ -975,7 +981,7 @@ double ModelCodon::optimizeParameters(double gradient_epsilon) {
         // return if nothing to be optimized
         return 0.0;
     }    
-    TREE_LOG_LINE(*phylo_tree, VB_MAX, "Optimizing " << name << " model parameters...");
+    TREE_LOG_LINE(*report_to_tree, VB_MAX, "Optimizing " << name << " model parameters...");
 	double* variables   = new double[ndim+1];
 	double* upper_bound = new double[ndim+1];
 	double* lower_bound = new double[ndim+1];

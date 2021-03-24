@@ -21,16 +21,17 @@
 #include "modelliemarkov.h"
 #include <utils/stringfunctions.h> //for string_to_upper, convert_double
 
-ModelDNA::ModelDNA(PhyloTree *tree)
-: ModelMarkov(tree)
+ModelDNA::ModelDNA(PhyloTree *tree, PhyloTree* report_to_tree)
+: ModelMarkov(tree, report_to_tree)
 {
 }
 
 ModelDNA::ModelDNA(const char *model_name, string model_params,
-                   StateFreqType freq, string freq_params, PhyloTree *tree)
-: ModelMarkov(tree)
+                   StateFreqType freq, string freq_params,
+                   PhyloTree *tree, PhyloTree* report_to_tree)
+    : ModelMarkov(tree, report_to_tree)
 {
-  init(model_name, model_params, freq, freq_params);
+  init(model_name, model_params, freq, freq_params, report_to_tree);
 }
 
 namespace {
@@ -113,7 +114,8 @@ string getDNAModelInfo(string model_name, string &full_name,
 }
 
 void ModelDNA::init(const char *model_name, string model_params,
-                    StateFreqType freq, string freq_params)
+                    StateFreqType freq, string freq_params,
+                    PhyloTree* report_to_tree)
 {
 	ASSERT(num_states == 4); // make sure that you create model for DNA
 	StateFreqType def_freq = FREQ_UNKNOWN;
@@ -137,7 +139,7 @@ void ModelDNA::init(const char *model_name, string model_params,
 		    name = model_name;
 		    full_name = "Time reversible ("+name+")";
 		} else {
-			readParameters(model_name);
+			readParameters(model_name, true, report_to_tree);
             name = full_name = model_name;
             freq = FREQ_USER_DEFINED;
 			//name += " (user-defined)";
@@ -145,14 +147,14 @@ void ModelDNA::init(const char *model_name, string model_params,
 	}
 
 	if (freq_params != "") {
-		readStateFreq(freq_params);
+		readStateFreq(freq_params, report_to_tree);
 	}
 	if (model_params != "") {
 	  readRates(model_params);
 	}
 	
 	if (freq == FREQ_UNKNOWN ||  def_freq == FREQ_EQUAL) freq = def_freq;
-	ModelMarkov::init(freq);
+	ModelMarkov::init(freq, report_to_tree);
 //    model_parameters = new double [getNDim()+1]; // see setVariables for explaination of +1
 //    setVariables(model_parameters);
 }

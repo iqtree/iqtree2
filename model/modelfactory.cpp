@@ -154,8 +154,9 @@ StateFreqType ModelFactory::getDefaultFrequencyTypeForSequenceType(SeqType seq_t
     return freq_type;
 }
 
-ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree,
-                           ModelsBlock *models_block): CheckpointFactory() {
+ModelFactory::ModelFactory(Params &params, string &model_name,
+                           PhyloTree *tree, ModelsBlock *models_block,
+                           PhyloTree* report_to_tree): CheckpointFactory() {
     store_trans_matrix = params.store_trans_matrix;
     is_storing         = false;
     joint_optimize     = params.optimize_model_rate_joint;
@@ -208,11 +209,12 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree,
         ModelInfoFromName model_info(model_str);
         initializeModel(model_name, models_block, model_info,
                         model_str, params.freq_type, freq_params,
-                        optimize_mixmodel_weight, tree);
+                        optimize_mixmodel_weight, tree, report_to_tree);
         initializeAscertainmentCorrection(rate_info, rate_str, tree);
         initializeRateHeterogeneity(rate_info, rate_str, params, tree);
         initializeFusedMixRate(models_block, model_name, model_str, freq_params,
-                                freq_type, optimize_mixmodel_weight, tree);
+                               freq_type, optimize_mixmodel_weight,
+                               tree, report_to_tree);
         tree->discardSaturatedSite(params.discard_saturated_site);
     } catch (const char* str) {
         outError(str);
@@ -461,7 +463,8 @@ void ModelFactory::initializeModel(const std::string& model_name,
                                    ModelInfo& model_info, string& model_str,
                                    StateFreqType freq_type, string& freq_params,
                                    bool optimize_mixmodel_weight,
-                                   PhyloTree* tree) {
+                                   PhyloTree* tree,
+                                   PhyloTree* report_to_tree) {
         /******************** initialize model ****************************/
         bool is_mixture_model = model_info.isMixtureModel();
             
@@ -473,12 +476,14 @@ void ModelFactory::initializeModel(const std::string& model_name,
                 }
                 model = new ModelMixture(model_name, model_str, model_list,
                                          models_block, freq_type, freq_params,
-                                         tree, optimize_mixmodel_weight);
+                                         tree, optimize_mixmodel_weight,
+                                         report_to_tree);
             } else {
                 //            string model_desc;
                 //            NxsModel *nxsmodel = models_block->findModel(model_str);
                 //            if (nxsmodel) model_desc = nxsmodel->description;
-                model = createModel(model_str, models_block, freq_type, freq_params, tree);
+                model = createModel(model_str, models_block, freq_type,
+                                    freq_params, tree, report_to_tree);
             }
     //        fused_mix_rate &= model->isMixture() && site_rate->getNRate() > 1;
         } else {
@@ -488,7 +493,8 @@ void ModelFactory::initializeModel(const std::string& model_name,
             }
             model = new ModelSet(model_str.c_str(), tree);
             ModelSet *models = (ModelSet*)model; // assign pointer for convenience
-            models->init((freq_type != FREQ_UNKNOWN) ? freq_type : FREQ_EMPIRICAL);
+            models->init((freq_type != FREQ_UNKNOWN) ? freq_type : FREQ_EMPIRICAL,
+                         report_to_tree);
             models->pattern_model_map.resize(tree->aln->getNPattern(), -1);
             for (size_t i = 0; i < tree->aln->getNSite(); ++i) {
                 models->pattern_model_map[tree->aln->getPatternID(i)] = tree->aln->site_model[i];
@@ -503,19 +509,21 @@ void ModelFactory::initializeModel(const std::string& model_name,
                     auto f_type = (freq_type != FREQ_UNKNOWN)
                                 ? freq_type : FREQ_EMPIRICAL;
                     modeli = (ModelMarkov*)createModel(model_str, models_block,
-                                                       f_type, "", tree);
+                                                       f_type, "", tree,
+                                                       report_to_tree);
                     modeli->getStateFrequency(state_freq);
                     modeli->getRateMatrix(rates);
                 } else {
                     modeli = (ModelMarkov*)createModel(model_str, models_block,
-                                                       FREQ_EQUAL, "", tree);
+                                                       FREQ_EQUAL, "", tree,
+                                                       report_to_tree);
                     modeli->setStateFrequency(state_freq);
                     modeli->setRateMatrix(rates);
                 }
                 if (tree->aln->site_state_freq[i])
                     modeli->setStateFrequency (tree->aln->site_state_freq[i]);
 
-                modeli->init(FREQ_USER_DEFINED);
+                modeli->init(FREQ_USER_DEFINED, report_to_tree);
                 models->push_back(modeli);
             }
             delete [] rates;
@@ -788,7 +796,8 @@ void ModelFactory::initializeFusedMixRate(ModelsBlock *models_block,
                                           const std::string& freq_params,
                                           StateFreqType freq_type,
                                           bool optimize_mixmodel_weight,
-                                          PhyloTree *tree) {
+                                          PhyloTree *tree,
+                                          PhyloTree* report_to_tree) {
     if (fused_mix_rate) {
         if (!model->isMixture()) {
             TREE_LOG_LINE(*tree, VB_MED,
@@ -801,7 +810,8 @@ void ModelFactory::initializeFusedMixRate(ModelsBlock *models_block,
             }
             model = new ModelMixture(model_name, model_str, model_list,
                                      models_block, freq_type, freq_params,
-                                     tree, optimize_mixmodel_weight);
+                                     tree, optimize_mixmodel_weight,
+                                     report_to_tree);
         }
         if (model->getNMixtures() != site_rate->getNRate()) {
             outError("Mixture model and site rate model"
@@ -865,7 +875,7 @@ int ModelFactory::getNParameters(int brlen_type) {
 }
 
 double ModelFactory::optimizeParametersOnly(int num_steps, double gradient_epsilon,
-                                            double cur_logl) {
+                                            double cur_logl, PhyloTree* report_to_tree) {
     double logl;
     /* Optimize substitution and heterogeneity rates independently */
     if (!joint_optimize) {
@@ -882,8 +892,8 @@ double ModelFactory::optimizeParametersOnly(int num_steps, double gradient_epsil
         double prev_logl = cur_logl;
         for (int step = 0; step < steps; step++) {
             // only optimized if model is not linked
-            double model_lh = model->optimizeParameters(gradient_epsilon);
-            double rate_lh  = site_rate->optimizeParameters(gradient_epsilon);
+            double model_lh = model->optimizeParameters(gradient_epsilon, report_to_tree);
+            double rate_lh  = site_rate->optimizeParameters(gradient_epsilon, report_to_tree);
 
             if (rate_lh == 0.0) {
                 logl = model_lh;
@@ -955,13 +965,15 @@ double ModelFactory::optimizeAllParameters(double gradient_epsilon) {
 
 double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info,
                                                   double logl_epsilon,
-                                                  double gradient_epsilon) {
+                                                  double gradient_epsilon,
+                                                  PhyloTree* report_to_tree) {
     if (!site_rate->isGammai() || site_rate->isFixPInvar()
         || site_rate->isFixGammaShape()
         || site_rate->getTree()->aln->frac_const_sites == 0.0
         || model->isMixture())
         return optimizeParameters(fixed_len, write_info,
-                                  logl_epsilon, gradient_epsilon);
+                                  logl_epsilon, gradient_epsilon,
+                                  report_to_tree);
 
     double begin_time = getRealTime();
 
@@ -1002,7 +1014,8 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
             DoubleVector estResults
                 = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon,
                                                 gradient_epsilon, initPInv,
-                                                initAlpha, initBranLens, model_ckp);
+                                                initAlpha, initBranLens, model_ckp,
+                                                report_to_tree);
             if (write_info) {
                 TREE_LOG_LINE(*tree, VB_QUIET,
                               "Est. p_inv: " << estResults[0]
@@ -1055,13 +1068,15 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
                 estResults
                     = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon,
                                                     gradient_epsilon, initPInv,
-                                                    initAlpha, bestLens, model_ckp);
+                                                    initAlpha, bestLens, model_ckp,
+                                                    report_to_tree);
             }
             else {
                 estResults
                     = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon,
                                                     gradient_epsilon, initPInv,
-                                                    initAlpha, initBranLens, model_ckp);
+                                                    initAlpha, initBranLens, model_ckp,
+                                                    report_to_tree);
             }
             if (write_info) {
                 TREE_LOG_LINE(*tree, VB_QUIET,
@@ -1120,9 +1135,10 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
 }
 
 DoubleVector ModelFactory::optimizeGammaInvWithInitValue(int fixed_len, double logl_epsilon,
-                                                           double gradient_epsilon,
-                                                           double initPInv, double initAlpha,
-                                                           DoubleVector &lenvec, Checkpoint *model_ckp) {
+                                                         double gradient_epsilon,
+                                                         double initPInv, double initAlpha,
+                                                         DoubleVector &lenvec, Checkpoint *model_ckp,
+                                                         PhyloTree* report_to_tree) {
     PhyloTree *tree = site_rate->getTree();
     tree->restoreBranchLengths(lenvec);
 
@@ -1137,7 +1153,8 @@ DoubleVector ModelFactory::optimizeGammaInvWithInitValue(int fixed_len, double l
     // --
 
     tree->clearAllPartialLH();
-    optimizeParameters(fixed_len, false, logl_epsilon, gradient_epsilon);
+    optimizeParameters(fixed_len, false, logl_epsilon,
+                       gradient_epsilon, report_to_tree);
 
     DoubleVector estResults;
     double estPInv  = site_rate->getPInvar();
@@ -1150,16 +1167,20 @@ DoubleVector ModelFactory::optimizeGammaInvWithInitValue(int fixed_len, double l
 }
 
 double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
-                                        double logl_epsilon, double gradient_epsilon) {
+                                        double logl_epsilon, double gradient_epsilon,
+                                        PhyloTree* report_to_tree) {
     ASSERT(model);
     ASSERT(site_rate);
 
     double begin_time = getRealTime();
     PhyloTree *tree = site_rate->getTree();
     ASSERT(tree);
+    if (report_to_tree==nullptr) {
+        report_to_tree = tree;
+    }
 
     double estimatedIterations = tree->params->num_param_iterations; //for now
-    tree->initProgress(estimatedIterations, "Optimizing Model Parameters",
+    report_to_tree->initProgress(estimatedIterations, "Optimizing Model Parameters",
                        "finished", "iteration", true );
     
     stopStoringTransMatrix();
@@ -1168,7 +1189,7 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
     double optimizeStartTime = getRealTime();
     double cur_lh = tree->computeLikelihood();
     tree->setCurScore(cur_lh);
-    tree->trackProgress(1.0);
+    report_to_tree->trackProgress(1.0);
 
     if (verbose_mode >= VB_MED || write_info) {
         auto p = cout.precision(); //We'll restore it later
@@ -1179,17 +1200,17 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
             s << "1. Initial log-likelihood: " << cur_lh;
             s.precision(4);
             s << " (took " << elapsed << " wall-clock sec)";
-            TREE_LOG_LINE(*tree, VB_MED, s.str() );
+            TREE_LOG_LINE(*report_to_tree, VB_MED, s.str() );
         }
         else {
-            TREE_LOG_LINE(*tree, VB_QUIET, "1. Initial log-likelihood: " << cur_lh);
+            TREE_LOG_LINE(*report_to_tree, VB_QUIET, "1. Initial log-likelihood: " << cur_lh);
         }
         if (verbose_mode >= VB_MAX) {
-            tree->hideProgress();
-            tree->printTree(cout);
+            report_to_tree->hideProgress();
+            report_to_tree->printTree(cout);
             cout << endl;
             cout.precision(p);
-            tree->showProgress();
+            report_to_tree->showProgress();
         }
         cout.precision(p);
     }
@@ -1208,71 +1229,78 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
         // changed to optimise edge length first,
         // and then Q,W,R inside the loop by Thomas on Sept 11, 15
         if (fixed_len == BRLEN_OPTIMIZE) {
-            TREE_LOG_LINE(*tree, VB_MAX, "Optimizing branch lengths");
+            TREE_LOG_LINE(*report_to_tree, VB_MAX,
+                          "Optimizing branch lengths");
             new_lh = tree->optimizeAllBranches(min(i, 3), logl_epsilon);
                 // loop only 3 times in total (previously in v0.9.6 5 times)
         }
         else if (fixed_len == BRLEN_SCALE) {
             double scaling = 1.0;
-            TREE_LOG_LINE(*tree, VB_MAX, "Optimizing branch scaling");
+            TREE_LOG_LINE(*report_to_tree, VB_MAX,
+                          "Optimizing branch scaling");
             new_lh = tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling,
                                                      MAX_BRLEN_SCALE, gradient_epsilon);
         } else {
             new_lh = cur_lh;
         }
-        TREE_LOG_LINE(*tree, VB_MAX, "Optimizing parameters");
-        new_lh = optimizeParametersOnly(i, gradient_epsilon, new_lh);
+        TREE_LOG_LINE(*report_to_tree, VB_MAX, "Optimizing parameters");
+        new_lh = optimizeParametersOnly(i, gradient_epsilon,
+                                        new_lh, report_to_tree);
         if (new_lh == 0.0) {
             if (fixed_len == BRLEN_OPTIMIZE) {
-                TREE_LOG_LINE(*tree, VB_MAX, "Optimizing branch lengths (2nd time)");
+                TREE_LOG_LINE(*report_to_tree, VB_MAX,
+                              "Optimizing branch lengths (2nd time)");
                 auto iterations = tree->params->num_param_iterations;
                 cur_lh = tree->optimizeAllBranches(iterations, logl_epsilon);
             } else if (fixed_len == BRLEN_SCALE) {
                 double scaling = 1.0;
-                TREE_LOG_LINE(*tree, VB_MAX, "Optimizing branch scaling (2nd time)");
+                TREE_LOG_LINE(*report_to_tree, VB_MAX,
+                              "Optimizing branch scaling (2nd time)");
                 cur_lh = tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling,
                                                          MAX_BRLEN_SCALE, gradient_epsilon);
             }
             break;
         }
         if (verbose_mode >= VB_MED) {
-            tree->hideProgress();
+            report_to_tree->hideProgress();
             model->writeInfo(cout);
             site_rate->writeInfo(cout);
             if (fixed_len == BRLEN_SCALE) {
                 cout << "Scaled tree length: " << tree->treeLength() << endl;
             }
-            tree->showProgress();
+            report_to_tree->showProgress();
         }
         if (new_lh > cur_lh + logl_epsilon) {
             cur_lh = new_lh;
             if (write_info) {
                 if (verbose_mode >= VB_MED) {
                     double elapsed = tree->params->num_param_iterations;
-                    TREE_LOG_LINE(*tree, VB_MED,
+                    TREE_LOG_LINE(*report_to_tree, VB_MED,
                                   i << ". Current log-likelihood: " << cur_lh
                                   << " (after " << elapsed << " wall-clock sec)");
                 } else {
-                    TREE_LOG_LINE(*tree, VB_QUIET,
+                    TREE_LOG_LINE(*report_to_tree, VB_QUIET,
                                   i << ". Current log-likelihood: " << cur_lh);
                 }
             }
         } else {
-            site_rate->classifyRates(new_lh);
+            site_rate->classifyRates(new_lh, report_to_tree);
             if (fixed_len == BRLEN_OPTIMIZE) {
-                TREE_LOG_LINE(*tree, VB_MAX, "Optimizing branch lengths (3rd time)");
+                TREE_LOG_LINE(*report_to_tree, VB_MAX,
+                              "Optimizing branch lengths (3rd time)");
                 cur_lh = tree->optimizeAllBranches(100, logl_epsilon);
             } else if (fixed_len == BRLEN_SCALE) {
                 double scaling = 1.0;
-                TREE_LOG_LINE(*tree, VB_MAX, "Optimizing branch scaling (3rd time)");
+                TREE_LOG_LINE(*report_to_tree, VB_MAX,
+                              "Optimizing branch scaling (3rd time)");
                 cur_lh = tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling,
                                                          MAX_BRLEN_SCALE, gradient_epsilon);
             }
             break;
         }
-        tree->trackProgress(1.0);
+        report_to_tree->trackProgress(1.0);
     }
-    tree->doneProgress();
+    report_to_tree->doneProgress();
     
     //normalize rates s.t. branch lengths are #subst per site
     //if (Params::getInstance().optimize_alg_gammai != "EM")
@@ -1293,12 +1321,12 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
         cur_lh = tree->optimizeRootPosition(params.root_move_dist,
                                             write_info, logl_epsilon);
         if (verbose_mode >= VB_MED || write_info) {
-            TREE_LOG_LINE(*tree, VB_QUIET,
+            TREE_LOG_LINE(*report_to_tree, VB_QUIET,
                           "Rooting log-likelihood: " << cur_lh);
         }
     }
     if (verbose_mode >= VB_MED || write_info) {
-        TREE_LOG_LINE(*tree, VB_QUIET,
+        TREE_LOG_LINE(*report_to_tree, VB_QUIET,
                       "Optimal log-likelihood: " << cur_lh);
     }
     // For UpperBounds -----------
@@ -1311,13 +1339,13 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
         model->writeInfo(cout);
         site_rate->writeInfo(cout);
         if (fixed_len == BRLEN_SCALE) {
-            TREE_LOG_LINE(*tree, VB_MIN,
+            TREE_LOG_LINE(*report_to_tree, VB_MIN,
                           "Scaled tree length: " << tree->treeLength());
         }
     }
     double elapsed_secs = getRealTime() - begin_time;
     if (write_info) {
-        TREE_LOG_LINE(*tree, VB_QUIET,
+        TREE_LOG_LINE(*report_to_tree, VB_QUIET,
                       "Parameters optimization took " << i-1 << " rounds"
                       << " (" << elapsed_secs << " sec)" );
     }

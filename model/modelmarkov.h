@@ -82,20 +82,22 @@ public:
 		after creating the class. Otherwise it will not work properly.
 		@param freq_type state frequency type, can be FREQ_USER_DEFINED, FREQ_EQUAL, FREQ_EMPIRICAL, or FREQ_ESTIMATE
 	*/
-	void init(StateFreqType freq_type);
+	void init(StateFreqType freq_type, PhyloTree* report_to_tree);
 
 	/**
 	   initializes ModelSubst::freq_type array according to freq_type
            (can be FREQ_USER_DEFINED, FREQ_EQUAL, FREQ_EMPIRICAL, or FREQ_ESTIMATE)
 	 */
-	void init_state_freq(StateFreqType freq_type);
+	void init_state_freq(StateFreqType freq_type, PhyloTree* report_to_tree);
 
 	/**
 		this function is served for ModelDNA and ModelProtein
 		@param model_name name of the model
 		@param freq_type state frequency type, can be FREQ_USER_DEFINED, FREQ_EQUAL, FREQ_EMPIRICAL, or FREQ_ESTIMATE
 	*/
-	virtual void init(const char *model_name, string model_params, StateFreqType freq, string freq_params) {}
+	virtual void init(const char *model_name, string model_params,
+                      StateFreqType freq, string freq_params,
+                      PhyloTree* report_to_tree) {}
 
 	/**
 		destructor
@@ -165,26 +167,30 @@ public:
 		It will throw error messages if failed
 		@param in input stream
 	*/
-	virtual void readStateFreq(istream &in) THROW_SPEC(const char*);
+	virtual void readStateFreq(istream &in, PhyloTree* report_to_tree)
+        THROW_SPEC(const char*);
 
 	/**
 		Read state frequencies from comma-separated string
 		It will throw error messages if failed
 		@param str input string
 	*/
-	virtual void readStateFreq(string str) THROW_SPEC(const char*);
+	virtual void readStateFreq(string str, PhyloTree* report_to_tree)
+        THROW_SPEC(const char*);
 
 	/**
 		read model parameters from a file
 		@param file_name file containing rate matrix and state frequencies
 	*/
-	void readParameters(const char *file_name, bool adapt_tree = true);
+	void readParameters(const char *file_name, bool adapt_tree,
+                        PhyloTree* report_to_tree);
 
 	/**
 		read model parameters from a string
 		@param model_str string containing rate matrix and state frequencies
 	*/
-	void readParametersString(string &model_str, bool adapt_tree = true);
+	void readParametersString(string &model_str, bool adapt_tree,
+                              PhyloTree* report_to_tree);
 
 	/**
 		compute the transition probability matrix.
@@ -313,7 +319,8 @@ public:
 		optimize model parameters
 		@return the best likelihood 
 	*/
-	virtual double optimizeParameters(double gradient_epsilon);
+	virtual double optimizeParameters(double gradient_epsilon,
+                                      PhyloTree* report_to_tree);
 
 	/**
 	 * @return TRUE if parameters are at the boundary that may cause numerical unstability
@@ -404,7 +411,9 @@ public:
     /**
      * Return a model of type given by model_name. (Will be some subclass of ModelMarkov.)
      */
-    static ModelMarkov* getModelByName(string model_name, PhyloTree *tree, string model_params, StateFreqType freq_type, string freq_params);
+    static ModelMarkov* getModelByName(string model_name, PhyloTree *tree,
+                                       string model_params, StateFreqType freq_type,
+                                       string freq_params, PhyloTree* report_to_tree);
 
     /**
      * true if model_name is the name of some known non-reversible model

@@ -36,14 +36,19 @@ public:
 		@param freq state frequency type
 		@param tree associated phylogenetic tree
 	*/
-    ModelBIN(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree);
+    ModelBIN(const char *model_name, string model_params, StateFreqType freq,
+             string freq_params, PhyloTree *tree, PhyloTree* report_to_tree);
 
 	/**
 		initialization, called automatically by the constructor, no need to call it
 		@param model_name model name, e.g., JC, HKY.
 		@param freq state frequency type
+     @param freq_params
+     @param report_to_tree
 	*/
-	virtual void init(const char *model_name, string model_params, StateFreqType freq, string freq_params);
+	virtual void init(const char *model_name, string model_params,
+                      StateFreqType freq, string freq_params,
+                      PhyloTree* report_to_tree);
 
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}

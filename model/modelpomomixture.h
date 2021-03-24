@@ -41,7 +41,8 @@ public:
                      string freq_params,
                      PhyloTree *tree,
                      string pomo_params,
-                     string pomo_rate_str);
+                     string pomo_rate_str,
+                     PhyloTree* report_to_tree);
 
     virtual ~ModelPoMoMixture();
 
@@ -104,7 +105,8 @@ public:
 		optimize model parameters
 		@return the best likelihood
 	*/
-	virtual double optimizeParameters(double gradient_epsilon);
+	virtual double optimizeParameters(double gradient_epsilon,
+                                      PhyloTree* report_to_tree);
 
 	/**
 		write information

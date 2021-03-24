@@ -258,7 +258,8 @@ void ModelMarkov::getNameParamsFreq(ostream &retname) {
     }
 }
 
-void ModelMarkov::init_state_freq(StateFreqType type) {
+void ModelMarkov::init_state_freq(StateFreqType type,
+                                  PhyloTree* report_to_tree) {
     //if (type == FREQ_UNKNOWN) return;
     freq_type = type;
     ASSERT(freq_type != FREQ_UNKNOWN);
@@ -297,7 +298,7 @@ void ModelMarkov::init_state_freq(StateFreqType type) {
             boost::scoped_array<double> emp_state_freq ( new double[num_states] );
 #endif
             phylo_tree->hideProgress();
-            phylo_tree->aln->computeStateFreq(&emp_state_freq[0]);
+            phylo_tree->aln->computeStateFreq(&emp_state_freq[0], 0, report_to_tree);
             phylo_tree->showProgress();
             setStateFrequency(&emp_state_freq[0]);
         }
@@ -318,7 +319,7 @@ void ModelMarkov::init_state_freq(StateFreqType type) {
         // BQM 2017-05-02: first, empirically count state_freq from alignment
         if (freq_type >= FREQ_DNA_RY) {
             phylo_tree->hideProgress();
-            phylo_tree->aln->computeStateFreq(state_freq);
+            phylo_tree->aln->computeStateFreq(state_freq, 0, phylo_tree);
             phylo_tree->showProgress();
         }
         // For complex DNA freq_types, adjust state_freq to conform to that freq_type.
@@ -326,8 +327,9 @@ void ModelMarkov::init_state_freq(StateFreqType type) {
     }
 }
 
-void ModelMarkov::init(StateFreqType type) {
-    init_state_freq(type);
+void ModelMarkov::init(StateFreqType type,
+                       PhyloTree* report_to_tree) {
+    init_state_freq(type, report_to_tree);
     decomposeRateMatrix();
     if (verbose_mode >= VB_MAX) {
         writeInfo(cout);
@@ -1002,7 +1004,7 @@ void ModelMarkov::setBounds(double *lower_bound, double *upper_bound, bool *boun
     }
 }
 
-double ModelMarkov::optimizeParameters(double gradient_epsilon) {
+double ModelMarkov::optimizeParameters(double gradient_epsilon, PhyloTree* report_to_tree) {
     if (fixed_parameters) {
         return 0.0;
     }
@@ -1011,7 +1013,7 @@ double ModelMarkov::optimizeParameters(double gradient_epsilon) {
         // return if nothing to be optimized
         return 0.0;
     }
-    TREE_LOG_LINE(*phylo_tree, VB_MAX, "Optimizing " << name << " model parameters...");
+    TREE_LOG_LINE(*report_to_tree, VB_MAX, "Optimizing " << name << " model parameters...");
 
     //if (freq_type == FREQ_ESTIMATE) scaleStateFreq(false);
 
@@ -1558,7 +1560,8 @@ void ModelMarkov::readRates(string str) THROW_SPEC(const char*) {
     num_params = 0;
 }
 
-void ModelMarkov::readStateFreq(istream &in) THROW_SPEC(const char*) {
+void ModelMarkov::readStateFreq(istream &in, PhyloTree* report_to_tree)
+    THROW_SPEC(const char*) {
     for (int i = 0; i < num_states; ++i) {
         if (!(in >> state_freq[i])) {
             throw "State frequencies could not be read";
@@ -1580,7 +1583,8 @@ void ModelMarkov::readStateFreq(istream &in) THROW_SPEC(const char*) {
     }
 }
 
-void ModelMarkov::readStateFreq(string str) THROW_SPEC(const char*) {
+void ModelMarkov::readStateFreq(string str, PhyloTree* report_to_tree)
+    THROW_SPEC(const char*) {
     int end_pos = 0;
     for (int i = 0; i < num_states; ++i) {
         int new_end_pos;
@@ -1611,7 +1615,7 @@ void ModelMarkov::readStateFreq(string str) THROW_SPEC(const char*) {
     }
 }
 
-void ModelMarkov::readParameters(const char *file_name, bool adapt_tree) {
+void ModelMarkov::readParameters(const char *file_name, bool adapt_tree, PhyloTree* report_to_tree) {
     if (!fileExists(file_name)) {
         outError("File not found ", file_name);
     }
@@ -1638,7 +1642,7 @@ void ModelMarkov::readParameters(const char *file_name, bool adapt_tree) {
             outError("Invalid model name ", file_name);
         }
         readRates(in);
-        readStateFreq(in);
+        readStateFreq(in, report_to_tree);
         in.close();
     }
     catch (const char *str) {
@@ -1665,7 +1669,8 @@ void ModelMarkov::readParameters(const char *file_name, bool adapt_tree) {
     }
 }
 
-void ModelMarkov::readParametersString(string &model_str, bool adapt_tree) {
+void ModelMarkov::readParametersString(string &model_str, bool adapt_tree,
+                                       PhyloTree* report_to_tree) {
 
     // if detect if reading full matrix or half matrix by the first entry
     int end_pos;
@@ -1680,7 +1685,7 @@ void ModelMarkov::readParametersString(string &model_str, bool adapt_tree) {
     try {
         stringstream in(model_str);
         readRates(in);
-        readStateFreq(in);
+        readStateFreq(in, report_to_tree);
     }
     catch (const char *str) {
         outError(str);
@@ -1780,12 +1785,12 @@ void ModelMarkov::setRates() {
 
 /* static */ ModelMarkov* ModelMarkov::getModelByName(string model_name, PhyloTree *tree,
                                                       string model_params, StateFreqType freq_type,
-                                                      string freq_params) {
+                                                      string freq_params, PhyloTree* report_to_tree) {
     if (ModelUnrest::validModelName(model_name)) {
-        return (new ModelUnrest(tree, model_params));
+        return (new ModelUnrest(tree, model_params, report_to_tree));
     } else if (ModelLieMarkov::validModelName(model_name)) {
         return (new ModelLieMarkov(model_name, tree, model_params,
-                                   freq_type, freq_params));
+                                   freq_type, freq_params, report_to_tree));
     } else {
         cerr << "Unrecognized model name " << model_name << endl;
         return (NULL);

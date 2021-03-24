@@ -1145,7 +1145,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         treeDescription << "candidate tree " << candidate
                         << " (of " << candidateCount << ")";
         string context = treeDescription.str();
-        doNNISearch(true, context.c_str());
+        doNNISearch(true, context.c_str(), this);
         string treeString = getTreeString();
         auto process_id = MPIHelper::getInstance().getProcessID();
         addTreeToCandidateSet(treeString, curScore, true, process_id);
@@ -1173,7 +1173,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
             string tree;
             readTreeString(*it);
             //tree = optimizeBranches();
-            tree = optimizeModelParameters();
+            tree = optimizeModelParameters(false, -1, this);
             LOG_LINE(VB_QUIET, "Tree "
                      << distance(bestInitTrees.begin(), it)+1
                      << " / LogL: " << getCurScore());
@@ -1270,7 +1270,8 @@ bool IQTree::isInitializedPLL() {
 }
 
 void IQTree::initializeModel(Params &params, string model_name,
-                             ModelsBlock *models_block) {
+                             ModelsBlock *models_block,
+                             PhyloTree* report_to_tree) {
     try {
         if (!getModelFactory()) {
             if (isSuperTree()) {
@@ -1278,10 +1279,12 @@ void IQTree::initializeModel(Params &params, string model_name,
                 if (params.partition_type == BRLEN_OPTIMIZE ||
                     params.partition_type == TOPO_UNLINKED) {
                     PhyloSuperTree *tree = (PhyloSuperTree*) this;
-                    new_model = new PartitionModel(params, tree, models_block);
+                    new_model = new PartitionModel(params, tree,
+                                                   models_block, report_to_tree);
                 } else {
                     PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*) this;
-                    new_model = new PartitionModelPlen(params, tree, models_block);
+                    new_model = new PartitionModelPlen(params, tree,
+                                                       models_block, report_to_tree);
                 }
                 setModelFactory(new_model);
                 // mapTrees again in case of different rooting
@@ -1290,7 +1293,8 @@ void IQTree::initializeModel(Params &params, string model_name,
                 }
             } else {
                 setModelFactory(new ModelFactory(params, model_name,
-                                                 this, models_block));
+                                                 this, models_block,
+                                                 report_to_tree));
             }
         }
     } catch (string & str) {
@@ -2436,7 +2440,8 @@ double IQTree::perturb(int times) {
 //extern "C" pllUFBootData * pllUFBootDataPtr;
 extern pllUFBootData * pllUFBootDataPtr;
 
-string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon) {
+string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon,
+                                       PhyloTree* report_to_progress) {
     prepareToComputeDistances();
     if (logl_epsilon == -1) {
         logl_epsilon = params->modelEps;
@@ -2471,11 +2476,13 @@ string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon) {
         double modOptScore;
         if (params->opt_gammai) { // DO RESTART ON ALPHA AND P_INVAR
             modOptScore = getModelFactory()->optimizeParametersGammaInvar
-                          (params->fixed_branch_length, printInfo, logl_epsilon);
+                          (params->fixed_branch_length, printInfo,
+                           logl_epsilon, 0.0001, this);
             params->opt_gammai = false;
         } else {
             modOptScore = getModelFactory()->optimizeParameters
-                          (params->fixed_branch_length, printInfo, logl_epsilon);
+                          (params->fixed_branch_length, printInfo,
+                           logl_epsilon, 0.0001, this);
         }
         if (isSuperTree()) {
             ((PhyloSuperTree*) this)->computeBranchLengths();
@@ -2518,7 +2525,7 @@ string IQTree::ensureModelParametersAreSet(double initEpsilon) {
         LOG_LINE(VB_QUIET, "CHECKPOINT: Model parameters restored,"
                  " LogL: " << getCurScore());
     } else {
-        initTree = optimizeModelParameters(true, initEpsilon);
+        initTree = optimizeModelParameters(true, initEpsilon, this);
         if (isMixlen()) {
             ModelFactoryMixlen* factory = (ModelFactoryMixlen*)getModelFactory();
             initTree = factory->sortClassesByTreeLength();
@@ -2702,7 +2709,7 @@ double IQTree::doTreeSearch() {
          * Optimize tree with NNI
          *----------------------------------------*/
         pair<int, int> nniInfos; // <num_NNIs, num_steps>
-        nniInfos = doNNISearch(true, "");
+        nniInfos = doNNISearch(true, "", this);
         curTree = getTreeString();
         int pos = addTreeToCandidateSet(curTree, curScore, true,
                                         MPIHelper::getInstance().getProcessID());
@@ -2934,7 +2941,7 @@ void IQTree::refineBootTrees() {
         }
         // copy model
         // BQM 2019-05-31: bug fix with -bsam option
-        boot_tree->initializeModel(*params, aln->model_name, models_block);
+        boot_tree->initializeModel(*params, aln->model_name, models_block, this);
         boot_tree->getModelFactory()->setCheckpoint(getCheckpoint());
         if (isSuperTree()) {
             auto mf = ((PartitionModel*)boot_tree->getModelFactory());
@@ -2979,7 +2986,7 @@ void IQTree::refineBootTrees() {
         sampleDescription << "bootstrap tree " << sample
             << "( of " << boot_trees.size() << ")";
         string context = sampleDescription.str();
-        auto num_nnis = boot_tree->doNNISearch(true, context.c_str());
+        auto num_nnis = boot_tree->doNNISearch(true, context.c_str(), boot_tree);
         if (num_nnis.second != 0) {
             ++refined_trees;
         }
@@ -3153,7 +3160,8 @@ double IQTree::doTreePerturbation() {
 /****************************************************************************
  Fast Nearest Neighbor Interchange by maximum likelihood
  ****************************************************************************/
-pair<int, int> IQTree::doNNISearch(bool write_info, const char* context) {
+pair<int, int> IQTree::doNNISearch(bool write_info, const char* context,
+                                   PhyloTree* report_to_tree) {
 
     computeLogL();
     double curBestScore = getBestScore();
@@ -3185,7 +3193,8 @@ pair<int, int> IQTree::doNNISearch(bool write_info, const char* context) {
         // Better tree or score is found
         if (getCurScore() > curBestScore + params->modelEps) {
             // Re-optimize model parameters (the sNNI algorithm)
-            optimizeModelParameters(write_info, params->modelEps * 10);
+            optimizeModelParameters(write_info, params->modelEps * 10,
+                                    report_to_tree);
             getModelFactory()->saveCheckpoint();
 
             // 2018-01-09: additional optimize root position

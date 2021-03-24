@@ -83,7 +83,8 @@ public:
     virtual void readTreeString(const string &tree_string);
 
     virtual void initializeModel(Params &params, string model_name,
-                                 ModelsBlock *models_block);
+                                 ModelsBlock *models_block,
+                                 PhyloTree* report_to_tree);
 
     /**
         @return true if this is a tree with mixture branch lengths, default: false
@@ -142,10 +143,12 @@ public:
     /**
         initialize mixture branch lengths
     */
-    void initializeMixBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    void initializeMixBranches(PhyloNode *node = nullptr,
+                               PhyloNode *dad  = nullptr);
 
     /** initialize parameters if necessary */
-    void initializeMixlen(double tolerance, bool write_info);
+    void initializeMixlen(double tolerance, bool write_info,
+                          PhyloTree* report_to_tree);
 
     /**
         called by fixNegativeBranch to fix one branch
@@ -153,7 +156,8 @@ public:
         @param dad_branch dad branch
         @param dad dad node
     */
-    virtual void fixOneNegativeBranch(double branch_length, Neighbor *dad_branch, Node *dad);
+    virtual void fixOneNegativeBranch(double branch_length,
+                                      Neighbor *dad_branch, Node *dad);
 
     /**
      * IMPORTANT: semantic change: this function does not return score anymore, for efficiency purpose
@@ -164,7 +168,8 @@ public:
             @param maxNRStep maximum number of Newton-Raphson steps
             @return likelihood score
      */
-    virtual void optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH = true, int maxNRStep = 100);
+    virtual void optimizeOneBranch(PhyloNode *node1, PhyloNode *node2,
+                                   bool clearLH = true, int maxNRStep = 100);
 
     /**
             optimize all branch lengths of the tree
@@ -172,7 +177,8 @@ public:
             @return the likelihood of the tree
      */
     virtual double optimizeAllBranches(int my_iterations = 100, double tolerance = TOL_LIKELIHOOD,
-                                       int maxNRStep = 100, bool were_lengths_consistent = true);
+                                       int maxNRStep = 100, bool were_lengths_consistent = true,
+                                       PhyloTree* report_to_tree = nullptr);
 
 	/**
 		This function calculate f(value), first derivative f'(value) and 2nd derivative f''(value).

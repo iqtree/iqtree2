@@ -53,14 +53,15 @@ double RateKategory::targetFunk(double x[])
 	return -phylo_tree->computeLikelihood();
 }
 
-double RateKategory::optimizeParameters(double gradient_epsilon)
+double RateKategory::optimizeParameters(double gradient_epsilon,
+                                        PhyloTree* report_to_tree)
 {
 	int ndim = getNDim();
 	
 	// return if nothing to be optimized
 	if (ndim == 0) return 0.0;
 
-	TREE_LOG_LINE(*phylo_tree, VB_MAX, "Optimizing " << name << " model parameters...");
+	TREE_LOG_LINE(*report_to_tree, VB_MAX, "Optimizing " << name << " model parameters...");
 
 	//if (freq_type == FREQ_ESTIMATE) scaleStateFreq(false);
 

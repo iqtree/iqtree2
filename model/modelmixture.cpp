@@ -1070,7 +1070,7 @@ const double MIN_MIXTURE_PROP = 0.001;
 
 ModelSubst* createModel(string model_str, ModelsBlock *models_block,
                         StateFreqType freq_type, string freq_params,
-                        PhyloTree* tree)
+                        PhyloTree* tree, PhyloTree* report_to_tree)
 {
     ModelSubst *model = NULL;
     string model_params;
@@ -1128,27 +1128,45 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block,
     }
 
     if ((pomo) || (tree->aln->seq_type == SEQ_POMO)) {
-        if (pomo_rate_str == "")
-            model = new ModelPoMo(model_str.c_str(), model_params, freq_type, freq_params, tree, pomo_heterozygosity);
-        else
-            model = new ModelPoMoMixture(model_str.c_str(), model_params, freq_type, freq_params, tree, pomo_heterozygosity, pomo_rate_str);
-        if (model->isMixture() && verbose_mode >= VB_MED)
-            cout << "PoMo mixture model for Gamma rate heterogeneity." << endl;
+        if (pomo_rate_str == "") {
+            model = new ModelPoMo(model_str.c_str(), model_params,
+                                  freq_type, freq_params, tree,
+                                  pomo_heterozygosity, report_to_tree);
+        }
+        else {
+            model = new ModelPoMoMixture(model_str.c_str(), model_params,
+                                         freq_type, freq_params, tree,
+                                         pomo_heterozygosity, pomo_rate_str,
+                                         report_to_tree);
+        }
+        if (model->isMixture() && verbose_mode >= VB_MED) {
+            report_to_tree->logLine("PoMo mixture model"
+                                    " for Gamma rate heterogeneity.");
+        }
 	} else if (ModelMarkov::validModelName(model_str)) {
-	        model = ModelMarkov::getModelByName(model_str, tree, model_params, freq_type, freq_params);
+	        model = ModelMarkov::getModelByName(model_str, tree, model_params,
+                                                freq_type, freq_params,
+                                                report_to_tree);
 	} else if (tree->aln->seq_type == SEQ_BINARY) {
-		model = new ModelBIN(model_str.c_str(), model_params, freq_type, freq_params, tree);
+		model = new ModelBIN(model_str.c_str(), model_params, freq_type,
+                             freq_params, tree, report_to_tree);
 	} else if (tree->aln->seq_type == SEQ_DNA) {
         if (seqerr.empty())
-            model = new ModelDNA(model_str.c_str(), model_params, freq_type, freq_params, tree);
+            model = new ModelDNA(model_str.c_str(), model_params, freq_type,
+                                 freq_params, tree, report_to_tree);
         else
-            model = new ModelDNAError(model_str.c_str(), model_params, freq_type, freq_params, seqerr, tree);
+            model = new ModelDNAError(model_str.c_str(), model_params, freq_type,
+                                      freq_params, seqerr, tree, report_to_tree);
 	} else if (tree->aln->seq_type == SEQ_PROTEIN) {
-		model = new ModelProtein(model_str.c_str(), model_params, freq_type, freq_params, tree, models_block);
+		model = new ModelProtein(model_str.c_str(), model_params,
+                                 freq_type, freq_params, tree,
+                                 models_block, report_to_tree);
 	} else if (tree->aln->seq_type == SEQ_CODON) {
-		model = new ModelCodon(model_str.c_str(), model_params, freq_type, freq_params, tree);
+		model = new ModelCodon(model_str.c_str(), model_params, freq_type,
+                               freq_params, tree, report_to_tree);
 	} else if (tree->aln->seq_type == SEQ_MORPH) {
-		model = new ModelMorphology(model_str.c_str(), model_params, freq_type, freq_params, tree);
+		model = new ModelMorphology(model_str.c_str(), model_params, freq_type,
+                                    freq_params, tree, report_to_tree);
 	} else {
 		outError("Unsupported model type");
 	}
@@ -1160,26 +1178,33 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block,
 	constructor
 	@param tree associated tree for the model
 */
-ModelMixture::ModelMixture(PhyloTree *tree) : ModelMarkov(tree) {
-	prop = NULL;
-	fix_prop = true;
-	optimizing_submodels = false;
+ModelMixture::ModelMixture(PhyloTree *tree,
+                           PhyloTree* report_to_tree)
+    : ModelMarkov(tree, report_to_tree) {
+    prop = NULL;
+    fix_prop = true;
+    optimizing_submodels = false;
 }
 
 ModelMixture::ModelMixture(string orig_model_name, string model_name,
                            string model_list, ModelsBlock *models_block,
                            StateFreqType freq, string freq_params, PhyloTree *tree,
-                           bool optimize_weights) : ModelMarkov(tree)
-{
+                           bool optimize_weights, PhyloTree* report_to_tree)
+    : ModelMarkov(tree) {
     prop = NULL;
     fix_prop = true;
     optimizing_submodels = false;
     optimize_steps = 0;
-    initMixture(orig_model_name, model_name, model_list, models_block, freq, freq_params, tree, optimize_weights);
+    initMixture(orig_model_name, model_name, model_list,
+                models_block, freq, freq_params, tree,
+                optimize_weights, report_to_tree);
 }
 
-void ModelMixture::initMixture(string orig_model_name, string model_name, string model_list, ModelsBlock *models_block,
-		StateFreqType freq, string freq_params, PhyloTree *tree, bool optimize_weights)
+void ModelMixture::initMixture(string orig_model_name, string model_name,
+                               string model_list, ModelsBlock *models_block,
+                               StateFreqType freq, string freq_params,
+                               PhyloTree *tree, bool optimize_weights,
+                               PhyloTree* report_to_tree)
 {
     //	const int MAX_MODELS = 64;
 	size_t cur_pos;
@@ -1253,13 +1278,15 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
                 freq_weights[m] = sum_weights / freq_weights.size();
             }
         }
-		ModelMarkov::init(FREQ_USER_DEFINED);
+		ModelMarkov::init(FREQ_USER_DEFINED, report_to_tree);
 	} else {
-		if (freq_params != "")
-			readStateFreq(freq_params);
-        if (freq == FREQ_UNKNOWN)
+        if (freq_params != "") {
+			readStateFreq(freq_params, report_to_tree);
+        }
+        if (freq == FREQ_UNKNOWN) {
             freq = FREQ_USER_DEFINED;
-		ModelMarkov::init(freq);
+        }
+		ModelMarkov::init(freq, report_to_tree);
 	}
 
 	DoubleVector weights;
@@ -1293,36 +1320,44 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 		}
 		cur_pos = pos+1;
 		ModelMarkov* model;
-		if (freq == FREQ_MIXTURE) {
-			for(int f = 0; f != freq_vec.size(); f++) {
+        if (freq == FREQ_MIXTURE) {
+            for(int f = 0; f != freq_vec.size(); f++) {
                 if (freq_vec[f] == nxs_freq_empirical)
-					model = (ModelMarkov*)createModel(this_name, models_block, FREQ_EMPIRICAL, "", tree);
+                    model = (ModelMarkov*)createModel(this_name, models_block,
+                                                      FREQ_EMPIRICAL, "", tree,
+                                                      report_to_tree);
                 else if (freq_vec[f] == nxs_freq_optimize)
-					model = (ModelMarkov*)createModel(this_name, models_block, FREQ_ESTIMATE, "", tree);
-				else
-					model = (ModelMarkov*)createModel(this_name, models_block, FREQ_USER_DEFINED, freq_vec[f]->description, tree);
-				model->total_num_subst = rate * freq_rates[f];
-				push_back(model);
-				weights.push_back(weight * freq_weights[f]);
-				if (m+f > 0) {
-//					name += ',';
-					full_name += ',';
-				}
-				if (freq_vec[f] == nxs_freq_empirical) {
-					model->name += "+F";
-					model->full_name += "+F";
+                    model = (ModelMarkov*)createModel(this_name, models_block,
+                                                      FREQ_ESTIMATE, "", tree,
+                                                      report_to_tree);
+                else
+                    model = (ModelMarkov*)createModel(this_name, models_block,
+                                                      FREQ_USER_DEFINED, freq_vec[f]->description,
+                                                      tree, report_to_tree);
+                model->total_num_subst = rate * freq_rates[f];
+                push_back(model);
+                weights.push_back(weight * freq_weights[f]);
+                if (m+f > 0) {
+                    //					name += ',';
+                    full_name += ',';
+                }
+                if (freq_vec[f] == nxs_freq_empirical) {
+                    model->name += "+F";
+                    model->full_name += "+F";
                 } else if (freq_vec[f] == nxs_freq_optimize) {
-					model->name += "+FO";
-					model->full_name += "+FO";
-				} else {
-					model->name += "+F" +freq_vec[f]->name + "";
-					model->full_name += "+F" +freq_vec[f]->name + "";
-				}
-//				name += model->name;
-				full_name += model->name;
-			}
-		} else {
-			model = (ModelMarkov*)createModel(this_name, models_block, freq, freq_params, tree);
+                    model->name += "+FO";
+                    model->full_name += "+FO";
+                } else {
+                    model->name += "+F" +freq_vec[f]->name + "";
+                    model->full_name += "+F" +freq_vec[f]->name + "";
+                }
+                //name += model->name;
+                full_name += model->name;
+            }
+        } else {
+			model = (ModelMarkov*)createModel(this_name, models_block,
+                                              freq, freq_params, tree,
+                                              report_to_tree);
 			model->total_num_subst = rate;
 			push_back(model);
 			weights.push_back(weight);
@@ -1683,7 +1718,7 @@ double ModelMixture::optimizeWeights() {
     return phylo_tree->computeLikelihood();
 }
 
-double ModelMixture::optimizeWithEM(double gradient_epsilon) {
+double ModelMixture::optimizeWithEM(double gradient_epsilon, PhyloTree* report_to_tree) {
     intptr_t ptn;
     intptr_t nptn = phylo_tree->aln->getNPattern();
     intptr_t nmix = size();
@@ -1799,7 +1834,7 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
             double *this_lk_cat = phylo_tree->tree_buffers._pattern_lh_cat+c;
             for (ptn = 0; ptn < nptn; ptn++)
                 tree->ptn_freq[ptn] = this_lk_cat[ptn*nmix];
-            subst_model->optimizeParameters(gradient_epsilon);
+            subst_model->optimizeParameters(gradient_epsilon, report_to_tree);
             // reset subst model
             tree->setModel(NULL);
             subst_model->setTree(phylo_tree);
@@ -1829,8 +1864,9 @@ bool ModelMixture::isFused() {
     return true;
 }
 
-double ModelMixture::optimizeParameters(double gradient_epsilon) {
-	optimizing_submodels = true;
+double ModelMixture::optimizeParameters(double gradient_epsilon,
+                                        PhyloTree* report_to_tree) {
+    optimizing_submodels = true;
 
     int dim = getNDim();
     double score = 0.0;
@@ -1839,12 +1875,12 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
         outError("Mixture model +ASC is not supported yet. Contact author if needed.");
     }
     if (dim > 0) {
-        score = optimizeWithEM(gradient_epsilon);
+        score = optimizeWithEM(gradient_epsilon, report_to_tree);
     }
     else if (!fix_prop) {
         score = optimizeWeights();
     }
-//	double score = ModelGTR::optimizeParameters(gradient_epsilon);
+//	double score = ModelGTR::optimizeParameters(gradient_epsilon, report_to_tree);
 	optimizing_submodels = false;
     if (getNDim() == 0) {
         return score;

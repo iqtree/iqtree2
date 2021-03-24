@@ -152,7 +152,8 @@ public:
      *         @return <number_of_NNIs, number_of_NNI_steps>
      *         This function will automatically use the selected kernel (either PLL or IQ-TREE)
      */
-    virtual pair<int, int> doNNISearch(bool write_info, const char* context);
+    virtual pair<int, int> doNNISearch(bool write_info, const char* context,
+                                       PhyloTree* report_to_tree);
 
     /**
      perform tree search

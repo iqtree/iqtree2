@@ -14,7 +14,8 @@ class ModelUnrest: public ModelMarkov {
 public:
 
     /** constructor */
-	ModelUnrest(PhyloTree *tree, string model_params);
+	ModelUnrest(PhyloTree *tree, string model_params,
+                PhyloTree* report_to_tree);
 
     /**
      * true if model_name is the name of some known non-reversible model

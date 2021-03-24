@@ -142,7 +142,8 @@ public:
     void doPLLParsimonySPR();
     
     virtual void initializeModel(Params &params, string model_name,
-                                 ModelsBlock *models_block);
+                                 ModelsBlock *models_block,
+                                 PhyloTree* report_to_tree);
 
     /**
             print tree to .treefile
@@ -439,7 +440,8 @@ public:
      *         @return <number_of_NNIs, number_of_NNI_steps>
      *         This function will automatically use the selected kernel (either PLL or IQ-TREE)
      */
-    virtual pair<int, int> doNNISearch(bool write_info, const char* context);
+    virtual pair<int, int> doNNISearch(bool write_info, const char* context,
+                                       PhyloTree* report_to_tree);
 
     /**
             @brief evaluate all NNIs
@@ -751,7 +753,8 @@ public:
      *  @param epsilon likelihood epsilon for optimization
      *
      */
-    string optimizeModelParameters(bool printInfo = false, double epsilon = -1);
+    string optimizeModelParameters(bool printInfo, double epsilon,
+                                   PhyloTree* report_to_progress);
 
     /**
      *  @brief: either optimize model parameters on the current tree

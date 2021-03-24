@@ -17,8 +17,9 @@
 #endif
 
 ModelFactoryMixlen::ModelFactoryMixlen(Params &params, string &model_name,
-                                       PhyloTree *tree, ModelsBlock *models_block) :
-    ModelFactory(params, model_name, tree, models_block) {
+                                       PhyloTree *tree, ModelsBlock *models_block,
+                                       PhyloTree* report_to_tree)
+    : ModelFactory(params, model_name, tree, models_block, report_to_tree) {
     if (!tree->isMixlen()) {
         cerr << "Please add '-mixlen " << site_rate->getNRate()
              << "' option into the command line" << endl;
@@ -52,15 +53,17 @@ ModelFactoryMixlen::ModelFactoryMixlen(Params &params, string &model_name,
 }
 
 double ModelFactoryMixlen::optimizeParameters(int fixed_len, bool write_info,
-                                              double logl_epsilon, double gradient_epsilon) {
+                                              double logl_epsilon, double gradient_epsilon,
+                                              PhyloTree* report_to_tree) {
 
 	PhyloTreeMixlen *tree = (PhyloTreeMixlen*)site_rate->getTree();
 	ASSERT(tree);
     
-    tree->initializeMixlen(logl_epsilon, write_info);
+    tree->initializeMixlen(logl_epsilon, write_info, report_to_tree);
 
     double score = ModelFactory::optimizeParameters(fixed_len, write_info,
-                                                    logl_epsilon, gradient_epsilon);
+                                                    logl_epsilon, gradient_epsilon,
+                                                    report_to_tree);
 
     return score;
 }

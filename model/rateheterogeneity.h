@@ -258,14 +258,18 @@ public:
 		optimize parameters. Default does nothing
 		@return the best likelihood 
 	*/
-	virtual double optimizeParameters(double gradient_epsilon) { return 0.0; }
+	virtual double optimizeParameters(double gradient_epsilon,
+                                      PhyloTree* report_to_tree) { return 0.0; }
 
 	/**
 		classify rates into categories, this is meant for the discrete MH model. 
 		The default just return tree_lh
 		@param tree_lh the current tree log-likelihood
 	*/
-	virtual double classifyRates(double tree_lh) { return tree_lh; }
+	virtual double classifyRates(double tree_lh,
+                                 PhyloTree* report_to_tree) {
+        return tree_lh;
+    }
 
 	/**
 	 * used to normal branch lengths if mean rate is not equal to 1 (e.g. FreeRate model)

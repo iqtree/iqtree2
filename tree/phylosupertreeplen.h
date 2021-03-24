@@ -172,7 +172,8 @@ public:
     virtual double optimizeAllBranches(int my_iterations = 100,
                                        double tolerance = TOL_LIKELIHOOD,
                                        int maxNRStep = 100,
-                                       bool were_lengths_consistent = true);
+                                       bool were_lengths_consistent = true,
+                                       PhyloTree* report_to_tree = nullptr);
 
     /**
             optimize one branch length by ML by optimizing all mapped branches of subtrees

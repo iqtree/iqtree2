@@ -91,20 +91,21 @@ public:
 		compute categorized rates from the "continuous" rate of the original Meyer & von Haeseler model.
 		The current implementation uses the k-means algorithm with k-means++ package.
 	*/
-	virtual double optimizeParameters(double epsilon);
+	virtual double optimizeParameters(double epsilon,
+                                      PhyloTree* report_to_tree);
 
 	/**
 		classify rates into categories.
 		@param tree_lh the current tree log-likelihood
 	*/
-	virtual double classifyRates(double tree_lh);
+	virtual double classifyRates(double tree_lh,
+                                 PhyloTree* report_to_tree);
 
 	/**
 		classify rates into categories using k-means++ method.
 		@return tree likelihood
 	*/
-	double classifyRatesKMeans();
-
+	double classifyRatesKMeans(PhyloTree* report_to_tree);
 
 	/**
 		This function is inherited from Optimization class for optimizting site rates 

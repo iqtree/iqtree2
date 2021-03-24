@@ -139,16 +139,17 @@ void RateHeterotachy::writeParameters(ostream &out) {
     optimize parameters. Default is to optimize gamma shape
     @return the best likelihood
 */
-double RateHeterotachy::optimizeParameters(double gradient_epsilon) {
+double RateHeterotachy::optimizeParameters(double gradient_epsilon,
+                                           PhyloTree* report_to_tree) {
     if (fix_params) {
         return phylo_tree->computeLikelihood();
     }
-    TREE_LOG_LINE(*phylo_tree, VB_MED, "Optimizing " << name
+    TREE_LOG_LINE(*report_to_tree, VB_MED, "Optimizing " << name
                   << " model parameters by EM algorithm...");
-    return optimizeWithEM();
+    return optimizeWithEM(report_to_tree);
 }
 
-double RateHeterotachy::optimizeWithEM() {
+double RateHeterotachy::optimizeWithEM(PhyloTree* report_to_tree) {
 
     // first compute _pattern_lh_cat
     phylo_tree->computePatternLhCat(WSL_RATECAT);

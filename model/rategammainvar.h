@@ -115,13 +115,14 @@ public:
 		optimize parameters
 		@return the best likelihood 
 	*/
-	virtual double optimizeParameters(double gradient_epsilon);
+	virtual double optimizeParameters(double gradient_epsilon,
+                                      PhyloTree* report_to_tree);
 
 	/**
         optimize rate parameters using EM algorithm
         @return log-likelihood of optimized parameters
     */
-	double optimizeWithEM();
+	double optimizeWithEM(PhyloTree* report_to_tree);
 
 	/**
 		return the number of dimensions
@@ -190,12 +191,14 @@ private:
     /**
      *  Optimize p_inv and gamma shape using the EM algorithm
      */
-	double optimizeWithEM(double gradient_epsilon);
+	double optimizeWithEM(double gradient_epsilon,
+                          PhyloTree* report_to_tree);
 
     /**
      *  Start with different initial values of p_inv
      */
-    double randomRestartOptimization(double gradient_epsilon);
+    double randomRestartOptimization(double gradient_epsilon,
+                                     PhyloTree* report_to_tree);
 
 #ifdef _MSC_VER
 	//Explicitly say, for member functions otherwise inherited via dominance

@@ -46,7 +46,7 @@ public:
 		constructor
 		@param tree associated tree for the model
 	*/
-    ModelDNA(PhyloTree *tree);
+    ModelDNA(PhyloTree *tree, PhyloTree* report_to_tree);
 
 	/**
 		constructor
@@ -54,14 +54,18 @@ public:
 		@param freq state frequency type
 		@param tree associated phylogenetic tree
 	*/
-    ModelDNA(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree);
+    ModelDNA(const char *model_name, string model_params,
+             StateFreqType freq, string freq_params,
+             PhyloTree *tree, PhyloTree* report_to_tree);
 
 	/**
 		initialization, called automatically by the constructor, no need to call it
 		@param model_name model name, e.g., JC, HKY.
 		@param freq state frequency type
 	*/
-    virtual void init(const char *model_name, string model_params, StateFreqType freq, string freq_params);
+    virtual void init(const char *model_name, string model_params,
+                      StateFreqType freq, string freq_params,
+                      PhyloTree* report_to_tree);
 
     /**
         start structure for checkpointing

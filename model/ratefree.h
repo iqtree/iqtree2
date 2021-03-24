@@ -70,13 +70,14 @@ public:
 		optimize parameters. Default is to optimize gamma shape
 		@return the best likelihood
 	*/
-	virtual double optimizeParameters(double gradient_epsilon);
+	virtual double optimizeParameters(double gradient_epsilon,
+                                      PhyloTree* report_to_tree);
 
     /** 
         optimize rate parameters using EM algorithm 
         @return log-likelihood of optimized parameters
     */
-    double optimizeWithEM();
+    double optimizeWithEM(PhyloTree* report_to_tree);
 
 	/**
 		return the number of dimensions

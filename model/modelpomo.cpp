@@ -13,7 +13,8 @@
 #include <boost/scoped_array.hpp>
 #endif
 
-ModelPoMo::ModelPoMo(PhyloTree *tree) : ModelMarkov(tree) {
+ModelPoMo::ModelPoMo(PhyloTree *tree, PhyloTree* report_to_tree)
+    : ModelMarkov(tree, report_to_tree) {
 }
 
 ModelPoMo::ModelPoMo(const char *model_name,
@@ -21,20 +22,21 @@ ModelPoMo::ModelPoMo(const char *model_name,
                      StateFreqType freq_type,
                      string freq_params,
                      PhyloTree *tree,
-                     string pomo_heterozygosity)
+                     string pomo_heterozygosity,
+                     PhyloTree* report_to_tree)
     // Set reversibility to true to allocate memory for objects (like
     // eigenvalues) necessary when the model is reversible.  In case
     // the model is not reversible memory for different object has to
     // be allocated separately.  This is done during the
     // initialization in ModelPoMo::init_mutation_model().
     : ModelMarkov(tree, true) {
-    init(model_name, model_params, freq_type, freq_params, pomo_heterozygosity);
+    init(model_name, model_params, freq_type, freq_params,
+         pomo_heterozygosity, report_to_tree);
 }
 
-void ModelPoMo::init_mutation_model(const char *model_name,
-                                        string model_params,
-                                        StateFreqType freq_type,
-                                        string freq_params)
+void ModelPoMo::init_mutation_model(const char *model_name,  string model_params,
+                                    StateFreqType freq_type, string freq_params,
+                                    PhyloTree* report_to_tree)
 {
     // Trick ModelDNA constructor by setting the number of states to 4 (DNA).
     phylo_tree->aln->num_states = n_alleles;
@@ -46,9 +48,12 @@ void ModelPoMo::init_mutation_model(const char *model_name,
             cout << "Initialize PoMo DNA mutation model." << endl;
         string model_str = model_name;
         if (ModelMarkov::validModelName(model_str))
-            mutation_model = ModelMarkov::getModelByName(model_str, phylo_tree, model_params, freq_type, freq_params);
+            mutation_model = ModelMarkov::getModelByName(model_str, phylo_tree,
+                                                         model_params, freq_type,
+                                                         freq_params, report_to_tree);
         else
-            mutation_model = new ModelDNA(model_name, model_params, freq_type, freq_params, phylo_tree);
+            mutation_model = new ModelDNA(model_name, model_params, freq_type,
+                                          freq_params, phylo_tree, report_to_tree);
     }
     catch (string str) {
         cout << "Error during initialization of the underlying mutation model of PoMo." << endl;
@@ -172,7 +177,8 @@ void ModelPoMo::init(const char *model_name,
                      string model_params,
                      StateFreqType freq_type,
                      string freq_params,
-                     string pomo_heterozygosity) {
+                     string pomo_heterozygosity,
+                     PhyloTree* report_to_tree) {
     // Initialize model constants.
     N = phylo_tree->aln->virtual_pop_size;
     n_alleles = 4;
@@ -182,10 +188,8 @@ void ModelPoMo::init(const char *model_name,
     ASSERT(num_states == (n_alleles + (n_alleles*(n_alleles-1)/2 * (N-1))) );
 
     // Main initialization of model and parameters.
-    init_mutation_model(model_name,
-                        model_params,
-                        freq_type,
-                        freq_params);
+    init_mutation_model(model_name, model_params,
+                        freq_type,  freq_params, report_to_tree);
     init_sampling_method();
     init_boundary_frequencies();
     // Initialize heterozygosity and the scale factor of the mutation rates
@@ -722,8 +726,9 @@ ModelPoMo::estimateEmpiricalBoundaryStateFreqs(double * freq_boundary_states)
             std::stringstream text;
             text.precision(6);
             text << "Absolute empirical state frequencies:" << std::endl;
-            for (int i = 0; i < num_states; i++)
+            for (int i = 0; i < num_states; i++) {
                 text << abs_state_freq[i] << " ";
+            }
             TREE_LOG_LINE(*phylo_tree, VB_MAX, text.str());
         }
         // Set highest_freq_state.

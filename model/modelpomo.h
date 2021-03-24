@@ -58,10 +58,12 @@ class ModelPoMo : virtual public ModelMarkov
      *
      * @return
      */
-    ModelPoMo(const char *model_name, string model_params, StateFreqType freq_type, string freq_params,
-              PhyloTree *tree, string pomo_heterozygosity);
+    ModelPoMo(const char *model_name, string model_params,
+              StateFreqType freq_type, string freq_params,
+              PhyloTree *tree, string pomo_heterozygosity,
+              PhyloTree* report_to_tree);
 
-    ModelPoMo(PhyloTree *tree);
+    ModelPoMo(PhyloTree *tree, PhyloTree* report_to_tree);
 
     ~ModelPoMo();
 
@@ -82,7 +84,8 @@ class ModelPoMo : virtual public ModelMarkov
                       string model_params,
                       StateFreqType freq_type,
                       string freq_params,
-                      string pomo_heterozygosity);
+                      string pomo_heterozygosity,
+                      PhyloTree* report_to_tree);
 
     /**
      *  \brief Initialize underlying mutation model.
@@ -95,10 +98,9 @@ class ModelPoMo : virtual public ModelMarkov
      * of polymorphism.
      *
      */
-    void init_mutation_model(const char *model_name,
-                             string model_params,
-                             StateFreqType freq_type,
-                             string freq_params);
+    void init_mutation_model(const char *model_name,  string model_params,
+                             StateFreqType freq_type, string freq_params,
+                             PhyloTree* report_to_tree);
 
     /**
      *  \brief Initialize sampling type.

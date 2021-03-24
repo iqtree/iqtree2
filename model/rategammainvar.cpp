@@ -131,7 +131,8 @@ void RateGammaInvar::setBounds(double *lower_bound, double *upper_bound,
 	RateInvar::setBounds(lower_bound+gid, upper_bound+gid, bound_check+gid);
 }
 
-double RateGammaInvar::optimizeParameters(double gradient_epsilon) {
+double RateGammaInvar::optimizeParameters(double gradient_epsilon,
+                                          PhyloTree* report_to_tree) {
 
 	int ndim = getNDim();
 
@@ -139,25 +140,25 @@ double RateGammaInvar::optimizeParameters(double gradient_epsilon) {
     if (ndim == 0) {
         return phylo_tree->computeLikelihood();
     }
-    TREE_LOG_LINE(*phylo_tree, VB_MED, "Optimizing " << name
+    TREE_LOG_LINE(*report_to_tree, VB_MED, "Optimizing " << name
                   << " model parameters by " << optimize_alg << " algorithm...");
 
 	if (optimize_alg.find("EM_RR") != string::npos) {
-        return randomRestartOptimization(gradient_epsilon);
+        return randomRestartOptimization(gradient_epsilon, report_to_tree);
     } else if (optimize_alg.find("Brent") != string::npos
                || phylo_tree->aln->frac_const_sites == 0.0 || isFixPInvar() || isFixGammaShape()) {
 		double lh = phylo_tree->computeLikelihood();
 		cur_optimize = 0;
-		double gamma_lh = RateGamma::optimizeParameters(gradient_epsilon);
+		double gamma_lh = RateGamma::optimizeParameters(gradient_epsilon, report_to_tree);
 		ASSERT(gamma_lh >= lh-0.1);
 		cur_optimize = 1;
 		double invar_lh = -DBL_MAX;
-        invar_lh = RateInvar::optimizeParameters(gradient_epsilon);
+        invar_lh = RateInvar::optimizeParameters(gradient_epsilon, report_to_tree);
 		ASSERT(invar_lh >= gamma_lh-0.1);
         cur_optimize = 0;
         return invar_lh;
 	} else if (optimize_alg.find("EM") != string::npos) {
-        return optimizeWithEM(gradient_epsilon);
+        return optimizeWithEM(gradient_epsilon, report_to_tree);
     } else if (optimize_alg.find("BFGS") != string::npos) {
         //if (freq_type == FREQ_ESTIMATE) scaleStateFreq(false);
         double *variables = new double[ndim+1];
@@ -223,11 +224,12 @@ int RateGammaInvar::computePatternRates(DoubleVector &pattern_rates,
     return ncategory+1;
 }
 
-double RateGammaInvar::optimizeWithEM(double gradient_epsilon) {
+double RateGammaInvar::optimizeWithEM(double gradient_epsilon,
+                                      PhyloTree* report_to_tree) {
     double curlh = phylo_tree->computeLikelihood();
 
     cur_optimize = 0;
-    double gamma_lh = RateGamma::optimizeParameters(gradient_epsilon);
+    double gamma_lh = RateGamma::optimizeParameters(gradient_epsilon, report_to_tree);
     if (!phylo_tree->params->ignore_any_errors) {
         ASSERT(gamma_lh > curlh - 1.0);
     }
@@ -265,9 +267,10 @@ double RateGammaInvar::optimizeWithEM(double gradient_epsilon) {
     return pinvLH;
 }
 
-double RateGammaInvar::randomRestartOptimization(double gradient_epsilon) {
+double RateGammaInvar::randomRestartOptimization(double gradient_epsilon,
+                                                 PhyloTree* report_to_tree) {
     if (testParamDone) {
-        return optimizeWithEM(gradient_epsilon);
+        return optimizeWithEM(gradient_epsilon, report_to_tree);
     }
     double frac_const = phylo_tree->aln->frac_const_sites;
     double bestLogl = phylo_tree->getCurScore();
@@ -286,7 +289,7 @@ double RateGammaInvar::randomRestartOptimization(double gradient_epsilon) {
         setPInvar(initPInv);
         setGammaShape(initAlpha);
         phylo_tree->clearAllPartialLH();
-        double logl = optimizeWithEM(gradient_epsilon);
+        double logl = optimizeWithEM(gradient_epsilon, report_to_tree);
         double estAlpha = getGammaShape();
         double estPInv = getPInvar();
 

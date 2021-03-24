@@ -20,15 +20,21 @@ public:
 		@param params program parameters
 		@param tree associated phylogenetic tree
 	*/
-	ModelFactoryMixlen(Params &params, string &model_name, PhyloTree *tree, ModelsBlock *models_block);
+	ModelFactoryMixlen(Params &params, string &model_name, PhyloTree *tree,
+                       ModelsBlock *models_block, PhyloTree* report_to_tree);
 
-	/**
-		optimize model parameters and tree branch lengths
-		@param fixed_len TRUE to fix branch lengths, default is false
-		@return the best likelihood 
-	*/
+    /**
+     optimize model parameters and tree branch lengths
+     @param fixed_len TRUE to fix branch lengths, default is false
+     @param write_info TRUE if information about parameters is to be logged
+     @param logl_epsilon
+     @param gradient_episilon
+     @param report_to_tree the phylo tree to report progress to
+     @return the best likelihood
+     */
 	virtual double optimizeParameters(int fixed_len = BRLEN_OPTIMIZE, bool write_info = true,
-                                      double logl_epsilon = 0.1, double gradient_epsilon = 0.0001);
+                                      double logl_epsilon = 0.1, double gradient_epsilon = 0.0001,
+                                      PhyloTree* report_to_tree = nullptr);
 
     /**
         sort classes in ascending order of tree lengths

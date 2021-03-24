@@ -92,7 +92,8 @@ public:
 		optimize parameters
 		@return the best likelihood 
 	*/
-	virtual double optimizeParameters(double gradient_epsilon);
+	virtual double optimizeParameters(double gradient_epsilon,
+                                      PhyloTree* report_to_tree);
 
 	/**
 		override function from Optimization class, used by the minimizeOneDimen() to optimize

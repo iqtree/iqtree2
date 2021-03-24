@@ -27,7 +27,7 @@ extern void loadBuiltInMixInModels(stringstream& here);
  */
 ModelSubst *createModel(string model_str, ModelsBlock *models_block,
                         StateFreqType freq_type, string freq_params,
-                        PhyloTree *tree);
+                        PhyloTree *tree, PhyloTree* report_to_tree);
 
 
 /**
@@ -42,11 +42,14 @@ public:
 		@param freq state frequency type
 		@param tree associated phylogenetic tree
 	*/
-    ModelMixture(string orig_model_name, string model_name, string model_list, ModelsBlock *models_block,
-    		StateFreqType freq, string freq_params, PhyloTree *tree, bool optimize_weights);
+    ModelMixture(string orig_model_name, string model_name, string model_list,
+                 ModelsBlock *models_block, StateFreqType freq, string freq_params,
+                 PhyloTree *tree, bool optimize_weights, PhyloTree* report_to_tree);
 
-    void initMixture(string orig_model_name, string model_name, string model_list, ModelsBlock *models_block,
-    		StateFreqType freq, string freq_params, PhyloTree *tree, bool optimize_weights);
+    void initMixture(string orig_model_name, string model_name,
+                     string model_list, ModelsBlock *models_block,
+                     StateFreqType freq, string freq_params, PhyloTree *tree,
+                     bool optimize_weights, PhyloTree* report_to_tree);
 
     void initMem();
 
@@ -54,7 +57,7 @@ public:
 		constructor
 		@param tree associated tree for the model
 	*/
-    ModelMixture(PhyloTree *tree);
+    ModelMixture(PhyloTree *tree, PhyloTree* report_to_tree);
 
 
     virtual ~ModelMixture();
@@ -181,7 +184,7 @@ public:
         @param gradient_epsilon
         @return log-likelihood of optimized parameters
     */
-    double optimizeWithEM(double gradient_epsilon);
+    double optimizeWithEM(double gradient_epsilon, PhyloTree* report_to_tree);
 
 
     /** 
@@ -197,7 +200,8 @@ public:
 		optimize model parameters
 		@return the best likelihood
 	*/
-	virtual double optimizeParameters(double gradient_epsilon);
+	virtual double optimizeParameters(double gradient_epsilon,
+                                      PhyloTree* report_to_tree);
 
 	/**
 	 * @return TRUE if parameters are at the boundary that may cause numerical unstability

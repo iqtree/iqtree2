@@ -7,13 +7,17 @@
 
 #include "modelmorphology.h"
 
-ModelMorphology::ModelMorphology(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree)
-: ModelMarkov(tree)
+ModelMorphology::ModelMorphology(const char *model_name, string model_params,
+                                 StateFreqType freq, string freq_params,
+                                 PhyloTree *tree, PhyloTree* report_to_tree)
+: ModelMarkov(tree, report_to_tree)
 {
-	init(model_name, model_params, freq, freq_params);
+	init(model_name, model_params, freq, freq_params, report_to_tree);
 }
 
-void ModelMorphology::init(const char *model_name, string model_params, StateFreqType freq, string freq_params)
+void ModelMorphology::init(const char *model_name, string model_params,
+                           StateFreqType freq, string freq_params,
+                           PhyloTree* report_to_tree)
 {
     name = model_name;
     full_name = model_name;
@@ -39,11 +43,11 @@ void ModelMorphology::init(const char *model_name, string model_params, StateFre
         name = "GTRX";
     } else {
         // if name does not match, read the user-defined model
-        readParameters(model_name);
+        readParameters(model_name, true, report_to_tree);
         num_params = 0;
         freq = FREQ_USER_DEFINED;
     }
-    ModelMarkov::init(freq);
+    ModelMarkov::init(freq, report_to_tree);
 }
 
 void ModelMorphology::readRates(istream &in) THROW_SPEC_2(const char*, string) {

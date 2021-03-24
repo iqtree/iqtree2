@@ -220,15 +220,17 @@ void PhyloSuperTreePlen::linkTrees() {
 
 
 double PhyloSuperTreePlen::optimizeAllBranches(int my_iterations, double tolerance,
-                                               int maxNRStep, bool were_lengths_consistent) {
-	//initPartitionInfo(); // OLGA: not needed here
-	//cout<<"Optimizing all branches"<<endl;
-	for(int part = 0; part < size(); part++){
-		part_info[part].cur_score = 0.0;
-	}
-
-	return PhyloTree::optimizeAllBranches(my_iterations,tolerance,
-                                          maxNRStep, were_lengths_consistent);
+                                               int maxNRStep, bool were_lengths_consistent,
+                                               PhyloTree* report_to_tree) {
+    //initPartitionInfo(); // OLGA: not needed here
+    //cout<<"Optimizing all branches"<<endl;
+    for(int part = 0; part < size(); part++){
+        part_info[part].cur_score = 0.0;
+    }
+    
+    return PhyloTree::optimizeAllBranches(my_iterations,tolerance,
+                                          maxNRStep, were_lengths_consistent,
+                                          report_to_tree);
 }
 
 void PhyloSuperTreePlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2,

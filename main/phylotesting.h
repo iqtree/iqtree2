@@ -76,17 +76,20 @@ public:
      @param models_block models block
      @param num_thread number of threads
      @param brlen_type BRLEN_OPTIMIZE | BRLEN_FIX | BRLEN_SCALE | TOPO_UNLINKED
+     @param report_to_tree tree to report progress to
      @return tree string
      */
     string evaluate(Params &params,
                     ModelCheckpoint &in_model_info, ModelCheckpoint &out_model_info,
-                    ModelsBlock *models_block, int &num_threads, int brlen_type);
+                    ModelsBlock *models_block, int &num_threads, int brlen_type,
+                    PhyloTree* report_to_tree);
     
     /**
      evaluate concatenated alignment
      */
     string evaluateConcatenation(Params &params, SuperAlignment *super_aln,
-                                 ModelCheckpoint &model_info, ModelsBlock *models_block, int num_threads);
+                                 ModelCheckpoint &model_info, ModelsBlock *models_block,
+                                 int num_threads, PhyloTree* report_to_tree);
 
     /**
      compute information criterion scores (AIC, AICc, BIC)

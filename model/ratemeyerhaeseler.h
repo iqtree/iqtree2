@@ -97,7 +97,8 @@ public:
 		optimize parameters, the rates in this case
 		@return the best likelihood 
 	*/
-	virtual double optimizeParameters(double epsilon);
+	virtual double optimizeParameters(double epsilon,
+                                      PhyloTree* report_to_tree);
 
 	/**
 		optimize rate of site

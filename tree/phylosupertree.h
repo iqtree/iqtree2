@@ -304,7 +304,8 @@ public:
             @return the likelihood of the tree
      */
     virtual double optimizeAllBranches(int my_iterations = 100, double tolerance = TOL_LIKELIHOOD,
-                                       int maxNRStep = 100, bool were_lengths_consistent = true);
+                                       int maxNRStep = 100, bool were_lengths_consistent = true,
+                                       PhyloTree* report_to_tree = nullptr);
 
     /**
             search the best swap for a branch

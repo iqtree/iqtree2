@@ -802,11 +802,12 @@ end;
 
 ModelProtein::ModelProtein(const char *model_name, string model_params,
                            StateFreqType freq, string freq_params,
-                           PhyloTree *tree, ModelsBlock* models_block)
+                           PhyloTree *tree, ModelsBlock* models_block,
+                           PhyloTree* report_to_tree)
  : ModelMarkov(tree, true, false)
 {
     this->models_block = models_block;
-	init(model_name, model_params, freq, freq_params);
+	init(model_name, model_params, freq, freq_params, report_to_tree);
 }
 
 void rescaleRates(double *rates, int nrates) {
@@ -824,7 +825,8 @@ void rescaleRates(double *rates, int nrates) {
 }
 
 void ModelProtein::init(const char *model_name, string model_params,
-                        StateFreqType freq, string freq_params) {
+                        StateFreqType freq, string freq_params,
+                        PhyloTree* report_to_tree) {
     ASSERT(num_states == 20);
     ASSERT(models_block && "models_block uninitialized");
     name = model_name;
@@ -840,7 +842,7 @@ void ModelProtein::init(const char *model_name, string model_params,
         if (nxs_model->flag != NM_ATOMIC) {
             outError("Invalid protein model name ", model_name);
         }
-        readParametersString(nxs_model->description);
+        readParametersString(nxs_model->description, true, report_to_tree);
         rescaleRates(rates, getNumRateEntries());
 
         double sum = 0.0;
@@ -855,7 +857,7 @@ void ModelProtein::init(const char *model_name, string model_params,
         num_params = 0;
 
     } else if (!model_params.empty()) {
-        readParametersString(model_params);
+        readParametersString(model_params, true, report_to_tree);
         rescaleRates(rates, getNumRateEntries());
         num_params = 0;
     } else if (name_upper == "GTR20") {
@@ -871,10 +873,10 @@ void ModelProtein::init(const char *model_name, string model_params,
         if (name_init!=nullptr) {
             nxs_model = models_block->findModel(name_init);
             if (nxs_model) {
-                readParametersString(nxs_model->description, false);
+                readParametersString(nxs_model->description, false, report_to_tree);
             } else {
                 // initialize with custom model file
-                readParameters(name_init, false);
+                readParameters(name_init, false, report_to_tree);
             }
             rescaleRates(rates, getNumRateEntries());
             if (!isReversible()) {
@@ -884,7 +886,7 @@ void ModelProtein::init(const char *model_name, string model_params,
             // initialize rate matrix with LG
             nxs_model = models_block->findModel("LG");
             ASSERT(nxs_model);
-            readParametersString(nxs_model->description, false);
+            readParametersString(nxs_model->description, false, report_to_tree);
             rescaleRates(rates, getNumRateEntries());
         }
         // 2018-05-08 bug fix: GTR20 rates are not optimized
@@ -902,10 +904,10 @@ void ModelProtein::init(const char *model_name, string model_params,
         if (name_init!=nullptr) {
             nxs_model = models_block->findModel(name_init);
             if (nxs_model) {
-                readParametersString(nxs_model->description, false);
+                readParametersString(nxs_model->description, false, report_to_tree);
             } else {
                 // initialize with custom model file
-                readParameters(name_init, false);
+                readParameters(name_init, false, report_to_tree);
             }
             rescaleRates(rates, getNumRateEntries());
             if (isReversible()) {
@@ -915,25 +917,25 @@ void ModelProtein::init(const char *model_name, string model_params,
             // initialize rate matrix with LG
             nxs_model = models_block->findModel("LG");
             ASSERT(nxs_model);
-            readParametersString(nxs_model->description, false);
+            readParametersString(nxs_model->description, false, report_to_tree);
             rescaleRates(rates, getNumRateEntries());
             setReversible(false);
         }
         num_params = getNumRateEntries()-1;
     } else {
         // if name does not match, read the user-defined model
-        readParameters(model_name);
+        readParameters(model_name, true, report_to_tree);
         rescaleRates(rates, getNumRateEntries());
         num_params = 0;
     }
     if (freq_params != "") {
-        readStateFreq(freq_params);
+        readStateFreq(freq_params, report_to_tree);
     }
     //assert(freq != FREQ_ESTIMATE);
     if (freq == FREQ_UNKNOWN) {
         freq = FREQ_USER_DEFINED;
     }
-    ModelMarkov::init(freq);
+    ModelMarkov::init(freq, report_to_tree);
 }
 
 void ModelProtein::startCheckpoint() {

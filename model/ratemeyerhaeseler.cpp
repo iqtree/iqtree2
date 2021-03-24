@@ -386,7 +386,7 @@ void RateMeyerHaeseler::optimizeRates() {
 
 }
 
-double RateMeyerHaeseler::optimizeParameters(double epsilon) {
+double RateMeyerHaeseler::optimizeParameters(double epsilon, PhyloTree* report_to_tree) {
 	ASSERT(phylo_tree);
 	double tree_lh = phylo_tree->computeLikelihood();
 
@@ -555,7 +555,7 @@ void RateMeyerHaeseler::runIterativeProc(Params &params, IQTree &tree) {
 		//DoubleVector prev_rates;
 		//getRates(prev_rates);
 		//writeSiteRates(prev_rates, rate_file.c_str());
-		tree.setCurScore(optimizeParameters(0.0));
+		tree.setCurScore(optimizeParameters(0.0, &tree));
 		tree.setCurScore(tree.optimizeAllBranches(i));
 		cout << "Current Log-likelihood: " << tree.getCurScore() << endl;
 		if (tree.getCurScore() <= prev_lh + 1e-4) {

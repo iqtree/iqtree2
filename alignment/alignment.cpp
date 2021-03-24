@@ -23,6 +23,7 @@
 #include <utils/timeutil.h>        //for getRealTime()
 #include <utils/tools.h>
 #include "alignmentsummary.h"
+#include <tree/phylotree.h>
 
 #include <Eigen/LU>
 #ifdef USE_BOOST
@@ -137,7 +138,7 @@ double chi2prob (int deg, double chi2)
 
 int Alignment::checkAbsentStates(string msg) {
     double *state_freq = new double[num_states];
-    computeStateFreq(state_freq);
+    computeStateFreq(state_freq, 0, nullptr);
     string absent_states, rare_states;
     int count = 0;
     // Skip check for PoMo.
@@ -211,7 +212,7 @@ void Alignment::checkSeqName() {
     boost::scoped_array<double> state_freq(new double[num_states]);
 #endif
     unsigned *count_per_seq = new unsigned[num_states*getNSeq()];
-    computeStateFreq(&state_freq[0]);
+    computeStateFreq(&state_freq[0], 0, nullptr);
     countStatePerSequence(count_per_seq);
 
     int df = -1; //degrees of freedom (for a chi-squared test)
@@ -5135,18 +5136,26 @@ void Alignment::convertCountToFreq(size_t *state_count, double *state_freq) {
 // TODO DS: This only works when the sampling method is SAMPLING_SAMPLED or when
 // the virtual population size is also the sample size (for every species and
 // every site).
-void Alignment::computeStateFreq (double *state_freq, size_t num_unknown_states) {
+void Alignment::computeStateFreq (double *state_freq,
+                                  size_t num_unknown_states,
+                                  PhyloTree* report_to_tree) {
     size_t *state_count = new size_t[STATE_UNKNOWN+1];
 
     countStates(state_count, num_unknown_states);
     convertCountToFreq(state_count, state_freq);
 
     if (verbose_mode >= VB_MED) {
+        if (report_to_tree != nullptr) {
+            report_to_tree->hideProgress();
+        }
         cout << "Empirical state frequencies: ";
         cout << setprecision(10);
         for (int i = 0; i < num_states; i++)
             cout << state_freq[i] << " ";
         cout << endl;
+        if (report_to_tree != nullptr) {
+            report_to_tree->showProgress();
+        }
     }
 
     delete [] state_count;

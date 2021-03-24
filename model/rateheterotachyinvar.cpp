@@ -78,9 +78,11 @@ void RateHeterotachyInvar::setBounds(double *lower_bound, double *upper_bound,
 	optimize parameters
 	@return the best likelihood
 */
-double RateHeterotachyInvar::optimizeParameters(double gradient_epsilon) {
+double RateHeterotachyInvar::optimizeParameters(double gradient_epsilon,
+                                                PhyloTree* report_to_tree) {
 	double tree_lh;
-	tree_lh = RateHeterotachy::optimizeParameters(gradient_epsilon);
+	tree_lh = RateHeterotachy::optimizeParameters(gradient_epsilon,
+                                                  report_to_tree);
 	return tree_lh;
 }
 

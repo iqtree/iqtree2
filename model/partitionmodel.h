@@ -40,7 +40,9 @@ public:
 		@param params program parameters
 		@param tree associated phylogenetic super-tree
 	*/
-	PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock *models_block);
+	PartitionModel(Params &params, PhyloSuperTree *tree,
+                   ModelsBlock *models_block,
+                   PhyloTree* report_to_tree);
 
     ~PartitionModel();
 
@@ -78,10 +80,12 @@ public:
         @param write_info TRUE to write model parameters every optimization step, FALSE to only print at the end
         @param logl_epsilon log-likelihood epsilon to stop
         @param gradient_epsilon gradient (derivative) epsilon to stop
+        @param report_to_tree phylo tree to report progress to 
 		@return the best likelihood 
 	*/
 	virtual double optimizeParameters(int fixed_len = BRLEN_OPTIMIZE, bool write_info = true,
-                                      double logl_epsilon = 0.1, double gradient_epsilon = 0.0001);
+                                      double logl_epsilon = 0.1, double gradient_epsilon = 0.0001,
+                                      PhyloTree* report_to_tree = nullptr);
 
 	/**
 	 *  optimize model parameters and tree branch lengths for the +I+G model
@@ -89,7 +93,10 @@ public:
 	 * 	@param fixed_len TRUE to fix branch lengths, default is false
 	 *	@return the best likelihood
 	 */
-	virtual double optimizeParametersGammaInvar(int fixed_len = BRLEN_OPTIMIZE, bool write_info = true, double logl_epsilon = 0.1, double gradient_epsilon = 0.0001);
+	virtual double optimizeParametersGammaInvar(int fixed_len = BRLEN_OPTIMIZE,
+                                                bool write_info = true, double logl_epsilon = 0.1,
+                                                double gradient_epsilon = 0.0001,
+                                                PhyloTree* report_to_tree = nullptr);
 
 	/**
 	 * @return TRUE if parameters are at the boundary that may cause numerical unstability
@@ -132,10 +139,12 @@ public:
      */
     
     /** optimize linked model parameter of over all partitions */
-    double optimizeLinkedModel(bool write_info, double gradient_epsilon);
+    double optimizeLinkedModel(bool write_info, double gradient_epsilon,
+                               PhyloTree* report_to_tree);
 
     /** optimize all linked models parameter of over all partitions */
-    double optimizeLinkedModels(bool write_info, double gradient_epsilon);
+    double optimizeLinkedModels(bool write_info, double gradient_epsilon,
+                                PhyloTree* report_to_tree);
 
     void reportLinkedModel(ostream &out);
 

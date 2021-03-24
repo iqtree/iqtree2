@@ -53,7 +53,8 @@ public:
         @param model_name full model name
 		@param tree associated phylogenetic tree
 	*/
-	ModelFactory(Params &params, string &model_name, PhyloTree *tree, ModelsBlock *models_block);
+	ModelFactory(Params &params, string &model_name, PhyloTree *tree,
+                 ModelsBlock *models_block, PhyloTree* report_to_tree);
 
     string getDefaultModelName(PhyloTree *tree, Params &params);
     
@@ -85,7 +86,8 @@ public:
                          ModelInfo& model_info, string& model_str,
                          StateFreqType freq_type, string& freq_params,
                          bool optimize_mixmodel_weight,
-                         PhyloTree* tree);
+                         PhyloTree* tree,
+                         PhyloTree* report_to_tree);
     void initializeAscertainmentCorrection(ModelInfo& rate_info,
                                            std::string &rate_str,
                                            PhyloTree* tree);
@@ -99,7 +101,8 @@ public:
                                 const std::string& freq_params,
                                 const StateFreqType freq_type,
                                 bool optimize_mixmodel_weight,
-                                PhyloTree *tree);
+                                PhyloTree *tree,
+                                PhyloTree* report_to_tree);
     
     /**
         set checkpoint object
@@ -198,19 +201,28 @@ public:
         @param write_info TRUE to write model parameters every optimization step, FALSE to only print at the end
         @param logl_epsilon log-likelihood epsilon to stop
         @param gradient_epsilon gradient (derivative) epsilon to stop
+        @param report_to_tree report proress to this tree
 		@return the best likelihood 
 	*/
 	virtual double optimizeParameters(int fixed_len = BRLEN_OPTIMIZE, bool write_info = true,
-                                      double logl_epsilon = 0.1, double gradient_epsilon = 0.0001);
+                                      double logl_epsilon = 0.1, double gradient_epsilon = 0.0001,
+                                      PhyloTree* report_to_tree = nullptr);
 
-	/**
-	 *  optimize model parameters and tree branch lengths for the +I+G model
-	 *  using restart strategy.
-	 * 	@param fixed_len TRUE to fix branch lengths, default is false
-	 *	@return the best likelihood
-	 */
-	virtual double optimizeParametersGammaInvar(int fixed_len = BRLEN_OPTIMIZE, bool write_info = true,
-												double logl_epsilon = 0.1, double gradient_epsilon = 0.0001);
+    /**
+     *  optimize model parameters and tree branch lengths for the +I+G model
+     *  using restart strategy.
+     * @param fixed_len TRUE to fix branch lengths, default is false
+     * @param write_info TRUE to write model parameters every optimization step, FALSE to only print at the end
+     * @param logl_epsilon log-likelihood epsilon to stop
+     * @param gradient_epsilon gradient (derivative) epsilon to stop
+     * @param report_to_tree report proress to this tree
+     *	@return the best likelihood
+     */
+    virtual double optimizeParametersGammaInvar(int fixed_len = BRLEN_OPTIMIZE,
+                                                bool write_info = true,
+                                                double logl_epsilon = 0.1,
+                                                double gradient_epsilon = 0.0001,
+                                                PhyloTree* report_to_tree = nullptr);
 
 	/**
 	 * @return TRUE if parameters are at the boundary that may cause numerical unstability
@@ -257,7 +269,8 @@ public:
 	 * @param gradient_epsilon to control stop
      * @param cur_logl current log-likelihood
 	 */
-	double optimizeParametersOnly(int num_steps, double gradient_epsilon, double cur_logl);
+	double optimizeParametersOnly(int num_steps, double gradient_epsilon,
+                                  double cur_logl, PhyloTree* report_to_tree);
 
 	/************* FOLLOWING FUNCTIONS SERVE FOR JOINT OPTIMIZATION OF MODEL AND RATE PARAMETERS *******/
 
@@ -304,7 +317,8 @@ protected:
     DoubleVector optimizeGammaInvWithInitValue(int fixed_len, double logl_epsilon,
                                                double gradient_epsilon,
                                                double initPInv, double initAlpha,
-                                               DoubleVector &lenvec, Checkpoint *model_ckp);
+                                               DoubleVector &lenvec, Checkpoint *model_ckp,
+                                               PhyloTree* report_to_tree);
 };
 
 #endif

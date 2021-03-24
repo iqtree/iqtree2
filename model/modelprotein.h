@@ -38,14 +38,18 @@ public:
 		@param freq state frequency type
 		@param tree associated phylogenetic tree
 	*/
-    ModelProtein(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree, ModelsBlock *models_block);
+    ModelProtein(const char *model_name, string model_params, StateFreqType freq,
+                 string freq_params, PhyloTree *tree, ModelsBlock *models_block,
+                 PhyloTree* report_to_tree);
 
 	/**
 		initialization, called automatically by the constructor, no need to call it
 		@param model_name model name, e.g., JTT, WAG.
 		@param freq state frequency type
 	*/
-	virtual void init(const char *model_name, string model_params, StateFreqType freq, string freq_params);
+	virtual void init(const char *model_name, string model_params,
+                      StateFreqType freq, string freq_params,
+                      PhyloTree* report_to_tree);
 
     /**
         start structure for checkpointing

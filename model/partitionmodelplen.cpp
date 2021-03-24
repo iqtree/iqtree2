@@ -26,8 +26,9 @@ PartitionModelPlen::PartitionModelPlen()
 }
 
 PartitionModelPlen::PartitionModelPlen(Params &params, PhyloSuperTreePlen *tree,
-                                       ModelsBlock *models_block)
-    : PartitionModel(params, tree, models_block)
+                                       ModelsBlock *models_block,
+                                       PhyloTree* report_to_tree)
+    : PartitionModel(params, tree, models_block, report_to_tree)
 {
     //    optimizing_part = -1;
 }
@@ -76,8 +77,12 @@ void PartitionModelPlen::restoreCheckpoint() {
 
 
 double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info,
-                                              double logl_epsilon, double gradient_epsilon) {
+                                              double logl_epsilon, double gradient_epsilon,
+                                              PhyloTree* report_to_tree) {
     PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
+    if (report_to_tree==nullptr) {
+        report_to_tree = tree;
+    }
     double tree_lh = 0.0, cur_lh = 0.0;
     int ntrees = static_cast<int>(tree->size());
     
@@ -97,7 +102,9 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info,
 //    }
     tree_lh = tree->computeLikelihood();
     
+    report_to_tree->hideProgress();
     cout<<"Initial log-likelihood: "<<tree_lh<<endl;
+    report_to_tree->showProgress();
     double begin_time = getRealTime();
     int i;
     for(i = 1; i < tree->params->num_param_iterations; i++){
@@ -111,7 +118,8 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info,
             // Subtree model parameters optimization
             tree->part_info[part].cur_score = tree->at(part)->getModelFactory()->
                 optimizeParametersOnly(i+1, gradient_epsilon/min(min(i,ntrees),10),
-                                       tree->part_info[part].cur_score);
+                                       tree->part_info[part].cur_score,
+                                       report_to_tree);
             if (tree->part_info[part].cur_score == 0.0)
                 tree->part_info[part].cur_score = tree->at(part)->computeLikelihood();
             cur_lh += tree->part_info[part].cur_score;
@@ -135,13 +143,15 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info,
 
         // optimize linked models
         if (!linked_models.empty()) {
-            double new_cur_lh = optimizeLinkedModels(write_info, gradient_epsilon);
+            double new_cur_lh = optimizeLinkedModels(write_info, gradient_epsilon,
+                                                     report_to_tree);
             ASSERT(new_cur_lh > cur_lh - 0.1);
             cur_lh = new_cur_lh;
         }
 
-        if (verbose_mode >= VB_MED)
+        if (verbose_mode >= VB_MED) {
             cout << "LnL after optimizing individual models: " << cur_lh << endl;
+        }
         if (cur_lh <= tree_lh - 1.0) {
             // more info for ASSERTION
             writeInfo(cout);
@@ -174,7 +184,9 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info,
             ASSERT(new_lh > cur_lh - 1.0);
             cur_lh = new_lh;
         }
-        cout<<"Current log-likelihood at step "<<i<<": "<<cur_lh<<endl;
+        report_to_tree->hideProgress();
+        cout<<"Current log-likelihood at step " << i << ": " << cur_lh<<endl;
+        report_to_tree->showProgress();
         if(fabs(cur_lh-tree_lh) < logl_epsilon) {
             tree_lh = cur_lh;
             break;
@@ -184,23 +196,25 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info,
         tree_lh = cur_lh;
     }
     //    cout <<"OPTIMIZE MODEL has finished"<< endl;
-    if (write_info)
+    if (write_info) {
         writeInfo(cout);
-
+    }
     // write linked_models
     if (verbose_mode <= VB_MIN && write_info) {
-        for (auto it = linked_models.begin(); it != linked_models.end(); it++)
+        for (auto it = linked_models.begin(); it != linked_models.end(); it++) {
             it->second->writeInfo(cout);
+        }
     }
-
+    report_to_tree->hideProgress();
     cout << "Parameters optimization took " << i-1 << " rounds"
-        << " (" << getRealTime()-begin_time << " sec)" << endl << endl;
-    
+         << " (" << getRealTime()-begin_time << " sec)" << endl << endl;
+    report_to_tree->showProgress();
     return tree_lh;
 }
 
 double PartitionModelPlen::optimizeParametersGammaInvar(int fixed_len, bool write_info,
-                                                        double logl_epsilon, double gradient_epsilon) {
+                                                        double logl_epsilon, double gradient_epsilon,
+                                                        PhyloTree* report_to_tree) {
     outError("Thorough I+G parameter optimization does not work"
              " with edge-linked partition model yet");
     return 0.0;
@@ -282,7 +296,7 @@ double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
 int PartitionModelPlen::getNParameters(int brlen_type) {
     PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
     int df = 0;
-    for (PhyloSuperTreePlen::iterator it = tree->begin(); it != tree->end(); it++) {
+    for (auto it = tree->begin(); it != tree->end(); it++) {
         df += (*it)->getModelFactory()->model->getNDim() +
         (*it)->getModelFactory()->model->getNDimFreq() +
         (*it)->getModelFactory()->site_rate->getNDim();

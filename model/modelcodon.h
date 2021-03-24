@@ -41,8 +41,9 @@ public:
 		@param freq state frequency type
 		@param tree associated phylogenetic tree
 	*/
-	ModelCodon(const char *model_name, string model_params, StateFreqType freq, string freq_params,
-    		PhyloTree *tree);
+	ModelCodon(const char *model_name, string model_params,
+               StateFreqType freq, string freq_params,
+               PhyloTree *tree, PhyloTree* report_to_tree);
 
 	/**
 	 * destructor
@@ -75,7 +76,9 @@ public:
 		@param model_name model name, e.g., JC, HKY.
 		@param freq state frequency type
 	*/
-	virtual void init(const char *model_name, string model_params, StateFreqType freq, string freq_params);
+	virtual void init(const char *model_name, string model_params,
+                      StateFreqType freq, string freq_params,
+                      PhyloTree* report_to_tree);
 
 	StateFreqType initCodon(const char *model_name, StateFreqType freq, bool reset_params);
 
@@ -138,7 +141,7 @@ public:
 		optimize model parameters
 		@return the best likelihood
 	*/
-	virtual double optimizeParameters(double gradient_epsilon);
+	virtual double optimizeParameters(double gradient_epsilon, PhyloTree* report_to_tree);
 
 	/** 3x4 matrix of nucleotide frequencies at 1st,2nd,3rd codon position */
 	double *ntfreq;
