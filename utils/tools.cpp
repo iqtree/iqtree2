@@ -2486,6 +2486,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc) {
                     throw "-lk x86|SSE|AVX|FMA|AVX512";
                 }
+                arg=argv[argc];
                 if (arg=="x86") {
                     params.SSE = LK_386;
                 }
