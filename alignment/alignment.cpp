@@ -884,6 +884,41 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
         }
 }
 
+void Alignment::extractSequences(char *filename, char *sequence_type, StrVector &sequences, int &nseq, int &nsite){
+    InputType intype = detectInputFile(filename);
+
+    try {
+        if (intype == IN_NEXUS) {
+            outError("Unsupported sequence format, please use PHYLIP, FASTA, CLUSTAL, MSF format");
+        } else if (intype == IN_FASTA) {
+            cout << "Fasta format detected" << endl;
+            doReadFasta(filename, sequence_type, sequences, nseq, nsite);
+        } else if (intype == IN_PHYLIP) {
+            cout << "Phylip format detected" << endl;
+            if (Params::getInstance().phylip_sequential_format)
+                doReadPhylipSequential(filename, sequence_type, sequences, nseq, nsite);
+            else
+                doReadPhylip(filename, sequence_type, sequences, nseq, nsite);
+        } else if (intype == IN_COUNTS) {
+            outError("Unsupported sequence format, please use PHYLIP, FASTA, CLUSTAL, MSF format");
+        } else if (intype == IN_CLUSTAL) {
+            cout << "Clustal format detected" << endl;
+            doReadClustal(filename, sequence_type, sequences, nseq, nsite);
+        } else if (intype == IN_MSF) {
+            cout << "MSF format detected" << endl;
+            doReadMSF(filename, sequence_type, sequences, nseq, nsite);
+        } else {
+            outError("Unknown sequence format, please use PHYLIP, FASTA, CLUSTAL, MSF format");
+        }
+    } catch (ios::failure) {
+        outError(ERR_READ_INPUT);
+    } catch (const char *str) {
+        outError(str);
+    } catch (string str) {
+        outError(str);
+    }
+}
+
 /**
 	determine if the pattern is constant. update the is_const variable.
 */
@@ -1887,16 +1922,14 @@ void processSeq(string &sequence, string &line, int line_num) {
     }
 }
 
-int Alignment::readPhylip(char *filename, char *sequence_type) {
-
-    StrVector sequences;
+void Alignment::doReadPhylip(char *filename, char *sequence_type, StrVector &sequences, int &nseq, int &nsite)
+{
     ostringstream err_str;
     igzstream in;
     int line_num = 1;
     // set the failbit and badbit
     in.exceptions(ios::failbit | ios::badbit);
     in.open(filename);
-    int nseq = 0, nsite = 0;
     int seq_id = 0;
     string line;
     // remove the failbit
@@ -1959,20 +1992,26 @@ int Alignment::readPhylip(char *filename, char *sequence_type) {
     // set the failbit again
     in.exceptions(ios::failbit | ios::badbit);
     in.close();
+}
+
+int Alignment::readPhylip(char *filename, char *sequence_type) {
+    StrVector sequences;
+    int nseq = 0, nsite = 0;
+    
+    doReadPhylip(filename, sequence_type, sequences, nseq, nsite);
 
     return buildPattern(sequences, sequence_type, nseq, nsite);
 }
 
-int Alignment::readPhylipSequential(char *filename, char *sequence_type) {
-
-    StrVector sequences;
+void Alignment::doReadPhylipSequential(char *filename, char *sequence_type, StrVector &sequences, int &nseq, int &nsite)
+{
     ostringstream err_str;
     igzstream in;
     int line_num = 1;
     // set the failbit and badbit
     in.exceptions(ios::failbit | ios::badbit);
     in.open(filename);
-    int nseq = 0, nsite = 0;
+    
     int seq_id = 0;
     string line;
     // remove the failbit
@@ -2021,12 +2060,19 @@ int Alignment::readPhylipSequential(char *filename, char *sequence_type) {
     // set the failbit again
     in.exceptions(ios::failbit | ios::badbit);
     in.close();
+}
+
+int Alignment::readPhylipSequential(char *filename, char *sequence_type) {
+
+    StrVector sequences;
+    int nseq = 0, nsite = 0;
+    
+    doReadPhylipSequential(filename, sequence_type, sequences, nseq, nsite);
 
     return buildPattern(sequences, sequence_type, nseq, nsite);
 }
 
-int Alignment::readFasta(char *filename, char *sequence_type) {
-    StrVector sequences;
+void Alignment::doReadFasta(char *filename, char *sequence_type, StrVector &sequences, int &nseq, int &nsite){
     ostringstream err_str;
     igzstream in;
     // ifstream in;
@@ -2117,13 +2163,24 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
     }
 
     seq_names = new_seq_names;
-
-    return buildPattern(sequences, sequence_type, seq_names.size(), sequences.front().length());
+    
+    nseq = seq_names.size();
+    nsite = sequences.front().length();
+    
 }
 
-int Alignment::readClustal(char *filename, char *sequence_type) {
-
+int Alignment::readFasta(char *filename, char *sequence_type) {
     StrVector sequences;
+    int nseq = 0;
+    int nsite = 0;
+    
+    doReadFasta(filename, sequence_type, sequences, nseq, nsite);
+    
+
+    return buildPattern(sequences, sequence_type, nseq, nsite);
+}
+
+void Alignment::doReadClustal(char *filename, char *sequence_type, StrVector &sequences, int &nseq, int &nsite){
     igzstream in;
     int line_num = 1;
     string line;
@@ -2178,17 +2235,27 @@ int Alignment::readClustal(char *filename, char *sequence_type) {
 
     if (sequences.empty())
         throw "No sequences found. Please check input (e.g. newline character)";
+    
+    nseq = seq_names.size();
+    nsite = sequences.front().length();
+}
 
-    return buildPattern(sequences, sequence_type, seq_names.size(), sequences.front().length());
+
+int Alignment::readClustal(char *filename, char *sequence_type) {
+
+    StrVector sequences;
+    int nseq = 0;
+    int nsite = 0;
+    
+    doReadClustal(filename, sequence_type, sequences, nseq, nsite);
+    
+    return buildPattern(sequences, sequence_type, nseq, nsite);
 
 
 }
 
-
-int Alignment::readMSF(char *filename, char *sequence_type) {
-
-
-    StrVector sequences;
+void Alignment::doReadMSF(char *filename, char *sequence_type, StrVector &sequences, int &nseq, int &nsite){
+    
     igzstream in;
     int line_num = 1;
     string line;
@@ -2282,9 +2349,21 @@ int Alignment::readMSF(char *filename, char *sequence_type) {
     // set the failbit again
     in.exceptions(ios::failbit | ios::badbit);
     in.close();
-    return buildPattern(sequences, sequence_type, seq_names.size(), sequences.front().length());
+    
+    nseq = seq_names.size();
+    nsite = sequences.front().length();
+}
+
+int Alignment::readMSF(char *filename, char *sequence_type) {
 
 
+    StrVector sequences;
+    int nseq = 0;
+    int nsite = 0;
+    
+    doReadMSF(filename, sequence_type, sequences, nseq, nsite);
+
+    return buildPattern(sequences, sequence_type, nseq, nsite);
 }
 
 // TODO: Use outWarning to print warnings.

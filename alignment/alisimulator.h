@@ -41,12 +41,7 @@ protected:
     /**
     *  generate an alignment from a tree (model, alignment instances are supplied via the IQTree instance)
     */
-    void generateSingleDatasetFromSingleTree(string output_filepath);
-
-    /**
-    *  get the ancestral sequence for the root node (from an input file or randomly generated)
-    */
-    IntVector getAncestralSequence();
+    void generateSingleDatasetFromSingleTree(string output_filepath, IntVector ancestral_sequence);
 
     /**
     *  retrieve the ancestral sequence for the root node from an input file

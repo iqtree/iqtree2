@@ -101,11 +101,8 @@ void AliSimulator::initializeModel()
 /**
 *  generate an alignment from a tree (model, alignment instances are supplied via the IQTree instance)
 */
-void AliSimulator::generateSingleDatasetFromSingleTree(string output_filepath)
+void AliSimulator::generateSingleDatasetFromSingleTree(string output_filepath, IntVector ancestral_sequence)
 {
-    // get the ancestral sequence from file or generate it randomly
-    IntVector ancestral_sequence = getAncestralSequence();
-    
     // set ancestral sequence to the root node
     tree->MTree::root->sequence = ancestral_sequence;
     
@@ -121,30 +118,27 @@ void AliSimulator::generateSingleDatasetFromSingleTree(string output_filepath)
 */
 void AliSimulator::generateMultipleAlignmentsFromSingleTree()
 {
+    // Get/Generate the ancestral sequence
+    IntVector ancestral_sequence;
+    // retrieve the ancestral sequence from input file if its position is specified in the input parameter
+    if (params->alisim_ancestral_sequence >= 0)
+        ancestral_sequence = retrieveAncestralSequenceFromInputFile(params->alisim_ancestral_sequence);
+    
     // iteratively generate multiple datasets for each tree
     for (int i = 0; i < params->alisim_dataset_num; i++)
     {
+        // if the ancestral sequence is not specified, randomly generate the sequence
+        if (params->alisim_ancestral_sequence < 0)
+            ancestral_sequence = generateRandomSequence(params->alisim_sequence_length);
+        
         // initialize output_filepath
         std::string output_filepath(params->user_file);
         output_filepath = output_filepath
         +"_"+params->alisim_output_filename
         +"_"+convertIntToString(i)+".phy";
         
-        generateSingleDatasetFromSingleTree(output_filepath);
+        generateSingleDatasetFromSingleTree(output_filepath, ancestral_sequence);
     }
-}
-
-/**
-*  get the ancestral sequence for the root node (from an input file or randomly generated)
-*/
-IntVector AliSimulator::getAncestralSequence()
-{
-    // retrieve the ancestral sequence from input file if its position is specified in the input parameter
-    if (params->alisim_ancestral_sequence >= 0)
-        return retrieveAncestralSequenceFromInputFile(params->alisim_ancestral_sequence);
-    
-    // otherwise, randomly generate the sequence
-    return generateRandomSequence(params->alisim_sequence_length);
 }
 
 /**
@@ -154,12 +148,23 @@ IntVector AliSimulator:: retrieveAncestralSequenceFromInputFile(int sequence_pos
 {
     IntVector sequence;
     
-    // FAKE -> fixed the input sequence instead of retrieved it from the input file
-    string sequence_str = "GGAGAGTGTCCTGACCTGGAAGGAATACCTGTAAAGGGGGCGCCATTTATAAAACTACATAGATGGCTCAAAACTAGGACCATAATGCCGGTCCTCAAGG";
+    // read sequences from the input file
+    Alignment *aln = new Alignment();
+    StrVector sequences;
+    int nseq = 0, nsite = 0;
+    aln->extractSequences(params->aln_file, params->sequence_type, sequences, nseq, nsite);
     
-    sequence.resize(sequence_str.length());
+    // validate sequence_position
+    if (sequence_position > nseq)
+        outError("The position of the ancestral sequence (" + convertIntToString(sequence_position) + ") is exceeding the number of sequences in the input file ("+convertIntToString(nseq)+")");
+    
+    // overwrite the output sequence_length
+    params->alisim_sequence_length = nsite;
+    string sequence_str = sequences[sequence_position - 1];
+    
+    sequence.resize(nsite);
     // convert the input sequence into (numerical states) sequence
-    for (int i = 0; i < sequence_str.length(); i++)
+    for (int i = 0; i < nsite; i++)
         sequence[i] = tree->aln->convertState(sequence_str[i]);
         
     return sequence;

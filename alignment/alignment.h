@@ -197,6 +197,14 @@ public:
     int readNexus(char *filename);
 
     int buildPattern(StrVector &sequences, char *sequence_type, int nseq, int nsite);
+    
+    /**
+            do-read the alignment in PHYLIP format (interleaved)
+            @param filename file name
+            @param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
+            @param sequences, nseq, nsite
+     */
+    void doReadPhylip(char *filename, char *sequence_type, StrVector &sequences, int &nseq, int &nsite);
 
     /**
             read the alignment in PHYLIP format (interleaved)
@@ -205,6 +213,14 @@ public:
             @return 1 on success, 0 on failure
      */
     int readPhylip(char *filename, char *sequence_type);
+    
+    /**
+            do-read the alignment in sequential PHYLIP format
+            @param filename file name
+            @param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
+            @param sequences, nseq, nsite
+     */
+    void doReadPhylipSequential(char *filename, char *sequence_type, StrVector &sequences, int &nseq, int &nsite);
 
     /**
             read the alignment in sequential PHYLIP format
@@ -213,6 +229,14 @@ public:
             @return 1 on success, 0 on failure
      */
     int readPhylipSequential(char *filename, char *sequence_type);
+    
+    /**
+            do-read the alignment in FASTA format
+            @param filename file name
+            @param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
+            @param sequences, nseq, nsite
+     */
+    void doReadFasta(char *filename, char *sequence_type, StrVector &sequences, int &nseq, int &nsite);
 
     /**
             read the alignment in FASTA format
@@ -233,6 +257,14 @@ public:
      * @return 1 on success, 0 on failure
      */
     int readCountsFormat(char *filename, char *sequence_type);
+    
+    /**
+            do-read the alignment in CLUSTAL format.
+            @param filename file name
+            @param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
+            @param sequences, nseq, nsite
+     */
+    void doReadClustal(char *filename, char *sequence_type, StrVector &sequences, int &nseq, int &nsite);
 
     /**
             read the alignment in CLUSTAL format
@@ -241,6 +273,14 @@ public:
             @return 1 on success, 0 on failure
      */
     int readClustal(char *filename, char *sequence_type);
+    
+    /**
+            do-read the alignment in MSF format.
+            @param filename file name
+            @param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
+            @param sequences, nseq, nsite
+     */
+    void doReadMSF(char *filename, char *sequence_type, StrVector &sequences, int &nseq, int &nsite);
 
     /**
             read the alignment in MSF format
@@ -255,6 +295,15 @@ public:
             @param data_block data block of nexus file
      */
     void extractDataBlock(NxsCharactersBlock *data_block);
+    
+    /**
+            extract sequences, nseq, nsite from an input file.
+            @param filename file name
+            @param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
+            @param sequences, nseq, nsite
+     */
+    void extractSequences(char *filename, char *sequence_type, StrVector &sequences, int &nseq, int &nsite);
+
 
     vector<Pattern> ordered_pattern;
     
