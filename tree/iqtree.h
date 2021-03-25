@@ -819,7 +819,12 @@ public:
         compute rootstrap supports for rooted tree, 2021-01-19 for Suha's paper
      */
     void computeRootstrap(StrVector &rooted_trees);
-    
+
+    /**
+        compute rootstrap supports for unrooted tree using outgroup, 2021-01-19 for Suha's paper
+     */
+    void computeRootstrapUnrooted(StrVector &unrooted_trees, const char* outgroup);
+
     int getDelete() const;
     void setDelete(int _delete);
 

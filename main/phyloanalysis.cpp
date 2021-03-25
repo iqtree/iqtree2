@@ -870,6 +870,9 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
             cout << "  ML tree with rootstrap:        " << params.out_prefix << ".rootstrap.nex" << endl;
 
         }
+        if (params.root_test) {
+            cout << "  Root testing results:          " << params.out_prefix << ".roottest.csv" << endl;
+        }
         if (params.print_ufboot_trees)
         cout << "  UFBoot trees:                  " << params.out_prefix << ".ufboot" << endl;
 
@@ -2607,13 +2610,13 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
     if (params.root_test) {
         cout << "Testing root positions..." << endl;
-        string out_file = (string)params.out_prefix + ".rooted_trees";
+        string out_file = (string)params.out_prefix + ".roottest.trees";
         IntVector branch_ids;
         iqtree->testRootPosition(true, params.loglh_epsilon, branch_ids, out_file);
         vector<TreeInfo> info;
         IntVector distinct_ids;
         evaluateTrees(out_file, params, iqtree, info, distinct_ids);
-        out_file = out_file + ".csv";
+        out_file = (string)params.out_prefix + ".roottest.csv";
         printTreeTestResults(info, distinct_ids, branch_ids, out_file);
     }
     
@@ -2668,6 +2671,15 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         iqtree->computeRootstrap(iqtree->boot_trees);
         iqtree->readTreeString(saved);
     }
+
+    /*
+    if (!iqtree->rooted && params.root && params.gbo_replicates && params.online_bootstrap) {
+        cout << "Computing rootstrap supports using outgroup..." << endl;
+        string saved = iqtree->getTreeString();
+        iqtree->computeRootstrapUnrooted(iqtree->boot_trees, params.root);
+        iqtree->readTreeString(saved);
+    }
+    */
     
     if (params.gbo_replicates && params.online_bootstrap && !iqtree->isSuperTreeUnlinked()) {
         
