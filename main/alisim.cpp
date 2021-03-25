@@ -49,4 +49,7 @@ void runAliSim(Params params)
     alisimulator->generateMultipleAlignmentsFromSingleTree();
     
     cout << "[Alignment Simulator] Done"<<"\n";
+    
+    // delete alisimulator
+    delete alisimulator;
 }

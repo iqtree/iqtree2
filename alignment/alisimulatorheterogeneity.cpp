@@ -60,6 +60,9 @@ void AliSimulatorHeterogeneity::getSiteSpecificRatesContinuousGamma(double *site
     RateContinuousGamma *rate_continuous_gamma = new RateContinuousGamma(rate_heterogeneity->getGammaShape(), params->ran_seed);
     
     rate_continuous_gamma->getSiteSpecificRates(site_specific_rates, sequence_length);
+    
+    // delete rate_continuous_gamma
+    delete rate_continuous_gamma;
 }
 
 /**

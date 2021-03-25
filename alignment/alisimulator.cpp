@@ -13,6 +13,17 @@ AliSimulator::AliSimulator(Params *input_params)
     AliSimulator::initializeIQTreeFromTreeFile();
 }
 
+AliSimulator::~AliSimulator()
+{
+    if (!tree || !(tree->aln)) return;
+    
+    // delete aln
+    delete tree->aln;
+    
+    // delete tree
+    delete tree;
+}
+
 /**
 *  show all input parameters for AliSim
 */
@@ -153,6 +164,9 @@ IntVector AliSimulator:: retrieveAncestralSequenceFromInputFile(int sequence_pos
     StrVector sequences;
     int nseq = 0, nsite = 0;
     aln->extractSequences(params->aln_file, params->sequence_type, sequences, nseq, nsite);
+    
+    // delete aln
+    delete aln;
     
     // validate sequence_position
     if (sequence_position > nseq)

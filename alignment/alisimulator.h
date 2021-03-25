@@ -113,6 +113,11 @@ public:
         constructor
     */
     AliSimulator(Params *params);
+    
+    /**
+        deconstructor
+    */
+    ~AliSimulator();
 
     /**
     *  show all input parameters for AliSim
