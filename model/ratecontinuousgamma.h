@@ -70,7 +70,7 @@ protected:
     */
     double gamma_shape;
     
-    int seed;
+    default_random_engine generator;
 
 };
 

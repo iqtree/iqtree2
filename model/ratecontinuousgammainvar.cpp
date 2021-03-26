@@ -37,11 +37,7 @@ string RateContinuousGammaInvar::getNameParams() {
 void RateContinuousGammaInvar::getSiteSpecificRates(double * site_specific_rates, int sequence_length)
 {
     // initialize gamma distribution
-    default_random_engine generator;
-    generator.seed(seed);
-    gamma_distribution<double> distribution(gamma_shape, gamma_shape);
-    
-    double sum_rate = 0;
+    gamma_distribution<double> distribution(gamma_shape, 1/gamma_shape);
     
     for (int i = 0; i < sequence_length; i++)
     {
@@ -50,18 +46,6 @@ void RateContinuousGammaInvar::getSiteSpecificRates(double * site_specific_rates
             site_specific_rates[i] = 0;
         else
             site_specific_rates[i] = distribution(generator);
-        
-        // update sum_rate
-        sum_rate += site_specific_rates[i];
-    }
-    
-    // compute mean_rate
-    double mean_rate = sum_rate/sequence_length;
-    
-    // normalize the rates
-    for (int i = 0; i < sequence_length; i++)
-    {
-        site_specific_rates[i] /= mean_rate;
     }
 }
 
