@@ -211,7 +211,10 @@ IntVector AliSimulator::generateRandomSequence(int sequence_length)
         if (tree->getModel()->getFreqType() == FREQ_USER_DEFINED)
             tree->getModel()->getStateFrequency(state_freq);
         else // otherwise, randomly generate the base frequencies
+        {
             generateRandomBaseFrequencies(state_freq, max_num_states);
+            tree->getModel()->setStateFrequency(state_freq);
+        }
         
         // convert the probability matrix into an accumulated probability matrix
         convertProMatrixIntoAccumulatedProMatrix(state_freq, 1, max_num_states);

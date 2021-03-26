@@ -23,4 +23,4 @@ alisimulatorheterogeneity.cpp alisimulatorheterogeneity.h
 alisimulatorheterogeneityinvar.cpp alisimulatorheterogeneityinvar.h
 )
 
-target_link_libraries(alignment ncl gsl)
+target_link_libraries(alignment ncl gsl model)
