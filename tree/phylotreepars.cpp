@@ -15,7 +15,7 @@
 #include <placement/parallelparsimonycalculator.h>
 #include <utils/timeutil.h> //for getRealTime
 
-#if defined (__GNUC__) || defined(__clang__)
+#if defined (__GNUC__) || defined(__clang__) && !defined(CLANG_UNDER_VS)
 #define vml_popcnt __builtin_popcount
 #else
 // taken from vectorclass library
@@ -27,6 +27,20 @@ static inline uint32_t vml_popcnt (uint32_t a) {
     uint32_t e = d * 0x01010101;
     return   e >> 24;
 }
+static inline uint32_t vml_popcntl (uint64_t ab) 
+{
+    union {
+        uint64_t value64;
+        struct {
+            //endianness does not matter here, which is why these are 
+            //first32 and second32, rather than low32 and high32.
+            uint32_t first32;
+            uint32_t second32;
+        };
+    } bitness_converter;
+    bitness_converter.value64 = ab;
+    return vml_popcnt(bitness_converter.first32) + vml_popcnt(bitness_converter.second32);
+}
 #endif
 
 #if defined (_MSC_VER)
@@ -34,6 +48,9 @@ static inline uint32_t vml_popcnt (uint32_t a) {
 #include <nmmintrin.h>
 #define __builtin_popcount  _mm_popcnt_u32
 #define __builtin_popcountl _mm_popcnt_u64
+#else
+#define __builtin_popcount  vml_popcnt
+#define __builtin_popcountl vml_popcntl
 #endif
 #endif
 

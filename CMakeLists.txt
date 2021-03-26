@@ -1,5 +1,6 @@
 ##################################################################
 # IQ-TREE cmake build definition
+
 # Copyright (c) 2012-2015 Bui Quang Minh, Lam-Tung Nguyen
 ##################################################################
 
@@ -458,7 +459,13 @@ endif()
 
 SET(SSE_FLAGS "-D__SSE3")
 if (VCC)
-    set(SSE_FLAGS "${SSE_FLAGS} /arch:SSE2 -D__SSE3__")
+    if (BINARY32)
+        set(SSE_FLAGS "${SSE_FLAGS} /arch:SSE2 -D__SSE3__")
+    else()
+        #For 64-bit compiler, passing /arch:SSE2 just results in warning
+        #messages.  It doesn't have any other effect.
+        set(SSE_FLAGS "${SSE_FLAGS} -D__SSE3__")
+    endif()
 elseif (GCC OR CLANG)
     set(SSE_FLAGS "${SSE_FLAGS} -msse3")
 elseif (ICC)
@@ -486,8 +493,11 @@ endif()
 
 SET(AVX512_FLAGS "-D__SSE3 -D__AVX")
 if (VCC)
-    message("AVX512 not available in Visual C++")
-    #set(AVX512_FLAGS "${AVX512_FLAGS} /arch:AVX512")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 16.3)
+        message("AVX512 not available in Visual C++ in versions earlier than 16.3")
+    else()    
+        set(AVX512_FLAGS "${AVX512_FLAGS} /arch:AVX512")
+    endif()
 elseif (CLANG)
     set(AVX512_FLAGS "${AVX512_FLAGS} -mavx512f -mfma")
 elseif (GCC)
