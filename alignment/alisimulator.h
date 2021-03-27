@@ -48,6 +48,11 @@ protected:
     *  retrieve the ancestral sequence for the root node from an input file
     */
     IntVector retrieveAncestralSequenceFromInputFile(int sequence_position);
+    
+    /**
+    *  get state frequencies from model
+    */
+    void getStateFrequenciesFromModel(double *state_freqs);
 
     /**
     *  randomly generate the ancestral sequence for the root node

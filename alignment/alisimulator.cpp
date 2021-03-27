@@ -181,10 +181,29 @@ IntVector AliSimulator:: retrieveAncestralSequenceFromInputFile(int sequence_pos
     params->alisim_sequence_length = nsite;
     string sequence_str = sequences[sequence_position - 1];
     
-    sequence.resize(nsite);
+    // get Max number of states
+    int max_num_states = tree->aln->getMaxNumStates();
+    
+    // get the base frequencies
+    double *state_freq = new double[max_num_states];
+    getStateFrequenciesFromModel(state_freq);
+    
+    // convert the probability matrix into an accumulated probability matrix
+    convertProMatrixIntoAccumulatedProMatrix(state_freq, 1, max_num_states);
+    
     // convert the input sequence into (numerical states) sequence
+    sequence.resize(nsite);
     for (int i = 0; i < nsite; i++)
+    {
         sequence[i] = tree->aln->convertState(sequence_str[i]);
+        
+        // Handle invalid/unknown state
+        if (sequence[i] >= max_num_states)
+            sequence[i] = getRandomItemWithAccumulatedProbabilityMatrix(state_freq, 0, max_num_states);
+    }
+    
+    // delete state_freq
+    delete [] state_freq;
         
     return sequence;
 }
@@ -211,15 +230,7 @@ IntVector AliSimulator::generateRandomSequence(int sequence_length)
     {
         // get the base frequencies
         double *state_freq = new double[max_num_states];
-        
-        // get user-defined base frequencies (if any)
-        if (tree->getModel()->getFreqType() == FREQ_USER_DEFINED)
-            tree->getModel()->getStateFrequency(state_freq);
-        else // otherwise, randomly generate the base frequencies
-        {
-            generateRandomBaseFrequencies(state_freq, max_num_states);
-            tree->getModel()->setStateFrequency(state_freq);
-        }
+        getStateFrequenciesFromModel(state_freq);
         
         // convert the probability matrix into an accumulated probability matrix
         convertProMatrixIntoAccumulatedProMatrix(state_freq, 1, max_num_states);
@@ -233,6 +244,17 @@ IntVector AliSimulator::generateRandomSequence(int sequence_length)
     }
     
     return sequence;
+}
+
+void AliSimulator::getStateFrequenciesFromModel(double *state_freqs){
+    // get user-defined base frequencies (if any)
+    if (tree->getModel()->getFreqType() == FREQ_USER_DEFINED)
+        tree->getModel()->getStateFrequency(state_freqs);
+    else // otherwise, randomly generate the base frequencies
+    {
+        generateRandomBaseFrequencies(state_freqs, tree->aln->getMaxNumStates());
+        tree->getModel()->setStateFrequency(state_freqs);
+    }
 }
 
 /**
