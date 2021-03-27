@@ -59,7 +59,12 @@ void AliSimulator::initializeAlignment()
     tree->aln = new Alignment();
     
     // set the seq_type and the maximum number of bases based on the Seq_type
-    tree->aln->seq_type = tree->aln->getSeqType(params->sequence_type);
+    string model_fullname = params->model_name;
+    string model_familyname_with_params = model_fullname.substr(0, model_fullname.find("+"));
+    string model_familyname = model_familyname_with_params.substr(0, model_familyname_with_params.find("{"));
+    detectSeqType(model_familyname.c_str(), tree->aln->seq_type);
+    string seq_type_name = convertSeqTypeToSeqTypeName(tree->aln->seq_type);
+    params->sequence_type = strcpy(new char[seq_type_name.length() + 1], seq_type_name.c_str());
     
     switch (tree->aln->seq_type) {
     case SEQ_BINARY:

@@ -408,9 +408,8 @@ int detectSeqType(const char *model_name, SeqType &seq_type) {
     return (empirical_model) ? 2 : 1;
 }
 
-string detectSeqTypeName(string model_name) {
-    SeqType seq_type;
-    detectSeqType(model_name.c_str(), seq_type);
+string convertSeqTypeToSeqTypeName(SeqType seq_type)
+{
     switch (seq_type) {
     case SEQ_BINARY: return "BIN"; break;
     case SEQ_MORPH: return "MORPH"; break;
@@ -420,6 +419,12 @@ string detectSeqTypeName(string model_name) {
     default: break;
     }
     return "";
+}
+
+string detectSeqTypeName(string model_name) {
+    SeqType seq_type;
+    detectSeqType(model_name.c_str(), seq_type);
+    return convertSeqTypeToSeqTypeName(seq_type);
 }
 
 void computeInformationScores(double tree_lh, int df, int ssize, double &AIC, double &AICc, double &BIC) {

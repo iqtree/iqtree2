@@ -13,6 +13,7 @@
 #include "model/modelmarkov.h"
 #include "model/ratecontinuousgammainvar.h"
 #include "tree/iqtree.h"
+#include "main/phylotesting.h"
 #include <random>
 
 class AliSimulator{
