@@ -3779,21 +3779,43 @@ void IQTree::summarizeBootstrap(SplitGraph &sg) {
     trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1, NULL, false); // do not sort taxa
 }
 
-void IQTree::computeRootstrap(StrVector &rooted_trees) {
+void IQTree::computeRootstrap(MTreeSet &trees, bool use_taxid) {
     ASSERT(rooted);
     ASSERT(root->name == ROOT_NAME);
-    MTreeSet trees;
-    trees.init(rooted_trees, rooted);
     
     // convert each tree into a split graph
     vector<SplitIntMap> ssvec;
     ssvec.resize(trees.size());
     vector<string> taxname;
+    StringIntMap tax2id;
     int i;
-    for (i = 0; i < leafNum; i++)
-        taxname.push_back(convertIntToString(i));
+    if (use_taxid) {
+        for (i = 0; i < leafNum; i++)
+            taxname.push_back(convertIntToString(i));
+    } else {
+        getTaxaName(taxname);
+        for (i = 0; i < taxname.size(); i++)
+            tax2id[taxname[i]] = i;
+    }
     for (i = 0; i < trees.size(); i++) {
-        ASSERT(trees[i]->rooted);
+        if (!trees[i]->rooted)
+            outError("Tree " + convertIntToString(i+1) + " is not rooted");
+        if (trees[i]->leafNum != leafNum)
+            outError("Tree " + convertIntToString(i+1) + " does not have the same number of taxa");
+        
+        if (!use_taxid) {
+            // change the taxon IDs to be the same as main tree
+            NodeVector taxa;
+            trees[i]->getTaxa(taxa);
+            for (int j = 0; j < taxa.size(); j++) {
+                auto id = tax2id.find(taxa[j]->name);
+                if (id == tax2id.end())
+                    outError("Taxon " + taxa[j]->name + " in tree " + convertIntToString(i+1) + " not found in main tree");
+                taxa[j]->id = id->second;
+            }
+        }
+        
+        // convert this tree for splits graph
         SplitGraph sg;
         trees[i]->convertSplits(taxname, sg);
         for (auto split : sg) {

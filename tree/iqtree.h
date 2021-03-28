@@ -817,8 +817,10 @@ public:
 
     /**
         compute rootstrap supports for rooted tree, 2021-01-19 for Suha's paper
+        @param[in] trees set of rooted trees
+        @param[in] use_taxid true if rooted_trees has taxa IDs, false for taxa names
      */
-    void computeRootstrap(StrVector &rooted_trees);
+    void computeRootstrap(MTreeSet &trees, bool use_taxid);
 
     /**
         compute rootstrap supports for unrooted tree using outgroup, 2021-01-19 for Suha's paper

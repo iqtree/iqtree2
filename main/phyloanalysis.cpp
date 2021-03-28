@@ -2668,7 +2668,9 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     if (iqtree->rooted && params.gbo_replicates && params.online_bootstrap) {
         cout << "Computing rootstrap supports..." << endl;
         string saved = iqtree->getTreeString();
-        iqtree->computeRootstrap(iqtree->boot_trees);
+        MTreeSet trees;
+        trees.init(iqtree->boot_trees, iqtree->rooted);
+        iqtree->computeRootstrap(trees, true);
         iqtree->readTreeString(saved);
     }
 
@@ -3282,7 +3284,7 @@ void runStandardBootstrap(Params &params, Alignment *alignment, IQTree *tree) {
     if (params.consensus_type == CT_CONSENSUS_TREE && MPIHelper::getInstance().isMaster()) {
 
         cout << endl << "===> COMPUTE CONSENSUS TREE FROM " << params.num_bootstrap_samples
-            << RESAMPLE_NAME_UPPER << " TREES" << endl << endl;
+            << " " << RESAMPLE_NAME_UPPER << " TREES" << endl << endl;
         string root_name = (params.root) ? params.root : alignment->getSeqName(0);
         const char* saved_root = params.root;
         params.root = root_name.c_str();
@@ -3317,7 +3319,15 @@ void runStandardBootstrap(Params &params, Alignment *alignment, IQTree *tree) {
                     treefile_name.c_str(), false, treefile_name.c_str(),
                     params.out_prefix, ext_tree, NULL, &params);
             tree->copyTree(&ext_tree);
+            if (tree->rooted) {
+                cout << "Computing rootstrap supports from " << params.num_bootstrap_samples << " bootstrap trees..." << endl;
+                string saved = tree->getTreeString();
+                MTreeSet trees(boottrees_name.c_str(), tree->rooted, 0, params.num_bootstrap_samples);
+                tree->computeRootstrap(trees, false);
+                tree->readTreeString(saved);
+            }
             reportPhyloAnalysis(params, *tree, *model_info);
+
         }
     } else if (params.consensus_type == CT_CONSENSUS_TREE && MPIHelper::getInstance().isMaster()) {
         int mi = params.min_iterations;
@@ -3359,7 +3369,7 @@ void runStandardBootstrap(Params &params, Alignment *alignment, IQTree *tree) {
     cout << "Non-parametric " << RESAMPLE_NAME << " results written to:" << endl;
     if (params.print_bootaln)
         cout << RESAMPLE_NAME_I << " alignments:     " << params.out_prefix << ".bootaln" << endl;
-    cout << RESAMPLE_NAME_I << " trees:          " << params.out_prefix << ".boottrees" << endl;
+    cout << "  " << RESAMPLE_NAME_I << " trees:          " << params.out_prefix << ".boottrees" << endl;
     if (params.consensus_type == CT_CONSENSUS_TREE)
         cout << "  Consensus tree:           " << params.out_prefix << ".contree" << endl;
     cout << endl;
