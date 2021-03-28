@@ -4573,3 +4573,38 @@ void computeConsensusNetwork(const char *input_trees, int burnin, int max_count,
     }
 
 }
+
+void runRootstrap(Params &params) {
+    if (!params.user_file)
+        outError("No target tree file provided");
+    if (params.treeset_file.empty())
+        outError("No tree set file provided");
+    IQTree tree;
+    tree.setParams(&params);
+
+    cout << "Reading tree " << params.user_file << " ..." << endl;
+    bool rooted = params.is_rooted;
+    tree.readTree(params.user_file, rooted);
+    if (!tree.rooted)
+        outError("Tree must be rooted");
+    cout << ((tree.rooted) ? "rooted" : "un-rooted") << " tree with "
+        << tree.leafNum - tree.rooted << " taxa and " << tree.branchNum << " branches" << endl;
+
+    BranchVector branches;
+    tree.getInnerBranches(branches);
+    BranchVector::iterator brit;
+    for (brit = branches.begin(); brit != branches.end(); brit++) {
+        Neighbor *branch = brit->second->findNeighbor(brit->first);
+        string label = brit->second->name;
+        if (!label.empty())
+            PUT_ATTR(branch, label);
+    }
+    
+    rooted = params.is_rooted;
+    MTreeSet trees(params.treeset_file.c_str(), rooted, params.tree_burnin, params.tree_max_count);
+    double start_time = getRealTime();
+    cout << "Computing rootstrap supports..." << endl;
+    tree.computeRootstrap(trees, false);
+    cout << getRealTime() - start_time << " sec" << endl;
+    
+}

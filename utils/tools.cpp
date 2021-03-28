@@ -1584,6 +1584,15 @@ void parseArg(int argc, char *argv[], Params &params) {
                 outError("Deprecated -sup2 option, please use --gcf --tree FILE");
             }
             
+            if (strcmp(argv[cnt], "--rootstrap") == 0) {
+                params.consensus_type = CT_ROOTSTRAP;
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --rootstrap <user_trees_file>";
+                params.treeset_file = argv[cnt];
+                continue;
+            }
+            
             if (strcmp(argv[cnt], "--gcf") == 0) {
 				params.consensus_type = CT_ASSIGN_SUPPORT_EXTENDED;
                 cnt++;
