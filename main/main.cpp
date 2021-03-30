@@ -2608,7 +2608,7 @@ int main(int argc, char *argv[]) {
     } else
     // call the main function
     if (Params::getInstance().alisim_active) {
-        runAliSim(Params::getInstance());
+        runAliSim(Params::getInstance(), checkpoint);
     } else if (Params::getInstance().tree_gen != NONE) {
         generateRandomTree(Params::getInstance());
     } else if (Params::getInstance().do_pars_multistate) {

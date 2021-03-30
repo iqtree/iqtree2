@@ -1339,7 +1339,7 @@ SeqType Alignment::detectSequenceType(StrVector &sequences) {
         return SEQ_BINARY;
     if (((double)num_alpha + num_nuc) / num_ungap > 0.9)
         return SEQ_PROTEIN;
-    if (((double)(num_alpha+num_digit)) / num_ungap > 0.9)
+    if (((double)(num_alpha + num_digit + num_nuc)) / num_ungap > 0.9)
         return SEQ_MORPH;
     return SEQ_UNKNOWN;
 }

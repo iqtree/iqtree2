@@ -149,8 +149,9 @@ void AliSimulator::generateMultipleAlignmentsFromSingleTree()
         
         // initialize output_filepath
         std::string output_filepath(params->user_file);
+        output_filepath = output_filepath.substr(0, output_filepath.find_last_of("/\\") + 1);
         output_filepath = output_filepath
-        +"_"+params->alisim_output_filename
+        +params->alisim_output_filename
         +"_"+convertIntToString(i)+".phy";
         
         generateSingleDatasetFromSingleTree(output_filepath, ancestral_sequence);
@@ -204,6 +205,9 @@ IntVector AliSimulator:: retrieveAncestralSequenceFromInputFile(int sequence_pos
     
     // delete state_freq
     delete [] state_freq;
+    
+    // show warning
+    outWarning("Using an ancestral sequence with base frequencies that are not compatible with the specification of the model may lead to unexpected results.");
         
     return sequence;
 }
@@ -231,6 +235,9 @@ IntVector AliSimulator::generateRandomSequence(int sequence_length)
         // get the base frequencies
         double *state_freq = new double[max_num_states];
         getStateFrequenciesFromModel(state_freq);
+        
+        // print model's parameters
+        tree->getModel()->writeInfo(cout);
         
         // convert the probability matrix into an accumulated probability matrix
         convertProMatrixIntoAccumulatedProMatrix(state_freq, 1, max_num_states);

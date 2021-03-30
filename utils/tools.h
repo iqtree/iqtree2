@@ -2234,6 +2234,16 @@ public:
     bool alisim_active;
     
     /**
+    *  TRUE to activate inference_mode before sumulating
+    */
+    bool alisim_inference;
+    
+    /**
+    *  original parameters
+    */
+    string original_params;
+    
+    /**
     *  output filename
     */
     string alisim_output_filename;

@@ -1108,13 +1108,19 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.suppress_zero_distance_warnings = false;
     params.suppress_duplicate_sequence_warnings = false;
     
+    params.original_params = "";
     params.alisim_active = false;
+    params.alisim_inference = false;
     params.alisim_sequence_length = 1000;
     params.alisim_dataset_num = 1;
     params.alisim_ancestral_sequence = -1;
     params.alisim_continuous_gamma = false;
     
-
+    // store original params
+    for (cnt = 1; cnt < argc; cnt++) {
+        params.original_params = params.original_params + argv[cnt] + " ";
+    }
+    
     for (cnt = 1; cnt < argc; cnt++) {
         try {
 
@@ -4221,6 +4227,12 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             
+            if (strcmp(argv[cnt], "--infer") == 0) {
+                params.alisim_inference = true;
+                
+                continue;
+            }
+            
             if (strcmp(argv[cnt], "--length") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -4378,11 +4390,14 @@ void parseArg(int argc, char *argv[], Params &params) {
         if (params.partition_merge == MERGE_NONE)
             params.partition_merge = MERGE_RCLUSTERF;
     
-    if (params.alisim_active && !params.user_file)
-        outError("A tree filepath is a mandatory input to execute AliSim. Use -t <TREE_FILEPATH>");
+    if (params.alisim_active && !params.alisim_inference && !params.user_file)
+        outError("A tree filepath is a mandatory input to execute AliSim when inference mode is inactive. Use -t <TREE_FILEPATH> or activate the inference mode by --infer");
     
     if (params.alisim_ancestral_sequence > -1 && !params.aln_file)
         outError("An alignment input file must be provided when root sequence is set. Use -s <ALIGNMENT>");
+    
+    if (params.alisim_inference && !params.aln_file)
+        outError("An alignment input file must be provided when inference mode is activated. Use -s <ALIGNMENT>");
     
     //    if (MPIHelper::getInstance().isWorker()) {
     // BUG: setting out_prefix this way cause access to stack, which is cleaned up after returning from this function
