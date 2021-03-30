@@ -741,6 +741,7 @@ void transferModelFinderParameters(IQTree *iqtree, Checkpoint *target) {
     source->transferSubCheckpoint(target, "PhyloTree");
 }
 
+
 void runModelFinder(Params &params, IQTree &iqtree,
                     ModelCheckpoint &model_checkpoint) {
     ModelInfoFromName model_info(params.model_name);
@@ -758,13 +759,15 @@ void runModelFinder(Params &params, IQTree &iqtree,
             }
     }
     
-    if (params.model_joint)
+    if (params.model_joint) {
         empty_model_found = false;
+    }
 
     // Model already specifed, nothing to do here
     if (!model_info.isModelFinder()) {
         return;
     }
+    
     if (MPIHelper::getInstance().getNumProcesses() > 1)
         outError("Please use only 1 MPI process! We are currently working on the MPI parallelization of model selection.");
     // TODO: check if necessary
@@ -836,7 +839,8 @@ void runModelFinder(Params &params, IQTree &iqtree,
     //        checkpoint->dump(true);
     
     CandidateModelSet candidate_models;
-    int max_cats = candidate_models.generate(params, iqtree.aln, params.model_test_separate_rate, false);
+    int max_cats = candidate_models.generate(params, iqtree.aln,
+                                             params.model_test_separate_rate, false);
     
     uint64_t mem_size = iqtree.getMemoryRequiredThreaded(max_cats);
     cout << "NOTE: ModelFinder requires " << (mem_size / 1024) / 1024 << " MB RAM!" << endl;
@@ -849,7 +853,6 @@ void runModelFinder(Params &params, IQTree &iqtree,
     }
 #endif
     
-
     if (iqtree.isSuperTree()) {
         // partition model selection
         PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
@@ -1208,7 +1211,8 @@ void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites
     }
 }
 
-int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_rate, bool merge_phase) {
+int CandidateModelSet::generate(Params &params, Alignment *aln,
+                                bool separate_rate, bool merge_phase) {
 	StrVector model_names;
     StrVector freq_names;
 	SeqType alignment_seq_type = aln->seq_type;
@@ -1218,16 +1222,18 @@ int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_ra
     
     if (merge_phase) {
         model_set = params.merge_models;
-    } else
+    } else {
         model_set = params.model_set;
+    }
 
     bool auto_model = iEquals(model_set, "AUTO");
     
     getModelSubst(alignment_seq_type, aln->isStandardGeneticCode(), params.model_name,
                   model_set, params.model_subset, model_names);
 
-	if (model_names.empty()) 
+    if (model_names.empty()) {
         return 1;
+    }
     
     getStateFreqs(alignment_seq_type, params.state_freq_set, freq_names);
     
@@ -1269,29 +1275,33 @@ int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_ra
     // add number of rate cateogories for special rate models
     const char *rates[] = {"+R", "*R", "+H", "*H"};
 
-    for (i = 0; i < element_count(rates); i++)
-        if (params.model_name.find(rates[i]) != string::npos)
+    for (i = 0; i < element_count(rates); i++) {
+        if (params.model_name.find(rates[i]) != string::npos) {
             ratehet.push_back(rates[i]);
+        }
+    }
 
     size_t pos;
 
     vector<int> flags;
     flags.resize(ratehet.size(), 0);
     
-    for (i = 0; i < element_count(rates); i++)
-    for (j = 0; j < ratehet.size(); j++)
-        if ((pos = ratehet[j].find(rates[i])) != string::npos &&
-            (pos >= ratehet[j].length()-2 || !isdigit(ratehet[j][pos+2]) ))
-        {
-            string str = ratehet[j];
-            ratehet[j].insert(pos+2, convertIntToString(params.min_rate_cats));
-            max_cats = max(max_cats, params.max_rate_cats);
-            for (int k = params.min_rate_cats+1; k <= params.max_rate_cats; k++) {
-                int ins_pos = j+k-params.min_rate_cats;
-                ratehet.insert(ratehet.begin() + ins_pos, str.substr(0, pos+2) + convertIntToString(k) + str.substr(pos+2));
-                flags.insert(flags.begin() + ins_pos, MF_WAITING);
+    for (i = 0; i < element_count(rates); i++) {
+        for (j = 0; j < ratehet.size(); j++) {
+            if ((pos = ratehet[j].find(rates[i])) != string::npos &&
+                (pos >= ratehet[j].length()-2 || !isdigit(ratehet[j][pos+2]) ))
+            {
+                string str = ratehet[j];
+                ratehet[j].insert(pos+2, convertIntToString(params.min_rate_cats));
+                max_cats = max(max_cats, params.max_rate_cats);
+                for (int k = params.min_rate_cats+1; k <= params.max_rate_cats; k++) {
+                    int ins_pos = j+k-params.min_rate_cats;
+                    ratehet.insert(ratehet.begin() + ins_pos, str.substr(0, pos+2) + convertIntToString(k) + str.substr(pos+2));
+                    flags.insert(flags.begin() + ins_pos, MF_WAITING);
+                }
             }
         }
+    }
 
     ASSERT(ratehet.size() == flags.size());
     
@@ -1300,38 +1310,72 @@ int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_ra
 
     // combine substitution models with rate heterogeneity
     if (separate_rate) {
-        for (i = 0; i < model_names.size(); i++) 
+        for (i = 0; i < model_names.size(); i++) {
             push_back(CandidateModel(model_names[i], ratehet[0] + pomo_suffix, aln));
-        for (j = 0; j < ratehet.size(); j++)
-            if (ratehet[j] != "")
+        }
+        for (j = 0; j < ratehet.size(); j++) {
+            if (ratehet[j] != "") {
                 push_back(CandidateModel("", ratehet[j] + pomo_suffix, aln));
+            }
+        }
     } else {
         if (auto_model) {
             // all rate heterogeneity for the first model
-            for (j = 0; j < ratehet.size(); j++)
+            for (j = 0; j < ratehet.size(); j++) {
                 push_back(CandidateModel(model_names[0], ratehet[j] + pomo_suffix, aln, flags[j]));
+            }
             // now all models the first RHAS
-            for (i = 1; i < model_names.size(); i++)
+            for (i = 1; i < model_names.size(); i++) {
                 push_back(CandidateModel(model_names[i], ratehet[0] + pomo_suffix, aln, flags[0]));
+            }
             // all remaining models
-            for (i = 1; i < model_names.size(); i++)
+            for (i = 1; i < model_names.size(); i++) {
                 for (j = 1; j < ratehet.size(); j++) {
                     push_back(CandidateModel(model_names[i], ratehet[j] + pomo_suffix, aln, flags[j]));
                 }
+            }
         } else {
             // testing all models
-            for (i = 0; i < model_names.size(); i++)
+            for (i = 0; i < model_names.size(); i++) {
                 for (j = 0; j < ratehet.size(); j++) {
                     push_back(CandidateModel(model_names[i], ratehet[j] + pomo_suffix, aln, flags[j]));
                 }
+            }
         }
     }
     if (params.model_extra_set) {
         StrVector extra_model_names;
         convert_string_vec(params.model_extra_set, extra_model_names);
-        for (auto s : extra_model_names)
+        for (auto s : extra_model_names) {
             push_back(CandidateModel(s, "", aln));
+        }
     }
+    auto yaml_path = params.yaml_model_file;
+    if (!yaml_path.empty()) {
+        //Get names of models from the model file
+        try {
+            YAML::Node yaml_model_list = YAML::LoadFile(yaml_path);
+            if (!yaml_model_list.IsSequence()) {
+                throw YAML::Exception(yaml_model_list.Mark(), "list '[...]' expected");
+            }
+            for (auto it = yaml_model_list.begin(); it != yaml_model_list.end(); it++)
+            {
+                auto datatype = *it;
+                if (!(datatype["substitutionmodel"])) {
+                    continue;
+                }
+                std::string model_name = datatype["substitutionmodel"].Scalar();
+                std::string rate_name;
+                //Todo: figure out what the rate name ought to be.
+                //Todo: what is there is already a model, with the same name
+                push_back(CandidateModel(model_name, rate_name, aln));
+                cout << "Available model=" << model_name;
+            }
+        } catch (YAML::Exception &e) {
+            outError(e.what());
+        }
+    }
+
     return max_cats;
 }
 
@@ -1531,8 +1575,8 @@ string CandidateModel::evaluate(Params &params,
                                 PhyloTree* report_to_tree)
 {
     //string model_name = name;
-    Alignment *in_aln = aln;
-    IQTree *iqtree = NULL;
+    Alignment* in_aln = aln;
+    IQTree*    iqtree = NULL;
     if (in_aln->isSuperAlignment()) {
         SuperAlignment *saln = (SuperAlignment*)in_aln;
         if (params.partition_type == BRLEN_OPTIMIZE) {
@@ -1549,10 +1593,12 @@ string CandidateModel::evaluate(Params &params,
         for (int part = 0; part != subst_names.size(); part++) {
             saln->partitions[part]->model_name = subst_names[part]+rate_names[part];
         }
-    } else if (ModelInfoFromName(getName()).hasRateHeterotachy())
+    } else if (ModelInfoFromName(getName()).hasRateHeterotachy()) {
         iqtree = new PhyloTreeMixlen(in_aln, 0);
-    else
+    }
+    else {
         iqtree = new IQTree(in_aln);
+    }
     iqtree->setParams(&params);
     iqtree->setLikelihoodKernel(params.SSE);
     iqtree->optimize_by_newton = params.optimize_by_newton;

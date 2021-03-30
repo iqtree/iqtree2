@@ -46,10 +46,12 @@ void ModelBIN::init(const char *model_name, string model_params,
         readStateFreq(freq_params, report_to_tree);
     }
     if (model_params != "") {
-      readRates(model_params);
+        readRates(model_params);
     }
-	if (freq == FREQ_UNKNOWN || def_freq == FREQ_EQUAL) freq = def_freq;
-	ModelMarkov::init(freq, report_to_tree);
+    if (freq == FREQ_UNKNOWN || def_freq == FREQ_EQUAL) {
+        freq = def_freq;
+    }
+    ModelMarkov::init(freq, report_to_tree);
 }
 
 void ModelBIN::startCheckpoint() {

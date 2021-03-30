@@ -1615,7 +1615,8 @@ void ModelMarkov::readStateFreq(string str, PhyloTree* report_to_tree)
     }
 }
 
-void ModelMarkov::readParameters(const char *file_name, bool adapt_tree, PhyloTree* report_to_tree) {
+void ModelMarkov::readParameters(const char *file_name,
+                                 bool adapt_tree, PhyloTree* report_to_tree) {
     if (!fileExists(file_name)) {
         outError("File not found ", file_name);
     }
@@ -1783,9 +1784,9 @@ void ModelMarkov::setRates() {
 	ASSERT(0 && "setRates should only be called on subclass of ModelMarkov");
 }
 
-/* static */ ModelMarkov* ModelMarkov::getModelByName(string model_name, PhyloTree *tree,
+/* static */ ModelMarkov* ModelMarkov::getModelByName(string model_name,   PhyloTree *tree,
                                                       string model_params, StateFreqType freq_type,
-                                                      string freq_params, PhyloTree* report_to_tree) {
+                                                      string freq_params,  PhyloTree* report_to_tree) {
     if (ModelUnrest::validModelName(model_name)) {
         return (new ModelUnrest(tree, model_params, report_to_tree));
     } else if (ModelLieMarkov::validModelName(model_name)) {
@@ -1827,8 +1828,10 @@ void ModelMarkov::computeTransMatrixEigen(double time, double *trans_matrix) {
         if (eigenvalues_imag[i] == 0.0) {
             exptime[i*num_states+i] = exp(evol_time * eigenvalues[i]);
         } else {
-            ASSERT(i < num_states-1 && eigenvalues_imag[i+1] != 0.0 && eigenvalues_imag[i] > 0.0);
-            complex<double> exp_eval(eigenvalues[i] * evol_time, eigenvalues_imag[i] * evol_time);
+            ASSERT(i < num_states-1 && eigenvalues_imag[i+1] != 0.0 &&
+                   eigenvalues_imag[i] > 0.0);
+            complex<double> exp_eval(eigenvalues[i] * evol_time,
+                                     eigenvalues_imag[i] * evol_time);
             exp_eval = exp(exp_eval);
             exptime[i*num_states+i] = exp_eval.real();
             exptime[i*num_states+i+1] = exp_eval.imag();
@@ -1877,7 +1880,8 @@ void ModelMarkov::computeTransMatrixEigen(double time, double *trans_matrix) {
 int matinv (double x[], int n, int m, double space[])
 {
     /* x[n*m]  ... m>=n
-       space[n].  This puts the fabs(|x|) into space[0].  Check and calculate |x|.
+       space[n].  This puts the fabs(|x|) into space[0].
+       Check and calculate |x|.
        Det may have the wrong sign.  Check and fix.
     */
     int *irow=(int*) space;

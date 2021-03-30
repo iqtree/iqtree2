@@ -94,7 +94,9 @@ class ModelInfoFromYAMLFile: public ModelInfo {
 private:
     std::string model_name;
     std::string model_file_path;
+    friend class ModelListFromYAMLFile;
 public:
+    ModelInfoFromYAMLFile() = default; //Only ModelListFromYAMLFile uses it.
     explicit ModelInfoFromYAMLFile(const std::string& file_path);
     ~ModelInfoFromYAMLFile() = default;
     
@@ -152,6 +154,23 @@ public:
         return "";
     }
     void        updateName(const std::string& name);
+};
+
+class ModelMarkov;
+class PhyloTree;
+class ModelListFromYAMLFile {
+protected:
+    std::map<std::string, ModelInfoFromYAMLFile> models_found;
+
+public:
+    ModelListFromYAMLFile()  = default;
+    ~ModelListFromYAMLFile() = default;
+
+    void loadFromFile          (const char* file_path);
+    bool isModelNameRecognized (const char* model_name);
+    ModelMarkov* getModelByName(const char* model_name,   PhyloTree *tree,
+                                const char* model_params, StateFreqType freq_type,
+                                const char* freq_params,  PhyloTree* report_to_tree);
 };
 
 

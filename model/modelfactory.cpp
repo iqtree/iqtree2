@@ -154,45 +154,40 @@ StateFreqType ModelFactory::getDefaultFrequencyTypeForSequenceType(SeqType seq_t
     return freq_type;
 }
 
-ModelFactory::ModelFactory(Params &params, string &model_name,
-                           PhyloTree *tree, ModelsBlock *models_block,
+ModelFactory::ModelFactory(Params&    params, string&      model_name,
+                           PhyloTree* tree,   ModelsBlock* models_block,
                            PhyloTree* report_to_tree): CheckpointFactory() {
     store_trans_matrix = params.store_trans_matrix;
     is_storing         = false;
     joint_optimize     = params.optimize_model_rate_joint;
     fused_mix_rate     = false;
     ASC_type           = ASC_NONE;
-    string model_str   = model_name;
-    string rate_str;
-
+    
     try {
+        string model_str   = model_name;
         if (model_str == "") {
             model_str = getDefaultModelName(tree, params);
         }
-        
         initializeModelAlias(models_block, model_str);
 
         // Detect PoMo and throw error if sequence type is PoMo but +P is
         // not given.  This makes the model string cleaner and
         // comparable.
         bool pomo = ModelInfoFromName(model_str).isPolymorphismAware();
-
         if (!pomo &&
             (tree->aln->seq_type == SEQ_POMO)) {
             outError("Provided alignment is exclusively used by PoMo"
                      " but model string does not contain, e.g., \"+P\".");
         }
-
+        string rate_str;
         moveRateParameters(model_str, rate_str);
     
-        string freq_str = "";
+        string freq_str;
         moveFrequencyParameters(rate_str, model_str, freq_str);
-        
         moveErrorModelParameter(rate_str, model_str);
         removeSamplingParametersFromRateString(pomo, rate_str);
         
         ModelInfoFromName rate_info(rate_str);
-        
         initializePoMo(pomo, rate_info, rate_str, model_str);
 
         //nxsmodel = models_block->findModel(model_str);
@@ -201,11 +196,12 @@ ModelFactory::ModelFactory(Params &params, string &model_name,
         //    model_str = nxsmodel->description;
         //}
 
-        std::string freq_params;
+        std::string   freq_params;
         StateFreqType freq_type;
-        bool optimize_mixmodel_weight;
+        bool          optimize_mixmodel_weight;
         initializeFrequency(params, tree, freq_str, freq_params,
                             freq_type, optimize_mixmodel_weight);
+        
         ModelInfoFromName model_info(model_str);
         initializeModel(model_name, models_block, model_info,
                         model_str, params.freq_type, freq_params,
@@ -465,73 +461,73 @@ void ModelFactory::initializeModel(const std::string& model_name,
                                    bool optimize_mixmodel_weight,
                                    PhyloTree* tree,
                                    PhyloTree* report_to_tree) {
-        /******************** initialize model ****************************/
-        bool is_mixture_model = model_info.isMixtureModel();
-            
-        if (tree->aln->site_state_freq.empty()) {
-            if (is_mixture_model || freq_type == FREQ_MIXTURE) {
-                string model_list;
-                if (is_mixture_model) {
-                    model_list = model_info.extractMixtureModelList(model_str);
-                }
-                model = new ModelMixture(model_name, model_str, model_list,
-                                         models_block, freq_type, freq_params,
-                                         tree, optimize_mixmodel_weight,
-                                         report_to_tree);
-            } else {
-                //            string model_desc;
-                //            NxsModel *nxsmodel = models_block->findModel(model_str);
-                //            if (nxsmodel) model_desc = nxsmodel->description;
-                model = createModel(model_str, models_block, freq_type,
-                                    freq_params, tree, report_to_tree);
+    /******************** initialize model ****************************/
+    bool is_mixture_model = model_info.isMixtureModel();
+        
+    if (tree->aln->site_state_freq.empty()) {
+        if (is_mixture_model || freq_type == FREQ_MIXTURE) {
+            string model_list;
+            if (is_mixture_model) {
+                model_list = model_info.extractMixtureModelList(model_str);
             }
-    //        fused_mix_rate &= model->isMixture() && site_rate->getNRate() > 1;
+            model = new ModelMixture(model_name, model_str, model_list,
+                                     models_block, freq_type, freq_params,
+                                     tree, optimize_mixmodel_weight,
+                                     report_to_tree);
         } else {
-            // site-specific model
-            if (model_str == "JC" || model_str == "POISSON") {
-                outError("JC is not suitable for site-specific model");
-            }
-            model = new ModelSet(model_str.c_str(), tree);
-            ModelSet *models = (ModelSet*)model; // assign pointer for convenience
-            models->init((freq_type != FREQ_UNKNOWN) ? freq_type : FREQ_EMPIRICAL,
-                         report_to_tree);
-            models->pattern_model_map.resize(tree->aln->getNPattern(), -1);
-            for (size_t i = 0; i < tree->aln->getNSite(); ++i) {
-                models->pattern_model_map[tree->aln->getPatternID(i)] = tree->aln->site_model[i];
-                //cout << "site " << i << " ptn " << tree->aln->getPatternID(i)
-                //     << " -> model " << site_model[i] << endl;
-            }
-            double *state_freq = new double[model->num_states];
-            double *rates = new double[model->getNumRateEntries()];
-            for (size_t i = 0; i < tree->aln->site_state_freq.size(); ++i) {
-                ModelMarkov *modeli;
-                if (i == 0) {
-                    auto f_type = (freq_type != FREQ_UNKNOWN)
-                                ? freq_type : FREQ_EMPIRICAL;
-                    modeli = (ModelMarkov*)createModel(model_str, models_block,
-                                                       f_type, "", tree,
-                                                       report_to_tree);
-                    modeli->getStateFrequency(state_freq);
-                    modeli->getRateMatrix(rates);
-                } else {
-                    modeli = (ModelMarkov*)createModel(model_str, models_block,
-                                                       FREQ_EQUAL, "", tree,
-                                                       report_to_tree);
-                    modeli->setStateFrequency(state_freq);
-                    modeli->setRateMatrix(rates);
-                }
-                if (tree->aln->site_state_freq[i])
-                    modeli->setStateFrequency (tree->aln->site_state_freq[i]);
-
-                modeli->init(FREQ_USER_DEFINED, report_to_tree);
-                models->push_back(modeli);
-            }
-            delete [] rates;
-            delete [] state_freq;
-
-            models->joinEigenMemory();
-            models->decomposeRateMatrix();
+            //            string model_desc;
+            //            NxsModel *nxsmodel = models_block->findModel(model_str);
+            //            if (nxsmodel) model_desc = nxsmodel->description;
+            model = createModel(model_str, models_block, freq_type,
+                                freq_params, tree, report_to_tree);
         }
+//        fused_mix_rate &= model->isMixture() && site_rate->getNRate() > 1;
+    } else {
+        // site-specific model
+        if (model_str == "JC" || model_str == "POISSON") {
+            outError("JC is not suitable for site-specific model");
+        }
+        model = new ModelSet(model_str.c_str(), tree);
+        ModelSet *models = (ModelSet*)model; // assign pointer for convenience
+        models->init((freq_type != FREQ_UNKNOWN) ? freq_type : FREQ_EMPIRICAL,
+                     report_to_tree);
+        models->pattern_model_map.resize(tree->aln->getNPattern(), -1);
+        for (size_t i = 0; i < tree->aln->getNSite(); ++i) {
+            models->pattern_model_map[tree->aln->getPatternID(i)] = tree->aln->site_model[i];
+            //cout << "site " << i << " ptn " << tree->aln->getPatternID(i)
+            //     << " -> model " << site_model[i] << endl;
+        }
+        double* state_freq = new double[model->num_states];
+        double* rates = new double[model->getNumRateEntries()];
+        for (size_t i = 0; i < tree->aln->site_state_freq.size(); ++i) {
+            ModelMarkov *modeli;
+            if (i == 0) {
+                auto f_type = (freq_type != FREQ_UNKNOWN)
+                            ? freq_type : FREQ_EMPIRICAL;
+                modeli = (ModelMarkov*)createModel(model_str, models_block,
+                                                   f_type, "", tree,
+                                                   report_to_tree);
+                modeli->getStateFrequency(state_freq);
+                modeli->getRateMatrix(rates);
+            } else {
+                modeli = (ModelMarkov*)createModel(model_str, models_block,
+                                                   FREQ_EQUAL, "", tree,
+                                                   report_to_tree);
+                modeli->setStateFrequency(state_freq);
+                modeli->setRateMatrix(rates);
+            }
+            if (tree->aln->site_state_freq[i]) {
+                modeli->setStateFrequency (tree->aln->site_state_freq[i]);
+            }
+            modeli->init(FREQ_USER_DEFINED, report_to_tree);
+            models->push_back(modeli);
+        }
+        delete [] rates;
+        delete [] state_freq;
+
+        models->joinEigenMemory();
+        models->decomposeRateMatrix();
+    }
 }
 
 void ModelFactory::initializeAscertainmentCorrection(ModelInfo& rate_info,

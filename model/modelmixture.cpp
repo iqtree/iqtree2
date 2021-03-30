@@ -1107,27 +1107,34 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block,
     while ((spec_pos = model_str.find("+E")) != string::npos) {
         string::size_type end_pos = model_str.find_first_of("+*", spec_pos+1);
         if (end_pos == string::npos) {
-            seqerr = model_str.substr(spec_pos);
+            seqerr    = model_str.substr(spec_pos);
             model_str = model_str.substr(0, spec_pos);
         } else {
-            seqerr = model_str.substr(spec_pos, end_pos - spec_pos);
+            seqerr    = model_str.substr(spec_pos, end_pos - spec_pos);
             model_str = model_str.substr(0, spec_pos) + model_str.substr(end_pos);
         }
     }
     
     if (!seqerr.empty() && tree->aln->seq_type != SEQ_DNA) {
-        outError("Sequencing error model " + seqerr + " is only supported for DNA");
+        outError("Sequencing error model " + seqerr +
+                 " is only supported for DNA");
     }
     // Now that PoMo stuff has been removed, check for model parameters.
-	size_t pos = model_str.find(OPEN_BRACKET);
+    size_t pos = model_str.find(OPEN_BRACKET);
     if (pos != string::npos) {
-		if (model_str.rfind(CLOSE_BRACKET) != model_str.length()-1)
-			outError("Close bracket not found at the end of ", model_str);
-		model_params = model_str.substr(pos+1, model_str.length()-pos-2);
-		model_str = model_str.substr(0, pos);
+        if (model_str.rfind(CLOSE_BRACKET) != model_str.length()-1) {
+            outError("Close bracket not found at the end of ", model_str);
+        }
+        model_params = model_str.substr(pos+1, model_str.length()-pos-2);
+        model_str = model_str.substr(0, pos);
     }
-
-    if ((pomo) || (tree->aln->seq_type == SEQ_POMO)) {
+    
+    auto yaml_path = tree->params->yaml_model_file;
+    ModelListFromYAMLFile yaml_list;
+    if (!yaml_path.empty()) {
+        yaml_list.loadFromFile(yaml_path.c_str());
+    }
+    if (pomo || tree->aln->seq_type == SEQ_POMO) {
         if (pomo_rate_str == "") {
             model = new ModelPoMo(model_str.c_str(), model_params,
                                   freq_type, freq_params, tree,
@@ -1143,35 +1150,40 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block,
             report_to_tree->logLine("PoMo mixture model"
                                     " for Gamma rate heterogeneity.");
         }
-	} else if (ModelMarkov::validModelName(model_str)) {
-	        model = ModelMarkov::getModelByName(model_str, tree, model_params,
-                                                freq_type, freq_params,
-                                                report_to_tree);
-	} else if (tree->aln->seq_type == SEQ_BINARY) {
-		model = new ModelBIN(model_str.c_str(), model_params, freq_type,
+    } else if (yaml_list.isModelNameRecognized(model_str.c_str())) {
+        model = yaml_list.getModelByName(model_str.c_str(),    tree,
+                                         model_params.c_str(), freq_type,
+                                         freq_params.c_str(),  report_to_tree);
+    } else if (ModelMarkov::validModelName(model_str)) {
+        model = ModelMarkov::getModelByName(model_str,    tree,
+                                            model_params, freq_type,
+                                            freq_params,  report_to_tree);
+    } else if (tree->aln->seq_type == SEQ_BINARY) {
+        model = new ModelBIN(model_str.c_str(), model_params, freq_type,
                              freq_params, tree, report_to_tree);
-	} else if (tree->aln->seq_type == SEQ_DNA) {
-        if (seqerr.empty())
+    } else if (tree->aln->seq_type == SEQ_DNA) {
+        if (seqerr.empty()) {
             model = new ModelDNA(model_str.c_str(), model_params, freq_type,
                                  freq_params, tree, report_to_tree);
-        else
+        }
+        else {
             model = new ModelDNAError(model_str.c_str(), model_params, freq_type,
                                       freq_params, seqerr, tree, report_to_tree);
-	} else if (tree->aln->seq_type == SEQ_PROTEIN) {
-		model = new ModelProtein(model_str.c_str(), model_params,
+        }
+    } else if (tree->aln->seq_type == SEQ_PROTEIN) {
+        model = new ModelProtein(model_str.c_str(), model_params,
                                  freq_type, freq_params, tree,
                                  models_block, report_to_tree);
-	} else if (tree->aln->seq_type == SEQ_CODON) {
-		model = new ModelCodon(model_str.c_str(), model_params, freq_type,
+    } else if (tree->aln->seq_type == SEQ_CODON) {
+        model = new ModelCodon(model_str.c_str(), model_params, freq_type,
                                freq_params, tree, report_to_tree);
-	} else if (tree->aln->seq_type == SEQ_MORPH) {
-		model = new ModelMorphology(model_str.c_str(), model_params, freq_type,
+    } else if (tree->aln->seq_type == SEQ_MORPH) {
+        model = new ModelMorphology(model_str.c_str(), model_params, freq_type,
                                     freq_params, tree, report_to_tree);
-	} else {
-		outError("Unsupported model type");
-	}
-
-	return model;
+    } else {
+        outError("Unsupported model type");
+    }
+    return model;
 }
 
 /**

@@ -484,6 +484,46 @@ void ModelInfoFromYAMLFile::updateName(const std::string& name) {
     model_name = name;
 }
 
+
 ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(const std::string& path)
     : model_file_path(path) {
+}
+
+void ModelListFromYAMLFile::loadFromFile (const char* file_path) {
+    YAML::Node yaml_model_list = YAML::LoadFile(file_path);
+    try {
+        if (!yaml_model_list.IsSequence()) {
+            throw YAML::Exception(yaml_model_list.Mark(), "list '[...]' expected");
+        }
+        for (auto it = yaml_model_list.begin(); it != yaml_model_list.end(); it++)
+        {
+            auto datatype = *it;
+            if (!(datatype["substitutionmodel"])) {
+                continue;
+            }
+            std::string yaml_model_name = datatype["substitutionmodel"].Scalar();
+            std::cout << "Parsing YAML model " << yaml_model_name << std::endl;
+            ModelInfoFromYAMLFile &y = models_found[yaml_model_name] = ModelInfoFromYAMLFile();
+            y.updateName(yaml_model_name);
+            
+            //Todo: extract other information from the substitution model.
+            //      Such as parameters and rate matrices and so forth
+            //
+        }
+    }
+    catch (YAML::Exception &e) {
+        outError(e.what());
+    }
+}
+
+bool ModelListFromYAMLFile::isModelNameRecognized (const char* model_name) {
+    return models_found.find(std::string(model_name)) != models_found.end();
+}
+
+ModelMarkov* ModelListFromYAMLFile::getModelByName
+    (const char* model_name,   PhyloTree *tree,
+     const char* model_params, StateFreqType freq_type,
+     const char* freq_params,  PhyloTree* report_to_tree) {
+    FUNCTION_NOT_IMPLEMENTED;
+    return nullptr;
 }

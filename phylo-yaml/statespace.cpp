@@ -241,8 +241,9 @@ bool StateSpace::isUnknown(StateType state) {
 StateType StateSpace::toState(string str) {
     StringStateMap::iterator it;
     it = states.find(str);
-    if (it == states.end())
+    if (it == states.end()) {
         throw str + " is not a valid state symbol";
+    }
     return it->second;
 }
     
@@ -252,15 +253,18 @@ void StateSpace::toState(string &str, StateVector &str_states) {
         bool found = false;
         for (int len = min_state_len; len <= max_state_len; len++) {
             auto it = states.find(str.substr(pos, len));
-            if (it == states.end())
+            if (it == states.end()) {
                 continue;
+            }
             found = true;
             str_states.push_back(it->second);
             pos += len;
             break;
         }
-        if (!found)
-            throw str.substr(pos, max_state_len) + " is not a valid state symbol";
+        if (!found) {
+            throw str.substr(pos, max_state_len) +
+                             " is not a valid state symbol";
+        }
     }
 }
 
@@ -284,8 +288,9 @@ void parseRange(string str, StrVector &list) {
     trimString(first);
     trimString(last);
     if (first.length() == 1 && last.length() == 1 && first[0] < last[0]) {
-        for (char ch = first[0]; ch <= last[0]; ch++)
+        for (char ch = first[0]; ch <= last[0]; ch++) {
             list.push_back(string(1,ch));
+        }
     } else {
         list.push_back(str);
     }
@@ -294,7 +299,9 @@ void parseRange(string str, StrVector &list) {
 /**
  parse a list into a vector of string
  */
-void parseList(YAML::const_iterator first, YAML::const_iterator last, StrVector &list) {
+void parseList(YAML::const_iterator first,
+               YAML::const_iterator last,
+               StrVector &list) {
     StrVector this_list;
     if (first->IsScalar())
         parseRange(first->Scalar(), this_list);
@@ -307,20 +314,25 @@ void parseList(YAML::const_iterator first, YAML::const_iterator last, StrVector 
     }
     StrVector last_list;
     first++;
-    if (first != last)
+    if (first != last) {
         parseList(first, last, last_list);
-    else
+    }
+    else {
         last_list = { "" };
-    for (auto sit = this_list.begin(); sit != this_list.end(); sit++)
-        for (auto sit2 = last_list.begin(); sit2 != last_list.end(); sit2++ )
+    }
+    for (auto sit = this_list.begin(); sit != this_list.end(); sit++) {
+        for (auto sit2 = last_list.begin(); sit2 != last_list.end(); sit2++ ) {
             list.push_back(*sit + *sit2);
+        }
+    }
 }
 
 /**
  parse a YAML::Node into a list of strings
  @param extend_length TRUE to make vector of characters if list has length 1
  */
-void parseStringList(YAML::Node node, StrVector &list, bool extend_length = false) {
+void parseStringList(YAML::Node node, StrVector &list,
+                     bool extend_length = false) {
     if (node.IsScalar()) {
         // scalar assumed to be string
         parseRange(node.Scalar(), list);
@@ -328,17 +340,20 @@ void parseStringList(YAML::Node node, StrVector &list, bool extend_length = fals
         YAML::const_iterator it;
         // check if a sequence of scalars
         bool all_scalars = true;
-        for (it = node.begin(); it != node.end(); it++)
+        for (it = node.begin(); it != node.end(); it++) {
             if (!it->IsScalar()) {
                 all_scalars = false;
                 break;
             }
-        
+        }
+
         if (all_scalars) {
-            for (it = node.begin(); it != node.end(); it++)
+            for (it = node.begin(); it != node.end(); it++) {
                 parseRange(it->Scalar(), list);
+            }
         } else {
-            // now it can be a sequence of sequences, merge them together
+            //now it can be a sequence of sequences,
+            //merge them together
             parseList(node.begin(), node.end(), list);
         }
     } else {
@@ -347,8 +362,9 @@ void parseStringList(YAML::Node node, StrVector &list, bool extend_length = fals
     
     if (list.size() == 1 && extend_length) {
         // single list, convert to vector of characters
-        for (auto i = list[0].begin()+1; i != list[0].end(); i++)
+        for (auto i = list[0].begin()+1; i != list[0].end(); i++) {
             list.push_back(string(1,*i));
+        }
         list[0] = list[0].substr(0,1);
     }
 }
@@ -365,29 +381,38 @@ void StateSpace::resetStateSpace() {
 }
 
 void StateSpace::parseStateSpace(YAML::Node datatype) {
-    if (!datatype.IsMap())
+    if (!datatype.IsMap()) {
         throw YAML::Exception(datatype.Mark(), ERR_NOT_A_MAP);
-    if (!datatype[KEY_DATATYPE])
-        throw YAML::Exception(datatype.Mark(), "'datatype: XXX' declaration not found");
+    }
+    if (!datatype[KEY_DATATYPE]) {
+        throw YAML::Exception(datatype.Mark(),
+                              "'datatype: XXX' declaration not found");
+    }
     resetStateSpace();
     space_name = datatype[KEY_DATATYPE].Scalar();
     // definition found
     // parse state: symbols
-    if (!datatype[KEY_STATE])
-        throw YAML::Exception(datatype.Mark(), "datatype does not have 'state: [...]'");
+    if (!datatype[KEY_STATE]) {
+        throw YAML::Exception(datatype.Mark(),
+                              "datatype does not have 'state: [...]'");
+    }
     StrVector allstates;
     parseStringList(datatype[KEY_STATE], allstates);
-    if (allstates.size() < 2)
-        throw YAML::Exception(datatype[KEY_STATE].Mark(), "state space must have at least 2 states");
+    if (allstates.size() < 2) {
+        throw YAML::Exception(datatype[KEY_STATE].Mark(),
+                              "state space must have at least 2 states");
+    }
     StateType stateID = 0;
-    for (auto sit = allstates.begin(); sit != allstates.end(); sit++, stateID++) {
+    for (auto sit = allstates.begin();
+         sit != allstates.end(); sit++, stateID++) {
         states[*sit] = stateID;
         raw_states[stateID] = *sit;
     }
-    num_states = stateID;
     
-    if (verbose_mode >= VB_MED)
+    num_states = stateID;
+    if (verbose_mode >= VB_MED) {
         cout << states.size() << " " << KEY_STATE << endl;
+    }
 
     // parse missing: symbols
     if (datatype[KEY_MISSING]) {
@@ -423,12 +448,15 @@ void StateSpace::parseStateSpace(YAML::Node datatype) {
             StrVector values;
             parseStringList(value, values);
             for (auto i = values.begin(); i != values.end(); i++) {
-                if (states.find(*i) == states.end())
+                if (states.find(*i) == states.end()) {
                     throw YAML::Exception(value.Mark(), ERR_UNDEFINED_STATE);
-                if (equate.find(stateID) == equate.end())
+                }
+                if (equate.find(stateID) == equate.end()) {
                     equate[stateID] = { states[*i] };
-                else
+                }
+                else {
                     equate[stateID].push_back(states[*i]);
+                }
             }
             if (equate[stateID].size() == 1) {
                 // map to just one state, so it's not an ambiguous state
@@ -448,43 +476,47 @@ void StateSpace::parseStateSpace(YAML::Node datatype) {
     if (datatype[KEY_TRANSLATE]) {
         parseStringList(datatype[KEY_TRANSLATE], translate, true);
         if (translate.size() != num_states)
-            throw YAML::Exception(datatype[KEY_TRANSLATE].Mark(), ERR_TRANSLATE_LENGTH);
+            throw YAML::Exception(datatype[KEY_TRANSLATE].Mark(),
+                                  ERR_TRANSLATE_LENGTH);
     }
     
     num_all_states = stateID;
     min_state_len = max_state_len = static_cast<int>(states.begin()->first.length());
     for (auto i = states.begin(); i != states.end(); i++) {
         int first_len = static_cast<int>(i->first.length());
-        if (min_state_len > first_len)
+        if (min_state_len > first_len) {
             min_state_len = first_len;
-        if (max_state_len < first_len)
+        }
+        if (max_state_len < first_len) {
             max_state_len = first_len;
+        }
     }
 }
 
 void StateSpace::initStateSpace(SeqType seqtype) {
-    
     string name;
     switch (seqtype) {
-    case SEQ_DNA: name = "DNA"; break;
-    case SEQ_CODON: name = "CODON"; break;
-    case SEQ_MORPH: name = "MORPH"; break;
-    case SEQ_BINARY: name = "BIN"; break;
-    case SEQ_PROTEIN: name = "AA"; break;
-    case SEQ_MULTISTATE: name = "MULTI"; break;
-    case SEQ_POMO: outError("Unhandled POMO state space"); break;
-    case SEQ_UNKNOWN: ASSERT(0);
+        case SEQ_DNA:        name = "DNA";   break;
+        case SEQ_CODON:      name = "CODON"; break;
+        case SEQ_MORPH:      name = "MORPH"; break;
+        case SEQ_BINARY:     name = "BIN";   break;
+        case SEQ_PROTEIN:    name = "AA";    break;
+        case SEQ_MULTISTATE: name = "MULTI"; break;
+        case SEQ_POMO:       outError("Unhandled POMO state space");
+                             break;
+        case SEQ_UNKNOWN:    ASSERT(0);
     }
-    
     try {
         YAML::Node spaceDef = YAML::Load(builtin_state_spaces);
-        if (!spaceDef.IsSequence())
+        if (!spaceDef.IsSequence()) {
             throw YAML::Exception(spaceDef.Mark(), ERR_NOT_A_LIST);
+        }
         for (auto it = spaceDef.begin(); it != spaceDef.end(); it++)
         {
             auto datatype = *it;
-            if (!(datatype[KEY_DATATYPE]))
+            if (!(datatype[KEY_DATATYPE])) {
                 continue;
+            }
             if (datatype[KEY_DATATYPE].Scalar() == name) {
                 parseStateSpace(datatype);
                 break;
