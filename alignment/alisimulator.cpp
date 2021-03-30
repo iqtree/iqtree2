@@ -417,14 +417,39 @@ void AliSimulator::writeSequencesToFile(string file_path)
         // write the first line <#taxa> <length_of_sequence>
         out <<(tree->leafNum) <<" "<<params->alisim_sequence_length<< endl;
         
-        // write senquences of leaf nodes to file
-        writeASequenceToFile(tree->aln, out, tree->root, tree->root);
+        // write senquences of leaf nodes to file with/without gaps copied from the input sequence
+        if (params->alisim_inference && !params->alisim_not_copy_gaps)
+        {
+            // load input sequences (with gaps)
+            vector<string> seq_names;
+            vector<string> sequences;
+            loadSequences(params->aln_file, seq_names, sequences);
+            
+            // write simulated sequence with the gaps copied from the input sequence
+            writeASequenceToFileWithGaps(tree->aln, seq_names, sequences, out, tree->root, tree->root);
+        }
+        else
+        {
+            writeASequenceToFile(tree->aln, out, tree->root, tree->root);
+        }
         
         // close the file
         out.close();
     } catch (ios::failure) {
         outError(ERR_WRITE_OUTPUT, file_path);
     }
+}
+
+/**
+*  load sequences from input file
+*/
+void AliSimulator::loadSequences(char *file_path, vector<string> &seq_names, vector<string> &sequences)
+{
+    // read sequences from the input file
+    Alignment *aln = new Alignment();
+    int nseq = 0, nsite = 0;
+    aln->extractSequences(params->aln_file, params->sequence_type, sequences, nseq, nsite);
+    seq_names = aln->getSeqNames();
 }
 
 /**
@@ -455,4 +480,40 @@ string AliSimulator::convertEncodedSequenceToReadableSequence(Alignment *aln, In
     return output_sequence;
     
 };
+
+/**
+*  write a sequence of a node to an output file with gaps copied from the input sequence
+*/
+void AliSimulator::writeASequenceToFileWithGaps(Alignment *aln, vector<string> seq_names, vector<string> sequences, ofstream &out, Node *node, Node *dad)
+{
+    if (node->isLeaf() && node->name!=ROOT_NAME) {
+        // retrieve the input sequence of the current node
+        for (int i = 0; i < sequences.size(); i++)
+            if (!seq_names[i].compare(node->name))
+            {
+                out <<node->name <<" "<<convertEncodedSequenceToReadableSequenceWithGaps(aln, sequences[i], node->sequence) << endl;
+            }
+    }
+    
+    NeighborVec::iterator it;
+    FOR_NEIGHBOR(node, dad, it) {
+        writeASequenceToFileWithGaps(aln, seq_names, sequences, out, (*it)->node, node);
+    }
+}
+
+/**
+*  convert an encoded sequence (with integer numbers) to a readable sequence (with ACGT...) with gaps copied from the input sequence
+*/
+string AliSimulator::convertEncodedSequenceToReadableSequenceWithGaps(Alignment *aln, string input_sequence, IntVector sequence)
+{
+    string output_sequence = "";
+
+    for (int i = 0; i < sequence.size(); i++)
+        if ((i < input_sequence.length()) && (input_sequence[i] == '-'))
+            output_sequence = output_sequence + "-";
+        else
+            output_sequence = output_sequence + aln->convertStateBackStr(sequence[i]);
+        
+    return output_sequence;
+}
 

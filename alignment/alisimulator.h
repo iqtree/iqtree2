@@ -88,16 +88,31 @@ protected:
     *  write all sequences of a tree to an output file
     */
     void writeSequencesToFile(string file_path);
-
+    
+    /**
+    *  load sequences from input file
+    */
+    void loadSequences(char *file_path, vector<string> &seq_names, vector<string> &sequences);
+    
     /**
     *  write a sequence of a node to an output file
     */
     void writeASequenceToFile(Alignment *aln, ofstream &out, Node *node, Node *dad);
+    
+    /**
+    *  write a sequence of a node to an output file with gaps copied from the input sequence
+    */
+    void writeASequenceToFileWithGaps(Alignment *aln, vector<string> seq_names, vector<string> sequences, ofstream &out, Node *node, Node *dad);
 
     /**
     *  convert an encoded sequence (with integer numbers) to a readable sequence (with ACGT...)
     */
     string convertEncodedSequenceToReadableSequence(Alignment *aln, IntVector sequence);
+    
+    /**
+    *  convert an encoded sequence (with integer numbers) to a readable sequence (with ACGT...) with gaps copied from the input sequence
+    */
+    string convertEncodedSequenceToReadableSequenceWithGaps(Alignment *aln, string input_sequence, IntVector sequence);
     
     /**
     *  simulate sequences for all nodes in the tree by DFS

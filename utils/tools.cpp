@@ -1111,6 +1111,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.original_params = "";
     params.alisim_active = false;
     params.alisim_inference = false;
+    params.alisim_not_copy_gaps = false;
     params.alisim_sequence_length = 1000;
     params.alisim_dataset_num = 1;
     params.alisim_ancestral_sequence = -1;
@@ -4229,6 +4230,12 @@ void parseArg(int argc, char *argv[], Params &params) {
             
             if (strcmp(argv[cnt], "--infer") == 0) {
                 params.alisim_inference = true;
+                
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "--not-copy-gaps") == 0) {
+                params.alisim_not_copy_gaps = true;
                 
                 continue;
             }

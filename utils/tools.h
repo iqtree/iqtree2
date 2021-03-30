@@ -2239,6 +2239,11 @@ public:
     bool alisim_inference;
     
     /**
+    *  TRUE to disable copying gaps from input sequences
+    */
+    bool alisim_not_copy_gaps;
+    
+    /**
     *  original parameters
     */
     string original_params;
