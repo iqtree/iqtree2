@@ -9,6 +9,10 @@
 #include <string>
 #include <utils/tools.h> //for ASCType
 
+class ModelMarkov;
+class PhyloTree;
+class YAMLFileLoader;
+
 class ModelInfo {
 public:
     ModelInfo()                     = default;
@@ -53,6 +57,8 @@ class ModelInfoFromName: public ModelInfo {
 private:
     std::string model_name;
 public:
+    friend class YAMLFileLoader;
+    
     explicit ModelInfoFromName(std::string name);
     explicit ModelInfoFromName(const char* name);
     virtual ~ModelInfoFromName() = default;
@@ -92,11 +98,18 @@ public:
 
 class ModelInfoFromYAMLFile: public ModelInfo {
 private:
-    std::string model_name;
-    std::string model_file_path;
+    std::string model_name;       //
+    std::string model_file_path;  //
+    std::string citation;         //
+    std::string data_type_name;   //
+    bool        reversible;       //don't trust this; check against rate matrix
+    size_t      rate_matrix_rank; //
+    std::vector<StrVector> rate_matrix_expressions; //row major
+    
     friend class ModelListFromYAMLFile;
+    friend class YAMLFileLoader;
 public:
-    ModelInfoFromYAMLFile() = default; //Only ModelListFromYAMLFile uses it.
+    ModelInfoFromYAMLFile(); //Only ModelListFromYAMLFile uses it.
     explicit ModelInfoFromYAMLFile(const std::string& file_path);
     ~ModelInfoFromYAMLFile() = default;
     
@@ -156,8 +169,6 @@ public:
     void        updateName(const std::string& name);
 };
 
-class ModelMarkov;
-class PhyloTree;
 class ModelListFromYAMLFile {
 protected:
     std::map<std::string, ModelInfoFromYAMLFile> models_found;

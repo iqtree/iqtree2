@@ -480,35 +480,177 @@ void ModelInfoFromName::updateName(const std::string& name) {
     model_name = name;
 }
 
-void ModelInfoFromYAMLFile::updateName(const std::string& name) {
-    model_name = name;
-}
+class YAMLFileLoader {
+public:
+    const char* file_path;
+    const std::string model_name;
+   
+    YAMLFileLoader(const char* path): file_path(path) {
+    }
+        
+    std::string stringScalar(const YAML::Node& node,
+                                    const char* key) {
+        auto cite = node[key];
+        return cite ? cite.Scalar() : "";
+    }
+    
+    bool booleanScalar(const YAML::Node& node,
+                              const char* key) {
+        std::string s = string_to_lower(stringScalar(node, key));
+        return s == "true" || s == "yes" || s == "t" || s == "y" || s == "1";
+    }
+    
+    void complainIfNot(bool check_me,
+                              std::string error_message) {
+        if (!check_me) {
+            outError(error_message);
+        }
+    }
+    
+    void parseYAMLModelParameters(const YAML::Node& params,
+                                  ModelInfoFromYAMLFile& info) {
+        //Assumes params is a sequence of parameter declarations
+        //
+    }
+    
+    template <class S>
+    void dumpRateMatrixTo(const ModelInfoFromYAMLFile& info, S &out) {
+        std::stringstream dump;
+        for (auto r : info.rate_matrix_expressions) {
+            for (auto c: r) {
+                dump << c << " : ";
+            }
+            dump << "\n";
+        }
+        out << "Rate matrix for " << info.model_name << " is...\n" << dump.str();
+    }
+    
+    /* Example of a rate matrix
+     
+     rateMatrix:
+     - [      ,     r(1)*r(2), r(2)*r(3), r(3)*f(4) ]
+     - [ r(1)*f(1),          , r(4)*f(3), r(5)*f(4) ]
+     - [ r(2)*f(1), r(4)*f(2),          , f(4)      ]
+     - [ r(3)*f(1), r(5)*f(2), f(3)     ,           ]
 
+     */
+    
+    
+    void parseRateMatrix(const YAML::Node& rate_matrix,
+                         ModelInfoFromYAMLFile& info) {
+        //Assumes rate_matrix is a sequence (of rows)
+        for (auto it = rate_matrix.begin(); it != rate_matrix.end(); ++it)
+        {
+            ++info.rate_matrix_rank;
+            const YAML::Node& row = *it;
+            std::stringstream s;
+            s << "Row " << info.rate_matrix_rank << " of rate matrix "
+              << " for model " << info.model_name
+              << " in " << info.model_file_path;
+            std::string context = s.str();
+            complainIfNot(row.IsSequence(),
+                          context + " is not a sequence" );
+            StrVector expr_row;
+            for (auto it2 = row.begin(); it2 != row.end(); ++it2) {
+                const YAML::Node& col = *it2;
+                if (col.IsNull()) {
+                    expr_row.emplace_back("");
+                    //Gets whatever hasn't been assigned in this row
+                }
+                else if (!col.IsScalar()) {
+                    std::stringstream s2;
+                    s2 << "Column " << (expr_row.size()+1)
+                       << " of " << context << " is not a scalar";
+                    outError(s2.str());
+                } else {
+                    expr_row.emplace_back(col.Scalar());
+                }
+            }
+            info.rate_matrix_expressions.emplace_back(expr_row);
+        }
+        dumpRateMatrixTo(info, cout);
+    }
+        
+    void parseYAMLSubstitutionModel(const YAML::Node& substitution_model,
+                                    const std::string& name_of_model,
+                                    ModelInfoFromYAMLFile& info) {
+        info.model_file_path = file_path;
+        info.model_name      = name_of_model;
+        info.citation        = stringScalar(substitution_model,  "citation");
+        info.reversible      = booleanScalar(substitution_model, "reversible");
+        //
+        //Todo: read off the datatype (if there is one).
+        //
+        info.data_type_name  = stringScalar(substitution_model,  "datatype");
+        
+        //
+        //Todo: extract other information from the subsstitution model.
+        //      Such as parameters and rate matrices and so forth
+        //
+        auto params = substitution_model["parameters"];
+        if (params) {
+            complainIfNot(params.IsSequence(),
+                          "Parameters of model " + model_name +
+                          " in file " + file_path + " not a sequence");
+            parseYAMLModelParameters(params, info);
+        }
+        
+        //
+        //Todo: It should be okay for a model *not* to specify a rateMatrix,
+        //      so long as it subclasses another model that *does* specify one.
+        //
+        auto rateMatrix = substitution_model["rateMatrix"];
+        complainIfNot(rateMatrix, "Model " + model_name +
+                      " in file " + file_path +
+                      " does not specify a rateMatrix" );
+        parseRateMatrix(rateMatrix, info);
+        
+        //
+        //Todo: How do you specify paramters
+        //
+        auto stateFrequency = substitution_model["stateFrequency"];
+        if (stateFrequency) {
+            //Check that dimension of the specified parameter is the
+            //same as the rank of the rate matrix (it must be!).
+        } else {
+            //If we have parameters with a type of frequency, we're all good.
+        }
+    }
+};
+
+ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(): rate_matrix_rank(0) {
+    
+}
 
 ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(const std::string& path)
     : model_file_path(path) {
 }
 
+void ModelInfoFromYAMLFile::updateName(const std::string& name) {
+    model_name = name;
+}
+
+
+
+
+
 void ModelListFromYAMLFile::loadFromFile (const char* file_path) {
     YAML::Node yaml_model_list = YAML::LoadFile(file_path);
+    YAMLFileLoader loader(file_path);
     try {
         if (!yaml_model_list.IsSequence()) {
             throw YAML::Exception(yaml_model_list.Mark(), "list '[...]' expected");
         }
         for (auto it = yaml_model_list.begin(); it != yaml_model_list.end(); it++)
         {
-            auto datatype = *it;
-            if (!(datatype["substitutionmodel"])) {
+            const YAML::Node& node = *it;
+            if (!(node["substitutionmodel"])) {
                 continue;
             }
-            std::string yaml_model_name = datatype["substitutionmodel"].Scalar();
+            std::string yaml_model_name = node["substitutionmodel"].Scalar();
             std::cout << "Parsing YAML model " << yaml_model_name << std::endl;
             ModelInfoFromYAMLFile &y = models_found[yaml_model_name] = ModelInfoFromYAMLFile();
-            y.updateName(yaml_model_name);
-            
-            //Todo: extract other information from the substitution model.
-            //      Such as parameters and rate matrices and so forth
-            //
+            loader.parseYAMLSubstitutionModel(node, yaml_model_name, y);
         }
     }
     catch (YAML::Exception &e) {

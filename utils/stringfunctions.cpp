@@ -301,6 +301,12 @@ bool iEquals(const std::string& a, const std::string& b)
     return true;
 }
 
+std::string string_to_lower(const std::string& input_string) {
+    std::string answer = input_string;
+    std::transform(answer.begin(), answer.end(), answer.begin(),
+                   []( char c){ return std::tolower(c); });
+    return answer;
+}
 
 std::string string_to_lower(const char* input) {
     std::string answer = input;

@@ -141,6 +141,7 @@ std::string convertDoubleToString(double number);
  */
 bool iEquals(const std::string& a, const std::string& b);
  
+std::string string_to_lower(const std::string& input_string); //added 30-Mar-2021
 
 std::string string_to_lower(const char* input); //was only in tools.cpp
 
