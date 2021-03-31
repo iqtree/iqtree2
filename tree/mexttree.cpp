@@ -290,7 +290,7 @@ void MExtTree::generateBirthDeath(int size, double scale_birth_rate, bool binary
     int i;
     
     // retry the birth-death process until successfully generating the tree
-    while (myleaves.size() <= 0)
+    while (myleaves.size() < size)
     {
         i  = 0;
         root = newNode();
@@ -325,7 +325,14 @@ void MExtTree::generateBirthDeath(int size, double scale_birth_rate, bool binary
             else
             {
                 // remove the current node from the tree
-                Node *dad_node = node->neighbors[0]->node;
+                Node *dad_node;
+                // if the death event occurs when the tree has only root node -> restart
+                if (node->neighbors.size() == 0)
+                    break;
+                // otherwise, retrieve the dad of the current node
+                else
+                    dad_node = node->neighbors[0]->node;
+                
                 // if dad_node is root -> delete the neiborhood to the current node
                 if (dad_node == root)
                 {
@@ -352,7 +359,7 @@ void MExtTree::generateBirthDeath(int size, double scale_birth_rate, bool binary
                         if ((*it)->node == node)
                             continue;
                         // detect sibling
-                        else if(std::find(myleaves.begin(), myleaves.end(), (*it)->node) != myleaves.end()) {
+                        else if((*it)->node->id > dad_node->id) {
                             sibling_node = (*it)->node;
                             length_from_sibling = (*it)->length;
                         }
@@ -363,6 +370,10 @@ void MExtTree::generateBirthDeath(int size, double scale_birth_rate, bool binary
                             length_from_grandfather = (*it)->length;
                         }
                     }
+                    
+                    // make sure grandfather_node and sibling_node are found
+                    if (!grandfather_node || !sibling_node)
+                        break;
                     
                     // connect grand_father to sibling
                     for (NeighborVec::iterator it = grandfather_node->neighbors.begin(); it != grandfather_node->neighbors.end(); it++)

@@ -1429,8 +1429,12 @@ void parseArg(int argc, char *argv[], Params &params) {
                     || (bd_params.find(delimiter) == std::string::npos))
                     throw "Use -rbd {<birth_rate>,<death_rate>} <num_taxa>";
                 params.birth_rate = convert_double(bd_params.substr(1, bd_params.find(delimiter) - 1).c_str());
+                if (params.birth_rate <= 0)
+                    throw "<birth_rate> must be positive";
                 bd_params.erase(0, bd_params.find(delimiter) + delimiter.length());
                 params.death_rate = convert_double(bd_params.substr(0, bd_params.length()-1).c_str());
+                if (params.death_rate < 0)
+                    throw "<death_rate> must be non-negative";
                 
                 // get #taxa
                 cnt++;
