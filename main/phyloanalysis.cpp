@@ -4585,26 +4585,37 @@ void runRootstrap(Params &params) {
     cout << "Reading tree " << params.user_file << " ..." << endl;
     bool rooted = params.is_rooted;
     tree.readTree(params.user_file, rooted);
-    if (!tree.rooted)
-        outError("Tree must be rooted");
+
     cout << ((tree.rooted) ? "rooted" : "un-rooted") << " tree with "
         << tree.leafNum - tree.rooted << " taxa and " << tree.branchNum << " branches" << endl;
+    
+    if (!tree.rooted && !params.root)
+        outError("For unrooted tree please provide an outgroup via -o option");
 
+    
+    // move the node name into branch name to avoid mis-labelling
     BranchVector branches;
     tree.getInnerBranches(branches);
     BranchVector::iterator brit;
     for (brit = branches.begin(); brit != branches.end(); brit++) {
-        Neighbor *branch = brit->second->findNeighbor(brit->first);
+        Neighbor *branch1 = brit->second->findNeighbor(brit->first);
+        Neighbor *branch2 = brit->first->findNeighbor(brit->second);
         string label = brit->second->name;
-        if (!label.empty())
-            PUT_ATTR(branch, label);
+        if (!label.empty()) {
+            PUT_ATTR(branch1, label);
+            PUT_ATTR(branch2, label);
+            brit->second->name = "";
+        }
     }
     
     rooted = params.is_rooted;
     MTreeSet trees(params.treeset_file.c_str(), rooted, params.tree_burnin, params.tree_max_count);
     double start_time = getRealTime();
     cout << "Computing rootstrap supports..." << endl;
-    tree.computeRootstrap(trees, false);
+    if (tree.rooted)
+        tree.computeRootstrap(trees, false);
+    else
+        tree.computeRootstrapUnrooted(trees, params.root, false);
     cout << getRealTime() - start_time << " sec" << endl;
     
 }

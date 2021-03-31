@@ -825,7 +825,7 @@ public:
     /**
         compute rootstrap supports for unrooted tree using outgroup, 2021-01-19 for Suha's paper
      */
-    void computeRootstrapUnrooted(StrVector &unrooted_trees, const char* outgroup);
+    void computeRootstrapUnrooted(MTreeSet &trees, const char* outgroup, bool use_taxid);
 
     int getDelete() const;
     void setDelete(int _delete);

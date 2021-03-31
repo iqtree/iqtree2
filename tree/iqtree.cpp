@@ -3892,7 +3892,7 @@ void IQTree::computeRootstrap(MTreeSet &trees, bool use_taxid) {
     cout << "Annotated tree (best viewed in FigTree) written to " << filename << endl;
 }
 
-void IQTree::computeRootstrapUnrooted(StrVector &unrooted_trees, const char* outgroup) {
+void IQTree::computeRootstrapUnrooted(MTreeSet &trees, const char* outgroup, bool use_taxid) {
     ASSERT(!rooted);
 
     // check for monophyly of outgroup
@@ -3903,31 +3903,39 @@ void IQTree::computeRootstrapUnrooted(StrVector &unrooted_trees, const char* out
     for (auto it = outgroup_vec.begin(); it != outgroup_vec.end(); it++)
         outgroup_set.insert(*it);
     pair<Node*,Neighbor*> outgroup_branch = {NULL, NULL};
+    // move the root
+    root = findLeafName(outgroup_vec[0]);
+    if (!root)
+        outError("Taxon " + outgroup_vec[0] + " found not");
     if (outgroup_vec.size() == 1) {
-        outgroup_branch.first = findNodeName(outgroup_vec[0]);
+        outgroup_branch.first = root;
         outgroup_branch.second = outgroup_branch.first->neighbors[0];
     } else {
-        findNodeNames(outgroup_set, outgroup_branch, root->neighbors[0]->node, root);
+        findNodeNames(outgroup_set, outgroup_branch, root->neighbors[0]->node, nullptr);
     }
     if (!outgroup_branch.first) {
         cout << "WARNING: outgroup taxa are not monophyletic - rootstrap will not be computed" << endl;
         return;
     }
+    // set root to the branch separating outgroup from ingroup
+    root = outgroup_branch.first;
+    
     Split outgroup_split(leafNum);
     getTaxa(outgroup_split, outgroup_branch.first, outgroup_branch.second->node);
     int first_outgroup_id = outgroup_split.firstTaxon();
     
     // sanity check
-    ASSERT(outgroup_split.countTaxa() == outgroup_vec.size());
+    if (outgroup_split.countTaxa() != outgroup_vec.size()) {
+        cout << "WARNING: outgroup taxa are not monophyletic - rootstrap will not be computed" << endl;
+        return;
+    }
     if (outgroup_split.shouldInvert())
         outError("Number of outgroup taxa must not be larger than half of all taxa");
 
-    MTreeSet trees;
-    trees.init(unrooted_trees, rooted);
     bool error = false;
     for (i = 0; i < trees.size(); i++)
         if (trees[i]->rooted) {
-            cerr << "Tree " + convertIntToString(i+1) + " is rooted";
+            cerr << "Tree " + convertIntToString(i+1) + " is rooted" << endl;
             error = true;
         }
     
@@ -3938,11 +3946,32 @@ void IQTree::computeRootstrapUnrooted(StrVector &unrooted_trees, const char* out
     vector<SplitIntMap> ssvec;
     ssvec.resize(trees.size());
     vector<string> taxname;
-    for (i = 0; i < leafNum; i++)
-        taxname.push_back(convertIntToString(i));
+    StringIntMap tax2id;
+    if (use_taxid) {
+        for (i = 0; i < leafNum; i++)
+            taxname.push_back(convertIntToString(i));
+    } else {
+        getTaxaName(taxname);
+        for (i = 0; i < taxname.size(); i++)
+            tax2id[taxname[i]] = i;
+    }
+
     IntVector monophyletic;
     monophyletic.resize(trees.size());
     for (i = 0; i < trees.size(); i++) {
+        if (!use_taxid) {
+            // change the taxon IDs to be the same as main tree
+            NodeVector taxa;
+            trees[i]->getTaxa(taxa);
+            for (int j = 0; j < taxa.size(); j++) {
+                auto id = tax2id.find(taxa[j]->name);
+                if (id == tax2id.end())
+                    outError("Taxon " + taxa[j]->name + " in tree " + convertIntToString(i+1) + " not found in main tree");
+                taxa[j]->id = id->second;
+            }
+        }
+        
+        // convert this tree for splits graph
         SplitGraph sg;
         trees[i]->convertSplits(taxname, sg);
         for (auto split : sg) {
@@ -3988,7 +4017,9 @@ void IQTree::computeRootstrapUnrooted(StrVector &unrooted_trees, const char* out
                 }
                 treeid++;
             }
-
+            if (branch.first == outgroup_branch.second->node) {
+                cout << "Rootstrap at the current outgroup position: " << rootstrap*100.0 / trees.size() << "%" << endl;
+            }
         } else {
             /* root branch */
             // make sure that first of pair is the root
@@ -4021,7 +4052,6 @@ void IQTree::computeRootstrapUnrooted(StrVector &unrooted_trees, const char* out
         }
         
         double rootstrap_dbl = (double)rootstrap*100.0 / trees.size();
-        //branch.first->findNeighbor(branch.second)->putAttr("rootstrap", rootstrap_dbl);
         Neighbor *nei = branch.second->findNeighbor(branch.first);
         nei->putAttr("rootstrap", rootstrap_dbl);
         nei->putAttr("id", nei->id);

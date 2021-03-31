@@ -1550,21 +1550,25 @@ bool MTree::findNodeNames(unordered_set<string> &taxa_set, pair<Node*,Neighbor*>
         }
     }
     // all presence or absence
-    if (presence == node->neighbors.size()-1)
-        return true;
     if (presence == 0)
         return false;
     // inbetween: detect it!
-    res.first = node;
-    res.second = target;
-    if (target != node->neighbors[0]) {
-        // move target into the first neighbor
-        FOR_NEIGHBOR_IT(node, NULL, it)
-        if ((*it) == target) {
-            (*it) = node->neighbors[0];
-            node->neighbors[0] = target;
-            break;
+    if (!res.first) {
+        res.first = node;
+        res.second = target;
+        if (target != node->neighbors[0]) {
+            // move target into the first neighbor
+            FOR_NEIGHBOR_IT(node, NULL, it)
+            if ((*it) == target) {
+                (*it) = node->neighbors[0];
+                node->neighbors[0] = target;
+                break;
+            }
         }
+    }
+
+    if (presence == node->neighbors.size()-1) {
+        return true;
     }
     return false;
 }
