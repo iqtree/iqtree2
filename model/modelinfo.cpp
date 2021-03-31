@@ -480,9 +480,73 @@ void ModelInfoFromName::updateName(const std::string& name) {
     model_name = name;
 }
 
-
 YAMLFileParameter::YAMLFileParameter() : value(0.0) {
 }
+
+class YAMLExpression {
+protected:
+    const ModelInfoFromYAMLFile& model;
+public:
+    YAMLExpression(ModelInfoFromYAMLFile& for_model) : model(for_model) { }
+    virtual ~YAMLExpression() = default;
+    virtual double evaluate() const { return 0; }
+};
+
+class YAMLVariable: public YAMLExpression {
+    std::string variable_name;
+public:
+    typedef YAMLExpression super;
+    YAMLVariable(ModelInfoFromYAMLFile& for_model, const char* name)
+        : super(for_model), variable_name(name) {
+        if (!for_model.hasVariable(name)) {
+            std::stringstream complaint;
+            complaint << "Could not evaluate variable " << name
+                      << " for model " << for_model.getLongName();
+        }
+    }
+    virtual ~YAMLVariable() = default;
+    virtual double evaluate() const {
+        return model.getVariableValue(variable_name);
+    }
+};
+
+class YAMLInfix: public YAMLExpression {
+protected:
+    YAMLExpression* lhs;
+    YAMLExpression* rhs;
+public:
+    typedef YAMLExpression super;
+    YAMLInfix(ModelInfoFromYAMLFile& for_model,
+              YAMLExpression* left, YAMLExpression* right )
+    : super(for_model), lhs(left), rhs(right) {
+        ASSERT(lhs!=nullptr && rhs!=nullptr);
+    }
+    virtual ~YAMLInfix() {
+        delete lhs;
+        lhs = nullptr;
+        delete rhs;
+        rhs = nullptr;
+    }
+};
+
+class YAMLMultiplication: public YAMLInfix {
+public:
+    typedef YAMLInfix super;
+    YAMLMultiplication(ModelInfoFromYAMLFile& for_model,
+                       YAMLExpression* left, YAMLExpression* right )
+        : super(for_model, left, right) { }
+    virtual ~YAMLMultiplication() = default;
+    virtual double evaluate() const { return lhs->evaluate() * rhs->evaluate(); }
+};
+
+class YAMLSubtraction: public YAMLInfix {
+    typedef YAMLInfix super;
+    YAMLSubtraction(ModelInfoFromYAMLFile& for_model,
+                       YAMLExpression* left, YAMLExpression* right )
+        : super(for_model, left, right) { }
+    virtual ~YAMLSubtraction() = default;
+    virtual double evaluate() const { return lhs->evaluate() - rhs->evaluate(); }
+};
 
 class YAMLFileLoader {
 public:
@@ -593,10 +657,10 @@ public:
     /* Example of a rate matrix
      
      rateMatrix:
-     - [      ,     r(1)*r(2), r(2)*f(3), r(3)*f(4) ]
-     - [ r(1)*f(1),          , r(4)*f(3), r(5)*f(4) ]
-     - [ r(2)*f(1), r(4)*f(2),          , f(4)      ]
-     - [ r(3)*f(1), r(5)*f(2), f(3)     ,           ]
+     - [      , r1*r2, r2*f3, r3*f4 ]
+     - [ r1*f1,      , r4*f3, r5*f4 ]
+     - [ r2*f1, r4*f2,      , f4    ]
+     - [ r3*f1, r5*f2, f3   ,       ]
 
      */
     
@@ -633,6 +697,14 @@ public:
         dumpRateMatrixTo(info, cout);
     }
         
+    void parseRateMatrixExpressions(ModelInfoFromYAMLFile& info) {
+        //Todo:
+        //This is to execute after the rate matrix expressions are known.
+        //It is to convert rate matrix expression strings into
+        //a vector of expression trees, to check they are valid,
+        //and then discard the expression trees.
+    }
+    
     void parseYAMLSubstitutionModel(const YAML::Node& substitution_model,
                                     const std::string& name_of_model,
                                     ModelInfoFromYAMLFile& info) {
@@ -723,5 +795,14 @@ ModelMarkov* ModelListFromYAMLFile::getModelByName
      const char* model_params, StateFreqType freq_type,
      const char* freq_params,  PhyloTree* report_to_tree) {
     FUNCTION_NOT_IMPLEMENTED;
+        
+    //Todo:
+    //This must convert the rate matrix expression strings into
+    //a vector of expression trees (it can assume they will be valid)
+    //Then it must evaluate the expressions, to get the rate matrix
+    //to be assigned to the ModelMarkov instance it will return.
+    //Only then can it delete the expression trees.
+    //
+
     return nullptr;
 }

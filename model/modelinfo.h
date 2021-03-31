@@ -120,8 +120,10 @@ private:
     std::string data_type_name;   //
     bool        reversible;       //don't trust this; check against rate matrix
     size_t      rate_matrix_rank; //
-    std::vector<StrVector> rate_matrix_expressions; //row major
+    std::vector<StrVector> rate_matrix_expressions; //row major (expression strings)
     std::vector<YAMLFileParameter> parameters;      //parameters
+    
+    std::map<std::string, double> variables;
     
     friend class ModelListFromYAMLFile;
     friend class YAMLFileLoader;
@@ -188,6 +190,25 @@ public:
         return "";
     }
     void        updateName(const std::string& name);
+    
+    
+public:
+    std::string getLongName() const {
+        return model_name + " from YAML model file " + model_file_path;
+    }
+    bool hasVariable(const char* name) const {
+        return variables.find(name) != variables.end();
+    }
+    bool hasVariable(const std::string& name) const {
+        return variables.find(name) != variables.end();
+    }
+    double getVariableValue(const std::string& name) const {
+        auto found = variables.find(name);
+        if (found==variables.end()) {
+            return 0.0;
+        }
+        return found->second;
+    }
 };
 
 class ModelListFromYAMLFile {
