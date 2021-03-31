@@ -1116,6 +1116,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_dataset_num = 1;
     params.alisim_ancestral_sequence = -1;
     params.alisim_continuous_gamma = false;
+    params.birth_rate = 0.8;
+    params.death_rate = 0.2;
     
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
@@ -1415,6 +1417,29 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.tree_gen = UNIFORM;
 				continue;
 			}
+            if (strcmp(argv[cnt], "-rbd") == 0) {
+                // get birth_death parameters
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -rbd {<birth_rate>,<death_rate>} <num_taxa>";
+                string bd_params = argv[cnt];
+                string delimiter = ",";
+                if ((bd_params[0]!='{')
+                    || (bd_params[bd_params.length()-1]!='}')
+                    || (bd_params.find(delimiter) == std::string::npos))
+                    throw "Use -rbd {<birth_rate>,<death_rate>} <num_taxa>";
+                params.birth_rate = convert_double(bd_params.substr(1, bd_params.find(delimiter) - 1).c_str());
+                bd_params.erase(0, bd_params.find(delimiter) + delimiter.length());
+                params.death_rate = convert_double(bd_params.substr(0, bd_params.length()-1).c_str());
+                
+                // get #taxa
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -rbd {<birth_rate>,<death_rate>} <num_taxa>";
+                params.sub_size = convert_int(argv[cnt]);
+                params.tree_gen = BIRTH_DEATH;
+                continue;
+            }
 			if (strcmp(argv[cnt], "-rcat") == 0) {
 				cnt++;
 				if (cnt >= argc)

@@ -150,7 +150,7 @@ void generateRandomTree(Params &params)
     try {
 
         if (params.tree_gen == YULE_HARDING || params.tree_gen == CATERPILLAR ||
-            params.tree_gen == BALANCED || params.tree_gen == UNIFORM || params.tree_gen == STAR_TREE) {
+            params.tree_gen == BALANCED || params.tree_gen == UNIFORM || params.tree_gen == STAR_TREE || params.tree_gen == BIRTH_DEATH) {
             if (!overwriteFile(params.user_file)) return;
             ofstream out;
             out.open(params.user_file);
@@ -175,6 +175,9 @@ void generateRandomTree(Params &params)
                 break;
             case STAR_TREE:
                 cout << "Generating star tree with random external branch lengths..." << endl;
+                break;
+            case BIRTH_DEATH:
+                cout << "Generating random Birth-death tree..." << endl;
                 break;
             default: break;
             }

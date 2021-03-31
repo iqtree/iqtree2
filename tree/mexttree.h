@@ -90,6 +90,14 @@ public:
 		@param binary TRUE if you want to generate a binary tree
 	*/
 	void generateUniform(int size, bool binary = true);
+    
+    /**
+        generate a random tree following birth-death model
+        @param size number of taxa
+        @param scale_birth_rate (birth_rate/(birth_rate+death_rate)
+        @param binary TRUE if you want to generate a binary tree
+    */
+    void generateBirthDeath(int size, double scale_birth_rate, bool binary = true);
 
 	/**
 		generate a caterpillar tree

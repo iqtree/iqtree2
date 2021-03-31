@@ -267,7 +267,7 @@ enum RunMode {
         type of generating trees or splits graphs
  */
 enum TreeGenType {
-    NONE, YULE_HARDING, UNIFORM, CATERPILLAR, BALANCED,
+    NONE, YULE_HARDING, UNIFORM, CATERPILLAR, BALANCED, BIRTH_DEATH,
     CIRCULAR_SPLIT_GRAPH, TAXA_SET, STAR_TREE
 };
 
@@ -2272,6 +2272,16 @@ public:
     *  true if using continuous gamma model
     */
     bool alisim_continuous_gamma;
+    
+    /**
+    *  birth_rate (Birth_Death model)
+    */
+    double birth_rate;
+    
+    /**
+    *  death_rate (Birth_Death model)
+    */
+    double death_rate;
     
 };
 
