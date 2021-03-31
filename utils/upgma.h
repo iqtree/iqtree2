@@ -335,14 +335,16 @@ protected:
         calculateRowHashes(hashed_rows, show_progress);
         std::vector< std::vector< intptr_t > > vvc;
         identifyDuplicateClusters(hashed_rows, vvc, show_progress);
-        size_t dupes_clustered = joinUpDuplicateClusters(vvc, show_progress);
         
         #if (USE_PROGRESS_DISPLAY)
+        size_t dupes_clustered = joinUpDuplicateClusters(vvc, show_progress);
         show_progress.done();
         if (0<dupes_clustered && !silent) {
             std::cout << "Clustered " << dupes_clustered
                       << " identical (or near-identical) taxa." << std::endl;
         }
+        #else
+            joinUpDuplicateClusters(vvc, show_progress);
         #endif
     }
     void calculateRowHashes(std::vector<HashRow>& hashed_rows,

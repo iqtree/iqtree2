@@ -392,7 +392,10 @@ public:
         }
         #endif
         
+        #ifdef _OPENMP
         int threshold = threadCount << 7; /* multiplied by 128*/
+        #endif
+        
         //Note, rowMinima might have size 0 (the first time this member
         //function is called during processing of a distance matrix)
         //Or it might have a size of n+1 (later times), but it won't be n.
