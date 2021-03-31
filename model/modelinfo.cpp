@@ -480,8 +480,13 @@ void ModelInfoFromName::updateName(const std::string& name) {
     model_name = name;
 }
 
+
+YAMLFileParameter::YAMLFileParameter() : value(0.0) {
+}
+
 class YAMLFileLoader {
 public:
+    
     const char* file_path;
     const std::string model_name;
    
@@ -507,10 +512,70 @@ public:
         }
     }
     
+    double toDouble(const YAML::Node& i, double default_val) {
+        if (!i.IsScalar()) {
+            return default_val;
+        }
+        std::string double_string = i.Scalar();
+        return convert_double_nothrow(double_string.c_str(), default_val);
+    }
+    
+    ParameterRange parseRange(const YAML::Node& node, const char* key) {
+        ParameterRange range;
+        auto r = node[key];
+        if (!r) {
+            return range;
+        }
+        //Todo: what if range is a string?
+        if (r.IsSequence()) {
+            int ix = 0;
+            for (auto i : r) {
+                if (ix==0) {
+                    range.first  = toDouble(i, 0);
+                } else if (ix==1) {
+                    range.second = toDouble(i, 0);
+                } else {
+                    //Throw: Range ought to be a two-value sequence
+                    //       Three values... one too many.
+                    //(for now, 3rd and later items in sequence
+                    // are just ignored).
+                }
+                ++ix;
+            }
+            range.is_set = ( 1 < ix );
+        }
+        return range;
+    }
+    
     void parseYAMLModelParameters(const YAML::Node& params,
                                   ModelInfoFromYAMLFile& info) {
-        //Assumes params is a sequence of parameter declarations
         //
+        //Assumes: params is a sequence of parameter declarations
+        //
+        for (auto param: params) {
+            YAMLFileParameter p;
+            p.name      = stringScalar(param, "name");
+            p.type_name = string_to_lower(stringScalar(param, "type"));
+            double dv   = 0.0; //default initial value
+            if (p.type_name=="frequency") {
+                dv = 0.25;  //Todo: should be 1.0 divided by number of states
+                            //determined from the data type (info.data_type_name ?)
+                            //Or 1 divided by the number of parameters.
+            } else if (p.type_name=="rate") {
+                dv = 1.0;
+            } else if (p.type_name=="weight") {
+                dv = 0.5;    //Todo: Should be 1.0 divided by # of parameters
+            }
+            p.range  = parseRange  (param, "range");
+            std::string value_string = stringScalar(param, "initValue");
+            p.value  = convert_double_nothrow(value_string.c_str(), dv);
+            std::cout << "Parsed parameter " << p.name
+                      << " of type " << p.type_name
+                      << ", with range " << p.range.first
+                      << " to " << p.range.second
+                      << ", and initial value " << p.value << std::endl;
+            info.parameters.emplace_back(p);
+        }
     }
     
     template <class S>
@@ -528,21 +593,19 @@ public:
     /* Example of a rate matrix
      
      rateMatrix:
-     - [      ,     r(1)*r(2), r(2)*r(3), r(3)*f(4) ]
+     - [      ,     r(1)*r(2), r(2)*f(3), r(3)*f(4) ]
      - [ r(1)*f(1),          , r(4)*f(3), r(5)*f(4) ]
      - [ r(2)*f(1), r(4)*f(2),          , f(4)      ]
      - [ r(3)*f(1), r(5)*f(2), f(3)     ,           ]
 
      */
     
-    
     void parseRateMatrix(const YAML::Node& rate_matrix,
                          ModelInfoFromYAMLFile& info) {
         //Assumes rate_matrix is a sequence (of rows)
-        for (auto it = rate_matrix.begin(); it != rate_matrix.end(); ++it)
+        for (auto row : rate_matrix)
         {
             ++info.rate_matrix_rank;
-            const YAML::Node& row = *it;
             std::stringstream s;
             s << "Row " << info.rate_matrix_rank << " of rate matrix "
               << " for model " << info.model_name
@@ -551,8 +614,7 @@ public:
             complainIfNot(row.IsSequence(),
                           context + " is not a sequence" );
             StrVector expr_row;
-            for (auto it2 = row.begin(); it2 != row.end(); ++it2) {
-                const YAML::Node& col = *it2;
+            for (auto col : row) {
                 if (col.IsNull()) {
                     expr_row.emplace_back("");
                     //Gets whatever hasn't been assigned in this row
@@ -630,10 +692,6 @@ void ModelInfoFromYAMLFile::updateName(const std::string& name) {
     model_name = name;
 }
 
-
-
-
-
 void ModelListFromYAMLFile::loadFromFile (const char* file_path) {
     YAML::Node yaml_model_list = YAML::LoadFile(file_path);
     YAMLFileLoader loader(file_path);
@@ -641,9 +699,7 @@ void ModelListFromYAMLFile::loadFromFile (const char* file_path) {
         if (!yaml_model_list.IsSequence()) {
             throw YAML::Exception(yaml_model_list.Mark(), "list '[...]' expected");
         }
-        for (auto it = yaml_model_list.begin(); it != yaml_model_list.end(); it++)
-        {
-            const YAML::Node& node = *it;
+        for (auto node : yaml_model_list) {
             if (!(node["substitutionmodel"])) {
                 continue;
             }

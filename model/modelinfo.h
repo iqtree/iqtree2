@@ -96,6 +96,22 @@ public:
     void        updateName(const std::string& name);
 };
 
+class ParameterRange: public std::pair<double,double> {
+public:
+    typedef std::pair<double,double> super;
+    bool is_set;
+    ParameterRange(): super(0,0), is_set(false) {}
+};
+
+class YAMLFileParameter {
+public:
+    std::string    name;
+    std::string    type_name;
+    ParameterRange range;
+    double         value;
+    YAMLFileParameter();
+};
+
 class ModelInfoFromYAMLFile: public ModelInfo {
 private:
     std::string model_name;       //
@@ -105,6 +121,7 @@ private:
     bool        reversible;       //don't trust this; check against rate matrix
     size_t      rate_matrix_rank; //
     std::vector<StrVector> rate_matrix_expressions; //row major
+    std::vector<YAMLFileParameter> parameters;      //parameters
     
     friend class ModelListFromYAMLFile;
     friend class YAMLFileLoader;
@@ -118,20 +135,24 @@ public:
         FUNCTION_NOT_IMPLEMENTED;
         return "";
     }
+    
     virtual std::string getFrequencyMixtureParams(std::string& freq_str) const {
         FUNCTION_NOT_IMPLEMENTED;
         return "";
     }
+    
     virtual void        getFrequencyOptions(std::string& freq_str,
                                             StateFreqType& freq_type,
                                             std::string& freq_params,
                                             bool& optimize_mixmodel_weight) const {
         FUNCTION_NOT_IMPLEMENTED;
     }
+    
     virtual void        getGammaParameters(int& num_rate_cats,
                                            double& gamma_shape) const {
         FUNCTION_NOT_IMPLEMENTED;
     }
+    
     virtual std::string getHeterotachyParameters(bool is_mixture_model,
                                                  int& num_rate_cats,
                                                  bool& fused_mix_rate) const {
