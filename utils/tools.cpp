@@ -4211,6 +4211,8 @@ void parseArg(int argc, char *argv[], Params &params) {
             
             if (strcmp(argv[cnt], "--alisim") == 0) {
                 params.alisim_active = true;
+                // force --redo(ing)
+                params.ignore_checkpoint = true;
                 
                 cnt++;
                 if (cnt >= argc || argv[cnt][0] == '-')
@@ -4306,7 +4308,7 @@ void parseArg(int argc, char *argv[], Params &params) {
         }
 
     } // for
-    if (!params.user_file && !params.aln_file && !params.ngs_file && !params.ngs_mapped_reads && !params.partition_file) {
+    if (!params.user_file && !params.aln_file && !params.ngs_file && !params.ngs_mapped_reads && !params.partition_file && !params.alisim_active) {
 #ifdef IQ_TREE
         quickStartGuide();
 //        usage_iqtree(argv, false);
@@ -4397,14 +4399,21 @@ void parseArg(int argc, char *argv[], Params &params) {
         if (params.partition_merge == MERGE_NONE)
             params.partition_merge = MERGE_RCLUSTERF;
     
-    if (params.alisim_active && !params.alisim_inference && !params.user_file)
-        outError("A tree filepath is a mandatory input to execute AliSim when inference mode is inactive. Use -t <TREE_FILEPATH> or activate the inference mode by --infer");
+    if (params.alisim_active && !params.alisim_inference && !params.user_file && params.tree_gen == NONE)
+        outError("A tree filepath is a mandatory input to execute AliSim when neither Inference mode nor Random mode (generating a random tree) is inactive. Use -t <TREE_FILEPATH> ; or Activate the inference mode by --infer ; or Activate Random mode by -r <num_taxa>");
     
     if (params.alisim_ancestral_sequence > -1 && !params.aln_file)
         outError("An alignment input file must be provided when root sequence is set. Use -s <ALIGNMENT>");
     
     if (params.alisim_inference && !params.aln_file)
         outError("An alignment input file must be provided when inference mode is activated. Use -s <ALIGNMENT>");
+    
+    // set default filename for the random tree if AliSim is running in Random mode
+    if (params.alisim_active && !params.alisim_inference && !params.user_file && params.tree_gen != NONE)
+    {
+        params.user_file = (char*) "randomtree.treefile";
+        params.out_prefix = params.user_file;
+    }
     
     //    if (MPIHelper::getInstance().isWorker()) {
     // BUG: setting out_prefix this way cause access to stack, which is cleaned up after returning from this function

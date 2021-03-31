@@ -32,6 +32,11 @@ void runAliSimWithoutInference(Params params);
 void inferInputParameters(Params &params, Checkpoint *checkpoint);
 
 /**
+*  generate a random tree
+*/
+void generateRandomTree(Params &params);
+
+/**
 *  extract input parameters for AliSim after inferring
 */
 void extractInputParameters(char *iqtree_file_path, int &sequence_length, string &model, bool extract_model);
