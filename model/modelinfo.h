@@ -11,7 +11,7 @@
 
 class ModelMarkov;
 class PhyloTree;
-class YAMLFileLoader;
+class ModelFileLoader;
 
 class ModelInfo {
 public:
@@ -57,7 +57,7 @@ class ModelInfoFromName: public ModelInfo {
 private:
     std::string model_name;
 public:
-    friend class YAMLFileLoader;
+    friend class ModelFileLoader;
     
     explicit ModelInfoFromName(std::string name);
     explicit ModelInfoFromName(const char* name);
@@ -126,7 +126,7 @@ private:
     std::map<std::string, double> variables;
     
     friend class ModelListFromYAMLFile;
-    friend class YAMLFileLoader;
+    friend class ModelFileLoader;
 public:
     ModelInfoFromYAMLFile(); //Only ModelListFromYAMLFile uses it.
     explicit ModelInfoFromYAMLFile(const std::string& file_path);

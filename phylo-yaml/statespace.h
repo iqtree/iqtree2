@@ -18,8 +18,8 @@
 #include <string>
 #include <vector>
 #include <stdint.h>
+#include <yaml-cpp/yaml.h>
 #include "utils/tools.h"
-#include "yaml-cpp/yaml.h"
 
 namespace PML {
 
