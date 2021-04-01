@@ -283,16 +283,20 @@ void MExtTree::generateBirthDeath(int size, double scale_birth_rate, bool binary
     if (size < 3)
         outError(ERR_FEW_TAXA);
     
+    // make sure birth_rate > death_rate
+    ASSERT(scale_birth_rate > 0.5);
+    
     // list of leaves
     NodeVector myleaves;
     Node *node, *new_node;
     double len, random_num;
     int i;
     
-    // retry the birth-death process until successfully generating the tree
-    while (myleaves.size() < size)
+    // retry the birth-death process (up to 1000 times) until successfully generating the tree
+    for (int retry = 0; retry < 1000; retry++)
     {
         i  = 0;
+        myleaves.clear();
         root = newNode();
         myleaves.push_back(root);
         
@@ -344,9 +348,6 @@ void MExtTree::generateBirthDeath(int size, double scale_birth_rate, bool binary
                             break;
                         }
                     }
-                    
-                    // delete the current node
-                    delete node;
                 }
                 // if dad_node is an internal node -> connect the grandfather_node to sibling_node
                 else
@@ -372,8 +373,7 @@ void MExtTree::generateBirthDeath(int size, double scale_birth_rate, bool binary
                     }
                     
                     // make sure grandfather_node and sibling_node are found
-                    if (!grandfather_node || !sibling_node)
-                        break;
+                    ASSERT(grandfather_node && sibling_node);
                     
                     // connect grand_father to sibling
                     for (NeighborVec::iterator it = grandfather_node->neighbors.begin(); it != grandfather_node->neighbors.end(); it++)
@@ -397,19 +397,29 @@ void MExtTree::generateBirthDeath(int size, double scale_birth_rate, bool binary
                         }
                     }
                     
-                    // remove the current node from the list of leaves
-                    myleaves.erase(myleaves.begin()+current_node_index);
-                    
-                    // delect dad_node and the current node
+                    // delect dad_node
                     delete dad_node;
-                    delete node;
                 }
+                
+                // remove the current node from the list of leaves
+                myleaves.erase(myleaves.begin()+current_node_index);
+                
+                // delect the current node
+                delete node;
             }
             
             // break the loop in case unfortunately all species are died.
             if (myleaves.size() <= 0) break;
         }
+        
+        // check if the tree has been successfully generated or not
+        if (myleaves.size() == size)
+            break;
     }
+    
+    // show error if the program failed to generate the tree after reaching the maximum retry.
+    if (myleaves.size() != size)
+        outError("Failed to generate the random tree after retrying 1000 times. Please retry with other birth_rate and death_rate.");
     
     // indexing the leaves
     setLeavesName(myleaves);

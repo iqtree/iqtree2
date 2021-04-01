@@ -418,12 +418,16 @@ void AliSimulator::writeSequencesToFile(string file_path)
         out <<(tree->leafNum) <<" "<<params->alisim_sequence_length<< endl;
         
         // write senquences of leaf nodes to file with/without gaps copied from the input sequence
-        if (params->alisim_inference && !params->alisim_not_copy_gaps)
+        if (params->alisim_inference && !params->alisim_no_copy_gaps)
         {
             // load input sequences (with gaps)
             vector<string> seq_names;
             vector<string> sequences;
             loadSequences(params->aln_file, seq_names, sequences);
+            
+            // show a warning if the length of input alignment is unequal to that of simulated sequence
+            if (sequences.size() > 0  && sequences[0].length() != params->alisim_sequence_length)
+                outWarning("The sequence length of the input alignment is unequal to that of that simulated sequences. Thus, only gaps in the first MIN(input_sequence_length, simulated_sequence_length) sites are copied.");
             
             // write simulated sequence with the gaps copied from the input sequence
             writeASequenceToFileWithGaps(tree->aln, seq_names, sequences, out, tree->root, tree->root);

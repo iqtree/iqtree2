@@ -1111,7 +1111,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.original_params = "";
     params.alisim_active = false;
     params.alisim_inference = false;
-    params.alisim_not_copy_gaps = false;
+    params.alisim_no_copy_gaps = false;
     params.alisim_sequence_length = 1000;
     params.alisim_dataset_num = 1;
     params.alisim_ancestral_sequence = -1;
@@ -1433,8 +1433,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "<birth_rate> must be positive";
                 bd_params.erase(0, bd_params.find(delimiter) + delimiter.length());
                 params.death_rate = convert_double(bd_params.substr(0, bd_params.length()-1).c_str());
-                if (params.death_rate < 0)
-                    throw "<death_rate> must be non-negative";
+                if (params.death_rate < 0 || params.death_rate >= params.birth_rate)
+                    throw "<death_rate> must be non-negative and less than <birth_rate>";
                 
                 // get #taxa
                 cnt++;
@@ -4265,8 +4265,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             
-            if (strcmp(argv[cnt], "--not-copy-gaps") == 0) {
-                params.alisim_not_copy_gaps = true;
+            if (strcmp(argv[cnt], "--no-copy-gaps") == 0) {
+                params.alisim_no_copy_gaps = true;
                 
                 continue;
             }

@@ -79,7 +79,7 @@ void inferInputParameters(Params &params, Checkpoint *checkpoint)
             strcpy(params.user_file, params.aln_file);
             strcat(params.user_file,".treefile");
             
-            // extract the sequence_length for AliSim from the output of IQTree (if it's yet specified by the user)
+            // extract the sequence_length for AliSim from the output of IQTree (if it's yet been specified by the user)
             if (params.original_params.find("--length") == std::string::npos)
             {
                 int sequence_length = 1000;
@@ -98,7 +98,7 @@ void inferInputParameters(Params &params, Checkpoint *checkpoint)
         else
         {
             // run IQTree to infer the tree and the model
-            params.model_name = "MF";
+            //params.model_name = "MF";
             runPhyloAnalysis(Params::getInstance(), checkpoint);
             
             // initialize the tree_file_path

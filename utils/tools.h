@@ -2241,7 +2241,7 @@ public:
     /**
     *  TRUE to disable copying gaps from input sequences
     */
-    bool alisim_not_copy_gaps;
+    bool alisim_no_copy_gaps;
     
     /**
     *  original parameters
