@@ -13,6 +13,15 @@ AliSimulator::AliSimulator(Params *input_params)
     AliSimulator::initializeIQTreeFromTreeFile();
 }
 
+/**
+    constructor
+*/
+AliSimulator::AliSimulator(Params *input_params, IQTree *iq_tree)
+{
+    params = input_params;
+    tree = iq_tree;
+}
+
 AliSimulator::~AliSimulator()
 {
     if (!tree || !(tree->aln)) return;
@@ -423,7 +432,7 @@ void AliSimulator::writeSequencesToFile(string file_path)
         out <<(tree->leafNum) <<" "<<params->alisim_sequence_length<< endl;
         
         // write senquences of leaf nodes to file with/without gaps copied from the input sequence
-        if (params->alisim_inference && !params->alisim_no_copy_gaps)
+        if (params->aln_file && !params->alisim_no_copy_gaps)
         {
             // load input sequences (with gaps)
             vector<string> seq_names;

@@ -2234,11 +2234,6 @@ public:
     bool alisim_active;
     
     /**
-    *  TRUE to activate inference_mode before sumulating
-    */
-    bool alisim_inference;
-    
-    /**
     *  TRUE to disable copying gaps from input sequences
     */
     bool alisim_no_copy_gaps;

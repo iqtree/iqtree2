@@ -136,6 +136,11 @@ public:
     AliSimulator(Params *params);
     
     /**
+        constructor
+    */
+    AliSimulator(Params *params, IQTree *tree);
+    
+    /**
         deconstructor
     */
     ~AliSimulator();

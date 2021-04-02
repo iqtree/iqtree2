@@ -9,126 +9,65 @@
 
 void runAliSim(Params &params, Checkpoint *checkpoint)
 {
+    // Init variables
+    IQTree *tree;
+    Alignment *aln;
+    
     // inferring input parameters if inference mode is active
-    if (params.alisim_inference)
+    if (params.aln_file)
     {
-        inferInputParameters(params, checkpoint);
+        inferInputParameters(params, checkpoint, tree, aln);
     }
-    // otherwise, generate a random tree if the random mode is active
+    /*// otherwise, generate a random tree if the random mode is active
     else if (params.tree_gen != NONE)
         {
             generateRandomTree(params);
-        }
+        }*/
     
-    // run AliSim
-    runAliSimWithoutInference(params);
+    // run AliSim without inference
+    runAliSimWithoutInference(params, tree);
+    
+    // aln and tree are deleted in distructor of AliSimSimulator
 }
 
 /**
 *  inferring input parameters for AliSim
 */
-void inferInputParameters(Params &params, Checkpoint *checkpoint)
+void inferInputParameters(Params &params, Checkpoint *checkpoint, IQTree *&tree, Alignment *&aln)
 {
-    // check if a tree_file is provided or not
-    if (params.user_file)
+    // if user has not specified model_name -> set model_name = MF (to override the default model JC)
+    if ((params.original_params.find("-m ") == std::string::npos)
+        || (params.original_params.find("-m TEST") != std::string::npos)
+        || (params.original_params.find("-m MF") != std::string::npos))
     {
-        // case 0: skip inferring step if all input parameters for AliSim are provided.
-        if ((params.original_params.find("-m ") != std::string::npos)
-            && (params.original_params.find("-m TEST") == std::string::npos)
-            && (params.original_params.find("-m MF") == std::string::npos))
-        {
-            outWarning("Inference mode is deactive since all input parameters for AliSim are provided.");
-            return;
-        }
-        // case 1: only a tree is supplied
-        else
-        {
-            // run ModelFinder to infer the model
-            params.model_name = "MF";
-            runPhyloAnalysis(Params::getInstance(), checkpoint);
-            
-            // initialize dummy variables
-            int sequence_length = 1000;
-            string model = "";
-            
-            // extract sequence_length and model's parameters from the output of ModelFinder
-            char *iqtree_file_path = new char[strlen(params.aln_file) + 8];
-            strcpy(iqtree_file_path, params.aln_file);
-            strcat(iqtree_file_path,".iqtree");
-            extractInputParameters(iqtree_file_path, sequence_length, model, true);
-            puts (iqtree_file_path);
-            
-            // transfer inferred parameters to AliSim's inputs
-            params.model_name = model;
-            if (params.original_params.find("--length") == std::string::npos)
-                params.alisim_sequence_length = sequence_length;
-        }
-    }
-    else
-    {
-        // case 2: only a model is supplied
-        if ((params.original_params.find("-m ") != std::string::npos)
-            && (params.original_params.find("-m TEST") == std::string::npos)
-            && (params.original_params.find("-m MF") == std::string::npos))
-        {
-            // run IQTree to infer the tree (provided the model)
-            runPhyloAnalysis(Params::getInstance(), checkpoint);
-            
-            // initialize the tree_file_path
-            params.user_file = new char[strlen(params.aln_file) + 10];
-            strcpy(params.user_file, params.aln_file);
-            strcat(params.user_file,".treefile");
-            
-            // extract the sequence_length for AliSim from the output of IQTree (if it's yet been specified by the user)
-            if (params.original_params.find("--length") == std::string::npos)
-            {
-                int sequence_length = 1000;
-                string model = "";
-                
-                char *iqtree_file_path = new char[strlen(params.aln_file) + 8];
-                strcpy(iqtree_file_path, params.aln_file);
-                strcat(iqtree_file_path,".iqtree");
-                extractInputParameters(iqtree_file_path, sequence_length, model, false);
-                puts (iqtree_file_path);
-                
-                params.alisim_sequence_length = sequence_length;
-            }
-        }
-        // case 3: neither a tree nor a model is supplied
-        else
-        {
-            // run IQTree to infer the tree and the model
-            //params.model_name = "MF";
-            runPhyloAnalysis(Params::getInstance(), checkpoint);
-            
-            // initialize the tree_file_path
-            params.user_file = new char[strlen(params.aln_file) + 10];
-            strcpy(params.user_file, params.aln_file);
-            strcat(params.user_file,".treefile");
-            
-            // initialize dummy variables
-            int sequence_length = 1000;
-            string model = "";
-            
-            // extract sequence_length and model's parameters from the output of IQTree
-            char *iqtree_file_path = new char[strlen(params.aln_file) + 8];
-            strcpy(iqtree_file_path, params.aln_file);
-            strcat(iqtree_file_path,".iqtree");
-            extractInputParameters(iqtree_file_path, sequence_length, model, true);
-            puts (iqtree_file_path);
-            
-            // transfer inferred parameters to AliSim's inputs
-            params.model_name = model;
-            if (params.original_params.find("--length") == std::string::npos)
-            {
-                params.alisim_sequence_length = sequence_length;
-            }
-        }
+        params.model_name = "MF";
     }
     
-    cout << "Start AliSim with Input parameters inferred from IQTree: " << endl;
-    cout << "- Treefile: " << params.user_file << endl;
-    cout << "- Model: " << params.model_name << endl;
+    // infer model's parameters [and a tree]
+    runPhyloAnalysis(Params::getInstance(), checkpoint, tree, aln);
+    ASSERT(tree && tree->getModel() && tree->aln);
+    
+    // update model_name
+    params.model_name = tree->getModel()->getNameParams();
+    
+    // initialize the tree_file if it has not been provided by the user
+    if (!params.user_file)
+    {
+        // initialize the tree_file if it has not been provided by the user
+        params.user_file = new char[strlen(params.aln_file) + 10];
+        strcpy(params.user_file, params.aln_file);
+        strcat(params.user_file,".treefile");
+    }
+    // reload tree from tree_file
+    else
+    {
+        bool is_rooted = false;
+        tree->readTree(params.user_file, is_rooted);
+    }
+    
+    // update sequence_length
+    if (params.original_params.find("--length") == std::string::npos)
+        params.alisim_sequence_length = tree->aln->getNSite();
 }
 
 /**
@@ -246,222 +185,18 @@ void generateRandomTree(Params &params)
 }
 
 /**
-*  extract input parameters for AliSim from output (*.iqtree) file after inferring
-*/
-void extractInputParameters(char *iqtree_file_path, int &sequence_length, string &model, bool extract_model){
-    
-    ostringstream err_str;
-    igzstream in;
-    int line_num = 1;
-    string line;
-    
-    bool rate_parameter_begin = false;
-    bool state_freqs_begin = false;
-    DoubleVector state_freqs;
-    DoubleVector rate_params;
-    bool rate_equal = true;
-    double invariant_prop = 0;
-    double alpha_shape = 0;
-    int gamma_num_categories = 0;
-    int freerate_num_categories = 0;
-    DoubleVector freerate_props;
-    DoubleVector freerate_rates;
-    string model_name = "";
-    
-    // set the failbit and badbit
-    in.exceptions(ios::failbit | ios::badbit);
-    in.open(iqtree_file_path);
-    
-    // remove the failbit
-    in.exceptions(ios::badbit);
-
-    for (; !in.eof(); line_num++) {
-        safeGetline(in, line);
-        line = line.substr(0, line.find_first_of("\n\r"));
-        if (line == "") continue;
-        
-        // extract sequence_length
-        if (regex_match(line, regex("(Input data: )(.*)")))
-        {
-            string delimiter = "sequences with ";
-            line.erase(0, line.find(delimiter) + delimiter.length());
-            delimiter = " ";
-            sequence_length = convert_int(line.substr(0, line.find(delimiter)).c_str());
-            if (!extract_model)
-                break;
-            else
-                continue;
-        }
-        
-        // extract state_freqs
-        if (regex_match(line, regex("(Rate matrix Q:)")))
-        {
-            state_freqs_begin = false;
-            continue;
-        }
-        if (state_freqs_begin)
-        {
-            string delimiter = " = ";
-            double state_freq = convert_double(line.substr(delimiter.length() + line.find(delimiter), line.length() - (delimiter.length() + line.find(delimiter))).c_str());
-            state_freqs.resize(state_freqs.size() + 1);
-            state_freqs[state_freqs.size() - 1] = state_freq;
-            continue;
-        }
-        if (regex_match(line, regex("(State frequencies:)(.*)")))
-        {
-            rate_parameter_begin = false;
-            // normalize rate_params and remove the last param
-            if (rate_params.size()>0)
-            {
-                for (int i = 0; i < rate_params.size() - 1; i ++)
-                {
-                    rate_params[i] = rate_params[i]/rate_params[rate_params.size()-1];
-                    if (rate_equal && rate_params[i] != 1.0)
-                        rate_equal = false;
-                }
-                
-                rate_params.resize(rate_params.size() - 1);
-            }
-            state_freqs_begin = true;
-            continue;
-        }
-        
-        // extract rate_params
-        if (rate_parameter_begin)
-        {
-            string delimiter = ": ";
-            double rate_param = convert_double(line.substr(delimiter.length() + line.find(delimiter), line.length() - (delimiter.length() + line.find(delimiter))).c_str());
-            rate_params.resize(rate_params.size() + 1);
-            rate_params[rate_params.size() - 1] = rate_param;
-            continue;
-        }
-        if (regex_match(line, regex("(Rate parameter R:)(.*)")))
-        {
-            rate_parameter_begin = true;
-            continue;
-        }
-        
-        // extract model_name
-        if (regex_match(line, regex("(Model of substitution: )(.*)")))
-        {
-            string delimiter = "Model of substitution: ";
-            model_name = line.substr(delimiter.length(), line.length() - delimiter.length());
-            continue;
-        }
-        
-        // extract invariant_prop
-        if (regex_match(line, regex("(Proportion of invariable sites: )(.*)")))
-        {
-            string delimiter = "Proportion of invariable sites: ";
-            invariant_prop = convert_double(line.substr(delimiter.length(), line.length() - delimiter.length()).c_str());
-            continue;
-        }
-        
-        // extract alpha_shape
-        if (regex_match(line, regex("(Gamma shape alpha: )(.*)")))
-        {
-            string delimiter = "Gamma shape alpha: ";
-            alpha_shape = convert_double(line.substr(delimiter.length(), line.length() - delimiter.length()).c_str());
-            continue;
-        }
-        
-        // extract gamma_num_categories
-        if (regex_match(line, regex("(.*)(Gamma with )(.*)")))
-        {
-            string delimiter = "Gamma with ";
-            gamma_num_categories = convert_int(line.substr(delimiter.length() + line.find(delimiter), line.length() - (delimiter.length() + line.find(delimiter) + 11)).c_str());
-            continue;
-        }
-        
-        // extract freerate_num_categories
-        if (regex_match(line, regex("(.*)(FreeRate with )(.*)")))
-        {
-            string delimiter = "FreeRate with ";
-            freerate_num_categories = convert_int(line.substr(delimiter.length() + line.find(delimiter), line.length() - (delimiter.length() + line.find(delimiter) + 11)).c_str());
-            continue;
-        }
-        
-        // extract freerate_props and freerate_rates
-        if (regex_match(line, regex("(Site proportion and rates: )(.*)")))
-        {
-            string delimiter = "Site proportion and rates: ";
-            line = line.substr(delimiter.length(), line.length()-delimiter.length());
-            while (line.length() > 0)
-            {
-                string prop_rate = line.substr(line.find("("), line.find(")"));
-                freerate_props.resize(freerate_props.size() + 1);
-                freerate_rates.resize(freerate_rates.size() + 1);
-                freerate_props[freerate_props.size() - 1] = convert_double(prop_rate.substr(1, prop_rate.find(",") - 1).c_str());
-                freerate_rates[freerate_rates.size() - 1] = convert_double(prop_rate.substr(prop_rate.find(",") + 1, prop_rate.length() - prop_rate.find(",") - 2).c_str());
-                line.erase(0, line.find(")")+1);
-            }
-            continue;
-        }
-        
-    }
-    
-    in.clear();
-    // set the failbit again
-    in.exceptions(ios::failbit | ios::badbit);
-    in.close();
-    
-    // reconstruct the model_fullname
-    model = model_name.substr(0, model_name.find("+"));
-    // add rate_params
-    if (!rate_equal)
-    {
-        model = model + "{";
-        for (int i = 0; i < rate_params.size(); i++)
-            if (i == rate_params.size() - 1)
-                model = model + convertDoubleToString(rate_params[i]);
-            else
-                model = model + convertDoubleToString(rate_params[i])+",";
-        model = model + "}";
-    }
-    // add +F & its paramters (if any)
-    if (model_name.find("+F") != std::string::npos)
-    {
-        model = model + "+F{";
-        for (int i = 0; i < state_freqs.size(); i++)
-            if (i == state_freqs.size() - 1)
-                model = model + convertDoubleToString(state_freqs[i]);
-            else
-                model = model + convertDoubleToString(state_freqs[i])+",";
-        model = model + "}";
-    }
-    // add +I & its paramter (if any)
-    if (model_name.find("+I") != std::string::npos)
-    {
-        model = model + "+I{" + convertDoubleToString(invariant_prop) + "}";
-    }
-    // add +G & its paramters (if any)
-    if (model_name.find("+G") != std::string::npos)
-    {
-        model = model + "+G" + convertIntToString(gamma_num_categories) + "{" + convertDoubleToString(alpha_shape) + "}";
-    }
-    // add +R & its paramters (if any)
-    if (model_name.find("+R") != std::string::npos)
-    {
-        model = model + "+R" + convertIntToString(freerate_num_categories) + "{";
-        for (int i = 0; i < freerate_num_categories; i++)
-            if (i == freerate_num_categories - 1)
-                model = model + convertDoubleToString(freerate_props[i]) + "," + convertDoubleToString(freerate_rates[i]);
-            else
-                model = model + convertDoubleToString(freerate_props[i]) + "," + convertDoubleToString(freerate_rates[i]) + ",";
-        convertDoubleToString(alpha_shape);
-        model = model + "}";
-    }
-}
-
-/**
 *  execute AliSim without inference
 */
-void runAliSimWithoutInference(Params params)
+void runAliSimWithoutInference(Params params, IQTree *&tree)
 {
     cout << "[Alignment Simulator] Executing" <<"\n";
     
     // case 1 (default): without rate heterogeneity
-    AliSimulator *alisimulator = new AliSimulator(&params);
+    AliSimulator *alisimulator;
+    if (tree && params.aln_file)
+        alisimulator = new AliSimulator(&params, tree);
+    else
+        alisimulator = new AliSimulator(&params);
     
     // get variables
     string rate_name = alisimulator->tree->getRateName();

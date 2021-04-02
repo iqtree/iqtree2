@@ -24,21 +24,16 @@ void runAliSim(Params &params, Checkpoint *checkpoint);
 /**
 *  execute AliSim without inference
 */
-void runAliSimWithoutInference(Params params);
+void runAliSimWithoutInference(Params params, IQTree *&tree);
 
 /**
 *  inferring input parameters for AliSim
 */
-void inferInputParameters(Params &params, Checkpoint *checkpoint);
+void inferInputParameters(Params &params, Checkpoint *checkpoint, IQTree *&tree, Alignment *&aln);
 
 /**
 *  generate a random tree
 */
 void generateRandomTree(Params &params);
-
-/**
-*  extract input parameters for AliSim after inferring
-*/
-void extractInputParameters(char *iqtree_file_path, int &sequence_length, string &model, bool extract_model);
 
 #endif /* alisim_h */

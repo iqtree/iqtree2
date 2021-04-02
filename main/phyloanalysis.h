@@ -40,6 +40,12 @@ class IQTree;
 void runPhyloAnalysis(Params &params, Checkpoint *checkpoint);
 
 /**
+    carry out phylogenetic inference without deleting IQTree instance
+    @param params program parameters
+*/
+void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Alignment *&aln);
+
+/**
     Perform separate tree inference across partitions
  */
 void runUnlinkedPhyloAnalysis(Params &params, Checkpoint *checkpoint);

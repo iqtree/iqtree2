@@ -3709,9 +3709,8 @@ void doSymTest(Alignment *alignment, Params &params) {
         exit(EXIT_SUCCESS);
 }
 
-void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
-    Alignment *alignment;
-
+void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Alignment *&alignment)
+{
     checkpoint->putBool("finished", false);
     checkpoint->setDumpInterval(params.checkpoint_dump_interval);
 
@@ -3759,7 +3758,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
     }
 
     /*************** initialize tree ********************/
-    IQTree *tree = newIQTree(params, alignment);
+    tree = newIQTree(params, alignment);
     
     tree->setCheckpoint(checkpoint);
     if (params.min_branch_length <= 0.0) {
@@ -3895,6 +3894,17 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
             ((PhyloSuperTreePlen*) tree)->printNNIcasesNUM();
         }
     }
+
+    checkpoint->putBool("finished", true);
+    checkpoint->dump(true);
+}
+
+void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
+    IQTree *tree;
+    Alignment *alignment;
+    
+    runPhyloAnalysis(params, checkpoint, tree, alignment);
+
     // 2015-09-22: bug fix, move this line to before deleting tree
     alignment = tree->aln;
     delete tree;
@@ -3902,9 +3912,6 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
     // 2015-09-22: THIS IS STUPID: after deleting tree, one cannot access tree->aln anymore
 //    alignment = tree->aln;
     delete alignment;
-
-    checkpoint->putBool("finished", true);
-    checkpoint->dump(true);
 }
 
 /**

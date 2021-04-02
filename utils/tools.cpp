@@ -1110,7 +1110,6 @@ void parseArg(int argc, char *argv[], Params &params) {
     
     params.original_params = "";
     params.alisim_active = false;
-    params.alisim_inference = false;
     params.alisim_no_copy_gaps = false;
     params.alisim_sequence_length = 1000;
     params.alisim_dataset_num = 1;
@@ -4260,12 +4259,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             
-            if (strcmp(argv[cnt], "--infer") == 0) {
-                params.alisim_inference = true;
-                
-                continue;
-            }
-            
             if (strcmp(argv[cnt], "--no-copy-gaps") == 0) {
                 params.alisim_no_copy_gaps = true;
                 
@@ -4437,14 +4430,11 @@ void parseArg(int argc, char *argv[], Params &params) {
         if (params.partition_merge == MERGE_NONE)
             params.partition_merge = MERGE_RCLUSTERF;
     
-    if (params.alisim_active && !params.alisim_inference && !params.user_file && params.tree_gen == NONE)
-        outError("A tree filepath is a mandatory input to execute AliSim when neither Inference mode nor Random mode (generating a random tree) is inactive. Use -t <TREE_FILEPATH> ; or Activate the inference mode by --infer ; or Activate Random mode by -r <num_taxa>");
-    
-    if (params.alisim_inference && !params.aln_file)
-        outError("An alignment input file must be provided when inference mode is activated. Use -s <ALIGNMENT>");
+    if (params.alisim_active && !params.aln_file && !params.user_file && params.tree_gen == NONE)
+        outError("A tree filepath is a mandatory input to execute AliSim when neither Inference mode nor Random mode (generating a random tree) is inactive. Use -t <TREE_FILEPATH> ; or Activate the inference mode by -s <ALIGNMENT_FILE> ; or Activate Random mode by -r <NUM_TAXA>");
     
     // set default filename for the random tree if AliSim is running in Random mode
-    if (params.alisim_active && !params.alisim_inference && !params.user_file && params.tree_gen != NONE)
+    if (params.alisim_active && !params.aln_file && !params.user_file && params.tree_gen != NONE)
     {
         params.user_file = (char*) "randomtree.treefile";
         params.out_prefix = params.user_file;
