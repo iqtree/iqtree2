@@ -419,7 +419,7 @@ void MExtTree::generateBirthDeath(int size, double scale_birth_rate, bool binary
     
     // show error if the program failed to generate the tree after reaching the maximum retry.
     if (myleaves.size() != size)
-        outError("Failed to generate the random tree after retrying 1000 times. Please retry with other birth_rate and death_rate.");
+        outError("Failed to generate the random tree after 1000 attempts. Please retry with other birth_rate and death_rate.");
     
     // indexing the leaves
     setLeavesName(myleaves);

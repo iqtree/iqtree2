@@ -1114,7 +1114,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_no_copy_gaps = false;
     params.alisim_sequence_length = 1000;
     params.alisim_dataset_num = 1;
-    params.alisim_ancestral_sequence = -1;
+    params.alisim_ancestral_sequence_aln_filepath = NULL;
+    params.alisim_ancestral_sequence_name = "";
     params.alisim_continuous_gamma = false;
     params.birth_rate = 0.8;
     params.death_rate = 0.2;
@@ -4294,10 +4295,18 @@ void parseArg(int argc, char *argv[], Params &params) {
             if (strcmp(argv[cnt], "--root-seq") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use --root-seq <ANCESTRAL_SEQUENCE_NUMBER>";
-                params.alisim_ancestral_sequence = convert_int(argv[cnt]);
-                if (params.alisim_ancestral_sequence < 0)
-                    throw "Non-Negative --root-seq please";
+                    throw "Use --root-seq <ALN_FILE>,<SEQ_NAME>";
+                string ancestral_sequence_params = argv[cnt];
+                string delimiter = ",";
+                if ((ancestral_sequence_params.find(delimiter) == std::string::npos)||ancestral_sequence_params.find(delimiter) == 0)
+                    throw "Use --root-seq <ALN_FILE>,<SEQ_NAME>";
+                params.alisim_ancestral_sequence_aln_filepath = new char[ancestral_sequence_params.find(delimiter) + 1];
+                params.alisim_ancestral_sequence_aln_filepath = strcpy(params.alisim_ancestral_sequence_aln_filepath, ancestral_sequence_params.substr(0, ancestral_sequence_params.find(delimiter)).c_str());
+                ancestral_sequence_params.erase(0, ancestral_sequence_params.find(delimiter) + delimiter.length());
+                params.alisim_ancestral_sequence_name = ancestral_sequence_params;
+                if (!params.alisim_ancestral_sequence_aln_filepath || params.alisim_ancestral_sequence_name.length() == 0)
+                    throw "Use --root-seq <ALN_FILE>,<SEQ_NAME>";
+                
                 continue;
             }
 
@@ -4430,9 +4439,6 @@ void parseArg(int argc, char *argv[], Params &params) {
     
     if (params.alisim_active && !params.alisim_inference && !params.user_file && params.tree_gen == NONE)
         outError("A tree filepath is a mandatory input to execute AliSim when neither Inference mode nor Random mode (generating a random tree) is inactive. Use -t <TREE_FILEPATH> ; or Activate the inference mode by --infer ; or Activate Random mode by -r <num_taxa>");
-    
-    if (params.alisim_ancestral_sequence > -1 && !params.aln_file)
-        outError("An alignment input file must be provided when root sequence is set. Use -s <ALIGNMENT>");
     
     if (params.alisim_inference && !params.aln_file)
         outError("An alignment input file must be provided when inference mode is activated. Use -s <ALIGNMENT>");

@@ -47,7 +47,7 @@ protected:
     /**
     *  retrieve the ancestral sequence for the root node from an input file
     */
-    IntVector retrieveAncestralSequenceFromInputFile(int sequence_position);
+    IntVector retrieveAncestralSequenceFromInputFile(char *aln_filepath, string sequence_name);
     
     /**
     *  get state frequencies from model

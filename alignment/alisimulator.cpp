@@ -34,7 +34,7 @@ void AliSimulator::showParameters()
     if (!params->model_name.empty())
         cout << " - Model: " << params->model_name <<"\n";
     cout << " - Number of output datasets: " << params->alisim_dataset_num<<"\n";
-    if (params->alisim_ancestral_sequence >= 0)
+    if (params->alisim_ancestral_sequence_name.length() > 0)
         cout << " - Ancestral sequence position: " << params->alisim_dataset_num <<"\n";
 }
 
@@ -137,14 +137,14 @@ void AliSimulator::generateMultipleAlignmentsFromSingleTree()
     // Get/Generate the ancestral sequence
     IntVector ancestral_sequence;
     // retrieve the ancestral sequence from input file if its position is specified in the input parameter
-    if (params->alisim_ancestral_sequence >= 0)
-        ancestral_sequence = retrieveAncestralSequenceFromInputFile(params->alisim_ancestral_sequence);
+    if (params->alisim_ancestral_sequence_name.length() > 0)
+        ancestral_sequence = retrieveAncestralSequenceFromInputFile(params->alisim_ancestral_sequence_aln_filepath, params->alisim_ancestral_sequence_name);
     
     // iteratively generate multiple datasets for each tree
     for (int i = 0; i < params->alisim_dataset_num; i++)
     {
         // if the ancestral sequence is not specified, randomly generate the sequence
-        if (params->alisim_ancestral_sequence < 0)
+        if (params->alisim_ancestral_sequence_name.length() == 0)
             ancestral_sequence = generateRandomSequence(params->alisim_sequence_length);
         
         // initialize output_filepath
@@ -161,7 +161,7 @@ void AliSimulator::generateMultipleAlignmentsFromSingleTree()
 /**
 *  retrieve the ancestral sequence for the root node from an input file
 */
-IntVector AliSimulator:: retrieveAncestralSequenceFromInputFile(int sequence_position)
+IntVector AliSimulator:: retrieveAncestralSequenceFromInputFile(char *aln_filepath, string sequence_name)
 {
     IntVector sequence;
     
@@ -169,18 +169,23 @@ IntVector AliSimulator:: retrieveAncestralSequenceFromInputFile(int sequence_pos
     Alignment *aln = new Alignment();
     StrVector sequences;
     int nseq = 0, nsite = 0;
-    aln->extractSequences(params->aln_file, params->sequence_type, sequences, nseq, nsite);
+    aln->extractSequences(aln_filepath, params->sequence_type, sequences, nseq, nsite);
+    StrVector seq_names = aln->getSeqNames();
     
     // delete aln
     delete aln;
     
-    // validate sequence_position
-    if (sequence_position > nseq)
-        outError("The position of the ancestral sequence (" + convertIntToString(sequence_position) + ") is exceeding the number of sequences in the input file ("+convertIntToString(nseq)+")");
-    
     // overwrite the output sequence_length
     params->alisim_sequence_length = nsite;
-    string sequence_str = sequences[sequence_position - 1];
+    string sequence_str = "";
+    for (int i = 0; i < seq_names.size(); i++)
+        if (!sequence_name.compare(seq_names[i]))
+        {
+            sequence_str = sequences[i];
+            break;
+        }
+    if (sequence_str.length() == 0)
+        outError("Sequence name could not be found in the input alignment file.");
     
     // get Max number of states
     int max_num_states = tree->aln->getMaxNumStates();

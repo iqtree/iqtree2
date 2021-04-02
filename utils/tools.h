@@ -2264,9 +2264,14 @@ public:
     int alisim_dataset_num;
     
     /**
-    *  position of the ancestral sequence of alisim
+    *  alignment_filepath containing the ancestral sequence of alisim
     */
-    int alisim_ancestral_sequence;
+    char * alisim_ancestral_sequence_aln_filepath;
+    
+    /**
+    *  the sequence name of the ancestral sequence of alisim
+    */
+    string alisim_ancestral_sequence_name;
     
     /**
     *  true if using continuous gamma model
