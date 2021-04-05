@@ -720,7 +720,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alpha_invar_file = NULL;
     params.out_prefix = NULL;
     params.out_file = NULL;
-    params.sub_size = 0;
+    params.sub_size = 4;
     params.pd_proportion = 0.0;
     params.min_proportion = 0.0;
     params.step_proportion = 0.01;
@@ -3959,14 +3959,133 @@ void parseArg(int argc, char *argv[], Params &params) {
 				else if (strcmp(argv[cnt], "PLLPARS") == 0)
 					params.start_tree = STT_PLL_PARSIMONY;
                 else if (strcmp(argv[cnt], "RANDOM") == 0 || strcmp(argv[cnt], "RAND") == 0)
+                {
 					params.start_tree = STT_RANDOM_TREE;
+                    params.tree_gen = YULE_HARDING;
+                    
+                    // get <NUM_TAXA>
+                    try {
+                        cnt++;
+                        if (cnt >= argc)
+                            throw "";
+                        
+                        params.sub_size = convert_int(argv[cnt]);
+                        
+                        if (params.sub_size <= 3)
+                            throw "";
+                    } catch(...) {
+                        // <NUM_TAXA> is required if an alignment is not provided
+                        if (((params.original_params.find("-s ") == std::string::npos)
+                            && (params.original_params.find("--aln ") == std::string::npos))
+                            || (params.sub_size <= 3)){
+                            throw "Use -t RANDOM <NUM_TAXA>. <NUM_TAXA> must be greater than 3.";
+                        }
+                        else
+                        {
+                            cnt--;
+                        }
+                    }
+                }
                 else if (START_TREE_RECOGNIZED(argv[cnt])) {
                     params.start_tree_subtype_name = argv[cnt];
                     params.start_tree = STT_BIONJ;
-                } else {
-                    params.user_file = argv[cnt];
-                    if (params.min_iterations == 0)
-                        params.start_tree = STT_USER_TREE;
+                }
+                else
+                {
+                    string ERR_MSG = "Use -t RANDOM{<MODEL>} <NUM_TAXA> where <MODEL> is yh, u, cat, bal, bd{<birth_rate>,<death_rate>} stands for Yule-Harding, Uniform, Caterpillar, Balanced, Birth-Death model respectively. <NUM_TAXA> is only required if an alignment is not provided by -s <ALIGNMENT_FILE>.";
+                    string t_params = argv[cnt];
+                    string KEYWORD = "RANDOM";
+                    if ((t_params.length() > KEYWORD.length())
+                        && (!t_params.substr(0, KEYWORD.length()).compare(KEYWORD)))
+                    {
+                        params.start_tree = STT_RANDOM_TREE;
+                        
+                        // validate the input
+                        if ((t_params[KEYWORD.length()]!='{')
+                            ||(t_params[t_params.length()-1]!='}'))
+                            throw ERR_MSG;
+                        
+                        // remove "RANDOM{"
+                        t_params.erase(0, KEYWORD.length() + 1);
+                        
+                        // remove "}"
+                        t_params = t_params.substr(0, t_params.length()-1);
+                        
+                        // detect model
+                        if (t_params == "yh")
+                            params.tree_gen = YULE_HARDING;
+                        else if (t_params == "u")
+                            params.tree_gen = UNIFORM;
+                        else if (t_params == "cat")
+                            params.tree_gen = CATERPILLAR;
+                        else if (t_params == "bal")
+                            params.tree_gen = BALANCED;
+                        else
+                        {
+                            KEYWORD = "bd";
+                            if ((t_params.length() > KEYWORD.length())
+                                && (!t_params.substr(0, KEYWORD.length()).compare(KEYWORD)))
+                            {
+                                params.tree_gen = BIRTH_DEATH;
+                                
+                                string delimiter = ",";
+                                // validate the input
+                                if ((t_params[KEYWORD.length()]!='{')
+                                    ||(t_params[t_params.length()-1]!='}')
+                                    ||(t_params.find(delimiter) == string::npos))
+                                    outError("Use bd{<birth_rate>,<death_rate>} to specify the Birth-Death model.");
+                                
+                                // remove "bd{"
+                                t_params.erase(0, KEYWORD.length() + 1);
+                                
+                                // remove "}"
+                                t_params = t_params.substr(0, t_params.length()-1);
+                                
+                                // get birth_rate
+                                params.birth_rate = convert_double(t_params.substr(0, t_params.find(delimiter)).c_str());
+                                if (params.birth_rate <= 0)
+                                    throw "<birth_rate> must be positive.";
+                                
+                                // remove "<birth_rate>,"
+                                t_params.erase(0, t_params.find(delimiter) + delimiter.length());
+                                
+                                // get death_rate
+                                params.death_rate = convert_double(t_params.c_str());
+                                if (params.death_rate < 0 || params.death_rate >= params.birth_rate)
+                                    throw "<death_rate> must be non-negative and less than <birth_rate>";
+                            }
+                            else
+                                throw ERR_MSG;
+                        }
+                        
+                        // get <NUM_TAXA>
+                        try {
+                            cnt++;
+                            if (cnt >= argc)
+                                throw "";
+                            
+                            params.sub_size = convert_int(argv[cnt]);
+                            
+                            if (params.sub_size <= 3)
+                                throw "";
+                        } catch(...) {
+                            // <NUM_TAXA> is required if an alignment is not provided
+                            if (((params.original_params.find("-s ") == std::string::npos)
+                                && (params.original_params.find("--aln ") == std::string::npos))
+                                || (params.sub_size <= 3)){
+                                throw ERR_MSG +" <NUM_TAXA> must be greater than 3.";
+                            }
+                            else
+                            {
+                                cnt--;
+                            }
+                        }
+                    }
+                    else {
+                        params.user_file = argv[cnt];
+                        if (params.min_iterations == 0)
+                            params.start_tree = STT_USER_TREE;
+                    }
                 }
 				continue;
 			}
@@ -4431,12 +4550,25 @@ void parseArg(int argc, char *argv[], Params &params) {
             params.partition_merge = MERGE_RCLUSTERF;
     
     if (params.alisim_active && !params.aln_file && !params.user_file && params.tree_gen == NONE)
-        outError("A tree filepath is a mandatory input to execute AliSim when neither Inference mode nor Random mode (generating a random tree) is inactive. Use -t <TREE_FILEPATH> ; or Activate the inference mode by -s <ALIGNMENT_FILE> ; or Activate Random mode by -r <NUM_TAXA>");
+        outError("A tree filepath is a mandatory input to execute AliSim when neither Inference mode nor Random mode (generating a random tree) is inactive. Use -t <TREE_FILEPATH> ; or Activate the inference mode by -s <ALIGNMENT_FILE> ; or Activate Random mode by -t RANDOM{<model>} <NUM_TAXA> where model is yh, u, cat, bal, bd{<birth_rate>,<death_rate>} stands for Yule-Harding, Uniform, Caterpillar, Balanced, Birth-Death model respectively.");
     
     // set default filename for the random tree if AliSim is running in Random mode
-    if (params.alisim_active && !params.aln_file && !params.user_file && params.tree_gen != NONE)
+    if (params.alisim_active && !params.user_file && params.tree_gen != NONE)
     {
-        params.user_file = (char*) "randomtree.treefile";
+        if (!params.aln_file)
+        {
+            params.user_file = (char*) "randomtree.treefile";
+        }
+        else
+        {
+            // initialize output_filepath
+            std::string output_filepath(params.aln_file);
+            output_filepath = output_filepath.substr(0, output_filepath.find_last_of("/\\") + 1);
+            output_filepath = output_filepath + "randomtree.treefile";
+            
+            params.user_file = new char[output_filepath.length() + 1];
+            strcpy(params.user_file, output_filepath.c_str());
+        }
         params.out_prefix = params.user_file;
     }
     

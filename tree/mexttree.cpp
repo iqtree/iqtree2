@@ -48,7 +48,7 @@ void MExtTree::generateRandomTree(TreeGenType tree_type, Params &params, bool bi
 		generateStarTree(params);
 		break;
     case BIRTH_DEATH:
-        generateBirthDeath(params.sub_size, params.birth_rate/(params.birth_rate+params.death_rate), binary);
+        generateBirthDeath(params);
         break;
 	default:
 		break;
@@ -182,7 +182,6 @@ void MExtTree::generateBalanced(int size) {
 	leafNum = myleaves.size();
 	nodeNum = leafNum;
 	initializeTree();
-
 }
 
 /**
@@ -278,8 +277,11 @@ void MExtTree::generateUniform(int size, bool binary)
     @param rescale_birth_rate (birth_rate/(birth_rate+death_rate)
     @param binary TRUE if you want to generate a binary tree
 */
-void MExtTree::generateBirthDeath(int size, double scale_birth_rate, bool binary)
+void MExtTree::generateBirthDeath(Params &params)
 {
+    int size = params.sub_size;
+    double scale_birth_rate = params.birth_rate/(params.birth_rate + params.death_rate);
+    
     if (size < 3)
         outError(ERR_FEW_TAXA);
     
@@ -288,7 +290,7 @@ void MExtTree::generateBirthDeath(int size, double scale_birth_rate, bool binary
     
     // list of leaves
     NodeVector myleaves;
-    Node *node, *new_node;
+    Node *node = NULL, *new_node = NULL;
     double len, random_num;
     int i;
     
@@ -297,8 +299,17 @@ void MExtTree::generateBirthDeath(int size, double scale_birth_rate, bool binary
     {
         i  = 0;
         myleaves.clear();
-        root = newNode();
-        myleaves.push_back(root);
+        node = newNode(i, i);
+        
+        // create innitial three leaves
+        for (int j = 0; j < 3; j++) {
+            i++;
+            new_node = newNode(i, i);
+            len = randomLen(params);
+            node->addNeighbor(new_node, len);
+            new_node->addNeighbor(node, len);
+            myleaves.push_back(new_node);
+        }
         
         while (myleaves.size() < size)
         {
@@ -316,20 +327,17 @@ void MExtTree::generateBirthDeath(int size, double scale_birth_rate, bool binary
                 for (int j = 0; j < 2; j++) {
                     i++;
                     new_node = newNode(i, i);
-                    len = random_double();
+                    len = randomLen(params);
                     node->addNeighbor(new_node, len);
                     new_node->addNeighbor(node, len);
                     myleaves.push_back(new_node);
                 }
-                
-                // remove the current node from the list of leaves
-                myleaves.erase(myleaves.begin()+current_node_index);
             }
             // death event occurs
             else
             {
-                // remove the current node from the tree
-                Node *dad_node;
+                Node *dad_node = NULL;
+                
                 // if the death event occurs when the tree has only root node -> restart
                 if (node->neighbors.size() == 0)
                     break;
@@ -337,79 +345,63 @@ void MExtTree::generateBirthDeath(int size, double scale_birth_rate, bool binary
                 else
                     dad_node = node->neighbors[0]->node;
                 
-                // if dad_node is root -> delete the neiborhood to the current node
-                if (dad_node == root)
+                // initial new length for the branch connecting 2 siblings
+                len = randomLen(params);
+
+                // detect the two siblings of the current node
+                Node *sibling_node1 = NULL, *sibling_node2 = NULL;
+                for (NeighborVec::iterator it = dad_node->neighbors.begin(); it != dad_node->neighbors.end(); it++)
                 {
-                    for (NeighborVec::iterator it = dad_node->neighbors.begin(); it != dad_node->neighbors.end(); it++)
-                    {
-                        if ((*it)->node == node)
-                        {
-                            dad_node->neighbors.erase(it);
-                            break;
-                        }
+                    if ((*it)->node == node)
+                        continue;
+                    // detect sibling_node1
+                    else if(!sibling_node1) {
+                        sibling_node1 = (*it)->node;
                     }
-                }
-                // if dad_node is an internal node -> connect the grandfather_node to sibling_node
-                else
-                {
-                    // detect grandfather_node and sibling_node
-                    Node *grandfather_node, *sibling_node;
-                    double length_from_grandfather = 0, length_from_sibling = 0;
-                    for (NeighborVec::iterator it = dad_node->neighbors.begin(); it != dad_node->neighbors.end(); it++)
+                    // detect sibling_node2
+                    else
                     {
-                        if ((*it)->node == node)
-                            continue;
-                        // detect sibling
-                        else if((*it)->node->id > dad_node->id) {
-                            sibling_node = (*it)->node;
-                            length_from_sibling = (*it)->length;
-                        }
-                        // detect grand_father
-                        else
-                        {
-                            grandfather_node = (*it)->node;
-                            length_from_grandfather = (*it)->length;
-                        }
+                        sibling_node2 = (*it)->node;
                     }
-                    
-                    // make sure grandfather_node and sibling_node are found
-                    ASSERT(grandfather_node && sibling_node);
-                    
-                    // connect grand_father to sibling
-                    for (NeighborVec::iterator it = grandfather_node->neighbors.begin(); it != grandfather_node->neighbors.end(); it++)
-                    {
-                        if ((*it)->node == dad_node)
-                        {
-                            (*it)->node = sibling_node;
-                            (*it)->length = length_from_sibling + length_from_grandfather;
-                            break;
-                        }
-                    }
-                    
-                    // connect sibling to grand_father
-                    for (NeighborVec::iterator it = sibling_node->neighbors.begin(); it != sibling_node->neighbors.end(); it++)
-                    {
-                        if ((*it)->node == dad_node)
-                        {
-                            (*it)->node = grandfather_node;
-                            (*it)->length = length_from_sibling + length_from_grandfather;
-                            break;
-                        }
-                    }
-                    
-                    // delect dad_node
-                    delete dad_node;
                 }
                 
-                // remove the current node from the list of leaves
-                myleaves.erase(myleaves.begin()+current_node_index);
+                // make sure the two siblings are found
+                ASSERT(sibling_node1 && sibling_node2);
+                
+                // connect sibling_node1 to sibling_node2
+                for (NeighborVec::iterator it = sibling_node1->neighbors.begin(); it != sibling_node1->neighbors.end(); it++)
+                {
+                    if ((*it)->node == dad_node)
+                    {
+                        (*it)->node = sibling_node2;
+                        (*it)->length = len;
+                        break;
+                    }
+                }
+                
+                // connect sibling_node2 to sibling_node1
+                for (NeighborVec::iterator it = sibling_node2->neighbors.begin(); it != sibling_node2->neighbors.end(); it++)
+                {
+                    if ((*it)->node == dad_node)
+                    {
+                        (*it)->node = sibling_node1;
+                        (*it)->length = len;
+                        break;
+                    }
+                }
+                    
+                // delect dad_node
+                delete dad_node;
                 
                 // delect the current node
                 delete node;
             }
             
-            // break the loop in case unfortunately all species are died.
-            if (myleaves.size() <= 0) break;
+            // remove the current node from the list of leaves
+            myleaves.erase(myleaves.begin()+current_node_index);
+            
+            // break the loop in case unfortunately the number of leaves is less than the initial tree (with 3 leaves).
+            if (myleaves.size() < 3) break;
         }
         
         // check if the tree has been successfully generated or not
@@ -420,6 +412,8 @@ void MExtTree::generateBirthDeath(int size, double scale_birth_rate, bool binary
     // show error if the program failed to generate the tree after reaching the maximum retry.
     if (myleaves.size() != size)
         outError("Failed to generate the random tree after 1000 attempts. Please retry with other birth_rate and death_rate.");
+    
+    root = myleaves[0];
     
     // indexing the leaves
     setLeavesName(myleaves);

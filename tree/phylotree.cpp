@@ -5496,6 +5496,9 @@ void PhyloTree::generateRandomTree(TreeGenType tree_type) {
         case STAR_TREE:
             ext_tree.generateStarTree(*params);
             break;
+        case BIRTH_DEATH:
+            ext_tree.generateBirthDeath(*params);
+            break;
         default:
             break;
         }

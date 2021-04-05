@@ -13,16 +13,21 @@ void runAliSim(Params &params, Checkpoint *checkpoint)
     IQTree *tree;
     Alignment *aln;
     
+    // generate a random tree if neccessary
+    if (params.tree_gen != NONE && params.sub_size > 3)
+    {
+        generateRandomTree(params);
+        
+        // reset flags to make sure IQTree will not re-generate new random starting_tree
+        params.start_tree = STT_PLL_PARSIMONY;
+        params.tree_gen = NONE;
+    }
+    
     // inferring input parameters if inference mode is active
     if (params.aln_file)
     {
         inferInputParameters(params, checkpoint, tree, aln);
     }
-    /*// otherwise, generate a random tree if the random mode is active
-    else if (params.tree_gen != NONE)
-        {
-            generateRandomTree(params);
-        }*/
     
     // run AliSim without inference
     runAliSimWithoutInference(params, tree);
