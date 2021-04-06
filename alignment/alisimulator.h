@@ -11,6 +11,7 @@
 #include "utils/tools.h"
 #include "tree/node.h"
 #include "model/modelmarkov.h"
+#include "model/modelliemarkov.h"
 #include "model/ratecontinuousgammainvar.h"
 #include "tree/iqtree.h"
 #include "main/phylotesting.h"

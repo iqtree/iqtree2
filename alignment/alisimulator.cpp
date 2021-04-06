@@ -75,6 +75,9 @@ void AliSimulator::initializeAlignment()
     string seq_type_name = convertSeqTypeToSeqTypeName(tree->aln->seq_type);
     params->sequence_type = strcpy(new char[seq_type_name.length() + 1], seq_type_name.c_str());
     
+    if (tree->aln->seq_type == SEQ_UNKNOWN)
+        outError("Could not detect SequenceType from Model Name");
+    
     switch (tree->aln->seq_type) {
     case SEQ_BINARY:
         tree->aln->num_states = 2;
@@ -269,7 +272,8 @@ IntVector AliSimulator::generateRandomSequence(int sequence_length)
 
 void AliSimulator::getStateFrequenciesFromModel(double *state_freqs){
     // get user-defined base frequencies (if any)
-    if (tree->getModel()->getFreqType() == FREQ_USER_DEFINED)
+    if ((tree->getModel()->getFreqType() == FREQ_USER_DEFINED)
+        || (ModelLieMarkov::validModelName(tree->getModel()->getName())))
         tree->getModel()->getStateFrequency(state_freqs);
     else // otherwise, randomly generate the base frequencies
     {
@@ -429,7 +433,8 @@ void AliSimulator::writeSequencesToFile(string file_path)
         out.open(file_path.c_str());
         
         // write the first line <#taxa> <length_of_sequence>
-        out <<(tree->leafNum) <<" "<<params->alisim_sequence_length<< endl;
+        int leaf_num = tree->leafNum - ((tree->root->isLeaf() && tree->root->name == ROOT_NAME)?1:0);
+        out <<leaf_num<<" "<<params->alisim_sequence_length<< endl;
         
         // write senquences of leaf nodes to file with/without gaps copied from the input sequence
         if (params->aln_file && !params->alisim_no_copy_gaps)

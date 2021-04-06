@@ -390,6 +390,36 @@ int detectSeqType(const char *model_name, SeqType &seq_type) {
             seq_type = SEQ_DNA;
             break;
         }
+    copyCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym)/sizeof(char*), model_list, true);
+    for (i = 0; i < model_list.size(); i++)
+        if (model_str == model_list[i]) {
+            seq_type = SEQ_DNA;
+            break;
+        }
+    copyCString(dna_model_names_lie_markov_ry, sizeof(dna_model_names_lie_markov_ry)/sizeof(char*), model_list, true);
+    for (i = 0; i < model_list.size(); i++)
+        if (model_str == model_list[i]) {
+            seq_type = SEQ_DNA;
+            break;
+        }
+    copyCString(dna_model_names_lie_markov_ws, sizeof(dna_model_names_lie_markov_ws)/sizeof(char*), model_list, true);
+    for (i = 0; i < model_list.size(); i++)
+        if (model_str == model_list[i]) {
+            seq_type = SEQ_DNA;
+            break;
+        }
+    copyCString(dna_model_names_lie_markov_mk, sizeof(dna_model_names_lie_markov_mk)/sizeof(char*), model_list, true);
+    for (i = 0; i < model_list.size(); i++)
+        if (model_str == model_list[i]) {
+            seq_type = SEQ_DNA;
+            break;
+        }
+    copyCString(dna_model_names_lie_markov_strsym, sizeof(dna_model_names_lie_markov_strsym)/sizeof(char*), model_list, true);
+    for (i = 0; i < model_list.size(); i++)
+        if (model_str == model_list[i]) {
+            seq_type = SEQ_DNA;
+            break;
+        }
     copyCString(aa_model_names, sizeof(aa_model_names)/sizeof(char*), model_list, true);
     for (i = 0; i < model_list.size(); i++)
         if (model_str == model_list[i]) {

@@ -40,12 +40,12 @@ void runAliSim(Params &params, Checkpoint *checkpoint)
 */
 void inferInputParameters(Params &params, Checkpoint *checkpoint, IQTree *&tree, Alignment *&aln)
 {
-    // if user has not specified model_name -> set model_name = MF (to override the default model JC)
+    // if user has not specified model_name -> set model_name = "" (to override the default model JC)
     if ((params.original_params.find("-m ") == std::string::npos)
         || (params.original_params.find("-m TEST") != std::string::npos)
         || (params.original_params.find("-m MF") != std::string::npos))
     {
-        params.model_name = "MF";
+        params.model_name = "";
     }
     
     // infer model's parameters [and a tree]
