@@ -1,8 +1,16 @@
 //
-//  modelexpression.h
-//  alignment
+// modelexpression.h
+// Implementations of classes used for analyzing expressions
+// (e.g. for values of rate matrix entries) in YAML model files.
 //
-//  Created by James Barbetti on 1/4/21.
+// ModelExpression
+//   Expression
+//   Variable
+//   InfixOperator
+//     Multiplication
+//     Subtraction
+//
+// Created by James Barbetti on 01-Apr-2021
 //
 
 #ifndef modelexpression_h
@@ -10,50 +18,119 @@
 
 #include "modelinfo.h"  //for ModelInfoFromYAMLFile
 
-class ModelExpression {
-protected:
-    const ModelInfoFromYAMLFile& model;
-public:
-    ModelExpression(ModelInfoFromYAMLFile& for_model);
-    virtual ~ModelExpression() = default;
-    virtual double evaluate() const;
-};
+namespace ModelExpression {
 
-class ModelVariable: public ModelExpression {
-    std::string variable_name;
-public:
-    typedef ModelExpression super;
-    ModelVariable(ModelInfoFromYAMLFile& for_model, const char* name);
-    virtual ~ModelVariable() = default;
-    virtual double evaluate() const;
-};
+    class Expression {
+    protected:
+        const ModelInfoFromYAMLFile& model;
+    public:
+        Expression(const ModelInfoFromYAMLFile& for_model);
+        virtual ~Expression() = default;
+        virtual double evaluate()      const;
+        virtual bool   isConstant()    const;
+        virtual bool   isFunction()    const;
+        virtual bool   isOperator()    const;
+        virtual bool   isToken(char c) const;
+        virtual bool   isVariable()    const;
+        virtual int    getPrecedence() const;
+    };
 
-class ModelInfix: public ModelExpression {
-protected:
-    ModelExpression* lhs;
-    ModelExpression* rhs;
-public:
-    typedef ModelExpression super;
-    ModelInfix(ModelInfoFromYAMLFile& for_model,
-               ModelExpression* left, ModelExpression* right );
-    virtual ~ModelInfix();
-};
+    class Token: public Expression {
+    protected:
+        char token_char;
+    public:
+        Token(const ModelInfoFromYAMLFile& for_model, char c);
+        virtual bool   isToken(char c) const;
+    };
 
-class ModelMultiplication: public ModelInfix {
-public:
-    typedef ModelInfix super;
-    ModelMultiplication(ModelInfoFromYAMLFile& for_model,
-                        ModelExpression* left, ModelExpression* right );
-    virtual ~ModelMultiplication() = default;
-    virtual double evaluate() const;
-};
+    class Variable: public Expression {
+        std::string variable_name;
+    public:
+        typedef Expression super;
+        Variable(const ModelInfoFromYAMLFile& for_model,
+                 const std::string& name);
+        virtual ~Variable() = default;
+        virtual double evaluate() const;
+        virtual bool isVariable() const;
+    };
 
-class ModelSubtraction: public ModelInfix {
-    typedef ModelInfix super;
-    ModelSubtraction(ModelInfoFromYAMLFile& for_model,
-                     ModelExpression* left, ModelExpression* right );
-    virtual ~ModelSubtraction() = default;
-    virtual double evaluate() const;
-};
+    class Constant: public Expression {
+        double value;
+    public:
+        typedef Expression super;
+        Constant(const ModelInfoFromYAMLFile& for_model,
+                 double v);
+        virtual ~Constant() = default;
+        virtual double evaluate() const;
+        virtual bool isConstant() const;
+    };
+
+
+    class InfixOperator: public Expression {
+    protected:
+        Expression* lhs;
+        Expression* rhs;
+    public:
+        typedef Expression super;
+        InfixOperator(const ModelInfoFromYAMLFile& for_model);
+        virtual ~InfixOperator();
+        virtual bool isOperator() const;
+        void setOperands(Expression* left, Expression* right);
+    };
+
+    class Multiplication: public InfixOperator {
+    public:
+        typedef InfixOperator super;
+        Multiplication(const ModelInfoFromYAMLFile& for_model);
+        virtual ~Multiplication() = default;
+        virtual double evaluate() const;
+        virtual int    getPrecedence() const;
+    };
+
+    class Division: public InfixOperator {
+    public:
+        typedef InfixOperator super;
+        Division(const ModelInfoFromYAMLFile& for_model);
+        virtual ~Division() = default;
+        virtual double evaluate() const;
+        virtual int    getPrecedence() const;
+    };
+
+    class Addition: public InfixOperator {
+    public:
+        typedef InfixOperator super;
+        Addition(const ModelInfoFromYAMLFile& for_model );
+        virtual ~Addition() = default;
+        virtual double evaluate() const;
+        virtual int    getPrecedence() const;
+    };
+
+    class Subtraction: public InfixOperator {
+    public:
+        typedef InfixOperator super;
+        Subtraction(const ModelInfoFromYAMLFile& for_model);
+        virtual ~Subtraction() = default;
+        virtual double evaluate() const;
+        virtual int    getPrecedence() const;
+    };
+
+    class InterpretedExpression: public Expression {
+    protected:
+        bool        is_unset;
+        Expression* root;
+        Expression* parseExpression(const   std::string& expression_text,
+                                    size_t& index);
+        bool        parseToken     (const std::string& text,
+                                    size_t& ix, Expression*& expr);
+    public:
+        typedef Expression super;
+        using super::model;
+        InterpretedExpression(const ModelInfoFromYAMLFile& for_model,
+                              const std::string& expression_text);
+        virtual ~InterpretedExpression();
+        bool    isSet() const;
+        virtual double evaluate() const;
+    };
+} //ModelExpression namespace
 
 #endif /* modelexpression_hpp */

@@ -177,15 +177,18 @@ public:
     virtual bool isPolymorphismAware()             const { return false; /*stub*/ }
     virtual bool isWeissAndVonHaeselerTest()       const { return false; /*stub*/ }
 
-    ASCType     extractASCType(std::string& leftover_name) const {
+    ASCType extractASCType
+        (std::string& leftover_name) const {
         FUNCTION_NOT_IMPLEMENTED;
         return ASC_VARIANT;
     }
-    std::string extractMixtureModelList(std::string& leftover_name) const {
+    std::string extractMixtureModelList
+        (std::string& leftover_name) const {
         FUNCTION_NOT_IMPLEMENTED;
         return "";
     }
-    std::string extractPolymorphicHeterozygosity(std::string& leftover_name) const {
+    std::string extractPolymorphicHeterozygosity
+        (std::string& leftover_name) const {
         FUNCTION_NOT_IMPLEMENTED;
         return "";
     }
@@ -194,7 +197,8 @@ public:
     
 public:
     std::string getLongName() const {
-        return model_name + " from YAML model file " + model_file_path;
+        return model_name + " from YAML model file " +
+        model_file_path;
     }
     bool hasVariable(const char* name) const {
         return variables.find(name) != variables.end();
@@ -225,6 +229,5 @@ public:
                                 const char* model_params, StateFreqType freq_type,
                                 const char* freq_params,  PhyloTree* report_to_tree);
 };
-
 
 #endif /* modelinfo_hpp */
