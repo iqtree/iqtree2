@@ -36,8 +36,8 @@ double ModelFileLoader::toDouble(const YAML::Node& i, double default_val) {
     return convert_double_nothrow(double_string.c_str(), default_val);
 }
     
-ParameterRange ModelFileLoader::parseRange(const YAML::Node& node, const char* key) {
-    ParameterRange range;
+ModelParameterRange ModelFileLoader::parseRange(const YAML::Node& node, const char* key) {
+    ModelParameterRange range;
     auto r = node[key];
     if (!r) {
         return range;

@@ -88,7 +88,7 @@ string getDNAModelInfo(string model_name, string &full_name,
     string name       = model_name;
     full_name         = name;
     rate_type         = "";
-    def_freq = FREQ_UNKNOWN;
+    def_freq          = FREQ_UNKNOWN;
     
     std::string search = name_upper;
     for (int i=0; i<sizeof(dna_model_aliases)/sizeof(dna_model_aliases[0]); ++i) {
@@ -117,48 +117,48 @@ void ModelDNA::init(const char *model_name, string model_params,
                     StateFreqType freq, string freq_params,
                     PhyloTree* report_to_tree)
 {
-	ASSERT(num_states == 4); // make sure that you create model for DNA
-	StateFreqType def_freq = FREQ_UNKNOWN;
-	string rate_type;
-	// First try: the time reversible models
-	name = getDNAModelInfo((string)model_name, full_name, rate_type, def_freq);
-	if (name == "") {
-	    // Second try: Lie Markov models. (Note, we're still missing UNREST 
-	    // model. 12.12 is equivalent, but user may not realize that.)
-	    int model_num, symmetry; // returned by getLieMarkovModelInfo, but not used here
-	    ModelLieMarkov::getLieMarkovModelInfo((string)model_name, name, full_name,
+    ASSERT(num_states == 4); // make sure that you create model for DNA
+    StateFreqType def_freq = FREQ_UNKNOWN;
+    string rate_type;
+    // First try: the time reversible models
+    name = getDNAModelInfo((string)model_name, full_name, rate_type, def_freq);
+    if (name == "") {
+        // Second try: Lie Markov models. (Note, we're still missing UNREST
+        // model. 12.12 is equivalent, but user may not realize that.)
+        int model_num, symmetry; // returned by getLieMarkovModelInfo, but not used here
+        ModelLieMarkov::getLieMarkovModelInfo((string)model_name, name, full_name,
                                               model_num, symmetry, def_freq);
-	}
-
-	if (name != "") {
-		setRateType(rate_type.c_str());
-	} else {
-		//cout << "User-specified model "<< model_name << endl;
+    }
+    
+    if (name != "") {
+        setRateType(rate_type.c_str());
+    } else {
+        //cout << "User-specified model "<< model_name << endl;
         if (setRateType(model_name)) {
-		    // model was six digits (e.g. 010010 for K2P/HKY)
-		    name = model_name;
-		    full_name = "Time reversible ("+name+")";
-		} else if (strlen(model_name)!=0) {
-			readParameters(model_name, true, report_to_tree);
+            // model was six digits (e.g. 010010 for K2P/HKY)
+            name = model_name;
+            full_name = "Time reversible ("+name+")";
+        } else if (strlen(model_name)!=0) {
+            readParameters(model_name, true, report_to_tree);
             name = full_name = model_name;
             freq = FREQ_USER_DEFINED;
-			//name += " (user-defined)";
-		}
-	}
-
-	if (freq_params != "") {
-		readStateFreq(freq_params, report_to_tree);
-	}
-	if (model_params != "") {
-	  readRates(model_params);
-	}
+            //name += " (user-defined)";
+        }
+    }
+    
+    if (freq_params != "") {
+        readStateFreq(freq_params, report_to_tree);
+    }
+    if (model_params != "") {
+        readRates(model_params);
+    }
 
     if (freq == FREQ_UNKNOWN ||  def_freq == FREQ_EQUAL) {
         freq = def_freq;
     }
     ModelMarkov::init(freq, report_to_tree);
-//    model_parameters = new double [getNDim()+1]; // see setVariables for explaination of +1
-//    setVariables(model_parameters);
+    //model_parameters = new double [getNDim()+1]; // see setVariables for explaination of +1
+    //setVariables(model_parameters);
 }
 
 void ModelDNA::startCheckpoint() {
@@ -169,22 +169,24 @@ void ModelDNA::saveCheckpoint() {
     // construct model_parameters from rates and base freqs. 
     // This is one-indexed, so parameters are in model_parameters[1]
     // up to model_parameters[num_params]
-//    setVariables(model_parameters);
+    //    setVariables(model_parameters);
     startCheckpoint();
-    if (!fixed_parameters)
+    if (!fixed_parameters) {
         CKP_ARRAY_SAVE(6, rates);
+    }
     endCheckpoint();
     ModelMarkov::saveCheckpoint();
 }
 
 void ModelDNA::restoreCheckpoint() {
-  // curiously, this seems to be the only plase ModelDNA uses model_parameters.
+    // curiously, this seems to be the only plase ModelDNA uses model_parameters.
     ModelMarkov::restoreCheckpoint();
     startCheckpoint();
-    if (!fixed_parameters)
+    if (!fixed_parameters) {
         CKP_ARRAY_RESTORE(6, rates);
+    }
     endCheckpoint();
-//    getVariables(model_parameters);       // updates rates and state_freq
+    //getVariables(model_parameters);       // updates rates and state_freq
     string rate_spec = param_spec;
     for (auto i = rate_spec.begin(); i != rate_spec.end(); ++i) {
         *i = *i + '0';
@@ -258,8 +260,10 @@ void ModelDNA::readRates(string str) THROW_SPEC(const char*) {
 }
 
 string ModelDNA::getNameParams() {
-	if (num_params == 0) return name;
-	ostringstream retname;
+    if (num_params == 0) {
+        return name;
+    }
+    ostringstream retname;
     retname << name;
     if (!fixed_parameters) {
         retname << '{';
@@ -275,7 +279,7 @@ string ModelDNA::getNameParams() {
         retname << '}';
     }
     getNameParamsFreq(retname);
-	return retname.str();
+    return retname.str();
 }
 
 bool ModelDNA::setRateType(string rate_str) {
@@ -375,31 +379,33 @@ bool ModelDNA::setRateType(string rate_str) {
 
 
 int ModelDNA::getNDim() {
-	if (fixed_parameters)
-	{
-		return 0;
-	}
-	ASSERT(freq_type != FREQ_UNKNOWN);
-	// possible TO-DO: cache nFreqParams(freq_type) to avoid repeat calls.
-//        return (num_params+nFreqParams(freq_type));
+    if (fixed_parameters)
+    {
+        return 0;
+    }
+    ASSERT(freq_type != FREQ_UNKNOWN);
+    // possible TO-DO: cache nFreqParams(freq_type) to avoid repeat calls.
+    // return (num_params+nFreqParams(freq_type));
 
-//    if (linked_model && linked_model != this)
-//        return 0;
+    // if (linked_model && linked_model != this) {
+    //     return 0;
+    // }
     
-	int ndim = num_params;
-	if (freq_type == FREQ_ESTIMATE) {
-		ndim += num_states - 1;
-	} else {
-		ndim += nFreqParams(freq_type);
-	}
-	return ndim;
+    int ndim = num_params;
+    if (freq_type == FREQ_ESTIMATE) {
+        ndim += num_states - 1;
+    } else {
+        ndim += nFreqParams(freq_type);
+    }
+    return ndim;
 }
 
 void ModelDNA::writeParameters(ostream& out) {
     int i;
     if (freq_type == FREQ_ESTIMATE) {
-        for (i = 0; i < num_states; ++i)
+        for (i = 0; i < num_states; ++i) {
             out << "\t" << state_freq[i];
+        }
     }
     if (num_params == 0) {
         return;
@@ -449,22 +455,21 @@ bool ModelDNA::getVariables(double *variables) {
              }
         }
     }
-	if (freq_type == FREQ_ESTIMATE) {
+    if (freq_type == FREQ_ESTIMATE) {
         // 2015-09-07: relax the sum of state_freq to be 1,
         // this will be done at the end of optimization
-		int ndim = getNDim();
-		changed |= memcmpcpy(state_freq, variables+(ndim-num_states+2),
+        int ndim = getNDim();
+        changed |= memcmpcpy(state_freq, variables+(ndim-num_states+2),
                              (num_states-1)*sizeof(double));
-//                double sum = 0;
-//                for (i = 0; i < num_states-1; i++)
-//                        sum += state_freq[i];
-//                state_freq[num_states-1] = 1.0 - sum;
+        //double sum = 0;
+        //for (i = 0; i < num_states-1; i++)
+        //    sum += state_freq[i];
+        //state_freq[num_states-1] = 1.0 - sum;
     } else {
         // BQM: for special DNA freq stuffs from MDW
         changed |= freqsFromParams(state_freq,variables+num_params+1,freq_type);
     }
     return changed;
-
 
         // BUG FIX 2015.08.28
 //        int nrate = getNDim();
@@ -505,11 +510,11 @@ void ModelDNA::setVariables(double *variables) {
     }
     // and copy parameters for base frequencies
 
-	if (freq_type == FREQ_ESTIMATE) {
+    if (freq_type == FREQ_ESTIMATE) {
         // 2015-09-07: relax the sum of state_freq to be 1,
         // this will be done at the end of optimization
-		int ndim = getNDim();
-		memcpy(variables+(ndim-num_states+2), state_freq,
+        int ndim = getNDim();
+        memcpy(variables+(ndim-num_states+2), state_freq,
                (num_states-1)*sizeof(double));
     } else {
         paramsFromFreqs(variables+num_params+1, state_freq, freq_type);

@@ -260,7 +260,6 @@ void ModelMarkov::getNameParamsFreq(ostream &retname) {
 
 void ModelMarkov::init_state_freq(StateFreqType type,
                                   PhyloTree* report_to_tree) {
-    //if (type == FREQ_UNKNOWN) return;
     freq_type = type;
     ASSERT(freq_type != FREQ_UNKNOWN);
     switch (freq_type) {
@@ -290,7 +289,6 @@ void ModelMarkov::init_state_freq(StateFreqType type,
         if (phylo_tree->aln->seq_type == SEQ_CODON) {
             double ntfreq[12];
             phylo_tree->aln->computeCodonFreq(freq_type, state_freq, ntfreq);
-//                      phylo_tree->aln->computeCodonFreq(state_freq);
         } else if (phylo_tree->aln->seq_type != SEQ_POMO) {
 #ifndef _MSC_VER
             double emp_state_freq[num_states];

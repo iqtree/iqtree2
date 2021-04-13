@@ -96,23 +96,40 @@ public:
     void        updateName(const std::string& name);
 };
 
-class ParameterRange: public std::pair<double,double> {
+class ModelParameterRange: public std::pair<double,double> {
 public:
     typedef std::pair<double,double> super;
     bool is_set;
-    ParameterRange(): super(0,0), is_set(false) {}
+    ModelParameterRange(): super(0,0), is_set(false) {}
 };
 
 class YAMLFileParameter {
 public:
-    std::string    name;
-    bool           is_subscripted;
-    int            minimum_subscript;
-    int            maximum_subscript;
-    std::string    type_name;
-    ParameterRange range;
-    double         value;
+    std::string         name;
+    bool                is_subscripted;
+    int                 minimum_subscript;
+    int                 maximum_subscript;
+    std::string         type_name;
+    ModelParameterRange range;
+    double              value;
     YAMLFileParameter();
+    std::string getSubscriptedVariableName(int subscript) const;
+};
+
+enum ModelParameterType {
+    RATE, FREQUENCY, OTHER
+};
+
+class ModelVariable {
+public:
+    ModelParameterRange range;
+    ModelParameterType  type;
+    double              value;
+    ModelVariable();
+    ModelVariable(ModelParameterType t, const ModelParameterRange& r, double v);
+    ~ModelVariable() = default;
+    ModelVariable(const ModelVariable& rhs) = default;
+    ModelVariable& operator=(const ModelVariable& rhs) = default;
 };
 
 class ModelInfoFromYAMLFile: public ModelInfo {
@@ -126,7 +143,7 @@ private:
     std::vector<StrVector> rate_matrix_expressions; //row major (expression strings)
     std::vector<YAMLFileParameter> parameters;      //parameters
     
-    std::map<std::string, double> variables;
+    std::map<std::string, ModelVariable> variables;
     
     friend class ModelListFromYAMLFile;
     friend class ModelFileLoader;
@@ -216,7 +233,7 @@ public:
         if (found==variables.end()) {
             return 0.0;
         }
-        return found->second;
+        return found->second.value;
     }
 };
 

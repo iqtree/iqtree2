@@ -283,7 +283,6 @@ void ModelInfoFromName::getGammaParameters(int& num_rate_cats,
     }
 }
 
-
 std::string ModelInfoFromName::getHeterotachyParameters
     (bool is_mixture_model, int& num_rate_cats,
      bool& fused_mix_rate) const {
@@ -353,7 +352,6 @@ double ModelInfoFromName::getProportionOfInvariantSites() const {
     }
     return 0;
 }
-
 
 bool ModelInfoFromName::hasAscertainmentBiasCorrection() const {
     return model_name.find("+ASC") != std::string::npos;
@@ -487,6 +485,21 @@ void ModelInfoFromName::updateName(const std::string& name) {
 YAMLFileParameter::YAMLFileParameter() : is_subscripted(false), value(0.0) {
 }
 
+std::string YAMLFileParameter::getSubscriptedVariableName(int subscript) const {
+    std::stringstream subscripted_name;
+    subscripted_name << name << "(" << subscript << ")";
+    return subscripted_name.str();
+}
+
+ModelVariable::ModelVariable(): value(0) {
+    
+}
+ModelVariable::ModelVariable(ModelParameterType t,
+                             const ModelParameterRange& r,
+                             double v)
+    : range(r), type(t), value(v) {
+}
+
 ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(): rate_matrix_rank(0) {
     
 }
@@ -501,17 +514,22 @@ void ModelInfoFromYAMLFile::updateName(const std::string& name) {
 
 void ModelInfoFromYAMLFile::addParameter(const YAMLFileParameter& p) {
     parameters.emplace_back(p);
+    ModelParameterType mpt = OTHER;
+    std::string lower_type_name = string_to_lower(p.type_name);
+    if (lower_type_name=="frequency") {
+        mpt = FREQUENCY;
+    }
+    if (lower_type_name=="rate") {
+        mpt = RATE;
+    }
     if (p.is_subscripted) {
         for (int i=p.minimum_subscript; i<=p.maximum_subscript; ++i) {
-            std::stringstream subscripted_name;
-            subscripted_name << p.name << "(" << i << ")";
-            std::string var_name = subscripted_name.str();
-            variables[var_name] = p.value;
+            std::string var_name = p.getSubscriptedVariableName(i);
+            variables[var_name] = ModelVariable(mpt, p.range, p.value);
         }
     } else {
-        variables[p.name] = p.value;
+        variables[p.name] = ModelVariable(mpt, p.range, p.value);
     }
-    
 }
 
 void ModelListFromYAMLFile::loadFromFile (const char* file_path) {
@@ -543,25 +561,17 @@ bool ModelListFromYAMLFile::isModelNameRecognized (const char* model_name) {
 ModelMarkov* ModelListFromYAMLFile::getModelByName(const char* model_name,   PhyloTree *tree,
                                                    const char* model_params, StateFreqType freq_type,
                                                    const char* freq_params,  PhyloTree* report_to_tree) {
-    //Todo:
-    //This must convert the rate matrix expression strings into
-    //a vector of expression trees (it can assume they will be valid)
-    //Then it must evaluate the expressions, to get the rate matrix
-    //to be assigned to the ModelMarkov instance it will return.
-    //Only then can it delete the expression trees.
-    //
-
     ModelInfoFromYAMLFile& model_info = models_found[model_name];
     std::cout << "Model Params " << model_params
               << " Freq Params " << freq_params << std::endl;
     
     ModelMarkov* model = nullptr;
     
-    //Todo: other data types, ModelBIN, ModelCodon, ModelPoMo, ModelProtein
-    //if (model_info.data_type_name=="DNA") {
     string dummy_rate_params;
     string dummy_freq_params;
     
+    //Todo: other data types, ModelBIN, ModelCodon, ModelPoMo, ModelProtein
+    //if (model_info.data_type_name=="DNA") {
     model = new ModelDNA("", dummy_rate_params, FREQ_USER_DEFINED,
                          dummy_freq_params, tree, report_to_tree);
     
@@ -589,7 +599,5 @@ ModelMarkov* ModelListFromYAMLFile::getModelByName(const char* model_name,   Phy
     //memset(model_parameters, 0, sizeof(double)*num_params);
     //this->setRates();
 
-    FUNCTION_NOT_IMPLEMENTED;
-        
-    return nullptr;
+    return model;
 }

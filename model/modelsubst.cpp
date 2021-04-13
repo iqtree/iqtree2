@@ -16,17 +16,18 @@
 #include <boost/scoped_array.hpp>
 #endif
 
-ModelSubst::ModelSubst(int nstates) : Optimization(), CheckpointFactory()
-{
-	num_states = nstates;
-	name = "JC";
-	full_name = "JC (Juke and Cantor, 1969)";
-	state_freq = new double[num_states];
-	for (int i = 0; i < num_states; i++)
-		state_freq[i] = 1.0 / num_states;
-	freq_type = FREQ_EQUAL;
+ModelSubst::ModelSubst(int nstates)
+    : Optimization(), CheckpointFactory() {
+    num_states = nstates;
+    name = "JC";
+    full_name = "JC (Juke and Cantor, 1969)";
+    state_freq = new double[num_states];
+    for (int i = 0; i < num_states; i++) {
+        state_freq[i] = 1.0 / num_states;
+    }
+    freq_type = FREQ_EQUAL;
     fixed_parameters = false;
-//    linked_model = NULL;
+    // linked_model = NULL;
 }
 
 void ModelSubst::startCheckpoint() {
@@ -35,12 +36,13 @@ void ModelSubst::startCheckpoint() {
 
 void ModelSubst::saveCheckpoint() {
     startCheckpoint();
-//    CKP_SAVE(num_states);
-//    CKP_SAVE(name);
-//    CKP_SAVE(full_name);
-//    CKP_SAVE(freq_type);
-    if (freq_type == FREQ_ESTIMATE && !fixed_parameters)
+    //CKP_SAVE(num_states);
+    //CKP_SAVE(name);
+    //CKP_SAVE(full_name);
+    //CKP_SAVE(freq_type);
+    if (freq_type == FREQ_ESTIMATE && !fixed_parameters) {
         CKP_ARRAY_SAVE(num_states, state_freq);
+    }
     endCheckpoint();
     CheckpointFactory::saveCheckpoint();
 }
@@ -48,83 +50,95 @@ void ModelSubst::saveCheckpoint() {
 void ModelSubst::restoreCheckpoint() {
     CheckpointFactory::restoreCheckpoint();
     startCheckpoint();
-//    CKP_RESTORE(num_states);
-//    CKP_RESTORE(name);
-//    CKP_RESTORE(full_name);
-//    int freq_type = this->freq_type;
-//    CKP_RESTORE(freq_type);
-//    this->freq_type = (StateFreqType)freq_type;
-    if (freq_type == FREQ_ESTIMATE && !fixed_parameters)
+    //CKP_RESTORE(num_states);
+    //CKP_RESTORE(name);
+    //CKP_RESTORE(full_name);
+    //int freq_type = this->freq_type;
+    //CKP_RESTORE(freq_type);
+    //this->freq_type = (StateFreqType)freq_type;
+    if (freq_type == FREQ_ESTIMATE && !fixed_parameters) {
         CKP_ARRAY_RESTORE(num_states, state_freq);
+    }
     endCheckpoint();
-
     decomposeRateMatrix();
 }
 
 // here the simplest Juke-Cantor model is implemented, valid for all kind of data (DNA, AA,...)
 void ModelSubst::computeTransMatrix(double time, double *trans_matrix, int mixture) {
-	double non_diagonal = (1.0 - exp(-time*num_states/(num_states - 1))) / num_states;
-	double diagonal = 1.0 - non_diagonal * (num_states - 1);
-	int nstates_sqr = num_states * num_states;
-
-	for (int i = 0; i < nstates_sqr; i++)
-		if (i % (num_states+1) == 0) 
-			trans_matrix[i] = diagonal; 
-		else 
-			trans_matrix[i] = non_diagonal;
+    double non_diagonal = (1.0 - exp(-time*num_states/(num_states - 1))) / num_states;
+    double diagonal     = 1.0 - non_diagonal * (num_states - 1);
+    int    nstates_sqr  = num_states * num_states;
+    
+    for (int i = 0; i < nstates_sqr; i++) {
+        if (i % (num_states+1) == 0) {
+            trans_matrix[i] = diagonal;
+        }
+        else {
+            trans_matrix[i] = non_diagonal;
+        }
+    }
 }
-
 
 double ModelSubst::computeTrans(double time, int state1, int state2) {
-	double expt = exp(-time * num_states / (num_states-1));
-	if (state1 != state2) {
-		return (1.0 - expt) / num_states;
-	}
-	return (1.0 + (num_states-1)*expt) / num_states;
-
-/*	double non_diagonal = (1.0 - exp(-time*num_states/(num_states - 1))) / num_states;
-	if (state1 != state2)
-		return non_diagonal;
-	return 1.0 - non_diagonal * (num_states - 1);*/
+    double expt = exp(-time * num_states / (num_states-1));
+    if (state1 != state2) {
+        return (1.0 - expt) / num_states;
+    }
+    return (1.0 + (num_states-1)*expt) / num_states;
+    
+    /*	double non_diagonal = (1.0 - exp(-time*num_states/(num_states - 1))) / num_states;
+     if (state1 != state2)
+     return non_diagonal;
+     return 1.0 - non_diagonal * (num_states - 1);*/
 }
 
-double ModelSubst::computeTrans(double time, int model_id, int state1, int state2) {
-	return computeTrans(time, state1, state2);
+double ModelSubst::computeTrans(double time, int model_id,
+                                int state1, int state2) {
+    return computeTrans(time, state1, state2);
 }
 
-double ModelSubst::computeTrans(double time, int state1, int state2, double &derv1, double &derv2) {
-	double coef = -double(num_states) / (num_states-1);
-	double expt = exp(time * coef);
-	if (state1 != state2) {
-		derv1 = expt / (num_states-1);
-		derv2 = derv1 * coef;
-		return (1.0 - expt) / num_states;
-	}
-
-	derv1 = -expt;
-	derv2 = derv1 * coef;
-	return (1.0 + (num_states-1)*expt) / num_states;
+double ModelSubst::computeTrans(double time, int state1, int state2,
+                                double &derv1, double &derv2) {
+    double coef = -double(num_states) / (num_states-1);
+    double expt = exp(time * coef);
+    if (state1 != state2) {
+        derv1 = expt / (num_states-1);
+        derv2 = derv1 * coef;
+        return (1.0 - expt) / num_states;
+    }
+    derv1 = -expt;
+    derv2 = derv1 * coef;
+    return (1.0 + (num_states-1)*expt) / num_states;
 }
 
-double ModelSubst::computeTrans(double time, int model_id, int state1, int state2, double &derv1, double &derv2) {
-	return computeTrans(time, state1, state2, derv1, derv2);
+double ModelSubst::computeTrans(double time, int model_id,
+                                int state1, int state2,
+                                double &derv1, double &derv2) {
+    return computeTrans(time, state1, state2, derv1, derv2);
 }
 
 void ModelSubst::getRateMatrix(double *rate_mat) {
-	int nrate = getNumRateEntries();
-	for (int i = 0; i < nrate; i++)
-		rate_mat[i] = 1.0;
+    int nrate = getNumRateEntries();
+    for (int i = 0; i < nrate; i++) {
+        rate_mat[i] = 1.0;
+    }
 }
 
 void ModelSubst::getQMatrix(double *q_mat) {
     for (int i = 0, k = 0; i < num_states; i++) {
         for (int j = 0; j < num_states; j++, k++) {
-            if (i == j) q_mat[k] = -1.0; else q_mat[k] = 1.0/3;
+            if (i == j) {
+                q_mat[k] = -1.0;
+            }
+            else {
+                q_mat[k] = 1.0/3;
+            }
         }
     }
 }
 
-void ModelSubst::getStateFrequency(double *state_frequency_array, int mixture) {
+void ModelSubst::getStateFrequency(double *state_frequency_array,
+                                   int mixture) {
     double freq = 1.0 / num_states;
     for (int i = 0; i < num_states; i++)
         state_frequency_array[i] = freq;
@@ -133,7 +147,8 @@ void ModelSubst::getStateFrequency(double *state_frequency_array, int mixture) {
 void ModelSubst::setStateFrequency(double *state_frequency_array) {
     ASSERT(state_freq != nullptr);
     ASSERT(state_frequency_array != nullptr);
-    memcpy(this->state_freq, state_frequency_array, sizeof(double)*num_states);
+    memcpy(this->state_freq, state_frequency_array,
+           sizeof(double)*num_states);
 }
 
 void ModelSubst::computeTransDerv(double time, double *trans_matrix, 
@@ -183,7 +198,6 @@ void ModelSubst::computeTransDerv(double time, double *trans_matrix,
 		}
 		cout.precision(10);
 	}*/
-
 }
 
 void ModelSubst::multiplyWithInvEigenvector(double *state_lk) {
@@ -223,12 +237,11 @@ double *ModelSubst::newTransMatrix() {
 
 ModelSubst::~ModelSubst()
 {
-    // mem space pointing to target model and thus avoid double free here
-//    if (linked_model && linked_model != this)
-//        return;
-
-    if (state_freq) delete [] state_freq;
+    //mem space pointing to target model and thus avoid double free here
+    //if (linked_model && linked_model != this) {
+    //    return;
+    //}
+    if (state_freq) {
+        delete [] state_freq;
+    }
 }
-
-
-

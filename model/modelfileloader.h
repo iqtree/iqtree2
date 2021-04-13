@@ -26,7 +26,7 @@ public:
                        std::string error_message);
     double toDouble(const YAML::Node& i, double default_val);
     
-    ParameterRange parseRange(const YAML::Node& node, const char* key);
+    ModelParameterRange parseRange(const YAML::Node& node, const char* key);
     
     void parseYAMLModelParameters(const YAML::Node& params,
                                   ModelInfoFromYAMLFile& info);
