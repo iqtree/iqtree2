@@ -70,7 +70,25 @@ void ModelFileLoader::parseYAMLModelParameters(const YAML::Node& params,
     //
     for (auto param: params) {
         YAMLFileParameter p;
-        p.name      = stringScalar(param, "name");
+        p.name       = stringScalar(param, "name");
+        auto bracket = p.name.find('(');
+        if ( bracket != std::string::npos ) {
+            p.is_subscripted = true;
+            const char* range = p.name.c_str() + bracket + 1;
+            int ix;
+            p.minimum_subscript = convert_int(range, ix);
+            if (strncmp(range + ix, "..", 2)==0) {
+                range = range + ix + 2;
+                p.maximum_subscript = convert_int(range, ix);
+            } else {
+                p.maximum_subscript = p.minimum_subscript;
+                p.minimum_subscript   = 1;
+            }
+            if (strncmp(range + ix, ")", 1)!=0) {
+                throw "Subscript range does not end with right parenthesis";
+            }
+            p.name = p.name.substr(0, bracket);
+        }
         p.type_name = string_to_lower(stringScalar(param, "type"));
         double dv   = 0.0; //default initial value
         if (p.type_name=="frequency") {
@@ -90,7 +108,7 @@ void ModelFileLoader::parseYAMLModelParameters(const YAML::Node& params,
                   << ", with range " << p.range.first
                   << " to " << p.range.second
                   << ", and initial value " << p.value << std::endl;
-        info.parameters.emplace_back(p);
+        info.addParameter(p);
     }
 }
     

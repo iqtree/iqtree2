@@ -106,6 +106,9 @@ public:
 class YAMLFileParameter {
 public:
     std::string    name;
+    bool           is_subscripted;
+    int            minimum_subscript;
+    int            maximum_subscript;
     std::string    type_name;
     ParameterRange range;
     double         value;
@@ -175,6 +178,7 @@ public:
     virtual bool isModelFinder()                   const { return false; /*stub*/ }
     virtual bool isModelFinderOnly()               const { return false; /*stub*/ }
     virtual bool isPolymorphismAware()             const { return false; /*stub*/ }
+    virtual bool isReversible()                    const { return reversible; }
     virtual bool isWeissAndVonHaeselerTest()       const { return false; /*stub*/ }
 
     ASCType extractASCType
@@ -192,7 +196,8 @@ public:
         FUNCTION_NOT_IMPLEMENTED;
         return "";
     }
-    void        updateName(const std::string& name);
+    void updateName  (const std::string&       name);
+    void addParameter(const YAMLFileParameter& p);
     
     
 public:

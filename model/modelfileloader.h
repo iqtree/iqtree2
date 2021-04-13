@@ -12,7 +12,6 @@
 #include <yaml-cpp/yaml.h> //for YAML::Node
 #include "modelinfo.h" //for ModelInfoFromYAMLFile
 
-
 class ModelFileLoader {
 public:
     const char* file_path;
@@ -36,12 +35,15 @@ public:
     void dumpRateMatrixTo(const ModelInfoFromYAMLFile& info, S &out) {
         std::stringstream dump;
         for (auto r : info.rate_matrix_expressions) {
+            const char* separator = "";
             for (auto c: r) {
-                dump << c << " : ";
+                dump << separator << c;
+                separator = " : ";
             }
             dump << "\n";
         }
-        out << "Rate matrix for " << info.model_name << " is...\n" << dump.str();
+        out << "Rate matrix for " << info.model_name
+            << " is...\n" << dump.str();
     }
     
     /* Example of a rate matrix
@@ -63,6 +65,5 @@ public:
                                     const std::string& name_of_model,
                                     ModelInfoFromYAMLFile& info);
 };
-
 
 #endif /* modelfileloader_hpp */

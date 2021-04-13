@@ -26,9 +26,9 @@ ModelDNA::ModelDNA(PhyloTree *tree, PhyloTree* report_to_tree)
 {
 }
 
-ModelDNA::ModelDNA(const char *model_name, string model_params,
-                   StateFreqType freq, string freq_params,
-                   PhyloTree *tree, PhyloTree* report_to_tree)
+ModelDNA::ModelDNA(const char* model_name, std::string model_params,
+                   StateFreqType freq,     std::string freq_params,
+                   PhyloTree*    tree,     PhyloTree*  report_to_tree)
     : ModelMarkov(tree, report_to_tree)
 {
   init(model_name, model_params, freq, freq_params, report_to_tree);
@@ -138,7 +138,7 @@ void ModelDNA::init(const char *model_name, string model_params,
 		    // model was six digits (e.g. 010010 for K2P/HKY)
 		    name = model_name;
 		    full_name = "Time reversible ("+name+")";
-		} else {
+		} else if (strlen(model_name)!=0) {
 			readParameters(model_name, true, report_to_tree);
             name = full_name = model_name;
             freq = FREQ_USER_DEFINED;
@@ -152,9 +152,11 @@ void ModelDNA::init(const char *model_name, string model_params,
 	if (model_params != "") {
 	  readRates(model_params);
 	}
-	
-	if (freq == FREQ_UNKNOWN ||  def_freq == FREQ_EQUAL) freq = def_freq;
-	ModelMarkov::init(freq, report_to_tree);
+
+    if (freq == FREQ_UNKNOWN ||  def_freq == FREQ_EQUAL) {
+        freq = def_freq;
+    }
+    ModelMarkov::init(freq, report_to_tree);
 //    model_parameters = new double [getNDim()+1]; // see setVariables for explaination of +1
 //    setVariables(model_parameters);
 }

@@ -6,6 +6,8 @@
 #include "modelinfo.h"
 #include "modelsubst.h"      //for OPEN_BRACKET and CLOSE_BRACKET
 #include "modelfileloader.h"
+#include "modeldna.h"        //for ModelDNA
+#include "modelexpression.h" //for InterpretedExpression
 
 #include <utils/my_assert.h> //for ASSERT macro
 #include <utils/stringfunctions.h> //for convert_int
@@ -482,7 +484,7 @@ void ModelInfoFromName::updateName(const std::string& name) {
     model_name = name;
 }
 
-YAMLFileParameter::YAMLFileParameter() : value(0.0) {
+YAMLFileParameter::YAMLFileParameter() : is_subscripted(false), value(0.0) {
 }
 
 ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(): rate_matrix_rank(0) {
@@ -495,6 +497,21 @@ ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(const std::string& path)
 
 void ModelInfoFromYAMLFile::updateName(const std::string& name) {
     model_name = name;
+}
+
+void ModelInfoFromYAMLFile::addParameter(const YAMLFileParameter& p) {
+    parameters.emplace_back(p);
+    if (p.is_subscripted) {
+        for (int i=p.minimum_subscript; i<=p.maximum_subscript; ++i) {
+            std::stringstream subscripted_name;
+            subscripted_name << p.name << "(" << i << ")";
+            std::string var_name = subscripted_name.str();
+            variables[var_name] = p.value;
+        }
+    } else {
+        variables[p.name] = p.value;
+    }
+    
 }
 
 void ModelListFromYAMLFile::loadFromFile (const char* file_path) {
@@ -523,12 +540,9 @@ bool ModelListFromYAMLFile::isModelNameRecognized (const char* model_name) {
     return models_found.find(std::string(model_name)) != models_found.end();
 }
 
-ModelMarkov* ModelListFromYAMLFile::getModelByName
-    (const char* model_name,   PhyloTree *tree,
-     const char* model_params, StateFreqType freq_type,
-     const char* freq_params,  PhyloTree* report_to_tree) {
-    FUNCTION_NOT_IMPLEMENTED;
-        
+ModelMarkov* ModelListFromYAMLFile::getModelByName(const char* model_name,   PhyloTree *tree,
+                                                   const char* model_params, StateFreqType freq_type,
+                                                   const char* freq_params,  PhyloTree* report_to_tree) {
     //Todo:
     //This must convert the rate matrix expression strings into
     //a vector of expression trees (it can assume they will be valid)
@@ -537,5 +551,45 @@ ModelMarkov* ModelListFromYAMLFile::getModelByName
     //Only then can it delete the expression trees.
     //
 
+    ModelInfoFromYAMLFile& model_info = models_found[model_name];
+    std::cout << "Model Params " << model_params
+              << " Freq Params " << freq_params << std::endl;
+    
+    ModelMarkov* model = nullptr;
+    
+    //Todo: other data types, ModelBIN, ModelCodon, ModelPoMo, ModelProtein
+    //if (model_info.data_type_name=="DNA") {
+    string dummy_rate_params;
+    string dummy_freq_params;
+    
+    model = new ModelDNA("", dummy_rate_params, FREQ_USER_DEFINED,
+                         dummy_freq_params, tree, report_to_tree);
+    
+    ASSERT( model_info.rate_matrix_rank == model->num_states);
+    
+    DoubleVector rates;
+    const char* separator = "";
+    for (int row=0; row<model_info.rate_matrix_rank; ++row) {
+        separator = " ";
+        for (int col=0; col<model_info.rate_matrix_rank; ++col) {
+            if (col!=row) {
+                std::string expr_string = model_info.rate_matrix_expressions[row][col];
+                typedef ModelExpression::InterpretedExpression Interpreter;
+                Interpreter interpreter(model_info, expr_string);
+                double entry = interpreter.evaluate();
+                rates.push_back(entry);
+                std::cout << separator << entry;
+            }
+        }
+    }
+    std::cout << std::endl;
+    model->setRateMatrix(rates.data());
+    
+    //model_parameters = new double [num_params];
+    //memset(model_parameters, 0, sizeof(double)*num_params);
+    //this->setRates();
+
+    FUNCTION_NOT_IMPLEMENTED;
+        
     return nullptr;
 }

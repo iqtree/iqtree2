@@ -10,6 +10,35 @@
 
 namespace ModelExpression {
 
+    class BuiltIns {
+    public:
+        class Exp : public UnaryFunctionImplementation {
+            double callFunction(const ModelInfoFromYAMLFile& mf,
+                                double parameter) const {
+                return exp(parameter);
+            }
+        } exp_body;
+        class Logarithm: public UnaryFunctionImplementation {
+            double callFunction(const ModelInfoFromYAMLFile& mf,
+                                double parameter) const {
+                return log(parameter);
+            }
+        } ln_body;
+        std::map<std::string, UnaryFunctionImplementation*> functions;
+        
+        BuiltIns() {
+            functions["exp"] = &exp_body;
+            functions["ln"]  = &ln_body;
+        }
+        bool isBuiltIn(const std::string &name) {
+            return functions.find(name) != functions.end();
+        }
+        Expression* asBuiltIn(const ModelInfoFromYAMLFile& mf,
+                              const std::string& name) {
+            return new UnaryFunction(mf, functions[name]);
+        }
+    } built_in_functions;
+
     Expression::Expression(const ModelInfoFromYAMLFile& for_model) : model(for_model) {
     }
 
@@ -21,6 +50,14 @@ namespace ModelExpression {
     bool   Expression::isVariable()    const { return false; }
     int    Expression::getPrecedence() const { return false; }
 
+    Token::Token(const ModelInfoFromYAMLFile& for_model, char c): super(for_model) {
+        token_char = c;
+    }
+
+    bool Token::isToken(char c) const {
+        return (token_char == c);
+    }
+
     Constant::Constant(const ModelInfoFromYAMLFile& for_model,
                        double v) : super(for_model), value(v) {
     }
@@ -29,17 +66,51 @@ namespace ModelExpression {
         return value;
     }
 
-    Variable::Variable(const ModelInfoFromYAMLFile& for_model, const std::string& name)
+    bool Constant::isConstant() const {
+        return true;
+    }
+
+    Variable::Variable(const ModelInfoFromYAMLFile& for_model,
+                       const std::string& name)
         : super(for_model), variable_name(name) {
         if (!for_model.hasVariable(name)) {
             std::stringstream complaint;
             complaint << "Could not evaluate variable " << name
                       << " for model " << for_model.getLongName();
+            throw complaint.str();
         }
     }
 
     double Variable::evaluate() const {
-        return model.getVariableValue(variable_name);
+        double v =  model.getVariableValue(variable_name);
+        return v;
+    }
+
+    bool Variable::isVariable() const {
+        return true;
+    }
+
+    UnaryFunction::UnaryFunction(const ModelInfoFromYAMLFile& for_model,
+                                 const UnaryFunctionImplementation* implementation)
+        : super(for_model), body(implementation), parameter(nullptr) {
+    }
+
+    void UnaryFunction::setParameter(Expression* param) {
+        parameter = param;
+    }
+
+    double UnaryFunction::evaluate() const {
+        double parameter_value = parameter->evaluate();
+        return body->callFunction(model, parameter_value);
+    }
+
+    bool   UnaryFunction::isFunction() const {
+        return true;
+    }
+
+    UnaryFunction::~UnaryFunction() {
+        delete parameter;
+        parameter = nullptr;
     }
 
     InfixOperator::InfixOperator(const ModelInfoFromYAMLFile& for_model )
@@ -51,6 +122,10 @@ namespace ModelExpression {
         rhs = right;
     }
 
+    bool InfixOperator::isOperator() const {
+        return true;
+    }
+
     InfixOperator::~InfixOperator() {
         delete lhs;
         lhs = nullptr;
@@ -58,14 +133,26 @@ namespace ModelExpression {
         rhs = nullptr;
     }
 
+    Exponentiation::Exponentiation(const ModelInfoFromYAMLFile& for_model)
+        : super(for_model) { }
+
+    double Exponentiation::evaluate() const {
+        double v1 = lhs->evaluate();
+        double v2 = rhs->evaluate();
+        return pow(v1, v2);
+    }
+    int    Exponentiation::getPrecedence() const { return 3; }
+
     Multiplication::Multiplication(const ModelInfoFromYAMLFile& for_model)
         : super(for_model) { }
 
     double Multiplication::evaluate() const {
-        return lhs->evaluate() * rhs->evaluate();
+        double v1 = lhs->evaluate();
+        double v2 = rhs->evaluate();
+        return v1 * v2;
     }
-    int    Multiplication::getPrecedence() const { return 2; }
 
+    int    Multiplication::getPrecedence() const { return 2; }
 
     Division::Division(const ModelInfoFromYAMLFile& for_model )
         : super(for_model) { }
@@ -73,13 +160,16 @@ namespace ModelExpression {
     double Division::evaluate() const {
         return lhs->evaluate() / rhs->evaluate();
     }
+
     int    Division::getPrecedence() const { return 2; }
 
     Addition::Addition(const ModelInfoFromYAMLFile& for_model)
         : super(for_model) { }
 
     double Addition::evaluate() const {
-        return lhs->evaluate() + rhs->evaluate();
+        double v1 = lhs->evaluate();
+        double v2 = rhs->evaluate();
+        return v1 + v2;
     }
     int    Addition::getPrecedence() const { return 1; }
 
@@ -89,6 +179,8 @@ namespace ModelExpression {
     double Subtraction::evaluate() const {
         return lhs->evaluate() - rhs->evaluate();
     }
+
+    int Subtraction::getPrecedence() const { return 1; }
 
     InterpretedExpression::InterpretedExpression(const ModelInfoFromYAMLFile& for_model,
                                                  const std::string& text): super(for_model) {
@@ -145,6 +237,8 @@ namespace ModelExpression {
                     output << operator_stack.pop();
                 }
                 operator_stack << token;
+            } else if (token->isVariable()) {
+                output << token;
             } else if (token->isToken('(')) {
                 operator_stack << token;
             } else if (token->isToken(')')) {
@@ -167,11 +261,16 @@ namespace ModelExpression {
         for (size_t i=0; i<output.size(); ++i) {
             token = output[i];
             if (token->isOperator()) {
-                Expression* rhs = operand_stack.pop();
-                Expression* lhs = operand_stack.pop();
-                InfixOperator* op = dynamic_cast<InfixOperator*>(token);
+                Expression*    rhs = operand_stack.pop();
+                Expression*    lhs = operand_stack.pop();
+                InfixOperator* op  = dynamic_cast<InfixOperator*>(token);
                 op->setOperands(lhs, rhs);
                 operand_stack << op;
+            } else if (token->isFunction()) {
+                Expression* param = operand_stack.pop();
+                UnaryFunction* fn = dynamic_cast<UnaryFunction*>(token);
+                fn->setParameter(param);
+                operand_stack << fn;
             } else {
                 operand_stack << token;
             }
@@ -200,7 +299,26 @@ namespace ModelExpression {
                     break;
                 }
             }
-            expr = new Variable(model, text.substr(var_start, ix-var_start));
+            std::string var_name = text.substr(var_start, ix-var_start);
+            while (ix<text.size() && text[ix]==' ') {
+                ++ix;
+            }
+            if (built_in_functions.isBuiltIn(var_name)) {
+                expr = built_in_functions.asBuiltIn(model, var_name);
+                return true;
+            }
+            if (text[ix]=='(') {
+                //Subscripted
+                size_t subscript_start = ix;
+                while (ix<text.size() && text[ix]!=')') {
+                    ++ix; //find closing bracket
+                }
+                if (ix<text.size()) {
+                    ++ix; //skip over closing bracket
+                    var_name += text.substr(subscript_start, ix-subscript_start);
+                }
+            }
+            expr = new Variable(model, var_name);
             return true;
         }
         if (isnumber(ch)) {
@@ -212,16 +330,18 @@ namespace ModelExpression {
             return true;
         }
         switch (ch) {
-            case '(': expr = new Token(model, ch);
-            case ')': expr = new Token(model, ch);
-            case '-': expr = new Subtraction(model);
-            case '+': expr = new Addition(model);
-            case '*': expr = new Multiplication(model);
-            case '/': expr = new Division(model);
+            case '(': expr = new Token(model, ch);      break;
+            case ')': expr = new Token(model, ch);      break;
+            case '^': expr = new Exponentiation(model); break;
+            case '*': expr = new Multiplication(model); break;
+            case '/': expr = new Division(model);       break;
+            case '+': expr = new Addition(model);       break;
+            case '-': expr = new Subtraction(model);    break;
             default:
                 throw std::string("unrecognized character '") +
                       std::string(1, ch) + "'' in expression";
         }
+        ++ix;
         return true;
     }
 

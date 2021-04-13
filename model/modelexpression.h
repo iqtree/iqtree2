@@ -39,8 +39,10 @@ namespace ModelExpression {
     protected:
         char token_char;
     public:
+        typedef Expression super;
         Token(const ModelInfoFromYAMLFile& for_model, char c);
-        virtual bool   isToken(char c) const;
+        virtual ~Token() = default;
+        virtual bool isToken(char c) const;
     };
 
     class Variable: public Expression {
@@ -65,6 +67,25 @@ namespace ModelExpression {
         virtual bool isConstant() const;
     };
 
+    class UnaryFunctionImplementation {
+    public:
+        virtual double callFunction(const  ModelInfoFromYAMLFile&,
+                                    double parameter) const = 0;
+        virtual ~UnaryFunctionImplementation() = default;
+    };
+
+    class UnaryFunction: public Expression {
+        const UnaryFunctionImplementation* body;
+        Expression*                        parameter;
+    public:
+        typedef Expression super;
+        UnaryFunction(const ModelInfoFromYAMLFile& for_model,
+                      const UnaryFunctionImplementation* implementation);
+        virtual ~UnaryFunction();
+        virtual void   setParameter(Expression* param); //takes ownership
+        virtual double evaluate() const;
+        virtual bool   isFunction() const;
+    };
 
     class InfixOperator: public Expression {
     protected:
@@ -75,7 +96,16 @@ namespace ModelExpression {
         InfixOperator(const ModelInfoFromYAMLFile& for_model);
         virtual ~InfixOperator();
         virtual bool isOperator() const;
-        void setOperands(Expression* left, Expression* right);
+        void setOperands(Expression* left, Expression* right); //takes ownership
+    };
+
+    class Exponentiation: public InfixOperator {
+        public:
+            typedef InfixOperator super;
+            Exponentiation(const ModelInfoFromYAMLFile& for_model);
+            virtual ~Exponentiation() = default;
+            virtual double evaluate() const;
+            virtual int    getPrecedence() const;
     };
 
     class Multiplication: public InfixOperator {
