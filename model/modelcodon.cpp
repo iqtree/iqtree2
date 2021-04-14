@@ -366,43 +366,44 @@ void ModelCodon::init(const char *model_name, string model_params,
                 this_emp_rate[j] = 1.0;
             }
         }
-    }    
-
-    ignore_state_freq = false;
-
-	StateFreqType def_freq = FREQ_UNKNOWN;
-	name = full_name = model_name;
-    size_t pos;
-	if ((pos=name.find('_')) == string::npos) {
-		def_freq = initCodon(model_name, freq, true);
-	} else {
-		def_freq = initCodon(name.substr(0, pos).c_str(), freq, false);
-		if (def_freq != FREQ_USER_DEFINED)
-			outError("Invalid model " + name + ": first component must be an empirical model"); // first model must be empirical
-		def_freq = initCodon(name.substr(pos+1).c_str(), freq, false);
-		if (def_freq == FREQ_USER_DEFINED) // second model must be parametric
-			outError("Invalid model " + name + ": second component must be a mechanistic model");
-		// adjust the constraint
-        if (codon_freq_style==CF_TARGET_CODON) 
+    }
+    ignore_state_freq      = false;
+    StateFreqType def_freq = FREQ_UNKNOWN;
+    name                   = full_name = model_name;
+    size_t pos             = name.find('_');
+    if (pos == string::npos) {
+        def_freq = initCodon(model_name, freq, true);
+    } else {
+        def_freq = initCodon(name.substr(0, pos).c_str(), freq, false);
+        if (def_freq != FREQ_USER_DEFINED) {
+            outError("Invalid model " + name + ":"
+                     " first component must be an empirical model");
+        }
+        def_freq = initCodon(name.substr(pos+1).c_str(), freq, false);
+        if (def_freq == FREQ_USER_DEFINED) {
+            // second model must be parametric
+            outError("Invalid model " + name + ":"
+                     " second component must be a mechanistic model");
+        }
+        // adjust the constraint
+        if (codon_freq_style==CF_TARGET_CODON) {
             def_freq = FREQ_USER_DEFINED;
-	}
-
+        }
+    }
     num_params = (!fix_omega) + (!fix_kappa) + (!fix_kappa2);
-
-	if (freq_params != "") {
-		readStateFreq(freq_params, report_to_tree);
-	}
-	if (model_params != "") {
-		readRates(model_params);
-	}
-
-//	if (freq == FREQ_UNKNOWN ||  def_freq == FREQ_EQUAL) freq = def_freq;
-    if (freq == FREQ_UNKNOWN) freq = def_freq;
-	if (freq == FREQ_CODON_1x4 || freq == FREQ_CODON_3x4 || freq == FREQ_CODON_3x4C) {
-		//ntfreq = new double[12];
-		phylo_tree->aln->computeCodonFreq(freq, state_freq, ntfreq);
-	}
-	ModelMarkov::init(freq, report_to_tree);
+    if (freq_params != "") {
+        readStateFreq(freq_params, report_to_tree);
+    }
+    if (model_params != "") {
+        readRates(model_params);
+    }
+    if (freq == FREQ_UNKNOWN) {
+        freq = def_freq;
+    }
+    if (freq == FREQ_CODON_1x4 || freq == FREQ_CODON_3x4 || freq == FREQ_CODON_3x4C) {
+        phylo_tree->aln->computeCodonFreq(freq, state_freq, ntfreq);
+    }
+    ModelMarkov::init(freq, report_to_tree);
 }
 
 StateFreqType ModelCodon::initMG94(bool should_fix_kappa, StateFreqType freq, CodonKappaStyle kappa_style) {

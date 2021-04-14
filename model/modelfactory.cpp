@@ -888,8 +888,10 @@ double ModelFactory::optimizeParametersOnly(int num_steps, double gradient_epsil
         double prev_logl = cur_logl;
         for (int step = 0; step < steps; step++) {
             // only optimized if model is not linked
-            double model_lh = model->optimizeParameters(gradient_epsilon, report_to_tree);
-            double rate_lh  = site_rate->optimizeParameters(gradient_epsilon, report_to_tree);
+            double model_lh = model->optimizeParameters(gradient_epsilon,
+                                                        report_to_tree);
+            double rate_lh  = site_rate->optimizeParameters(gradient_epsilon,
+                                                            report_to_tree);
 
             if (rate_lh == 0.0) {
                 logl = model_lh;
@@ -994,7 +996,8 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
 
     size_t numberOfStartValues = 10; //Was hardcoded
     
-    double testInterval = (frac_const - MIN_PINVAR * 2.0) / ((double)numberOfStartValues - 1.0);
+    double testInterval = (frac_const - MIN_PINVAR * 2.0)
+                        / ((double)numberOfStartValues - 1.0);
     double initPInv     = MIN_PINVAR;
     double initAlpha    = site_rate->getGammaShape();
 
@@ -1199,7 +1202,8 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
             TREE_LOG_LINE(*report_to_tree, VB_MED, s.str() );
         }
         else {
-            TREE_LOG_LINE(*report_to_tree, VB_QUIET, "1. Initial log-likelihood: " << cur_lh);
+            TREE_LOG_LINE(*report_to_tree, VB_QUIET,
+                          "1. Initial log-likelihood: " << cur_lh);
         }
         if (verbose_mode >= VB_MAX) {
             report_to_tree->hideProgress();
@@ -1389,7 +1393,8 @@ double ModelFactory::computeTrans(double time, int state1, int state2,
     return model->computeTrans(time, state1, state2, derv1, derv2);
 }
 
-void ModelFactory::computeTransMatrix(double time, double *trans_matrix, int mixture) {
+void ModelFactory::computeTransMatrix(double time, double *trans_matrix,
+                                      int mixture) {
     if (!store_trans_matrix || !is_storing || model->isSiteSpecificModel()) {
         model->computeTransMatrix(time, trans_matrix, mixture);
         return;

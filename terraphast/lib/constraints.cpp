@@ -73,16 +73,16 @@ constraints compute_constraints(const std::vector<tree>& trees) {
 }
 
 index deduplicate_constraints(constraints& in_c) {
-	for (auto& c : in_c) {
-		c = {std::min(c.left, c.shared), std::max(c.left, c.shared), c.right};
-	}
-	std::sort(in_c.begin(), in_c.end(), [](constraint a, constraint b) {
-		return std::tie(a.left, a.shared, a.right) < std::tie(b.left, b.shared, b.right);
-	});
-	auto it = std::unique(in_c.begin(), in_c.end());
-	index count = (index)std::distance(it, in_c.end());
-	in_c.erase(it, in_c.end());
-	return count;
+    for (auto& c : in_c) {
+        c = {std::min(c.left, c.shared), std::max(c.left, c.shared), c.right};
+    }
+    std::sort(in_c.begin(), in_c.end(), [](constraint a, constraint b) {
+        return std::tie(a.left, a.shared, a.right) < std::tie(b.left, b.shared, b.right);
+    });
+    auto it = std::unique(in_c.begin(), in_c.end());
+    index count = (index)std::distance(it, in_c.end());
+    in_c.erase(it, in_c.end());
+    return count;
 }
 
 } // namespace terraces

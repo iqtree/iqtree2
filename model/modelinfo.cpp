@@ -75,8 +75,8 @@ std::string ModelInfoFromName::getFreeRateParameters
     std::string freerate_params;
     if (posR != string::npos && posR2 != string::npos) {
         auto posFirst = (posR < posR2) ? posR : posR2;
-        cout << "NOTE: both +R and *R were specified, continue with "
-             << model_name.substr(posFirst,2) << endl;
+        std::cout << "NOTE: both +R and *R were specified, continue with "
+                  << model_name.substr(posFirst,2) << std::endl;
     }
     if (posR2 != string::npos && posR2 < posR) {
         posR = posR2;
@@ -273,8 +273,8 @@ void ModelInfoFromName::getGammaParameters(int& num_rate_cats,
     string::size_type posG2 = model_name.find("*G");
     if (posG != string::npos && posG2 != string::npos) {
         auto posFirst = (posG < posG2) ? posG : posG2;
-        cout << "NOTE: both +G and *G were specified, continue with "
-             << model_name.substr(posFirst,2) << endl;
+        std::cout << "NOTE: both +G and *G were specified, continue with "
+                  << model_name.substr(posFirst,2) << std::endl;
     }
     if (posG2 != string::npos && posG2 < posG) {
         posG = posG2;
@@ -299,7 +299,7 @@ void ModelInfoFromName::getGammaParameters(int& num_rate_cats,
         //    gamma_shape > MAX_GAMMA_SHAPE) {
         //    stringstream str;
         //    str << "Gamma shape parameter " << gamma_shape << "out of range ["
-        //        << MIN_GAMMA_SHAPE << ',' << MAX_GAMMA_SHAPE << "]" << endl;
+        //        << MIN_GAMMA_SHAPE << ',' << MAX_GAMMA_SHAPE << "]\n";
         //    outError(str.str());
         //}
     } else if (model_name.length() > posG+2+end_pos &&
@@ -316,8 +316,8 @@ std::string ModelInfoFromName::getHeterotachyParameters
 
     if (posH != string::npos && posH2 != string::npos) {
         auto posFirst = (posH < posH2) ? posH : posH2;
-        cout << "NOTE: both +H and *H were specified, continue with "
-             << model_name.substr(posFirst,2) << endl;
+        std::cout << "NOTE: both +H and *H were specified, continue with "
+                  << model_name.substr(posFirst,2) << std::endl;
     }
     if (posH2 != string::npos && posH2 < posH) {
         posH = posH2;
@@ -526,11 +526,12 @@ ModelVariable::ModelVariable(ModelParameterType t,
     : range(r), type(t), value(v) {
 }
 
-ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(): rate_matrix_rank(0) {
+ModelInfoFromYAMLFile::ModelInfoFromYAMLFile()
+    : rate_matrix_rank(0), frequency_type(FREQ_UNKNOWN) {
 }
 
 ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(const std::string& path)
-    : model_file_path(path) {
+    :  model_file_path(path), rate_matrix_rank(0), frequency_type(FREQ_UNKNOWN) {
 }
 
 void ModelInfoFromYAMLFile::updateName(const std::string& name) {
@@ -548,6 +549,16 @@ void ModelInfoFromYAMLFile::addParameter(const YAMLFileParameter& p) {
         variables[p.name] = ModelVariable(p.type, p.range, p.value);
     }
 }
+
+bool ModelInfoFromYAMLFile::isFrequencyParameter(const std::string& param_name) const {
+    for ( auto p : parameters ) {
+        if (string_to_lower(p.name) == string_to_lower(param_name)) {
+            return p.type == ModelParameterType::FREQUENCY;
+        }
+    }
+    return false;
+}
+
 
 void ModelInfoFromYAMLFile::setBounds(int param_count, double *lower_bound,
                                       double *upper_bound, bool *bound_check) const {
@@ -573,8 +584,8 @@ void ModelInfoFromYAMLFile::updateVariables(const double* updated_values,
             for (int sub = p.minimum_subscript;
                  sub <= p.maximum_subscript; ++sub) {
                 ASSERT( i<= param_count );
-                std::string var_name = p.getSubscriptedVariableName(sub);
-                double var_value = updated_values[i];
+                std::string var_name  = p.getSubscriptedVariableName(sub);
+                double      var_value = updated_values[i];
                 this->variables[var_name].value = var_value;
                 ++i;
             }
@@ -589,7 +600,8 @@ void ModelListFromYAMLFile::loadFromFile (const char* file_path) {
     ModelFileLoader loader(file_path);
     try {
         if (!yaml_model_list.IsSequence()) {
-            throw YAML::Exception(yaml_model_list.Mark(), "list '[...]' expected");
+            throw YAML::Exception(yaml_model_list.Mark(),
+                                  "list '[...]' expected");
         }
         for (auto node : yaml_model_list) {
             if (!(node["substitutionmodel"])) {
@@ -597,7 +609,8 @@ void ModelListFromYAMLFile::loadFromFile (const char* file_path) {
             }
             std::string yaml_model_name = node["substitutionmodel"].Scalar();
             std::cout << "Parsing YAML model " << yaml_model_name << std::endl;
-            ModelInfoFromYAMLFile &y = models_found[yaml_model_name] = ModelInfoFromYAMLFile();
+            ModelInfoFromYAMLFile &y = models_found[yaml_model_name]
+                                     = ModelInfoFromYAMLFile();
             loader.parseYAMLSubstitutionModel(node, yaml_model_name, y);
         }
     }
@@ -620,16 +633,16 @@ public:
                  PhyloTree *tree, PhyloTree* report_to_tree,
                  const ModelInfoFromYAMLFile& info)
         : super(model_name, model_params, freq,
-                freq_params, tree, report_to_tree), model_info(info) {
+                freq_params, tree, report_to_tree),
+          model_info(info) {
     }
     virtual void setBounds(double *lower_bound, double *upper_bound,
                             bool *bound_check) {
         //ASSERT(is_reversible && "setBounds should only be called"
         //       "on subclass of ModelMarkov");
-
         int ndim = getNDim();
         for (int i = 1; i <= ndim; ++i) {
-            //cout << variables[i] << endl;
+            //std::cout << variables[i] << std::endl;
             lower_bound[i] = MIN_RATE;
             upper_bound[i] = MAX_RATE;
             bound_check[i] = false;
@@ -638,11 +651,60 @@ public:
                              upper_bound, bound_check);
     }
     virtual bool getVariables(double *variables) {
-        bool changed = super::getVariables(variables);
+        bool changed = false;
+        if (num_params > 0) {
+            int num_all = static_cast<int>(param_spec.length());
+            //if (verbose_mode >= VB_MAX) {
+                for (int i = 1; i <= num_params; i++) {
+                    std::cout << "  estimated rates[" << i << "] changing from "
+                              << rates[i] << " to " << variables[i] << std::endl;
+                }
+            //}
+            for (int i = 0; i < num_all; i++) {
+                changed |= (rates[i] != variables[i]);
+                rates[i] = variables[i];
+            }
+        }
+        if (freq_type == FREQ_ESTIMATE) {
+            int ndim = getNDim();
+            auto read_freq = variables+(ndim-num_states+2);
+            for (int i=0; i<num_states-1; ++i) {
+                if (state_freq[i]!=read_freq[i]) {
+                    std::cout << "  estimated freqs[" << i << "] changing from "
+                              << state_freq[i] << " to " << read_freq[i] << std::endl;
+                    changed = true;
+                }
+                state_freq[i] = read_freq[i];
+                //if (verbose_mode >= VB_MAX) {
+                //}
+            }
+        } else {
+            changed |= freqsFromParams(state_freq,variables+num_params+1,freq_type);
+        }
+        //if (verbose_mode >= VB_MAX) {
+        std::cout << std::endl;
+        //}
         if (changed) {
             model_info.updateVariables(variables, getNDim());
         }
         return changed;
+    }
+    virtual void setVariables(double *variables) {
+        if (num_params > 0) {
+            for (int i=0; i<num_params; ++i) {
+                variables[i] = rates[i];
+            }
+        }
+        if (freq_type == FREQ_ESTIMATE) {
+            // 2015-09-07: relax the sum of state_freq to be 1,
+            // this will be done at the end of optimization
+            int ndim = getNDim();
+            memcpy(variables+(ndim-num_states+2), state_freq,
+                   (num_states-1)*sizeof(double));
+        } else {
+            paramsFromFreqs(variables+num_params+1,
+                            state_freq, freq_type);
+        }
     }
 };
 
@@ -655,14 +717,18 @@ ModelMarkov* ModelListFromYAMLFile::getModelByName(const char* model_name,   Phy
               << " Freq Params " << freq_params << std::endl;
     
     ModelMarkov* model = nullptr;
-    
     string dummy_rate_params;
     string dummy_freq_params;
     
-    //Todo: other data types, based on ModelBIN, ModelCodon, ModelPoMo, ModelProtein
+    if (freq_type == FREQ_UNKNOWN) {
+        freq_type = model_info.frequency_type;
+    }
+    //Todo: other data types, based on ModelBIN,
+    //      ModelCodon, ModelPoMo, ModelProtein
     //if (model_info.data_type_name=="DNA") {
-    model = new YAMLModelDNA("", dummy_rate_params, FREQ_USER_DEFINED,
-                             dummy_freq_params, tree, report_to_tree, model_info);
+    model = new YAMLModelDNA("", dummy_rate_params, freq_type,
+                             dummy_freq_params, tree,
+                             report_to_tree, model_info);
     
     ASSERT( model_info.rate_matrix_rank == model->num_states);
     

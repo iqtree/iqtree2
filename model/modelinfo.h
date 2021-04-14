@@ -144,6 +144,7 @@ private:
     size_t      rate_matrix_rank; //
     std::vector<StrVector> rate_matrix_expressions; //row major (expression strings)
     std::vector<YAMLFileParameter> parameters;      //parameters
+    StateFreqType frequency_type;
     
     std::map<std::string, ModelVariable> variables;
     
@@ -237,6 +238,7 @@ public:
         }
         return found->second.value;
     }
+    bool isFrequencyParameter(const std::string& param_name) const;
     void setBounds(int bound_count, double *lower_bound,
                    double *upper_bound, bool *bound_check) const;
     void updateVariables(const double* variables,

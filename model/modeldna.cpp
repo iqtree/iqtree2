@@ -129,7 +129,6 @@ void ModelDNA::init(const char *model_name, string model_params,
         ModelLieMarkov::getLieMarkovModelInfo((string)model_name, name, full_name,
                                               model_num, symmetry, def_freq);
     }
-    
     if (name != "") {
         setRateType(rate_type.c_str());
     } else {
@@ -145,14 +144,12 @@ void ModelDNA::init(const char *model_name, string model_params,
             //name += " (user-defined)";
         }
     }
-    
     if (freq_params != "") {
         readStateFreq(freq_params, report_to_tree);
     }
     if (model_params != "") {
         readRates(model_params);
     }
-
     if (freq == FREQ_UNKNOWN ||  def_freq == FREQ_EQUAL) {
         freq = def_freq;
     }
@@ -191,16 +188,15 @@ void ModelDNA::restoreCheckpoint() {
     for (auto i = rate_spec.begin(); i != rate_spec.end(); ++i) {
         *i = *i + '0';
     }
-    
     if (!rate_spec.empty()) {
         if (!setRateType(rate_spec)) {
             ASSERT(0 && "Cannot set rate_spec");
         }
     }
-
     decomposeRateMatrix();
-    if (phylo_tree)
+    if (phylo_tree) {
         phylo_tree->clearAllPartialLH();
+    }
 }
 
 void ModelDNA::readRates(string str) THROW_SPEC(const char*) {
@@ -376,7 +372,6 @@ bool ModelDNA::setRateType(string rate_str) {
     delete [] avg_rates;
     return true;
 }
-
 
 int ModelDNA::getNDim() {
     if (fixed_parameters)

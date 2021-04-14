@@ -4211,15 +4211,14 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 
         startTreeReconstruction(params, tree, *model_info);
         // call main tree reconstruction
-        if (params.num_runs == 1)
+        if (params.num_runs == 1) {
             runTreeReconstruction(params, tree);
-        else
+        } else {
             runMultipleTreeReconstruction(params, tree->aln, tree);
-        
+        }
         if (MPIHelper::getInstance().isMaster()) {
             reportPhyloAnalysis(params, *tree, *model_info);
         }
-
         // reinsert identical sequences
         if (tree->removed_seqs.size() > 0) {
             // BUG FIX: dont use reinsertIdenticalSeqs anymore
@@ -4227,11 +4226,9 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
             tree->printResultTree();
         }
         delete model_info;
-        
         if (params.dating_method != "") {
             doTimeTree(tree);
         }
-
     } else {
         if (alignment->getNSeq() < 4) {
             outError("It makes no sense to perform bootstrap"
@@ -4239,8 +4236,9 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
         }
         runStandardBootstrap(params, alignment, tree);
     }
-    if (verbose_mode >= VB_MED){
-        if(tree->isSuperTree() && params.partition_type != BRLEN_OPTIMIZE){
+    if (verbose_mode >= VB_MED) {
+        if (tree->isSuperTree() &&
+            params.partition_type != BRLEN_OPTIMIZE) {
             ((PhyloSuperTreePlen*) tree)->printNNIcasesNUM();
         }
     }
@@ -4252,7 +4250,6 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
     // one cannot access tree->aln anymore
     //alignment = tree->aln;
     delete alignment;
-
     checkpoint->putBool("finished", true);
     checkpoint->dump(true);
 }
@@ -4274,15 +4271,16 @@ void runUnlinkedPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
     /**** do separate tree reconstruction for each partition ***/
     
     MTreeSet part_trees;
-    
     if (!params.user_file.empty()) {
         // reading user tree file for all partitions
         bool is_rooted = false;
         part_trees.readTrees(params.user_file.c_str(), is_rooted, 0, static_cast<int>(super_aln->partitions.size()));
-        if (is_rooted)
+        if (is_rooted) {
             outError("Rooted trees not allowed: ", params.user_file);
-        if (part_trees.size() != super_aln->partitions.size())
+        }
+        if (part_trees.size() != super_aln->partitions.size()) {
             outError("User tree file does not have the same number of trees as partitions");
+        }
         params.user_file.clear();
     }
 
@@ -4301,28 +4299,27 @@ void runUnlinkedPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
             tree = new PhyloTreeMixlen((*alnit), params.num_mixlen);
         } else if (model_info.hasRateHeterotachy()) {
             tree = new PhyloTreeMixlen((*alnit), 0);
-        } else
+        } else {
             tree = new IQTree((*alnit));
-
+        }
         tree->setCheckpoint(checkpoint);
         if (checkpoint->getBool("finished")) {
             tree->restoreCheckpoint();
         } else {
-            if (!part_trees.empty())
+            if (!part_trees.empty()) {
                 tree->copyTree(part_trees[part]);
-
+            }
             startTreeReconstruction(params, tree, *model_checkpoint);
             // call main tree reconstruction
-            if (params.num_runs == 1)
+            if (params.num_runs == 1) {
                 runTreeReconstruction(params, tree);
-            else
+            } else {
                 runMultipleTreeReconstruction(params, tree->aln, tree);
+            }
             checkpoint->putBool("finished", true);
             checkpoint->dump();
         }
-
         super_tree->at(part)->copyTree(tree);
-        
         delete tree;
         checkpoint->endStruct();
     }
@@ -4331,9 +4328,9 @@ void runUnlinkedPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
     super_tree->setCheckpoint(checkpoint);
     startTreeReconstruction(params, iqtree, *model_checkpoint);
     runTreeReconstruction(params, iqtree);
-    if (MPIHelper::getInstance().isMaster())
+    if (MPIHelper::getInstance().isMaster()) {
         reportPhyloAnalysis(params, *iqtree, *model_checkpoint);
-
+    }
     delete super_tree;
     delete super_aln;
     delete model_checkpoint;
@@ -4350,8 +4347,9 @@ void assignBranchSupportNew(Params &params) {
     PhyloTree *tree;
     Alignment *aln = NULL;
     if (params.site_concordance) {
-        if (!params.aln_file && !params.partition_file)
+        if (!params.aln_file && !params.partition_file) {
             outError("Please provide an alignment (-s) or partition file");
+        }
         if (params.partition_file) {
             params.compute_seq_composition = false;
             aln = new SuperAlignment(params);
@@ -4376,8 +4374,9 @@ void assignBranchSupportNew(Params &params) {
     // 2018-12-13: move initialisation to fix rooted vs unrooted tree
     if (params.site_concordance) {
         tree->setAlignment(aln);
-        if (tree->isSuperTree())
+        if (tree->isSuperTree()) {
             ((PhyloSuperTree*)tree)->mapTrees();
+        }
     }
     
     BranchVector branches;
@@ -4386,10 +4385,10 @@ void assignBranchSupportNew(Params &params) {
     for (brit = branches.begin(); brit != branches.end(); brit++) {
         Neighbor *branch = brit->second->findNeighbor(brit->first);
         string label = brit->second->name;
-        if (!label.empty())
+        if (!label.empty()) {
             PUT_ATTR(branch, label);
+        }
     }
-    
     map<string,string> meanings;
     
     if (!params.treeset_file.empty()) {
@@ -4398,8 +4397,9 @@ void assignBranchSupportNew(Params &params) {
         double start_time = getRealTime();
         cout << "Computing gene concordance factor..." << endl;
         tree->computeGeneConcordance(trees, meanings);
-        if (params.internode_certainty)
+        if (params.internode_certainty) {
             tree->computeQuartetConcordance(trees);
+        }
         cout << getRealTime() - start_time << " sec" << endl;
     }
     if (params.site_concordance) {
@@ -4420,8 +4420,9 @@ void assignBranchSupportNew(Params &params) {
                      " for branch annotation meanings." +
                      " This file is best viewed in FigTree.");
     cout << "Annotated tree (best viewed in FigTree) written to " << str << endl;
-    if (verbose_mode >= VB_DEBUG)
+    if (verbose_mode >= VB_DEBUG) {
         tree->drawTree(cout);
+    }
     str = prefix + ".cf.branch";
     tree->printTree(str.c_str(), WT_BR_LEN + WT_INT_NODE + WT_NEWLINE);
     cout << "Tree with branch IDs written to " << str << endl;
@@ -4433,32 +4434,41 @@ void assignBranchSupportNew(Params &params) {
         << "# Columns are tab-separated with following meaning:" << endl
         << "#   ID: Branch ID" << endl;
     map<string,string>::iterator mit;
-    for (mit = meanings.begin(); mit != meanings.end(); mit++)
-        if (mit->first[0] != '*')
+    for (mit = meanings.begin(); mit != meanings.end(); mit++) {
+        if (mit->first[0] != '*') {
             out << "#   " << mit->first << ": " << mit->second << endl;
+        }
+    }
     out << "#   Label: Existing branch label" << endl;
     out << "#   Length: Branch length" << endl;
-    for (mit = meanings.begin(); mit != meanings.end(); mit++)
-        if (mit->first[0] == '*')
+    for (mit = meanings.begin(); mit != meanings.end(); mit++) {
+        if (mit->first[0] == '*') {
             out << "# " << mit->first << ": " << mit->second << endl;
+        }
+    }
     out << "ID";
-    for (mit = meanings.begin(); mit != meanings.end(); mit++)
-        if (mit->first[0] != '*')
+    for (mit = meanings.begin(); mit != meanings.end(); mit++) {
+        if (mit->first[0] != '*') {
             out << "\t" << mit->first;
+        }
+    }
     out << "\tLabel\tLength" << endl;
     for (brit = branches.begin(); brit != branches.end(); brit++) {
         Neighbor *branch = brit->second->findNeighbor(brit->first);
         int ID = brit->second->id;
         out << ID;
         for (mit = meanings.begin(); mit != meanings.end(); mit++) {
-            if (mit->first[0] == '*')
+            if (mit->first[0] == '*') {
                 continue; // ignore NOTES
+            }
             out << '\t';
             string val;
-            if (branch->getAttr(mit->first, val))
+            if (branch->getAttr(mit->first, val)) {
                 out << val;
-            else
+            }
+            else {
                 out << "NA";
+            }
         }
         double length = branch->length;
         string label;
@@ -4494,13 +4504,18 @@ void assignBranchSupportNew(Params &params) {
             int ID = brit->second->id;
             for (int qid = 0; ; qid++) {
                 string qstr;
-                if (branch->attributes.find("q" + convertIntToString(qid)) == branch->attributes.end())
+                if (branch->attributes.find("q" + convertIntToString(qid)) ==
+                    branch->attributes.end()) {
                     break;
-                out << ID << '\t' << qid+1 << '\t' << branch->attributes["q" + convertIntToString(qid)] << endl;
+                }
+                out << ID << '\t' << qid+1 << '\t'
+                    << branch->attributes["q" + convertIntToString(qid)]
+                    << endl;
             }
         }
         out.close();
-        cout << "Site concordance factors for quartets printed to " << filename << endl;
+        cout << "Site concordance factors for quartets"
+             << " printed to " << filename << endl;
     }
     
     if (!params.site_concordance_partition)
@@ -4533,7 +4548,8 @@ void assignBranchSupportNew(Params &params) {
         }
     }
     out.close();
-    cout << "Concordance factors per branch and tree printed to " << filename << endl;
+    cout << "Concordance factors per branch"
+         << " and tree printed to " << filename << endl;
     
     if (!params.site_concordance_partition || !tree->isSuperTree())
         return;
@@ -4603,7 +4619,8 @@ void assignBootstrapSupport(const char *input_trees, int burnin, int max_count,
     mytree.getTaxa(taxa);
     sort(taxa.begin(), taxa.end(), nodenamecmp);
     int i = 0;
-    for (NodeVector::iterator it = taxa.begin(); it != taxa.end(); it++) {
+    for (NodeVector::iterator it = taxa.begin();
+         it != taxa.end(); it++) {
         (*it)->id = i++;
     }
 
@@ -4628,8 +4645,10 @@ void assignBootstrapSupport(const char *input_trees, int burnin, int max_count,
     MTreeSet boot_trees;
     if (params && detectInputFile(input_trees) == IN_NEXUS) {
         sg.init(*params);
-        for (SplitGraph::iterator it = sg.begin(); it != sg.end(); it++)
+        for (SplitGraph::iterator it = sg.begin();
+             it != sg.end(); it++) {
             hash_ss.insertSplit((*it), static_cast<int>((*it)->getWeight()));
+        }
         StrVector sgtaxname;
         sg.getTaxaName(sgtaxname);
         i = 0;
@@ -4683,13 +4702,14 @@ void assignBootstrapSupport(const char *input_trees, int burnin, int max_count,
     
     //mytree.scaleLength(100.0/boot_trees.size(), true);
     string out_file;
-    if (output_tree)
+    if (output_tree) {
         out_file = output_tree;
-    else {
-        if (out_prefix)
+    } else {
+        if (out_prefix) {
             out_file = out_prefix;
-        else
+        } else {
             out_file = target_tree;
+        }
         out_file += ".suptree";
     }
 
@@ -4733,9 +4753,9 @@ void computeConsensusTree(const char *input_trees, int burnin,
 
     // read the bootstrap tree file
     double scale = 100.0;
-    if (params->scaling_factor > 0)
+    if (params->scaling_factor > 0) {
         scale = params->scaling_factor;
-
+    }
     MTreeSet boot_trees;
     if (params && detectInputFile(input_trees) == IN_NEXUS) {
         const char *user_file = params->user_file.c_str();
@@ -4743,7 +4763,7 @@ void computeConsensusTree(const char *input_trees, int burnin,
         params->split_weight_summary = SW_COUNT; // count number of splits
         sg.init(*params);
         params->user_file = user_file;
-        for (SplitGraph::iterator it = sg.begin(); it != sg.end();)
+        for (SplitGraph::iterator it = sg.begin(); it != sg.end();) {
             if ((*it)->getWeight() > weight_threshold) {
                 hash_ss.insertSplit((*it), static_cast<int>((*it)->getWeight()));
                 it++;
@@ -4755,6 +4775,7 @@ void computeConsensusTree(const char *input_trees, int burnin,
                 delete sg.back();
                 sg.pop_back();
             }
+        }
         /*        StrVector sgtaxname;
          sg.getTaxaName(sgtaxname);
          i = 0;
@@ -4772,35 +4793,38 @@ void computeConsensusTree(const char *input_trees, int burnin,
         cout << sg.size() << " splits found" << endl;
     }
     //sg.report(cout);
-    if (verbose_mode >= VB_MED)
+    if (verbose_mode >= VB_MED) {
         cout << "Rescaling split weights by " << scale << endl;
-    if (params->scaling_factor < 0)
+    }
+    if (params->scaling_factor < 0) {
         sg.scaleWeight(scale, true);
-    else {
+    } else {
         sg.scaleWeight(scale, false, params->numeric_precision);
     }
-
-
 
     //cout << "Creating greedy consensus tree..." << endl;
     MTree mytree;
     SplitGraph maxsg;
     sg.findMaxCompatibleSplits(maxsg);
 
-    if (verbose_mode >= VB_MAX)
+    if (verbose_mode >= VB_MAX) {
         maxsg.saveFileStarDot(cout);
+    }
     //cout << "convert compatible split system into tree..." << endl;
     mytree.convertToTree(maxsg);
     //cout << "done" << endl;
     if (!mytree.rooted) {
         string taxname;
-        if (params->root)
+        if (params->root) {
             taxname = params->root;
-        else
+        }
+        else {
             taxname = sg.getTaxa()->GetTaxonLabel(0);
+        }
         Node *node = mytree.findLeafName(taxname);
-        if (node)
+        if (node) {
             mytree.root = node;
+        }
     }
     // mytree.scaleLength(100.0 / boot_trees.sumTreeWeights(), true);
 
@@ -4809,13 +4833,14 @@ void computeConsensusTree(const char *input_trees, int burnin,
 
     string out_file;
 
-    if (output_tree)
+    if (output_tree) {
         out_file = output_tree;
-    else {
-        if (out_prefix)
+    } else {
+        if (out_prefix) {
             out_file = out_prefix;
-        else
+        } else {
             out_file = input_trees;
+        }
         out_file += ".contree";
     }
 
@@ -4825,13 +4850,14 @@ void computeConsensusTree(const char *input_trees, int burnin,
     mytree.printTree(out_file.c_str(), WT_BR_CLADE);
     cout << "Consensus tree written to " << out_file << endl;
 
-    if (output_tree)
+    if (output_tree) {
         out_file = output_tree;
-    else {
-        if (out_prefix)
+    } else {
+        if (out_prefix) {
             out_file = out_prefix;
-        else
+        } else {
             out_file = input_trees;
+        }
         out_file += ".splits";
     }
 
@@ -4851,36 +4877,38 @@ void computeConsensusNetwork(const char *input_trees, int burnin,
     bool rooted = false;
 
     // read the bootstrap tree file
-    MTreeSet boot_trees(input_trees, rooted, burnin, max_count,
-            tree_weight_file);
+    MTreeSet boot_trees(input_trees, rooted, burnin,
+                        max_count, tree_weight_file);
 
     SplitGraph sg;
     //SplitIntMap hash_ss;
 
-    boot_trees.convertSplits(sg, cutoff, weight_summary, weight_threshold);
-
+    boot_trees.convertSplits(sg, cutoff, weight_summary,
+                             weight_threshold);
     string out_file;
 
-    if (output_tree)
+    if (output_tree) {
         out_file = output_tree;
-    else {
-        if (out_prefix)
+    } else {
+        if (out_prefix) {
             out_file = out_prefix;
-        else
+        } else {
             out_file = input_trees;
+        }
         out_file += ".nex";
     }
 
     sg.saveFile(out_file.c_str(), IN_NEXUS);
     cout << "Consensus network printed to " << out_file << endl;
 
-    if (output_tree)
+    if (output_tree) {
         out_file = output_tree;
-    else {
-        if (out_prefix)
+    } else {
+        if (out_prefix) {
             out_file = out_prefix;
-        else
+        } else {
             out_file = input_trees;
+        }
         out_file += ".splits";
     }
     if (verbose_mode >= VB_MED) {

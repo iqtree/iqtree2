@@ -165,8 +165,8 @@ void ModelFileLoader::parseRateMatrixExpressions(ModelInfoFromYAMLFile& info) {
 }
     
 void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_model,
-                                const std::string& name_of_model,
-                                ModelInfoFromYAMLFile& info) {
+                                                 const std::string& name_of_model,
+                                                 ModelInfoFromYAMLFile& info) {
     info.model_file_path = file_path;
     info.model_name      = name_of_model;
     info.citation        = stringScalar(substitution_model,  "citation");
@@ -203,8 +203,21 @@ void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_
     //
     auto stateFrequency = substitution_model["stateFrequency"];
     if (stateFrequency) {
+        //
         //Check that dimension of the specified parameter is the
         //same as the rank of the rate matrix (it must be!).
+        //
+        std::string freq     = stateFrequency.IsScalar() ? stateFrequency.Scalar() : "";
+        std::string low_freq = string_to_lower(freq);
+        if (low_freq=="estimate") {
+            info.frequency_type = StateFreqType::FREQ_ESTIMATE;
+        } else if (low_freq=="empirical") {
+            info.frequency_type = StateFreqType::FREQ_EMPIRICAL;
+        } else if (low_freq=="uniform") {
+            info.frequency_type = StateFreqType::FREQ_EQUAL;
+        } else if (info.isFrequencyParameter(low_freq)) {
+            info.frequency_type = StateFreqType::FREQ_USER_DEFINED;
+        }
     } else {
         //If we have parameters with a type of frequency, we're all good.
     }
