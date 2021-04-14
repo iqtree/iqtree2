@@ -868,7 +868,9 @@ void ModelMarkov::scaleStateFreq(bool sum_one) {
         }
     } else {
         // make the last frequency equal to 0.1
-        if (state_freq[num_states-1] == 0.1) return;
+        if (state_freq[num_states-1] == 0.1) {
+            return;
+        }
         ASSERT(state_freq[num_states-1] > 1.1e-6);
         for (int i = 0; i < num_states; ++i) {
             state_freq[i] /= state_freq[num_states-1]*10.0;
@@ -904,7 +906,6 @@ bool ModelMarkov::getVariables(double *variables) {
         memcpy(rates, variables+1, nrate * sizeof(double));
     }
     if (is_reversible && freq_type == FREQ_ESTIMATE) {
-        // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
         // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
         int ndim = getNDim();
         for (int i = 0; i < num_states-1; i++) {
@@ -977,8 +978,10 @@ bool ModelMarkov::isUnstableParameters() {
     return false;
 }
 
-void ModelMarkov::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
-//    ASSERT(is_reversible && "setBounds should only be called on subclass of ModelMarkov");
+void ModelMarkov::setBounds(double *lower_bound, double *upper_bound,
+                            bool *bound_check) {
+    //ASSERT(is_reversible && "setBounds should only be called"
+    //       "on subclass of ModelMarkov");
 
     int ndim = getNDim();
     for (int i = 1; i <= ndim; ++i) {
@@ -989,10 +992,7 @@ void ModelMarkov::setBounds(double *lower_bound, double *upper_bound, bool *boun
     }
     if (is_reversible && freq_type == FREQ_ESTIMATE) {
         for (int i = num_params+1; i <= num_params+num_states-1; ++i) {
-            //lower_bound[i] = MIN_FREQUENCY/state_freq[highest_freq_state];
-            //upper_bound[i] = state_freq[highest_freq_state]/MIN_FREQUENCY;
             lower_bound[i]  = Params::getInstance().min_state_freq;
-            //upper_bound[i] = 100.0;
             upper_bound[i] = 1.0;
             bound_check[i] = false;
         }
@@ -1000,9 +1000,12 @@ void ModelMarkov::setBounds(double *lower_bound, double *upper_bound, bool *boun
         setBoundsForFreqType(&lower_bound[num_params+1], &upper_bound[num_params+1],
             &bound_check[num_params+1], Params::getInstance().min_state_freq, freq_type);
     }
+    //Todo: What about bounds for non-reversible models on sequence
+    //      types other than DNA.  Shouldn't that be handled here, too?
 }
 
-double ModelMarkov::optimizeParameters(double gradient_epsilon, PhyloTree* report_to_tree) {
+double ModelMarkov::optimizeParameters(double gradient_epsilon,
+                                       PhyloTree* report_to_tree) {
     if (fixed_parameters) {
         return 0.0;
     }
@@ -1621,8 +1624,8 @@ void ModelMarkov::readParameters(const char *file_name,
     cout << "Reading model parameters from file " << file_name << endl;
 
     // if detect if reading full matrix or half matrix by the first entry
-	try {
-		ifstream in(file_name);
+    try {
+        ifstream in(file_name);
         double d;
         in >> d;
         if (d < 0) {

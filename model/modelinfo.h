@@ -16,7 +16,7 @@ class ModelFileLoader;
 class ModelInfo {
 public:
     ModelInfo()                     = default;
-    ModelInfo(const ModelInfo& rhs) = delete;
+    ModelInfo(const ModelInfo& rhs) = default;
     virtual ~ModelInfo()            = default;
     
     virtual std::string getFreeRateParameters(int& num_rate_cats,
@@ -103,6 +103,10 @@ public:
     ModelParameterRange(): super(0,0), is_set(false) {}
 };
 
+enum ModelParameterType {
+    RATE, FREQUENCY, WEIGHT, OTHER
+};
+
 class YAMLFileParameter {
 public:
     std::string         name;
@@ -110,15 +114,13 @@ public:
     int                 minimum_subscript;
     int                 maximum_subscript;
     std::string         type_name;
+    ModelParameterType  type;
     ModelParameterRange range;
     double              value;
     YAMLFileParameter();
     std::string getSubscriptedVariableName(int subscript) const;
 };
 
-enum ModelParameterType {
-    RATE, FREQUENCY, OTHER
-};
 
 class ModelVariable {
 public:
@@ -149,6 +151,7 @@ private:
     friend class ModelFileLoader;
 public:
     ModelInfoFromYAMLFile(); //Only ModelListFromYAMLFile uses it.
+    ModelInfoFromYAMLFile(const ModelInfoFromYAMLFile& rhs) = default;
     explicit ModelInfoFromYAMLFile(const std::string& file_path);
     ~ModelInfoFromYAMLFile() = default;
     
@@ -216,7 +219,6 @@ public:
     void updateName  (const std::string&       name);
     void addParameter(const YAMLFileParameter& p);
     
-    
 public:
     std::string getLongName() const {
         return model_name + " from YAML model file " +
@@ -235,6 +237,10 @@ public:
         }
         return found->second.value;
     }
+    void setBounds(int bound_count, double *lower_bound,
+                   double *upper_bound, bool *bound_check) const;
+    void updateVariables(const double* variables,
+                         int param_count);
 };
 
 class ModelListFromYAMLFile {

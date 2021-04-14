@@ -1262,7 +1262,8 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
             model->writeInfo(cout);
             site_rate->writeInfo(cout);
             if (fixed_len == BRLEN_SCALE) {
-                cout << "Scaled tree length: " << tree->treeLength() << endl;
+                cout << "Scaled tree length: "
+                     << tree->treeLength() << endl;
             }
             report_to_tree->showProgress();
         }
@@ -1305,7 +1306,8 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
         if (fabs(mean_rate-1.0) > 1e-6) {
             if (fixed_len == BRLEN_FIX)
             {
-                outError("Fixing branch lengths not supported under specified site rate model");
+                outError("Fixing branch lengths not supported"
+                         " under specified site rate model");
             }
             tree->scaleLength(mean_rate);
             tree->clearAllPartialLH();

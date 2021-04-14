@@ -313,11 +313,11 @@ bool ModelDNA::setRateType(string rate_str) {
 		return false;
 	}
 
-	num_params = last_type - first_type;
-	param_spec = "";
-	for (i = 0; i < num_ch; i++) {
-		param_spec.push_back(rate_str[i]-first_type);
-	}*/
+     num_params = last_type - first_type;
+     param_spec = "";
+     for (i = 0; i < num_ch; i++) {
+     param_spec.push_back(rate_str[i]-first_type);
+     }*/
 
     map<char,char> param_k;
     num_params = 0;
@@ -429,8 +429,9 @@ void ModelDNA::computeTipLikelihood(PML::StateType state, double *state_lk) {
     memset(state_lk, 0, num_states*sizeof(double));
     int cstate = state-num_states+1;
     for (int i = 0; i < num_states; i++) {
-        if ((cstate) & (1 << i))
+        if ((cstate) & (1 << i)) {
             state_lk[i] = 1.0;
+        }
     }
 }
 
@@ -439,20 +440,20 @@ void ModelDNA::computeTipLikelihood(PML::StateType state, double *state_lk) {
  * Returns true if the model state has changed, false if not.
  */
 bool ModelDNA::getVariables(double *variables) {
-    int i;
     bool changed = false;
     if (num_params > 0) {
         int num_all = static_cast<int>(param_spec.length());
         if (verbose_mode >= VB_MAX) {
-            for (i = 1; i <= num_params; i++) {
-                cout << "  estimated variables[" << i << "] = " << variables[i] << endl;
+            for (int i = 1; i <= num_params; i++) {
+                cout << "  estimated variables[" << i << "] = "
+                     << variables[i] << endl;
             }
         }
-        for (i = 0; i < num_all; i++) {
+        for (int i = 0; i < num_all; i++) {
             if (!param_fixed[param_spec[i]]) {
                 changed |= (rates[i] != variables[(int)param_spec[i]]);
                             rates[i]  = variables[(int)param_spec[i]];
-             }
+            }
         }
     }
     if (freq_type == FREQ_ESTIMATE) {
@@ -462,7 +463,7 @@ bool ModelDNA::getVariables(double *variables) {
         changed |= memcmpcpy(state_freq, variables+(ndim-num_states+2),
                              (num_states-1)*sizeof(double));
         //double sum = 0;
-        //for (i = 0; i < num_states-1; i++)
+        //for (int i = 0; i < num_states-1; i++)
         //    sum += state_freq[i];
         //state_freq[num_states-1] = 1.0 - sum;
     } else {

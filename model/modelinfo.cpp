@@ -30,25 +30,29 @@ namespace {
         std::string::size_type pos1, pos2;
         for (pos1 = 0; pos1 != std::string::npos; pos1++) {
             pos1 = name.find(sub1, pos1);
-            if (pos1 == std::string::npos)
+            if (pos1 == std::string::npos) {
                 break;
+            }
             if (pos1+2 >= name.length() || !isalpha(name[pos1+2])) {
                 break;
             }
         }
         for (pos2 = 0; pos2 != std::string::npos; pos2++) {
             pos2 = name.find(sub2, pos2);
-            if (pos2 == std::string::npos)
+            if (pos2 == std::string::npos) {
                 break;
-            if (pos2+2 >= name.length() ||!isalpha(name[pos2+2]))
+            }
+            if (pos2+2 >= name.length() ||!isalpha(name[pos2+2])) {
                 break;
+            }
         }
         if (pos1 != std::string::npos && pos2 != std::string::npos) {
             return std::min(pos1, pos2);
-        } else if (pos1 != std::string::npos)
+        } else if (pos1 != std::string::npos) {
             return pos1;
-        else
+        } else {
             return pos2;
+        }
     }
     std::string::size_type findSubStr(const std::string &name,
                                       const char * sub1,
@@ -121,8 +125,9 @@ std::string ModelInfoFromName::getFrequencyMixtureParams
             freq_str = freq_str.substr(0, posfreq)
                      + freq_str.substr(last_pos);
         }
-        if (fmix_str[5] != OPEN_BRACKET)
+        if (fmix_str[5] != OPEN_BRACKET) {
             outError("Mixture-frequency must start with +FMIX{");
+        }
         close_bracket = fmix_str.find(CLOSE_BRACKET);
         if (close_bracket == string::npos) {
             outError("Close bracket not found in ", fmix_str);
@@ -157,7 +162,7 @@ void ModelInfoFromName::getFrequencyOptions(std::string& freq_str,
         } else {
             fstr = freq_str.substr(posfreq, last_pos-posfreq);
             freq_str = freq_str.substr(0, posfreq)
-                     + freq_str.substr(last_pos);
+            + freq_str.substr(last_pos);
         }
         if (fstr.length() > 2 && fstr[2] == OPEN_BRACKET) {
             if (freq_type == FREQ_MIXTURE) {
@@ -165,70 +170,90 @@ void ModelInfoFromName::getFrequencyOptions(std::string& freq_str,
                          " is not allowed");
             }
             auto close_bracket = fstr.find(CLOSE_BRACKET);
-            if (close_bracket == string::npos)
+            if (close_bracket == string::npos) {
                 outError("Close bracket not found in ", fstr);
-            if (close_bracket != fstr.length()-1)
+            }
+            if (close_bracket != fstr.length()-1) {
                 outError("Wrong close bracket position ", fstr);
+            }
             freq_type = FREQ_USER_DEFINED;
             freq_params = fstr.substr(3, close_bracket-3);
         } else if (fstr == "+FC" || fstr == "+Fc" || fstr == "+F") {
             if (freq_type == FREQ_MIXTURE) {
                 freq_params = "empirical," + freq_params;
                 optimize_mixmodel_weight = true;
-            } else
+            } else {
                 freq_type = FREQ_EMPIRICAL;
+            }
         } else if (fstr == "+FU" || fstr == "+Fu") {
-            if (freq_type == FREQ_MIXTURE)
+            if (freq_type == FREQ_MIXTURE) {
                 outError("Mixture frequency with user-defined frequency"
                          " is not allowed");
-            else
+            }
+            else {
                 freq_type = FREQ_USER_DEFINED;
+            }
         } else if (fstr == "+FQ" || fstr == "+Fq") {
-            if (freq_type == FREQ_MIXTURE)
+            if (freq_type == FREQ_MIXTURE) {
                 outError("Mixture frequency with equal frequency"
                          " is not allowed");
-            else
-            freq_type = FREQ_EQUAL;
+            }
+            else {
+                freq_type = FREQ_EQUAL;
+            }
         } else if (fstr == "+FO" || fstr == "+Fo") {
             if (freq_type == FREQ_MIXTURE) {
                 freq_params = "optimize," + freq_params;
                 optimize_mixmodel_weight = true;
-            } else
+            } else {
                 freq_type = FREQ_ESTIMATE;
-    } else if (fstr == "+F1x4" || fstr == "+F1X4") {
-            if (freq_type == FREQ_MIXTURE)
+            }
+        } else if (fstr == "+F1x4" || fstr == "+F1X4") {
+            if (freq_type == FREQ_MIXTURE) {
                 outError("Mixture frequency with " + fstr + " is not allowed");
-            else
+            }
+            else {
                 freq_type = FREQ_CODON_1x4;
+            }
         } else if (fstr == "+F3x4" || fstr == "+F3X4") {
-            if (freq_type == FREQ_MIXTURE)
+            if (freq_type == FREQ_MIXTURE) {
                 outError("Mixture frequency with " + fstr + " is not allowed");
-            else
+            }
+            else {
                 freq_type = FREQ_CODON_3x4;
+            }
         } else if (fstr == "+F3x4C" || fstr == "+F3x4c" ||
                    fstr == "+F3X4C" || fstr == "+F3X4c") {
-            if (freq_type == FREQ_MIXTURE)
+            if (freq_type == FREQ_MIXTURE) {
                 outError("Mixture frequency with " + fstr + " is not allowed");
-            else
+            }
+            else {
                 freq_type = FREQ_CODON_3x4C;
+            }
         } else if (fstr == "+FRY") {
-        // MDW to Minh: I don't know how these should interact with FREQ_MIXTURE,
-        // so as nearly everything else treats it as an error, I do too.
-        // BQM answer: that's fine
-            if (freq_type == FREQ_MIXTURE)
+            // MDW to Minh: I don't know how these should interact with FREQ_MIXTURE,
+            // so as nearly everything else treats it as an error, I do too.
+            // BQM answer: that's fine
+            if (freq_type == FREQ_MIXTURE) {
                 outError("Mixture frequency with " + fstr + " is not allowed");
-            else
+            }
+            else {
                 freq_type = FREQ_DNA_RY;
+            }
         } else if (fstr == "+FWS") {
-            if (freq_type == FREQ_MIXTURE)
+            if (freq_type == FREQ_MIXTURE) {
                 outError("Mixture frequency with " + fstr + " is not allowed");
-            else
+            }
+            else {
                 freq_type = FREQ_DNA_WS;
+            }
         } else if (fstr == "+FMK") {
-            if (freq_type == FREQ_MIXTURE)
+            if (freq_type == FREQ_MIXTURE) {
                 outError("Mixture frequency with " + fstr + " is not allowed");
-            else
+            }
+            else {
                 freq_type = FREQ_DNA_MK;
+            }
         } else {
             // might be "+F####" where # are digits
             try {
@@ -397,8 +422,9 @@ bool ModelInfoFromName::isMixtureModel() const {
 }
 
 bool ModelInfoFromName::isModelFinder() const {
-    return model_name.empty() || startsWith(model_name, "TEST")
-    || startsWith(model_name, "MF");
+    return model_name.empty() ||
+           startsWith(model_name, "TEST") ||
+           startsWith(model_name, "MF");
 }
 
 bool ModelInfoFromName::isModelFinderOnly() const {
@@ -492,8 +518,8 @@ std::string YAMLFileParameter::getSubscriptedVariableName(int subscript) const {
 }
 
 ModelVariable::ModelVariable(): value(0) {
-    
 }
+
 ModelVariable::ModelVariable(ModelParameterType t,
                              const ModelParameterRange& r,
                              double v)
@@ -501,7 +527,6 @@ ModelVariable::ModelVariable(ModelParameterType t,
 }
 
 ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(): rate_matrix_rank(0) {
-    
 }
 
 ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(const std::string& path)
@@ -514,23 +539,50 @@ void ModelInfoFromYAMLFile::updateName(const std::string& name) {
 
 void ModelInfoFromYAMLFile::addParameter(const YAMLFileParameter& p) {
     parameters.emplace_back(p);
-    ModelParameterType mpt = OTHER;
-    std::string lower_type_name = string_to_lower(p.type_name);
-    if (lower_type_name=="frequency") {
-        mpt = FREQUENCY;
-    }
-    if (lower_type_name=="rate") {
-        mpt = RATE;
-    }
     if (p.is_subscripted) {
         for (int i=p.minimum_subscript; i<=p.maximum_subscript; ++i) {
             std::string var_name = p.getSubscriptedVariableName(i);
-            variables[var_name] = ModelVariable(mpt, p.range, p.value);
+            variables[var_name] = ModelVariable(p.type, p.range, p.value);
         }
     } else {
-        variables[p.name] = ModelVariable(mpt, p.range, p.value);
+        variables[p.name] = ModelVariable(p.type, p.range, p.value);
     }
 }
+
+void ModelInfoFromYAMLFile::setBounds(int param_count, double *lower_bound,
+                                      double *upper_bound, bool *bound_check) const {
+    int i = 1; //Rate parameter numbering starts at 1, see ModelMarkov
+    for ( auto p : parameters ) {
+        if (p.type == ModelParameterType::RATE) {
+            for (int sub = p.minimum_subscript; sub <= p.maximum_subscript; ++sub) {
+                ASSERT( i<= param_count );
+                lower_bound[i] = p.range.first;
+                upper_bound[i] = p.range.second;
+                bound_check[i] = false;
+                ++i;
+            }
+        }
+    }
+}
+
+void ModelInfoFromYAMLFile::updateVariables(const double* updated_values,
+                                            int param_count) {
+    int i = 1; //Rate parameter numbering starts at 1, see ModelMarkov
+    for ( auto p : parameters ) {
+        if (p.type == ModelParameterType::RATE) {
+            for (int sub = p.minimum_subscript;
+                 sub <= p.maximum_subscript; ++sub) {
+                ASSERT( i<= param_count );
+                std::string var_name = p.getSubscriptedVariableName(sub);
+                double var_value = updated_values[i];
+                this->variables[var_name].value = var_value;
+                ++i;
+            }
+        }
+    }
+}
+
+
 
 void ModelListFromYAMLFile::loadFromFile (const char* file_path) {
     YAML::Node yaml_model_list = YAML::LoadFile(file_path);
@@ -558,6 +610,43 @@ bool ModelListFromYAMLFile::isModelNameRecognized (const char* model_name) {
     return models_found.find(std::string(model_name)) != models_found.end();
 }
 
+class YAMLModelDNA: public ModelDNA {
+protected:
+    ModelInfoFromYAMLFile model_info;
+public:
+    typedef ModelDNA super;
+    YAMLModelDNA(const char *model_name, string model_params,
+                 StateFreqType freq, string freq_params,
+                 PhyloTree *tree, PhyloTree* report_to_tree,
+                 const ModelInfoFromYAMLFile& info)
+        : super(model_name, model_params, freq,
+                freq_params, tree, report_to_tree), model_info(info) {
+    }
+    virtual void setBounds(double *lower_bound, double *upper_bound,
+                            bool *bound_check) {
+        //ASSERT(is_reversible && "setBounds should only be called"
+        //       "on subclass of ModelMarkov");
+
+        int ndim = getNDim();
+        for (int i = 1; i <= ndim; ++i) {
+            //cout << variables[i] << endl;
+            lower_bound[i] = MIN_RATE;
+            upper_bound[i] = MAX_RATE;
+            bound_check[i] = false;
+        }
+        model_info.setBounds(ndim, lower_bound,
+                             upper_bound, bound_check);
+    }
+    virtual bool getVariables(double *variables) {
+        bool changed = super::getVariables(variables);
+        if (changed) {
+            model_info.updateVariables(variables, getNDim());
+        }
+        return changed;
+    }
+};
+
+
 ModelMarkov* ModelListFromYAMLFile::getModelByName(const char* model_name,   PhyloTree *tree,
                                                    const char* model_params, StateFreqType freq_type,
                                                    const char* freq_params,  PhyloTree* report_to_tree) {
@@ -570,10 +659,10 @@ ModelMarkov* ModelListFromYAMLFile::getModelByName(const char* model_name,   Phy
     string dummy_rate_params;
     string dummy_freq_params;
     
-    //Todo: other data types, ModelBIN, ModelCodon, ModelPoMo, ModelProtein
+    //Todo: other data types, based on ModelBIN, ModelCodon, ModelPoMo, ModelProtein
     //if (model_info.data_type_name=="DNA") {
-    model = new ModelDNA("", dummy_rate_params, FREQ_USER_DEFINED,
-                         dummy_freq_params, tree, report_to_tree);
+    model = new YAMLModelDNA("", dummy_rate_params, FREQ_USER_DEFINED,
+                             dummy_freq_params, tree, report_to_tree, model_info);
     
     ASSERT( model_info.rate_matrix_rank == model->num_states);
     

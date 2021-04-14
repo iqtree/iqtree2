@@ -90,19 +90,31 @@ void ModelFileLoader::parseYAMLModelParameters(const YAML::Node& params,
             p.name = p.name.substr(0, bracket);
         }
         p.type_name = string_to_lower(stringScalar(param, "type"));
+        if (p.type_name=="rate") {
+            p.type = ModelParameterType::RATE;
+        } else if (p.type_name=="frequency") {
+            p.type = ModelParameterType::FREQUENCY;
+        } else if (p.type_name=="weight") {
+            p.type = ModelParameterType::WEIGHT;
+        } else {
+            p.type = ModelParameterType::OTHER;
+        }
+        auto count = p.maximum_subscript - p.minimum_subscript + 1;
+        ASSERT(0<count);
         double dv   = 0.0; //default initial value
-        if (p.type_name=="frequency") {
-            dv = 0.25;  //Todo: should be 1.0 divided by number of states
+        if (p.type==ModelParameterType::FREQUENCY) {
+            dv = 1.0 / (double)count;
+                        //Todo: should be 1.0 divided by number of states
                         //determined from the data type (info.data_type_name ?)
                         //Or 1 divided by the number of parameters.
-        } else if (p.type_name=="rate") {
+        } else if (p.type==ModelParameterType::RATE) {
             dv = 1.0;
-        } else if (p.type_name=="weight") {
-            dv = 0.5;    //Todo: Should be 1.0 divided by # of parameters
+        } else if (p.type==ModelParameterType::WEIGHT) {
+            dv = 1.0 / (double)count;    //Todo: Should be 1.0 divided by # of parameters
         }
-        p.range  = parseRange  (param, "range");
         std::string value_string = stringScalar(param, "initValue");
-        p.value  = convert_double_nothrow(value_string.c_str(), dv);
+        p.range                  = parseRange  (param, "range");
+        p.value                  = convert_double_nothrow(value_string.c_str(), dv);
         std::cout << "Parsed parameter " << p.name
                   << " of type " << p.type_name
                   << ", with range " << p.range.first
@@ -115,8 +127,7 @@ void ModelFileLoader::parseYAMLModelParameters(const YAML::Node& params,
 void ModelFileLoader::parseRateMatrix(const YAML::Node& rate_matrix,
                      ModelInfoFromYAMLFile& info) {
     //Assumes rate_matrix is a sequence (of rows)
-    for (auto row : rate_matrix)
-    {
+    for (auto row : rate_matrix) {
         ++info.rate_matrix_rank;
         std::stringstream s;
         s << "Row " << info.rate_matrix_rank << " of rate matrix "
