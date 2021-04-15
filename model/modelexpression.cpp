@@ -295,7 +295,7 @@ namespace ModelExpression {
             size_t var_start = ix;
             for (++ix; ix<text.size(); ++ix ) {
                 ch = text[ix];
-                if (!isalpha(ch) && !isnumber(ch)) {
+                if (!isalpha(ch) && (ch<'0' || '9'<ch)) {
                     break;
                 }
             }
@@ -321,7 +321,7 @@ namespace ModelExpression {
             expr = new Variable(model, var_name);
             return true;
         }
-        if (isnumber(ch)) {
+        if ('0'<=ch && ch<='9') {
             //Number
             int    endpos    = 0;
             double v         = convert_double(text.c_str()+ix, endpos);

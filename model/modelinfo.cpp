@@ -47,7 +47,7 @@ namespace {
             }
         }
         if (pos1 != std::string::npos && pos2 != std::string::npos) {
-            return std::min(pos1, pos2);
+            return (pos1 < pos2) ? pos1 : pos2;
         } else if (pos1 != std::string::npos) {
             return pos1;
         } else {
