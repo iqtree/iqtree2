@@ -1825,6 +1825,7 @@ void initializeParams(Params &params, IQTree &iqtree)
         if (!params.additional_alignment_files.empty()) {
             iqtree.mergeAlignments(params.additional_alignment_files);
             iqtree.optimizeConstructedTree();
+            iqtree.fixNegativeBranches(true);
         }
     }
     ASSERT(iqtree.aln);

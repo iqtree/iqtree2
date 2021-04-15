@@ -749,16 +749,7 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
              params->parsimony_hybrid_iterations != 0) {
             optimizeConstructedTree();
         }
-        if (params->compute_likelihood) {
-            if (isSuperTree()) {
-                bool force = params->fixed_branch_length == BRLEN_OPTIMIZE &&
-                             params->partition_type == BRLEN_OPTIMIZE;
-                wrapperFixNegativeBranch(force);
-            }
-            else {
-                fixed_number = wrapperFixNegativeBranch(false);
-            }
-        }
+        fixNegativeBranches(false);
         params->numInitTrees = 1;
         params->numNNITrees  = 1;
         if (params->pll) {
@@ -853,13 +844,7 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
                          << getRealTime() - start << " seconds");
                 params->numInitTrees = 1;
                 optimizeConstructedTree();
-                if (params->compute_likelihood) {
-                    if (isSuperTree()) {
-                        wrapperFixNegativeBranch(true);
-                    } else {
-                        fixed_number = wrapperFixNegativeBranch(false);
-                    }
-                }
+                fixNegativeBranches(true);
                 break;
             }
             //else, fall through
@@ -900,13 +885,7 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
             }
             params->numInitTrees = 1;
             optimizeConstructedTree();
-            if (params->compute_likelihood) {
-                if (isSuperTree()) {
-                    wrapperFixNegativeBranch(true);
-                } else {
-                    fixed_number = wrapperFixNegativeBranch(false);
-                }
-            }
+            fixNegativeBranches(true);
             break;
 
         case STT_USER_TREE:
@@ -1223,15 +1202,14 @@ string IQTree::generateParsimonyTree(int randomSeed) {
                         PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
         string pllTreeString = string(pllInst->tree_string);
         PhyloTree::readTreeString(pllTreeString);
-        wrapperFixNegativeBranch(true);
     } else if (params->start_tree == STT_RANDOM_TREE) {
         generateRandomTree(YULE_HARDING);
-        wrapperFixNegativeBranch(true);
         optimizeConstructedTree();
     } else {
         computeParsimonyTree(NULL, aln, randstream);
         optimizeConstructedTree();
     }
+    fixNegativeBranches(true);
     string parsimonyTreeString = getTreeString();
     return parsimonyTreeString;
 }
@@ -4710,6 +4688,22 @@ void IQTree::optimizeConstructedTree() {
     }
     if (0<params->parsimony_nni_iterations) {
         doParsimonyNNI();
+    }
+}
+
+void IQTree::fixNegativeBranches(bool force) {
+    if (params->compute_likelihood) {
+        int fixed_number;
+        if (isSuperTree()) {
+            if (params->fixed_branch_length == BRLEN_OPTIMIZE &&
+                params->partition_type == BRLEN_OPTIMIZE) {
+                force = true;
+            }
+            fixed_number = wrapperFixNegativeBranch(force);
+        }
+        else {
+            fixed_number = wrapperFixNegativeBranch(false);
+        }
     }
 }
 

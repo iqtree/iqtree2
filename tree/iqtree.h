@@ -138,6 +138,7 @@ public:
     void initializePLLIfNecessary();
     
     void optimizeConstructedTree();
+    void fixNegativeBranches(bool force);
     
     void doPLLParsimonySPR();
     

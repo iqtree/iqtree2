@@ -1130,9 +1130,9 @@ int PhyloTree::wrapperFixNegativeBranch(bool force_change) {
         pllReadNewick(getTreeString());
     }
     resetCurScore();
-    if (verbose_mode >= VB_MAX)
+    if (verbose_mode >= VB_MAX) {
         printTree(cout);
-//    lhComputed = false;
+    }
     return numFixed;
 }
 
