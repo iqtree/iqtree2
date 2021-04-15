@@ -4,6 +4,7 @@
 //
 
 #include "modelfileloader.h"
+#include "modelexpression.h" //for ModelExpression::ModelException
 #include <utils/stringfunctions.h>
    
 ModelFileLoader::ModelFileLoader(const char* path): file_path(path) {
@@ -85,7 +86,8 @@ void ModelFileLoader::parseYAMLModelParameters(const YAML::Node& params,
                 p.minimum_subscript   = 1;
             }
             if (strncmp(range + ix, ")", 1)!=0) {
-                throw "Subscript range does not end with right parenthesis";
+                const char* msg = "Subscript range does not end with right parenthesis";
+                throw ModelExpression::ModelException(msg);
             }
             p.name = p.name.substr(0, bracket);
         }

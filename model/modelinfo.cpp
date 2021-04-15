@@ -593,8 +593,6 @@ void ModelInfoFromYAMLFile::updateVariables(const double* updated_values,
     }
 }
 
-
-
 void ModelListFromYAMLFile::loadFromFile (const char* file_path) {
     YAML::Node yaml_model_list = YAML::LoadFile(file_path);
     ModelFileLoader loader(file_path);
@@ -617,6 +615,10 @@ void ModelListFromYAMLFile::loadFromFile (const char* file_path) {
     catch (YAML::Exception &e) {
         outError(e.what());
     }
+    catch (ModelExpression::ModelException& x) {
+        outError(x.getMessage());
+    }
+
 }
 
 bool ModelListFromYAMLFile::isModelNameRecognized (const char* model_name) {
@@ -732,22 +734,34 @@ ModelMarkov* ModelListFromYAMLFile::getModelByName(const char* model_name,   Phy
     
     ASSERT( model_info.rate_matrix_rank == model->num_states);
     
-    DoubleVector rates;
-    const char* separator = "";
-    for (int row=0; row<model_info.rate_matrix_rank; ++row) {
-        separator = " ";
-        for (int col=0; col<model_info.rate_matrix_rank; ++col) {
-            if (col!=row) {
+    DoubleVector      rates;
+    const char*       separator = "";
+    std::stringstream trace;
+    for (int row = 0; row < model_info.rate_matrix_rank; ++row) {
+        for (int col = 0; col < model_info.rate_matrix_rank; ++col) {
+            if (col != row) {
                 std::string expr_string = model_info.rate_matrix_expressions[row][col];
                 typedef ModelExpression::InterpretedExpression Interpreter;
-                Interpreter interpreter(model_info, expr_string);
-                double entry = interpreter.evaluate();
-                rates.push_back(entry);
-                std::cout << separator << entry;
+                try {
+                    Interpreter interpreter(model_info, expr_string);
+                    double entry = interpreter.evaluate();
+                    rates.push_back(entry);
+                    trace << separator << entry;
+                }
+                catch (ModelExpression::ModelException& x) {
+                    std::stringstream msg;
+                    msg << "Error parsing expression for " << model_name 
+                        << " rate matrix entry"
+                        << " for row "    << (row + 1) << ","
+                        << " and column " << (col + 1) << ": " 
+                        << x.getMessage();
+                    outError(msg.str());                        
+                }
+                separator = " ";
             }
         }
     }
-    std::cout << std::endl;
+    TREE_LOG_LINE(*report_to_tree, VB_MIN, trace.str());
     model->setRateMatrix(rates.data());
     
     //model_parameters = new double [num_params];

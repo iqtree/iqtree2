@@ -10,6 +10,13 @@
 
 namespace ModelExpression {
 
+    ModelException::ModelException(const char* s) : message(s) {}
+    ModelException::ModelException(const std::string& s) : message(s) {}
+    ModelException::ModelException(const std::stringstream& s) : message(s.str()) {}
+    const std::string& ModelException::getMessage() const {
+        return message;
+    }
+
     class BuiltIns {
     public:
         class Exp : public UnaryFunctionImplementation {
@@ -77,7 +84,7 @@ namespace ModelExpression {
             std::stringstream complaint;
             complaint << "Could not evaluate variable " << name
                       << " for model " << for_model.getLongName();
-            throw complaint.str();
+            throw ModelException(complaint.str());
         }
     }
 
@@ -338,8 +345,8 @@ namespace ModelExpression {
             case '+': expr = new Addition(model);       break;
             case '-': expr = new Subtraction(model);    break;
             default:
-                throw std::string("unrecognized character '") +
-                      std::string(1, ch) + "'' in expression";
+                throw ModelException(std::string("unrecognized character '") +
+                                     std::string(1, ch) + "'' in expression");
         }
         ++ix;
         return true;
@@ -351,9 +358,11 @@ namespace ModelExpression {
 
     InterpretedExpression::~InterpretedExpression() {
         delete root;
+        root = nullptr;
     }
 
     double InterpretedExpression::evaluate() const {
+        ASSERT(root != nullptr);
         return root->evaluate();
     }
 }

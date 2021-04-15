@@ -20,6 +20,16 @@
 
 namespace ModelExpression {
 
+    class ModelException {
+        protected:
+            std::string message;
+        public: 
+            explicit ModelException(const char* s);
+            explicit ModelException(const std::string& s);
+            explicit ModelException(const std::stringstream& s);
+            const std::string& getMessage() const;
+    };
+
     class Expression {
     protected:
         const ModelInfoFromYAMLFile& model;
