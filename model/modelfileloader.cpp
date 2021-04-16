@@ -11,17 +11,35 @@ ModelFileLoader::ModelFileLoader(const char* path): file_path(path) {
 }
         
 std::string ModelFileLoader::stringScalar(const YAML::Node& node,
-                                const char* key) {
-    auto cite = node[key];
-    return cite ? cite.Scalar() : "";
+                                          const char* key,
+                                          const char* default_value) {
+    auto   scalar_node = node[key];
+    return scalar_node ? scalar_node.Scalar() : default_value;
 }
     
 bool ModelFileLoader::booleanScalar(const YAML::Node& node,
-                          const char* key) {
-    std::string s = string_to_lower(stringScalar(node, key));
+                                    const char* key,
+                                    const bool default_value) {
+    std::string s = string_to_lower(stringScalar(node, key, ""));
+    if (s.empty()) {
+        return default_value;
+    }
     return s == "true" || s == "yes" || s == "t" || s == "y" || s == "1";
 }
-    
+
+int ModelFileLoader::integerScalar(const YAML::Node& node,
+                                   const char* key,
+                                   const int default_value) {
+    std::string s = stringScalar(node, key, "");
+    if (s.empty()) {
+        return default_value;
+    }
+    if (s[0]<'0' || '9'<s[0]) {
+        return default_value;
+    }
+    return atoi(s.c_str());
+}
+
 void ModelFileLoader::complainIfNot(bool check_me,
                           std::string error_message) {
     if (!check_me) {
@@ -37,12 +55,14 @@ double ModelFileLoader::toDouble(const YAML::Node& i, double default_val) {
     return convert_double_nothrow(double_string.c_str(), default_val);
 }
     
-ModelParameterRange ModelFileLoader::parseRange(const YAML::Node& node, const char* key) {
-    ModelParameterRange range;
+ModelParameterRange ModelFileLoader::parseRange(const YAML::Node& node,
+                                                const char* key,
+                                                const ModelParameterRange& default_value ) {
     auto r = node[key];
     if (!r) {
-        return range;
+        return default_value;
     }
+    ModelParameterRange range;
     //Todo: what if range is a string?
     if (r.IsSequence()) {
         int ix = 0;
@@ -69,63 +89,108 @@ void ModelFileLoader::parseYAMLModelParameters(const YAML::Node& params,
     //
     //Assumes: params is a sequence of parameter declarations
     //
-    for (auto param: params) {
-        YAMLFileParameter p;
-        p.name       = stringScalar(param, "name");
-        auto bracket = p.name.find('(');
-        if ( bracket != std::string::npos ) {
-            p.is_subscripted = true;
-            const char* range = p.name.c_str() + bracket + 1;
-            int ix;
-            p.minimum_subscript = convert_int(range, ix);
-            if (strncmp(range + ix, "..", 2)==0) {
-                range = range + ix + 2;
-                p.maximum_subscript = convert_int(range, ix);
-            } else {
-                p.maximum_subscript = p.minimum_subscript;
-                p.minimum_subscript   = 1;
+    for (const YAML::Node& param: params) {
+        const YAML::Node& name_node = param["name"];
+        if (name_node) {
+            if (name_node.IsScalar()) {
+                parseModelParameter(param, name_node.Scalar(), info);
             }
-            if (strncmp(range + ix, ")", 1)!=0) {
-                const char* msg = "Subscript range does not end with right parenthesis";
-                throw ModelExpression::ModelException(msg);
+            else if (name_node.IsSequence()) {
+                for (auto current_name: name_node) {
+                    if (current_name.IsScalar()) {
+                        parseModelParameter(param, current_name.Scalar(), info);
+                    }
+                }
             }
-            p.name = p.name.substr(0, bracket);
+            else {
+                outError("Model parameter must have a name");
+            }
         }
-        p.type_name = string_to_lower(stringScalar(param, "type"));
-        if (p.type_name=="rate") {
-            p.type = ModelParameterType::RATE;
-        } else if (p.type_name=="frequency") {
-            p.type = ModelParameterType::FREQUENCY;
-        } else if (p.type_name=="weight") {
-            p.type = ModelParameterType::WEIGHT;
-        } else {
-            p.type = ModelParameterType::OTHER;
-        }
-        auto count = p.maximum_subscript - p.minimum_subscript + 1;
-        ASSERT(0<count);
-        double dv   = 0.0; //default initial value
-        if (p.type==ModelParameterType::FREQUENCY) {
-            dv = 1.0 / (double)count;
-                        //Todo: should be 1.0 divided by number of states
-                        //determined from the data type (info.data_type_name ?)
-                        //Or 1 divided by the number of parameters.
-        } else if (p.type==ModelParameterType::RATE) {
-            dv = 1.0;
-        } else if (p.type==ModelParameterType::WEIGHT) {
-            dv = 1.0 / (double)count;    //Todo: Should be 1.0 divided by # of parameters
-        }
-        std::string value_string = stringScalar(param, "initValue");
-        p.range                  = parseRange  (param, "range");
-        p.value                  = convert_double_nothrow(value_string.c_str(), dv);
-        std::cout << "Parsed parameter " << p.name
-                  << " of type " << p.type_name
-                  << ", with range " << p.range.first
-                  << " to " << p.range.second
-                  << ", and initial value " << p.value << std::endl;
-        info.addParameter(p);
     }
 }
+
+void ModelFileLoader::parseModelParameter(const YAML::Node& param,
+                                          std::string name,
+                                          ModelInfoFromYAMLFile& info) {
+    YAMLFileParameter p;
+    p.name       = name;
+    auto bracket = p.name.find('(');
+    if ( bracket != std::string::npos ) {
+        p.is_subscripted = true;
+        const char* range = p.name.c_str() + bracket + 1;
+        int ix;
+        p.minimum_subscript = convert_int(range, ix);
+        if (strncmp(range + ix, "..", 2)==0) {
+            range = range + ix + 2;
+            p.maximum_subscript = convert_int(range, ix);
+        } else {
+            p.maximum_subscript = p.minimum_subscript;
+            p.minimum_subscript   = 1;
+        }
+        if (strncmp(range + ix, ")", 1)!=0) {
+            const char* msg = "Subscript range does not end with right parenthesis";
+            throw ModelExpression::ModelException(msg);
+        }
+        p.name = p.name.substr(0, bracket);
+    }
     
+    bool overriding = false;
+    for (const YAMLFileParameter& oldp: info.parameters) {
+        if (oldp.name == p.name) {
+            complainIfNot(oldp.is_subscripted == p.is_subscripted,
+                          "Canot redefine subscripted parameter"
+                          " as unsubscripted (or vice versa)");
+            complainIfNot(oldp.minimum_subscript == p.minimum_subscript,
+                          "Cannot redefine parameter subscript range");
+            complainIfNot(oldp.maximum_subscript == p.maximum_subscript,
+                          "Cannot redefine parameter subscript range");
+            p = oldp;
+            overriding = true;
+            break;
+        }
+    }
+    
+    p.type_name = string_to_lower(stringScalar(param, "type", p.type_name.c_str()));
+    if (p.type_name=="rate") {
+        p.type = ModelParameterType::RATE;
+    } else if (p.type_name=="frequency") {
+        p.type = ModelParameterType::FREQUENCY;
+    } else if (p.type_name=="weight") {
+        p.type = ModelParameterType::WEIGHT;
+    } else {
+        p.type = ModelParameterType::OTHER;
+    }
+    auto count = p.maximum_subscript - p.minimum_subscript + 1;
+    ASSERT(0<count);
+    double dv   = 0.0; //default initial value
+    if (p.type==ModelParameterType::FREQUENCY) {
+        dv = 1.0 / (double)count;
+                    //Todo: should be 1.0 divided by number of states
+                    //determined from the data type (info.data_type_name ?)
+                    //Or 1 divided by the number of parameters.
+    } else if (p.type==ModelParameterType::RATE) {
+        dv = 1.0;
+    } else if (p.type==ModelParameterType::WEIGHT) {
+        dv = 1.0 / (double)count;    //Todo: Should be 1.0 divided by # of parameters
+    }
+    std::string value_string = stringScalar(param, "initValue", "");
+    p.range                  = parseRange  (param, "range", p.range);
+    if (value_string!="") {
+        p.value = convert_double_nothrow(value_string.c_str(), dv);
+    } else if (!overriding) {
+        p.value = dv;
+    }
+    
+    p.description = stringScalar(param, "description", p.description.c_str());
+    
+    std::cout << "Parsed parameter " << p.name
+              << " of type " << p.type_name
+              << ", with range " << p.range.first
+              << " to " << p.range.second
+              << ", and initial value " << p.value << std::endl;
+    info.addParameter(p);
+}
+
 void ModelFileLoader::parseRateMatrix(const YAML::Node& rate_matrix,
                      ModelInfoFromYAMLFile& info) {
     //Assumes rate_matrix is a sequence (of rows)
@@ -168,15 +233,36 @@ void ModelFileLoader::parseRateMatrixExpressions(ModelInfoFromYAMLFile& info) {
     
 void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_model,
                                                  const std::string& name_of_model,
-                                                 ModelInfoFromYAMLFile& info) {
+                                                 ModelInfoFromYAMLFile& info,
+                                                 ModelListFromYAMLFile& list) {
+    
+    std::string parent_model = stringScalar(substitution_model, "frommodel", "");
+    if (parent_model != "") {
+        if (list.hasModel(parent_model)) {
+            info = list.getModel(parent_model);
+        } else {
+            std::stringstream complaint;
+            complaint << "Model " << name_of_model << " specifies frommodel "
+                      << parent_model << ", but that model was not found.";
+            outError(complaint.str());
+        }
+    }
+    
     info.model_file_path = file_path;
     info.model_name      = name_of_model;
-    info.citation        = stringScalar(substitution_model,  "citation");
-    info.reversible      = booleanScalar(substitution_model, "reversible");
+    info.citation        = stringScalar(substitution_model,  "citation",   info.citation.c_str());
+    info.DOI             = stringScalar(substitution_model,  "doi",        info.DOI.c_str());
+    info.reversible      = booleanScalar(substitution_model, "reversible", info.reversible);
+    info.data_type_name  = stringScalar(substitution_model,  "datatype",   info.data_type_name.c_str());
+    //Note: doco currently says this will be called "forData".
     //
-    //Todo: read off the datatype (if there is one).
+    //Todo: read off the in-lined datatype (if there is one).
     //
-    info.data_type_name  = stringScalar(substitution_model,  "datatype");
+    
+    info.num_states      = integerScalar(substitution_model, "numStates", 0);
+    if (info.num_states==0) {
+        info.num_states = 4;
+    }
     
     //
     //Todo: extract other information from the subsstitution model.
@@ -190,19 +276,18 @@ void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_
         parseYAMLModelParameters(params, info);
     }
     
-    //
-    //Todo: It should be okay for a model *not* to specify a rateMatrix,
-    //      so long as it subclasses another model that *does* specify one.
-    //
     auto rateMatrix = substitution_model["rateMatrix"];
-    complainIfNot(rateMatrix, "Model " + model_name +
-                  " in file " + file_path +
-                  " does not specify a rateMatrix" );
-    parseRateMatrix(rateMatrix, info);
+    if (info.rate_matrix_expressions.empty()) {
+        complainIfNot(rateMatrix, "Model " + model_name +
+                      " in file " + file_path +
+                      " does not specify a rateMatrix" );
+    }
+    //If this model subclasses another it doesn't have to specify
+    //a rate matrix (if it doesn't it inherits from its parent model).
+    if (rateMatrix) {
+        parseRateMatrix(rateMatrix, info);
+    }
     
-    //
-    //Todo: How do you specify paramters
-    //
     auto stateFrequency = substitution_model["stateFrequency"];
     if (stateFrequency) {
         //
@@ -222,5 +307,7 @@ void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_
         }
     } else {
         //If we have parameters with a type of frequency, we're all good.
+        //If we don't, then what?   We might have inherited from a parent
+        //model, too.  That'd be okay.
     }
 }

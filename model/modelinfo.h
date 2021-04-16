@@ -110,6 +110,7 @@ enum ModelParameterType {
 class YAMLFileParameter {
 public:
     std::string         name;
+    std::string         description;
     bool                is_subscripted;
     int                 minimum_subscript;
     int                 maximum_subscript;
@@ -138,8 +139,10 @@ class ModelInfoFromYAMLFile: public ModelInfo {
 private:
     std::string model_name;       //
     std::string model_file_path;  //
-    std::string citation;         //
+    std::string citation;         //Citation string
+    std::string DOI;              //DOI for the publication (optional)
     std::string data_type_name;   //
+    int         num_states;       //number of states
     bool        reversible;       //don't trust this; check against rate matrix
     size_t      rate_matrix_rank; //
     std::vector<StrVector> rate_matrix_expressions; //row major (expression strings)
@@ -258,6 +261,9 @@ public:
     ModelMarkov* getModelByName(const char* model_name,   PhyloTree *tree,
                                 const char* model_params, StateFreqType freq_type,
                                 const char* freq_params,  PhyloTree* report_to_tree);
+    
+    bool hasModel(const std::string& model_name) const;
+    const ModelInfoFromYAMLFile& getModel(const std::string& model_name) const;
 };
 
 #endif /* modelinfo_hpp */

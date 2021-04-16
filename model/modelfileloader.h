@@ -19,17 +19,27 @@ public:
    
     ModelFileLoader(const char* path);
     std::string stringScalar(const YAML::Node& node,
-                             const char* key);
+                             const char* key,
+                             const char* default_value);
     bool booleanScalar(const YAML::Node& node,
-                       const char* key);
+                       const char* key,
+                       const bool  default_value);
+    int integerScalar(const YAML::Node& node,
+                      const char* key,
+                      const int   default_value);
+    
     void complainIfNot(bool check_me,
                        std::string error_message);
     double toDouble(const YAML::Node& i, double default_val);
     
-    ModelParameterRange parseRange(const YAML::Node& node, const char* key);
+    ModelParameterRange parseRange(const YAML::Node& node, const char* key,
+                                   const ModelParameterRange& default_value);
     
     void parseYAMLModelParameters(const YAML::Node& params,
                                   ModelInfoFromYAMLFile& info);
+    void parseModelParameter(const YAML::Node& param,
+                             std::string name,
+                             ModelInfoFromYAMLFile& info);
     
     template <class S>
     void dumpRateMatrixTo(const ModelInfoFromYAMLFile& info, S &out) {
@@ -63,7 +73,8 @@ public:
     
     void parseYAMLSubstitutionModel(const YAML::Node& substitution_model,
                                     const std::string& name_of_model,
-                                    ModelInfoFromYAMLFile& info);
+                                    ModelInfoFromYAMLFile& info,
+                                    ModelListFromYAMLFile& list);
 };
 
 #endif /* modelfileloader_hpp */

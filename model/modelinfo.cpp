@@ -539,7 +539,17 @@ void ModelInfoFromYAMLFile::updateName(const std::string& name) {
 }
 
 void ModelInfoFromYAMLFile::addParameter(const YAMLFileParameter& p) {
-    parameters.emplace_back(p);
+    bool replaced = false;
+    for (auto it = parameters.begin(); it != parameters.end(); ++it) {
+        if (it->name == p.name) {
+            *it = p;
+            replaced = true;
+            break;
+        }
+    }
+    if (!replaced) {
+        parameters.emplace_back(p);
+    }
     if (p.is_subscripted) {
         for (int i=p.minimum_subscript; i<=p.maximum_subscript; ++i) {
             std::string var_name = p.getSubscriptedVariableName(i);
@@ -609,7 +619,7 @@ void ModelListFromYAMLFile::loadFromFile (const char* file_path) {
             std::cout << "Parsing YAML model " << yaml_model_name << std::endl;
             ModelInfoFromYAMLFile &y = models_found[yaml_model_name]
                                      = ModelInfoFromYAMLFile();
-            loader.parseYAMLSubstitutionModel(node, yaml_model_name, y);
+            loader.parseYAMLSubstitutionModel(node, yaml_model_name, y, *this);
         }
     }
     catch (YAML::Exception &e) {
@@ -710,6 +720,15 @@ public:
     }
 };
 
+bool ModelListFromYAMLFile::hasModel(const std::string& model_name) const {
+    return models_found.find(model_name) != models_found.end();
+}
+
+const ModelInfoFromYAMLFile& ModelListFromYAMLFile::getModel(const std::string& model_name) const {
+    auto it = models_found.find(model_name);
+    ASSERT(it != models_found.end());
+    return it->second;
+}
 
 ModelMarkov* ModelListFromYAMLFile::getModelByName(const char* model_name,   PhyloTree *tree,
                                                    const char* model_params, StateFreqType freq_type,
