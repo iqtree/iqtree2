@@ -4381,7 +4381,7 @@ void PhyloTree::computeBioNJ(Params &params) {
     #ifdef CLANG_UNDER_VS
         omp_set_max_active_levels(1);
     #else
-        omp_set_nested(true); // 't allow nested OpenMP parallelism
+        omp_set_nested(true); //allow nested OpenMP parallelism
     #endif
     #pragma omp parallel num_threads(2)
     {
