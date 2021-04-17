@@ -5485,13 +5485,13 @@ void PhyloTree::generateRandomTree(TreeGenType tree_type) {
             ext_tree.generateYuleHarding(*params);
             break;
         case UNIFORM:
-            ext_tree.generateUniform(params->sub_size);
+            ext_tree.generateUniform(*params);
             break;
         case CATERPILLAR:
-            ext_tree.generateCaterpillar(params->sub_size);
+            ext_tree.generateCaterpillar(*params);
             break;
         case BALANCED:
-            ext_tree.generateBalanced(params->sub_size);
+            ext_tree.generateBalanced(*params);
             break;
         case STAR_TREE:
             ext_tree.generateStarTree(*params);

@@ -351,6 +351,11 @@ public:
     virtual uint64_t getMemoryRequired() {
     	return num_states*sizeof(double);
     }
+    
+    /** @return true if model is a mixture model and it's fused with site_rate */
+    virtual bool isFused(){
+        return false;
+    };
 
     /**
     * get the underlying mutation model, used with PoMo model

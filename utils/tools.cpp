@@ -1116,6 +1116,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_ancestral_sequence_aln_filepath = NULL;
     params.alisim_ancestral_sequence_name = "";
     params.alisim_continuous_gamma = false;
+    params.alisim_max_rate_categories_for_applying_caching = 5;
     params.birth_rate = 0.8;
     params.death_rate = 0.2;
     
@@ -3963,28 +3964,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 					params.start_tree = STT_RANDOM_TREE;
                     params.tree_gen = YULE_HARDING;
                     
-                    // get <NUM_TAXA>
-                    try {
-                        cnt++;
-                        if (cnt >= argc)
-                            throw "";
-                        
-                        params.sub_size = convert_int(argv[cnt]);
-                        
-                        if (params.sub_size <= 3)
-                            throw "";
-                    } catch(...) {
-                        // <NUM_TAXA> is required if an alignment is not provided
-                        if (((params.original_params.find("-s ") == std::string::npos)
-                            && (params.original_params.find("--aln ") == std::string::npos))
-                            || (params.sub_size <= 3)){
-                            throw "Use -t RANDOM <NUM_TAXA>. <NUM_TAXA> must be greater than 3.";
-                        }
-                        else
-                        {
-                            cnt--;
-                        }
-                    }
+                    // <NUM_TAXA> is required if an alignment is not provided
+                    if ((params.original_params.find("-s ") == std::string::npos)
+                        && (params.original_params.find("--aln ") == std::string::npos))
+                        throw "Use -t RANDOM{<MODEL>,<NUM_TAXA>} where <MODEL> is yh, u, cat, bal, bd{<birth_rate>,<death_rate>} stands for Yule-Harding, Uniform, Caterpillar, Balanced, Birth-Death model respectively. <NUM_TAXA> is only required if an alignment is not provided by -s <ALIGNMENT_FILE>.";
                 }
                 else if (START_TREE_RECOGNIZED(argv[cnt])) {
                     params.start_tree_subtype_name = argv[cnt];
@@ -3992,7 +3975,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 }
                 else
                 {
-                    string ERR_MSG = "Use -t RANDOM{<MODEL>} <NUM_TAXA> where <MODEL> is yh, u, cat, bal, bd{<birth_rate>,<death_rate>} stands for Yule-Harding, Uniform, Caterpillar, Balanced, Birth-Death model respectively. <NUM_TAXA> is only required if an alignment is not provided by -s <ALIGNMENT_FILE>.";
+                    string ERR_MSG = "Use -t RANDOM{<MODEL>,<NUM_TAXA>} where <MODEL> is yh, u, cat, bal, bd{<birth_rate>,<death_rate>} stands for Yule-Harding, Uniform, Caterpillar, Balanced, Birth-Death model respectively. <NUM_TAXA> is only required if an alignment is not provided by -s <ALIGNMENT_FILE>.";
                     string t_params = argv[cnt];
                     string KEYWORD = "RANDOM";
                     if ((t_params.length() > KEYWORD.length())
@@ -4011,74 +3994,81 @@ void parseArg(int argc, char *argv[], Params &params) {
                         // remove "}"
                         t_params = t_params.substr(0, t_params.length()-1);
                         
-                        // detect model
-                        if (t_params == "yh")
+                        // extract model_name & #taxa
+                        string delimiter = ",";
+                        // change the delimiter to "}," in case with birth-death model
+                        if ((t_params.length() > 2)
+                            && (!t_params.substr(0, 2).compare("bd")))
+                            delimiter = "},";
+                        string model_name = t_params;
+                        string num_taxa = "";
+                        if (t_params.find(delimiter) != string::npos)
+                        {
+                            int delimiter_index = t_params.find(delimiter);
+                            model_name = t_params.substr(0, delimiter_index +  delimiter.length() - 1);
+                            num_taxa = t_params;
+                            num_taxa.erase(0, delimiter_index + delimiter.length());
+                        }
+                        
+                        // <NUM_TAXA> is required if an alignment is not provided
+                        if ((params.original_params.find("-s ") == std::string::npos)
+                            && (params.original_params.find("--aln ") == std::string::npos)
+                            && num_taxa.length() == 0)
+                            throw ERR_MSG;
+                        
+                        // parse #taxa
+                        if (num_taxa.length() > 0)
+                        {
+                            params.sub_size = convert_int(num_taxa.c_str());
+                            if (params.sub_size <= 3)
+                                throw ERR_MSG +" <NUM_TAXA> must be greater than 3.";
+                        }
+                        
+                        // parse model
+                        if (model_name == "yh")
                             params.tree_gen = YULE_HARDING;
-                        else if (t_params == "u")
+                        else if (model_name == "u")
                             params.tree_gen = UNIFORM;
-                        else if (t_params == "cat")
+                        else if (model_name == "cat")
                             params.tree_gen = CATERPILLAR;
-                        else if (t_params == "bal")
+                        else if (model_name == "bal")
                             params.tree_gen = BALANCED;
                         else
                         {
                             KEYWORD = "bd";
-                            if ((t_params.length() > KEYWORD.length())
-                                && (!t_params.substr(0, KEYWORD.length()).compare(KEYWORD)))
+                            if ((model_name.length() > KEYWORD.length())
+                                && (!model_name.substr(0, KEYWORD.length()).compare(KEYWORD)))
                             {
                                 params.tree_gen = BIRTH_DEATH;
                                 
-                                string delimiter = ",";
+                                delimiter = ",";
                                 // validate the input
-                                if ((t_params[KEYWORD.length()]!='{')
-                                    ||(t_params[t_params.length()-1]!='}')
-                                    ||(t_params.find(delimiter) == string::npos))
-                                    outError("Use bd{<birth_rate>,<death_rate>} to specify the Birth-Death model.");
+                                if ((model_name[KEYWORD.length()]!='{')
+                                    ||(model_name[model_name.length()-1]!='}')
+                                    ||(model_name.find(delimiter) == string::npos))
+                                    throw "Use bd{<birth_rate>,<death_rate>} to specify the Birth-Death model.";
                                 
                                 // remove "bd{"
-                                t_params.erase(0, KEYWORD.length() + 1);
+                                model_name.erase(0, KEYWORD.length() + 1);
                                 
                                 // remove "}"
-                                t_params = t_params.substr(0, t_params.length()-1);
+                                model_name = model_name.substr(0, model_name.length()-1);
                                 
                                 // get birth_rate
-                                params.birth_rate = convert_double(t_params.substr(0, t_params.find(delimiter)).c_str());
+                                params.birth_rate = convert_double(model_name.substr(0, model_name.find(delimiter)).c_str());
                                 if (params.birth_rate <= 0)
                                     throw "<birth_rate> must be positive.";
                                 
                                 // remove "<birth_rate>,"
-                                t_params.erase(0, t_params.find(delimiter) + delimiter.length());
+                                model_name.erase(0, model_name.find(delimiter) + delimiter.length());
                                 
                                 // get death_rate
-                                params.death_rate = convert_double(t_params.c_str());
+                                params.death_rate = convert_double(model_name.c_str());
                                 if (params.death_rate < 0 || params.death_rate >= params.birth_rate)
                                     throw "<death_rate> must be non-negative and less than <birth_rate>";
                             }
                             else
                                 throw ERR_MSG;
-                        }
-                        
-                        // get <NUM_TAXA>
-                        try {
-                            cnt++;
-                            if (cnt >= argc)
-                                throw "";
-                            
-                            params.sub_size = convert_int(argv[cnt]);
-                            
-                            if (params.sub_size <= 3)
-                                throw "";
-                        } catch(...) {
-                            // <NUM_TAXA> is required if an alignment is not provided
-                            if (((params.original_params.find("-s ") == std::string::npos)
-                                && (params.original_params.find("--aln ") == std::string::npos))
-                                || (params.sub_size <= 3)){
-                                throw ERR_MSG +" <NUM_TAXA> must be greater than 3.";
-                            }
-                            else
-                            {
-                                cnt--;
-                            }
                         }
                     }
                     else {
@@ -4366,10 +4356,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc || argv[cnt][0] == '-')
                     throw "Use --alisim <OUTPUT_FILENAME>";
                 params.alisim_output_filename = argv[cnt];
-                
-                // set default seq_type
-                if (!params.sequence_type)
-                    params.sequence_type = (char *) "DNA";
                 
                 // set default model_name
                 if (params.model_name.empty())

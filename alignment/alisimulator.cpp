@@ -67,16 +67,46 @@ void AliSimulator::initializeAlignment()
 {
     tree->aln = new Alignment();
     
-    // set the seq_type and the maximum number of bases based on the Seq_type
-    string model_fullname = params->model_name;
-    string model_familyname_with_params = model_fullname.substr(0, model_fullname.find("+"));
-    string model_familyname = model_familyname_with_params.substr(0, model_familyname_with_params.find("{"));
-    detectSeqType(model_familyname.c_str(), tree->aln->seq_type);
-    string seq_type_name = convertSeqTypeToSeqTypeName(tree->aln->seq_type);
-    params->sequence_type = strcpy(new char[seq_type_name.length() + 1], seq_type_name.c_str());
+    if (!params->sequence_type)
+    {
+        // set the seq_type and the maximum number of bases based on the Seq_type
+        string model_fullname = params->model_name;
+        // if a mixture model is used -> extract the name of the first model component for SeqType detection
+        string KEYWORD = "MIX";
+        string delimiter = ",";
+        if ((model_fullname.length() > KEYWORD.length())
+            && (!model_fullname.substr(0, KEYWORD.length()).compare(KEYWORD)))
+        {
+            // only get the model name, removing additional params (+G,+F,*G,*F,etc)
+            model_fullname = model_fullname.substr(0, model_fullname.find("+"));
+            model_fullname = model_fullname.substr(0, model_fullname.find("*"));
+            
+            // validate the input
+            if ((model_fullname[KEYWORD.length()]!='{')
+                ||(model_fullname[model_fullname.length()-1]!='}')
+                ||(model_fullname.find(delimiter) == string::npos))
+                outError("Use -m MIX{m1,...,mK} to define a mixture model.");
+            
+            // remove "MIX{"
+            model_fullname.erase(0, KEYWORD.length() + 1);
+            
+            // get the first model name
+            model_fullname = model_fullname.substr(0, model_fullname.find(delimiter));
+            
+            // remove the weight (if any)
+            model_fullname = model_fullname.substr(0, model_fullname.find(":"));
+        }
+        string model_familyname_with_params = model_fullname.substr(0, model_fullname.find("+"));
+        string model_familyname = model_familyname_with_params.substr(0, model_familyname_with_params.find("{"));
+        detectSeqType(model_familyname.c_str(), tree->aln->seq_type);
+        string seq_type_name = convertSeqTypeToSeqTypeName(tree->aln->seq_type);
+        params->sequence_type = strcpy(new char[seq_type_name.length() + 1], seq_type_name.c_str());
+    }
+    else
+        tree->aln->seq_type = tree->aln->getSeqType(params->sequence_type);
     
     if (tree->aln->seq_type == SEQ_UNKNOWN)
-        outError("Could not detect SequenceType from Model Name");
+        outError("Could not detect SequenceType from Model Name. Please check your Model Name or specify the SequenceType by --seqtype <SEQ_TYPE_STR> where <SEQ_TYPE_STR> is BIN, DNA, AA, NT2AA, CODON, or MORPH.");
     
     switch (tree->aln->seq_type) {
     case SEQ_BINARY:
@@ -120,6 +150,7 @@ void AliSimulator::addLeafNamesToAlignment(Alignment *aln, Node *node, Node *dad
 void AliSimulator::initializeModel()
 {
     tree->aln->model_name = params->model_name;
+    tree->aln->computeUnknownState();
     ModelsBlock *models_block = readModelsDefinition(*params);
     tree->setParams(params);
     
@@ -271,8 +302,13 @@ IntVector AliSimulator::generateRandomSequence(int sequence_length)
 }
 
 void AliSimulator::getStateFrequenciesFromModel(double *state_freqs){
+    // if a mixture model is used -> get weighted sum of state_freq across classes
+    if (tree->getModel()->isMixture())
+    {
+        tree->getModel()->getStateFrequency(state_freqs, -1);
+    }
     // get user-defined base frequencies (if any)
-    if ((tree->getModel()->getFreqType() == FREQ_USER_DEFINED)
+    else if ((tree->getModel()->getFreqType() == FREQ_USER_DEFINED)
         || (ModelLieMarkov::validModelName(tree->getModel()->getName())))
         tree->getModel()->getStateFrequency(state_freqs);
     else // otherwise, randomly generate the base frequencies
@@ -381,7 +417,7 @@ void AliSimulator::convertProMatrixIntoAccumulatedProMatrix(double *probability_
     for (int r = 0; r < num_rows; r++)
     {
         for (int c = 1; c < num_columns; c++)
-        probability_maxtrix[r*num_rows+c] = probability_maxtrix[r*num_rows+c] + probability_maxtrix[r*num_rows+c-1];
+        probability_maxtrix[r*num_columns+c] = probability_maxtrix[r*num_columns+c] + probability_maxtrix[r*num_columns+c-1];
     }
             
 }

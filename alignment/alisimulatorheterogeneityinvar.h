@@ -37,11 +37,6 @@ public:
         constructor
     */
     AliSimulatorHeterogeneityInvar(AliSimulator *alisimulator, double invar_prop);
-
-    /**
-    *  simulate sequences for all nodes in the tree
-    */
-    virtual void simulateSeqsForTree();
 };
 
 #endif /* alisimulatorheterogeneityinvar_h */

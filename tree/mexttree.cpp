@@ -36,13 +36,13 @@ void MExtTree::generateRandomTree(TreeGenType tree_type, Params &params, bool bi
 		generateYuleHarding(params, binary);
 		break;
 	case UNIFORM:
-		generateUniform(params.sub_size, binary);
+		generateUniform(params, binary);
 		break;
 	case CATERPILLAR:
-		generateCaterpillar(params.sub_size);
+		generateCaterpillar(params);
 		break;
 	case BALANCED:
-		generateBalanced(params.sub_size);
+		generateBalanced(params);
 		break;
 	case STAR_TREE:
 		generateStarTree(params);
@@ -76,7 +76,8 @@ void MExtTree::setZeroInternalBranches(int num_zero_len) {
 	}
 }
 
-void MExtTree::generateCaterpillar(int size) {
+void MExtTree::generateCaterpillar(Params &params) {
+    int size = params.sub_size;
 	if (size < 3)
 		outError(ERR_FEW_TAXA);
 	root = newNode();
@@ -91,7 +92,7 @@ void MExtTree::generateCaterpillar(int size) {
 	for (i = 0; i < 3; i++)
 	{
 		node = newNode();
-		len = random_double();
+        len = randomLen(params);
 		root->addNeighbor(node, len);
 		node->addNeighbor(root, len);
 		myleaves.push_back(node);
@@ -107,14 +108,14 @@ void MExtTree::generateCaterpillar(int size) {
 		innodes.push_back(node);
 		// add the first leaf
 		Node *newleaf = newNode();
-		len = random_double();
+        len = randomLen(params);
 		node->addNeighbor(newleaf, len);
 		newleaf->addNeighbor(node, len);
 		myleaves[index] = newleaf;
 
 		// add the second leaf
 		newleaf = newNode();
-		len = random_double();
+        len = randomLen(params);
 		node->addNeighbor(newleaf, len);
 		newleaf->addNeighbor(node, len);
 		myleaves.push_back(newleaf);
@@ -132,7 +133,8 @@ void MExtTree::generateCaterpillar(int size) {
 }
 
 
-void MExtTree::generateBalanced(int size) {
+void MExtTree::generateBalanced(Params &params) {
+    int size = params.sub_size;
 	if (size < 3)
 		outError(ERR_FEW_TAXA);
 	root = newNode();
@@ -144,7 +146,7 @@ void MExtTree::generateBalanced(int size) {
 	myleaves.push_back(root);
 	// create initial tree with 2 leaves
 	node = newNode();
-	len = random_double();
+    len = randomLen(params);
 	root->addNeighbor(node, len);
 	node->addNeighbor(root, len);
 	myleaves.push_back(node);
@@ -160,14 +162,14 @@ void MExtTree::generateBalanced(int size) {
 			node = myleaves[index];
 			// add the first leaf
 			Node *newleaf = newNode();
-			len = random_double();
+            len = randomLen(params);
 			node->addNeighbor(newleaf, len);
 			newleaf->addNeighbor(node, len);
 			myleaves[index] = newleaf;
 	
 			// add the second leaf
 			newleaf = newNode();
-			len = random_double();
+            len = randomLen(params);
 			node->addNeighbor(newleaf, len);
 			newleaf->addNeighbor(node, len);
 			myleaves.push_back(newleaf);
@@ -187,8 +189,9 @@ void MExtTree::generateBalanced(int size) {
 /**
 	generate a random tree following uniform model
 */
-void MExtTree::generateUniform(int size, bool binary)
+void MExtTree::generateUniform(Params &params, bool binary)
 {
+    int size = params.sub_size;
 	if (size < 3)
 		outError(ERR_FEW_TAXA);
 	int i;
@@ -201,7 +204,7 @@ void MExtTree::generateUniform(int size, bool binary)
 	root = newNode(0, "0");
 	// create initial tree with 2 leaves
 	node = newNode(1, "1");
-	len = random_double();
+    len = randomLen(params);
 	root->addNeighbor(node, len);
 	node->addNeighbor(root, len);
 
@@ -224,7 +227,7 @@ void MExtTree::generateUniform(int size, bool binary)
 		node = leftend[index];
 		for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++) 
 			if ((*it)->node == rightend[index]) {
-				len = random_double();
+                len = randomLen(params);
 				(*it)->node = newnode;
 				(*it)->length = len;
 				newnode->addNeighbor(node, len);
@@ -235,7 +238,7 @@ void MExtTree::generateUniform(int size, bool binary)
 		node = rightend[index];
 		for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++) 
 			if ((*it)->node == leftend[index]) {
-				len = random_double();
+                len = randomLen(params);
 				(*it)->node = newnode;
 				(*it)->length = len;
 				newnode->addNeighbor(node, len);
@@ -245,7 +248,7 @@ void MExtTree::generateUniform(int size, bool binary)
 
 		// add a new leaf
 		Node *newleaf = newNode(i, i);
-		len = random_double();
+        len = randomLen(params);
 		newnode->addNeighbor(newleaf, len);
 		newleaf->addNeighbor(newnode, len);
 

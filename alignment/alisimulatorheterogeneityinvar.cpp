@@ -29,14 +29,47 @@ void AliSimulatorHeterogeneityInvar::simulateSeqs(int sequence_length, double *s
         // estimate the sequence for the current neighbor
         (*it)->node->sequence.resize(sequence_length);
         
-        for (int i = 0; i < sequence_length; i++)
+        // check if trans_matrix could be caching (without rate_heterogeneity or the num of rate_categories is lowr than the threshold (5)) or not
+        if (tree->getRateName().empty()
+            || (!params->alisim_continuous_gamma && rate_heterogeneity && rate_heterogeneity->getNDiscreteRate() <= params->alisim_max_rate_categories_for_applying_caching))
         {
-            // if this site is invariant -> preserve the dad's state
-            if (site_specific_rates[i] == 0)
-                (*it)->node->sequence[i] = node->sequence[i];
-            else // otherwise, randomly select the state, considering it's dad states, and the transition_probability_matrix
+            int num_models = tree->getModel()->isMixture()?tree->getModel()->getNMixtures():1;
+            int num_rate_categories  = tree->getRateName().empty()?1:rate_heterogeneity->getNDiscreteRate();
+            double *cache_trans_matrix = new double[num_models*num_rate_categories*max_num_states*max_num_states];
+            
+            intializeCachingAccumulatedTransMax(cache_trans_matrix, num_models, num_rate_categories, max_num_states, (*it)->length, trans_matrix, model);
+
+            // estimate the sequence
+            for (int i = 0; i < sequence_length; i++)
             {
-                (*it)->node->sequence[i] = estimateStateWithRH(model, site_specific_rates[i], trans_matrix, max_num_states, (*it)->length, node->sequence[i]);
+                // if this site is invariant -> preserve the dad's state
+                if (site_specific_rates[i] == 0)
+                    (*it)->node->sequence[i] = node->sequence[i];
+                else // otherwise, randomly select the state, considering it's dad states, and the transition_probability_matrix
+                {
+                    int model_index = site_specific_model_index[i];
+                    int category_index = site_specific_rate_index[i];
+                    int starting_index = model_index*num_rate_categories*max_num_states*max_num_states + category_index*max_num_states*max_num_states + max_num_states*node->sequence[i];
+                
+                    (*it)->node->sequence[i] = getRandomItemWithAccumulatedProbabilityMatrix(cache_trans_matrix, starting_index, max_num_states);
+                }
+            }
+            
+            // delete cache_trans_matrix
+            delete [] cache_trans_matrix;
+        }
+        // otherwise, estimating the sequence without trans_matrix caching
+        else
+        {
+            for (int i = 0; i < sequence_length; i++)
+            {
+                // if this site is invariant -> preserve the dad's state
+                if (site_specific_rates[i] == 0)
+                    (*it)->node->sequence[i] = node->sequence[i];
+                else // otherwise, randomly select the state, considering it's dad states, and the transition_probability_matrix
+                {
+                    (*it)->node->sequence[i] = estimateStateWithRH(model, site_specific_model_index[i], site_specific_rates[i], trans_matrix, max_num_states, (*it)->length, node->sequence[i]);
+                }
             }
         }
         
@@ -56,30 +89,4 @@ void AliSimulatorHeterogeneityInvar::getSiteSpecificRatesContinuousGamma(double 
     
     // delete rate_continuous_gamma
     delete rate_continuous_gamma;
-}
-
-/**
-*  simulate sequences for all nodes in the tree
-*/
-void AliSimulatorHeterogeneityInvar::simulateSeqsForTree(){
-    // get variables
-    int sequence_length = params->alisim_sequence_length;
-    ModelSubst *model = tree->getModel();
-    int max_num_states = tree->aln->getMaxNumStates();
-    
-    // initialize trans_matrix
-    double *trans_matrix = new double[max_num_states*max_num_states];
-    
-    // initialize site-specific rates
-    double *site_specific_rates = new double[sequence_length];
-    getSiteSpecificRates(site_specific_rates, sequence_length);
-    
-    // simulate Sequences
-    simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, tree->MTree::root, tree->MTree::root);
-        
-    // delete the site-specific rates
-    delete[] site_specific_rates;
-    
-    // delete trans_matrix array
-    delete[] trans_matrix;
 }

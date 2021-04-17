@@ -120,7 +120,10 @@ const char *dna_model_names_lie_markov_strsym[] = {
 const char* aa_model_names[] = {"LG", "WAG", "JTT", "JTTDCMut", "DCMut", "VT", "PMB", "Blosum62", "Dayhoff",
         "mtREV", "mtART", "mtZOA", "mtMet" , "mtVer" , "mtInv", "mtMAM",
 		"HIVb", "HIVw", "FLU", "rtREV", "cpREV"};
-        
+
+/****** Protein mixture model set ******/
+const char* aa_mixture_model_names[] = {"C10", "C20", "C30", "C40", "C50", "C60", "EX2", "EX3", "EHO", "UL2", "UL3", "EX_EHO", "LG4M", "LG4X", "CF4"};
+
 /* Protein models supported by PhyML/PartitionFinder */
 const char *aa_model_names_phyml[] = {"LG", "WAG", "JTT", "DCMut", "VT", "Blosum62", "Dayhoff",
 		"mtREV", "mtART", "mtMAM",
@@ -421,6 +424,13 @@ int detectSeqType(const char *model_name, SeqType &seq_type) {
             break;
         }
     copyCString(aa_model_names, sizeof(aa_model_names)/sizeof(char*), model_list, true);
+    for (i = 0; i < model_list.size(); i++)
+        if (model_str == model_list[i]) {
+            seq_type = SEQ_PROTEIN;
+            empirical_model = true;
+            break;
+        }
+    copyCString(aa_mixture_model_names, sizeof(aa_mixture_model_names)/sizeof(char*), model_list, true);
     for (i = 0; i < model_list.size(); i++)
         if (model_str == model_list[i]) {
             seq_type = SEQ_PROTEIN;

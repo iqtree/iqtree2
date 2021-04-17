@@ -86,29 +86,29 @@ public:
 
 	/**
 		generate a random tree following uniform model
-		@param size number of taxa
+		@param params program parameters
 		@param binary TRUE if you want to generate a binary tree
 	*/
-	void generateUniform(int size, bool binary = true);
+	void generateUniform(Params &params, bool binary = true);
     
     /**
         generate a random tree following birth-death model
-        @param size number of taxa
+        @param params program parameters
         @param scale_birth_rate (birth_rate/(birth_rate+death_rate)
     */
     void generateBirthDeath(Params &params);
 
 	/**
 		generate a caterpillar tree
-		@param size number of taxa
+		@param params program parameters
 	*/
-	void generateCaterpillar(int size);
+	void generateCaterpillar(Params &params);
 
 	/**
 		generate a balanced tree
-		@param size number of taxa
+		@param params program parameters
 	*/
-	void generateBalanced(int size);
+	void generateBalanced(Params &params);
 
 	/**
 		generate a star tree

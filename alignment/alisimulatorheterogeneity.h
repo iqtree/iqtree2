@@ -33,11 +33,30 @@ protected:
     /**
       estimate the state for the current site of a node in the case WITH Rate Heterogeneity (Gamma/FreeRate Model)
     */
-    int estimateStateWithRH(ModelSubst *model, double rate, double *trans_matrix, int max_num_states, double branch_length, int dad_state);
+    int estimateStateWithRH(ModelSubst *model, int model_component_index, double rate, double *trans_matrix, int max_num_states, double branch_length, int dad_state);
+    
+    /**
+        initialize site specific model index based on its weights in the mixture model
+    */
+    void intializeSiteSpecificModelIndex();
+    
+    /**
+        initialize state freqs for all model components (of a mixture model)
+    */
+    void intializeStateFreqsMixtureModel();
+    
+    /**
+        initialize caching accumulated_trans_matrix
+    */
+    void intializeCachingAccumulatedTransMax(double *cache_trans_matrix, int num_models, int num_rate_categories, int max_num_states, double branch_length, double *trans_matrix, ModelSubst* model);
     
 public:
     
     RateHeterogeneity *rate_heterogeneity;
+    IntVector site_specific_model_index;
+    IntVector site_specific_rate_index;
+    const int RATE_ZERO_INDEX = -1;
+    const int RATE_ONE_INDEX = 0;
     
     /**
         constructor
