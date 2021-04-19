@@ -555,8 +555,9 @@ public:
             extract a sub-set of sites
             @param aln original input alignment
             @param spec specification of positions, e.g. "1-100,101-200\2"
+            @return the modified site spec if nt2aa is true, otherwise same as spec
      */
-    void extractSites(Alignment *aln, const char* spec);
+    void extractSites(Alignment *aln, const char* spec, bool nt2aa = false);
 
     /**
         convert a DNA alignment into codon or AA alignment
@@ -925,7 +926,7 @@ protected:
 };
 
 
-void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id);
+void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id, bool nt2aa = false);
 
 /**
  create a new Alignment object with possibility of comma-separated file names

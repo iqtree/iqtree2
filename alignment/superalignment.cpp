@@ -422,6 +422,12 @@ void SuperAlignment::readPartitionNexus(Params &params) {
         delete assumptions_block;
         delete taxa_block;
     }
+
+    // check if converted from DNA to AA
+    bool nt2aa = false;
+    if (input_aln && input_aln->seq_type == SEQ_PROTEIN && params.sequence_type && strncmp(params.sequence_type, "NT2AA", 5) == 0)
+        nt2aa = true;
+
     
     bool empty_partition = true;
     vector<CharSet*>::iterator it;
@@ -476,7 +482,7 @@ void SuperAlignment::readPartitionNexus(Params &params) {
             }
             if (!(*it)->position_spec.empty() && (*it)->position_spec != "*") {
                 Alignment *new_aln = new Alignment();
-                new_aln->extractSites(part_aln, (*it)->position_spec.c_str());
+                new_aln->extractSites(part_aln, (*it)->position_spec.c_str(), nt2aa);
                 if (part_aln != input_aln) delete part_aln;
                 part_aln = new_aln;
             }
