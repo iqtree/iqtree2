@@ -2960,7 +2960,7 @@ double PhyloTree::testRootPosition(bool write_info, double logl_epsilon, IntVect
     // optimize branch lengths for all trees
     for (i = 0; i != trees.size(); i++) {
         readTreeString(trees[i]);
-        optimizeAllBranches(100, logl_epsilon);
+        setCurScore(optimizeAllBranches(100, logl_epsilon));
         stringstream ss;
         printTree(ss);
         logl_trees.insert({curScore, make_pair(branch_ids[i], ss.str())});
