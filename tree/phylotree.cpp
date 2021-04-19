@@ -2943,6 +2943,7 @@ double PhyloTree::testRootPosition(bool write_info, double logl_epsilon, IntVect
             i++;
         }
     branches.push_back(root_br);
+    string cur_tree = getTreeString();
         
     // get all trees
     StrVector trees;
@@ -2950,7 +2951,10 @@ double PhyloTree::testRootPosition(bool write_info, double logl_epsilon, IntVect
     for (i = 0; i != branches.size(); i++) {
         branch_ids.push_back(branches[i].first->findNeighbor(branches[i].second)->id);
         moveRoot(branches[i].first, branches[i].second);
-        trees.push_back(getTreeString());
+        if (branches[i] == root_br)
+            trees.push_back(cur_tree);
+        else
+            trees.push_back(getTreeString());
     }
 
     // optimize branch lengths for all trees
@@ -2975,6 +2979,8 @@ double PhyloTree::testRootPosition(bool write_info, double logl_epsilon, IntVect
 //    readTreeString(best_tree);
 //    curScore = computeLikelihood();
     
+    if (!(curScore > orig_score - 0.1))
+        cout << "curScore: " << curScore << " orig_score: " << orig_score << endl;
     ASSERT(curScore > orig_score - 0.1);
     if (curScore > orig_score)
         cout << "UPDATE BEST SCORE: " << curScore << endl;
