@@ -41,6 +41,9 @@ public:
                              std::string name,
                              ModelInfoFromYAMLFile& info);
     
+    void parseYAMLModelConstraints(const YAML::Node& params,
+                                  ModelInfoFromYAMLFile& info);
+    
     template <class S>
     void dumpRateMatrixTo(const ModelInfoFromYAMLFile& info, S &out) {
         std::stringstream dump;

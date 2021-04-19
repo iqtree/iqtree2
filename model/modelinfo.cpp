@@ -526,6 +526,10 @@ ModelVariable::ModelVariable(ModelParameterType t,
     : range(r), type(t), value(v) {
 }
 
+void ModelVariable::markAsFixed() {
+    is_fixed = true;
+}
+
 ModelInfoFromYAMLFile::ModelInfoFromYAMLFile()
     : rate_matrix_rank(0), frequency_type(FREQ_UNKNOWN) {
 }
@@ -603,6 +607,21 @@ void ModelInfoFromYAMLFile::updateVariables(const double* updated_values,
     }
 }
 
+ModelVariable& ModelInfoFromYAMLFile::assign(const std::string& var_name,
+                                             double value_to_set) {
+    auto it = variables.find(var_name);
+    if ( it == variables.end()) {
+        std::stringstream complaint;
+        complaint << "Could not assign"
+                  << " to unrecognized variable " << var_name
+                  << " of model " << model_name << ".";
+        outError(complaint.str());
+    }
+    it->second.value = value_to_set;
+    return it->second;
+}
+
+
 void ModelListFromYAMLFile::loadFromFile (const char* file_path) {
     YAML::Node yaml_model_list = YAML::LoadFile(file_path);
     ModelFileLoader loader(file_path);
@@ -666,12 +685,12 @@ public:
         bool changed = false;
         if (num_params > 0) {
             int num_all = static_cast<int>(param_spec.length());
-            //if (verbose_mode >= VB_MAX) {
+            if (verbose_mode >= VB_MAX) {
                 for (int i = 1; i <= num_params; i++) {
                     std::cout << "  estimated rates[" << i << "] changing from "
                               << rates[i] << " to " << variables[i] << std::endl;
                 }
-            //}
+            }
             for (int i = 0; i < num_all; i++) {
                 changed |= (rates[i] != variables[i]);
                 rates[i] = variables[i];
@@ -682,20 +701,21 @@ public:
             auto read_freq = variables+(ndim-num_states+2);
             for (int i=0; i<num_states-1; ++i) {
                 if (state_freq[i]!=read_freq[i]) {
-                    std::cout << "  estimated freqs[" << i << "] changing from "
-                              << state_freq[i] << " to " << read_freq[i] << std::endl;
+                    if (verbose_mode >= VB_MAX) {
+                        std::cout << "  estimated freqs[" << i << "]"
+                                  << " changing from " << state_freq[i]
+                                  << " to " << read_freq[i] << std::endl;
+                    }
                     changed = true;
                 }
                 state_freq[i] = read_freq[i];
-                //if (verbose_mode >= VB_MAX) {
-                //}
             }
         } else {
             changed |= freqsFromParams(state_freq,variables+num_params+1,freq_type);
         }
-        //if (verbose_mode >= VB_MAX) {
-        std::cout << std::endl;
-        //}
+        if (verbose_mode >= VB_MAX) {
+            std::cout << std::endl;
+        }
         if (changed) {
             model_info.updateVariables(variables, getNDim());
         }

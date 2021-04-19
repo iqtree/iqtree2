@@ -20,13 +20,13 @@ namespace ModelExpression {
     class BuiltIns {
     public:
         class Exp : public UnaryFunctionImplementation {
-            double callFunction(const ModelInfoFromYAMLFile& mf,
+            double callFunction(ModelInfoFromYAMLFile& mf,
                                 double parameter) const {
                 return exp(parameter);
             }
         } exp_body;
         class Logarithm: public UnaryFunctionImplementation {
-            double callFunction(const ModelInfoFromYAMLFile& mf,
+            double callFunction(ModelInfoFromYAMLFile& mf,
                                 double parameter) const {
                 return log(parameter);
             }
@@ -40,13 +40,13 @@ namespace ModelExpression {
         bool isBuiltIn(const std::string &name) {
             return functions.find(name) != functions.end();
         }
-        Expression* asBuiltIn(const ModelInfoFromYAMLFile& mf,
+        Expression* asBuiltIn(ModelInfoFromYAMLFile& mf,
                               const std::string& name) {
             return new UnaryFunction(mf, functions[name]);
         }
     } built_in_functions;
 
-    Expression::Expression(const ModelInfoFromYAMLFile& for_model) : model(for_model) {
+    Expression::Expression(ModelInfoFromYAMLFile& for_model) : model(for_model) {
     }
 
     double Expression::evaluate()      const { return 0; }
@@ -55,9 +55,11 @@ namespace ModelExpression {
     bool   Expression::isOperator()    const { return false; }
     bool   Expression::isToken(char c) const { return false; }
     bool   Expression::isVariable()    const { return false; }
+    bool   Expression::isAssignment()  const { return false; }
+
     int    Expression::getPrecedence() const { return false; }
 
-    Token::Token(const ModelInfoFromYAMLFile& for_model, char c): super(for_model) {
+    Token::Token(ModelInfoFromYAMLFile& for_model, char c): super(for_model) {
         token_char = c;
     }
 
@@ -65,7 +67,7 @@ namespace ModelExpression {
         return (token_char == c);
     }
 
-    Constant::Constant(const ModelInfoFromYAMLFile& for_model,
+    Constant::Constant(ModelInfoFromYAMLFile& for_model,
                        double v) : super(for_model), value(v) {
     }
 
@@ -77,7 +79,7 @@ namespace ModelExpression {
         return true;
     }
 
-    Variable::Variable(const ModelInfoFromYAMLFile& for_model,
+    Variable::Variable(ModelInfoFromYAMLFile& for_model,
                        const std::string& name)
         : super(for_model), variable_name(name) {
         if (!for_model.hasVariable(name)) {
@@ -97,7 +99,11 @@ namespace ModelExpression {
         return true;
     }
 
-    UnaryFunction::UnaryFunction(const ModelInfoFromYAMLFile& for_model,
+    const std::string& Variable::getName() const {
+        return variable_name;
+    }
+
+    UnaryFunction::UnaryFunction(ModelInfoFromYAMLFile& for_model,
                                  const UnaryFunctionImplementation* implementation)
         : super(for_model), body(implementation), parameter(nullptr) {
     }
@@ -120,7 +126,7 @@ namespace ModelExpression {
         parameter = nullptr;
     }
 
-    InfixOperator::InfixOperator(const ModelInfoFromYAMLFile& for_model )
+    InfixOperator::InfixOperator(ModelInfoFromYAMLFile& for_model )
         : super(for_model), lhs(nullptr), rhs(nullptr) {
     }
 
@@ -140,7 +146,7 @@ namespace ModelExpression {
         rhs = nullptr;
     }
 
-    Exponentiation::Exponentiation(const ModelInfoFromYAMLFile& for_model)
+    Exponentiation::Exponentiation(ModelInfoFromYAMLFile& for_model)
         : super(for_model) { }
 
     double Exponentiation::evaluate() const {
@@ -150,7 +156,7 @@ namespace ModelExpression {
     }
     int    Exponentiation::getPrecedence() const { return 3; }
 
-    Multiplication::Multiplication(const ModelInfoFromYAMLFile& for_model)
+    Multiplication::Multiplication(ModelInfoFromYAMLFile& for_model)
         : super(for_model) { }
 
     double Multiplication::evaluate() const {
@@ -161,7 +167,7 @@ namespace ModelExpression {
 
     int    Multiplication::getPrecedence() const { return 2; }
 
-    Division::Division(const ModelInfoFromYAMLFile& for_model )
+    Division::Division(ModelInfoFromYAMLFile& for_model )
         : super(for_model) { }
 
     double Division::evaluate() const {
@@ -170,7 +176,7 @@ namespace ModelExpression {
 
     int    Division::getPrecedence() const { return 2; }
 
-    Addition::Addition(const ModelInfoFromYAMLFile& for_model)
+    Addition::Addition(ModelInfoFromYAMLFile& for_model)
         : super(for_model) { }
 
     double Addition::evaluate() const {
@@ -180,7 +186,7 @@ namespace ModelExpression {
     }
     int    Addition::getPrecedence() const { return 1; }
 
-    Subtraction::Subtraction(const ModelInfoFromYAMLFile& for_model )
+    Subtraction::Subtraction(ModelInfoFromYAMLFile& for_model )
         : super(for_model) { }
 
     double Subtraction::evaluate() const {
@@ -189,7 +195,40 @@ namespace ModelExpression {
 
     int Subtraction::getPrecedence() const { return 1; }
 
-    InterpretedExpression::InterpretedExpression(const ModelInfoFromYAMLFile& for_model,
+    Assignment::Assignment(ModelInfoFromYAMLFile& for_model )
+    : super(for_model) { }
+
+    double Assignment::evaluate() const {
+        double eval = rhs->evaluate();
+        if (!lhs->isVariable()) {
+            outError("Can only assign to variables");
+        }
+        Variable* v = dynamic_cast<ModelExpression::Variable*>(lhs);
+        model.assign(v->getName(), eval);
+        return eval;
+    }
+
+    bool Assignment::isAssignment() const {
+        return true;
+    }
+
+    int Assignment::getPrecedence()     const {
+        return 0;
+    }
+
+    Expression* Assignment::getTarget()         const {
+        return lhs;
+    }
+
+    Variable*   Assignment::getTargetVariable() const {
+        return lhs->isVariable() ? dynamic_cast<Variable*>(lhs) : nullptr;
+    }
+
+    Expression* Assignment::getExpression()    const {
+        return rhs;
+    }
+
+    InterpretedExpression::InterpretedExpression(ModelInfoFromYAMLFile& for_model,
                                                  const std::string& text): super(for_model) {
         is_unset  = text.empty();
         size_t ix = 0;
@@ -344,6 +383,7 @@ namespace ModelExpression {
             case '/': expr = new Division(model);       break;
             case '+': expr = new Addition(model);       break;
             case '-': expr = new Subtraction(model);    break;
+            case '=': expr = new Assignment(model);     break;
             default:
                 throw ModelException(std::string("unrecognized character '") +
                                      std::string(1, ch) + "'' in expression");
@@ -364,5 +404,9 @@ namespace ModelExpression {
     double InterpretedExpression::evaluate() const {
         ASSERT(root != nullptr);
         return root->evaluate();
+    }
+
+    Expression* InterpretedExpression::expression() const {
+        return root;
     }
 }

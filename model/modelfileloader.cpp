@@ -173,6 +173,7 @@ void ModelFileLoader::parseModelParameter(const YAML::Node& param,
     } else if (p.type==ModelParameterType::WEIGHT) {
         dv = 1.0 / (double)count;    //Todo: Should be 1.0 divided by # of parameters
     }
+    //Todo: What if name was a list, and initValue is also a list?!
     std::string value_string = stringScalar(param, "initValue", "");
     p.range                  = parseRange  (param, "range", p.range);
     if (value_string!="") {
@@ -180,9 +181,7 @@ void ModelFileLoader::parseModelParameter(const YAML::Node& param,
     } else if (!overriding) {
         p.value = dv;
     }
-    
     p.description = stringScalar(param, "description", p.description.c_str());
-    
     std::cout << "Parsed parameter " << p.name
               << " of type " << p.type_name
               << ", with range " << p.range.first
@@ -190,6 +189,49 @@ void ModelFileLoader::parseModelParameter(const YAML::Node& param,
               << ", and initial value " << p.value << std::endl;
     info.addParameter(p);
 }
+
+void ModelFileLoader::parseYAMLModelConstraints(const YAML::Node& constraints,
+                                                ModelInfoFromYAMLFile& info) {
+    for (const YAML::Node& constraint: constraints) {
+        //constraints are assignments of the form: name = value
+        //and are equivalent to parameter name/initialValue pairs
+        //Todo: For now, I don't want to support (x,y) = (1,2).
+        //
+        std::stringstream complaint;
+        if (!constraint.IsScalar()) {
+            complaint << "Constraint setting"
+                      << " for model " << info.model_name
+                      << " was not a scalar.";
+            outError(complaint.str());
+        }
+        std::string constraint_string = constraint.Scalar();
+        ModelExpression::InterpretedExpression interpreter(info, constraint_string);
+        ModelExpression::Expression* x = interpreter.expression();
+        
+        if (!x->isAssignment()) {
+            complaint << "Constraint setting for model " << info.model_name
+            << " was not an asignment: " << constraint_string;
+            outError(complaint.str());
+        }
+        ModelExpression::Assignment* a = dynamic_cast<ModelExpression::Assignment*>(x);
+        
+        if (!a->getTarget()->isVariable()) {
+            delete x;
+            complaint << "Constraint setting for model " << info.model_name
+                      << " did not assign a variable: " << constraint_string;
+            outError(complaint.str());
+        }
+        ModelExpression::Variable* v = a->getTargetVariable();
+        double setting = a->getExpression()->evaluate();
+        ModelVariable& mv = info.assign(v->getName(), setting);
+        mv.markAsFixed();
+        std::cout << "Assigned " << v->getName()
+                  << " := " << setting << std::endl;
+    }
+}
+
+
+
 
 void ModelFileLoader::parseRateMatrix(const YAML::Node& rate_matrix,
                      ModelInfoFromYAMLFile& info) {
@@ -276,12 +318,21 @@ void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_
         parseYAMLModelParameters(params, info);
     }
     
+    auto constraints = substitution_model["constraints"];
+    if (constraints) {
+        complainIfNot(constraints.IsSequence(),
+                      "Constraints for model " + model_name +
+                      " in file " + file_path + " not a sequence");
+        parseYAMLModelConstraints(constraints, info);
+    }
+    
     auto rateMatrix = substitution_model["rateMatrix"];
     if (info.rate_matrix_expressions.empty()) {
         complainIfNot(rateMatrix, "Model " + model_name +
                       " in file " + file_path +
                       " does not specify a rateMatrix" );
     }
+    
     //If this model subclasses another it doesn't have to specify
     //a rate matrix (if it doesn't it inherits from its parent model).
     if (rateMatrix) {

@@ -8,7 +8,10 @@
 //   Variable
 //   InfixOperator
 //     Multiplication
+//     Division
+//     Addition
 //     Subtraction
+//     Assignment
 //
 // Created by James Barbetti on 01-Apr-2021
 //
@@ -32,9 +35,9 @@ namespace ModelExpression {
 
     class Expression {
     protected:
-        const ModelInfoFromYAMLFile& model;
+        ModelInfoFromYAMLFile& model;
     public:
-        Expression(const ModelInfoFromYAMLFile& for_model);
+        Expression(ModelInfoFromYAMLFile& for_model);
         virtual ~Expression() = default;
         virtual double evaluate()      const;
         virtual bool   isConstant()    const;
@@ -42,6 +45,7 @@ namespace ModelExpression {
         virtual bool   isOperator()    const;
         virtual bool   isToken(char c) const;
         virtual bool   isVariable()    const;
+        virtual bool   isAssignment()  const;
         virtual int    getPrecedence() const;
     };
 
@@ -50,7 +54,7 @@ namespace ModelExpression {
         char token_char;
     public:
         typedef Expression super;
-        Token(const ModelInfoFromYAMLFile& for_model, char c);
+        Token(ModelInfoFromYAMLFile& for_model, char c);
         virtual ~Token() = default;
         virtual bool isToken(char c) const;
     };
@@ -59,18 +63,19 @@ namespace ModelExpression {
         std::string variable_name;
     public:
         typedef Expression super;
-        Variable(const ModelInfoFromYAMLFile& for_model,
+        Variable(ModelInfoFromYAMLFile& for_model,
                  const std::string& name);
         virtual ~Variable() = default;
         virtual double evaluate() const;
         virtual bool isVariable() const;
+        const std::string& getName() const;
     };
 
     class Constant: public Expression {
         double value;
     public:
         typedef Expression super;
-        Constant(const ModelInfoFromYAMLFile& for_model,
+        Constant(ModelInfoFromYAMLFile& for_model,
                  double v);
         virtual ~Constant() = default;
         virtual double evaluate() const;
@@ -79,7 +84,7 @@ namespace ModelExpression {
 
     class UnaryFunctionImplementation {
     public:
-        virtual double callFunction(const  ModelInfoFromYAMLFile&,
+        virtual double callFunction(ModelInfoFromYAMLFile&,
                                     double parameter) const = 0;
         virtual ~UnaryFunctionImplementation() = default;
     };
@@ -89,7 +94,7 @@ namespace ModelExpression {
         Expression*                        parameter;
     public:
         typedef Expression super;
-        UnaryFunction(const ModelInfoFromYAMLFile& for_model,
+        UnaryFunction(ModelInfoFromYAMLFile& for_model,
                       const UnaryFunctionImplementation* implementation);
         virtual ~UnaryFunction();
         virtual void   setParameter(Expression* param); //takes ownership
@@ -103,7 +108,7 @@ namespace ModelExpression {
         Expression* rhs;
     public:
         typedef Expression super;
-        InfixOperator(const ModelInfoFromYAMLFile& for_model);
+        InfixOperator(ModelInfoFromYAMLFile& for_model);
         virtual ~InfixOperator();
         virtual bool isOperator() const;
         void setOperands(Expression* left, Expression* right); //takes ownership
@@ -112,7 +117,7 @@ namespace ModelExpression {
     class Exponentiation: public InfixOperator {
         public:
             typedef InfixOperator super;
-            Exponentiation(const ModelInfoFromYAMLFile& for_model);
+            Exponentiation(ModelInfoFromYAMLFile& for_model);
             virtual ~Exponentiation() = default;
             virtual double evaluate() const;
             virtual int    getPrecedence() const;
@@ -121,7 +126,7 @@ namespace ModelExpression {
     class Multiplication: public InfixOperator {
     public:
         typedef InfixOperator super;
-        Multiplication(const ModelInfoFromYAMLFile& for_model);
+        Multiplication(ModelInfoFromYAMLFile& for_model);
         virtual ~Multiplication() = default;
         virtual double evaluate() const;
         virtual int    getPrecedence() const;
@@ -130,7 +135,7 @@ namespace ModelExpression {
     class Division: public InfixOperator {
     public:
         typedef InfixOperator super;
-        Division(const ModelInfoFromYAMLFile& for_model);
+        Division(ModelInfoFromYAMLFile& for_model);
         virtual ~Division() = default;
         virtual double evaluate() const;
         virtual int    getPrecedence() const;
@@ -139,7 +144,7 @@ namespace ModelExpression {
     class Addition: public InfixOperator {
     public:
         typedef InfixOperator super;
-        Addition(const ModelInfoFromYAMLFile& for_model );
+        Addition(ModelInfoFromYAMLFile& for_model );
         virtual ~Addition() = default;
         virtual double evaluate() const;
         virtual int    getPrecedence() const;
@@ -148,10 +153,23 @@ namespace ModelExpression {
     class Subtraction: public InfixOperator {
     public:
         typedef InfixOperator super;
-        Subtraction(const ModelInfoFromYAMLFile& for_model);
+        Subtraction(ModelInfoFromYAMLFile& for_model);
         virtual ~Subtraction() = default;
         virtual double evaluate() const;
         virtual int    getPrecedence() const;
+    };
+
+    class Assignment: public InfixOperator {
+    public:
+        typedef InfixOperator super;
+        Assignment(ModelInfoFromYAMLFile& for_model);
+        virtual ~Assignment() = default;
+        virtual double evaluate() const;
+        virtual bool   isAssignment() const;
+        virtual int getPrecedence()     const;
+        Expression* getTarget()         const;
+        Variable*   getTargetVariable() const;
+        Expression* getExpression()     const;
     };
 
     class InterpretedExpression: public Expression {
@@ -165,11 +183,12 @@ namespace ModelExpression {
     public:
         typedef Expression super;
         using super::model;
-        InterpretedExpression(const ModelInfoFromYAMLFile& for_model,
+        InterpretedExpression(ModelInfoFromYAMLFile& for_model,
                               const std::string& expression_text);
         virtual ~InterpretedExpression();
         bool    isSet() const;
         virtual double evaluate() const;
+        Expression* expression() const; //Does *not* yield ownership
     };
 } //ModelExpression namespace
 

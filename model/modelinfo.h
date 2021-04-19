@@ -128,11 +128,13 @@ public:
     ModelParameterRange range;
     ModelParameterType  type;
     double              value;
+    bool                is_fixed;
     ModelVariable();
     ModelVariable(ModelParameterType t, const ModelParameterRange& r, double v);
     ~ModelVariable() = default;
     ModelVariable(const ModelVariable& rhs) = default;
     ModelVariable& operator=(const ModelVariable& rhs) = default;
+    void markAsFixed();
 };
 
 class ModelInfoFromYAMLFile: public ModelInfo {
@@ -246,6 +248,7 @@ public:
                    double *upper_bound, bool *bound_check) const;
     void updateVariables(const double* variables,
                          int param_count);
+    ModelVariable& assign(const std::string& var_name, double value);
 };
 
 class ModelListFromYAMLFile {
