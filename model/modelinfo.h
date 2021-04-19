@@ -124,17 +124,21 @@ public:
 
 
 class ModelVariable {
-public:
+protected:
     ModelParameterRange range;
     ModelParameterType  type;
     double              value;
     bool                is_fixed;
+public:
     ModelVariable();
     ModelVariable(ModelParameterType t, const ModelParameterRange& r, double v);
     ~ModelVariable() = default;
     ModelVariable(const ModelVariable& rhs) = default;
     ModelVariable& operator=(const ModelVariable& rhs) = default;
-    void markAsFixed();
+    void   setValue(double v);
+    void   markAsFixed();
+    double getValue() const;
+    bool   isFixed() const;
 };
 
 class ModelInfoFromYAMLFile: public ModelInfo {
@@ -241,14 +245,21 @@ public:
         if (found==variables.end()) {
             return 0.0;
         }
-        return found->second.value;
+        return found->second.getValue();
     }
     bool isFrequencyParameter(const std::string& param_name) const;
     void setBounds(int bound_count, double *lower_bound,
                    double *upper_bound, bool *bound_check) const;
     void updateVariables(const double* variables,
                          int param_count);
-    ModelVariable& assign(const std::string& var_name, double value);
+    void logVariablesTo(PhyloTree& report_to_tree);
+    ModelVariable&     assign(const std::string& var_name, double value);
+    bool               assignLastFrequency(double value);
+    const std::string& getName() const;
+    int                getRateMatrixRank() const;
+    const std::string& getRateMatrixExpression(int row, int col) const;
+    
+
 };
 
 class ModelListFromYAMLFile {
@@ -259,7 +270,7 @@ public:
     ModelListFromYAMLFile()  = default;
     ~ModelListFromYAMLFile() = default;
 
-    void loadFromFile          (const char* file_path);
+    void loadFromFile          (const char* file_path,    PhyloTree* report_to_tree);
     bool isModelNameRecognized (const char* model_name);
     ModelMarkov* getModelByName(const char* model_name,   PhyloTree *tree,
                                 const char* model_params, StateFreqType freq_type,

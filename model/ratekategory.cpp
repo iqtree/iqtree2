@@ -63,8 +63,6 @@ double RateKategory::optimizeParameters(double gradient_epsilon,
 
 	TREE_LOG_LINE(*report_to_tree, VB_MAX, "Optimizing " << name << " model parameters...");
 
-	//if (freq_type == FREQ_ESTIMATE) scaleStateFreq(false);
-
 	double *variables = new double[ndim+1];
 	double *upper_bound = new double[ndim+1];
 	double *lower_bound = new double[ndim+1];

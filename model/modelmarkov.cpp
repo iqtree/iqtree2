@@ -832,10 +832,11 @@ int ModelMarkov::getNDim() {
     return ndim;
 }
 
-int ModelMarkov::getNDimFreq() { 
-
-    // BQM, 2017-05-02: getNDimFreq should return degree of freedom, which is not included in getNDim()
-    // That's why 0 is returned for FREQ_ESTIMATE, num_states-1 for FREQ_EMPIRICAL
+int ModelMarkov::getNDimFreq() {
+    //BQM, 2017-05-02: getNDimFreq should return degree of freedom,
+    //which is not included in getNDim()
+    //That's why 0 is returned for FREQ_ESTIMATE,
+    //num_states-1 for FREQ_EMPIRICAL
 
     if (fixed_parameters) {
         return 0;
@@ -856,26 +857,19 @@ int ModelMarkov::getNDimFreq() {
 	return 0;
 }
 
-void ModelMarkov::scaleStateFreq(bool sum_one) {
-    if (sum_one) {
-        // make the frequencies sum to 1
-        double sum = 0.0;
-        for (int i = 0; i < num_states; ++i) {
-            sum += state_freq[i];
-        }
-        for (int i = 0; i < num_states; ++i) {
-            state_freq[i] /= sum;
-        }
-    } else {
-        // make the last frequency equal to 0.1
-        if (state_freq[num_states-1] == 0.1) {
-            return;
-        }
-        ASSERT(state_freq[num_states-1] > 1.1e-6);
-        for (int i = 0; i < num_states; ++i) {
-            state_freq[i] /= state_freq[num_states-1]*10.0;
-        }
+bool ModelMarkov::scaleStateFreq() {
+    // make the frequencies sum to 1
+    double sum = 0.0;
+    for (int i = 0; i < num_states; ++i) {
+        sum += state_freq[i];
     }
+    if (sum==1.0) {
+        return false;
+    }
+    for (int i = 0; i < num_states; ++i) {
+        state_freq[i] /= sum;
+    }
+    return true;
 }
 
 void ModelMarkov::setVariables(double *variables) {
@@ -906,7 +900,8 @@ bool ModelMarkov::getVariables(double *variables) {
         memcpy(rates, variables+1, nrate * sizeof(double));
     }
     if (is_reversible && freq_type == FREQ_ESTIMATE) {
-        // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
+        // 2015-09-07: relax the sum of state_freq to be 1,
+        // this will be done at the end of optimization
         int ndim = getNDim();
         for (int i = 0; i < num_states-1; i++) {
             changed |= (state_freq[i] != variables[i+ndim-num_states+2]);
@@ -915,7 +910,7 @@ bool ModelMarkov::getVariables(double *variables) {
 
 //		memcpy(state_freq, variables+nrate+1, (num_states-1)*sizeof(double));
 		//state_freq[num_states-1] = 0.1;
-		//scaleStateFreq(true);
+		//scaleStateFreq();
 
 //		double sum = 0.0;
 //		for (int i = 0; i < num_states-1; i++)
@@ -1016,8 +1011,6 @@ double ModelMarkov::optimizeParameters(double gradient_epsilon,
     }
     TREE_LOG_LINE(*report_to_tree, VB_MAX, "Optimizing " << name << " model parameters...");
 
-    //if (freq_type == FREQ_ESTIMATE) scaleStateFreq(false);
-
     double* variables = new double[ndim+1]; // used for BFGS numerical recipes
     double* variables2 = new double[ndim+1]; // used for L-BFGS-B
     double* upper_bound = new double[ndim+1];
@@ -1065,8 +1058,7 @@ double ModelMarkov::optimizeParameters(double gradient_epsilon,
 
     // BQM 2015-09-07: normalize state_freq
 	if (is_reversible && freq_type == FREQ_ESTIMATE) {
-        scaleStateFreq(true);
-        changed = true;
+        changed = scaleStateFreq();
     }
     if (changed) {
         decomposeRateMatrix();

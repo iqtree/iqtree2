@@ -1006,8 +1006,7 @@ double ModelCodon::optimizeParameters(double gradient_epsilon,
 	bool changed = getVariables(variables);
     // BQM 2015-09-07: normalize state_freq
 	if (freq_type == FREQ_ESTIMATE) { 
-        scaleStateFreq(true);
-        changed = true;
+        changed = scaleStateFreq();
     }
     if (changed) {
         decomposeRateMatrix();

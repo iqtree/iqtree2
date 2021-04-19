@@ -947,7 +947,6 @@ double ModelFactory::optimizeAllParameters(double gradient_epsilon) {
                                 bound_check, max(gradient_epsilon, TOL_RATE));
 
     getVariables(variables);
-    //if (freq_type == FREQ_ESTIMATE) scaleStateFreq(true);
     model->decomposeRateMatrix();
     site_rate->phylo_tree->clearAllPartialLH();
 

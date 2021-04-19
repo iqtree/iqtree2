@@ -127,9 +127,9 @@ public:
 
     /**
      rescale the state frequencies
-     @param sum_one TRUE to make frequencies sum to 1, FALSE to make last entry equal to 1
+     @return true if and only if a frequency was changed
      */
-    void scaleStateFreq(bool sum_one);
+    virtual bool scaleStateFreq();
 
     /**
      the approximated derivative function

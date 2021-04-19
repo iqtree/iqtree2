@@ -526,8 +526,20 @@ ModelVariable::ModelVariable(ModelParameterType t,
     : range(r), type(t), value(v) {
 }
 
+void ModelVariable::setValue(double v) {
+    value = v;
+}
+
 void ModelVariable::markAsFixed() {
     is_fixed = true;
+}
+
+double ModelVariable::getValue() const {
+    return value;
+}
+
+bool ModelVariable::isFixed() const {
+    return is_fixed;
 }
 
 ModelInfoFromYAMLFile::ModelInfoFromYAMLFile()
@@ -593,19 +605,49 @@ void ModelInfoFromYAMLFile::setBounds(int param_count, double *lower_bound,
 void ModelInfoFromYAMLFile::updateVariables(const double* updated_values,
                                             int param_count) {
     int i = 1; //Rate parameter numbering starts at 1, see ModelMarkov
-    for ( auto p : parameters ) {
-        if (p.type == ModelParameterType::RATE) {
-            for (int sub = p.minimum_subscript;
-                 sub <= p.maximum_subscript; ++sub) {
-                ASSERT( i<= param_count );
-                std::string var_name  = p.getSubscriptedVariableName(sub);
-                double      var_value = updated_values[i];
-                this->variables[var_name].value = var_value;
-                ++i;
+    ModelParameterType supported_types[] = {
+        ModelParameterType::RATE, ModelParameterType::FREQUENCY };
+        //FREQUENCY must be last.
+        //Todo: Where do weight parameters go?  Esepecially in mixture
+        //      models
+    for ( auto param_type : supported_types ) {
+        for ( auto p : parameters ) {
+            if (p.type == param_type) {
+                for (int sub = p.minimum_subscript;
+                     sub <= p.maximum_subscript; ++sub) {
+                    if ( i<= param_count ) {
+                        std::string var_name  = p.getSubscriptedVariableName(sub);
+                        double      var_value = updated_values[i];
+                        if (!this->variables[var_name].isFixed()) {
+                            this->variables[var_name].setValue(var_value);
+                        }
+                        ++i;
+                    }
+                    //For the last frequency parameter, if there is one,
+                    //i will be equal to ( param_count + 1 ).
+                }
             }
         }
     }
 }
+
+void ModelInfoFromYAMLFile::logVariablesTo(PhyloTree& report_to_tree) {
+    if (verbose_mode < VB_MIN) {
+        return;
+    }
+    std::stringstream var_list;
+    const char* sep = "Variables: ";
+    for (auto itv : variables) {
+        var_list << sep << itv.first << "=" << itv.second.getValue();
+        sep = ", ";
+    }
+    std::string list = var_list.str();
+    if (list.find("nan") != std::string::npos) {
+        list += " ...?";
+    }
+    TREE_LOG_LINE(report_to_tree, VB_MAX, list);
+}
+
 
 ModelVariable& ModelInfoFromYAMLFile::assign(const std::string& var_name,
                                              double value_to_set) {
@@ -617,12 +659,45 @@ ModelVariable& ModelInfoFromYAMLFile::assign(const std::string& var_name,
                   << " of model " << model_name << ".";
         outError(complaint.str());
     }
-    it->second.value = value_to_set;
+    it->second.setValue(value_to_set);
     return it->second;
 }
 
+bool ModelInfoFromYAMLFile::assignLastFrequency(double value) {
+    //Ee-uw.  It's sad that this is needed!
+    for ( auto pit = parameters.rbegin();
+         pit!= parameters.rend(); ++pit ) {
+        if (pit->type == ModelParameterType::FREQUENCY) {
+            for (int sub = pit->maximum_subscript;
+                 pit->minimum_subscript <= sub; --sub) {
+                std::string var_name  = pit->getSubscriptedVariableName(sub);
+                if (!this->variables[var_name].isFixed()) {
+                    this->variables[var_name].setValue(value);
+                    return true;
+                }
+                //For the last frequency parameter, if there is one,
+                //i will be equal to ( param_count + 1 ).
+            }
+        }
+    }
+    return false;
+}
 
-void ModelListFromYAMLFile::loadFromFile (const char* file_path) {
+int ModelInfoFromYAMLFile::getRateMatrixRank() const {
+    return rate_matrix_rank;
+}
+
+const std::string& ModelInfoFromYAMLFile::getRateMatrixExpression
+    ( int row, int col ) const {
+    return rate_matrix_expressions[row][col];
+}
+
+const std::string& ModelInfoFromYAMLFile::getName() const {
+    return model_name;
+}
+
+void ModelListFromYAMLFile::loadFromFile (const char* file_path,
+                                          PhyloTree* report_to_tree) {
     YAML::Node yaml_model_list = YAML::LoadFile(file_path);
     ModelFileLoader loader(file_path);
     try {
@@ -635,10 +710,12 @@ void ModelListFromYAMLFile::loadFromFile (const char* file_path) {
                 continue;
             }
             std::string yaml_model_name = node["substitutionmodel"].Scalar();
-            std::cout << "Parsing YAML model " << yaml_model_name << std::endl;
+            TREE_LOG_LINE(*report_to_tree, VB_MAX,
+                          "Parsing YAML model " << yaml_model_name);
             ModelInfoFromYAMLFile &y = models_found[yaml_model_name]
                                      = ModelInfoFromYAMLFile();
-            loader.parseYAMLSubstitutionModel(node, yaml_model_name, y, *this);
+            loader.parseYAMLSubstitutionModel(node, yaml_model_name, y, *this,
+                                              report_to_tree);
         }
     }
     catch (YAML::Exception &e) {
@@ -657,6 +734,7 @@ bool ModelListFromYAMLFile::isModelNameRecognized (const char* model_name) {
 class YAMLModelDNA: public ModelDNA {
 protected:
     ModelInfoFromYAMLFile model_info;
+    PhyloTree*            report_tree;
 public:
     typedef ModelDNA super;
     YAMLModelDNA(const char *model_name, string model_params,
@@ -665,12 +743,12 @@ public:
                  const ModelInfoFromYAMLFile& info)
         : super(model_name, model_params, freq,
                 freq_params, tree, report_to_tree),
-          model_info(info) {
+          model_info(info), report_tree(report_to_tree) {
+        setRateMatrixFromModel();
     }
     virtual void setBounds(double *lower_bound, double *upper_bound,
                             bool *bound_check) {
-        //ASSERT(is_reversible && "setBounds should only be called"
-        //       "on subclass of ModelMarkov");
+        //
         int ndim = getNDim();
         for (int i = 1; i <= ndim; ++i) {
             //std::cout << variables[i] << std::endl;
@@ -685,15 +763,14 @@ public:
         bool changed = false;
         if (num_params > 0) {
             int num_all = static_cast<int>(param_spec.length());
-            if (verbose_mode >= VB_MAX) {
-                for (int i = 1; i <= num_params; i++) {
-                    std::cout << "  estimated rates[" << i << "] changing from "
-                              << rates[i] << " to " << variables[i] << std::endl;
-                }
-            }
             for (int i = 0; i < num_all; i++) {
-                changed |= (rates[i] != variables[i]);
-                rates[i] = variables[i];
+                if (rates[i] != variables[i] ) {
+                    TREE_LOG_LINE(*report_tree, VB_MAX,
+                                  "  estimated rates[" << i << "] changing from "
+                                  << rates[i] << " to " << variables[i]);
+                    rates[i] = variables[i];
+                    changed  = true;
+                }
             }
         }
         if (freq_type == FREQ_ESTIMATE) {
@@ -701,26 +778,56 @@ public:
             auto read_freq = variables+(ndim-num_states+2);
             for (int i=0; i<num_states-1; ++i) {
                 if (state_freq[i]!=read_freq[i]) {
-                    if (verbose_mode >= VB_MAX) {
-                        std::cout << "  estimated freqs[" << i << "]"
+                    TREE_LOG_LINE(*report_tree, VB_MAX,
+                                  "  estimated freqs[" << i << "]"
                                   << " changing from " << state_freq[i]
-                                  << " to " << read_freq[i] << std::endl;
-                    }
-                    changed = true;
+                                  << " to " << read_freq[i]);
+                    state_freq[i] = read_freq[i];
+                    changed       = true;
                 }
-                state_freq[i] = read_freq[i];
+            }
+            //Set the last frequency to the residual
+            //(one minus the sum of the others)
+            if (scaleStateFreq()) {
+                changed = true;
+                model_info.assignLastFrequency(state_freq[num_states-1]);
             }
         } else {
             changed |= freqsFromParams(state_freq,variables+num_params+1,freq_type);
         }
-        if (verbose_mode >= VB_MAX) {
-            std::cout << std::endl;
-        }
+        TREE_LOG_LINE(*report_tree, VB_MAX, "");
         if (changed) {
             model_info.updateVariables(variables, getNDim());
+            model_info.logVariablesTo(*report_tree);
+            setRateMatrixFromModel();
         }
         return changed;
     }
+    virtual bool scaleStateFreq() {
+        // make the frequencies sum to 1
+        bool changed = false;
+        double sum = 0.0;
+        for (int i = 0; i < num_states-1; ++i) {
+            sum += state_freq[i];
+        }
+        if (1.0<sum) {
+            sum += state_freq[num_states-1];
+            changed = true;
+            for (int i = 0; i < num_states; ++i) {
+                state_freq[i] /= sum;
+            }
+        } else {
+            //Set last state frequency to 1.0 minus
+            //the sum of the others
+            double residual = 1.0 - sum;
+            if (state_freq[num_states-1] != residual) {
+                state_freq[num_states-1] = residual;
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
     virtual void setVariables(double *variables) {
         if (num_params > 0) {
             for (int i=0; i<num_params; ++i) {
@@ -738,6 +845,44 @@ public:
                             state_freq, freq_type);
         }
     }
+    void setRateMatrixFromModel() {
+        auto rank = model_info.getRateMatrixRank();
+        ASSERT( rank == num_states);
+        
+        DoubleVector      rates;
+        const char*       separator = "";
+        std::stringstream trace;
+        trace << "Rate Matrix: { ";
+        for (int row = 0; row < rank; ++row) {
+            for (int col = 0; col < rank; ++col) {
+                if (col != row) {
+                    std::string expr_string = model_info.getRateMatrixExpression(row,col);
+                    typedef ModelExpression::InterpretedExpression Interpreter;
+                    try {
+                        Interpreter interpreter(model_info, expr_string);
+                        double entry = interpreter.evaluate();
+                        rates.push_back(entry);
+                        trace << separator << entry;
+                    }
+                    catch (ModelExpression::ModelException& x) {
+                        std::stringstream msg;
+                        msg << "Error parsing expression for " << model_info.getName()
+                            << " rate matrix entry"
+                            << " for row "    << (row + 1) << ","
+                            << " and column " << (col + 1) << ": "
+                            << x.getMessage();
+                        outError(msg.str());
+                    }
+                } else {
+                    trace << separator << "-";
+                }
+                separator = ", ";
+            }
+        }
+        trace << " }";
+        TREE_LOG_LINE(*report_tree, VB_MAX, trace.str());
+        setRateMatrix(rates.data());
+    }
 };
 
 bool ModelListFromYAMLFile::hasModel(const std::string& model_name) const {
@@ -754,9 +899,11 @@ ModelMarkov* ModelListFromYAMLFile::getModelByName(const char* model_name,   Phy
                                                    const char* model_params, StateFreqType freq_type,
                                                    const char* freq_params,  PhyloTree* report_to_tree) {
     ModelInfoFromYAMLFile& model_info = models_found[model_name];
-    std::cout << "Model Params " << model_params
-              << " Freq Params " << freq_params << std::endl;
-    
+    if (0<strlen(model_params) || 0<strlen(freq_params)) {
+        TREE_LOG_LINE(*report_to_tree, VB_MAX,
+                      "Model Params " << model_params
+                      << " Freq Params " << freq_params);
+    }
     ModelMarkov* model = nullptr;
     string dummy_rate_params;
     string dummy_freq_params;
@@ -770,38 +917,6 @@ ModelMarkov* ModelListFromYAMLFile::getModelByName(const char* model_name,   Phy
     model = new YAMLModelDNA("", dummy_rate_params, freq_type,
                              dummy_freq_params, tree,
                              report_to_tree, model_info);
-    
-    ASSERT( model_info.rate_matrix_rank == model->num_states);
-    
-    DoubleVector      rates;
-    const char*       separator = "";
-    std::stringstream trace;
-    for (int row = 0; row < model_info.rate_matrix_rank; ++row) {
-        for (int col = 0; col < model_info.rate_matrix_rank; ++col) {
-            if (col != row) {
-                std::string expr_string = model_info.rate_matrix_expressions[row][col];
-                typedef ModelExpression::InterpretedExpression Interpreter;
-                try {
-                    Interpreter interpreter(model_info, expr_string);
-                    double entry = interpreter.evaluate();
-                    rates.push_back(entry);
-                    trace << separator << entry;
-                }
-                catch (ModelExpression::ModelException& x) {
-                    std::stringstream msg;
-                    msg << "Error parsing expression for " << model_name 
-                        << " rate matrix entry"
-                        << " for row "    << (row + 1) << ","
-                        << " and column " << (col + 1) << ": " 
-                        << x.getMessage();
-                    outError(msg.str());                        
-                }
-                separator = " ";
-            }
-        }
-    }
-    TREE_LOG_LINE(*report_to_tree, VB_MIN, trace.str());
-    model->setRateMatrix(rates.data());
     
     //model_parameters = new double [num_params];
     //memset(model_parameters, 0, sizeof(double)*num_params);

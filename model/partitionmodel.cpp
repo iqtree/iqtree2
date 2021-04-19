@@ -348,11 +348,18 @@ bool PartitionModel::getVariables(double *variables) {
     return changed;
 }
 
-void PartitionModel::scaleStateFreq(bool sum_one) {
+bool PartitionModel::scaleStateFreq() {
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
-    for (auto it = tree->begin(); it != tree->end(); it++)
-        if ((*it)->getModel()->getName() == model->getName())
-            ((ModelMarkov*)(*it)->getModel())->scaleStateFreq(sum_one);
+    bool changed = false;
+    for (auto it = tree->begin(); it != tree->end(); it++) {
+        if ((*it)->getModel()->getName() == model->getName()) {
+            ModelMarkov* mod = dynamic_cast<ModelMarkov*>((*it)->getModel());
+            if (mod->scaleStateFreq()) {
+                changed = true;
+            }
+        }
+    }
+    return true;
 }
 
 double PartitionModel::optimizeLinkedModel(bool write_info,
@@ -370,8 +377,6 @@ double PartitionModel::optimizeLinkedModel(bool write_info,
     }    
     TREE_LOG_LINE(*report_to_tree, VB_MAX,
                   "Optimizing " << model->name << " model parameters...");
-    
-    //if (freq_type == FREQ_ESTIMATE) scaleStateFreq(false);
     
     double *variables = new double[ndim+1]; // used for BFGS numerical recipes
     double *variables2 = new double[ndim+1]; // used for L-BFGS-B
@@ -423,8 +428,7 @@ double PartitionModel::optimizeLinkedModel(bool write_info,
     
     // BQM 2015-09-07: normalize state_freq
     if (model->isReversible() && model->freq_type == FREQ_ESTIMATE) {
-        scaleStateFreq(true);
-        changed = true;
+        changed = scaleStateFreq();
     }
     if (changed) {
         PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();

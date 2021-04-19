@@ -6,6 +6,7 @@
 #include "modelfileloader.h"
 #include "modelexpression.h" //for ModelExpression::ModelException
 #include <utils/stringfunctions.h>
+#include <tree/phylotree.h> //for TREE_LOG_LINE macro
    
 ModelFileLoader::ModelFileLoader(const char* path): file_path(path) {
 }
@@ -72,20 +73,27 @@ ModelParameterRange ModelFileLoader::parseRange(const YAML::Node& node,
             } else if (ix==1) {
                 range.second = toDouble(i, 0);
             } else {
-                //Throw: Range ought to be a two-value sequence
-                //       Three values... one too many.
-                //(for now, 3rd and later items in sequence
-                // are just ignored).
+                throw ModelExpression::ModelException
+                      ("Range may only have two bounds (lower, upper)");
             }
             ++ix;
         }
-        range.is_set = ( 1 < ix );
+        range.is_set = ( 1 <= ix );
+        if ( ix == 1 ) {
+            range.second = range.first;
+        } else if (range.second < range.first) {
+            std::stringstream complaint;
+            complaint << "Range has lower bound (" << range.first << ")"
+                      << " greater than its upper bound (" << range.second << ")";
+            throw ModelExpression::ModelException(complaint.str());
+        }
     }
     return range;
 }
     
 void ModelFileLoader::parseYAMLModelParameters(const YAML::Node& params,
-                              ModelInfoFromYAMLFile& info) {
+                                               ModelInfoFromYAMLFile& info,
+                                               PhyloTree* report_to_tree) {
     //
     //Assumes: params is a sequence of parameter declarations
     //
@@ -93,12 +101,15 @@ void ModelFileLoader::parseYAMLModelParameters(const YAML::Node& params,
         const YAML::Node& name_node = param["name"];
         if (name_node) {
             if (name_node.IsScalar()) {
-                parseModelParameter(param, name_node.Scalar(), info);
+                parseModelParameter(param, name_node.Scalar(), info,
+                                    report_to_tree);
             }
             else if (name_node.IsSequence()) {
                 for (auto current_name: name_node) {
                     if (current_name.IsScalar()) {
-                        parseModelParameter(param, current_name.Scalar(), info);
+                        std::string name = current_name.Scalar();
+                        parseModelParameter(param, name, info,
+                                            report_to_tree);
                     }
                 }
             }
@@ -111,7 +122,8 @@ void ModelFileLoader::parseYAMLModelParameters(const YAML::Node& params,
 
 void ModelFileLoader::parseModelParameter(const YAML::Node& param,
                                           std::string name,
-                                          ModelInfoFromYAMLFile& info) {
+                                          ModelInfoFromYAMLFile& info,
+                                          PhyloTree* report_to_tree) {
     YAMLFileParameter p;
     p.name       = name;
     auto bracket = p.name.find('(');
@@ -132,6 +144,9 @@ void ModelFileLoader::parseModelParameter(const YAML::Node& param,
             throw ModelExpression::ModelException(msg);
         }
         p.name = p.name.substr(0, bracket);
+    } else {
+        p.minimum_subscript = 0;
+        p.maximum_subscript = 1;
     }
     
     bool overriding = false;
@@ -179,19 +194,30 @@ void ModelFileLoader::parseModelParameter(const YAML::Node& param,
     if (value_string!="") {
         p.value = convert_double_nothrow(value_string.c_str(), dv);
     } else if (!overriding) {
+        if (p.range.is_set) {
+            //Initial value has to be inside the legal range.
+            if (dv<p.range.first) {
+                dv = p.range.first;
+            } if (p.range.second<dv) {
+                dv = p.range.second;
+            }
+        }
         p.value = dv;
     }
     p.description = stringScalar(param, "description", p.description.c_str());
-    std::cout << "Parsed parameter " << p.name
-              << " of type " << p.type_name
-              << ", with range " << p.range.first
-              << " to " << p.range.second
-              << ", and initial value " << p.value << std::endl;
+    std::stringstream msg;
+    msg  << "Parsed parameter " << p.name
+         << " of type " << p.type_name
+         << ", with range " << p.range.first
+         << " to " << p.range.second
+         << ", and initial value " << p.value;
+    TREE_LOG_LINE(*report_to_tree, VB_MAX, msg.str());
     info.addParameter(p);
 }
 
 void ModelFileLoader::parseYAMLModelConstraints(const YAML::Node& constraints,
-                                                ModelInfoFromYAMLFile& info) {
+                                                ModelInfoFromYAMLFile& info,
+                                                PhyloTree* report_to_tree) {
     for (const YAML::Node& constraint: constraints) {
         //constraints are assignments of the form: name = value
         //and are equivalent to parameter name/initialValue pairs
@@ -234,7 +260,8 @@ void ModelFileLoader::parseYAMLModelConstraints(const YAML::Node& constraints,
 
 
 void ModelFileLoader::parseRateMatrix(const YAML::Node& rate_matrix,
-                     ModelInfoFromYAMLFile& info) {
+                                      ModelInfoFromYAMLFile& info,
+                                      PhyloTree* report_to_tree) {
     //Assumes rate_matrix is a sequence (of rows)
     for (auto row : rate_matrix) {
         ++info.rate_matrix_rank;
@@ -262,10 +289,13 @@ void ModelFileLoader::parseRateMatrix(const YAML::Node& rate_matrix,
         }
         info.rate_matrix_expressions.emplace_back(expr_row);
     }
-    dumpRateMatrixTo(info, cout);
+    std::stringstream matrix_stream;
+    dumpRateMatrixTo(info, matrix_stream);
+    TREE_LOG_LINE(*report_to_tree, VB_MAX, matrix_stream.str());
 }
         
-void ModelFileLoader::parseRateMatrixExpressions(ModelInfoFromYAMLFile& info) {
+void ModelFileLoader::parseRateMatrixExpressions(ModelInfoFromYAMLFile& info,
+                                                 PhyloTree* report_to_tree) {
     //Todo:
     //This is to execute after the rate matrix expressions are known.
     //It is to convert rate matrix expression strings into
@@ -276,7 +306,8 @@ void ModelFileLoader::parseRateMatrixExpressions(ModelInfoFromYAMLFile& info) {
 void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_model,
                                                  const std::string& name_of_model,
                                                  ModelInfoFromYAMLFile& info,
-                                                 ModelListFromYAMLFile& list) {
+                                                 ModelListFromYAMLFile& list,
+                                                 PhyloTree* report_to_tree) {
     
     std::string parent_model = stringScalar(substitution_model, "frommodel", "");
     if (parent_model != "") {
@@ -315,7 +346,7 @@ void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_
         complainIfNot(params.IsSequence(),
                       "Parameters of model " + model_name +
                       " in file " + file_path + " not a sequence");
-        parseYAMLModelParameters(params, info);
+        parseYAMLModelParameters(params, info, report_to_tree);
     }
     
     auto constraints = substitution_model["constraints"];
@@ -323,7 +354,7 @@ void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_
         complainIfNot(constraints.IsSequence(),
                       "Constraints for model " + model_name +
                       " in file " + file_path + " not a sequence");
-        parseYAMLModelConstraints(constraints, info);
+        parseYAMLModelConstraints(constraints, info, report_to_tree);
     }
     
     auto rateMatrix = substitution_model["rateMatrix"];
@@ -336,7 +367,7 @@ void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_
     //If this model subclasses another it doesn't have to specify
     //a rate matrix (if it doesn't it inherits from its parent model).
     if (rateMatrix) {
-        parseRateMatrix(rateMatrix, info);
+        parseRateMatrix(rateMatrix, info, report_to_tree);
     }
     
     auto stateFrequency = substitution_model["stateFrequency"];

@@ -36,13 +36,16 @@ public:
                                    const ModelParameterRange& default_value);
     
     void parseYAMLModelParameters(const YAML::Node& params,
-                                  ModelInfoFromYAMLFile& info);
+                                  ModelInfoFromYAMLFile& info,
+                                  PhyloTree* report_to_tree);
     void parseModelParameter(const YAML::Node& param,
                              std::string name,
-                             ModelInfoFromYAMLFile& info);
+                             ModelInfoFromYAMLFile& info,
+                             PhyloTree* report_to_tree);
     
     void parseYAMLModelConstraints(const YAML::Node& params,
-                                  ModelInfoFromYAMLFile& info);
+                                   ModelInfoFromYAMLFile& info,
+                                   PhyloTree* report_to_tree);
     
     template <class S>
     void dumpRateMatrixTo(const ModelInfoFromYAMLFile& info, S &out) {
@@ -70,14 +73,17 @@ public:
      */
     
     void parseRateMatrix(const YAML::Node& rate_matrix,
-                         ModelInfoFromYAMLFile& info);
+                         ModelInfoFromYAMLFile& info,
+                         PhyloTree* report_to_tree);
         
-    void parseRateMatrixExpressions(ModelInfoFromYAMLFile& info);
+    void parseRateMatrixExpressions(ModelInfoFromYAMLFile& info,
+                                    PhyloTree* report_to_tree);
     
     void parseYAMLSubstitutionModel(const YAML::Node& substitution_model,
                                     const std::string& name_of_model,
                                     ModelInfoFromYAMLFile& info,
-                                    ModelListFromYAMLFile& list);
+                                    ModelListFromYAMLFile& list,
+                                    PhyloTree* report_to_tree);
 };
 
 #endif /* modelfileloader_hpp */

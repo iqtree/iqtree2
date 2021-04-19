@@ -1132,7 +1132,7 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block,
     auto yaml_path = tree->params->yaml_model_file;
     ModelListFromYAMLFile yaml_list;
     if (!yaml_path.empty()) {
-        yaml_list.loadFromFile(yaml_path.c_str());
+        yaml_list.loadFromFile(yaml_path.c_str(), report_to_tree);
     }
     if (pomo || tree->aln->seq_type == SEQ_POMO) {
         if (pomo_rate_str == "") {

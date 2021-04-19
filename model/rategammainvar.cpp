@@ -161,7 +161,6 @@ double RateGammaInvar::optimizeParameters(double gradient_epsilon,
 	} else if (optimize_alg.find("EM") != string::npos) {
         return optimizeWithEM(gradient_epsilon, report_to_tree);
     } else if (optimize_alg.find("BFGS") != string::npos) {
-        //if (freq_type == FREQ_ESTIMATE) scaleStateFreq(false);
         double *variables = new double[ndim+1];
         double *upper_bound = new double[ndim+1];
         double *lower_bound = new double[ndim+1];

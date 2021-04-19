@@ -253,7 +253,6 @@ double RateFree::optimizeParameters(double gradient_epsilon,
             return optimizeWithEM(report_to_tree);
         }
     }
-	//if (freq_type == FREQ_ESTIMATE) scaleStateFreq(false);
 
 	double *variables = new double[ndim+1];
 	double *upper_bound = new double[ndim+1];
