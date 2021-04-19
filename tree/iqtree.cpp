@@ -723,6 +723,8 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
     const bool noisy = false;
     #endif
     
+    bool want_distances = params->generate_dist_file;
+    
     if (!params->user_file.empty()) {
         // start the search with user-defined tree
         std::stringstream msg;
@@ -886,6 +888,7 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
             params->numInitTrees = 1;
             optimizeConstructedTree();
             fixNegativeBranches(true);
+            want_distances = false;
             break;
 
         case STT_USER_TREE:
@@ -919,6 +922,24 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
     if (params->write_init_tree) {
         out_file += ".init_tree";
         printTree(out_file.c_str(), WT_NEWLINE);
+    }
+    if (want_distances) {
+        //Distance file was requested, but observed distances were not
+        //calculated, as yet.
+        if (this->dist_matrix == nullptr) {
+            //Really, we want to re-use the distance matrix from the tree,
+            //two levels higher in the call stack (in runModelFinder)
+            //(and this is just an easy workaround to avert a null de-reference).
+            //Easier than adding parameters to computeFastMLTree, and to
+            //IQTree::computeInitialTree, but not ideal. -James B. 19-Apr-2021
+            computeDistanceMatrix(*params, aln);
+        }
+        double write_begin_time = getRealTime();
+        dist_file = params->out_prefix + ".dist";
+        printDistanceFile();
+        double timeToWriteDistanceFile = getRealTime() - write_begin_time;
+        LOG_LINE(VB_MED, "Time taken to write distance file: "
+                 << timeToWriteDistanceFile << " seconds " );
     }
 }
 

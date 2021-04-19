@@ -57,8 +57,8 @@ void GlobalPlacementOptimizer::optimizeAfterPlacement(PhyloTree& tree) {
         }
         //Then, fix any negative branches
         tree.initializeAllPartialLh();
-        double negativeStart = getRealTime();
-        auto   fixed = tree.fixNegativeBranch();
+        double negativeStart   = getRealTime();
+        auto   fixed           = tree.fixNegativeBranch();
         double negativeElapsed = getRealTime() - negativeStart;
         TREE_LOG_LINE(tree, VB_MED, "Fixing " << fixed
                       << " negative branches took " << negativeElapsed

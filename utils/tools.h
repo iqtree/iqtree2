@@ -1052,6 +1052,12 @@ public:
             output file to store the distance matrix
      */
     char *dist_file;
+    
+    /**
+            generate a distance matrix and distance file even if
+            not using a distance matrix algorithm
+     */
+    bool generate_dist_file;
 
     /**
             true if processing is incremental (previous trees, or distance

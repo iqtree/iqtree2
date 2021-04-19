@@ -893,6 +893,11 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
                  << params.out_prefix << ".conaln" << endl;
         }
     }
+    if (params.start_tree != STT_BIONJ &&
+        params.generate_dist_file) {
+        cout << "  Observed distances:            "
+             << params.out_prefix << ".dist" << endl;
+    }
     if (model_info.isModelFinder() && tree.isSuperTree()) {
         cout << "  Best partitioning scheme:      "
              << params.out_prefix << ".best_scheme.nex" << endl;

@@ -707,7 +707,6 @@ public:
         return computeJCDist(seq1, seq2);
     }
 
-
     /**
             write distance matrix into a file in PHYLIP distance format
             @param format       distance file format (starting "upper", "lower", or "square"
@@ -723,7 +722,8 @@ public:
             @param out output stream
             @param dist_mat distance matrix
      */
-    template <class S> void printDist(const std::string&, S &out, double *dist_mat) const;
+    template <class S> void printDist(const std::string&, S &out,
+                                      double *dist_mat) const;
 
     /**
             read distance matrix from a file in PHYLIP distance format

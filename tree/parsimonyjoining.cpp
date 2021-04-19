@@ -583,7 +583,8 @@ int PhyloTree::joinParsimonyTree(const char *out_prefix,
     initializeAllPartialPars();
 
     /* how long does this take?! */
-    double parsimony_score = computeParsimony("Computing post PJ parsimony", true, false);
+    double parsimony_score = computeParsimony("Computing post PJ parsimony",
+                                              true, false);
     setAllBranchLengthsFromParsimony(false, parsimony_score);
     
     // convert to rooted tree if originally so

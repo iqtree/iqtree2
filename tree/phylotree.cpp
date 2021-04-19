@@ -4318,7 +4318,8 @@ double PhyloTree::computeDistanceMatrix(Params &params, Alignment *alignment) {
 }
 
 void PhyloTree::printDistanceFile() const {
-    aln->printDist(params->dist_format, params->dist_compression_level, dist_file.c_str(), dist_matrix);
+    aln->printDist(params->dist_format, params->dist_compression_level,
+                   dist_file.c_str(), dist_matrix);
     distanceFileWritten = dist_file.c_str();
 }
 
@@ -4417,14 +4418,14 @@ void PhyloTree::computeBioNJ(Params &params) {
             omp_set_nested(false); // don't allow nested OpenMP parallelism
         #endif
     #endif
-    if (timeToWriteDistanceFile!=0.0 && verbose_mode >= VB_MED) {
+    if (timeToWriteDistanceFile!=0.0) {
         //This information is logged *afterwards* because, if
         //timeToWriteDistanceFile was logged *during* the
         //calculation of the tree it could mess up the formatting
         //of the progress reporting (if any) done by the
         //distance matrix algorithm.
-        cout << "Time taken to write distance file: "
-            << timeToWriteDistanceFile << " seconds " << endl;
+        LOG_LINE(VB_MED, "Time taken to write distance file: "
+                 << timeToWriteDistanceFile << " seconds " );
     }
     if (wasDoneInMemory) {
         cout << "Computing " << treeBuilder->getName() << " tree"

@@ -503,6 +503,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.areas_boundary_file = NULL;
     params.boundary_modifier = 1.0;
     params.dist_file = nullptr;
+    params.generate_dist_file = false;
     params.dist_format = "square";
     params.incremental = false;
     params.dist_compression_level = 1;
@@ -1179,6 +1180,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "Use -dist <distance_file>";
                 }
                 params.dist_file = argv[cnt];
+                continue;
+            }
+            if (arg=="-generate-dist-file") {
+                params.generate_dist_file = true;
                 continue;
             }
             if (arg=="-djc" || arg=="-no-ml-dist") {
