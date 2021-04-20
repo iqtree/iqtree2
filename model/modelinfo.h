@@ -258,8 +258,7 @@ public:
     const std::string& getName() const;
     int                getRateMatrixRank() const;
     const std::string& getRateMatrixExpression(int row, int col) const;
-    
-
+    std::string        getParameterList(ModelParameterType param_type) const;
 };
 
 class ModelListFromYAMLFile {

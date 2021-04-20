@@ -687,6 +687,38 @@ int ModelInfoFromYAMLFile::getRateMatrixRank() const {
     return rate_matrix_rank;
 }
 
+std::string ModelInfoFromYAMLFile::getParameterList(ModelParameterType param_type) const {
+    std::stringstream list;
+    const char* separator = "";
+    for ( auto p : parameters ) {
+        if (p.type == param_type) {
+            if (p.is_subscripted) {
+                for (int sub = p.minimum_subscript;
+                     sub <= p.maximum_subscript; ++sub) {
+                    std::string var_name = p.getSubscriptedVariableName(sub);
+                    auto it = variables.find(var_name);
+                    if (it!=variables.end()) {
+                        const ModelVariable &v = it->second;
+                        list << separator << var_name << "=" << v.getValue();
+                        list << (v.isFixed() ? "(*)" : "");
+                        separator = ", ";
+                    }
+                }
+            } else {
+                const std::string& var_name = p.name;
+                auto it = variables.find(var_name);
+                if (it!=variables.end()) {
+                    const ModelVariable &v = it->second;
+                    list << p.name << "=" << v.getValue();
+                    list << (v.isFixed() ? "(*)" : "");
+                    separator = ", ";
+                }
+            }
+        }
+    }
+    return list.str();
+}
+
 const std::string& ModelInfoFromYAMLFile::getRateMatrixExpression
     ( int row, int col ) const {
     return rate_matrix_expressions[row][col];
@@ -845,6 +877,7 @@ public:
                             state_freq, freq_type);
         }
     }
+    
     void setRateMatrixFromModel() {
         auto rank = model_info.getRateMatrixRank();
         ASSERT( rank == num_states);
@@ -882,6 +915,17 @@ public:
         trace << " }";
         TREE_LOG_LINE(*report_tree, VB_MAX, trace.str());
         setRateMatrix(rates.data());
+    }
+    
+    virtual void writeInfo(ostream &out) {
+        auto rates = model_info.getParameterList(ModelParameterType::RATE);
+        auto freqs = model_info.getParameterList(ModelParameterType::FREQUENCY);
+        if (!rates.empty()) {
+            out << "Rate parameters: " << rates << std::endl;
+        }
+        if (!freqs.empty()) {
+            out << "State frequencies: " << freqs << std::endl;
+        }
     }
 };
 

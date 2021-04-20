@@ -251,8 +251,9 @@ void ModelFileLoader::parseYAMLModelConstraints(const YAML::Node& constraints,
         double setting = a->getExpression()->evaluate();
         ModelVariable& mv = info.assign(v->getName(), setting);
         mv.markAsFixed();
-        std::cout << "Assigned " << v->getName()
-                  << " := " << setting << std::endl;
+        TREE_LOG_LINE(*report_to_tree, VB_MAX,
+                      "Assigned " << v->getName()
+                      << " := " << setting);
     }
 }
 
