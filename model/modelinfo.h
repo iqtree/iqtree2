@@ -9,6 +9,8 @@
 #include <string>
 #include <utils/tools.h> //for ASCType
 
+extern VerboseMode YAMLModelVerbosity;
+
 class ModelMarkov;
 class PhyloTree;
 class ModelFileLoader;
@@ -122,7 +124,6 @@ public:
     std::string getSubscriptedVariableName(int subscript) const;
 };
 
-
 class ModelVariable {
 protected:
     ModelParameterRange range;
@@ -141,29 +142,35 @@ public:
     bool   isFixed() const;
 };
 
+
 class ModelInfoFromYAMLFile: public ModelInfo {
+public:
+    typedef std::vector<StrVector>                       StringMatrix;
+    typedef std::vector<YAMLFileParameter>               Parameters;
+    typedef std::map<std::string, ModelVariable>         Variables;
+    typedef std::map<std::string, ModelInfoFromYAMLFile> MapOfModels;
 private:
-    std::string model_name;       //
-    std::string model_file_path;  //
-    std::string citation;         //Citation string
-    std::string DOI;              //DOI for the publication (optional)
-    std::string data_type_name;   //
-    int         num_states;       //number of states
-    bool        reversible;       //don't trust this; check against rate matrix
-    int         rate_matrix_rank; //
-    std::vector<StrVector> rate_matrix_expressions; //row major (expression strings)
-    std::vector<YAMLFileParameter> parameters;      //parameters
+    std::string   model_name;       //
+    std::string   model_file_path;  //
+    std::string   citation;         //Citation string
+    std::string   DOI;              //DOI for the publication (optional)
+    std::string   data_type_name;   //
+    int           num_states;       //number of states
+    bool          reversible;       //don't trust this; check against rate matrix
+    int           rate_matrix_rank; //
+    StringMatrix  rate_matrix_expressions; //row major (expression strings)
+    Parameters    parameters;      //parameters
     StateFreqType frequency_type;
-    
-    std::map<std::string, ModelVariable> variables;
+    Variables     variables;
+    MapOfModels*  mixed_models;
     
     friend class ModelListFromYAMLFile;
     friend class ModelFileLoader;
 public:
     ModelInfoFromYAMLFile(); //Only ModelListFromYAMLFile uses it.
-    ModelInfoFromYAMLFile(const ModelInfoFromYAMLFile& rhs) = default;
+    ModelInfoFromYAMLFile(const ModelInfoFromYAMLFile& rhs);
     explicit ModelInfoFromYAMLFile(const std::string& file_path);
-    ~ModelInfoFromYAMLFile() = default;
+    ~ModelInfoFromYAMLFile();
     
     virtual std::string getFreeRateParameters(int& num_rate_cats,
                                               bool &fused_mix_rate) const {
@@ -204,11 +211,11 @@ public:
     virtual bool isFrequencyMixture()              const { return false; /*stub*/ }
     virtual bool isGammaModel()                    const { return false; /*stub*/ }
     virtual bool isInvariantModel()                const { return false; /*stub*/ }
-    virtual bool isMixtureModel()                  const { return false; /*stub*/ }
-    virtual bool isModelFinder()                   const { return false; /*stub*/ }
-    virtual bool isModelFinderOnly()               const { return false; /*stub*/ }
+    virtual bool isMixtureModel()                  const;
+    virtual bool isModelFinder()                   const;
+    virtual bool isModelFinderOnly()               const;
     virtual bool isPolymorphismAware()             const { return false; /*stub*/ }
-    virtual bool isReversible()                    const { return reversible; }
+    virtual bool isReversible()                    const;
     virtual bool isWeissAndVonHaeselerTest()       const { return false; /*stub*/ }
 
     ASCType extractASCType
@@ -232,6 +239,13 @@ public:
 public:
     const std::string& getName ()                                       const;
     std::string getLongName    ()                                       const;
+    
+    bool hasDot    (const char* name)                                   const;
+    void breakAtDot(const char* name, std::string& sub_model_name,
+                    const char* &remainder)                             const;
+    MapOfModels::const_iterator findMixedModel(const std::string& name) const;
+    MapOfModels::iterator       findMixedModel(const std::string& name);
+
     bool   hasVariable         (const char* name)                       const;
     bool   hasVariable         (const std::string& name)                const;
     double getVariableValue    (const std::string& name)                const;
@@ -244,15 +258,21 @@ public:
     int                getRateMatrixRank()                              const;
     const std::string& getRateMatrixExpression(int row, int col)        const;
     std::string        getParameterList(ModelParameterType param_type)  const;
-    ModelVariable& assign(const std::string& var_name, double value);
+    void               appendParameterList(ModelParameterType param_type,
+                                           std::stringstream& list) const;
+    ModelVariable&     assign(const std::string& var_name, double value);
     bool               assignLastFrequency(double value);
+    int                getNumStates() const;
 };
+
+typedef std::map<std::string, ModelInfoFromYAMLFile> MapOfModels;
 
 class ModelListFromYAMLFile {
 protected:
-    std::map<std::string, ModelInfoFromYAMLFile> models_found;
+    MapOfModels models_found;
 
 public:
+    friend class ModelFileLoader;
     ModelListFromYAMLFile()  = default;
     ~ModelListFromYAMLFile() = default;
 

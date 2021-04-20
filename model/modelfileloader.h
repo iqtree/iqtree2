@@ -14,7 +14,7 @@
 
 class ModelFileLoader {
 public:
-    const char* file_path;
+    const char*       file_path;
     const std::string model_name;
    
     ModelFileLoader(const char* path);
@@ -42,10 +42,16 @@ public:
                              std::string name,
                              ModelInfoFromYAMLFile& info,
                              PhyloTree* report_to_tree);
-    
+    YAMLFileParameter
+         addDummyFrequencyParameterTo(ModelInfoFromYAMLFile& info,
+                                      PhyloTree* report_to_tree);
     void parseYAMLModelConstraints(const YAML::Node& params,
                                    ModelInfoFromYAMLFile& info,
                                    PhyloTree* report_to_tree);
+    void parseYAMLMixtureModels(const YAML::Node& mixture_models,
+                                ModelInfoFromYAMLFile& info,
+                                ModelListFromYAMLFile& list,
+                                PhyloTree* report_to_tree);
     
     template <class S>
     void dumpRateMatrixTo(const ModelInfoFromYAMLFile& info, S &out) {
@@ -83,6 +89,7 @@ public:
                                     const std::string& name_of_model,
                                     ModelInfoFromYAMLFile& info,
                                     ModelListFromYAMLFile& list,
+                                    ModelInfoFromYAMLFile* parent_model,
                                     PhyloTree* report_to_tree);
 };
 

@@ -13,6 +13,8 @@
 #include <utils/stringfunctions.h> //for convert_int
 #include <utils/tools.h>     //for outError
 
+VerboseMode YAMLModelVerbosity = VB_MIN;
+
 ModelInfoFromName::ModelInfoFromName(std::string name): model_name(name) {}
 ModelInfoFromName::ModelInfoFromName(const char* name): model_name(name) {}
 
@@ -543,11 +545,47 @@ bool ModelVariable::isFixed() const {
 }
 
 ModelInfoFromYAMLFile::ModelInfoFromYAMLFile()
-    : rate_matrix_rank(0), frequency_type(FREQ_UNKNOWN) {
+    : rate_matrix_rank(0), frequency_type(FREQ_UNKNOWN)
+    , mixed_models(nullptr) {
+}
+
+ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(const ModelInfoFromYAMLFile& rhs)
+    : model_name(rhs.model_name), model_file_path(rhs.model_file_path)
+    , citation(rhs.citation), DOI(rhs.DOI), data_type_name(rhs.data_type_name)
+    , num_states(rhs.num_states), reversible(rhs.reversible)
+    , rate_matrix_rank(rhs.rate_matrix_rank)
+    , rate_matrix_expressions(rhs.rate_matrix_expressions)
+    , parameters(rhs.parameters), frequency_type(rhs.frequency_type)
+    , variables(rhs.variables) {
+    if (rhs.mixed_models!=nullptr) {
+        mixed_models = new MapOfModels(*mixed_models);
+    }
 }
 
 ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(const std::string& path)
-    :  model_file_path(path), rate_matrix_rank(0), frequency_type(FREQ_UNKNOWN) {
+    :  model_file_path(path), rate_matrix_rank(0)
+    , frequency_type(FREQ_UNKNOWN), mixed_models(nullptr) {
+}
+
+ModelInfoFromYAMLFile::~ModelInfoFromYAMLFile() {
+    delete mixed_models;
+}
+
+bool ModelInfoFromYAMLFile::isMixtureModel() const {
+    return mixed_models!=nullptr;
+}
+
+bool ModelInfoFromYAMLFile::isModelFinder() const {
+    return false;
+}
+
+bool ModelInfoFromYAMLFile::isModelFinderOnly() const {
+    return false;
+}
+
+
+bool ModelInfoFromYAMLFile::isReversible() const {
+    return reversible;
 }
 
 void ModelInfoFromYAMLFile::updateName(const std::string& name) {
@@ -559,17 +597,80 @@ std::string ModelInfoFromYAMLFile::getLongName() const {
         model_file_path;
 }
 
+bool ModelInfoFromYAMLFile::hasDot(const char* name) const {
+    return strstr(name, ".") != nullptr;
+}
+
+void ModelInfoFromYAMLFile::breakAtDot(const char* name,
+                                       std::string& sub_model_name,
+                                       const char* &remainder) const {
+    auto dotpos = strstr(name, ".");
+    if (dotpos==nullptr) {
+        sub_model_name.clear();
+        remainder = name;
+    }
+    else {
+        sub_model_name = std::string(name, dotpos-name);
+        remainder      = name + 1;
+    }
+}
+
+ModelInfoFromYAMLFile::MapOfModels::const_iterator
+ModelInfoFromYAMLFile::findMixedModel(const std::string& name) const {
+    auto it = mixed_models->find(name);
+    if (it==mixed_models->end()) {
+        std::stringstream complaint;
+        complaint << "Could not evaluate variable " << name
+                  << " for model " << getLongName();
+        throw ModelExpression::ModelException(complaint.str());
+    }
+    return it;
+}
+
+ModelInfoFromYAMLFile::MapOfModels::iterator
+ModelInfoFromYAMLFile::findMixedModel(const std::string& name) {
+    auto it = mixed_models->find(name);
+    if (it==mixed_models->end()) {
+        std::stringstream complaint;
+        complaint << "Could not evaluate variable " << name
+                  << " for model " << getLongName();
+        throw ModelExpression::ModelException(complaint.str());
+    }
+    return it;
+}
+
 bool ModelInfoFromYAMLFile::hasVariable(const char* name) const {
+    if (hasDot(name) && mixed_models!=nullptr) {
+        std::string sub_model_name;
+        const char* var_name = nullptr;
+        breakAtDot(name, sub_model_name, var_name);
+        auto it = findMixedModel(sub_model_name);
+        return it->second.hasVariable(var_name);
+    }
     return variables.find(name) != variables.end();
 }
 
 bool ModelInfoFromYAMLFile::hasVariable(const std::string& name) const {
+    if (hasDot(name.c_str()) && mixed_models!=nullptr) {
+        std::string sub_model_name;
+        const char* var_name = nullptr;
+        breakAtDot(name.c_str(), sub_model_name, var_name);
+        auto it = findMixedModel(sub_model_name);
+        return it->second.hasVariable(var_name);
+    }
     return variables.find(name) != variables.end();
 }
 
 double ModelInfoFromYAMLFile::getVariableValue(const std::string& name) const {
     auto found = variables.find(name);
     if (found == variables.end()) {
+        if (hasDot(name.c_str()) && mixed_models!=nullptr) {
+            std::string sub_model_name;
+            const char* var_name = nullptr;
+            breakAtDot(name.c_str(), sub_model_name, var_name);
+            auto it = findMixedModel(sub_model_name);
+            return it->second.getVariableValue(var_name);
+        }
         return 0.0;
     }
     return found->second.getValue();
@@ -605,7 +706,6 @@ bool ModelInfoFromYAMLFile::isFrequencyParameter(const std::string& param_name) 
     }
     return false;
 }
-
 
 void ModelInfoFromYAMLFile::setBounds(int param_count, double *lower_bound,
                                       double *upper_bound, bool *bound_check) const {
@@ -666,14 +766,21 @@ void ModelInfoFromYAMLFile::logVariablesTo(PhyloTree& report_to_tree) const {
     if (list.find("nan") != std::string::npos) {
         list += " ...?";
     }
-    TREE_LOG_LINE(report_to_tree, VB_MAX, list);
+    TREE_LOG_LINE(report_to_tree, YAMLModelVerbosity, list);
 }
-
 
 ModelVariable& ModelInfoFromYAMLFile::assign(const std::string& var_name,
                                              double value_to_set) {
     auto it = variables.find(var_name);
     if ( it == variables.end()) {
+        if (hasDot(var_name.c_str()) && mixed_models!=nullptr) {
+            std::string sub_model_name;
+            const char* sub_model_var_name = nullptr;
+            breakAtDot(var_name.c_str(), sub_model_name, sub_model_var_name);
+            auto it = findMixedModel(sub_model_name);
+            return it->second.assign(sub_model_var_name, value_to_set);
+        }
+
         std::stringstream complaint;
         complaint << "Could not assign"
                   << " to unrecognized variable " << var_name
@@ -704,12 +811,23 @@ bool ModelInfoFromYAMLFile::assignLastFrequency(double value) {
     return false;
 }
 
+int ModelInfoFromYAMLFile::getNumStates() const {
+    //Todo: decide from the data type (or at least from data_type_name!)
+    return 4; //but, for now, hardcoded!
+}
+
 int ModelInfoFromYAMLFile::getRateMatrixRank() const {
     return rate_matrix_rank;
 }
 
 std::string ModelInfoFromYAMLFile::getParameterList(ModelParameterType param_type) const {
     std::stringstream list;
+    appendParameterList(param_type, list);
+    return list.str();
+}
+
+void ModelInfoFromYAMLFile::appendParameterList(ModelParameterType param_type,
+                                                std::stringstream& list) const {
     const char* separator = "";
     for ( auto p : parameters ) {
         if (p.type == param_type) {
@@ -730,14 +848,27 @@ std::string ModelInfoFromYAMLFile::getParameterList(ModelParameterType param_typ
                 auto it = variables.find(var_name);
                 if (it!=variables.end()) {
                     const ModelVariable &v = it->second;
-                    list << p.name << "=" << v.getValue();
+                    list << separator << p.name << "=" << v.getValue();
                     list << (v.isFixed() ? "(*)" : "");
                     separator = ", ";
                 }
             }
         }
     }
-    return list.str();
+    
+    //
+    //Todo: Decide, is this right?  e.g. Rate parameters
+    //      for a JC+GTR model might read "GTR={r(1)=4, r(2)=3, ...}"
+    //
+    if (this->mixed_models!=nullptr) {
+        for (auto it=mixed_models->begin(); it!=mixed_models->end(); ++it) {
+            list << separator << it->first;
+            list << "={";
+            it->second.appendParameterList(param_type, list);
+            list << "}";
+            separator = ", ";
+        }
+    }
 }
 
 const std::string& ModelInfoFromYAMLFile::getRateMatrixExpression
@@ -763,12 +894,12 @@ void ModelListFromYAMLFile::loadFromFile (const char* file_path,
                 continue;
             }
             std::string yaml_model_name = node["substitutionmodel"].Scalar();
-            TREE_LOG_LINE(*report_to_tree, VB_MAX,
+            TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
                           "Parsing YAML model " << yaml_model_name);
             ModelInfoFromYAMLFile &y = models_found[yaml_model_name]
                                      = ModelInfoFromYAMLFile();
             loader.parseYAMLSubstitutionModel(node, yaml_model_name, y, *this,
-                                              report_to_tree);
+                                              nullptr, report_to_tree);
         }
     }
     catch (YAML::Exception &e) {
@@ -777,7 +908,6 @@ void ModelListFromYAMLFile::loadFromFile (const char* file_path,
     catch (ModelExpression::ModelException& x) {
         outError(x.getMessage());
     }
-
 }
 
 bool ModelListFromYAMLFile::isModelNameRecognized (const char* model_name) {
@@ -965,7 +1095,7 @@ ModelMarkov* ModelListFromYAMLFile::getModelByName(const char* model_name,   Phy
                                                    const char* freq_params,  PhyloTree* report_to_tree) {
     ModelInfoFromYAMLFile& model_info = models_found[model_name];
     if (0<strlen(model_params) || 0<strlen(freq_params)) {
-        TREE_LOG_LINE(*report_to_tree, VB_MAX,
+        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
                       "Model Params " << model_params
                       << " Freq Params " << freq_params);
     }

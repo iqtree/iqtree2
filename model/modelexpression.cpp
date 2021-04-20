@@ -341,7 +341,8 @@ namespace ModelExpression {
             size_t var_start = ix;
             for (++ix; ix<text.size(); ++ix ) {
                 ch = text[ix];
-                if (!isalpha(ch) && (ch<'0' || '9'<ch)) {
+                if (!isalpha(ch) && (ch < '0' || '9' < ch)
+                    && ch != '.' && ch != '_' ) {
                     break;
                 }
             }

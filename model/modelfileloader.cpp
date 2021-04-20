@@ -211,9 +211,41 @@ void ModelFileLoader::parseModelParameter(const YAML::Node& param,
          << ", with range " << p.range.first
          << " to " << p.range.second
          << ", and initial value " << p.value;
-    TREE_LOG_LINE(*report_to_tree, VB_MAX, msg.str());
+    TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity, msg.str());
     info.addParameter(p);
 }
+
+YAMLFileParameter
+    ModelFileLoader::addDummyFrequencyParameterTo(ModelInfoFromYAMLFile& info,
+                                                  PhyloTree* report_to_tree) {
+    YAMLFileParameter   p;
+    p.name              = "freq";
+    p.is_subscripted    = true;
+    p.minimum_subscript = 1;
+    p.maximum_subscript = info.getNumStates();
+    p.type_name         = "frequency";
+    p.type              = FREQUENCY;
+    p.value             = 1 / (double) info.getNumStates();
+    info.addParameter(p);
+    return p;
+}
+
+void ModelFileLoader::parseYAMLMixtureModels(const YAML::Node& mixture_models,
+                                             ModelInfoFromYAMLFile& info,
+                                             ModelListFromYAMLFile& list,
+                                             PhyloTree* report_to_tree) {
+    TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity, "Processing mixtures" );
+    info.mixed_models = new MapOfModels();
+    for (const YAML::Node& model: mixture_models) {
+        std::string child_model_name = stringScalar(model, "substitutionmodel", "");
+        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity, "Processing mixture model" );
+        ModelInfoFromYAMLFile child_info;
+        parseYAMLSubstitutionModel(model, child_model_name, child_info,
+                                   list, &info, report_to_tree);
+        (*info.mixed_models)[info.getName()] = child_info;
+    }
+}
+
 
 void ModelFileLoader::parseYAMLModelConstraints(const YAML::Node& constraints,
                                                 ModelInfoFromYAMLFile& info,
@@ -251,7 +283,7 @@ void ModelFileLoader::parseYAMLModelConstraints(const YAML::Node& constraints,
         double setting = a->getExpression()->evaluate();
         ModelVariable& mv = info.assign(v->getName(), setting);
         mv.markAsFixed();
-        TREE_LOG_LINE(*report_to_tree, VB_MAX,
+        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
                       "Assigned " << v->getName()
                       << " := " << setting);
     }
@@ -292,7 +324,7 @@ void ModelFileLoader::parseRateMatrix(const YAML::Node& rate_matrix,
     }
     std::stringstream matrix_stream;
     dumpRateMatrixTo(info, matrix_stream);
-    TREE_LOG_LINE(*report_to_tree, VB_MAX, matrix_stream.str());
+    TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity, matrix_stream.str());
 }
         
 void ModelFileLoader::parseRateMatrixExpressions(ModelInfoFromYAMLFile& info,
@@ -308,22 +340,26 @@ void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_
                                                  const std::string& name_of_model,
                                                  ModelInfoFromYAMLFile& info,
                                                  ModelListFromYAMLFile& list,
+                                                 ModelInfoFromYAMLFile* parent_model,
                                                  PhyloTree* report_to_tree) {
     
-    std::string parent_model = stringScalar(substitution_model, "frommodel", "");
-    if (parent_model != "") {
-        if (list.hasModel(parent_model)) {
-            info = list.getModel(parent_model);
+    std::string superclass_model_name = stringScalar(substitution_model, "frommodel", "");
+    if (superclass_model_name != "") {
+        if (list.hasModel(superclass_model_name)) {
+            info = list.getModel(superclass_model_name);
+            TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+                          "Model " << name_of_model
+                          << " is based on model " << superclass_model_name);
         } else {
             std::stringstream complaint;
             complaint << "Model " << name_of_model << " specifies frommodel "
-                      << parent_model << ", but that model was not found.";
+                      << superclass_model_name << ", but that model was not found.";
             outError(complaint.str());
         }
     }
     
     info.model_file_path = file_path;
-    info.model_name      = name_of_model;
+    info.model_name      = name_of_model.empty() ? superclass_model_name : name_of_model;
     info.citation        = stringScalar(substitution_model,  "citation",   info.citation.c_str());
     info.DOI             = stringScalar(substitution_model,  "doi",        info.DOI.c_str());
     info.reversible      = booleanScalar(substitution_model, "reversible", info.reversible);
@@ -349,6 +385,17 @@ void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_
                       " in file " + file_path + " not a sequence");
         parseYAMLModelParameters(params, info, report_to_tree);
     }
+
+    //Mixtures have to be handled before constraints, as constraints
+    //that are setting parameters in mixed models... would otherwise
+    //not be resolved correctly.
+    auto mixtures = substitution_model["mixture"];
+    if (mixtures) {
+        complainIfNot(mixtures.IsSequence(),
+                      "Constraints for model " + model_name +
+                      " in file " + file_path + " not a sequence");
+        parseYAMLMixtureModels(mixtures, info, list, report_to_tree);
+    }
     
     auto constraints = substitution_model["constraints"];
     if (constraints) {
@@ -357,9 +404,9 @@ void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_
                       " in file " + file_path + " not a sequence");
         parseYAMLModelConstraints(constraints, info, report_to_tree);
     }
-    
+        
     auto rateMatrix = substitution_model["rateMatrix"];
-    if (info.rate_matrix_expressions.empty()) {
+    if (info.rate_matrix_expressions.empty() && !mixtures) {
         complainIfNot(rateMatrix, "Model " + model_name +
                       " in file " + file_path +
                       " does not specify a rateMatrix" );
@@ -387,10 +434,66 @@ void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_
             info.frequency_type = StateFreqType::FREQ_EQUAL;
         } else if (info.isFrequencyParameter(low_freq)) {
             info.frequency_type = StateFreqType::FREQ_USER_DEFINED;
+        } else if (stateFrequency.IsSequence()) {
+            info.frequency_type = StateFreqType::FREQ_USER_DEFINED;
+            YAMLFileParameter freq_param = addDummyFrequencyParameterTo(info, report_to_tree);
+            int subscript = freq_param.minimum_subscript;
+            for (auto f: stateFrequency) {
+                complainIfNot(f.IsScalar(), "Model " + model_name +
+                              " in file " + file_path +
+                              " has unrecognized frequency ");
+                complainIfNot(subscript<=freq_param.maximum_subscript,
+                              "Too many frequencies specified for "
+                              "Model " + model_name +
+                              " in file " + file_path);
+                ModelExpression::InterpretedExpression x(info, f.Scalar());
+                auto   var_name  = freq_param.getSubscriptedVariableName(subscript);
+                double var_value = x.evaluate();
+                info.assign(var_name, var_value);
+                TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+                              "Assigned frequency: " << var_name
+                              << " := " << var_value  );
+                ++subscript;
+            }
         }
     } else {
         //If we have parameters with a type of frequency, we're all good.
         //If we don't, then what?   We might have inherited from a parent
         //model, too.  That'd be okay.
+    }
+    
+    auto weight = substitution_model["weight"];
+    if (weight) {
+        complainIfNot(parent_model!=nullptr,
+                      "Model " + model_name +
+                      " in file " + file_path +
+                      " is not part of a mixture model" );
+        //Todo: decide what to do with weight ; it may well
+        //      be a reference to variable in the parent
+        //      mixture model.  Does it have to be?
+    }
+
+    auto scale  = substitution_model["scale"];
+    if (scale) {
+        //Todo: can you legitimately set the scale
+        //      for a substitution model that is not part
+        //      of a mixture model.
+        //
+        complainIfNot(parent_model!=nullptr,
+                      "Model " + model_name +
+                      " in file " + file_path +
+                      " is not part of a mixture model" );
+        //Todo: set the scale.
+    }
+    
+    if (parent_model!=nullptr) {
+        if (!scale) {
+            //Default the scale
+        }
+        complainIfNot(weight,
+                      "No weight specified"
+                      " for model " + model_name +
+                      " in mixture " + parent_model->getName() +
+                      " in file " + file_path);
     }
 }
