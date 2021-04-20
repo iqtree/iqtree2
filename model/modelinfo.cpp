@@ -554,6 +554,27 @@ void ModelInfoFromYAMLFile::updateName(const std::string& name) {
     model_name = name;
 }
 
+std::string ModelInfoFromYAMLFile::getLongName() const {
+    return model_name + " from YAML model file " +
+        model_file_path;
+}
+
+bool ModelInfoFromYAMLFile::hasVariable(const char* name) const {
+    return variables.find(name) != variables.end();
+}
+
+bool ModelInfoFromYAMLFile::hasVariable(const std::string& name) const {
+    return variables.find(name) != variables.end();
+}
+
+double ModelInfoFromYAMLFile::getVariableValue(const std::string& name) const {
+    auto found = variables.find(name);
+    if (found == variables.end()) {
+        return 0.0;
+    }
+    return found->second.getValue();
+}
+
 void ModelInfoFromYAMLFile::addParameter(const YAMLFileParameter& p) {
     bool replaced = false;
     for (auto it = parameters.begin(); it != parameters.end(); ++it) {
@@ -631,7 +652,7 @@ void ModelInfoFromYAMLFile::updateVariables(const double* updated_values,
     }
 }
 
-void ModelInfoFromYAMLFile::logVariablesTo(PhyloTree& report_to_tree) {
+void ModelInfoFromYAMLFile::logVariablesTo(PhyloTree& report_to_tree) const {
     if (verbose_mode < VB_MIN) {
         return;
     }

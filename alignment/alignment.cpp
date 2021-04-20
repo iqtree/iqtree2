@@ -4557,13 +4557,14 @@ void Alignment::countConstSite() {
  */
 template<class T>
 void generateSubsets(vector<T> &inset, vector<vector<T> > &subsets) {
-    if (inset.size() > 30)
+    if (inset.size() > 30) {
         outError("Cannot work with more than 31 states");
+    }
     uint64_t total = ((uint64_t)1 << inset.size());
     for (uint64_t binrep = 0; binrep < total; binrep++) {
         vector<T> subset;
         for (uint64_t i = 0; i < inset.size(); i++)
-            if (binrep & (1 << i))
+            if (binrep & ((uint64_t)1 << i))
                 subset.push_back(inset[i]);
         subsets.push_back(subset);
     }

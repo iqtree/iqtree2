@@ -150,7 +150,7 @@ private:
     std::string data_type_name;   //
     int         num_states;       //number of states
     bool        reversible;       //don't trust this; check against rate matrix
-    size_t      rate_matrix_rank; //
+    int         rate_matrix_rank; //
     std::vector<StrVector> rate_matrix_expressions; //row major (expression strings)
     std::vector<YAMLFileParameter> parameters;      //parameters
     StateFreqType frequency_type;
@@ -230,35 +230,22 @@ public:
     void addParameter(const YAMLFileParameter& p);
     
 public:
-    std::string getLongName() const {
-        return model_name + " from YAML model file " +
-        model_file_path;
-    }
-    bool hasVariable(const char* name) const {
-        return variables.find(name) != variables.end();
-    }
-    bool hasVariable(const std::string& name) const {
-        return variables.find(name) != variables.end();
-    }
-    double getVariableValue(const std::string& name) const {
-        auto found = variables.find(name);
-        if (found==variables.end()) {
-            return 0.0;
-        }
-        return found->second.getValue();
-    }
-    bool isFrequencyParameter(const std::string& param_name) const;
-    void setBounds(int bound_count, double *lower_bound,
-                   double *upper_bound, bool *bound_check) const;
-    void updateVariables(const double* variables,
-                         int param_count);
-    void logVariablesTo(PhyloTree& report_to_tree);
-    ModelVariable&     assign(const std::string& var_name, double value);
+    const std::string& getName ()                                       const;
+    std::string getLongName    ()                                       const;
+    bool   hasVariable         (const char* name)                       const;
+    bool   hasVariable         (const std::string& name)                const;
+    double getVariableValue    (const std::string& name)                const;
+    bool   isFrequencyParameter(const std::string& param_name)          const;
+    void   setBounds           (int bound_count, double *lower_bound,
+                                double *upper_bound, bool *bound_check) const;
+    void   updateVariables     (const double* variables,
+                                int param_count);
+    void   logVariablesTo      (PhyloTree& report_to_tree)              const;
+    int                getRateMatrixRank()                              const;
+    const std::string& getRateMatrixExpression(int row, int col)        const;
+    std::string        getParameterList(ModelParameterType param_type)  const;
+    ModelVariable& assign(const std::string& var_name, double value);
     bool               assignLastFrequency(double value);
-    const std::string& getName() const;
-    int                getRateMatrixRank() const;
-    const std::string& getRateMatrixExpression(int row, int col) const;
-    std::string        getParameterList(ModelParameterType param_type) const;
 };
 
 class ModelListFromYAMLFile {
