@@ -66,8 +66,12 @@ void inferInputParameters(Params &params, Checkpoint *checkpoint, IQTree *&tree,
     // reload tree from tree_file
     else
     {
-        bool is_rooted = false;
-        tree->readTree(params.user_file, is_rooted);
+        // do not reload the tree from file in case with heterotachy
+        if (!tree->getRate()->isHeterotachy())
+        {
+            bool is_rooted = false;
+            tree->readTree(params.user_file, is_rooted);
+        }
     }
     
     // update sequence_length
