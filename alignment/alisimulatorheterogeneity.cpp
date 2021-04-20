@@ -52,30 +52,10 @@ void AliSimulatorHeterogeneity::intializeSiteSpecificModelIndex()
         // convert the model_prop into an accumulated model_prop
         convertProMatrixIntoAccumulatedProMatrix(model_prop, 1, num_models);
         
-        // initialize the site-specific model
-        // if the model is fused with site rates -> initialize the site specific rates based on the site specific model
-        if (isFused)
+        for (int i = 0; i < sequence_length; i++)
         {
-            double invariant_prop = tree->getRate()->getPInvar();
-            site_specific_rate_index.resize(sequence_length);
-            
-            for (int i = 0; i < sequence_length; i++)
-            {
-                // randomly select a model from the set of model components, considering its probability array.
-                site_specific_model_index[i] = getRandomItemWithAccumulatedProbabilityMatrix(model_prop, 0, num_models);
-                
-                // initialize site specific rate
-                site_specific_rate_index[i] = random_double() <= invariant_prop ? RATE_ZERO_INDEX : site_specific_model_index[i];
-            }
-        }
-        // otherwise (it's not fused) -> only initialize site specific model
-        else
-        {
-            for (int i = 0; i < sequence_length; i++)
-            {
-                // randomly select a model from the set of model components, considering its probability array.
-                site_specific_model_index[i] = getRandomItemWithAccumulatedProbabilityMatrix(model_prop, 0, num_models);
-            }
+            // randomly select a model from the set of model components, considering its probability array.
+            site_specific_model_index[i] = getRandomItemWithAccumulatedProbabilityMatrix(model_prop, 0, num_models);
         }
         
         // delete the probability array of rate categories
@@ -273,23 +253,33 @@ void AliSimulatorHeterogeneity::getSiteSpecificRatesDiscrete(double *site_specif
 */
 void AliSimulatorHeterogeneity::getSiteSpecificRates(double *site_specific_rates, int sequence_length)
 {
-    // if a mixture model is supplied and it's fused with site rates -> skip initializing site specific rates since they have been already initilized at the same time with site specific model
+    site_specific_rate_index.resize(sequence_length);
+    
+    // if a mixture model is supplied and it's fused with site rates -> set site_specific_rate_index equals to site_specific_model_index
     if (tree->getModel()->isMixture() && tree->getModel()->isFused())
     {
-        // get rate from rate index
+        // get invariant_probability
+        double invariant_prop = tree->getRate()->getPInvar();
+
         for (int i = 0; i < sequence_length; i++)
         {
-            // if site_specific_rate_index == RATE_ZERO_INDEX <=> this site is invariant
-            if (site_specific_rate_index[i] == RATE_ZERO_INDEX)
+            // handle invariant sites
+            if (random_double() <= invariant_prop)
+            {
+                site_specific_rate_index[i] = RATE_ZERO_INDEX;
                 site_specific_rates[i] = 0;
-            else // otherwise, get the rate of that rate_category
+            }
+            // or set the rate index equal to the model index
+            else
+            {
+                site_specific_rate_index[i] = site_specific_model_index[i];
                 site_specific_rates[i] = rate_heterogeneity->getRate(site_specific_rate_index[i]);
+            }
         }
         return;
     }
     
     string rate_name = tree->getRateName();
-    site_specific_rate_index.resize(sequence_length);
     
     // mixture model without site rate heterogeneity
     if (rate_name.empty())

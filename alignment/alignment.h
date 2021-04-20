@@ -978,6 +978,12 @@ public:
      * @return TRUE if alignment needs to be changed, FALSE otherwise
 	 */
 	bool readSiteStateFreq(const char* site_freq_file);
+    
+    /**
+     * special initialization for codon sequences, e.g., setting #states, genetic_code
+     * @param sequence_type user-defined sequence type
+     */
+    void initCodon(char *gene_code_id);
 
 
 protected:
@@ -997,13 +1003,6 @@ protected:
             hash map from pattern to index in the vector of patterns (the alignment)
      */
     PatternIntMap pattern_index;
-
-
-    /**
-	 * special initialization for codon sequences, e.g., setting #states, genetic_code
-	 * @param sequence_type user-defined sequence type
-	 */
-	void initCodon(char *gene_code_id);
 
 };
 

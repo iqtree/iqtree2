@@ -4741,21 +4741,34 @@ void Alignment::getAppearance(StateType state, StateBitset &state_app) {
 
 void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double *ntfreq) {
 	size_t nseqs = getNSeq();
+    
+    // TRUE if alisim is executing and state/codon freqs needs to be randomly generated
+    Params params = Params::getInstance();
+    bool freqs_random_generated = params.alisim_active && !params.aln_file;
 
 	if (freq == FREQ_CODON_1x4) {
 		memset(ntfreq, 0, sizeof(double)*4);
-		for (iterator it = begin(); it != end(); it++) {
-			for (int seq = 0; seq < nseqs; seq++) if ((*it)[seq] != STATE_UNKNOWN) {
-				int codon = codon_table[(int)(*it)[seq]];
-//				int codon = (int)(*it)[seq];
-				int nt1 = codon / 16;
-				int nt2 = (codon % 16) / 4;
-				int nt3 = codon % 4;
-				ntfreq[nt1] += (*it).frequency;
-				ntfreq[nt2] += (*it).frequency;
-				ntfreq[nt3] += (*it).frequency;
-			}
-		}
+        // randomly generate state/condon freqs or estimating it from the input sequence
+        if (freqs_random_generated)
+        {
+            for (int i = 0; i < 4 ; i++)
+                ntfreq[i] =  random_double();
+        }
+        else
+        {
+            for (iterator it = begin(); it != end(); it++) {
+                for (int seq = 0; seq < nseqs; seq++) if ((*it)[seq] != STATE_UNKNOWN) {
+                    int codon = codon_table[(int)(*it)[seq]];
+    //				int codon = (int)(*it)[seq];
+                    int nt1 = codon / 16;
+                    int nt2 = (codon % 16) / 4;
+                    int nt3 = codon % 4;
+                    ntfreq[nt1] += (*it).frequency;
+                    ntfreq[nt2] += (*it).frequency;
+                    ntfreq[nt3] += (*it).frequency;
+                }
+            }
+        }
 		double sum = 0;
 		for (int i = 0; i < 4; i++)
 			sum += ntfreq[i];
@@ -4791,18 +4804,27 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 	} else if (freq == FREQ_CODON_3x4) {
 		// F3x4 frequency model
 		memset(ntfreq, 0, sizeof(double)*12);
-		for (iterator it = begin(); it != end(); it++) {
-			for (int seq = 0; seq < nseqs; seq++) if ((*it)[seq] != STATE_UNKNOWN) {
-				int codon = codon_table[(int)(*it)[seq]];
-//				int codon = (int)(*it)[seq];
-				int nt1 = codon / 16;
-				int nt2 = (codon % 16) / 4;
-				int nt3 = codon % 4;
-				ntfreq[nt1] += (*it).frequency;
-				ntfreq[4+nt2] += (*it).frequency;
-				ntfreq[8+nt3] += (*it).frequency;
-			}
-		}
+        // randomly generate state/condon freqs or estimating it from the input sequence
+        if (freqs_random_generated)
+        {
+            for (int i = 0; i < 12 ; i++)
+                ntfreq[i] =  random_double();
+        }
+        else
+        {
+            for (iterator it = begin(); it != end(); it++) {
+                for (int seq = 0; seq < nseqs; seq++) if ((*it)[seq] != STATE_UNKNOWN) {
+                    int codon = codon_table[(int)(*it)[seq]];
+    //				int codon = (int)(*it)[seq];
+                    int nt1 = codon / 16;
+                    int nt2 = (codon % 16) / 4;
+                    int nt3 = codon % 4;
+                    ntfreq[nt1] += (*it).frequency;
+                    ntfreq[4+nt2] += (*it).frequency;
+                    ntfreq[8+nt3] += (*it).frequency;
+                }
+            }
+        }
 		for (int j = 0; j < 12; j+=4) {
 			double sum = 0;
 			for (int i = 0; i < 4; i++)
@@ -4879,12 +4901,21 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 	} else if (freq == FREQ_EMPIRICAL || freq == FREQ_ESTIMATE) {
 		memset(state_freq, 0, num_states*sizeof(double));
         int i = 0;
-        for (iterator it = begin(); it != end(); ++it, ++i)
-			for (size_t seq = 0; seq < nseqs; seq++) {
-				int state = it->at(seq);
-				if (state >= num_states) continue;
-				state_freq[state] += it->frequency;
-			}
+        // randomly generate state/condon freqs or estimating it from the input sequence
+        if (freqs_random_generated)
+        {
+            for (i = 0; i < num_states; i++)
+                state_freq[i] = random_double();
+        }
+        else
+        {
+            for (iterator it = begin(); it != end(); ++it, ++i)
+                for (size_t seq = 0; seq < nseqs; seq++) {
+                    int state = it->at(seq);
+                    if (state >= num_states) continue;
+                    state_freq[state] += it->frequency;
+                }
+        }
         double sum = 0.0;
         for (i = 0; i < num_states; i++)
         	sum += state_freq[i];

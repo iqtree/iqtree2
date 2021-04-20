@@ -128,6 +128,10 @@ void AliSimulator::initializeAlignment()
     
     // add all leaf nodes' name into the alignment
     addLeafNamesToAlignment(tree->aln, tree->root, tree->root);
+    
+    // init Codon (if neccessary)
+    if (tree->aln->seq_type == SEQ_CODON)
+        tree->aln->initCodon(&params->sequence_type[5]);
 }
 
 /**
@@ -309,7 +313,8 @@ void AliSimulator::getStateFrequenciesFromModel(double *state_freqs){
     }
     // get user-defined base frequencies (if any)
     else if ((tree->getModel()->getFreqType() == FREQ_USER_DEFINED)
-        || (ModelLieMarkov::validModelName(tree->getModel()->getName())))
+        || (ModelLieMarkov::validModelName(tree->getModel()->getName()))
+             || tree->aln->seq_type == SEQ_CODON)
         tree->getModel()->getStateFrequency(state_freqs);
     else // otherwise, randomly generate the base frequencies
     {
