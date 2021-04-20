@@ -97,6 +97,7 @@ void AliSimulator::initializeAlignment()
             model_fullname = model_fullname.substr(0, model_fullname.find(":"));
         }
         string model_familyname_with_params = model_fullname.substr(0, model_fullname.find("+"));
+        model_familyname_with_params = model_familyname_with_params.substr(0, model_fullname.find("*"));
         string model_familyname = model_familyname_with_params.substr(0, model_familyname_with_params.find("{"));
         detectSeqType(model_familyname.c_str(), tree->aln->seq_type);
         string seq_type_name = convertSeqTypeToSeqTypeName(tree->aln->seq_type);

@@ -31,9 +31,14 @@ protected:
     void getSiteSpecificRatesDiscrete(double *site_specific_rates, int sequence_length);
     
     /**
-      estimate the state for the current site of a node in the case WITH Rate Heterogeneity (Gamma/FreeRate Model)
+      estimate the state from accumulated trans_matrices
     */
-    int estimateStateWithRH(ModelSubst *model, int model_component_index, double rate, double *trans_matrix, int max_num_states, double branch_length, int dad_state);
+    virtual int estimateStateFromAccumulatedTransMatrices(double *cache_trans_matrix, double site_specific_rate, int site_index, int num_rate_categories, int max_num_states, int dad_state);
+    
+    /**
+      estimate the state from an original trans_matrix
+    */
+    virtual int estimateStateFromOriginalTransMatrix(ModelSubst *model, int model_component_index, double rate, double *trans_matrix, int max_num_states, double branch_length, int dad_state);
     
     /**
         initialize site specific model index based on its weights in the mixture model

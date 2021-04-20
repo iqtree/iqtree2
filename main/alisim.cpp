@@ -211,7 +211,12 @@ void runAliSimWithoutInference(Params params, IQTree *&tree)
     // case 2: with rate heterogeneity or mixture model
     if ((!rate_name.empty()) || is_mixture_model)
     {
-        if((rate_name.find("+G") != std::string::npos) || (rate_name.find("+R") != std::string::npos) || is_mixture_model)
+        // case 2.3: with only invariant sites (without gamma/freerate model/mixture models)
+        if (!rate_name.compare("+I"))
+        {
+            alisimulator = new AliSimulatorInvar(alisimulator, invariant_proportion);
+        }
+        else
         {
             // case 2.1: with rate heterogeneity (gamma/freerate model with invariant sites)
             if (invariant_proportion > 0)
@@ -225,11 +230,7 @@ void runAliSimWithoutInference(Params params, IQTree *&tree)
                 
             }
         }
-        // case 2.3: with only invariant sites (without gamma/freerate model/mixture models)
-        else if (rate_name.find("+I") != std::string::npos)
-        {
-            alisimulator = new AliSimulatorInvar(alisimulator, invariant_proportion);
-        }
+        
     }
     
     // show parameters

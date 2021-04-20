@@ -160,13 +160,7 @@ void AliSimulatorHeterogeneity::simulateSeqs(int sequence_length, double *site_s
             // estimate the sequence
             for (int i = 0; i < sequence_length; i++)
             {
-                int model_index = site_specific_model_index[i];
-                int category_index = site_specific_rate_index[i];
-                int starting_index = model_index*num_rate_categories*max_num_states*max_num_states + category_index*max_num_states*max_num_states + max_num_states*node->sequence[i];
-                
-                ASSERT(category_index > RATE_ZERO_INDEX);
-                
-                (*it)->node->sequence[i] = getRandomItemWithAccumulatedProbabilityMatrix(cache_trans_matrix, starting_index, max_num_states);
+                (*it)->node->sequence[i] = estimateStateFromAccumulatedTransMatrices(cache_trans_matrix, site_specific_rates[i] , i, num_rate_categories, max_num_states, node->sequence[i]);
             }
             
             // delete cache_trans_matrix
@@ -178,7 +172,7 @@ void AliSimulatorHeterogeneity::simulateSeqs(int sequence_length, double *site_s
             for (int i = 0; i < sequence_length; i++)
             {
                // randomly select the state, considering it's dad states, and the transition_probability_matrix
-                (*it)->node->sequence[i] = estimateStateWithRH(model, site_specific_model_index[i], site_specific_rates[i], trans_matrix, max_num_states, (*it)->length, node->sequence[i]);
+                (*it)->node->sequence[i] = estimateStateFromOriginalTransMatrix(model, site_specific_model_index[i], site_specific_rates[i], trans_matrix, max_num_states, (*it)->length, node->sequence[i]);
             }
         }
         
@@ -187,7 +181,25 @@ void AliSimulatorHeterogeneity::simulateSeqs(int sequence_length, double *site_s
     }
 }
 
-int AliSimulatorHeterogeneity::estimateStateWithRH(ModelSubst *model, int model_component_index, double rate, double *trans_matrix, int max_num_states, double branch_length, int dad_state)
+/**
+  estimate the state from accumulated trans_matrices
+*/
+int AliSimulatorHeterogeneity::estimateStateFromAccumulatedTransMatrices(double *cache_trans_matrix, double site_specific_rate, int site_index, int num_rate_categories, int max_num_states, int dad_state)
+{
+    // randomly select the state, considering it's dad states, and the accumulated trans_matrices
+    int model_index = site_specific_model_index[site_index];
+    int category_index = site_specific_rate_index[site_index];
+    int starting_index = model_index*num_rate_categories*max_num_states*max_num_states + category_index*max_num_states*max_num_states + max_num_states*dad_state;
+    
+    ASSERT(category_index > RATE_ZERO_INDEX);
+    
+    return getRandomItemWithAccumulatedProbabilityMatrix(cache_trans_matrix, starting_index, max_num_states);
+}
+
+/**
+  estimate the state from an original trans_matrix
+*/
+int AliSimulatorHeterogeneity::estimateStateFromOriginalTransMatrix(ModelSubst *model, int model_component_index, double rate, double *trans_matrix, int max_num_states, double branch_length, int dad_state)
 {
     // compute the transition matrix
     model->computeTransMatrix(branch_length*rate, trans_matrix, model_component_index);
