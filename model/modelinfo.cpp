@@ -556,7 +556,7 @@ ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(const ModelInfoFromYAMLFile& rhs)
     , rate_matrix_rank(rhs.rate_matrix_rank)
     , rate_matrix_expressions(rhs.rate_matrix_expressions)
     , parameters(rhs.parameters), frequency_type(rhs.frequency_type)
-    , variables(rhs.variables) {
+    , variables(rhs.variables), mixed_models(nullptr) {
     if (rhs.mixed_models!=nullptr) {
         mixed_models = new MapOfModels(*mixed_models);
     }

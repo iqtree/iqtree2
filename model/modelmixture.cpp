@@ -1068,11 +1068,11 @@ const double MIN_MIXTURE_PROP = 0.001;
 //const double MIN_MIXTURE_RATE = 0.01;
 //const double MAX_MIXTURE_RATE = 100.0;
 
-ModelSubst* createModel(string model_str, ModelsBlock *models_block,
+ModelMarkov* createModel(string model_str, ModelsBlock *models_block,
                         StateFreqType freq_type, string freq_params,
                         PhyloTree* tree, PhyloTree* report_to_tree)
 {
-    ModelSubst *model = NULL;
+    ModelMarkov *model = nullptr;
     string model_params;
     NxsModel *nxsmodel = models_block->findModel(model_str);
     if (nxsmodel) model_params = nxsmodel->description;
@@ -1330,27 +1330,27 @@ void ModelMixture::initMixture(string orig_model_name, string model_name,
 			}
 			this_name = this_name.substr(0, pos_rate);
 		}
-		cur_pos = pos+1;
-		ModelMarkov* model;
+        cur_pos = pos+1;
+        ModelMarkov* model;
         if (freq == FREQ_MIXTURE) {
             for(int f = 0; f != freq_vec.size(); f++) {
-                if (freq_vec[f] == nxs_freq_empirical)
-                    model = (ModelMarkov*)createModel(this_name, models_block,
-                                                      FREQ_EMPIRICAL, "", tree,
-                                                      report_to_tree);
-                else if (freq_vec[f] == nxs_freq_optimize)
-                    model = (ModelMarkov*)createModel(this_name, models_block,
-                                                      FREQ_ESTIMATE, "", tree,
-                                                      report_to_tree);
-                else
-                    model = (ModelMarkov*)createModel(this_name, models_block,
-                                                      FREQ_USER_DEFINED, freq_vec[f]->description,
-                                                      tree, report_to_tree);
+                StateFreqType sf   = FREQ_USER_DEFINED;
+                std::string   desc;
+                if (freq_vec[f] == nxs_freq_empirical) {
+                    sf = FREQ_EMPIRICAL;
+                }
+                else if (freq_vec[f] == nxs_freq_optimize) {
+                    sf = FREQ_ESTIMATE;
+                }
+                else {
+                    desc = freq_vec[f]->description;
+                }
+                model = createModel(this_name, models_block, sf, desc,
+                                    tree, report_to_tree);
                 model->total_num_subst = rate * freq_rates[f];
                 push_back(model);
                 weights.push_back(weight * freq_weights[f]);
                 if (m+f > 0) {
-                    //					name += ',';
                     full_name += ',';
                 }
                 if (freq_vec[f] == nxs_freq_empirical) {
@@ -1367,9 +1367,8 @@ void ModelMixture::initMixture(string orig_model_name, string model_name,
                 full_name += model->name;
             }
         } else {
-			model = (ModelMarkov*)createModel(this_name, models_block,
-                                              freq, freq_params, tree,
-                                              report_to_tree);
+			model = createModel(this_name, models_block, freq,
+                                freq_params, tree, report_to_tree);
 			model->total_num_subst = rate;
 			push_back(model);
 			weights.push_back(weight);
@@ -1682,7 +1681,8 @@ double ModelMixture::optimizeWeights() {
     double *ratio_prop = aligned_alloc<double>(nmix);
 
     // EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
-    for (int step = 0; step < optimize_steps; step++) {
+    bool converged = false;
+    for (int step = 0; step < optimize_steps && !converged; step++) {
 
         // E-step
         if (step > 0) {
@@ -1707,7 +1707,7 @@ double ModelMixture::optimizeWeights() {
                 new_prop[c] += this_lk_cat[c] * lk_ptn;
             }
         }
-        bool converged = true;
+        converged = true;
         for (size_t c = 0; c < nmix; c++) {
             new_prop[c] /= phylo_tree->getAlnNSite();
             // Make sure that probabilities do not get to zero
@@ -1723,7 +1723,6 @@ double ModelMixture::optimizeWeights() {
             }
             prop[c] = new_prop[c];
         }
-        if (converged) break;
     }
     aligned_free(ratio_prop);
     aligned_free(new_prop);
@@ -1759,20 +1758,21 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon, PhyloTree* report_t
     site_rate->setTree(tree);
 
     model_fac->site_rate = site_rate;
-    tree->model_factory = model_fac;
+    tree->model_factory  = model_fac;
     tree->setParams(phylo_tree->params);
-    double prev_score = -DBL_MAX, score;
+    double prev_score    = -DBL_MAX, score;
 
-//    int num_steps = 100000; //SC
     int step;
 
     // EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
-    for (step = 0; step < optimize_steps; step++) {
+    bool converged = false;
+    for (step = 0; step < optimize_steps && !converged; step++) {
         // first compute _pattern_lh_cat
         score = phylo_tree->computePatternLhCat(WSL_MIXTURE);
 
-        if (score < prev_score + gradient_epsilon)
+        if (score < prev_score + gradient_epsilon) {
             break;
+        }
         prev_score = score;
 
         memset(new_prop, 0, nmix*sizeof(double));
@@ -1798,8 +1798,7 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon, PhyloTree* report_t
 
         // M-step, update weights according to (*)
 
-        bool converged = !fix_prop;
-
+        converged = !fix_prop;
         if (phylo_tree->isMixlen() && isFused() && !phylo_tree->getRate()->getFixParams()) {
             // update the weights for rate model
             converged = true;
@@ -1808,13 +1807,15 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon, PhyloTree* report_t
                 new_prop[c] = new_prop[c] / phylo_tree->getAlnNSite();
                 if (new_prop[c] < 1e-10) new_prop[c] = 1e-10;
                 // check for convergence
-                converged = converged && (fabs(phylo_tree->getRate()->getProp(c) - new_prop[c]) < 1e-4);
+                double delta = phylo_tree->getRate()->getProp(c) - new_prop[c];
+                converged    = converged && ( fabs(delta)< 1e-4);
                 phylo_tree->getRate()->setProp(c, new_prop[c]);
                 new_pinvar += new_prop[c];
             }
             new_pinvar = fabs(1.0 - new_pinvar);
             if (new_pinvar > 1e-6) {
-                converged = converged && (fabs(phylo_tree->getRate()->getPInvar()-new_pinvar) < 1e-4);
+                double delta = phylo_tree->getRate()->getPInvar() - new_pinvar;
+                converged    = converged && (fabs(delta) < 1e-4);
                 phylo_tree->getRate()->setPInvar(new_pinvar);
                 phylo_tree->computePtnInvar();
             }
@@ -1824,7 +1825,8 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon, PhyloTree* report_t
                 new_prop[c] = new_prop[c] / phylo_tree->getAlnNSite();
                 if (new_prop[c] < 1e-10) new_prop[c] = 1e-10;
                 // check for convergence
-                converged = converged && (fabs(prop[c]-new_prop[c]) < 1e-4);
+                double delta = prop[c]-new_prop[c];
+                converged    = converged && (fabs(delta) < 1e-4);
                 prop[c] = new_prop[c];
             }
         }
@@ -1844,16 +1846,15 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon, PhyloTree* report_t
             // copy posterior probability into ptn_freq
             tree->computePtnFreq();
             double *this_lk_cat = phylo_tree->tree_buffers._pattern_lh_cat+c;
-            for (ptn = 0; ptn < nptn; ptn++)
+            for (ptn = 0; ptn < nptn; ptn++) {
                 tree->ptn_freq[ptn] = this_lk_cat[ptn*nmix];
+            }
             subst_model->optimizeParameters(gradient_epsilon, report_to_tree);
             // reset subst model
             tree->setModel(NULL);
             subst_model->setTree(phylo_tree);
         }
-
         phylo_tree->clearAllPartialLH();
-        if (converged) break;
     }
 
     // deattach memory
@@ -1870,8 +1871,9 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon, PhyloTree* report_t
 
 bool ModelMixture::isFused() {
 	for (int i = 0; i < size(); i++) {
-        if (prop[i] != 1.0)
+        if (prop[i] != 1.0) {
             return false;
+        }
     }
     return true;
 }
@@ -1899,10 +1901,10 @@ double ModelMixture::optimizeParameters(double gradient_epsilon,
     }
 	// now rescale Q matrices to have proper interpretation of branch lengths
 
-	double sum = 0.0;
+    double sum = 0.0;
     intptr_t ncategory = size();
-	for (intptr_t i = 0 ; i < ncategory; ++i) {
-		sum += prop[i]*at(i)->total_num_subst;
+    for (intptr_t i = 0 ; i < ncategory; ++i) {
+        sum += prop[i]*at(i)->total_num_subst;
     }
     if (fabs(sum-1.0) > 1e-6 && !isFused()) {
         for (intptr_t i = 0; i < ncategory; ++i) {
@@ -1928,16 +1930,17 @@ bool ModelMixture::isUnstableParameters() {
 }
 
 void ModelMixture::decomposeRateMatrix() {
-	for (iterator it = begin(); it != end(); it++)
-		(*it)->decomposeRateMatrix();
+    for (iterator it = begin(); it != end(); it++) {
+        (*it)->decomposeRateMatrix();
+    }
 }
 
 void ModelMixture::setVariables(double *variables) {
-	int dim = 0;
-	for (iterator it = begin(); it != end(); it++) {
-		(*it)->setVariables(&variables[dim]);
-		dim += (*it)->getNDim();
-	}
+    int dim = 0;
+    for (iterator it = begin(); it != end(); it++) {
+        (*it)->setVariables(&variables[dim]);
+        dim += (*it)->getNDim();
+    }
 //	if (fix_prop) return;
 //	int i, ncategory = size();
 
@@ -1960,12 +1963,12 @@ void ModelMixture::setVariables(double *variables) {
 }
 
 bool ModelMixture::getVariables(double *variables) {
-	int dim = 0;
+    int dim = 0;
     bool changed = false;
-	for (iterator it = begin(); it != end(); it++) {
-		changed |= (*it)->getVariables(&variables[dim]);
-		dim += (*it)->getNDim();
-	}
+    for (iterator it = begin(); it != end(); it++) {
+        changed |= (*it)->getVariables(&variables[dim]);
+        dim += (*it)->getNDim();
+    }
 //	if (fix_prop) return;
 //	int i, ncategory = size();
 
@@ -2003,10 +2006,12 @@ bool ModelMixture::getVariables(double *variables) {
     return changed;
 }
 
-void ModelMixture::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
+void ModelMixture::setBounds(double* lower_bound, double* upper_bound,
+                             bool*   bound_check) {
 	int dim = 0;
 	for (iterator it = begin(); it != end(); it++) {
-		(*it)->setBounds(&lower_bound[dim], &upper_bound[dim], &bound_check[dim]);
+		(*it)->setBounds(&lower_bound[dim], &upper_bound[dim],
+                         &bound_check[dim]);
 		dim += (*it)->getNDim();
 	}
 //	if (fix_prop) return;
@@ -2019,17 +2024,17 @@ void ModelMixture::setBounds(double *lower_bound, double *upper_bound, bool *bou
 }
 
 void ModelMixture::writeInfo(ostream &out) {
-	int i;
-	for (i = 0; i < size(); i++) {
-		at(i)->writeInfo(out);
-	}
-//	if (fix_prop) return;
+    int i;
+    for (i = 0; i < size(); i++) {
+        at(i)->writeInfo(out);
+    }
+    //	if (fix_prop) return;
     if (isFused()) return;
-
-	cout << "Mixture weights:";
-	for (i = 0; i < size(); i++)
-		cout << " " << prop[i];
-	cout << endl;
+    
+    cout << "Mixture weights:";
+    for (i = 0; i < size(); i++)
+        cout << " " << prop[i];
+    cout << endl;
 }
 
 void ModelMixture::writeParameters(ostream &out) {
@@ -2055,9 +2060,11 @@ string ModelMixture::getNameParams() {
         return full_name;
     string retname = "MIX";
     retname += OPEN_BRACKET;
+    const char* separator = "";
     for (iterator it = begin(); it != end(); it++) {
-        if (it != begin()) retname += ",";
-        retname += (*it)->getNameParams();
+        retname  += separator;
+        separator = ",";
+        retname  += (*it)->getNameParams();
     }
     retname += CLOSE_BRACKET;
     return retname;

@@ -504,18 +504,16 @@ void ModelFactory::initializeModel(const std::string& model_name,
             if (i == 0) {
                 auto f_type = (freq_type != FREQ_UNKNOWN)
                             ? freq_type : FREQ_EMPIRICAL;
-                modeli = (ModelMarkov*)createModel(model_str, models_block,
+                modeli = createModel(model_str, models_block,
                                                    f_type, "", tree,
                                                    report_to_tree);
-                modeli->getStateFrequency(state_freq);
-                modeli->getRateMatrix(rates);
             } else {
-                modeli = (ModelMarkov*)createModel(model_str, models_block,
+                modeli = createModel(model_str, models_block,
                                                    FREQ_EQUAL, "", tree,
                                                    report_to_tree);
-                modeli->setStateFrequency(state_freq);
-                modeli->setRateMatrix(rates);
             }
+            modeli->getStateFrequency(state_freq);
+            modeli->getRateMatrix(rates);
             if (tree->aln->site_state_freq[i]) {
                 modeli->setStateFrequency (tree->aln->site_state_freq[i]);
             }
@@ -967,10 +965,11 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
     if (!site_rate->isGammai() || site_rate->isFixPInvar()
         || site_rate->isFixGammaShape()
         || site_rate->getTree()->aln->frac_const_sites == 0.0
-        || model->isMixture())
+        || model->isMixture()) {
         return optimizeParameters(fixed_len, write_info,
                                   logl_epsilon, gradient_epsilon,
                                   report_to_tree);
+    }
 
     double begin_time = getRealTime();
 
@@ -1035,8 +1034,9 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
                         initPInv = 0.0;
                 } else {
                     initPInv = estResults[0] + testInterval;
-                    if (initPInv > frac_const)
+                    if (initPInv > frac_const) {
                         initPInv = frac_const;
+                    }
                 }
                 //cout << "New initPInv = " << initPInv << endl;
             }  else {
@@ -1170,8 +1170,8 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
     ASSERT(model);
     ASSERT(site_rate);
 
-    double begin_time = getRealTime();
-    PhyloTree *tree = site_rate->getTree();
+    double     begin_time = getRealTime();
+    PhyloTree* tree       = site_rate->getTree();
     ASSERT(tree);
     if (report_to_tree==nullptr) {
         report_to_tree = tree;
@@ -1185,7 +1185,7 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
     // modified by Thomas Wong on Sept 11, 15
     // no optimization of branch length in the first round
     double optimizeStartTime = getRealTime();
-    double cur_lh = tree->computeLikelihood();
+    double cur_lh            = tree->computeLikelihood();
     tree->setCurScore(cur_lh);
     report_to_tree->trackProgress(1.0);
 
@@ -1216,7 +1216,7 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
 
     // For UpperBounds -----------
     //cout<<"MLCheck = "<<tree->mlCheck <<endl;
-    if(tree->mlCheck == 0){
+    if(tree->mlCheck == 0) {
         tree->mlInitial = cur_lh;
     }
     // ---------------------------
@@ -1420,11 +1420,11 @@ void ModelFactory::computeTransDerv(double time, double *trans_matrix,
         model->computeTransDerv(time, trans_matrix, trans_derv1, trans_derv2, mixture);
         return;
     }
-    int mat_size = model->num_states * model->num_states;
-    iterator ass_it = find(static_cast<int>(round(time * 1e6)));
+    int      mat_size = model->num_states * model->num_states;
+    iterator ass_it   = find(static_cast<int>(round(time * 1e6)));
     if (ass_it == end()) {
         // allocate memory for 3 matricies
-        double *trans_entry = new double[mat_size * 3];
+        double* trans_entry   = new double[mat_size * 3];
         trans_entry[mat_size] = trans_entry[mat_size+1] = 0.0;
         model->computeTransDerv(time, trans_entry, trans_entry+mat_size,
                                 trans_entry+(mat_size*2), mixture);
@@ -1435,14 +1435,15 @@ void ModelFactory::computeTransDerv(double time, double *trans_matrix,
                                 trans_entry+(mat_size*2), mixture);
     }
     memcpy(trans_matrix, ass_it->second, mat_size * sizeof(double));
-    memcpy(trans_derv1, ass_it->second + mat_size, mat_size * sizeof(double));
-    memcpy(trans_derv2, ass_it->second + (mat_size*2), mat_size * sizeof(double));
+    memcpy(trans_derv1,  ass_it->second + mat_size, mat_size * sizeof(double));
+    memcpy(trans_derv2,  ass_it->second + (mat_size*2), mat_size * sizeof(double));
 }
 
 ModelFactory::~ModelFactory()
 {
-    for (iterator it = begin(); it != end(); it++)
+    for (iterator it = begin(); it != end(); it++) {
         delete it->second;
+    }
     clear();
 }
 
@@ -1455,7 +1456,9 @@ int ModelFactory::getNDim()
 double ModelFactory::targetFunk(double x[]) {
     model->getVariables(x);
     // need to compute rates again if p_inv or Gamma shape changes!
-    if (model->state_freq[model->num_states-1] < MIN_RATE) return 1.0e+12;
+    if (model->state_freq[model->num_states-1] < MIN_RATE) {
+        return 1.0e+12;
+    }
     model->decomposeRateMatrix();
     site_rate->phylo_tree->clearAllPartialLH();
     return site_rate->targetFunk(x + model->getNDim());

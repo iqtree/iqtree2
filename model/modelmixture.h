@@ -25,7 +25,7 @@ extern void loadBuiltInMixInModels(stringstream& here);
  * @param count_rates TRUE to assign rates counted from alignment, FALSE to not initialize rates
  * @return substitution model created
  */
-ModelSubst *createModel(string model_str, ModelsBlock *models_block,
+ModelMarkov *createModel(string model_str, ModelsBlock *models_block,
                         StateFreqType freq_type, string freq_params,
                         PhyloTree *tree, PhyloTree* report_to_tree);
 
