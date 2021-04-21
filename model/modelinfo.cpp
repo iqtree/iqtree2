@@ -841,6 +841,10 @@ void ModelInfoFromYAMLFile::appendParameterList(ModelParameterType param_type,
                         list << separator << var_name << "=" << v.getValue();
                         list << (v.isFixed() ? "(*)" : "");
                         separator = ", ";
+                    } else {
+                        std::stringstream complaint;
+                        complaint << "Variable " << var_name << " not found ";
+                        outError(complaint.str());
                     }
                 }
             } else {
@@ -851,6 +855,10 @@ void ModelInfoFromYAMLFile::appendParameterList(ModelParameterType param_type,
                     list << separator << p.name << "=" << v.getValue();
                     list << (v.isFixed() ? "(*)" : "");
                     separator = ", ";
+                } else {
+                    std::stringstream complaint;
+                    complaint << "Variable " << var_name << " not found ";
+                    outError(complaint.str());
                 }
             }
         }
@@ -1070,10 +1078,10 @@ public:
     
     virtual void writeInfo(ostream &out) {
         auto rates = model_info.getParameterList(ModelParameterType::RATE);
-        auto freqs = model_info.getParameterList(ModelParameterType::FREQUENCY);
         if (!rates.empty()) {
             out << "Rate parameters: " << rates << std::endl;
         }
+        auto freqs = model_info.getParameterList(ModelParameterType::FREQUENCY);
         if (!freqs.empty()) {
             out << "State frequencies: " << freqs << std::endl;
         }
