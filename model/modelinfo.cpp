@@ -1,6 +1,6 @@
 //
-//  modelinfo.cpp
-//  Created by James Barbetti on 28-Jan-21
+// modelinfo.cpp
+// Created by James Barbetti on 28-Jan-2021
 //
 
 #include "modelinfo.h"

@@ -1,6 +1,6 @@
 //
-//  modelinfo.h
-//  Created by James Barbetti on 28-Jan-2021
+//modelinfo.h
+//Created by James Barbetti on 28-Jan-2021
 //
 
 #ifndef modelinfo_h
@@ -286,4 +286,4 @@ public:
     const ModelInfoFromYAMLFile& getModel(const std::string& model_name) const;
 };
 
-#endif /* modelinfo_hpp */
+#endif /* modelinfo_h */

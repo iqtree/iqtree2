@@ -289,9 +289,6 @@ void ModelFileLoader::parseYAMLModelConstraints(const YAML::Node& constraints,
     }
 }
 
-
-
-
 void ModelFileLoader::parseRateMatrix(const YAML::Node& rate_matrix,
                                       ModelInfoFromYAMLFile& info,
                                       PhyloTree* report_to_tree) {
@@ -353,16 +350,7 @@ void ModelFileLoader::parseRateMatrix(const YAML::Node& rate_matrix,
     dumpRateMatrixTo(info, matrix_stream);
     TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity, matrix_stream.str());
 }
-        
-void ModelFileLoader::parseRateMatrixExpressions(ModelInfoFromYAMLFile& info,
-                                                 PhyloTree* report_to_tree) {
-    //Todo:
-    //This is to execute after the rate matrix expressions are known.
-    //It is to convert rate matrix expression strings into
-    //a vector of expression trees, to check they are valid,
-    //and then discard the expression trees.
-}
-    
+
 void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_model,
                                                  const std::string& name_of_model,
                                                  ModelInfoFromYAMLFile& info,
