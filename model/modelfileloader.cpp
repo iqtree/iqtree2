@@ -296,6 +296,7 @@ void ModelFileLoader::parseRateMatrix(const YAML::Node& rate_matrix,
                                       ModelInfoFromYAMLFile& info,
                                       PhyloTree* report_to_tree) {
     //Assumes rate_matrix is a sequence (of rows)
+    size_t column_count = 0;
     for (auto row : rate_matrix) {
         ++info.rate_matrix_rank;
         std::stringstream s;
@@ -309,7 +310,6 @@ void ModelFileLoader::parseRateMatrix(const YAML::Node& rate_matrix,
         for (auto col : row) {
             if (col.IsNull()) {
                 expr_row.emplace_back("");
-                //Gets whatever hasn't been assigned in this row
             }
             else if (!col.IsScalar()) {
                 std::stringstream s2;
@@ -321,7 +321,34 @@ void ModelFileLoader::parseRateMatrix(const YAML::Node& rate_matrix,
             }
         }
         info.rate_matrix_expressions.emplace_back(expr_row);
+        column_count = ( expr_row.size() < column_count )
+                     ? column_count : expr_row.size();
     }
+    size_t row_count = info.rate_matrix_expressions.size();
+    if ( row_count != column_count) {
+        std::stringstream s2;
+        s2 << "Rate matrix "
+           << " for model " << info.model_name
+           << " in " << info.model_file_path
+           << " was not square: it had " << row_count << " rows"
+           << " and " << column_count << " columns.";
+        outError(s2.str());
+    }
+    //If the last cell is left blank, a trailing comma
+    //e.g. [x, y, z, ] ... will not be counted as a blank
+    //string (it's a feature of the YAML format).
+    //Make sure that it is counted, so that
+    //rate_matrix_expressions will be square (not ragged).
+    for (size_t r=0; r<row_count; r++) {
+        StrVector& row = info.rate_matrix_expressions[r];
+        if (row.size() < column_count ) {
+            row.resize(column_count, "");
+        }
+    }
+    //
+    //Todo: Are off-diagonal entries in the matrix allowed
+    //to be blank?
+    //
     std::stringstream matrix_stream;
     dumpRateMatrixTo(info, matrix_stream);
     TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity, matrix_stream.str());
