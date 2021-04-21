@@ -1924,54 +1924,66 @@ bool Alignment::buildPattern(StrVector &sequences,
             throw "Unknown sequence type.";
     }
     bool nt2aa = false;
-    if (sequence_type && strcmp(sequence_type,"") != 0) {
-        SeqType user_seq_type;
-        if (strcmp(sequence_type, "BIN") == 0) {
-            num_states = 2;
-            user_seq_type = SEQ_BINARY;
-        } else if (strcmp(sequence_type, "NT") == 0 ||
-                   strcmp(sequence_type, "DNA") == 0) {
-            num_states = 4;
-            user_seq_type = SEQ_DNA;
-        } else if (strcmp(sequence_type, "AA") == 0 ||
-                   strcmp(sequence_type, "PROT") == 0) {
-            num_states = 20;
-            user_seq_type = SEQ_PROTEIN;
-        } else if (strncmp(sequence_type, "NT2AA", 5) == 0) {
-            if (seq_type != SEQ_DNA)
-                outWarning("Sequence type detected as non DNA!");
-            initCodon(&sequence_type[5]);
-            seq_type = user_seq_type = SEQ_PROTEIN;
-            num_states = 20;
-            nt2aa = true;
-            cout << "Translating to amino-acid sequences"
-                 << " with genetic code " << &sequence_type[5]
-                 << " ..." << endl;
-        } else if (strcmp(sequence_type, "NUM") == 0 ||
-                   strcmp(sequence_type, "MORPH") == 0) {
-            num_states = getMorphStates(sequences);
-            if (num_states < 2 || num_states > 32) {
-                throw "Invalid number of states";
-            }
-            user_seq_type = SEQ_MORPH;
-        } else if (strcmp(sequence_type, "TINA") == 0 ||
-                   strcmp(sequence_type, "MULTI") == 0) {
-            cout << "Multi-state data with " << num_states << " alphabets" << endl;
-            user_seq_type = SEQ_MULTISTATE;
-        } else if (strncmp(sequence_type, "CODON", 5) == 0) {
-            if (seq_type != SEQ_DNA)
-                outWarning("You want to use codon models"
-                           " but the sequences were not detected as DNA");
-            seq_type = user_seq_type = SEQ_CODON;
-        	initCodon(&sequence_type[5]);
-            cout << "Converting to codon sequences"
-                 << " with genetic code " << &sequence_type[5]
-                 << " ..." << endl;
-        } else
-            throw "Invalid sequence type.";
-        if (user_seq_type != seq_type && seq_type != SEQ_UNKNOWN)
-            outWarning("Your specified sequence type"
-                       " is different from the detected one");
+    if (sequence_type == nullptr) {
+        sequence_type = "";
+    }
+    if (strcmp(sequence_type,"") != 0) {
+        SeqType user_seq_type = getSeqType(sequence_type);
+        num_states = getNumStatesForSeqType(user_seq_type, num_states);
+        switch (user_seq_type) {
+            case SEQ_BINARY: /* fall-through */
+            case SEQ_DNA:
+                break;
+                
+            case SEQ_CODON:
+                ASSERT( strncmp(sequence_type, "CODON", 5)==0 );
+                if (seq_type != SEQ_DNA) {
+                    outWarning("You want to use codon models"
+                               " but the sequences were not detected as DNA");
+                }
+                cout << "Converting to codon sequences"
+                     << " with genetic code " << &sequence_type[5]
+                     << " ..." << endl;
+                initCodon(&sequence_type[5]);
+                break;
+                
+            case SEQ_MORPH:
+                num_states = getMorphStates(sequences);
+                if (num_states < 2 || num_states > 32) {
+                    throw "Invalid number of states";
+                }
+                break;
+                
+            case SEQ_MULTISTATE:
+                cout << "Multi-state data with "
+                     << num_states << " alphabets" << endl;
+                break;
+                
+            case SEQ_PROTEIN:
+                if (strncmp(sequence_type, "NT2AA", 5) == 0) {
+                    if (seq_type != SEQ_DNA) {
+                        outWarning("Sequence type detected as non DNA!");
+                    }
+                    initCodon(&sequence_type[5]);
+                    nt2aa    = true;
+                    cout << "Translating to amino-acid sequences"
+                         << " with genetic code " << &sequence_type[5]
+                         << " ..." << endl;
+                }
+                break;
+                
+            case SEQ_UNKNOWN:
+                throw "Invalid sequence type.";
+                break;
+                
+            default:
+                std::stringstream warning;
+                warning << "Your specified sequence type"
+                        << " (" << getSeqTypeName(user_seq_type) << ")"
+                        << " is different from the detected one"
+                        << " (" << getSeqTypeName(seq_type) << ")";
+                outWarning(warning.str());
+        }
         seq_type = user_seq_type;
     }
     return constructPatterns(nseq, nsite, sequences, nullptr);

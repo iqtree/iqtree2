@@ -13,15 +13,30 @@
 std::string getSeqTypeName(SeqType seq_type) {
     switch (seq_type) {
         case SEQ_BINARY:     return "binary";
-        case SEQ_DNA:        return "DNA";
-        case SEQ_PROTEIN:    return "protein";
         case SEQ_CODON:      return "codon";
+        case SEQ_DNA:        return "DNA";
         case SEQ_MORPH:      return "morphological";
-        case SEQ_POMO:       return "PoMo";
-        case SEQ_UNKNOWN:    return "unknown";
         case SEQ_MULTISTATE: return "MultiState";
+        case SEQ_POMO:       return "PoMo";
+        case SEQ_PROTEIN:    return "protein";
+        case SEQ_UNKNOWN:    return "unknown";
         default:             return "unknown";
     }
+}
+
+std::string getSeqTypeShortName(SeqType seq_type, bool extended) {
+    switch (seq_type) {
+        case SEQ_BINARY:     return "BIN";   break;
+        case SEQ_CODON:      return "CODON"; break;
+        case SEQ_DNA:        return "DNA";   break;
+        case SEQ_MORPH:      return "MORPH"; break;
+        case SEQ_MULTISTATE: return extended ? "MULTI" : ""; break;
+        case SEQ_POMO:       return extended ? "POMO" : "";  break;
+        case SEQ_PROTEIN:    return "AA";    break;
+        case SEQ_UNKNOWN:    return extended ? "???" : "";   break;
+        default:             break;
+    }
+    return "";
 }
 
 //This function came from alignment/alignment.cpp
@@ -30,15 +45,19 @@ SeqType getSeqType(const char *sequence_type) {
     SeqType user_seq_type = SEQ_UNKNOWN;
     if (strcmp(sequence_type, "BIN") == 0) {
         user_seq_type = SEQ_BINARY;
-    } else if (strcmp(sequence_type, "NT") == 0 || strcmp(sequence_type, "DNA") == 0) {
+    } else if (strcmp(sequence_type, "NT") == 0 ||
+               strcmp(sequence_type, "DNA") == 0) {
         user_seq_type = SEQ_DNA;
-    } else if (strcmp(sequence_type, "AA") == 0 || strcmp(sequence_type, "PROT") == 0) {
+    } else if (strcmp(sequence_type, "AA") == 0 ||
+               strcmp(sequence_type, "PROT") == 0) {
         user_seq_type = SEQ_PROTEIN;
     } else if (strncmp(sequence_type, "NT2AA", 5) == 0) {
         user_seq_type = SEQ_PROTEIN;
-    } else if (strcmp(sequence_type, "NUM") == 0 || strcmp(sequence_type, "MORPH") == 0) {
+    } else if (strcmp(sequence_type, "NUM") == 0 ||
+               strcmp(sequence_type, "MORPH") == 0) {
         user_seq_type = SEQ_MORPH;
-    } else if (strcmp(sequence_type, "TINA") == 0 || strcmp(sequence_type, "MULTI") == 0) {
+    } else if (strcmp(sequence_type, "TINA") == 0 ||
+               strcmp(sequence_type, "MULTI") == 0) {
         user_seq_type = SEQ_MULTISTATE;
     } else if (strncmp(sequence_type, "CODON", 5) == 0) {
         user_seq_type = SEQ_CODON;
@@ -46,6 +65,26 @@ SeqType getSeqType(const char *sequence_type) {
     return user_seq_type;
 }
 
+int getNumStatesForSeqType(SeqType type, int num_states) {
+    switch (type) {
+        case SEQ_BINARY:     return 2;
+        case SEQ_CODON:      return num_states;
+        case SEQ_DNA:        return 4;
+        case SEQ_MORPH:      return num_states;
+        case SEQ_MULTISTATE: return num_states;
+        case SEQ_PROTEIN:    return 20;
+        case SEQ_UNKNOWN:    return num_states;
+        default:
+            {
+                std::stringstream complaint;
+                complaint << "Logic error: getNumStatesForSeqType"
+                          << " did not recognize sequence type "
+                          << (int)type;
+                outWarning(complaint.str());
+                return num_states;
+            }
+    }
+}
 
 
 /*

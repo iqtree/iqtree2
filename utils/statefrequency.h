@@ -18,9 +18,20 @@ enum SeqType {
 //This function came from main/phylotesting.cpp
 std::string getSeqTypeName(SeqType seq_type);
 
+//This function reverse-engineered from code doing the same
+//thing (or nearly the same thing), in:
+// (a) reportPhyloAnalysis(), in phyloanalysis.cpp
+// (b) detectSeqTypeName(),   in phylotesting.cpp
+// (c) StateSpace::initStateSpace
+std::string getSeqTypeShortName(SeqType seq_type, bool extended);
+
 //This function came from alignment/alignment.cpp
 //(where it was Alignment::getSeqType)
 SeqType getSeqType(const char *sequence_type);
+
+//This function came from alignment/alignment.cpp
+//(where it was done in Alignment::buildPattern)
+int getNumStatesForSeqType(SeqType type, int num_states);
 
 /**
         State frequency type

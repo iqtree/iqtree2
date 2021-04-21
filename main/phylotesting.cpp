@@ -177,12 +177,12 @@ extern double RunKMeans1D(int n, int k, double *points, int *weights, double *ce
 
 string getUsualModelSubst(SeqType seq_type) {
     switch (seq_type) {
-        case SEQ_DNA: return dna_model_names[0];
+        case SEQ_DNA:     return dna_model_names[0];
         case SEQ_PROTEIN: return aa_model_names[0];
-        case SEQ_CODON: return string(codon_model_names[0]) + codon_freq_names[0];
-        case SEQ_BINARY: return bin_model_names[0];
-        case SEQ_MORPH: return morph_model_names[0];
-        case SEQ_POMO: return string(dna_model_names[0]) + "+P";
+        case SEQ_CODON:   return string(codon_model_names[0]) + codon_freq_names[0];
+        case SEQ_BINARY:  return bin_model_names[0];
+        case SEQ_MORPH:   return morph_model_names[0];
+        case SEQ_POMO:    return string(dna_model_names[0]) + "+P";
         default: ASSERT(0 && "Unprocessed seq_type"); return "";
     }
 }
@@ -415,15 +415,7 @@ int detectSeqType(const char *model_name, SeqType &seq_type) {
 string detectSeqTypeName(string model_name) {
     SeqType seq_type;
     detectSeqType(model_name.c_str(), seq_type);
-    switch (seq_type) {
-    case SEQ_BINARY: return "BIN"; break;
-    case SEQ_MORPH: return "MORPH"; break;
-    case SEQ_DNA: return "DNA"; break;
-    case SEQ_PROTEIN: return "AA"; break;
-    case SEQ_CODON: return "CODON"; break;
-    default: break;
-    }
-    return "";
+    return getSeqTypeShortName(seq_type, false);
 }
 
 void computeInformationScores(double tree_lh, int df, size_t sample_size, double &AIC, double &AICc, double &BIC) {

@@ -496,15 +496,15 @@ void StateSpace::parseStateSpace(YAML::Node datatype) {
 void StateSpace::initStateSpace(SeqType seqtype) {
     string name;
     switch (seqtype) {
-        case SEQ_DNA:        name = "DNA";   break;
-        case SEQ_CODON:      name = "CODON"; break;
-        case SEQ_MORPH:      name = "MORPH"; break;
-        case SEQ_BINARY:     name = "BIN";   break;
-        case SEQ_PROTEIN:    name = "AA";    break;
-        case SEQ_MULTISTATE: name = "MULTI"; break;
-        case SEQ_POMO:       outError("Unhandled POMO state space");
-                             break;
-        case SEQ_UNKNOWN:    ASSERT(0);
+        case SEQ_POMO:
+            outError("Unhandled POMO state space");
+            break;
+        case SEQ_UNKNOWN:
+            ASSERT(0);
+            break;
+        default:
+            name = getSeqTypeShortName(seqtype, true);
+            break;
     }
     try {
         YAML::Node spaceDef = YAML::Load(builtin_state_spaces);

@@ -1087,16 +1087,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree,
                 out << right << part+1 << "  ";
                 out.width(max(namelen,4));
                 out << left << (*it)->aln->name << "  ";
-                switch ((*it)->aln->seq_type) {
-                case SEQ_BINARY: out << "BIN"; break;
-                case SEQ_CODON: out << "CODON"; break;
-                case SEQ_DNA: out << "DNA"; break;
-                case SEQ_MORPH: out << "MORPH"; break;
-                case SEQ_MULTISTATE: out << "MULTI"; break;
-                case SEQ_PROTEIN: out << "AA"; break;
-                case SEQ_POMO: out << "POMO"; break;
-                case SEQ_UNKNOWN: out << "???"; break;
-                }
+                out << getSeqTypeShortName((*it)->aln->seq_type, true);
                 out << "\t" << (*it)->aln->getNSeq() << "\t" << (*it)->aln->getNSite()
                     << "\t" << (*it)->aln->getNPattern() << "\t" << (*it)->aln->num_informative_sites
                     << "\t" << (*it)->getAlnNSite() - (*it)->aln->num_variant_sites
