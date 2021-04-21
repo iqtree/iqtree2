@@ -2891,7 +2891,7 @@ double PhyloTree::optimizeRootPosition(int root_dist, bool write_info, double lo
     // optimize branch lengths for all trees
     for (auto t = trees.begin(); t != trees.end(); t++) {
         readTreeString(*t);
-        optimizeAllBranches(100, logl_epsilon);
+        setCurScore(optimizeAllBranches(100, logl_epsilon));
         if (verbose_mode >= VB_MED) {
             cout << "Root pos " << (t - trees.begin())+1 << ": " << curScore << endl;
             if (verbose_mode >= VB_DEBUG)
