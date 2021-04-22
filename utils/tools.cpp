@@ -4558,6 +4558,15 @@ void parseArg(int argc, char *argv[], Params &params) {
         params.out_prefix = params.user_file;
     }
     
+    // set the number of sites per state at 3 (for CODON)
+    if (params.sequence_type)
+    {
+        std::string sequence_type(params.sequence_type);
+        string KEYWORD = "CODON";
+        if (sequence_type.length() >= KEYWORD.length() && sequence_type.substr(0, KEYWORD.length()) == KEYWORD)
+            params.alisim_sites_per_state = 3;
+    }
+    
     //    if (MPIHelper::getInstance().isWorker()) {
     // BUG: setting out_prefix this way cause access to stack, which is cleaned up after returning from this function
 //        string newPrefix = string(params.out_prefix) + "."  + NumberToString(MPIHelper::getInstance().getProcessID()) ;

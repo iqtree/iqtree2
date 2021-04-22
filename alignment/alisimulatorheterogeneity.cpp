@@ -27,7 +27,7 @@ AliSimulatorHeterogeneity::AliSimulatorHeterogeneity(AliSimulator *alisimulator)
 */
 void AliSimulatorHeterogeneity::intializeSiteSpecificModelIndex()
 {
-    int sequence_length = params->alisim_sequence_length;
+    int sequence_length = params->alisim_sequence_length/params->alisim_sites_per_state;
     site_specific_model_index.resize(sequence_length);
     
     // if a mixture model is used -> randomly select a model for each site based on the weights of model components
@@ -191,11 +191,8 @@ void AliSimulatorHeterogeneity::simulateSeqsWithHeterotachy(int sequence_length,
         // estimate the sequence for the current neighbor
         (*it)->node->sequence.resize(sequence_length);
         
-        // estimate the sequence
         for (int i = 0; i < sequence_length; i++)
-        {
             (*it)->node->sequence[i] = estimateStateFromAccumulatedTransMatrices(cache_trans_matrix, site_specific_rates[i] , i, num_rate_categories, max_num_states, node->sequence[i]);
-        }
             
         // browse 1-step deeper to the neighbor node
         simulateSeqsWithHeterotachy(sequence_length, site_specific_rates, cache_trans_matrix, num_rate_categories, max_num_states, (*it)->node, node);
@@ -229,9 +226,7 @@ void AliSimulatorHeterogeneity::simulateSeqsWithoutHeterotachy(int sequence_leng
 
             // estimate the sequence
             for (int i = 0; i < sequence_length; i++)
-            {
                 (*it)->node->sequence[i] = estimateStateFromAccumulatedTransMatrices(cache_trans_matrix, site_specific_rates[i] , i, num_rate_categories, max_num_states, node->sequence[i]);
-            }
             
             // delete cache_trans_matrix
             delete [] cache_trans_matrix;
@@ -240,10 +235,8 @@ void AliSimulatorHeterogeneity::simulateSeqsWithoutHeterotachy(int sequence_leng
         else
         {
             for (int i = 0; i < sequence_length; i++)
-            {
                // randomly select the state, considering it's dad states, and the transition_probability_matrix
                 (*it)->node->sequence[i] = estimateStateFromOriginalTransMatrix(model, site_specific_model_index[i], site_specific_rates[i], trans_matrix, max_num_states, (*it)->length, node->sequence[i]);
-            }
         }
         
         // browse 1-step deeper to the neighbor node
@@ -394,7 +387,7 @@ void AliSimulatorHeterogeneity::getSiteSpecificRates(double *site_specific_rates
 */
 void AliSimulatorHeterogeneity::simulateSeqsForTree(){
     // get variables
-    int sequence_length = params->alisim_sequence_length;
+    int sequence_length = params->alisim_sequence_length/params->alisim_sites_per_state;
     ModelSubst *model = tree->getModel();
     int max_num_states = tree->aln->getMaxNumStates();
     

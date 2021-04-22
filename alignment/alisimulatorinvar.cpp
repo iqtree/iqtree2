@@ -48,7 +48,6 @@ void AliSimulatorInvar::simulateSeqs(int sequence_length, double *site_specific_
                 int starting_index = node->sequence[i]*max_num_states;
                 (*it)->node->sequence[i] = getRandomItemWithAccumulatedProbabilityMatrix(trans_matrix, starting_index, max_num_states);
             }
-            
         }
         
         // browse 1-step deeper to the neighbor node
@@ -63,7 +62,7 @@ void AliSimulatorInvar::simulateSeqs(int sequence_length, double *site_specific_
 void AliSimulatorInvar::simulateSeqsForTree()
 {
     // get variables
-    int sequence_length = params->alisim_sequence_length;
+    int sequence_length = params->alisim_sequence_length/params->alisim_sites_per_state;
     double invariant_proportion = tree->getRate()->getPInvar();
     ModelSubst *model = tree->getModel();
     int max_num_states = tree->aln->getMaxNumStates();

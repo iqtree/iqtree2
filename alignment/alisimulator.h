@@ -121,6 +121,12 @@ protected:
     */
     virtual void simulateSeqs(int sequence_length, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad);
     
+    /**
+    *  validate sequence length of codon
+    *
+    */
+    void validataSeqLengthCodon();
+    
 public:
     
     IQTree *tree;

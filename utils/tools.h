@@ -2279,6 +2279,11 @@ public:
     int alisim_max_rate_categories_for_applying_caching;
     
     /**
+    *  number of sites per state: 3 for codon, 1 for others
+    */
+    int alisim_sites_per_state = 1;
+    
+    /**
     *  birth_rate (Birth_Death model)
     */
     double birth_rate;

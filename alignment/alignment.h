@@ -637,6 +637,11 @@ public:
         convert a DNA alignment into codon or AA alignment
     */
     void convertToCodonOrAA(Alignment *aln, char *gene_code_id, bool nt2aa = false);
+    
+    /**
+        get Codon StateType from input sites
+    */
+    StateType getCodonStateTypeFromSites(char state, char state2, char state3, string sequence_name, int site_index, ostringstream &err_str, int &num_error);
 
     /**
      convert this codon alignment to AA

@@ -170,6 +170,9 @@ void AliSimulator::generateSingleDatasetFromSingleTree(string output_filepath, I
     // set ancestral sequence to the root node
     tree->MTree::root->sequence = ancestral_sequence;
     
+    // validate the sequence length (in case of codon)
+    validataSeqLengthCodon();
+    
     // simulate the sequence for each node in the tree by DFS
     simulateSeqsForTree();
     
@@ -193,7 +196,7 @@ void AliSimulator::generateMultipleAlignmentsFromSingleTree()
     {
         // if the ancestral sequence is not specified, randomly generate the sequence
         if (params->alisim_ancestral_sequence_name.length() == 0)
-            ancestral_sequence = generateRandomSequence(params->alisim_sequence_length);
+            ancestral_sequence = generateRandomSequence((int)(params->alisim_sequence_length/params->alisim_sites_per_state));
         
         // initialize output_filepath
         std::string output_filepath(params->user_file);
@@ -225,6 +228,8 @@ IntVector AliSimulator:: retrieveAncestralSequenceFromInputFile(char *aln_filepa
     
     // overwrite the output sequence_length
     params->alisim_sequence_length = nsite;
+    cout<<" Sequence length is now set equally to the length of ancestral sequence."<<endl;
+    
     string sequence_str = "";
     for (int i = 0; i < seq_names.size(); i++)
         if (!sequence_name.compare(seq_names[i]))
@@ -246,15 +251,30 @@ IntVector AliSimulator:: retrieveAncestralSequenceFromInputFile(char *aln_filepa
     convertProMatrixIntoAccumulatedProMatrix(state_freq, 1, max_num_states);
     
     // convert the input sequence into (numerical states) sequence
-    sequence.resize(nsite);
-    for (int i = 0; i < nsite; i++)
+    int sequence_length = params->alisim_sequence_length/params->alisim_sites_per_state;
+    sequence.resize(sequence_length);
+    ostringstream err_str;
+    int num_error = 0;
+    for (int i = 0; i < sequence_length; i++)
     {
-        sequence[i] = tree->aln->convertState(sequence_str[i]);
+        if (tree->aln->seq_type == SEQ_CODON)
+        {
+            int site_index = i*params->alisim_sites_per_state;
+            sequence[i] = tree->aln->getCodonStateTypeFromSites(tree->aln->convertState(sequence_str[site_index], SEQ_DNA), tree->aln->convertState(sequence_str[site_index+1], SEQ_DNA), tree->aln->convertState(sequence_str[site_index+2], SEQ_DNA), sequence_name, site_index, err_str, num_error);
+        }
+        else
+        {
+            sequence[i] = tree->aln->convertState(sequence_str[i]);
         
-        // Handle invalid/unknown state
-        if (sequence[i] >= max_num_states)
-            sequence[i] = getRandomItemWithAccumulatedProbabilityMatrix(state_freq, 0, max_num_states);
+            // Handle invalid/unknown state
+            if (sequence[i] >= max_num_states)
+                sequence[i] = getRandomItemWithAccumulatedProbabilityMatrix(state_freq, 0, max_num_states);
+        }
     }
+    
+    // show error from ancestral sequence (if any)
+    if (num_error)
+        outError(err_str.str());
     
     // delete state_freq
     delete [] state_freq;
@@ -297,7 +317,7 @@ IntVector AliSimulator::generateRandomSequence(int sequence_length)
         
         // randomly generate each site in the sequence follows the base frequencies defined by the user
         for (int i = 0; i < sequence_length; i++)
-        sequence[i] =  getRandomItemWithAccumulatedProbabilityMatrix(state_freq, 0, max_num_states);
+            sequence[i] =  getRandomItemWithAccumulatedProbabilityMatrix(state_freq, 0, max_num_states);
         
         // delete state_freq
         delete []  state_freq;
@@ -349,7 +369,7 @@ void AliSimulator::generateRandomBaseFrequencies(double *base_frequencies, int m
 void AliSimulator::simulateSeqsForTree()
 {
     // get variables
-    int sequence_length = params->alisim_sequence_length;
+    int sequence_length = params->alisim_sequence_length/params->alisim_sites_per_state;
     ModelSubst *model = tree->getModel();
     int max_num_states = tree->aln->getMaxNumStates();
     
@@ -582,3 +602,12 @@ string AliSimulator::convertEncodedSequenceToReadableSequenceWithGaps(Alignment 
     return output_sequence;
 }
 
+/**
+*  validate sequence length of codon
+*
+*/
+void AliSimulator::validataSeqLengthCodon()
+{
+    if (tree->aln->seq_type == SEQ_CODON && (params->alisim_sequence_length%3))
+        outError("Sequence length of Codon must be divisible by 3. Please check & try again!");
+}

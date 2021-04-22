@@ -3278,6 +3278,39 @@ void Alignment::extractSites(Alignment *aln, IntVector &site_id) {
 }
 
 
+/**
+    get Codon StateType from input sites
+*/
+StateType Alignment::getCodonStateTypeFromSites(char state, char state2, char state3, string sequence_name, int site_index, ostringstream &err_str, int &num_error){
+    if (state < 4 && state2 < 4 && state3 < 4) {
+//                    state = non_stop_codon[state*16 + state2*4 + state3];
+        state = state*16 + state2*4 + state3;
+        if (genetic_code[(int)state] == '*') {
+            err_str << "Sequence " << sequence_name << " has stop codon at site " << site_index+1 << endl;
+            num_error++;
+            state = STATE_UNKNOWN;
+        } else {
+            state = non_stop_codon[(int)state];
+        }
+    } else if (state == STATE_INVALID || state2 == STATE_INVALID || state3 == STATE_INVALID) {
+        state = STATE_INVALID;
+    } else {
+        if (state != STATE_UNKNOWN || state2 != STATE_UNKNOWN || state3 != STATE_UNKNOWN) {
+            ostringstream warn_str;
+            warn_str << "Sequence " << sequence_name << " has ambiguous character at site " << site_index+1;
+            outWarning(warn_str.str());
+        }
+        state = STATE_UNKNOWN;
+    }
+    if (state == STATE_INVALID) {
+        if (num_error < 100) {
+            err_str << "Sequence " << sequence_name << " has invalid character at site " << site_index+1 << endl;
+        } else if (num_error == 100)
+            err_str << "...many more..." << endl;
+        num_error++;
+    }
+    return (int)state;
+}
 
 void Alignment::convertToCodonOrAA(Alignment *aln, char *gene_code_id, bool nt2aa) {
     if (aln->seq_type != SEQ_DNA)

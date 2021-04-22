@@ -76,7 +76,7 @@ void inferInputParameters(Params &params, Checkpoint *checkpoint, IQTree *&tree,
     
     // update sequence_length
     if (params.original_params.find("--length") == std::string::npos)
-        params.alisim_sequence_length = tree->aln->getNSite();
+        params.alisim_sequence_length = tree->aln->getNSite() * params.alisim_sites_per_state;
 }
 
 /**
