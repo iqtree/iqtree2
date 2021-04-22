@@ -42,7 +42,8 @@
 #include "genericParallelization.h"
 #include "pllInternal.h"
 #include "pll.h"
-#include <mpi.h>
+// BQM: this causes compiling error when MPI was not installed
+//#include <mpi.h>
 
 /** @file genericParallelization.c
     
