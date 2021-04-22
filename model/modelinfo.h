@@ -158,6 +158,7 @@ public:
     typedef std::vector<YAMLFileParameter>               Parameters;
     typedef std::map<std::string, ModelVariable>         Variables;
     typedef std::map<std::string, ModelInfoFromYAMLFile> MapOfModels;
+    typedef  std::map<std::string, std::string>          StringMap;
 private:
     std::string   model_name;       //
     std::string   model_file_path;  //
@@ -172,7 +173,8 @@ private:
     StateFreqType frequency_type;
     Variables     variables;
     MapOfModels*  mixed_models;
-    std::map<std::string, std::string> string_properties;
+    StringMap     string_properties;
+    mutable StrVector variable_names;
     
     friend class ModelListFromYAMLFile;
     friend class ModelFileLoader;
@@ -284,6 +286,10 @@ public:
     void   logVariablesTo      (PhyloTree& report_to_tree)              const;
     ModelVariable& assign      (const std::string& var_name,
                                 double value);
+    const StrVector&            getVariableNamesByPosition() const;
+    ModelVariable& assignByPosition(size_t position,
+                                    double value_to_set);
+
     bool   assignLastFrequency (double value);
 
     //String Properties
