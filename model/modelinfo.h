@@ -111,6 +111,7 @@ enum ModelParameterType {
 
 class YAMLFileParameter {
 public:
+    //Member variables
     std::string         name;
     std::string         description;
     bool                is_subscripted;
@@ -120,8 +121,16 @@ public:
     ModelParameterType  type;
     ModelParameterRange range;
     double              value;
+
+    //Constructors
     YAMLFileParameter();
+    YAMLFileParameter( const YAMLFileParameter& ) = default;
+    YAMLFileParameter& operator= ( const YAMLFileParameter& ) = default;
+
+    //Member functions
     std::string getSubscriptedVariableName(int subscript) const;
+    bool isMatchFor(const std::string& match_name /* assumed: lower-case */,
+                    ModelParameterType match_type) const;
 };
 
 class ModelVariable {
@@ -163,6 +172,7 @@ private:
     StateFreqType frequency_type;
     Variables     variables;
     MapOfModels*  mixed_models;
+    std::map<std::string, std::string> string_properties;
     
     friend class ModelListFromYAMLFile;
     friend class ModelFileLoader;
@@ -246,23 +256,40 @@ public:
     MapOfModels::const_iterator findMixedModel(const std::string& name) const;
     MapOfModels::iterator       findMixedModel(const std::string& name);
 
+    //Parameters
+    const YAMLFileParameter* findParameter(const char* name,
+                                           ModelParameterType type) const;
+    void  moveParameterToBack(const char* name,
+                              ModelParameterType type);
+    bool   isFrequencyParameter(const std::string& param_name)          const;
+    std::string        getParameterList(ModelParameterType param_type)  const;
+    void               appendParameterList(ModelParameterType param_type,
+                                           std::stringstream& list) const;
+
+    //Rate matrices
+    int                getRateMatrixRank()                              const;
+    const std::string& getRateMatrixExpression(int row, int col)        const;
+    int                getNumStates() const;
+    
+    //Variables
     bool   hasVariable         (const char* name)                       const;
     bool   hasVariable         (const std::string& name)                const;
     double getVariableValue    (const std::string& name)                const;
-    bool   isFrequencyParameter(const std::string& param_name)          const;
+    double getVariableValue    (const char* name)                       const;
+    bool   isVariableFixed     (const std::string& name)                const;
     void   setBounds           (int bound_count, double *lower_bound,
                                 double *upper_bound, bool *bound_check) const;
     void   updateVariables     (const double* variables,
                                 int param_count);
     void   logVariablesTo      (PhyloTree& report_to_tree)              const;
-    int                getRateMatrixRank()                              const;
-    const std::string& getRateMatrixExpression(int row, int col)        const;
-    std::string        getParameterList(ModelParameterType param_type)  const;
-    void               appendParameterList(ModelParameterType param_type,
-                                           std::stringstream& list) const;
-    ModelVariable&     assign(const std::string& var_name, double value);
-    bool               assignLastFrequency(double value);
-    int                getNumStates() const;
+    ModelVariable& assign      (const std::string& var_name,
+                                double value);
+    bool   assignLastFrequency (double value);
+
+    //String Properties
+    std::string getStringProperty(const char* name,
+                                  const char* default_value)            const;
+    
 };
 
 typedef std::map<std::string, ModelInfoFromYAMLFile> MapOfModels;

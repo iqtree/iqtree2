@@ -84,6 +84,15 @@ public:
      */
     virtual void computeTipLikelihood(PML::StateType state, double *state_lk);
 
+    /**
+         this function is called by ModelListFromYAMLFile::getModelByName
+         to configure an instance ofr ModelDNAError.
+         @param e
+         @param fixed
+         @param seqerr
+    */
+    void setEpsilon(double e, bool fixed, string seqerr);
+
 protected:
 
     /**
@@ -100,8 +109,8 @@ protected:
         @return TRUE if parameters are changed, FALSE otherwise (2015-10-20)
     */
     virtual bool getVariables(double *variables);
-
-private:
+    
+protected:
     
     /** sequencing error */
     double epsilon;

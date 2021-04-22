@@ -145,6 +145,7 @@ void ModelFileLoader::parseModelParameter(const YAML::Node& param,
         }
         p.name = p.name.substr(0, bracket);
     } else {
+        p.is_subscripted    = false;
         p.minimum_subscript = 0;
         p.maximum_subscript = 1;
     }
@@ -477,6 +478,24 @@ void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_
         //model, too.  That'd be okay.
     }
     
+    const char* recognized_string_property_names[] = {
+        "errormodel", //One of "+E", "+EA", "+EC", "+EG", "+ET"
+                      //recognized by ModelDNAError.
+    };
+    for (const char* prop_name : recognized_string_property_names ) {
+        auto prop_node = substitution_model[prop_name];
+        if (prop_node) {
+            if (prop_node.IsScalar()) {
+                std::string prop_value = prop_node.Scalar();
+                info.string_properties[prop_name] = prop_value;
+                TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+                              "string property " << prop_name <<
+                              " set to " << prop_value);
+            }
+            //Todo: what about lists?
+        }
+    }
+
     auto weight = substitution_model["weight"];
     if (weight) {
         complainIfNot(parent_model!=nullptr,

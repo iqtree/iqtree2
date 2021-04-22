@@ -16,14 +16,15 @@
 ModelDNAError::ModelDNAError(PhyloTree *tree, PhyloTree* report_to_tree)
 : ModelDNA(tree, report_to_tree)
 {
-    epsilon = 0.05;
+    epsilon     = 0.05;
     fix_epsilon = false;
+    seqerr_name = "+E";
 }
 
 ModelDNAError::ModelDNAError(const char *model_name, string model_params,
                              StateFreqType freq, string freq_params, string seqerr,
                              PhyloTree *tree, PhyloTree* report_to_tree)
-: ModelDNA(model_name, model_params, freq, freq_params, tree, report_to_tree)
+    : ModelDNA(model_name, model_params, freq, freq_params, tree, report_to_tree)
 {
     epsilon = 0.05;
     fix_epsilon = false;
@@ -35,13 +36,24 @@ ModelDNAError::ModelDNAError(const char *model_name, string model_params,
         if (end_pos == string::npos)
             outError("Missing closing bracket in " + seqerr);
         epsilon = convert_double(seqerr.substr(pos+1, end_pos-pos-1).c_str());
-        if (epsilon < 0.0 || epsilon > 1.0)
-            outError("Sequencing error probability " + convertDoubleToString(epsilon) + " is not between 0 and 1");
-        if (!Params::getInstance().optimize_from_given_params)
+        if (epsilon < 0.0 || epsilon > 1.0) {
+            outError("Sequencing error probability " +
+                     convertDoubleToString(epsilon) +
+                     " is not between 0 and 1");
+        }
+        if (!Params::getInstance().optimize_from_given_params) {
             fix_epsilon = true;
+        }
         seqerr_name = seqerr.substr(0, pos);
     }
 }
+
+void ModelDNAError::setEpsilon(double e, bool fixed, string seqerr) {
+    epsilon = e;
+    fix_epsilon = fixed;
+    seqerr_name = seqerr;
+}
+
 
 void ModelDNAError::startCheckpoint() {
     checkpoint->startStruct("ModelDNAError");
@@ -49,8 +61,9 @@ void ModelDNAError::startCheckpoint() {
 
 void ModelDNAError::saveCheckpoint() {
     startCheckpoint();
-    if (!fix_epsilon)
+    if (!fix_epsilon) {
         CKP_SAVE(epsilon);
+    }
     endCheckpoint();
     ModelDNA::saveCheckpoint();
 }
@@ -58,8 +71,9 @@ void ModelDNAError::saveCheckpoint() {
 void ModelDNAError::restoreCheckpoint() {
     ModelDNA::restoreCheckpoint();
     startCheckpoint();
-    if (!fix_epsilon)
+    if (!fix_epsilon) {
         CKP_RESTORE(epsilon);
+    }
     endCheckpoint();
 }
 
@@ -83,16 +97,18 @@ void ModelDNAError::writeInfo(ostream &out) {
 }
 
 int ModelDNAError::getNDim() {
-    if (fix_epsilon)
+    if (fix_epsilon) {
         return ModelDNA::getNDim();
-    else
+    }
+    else {
         return ModelDNA::getNDim() + 1;
+    }
 }
 
 void ModelDNAError::computeTipLikelihood(PML::StateType state, double *state_lk) {
-    if (epsilon == 0.0)
+    if (epsilon == 0.0) {
         return ModelDNA::ModelSubst::computeTipLikelihood(state, state_lk);
-
+    }
     int i;
 
     int b = -1;
@@ -120,15 +136,17 @@ void ModelDNAError::computeTipLikelihood(PML::StateType state, double *state_lk)
     } else if (state < 18) {
         // ambiguous (polymorphic) state
         int cstate = state-num_states+1;
-        for (i = 0; i < num_states; i++)
+        for (i = 0; i < num_states; i++) {
             if ((cstate) & (1 << i)) {
                 observed[i] = true;
                 num_observed++;
             }
+        }
     } else {
         // unknown state
-        for (i = 0; i < num_states; i++)
+        for (i = 0; i < num_states; i++) {
             observed[i] = true;
+        }
         num_observed = num_states;
     }
 
@@ -143,8 +161,9 @@ void ModelDNAError::computeTipLikelihood(PML::StateType state, double *state_lk)
         observed_lk = 1.0 - (4-num_observed)*epsilon/3.0;
         unobserved_lk = num_observed*epsilon/3.0;
     }
-    for (i = 0; i < num_states; i++)
+    for (i = 0; i < num_states; i++) {
         state_lk[i] = observed[i] ? observed_lk : unobserved_lk;
+    }
 }
 
 void ModelDNAError::setBounds(double *lower_bound, double *upper_bound,

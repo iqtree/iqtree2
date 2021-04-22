@@ -7,6 +7,7 @@
 #include "modelsubst.h"      //for OPEN_BRACKET and CLOSE_BRACKET
 #include "modelfileloader.h"
 #include "modeldna.h"        //for ModelDNA
+#include "modeldnaerror.h"   //for ModelDNAError
 #include "modelexpression.h" //for InterpretedExpression
 
 #include <utils/my_assert.h> //for ASSERT macro
@@ -519,13 +520,19 @@ std::string YAMLFileParameter::getSubscriptedVariableName(int subscript) const {
     return subscripted_name.str();
 }
 
-ModelVariable::ModelVariable(): value(0) {
+bool YAMLFileParameter::isMatchFor(const std::string& match_name,
+                                   ModelParameterType match_type) const {
+    return (type == match_type &&
+            string_to_lower(name) == match_name);
+}
+
+ModelVariable::ModelVariable(): value(0), is_fixed(false) {
 }
 
 ModelVariable::ModelVariable(ModelParameterType t,
                              const ModelParameterRange& r,
                              double v)
-    : range(r), type(t), value(v) {
+    : range(r), type(t), value(v), is_fixed(false) {
 }
 
 void ModelVariable::setValue(double v) {
@@ -639,6 +646,42 @@ ModelInfoFromYAMLFile::findMixedModel(const std::string& name) {
     return it;
 }
 
+const YAMLFileParameter* ModelInfoFromYAMLFile::findParameter
+    ( const char* name, ModelParameterType type) const {
+    size_t      param_count = parameters.size();
+    std::string lower_name  = string_to_lower(name);
+    for (size_t i = 0 ; i < param_count; ++i) {
+        if (parameters[i].isMatchFor(lower_name, type)) {
+            return &parameters[i];
+        }
+    }
+    return nullptr;
+}
+
+void  ModelInfoFromYAMLFile::moveParameterToBack
+    ( const char* name, ModelParameterType type) {
+    size_t      param_count = parameters.size();
+    std::string lower_name  = string_to_lower(name);
+    size_t      i;
+    for (i = 0 ; i < param_count; ++i) {
+        if (parameters[i].isMatchFor(lower_name, type)) {
+            break;
+        }
+    }
+    if (i==param_count) {
+        return; //Didn't find the parameter to be moved
+    }
+    YAMLFileParameter lift = parameters[i];
+    for (size_t j = i+1; j<param_count; ++j) {
+        if (parameters[j].type == type ) {
+            parameters[i] = parameters[j];
+            i = j;
+        }
+    }
+    parameters[i] = lift;
+}
+
+
 bool ModelInfoFromYAMLFile::hasVariable(const char* name) const {
     if (hasDot(name) && mixed_models!=nullptr) {
         std::string sub_model_name;
@@ -662,6 +705,25 @@ bool ModelInfoFromYAMLFile::hasVariable(const std::string& name) const {
 }
 
 double ModelInfoFromYAMLFile::getVariableValue(const std::string& name) const {
+    return getVariableValue(name.c_str());
+}
+
+double ModelInfoFromYAMLFile::getVariableValue(const char* name) const {
+    auto found = variables.find(name);
+    if (found == variables.end()) {
+        if (hasDot(name) && mixed_models!=nullptr) {
+            std::string sub_model_name;
+            const char* var_name = nullptr;
+            breakAtDot(name, sub_model_name, var_name);
+            auto it = findMixedModel(sub_model_name);
+            return it->second.getVariableValue(var_name);
+        }
+        return 0.0;
+    }
+    return found->second.getValue();
+}
+
+bool ModelInfoFromYAMLFile::isVariableFixed(const std::string& name) const {
     auto found = variables.find(name);
     if (found == variables.end()) {
         if (hasDot(name.c_str()) && mixed_models!=nullptr) {
@@ -669,11 +731,11 @@ double ModelInfoFromYAMLFile::getVariableValue(const std::string& name) const {
             const char* var_name = nullptr;
             breakAtDot(name.c_str(), sub_model_name, var_name);
             auto it = findMixedModel(sub_model_name);
-            return it->second.getVariableValue(var_name);
+            return it->second.isVariableFixed(var_name);
         }
-        return 0.0;
+        return false;
     }
-    return found->second.getValue();
+    return found->second.isFixed();
 }
 
 void ModelInfoFromYAMLFile::addParameter(const YAMLFileParameter& p) {
@@ -712,7 +774,8 @@ void ModelInfoFromYAMLFile::setBounds(int param_count, double *lower_bound,
     int i = 1; //Rate parameter numbering starts at 1, see ModelMarkov
     for ( auto p : parameters ) {
         if (p.type == ModelParameterType::RATE) {
-            for (int sub = p.minimum_subscript; sub <= p.maximum_subscript; ++sub) {
+            for (int sub = p.minimum_subscript;
+                 sub <= p.maximum_subscript; ++sub) {
                 ASSERT( i<= param_count );
                 lower_bound[i] = p.range.first;
                 upper_bound[i] = p.range.second;
@@ -729,7 +792,7 @@ void ModelInfoFromYAMLFile::updateVariables(const double* updated_values,
     ModelParameterType supported_types[] = {
         ModelParameterType::RATE, ModelParameterType::FREQUENCY };
         //FREQUENCY must be last.
-        //Todo: Where do weight parameters go?  Esepecially in mixture
+        //Todo: Where do weight parameters go?    Esepecially in mixture
         //      models
     for ( auto param_type : supported_types ) {
         for ( auto p : parameters ) {
@@ -776,7 +839,8 @@ ModelVariable& ModelInfoFromYAMLFile::assign(const std::string& var_name,
         if (hasDot(var_name.c_str()) && mixed_models!=nullptr) {
             std::string sub_model_name;
             const char* sub_model_var_name = nullptr;
-            breakAtDot(var_name.c_str(), sub_model_name, sub_model_var_name);
+            breakAtDot(var_name.c_str(), sub_model_name,
+                       sub_model_var_name);
             auto it = findMixedModel(sub_model_name);
             return it->second.assign(sub_model_var_name, value_to_set);
         }
@@ -811,6 +875,12 @@ bool ModelInfoFromYAMLFile::assignLastFrequency(double value) {
     return false;
 }
 
+std::string ModelInfoFromYAMLFile::getStringProperty(const char* name,
+                                                     const char* default_value) const {
+    auto it = string_properties.find(name);
+    return it==string_properties.end() ? default_value : it->second;
+}
+
 int ModelInfoFromYAMLFile::getNumStates() const {
     //Todo: decide from the data type (or at least from data_type_name!)
     return 4; //but, for now, hardcoded!
@@ -839,7 +909,9 @@ void ModelInfoFromYAMLFile::appendParameterList(ModelParameterType param_type,
                     if (it!=variables.end()) {
                         const ModelVariable &v = it->second;
                         list << separator << var_name << "=" << v.getValue();
-                        list << (v.isFixed() ? "(*)" : "");
+                        if (v.isFixed()) {
+                            list << "(*)";
+                        }
                         separator = ", ";
                     } else {
                         std::stringstream complaint;
@@ -853,7 +925,9 @@ void ModelInfoFromYAMLFile::appendParameterList(ModelParameterType param_type,
                 if (it!=variables.end()) {
                     const ModelVariable &v = it->second;
                     list << separator << p.name << "=" << v.getValue();
-                    list << (v.isFixed() ? "(*)" : "");
+                    if (v.isFixed()) {
+                        list << "(*)";
+                    }
                     separator = ", ";
                 } else {
                     std::stringstream complaint;
@@ -922,27 +996,33 @@ bool ModelListFromYAMLFile::isModelNameRecognized (const char* model_name) {
     return models_found.find(std::string(model_name)) != models_found.end();
 }
 
-class YAMLModelDNA: public ModelDNA {
+template <class S> class YAMLModelWrapper: public S {
 protected:
     ModelInfoFromYAMLFile model_info;
     PhyloTree*            report_tree;
 public:
-    typedef ModelDNA super;
-    YAMLModelDNA(const char *model_name, string model_params,
-                 StateFreqType freq, string freq_params,
-                 PhyloTree *tree, PhyloTree* report_to_tree,
-                 const ModelInfoFromYAMLFile& info)
-        : super(model_name, model_params, freq,
-                freq_params, tree, report_to_tree),
-          model_info(info), report_tree(report_to_tree) {
-        setRateMatrixFromModel();
+    typedef S super;
+    using   S::freq_type;
+    using   S::num_params;
+    using   S::num_states;
+    using   S::param_spec;
+    using   S::rates;
+    using   S::state_freq;
+    
+    using   S::getNDim;
+    using   S::setRateMatrix;
+    
+    YAMLModelWrapper(const ModelInfoFromYAMLFile& info,
+                     PhyloTree* report_to_tree)
+        : super(report_to_tree, report_to_tree)
+        , model_info(info), report_tree(report_to_tree) {
     }
+    
     virtual void setBounds(double *lower_bound, double *upper_bound,
                             bool *bound_check) {
         //
         int ndim = getNDim();
         for (int i = 1; i <= ndim; ++i) {
-            //std::cout << variables[i] << std::endl;
             lower_bound[i] = MIN_RATE;
             upper_bound[i] = MAX_RATE;
             bound_check[i] = false;
@@ -950,6 +1030,7 @@ public:
         model_info.setBounds(ndim, lower_bound,
                              upper_bound, bound_check);
     }
+    
     virtual bool getVariables(double *variables) {
         bool changed = false;
         if (num_params > 0) {
@@ -984,7 +1065,8 @@ public:
                 model_info.assignLastFrequency(state_freq[num_states-1]);
             }
         } else {
-            changed |= freqsFromParams(state_freq,variables+num_params+1,freq_type);
+            changed |= freqsFromParams(state_freq, variables+num_params+1,
+                                       freq_type);
         }
         TREE_LOG_LINE(*report_tree, VB_MAX, "");
         if (changed) {
@@ -994,6 +1076,7 @@ public:
         }
         return changed;
     }
+    
     virtual bool scaleStateFreq() {
         // make the frequencies sum to 1
         bool changed = false;
@@ -1048,7 +1131,8 @@ public:
         for (int row = 0; row < rank; ++row) {
             for (int col = 0; col < rank; ++col) {
                 if (col != row) {
-                    std::string expr_string = model_info.getRateMatrixExpression(row,col);
+                    std::string expr_string =
+                        model_info.getRateMatrixExpression(row,col);
                     typedef ModelExpression::InterpretedExpression Interpreter;
                     try {
                         Interpreter interpreter(model_info, expr_string);
@@ -1058,7 +1142,8 @@ public:
                     }
                     catch (ModelExpression::ModelException& x) {
                         std::stringstream msg;
-                        msg << "Error parsing expression for " << model_info.getName()
+                        msg << "Error parsing expression"
+                            << " for " << model_info.getName()
                             << " rate matrix entry"
                             << " for row "    << (row + 1) << ","
                             << " and column " << (col + 1) << ": "
@@ -1087,12 +1172,47 @@ public:
         }
     }
 };
+    
+class YAMLModelDNA: public YAMLModelWrapper<ModelDNA> {
+public:
+    typedef YAMLModelWrapper<ModelDNA> super;
+    YAMLModelDNA(const char *model_name, string model_params,
+                 StateFreqType freq, string freq_params,
+                 PhyloTree *tree, PhyloTree* report_to_tree,
+                 const ModelInfoFromYAMLFile& info): super(info, report_to_tree) {
+        init(model_name, model_params, freq,
+             freq_params, report_to_tree);
+        setRateMatrixFromModel();
+    }
+};
+
+class YAMLModelDNAError: public YAMLModelWrapper<ModelDNAError> {
+public:
+    typedef YAMLModelWrapper<ModelDNAError> super;
+    YAMLModelDNAError(const char *model_name, string model_params,
+                      StateFreqType freq, string freq_params,
+                      PhyloTree *tree, PhyloTree* report_to_tree,
+                      const ModelInfoFromYAMLFile& info): super(info, report_to_tree) {
+        init(model_name, model_params, freq,
+             freq_params, report_to_tree);
+        
+        setRateMatrixFromModel();
+    }
+    bool getVariables(double *variables) {
+        bool changed = super::getVariables(variables);
+        if (changed && !fix_epsilon) {
+            epsilon = model_info.getVariableValue("epsilon");
+        }
+        return changed;
+    }
+};
 
 bool ModelListFromYAMLFile::hasModel(const std::string& model_name) const {
     return models_found.find(model_name) != models_found.end();
 }
 
-const ModelInfoFromYAMLFile& ModelListFromYAMLFile::getModel(const std::string& model_name) const {
+const ModelInfoFromYAMLFile&
+    ModelListFromYAMLFile::getModel(const std::string& model_name) const {
     auto it = models_found.find(model_name);
     ASSERT(it != models_found.end());
     return it->second;
@@ -1117,9 +1237,36 @@ ModelMarkov* ModelListFromYAMLFile::getModelByName(const char* model_name,   Phy
     //Todo: other data types, based on ModelBIN,
     //      ModelCodon, ModelPoMo, ModelProtein
     //if (model_info.data_type_name=="DNA") {
-    model = new YAMLModelDNA("", dummy_rate_params, freq_type,
-                             dummy_freq_params, tree,
-                             report_to_tree, model_info);
+    
+    const YAMLFileParameter* p =
+        model_info.findParameter("epsilon",
+                                 ModelParameterType::RATE);
+    if (p!=nullptr) {
+        if (p->is_subscripted) {
+            outError("epsilon parameter for DNA+error model"
+                     "may not be subscripted");
+        }
+        double epsilon = p->value;
+        bool epsilon_is_fixed = model_info.isVariableFixed("epsilon");
+        model_info.moveParameterToBack("epsilon",
+                                       ModelParameterType::RATE);
+        YAMLModelDNAError* emodel;
+        emodel = new YAMLModelDNAError("", dummy_rate_params, freq_type,
+                                      dummy_freq_params, tree,
+                                      report_to_tree, model_info);
+        std::string error_model = model_info.getStringProperty("errormodel", "+E");
+        emodel->setEpsilon(epsilon, epsilon_is_fixed, error_model);
+        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+                      "epsilon is " << epsilon
+                      << ", fixed is " << epsilon_is_fixed
+                      << ", and errormodel is " << error_model);
+        model = emodel;
+    }
+    else {
+        model = new YAMLModelDNA("", dummy_rate_params, freq_type,
+                                 dummy_freq_params, tree,
+                                 report_to_tree, model_info);
+    }
     
     //model_parameters = new double [num_params];
     //memset(model_parameters, 0, sizeof(double)*num_params);
