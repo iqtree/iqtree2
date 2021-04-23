@@ -127,6 +127,20 @@ protected:
     */
     void validataSeqLengthCodon();
     
+    /**
+        initialize site specific model index based on its weights in the mixture model
+    */
+    virtual void intializeSiteSpecificModelIndex(){
+        // will be override in alisimulatorheterogeneity
+    };
+    
+    /**
+        initialize state freqs for all model components (of a mixture model)
+    */
+    virtual void intializeStateFreqsMixtureModel(){
+        // will be override in alisimulatorheterogeneity
+    };
+    
 public:
     
     IQTree *tree;

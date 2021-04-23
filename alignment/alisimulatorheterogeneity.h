@@ -55,12 +55,12 @@ protected:
     /**
         initialize site specific model index based on its weights in the mixture model
     */
-    void intializeSiteSpecificModelIndex();
+    virtual void intializeSiteSpecificModelIndex();
     
     /**
         initialize state freqs for all model components (of a mixture model)
     */
-    void intializeStateFreqsMixtureModel();
+    virtual void intializeStateFreqsMixtureModel();
     
     /**
         initialize caching accumulated_trans_matrix

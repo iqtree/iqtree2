@@ -10,16 +10,12 @@
 AliSimulatorHeterogeneity::AliSimulatorHeterogeneity(Params *params) :
 AliSimulator(params) {
     rate_heterogeneity = tree->getRate();
-    intializeSiteSpecificModelIndex();
-    intializeStateFreqsMixtureModel();
 }
 
 AliSimulatorHeterogeneity::AliSimulatorHeterogeneity(AliSimulator *alisimulator){
     tree = alisimulator->tree;
     params = alisimulator->params;
     rate_heterogeneity = tree->getRate();
-    intializeSiteSpecificModelIndex();
-    intializeStateFreqsMixtureModel();
 }
 
 /**

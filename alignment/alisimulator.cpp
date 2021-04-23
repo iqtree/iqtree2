@@ -194,6 +194,9 @@ void AliSimulator::generateMultipleAlignmentsFromSingleTree()
     // iteratively generate multiple datasets for each tree
     for (int i = 0; i < params->alisim_dataset_num; i++)
     {
+        // initialize site specific model index based on its weights (in the mixture model)
+        intializeSiteSpecificModelIndex();
+        
         // if the ancestral sequence is not specified, randomly generate the sequence
         if (params->alisim_ancestral_sequence_name.length() == 0)
             ancestral_sequence = generateRandomSequence((int)(params->alisim_sequence_length/params->alisim_sites_per_state));
@@ -327,6 +330,9 @@ IntVector AliSimulator::generateRandomSequence(int sequence_length)
 }
 
 void AliSimulator::getStateFrequenciesFromModel(double *state_freqs){
+    // firstly, initialize state freqs for mixture models (if neccessary)
+    intializeStateFreqsMixtureModel();
+    
     // if a mixture model is used -> get weighted sum of state_freq across classes
     if (tree->getModel()->isMixture())
     {
