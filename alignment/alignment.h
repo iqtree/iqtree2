@@ -1008,6 +1008,11 @@ protected:
             hash map from pattern to index in the vector of patterns (the alignment)
      */
     PatternIntMap pattern_index;
+    
+    /**
+            alisim: caching ntfreq if it has already randomly initialized
+     */
+    double* cache_ntfreq = NULL;
 
 };
 

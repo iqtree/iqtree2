@@ -4784,8 +4784,27 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
         // randomly generate state/condon freqs or estimating it from the input sequence
         if (freqs_random_generated)
         {
-            for (int i = 0; i < 4 ; i++)
-                ntfreq[i] =  random_double();
+            // randomly generate ntfreq if it has not yet been generated
+            if (!cache_ntfreq)
+            {
+                // randomly generate ntfreq
+                for (int i = 0; i < 4 ; i++)
+                    ntfreq[i] = random_double();
+                
+                // cache ntfreq for using later
+                cache_ntfreq = new double[4];
+                memcpy(cache_ntfreq, ntfreq, sizeof(double)*4);
+            }
+            // otherwise, reload ntfreq from cache then delete the cache
+            else
+            {
+                // reload ntfreq from the cache
+                memcpy(ntfreq, cache_ntfreq, sizeof(double)*4);
+                
+                // delete the cache
+                delete cache_ntfreq;
+                cache_ntfreq = NULL;
+            }
         }
         else
         {
@@ -4840,8 +4859,27 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
         // randomly generate state/condon freqs or estimating it from the input sequence
         if (freqs_random_generated)
         {
-            for (int i = 0; i < 12 ; i++)
-                ntfreq[i] =  random_double();
+            // randomly generate ntfreq if it has not yet been generated
+            if (!cache_ntfreq)
+            {
+                // randomly generate ntfreq
+                for (int i = 0; i < 12 ; i++)
+                    ntfreq[i] = random_double();
+                
+                // cache ntfreq for using later
+                cache_ntfreq = new double[12];
+                memcpy(cache_ntfreq, ntfreq, sizeof(double)*12);
+            }
+            // otherwise, reload ntfreq from cache then delete the cache
+            else
+            {
+                // reload ntfreq from the cache
+                memcpy(ntfreq, cache_ntfreq, sizeof(double)*12);
+                
+                // delete the cache
+                delete cache_ntfreq;
+                cache_ntfreq = NULL;
+            }
         }
         else
         {
