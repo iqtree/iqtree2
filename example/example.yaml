@@ -1,0 +1,89 @@
+#### definition for DNA data ###
+- datatype: YDNA
+  state: [ A, C, G, T ]
+  missing: [ N, "?" ]
+  gap: "-"
+  equate:
+    U: T      # T and U are the same
+    R: [A, G] # R is interpreted as A or G
+    Y: [C, T]
+    W: [A, T]
+    S: [G, C]
+    M: [A, C]
+    K: [G, T]
+    B: [C, G, T]
+    H: [A, C, T]
+    D: [A, G, T]
+    V: [A, G, C]
+
+- substitutionmodel: YJC
+  description: Jukes-Cantor model
+  citation: “Jukes and Cantor, 1969”
+  reversible: true
+  stateFrequency: [ 0.25, 0.25, 0.25, 0.25 ]
+  rateMatrix:
+  - [  , 1, 1, 1 ]
+  - [ 1,  , 1, 1 ]
+  - [ 1, 1,  , 1 ]
+  - [ 1, 1, 1,   ]
+
+- substitutionmodel: YJC_ERROR 
+  frommodel:  YJC
+  #errormodel: "+EA" # if not set, defaults to "+E"
+  parameters:
+    - name:  epsilon
+      type:  rate
+      range: [ 0.0001, 0.5 ]
+      initValue: 0.05
+
+### GTR model ###
+- substitutionmodel: YGTR
+  description: “General time reversible”
+  citation: “Tavare, 1986”
+  reversible: true
+  datatype: DNA
+  parameters:
+  - name:  r(1..5)   # rate parameter vector r(1), ... , r(5)
+    type:  rate
+    range: [ 0.0001, 100 ]
+    initValue: 1.0
+  - name:  f(1..4)   # frequency vector f(1), ..., f(4)
+    type:  frequency # make parameters in range [0,1] and sum to 1.0
+
+  rateMatrix:
+  - [      ,     r(1)*f(2), r(2)*f(3), r(3)*f(4) ]
+  - [ r(1)*f(1),          , r(4)*f(3), r(5)*f(4) ]
+  - [ r(2)*f(1), r(4)*f(2),          , f(4)      ]
+  - [ r(3)*f(1), r(5)*f(2), f(3)     ,           ]
+
+  stateFrequency: estimate
+
+
+- substitutionmodel: COV_GTR
+  frommodel: YGTR
+  description: "Covarion model switching between invariant and GTR"
+  parameters:
+    - name: [ s0, s1 ] #switching rate parameters
+      range: [ 0.0001, 100 ]
+
+- substitutionmodel: YCONSTRAINT
+  frommodel: YGTR
+  constraints:
+    - r(1) = 1
+    - r(3) = 1
+
+- substitutionmodel: YMIX
+  description: "Mixture of JC and GTR"
+  parameters:
+  - name: w(1..2)
+    type: weight    # type weight implies that w[1]+w[2]=1.0
+  mixture:          # mixture components defined in this section
+  - substitutionmodel: YMIX_JC
+    frommodel: YJC  # 1st component from JC model
+    weight: w(1)    # weight parameter
+    scale: 1.0      # scaling factor of Q matrix for this component
+  - substitutionmodel: YMIX_GTR
+    frommodel: YGTR # 2nd component from GTR model
+    weight: w(2)
+    scale: 1.0   
+
