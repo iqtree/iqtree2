@@ -117,7 +117,7 @@ void AliSimulator::initializeAlignment()
         tree->aln->num_states = 20;
         break;
     case SEQ_MORPH:
-        throw "Sorry! SEQ_MORPH is currently not supported";
+        tree->aln->num_states = params->alisim_num_states_morph;
         break;
     case SEQ_POMO:
         throw "Sorry! SEQ_POMO is currently not supported";

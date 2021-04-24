@@ -1117,6 +1117,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_ancestral_sequence_name = "";
     params.alisim_continuous_gamma = false;
     params.alisim_max_rate_categories_for_applying_caching = 5;
+    params.alisim_sites_per_state = 1;
+    params.alisim_num_states_morph = 0;
     params.birth_rate = 0.8;
     params.death_rate = 0.2;
     
@@ -2160,6 +2162,37 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -st BIN or -st DNA or -st AA or -st CODON or -st MORPH or -st CRXX or -st CFxx.";
                 string arg = argv[cnt];
                 params.sequence_type = argv[cnt];
+                
+                // handle MORPH{<#STATE>}
+                string ERR_MSG = "Please use MORPH{<#STATE>} to specify the number of states for MORPH. <#STATE> should be positive and no greater than 32.";
+                string t_params = argv[cnt];
+                string KEYWORD = "MORPH";
+                if ((t_params.length() > KEYWORD.length())
+                    && (!t_params.substr(0, KEYWORD.length()).compare(KEYWORD)))
+                {
+                    // validate the input
+                    if ((t_params[KEYWORD.length()]!='{')
+                        ||(t_params[t_params.length()-1]!='}'))
+                        throw ERR_MSG;
+                    
+                    // remove "MORPH{"
+                    t_params.erase(0, KEYWORD.length() + 1);
+                    
+                    // remove "}"
+                    t_params = t_params.substr(0, t_params.length()-1);
+                    
+                    // extract num_states
+                    params.alisim_num_states_morph = convert_int(t_params.c_str());
+                    
+                    // validate num_states
+                    if (params.alisim_num_states_morph < 1 || params.alisim_num_states_morph > 32)
+                        throw ERR_MSG;
+                    
+                    // set seqtype to MORPH (without {<#STATE>})
+                    params.sequence_type = new char(KEYWORD.length());
+                    memcpy(params.sequence_type, KEYWORD.c_str(), KEYWORD.length());
+                }
+                
                 // if (arg.substr(0,2) == "CR") params.pomo_random_sampling = true;
                 // if (arg.substr(0,2) == "CF" || arg.substr(0,2) == "CR") {
                 //     outWarning("Setting the sampling method and population size with this flag is deprecated.");
@@ -4565,6 +4598,16 @@ void parseArg(int argc, char *argv[], Params &params) {
         string KEYWORD = "CODON";
         if (sequence_type.length() >= KEYWORD.length() && sequence_type.substr(0, KEYWORD.length()) == KEYWORD)
             params.alisim_sites_per_state = 3;
+    }
+    
+    // validate the number of states of MORPH
+    if (params.alisim_active && params.sequence_type)
+    {
+        string str_morph = "MORPH";
+        std::string str_seq_type(params.sequence_type);
+        
+        if (!str_morph.compare(str_seq_type) && (params.alisim_num_states_morph < 1 || params.alisim_num_states_morph > 32))
+            outError("Please use MORPH{<#STATE>} to specify the number of states for MORPH. <#STATE> should be positive and no greater than 32.");
     }
     
     //    if (MPIHelper::getInstance().isWorker()) {

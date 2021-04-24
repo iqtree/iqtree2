@@ -2281,7 +2281,12 @@ public:
     /**
     *  number of sites per state: 3 for codon, 1 for others
     */
-    int alisim_sites_per_state = 1;
+    int alisim_sites_per_state;
+    
+    /**
+    *  number of states (SEQ_MORPH)
+    */
+    int alisim_num_states_morph;
     
     /**
     *  birth_rate (Birth_Death model)
