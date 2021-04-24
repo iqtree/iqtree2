@@ -1118,7 +1118,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_continuous_gamma = false;
     params.alisim_max_rate_categories_for_applying_caching = 5;
     params.alisim_sites_per_state = 1;
-    params.alisim_num_states_morph = 0;
+    params.alisim_num_states_morph = 32;
     params.birth_rate = 0.8;
     params.death_rate = 0.2;
     
@@ -4598,16 +4598,6 @@ void parseArg(int argc, char *argv[], Params &params) {
         string KEYWORD = "CODON";
         if (sequence_type.length() >= KEYWORD.length() && sequence_type.substr(0, KEYWORD.length()) == KEYWORD)
             params.alisim_sites_per_state = 3;
-    }
-    
-    // validate the number of states of MORPH
-    if (params.alisim_active && params.sequence_type)
-    {
-        string str_morph = "MORPH";
-        std::string str_seq_type(params.sequence_type);
-        
-        if (!str_morph.compare(str_seq_type) && (params.alisim_num_states_morph < 1 || params.alisim_num_states_morph > 32))
-            outError("Please use MORPH{<#STATE>} to specify the number of states for MORPH. <#STATE> should be positive and no greater than 32.");
     }
     
     //    if (MPIHelper::getInstance().isWorker()) {
