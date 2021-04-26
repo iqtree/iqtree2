@@ -97,6 +97,11 @@ public:
         @param scale_birth_rate (birth_rate/(birth_rate+death_rate)
     */
     void generateBirthDeath(Params &params);
+    
+    /**
+        compute branch_lengths for the Birth-Death tree
+    */
+    void computeBranchLengthsBirthDeathTree(double last_moment, Node *node, Node *dad);
 
 	/**
 		generate a caterpillar tree

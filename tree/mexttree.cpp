@@ -283,7 +283,8 @@ void MExtTree::generateUniform(Params &params, bool binary)
 void MExtTree::generateBirthDeath(Params &params)
 {
     int size = params.sub_size;
-    double scale_birth_rate = params.birth_rate/(params.birth_rate + params.death_rate);
+    double both_rate = (params.birth_rate + params.death_rate);
+    double scale_birth_rate = params.birth_rate/both_rate;
     
     if (size < 3)
         outError(ERR_FEW_TAXA);
@@ -293,29 +294,36 @@ void MExtTree::generateBirthDeath(Params &params)
     
     // list of leaves
     NodeVector myleaves;
-    Node *node = NULL, *new_node = NULL;
-    double len, random_num;
+    Node *node = NULL, *new_node = NULL, *starting_node;
+    double current_time, random_num;
+    const double UNKNOWN_LENGTH = -1;
     int i;
     
     // retry the birth-death process (up to 1000 times) until successfully generating the tree
     for (int retry = 0; retry < 1000; retry++)
     {
         i  = 0;
+        current_time = 0;
         myleaves.clear();
         node = newNode(i, i);
+        starting_node = node;
         
         // create innitial three leaves
         for (int j = 0; j < 3; j++) {
             i++;
             new_node = newNode(i, i);
-            len = randomLen(params);
-            node->addNeighbor(new_node, len);
-            new_node->addNeighbor(node, len);
+            node->addNeighbor(new_node, UNKNOWN_LENGTH);
+            new_node->addNeighbor(node, UNKNOWN_LENGTH);
             myleaves.push_back(new_node);
         }
+        node->setSpeciationTime(current_time);
         
         while (myleaves.size() < size)
         {
+            // draw a waiting time until the next event
+            double total_rate = both_rate*myleaves.size();
+            current_time = current_time - (1.0/total_rate) * std::log(random_double());
+            
             // randomly select a leaf
             int current_node_index = random_int(myleaves.size());
             node = myleaves[current_node_index];
@@ -330,11 +338,11 @@ void MExtTree::generateBirthDeath(Params &params)
                 for (int j = 0; j < 2; j++) {
                     i++;
                     new_node = newNode(i, i);
-                    len = randomLen(params);
-                    node->addNeighbor(new_node, len);
-                    new_node->addNeighbor(node, len);
+                    new_node->addNeighbor(node, UNKNOWN_LENGTH);
+                    node->addNeighbor(new_node, UNKNOWN_LENGTH);
                     myleaves.push_back(new_node);
                 }
+                node->setSpeciationTime(current_time);
             }
             // death event occurs
             else
@@ -347,9 +355,6 @@ void MExtTree::generateBirthDeath(Params &params)
                 // otherwise, retrieve the dad of the current node
                 else
                     dad_node = node->neighbors[0]->node;
-                
-                // initial new length for the branch connecting 2 siblings
-                len = randomLen(params);
 
                 // detect the two siblings of the current node
                 Node *sibling_node1 = NULL, *sibling_node2 = NULL;
@@ -377,7 +382,7 @@ void MExtTree::generateBirthDeath(Params &params)
                     if ((*it)->node == dad_node)
                     {
                         (*it)->node = sibling_node2;
-                        (*it)->length = len;
+                        (*it)->length = UNKNOWN_LENGTH;
                         break;
                     }
                 }
@@ -388,7 +393,7 @@ void MExtTree::generateBirthDeath(Params &params)
                     if ((*it)->node == dad_node)
                     {
                         (*it)->node = sibling_node1;
-                        (*it)->length = len;
+                        (*it)->length = UNKNOWN_LENGTH;
                         break;
                     }
                 }
@@ -409,7 +414,15 @@ void MExtTree::generateBirthDeath(Params &params)
         
         // check if the tree has been successfully generated or not
         if (myleaves.size() == size)
+        {
+            // draw a waiting time one more time for the last event
+            double total_rate = both_rate*myleaves.size();
+            current_time = current_time - (1.0/total_rate) * std::log(random_double());
+            
+            // browse the tree to the branch_lengths
+            computeBranchLengthsBirthDeathTree(current_time, starting_node, starting_node);
             break;
+        }
     }
     
     // show error if the program failed to generate the tree after reaching the maximum retry.
@@ -424,6 +437,31 @@ void MExtTree::generateBirthDeath(Params &params)
     leafNum = size;
     nodeNum = leafNum;
     initializeTree();
+}
+
+/**
+    compute branch_lengths for the Birth-Death tree
+*/
+void MExtTree::computeBranchLengthsBirthDeathTree(double last_moment, Node *node, Node *dad)
+{
+    NeighborVec::iterator it;
+    FOR_NEIGHBOR(node, dad, it) {
+        // only process internal nodes ~ speciation_time is NOT null
+        if (node->getSpeciationTime())
+        {
+            // get the speciation_time for the current and the neighbor node
+            double current_node_speciation_time = *(node->getSpeciationTime());
+            double neighbor_node_speciation_time = last_moment;
+            if ((*it)->node->getSpeciationTime())
+                neighbor_node_speciation_time = *((*it)->node->getSpeciationTime());
+            
+            (*it)->length = neighbor_node_speciation_time - current_node_speciation_time;
+            (*it)->node->updateNeighbor(node, node, (*it)->length);
+            
+            // recursively browse the tree
+            computeBranchLengthsBirthDeathTree(last_moment, (*it)->node, node);
+        }
+    }
 }
 
 /**

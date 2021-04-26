@@ -256,6 +256,12 @@ A Node in the tree
 @author BUI Quang Minh, Steffen Klaere, Arndt von Haeseler
  */
 class Node {
+protected:    
+    /**
+        speciation_time (for birth_death model) to compute branch-length
+     */
+    double *speciation_time = NULL;
+    
 public:
     /**
         node id.
@@ -454,6 +460,21 @@ public:
         @param id branch ID
      */
     virtual void addNeighbor(Node *node, DoubleVector &length, int id = -1);
+    
+    /**
+        set speciation_time
+     */
+    void setSpeciationTime(double new_speciation_time);
+    
+    /**
+        get speciation_time
+     */
+    double* getSpeciationTime();
+    
+    /**
+        delete speciation_time
+     */
+    void deleteSpeciationTime();
 
 };
 /*
