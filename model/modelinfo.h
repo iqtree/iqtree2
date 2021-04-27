@@ -151,10 +151,21 @@ public:
     bool   isFixed() const;
 };
 
+class StringMatrix: public std::vector<StrVector> {
+public:
+    void makeRectangular(size_t column_count) {
+        size_t row_count = size();
+        for (int row_num=0; row_num<row_count; ++row_num) {
+            StrVector& row = at(row_num);
+            if (row.size() != column_count) {
+                row.resize(row_count, "");
+            }
+        }
+    }
+};
 
 class ModelInfoFromYAMLFile: public ModelInfo {
 public:
-    typedef std::vector<StrVector>                       StringMatrix;
     typedef std::vector<YAMLFileParameter>               Parameters;
     typedef std::map<std::string, ModelVariable>         Variables;
     typedef std::map<std::string, ModelInfoFromYAMLFile> MapOfModels;
@@ -168,7 +179,8 @@ private:
     int           num_states;       //number of states
     bool          reversible;       //don't trust this; check against rate matrix
     int           rate_matrix_rank; //
-    StringMatrix  rate_matrix_expressions; //row major (expression strings)
+    StringMatrix  rate_matrix_expressions;    //row major (expression strings)
+    StringMatrix  tip_likelihood_expressions; //likewise (for tip likelihoods)
     Parameters    parameters;      //parameters
     StateFreqType frequency_type;
     Variables     variables;
@@ -272,6 +284,10 @@ public:
     int                getRateMatrixRank()                              const;
     const std::string& getRateMatrixExpression(int row, int col)        const;
     int                getNumStates() const;
+    
+    //Tip Likelihood matrices
+    int  getTipLikelihoodMatrixRank() const;
+    void computeTipLikelihoodsForState(int state, int num_states, double* likelihoods);
     
     //Variables
     bool   hasVariable         (const char* name)                       const;

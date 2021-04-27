@@ -573,6 +573,7 @@ ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(const ModelInfoFromYAMLFile& rhs)
     , num_states(rhs.num_states), reversible(rhs.reversible)
     , rate_matrix_rank(rhs.rate_matrix_rank)
     , rate_matrix_expressions(rhs.rate_matrix_expressions)
+    , tip_likelihood_expressions(rhs.tip_likelihood_expressions)
     , parameters(rhs.parameters), frequency_type(rhs.frequency_type)
     , variables(rhs.variables), mixed_models(nullptr) {
     if (rhs.mixed_models!=nullptr) {
@@ -932,6 +933,55 @@ int ModelInfoFromYAMLFile::getNumStates() const {
     return 4; //but, for now, hardcoded!
 }
 
+int  ModelInfoFromYAMLFile::getTipLikelihoodMatrixRank() const {
+    return static_cast<int>(tip_likelihood_expressions.size());
+}
+
+void ModelInfoFromYAMLFile::computeTipLikelihoodsForState(int state, int num_states,
+                                                          double* likelihoods) {
+    std::stringstream complaint;
+    int tip_states = getTipLikelihoodMatrixRank();
+    if (state<0) {
+        complaint << "Cannot calculate tip likelihoods for state " << state << ".";
+    } else if (num_states<=state) {
+        complaint << "Cannot calculate tip likelihoods for state " << state
+                  << " as there are only " << num_states << " states.";
+    } else if (tip_states<=state) {
+        complaint << "Cannot calculate tip likelihoods for state " << state
+                  << " as tip likelihoods were provided"
+                  << " only for " << tip_states << " states.";
+    }
+    if (!complaint.str().empty()) {
+        outError(complaint.str());
+    }
+    StrVector expr_row = tip_likelihood_expressions[state];
+    
+    typedef ModelExpression::InterpretedExpression Interpreter;
+    for (int column=0; column<num_states; ++column) {
+        std::string expr_string;
+        if ( column < expr_row.size() ) {
+            expr_string = expr_row[column];
+        }
+        if (expr_string.empty()) {
+            likelihoods[column] = (column==state) ? 1.0 : 0.0;
+        } else {
+            try {
+                Interpreter interpreter(*this, expr_string);
+                likelihoods[column] = interpreter.evaluate();
+            }
+            catch (ModelExpression::ModelException& x) {
+                std::stringstream msg;
+                msg << "Error parsing expression"
+                    << " for tip likelihood matrix entry"
+                    << " for (0-based) row "    << state << ","
+                    << " and (0-based) column " << column << ":\n"
+                    << x.getMessage();
+                outError(msg.str());
+            }
+        }
+    }
+}
+
 int ModelInfoFromYAMLFile::getRateMatrixRank() const {
     return rate_matrix_rank;
 }
@@ -1276,6 +1326,22 @@ public:
         setRateMatrix(rates.data());
     }
     
+    virtual void computeTipLikelihood(PML::StateType state, double *state_lk) {
+        int state_num = static_cast<int>(state);
+        if ( state_num < model_info.getTipLikelihoodMatrixRank()) {
+            model_info.computeTipLikelihoodsForState(state, num_states, state_lk);
+        } else if (state_num < num_states) {
+            // single state
+            memset(state_lk, 0, num_states*sizeof(double));
+            state_lk[state] = 1.0;
+        } else {
+            // unknown state
+            for (int i = 0; i < num_states; i++) {
+                state_lk[i] = 1.0;
+            }
+        }
+    }
+    
     virtual void writeInfo(ostream &out) {
         auto rates = model_info.getParameterList(ModelParameterType::RATE);
         if (!rates.empty()) {
@@ -1406,7 +1472,6 @@ ModelMarkov* ModelListFromYAMLFile::getModelByName(const char* model_name,   Phy
         dmodel->acceptParameterList(parameter_list, report_to_tree);
         model = dmodel;
     }
-    
     
     //model_parameters = new double [num_params];
     //memset(model_parameters, 0, sizeof(double)*num_params);

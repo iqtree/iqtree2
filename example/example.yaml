@@ -36,6 +36,18 @@
       range: [ 0.0001, 0.5 ]
       initValue: 0.05
 
+- substitutionmodel: YTIP
+  frommodel: YJC
+  parameters:
+    - name:  tiplikelihood
+      type:  matrix
+      value:
+        - [ 1,    0.01,  0.1,  0.01 ]
+        - [ 0.01,    1,  0.01, 0.1  ]
+        - [ 0.1,  0.01,  1,    0.01 ]
+        - [ 0.01,   0.1, 0.01, 1    ]
+
+
 ### GTR model ###
 - substitutionmodel: YGTR
   description: “General time reversible”

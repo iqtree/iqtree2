@@ -41,6 +41,13 @@ int ModelFileLoader::integerScalar(const YAML::Node& node,
     return atoi(s.c_str());
 }
 
+void ModelFileLoader::complainIfSo(bool        check_me,
+                                   std::string error_message) {
+    if (check_me) {
+        outError(error_message);
+    }
+}
+
 void ModelFileLoader::complainIfNot(bool check_me,
                           std::string error_message) {
     if (!check_me) {
@@ -150,6 +157,20 @@ void ModelFileLoader::parseModelParameter(const YAML::Node& param,
         p.maximum_subscript = 1;
     }
     
+    p.type_name = string_to_lower(stringScalar(param, "type", p.type_name.c_str()));
+    if (p.type_name=="matrix") {
+        complainIfSo(p.is_subscripted,
+                     "Matrix subscripts are implied by the matrix value itself, "
+                     " but " + p.name + " parameter of model " + info.getName() +
+                     " was explicitly subscripted (which is not supported).");
+        auto value = param["value"];
+        complainIfNot(value, p.name +
+                      " matrix parameter's value must be defined"
+                      " in model " + info.getName() + ".");
+        parseMatrixParameter(param, name, info, report_to_tree);
+        return;
+    }
+    
     bool overriding = false;
     for (const YAMLFileParameter& oldp: info.parameters) {
         if (oldp.name == p.name) {
@@ -166,7 +187,6 @@ void ModelFileLoader::parseModelParameter(const YAML::Node& param,
         }
     }
     
-    p.type_name = string_to_lower(stringScalar(param, "type", p.type_name.c_str()));
     if (p.type_name=="rate") {
         p.type = ModelParameterType::RATE;
     } else if (p.type_name=="frequency") {
@@ -176,6 +196,7 @@ void ModelFileLoader::parseModelParameter(const YAML::Node& param,
     } else {
         p.type = ModelParameterType::OTHER;
     }
+    
     auto count = p.maximum_subscript - p.minimum_subscript + 1;
     ASSERT(0<count);
     double dv   = 0.0; //default initial value
@@ -214,6 +235,64 @@ void ModelFileLoader::parseModelParameter(const YAML::Node& param,
          << ", and initial value " << p.value;
     TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity, msg.str());
     info.addParameter(p);
+}
+
+void ModelFileLoader::parseMatrixParameter(const YAML::Node& param,
+                                           std::string name,
+                                           ModelInfoFromYAMLFile& info,
+                                           PhyloTree* report_to_tree) {
+    //Assumed: parameter has a "value" entry, and it is a sequence of sequences
+    
+    auto         value        = param["value"];
+    int          rank         = 0;
+    int          column_count = 0;
+    StringMatrix expressions;
+    
+    complainIfNot(value.IsSequence(),
+                  "value of " + name +
+                  " matrix of model " + info.getName() +
+                  " was not a matrix");
+    for (auto row : value) {
+        ++rank;
+        std::stringstream s;
+        s << "Row " << rank << " of " + name + " matrix "
+          << " for model " << info.model_name
+          << " in " << info.model_file_path;
+        std::string context = s.str();
+        complainIfNot(row.IsSequence(),
+                      context + " is not a sequence" );
+        StrVector expr_row;
+        for (auto col : row) {
+            if (col.IsNull()) {
+                expr_row.emplace_back("");
+            }
+            else if (!col.IsScalar()) {
+                std::stringstream s2;
+                s2 << "Column " << (expr_row.size()+1)
+                   << " of " << context << " is not a scalar";
+                outError(s2.str());
+            } else {
+                expr_row.emplace_back(col.Scalar());
+            }
+        }
+        expressions.emplace_back(expr_row);
+        column_count = ( expr_row.size() < column_count )
+                     ? column_count : expr_row.size();
+    }
+    expressions.makeRectangular(column_count);
+    
+    std::string lower_name = string_to_lower(name);
+    if (lower_name=="ratematrix") {
+        info.rate_matrix_rank           = rank;
+        info.rate_matrix_expressions    = expressions;
+    }
+    else if (lower_name=="tiplikelihood") {
+        info.tip_likelihood_expressions = expressions;
+    }
+    else {
+        outError(name + " matrix parameter not recognized"
+                 " in " + info.getName() + " model");
+    }
 }
 
 YAMLFileParameter
@@ -332,17 +411,8 @@ void ModelFileLoader::parseRateMatrix(const YAML::Node& rate_matrix,
            << " and " << column_count << " columns.";
         outError(s2.str());
     }
-    //If the last cell is left blank, a trailing comma
-    //e.g. [x, y, z, ] ... will not be counted as a blank
-    //string (it's a feature of the YAML format).
-    //Make sure that it is counted, so that
-    //rate_matrix_expressions will be square (not ragged).
-    for (size_t r=0; r<row_count; r++) {
-        StrVector& row = info.rate_matrix_expressions[r];
-        if (row.size() < column_count ) {
-            row.resize(column_count, "");
-        }
-    }
+    info.rate_matrix_expressions.makeRectangular(column_count);
+    
     //
     //Todo: Are off-diagonal entries in the matrix allowed
     //to be blank?
@@ -420,7 +490,11 @@ void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_
                       " in file " + file_path + " not a sequence");
         parseYAMLModelConstraints(constraints, info, report_to_tree);
     }
-        
+    
+    //
+    //Note: if rateMatrix was read as a parameter,
+    //      rate_matrix_expressions will aready have been set.
+    //
     auto rateMatrix = substitution_model["rateMatrix"];
     if (info.rate_matrix_expressions.empty() && !mixtures) {
         complainIfNot(rateMatrix, "Model " + model_name +

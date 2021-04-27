@@ -26,9 +26,9 @@ public:
                        const char* key,
                        const int   default_value);
     
-    void complainIfNot(bool check_me,
-                       std::string error_message);
-    double toDouble(const YAML::Node& i, double default_val);
+    void   complainIfSo (bool check_me, std::string error_message);
+    void   complainIfNot(bool check_me, std::string error_message);
+    double toDouble     (const YAML::Node& i, double default_val);
     
     ModelParameterRange parseRange(const YAML::Node& node, const char* key,
                                    const ModelParameterRange& default_value);
@@ -36,10 +36,15 @@ public:
     void parseYAMLModelParameters(const YAML::Node& params,
                                   ModelInfoFromYAMLFile& info,
                                   PhyloTree* report_to_tree);
-    void parseModelParameter(const YAML::Node& param,
-                             std::string name,
-                             ModelInfoFromYAMLFile& info,
-                             PhyloTree* report_to_tree);
+    void parseModelParameter (const YAML::Node& param,
+                              std::string name,
+                              ModelInfoFromYAMLFile& info,
+                              PhyloTree* report_to_tree);
+    void parseMatrixParameter(const YAML::Node& param,
+                              std::string name,
+                              ModelInfoFromYAMLFile& info,
+                              PhyloTree* report_to_tree);
+
     YAMLFileParameter
          addDummyFrequencyParameterTo(ModelInfoFromYAMLFile& info,
                                       PhyloTree* report_to_tree);

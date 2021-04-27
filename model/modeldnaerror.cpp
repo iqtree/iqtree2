@@ -107,7 +107,8 @@ int ModelDNAError::getNDim() {
 
 void ModelDNAError::computeTipLikelihood(PML::StateType state, double *state_lk) {
     if (epsilon == 0.0) {
-        return ModelDNA::ModelSubst::computeTipLikelihood(state, state_lk);
+        ModelDNA::ModelSubst::computeTipLikelihood(state, state_lk);
+        return;
     }
     int i;
 
