@@ -56,7 +56,7 @@
     - name:    tiplikelihood
       type:    matrix
       rank:    num_states
-      formula: "(row==column) ? (1-e) : (e/num_states)"
+      formula: "(row==column) ? (1-e) : (e/(num_states-1))"
 
 ### GTR model ###
 - substitutionmodel: YGTR
