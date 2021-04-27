@@ -21,18 +21,6 @@ protected:
     virtual void simulateSeqs(int sequence_length, double *site_specific_rates, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad);
     
     /**
-    *  simulate sequences with heteroachy for all nodes in the tree by DFS
-    *
-    */
-    void simulateSeqsWithHeterotachy(int sequence_length, double *site_specific_rates, double *cache_trans_matrix, int num_rate_categories, int max_num_states, Node *node, Node *dad);
-    
-    /**
-    *  simulate sequences without heteroachy for all nodes in the tree by DFS
-    *
-    */
-    void simulateSeqsWithoutHeterotachy(int sequence_length, double *site_specific_rates, ModelSubst *model, double *trans_matrix, int max_num_states, DoubleVector branch_lengths, Node *node, Node *dad);
-    
-    /**
         get site-specific rates based on Continuous Gamma Distribution
     */
     virtual void getSiteSpecificRatesContinuousGamma(double *site_specific_rates, int sequence_length);

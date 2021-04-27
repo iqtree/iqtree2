@@ -57,6 +57,25 @@ void AliSimulator::initializeIQTreeFromTreeFile()
     tree->readTree(params->user_file, is_rooted);
     initializeAlignment();
     initializeModel();
+
+    // if a Heterotachy model is used -> re-read the PhyloTreeMixlen from file
+    if (tree->getRate()->isHeterotachy())
+    {
+        // initialize a new PhyloTreeMixlen
+        IQTree* new_tree = new PhyloTreeMixlen(tree->aln, tree->getRate()->getNRate());
+        
+        // delete the old tree
+        delete tree;
+        
+        // set the new PhyloTreeMixlen to the new tree
+        tree = new_tree;
+        
+        // re-load the tree/branch-lengths from the file
+        tree->IQTree::readTree(params->user_file, is_rooted);
+        
+        // re-initialize the model
+        initializeModel();
+    }
 }
 
 

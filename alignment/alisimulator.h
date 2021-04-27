@@ -10,6 +10,7 @@
 
 #include "utils/tools.h"
 #include "tree/node.h"
+#include "tree/phylotreemixlen.h"
 #include "model/modelmarkov.h"
 #include "model/modelliemarkov.h"
 #include "model/ratecontinuousgammainvar.h"

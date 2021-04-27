@@ -137,70 +137,6 @@ void AliSimulatorHeterogeneity::intializeCachingAccumulatedTransMatrices(double 
 */
 void AliSimulatorHeterogeneity::simulateSeqs(int sequence_length, double *site_specific_rates, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad)
 {
-    DoubleVector branch_lengths;
-    
-    if (rate_heterogeneity->isHeterotachy())
-    {
-        // get branch_lengths
-        rate_heterogeneity->getTree()->treeLengths(branch_lengths);
-        
-        // if branch_lengths are not yet inferred from input data or defined by the user -> randomly generate it
-        if (branch_lengths.size() < rate_heterogeneity->getNRate())
-        {
-            branch_lengths.resize(rate_heterogeneity->getNRate());
-            for (int i = 0; i < rate_heterogeneity->getNRate(); i++)
-                branch_lengths[i] = randomLen(*params);
-        }
-        
-        // initialize the accumulated_trans_matrices
-        int num_models = tree->getModel()->isMixture()?tree->getModel()->getNMixtures():1;
-        int num_rate_categories  = tree->getRateName().empty()?1:rate_heterogeneity->getNDiscreteRate();
-        double *cache_trans_matrix = new double[num_models*num_rate_categories*max_num_states*max_num_states];
-        intializeCachingAccumulatedTransMatrices(cache_trans_matrix, num_models, num_rate_categories, max_num_states, branch_lengths, trans_matrix, model);
-        
-        // simulate sequences with heteroachy
-        simulateSeqsWithHeterotachy(sequence_length, site_specific_rates, cache_trans_matrix, num_rate_categories, max_num_states, node, dad);
-        
-        // delete cache_trans_matrix
-        delete [] cache_trans_matrix;
-    }
-    else
-    {
-        // in case without heterotachy, we only use the first element of branch_lengths to store the length of the current branch.
-        branch_lengths.resize(1);
-        
-        // simulate sequences without heteroachy
-        simulateSeqsWithoutHeterotachy(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, branch_lengths, node, dad);
-    }
-}
-
-/**
-*  simulate sequences with heteroachy for all nodes in the tree by DFS
-*
-*/
-void AliSimulatorHeterogeneity::simulateSeqsWithHeterotachy(int sequence_length, double *site_specific_rates, double *cache_trans_matrix, int num_rate_categories, int max_num_states, Node *node, Node *dad)
-{
-    // process its neighbors/children
-    NeighborVec::iterator it;
-    FOR_NEIGHBOR(node, dad, it) {
-        
-        // estimate the sequence for the current neighbor
-        (*it)->node->sequence.resize(sequence_length);
-        
-        for (int i = 0; i < sequence_length; i++)
-            (*it)->node->sequence[i] = estimateStateFromAccumulatedTransMatrices(cache_trans_matrix, site_specific_rates[i] , i, num_rate_categories, max_num_states, node->sequence[i]);
-            
-        // browse 1-step deeper to the neighbor node
-        simulateSeqsWithHeterotachy(sequence_length, site_specific_rates, cache_trans_matrix, num_rate_categories, max_num_states, (*it)->node, node);
-    }
-}
-
-/**
-*  simulate sequences without heteroachy for all nodes in the tree by DFS
-*
-*/
-void AliSimulatorHeterogeneity::simulateSeqsWithoutHeterotachy(int sequence_length, double *site_specific_rates, ModelSubst *model, double *trans_matrix, int max_num_states, DoubleVector branch_lengths, Node *node, Node *dad)
-{
     // process its neighbors/children
     NeighborVec::iterator it;
     FOR_NEIGHBOR(node, dad, it) {
@@ -215,9 +151,14 @@ void AliSimulatorHeterogeneity::simulateSeqsWithoutHeterotachy(int sequence_leng
             int num_models = tree->getModel()->isMixture()?tree->getModel()->getNMixtures():1;
             int num_rate_categories  = tree->getRateName().empty()?1:rate_heterogeneity->getNDiscreteRate();
             double *cache_trans_matrix = new double[num_models*num_rate_categories*max_num_states*max_num_states];
-            // in case without heterotachy -> set the current branch_length to the first element of the branch_lengths
-            branch_lengths[0] = (*it)->length;
             
+            // initialize a set of branch_lengths
+            DoubleVector branch_lengths;
+            branch_lengths.resize(num_rate_categories);
+            for (int i = 0; i < num_rate_categories; i++)
+                branch_lengths[i] = (*it)->getLength(i);
+            
+            // initialize caching accumulated trans_matrices
             intializeCachingAccumulatedTransMatrices(cache_trans_matrix, num_models, num_rate_categories, max_num_states, branch_lengths, trans_matrix, model);
 
             // estimate the sequence
@@ -236,7 +177,7 @@ void AliSimulatorHeterogeneity::simulateSeqsWithoutHeterotachy(int sequence_leng
         }
         
         // browse 1-step deeper to the neighbor node
-        simulateSeqsWithoutHeterotachy(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, branch_lengths, (*it)->node, node);
+        simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, (*it)->node, node);
     }
 }
 
