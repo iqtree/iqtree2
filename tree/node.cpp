@@ -256,35 +256,9 @@ void Node::deleteNode() {
 }
 
 Node::~Node() {
-    Node::deleteSpeciationTime();
     NeighborVec::reverse_iterator it;
     for (it = neighbors.rbegin(); it != neighbors.rend(); it++)
         delete (*it);
     neighbors.clear();
 }
-
-/**
-    set speciation_time
- */
-void Node::setSpeciationTime(double new_speciation_time){
-    speciation_time = new double(new_speciation_time);
-};
-
-/**
-    get speciation_time
- */
-double* Node::getSpeciationTime(){
-    return speciation_time;
-};
-
-/**
-    delete speciation_time
- */
-void Node::deleteSpeciationTime(){
-    if (speciation_time)
-    {
-        delete speciation_time;
-        speciation_time = NULL;
-    }
-};
 
