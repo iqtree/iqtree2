@@ -40,9 +40,11 @@ namespace ModelExpression {
         Expression(ModelInfoFromYAMLFile& for_model);
         virtual ~Expression() = default;
         virtual double evaluate()      const;
+        virtual bool   isBoolean()     const;
         virtual bool   isConstant()    const;
         virtual bool   isFunction()    const;
         virtual bool   isOperator()    const;
+        virtual bool   isList()        const;
         virtual bool   isToken(char c) const;
         virtual bool   isVariable()    const;
         virtual bool   isAssignment()  const;
@@ -111,7 +113,7 @@ namespace ModelExpression {
         InfixOperator(ModelInfoFromYAMLFile& for_model);
         virtual ~InfixOperator();
         virtual bool isOperator() const;
-        void setOperands(Expression* left, Expression* right); //takes ownership
+        virtual void setOperands(Expression* left, Expression* right); //takes ownership
     };
 
     class Exponentiation: public InfixOperator {
@@ -170,6 +172,83 @@ namespace ModelExpression {
         Expression* getTarget()         const;
         Variable*   getTargetVariable() const;
         Expression* getExpression()     const;
+    };
+
+    class BooleanOperator: public InfixOperator {
+    public:
+        typedef InfixOperator super;
+        BooleanOperator(ModelInfoFromYAMLFile& for_model);
+        virtual bool isBoolean() const;
+    };
+
+    class LessThanOperator: public BooleanOperator {
+    public:
+        typedef BooleanOperator super;
+        LessThanOperator(ModelInfoFromYAMLFile& for_model);
+        virtual int    getPrecedence() const;
+        virtual double evaluate()      const;
+    };
+
+    class GreaterThanOperator: public BooleanOperator {
+    public:
+        typedef BooleanOperator super;
+        GreaterThanOperator(ModelInfoFromYAMLFile& for_model);
+        virtual int    getPrecedence() const;
+        virtual double evaluate()      const;
+    };
+
+    class EqualityOperator: public BooleanOperator {
+    public:
+        typedef BooleanOperator super;
+        EqualityOperator(ModelInfoFromYAMLFile& for_model);
+        virtual int    getPrecedence() const;
+        virtual double evaluate()      const;
+    };
+
+    class InequalityOperator: public BooleanOperator {
+    public:
+        typedef BooleanOperator super;
+        InequalityOperator(ModelInfoFromYAMLFile& for_model);
+        virtual int    getPrecedence() const;
+        virtual double evaluate()      const;
+    };
+
+    class ShortcutAndOperator: public BooleanOperator {
+    public:
+        typedef BooleanOperator super;
+        ShortcutAndOperator(ModelInfoFromYAMLFile& for_model);
+        virtual int    getPrecedence() const;
+        virtual double evaluate()      const;
+    };
+
+    class ShortcutOrOperator: public BooleanOperator {
+    public:
+        typedef BooleanOperator super;
+        ShortcutOrOperator(ModelInfoFromYAMLFile& for_model);
+        virtual int    getPrecedence() const;
+        virtual double evaluate()      const;
+    };
+
+    class ListOperator: public InfixOperator {
+        std::vector<Expression*> list_entries;
+    public:
+        typedef InfixOperator super;
+        ListOperator(ModelInfoFromYAMLFile& for_model);
+        virtual ~ListOperator();
+        virtual int    getPrecedence()   const;
+        virtual double evaluate()        const;
+        virtual void   setOperands(Expression* left, Expression* right); //takes ownership
+        virtual bool   isList()          const;
+        virtual int    getEntryCount()   const;
+        virtual double evaluateEntry(int index) const;
+    };
+
+    class SelectOperator: public InfixOperator {
+    public:
+        typedef InfixOperator super;
+        SelectOperator(ModelInfoFromYAMLFile& for_model);
+        virtual int    getPrecedence() const;
+        virtual double evaluate()      const;
     };
 
     class InterpretedExpression: public Expression {

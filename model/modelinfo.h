@@ -180,7 +180,10 @@ private:
     bool          reversible;       //don't trust this; check against rate matrix
     int           rate_matrix_rank; //
     StringMatrix  rate_matrix_expressions;    //row major (expression strings)
+    std::string   rate_matrix_formula;
+    int           tip_likelihood_rank;
     StringMatrix  tip_likelihood_expressions; //likewise (for tip likelihoods)
+    std::string   tip_likelihood_formula;
     Parameters    parameters;      //parameters
     StateFreqType frequency_type;
     Variables     variables;
@@ -301,6 +304,8 @@ public:
                                 int param_count);
     void   logVariablesTo      (PhyloTree& report_to_tree)              const;
     ModelVariable& assign      (const std::string& var_name,
+                                double value);
+    ModelVariable& forceAssign (const std::string& var_name,
                                 double value);
     const StrVector&            getVariableNamesByPosition() const;
     ModelVariable& assignByPosition(size_t position,

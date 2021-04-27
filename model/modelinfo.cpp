@@ -573,7 +573,10 @@ ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(const ModelInfoFromYAMLFile& rhs)
     , num_states(rhs.num_states), reversible(rhs.reversible)
     , rate_matrix_rank(rhs.rate_matrix_rank)
     , rate_matrix_expressions(rhs.rate_matrix_expressions)
+    , rate_matrix_formula(rhs.rate_matrix_formula)
+    , tip_likelihood_rank(rhs.tip_likelihood_rank)
     , tip_likelihood_expressions(rhs.tip_likelihood_expressions)
+    , tip_likelihood_formula(rhs.tip_likelihood_formula)
     , parameters(rhs.parameters), frequency_type(rhs.frequency_type)
     , variables(rhs.variables), mixed_models(nullptr) {
     if (rhs.mixed_models!=nullptr) {
@@ -867,6 +870,27 @@ ModelVariable& ModelInfoFromYAMLFile::assign(const std::string& var_name,
     return it->second;
 }
 
+ModelVariable& ModelInfoFromYAMLFile::forceAssign (const std::string& var_name,
+                                                   double value_to_set) {
+    auto it = variables.find(var_name);
+    if ( it == variables.end()) {
+        if (hasDot(var_name.c_str()) && mixed_models!=nullptr) {
+            std::string sub_model_name;
+            const char* sub_model_var_name = nullptr;
+            breakAtDot(var_name.c_str(), sub_model_name,
+                       sub_model_var_name);
+            auto it = findMixedModel(sub_model_name);
+            return it->second.forceAssign(sub_model_var_name, value_to_set);
+        }
+        variables[var_name] = ModelVariable(ModelParameterType::OTHER,
+                                            ModelParameterRange(),
+                                            value_to_set);
+        it = variables.find(var_name);
+    }
+    it->second.setValue(value_to_set);
+    return it->second;
+}
+
 const StrVector& ModelInfoFromYAMLFile::getVariableNamesByPosition() const {
     variable_names.clear();
     ModelParameterType supported_types[] = {
@@ -934,19 +958,20 @@ int ModelInfoFromYAMLFile::getNumStates() const {
 }
 
 int  ModelInfoFromYAMLFile::getTipLikelihoodMatrixRank() const {
-    return static_cast<int>(tip_likelihood_expressions.size());
+    return tip_likelihood_rank;
 }
 
 void ModelInfoFromYAMLFile::computeTipLikelihoodsForState(int state, int num_states,
                                                           double* likelihoods) {
     std::stringstream complaint;
+    
     int tip_states = getTipLikelihoodMatrixRank();
     if (state<0) {
         complaint << "Cannot calculate tip likelihoods for state " << state << ".";
-    } else if (num_states<=state) {
+    } else if (num_states<=state && tip_likelihood_formula.empty()) {
         complaint << "Cannot calculate tip likelihoods for state " << state
                   << " as there are only " << num_states << " states.";
-    } else if (tip_states<=state) {
+    } else if (tip_states<=state && tip_likelihood_formula.empty() ) {
         complaint << "Cannot calculate tip likelihoods for state " << state
                   << " as tip likelihoods were provided"
                   << " only for " << tip_states << " states.";
@@ -954,13 +979,23 @@ void ModelInfoFromYAMLFile::computeTipLikelihoodsForState(int state, int num_sta
     if (!complaint.str().empty()) {
         outError(complaint.str());
     }
-    StrVector expr_row = tip_likelihood_expressions[state];
+    StrVector dummyRow;
+    StrVector& expr_row = tip_likelihood_expressions.empty()
+                        ? dummyRow : tip_likelihood_expressions[state];
     
     typedef ModelExpression::InterpretedExpression Interpreter;
+
+    forceAssign("num_states", (double)num_states);
+    forceAssign("row",        (double)state);
+    ModelVariable& column_var = forceAssign("column", (double)0);
     for (int column=0; column<num_states; ++column) {
+        column_var.setValue((double)column);
         std::string expr_string;
         if ( column < expr_row.size() ) {
             expr_string = expr_row[column];
+        }
+        if (expr_string.empty() && !tip_likelihood_formula.empty()) {
+            expr_string = tip_likelihood_formula;
         }
         if (expr_string.empty()) {
             likelihoods[column] = (column==state) ? 1.0 : 0.0;
@@ -1051,6 +1086,9 @@ void ModelInfoFromYAMLFile::appendParameterList(ModelParameterType param_type,
 
 const std::string& ModelInfoFromYAMLFile::getRateMatrixExpression
     ( int row, int col ) const {
+    if (rate_matrix_expressions.empty()) {
+        return rate_matrix_formula;
+    }
     return rate_matrix_expressions[row][col];
 }
 
@@ -1293,8 +1331,15 @@ public:
         const char*       separator = "";
         std::stringstream trace;
         trace << "Rate Matrix: { ";
+        
+        model_info.forceAssign("num_states", (double)num_states);
+        ModelVariable& row_var    = model_info.forceAssign("row",    (double)0);
+        ModelVariable& column_var = model_info.forceAssign("column", (double)0);
+        
         for (int row = 0; row < rank; ++row) {
+            row_var.setValue((double)row);
             for (int col = 0; col < rank; ++col) {
+                column_var.setValue((double)col);
                 if (col != row) {
                     std::string expr_string =
                         model_info.getRateMatrixExpression(row,col);

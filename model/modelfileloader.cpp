@@ -8,6 +8,9 @@
 #include <utils/stringfunctions.h>
 #include <tree/phylotree.h> //for TREE_LOG_LINE macro
    
+
+typedef ModelExpression::InterpretedExpression Interpreter;
+
 ModelFileLoader::ModelFileLoader(const char* path): file_path(path) {
 }
         
@@ -163,8 +166,10 @@ void ModelFileLoader::parseModelParameter(const YAML::Node& param,
                      "Matrix subscripts are implied by the matrix value itself, "
                      " but " + p.name + " parameter of model " + info.getName() +
                      " was explicitly subscripted (which is not supported).");
-        auto value = param["value"];
-        complainIfNot(value, p.name +
+        auto value   = param["value"];
+        auto formula = param["formula"];
+        auto rank    = param["rank"];
+        complainIfNot(value || (formula && rank), p.name +
                       " matrix parameter's value must be defined"
                       " in model " + info.getName() + ".");
         parseMatrixParameter(param, name, info, report_to_tree);
@@ -244,55 +249,96 @@ void ModelFileLoader::parseMatrixParameter(const YAML::Node& param,
     //Assumed: parameter has a "value" entry, and it is a sequence of sequences
     
     auto         value        = param["value"];
-    int          rank         = 0;
     int          column_count = 0;
     StringMatrix expressions;
     
-    complainIfNot(value.IsSequence(),
-                  "value of " + name +
-                  " matrix of model " + info.getName() +
-                  " was not a matrix");
-    for (auto row : value) {
-        ++rank;
-        std::stringstream s;
-        s << "Row " << rank << " of " + name + " matrix "
-          << " for model " << info.model_name
-          << " in " << info.model_file_path;
-        std::string context = s.str();
-        complainIfNot(row.IsSequence(),
-                      context + " is not a sequence" );
-        StrVector expr_row;
-        for (auto col : row) {
-            if (col.IsNull()) {
-                expr_row.emplace_back("");
+    auto         formula_node = param["formula"];
+    std::string  formula;
+
+    auto         rank_node    = param["rank"];
+    int          rank         = 0;
+
+    if (value) {
+        complainIfNot(value.IsSequence(),
+                      "value of " + name +
+                      " matrix of model " + info.getName() +
+                      " was not a matrix");
+        for (auto row : value) {
+            ++rank;
+            std::stringstream s;
+            s << "Row " << rank << " of " + name + " matrix "
+              << " for model " << info.model_name
+              << " in " << info.model_file_path;
+            std::string context = s.str();
+            complainIfNot(row.IsSequence(),
+                          context + " is not a sequence" );
+            StrVector expr_row;
+            for (auto col : row) {
+                if (col.IsNull()) {
+                    expr_row.emplace_back("");
+                }
+                else if (!col.IsScalar()) {
+                    std::stringstream s2;
+                    s2 << "Column " << (expr_row.size()+1)
+                       << " of " << context << " is not a scalar";
+                    outError(s2.str());
+                } else {
+                    expr_row.emplace_back(col.Scalar());
+                }
             }
-            else if (!col.IsScalar()) {
-                std::stringstream s2;
-                s2 << "Column " << (expr_row.size()+1)
-                   << " of " << context << " is not a scalar";
-                outError(s2.str());
-            } else {
-                expr_row.emplace_back(col.Scalar());
-            }
+            expressions.emplace_back(expr_row);
+            column_count = ( expr_row.size() < column_count )
+                         ? column_count : expr_row.size();
         }
-        expressions.emplace_back(expr_row);
-        column_count = ( expr_row.size() < column_count )
-                     ? column_count : expr_row.size();
+        expressions.makeRectangular(column_count);
     }
-    expressions.makeRectangular(column_count);
+    else if (!formula_node || !rank_node) {
+        outError(name +
+                 " matrix of model " + info.getName() +
+                 " had no value, and lacked either a rank or a formula");
+    }
+    if (rank_node) {
+        complainIfNot(rank_node.IsScalar(), "rank of " + name +
+                      " matrix of model " + info.getName() +
+                      " was not a scalar");
+        std::string rank_str = rank_node.Scalar();
+        info.forceAssign("num_states", (double) info.num_states);
+        
+        Interpreter interpreter(info, rank_str);
+        double rank_dbl = interpreter.evaluate();
+        rank            = (int)floor(rank_dbl);
+        complainIfNot(0<rank, "rank of " + name + " matrix of model "
+                      + info.getName() + " was invalid (" + rank_str + ")");
+        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+                      "Rank of " << info.getName() << "." << name <<
+                      " was " << rank_str << " ... or " << rank);
+    }
+    if (formula_node) {
+        complainIfNot(formula_node.IsScalar(), "formula of " + name +
+                      " matrix of model " + info.getName() +
+                      " was not a scalar");
+        formula = formula_node.Scalar();
+    }
     
     std::string lower_name = string_to_lower(name);
     if (lower_name=="ratematrix") {
         info.rate_matrix_rank           = rank;
         info.rate_matrix_expressions    = expressions;
+        info.rate_matrix_formula        = formula;
     }
     else if (lower_name=="tiplikelihood") {
+        info.tip_likelihood_rank        = rank;
         info.tip_likelihood_expressions = expressions;
+        info.tip_likelihood_formula     = formula;
     }
     else {
         outError(name + " matrix parameter not recognized"
                  " in " + info.getName() + " model");
     }
+    std::stringstream matrix_stream;
+    dumpMatrixTo(lower_name.c_str(), info, expressions, rank,
+                 formula, matrix_stream);
+    TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity, matrix_stream.str());
 }
 
 YAMLFileParameter
@@ -418,8 +464,63 @@ void ModelFileLoader::parseRateMatrix(const YAML::Node& rate_matrix,
     //to be blank?
     //
     std::stringstream matrix_stream;
-    dumpRateMatrixTo(info, matrix_stream);
+    dumpMatrixTo("rate", info, info.rate_matrix_expressions,
+                 info.rate_matrix_rank, info.rate_matrix_formula,
+                 matrix_stream);
     TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity, matrix_stream.str());
+}
+
+void ModelFileLoader::dumpMatrixTo(const char* name, ModelInfoFromYAMLFile& info,
+                                   const StringMatrix& matrix, int rank,
+                                   const std::string& formula, std::stringstream &out) {
+    info.forceAssign("num_states", (double)info.num_states);
+    ModelVariable& row_var    = info.forceAssign("row",    (double)0);
+    ModelVariable& column_var = info.forceAssign("column", (double)0);
+
+    std::string with_formula;
+    std::stringstream dump;
+    if (!matrix.empty()) {
+        //If there's a matrix of expressions, dump the expressions
+        int row = 0;
+        for (auto r : matrix) {
+            row_var.setValue(row);
+            const char* separator = "";
+            int col = 0;
+            for (auto c: r) {
+                column_var.setValue(col);
+                dump << separator << c;
+                separator = " : ";
+                ++col;
+            }
+            dump << "\n";
+            ++row;
+        }
+    }
+    else {
+        //If there is a formula, dump the formula, and its
+        //current value, for each entry in the matrix
+        with_formula = " (with formula " + formula + ")";
+        for (int row=0; row<rank; ++row) {
+            row_var.setValue(row);
+            const char* separator = "";
+            for (int col=0; col<rank; ++col) {
+                column_var.setValue(col);
+                try {
+                    Interpreter interpreter(info, formula);
+                    double value = interpreter.evaluate();
+                    dump << separator << value;
+                }
+                catch (ModelExpression::ModelException& x) {
+                    dump << separator << " ERROR";
+                }
+                separator = " : ";
+            }
+            dump << "\n";
+        }
+    }
+    out << name << " matrix for " << info.model_name
+        << with_formula
+        << " is...\n" << dump.str();
 }
 
 void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_model,

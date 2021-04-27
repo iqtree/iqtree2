@@ -11,7 +11,7 @@
 #include "modelinfo.h" //for ModelInfoFromYAMLFile
 
 class ModelFileLoader {
-public:
+public:    
     const char*       file_path;
     const std::string model_name;
    
@@ -55,21 +55,12 @@ public:
                                 ModelInfoFromYAMLFile& info,
                                 ModelListFromYAMLFile& list,
                                 PhyloTree* report_to_tree);
-    
-    template <class S>
-    void dumpRateMatrixTo(const ModelInfoFromYAMLFile& info, S &out) {
-        std::stringstream dump;
-        for (auto r : info.rate_matrix_expressions) {
-            const char* separator = "";
-            for (auto c: r) {
-                dump << separator << c;
-                separator = " : ";
-            }
-            dump << "\n";
-        }
-        out << "Rate matrix for " << info.model_name
-            << " is...\n" << dump.str();
-    }
+    void dumpMatrixTo(const char* name, ModelInfoFromYAMLFile& info,
+                      const StringMatrix& matrix,
+                      int rank,
+                      const std::string& formula, std::stringstream &out);
+
+
 
     void parseRateMatrix(const YAML::Node& rate_matrix,
                          ModelInfoFromYAMLFile& info,

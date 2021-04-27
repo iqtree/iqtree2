@@ -39,14 +39,24 @@
 - substitutionmodel: YTIP
   frommodel: YJC
   parameters:
-    - name:  tiplikelihood
-      type:  matrix
+    - name: tiplikelihood
+      type: matrix
       value:
         - [ 1,    0.01,  0.1,  0.01 ]
         - [ 0.01,    1,  0.01, 0.1  ]
         - [ 0.1,  0.01,  1,    0.01 ]
         - [ 0.01,   0.1, 0.01, 1    ]
 
+- substitutionmodel: YTIP2
+  frommodel: YTIP
+  parameters:
+    - name: e
+      type: other
+      initValue: 0.05
+    - name:    tiplikelihood
+      type:    matrix
+      rank:    num_states
+      formula: "(row==column) ? (1-e) : (e/num_states)"
 
 ### GTR model ###
 - substitutionmodel: YGTR

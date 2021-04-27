@@ -50,14 +50,16 @@ namespace ModelExpression {
     }
 
     double Expression::evaluate()      const { return 0; }
+    bool   Expression::isBoolean()     const { return false; }
     bool   Expression::isConstant()    const { return false; }
     bool   Expression::isFunction()    const { return false; }
+    bool   Expression::isList()        const { return false; }
     bool   Expression::isOperator()    const { return false; }
     bool   Expression::isToken(char c) const { return false; }
     bool   Expression::isVariable()    const { return false; }
     bool   Expression::isAssignment()  const { return false; }
 
-    int    Expression::getPrecedence() const { return false; }
+    int    Expression::getPrecedence() const { return 0; }
 
     Token::Token(ModelInfoFromYAMLFile& for_model, char c): super(for_model) {
         token_char = c;
@@ -154,7 +156,7 @@ namespace ModelExpression {
         double v2 = rhs->evaluate();
         return pow(v1, v2);
     }
-    int    Exponentiation::getPrecedence() const { return 3; }
+    int    Exponentiation::getPrecedence() const { return 12; }
 
     Multiplication::Multiplication(ModelInfoFromYAMLFile& for_model)
         : super(for_model) { }
@@ -165,7 +167,7 @@ namespace ModelExpression {
         return v1 * v2;
     }
 
-    int    Multiplication::getPrecedence() const { return 2; }
+    int    Multiplication::getPrecedence() const { return 11; }
 
     Division::Division(ModelInfoFromYAMLFile& for_model )
         : super(for_model) { }
@@ -174,7 +176,7 @@ namespace ModelExpression {
         return lhs->evaluate() / rhs->evaluate();
     }
 
-    int    Division::getPrecedence() const { return 2; }
+    int    Division::getPrecedence() const { return 11; }
 
     Addition::Addition(ModelInfoFromYAMLFile& for_model)
         : super(for_model) { }
@@ -184,7 +186,7 @@ namespace ModelExpression {
         double v2 = rhs->evaluate();
         return v1 + v2;
     }
-    int    Addition::getPrecedence() const { return 1; }
+    int    Addition::getPrecedence() const { return 10; }
 
     Subtraction::Subtraction(ModelInfoFromYAMLFile& for_model )
         : super(for_model) { }
@@ -193,7 +195,7 @@ namespace ModelExpression {
         return lhs->evaluate() - rhs->evaluate();
     }
 
-    int Subtraction::getPrecedence() const { return 1; }
+    int Subtraction::getPrecedence() const { return 10; }
 
     Assignment::Assignment(ModelInfoFromYAMLFile& for_model )
     : super(for_model) { }
@@ -212,9 +214,7 @@ namespace ModelExpression {
         return true;
     }
 
-    int Assignment::getPrecedence()     const {
-        return 0;
-    }
+    int Assignment::getPrecedence()     const { return 9; }
 
     Expression* Assignment::getTarget()         const {
         return lhs;
@@ -226,6 +226,184 @@ namespace ModelExpression {
 
     Expression* Assignment::getExpression()    const {
         return rhs;
+    }
+
+    BooleanOperator::BooleanOperator(ModelInfoFromYAMLFile& for_model)
+        : super(for_model) {}
+
+    bool BooleanOperator::isBoolean() const {
+        return true;
+    }
+
+    LessThanOperator::LessThanOperator(ModelInfoFromYAMLFile& for_model)
+        : super(for_model) {}
+
+    int LessThanOperator::getPrecedence() const {
+        return 8;
+    }
+
+    double LessThanOperator::evaluate()      const {
+        return lhs->evaluate() < rhs->evaluate() ? 1.0 : 0.0;
+    }
+
+    GreaterThanOperator::GreaterThanOperator(ModelInfoFromYAMLFile& for_model)
+        : super(for_model) {}
+
+    int GreaterThanOperator::getPrecedence() const {
+        return 8;
+    }
+
+    double GreaterThanOperator::evaluate()      const {
+        return lhs->evaluate() > rhs->evaluate() ? 1.0 : 0.0;
+    }
+
+    EqualityOperator::EqualityOperator(ModelInfoFromYAMLFile& for_model)
+        : super(for_model) {}
+
+    int EqualityOperator::getPrecedence() const {
+        return 7;
+    }
+
+    double EqualityOperator::evaluate()      const {
+        return lhs->evaluate() == rhs->evaluate() ? 1.0 : 0.0;
+    }
+
+    InequalityOperator::InequalityOperator(ModelInfoFromYAMLFile& for_model)
+        : super(for_model) {}
+
+    int InequalityOperator::getPrecedence() const {
+        return 7;
+    }
+
+    double InequalityOperator::evaluate() const {
+        return lhs->evaluate() != rhs->evaluate() ? 1.0 : 0.0;
+    }
+
+    ShortcutAndOperator::ShortcutAndOperator(ModelInfoFromYAMLFile& for_model)
+    : super(for_model) {}
+
+    int ShortcutAndOperator::getPrecedence() const {
+        return 6;
+    }
+
+    double ShortcutAndOperator::evaluate() const {
+        return ( lhs->evaluate() != 0 && rhs->evaluate() !=0 ) ? 1.0 : 0.0;
+    }
+
+    ShortcutOrOperator::ShortcutOrOperator(ModelInfoFromYAMLFile& for_model)
+        : super(for_model) {}
+
+    int ShortcutOrOperator::getPrecedence() const {
+        return 5;
+    }
+
+    double ShortcutOrOperator::evaluate() const {
+        return ( lhs->evaluate() != 0 || rhs->evaluate() !=0 ) ? 1.0 : 0.0;
+    }
+
+    ListOperator::ListOperator(ModelInfoFromYAMLFile& for_model)
+        : super(for_model) {}
+
+    ListOperator::~ListOperator() {
+        for (Expression* exp : list_entries) {
+            delete exp;
+        }
+        list_entries.clear();
+    }
+
+    int ListOperator::getPrecedence() const {
+        return 4;
+    }
+
+    double ListOperator::evaluate() const {
+        double v = 0;
+        for (Expression* expr: list_entries) {
+            v = expr->evaluate();
+        }
+        return v;
+    }
+
+    void   ListOperator::setOperands(Expression* left, Expression* right) {
+        if (left->isList()) {
+            ListOperator* old = dynamic_cast<ListOperator*>(left);
+            std::swap(old->list_entries, list_entries);
+            list_entries.push_back(right);
+            delete left;
+        } else {
+            list_entries.push_back(left);
+            list_entries.push_back(right);
+        }
+    }
+
+    bool ListOperator::isList() const {
+        return true;
+    }
+
+    int  ListOperator::getEntryCount()   const {
+        return static_cast<int>(list_entries.size());
+    }
+
+    double  ListOperator::evaluateEntry(int index) const {
+        if (index<0) {
+            std::stringstream complaint;
+            complaint << "Cannot select list element"
+                      <<" with zero-based index " << index << ".";
+            throw ModelException(complaint.str());
+        }
+        if (list_entries.size()<=index) {
+            std::stringstream complaint;
+            complaint << "Cannot select list element"
+                      << " with zero-based index " << index
+                      << " from a list of " << list_entries.size() << "entries.";
+            throw ModelException(complaint.str());
+
+        }
+        return list_entries[index]->evaluate();
+    }
+
+    SelectOperator::SelectOperator(ModelInfoFromYAMLFile& for_model)
+        : super(for_model) {}
+
+    int    SelectOperator::getPrecedence() const {
+        return 3;
+    }
+
+    double SelectOperator::evaluate()      const {
+        if (lhs->isBoolean()) {
+            if (rhs->isList()) {
+                int index = (lhs->evaluate() == 0) ? 1: 0;
+                ListOperator* r = dynamic_cast<ListOperator*>(rhs);
+                return r->evaluateEntry(index);
+            } else {
+                return lhs->evaluate() ? rhs->evaluate() : 0 ;
+            }
+        } else {
+            double index = lhs->evaluate();
+            if (index<0) {
+                std::stringstream complaint;
+                complaint << "Cannot select list element"
+                          << " with zero-based index " << index
+                          << " from a list.";
+                throw ModelException(complaint.str());
+            }
+            if (rhs->isList()) {
+                ListOperator* r = dynamic_cast<ListOperator*>(rhs);
+                if (r->getEntryCount() <= index) {
+                    std::stringstream complaint;
+                    complaint << "Cannot select list element"
+                              << " with zero-based index " << index
+                              << " from a list of " << r->getEntryCount()
+                              << " entries.";
+                    throw ModelException(complaint.str());
+                }
+                int int_index = (int) floor(index);
+                return r->evaluateEntry(int_index);
+            }
+            if (index==0) {
+                return 0.0;
+            }
+            return rhs->evaluate();
+        }
     }
 
     InterpretedExpression::InterpretedExpression(ModelInfoFromYAMLFile& for_model,
@@ -379,12 +557,43 @@ namespace ModelExpression {
         switch (ch) {
             case '(': expr = new Token(model, ch);      break;
             case ')': expr = new Token(model, ch);      break;
+            case '!': if (text[ix+1]=='=') {
+                          expr = new InequalityOperator(model);
+                          ++ix;
+                      } else {
+                          throw new ModelException("unary not (!) operator not supported");
+                      }
+                      break;
             case '^': expr = new Exponentiation(model); break;
             case '*': expr = new Multiplication(model); break;
             case '/': expr = new Division(model);       break;
             case '+': expr = new Addition(model);       break;
             case '-': expr = new Subtraction(model);    break;
-            case '=': expr = new Assignment(model);     break;
+            case '<': expr = new LessThanOperator(model);    break;
+            case '>': expr = new GreaterThanOperator(model); break;
+            case '=': if (text[ix+1]=='=') {
+                          expr = new EqualityOperator(model);
+                          ++ix;
+                      } else {
+                          expr = new Assignment(model);
+                      }
+                      break;
+            case '&': if (text[ix+1]=='&') {
+                          expr = new ShortcutAndOperator(model);
+                          ++ix;
+                      } else {
+                          throw new ModelException("bitwise-and & operator not supported");
+                      }
+                      break;
+            case '|': if (text[ix+1]=='|') {
+                          expr = new ShortcutOrOperator(model);
+                          ++ix;
+                      } else {
+                            throw new ModelException("bitwise-or | operator not supported");
+                      }
+                      break;
+            case ':': expr = new ListOperator(model);   break;
+            case '?': expr = new SelectOperator(model); break;
             default:
                 throw ModelException(std::string("unrecognized character '") +
                                      std::string(1, ch) + "'' in expression");
