@@ -2289,6 +2289,13 @@ public:
     int alisim_num_states_morph;
     
     /**
+    *  number of taxa
+    */
+    int alisim_num_taxa_uniform_start;
+    int alisim_num_taxa_uniform_end;
+    IntVector alisim_num_taxa_list;
+    
+    /**
     *  birth_rate (Birth_Death model)
     */
     double birth_rate;

@@ -1119,6 +1119,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_max_rate_categories_for_applying_caching = 5;
     params.alisim_sites_per_state = 1;
     params.alisim_num_states_morph = 32;
+    params.alisim_num_taxa_uniform_start = -1;
+    params.alisim_num_taxa_uniform_end = -1;
     params.birth_rate = 0.8;
     params.death_rate = 0.2;
     
@@ -4000,7 +4002,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                     // <NUM_TAXA> is required if an alignment is not provided
                     if ((params.original_params.find("-s ") == std::string::npos)
                         && (params.original_params.find("--aln ") == std::string::npos))
-                        throw "Use -t RANDOM{<MODEL>,<NUM_TAXA>} where <MODEL> is yh, u, cat, bal, bd{<birth_rate>,<death_rate>} stands for Yule-Harding, Uniform, Caterpillar, Balanced, Birth-Death model respectively. <NUM_TAXA> is only required if an alignment is not provided by -s <ALIGNMENT_FILE>.";
+                        throw "Use -t RANDOM{<MODEL>,<NUM_TAXA>} where <MODEL> is yh, u, cat, bal, bd{<birth_rate>,<death_rate>} stands for Yule-Harding, Uniform, Caterpillar, Balanced, Birth-Death model respectively; <NUM_TAXA> could be a fixed number, a list (<NUM_1>,<NUM_2>,...,<NUM_N>), or a Uniform distribution U(<LOWER_BOUND>,<UPPER_BOUND>). <NUM_TAXA> is only required if an alignment is not provided by -s <ALIGNMENT_FILE>.";
                 }
                 else if (START_TREE_RECOGNIZED(argv[cnt])) {
                     params.start_tree_subtype_name = argv[cnt];
@@ -4008,7 +4010,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 }
                 else
                 {
-                    string ERR_MSG = "Use -t RANDOM{<MODEL>,<NUM_TAXA>} where <MODEL> is yh, u, cat, bal, bd{<birth_rate>,<death_rate>} stands for Yule-Harding, Uniform, Caterpillar, Balanced, Birth-Death model respectively. <NUM_TAXA> is only required if an alignment is not provided by -s <ALIGNMENT_FILE>.";
+                    string ERR_MSG = "Use -t RANDOM{<MODEL>,<NUM_TAXA>} where <MODEL> is yh, u, cat, bal, bd{<birth_rate>,<death_rate>} stands for Yule-Harding, Uniform, Caterpillar, Balanced, Birth-Death model respectively; <NUM_TAXA> could be a fixed number, a list (<NUM_1>,<NUM_2>,...,<NUM_N>), or a Uniform distribution U(<LOWER_BOUND>,<UPPER_BOUND>). <NUM_TAXA> is only required if an alignment is not provided by -s <ALIGNMENT_FILE>.";
                     string t_params = argv[cnt];
                     string KEYWORD = "RANDOM";
                     if ((t_params.length() > KEYWORD.length())
@@ -4052,9 +4054,74 @@ void parseArg(int argc, char *argv[], Params &params) {
                         // parse #taxa
                         if (num_taxa.length() > 0)
                         {
-                            params.sub_size = convert_int(num_taxa.c_str());
-                            if (params.sub_size <= 3)
-                                throw ERR_MSG +" <NUM_TAXA> must be greater than 3.";
+                            // handle the case with a list (<NUM_1>,<NUM_2>,...,<NUM_N>)
+                            if (num_taxa[0] == '{')
+                            {
+                                delimiter = ",";
+                                // validate the input
+                                if ((num_taxa[0]!='{')
+                                    ||(num_taxa[num_taxa.length()-1]!='}'))
+                                    throw ERR_MSG;
+                                
+                                // remove "U{"
+                                num_taxa.erase(0, 1);
+                                
+                                // remove "}"
+                                num_taxa = num_taxa.substr(0, num_taxa.length()-1);
+                                
+                                // get the list of numbers of taxa
+                                while (num_taxa.length()>0)
+                                {
+                                    // get the <NUM_X>
+                                    int tmp_num = convert_int(num_taxa.substr(0, num_taxa.find(delimiter)).c_str());
+                                    if (tmp_num <= 3)
+                                        throw "<NUM_TAXA> must be greater than 3.";
+                                    params.alisim_num_taxa_list.push_back(tmp_num);
+                                    
+                                    // remove "<NUM_TAXA>,"
+                                    if (num_taxa.find(delimiter) != string::npos)
+                                        num_taxa.erase(0, num_taxa.find(delimiter) + delimiter.length());
+                                    else
+                                        num_taxa = "";
+                                }
+                            }
+                            // handle the case with a Uniform Distribution U(<LOWER_BOUND>,<UPPER_BOUND>)
+                            else if (num_taxa[0] == 'U')
+                            {
+                                delimiter = ",";
+                                // validate the input
+                                if ((num_taxa[1]!='{')
+                                    ||(num_taxa[num_taxa.length()-1]!='}')
+                                    || (num_taxa.find(delimiter) == string::npos))
+                                    throw ERR_MSG;
+                                
+                                // remove "U{"
+                                num_taxa.erase(0, 2);
+                                
+                                // remove "}"
+                                num_taxa = num_taxa.substr(0, num_taxa.length()-1);
+                                
+                                // get the <LOWER_BOUND>
+                                params.alisim_num_taxa_uniform_start = convert_int(num_taxa.substr(0, num_taxa.find(delimiter)).c_str());
+                                if (params.alisim_num_taxa_uniform_start <= 3)
+                                    throw "<LOWER_BOUND> must be greater than 3.";
+                                
+                                // remove "<LOWER_BOUND>,"
+                                num_taxa.erase(0, num_taxa.find(delimiter) + delimiter.length());
+                                
+                                // get <UPPER_BOUND>
+                                params.alisim_num_taxa_uniform_end = convert_int(num_taxa.c_str());
+                                if (params.alisim_num_taxa_uniform_start > params.alisim_num_taxa_uniform_end)
+                                    throw "<UPPER_BOUND> must not be less than <LOWER_BOUND>";
+                                
+                            }
+                            // handle the case with a fixed number
+                            else
+                            {
+                                params.sub_size = convert_int(num_taxa.c_str());
+                                if (params.sub_size <= 3)
+                                    throw ERR_MSG +" <NUM_TAXA> must be greater than 3.";
+                            }
                         }
                         
                         // parse model

@@ -14,8 +14,21 @@ void runAliSim(Params &params, Checkpoint *checkpoint)
     Alignment *aln;
     
     // generate a random tree if neccessary
-    if (params.tree_gen != NONE && params.sub_size > 3)
+    if (params.tree_gen != NONE)
     {
+        // draw a random num_taxa from a user-defined list
+        if (!params.alisim_num_taxa_list.empty())
+        {
+            int rand_index = random_int(params.alisim_num_taxa_list.size());
+            params.sub_size = params.alisim_num_taxa_list.at(rand_index);
+        }
+        // draw a random num_taxa from uniform distribution
+        else if (params.alisim_num_taxa_uniform_start > 3)
+        {
+            int range = params.alisim_num_taxa_uniform_end - params.alisim_num_taxa_uniform_start + 1;
+            params.sub_size = params.alisim_num_taxa_uniform_start + random_int(range);
+        }
+            
         generateRandomTree(params);
         
         // reset flags to make sure IQTree will not re-generate new random starting_tree
