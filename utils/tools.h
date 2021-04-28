@@ -2305,6 +2305,13 @@ public:
     */
     double death_rate;
     
+    /**
+    *  rate to generate abundant states
+    *  default is 1.0 in case without constant sites removal;
+    *  or is 2.0 in case with constant sites removal;
+    */
+    double alisim_abundant_state_rate;
+    
 };
 
 /**

@@ -89,7 +89,7 @@ protected:
     /**
     *  write all sequences of a tree to an output file
     */
-    void writeSequencesToFile(string file_path);
+    void writeSequencesToFile(string file_path, IntVector variant_state_mask);
     
     /**
     *  load sequences from input file
@@ -99,22 +99,22 @@ protected:
     /**
     *  write a sequence of a node to an output file
     */
-    void writeASequenceToFile(Alignment *aln, ofstream &out, Node *node, Node *dad);
+    void writeASequenceToFile(Alignment *aln, ofstream &out, IntVector variant_state_mask, Node *node, Node *dad);
     
     /**
     *  write a sequence of a node to an output file with gaps copied from the input sequence
     */
-    void writeASequenceToFileWithGaps(Alignment *aln, vector<string> seq_names, vector<string> sequences, ofstream &out, Node *node, Node *dad);
+    void writeASequenceToFileWithGaps(Alignment *aln, vector<string> seq_names, vector<string> sequences, ofstream &out, IntVector variant_state_mask, Node *node, Node *dad);
 
     /**
     *  convert an encoded sequence (with integer numbers) to a readable sequence (with ACGT...)
     */
-    string convertEncodedSequenceToReadableSequence(Alignment *aln, IntVector sequence);
+    string convertEncodedSequenceToReadableSequence(Alignment *aln, IntVector sequence, IntVector variant_state_mask);
     
     /**
     *  convert an encoded sequence (with integer numbers) to a readable sequence (with ACGT...) with gaps copied from the input sequence
     */
-    string convertEncodedSequenceToReadableSequenceWithGaps(Alignment *aln, string input_sequence, IntVector sequence);
+    string convertEncodedSequenceToReadableSequenceWithGaps(Alignment *aln, string input_sequence, IntVector sequence, IntVector variant_state_mask);
     
     /**
     *  simulate sequences for all nodes in the tree by DFS
@@ -141,6 +141,11 @@ protected:
     virtual void intializeStateFreqsMixtureModel(){
         // will be override in alisimulatorheterogeneity
     };
+    
+    /**
+        create mask for variant states
+    */
+    void createVariantStateMask(IntVector &variant_state_mask, int &num_variant_states, int expected_num_variant_states, Node *node, Node *dad);
     
 public:
     
