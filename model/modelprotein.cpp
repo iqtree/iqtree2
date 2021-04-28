@@ -800,6 +800,12 @@ end;
 )";
 }
 
+ModelProtein::ModelProtein(PhyloTree *tree, PhyloTree* report_to_tree)
+: super(tree, true, false)
+{
+}
+
+
 ModelProtein::ModelProtein(const char *model_name, string model_params,
                            StateFreqType freq, string freq_params,
                            PhyloTree *tree, ModelsBlock* models_block,
@@ -823,6 +829,15 @@ void rescaleRates(double *rates, int nrates) {
         rates[i] *= scaler;
     }
 }
+
+void ModelProtein::setModelsBlock(ModelsBlock* blocks) {
+    models_block = blocks;
+}
+
+void ModelProtein::setNumberOfStates(int states) {
+    num_states = states;
+}
+
 
 void ModelProtein::init(const char *model_name, string model_params,
                         StateFreqType freq, string freq_params,
@@ -922,8 +937,9 @@ void ModelProtein::init(const char *model_name, string model_params,
             setReversible(false);
         }
         num_params = getNumRateEntries()-1;
-    } else {
-        // if name does not match, read the user-defined model
+    } else if (strlen(model_name)!=0) {
+        // if name does not match and is not blank,
+        // it's a user-defined model: read it from file.
         readParameters(model_name, true, report_to_tree);
         rescaleRates(rates, getNumRateEntries());
         num_params = 0;
@@ -931,7 +947,6 @@ void ModelProtein::init(const char *model_name, string model_params,
     if (freq_params != "") {
         readStateFreq(freq_params, report_to_tree);
     }
-    //assert(freq != FREQ_ESTIMATE);
     if (freq == FREQ_UNKNOWN) {
         freq = FREQ_USER_DEFINED;
     }

@@ -31,8 +31,10 @@
 #ifdef GLOBAL_VARIABLES_DEFINITION
 
 
-const char *protModels[PLL_NUM_PROT_MODELS] = {"DAYHOFF", "DCMUT", "JTT", "MTREV", "WAG", "RTREV", "CPREV", "VT", "BLOSUM62", "MTMAM", "LG", "MTART", "MTZOA", "PMB", 
-					   "HIVB", "HIVW", "JTTDCMUT", "FLU", "AUTO", "LG4M", "LG4X", "GTR"};
+const char *protModels[PLL_NUM_PROT_MODELS] = {
+    "DAYHOFF", "DCMUT", "JTT", "MTREV", "WAG", "RTREV", "CPREV",
+    "VT", "BLOSUM62", "MTMAM", "LG", "MTART", "MTZOA", "PMB",
+    "HIVB", "HIVW", "JTTDCMUT", "FLU", "AUTO", "LG4M", "LG4X", "GTR"};
 
 const char binaryStateNames[2]   = {'0', '1'};  
 

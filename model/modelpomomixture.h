@@ -208,16 +208,16 @@ public:
 	virtual uint64_t getMemoryRequired()       { return ModelMixture::getMemoryRequired(); }
 	virtual void writeParameters(ostream& out) { ModelMixture::writeParameters(out); }
 
-	virtual bool isPolymorphismAware() { return ModelPoMo::isPolymorphismAware(); };
-	virtual int getNumRateEntries()    { return ModelPoMo::getNumRateEntries();  }
-	virtual void computeTipLikelihood(PML::StateType state, double* state_lk) {
-		ModelPoMo::computeTipLikelihood(state, state_lk);
-	}
-	virtual ModelSubst* getMutationModel() { return ModelPoMo::getMutationModel(); }	
-	virtual void setRates()                { ModelPoMo::setRates(); }
-	virtual void computeRateMatrix(double** rate_matrix, double* state_freq, int num_state) {
-		ModelPoMo::computeRateMatrix(rate_matrix, state_freq, num_state);
-	}
+    virtual bool isPolymorphismAware()    { return ModelPoMo::isPolymorphismAware(); };
+    virtual int getNumRateEntries() const { return ModelPoMo::getNumRateEntries();  }
+    virtual void computeTipLikelihood(PML::StateType state, double* state_lk) {
+        ModelPoMo::computeTipLikelihood(state, state_lk);
+    }
+    virtual ModelSubst* getMutationModel() { return ModelPoMo::getMutationModel(); }
+    virtual void setRates()                { ModelPoMo::setRates(); }
+    virtual void computeRateMatrix(double** rate_matrix, double* state_freq, int num_state) {
+        ModelPoMo::computeRateMatrix(rate_matrix, state_freq, num_state);
+    }
 #endif
 
 

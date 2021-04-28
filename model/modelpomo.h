@@ -180,7 +180,7 @@ class ModelPoMo : virtual public ModelMarkov
     /**
      *  @return the number of rate entries
      */
-    virtual int getNumRateEntries() { return n_alleles*(n_alleles-1)/2; };
+    virtual int getNumRateEntries() const { return n_alleles*(n_alleles-1)/2; };
 
     /**
      *  \brief Normalize boundary frequencies so that they sum to 1.0.

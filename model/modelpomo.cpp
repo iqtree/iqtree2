@@ -748,12 +748,7 @@ ModelPoMo::estimateEmpiricalBoundaryStateFreqs(double * freq_boundary_states)
             }
             TREE_LOG_LINE(*phylo_tree, VB_MAX, text.str());
         }
-        // Set highest_freq_state.
-        for (int i = 0; i < num_states; i++) {
-            if (abs_state_freq[i] > abs_state_freq[highest_freq_state]) {
-                highest_freq_state = i;
-            }
-        }
+        identifyHighestFrequencyState(abs_state_freq);        
     } else {
         for (Alignment::iterator it = phylo_tree->aln->begin();
              it != phylo_tree->aln->end(); it++) {

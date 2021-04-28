@@ -8,6 +8,7 @@
 
 #include <string>
 #include <utils/tools.h> //for ASCType
+#include <nclextra/modelsblock.h>
 
 extern VerboseMode YAMLModelVerbosity;
 
@@ -153,15 +154,14 @@ public:
 
 class StringMatrix: public std::vector<StrVector> {
 public:
-    void makeRectangular(size_t column_count) {
-        size_t row_count = size();
-        for (int row_num=0; row_num<row_count; ++row_num) {
-            StrVector& row = at(row_num);
-            if (row.size() != column_count) {
-                row.resize(row_count, "");
-            }
-        }
-    }
+    void makeRectangular(size_t column_count);
+    
+    /**
+        makes a matrix (typically a rate matrix square), possibly  by
+        reflecting expressions across the diagonal.
+        @param reflect true if expressions to be reflected
+     */
+    void makeSquare(bool reflect);
 };
 
 class ModelInfoFromYAMLFile: public ModelInfo {
@@ -175,7 +175,9 @@ private:
     std::string   model_file_path;  //
     std::string   citation;         //Citation string
     std::string   DOI;              //DOI for the publication (optional)
+    std::string   url;              //URL for the model (optional).
     std::string   data_type_name;   //
+    SeqType       sequence_type;    //sequence type (perhaps from data_type_name ?)
     int           num_states;       //number of states
     bool          reversible;       //don't trust this; check against rate matrix
     int           rate_matrix_rank; //
@@ -273,6 +275,9 @@ public:
     MapOfModels::const_iterator findMixedModel(const std::string& name) const;
     MapOfModels::iterator       findMixedModel(const std::string& name);
 
+    //Initialization helper functions
+    void setNumberOfStatesAndSequenceType(int requested_num_states);
+    
     //Parameters
     const YAMLFileParameter* findParameter(const char* name,
                                            ModelParameterType type) const;
@@ -334,7 +339,20 @@ public:
     bool isModelNameRecognized (const char* model_name);
     ModelMarkov* getModelByName(const char* model_name,   PhyloTree *tree,
                                 const char* model_params, StateFreqType freq_type,
-                                const char* freq_params,  PhyloTree* report_to_tree);
+                                const char* freq_params,  ModelsBlock * blocks_model,
+                                PhyloTree* report_to_tree);
+    
+    ModelMarkov* getDNAModel    (ModelInfoFromYAMLFile& model_info,
+                                 const std::string& parameter_list,
+                                 StateFreqType freq_type,
+                                 PhyloTree* tree,
+                                 PhyloTree* report_to_tree);
+    ModelMarkov* getProteinModel(ModelInfoFromYAMLFile& model_info,
+                                 const std::string& parameter_list,
+                                 StateFreqType freq_type,
+                                 PhyloTree*   tree,
+                                 ModelsBlock* models_block,
+                                 PhyloTree*   report_to_trees);
     
     bool hasModel(const std::string& model_name) const;
     const ModelInfoFromYAMLFile& getModel(const std::string& model_name) const;

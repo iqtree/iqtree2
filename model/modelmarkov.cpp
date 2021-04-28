@@ -50,24 +50,23 @@ int computeStateFreqFromQMatrix (double Q[], double pi[], int n);
 ModelMarkov::ModelMarkov(PhyloTree *tree, bool reversible, bool adapt_tree)
  : ModelSubst(tree->aln->num_states), EigenDecomposition()
 {
-    phylo_tree = tree;
-    rates = nullptr;
+    phylo_tree         = tree;
+    rates              = nullptr;
 
     // variables for reversible model
-    eigenvalues = nullptr;
-    eigenvectors = nullptr;
-    inv_eigenvectors = nullptr;
+    eigenvalues        = nullptr;
+    eigenvectors       = nullptr;
+    inv_eigenvectors   = nullptr;
     inv_eigenvectors_transposed = nullptr;
-    highest_freq_state = num_states-1;
-    freq_type = FREQ_UNKNOWN;
-    half_matrix = true;
-    highest_freq_state = num_states-1;
+    highest_freq_state = 0;
+    freq_type          = FREQ_UNKNOWN;
+    half_matrix        = true;
 
     // variables for non-reversible model
-    rate_matrix = nullptr;
-    eigenvalues_imag = nullptr;
+    rate_matrix        = nullptr;
+    eigenvalues_imag   = nullptr;
     ceval = cevec = cinv_evec = nullptr;
-    nondiagonalizable = false;
+    nondiagonalizable  = false;
 
     if (reversible) {
         name      = "Rev";
@@ -81,7 +80,7 @@ ModelMarkov::ModelMarkov(PhyloTree *tree, bool reversible, bool adapt_tree)
 
 void ModelMarkov::setReversible(bool reversible, bool adapt_tree) {
     bool old_reversible = is_reversible;
-    is_reversible = reversible;
+    is_reversible       = reversible;
 
     if (reversible) {
         // setup reversible model
@@ -158,7 +157,7 @@ void ModelMarkov::setReversible(bool reversible, bool adapt_tree) {
     }
 }
 
-int ModelMarkov::getNumRateEntries() {
+int ModelMarkov::getNumRateEntries() const {
     if (is_reversible) {
         return num_states*(num_states-1) / 2;
     }
@@ -195,6 +194,10 @@ void ModelMarkov::restoreCheckpoint() {
     startCheckpoint();
     //CKP_ARRAY_RESTORE(num_params, model_parameters);
     endCheckpoint();
+}
+
+int ModelMarkov::getNumberOfRates() const {
+    return getNumRateEntries();
 }
 
 void ModelMarkov::setTree(PhyloTree *tree) {
@@ -300,11 +303,7 @@ void ModelMarkov::init_state_freq(StateFreqType type,
             phylo_tree->showProgress();
             setStateFrequency(&emp_state_freq[0]);
         }
-        for (int i = 0; i < num_states; ++i) {
-            if (state_freq[i] > state_freq[highest_freq_state]) {
-                highest_freq_state = i;
-            }
-        }
+        identifyHighestFrequencyState();
         break;
     case FREQ_USER_DEFINED:
         if (state_freq[0] == 0.0) {
@@ -857,6 +856,28 @@ int ModelMarkov::getNDimFreq() {
 	return 0;
 }
 
+void ModelMarkov::identifyHighestFrequencyState() {
+    identifyHighestFrequencyState(state_freq);
+}
+
+void ModelMarkov::identifyHighestFrequencyState(const double* freq_vector) {
+    highest_freq_state = 0;
+    for (int i = 1; i < num_states; i++) {
+        if (freq_vector[i] > freq_vector[highest_freq_state]) {
+            highest_freq_state = i;
+        }
+    }
+}
+
+void ModelMarkov::identifyHighestFrequencyState(const unsigned int* freq_vector) {
+    highest_freq_state = 0;
+    for (int i = 1; i < num_states; i++) {
+        if (freq_vector[i] > freq_vector[highest_freq_state]) {
+            highest_freq_state = i;
+        }
+    }
+}
+
 bool ModelMarkov::scaleStateFreq() {
     // make the frequencies sum to 1
     double sum = 0.0;
@@ -1018,20 +1039,19 @@ double ModelMarkov::optimizeParameters(double gradient_epsilon,
     bool*   bound_check = new bool[ndim+1];
     double  score;
 
-    for (int i = 0; i < num_states; i++) {
-        if (state_freq[i] > state_freq[highest_freq_state]) {
-            highest_freq_state = i;
-        }
-    }
-
+    identifyHighestFrequencyState();
+    
     // by BFGS algorithm
     setVariables(variables);
     setVariables(variables2);
     setBounds(lower_bound, upper_bound, bound_check);
 //    if (phylo_tree->params->optimize_alg.find("BFGS-B") == string::npos)
-        score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
+        score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound,
+                                    bound_check, max(gradient_epsilon, TOL_RATE));
 //    else
-//        score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
+//        score = -L_BFGS_B(ndim, variables+1,
+//                          lower_bound+1, upper_bound+1,
+//                          max(gradient_epsilon, TOL_RATE));
 
     bool changed = getVariables(variables);
 

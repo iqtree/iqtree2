@@ -135,12 +135,15 @@ public:
     */
     void getNameParamsFreq(ostream &retname);
 
-	/**
-		@return the number of rate entries, equal to the number of non-diagonal elements
-			of the rate matrix (since model is NOT reversible)
-	*/
-	virtual int getNumRateEntries();
+    /**
+     @return the number of rate entries, usually equal to
+     the number of non-diagonal elements
+     of the rate matrix (if the model is NOT reversible)
+     */
+	virtual int getNumRateEntries() const;
 
+    virtual int getNumberOfRates() const;
+    
 	/**
 		set the associated tree
 		@param tree the associated tree
@@ -265,6 +268,17 @@ public:
 	 * @param q_mat (OUT) Q matrix, assuming of size num_states * num_states
 	 */
 	virtual void getQMatrix(double *q_mat);
+
+    /**
+     identify the highest frequency in the state_freq vector of frequencies
+     */
+    void identifyHighestFrequencyState();
+    /**
+     identify the highest frequency in a vector of frequencies
+     @param freq_vector (IN) state frequency vector. Assume state_freq has size of num_states
+     */
+    void identifyHighestFrequencyState(const double*       freq_vector);
+    void identifyHighestFrequencyState(const unsigned int* freq_vector);
 
 	/**
 		rescale the state frequencies

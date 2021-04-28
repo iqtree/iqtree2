@@ -136,11 +136,11 @@ public:
 	 */
     virtual void setMixtureClass(int cat, ModelSubst* m) { }
 
-	/**
-		@return the number of rate entries, equal to the number of elements
-			in the upper-diagonal of the rate matrix (since model is reversible)
-	*/
-	virtual int getNumRateEntries() { return num_states*(num_states-1)/2; }
+    /**
+     @return the number of rate entries, equal to the number of elements
+     in the upper-diagonal of the rate matrix (since model is reversible)
+     */
+    virtual int getNumRateEntries() const { return num_states*(num_states-1)/2; }
     
     /**
      set num_params variable

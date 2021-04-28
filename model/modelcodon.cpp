@@ -989,11 +989,7 @@ double ModelCodon::optimizeParameters(double gradient_epsilon,
 	bool*   bound_check = new bool[ndim+1];
 	double score;
 
-    for (int i = 0; i < num_states; i++) {
-        if (state_freq[i] > state_freq[highest_freq_state]) {
-            highest_freq_state = i;
-        }
-    }
+    identifyHighestFrequencyState();
 	// by BFGS algorithm
 	setVariables(variables);
 	setBounds(lower_bound, upper_bound, bound_check);

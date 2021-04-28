@@ -1153,7 +1153,8 @@ ModelMarkov* createModel(string model_str, ModelsBlock *models_block,
     } else if (yaml_list.isModelNameRecognized(model_str.c_str())) {
         model = yaml_list.getModelByName(model_str.c_str(),    tree,
                                          model_params.c_str(), freq_type,
-                                         freq_params.c_str(),  report_to_tree);
+                                         freq_params.c_str(),  models_block,
+                                         report_to_tree);
     } else if (ModelMarkov::validModelName(model_str)) {
         model = ModelMarkov::getModelByName(model_str,    tree,
                                             model_params, freq_type,

@@ -6,9 +6,11 @@
 #include "modelinfo.h"
 #include "modelsubst.h"      //for OPEN_BRACKET and CLOSE_BRACKET
 #include "modelfileloader.h"
+#include "modelexpression.h" //for InterpretedExpression
+
 #include "modeldna.h"        //for ModelDNA
 #include "modeldnaerror.h"   //for ModelDNAError
-#include "modelexpression.h" //for InterpretedExpression
+#include "modelprotein.h"    //for ModelProtein
 
 #include <utils/my_assert.h> //for ASSERT macro
 #include <utils/stringfunctions.h> //for convert_int
@@ -562,14 +564,54 @@ bool ModelVariable::isFixed() const {
     return is_fixed;
 }
 
+void StringMatrix::makeRectangular(size_t column_count) {
+    size_t row_count = size();
+    for (int row_num=0; row_num<row_count; ++row_num) {
+        StrVector& row = at(row_num);
+        if (row.size() != column_count) {
+            row.resize(row_count, "");
+        }
+    }
+}
+
+void StringMatrix::makeSquare(bool reflect) {
+    size_t row_count = size();
+    size_t col_count = row_count;
+    for (StrVector& row: *this) {
+        if (col_count < row.size()) {
+            col_count = row.size();
+        }
+    }
+    for (size_t row_num = 0;
+         row_num<size(); ++row_num ) {
+        StrVector& row    = at(row_num);
+        int old_col_count = row.size();
+        if ( old_col_count < col_count ) {
+            row.resize(col_count, "");
+            if (reflect) {
+                for (int col_num=old_col_count;
+                     col_num<col_count; ++col_num) {
+                    if ( col_num == row_num ) {
+                        continue;
+                    }
+                    if (row_num < at(col_num).size()) {
+                        row[col_num] = at(col_num)[row_num];
+                    }
+                }
+            }
+        }
+    }
+}
+
 ModelInfoFromYAMLFile::ModelInfoFromYAMLFile()
-    : rate_matrix_rank(0), frequency_type(FREQ_UNKNOWN)
-    , mixed_models(nullptr) {
+    : sequence_type(SEQ_UNKNOWN), num_states(0), rate_matrix_rank(0)
+    , frequency_type(FREQ_UNKNOWN), mixed_models(nullptr) {
 }
 
 ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(const ModelInfoFromYAMLFile& rhs)
     : model_name(rhs.model_name), model_file_path(rhs.model_file_path)
-    , citation(rhs.citation), DOI(rhs.DOI), data_type_name(rhs.data_type_name)
+    , citation(rhs.citation), DOI(rhs.DOI), url(rhs.url)
+    , data_type_name(rhs.data_type_name), sequence_type(rhs.sequence_type)
     , num_states(rhs.num_states), reversible(rhs.reversible)
     , rate_matrix_rank(rhs.rate_matrix_rank)
     , rate_matrix_expressions(rhs.rate_matrix_expressions)
@@ -585,8 +627,9 @@ ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(const ModelInfoFromYAMLFile& rhs)
 }
 
 ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(const std::string& path)
-    :  model_file_path(path), rate_matrix_rank(0)
-    , frequency_type(FREQ_UNKNOWN), mixed_models(nullptr) {
+    : model_file_path(path), sequence_type(SEQ_UNKNOWN), num_states(0)
+    , rate_matrix_rank(0), frequency_type(FREQ_UNKNOWN)
+    , mixed_models(nullptr) {
 }
 
 ModelInfoFromYAMLFile::~ModelInfoFromYAMLFile() {
@@ -660,6 +703,37 @@ ModelInfoFromYAMLFile::findMixedModel(const std::string& name) {
     }
     return it;
 }
+
+void ModelInfoFromYAMLFile::setNumberOfStatesAndSequenceType( int requested_num_states ) {
+    if ( requested_num_states != 0 ) {
+        num_states = requested_num_states;
+    }
+    if ( num_states == 0 ) {
+        num_states = 4;
+    }
+    if (!data_type_name.empty()) {
+        auto seq_type_requested = getSeqType(data_type_name.c_str());
+        if (seq_type_requested!=SEQ_UNKNOWN) {
+            sequence_type = seq_type_requested;
+            num_states    = getNumStatesForSeqType(sequence_type, num_states);
+        }
+    }
+    if (sequence_type==SEQ_UNKNOWN) {
+        switch (num_states) {
+            case 2:   sequence_type = SEQ_BINARY;  break;
+            case 4:   sequence_type = SEQ_DNA;     break;
+            case 20:  sequence_type = SEQ_PROTEIN; break;
+            case 61:  sequence_type = SEQ_CODON;   break;
+            default:  /* still, no idea */
+                outWarning("Could not determine sequence type"
+                           " for model " + model_name);
+                break;
+        }
+    }
+    forceAssign("num_states", num_states);
+    forceAssign("numStates",  num_states);
+}
+
 
 const YAMLFileParameter* ModelInfoFromYAMLFile::findParameter
     ( const char* name, ModelParameterType type) const {
@@ -882,9 +956,9 @@ ModelVariable& ModelInfoFromYAMLFile::forceAssign (const std::string& var_name,
             auto it = findMixedModel(sub_model_name);
             return it->second.forceAssign(sub_model_var_name, value_to_set);
         }
-        variables[var_name] = ModelVariable(ModelParameterType::OTHER,
-                                            ModelParameterRange(),
-                                            value_to_set);
+        ModelVariable var(ModelParameterType::OTHER,
+                          ModelParameterRange(), value_to_set);
+        variables[var_name] = var;
         it = variables.find(var_name);
     }
     it->second.setValue(value_to_set);
@@ -985,7 +1059,6 @@ void ModelInfoFromYAMLFile::computeTipLikelihoodsForState(int state, int num_sta
     
     typedef ModelExpression::InterpretedExpression Interpreter;
 
-    forceAssign("num_states", (double)num_states);
     forceAssign("row",        (double)state);
     ModelVariable& column_var = forceAssign("column", (double)0);
     for (int column=0; column<num_states; ++column) {
@@ -1089,7 +1162,23 @@ const std::string& ModelInfoFromYAMLFile::getRateMatrixExpression
     if (rate_matrix_expressions.empty()) {
         return rate_matrix_formula;
     }
-    return rate_matrix_expressions[row][col];
+    ASSERT( 0   <= row );
+    ASSERT( row <  rate_matrix_expressions.size() );
+    ASSERT( 0   <= col );
+    ASSERT( col <  rate_matrix_expressions.size() );
+    const StrVector& matrix_row = rate_matrix_expressions[row];
+    if ( col < matrix_row.size() ) {
+        return matrix_row[col];
+    }
+    //
+    //possibly a triangular matrix?!
+    //Todo: Don't the stationary frequencies have
+    //to be taken into account, here?
+    //
+    std::swap(row, col);
+    const StrVector& other_matrix_row = rate_matrix_expressions[row];
+    ASSERT ( col <  other_matrix_row.size() );
+    return other_matrix_row[col];
 }
 
 const std::string& ModelInfoFromYAMLFile::getName() const {
@@ -1144,11 +1233,11 @@ public:
     using   S::freq_type;
     using   S::num_params;
     using   S::num_states;
-    using   S::param_spec;
     using   S::rates;
     using   S::state_freq;
     
     using   S::getNDim;
+    using   S::getNumberOfRates;
     using   S::setRateMatrix;
     
     YAMLModelWrapper(const ModelInfoFromYAMLFile& info,
@@ -1237,7 +1326,7 @@ public:
     virtual bool getVariables(double *variables) {
         bool changed = false;
         if (num_params > 0) {
-            int num_all = static_cast<int>(param_spec.length());
+            int num_all = getNumberOfRates();
             for (int i = 0; i < num_all; i++) {
                 if (rates[i] != variables[i] ) {
                     TREE_LOG_LINE(*report_tree, VB_MAX,
@@ -1433,6 +1522,25 @@ public:
     }
 };
 
+class YAMLModelProtein: public YAMLModelWrapper<ModelProtein> {
+public:
+    typedef YAMLModelWrapper<ModelProtein> super;
+    YAMLModelProtein(ModelsBlock* block,
+                     const char *model_name, string model_params,
+                     StateFreqType freq, string freq_params,
+                     PhyloTree *tree, PhyloTree* report_to_tree,
+                     const ModelInfoFromYAMLFile& info): super(info, report_to_tree) {
+        setModelsBlock(block);
+        setNumberOfStates(20);
+        setReversible(info.isReversible());
+        init(model_name, model_params, freq,
+             freq_params, report_to_tree);
+        setNumberOfStates(20); //Why again?
+        setRateMatrixFromModel();
+    }
+};
+
+
 bool ModelListFromYAMLFile::hasModel(const std::string& model_name) const {
     return models_found.find(model_name) != models_found.end();
 }
@@ -1460,7 +1568,8 @@ namespace {
 
 ModelMarkov* ModelListFromYAMLFile::getModelByName(const char* model_name,   PhyloTree *tree,
                                                    const char* model_params, StateFreqType freq_type,
-                                                   const char* freq_params,  PhyloTree* report_to_tree) {
+                                                   const char* freq_params,  ModelsBlock* models_block,
+                                                   PhyloTree* report_to_tree) {
     std::string name;
     std::string parameter_list;
     extractModelNameAndParameters(model_name, name, parameter_list);
@@ -1473,16 +1582,33 @@ ModelMarkov* ModelListFromYAMLFile::getModelByName(const char* model_name,   Phy
             parameter_list = model_params;
         }
     }
-    ModelMarkov* model = nullptr;
-    string dummy_rate_params;
-    string dummy_freq_params;
     
     if (freq_type == FREQ_UNKNOWN) {
         freq_type = model_info.frequency_type;
     }
-    //Todo: other data types, based on ModelBIN,
-    //      ModelCodon, ModelPoMo, ModelProtein
-    //if (model_info.data_type_name=="DNA") {
+    
+    switch (model_info.sequence_type) {
+        case SeqType::SEQ_DNA:
+            return getDNAModel(model_info, parameter_list,
+                               freq_type, tree, report_to_tree);
+        case SeqType::SEQ_PROTEIN:
+            return getProteinModel(model_info, parameter_list,
+                                   freq_type, tree, models_block,
+                                   report_to_tree);
+        default:
+            outError("YAML model uses unsupported sequence type");
+            return nullptr;
+    };
+}
+    
+ModelMarkov* ModelListFromYAMLFile::getDNAModel(ModelInfoFromYAMLFile& model_info,
+                                                const std::string& parameter_list,
+                                                StateFreqType freq_type,
+                                                PhyloTree* tree,
+                                                PhyloTree* report_to_tree) {
+    ModelMarkov* model = nullptr;
+    string dummy_rate_params;
+    string dummy_freq_params;
     
     const YAMLFileParameter* p =
         model_info.findParameter("epsilon",
@@ -1517,10 +1643,25 @@ ModelMarkov* ModelListFromYAMLFile::getModelByName(const char* model_name,   Phy
         dmodel->acceptParameterList(parameter_list, report_to_tree);
         model = dmodel;
     }
-    
-    //model_parameters = new double [num_params];
-    //memset(model_parameters, 0, sizeof(double)*num_params);
-    //this->setRates();
+    return model;
+}
 
+ModelMarkov* ModelListFromYAMLFile::getProteinModel(ModelInfoFromYAMLFile& model_info,
+                                                    const std::string& parameter_list,
+                                                    StateFreqType freq_type,
+                                                    PhyloTree* tree,
+                                                    ModelsBlock* models_block,
+                                                    PhyloTree* report_to_tree) {
+    ModelMarkov* model = nullptr;
+    string dummy_rate_params;
+    string dummy_freq_params;
+    
+    YAMLModelProtein* pmodel;
+    pmodel = new YAMLModelProtein(models_block, "", dummy_rate_params, freq_type,
+                                  dummy_freq_params, tree, report_to_tree,
+                                  model_info);
+    pmodel->acceptParameterList(parameter_list, report_to_tree);
+    model = pmodel;
+    
     return model;
 }

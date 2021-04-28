@@ -94,6 +94,70 @@
     - r(1) = 1
     - r(3) = 1
 
+- substitutionmodel: YDAY
+  description:       Dayhoff
+  url:               https://www.ebi.ac.uk/goldman-srv/dayhoff/dayhoff-dcmut.dat
+  citation:          Kosiol,C. and Goldman,N. The Different Versions of the Dayhoff Rate Matrix.
+  reversible:        true
+  datatype:          AA
+  stateOrder:        [ A, R, N, D, C, Q, E, G, H, I, L, K, M, F, P, S, T, W, Y, V ]
+  stateName:         [ Ala, Arg, Asn, Asp, Cys, Gln, Glu, Gly, His, Ile, 
+                       Leu, Lys, Met, Phe, Pro, Ser, Thr, Trp, Tyr, Val ] 
+  stateFrequency:    estimate
+  parameters:
+    - name:          f(1..20)
+      description:   state frequency
+      type:          frequency
+      range:         [0,1]
+      initValue:     [ 0.08712691, 0.04090396, 0.04043196, 0.04687195, 0.03347397,
+                       0.03825496, 0.04952995, 0.08861191, 0.03361897, 0.03688596,
+                       0.08535691, 0.08048092, 0.01475299, 0.03977196, 0.05067995,
+                       0.06957693, 0.05854194, 0.01049399, 0.02991597, 0.06471794 ]
+    - name:         rateMatrix
+      description:
+      type:         matrix 
+      rank:         num_states
+      value:
+        - [ ]
+        - [ 27 ]
+        - [ 98,  32 ]
+        - [ 120, 0,   905 ]
+        - [ 36,  23,  0,   0 ]
+        - [ 89,  246  103, 134, 0 ]
+        - [ 198, 1,   148, 1153, 0,  716 ]
+        - [ 240, 9,   139, 125, 11,  28,  81 ]
+        - [ 23,  240, 535, 86,  28,  606, 43, 10 ]
+        - [ 65,  64,  77,  24,  44,  18,  61, 0,   7 ]
+        - [ 41,  15,  34,  0,   0,   73,  11, 7,   44,  257 ]
+        - [ 26,  464, 318, 71,  0,   153, 83, 27,  26,  46,  18 ]
+        - [ 72,  90,  1,   0,   0,   114, 30, 17,  0,   336, 527, 243 ]
+        - [ 18,  14,  14,  0,   0,   0,   0,  15,  48,  196, 157, 0,  92, ]
+        - [ 250, 103, 42,  13,  19,  153, 51, 34,  94,  12,  32,  33, 17,  11 ]
+        - [ 409, 154, 495, 95,  161, 56,  79, 234, 35,  24,  17,  96, 62,  46,  245 ]
+        - [ 371, 26,  229, 66,  16,  53,  34, 30,  22,  192, 33,  136 104, 13,  78, 550 ]
+        - [ 0,   201, 23,  0,   0,   0,   0,  0,   27,  0,   46,  0,  0,   76,  0,  75, 0, ]
+        - [ 24,  8,   95,  0,   96,  0,   22, 0,   127, 37,  28,  13, 0,   698, 0,  34, 42,  61 ]
+        - [ 208, 24,  15, 18,   49,  35,  37, 54,  44,  889, 175, 10, 258, 12,  48, 30, 157, 0, 28 ]
+
+- substitutionmodel: YB18
+  frommodel:       YDAY
+  reversible:      true
+  datatype:        AA
+  stateOrder:      [ A, R, N, D, C, Q, E, G, H, I, L, K, M, F, P, S, T, W, Y, V ]
+  stateFrequency:  estimate
+  parameters:
+    - name:        v(1..20)
+      description: volume
+      type:        rate
+      initValue:   [31, 124, 56, 54, 55, 85, 83, 3, 96, 111, 111, 119, 
+                    105, 132, 32.5, 32, 61, 170, 136, 84]
+    - name:        f(1..20)
+      description: state frequency
+      type:        frequency
+      range:       [0,1]
+      initValue:   1/num_states
+
+
 - substitutionmodel: YMIX
   description: "Mixture of JC and GTR"
   parameters:
@@ -108,4 +172,5 @@
     frommodel: YGTR # 2nd component from GTR model
     weight: w(2)
     scale: 1.0   
+
 

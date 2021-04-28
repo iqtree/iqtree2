@@ -69,7 +69,7 @@ public:
 		@return the number of rate entries, equal to the number of non-diagonal elements of the rate matrix
         since we store full matrix here
 	*/
-	virtual int getNumRateEntries() { return num_states*(num_states); }
+	virtual int getNumRateEntries() const { return num_states*(num_states); }
 
 	/**
 		initialization, called automatically by the constructor, no need to call it

@@ -32,6 +32,9 @@ Substitution models for protein sequences
 class ModelProtein : public ModelMarkov
 {
 public:
+    typedef ModelMarkov super;
+    ModelProtein(PhyloTree* tree, PhyloTree* report_to_tree);
+    
 	/**
 		constructor
 		@param model_name model name, e.g., JTT, WAG.
@@ -42,6 +45,10 @@ public:
                  string freq_params, PhyloTree *tree, ModelsBlock *models_block,
                  PhyloTree* report_to_tree);
 
+    void setModelsBlock(ModelsBlock* blocks);
+    
+    void setNumberOfStates(int states);
+    
 	/**
 		initialization, called automatically by the constructor, no need to call it
 		@param model_name model name, e.g., JTT, WAG.

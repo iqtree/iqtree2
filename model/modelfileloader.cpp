@@ -287,10 +287,12 @@ void ModelFileLoader::parseMatrixParameter(const YAML::Node& param,
                 }
             }
             expressions.emplace_back(expr_row);
-            column_count = ( expr_row.size() < column_count )
+            column_count = ( expr_row.size() <= column_count )
                          ? column_count : expr_row.size();
         }
-        expressions.makeRectangular(column_count);
+        if (column_count<expressions.size()) {
+            column_count = expressions.size();
+        }
     }
     else if (!formula_node || !rank_node) {
         outError(name +
@@ -302,7 +304,6 @@ void ModelFileLoader::parseMatrixParameter(const YAML::Node& param,
                       " matrix of model " + info.getName() +
                       " was not a scalar");
         std::string rank_str = rank_node.Scalar();
-        info.forceAssign("num_states", (double) info.num_states);
         
         Interpreter interpreter(info, rank_str);
         double rank_dbl = interpreter.evaluate();
@@ -322,11 +323,13 @@ void ModelFileLoader::parseMatrixParameter(const YAML::Node& param,
     
     std::string lower_name = string_to_lower(name);
     if (lower_name=="ratematrix") {
+        expressions.makeSquare(true);
         info.rate_matrix_rank           = rank;
         info.rate_matrix_expressions    = expressions;
         info.rate_matrix_formula        = formula;
     }
     else if (lower_name=="tiplikelihood") {
+        expressions.makeRectangular(column_count);
         info.tip_likelihood_rank        = rank;
         info.tip_likelihood_expressions = expressions;
         info.tip_likelihood_formula     = formula;
@@ -455,9 +458,9 @@ void ModelFileLoader::parseRateMatrix(const YAML::Node& rate_matrix,
            << " in " << info.model_file_path
            << " was not square: it had " << row_count << " rows"
            << " and " << column_count << " columns.";
-        outError(s2.str());
+        outWarning(s2.str());
     }
-    info.rate_matrix_expressions.makeRectangular(column_count);
+    info.rate_matrix_expressions.makeSquare(true);
     
     //
     //Todo: Are off-diagonal entries in the matrix allowed
@@ -473,7 +476,6 @@ void ModelFileLoader::parseRateMatrix(const YAML::Node& rate_matrix,
 void ModelFileLoader::dumpMatrixTo(const char* name, ModelInfoFromYAMLFile& info,
                                    const StringMatrix& matrix, int rank,
                                    const std::string& formula, std::stringstream &out) {
-    info.forceAssign("num_states", (double)info.num_states);
     ModelVariable& row_var    = info.forceAssign("row",    (double)0);
     ModelVariable& column_var = info.forceAssign("column", (double)0);
 
@@ -544,22 +546,19 @@ void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_
             outError(complaint.str());
         }
     }
-    
     info.model_file_path = file_path;
     info.model_name      = name_of_model.empty() ? superclass_model_name : name_of_model;
-    info.citation        = stringScalar(substitution_model,  "citation",   info.citation.c_str());
-    info.DOI             = stringScalar(substitution_model,  "doi",        info.DOI.c_str());
+    info.citation        = stringScalar (substitution_model, "citation",   info.citation.c_str());
+    info.DOI             = stringScalar (substitution_model, "doi",        info.DOI.c_str());
+    info.url             = stringScalar (substitution_model, "doi",        info.url.c_str());
     info.reversible      = booleanScalar(substitution_model, "reversible", info.reversible);
-    info.data_type_name  = stringScalar(substitution_model,  "datatype",   info.data_type_name.c_str());
+    info.data_type_name  = stringScalar (substitution_model, "datatype",   info.data_type_name.c_str());
     //Note: doco currently says this will be called "forData".
-    //
-    //Todo: read off the in-lined datatype (if there is one).
-    //
+        
+    int num_states_requested = integerScalar(substitution_model,
+                                             "numStates", info.num_states);
+    info.setNumberOfStatesAndSequenceType(num_states_requested);
     
-    info.num_states      = integerScalar(substitution_model, "numStates", 0);
-    if (info.num_states==0) {
-        info.num_states = 4;
-    }
     
     //
     //Todo: extract other information from the subsstitution model.
@@ -598,7 +597,7 @@ void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_
     //
     auto rateMatrix = substitution_model["rateMatrix"];
     if (info.rate_matrix_expressions.empty() && !mixtures) {
-        complainIfNot(rateMatrix, "Model " + model_name +
+        complainIfNot(rateMatrix, "Model " + info.model_name +
                       " in file " + file_path +
                       " does not specify a rateMatrix" );
     }

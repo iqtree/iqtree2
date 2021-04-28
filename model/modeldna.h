@@ -87,6 +87,12 @@ public:
 	 */
 	virtual string getNameParams();
 
+    /**
+     @return the number of rate entries, equal to the number of elements
+     in the upper-diagonal of the rate matrix (since model is reversible)
+     */
+    virtual int getNumberOfRates() const;
+    
 	/**
 		Read the rate parameters from a comma-separated string
 		It will throw error messages if failed

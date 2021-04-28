@@ -199,6 +199,10 @@ void ModelDNA::restoreCheckpoint() {
     }
 }
 
+int ModelDNA::getNumberOfRates() const {
+    return static_cast<int>(param_spec.length());
+}
+
 void ModelDNA::readRates(string str) THROW_SPEC(const char*) {
     int nrates = *max_element(param_spec.begin(), param_spec.end());
     int end_pos = 0;
