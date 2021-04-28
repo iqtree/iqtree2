@@ -17,8 +17,8 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#ifndef TERRACE_H
-#define TERRACE_H
+#ifndef TERRACETPHAST_H
+#define TERRACETPHAST_H
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -38,7 +38,7 @@
     A phylogenetic terrace
     @author Lukasz Reszczynski <lukasz.reszczynski@univie.ac.at>
 */
-class Terrace {
+class TerraceTP {
 
 public:
 	/**
@@ -46,7 +46,7 @@ public:
 	 *  @param tree tree
 	 *  @param saln superalignment
 	 */
-    Terrace(PhyloTree &tree, SuperAlignment* saln);
+    TerraceTP(PhyloTree &tree, SuperAlignment* saln);
 
     /**
      *  @return The terrace size
@@ -67,7 +67,7 @@ public:
 
 	void init();
 
-    ~Terrace();
+    ~TerraceTP();
 
 private:
   	terraces::bitmatrix coverage;

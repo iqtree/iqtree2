@@ -639,7 +639,7 @@ add_subdirectory(phylo-yaml)
 
 if (USE_TERRAPHAST)
    add_subdirectory(terraphast)
-   add_subdirectory(terrace)
+   add_subdirectory(terracetphast)
 endif()
 
 if (USE_LSD2)
@@ -678,7 +678,7 @@ if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
     if (NOT IQTREE_FLAGS MATCHES "nosse")
         set_target_properties(iqtree2 ncl nclextra utils pda lbfgsb whtest sprng vectorclass model gsl alignment tree yaml-cpp phyloYAML main PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
         if (USE_TERRAPHAST)
-            set_target_properties(terrace terraphast PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
+            set_target_properties(terracetphast terraphast PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
         endif()
         if (USE_LSD2)
             set_target_properties(lsd2 PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
@@ -742,7 +742,7 @@ target_link_libraries(iqtree2 pll ncl nclextra utils pda lbfgsb whtest sprng vec
     gsl alignment tree yaml-cpp phyloYAML main ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
 
 if (USE_TERRAPHAST)
-   target_link_libraries(iqtree2 terrace)
+   target_link_libraries(iqtree2 terracetphast)
 endif()
 
 if (USE_LSD2)

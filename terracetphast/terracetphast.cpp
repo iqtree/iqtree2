@@ -17,9 +17,9 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#include "terrace.h"
+#include "terracetphast.h"
 
-Terrace::Terrace(PhyloTree &tree, SuperAlignment* saln) : 
+TerraceTP::TerraceTP(PhyloTree &tree, SuperAlignment* saln) :
     coverage(tree.aln->getSeqNames().size(), saln->taxa_index[0].size())
 {
     stringstream nwk;
@@ -57,27 +57,27 @@ Terrace::Terrace(PhyloTree &tree, SuperAlignment* saln) :
     init();  
 }
 
-void Terrace::init() 
+void TerraceTP::init()
 {
 
 }
 
-uint64_t Terrace::getSize()
+uint64_t TerraceTP::getSize()
 {
     return terraces::count_terrace(supertree);
 }
 
-void Terrace::printTrees(ostream &out)
+void TerraceTP::printTrees(ostream &out)
 {
     terraces::print_terrace(supertree, names, out);
 }
 
-void Terrace::printTreesCompressed(ostream &out)
+void TerraceTP::printTreesCompressed(ostream &out)
 {
     terraces::print_terrace_compressed(supertree, names, out);
 }
 
-Terrace::~Terrace()
+TerraceTP::~TerraceTP()
 {
 }
 

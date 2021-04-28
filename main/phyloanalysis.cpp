@@ -69,7 +69,7 @@ extern "C" {
 #endif
 
 #ifdef IQTREE_TERRAPHAST
-    #include "terrace/terrace.h"
+    #include "terrace/terracetphast.h"
 #endif
 
 void reportReferences(Params &params, ofstream &out) {
@@ -1287,7 +1287,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
 
             try
             {
-                Terrace terrace(tree, (SuperAlignment*)(tree.aln));
+                TerraceTP terrace(tree, (SuperAlignment*)(tree.aln));
 
                 uint64_t terrace_size = terrace.getSize();
 
