@@ -306,6 +306,7 @@ public:
     void   setBounds           (int bound_count, double *lower_bound,
                                 double *upper_bound, bool *bound_check) const;
     void   updateVariables     (const double* variables,
+                                int first_freq_index,
                                 int param_count);
     void   logVariablesTo      (PhyloTree& report_to_tree)              const;
     ModelVariable& assign      (const std::string& var_name,

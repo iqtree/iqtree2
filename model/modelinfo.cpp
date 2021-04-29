@@ -876,6 +876,7 @@ void ModelInfoFromYAMLFile::setBounds(int param_count, double *lower_bound,
 }
 
 void ModelInfoFromYAMLFile::updateVariables(const double* updated_values,
+                                            int first_freq_index,
                                             int param_count) {
     int i = 1; //Rate parameter numbering starts at 1, see ModelMarkov
     ModelParameterType supported_types[] = {
@@ -884,6 +885,9 @@ void ModelInfoFromYAMLFile::updateVariables(const double* updated_values,
         //Todo: Where do weight parameters go?    Esepecially in mixture
         //      models
     for ( auto param_type : supported_types ) {
+        if (param_type == FREQUENCY) {
+            i = first_freq_index;
+        }
         for ( auto p : parameters ) {
             if (p.type == param_type) {
                 for (int sub = p.minimum_subscript;
@@ -1337,9 +1341,10 @@ public:
                 }
             }
         }
+        int ndim = getNDim();
+        int first_freq_index = (ndim-num_states+2);
         if (freq_type == FREQ_ESTIMATE) {
-            int ndim = getNDim();
-            auto read_freq = variables+(ndim-num_states+2);
+            auto read_freq = variables+first_freq_index;
             for (int i=0; i<num_states-1; ++i) {
                 if (state_freq[i]!=read_freq[i]) {
                     TREE_LOG_LINE(*report_tree, VB_MAX,
@@ -1362,7 +1367,7 @@ public:
         }
         TREE_LOG_LINE(*report_tree, VB_MAX, "");
         if (changed) {
-            model_info.updateVariables(variables, getNDim());
+            model_info.updateVariables(variables, first_freq_index, getNDim());
             model_info.logVariablesTo(*report_tree);
             setRateMatrixFromModel();
         }

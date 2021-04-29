@@ -646,6 +646,12 @@ void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_
                 ++subscript;
             }
         }
+        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+                      "After setting frequency type"
+                      " of " << info.model_name <<
+                      " to " << low_freq << "...");
+        info.logVariablesTo(*report_to_tree);
+
     } else {
         //If we have parameters with a type of frequency, we're all good.
         //If we don't, then what?   We might have inherited from a parent
