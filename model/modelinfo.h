@@ -106,7 +106,7 @@ public:
     ModelParameterRange(): super(0,0), is_set(false) {}
 };
 
-enum ModelParameterType {
+enum class ModelParameterType {
     RATE, FREQUENCY, WEIGHT, OTHER
 };
 

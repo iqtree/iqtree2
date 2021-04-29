@@ -144,7 +144,8 @@ double RateHeterotachy::optimizeParameters(double gradient_epsilon,
     if (fix_params) {
         return phylo_tree->computeLikelihood();
     }
-    TREE_LOG_LINE(*report_to_tree, VB_MED, "Optimizing " << name
+    TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MED, 
+                  "Optimizing " << name
                   << " model parameters by EM algorithm...");
     return optimizeWithEM(report_to_tree);
 }

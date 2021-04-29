@@ -258,7 +258,7 @@ public:
 		get frequency type
 		@return frequency type
 	*/
-	virtual StateFreqType getFreqType() { return FREQ_EQUAL; }
+	virtual StateFreqType getFreqType() { return StateFreqType::FREQ_EQUAL; }
 
     /** for reversible models, multiply likelihood with inverse eigenvectors for fast pruning algorithm
             @param[in/out] state_lk state likelihood multiplied with inverse eigenvectors

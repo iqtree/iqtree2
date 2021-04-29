@@ -149,7 +149,7 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info,
             cur_lh = new_cur_lh;
         }
 
-        if (verbose_mode >= VB_MED) {
+        if (verbose_mode >= VerboseMode::VB_MED) {
             cout << "LnL after optimizing individual models: " << cur_lh << endl;
         }
         if (cur_lh <= tree_lh - 1.0) {
@@ -163,7 +163,7 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info,
         // Optimizing gene rate
         if(!tree->fixed_rates){
             cur_lh = optimizeGeneRate(gradient_epsilon);
-            if (verbose_mode >= VB_MED) {
+            if (verbose_mode >= VerboseMode::VB_MED) {
                 cout << "LnL after optimizing partition-specific rates: " << cur_lh << endl;
                 writeInfo(cout);
             }
@@ -200,7 +200,7 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info,
         writeInfo(cout);
     }
     // write linked_models
-    if (verbose_mode <= VB_MIN && write_info) {
+    if (verbose_mode <= VerboseMode::VB_MIN && write_info) {
         for (auto it = linked_models.begin(); it != linked_models.end(); it++) {
             it->second->writeInfo(cout);
         }
@@ -263,7 +263,9 @@ double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
             max_scaling = tree->part_info[i].part_rate;
         if (min_scaling > tree->part_info[i].part_rate)
             min_scaling = tree->part_info[i].part_rate;
-        tree->part_info[i].cur_score = tree->at(i)->optimizeTreeLengthScaling(min_scaling, tree->part_info[i].part_rate, max_scaling, gradient_epsilon);
+        auto t_score = tree->at(i)->optimizeTreeLengthScaling(min_scaling, tree->part_info[i].part_rate, 
+                                                              max_scaling, gradient_epsilon);
+        tree->part_info[i].cur_score = t_score;
         score += tree->part_info[i].cur_score;
     }
     // now normalize the rates
@@ -271,7 +273,8 @@ double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
     size_t nsite = 0;
     for (size_t i = 0; i < tree->size(); ++i) {
         sum += tree->part_info[i].part_rate * tree->at(i)->aln->getNSite();
-        if (tree->at(i)->aln->seq_type == SEQ_CODON && tree->rescale_codon_brlen)
+        auto seq = tree->at(i)->aln->seq_type;
+        if (seq == SeqType::SEQ_CODON && tree->rescale_codon_brlen)
             nsite += 3*tree->at(i)->aln->getNSite();
         else
             nsite += tree->at(i)->aln->getNSite();

@@ -158,15 +158,16 @@ ModelCodonEmpirical::ModelCodonEmpirical(const char *model_name, string model_pa
 ModelCodonEmpirical::~ModelCodonEmpirical() {
 }
 
-void ModelCodonEmpirical::init(const char *model_name, string model_params, StateFreqType freq, string freq_params)
+void ModelCodonEmpirical::init(const char *model_name, string model_params, 
+	                           StateFreqType freq, string freq_params)
 {
-	StateFreqType def_freq = FREQ_UNKNOWN;
+	StateFreqType def_freq = StateFreqType::FREQ_UNKNOWN;
 	name = full_name = model_name;
 	string name_upper = model_name;
 	for (string::iterator it = name_upper.begin(); it != name_upper.end(); it++)
 		(*it) = toupper(*it);
 	if (name_upper == "ECM") {
-		def_freq = FREQ_USER_DEFINED;
+		def_freq = StateFreqType::FREQ_USER_DEFINED;
 		if (!phylo_tree->aln->isStandardGeneticCode())
 			outError("For ECM a standard genetic code must be used");
 		try {
@@ -177,7 +178,7 @@ void ModelCodonEmpirical::init(const char *model_name, string model_params, Stat
 			outError(str);
 		}
 	} else if (name_upper == "ECMREST") {
-		def_freq = FREQ_USER_DEFINED;
+		def_freq = StateFreqType::FREQ_USER_DEFINED;
 		if (!phylo_tree->aln->isStandardGeneticCode())
 			outError("For ECM a standard genetic code must be used");
 		try {
@@ -199,8 +200,10 @@ void ModelCodonEmpirical::init(const char *model_name, string model_params, Stat
 	if (model_params != "") {
 		readRates(model_params);
 	}
-
-	if (freq == FREQ_UNKNOWN ||  def_freq == FREQ_EQUAL) freq = def_freq;
+	if (freq == StateFreqType::FREQ_UNKNOWN ||
+		def_freq == StateFreqType::FREQ_EQUAL) {
+		freq = def_freq;
+	}
 	ModelCodon::init(freq);
 }
 
@@ -214,9 +217,13 @@ void ModelCodonEmpirical::readCodonModel(istream &in) {
 		for (j = 0; j < i; j++) {
 			in >> q[i][j];
 			q[j][i] = q[i][j];
-			if (verbose_mode >= VB_MAX) cout << " " << q[i][j];
+			if (verbose_mode >= VerboseMode::VB_MAX) {
+				cout << " " << q[i][j];
+			}
 		}
-		if (verbose_mode >= VB_MAX) cout << endl;
+		if (verbose_mode >= VerboseMode::VB_MAX) {
+			cout << endl;
+		}
 	}
 	for (i = 0; i < num_states; i++)
 		in >> f[i];
@@ -234,11 +241,13 @@ void ModelCodonEmpirical::readCodonModel(istream &in) {
 		if (nt1 > 3 || nt2 > 3 || nt3 > 3)
 			outError("Wrong codon triplet ", codons[i]);
 		state_map[i] = phylo_tree->aln->non_stop_codon[nt1*16+nt2*4+nt3];
-		if (verbose_mode >= VB_MAX)
+		if (verbose_mode >= VerboseMode::VB_MAX) {
 			cout << " " << codons[i] << " " << state_map[i];
+		}
 	}
-	if (verbose_mode >= VB_MAX) cout << endl;
-
+	if (verbose_mode >= VerboseMode::VB_MAX) {
+		cout << endl;
+	}
 	//int nrates = getNumRateEntries();
 	//int row = 0, col = 1;
 	// since rates for codons is stored in lower-triangle, special treatment is needed
@@ -255,16 +264,18 @@ void ModelCodonEmpirical::readCodonModel(istream &in) {
 			rates[id] = q[i][j];
 		}
 	}
-	for (i = 0; i < num_states; i++)
+	for (i = 0; i < num_states; i++) {
 		state_freq[i] = MIN_FREQUENCY;
-	for (i = 0; i < nscodons; i++)
-		state_freq[state_map[i]] = f[i]-(num_states-nscodons)*MIN_FREQUENCY/nscodons;
-
+	}
+	for (i = 0; i < nscodons; i++) {
+		state_freq[state_map[i]] = f[i] - (num_states - nscodons) * MIN_FREQUENCY / nscodons;
+	}
 	num_params = 0;
 
 	delete [] f;
-	for (i = num_states-1; i >= 0; i--)
-		delete [] q[i];
+	for (i = num_states - 1; i >= 0; i--) {
+		delete[] q[i];
+	}
 	delete [] q;
 }
 

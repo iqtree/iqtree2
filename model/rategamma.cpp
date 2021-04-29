@@ -217,7 +217,8 @@ double RateGamma::optimizeParameters(double gradient_epsilon,
 	if (fix_gamma_shape) {
 		return phylo_tree->computeLikelihood();
 	}
-	TREE_LOG_LINE(*phylo_tree, VB_MAX, "Optimizing gamma shape...");
+	TREE_LOG_LINE(*phylo_tree, VerboseMode::VB_MAX, 
+		          "Optimizing gamma shape...");
 	double negative_lh;
 	double current_shape = gamma_shape;
 	double ferror, optx;
@@ -237,7 +238,8 @@ double RateGamma::optimizeParameters(double gradient_epsilon,
                                      PhyloTree* report_to_tree) {
 	if (fix_gamma_shape)
 		return phylo_tree->computeLikelihood();
-	TREE_LOG_LINE(*phylo_tree, VB_MAX, "Optimizing gamma shape...");
+	TREE_LOG_LINE(*phylo_tree, VerboseMode::VB_MAX, 
+		          "Optimizing gamma shape...");
 	double negative_lh;
 	double current_shape = gamma_shape;
 	double ferror, optx;

@@ -44,7 +44,7 @@ void ModelPoMo::init_mutation_model(const char *model_name,  string model_params
     // work yet.  I guess, for the moment, the user has to find out
     // what went wrong during DNA model initialization.
     try {
-        if (verbose_mode >= VB_MED) {
+        if (verbose_mode >= VerboseMode::VB_MED) {
             cout << "Initialize PoMo DNA mutation model." << endl;
         }
         string model_str = model_name;
@@ -82,15 +82,15 @@ void ModelPoMo::init_sampling_method()
 {
     sampling_method = phylo_tree->aln->pomo_sampling_method;
     string sampling_method_str;
-    if (sampling_method == SAMPLING_SAMPLED) {
+    if (sampling_method == SamplingType::SAMPLING_SAMPLED) {
         this->name += "+S";
         sampling_method_str = "Sampled";
     }
-    else if (sampling_method == SAMPLING_WEIGHTED_BINOM) {
+    else if (sampling_method == SamplingType::SAMPLING_WEIGHTED_BINOM) {
         this->name += "+WB";
         sampling_method_str = "Weighted binomial";
     }
-    else if (sampling_method == SAMPLING_WEIGHTED_HYPER) {
+    else if (sampling_method == SamplingType::SAMPLING_WEIGHTED_HYPER) {
       this->name += "+WH";
       sampling_method_str = "Weighted hypergeometric";
     }
@@ -118,27 +118,27 @@ void ModelPoMo::init_boundary_frequencies()
     // mutation model because interpretation of polymorphic states is
     // undefined.
     switch (freq_type) {
-    case FREQ_EQUAL:
+    case StateFreqType::FREQ_EQUAL:
         // '+FQ'.
         for (int i = 0; i < 4; i++)
             freq_boundary_states[i] = 1.0/ (double)n_alleles;
         break;
-    case FREQ_ESTIMATE:
+    case StateFreqType::FREQ_ESTIMATE:
         // '+FO'.  Start estimation at empirical frequencies.
         for (int i = 0; i < 4; i++)
             freq_boundary_states[i] = freq_boundary_states_emp[i];
         break;
-    case FREQ_EMPIRICAL:
+    case StateFreqType::FREQ_EMPIRICAL:
         // '+F'.
         for (int i = 0; i < 4; i++)
             freq_boundary_states[i] = freq_boundary_states_emp[i];
         break;
-    case FREQ_USER_DEFINED:
+    case StateFreqType::FREQ_USER_DEFINED:
         // '+FU'. ModelDNA should have set them already.
         if (freq_boundary_states[0] == 0.0)
             outError("State frequencies not specified");
         break;
-    case FREQ_UNKNOWN:
+    case StateFreqType::FREQ_UNKNOWN:
         outError("No frequency type given.");
         break;
     default:
@@ -223,12 +223,12 @@ void ModelPoMo::init(const char *model_name,
 //        this->name += "{" + pomo_heterozygosity + "}";
     this->name += "+N" + convertIntToString(N);
 
-    if (verbose_mode >= VB_MED) {
+    if (verbose_mode >= VerboseMode::VB_MED) {
         cout << "Initialized PoMo model." << endl;
         cout << "Model name: " << this->name << "." << endl;
         cout << this->full_name << endl;
     }
-    if (verbose_mode >= VB_MAX)
+    if (verbose_mode >= VerboseMode::VB_MAX)
         writeInfo(cout);
 }
 
@@ -551,7 +551,7 @@ void ModelPoMo::normalizeMutationRates() {
     double x = correction - harmonic(N-1) * heterozygosity;
     double m_norm = scale * (heterozygosity / (theta_bm * x ));
 
-    if (verbose_mode >= VB_MAX) {
+    if (verbose_mode >= VerboseMode::VB_MAX) {
       cout << "Normalization constant of mutation rates: " << m_norm << endl;
       // cout << "Heterozygosity: " << heterozygosity << endl;
     }
@@ -565,7 +565,7 @@ void ModelPoMo::normalizeMutationRates() {
       }
 
     // DEBUG.
-    if (verbose_mode >= VB_MED) {
+    if (verbose_mode >= VerboseMode::VB_MED) {
       cout << "theta_bm before normalization is " << theta_bm << endl;
       cout << "heterozygosity is " << heterozygosity << endl;
       for (int i = 0; i < n_alleles; i++) {
@@ -658,7 +658,9 @@ double ModelPoMo::targetFunk(double x[]) {
 bool ModelPoMo::isUnstableParameters() {
     // More checking could be done.
     for (int i = 0; i < num_states; i++) {
-        if (state_freq[i] < eps) return true;
+        if (state_freq[i] < eps) {
+            return true;
+        }
     }
     return false;
 }
@@ -670,7 +672,7 @@ void ModelPoMo::normalize_boundary_freqs(double * bfs) {
         sum += bfs[i];
     for (int i = 0; i < n_alleles; i++)
         bfs[i] /= sum;
-    if (verbose_mode >= VB_MAX) {
+    if (verbose_mode >= VerboseMode::VB_MAX) {
         std::cout << "The empirical frequencies"
                   << " of the boundary states are:" << std::endl;
         for (int i = 0; i < n_alleles; i++)
@@ -706,7 +708,7 @@ ModelPoMo::estimateEmpiricalBoundaryStateFreqs(double * freq_boundary_states)
 {
     memset(freq_boundary_states, 0, sizeof(double)*n_alleles);
 
-    if (sampling_method == SAMPLING_SAMPLED) {
+    if (sampling_method == SamplingType::SAMPLING_SAMPLED) {
 #ifndef _MSC_VER
         unsigned int abs_state_freq[num_states];
 #else
@@ -739,16 +741,20 @@ ModelPoMo::estimateEmpiricalBoundaryStateFreqs(double * freq_boundary_states)
             freq_boundary_states[i] = (double) sum[i]/tot_sum;
         }
         // Output vector if verbose mode.
-        if (verbose_mode >= VB_MAX) {
+        if (verbose_mode >= VerboseMode::VB_MAX) {
             std::stringstream text;
             text.precision(6);
             text << "Absolute empirical state frequencies:" << std::endl;
             for (int i = 0; i < num_states; i++) {
                 text << abs_state_freq[i] << " ";
             }
-            TREE_LOG_LINE(*phylo_tree, VB_MAX, text.str());
+            TREE_LOG_LINE(*phylo_tree, VerboseMode::VB_MAX, text.str());
         }
-        identifyHighestFrequencyState(abs_state_freq);        
+        #ifndef _MSC_VER
+            identifyHighestFrequencyState(abs_state_freq);
+        #else
+            identifyHighestFrequencyState(abs_state_freq.get());
+        #endif
     } else {
         for (Alignment::iterator it = phylo_tree->aln->begin();
              it != phylo_tree->aln->end(); it++) {
@@ -772,7 +778,7 @@ ModelPoMo::estimateEmpiricalBoundaryStateFreqs(double * freq_boundary_states)
         }
     }
     normalize_boundary_freqs(freq_boundary_states);
-    if (verbose_mode >= VB_MAX) {
+    if (verbose_mode >= VerboseMode::VB_MAX) {
         cout << "Empirical boundary state frequencies: ";
         for (int i = 0; i< n_alleles; i++)
             cout << freq_boundary_states[i] << " ";
@@ -788,7 +794,7 @@ ModelPoMo::estimateEmpiricalWattersonTheta()
     int sum_fix = 0;
     double sum_theta_w = 0.0;
 
-    if (sampling_method == SAMPLING_SAMPLED) {
+    if (sampling_method == SamplingType::SAMPLING_SAMPLED) {
 #ifndef _MSC_VER
         unsigned int abs_state_freq[num_states];
 #else
@@ -841,7 +847,7 @@ ModelPoMo::estimateEmpiricalWattersonTheta()
         theta_p = sum_theta_w;
     }
     // Output vector if verbose mode.
-    if (verbose_mode >= VB_MAX) {
+    if (verbose_mode >= VerboseMode::VB_MAX) {
         cout << setprecision(8);
         cout << "Estimated relative frequency"
              << " of polymorphic states:" << std::endl;
@@ -869,7 +875,7 @@ void ModelPoMo::report_model_params(ostream &out, bool reset_scale) {
     }
 
     // TODO: If verbose, output rate matrix.
-    if (verbose_mode >= VB_MED) {
+    if (verbose_mode >= VerboseMode::VB_MED) {
         out << "Rate matrix: " << endl;
         for (int i = 0; i < num_states; i++) {
             for (int j = 0; j < num_states; j++) {
@@ -976,7 +982,7 @@ void ModelPoMo::report_model_params(ostream &out, bool reset_scale) {
   out << setprecision(4);
   if (!fixed_heterozygosity) {
     out << "Estimated heterozygosity: " << heterozygosity << endl;
-    if (sampling_method == SAMPLING_WEIGHTED_BINOM)
+    if (sampling_method == SamplingType::SAMPLING_WEIGHTED_BINOM)
       out << "A slight overestimation is expected"
           << " and an effect of weighted binomial sampling; see manual." << endl;
   }
@@ -1214,7 +1220,7 @@ void ModelPoMo::computeTipLikelihood(PML::StateType state, double *lh) {
     }
     state = state - num_states;
 
-  bool hypergeometric = (aln->pomo_sampling_method == SAMPLING_WEIGHTED_HYPER);
+  bool hypergeometric = (aln->pomo_sampling_method == SamplingType::SAMPLING_WEIGHTED_HYPER);
   int nstates = aln->num_states;
   int N = aln->virtual_pop_size;
 

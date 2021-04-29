@@ -101,7 +101,8 @@ double RateInvar::optimizeParameters(double gradient_epsilon,
     if (fix_p_invar) {
         return -computeFunction(p_invar);
     }
-    TREE_LOG_LINE(*phylo_tree, VB_MAX, "Optimizing proportion of invariable sites...");
+    TREE_LOG_LINE(*phylo_tree, VerboseMode::VB_MAX, 
+		          "Optimizing proportion of invariable sites...");
     
     double negative_lh;
     double ferror;

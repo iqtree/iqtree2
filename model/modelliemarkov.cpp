@@ -357,18 +357,24 @@ void ModelLieMarkov::init(const char *model_name, string model_params,
         DoubleVector vec;
         convert_double_vec(model_params.c_str(), vec);
         if (vec.size() != num_params) 
-            outError("String '"+ model_params + "' does not have exactly " + convertIntToString(num_params) + " parameters");
+            outError("String '"+ model_params + "' does not have exactly " + 
+				     convertIntToString(num_params) + " parameters");
         for (int i = 0; i < num_params; i++) {
             if (vec[i] <= MIN_LIE_WEIGHT || vec[i] >= MAX_LIE_WEIGHT)
-                outError("Weights for Lie Markov model must be between " + convertDoubleToString(MIN_LIE_WEIGHT) + " and " +
-                    convertDoubleToString(MAX_LIE_WEIGHT));
+                outError("Weights for Lie Markov model must be between " + 
+					     convertDoubleToString(MIN_LIE_WEIGHT) + " and " +
+					     convertDoubleToString(MAX_LIE_WEIGHT));
             model_parameters[i] = vec[i];
             fixed_parameters = !Params::getInstance().optimize_from_given_params;
         }
         setRates();
     }
 
-    if (freq_type == FREQ_UNKNOWN || expected_freq_type == FREQ_EQUAL) freq_type = expected_freq_type;
+	if (freq_type == StateFreqType::FREQ_UNKNOWN || 
+		expected_freq_type == StateFreqType::FREQ_EQUAL) { 
+		freq_type = expected_freq_type; 
+	}
+
     ModelMarkov::init(freq_type, report_to_tree);
 }
 
@@ -412,7 +418,8 @@ void ModelLieMarkov::writeInfo(ostream &out) {
     out << endl;
 }
 
-/*static*/ void ModelLieMarkov::getLieMarkovModelInfo(string model_name, string &name, string &full_name, int &model_num, int &symmetry, StateFreqType &def_freq) {
+/*static*/ void ModelLieMarkov::getLieMarkovModelInfo(string model_name, string &name, string &full_name, 
+	                                                  int &model_num, int &symmetry, StateFreqType &def_freq) {
     parseModelName(model_name,&model_num,&symmetry);
     // Special case, just because it is confusing
     if (model_name == "2.2a" || model_name == "RY2.2a" ||
@@ -425,14 +432,15 @@ void ModelLieMarkov::writeInfo(ostream &out) {
         full_name = "";
 	model_num = -1;
 	symmetry = -1;
-	def_freq = FREQ_UNKNOWN;
+	def_freq = StateFreqType::FREQ_UNKNOWN;
 	return;
     }
 
     // name and full_name:
     // Special case for strand symmetric model.
     if (model_num == STR_SYM_INDEX) {
-      name = "StrSym"; // Can't use MODEL_NAMES[STR_SYM_INDEX] as this is all lowercase, as it must be for parseModelName to work.
+      name = "StrSym"; // Can't use MODEL_NAMES[STR_SYM_INDEX] 
+	  //as this is all lowercase, as it must be for parseModelName to work.
       full_name = "Strand Symmetric model (alias WS6.6) (non reversible)";
     } else {
       name = SYMMETRY[symmetry]+MODEL_NAMES[model_num];
@@ -443,41 +451,41 @@ void ModelLieMarkov::writeInfo(ostream &out) {
     // def_freq
     int bdf = BDF[model_num];
     if (bdf==0) {
-      def_freq=FREQ_EQUAL;
+      def_freq = StateFreqType::FREQ_EQUAL;
     } else if (bdf==1) {
       switch(symmetry) {
       case 0:
-	def_freq=FREQ_DNA_1212;
-	break;
+		def_freq = StateFreqType::FREQ_DNA_1212;
+		break;
       case 1:
-	def_freq=FREQ_DNA_1221;
-	break;
+		def_freq = StateFreqType::FREQ_DNA_1221;
+		break;
       case 2:
-	def_freq=FREQ_DNA_1122;
-	break;
+		def_freq = StateFreqType::FREQ_DNA_1122;
+		break;
       case 3:
       default:
-	cerr << "Can't happen" << endl;
-        abort();
+		cerr << "Can't happen" << endl;
+		abort();
       }
     } else if (bdf==2) {
       switch(symmetry) {
       case 0:
-	def_freq=FREQ_DNA_RY;
-	break;
+		def_freq = StateFreqType::FREQ_DNA_RY;
+		break;
       case 1:
-	def_freq=FREQ_DNA_WS;
-	break;
+		def_freq = StateFreqType::FREQ_DNA_WS;
+		break;
       case 2:
-	def_freq=FREQ_DNA_MK;
-	break;
-      case 3:
+		def_freq = StateFreqType::FREQ_DNA_MK;
+		break;
+      case 3: /* fall-through */
       default:
-	cerr << "Can't happen" << endl;
+		cerr << "Can't happen" << endl;
         abort();
       }
     } else if (bdf==3) {
-      def_freq=FREQ_ESTIMATE;
+      def_freq = StateFreqType::FREQ_ESTIMATE;
     }
 
     return;
@@ -511,39 +519,39 @@ ModelLieMarkov::~ModelLieMarkov() {
 bool  ModelLieMarkov::validFreqType() {
   int bdf=BDF[model_num];
   switch(getFreqType()) {
-    case FREQ_USER_DEFINED:
-    case FREQ_EMPIRICAL:
-    case FREQ_ESTIMATE:
+    case StateFreqType::FREQ_USER_DEFINED:
+    case StateFreqType::FREQ_EMPIRICAL:
+    case StateFreqType::FREQ_ESTIMATE:
         return true;
-    case FREQ_UNKNOWN:
-    case FREQ_CODON_1x4:
-    case FREQ_CODON_3x4:
-    case FREQ_CODON_3x4C:
-    case FREQ_MIXTURE:
-    case FREQ_DNA_1112:
-    case FREQ_DNA_1121:
-    case FREQ_DNA_1211:
-    case FREQ_DNA_2111:
-    case FREQ_DNA_1123:
-    case FREQ_DNA_1213:
-    case FREQ_DNA_1231:
-    case FREQ_DNA_2113:
-    case FREQ_DNA_2131:
-    case FREQ_DNA_2311:
+    case StateFreqType::FREQ_UNKNOWN:
+    case StateFreqType::FREQ_CODON_1x4:
+    case StateFreqType::FREQ_CODON_3x4:
+    case StateFreqType::FREQ_CODON_3x4C:
+    case StateFreqType::FREQ_MIXTURE:
+    case StateFreqType::FREQ_DNA_1112:
+    case StateFreqType::FREQ_DNA_1121:
+    case StateFreqType::FREQ_DNA_1211:
+    case StateFreqType::FREQ_DNA_2111:
+    case StateFreqType::FREQ_DNA_1123:
+    case StateFreqType::FREQ_DNA_1213:
+    case StateFreqType::FREQ_DNA_1231:
+    case StateFreqType::FREQ_DNA_2113:
+    case StateFreqType::FREQ_DNA_2131:
+    case StateFreqType::FREQ_DNA_2311:
         return false;
-    case FREQ_EQUAL:
+    case StateFreqType::FREQ_EQUAL:
         return (bdf==0);
-    case FREQ_DNA_RY:   return("+FRY");
+    case StateFreqType::FREQ_DNA_RY:   return("+FRY");
         return (bdf==2 && symmetry==0);
-    case FREQ_DNA_WS:   return("+FWS");
+    case StateFreqType::FREQ_DNA_WS:   return("+FWS");
         return (bdf==2 && symmetry==1);
-    case FREQ_DNA_MK:   return("+FMK");
+    case StateFreqType::FREQ_DNA_MK:   return("+FMK");
         return (bdf==2 && symmetry==2);
-    case FREQ_DNA_1122: return("+F1122");
+    case StateFreqType::FREQ_DNA_1122: return("+F1122");
         return (bdf==1 && symmetry==2);
-    case FREQ_DNA_1212: return("+F1212");
+    case StateFreqType::FREQ_DNA_1212: return("+F1212");
         return (bdf==1 && symmetry==0);
-    case FREQ_DNA_1221: return("+F1221");
+    case StateFreqType::FREQ_DNA_1221: return("+F1221");
         return (bdf==1 && symmetry==1);
     default: throw("Unrecognized freq_type in validFreqType - can't happen");
     }
@@ -644,14 +652,14 @@ bool ModelLieMarkov::isReversible() {
 
 string ModelLieMarkov::getName() {
     switch(getFreqType()) {
-    case FREQ_ESTIMATE:
+    case StateFreqType::FREQ_ESTIMATE:
         return name;
-    case FREQ_EMPIRICAL:
+    case StateFreqType::FREQ_EMPIRICAL:
         return name+"+F";
-    case FREQ_USER_DEFINED:
+    case StateFreqType::FREQ_USER_DEFINED:
         return name+"+FU";
-    case FREQ_EQUAL:
-      return name;
+    case StateFreqType::FREQ_EQUAL:
+		return name;
     default:
        	cerr << "Bad freq_type for a Lie-Markov model. Can't happen" << endl;
         abort();
@@ -686,10 +694,13 @@ void ModelLieMarkov::setVariables(double *variables) {
         return;
     }
 
-	if (freq_type == FREQ_ESTIMATE) nrate -= (num_states-1);
-	if (nrate > 0)
-		memcpy(variables+1, rates, nrate*sizeof(double));
-	if (freq_type == FREQ_ESTIMATE) {
+	if (freq_type == StateFreqType::FREQ_ESTIMATE) {
+		nrate -= (num_states - 1);
+	}
+	if (nrate > 0) {
+		memcpy(variables + 1, rates, nrate * sizeof(double));
+	}
+	if (freq_type == StateFreqType::FREQ_ESTIMATE) {
         // 2015-09-07: relax the sum of state_freq to be 1,
         // this will be done at the end of optimization
 		int ndim = getNDim();
@@ -698,30 +709,32 @@ void ModelLieMarkov::setVariables(double *variables) {
     }
 }
 
-bool ModelLieMarkov::getVariables(double *variables) {
+bool ModelLieMarkov::getVariables(double* variables) {
 	int nrate = getNDim();
 	int i;
 	bool changed = false;
 
-    // non-reversible case
-    if (!is_reversible) {
-        for (i = 0; i < nrate && !changed; i++)
-            changed = (model_parameters[i] != variables[i+1]);
-        if (changed) {
-            memcpy(model_parameters, variables+1, nrate * sizeof(double));
-            setRates();
-        }
-        return changed;
-    }
+	// non-reversible case
+	if (!is_reversible) {
+		for (i = 0; i < nrate && !changed; i++)
+			changed = (model_parameters[i] != variables[i + 1]);
+		if (changed) {
+			memcpy(model_parameters, variables + 1, nrate * sizeof(double));
+			setRates();
+		}
+		return changed;
+	}
 
-	if (freq_type == FREQ_ESTIMATE) nrate -= (num_states-1);
+	if (freq_type == StateFreqType::FREQ_ESTIMATE) {
+		nrate -= (num_states - 1);
+	}
 	if (nrate > 0) {
 		for (i = 0; i < nrate; i++)
 			changed |= (rates[i] != variables[i+1]);
 		memcpy(rates, variables+1, nrate * sizeof(double));
 	}
 
-	if (freq_type == FREQ_ESTIMATE) {
+	if (freq_type == StateFreqType::FREQ_ESTIMATE) {
         // 2015-09-07: relax the sum of state_freq to be 1,
         //             this will be done at the end of optimization
         // 2015-09-07: relax the sum of state_freq to be 1,
@@ -791,18 +804,20 @@ bool ModelLieMarkov::restartParameters(double guess[], int ndim, double lower[],
                 guess[i] = sign2 * upper[i]/2;
             }
 	}
-	if (verbose_mode >= VB_MED) {
+	if (verbose_mode >= VerboseMode::VB_MED) {
             cout << "Lie Markov Restart estimation at the boundary, iteration " << iteration;
-            if (verbose_mode >= VB_MAX) {
+            if (verbose_mode >= VerboseMode::VB_MAX) {
                 cout << ", new start point:" << std::endl << guess[1] ;
-                for (i = 2; i <= ndim; i++) cout << "," << guess[i]; 
+				for (i = 2; i <= ndim; i++) {
+					cout << "," << guess[i];
+				}
             }
             cout << std::endl;
 	}
     } else {
-        if (iteration > 1 && verbose_mode >= VB_MAX)
-	  cout << "Lie Markov restarts ended at iteration " << iteration-1 << std::endl;
-    
+		if (iteration > 1 && verbose_mode >= VerboseMode::VB_MAX) {
+			cout << "Lie Markov restarts ended at iteration " << iteration - 1 << std::endl;
+		}    
     } // if restart else
     return (restart);
 }
@@ -878,7 +893,9 @@ void ModelLieMarkov::setBasis(PhyloTree* report_to_tree) {
   setReversible(false);
 
   // if not otherwise specified, use FREQ_ESTIMATE.
-  if (getFreqType() == FREQ_UNKNOWN) freq_type = FREQ_ESTIMATE;
+  if (getFreqType() == StateFreqType::FREQ_UNKNOWN) {
+	  freq_type = StateFreqType::FREQ_ESTIMATE;
+  }
 
   /* 
    * Note I've chosen to be picky here, and reject almost all <model>+F
@@ -888,17 +905,23 @@ void ModelLieMarkov::setBasis(PhyloTree* report_to_tree) {
    * RY5.6b+FQ is RY2.2b.  
    */
 
-  if (getFreqType() != FREQ_EMPIRICAL && 
-      getFreqType() != FREQ_USER_DEFINED && 
-      getFreqType() != FREQ_ESTIMATE) {
+  if (getFreqType() != StateFreqType::FREQ_EMPIRICAL &&
+      getFreqType() != StateFreqType::FREQ_USER_DEFINED &&
+      getFreqType() != StateFreqType::FREQ_ESTIMATE) {
       // Note to Minh: this is formatted horribly - one hugely long line - if you know how to tidily output 
       // multiline throw, please fix.
-      throw("Lie-Markov models can only have base frequencies specified as\nempirical (-f c, <model>+FC or default), user defined (<model>+F{<freqs>})\nor estimated/optimized (-f o, <model>+FO).\nEach Lie-Markov model has its own base frequency constraints (corresponding\nto one of +FQ, +F1122,+F1212, +F1221, +FRY, +FWS, +FMK or unconstrained).\nImposing extra constraints is either redundant, makes the model no longer\nLie-Markov, or makes it a lower dimensioned Lie-Markov model.\n");
+      throw("Lie-Markov models can only have base frequencies specified as\n" 
+		  "empirical (-f c, <model>+FC or default), user defined (<model>+F{<freqs>})\n"
+		  "or estimated/optimized (-f o, <model>+FO).\n"
+		  "Each Lie-Markov model has its own base frequency constraints (corresponding\n"
+		  "to one of +FQ, +F1122,+F1212, +F1221, +FRY, +FWS, +FMK or unconstrained).\n"
+		  "Imposing extra constraints is either redundant, makes the model no longer\n"
+		  "Lie-Markov, or makes it a lower dimensioned Lie-Markov model.\n");
       //throw("Invalid base frequency constraints for a Lie-Markov model");
   }
 
-  if (getFreqType() == FREQ_EMPIRICAL || 
-      getFreqType() == FREQ_USER_DEFINED) {
+  if (getFreqType() == StateFreqType::FREQ_EMPIRICAL ||
+      getFreqType() == StateFreqType::FREQ_USER_DEFINED) {
     int bdf = BDF[model_num];
     // There are no free parameters for base frequencies:
     num_params = MODEL_PARAMS[model_num]-bdf;
@@ -933,7 +956,10 @@ void ModelLieMarkov::setBasis(PhyloTree* report_to_tree) {
       double eqbm[4];
       tauToPi(tau,eqbm,symmetry);
       char buffer[200];
-      snprintf(buffer,200,"Model %s cannot achieve requested equilibrium base frequencies\n(%5.3f,%5.3f,%5.3f,%5.3f).\nInstead it will use equilibrium base frequencies (%5.3f,%5.3f,%5.3f,%5.3f).\n",
+      snprintf(buffer,200,"Model %s cannot achieve requested" 
+		       " equilibrium base frequencies\n(%5.3f,%5.3f,%5.3f,%5.3f).\n" 
+		       "Instead it will use equilibrium base frequencies" 
+		       " (%5.3f,%5.3f,%5.3f,%5.3f).\n",
                name.c_str(),state_freq[0],state_freq[1],state_freq[2],
                state_freq[3],eqbm[0],eqbm[1],eqbm[2],eqbm[3]);
       outWarning(buffer);
@@ -962,7 +988,7 @@ void ModelLieMarkov::setBasis(PhyloTree* report_to_tree) {
       basis[i] = permuted_rates;
     } // for i
   } else {
-      ASSERT(getFreqType() == FREQ_ESTIMATE); // only other legal possibility
+      ASSERT(getFreqType() == StateFreqType::FREQ_ESTIMATE); // only other legal possibility
       num_params = MODEL_PARAMS[model_num];
       basis = new double*[num_params+1];
       for (int i=0;i<=num_params;i++) {
@@ -987,7 +1013,8 @@ void ModelLieMarkov::setRates() {
     double max_abs = 0;
     for (int param=0; param<num_params; param++) {
         // COMMENT: is this abs() or fabs()? abs is for int type, whereas fabs for double 
-        max_abs = (fabs(model_parameters[param])>max_abs ? fabs(model_parameters[param]) : max_abs);
+        max_abs = (fabs(model_parameters[param])>max_abs
+			    ? fabs(model_parameters[param]) : max_abs);
         for (int rate=0; rate<NUM_RATES; rate++) 
             rates[rate] += model_parameters[param]*basis[param+1][rate];
         // basis[0] is 'A' matrix which doesn't get a parameter.
@@ -1000,7 +1027,7 @@ void ModelLieMarkov::setRates() {
     double norm = (max_abs==0 ? 0 : -max_abs/min_unnorm);
     for (int rate=0; rate<NUM_RATES; rate++) 
         rates[rate]=aprime[rate]+norm*rates[rate];
-    if (verbose_mode >= VB_DEBUG) {
+    if (verbose_mode >= VerboseMode::VB_DEBUG) {
       cout << "LM setRates params = (";
       for (int param=0; param<num_params; param++) 
 	cout << model_parameters[param] << ",";

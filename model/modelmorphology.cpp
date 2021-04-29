@@ -45,7 +45,7 @@ void ModelMorphology::init(const char *model_name, string model_params,
         // if name does not match, read the user-defined model
         readParameters(model_name, true, report_to_tree);
         num_params = 0;
-        freq = FREQ_USER_DEFINED;
+        freq = StateFreqType::FREQ_USER_DEFINED;
     }
     ModelMarkov::init(freq, report_to_tree);
 }
@@ -74,8 +74,9 @@ void ModelMorphology::readRates(istream &in) THROW_SPEC_2(const char*, string) {
 
 int ModelMorphology::getNDim() {
     int ndim = num_params;
-    if (freq_type == FREQ_ESTIMATE)
-        ndim += num_states-1;
+    if (freq_type == StateFreqType::FREQ_ESTIMATE) {
+        ndim += num_states - 1;
+    }
     return ndim;
 }
 
@@ -120,7 +121,7 @@ string ModelMorphology::getNameParams() {
 }
 
 void ModelMorphology::writeParameters(ostream &out) {
-    if (freq_type == FREQ_ESTIMATE) {
+    if (freq_type == StateFreqType::FREQ_ESTIMATE) {
         for (int i = 0; i < num_states; i++) {
             out << "\t" << state_freq[i];
         }
@@ -143,7 +144,7 @@ void ModelMorphology::writeInfo(ostream &out) {
         }
         out << endl;
     }
-    if (freq_type != FREQ_EQUAL) {
+    if (freq_type != StateFreqType::FREQ_EQUAL) {
         out << "State frequencies:";
         for (int i = 0; i < num_states; i++) {
             out << " " << state_freq[i];

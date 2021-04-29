@@ -263,7 +263,8 @@ double RateMeyerHaeseler::optimizeRate(int pattern) {
 				cout << "+++NEWTON IS WRONG for pattern " << pattern << ": " << optx2 << " " << 
 				negative_lh2 << " (Newton: " << optx << " " << negative_lh <<")" << endl;
 			}
-			if (negative_lh < negative_lh2 - 1e-4 && verbose_mode >= VB_MED) {
+			if (negative_lh < negative_lh2 - 1e-4 && 
+				verbose_mode >= VerboseMode::VB_MED) {
 				cout << "Brent is wrong for pattern " << pattern << ": " << optx2 << " " << 
 				negative_lh2 << " (Newton: " << optx << " " << negative_lh <<")" << endl;
 			}
@@ -293,10 +294,11 @@ double RateMeyerHaeseler::optimizeRate(int pattern) {
 	}
 
 //#ifndef NDEBUG		
-	if (optx == MAX_SITE_RATE || (optx == MIN_SITE_RATE && !phylo_tree->aln->at(pattern).isConst())) {
+	if (optx == MAX_SITE_RATE || 
+		(optx == MIN_SITE_RATE && !phylo_tree->aln->at(pattern).isConst())) {
 		ofstream out;
 	
-        if (verbose_mode >= VB_MED)  {
+        if (verbose_mode >= VerboseMode::VB_MED)  {
             cout << "Checking pattern " << pattern
                  << " (" << current_rate << ", " << optx << ")" << endl;
             out.open("x", ios::app);
@@ -305,11 +307,18 @@ double RateMeyerHaeseler::optimizeRate(int pattern) {
 		for (double val=0.1; val <= 100; val += 0.1) {
 			double f = computeFunction(val);
 			
-			if (verbose_mode >= VB_MED) out << " " << f;
-			if (f < minf) { minf = f; minx = val; }
-			if (verbose_mode < VB_MED && minf < negative_lh) break;
+			if (verbose_mode >= VerboseMode::VB_MED) {
+				out << " " << f;
+			}
+			if (f < minf) { 
+				minf = f; 
+				minx = val; 
+			}
+			if (verbose_mode < VerboseMode::VB_MED && minf < negative_lh) {
+				break;
+			}
 		}
-		if (verbose_mode >= VB_MED) { 
+		if (verbose_mode >= VerboseMode::VB_MED) {
 			out << endl;
 			out.close();
 		}
@@ -318,8 +327,9 @@ double RateMeyerHaeseler::optimizeRate(int pattern) {
 			optx = minimizeOneDimen(MIN_SITE_RATE, minx, max_rate,
                                     1e-3, &negative_lh, &ferror);
 			at(pattern) = optx;
-			if (verbose_mode >= VB_MED)
+			if (verbose_mode >= VerboseMode::VB_MED) {
 				cout << "FIX rate: " << minx << " , " << optx << endl;
+			}
 		}
 	}
 //#endif
@@ -503,7 +513,7 @@ void RateMeyerHaeseler::computeFuncDerv(double value, double &df, double &ddf) {
 }
 
 void RateMeyerHaeseler::runIterativeProc(Params &params, IQTree &tree) {
-	if (verbose_mode >= VB_MED) {
+	if (verbose_mode >= VerboseMode::VB_MED) {
 		ofstream out("x");
 		out.close();
 	}
@@ -529,7 +539,7 @@ void RateMeyerHaeseler::runIterativeProc(Params &params, IQTree &tree) {
         }
 		sum /=  phylo_tree->aln->getNSite();
 		if (fabs(sum - 1.0) > 0.0001) {
-            if (verbose_mode >= VB_MED) {
+            if (verbose_mode >= VerboseMode::VB_MED) {
                 cout << "Normalizing Gamma rates (" << sum << ")" << endl;
             }
             for (size_t i = 0; i < size(); ++i) {

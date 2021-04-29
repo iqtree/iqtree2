@@ -121,14 +121,14 @@ size_t findCloseBracket(string &str, size_t start_pos) {
 
 string ModelFactory::getDefaultModelName(PhyloTree *tree, Params &params) {
     std::string model_str;
-    if (tree->aln->seq_type == SEQ_DNA) model_str = "HKY";
-    else if (tree->aln->seq_type == SEQ_PROTEIN) model_str = "LG";
-    else if (tree->aln->seq_type == SEQ_BINARY) model_str = "GTR2";
-    else if (tree->aln->seq_type == SEQ_CODON) model_str = "GY";
-    else if (tree->aln->seq_type == SEQ_MORPH) model_str = "MK";
-    else if (tree->aln->seq_type == SEQ_POMO) model_str = "HKY+P";
+    if      (tree->aln->seq_type == SeqType::SEQ_DNA)     model_str = "HKY";
+    else if (tree->aln->seq_type == SeqType::SEQ_PROTEIN) model_str = "LG";
+    else if (tree->aln->seq_type == SeqType::SEQ_BINARY)  model_str = "GTR2";
+    else if (tree->aln->seq_type == SeqType::SEQ_CODON)   model_str = "GY";
+    else if (tree->aln->seq_type == SeqType::SEQ_MORPH)   model_str = "MK";
+    else if (tree->aln->seq_type == SeqType::SEQ_POMO)    model_str = "HKY+P";
     else model_str = "JC";
-    if (tree->aln->seq_type != SEQ_POMO && !params.model_joint) {
+    if (tree->aln->seq_type != SeqType::SEQ_POMO && !params.model_joint) {
         outWarning("Default model "+model_str + " may be under-fitting."
                    " Use option '-m TEST' to determine the best-fit model.");
     }
@@ -138,16 +138,18 @@ string ModelFactory::getDefaultModelName(PhyloTree *tree, Params &params) {
 StateFreqType ModelFactory::getDefaultFrequencyTypeForSequenceType(SeqType seq_type) {
     StateFreqType freq_type;
     switch (seq_type) {
-        case SEQ_BINARY:
-            freq_type = FREQ_ESTIMATE;  break; //default for binary: optimized frequencies
-        case SEQ_PROTEIN:
-            freq_type = FREQ_UNKNOWN;   break; // let ModelProtein decide by itself
-        case SEQ_MORPH:
-            freq_type = FREQ_EQUAL;     break;
-        case SEQ_CODON:
-            freq_type = FREQ_UNKNOWN;   break;
+        case SeqType::SEQ_BINARY:
+            freq_type = StateFreqType::FREQ_ESTIMATE;  break; 
+            //default for binary: optimized frequencies
+        case SeqType::SEQ_PROTEIN:
+            freq_type = StateFreqType::FREQ_UNKNOWN;   break; 
+            // let ModelProtein decide by itself
+        case SeqType::SEQ_MORPH:
+            freq_type = StateFreqType::FREQ_EQUAL;     break;
+        case SeqType::SEQ_CODON:
+            freq_type = StateFreqType::FREQ_UNKNOWN;   break;
         default:
-            freq_type = FREQ_EMPIRICAL; break;
+            freq_type = StateFreqType::FREQ_EMPIRICAL; break;
             //default for DNA, PoMo and others:
             //counted frequencies from alignment
     }
@@ -175,7 +177,7 @@ ModelFactory::ModelFactory(Params&    params, string&      model_name,
         // comparable.
         bool pomo = ModelInfoFromName(model_str).isPolymorphismAware();
         if (!pomo &&
-            (tree->aln->seq_type == SEQ_POMO)) {
+            (tree->aln->seq_type == SeqType::SEQ_POMO)) {
             outError("Provided alignment is exclusively used by PoMo"
                      " but model string does not contain, e.g., \"+P\".");
         }
@@ -438,14 +440,14 @@ void ModelFactory::initializeFrequency(const Params& params, PhyloTree* tree,
     /******************** initialize state frequency ****************************/
 
     freq_type = params.freq_type;
-    if (freq_type == FREQ_UNKNOWN) {
+    if (freq_type == StateFreqType::FREQ_UNKNOWN) {
         freq_type = getDefaultFrequencyTypeForSequenceType(tree->aln->seq_type);
     }
 
     ModelInfoFromName freq_info(freq_str);
     if (freq_info.isFrequencyMixture()) {
         freq_params = freq_info.getFrequencyMixtureParams(freq_str);
-        freq_type = FREQ_MIXTURE;
+        freq_type   = StateFreqType::FREQ_MIXTURE;
         freq_info.updateName(freq_str);
     }
     optimize_mixmodel_weight = params.optimize_mixmodel_weight;
@@ -465,7 +467,8 @@ void ModelFactory::initializeModel(const std::string& model_name,
     bool is_mixture_model = model_info.isMixtureModel();
         
     if (tree->aln->site_state_freq.empty()) {
-        if (is_mixture_model || freq_type == FREQ_MIXTURE) {
+        if (is_mixture_model || 
+            freq_type == StateFreqType::FREQ_MIXTURE) {
             string model_list;
             if (is_mixture_model) {
                 model_list = model_info.extractMixtureModelList(model_str);
@@ -489,8 +492,9 @@ void ModelFactory::initializeModel(const std::string& model_name,
         }
         model = new ModelSet(model_str.c_str(), tree);
         ModelSet *models = (ModelSet*)model; // assign pointer for convenience
-        models->init((freq_type != FREQ_UNKNOWN) ? freq_type : FREQ_EMPIRICAL,
-                     report_to_tree);
+        models->init((freq_type != StateFreqType::FREQ_UNKNOWN) 
+                     ? freq_type : StateFreqType::FREQ_EMPIRICAL, 
+            report_to_tree);
         models->pattern_model_map.resize(tree->aln->getNPattern(), -1);
         for (size_t i = 0; i < tree->aln->getNSite(); ++i) {
             models->pattern_model_map[tree->aln->getPatternID(i)] = tree->aln->site_model[i];
@@ -502,22 +506,23 @@ void ModelFactory::initializeModel(const std::string& model_name,
         for (size_t i = 0; i < tree->aln->site_state_freq.size(); ++i) {
             ModelMarkov *modeli;
             if (i == 0) {
-                auto f_type = (freq_type != FREQ_UNKNOWN)
-                            ? freq_type : FREQ_EMPIRICAL;
+                auto f_type = (freq_type != StateFreqType::FREQ_UNKNOWN)
+                            ? freq_type : StateFreqType::FREQ_EMPIRICAL;
                 modeli = createModel(model_str, models_block,
-                                                   f_type, "", tree,
-                                                   report_to_tree);
+                                     f_type, "", tree,
+                                     report_to_tree);
             } else {
                 modeli = createModel(model_str, models_block,
-                                                   FREQ_EQUAL, "", tree,
-                                                   report_to_tree);
+                                     StateFreqType::FREQ_EQUAL, "", tree,
+                                     report_to_tree);
             }
             modeli->getStateFrequency(state_freq);
             modeli->getRateMatrix(rates);
             if (tree->aln->site_state_freq[i]) {
                 modeli->setStateFrequency (tree->aln->site_state_freq[i]);
             }
-            modeli->init(FREQ_USER_DEFINED, report_to_tree);
+            modeli->init(StateFreqType::FREQ_USER_DEFINED, 
+                         report_to_tree);
             models->push_back(modeli);
         }
         delete [] rates;
@@ -559,7 +564,7 @@ void ModelFactory::initializeAscertainmentCorrection(ModelInfo& rate_info,
                          " because of " + convertIntToString(useless_sites) +
                          " parsimony-uninformative sites in the alignment");
             }
-            TREE_LOG_LINE(*tree, VB_MED,
+            TREE_LOG_LINE(*tree, VerboseMode::VB_MED,
                           "Ascertainment bias correction: " << unobserved_ptns.size()
                           << " unobservable uninformative patterns");
         } else if (ASC_type == ASC_VARIANT_MISSING) {
@@ -583,7 +588,8 @@ void ModelFactory::initializeAscertainmentCorrection(ModelInfo& rate_info,
                          " because of " + convertInt64ToString(invar_count) +
                          " invariant sites in the alignment");
             }
-            TREE_LOG_LINE(*tree, VB_MED, "Holder's ascertainment bias correction: "
+            TREE_LOG_LINE(*tree, VerboseMode::VB_MED, 
+                          "Holder's ascertainment bias correction: "
                           << unobserved_ptns.size()
                           << " unobservable constant patterns" );
         } else {
@@ -629,7 +635,7 @@ void ModelFactory::initializeAscertainmentCorrection(ModelInfo& rate_info,
                 outError("Invalid use of +ASC because of " + convertInt64ToString(invar_count) +
                          " invariant sites in the alignment");
             }
-            TREE_LOG_LINE(*tree, VB_MED,
+            TREE_LOG_LINE(*tree, VerboseMode::VB_MED,
                           "Ascertainment bias correction: "
                           << unobserved_ptns.size()
                           << " unobservable constant patterns");
@@ -794,7 +800,7 @@ void ModelFactory::initializeFusedMixRate(ModelsBlock *models_block,
                                           PhyloTree* report_to_tree) {
     if (fused_mix_rate) {
         if (!model->isMixture()) {
-            TREE_LOG_LINE(*tree, VB_MED,
+            TREE_LOG_LINE(*tree, VerboseMode::VB_MED,
                           "\nNOTE: Using mixture model"
                           << " with unlinked " << model_str << " parameters");
             string model_list = model_str;
@@ -932,7 +938,7 @@ double ModelFactory::optimizeAllParameters(double gradient_epsilon) {
         bound_check[i] = false;
     }
 
-    if (model->freq_type == FREQ_ESTIMATE) {
+    if (model->freq_type == StateFreqType::FREQ_ESTIMATE) {
         for (i = model_ndim - model->num_states+2; i <= model_ndim; i++)
             upper_bound[i] = 1.0;
     }
@@ -1004,7 +1010,7 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
         bool stop = false;
         while(!stop) {
             if (write_info) {
-                TREE_LOG_LINE(*tree, VB_QUIET,
+                TREE_LOG_LINE(*tree, VerboseMode::VB_QUIET,
                               "\nTesting with init. pinv = " << initPInv
                               << " / init. alpha = "  << initAlpha );
             }
@@ -1014,7 +1020,7 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
                                                 initAlpha, initBranLens, model_ckp,
                                                 report_to_tree);
             if (write_info) {
-                TREE_LOG_LINE(*tree, VB_QUIET,
+                TREE_LOG_LINE(*tree, VerboseMode::VB_QUIET,
                               "Est. p_inv: " << estResults[0]
                               << " / Est. gamma shape: " << estResults[1]
                               << " / Logl: " << estResults[2]);
@@ -1077,7 +1083,7 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
                                                     report_to_tree);
             }
             if (write_info) {
-                TREE_LOG_LINE(*tree, VB_QUIET,
+                TREE_LOG_LINE(*tree, VerboseMode::VB_QUIET,
                               "Init pinv, alpha: " << initPInv << ", "  << initAlpha
                               << " / Estimate: " << estResults[0] << ", " << estResults[1]
                               << " / LogL: " << estResults[2]);
@@ -1112,7 +1118,8 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
     tree->clearAllPartialLH();
     tree->setCurScore(tree->computeLikelihood());
     if (write_info) {
-        TREE_LOG_LINE(*tree, VB_QUIET, "Optimal pinv,alpha: " << bestPInvar
+        TREE_LOG_LINE(*tree, VerboseMode::VB_QUIET, 
+                      "Optimal pinv,alpha: " << bestPInvar
                       << ", " << bestAlpha
                       << " / LogL: " << tree->getCurScore() << "\n");
     }
@@ -1124,7 +1131,8 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
 
     double elapsed_secs = getRealTime() - begin_time;
     if (write_info) {
-        TREE_LOG_LINE(*tree, VB_QUIET, "Parameters optimization took "
+        TREE_LOG_LINE(*tree, VerboseMode::VB_QUIET, 
+                      "Parameters optimization took "
                       << elapsed_secs << " sec");
     }
 
@@ -1189,22 +1197,23 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
     tree->setCurScore(cur_lh);
     report_to_tree->trackProgress(1.0);
 
-    if (verbose_mode >= VB_MED || write_info) {
+    if (verbose_mode >= VerboseMode::VB_MED || write_info) {
         auto p = cout.precision(); //We'll restore it later
-        if (VB_MED <= verbose_mode) {
+        if (VerboseMode::VB_MED <= verbose_mode) {
             double elapsed = getRealTime() - optimizeStartTime;
             std::stringstream s;
             s.precision(17);
             s << "1. Initial log-likelihood: " << cur_lh;
             s.precision(4);
             s << " (took " << elapsed << " wall-clock sec)";
-            TREE_LOG_LINE(*report_to_tree, VB_MED, s.str() );
+            TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MED, 
+                          s.str() );
         }
         else {
-            TREE_LOG_LINE(*report_to_tree, VB_QUIET,
+            TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_QUIET,
                           "1. Initial log-likelihood: " << cur_lh);
         }
-        if (verbose_mode >= VB_MAX) {
+        if (verbose_mode >= VerboseMode::VB_MAX) {
             report_to_tree->hideProgress();
             report_to_tree->printTree(cout);
             cout << endl;
@@ -1228,39 +1237,40 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
         // changed to optimise edge length first,
         // and then Q,W,R inside the loop by Thomas on Sept 11, 15
         if (fixed_len == BRLEN_OPTIMIZE) {
-            TREE_LOG_LINE(*report_to_tree, VB_MAX,
+            TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MAX,
                           "Optimizing branch lengths");
             new_lh = tree->optimizeAllBranches(min(i, 3), logl_epsilon);
                 // loop only 3 times in total (previously in v0.9.6 5 times)
         }
         else if (fixed_len == BRLEN_SCALE) {
             double scaling = 1.0;
-            TREE_LOG_LINE(*report_to_tree, VB_MAX,
+            TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MAX,
                           "Optimizing branch scaling");
             new_lh = tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling,
                                                      MAX_BRLEN_SCALE, gradient_epsilon);
         } else {
             new_lh = cur_lh;
         }
-        TREE_LOG_LINE(*report_to_tree, VB_MAX, "Optimizing parameters");
+        TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MAX, 
+                      "Optimizing parameters");
         new_lh = optimizeParametersOnly(i, gradient_epsilon,
                                         new_lh, report_to_tree);
         if (new_lh == 0.0) {
             if (fixed_len == BRLEN_OPTIMIZE) {
-                TREE_LOG_LINE(*report_to_tree, VB_MAX,
+                TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MAX,
                               "Optimizing branch lengths (2nd time)");
                 auto iterations = tree->params->num_param_iterations;
                 cur_lh = tree->optimizeAllBranches(iterations, logl_epsilon);
             } else if (fixed_len == BRLEN_SCALE) {
                 double scaling = 1.0;
-                TREE_LOG_LINE(*report_to_tree, VB_MAX,
+                TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MAX,
                               "Optimizing branch scaling (2nd time)");
                 cur_lh = tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling,
                                                          MAX_BRLEN_SCALE, gradient_epsilon);
             }
             break;
         }
-        if (verbose_mode >= VB_MED) {
+        if (verbose_mode >= VerboseMode::VB_MED) {
             report_to_tree->hideProgress();
             model->writeInfo(cout);
             site_rate->writeInfo(cout);
@@ -1273,25 +1283,25 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
         if (new_lh > cur_lh + logl_epsilon) {
             cur_lh = new_lh;
             if (write_info) {
-                if (verbose_mode >= VB_MED) {
+                if (verbose_mode >= VerboseMode::VB_MED) {
                     double elapsed = tree->params->num_param_iterations;
-                    TREE_LOG_LINE(*report_to_tree, VB_MED,
+                    TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MED,
                                   i << ". Current log-likelihood: " << cur_lh
                                   << " (after " << elapsed << " wall-clock sec)");
                 } else {
-                    TREE_LOG_LINE(*report_to_tree, VB_QUIET,
+                    TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_QUIET,
                                   i << ". Current log-likelihood: " << cur_lh);
                 }
             }
         } else {
             site_rate->classifyRates(new_lh, report_to_tree);
             if (fixed_len == BRLEN_OPTIMIZE) {
-                TREE_LOG_LINE(*report_to_tree, VB_MAX,
+                TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MAX,
                               "Optimizing branch lengths (3rd time)");
                 cur_lh = tree->optimizeAllBranches(100, logl_epsilon);
             } else if (fixed_len == BRLEN_SCALE) {
                 double scaling = 1.0;
-                TREE_LOG_LINE(*report_to_tree, VB_MAX,
+                TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MAX,
                               "Optimizing branch scaling (3rd time)");
                 cur_lh = tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling,
                                                          MAX_BRLEN_SCALE, gradient_epsilon);
@@ -1321,13 +1331,13 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
         && params.root_move_dist > 0) {
         cur_lh = tree->optimizeRootPosition(params.root_move_dist,
                                             write_info, logl_epsilon);
-        if (verbose_mode >= VB_MED || write_info) {
-            TREE_LOG_LINE(*report_to_tree, VB_QUIET,
+        if (verbose_mode >= VerboseMode::VB_MED || write_info) {
+            TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_QUIET,
                           "Rooting log-likelihood: " << cur_lh);
         }
     }
-    if (verbose_mode >= VB_MED || write_info) {
-        TREE_LOG_LINE(*report_to_tree, VB_QUIET,
+    if (verbose_mode >= VerboseMode::VB_MED || write_info) {
+        TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_QUIET,
                       "Optimal log-likelihood: " << cur_lh);
     }
     // For UpperBounds -----------
@@ -1336,17 +1346,17 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
     }
     // ---------------------------
 
-    if (verbose_mode <= VB_MIN && write_info) {
+    if (verbose_mode <= VerboseMode::VB_MIN && write_info) {
         model->writeInfo(cout);
         site_rate->writeInfo(cout);
         if (fixed_len == BRLEN_SCALE) {
-            TREE_LOG_LINE(*report_to_tree, VB_MIN,
+            TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MIN,
                           "Scaled tree length: " << tree->treeLength());
         }
     }
     double elapsed_secs = getRealTime() - begin_time;
     if (write_info) {
-        TREE_LOG_LINE(*report_to_tree, VB_QUIET,
+        TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_QUIET,
                       "Parameters optimization took " << i-1 << " rounds"
                       << " (" << elapsed_secs << " sec)" );
     }
@@ -1364,7 +1374,9 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
  * @return TRUE if parameters are at the boundary that may cause numerical unstability
  */
 bool ModelFactory::isUnstableParameters() {
-    if (model->isUnstableParameters()) return true;
+    if (model->isUnstableParameters()) {
+        return true;
+    }
     return false;
 }
 
@@ -1407,7 +1419,7 @@ void ModelFactory::computeTransMatrix(double time, double *trans_matrix,
         model->computeTransMatrix(time, trans_entry, mixture);
         ass_it = insert(value_type(static_cast<int>(round(time * 1e6)), trans_entry)).first;
     } else {
-        //if (verbose_mode >= VB_MAX)
+        //if (verbose_mode >= VerboseMode::VB_MAX)
             //cout << "ModelFactory bingo" << endl;
     }
 

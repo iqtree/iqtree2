@@ -39,11 +39,13 @@ ModelPoMoMixture::ModelPoMoMixture(const char *model_name, string model_params,
     }
 
     // initialize rate heterogeneity
-    ratehet = new RateGamma(num_rate_cats, Params::getInstance().gamma_shape, Params::getInstance().gamma_median, tree);
+    ratehet = new RateGamma(num_rate_cats, Params::getInstance().gamma_shape, 
+                            Params::getInstance().gamma_median, tree);
 
     // Adjust name.
     // this->name += pomo_rate_str;
-    // this->full_name += " Gamma rate heterogeneity with " + convertIntToString(num_rate_cats) + " components;";
+    // this->full_name += " Gamma rate heterogeneity with " + 
+    //                    convertIntToString(num_rate_cats) + " components;";
     this->name += ratehet->name;
     this->full_name += ratehet->full_name;
 
@@ -53,7 +55,7 @@ ModelPoMoMixture::ModelPoMoMixture(const char *model_name, string model_params,
     // creating mixture components
     for (m = 0; m < num_rate_cats; m++) {
         ModelMarkov* model = new ModelMarkov(tree);
-        model->init(FREQ_USER_DEFINED, report_to_tree);
+        model->init(StateFreqType::FREQ_USER_DEFINED, report_to_tree);
 //        model->total_num_subst = ratehet->getRate(m);
         push_back(model);
         prop[m] = ratehet->getProp(m);
@@ -125,7 +127,8 @@ double ModelPoMoMixture::targetFunk(double x[]) {
 
 
 
-void ModelPoMoMixture::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
+void ModelPoMoMixture::setBounds(double *lower_bound, double *upper_bound, 
+                                 bool *bound_check) {
     if (opt_mode == OPT_RATEHET) {
 //        ratehet->setBounds(lower_bound, upper_bound, bound_check);
         lower_bound[1] = max(POMO_GAMMA_MIN, Params::getInstance().min_gamma_shape);
@@ -214,7 +217,7 @@ double ModelPoMoMixture::optimizeParameters(double gradient_epsilon,
         opt_mode = OPT_RATEHET;
         double score_ratehet = ModelPoMo::optimizeParameters(gradient_epsilon,
                                                              report_to_tree);
-        if (verbose_mode >= VB_MIN) {
+        if (verbose_mode >= VerboseMode::VB_MIN) {
           double shape = ratehet->getGammaShape();
           if (shape <= POMO_GAMMA_MIN)
             outWarning("The shape parameter of the gamma rate heterogeneity"

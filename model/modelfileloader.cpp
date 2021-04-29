@@ -320,10 +320,10 @@ void ModelFileLoader::parseMatrixParameter(const YAML::Node& param,
             }
             expressions.emplace_back(expr_row);
             column_count = ( expr_row.size() <= column_count )
-                         ? column_count : expr_row.size();
+                         ? column_count : static_cast<int>(expr_row.size());
         }
         if (column_count<expressions.size()) {
-            column_count = expressions.size();
+            column_count = static_cast<int>(expressions.size());
         }
     }
     else if (!formula_node || !rank_node) {
@@ -385,7 +385,7 @@ YAMLFileParameter
     p.minimum_subscript = 1;
     p.maximum_subscript = info.getNumStates();
     p.type_name         = "frequency";
-    p.type              = FREQUENCY;
+    p.type              = ModelParameterType::FREQUENCY;
     p.value             = 1 / (double) info.getNumStates();
     info.addParameter(p);
     return p;
@@ -406,7 +406,6 @@ void ModelFileLoader::parseYAMLMixtureModels(const YAML::Node& mixture_models,
         (*info.mixed_models)[info.getName()] = child_info;
     }
 }
-
 
 void ModelFileLoader::parseYAMLModelConstraints(const YAML::Node& constraints,
                                                 ModelInfoFromYAMLFile& info,
@@ -562,7 +561,7 @@ void ModelFileLoader::dumpMatrixTo(const char* name, ModelInfoFromYAMLFile& info
                     dump << separator << value;
                 }
                 catch (ModelExpression::ModelException& x) {
-                    dump << separator << " ERROR";
+                    dump << separator << " ERROR(" << x.getMessage() << ")";
                 }
                 separator = " : ";
             }

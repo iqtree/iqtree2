@@ -32,13 +32,13 @@ void ModelBIN::init(const char *model_name, string model_params,
                     PhyloTree* report_to_tree)
 {
 	ASSERT(num_states == 2); // make sure that you create model for Binary data
-	StateFreqType def_freq = FREQ_UNKNOWN;
+	StateFreqType def_freq = StateFreqType::FREQ_UNKNOWN;
 	name = model_name;
 	full_name = model_name;
 	if (name == "JC2") {
-		def_freq = FREQ_EQUAL;
+		def_freq = StateFreqType::FREQ_EQUAL;
 	} else if (name == "GTR2") {
-		def_freq = FREQ_ESTIMATE;
+		def_freq = StateFreqType::FREQ_ESTIMATE;
 	} else {
 		readParameters(model_name, true, report_to_tree);
 	}
@@ -48,7 +48,8 @@ void ModelBIN::init(const char *model_name, string model_params,
     if (model_params != "") {
         readRates(model_params);
     }
-    if (freq == FREQ_UNKNOWN || def_freq == FREQ_EQUAL) {
+    if (freq == StateFreqType::FREQ_UNKNOWN || 
+        def_freq == StateFreqType::FREQ_EQUAL) {
         freq = def_freq;
     }
     ModelMarkov::init(freq, report_to_tree);
@@ -73,11 +74,13 @@ string ModelBIN::getNameParams() {
 //    }
 //    getNameParamsFreq(retname);
     retname << freqTypeString(freq_type, phylo_tree->aln->seq_type, true);
-    if (freq_type == FREQ_EMPIRICAL || freq_type == FREQ_ESTIMATE ||
-        (freq_type == FREQ_USER_DEFINED)) {
+    if (freq_type == StateFreqType::FREQ_EMPIRICAL || 
+        freq_type == StateFreqType::FREQ_ESTIMATE ||
+        freq_type == StateFreqType::FREQ_USER_DEFINED) {
         retname << "{" << state_freq[0];
-        for (int i = 1; i < num_states; i++)
+        for (int i = 1; i < num_states; i++) {
             retname << "," << state_freq[i];
+        }
         retname << "}";
     }
     return retname.str();

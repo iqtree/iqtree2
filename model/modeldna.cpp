@@ -57,28 +57,28 @@ namespace {
             const char* full_name;
     } dna_model_lookups [] =
     {
-        { "JC",    "000000", FREQ_EQUAL,    "JC (Juke and Cantor, 1969)"},
-        { "F81",   "000000", FREQ_ESTIMATE, "F81 (Felsenstein, 1981)"},
-        { "K2P",   "010010", FREQ_EQUAL,    "K2P (Kimura, 1980)"},
-        { "HKY",   "010010", FREQ_ESTIMATE, "HKY (Hasegawa, Kishino and Yano, 1985)"},
-        { "K3P",   "012210", FREQ_EQUAL,    "K3P (Kimura, 1981)" },
-        { "K3Pu",  "012210", FREQ_ESTIMATE, "K3P unequal frequencies (Kimura, 1981)"},
-        { "TN",    "010020", FREQ_ESTIMATE, "TN (Tamura and Nei, 1993)"},
-        { "TNe",   "010020", FREQ_EQUAL,    "TN equal frequencies (Tamura and Nei, 1993)"},
-        { "TPM2",  "121020", FREQ_ESTIMATE, "TPM2 ()"},
-        { "TPM2u", "121020", FREQ_ESTIMATE, "TPM2 unequal frequencies ()"},
-        { "TPM3",  "120120", FREQ_ESTIMATE, "TPM3 ()"}, //You would think, FREQ_EQUAL. Why not? James B.
-        { "TPM3u", "120120", FREQ_ESTIMATE, "TPM3 unequal frequencies ()"},
-        { "TIM",   "012230", FREQ_ESTIMATE, "TIM ()"},
-        { "TIMe",  "012230", FREQ_EQUAL,    "TIM equal frequencies"},
-        { "TIM2",  "121030", FREQ_ESTIMATE, "TIM2 ()"},
-        { "TIM2e", "121030", FREQ_EQUAL,    "TIM2 equal frequencies"},
-        { "TIM3",  "120130", FREQ_ESTIMATE, "TIM3 ()"},
-        { "TIM3e", "120130", FREQ_EQUAL,    "TIM3 equal frequencies"},
-        { "TVM",   "412310", FREQ_ESTIMATE, "TVM"},
-        { "TVMe",  "412310", FREQ_EQUAL,    "TVM equal frequencies"},
-        { "SYM",   "123450", FREQ_EQUAL,    "SYM (Zharkihk, 1994)"},
-        { "GTR",   "123450", FREQ_ESTIMATE, "GTR (Tavare, 1986)"},
+        { "JC",    "000000", StateFreqType::FREQ_EQUAL,    "JC (Juke and Cantor, 1969)"},
+        { "F81",   "000000", StateFreqType::FREQ_ESTIMATE, "F81 (Felsenstein, 1981)"},
+        { "K2P",   "010010", StateFreqType::FREQ_EQUAL,    "K2P (Kimura, 1980)"},
+        { "HKY",   "010010", StateFreqType::FREQ_ESTIMATE, "HKY (Hasegawa, Kishino and Yano, 1985)"},
+        { "K3P",   "012210", StateFreqType::FREQ_EQUAL,    "K3P (Kimura, 1981)" },
+        { "K3Pu",  "012210", StateFreqType::FREQ_ESTIMATE, "K3P unequal frequencies (Kimura, 1981)"},
+        { "TN",    "010020", StateFreqType::FREQ_ESTIMATE, "TN (Tamura and Nei, 1993)"},
+        { "TNe",   "010020", StateFreqType::FREQ_EQUAL,    "TN equal frequencies (Tamura and Nei, 1993)"},
+        { "TPM2",  "121020", StateFreqType::FREQ_ESTIMATE, "TPM2 ()"},
+        { "TPM2u", "121020", StateFreqType::FREQ_ESTIMATE, "TPM2 unequal frequencies ()"},
+        { "TPM3",  "120120", StateFreqType::FREQ_ESTIMATE, "TPM3 ()"}, //You would think, FREQ_EQUAL. Why not? James B.
+        { "TPM3u", "120120", StateFreqType::FREQ_ESTIMATE, "TPM3 unequal frequencies ()"},
+        { "TIM",   "012230", StateFreqType::FREQ_ESTIMATE, "TIM ()"},
+        { "TIMe",  "012230", StateFreqType::FREQ_EQUAL,    "TIM equal frequencies"},
+        { "TIM2",  "121030", StateFreqType::FREQ_ESTIMATE, "TIM2 ()"},
+        { "TIM2e", "121030", StateFreqType::FREQ_EQUAL,    "TIM2 equal frequencies"},
+        { "TIM3",  "120130", StateFreqType::FREQ_ESTIMATE, "TIM3 ()"},
+        { "TIM3e", "120130", StateFreqType::FREQ_EQUAL,    "TIM3 equal frequencies"},
+        { "TVM",   "412310", StateFreqType::FREQ_ESTIMATE, "TVM"},
+        { "TVMe",  "412310", StateFreqType::FREQ_EQUAL,    "TVM equal frequencies"},
+        { "SYM",   "123450", StateFreqType::FREQ_EQUAL,    "SYM (Zharkihk, 1994)"},
+        { "GTR",   "123450", StateFreqType::FREQ_ESTIMATE, "GTR (Tavare, 1986)"},
     };
 };
 
@@ -88,7 +88,7 @@ string getDNAModelInfo(string model_name, string &full_name,
     string name       = model_name;
     full_name         = name;
     rate_type         = "";
-    def_freq          = FREQ_UNKNOWN;
+    def_freq          = StateFreqType::FREQ_UNKNOWN;
     
     std::string search = name_upper;
     for (int i=0; i<sizeof(dna_model_aliases)/sizeof(dna_model_aliases[0]); ++i) {
@@ -118,7 +118,7 @@ void ModelDNA::init(const char *model_name, string model_params,
                     PhyloTree* report_to_tree)
 {
     ASSERT(num_states == 4); // make sure that you create model for DNA
-    StateFreqType def_freq = FREQ_UNKNOWN;
+    StateFreqType def_freq = StateFreqType::FREQ_UNKNOWN;
     string rate_type;
     // First try: the time reversible models
     name = getDNAModelInfo((string)model_name, full_name, rate_type, def_freq);
@@ -140,7 +140,7 @@ void ModelDNA::init(const char *model_name, string model_params,
         } else if (strlen(model_name)!=0) {
             readParameters(model_name, true, report_to_tree);
             name = full_name = model_name;
-            freq = FREQ_USER_DEFINED;
+            freq = StateFreqType::FREQ_USER_DEFINED;
             //name += " (user-defined)";
         }
     }
@@ -150,7 +150,8 @@ void ModelDNA::init(const char *model_name, string model_params,
     if (model_params != "") {
         readRates(model_params);
     }
-    if (freq == FREQ_UNKNOWN ||  def_freq == FREQ_EQUAL) {
+    if (freq == StateFreqType::FREQ_UNKNOWN ||  
+        def_freq == StateFreqType::FREQ_EQUAL) {
         freq = def_freq;
     }
     ModelMarkov::init(freq, report_to_tree);
@@ -354,7 +355,7 @@ bool ModelDNA::setRateType(string rate_str) {
             rates[i] = avg_rates[(int)param_spec[i]];
         }
 	}
-	if (verbose_mode >= VB_DEBUG) {
+	if (verbose_mode >= VerboseMode::VB_DEBUG) {
 		cout << "Initialized rates: ";
         for (i = 0; i < param_spec.size(); ++i) {
 			cout << rates[i] << " ";
@@ -382,7 +383,7 @@ int ModelDNA::getNDim() {
     {
         return 0;
     }
-    ASSERT(freq_type != FREQ_UNKNOWN);
+    ASSERT(freq_type != StateFreqType::FREQ_UNKNOWN);
     // possible TO-DO: cache nFreqParams(freq_type) to avoid repeat calls.
     // return (num_params+nFreqParams(freq_type));
 
@@ -391,7 +392,7 @@ int ModelDNA::getNDim() {
     // }
     
     int ndim = num_params;
-    if (freq_type == FREQ_ESTIMATE) {
+    if (freq_type == StateFreqType::FREQ_ESTIMATE) {
         ndim += num_states - 1;
     } else {
         ndim += nFreqParams(freq_type);
@@ -401,7 +402,7 @@ int ModelDNA::getNDim() {
 
 void ModelDNA::writeParameters(ostream& out) {
     int i;
-    if (freq_type == FREQ_ESTIMATE) {
+    if (freq_type == StateFreqType::FREQ_ESTIMATE) {
         for (i = 0; i < num_states; ++i) {
             out << "\t" << state_freq[i];
         }
@@ -442,7 +443,7 @@ bool ModelDNA::getVariables(double *variables) {
     bool changed = false;
     if (num_params > 0) {
         int num_all = static_cast<int>(param_spec.length());
-        if (verbose_mode >= VB_MAX) {
+        if (verbose_mode >= VerboseMode::VB_MAX) {
             for (int i = 1; i <= num_params; i++) {
                 cout << "  estimated variables[" << i << "] = "
                      << variables[i] << endl;
@@ -455,7 +456,7 @@ bool ModelDNA::getVariables(double *variables) {
             }
         }
     }
-    if (freq_type == FREQ_ESTIMATE) {
+    if (freq_type == StateFreqType::FREQ_ESTIMATE) {
         // 2015-09-07: relax the sum of state_freq to be 1,
         // this will be done at the end of optimization
         int ndim = getNDim();
@@ -473,7 +474,7 @@ bool ModelDNA::getVariables(double *variables) {
 
         // BUG FIX 2015.08.28
 //        int nrate = getNDim();
-//        if (freq_type == FREQ_ESTIMATE) nrate -= (num_states-1);
+//        if (freq_type == StateFreqType::FREQ_ESTIMATE) nrate -= (num_states-1);
 //              double sum = 1.0;
 //              int i, j;
 //              for (i = 1; i < num_states; i++)
@@ -510,7 +511,7 @@ void ModelDNA::setVariables(double *variables) {
     }
     // and copy parameters for base frequencies
 
-    if (freq_type == FREQ_ESTIMATE) {
+    if (freq_type == StateFreqType::FREQ_ESTIMATE) {
         // 2015-09-07: relax the sum of state_freq to be 1,
         // this will be done at the end of optimization
         int ndim = getNDim();
@@ -522,7 +523,7 @@ void ModelDNA::setVariables(double *variables) {
 
         // BUG FIX 2015.08.28
 //        int nrate = getNDim();
-//        if (freq_type == FREQ_ESTIMATE) nrate -= (num_states-1);
+//        if (freq_type == StateFreqType::FREQ_ESTIMATE) nrate -= (num_states-1);
 //              int i, j;
 //              for (i = 0, j = 1; i < num_states; i++)
 //                      if (i != highest_freq_state) {

@@ -16,7 +16,7 @@
 #include <utils/stringfunctions.h> //for convert_int
 #include <utils/tools.h>     //for outError
 
-VerboseMode YAMLModelVerbosity = VB_MIN;
+VerboseMode YAMLModelVerbosity = VerboseMode::VB_MIN;
 
 ModelInfoFromName::ModelInfoFromName(std::string name): model_name(name) {}
 ModelInfoFromName::ModelInfoFromName(const char* name): model_name(name) {}
@@ -181,7 +181,7 @@ void ModelInfoFromName::getFrequencyOptions(std::string& freq_str,
             + freq_str.substr(last_pos);
         }
         if (fstr.length() > 2 && fstr[2] == OPEN_BRACKET) {
-            if (freq_type == FREQ_MIXTURE) {
+            if (freq_type == StateFreqType::FREQ_MIXTURE) {
                 outError("Mixture frequency with user-defined frequency"
                          " is not allowed");
             }
@@ -192,83 +192,83 @@ void ModelInfoFromName::getFrequencyOptions(std::string& freq_str,
             if (close_bracket != fstr.length()-1) {
                 outError("Wrong close bracket position ", fstr);
             }
-            freq_type = FREQ_USER_DEFINED;
+            freq_type = StateFreqType::FREQ_USER_DEFINED;
             freq_params = fstr.substr(3, close_bracket-3);
         } else if (fstr == "+FC" || fstr == "+Fc" || fstr == "+F") {
-            if (freq_type == FREQ_MIXTURE) {
+            if (freq_type == StateFreqType::FREQ_MIXTURE) {
                 freq_params = "empirical," + freq_params;
                 optimize_mixmodel_weight = true;
             } else {
-                freq_type = FREQ_EMPIRICAL;
+                freq_type = StateFreqType::FREQ_EMPIRICAL;
             }
         } else if (fstr == "+FU" || fstr == "+Fu") {
-            if (freq_type == FREQ_MIXTURE) {
+            if (freq_type == StateFreqType::FREQ_MIXTURE) {
                 outError("Mixture frequency with user-defined frequency"
                          " is not allowed");
             }
             else {
-                freq_type = FREQ_USER_DEFINED;
+                freq_type = StateFreqType::FREQ_USER_DEFINED;
             }
         } else if (fstr == "+FQ" || fstr == "+Fq") {
-            if (freq_type == FREQ_MIXTURE) {
+            if (freq_type == StateFreqType::FREQ_MIXTURE) {
                 outError("Mixture frequency with equal frequency"
                          " is not allowed");
             }
             else {
-                freq_type = FREQ_EQUAL;
+                freq_type = StateFreqType::FREQ_EQUAL;
             }
         } else if (fstr == "+FO" || fstr == "+Fo") {
-            if (freq_type == FREQ_MIXTURE) {
+            if (freq_type == StateFreqType::FREQ_MIXTURE) {
                 freq_params = "optimize," + freq_params;
                 optimize_mixmodel_weight = true;
             } else {
-                freq_type = FREQ_ESTIMATE;
+                freq_type = StateFreqType::FREQ_ESTIMATE;
             }
         } else if (fstr == "+F1x4" || fstr == "+F1X4") {
-            if (freq_type == FREQ_MIXTURE) {
+            if (freq_type == StateFreqType::FREQ_MIXTURE) {
                 outError("Mixture frequency with " + fstr + " is not allowed");
             }
             else {
-                freq_type = FREQ_CODON_1x4;
+                freq_type = StateFreqType::FREQ_CODON_1x4;
             }
         } else if (fstr == "+F3x4" || fstr == "+F3X4") {
-            if (freq_type == FREQ_MIXTURE) {
+            if (freq_type == StateFreqType::FREQ_MIXTURE) {
                 outError("Mixture frequency with " + fstr + " is not allowed");
             }
             else {
-                freq_type = FREQ_CODON_3x4;
+                freq_type = StateFreqType::FREQ_CODON_3x4;
             }
         } else if (fstr == "+F3x4C" || fstr == "+F3x4c" ||
                    fstr == "+F3X4C" || fstr == "+F3X4c") {
-            if (freq_type == FREQ_MIXTURE) {
+            if (freq_type == StateFreqType::FREQ_MIXTURE) {
                 outError("Mixture frequency with " + fstr + " is not allowed");
             }
             else {
-                freq_type = FREQ_CODON_3x4C;
+                freq_type = StateFreqType::FREQ_CODON_3x4C;
             }
         } else if (fstr == "+FRY") {
             // MDW to Minh: I don't know how these should interact with FREQ_MIXTURE,
             // so as nearly everything else treats it as an error, I do too.
             // BQM answer: that's fine
-            if (freq_type == FREQ_MIXTURE) {
+            if (freq_type == StateFreqType::FREQ_MIXTURE) {
                 outError("Mixture frequency with " + fstr + " is not allowed");
             }
             else {
-                freq_type = FREQ_DNA_RY;
+                freq_type = StateFreqType::FREQ_DNA_RY;
             }
         } else if (fstr == "+FWS") {
-            if (freq_type == FREQ_MIXTURE) {
+            if (freq_type == StateFreqType::FREQ_MIXTURE) {
                 outError("Mixture frequency with " + fstr + " is not allowed");
             }
             else {
-                freq_type = FREQ_DNA_WS;
+                freq_type = StateFreqType::FREQ_DNA_WS;
             }
         } else if (fstr == "+FMK") {
-            if (freq_type == FREQ_MIXTURE) {
+            if (freq_type == StateFreqType::FREQ_MIXTURE) {
                 outError("Mixture frequency with " + fstr + " is not allowed");
             }
             else {
-                freq_type = FREQ_DNA_MK;
+                freq_type = StateFreqType::FREQ_DNA_MK;
             }
         } else {
             // might be "+F####" where # are digits
@@ -310,7 +310,9 @@ void ModelInfoFromName::getGammaParameters(int& num_rate_cats,
         if (close_bracket == std::string::npos) {
             outError("Close bracket not found in ", model_name);
         }
-        gamma_shape = convert_double(model_name.substr(posG+3+end_pos, close_bracket-posG-3-end_pos).c_str());
+        auto gamma_str = model_name.substr(posG + 3 + end_pos, 
+                                           close_bracket - posG - 3 - end_pos);
+        gamma_shape = convert_double(gamma_str.c_str());
         //if (gamma_shape < MIN_GAMMA_SHAPE ||
         //    gamma_shape > MAX_GAMMA_SHAPE) {
         //    stringstream str;
@@ -524,7 +526,9 @@ void ModelInfoFromName::updateName(const std::string& name) {
     model_name = name;
 }
 
-YAMLFileParameter::YAMLFileParameter() : is_subscripted(false), value(0.0) {
+YAMLFileParameter::YAMLFileParameter() 
+    : is_subscripted(false), minimum_subscript(0), maximum_subscript(0)
+    , value(0.0),  type(ModelParameterType::OTHER) {
 }
 
 std::string YAMLFileParameter::getSubscriptedVariableName(int subscript) const {
@@ -539,7 +543,8 @@ bool YAMLFileParameter::isMatchFor(const std::string& match_name,
             string_to_lower(name) == match_name);
 }
 
-ModelVariable::ModelVariable(): value(0), is_fixed(false) {
+ModelVariable::ModelVariable(): type(ModelParameterType::OTHER)
+                              , value(0), is_fixed(false) {
 }
 
 ModelVariable::ModelVariable(ModelParameterType t,
@@ -585,7 +590,7 @@ void StringMatrix::makeSquare(bool reflect) {
     for (size_t row_num = 0;
          row_num<size(); ++row_num ) {
         StrVector& row    = at(row_num);
-        int old_col_count = row.size();
+        int old_col_count = static_cast<int>(row.size());
         if ( old_col_count < col_count ) {
             row.resize(col_count, "");
             if (reflect) {
@@ -604,8 +609,10 @@ void StringMatrix::makeSquare(bool reflect) {
 }
 
 ModelInfoFromYAMLFile::ModelInfoFromYAMLFile()
-    : sequence_type(SEQ_UNKNOWN), num_states(0), rate_matrix_rank(0)
-    , frequency_type(FREQ_UNKNOWN), mixed_models(nullptr) {
+    : sequence_type(SeqType::SEQ_UNKNOWN), num_states(0)
+    , reversible(false), rate_matrix_rank(0)
+    , tip_likelihood_rank(0)
+    , frequency_type(StateFreqType::FREQ_UNKNOWN), mixed_models(nullptr) {
 }
 
 ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(const ModelInfoFromYAMLFile& rhs)
@@ -622,14 +629,15 @@ ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(const ModelInfoFromYAMLFile& rhs)
     , parameters(rhs.parameters), frequency_type(rhs.frequency_type)
     , variables(rhs.variables), mixed_models(nullptr) {
     if (rhs.mixed_models!=nullptr) {
-        mixed_models = new MapOfModels(*mixed_models);
+        mixed_models = new MapOfModels(*rhs.mixed_models);
     }
 }
 
 ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(const std::string& path)
-    : model_file_path(path), sequence_type(SEQ_UNKNOWN), num_states(0)
-    , rate_matrix_rank(0), frequency_type(FREQ_UNKNOWN)
-    , mixed_models(nullptr) {
+    : model_file_path(path), sequence_type(SeqType::SEQ_UNKNOWN)
+    , num_states(0),         reversible(true)
+    , rate_matrix_rank(0),   tip_likelihood_rank(0)
+    , frequency_type(StateFreqType::FREQ_UNKNOWN), mixed_models(nullptr) {
 }
 
 ModelInfoFromYAMLFile::~ModelInfoFromYAMLFile() {
@@ -713,17 +721,17 @@ void ModelInfoFromYAMLFile::setNumberOfStatesAndSequenceType( int requested_num_
     }
     if (!data_type_name.empty()) {
         auto seq_type_requested = getSeqType(data_type_name.c_str());
-        if (seq_type_requested!=SEQ_UNKNOWN) {
+        if (seq_type_requested!=SeqType::SEQ_UNKNOWN) {
             sequence_type = seq_type_requested;
             num_states    = getNumStatesForSeqType(sequence_type, num_states);
         }
     }
-    if (sequence_type==SEQ_UNKNOWN) {
+    if (sequence_type== SeqType::SEQ_UNKNOWN) {
         switch (num_states) {
-            case 2:   sequence_type = SEQ_BINARY;  break;
-            case 4:   sequence_type = SEQ_DNA;     break;
-            case 20:  sequence_type = SEQ_PROTEIN; break;
-            case 61:  sequence_type = SEQ_CODON;   break;
+            case 2:   sequence_type = SeqType::SEQ_BINARY;  break;
+            case 4:   sequence_type = SeqType::SEQ_DNA;     break;
+            case 20:  sequence_type = SeqType::SEQ_PROTEIN; break;
+            case 61:  sequence_type = SeqType::SEQ_CODON;   break;
             default:  /* still, no idea */
                 outWarning("Could not determine sequence type"
                            " for model " + model_name);
@@ -902,7 +910,7 @@ void ModelInfoFromYAMLFile::updateVariables(const double* updated_values,
         //Todo: Where do weight parameters go?    Esepecially in mixture
         //      models
     for ( auto param_type : supported_types ) {
-        if (param_type == FREQUENCY) {
+        if (param_type == ModelParameterType::FREQUENCY) {
             i = first_freq_index;
         }
         for ( auto p : parameters ) {
@@ -926,7 +934,7 @@ void ModelInfoFromYAMLFile::updateVariables(const double* updated_values,
 }
 
 void ModelInfoFromYAMLFile::logVariablesTo(PhyloTree& report_to_tree) const {
-    if (verbose_mode < VB_MIN) {
+    if (verbose_mode < VerboseMode::VB_MIN) {
         return;
     }
     std::stringstream var_list;
@@ -1350,7 +1358,7 @@ public:
             int num_all = getNumberOfRates();
             for (int i = 0; i < num_all; i++) {
                 if (rates[i] != variables[i] ) {
-                    TREE_LOG_LINE(*report_tree, VB_MAX,
+                    TREE_LOG_LINE(*report_tree, VerboseMode::VB_MAX,
                                   "  estimated rates[" << i << "] changing from "
                                   << rates[i] << " to " << variables[i]);
                     rates[i] = variables[i];
@@ -1360,11 +1368,11 @@ public:
         }
         int ndim = getNDim();
         int first_freq_index = (ndim-num_states+2);
-        if (freq_type == FREQ_ESTIMATE) {
+        if (freq_type == StateFreqType::FREQ_ESTIMATE) {
             auto read_freq = variables+first_freq_index;
             for (int i=0; i<num_states-1; ++i) {
                 if (state_freq[i]!=read_freq[i]) {
-                    TREE_LOG_LINE(*report_tree, VB_MAX,
+                    TREE_LOG_LINE(*report_tree, VerboseMode::VB_MAX,
                                   "  estimated freqs[" << i << "]"
                                   << " changing from " << state_freq[i]
                                   << " to " << read_freq[i]);
@@ -1382,7 +1390,7 @@ public:
             changed |= freqsFromParams(state_freq, variables+num_params+1,
                                        freq_type);
         }
-        TREE_LOG_LINE(*report_tree, VB_MAX, "");
+        TREE_LOG_LINE(*report_tree, VerboseMode::VB_MAX, "");
         if (changed) {
             model_info.updateVariables(variables, first_freq_index, getNDim());
             model_info.logVariablesTo(*report_tree);
@@ -1422,7 +1430,7 @@ public:
                 variables[i] = rates[i];
             }
         }
-        if (freq_type == FREQ_ESTIMATE) {
+        if (freq_type == StateFreqType::FREQ_ESTIMATE) {
             // 2015-09-07: relax the sum of state_freq to be 1,
             // this will be done at the end of optimization
             int ndim = getNDim();
@@ -1478,7 +1486,7 @@ public:
             }
         }
         trace << " }";
-        TREE_LOG_LINE(*report_tree, VB_MAX, trace.str());
+        TREE_LOG_LINE(*report_tree, VerboseMode::VB_MAX, trace.str());
         setRateMatrix(rates.data());
     }
     
@@ -1605,7 +1613,7 @@ ModelMarkov* ModelListFromYAMLFile::getModelByName(const char* model_name,   Phy
         }
     }
     
-    if (freq_type == FREQ_UNKNOWN) {
+    if (freq_type == StateFreqType::FREQ_UNKNOWN) {
         freq_type = model_info.frequency_type;
     }
     

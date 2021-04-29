@@ -141,13 +141,15 @@ double RateGammaInvar::optimizeParameters(double gradient_epsilon,
     if (ndim == 0) {
         return phylo_tree->computeLikelihood();
     }
-    TREE_LOG_LINE(*report_to_tree, VB_MED, "Optimizing " << name
-                  << " model parameters by " << optimize_alg << " algorithm...");
+    TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MED, 
+                  "Optimizing " << name << " model parameters" 
+                  " by " << optimize_alg << " algorithm...");
 
 	if (optimize_alg.find("EM_RR") != string::npos) {
         return randomRestartOptimization(gradient_epsilon, report_to_tree);
-    } else if (optimize_alg.find("Brent") != string::npos
-               || phylo_tree->aln->frac_const_sites == 0.0 || isFixPInvar() || isFixGammaShape()) {
+    } else if (optimize_alg.find("Brent") != string::npos || 
+               phylo_tree->aln->frac_const_sites == 0.0 || 
+               isFixPInvar() || isFixGammaShape()) {
 		double lh = phylo_tree->computeLikelihood();
 		cur_optimize = 0;
 		double gamma_lh = RateGamma::optimizeParameters(gradient_epsilon, report_to_tree);
@@ -212,7 +214,8 @@ int RateGammaInvar::computePatternRates(DoubleVector &pattern_rates,
 			sum_rate += rates[c] * lh_cat[c];
 			sum_lh += lh_cat[c];
 			if (lh_cat[c] > best_lh
-                || (lh_cat[c] == best_lh && random_double()<0.5)) { // break tie at random
+                || (lh_cat[c] == best_lh && 
+                    random_double()<0.5)) { // break tie at random
                 best = c+1;
                 best_lh = lh_cat[c];
             }
@@ -281,7 +284,7 @@ double RateGammaInvar::randomRestartOptimization(double gradient_epsilon,
     double initAlpha = getGammaShape();
 
     while (initPInv <= frac_const) {
-        if (verbose_mode >= VB_MED) {
+        if (verbose_mode >= VerboseMode::VB_MED) {
             cout << endl;
             cout << "Testing with init. pinv = " << initPInv
                  << " / init. alpha = " << initAlpha << endl;
@@ -293,7 +296,7 @@ double RateGammaInvar::randomRestartOptimization(double gradient_epsilon,
         double estAlpha = getGammaShape();
         double estPInv = getPInvar();
 
-        if (verbose_mode >= VB_MED) {
+        if (verbose_mode >= VerboseMode::VB_MED) {
             cout << "Est. alpha: " << estAlpha << " / Est. pinv: " << estPInv
             << " / Logl: " << logl << endl;
         }
@@ -307,7 +310,7 @@ double RateGammaInvar::randomRestartOptimization(double gradient_epsilon,
         }
     }
 
-    if (verbose_mode >= VB_MED) {
+    if (verbose_mode >= VerboseMode::VB_MED) {
         cout << "Best gamma shape: " << bestAlpha
              << " / best p_inv: " << bestPInvar
              << " / logl: " << bestLogl << endl;

@@ -85,8 +85,8 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree,
             }
         } else if ((*it)->aln->getNSeq() < tree->aln->getNSeq()
                    && params.partition_type != TOPO_UNLINKED
-                   && (*it)->getModel()->freq_type == FREQ_EMPIRICAL
-                   && (*it)->aln->seq_type != SEQ_CODON) {
+                   && (*it)->getModel()->freq_type == StateFreqType::FREQ_EMPIRICAL
+                   && (*it)->aln->seq_type != SeqType::SEQ_CODON) {
             // modify state_freq to account for empty sequences
             auto nsites = (*it)->aln->getNSite();
             auto nseqs  = tree->aln->getNSeq();
@@ -122,7 +122,8 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree,
     } else
     for (auto mit = linked_models.begin(); mit != linked_models.end(); mit++) {
         PhyloSuperTree *stree = (PhyloSuperTree*)site_rate->phylo_tree;
-        if (mit->second->freq_type != FREQ_ESTIMATE && mit->second->freq_type != FREQ_EMPIRICAL)
+        if (mit->second->freq_type != StateFreqType::FREQ_ESTIMATE && 
+            mit->second->freq_type != StateFreqType::FREQ_EMPIRICAL)
             continue;
         // count state occurrences
         size_t *sum_state_counts = NULL;
@@ -130,10 +131,10 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree,
         for (it = stree->begin(); it != stree->end(); it++) {
             if ((*it)->getModel()->getName() == mit->second->getName()) {
                 num_parts++;
-                if ((*it)->aln->seq_type == SEQ_CODON) {
+                if ((*it)->aln->seq_type == SeqType::SEQ_CODON) {
                     outError("Linking codon models not supported");
                 }
-                if ((*it)->aln->seq_type == SEQ_POMO) {
+                if ((*it)->aln->seq_type == SeqType::SEQ_POMO) {
                     outError("Linking POMO models not supported");
                 }
 #ifndef _MSC_VER
@@ -371,11 +372,11 @@ double PartitionModel::optimizeLinkedModel(bool write_info,
     if (ndim == 0) return 0.0;
     
     if (write_info) {
-        TREE_LOG_LINE(*report_to_tree, VB_QUIET,
+        TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_QUIET,
                       "Optimizing linked " << model->getName() << " parameters"
                       " across all partitions (" << ndim << " free parameters)");
     }    
-    TREE_LOG_LINE(*report_to_tree, VB_MAX,
+    TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MAX,
                   "Optimizing " << model->name << " model parameters...");
     
     double *variables = new double[ndim+1]; // used for BFGS numerical recipes
@@ -415,7 +416,7 @@ double PartitionModel::optimizeLinkedModel(bool write_info,
         // parameters at boundary, restart with L-BFGS-B with parameters2
         double score2 = -L_BFGS_B(ndim, variables2+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
         if (score2 > score+0.1) {
-            if (verbose_mode >= VB_MED)
+            if (verbose_mode >= VerboseMode::VB_MED)
                 cout << "NICE: L-BFGS-B found better parameters with LnL=" << score2 << " than BFGS LnL=" << score << endl;
             changed = getVariables(variables2);
             score = score2;
@@ -427,7 +428,8 @@ double PartitionModel::optimizeLinkedModel(bool write_info,
     */
     
     // BQM 2015-09-07: normalize state_freq
-    if (model->isReversible() && model->freq_type == FREQ_ESTIMATE) {
+    if (model->isReversible() && 
+        model->freq_type == StateFreqType::FREQ_ESTIMATE) {
         changed = scaleStateFreq();
     }
     if (changed) {
@@ -506,23 +508,29 @@ double PartitionModel::optimizeParameters(int fixed_len, bool write_info,
     double prev_tree_lh = -DBL_MAX, tree_lh = 0.0;
     int ntrees = static_cast<int>(tree->size());
 
-    for (int step = 0; step < Params::getInstance().model_opt_steps; step++) {
+    for (int step = 0; step < Params::getInstance().model_opt_steps; ++step) {
         tree_lh = 0.0;
-        if (tree->part_order.empty()) tree->computePartitionOrder();
+        if (tree->part_order.empty()) {
+            tree->computePartitionOrder();
+        }
         #ifdef _OPENMP
         #pragma omp parallel for reduction(+: tree_lh) schedule(dynamic) if(tree->num_threads > 1)
         #endif
         for (int i = 0; i < ntrees; i++) {
-            int part = tree->part_order[i];
+            int    part         = tree->part_order[i];
+            auto   fac          = tree->at(part)->getModelFactory();
+            bool   noisy        = write_info && verbose_mode >= VerboseMode::VB_MED;
+            double lh_epsilon   = logl_epsilon / min(ntrees, 10);
+            double grad_epsilon = gradient_epsilon / min(ntrees, 10);
             double score;
-            if (opt_gamma_invar)
-                score = tree->at(part)->getModelFactory()->optimizeParametersGammaInvar(fixed_len,
-                    write_info && verbose_mode >= VB_MED,
-                    logl_epsilon/min(ntrees,10), gradient_epsilon/min(ntrees,10), report_to_tree);
-            else
-                score = tree->at(part)->getModelFactory()->optimizeParameters(fixed_len,
-                    write_info && verbose_mode >= VB_MED,
-                    logl_epsilon/min(ntrees,10), gradient_epsilon/min(ntrees,10), report_to_tree);
+            if (opt_gamma_invar) {
+                score = fac->optimizeParametersGammaInvar(fixed_len, noisy,
+                    lh_epsilon, grad_epsilon, report_to_tree);
+            } 
+            else {
+                score = fac->optimizeParameters(fixed_len, noisy,
+                    lh_epsilon, grad_epsilon, report_to_tree);
+            }
             tree_lh += score;
             if (write_info)
 #ifdef _OPENMP
@@ -532,7 +540,7 @@ double PartitionModel::optimizeParameters(int fixed_len, bool write_info,
                 report_to_tree->hideProgress();
                 cout << "Partition " << tree->at(part)->aln->name
                      << " / Model: " << tree->at(part)->getModelName()
-                     << " / df: " << tree->at(part)->getModelFactory()->getNParameters(fixed_len)
+                     << " / df: " << fac->getNParameters(fixed_len)
                 << " / LogL: " << score << endl;
                 report_to_tree->showProgress();
             }
@@ -542,7 +550,7 @@ double PartitionModel::optimizeParameters(int fixed_len, bool write_info,
         if (!isLinkedModel())
             break;
 
-        if (verbose_mode >= VB_MED || write_info) {
+        if (verbose_mode >= VerboseMode::VB_MED || write_info) {
             report_to_tree->hideProgress();
             cout << step+1 << ". Log-likelihood: " << tree_lh << endl;
             report_to_tree->showProgress();
@@ -567,13 +575,13 @@ double PartitionModel::optimizeParameters(int fixed_len, bool write_info,
         prev_tree_lh = tree_lh;
     }
     
-    if (verbose_mode >= VB_MED || write_info) {
+    if (verbose_mode >= VerboseMode::VB_MED || write_info) {
         report_to_tree->hideProgress();
         cout << "Optimal log-likelihood: " << tree_lh << endl;
         report_to_tree->showProgress();
     }
     // write linked_models
-    if (verbose_mode <= VB_MIN && write_info) {
+    if (verbose_mode <= VerboseMode::VB_MIN && write_info) {
         for (auto it = linked_models.begin();
              it != linked_models.end(); it++) {
             it->second->writeInfo(cout);
@@ -583,7 +591,8 @@ double PartitionModel::optimizeParameters(int fixed_len, bool write_info,
 }
 
 double PartitionModel::optimizeParametersGammaInvar(int fixed_len, bool write_info,
-                                                    double logl_epsilon, double gradient_epsilon,
+                                                    double logl_epsilon, 
+                                                    double gradient_epsilon,
                                                     PhyloTree* report_to_tree) {
     opt_gamma_invar = true;
     double tree_lh = optimizeParameters(fixed_len, write_info, logl_epsilon,

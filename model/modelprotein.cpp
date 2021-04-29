@@ -882,8 +882,8 @@ void ModelProtein::init(const char *model_name, string model_params,
             outWarning("Please only use GTR20 with very large data"
                        " and always test for model fit!");
         }
-        if (freq == FREQ_UNKNOWN) {
-            freq = FREQ_EMPIRICAL;
+        if (freq == StateFreqType::FREQ_UNKNOWN) {
+            freq = StateFreqType::FREQ_EMPIRICAL;
         }
         if (name_init!=nullptr) {
             nxs_model = models_block->findModel(name_init);
@@ -913,8 +913,8 @@ void ModelProtein::init(const char *model_name, string model_params,
             outWarning("Please only use NONREV with very large data"
                        " and always test for model fit!");
         }
-        if (freq == FREQ_UNKNOWN) {
-            freq = FREQ_ESTIMATE;
+        if (freq == StateFreqType::FREQ_UNKNOWN) {
+            freq = StateFreqType::FREQ_ESTIMATE;
         }
         if (name_init!=nullptr) {
             nxs_model = models_block->findModel(name_init);
@@ -947,8 +947,8 @@ void ModelProtein::init(const char *model_name, string model_params,
     if (freq_params != "") {
         readStateFreq(freq_params, report_to_tree);
     }
-    if (freq == FREQ_UNKNOWN) {
-        freq = FREQ_USER_DEFINED;
+    if (freq == StateFreqType::FREQ_UNKNOWN) {
+        freq = StateFreqType::FREQ_USER_DEFINED;
     }
     ModelMarkov::init(freq, report_to_tree);
 }
@@ -1040,7 +1040,7 @@ string ModelProtein::getNameParams() {
     if (fixed_parameters) {
         return retname.str();
     }
-    if (freq_type == FREQ_ESTIMATE) {
+    if (freq_type == StateFreqType::FREQ_ESTIMATE) {
         retname << "{" << state_freq[0];
         for (int i = 1; i < num_states; i++) {
             retname << "," << state_freq[i];

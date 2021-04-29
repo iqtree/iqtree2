@@ -125,7 +125,7 @@ void ModelSet::writeInfo(ostream& out)
     if (empty()) {
         return;
     }
-	if (verbose_mode >= VB_DEBUG) {
+	if (verbose_mode >= VerboseMode::VB_DEBUG) {
 		int i = 1;
 		for (iterator it = begin(); it != end(); it++, i++) {
 			out << "Partition " << i << ":" << endl;

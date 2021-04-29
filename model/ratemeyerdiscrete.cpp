@@ -528,7 +528,7 @@ double RateMeyerDiscrete::classifyRatesKMeans(PhyloTree* report_to_tree) {
     if (rates[ncategory-1] > MAX_SITE_RATE - 1e-6) {
         rates[ncategory-1] = MAX_SITE_RATE;
     }
-	if (verbose_mode >= VB_MED) {
+	if (verbose_mode >= VerboseMode::VB_MED) {
 		cout << "K-means cost: " << cost << endl;
 		for (i = 0; i < ncategory; i++) cout << rates[i] << " ";
 		cout << endl;
@@ -578,8 +578,9 @@ double RateMeyerDiscrete::classifyRates(double tree_lh,
 	double new_tree_lh;
 	is_categorized = true;
     if (ncategory > 0) {
-        TREE_LOG_LINE(*report_to_tree, VB_QUIET,
-                      "\nClassifying rates into " << ncategory << " categories...");
+        TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_QUIET,
+                      "\nClassifying rates into " 
+                      << ncategory << " categories...");
         return classifyRatesKMeans(report_to_tree);
     }
 

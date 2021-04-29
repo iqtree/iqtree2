@@ -61,7 +61,8 @@ double RateKategory::optimizeParameters(double gradient_epsilon,
 	// return if nothing to be optimized
 	if (ndim == 0) return 0.0;
 
-	TREE_LOG_LINE(*report_to_tree, VB_MAX, "Optimizing " << name << " model parameters...");
+	TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MAX, 
+		          "Optimizing " << name << " model parameters...");
 
 	double *variables = new double[ndim+1];
 	double *upper_bound = new double[ndim+1];

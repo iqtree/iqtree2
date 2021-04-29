@@ -40,7 +40,7 @@ ModelGTR::ModelGTR(PhyloTree *tree, bool count_rates)
 	rates = new double[nrate];
 	memset(rates, 0, sizeof(double) * nrate);
 
-	freq_type = FREQ_UNKNOWN;
+	freq_type = StateFreqType::FREQ_UNKNOWN;
 	
 	eigenvalues = aligned_alloc<double>(num_states);
 
@@ -81,17 +81,19 @@ void ModelGTR::setTree(PhyloTree *tree) {
 }
 
 string ModelGTR::getName() {
-	if (getFreqType() == FREQ_EMPIRICAL)
+	if (getFreqType() == StateFreqType::FREQ_EMPIRICAL)
 		return name + "+F";
-	else if (getFreqType() == FREQ_CODON_1x4)
+	else if (getFreqType() == StateFreqType::FREQ_CODON_1x4)
 		return name += "+F1X4";
-	else if (getFreqType() == FREQ_CODON_3x4)
+	else if (getFreqType() == StateFreqType::FREQ_CODON_3x4)
 		return name + "+F3X4";
-	else if (getFreqType() == FREQ_CODON_3x4C)
+	else if (getFreqType() == StateFreqType::FREQ_CODON_3x4C)
 		return name + "+F3X4C";
-	else if (getFreqType() == FREQ_ESTIMATE && phylo_tree->aln->seq_type != SEQ_DNA)
+	else if (getFreqType() == StateFreqType::FREQ_ESTIMATE && 
+		     phylo_tree->aln->seq_type != SeqType::SEQ_DNA)
 		return name + "+FO";
-	else if (getFreqType() == FREQ_EQUAL && phylo_tree->aln->seq_type != SEQ_DNA)
+	else if (getFreqType() == StateFreqType::FREQ_EQUAL && 
+		     phylo_tree->aln->seq_type != SeqType::SEQ_DNA)
 		return name + "+FQ";
     else
         return name;
@@ -114,36 +116,39 @@ string ModelGTR::getNameParams() {
 }
     
 void ModelGTR::getNameParamsFreq(ostream &retname) {
-	if (getFreqType() == FREQ_EMPIRICAL || (getFreqType() == FREQ_USER_DEFINED && phylo_tree->aln->seq_type == SEQ_DNA)) {
+	if (getFreqType() == StateFreqType::FREQ_EMPIRICAL || 
+		( getFreqType() == StateFreqType::FREQ_USER_DEFINED && 
+		  phylo_tree->aln->seq_type == SeqType::SEQ_DNA)) {
 		retname << "+F";
         retname << "{" << state_freq[0];
         for (int i = 1; i < num_states; i++)
             retname << "," << state_freq[i];
         retname << "}";
-	} else if (getFreqType() == FREQ_CODON_1x4)
+	} else if (getFreqType() == StateFreqType::FREQ_CODON_1x4)
 		retname << "+F1X4";
-	else if (getFreqType() == FREQ_CODON_3x4)
+	else if (getFreqType() == StateFreqType::FREQ_CODON_3x4)
 		retname << "+F3X4";
-	else if (getFreqType() == FREQ_CODON_3x4C)
+	else if (getFreqType() == StateFreqType::FREQ_CODON_3x4C)
 		name += "+F3X4C";
-	else if (getFreqType() == FREQ_ESTIMATE) {
+	else if (getFreqType() == StateFreqType::FREQ_ESTIMATE) {
 		retname << "+FO";
         retname << "{" << state_freq[0];
         for (int i = 1; i < num_states; i++)
             retname << "," << state_freq[i];
         retname << "}";
-    } else if (getFreqType() == FREQ_EQUAL && phylo_tree->aln->seq_type != SEQ_DNA)
+    } else if (getFreqType() == StateFreqType::FREQ_EQUAL && 
+		       phylo_tree->aln->seq_type != SeqType::SEQ_DNA)
 		retname << "+FQ";
 }
 
 void ModelGTR::init(StateFreqType type) {
-	//if (type == FREQ_UNKNOWN) return;
+	//if (type == StateFreqType::FREQ_UNKNOWN) return;
 	int i;
 	freq_type = type;
-	assert(freq_type != FREQ_UNKNOWN);
+	assert(freq_type != StateFreqType::FREQ_UNKNOWN);
 	switch (freq_type) {
 	case FREQ_EQUAL:
-		if (phylo_tree->aln->seq_type == SEQ_CODON) {
+		if (phylo_tree->aln->seq_type == SeqType::SEQ_CODON) {
 			int nscodon = phylo_tree->aln->getNumNonstopCodons();
             double freq_codon = (1.0-(num_states-nscodon)*MIN_FREQUENCY)/(nscodon);
 			for (i = 0; i < num_states; i++)
@@ -159,7 +164,7 @@ void ModelGTR::init(StateFreqType type) {
 		break;	
 	case FREQ_ESTIMATE:
 	case FREQ_EMPIRICAL:
-		if (phylo_tree->aln->seq_type == SEQ_CODON) {
+		if (phylo_tree->aln->seq_type == SeqType::SEQ_CODON) {
 			double ntfreq[12];
 			phylo_tree->hideProgress();
 			phylo_tree->aln->computeCodonFreq(freq_type, state_freq, ntfreq);
@@ -181,10 +186,9 @@ void ModelGTR::init(StateFreqType type) {
 	default: break;
 	}
 	decomposeRateMatrix();
-	if (verbose_mode >= VB_MAX) {
+	if (verbose_mode >= VerboseMode::VB_MAX) {
 		writeInfo(cout);
 	}
-
 }
 
 void ModelGTR::writeInfo(ostream &out) {
@@ -199,7 +203,7 @@ void ModelGTR::writeInfo(ostream &out) {
 		out << "  C-T: " << rates[4];
 		out << "  G-T: " << rates[5];
 		out << endl;
-		//if (freq_type != FREQ_ESTIMATE) return;
+		//if (freq_type != StateFreqType::FREQ_ESTIMATE) return;
 		out << "Base frequencies: ";
 		out << "  A: " << state_freq[0];
 		out << "  C: " << state_freq[1];
@@ -207,7 +211,7 @@ void ModelGTR::writeInfo(ostream &out) {
 		out << "  T: " << state_freq[3];
 		out << endl;
 	}
-//	if (verbose_mode >= VB_DEBUG) {
+//	if (verbose_mode >= VerboseMode::VB_DEBUG) {
 //		int i, j;
 //		out.precision(6);
 //		out << "eigenvalues: " << endl;
@@ -374,7 +378,7 @@ void ModelGTR::setRateMatrix(double* rate_mat)
 
 void ModelGTR::getStateFrequency(double *freq) {
 	assert(state_freq);
-	assert(freq_type != FREQ_UNKNOWN);
+	assert(freq_type != StateFreqType::FREQ_UNKNOWN);
 	memcpy(freq, state_freq, sizeof(double) * num_states);
     // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
     double sum = 0.0;
@@ -416,19 +420,20 @@ void ModelGTR::getQMatrix(double *q_mat) {
 }
 
 int ModelGTR::getNDim() { 
-	assert(freq_type != FREQ_UNKNOWN);
+	assert(freq_type != StateFreqType::FREQ_UNKNOWN);
 	int ndim = num_params;
-	if (freq_type == FREQ_ESTIMATE) 
+	if (freq_type == StateFreqType::FREQ_ESTIMATE) 
 		ndim += num_states-1;
 	return ndim;
 }
 
 int ModelGTR::getNDimFreq() { 
-	if (freq_type == FREQ_EMPIRICAL) 
+	if (freq_type == StateFreqType::FREQ_EMPIRICAL) 
         return num_states-1;
-	else if (freq_type == FREQ_CODON_1x4) 
+	else if (freq_type == StateFreqType::FREQ_CODON_1x4) 
         return 3;
-	else if (freq_type == FREQ_CODON_3x4 || freq_type == FREQ_CODON_3x4C) 
+	else if (freq_type == StateFreqType::FREQ_CODON_3x4 || 
+		     freq_type == StateFreqType::FREQ_CODON_3x4C) 
         return 9;
     
     return 0;
@@ -452,13 +457,17 @@ void ModelGTR::scaleStateFreq(bool sum_one) {
 
 void ModelGTR::setVariables(double *variables) {
 	int nrate = getNDim();
-	if (freq_type == FREQ_ESTIMATE) nrate -= (num_states-1);
+	if (freq_type == StateFreqType::FREQ_ESTIMATE) {
+		nrate -= (num_states - 1);
+	}
 	if (nrate > 0)
 		memcpy(variables+1, rates, nrate*sizeof(double));
-	if (freq_type == FREQ_ESTIMATE) {
-        // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
+	if (freq_type == StateFreqType::FREQ_ESTIMATE) {
+        // 2015-09-07: relax the sum of state_freq to be 1, 
+		// this will be done at the end of optimization
 		int ndim = getNDim();
-		memcpy(variables+(ndim-num_states+2), state_freq, (num_states-1)*sizeof(double));
+		memcpy(variables+(ndim-num_states+2), state_freq, 
+			   (num_states-1)*sizeof(double));
         
 //		int i, j;
 //		for (i = 0, j = 1; i < num_states; i++)
@@ -476,20 +485,24 @@ bool ModelGTR::getVariables(double *variables) {
 	int nrate = getNDim();
 	int i;
 	bool changed = false;
-	if (freq_type == FREQ_ESTIMATE) nrate -= (num_states-1);
+	if (freq_type == StateFreqType::FREQ_ESTIMATE) {
+		nrate -= (num_states - 1);
+	}
 	if (nrate > 0) {
 		for (i = 0; i < nrate; i++)
 			changed |= (rates[i] != variables[i+1]);
 		memcpy(rates, variables+1, nrate * sizeof(double));
 	}
 
-	if (freq_type == FREQ_ESTIMATE) {
-        // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
-        // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
+	if (freq_type == StateFreqType::FREQ_ESTIMATE) {
+        // 2015-09-07: relax the sum of state_freq to be 1, 
+		// this will be done at the end of optimization
 		int ndim = getNDim();
-		for (i = 0; i < num_states-1; i++)
-			changed |= (state_freq[i] != variables[i+ndim-num_states+2]);
-		memcpy(state_freq, variables+(ndim-num_states+2), (num_states-1)*sizeof(double));
+		for (i = 0; i < num_states - 1; i++) {
+			changed |= (state_freq[i] != variables[i + ndim - num_states + 2]);
+		}
+		memcpy(state_freq, variables+(ndim-num_states+2), 
+			   (num_states-1)*sizeof(double));
 
 //		memcpy(state_freq, variables+nrate+1, (num_states-1)*sizeof(double));
 		//state_freq[num_states-1] = 0.1;
@@ -528,16 +541,21 @@ bool ModelGTR::isUnstableParameters() {
 	int nrates = getNumRateEntries();
 	int i;
     // NOTE: zero rates are not consider unstable anymore
-	for (i = 0; i < nrates; i++)
-		if (/*rates[i] < MIN_RATE+TOL_RATE || */rates[i] > MAX_RATE-TOL_RATE)
+	for (i = 0; i < nrates; i++) {
+		if (/*rates[i] < MIN_RATE+TOL_RATE || */rates[i] > MAX_RATE - TOL_RATE) {
 			return true;
-	for (i = 0; i < num_states; i++)
-		if (state_freq[i] < MIN_RATE+TOL_RATE)
+		}
+	}
+	for (i = 0; i < num_states; i++) {
+		if (state_freq[i] < MIN_RATE + TOL_RATE) {
 			return true;
+		}
+	}
 	return false;
 }
 
-void ModelGTR::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
+void ModelGTR::setBounds(double *lower_bound, double *upper_bound, 
+	                     bool *bound_check) {
 	int i, ndim = getNDim();
 
 	for (i = 1; i <= ndim; i++) {
@@ -547,7 +565,7 @@ void ModelGTR::setBounds(double *lower_bound, double *upper_bound, bool *bound_c
 		bound_check[i] = false;
 	}
 
-	if (freq_type == FREQ_ESTIMATE) {
+	if (freq_type == StateFreqType::FREQ_ESTIMATE) {
 		for (i = ndim-num_states+2; i <= ndim; i++) {
 //            lower_bound[i] = MIN_FREQUENCY/state_freq[highest_freq_state];
 //			upper_bound[i] = state_freq[highest_freq_state]/MIN_FREQUENCY;
@@ -565,9 +583,12 @@ double ModelGTR::optimizeParameters(double gradient_epsilon) {
 	// return if nothing to be optimized
 	if (ndim == 0) return 0.0;
     
-	TREE_LOG_LINE(*phylo_tree, VB_MAX, "Optimizing " << name << " model parameters...");
+	TREE_LOG_LINE(*phylo_tree, VerboseMode::VB_MAX, 
+		          "Optimizing " << name << " model parameters...");
 
-	//if (freq_type == FREQ_ESTIMATE) scaleStateFreq(false);
+	//if (freq_type == StateFreqType::FREQ_ESTIMATE) {
+	//    scaleStateFreq(false);
+	//}
 
 	double *variables = new double[ndim+1];
 	double *upper_bound = new double[ndim+1];
@@ -584,13 +605,15 @@ double ModelGTR::optimizeParameters(double gradient_epsilon) {
 	setBounds(lower_bound, upper_bound, bound_check);
 	//packData(variables, lower_bound, upper_bound, bound_check);
 //    if (phylo_tree->params->optimize_alg.find("BFGS-B") == string::npos)
-        score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
+        score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, 
+			                        bound_check, max(gradient_epsilon, TOL_RATE));
 //    else
-//        score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
+//        score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, 
+//                          max(gradient_epsilon, TOL_RATE));
 
 	bool changed = getVariables(variables);
     // BQM 2015-09-07: normalize state_freq
-	if (freq_type == FREQ_ESTIMATE) { 
+	if (freq_type == StateFreqType::FREQ_ESTIMATE) { 
         scaleStateFreq(true);
         changed = true;
     }
@@ -598,8 +621,7 @@ double ModelGTR::optimizeParameters(double gradient_epsilon) {
         decomposeRateMatrix();
         phylo_tree->clearAllPartialLH();
         score = phylo_tree->computeLikelihood();
-    }
-	
+    }	
 	delete [] bound_check;
 	delete [] lower_bound;
 	delete [] upper_bound;
@@ -607,8 +629,6 @@ double ModelGTR::optimizeParameters(double gradient_epsilon) {
 
 	return score;
 }
-
-
 
 void ModelGTR::decomposeRateMatrix(){
 	int i, j, k = 0;
@@ -698,8 +718,10 @@ void ModelGTR::decomposeRateMatrix(){
 //            cout << endl;
         }
 		/* eigensystem of 1 PAM rate matrix */
-		eigensystem_sym(rate_matrix, state_freq, eigenvalues, eigenvectors, inv_eigenvectors, num_states);
-		//eigensystem(rate_matrix, state_freq, eigenvalues, eigenvectors, inv_eigenvectors, num_states);
+		eigensystem_sym(rate_matrix, state_freq, eigenvalues, 
+			            eigenvectors, inv_eigenvectors, num_states);
+		//eigensystem(rate_matrix, state_freq, eigenvalues, 
+		//            eigenvectors, inv_eigenvectors, num_states);
 		for (i = num_states-1; i >= 0; i--)
 			delete [] rate_matrix[i];
 		delete [] rate_matrix;

@@ -1115,7 +1115,7 @@ ModelMarkov* createModel(string model_str, ModelsBlock *models_block,
         }
     }
     
-    if (!seqerr.empty() && tree->aln->seq_type != SEQ_DNA) {
+    if (!seqerr.empty() && tree->aln->seq_type != SeqType::SEQ_DNA) {
         outError("Sequencing error model " + seqerr +
                  " is only supported for DNA");
     }
@@ -1134,7 +1134,7 @@ ModelMarkov* createModel(string model_str, ModelsBlock *models_block,
     if (!yaml_path.empty()) {
         yaml_list.loadFromFile(yaml_path.c_str(), report_to_tree);
     }
-    if (pomo || tree->aln->seq_type == SEQ_POMO) {
+    if (pomo || tree->aln->seq_type == SeqType::SEQ_POMO) {
         if (pomo_rate_str == "") {
             model = new ModelPoMo(model_str.c_str(), model_params,
                                   freq_type, freq_params, tree,
@@ -1146,7 +1146,7 @@ ModelMarkov* createModel(string model_str, ModelsBlock *models_block,
                                          pomo_heterozygosity, pomo_rate_str,
                                          report_to_tree);
         }
-        if (model->isMixture() && verbose_mode >= VB_MED) {
+        if (model->isMixture() && verbose_mode >= VerboseMode::VB_MED) {
             report_to_tree->logLine("PoMo mixture model"
                                     " for Gamma rate heterogeneity.");
         }
@@ -1159,10 +1159,10 @@ ModelMarkov* createModel(string model_str, ModelsBlock *models_block,
         model = ModelMarkov::getModelByName(model_str,    tree,
                                             model_params, freq_type,
                                             freq_params,  report_to_tree);
-    } else if (tree->aln->seq_type == SEQ_BINARY) {
+    } else if (tree->aln->seq_type == SeqType::SEQ_BINARY) {
         model = new ModelBIN(model_str.c_str(), model_params, freq_type,
                              freq_params, tree, report_to_tree);
-    } else if (tree->aln->seq_type == SEQ_DNA) {
+    } else if (tree->aln->seq_type == SeqType::SEQ_DNA) {
         if (seqerr.empty()) {
             model = new ModelDNA(model_str.c_str(), model_params, freq_type,
                                  freq_params, tree, report_to_tree);
@@ -1171,14 +1171,14 @@ ModelMarkov* createModel(string model_str, ModelsBlock *models_block,
             model = new ModelDNAError(model_str.c_str(), model_params, freq_type,
                                       freq_params, seqerr, tree, report_to_tree);
         }
-    } else if (tree->aln->seq_type == SEQ_PROTEIN) {
+    } else if (tree->aln->seq_type == SeqType::SEQ_PROTEIN) {
         model = new ModelProtein(model_str.c_str(), model_params,
                                  freq_type, freq_params, tree,
                                  models_block, report_to_tree);
-    } else if (tree->aln->seq_type == SEQ_CODON) {
+    } else if (tree->aln->seq_type == SeqType::SEQ_CODON) {
         model = new ModelCodon(model_str.c_str(), model_params, freq_type,
                                freq_params, tree, report_to_tree);
-    } else if (tree->aln->seq_type == SEQ_MORPH) {
+    } else if (tree->aln->seq_type == SeqType::SEQ_MORPH) {
         model = new ModelMorphology(model_str.c_str(), model_params, freq_type,
                                     freq_params, tree, report_to_tree);
     } else {
@@ -1234,7 +1234,7 @@ void ModelMixture::initMixture(string orig_model_name, string model_name,
 	fix_prop = false;
 	optimizing_submodels = false;
 
-	if (freq == FREQ_MIXTURE) {
+	if (freq == StateFreqType::FREQ_MIXTURE) {
 		for (m = 0, cur_pos = 0; cur_pos < freq_params.length(); m++) {
 			size_t pos = freq_params.find(',', cur_pos);
 			if (pos == string::npos)
@@ -1291,13 +1291,13 @@ void ModelMixture::initMixture(string orig_model_name, string model_name,
                 freq_weights[m] = sum_weights / freq_weights.size();
             }
         }
-		ModelMarkov::init(FREQ_USER_DEFINED, report_to_tree);
+		ModelMarkov::init(StateFreqType::FREQ_USER_DEFINED, report_to_tree);
 	} else {
         if (freq_params != "") {
 			readStateFreq(freq_params, report_to_tree);
         }
-        if (freq == FREQ_UNKNOWN) {
-            freq = FREQ_USER_DEFINED;
+        if (freq == StateFreqType::FREQ_UNKNOWN) {
+            freq = StateFreqType::FREQ_USER_DEFINED;
         }
 		ModelMarkov::init(freq, report_to_tree);
 	}
@@ -1323,8 +1323,9 @@ void ModelMixture::initMixture(string orig_model_name, string model_name,
 			if (pos_weight == string::npos) {
 				rate = convert_double(this_name.substr(pos_rate+1).c_str());
 			} else {
-				rate = convert_double(this_name.substr(pos_rate+1, pos_weight-pos_rate-1).c_str());
-				weight = convert_double(this_name.substr(pos_weight+1).c_str());
+                string rate_str = this_name.substr(pos_rate + 1, pos_weight - pos_rate - 1);
+				rate            = convert_double(rate_str.c_str());
+				weight          = convert_double(this_name.substr(pos_weight+1).c_str());
 				fix_prop = true;
 				if (weight <= 0.0)
 					outError("Mixture component weight is negative!");
@@ -1333,15 +1334,15 @@ void ModelMixture::initMixture(string orig_model_name, string model_name,
 		}
         cur_pos = pos+1;
         ModelMarkov* model;
-        if (freq == FREQ_MIXTURE) {
+        if (freq == StateFreqType::FREQ_MIXTURE) {
             for(int f = 0; f != freq_vec.size(); f++) {
-                StateFreqType sf   = FREQ_USER_DEFINED;
+                StateFreqType sf   = StateFreqType::FREQ_USER_DEFINED;
                 std::string   desc;
                 if (freq_vec[f] == nxs_freq_empirical) {
-                    sf = FREQ_EMPIRICAL;
+                    sf = StateFreqType::FREQ_EMPIRICAL;
                 }
                 else if (freq_vec[f] == nxs_freq_optimize) {
-                    sf = FREQ_ESTIMATE;
+                    sf = StateFreqType::FREQ_ESTIMATE;
                 }
                 else {
                     desc = freq_vec[f]->description;
@@ -1407,7 +1408,8 @@ void ModelMixture::initMixture(string orig_model_name, string model_name,
 	// normalize weights to 1.0
     if (sum != 1.0) {
         sum = 1.0/sum;
-//        cout << "NOTE: Mixture weights do not sum up to 1, rescale weights by " << sum << endl;
+//        cout << "NOTE: Mixture weights do not sum up to 1," 
+//             << " rescale weights by " << sum << endl;
         for (i = 0; i < nmixtures; i++)
              prop[i] *= sum;
     }
@@ -1432,7 +1434,8 @@ void ModelMixture::initMixture(string orig_model_name, string model_name,
     bool err = false;
     for (i = 1; i < nmixtures; i++) {
         if (at(i)->isReversible() != rev) {
-            cerr << "ERROR: Model " << at(i)->name << " has different reversible property" << endl;
+            cerr << "ERROR: Model " << at(i)->name 
+                 << " has different reversible property" << endl;
             err = true;
         }
     }
@@ -1466,9 +1469,10 @@ void ModelMixture::initMem() {
     aligned_free(inv_eigenvectors);
     aligned_free(inv_eigenvectors_transposed);
     ensure_aligned_allocated(eigenvalues, num_states_total*nmixtures);
-    ensure_aligned_allocated(eigenvectors, num_states_total*num_states_total*nmixtures);
-    ensure_aligned_allocated(inv_eigenvectors, num_states_total*num_states_total*nmixtures);
-    ensure_aligned_allocated(inv_eigenvectors_transposed, num_states_total*num_states_total*nmixtures);
+    auto n_squared_m = num_states_total * num_states_total * nmixtures;
+    ensure_aligned_allocated(eigenvectors, n_squared_m);
+    ensure_aligned_allocated(inv_eigenvectors, n_squared_m);
+    ensure_aligned_allocated(inv_eigenvectors_transposed, n_squared_m);
     
     // assigning memory for individual models
     int m = 0;
@@ -1484,7 +1488,8 @@ void ModelMixture::initMem() {
                num_states_this_model_2*sizeof(double));
         memcpy(&inv_eigenvectors[count_num_states_2], (*it)->inv_eigenvectors,
                num_states_this_model_2*sizeof(double));
-        memcpy(&inv_eigenvectors_transposed[count_num_states_2], (*it)->inv_eigenvectors_transposed,
+        memcpy(&inv_eigenvectors_transposed[count_num_states_2], 
+               (*it)->inv_eigenvectors_transposed,
                num_states_this_model_2*sizeof(double));
         
         // then delete
@@ -1589,8 +1594,11 @@ void ModelMixture::getStateFrequency(double *state_freq, int mixture) {
         at(i)->getStateFrequency(&state_freq_class[0]);
         double weight = getMixtureWeight(i);
         // fused model, take the weight from site_rate
-        if (fused)
-            weight = phylo_tree->getRate()->getProp(i) / (1.0 - phylo_tree->getRate()->getPInvar());
+        if (fused) {
+            auto prop       = phylo_tree->getRate()->getProp(i);
+            auto prop_invar = phylo_tree->getRate()->getPInvar();
+            weight          = prop / (1.0 - prop_invar);
+        }
         for (int j = 0; j < num_states; j++)
             state_freq[j] += weight*state_freq_class[j];
     }
@@ -1633,18 +1641,18 @@ int ModelMixture::getNDimFreq() {
 	for (iterator it = begin(); it != end(); it++) {
         // 2016-03-06: count empirical freq only once (thanks to Stephen Crotty)
         switch ((*it)->freq_type) {
-        case FREQ_EMPIRICAL:
+        case StateFreqType::FREQ_EMPIRICAL:
             num_empirical++;
             if (num_empirical==1)
                 dim += (*it)->getNDimFreq();
             break;
-        case FREQ_CODON_1x4:
+        case StateFreqType::FREQ_CODON_1x4:
             num_codon_1x4++;
             if (num_codon_1x4==1)
                 dim += (*it)->getNDimFreq();
             break;
-        case FREQ_CODON_3x4:
-        case FREQ_CODON_3x4C:
+        case StateFreqType::FREQ_CODON_3x4:
+        case StateFreqType::FREQ_CODON_3x4C:
             num_codon_3x4++;
             if (num_codon_3x4==1)
                 dim += (*it)->getNDimFreq();
@@ -1730,7 +1738,8 @@ double ModelMixture::optimizeWeights() {
     return phylo_tree->computeLikelihood();
 }
 
-double ModelMixture::optimizeWithEM(double gradient_epsilon, PhyloTree* report_to_tree) {
+double ModelMixture::optimizeWithEM(double gradient_epsilon, 
+                                    PhyloTree* report_to_tree) {
     intptr_t ptn;
     intptr_t nptn = phylo_tree->aln->getNPattern();
     intptr_t nmix = size();
@@ -1779,7 +1788,8 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon, PhyloTree* report_t
         memset(new_prop, 0, nmix*sizeof(double));
 
         // E-step
-        // decoupled weights (prop) from _pattern_lh_cat to obtain L_ci and compute pattern likelihood L_i
+        // decoupled weights (prop) from _pattern_lh_cat 
+        // to obtain L_ci and compute pattern likelihood L_i
         for (ptn = 0; ptn < nptn; ptn++) {
             double *this_lk_cat = phylo_tree->tree_buffers._pattern_lh_cat + ptn*nmix;
             double lk_ptn = phylo_tree->ptn_invar[ptn];
@@ -1800,7 +1810,8 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon, PhyloTree* report_t
         // M-step, update weights according to (*)
 
         converged = !fix_prop;
-        if (phylo_tree->isMixlen() && isFused() && !phylo_tree->getRate()->getFixParams()) {
+        bool fix_params = phylo_tree->getRate()->getFixParams();
+        if (phylo_tree->isMixlen() && isFused() && !fix_params) {
             // update the weights for rate model
             converged = true;
             double new_pinvar = 0.0;
@@ -1887,7 +1898,8 @@ double ModelMixture::optimizeParameters(double gradient_epsilon,
     double score = 0.0;
 
     if (!phylo_tree->getModelFactory()->unobserved_ptns.empty()) {
-        outError("Mixture model +ASC is not supported yet. Contact author if needed.");
+        outError("Mixture model +ASC is not supported yet." 
+                 " Contact author if needed.");
     }
     if (dim > 0) {
         score = optimizeWithEM(gradient_epsilon, report_to_tree);
@@ -1922,9 +1934,8 @@ bool ModelMixture::isUnstableParameters() {
     int ncategory = static_cast<int>(size());
     for (c = 0; c < ncategory; c++)
         if (prop[c] < MIN_MIXTURE_PROP*0.1) {
-            outWarning("The mixture model might be overfitting because some mixture weights are estimated close to zero");
-            //Todo: Which is it? Break, or return true? James B. 23-Jul-2020
-            break;
+            outWarning("The mixture model might be overfitting" 
+                       " because some mixture weights are estimated close to zero");
             return true;
         }
     return false;
@@ -1998,7 +2009,7 @@ bool ModelMixture::getVariables(double *variables) {
 //	for (i = 0; i < ncategory; i++)
 //		at(i)->total_num_subst /= sum;
 
-//	if (verbose_mode >= VB_MAX) {
+//	if (verbose_mode >= VerboseMode::VB_MAX) {
 //		for (i = 0; i < ncategory; i++)
 //			cout << "Component " << i << " prop=" << prop[i] << endl;
 //	}

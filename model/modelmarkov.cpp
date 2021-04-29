@@ -59,7 +59,7 @@ ModelMarkov::ModelMarkov(PhyloTree *tree, bool reversible, bool adapt_tree)
     inv_eigenvectors   = nullptr;
     inv_eigenvectors_transposed = nullptr;
     highest_freq_state = 0;
-    freq_type          = FREQ_UNKNOWN;
+    freq_type          = StateFreqType::FREQ_UNKNOWN;
     half_matrix        = true;
 
     // variables for non-reversible model
@@ -101,7 +101,7 @@ void ModelMarkov::setReversible(bool reversible, bool adapt_tree) {
         num_params = nrate - 1;
 
         if (adapt_tree && phylo_tree && phylo_tree->rooted) {
-            if (verbose_mode >= VB_MED) {
+            if (verbose_mode >= VerboseMode::VB_MED) {
                 cout << "Converting rooted to unrooted tree..." << endl;
             }
             phylo_tree->convertToUnrooted();
@@ -148,7 +148,7 @@ void ModelMarkov::setReversible(bool reversible, bool adapt_tree) {
         ensure_aligned_allocated(cinv_evec, num_states_squared);
         if (adapt_tree && phylo_tree && !phylo_tree->rooted
             && 0 < phylo_tree->leafNum) {
-            if (verbose_mode >= VB_MED) {
+            if (verbose_mode >= VerboseMode::VB_MED) {
                 cout << "Converting unrooted to rooted tree..." << endl;
             }
             phylo_tree->convertToRooted();
@@ -174,7 +174,7 @@ void ModelMarkov::startCheckpoint() {
  * model_parameters must hold whatever is needed to reconstruct the
  * model parameters - subclass's saveCheckpoint should ensure this.
  * Also: ModelSubst::saveCheckpoint saves state_freq 
- * if freq_type == FREQ_ESTIMATE. This will be redundant if called from
+ * if freq_type == StateFreqType::FREQ_ESTIMATE. This will be redundant if called from
  * ModelMarkov::saveCheckpoint, but is needed by ModelProtein and others.
  */
 void ModelMarkov::saveCheckpoint() {
@@ -210,17 +210,17 @@ string ModelMarkov::getName() {
   // the new freq_types, but give this change extra attention please.
     return name+freqTypeString(getFreqType(), phylo_tree->aln->seq_type, false);
   /*
-	if (getFreqType() == FREQ_EMPIRICAL)
+	if (getFreqType() == StateFreqType::FREQ_EMPIRICAL)
 		return name + "+F";
-	else if (getFreqType() == FREQ_CODON_1x4)
+	else if (getFreqType() == StateFreqType::FREQ_CODON_1x4)
 		return name += "+F1X4";
-	else if (getFreqType() == FREQ_CODON_3x4)
+	else if (getFreqType() == StateFreqType::FREQ_CODON_3x4)
 		return name + "+F3X4";
-	else if (getFreqType() == FREQ_CODON_3x4C)
+	else if (getFreqType() == StateFreqType::FREQ_CODON_3x4C)
 		return name + "+F3X4C";
-	else if (getFreqType() == FREQ_ESTIMATE && phylo_tree->aln->seq_type != SEQ_DNA)
+	else if (getFreqType() == StateFreqType::FREQ_ESTIMATE && phylo_tree->aln->seq_type != SeqType::SEQ_DNA)
 		return name + "+FO";
-	else if (getFreqType() == FREQ_EQUAL && phylo_tree->aln->seq_type != SEQ_DNA)
+	else if (getFreqType() == StateFreqType::FREQ_EQUAL && phylo_tree->aln->seq_type != SeqType::SEQ_DNA)
 		return name + "+FQ";
     else
         return name;
@@ -251,8 +251,10 @@ void ModelMarkov::getNameParamsFreq(ostream &retname) {
     if (fixed_parameters) {
         return;
     }
-    if (freq_type == FREQ_EMPIRICAL || freq_type == FREQ_ESTIMATE ||
-        (freq_type == FREQ_USER_DEFINED && phylo_tree->aln->seq_type == SEQ_DNA)) {
+    if (freq_type == StateFreqType::FREQ_EMPIRICAL || 
+        freq_type == StateFreqType::FREQ_ESTIMATE ||
+        (freq_type == StateFreqType::FREQ_USER_DEFINED && 
+            phylo_tree->aln->seq_type == SeqType::SEQ_DNA)) {
         retname << "{" << state_freq[0];
         for (int i = 1; i < num_states; ++i) {
             retname << "," << state_freq[i];
@@ -264,10 +266,10 @@ void ModelMarkov::getNameParamsFreq(ostream &retname) {
 void ModelMarkov::init_state_freq(StateFreqType type,
                                   PhyloTree* report_to_tree) {
     freq_type = type;
-    ASSERT(freq_type != FREQ_UNKNOWN);
+    ASSERT(freq_type != StateFreqType::FREQ_UNKNOWN);
     switch (freq_type) {
-    case FREQ_EQUAL:
-        if (phylo_tree->aln->seq_type == SEQ_CODON) {
+    case StateFreqType::FREQ_EQUAL:
+        if (phylo_tree->aln->seq_type == SeqType::SEQ_CODON) {
             double nscodon    = phylo_tree->aln->getNumNonstopCodons();
             double stopcodons = (double)(num_states) - nscodon;
             double min_freq   = Params::getInstance().min_state_freq;
@@ -287,12 +289,12 @@ void ModelMarkov::init_state_freq(StateFreqType type,
             }
         }
         break;  
-    case FREQ_ESTIMATE:
-    case FREQ_EMPIRICAL:
-        if (phylo_tree->aln->seq_type == SEQ_CODON) {
+    case StateFreqType::FREQ_ESTIMATE:
+    case StateFreqType::FREQ_EMPIRICAL:
+        if (phylo_tree->aln->seq_type == SeqType::SEQ_CODON) {
             double ntfreq[12];
             phylo_tree->aln->computeCodonFreq(freq_type, state_freq, ntfreq);
-        } else if (phylo_tree->aln->seq_type != SEQ_POMO) {
+        } else if (phylo_tree->aln->seq_type != SeqType::SEQ_POMO) {
 #ifndef _MSC_VER
             double emp_state_freq[num_states];
 #else
@@ -305,16 +307,16 @@ void ModelMarkov::init_state_freq(StateFreqType type,
         }
         identifyHighestFrequencyState();
         break;
-    case FREQ_USER_DEFINED:
+    case StateFreqType::FREQ_USER_DEFINED:
         if (state_freq[0] == 0.0) {
             outError("State frequencies not specified");
         }
         break;
     default: break;
     }
-    if (phylo_tree->aln->seq_type == SEQ_DNA) {
+    if (phylo_tree->aln->seq_type == SeqType::SEQ_DNA) {
         // BQM 2017-05-02: first, empirically count state_freq from alignment
-        if (freq_type >= FREQ_DNA_RY) {
+        if (freq_type >= StateFreqType::FREQ_DNA_RY) {
             phylo_tree->hideProgress();
             phylo_tree->aln->computeStateFreq(state_freq, 0, phylo_tree);
             phylo_tree->showProgress();
@@ -328,7 +330,7 @@ void ModelMarkov::init(StateFreqType type,
                        PhyloTree* report_to_tree) {
     init_state_freq(type, report_to_tree);
     decomposeRateMatrix();
-    if (verbose_mode >= VB_MAX) {
+    if (verbose_mode >= VerboseMode::VB_MAX) {
         writeInfo(cout);
     }
 }
@@ -337,7 +339,7 @@ void ModelMarkov::writeInfo(ostream &out) {
     if (is_reversible && num_states == 4) {
         report_rates(out, "Rate parameters", rates);
         report_state_freqs(out);
-        //if (freq_type != FREQ_ESTIMATE) return;
+        //if (freq_type != StateFreqType::FREQ_ESTIMATE) return;
     } else if (is_reversible && num_states == 2) {
         report_state_freqs(out);
     } else if (!is_reversible) {
@@ -449,7 +451,7 @@ void ModelMarkov::computeTransMatrixNonrev(double time, double *trans_matrix, in
         double mincoeff = row_sum.minCoeff();
         double maxcoeff = row_sum.maxCoeff();
         if (maxcoeff > 1.0001 || mincoeff < 0.9999) {
-            if (verbose_mode >= VB_MED) {
+            if (verbose_mode >= VerboseMode::VB_MED) {
                 cout << "INFO: Switch to scaling-squaring"
                      << " due to unstable eigen-decomposition rowsum: "
                      << mincoeff << " to " << maxcoeff << endl;
@@ -749,7 +751,7 @@ void ModelMarkov::setFullRateMatrix(double* rate_mat, double *freq)
 
 void ModelMarkov::getStateFrequency(double *freq, int mixture) {
     ASSERT(state_freq);
-    ASSERT(freq_type != FREQ_UNKNOWN);
+    ASSERT(freq_type != StateFreqType::FREQ_UNKNOWN);
     memcpy(freq, state_freq, sizeof(double) * num_states);
     // // DEBUG.
     // cout << setprecision(8);
@@ -816,7 +818,7 @@ void ModelMarkov::getQMatrix(double *q_mat) {
 }
 
 int ModelMarkov::getNDim() { 
-    ASSERT(freq_type != FREQ_UNKNOWN);
+    ASSERT(freq_type != StateFreqType::FREQ_UNKNOWN);
     if (fixed_parameters) {
         return 0;
     }
@@ -825,7 +827,7 @@ int ModelMarkov::getNDim() {
     }
     // reversible model
     int ndim = num_params;
-    if (freq_type == FREQ_ESTIMATE) {
+    if (freq_type == StateFreqType::FREQ_ESTIMATE) {
         ndim += num_states-1;
     }
     return ndim;
@@ -840,17 +842,18 @@ int ModelMarkov::getNDimFreq() {
     if (fixed_parameters) {
         return 0;
     }
-    if (freq_type == FREQ_EMPIRICAL) {
+    if (freq_type == StateFreqType::FREQ_EMPIRICAL) {
         return num_states - 1;
     }
-    else if (freq_type == FREQ_CODON_1x4) {
+    else if (freq_type == StateFreqType::FREQ_CODON_1x4) {
         return 3;
     }
-    else if (freq_type == FREQ_CODON_3x4 || freq_type == FREQ_CODON_3x4C) {
+    else if (freq_type == StateFreqType::FREQ_CODON_3x4 || 
+             freq_type == StateFreqType::FREQ_CODON_3x4C) {
         return 9;
     }
     // commented out due to reason above
-//	if (phylo_tree->aln->seq_type == SEQ_DNA) {
+//	if (phylo_tree->aln->seq_type == SeqType::SEQ_DNA) {
 //            return nFreqParams(freq_type);
 //	}
 	return 0;
@@ -895,14 +898,15 @@ bool ModelMarkov::scaleStateFreq() {
 
 void ModelMarkov::setVariables(double *variables) {
     int nrate = getNDim();
-    if (is_reversible && freq_type == FREQ_ESTIMATE) {
+    if (is_reversible && freq_type == StateFreqType::FREQ_ESTIMATE) {
         nrate -= (num_states-1);
     }
     if (nrate > 0) {
         memcpy(variables+1, rates, nrate*sizeof(double));
     }
-    if (is_reversible && freq_type == FREQ_ESTIMATE) {
-        // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
+    if (is_reversible && freq_type == StateFreqType::FREQ_ESTIMATE) {
+        // 2015-09-07: relax the sum of state_freq to be 1, 
+        // this will be done at the end of optimization
         int ndim = getNDim();
         memcpy(variables+(ndim-num_states+2), state_freq, (num_states-1)*sizeof(double));
     }
@@ -910,7 +914,7 @@ void ModelMarkov::setVariables(double *variables) {
 
 bool ModelMarkov::getVariables(double *variables) {
     int nrate = getNDim();
-    if (is_reversible && freq_type == FREQ_ESTIMATE) {
+    if (is_reversible && freq_type == StateFreqType::FREQ_ESTIMATE) {
         nrate -= (num_states-1);
     }
     bool changed = false;
@@ -920,7 +924,7 @@ bool ModelMarkov::getVariables(double *variables) {
         }
         memcpy(rates, variables+1, nrate * sizeof(double));
     }
-    if (is_reversible && freq_type == FREQ_ESTIMATE) {
+    if (is_reversible && freq_type == StateFreqType::FREQ_ESTIMATE) {
         // 2015-09-07: relax the sum of state_freq to be 1,
         // this will be done at the end of optimization
         int ndim = getNDim();
@@ -961,10 +965,12 @@ double ModelMarkov::targetFunk(double x[]) {
         //    return 1.0e+30;
     }
     // avoid numerical issue if state_freq is too small
+    auto min_freq = Params::getInstance().min_state_freq;
     for (int i = 0; i < num_states; ++i) {
         if (state_freq[i] < 0 ||
-            (state_freq[i] > 0 && state_freq[i] < Params::getInstance().min_state_freq)) {
-            //outWarning("Weird state_freq[" + convertIntToString(i) + "]=" + convertDoubleToString(state_freq[i]));
+            (state_freq[i] > 0 && state_freq[i] < min_freq)) {
+            //outWarning("Weird state_freq[" + convertIntToString(i) + "]=" + 
+            //           convertDoubleToString(state_freq[i]));
             return 1.0e+30;
         }
     }
@@ -984,7 +990,7 @@ bool ModelMarkov::isUnstableParameters() {
             return true;
         }
     }
-    if (freq_type == FREQ_ESTIMATE) {
+    if (freq_type == StateFreqType::FREQ_ESTIMATE) {
         for (int i = 0; i < num_states; ++i) {
             if (state_freq[i] > 0.0 && state_freq[i] < MIN_RATE + TOL_RATE) {
                 return true;
@@ -1006,15 +1012,16 @@ void ModelMarkov::setBounds(double *lower_bound, double *upper_bound,
         upper_bound[i] = MAX_RATE;
         bound_check[i] = false;
     }
-    if (is_reversible && freq_type == FREQ_ESTIMATE) {
+    double min_freq = Params::getInstance().min_state_freq;
+    if (is_reversible && freq_type == StateFreqType::FREQ_ESTIMATE) {
         for (int i = num_params+1; i <= num_params+num_states-1; ++i) {
-            lower_bound[i]  = Params::getInstance().min_state_freq;
+            lower_bound[i] = min_freq;
             upper_bound[i] = 1.0;
             bound_check[i] = false;
         }
-    } else if (phylo_tree->aln->seq_type == SEQ_DNA) {
+    } else if (phylo_tree->aln->seq_type == SeqType::SEQ_DNA) {
         setBoundsForFreqType(&lower_bound[num_params+1], &upper_bound[num_params+1],
-            &bound_check[num_params+1], Params::getInstance().min_state_freq, freq_type);
+            &bound_check[num_params+1], min_freq, freq_type);
     }
     //Todo: What about bounds for non-reversible models on sequence
     //      types other than DNA.  Shouldn't that be handled here, too?
@@ -1030,7 +1037,8 @@ double ModelMarkov::optimizeParameters(double gradient_epsilon,
         // return if nothing to be optimized
         return 0.0;
     }
-    TREE_LOG_LINE(*report_to_tree, VB_MAX, "Optimizing " << name << " model parameters...");
+    TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MAX, 
+                  "Optimizing " << name << " model parameters...");
 
     double* variables = new double[ndim+1]; // used for BFGS numerical recipes
     double* variables2 = new double[ndim+1]; // used for L-BFGS-B
@@ -1058,15 +1066,19 @@ double ModelMarkov::optimizeParameters(double gradient_epsilon,
     /* 2019-09-05: REMOVED due to numerical issue (NAN) with L-BFGS-B
     // 2017-12-06: more robust optimization using 2 different routines
     // when estimates are at boundary
-    score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
+    score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, 
+                                bound_check, max(gradient_epsilon, TOL_RATE));
 	bool changed = getVariables(variables);
 
     if (isUnstableParameters()) {
         // parameters at boundary, restart with L-BFGS-B with parameters2
-        double score2 = -L_BFGS_B(ndim, variables2+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
+        double score2 = -L_BFGS_B(ndim, variables2+1, lower_bound+1, upper_bound+1, 
+                                  max(gradient_epsilon, TOL_RATE));
         if (score2 > score+0.1) {
-            if (verbose_mode >= VB_MED)
-                cout << "NICE: L-BFGS-B found better parameters with LnL=" << score2 << " than BFGS LnL=" << score << endl;
+            if (verbose_mode >= VerboseMode::VB_MED)
+                cout << "NICE: L-BFGS-B found better parameters" 
+                     << " with LnL=" << score2 
+                     << " than BFGS LnL=" << score << endl;
             changed = getVariables(variables2);
             score = score2;
         } else {
@@ -1077,7 +1089,7 @@ double ModelMarkov::optimizeParameters(double gradient_epsilon,
      */
 
     // BQM 2015-09-07: normalize state_freq
-	if (is_reversible && freq_type == FREQ_ESTIMATE) {
+	if (is_reversible && freq_type == StateFreqType::FREQ_ESTIMATE) {
         changed = scaleStateFreq();
     }
     if (changed) {
@@ -1127,7 +1139,9 @@ void ModelMarkov::decomposeRateMatrixNonrev() {
         }
     }
     if (phylo_tree->params->matrix_exp_technique == MET_EIGEN_DECOMPOSITION) {
-        eigensystem_nonrev(rate_matrix, state_freq, eigenvalues, eigenvalues_imag, eigenvectors, inv_eigenvectors, num_states);
+        eigensystem_nonrev(rate_matrix, state_freq, 
+                           eigenvalues, eigenvalues_imag, 
+                           eigenvectors, inv_eigenvectors, num_states);
         calculateSquareMatrixTranspose(inv_eigenvectors, num_states
                                        , inv_eigenvectors_transposed);
         return;
@@ -1370,7 +1384,7 @@ void ModelMarkov::decomposeRateMatrix(){
         }
         //symmetrize rate matrix
         Q = pi_sqrt * Q * pi_sqrt_inv;
-        if (verbose_mode >= VB_DEBUG) {
+        if (verbose_mode >= VerboseMode::VB_DEBUG) {
             cout << "Symmetric rate matrix:" << endl << Q << endl;
         }
         if ((Q - Q.transpose()).cwiseAbs().maxCoeff() >= 0.01) {
@@ -1398,7 +1412,7 @@ void ModelMarkov::decomposeRateMatrix(){
         if (n == num_states) {
             Map<VectorXd,Aligned> eval(eigenvalues,num_states);
             eval = eigensolver.eigenvalues();
-            if (verbose_mode >= VB_DEBUG) {
+            if (verbose_mode >= VerboseMode::VB_DEBUG) {
                 cout << "eval: " << eval << endl;
             }
             RowMajorAlignedMatrix evec(eigenvectors,num_states,num_states);
@@ -1456,7 +1470,9 @@ void ModelMarkov::decomposeRateMatrixRev() {
         for (int i = 0, k = 0; i < num_states; ++i) {
             rate_matrix[i][i] = 0.0;
             for (int j = i+1; j < num_states; ++j, ++k) {
-                rate_matrix[i][j] = (state_freq[i] <= ZERO_FREQ || state_freq[j] <= ZERO_FREQ) ? 0 : rates[k];
+                bool low_freq     = (state_freq[i] <= ZERO_FREQ || 
+                                     state_freq[j] <= ZERO_FREQ);
+                rate_matrix[i][j] = low_freq ? 0 : rates[k];
                 rate_matrix[j][i] = rate_matrix[i][j];
             }
         }
@@ -1468,7 +1484,8 @@ void ModelMarkov::decomposeRateMatrixRev() {
         }
     }
     /* eigensystem of 1 PAM rate matrix */
-    eigensystem_sym(rate_matrix, state_freq, eigenvalues, eigenvectors, inv_eigenvectors, num_states);
+    eigensystem_sym(rate_matrix, state_freq, eigenvalues, 
+                    eigenvectors, inv_eigenvectors, num_states);
     calculateSquareMatrixTranspose(inv_eigenvectors, num_states
                                    , inv_eigenvectors_transposed);
     for (int i = num_states-1; i >= 0; --i) {
@@ -1793,7 +1810,8 @@ void ModelMarkov::setInverseEigenvectorsTransposed(double *eigenVTranspose)
 /****************************************************/
 
 void ModelMarkov::setRates() {
-	// I don't know the proper C++ way to handle this: got error if I didn't define something here.
+	//I don't know the proper C++ way to handle this: 
+    //got error if I didn't define something here.
 	ASSERT(0 && "setRates should only be called on subclass of ModelMarkov");
 }
 
@@ -2034,7 +2052,8 @@ int computeStateFreqFromQMatrix (double Q[], double pi[], int n) {
 //    // cout << "Branch length (t): " << t << "." << endl;
 //    // cout << "Norm of Q*t-matrix before scaling: " << frob_norm(Q, n, t) << "." << endl;
 //    // cout << "Scaling factor (TimeSquare): " << TimeSquare << "." << endl;
-//    // cout << "Norm of Q-matrix after scaling: " << frob_norm(T[0], n) << "." << endl << endl;
+//    // cout << "Norm of Q-matrix after scaling: " 
+//    //      << frob_norm(T[0], n) << "." << endl << endl;
 //
 //    matby (T[0], T[0], T[1], n, n, n);
 //    for (i=0; i<n*n; i++)  T[0][i] += T[1][i]/2;

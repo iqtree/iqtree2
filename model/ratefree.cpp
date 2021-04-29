@@ -236,14 +236,12 @@ double RateFree::targetFunk(double x[]) {
 */
 double RateFree::optimizeParameters(double gradient_epsilon,
                                     PhyloTree* report_to_tree) {
-
 	int ndim = getNDim();
-
-	// return if nothing to be optimized
     if (ndim == 0) {
+        // return if nothing to be optimized
         return phylo_tree->computeLikelihood();
     }
-    TREE_LOG_LINE(*report_to_tree, VB_MED,
+    TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MED,
                   "Optimizing " << name << " model parameters by "
                   << optimize_alg << " algorithm...");
     // TODO: turn off EM algorithm for +ASC model
@@ -524,7 +522,8 @@ double RateFree::optimizeWithEM(PhyloTree* report_to_tree) {
     for (int step = 0; step < ncategory; step++) {
         // first compute _pattern_lh_cat
         double score = phylo_tree->computePatternLhCat(WSL_RATECAT);
-        TREE_LOG_LINE(*phylo_tree, VB_DEBUG, "At start of EM step " << step
+        TREE_LOG_LINE(*phylo_tree, VerboseMode::VB_DEBUG, 
+                      "At start of EM step " << step
                       << " likelihood score is " << score);
         if (score > 0.0) {
             phylo_tree->printTree(cout, WT_BR_LEN+WT_NEWLINE);
@@ -536,7 +535,7 @@ double RateFree::optimizeWithEM(PhyloTree* report_to_tree) {
             if (score <= old_score-0.1) {
                 phylo_tree->printTree(cout, WT_BR_LEN+WT_NEWLINE);
                 writeInfo(cout);
-                TREE_LOG_LINE(*phylo_tree, VB_QUIET,
+                TREE_LOG_LINE(*phylo_tree, VerboseMode::VB_QUIET,
                     "Partition " << phylo_tree->aln->name << "\n"
                     << "score: " << score << "  old_score: " << old_score);
                 if (!Params::getInstance().ignore_any_errors) {

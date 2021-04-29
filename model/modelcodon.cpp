@@ -320,26 +320,26 @@ StateFreqType ModelCodon::initCodon(const char *model_name, StateFreqType freq, 
 		if (!phylo_tree->aln->isStandardGeneticCode())
 			outError("For ECMK07 a standard genetic code must be used");
 		readCodonModel(model_ECMunrest, reset_params);
-		return FREQ_USER_DEFINED;
+		return StateFreqType::FREQ_USER_DEFINED;
 	} else if (name_upper == "ECMREST") {
 		if (!phylo_tree->aln->isStandardGeneticCode())
 			outError("For ECMREST a standard genetic code must be used");
 		readCodonModel(model_ECMrest, reset_params);
-		return FREQ_USER_DEFINED;
+		return StateFreqType::FREQ_USER_DEFINED;
 	} else if (name_upper == "SCHN05" || name_upper == "ECMS05") {
 		if (!phylo_tree->aln->isStandardGeneticCode())
 			outError("For ECMS05 a standard genetic code must be used");
 		readCodonModel(model_ECM_Schneider05, reset_params);
-		return FREQ_USER_DEFINED;
+		return StateFreqType::FREQ_USER_DEFINED;
 	} else {
 		//cout << "User-specified model "<< model_name << endl;
 		//readParameters(model_name);
 			//name += " (user-defined)";
         readCodonModelFile(model_name, reset_params);
-		return FREQ_USER_DEFINED;
+		return StateFreqType::FREQ_USER_DEFINED;
 	}
 
-	return FREQ_UNKNOWN;
+	return StateFreqType::FREQ_UNKNOWN;
 }
 
 void ModelCodon::init(const char *model_name, string model_params,
@@ -368,26 +368,26 @@ void ModelCodon::init(const char *model_name, string model_params,
         }
     }
     ignore_state_freq      = false;
-    StateFreqType def_freq = FREQ_UNKNOWN;
+    StateFreqType def_freq = StateFreqType::FREQ_UNKNOWN;
     name                   = full_name = model_name;
     size_t pos             = name.find('_');
     if (pos == string::npos) {
         def_freq = initCodon(model_name, freq, true);
     } else {
         def_freq = initCodon(name.substr(0, pos).c_str(), freq, false);
-        if (def_freq != FREQ_USER_DEFINED) {
+        if (def_freq != StateFreqType::FREQ_USER_DEFINED) {
             outError("Invalid model " + name + ":"
                      " first component must be an empirical model");
         }
         def_freq = initCodon(name.substr(pos+1).c_str(), freq, false);
-        if (def_freq == FREQ_USER_DEFINED) {
+        if (def_freq == StateFreqType::FREQ_USER_DEFINED) {
             // second model must be parametric
             outError("Invalid model " + name + ":"
                      " second component must be a mechanistic model");
         }
         // adjust the constraint
         if (codon_freq_style==CF_TARGET_CODON) {
-            def_freq = FREQ_USER_DEFINED;
+            def_freq = StateFreqType::FREQ_USER_DEFINED;
         }
     }
     num_params = (!fix_omega) + (!fix_kappa) + (!fix_kappa2);
@@ -397,16 +397,19 @@ void ModelCodon::init(const char *model_name, string model_params,
     if (model_params != "") {
         readRates(model_params);
     }
-    if (freq == FREQ_UNKNOWN) {
+    if (freq == StateFreqType::FREQ_UNKNOWN) {
         freq = def_freq;
     }
-    if (freq == FREQ_CODON_1x4 || freq == FREQ_CODON_3x4 || freq == FREQ_CODON_3x4C) {
+    if (freq == StateFreqType::FREQ_CODON_1x4 || 
+        freq == StateFreqType::FREQ_CODON_3x4 || 
+        freq == StateFreqType::FREQ_CODON_3x4C) {
         phylo_tree->aln->computeCodonFreq(freq, state_freq, ntfreq);
     }
     ModelMarkov::init(freq, report_to_tree);
 }
 
-StateFreqType ModelCodon::initMG94(bool should_fix_kappa, StateFreqType freq, CodonKappaStyle kappa_style) {
+StateFreqType ModelCodon::initMG94(bool should_fix_kappa, StateFreqType freq, 
+                                   CodonKappaStyle kappa_style) {
 	/* Muse-Gaut 1994 model with 1 parameters: omega */
 
     fix_omega = false;
@@ -419,19 +422,22 @@ StateFreqType ModelCodon::initMG94(bool should_fix_kappa, StateFreqType freq, Co
     if (kappa_style == CK_TWO_KAPPA)
         fix_kappa2 = false;
     
-    if (freq == FREQ_UNKNOWN || freq == FREQ_USER_DEFINED)
-        freq = FREQ_CODON_3x4;
+    if (freq == StateFreqType::FREQ_UNKNOWN || 
+        freq == StateFreqType::FREQ_USER_DEFINED) {
+        freq = StateFreqType::FREQ_CODON_3x4;
+    }
         
     switch (freq) {
-      case FREQ_CODON_1x4:
-      case FREQ_CODON_3x4:
-      case FREQ_CODON_3x4C:
+      case StateFreqType::FREQ_CODON_1x4:
+      case StateFreqType::FREQ_CODON_3x4:
+      case StateFreqType::FREQ_CODON_3x4C:
 		phylo_tree->aln->computeCodonFreq(freq, state_freq, ntfreq);
         break;
-      case FREQ_EMPIRICAL:
-      case FREQ_ESTIMATE:
-      case FREQ_USER_DEFINED:
-        outError("Invalid state frequency type for MG model, please use +F1X4 or +F3X4 or +F3X4C");
+      case StateFreqType::FREQ_EMPIRICAL:
+      case StateFreqType::FREQ_ESTIMATE:
+      case StateFreqType::FREQ_USER_DEFINED:
+        outError("Invalid state frequency type for MG model," 
+                 " please use +F1X4 or +F3X4 or +F3X4C");
         break;
       default:
         break;
@@ -441,10 +447,11 @@ StateFreqType ModelCodon::initMG94(bool should_fix_kappa, StateFreqType freq, Co
     ignore_state_freq = true;
     combineRateNTFreq();
     
-    return FREQ_CODON_3x4;
+    return StateFreqType::FREQ_CODON_3x4;
 }
 
-StateFreqType ModelCodon::initGY94(bool should_fix_kappa, CodonKappaStyle kappa_style) {
+StateFreqType ModelCodon::initGY94(bool should_fix_kappa, 
+                                   CodonKappaStyle kappa_style) {
     fix_omega = false;
     this->fix_kappa = should_fix_kappa;
     if (should_fix_kappa) {
@@ -456,7 +463,7 @@ StateFreqType ModelCodon::initGY94(bool should_fix_kappa, CodonKappaStyle kappa_
     if (kappa_style == CK_TWO_KAPPA)
         fix_kappa2 = false;
             
-    return FREQ_EMPIRICAL;
+    return StateFreqType::FREQ_EMPIRICAL;
 }
 
 
@@ -487,15 +494,17 @@ void ModelCodon::computeRateAttributes() {
             ts = tv = 0;
             int codoni = phylo_tree->aln->codon_table[i];
             int codonj = phylo_tree->aln->codon_table[j];
-            if (phylo_tree->aln->genetic_code[codoni] == phylo_tree->aln->genetic_code[codonj])
+            if (phylo_tree->aln->genetic_code[codoni] == 
+                phylo_tree->aln->genetic_code[codonj])
                 attr |= CA_SYNONYMOUS;
             else
                 attr |= CA_NONSYNONYMOUS;
                 
                 
             int nt_changes = ((codoni/16) != (codonj/16)) + (((codoni%16)/4) != ((codonj%16)/4)) + ((codoni%4) != (codonj%4));
-            auto aa1 = strchr(symbols_protein, phylo_tree->aln->genetic_code[codoni]) - symbols_protein;
-            auto aa2 = strchr(symbols_protein, phylo_tree->aln->genetic_code[codonj]) - symbols_protein;
+            auto code = phylo_tree->aln->genetic_code;
+            auto aa1  = strchr(symbols_protein, code[codoni]) - symbols_protein;
+            auto aa2  = strchr(symbols_protein, code[codonj]) - symbols_protein;
             ASSERT(aa1 >= 0 && aa1 < 20 && aa2 >= 0 && aa2 < 20);
             if (nt_changes < aa_cost_change[aa1*20+aa2]) {
                 aa_cost_change[aa1*20+aa2] = aa_cost_change[aa2*20+aa1] = nt_changes;
@@ -539,7 +548,7 @@ void ModelCodon::computeRateAttributes() {
         }
     }
     
-    if (verbose_mode >= VB_MAX) {
+    if (verbose_mode >= VerboseMode::VB_MAX) {
 
         // make cost matrix fulfill triangular inequality
         for (int k = 0; k < 20; k++)
@@ -552,7 +561,8 @@ void ModelCodon::computeRateAttributes() {
         cout << "smatrix =1 (aa_nt_changes)";
         for (i = 0; i < 19; i++)
             for (j = i+1; j < 20; j++)
-                cout << " " << symbols_protein[i] << "/" << symbols_protein[j] << " " << (int)aa_cost_change[i*20+j];
+                cout << " " << symbols_protein[i] << "/" << symbols_protein[j] 
+                     << " " << (int)aa_cost_change[i*20+j];
         cout << ";" << endl;
         cout << 20 << endl;
         for (i = 0; i < 20; i++) {
@@ -607,12 +617,17 @@ void ModelCodon::readCodonModel(istream &in, bool reset_params) {
 		for (j = 0; j < i; j++) {
 			in >> q[i*nscodons+j];
 			//q[j*num_states+i] = q[i*num_states+j];
-			if (verbose_mode >= VB_MAX) cout << " " << q[i*nscodons+j];
+            if (verbose_mode >= VerboseMode::VB_MAX) {
+                cout << " " << q[i * nscodons + j];
+            }
 		}
-		if (verbose_mode >= VB_MAX) cout << endl;
+        if (verbose_mode >= VerboseMode::VB_MAX) {
+            cout << endl;
+        }
 	}
-	for (i = 0; i < nscodons; i++)
-		in >> f[i];
+    for (i = 0; i < nscodons; i++) {
+        in >> f[i];
+    }
 	StrVector codons;
 	codons.resize(nscodons);
 	IntVector state_map;
@@ -621,18 +636,23 @@ void ModelCodon::readCodonModel(istream &in, bool reset_params) {
 		in >> codons[i];
 		if (codons[i].length() != 3)
 			outError("Input model has wrong codon format ", codons[i]);
-		int nt1 = phylo_tree->aln->convertState(codons[i][0], SEQ_DNA);
-		int nt2 = phylo_tree->aln->convertState(codons[i][1], SEQ_DNA);
-		int nt3 = phylo_tree->aln->convertState(codons[i][2], SEQ_DNA);
+		int nt1 = phylo_tree->aln->convertState(codons[i][0], SeqType::SEQ_DNA);
+		int nt2 = phylo_tree->aln->convertState(codons[i][1], SeqType::SEQ_DNA);
+		int nt3 = phylo_tree->aln->convertState(codons[i][2], SeqType::SEQ_DNA);
 		if (nt1 > 3 || nt2 > 3 || nt3 > 3)
 			outError("Wrong codon triplet ", codons[i]);
 		state_map[i] = phylo_tree->aln->non_stop_codon[nt1*16+nt2*4+nt3];
-		if (phylo_tree->aln->isStopCodon(state_map[i]) || state_map[i] == STATE_INVALID)
-			outError("Stop codon encountered");
-		if (verbose_mode >= VB_MAX)
-			cout << " " << codons[i] << " " << state_map[i];
+        if (phylo_tree->aln->isStopCodon(state_map[i]) || 
+            state_map[i] == STATE_INVALID) {
+            outError("Stop codon encountered");
+        }
+        if (verbose_mode >= VerboseMode::VB_MAX) {
+            cout << " " << codons[i] << " " << state_map[i];
+        }
 	}
-	if (verbose_mode >= VB_MAX) cout << endl;
+    if (verbose_mode >= VerboseMode::VB_MAX) {
+        cout << endl;
+    }
 
 	//int row = 0, col = 1;
 	// since rates for codons is stored in lower-triangle, special treatment is needed
@@ -657,10 +677,13 @@ void ModelCodon::readCodonModel(istream &in, bool reset_params) {
 		}
 	}
 	memset(state_freq, 0, num_states*sizeof(double));
-	for (i = 0; i < num_states; i++)
-        state_freq[i] = Params::getInstance().min_state_freq;
+    auto min_freq = Params::getInstance().min_state_freq;
+    for (i = 0; i < num_states; i++) {
+        state_freq[i] = min_freq;
+    }
+
 	for (i = 0; i < nscodons; i++)
-		state_freq[state_map[i]] = f[i]-(num_states-nscodons)*Params::getInstance().min_state_freq/nscodons;
+		state_freq[state_map[i]] = f[i]-(num_states-nscodons)*min_freq/nscodons;
 
     if (reset_params) {
         fix_omega = fix_kappa = fix_kappa2 = true;
@@ -897,10 +920,11 @@ bool ModelCodon::getVariables(double *variables) {
         }
         ASSERT(j == num_params+1);
     }
-	if (freq_type == FREQ_ESTIMATE) {
+	if (freq_type == StateFreqType::FREQ_ESTIMATE) {
         // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
 		int ndim = getNDim();
-		changed |= memcmpcpy(state_freq, variables+(ndim-num_states+2), (num_states-1)*sizeof(double));
+		changed |= memcmpcpy(state_freq, variables+(ndim-num_states+2), 
+                             (num_states-1)*sizeof(double));
 //		double sum = 0;
 //		for (i = 0; i < num_states-1; i++)
 //			sum += state_freq[i];
@@ -908,7 +932,7 @@ bool ModelCodon::getVariables(double *variables) {
 
         // BUG FIX 2015.08.28
 //        int nrate = getNDim();
-//        if (freq_type == FREQ_ESTIMATE) nrate -= (num_states-1);
+//        if (freq_type == StateFreqType::FREQ_ESTIMATE) nrate -= (num_states-1);
 //		double sum = 1.0;
 ////		int i, j;
 //		for (i = 1; i < num_states; i++)
@@ -936,14 +960,16 @@ void ModelCodon::setVariables(double *variables) {
         
 		ASSERT(j == num_params+1);
 	}
-	if (freq_type == FREQ_ESTIMATE) {
-        // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
+	if (freq_type == StateFreqType::FREQ_ESTIMATE) {
+        // 2015-09-07: relax the sum of state_freq to be 1, 
+        //this will be done at the end of optimization
 		int ndim = getNDim();
-		memcpy(variables+(ndim-num_states+2), state_freq, (num_states-1)*sizeof(double));
+		memcpy(variables+(ndim-num_states+2), state_freq, 
+               (num_states-1)*sizeof(double));
 
         // BUG FIX 2015.08.28
 //        int nrate = getNDim();
-//        if (freq_type == FREQ_ESTIMATE) nrate -= (num_states-1);
+//        if (freq_type == StateFreqType::FREQ_ESTIMATE) nrate -= (num_states-1);
 //		int i, j;
 //		for (i = 0, j = 1; i < num_states; i++)
 //			if (i != highest_freq_state) {
@@ -963,7 +989,7 @@ void ModelCodon::setBounds(double *lower_bound, double *upper_bound, bool *bound
 		bound_check[i] = false;
 	}
 
-	if (freq_type == FREQ_ESTIMATE) {
+	if (freq_type == StateFreqType::FREQ_ESTIMATE) {
 		for (i = ndim-num_states+2; i <= ndim; i++) {
             lower_bound[i]  = Params::getInstance().min_state_freq;
             upper_bound[i] = 1.0;
@@ -982,7 +1008,8 @@ double ModelCodon::optimizeParameters(double gradient_epsilon,
         // return if nothing to be optimized
         return 0.0;
     }    
-    TREE_LOG_LINE(*report_to_tree, VB_MAX, "Optimizing " << name << " model parameters...");
+    TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MAX, 
+                  "Optimizing " << name << " model parameters...");
 	double* variables   = new double[ndim+1];
 	double* upper_bound = new double[ndim+1];
 	double* lower_bound = new double[ndim+1];
@@ -994,14 +1021,16 @@ double ModelCodon::optimizeParameters(double gradient_epsilon,
 	setVariables(variables);
 	setBounds(lower_bound, upper_bound, bound_check);
     if (phylo_tree->params->optimize_alg_freerate.find("BFGS-B") == string::npos) {
-        score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
+        score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, 
+                                    bound_check, max(gradient_epsilon, TOL_RATE));
     }
     else {
-        score = -L_BFGS_B(ndim, variables + 1, lower_bound + 1, upper_bound + 1, max(gradient_epsilon, TOL_RATE));
+        score = -L_BFGS_B(ndim, variables + 1, lower_bound + 1, upper_bound + 1, 
+                          max(gradient_epsilon, TOL_RATE));
     }
 	bool changed = getVariables(variables);
     // BQM 2015-09-07: normalize state_freq
-	if (freq_type == FREQ_ESTIMATE) { 
+	if (freq_type == StateFreqType::FREQ_ESTIMATE) {
         changed = scaleStateFreq();
     }
     if (changed) {
@@ -1020,12 +1049,16 @@ double ModelCodon::optimizeParameters(double gradient_epsilon,
 
 
 void ModelCodon::writeInfo(ostream &out) {
-    if (name.find('_') == string::npos)
+    if (name.find('_') == string::npos) {
         out << "Nonsynonymous/synonymous ratio (omega): " << omega << endl;
-    else
-        out << "Empirical nonsynonymous/synonymous ratio (omega_E): " << computeEmpiricalOmega() << endl;
+    }
+    else {
+        out << "Empirical nonsynonymous/synonymous ratio (omega_E): "
+            << computeEmpiricalOmega() << endl;
+    }
     out << "Transition/transversion ratio (kappa): " << kappa << endl;
-    if (codon_kappa_style == CK_TWO_KAPPA) 
+    if (codon_kappa_style == CK_TWO_KAPPA) {
         out << "Transition/transversion ratio 2 (kappa2): " << kappa2 << endl;
+    }
 }
 
