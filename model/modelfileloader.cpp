@@ -380,6 +380,7 @@ void ModelFileLoader::parseYAMLModelConstraints(const YAML::Node& constraints,
                                                 ModelInfoFromYAMLFile& info,
                                                 PhyloTree* report_to_tree) {
     for (const YAML::Node& constraint: constraints) {
+        //
         //constraints are assignments of the form: name = value
         //and are equivalent to parameter name/initialValue pairs
         //Todo: For now, I don't want to support (x,y) = (1,2).
@@ -392,30 +393,46 @@ void ModelFileLoader::parseYAMLModelConstraints(const YAML::Node& constraints,
             outError(complaint.str());
         }
         std::string constraint_string = constraint.Scalar();
-        ModelExpression::InterpretedExpression interpreter(info, constraint_string);
+        ModelExpression::InterpretedExpression
+            interpreter(info, constraint_string);
         ModelExpression::Expression* x = interpreter.expression();
-        
         if (!x->isAssignment()) {
             complaint << "Constraint setting for model " << info.model_name
-            << " was not an asignment: " << constraint_string;
+                      << " was not an asignment: " << constraint_string;
             outError(complaint.str());
         }
-        ModelExpression::Assignment* a = dynamic_cast<ModelExpression::Assignment*>(x);
-        
-        if (!a->getTarget()->isVariable()) {
-            delete x;
-            complaint << "Constraint setting for model " << info.model_name
-                      << " did not assign a variable: " << constraint_string;
-            outError(complaint.str());
-        }
-        ModelExpression::Variable* v = a->getTargetVariable();
-        double setting = a->getExpression()->evaluate();
-        ModelVariable& mv = info.assign(v->getName(), setting);
-        mv.markAsFixed();
-        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
-                      "Assigned " << v->getName()
-                      << " := " << setting);
+        ModelExpression::Assignment* a =
+            dynamic_cast<ModelExpression::Assignment*>(x);
+        setConstraint(a, info, constraint_string, report_to_tree);
     }
+}
+
+double ModelFileLoader::setConstraint(ModelExpression::Assignment* a,
+                                    ModelInfoFromYAMLFile& info,
+                                    const std::string& constraint_string,
+                                    PhyloTree* report_to_tree) {
+    if (!a->getTarget()->isVariable()) {
+        std::stringstream complaint;
+        complaint << "Constraint setting for model " << info.model_name
+                  << " did not assign a variable: " << constraint_string;
+        outError(complaint.str());
+    }
+    ModelExpression::Variable*   v = a->getTargetVariable();
+    ModelExpression::Expression* x = a->getExpression();
+    double setting;
+    if (x->isAssignment()) {
+        auto a2 = dynamic_cast<ModelExpression::Assignment*>(x);
+        setting = setConstraint(a2, info, constraint_string,
+                                report_to_tree);
+    } else {
+        setting = a->getExpression()->evaluate();
+    }
+    ModelVariable& mv = info.assign(v->getName(), setting);
+    mv.markAsFixed();
+    TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+                  "Assigned " << v->getName()
+                  << " := " << setting);
+    return setting;
 }
 
 void ModelFileLoader::parseRateMatrix(const YAML::Node& rate_matrix,

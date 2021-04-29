@@ -57,6 +57,18 @@
       type:    matrix
       rank:    num_states
       formula: "(row==column) ? (1-e) : (e/(num_states-1))"
+  stateFrequency: estimate
+
+- substitutionmodel: YRIGHTASSOC
+  frommodel: YTIP2
+  description: "Right-associativity (constraint) test"
+  parameters:
+    - name: [a,b,c,d]
+      type: other
+      intValue: 0
+  constraints:
+    - a=b=c=1
+    - d=2
 
 ### GTR model ###
 - substitutionmodel: YGTR
@@ -71,13 +83,11 @@
     initValue: 1.0
   - name:  f(1..4)   # frequency vector f(1), ..., f(4)
     type:  frequency # make parameters in range [0,1] and sum to 1.0
-
   rateMatrix:
   - [      ,     r(1)*f(2), r(2)*f(3), r(3)*f(4) ]
   - [ r(1)*f(1),          , r(4)*f(3), r(5)*f(4) ]
   - [ r(2)*f(1), r(4)*f(2),          , f(4)      ]
   - [ r(3)*f(1), r(5)*f(2), f(3)     ,           ]
-
   stateFrequency: estimate
 
 

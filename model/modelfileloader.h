@@ -10,6 +10,10 @@
 #include <yaml-cpp/yaml.h> //for YAML::Node
 #include "modelinfo.h" //for ModelInfoFromYAMLFile
 
+namespace ModelExpression {
+    class Assignment;
+};
+
 class ModelFileLoader {
 public:    
     const char*       file_path;
@@ -51,6 +55,11 @@ public:
     void parseYAMLModelConstraints(const YAML::Node& params,
                                    ModelInfoFromYAMLFile& info,
                                    PhyloTree* report_to_tree);
+    double setConstraint(ModelExpression::Assignment* a,
+                         ModelInfoFromYAMLFile&       info,
+                         const std::string& constraint_string,
+                         PhyloTree*         report_to_tree);
+    
     void parseYAMLMixtureModels(const YAML::Node& mixture_models,
                                 ModelInfoFromYAMLFile& info,
                                 ModelListFromYAMLFile& list,

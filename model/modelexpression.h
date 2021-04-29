@@ -39,16 +39,17 @@ namespace ModelExpression {
     public:
         Expression(ModelInfoFromYAMLFile& for_model);
         virtual ~Expression() = default;
-        virtual double evaluate()      const;
-        virtual bool   isBoolean()     const;
-        virtual bool   isConstant()    const;
-        virtual bool   isFunction()    const;
-        virtual bool   isOperator()    const;
-        virtual bool   isList()        const;
-        virtual bool   isToken(char c) const;
-        virtual bool   isVariable()    const;
-        virtual bool   isAssignment()  const;
-        virtual int    getPrecedence() const;
+        virtual double evaluate()           const;
+        virtual bool   isAssignment()       const;
+        virtual bool   isBoolean()          const;
+        virtual bool   isConstant()         const;
+        virtual bool   isFunction()         const;
+        virtual bool   isList()             const;
+        virtual bool   isOperator()         const;
+        virtual bool   isRightAssociative() const;
+        virtual bool   isToken(char c)      const;
+        virtual bool   isVariable()         const;
+        virtual int    getPrecedence()      const;
     };
 
     class Token: public Expression {
@@ -166,12 +167,14 @@ namespace ModelExpression {
         typedef InfixOperator super;
         Assignment(ModelInfoFromYAMLFile& for_model);
         virtual ~Assignment() = default;
-        virtual double evaluate() const;
-        virtual bool   isAssignment() const;
-        virtual int getPrecedence()     const;
-        Expression* getTarget()         const;
-        Variable*   getTargetVariable() const;
-        Expression* getExpression()     const;
+        virtual double evaluate()           const;
+        virtual bool   isAssignment()       const;
+        virtual bool   isRightAssociative() const;
+
+        virtual int    getPrecedence()      const;
+        Expression*    getTarget()          const;
+        Variable*      getTargetVariable()  const;
+        Expression*    getExpression()      const;
     };
 
     class BooleanOperator: public InfixOperator {

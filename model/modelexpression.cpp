@@ -49,15 +49,16 @@ namespace ModelExpression {
     Expression::Expression(ModelInfoFromYAMLFile& for_model) : model(for_model) {
     }
 
-    double Expression::evaluate()      const { return 0; }
-    bool   Expression::isBoolean()     const { return false; }
-    bool   Expression::isConstant()    const { return false; }
-    bool   Expression::isFunction()    const { return false; }
-    bool   Expression::isList()        const { return false; }
-    bool   Expression::isOperator()    const { return false; }
-    bool   Expression::isToken(char c) const { return false; }
-    bool   Expression::isVariable()    const { return false; }
-    bool   Expression::isAssignment()  const { return false; }
+    double Expression::evaluate()           const { return 0; }
+    bool   Expression::isAssignment()       const { return false; }
+    bool   Expression::isBoolean()          const { return false; }
+    bool   Expression::isConstant()         const { return false; }
+    bool   Expression::isFunction()         const { return false; }
+    bool   Expression::isList()             const { return false; }
+    bool   Expression::isOperator()         const { return false; }
+    bool   Expression::isRightAssociative() const { return false; }
+    bool   Expression::isToken(char c)      const { return false; }
+    bool   Expression::isVariable()         const { return false; }
 
     int    Expression::getPrecedence() const { return 0; }
 
@@ -211,6 +212,10 @@ namespace ModelExpression {
     }
 
     bool Assignment::isAssignment() const {
+        return true;
+    }
+
+    bool Assignment::isRightAssociative() const {
         return true;
     }
 
@@ -455,9 +460,13 @@ namespace ModelExpression {
             } else if (token->isFunction()) {
                 operator_stack << token;
             } else if (token->isOperator()) {
+                auto prec = token->getPrecedence();
+                bool isRightAssociative = token->isRightAssociative();
                 while (operator_stack.topIsOperator() &&
-                       operator_stack.back()->getPrecedence() >
-                       token->getPrecedence()) {
+                       ( operator_stack.back()->getPrecedence() > prec ||
+                        ( operator_stack.back()->getPrecedence() == prec
+                          && !isRightAssociative )
+                       ) ) {
                     output << operator_stack.pop();
                 }
                 operator_stack << token;
