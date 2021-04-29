@@ -56,11 +56,19 @@ namespace ModelExpression {
     bool   Expression::isFunction()         const { return false; }
     bool   Expression::isList()             const { return false; }
     bool   Expression::isOperator()         const { return false; }
+    bool   Expression::isRange()            const { return false; }
     bool   Expression::isRightAssociative() const { return false; }
     bool   Expression::isToken(char c)      const { return false; }
     bool   Expression::isVariable()         const { return false; }
-
     int    Expression::getPrecedence() const { return 0; }
+    int    Expression::evaluateAsInteger() const {
+        //
+        //Todo: better error handling.  Probably want to throw
+        //      a ModelExpression::ModelException if not an integral
+        //      integer (in a sensible range).
+        //
+        return (int)floor(evaluate());
+    }
 
     Token::Token(ModelInfoFromYAMLFile& for_model, char c): super(for_model) {
         token_char = c;
@@ -411,6 +419,21 @@ namespace ModelExpression {
         }
     }
 
+    RangeOperator::RangeOperator(ModelInfoFromYAMLFile& for_model)
+        : super(for_model) {}
+
+    int    RangeOperator::getPrecedence()        const { return 2; }
+    bool   RangeOperator::isRange()              const { return true; }
+    int    RangeOperator::getIntegerLowerBound() const {
+        //Todo: better error-checking (out of range for an int...
+        return (int)floor(lhs->evaluate());
+    }
+    int    RangeOperator::getIntegerUpperBound() const {
+        //Todo: better error-checking (out of range for an int...
+        return (int)floor(rhs->evaluate());
+    }
+
+
     InterpretedExpression::InterpretedExpression(ModelInfoFromYAMLFile& for_model,
                                                  const std::string& text): super(for_model) {
         is_unset  = text.empty();
@@ -555,18 +578,30 @@ namespace ModelExpression {
             expr = new Variable(model, var_name);
             return true;
         }
-        if ('0'<=ch && ch<='9') {
+        char nextch = ((ix+1)<text.length()) ? text[ix+1] : '\0';
+        if (('0'<=ch && ch<='9') || (ch=='.' && '0'<=nextch && nextch<='9')) {
             //Number
             int    endpos    = 0;
             double v         = convert_double(text.c_str()+ix, endpos);
             expr             = new Constant(model, v);
-            ix              += endpos;
+            //".." sequences are read a bit funny.  We don't want them
+            //skipped over, because then expressions like "1..5" would not
+            //be read as "a range with lower bound 1 and upper bound 5".
+            for (; endpos>0 && (text[ix]!='.' || text[ix+1]!='.'); --endpos) {
+                ++ix;
+            }
+            if (0<endpos) {
+                std::stringstream log_stream;
+                log_stream << "chopped a numeric literal at" << (text.c_str()+ix);
+                std::string log_line = log_stream.str();
+                std::cout << log_line << std::endl;
+            }
             return true;
         }
         switch (ch) {
             case '(': expr = new Token(model, ch);      break;
             case ')': expr = new Token(model, ch);      break;
-            case '!': if (text[ix+1]=='=') {
+            case '!': if (nextch=='=') {
                           expr = new InequalityOperator(model);
                           ++ix;
                       } else {
@@ -580,21 +615,21 @@ namespace ModelExpression {
             case '-': expr = new Subtraction(model);    break;
             case '<': expr = new LessThanOperator(model);    break;
             case '>': expr = new GreaterThanOperator(model); break;
-            case '=': if (text[ix+1]=='=') {
+            case '=': if (nextch=='=') {
                           expr = new EqualityOperator(model);
                           ++ix;
                       } else {
                           expr = new Assignment(model);
                       }
                       break;
-            case '&': if (text[ix+1]=='&') {
+            case '&': if (nextch=='&') {
                           expr = new ShortcutAndOperator(model);
                           ++ix;
                       } else {
                           throw new ModelException("bitwise-and & operator not supported");
                       }
                       break;
-            case '|': if (text[ix+1]=='|') {
+            case '|': if (nextch=='|') {
                           expr = new ShortcutOrOperator(model);
                           ++ix;
                       } else {
@@ -603,6 +638,14 @@ namespace ModelExpression {
                       break;
             case ':': expr = new ListOperator(model);   break;
             case '?': expr = new SelectOperator(model); break;
+            case '.': if (nextch=='.') {
+                          expr = new RangeOperator(model);
+                          ++ix;
+                      } else {
+                          throw new ModelException("period that wasn't part of .. or a number,"
+                                                   " was not understood");
+                      }
+                      break;
             default:
                 throw ModelException(std::string("unrecognized character '") +
                                      std::string(1, ch) + "'' in expression");

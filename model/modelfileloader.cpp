@@ -58,30 +58,32 @@ void ModelFileLoader::complainIfNot(bool check_me,
     }
 }
     
-double ModelFileLoader::toDouble(const YAML::Node& i, double default_val) {
+double ModelFileLoader::toDouble(const YAML::Node& i, double default_val,
+                                 ModelInfoFromYAMLFile& info, std::string context) {
     if (!i.IsScalar()) {
         return default_val;
     }
-    std::string double_string = i.Scalar();
-    return convert_double_nothrow(double_string.c_str(), default_val);
+    std::string expr = i.Scalar();
+    return info.evaluateExpression(expr, context);
 }
     
 ModelParameterRange ModelFileLoader::parseRange(const YAML::Node& node,
                                                 const char* key,
-                                                const ModelParameterRange& default_value ) {
+                                                const ModelParameterRange& default_value,
+                                                ModelInfoFromYAMLFile& info) {
     auto r = node[key];
     if (!r) {
         return default_value;
     }
     ModelParameterRange range;
-    //Todo: what if range is a string?
     if (r.IsSequence()) {
+        std::string context = std::string(key) + " parameter";
         int ix = 0;
         for (auto i : r) {
             if (ix==0) {
-                range.first  = toDouble(i, 0);
+                range.first  = toDouble(i, 0, info, "lower bound for " + context);
             } else if (ix==1) {
-                range.second = toDouble(i, 0);
+                range.second = toDouble(i, 0, info, "upper bound for " + context);
             } else {
                 throw ModelExpression::ModelException
                       ("Range may only have two bounds (lower, upper)");
@@ -97,6 +99,8 @@ ModelParameterRange ModelFileLoader::parseRange(const YAML::Node& node,
                       << " greater than its upper bound (" << range.second << ")";
             throw ModelExpression::ModelException(complaint.str());
         }
+    } else {
+        
     }
     return range;
 }
@@ -136,24 +140,44 @@ void ModelFileLoader::parseModelParameter(const YAML::Node& param,
                                           PhyloTree* report_to_tree) {
     YAMLFileParameter p;
     p.name       = name;
-    auto bracket = p.name.find('(');
+    auto name_len = p.name.length();
+    auto bracket  = p.name.find('(');
     if ( bracket != std::string::npos ) {
+        auto expr_len = name_len-bracket;
         p.is_subscripted = true;
-        const char* range = p.name.c_str() + bracket + 1;
-        int ix;
-        p.minimum_subscript = convert_int(range, ix);
-        if (strncmp(range + ix, "..", 2)==0) {
-            range = range + ix + 2;
-            p.maximum_subscript = convert_int(range, ix);
-        } else {
-            p.maximum_subscript = p.minimum_subscript;
-            p.minimum_subscript   = 1;
-        }
-        if (strncmp(range + ix, ")", 1)!=0) {
-            const char* msg = "Subscript range does not end with right parenthesis";
-            throw ModelExpression::ModelException(msg);
-        }
+        std::string expr = p.name.substr(bracket, expr_len );
         p.name = p.name.substr(0, bracket);
+        const char* parsing_what = "subscript expression";
+        try {
+            Interpreter interpreter(info, expr );
+            auto x = interpreter.expression();
+            if (x->isRange()) {
+                auto r = dynamic_cast<ModelExpression::RangeOperator*>(x);
+                parsing_what = "minimum subscript";
+                p.minimum_subscript = r->getIntegerLowerBound();
+                parsing_what = "maximum subscript";
+                p.maximum_subscript = r->getIntegerUpperBound();
+            } else {
+                p.minimum_subscript = 1;
+                p.maximum_subscript = x->evaluateAsInteger();
+            }
+            if (p.maximum_subscript<p.maximum_subscript) {
+                std::stringstream msg;
+                msg << "Illegal subscript expression"
+                    << " for " << info.getName()
+                    << " parameter " << name << ":\n"
+                    << " minimum subscript (" << p.minimum_subscript << ")"
+                    << " was greater than maximum (" << p.maximum_subscript << ")";
+            }
+        }
+        catch (ModelExpression::ModelException& x) {
+            std::stringstream msg;
+            msg << "Error parsing " << parsing_what
+                << " for " << info.getName()
+                << " parameter " << name << ":\n"
+                << x.getMessage();
+            outError(msg.str());
+        }
     } else {
         p.is_subscripted    = false;
         p.minimum_subscript = 0;
@@ -199,6 +223,7 @@ void ModelFileLoader::parseModelParameter(const YAML::Node& param,
     } else if (p.type_name=="weight") {
         p.type = ModelParameterType::WEIGHT;
     } else {
+        p.type_name = "other";
         p.type = ModelParameterType::OTHER;
     }
     
@@ -217,9 +242,11 @@ void ModelFileLoader::parseModelParameter(const YAML::Node& param,
     }
     //Todo: What if name was a list, and initValue is also a list?!
     std::string value_string = stringScalar(param, "initValue", "");
-    p.range                  = parseRange  (param, "range", p.range);
+    p.range                  = parseRange  (param, "range", p.range, info);
     if (value_string!="") {
-        p.value = convert_double_nothrow(value_string.c_str(), dv);
+        p.value = info.evaluateExpression(value_string,
+                                          "initial value of " + p.name +
+                                          " parameter" );
     } else if (!overriding) {
         if (p.range.is_set) {
             //Initial value has to be inside the legal range.
@@ -233,8 +260,13 @@ void ModelFileLoader::parseModelParameter(const YAML::Node& param,
     }
     p.description = stringScalar(param, "description", p.description.c_str());
     std::stringstream msg;
-    msg  << "Parsed parameter " << p.name
-         << " of type " << p.type_name
+    if (p.is_subscripted) {
+        msg  << "Parsed subscripted parameter " << p.name
+             << "(" << p.minimum_subscript << " .. " << p.maximum_subscript << ")";
+    } else {
+        msg  << "Parsed parameter " << p.name;
+    }
+    msg  << " of type " << p.type_name
          << ", with range " << p.range.first
          << " to " << p.range.second
          << ", and initial value " << p.value;

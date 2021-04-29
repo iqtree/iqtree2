@@ -277,6 +277,7 @@ public:
 
     //Initialization helper functions
     void setNumberOfStatesAndSequenceType(int requested_num_states);
+    double evaluateExpression(std::string& expression, std::string context);
     
     //Parameters
     const YAMLFileParameter* findParameter(const char* name,

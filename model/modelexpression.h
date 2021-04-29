@@ -46,10 +46,12 @@ namespace ModelExpression {
         virtual bool   isFunction()         const;
         virtual bool   isList()             const;
         virtual bool   isOperator()         const;
+        virtual bool   isRange()            const;
         virtual bool   isRightAssociative() const;
         virtual bool   isToken(char c)      const;
         virtual bool   isVariable()         const;
         virtual int    getPrecedence()      const;
+        int evaluateAsInteger() const;
     };
 
     class Token: public Expression {
@@ -252,6 +254,16 @@ namespace ModelExpression {
         SelectOperator(ModelInfoFromYAMLFile& for_model);
         virtual int    getPrecedence() const;
         virtual double evaluate()      const;
+    };
+
+    class RangeOperator: public InfixOperator {
+    public:
+        typedef InfixOperator super;
+        RangeOperator(ModelInfoFromYAMLFile& for_model);
+        virtual int    getPrecedence()        const;
+        virtual bool   isRange()              const;
+        virtual int    getIntegerLowerBound() const;
+        virtual int    getIntegerUpperBound() const;
     };
 
     class InterpretedExpression: public Expression {

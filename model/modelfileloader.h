@@ -32,10 +32,12 @@ public:
     
     void   complainIfSo (bool check_me, std::string error_message);
     void   complainIfNot(bool check_me, std::string error_message);
-    double toDouble     (const YAML::Node& i, double default_val);
+    double toDouble     (const YAML::Node& i, double default_val,
+                         ModelInfoFromYAMLFile& info, std::string context);
     
     ModelParameterRange parseRange(const YAML::Node& node, const char* key,
-                                   const ModelParameterRange& default_value);
+                                   const ModelParameterRange& default_value,
+                                   ModelInfoFromYAMLFile& info);
     
     void parseYAMLModelParameters(const YAML::Node& params,
                                   ModelInfoFromYAMLFile& info,

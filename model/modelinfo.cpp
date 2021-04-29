@@ -734,6 +734,23 @@ void ModelInfoFromYAMLFile::setNumberOfStatesAndSequenceType( int requested_num_
     forceAssign("numStates",  num_states);
 }
 
+double ModelInfoFromYAMLFile::evaluateExpression(std::string& expr,
+                                                 std::string context) {
+    const char* verb = "parsing";
+    try {
+        ModelExpression::InterpretedExpression interpreter(*this, expr );
+        verb = "evaluating";
+        return interpreter.evaluate();
+    }
+    catch (ModelExpression::ModelException& x) {
+        std::stringstream msg;
+        msg << "Error " << verb << " " << context
+            << " for " << model_name << ":\n"
+            << x.getMessage();
+        outError(msg.str());
+    }
+    return 0;
+}
 
 const YAMLFileParameter* ModelInfoFromYAMLFile::findParameter
     ( const char* name, ModelParameterType type) const {
