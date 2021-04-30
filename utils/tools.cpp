@@ -475,7 +475,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     #if USE_PROGRESS_DISPLAY
     progress_display::setProgressDisplay(false);
     #endif
-    verbose_mode = VB_MIN;
+    verbose_mode = VerboseMode::VB_MIN;
     params.tree_gen = NONE;
     params.constraint_tree_file = NULL;
     params.opt_gammai = true;
@@ -527,7 +527,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     //params.nr_output = 10000;
     params.nr_output = 0;
     //params.smode = EXHAUSTIVE;
-    params.intype = IN_OTHER;
+    params.intype = InputType::IN_OTHER;
     params.budget = -1;
     params.min_budget = -1;
     params.step_budget = 1;
@@ -607,7 +607,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.sequence_type = NULL;
     params.aln_output = NULL;
     params.aln_site_list = NULL;
-    params.aln_output_format = IN_PHYLIP;
+    params.aln_output_format = InputType::IN_PHYLIP;
     params.output_format = FORMAT_NORMAL;
     params.newick_extended_format = false;
     params.gap_masked_aln = NULL;
@@ -668,8 +668,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.optimize_mixmodel_weight = false;
     params.optimize_rate_matrix = false;
     params.store_trans_matrix = false;
-    //params.freq_type = FREQ_EMPIRICAL;
-    params.freq_type = FREQ_UNKNOWN;
+    //params.freq_type = StateFreqType::FREQ_EMPIRICAL;
+    params.freq_type = StateFreqType::FREQ_UNKNOWN;
     params.keep_zero_freq = true;
     params.min_state_freq = MIN_FREQUENCY;
     params.min_rate_cats = 2;
@@ -923,19 +923,19 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             if (arg=="-v0") {
-                verbose_mode = VB_QUIET;
+                verbose_mode = VerboseMode::VB_QUIET;
                 continue;
             }
             if (arg=="-v" || arg=="--verbose") {
-                verbose_mode = VB_MED;
+                verbose_mode = VerboseMode::VB_MED;
                 continue;
             }
             if (arg=="-vv" || arg=="-v2") {
-                verbose_mode = VB_MAX;
+                verbose_mode = VerboseMode::VB_MAX;
                 continue;
             }
             if (arg=="-vvv" || arg=="-v3") {
-                verbose_mode = VB_DEBUG;
+                verbose_mode = VerboseMode::VB_DEBUG;
                 continue;
             }
             if (arg=="-k") {
@@ -1633,7 +1633,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             if (arg=="-quiet" || arg=="--quiet") {
-                verbose_mode = VB_QUIET;
+                verbose_mode = VerboseMode::VB_QUIET;
                 continue;
             }
             if (arg=="-mult") {
@@ -2139,13 +2139,13 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "Use -af phy|fasta";
                 }
                 if (arg=="phy") {
-                    params.aln_output_format = IN_PHYLIP;
+                    params.aln_output_format = InputType::IN_PHYLIP;
                 }
                 else if (arg=="fasta") {
-                    params.aln_output_format = IN_FASTA;
+                    params.aln_output_format = InputType::IN_FASTA;
                 }
                 else if (arg=="nexus") {
-                    params.aln_output_format = IN_NEXUS;
+                    params.aln_output_format = InputType::IN_NEXUS;
                 }
                 else {
                     throw "Unknown output format";
@@ -2743,7 +2743,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.opt_gammai            = false;
                 params.min_iterations        = 0;
                 params.stop_condition        = SC_FIXED_ITERATION;
-                verbose_mode                 = VB_DEBUG;
+                verbose_mode                 = VerboseMode::VB_DEBUG;
                 params.ignore_checkpoint     = true;
                 continue;
             }
@@ -4863,24 +4863,24 @@ InputType detectInputFile(const char *input_file) {
         in >> ch2;
         in.close();
         switch (ch) {
-            case '#': return IN_NEXUS;
-            case '(': return IN_NEWICK;
-            case '[': return IN_NEWICK;
-            case '>': return IN_FASTA;
-            case 'C': if (ch2 == 'L') return IN_CLUSTAL;
-                      else if (ch2 == 'O') return IN_COUNTS;
-                      else return IN_OTHER;
-            case '!': if (ch2 == '!') return IN_MSF; else return IN_OTHER;
+            case '#': return InputType::IN_NEXUS;
+            case '(': return InputType::IN_NEWICK;
+            case '[': return InputType::IN_NEWICK;
+            case '>': return InputType::IN_FASTA;
+            case 'C': if (ch2 == 'L') return InputType::IN_CLUSTAL;
+                      else if (ch2 == 'O') return InputType::IN_COUNTS;
+                      else return InputType::IN_OTHER;
+            case '!': if (ch2 == '!') return InputType::IN_MSF; else return InputType::IN_OTHER;
             default:
-                if (isdigit(ch)) return IN_PHYLIP;
-                return IN_OTHER;
+                if (isdigit(ch)) return InputType::IN_PHYLIP;
+                return InputType::IN_OTHER;
         }
     } catch (ios::failure) {
         outError("Cannot read file ", input_file);
     } catch (...) {
         outError("Cannot read file ", input_file);
     }
-    return IN_OTHER;
+    return InputType::IN_OTHER;
 }
 
 bool overwriteFile(const char *filename) {
@@ -5075,7 +5075,7 @@ int init_random(int seed) /* RAND4 */ {
         }
         for (n = 0; n < PP_Myid; ++n)
             (void) randomunitintervall();
-        if (verbose_mode >= VB_MED) {
+        if (verbose_mode >= VerboseMode::VB_MED) {
             cout << "(" << PP_Myid << ") !!! random seed set to " << seed << ", " << n << " drawn !!!" << endl;
         }
     }
@@ -5105,7 +5105,7 @@ int init_random(int seed, bool write_info, int** rstream) {
         *rstream = init_sprng(0, 1, seed, SPRNG_DEFAULT); /*init stream*/
     } else {
         randstream = init_sprng(0, 1, seed, SPRNG_DEFAULT); /*init stream*/
-        if (verbose_mode >= VB_MED) {
+        if (verbose_mode >= VerboseMode::VB_MED) {
             print_sprng(randstream);
         }
     }
@@ -5118,7 +5118,7 @@ int init_random(int seed, bool write_info, int** rstream) {
         *rstream = init_sprng(PP_Myid, PP_NumProcs, seed, SPRNG_DEFAULT); /*initialize stream*/
     } else {
         randstream = init_sprng(PP_Myid, PP_NumProcs, seed, SPRNG_DEFAULT); /*initialize stream*/
-        if (verbose_mode >= VB_MED) {
+        if (verbose_mode >= VerboseMode::VB_MED) {
             cout << "(" << PP_Myid << ") !!! random seed set to " << seed << " !!!" << endl;
             print_sprng(randstream);
         }

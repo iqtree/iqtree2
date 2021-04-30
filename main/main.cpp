@@ -252,14 +252,14 @@ void summarizeHeader(ostream &out, Params &params, bool budget_constraint, Input
     out << "Input tree/split network file name: " << params.user_file << endl;
     if(params.eco_dag_file)
         out << "Input food web file name: "<<params.eco_dag_file<<endl;
-     out << "Input file format: " << ((params.intype == IN_NEWICK) ? "Newick" : ( (params.intype == IN_NEXUS) ? "Nexus" : "Unknown" )) << endl;
+     out << "Input file format: " << ((params.intype == InputType::IN_NEWICK) ? "Newick" : ( (params.intype == InputType::IN_NEXUS) ? "Nexus" : "Unknown" )) << endl;
     if (params.initial_file != NULL)
         out << "Initial taxa file: " << params.initial_file << endl;
     if (params.param_file != NULL)
         out << "Parameter file: " << params.param_file << endl;
     out << endl;
     out << "Type of measure: " << ((params.root != NULL || params.is_rooted) ? "Rooted": "Unrooted") <<
-            (analysis_type== IN_NEWICK ? " phylogenetic diversity (PD)" : " split diversity (SD)");
+            (analysis_type== InputType::IN_NEWICK ? " phylogenetic diversity (PD)" : " split diversity (SD)");
     if (params.root != NULL) out << " at " << params.root;
     out << endl;
     if (params.run_mode != CALC_DIST && params.run_mode != PD_USER_SET) {
@@ -281,8 +281,8 @@ void summarizeHeader(ostream &out, Params &params, bool budget_constraint, Input
         case CALC_DIST: out << "Distance matrix computation"; break;
         default:
             out << ((budget_constraint) ? "Budget constraint " : "Subset size k ");
-            if (params.intype == IN_NEWICK)
-                out << ((analysis_type == IN_NEWICK) ? "on tree" : "on tree -> split network");
+            if (params.intype == InputType::IN_NEWICK)
+                out << ((analysis_type == InputType::IN_NEWICK) ? "on tree" : "on tree -> split network");
             else
                 out << "on split network";
     }
@@ -359,7 +359,7 @@ void summarizeTree(Params &params, PDTree &tree, vector<PDTaxaSet> &taxa_set,
         out.exceptions(ios::failbit | ios::badbit);
         out.open(filename.c_str());
 
-        summarizeHeader(out, params, false, IN_NEWICK);
+        summarizeHeader(out, params, false, InputType::IN_NEWICK);
         out << "Tree size: " << tree.leafNum-params.is_rooted << " taxa, " <<
             tree.nodeNum-1-params.is_rooted << " branches" << endl;
         separator(out);
@@ -524,7 +524,7 @@ void runPDTree(Params &params)
     else
         cout << endl << "Running PD algorithm on ROOTED tree..." << endl;
 
-    if (verbose_mode >= VB_DEBUG)
+    if (verbose_mode >= VerboseMode::VB_DEBUG)
         test_greedy.drawTree(cout, WT_INT_NODE + WT_BR_SCALE + WT_BR_LEN);
 
     if (params.run_mode == GREEDY || params.run_mode == BOTH_ALG ||
@@ -756,7 +756,7 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
         /****************************/
         /********** HEADER **********/
         /****************************/
-        summarizeHeader(out, params, sg.isBudgetConstraint(), IN_NEXUS);
+        summarizeHeader(out, params, sg.isBudgetConstraint(), InputType::IN_NEXUS);
 
         out << "Network size: " << sg.getNTaxa()-params.is_rooted << " taxa, " <<
             sg.getNSplits()-params.is_rooted << " splits (of which " <<
@@ -1155,7 +1155,7 @@ void runPDSplit(Params &params) {
 
     cout << "Time used: " << (double) (params.run_time) << " seconds." << endl;
 
-    if (verbose_mode >= VB_DEBUG && !sg.isPDArea()) {
+    if (verbose_mode >= VerboseMode::VB_DEBUG && !sg.isPDArea()) {
         cout << "PD set(s) with score(s): " << endl;
         for (vector<SplitSet>::iterator it = pd_set.begin(); it != pd_set.end(); it++)
         for (SplitSet::iterator it2 = (*it).begin(); it2 != (*it).end(); it2++ ){
@@ -1425,7 +1425,7 @@ void computeRFDistExtended(const char *trees1, const char *trees2, const char *f
 
             // read in the tree and convert into split system for indexing
             tree.readTree(in, is_rooted);
-            if (verbose_mode >= VB_DEBUG)
+            if (verbose_mode >= VerboseMode::VB_DEBUG)
                 cout << ntrees << " " << endl;
             DoubleVector dist;
             tree.computeRFDist(trees2, dist);
@@ -1475,7 +1475,7 @@ void computeRFDistSamePair(const char *trees1, const char *trees2, const char *f
             // read in the tree and convert into split system for indexing
             tree.readTree(in, is_rooted);
 
-            if (verbose_mode >= VB_DEBUG)
+            if (verbose_mode >= VerboseMode::VB_DEBUG)
                 cout << ntrees << " " << endl;
             DoubleVector dist;
             tree.computeRFDist(in2, dist, 0, true);
@@ -1505,7 +1505,7 @@ void computeRFDistSamePair(const char *trees1, const char *trees2, const char *f
     delete [] rfdist_raw;
 }
 
-void computeRFDist(Params &params) {
+void computeRFDist(Params& params) {
 
     if (params.user_file.empty()) {
         outError("User tree file not provided");
@@ -1526,8 +1526,8 @@ void computeRFDist(Params &params) {
     MTreeSet trees(params.user_file.c_str(), params.is_rooted, params.tree_burnin, params.tree_max_count);
     int n = static_cast<int>(trees.size());
     int m = n;
-    double *rfdist;
-    double *incomp_splits = NULL;
+    double* rfdist;
+    double* incomp_splits = NULL;
     string infoname = params.out_prefix;
     infoname += ".rfinfo";
     string treename = params.out_prefix;
@@ -1536,30 +1536,35 @@ void computeRFDist(Params &params) {
         MTreeSet treeset2(params.second_tree, params.is_rooted, params.tree_burnin, params.tree_max_count);
         cout << "Computing Robinson-Foulds distances between two sets of trees" << endl;
         m = static_cast<int>(treeset2.size());
-        size_t size = n*m;
+        size_t size = n * m;
         if (params.rf_same_pair) {
             if (m != n)
                 outError("Tree sets has different number of trees");
             size = n;
         }
-        rfdist = new double [size];
-        memset(rfdist, 0, size*sizeof(double));
-        if (verbose_mode >= VB_MAX) {
-            incomp_splits = new double [size];
-            memset(incomp_splits, 0, size*sizeof(double));
+        rfdist = new double[size];
+        memset(rfdist, 0, size * sizeof(double));
+        if (verbose_mode >= VerboseMode::VB_MAX) {
+            incomp_splits = new double[size];
+            memset(incomp_splits, 0, size * sizeof(double));
         }
-        if (verbose_mode >= VB_MED)
+        if (verbose_mode >= VerboseMode::VB_MED) {
             trees.computeRFDist(rfdist, &treeset2, params.rf_same_pair,
-                                infoname.c_str(),treename.c_str(), incomp_splits);
-        else
+                infoname.c_str(), treename.c_str(), incomp_splits);
+        }
+        else {
             trees.computeRFDist(rfdist, &treeset2, params.rf_same_pair);
-    } else {
-        rfdist = new double [n*n];
-        memset(rfdist, 0, n*n* sizeof(double));
+        }
+    }
+    else {
+        rfdist = new double[n * n];
+        memset(rfdist, 0, n * n * sizeof(double));
         trees.computeRFDist(rfdist, params.rf_dist_mode, params.split_weight_threshold);
     }
 
-    //if (verbose_mode >= VB_MED) printRFDist(cout, rfdist, n, m, params.rf_dist_mode);
+    //if (verbose_mode >= VerboseMode::VB_MED) {
+    //    printRFDist(cout, rfdist, n, m, params.rf_dist_mode);
+    //}
 
     printRFDist(filename, rfdist, n, m, params.rf_dist_mode);
 
@@ -1570,18 +1575,21 @@ void computeRFDist(Params &params) {
         cout << "Number of incompatible splits in printed to " << filename << endl;
     }
 
-    if (incomp_splits) delete [] incomp_splits;
+    if (incomp_splits != nullptr) {
+        delete[] incomp_splits;
+    }
     delete [] rfdist;
 }
 
 
 void testInputFile(Params &params) {
     SplitGraph sg(params);
-    if (sg.isWeaklyCompatible())
+    if (sg.isWeaklyCompatible()) {
         cout << "The split system is weakly compatible." << endl;
-    else
+    }
+    else {
         cout << "The split system is NOT weakly compatible." << endl;
-
+    }
 }
 
 /**MINH ANH: for some statistics about the branches on the input tree*/
@@ -1717,7 +1725,7 @@ void guidedBootstrap(Params &params)
     MaAlignment gboAlign;
     double prob;
     gboAlign.generateExpectedAlignment(&inputAlign, prob);
-    gboAlign.printAlignment(IN_PHYLIP, gboAln_name.c_str());
+    gboAlign.printAlignment(InputType::IN_PHYLIP, gboAln_name.c_str());
 
 
     string outProb_name = params.out_prefix;
@@ -1847,8 +1855,8 @@ outstreambuf* outstreambuf::close() {
 }
 
 int outstreambuf::overflow( int c) { // used for output buffer only
-    if ((verbose_mode >= VB_MIN && MPIHelper::getInstance().isMaster()) ||
-        verbose_mode >= VB_MED) {
+    if ((verbose_mode >= VerboseMode::VB_MIN && MPIHelper::getInstance().isMaster()) ||
+        verbose_mode >= VerboseMode::VB_MED) {
         if (cout_buf->sputc(c) == EOF) {
             return EOF;
         }
@@ -1868,9 +1876,11 @@ int outstreambuf::overflow( int c) { // used for output buffer only
 
 
 int outstreambuf::sync() { // used for output buffer only
-    if ((verbose_mode >= VB_MIN && MPIHelper::getInstance().isMaster()) || verbose_mode >= VB_MED)
+    if ((verbose_mode >= VerboseMode::VB_MIN && MPIHelper::getInstance().isMaster()) || 
+        verbose_mode >= VerboseMode::VB_MED)
         cout_buf->pubsync();
-    if ((Params::getInstance().suppress_output_flags & OUT_LOG) || !MPIHelper::getInstance().isMaster())
+    if ((Params::getInstance().suppress_output_flags & OUT_LOG) || 
+        !MPIHelper::getInstance().isMaster())
         return 0;        
     return fout_buf->pubsync();
 }
@@ -2152,9 +2162,9 @@ void processECOpd(Params &params) {
 
     //Defining the input phylo type: t - rooted/unrooted tree, n - split network
     params.intype=detectInputFile(params.user_file.c_str());
-    if(params.intype == IN_NEWICK){
+    if(params.intype == InputType::IN_NEWICK){
         params.eco_type = "t";
-    } else if(params.intype == IN_NEXUS){
+    } else if(params.intype == InputType::IN_NEXUS){
         params.eco_type = "n";
     }
 
@@ -2177,7 +2187,7 @@ void processECOpd(Params &params) {
         // Setting all the information-----------------
         tree.phyloType = "t";
         tree.TaxaNUM = tree.leafNum;
-        if(verbose_mode == VB_MAX){
+        if(verbose_mode == VerboseMode::VB_MAX){
             cout<<"TaxaNUM = "<<tree.TaxaNUM<<endl;
             cout<<"LeafNUM = "<<tree.leafNum<<endl;
             cout<<"root_id = "<<tree.root->id<<" root_name = "<<tree.root->name<<endl;
@@ -2218,8 +2228,9 @@ void processECOpd(Params &params) {
         // Solve IP problem
         cout<<"Solving the problem..."<<endl;
         variables = new double[tree.nvar];
-        int g_return = gurobi_solve(model_file.c_str(), tree.nvar, &score, variables, verbose_mode, threads);
-        if(verbose_mode == VB_MAX){
+        int g_return = gurobi_solve(model_file.c_str(), tree.nvar, &score, variables, 
+                                    static_cast<int>(verbose_mode), threads);
+        if(verbose_mode == VerboseMode::VB_MAX){
             cout<<"GUROBI finished with "<<g_return<<" return."<<endl;
             for(i=0; i<tree.nvar; i++)
                 cout<<"x"<<i<<" = "<<variables[i]<<endl;
@@ -2269,8 +2280,10 @@ void processECOpd(Params &params) {
         ecoInfDAG.printInfDAG(model_file.c_str(),splitSYS,params);
         cout<<"Solving the problem..."<<endl;
         variables = new double[ecoInfDAG.nvar];
-        int g_return = gurobi_solve(model_file.c_str(), ecoInfDAG.nvar, &score, variables, verbose_mode, threads);
-        if(verbose_mode == VB_MAX){
+        int g_return = gurobi_solve(model_file.c_str(), ecoInfDAG.nvar, 
+                                    &score, variables, 
+                                    static_cast<int>(verbose_mode), threads);
+        if(verbose_mode == VerboseMode::VB_MAX){
             cout<<"GUROBI finished with "<<g_return<<" return."<<endl;
             for(i=0; i<ecoInfDAG.nvar; i++)
                 cout<<"x"<<i<<" = "<<variables[i]<<endl;
@@ -2296,7 +2309,7 @@ void collapseLowBranchSupport(const char *user_file, char *split_threshold_str) 
     tree.readTree(user_file, isrooted);
     tree.collapseLowBranchSupport(minsup);
     tree.collapseZeroBranches(NULL, NULL, -1.0);
-    if (verbose_mode >= VB_MED)
+    if (verbose_mode >= VerboseMode::VB_MED)
         tree.drawTree(cout);
     string outfile = (string)user_file + ".collapsed";
     tree.printTree(outfile.c_str());
@@ -2724,7 +2737,7 @@ int main(int argc, char *argv[]) {
         collapseLowBranchSupport(params.user_file.c_str(), params.split_threshold_str);
     } else {
         params.intype = detectInputFile(params.user_file.c_str());
-        if (params.intype == IN_NEWICK && params.pdtaxa_file && params.tree_gen == NONE) {
+        if (params.intype == InputType::IN_NEWICK && params.pdtaxa_file && params.tree_gen == NONE) {
             if (params.budget_file) {
                 //if (params.budget < 0) params.run_mode = PD_USER_SET;
             } else {
@@ -2736,11 +2749,11 @@ int main(int argc, char *argv[]) {
         }
 
 
-        if (params.intype == IN_NEWICK && !params.find_all && params.budget_file == NULL &&
+        if (params.intype == InputType::IN_NEWICK && !params.find_all && params.budget_file == NULL &&
             params.find_pd_min == false && params.calc_pdgain == false &&
             params.run_mode != LINEAR_PROGRAMMING && params.multi_tree == false)
             runPDTree(params);
-        else if (params.intype == IN_NEXUS || params.intype == IN_NEWICK) {
+        else if (params.intype == InputType::IN_NEXUS || params.intype == InputType::IN_NEWICK) {
             if (params.run_mode == LINEAR_PROGRAMMING && params.find_pd_min)
                 outError("Current linear programming does not support finding minimal PD sets!");
             if (params.find_all && params.run_mode == LINEAR_PROGRAMMING)

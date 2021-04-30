@@ -890,7 +890,7 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
     }
 #endif
     
-    //    if (verbose_mode >= VB_MED) {
+    //    if (verbose_mode >= VerboseMode::VB_MED) {
     //        cout << "scale";
     //        for (k = 0; k < nscales; k++)
     //            cout << "\t" << r[k];
@@ -988,14 +988,15 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
                 se = 0.0;
                 d = c = 0.0;
                 rss = 0.0;
-                if (verbose_mode >= VB_MED)
+                if (verbose_mode >= VerboseMode::VB_MED) {
                     cout << "   error in wls" << endl;
+                }
                 //info[tid].au_pvalue = pval;
                 //break;
             }
             
             
-            if (verbose_mode >= VB_MED) {
+            if (verbose_mode >= VerboseMode::VB_MED) {
                 cout.unsetf(ios::fixed);
                 cout << "\t" << step << "\t" << th << "\t" << x << "\t" << pval << "\t" << se << "\t" << nscales-2 << "\t" << d << "\t" << c << "\t" << z << "\t" << ze << "\t" << rss << endl;
             }
@@ -1003,8 +1004,9 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
             if(df < 0 && idf0 < 0) { failed = true; break;} /* degenerated */
             
             if ((df < 0) || (idf0 >= 0 && (z-z0)*(x-thp) > 0.0 && fabs(z-z0)>0.1*ze0)) {
-                if (verbose_mode >= VB_MED)
+                if (verbose_mode >= VerboseMode::VB_MED) {
                     cout << "   non-monotone" << endl;
+                }
                 th=x;
                 xn=0.5*x+0.5*thp;
                 continue;
@@ -1023,12 +1025,13 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
             if(fabs(x-th)<1e-10) break;
         } // for step
         
-        if (failed && verbose_mode >= VB_MED)
+        if (failed && verbose_mode >= VerboseMode::VB_MED) {
             cout << "   degenerated" << endl;
-        
+        }        
         if (step == max_step) {
-            if (verbose_mode >= VB_MED)
+            if (verbose_mode >= VerboseMode::VB_MED) {
                 cout << "   non-convergence" << endl;
+            }
             failed = true;
         }
         

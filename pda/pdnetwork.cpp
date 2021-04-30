@@ -395,7 +395,7 @@ void PDNetwork::enterFindPD(Params &params) {
 		if (isBudgetConstraint()) {
 			// fix the budget and min_budget first
 			if (params.budget < 0) params.budget = static_cast<int>(pda->budget);
-			if (verbose_mode >= VB_DEBUG) {
+			if (verbose_mode >= VerboseMode::VB_DEBUG) {
 				pda->Report(cout);
 			}
 			cout << "Budget constraint with budget = " << params.budget << " ..." << endl;
@@ -852,11 +852,11 @@ void PDNetwork::findPD_LP(Params &params, vector<SplitSet> &taxa_set) {
 			cout.flush();
 			if (params.gurobi_format)
 				lp_ret = gurobi_solve(ofile.c_str(), ntaxa, &score,
-                                      variables, verbose_mode,
+                                      variables, static_cast<int>(verbose_mode),
                                       params.gurobi_threads);
 			else
 				lp_ret = lp_solve(ofile.c_str(), ntaxa, &score,
-                                  variables, verbose_mode);
+                                  variables, static_cast<int>(verbose_mode));
 		} else lp_ret = 7;
 		if (lp_ret != 0 && lp_ret != 7)
 			outError("Something went wrong with LP solver!");
@@ -869,11 +869,11 @@ void PDNetwork::findPD_LP(Params &params, vector<SplitSet> &taxa_set) {
 			cout.flush();
 			if (params.gurobi_format)
 				lp_ret = gurobi_solve(ofile.c_str(), ntaxa, &score,
-                                      variables, verbose_mode,
+                                      variables, static_cast<int>(verbose_mode),
                                       params.gurobi_threads);
 			else
 				lp_ret = lp_solve(ofile.c_str(), ntaxa, &score,
-                                  variables, verbose_mode);
+                                  variables, static_cast<int>(verbose_mode));
 			if (lp_ret != 0) // check error again without allowing non-binary
 				outError("Something went wrong with LP solver!");
 		}	
@@ -968,10 +968,10 @@ double PDNetwork::findMinKArea_LP(Params &params, const char* filename,
 		transformMinK_Area2(params, filename, pd_proportion, false);
 		if (params.gurobi_format)
 			lp_ret = gurobi_solve(filename, nareas, &score, variables,
-                                  verbose_mode, params.gurobi_threads);
+				                  static_cast<int>(verbose_mode), params.gurobi_threads);
 		else
 			lp_ret = lp_solve(filename, nareas, &score,
-                              variables, verbose_mode);
+                              variables, static_cast<int>(verbose_mode));
 	} else lp_ret = 7;
 	if (lp_ret != 0 && lp_ret != 7)
 		outError("Something went wrong with LP solver!");
@@ -984,11 +984,11 @@ double PDNetwork::findMinKArea_LP(Params &params, const char* filename,
 			lpVariableBinary(filename, params, initialareas);
 		if (params.gurobi_format)
 			lp_ret = gurobi_solve(filename, nareas, &score,
-                                  variables, verbose_mode,
+                                  variables, static_cast<int>(verbose_mode),
                                   params.gurobi_threads);
 		else
 			lp_ret = lp_solve(filename, nareas, &score,
-                              variables, verbose_mode);
+                              variables, static_cast<int>(verbose_mode));
 		if (lp_ret != 0) // check error again without allowing non-binary
 			outError("Something went wrong with LP solver!");
 	}	
@@ -1062,7 +1062,7 @@ void PDNetwork::computeFeasibleBudget(Params &params, IntVector &ok_budget) {
 		}
 		
 
-	if (verbose_mode < VB_MED)
+	if (verbose_mode < VerboseMode::VB_MED)
 		return;
 	cout << "Feasible budgets:";
 	for (i = 0; i < ok_budget.size(); i++)
@@ -1296,10 +1296,11 @@ void PDNetwork::findPDArea_LP(Params &params, vector<SplitSet> &areas_set) {
 			transformLP_Area2(params, ofile.c_str(), k, false);
 			if (params.gurobi_format)
 				lp_ret = gurobi_solve(ofile.c_str(), nareas, &score,
-                                      variables, verbose_mode, params.gurobi_threads);
+                                      variables, static_cast<int>(verbose_mode), 
+					                  params.gurobi_threads);
 			else
 				lp_ret = lp_solve(ofile.c_str(), nareas, &score,
-                                  variables, verbose_mode);
+                                  variables, static_cast<int>(verbose_mode));
 		} else lp_ret = 7;
 
 		if (lp_ret != 0 && lp_ret != 7)
@@ -1313,10 +1314,11 @@ void PDNetwork::findPDArea_LP(Params &params, vector<SplitSet> &areas_set) {
 				lpVariableBinary(ofile.c_str(), params, initialareas);
 			if (params.gurobi_format)
 				lp_ret = gurobi_solve(ofile.c_str(), nareas, &score,
-                                      variables, verbose_mode, params.gurobi_threads);
+                                      variables, static_cast<int>(verbose_mode), 
+					                  params.gurobi_threads);
 			else
 				lp_ret = lp_solve(ofile.c_str(), nareas, &score,
-                                  variables, verbose_mode);
+                                  variables, static_cast<int>(verbose_mode));
 			if (lp_ret != 0) // check error again without allowing non-binary
 				outError("Something went wrong with LP solver!");
 		}	
@@ -1384,7 +1386,7 @@ void PDNetwork::transformLP_Area_Coverage(const char *outfile,
 	}
 	for (j = 0; j < ntaxa; j++) {
 		if (isUniquelyCovered(j, i)) {
-			if (verbose_mode >= VB_MED) {
+			if (verbose_mode >= VerboseMode::VB_MED) {
 				cout << "Taxon " << taxa->GetTaxonLabel(j)
                     << " is uniquely covered by " << sets->getSet(i)->name << endl;
 			}
@@ -1440,10 +1442,11 @@ int PDNetwork::findMinAreas(Params &params, Split &area_id) {
 	int lp_ret;
 	if (params.gurobi_format)
 		lp_ret = gurobi_solve(ofile.c_str(), nareas, &score,
-                              variables, verbose_mode, params.gurobi_threads);
+                              variables, static_cast<int>(verbose_mode), 
+			                  params.gurobi_threads);
 	else
 		lp_ret = lp_solve(ofile.c_str(), nareas, &score,
-                          variables, verbose_mode);
+                          variables, static_cast<int>(verbose_mode));
 
 	if (lp_ret != 0 && lp_ret != 7)
 		outError("Something went wrong with LP solver!");
@@ -1452,10 +1455,11 @@ int PDNetwork::findMinAreas(Params &params, Split &area_id) {
 				
 		if (params.gurobi_format)
 			lp_ret = gurobi_solve(ofile.c_str(), nareas, &score,
-                                  variables, verbose_mode, params.gurobi_threads);
+                                  variables, static_cast<int>(verbose_mode), 
+				                  params.gurobi_threads);
 		else
 			lp_ret = lp_solve(ofile.c_str(), nareas, &score,
-                              variables, verbose_mode);
+                              variables, static_cast<int>(verbose_mode));
 		if (lp_ret != 0) // check error again without allowing non-binary
 			outError("Something went wrong with LP solver!");
 	}

@@ -51,7 +51,7 @@ int gurobi_solve(const char *filename, int ntaxa, double *score, double *variabl
 	ss << "gurobi_cl Threads=" << num_threads << " ResultFile=" << filename
 		<< ".sol MIPGap=0 "<< filename  << " >" << filename << ".log ";
 	command = ss.str();
-	if (verbosity >= VB_MED)
+	if (verbosity >= static_cast<int>(VerboseMode::VB_MED))
 		cout << command << endl;
 	int sys_ret = system(command.c_str());
 	if (sys_ret != 0) {
@@ -85,7 +85,9 @@ int gurobi_solve(const char *filename, int ntaxa, double *score, double *variabl
 			double value;
 			in >> value;
 			if (value > tolerance && (1.0 - value) > tolerance) {
-				if (verbosity >= VB_MED) cout << endl << str << " = " << value;
+				if (verbosity >= static_cast<int>(VerboseMode::VB_MED)) {
+					cout << endl << str << " = " << value;
+				}
 				ret = 7;
 				if (!verbosity) break;
 			}

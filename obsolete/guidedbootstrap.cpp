@@ -643,7 +643,7 @@ void runGuidedBootstrapReal(Params &params, Alignment *alignment, IQTree &tree) 
         origin_freq.push_back(alignment->at(i).frequency);
 
 
-    if (verbose_mode >= VB_DEBUG) {
+    if (verbose_mode >= VerboseMode::VB_DEBUG) {
         cout << "Original pattern freq: ";
         for (i = 0; i < alignment->getNPattern(); i++)
             cout << alignment->at(i).frequency << " ";
@@ -683,7 +683,7 @@ void runGuidedBootstrapReal(Params &params, Alignment *alignment, IQTree &tree) 
         IntVector expected_freq;
         computeExpectedNorFre(alignment, (*pattern_lhs)[*it], expected_freq);
         expected_freqs.push_back(expected_freq);
-        if (verbose_mode >= VB_DEBUG) {
+        if (verbose_mode >= VerboseMode::VB_DEBUG) {
             for (i = 0; i < expected_freq.size(); i++)
                 cout << expected_freq[i] << " ";
             cout << endl;
@@ -746,7 +746,7 @@ void runGuidedBootstrapReal(Params &params, Alignment *alignment, IQTree &tree) 
                 for (j = 0; j < ndiff; j++) {
                     int tree_id = diff_tree_ids[j];
                     logl[j] = computeRELL((*pattern_lhs)[tree_id], pattern_freq);
-                    //if (verbose_mode >= VB_MAX) cout << logl << endl;
+                    //if (verbose_mode >= VerboseMode::VB_MAX) cout << logl << endl;
                 }
                 DoubleVector::iterator max_logl = max_element(logl.begin(), logl.end());
                 int k = 0;
@@ -770,7 +770,7 @@ void runGuidedBootstrapReal(Params &params, Alignment *alignment, IQTree &tree) 
                                 }
                             }
                     }
-                    if (verbose_mode >= VB_MAX) {
+                    if (verbose_mode >= VerboseMode::VB_MAX) {
                         cout << "Bootstrap " << i+1 <<  " lprob=" << prob << " max_logl=" <<
                              *max_logl << " select " << diff_tree_ids[j]+1;
                         if (num_max > 1)
@@ -794,7 +794,7 @@ void runGuidedBootstrapReal(Params &params, Alignment *alignment, IQTree &tree) 
                             k++;
                         }
                     }
-                    if (verbose_mode >= VB_MAX)
+                    if (verbose_mode >= VerboseMode::VB_MAX)
                         cout << "Bootstrap " << i+1 <<  " lprob=" << prob << " max_id=" << max_id << " max_w=" <<
                              weights[max_id] << " " << k << " trees" << endl;
                 }
@@ -813,13 +813,13 @@ void runGuidedBootstrapReal(Params &params, Alignment *alignment, IQTree &tree) 
                 }
                 diff_tree_ids.push_back(diff_tree_ids[chosen_id]);
                 prob_vec.push_back(prob);
-                if (verbose_mode >= VB_MAX) {
+                if (verbose_mode >= VerboseMode::VB_MAX) {
                     cout << "Bootstrap " << i+1 << " choose id=" << diff_tree_ids[chosen_id]+1 // <<" dist=" << min_dist
                          << " lprob=" << prob << endl;
                 }
             }
 
-            if (verbose_mode >= VB_DEBUG) {
+            if (verbose_mode >= VerboseMode::VB_DEBUG) {
                 for (j = 0; j < pattern_freq.size(); j++)
                     cout << pattern_freq[j] << " ";
                 cout << endl;
@@ -865,7 +865,7 @@ void runGuidedBootstrapReal(Params &params, Alignment *alignment, IQTree &tree) 
 
 	tree.summarizeBootstrap(params, trees);
 /*    int sum_weights = trees.sumTreeWeights();
-    if (verbose_mode >= VB_MED) {
+    if (verbose_mode >= VerboseMode::VB_MED) {
         for (i = 0; i < trees.size(); i++)
             if (trees.tree_weights[i] > 0)
                 cout << "Tree " << i+1 << " weight= " << trees.tree_weights[i] * 100 / sum_weights << endl;
@@ -1131,7 +1131,7 @@ void runAvHTest(Params &params, Alignment *alignment, IQTree &tree) {
     params.aLRT_replicates = saved_aLRT_replicates;
 
     double logn = log(params.avh_test);
-    if (verbose_mode >= VB_MED) {
+    if (verbose_mode >= VerboseMode::VB_MED) {
         for (int j = 0; j < boot_freqs.size(); j++) {
             cout << "p=" << alignment->multinomialProb(*boot_freqs[j])
                  << " p_obs=" << log(boot_times[j]) - logn << " tree=" << aln_tree_map[j] << " ";

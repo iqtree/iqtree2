@@ -141,7 +141,7 @@ void ECOpd::readDAG(istream &in) {
 /* ---------------------------------------------------------------------------------------------------------
  * Input data
  * ---------------------------------------------------------------------------------------------------------*/
-	if(verbose_mode == VB_MAX){
+	if(verbose_mode == VerboseMode::VB_MAX){
 		cout<<endl<<"Food web is defined by the following matrix"<<endl;
 		for(i=0;i<SpeciesNUM;i++) {
 			cout<<dagNames[i]<<"\t";
@@ -273,7 +273,7 @@ void ECOpd::readDAG(istream &in) {
 	for(i=SpeciesNUM-1;i>=0;i--)
 		delete[] MM[i];
 
-	if(verbose_mode == VB_MAX){
+	if(verbose_mode >= VerboseMode::VB_MAX){
 	// Print info about synchronization
 		cout<<endl<<"Synchronization:"<<endl;
 		cout<<"PhyloInfo id | FoodWeb id, name"<<endl;
@@ -365,7 +365,7 @@ void ECOpd::readDAG(istream &in) {
 	}
 
 // For each predator the level corresponds to its longest food chain----------------------------
-	if(verbose_mode == VB_MAX){
+	if(verbose_mode >= VerboseMode::VB_MAX){
 		cout<<"For each species its longest chain according to a food web"<<endl;
 		for(j=0;j<nvar;j++)
 			//if(findFoodWebID(j) != -1)
@@ -1317,9 +1317,9 @@ void ECOpd::printResults(const char* fileOUT,double* variables, double score,Par
 	int i;
 
 	if(phyloType == "t")
-		summarizeHeader(out, params, false, IN_NEWICK);
+		summarizeHeader(out, params, false, InputType::IN_NEWICK);
 	else
-		summarizeHeader(out, params, false, IN_NEXUS);
+		summarizeHeader(out, params, false, InputType::IN_NEXUS);
 
 	// Analyze the results of IP and print the information
 	out<<endl<<"------Results of biodiversity analysis--------------------------------------------------"<<endl;

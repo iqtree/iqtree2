@@ -408,7 +408,8 @@ void AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf) {
         for (int cat = 0; cat < ncat; cat++) {
             double rate_val = site_rate->getRate(cat);
             double derv1 = 0.0, derv2 = 0.0;
-            tree->getModelFactory()->computeTransDerv(value*rate_val, trans_mat, trans_derv1, trans_derv2);
+            tree->getModelFactory()->computeTransDerv(value*rate_val, trans_mat, 
+                                                      trans_derv1, trans_derv2);
             double *pair_pos = pair_freq + cat*trans_size;
             for (int i = 0; i < trans_size; i++) {
                 if (pair_pos[i] > 0) {
@@ -481,7 +482,7 @@ double AlignmentPairwise::optimizeDist(double initial_dist, double &d2l) {
     }
     double negative_lh, ferror;
     double max_genetic_dist = MAX_GENETIC_DIST;
-    if (tree->aln->seq_type == SEQ_POMO) {
+    if (tree->aln->seq_type == SeqType::SEQ_POMO) {
         int N = tree->aln->virtual_pop_size;
         max_genetic_dist *= N*N;
     }
@@ -490,7 +491,8 @@ double AlignmentPairwise::optimizeDist(double initial_dist, double &d2l) {
     if (tree->optimize_by_newton) { // Newton-Raphson method
         dist = minimizeNewton(min_branch, dist, max_genetic_dist, min_branch, d2l);
     } else { // Brent method
-        dist = minimizeOneDimen(min_branch, dist, max_genetic_dist, min_branch, &negative_lh, &ferror);
+        dist = minimizeOneDimen(min_branch, dist, max_genetic_dist, min_branch, 
+                                &negative_lh, &ferror);
     }
     return dist;
 }

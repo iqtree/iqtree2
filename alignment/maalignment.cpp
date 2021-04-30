@@ -173,7 +173,7 @@ void MaAlignment::generateExpectedAlignment(MaAlignment *aln, double &prob)
 	clear();
 	pattern_index.clear();
 	VerboseMode save_mode = verbose_mode; 
-	verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
+	verbose_mode = min(verbose_mode, VerboseMode::VB_MIN); // to avoid printing gappy sites in addPattern
 
 	int site = 0;
 	int npat = static_cast<int>(aln->getNPattern());

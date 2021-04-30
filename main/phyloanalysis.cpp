@@ -145,12 +145,12 @@ void reportAlignment(ofstream &out, Alignment &alignment, int nremoved_seqs) {
     out << "Input data: " << alignment.getNSeq()+nremoved_seqs << " sequences with "
             << alignment.getNSite() << " ";
     switch (alignment.seq_type) {
-    case SEQ_BINARY: out << "binary"; break;
-    case SEQ_DNA: out << "nucleotide"; break;
-    case SEQ_PROTEIN: out << "amino-acid"; break;
-    case SEQ_CODON: out << "codon"; break;
-    case SEQ_MORPH: out << "morphological"; break;
-    case SEQ_POMO: out << "PoMo"; break;
+        case SeqType::SEQ_BINARY:  out << "binary"; break;
+        case SeqType::SEQ_DNA:     out << "nucleotide"; break;
+        case SeqType::SEQ_PROTEIN: out << "amino-acid"; break;
+        case SeqType::SEQ_CODON:   out << "codon"; break;
+        case SeqType::SEQ_MORPH:   out << "morphological"; break;
+        case SeqType::SEQ_POMO:    out << "PoMo"; break;
     default: out << "unknown"; break;
     }
     out << " sites" << endl << "Number of constant sites: "
@@ -350,7 +350,7 @@ void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
         //if (tree.aln->num_states > 4)
         out << endl;
         out.unsetf(ios_base::fixed);
-    } else if (aln->seq_type == SEQ_PROTEIN && m->getNDim() > 20) {
+    } else if (aln->seq_type == SeqType::SEQ_PROTEIN && m->getNDim() > 20) {
         ASSERT(m->num_states == 20);
         out << "WARNING: This model has " << m->getNDim() + m->getNDimFreq()
             << " parameters that may be overfitting."
@@ -395,7 +395,7 @@ void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
         out.precision(4);
     }
     delete[] rate_mat;
-    if (aln->seq_type == SEQ_POMO) {
+    if (aln->seq_type == SeqType::SEQ_POMO) {
         m->report(out);
         return;
     }
@@ -409,16 +409,16 @@ void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
 //            out << "(inferred from Q matrix)" << endl;
 //        else
             switch (m->getFreqType()) {
-            case FREQ_EMPIRICAL:
+            case StateFreqType::FREQ_EMPIRICAL:
                 out << "(empirical counts from alignment)" << endl;
                 break;
-            case FREQ_ESTIMATE:
+            case StateFreqType::FREQ_ESTIMATE:
                 out << "(estimated with maximum likelihood)" << endl;
                 break;
-            case FREQ_USER_DEFINED:
-                out << ((aln->seq_type == SEQ_PROTEIN) ? "(model)" : "(user-defined)") << endl;
+            case StateFreqType::FREQ_USER_DEFINED:
+                out << ((aln->seq_type == SeqType::SEQ_PROTEIN) ? "(model)" : "(user-defined)") << endl;
                 break;
-            case FREQ_EQUAL:
+            case StateFreqType::FREQ_EQUAL:
                 out << "(equal frequencies)" << endl;
                 break;
             default:
@@ -426,11 +426,11 @@ void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
             }
         out << endl;
 
-        if ((m->getFreqType() != FREQ_USER_DEFINED || aln->seq_type == SEQ_DNA) &&
-            m->getFreqType() != FREQ_EQUAL) {
+        if ((m->getFreqType() != StateFreqType::FREQ_USER_DEFINED || aln->seq_type == SeqType::SEQ_DNA) &&
+            m->getFreqType() != StateFreqType::FREQ_EQUAL) {
             double *state_freqs = new double[m->num_states];
             m->getStateFrequency(state_freqs);
-            int ncols=(aln->seq_type == SEQ_CODON) ? 4 : 1;
+            int ncols=(aln->seq_type == SeqType::SEQ_CODON) ? 4 : 1;
             for (int i = 0; i < m->num_states; i++) {
                 out << "  pi(" << aln->convertStateBackStr(i) << ") = " << state_freqs[i];
                 if (i % ncols == ncols-1) {
@@ -440,9 +440,9 @@ void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
             delete[] state_freqs;
             out << endl;
         }
-        if (m->num_states <= 4 || verbose_mode >= VB_MED) {
+        if (m->num_states <= 4 || verbose_mode >= VerboseMode::VB_MED) {
             // report Q matrix
-            if (verbose_mode >= VB_MED)
+            if (verbose_mode >= VerboseMode::VB_MED)
                 out.precision(6);
             double *q_mat = new double[m->num_states * m->num_states];
             m->getQMatrix(q_mat);
@@ -484,17 +484,17 @@ void reportModel(ofstream &out, PhyloTree &tree) {
             out.width(7);
             out << mmodel->getMixtureWeight(i) << "  " << (m)->getNameParams() << endl;
 
-            if (tree.aln->seq_type == SEQ_POMO) {
+            if (tree.aln->seq_type == SeqType::SEQ_POMO) {
                 out << endl << "Model for mixture component "  << i+1
                     << ": " << (m)->name << endl;
                 reportModel(out, tree.aln, m);
             }
         }
-        if (tree.aln->seq_type != SEQ_POMO && tree.aln->seq_type != SEQ_DNA) {
+        if (tree.aln->seq_type != SeqType::SEQ_POMO && tree.aln->seq_type != SeqType::SEQ_DNA) {
             for (int i = 0; i < nmix; i++) {
                 ModelMarkov *m = (ModelMarkov*)mmodel->getMixtureClass(i);
-                if (m->getFreqType() == FREQ_EQUAL ||
-                    m->getFreqType() == FREQ_USER_DEFINED) {
+                if (m->getFreqType() == StateFreqType::FREQ_EQUAL ||
+                    m->getFreqType() == StateFreqType::FREQ_USER_DEFINED) {
                     continue;
                 }
                 out << endl << "Model for mixture component "  << i+1
@@ -637,7 +637,7 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree,
     }
     out << endl;
 
-    if (tree.aln->seq_type == SEQ_POMO) {
+    if (tree.aln->seq_type == SeqType::SEQ_POMO) {
         int N = tree.aln->virtual_pop_size;
         out << "NOTE: The branch lengths of PoMo measure mutations and frequency shifts." << endl;
         out << "To compare PoMo branch lengths to DNA substitution models use the tree length" << endl;
@@ -651,7 +651,7 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree,
 
     double totalLenInternal  = tree.treeLengthInternal(epsilon);
     double totalLenInternalP = totalLenInternal*100.0 / totalLen;
-    if (tree.aln->seq_type == SEQ_POMO) {
+    if (tree.aln->seq_type == SeqType::SEQ_POMO) {
       int N = tree.aln->virtual_pop_size;
       double totLenIntSub = totalLenInternal/(N * N);
         out << "Sum of internal branch lengths" << endl;
@@ -733,12 +733,12 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree,
     if (tree.isMixlen()) {
         out << "NOTE: Branch lengths are weighted average over heterotachy classes" << endl;
     }
-    bool is_codon = tree.aln->seq_type == SEQ_CODON;
+    bool is_codon = tree.aln->seq_type == SeqType::SEQ_CODON;
     if (tree.isSuperTree()) {
         PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
         is_codon = true;
         for (PhyloSuperTree::iterator sit = stree->begin(); sit != stree->end(); sit++)
-            if ((*sit)->aln->seq_type != SEQ_CODON) {
+            if ((*sit)->aln->seq_type != SeqType::SEQ_CODON) {
                 is_codon = false;
                 break;
             }
@@ -780,16 +780,18 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree,
     tree.drawTree(out, WT_BR_SCALE, epsilon);
 
     out << "Tree in newick format:";
-    if (tree.isMixlen())
+    if (tree.isMixlen()) {
         out << " (class branch lengths are given in [...] and separated by '/' )";
-    if (tree.aln->seq_type == SEQ_POMO)
+    }
+    if (tree.aln->seq_type == SeqType::SEQ_POMO) {
         out << " (measured in mutations and frequency shifts)";
+    }
     out << endl << endl;
 
     tree.printTree(out, WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
     out << endl << endl;
 
-  if (tree.aln->seq_type == SEQ_POMO) {
+  if (tree.aln->seq_type == SeqType::SEQ_POMO) {
     out << "Tree in newick format (measured in substitutions, see above):" << endl;
     out << "WARNING: Only for comparison with substitution models." << endl;
     out << "         These are NOT the branch lengths inferred by PoMo." << endl << endl;
@@ -1285,7 +1287,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree,
 
             reportTree(out, params, tree, tree.getBestScore(), tree.logl_variance, true);
 
-            if (tree.isSuperTree() && verbose_mode >= VB_MED) {
+            if (tree.isSuperTree() && verbose_mode >= VerboseMode::VB_MED) {
                 PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
 //                stree->mapTrees();
 //                int empty_branches = stree->countEmptyBranches();
@@ -1636,73 +1638,73 @@ void printAnalysisInfo(int model_df, IQTree& iqtree, Params& params) {
     } else {
         cout << iqtree.getModelName() << " with ";
         switch (iqtree.getModel()->getFreqType()) {
-        case FREQ_EQUAL:
+        case StateFreqType::FREQ_EQUAL:
             cout << "equal";
             break;
-        case FREQ_EMPIRICAL:
+        case StateFreqType::FREQ_EMPIRICAL:
             cout << "counted";
             break;
-        case FREQ_USER_DEFINED:
+        case StateFreqType::FREQ_USER_DEFINED:
             cout << "user-defined";
             break;
-        case FREQ_ESTIMATE:
+        case StateFreqType::FREQ_ESTIMATE:
             cout << "optimized";
             break;
-        case FREQ_CODON_1x4:
+        case StateFreqType::FREQ_CODON_1x4:
             cout << "counted 1x4";
             break;
-        case FREQ_CODON_3x4:
+        case StateFreqType::FREQ_CODON_3x4:
             cout << "counted 3x4";
             break;
-        case FREQ_CODON_3x4C:
+        case StateFreqType::FREQ_CODON_3x4C:
             cout << "counted 3x4-corrected";
             break;
-        case FREQ_DNA_RY:
+        case StateFreqType::FREQ_DNA_RY:
             cout << "constrained A+G=C+T";
             break;
-        case FREQ_DNA_WS:
+        case StateFreqType::FREQ_DNA_WS:
             cout << "constrained A+T=C+G";
             break;
-        case FREQ_DNA_MK:
+        case StateFreqType::FREQ_DNA_MK:
             cout << "constrained A+C=G+T";
             break;
-        case FREQ_DNA_1112:
+        case StateFreqType::FREQ_DNA_1112:
             cout << "constrained A=C=G";
             break;
-        case FREQ_DNA_1121:
+        case StateFreqType::FREQ_DNA_1121:
             cout << "constrained A=C=T";
             break;
-        case FREQ_DNA_1211:
+        case StateFreqType::FREQ_DNA_1211:
             cout << "constrained A=G=T";
             break;
-        case FREQ_DNA_2111:
+        case StateFreqType::FREQ_DNA_2111:
             cout << "constrained C=G=T";
             break;
-        case FREQ_DNA_1122:
+        case StateFreqType::FREQ_DNA_1122:
             cout << "constrained A=C,G=T";
             break;
-        case FREQ_DNA_1212:
+        case StateFreqType::FREQ_DNA_1212:
             cout << "constrained A=G,C=T";
             break;
-        case FREQ_DNA_1221:
+        case StateFreqType::FREQ_DNA_1221:
             cout << "constrained A=T,C=G";
             break;
-        case FREQ_DNA_1123:
+        case StateFreqType::FREQ_DNA_1123:
             cout << "constrained A=C";
             break;
-        case FREQ_DNA_1213:
+        case StateFreqType::FREQ_DNA_1213:
             cout << "constrained A=G";
             break;
-        case FREQ_DNA_1231:
+        case StateFreqType::FREQ_DNA_1231:
             cout << "constrained A=T";
             break;
-        case FREQ_DNA_2113:
+        case StateFreqType::FREQ_DNA_2113:
             cout << "constrained C=G";
             break;
-        case FREQ_DNA_2131:
+        case StateFreqType::FREQ_DNA_2131:
             cout << "constrained C=T";
             break;
-        case FREQ_DNA_2311:
+        case StateFreqType::FREQ_DNA_2311:
             cout << "constrained G=T";
             break;
         default:
@@ -1770,7 +1772,7 @@ void computeMLDist ( Params& params, IQTree& iqtree
         iqtree.printDistanceFile();
     }
     double max_genetic_dist = MAX_GENETIC_DIST;
-    if (iqtree.aln->seq_type == SEQ_POMO) {
+    if (iqtree.aln->seq_type == SeqType::SEQ_POMO) {
         int N = iqtree.aln->virtual_pop_size;
         max_genetic_dist *= N * N;
     }
@@ -1795,7 +1797,7 @@ void computeInitialDist(Params &params, IQTree &iqtree) {
         //  checkZeroDist(iqtree.aln, iqtree.dist_matrix);
         //}
         double max_genetic_dist = MAX_GENETIC_DIST;
-        if (iqtree.aln->seq_type == SEQ_POMO) {
+        if (iqtree.aln->seq_type == SeqType::SEQ_POMO) {
             int N = iqtree.aln->virtual_pop_size;
             max_genetic_dist *= N * N;
         }
@@ -1829,7 +1831,7 @@ void initializeParams(Params &params, IQTree &iqtree)
     ModelInfoFromName model_info(iqtree.aln->model_name);
 
     if (model_info.isWeissAndVonHaeselerTest()) {
-        if (iqtree.aln->seq_type != SEQ_DNA) {
+        if (iqtree.aln->seq_type != SeqType::SEQ_DNA) {
             outError("Weiss & von Haeseler test"
                      " of model homogeneity only works for DNA");
         }
@@ -2224,7 +2226,7 @@ void printFinalSearchInfo(Params &params, IQTree &iqtree,
                           double search_cpu_time, double search_real_time) {
     cout << "Total tree length: " << iqtree.treeLength() << endl;
 
-    if (iqtree.isSuperTree() && verbose_mode >= VB_MAX) {
+    if (iqtree.isSuperTree() && verbose_mode >= VerboseMode::VB_MAX) {
         PhyloSuperTree *stree = (PhyloSuperTree*) &iqtree;
         double percent = ((stree->evalNNIs+1.0)/(stree->totalNNIs+1.0))*100.0;
         
@@ -2296,12 +2298,12 @@ void startTreeReconstruction(Params &params, IQTree* &iqtree,
             PhyloSuperTree *stree = (PhyloSuperTree*)iqtree;
             for (auto it = stree->begin(); it != stree->end(); it++) {
                 auto seq_type = (*it)->aln->seq_type;
-                if (seq_type != SEQ_DNA && seq_type != SEQ_PROTEIN) {
+                if (seq_type != SeqType::SEQ_DNA && seq_type != SeqType::SEQ_PROTEIN) {
                     params.start_tree = STT_PARSIMONY;
                 }
             }
-        } else if (iqtree->aln->seq_type != SEQ_DNA &&
-                   iqtree->aln->seq_type != SEQ_PROTEIN) {
+        } else if (iqtree->aln->seq_type != SeqType::SEQ_DNA &&
+                   iqtree->aln->seq_type != SeqType::SEQ_PROTEIN) {
             params.start_tree = STT_PARSIMONY;
         }
     }
@@ -2449,7 +2451,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
     // degree of freedom
     cout << endl;
-    if (verbose_mode >= VB_MED && params.compute_likelihood) {
+    if (verbose_mode >= VerboseMode::VB_MED && params.compute_likelihood) {
         cout << "ML-TREE SEARCH START WITH THE FOLLOWING PARAMETERS:" << endl;
         int model_df = iqtree->getModelFactory()->getNParameters(BRLEN_OPTIMIZE);
         printAnalysisInfo(model_df, *iqtree, params);
@@ -2612,7 +2614,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
                 }
                 double start_bionj = getRealTime();
                 iqtree->computeBioNJ(params);
-                if (verbose_mode >= VB_MED) {
+                if (verbose_mode >= VerboseMode::VB_MED) {
                     cout << "Wall-clock time spent creating initial tree was "
                     << getRealTime() - start_bionj << " seconds" << endl;
                 }
@@ -2654,7 +2656,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         if (!wasMLDistanceWrittenToFile && !params.dist_file) {
             double write_begin_time = getRealTime();
             iqtree->printDistanceFile();
-            if (verbose_mode >= VB_MED) {
+            if (verbose_mode >= VerboseMode::VB_MED) {
                 double elapsed = getRealTime() - write_begin_time ;
                 #ifdef _OPENMP
                 #pragma omp critical (io)
@@ -2721,7 +2723,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         delete[] pattern_lh;
         return;
     }
-    if (params.snni && 0<params.min_iterations && verbose_mode >= VB_MED) {
+    if (params.snni && 0<params.min_iterations && verbose_mode >= VerboseMode::VB_MED) {
         cout << "Log-likelihoods of " << params.popSize
              << " best candidate trees: " << endl;
         iqtree->printBestScores();
@@ -3105,13 +3107,13 @@ void runMultipleTreeReconstruction(Params &params, Alignment *alignment,
         string out_file = (string)params.out_prefix + ".splits";
         auto last_split = tree->boot_splits.back();
         if (params.print_splits_file) {
-            last_split->saveFile(out_file.c_str(), IN_OTHER, true);
+            last_split->saveFile(out_file.c_str(), InputType::IN_OTHER, true);
             cout << "Split supports printed to star-dot file " << out_file << endl;
         }
 
         if (params.print_splits_nex_file) {
             out_file = (string)params.out_prefix + ".splits.nex";
-            last_split->saveFile(out_file.c_str(), IN_NEXUS, false);
+            last_split->saveFile(out_file.c_str(), InputType::IN_NEXUS, false);
             cout << "Split supports printed to NEXUS file " << out_file << endl;
         }
 
@@ -3241,7 +3243,7 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
         site_rates->setGammaShape(initAlphas[i]);
         site_rates->setPInvar(initPInvar);
         iqtree.clearAllPartialLH();
-        iqtree.optimizeModelParameters(verbose_mode >= VB_MED,
+        iqtree.optimizeModelParameters(verbose_mode >= VerboseMode::VB_MED,
                                        Params::getInstance().testAlphaEps,
                                        &iqtree);
         double estAlpha = iqtree.getRate()->getGammaShape();
@@ -3588,7 +3590,7 @@ void runStandardBootstrap(Params &params, Alignment *alignment, IQTree *tree) {
         string stat_out = (string)params.out_prefix + ".tbe.stat";
         main_booster(input_tree.c_str(), boot_trees.c_str(), out_tree.c_str(),
                      (params.transfer_bootstrap==2) ? out_raw_tree.c_str() : NULL,
-                     stat_out.c_str(), (verbose_mode >= VB_MED) ? 0 : 1);
+                     stat_out.c_str(), (verbose_mode >= VerboseMode::VB_MED) ? 0 : 1);
         cout << "TBE tree written to " << out_tree << endl;
         if (params.transfer_bootstrap == 2)
             cout << "TBE raw tree written to " << out_raw_tree << endl;
@@ -3650,7 +3652,7 @@ void convertAlignment(Params &params, IQTree *iqtree) {
                                   exclude_sites, params.ref_seq_name);
         if (params.print_subaln)
             ((SuperAlignment*)alignment)->printSubAlignments(params);
-        if (params.aln_output_format != IN_NEXUS) {
+        if (params.aln_output_format != InputType::IN_NEXUS) {
             string partition_info = string(params.aln_output) + ".nex";
             ((SuperAlignment*)alignment)->printPartition(partition_info.c_str(),
                                                          params.aln_output);
@@ -4018,7 +4020,7 @@ void doSymTest(Alignment *alignment, Params &params) {
             else {
                 outError("Can't remove all partitions");
             }
-            if (params.aln_output_format == IN_NEXUS) {
+            if (params.aln_output_format == InputType::IN_NEXUS) {
                 string aln_file = (string)params.out_prefix
                                 + ((params.symtest_remove == 1)? ".good.nex" : ".bad.nex");
                 alignment->printAlignment(params.aln_output_format, aln_file.c_str());
@@ -4105,7 +4107,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
             cout.precision(3);
         }
         // Increase the minimum branch length if PoMo is used.
-        if (alignment->seq_type == SEQ_POMO) {
+        if (alignment->seq_type == SeqType::SEQ_POMO) {
             params.min_branch_length *= alignment->virtual_pop_size * alignment->virtual_pop_size;
             cout.precision(12);
             cout << "NOTE: minimal branch length is increased to "
@@ -4115,7 +4117,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
         }
     }
     // Increase the minimum branch length if PoMo is used.
-    if (alignment->seq_type == SEQ_POMO) {
+    if (alignment->seq_type == SeqType::SEQ_POMO) {
         params.max_branch_length *= alignment->virtual_pop_size * alignment->virtual_pop_size;
         cout.precision(1);
         cout << "NOTE: maximal branch length is increased to "
@@ -4163,7 +4165,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
         if (!tree->rooted)
             tree->setRootNode(params.root);
         tree->computeSeqIdentityAlongTree();
-        if (verbose_mode >= VB_MED)
+        if (verbose_mode >= VerboseMode::VB_MED)
             tree->drawTree(cout);
         string out_tree = (string)params.out_prefix + ".seqident_tree";
         tree->printTree(out_tree.c_str());
@@ -4233,7 +4235,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
         }
         runStandardBootstrap(params, alignment, tree);
     }
-    if (verbose_mode >= VB_MED) {
+    if (verbose_mode >= VerboseMode::VB_MED) {
         if (tree->isSuperTree() &&
             params.partition_type != BRLEN_OPTIMIZE) {
             ((PhyloSuperTreePlen*) tree)->printNNIcasesNUM();
@@ -4417,7 +4419,7 @@ void assignBranchSupportNew(Params &params) {
                      " for branch annotation meanings." +
                      " This file is best viewed in FigTree.");
     cout << "Annotated tree (best viewed in FigTree) written to " << str << endl;
-    if (verbose_mode >= VB_DEBUG) {
+    if (verbose_mode >= VerboseMode::VB_DEBUG) {
         tree->drawTree(cout);
     }
     str = prefix + ".cf.branch";
@@ -4640,7 +4642,7 @@ void assignBootstrapSupport(const char *input_trees, int burnin, int max_count,
         scale = params->scaling_factor;
 
     MTreeSet boot_trees;
-    if (params && detectInputFile(input_trees) == IN_NEXUS) {
+    if (params && detectInputFile(input_trees) == InputType::IN_NEXUS) {
         sg.init(*params);
         for (SplitGraph::iterator it = sg.begin();
              it != sg.end(); it++) {
@@ -4754,7 +4756,7 @@ void computeConsensusTree(const char *input_trees, int burnin,
         scale = params->scaling_factor;
     }
     MTreeSet boot_trees;
-    if (params && detectInputFile(input_trees) == IN_NEXUS) {
+    if (params && detectInputFile(input_trees) == InputType::IN_NEXUS) {
         const char *user_file = params->user_file.c_str();
         params->user_file = input_trees;
         params->split_weight_summary = SW_COUNT; // count number of splits
@@ -4790,7 +4792,7 @@ void computeConsensusTree(const char *input_trees, int burnin,
         cout << sg.size() << " splits found" << endl;
     }
     //sg.report(cout);
-    if (verbose_mode >= VB_MED) {
+    if (verbose_mode >= VerboseMode::VB_MED) {
         cout << "Rescaling split weights by " << scale << endl;
     }
     if (params->scaling_factor < 0) {
@@ -4804,7 +4806,7 @@ void computeConsensusTree(const char *input_trees, int burnin,
     SplitGraph maxsg;
     sg.findMaxCompatibleSplits(maxsg);
 
-    if (verbose_mode >= VB_MAX) {
+    if (verbose_mode >= VerboseMode::VB_MAX) {
         maxsg.saveFileStarDot(cout);
     }
     //cout << "convert compatible split system into tree..." << endl;
@@ -4860,7 +4862,7 @@ void computeConsensusTree(const char *input_trees, int burnin,
 
     //sg.scaleWeight(0.01, false, 4);
     if (params->print_splits_file) {
-        sg.saveFile(out_file.c_str(), IN_OTHER, true);
+        sg.saveFile(out_file.c_str(), InputType::IN_OTHER, true);
         cout << "Non-trivial split supports printed"
              << " to star-dot file " << out_file << endl;
     }
@@ -4895,7 +4897,7 @@ void computeConsensusNetwork(const char *input_trees, int burnin,
         out_file += ".nex";
     }
 
-    sg.saveFile(out_file.c_str(), IN_NEXUS);
+    sg.saveFile(out_file.c_str(), InputType::IN_NEXUS);
     cout << "Consensus network printed to " << out_file << endl;
 
     if (output_tree) {
@@ -4908,8 +4910,8 @@ void computeConsensusNetwork(const char *input_trees, int burnin,
         }
         out_file += ".splits";
     }
-    if (verbose_mode >= VB_MED) {
-        sg.saveFile(out_file.c_str(), IN_OTHER, true);
+    if (verbose_mode >= VerboseMode::VB_MED) {
+        sg.saveFile(out_file.c_str(), InputType::IN_OTHER, true);
         cout << "Non-trivial split supports printed"
              << " to star-dot file " << out_file << endl;
     }

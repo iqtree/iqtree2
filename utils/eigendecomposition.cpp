@@ -251,7 +251,7 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 		}
 
     // Only print eigenvalues and eigenvectors if state space is manageable.
-	if ((verbose_mode >= VB_MAX) && num_state < 30) {
+	if ((verbose_mode >= VerboseMode::VB_MAX) && num_state < 30) {
 		cout << "eigenvalues:";
 		for (i = 0; i < num_state; i++)
 			cout << "\t" << eval[i];
@@ -543,7 +543,7 @@ void EigenDecomposition::eliminateZero(double **mat, double *forg, int num,
             for (j = 0; j < num; j++)
                 mat[j][i] = 0.0;
         }
-	if (verbose_mode >= VB_MED) {
+	if (verbose_mode >= VerboseMode::VB_MED) {
 		cout << "new_num_states = " << new_num << endl;
         for (i = 0; i < new_num; i++) {
             cout << new_mat[i][i] << " ";
@@ -554,7 +554,8 @@ void EigenDecomposition::eliminateZero(double **mat, double *forg, int num,
 	//writeDouble(new_forg, new_num);
 }
 
-void EigenDecomposition::symmetrizeRateMatrix(double **a, double *stateFrq, double *stateFrq_sqrt, int num_state) {
+void EigenDecomposition::symmetrizeRateMatrix(double **a, double *stateFrq, 
+	                                          double *stateFrq_sqrt, int num_state) {
 	int i, j;
 
 	for (i = 0; i < num_state; i++)

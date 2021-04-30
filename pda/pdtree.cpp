@@ -209,7 +209,7 @@ void PDTree::computePD(Params &params, vector<PDTaxaSet> &taxa_set, PDRelatedMea
 
  	cout << "Reading taxa sets in file " << params.pdtaxa_file << "..." << endl;
 
-	bool nexus_formated = (detectInputFile(params.pdtaxa_file) == IN_NEXUS);
+	bool nexus_formated = (detectInputFile(params.pdtaxa_file) == InputType::IN_NEXUS);
 	if (nexus_formated) {
 		MyReader nexus(params.pdtaxa_file);
 		nexus.Add(sets);

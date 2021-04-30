@@ -123,7 +123,7 @@ void NGSAlignment::computeStateFreq (double *stateFrqArr, size_t num_unknown_sta
     for (i = 0; i < num_states; i++) sum_count += state_count[i];
     if (sum_count == 0) throw "Empty data observed";
     for (i = 0; i < num_states; i++) stateFrqArr[i] = double(state_count[i]) / sum_count;
-    /*if (verbose_mode >= VB_MIN)*/ {
+    /*if (verbose_mode >= VerboseMode::VB_MIN)*/ {
         cout << "Empirical state frequencies: ";
         for (i = 0; i < num_states; i++)
             cout << stateFrqArr[i] << " ";
@@ -165,7 +165,7 @@ void NGSAlignment::computeDivergenceMatrix (double *rates) {
     for (i = 0; i < num_states-1; i++)
         for (j = i+1; j < num_states; j++)
             rates[k++] = (pair_rates[i][j] + pair_rates[j][i]) / last_rate;
-    /*if (verbose_mode >= VB_MIN)*/ {
+    /*if (verbose_mode >= VerboseMode::VB_MIN)*/ {
         cout << "Empirical rates: ";
         for (k = 0; k < num_states*(num_states-1)/2; k++)
             cout << rates[k] << " ";
@@ -1122,7 +1122,7 @@ void runNGSAnalysis(Params &params) {
     NGSAlignment aln(params.ngs_file);
     cout.setf(ios::fixed,ios::floatfield);
 
-    //params.freq_type = FREQ_ESTIMATE;
+    //params.freq_type = StateFreqType::FREQ_ESTIMATE;
 
     // initialize NGSTree
     NGSTree tree(params, &aln);
@@ -1133,7 +1133,7 @@ void runNGSAnalysis(Params &params) {
     string original_model = params.model_name;
     if (params.model_name == "") {
         sprintf(model_name, "GTR+F%d", aln.ncategory);
-        params.freq_type = FREQ_ESTIMATE;
+        params.freq_type = StateFreqType::FREQ_ESTIMATE;
     }
     else
         sprintf(model_name, "%s+F%d", params.model_name.c_str(), aln.ncategory);
@@ -1186,7 +1186,7 @@ void runNGSAnalysis(Params &params) {
 
 
     VerboseMode vb_saved = verbose_mode;
-    verbose_mode = VB_QUIET;
+    verbose_mode = VerboseMode::VB_QUIET;
 
     cout << endl << "--> INFERING RATE ASSUMING POSITION-SPECIFIC MODEL..." << endl << endl;
     for (int pos = 0; pos < aln.ncategory; pos++) {

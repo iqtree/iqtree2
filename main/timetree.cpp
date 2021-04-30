@@ -157,18 +157,21 @@ void writeDate(string date_file, ostream &out, set<string> &nodenames) {
     if (Params::getInstance().root) {
         StrVector outgroup_names;
         convert_string_vec(Params::getInstance().root, outgroup_names);
-        for (auto name : outgroup_names)
+        for (auto name : outgroup_names) {
             outgroup_set.insert(name);
+        }
     }
-    if (verbose_mode >= VB_MED)
+    if (verbose_mode >= VerboseMode::VB_MED) {
         cout << "Node\tDate" << endl;
+    }
     for (auto name: nodenames) {
         string date = "NA";
         if (dates.find(name) == dates.end()) {
             // taxon present in the dates
 //            if (!Params::getInstance().date_tip.empty())
 //                date = Params::getInstance().date_tip;
-        } else if (outgroup_set.find(name) == outgroup_set.end() || Params::getInstance().date_with_outgroup) {
+        } else if (outgroup_set.find(name) == outgroup_set.end() || 
+                   Params::getInstance().date_with_outgroup) {
             // ignore the date of the outgroup
             date = dates[name];
         }
@@ -176,8 +179,9 @@ void writeDate(string date_file, ostream &out, set<string> &nodenames) {
             retained_dates[name] = date;
             dates.erase(name);
         }
-        if (verbose_mode >= VB_MED)
+        if (verbose_mode >= VerboseMode::VB_MED) {
             cout << name << "\t" << date << endl;
+        }
     }
     
     // add remaining ancestral dates
@@ -186,7 +190,8 @@ void writeDate(string date_file, ostream &out, set<string> &nodenames) {
             retained_dates[date.first] = date.second;
         else if (date.first.find(',') != string::npos) {
             retained_dates["ancestor(" + date.first + ")"] = date.second;
-        } else if (outgroup_set.find(date.first) == outgroup_set.end() || Params::getInstance().date_with_outgroup) {
+        } else if (outgroup_set.find(date.first) == outgroup_set.end() || 
+                   Params::getInstance().date_with_outgroup) {
             retained_dates[date.first] = date.second;
         }
     }

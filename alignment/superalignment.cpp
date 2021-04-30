@@ -76,16 +76,20 @@ SuperAlignment::SuperAlignment(Params &params) : Alignment()
 void SuperAlignment::readFromParams(Params &params) {
     if (isDirectory(params.partition_file)) {
         // reading all files in the directory
-        readPartitionDir(params.partition_file, params.sequence_type, params.intype, params.model_name, params.remove_empty_seq);
+        readPartitionDir(params.partition_file, params.sequence_type, 
+                         params.intype, params.model_name, params.remove_empty_seq);
     } else if (strstr(params.partition_file, ",") != nullptr) {
         // reading all files in a comma-separated list
-        readPartitionList(params.partition_file, params.sequence_type, params.intype, params.model_name, params.remove_empty_seq);
+        readPartitionList(params.partition_file, params.sequence_type, 
+                          params.intype, params.model_name, params.remove_empty_seq);
     } else {
         cout << "Reading partition model file " << params.partition_file << " ..." << endl;
-        if (detectInputFile(params.partition_file) == IN_NEXUS) {
+        if (detectInputFile(params.partition_file) == InputType::IN_NEXUS) {
             readPartitionNexus(params);
             if (partitions.empty()) {
-                outError("No partition found in SETS block. An example syntax looks like: \n#nexus\nbegin sets;\n  charset part1=1-100;\n  charset part2=101-300;\nend;");
+                outError("No partition found in SETS block." 
+                         " An example syntax looks like: \n#nexus\nbegin sets;\n"
+                         "  charset part1=1-100;\n  charset part2=101-300;\nend;");
             }
         } else
             readPartitionRaxml(params);
@@ -105,8 +109,9 @@ void SuperAlignment::readFromParams(Params &params) {
         // sumsample a number of partitions
         int subsample = params.subsampling;
         if (abs(subsample) >= partitions.size()) {
-            outError("--subsample must be between -" + convertInt64ToString(partitions.size() - 1) + 
-                " and " + convertInt64ToString(partitions.size() - 1));
+            outError("--subsample must be between -" + 
+                     convertInt64ToString(partitions.size() - 1) + 
+                     " and " + convertInt64ToString(partitions.size() - 1));
         }
         cout << "Random subsampling " << ((subsample > 0) ? subsample : partitions.size() + subsample)
              << " partitions (seed: " << params.subsampling_seed <<  ")..." << endl;
@@ -190,14 +195,14 @@ void SuperAlignment::init(StrVector *sequence_names) {
 
 void SuperAlignment::buildPattern() {
 	size_t nsite = partitions.size();
-	seq_type = SEQ_BINARY;
+	seq_type = SeqType::SEQ_BINARY;
 	num_states = 2; // binary type because the super alignment presents the presence/absence of taxa in the partitions
 	STATE_UNKNOWN = 2;
 	site_pattern.resize(nsite, -1);
 	clear();
 	pattern_index.clear();
 	VerboseMode save_mode = verbose_mode; 
-	verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
+	verbose_mode = min(verbose_mode, VerboseMode::VB_MIN); // to avoid printing gappy sites in addPattern
 	int nseq = getNSeq32();
 	for (size_t site = 0; site < nsite; site++) {
  		Pattern pat;
@@ -296,17 +301,18 @@ void SuperAlignment::readPartitionRaxml(Params &params) {
             getline(in, info.model_name, ',');
             if (in.eof()) break;
             trimString(info.model_name);
-            //            std::transform(info.model_name.begin(), info.model_name.end(), info.model_name.begin(), ::toupper);
+            //            std::transform(info.model_name.begin(), info.model_name.end(), 
+            //                           info.model_name.begin(), ::toupper);
             
             bool is_ASC = info.model_name.substr(0,4) == "ASC_";
             if (is_ASC) info.model_name.erase(0, 4);
-            StateFreqType freq = FREQ_UNKNOWN;
+            StateFreqType freq = StateFreqType::FREQ_UNKNOWN;
             if (info.model_name.find_first_of("*+{") == string::npos ) {
                 if (*info.model_name.rbegin() == 'F' && info.model_name != "DAYHOFF") {
-                    freq = FREQ_EMPIRICAL;
+                    freq = StateFreqType::FREQ_EMPIRICAL;
                     info.model_name.erase(info.model_name.length()-1);
                 } else if (*info.model_name.rbegin() == 'X' && info.model_name != "LG4X") {
-                    freq = FREQ_ESTIMATE;
+                    freq = StateFreqType::FREQ_ESTIMATE;
                     info.model_name.erase(info.model_name.length()-1);
                 }
             }
@@ -334,9 +340,9 @@ void SuperAlignment::readPartitionRaxml(Params &params) {
                 }
             }
             
-            if (freq == FREQ_EMPIRICAL)
+            if (freq == StateFreqType::FREQ_EMPIRICAL)
                 info.model_name += "+F";
-            else if (freq == FREQ_ESTIMATE)
+            else if (freq == StateFreqType::FREQ_ESTIMATE)
                 info.model_name += "+FO";
             if (is_ASC) {
                 info.model_name += "+ASC";
@@ -470,7 +476,7 @@ void SuperAlignment::readPartitionNexus(Params &params) {
             trimString((*it)->sequence_type);
             //            cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" <<
             //                info.aln_file << ", seq=" << info.sequence_type << ", pos=" << ((info.position_spec.length() >= 20) ? info.position_spec.substr(0,20)+"..." : info.position_spec) << ") ..." << endl;
-            if ((*it)->sequence_type != "" && getSeqType((*it)->sequence_type.c_str()) == SEQ_UNKNOWN)
+            if ((*it)->sequence_type != "" && getSeqType((*it)->sequence_type.c_str()) == SeqType::SEQ_UNKNOWN)
                 outError("Unknown sequence type " + (*it)->sequence_type);
 
             // TODO move to supertree
@@ -490,7 +496,7 @@ void SuperAlignment::readPartitionNexus(Params &params) {
                 if (part_aln != input_aln) delete part_aln;
                 part_aln = new_aln;
             }
-            if (part_aln->seq_type == SEQ_DNA && ((*it)->sequence_type.substr(0, 5) == "CODON" || (*it)->sequence_type.substr(0, 5) == "NT2AA")) {
+            if (part_aln->seq_type == SeqType::SEQ_DNA && ((*it)->sequence_type.substr(0, 5) == "CODON" || (*it)->sequence_type.substr(0, 5) == "NT2AA")) {
                 Alignment *new_aln = new Alignment();
                 new_aln->convertToCodonOrAA(part_aln, &(*it)->sequence_type[5], (*it)->sequence_type.substr(0, 5) == "NT2AA");
                 if (part_aln != input_aln) delete part_aln;
@@ -544,7 +550,7 @@ void SuperAlignment::readPartitionDir(string partition_dir, const char *sequence
     {
         Alignment *part_aln;
         part_aln = createAlignment(dir+*it, sequence_type, intype, model_name);
-//        if (part_aln->seq_type == SEQ_DNA && (strncmp(params.sequence_type, "CODON", 5) == 0 || strncmp(params.sequence_type, "NT2AA", 5) == 0)) {
+//        if (part_aln->seq_type == SeqType::SEQ_DNA && (strncmp(params.sequence_type, "CODON", 5) == 0 || strncmp(params.sequence_type, "NT2AA", 5) == 0)) {
 //            Alignment *new_aln = new Alignment();
 //            new_aln->convertToCodonOrAA(part_aln, params.sequence_type+5, strncmp(params.sequence_type, "NT2AA", 5) == 0);
 //            delete part_aln;
@@ -589,7 +595,7 @@ void SuperAlignment::readPartitionList(string file_list,
         {
         Alignment *part_aln;
         part_aln = createAlignment(*it, sequence_type, intype, model_name);
-        //        if (part_aln->seq_type == SEQ_DNA && (strncmp(params.sequence_type, "CODON", 5) == 0 || strncmp(params.sequence_type, "NT2AA", 5) == 0)) {
+        //        if (part_aln->seq_type == SeqType::SEQ_DNA && (strncmp(params.sequence_type, "CODON", 5) == 0 || strncmp(params.sequence_type, "NT2AA", 5) == 0)) {
         //            Alignment *new_aln = new Alignment();
         //            new_aln->convertToCodonOrAA(part_aln, params.sequence_type+5, strncmp(params.sequence_type, "NT2AA", 5) == 0);
         //            delete part_aln;
@@ -677,7 +683,7 @@ void SuperAlignment::printBestPartition(const char *filename) {
             replace(name.begin(), name.end(), '+', '_');
             out << "  charset " << name << " = ";
             if (!partitions[part]->aln_file.empty()) out << partitions[part]->aln_file << ": ";
-            if (partitions[part]->seq_type == SEQ_CODON)
+            if (partitions[part]->seq_type == SeqType::SEQ_CODON)
                 out << "CODON, ";
             string pos = partitions[part]->position_spec;
             replace(pos.begin(), pos.end(), ',' , ' ');
@@ -727,9 +733,9 @@ void SuperAlignment::printPartitionRaxml(const char *filename) {
             replace(name.begin(), name.end(), '+', '_');
             int end_site = start_site + partitions[part]->getNSite32();
             switch (partitions[part]->seq_type) {
-                case SEQ_DNA: out << "DNA, "; break;
-                case SEQ_BINARY: out << "BIN, "; break;
-                case SEQ_MORPH: out << "MULTI, "; break;
+                case SeqType::SEQ_DNA:    out << "DNA, "; break;
+                case SeqType::SEQ_BINARY: out << "BIN, "; break;
+                case SeqType::SEQ_MORPH:  out << "MULTI, "; break;
                 default: out << partitions[part]->model_name << ","; break;
             }
             out << name << " = " << start_site << "-" << end_site-1 << endl;
@@ -764,13 +770,13 @@ void SuperAlignment::printBestPartitionRaxml(const char *filename) {
             if (info.hasAscertainmentBiasCorrection())
                 out << "ASC_";
             switch (partitions[part]->seq_type) {
-                case SEQ_DNA: out << "DNA"; break;
-                case SEQ_BINARY: out << "BIN"; break;
-                case SEQ_MORPH: out << "MULTI"; break;
-                case SEQ_PROTEIN:
+                case SeqType::SEQ_DNA:    out << "DNA"; break;
+                case SeqType::SEQ_BINARY: out << "BIN"; break;
+                case SeqType::SEQ_MORPH:  out << "MULTI"; break;
+                case SeqType::SEQ_PROTEIN:
                     out << partitions[part]->model_name.substr(0, partitions[part]->model_name.find_first_of("*{+"));
                     break;
-                case SEQ_CODON:
+                case SeqType::SEQ_CODON:
                     out << "CODON_" << partitions[part]->model_name.substr(0, partitions[part]->model_name.find_first_of("*{+"));
                     break;
                 default: out << partitions[part]->model_name; break;
@@ -960,7 +966,7 @@ std::vector<size_t> SuperAlignment::getSequenceHashes(progress_display_ptr progr
         }
         hashes[seq1] = hash;
     }
-    if (verbose_mode >= VB_MED) {
+    if (verbose_mode >= VerboseMode::VB_MED) {
         auto hashTime = getRealTime() - startHash;
         cout << "Hashing sequences took " << hashTime << " wall-clock seconds" << endl;
     }
@@ -1049,9 +1055,10 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, 
     progress.done();
     #endif
     
-    if (verbose_mode >= VB_MED) {
+    if (verbose_mode >= VerboseMode::VB_MED) {
         auto checkTime = getRealTime() - startCheck;
-        cout << "Checking for identical sequences took " << checkTime << " wall-clock seconds" << endl;
+        cout << "Checking for identical sequences took " 
+             << checkTime << " wall-clock seconds" << endl;
     }
 
 	if (removed_seqs.empty()) return this; // do nothing if the list is empty
@@ -1514,7 +1521,7 @@ void SuperAlignment::printAlignment(InputType format, ostream &out, const char* 
     Alignment *concat = concatenateAlignments();
     concat->printAlignment(format, out, file_name, append, aln_site_list, exclude_sites, ref_seq_name);
     delete concat;
-    if (format == IN_NEXUS)
+    if (format == InputType::IN_NEXUS)
         printPartition(out, NULL, true);
 }
 
@@ -1557,12 +1564,12 @@ double SuperAlignment::computeMissingData() {
 Alignment *SuperAlignment::concatenateAlignments(set<int> &ids) {
 	string union_taxa;
 	int nsites = 0, nstates = 0;
-	SeqType sub_type = SEQ_UNKNOWN;
+	SeqType sub_type = SeqType::SEQ_UNKNOWN;
 	for (auto it = ids.begin(); it != ids.end(); it++) {
 		int id = *it;
 		ASSERT(id >= 0 && id < partitions.size());
 		if (nstates == 0) nstates = partitions[id]->num_states;
-		if (sub_type == SEQ_UNKNOWN) sub_type = partitions[id]->seq_type;
+		if (sub_type == SeqType::SEQ_UNKNOWN) sub_type = partitions[id]->seq_type;
 		if (sub_type != partitions[id]->seq_type)
 			outError("Cannot concatenate sub-alignments of different type");
 		if (nstates != partitions[id]->num_states)
@@ -1590,7 +1597,7 @@ Alignment *SuperAlignment::concatenateAlignments(set<int> &ids) {
     aln->pattern_index.clear();
     aln->STATE_UNKNOWN = partitions[*ids.begin()]->STATE_UNKNOWN;
     aln->genetic_code = partitions[*ids.begin()]->genetic_code;
-    if (aln->seq_type == SEQ_CODON) {
+    if (aln->seq_type == SeqType::SEQ_CODON) {
     	aln->codon_table = new char[aln->num_states];
     	memcpy(aln->codon_table, partitions[*ids.begin()]->codon_table, aln->num_states);
     	aln->non_stop_codon = new char[strlen(aln->genetic_code)];

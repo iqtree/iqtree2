@@ -325,7 +325,7 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 	/* apply non-conflicting positive NNIs */
 	if (searchinfo.posNNIList.size() != 0) {
 		sort(searchinfo.posNNIList.begin(), searchinfo.posNNIList.end(), comparePLLNNIMove);
-        if (verbose_mode >= VB_DEBUG) {
+        if (verbose_mode >= VerboseMode::VB_DEBUG) {
         	cout << "curScore: "  << searchinfo.curLogl << endl;
             for (int i = 0; i < searchinfo.posNNIList.size(); i++) {
                 cout << "Logl of positive NNI " << i << " : " << searchinfo.posNNIList[i].likelihood << endl;
@@ -862,13 +862,14 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
         tree_index = *((int *)item_ptr->data);
         if (cur_logl <= pllUFBootDataPtr->treels_logl[tree_index] + 1e-4) {
             if (cur_logl < pllUFBootDataPtr->treels_logl[tree_index] - 5.0)
-                if (verbose_mode >= VB_MED)
+                if (verbose_mode >= VerboseMode::VB_MED)
                     printf("Current lh %f is much worse than expected %f\n",
                             cur_logl, pllUFBootDataPtr->treels_logl[tree_index]);
             return;
         }
-        if (verbose_mode >= VB_MAX)
-            printf("Updated logl %f to %f\n", pllUFBootDataPtr->treels_logl[tree_index], cur_logl);
+		if (verbose_mode >= VerboseMode::VB_MAX) {
+			printf("Updated logl %f to %f\n", pllUFBootDataPtr->treels_logl[tree_index], cur_logl);
+		}
         pllUFBootDataPtr->treels_logl[tree_index] = cur_logl;
 
         if (pllUFBootDataPtr->boot_samples == NULL) {
@@ -877,8 +878,9 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
             pllComputePatternLikelihood(tr, (pllUFBootDataPtr->treels_ptnlh)[tree_index], &cur_logl);
             return;
         }
-        if (verbose_mode >= VB_MAX)
-            printf("Update treels_logl[%d] := %f\n", tree_index, cur_logl);
+		if (verbose_mode >= VerboseMode::VB_MAX) {
+			printf("Update treels_logl[%d] := %f\n", tree_index, cur_logl);
+		}
 
     } else {
 		if (pllUFBootDataPtr->logl_cutoff != 0.0 && cur_logl <= pllUFBootDataPtr->logl_cutoff + 1e-4){
@@ -893,8 +895,9 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
 		tree_index = pllUFBootDataPtr->candidate_trees_count;
 		pllUFBootDataPtr->candidate_trees_count++;
 		pllUFBootDataPtr->treels_logl[tree_index] = cur_logl;
-		if (verbose_mode >= VB_MAX)
+		if (verbose_mode >= VerboseMode::VB_MAX) {
 			printf("Add    treels_logl[%d] := %f\n", tree_index, cur_logl);
+		}
    }
 
     //if (write_intermediate_trees)

@@ -11,7 +11,7 @@
 #include <string>
 
 //This enumerated type came from phyloYAML/statespace.h
-enum SeqType {
+enum class SeqType {
     SEQ_DNA, SEQ_PROTEIN, SEQ_BINARY, SEQ_MORPH, SEQ_MULTISTATE, SEQ_CODON, SEQ_POMO, SEQ_UNKNOWN
 };
 
@@ -36,7 +36,7 @@ int getNumStatesForSeqType(SeqType type, int num_states);
 /**
         State frequency type
  */
-enum StateFreqType {
+enum class StateFreqType {
     FREQ_UNKNOWN, FREQ_USER_DEFINED, FREQ_EQUAL, FREQ_EMPIRICAL, FREQ_ESTIMATE,
     FREQ_CODON_1x4, FREQ_CODON_3x4, FREQ_CODON_3x4C, // special frequency for codon model
     FREQ_MIXTURE, // mixture-frequency model

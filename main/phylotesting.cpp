@@ -177,12 +177,12 @@ extern double RunKMeans1D(int n, int k, double *points, int *weights, double *ce
 
 string getUsualModelSubst(SeqType seq_type) {
     switch (seq_type) {
-        case SEQ_DNA:     return dna_model_names[0];
-        case SEQ_PROTEIN: return aa_model_names[0];
-        case SEQ_CODON:   return string(codon_model_names[0]) + codon_freq_names[0];
-        case SEQ_BINARY:  return bin_model_names[0];
-        case SEQ_MORPH:   return morph_model_names[0];
-        case SEQ_POMO:    return string(dna_model_names[0]) + "+P";
+        case SeqType::SEQ_DNA:     return dna_model_names[0];
+        case SeqType::SEQ_PROTEIN: return aa_model_names[0];
+        case SeqType::SEQ_CODON:   return string(codon_model_names[0]) + codon_freq_names[0];
+        case SeqType::SEQ_BINARY:  return bin_model_names[0];
+        case SeqType::SEQ_MORPH:   return morph_model_names[0];
+        case SeqType::SEQ_POMO:    return string(dna_model_names[0]) + "+P";
         default: ASSERT(0 && "Unprocessed seq_type"); return "";
     }
 }
@@ -374,37 +374,37 @@ int detectSeqType(const char *model_name, SeqType &seq_type) {
     std::transform(model_str.begin(), model_str.end(), model_str.begin(), ::toupper);
     StrVector model_list;
 
-    seq_type = SEQ_UNKNOWN;
+    seq_type = SeqType::SEQ_UNKNOWN;
     
     copyCString(bin_model_names, element_count(bin_model_names), model_list, true);
     for (i = 0; i < model_list.size(); i++)
         if (model_str == model_list[i]) {
-            seq_type = SEQ_BINARY;
+            seq_type = SeqType::SEQ_BINARY;
             break;
         }
     copyCString(morph_model_names, element_count(morph_model_names), model_list, true);
     for (i = 0; i < model_list.size(); i++)
         if (model_str == model_list[i]) {
-            seq_type = SEQ_MORPH;
+            seq_type = SeqType::SEQ_MORPH;
             break;
         }
     copyCString(dna_model_names, element_count(dna_model_names), model_list, true);
     for (i = 0; i < model_list.size(); i++)
         if (model_str == model_list[i]) {
-            seq_type = SEQ_DNA;
+            seq_type = SeqType::SEQ_DNA;
             break;
         }
     copyCString(aa_model_names, element_count(aa_model_names), model_list, true);
     for (i = 0; i < model_list.size(); i++)
         if (model_str == model_list[i]) {
-            seq_type = SEQ_PROTEIN;
+            seq_type = SeqType::SEQ_PROTEIN;
             empirical_model = true;
             break;
         }
     copyCString(codon_model_names, element_count(codon_model_names), model_list, true);
     for (i = 0; i < model_list.size(); i++)
         if (model_str.substr(0,model_list[i].length()) == model_list[i]) {
-            seq_type = SEQ_CODON;
+            seq_type = SeqType::SEQ_CODON;
             if (std_genetic_code[i]) empirical_model = true;
             break;
         }
@@ -587,7 +587,7 @@ string computeFastMLTree(Params &params, Alignment *aln,
     //ASSERT(iqtree->root);
     iqtree->initializeModel(params, usual_model.getName(),
                             models_block, report_to_tree);
-    if (!iqtree->getModel()->isMixture() || aln->seq_type == SEQ_POMO) {
+    if (!iqtree->getModel()->isMixture() || aln->seq_type == SeqType::SEQ_POMO) {
         usual_model.subst_name = iqtree->getSubstName();
         usual_model.rate_name = iqtree->getRateName();
     }
@@ -708,7 +708,8 @@ void transferModelFinderParameters(IQTree *iqtree, Checkpoint *target) {
             int i;
             for (i = 0; i < tree->size(); i++) {
                 sum += tree_lens[i] * tree->at(i)->aln->getNSite();
-                if (tree->at(i)->aln->seq_type == SEQ_CODON && tree->rescale_codon_brlen)
+                if (tree->at(i)->aln->seq_type == SeqType::SEQ_CODON && 
+                    tree->rescale_codon_brlen)
                     nsite += 3*tree->at(i)->aln->getNSite();
                 else
                     nsite += tree->at(i)->aln->getNSite();
@@ -925,7 +926,7 @@ void getModelSubst(SeqType seq_type, bool standard_code, string model_name,
     if (iEquals(model_set, "ALL") || iEquals(model_set, "AUTO"))
         model_set = "";
     
-    if (seq_type == SEQ_BINARY) {
+    if (seq_type == SeqType::SEQ_BINARY) {
         if (model_set.empty()) {
             copyCString(bin_model_names, element_count(bin_model_names), model_names);
         } else if (model_set[0] == '+') {
@@ -935,7 +936,7 @@ void getModelSubst(SeqType seq_type, bool standard_code, string model_name,
         } else {
             convert_string_vec(model_set.c_str(), model_names);
         }
-    } else if (seq_type == SEQ_MORPH) {
+    } else if (seq_type == SeqType::SEQ_MORPH) {
         if (model_set.empty()) {
             copyCString(morph_model_names, element_count(morph_model_names), model_names);
         } else if (model_set[0] == '+') {
@@ -945,7 +946,7 @@ void getModelSubst(SeqType seq_type, bool standard_code, string model_name,
         } else {
             convert_string_vec(model_set.c_str(), model_names);
         }
-    } else if (seq_type == SEQ_DNA || seq_type == SEQ_POMO) {
+    } else if (seq_type == SeqType::SEQ_DNA || seq_type == SeqType::SEQ_POMO) {
         if (model_set.empty()) {
             copyCString(dna_model_names, element_count(dna_model_names), model_names);
             //            copyCString(dna_freq_names, element_count(dna_freq_names), freq_names);
@@ -1003,7 +1004,7 @@ void getModelSubst(SeqType seq_type, bool standard_code, string model_name,
             appendCString(dna_model_names_lie_markov_ws, element_count(dna_model_names_lie_markov_ws), model_names);
             appendCString(dna_model_names_lie_markov_mk, element_count(dna_model_names_lie_markov_mk), model_names);
         }
-    } else if (seq_type == SEQ_PROTEIN) {
+    } else if (seq_type == SeqType::SEQ_PROTEIN) {
         if (model_set.empty()) {
             copyCString(aa_model_names, element_count(aa_model_names), model_names);
         } else if (model_set == "partitionfinder" || model_set == "phyml") {
@@ -1049,7 +1050,7 @@ void getModelSubst(SeqType seq_type, bool standard_code, string model_name,
             }
         }
         
-    } else if (seq_type == SEQ_CODON) {
+    } else if (seq_type == SeqType::SEQ_CODON) {
         if (model_set.empty()) {
             if (standard_code)
                 copyCString(codon_model_names, element_count(codon_model_names), model_names);
@@ -1082,10 +1083,10 @@ void getStateFreqs(SeqType seq_type, char *state_freq_set, StrVector &freq_names
     int j;
     
     switch (seq_type) {
-        case SEQ_PROTEIN:
+        case SeqType::SEQ_PROTEIN:
             copyCString(aa_freq_names, element_count(aa_freq_names), freq_names);
             break;
-        case SEQ_CODON:
+        case SeqType::SEQ_CODON:
             copyCString(codon_freq_names, element_count(codon_freq_names), freq_names);
             break;
         default:
@@ -1127,7 +1128,7 @@ void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites
     bool with_new = (model_name.find("NEW") != string::npos || model_name.substr(0,2) == "MF" || model_name.empty());
     bool with_asc = model_name.find("ASC") != string::npos;
 
-    if (seq_type == SEQ_POMO) {
+    if (seq_type == SeqType::SEQ_POMO) {
         for (i = 0; i < noptions; i++)
             test_options[i] = test_options_pomo[i];
     }
@@ -1137,13 +1138,15 @@ void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites
         if (with_new && rate_set != "1") {
             if (with_asc)
                 test_options = test_options_asc_new;
-            else if (seq_type == SEQ_DNA || seq_type == SEQ_BINARY || seq_type == SEQ_MORPH)
+            else if (seq_type == SeqType::SEQ_DNA || seq_type == SeqType::SEQ_BINARY || 
+                     seq_type == SeqType::SEQ_MORPH)
                 test_options = test_options_morph_new;
             else
                 test_options = test_options_noASC_I_new;
         } else if (with_asc)
             test_options = test_options_asc;
-        else if (seq_type == SEQ_DNA || seq_type == SEQ_BINARY || seq_type == SEQ_MORPH) {
+        else if (seq_type == SeqType::SEQ_DNA || seq_type == SeqType::SEQ_BINARY || 
+                 seq_type == SeqType::SEQ_MORPH) {
             if (rate_set == "1")
                 test_options = test_options_morph_fast;
             else
@@ -1234,7 +1237,7 @@ int CandidateModelSet::generate(Params &params, Alignment *aln,
         StrVector orig_model_names = model_names;
         model_names.clear();
         for (j = 0; j < orig_model_names.size(); j++) {
-            if (aln->seq_type == SEQ_CODON) {
+            if (aln->seq_type == SeqType::SEQ_CODON) {
                 SeqType seq_type;
                 int model_type = detectSeqType(orig_model_names[j].c_str(), seq_type);
                 for (i = 0; i < freq_names.size(); i++) {
@@ -1297,7 +1300,7 @@ int CandidateModelSet::generate(Params &params, Alignment *aln,
 
     ASSERT(ratehet.size() == flags.size());
     
-    string pomo_suffix = (alignment_seq_type == SEQ_POMO) ? "+P" : "";
+    string pomo_suffix = (alignment_seq_type == SeqType::SEQ_POMO) ? "+P" : "";
     // TODO DS: should we allow virtual population size?
 
     // combine substitution models with rate heterogeneity
@@ -1605,7 +1608,8 @@ string CandidateModel::evaluate(Params &params,
     ASSERT(iqtree->root);
     iqtree->initializeModel(params, getName(),
                             models_block, report_to_tree);
-    if (!iqtree->getModel()->isMixture() || in_aln->seq_type == SEQ_POMO) {
+    if (!iqtree->getModel()->isMixture() || 
+        in_aln->seq_type == SeqType::SEQ_POMO) {
         subst_name = iqtree->getSubstName();
         rate_name = iqtree->getRateName();
     }
@@ -1666,7 +1670,7 @@ string CandidateModel::evaluate(Params &params,
 
     } else {
         //--- FIX TREE TOPOLOGY AND ESTIMATE MODEL PARAMETERS ----//
-        TREE_LOG_LINE(*report_to_tree, VB_MED, "Optimizing model " << getName());
+        TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MED, "Optimizing model " << getName());
 
         iqtree->ensureNumberOfThreadsIsSet(nullptr, true);
         iqtree->initializeAllPartialLh();
@@ -2554,7 +2558,7 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree,
     Alignment *prot_aln = NULL;
     Alignment *dna_aln  = NULL;
     bool do_modelomatic = params.modelomatic &&
-                          in_tree->aln->seq_type == SEQ_CODON;
+                          in_tree->aln->seq_type == SeqType::SEQ_CODON;
 
     if (in_model_name.empty()) {
         generate(params, in_tree->aln, params.model_test_separate_rate, merge_phase);
@@ -2949,9 +2953,7 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
     Alignment *prot_aln = nullptr;
     Alignment *dna_aln  = nullptr;
     bool do_modelomatic = params.modelomatic &&
-                          in_tree->aln->seq_type == SEQ_CODON;
-    
-    
+                          in_tree->aln->seq_type == SeqType::SEQ_CODON;
     
     if (in_model_name.empty()) {
         generate(params, in_tree->aln,

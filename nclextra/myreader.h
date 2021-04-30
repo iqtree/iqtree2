@@ -72,7 +72,7 @@ public:
      */
     virtual bool EnteringBlock(NxsString blockName)
     {
-        if (verbose_mode >= VB_MED) {
+        if (verbose_mode >= VerboseMode::VB_MED) {
             inf.hideProgress();
             cout << "Reading \"" << blockName << "\" block..." << endl;
             inf.showProgress();

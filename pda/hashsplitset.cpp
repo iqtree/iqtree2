@@ -58,7 +58,9 @@ void SplitIntMap::eraseSplit(Split *sp) {
 
 void SplitIntMap::insertSplit(Split *sp, int value) {
     ASSERT(!findSplit(sp));
-    if (verbose_mode >= VB_MAX) sp->report(cout);
+    if (verbose_mode >= VerboseMode::VB_MAX) {
+        sp->report(cout);
+    }
     (*this)[sp] = value;
 }
 

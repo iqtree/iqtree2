@@ -69,7 +69,7 @@ void SplitGraph::createBlocks() {
 void SplitGraph::init(Params &params)
 {
     mtrees = NULL;
-    if (params.intype == IN_NEWICK) {
+    if (params.intype == InputType::IN_NEWICK) {
         // read the input file, can contain more than 1 tree
         mtrees = new MTreeSet(params.user_file.c_str(), params.is_rooted, params.tree_burnin, params.tree_max_count);
         //mtree = new MTree(params.user_file, params.is_rooted);
@@ -84,8 +84,9 @@ void SplitGraph::init(Params &params)
         mtrees->convertSplits(*this, params.split_threshold, static_cast<int>(params.split_weight_summary), 
                               params.split_weight_threshold);
 
-        if (verbose_mode >= VB_DEBUG)
+        if (verbose_mode >= VerboseMode::VB_DEBUG) {
             saveFileStarDot(cout);
+        }
     } else {
         createBlocks();
 //        if (params.is_rooted)
@@ -110,10 +111,11 @@ void SplitGraph::init(Params &params)
                 static_cast<int>(params.split_weight_summary), params.split_weight_threshold, params.tree_weight_file);
         }
 
-    }
-    
-    if (verbose_mode >= VB_DEBUG)
+    }    
+    if (verbose_mode >= VerboseMode::VB_DEBUG) {
         taxa->Report(cout);
+    }
+
     //splits->Report(cout);
     //reportConflict(cout);
     if (params.pdtaxa_file != NULL) {
@@ -121,7 +123,7 @@ void SplitGraph::init(Params &params)
             outError("Taxa sets were already specified in the input file");
         cout << "Reading taxa sets in file " << params.pdtaxa_file << "..." << endl;
     
-        bool nexus_formated = (detectInputFile(params.pdtaxa_file) == IN_NEXUS);
+        bool nexus_formated = (detectInputFile(params.pdtaxa_file) == InputType::IN_NEXUS);
         if (nexus_formated) {
             MyReader nexus(params.pdtaxa_file);
             nexus.Add(sets);
@@ -141,10 +143,9 @@ void SplitGraph::init(Params &params)
         cout << "Reading sets relation file " << params.areas_boundary_file << "..." << endl;
         readAreasBoundary(params.areas_boundary_file, sets, areas_boundary);
     }
-
-    if (verbose_mode >= VB_DEBUG && sets->getNSets() > 0)
+    if (verbose_mode >= VerboseMode::VB_DEBUG && sets->getNSets() > 0) {
         sets->Report(cout);
-
+    }
     if (sets->getNSets() > 0 && taxa->GetNumTaxonLabels() == 0) {
         AddTaxaFromSets();
     }
@@ -156,7 +157,6 @@ void SplitGraph::init(Params &params)
     }
     cout << getNTaxa()-params.is_rooted <<
         " taxa and " << getNSplits()-params.is_rooted << " splits." << endl;
-
 }
 
 
@@ -626,10 +626,12 @@ void SplitGraph::saveFile(const char* out_file, InputType file_format, bool omit
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
         out.open(out_file);
-        if (file_format == IN_NEXUS) 
+        if (file_format == InputType::IN_NEXUS) {
             saveFileNexus(out, omit_trivial);
-        else
+        }
+        else {
             saveFileStarDot(out, omit_trivial);
+        }
         out.close();
     } catch (ios::failure) {
         outError(ERR_WRITE_OUTPUT, out_file);

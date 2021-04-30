@@ -12,28 +12,28 @@
 //This function came from main/phylotesting.cpp
 std::string getSeqTypeName(SeqType seq_type) {
     switch (seq_type) {
-        case SEQ_BINARY:     return "binary";
-        case SEQ_CODON:      return "codon";
-        case SEQ_DNA:        return "DNA";
-        case SEQ_MORPH:      return "morphological";
-        case SEQ_MULTISTATE: return "MultiState";
-        case SEQ_POMO:       return "PoMo";
-        case SEQ_PROTEIN:    return "protein";
-        case SEQ_UNKNOWN:    return "unknown";
+        case SeqType::SEQ_BINARY:     return "binary";
+        case SeqType::SEQ_CODON:      return "codon";
+        case SeqType::SEQ_DNA:        return "DNA";
+        case SeqType::SEQ_MORPH:      return "morphological";
+        case SeqType::SEQ_MULTISTATE: return "MultiState";
+        case SeqType::SEQ_POMO:       return "PoMo";
+        case SeqType::SEQ_PROTEIN:    return "protein";
+        case SeqType::SEQ_UNKNOWN:    return "unknown";
         default:             return "unknown";
     }
 }
 
 std::string getSeqTypeShortName(SeqType seq_type, bool extended) {
     switch (seq_type) {
-        case SEQ_BINARY:     return "BIN";   break;
-        case SEQ_CODON:      return "CODON"; break;
-        case SEQ_DNA:        return "DNA";   break;
-        case SEQ_MORPH:      return "MORPH"; break;
-        case SEQ_MULTISTATE: return extended ? "MULTI" : ""; break;
-        case SEQ_POMO:       return extended ? "POMO" : "";  break;
-        case SEQ_PROTEIN:    return "AA";    break;
-        case SEQ_UNKNOWN:    return extended ? "???" : "";   break;
+        case SeqType::SEQ_BINARY:     return "BIN";   break;
+        case SeqType::SEQ_CODON:      return "CODON"; break;
+        case SeqType::SEQ_DNA:        return "DNA";   break;
+        case SeqType::SEQ_MORPH:      return "MORPH"; break;
+        case SeqType::SEQ_MULTISTATE: return extended ? "MULTI" : ""; break;
+        case SeqType::SEQ_POMO:       return extended ? "POMO" : "";  break;
+        case SeqType::SEQ_PROTEIN:    return "AA";    break;
+        case SeqType::SEQ_UNKNOWN:    return extended ? "???" : "";   break;
         default:             break;
     }
     return "";
@@ -42,38 +42,38 @@ std::string getSeqTypeShortName(SeqType seq_type, bool extended) {
 //This function came from alignment/alignment.cpp
 //(where it was Alignment::getSeqType)
 SeqType getSeqType(const char *sequence_type) {
-    SeqType user_seq_type = SEQ_UNKNOWN;
+    SeqType user_seq_type = SeqType::SEQ_UNKNOWN;
     if (strcmp(sequence_type, "BIN") == 0) {
-        user_seq_type = SEQ_BINARY;
+        user_seq_type = SeqType::SEQ_BINARY;
     } else if (strcmp(sequence_type, "NT") == 0 ||
                strcmp(sequence_type, "DNA") == 0) {
-        user_seq_type = SEQ_DNA;
+        user_seq_type = SeqType::SEQ_DNA;
     } else if (strcmp(sequence_type, "AA") == 0 ||
                strcmp(sequence_type, "PROT") == 0) {
-        user_seq_type = SEQ_PROTEIN;
+        user_seq_type = SeqType::SEQ_PROTEIN;
     } else if (strncmp(sequence_type, "NT2AA", 5) == 0) {
-        user_seq_type = SEQ_PROTEIN;
+        user_seq_type = SeqType::SEQ_PROTEIN;
     } else if (strcmp(sequence_type, "NUM") == 0 ||
                strcmp(sequence_type, "MORPH") == 0) {
-        user_seq_type = SEQ_MORPH;
+        user_seq_type = SeqType::SEQ_MORPH;
     } else if (strcmp(sequence_type, "TINA") == 0 ||
                strcmp(sequence_type, "MULTI") == 0) {
-        user_seq_type = SEQ_MULTISTATE;
+        user_seq_type = SeqType::SEQ_MULTISTATE;
     } else if (strncmp(sequence_type, "CODON", 5) == 0) {
-        user_seq_type = SEQ_CODON;
+        user_seq_type = SeqType::SEQ_CODON;
     }
     return user_seq_type;
 }
 
 int getNumStatesForSeqType(SeqType type, int num_states) {
     switch (type) {
-        case SEQ_BINARY:     return 2;
-        case SEQ_CODON:      return num_states;
-        case SEQ_DNA:        return 4;
-        case SEQ_MORPH:      return num_states;
-        case SEQ_MULTISTATE: return num_states;
-        case SEQ_PROTEIN:    return 20;
-        case SEQ_UNKNOWN:    return num_states;
+        case SeqType::SEQ_BINARY:     return 2;
+        case SeqType::SEQ_CODON:      return num_states;
+        case SeqType::SEQ_DNA:        return 4;
+        case SeqType::SEQ_MORPH:      return num_states;
+        case SeqType::SEQ_MULTISTATE: return num_states;
+        case SeqType::SEQ_PROTEIN:    return 20;
+        case SeqType::SEQ_UNKNOWN:    return num_states;
         default:
             {
                 std::stringstream complaint;
@@ -93,31 +93,32 @@ int getNumStatesForSeqType(SeqType type, int num_states) {
  * unable to find a good +F... specifier
  */
 StateFreqType parseStateFreqFromPlusF(std::string model_name) {
-//    StateFreqType freq_type = FREQ_EMPIRICAL;
+//    StateFreqType freq_type = StateFreqType::FREQ_EMPIRICAL;
 
-    // BQM 2017-05-02: change back to FREQ_UNKNOWN to resemble old behavior
-    StateFreqType freq_type = FREQ_UNKNOWN;
+    // BQM 2017-05-02: change back to StateFreqType::FREQ_UNKNOWN 
+    // to resemble old behavior
+    StateFreqType freq_type = StateFreqType::FREQ_UNKNOWN;
     size_t plusFPos;
     if (model_name.find("+F1X4") != std::string::npos)
-        freq_type = FREQ_CODON_1x4;
+        freq_type = StateFreqType::FREQ_CODON_1x4;
     else if (model_name.find("+F3X4C") != std::string::npos)
-        freq_type = FREQ_CODON_3x4C;
+        freq_type = StateFreqType::FREQ_CODON_3x4C;
     else if (model_name.find("+F3X4") != std::string::npos)
-        freq_type = FREQ_CODON_3x4;
+        freq_type = StateFreqType::FREQ_CODON_3x4;
     else if (model_name.find("+FQ") != std::string::npos)
-        freq_type = FREQ_EQUAL;
+        freq_type = StateFreqType::FREQ_EQUAL;
     else if (model_name.find("+FO") != std::string::npos)
-        freq_type = FREQ_ESTIMATE;
+        freq_type = StateFreqType::FREQ_ESTIMATE;
     else if (model_name.find("+FU") != std::string::npos)
-        freq_type = FREQ_USER_DEFINED;
+        freq_type = StateFreqType::FREQ_USER_DEFINED;
     else if (model_name.find("+FRY") != std::string::npos)
-        freq_type = FREQ_DNA_RY;
+        freq_type = StateFreqType::FREQ_DNA_RY;
     else if (model_name.find("+FWS") != std::string::npos)
-        freq_type = FREQ_DNA_WS;
+        freq_type = StateFreqType::FREQ_DNA_WS;
     else if (model_name.find("+FMK") != std::string::npos)
-        freq_type = FREQ_DNA_MK;
+        freq_type = StateFreqType::FREQ_DNA_MK;
     else if ((plusFPos = model_name.find("+F")) != std::string::npos) {
-        freq_type = FREQ_EMPIRICAL;
+        freq_type = StateFreqType::FREQ_EMPIRICAL;
         // Now look for +F#### where #s are digits
         if (model_name.length() > plusFPos+2 && isdigit(model_name[plusFPos+2]))
         try {
@@ -134,25 +135,25 @@ StateFreqType parseStateFreqFromPlusF(std::string model_name) {
 bool parseStateFrequencyTypeName(const std::string& name,
                                  StateFreqType& freq) {
     if (name=="q" || name=="EQ") {
-        freq = FREQ_EQUAL;
+        freq = StateFreqType::FREQ_EQUAL;
     }
     else if (name=="c" || name=="EM") {
-        freq = FREQ_EMPIRICAL;
+        freq = StateFreqType::FREQ_EMPIRICAL;
     }
     else if (name=="o" || name=="ES") {
-        freq = FREQ_ESTIMATE;
+        freq = StateFreqType::FREQ_ESTIMATE;
     }
     else if (name=="u" || name=="UD") {
-        freq = FREQ_USER_DEFINED;
+        freq = StateFreqType::FREQ_USER_DEFINED;
     }
     else if (name=="ry" || name=="RY") {
-        freq = FREQ_DNA_RY;
+        freq = StateFreqType::FREQ_DNA_RY;
     }
     else if (name=="ws" || name=="WS") {
-        freq = FREQ_DNA_WS;
+        freq = StateFreqType::FREQ_DNA_WS;
     }
     else if (name=="mk" || name=="MK") {
-        freq = FREQ_DNA_MK;
+        freq = StateFreqType::FREQ_DNA_MK;
     }
     else {
         return false;
@@ -197,38 +198,38 @@ StateFreqType parseStateFreqDigits(std::string digits) {
         // e.g. if digits was "5288", digit_order will end up as {-1,-1,2,-1,-1,1,-1,-1,3,-1}
     }
     if (!good) throw "Use -f <c | o | u | q | ry | ws | mk | <digit><digit><digit><digit>>";
-    StateFreqType freq_type = FREQ_UNKNOWN;
+    StateFreqType freq_type = StateFreqType::FREQ_UNKNOWN;
     // Now just exhaustively list all canonical digit possibilities
     if (digits.compare("1111")==0) {
-        freq_type = FREQ_EQUAL;
+        freq_type = StateFreqType::FREQ_EQUAL;
     } else if (digits.compare("1112")==0) {
-        freq_type = FREQ_DNA_1112;
+        freq_type = StateFreqType::FREQ_DNA_1112;
     } else if (digits.compare("1121")==0) {
-        freq_type = FREQ_DNA_1121;
+        freq_type = StateFreqType::FREQ_DNA_1121;
     } else if (digits.compare("1211")==0) {
-        freq_type = FREQ_DNA_1211;
+        freq_type = StateFreqType::FREQ_DNA_1211;
     } else if (digits.compare("1222")==0) {
-        freq_type = FREQ_DNA_2111;
+        freq_type = StateFreqType::FREQ_DNA_2111;
     } else if (digits.compare("1122")==0) {
-        freq_type = FREQ_DNA_1122;
+        freq_type = StateFreqType::FREQ_DNA_1122;
     } else if (digits.compare("1212")==0) {
-        freq_type = FREQ_DNA_1212;
+        freq_type = StateFreqType::FREQ_DNA_1212;
     } else if (digits.compare("1221")==0) {
-        freq_type = FREQ_DNA_1221;
+        freq_type = StateFreqType::FREQ_DNA_1221;
     } else if (digits.compare("1123")==0) {
-        freq_type = FREQ_DNA_1123;
+        freq_type = StateFreqType::FREQ_DNA_1123;
     } else if (digits.compare("1213")==0) {
-        freq_type = FREQ_DNA_1213;
+        freq_type = StateFreqType::FREQ_DNA_1213;
     } else if (digits.compare("1231")==0) {
-        freq_type = FREQ_DNA_1231;
+        freq_type = StateFreqType::FREQ_DNA_1231;
     } else if (digits.compare("1223")==0) {
-        freq_type = FREQ_DNA_2113;
+        freq_type = StateFreqType::FREQ_DNA_2113;
     } else if (digits.compare("1232")==0) {
-        freq_type = FREQ_DNA_2131;
+        freq_type = StateFreqType::FREQ_DNA_2131;
     } else if (digits.compare("1233")==0) {
-        freq_type = FREQ_DNA_2311;
+        freq_type = StateFreqType::FREQ_DNA_2311;
     } else if (digits.compare("1234")==0) {
-        freq_type = FREQ_ESTIMATE;
+        freq_type = StateFreqType::FREQ_ESTIMATE;
     } else
         throw ("Unrecognized canonical digits - Can't happen"); // paranoia is good.
     return freq_type;
@@ -247,11 +248,11 @@ bool freqsFromParams(double *freq_vec, double *params, StateFreqType freq_type) 
 
     double pA, pC, pG, pT; // base freqs
     switch (freq_type) {
-    case FREQ_EQUAL:
-    case FREQ_USER_DEFINED:
-    case FREQ_EMPIRICAL:
+    case StateFreqType::FREQ_EQUAL:
+    case StateFreqType::FREQ_USER_DEFINED:
+    case StateFreqType::FREQ_EMPIRICAL:
         return false;
-    case FREQ_ESTIMATE:
+    case StateFreqType::FREQ_ESTIMATE:
     // Minh: in code review, please pay extra attention to ensure my treadment of FREQ_ESTIMATE is equivalent to old treatment.
     // BQM: DONE!
         pA=params[0];
@@ -260,89 +261,89 @@ bool freqsFromParams(double *freq_vec, double *params, StateFreqType freq_type) 
         //pT=1-pA-pC-pG;
         pT=freq_vec[3];
         break;
-    case FREQ_DNA_RY:
+    case StateFreqType::FREQ_DNA_RY:
         pA = params[0]/2;
         pG = 0.5-pA;
         pC = params[1]/2;
         pT = 0.5-pC;
         break;
-    case FREQ_DNA_WS:
+    case StateFreqType::FREQ_DNA_WS:
         pA = params[0]/2;
         pT = 0.5-pA;
         pC = params[1]/2;
         pG = 0.5-pC;
         break;
-    case FREQ_DNA_MK:
+    case StateFreqType::FREQ_DNA_MK:
         pA = params[0]/2;
         pC = 0.5-pA;
         pG = params[1]/2;
         pT = 0.5-pG;
         break;
-    case FREQ_DNA_1112:
+    case StateFreqType::FREQ_DNA_1112:
         pA = pC = pG = params[0]/3;
         pT = 1-3*pA;
         break;
-    case FREQ_DNA_1121:
+    case StateFreqType::FREQ_DNA_1121:
         pA = pC = pT = params[0]/3;
         pG = 1-3*pA;
         break;
-    case FREQ_DNA_1211:
+    case StateFreqType::FREQ_DNA_1211:
         pA = pG = pT = params[0]/3;
         pC = 1-3*pA;
         break;
-    case FREQ_DNA_2111:
+    case StateFreqType::FREQ_DNA_2111:
         pC = pG = pT = params[0]/3;
         pA = 1-3*pC;
         break;
-    case FREQ_DNA_1122:
+    case StateFreqType::FREQ_DNA_1122:
         pA = params[0]/2;
         pC = pA;
         pG = 0.5-pA;
         pT = pG;
         break;
-    case FREQ_DNA_1212:
+    case StateFreqType::FREQ_DNA_1212:
         pA = params[0]/2;
         pG = pA;
         pC = 0.5-pA;
         pT = pC;
         break;
-    case FREQ_DNA_1221:
+    case StateFreqType::FREQ_DNA_1221:
         pA = params[0]/2;
         pT = pA;
         pC = 0.5-pA;
         pG = pC;
         break;
-    case FREQ_DNA_1123:
+    case StateFreqType::FREQ_DNA_1123:
         pA = params[0]/2;
         pC = pA;
         pG = params[1]*(1-2*pA);
         pT = 1-pG-2*pA;
         break;
-    case FREQ_DNA_1213:
+    case StateFreqType::FREQ_DNA_1213:
         pA = params[0]/2;
         pG = pA;
         pC = params[1]*(1-2*pA);
         pT = 1-pC-2*pA;
         break;
-    case FREQ_DNA_1231:
+    case StateFreqType::FREQ_DNA_1231:
         pA = params[0]/2;
         pT = pA;
         pC = params[1]*(1-2*pA);
         pG = 1-pC-2*pA;
         break;
-    case FREQ_DNA_2113:
+    case StateFreqType::FREQ_DNA_2113:
         pC = params[0]/2;
         pG = pC;
         pA = params[1]*(1-2*pC);
         pT = 1-pA-2*pC;
         break;
-    case FREQ_DNA_2131:
+    case StateFreqType::FREQ_DNA_2131:
         pC = params[0]/2;
         pT = pC;
         pA = params[1]*(1-2*pC);
         pG = 1-pA-2*pC;
         break;
-    case FREQ_DNA_2311:
+    case StateFreqType::FREQ_DNA_2311:
         pG = params[0]/2;
         pT = pG;
         pA = params[1]*(1-2*pG);
@@ -376,69 +377,69 @@ void paramsFromFreqs(double *params, double *freq_vec, StateFreqType freq_type) 
     double pG = freq_vec[2];
 //    double pT = freq_vec[3]; // pT is not used below
     switch (freq_type) {
-    case FREQ_EQUAL:
-    case FREQ_USER_DEFINED:
-    case FREQ_EMPIRICAL:
+    case StateFreqType::FREQ_EQUAL:
+    case StateFreqType::FREQ_USER_DEFINED:
+    case StateFreqType::FREQ_EMPIRICAL:
         break; // freq_vec never changes
-    case FREQ_ESTIMATE:
+    case StateFreqType::FREQ_ESTIMATE:
         params[0]=pA;
         params[1]=pC;
         params[2]=pG;
         break;
-    case FREQ_DNA_RY:
+    case StateFreqType::FREQ_DNA_RY:
         params[0]=2*pA;
         params[1]=2*pC;
         break;
-    case FREQ_DNA_WS:
+    case StateFreqType::FREQ_DNA_WS:
         params[0]=2*pA;
         params[1]=2*pC;
         break;
-    case FREQ_DNA_MK:
+    case StateFreqType::FREQ_DNA_MK:
         params[0]=2*pA;
         params[1]=2*pG;
         break;
-    case FREQ_DNA_1112:
+    case StateFreqType::FREQ_DNA_1112:
         params[0]=3*pA;
         break;
-    case FREQ_DNA_1121:
+    case StateFreqType::FREQ_DNA_1121:
         params[0]=3*pA;
         break;
-    case FREQ_DNA_1211:
+    case StateFreqType::FREQ_DNA_1211:
         params[0]=3*pA;
         break;
-    case FREQ_DNA_2111:
+    case StateFreqType::FREQ_DNA_2111:
         params[0]=3*pC;
         break;
-    case FREQ_DNA_1122:
+    case StateFreqType::FREQ_DNA_1122:
         params[0]=2*pA;
         break;
-    case FREQ_DNA_1212:
+    case StateFreqType::FREQ_DNA_1212:
         params[0]=2*pA;
         break;
-    case FREQ_DNA_1221:
+    case StateFreqType::FREQ_DNA_1221:
         params[0]=2*pA;
         break;
-    case FREQ_DNA_1123:
+    case StateFreqType::FREQ_DNA_1123:
         params[0]=2*pA;
         params[1]=pG/(1-params[0]);
         break;
-    case FREQ_DNA_1213:
+    case StateFreqType::FREQ_DNA_1213:
         params[0]=2*pA;
         params[1]=pC/(1-params[0]);
         break;
-    case FREQ_DNA_1231:
+    case StateFreqType::FREQ_DNA_1231:
         params[0]=2*pA;
         params[1]=pC/(1-params[0]);
         break;
-    case FREQ_DNA_2113:
+    case StateFreqType::FREQ_DNA_2113:
         params[0]=2*pC;
         params[1]=pA/(1-params[0]);
         break;
-    case FREQ_DNA_2131:
+    case StateFreqType::FREQ_DNA_2131:
         params[0]=2*pC;
         params[1]=pA/(1-params[0]);
         break;
-    case FREQ_DNA_2311:
+    case StateFreqType::FREQ_DNA_2311:
         params[0]=2*pG;
         params[1]=pA/(1-params[0]);
         break;
@@ -458,15 +459,15 @@ void forceFreqsConform(double *base_freq, StateFreqType freq_type) {
     double pT = base_freq[3];
     double scale;
     switch (freq_type) {
-    case FREQ_EQUAL:
+    case StateFreqType::FREQ_EQUAL:
         // this was already handled, thus not necessary to check here
 //        base_freq[0] = base_freq[1] = base_freq[2] = base_freq[3] = 0.25;
 //        break;
-    case FREQ_USER_DEFINED:
-    case FREQ_EMPIRICAL:
-    case FREQ_ESTIMATE:
+    case StateFreqType::FREQ_USER_DEFINED:
+    case StateFreqType::FREQ_EMPIRICAL:
+    case StateFreqType::FREQ_ESTIMATE:
         break; // any base_freq is legal
-    case FREQ_DNA_RY:
+    case StateFreqType::FREQ_DNA_RY:
         scale = 0.5/(pA+pG);
         base_freq[0] = pA*scale;
         base_freq[2] = pG*scale;
@@ -474,7 +475,7 @@ void forceFreqsConform(double *base_freq, StateFreqType freq_type) {
         base_freq[1] = pC*scale;
         base_freq[3] = pT*scale;
         break;
-    case FREQ_DNA_WS:
+    case StateFreqType::FREQ_DNA_WS:
         scale = 0.5/(pA+pT);
         base_freq[0] = pA*scale;
         base_freq[3] = pT*scale;
@@ -482,7 +483,7 @@ void forceFreqsConform(double *base_freq, StateFreqType freq_type) {
         base_freq[1] = pC*scale;
         base_freq[2] = pG*scale;
         break;
-    case FREQ_DNA_MK:
+    case StateFreqType::FREQ_DNA_MK:
         scale = 0.5/(pA+pC);
         base_freq[0] = pA*scale;
         base_freq[1] = pC*scale;
@@ -490,46 +491,46 @@ void forceFreqsConform(double *base_freq, StateFreqType freq_type) {
         base_freq[2] = pG*scale;
         base_freq[3] = pT*scale;
         break;
-    case FREQ_DNA_1112:
+    case StateFreqType::FREQ_DNA_1112:
         base_freq[0]=base_freq[1]=base_freq[2]=(pA+pC+pG)/3;
         break;
-    case FREQ_DNA_1121:
+    case StateFreqType::FREQ_DNA_1121:
         base_freq[0]=base_freq[1]=base_freq[3]=(pA+pC+pT)/3;
         break;
-    case FREQ_DNA_1211:
+    case StateFreqType::FREQ_DNA_1211:
         base_freq[0]=base_freq[2]=base_freq[3]=(pA+pG+pT)/3;
         break;
-    case FREQ_DNA_2111:
+    case StateFreqType::FREQ_DNA_2111:
         base_freq[1]=base_freq[2]=base_freq[3]=(pC+pG+pT)/3;
         break;
-    case FREQ_DNA_1122:
+    case StateFreqType::FREQ_DNA_1122:
         base_freq[0]=base_freq[1]=(pA+pC)/2;
         base_freq[2]=base_freq[3]=(pG+pT)/2;
         break;
-    case FREQ_DNA_1212:
+    case StateFreqType::FREQ_DNA_1212:
         base_freq[0]=base_freq[2]=(pA+pG)/2;
         base_freq[1]=base_freq[3]=(pC+pT)/2;
         break;
-    case FREQ_DNA_1221:
+    case StateFreqType::FREQ_DNA_1221:
         base_freq[0]=base_freq[3]=(pA+pT)/2;
         base_freq[1]=base_freq[2]=(pC+pG)/2;
         break;
-    case FREQ_DNA_1123:
+    case StateFreqType::FREQ_DNA_1123:
         base_freq[0]=base_freq[1]=(pA+pC)/2;
         break;
-    case FREQ_DNA_1213:
+    case StateFreqType::FREQ_DNA_1213:
         base_freq[0]=base_freq[2]=(pA+pG)/2;
         break;
-    case FREQ_DNA_1231:
+    case StateFreqType::FREQ_DNA_1231:
         base_freq[0]=base_freq[3]=(pA+pT)/2;
         break;
-    case FREQ_DNA_2113:
+    case StateFreqType::FREQ_DNA_2113:
         base_freq[1]=base_freq[2]=(pC+pG)/2;
         break;
-    case FREQ_DNA_2131:
+    case StateFreqType::FREQ_DNA_2131:
         base_freq[1]=base_freq[3]=(pC+pT)/2;
         break;
-    case FREQ_DNA_2311:
+    case StateFreqType::FREQ_DNA_2311:
         base_freq[2]=base_freq[3]=(pG+pT)/2;
         break;
     default:
@@ -546,23 +547,23 @@ void forceFreqsConform(double *base_freq, StateFreqType freq_type) {
 
 int nFreqParams(StateFreqType freq_type) {
     switch (freq_type) {
-    case FREQ_DNA_1112:
-    case FREQ_DNA_1121:
-    case FREQ_DNA_1211:
-    case FREQ_DNA_2111:
-    case FREQ_DNA_1122:
-    case FREQ_DNA_1212:
-    case FREQ_DNA_1221:
+    case StateFreqType::FREQ_DNA_1112:
+    case StateFreqType::FREQ_DNA_1121:
+    case StateFreqType::FREQ_DNA_1211:
+    case StateFreqType::FREQ_DNA_2111:
+    case StateFreqType::FREQ_DNA_1122:
+    case StateFreqType::FREQ_DNA_1212:
+    case StateFreqType::FREQ_DNA_1221:
         return(1);
-    case FREQ_DNA_RY:
-    case FREQ_DNA_WS:
-    case FREQ_DNA_MK:
-    case FREQ_DNA_1123:
-    case FREQ_DNA_1213:
-    case FREQ_DNA_1231:
-    case FREQ_DNA_2113:
-    case FREQ_DNA_2131:
-    case FREQ_DNA_2311:
+    case StateFreqType::FREQ_DNA_RY:
+    case StateFreqType::FREQ_DNA_WS:
+    case StateFreqType::FREQ_DNA_MK:
+    case StateFreqType::FREQ_DNA_1123:
+    case StateFreqType::FREQ_DNA_1213:
+    case StateFreqType::FREQ_DNA_1231:
+    case StateFreqType::FREQ_DNA_2113:
+    case StateFreqType::FREQ_DNA_2131:
+    case StateFreqType::FREQ_DNA_2311:
         return(2);
     default:
         return 0; // BQM: don't care about other cases
@@ -579,43 +580,43 @@ int nFreqParams(StateFreqType freq_type) {
                            double min_freq,
                            StateFreqType freq_type) {
     // Sanity check: if min_freq==0, lower_bound=0 and upper_bound=1
-    // (except FREQ_ESTIMATE, which follows legacy code way of doing things.)
+    // (except StateFreqType::FREQ_ESTIMATE, which follows legacy code way of doing things.)
     switch (freq_type) {
-    case FREQ_EQUAL:
-    case FREQ_USER_DEFINED:
-    case FREQ_EMPIRICAL:
+    case StateFreqType::FREQ_EQUAL:
+    case StateFreqType::FREQ_USER_DEFINED:
+    case StateFreqType::FREQ_EMPIRICAL:
         break; // There are no frequency determining parameters
-    case FREQ_DNA_1112:
-    case FREQ_DNA_1121:
-    case FREQ_DNA_1211:
-    case FREQ_DNA_2111:
+    case StateFreqType::FREQ_DNA_1112:
+    case StateFreqType::FREQ_DNA_1121:
+    case StateFreqType::FREQ_DNA_1211:
+    case StateFreqType::FREQ_DNA_2111:
         // one frequency determining parameter
         lower_bound[0] = 3*min_freq;
         upper_bound[0] = 1-min_freq;
         bound_check[0] = true;
         break;
-    case FREQ_DNA_1122:
-    case FREQ_DNA_1212:
-    case FREQ_DNA_1221:
+    case StateFreqType::FREQ_DNA_1122:
+    case StateFreqType::FREQ_DNA_1212:
+    case StateFreqType::FREQ_DNA_1221:
         // one frequency determining parameter
         lower_bound[0] = 2*min_freq;
         upper_bound[0] = 1-2*min_freq;
         bound_check[0] = true;
         break;
-    case FREQ_DNA_RY:
-    case FREQ_DNA_WS:
-    case FREQ_DNA_MK:
+    case StateFreqType::FREQ_DNA_RY:
+    case StateFreqType::FREQ_DNA_WS:
+    case StateFreqType::FREQ_DNA_MK:
         // two frequency determining parameters
         lower_bound[0] = lower_bound[1] = 2*min_freq;
         upper_bound[0] = upper_bound[1] = 1-2*min_freq;
         bound_check[0] = bound_check[1] = true;
     break;
-    case FREQ_DNA_1123:
-    case FREQ_DNA_1213:
-    case FREQ_DNA_1231:
-    case FREQ_DNA_2113:
-    case FREQ_DNA_2131:
-    case FREQ_DNA_2311:
+    case StateFreqType::FREQ_DNA_1123:
+    case StateFreqType::FREQ_DNA_1213:
+    case StateFreqType::FREQ_DNA_1231:
+    case StateFreqType::FREQ_DNA_2113:
+    case StateFreqType::FREQ_DNA_2131:
+    case StateFreqType::FREQ_DNA_2311:
         // two frequency determining parameters
         lower_bound[0] = 2*min_freq;
         upper_bound[0] = 1-2*min_freq;
@@ -628,7 +629,7 @@ int nFreqParams(StateFreqType freq_type) {
          * will give base freqs for '2' or '3' base below minimum. This is
          * the best that can be done without passing min_freq to freqsFromParams
          */
-    case FREQ_ESTIMATE:
+    case StateFreqType::FREQ_ESTIMATE:
         lower_bound[0] = lower_bound[1] = lower_bound[2] = min_freq;
         upper_bound[0] = upper_bound[1] = upper_bound[2] = 1;
         bound_check[0] = bound_check[1] = bound_check[2] = false;
@@ -648,40 +649,40 @@ int nFreqParams(StateFreqType freq_type) {
 string freqTypeString(StateFreqType freq_type,
                       SeqType seq_type, bool full_str) {
     switch(freq_type) {
-    case FREQ_UNKNOWN:    return("");
-    case FREQ_USER_DEFINED:
-        if (seq_type == SEQ_PROTEIN)
+    case StateFreqType::FREQ_UNKNOWN:    return("");
+    case StateFreqType::FREQ_USER_DEFINED:
+        if (seq_type == SeqType::SEQ_PROTEIN)
             return "";
         else
             return "+FU";
-    case FREQ_EQUAL:
-        if (seq_type == SEQ_DNA && !full_str)
+    case StateFreqType::FREQ_EQUAL:
+        if (seq_type == SeqType::SEQ_DNA && !full_str)
             return "";
         else
             return "+FQ";
-    case FREQ_EMPIRICAL:  return "+F";
-    case FREQ_ESTIMATE:
+    case StateFreqType::FREQ_EMPIRICAL:  return "+F";
+    case StateFreqType::FREQ_ESTIMATE:
         return "+FO";
-    case FREQ_CODON_1x4:  return("+F1X4");
-    case FREQ_CODON_3x4:  return("+F3X4");
-    case FREQ_CODON_3x4C: return("+F3X4C");
-    case FREQ_MIXTURE:  return(""); // no idea what to do here - MDW
-    case FREQ_DNA_RY:   return("+FRY");
-    case FREQ_DNA_WS:   return("+FWS");
-    case FREQ_DNA_MK:   return("+FMK");
-    case FREQ_DNA_1112: return("+F1112");
-    case FREQ_DNA_1121: return("+F1121");
-    case FREQ_DNA_1211: return("+F1211");
-    case FREQ_DNA_2111: return("+F2111");
-    case FREQ_DNA_1122: return("+F1122");
-    case FREQ_DNA_1212: return("+F1212");
-    case FREQ_DNA_1221: return("+F1221");
-    case FREQ_DNA_1123: return("+F1123");
-    case FREQ_DNA_1213: return("+F1213");
-    case FREQ_DNA_1231: return("+F1231");
-    case FREQ_DNA_2113: return("+F2113");
-    case FREQ_DNA_2131: return("+F2131");
-    case FREQ_DNA_2311: return("+F2311");
+    case StateFreqType::FREQ_CODON_1x4:  return("+F1X4");
+    case StateFreqType::FREQ_CODON_3x4:  return("+F3X4");
+    case StateFreqType::FREQ_CODON_3x4C: return("+F3X4C");
+    case StateFreqType::FREQ_MIXTURE:  return(""); // no idea what to do here - MDW
+    case StateFreqType::FREQ_DNA_RY:   return("+FRY");
+    case StateFreqType::FREQ_DNA_WS:   return("+FWS");
+    case StateFreqType::FREQ_DNA_MK:   return("+FMK");
+    case StateFreqType::FREQ_DNA_1112: return("+F1112");
+    case StateFreqType::FREQ_DNA_1121: return("+F1121");
+    case StateFreqType::FREQ_DNA_1211: return("+F1211");
+    case StateFreqType::FREQ_DNA_2111: return("+F2111");
+    case StateFreqType::FREQ_DNA_1122: return("+F1122");
+    case StateFreqType::FREQ_DNA_1212: return("+F1212");
+    case StateFreqType::FREQ_DNA_1221: return("+F1221");
+    case StateFreqType::FREQ_DNA_1123: return("+F1123");
+    case StateFreqType::FREQ_DNA_1213: return("+F1213");
+    case StateFreqType::FREQ_DNA_1231: return("+F1231");
+    case StateFreqType::FREQ_DNA_2113: return("+F2113");
+    case StateFreqType::FREQ_DNA_2131: return("+F2131");
+    case StateFreqType::FREQ_DNA_2311: return("+F2311");
     default: throw("Unrecognized freq_type in freqTypeString - can't happen");
     }
 }

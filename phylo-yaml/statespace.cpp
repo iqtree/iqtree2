@@ -410,7 +410,7 @@ void StateSpace::parseStateSpace(YAML::Node datatype) {
     }
     
     num_states = stateID;
-    if (verbose_mode >= VB_MED) {
+    if (verbose_mode >= VerboseMode::VB_MED) {
         cout << states.size() << " " << KEY_STATE << endl;
     }
 
@@ -468,8 +468,9 @@ void StateSpace::parseStateSpace(YAML::Node datatype) {
                 stateID++;
             }
         } // for Node
-        if (verbose_mode >= VB_MED)
+        if (verbose_mode >= VerboseMode::VB_MED) {
             cout << equate.size() << " ambiguous states" << endl;
+        }
     } // equate
 
     // parse translate
@@ -496,10 +497,10 @@ void StateSpace::parseStateSpace(YAML::Node datatype) {
 void StateSpace::initStateSpace(SeqType seqtype) {
     string name;
     switch (seqtype) {
-        case SEQ_POMO:
+        case SeqType::SEQ_POMO:
             outError("Unhandled POMO state space");
             break;
-        case SEQ_UNKNOWN:
+        case SeqType::SEQ_UNKNOWN:
             ASSERT(0);
             break;
         default:

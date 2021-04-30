@@ -375,20 +375,21 @@ double Optimization::minimizeOneDimen(double xmin, double xguess, double xmax, d
 	return optx; /* return optimal x */
 }
 
-double Optimization::minimizeOneDimenSafeMode(double xmin, double xguess, double xmax, double tolerance, double *f)
+double Optimization::minimizeOneDimenSafeMode(double xmin, double xguess, 
+	                                          double xmax, double tolerance, double *f)
 {
 	double ferror;
 	double optx = minimizeOneDimen(xmin, xguess, xmax, tolerance, f, &ferror);
 	double fnew;
 	// check value at the boundary
 	if ((optx < xmax) && (fnew = computeFunction(xmax)) <= *f+tolerance) {
-		//if (verbose_mode >= VB_MAX)
+		//if (verbose_mode >= VerboseMode::VB_MAX)
 			//cout << "Note from Newton safe mode: " << optx << " (" << f << ") -> " << xmax << " ("<< fnew << ")" << endl;
 		optx = xmax;
 		*f = fnew;
 	}
 	if ((optx > xmin) && (fnew = computeFunction(xmin)) <= *f+tolerance) {
-		//if (verbose_mode >= VB_MAX)
+		//if (verbose_mode >= VerboseMode::VB_MAX)
 			//cout << "Note from Newton safe mode: " << optx << " -> " << xmin << endl;
 		optx = xmin;
 		*f = fnew;
@@ -402,19 +403,20 @@ double Optimization::minimizeOneDimenSafeMode(double xmin, double xguess, double
 *****************************************************/
 
 
-double Optimization::minimizeNewtonSafeMode(double xmin, double xguess, double xmax, double tolerance, double &f)
+double Optimization::minimizeNewtonSafeMode(double xmin, double xguess, double xmax, 
+	                                        double tolerance, double &f)
 {
 	double optx = minimizeNewton(xmin, xguess, xmax, tolerance, f);
 	double fnew;
 	// check value at the boundary
 	if ((optx < xmax) && (fnew = computeFunction(xmax)) <= f+tolerance) {
-		//if (verbose_mode >= VB_MAX)
+		//if (verbose_mode >= VerboseMode::VB_MAX)
 			//cout << "Note from Newton safe mode: " << optx << " (" << f << ") -> " << xmax << " ("<< fnew << ")" << endl;
 		optx = xmax;
 		f = fnew;
 	}
 	if ((optx > xmin) && (fnew = computeFunction(xmin)) <= f+tolerance) {
-		//if (verbose_mode >= VB_MAX)
+		//if (verbose_mode >= VerboseMode::VB_MAX)
 			//cout << "Note from Newton safe mode: " << optx << " -> " << xmin << endl;
 		optx = xmin;
 		f = fnew;
@@ -422,7 +424,8 @@ double Optimization::minimizeNewtonSafeMode(double xmin, double xguess, double x
 	return optx;
 }
 
-double Optimization::minimizeNewton(double x1, double xguess, double x2, double xacc, double &d2l, int maxNRStep)
+double Optimization::minimizeNewton(double x1, double xguess, double x2, 
+	                                double xacc, double &d2l, int maxNRStep)
 {
 	int j;
 	double df,dx,dxold,f;
@@ -471,7 +474,8 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 		}
 		if (fabs(dx) < xacc || (j == maxNRStep)) {
 //			if (fm > finit) {
-//				// happen in rare cases that it is worse than starting point: revert init value
+//				//happens in rare cases that it is 
+//			    //worse than starting point: revert init value
 //				fm = computeFunction(xinit);
 //				return xinit;
 //			}
@@ -485,7 +489,8 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 		if (df > 0.0 && fabs(f) < xacc) {
 			d2l = df;
 //			if (fm > finit) {
-//				// happen in rare cases that it is worse than starting point: revert init value
+//				//happens in rare cases that it is 
+//			    //worse than starting point: revert init value
 //				fm = computeFunction(xinit);
 //				return xinit;
 //			}
@@ -501,7 +506,8 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 	return 0.0;
 }
 
-double Optimization::minimizeNewton(double x1, double xguess, double x2, double xacc, int maxNRStep)
+double Optimization::minimizeNewton(double x1, double xguess, double x2, 
+	                                double xacc, int maxNRStep)
 {
 	double var;
 	double optx = minimizeNewton(x1, xguess, x2, xacc, var, maxNRStep);
@@ -515,7 +521,8 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 
 int matinv (double x[], int n, int m, double space[]);
 
-double Optimization::minimizeNewtonMulti(double *x1, double *xguess, double *x2, double xacc, int N, int maxNRStep)
+double Optimization::minimizeNewtonMulti(double *x1, double *xguess, double *x2, 
+	                                     double xacc, int N, int maxNRStep)
 {
 	int i, step;
     int N_2 = N*N;
@@ -1158,7 +1165,7 @@ double Optimization::L_BFGS_B(int n, double* x, double* l, double* u, double pgt
 	// Default is zero, when the check is suppressed
 
 	int trace = 0;      // non-negative integer.
-	if (verbose_mode >= VB_MAX) {
+	if (verbose_mode >= VerboseMode::VB_MAX) {
 		trace = 1;
 	}
 	// If positive, tracing information on the progress of the optimization is produced.

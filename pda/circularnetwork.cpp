@@ -470,7 +470,7 @@ void CircularNetwork::computePDBudgetInfo(Params &params, mmatrix(double) &table
 
 	// allocate memory and initialize table
 	table.resize(ntaxa);
-	if (verbose_mode >= VB_DEBUG) {
+	if (verbose_mode >= VerboseMode::VB_DEBUG) {
 		id.resize(ntaxa);
 		for (v = 0; v <= root; v++) {
 			for (b = 0; b < table[v].size(); b++)
@@ -486,7 +486,7 @@ void CircularNetwork::computePDBudgetInfo(Params &params, mmatrix(double) &table
 		// init table[v][b]
 		for (b = 0; b <= total_b; b++)
 			table[v][b] = 0;
-		if (verbose_mode >= VB_DEBUG) {
+		if (verbose_mode >= VerboseMode::VB_DEBUG) {
 			id[v].resize(total_b + 1, 0);
 			for (b = 0; b <= total_b; b++) 
 				id[v][b] = 0;
@@ -507,13 +507,14 @@ void CircularNetwork::computePDBudgetInfo(Params &params, mmatrix(double) &table
 				double sum = dist[v][s] + table[s][sub_b];
 				if (table[v][b] < sum) {
 					table[v][b] = sum;
-					if (verbose_mode >= VB_DEBUG)
-						id[v][b] = s+1;
+					if (verbose_mode >= VerboseMode::VB_DEBUG) {
+						id[v][b] = s + 1;
+					}
 				}
 			}
 	}
 
-	if (verbose_mode >= VB_DEBUG)	{
+	if (verbose_mode >= VerboseMode::VB_DEBUG)	{
 		reportMyMat(cout, table);
 		reportMyMat(cout, id);
 	}
@@ -570,7 +571,7 @@ void CircularNetwork::findCircularRootedPDBudget(Params &params, vector<SplitSet
 	int set_count = 0;
 	for (b = params.min_budget; b <= params.budget; b++) {
 		constructPDBudget(b, params.find_all, table, dist, taxa_set[b-params.min_budget], taxa_order, max_b, 0);
-		if (verbose_mode >= VB_MAX) {
+		if (verbose_mode >= VerboseMode::VB_MAX) {
 			cout << "budget " << b << ": " << taxa_set.size()-set_count << " set(s)" << endl;
 			set_count = static_cast<int>(taxa_set.size());
 		}
@@ -587,7 +588,7 @@ void CircularNetwork::findCircularPDBudget(Params &params, vector<SplitSet> &tax
 	// calculate the distance matrix
 	calcDistance(dist, taxa_order);
 
-	if (verbose_mode >= VB_DEBUG)	{
+	if (verbose_mode >= VerboseMode::VB_DEBUG)	{
 		reportMyMat(cout, dist);
 	}
 

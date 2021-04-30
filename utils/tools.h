@@ -277,19 +277,19 @@ const int SW_AVG_PRESENT = 4; // take the split weight average over all trees th
 /**
         input type, tree or splits graph
  */
-enum InputType {
+enum class InputType {
     IN_NEWICK, IN_NEXUS, IN_FASTA, IN_PHYLIP, IN_COUNTS, IN_CLUSTAL, IN_MSF, IN_OTHER
 };
 
   // TODO DS: SAMPLING_SAMPLED is DEPRECATED and it is not possible to run PoMo with SAMPLING_SAMPLED.
-enum SamplingType {
+enum class SamplingType {
   SAMPLING_WEIGHTED_BINOM, SAMPLING_WEIGHTED_HYPER, SAMPLING_SAMPLED
 };
 
 /**
         verbose mode, determine how verbose should the screen be printed.
  */
-enum VerboseMode {
+enum class VerboseMode {
     VB_QUIET, VB_MIN, VB_MED, VB_MAX, VB_DEBUG
 };
 

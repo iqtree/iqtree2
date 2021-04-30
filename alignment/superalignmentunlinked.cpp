@@ -88,7 +88,7 @@ void SuperAlignmentUnlinked::buildPattern() {
     }
     int part;
     int npart = static_cast<int>(partitions.size());
-    seq_type = SEQ_BINARY;
+    seq_type = SeqType::SEQ_BINARY;
     num_states = 2; // binary type because the super alignment presents the presence/absence of taxa in the partitions
     STATE_UNKNOWN = 2;
     site_pattern.resize(npart, -1);
@@ -96,7 +96,7 @@ void SuperAlignmentUnlinked::buildPattern() {
     pattern_index.clear();
     /*
     VerboseMode save_mode = verbose_mode;
-    verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
+    verbose_mode = min(verbose_mode, VerboseMode::VB_MIN); // to avoid printing gappy sites in addPattern
     size_t nseq = getNSeq();
     int start_seq = 0;
     resize(npart, Pattern(nseq));
