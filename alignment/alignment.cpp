@@ -1323,7 +1323,7 @@ void Alignment::orderPatternByNumChars(int pat_type) {
         quicksort(num_chars, 0, static_cast<int>(nptn-1), ptn_order);
         delete [] num_chars;
         for (intptr_t ptn = 0; ptn < nptn; ++ptn) {
-            auto pat = at(ptn_order[ptn]);
+            Pattern& pat = at(ptn_order[ptn]);
             if (pat.isInvariant()) {
                 nptn = ptn;
             }
@@ -1353,7 +1353,7 @@ void Alignment::orderPatternByNumChars(int pat_type) {
     size_t i = 0;
     UINT sum = 0;
     for (intptr_t ptn = 0; ptn < nptn; ptn++) {
-        auto pat = ordered_pattern[ptn];
+        Pattern& pat = ordered_pattern[ptn];
         for (int j = pat.frequency; 0 < j; --j, site++) {
             if (site == UINT_BITS) {
                 sum += pars_lower_bound[i];
@@ -1790,7 +1790,7 @@ void Alignment::initCodon(const char *gene_code_id, bool nt2aa) {
 	} else {
 		genetic_code = genetic_code1;
 	}
-    int num_codons = genetic_code.length();
+    const int num_codons = static_cast<int>(genetic_code.length());
     ASSERT(num_codons == 64);
     
     std::set<char> proteins;
@@ -1799,18 +1799,17 @@ void Alignment::initCodon(const char *gene_code_id, bool nt2aa) {
     for (int codon = 0; codon < num_codons; codon++) {
         if (genetic_code[codon] != '*') {
             if (proteins.insert(genetic_code[codon]).second) {
-                ++num_proteins; // only count non-stop codons
+                ++num_proteins; // only count distinct non-stop codons
             }
             ++num_non_stop_codons;
         }
     }
-    int codon_count = static_cast<size_t>(genetic_code.length());
     codon_table.clear();
     codon_table.resize(num_non_stop_codons,0);
     non_stop_codon.clear();
-    non_stop_codon.resize(codon_count,0);
+    non_stop_codon.resize(num_codons,0);
     int state = 0;
-    for (int codon = 0; codon < codon_count; codon++) {
+    for (int codon = 0; codon < num_codons; codon++) {
         if (genetic_code[codon] != '*') {
             codon_table[state]    = codon;
             non_stop_codon[codon] = state;
@@ -4597,7 +4596,7 @@ void Alignment::getUnobservedConstPatterns(ASCType ASC_type,
                     if (s != repeat) rest.push_back(s);
                 vector<vector<StateType> > singletons;
                 generateSubsets(rest, singletons);
-                for (auto singleton : singletons)
+                for (vector<StateType>& singleton : singletons)
                     if (singleton.size() < getNSeq()-1 ||
                         (singleton.size() == getNSeq()-1 && repeat == 0)) {
                         vector<int> seq_pos;
@@ -4994,7 +4993,7 @@ void Alignment::countStatesForSites(size_t startPattern,
         size_t stateCount = pat.size();
         for (int i=0; i<stateCount; ++i) {
             int state = convertPomoState(stateArray[i]);
-            if (state<0 || STATE_UNKNOWN<state) {
+            if (state<0 || static_cast<int>(STATE_UNKNOWN)<state) {
                 state = STATE_UNKNOWN;
             }
             state_count[state] += freq;
@@ -5015,7 +5014,9 @@ void Alignment::countStates(size_t *state_count, size_t num_unknown_states) {
         for (int thread=0; thread<thread_count; ++thread) {
             size_t start = thread * step;
             size_t stop  = start + step;
-            if (size()<stop) stop=size();
+            if (size() < stop) {
+                stop = size();
+            }
 #ifndef _MSC_VER
             size_t localStateCount[this->STATE_UNKNOWN+1];
 #else
@@ -5024,7 +5025,7 @@ void Alignment::countStates(size_t *state_count, size_t num_unknown_states) {
             countStatesForSites(start, stop, &localStateCount[0]);
             #pragma omp critical (sum_states)
             {
-                for (size_t state=0; state<=STATE_UNKNOWN; ++state) {
+                for (int state=0; state<=static_cast<int>(STATE_UNKNOWN); ++state) {
                     state_count[state] += localStateCount[state];
                 }
             }
@@ -5036,7 +5037,7 @@ void Alignment::countStates(size_t *state_count, size_t num_unknown_states) {
             int freq = it->frequency;
             for (Pattern::iterator it2 = it->begin(); it2 != it->end(); it2++) {
                 int state = convertPomoState((int)*it2);
-                if (state<0 || STATE_UNKNOWN<state) {
+                if (state<0 || static_cast<int>(STATE_UNKNOWN)<state) {
                     state = STATE_UNKNOWN;
                 }
                 state_count[state] += freq;

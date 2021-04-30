@@ -776,7 +776,7 @@ double Optimization::minimizeMultiDimen(double guess[], int ndim, double lower[]
     double fret, minf = 1e+12;
     double *minx = new double [ndim+1];
     int count = 0;
-    bool restart;
+    bool restart = false;
     do {
         dfpmin(guess, ndim, lower, upper, gtol, &iter, &fret, hessian);
         if (fret < minf) {
