@@ -93,7 +93,7 @@ void ModelMarkov::setReversible(bool reversible, bool adapt_tree) {
 
         num_params = nrate - 1;
 
-        if (adapt_tree && phylo_tree && phylo_tree->rooted) {
+        if (adapt_tree && phylo_tree && phylo_tree->rooted && phylo_tree->root) {
             if (verbose_mode >= VB_MED)
                 cout << "Converting rooted to unrooted tree..." << endl;
             phylo_tree->convertToUnrooted();
@@ -141,7 +141,7 @@ void ModelMarkov::setReversible(bool reversible, bool adapt_tree) {
         if (!cinv_evec)
             cinv_evec = aligned_alloc<complex<double> >(num_states*num_states);
         
-        if (adapt_tree && phylo_tree && !phylo_tree->rooted) {
+        if (adapt_tree && phylo_tree && !phylo_tree->rooted && phylo_tree->root) {
             if (verbose_mode >= VB_MED)
                 cout << "Converting unrooted to rooted tree..." << endl;
             phylo_tree->convertToRooted();
