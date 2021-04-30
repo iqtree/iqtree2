@@ -617,6 +617,8 @@ public:
      */
     void copyAlignment(Alignment *aln);
     
+    void copyStateInfoFrom(const Alignment* aln);
+    
     /** Update this alignment, from another
      *  @param other - the source alignment (may not be == this)
      *  @param updated_sequences - vector indicating sequences to be replaced
@@ -893,19 +895,19 @@ public:
 	/**
 	 *  map from 64 codon to non-stop codon index
 	 */
-    char *non_stop_codon;
+    IntVector non_stop_codon;
 
 	/**
 	 * For codon sequences: index of 61 non-stop codons to 64 codons
-	 * For other sequences: NULL
+	 * For other sequences: empty
 	 */
-	char *codon_table;
+	IntVector codon_table;
 
 	/**
 	 * For codon_sequences: 64 amino-acid letters for genetic code of AAA,AAC,AAG,AAT,...,TTT
-	 * For other sequences: NULL
+	 * For other sequences: empty
 	 */
-	char *genetic_code;
+	std::string genetic_code;
 
 	/**
 	 * Virtual population size for PoMo model
@@ -1035,7 +1037,7 @@ protected:
 	 * special initialization for codon sequences, e.g., setting #states, genetic_code
 	 * @param sequence_type user-defined sequence type
 	 */
-	void initCodon(const char *gene_code_id);
+	void initCodon(const char *gene_code_id, bool nt2aa);
 
     bool isShowingProgressDisabled;
 };

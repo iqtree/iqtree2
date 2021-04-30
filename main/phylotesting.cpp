@@ -500,13 +500,13 @@ double computeAdapter(Alignment *orig_aln, Alignment *newaln, int &adjusted_df) 
     for (int aa = 0; aa < newaln->num_states; ++aa) {
         double sum = 0;
         for (int codon = 0; codon < orig_aln->num_states; codon++) {
-            if (newaln->convertState(orig_aln->genetic_code[(int)orig_aln->codon_table[codon]]) == aa) {
+            if (newaln->convertState(orig_aln->genetic_code[orig_aln->codon_table[codon]]) == aa) {
                 sum += codon_freq[codon];
             }
         }
         sum = 1.0/sum;
         for (int codon = 0; codon < orig_aln->num_states; codon++) {
-            if (newaln->convertState(orig_aln->genetic_code[(int)orig_aln->codon_table[codon]]) == aa) {
+            if (newaln->convertState(orig_aln->genetic_code[orig_aln->codon_table[codon]]) == aa) {
                 codon_freq[codon] *= sum;
             }
         }
@@ -521,7 +521,7 @@ double computeAdapter(Alignment *orig_aln, Alignment *newaln, int &adjusted_df) 
         if (codon_counts[codon] == 0) {
             continue;
         }
-        has_AA[newaln->convertState(orig_aln->genetic_code[(int)orig_aln->codon_table[codon]])] = true;
+        has_AA[newaln->convertState(orig_aln->genetic_code[orig_aln->codon_table[codon]])] = true;
         adapter += codon_counts[codon]*log(codon_freq[codon]);
         adjusted_df++;
     }

@@ -1591,18 +1591,14 @@ Alignment *SuperAlignment::concatenateAlignments(set<int> &ids) {
 			aln->seq_names.push_back(getSeqName(i));
 		}
 	aln->num_states = nstates;
-	aln->seq_type = sub_type;
+	aln->seq_type   = sub_type;
 	aln->site_pattern.resize(nsites, -1);
     aln->clear();
     aln->pattern_index.clear();
-    aln->STATE_UNKNOWN = partitions[*ids.begin()]->STATE_UNKNOWN;
-    aln->genetic_code = partitions[*ids.begin()]->genetic_code;
-    if (aln->seq_type == SeqType::SEQ_CODON) {
-    	aln->codon_table = new char[aln->num_states];
-    	memcpy(aln->codon_table, partitions[*ids.begin()]->codon_table, aln->num_states);
-    	aln->non_stop_codon = new char[strlen(aln->genetic_code)];
-    	memcpy(aln->non_stop_codon, partitions[*ids.begin()]->non_stop_codon, strlen(aln->genetic_code));
-    }
+    aln->STATE_UNKNOWN  = partitions[*ids.begin()]->STATE_UNKNOWN;
+    aln->genetic_code   = partitions[*ids.begin()]->genetic_code;
+    aln->codon_table    = partitions[*ids.begin()]->codon_table;
+    aln->non_stop_codon = partitions[*ids.begin()]->non_stop_codon;
 
     int site = 0;
     for (auto itId = ids.begin(); itId != ids.end(); ++itId) {
@@ -1641,27 +1637,30 @@ Alignment *SuperAlignment::concatenateAlignments(set<int> &ids) {
 }
 
 Alignment *SuperAlignment::concatenateAlignments() {
-    vector<SeqType> seq_types;
-    vector<char*> genetic_codes;
+    vector<SeqType>   seq_types;
+    StrVector         genetic_codes;
     vector<set<int> > ids;
     for (int i = 0; i < partitions.size(); i++) {
         bool found = false;
         for (int j = 0; j < seq_types.size(); j++)
-            if (partitions[i]->seq_type == seq_types[j] && partitions[i]->genetic_code == genetic_codes[j]) {
+            if (partitions[i]->seq_type == seq_types[j] &&
+                partitions[i]->genetic_code == genetic_codes[j]) {
                 ids[j].insert(i);
                 found = true;
                 break;
             }
-        if (found)
+        if (found) {
             continue;
+        }
         // create a new partition
         seq_types.push_back(partitions[i]->seq_type);
         genetic_codes.push_back(partitions[i]->genetic_code);
         ids.push_back(set<int>());
         ids.back().insert(i);
     }
-    if (seq_types.size() == 1)
+    if (seq_types.size() == 1) {
         return concatenateAlignments(ids[0]);
+    }
 
     // mixed data with >= 2 partitions
     SuperAlignment *saln = new SuperAlignment();
@@ -1674,9 +1673,10 @@ Alignment *SuperAlignment::concatenateAlignments() {
     
     saln->seq_names = seq_names;
     saln->taxa_index.resize(saln->seq_names.size());
-    for (auto it = saln->taxa_index.begin(); it != saln->taxa_index.end(); it++)
+    for (auto it = saln->taxa_index.begin();
+         it != saln->taxa_index.end(); it++) {
         it->resize(nsite, -1);
-    
+    }
     for (size_t site = 0; site != nsite; ++site) {
         Alignment *part_aln = concatenateAlignments(ids[site]);
         saln->partitions.push_back(part_aln);
