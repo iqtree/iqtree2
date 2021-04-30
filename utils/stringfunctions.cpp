@@ -337,3 +337,22 @@ std::string next_argument(int argc, char* argv[], const char* desc, int& cnt ) {
     }
     return argv[cnt];
 }
+
+//These three functions moved here from model/modelinfofromyamlfile.cpp, 30-Apr-2021:
+
+bool startsWith(std::string s, const char* front) {
+    auto frontLen = strlen(front);
+    return (s.substr(0, frontLen) == front);
+}
+
+bool endsWith(const std::string s, const char* suffix) {
+    auto suffixLen = strlen(suffix);
+    if (s.length() < suffixLen) {
+        return false;
+    }
+    return s.substr(s.length() - suffixLen, suffixLen) == suffix;
+}
+
+bool contains(std::string s, const char* pattern) {
+    return s.find(pattern) != std::string::npos;
+}

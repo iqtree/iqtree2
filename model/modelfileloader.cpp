@@ -8,7 +8,6 @@
 #include <utils/stringfunctions.h>
 #include <tree/phylotree.h> //for TREE_LOG_LINE macro
    
-
 typedef ModelExpression::InterpretedExpression Interpreter;
 
 ModelFileLoader::ModelFileLoader(const char* path): file_path(path) {

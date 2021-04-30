@@ -30,6 +30,18 @@ ModelSubst::ModelSubst(int nstates)
     // linked_model = NULL;
 }
 
+void ModelSubst::setNumberOfStates(int states) {
+    if (num_states != states) {
+        delete[] state_freq;
+        state_freq = new double[num_states];
+        for (int i = 0; i < num_states; i++) {
+            state_freq[i] = 1.0 / num_states;
+        }
+        freq_type = StateFreqType::FREQ_EQUAL;
+        num_states = states;
+    }
+}
+
 void ModelSubst::startCheckpoint() {
     checkpoint->startStruct("ModelSubst");
 }

@@ -801,10 +801,9 @@ end;
 }
 
 ModelProtein::ModelProtein(PhyloTree *tree, PhyloTree* report_to_tree)
-: super(tree, true, false)
+: super(tree, true, false), models_block(nullptr)
 {
 }
-
 
 ModelProtein::ModelProtein(const char *model_name, string model_params,
                            StateFreqType freq, string freq_params,
@@ -834,25 +833,16 @@ void ModelProtein::setModelsBlock(ModelsBlock* blocks) {
     models_block = blocks;
 }
 
-void ModelProtein::setNumberOfStates(int states) {
-    num_states = states;
-}
-
 
 void ModelProtein::init(const char *model_name, string model_params,
                         StateFreqType freq, string freq_params,
                         PhyloTree* report_to_tree) {
     ASSERT(num_states == 20);
-    ASSERT(models_block && "models_block uninitialized");
+    ASSERT(models_block!=nullptr && "models_block uninitialized");
     name = model_name;
-    const char* name_init = Params::getInstance().model_name_init.c_str();
-    
-    string name_upper = model_name;
-    for (auto it = name_upper.begin(); it != name_upper.end(); it++) {
-        (*it) = toupper(*it);
-    }
-
-    NxsModel *nxs_model = models_block->findModel(name_upper);
+    const char* name_init  = Params::getInstance().model_name_init.c_str();    
+    string      name_upper = string_to_upper(model_name);
+    NxsModel*   nxs_model  = models_block->findModel(name_upper);
     if (nxs_model) {
         if (nxs_model->flag != NM_ATOMIC) {
             outError("Invalid protein model name ", model_name);

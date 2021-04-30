@@ -194,19 +194,24 @@ public:
     */
 	template<class T>
     bool getArray(string key, int maxnum, T* value) {
-        if (key.empty())
-            key = struct_name.substr(0, struct_name.length()-1);
-        else
+        if (key.empty()) {
+            key = struct_name.substr(0, struct_name.length() - 1);
+        }
+        else {
             key = struct_name + key;
+        }
         iterator it = find(key);
-        if (it == end())
+        if (it == end()) {
             return false;
-        size_t pos = 0, next_pos;
+        }
+        size_t pos = 0;
+        size_t next_pos = string::npos;
         for (int i = 0; i < maxnum; i++) {
         	next_pos = it->second.find(", ", pos);
             CkpStream ss(it->second.substr(pos, next_pos-pos));
-        	if (!(ss >> value[i]))
+            if (!(ss >> value[i])) {
                 break;
+            }
             if (next_pos == string::npos) {
                 ASSERT(i == maxnum-1);
                 break;
@@ -225,14 +230,18 @@ public:
     */
 	template<class T>
     bool getVector(string key, vector<T> &value) {
-        if (key.empty())
-            key = struct_name.substr(0, struct_name.length()-1);
-        else
+        if (key.empty()) {
+            key = struct_name.substr(0, struct_name.length() - 1);
+        }
+        else {
             key = struct_name + key;
+        }
         iterator it = find(key);
-        if (it == end())
+        if (it == end()) {
             return false;
-        size_t pos = 0, next_pos;
+        }
+        size_t pos      = 0;
+        size_t next_pos = string::npos;
         value.clear();
         for (int i = 0; ; i++) {
         	next_pos = it->second.find(", ", pos);
@@ -260,13 +269,16 @@ public:
     */
     template<class T>
     bool ymlGetVector(string key, vector<T> &value) {
-        if (key.empty())
-            key = struct_name.substr(0, struct_name.length()-1);
-        else
+        if (key.empty()) {
+            key = struct_name.substr(0, struct_name.length() - 1);
+        } 
+        else {
             key = struct_name + key;
+        }
         iterator it = find(key);
-        if (it == end())
+        if (it == end()) {
             return false;
+        }
         size_t pos = 0, next_pos;
         value.clear();
         if ((pos = it->second.find('[')) == string::npos)
@@ -275,11 +287,15 @@ public:
             next_pos = it->second.find(", ", pos);
             CkpStream ss(it->second.substr(pos, next_pos-pos));
             T val;
-            if (ss >> val)
+            if (ss >> val) {
                 value.push_back(val);
-            else
+            }
+            else {
                 break;
-            if (next_pos == string::npos) break;
+            }
+            if (next_pos == string::npos) {
+                break;
+            }
             pos = next_pos+2;
         }
         return true;

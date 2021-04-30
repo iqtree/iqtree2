@@ -42,6 +42,7 @@ public:
 	*/
     ModelSubst(int nstates);
 
+	void setNumberOfStates(int states);
 
 	/**
 		@return the number of dimensions

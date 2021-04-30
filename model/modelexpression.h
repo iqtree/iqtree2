@@ -19,7 +19,7 @@
 #ifndef modelexpression_h
 #define modelexpression_h
 
-#include "modelinfo.h"  //for ModelInfoFromYAMLFile
+#include "modelinfofromyamlfile.h"  //for ModelInfoFromYAMLFile
 
 namespace ModelExpression {
 

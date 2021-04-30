@@ -46,9 +46,7 @@ public:
                  PhyloTree* report_to_tree);
 
     void setModelsBlock(ModelsBlock* blocks);
-    
-    void setNumberOfStates(int states);
-    
+        
 	/**
 		initialization, called automatically by the constructor, no need to call it
 		@param model_name model name, e.g., JTT, WAG.

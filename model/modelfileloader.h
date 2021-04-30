@@ -8,7 +8,7 @@
 
 #include <string> //for std::string
 #include <yaml-cpp/yaml.h> //for YAML::Node
-#include "modelinfo.h" //for ModelInfoFromYAMLFile
+#include "modelinfofromyamlfile.h" //for ModelInfoFromYAMLFile class
 
 namespace ModelExpression {
     class Assignment;

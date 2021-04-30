@@ -56,6 +56,7 @@ class ModelMarkov : public ModelSubst, public EigenDecomposition
     friend class PartitionModelPlen;
 	
 public:
+	typedef ModelSubst super;
 	/**
 		constructor
 		@param tree associated tree for the model
@@ -63,6 +64,8 @@ public:
         @param adapt_tree TRUE (default) to convert rooted<->unrooted tree
 	*/
     ModelMarkov(PhyloTree *tree, bool reversible = true, bool adapt_tree = true);
+
+	void setNumberOfStates(int states);
 
 	/**
 		@return TRUE if model is time-reversible, FALSE otherwise

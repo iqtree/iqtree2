@@ -7,7 +7,8 @@ modelfactory.cpp modelfactory.h
 modelprotein.cpp modelprotein.h
 modelset.cpp modelset.h
 modelsubst.cpp modelsubst.h
-modelinfo.cpp modelinfo.h
+modelinfofromname.cpp modelinfo.h
+modelinfofromyamlfile.cpp modellistfromyamlfile.cpp modelinfofromyamlfile.h
 modelfileloader.cpp modelfileloader.h
 modelexpression.cpp modelexpression.h
 partitionmodel.cpp partitionmodel.h
@@ -30,7 +31,6 @@ modelunrest.cpp modelunrest.h
 modelliemarkov.cpp modelliemarkov.h
 modelpomo.cpp modelpomo.h
 modelpomomixture.cpp modelpomomixture.h
-modelfactorymixlen.cpp modelfactorymixlen.h
-)
+modelfactorymixlen.cpp modelfactorymixlen.h)
 
 target_link_libraries(model utils)

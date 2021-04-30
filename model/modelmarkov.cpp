@@ -23,6 +23,11 @@
 #include "modelliemarkov.h"
 #include "modelunrest.h"
 
+#ifdef _MSC_VER
+    //Hack to prevent assertion failures in aligned_malloc 
+    //in Eigen/Memory.h, in MSVC debug builds
+    #define EIGEN_MALLOC_ALREADY_ALIGNED 0
+#endif
 #include <Eigen/Eigenvalues>
 #include <unsupported/Eigen/MatrixFunctions>
 using namespace Eigen;
@@ -76,6 +81,25 @@ ModelMarkov::ModelMarkov(PhyloTree *tree, bool reversible, bool adapt_tree)
         full_name = "General non-reversible model";
     }
     setReversible(reversible, adapt_tree);
+}
+
+void ModelMarkov::setNumberOfStates(int states) {
+    bool changed = (num_states != states);
+    if (changed) {
+        delete [] rates;
+        rates = nullptr;
+        aligned_free(eigenvalues);
+        aligned_free(eigenvectors);
+        aligned_free(inv_eigenvectors);
+        aligned_free(inv_eigenvectors);
+        aligned_free(ceval);
+        aligned_free(cevec);
+        aligned_free(cinv_evec);
+    }      
+    super::setNumberOfStates(states);
+    if (changed) {
+        setReversible(is_reversible);
+    }
 }
 
 void ModelMarkov::setReversible(bool reversible, bool adapt_tree) {
