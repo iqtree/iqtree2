@@ -91,10 +91,12 @@ void ModelMarkov::setNumberOfStates(int states) {
         aligned_free(eigenvalues);
         aligned_free(eigenvectors);
         aligned_free(inv_eigenvectors);
-        aligned_free(inv_eigenvectors);
+        aligned_free(inv_eigenvectors_transposed);
+        aligned_free(eigenvalues_imag);
         aligned_free(ceval);
         aligned_free(cevec);
         aligned_free(cinv_evec);
+        aligned_free(rate_matrix);
     }      
     super::setNumberOfStates(states);
     if (changed) {
