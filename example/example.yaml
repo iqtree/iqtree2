@@ -29,6 +29,7 @@
 
 - substitutionmodel: YJC_ERROR 
   frommodel:  YJC
+  description: "YJC with a built-in tip likelihood matrix"
   #errormodel: "+EA" # if not set, defaults to "+E"
   parameters:
     - name:  epsilon
@@ -38,30 +39,32 @@
 
 - substitutionmodel: YTIP
   frommodel: YJC
+  description: "YJC with an explicit tip likelihood matrix"
   parameters:
     - name: tiplikelihood
       type: matrix
       value:
-        - [ 1,    0.01,  0.1,  0.01 ]
-        - [ 0.01,    1,  0.01, 0.1  ]
-        - [ 0.1,  0.01,  1,    0.01 ]
-        - [ 0.01,   0.1, 0.01, 1    ]
+        - [ 0.88, 0.01, 0.10, 0.01 ]
+        - [ 0.01, 0.88, 0.01, 0.10 ]
+        - [ 0.10, 0.01, 0.88, 0.01 ]
+        - [ 0.01, 0.10, 0.01, 0.88 ]
 
 - substitutionmodel: YTIP2
-  frommodel: YTIP
+  frommodel:   YTIP
+  description: "YJC with a formulaic tip likelihood matrix"
   parameters:
-    - name: e
-      type: other
+    - name:      e
+      type:      other
       initValue: 0.05
-    - name:    tiplikelihood
-      type:    matrix
-      rank:    num_states
-      formula: "(row==column) ? (1-e) : (e/(num_states-1))"
+    - name:      tiplikelihood
+      type:      matrix
+      rank:      num_states
+      formula:   "(row==column) ? (1-e) : (e/(num_states-1))"
   stateFrequency: estimate
 
 - substitutionmodel: YRIGHTASSOC
-  frommodel: YTIP2
-  description: "Right-associativity (constraint) test"
+  frommodel:         YTIP2
+  description:       "Right-associativity (constraint) test"
   parameters:
     - name: [a,b,c,d]
       type: other
@@ -93,7 +96,7 @@
 
 
 - substitutionmodel: COV_GTR
-  frommodel: YGTR
+  frommodel:   YGTR
   description: "Covarion model switching between invariant and GTR"
   parameters:
     - name: [ s0, s1 ] #switching rate parameters
@@ -101,6 +104,7 @@
 
 - substitutionmodel: YCONSTRAINT
   frommodel: YGTR
+  description: "Test of addition of constraints"
   constraints:
     - r(1) = 1
     - r(3) = 1
@@ -167,7 +171,6 @@
       type:        frequency
       range:       [0,1]
       initValue:   1/num_states
-
 
 - substitutionmodel: YMIX
   description: "Mixture of JC and GTR"
