@@ -528,7 +528,7 @@ void ModelInfoFromName::updateName(const std::string& name) {
 
 YAMLFileParameter::YAMLFileParameter() 
     : is_subscripted(false), minimum_subscript(0), maximum_subscript(0)
-    , value(0.0),  type(ModelParameterType::OTHER) {
+    , type(ModelParameterType::OTHER), value(0.0) {
 }
 
 std::string YAMLFileParameter::getSubscriptedVariableName(int subscript) const {
@@ -1570,7 +1570,6 @@ public:
     }
 };
 
-
 bool ModelListFromYAMLFile::hasModel(const std::string& model_name) const {
     return models_found.find(model_name) != models_found.end();
 }
@@ -1692,6 +1691,6 @@ ModelMarkov* ModelListFromYAMLFile::getProteinModel(ModelInfoFromYAMLFile& model
                                   model_info);
     pmodel->acceptParameterList(parameter_list, report_to_tree);
     model = pmodel;
-    
+
     return model;
 }

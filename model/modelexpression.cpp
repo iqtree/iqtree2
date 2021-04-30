@@ -590,12 +590,6 @@ namespace ModelExpression {
             for (; endpos>0 && (text[ix]!='.' || text[ix+1]!='.'); --endpos) {
                 ++ix;
             }
-            if (0<endpos) {
-                std::stringstream log_stream;
-                log_stream << "chopped a numeric literal at" << (text.c_str()+ix);
-                std::string log_line = log_stream.str();
-                std::cout << log_line << std::endl;
-            }
             return true;
         }
         switch (ch) {
