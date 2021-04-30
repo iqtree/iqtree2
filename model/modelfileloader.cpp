@@ -160,7 +160,7 @@ void ModelFileLoader::parseModelParameter(const YAML::Node& param,
                 p.minimum_subscript = 1;
                 p.maximum_subscript = x->evaluateAsInteger();
             }
-            if (p.maximum_subscript<p.maximum_subscript) {
+            if (p.maximum_subscript<p.minimum_subscript) {
                 std::stringstream msg;
                 msg << "Illegal subscript expression"
                     << " for " << info.getName()
