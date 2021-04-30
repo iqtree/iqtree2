@@ -46,7 +46,7 @@ void ParsimonyCostCalculator::assessPlacementCost(PhyloTree& phylo_tree,
     placement.score      = placement.parsimony_score;
     placement.lenToNode1 = target->first->findNeighbor(target->second)->length * 0.5;
     placement.lenToNode2 = placement.lenToNode1;
-    if ( verbose_mode >= VB_MAX ) {
+    if ( verbose_mode >= VerboseMode::VB_MAX ) {
         std::stringstream s2;
         s2  << "Parsimony score for taxon " << taxon.getTaxonId()
         << " at target branch " << placement.getTargetIndex()
@@ -142,8 +142,8 @@ void LikelihoodCostCalculator::assessPlacementCost(PhyloTree& tree, const TaxonT
             , buffers(phyloTree.tree_buffers) //new buffers, same sizes
             , initial_length(-1), initial_score(0) {
 #if (0)
-            TREE_LOG_LINE(tree, VB_MIN, "neigh_up   is " << pointer_to_hex(neighUp));
-            TREE_LOG_LINE(tree, VB_MIN, "neigh_down is " << pointer_to_hex(neighDown));
+            TREE_LOG_LINE(tree, VerboseMode::VB_MIN, "neigh_up   is " << pointer_to_hex(neighUp));
+            TREE_LOG_LINE(tree, VerboseMode::VB_MIN, "neigh_down is " << pointer_to_hex(neighDown));
             std::stringstream s;
             const char* sep = "nu ";
             auto lh_block = tree.getLhBlockSize();
@@ -160,7 +160,7 @@ void LikelihoodCostCalculator::assessPlacementCost(PhyloTree& tree, const TaxonT
             neigh_up->length   = value;
             neigh_down->length = value;
             double score = -tree.computeLikelihoodBranch(neigh_up, leaf_node, buffers);
-            TREE_LOG_LINE(tree, VB_MAX, "  length " << value
+            TREE_LOG_LINE(tree, VerboseMode::VB_MAX, "  length " << value
                           << ", f " << score
                           << " for taxon " << leaf_node->id);
             return score;
@@ -171,7 +171,7 @@ void LikelihoodCostCalculator::assessPlacementCost(PhyloTree& tree, const TaxonT
             tree.computeLikelihoodDerv(neigh_up, leaf_node, &df, &ddf, buffers);
             df  = -df;
             ddf = -ddf;
-            TREE_LOG_LINE(tree, VB_MAX, "  length " << value
+            TREE_LOG_LINE(tree, VerboseMode::VB_MAX, "  length " << value
                           << ", df " << df << ", ddf " << ddf
                           << " for taxon " << leaf_node->id);
         }
@@ -220,7 +220,7 @@ void LikelihoodCostCalculator::assessPlacementCost(PhyloTree& tree, const TaxonT
     opt.optimize(placement);
     const_cast<TargetBranch*>(target)->setLhScaleFactor(neighUp->lh_scale_factor);
     
-    TREE_LOG_LINE(tree, VB_MED, taxon.taxonName
+    TREE_LOG_LINE(tree, VerboseMode::VB_MED, taxon.taxonName
                   << " (taxon " << taxon.taxonId << ")"
                   << " at target branch " << placement.getTargetIndex()
                   << " had parsimony score " << placement.parsimony_score

@@ -37,7 +37,7 @@ PhyloSuperTreePlen::PhyloSuperTreePlen(SuperAlignment *alignment)
 	for (iterator it = begin(); it != end(); it++, part++) {
 		part_info[part].part_rate = 1.0;
 		part_info[part].evalNNIs = 0.0;
-        if ((*it)->aln->seq_type == SEQ_CODON && rescale_codon_brlen)
+        if ((*it)->aln->seq_type == SeqType::SEQ_CODON && rescale_codon_brlen)
             part_info[part].part_rate = 3.0;
 	}
 }
@@ -57,7 +57,7 @@ PhyloSuperTreePlen::PhyloSuperTreePlen(SuperAlignment *alignment, int partition_
             has_tree_len = true;
         }
         part_info[part].evalNNIs = 0;
-        if ((*it)->aln->seq_type == SEQ_CODON && rescale_codon_brlen)
+        if ((*it)->aln->seq_type == SeqType::SEQ_CODON && rescale_codon_brlen)
             part_info[part].part_rate *= 3.0;
     }
     
@@ -79,7 +79,7 @@ PhyloSuperTreePlen::PhyloSuperTreePlen(SuperAlignment *alignment, PhyloSuperTree
             has_tree_len = true;
         }
         part_info[part].evalNNIs = 0;
-        if ((*it)->aln->seq_type == SEQ_CODON && rescale_codon_brlen)
+        if ((*it)->aln->seq_type == SeqType::SEQ_CODON && rescale_codon_brlen)
             part_info[part].part_rate *= 3.0;
     }
     if (has_tree_len)
@@ -92,7 +92,7 @@ void PhyloSuperTreePlen::normalizePartRate() {
     int i;
     for (i = 0; i < size(); i++) {
         sum += part_info[i].part_rate * at(i)->aln->getNSite();
-        if (at(i)->aln->seq_type == SEQ_CODON && rescale_codon_brlen)
+        if (at(i)->aln->seq_type == SeqType::SEQ_CODON && rescale_codon_brlen)
             nsite += 3*at(i)->aln->getNSite();
         else
             nsite += at(i)->aln->getNSite();
@@ -176,7 +176,7 @@ void PhyloSuperTreePlen::mapTrees() {
     bool noncodon_present = false;
     iterator it;
 	for (it = begin(); it != end(); it++) {
-		if ((*it)->aln->seq_type != SEQ_CODON) {
+		if ((*it)->aln->seq_type != SeqType::SEQ_CODON) {
 			noncodon_present = true;
 			break;
 		}
@@ -383,7 +383,7 @@ void PhyloSuperTreePlen::computeFuncDerv(double value, double &df_ret,
             nei1_part->length += delta;
             if(nei1_part->length<-1e-4) {
                 std::stringstream complaint;
-                LOG_LINE(VB_MED, "Problem: value " << value
+                LOG_LINE(VerboseMode::VB_MED, "Problem: value " << value
                          << " lambda = " << lambda << endl
                          << "NEGATIVE BRANCH len = " << nei1_part->length
                          << " rate = "<<part_info[part].part_rate);
@@ -393,7 +393,7 @@ void PhyloSuperTreePlen::computeFuncDerv(double value, double &df_ret,
             nei2_part->length += delta;
             if(nei2_part->length<-1e-4) {
                 std::stringstream complaint;
-                LOG_LINE(VB_MED, "Problem: value " << value
+                LOG_LINE(VerboseMode::VB_MED, "Problem: value " << value
                          << " lambda = " << lambda << endl
                          << "NEGATIVE BRANCH len = " << nei2_part->length
                          << " rate = "<<part_info[part].part_rate);
@@ -619,7 +619,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	 *===========================================================================================*/
 	vector<NNIType> is_nni;
 	getNNIType(node1, node2, is_nni);
-	if(verbose_mode >= VB_MED){
+	if(verbose_mode >= VerboseMode::VB_MED){
 		for (int part = 0; part < ntrees; ++part)
 			switch (is_nni[part]) {
 			case NNI_NO_EPSILON:
@@ -1144,7 +1144,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 //		double score = computeLikelihoodFromBuffer();
 		node1->findNeighbor(node2)->getLength(nniMoves[cnt].newLen[0]);
 
-//		if (verbose_mode >= VB_MED) {
+//		if (verbose_mode >= VerboseMode::VB_MED) {
 //			cout << "After_nni1 [" << score << "] ";
 //			printTree(cout);
 //			cout << endl;
@@ -1220,14 +1220,14 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	    }
 
 		double score = computeLikelihoodFromBuffer();
-		if (verbose_mode >= VB_DEBUG)
+		if (verbose_mode >= VerboseMode::VB_DEBUG)
 			cout << "Log-likelihood: " << score << endl;
 
 		// %%%%%%%%%%%%%%%%%%%%%%%%%%%  END of nni5branch  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 		nniMoves[cnt].newloglh = score;
 
-//	    if (verbose_mode >= VB_MED) {
+//	    if (verbose_mode >= VerboseMode::VB_MED) {
 //			//this->clearAllPartialLH();
 //			//for(part = 0; part<ntrees; part++){
 //			//	at(part)->clearAllPartialLH();
@@ -1254,7 +1254,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 //
 //	    // Store information about this NNI for NNImove for SuperTree
 //		if (nni_param) {
-////			if (verbose_mode >= VB_MAX)
+////			if (verbose_mode >= VerboseMode::VB_MAX)
 ////				printTree(cout, WT_BR_LEN + WT_NEWLINE);
 //			if (cnt == 0) {
 //				nni_param->nni1_score = score;

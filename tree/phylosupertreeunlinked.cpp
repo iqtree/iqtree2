@@ -183,14 +183,16 @@ void PhyloSuperTreeUnlinked::printResultTree(string suffix) {
     for (iterator tree = begin(); tree != end(); tree++)
         (*tree)->printTree(out, WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
     out.close();
-    if (verbose_mode >= VB_MED)
+    if (verbose_mode >= VerboseMode::VB_MED) {
         cout << "Best tree printed to " << tree_file_name << endl;
+    }
 }
 
 double PhyloSuperTreeUnlinked::treeLength(Node *node, Node *dad) {
     double len = 0.0;
-    for (iterator tree = begin(); tree != end(); tree++)
+    for (iterator tree = begin(); tree != end(); tree++) {
         len += (*tree)->treeLength();
+    }
     return len;
 }
 
@@ -243,7 +245,7 @@ double PhyloSuperTreeUnlinked::doTreeSearch() {
     int saved_flag = params->suppress_output_flags;
     params->suppress_output_flags |= OUT_TREEFILE + OUT_LOG;
     VerboseMode saved_mode = verbose_mode;
-    verbose_mode = VB_QUIET;
+    verbose_mode = VerboseMode::VB_QUIET;
     bool saved_print_ufboot_trees = params->print_ufboot_trees;
     params->print_ufboot_trees = false;
 

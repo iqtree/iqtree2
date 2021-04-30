@@ -95,7 +95,7 @@ void ParsimonyNNIMove::findMove(const PhyloTree& tree, /* problem, not const */
                    ( tree, left1, right1, tb.first, tb.second,
                      left2, right2,
                      path_parsimony[0], path_parsimony[1]);
-    TREE_LOG_LINE(tree, VB_DEBUG, "for " << source_branch_id
+    TREE_LOG_LINE(tree, VerboseMode::VB_DEBUG, "for " << source_branch_id
                   << " cost1 " << cost1 << ","
                   << " oldcost " << parsimony_score );
     consider(source_branch_id, left1, tb, right2, parsimony_score - cost1);
@@ -104,7 +104,7 @@ void ParsimonyNNIMove::findMove(const PhyloTree& tree, /* problem, not const */
                    ( tree, left1, right2, tb.first,
                      tb.second, left2, right1,
                      path_parsimony[0], path_parsimony[1]);
-    TREE_LOG_LINE(tree, VB_DEBUG, "for " << source_branch_id
+    TREE_LOG_LINE(tree, VerboseMode::VB_DEBUG, "for " << source_branch_id
                   << " cost2 " << cost2 << ","
                   << " oldcost " << parsimony_score );
     consider(source_branch_id, left1, tb, right1, parsimony_score - cost2);
@@ -146,7 +146,7 @@ double ParsimonyNNIMove::recalculateBenefit
     noswap_cost = ppc.parsimonyLink4Cost(right, left, middle.first,
                                          middle.second, left2, right2,
                                          buffer1[1], buffer2[1]);
-    TREE_LOG_LINE(tree, VB_DEBUG, "branch " << source_branch_id << ","
+    TREE_LOG_LINE(tree, VerboseMode::VB_DEBUG, "branch " << source_branch_id << ","
              << " swap cost "    << swap_cost << ","
              << " no-swap cost " << noswap_cost );
     double improvement = noswap_cost - swap_cost;
@@ -161,7 +161,7 @@ double ParsimonyNNIMove::apply(PhyloTree& tree,
     double improvement = recalculateBenefit(tree, parsimony_score,
                                             branches, blocks,
                                             parsimony_path_vectors);
-    TREE_LOG_LINE(tree, VB_MAX, "branch " << source_branch_id
+    TREE_LOG_LINE(tree, VerboseMode::VB_MAX, "branch " << source_branch_id
              << " had predicted benefit " << benefit
              << ", and actual improvement  " << improvement);
     if (improvement<0)

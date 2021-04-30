@@ -67,18 +67,21 @@ void PlacementRun::setUpAllocator(int extra_parsimony_blocks,
                      
 void PlacementRun::prepareForPlacementRun() {
     if (use_likelihood) {
-        TREE_LOG_LINE(phylo_tree, VB_MED, "After overallocating lh blocks, index_lh was "
-            << block_allocator->getLikelihoodBlockCount());
+        TREE_LOG_LINE(phylo_tree, VerboseMode::VB_MED, 
+                      "After overallocating lh blocks, index_lh was "
+                      << block_allocator->getLikelihoodBlockCount());
     }
-    if (VB_MED <= verbose_mode &&
+    if (VerboseMode::VB_MED <= verbose_mode &&
         (phylo_tree.params->compute_likelihood || use_likelihood) &&
         phylo_tree.hasModel()) {
         phylo_tree.configureLikelihoodKernel(*phylo_tree.params, true);
         double curScore = phylo_tree.computeLikelihood();
-        TREE_LOG_LINE(phylo_tree, VB_MED, "Likelihood score before insertions was " << curScore);
+        TREE_LOG_LINE(phylo_tree, VerboseMode::VB_MED, 
+                      "Likelihood score before insertions was " << curScore);
         if (use_likelihood) {
             curScore = phylo_tree.optimizeAllBranches(2);
-            TREE_LOG_LINE(phylo_tree, VB_MED, "Optimized likelihood score"
+            TREE_LOG_LINE(phylo_tree, VerboseMode::VB_MED, 
+                          "Optimized likelihood score"
                           " before insertions was " << curScore);
         }
     }
@@ -86,8 +89,10 @@ void PlacementRun::prepareForPlacementRun() {
         phylo_tree.deleteAllPartialLh();
     }
     if (!be_quiet) {
-        TREE_LOG_LINE ( phylo_tree, VB_MED, "Batch size is " << taxa_per_batch
-                        << " and the number of inserts per batch is " << inserts_per_batch);
+        TREE_LOG_LINE ( phylo_tree, VerboseMode::VB_MED, 
+                        "Batch size is " << taxa_per_batch
+                        << " and the number of inserts" 
+                        << " per batch is " << inserts_per_batch);
     }
     if (calculator->usesSankoffParsimony()) {
         phylo_tree.computeTipPartialParsimony();
@@ -100,7 +105,8 @@ void PlacementRun::prepareForBatch() {
         phylo_tree.clearAllPartialLH(false);
         phylo_tree.clearAllScaleNum(false);
         double likelihoodScore = phylo_tree.computeLikelihood();
-        TREE_LOG_LINE( phylo_tree, VB_MIN, "Log-likelihood is currently " << likelihoodScore);
+        TREE_LOG_LINE( phylo_tree, VerboseMode::VB_MIN, 
+                       "Log-likelihood is currently " << likelihoodScore);
     }
     phylo_tree.clearAllPartialParsimony(false);
     refreshTime.stop();
@@ -130,11 +136,11 @@ void PlacementRun::doBatchPlacementCosting(TaxaToPlace& candidates,
     evaluationTime.start();
     for (int i = batchStart; i<batchStop; ++i) {
         TaxonToPlace& c = candidates.getTaxonByIndex(i);
-        TREE_LOG_LINE(phylo_tree, VB_DEBUG, "Scoring ... " << c,taxonName);
+        TREE_LOG_LINE(phylo_tree, VerboseMode::VB_DEBUG, "Scoring ... " << c,taxonName);
         c.findPlacement(phylo_tree, i, targets,
                          heuristic, calculator);
         const PossiblePlacement& p = c.getBestPlacement();
-        TREE_LOG_LINE(phylo_tree, VB_DEBUG, "Scored " << p.score << " for placement"
+        TREE_LOG_LINE(phylo_tree, VerboseMode::VB_DEBUG, "Scored " << p.score << " for placement"
                       << " of " << c.taxonName << " with lengths "
                  << p.lenToNode1 << ", " << p.lenToNode2 << ", " << p.lenToNewTaxon);
         if ((i-batchStart) % 1000 ) == 0 ) {
@@ -154,7 +160,7 @@ void PlacementRun::doBatchPlacementCosting(TaxaToPlace& candidates,
     for (size_t t = 0; t < targetCount; ++t ) {
         TargetBranch* target = targets.getTargetBranch(t);
         if ((t & tStep) == 0) {
-            TREE_LOG_LINE(phylo_tree, VB_DEBUG,
+            TREE_LOG_LINE(phylo_tree, VerboseMode::VB_DEBUG,
                 "Scoring target branch " << t << " of " << targetCount);
         }
         refreshTime.start();
@@ -249,13 +255,13 @@ void PlacementRun::doPartOfBatchInsert
             ASSERT(targets[t].getRightNeighbor()->isParsimonyComputed());
 #if (0)
             icky2.stop();
-            TREE_LOG_LINE(phylo_tree, VB_MIN,
+            TREE_LOG_LINE(phylo_tree, VerboseMode::VB_MIN,
                           "Rescoring target " << t
                           << " for insert " << h << " took "
                           << icky2.elapsed_wallclock_time << " wall, "
                           << icky2.elapsed_cpu_time << " cpu");
         } else {
-            TREE_LOG_LINE(phylo_tree, VB_MIN, "Target " << t
+            TREE_LOG_LINE(phylo_tree, VerboseMode::VB_MIN, "Target " << t
                           << " for insert " << h << " already up to date ");
 #endif
         }
@@ -281,7 +287,7 @@ void PlacementRun::doPartOfBatchInsert
                     phylo_tree.trackProgress(1000.0*estimate_per_placement);
                 }
 #if (0)
-                TREE_LOG_LINE(phylo_tree, VB_MIN, "Insert " << i
+                TREE_LOG_LINE(phylo_tree, VerboseMode::VB_MIN, "Insert " << i
                               << ", of Candidate " << insert.candidate_index
                               << ", at or near target branch " << insert.target_index
                               << " (check " << check_index << ") done");
@@ -289,7 +295,7 @@ void PlacementRun::doPartOfBatchInsert
             }
 #if (0)
             icky.stop();
-            TREE_LOG_LINE(phylo_tree, VB_MIN, "Inserting I " << h
+            TREE_LOG_LINE(phylo_tree, VerboseMode::VB_MIN, "Inserting I " << h
                           << " thru " << (j-1)
                           << " at T " << inserts[h].target_index << " took "
                           << icky.elapsed_wallclock_time << " wall, "
@@ -316,7 +322,7 @@ void PlacementRun::doPartOfBatchInsert
                 insert.placement          = &candidate.getBestPlacement();
                 insert.target_index       = insert.placement->getTargetIndex();
 #if (0)
-                TREE_LOG_LINE(phylo_tree, VB_MIN, "New place for insert " << i
+                TREE_LOG_LINE(phylo_tree, VerboseMode::VB_MIN, "New place for insert " << i
                               << " of candidate " << insert.candidate_index
                               << " was target branch " << insert.target_index
                               << " with pars score " << insert.placement->parsimony_score);
@@ -326,7 +332,7 @@ void PlacementRun::doPartOfBatchInsert
             std::sort(inserts.begin() + sampleStop, inserts.begin() + j );
 #if (0)
             for (size_t i=sampleStop; i<j; ++i) {
-                TREE_LOG_LINE(phylo_tree, VB_MIN, "Insert " << i
+                TREE_LOG_LINE(phylo_tree, VerboseMode::VB_MIN, "Insert " << i
                               << " candidate " << inserts[i].candidate_index
                               << " has best placement t.b. " << inserts[i].target_index);
             }
@@ -371,9 +377,9 @@ void PlacementRun::insertTaxon(TaxaToPlace& taxa, size_t taxon_index,
         where = "near its desired branch";
     }
     
-    if (( verbose_mode >= VB_MIN
+    if (( verbose_mode >= VerboseMode::VB_MIN
           && !phylo_tree.params->suppress_list_of_sequences)
-          || verbose_mode >= VB_MAX ) {
+          || verbose_mode >= VerboseMode::VB_MAX ) {
         const PossiblePlacement& p = c.getBestPlacement();
         stringstream s;
         s << taxa_inserted_in_total << ". " << verb << " "
@@ -398,7 +404,7 @@ void PlacementRun::doneBatch(TaxaToPlace& candidates,
     optoTime.start();
     intptr_t batch_size = batchStop - batchStart;
     if ( static_cast<intptr_t>(taxa_inserted_this_batch) < batch_size && !be_quiet ) {
-        TREE_LOG_LINE ( phylo_tree, VB_MED,  "Inserted " << (taxa_inserted_this_batch)
+        TREE_LOG_LINE ( phylo_tree, VerboseMode::VB_MED,  "Inserted " << (taxa_inserted_this_batch)
                   << " out of a batch of " << batch_size << "." );
     }
     batch_placement_optimizer->optimizeAfterBatch(candidates, batchStart, batchStop, targets, phylo_tree);
@@ -431,7 +437,7 @@ void PlacementRun::logSubtreesNearAddedTaxa() const {
                 }
             }
             auto length = leaf->firstNeighbor()->length;
-            if (VB_MED <= verbose_mode) {
+            if (VerboseMode::VB_MED <= verbose_mode) {
                 std::cout << (i+1) << "." << "Node [" << leaf->id << "]=" << leaf->name
                     << " now has branch length " << length
                     << " (interior left branch " << leftLength
@@ -444,14 +450,15 @@ void PlacementRun::logSubtreesNearAddedTaxa() const {
 
 void PlacementRun::donePlacement() {
     optoTime.start();
-    if (VB_MED <= verbose_mode && use_likelihood) {
+    if (VerboseMode::VB_MED <= verbose_mode && use_likelihood) {
         logSubtreesNearAddedTaxa();
     }
     if (!be_quiet) {
-        TREE_LOG_LINE(phylo_tree, VB_MED, "Tidying up tree after inserting taxa.");
+        TREE_LOG_LINE(phylo_tree, VerboseMode::VB_MED, 
+                     "Tidying up tree after inserting taxa.");
     }
     global_placement_optimizer->optimizeAfterPlacement(phylo_tree);
-    if (VB_MED <= verbose_mode && use_likelihood) {
+    if (VerboseMode::VB_MED <= verbose_mode && use_likelihood) {
         logSubtreesNearAddedTaxa();
     }
     optoTime.stop();

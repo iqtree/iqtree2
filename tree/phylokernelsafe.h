@@ -1482,7 +1482,7 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
         for (vector<Alignment*>::iterator alnit = partitions->begin(); alnit != partitions->end(); alnit++) {
             int end_pos = start_pos + (*alnit)->ordered_pattern.size();
             switch ((*alnit)->seq_type) {
-            case SEQ_DNA:
+            case SeqType::SEQ_DNA:
                 for (int patid = start_pos; patid != end_pos; patid++) {
                     Alignment::iterator pat = aln->ordered_pattern.begin()+ patid;
                     int state = pat->at(leafid);
@@ -1525,7 +1525,7 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                     }
                 }
                 break;
-            case SEQ_PROTEIN:
+            case SeqType::SEQ_PROTEIN:
                 for (int patid = start_pos; patid != end_pos; patid++) {
                     Alignment::iterator pat = aln->ordered_pattern.begin()+ patid;
                     int state = pat->at(leafid);

@@ -327,7 +327,7 @@ public:
                 candidate.best_branch = sample[s];
             }
         }
-        /*TREE_LOG_LINE(tree, VB_MIN, "C Taxon " << candidate.new_leaf->id
+        /*TREE_LOG_LINE(tree, VerboseMode::VB_MIN, "C Taxon " << candidate.new_leaf->id
                       << " @ Branch " << best_branch
                       << " with score " << best_branch_score );*/
     }
@@ -372,7 +372,7 @@ public:
                     best_subtree_score = subtree_score;
                     best_branch_id     = id;
                     equal_scores       = 0;
-                    /*TREE_LOG_LINE(tree, VB_MIN, "I Taxon " << taxon.new_leaf->id
+                    /*TREE_LOG_LINE(tree, VerboseMode::VB_MIN, "I Taxon " << taxon.new_leaf->id
                                   << " @ Branch " << best_branch_id
                                   << " with score " << best_score );*/
                 } else if (branch_score==taxon.best_score) {
@@ -547,9 +547,10 @@ public:
             rescoring.stop();
         }
         
-        TREE_LOG_LINE(tree, VB_MIN, "Score " << parsimony_score
+        TREE_LOG_LINE(tree, VerboseMode::VB_MIN, 
+                      "Score " << parsimony_score
                       << " total_work " << total_work);
-        if (VB_MED <= verbose_mode) {
+        if (VerboseMode::VB_MED <= verbose_mode) {
             tree.hideProgress();
             std::cout.precision(4);
             initializing.report();

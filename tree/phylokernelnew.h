@@ -1096,7 +1096,7 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad,
         }
     }
     
-    if (verbose_mode >= VB_DEBUG && traversal_info.size() > 0) {
+    if (verbose_mode >= VerboseMode::VB_DEBUG && traversal_info.size() > 0) {
         Node *saved = root;
         root = dad;
         hideProgress();
@@ -1111,7 +1111,7 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad,
 
     if (!model->isSiteSpecificModel()) {
         size_t num_info = traversal_info.size();
-        if (verbose_mode >= VB_DEBUG) {
+        if (verbose_mode >= VerboseMode::VB_DEBUG) {
             hideProgress();
             cout << "traversal order:";
             for (auto it = traversal_info.begin(); it != traversal_info.end(); it++) {
@@ -3121,7 +3121,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
         }
         //Don't we need to set _pattern_lh[...] something?
         if (justWarned) {
-            LOG_LINE(VB_MED, "Fixed tree_lh was " << tree_lh);
+            LOG_LINE(VerboseMode::VB_MED, "Fixed tree_lh was " << tree_lh);
         }
     }
     // robust phylogeny project, summing log-likelihood over the best sites

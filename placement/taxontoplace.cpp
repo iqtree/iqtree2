@@ -117,7 +117,7 @@ void TaxonToPlace::findPlacement(PhyloTree& phylo_tree,
     placements.resize(target_branch_count);
     PossiblePlacement* placementArray = placements.data();
     
-    if ( verbose_mode >= VB_DEBUG ) {
+    if ( verbose_mode >= VerboseMode::VB_DEBUG ) {
         std::stringstream s1;
         s1 << "Scoring " << this->taxonName;
         phylo_tree.logLine(s1.str());
@@ -138,7 +138,7 @@ void TaxonToPlace::findPlacement(PhyloTree& phylo_tree,
     
     auto bestI = considerPlacements(placements.data(), placements.size());
     
-    if ( verbose_mode >= VB_MED ) {
+    if ( verbose_mode >= VerboseMode::VB_MED ) {
         std::stringstream s3;
         s3 << "Best (lowest) score for " << this->taxonName 
             << " was " << bestPlacement.score << " at place " << bestI;

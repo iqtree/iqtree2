@@ -71,7 +71,7 @@ double NNIMove::optimizeNNIBranches(PhyloTree* tree, bool nni5, int nni5_num_eva
         }
     }
     newloglh = tree->computeLikelihoodFromBuffer();
-    TREE_LOG_LINE(*tree, VB_DEBUG, "NNI of branch " << central_branch_id
+    TREE_LOG_LINE(*tree, VerboseMode::VB_DEBUG, "NNI of branch " << central_branch_id
         << " for nodes with Ids " << node1->id << " - " << node2->id
         << ": scores " << newloglh);
     // compute the pattern likelihoods if wanted
@@ -87,15 +87,15 @@ NNIContext::NNIContext(PhyloTree* phylo_tree, PhyloNode* firstNode, PhyloNode* s
     s1.remember(tree->current_it);
     s1.remember(tree->current_it_back);
 
-    TREE_LOG_LINE(*tree, VB_DEBUG, "curScore was " << tree->curScore);
+    TREE_LOG_LINE(*tree, VerboseMode::VB_DEBUG, "curScore was " << tree->curScore);
     FOR_EACH_PHYLO_NEIGHBOR(node1, nullptr, it3, nei) {
-        TREE_LOG_LINE(*tree, VB_DEBUG, "branch [" << nei->id << "] from node1 "
+        TREE_LOG_LINE(*tree, VerboseMode::VB_DEBUG, "branch [" << nei->id << "] from node1 "
             << pointer_to_hex(nei) << " length was " << nei->length);
         s2.remember(nei->length);
         s2.remember(nei->getNode()->findNeighbor(node1)->length);
     }
     FOR_EACH_PHYLO_NEIGHBOR(node2, nullptr, it4, nei) {
-        TREE_LOG_LINE(*tree, VB_DEBUG, "branch [" << nei->id << "] from node2 "
+        TREE_LOG_LINE(*tree, VerboseMode::VB_DEBUG, "branch [" << nei->id << "] from node2 "
             << pointer_to_hex(nei) << " length was " << nei->length);
         s2.remember(nei->length);
         s2.remember(nei->getNode()->findNeighbor(node2)->length);

@@ -138,7 +138,7 @@ double TargetBranch::computeState(PhyloTree& phylo_tree,
     parsimony_dirtiness = 0;
     branch_cost         = connection_cost - first_subtree_cost - second_subtree_cost;
     if (phylo_tree.leafNum < 50) {
-        TREE_LOG_LINE(phylo_tree, VB_MAX, "TB Parsimony (net) was "
+        TREE_LOG_LINE(phylo_tree, VerboseMode::VB_MAX, "TB Parsimony (net) was "
                       << connection_cost << " (" << branch_cost << ")"
                       << ", neigh1->length was " << neigh1->length);
     }
@@ -147,7 +147,8 @@ double TargetBranch::computeState(PhyloTree& phylo_tree,
         LikelihoodBufferSet localBuffers(phylo_tree.tree_buffers);
         double score = -phylo_tree.computeLikelihoodBranch(neigh1, first, localBuffers);
         if (phylo_tree.leafNum < 50) {
-            TREE_LOG_LINE(phylo_tree, VB_MAX, "TB Initial Likelihood was " << score);
+            TREE_LOG_LINE(phylo_tree, VerboseMode::VB_MAX, 
+                          "TB Initial Likelihood was " << score);
         }
 
         double old_length      = neigh1->length;
@@ -267,7 +268,7 @@ TargetBranchRange::TargetBranchRange(PhyloTree& phylo_tree, BlockAllocator* b,
         phylo_tree.getBranches(v1, v2);
     }
     reserve(v1.size());
-    if ( verbose_mode >= VB_DEBUG ) {
+    if ( verbose_mode >= VerboseMode::VB_DEBUG ) {
         std::stringstream s1;
         s1 << "TargetBranchRange will have " << v1.size() << " entries";
         phylo_tree.logLine(s1.str());

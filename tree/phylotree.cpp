@@ -276,7 +276,7 @@ void PhyloTree::readTree(istream &in, bool &is_rooted) {
             right->updateNeighbor((*it), left, len);
             delete (*it);
             ++num_collapsed;
-            if (verbose_mode >= VB_MED) {
+            if (verbose_mode >= VerboseMode::VB_MED) {
                 cout << "Node of degree 2 collapsed" << endl;
             }
         }
@@ -424,7 +424,7 @@ void PhyloTree::setAlignment(Alignment *alignment) {
         root->id = aln->getNSeq32();
     }
     /*
-    if (verbose_mode >= VB_MED) {
+    if (verbose_mode >= VerboseMode::VB_MED) {
         cout << "Alignment namecheck took " << (getRealTime()-checkStart)
         << " sec (of wall-clock time)" << endl;
     }
@@ -465,25 +465,28 @@ void PhyloTree::initializeModel(Params &params, string model_name,
 }
 
 void PhyloTree::prepareForDeletes() {
-    LOG_LINE ( VB_DEBUG, "Before delete, number of leaves " << this->leafNum
-                    << ", of nodes "       << this->nodeNum
-                    << ", of branches "    << this->branchNum);
+    LOG_LINE ( VerboseMode::VB_DEBUG, 
+               "Before delete, number of leaves " << this->leafNum
+               << ", of nodes "       << this->nodeNum
+               << ", of branches "    << this->branchNum);
     deleteAllPartialLh(); //Todo: Only clear partial Lh
     clearAllPartialParsimony(false);
     if (shouldPlacementUseSankoffParsimony()) {
         computeTipPartialParsimony();
     }
     int initial_parsimony = computeParsimony("Computing initial parsimony");
-    LOG_LINE ( VB_MED, "Parsimony score before deletions was " << initial_parsimony );
+    LOG_LINE ( VerboseMode::VB_MED, 
+               "Parsimony score before deletions was " << initial_parsimony );
     if (shouldPlacementUseLikelihood()) {
         initializeAllPartialLh();
         fixNegativeBranch();
         double likelihoodStart    = getRealTime();
         double likelihoodCPUStart = getCPUTime();
         double likelihood         = computeLikelihood();
-        LOG_LINE ( VB_MIN, "Computed initial likelihood in " << (getRealTime() - likelihoodStart) << " wall-clock secs"
+        LOG_LINE ( VerboseMode::VB_MIN, 
+                   "Computed initial likelihood in " << (getRealTime() - likelihoodStart) << " wall-clock secs"
                   << " and " << (getCPUTime() - likelihoodCPUStart) << " cpu secs");
-        LOG_LINE ( VB_MIN, "Likelihood score before deletions was " << likelihood );
+        LOG_LINE ( VerboseMode::VB_MIN, "Likelihood score before deletions was " << likelihood );
     }
 }
 
@@ -493,7 +496,7 @@ void PhyloTree::doneDeletes(size_t countRemoved, bool are_placements_to_follow) 
     leafNum   -= static_cast<unsigned int>(countRemoved);
     branchNum -= static_cast<int>(countRemoved*2);
     nodeNum   -= static_cast<int>(countRemoved*2);
-    LOG_LINE ( VB_DEBUG, "After delete, number of leaves " << this->leafNum
+    LOG_LINE ( VerboseMode::VB_DEBUG, "After delete, number of leaves " << this->leafNum
                     << ", of nodes "       << this->nodeNum
                     << ", of branches "    << this->branchNum);
 
@@ -505,15 +508,18 @@ void PhyloTree::doneDeletes(size_t countRemoved, bool are_placements_to_follow) 
         std::stringstream sx;
         sx << "Computing parsimony (after deleting taxa)";
         int parsimony_score = computeParsimony(sx.str().c_str());
-        LOG_LINE(VB_MIN, "Parsimony score after deleting taxa was " << parsimony_score);
+        LOG_LINE(VerboseMode::VB_MIN, 
+                 "Parsimony score after deleting taxa was " << parsimony_score);
         fixNegativeBranch();
         double likelihood = computeLikelihood();
-        LOG_LINE(VB_MIN, "Likelihood score after deleting taxa was " << likelihood);
+        LOG_LINE(VerboseMode::VB_MIN, 
+                 "Likelihood score after deleting taxa was " << likelihood);
         deleteAllPartialLhAndParsimony();
     }
-    else if ( VB_MED <= verbose_mode ) {
+    else if (VerboseMode::VB_MED <= verbose_mode ) {
         int post_delete_parsimony = computeParsimony("Computing post-delete parsimony");
-        LOG_LINE ( VB_MIN, "Parsimony score after deletions was " << post_delete_parsimony );
+        LOG_LINE (VerboseMode::VB_MIN, 
+                  "Parsimony score after deletions was " << post_delete_parsimony );
     }
 
 }
@@ -552,7 +558,7 @@ void PhyloTree::logTaxaToBeRemoved(const map<string, Node*>& mapNameToNode) {
                 rightLength = rightLink->length;
             }
         }
-        LOG_LINE ( VB_MED, "Before deletion, " << it->second->name
+        LOG_LINE (VerboseMode::VB_MED, "Before deletion, " << it->second->name
                   << " had branch length " << upLink->length
                   << " (left branch " << leftLength
                   << ", and right branch " << rightLength << ")");
@@ -572,11 +578,12 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
     map<string, Node*> mapNameToNode;
     double mapStart = getRealTime();
     getMapOfTaxonNameToNode(nullptr, nullptr, mapNameToNode);
-    LOG_LINE ( VB_DEBUG, "Mapping taxa names to nodes took "
+    LOG_LINE (VerboseMode::VB_DEBUG, "Mapping taxa names to nodes took "
               << (getRealTime()-mapStart) << " wall-clock secs" );
-    if (VB_MAX <= verbose_mode) {
+    if (VerboseMode::VB_MAX <= verbose_mode) {
         for (auto it=mapNameToNode.begin(); it!=mapNameToNode.end(); ++it) {
-            LOG_LINE( VB_MAX, "sequence " << it->first << " has id " << it->second->id );
+            LOG_LINE(VerboseMode::VB_MAX, "sequence " << it->first << 
+                     " has id " << it->second->id );
         }
     }
 
@@ -586,8 +593,8 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
         auto   it       = mapNameToNode.find(seq_name);
         if (it==mapNameToNode.end()) {
             if ( !params->suppress_list_of_sequences
-                 || VB_MAX<=verbose_mode ) {
-            LOG_LINE( VB_MED, "Could not find sequence " << seq
+                 || VerboseMode::VB_MAX<=verbose_mode ) {
+            LOG_LINE(VerboseMode::VB_MED, "Could not find sequence " << seq
                      << " " << seq_name << " in the tree."
                      << " It will be added.");
             }
@@ -629,7 +636,7 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
             taxaToRemove.push_back(it->first);
         }
         if ( !params->suppress_list_of_sequences ||
-            VB_MAX <= verbose_mode ) {
+             VerboseMode::VB_MAX <= verbose_mode ) {
             logTaxaToBeRemoved(mapNameToNode);
         }
         mapNameToNode.clear();
@@ -828,7 +835,7 @@ void PhyloTree::mergeAlignment(const Alignment* new_aln) {
                 if (2<copies) {
                     duplicated_sequence_ids.push_back(new_seq_id);
                     if (!params->suppress_list_of_sequences) {
-                        LOG_LINE(VB_MIN, "Sequence " << new_name
+                        LOG_LINE(VerboseMode::VB_MIN, "Sequence " << new_name
                                  << " duplicated in " << path);
                     }
                     suppress = true;
@@ -837,7 +844,7 @@ void PhyloTree::mergeAlignment(const Alignment* new_aln) {
             if (!suppress) {
                 added_sequences.push_back(new_seq_id);
                 if (!params->suppress_list_of_sequences) {
-                    LOG_LINE(VB_MIN, "Sequence " << new_name
+                    LOG_LINE(VerboseMode::VB_MIN, "Sequence " << new_name
                              << " will be added from " << path);
                 }
                 int merged_seq_id = old_count + static_cast<int>(added_sequences.size());
@@ -848,7 +855,7 @@ void PhyloTree::mergeAlignment(const Alignment* new_aln) {
             if (old_count <= old_seq_id) {
                 //This sequence name duplicates that of a sequence found
                 //earlier in the same file.
-                LOG_LINE(VB_MIN, "Ignoring sequence with duplicated name "
+                LOG_LINE(VerboseMode::VB_MIN, "Ignoring sequence with duplicated name "
                          << new_name << " found in " << path);
                 continue;
             }
@@ -865,7 +872,7 @@ void PhyloTree::mergeAlignment(const Alignment* new_aln) {
                 size_t len = old_sequence.length();
                 for (size_t i = 0 ; i < len; ++i ) {
                     if (old_sequence[i]!=new_sequence[i]) {
-                        LOG_LINE(VB_DEBUG,
+                        LOG_LINE(VerboseMode::VB_DEBUG,
                                  "Sequence " << new_name << ": first changed "
                                  << " site was " << i << " (of " << len << ")");
                         same = false;
@@ -875,13 +882,13 @@ void PhyloTree::mergeAlignment(const Alignment* new_aln) {
                 if (same) {
                     ++count_the_same;
                     if (!params->suppress_list_of_sequences) {
-                        LOG_LINE(VB_MIN, "Sequence " << new_name
+                        LOG_LINE(VerboseMode::VB_MIN, "Sequence " << new_name
                                  << " unchanged in " << path);
                     }
                     continue;
                 }
             } else {
-                LOG_LINE(VB_DEBUG, "Sequence " << new_name
+                LOG_LINE(VerboseMode::VB_DEBUG, "Sequence " << new_name
                          << " had different hash (" << new_hashes[new_seq_id] << ")"
                          << " from before (" << old_hashes[old_seq_id] << ")");
             }
@@ -900,7 +907,7 @@ void PhyloTree::mergeAlignment(const Alignment* new_aln) {
             }
             if (!params->suppress_list_of_sequences) {
                 const char* preamble = was_old_dupe ? "Duplicated sequence " : "Sequence ";
-                LOG_LINE(VB_MIN, preamble << new_name << " updated in " << path);
+                LOG_LINE(VerboseMode::VB_MIN, preamble << new_name << " updated in " << path);
             }
             if (was_old_dupe) {
                 //this was an update to a sequence that was a duplicate
@@ -908,7 +915,7 @@ void PhyloTree::mergeAlignment(const Alignment* new_aln) {
                     dupe_to_twin.erase(new_name);
                     added_sequences.push_back(new_seq_id);
                     if (!params->suppress_list_of_sequences) {
-                        LOG_LINE(VB_MIN, "Sequence " << new_name
+                        LOG_LINE(VerboseMode::VB_MIN, "Sequence " << new_name
                                  << " will be added from " << path);
                     }
                     int merged_seq_id = old_count + static_cast<int>(added_sequences.size());
@@ -926,10 +933,10 @@ void PhyloTree::mergeAlignment(const Alignment* new_aln) {
     size_t count_updated_or_added = count_updated + count_added;
     size_t count_duplicated       = duplicated_sequence_ids.size();
     if (count_updated_or_added) {
-        LOG_LINE(VB_MIN, "Adding " << count_added << ","
+        LOG_LINE(VerboseMode::VB_MIN, "Adding " << count_added << ","
                 << " and Updating " << count_updated << " sequences");
         if (0<count_the_same) {
-            LOG_LINE(VB_MIN, "Leaving " << count_the_same
+            LOG_LINE(VerboseMode::VB_MIN, "Leaving " << count_the_same
                      << " sequences unchanged" );
         }
         if (0<count_duplicated) {
@@ -956,14 +963,14 @@ void PhyloTree::mergeAlignment(const Alignment* new_aln) {
                     added_sequences.push_back(static_cast<int>(new_seq_id));
                 }
             }
-            LOG_LINE(VB_MIN, "Dropped " << count_duplicated
+            LOG_LINE(VerboseMode::VB_MIN, "Dropped " << count_duplicated
                      << " duplicated sequences from consideration ");
-            LOG_LINE(VB_MIN, "These will be added back after analysis is complete.");
+            LOG_LINE(VerboseMode::VB_MIN, "These will be added back after analysis is complete.");
         }
         aln->updateFrom(new_aln, updated_sequences,
                         added_sequences, progress);
         doneProgress();
-        LOG_LINE(VB_MED, "Incremental Method: "
+        LOG_LINE(VerboseMode::VB_MED, "Incremental Method: "
                  << params->incremental_method);
         prepareForPlacement();
         IntVector ids_of_sequences_to_place;
@@ -1130,7 +1137,7 @@ int PhyloTree::wrapperFixNegativeBranch(bool force_change) {
         pllReadNewick(getTreeString());
     }
     resetCurScore();
-    if (verbose_mode >= VB_MAX) {
+    if (verbose_mode >= VerboseMode::VB_MAX) {
         printTree(cout);
     }
     return numFixed;
@@ -1431,7 +1438,7 @@ void PhyloTree::ensureCentralPartialParsimonyIsAllocated(size_t extra_vector_cou
     //two vectors, so allocate 4N-2, just in case the tree is rooted.
     total_parsimony_mem_size       = vector_count * pars_block_size + tip_partial_pars_size;
 
-    LOG_LINE(VB_DEBUG, "Allocating " << total_parsimony_mem_size * sizeof(UINT)
+    LOG_LINE(VerboseMode::VB_DEBUG, "Allocating " << total_parsimony_mem_size * sizeof(UINT)
              << " bytes for " << vector_count << " partial parsimony vectors"
              << " of " << (pars_block_size * sizeof(UINT)) << " bytes each, and "
              << (tip_partial_pars_size * sizeof(UINT)) << " additional bytes for tip vectors");
@@ -1446,10 +1453,10 @@ void PhyloTree::ensureCentralPartialParsimonyIsAllocated(size_t extra_vector_cou
     }
     tip_partial_pars = central_partial_pars + total_parsimony_mem_size - tip_partial_pars_size;
     
-    LOG_LINE(VB_MAX, "central_partial_pars is " << pointer_to_hex(central_partial_pars)
+    LOG_LINE(VerboseMode::VB_MAX, "central_partial_pars is " << pointer_to_hex(central_partial_pars)
              << ", tip_partial_pars is " << pointer_to_hex(tip_partial_pars)
              << ", end of allocation is " << pointer_to_hex(tip_partial_pars+tip_partial_pars_size));
-    LOG_LINE(VB_MAX, "parsimony_index upper bound is "
+    LOG_LINE(VerboseMode::VB_MAX, "parsimony_index upper bound is "
              << ((tip_partial_pars - central_partial_pars) / pars_block_size)
              << " block size is "  << pars_block_size);
     return;
@@ -1894,10 +1901,11 @@ void PhyloTree::allocateCentralBlocks(size_t extra_parsimony_block_count,
             + 4 + tip_partial_lh_size;
 
         if (0<extra_lh_block_count) {
-            LOG_LINE(VB_MED, "max_lh_slots was " << max_lh_slots
+            LOG_LINE(VerboseMode::VB_MED, "max_lh_slots was " << max_lh_slots
                 << " and extra_lh_block_count was " << extra_lh_block_count);
         }
-        LOG_LINE ( VB_DEBUG, "Allocating " << mem_size * sizeof(double) << " bytes for "
+        LOG_LINE (VerboseMode::VB_DEBUG, 
+                  "Allocating " << mem_size * sizeof(double) << " bytes for "
                   << (max_lh_slots + extra_lh_block_count) << " partial likelihood vectors "
                   << "( " << (tip_partial_lh_size+4) * sizeof(double) << " bytes for tips and scores)");
         try {
@@ -1908,14 +1916,16 @@ void PhyloTree::allocateCentralBlocks(size_t extra_parsimony_block_count,
         if (!central_partial_lh) {
             outError("Not enough memory for partial likelihood vectors");
         }
-        LOG_LINE ( VB_DEBUG, "central_partial_lh is " << pointer_to_hex(central_partial_lh)
+        LOG_LINE (VerboseMode::VB_DEBUG, 
+                  "central_partial_lh is " << pointer_to_hex(central_partial_lh)
                   << " through " << pointer_to_hex(central_partial_lh + mem_size));
         memset(central_partial_lh, 0, mem_size*sizeof(double));
                 
         // We need not treat params->lh_mem_save == LM_PER_NODE as a special case.
         tip_partial_lh = central_partial_lh + ((max_lh_slots + extra_lh_block_count) * lh_block_size);
-        LOG_LINE (VB_DEBUG, "tip_partial_lh is " << pointer_to_hex(tip_partial_lh)
-                    << " through " << pointer_to_hex(tip_partial_lh + tip_partial_lh_size ));
+        LOG_LINE (VerboseMode::VB_DEBUG, 
+                  "tip_partial_lh is " << pointer_to_hex(tip_partial_lh)
+                  << " through " << pointer_to_hex(tip_partial_lh + tip_partial_lh_size ));
     }
 
 
@@ -1923,7 +1933,9 @@ void PhyloTree::allocateCentralBlocks(size_t extra_parsimony_block_count,
         auto slots_wanted = max_lh_slots + extra_lh_block_count;
         uint64_t mem_size = slots_wanted * scale_block_size;
         central_scale_num_size_in_bytes = mem_size * sizeof(UBYTE);
-        LOG_LINE(VB_MAX, "Allocating " << central_scale_num_size_in_bytes << " bytes for scale num vectors");
+        LOG_LINE(VerboseMode::VB_MAX, 
+                 "Allocating " << central_scale_num_size_in_bytes 
+                 << " bytes for scale num vectors");
         try {
             central_scale_num = aligned_alloc<UBYTE>(mem_size);
         } catch (std::bad_alloc &) {
@@ -1932,9 +1944,11 @@ void PhyloTree::allocateCentralBlocks(size_t extra_parsimony_block_count,
         if (!central_scale_num) {
             outError("Not enough memory for scale num vectors");
         }
-        LOG_LINE ( VB_DEBUG, "Allocated " << central_scale_num_size_in_bytes << " bytes"
-                    << " for " << slots_wanted << " scale blocks");
-        LOG_LINE ( VB_DEBUG, "Address range for scale blocks is " << pointer_to_hex(central_scale_num)
+        LOG_LINE (VerboseMode::VB_DEBUG, 
+                  "Allocated " << central_scale_num_size_in_bytes << " bytes"
+                  << " for " << slots_wanted << " scale blocks");
+        LOG_LINE (VerboseMode::VB_DEBUG, 
+                  "Address range for scale blocks is " << pointer_to_hex(central_scale_num)
                   << " to " << pointer_to_hex(central_scale_num + mem_size) );
     }
     ensureCentralPartialParsimonyIsAllocated(extra_parsimony_block_count);
@@ -1974,7 +1988,7 @@ void PhyloTree::initializeAllPartialLh(int &index_pars, int &index_lh,
                     nei2->scale_num  = central_scale_num  + (index_lh * scale_block_size);
                     nei2->partial_lh = central_partial_lh + (index_lh * lh_block_size);
 #if (0)
-                    LOG_LINE ( VB_MAX, "allocating partial_lh block " << index_lh
+                    LOG_LINE ( VerboseMode::VB_MAX, "allocating partial_lh block " << index_lh
                         << " " << pointer_to_hex(nei2->partial_lh)
                         << " to front-neighbour " << pointer_to_hex(nei2)
                               << " of node " << pointer_to_hex(dad));
@@ -2065,7 +2079,7 @@ double PhyloTree::computeLikelihood(double *pattern_lh) {
 
 //double PhyloTree::computeLikelihoodRooted(PhyloNeighbor *dad_branch, PhyloNode *dad) {
 //    double score = computeLikelihoodBranchNaive(dad_branch, dad);
-//    if (verbose_mode >= VB_DEBUG) {
+//    if (verbose_mode >= VerboseMode::VB_DEBUG) {
 //        printTransMatrices(dad_branch->node, dad);
 //        /*
 //         FOR_EACH_PHYLO_NEIGHBOR(dad_branch->node, dad, it, pit) {
@@ -2484,7 +2498,7 @@ int PhyloTree::computePatternCategories(IntVector *pattern_ncat) {
         if (pattern_ncat) {
             (*pattern_ncat)[ptn] = m;
         }
-        if (verbose_mode >= VB_MED) {
+        if (verbose_mode >= VerboseMode::VB_MED) {
             cout << ptn << "\t" << (int)ptn_freq[ptn] << "\t" << m << "\t" << id_mixture[0];
             for (size_t c = 0; c < m; c++) {
                 cout  << "\t" << id_mixture[c] << "\t" << -sorted_lh_mixture[c];
@@ -3190,7 +3204,7 @@ double PhyloTree::computeBayesianBranchLength(PhyloNeighbor*          dad_branch
     delete[] tmp_state_freq;
 
 #if (0)
-    LOG_LINE(VB_MIN, "Was " << node_branch->length << ","
+    LOG_LINE(VerboseMode::VB_MIN, "Was " << node_branch->length << ","
              << " now " << obsLen
              << " node was leaf " << node->isLeaf() );
 #endif
@@ -3214,11 +3228,11 @@ double PhyloTree::correctBranchLengthF81(double observedBran, double alpha) cons
     if (alpha <= 0.0) {
         correctedBranLen = -H * log(observedBran);
     } else {
-        //if (verbose_mode >= VB_MAX) cout << "alpha: " << alpha << endl;
+        //if (verbose_mode >= VerboseMode::VB_MAX) cout << "alpha: " << alpha << endl;
         correctedBranLen = H * alpha * (pow(observedBran, -1 / alpha) - 1);
     }
     // Branch lengths under PoMo are #events, which is ~N^2 * #substitutions
-    if (aln->seq_type == SEQ_POMO) {
+    if (aln->seq_type == SeqType::SEQ_POMO) {
         correctedBranLen *= aln->virtual_pop_size * aln->virtual_pop_size;
     }
     if (correctedBranLen < params->min_branch_length) {
@@ -3454,7 +3468,7 @@ void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2,
     current_it_back->length = new_len;
     curScore = computeLikelihoodFromBuffer();
     if (curScore != original_lh) {
-        LOG_LINE(VB_MAX, "  branch=" << current_it->id
+        LOG_LINE(VerboseMode::VB_MAX, "  branch=" << current_it->id
             << ", old_len=" << original_len << ", new_len=" << new_len
             << ", old_lh=" << original_lh << ", new_lh=" << curScore
             << ", delta=" << (curScore - original_lh));
@@ -3512,7 +3526,7 @@ void PhyloTree::computeBestTraversal(NodeVector &nodes, NodeVector &nodes2) {
     PhyloNode *farleaf = findFarthestLeaf();
     // double call to farthest leaf to find the longest path on the tree
     findFarthestLeaf(farleaf);
-    if (verbose_mode >= VB_MAX) {
+    if (verbose_mode >= VerboseMode::VB_MAX) {
         cout << "Tree diameter: " << farleaf->height << endl;
     }
     getPreOrderBranches(nodes, nodes2, farleaf);
@@ -3524,7 +3538,7 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance,
     if (report_to_tree==nullptr) {
         report_to_tree = this;
     }
-    TREE_LOG_LINE(*report_to_tree, VB_MAX,
+    TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MAX,
                   "Optimizing branch lengths (max " << my_iterations << " loops)...");
     PhyloNodeVector nodes, nodes2;
     computeBestTraversal(nodes, nodes2);
@@ -3532,17 +3546,20 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance,
     PhyloNeighbor* firstNeighbor  = firstNode->findNeighbor(nodes2[0]);
     double         previous_score = computeLikelihoodBranch(firstNeighbor, firstNode,
                                                             tree_buffers);
-    TREE_LOG_LINE(*report_to_tree, VB_MAX,
+    TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MAX,
                   "Initial tree log-likelihood: " << previous_score);
     DoubleVector lenvec;
     double work_estimate = (double)my_iterations * (double)nodes.size();
     report_to_tree->initProgress(work_estimate, "Optimizing branch lengths", "", "", true);
     for (int i = 0; i < my_iterations; i++) {
-        LOG_LINE(VB_MAX, "Likelihood before iteration " << i + 1 << " : " << previous_score);
+        LOG_LINE(VerboseMode::VB_MAX, 
+                 "Likelihood before iteration " << i + 1 << " : " << previous_score);
         saveBranchLengths(lenvec);
         for (int j = 0; j < nodes.size(); j++) {
             optimizeOneBranch(nodes[j], nodes2[j]);
-            //LOG_LINE(VB_MAX, "Branch " << nodes[j]->id << " " << nodes2[j]->id << ": " << computeLikelihoodFromBuffer());
+            //LOG_LINE(VerboseMode::VB_MAX, 
+            //         "Branch " << nodes[j]->id << " " << nodes2[j]->id << 
+            //         ": " << computeLikelihoodFromBuffer());
             if ( (j % 100) == 99) {
                 report_to_tree->trackProgress(100.0);
             }
@@ -3550,12 +3567,12 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance,
         report_to_tree->trackProgress(static_cast<double>(nodes.size() % 100));
 
         curScore = computeLikelihoodFromBuffer();
-        TREE_LOG_LINE(*report_to_tree,VB_MAX,
+        TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MAX,
                       "Likelihood after iteration " << i + 1 << " : " << curScore);
 
         if (were_lengths_consistent && curScore < previous_score - tolerance*0.1) {
             // IN RARE CASE: tree log-likelihood decreases, revert the branch length and stop
-            TREE_LOG_LINE(*report_to_tree,VB_MED,
+            TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MED,
                           "NOTE: Restoring branch lengths"
                           << " as tree log-likelihood decreases"
                           << " after branch length optimization: "
@@ -3566,15 +3583,15 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance,
 
             double max_delta_lh = 1.0;
             // Increase max delta with PoMo because log likelihood is very much lower.
-            if (aln->seq_type == SEQ_POMO) max_delta_lh = 3.0;
-            // Different max delta if (aln->seq_type == SEQ_CODON) ?!
+            if (aln->seq_type == SeqType::SEQ_POMO) max_delta_lh = 3.0;
+            // Different max delta if (aln->seq_type == SeqType::SEQ_CODON) ?!
             curScore = computeLikelihood();
             if (fabs(curScore - previous_score) > max_delta_lh) {
                 report_to_tree->hideProgress();
                 printTree(cout);
                 cout << endl;
                 report_to_tree->showProgress();
-                TREE_LOG_LINE(*report_to_tree,VB_QUIET,
+                TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_QUIET,
                               "new_tree_lh: " << curScore <<
                               " previous_tree_lh: " << previous_score);
                 if (!params->ignore_any_errors) {
@@ -3588,7 +3605,8 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance,
         if (previous_score <= curScore && curScore <= previous_score + tolerance) {
             break;
         }
-        LOG_LINE(VB_DEBUG, "Prev " << previous_score << ", Curr " << curScore);
+        LOG_LINE(VerboseMode::VB_DEBUG, 
+                 "Prev " << previous_score << ", Curr " << curScore);
         previous_score = curScore;
         were_lengths_consistent = true;
     }
@@ -3631,7 +3649,8 @@ void PhyloTree::moveRoot(Node *node1, Node *node2) {
         pllReadNewick(getTreeString());
     }
     resetCurScore();
-    if (Params::getInstance().fixStableSplits || Params::getInstance().adaptPertubation) {
+    if (Params::getInstance().fixStableSplits || 
+        Params::getInstance().adaptPertubation) {
         buildNodeSplit();
     }
     current_it = current_it_back = NULL;
@@ -3675,14 +3694,14 @@ double PhyloTree::optimizeRootPosition(int root_dist, bool write_info, double lo
     for (auto t = trees.begin(); t != trees.end(); t++) {
         readTreeString(*t);
         optimizeAllBranches(100, logl_epsilon);
-        if (verbose_mode >= VB_MED) {
+        if (verbose_mode >= VerboseMode::VB_MED) {
             cout << "Root pos " << (t - trees.begin())+1 << ": " << curScore << endl;
-            if (verbose_mode >= VB_DEBUG) {
+            if (verbose_mode >= VerboseMode::VB_DEBUG) {
                 drawTree(cout);
             }
         }
         if (curScore > best_score + logl_epsilon) {
-            if (verbose_mode >= VB_MED || write_info) {
+            if (verbose_mode >= VerboseMode::VB_MED || write_info) {
                 cout << "Better root: " << curScore << endl;
             }
             best_score = curScore;
@@ -3743,13 +3762,13 @@ double PhyloTree::testRootPosition(bool write_info, double logl_epsilon) {
         stringstream ss;
         printTree(ss);
         logl_trees.insert({curScore, ss.str()});
-        if (verbose_mode >= VB_MED) {
+        if (verbose_mode >= VerboseMode::VB_MED) {
             cout << "Root pos " << i+1 << ": " << curScore << endl;
-            if (verbose_mode >= VB_DEBUG)
+            if (verbose_mode >= VerboseMode::VB_DEBUG)
                 drawTree(cout);
         }
         if (curScore > best_score + logl_epsilon) {
-            if (verbose_mode >= VB_MED || write_info)
+            if (verbose_mode >= VerboseMode::VB_MED || write_info)
                 cout << "Better root: " << curScore << endl;
             best_score = curScore;
         }
@@ -3904,7 +3923,7 @@ void PhyloTree::doneComputingDistances() {
     int p=0;
     for ( auto it = distanceProcessors.begin()
          ; it!=distanceProcessors.end(); ++it, ++p) {
-        if (verbose_mode >= VB_MAX) {
+        if (verbose_mode >= VerboseMode::VB_MAX) {
             if ( 0 < (*it)->costCalculationCount) {
                 double ratio = (double) ((*it)->derivativeCalculationCount) /
                 (double) ((*it)->costCalculationCount);
@@ -4076,7 +4095,9 @@ template <class L, class F> double computeDistanceMatrix
     
     #if USE_PROGRESS_DISPLAY
     const char* taskReflect = "Determining distance matrix lower triangle from upper";
-    if (verbose_mode<VB_MED) taskReflect="";
+    if (verbose_mode < VerboseMode::VB_MED) {
+        taskReflect = "";
+    }
     double work_to_do = (double)nseqs * ((double)nseqs - 1.0) * 0.5;
     progress_display progress2(work_to_do, taskReflect);
     #else
@@ -4104,7 +4125,7 @@ template <class L, class F> double computeDistanceMatrix
 }
 
 #define EX_START    double baseTime = getRealTime()
-#define EX_TRACE(x) if (verbose_mode < VB_MED) {} \
+#define EX_TRACE(x) if (verbose_mode < VerboseMode::VB_MED) {} \
                     else cout << (getRealTime()-baseTime) << "s " << x << endl
 
 double PhyloTree::computeDistanceMatrix_Experimental() {
@@ -4230,7 +4251,9 @@ double PhyloTree::computeDistanceMatrix() {
     #if USE_PROGRESS_DISPLAY
     progress.done();
     const char* taskReflect = "Determining distance matrix lower triangle from upper";
-    if (verbose_mode<VB_MED) taskReflect="";    
+    if (verbose_mode < VerboseMode::VB_MED) {
+        taskReflect = "";
+    }
     progress_display progress2(work_estimate, taskReflect);
     #else
     double progress2 = 0.0;
@@ -4309,7 +4332,7 @@ double PhyloTree::computeDistanceMatrix(Params &params, Alignment *alignment) {
         longest_dist = (params.use_alignment_summary_for_distance_calculation)
             ? computeDistanceMatrix_Experimental()
             : computeDistanceMatrix();
-        if (verbose_mode >= VB_MED) {
+        if (verbose_mode >= VerboseMode::VB_MED) {
             cout << "Distance calculation time: "
             << getRealTime() - begin_time << " seconds" << endl;
         }
@@ -4395,7 +4418,7 @@ void PhyloTree::computeBioNJ(Params &params) {
                 //This will take longer
                 double write_begin_time = getRealTime();
                 printDistanceFile();
-                if (verbose_mode >= VB_MED) {
+                if (verbose_mode >= VerboseMode::VB_MED) {
                     //Don't log it yet! It might mess up progress reporting!
                     timeToWriteDistanceFile = getRealTime() - write_begin_time;
                 }
@@ -4424,7 +4447,7 @@ void PhyloTree::computeBioNJ(Params &params) {
         //calculation of the tree it could mess up the formatting
         //of the progress reporting (if any) done by the
         //distance matrix algorithm.
-        LOG_LINE(VB_MED, "Time taken to write distance file: "
+        LOG_LINE(VerboseMode::VB_MED, "Time taken to write distance file: "
                  << timeToWriteDistanceFile << " seconds " );
     }
     if (wasDoneInMemory) {
@@ -4435,7 +4458,7 @@ void PhyloTree::computeBioNJ(Params &params) {
     if (!wasDoneInMemory) {
         double start_time = getRealTime();
         treeBuilder->constructTree(dist_file, bionj_file);
-        if (verbose_mode >= VB_MED) {
+        if (verbose_mode >= VerboseMode::VB_MED) {
             cout << "Constructing " << treeBuilder->getName() << " tree"
                 << " (from distance file " << dist_file << ") took "
                 << (getRealTime()-start_time) << " sec." << endl;
@@ -4443,7 +4466,7 @@ void PhyloTree::computeBioNJ(Params &params) {
     }
     double tree_load_start_time = getRealTime();
     readTreeFile(bionj_file.c_str());
-    if (verbose_mode >= VB_MED) {
+    if (verbose_mode >= VerboseMode::VB_MED) {
         cout << "Loading tree (from file " << bionj_file << ") took "
              << (getRealTime()-tree_load_start_time) << " sec." << endl;
     }
@@ -4521,10 +4544,10 @@ int PhyloTree::fixNegativeBranch(bool force, PhyloNode *node, PhyloNode *dad) {
 //
 //    FOR_NEIGHBOR_IT(node, dad, it){
 //        if ((*it)->length < 0.0 || force) { // negative branch length detected
-//            if (verbose_mode >= VB_DEBUG)
+//            if (verbose_mode >= VerboseMode::VB_DEBUG)
 //            cout << "Negative branch length " << (*it)->length << " was set to ";
 //            (*it)->length = random_double() + 0.1;
-//            if (verbose_mode >= VB_DEBUG)
+//            if (verbose_mode >= VerboseMode::VB_DEBUG)
 //            cout << (*it)->length << endl;
 //            // set the backward branch length
 //            (*it)->node->findNeighbor(node)->length = (*it)->length;
@@ -4633,7 +4656,7 @@ void PhyloTree::doNNI(const NNIMove &move, bool clearLH) {
     }
     
     // do the NNI swap
-    LOG_LINE(VB_DEBUG, "  Swapping branches " << node2Nei->id << " and " << node1Nei->id);
+    LOG_LINE(VerboseMode::VB_DEBUG, "  Swapping branches " << node2Nei->id << " and " << node1Nei->id);
     node1->updateNeighbor(node1Nei_it, node2Nei);
     node2Nei->node->updateNeighbor(node2, node1);
     PhyloNeighbor* backNei2 = node2Nei->getNode()->findNeighbor(node1);//JB
@@ -4775,7 +4798,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
             int nni5_num_eval = max(params->nni5_num_eval, getMixlen());
             double new_log_lh = move.optimizeNNIBranches(this, params->nni5, nni5_num_eval);
             if (old_log_lh<new_log_lh) {
-                LOG_LINE(VB_DEBUG, "cbi=" << move.central_branch_id
+                LOG_LINE(VerboseMode::VB_DEBUG, "cbi=" << move.central_branch_id
                          << ", cnt=" << cnt
                          << ", old_log_lh=" << old_log_lh
                          << ", new_log_lh=" << new_log_lh
@@ -4790,18 +4813,25 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
     }
     context.restore();
 
-    LOG_LINE(VB_MAX, "NNI scores were " << nniMoves[0].newloglh << " and " << nniMoves[1].newloglh);
+    LOG_LINE(VerboseMode::VB_MAX, "NNI scores were " << nniMoves[0].newloglh 
+             << " and " << nniMoves[1].newloglh);
     
     bool     takeFirst = nniMoves[0].newloglh > nniMoves[1].newloglh;
     NNIMove& res       = nniMoves[ takeFirst ? 0 : 1 ];
-    LOG_LINE(VB_MAX, "  Node1<->Node2 branch has id " << res.node1->findNeighbor(res.node2)->id << ", new len " << res.newLen);
-    LOG_LINE(VB_MAX, "  Swapped branch 1 has id " << (*res.node1Nei_it)->id << " and length " << (*res.node1Nei_it)->length);
-    LOG_LINE(VB_MAX, "  Swapped branch 2 has id " << (*res.node2Nei_it)->id << " and length " << (*res.node2Nei_it)->length);
+    LOG_LINE(VerboseMode::VB_MAX, 
+             "  Node1<->Node2 branch has id " << res.node1->findNeighbor(res.node2)->id 
+             << ", new len " << res.newLen);
+    LOG_LINE(VerboseMode::VB_MAX, 
+             "  Swapped branch 1 has id " << (*res.node1Nei_it)->id 
+             << " and length " << (*res.node1Nei_it)->length);
+    LOG_LINE(VerboseMode::VB_MAX, 
+             "  Swapped branch 2 has id " << (*res.node2Nei_it)->id 
+             << " and length " << (*res.node2Nei_it)->length);
 
     #if (0)
         double saved_score = curScore;
         double rescore     = computeLikelihood();
-        LOG_LINE(VB_MAX, "  Rescore after restore was " << rescore
+        LOG_LINE(VerboseMode::VB_MAX, "  Rescore after restore was " << rescore
             << " versus previous score of " << saved_score );
     #endif
 
@@ -5460,7 +5490,7 @@ int PhyloTree::collapseStableClade(int min_support, NodeVector &pruned_taxa,
     if (pruned_taxa.empty())
         return 0;
 
-    if (verbose_mode >= VB_MED) {
+    if (verbose_mode >= VerboseMode::VB_MED) {
         auto tax_it    = pruned_taxa.begin();
         auto linked_it = linked_name.begin();
         for (; tax_it != pruned_taxa.end(); tax_it++, linked_it++) {
@@ -5518,7 +5548,7 @@ int PhyloTree::restoreStableClade(Alignment *original_aln, NodeVector &pruned_ta
     initializeTree();
     setAlignment(original_aln);
     setRootNode(params->root);
-    //if (verbose_mode >= VB_MED) drawTree(cout);
+    //if (verbose_mode >= VerboseMode::VB_MED) drawTree(cout);
 
     return 0;
 }
@@ -5981,7 +6011,7 @@ bool PhyloTree::computeTraversalInfo(PhyloNeighbor* dad_branch,
     }
 
     if (params->lh_mem_save == LM_MEM_SAVE) {
-        if (verbose_mode >= VB_MED) {
+        if (verbose_mode >= VerboseMode::VB_MED) {
             int slot_id = static_cast<int>(mem_slots.findNei(dad_branch) - mem_slots.begin());
             node->name = convertIntToString(slot_id);
             //cout << "Branch " << dad->id << "-" << node->id << " assigned slot " << slot_id << endl;

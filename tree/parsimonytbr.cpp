@@ -54,7 +54,8 @@ void ParsimonyLazyTBRMove::finalize(PhyloTree& tree,
         return;
     }
     if (0<benefit) {
-        TREE_LOG_LINE(tree, VB_DEBUG, "move s=" << source_branch_id
+        TREE_LOG_LINE(tree, VerboseMode::VB_DEBUG, 
+            "move s=" << source_branch_id
             << ", t1=" << first_target_branch_id
             << ", t1=" << second_target_branch_id
             << ", b=" << benefit);
@@ -330,7 +331,8 @@ double ParsimonyLazyTBRMove::apply
         branch.computeState(tree, parsimony_score, id, blocks);
         branch.setParsimonyLength(tree);
     }
-    TREE_LOG_LINE(tree, VB_MAX, "Updated parsimony score"
+    TREE_LOG_LINE(tree, VerboseMode::VB_MAX, 
+                  "Updated parsimony score"
                   << " after applying TBR move was " << parsimony_score);
     return parsimony_score;
 }

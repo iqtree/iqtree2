@@ -22,7 +22,7 @@ void BatchPlacementOptimizer::optimizeAfterBatch(TaxaToPlace& taxa,
                                                 intptr_t firstTaxon, intptr_t lastTaxon,
                                                 TargetBranchRange& targets,
                                                 PhyloTree& tree) {
-    if (VB_MIN <= verbose_mode && !be_quiet) {
+    if (VerboseMode::VB_MIN <= verbose_mode && !be_quiet) {
         std::stringstream s;
         s << "Processed batch of "
           << (lastTaxon - firstTaxon) << " taxa";
@@ -53,14 +53,14 @@ void GlobalPlacementOptimizer::optimizeAfterPlacement(PhyloTree& tree) {
         int parsimony_score = tree.computeParsimony("Computing parsimony (after adding taxa)",
                                                     true, false);
         if (!be_quiet) {
-            TREE_LOG_LINE(tree, VB_MIN, "Parsimony score after adding taxa was " << parsimony_score);
+            TREE_LOG_LINE(tree, VerboseMode::VB_MIN, "Parsimony score after adding taxa was " << parsimony_score);
         }
         //Then, fix any negative branches
         tree.initializeAllPartialLh();
         double negativeStart   = getRealTime();
         auto   fixed           = tree.fixNegativeBranch();
         double negativeElapsed = getRealTime() - negativeStart;
-        TREE_LOG_LINE(tree, VB_MED, "Fixing " << fixed
+        TREE_LOG_LINE(tree, VerboseMode::VB_MED, "Fixing " << fixed
                       << " negative branches took " << negativeElapsed
                       << " wall-clock seconds");
 
@@ -68,13 +68,13 @@ void GlobalPlacementOptimizer::optimizeAfterPlacement(PhyloTree& tree) {
         double likelyStart   = getRealTime();
         double likelihood    = tree.computeLikelihood();
         double likelyElapsed = getRealTime() - likelyStart;
-        TREE_LOG_LINE(tree, VB_MIN, "Likelihood score after adding taxa was " << likelihood
+        TREE_LOG_LINE(tree, VerboseMode::VB_MIN, "Likelihood score after adding taxa was " << likelihood
             << " (and took " << likelyElapsed << " wall-clock seconds to calculate)");
     } else {
         double score;
         tree.setAllBranchLengthsFromParsimony(true, score);
         if (!be_quiet) {
-            TREE_LOG_LINE(tree, VB_MIN, "Parsimony score after adding taxa was " << score);
+            TREE_LOG_LINE(tree, VerboseMode::VB_MIN, "Parsimony score after adding taxa was " << score);
         }
     }
 }
@@ -90,7 +90,7 @@ void GlobalLikelihoodPlacementOptimizer::optimizeAfterPlacement(PhyloTree& tree)
     double optimizeStart   = getRealTime();
     double score           = tree.optimizeAllBranches();
     double optimizeElapsed = getRealTime() - optimizeStart;
-    TREE_LOG_LINE(tree, VB_MIN, "After optimizing"
+    TREE_LOG_LINE(tree, VerboseMode::VB_MIN, "After optimizing"
         << " (which took " << optimizeElapsed << " wall-clock seconds)"
         << ", likelihood score was " << score);
 }

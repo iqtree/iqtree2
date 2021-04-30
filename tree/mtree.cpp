@@ -390,7 +390,7 @@ void MTree::printTree(const char *ofile, int brtype)
             out.open(ofile);
         printTree(out, brtype);
         out.close();
-        if (verbose_mode >= VB_DEBUG)
+        if (verbose_mode >= VerboseMode::VB_DEBUG)
             cout << "Tree was printed to " << ofile << endl;
     } catch (ios::failure) {
         outError(ERR_WRITE_OUTPUT, ofile);
@@ -415,7 +415,7 @@ void MTree::printNexus(string ofile, int brtype, string nexus_comment)
         out << endl;
         out << "end;" << endl;
         out.close();
-        if (verbose_mode >= VB_DEBUG)
+        if (verbose_mode >= VerboseMode::VB_DEBUG)
             cout << "Tree was printed to " << ofile << endl;
     } catch (ios::failure) {
         outError(ERR_WRITE_OUTPUT, ofile);
@@ -697,7 +697,7 @@ void MTree::readTree(const char *infile, bool &is_rooted) {
         outError(ERR_READ_INPUT, infile);
     }
     rooted = is_rooted;
-    if (verbose_mode >= VB_MED) {
+    if (verbose_mode >= VerboseMode::VB_MED) {
         cout << "Tree contains " << leafNum - is_rooted <<
              " taxa and " << nodeNum-1-is_rooted << " branches" << (is_rooted ? " (rooted)" : "") << endl;
     }
@@ -1832,14 +1832,14 @@ void MTree::setParams(Params* params_to_use) {
 
 void MTree::drawTree(ostream &out, int brtype, double zero_epsilon) {
     IntVector sub_tree_br;
-    if (verbose_mode >= VB_DEBUG) {
+    if (verbose_mode >= VerboseMode::VB_DEBUG) {
         printTree(cout);
         cout << endl;
     }
     Node *node = root;
     if (node->isLeaf()) node = node->neighbors[0]->node;
     double scale = 60.0/treeDepth(node);
-    //if (verbose_mode >= VB_DEBUG)
+    //if (verbose_mode >= VerboseMode::VB_DEBUG)
     //cout << "Tree depth: " << scale<< endl;
     drawTree2(out, brtype, scale, sub_tree_br, zero_epsilon);
     /*
@@ -2312,7 +2312,7 @@ void MTree::assignBranchSupport(istream &in, map<int,BranchSupportInfo> &branch_
 	IntVector decisive_counts;
 	decisive_counts.resize(mynodes.size(), 0);
 	StrVector occurence_trees; // list of tree IDs where each split occurs
-	if (verbose_mode >= VB_MED)
+	if (verbose_mode >= VerboseMode::VB_MED)
 		occurence_trees.resize(mynodes.size());
 	SplitGraph::iterator sit;
 	for (sit = mysg.begin(); sit != mysg.end(); sit++)
@@ -2324,7 +2324,7 @@ void MTree::assignBranchSupport(istream &in, map<int,BranchSupportInfo> &branch_
 
 		// read in the tree and convert into split system for indexing
 		tree.readTree(in, is_rooted);
-		if (verbose_mode >= VB_DEBUG)
+		if (verbose_mode >= VerboseMode::VB_DEBUG)
 			cout << ntrees << " " << endl;
 		StrVector taxname;
 		tree.getTaxaName(taxname);
@@ -2377,9 +2377,9 @@ void MTree::assignBranchSupport(istream &in, map<int,BranchSupportInfo> &branch_
 			Split *sp = hash_ss.findSplit(subsp);
 			if (sp && sp->trivial() < 0) {
 				(*sit)->setWeight((*sit)->getWeight()+1.0);
-				if (verbose_mode >= VB_MED)
+				if (verbose_mode >= VerboseMode::VB_MED)
 					occurence_trees[id] += convertIntToString(ntrees) + " ";
-				if (verbose_mode >= VB_MAX) {
+				if (verbose_mode >= VerboseMode::VB_MAX) {
 					for (taxid = 0; taxid < (*sit)->getNTaxa(); taxid++)
 						if ((*sit)->containTaxon(taxid))
 							cout << " " << mysg.getTaxa()->GetTaxonLabel(taxid);
@@ -2419,7 +2419,7 @@ void MTree::assignBranchSupport(istream &in, map<int,BranchSupportInfo> &branch_
 			tmp << "0";
 		else
 			tmp << round((mysg[i]->getWeight()/decisive_counts[i])*1000)/10;
-		if (verbose_mode >= VB_MED)
+		if (verbose_mode >= VerboseMode::VB_MED)
 			tmp << "%" << decisive_counts[i];
 
         if (Params::getInstance().newick_extended_format) {
@@ -2432,7 +2432,7 @@ void MTree::assignBranchSupport(istream &in, map<int,BranchSupportInfo> &branch_
                 mynodes[i]->name.append("/");
             mynodes[i]->name.append(tmp.str());
         }
-		if (verbose_mode >= VB_MED) {
+		if (verbose_mode >= VerboseMode::VB_MED) {
 			cout << mynodes[i]->name << " " << occurence_trees[i] << endl;
 		}
 	}
@@ -2479,7 +2479,7 @@ void MTree::computeRFDist(istream &in, DoubleVector &dist, int assign_sup, bool 
 
 		// read in the tree and convert into split system for indexing
 		tree.readTree(in, is_rooted);
-		if (verbose_mode >= VB_DEBUG)
+		if (verbose_mode >= VerboseMode::VB_DEBUG)
 			cout << ntrees << " " << endl;
 		StrVector taxname;
 		tree.getTaxaName(taxname);
@@ -2522,7 +2522,7 @@ void MTree::computeRFDist(istream &in, DoubleVector &dist, int assign_sup, bool 
 			if (sp) {
 				++common_splits;
 				//(*sit)->setWeight((*sit)->getWeight()+1.0);
-				if (verbose_mode >= VB_MAX) {
+				if (verbose_mode >= VerboseMode::VB_MAX) {
 					for (taxid = 0; taxid < (*sit)->getNTaxa(); taxid++)
 						if ((*sit)->containTaxon(taxid))
 							cout << " " << mysg.getTaxa()->GetTaxonLabel(taxid);
@@ -2614,7 +2614,7 @@ void MTree::createBootstrapSupport(StrVector &taxname, MTreeSet &trees, SplitInt
 			} else {
 				if (!(*it)->node->name.empty()) (*it)->node->name.append("/");
 				(*it)->node->name.append("0");
-				if (verbose_mode >= VB_MED) {
+				if (verbose_mode >= VerboseMode::VB_MED) {
 					cout << "split not found:" << endl;
 					mysplit.report(cout);
 				}

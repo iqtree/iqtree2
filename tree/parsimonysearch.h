@@ -130,11 +130,12 @@ int PhyloTree::optimizeSubtreeParsimony(ParsimonySearchParameters& s,
         s.rescoring.stop();
         if (!s.be_quiet) {
             if (iteration==1) {
-                LOG_LINE(VB_MIN, "Before doing (up to) "
+                LOG_LINE(VerboseMode::VB_MIN, "Before doing (up to) "
                          << s.iterations << " rounds of parsimony " << s.name << ","
                          << " parsimony score was " << parsimony_score);
             } else if (!s.be_quiet) {
-                LOG_LINE(VB_MIN, "Applied " << moves_applied << " move"
+                LOG_LINE(VerboseMode::VB_MIN, 
+                         "Applied " << moves_applied << " move"
                          << ((1==moves_applied) ? "" : "s")
                          << " (out of " << moves_considered << ")"
                          << " (" << moves_still_possible << " still possible)"
@@ -146,18 +147,18 @@ int PhyloTree::optimizeSubtreeParsimony(ParsimonySearchParameters& s,
         s.evaluating.start();
         LikelihoodBlockPairs dummyBlocks(0);
         
-        LOG_LINE(VB_DEBUG, "Computing branch initial states");
+        LOG_LINE(VerboseMode::VB_DEBUG, "Computing branch initial states");
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
         for (intptr_t i=0; i<branch_count; ++i) {
             TargetBranch&     tb   = targets[i];
             tb.computeState(*this, parsimony_score, i, dummyBlocks);
-            LOG_LINE(VB_DEBUG, "Branch " << i
+            LOG_LINE(VerboseMode::VB_DEBUG, "Branch " << i
                      << " has branch cost " << tb.getBranchCost()
                      << " and connection_cost " << tb.getConnectionCost() );
         }
-        LOG_LINE(VB_DEBUG, "finding best " << s.name << " move for each branch");
+        LOG_LINE(VerboseMode::VB_DEBUG, "finding best " << s.name << " move for each branch");
         std::vector<Move> moves;
         moves.resize(branch_count);
         
@@ -181,7 +182,7 @@ int PhyloTree::optimizeSubtreeParsimony(ParsimonySearchParameters& s,
         trackProgress(static_cast<double>(branch_count % 100));
         s.evaluating.stop();
         
-        LOG_LINE(VB_DEBUG, "sorting " << s.name << " moves");
+        LOG_LINE(VerboseMode::VB_DEBUG, "sorting " << s.name << " moves");
         s.sorting.start();
         auto first         = moves.begin();
         auto firstNegative = std::partition(first, moves.end(),
@@ -191,7 +192,7 @@ int PhyloTree::optimizeSubtreeParsimony(ParsimonySearchParameters& s,
         
         s.applying.start();
         moves_considered=firstNegative-first;
-        LOG_LINE(VB_MAX, "Considering " << moves_considered
+        LOG_LINE(VerboseMode::VB_MAX, "Considering " << moves_considered
                  << " potentially beneficial " << s.name << " moves");
         moves_applied=0;
         moves_still_possible=0;
@@ -204,7 +205,7 @@ int PhyloTree::optimizeSubtreeParsimony(ParsimonySearchParameters& s,
         while (0<i) {
             --i;
             Move& move = moves[i];
-            LOG_LINE(VB_DEBUG, "considering " << s.name << " move " << i
+            LOG_LINE(VerboseMode::VB_DEBUG, "considering " << s.name << " move " << i
                      << " with benefit " << move.benefit
                      << move.getDescription() );
             
@@ -216,7 +217,8 @@ int PhyloTree::optimizeSubtreeParsimony(ParsimonySearchParameters& s,
                 //"the wrong side"of the source branch (so connecting
                 //to it would create a disconnected subtree and introduce
                 //a cycle containing the source branch).
-                LOG_LINE(VB_DEBUG, "Best move for branch " << move.source_branch_id
+                LOG_LINE(VerboseMode::VB_DEBUG, "Best move" 
+                         " for branch " << move.source_branch_id
                          << " is no longer possible.");
                 continue;
             }
@@ -227,7 +229,8 @@ int PhyloTree::optimizeSubtreeParsimony(ParsimonySearchParameters& s,
                                                   targets, dummyBlocks,
                                                   per_thread_path_parsimony) ;
                 if ( benefit <= 0) {
-                    LOG_LINE(VB_DEBUG, "Best move for branch " << move.source_branch_id
+                    LOG_LINE(VerboseMode::VB_DEBUG, 
+                             "Best move for branch " << move.source_branch_id
                              << " is no probably longer beneficial"
                              << " (net cost delta now " << benefit  << ").");
                     continue;
@@ -250,7 +253,8 @@ int PhyloTree::optimizeSubtreeParsimony(ParsimonySearchParameters& s,
                 //So: not only is not re-evaluating the move simpler, it's more
                 //efficient (in terms of CPU cost), on average.
             }
-            LOG_LINE(VB_MAX, "Applying " << s.name << " move " << i
+            LOG_LINE(VerboseMode::VB_MAX, 
+                     "Applying " << s.name << " move " << i
                      << " with original benefit " << move.getBenefit()
                      << " and current benefit " << benefit
                      << move.getDescription());
@@ -260,7 +264,8 @@ int PhyloTree::optimizeSubtreeParsimony(ParsimonySearchParameters& s,
             if (parsimony_score <= revised_score) {
                 const char* same_or_worse = (parsimony_score < revised_score)
                     ? " a worse " : " the same ";
-                LOG_LINE(VB_MAX, "Reverting " << s.name << " move; as it resulted in"
+                LOG_LINE(VerboseMode::VB_MAX, "Reverting " << s.name 
+                         << " move; as it resulted in"
                          << same_or_worse << "parsimony score"
                          << " (" << revised_score << ")");
                 //ParsimonyMove::apply() is its own inverse.  Calling it again
@@ -300,7 +305,8 @@ int PhyloTree::optimizeSubtreeParsimony(ParsimonySearchParameters& s,
     }
     
     if (!s.be_quiet) {
-        LOG_LINE(VB_MIN, "Applied " << moves_applied << " move"
+        LOG_LINE(VerboseMode::VB_MIN, 
+                 "Applied " << moves_applied << " move"
                  << ((1==moves_applied) ? "" : "s")
                  << " (out of " << moves_considered << ")"
                  << " (" << moves_still_possible << " still possible)"

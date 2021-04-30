@@ -213,7 +213,7 @@ public:
         partial_lh_computed = NOTHING_IS_COMPUTED;
         lh_scale_factor = 0.0;
         partial_pars = NULL;
-        direction = UNDEFINED_DIRECTION;
+        direction = RootDirection::UNDEFINED_DIRECTION;
         size = 0;
     }
 

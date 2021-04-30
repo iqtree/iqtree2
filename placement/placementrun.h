@@ -168,10 +168,13 @@ public:
                 candidates.emplace_back(oldCandidates[r]);
             }
         }
-        inserts_per_batch = placement_params.getInsertsPerBatch(taxa_ids_to_add.size(), taxa_per_batch);
-        TREE_LOG_LINE ( phylo_tree, VB_MAX, "At the end of this pass, index_lhs was "
-                  << block_allocator->getLikelihoodBlockCount() << ", index_pars was "
-                  << block_allocator->getParsimonyBlockCount());
+        inserts_per_batch = placement_params.getInsertsPerBatch(taxa_ids_to_add.size(), 
+                                                                taxa_per_batch);
+        TREE_LOG_LINE ( phylo_tree, VerboseMode::VB_MAX, 
+                        "At the end of this pass, index_lhs was "
+                        << block_allocator->getLikelihoodBlockCount() 
+                        << ", index_pars was "
+                        << block_allocator->getParsimonyBlockCount());
         optoTime.stop();
     }
 

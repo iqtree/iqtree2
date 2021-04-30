@@ -40,7 +40,7 @@ int TinaTree::computeParsimonyScore(intptr_t ptn, int &states, PhyloNode *node, 
     }
     if (node->degree() > 3)
         outError("Does not work with multifurcating tree");
-    if (verbose_mode == VB_DEBUG)
+    if (verbose_mode == VerboseMode::VB_DEBUG)
         cout << ptn << " " << node->id << "  " << node->name << endl;
 
     if (node->isLeaf()) {
@@ -95,13 +95,13 @@ int TinaTree::computeParsimonyScore() {
             int states;
             int ptn_score = computeParsimonyScore(ptn, states);
             score += ptn_score * (*aln)[ptn].frequency;
-            if (verbose_mode >= VB_MAX) {
+            if (verbose_mode >= VerboseMode::VB_MAX) {
             	for (size_t seq=0; seq < aln->getNSeq(); ++seq)
             		cout << aln->convertStateBackStr(aln->at(ptn)[seq]);
             	cout << " " << ptn_score << endl;
             }
         }
-    if (verbose_mode >= VB_MAX)
+    if (verbose_mode >= VerboseMode::VB_MAX)
     	cout << endl;
     return score;
 }

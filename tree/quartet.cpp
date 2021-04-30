@@ -1299,18 +1299,19 @@ void PhyloTree::readLikelihoodMappingGroups(char *filename, QuartetGroups &LMGro
 
     InputType intype = detectInputFile(filename);
     
-    if (intype == IN_NEXUS) {
+    if (intype == InputType::IN_NEXUS) {
         MyReader nexus(filename);
         nexus.Add(lmclusters);
         MyToken token(nexus.inf);
         nexus.Execute(token);
-    } else if (intype == IN_NEWICK) {
+    } else if (intype == InputType::IN_NEWICK) {
         readGroupNewick(filename, lmclusters);
-    } else
+    } else {
         outError("Unknown cluster file format, please use NEXUS or RAxML-style format");
-
-    if (lmclusters->getNSets() == 0)
+    }
+    if (lmclusters->getNSets() == 0) {
         outError("No cluster found");
+    }
 
     // lmclusters->Report(cout);
 

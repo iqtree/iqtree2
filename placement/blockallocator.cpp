@@ -37,7 +37,7 @@ void BlockAllocator::allocateVectorOfParsimonyBlocks(intptr_t vectorSize,
         ++index_parsimony;
     }
     //int leftover = parsimony_index_bound - index_parsimony;
-    //TREE_LOG_LINE(phylo_tree, VB_MIN,
+    //TREE_LOG_LINE(phylo_tree, VerboseMode::VB_MIN,
     //              "pv used " << vectorSize
     //              << ", index_parsimony now " << index_parsimony
     //              << " (left: " << leftover << ")");
@@ -223,7 +223,7 @@ void LikelihoodBlockAllocator::findMissingInputs(PhyloNode* first, PhyloNode* se
     }
     if (wanted->partial_lh == nullptr) {
         list.emplace_back(wanted);
-        //TREE_LOG_LINE(phylo_tree, VB_MIN, "Input " << pointer_to_hex(wanted)
+        //TREE_LOG_LINE(phylo_tree, VerboseMode::VB_MIN, "Input " << pointer_to_hex(wanted)
         //              << " has partial_lh " << pointer_to_hex(wanted->partial_lh));
     }
 }
@@ -234,7 +234,7 @@ void LikelihoodBlockAllocator::findUselessOutputs(PhyloNode* first, PhyloNode* s
         PhyloNeighbor* unwanted = third->findNeighbor(second);
         if (unwanted->partial_lh != nullptr) {
             list.emplace_back(unwanted);
-            //TREE_LOG_LINE(phylo_tree, VB_MIN, "Non-Input " << pointer_to_hex(unwanted)
+            //TREE_LOG_LINE(phylo_tree, VerboseMode::VB_MIN, "Non-Input " << pointer_to_hex(unwanted)
             //              << " has partial_lh " << pointer_to_hex(unwanted->partial_lh));
         }
     }
@@ -254,7 +254,7 @@ void LikelihoodBlockAllocator::makeTreeReady(PhyloNode* first,
     findUselessOutputs(second, first, useless_outputs);
     size_t countUseless  = useless_outputs.size();
     
-    //TREE_LOG_LINE(phylo_tree, VB_MIN, "missing " << countMissing
+    //TREE_LOG_LINE(phylo_tree, VerboseMode::VB_MIN, "missing " << countMissing
     //              << ", useless " << countUseless);
     ASSERT( countMissing <= countUseless + spare_block_pairs.size());
 

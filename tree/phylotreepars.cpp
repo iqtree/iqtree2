@@ -96,7 +96,7 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
         for (vector<Alignment*>::iterator alnit = partitions->begin(); alnit != partitions->end(); alnit++) {
             int end_pos = start_pos + static_cast<int>((*alnit)->ordered_pattern.size());
             switch ((*alnit)->seq_type) {
-            case SEQ_DNA:
+            case SeqType::SEQ_DNA:
                 for (int patid = start_pos; patid != end_pos; patid++) {
                     Alignment::iterator pat = aln->ordered_pattern.begin()+ patid;
                     int state = pat->at(leafid);
@@ -131,7 +131,7 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
                 //if (site < max_sites)
                 //    dad_branch->partial_pars[(site/UINT_BITS)*4] |= ~((1<<(site%UINT_BITS)) - 1);
                 break;
-            case SEQ_PROTEIN:
+            case SeqType::SEQ_PROTEIN:
                 for (int patid = start_pos; patid != end_pos; patid++) {
                     Alignment::iterator pat = aln->ordered_pattern.begin()+ patid;
                     int state = pat->at(leafid);
@@ -168,7 +168,7 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
                     Alignment::iterator pat = aln->ordered_pattern.begin()+ patid;
                     int state = pat->at(leafid);
                     int freq = pat->frequency;
-                    if (aln->seq_type == SEQ_POMO && state >= static_cast<int>((*alnit)->num_states) 
+                    if (aln->seq_type == SeqType::SEQ_POMO && state >= static_cast<int>((*alnit)->num_states) 
                         && state < static_cast<int>((*alnit)->STATE_UNKNOWN)) {
                         state = (*alnit)->convertPomoState(state);
                     }
@@ -247,7 +247,7 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
                 PhyloNode* node_here  = things_to_do[i].second;
                 FOR_EACH_PHYLO_NEIGHBOR(node_below, node_here, it, nei_below) {
                     if (nei_below->node->name != ROOT_NAME && !nei_below->isParsimonyComputed()) {
-                        //LOG_LINE(VB_MIN, "To do " << things_to_do.size()
+                        //LOG_LINE(VerboseMode::VB_MIN, "To do " << things_to_do.size()
                         //         << " is child of to do " << i);
                         things_to_do.emplace_back(nei_below, node_below);
                     }
@@ -268,7 +268,7 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
                     PhyloNeighbor* stack_nei  = things_to_do[i].first;
                     PhyloNode*     stack_node = things_to_do[i].second;
                     computePartialParsimonyFast(stack_nei, stack_node);
-                    //LOG_LINE(VB_MIN, "To do " << i
+                    //LOG_LINE(VerboseMode::VB_MIN, "To do " << i
                     //         << " set score " << getSubTreeParsimonyFast(stack_nei));
                 }
                 things_to_do.resize(start_index);
@@ -466,12 +466,12 @@ double PhyloTree::jukesCantorCorrection(double dist, double alpha) const {
         if (alpha <= 0.0) {
             dist = -log(x) / z;
         } else {
-            //if (verbose_mode >= VB_MAX) cout << "alpha: " << alpha << endl;
+            //if (verbose_mode >= VerboseMode::VB_MAX) cout << "alpha: " << alpha << endl;
             dist = alpha * (pow(x, -1.0/alpha) - 1) / z;
         }
     }
     // Branch lengths under PoMo are #events, which is ~N^2 * #substitutions
-    if (aln->seq_type == SEQ_POMO)
+    if (aln->seq_type == SeqType::SEQ_POMO)
         dist *= aln->virtual_pop_size * aln->virtual_pop_size;
     if (dist < Params::getInstance().min_branch_length)
         dist = Params::getInstance().min_branch_length;
@@ -619,7 +619,7 @@ int PhyloTree::setParsimonyBranchLengths() {
     }
     if (pars_score!=sum_score) {
         hideProgress();
-        LOG_LINE(VB_MIN, "pars_score " << pars_score << " but sum_score " << sum_score);
+        LOG_LINE(VerboseMode::VB_MIN, "pars_score " << pars_score << " but sum_score " << sum_score);
         showProgress();
     }
     ASSERT(pars_score == sum_score);
@@ -771,7 +771,7 @@ void PhyloTree::computeTipPartialParsimony() {
     UINT *this_tip_partial_pars;
     
     switch (aln->seq_type) {
-        case SEQ_DNA:
+        case SeqType::SEQ_DNA:
             for (int state = 4; state < 18; state++) {
                 int cstate = state-nstates+1;
                 this_tip_partial_pars = &tip_partial_pars[state*nstates];
@@ -789,7 +789,7 @@ void PhyloTree::computeTipPartialParsimony() {
                 }
             }
             break;
-        case SEQ_PROTEIN:
+        case SeqType::SEQ_PROTEIN:
             {
                 // ambiguous characters
                 int ambi_aa[] = {
@@ -816,7 +816,7 @@ void PhyloTree::computeTipPartialParsimony() {
                 }
             }
             break;
-        case SEQ_POMO:
+        case SeqType::SEQ_POMO:
             ASSERT(0 && "POMO not handled with Sankoff parsimony");
             break;
         default:
@@ -1208,7 +1208,7 @@ void PhyloTree::create3TaxonTree(IntVector &taxon_order,
     // create star tree
     for (leafNum = 0; leafNum < 3; ++leafNum) {
         auto name = aln->getSeqName(taxon_order[leafNum]);
-        if (leafNum < 3 && verbose_mode >= VB_MAX) {
+        if (leafNum < 3 && verbose_mode >= VerboseMode::VB_MAX) {
             cout << "Add " << name << " to the tree" << endl;
         }
         Node *new_taxon = newNode(taxon_order[leafNum], name.c_str());
@@ -1376,7 +1376,7 @@ int PhyloTree::computeParsimonyTreeBatch(const char *out_prefix,
     setAlignment(alignment);
     initializeAllPartialPars();
     double score = 0;
-    LOG_LINE(VB_MED, "Setting parsimony branch lengths");
+    LOG_LINE(VerboseMode::VB_MED, "Setting parsimony branch lengths");
 
     setAllBranchLengthsFromParsimony(true, score);
     parsimony_score = static_cast<int>(floor(score));
@@ -1386,7 +1386,7 @@ int PhyloTree::computeParsimonyTreeBatch(const char *out_prefix,
     if (out_prefix) {
         string file_name = out_prefix;
         file_name += ".parstree";
-        LOG_LINE(VB_MED, "Writing parsimony tree to " << file_name);
+        LOG_LINE(VerboseMode::VB_MED, "Writing parsimony tree to " << file_name);
         printTree(file_name.c_str(), WT_NEWLINE + WT_BR_LEN);
     }
     return parsimony_score;
@@ -1419,7 +1419,7 @@ int PhyloTree::computeParsimonyTreeNew(const char *out_prefix,
         create3TaxonTree(taxon_order, rand_stream);
     }
     for (size_t i=0; i<leafNum; ++i) {
-        LOG_LINE(VB_DEBUG, "Initial node " << aln->getSeqName(taxon_order[i]));
+        LOG_LINE(VerboseMode::VB_DEBUG, "Initial node " << aln->getSeqName(taxon_order[i]));
     }
     
     PhyloTreeThreadingContext context(*this, params->parsimony_uses_max_threads);
@@ -1468,7 +1468,7 @@ int PhyloTree::computeParsimonyTreeNew(const char *out_prefix,
     {
         ParallelParsimonyCalculator ppc(*this, true);
         parsimony_score = ppc.computeAllParsimony(getRoot()->firstNeighbor(), getRoot());
-        LOG_LINE(VB_DEBUG, "Parsimony score for first "
+        LOG_LINE(VerboseMode::VB_DEBUG, "Parsimony score for first "
                  << leafNum << " taxa is " << parsimony_score);
     }
     IntVector scores;
@@ -1515,7 +1515,7 @@ int PhyloTree::computeParsimonyTreeNew(const char *out_prefix,
         for (size_t j=0; j<branch_count; ++j) {
             s << " " << scores[j];
         }
-        LOG_LINE(VB_DEBUG, s.str());
+        LOG_LINE(VerboseMode::VB_DEBUG, s.str());
 #endif
         
         PhyloBranch b(branches[bestJ]);
@@ -1554,7 +1554,7 @@ int PhyloTree::computeParsimonyTreeNew(const char *out_prefix,
 
         ParallelParsimonyCalculator ppc(*this, true);
         ppc.computeReverseParsimony(newInterior, leaf);
-        LOG_LINE(VB_DEBUG, "After adding " << candidates[i].taxonName
+        LOG_LINE(VerboseMode::VB_DEBUG, "After adding " << candidates[i].taxonName
                  << " parsimony score was " << bestScore);
         ++leafNum;
     }
@@ -1618,7 +1618,7 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix,
         // first copy the constraint tree
         double copyStart = getRealTime();
         copyConstraintTree(&constraintTree, taxon_order, rand_stream);
-        LOG_LINE(VB_MED, "Time to copy constraint tree "
+        LOG_LINE(VerboseMode::VB_MED, "Time to copy constraint tree "
                  << (getRealTime()-copyStart) << " secs");
         
         newNodeID = nodeNum + static_cast<int>(nseq-leafNum);
@@ -1630,12 +1630,12 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix,
         // extract a bifurcating subtree and get removed nodes to insert later
         double extractStart = getRealTime();
         extractBifurcatingSubTree(removed_nei, attached_node, rand_stream);
-        LOG_LINE( VB_MED, "Time to extract bifurcating subtree "
+        LOG_LINE(VerboseMode::VB_MED, "Time to extract bifurcating subtree "
                  << (getRealTime()-extractStart) << " secs");
 
         added_nodes.reserve(removed_nei.size());
     }
-    if (verbose_mode >= VB_MAX) {
+    if (verbose_mode >= VerboseMode::VB_MAX) {
         cout << "computeParsimony: " << computeParsimony() << endl;
     }
 
@@ -1708,7 +1708,7 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix,
         }
         usefulTime.stop();
         
-        LOG_LINE(VB_MAX, "Added " << seq_name << " to the tree"
+        LOG_LINE(VerboseMode::VB_MAX, "Added " << seq_name << " to the tree"
                  << ", score " << best_pars_score );
 
         // now insert the new node in the middle of the branch node-dad

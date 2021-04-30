@@ -101,7 +101,7 @@ void MTreeSet::init(StringIntMap &treels, bool &is_rooted, IntVector &weights) {
 		//cout << "Tree " << it->second << ": ";
 		//tree->printTree(cout, WT_NEWLINE);
 	}
-	if (verbose_mode >= VB_MED)
+	if (verbose_mode >= VerboseMode::VB_MED)
 		cout << count << " tree(s) converted" << endl;
 	//tree_weights.resize(size(), 1);
 }
@@ -137,7 +137,7 @@ void MTreeSet::init(StrVector &treels, bool &is_rooted) {
 		//cout << "Tree " << it->second << ": ";
 		//tree->printTree(cout, WT_NEWLINE);
 	}
-	if (verbose_mode >= VB_MED)
+	if (verbose_mode >= VerboseMode::VB_MED)
 		cout << count << " tree(s) converted" << endl;
 	//tree_weights.resize(size(), 1);
 }
@@ -372,7 +372,7 @@ void MTreeSet::convertSplits(SplitGraph &sg, double split_threshold, int weighti
 		ASSERT(*sp == *(*it));
 		//Split *sp = ass_it->first;
 		if (freq_value <= threshold) {
-			if (verbose_mode == VB_DEBUG) {
+			if (verbose_mode == VerboseMode::VB_DEBUG) {
 				sp->report(cout);
 			}
 			int num = hash_ss.getValue(sg.back());
@@ -420,7 +420,7 @@ void MTreeSet::convertSplits(StrVector &taxname, SplitGraph &sg,
                              int weighting_type, double weight_threshold,
                              char *tag_str, bool sort_taxa) {
 
-	if (verbose_mode >= VB_MED) {
+	if (verbose_mode >= VerboseMode::VB_MED) {
 	#ifdef USE_HASH_MAP
 		cout << "Using hash_map" << endl;
 	#else

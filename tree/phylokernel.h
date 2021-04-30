@@ -1077,7 +1077,7 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
                 tree_lh += buffers._pattern_lh[ptn] * ptn_freq[ptn];
             }
             cout << endl;
-            if (verbose_mode >= VB_MED) {
+            if (verbose_mode >= VerboseMode::VB_MED) {
                 printTree(cout);
                 cout << endl;
             }
@@ -1564,7 +1564,7 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
             //JB 22-Dec-2020 end_pos now intptr_t, to prevent overflow
             intptr_t end_pos = start_pos + (*alnit)->ordered_pattern.size(); 
             switch ((*alnit)->seq_type) {
-            case SEQ_DNA:
+            case SeqType::SEQ_DNA:
                 for (intptr_t patid = start_pos; patid != end_pos; patid++) {
                     Alignment::iterator pat = aln->ordered_pattern.begin()+ patid;
                     int state = pat->at(leafid);
@@ -1607,7 +1607,7 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                     }
                 }
                 break;
-            case SEQ_PROTEIN:
+            case SeqType::SEQ_PROTEIN:
                 for (intptr_t patid = start_pos; patid != end_pos; patid++) {
                     Alignment::iterator pat = aln->ordered_pattern.begin()+ patid;
                     int state = pat->at(leafid);
@@ -1653,8 +1653,8 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                 Alignment::iterator pat = aln->ordered_pattern.begin()+ patid;
                 int state = pat->at(leafid);
                 int freq = pat->frequency;
-                if (aln->seq_type == SEQ_POMO && state >= nstates 
-                    && state < static_cast<int>( aln->STATE_UNKNOWN)) {
+                if (aln->seq_type == SeqType::SEQ_POMO && state >= nstates && 
+                    state < static_cast<int>( aln->STATE_UNKNOWN)) {
                     state -= nstates;
                     ASSERT(state < aln->pomo_sampled_states.size());
                     int id1 = aln->pomo_sampled_states[state] & 3;

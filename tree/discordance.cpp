@@ -407,7 +407,7 @@ void PhyloTree::computeGeneConcordance(MTreeSet &trees, map<string,string> &mean
         stringstream tmp;
         tmp.precision(3);
         tmp << (double)supports[0][i]/decisive_counts[i]*100;
-        if (verbose_mode >= VB_MED)
+        if (verbose_mode >= VerboseMode::VB_MED)
             tmp << "%" << decisive_counts[i];
         
         Node *node = branches[i].second;

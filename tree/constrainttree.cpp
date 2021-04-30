@@ -71,7 +71,7 @@ void ConstraintTree::initFromTree() {
 			right->updateNeighbor((*it), left, len);
 			delete (*it);
 			num_collapsed++;
-			if (verbose_mode >= VB_MED)
+			if (verbose_mode >= VerboseMode::VB_MED)
 				cout << "Node of degree 2 collapsed" << endl;
 		}
 	if (num_collapsed)
@@ -107,14 +107,16 @@ void ConstraintTree::readConstraint(MTree &src_tree) {
     copyTree(&src_tree);
     // convert all rooted constraint tree to unrooted
     if (rooted) {
-        if (verbose_mode >= VB_MED)
+        if (verbose_mode >= VerboseMode::VB_MED) {
             cout << "Converting rooted constraint tree to unrooted" << endl;
+        }
         convertToUnrooted();
     }
     initFromTree();
 }
 
-int ConstraintTree::removeTaxa(const StrVector &taxa_names, bool reassignNodeIDs, const char* context) {
+int ConstraintTree::removeTaxa(const StrVector &taxa_names, bool reassignNodeIDs, 
+                               const char* context) {
     if (taxa_names.empty()) {
         return 0;
     }

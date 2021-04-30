@@ -39,7 +39,7 @@ PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment, bool new_iqtree) :  IQ
     bool has_codon = false;
     vector<Alignment*>::iterator it;
     for (it = alignment->partitions.begin(); it != alignment->partitions.end(); it++)
-        if ((*it)->seq_type != SEQ_CODON) {
+        if ((*it)->seq_type != SeqType::SEQ_CODON) {
             rescale_codon_brlen = true;
         } else
             has_codon = true;
@@ -243,7 +243,7 @@ void PhyloSuperTree::printResultTree(string suffix) {
     } catch (ios::failure) {
         outError(ERR_WRITE_OUTPUT, tree_file_name);
     }
-    if (verbose_mode >= VB_MED)
+    if (verbose_mode >= VerboseMode::VB_MED)
         cout << "Partition trees printed to " << tree_file_name << endl;
 }
 
@@ -546,7 +546,7 @@ void PhyloSuperTree::mapTrees() {
 	ASSERT(root);
     syncRooting();
 	int part = 0, i;
-	if (verbose_mode >= VB_DEBUG)
+	if (verbose_mode >= VerboseMode::VB_DEBUG)
 		drawTree(cout,  WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE | WT_BR_ID);
 	for (iterator it = begin(); it != end(); it++, part++) {
 		string taxa_set;
@@ -573,14 +573,14 @@ void PhyloSuperTree::mapTrees() {
             }
 			if (id >=0) part_taxa[i] = my_taxa[id];
 		}
-		if (verbose_mode >= VB_DEBUG) {
+		if (verbose_mode >= VerboseMode::VB_DEBUG) {
 			cout << "Subtree for partition " << part << endl;
 			(*it)->drawTree(cout,  WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE | WT_BR_ID);
 		}
 		linkTree(part, part_taxa);
 	}
 
-	if (verbose_mode >= VB_DEBUG) printMapInfo();
+	if (verbose_mode >= VerboseMode::VB_DEBUG) printMapInfo();
 }
 
 void PhyloSuperTree::linkTrees() {
@@ -690,7 +690,7 @@ void PhyloSuperTree::computePartitionOrder() {
     delete [] cost;
     delete [] id;
     
-    if (verbose_mode >= VB_MED) {
+    if (verbose_mode >= VerboseMode::VB_MED) {
         cout << "Partitions ordered by computation costs:" << endl;
         cout << "#nexus" << endl << "begin sets;" << endl;
         for (int i = 0; i < ntrees; i++)
@@ -796,7 +796,7 @@ double PhyloSuperTree::optimizeAllBranches(int my_iterations, double tolerance,
                                                             maxNRStep, were_lengths_consistent,
                                                             report_to_tree);
         tree_lh += part_info[i].cur_score;
-        if (verbose_mode >= VB_MAX)
+        if (verbose_mode >= VerboseMode::VB_MAX)
             at(i)->printTree(cout, WT_BR_LEN + WT_NEWLINE);
     }
     
@@ -1170,7 +1170,7 @@ void PhyloSuperTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
 }
 
 void PhyloSuperTree::computeBranchLengths() {
-	if (verbose_mode >= VB_DEBUG)
+	if (verbose_mode >= VerboseMode::VB_DEBUG)
 		cout << "Assigning branch lengths for full tree with weighted average..." << endl;
 	int part = 0, i;
     iterator it;
@@ -1197,7 +1197,7 @@ void PhyloSuperTree::computeBranchLengths() {
 		for (i = 0; i < nodes1.size(); i++) {
 			PhyloNeighbor *nei1 = neighbors1[i]->link_neighbors[part];
 			if (!nei1) continue;
-            if ((*it)->aln->seq_type == SEQ_CODON && rescale_codon_brlen) {
+            if ((*it)->aln->seq_type == SeqType::SEQ_CODON && rescale_codon_brlen) {
                 // rescale branch length by 3
                 neighbors1[i]->length += (nei1->length) * (*it)->aln->getNSite() / brfreq[nei1->id];
                 occurence[i] += (*it)->aln->getNSite32()*3;
@@ -1300,13 +1300,13 @@ void PhyloSuperTree::removeIdenticalSeqs(Params &params) {
 	int part = 0;
     SuperAlignment *saln = (SuperAlignment*)aln;
 	for (iterator it = begin(); it != end(); it++, part++) {
-		if (verbose_mode >= VB_MED) {
+		if (verbose_mode >= VerboseMode::VB_MED) {
 			cout << "Partition " << saln->partitions[part]->name << " " << saln->partitions[part]->getNSeq() <<
 					" sequences from " << (*it)->aln->getNSeq() << " extracted" << endl;
 		}
 		(*it)->aln = saln->partitions[part];
 	}
-	if (verbose_mode >= VB_MED) {
+	if (verbose_mode >= VerboseMode::VB_MED) {
 		cout << "Reduced alignment has " << aln->getNSeq() << " sequences with " << getAlnNSite() << " sites and "
 				<< getAlnNPattern() << " patterns" << endl;
 	}
@@ -1522,7 +1522,7 @@ void PhyloSuperTree::printBestPartitionParams(const char *filename) {
             replace(name.begin(), name.end(), '+', '_');
             out << "  charset " << name << " = ";
             if (!saln->partitions[part]->aln_file.empty()) out << saln->partitions[part]->aln_file << ": ";
-            if (saln->partitions[part]->seq_type == SEQ_CODON)
+            if (saln->partitions[part]->seq_type == SeqType::SEQ_CODON)
                 out << "CODON, ";
             string pos = saln->partitions[part]->position_spec;
             replace(pos.begin(), pos.end(), ',' , ' ');

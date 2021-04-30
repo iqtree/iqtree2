@@ -122,9 +122,10 @@ void BaseballSearchHeuristic::prepareToFilter(PhyloTree& tree, TargetBranchRange
             intptr_t b = targetIndices[t];
             is_worth_trying.cell(b, c ) = true;
         }
-        if (VB_DEBUG <= verbose_mode) {
+        if (VerboseMode::VB_DEBUG <= verbose_mode) {
             std::stringstream s;
-            s << taxa.getTaxonByIndex(c).taxonName << " took top " << take << "target branches";
+            s << taxa.getTaxonByIndex(c).taxonName 
+              << " took top " << take << "target branches";
             tree.logLine(s.str());
             s.clear();
             if (take>3) {
@@ -147,11 +148,14 @@ void BaseballSearchHeuristic::prepareToFilter(PhyloTree& tree, TargetBranchRange
     tree_in_use = &tree;
 }
 
-bool BaseballSearchHeuristic::isPlacementWorthTrying(const TaxonToPlace& taxon, size_t taxonIndex,
-                                    const TargetBranchRef& target ) {
-    bool tryIt = is_worth_trying.cell(target.getTargetIndex() - target_base, taxonIndex-taxon_base);
+bool BaseballSearchHeuristic::isPlacementWorthTrying(const TaxonToPlace& taxon, 
+                                                     size_t taxonIndex,
+                                                     const TargetBranchRef& target ) {
+    bool tryIt = is_worth_trying.cell(target.getTargetIndex() - target_base, 
+                                      taxonIndex-taxon_base);
     if (tryIt && tree_in_use!=nullptr) {
-        TREE_LOG_LINE(*tree_in_use, VB_DEBUG, "Will try " << taxon.taxonName
+        TREE_LOG_LINE(*tree_in_use, VerboseMode::VB_DEBUG, 
+                      "Will try " << taxon.taxonName
                       << " against target branch " << target.getTargetIndex());
     }
     return tryIt;

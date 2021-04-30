@@ -47,7 +47,7 @@ struct PartitionInfo {
     //double *nni1_ptnlh; // pattern likelihoods of 1st NNI tree
     //double *nni2_ptnlh; // pattern likelihoods of 2nd NNI tree
     NNIMove nniMoves[2];
-    PartitionInfo(): cur_ptnlh(nullptr) {        
+    PartitionInfo(): cur_score(0), part_rate(0), evalNNIs(0), cur_ptnlh(nullptr) {
     }
     
 };

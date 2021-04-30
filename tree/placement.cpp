@@ -65,7 +65,7 @@ double PhyloTree::addTaxonML(PhyloNode* added_taxon,     PhyloNode *added_node,
     added_node->updateNeighbor(added_taxon, added_taxon, -1);
     added_taxon->updateNeighbor(added_node, added_node, -1);
     
-    LOG_LINE(VB_DEBUG, "  Placement branch length " << len);
+    LOG_LINE(VerboseMode::VB_DEBUG, "  Placement branch length " << len);
 
     FOR_EACH_PHYLO_NEIGHBOR(added_node, nullptr, it, nei) {
         nei->clearComputedFlags();
@@ -77,18 +77,21 @@ double PhyloTree::addTaxonML(PhyloNode* added_taxon,     PhyloNode *added_node,
     double best_score = 0;
     if (isAddedAtMidpoint) {
         len_to_new_taxon   = recomputeParsimonyBranchLength(added_taxon, added_node);
-        LOG_LINE(VB_DEBUG, "  Parsimony taxon->interior length " << len_to_new_taxon );
+        LOG_LINE(VerboseMode::VB_DEBUG, 
+                 "  Parsimony taxon->interior length " << len_to_new_taxon );
         nei                = added_taxon->findNeighbor(added_node);
         best_score         = computeLikelihoodBranch(nei, added_taxon,
                                                      tree_buffers);
-        LOG_LINE(VB_DEBUG, "  Traversal info size is " << traversal_info.size());
-        LOG_LINE(VB_DEBUG, "  Likelihood before optimization " << best_score);
+        LOG_LINE(VerboseMode::VB_DEBUG, 
+                 "  Traversal info size is " << traversal_info.size());
+        LOG_LINE(VerboseMode::VB_DEBUG, 
+                 "  Likelihood before optimization " << best_score);
         optimizeOneBranch(added_taxon, added_node, false, 20);
         len_to_target_dad  = halfLen;
         len_to_target_node = halfLen;
         len_to_new_taxon   = nei->length;
         best_score         = computeLikelihoodFromBuffer();
-        LOG_LINE(VB_DEBUG, "  Likelihood after optimization " << best_score
+        LOG_LINE(VerboseMode::VB_DEBUG, "  Likelihood after optimization " << best_score
                            << " (len = " << len_to_new_taxon << ")");
     }
     else {
@@ -108,7 +111,7 @@ double PhyloTree::addTaxonML(PhyloNode* added_taxon,     PhyloNode *added_node,
     }
     target_node        = node;
     target_dad         = dad;
-    LOG_LINE(VB_DEBUG, "  ML Lengths " << len_to_target_dad
+    LOG_LINE(VerboseMode::VB_DEBUG, "  ML Lengths " << len_to_target_dad
              << ", " << len_to_target_node << ", " << len_to_new_taxon << std::endl);
 
     //unlink the added node
@@ -147,14 +150,16 @@ void PhyloTree::removeSampleTaxaIfRequested() {
     int nseq = static_cast<int>(aln->getNSeq());
     size_t countOfTaxaToRemove = PlacementParameters().getNumberOfTaxaToRemoveAndReinsert(nseq);
     if (0<countOfTaxaToRemove) {
-        LOG_LINE(VB_DEBUG, "Will mark " << countOfTaxaToRemove << " (out of " << nseq
-                    << ") sequences, to be removed.");
+        LOG_LINE(VerboseMode::VB_DEBUG, 
+                 "Will mark " << countOfTaxaToRemove << " (out of " << nseq
+                 << ") sequences, to be removed.");
         map<string, Node*> mapNameToNode;
         getMapOfTaxonNameToNode(nullptr, nullptr, mapNameToNode);
         size_t r = 0;
-        LOG_LINE(VB_MAX, "Before removing sequences:");
+        LOG_LINE(VerboseMode::VB_MAX, "Before removing sequences:");
         for (auto it=mapNameToNode.begin(); it!=mapNameToNode.end(); ++it) {
-            LOG_LINE( VB_MAX, "sequence " << it->first << " has id " << it->second->id );
+            LOG_LINE(VerboseMode::VB_MAX, "sequence " << it->first 
+                     << " has id " << it->second->id );
         }
 
         for (int seq = 0; seq < nseq; ++seq) {
@@ -170,7 +175,9 @@ void PhyloTree::removeSampleTaxaIfRequested() {
                         node->name = newName;
                         mapNameToNode[newName] = node;
                     }
-                    LOG_LINE(VB_MED, "Marking sequence " << seq << " (" << node->name << ") to be removed.");
+                    LOG_LINE(VerboseMode::VB_MED, 
+                             "Marking sequence " << seq << " (" << node->name << ")"
+                             " as to be removed.");
                 }
             }
         }
@@ -201,8 +208,9 @@ void PhyloTree::reinsertTaxaViaStepwiseParsimony(const IntVector& taxaIdsToAdd) 
     double parsimonyStart = getRealTime();
     clearAllPartialParsimony(false);
     double parsimonyScore = computeParsimony("Recalculating parsimony score");
-    LOG_LINE( VB_MED, "Recalculated parsimony score " << parsimonyScore
-                << " (recalculation cost " << (getRealTime() - parsimonyStart) << " sec)" );
+    LOG_LINE(VerboseMode::VB_MED, 
+             "Recalculated parsimony score " << parsimonyScore
+             << " (recalculation cost " << (getRealTime() - parsimonyStart) << " sec)" );
 }
 
 typedef TaxonToPlace TaxonTypeInUse;
@@ -243,7 +251,7 @@ void PhyloTree::optimizePlacementRegion(ParsimonySearchParameters& s,
     std::partition(real_nodes.begin(), real_nodes.end(),
                    [tb](Node* n) { return n==tb.first || n==tb.second; });
 #if (0)
-    LOG_LINE(VB_MIN, "targ bran " << region_target_index
+    LOG_LINE(VerboseMode::VB_MIN, "targ bran " << region_target_index
              << " and first->id " << tb.first->id
              << " and second->id " << tb.second->id
              << " node count " << real_nodes.size());
@@ -423,7 +431,7 @@ void PhyloTree::optimizePlacementRegion(ParsimonySearchParameters& s,
     }
     //copyingOut.stop();
     /*
-    LOG_LINE(VB_MIN, "Opt " << branch_count << " branches "
+    LOG_LINE(VerboseMode::VB_MIN, "Opt " << branch_count << " branches "
              << "In "  << copyingIn.elapsed_wallclock_time << " " << copyingIn.elapsed_cpu_time
              << "Opt " << optimizing.elapsed_wallclock_time << " " << optimizing.elapsed_cpu_time
              << "Out " << copyingOut.elapsed_wallclock_time << " " << copyingOut.elapsed_cpu_time
@@ -541,7 +549,7 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
 
     double setUpStartTime = getRealTime();
     pr.searchTime.start();
-    LOG_LINE ( VB_DEBUG, "Before allocating TaxonToPlace array"
+    LOG_LINE ( VerboseMode::VB_DEBUG, "Before allocating TaxonToPlace array"
               << ", index_lh was "
               << pr.block_allocator->getLikelihoodBlockCount() );
     
@@ -565,17 +573,17 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
     trackProgress((double)(newTaxaCount % 1000));
     pr.searchTime.stop();
 
-    LOG_LINE ( VB_DEBUG, "After allocating TaxonToPlace"
+    LOG_LINE ( VerboseMode::VB_DEBUG, "After allocating TaxonToPlace"
                << ", index_lh was " << pr.block_allocator->getLikelihoodBlockCount()
                << ", index_pars was " << pr.block_allocator->getParsimonyBlockCount());
 
     TargetBranchRange targets(*this, pr.block_allocator, pr.calculator, false);
-    LOG_LINE ( VB_DEBUG, "After allocating TargetBranchRange"
+    LOG_LINE ( VerboseMode::VB_DEBUG, "After allocating TargetBranchRange"
                << ", index_lh was " << pr.block_allocator->getLikelihoodBlockCount()
                << ", index_pars was " << pr.block_allocator->getParsimonyBlockCount());
     
     if (!be_quiet) {
-        LOG_LINE ( VB_MIN, "Placement set-up time was "
+        LOG_LINE ( VerboseMode::VB_MIN, "Placement set-up time was "
                    << (getRealTime() - setUpStartTime) << " sec");
     }
     
@@ -615,8 +623,8 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
     doneProgress();
     
     if (!be_quiet) {
-        LOG_LINE ( VB_MED, "Total number of blocked inserts was "  << pr.taxa_inserted_nearby );
-        LOG_LINE ( VB_MED, "At the end of addNewTaxaToTree, index_lhs was "
+        LOG_LINE ( VerboseMode::VB_MED, "Total number of blocked inserts was "  << pr.taxa_inserted_nearby );
+        LOG_LINE ( VerboseMode::VB_MED, "At the end of addNewTaxaToTree, index_lhs was "
                   << pr.block_allocator->getLikelihoodBlockCount() << ", index_pars was "
                   << pr.block_allocator->getParsimonyBlockCount() << ".");
     }
@@ -628,7 +636,7 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
         
     pr.donePlacement();
     
-    if (VB_MIN <= verbose_mode && !be_quiet) {
+    if (VerboseMode::VB_MIN <= verbose_mode && !be_quiet) {
         pr.reportActivity();
     }
 }

@@ -314,7 +314,7 @@ void PhyloTree::computeTipPartialLikelihood() {
                             512+1024 // U = I or L
                             };
                         switch (aln->seq_type) {
-                        case SEQ_DNA:
+                        case SeqType::SEQ_DNA:
                             {
                                 int cstate = state-nstates+1;
                                 for (int i = 0; i < nstates; i++) {
@@ -326,7 +326,7 @@ void PhyloTree::computeTipPartialLikelihood() {
                                 }
                             }
                             break;
-                        case SEQ_PROTEIN:
+                        case SeqType::SEQ_PROTEIN:
                             //map[(unsigned char)'B'] = 4+8+19; // N or D
                             //map[(unsigned char)'Z'] = 32+64+19; // Q or E
                             {
@@ -370,9 +370,9 @@ void PhyloTree::computeTipPartialLikelihood() {
         nmixtures = getModel()->getNMixtures();
     int nstates = getModel()->num_states;
     int state;
-    if (aln->seq_type == SEQ_POMO) {
-        if (aln->pomo_sampling_method != SAMPLING_WEIGHTED_BINOM &&
-            aln->pomo_sampling_method != SAMPLING_WEIGHTED_HYPER)
+    if (aln->seq_type == SeqType::SEQ_POMO) {
+        if (aln->pomo_sampling_method != SamplingType::SAMPLING_WEIGHTED_BINOM &&
+            aln->pomo_sampling_method != SamplingType::SAMPLING_WEIGHTED_HYPER)
             outError("Sampling method not supported by PoMo.");
         ASSERT(aln->STATE_UNKNOWN == nstates + aln->pomo_sampled_states.size());
     }
@@ -410,7 +410,7 @@ void PhyloTree::computeTipPartialLikelihood() {
         }
         // special treatment for ambiguous characters
         switch (aln->seq_type) {
-        case SEQ_DNA:
+        case SeqType::SEQ_DNA:
             for (state = 4; state < 18; state++) {
                 int cstate = state-nstates+1;
                 this_tip_partial_lh = &tip_partial_lh[state*nstates];
@@ -420,7 +420,7 @@ void PhyloTree::computeTipPartialLikelihood() {
                 }
             }
             break;
-        case SEQ_PROTEIN:
+        case SeqType::SEQ_PROTEIN:
             for (state = 0; state < sizeof(ambi_aa)/sizeof(int); state++) {
                 this_tip_partial_lh = &tip_partial_lh[(state+20)*nstates];
                 for (i = 0; i < nstates; i++) {
@@ -483,7 +483,7 @@ void PhyloTree::computeTipPartialLikelihood() {
     // special treatment for ambiguous characters
 	double lh_ambiguous;
 	switch (aln->seq_type) {
-	case SEQ_DNA:
+	case SeqType::SEQ_DNA:
 		for (state = 4; state < 18; state++) {
 			int cstate = state-nstates+1;
 			double *this_tip_partial_lh = &tip_partial_lh[state*nstates*nmixtures];
@@ -499,7 +499,7 @@ void PhyloTree::computeTipPartialLikelihood() {
 			}
 		}
 		break;
-	case SEQ_PROTEIN:
+	case SeqType::SEQ_PROTEIN:
 		//map[(unsigned char)'B'] = 4+8+19; // N or D
 		//map[(unsigned char)'Z'] = 32+64+19; // Q or E
 		for (state = 0; state < sizeof(ambi_aa)/sizeof(int); state++) {
@@ -600,7 +600,7 @@ void PhyloTree::computePtnInvar() {
                 // left unchanged and zero because ptn_invar has been initialized to 0.
 			} else if ((*aln)[ptn].const_char < nstates) {
 				ptn_invar[ptn] = p_invar * state_freq[(int) (*aln)[ptn].const_char];
-			} else if (aln->seq_type == SEQ_DNA) {
+			} else if (aln->seq_type == SeqType::SEQ_DNA) {
                 // 2016-12-21: handling ambiguous state
                 ptn_invar[ptn] = 0.0;
                 int cstate = (*aln)[ptn].const_char-nstates+1;
@@ -609,7 +609,7 @@ void PhyloTree::computePtnInvar() {
                         ptn_invar[ptn] += state_freq[x];
                 }
                 ptn_invar[ptn] *= p_invar;
-            } else if (aln->seq_type == SEQ_PROTEIN) {
+            } else if (aln->seq_type == SeqType::SEQ_PROTEIN) {
                 ptn_invar[ptn] = 0.0;
                 int cstate = (*aln)[ptn].const_char-nstates;
                 ASSERT(cstate <= 2);
@@ -1891,7 +1891,7 @@ void PhyloTree::computeAncestralLikelihood(PhyloNeighbor *dad_branch, PhyloNode 
             
             // special treatment for ambiguous characters
             switch (aln->seq_type) {
-            case SEQ_DNA:
+            case SeqType::SEQ_DNA:
                 for (int state = 4; state < 18; state++) {
                     this_lh_leaf = lh_leaf + (state*nstates);
                     int cstate = state-nstates+1;
@@ -1905,7 +1905,7 @@ void PhyloTree::computeAncestralLikelihood(PhyloNeighbor *dad_branch, PhyloNode 
                     }
                 }
                 break;
-            case SEQ_PROTEIN:
+            case SeqType::SEQ_PROTEIN:
                 for (int state = 0; state < sizeof(ambi_aa)/sizeof(int); state++) {
                     this_lh_leaf = lh_leaf + ((state+20)*nstates);
                     for (int parent = 0; parent < nstates; parent++) {

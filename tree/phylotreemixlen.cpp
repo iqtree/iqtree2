@@ -274,7 +274,7 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance, bool write_info,
         }
         if (write_info) {
             cout << "Initial LogL: " << curScore << ", ";
-    //        if (verbose_mode >= VB_MED)
+    //        if (verbose_mode >= VerboseMode::VB_MED)
                 relative_rate->writeInfo(cout);
         }
 
@@ -326,7 +326,7 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance, bool write_info,
         for (i = 0; i < mixlen; i++) {
             relative_treelen[i] = relative_treelen[i] / lenvec[i];
         }
-        if (verbose_mode >= VB_MED) {
+        if (verbose_mode >= VerboseMode::VB_MED) {
             cout << "relative_ratio:";
             for (i = 0; i < mixlen; i++)
                 cout << " " << relative_treelen[i];
@@ -464,7 +464,7 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
             current_it->setLength(i, variables[i+1]);
             current_it_back->setLength(i, variables[i+1]);
         }
-        if (verbose_mode >= VB_DEBUG) {
+        if (verbose_mode >= VerboseMode::VB_DEBUG) {
             cout << "Mixlen-LnL: " << score << endl;
         }
 
@@ -740,7 +740,7 @@ void PhyloTreeMixlen::printResultTree(string suffix) {
         outError(ERR_WRITE_OUTPUT, tree_file_name);
     }
 
-    if (verbose_mode >= VB_MED)
+    if (verbose_mode >= VerboseMode::VB_MED)
         cout << "Best tree printed to " << tree_file_name << endl;
 }
 

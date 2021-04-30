@@ -402,7 +402,7 @@ int CandidateSet::computeSplitOccurences(double supportThreshold) {
         }
     }
     int newNumStableSplits = countStableSplits(supportThreshold);
-    if (verbose_mode >= VB_MED) {
+    if (verbose_mode >= VerboseMode::VB_MED) {
         cout << ((double) newNumStableSplits / (aln->getNSeq() - 3)) * 100;
         cout << " % of the splits are stable (support threshold " << supportThreshold;
         cout << " from " << candSplits.getNumTree() << " trees)" << endl;

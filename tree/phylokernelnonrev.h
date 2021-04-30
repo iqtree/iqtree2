@@ -1458,7 +1458,7 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
     tree_lh = all_tree_lh;
     if (!std::isfinite(tree_lh)) {
         outWarning("Numerical underflow for non-rev lh-branch " + aln->name);
-        if (verbose_mode >= VB_MED) {
+        if (verbose_mode >= VerboseMode::VB_MED) {
             getRate()->writeInfo(cout);
             getModel()->writeInfo(cout);
         }
