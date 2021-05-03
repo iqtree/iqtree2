@@ -93,6 +93,11 @@ public:
 
     /** number of different character states */
     int num_chars;
+
+    // added by TD
+    /** character frequencies */
+    vector<size_t> freqs;
+
 };
 
 #endif

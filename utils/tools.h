@@ -257,7 +257,9 @@ typedef unsigned int UINT;
 /**
         run mode of program
  */
-enum RunMode {
+// adapted by TD; using scoped enumerations due to redeclaration error with onnxruntime
+// https://en.cppreference.com/w/cpp/language/enum#Scoped_enumerations
+enum class RunMode {
     DETECTED, GREEDY, PRUNING, BOTH_ALG, EXHAUSTIVE, DYNAMIC_PROGRAMMING,
     CALC_DIST, PD_USER_SET, PRINT_TAXA, PRINT_AREA, SCALE_BRANCH_LEN,
     SCALE_NODE_NAME, PD_DISTRIBUTION, LINEAR_PROGRAMMING, STATS //, GBO, MPRO
@@ -2227,6 +2229,9 @@ public:
 
     /** supress notes about duplicate sequences */
     double suppress_duplicate_sequence_warnings;
+
+    /** flag for using neural network for model selection */
+    bool use_nn_model; // added by TD
     
 };
 

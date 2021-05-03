@@ -2153,7 +2153,8 @@ void startTreeReconstruction(Params &params, IQTree* &iqtree, ModelCheckpoint &m
        // FOR TUNG: swapping the order cause bug for -m TESTLINK
 //    iqtree.initSettings(params);
 
-    runModelFinder(params, *iqtree, model_info);
+    // added by TD
+    params.use_nn_model ? runModelFinderNN(params, *iqtree, model_info) : runModelFinder(params, *iqtree, model_info);
 }
         
 /**

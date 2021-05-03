@@ -22,6 +22,7 @@ Pattern::Pattern()
     flag = 0;
     const_char = -1;
     num_chars = 0;
+    freqs = {}; // added by TD
 }
 
 Pattern::Pattern(int nseq, int freq)
@@ -33,6 +34,7 @@ Pattern::Pattern(int nseq, int freq)
     flag = 0;
     const_char = -1;
     num_chars = 0;
+    freqs = {}; // added by TD
 }
 
 Pattern::Pattern(const Pattern &pat)
@@ -44,6 +46,7 @@ Pattern::Pattern(const Pattern &pat)
     flag = pat.flag;
     const_char = pat.const_char;
     num_chars = pat.num_chars;
+    freqs = pat.freqs; // added by TD
 }
 
 Pattern::~Pattern()

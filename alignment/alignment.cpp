@@ -921,6 +921,10 @@ void Alignment::computeConst(Pattern &pat) {
         }
     }
 
+    // added by TD
+    vector<size_t> vec(num_app, num_app + num_states);
+    pat.freqs = vec;
+
     // at least 2 states, each appearing at least twice
     is_informative = (count >= 2);
 

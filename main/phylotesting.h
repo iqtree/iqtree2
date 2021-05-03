@@ -349,6 +349,15 @@ string criterionName(ModelTestCriterion mtc);
 void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info);
 
 /**
+ perform ModelFinderNN to find the best-fit model (uses neural network for model inference)
+ @param params program parameters
+ @param iqtree phylogenetic tree
+ @param model_info (IN/OUT) information for all models considered
+ */
+ // added by TD
+void runModelFinderNN(Params &params, IQTree &iqtree, ModelCheckpoint &model_info);
+
+/**
  testing the best-fit model
  return in params.freq_type and params.rate_type
  @param set_name for partitioned analysis

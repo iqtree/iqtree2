@@ -727,8 +727,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.min_size = 0;
     params.step_size = 1;
     params.find_all = false;
-    params.run_mode = DETECTED;
-    params.detected_mode = DETECTED;
+    params.run_mode = RunMode::DETECTED;
+    params.detected_mode = RunMode::DETECTED;
     params.param_file = NULL;
     params.initial_file = NULL;
     params.initial_area_file = NULL;
@@ -1086,6 +1086,9 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.date_replicates = 0;
     params.clock_stddev = -1.0;
     params.date_outlier = -1.0;
+
+    // added by TD
+    params.use_nn_model = false;
     
     params.matrix_exp_technique = MET_EIGEN3LIB_DECOMPOSITION;
 
@@ -1257,12 +1260,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 			if (strcmp(argv[cnt], "--greedy") == 0) {
-				params.run_mode = GREEDY;
+				params.run_mode = RunMode::GREEDY;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-pr") == 0
 					|| strcmp(argv[cnt], "--pruning") == 0) {
-				params.run_mode = PRUNING;
+				params.run_mode = RunMode::PRUNING;
 				//continue; } if (strcmp(argv[cnt],"--both") == 0) {
 				//params.run_mode = BOTH_ALG;
 				continue;
@@ -1308,7 +1311,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -dd <sample_size>";
-				params.run_mode = PD_DISTRIBUTION;
+				params.run_mode = RunMode::PD_DISTRIBUTION;
 				params.sample_size = convert_int(argv[cnt]);
 				continue;
 			}
@@ -1340,7 +1343,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 			if (strcmp(argv[cnt], "-dist") == 0
 					|| strcmp(argv[cnt], "-d") == 0) {
 				// calculate distance matrix from the tree
-				params.run_mode = CALC_DIST;
+				params.run_mode = RunMode::CALC_DIST;
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -dist <distance_file>";
@@ -1513,7 +1516,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 			if (strcmp(argv[cnt], "-exhaust") == 0) {
-				params.run_mode = EXHAUSTIVE;
+				params.run_mode = RunMode::EXHAUSTIVE;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-seed") == 0 || strcmp(argv[cnt], "--seed") == 0) {
@@ -1606,7 +1609,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 			if (strcmp(argv[cnt], "-stats") == 0) {
-				params.run_mode = STATS;
+				params.run_mode = RunMode::STATS;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-gbo") == 0) { //guided bootstrap
@@ -1655,11 +1658,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 			if (strcmp(argv[cnt], "-taxa") == 0) {
-				params.run_mode = PRINT_TAXA;
+				params.run_mode = RunMode::PRINT_TAXA;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-area") == 0) {
-				params.run_mode = PRINT_AREA;
+				params.run_mode = RunMode::PRINT_AREA;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-scale") == 0) {
@@ -1677,7 +1680,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 			if (strcmp(argv[cnt], "-scalebranch") == 0) {
-				params.run_mode = SCALE_BRANCH_LEN;
+				params.run_mode = RunMode::SCALE_BRANCH_LEN;
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -scalebranch <scaling_factor>";
@@ -1685,7 +1688,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 			if (strcmp(argv[cnt], "-scalenode") == 0) {
-				params.run_mode = SCALE_NODE_NAME;
+				params.run_mode = RunMode::SCALE_NODE_NAME;
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -scalenode <scaling_factor>";
@@ -1700,11 +1703,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 			if (strcmp(argv[cnt], "-lp") == 0) {
-				params.run_mode = LINEAR_PROGRAMMING;
+				params.run_mode = RunMode::LINEAR_PROGRAMMING;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-lpbin") == 0) {
-				params.run_mode = LINEAR_PROGRAMMING;
+				params.run_mode = RunMode::LINEAR_PROGRAMMING;
 				params.binary_programming = true;
 				continue;
 			}
@@ -4178,6 +4181,13 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.dating_options = argv[cnt];
                 continue;
             }
+
+            // added by TD
+            if (strcmp(argv[cnt], "--use-nn-model") == 0) {
+                params.use_nn_model = true;
+                continue;
+            }
+
             if (arg=="-progress-bar" || arg=="--progress-bar" || arg=="-bar") {
                 progress_display::setProgressDisplay(true);
                 continue;
@@ -4388,6 +4398,7 @@ void usage(char* argv[]) {
     exit(0);
 }
 
+// TODO TD: add description for option use-nn-model
 void usage_iqtree(char* argv[], bool full_command) {
     printCopyright(cout);
     cout << "Usage: iqtree [-s ALIGNMENT] [-p PARTITION] [-m MODEL] [-t TREE] ..." << endl << endl;
@@ -4479,6 +4490,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --abayes             approximate Bayes test (Anisimova et al. 2011)" << endl
     << "  --lbp NUM            Replicates for fast local bootstrap probabilities" << endl
     << endl << "MODEL-FINDER:" << endl
+    << "  --use-nn-model       Use neural network for tree inference" << endl
     << "  -m TESTONLY          Standard model selection (like jModelTest, ProtTest)" << endl
     << "  -m TEST              Standard model selection followed by tree inference" << endl
     << "  -m MF                Extended model selection with FreeRate heterogeneity" << endl
