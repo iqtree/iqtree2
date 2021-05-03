@@ -8,6 +8,8 @@ treetesting.cpp
 treetesting.h
 timetree.cpp
 timetree.h
+terraceanalysis.cpp
+terraceanalysis.h
 )
 
 if (USE_BOOSTER)

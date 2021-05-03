@@ -823,13 +823,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.merge_models = "1";
     params.merge_rates = "1";
     params.partfinder_log_rate = true;
-    params.remove_empty_seq = true;
-    params.terrace_aware = true;
-#ifdef IQTREE_TERRAPHAST
-    params.terrace_analysis = false;
-#else
-    params.terrace_analysis = false;
-#endif
+    
     params.sequence_type = NULL;
     params.aln_output = NULL;
     params.aln_site_list = NULL;
@@ -1086,6 +1080,33 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.date_replicates = 0;
     params.clock_stddev = -1.0;
     params.date_outlier = -1.0;
+    
+    // ------------ Terrace variables ------------
+    params.terrace_check = false;
+    params.terrace_analysis = false;
+    params.print_terrace_trees = false;
+    params.print_induced_trees = false;
+    params.pr_ab_matrix = nullptr;
+    params.print_pr_ab_matrix = false;
+    params.terrace_query_set = nullptr;
+    params.terrace_stop_intermediate_num = -1;
+    params.terrace_stop_terrace_trees_num = -1;
+    params.terrace_stop_time = -1;
+    params.terrace_non_stop = false;
+    params.terrace_print_lim = 0;
+    params.terrace_remove_m_leaves = 0;
+    params.matrix_order = false;
+    params.gen_all_NNI = false;
+    
+    params.remove_empty_seq = true;
+    params.terrace_aware = true;
+#ifdef IQTREE_TERRAPHAST
+    params.terrace_analysis_tphast = false;
+#else
+    params.terrace_analysis_tphast = false;
+#endif
+    
+    // --------------------------------------------
     
     params.matrix_exp_technique = MET_EIGEN3LIB_DECOMPOSITION;
 
@@ -2072,23 +2093,139 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.remove_empty_seq = false;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-no_terrace") == 0) {
-				params.terrace_aware = false;
-                params.terrace_analysis = false;
-				continue;
-			}
-            if (strcmp(argv[cnt], "--terrace") == 0) {
+			
+            if (strcmp(argv[cnt], "--terrace_tphast") == 0) {
 #ifdef IQTREE_TERRAPHAST
-                params.terrace_analysis = true;
+                params.terrace_analysis_tphast = true;
 #else
-                    throw "Unsupported command: --terrace.\n"
+                    throw "Unsupported command: --terrace_tphast.\n"
                         "Please build IQ-TREE with the USE_TERRAPHAST flag.";
 #endif
                 continue;
             }
 
+            if (strcmp(argv[cnt], "--terrace") == 0) {
+                params.terrace_check = false;
+                continue;
+            }
+            
             if (strcmp(argv[cnt], "--no-terrace") == 0) {
-                params.terrace_analysis = false;
+                params.terrace_analysis_tphast = false;
+                params.terrace_check = false;
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "-no_terrace") == 0) {
+                params.terrace_aware = false;
+                params.terrace_analysis_tphast = false;
+                params.terrace_check = false;
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "-terrace_analysis") == 0) {
+                params.terrace_analysis = true;
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "-t_print") == 0) {
+                params.print_terrace_trees = true;
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "-t_print_lim") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -t_print_lim <num_of_trees_to_be_output>";
+                params.terrace_print_lim = convert_int(argv[cnt]);
+                if(params.terrace_print_lim<=0){
+                    throw "Invalid value! Use -t_print_lim <trees_num> with trees_num>0";
+                }
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "-t_print_induced") == 0) {
+                params.print_induced_trees = true;
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "-t_print_m") == 0) {
+                params.print_pr_ab_matrix = true;
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "-pr_ab_matrix") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -pr_ab_matrix <pr_ab_matrix_file>";
+                params.pr_ab_matrix = argv[cnt];
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "-terrace_query") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -terrace_query <terrace_query_set_file>";
+                params.terrace_query_set = argv[cnt];
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "-t_rm_leaves") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -t_rm_leaves <number_of_leaves_to_be_inserted>";
+                params.terrace_remove_m_leaves = convert_int(argv[cnt]);
+                if(params.terrace_remove_m_leaves<=0){
+                    throw "Invalid value! Use -t_rm_leaves <leaves_num> with leaves_num>0";
+                }
+                continue;
+            }
+            
+            
+            if (strcmp(argv[cnt], "-t_stop_i") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -t_stop_i <number_of_intermediate_trees_to_stop>";
+                params.terrace_stop_intermediate_num = convert_int(argv[cnt]);
+                if(params.terrace_stop_intermediate_num<0){
+                    throw "Invalid value! Use -t_stop_i <trees_num> with trees_num > 0 to stop after trees_num intermediate trees were generated, or use trees_num == 0 to turn off this stopping rule.";
+                }
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "-t_stop_t") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -t_stop_t <number_of_terrace_trees_to_stop>";
+                params.terrace_stop_terrace_trees_num = convert_int(argv[cnt]);
+                if(params.terrace_stop_terrace_trees_num<0){
+                    throw "Invalid value! Use -t_stop_t <trees_num> with trees_num>0 to stop after trees_num terrace trees were generated, or use trees_num == 0 to turn off this stopping rule.";
+                }
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "-t_stop_h") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -t_stop_h <number_of_hours_to_stop>";
+                params.terrace_stop_time = convert_double(argv[cnt]);
+                if(params.terrace_stop_time<0){
+                    throw "Invalid value! Use -t_stop_h <h> with h>0 to stop the run after h hours, or use h == 0 to turn off this stopping rule.";
+                }
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "-t_non_stop") == 0) {
+                params.terrace_non_stop = true;
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "-reorder_m_only") == 0) {
+                params.matrix_order = true;
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "-gen_all_nni") == 0) {
+                params.gen_all_NNI = true;
                 continue;
             }
             
@@ -4255,8 +4392,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     if (params.num_runs > 1 && params.lmap_num_quartets >= 0)
         outError("Can't combine --runs and -lmap options");
 
-    if (params.terrace_analysis && !params.partition_file)
-        params.terrace_analysis = false;
+    if (params.terrace_analysis_tphast && !params.partition_file)
+        params.terrace_analysis_tphast = false;
 
     if (params.constraint_tree_file && params.partition_type == TOPO_UNLINKED)
         outError("-g constraint tree option does not work with -S yet.");

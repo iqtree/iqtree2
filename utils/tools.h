@@ -917,15 +917,67 @@ public:
     /** use logarithm of rates for clustering algorithm */
     bool partfinder_log_rate;
     
+    /************************************************/
+    /******* variables for Terrace analysis *********/
+    
     /** remove all-gap sequences in partition model to account for terrace default: TRUE */
     bool remove_empty_seq;
 
     /** use terrace aware data structure for partition models, default: TRUE */
     bool terrace_aware;
 
-    /** check if the tree lies on a terrace */
+    /** check if the tree lies on a terrace using terraphast lib*/
+    bool terrace_analysis_tphast;
+    
+    /**
+        following partition model analysis, check if the inferred tree lies on a terrace
+     */
+    bool terrace_check;
+    
+    /*
+       Variables below are used for terrace analysis using general algorithm (TerraGen)
+     */
     bool terrace_analysis;
+    const char *pr_ab_matrix;
+    bool print_terrace_trees;
+    bool print_induced_trees;
+    bool print_pr_ab_matrix;
+    
+    /** file with tree set to be tested, whether from the same terrace with the representative tree */
+    char *terrace_query_set;
+    
+    /**
+     *  Options to set different stopping rules for generation of terrace trees
+     */
+    
+    int terrace_stop_intermediate_num;
+    int terrace_stop_terrace_trees_num;
+    double terrace_stop_time;
+    
+    bool terrace_non_stop;
+    
+    /**
+        Start generation process from a larger initial tree, i.e. remove m leaves and start generation process as in the typical analysis. This does not guarantee generating all trees, but can help investigate complicated datasets, if there are more than 1 tree on a terrace.
+     */
+    int terrace_remove_m_leaves;
+    
+    /**
+        number of terrace trees to be output to the file: default 100K
+     */
+    int terrace_print_lim;
+    
+    /**
+        flag: only order pr_ab_matrix
+     */
+    bool matrix_order;
+    
+    /*
+        generate all NNI neighbours for the input tree and output them (not terrace-specific variable)
+     */
+    bool gen_all_NNI;
 
+    /************************************************/
+    
     /**
             B, D, or P for Binary, DNA, or Protein sequences
      */

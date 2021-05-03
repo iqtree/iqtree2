@@ -56,6 +56,7 @@
 #include "tree/ncbitree.h"
 #include "pda/ecopd.h"
 #include "tree/upperbounds.h"
+#include "terraceanalysis.h"
 #include "pda/ecopdmtreeset.h"
 #include "pda/gurobiwrapper.h"
 #include "utils/timeutil.h"
@@ -2631,6 +2632,12 @@ int main(int argc, char *argv[]) {
         processNCBITree(Params::getInstance());
     } else if (Params::getInstance().user_file && Params::getInstance().eco_dag_file) { /**ECOpd analysis*/
         processECOpd(Params::getInstance());
+    } else if (Params::getInstance().gen_all_NNI){
+        PhyloTree *tree = new PhyloTree();
+        tree->readTree(Params::getInstance().user_file, Params::getInstance().is_rooted);
+        tree->gen_all_nni_trees();
+    } else if (Params::getInstance().terrace_analysis) { /**Olga: Terrace analysis*/
+        runterraceanalysis(Params::getInstance());
     } else if ((Params::getInstance().aln_file || Params::getInstance().partition_file) &&
                Params::getInstance().consensus_type != CT_ASSIGN_SUPPORT_EXTENDED)
     {

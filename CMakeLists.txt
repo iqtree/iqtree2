@@ -109,6 +109,7 @@ endif()
 
 include_directories("${PROJECT_SOURCE_DIR}")
 include_directories("${PROJECT_SOURCE_DIR}/yaml-cpp/include")
+include_directories(after system "/usr/local/include")
 
 ##################################################################
 # Include the Terraphast library
@@ -628,6 +629,7 @@ add_subdirectory(model)
 add_subdirectory(gsl)
 add_subdirectory(alignment)
 add_subdirectory(tree)
+add_subdirectory(terrace)
 
 # YAML library
 option(YAML_CPP_BUILD_TESTS "Enable testing" OFF)
@@ -739,7 +741,7 @@ endif()
 
 # basic linking librararies
 target_link_libraries(iqtree2 pll ncl nclextra utils pda lbfgsb whtest sprng vectorclass model
-    gsl alignment tree yaml-cpp phyloYAML main ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
+    gsl alignment tree terrace yaml-cpp phyloYAML main ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
 
 if (USE_TERRAPHAST)
    target_link_libraries(iqtree2 terracetphast)

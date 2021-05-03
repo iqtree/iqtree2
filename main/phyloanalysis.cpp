@@ -69,7 +69,7 @@ extern "C" {
 #endif
 
 #ifdef IQTREE_TERRAPHAST
-    #include "terrace/terracetphast.h"
+    #include "terracetphast/terracetphast.h"
 #endif
 
 void reportReferences(Params &params, ofstream &out) {
@@ -121,7 +121,7 @@ void reportReferences(Params &params, ofstream &out) {
         << "supermatrices. Syst. Biol., 65:997-1008." << endl
         << "https://doi.org/10.1093/sysbio/syw037" << endl << endl;
 
-    if (params.terrace_analysis)
+    if (params.terrace_analysis_tphast)
     out << "Since you used terrace analysis please also cite:" << endl << endl
         << "Biczok R, Bozsoky P, Eisenmann P, Ernst J, Ribizel T, Scholz F," << endl
         << "Trefzer A, Weber F, Hamann M, Stamatakis A. (2018)" << endl
@@ -1277,7 +1277,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
 //            out << endl << endl;
         }
 #ifdef IQTREE_TERRAPHAST
-        if (params.terrace_analysis && params.compute_ml_tree) {
+        if (params.terrace_analysis_tphast && params.compute_ml_tree) {
             
             out << "TERRACE ANALYSIS" << endl << "----------------" << endl << endl;
             cout << "Running additional analysis: Phylogenetic Terraces ..."<< endl;
@@ -1327,6 +1327,18 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
             cout<< "Done. Results are written in "<<params.out_prefix<<".iqtree file."<<endl;
         }
 #endif
+        
+        if (params.terrace_check && params.partition_file && params.compute_ml_tree) {
+            
+            out << "TERRACE ANALYSIS" << endl << "----------------" << endl << endl;
+            cout << "Running additional analysis: Phylogenetic Terraces ..."<< endl;
+            
+            string filename = params.out_prefix;
+            filename += ".terrace";
+            
+            // Integrate a terrace check for partitioned analysis
+        }
+        
         /* evaluate user trees */
         vector<TreeInfo> info;
         IntVector distinct_trees;
