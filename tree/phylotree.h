@@ -539,6 +539,11 @@ public:
     virtual bool isMixlen() { return false; }
 
     /**
+        @return true if this is a mixture of trees, default: false
+    */
+    virtual bool isTreeMix() { return false; }
+
+    /**
         @return number of mixture branch lengths, default: 1
     */
     virtual int getMixlen() { return 1; }

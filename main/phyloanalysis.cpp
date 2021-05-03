@@ -33,6 +33,7 @@
 #include "alignment/superalignment.h"
 #include "alignment/superalignmentunlinked.h"
 #include "tree/iqtree.h"
+#include "tree/iqtreemix.h"
 #include "tree/phylotreemixlen.h"
 #include "model/modelmarkov.h"
 #include "model/modeldna.h"
@@ -472,13 +473,45 @@ void reportModel(ofstream &out, PhyloTree &tree) {
             reportModel(out, tree.aln, m);
         }
         out << endl;
+    } else if (tree.isTreeMix()) {
+        IQTreeMix* treemix = (IQTreeMix*) &tree;
+        /*
+        if (treemix->models.size() == 1) {
+            out << "Linked model of substitution: " << treemix->at(0)->getModelName() << endl << endl;
+            reportModel(out, tree.aln, treemix->at(0)->getModel());
+        } else {*/
+            for (i=0; i<treemix->size(); i++) {
+                out << "Tree " << i+1 << "'s model of substitution: " << treemix->at(i)->getModelName() << endl << endl;
+                reportModel(out, tree.aln, treemix->at(i)->getModel());
+            }
+        //}
     } else {
         out << "Model of substitution: " << tree.getModelName() << endl << endl;
         reportModel(out, tree.aln, tree.getModel());
     }
 }
 
+void reportRate_TreeMix(ostream &out, PhyloTree &tree) {
+    IQTreeMix* treemix = (IQTreeMix*) &tree;
+    /*
+    if (treemix->site_rates.size() == 1) {
+        out << "Linked ";
+        reportRate(out, *(treemix->at(0)));
+    } else { */
+        for (size_t i=0; i<treemix->size(); i++) {
+            out << "Tree " << i+1 << "'s ";
+            reportRate(out, *(treemix->at(i)));
+        }
+    // }
+}
+
 void reportRate(ostream &out, PhyloTree &tree) {
+    
+    if (tree.isTreeMix()) {
+        reportRate_TreeMix(out, tree);
+        return;
+    }
+    
     RateHeterogeneity *rate_model = tree.getRate();
     out << "Model of rate heterogeneity: " << rate_model->full_name << endl;
     rate_model->writeInfo(out);
@@ -524,9 +557,6 @@ void reportRate(ostream &out, PhyloTree &tree) {
                 " of the portion of the Gamma distribution falling in the category." << endl;
         }
     }
-    /*
-     if (rate_model->getNDiscreteRate() > 1 || rate_model->isSiteSpecificRate())
-     out << endl << "See file " << rate_file << " for site-specific rates and categories" << endl;*/
     out << endl;
 }
 
@@ -534,7 +564,11 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
     size_t ssize = tree.getAlnNSite();
     double epsilon = 1.0 / ssize;
     double totalLen = tree.treeLength();
-    int df = tree.getModelFactory()->getNParameters(BRLEN_OPTIMIZE);
+    int df;
+    if (tree.isTreeMix())
+        df = ((IQTreeMix*) &tree)->getNParameters();
+    else
+        df = tree.getModelFactory()->getNParameters(BRLEN_OPTIMIZE);
     double AIC_score, AICc_score, BIC_score;
     computeInformationScores(tree_lh, df, ssize, AIC_score, AICc_score, BIC_score);
 
@@ -604,7 +638,11 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
     else out << "Total tree length (sum of branch lengths): " << totalLen << endl;
 
     double totalLenInternal = tree.treeLengthInternal(epsilon);
+    cout << "[phyloanalysis.cpp -- reportTree] totalLenInternal = " << totalLenInternal << endl << flush;
+
     double totalLenInternalP = totalLenInternal*100.0 / totalLen;
+    cout << "[phyloanalysis.cpp -- reportTree] totalLenInternalP = " << totalLenInternalP << "%" << endl << flush;
+    
     if (tree.aln->seq_type == SEQ_POMO) {
       int N = tree.aln->virtual_pop_size;
       double totLenIntSub = totalLenInternal/(N * N);
@@ -634,7 +672,13 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
         out << endl;
         return;
     }
-    
+
+    if (tree.isTreeMix()) {
+        out << "No drawing will be displayed for mixture of trees here" << endl;
+        out << endl;
+        return;
+    }
+
     //out << "ZERO BRANCH EPSILON = " << epsilon << endl;
     int zero_internal_branches = tree.countZeroInternalBranches(NULL, NULL, epsilon);
     if (zero_internal_branches > 0) {
@@ -1022,7 +1066,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
 //                pruneModelInfo(model_info, (PhyloSuperTree*)&tree);
             reportModelSelection(out, params, &model_info, &tree);
         }
-
+        cout << "[phyloanalysis.cpp -- reportPhyloAnalysis] line 1026" << endl << flush;
         out << "SUBSTITUTION PROCESS" << endl << "--------------------" << endl
                 << endl;
         if (tree.isSuperTree()) {
@@ -1714,7 +1758,12 @@ void initializeParams(Params &params, IQTree &iqtree)
     {
         // compute initial tree
         if (!params.compute_ml_tree_only) {
-            iqtree.computeInitialTree(params.SSE);
+            cout << "[phyloanalysis.cpp -- initializeParams] call iqtree.computeInitialTree(params.SSE);" << endl;
+            if (iqtree.isTreeMix())
+                ((IQTreeMix*) &iqtree)->computeInitialTree(params.SSE);
+            else
+                iqtree.computeInitialTree(params.SSE);
+            cout << "[phyloanalysis.cpp -- initializeParams] finish iqtree.computeInitialTree(params.SSE);" << endl;
         }
     }
     ASSERT(iqtree.aln);
@@ -1735,6 +1784,9 @@ void initializeParams(Params &params, IQTree &iqtree)
 
     // set parameter for the current tree
 //    iqtree.setParams(params);
+    
+    // for debugging
+    cout << "[phyloanalysis.cpp -- initializeParams] iqtree.aln->model_name = " << iqtree.aln->model_name << endl;
 }
 
 
@@ -2146,7 +2198,9 @@ void startTreeReconstruction(Params &params, IQTree* &iqtree, ModelCheckpoint &m
     }
     
     /******************** Pass the parameter object params to IQTree *******************/
+    cout << "[phyloanalysis.cpp startTreeReconstruction] start iqtree->setParams(&params);" << endl;
     iqtree->setParams(&params);
+    cout << "[phyloanalysis.cpp startTreeReconstruction] finish iqtree->setParams(&params);" << endl;
 
     /*************** SET UP PARAMETERS and model testing ****************/
 
@@ -2178,6 +2232,11 @@ void optimizeConTree(Params &params, IQTree *tree) {
     tree->printTree(contree_file.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
     string contree = tree->getTreeString();
     tree->getCheckpoint()->put("contree", contree);
+}
+
+// check whether it is tree-mixture model
+bool isTreeMixture(Params& params) {
+    return (params.model_name.find("+T") != string::npos);
 }
 
 void runTreeReconstruction(Params &params, IQTree* &iqtree) {
@@ -2223,6 +2282,12 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     initializeParams(params, *iqtree);
 
     if (posRateHeterotachy(iqtree->aln->model_name) != string::npos && !iqtree->isMixlen()) {
+        // model-mixture
+        
+        if (iqtree->isTreeMix()) {
+            outError("Tree-mixture model does not work with model-mixture");
+        }
+        
         // create a new instance
         IQTree* iqtree_new = new PhyloTreeMixlen(iqtree->aln, 0);
         iqtree_new->setCheckpoint(iqtree->getCheckpoint());
@@ -2259,7 +2324,9 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
 
     if (!iqtree->getModelFactory()) {
+        cout << "phyloanalysis.cpp line 2297: call iqtree->initializeModel(params, iqtree->aln->model_name, models_block)" << endl;
         iqtree->initializeModel(params, iqtree->aln->model_name, models_block);
+        cout << "phyloanalysis.cpp line 2299: finish iqtree->initializeModel(params, iqtree->aln->model_name, models_block)" << endl;
     }
     if (iqtree->getRate()->isHeterotachy() && !iqtree->isMixlen()) {
         ASSERT(0 && "Heterotachy tree not properly created");
@@ -2337,13 +2404,20 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     bool   finishedInitTree = false;
     double initEpsilon = params.min_iterations == 0 ? params.modelEps : (params.modelEps*10);
     string initTree;
+    
+    // add for tree mixture
+    if (iqtree->isTreeMix()) {
+        iqtree->optimizeModelParameters(false, params.modelEps);
+    }
+    
     //None of his will work until there is actually a tree
     //(we cannot do it until we *have* one).
-    if (!params.compute_ml_tree_only) {
-        iqtree->ensureNumberOfThreadsIsSet(&params);
-    
-        iqtree->initializeAllPartialLh();
+    else if (!params.compute_ml_tree_only) {
         
+        iqtree->ensureNumberOfThreadsIsSet(&params);
+
+        iqtree->initializeAllPartialLh();
+
         if (iqtree->getRate()->name.find("+I+G") != string::npos) {
             if (params.alpha_invar_file != NULL) { // COMPUTE TREE LIKELIHOOD BASED ON THE INPUT ALPHA AND P_INVAR VALUE
                 computeLoglFromUserInputGAMMAInvar(params, *iqtree);
@@ -2359,7 +2433,6 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         iqtree->clearAllPartialLH();
         initTree = iqtree->ensureModelParametersAreSet(initEpsilon);
         
-        
         if (params.lmap_num_quartets >= 0) {
             cout << endl << "Performing likelihood mapping with ";
             if (params.lmap_num_quartets > 0)
@@ -2371,8 +2444,8 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
             iqtree->doLikelihoodMapping();
             cout << "Likelihood mapping needed " << getRealTime()-lkmap_time << " seconds" << endl << endl;
         }
-        
         finishedInitTree = iqtree->getCheckpoint()->getBool("finishedInitTree");
+        cout << "[phyloanalysis.cpp -- runTreeReconstruction] finishedInitTree = " << finishedInitTree << endl;
         
         // now overwrite with random tree
         if (params.start_tree == STT_RANDOM_TREE && !finishedInitTree) {
@@ -2383,7 +2456,6 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
             initTree = iqtree->optimizeBranches(params.brlen_num_traversal);
             cout << "Log-likelihood of random tree: " << iqtree->getCurScore() << endl;
         }
-        
         /****************** NOW PERFORM MAXIMUM LIKELIHOOD TREE RECONSTRUCTION ******************/
         
         // Update best tree
@@ -2398,7 +2470,6 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
                                                             (*it)->getCurScore(), false, MPIHelper::getInstance().getProcessID());
             }
         }
-        
         if (params.min_iterations && !iqtree->isBifurcating()) {
             outError("Tree search does not work with initial multifurcating tree. Please specify `-n 0` to avoid this.");
         }
@@ -2425,7 +2496,6 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     if (wantMLDistances) {
         wantMLDistances = !finishedInitTree && ((!params.dist_file && params.compute_ml_dist) || params.leastSquareBranch);
     }
-        
     //Compute ML distances, and generate BIONJ tree from those
     if (wantMLDistances || params.compute_ml_tree_only) {
         computeMLDist(params, *iqtree, getRealTime(), getCPUTime());
@@ -2483,7 +2553,6 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         }
     }
     //iqtree->saveCheckpoint();
-
     double cputime_search_start = getCPUTime();
     double realtime_search_start = getRealTime();
 
@@ -2498,7 +2567,6 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     StrVector linked_name;
     double *saved_dist_mat = iqtree->dist_matrix;
     double *pattern_lh = new double[iqtree->getAlnNPattern()];
-
     // prune stable taxa
     pruneTaxa(params, *iqtree, pattern_lh, pruned_taxa, linked_name);
 
@@ -2523,7 +2591,6 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     }
     // restore pruned taxa
     restoreTaxa(*iqtree, saved_dist_mat, pruned_taxa, linked_name);
-
     double search_cpu_time = getCPUTime() - cputime_search_start;
     double search_real_time = getRealTime() - realtime_search_start;
 
@@ -2567,7 +2634,6 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         }
 
     }
-
     if (iqtree->isSuperTree()) {
         ((PhyloSuperTree*) iqtree)->computeBranchLengths();
         ((PhyloSuperTree*) iqtree)->printBestPartitionParams((string(params.out_prefix) + ".best_model.nex").c_str());
@@ -2594,7 +2660,6 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         // compute logl variance
         iqtree->logl_variance = iqtree->computeLogLVariance();
     }
-
     printMiscInfo(params, *iqtree, pattern_lh);
 
     if (params.root_test) {
@@ -3449,6 +3514,7 @@ void computeSiteFrequencyModel(Params &params, Alignment *alignment) {
 
 IQTree *newIQTree(Params &params, Alignment *alignment) {
     IQTree *tree;
+    
     if (alignment->isSuperAlignment()) {
         if (params.partition_type == TOPO_UNLINKED) {
             tree = new PhyloSuperTreeUnlinked((SuperAlignment*)alignment);
@@ -3477,6 +3543,37 @@ IQTree *newIQTree(Params &params, Alignment *alignment) {
     }
 
     return tree;
+}
+
+// return how many char c inside the infile
+int checkCharInFile(char* infile, char c) {
+    ifstream fin;
+    string aline;
+    size_t i,k;
+    k=0;
+    fin.open(infile);
+    while (getline(fin,aline)) {
+        for (i=0; i<aline.length(); i++) {
+            if (aline[i] == c)
+                k++;
+        }
+    }
+    fin.close();
+    return k;
+}
+
+IQTree *newIQTreeMix(Params &params, Alignment *alignment) {
+    int i, numTree;
+    vector<IQTree*> trees;
+    
+    // check how many trees inside the user input file
+    numTree = checkCharInFile(params.user_file, ';');
+    cout << "Number of input trees: " << numTree << endl;
+    ASSERT(numTree);
+    for (i=0; i<numTree; i++) {
+        trees.push_back(newIQTree(params,alignment));
+    }
+    return new IQTreeMix(params, alignment, trees);
 }
 
 /** get ID of bad or good symtest results */
@@ -3759,10 +3856,31 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
     }
 
     /*************** initialize tree ********************/
-    IQTree *tree = newIQTree(params, alignment);
+    IQTree *tree;
+    bool isTreeMix = isTreeMixture(params);
     
+    if (isTreeMix) {
+        cout << "Tree-mixture model" << endl;
+        // tree-mixture model
+        if (params.user_file == NULL) {
+            outError("Tree file has to be inputed (using the option -te) for tree-mixture model");
+        }
+        if (params.compute_ml_tree_only) {
+            outError("option compute_ml_tree_only cannot be set for tree-mixture model");
+        }
+        cout << "[runPhyloAnalysis] new IQTreeMix" << endl;
+        tree = newIQTreeMix(params, alignment); // tree mixture model
+        cout << "[runPhyloAnalysis] finish new IQTreeMix" << endl;
+    } else {
+        tree = newIQTree(params, alignment);
+    }
+
     tree->setCheckpoint(checkpoint);
-    if (params.min_branch_length <= 0.0) {
+    if (isTreeMix) {
+        cout << "[runPhyloAnalysis] setMinBranchLen(params)" << endl;
+        ((IQTreeMix*) tree)->setMinBranchLen(params);
+        cout << "[runPhyloAnalysis] finish setMinBranchLen(params)" << endl;
+    } else if (params.min_branch_length <= 0.0) {
         params.min_branch_length = 1e-6;
         if (!tree->isSuperTree() && tree->getAlnNSite() >= 100000) {
             params.min_branch_length = 0.1 / (tree->getAlnNSite());
@@ -3795,6 +3913,9 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
     }
 
     if (params.constraint_tree_file) {
+        if (isTreeMix) {
+            outError("Constraint tree does not work with tree-mixture model");
+        }
         cout << "Reading constraint tree " << params.constraint_tree_file << "..." << endl;
         tree->constraintTree.readConstraint(params.constraint_tree_file, alignment->getSeqNames());
         if (params.start_tree == STT_PLL_PARSIMONY)
@@ -3806,6 +3927,9 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
     }
 
     if (params.compute_seq_identity_along_tree) {
+        if (isTreeMix) {
+            outError("Computing sequence identity does not work with tree-mixture model");
+        }
         if (!params.user_file)
             outError("Please supply a user tree file!");
         tree->readTree(params.user_file, params.is_rooted);
@@ -3822,6 +3946,9 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
         tree->printTree(out_tree.c_str());
         cout << "Tree with sequence identity printed to " << out_tree << endl;
     } else if (params.aln_output) {
+        if (isTreeMix) {
+            outError("Coverting alignment feature does not work with tree-mixture model");
+        }
         /************ convert alignment to other format and write to output file *************/
         convertAlignment(params, tree);
     } else if (params.gbo_replicates > 0 && params.user_file && params.second_tree) {
@@ -3854,12 +3981,19 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
         }
         alignment = NULL; // from now on use tree->aln instead
 
+        cout << "[phyloanalysis.cpp -- runPhyloAnalysis()] start startTreeReconstruction(params, tree, *model_info);" << endl;
         startTreeReconstruction(params, tree, *model_info);
+        cout << "[phyloanalysis.cpp -- runPhyloAnalysis()] finish startTreeReconstruction(params, tree, *model_info);" << endl;
         // call main tree reconstruction
-        if (params.num_runs == 1)
+        if (params.num_runs == 1) {
+            cout << "[phyloanalysis.cpp -- runPhyloAnalysis()] start runTreeReconstruction(params, tree);" << endl;
             runTreeReconstruction(params, tree);
-        else
+            cout << "[phyloanalysis.cpp -- runPhyloAnalysis()] finish runTreeReconstruction(params, tree);" << endl;
+        } else {
+            cout << "[phyloanalysis.cpp -- runPhyloAnalysis()] start runMultipleTreeReconstruction(params, tree->aln, tree);" << endl;
             runMultipleTreeReconstruction(params, tree->aln, tree);
+            cout << "[phyloanalysis.cpp -- runPhyloAnalysis()] finish runMultipleTreeReconstruction(params, tree->aln, tree);" << endl;
+        }
         
         if (MPIHelper::getInstance().isMaster()) {
             reportPhyloAnalysis(params, *tree, *model_info);

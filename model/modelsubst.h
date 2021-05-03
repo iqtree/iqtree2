@@ -375,6 +375,8 @@ public:
         restore object from the checkpoint
     */
     virtual void restoreCheckpoint();
+
+    
     
 	/**
 		number of states

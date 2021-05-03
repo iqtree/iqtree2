@@ -544,7 +544,7 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
     }
 }
 
-void IQTree::computeInitialTree(LikelihoodKernel kernel) {
+void IQTree::computeInitialTree(LikelihoodKernel kernel, istream* in) {
     double start = getRealTime();
     string initTree;
     string out_file = params->out_prefix;
@@ -560,11 +560,16 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
 
     setParsimonyKernel(kernel);
 
-    if (params->user_file) {
+    if (in != NULL || params->user_file) {
+        
         // start the search with user-defined tree
-        cout << "Reading input tree file " << params->user_file << " ...";
         bool myrooted = params->is_rooted;
-        readTree(params->user_file, myrooted);
+        if (in != NULL) {
+            readTree(*in, myrooted);
+        } else {
+            cout << "Reading input tree file " << params->user_file << " ...";
+            readTree(params->user_file, myrooted);
+        }
         if (myrooted && !isSuperTreeUnlinked()) {
             cout << " rooted tree";
         }

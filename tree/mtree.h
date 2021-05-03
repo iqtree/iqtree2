@@ -276,7 +276,7 @@ public:
      */
     int sortTaxa(Node *node = NULL, Node *dad = NULL);
 
-	void drawTree(ostream &out, int brtype = WT_BR_SCALE + WT_INT_NODE, double zero_epsilon = 2e-6);
+	virtual void drawTree(ostream &out, int brtype = WT_BR_SCALE + WT_INT_NODE, double zero_epsilon = 2e-6);
 
 	/** OBSOLETE:
 	void drawTree(ostream &out, int brtype, double brscale, IntVector &sub_tree_br, double zero_epsilon,

@@ -2641,7 +2641,9 @@ int main(int argc, char *argv[]) {
             if (Params::getInstance().second_align)
                 computeMulProb(Params::getInstance());
         } else {
+            cout << "[main] call runPhyloAnalysis(Params::getInstance(), checkpoint)" << endl;
             runPhyloAnalysis(Params::getInstance(), checkpoint);
+            cout << "[main] finish runPhyloAnalysis(Params::getInstance(), checkpoint)" << endl;
         }
 //    } else if (Params::getInstance().ngs_file || Params::getInstance().ngs_mapped_reads) {
 //        runNGSAnalysis(Params::getInstance());

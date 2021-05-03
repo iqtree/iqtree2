@@ -720,7 +720,7 @@ public:
     /**
      * Generate the initial tree (usually used for model parameter estimation)
      */
-    void computeInitialTree(LikelihoodKernel kernel);
+    void computeInitialTree(LikelihoodKernel kernel, istream* in = NULL);
 
     /**
      *  @brief: optimize model parameters on the current tree
@@ -729,7 +729,7 @@ public:
      *  @param epsilon likelihood epsilon for optimization
      *
      */
-    string optimizeModelParameters(bool printInfo = false, double epsilon = -1);
+    virtual string optimizeModelParameters(bool printInfo = false, double epsilon = -1);
 
     /**
      *  @brief: either optimize model parameters on the current tree
@@ -738,7 +738,7 @@ public:
      *  @param initEpsilon likelihood epsilon for optimization
      */
 
-    string ensureModelParametersAreSet(double initEpsilon);
+    virtual string ensureModelParametersAreSet(double initEpsilon);
     
     /**
      *  variable storing the current best tree topology

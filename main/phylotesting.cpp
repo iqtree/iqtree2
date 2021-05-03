@@ -718,6 +718,11 @@ void transferModelFinderParameters(IQTree *iqtree, Checkpoint *target) {
 
 void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
 {
+    if (params.model_name.find("+T") != string::npos) {
+        // tree mixture
+        return;
+    }
+    
     //    iqtree.setCurScore(-DBL_MAX);
     bool test_only = (params.model_name.find("ONLY") != string::npos) ||
         (params.model_name.substr(0,2) == "MF" && params.model_name.substr(0,3) != "MFP");
