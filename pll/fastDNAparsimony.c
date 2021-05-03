@@ -1940,6 +1940,7 @@ void pllMakeParsimonyTreeFast(pllInstance *tr, partitionList *pr, int sprDist)
   rax_free(perm);
 } 
 
+#if (0) //Old version
 int pllOptimizeWithParsimonySPR(pllInstance* tr, partitionList* pr, 
                                  int maxSprIterations, int sprDist) {
     allocateParsimonyDataStructures(tr, pr);
@@ -1976,4 +1977,75 @@ int pllOptimizeWithParsimonySPR(pllInstance* tr, partitionList* pr,
     } while (0<iterationsToGo && randomMP < startMP);
     pllFreeParsimonyDataStructures(tr, pr);
     return maxSprIterations - iterationsToGo;
+}
+#endif 
+
+double crap_random_double() {
+  return (double)rand() / (double)((unsigned)RAND_MAX + 1);
+} 
+
+/**
+ * DTH: optimize whatever tree is stored in tr by parsimony SPR
+ * @param tr:              the tree instance 
+ * @param partition        the data partition
+ * @param maxSprIterations maximum number of iterations
+ * @param maxtrav          maximum spr radius
+ * @return best parsimony score found
+ * 
+ */
+int pllOptimizeWithParsimonySPR(pllInstance * tr, partitionList * pr, int maxSprIterations, int maxtrav ){
+  srand(time(NULL));
+  int perSiteScores = 1; //In Diep Thi Hoang's code, initialized to: globalParam->gbo_replicates > 0;
+  int mintrav       = 1; //In Diep's code, this is a parameter
+	                       //Diep's code declared: unsigned int bestIterationScoreHits = 1;
+
+  allocateParsimonyDataStructures(tr, pr); 
+
+  assert(!tr->constrained);
+
+  nodeRectifierPars(tr);
+  tr->bestParsimony = UINT_MAX;
+  tr->bestParsimony = evaluateParsimony(tr, pr, tr->start, PLL_TRUE);
+
+  int          iterationsToGo = maxSprIterations;
+  unsigned int randomMP       = tr->bestParsimony;
+  int          nodeCount      = tr->mxtips + tr->mxtips - 2;
+  unsigned int startMP;
+
+  tr->ntips = tr->mxtips; //<-- THIS was the important additional statement, in Diep's code
+
+  do{
+    startMP = randomMP;
+    nodeRectifierPars(tr);
+    for(int i = 1; i <= nodeCount; ++i){
+      tr->insertNode = NULL;
+      tr->removeNode = NULL;
+
+      rearrangeParsimony(tr, pr, tr->nodep[i], mintrav, maxtrav, PLL_FALSE);
+
+      #if (0) //Diep had this
+      if(tr->bestParsimony == randomMP) bestIterationScoreHits++;
+      if(tr->bestParsimony < randomMP) bestIterationScoreHits = 1;
+      if(((tr->bestParsimony < randomMP) ||
+          ((tr->bestParsimony == randomMP) &&
+            (crap_random_double() <= 1.0 / bestIterationScoreHits))) &&
+          tr->removeNode && tr->insertNode){
+        restoreTreeRearrangeParsimony(tr, pr);
+        randomMP = tr->bestParsimony;
+      }
+      #else 
+      if (tr->removeNode!=NULL && tr->insertNode!=NULL) {
+        if (tr->bestParsimony < randomMP) {
+          restoreTreeRearrangeParsimony(tr, pr);
+          randomMP = tr->bestParsimony;
+        } 
+      }
+      #endif
+    } 
+    --iterationsToGo;
+  } while(randomMP < startMP && 0<iterationsToGo);
+
+  pllFreeParsimonyDataStructures(tr, pr); //<-- This was missing.
+
+  return maxSprIterations - iterationsToGo; //Return # of iterations 
 }

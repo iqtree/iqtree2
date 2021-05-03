@@ -444,9 +444,10 @@ int PhyloTree::doParsimonySPR(intptr_t iterations, bool lazy,
 }
 
 void IQTree::doPLLParsimonySPR() {
-    double init_start = getRealTime();
+    double    init_start = getRealTime();
     StrVector oldNames;
-    bool areNamesDummied = false;
+    bool      areNamesDummied = false;
+    deleteAllPartialParsimony(); 
     if (!isInitializedPLL()) {
         //Names containing '/' characters give PLL trouble.
         //Simplest way to avoid the risk... is to dummy all
@@ -465,8 +466,8 @@ void IQTree::doPLLParsimonySPR() {
         }
         initializePLL(*params);
     }
+
     string constructedTreeString = getTreeString();
-    //LOG_LINE(VerboseMode::VB_MAX, constructedTreeString);
     pllReadNewick(constructedTreeString);
     double opt_start = getRealTime();
     int iterations = pllOptimizeWithParsimonySPR(pllInst, pllPartitions,
@@ -479,7 +480,6 @@ void IQTree::doPLLParsimonySPR() {
     string pllTreeString = string(pllInst->tree_string);
     PhyloTree::readTreeString(pllTreeString);
     
-    //LOG_LINE(VerboseMode::VB_MAX, pllTreeString);x
     if (areNamesDummied) {
         PhyloNodeVector taxa ( getTaxaNodesInIDOrder() );
         intptr_t taxa_count     = taxa.size();
@@ -498,10 +498,14 @@ void IQTree::doPLLParsimonySPR() {
     auto optimized_parsimony = computeParsimony("Computing post optimization parsimony");
     LOG_LINE(VerboseMode::VB_MIN, "After " << iterations << " rounds of Parsimony SPR,"
              << " parsimony score was " << optimized_parsimony);
-    double pll_overhead = (opt_start - init_start) + (pars_start - read_start);
-    double spr_time     = (read_start - opt_start);
-    LOG_LINE(VerboseMode::VB_MED, "PLL overhead was " << pll_overhead << " wall-clock seconds");
-    LOG_LINE(VerboseMode::VB_MED, "SPR optimization took " << spr_time << " wall-clock seconds");
+    double pars_time             = (getRealTime() - pars_start);
+    double pll_setup_overhead    = (opt_start - init_start);
+    double pll_teardown_overhead = (pars_start - read_start);
+    double spr_time              = (read_start - opt_start);
+    LOG_LINE(VerboseMode::VB_MED, "SPR optimization  took " << spr_time << " wall-clock seconds");
+    LOG_LINE(VerboseMode::VB_MED, "PLL set-up        took " << pll_setup_overhead << " wall-clock seconds");
+    LOG_LINE(VerboseMode::VB_MED, "PLL tear-down     took " << pll_teardown_overhead << " wall-clock seconds");   
+    LOG_LINE(VerboseMode::VB_MED, "Parsimony scoring took " << pars_time << " wall-clock seconds");
     
     double fix_start = getRealTime();
     fixNegativeBranches(false);
