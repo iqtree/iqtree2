@@ -45,6 +45,7 @@
 #include "utils/MPIHelper.h"
 //#include "vectorclass/vectorclass.h"
 
+#include "nn/neuralnetwork.h"
 
 /******* Binary model set ******/
 const char* bin_model_names[] = {"GTR2", "JC2"};
@@ -873,6 +874,25 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
     cout << "Wall-clock time for ModelFinder: " << real_time << " seconds (" << convert_time(real_time) << ")" << endl;
     
     //        alignment = iqtree.aln;
+    if (test_only) {
+        params.min_iterations = 0;
+    }
+}
+
+// added by TD
+void runModelFinderNN(Params &params, IQTree &iqtree, ModelCheckpoint &model_info) {
+    // where to put this function?
+    // TODO: ensure that it works with checkpoints
+    bool test_only = (params.model_name.find("ONLY") != string::npos) ||
+                     (params.model_name.substr(0,2) == "MF" && params.model_name.substr(0,3) != "MFP");
+
+    cout << "We are in runModelFinderNN because the option --use-nn-model is set to " << params.use_nn_model << endl;
+    Alignment *alignment = iqtree.aln;
+    NeuralNetwork nn(alignment);
+    // iqtree.aln->model_name = nn.doInference(0);
+    // dummy model assignment
+    iqtree.aln->model_name = "JC";
+    cout << "Best-fit model: " << iqtree.aln->model_name << " chosen according to Tamara's wisdom" << endl;
     if (test_only) {
         params.min_iterations = 0;
     }

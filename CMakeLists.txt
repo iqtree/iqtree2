@@ -79,6 +79,7 @@ if(Boost_FOUND)
     add_definitions(-DUSE_BOOST)
 endif()
 
+
 # The version number.
 set (iqtree_VERSION_MAJOR 2)
 set (iqtree_VERSION_MINOR 1)
@@ -273,6 +274,18 @@ if (IQTREE_FLAGS MATCHES "lto")
     #else()
         set(COMBINED_FLAGS "${COMBINED_FLAGS} -flto")
     #endif()
+endif()
+
+##################################################################
+# onnxruntime (added by TD)
+##################################################################
+
+if(NOT ONNXRUNTIME_ROOTDIR)
+    if(WIN32)
+        set(ONNXRUNTIME_ROOTDIR "C:/Program Files (x86)/onnxruntime")
+    else()
+        include_directories("/usr/local/include/onnxruntime")
+    endif()
 endif()
 
 ##################################################################
@@ -663,7 +676,7 @@ endif()
 add_executable(iqtree2
 obsolete/parsmultistate.cpp
 obsolete/parsmultistate.h
-)
+        nn/neuralnetwork.cpp nn/neuralnetwork.h) # added by TD (TODO: move into cmake in nn folder?)
 
 if(Backtrace_FOUND)
   include_directories(${Backtrace_INCLUDE_DIR})
@@ -740,6 +753,9 @@ endif()
 # basic linking librararies
 target_link_libraries(iqtree2 pll ncl nclextra utils pda lbfgsb whtest sprng vectorclass model
     gsl alignment tree yaml-cpp phyloYAML main ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
+
+# added by TD
+target_link_libraries(iqtree2 onnxruntime)
 
 if (USE_TERRAPHAST)
    target_link_libraries(iqtree2 terrace)
