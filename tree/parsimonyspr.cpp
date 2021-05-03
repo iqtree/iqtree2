@@ -467,7 +467,11 @@ void IQTree::doPLLParsimonySPR() {
         initializePLL(*params);
     }
 
-    string constructedTreeString = getTreeString();
+    stringstream tree_stream;
+    setRootNode(params->root);
+    printTree(tree_stream, WT_TAXON_ID);
+    string constructedTreeString = tree_stream.str();;
+    
     pllReadNewick(constructedTreeString);
     double opt_start = getRealTime();
     int iterations = pllOptimizeWithParsimonySPR(pllInst, pllPartitions,

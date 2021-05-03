@@ -1211,14 +1211,14 @@ static void testInsertParsimony (pllInstance *tr, partitionList *pr, nodeptr p, 
 
   if(doIt)
     {
-      double* z = (double*)rax_malloc(numBranches*sizeof(double));
+      double* z;
       
       if(saveBranches)
         {
-          int i;
-          
-          for(i = 0; i < numBranches; i++)
+          z = (double*)rax_malloc(numBranches*sizeof(double));
+          for(int i = 0; i < numBranches; i++) {
             z[i] = q->z[i];
+          }
         }
 
       insertParsimony(tr, pr, p, q);
@@ -1232,13 +1232,14 @@ static void testInsertParsimony (pllInstance *tr, partitionList *pr, nodeptr p, 
           tr->removeNode = p;
         }
       
-      if(saveBranches)
+      if(saveBranches) {
         hookup(q, r, z, numBranches);
+        rax_free(z);
+      }
       else
         hookupDefault(q, r);
       
       p->next->next->back = p->next->back = (nodeptr) NULL;
-      rax_free(z);
     }
        
   return;
@@ -1273,9 +1274,6 @@ static void addTraverseParsimony (pllInstance *tr, partitionList *pr, nodeptr p,
       addTraverseParsimony(tr, pr, p, q->next->next->back, mintrav, maxtrav, doAll, saveBranches);
     }
 }
-
-
-
 
 
 static void makePermutationFast(int *perm, int n, pllInstance *tr)
@@ -1342,6 +1340,8 @@ static int rearrangeParsimony(pllInstance *tr, partitionList *pr, nodeptr p, int
 
   q = p->back;
 
+	unsigned int mp = evaluateParsimony(tr, pr, p, PLL_FALSE); // Diep: This is VERY important to make sure SPR is accurate*****
+  
   if(tr->constrained)
     {    
       if(! tipHomogeneityCheckerPars(tr, p->back, 0))
@@ -1361,7 +1361,6 @@ static int rearrangeParsimony(pllInstance *tr, partitionList *pr, nodeptr p, int
       
       if ((p1->number > tr->mxtips) || (p2->number > tr->mxtips)) 
         {                 
-          //removeNodeParsimony(p, tr);          
           removeNodeParsimony(p);                
 
           if ((p1->number > tr->mxtips)) 
@@ -1402,7 +1401,6 @@ static int rearrangeParsimony(pllInstance *tr, partitionList *pr, nodeptr p, int
           )
         {          
 
-          //removeNodeParsimony(q, tr);
           removeNodeParsimony(q);
           
           mintrav2 = mintrav > 2 ? mintrav : 2;
@@ -1980,9 +1978,12 @@ int pllOptimizeWithParsimonySPR(pllInstance* tr, partitionList* pr,
 }
 #endif 
 
+#if (0)
+//Don't need this, the code that called it is #ifdeffed out.
 double crap_random_double() {
   return (double)rand() / (double)((unsigned)RAND_MAX + 1);
 } 
+#endif
 
 /**
  * DTH: optimize whatever tree is stored in tr by parsimony SPR
@@ -1994,7 +1995,7 @@ double crap_random_double() {
  * 
  */
 int pllOptimizeWithParsimonySPR(pllInstance * tr, partitionList * pr, int maxSprIterations, int maxtrav ){
-  srand(time(NULL));
+  //don't need this, not using crap_random_double()... srand(time(NULL));
   int perSiteScores = 1; //In Diep Thi Hoang's code, initialized to: globalParam->gbo_replicates > 0;
   int mintrav       = 1; //In Diep's code, this is a parameter
 	                       //Diep's code declared: unsigned int bestIterationScoreHits = 1;
@@ -2006,11 +2007,13 @@ int pllOptimizeWithParsimonySPR(pllInstance * tr, partitionList * pr, int maxSpr
   nodeRectifierPars(tr);
   tr->bestParsimony = UINT_MAX;
   tr->bestParsimony = evaluateParsimony(tr, pr, tr->start, PLL_TRUE);
+  //printf("initial parsimony %d\n", tr->bestParsimony);
 
   int          iterationsToGo = maxSprIterations;
   unsigned int randomMP       = tr->bestParsimony;
   int          nodeCount      = tr->mxtips + tr->mxtips - 2;
   unsigned int startMP;
+  unsigned int sprMovesDone   = 0; //Count of moves done so far
 
   tr->ntips = tr->mxtips; //<-- THIS was the important additional statement, in Diep's code
 
@@ -2038,10 +2041,12 @@ int pllOptimizeWithParsimonySPR(pllInstance * tr, partitionList * pr, int maxSpr
         if (tr->bestParsimony < randomMP) {
           restoreTreeRearrangeParsimony(tr, pr);
           randomMP = tr->bestParsimony;
+          ++sprMovesDone;
         } 
       }
       #endif
     } 
+    //printf("Parsimony now %d after %d moves\n", randomMP, sprMovesDone);
     --iterationsToGo;
   } while(randomMP < startMP && 0<iterationsToGo);
 
