@@ -76,6 +76,19 @@ namespace ModelExpression {
         const std::string& getName() const;
     };
 
+    class ParameterSubscript: public Expression {
+        const YAMLFileParameter* parameter_to_subscript;
+        Expression*              subscript_expression;
+    public:
+        typedef Expression super;
+        ParameterSubscript(ModelInfoFromYAMLFile& for_model,
+                            const YAMLFileParameter* param,
+                            Expression* subscript_expr);
+        virtual ~ParameterSubscript();
+        virtual double evaluate() const;
+        std::string getName() const;
+    };
+
     class Constant: public Expression {
         double value;
     public:
@@ -248,6 +261,13 @@ namespace ModelExpression {
         virtual double evaluateEntry(int index) const;
     };
 
+    class CommaOperator: public ListOperator {
+    public:
+        typedef ListOperator super;
+        CommaOperator(ModelInfoFromYAMLFile& for_model);
+        virtual int    getPrecedence()   const;
+    };
+
     class SelectOperator: public InfixOperator {
     public:
         typedef InfixOperator super;
@@ -283,6 +303,7 @@ namespace ModelExpression {
         bool    isSet() const;
         virtual double evaluate() const;
         Expression* expression() const; //Does *not* yield ownership
+        Expression* detatchExpression(); //*Does* yield ownership
     };
 } //ModelExpression namespace
 

@@ -114,6 +114,46 @@ namespace ModelExpression {
         return variable_name;
     }
 
+    ParameterSubscript::ParameterSubscript(ModelInfoFromYAMLFile& for_model,
+                                          const YAMLFileParameter* param,
+                                          Expression* expr) 
+        : super(for_model), parameter_to_subscript(param)
+        , subscript_expression(expr) {
+        if (!param->is_subscripted) {
+            delete expr;
+            std::stringstream complaint;
+            complaint << "Cannot subscript parameter " << param->name
+                      << " (it is not subscripted).";
+            throw new ModelException(complaint.str());
+        }
+    }
+
+    ParameterSubscript::~ParameterSubscript() {
+        delete subscript_expression;
+    }
+
+    double ParameterSubscript::evaluate() const {
+        return model.getVariableValue(getName());
+    }
+
+    std::string ParameterSubscript::getName() const {
+        double x = subscript_expression->evaluate();
+        int    i = (int)floor(x);
+        int   lo = parameter_to_subscript->minimum_subscript;
+        int   hi = parameter_to_subscript->maximum_subscript;
+        if (x<lo || hi<x) {
+            std::stringstream complaint;
+            complaint << "Invalid subscript " << i
+                      << " for parameter " << parameter_to_subscript->name
+                      << ", for which the valid subscript range is " << lo 
+                      << " through " << hi << " inclusive.";
+            throw new ModelException(complaint.str());
+        }
+        std::stringstream var_name_stream;
+        var_name_stream << parameter_to_subscript->name << "(" << i << ")";
+        return var_name_stream.str();
+    }
+
     UnaryFunction::UnaryFunction(ModelInfoFromYAMLFile& for_model,
                                  const UnaryFunctionImplementation* implementation)
         : super(for_model), body(implementation), parameter(nullptr) {
@@ -337,7 +377,11 @@ namespace ModelExpression {
     }
 
     void   ListOperator::setOperands(Expression* left, Expression* right) {
-        if (left->isList()) {
+        //The precedence comparison ensures that 1 : 2 , 3 
+        //is treated as ( 1 : 2), 3, rather than as 4, 3, 5,
+        //and that (1, 2) : (3, 4) is not treated as 1 : 2 : (3, 4).
+        //
+        if (left->isList() && left->getPrecedence()==this->getPrecedence()) {
             ListOperator* old = dynamic_cast<ListOperator*>(left);
             std::swap(old->list_entries, list_entries);
             list_entries.push_back(right);
@@ -372,6 +416,13 @@ namespace ModelExpression {
 
         }
         return list_entries[index]->evaluate();
+    }
+
+    CommaOperator::CommaOperator(ModelInfoFromYAMLFile& for_model): super(for_model) {
+    }
+    
+    int CommaOperator::getPrecedence() const {
+        return 1;
     }
 
     SelectOperator::SelectOperator(ModelInfoFromYAMLFile& for_model)
@@ -432,7 +483,6 @@ namespace ModelExpression {
         //Todo: better error-checking (out of range for an int...
         return (int)floor(rhs->evaluate());
     }
-
 
     InterpretedExpression::InterpretedExpression(ModelInfoFromYAMLFile& for_model,
                                                  const std::string& text): super(for_model) {
@@ -566,13 +616,35 @@ namespace ModelExpression {
             }
             if (text[ix]=='(') {
                 //Subscripted
-                size_t subscript_start = ix;
-                while (ix<text.size() && text[ix]!=')') {
-                    ++ix; //find closing bracket
+                size_t      subscript_start = ix;
+                int         bracket_depth   = 0;
+                
+                for (++ix;ix<text.size() && (text[ix]!=')' || 0<bracket_depth);++ix) {
+                    if (text[ix]==')')      --bracket_depth;
+                    else if (text[ix]=='(') ++bracket_depth;
                 }
+                std::string subscript_expr;
                 if (ix<text.size()) {
                     ++ix; //skip over closing bracket
-                    var_name += text.substr(subscript_start, ix-subscript_start);
+                    subscript_expr = text.substr(subscript_start+1, ix-subscript_start-2);
+                    if (is_string_all_digits(subscript_expr)) {
+                        var_name = var_name + "(" + subscript_expr + ")";
+                    } else {
+                        //Oh, boy.  Subscript expression!
+                        InterpretedExpression x(model, subscript_expr);
+                        var_name = string_to_lower(var_name);
+                        const YAMLFileParameter* param =  model.findParameter(var_name) ;
+                        if (param == nullptr ) {
+                            std::stringstream complaint;
+                            complaint << "Subscripted parameter " << var_name
+                                      << " not defined, for model " << model.getLongName();
+                            throw new ModelException(complaint.str());
+
+                        }
+                        expr = new ParameterSubscript(model, param, x.detatchExpression());
+                    }
+                } else {
+                    throw new ModelException("subscript expression not terminated by closing bracket");
                 }
             }
             expr = new Variable(model, var_name);
@@ -640,6 +712,7 @@ namespace ModelExpression {
                                                    " was not understood");
                       }
                       break;
+            case ',': expr = new CommaOperator(model); break;
             default:
                 throw ModelException(std::string("unrecognized character '") +
                                      std::string(1, ch) + "'' in expression");
@@ -664,5 +737,12 @@ namespace ModelExpression {
 
     Expression* InterpretedExpression::expression() const {
         return root;
+    }
+
+    Expression* InterpretedExpression::detatchExpression()  {
+        //Note: This yields ownership
+        Expression* expr = root;
+        root = nullptr;
+        return expr;
     }
 }

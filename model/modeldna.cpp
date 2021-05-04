@@ -67,7 +67,7 @@ namespace {
         { "TNe",   "010020", StateFreqType::FREQ_EQUAL,    "TN equal frequencies (Tamura and Nei, 1993)"},
         { "TPM2",  "121020", StateFreqType::FREQ_ESTIMATE, "TPM2 ()"},
         { "TPM2u", "121020", StateFreqType::FREQ_ESTIMATE, "TPM2 unequal frequencies ()"},
-        { "TPM3",  "120120", StateFreqType::FREQ_ESTIMATE, "TPM3 ()"}, //You would think, FREQ_EQUAL. Why not? James B.
+        { "TPM3",  "120120", StateFreqType::FREQ_ESTIMATE, "TPM3 ()"},
         { "TPM3u", "120120", StateFreqType::FREQ_ESTIMATE, "TPM3 unequal frequencies ()"},
         { "TIM",   "012230", StateFreqType::FREQ_ESTIMATE, "TIM ()"},
         { "TIMe",  "012230", StateFreqType::FREQ_EQUAL,    "TIM equal frequencies"},
@@ -155,7 +155,8 @@ void ModelDNA::init(const char *model_name, string model_params,
         freq = def_freq;
     }
     ModelMarkov::init(freq, report_to_tree);
-    //model_parameters = new double [getNDim()+1]; // see setVariables for explaination of +1
+    //model_parameters = new double [getNDim()+1]; 
+    // see setVariables for explaination of +1
     //setVariables(model_parameters);
 }
 
@@ -243,7 +244,8 @@ void ModelDNA::readRates(string str) THROW_SPEC(const char*) {
             outError("Negative rates found");
         }
         if (i == nrates && end_pos < str.length()) {
-            outError("More than " + convertIntToString(nrates) + " rate parameters specified in " + str);
+            outError("More than " + convertIntToString(nrates) + 
+            " rate parameters specified in " + str);
         }
         if (i < nrates-1 && end_pos >= str.length()) {
             outError("Unexpected end of string ", str);

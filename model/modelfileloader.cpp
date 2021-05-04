@@ -643,7 +643,8 @@ void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_
     //      rate_matrix_expressions will aready have been set.
     //
     auto rateMatrix = substitution_model["rateMatrix"];
-    if (info.rate_matrix_expressions.empty() && !mixtures) {
+    if (info.rate_matrix_expressions.empty() && 
+        info.rate_matrix_formula.empty() && !mixtures) {
         complainIfNot(rateMatrix, "Model " + info.model_name +
                       " in file " + file_path +
                       " does not specify a rateMatrix" );

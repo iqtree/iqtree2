@@ -38,8 +38,9 @@ public:
 
     //Member functions
     std::string getSubscriptedVariableName(int subscript) const;
-    bool isMatchFor(const std::string& match_name /* assumed: lower-case */,
-        ModelParameterType match_type) const;
+    bool isMatchFor(const std::string& match_name) const; /* assumed: lower-case */
+    bool isMatchFor(const std::string& match_name,        /* assumed: lower-case */
+                    ModelParameterType match_type) const;
 };
 
 class ModelVariable {
@@ -174,12 +175,12 @@ public:
     void addParameter(const YAMLFileParameter& p);
 
 public:
-    const std::string& getName()                                       const;
-    std::string getLongName()                                       const;
+    const std::string& getName()                                        const;
+    std::string        getLongName()                                    const;
 
-    bool hasDot(const char* name)                                   const;
+    bool hasDot    (const char* name)                                   const;
     void breakAtDot(const char* name, std::string& sub_model_name,
-        const char*& remainder)                             const;
+                    const char*& remainder)                             const;
     MapOfModels::const_iterator findMixedModel(const std::string& name) const;
     MapOfModels::iterator       findMixedModel(const std::string& name);
 
@@ -188,14 +189,18 @@ public:
     double evaluateExpression(std::string& expression, std::string context);
 
     //Parameters
+    const YAMLFileParameter* findParameter(const char* name)        const;
+    const YAMLFileParameter* findParameter(const std::string& name) const;
     const YAMLFileParameter* findParameter(const char* name,
-        ModelParameterType type) const;
+                                           ModelParameterType type) const;
+    const YAMLFileParameter* findParameter(const std::string& name,
+                                           ModelParameterType type) const;
     void  moveParameterToBack(const char* name,
-        ModelParameterType type);
+                              ModelParameterType type);
     bool   isFrequencyParameter(const std::string& param_name)          const;
     std::string        getParameterList(ModelParameterType param_type)  const;
     void               appendParameterList(ModelParameterType param_type,
-        std::stringstream& list) const;
+                                           std::stringstream& list) const;
 
     //Rate matrices
     int                getRateMatrixRank()                              const;
@@ -247,24 +252,40 @@ public:
 
     void loadFromFile(const char* file_path, PhyloTree* report_to_tree);
     bool isModelNameRecognized(const char* model_name);
+
     ModelMarkov* getModelByName(const char* model_name, PhyloTree* tree,
-        const char* model_params, StateFreqType freq_type,
-        const char* freq_params, ModelsBlock* blocks_model,
-        PhyloTree* report_to_tree);
+                                const char* model_params, StateFreqType freq_type,
+                                const char* freq_params, ModelsBlock* blocks_model,
+                                PhyloTree* report_to_tree);
+
+    ModelMarkov* getBinaryModel(ModelInfoFromYAMLFile& model_info,
+                                const std::string& parameter_list,
+                                StateFreqType freq_type, PhyloTree* tree, 
+                                PhyloTree* report_to_tree);
+
+    ModelMarkov* getCodonModel(ModelInfoFromYAMLFile& model_info,
+                              const std::string& parameter_list,
+                              StateFreqType freq_type, PhyloTree* tree,
+                              PhyloTree* report_to_tree);
 
     ModelMarkov* getDNAModel(ModelInfoFromYAMLFile& model_info,
-        const std::string& parameter_list,
-        StateFreqType freq_type,
-        PhyloTree* tree,
-        PhyloTree* report_to_tree);
+                             const std::string& parameter_list,
+                             StateFreqType freq_type, PhyloTree* tree,
+                             PhyloTree* report_to_tree);
+
+    ModelMarkov* getMorphologicalModel(ModelInfoFromYAMLFile& model_info,
+                                       const std::string& parameter_list,
+                                       StateFreqType freq_type, PhyloTree* tree,
+                                       PhyloTree* report_to_tree);
+
     ModelMarkov* getProteinModel(ModelInfoFromYAMLFile& model_info,
-        const std::string& parameter_list,
-        StateFreqType freq_type,
-        PhyloTree* tree,
-        ModelsBlock* models_block,
-        PhyloTree* report_to_trees);
+                                 const std::string& parameter_list,
+                                 StateFreqType freq_type, PhyloTree* tree,
+                                 ModelsBlock* models_block, 
+                                 PhyloTree* report_to_trees);
 
     bool hasModel(const std::string& model_name) const;
+    
     const ModelInfoFromYAMLFile& getModel(const std::string& model_name) const;
 };
 

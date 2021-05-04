@@ -30,6 +30,8 @@ Model for Binary data
 class ModelBIN : public ModelMarkov
 {
 public:
+	ModelBIN(PhyloTree *tree, PhyloTree* report_to_tree);
+
 	/**
 		constructor
 		@param model_name model name, e.g., JC, HKY.
@@ -43,8 +45,8 @@ public:
 		initialization, called automatically by the constructor, no need to call it
 		@param model_name model name, e.g., JC, HKY.
 		@param freq state frequency type
-     @param freq_params
-     @param report_to_tree
+        @param freq_params
+        @param report_to_tree
 	*/
 	virtual void init(const char *model_name, string model_params,
                       StateFreqType freq, string freq_params,

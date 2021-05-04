@@ -29,10 +29,13 @@
 #include "modeldna.h"              //for ModelDNA
 #include "modeldnaerror.h"         //for ModelDNAError
 #include "modelprotein.h"          //for ModelProtein
+#include "modelcodon.h"            //for ModelCodon
+#include "modelbin.h"              //for ModelBIN
+#include "modelmorphology.h"       //for ModelMorphology
 
-#include <utils/my_assert.h> //for ASSERT macro
+#include <utils/my_assert.h>       //for ASSERT macro
 #include <utils/stringfunctions.h> //for convert_int
-#include <utils/tools.h>     //for outError
+#include <utils/tools.h>           //for outError
 
 void ModelListFromYAMLFile::loadFromFile (const char* file_path,
                                           PhyloTree* report_to_tree) {
@@ -390,6 +393,42 @@ public:
     }
 };
 
+class YAMLModelBinary: public YAMLModelWrapper<ModelBIN> {
+public:
+    typedef YAMLModelWrapper<ModelBIN> super;
+    YAMLModelBinary(const char *model_name, std::string model_params,
+                 StateFreqType freq, std::string freq_params,
+                 PhyloTree *tree, PhyloTree* report_to_tree,
+                 const ModelInfoFromYAMLFile& info): super(info, report_to_tree) {
+        init(model_name, model_params, freq, freq_params, report_to_tree);
+        setRateMatrixFromModel();
+    }
+};
+
+class YAMLModelMorphology: public YAMLModelWrapper<ModelMorphology> {
+public:
+    typedef YAMLModelWrapper<ModelMorphology> super;
+    YAMLModelMorphology(const char *model_name, std::string model_params,
+                 StateFreqType freq, std::string freq_params,
+                 PhyloTree *tree, PhyloTree* report_to_tree,
+                 const ModelInfoFromYAMLFile& info): super(info, report_to_tree) {
+        init(model_name, model_params, freq, freq_params, report_to_tree);
+        setRateMatrixFromModel();
+    }
+};
+
+class YAMLModelCodon: public YAMLModelWrapper<ModelCodon> {
+public:
+    typedef YAMLModelWrapper<ModelCodon> super;
+    YAMLModelCodon(const char *model_name, std::string model_params,
+                 StateFreqType freq, std::string freq_params,
+                 PhyloTree *tree, PhyloTree* report_to_tree,
+                 const ModelInfoFromYAMLFile& info): super(info, report_to_tree) {
+        init(model_name, model_params, freq, freq_params, report_to_tree);
+        setRateMatrixFromModel();
+    }
+};
+
 bool ModelListFromYAMLFile::hasModel(const std::string& model_name) const {
     return models_found.find(model_name) != models_found.end();
 }
@@ -437,17 +476,67 @@ ModelMarkov* ModelListFromYAMLFile::getModelByName(const char* model_name,   Phy
     }
     
     switch (model_info.sequence_type) {
+        case SeqType::SEQ_BINARY:
+            return getBinaryModel(model_info, parameter_list,
+                                 freq_type, tree, report_to_tree);
+        case SeqType::SEQ_CODON:
+            return getCodonModel(model_info, parameter_list,
+                                 freq_type, tree, report_to_tree);
+
         case SeqType::SEQ_DNA:
             return getDNAModel(model_info, parameter_list,
                                freq_type, tree, report_to_tree);
+
+        case SeqType::SEQ_MORPH:
+            return getMorphologicalModel(model_info, parameter_list,
+                                         freq_type, tree, report_to_tree);
+
         case SeqType::SEQ_PROTEIN:
             return getProteinModel(model_info, parameter_list,
                                    freq_type, tree, models_block,
                                    report_to_tree);
+
+
         default:
             outError("YAML model uses unsupported sequence type");
             return nullptr;
     };
+}
+
+ModelMarkov* ModelListFromYAMLFile::getBinaryModel(ModelInfoFromYAMLFile& model_info,
+                                                   const std::string& parameter_list,
+                                                   StateFreqType freq_type,
+                                                   PhyloTree* tree,
+                                                   PhyloTree* report_to_tree) {
+    ModelMarkov* model = nullptr;
+    string       dummy_rate_params;
+    string       dummy_freq_params;    
+    YAMLModelBinary* pmodel;
+    pmodel = new YAMLModelBinary("", dummy_rate_params, freq_type,
+                                  dummy_freq_params, tree, report_to_tree,
+                                  model_info);
+    pmodel->acceptParameterList(parameter_list, report_to_tree);
+    model = pmodel;
+
+    return model;
+}
+
+ModelMarkov* ModelListFromYAMLFile::getCodonModel(ModelInfoFromYAMLFile& model_info,
+                                                  const std::string& parameter_list,
+                                                  StateFreqType freq_type,
+                                                  PhyloTree* tree,
+                                                  PhyloTree* report_to_tree) {
+    ModelMarkov*    model = nullptr;
+    string          dummy_rate_params;
+    string          dummy_freq_params;    
+    YAMLModelCodon* pmodel;
+    pmodel = new YAMLModelCodon("", dummy_rate_params, freq_type,
+                                  dummy_freq_params, tree, report_to_tree,
+                                  model_info);
+    pmodel->acceptParameterList(parameter_list, report_to_tree);
+    model = pmodel;
+
+    return model;
 }
     
 ModelMarkov* ModelListFromYAMLFile::getDNAModel(ModelInfoFromYAMLFile& model_info,
@@ -492,6 +581,24 @@ ModelMarkov* ModelListFromYAMLFile::getDNAModel(ModelInfoFromYAMLFile& model_inf
         dmodel->acceptParameterList(parameter_list, report_to_tree);
         model = dmodel;
     }
+    return model;
+}
+
+ModelMarkov* ModelListFromYAMLFile::getMorphologicalModel(ModelInfoFromYAMLFile& model_info,
+                                                          const std::string& parameter_list,
+                                                          StateFreqType freq_type,
+                                                          PhyloTree* tree,
+                                                          PhyloTree* report_to_tree) {
+    ModelMarkov* model = nullptr;
+    string       dummy_rate_params;
+    string       dummy_freq_params;    
+    YAMLModelMorphology* pmodel;
+    pmodel = new YAMLModelMorphology("", dummy_rate_params, freq_type,
+                                  dummy_freq_params, tree, report_to_tree,
+                                  model_info);
+    pmodel->acceptParameterList(parameter_list, report_to_tree);
+    model = pmodel;
+
     return model;
 }
 

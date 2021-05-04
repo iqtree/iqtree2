@@ -18,6 +18,8 @@
  */
 class ModelMorphology: public ModelMarkov {
 public:
+
+    ModelMorphology(PhyloTree *tree, PhyloTree* report_to_tree);
 	/**
 		constructor
 		@param model_name model name, e.g., JC, HKY.

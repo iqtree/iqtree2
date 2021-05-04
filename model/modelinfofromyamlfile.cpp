@@ -39,11 +39,16 @@ std::string YAMLFileParameter::getSubscriptedVariableName(int subscript) const {
     return subscripted_name.str();
 }
 
+bool YAMLFileParameter::isMatchFor(const std::string& match_name) const {
+    return string_to_lower(name) == match_name;
+}
+
 bool YAMLFileParameter::isMatchFor(const std::string& match_name,
     ModelParameterType match_type) const {
     return (type == match_type &&
         string_to_lower(name) == match_name);
 }
+
 
 ModelVariable::ModelVariable() : type(ModelParameterType::OTHER)
 , value(0), is_fixed(false) {
@@ -264,6 +269,24 @@ double ModelInfoFromYAMLFile::evaluateExpression(std::string& expr,
 }
 
 const YAMLFileParameter* ModelInfoFromYAMLFile::findParameter
+(const char* name) const {
+    size_t      param_count = parameters.size();
+    std::string lower_name = string_to_lower(name);
+    for (size_t i = 0; i < param_count; ++i) {
+        if (parameters[i].isMatchFor(lower_name)) {
+            return &parameters[i];
+        }
+    }
+    return nullptr;
+}
+
+const YAMLFileParameter* ModelInfoFromYAMLFile::findParameter
+(const std::string& name) const {
+    return findParameter(name.c_str());
+}
+
+
+const YAMLFileParameter* ModelInfoFromYAMLFile::findParameter
 (const char* name, ModelParameterType type) const {
     size_t      param_count = parameters.size();
     std::string lower_name = string_to_lower(name);
@@ -273,6 +296,11 @@ const YAMLFileParameter* ModelInfoFromYAMLFile::findParameter
         }
     }
     return nullptr;
+}
+
+const YAMLFileParameter* ModelInfoFromYAMLFile::findParameter
+(const std::string& name, ModelParameterType type) const {
+    return findParameter(name.c_str(), type);
 }
 
 void  ModelInfoFromYAMLFile::moveParameterToBack

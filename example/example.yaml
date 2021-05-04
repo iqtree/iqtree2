@@ -16,6 +16,33 @@
     D: [A, G, T]
     V: [A, G, C]
 
+- substitutionmodel: YJC_BIN
+  description:    Binary Jukes-Cantor model
+  reversible:     true
+  datatype:       BIN
+  stateFrequency: [ 0.25, 0.25 ]
+  rateMatrix:     
+  - [ ]
+  - [ 1 ]
+
+- substitutionmodel: YGTR_BIN
+  description:       General Time Reversible Binary model
+  citation:          “Tavare, 1986”
+  reversible:        true
+  datatype:          BIN
+  parameters:
+  - name:  r(1..1)             
+    type:  rate
+    range: [ 0.0001, 100 ]  
+    initValue: 1.0 
+  - name:  f(1..num_states) # frequency vector f(1), ..., f(4)
+    type:  frequency # make parameters in range [0,1] and sum to 1.0
+    range: [ 0, 1]
+  rateMatrix:
+  - [      ,     r(1)*f(2) ]
+  - [ r(1)*f(1),           ]
+  stateFrequency: estimate
+
 - substitutionmodel: YJC
   description: Jukes-Cantor model
   citation: “Jukes and Cantor, 1969”
@@ -94,7 +121,6 @@
   - [ r(3)*f(1), r(5)*f(2), f(3)     ,           ]
   stateFrequency: estimate
 
-
 - substitutionmodel: COV_GTR
   frommodel:   YGTR
   description: "Covarion model switching between invariant and GTR"
@@ -172,6 +198,39 @@
       range:       [0,1]
       initValue:   1/num_states
 
+
+- substitutionmodel: YCODON
+  reversible:        true
+  datatype:          CODON
+  parameters:
+    - name:        f(1..num_states)
+      description: state frequency
+      type:        frequency
+      range:       [0,1]
+      initValue:   1/num_states
+    - name:        r(1..num_states*num_states-num_states/2)
+      type:        rate
+      range:       [ 0.0001, 100 ]   
+      initValue:   1 
+    - name:        e
+      type:        other
+      initValue:   0.05
+    - name:        tiplikelihood
+      type:        matrix
+      rank:        num_states
+      formula:     "(row==column) ? (1-e) : (e/(num_states-1))"
+    - name:        t
+      type:        other
+    - name:        i
+      type:        other
+    - name:        rateMatrix
+      type:        matrix
+      rank:        num_states
+      formula:     "t=(column*column+column)/2,
+                    i=(column<row) ? (t + column + 1)
+                                   : (row*(num_states-1) + column + 1 - t), 
+                    (row==column) ? 1 : f(column)* r(i)"
+
 - substitutionmodel: YMIX
   description: "Mixture of JC and GTR"
   parameters:
@@ -186,5 +245,3 @@
     frommodel: YGTR # 2nd component from GTR model
     weight: w(2)
     scale: 1.0   
-
-

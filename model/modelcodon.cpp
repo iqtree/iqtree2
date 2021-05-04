@@ -224,12 +224,7 @@ CCG CAT CAC CAA CAG CGT CGC CGA CGG ATT ATC ATA ATG ACT ACC ACA ACG AAT AAC AAA 
 AAG AGT AGC AGA AGG GTT GTC GTA GTG GCT GCC GCA GCG GAT GAC GAA GAG GGT GGC GGA \
 GGG";
 
-
-ModelCodon::ModelCodon(const char *model_name, string model_params,
-                       StateFreqType freq, string freq_params,
-                       PhyloTree *tree, PhyloTree* report_to_tree)
-    : ModelMarkov(tree, report_to_tree)
-{
+void ModelCodon::setDefaults() {
     half_matrix = false;
     omega = kappa = kappa2 = 1.0;
     fix_omega = fix_kappa = false;
@@ -245,6 +240,19 @@ ModelCodon::ModelCodon(const char *model_name, string model_params,
 
     rate_attr = NULL;
     computeRateAttributes();
+}
+
+ModelCodon::ModelCodon(PhyloTree *tree, PhyloTree* report_to_tree) 
+    : ModelMarkov(tree, report_to_tree) {
+    setDefaults();
+}
+
+ModelCodon::ModelCodon(const char *model_name, string model_params,
+                       StateFreqType freq, string freq_params,
+                       PhyloTree *tree, PhyloTree* report_to_tree)
+    : ModelMarkov(tree, report_to_tree)
+{
+    setDefaults();
 
    	init(model_name, model_params, freq, freq_params, report_to_tree);
 }

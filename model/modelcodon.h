@@ -35,6 +35,11 @@ const int CA_TRANSITION_3NT   = 2048; // codon substitution involve the 3rd NT w
  */
 class ModelCodon: public ModelMarkov {
 public:
+
+	void setDefaults();
+
+	ModelCodon(PhyloTree *tree, PhyloTree* report_to_tree) ;
+
 	/**
 		constructor
 		@param model_name model name, e.g., GY,YN
