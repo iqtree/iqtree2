@@ -172,13 +172,21 @@ public:
     virtual int printTree(ostream &out, int brtype, Node *node, Node *dad = NULL);
 
     /**
-     *  @brief: either optimize model parameters on the current tree
-     *  or restore them from a checkpoint (this function exists because the
-     *  same things need to be done in two different places, in runTreeReconstruction)
-     *  @param initEpsilon likelihood epsilon for optimization
+     *  Return best tree string from the candidate set
+     *
+     *  @param numTrees
+     *      Number of best trees to return
+     *  @return
+     *      A string vector of trees
      */
-
-    virtual string ensureModelParametersAreSet(double initEpsilon);
+    virtual vector<string> getBestTrees(int numTrees = 0);
+    
+    /**
+            Read the tree saved with Taxon IDs and branch lengths.
+            @param tree_string tree string to read from
+            @param updatePLL if true, tree is read into PLL
+     */
+    virtual void readTreeString(const string &tree_string);
 
     /**
             pattern frequencies
@@ -215,10 +223,12 @@ private:
 
     // to separate the submodel names and the site rate names from the full model name
     void separateModel(string modelName);
+    
     /**
-            update the ptn_freq array
+            update the ptn_freq array according to the posterior probabilities along each site for each tree
+
      */
-    void updateFreqArray(double* pattern_mix_lh);
+    void computeFreqArray(double* pattern_mix_lh, bool need_computeLike);
 
     /**
             get posterior probabilities along each site for each tree

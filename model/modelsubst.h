@@ -23,6 +23,8 @@ using namespace std;
 const char OPEN_BRACKET = '{';
 const char CLOSE_BRACKET = '}';
 
+class PhyloTree;
+
 /**
 Substitution model abstract class
 
@@ -258,6 +260,12 @@ public:
 	*/
 	virtual StateFreqType getFreqType() { return FREQ_EQUAL; }
 
+    /**
+        set the associated tree
+        @param tree the associated tree
+    */
+    virtual void setTree(PhyloTree *tree) {}
+    
     /** for reversible models, multiply likelihood with inverse eigenvectors for fast pruning algorithm
             @param[in/out] state_lk state likelihood multiplied with inverse eigenvectors
      */

@@ -987,7 +987,7 @@ public:
      *  @return
      *      A string vector of trees
      */
-    vector<string> getBestTrees(int numTrees = 0);
+    virtual vector<string> getBestTrees(int numTrees = 0);
 
     /**
      *  Print the iteration number and the tree score
