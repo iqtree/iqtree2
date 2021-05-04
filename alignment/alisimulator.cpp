@@ -199,12 +199,12 @@ void AliSimulator::generateSingleDatasetFromSingleTree(string output_filepath, I
     int num_variant_states = -1;
     int expected_num_variant_states = params->alisim_sequence_length/params->alisim_sites_per_state;
     IntVector variant_state_mask;
-    if (params->alisim_abundant_state_rate > 1)
+    if (params->alisim_length_ratio > 1)
     {
         createVariantStateMask(variant_state_mask, num_variant_states, expected_num_variant_states, tree->root, tree->root);
         // return error if num_variant_states is less than the expected_num_variant_states
         if (num_variant_states < expected_num_variant_states){
-            outError("Unfortunately, after removing constant sites, the number of variant sites is less than the expected sequence length. Please use --abundant-site-rate <ABUNDANT_SITE_RATE> to generate more abundant sites and try again. The current <ABUNDANT_SITE_RATE> is "+ convertDoubleToString(params->alisim_abundant_state_rate));
+            outError("Unfortunately, after removing constant sites, the number of variant sites is less than the expected sequence length. Please use --length-ratio <LENGTH_RATIO> to generate more abundant sites and try again. The current <LENGTH_RATIO> is "+ convertDoubleToString(params->alisim_length_ratio));
         }
     }
     
@@ -272,7 +272,7 @@ void AliSimulator::generateMultipleAlignmentsFromSingleTree()
         
         // if the ancestral sequence is not specified, randomly generate the sequence
         if (params->alisim_ancestral_sequence_name.length() == 0)
-            ancestral_sequence = generateRandomSequence((int)(params->alisim_sequence_length/params->alisim_sites_per_state*params->alisim_abundant_state_rate));
+            ancestral_sequence = generateRandomSequence((int)(params->alisim_sequence_length/params->alisim_sites_per_state*params->alisim_length_ratio));
         
         // initialize output_filepath
         std::string output_filepath(params->user_file);
@@ -353,7 +353,7 @@ IntVector AliSimulator:: retrieveAncestralSequenceFromInputFile(char *aln_filepa
         outError(err_str.str());
     
     // randomly generate abundant states (if necessary)
-    int num_abundant_states = params->alisim_sequence_length/params->alisim_sites_per_state*params->alisim_abundant_state_rate - sequence_length;
+    int num_abundant_states = params->alisim_sequence_length/params->alisim_sites_per_state*params->alisim_length_ratio - sequence_length;
     for (int i = 0; i < num_abundant_states; i++)
     {
         sequence.push_back(getRandomItemWithAccumulatedProbabilityMatrix(state_freq, 0, max_num_states));
@@ -455,7 +455,7 @@ void AliSimulator::generateRandomBaseFrequencies(double *base_frequencies, int m
 void AliSimulator::simulateSeqsForTree()
 {
     // get variables
-    int sequence_length = params->alisim_sequence_length/params->alisim_sites_per_state*params->alisim_abundant_state_rate;
+    int sequence_length = params->alisim_sequence_length/params->alisim_sites_per_state*params->alisim_length_ratio;
     ModelSubst *model = tree->getModel();
     int max_num_states = tree->aln->getMaxNumStates();
     

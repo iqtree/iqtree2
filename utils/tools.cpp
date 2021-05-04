@@ -1121,7 +1121,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_num_states_morph = 32;
     params.alisim_num_taxa_uniform_start = -1;
     params.alisim_num_taxa_uniform_end = -1;
-    params.alisim_abundant_state_rate = 1;
+    params.alisim_length_ratio = 1;
     params.birth_rate = 0.8;
     params.death_rate = 0.2;
     
@@ -2391,20 +2391,20 @@ void parseArg(int argc, char *argv[], Params &params) {
                     params.model_name = tmp_model_name;
                             
                 }
-                // handle "+ASC" -> set alisim_abundant_state_rate to the default value at 2.0
+                // handle "+ASC" -> set alisim_length_ratio to the default value at 2.0
                 if (params.model_name.find("+ASC") != std::string::npos) {
-                    if (params.alisim_abundant_state_rate == 1)
-                        params.alisim_abundant_state_rate = 2.0;
+                    if (params.alisim_length_ratio == 1)
+                        params.alisim_length_ratio = 2.0;
                 }
 				continue;
 			}
-            if (strcmp(argv[cnt], "--abundant-site-rate") == 0) {
+            if (strcmp(argv[cnt], "--length-ratio") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use --abundant-site-rate <ABUNDANT_SITE_RATE>";
-                params.alisim_abundant_state_rate = convert_double(argv[cnt]);
-                if (params.alisim_abundant_state_rate <= 1)
-                    throw "<ABUNDANT_SITE_RATE> must be greater than 1.";
+                    throw "Use --length-ratio <LENGTH_RATIO>";
+                params.alisim_length_ratio = convert_double(argv[cnt]);
+                if (params.alisim_length_ratio <= 1)
+                    throw "<LENGTH_RATIO> must be greater than 1.";
                 continue;
             }
             if (strcmp(argv[cnt], "--init-model") == 0) {
@@ -4682,11 +4682,11 @@ void parseArg(int argc, char *argv[], Params &params) {
             params.alisim_sites_per_state = 3;
     }
     
-    // reset alisim_abundant_state_rate if Ascertainment Bias Correction option (+ASC) is inactive
-    if (params.alisim_abundant_state_rate > 1 && (params.original_params.find("+ASC") == std::string::npos))
+    // reset alisim_length_ratio if Ascertainment Bias Correction option (+ASC) is inactive
+    if (params.alisim_length_ratio > 1 && (params.original_params.find("+ASC") == std::string::npos))
     {
-        params.alisim_abundant_state_rate = 1;
-        outWarning("<ABUNDANT_SITE_RATE> is reset to 1 since Ascertainment Bias Correction option is inactive. Please use -m <MODEL_NAME>+ASC to activate Ascertainment Bias Correction option.");
+        params.alisim_length_ratio = 1;
+        outWarning("<LENGTH_RATIO> is reset to 1 since Ascertainment Bias Correction option is inactive. Please use -m <MODEL_NAME>+ASC to activate Ascertainment Bias Correction option.");
     }
     
     //    if (MPIHelper::getInstance().isWorker()) {

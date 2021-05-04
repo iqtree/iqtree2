@@ -23,7 +23,7 @@ AliSimulatorHeterogeneity::AliSimulatorHeterogeneity(AliSimulator *alisimulator)
 */
 void AliSimulatorHeterogeneity::intializeSiteSpecificModelIndex()
 {
-    int sequence_length = params->alisim_sequence_length/params->alisim_sites_per_state*params->alisim_abundant_state_rate;
+    int sequence_length = params->alisim_sequence_length/params->alisim_sites_per_state*params->alisim_length_ratio;
     site_specific_model_index.resize(sequence_length);
     
     // if a mixture model is used -> randomly select a model for each site based on the weights of model components
@@ -324,7 +324,7 @@ void AliSimulatorHeterogeneity::getSiteSpecificRates(double *site_specific_rates
 */
 void AliSimulatorHeterogeneity::simulateSeqsForTree(){
     // get variables
-    int sequence_length = params->alisim_sequence_length/params->alisim_sites_per_state*params->alisim_abundant_state_rate;
+    int sequence_length = params->alisim_sequence_length/params->alisim_sites_per_state*params->alisim_length_ratio;
     ModelSubst *model = tree->getModel();
     int max_num_states = tree->aln->getMaxNumStates();
     
