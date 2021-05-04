@@ -333,27 +333,30 @@ public:
     int buildRetainingSites(const char *aln_site_list, IntVector &kept_sites,
             int exclude_sites, const char *ref_seq_name) const;
 
-    void printAlignment(InputType format, const char *filename, bool append = false, const char *aln_site_list = NULL,
-    		int exclude_sites = 0, const char *ref_seq_name = NULL);
+    void printAlignment(InputType format, const char *filename, bool append = false, 
+                        const char *aln_site_list = nullptr, int exclude_sites = 0, 
+                        const char *ref_seq_name = nullptr, bool report_progress = true);
 
-    virtual void printAlignment(InputType format, ostream &out, const char* file_name
-                                , bool append = false, const char *aln_site_list = NULL
-                                , int exclude_sites = 0, const char *ref_seq_name = NULL);
+    virtual void printAlignment(InputType format, ostream &out, const char* file_name,
+                                bool append = false, const char *aln_site_list = nullptr,
+                                int exclude_sites = 0, const char *ref_seq_name = nullptr,
+                                bool report_progress = true);
 
-    void printPhylip(ostream &out, bool append = false, const char *aln_site_list = NULL,
-    		int exclude_sites = 0, const char *ref_seq_name = NULL, bool print_taxid = false) const;
+    void printPhylip(ostream &out, bool append = false, const char *aln_site_list = nullptr,
+                     int exclude_sites = 0, const char *ref_seq_name = nullptr, 
+                     bool print_taxid = false, bool report_progress = true) const;
     
     void getAllSequences(const char* task_description, StrVector& seq_data) const;
     void getStateStrings(StrVector& stateStrings) const;
     void getOneSequence(const StrVector& stateStrings, size_t seq_id, string& str) const;
 
-
-    
-    void printFasta(ostream &out, bool append = false, const char *aln_site_list = NULL,
-    		int exclude_sites = 0, const char *ref_seq_name = NULL);
+    void printFasta(ostream &out, bool append = false, const char *aln_site_list = nullptr,
+                    int exclude_sites = 0, const char *ref_seq_name = nullptr,
+                    bool report_progress = true);
 
     void printNexus(ostream &out, bool append = false, const char *aln_site_list = NULL,
-                    int exclude_sites = 0, const char *ref_seq_name = NULL, bool print_taxid = false);
+                    int exclude_sites = 0, const char *ref_seq_name = NULL, 
+                    bool print_taxid = false, bool report_progress = true);
     /**
             Print the number of gaps per site
             @param filename output file name

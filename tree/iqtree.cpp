@@ -1252,7 +1252,8 @@ void IQTree::initializePLL(Params &params) {
     {
         /* Read in the alignment file */
         stringstream pllAln;
-        aln->printAlignment(InputType::IN_PHYLIP, pllAln, "");
+        aln->printAlignment(InputType::IN_PHYLIP, pllAln, "", 
+                            false, nullptr, 0, nullptr, false);
         string pllAlnStr = pllAln.str();
         long len = static_cast<long>(pllAlnStr.length());
         pllAlignment = pllParsePHYLIPString(pllAlnStr.c_str(), len);

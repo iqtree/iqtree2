@@ -3309,7 +3309,8 @@ void Alignment::getAllSequences(const char* task_description,
 void Alignment::printPhylip(ostream &out, bool append,
                             const char *aln_site_list,
                             int exclude_sites, const char *ref_seq_name,
-                            bool print_taxid) const {
+                            bool print_taxid,
+                            bool report_progress) const {
     IntVector kept_sites;
     int final_length = buildRetainingSites(aln_site_list, kept_sites,
                                            exclude_sites, ref_seq_name);
@@ -3324,11 +3325,17 @@ void Alignment::printPhylip(ostream &out, bool append,
 
 
     StrVector seq_data;
-    getAllSequences("Calculating content to write to Phylip file", seq_data);
+    const char* calc_description  = "";
+    const char* write_description = "";
+    if (report_progress) {
+        calc_description  = "Calculating content to write to Phylip file";
+        write_description = "Writing Phylip file";
+    }
+    getAllSequences(calc_description, seq_data);
     
     #if USE_PROGRESS_DISPLAY
     auto seq_count = seq_names.size();
-    progress_display writeProgress(seq_count, "Writing Phylip file");
+    progress_display writeProgress(seq_count, write_description);
     #else
     double writeProgress = 0.0;
     #endif
@@ -3352,7 +3359,8 @@ void Alignment::printPhylip(ostream &out, bool append,
 }
 
 void Alignment::printFasta(ostream &out, bool append, const char *aln_site_list,
-                           int exclude_sites, const char *ref_seq_name)
+                           int exclude_sites, const char *ref_seq_name,
+                           bool report_progress)
 {
     IntVector kept_sites;
     buildRetainingSites(aln_site_list, kept_sites, exclude_sites, ref_seq_name);
@@ -3369,7 +3377,8 @@ void Alignment::printFasta(ostream &out, bool append, const char *aln_site_list,
 }
 
 void Alignment::printNexus(ostream &out, bool append, const char *aln_site_list,
-                           int exclude_sites, const char *ref_seq_name, bool print_taxid) {
+                           int exclude_sites, const char *ref_seq_name, 
+                           bool print_taxid, bool report_progress) {
     IntVector kept_sites;
     int final_length = buildRetainingSites(aln_site_list, kept_sites,
                                            exclude_sites, ref_seq_name);
@@ -3419,7 +3428,8 @@ void Alignment::printNexus(ostream &out, bool append, const char *aln_site_list,
 
 void Alignment::printAlignment(InputType format, const char *file_name,
                                bool append, const char *aln_site_list,
-                               int exclude_sites, const char *ref_seq_name) {
+                               int exclude_sites, const char *ref_seq_name,
+                               bool report_progress) {
     try {
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
@@ -3430,7 +3440,8 @@ void Alignment::printAlignment(InputType format, const char *file_name,
             out.open(file_name);
         
         printAlignment(format, out, file_name, append,
-                       aln_site_list, exclude_sites, ref_seq_name);
+                       aln_site_list, exclude_sites, ref_seq_name,
+                       report_progress);
 
         out.close();
         if (verbose_mode >= VerboseMode::VB_MED || !append) {
@@ -3442,26 +3453,27 @@ void Alignment::printAlignment(InputType format, const char *file_name,
 }
 
 void Alignment::printAlignment(InputType format, ostream &out, const char* file_name
-                               , bool append, const char *aln_site_list
-                               , int exclude_sites, const char *ref_seq_name) {
+                               , bool append,       const char *aln_site_list
+                               , int exclude_sites, const char *ref_seq_name
+                               , bool report_progress) {
     double printStart = getRealTime();
     const char* formatName = "phylip";
     switch (format) {
         case InputType::IN_PHYLIP:
-            printPhylip(out, append, aln_site_list, exclude_sites, ref_seq_name);
+            printPhylip(out, append, aln_site_list, exclude_sites, ref_seq_name, false, report_progress);
             break;
         case InputType::IN_FASTA:
             formatName = "fasta";
-            printFasta(out, append, aln_site_list, exclude_sites, ref_seq_name);
+            printFasta(out, append, aln_site_list, exclude_sites, ref_seq_name, report_progress);
             break;
         case InputType::IN_NEXUS:
             formatName = "nexus";
-            printNexus(out, append, aln_site_list, exclude_sites, ref_seq_name);
+            printNexus(out, append, aln_site_list, exclude_sites, ref_seq_name, false, report_progress);
             break;
         default:
             ASSERT(0 && "Unsupported alignment output format");
     }
-    if (verbose_mode >= VerboseMode::VB_MED) {
+    if (verbose_mode >= VerboseMode::VB_MED && report_progress) {
         std::stringstream msg;
         msg.precision(4);
         msg << "Printing alignment to " << formatName << " file "

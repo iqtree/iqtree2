@@ -339,7 +339,7 @@ parse_phylip (pllAlignmentData * alignmentData, int input)
 
        if (token.tokenType == PLL_TOKEN_UNKNOWN)
         {
-           fprintf(stderr, "Unknown token found reading sequence %d from line %d\n", j, i);
+          fprintf(stderr, "Unknown token found reading sequence %d from line %d\n", j, i);
           rax_free (sequenceLength);
           return (0);
         }
@@ -348,8 +348,8 @@ parse_phylip (pllAlignmentData * alignmentData, int input)
 
        if (token.tokenType != PLL_TOKEN_STRING && token.tokenType != PLL_TOKEN_NUMBER && token.tokenType != PLL_TOKEN_FLOAT)
         {
-           fprintf(stderr, "Unrecognized token type %d, reading sequence %d from line %d\n", token.tokenType, j, i);
-           rax_free (sequenceLength);
+          fprintf(stderr, "Unrecognized token type %d, reading sequence %d from line %d\n", token.tokenType, j, i);
+          rax_free (sequenceLength);
           return (0);
         }
        alignmentData->sequenceLabels[i + 1] = my_strndup (token.lexeme, token.len);
@@ -361,8 +361,10 @@ parse_phylip (pllAlignmentData * alignmentData, int input)
      {
        if (token.tokenType == PLL_TOKEN_EOF)
         {
-           fprintf(stderr, "Reached end of file reading sequence (%d) from line %d\n", j, i);
            rc = parsedOk (sequenceLength, alignmentData->sequenceCount, alignmentData->sequenceLength);
+           if (!rc) {
+             fprintf(stderr, "Reached end of file reading sequence (%d) from line %d\n", j, i);
+           }
           rax_free (sequenceLength);
           return (rc);
         }
@@ -370,15 +372,15 @@ parse_phylip (pllAlignmentData * alignmentData, int input)
        if (token.tokenType == PLL_TOKEN_UNKNOWN)
         {
            fprintf(stderr, "Unknown token found reading sequence %d from line %d\n", j, i);
-         rax_free (sequenceLength);
-         return (0);
+           rax_free (sequenceLength);
+           return (0);
         }
        
        if (token.tokenType == PLL_TOKEN_NEWLINE) break;
 
        if (token.tokenType != PLL_TOKEN_STRING)
         {
-           fprintf(stderr, "Expected string, when reading sequence %d from line %d\n", j, i);
+          fprintf(stderr, "Expected string, when reading sequence %d from line %d\n", j, i);
           rax_free (sequenceLength);
           return (0);
         }
