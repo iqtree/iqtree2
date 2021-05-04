@@ -37,6 +37,11 @@ public:
     Terrace(const char *infile_tree, bool is_rooted,const char *infile_matrix);
     
     /*
+     * constructor
+     */
+    Terrace(vector<TerraceTree*> input_induced_trees);
+    
+    /*
      * destructor
      */
     ~Terrace();

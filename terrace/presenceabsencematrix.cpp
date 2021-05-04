@@ -327,7 +327,7 @@ void PresenceAbsenceMatrix::remove_taxon(string taxon_name){
     
 }
 
-void PresenceAbsenceMatrix::getINFO_init_tree_taxon_order(vector<string> &taxa_names_sub, vector<string> &list_taxa_to_insert,const int m){
+int PresenceAbsenceMatrix::getINFO_init_tree_taxon_order(vector<string> &taxa_names_sub, vector<string> &list_taxa_to_insert,const int m){
     
     //cout<<"\n"<<"=================================================="<<"\n"<<"INITIAL tree and Taxon Order:"<<"\n"<<"\n";
     int i,j,k;
@@ -444,8 +444,10 @@ void PresenceAbsenceMatrix::getINFO_init_tree_taxon_order(vector<string> &taxa_n
         }
     }
     
+    int part_init = -1;
     if(m==0){
         cout<<"Partition "<<part_max+1<<" is chosen for the initial tree."<<"\n";
+        part_init = part_max;
     } else {
         cout<<"The initial tree will be created by removing from the input tree "<<m<<" leaves."<<"\n";
         cout<<"Note, that this procedure does not guarantee generating all trees from a terrace! It is only meant to investigate, if at least some trees from a terrace can be generate."<<"\n";
@@ -514,6 +516,8 @@ void PresenceAbsenceMatrix::getINFO_init_tree_taxon_order(vector<string> &taxa_n
     for(j=0; j<list_taxa_to_insert.size(); j++){
         cout<<j<<": "<<list_taxa_to_insert[j]<<"\n";
     }*/
+    
+    return part_init;
 }
 
 void PresenceAbsenceMatrix::orderTaxaByCoverage(vector<int> &taxon_ids, vector<IntVector> &coverage_info, IntVector &ordered_taxa){
@@ -942,3 +946,44 @@ void PresenceAbsenceMatrix::print_overlap_matrix(){
     }
     cout<<"\n";
 };
+
+void PresenceAbsenceMatrix::get_from_subtrees(vector<TerraceTree*> subtrees){
+    
+    part_num = subtrees.size();
+    
+    string taxon_name;
+    IntVector vec;
+    vec.resize(part_num,0);
+
+    int p=0, id;
+    
+    for(const auto &t: subtrees){
+        for(const auto &l: t->leafNodes){
+            taxon_name = l.first;
+            id=findTaxonID(taxon_name);
+            if(id==-1){
+                taxa_num++;
+                taxa_names.push_back(taxon_name);
+                pr_ab_matrix.push_back(vec);
+                pr_ab_matrix[taxa_num-1][p]=1;
+            }else{
+                pr_ab_matrix[id][p]=1;
+            }
+        }
+        p++;
+    }
+    
+    
+    /*for(const auto &taxon: taxon_coverage){
+        (taxon.second)->resize(part_num);
+        p=0;
+        for(const auto &t: subtrees){
+            if(t->leafNodes.find(taxon.first)!=t->leafNodes.end()){
+                (taxon.second)->at(p)=1;
+            }else{
+                (taxon.second)->at(p)=0;
+            }
+            p++;
+        }
+    }*/
+}

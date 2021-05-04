@@ -39,6 +39,11 @@ public:
      *  Fill in presence-absence matrix from an input alignment
      */
     void get_from_alignment(Params &params);
+    
+    /*
+     *  Build presence-absence matrix from input set of partition trees
+     */
+    void get_from_subtrees(vector<TerraceTree*> subtrees);
 
     /*
      *  Reading a presence-absence matrix for supermatrix
@@ -94,7 +99,7 @@ public:
      *  list_taxa_to_insert - taxa in the order to be inserted
      */
     
-    void getINFO_init_tree_taxon_order(vector<string> &taxa_names_sub, vector<string> &list_taxa_to_insert,const int m);
+    int getINFO_init_tree_taxon_order(vector<string> &taxa_names_sub, vector<string> &list_taxa_to_insert,const int m);
     
     /*
      *  Order partitions by their overlap

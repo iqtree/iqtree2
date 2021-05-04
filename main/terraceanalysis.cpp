@@ -110,6 +110,10 @@ void runterraceanalysis(Params &params){
         }
     
         terrace->rm_leaves = params.terrace_remove_m_leaves;
+        
+        //Terrace* test = new Terrace(terrace->induced_trees);
+        //test->rm_leaves = terrace->rm_leaves;
+        //run_generate_trees(test, params,test->rm_leaves);
         run_generate_trees(terrace, params,terrace->rm_leaves);
         
     }
@@ -125,7 +129,7 @@ void run_generate_trees(Terrace *terrace, Params &params,const int m){
     // GET INFO FOR INITIAL TREE and TAXA TO INSERT
     vector<string> taxa_names_sub;      // taxa to appear on initial tree
     vector<string> list_taxa_to_insert; // list of taxa to be inserted.
-    terrace->matrix->getINFO_init_tree_taxon_order(taxa_names_sub,list_taxa_to_insert,terrace->rm_leaves);
+    int part_init = terrace->matrix->getINFO_init_tree_taxon_order(taxa_names_sub,list_taxa_to_insert,terrace->rm_leaves);
     
 
     // INITIAL TERRACE
@@ -138,8 +142,13 @@ void run_generate_trees(Terrace *terrace, Params &params,const int m){
     terrace->matrix->getSubPrAbMatrix(taxa_names_sub, submatrix);
 
     TerraceTree tree_init;
-    tree_init.copyTree_byTaxonNames(terrace,taxa_names_sub);
-    //tree_init.drawTree(cout, WT_BR_SCALE | WT_TAXON_ID | WT_NEWLINE);
+    if(terrace->root){
+        tree_init.copyTree_byTaxonNames(terrace,taxa_names_sub);
+    }else{
+        assert(part_init!=-1);
+        tree_init.copyTree(terrace->induced_trees[part_init]);
+    }
+        //tree_init.drawTree(cout, WT_BR_SCALE | WT_TAXON_ID | WT_NEWLINE);
     
     Terrace *init_terrace = new Terrace(tree_init, submatrix);
     init_terrace->rm_leaves = m;

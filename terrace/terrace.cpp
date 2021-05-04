@@ -122,6 +122,25 @@ Terrace::Terrace(TerraceTree tree, PresenceAbsenceMatrix *m, vector<TerraceTree*
     fillLeafNodes();
 }
 
+Terrace::Terrace(vector<TerraceTree*> input_induced_trees){
+    
+    init();
+    set_part_trees(input_induced_trees);
+    
+    for(const auto &t: induced_trees){
+        if(t->leafNodes.size()==0){
+            t->fillLeafNodes();
+        }
+    }
+    
+    matrix = new PresenceAbsenceMatrix();
+    matrix->get_from_subtrees(induced_trees);
+    
+    //printInfo();
+    matrix->print_pr_ab_matrix();
+    
+}
+
 void Terrace::get_part_trees(){
     
     assert(matrix!=nullptr && "ERROR: Presence-absence matrix is absent! I cannot get induced partition trees..");
