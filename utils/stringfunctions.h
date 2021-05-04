@@ -169,10 +169,15 @@ T StringToNumber ( const std::string &Text )
     return ss >> result ? result : 0;
 }
 
-//These functions moved here from model/modelinfofromyamlfile.cpp, 30-Apr-2021:
+//These three functions moved here from model/modelinfofromyamlfile.cpp, 30-Apr-2021:
+bool startsWith(const std::string& s, const char* front);
+bool endsWith  (const std::string& s, const char* suffix);
+bool contains  (const std::string& s, const char* pattern);
+bool contains  (const char*        s, const char* pattern);
 
-bool startsWith(std::string s, const char* front);
-bool endsWith  (const std::string s, const char* suffix);
-bool contains  (std::string s, const char* pattern);
+//These functions added, 04-May-2021
+bool is_string_all_digits(const std::string& s);
+bool is_string_all_digits(const char* s);
+
 
 #endif /* stringfunctions_hpp */

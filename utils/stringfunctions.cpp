@@ -340,12 +340,12 @@ std::string next_argument(int argc, char* argv[], const char* desc, int& cnt ) {
 
 //These three functions moved here from model/modelinfofromyamlfile.cpp, 30-Apr-2021:
 
-bool startsWith(std::string s, const char* front) {
+bool startsWith(const std::string& s, const char* front) {
     auto frontLen = strlen(front);
     return (s.substr(0, frontLen) == front);
 }
 
-bool endsWith(const std::string s, const char* suffix) {
+bool endsWith(const std::string& s, const char* suffix) {
     auto suffixLen = strlen(suffix);
     if (s.length() < suffixLen) {
         return false;
@@ -353,6 +353,29 @@ bool endsWith(const std::string s, const char* suffix) {
     return s.substr(s.length() - suffixLen, suffixLen) == suffix;
 }
 
-bool contains(std::string s, const char* pattern) {
+bool contains(const std::string &s, const char* pattern) {
     return s.find(pattern) != std::string::npos;
+}
+
+bool contains(const char* s, const char* pattern) {
+    return strstr(s, pattern) != nullptr;
+}
+
+bool is_string_all_digits(const std::string& s) {
+    for (auto ch: s) {
+        if ( ch < '0' || '9' < ch ) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool is_string_all_digits(const char* s) {
+    for (; *s!='\0'; ++s) {
+        auto ch = *s;
+        if ( ch < '0' || '9' < ch ) {
+            return false;
+        }
+    }
+    return true;
 }
