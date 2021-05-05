@@ -201,7 +201,7 @@ ModelInfoFromYAMLFile::findMixedModel(const std::string& name) const {
     auto it = mixed_models->find(name);
     if (it == mixed_models->end()) {
         std::stringstream complaint;
-        complaint << "Could not evaluate variable " << name
+        complaint << "Could not evaluate mixedl model name " << name
             << " for model " << getLongName();
         throw ModelExpression::ModelException(complaint.str());
     }
@@ -213,7 +213,7 @@ ModelInfoFromYAMLFile::findMixedModel(const std::string& name) {
     auto it = mixed_models->find(name);
     if (it == mixed_models->end()) {
         std::stringstream complaint;
-        complaint << "Could not evaluate variable " << name
+        complaint << "Could not evaluate mixed model name " << name
             << " for model " << getLongName();
         throw ModelExpression::ModelException(complaint.str());
     }

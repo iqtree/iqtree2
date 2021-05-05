@@ -617,15 +617,16 @@ namespace ModelExpression {
             if (text[ix]=='(') {
                 //Subscripted
                 size_t      subscript_start = ix;
-                int         bracket_depth   = 0;
+                int         bracket_depth   = 1;
                 
-                for (++ix;ix<text.size() && (text[ix]!=')' || 0<bracket_depth);++ix) {
-                    if (text[ix]==')')      --bracket_depth;
-                    else if (text[ix]=='(') ++bracket_depth;
+                for (++ix;ix<text.size() && 0<bracket_depth;++ix) {
+                    auto ch = text[ix];
+                    if      (ch==')')  --bracket_depth;
+                    else if (ch=='(')  ++bracket_depth;
                 }
                 std::string subscript_expr;
                 if (ix<text.size()) {
-                    ++ix; //skip over closing bracket
+                    ++ix; //skip over opening bracket
                     subscript_expr = text.substr(subscript_start+1, ix-subscript_start-2);
                     if (is_string_all_digits(subscript_expr)) {
                         var_name = var_name + "(" + subscript_expr + ")";
@@ -633,7 +634,7 @@ namespace ModelExpression {
                         //Oh, boy.  Subscript expression!
                         InterpretedExpression x(model, subscript_expr);
                         var_name = string_to_lower(var_name);
-                        const YAMLFileParameter* param =  model.findParameter(var_name) ;
+                        const YAMLFileParameter* param = model.findParameter(var_name) ;
                         if (param == nullptr ) {
                             std::stringstream complaint;
                             complaint << "Subscripted parameter " << var_name
