@@ -796,7 +796,7 @@ namespace ModelExpression {
                 if (bracket_depth==0) {
                     subscript_expr = text.substr(subscript_start+1, ix-subscript_start-2);
                     if (is_string_all_digits(subscript_expr)) {
-                        std::cout << "VS expr: " << subscript_expr << std::endl;
+                        //std::cout << "VS expr: " << subscript_expr << std::endl;
                         var_name = var_name + "(" + subscript_expr + ")";
                     } else {
                         //Oh, boy.  Subscript expression!
