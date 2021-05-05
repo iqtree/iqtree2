@@ -972,18 +972,4 @@ void PresenceAbsenceMatrix::get_from_subtrees(vector<TerraceTree*> subtrees){
         }
         p++;
     }
-    
-    
-    /*for(const auto &taxon: taxon_coverage){
-        (taxon.second)->resize(part_num);
-        p=0;
-        for(const auto &t: subtrees){
-            if(t->leafNodes.find(taxon.first)!=t->leafNodes.end()){
-                (taxon.second)->at(p)=1;
-            }else{
-                (taxon.second)->at(p)=0;
-            }
-            p++;
-        }
-    }*/
 }

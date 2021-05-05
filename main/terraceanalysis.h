@@ -29,4 +29,9 @@ void run_terrace_check(Terrace *terrace, Params &params);
  */
 void run_generate_trees(Terrace *terrace, Params &params,const int m);
 
+/**
+        The function is used to read a set of subtrees to be considered as partition trees for terrace analysis
+ */
+void read_tree_set(const char *infile, bool &is_rooted, vector<TerraceTree*> &subtrees);
+
 #endif /* terraceanalysis_hpp */

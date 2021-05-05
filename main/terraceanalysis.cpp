@@ -60,8 +60,13 @@ void runterraceanalysis(Params &params){
         terrace = new Terrace(tree,matrix);
     } else if(params.user_file && params.pr_ab_matrix){
         terrace = new Terrace(params.user_file,params.is_rooted,params.pr_ab_matrix);
-    } else {
-        throw "ERROR: to start terrace analysis input a tree and either a presence-absence matrix or alignment with partition info!";
+    } else if(params.user_file){
+        vector<TerraceTree*> subtrees;
+        read_tree_set(params.user_file, params.is_rooted, subtrees);
+        assert(subtrees.size()>1 && "ERROR: the input set of trees must be larger than 1 to be considered for the analysis.");
+        terrace = new Terrace(subtrees);
+    }else{
+        throw "ERROR: to start terrace analysis input a tree and either a presence-absence matrix or alignment with partition info or a set of overlapping unrooted trees!";
     }
     
     /*terrace->out_file = params.out_prefix;
@@ -112,10 +117,9 @@ void runterraceanalysis(Params &params){
         terrace->rm_leaves = params.terrace_remove_m_leaves;
         
         //Terrace* test = new Terrace(terrace->induced_trees);
-        //test->rm_leaves = terrace->rm_leaves;
+        //test->rm_leaves = 0;
         //run_generate_trees(test, params,test->rm_leaves);
         run_generate_trees(terrace, params,terrace->rm_leaves);
-        
     }
 
 };
@@ -154,6 +158,9 @@ void run_generate_trees(Terrace *terrace, Params &params,const int m){
     init_terrace->rm_leaves = m;
     init_terrace->master_terrace = terrace;
 
+    //init_terrace->printInfo();
+    //init_terrace->matrix->print_pr_ab_matrix();
+    
     init_terrace->out_file = params.out_prefix;
     init_terrace->out_file += ".all_gen_terrace_trees";
     
@@ -256,19 +263,8 @@ void run_terrace_check(Terrace *terrace,Params &params){
     int i, count = 0;
     vector<MTree*> trees_on, trees_off;
     
-    /*MTreeSet tree_set_query(params.terrace_query_set, params.is_rooted, params.tree_burnin, params.tree_max_count);
-    for(i=0; i<tree_set_query.size(); i++){
-        if(terrace->check_two_trees(tree_set_query[i])){
-            trees_on.push_back(tree_set_query[i]);
-        }else{
-            trees_off.push_back(tree_set_query[i]);
-        }
-    }*/
-    
-    // Alternative
     ifstream in;
     in.open(params.terrace_query_set);
-    //while (!in.eof() && count < params.tree_max_count) {
     while (!in.eof()) {
         count++;
         MTree *tree = new MTree();
@@ -331,5 +327,22 @@ void run_terrace_check(Terrace *terrace,Params &params){
         cout<<" - "<<trees_off.size()<<" trees do not belong to considered terrace"<<"\n";
     }
     cout<<"----------------------------------------------------------------------------"<<"\n"<<"\n";
+}
+
+void read_tree_set(const char *infile, bool &is_rooted, vector<TerraceTree*> &subtrees){
+    
+    ifstream in;
+    in.open(infile);
+    while (!in.eof()) {
+        TerraceTree *tree = new TerraceTree();
+        tree->readTree(in, is_rooted);
+        subtrees.push_back(tree);
+        
+        char ch;
+        (in) >> ch;
+        if (in.eof()) break;
+        in.unget();
+    }
+    in.close();
 }
 
