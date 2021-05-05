@@ -1516,13 +1516,16 @@ SuperAlignment::~SuperAlignment()
 
 void SuperAlignment::printAlignment(InputType format, ostream &out, const char* file_name
                                     , bool append, const char *aln_site_list
-                                    , int exclude_sites, const char *ref_seq_name)
+                                    , int exclude_sites, const char *ref_seq_name
+                                    , bool report_progress)
 {
     Alignment *concat = concatenateAlignments();
-    concat->printAlignment(format, out, file_name, append, aln_site_list, exclude_sites, ref_seq_name);
+    concat->printAlignment(format, out, file_name, append, aln_site_list,
+                           exclude_sites, ref_seq_name, report_progress);
     delete concat;
-    if (format == InputType::IN_NEXUS)
+    if (format == InputType::IN_NEXUS) {
         printPartition(out, NULL, true);
+    }
 }
 
 void SuperAlignment::printSubAlignments(Params &params) {

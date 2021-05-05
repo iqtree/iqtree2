@@ -246,7 +246,8 @@ public:
 	 */
     virtual void printAlignment(InputType format, ostream &out, const char* file_name
                                 , bool append = false, const char *aln_site_list = NULL
-                                , int exclude_sites = 0, const char *ref_seq_name = NULL);
+                                , int exclude_sites = 0, const char *ref_seq_name = NULL
+                                , bool report_progress = true);
 
 	/**
 	 * print all sub alignments into files with prefix, suffix is the charset name
