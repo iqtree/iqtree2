@@ -98,10 +98,7 @@ message("IQ-TREE flags : ${IQTREE_FLAGS}")
 if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release")
 endif()
-
-if (CMAKE_BUILD_TYPE STREQUAL "Release")
-    message("Build mode   : Release")
-endif()
+message("Build mode   : ${CMAKE_BUILD_TYPE}")
 
 if (CMAKE_GENERATOR MATCHES "Xcode")
     set(CMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym")
@@ -816,7 +813,7 @@ if (WIN32)
     if (MSVC)
         ADD_CUSTOM_COMMAND(TARGET iqtree2 POST_BUILD COMMAND copy "iqtree2${EXE_SUFFIX}.exe" "iqtree2${EXE_SUFFIX}-click.exe")
         #The following didn't work.  I would like to copy libiomp5md.dll and pthreadVC2.dll
-        #into the output directory.  But... it doesn't work.'
+        #into the output directory.  But... it doesn't work.  -James B.
         #if (BINARY32)
         #    ADD_CUSTOM_COMMAND(TARGET iqtree2 POST_BUILD COMMAND copy "${PROJECT_SOURCE_DIR}\\lib32\\pthreadVC2.dll" pthreadVC2.dll)
         #else()
@@ -835,6 +832,7 @@ install (FILES "${PROJECT_SOURCE_DIR}/example/models.nex" DESTINATION .)
 install (FILES "${PROJECT_SOURCE_DIR}/example/example.phy" DESTINATION .)
 install (FILES "${PROJECT_SOURCE_DIR}/example/example.nex" DESTINATION .)
 install (FILES "${PROJECT_SOURCE_DIR}/example/example.cf" DESTINATION .)
+install (FILES "${PROJECT_SOURCE_DIR}/example/example.yaml" DESTINATION .)
 
 if (WIN32)
     install (FILES "${BINARY_DIR}/iqtree2${EXE_SUFFIX}-click.exe" DESTINATION bin)

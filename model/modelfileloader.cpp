@@ -426,7 +426,7 @@ void ModelFileLoader::parseYAMLModelConstraints(const YAML::Node& constraints,
             outError(complaint.str());
         }
         std::string constraint_string = constraint.Scalar();
-        try {
+        try { 
             ModelExpression::InterpretedExpression
                 interpreter(info, constraint_string);
             ModelExpression::Expression* x = interpreter.expression();
@@ -541,7 +541,7 @@ void ModelFileLoader::dumpMatrixTo(const char* name, ModelInfoFromYAMLFile& info
     ModelVariable& row_var    = info.forceAssign("row",    0);
     ModelVariable& column_var = info.forceAssign("column", 0);
 
-    std::string with_formula;
+    std::string       with_formula;
     std::stringstream dump;
     if (!matrix.empty()) {
         //If there's a matrix of expressions, dump the expressions
@@ -623,8 +623,7 @@ void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_
     int num_states_requested = integerScalar(substitution_model,
                                              "numStates", info.num_states);
     info.setNumberOfStatesAndSequenceType(num_states_requested, report_to_tree);
-    
-    
+        
     //
     //Todo: extract other information from the subsstitution model.
     //      Such as parameters and rate matrices and so forth
@@ -719,9 +718,16 @@ void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_
         info.logVariablesTo(*report_to_tree);
 
     } else {
-        //If we have parameters with a type of frequency, we're all good.
-        //If we don't, then what?   We might have inherited from a parent
-        //model, too.  That'd be okay.
+        if (info.frequency_type != StateFreqType::FREQ_UNKNOWN) {
+            //We inherited a frequency type from a parent model. Use that.
+        }
+        else if (info.hasFrequencyParameters(info.num_states)) {
+            //If we have parameters with a type of frequency, we're all good.
+            info.frequency_type = StateFreqType::FREQ_USER_DEFINED;
+        } else {
+            //If we don't, then what?  Use estimate as a last resort.
+            info.frequency_type = StateFreqType::FREQ_ESTIMATE;
+        }
     }
     
     const char* recognized_string_property_names[] = {

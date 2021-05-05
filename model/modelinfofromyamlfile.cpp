@@ -419,6 +419,23 @@ void ModelInfoFromYAMLFile::addParameter(const YAMLFileParameter& p) {
     }
 }
 
+bool  ModelInfoFromYAMLFile::hasFrequencyParameters(int min_variable_count) const {
+    for (auto p : parameters) {
+        if (p.type == ModelParameterType::FREQUENCY) {
+            if (p.is_subscripted) {
+                min_variable_count -= (p.maximum_subscript - p.minimum_subscript + 1);
+            } else {
+                --min_variable_count;
+            }
+            if (min_variable_count<=0) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+
 bool ModelInfoFromYAMLFile::isFrequencyParameter(const std::string& param_name) const {
     for (auto p : parameters) {
         if (string_to_lower(p.name) == string_to_lower(param_name)) {

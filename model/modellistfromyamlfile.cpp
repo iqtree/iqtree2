@@ -428,6 +428,7 @@ public:
                  StateFreqType freq, std::string freq_params,
                  PhyloTree *tree, PhyloTree* report_to_tree,
                  const ModelInfoFromYAMLFile& info): super(info, report_to_tree) {
+        setReversible(info.isReversible());
         init(model_name, model_params, freq, freq_params, report_to_tree);
         setRateMatrixFromModel();
     }
@@ -534,6 +535,18 @@ ModelMarkov* ModelListFromYAMLFile::getCodonModel(ModelInfoFromYAMLFile& model_i
     string          dummy_rate_params;
     string          dummy_freq_params;    
     YAMLModelCodon* pmodel;
+
+    if (tree->aln->seq_type != SeqType::SEQ_CODON) {
+        std::stringstream complaint;
+        complaint << "Cannot use Codon Model with a " << getSeqTypeName(tree->aln->seq_type) 
+                  << " alignment.";
+        if (tree->aln->seq_type == SeqType::SEQ_DNA) {
+            complaint << "\nPlease re-run, with a DNA model,"
+                      << " or passing -seqtype CODON on the command-line.";
+        }
+        outError(complaint.str());
+    }
+
     pmodel = new YAMLModelCodon("", dummy_rate_params, freq_type,
                                   dummy_freq_params, tree, report_to_tree,
                                   model_info);

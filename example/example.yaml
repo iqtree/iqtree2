@@ -144,7 +144,6 @@
   stateOrder:        [ A, R, N, D, C, Q, E, G, H, I, L, K, M, F, P, S, T, W, Y, V ]
   stateName:         [ Ala, Arg, Asn, Asp, Cys, Gln, Glu, Gly, His, Ile, 
                        Leu, Lys, Met, Phe, Pro, Ser, Thr, Trp, Tyr, Val ] 
-  stateFrequency:    estimate
   parameters:
     - name:          f(1..20)
       description:   state frequency
@@ -179,6 +178,7 @@
         - [ 0,   201, 23,  0,    0,   0,   0,  0,   27,  0,   46,  0,   0,   76,  0,  75, 0 ]
         - [ 24,  8,   95,  0,    96,  0,   22, 0,   127, 37,  28,  13,  0,   698, 0,  34, 42,  61 ]
         - [ 208, 24,  15, 18,    49,  35,  37, 54,  44,  889, 175, 10,  258, 12,  48, 30, 157, 0, 28 ]
+  stateFrequency:    f
 
 - substitutionmodel: YB18
   frommodel:       YDAY
@@ -197,7 +197,6 @@
       type:        frequency
       range:       [0,1]
       initValue:   1/num_states
-
 
 - substitutionmodel: YCODON
   reversible:        true

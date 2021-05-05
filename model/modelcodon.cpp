@@ -300,10 +300,7 @@ void ModelCodon::restoreCheckpoint() {
 }
 
 StateFreqType ModelCodon::initCodon(const char *model_name, StateFreqType freq, bool reset_params) {
-	string name_upper = model_name;
-	for (string::iterator it = name_upper.begin(); it != name_upper.end(); it++)
-		(*it) = toupper(*it);
-    
+	string name_upper = string_to_upper(model_name);
 	if (name_upper == "MG") {
 		return initMG94(true, freq, CK_ONE_KAPPA);
 	} else if (name_upper == "MGK") {
@@ -339,14 +336,10 @@ StateFreqType ModelCodon::initCodon(const char *model_name, StateFreqType freq, 
 			outError("For ECMS05 a standard genetic code must be used");
 		readCodonModel(model_ECM_Schneider05, reset_params);
 		return StateFreqType::FREQ_USER_DEFINED;
-	} else {
-		//cout << "User-specified model "<< model_name << endl;
-		//readParameters(model_name);
-			//name += " (user-defined)";
+	} else if (!name_upper.empty()) {
         readCodonModelFile(model_name, reset_params);
 		return StateFreqType::FREQ_USER_DEFINED;
 	}
-
 	return StateFreqType::FREQ_UNKNOWN;
 }
 

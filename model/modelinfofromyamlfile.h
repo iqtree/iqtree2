@@ -190,23 +190,24 @@ public:
     double evaluateExpression(std::string& expression, std::string context);
 
     //Parameters
-    const YAMLFileParameter* findParameter(const char* name)        const;
-    const YAMLFileParameter* findParameter(const std::string& name) const;
+    const YAMLFileParameter* findParameter(const char* name)            const;
+    const YAMLFileParameter* findParameter(const std::string& name)     const;
     const YAMLFileParameter* findParameter(const char* name,
-                                           ModelParameterType type) const;
+                                           ModelParameterType type)     const;
     const YAMLFileParameter* findParameter(const std::string& name,
-                                           ModelParameterType type) const;
+                                           ModelParameterType type)     const;
+    bool  hasFrequencyParameters(int min_variable_count)                const;
     void  moveParameterToBack(const char* name,
                               ModelParameterType type);
     bool   isFrequencyParameter(const std::string& param_name)          const;
     std::string        getParameterList(ModelParameterType param_type)  const;
     void               appendParameterList(ModelParameterType param_type,
-                                           std::stringstream& list) const;
+                                           std::stringstream& list)     const;
 
     //Rate matrices
     int                getRateMatrixRank()                              const;
     const std::string& getRateMatrixExpression(int row, int col)        const;
-    int                getNumStates() const;
+    int                getNumStates()                                   const;
 
     //Tip Likelihood matrices
     int  getTipLikelihoodMatrixRank() const;
@@ -215,15 +216,15 @@ public:
     //Variables
     bool   hasVariable(const char* name)                       const;
     bool   hasVariable(const std::string& name)                const;
-    double getVariableValue(const std::string& name)                const;
-    double getVariableValue(const char* name)                       const;
-    bool   isVariableFixed(const std::string& name)                const;
+    double getVariableValue(const std::string& name)           const;
+    double getVariableValue(const char* name)                  const;
+    bool   isVariableFixed(const std::string& name)            const;
     void   setBounds(int bound_count, double* lower_bound,
         double* upper_bound, bool* bound_check) const;
     void   updateVariables(const double* variables,
         int first_freq_index,
         int param_count);
-    void   logVariablesTo(PhyloTree& report_to_tree)              const;
+    void   logVariablesTo(PhyloTree& report_to_tree)           const;
     ModelVariable& assign(const std::string& var_name,
                           double value);
     ModelVariable& forceAssign(const std::string& var_name,

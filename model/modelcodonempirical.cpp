@@ -163,9 +163,8 @@ void ModelCodonEmpirical::init(const char *model_name, string model_params,
 {
 	StateFreqType def_freq = StateFreqType::FREQ_UNKNOWN;
 	name = full_name = model_name;
-	string name_upper = model_name;
-	for (string::iterator it = name_upper.begin(); it != name_upper.end(); it++)
-		(*it) = toupper(*it);
+	string name_upper = string_to_upper(model_name);
+	
 	if (name_upper == "ECM") {
 		def_freq = StateFreqType::FREQ_USER_DEFINED;
 		if (!phylo_tree->aln->isStandardGeneticCode())
