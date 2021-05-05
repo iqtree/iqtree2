@@ -208,7 +208,7 @@
       type:        frequency
       range:       [0,1]
       initValue:   1/num_states
-    - name:        r(1..num_states*num_states-num_states/2)
+    - name:        r(1..(num_states*num_states-num_states)/2)
       type:        rate
       range:       [ 0.0001, 100 ]   
       initValue:   1 
