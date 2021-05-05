@@ -51,7 +51,8 @@ namespace ModelExpression {
         virtual bool   isToken(char c)      const;
         virtual bool   isVariable()         const;
         virtual int    getPrecedence()      const;
-        int evaluateAsInteger() const;
+        int            evaluateAsInteger()  const;
+        virtual void   writeTextTo(std::stringstream &text) const = 0;
     };
 
     class Token: public Expression {
@@ -61,26 +62,32 @@ namespace ModelExpression {
         typedef Expression super;
         Token(ModelInfoFromYAMLFile& for_model, char c);
         virtual ~Token() = default;
+        virtual void writeTextTo(std::stringstream &text) const;
         virtual bool isToken(char c) const;
     };
 
     class Variable: public Expression {
+    protected:
         std::string variable_name;
+        explicit Variable(ModelInfoFromYAMLFile& for_model);
+        //The single parameter constructor should only be called
+        //from subclasses (notably ParameterSubscript).
     public:
         typedef Expression super;
         Variable(ModelInfoFromYAMLFile& for_model,
                  const std::string& name);
         virtual ~Variable() = default;
         virtual double evaluate() const;
-        virtual bool isVariable() const;
+        virtual void   writeTextTo(std::stringstream &text) const;
+        virtual bool   isVariable() const;
         const std::string& getName() const;
     };
 
-    class ParameterSubscript: public Expression {
-        const YAMLFileParameter* parameter_to_subscript;
-        Expression*              subscript_expression;
+    class ParameterSubscript: public Variable {
+        std::string parameter_to_subscript;
+        Expression* subscript_expression;
     public:
-        typedef Expression super;
+        typedef Variable super;
         ParameterSubscript(ModelInfoFromYAMLFile& for_model,
                             const YAMLFileParameter* param,
                             Expression* subscript_expr);
@@ -97,7 +104,8 @@ namespace ModelExpression {
                  double v);
         virtual ~Constant() = default;
         virtual double evaluate() const;
-        virtual bool isConstant() const;
+        virtual void   writeTextTo(std::stringstream &text) const;
+        virtual bool   isConstant() const;
     };
 
     class UnaryFunctionImplementation {
@@ -108,15 +116,18 @@ namespace ModelExpression {
     };
 
     class UnaryFunction: public Expression {
+        std::string                        function_name;
         const UnaryFunctionImplementation* body;
         Expression*                        parameter;
     public:
         typedef Expression super;
         UnaryFunction(ModelInfoFromYAMLFile& for_model,
+                      const char* name,
                       const UnaryFunctionImplementation* implementation);
         virtual ~UnaryFunction();
         virtual void   setParameter(Expression* param); //takes ownership
         virtual double evaluate() const;
+        virtual void   writeTextTo(std::stringstream &text) const;
         virtual bool   isFunction() const;
     };
 
@@ -130,6 +141,7 @@ namespace ModelExpression {
         virtual ~InfixOperator();
         virtual bool isOperator() const;
         virtual void setOperands(Expression* left, Expression* right); //takes ownership
+        virtual void writeInfixTextTo(const char* operator_text, std::stringstream& text) const;
     };
 
     class Exponentiation: public InfixOperator {
@@ -138,6 +150,7 @@ namespace ModelExpression {
             Exponentiation(ModelInfoFromYAMLFile& for_model);
             virtual ~Exponentiation() = default;
             virtual double evaluate() const;
+            virtual void   writeTextTo(std::stringstream &text) const;
             virtual int    getPrecedence() const;
     };
 
@@ -147,6 +160,7 @@ namespace ModelExpression {
         Multiplication(ModelInfoFromYAMLFile& for_model);
         virtual ~Multiplication() = default;
         virtual double evaluate() const;
+        virtual void   writeTextTo(std::stringstream &text) const;
         virtual int    getPrecedence() const;
     };
 
@@ -156,6 +170,7 @@ namespace ModelExpression {
         Division(ModelInfoFromYAMLFile& for_model);
         virtual ~Division() = default;
         virtual double evaluate() const;
+        virtual void   writeTextTo(std::stringstream &text) const;
         virtual int    getPrecedence() const;
     };
 
@@ -165,6 +180,7 @@ namespace ModelExpression {
         Addition(ModelInfoFromYAMLFile& for_model );
         virtual ~Addition() = default;
         virtual double evaluate() const;
+        virtual void   writeTextTo(std::stringstream &text) const;
         virtual int    getPrecedence() const;
     };
 
@@ -174,6 +190,7 @@ namespace ModelExpression {
         Subtraction(ModelInfoFromYAMLFile& for_model);
         virtual ~Subtraction() = default;
         virtual double evaluate() const;
+        virtual void   writeTextTo(std::stringstream &text) const;
         virtual int    getPrecedence() const;
     };
 
@@ -183,6 +200,7 @@ namespace ModelExpression {
         Assignment(ModelInfoFromYAMLFile& for_model);
         virtual ~Assignment() = default;
         virtual double evaluate()           const;
+        virtual void   writeTextTo(std::stringstream &text) const;
         virtual bool   isAssignment()       const;
         virtual bool   isRightAssociative() const;
 
@@ -205,6 +223,7 @@ namespace ModelExpression {
         LessThanOperator(ModelInfoFromYAMLFile& for_model);
         virtual int    getPrecedence() const;
         virtual double evaluate()      const;
+        virtual void   writeTextTo(std::stringstream &text) const;
     };
 
     class GreaterThanOperator: public BooleanOperator {
@@ -213,6 +232,7 @@ namespace ModelExpression {
         GreaterThanOperator(ModelInfoFromYAMLFile& for_model);
         virtual int    getPrecedence() const;
         virtual double evaluate()      const;
+        virtual void   writeTextTo(std::stringstream &text) const;
     };
 
     class EqualityOperator: public BooleanOperator {
@@ -221,6 +241,7 @@ namespace ModelExpression {
         EqualityOperator(ModelInfoFromYAMLFile& for_model);
         virtual int    getPrecedence() const;
         virtual double evaluate()      const;
+        virtual void   writeTextTo(std::stringstream &text) const;
     };
 
     class InequalityOperator: public BooleanOperator {
@@ -229,6 +250,7 @@ namespace ModelExpression {
         InequalityOperator(ModelInfoFromYAMLFile& for_model);
         virtual int    getPrecedence() const;
         virtual double evaluate()      const;
+        virtual void   writeTextTo(std::stringstream &text) const;
     };
 
     class ShortcutAndOperator: public BooleanOperator {
@@ -237,6 +259,7 @@ namespace ModelExpression {
         ShortcutAndOperator(ModelInfoFromYAMLFile& for_model);
         virtual int    getPrecedence() const;
         virtual double evaluate()      const;
+        virtual void   writeTextTo(std::stringstream &text) const;
     };
 
     class ShortcutOrOperator: public BooleanOperator {
@@ -245,6 +268,7 @@ namespace ModelExpression {
         ShortcutOrOperator(ModelInfoFromYAMLFile& for_model);
         virtual int    getPrecedence() const;
         virtual double evaluate()      const;
+        virtual void   writeTextTo(std::stringstream &text) const;
     };
 
     class ListOperator: public InfixOperator {
@@ -255,6 +279,7 @@ namespace ModelExpression {
         virtual ~ListOperator();
         virtual int    getPrecedence()   const;
         virtual double evaluate()        const;
+        virtual void   writeTextTo(std::stringstream &text) const;
         virtual void   setOperands(Expression* left, Expression* right); //takes ownership
         virtual bool   isList()          const;
         virtual int    getEntryCount()   const;
@@ -266,6 +291,7 @@ namespace ModelExpression {
         typedef ListOperator super;
         CommaOperator(ModelInfoFromYAMLFile& for_model);
         virtual int    getPrecedence()   const;
+        virtual void   writeTextTo(std::stringstream &text) const;
     };
 
     class SelectOperator: public InfixOperator {
@@ -274,6 +300,7 @@ namespace ModelExpression {
         SelectOperator(ModelInfoFromYAMLFile& for_model);
         virtual int    getPrecedence() const;
         virtual double evaluate()      const;
+        virtual void   writeTextTo(std::stringstream &text) const;
     };
 
     class RangeOperator: public InfixOperator {
@@ -284,6 +311,7 @@ namespace ModelExpression {
         virtual bool   isRange()              const;
         virtual int    getIntegerLowerBound() const;
         virtual int    getIntegerUpperBound() const;
+        virtual void   writeTextTo(std::stringstream &text) const;
     };
 
     class InterpretedExpression: public Expression {
@@ -302,6 +330,7 @@ namespace ModelExpression {
         virtual ~InterpretedExpression();
         bool    isSet() const;
         virtual double evaluate() const;
+        virtual void   writeTextTo(std::stringstream &text) const;
         Expression* expression() const; //Does *not* yield ownership
         Expression* detatchExpression(); //*Does* yield ownership
     };

@@ -409,6 +409,7 @@ void ModelFileLoader::parseYAMLMixtureModels(const YAML::Node& mixture_models,
 void ModelFileLoader::parseYAMLModelConstraints(const YAML::Node& constraints,
                                                 ModelInfoFromYAMLFile& info,
                                                 PhyloTree* report_to_tree) {
+    int constraint_num = 1;
     for (const YAML::Node& constraint: constraints) {
         //
         //constraints are assignments of the form: name = value
@@ -431,9 +432,18 @@ void ModelFileLoader::parseYAMLModelConstraints(const YAML::Node& constraints,
                       << " was not an asignment: " << constraint_string;
             outError(complaint.str());
         }
-        ModelExpression::Assignment* a =
-            dynamic_cast<ModelExpression::Assignment*>(x);
-        setConstraint(a, info, constraint_string, report_to_tree);
+        try {
+            ModelExpression::Assignment* a =
+                dynamic_cast<ModelExpression::Assignment*>(x);
+            setConstraint(a, info, constraint_string, report_to_tree);
+        }
+        catch (ModelExpression::ModelException x) {
+            std::stringstream complaint;
+            complaint << "An error occurred parsing constraint " << constraint_num
+                      << ": " << x.getMessage();
+            outError(complaint.str());
+        }
+        ++constraint_num;
     }
 }
 
@@ -441,7 +451,8 @@ double ModelFileLoader::setConstraint(ModelExpression::Assignment* a,
                                     ModelInfoFromYAMLFile& info,
                                     const std::string& constraint_string,
                                     PhyloTree* report_to_tree) {
-    if (!a->getTarget()->isVariable()) {
+    ModelExpression::Expression* assigned = a->getTarget();
+    if (!assigned->isVariable()) {
         std::stringstream complaint;
         complaint << "Constraint setting for model " << info.model_name
                   << " did not assign a variable: " << constraint_string;
