@@ -10,14 +10,14 @@ const double MIN_PROP = 0.001;
 const double MAX_PROP = 1000.0;
 
 // Input formats for the tree-mixture model
-// 1. linked models and site rates: GTR+G4+T2
-// 2. unlinked models and linked site rates: MIX{GTR,GTR}+G4+T2
-// 3. linked models and unlinked site rates: GTR+MIX{G4,E}+T2
-// 4. unlinked models and unlinked site rates: MIX{GTR+G4,GTR}+T2
+// 1. linked models and site rates: GTR+G4+T
+// 2. unlinked models and linked site rates: MIX{GTR,GTR}+G4+T
+// 3. linked models and unlinked site rates: GTR+MIX{G4,E}+T
+// 4. unlinked models and unlinked site rates: MIX{GTR+G4,GTR}+T
 // The situation that a part of the model is linked while another part is unlinked is not allowed.
-//    For example, MIX{GTR,GTR}+FO+T2 or GTR+MIX{FO+F0}+T2 is not be accepted
+//    For example, MIX{GTR,GTR}+FO+T or GTR+MIX{FO+F0}+T is not be accepted
 // Similarly, the situation that a part of the site rate is linked while another part is unlinked is also not allowed.
-//    For example, GTR+MIX{I,I}+G4+T2 or GTR+I+MIX{G4+G4}+T2 is not be accepted
+//    For example, GTR+MIX{I,I}+G4+T or GTR+I+MIX{G4+G4}+T is not be accepted
 
 IQTreeMix::IQTreeMix() : IQTree() {
     patn_freqs = NULL;
@@ -33,8 +33,9 @@ IQTreeMix::IQTreeMix(Params &params, Alignment *aln, vector<IQTree*> &trees) : I
     weights.clear();
 
     // store the trees and initialize tree-weights
-    double init_weight = 1.0 / (double) trees.size();
-    for (i=0; i<trees.size(); i++) {
+    ntree = trees.size();
+    double init_weight = 1.0 / (double) ntree;
+    for (i=0; i<ntree; i++) {
         push_back(trees[i]);
         weights.push_back(init_weight);
     }
@@ -61,28 +62,16 @@ IQTreeMix::IQTreeMix(Params &params, Alignment *aln, vector<IQTree*> &trees) : I
 IQTreeMix::~IQTreeMix() {
     size_t i;
     
-    // break the linkages
-    if (models.size() == 1) {
-        // share both model and site rate
-        for (i=1; i<size(); i++) {
-            at(i)->setModelFactory(NULL);
-            at(i)->setModel(NULL);
-            at(i)->setRate(NULL);
-        }
-    } else if (site_rates.size() == 1) {
-        // only share site rate
-        for (i=1; i<size(); i++) {
-            at(i)->getModelFactory()->site_rate = NULL;
-            at(i)->setRate(NULL);
-        }
-    }
+    // restore back the initial models and site rates
     for (i=0; i<size(); i++) {
-        at(i)->setParams(NULL);
+        at(i)->getModelFactory()->model = initial_models[i];
+        at(i)->setModel(initial_models[i]);
+        at(i)->getModel()->setTree(at(i));
+        at(i)->getModelFactory()->site_rate = initial_site_rates[i];
+        at(i)->setRate(initial_site_rates[i]);
+        at(i)->getRate()->setTree(at(i));
     }
-    setModelFactory(NULL);
-    setModel(NULL);
-    setRate(NULL);
-
+    
     for (i=0; i<size(); i++) {
         delete (at(i));
     }
@@ -191,10 +180,19 @@ void IQTreeMix::separateModel(string modelName) {
     if (t_pos == string::npos) {
         outError("This model is not a tree mixture model, because there is no '+T'");
     }
-    if (t_pos >= modelName.length()-2) {
-        outError("You need to specific the number of trees after '+T', e.g. +T2 for 2 trees");
+    if (t_pos < modelName.length()-2) {
+        ntree = atoi(modelName.substr(t_pos+2).c_str());
+        if (ntree < size()) {
+            
+            cout << endl << "NOTE: Only the first " << ntree << " trees in the treefile are considered, because '" <<  modelName.substr(t_pos+1) << "' has been specified!" << endl;
+            resize(ntree);
+            weights.resize(ntree);
+            double init_weight = 1.0 / (double) ntree;
+            for (i=0; i<ntree; i++) {
+                weights[i] = init_weight;
+            }
+        }
     }
-    ntree = atoi(modelName.substr(t_pos+2).c_str());
     /*
     if (ntree <= 1) {
         outError("For tree mixture model, number of trees has to be at least 2.");
@@ -293,14 +291,18 @@ void IQTreeMix::initializeModel(Params &params, string model_name, ModelsBlock *
     
     // initialize the models
     for (i=0; i<ntree; i++) {
-        if (isLinkModel)
+        if (isLinkModel) {
             curr_model = model_names[0];
-        else
+        } else {
             curr_model = model_names[i];
+        }
         if (anySiteRate) {
             if (isLinkSiteRate) {
                 if (siterate_names[0] != "E")
                     curr_model += "+" + siterate_names[0];
+                params.optimize_alg_gammai = "BFGS";
+                params.optimize_alg_freerate = "BFGS";
+                params.optimize_alg_mixlen = "BFGS";
             } else {
                 if (siterate_names[i] != "E")
                     curr_model += "+" + siterate_names[i];
@@ -308,10 +310,12 @@ void IQTreeMix::initializeModel(Params &params, string model_name, ModelsBlock *
         }
         // cout << "model: " << curr_model << endl;
         at(i)->initializeModel(params, curr_model, models_block);
-        if (i==0) {
-            // also initialize the model for this tree
-            IQTree::initializeModel(params, curr_model, models_block);
-        }
+    }
+    
+    // save the initial models and site rates
+    for (i=0; i<ntree; i++) {
+        initial_models.push_back(at(i)->getModelFactory()->model);
+        initial_site_rates.push_back(at(i)->getModelFactory()->site_rate);
     }
     
     // handle the linked or unlinked substitution model(s)
@@ -434,6 +438,32 @@ void IQTreeMix::computePatternLikelihood(double *pattern_lh, double *cur_logl,
 
     computeLikelihood(pattern_lh);
 }
+
+/**
+ * compute _pattern_lh_cat for site-likelihood per category
+ * this function is for linked site-rate model only
+ * @return tree log-likelihood
+ */
+/*
+double IQTreeMix::computePatternLhCat(SiteLoglType wsl) {
+    //size_t nptn = ((aln->size()+vector_size-1)/vector_size)*vector_size;
+    size_t nptn = aln->size();
+    size_t ncat = site_rates[0]->getNRate();
+    size_t n = nptn*ncat;
+    size_t i,j;
+    
+    for (i=0; i<size(); i++) {
+        at(i)->computePatternLhCat(wsl);
+    }
+    
+    for (i=0; i<n; i++) {
+        _pattern_lh_cat[i] = 0.0;
+        for (j=0; j<size(); j++) {
+            _pattern_lh_cat[i] += at(j)->_pattern_lh_cat[i] * weights[j];
+        }
+    }
+}
+ */
 
 void IQTreeMix::initializeAllPartialLh() {
     size_t i;

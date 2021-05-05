@@ -497,7 +497,7 @@ public:
             get rate heterogeneity
             @return associated rate heterogeneity class
      */
-    RateHeterogeneity *getRate();
+    virtual RateHeterogeneity *getRate();
 
     void discardSaturatedSite(bool val);
 
@@ -517,11 +517,11 @@ public:
 	 */
 	virtual string getModelNameParams();
 
-    ModelSubst *getModel() {
+    virtual ModelSubst *getModel() {
         return model;
     }
 
-    ModelFactory *getModelFactory() {
+    virtual ModelFactory *getModelFactory() {
         return model_factory;
     }
 

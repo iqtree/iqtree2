@@ -51,6 +51,12 @@ public:
     virtual void computePatternLikelihood(double *pattern_lh, double *cur_logl = NULL,
             double *pattern_lh_cat = NULL, SiteLoglType wsl = WSL_RATECAT);
 
+    /**
+     * compute _pattern_lh_cat for site-likelihood per category
+     * @return tree log-likelihood
+     */
+    //virtual double computePatternLhCat(SiteLoglType wsl);
+
     virtual void initializeAllPartialLh();
 
     virtual void deleteAllPartialLh();
@@ -188,6 +194,22 @@ public:
      */
     virtual void readTreeString(const string &tree_string);
 
+    virtual ModelFactory *getModelFactory() {
+        return at(0)->getModelFactory();
+    }
+
+    /**
+            get rate heterogeneity
+            @return associated rate heterogeneity class
+     */
+    virtual RateHeterogeneity *getRate() {
+        return at(0)->getRate();
+    }
+
+    virtual ModelSubst *getModel() {
+        return at(0)->getModel();
+    }
+
     /**
             pattern frequencies
      */
@@ -297,6 +319,16 @@ private:
             number of trees
      */
     int ntree;
+    
+    /**
+            initial models
+     */
+    vector<ModelSubst*> initial_models;
+    
+    /**
+            initial site rates
+     */
+    vector<RateHeterogeneity*> initial_site_rates;
 };
 
 #endif /* iqtreemix_h */

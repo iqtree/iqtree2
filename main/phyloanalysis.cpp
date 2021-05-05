@@ -1759,12 +1759,10 @@ void initializeParams(Params &params, IQTree &iqtree)
     {
         // compute initial tree
         if (!params.compute_ml_tree_only) {
-            cout << "[phyloanalysis.cpp -- initializeParams] call iqtree.computeInitialTree(params.SSE);" << endl;
             if (iqtree.isTreeMix())
                 ((IQTreeMix*) &iqtree)->computeInitialTree(params.SSE);
             else
                 iqtree.computeInitialTree(params.SSE);
-            cout << "[phyloanalysis.cpp -- initializeParams] finish iqtree.computeInitialTree(params.SSE);" << endl;
         }
     }
     ASSERT(iqtree.aln);
@@ -1785,11 +1783,7 @@ void initializeParams(Params &params, IQTree &iqtree)
 
     // set parameter for the current tree
 //    iqtree.setParams(params);
-    
-    // for debugging
-    // cout << "[phyloanalysis.cpp -- initializeParams] iqtree.aln->model_name = " << iqtree.aln->model_name << endl;
 }
-
 
 void pruneTaxa(Params &params, IQTree &iqtree, double *pattern_lh, NodeVector &pruned_taxa, StrVector &linked_name) {
     int num_low_support;
@@ -2281,10 +2275,10 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     initializeParams(params, *iqtree);
 
     if (posRateHeterotachy(iqtree->aln->model_name) != string::npos && !iqtree->isMixlen()) {
-        // model-mixture
+        // rate mixture
         
         if (iqtree->isTreeMix()) {
-            outError("Tree-mixture model does not work with model-mixture");
+            outError("Tree-mixture model does not work with rate mixture");
         }
         
         // create a new instance
@@ -3851,7 +3845,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
     bool isTreeMix = isTreeMixture(params);
     
     if (isTreeMix) {
-        cout << "Input model: Tree-mixture model" << endl;
+        cout << "Tree-mixture model" << endl;
         // tree-mixture model
         if (params.user_file == NULL) {
             outError("Tree file has to be inputed (using the option -te) for tree-mixture model");
