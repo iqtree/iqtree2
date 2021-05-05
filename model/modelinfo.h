@@ -11,6 +11,10 @@
 #include <nclextra/modelsblock.h>
 
 extern VerboseMode YAMLModelVerbosity;
+extern VerboseMode YAMLVariableVerbosity;
+extern VerboseMode YAMLFrequencyVerbosity;
+extern VerboseMode YAMLMatrixVerbosity;
+
 
 class ModelMarkov;
 class PhyloTree;

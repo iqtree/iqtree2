@@ -219,17 +219,17 @@
       type:        matrix
       rank:        num_states
       formula:     "(row==column) ? (1-e) : (e/(num_states-1))"
-    - name:        t
-      type:        other
     - name:        i
       type:        other
     - name:        rateMatrix
       type:        matrix
       rank:        num_states
-      formula:     "t=(column*column+column)/2,
-                    i=(column<row) ? (t + column + 1)
-                                   : (row*(num_states-1) + column + 1 - t), 
-                    (row==column) ? 1 : f(column)* r(i)"
+      formula:     "i=((column<row) 
+                       ? (row-1+(column-1)*(num_states-1)-column*(column-1)/2)
+                       : (column-1+(row-1)*(num_states-1)-row*(row-1)/2)), 
+                    (row==column) ? 1 : (f(column)* r(i))"
+
+#Get the I formula right
 
 - substitutionmodel: YMIX
   description: "Mixture of JC and GTR"

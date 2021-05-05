@@ -169,7 +169,7 @@ void ModelFileLoader::parseModelParameter(const YAML::Node& param,
                     << " was greater than maximum (" << p.maximum_subscript << ")";
             }
         }
-        catch (ModelExpression::ModelException& x) {
+        catch (ModelExpression::ModelException x) {
             std::stringstream msg;
             msg << "Error parsing " << parsing_what
                 << " for " << info.getName()
@@ -369,10 +369,12 @@ void ModelFileLoader::parseMatrixParameter(const YAML::Node& param,
         outError(name + " matrix parameter not recognized"
                  " in " + info.getName() + " model");
     }
-    std::stringstream matrix_stream;
-    dumpMatrixTo(lower_name.c_str(), info, expressions, rank,
-                 formula, matrix_stream);
-    TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity, matrix_stream.str());
+    if (YAMLMatrixVerbosity <= verbose_mode) {
+        std::stringstream matrix_stream;
+        dumpMatrixTo(lower_name.c_str(), info, expressions, rank,
+                     formula, matrix_stream);
+        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity, matrix_stream.str());
+    }
 }
 
 YAMLFileParameter
@@ -424,15 +426,15 @@ void ModelFileLoader::parseYAMLModelConstraints(const YAML::Node& constraints,
             outError(complaint.str());
         }
         std::string constraint_string = constraint.Scalar();
-        ModelExpression::InterpretedExpression
-            interpreter(info, constraint_string);
-        ModelExpression::Expression* x = interpreter.expression();
-        if (!x->isAssignment()) {
-            complaint << "Constraint setting for model " << info.model_name
-                      << " was not an asignment: " << constraint_string;
-            outError(complaint.str());
-        }
         try {
+            ModelExpression::InterpretedExpression
+                interpreter(info, constraint_string);
+            ModelExpression::Expression* x = interpreter.expression();
+            if (!x->isAssignment()) {
+                complaint << "Constraint setting for model " << info.model_name
+                          << " was not an asignment: " << constraint_string;
+                outError(complaint.str());
+            }
             ModelExpression::Assignment* a =
                 dynamic_cast<ModelExpression::Assignment*>(x);
             setConstraint(a, info, constraint_string, report_to_tree);
@@ -524,18 +526,20 @@ void ModelFileLoader::parseRateMatrix(const YAML::Node& rate_matrix,
     //Todo: Are off-diagonal entries in the matrix allowed
     //to be blank?
     //
-    std::stringstream matrix_stream;
-    dumpMatrixTo("rate", info, info.rate_matrix_expressions,
-                 info.rate_matrix_rank, info.rate_matrix_formula,
-                 matrix_stream);
-    TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity, matrix_stream.str());
+    if (YAMLMatrixVerbosity <= verbose_mode) {
+        std::stringstream matrix_stream;
+        dumpMatrixTo("rate", info, info.rate_matrix_expressions,
+                     info.rate_matrix_rank, info.rate_matrix_formula,
+                     matrix_stream);
+        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity, matrix_stream.str());
+    }
 }
 
 void ModelFileLoader::dumpMatrixTo(const char* name, ModelInfoFromYAMLFile& info,
                                    const StringMatrix& matrix, int rank,
                                    const std::string& formula, std::stringstream &out) {
-    ModelVariable& row_var    = info.forceAssign("row",    (double)0);
-    ModelVariable& column_var = info.forceAssign("column", (double)0);
+    ModelVariable& row_var    = info.forceAssign("row",    0);
+    ModelVariable& column_var = info.forceAssign("column", 0);
 
     std::string with_formula;
     std::stringstream dump;
@@ -543,11 +547,11 @@ void ModelFileLoader::dumpMatrixTo(const char* name, ModelInfoFromYAMLFile& info
         //If there's a matrix of expressions, dump the expressions
         int row = 0;
         for (auto r : matrix) {
-            row_var.setValue(row);
+            row_var.setValue(row+1);
             const char* separator = "";
             int col = 0;
             for (auto c: r) {
-                column_var.setValue(col);
+                column_var.setValue(col+1);
                 dump << separator << c;
                 separator = " : ";
                 ++col;
@@ -560,18 +564,21 @@ void ModelFileLoader::dumpMatrixTo(const char* name, ModelInfoFromYAMLFile& info
         //If there is a formula, dump the formula, and its
         //current value, for each entry in the matrix
         with_formula = " (with formula " + formula + ")";
-        for (int row=0; row<rank; ++row) {
-            row_var.setValue(row);
+        bool broken = false;
+        for (int row=0; row<rank && !broken; ++row) {
+            row_var.setValue(row+1);
             const char* separator = "";
-            for (int col=0; col<rank; ++col) {
-                column_var.setValue(col);
+            for (int col=0; col<rank && !broken; ++col) {
+                column_var.setValue(col+1);
                 try {
                     Interpreter interpreter(info, formula);
                     double value = interpreter.evaluate();
                     dump << separator << value;
                 }
-                catch (ModelExpression::ModelException& x) {
-                    dump << separator << " ERROR(" << x.getMessage() << ")";
+                catch (ModelExpression::ModelException x) {
+                    dump << separator << " ERROR(" << x.getMessage() << ")"
+                         << " for entry [" << (row+1) << "," << (col+1) << "]";
+                    broken = true;
                 }
                 separator = " : ";
             }
@@ -615,7 +622,7 @@ void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_
         
     int num_states_requested = integerScalar(substitution_model,
                                              "numStates", info.num_states);
-    info.setNumberOfStatesAndSequenceType(num_states_requested);
+    info.setNumberOfStatesAndSequenceType(num_states_requested, report_to_tree);
     
     
     //

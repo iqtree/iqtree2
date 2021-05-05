@@ -26,7 +26,10 @@
 #include <utils/stringfunctions.h> //for string_to_lower, startsWith, endsWith
 #include <tree/phylotree.h> //for TREE_LOG_LINE macro
 
-VerboseMode YAMLModelVerbosity = VerboseMode::VB_MIN;
+VerboseMode YAMLModelVerbosity     = VerboseMode::VB_MIN;
+VerboseMode YAMLVariableVerbosity  = VerboseMode::VB_MAX;
+VerboseMode YAMLFrequencyVerbosity = VerboseMode::VB_MAX;
+VerboseMode YAMLMatrixVerbosity    = VerboseMode::VB_MAX;
 
 YAMLFileParameter::YAMLFileParameter()
     : is_subscripted(false), minimum_subscript(0), maximum_subscript(0)
@@ -220,7 +223,8 @@ ModelInfoFromYAMLFile::findMixedModel(const std::string& name) {
     return it;
 }
 
-void ModelInfoFromYAMLFile::setNumberOfStatesAndSequenceType(int requested_num_states) {
+void ModelInfoFromYAMLFile::setNumberOfStatesAndSequenceType(int requested_num_states,
+                                                             PhyloTree* report_to_tree) {
     if (requested_num_states != 0) {
         num_states = requested_num_states;
     }
@@ -228,10 +232,16 @@ void ModelInfoFromYAMLFile::setNumberOfStatesAndSequenceType(int requested_num_s
         num_states = 4;
     }
     if (!data_type_name.empty()) {
+        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+                      "Data Type Name is" << data_type_name);
         auto seq_type_requested = getSeqType(data_type_name.c_str());
         if (seq_type_requested != SeqType::SEQ_UNKNOWN) {
             sequence_type = seq_type_requested;
-            num_states = getNumStatesForSeqType(sequence_type, num_states);
+            if (sequence_type == SeqType::SEQ_CODON) {
+                num_states = 61;
+            } else {
+                num_states = getNumStatesForSeqType(sequence_type, num_states);
+            }
         }
     }
     if (sequence_type == SeqType::SEQ_UNKNOWN) {
@@ -246,6 +256,9 @@ void ModelInfoFromYAMLFile::setNumberOfStatesAndSequenceType(int requested_num_s
             break;
         }
     }
+    TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+                  "Number of states is " << num_states);
+
     forceAssign("num_states", num_states);
     forceAssign("numStates", num_states);
 }
@@ -258,7 +271,7 @@ double ModelInfoFromYAMLFile::evaluateExpression(std::string& expr,
         verb = "evaluating";
         return interpreter.evaluate();
     }
-    catch (ModelExpression::ModelException& x) {
+    catch (ModelExpression::ModelException x) {
         std::stringstream msg;
         msg << "Error " << verb << " " << context
             << " for " << model_name << ":\n"
@@ -466,7 +479,7 @@ void ModelInfoFromYAMLFile::updateVariables(const double* updated_values,
 }
 
 void ModelInfoFromYAMLFile::logVariablesTo(PhyloTree& report_to_tree) const {
-    if (verbose_mode < VerboseMode::VB_MIN) {
+    if (verbose_mode < YAMLVariableVerbosity) {
         return;
     }
     std::stringstream var_list;
@@ -492,7 +505,8 @@ ModelVariable& ModelInfoFromYAMLFile::assign(const std::string& var_name,
             breakAtDot(var_name.c_str(), sub_model_name,
                 sub_model_var_name);
             auto it = findMixedModel(sub_model_name);
-            return it->second.assign(sub_model_var_name, value_to_set);
+            return it->second.assign(std::string(sub_model_var_name),
+                                     value_to_set);
         }
 
         std::stringstream complaint;
@@ -506,7 +520,7 @@ ModelVariable& ModelInfoFromYAMLFile::assign(const std::string& var_name,
 }
 
 ModelVariable& ModelInfoFromYAMLFile::forceAssign(const std::string& var_name,
-    double value_to_set) {
+                                                  double value_to_set) {
     auto it = variables.find(var_name);
     if (it == variables.end()) {
         if (hasDot(var_name.c_str()) && mixed_models != nullptr) {
@@ -515,7 +529,8 @@ ModelVariable& ModelInfoFromYAMLFile::forceAssign(const std::string& var_name,
             breakAtDot(var_name.c_str(), sub_model_name,
                 sub_model_var_name);
             auto it = findMixedModel(sub_model_name);
-            return it->second.forceAssign(sub_model_var_name, value_to_set);
+            return it->second.forceAssign(std::string(sub_model_var_name),
+                                          value_to_set);
         }
         ModelVariable var(ModelParameterType::OTHER,
             ModelParameterRange(), value_to_set);
@@ -524,6 +539,16 @@ ModelVariable& ModelInfoFromYAMLFile::forceAssign(const std::string& var_name,
     }
     it->second.setValue(value_to_set);
     return it->second;
+}
+
+ModelVariable& ModelInfoFromYAMLFile::forceAssign(const std::string& var_name,
+                                                  int value_to_set) {
+    return forceAssign(var_name, (double)value_to_set);
+}
+
+ModelVariable& ModelInfoFromYAMLFile::forceAssign(const char* var_name,
+                                                  int value_to_set) {
+    return forceAssign(std::string(var_name), (double)value_to_set);
 }
 
 const StrVector& ModelInfoFromYAMLFile::getVariableNamesByPosition() const {
@@ -622,10 +647,10 @@ void ModelInfoFromYAMLFile::computeTipLikelihoodsForState(int state, int num_sta
 
     typedef ModelExpression::InterpretedExpression Interpreter;
 
-    forceAssign("row", (double)state);
-    ModelVariable& column_var = forceAssign("column", (double)0);
+    forceAssign("row", state+1);
+    ModelVariable& column_var = forceAssign("column", 0);
     for (int column = 0; column < num_states; ++column) {
-        column_var.setValue((double)column);
+        column_var.setValue(column+1);
         std::string expr_string;
         if (column < expr_row.size()) {
             expr_string = expr_row[column];
@@ -641,7 +666,7 @@ void ModelInfoFromYAMLFile::computeTipLikelihoodsForState(int state, int num_sta
                 Interpreter interpreter(*this, expr_string);
                 likelihoods[column] = interpreter.evaluate();
             }
-            catch (ModelExpression::ModelException& x) {
+            catch (ModelExpression::ModelException x) {
                 std::stringstream msg;
                 msg << "Error parsing expression"
                     << " for tip likelihood matrix entry"

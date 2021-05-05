@@ -185,7 +185,8 @@ public:
     MapOfModels::iterator       findMixedModel(const std::string& name);
 
     //Initialization helper functions
-    void setNumberOfStatesAndSequenceType(int requested_num_states);
+    void setNumberOfStatesAndSequenceType(int requested_num_states,
+                                          PhyloTree* report_to_tree);
     double evaluateExpression(std::string& expression, std::string context);
 
     //Parameters
@@ -224,9 +225,14 @@ public:
         int param_count);
     void   logVariablesTo(PhyloTree& report_to_tree)              const;
     ModelVariable& assign(const std::string& var_name,
-        double value);
+                          double value);
     ModelVariable& forceAssign(const std::string& var_name,
-        double value);
+                               double value);
+    ModelVariable& forceAssign(const std::string& var_name,
+                               int value);
+    ModelVariable& forceAssign(const char* var_name,
+                               int value);
+
     const StrVector& getVariableNamesByPosition() const;
     ModelVariable& assignByPosition(size_t position,
         double value_to_set);

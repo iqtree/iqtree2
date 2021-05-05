@@ -62,7 +62,7 @@ void ModelListFromYAMLFile::loadFromFile (const char* file_path,
     catch (YAML::Exception &e) {
         outError(e.what());
     }
-    catch (ModelExpression::ModelException& x) {
+    catch (ModelExpression::ModelException x) {
         outError(x.getMessage());
     }
 }
@@ -274,14 +274,14 @@ public:
         std::stringstream trace;
         trace << "Rate Matrix: { ";
         
-        model_info.forceAssign("num_states", (double)num_states);
-        ModelVariable& row_var    = model_info.forceAssign("row",    (double)0);
-        ModelVariable& column_var = model_info.forceAssign("column", (double)0);
+        model_info.forceAssign("num_states", num_states);
+        ModelVariable& row_var    = model_info.forceAssign("row",    0);
+        ModelVariable& column_var = model_info.forceAssign("column", 0);
         
         for (int row = 0; row < rank; ++row) {
-            row_var.setValue((double)row);
+            row_var.setValue((double)row+1);
             for (int col = 0; col < rank; ++col) {
-                column_var.setValue((double)col);
+                column_var.setValue(col+1);
                 if (col != row) {
                     std::string expr_string =
                         model_info.getRateMatrixExpression(row,col);
@@ -292,7 +292,7 @@ public:
                         rates.push_back(entry);
                         trace << separator << entry;
                     }
-                    catch (ModelExpression::ModelException& x) {
+                    catch (ModelExpression::ModelException x) {
                         std::stringstream msg;
                         msg << "Error parsing expression"
                             << " for " << model_info.getName()
@@ -330,13 +330,17 @@ public:
     }
     
     virtual void writeInfo(ostream &out) {
-        auto rates = model_info.getParameterList(ModelParameterType::RATE);
-        if (!rates.empty()) {
-            out << "Rate parameters: " << rates << std::endl;
+        if (YAMLVariableVerbosity <= verbose_mode ) {
+            auto rates = model_info.getParameterList(ModelParameterType::RATE);
+            if (!rates.empty()) {
+                out << "Rate parameters: " << rates << std::endl;
+            }
         }
-        auto freqs = model_info.getParameterList(ModelParameterType::FREQUENCY);
-        if (!freqs.empty()) {
-            out << "State frequencies: " << freqs << std::endl;
+        if (YAMLFrequencyVerbosity <= verbose_mode) {
+            auto freqs = model_info.getParameterList(ModelParameterType::FREQUENCY);
+            if (!freqs.empty()) {
+                out << "State frequencies: " << freqs << std::endl;
+            }
         }
     }
 };

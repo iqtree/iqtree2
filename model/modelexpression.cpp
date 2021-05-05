@@ -141,13 +141,14 @@ namespace ModelExpression {
             std::stringstream complaint;
             complaint << "Cannot subscript parameter " << param->name
                       << " (it is not subscripted).";
-            throw new ModelException(complaint.str());
+            throw ModelException(complaint.str());
         }
         std::stringstream long_name;
         long_name <<  param->name + "(" ;
         expr->writeTextTo(long_name);
         long_name << ")";
         variable_name = long_name.str();
+        //std::cout << "PS varname is " << variable_name << std::endl;
     }
 
     ParameterSubscript::~ParameterSubscript() {
@@ -165,7 +166,7 @@ namespace ModelExpression {
             std::stringstream complaint;
             complaint << "Parameter " << parameter_to_subscript
                       << ", not found.";
-            throw new ModelException(complaint.str());
+            throw ModelException(complaint.str());
         }
         double x = subscript_expression->evaluate();
         int    i = (int)floor(x);
@@ -177,7 +178,7 @@ namespace ModelExpression {
                       << " for parameter " << param->name
                       << ", for which the valid subscript range is " << lo 
                       << " through " << hi << " inclusive.";
-            throw new ModelException(complaint.str());
+            throw ModelException(complaint.str());
         }
         std::stringstream var_name_stream;
         var_name_stream << param->name << "(" << i << ")";
@@ -325,6 +326,7 @@ namespace ModelExpression {
         }
         Variable* v = dynamic_cast<ModelExpression::Variable*>(lhs);
         model.assign(v->getName(), eval);
+        //std::cout << "VSET: " << v->getName() << "=" << eval << std::endl;
         return eval;
     }
 
@@ -652,6 +654,23 @@ namespace ModelExpression {
         }
     };
 
+    namespace {
+        void logExpressionAndValue(const char* prefix, Expression* expr) {
+            std::cout << prefix << ": ";
+            std::stringstream expr_text;
+            expr->writeTextTo(expr_text);
+            std::cout << expr_text.str();
+            try {
+                auto value =  expr->evaluate();
+                std::cout << " evaluated to " << value;
+            }
+            catch (ModelExpression::ModelException x) {
+                std::cout << " could not be evaluated (" << x.getMessage() << ")";
+            }
+            std::cout << std::endl;
+        }
+    };
+
     Expression* InterpretedExpression::parseExpression(const std::string& text,
                                                        size_t& ix) {
         //
@@ -727,7 +746,7 @@ namespace ModelExpression {
                 entry->writeTextTo(complaint);
                 ++parameter_number;
             }
-            throw new ModelException(complaint.str());
+            throw ModelException(complaint.str());
         }
         return operand_stack[0];
     }
@@ -763,17 +782,21 @@ namespace ModelExpression {
             }
             if (text[ix]=='(') {
                 //Subscripted: Parse the subscript expression
-                size_t      subscript_start = ix;
-                for (int bracket_depth = 0; ix < text.size() && 0 < bracket_depth; ++ix) {
+                size_t subscript_start = ix;
+                size_t text_length = text.length();
+                int    bracket_depth = 0;
+                do {
                     auto ch = text[ix];
                     if      (ch==')')  --bracket_depth;
                     else if (ch=='(')  ++bracket_depth;
-                }
+                    ++ix;
+                } while (ix<text_length && 0<bracket_depth);
                 //ix = index of first character after the closing bracket.
                 std::string subscript_expr;
-                if (ix<text.size()) {
+                if (bracket_depth==0) {
                     subscript_expr = text.substr(subscript_start+1, ix-subscript_start-2);
                     if (is_string_all_digits(subscript_expr)) {
+                        std::cout << "VS expr: " << subscript_expr << std::endl;
                         var_name = var_name + "(" + subscript_expr + ")";
                     } else {
                         //Oh, boy.  Subscript expression!
@@ -784,18 +807,21 @@ namespace ModelExpression {
                             std::stringstream complaint;
                             complaint << "Subscripted parameter " << var_name
                                       << " not defined, for model " << model.getLongName();
-                            throw new ModelException(complaint.str());
-
+                            throw ModelException(complaint.str());
                         }
+                        //std::cout << "PS expr: " << subscript_expr << std::endl;
                         expr = new ParameterSubscript(model, param, x.detatchExpression());
+                        if (false) {
+                            logExpressionAndValue("PS", expr);
+                        }
                         return true;
                     }
                 } else {
                     std::stringstream complaint;
                     complaint << "Subscripted reference for " << var_name
-                              << " for model " << model.getLongName() << 
-                              " was not terminated by a closing bracket:\n" << text;
-                    throw new ModelException(complaint.str());
+                              << " for model " << model.getLongName()
+                              << " was not terminated by a closing bracket:\n" << text;
+                    throw ModelException(complaint.str());
                 }
             }
             expr = new Variable(model, var_name);
@@ -822,7 +848,7 @@ namespace ModelExpression {
                           expr = new InequalityOperator(model);
                           ++ix;
                       } else {
-                          throw new ModelException("unary not (!) operator not supported");
+                          throw ModelException("unary not (!) operator not supported");
                       }
                       break;
             case '^': expr = new Exponentiation(model); break;
@@ -843,14 +869,14 @@ namespace ModelExpression {
                           expr = new ShortcutAndOperator(model);
                           ++ix;
                       } else {
-                          throw new ModelException("bitwise-and & operator not supported");
+                          throw ModelException("bitwise-and & operator not supported");
                       }
                       break;
             case '|': if (nextch=='|') {
                           expr = new ShortcutOrOperator(model);
                           ++ix;
                       } else {
-                            throw new ModelException("bitwise-or | operator not supported");
+                            throw ModelException("bitwise-or | operator not supported");
                       }
                       break;
             case ':': expr = new ListOperator(model);   break;
@@ -859,7 +885,7 @@ namespace ModelExpression {
                           expr = new RangeOperator(model);
                           ++ix;
                       } else {
-                          throw new ModelException("period that wasn't part of .. or a number,"
+                          throw ModelException("period that wasn't part of .. or a number,"
                                                    " was not understood");
                       }
                       break;
