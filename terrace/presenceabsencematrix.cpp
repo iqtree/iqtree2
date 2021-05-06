@@ -453,7 +453,7 @@ int PresenceAbsenceMatrix::getINFO_init_tree_taxon_order(vector<string> &taxa_na
         cout<<"Note, that this procedure does not guarantee generating all trees from a terrace! It is only meant to investigate, if at least some trees from a terrace can be generate."<<"\n";
     }
     
-    IntVector ordered_ids;
+    /*IntVector ordered_ids;
     
     for(i=1; i<part_num; i++){
         if(ordered_taxa_ids[i].size()>1){
@@ -483,12 +483,12 @@ int PresenceAbsenceMatrix::getINFO_init_tree_taxon_order(vector<string> &taxa_na
             ordered_taxa_ids[i].clear();
             ordered_taxa_ids[i] = ordered_ids;
             
-            /*cout<<"REORDERED taxa:"<<"\n";
-            for(k=0; k<ordered_taxa_ids[i].size(); k++){
-                cout<<k+1<<"|taxon "<<ordered_taxa_ids[i][k]<<"|"<<taxa_names[ordered_taxa_ids[i][k]]<<"\n";
-            }*/
+            //cout<<"REORDERED taxa:"<<"\n";
+            //for(k=0; k<ordered_taxa_ids[i].size(); k++){
+            //    cout<<k+1<<"|taxon "<<ordered_taxa_ids[i][k]<<"|"<<taxa_names[ordered_taxa_ids[i][k]]<<"\n";
+            //}
         }
-    }
+    }*/
     
     const int must_insert = taxa_num - m;
     int inserted_num = taxa_names_sub.size();
@@ -496,19 +496,31 @@ int PresenceAbsenceMatrix::getINFO_init_tree_taxon_order(vector<string> &taxa_na
     // ===================================================================
     // TAXON ORDER 1: first by coverage, then by partition order
     // ===================================================================
-    for(i=ordered_taxa_ids.size()-1; i>-1; i--){
-        if(!ordered_taxa_ids[i].empty()){
-            //cout<<"Taxa with "<<i<<" gene coverage: "<<"\n";
-            for(j=0; j<ordered_taxa_ids[i].size(); j++){
-                if(m==0 or must_insert == inserted_num){
-                    //cout<<" "<<j<<": "<<ordered_taxa_by_coverage[i][j]<<"\n";
+    if(m==0){
+        for(i=ordered_taxa_ids.size()-1; i>-1; i--){
+            if(!ordered_taxa_ids[i].empty()){
+                //cout<<"Taxa with "<<i<<" gene coverage: "<<"\n";
+                for(j=0; j<ordered_taxa_ids[i].size(); j++){
                     list_taxa_to_insert.push_back(taxa_names[ordered_taxa_ids[i][j]]);
-                }else{
-                    taxa_names_sub.push_back(taxa_names[ordered_taxa_ids[i][j]]);
-                    inserted_num++;
                 }
+                //cout<<"\n";
             }
-            //cout<<"\n";
+        }
+    }else{
+        for(i=ordered_taxa_ids.size()-1; i>-1; i--){
+            if(!ordered_taxa_ids[i].empty()){
+                //cout<<"Taxa with "<<i<<" gene coverage: "<<"\n";
+                for(j=0; j<ordered_taxa_ids[i].size(); j++){
+                    if(must_insert == inserted_num){
+                        //cout<<" "<<j<<": "<<ordered_taxa_by_coverage[i][j]<<"\n";
+                        list_taxa_to_insert.push_back(taxa_names[ordered_taxa_ids[i][j]]);
+                    }else{
+                        taxa_names_sub.push_back(taxa_names[ordered_taxa_ids[i][j]]);
+                        inserted_num++;
+                    }
+                }
+                //cout<<"\n";
+            }
         }
     }
    

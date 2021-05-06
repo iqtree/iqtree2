@@ -1106,7 +1106,6 @@ void Terrace::generateTerraceTrees(Terrace *terrace, vector<Terrace*> &part_tree
     
     string taxon_name;
     taxon_name = list_taxa_to_insert[taxon_to_insert];
-    //NodeVector branch_node_1, branch_node_2;
     NodeVector node1_vec_branch, node2_vec_branch;
     if(ordered_taxa_to_insert){
         
@@ -1123,11 +1122,9 @@ void Terrace::generateTerraceTrees(Terrace *terrace, vector<Terrace*> &part_tree
                 ordered_taxa_to_insert->clear();
             }
             
-            //getAllowedBranches(taxon_name, part_tree_pairs, &node1_vec_branch, &node2_vec_branch, &branch_node_1, &branch_node_2);
             getAllowedBranches(taxon_name, part_tree_pairs, &node1_vec_branch, &node2_vec_branch);
         }
     }else{
-        //getAllowedBranches(taxon_name, part_tree_pairs, &node1_vec_branch, &node2_vec_branch,&branch_node_1, &branch_node_2);
         getAllowedBranches(taxon_name, part_tree_pairs, &node1_vec_branch, &node2_vec_branch);
     }
     
