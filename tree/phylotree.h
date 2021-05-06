@@ -730,11 +730,15 @@ public:
      @param  bidirectional - if true, calculate parsimony in both directions
      @param  report_progress - if true, report progress
      @param  neighbor - if not supplied, getRoot()->getFirstNeighbor() will be used
-     @param  startin_node - if not supplied, getRoot() will be used
+     @param  starting_node - if not supplied, getRoot() will be used
      @return parsimony score of the tree
      */
     int computeParsimony(const char* taskDescription = "", bool bidirectional=false,
                          bool report_progress=false, PhyloNeighbor* neighbor=nullptr,
+                         PhyloNode* starting_node=nullptr);
+    int computeParsimony(const std::string& taskDescription,
+                         bool bidirectional=false, bool report_progress=false,
+                         PhyloNeighbor* neighbor=nullptr,
                          PhyloNode* starting_node=nullptr);
 
     typedef void (PhyloTree::*ComputePartialParsimonyType)(PhyloNeighbor *, PhyloNode *);
@@ -1673,34 +1677,40 @@ public:
      * @return vector of taxa nodes (in taxon id order)
      */
     PhyloNodeVector getTaxaNodesInIDOrder() const;
+
     /**
      * FAST VERSION: compute parsimony tree by step-wise addition
-     * @param out_prefix prefix for .parstree file
-     * @param alignment input alignment
      * @param rand_stream random stream
      * @return parsimony score
      */
-    virtual int computeParsimonyTree(const char *out_prefix, Alignment *alignment, int *rand_stream);
+    virtual int computeParsimonyTreeOld(int *rand_stream);
 
     /**
      * FASTER VERSION: compute parsimony tree by step-wise addition
-     * @param out_prefix prefix for .parstree file
-     * @param alignment input alignment
      * @param rand_stream random stream
      * @return parsimony score
      */
-    virtual int computeParsimonyTreeNew(const char *out_prefix,
-                                        Alignment *alignment, int *rand_stream);
+    virtual int computeParsimonyTreeNew(int *rand_stream);
     
     /**
      * EVEN FASTER VERSION: compute parsimony tree by step-wise addition
-     * @param out_prefix prefix for .parstree file
-     * @param alignment input alignment
      * @param rand_stream random stream
      * @return parsimony score
      */
-    virtual int computeParsimonyTreeBatch(const char *out_prefix,
-                                          Alignment* alignment, int *rand_stream);
+    virtual int computeParsimonyTreeBatch(int *rand_stream);
+
+    /**
+     * EVEN FASTER VERSION: compute parsimony tree by step-wise addition
+     * @param alignment   input alignment
+     * @param rand_stream random stream
+     * @param out_prefix  prefix for .parstree file (if null or blank, do not write one)
+     * @param description describes 
+     * @return parsimony score
+     */
+    virtual int computeParsimonyTree     (Alignment* alignment,
+                                          int* random_number_stream, 
+                                          const char* out_prefix,
+                                          const char*& description);
 
     /**
      * FAST VERSION: compute parsimony tree by parsimony joining
@@ -1710,16 +1720,16 @@ public:
      */
     virtual int joinParsimonyTree(const char *out_prefix, Alignment *alignment);
         
-    int  doParsimonyNNI();
+    int  doParsimonyNNI(VerboseMode how_loud);
     
-    int  doParsimonySPR();
+    int  doParsimonySPR(VerboseMode how_loud);
     
     int  doParsimonySPR(intptr_t iterations, bool lazy,
                         int radius, bool quiet);
     
-    int  doParsimonyTBR();
+    int  doParsimonyTBR(VerboseMode how_loud);
     
-    int  doParsimonyHybrid();
+    int  doParsimonyHybrid(VerboseMode how_loud);
     
     template <class Move>
     int doParsimonySearch(ParsimonySearchParameters& s);

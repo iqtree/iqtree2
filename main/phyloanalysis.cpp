@@ -879,7 +879,7 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
         cout << "  Trees from independent runs:   "
              << params.out_prefix << ".runtrees" << endl;
 
-    if (params.user_file.empty() && params.start_tree == STT_BIONJ) {
+    if (params.user_file.empty() && params.start_tree == START_TREE_TYPE::STT_BIONJ) {
         cout << "  BIONJ tree:                    "
              << params.out_prefix << ".bionj" << endl;
     }
@@ -895,7 +895,7 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
                  << params.out_prefix << ".conaln" << endl;
         }
     }
-    if (params.start_tree != STT_BIONJ &&
+    if (params.start_tree != START_TREE_TYPE::STT_BIONJ &&
         params.generate_dist_file) {
         cout << "  Observed distances:            "
              << params.out_prefix << ".dist" << endl;
@@ -1822,7 +1822,7 @@ void initializeParams(Params &params, IQTree &iqtree)
         }
         if (!params.additional_alignment_files.empty()) {
             iqtree.mergeAlignments(params.additional_alignment_files);
-            iqtree.optimizeConstructedTree();
+            iqtree.optimizeConstructedTree(false, VerboseMode::VB_MED);
             iqtree.fixNegativeBranches(true);
         }
     }
@@ -2291,27 +2291,27 @@ void startTreeReconstruction(Params &params, IQTree* &iqtree,
 
     // Temporary fix since PLL only supports DNA/Protein:
     // switch to IQ-TREE parsimony kernel
-    if (params.start_tree == STT_PLL_PARSIMONY) {
+    if (params.start_tree == START_TREE_TYPE::STT_PLL_PARSIMONY) {
         if (iqtree->isSuperTreeUnlinked()) {
-            params.start_tree = STT_PARSIMONY;
+            params.start_tree = START_TREE_TYPE::STT_PARSIMONY;
         } else if (iqtree->isSuperTree()) {
             PhyloSuperTree *stree = (PhyloSuperTree*)iqtree;
             for (auto it = stree->begin(); it != stree->end(); it++) {
                 auto seq_type = (*it)->aln->seq_type;
                 if (seq_type != SeqType::SEQ_DNA && seq_type != SeqType::SEQ_PROTEIN) {
-                    params.start_tree = STT_PARSIMONY;
+                    params.start_tree = START_TREE_TYPE::STT_PARSIMONY;
                 }
             }
         } else if (iqtree->aln->seq_type != SeqType::SEQ_DNA &&
                    iqtree->aln->seq_type != SeqType::SEQ_PROTEIN) {
-            params.start_tree = STT_PARSIMONY;
+            params.start_tree = START_TREE_TYPE::STT_PARSIMONY;
         }
     }
     iqtree->setParams(&params);
     iqtree->initializePLLIfNecessary();
     
     /********************* Compute pairwise distances *******************/
-    if (params.start_tree == STT_BIONJ || params.iqp ||
+    if (params.start_tree == START_TREE_TYPE::STT_BIONJ || params.iqp ||
         params.leastSquareBranch) {
         computeInitialDist(params, *iqtree);
     }
@@ -2380,7 +2380,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     iqtree->initializePLLIfNecessary();
     
     /********************* Compute pairwise distances *******************/
-    if ((params.start_tree == STT_BIONJ || params.iqp ||
+    if ((params.start_tree == START_TREE_TYPE::STT_BIONJ || params.iqp ||
          params.leastSquareBranch) && !iqtree->root) {
         computeInitialDist(params, *iqtree);
     }
@@ -2539,7 +2539,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
             initTree = iqtree->getTreeString();
         }
         // now overwrite with random tree
-        if (params.start_tree == STT_RANDOM_TREE && !finishedInitTree &&
+        if (params.start_tree == START_TREE_TYPE::STT_RANDOM_TREE && !finishedInitTree &&
             params.start_tree_subtype_name != "RBT" &&
             params.start_tree_subtype_name != "QDT") {
             cout << "Generate random initial Yule-Harding tree..." << endl;
@@ -2577,11 +2577,11 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         // ML distance is only needed for NNI/IQP
         
         if ((params.min_iterations <= 1 || params.numInitTrees <= 1)
-            && params.start_tree != STT_BIONJ) {
+            && params.start_tree != START_TREE_TYPE::STT_BIONJ) {
             params.compute_ml_dist = false;
         }
         if ((!params.user_file.empty() ||
-             params.start_tree == STT_RANDOM_TREE)
+             params.start_tree == START_TREE_TYPE::STT_RANDOM_TREE)
             && params.snni && !params.iqp) {
             params.compute_ml_dist = false;
         }
@@ -2597,10 +2597,12 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
                 << iqtree->getDistanceFileWritten() << endl;
         }
     }
-    bool wantMLDistances = MPIHelper::getInstance().isMaster() && !iqtree->getCheckpoint()->getBool("finishedCandidateSet") &&
-        params.compute_likelihood;
+    bool wantMLDistances = MPIHelper::getInstance().isMaster() &&
+                           !iqtree->getCheckpoint()->getBool("finishedCandidateSet") &&
+                           params.compute_likelihood;
     if (wantMLDistances) {
-        wantMLDistances = !finishedInitTree && ((!params.dist_file && params.compute_ml_dist) || params.leastSquareBranch);
+        bool asked_for  = (!params.dist_file && params.compute_ml_dist);
+        wantMLDistances = !finishedInitTree && (asked_for || params.leastSquareBranch);
     }
         
     //Compute ML distances, and generate BIONJ tree from those
@@ -2608,7 +2610,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         computeMLDist(params, *iqtree, getRealTime(), getCPUTime());
         bool wasMLDistanceWrittenToFile = false;
         if (params.user_file.empty()) {
-            if (params.start_tree != STT_RANDOM_TREE) {
+            if (params.start_tree != START_TREE_TYPE::STT_RANDOM_TREE) {
                 if (!params.compute_ml_tree_only) {
                     iqtree->resetCurScore();
                 }
@@ -2619,7 +2621,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
                     << getRealTime() - start_bionj << " seconds" << endl;
                 }
                 if (params.optimize_ml_tree_with_parsimony) {
-                    iqtree->optimizeConstructedTree();
+                    iqtree->optimizeConstructedTree(false, VerboseMode::VB_MED);
                 }
                 wasMLDistanceWrittenToFile  = !params.dist_file;
                 if (params.compute_ml_tree_only) {
@@ -2641,7 +2643,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
                 } else {
                     iqtree->wrapperFixNegativeBranch(iqtree->isSuperTree());
                     iqtree->initializeAllPartialLh();
-                    if (params.start_tree == STT_BIONJ) {
+                    if (params.start_tree == START_TREE_TYPE::STT_BIONJ) {
                         initTree = iqtree->optimizeModelParameters
                                    (params.min_iterations==0, initEpsilon, iqtree);
                     } else {
@@ -2698,6 +2700,10 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         iqtree->doneComputingDistances();
         iqtree->setAlignment(iqtree->aln);
     }
+    else if (1 < params.numInitTrees && !params.compute_likelihood) {
+        iqtree->initializeCandidateTreeSet();
+    }
+
     if (params.compute_likelihood && params.tree_spr) {
         iqtree->candidateTrees.saveCheckpoint();
         /* do SPR with likelihood function */
@@ -4140,10 +4146,10 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
              << params.constraint_tree_file << "..." << endl;
         tree->constraintTree.readConstraint(params.constraint_tree_file,
                                             alignment->getSeqNames());
-        if (params.start_tree == STT_PLL_PARSIMONY) {
-            params.start_tree = STT_PARSIMONY;
+        if (params.start_tree == START_TREE_TYPE::STT_PLL_PARSIMONY) {
+            params.start_tree = START_TREE_TYPE::STT_PARSIMONY;
         }
-        else if (params.start_tree == STT_BIONJ) {
+        else if (params.start_tree == START_TREE_TYPE::STT_BIONJ) {
             outError("Constraint tree does not work with -t BIONJ");
         }
         if (params.num_bootstrap_samples || params.gbo_replicates) {

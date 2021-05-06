@@ -699,6 +699,32 @@ PhyloNode* IQTree::generateProximityTree(IntVector& order,
     return interior;
 }
 
+void IQTree::generateRandomTreeSubtype() {
+    freeNode();
+    IntVector       order;
+    PhyloNodeVector nodes;
+    {
+        int* rand_stream = init_sprng(0, 1, params->ran_seed,
+                                        SPRNG_DEFAULT);
+        randomizeTaxonOrder(rand_stream, order);
+        free_sprng(rand_stream);
+    }
+    nodes.resize(aln->getNSeq(), nullptr);
+    if (params->start_tree_subtype_name=="QDT") {
+        this->prepareToComputeDistances();
+        generateProximityTree(order, 0, order.size(), 3, nodes);
+        this->doneComputingDistances();
+    }
+    else {
+        generateRandomBalancedTree(order, 0, order.size(), 3, nodes);
+    }
+    root     = nodes[0];
+    leafNum  = aln->getNSeq32();
+    rooted   = false;
+    setAlignment(aln);
+    initializeTree();
+}
+
 void IQTree::computeInitialTree(LikelihoodKernel kernel) {
     double start = getRealTime();
     string initTree;
@@ -749,7 +775,7 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
              params->parsimony_tbr_iterations != 0 ||
              params->parsimony_tbr_iterations != 0 ||
              params->parsimony_hybrid_iterations != 0) {
-            optimizeConstructedTree();
+            optimizeConstructedTree(false, VerboseMode::VB_MED);
         }
         fixNegativeBranches(false);
         params->numInitTrees = 1;
@@ -773,36 +799,25 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
         START_TREE_TYPE start_tree = params->start_tree;
         // only own parsimony kernel supports constraint tree
         if (!constraintTree.empty()) {
-            start_tree = STT_PARSIMONY;
+            start_tree = START_TREE_TYPE::STT_PARSIMONY;
         }
         auto prefix = params->out_prefix.c_str();
         switch (start_tree) {
-        case STT_PARSIMONY:
+        case START_TREE_TYPE::STT_PARSIMONY:
             // Create parsimony tree using IQ-Tree kernel
             logLine("Creating fast initial parsimony tree"
                     " by random order stepwise addition...");
             start = getRealTime();
             const char* doing_what;
-            if (params->use_batch_parsimony_addition) {
-                doing_what = "Generalized Batched Parsimony";
-                score = computeParsimonyTreeBatch(prefix, aln, randstream);
-            }
-            else if (params->use_compute_parsimony_tree_new) {
-                doing_what = "Experimental Step-wise Parsimony";
-                score = computeParsimonyTreeNew(prefix, aln, randstream);
-            }
-            else {
-                doing_what = "Step-wise Parsimony";
-                score = computeParsimonyTree(prefix, aln, randstream);
-            }
+            score = computeParsimonyTree(aln, randstream, prefix, doing_what);
+
             LOG_LINE(VerboseMode::VB_QUIET, doing_what
                      << " took " << getRealTime() - start << " seconds"
                      <<", parsimony score: " << score
                      << " (based on " << aln->num_parsimony_sites << " sites)");
-            optimizeConstructedTree();
             break;
 
-        case STT_PARSIMONY_JOINING:
+        case START_TREE_TYPE::STT_PARSIMONY_JOINING:
             logLine("Creating parsimony tree by parsimony joining...");
             start = getRealTime();
             score = joinParsimonyTree(params->out_prefix.c_str(), aln);
@@ -810,48 +825,23 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
                      << " took " << getRealTime() - start << " seconds"
                      << ", parsimony score: " << score
                      << " (based on " << aln->num_parsimony_sites << " sites)");
-            optimizeConstructedTree();
             break;
 
-        case STT_RANDOM_TREE:
+        case START_TREE_TYPE::STT_RANDOM_TREE:
             if (params->start_tree_subtype_name=="RBT" ||
                 params->start_tree_subtype_name=="QDT" ) {
                 logLine("Creating " + params->start_tree_subtype_name +
                         " tree ...");
                 start = getRealTime();
-                freeNode();
-                IntVector       order;
-                PhyloNodeVector nodes;
-                {
-                    int* rand_stream = init_sprng(0, 1, params->ran_seed,
-                                                  SPRNG_DEFAULT);
-                    randomizeTaxonOrder(rand_stream, order);
-                    free_sprng(rand_stream);
-                }
-                nodes.resize(aln->getNSeq(), nullptr);
-                if (params->start_tree_subtype_name=="QDT") {
-                    this->prepareToComputeDistances();
-                    generateProximityTree(order, 0, order.size(), 3, nodes);
-                    this->doneComputingDistances();
-                }
-                else {
-                    generateRandomBalancedTree(order, 0, order.size(), 3, nodes);
-                }
-                root     = nodes[0];
-                leafNum  = aln->getNSeq32();
-                rooted   = false;
-                setAlignment(aln);
-                initializeTree();
+                generateRandomTreeSubtype();
                 LOG_LINE(VerboseMode::VB_QUIET, "Random tree creation took "
                          << getRealTime() - start << " seconds");
                 params->numInitTrees = 1;
-                optimizeConstructedTree();
-                fixNegativeBranches(true);
                 break;
             }
             //else, fall through
                 
-        case STT_PLL_PARSIMONY:
+        case START_TREE_TYPE::STT_PLL_PARSIMONY:
             logLine("\nCreate initial parsimony tree"
                     " by phylogenetic likelihood library (PLL)... ");
             pllInst->randomNumberSeed = params->ran_seed +
@@ -866,10 +856,15 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
             PhyloTree::readTreeStringSeqName(string(pllInst->tree_string));
             LOG_LINE(VerboseMode::VB_QUIET, "Creation of initial parsimony tree"
                      << " took " << getRealTime() - start << " seconds");
-            wrapperFixNegativeBranch(true);
+            {
+                auto initial_parsimony = computeParsimony("Computing parsimony" 
+                                                        " of PLL Parismony tree");
+                LOG_LINE(VerboseMode::VB_QUIET, 
+                        "Initial tree's parsimony score is " << initial_parsimony);
+            }
             break;
 
-        case STT_BIONJ:
+        case START_TREE_TYPE::STT_BIONJ:
             // This is the old default option: using BIONJ as starting tree
             if (this->dist_matrix == nullptr) {
                 //Really, we want to re-use the distance matrix from the tree,
@@ -886,16 +881,19 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
                          << " wall-clock seconds");
             }
             params->numInitTrees = 1;
-            optimizeConstructedTree();
-            fixNegativeBranches(true);
             want_distances = false;
             break;
 
-        case STT_USER_TREE:
+        case START_TREE_TYPE::STT_USER_TREE:
             ASSERT(0 && "User tree should be handled already");
             break;
-        }
 
+        default:
+            ASSERT(0 && "Tree type not recognized by IQTree::computeInitialTree");
+            break;        
+        }
+        optimizeConstructedTree(false, VerboseMode::VB_MED);
+        fixNegativeBranches(true);
         initTree = getTreeString();
         CKP_SAVE(initTree);
         saveCheckpoint();
@@ -960,7 +958,7 @@ int IQTree::addTreeToCandidateSet(string treeString, double score,
             }
             bestcandidate_changed = true;
             // COMMENT OUT: not safe with MPI version
-//            printResultTree();
+            // printResultTree();
         }
         curScore = score;
         printIterationInfo(sourceProcID);
@@ -975,7 +973,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         const bool noisy = false;
     #endif
     if (nParTrees > 0 && noisy) {
-        if (params->start_tree == STT_RANDOM_TREE) {
+        if (params->start_tree == START_TREE_TYPE::STT_RANDOM_TREE) {
             LOG_LINE(VerboseMode::VB_QUIET, "Generating "
                      << nParTrees  << " random trees... ");
             cout.flush();
@@ -995,78 +993,107 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     std::string whatAmIDoingHere;
     const char* verb = "loaded";
     switch (params->start_tree) {
-        case STT_PLL_PARSIMONY:
+        case START_TREE_TYPE::STT_PLL_PARSIMONY:
             whatAmIDoingHere = "Constructing parsimony trees via PLL";
             verb = "constructed";
             break;
-        case STT_RANDOM_TREE:
+        case START_TREE_TYPE::STT_RANDOM_TREE:
             whatAmIDoingHere = "Generating Yule-Harding random trees";
+            if (params->start_tree_subtype_name=="RBT") {
+                whatAmIDoingHere = "Generating random balanced trees";
+            } else if (params->start_tree_subtype_name=="QDT" ) {
+                whatAmIDoingHere = "Generating quick-and-dirty distance trees";
+            }
             verb = "generated";
             break;
-        case STT_PARSIMONY:
+        case START_TREE_TYPE::STT_PARSIMONY:
             whatAmIDoingHere = "Constructing parsimony trees";
             verb = "constructed";
             break;
-        case STT_PARSIMONY_JOINING:
+        case START_TREE_TYPE::STT_PARSIMONY_JOINING:
             whatAmIDoingHere = "Constructing parsimony tree"
                                " via parsimony joining";
             verb = "constructed";
             break;
-        case STT_BIONJ:
+        case START_TREE_TYPE::STT_BIONJ:
             whatAmIDoingHere = std::string("Loading ")
                              + params->start_tree_subtype_name + " tree ";
             break;
-        case STT_USER_TREE:
-            /* fall-through */
-        default:
+        case START_TREE_TYPE::STT_USER_TREE:
             whatAmIDoingHere = "Loading user tree";
+            break;
+        default:
+            whatAmIDoingHere = "Loading user tree (unrecognized start tree type)";
             break;
     }
     if (0<nParTrees) {
         initProgress(nParTrees, whatAmIDoingHere, verb, "tree");
+        bool is_spr_done_by_pll = ( params->start_tree == 
+                                    START_TREE_TYPE::STT_PLL_PARSIMONY);
         for (int treeNr = 1; treeNr <= nParTrees; ++treeNr) {
             int parRandSeed = Params::getInstance().ran_seed
                             + processID * nParTrees + treeNr;
             string curParsTree;
-            
-            /********* Create parsimony tree using PLL *********/
-            if (params->start_tree == STT_PLL_PARSIMONY) {
-                pllInst->randomNumberSeed = parRandSeed;
-                pllComputeRandomizedStepwiseAdditionParsimonyTree
-                    (pllInst, pllPartitions, params->spr_radius);
-                resetBranches(pllInst);
-                pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions,
-                                pllInst->start->back, PLL_FALSE, PLL_TRUE, PLL_FALSE,
-                                PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
-                curParsTree = string(pllInst->tree_string);
-                PhyloTree::readTreeStringSeqName(curParsTree);
-                wrapperFixNegativeBranch(true);
-            } else if (params->start_tree == STT_RANDOM_TREE) {
-                generateRandomTree(YULE_HARDING);
-                wrapperFixNegativeBranch(true);
-                if (rooted) {
-                    rooted = false;
-                    convertToRooted();
-                }
-            } else if (params->start_tree == STT_PARSIMONY) {
-                int *rstream;
-                init_random(parRandSeed, false, &rstream);
-                PhyloTree tree;
-                if (!constraintTree.empty()) {
-                    tree.constraintTree.readConstraint(constraintTree);
-                }
-                tree.showNoProgress();
-                tree.setParams(params);
-                tree.setParsimonyKernel(params->SSE);
-                tree.rooted = rooted;
-                tree.computeParsimonyTree(NULL, aln, rstream);
-                finish_random(rstream);
-                PhyloTree::readTreeString(tree.getTreeString());
-            } else if (params->start_tree == STT_PARSIMONY_JOINING) {
-                joinParsimonyTree(nullptr, aln);
-            } else {
-                //Use the tree we've already got!
+            switch (params->start_tree) {
+                case START_TREE_TYPE::STT_PLL_PARSIMONY:
+                    /********* Create parsimony tree using PLL *********/        
+                    pllInst->randomNumberSeed = parRandSeed;
+                    pllComputeRandomizedStepwiseAdditionParsimonyTree
+                        (pllInst, pllPartitions, params->spr_radius);
+                    resetBranches(pllInst);
+                    pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions,
+                                    pllInst->start->back, PLL_FALSE, PLL_TRUE, PLL_FALSE,
+                                    PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
+                    curParsTree = string(pllInst->tree_string);
+                    PhyloTree::readTreeStringSeqName(curParsTree);
+                    break;
+
+                case START_TREE_TYPE::STT_RANDOM_TREE:
+                    if (params->start_tree_subtype_name=="QDT" ||
+                        params->start_tree_subtype_name=="RBT") {
+                        generateRandomTreeSubtype();
+                    }
+                    else {
+                        generateRandomTree(YULE_HARDING);
+                    }
+                    if (rooted) {
+                        rooted = false;
+                        convertToRooted();
+                    }
+                    break;
+
+                case START_TREE_TYPE::STT_PARSIMONY:
+                    {
+                        int *rstream;
+                        init_random(parRandSeed, false, &rstream);
+                        PhyloTree tree;
+                        if (!constraintTree.empty()) {
+                            tree.constraintTree.readConstraint(constraintTree);
+                        }
+                        tree.showNoProgress();
+                        tree.setParams(params);
+                        tree.setParsimonyKernel(params->SSE);
+                        tree.rooted = rooted;
+                        const char* doing_what;
+                        double score = tree.computeParsimonyTree(aln, rstream, 
+                                                                 nullptr, doing_what);
+                        finish_random(rstream);
+                        PhyloTree::readTreeString(tree.getTreeString());
+                    }
+                    break;
+
+                case START_TREE_TYPE::STT_PARSIMONY_JOINING: 
+                    joinParsimonyTree(nullptr, aln);
+                    break;
+
+                default:
+                    //Use the tree we've already got!
+                    //But: what about 
+                    break;
             }
+            optimizeConstructedTree(is_spr_done_by_pll, VerboseMode::VB_MAX);
+            wrapperFixNegativeBranch(true);
+
             curParsTree = getTreeString();
             auto process_id = MPIHelper::getInstance().getProcessID();
             int pos = addTreeToCandidateSet(curParsTree, -DBL_MAX,
@@ -1109,21 +1136,30 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     initProgress(static_cast<double>(candidateCount),
                  "Assessing candidate trees",
                  "assessed", "tree");
-    for (auto it = initTreeStrings.begin();
-         it != initTreeStrings.end(); ++it) {
-        string treeString;
-        double score;
-        readTreeString(*it);
-        if (it-initTreeStrings.begin() >= init_size) {
-            treeString = optimizeBranches(params->brlen_num_traversal);
+    int tree_num = 0;
+    for (std::string tree_string : initTreeStrings) {
+        readTreeString(tree_string);
+        double score = 0;
+        std::string updated_tree_string;
+        if (params->compute_likelihood) {
+            if (tree_num >= init_size) {
+                updated_tree_string = optimizeBranches(params->brlen_num_traversal);
+            }
+            else {
+                computeLogL();
+                updated_tree_string = getTreeString();
+            }
+            score = getCurScore();
+        } else {
+            std::stringstream desc;
+            desc << "Finding parsimony score for candidate tree #" << tree_num;
+            updated_tree_string = getTreeString();
+            initializeAllPartialPars();
+            score = 0 - computeParsimony(desc.str(), false);
         }
-        else {
-            computeLogL();
-            treeString = getTreeString();
-        }
-        score = getCurScore();
-        candidateTrees.update(treeString,score);
+        candidateTrees.update(updated_tree_string,score);
         trackProgress(1.0);
+        ++tree_num;
     }
     doneProgress();
 
@@ -1135,8 +1171,13 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         LOG_LINE(VerboseMode::VB_QUIET, elapsed << " seconds");
     }
     if (nParTrees > 0) {
-        LOG_LINE(VerboseMode::VB_QUIET, "Current best score: "
-                 << candidateTrees.getBestScore());
+        if (params->compute_likelihood) {
+            LOG_LINE(VerboseMode::VB_QUIET, "Current best score: "
+                    << candidateTrees.getBestScore());
+        } else {
+            LOG_LINE(VerboseMode::VB_QUIET, "Current best parsimony score: "
+                    << (0-candidateTrees.getBestScore()));
+        }
     }
 
     //---- BLOCKING COMMUNICATION
@@ -1169,16 +1210,21 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         treeDescription << "candidate tree " << candidate
                         << " (of " << candidateCount << ")";
         string context = treeDescription.str();
-        doNNISearch(true, context.c_str(), this);
+        double score;
+        if (params->compute_likelihood) {
+            doNNISearch(true, context.c_str(), this);
+            score = curScore;
+        } else {
+            score = 0 -(double)doParsimonyNNI(VerboseMode::VB_MAX);
+        }
         string treeString = getTreeString();
         auto process_id = MPIHelper::getInstance().getProcessID();
-        addTreeToCandidateSet(treeString, curScore, true, process_id);
+        addTreeToCandidateSet(treeString, score, true, process_id);
         if (Params::getInstance().writeDistImdTrees) {
-            intermediateTrees.update(treeString, curScore);
+            intermediateTrees.update(treeString, score);
         }
     }
 
-    // TODO turning this
     if (isMixlen()) {
         //(d) Optimizing model parameters for the best of the
         //    candidate trees.
@@ -1212,24 +1258,39 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 }
 
 string IQTree::generateParsimonyTree(int randomSeed) {
-    if (params->start_tree == STT_PLL_PARSIMONY) {
-        pllInst->randomNumberSeed = randomSeed;
-        pllComputeRandomizedStepwiseAdditionParsimonyTree(pllInst,
-                                                          pllPartitions,
-                                                          params->spr_radius);
-        resetBranches(pllInst);
-        pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions,
-                        pllInst->start->back, PLL_FALSE, PLL_TRUE, PLL_FALSE,
-                        PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
-        string pllTreeString = string(pllInst->tree_string);
-        PhyloTree::readTreeString(pllTreeString);
-    } else if (params->start_tree == STT_RANDOM_TREE) {
-        generateRandomTree(YULE_HARDING);
-        optimizeConstructedTree();
-    } else {
-        computeParsimonyTree(NULL, aln, randstream);
-        optimizeConstructedTree();
+    bool has_pll_spr_been_run = false;
+    switch (params->start_tree) {
+        case  START_TREE_TYPE::STT_PLL_PARSIMONY:
+            pllInst->randomNumberSeed = randomSeed;
+            pllComputeRandomizedStepwiseAdditionParsimonyTree(pllInst,
+                                                            pllPartitions,
+                                                            params->spr_radius);
+            resetBranches(pllInst);
+            pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions,
+                            pllInst->start->back, PLL_FALSE, PLL_TRUE, PLL_FALSE,
+                            PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
+            {
+                string pllTreeString = string(pllInst->tree_string);
+                PhyloTree::readTreeString(pllTreeString);
+            }
+            has_pll_spr_been_run = true;
+            break;
+        case START_TREE_TYPE::STT_RANDOM_TREE:
+            if (params->start_tree_subtype_name=="QDT" ||
+                params->start_tree_subtype_name=="RBT") {
+                generateRandomTreeSubtype();
+            }
+            else {
+                generateRandomTree(YULE_HARDING);
+            }
+            break;
+        default:
+            const char* doing_what;
+            computeParsimonyTree(aln, randstream,  
+                                 params->out_prefix.c_str(), doing_what);
+            break;
     }
+    optimizeConstructedTree(has_pll_spr_been_run, VerboseMode::VB_MED);
     fixNegativeBranches(true);
     string parsimonyTreeString = getTreeString();
     return parsimonyTreeString;
@@ -2076,9 +2137,10 @@ string IQTree::doRandomNNIs(bool storeTabu) {
     if (params->pll) {
         pllReadNewick(getTreeString());
     }
-
-    clearAllPartialLH();
-    resetCurScore();
+    if (params->compute_likelihood) {
+        clearAllPartialLH();
+        resetCurScore();
+    }
     return getTreeString();
 }
 
@@ -2623,8 +2685,7 @@ string IQTree::optimizeBranches(int maxTraversal) {
     return tree;
 }
 
-double IQTree::doTreeSearch() {
-    
+void IQTree::initializeCandidateTreeSet() {
     if (params->numInitTrees > 1) {
         logLine( "--------------------------------------------------------------------");
         logLine( "|             INITIALIZING CANDIDATE TREE SET                      |");
@@ -2642,9 +2703,9 @@ double IQTree::doTreeSearch() {
         treesPerProc = 0;
     }
     // Master node does one tree less because it already created the BIONJ tree
-//    if (MPIHelper::getInstance().isMaster()) {
-//        treesPerProc--;
-//    }
+    //    if (MPIHelper::getInstance().isMaster()) {
+    //        treesPerProc--;
+    //    }
 
     // Make sure to get at least 1 tree
     if (treesPerProc < 1 && params->numInitTrees > candidateTrees.size()) {
@@ -2669,8 +2730,17 @@ double IQTree::doTreeSearch() {
 
     auto best_tree_score = candidateTrees.getBestScore();
     auto cpu_time_spent  = getRealTime() - initCPUTime;
-    LOG_LINE(VerboseMode::VB_QUIET,"Current best tree score: " << best_tree_score
-             << " / CPU time: " << cpu_time_spent);
+
+    if (params->compute_likelihood) {
+        LOG_LINE(VerboseMode::VB_QUIET,
+                 "Current best tree score: " << best_tree_score
+                 << " / CPU time: " << cpu_time_spent);
+    } else {
+        LOG_LINE(VerboseMode::VB_QUIET,
+                 "Current best tree parsimony score: " << (0-best_tree_score)
+                 << " / CPU time: " << cpu_time_spent);
+
+    }
     LOG_LINE(VerboseMode::VB_QUIET,"Number of iterations: " << stop_rule.getCurIt());
 
 //    string treels_name = params->out_prefix;
@@ -2700,7 +2770,6 @@ double IQTree::doTreeSearch() {
                  << " search iterations restored");
     }
     searchinfo.curPerStrength = params->initPS;
-    double cur_correlation = 0.0;
 
     if ((Params::getInstance().fixStableSplits ||
          Params::getInstance().adaptPertubation) &&
@@ -2712,11 +2781,17 @@ double IQTree::doTreeSearch() {
     // tracking of worker candidate set is changed from master candidate set
     candidateset_changed.resize(MPIHelper::getInstance().getNumProcesses(), false);
     bestcandidate_changed = false;
+}
+
+double IQTree::doTreeSearch() {
+    
+    initializeCandidateTreeSet();
 
     /*==============================================================================================================
                                            MAIN LOOP OF THE IQ-TREE ALGORITHM
      *=============================================================================================================*/
 
+    double cur_correlation = 0.0;
     bool early_stop = stop_rule.meetStopCondition(stop_rule.getCurIt(), cur_correlation);
     if (!early_stop) {
         logLine( "--------------------------------------------------------------------" );
@@ -3119,9 +3194,13 @@ void IQTree::printIterationInfo(int sourceProcID) {
     if (stop_rule.getCurIt() % 10 == 0 || verbose_mode >= VerboseMode::VB_MED) {
         std::stringstream msg;
         msg << ((iqp_assess_quartet == IQP_BOOTSTRAP) ? "Bootstrap " : "Iteration ")
-            << stop_rule.getCurIt()
-            << " / LogL: " << curScore
-            << " / Time: " << convert_time(getRealTime() - params->start_real_time);
+            << stop_rule.getCurIt();
+        if (params->compute_likelihood) {
+            msg << " / LogL: " << curScore;
+        } else {
+            msg << " / Parsimony Score: " << (int)floor(-curScore);
+        }
+        msg << " / Time: " << convert_time(getRealTime() - params->start_real_time);
         if (stop_rule.getCurIt() > 20) {
             msg << " (" << convert_time(realtime_remaining) << " left)";
         }
@@ -3225,14 +3304,11 @@ double IQTree::doTreePerturbation() {
  ****************************************************************************/
 pair<int, int> IQTree::doNNISearch(bool write_info, const char* context,
                                    PhyloTree* report_to_tree) {
-
     computeLogL();
     double curBestScore = getBestScore();
-
     if (Params::getInstance().write_intermediate_trees && save_all_trees != 2) {
         printIntermediateTree(WT_NEWLINE | WT_APPEND | WT_SORT_TAXA | WT_BR_LEN);
     }
-
     pair<int, int> nniInfos; // Number of NNIs and number of steps
     if (params->pll) {
         if (params->partition_file)
@@ -4666,8 +4742,8 @@ void IQTree::initializePLLIfNecessary() {
     if (isInitializedPLL()) {
         return;
     }
-    if (params->start_tree == STT_PLL_PARSIMONY 
-        || ( params->start_tree == STT_RANDOM_TREE &&
+    if (params->start_tree == START_TREE_TYPE::STT_PLL_PARSIMONY 
+        || ( params->start_tree == START_TREE_TYPE::STT_RANDOM_TREE &&
              params->start_tree_subtype_name != "RBT" &&
              params->start_tree_subtype_name != "QDT")
         || params->pll) {
@@ -4675,10 +4751,8 @@ void IQTree::initializePLLIfNecessary() {
     }
 }
 
-void IQTree::optimizeConstructedTree() {
-    //Note: this should not be called if start_tree is STT_PLL_PARSIMONY
-    //(as parsimony spr iterations will already have been done).
-    
+void IQTree::optimizeConstructedTree(bool has_spr_been_done, 
+                                     VerboseMode how_loud) {
     if (params->parsimony_spr_iterations == 0 &&
         params->parsimony_tbr_iterations == 0 &&
         params->parsimony_nni_iterations == 0 &&
@@ -4687,29 +4761,28 @@ void IQTree::optimizeConstructedTree() {
     }
     initializeAllPartialPars();
     if (params->parsimony_hybrid_iterations != 0) {
-        doParsimonyHybrid();
+        doParsimonyHybrid(how_loud);
         return;
-    }    
-    
-    if (params->parsimony_spr_iterations != 0) {
+    }
+    if (!has_spr_been_done && params->parsimony_spr_iterations != 0) {
         if (params->parsimony_pll_spr) {
             auto initial_parsimony = computeParsimony("Computing pre-SPR parsimony");
-            LOG_LINE(VerboseMode::VB_MIN, "Before doing (up to) "
+            LOG_LINE(how_loud, "Before doing (up to) "
                 << params->parsimony_spr_iterations
                 << " rounds of parsimony SPR,"
                 << " parsimony score was " << initial_parsimony);
-            doPLLParsimonySPR();
+            doPLLParsimonySPR(how_loud);
             deleteAllPartialParsimony();
             initializeAllPartialPars();
         } else {
-            doParsimonySPR();
+            doParsimonySPR(how_loud);
         }
     }
     if (params->parsimony_tbr_iterations != 0) {
-        doParsimonyTBR();
+        doParsimonyTBR(how_loud);
     }
     if (0<params->parsimony_nni_iterations) {
-        doParsimonyNNI();
+        doParsimonyNNI(how_loud);
     }
 }
 

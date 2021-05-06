@@ -290,6 +290,21 @@ public:
         return partial_lh_computed;
 	}
 
+    /**
+        tell that the partial parsimony vector is not computed
+     */
+    inline void clearPartialParsimony() {
+        partial_lh_computed &= ~PARSIMONY_IS_COMPUTED;
+    }
+
+    /**
+     *  tell that the partial likelihood vector *is* computed
+     */
+    inline void unclearPartialParsimony() {
+        partial_lh_computed |= PARSIMONY_IS_COMPUTED;
+    }
+
+
 	/**
 	 * true if this Neighbor is directed towards the root
 	 */

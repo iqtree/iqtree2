@@ -422,10 +422,10 @@ void ParsimonySPRMove::findMove(const PhyloTree& tree,
     }
 }
 
-int PhyloTree::doParsimonySPR() {
+int PhyloTree::doParsimonySPR(VerboseMode how_loud) {
     return doParsimonySPR(params->parsimony_spr_iterations,
                           params->use_lazy_parsimony_spr,
-                          params->spr_radius, false);
+                          params->spr_radius, verbose_mode < how_loud );
 }
 
 
@@ -443,7 +443,7 @@ int PhyloTree::doParsimonySPR(intptr_t iterations, bool lazy,
     return doParsimonySearch<ParsimonySPRMove>(s);
 }
 
-void IQTree::doPLLParsimonySPR() {
+void IQTree::doPLLParsimonySPR(VerboseMode how_loud) {
     double    init_start = getRealTime();
     StrVector oldNames;
     bool      areNamesDummied = false;
@@ -500,19 +500,19 @@ void IQTree::doPLLParsimonySPR() {
     double pars_start = getRealTime();
     initializeAllPartialPars();
     auto optimized_parsimony = computeParsimony("Computing post optimization parsimony");
-    LOG_LINE(VerboseMode::VB_MIN, "After " << iterations << " rounds of Parsimony SPR,"
+    LOG_LINE(how_loud, "After " << iterations << " rounds of Parsimony SPR,"
              << " parsimony score was " << optimized_parsimony);
     double pars_time             = (getRealTime() - pars_start);
     double pll_setup_overhead    = (opt_start - init_start);
     double pll_teardown_overhead = (pars_start - read_start);
     double spr_time              = (read_start - opt_start);
-    LOG_LINE(VerboseMode::VB_MED, "SPR optimization  took " << spr_time << " wall-clock seconds");
-    LOG_LINE(VerboseMode::VB_MED, "PLL set-up        took " << pll_setup_overhead << " wall-clock seconds");
-    LOG_LINE(VerboseMode::VB_MED, "PLL tear-down     took " << pll_teardown_overhead << " wall-clock seconds");   
-    LOG_LINE(VerboseMode::VB_MED, "Parsimony scoring took " << pars_time << " wall-clock seconds");
+    LOG_LINE(how_loud, "SPR optimization  took " << spr_time << " wall-clock seconds");
+    LOG_LINE(how_loud, "PLL set-up        took " << pll_setup_overhead << " wall-clock seconds");
+    LOG_LINE(how_loud, "PLL tear-down     took " << pll_teardown_overhead << " wall-clock seconds");   
+    LOG_LINE(how_loud, "Parsimony scoring took " << pars_time << " wall-clock seconds");
     
     double fix_start = getRealTime();
     fixNegativeBranches(false);
     double fix_time  = getRealTime()-fix_start;
-    LOG_LINE(VerboseMode::VB_MED, "Fixing -ve branches took " << fix_time << " wall-clock seconds");
+    LOG_LINE(how_loud, "Fixing -ve branches took " << fix_time << " wall-clock seconds");
 }

@@ -49,6 +49,4 @@ void doParsMultiState(Params &params) {
     cout.precision(6);
     cout << "mean length: " << double(total_length)/pars_score << endl;
     cout << "Parsimony score is: " << pars_score << endl;
-	//cout << "Parsimony score ver2 is: " << tree.computeParsimony() << endl;
-	//tree.printParsimonyStates();
 }

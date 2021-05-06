@@ -137,10 +137,10 @@ public:
     bool isInitializedPLL();
     void initializePLLIfNecessary();
     
-    void optimizeConstructedTree();
+    void optimizeConstructedTree(bool has_spr_been_done, VerboseMode how_loud);
     void fixNegativeBranches(bool force);
     
-    void doPLLParsimonySPR();
+    void doPLLParsimonySPR(VerboseMode how_loud);
     
     virtual void initializeModel(Params &params, string model_name,
                                  ModelsBlock *models_block,
@@ -317,6 +317,11 @@ public:
      */
     double swapTaxa(PhyloNode *node1, PhyloNode *node2);
 
+    /**
+            generate candidate trees, to use in tere search
+            @return best likelihood found
+     */
+    virtual void initializeCandidateTreeSet();
 
     /**
             perform tree search
@@ -746,6 +751,8 @@ public:
      * Generate the initial tree (usually used for model parameter estimation)
      */
     void computeInitialTree(LikelihoodKernel kernel);
+
+    void generateRandomTreeSubtype();
 
     /**
      *  @brief: optimize model parameters on the current tree

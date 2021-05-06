@@ -45,6 +45,9 @@ int PhyloTree::doParsimonySearch(ParsimonySearchParameters& s) {
     if (s.overall.getActivity().empty()) {
         s.overall.setActivity(task_name.c_str());
     }
+    if (s.be_quiet) {
+        task_name.clear();
+    }
 
     double work_estimate = (double)branch_count * ((double)s.iterations * 2.5 + 1.0);
     //assumes that:

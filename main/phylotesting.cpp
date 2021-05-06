@@ -623,7 +623,7 @@ string computeFastMLTree(Params &params, Alignment *aln,
             initTree = ((ModelFactoryMixlen*)iqtree->getModelFactory())->sortClassesByTreeLength();
 
         // do quick NNI search
-        if (params.start_tree != STT_USER_TREE) {
+        if (params.start_tree != START_TREE_TYPE::STT_USER_TREE) {
             cout << "Perform nearest neighbor interchange..." << endl;
             iqtree->doNNISearch(true, "", report_to_tree);
             initTree = iqtree->getTreeString();

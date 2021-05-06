@@ -448,7 +448,7 @@ void ProperParsimonyTBRMove::findMove(const PhyloTree& tree,
     }
 }
 
-int PhyloTree::doParsimonyTBR() {
+int PhyloTree::doParsimonyTBR(VerboseMode how_loud) {
     if (leafNum<6) {
         return computeParsimony();
     }
@@ -458,6 +458,7 @@ int PhyloTree::doParsimonyTBR() {
     s.lazy_mode                  = params->use_lazy_parsimony_tbr;
     s.radius                     = params->tbr_radius;
     s.calculate_connection_costs = s.lazy_mode;
+    s.be_quiet                   = verbose_mode < how_loud;
 
     if (s.lazy_mode) {
         return doParsimonySearch<ParsimonyLazyTBRMove>(s);

@@ -73,8 +73,9 @@ void outError(const char *error, bool quit) {
         print_stacktrace(cerr);
 	}
 	cerr << error << endl;
-    if (quit)
+    if (quit) {
     	exit(2);
+    }
 }
 
 /**
@@ -228,8 +229,9 @@ bool renameString(std::string &name) {
     for (auto i = name.begin(); i != name.end(); ++i) {
         if ((*i) == '/') {
             // PLL does not accept '/' in names, turn it off
-            if (Params::getInstance().start_tree == STT_PLL_PARSIMONY)
-                Params::getInstance().start_tree = STT_PARSIMONY;
+            if (Params::getInstance().start_tree == START_TREE_TYPE::STT_PLL_PARSIMONY) {
+                Params::getInstance().start_tree = START_TREE_TYPE::STT_PARSIMONY;
+            }
         }
         if (!isalnum(*i) && (*i) != '_' && (*i) != '-' && (*i) != '.' && (*i) != '|' && (*i) != '/') {
             (*i) = '_';
@@ -450,19 +452,19 @@ namespace {
     bool parseTreeName(const char* name, Params& params) {
         std::string tree_name = name;
         if (tree_name == "PARS")
-            params.start_tree = STT_PARSIMONY;
+            params.start_tree = START_TREE_TYPE::STT_PARSIMONY;
         else if (tree_name == "PJ")
-            params.start_tree = STT_PARSIMONY_JOINING;
+            params.start_tree = START_TREE_TYPE::STT_PARSIMONY_JOINING;
         else if (tree_name == "PLLPARS")
-            params.start_tree = STT_PLL_PARSIMONY;
+            params.start_tree = START_TREE_TYPE::STT_PLL_PARSIMONY;
         else if (tree_name == "RAND" || tree_name=="RANDOM" ||
                  tree_name == "RBT"  || tree_name == "QDT") {
             params.start_tree_subtype_name = tree_name;
-            params.start_tree = STT_RANDOM_TREE;
+            params.start_tree = START_TREE_TYPE::STT_RANDOM_TREE;
         }
         else if (START_TREE_RECOGNIZED(tree_name)) {
             params.start_tree_subtype_name = tree_name;
-            params.start_tree = STT_BIONJ;
+            params.start_tree = START_TREE_TYPE::STT_BIONJ;
         } else {
             return false;
         }
@@ -840,7 +842,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.max_mem_is_in_bytes = false;
 	params.lh_mem_save = LM_PER_NODE; // auto detect
     params.buffer_mem_save = false;
-	params.start_tree = STT_PLL_PARSIMONY;
+	params.start_tree = START_TREE_TYPE::STT_PLL_PARSIMONY;
     params.start_tree_subtype_name = StartTree::Factory::getNameOfDefaultTreeBuilder();
 
     params.modelfinder_ml_tree = true;
@@ -3557,6 +3559,12 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.opt_gammai = false;
                 continue;
             }
+            if (arg=="-no-sequence-lists") {
+                params.suppress_list_of_sequences = true;
+                params.suppress_zero_distance_warnings = true;
+                params.suppress_duplicate_sequence_warnings = true;
+                continue;
+            }
             if (arg=="-fss") {
                 params.fixStableSplits = true;
                 //params.five_plus_five = true;
@@ -3724,7 +3732,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
             if (arg=="-iqpnni") {
                 params.snni = false;
-                params.start_tree = STT_BIONJ;
+                params.start_tree = START_TREE_TYPE::STT_BIONJ;
                 params.numNNITrees = 1;
                 continue;
             }
@@ -4006,7 +4014,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 else if (!parseTreeName(argv[cnt], params)) {
                     params.user_file = argv[cnt];
                     if (params.min_iterations == 0) {
-                        params.start_tree = STT_USER_TREE;
+                        params.start_tree = START_TREE_TYPE::STT_USER_TREE;
                     }
                 }
                 continue;

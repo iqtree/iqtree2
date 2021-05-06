@@ -52,13 +52,18 @@ void PhyloSuperTreeUnlinked::mapTrees() {
     // do nothing here as partition trees are unlinked
 }
 
-int PhyloSuperTreeUnlinked::computeParsimonyTree(const char *out_prefix, Alignment *alignment, int *rand_stream) {
+int PhyloSuperTreeUnlinked::computeParsimonyTree(Alignment*   alignment,
+                                                 int*         rand_stream, 
+                                                 const char*  out_prefix,
+                                                 const char*& doing_what) {
     SuperAlignment *saln = (SuperAlignment*)alignment;
     int score = 0;
     int i;
     ASSERT(saln->partitions.size() == size());
     for (i = 0; i < size(); i++) {
-        score += at(i)->computeParsimonyTree(NULL, saln->partitions[i], rand_stream);
+        const char* doing_what;
+        score += at(i)->computeParsimonyTree(saln->partitions[i], rand_stream,
+                                             nullptr, doing_what);
     }
     if (out_prefix) {
         string file_name = out_prefix;

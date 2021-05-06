@@ -1560,6 +1560,14 @@ int PhyloTree::computeParsimony(const char* taskDescription,
            ( nei, r, taskDescription );
 }
 
+int PhyloTree::computeParsimony(const std::string& taskDescription,
+                                bool bidirectional, bool countProgress,
+                                PhyloNeighbor* neighbor,
+                                PhyloNode* starting_node) {
+    return computeParsimony(taskDescription.c_str(), bidirectional,
+                            countProgress, neighbor, starting_node);
+}
+
 /****************************************************************************
  likelihood function
  ****************************************************************************/
@@ -4650,7 +4658,7 @@ void PhyloTree::doNNI(const NNIMove &move, bool clearLH) {
     PhyloNeighbor* node21_it = node2->findNeighbor(node1); 
 
     // reorient partial_lh before swap
-    if (!isSuperTree()) {
+    if (params->compute_likelihood && !isSuperTree()) {
         reorientPartialLh(node12_it, node1);
         reorientPartialLh(node21_it, node2);
     }
@@ -4674,11 +4682,17 @@ void PhyloTree::doNNI(const NNIMove &move, bool clearLH) {
     PhyloNeighbor *nei21 = node2->findNeighbor(node1); // return neighbor of node2 which points to node 1
 
     if (clearLH) {
-        // clear partial likelihood vector
-        nei12->clearPartialLh();
-        nei21->clearPartialLh();
-        node2->clearReversePartialLh(node1);
-        node1->clearReversePartialLh(node2);
+        if (params->compute_likelihood) {
+            // clear partial likelihood vector
+            nei12->clearPartialLh();
+            nei21->clearPartialLh();
+            node2->clearReversePartialLh(node1);
+            node1->clearReversePartialLh(node2);
+        }
+        nei12->clearPartialParsimony();
+        nei21->clearPartialParsimony();
+        node2->clearReversePartialParsimony(node1);
+        node1->clearReversePartialParsimony(node2);
     }
 
     if (params->leastSquareNNI) {

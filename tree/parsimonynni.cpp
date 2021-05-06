@@ -222,7 +222,7 @@ double ParsimonyNNIMove::apply(PhyloTree& tree,
     return parsimony_score;
 }
 
-int PhyloTree::doParsimonyNNI() {
+int PhyloTree::doParsimonyNNI(VerboseMode how_loud) {
     ParsimonySearchParameters s("NNI");
         
     s.name                       = "NNI";
@@ -230,5 +230,7 @@ int PhyloTree::doParsimonyNNI() {
     s.lazy_mode                  = false;
     s.radius                     = -1;
     s.calculate_connection_costs = false;
+    s.be_quiet                   = verbose_mode < how_loud;
+
     return doParsimonySearch<ParsimonyNNIMove>(s);
 }
