@@ -20,7 +20,7 @@ void runterraceanalysis(Params &params){
     params.startCPUTime = getCPUTime();
     params.start_real_time = getRealTime();
 
-    cout<<"Starting terrace analysis..."<<endl;    
+    cout<<"Starting species-tree/terrace analysis..."<<endl;
     
     if(params.matrix_order){
         cout<<"Reordering presence-absence matrix..\n\n";
@@ -52,11 +52,15 @@ void runterraceanalysis(Params &params){
      */
     Terrace *terrace;
     
-    if(params.partition_file && params.aln_file && params.user_file){
+    if(params.partition_file && params.user_file){
         PresenceAbsenceMatrix *matrix = new PresenceAbsenceMatrix();
         matrix->get_from_alignment(params);
         TerraceTree tree;
         tree.readTree(params.user_file, params.is_rooted);
+        if(tree.rooted){
+            cout<<"WARNING: The species-tree/terrace analysis is only available for unrooted trees!\nConverting rooted tree to unrooted...\n";
+            tree.convertToUnrooted();
+        }
         terrace = new Terrace(tree,matrix);
     } else if(params.user_file && params.pr_ab_matrix){
         terrace = new Terrace(params.user_file,params.is_rooted,params.pr_ab_matrix);
@@ -64,6 +68,18 @@ void runterraceanalysis(Params &params){
         vector<TerraceTree*> subtrees;
         read_tree_set(params.user_file, params.is_rooted, subtrees);
         assert(subtrees.size()>1 && "ERROR: the input set of trees must be larger than 1 to be considered for the analysis.");
+        if(subtrees[0]->rooted){
+            cout<<"WARNING: The species-tree/terrace analysis is only available for unrooted trees!\n";
+        }
+        int ti=0;
+        for(const auto &t: subtrees){
+            ti++;
+            if(t->rooted){
+                cout<<"Tree "<<ti<<": converting rooted tree to unrooted...\n";
+                t->convertToUnrooted();
+                //t->printTree(cout);
+            }
+        }
         terrace = new Terrace(subtrees);
     }else{
         throw "ERROR: to start terrace analysis input a tree and either a presence-absence matrix or alignment with partition info or a set of overlapping unrooted trees!";

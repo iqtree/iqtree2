@@ -44,6 +44,10 @@ Terrace::Terrace(const char *infile_tree, bool is_rooted,const char *infile_matr
     init();
     
     readTree(infile_tree,is_rooted);
+    if(rooted){
+        cout<<"WARNING: The species-tree/terrace analysis is only available for unrooted trees!\nConverting rooted tree to unrooted...\n";
+        convertToUnrooted();
+    }
     
     matrix = new PresenceAbsenceMatrix();
     matrix->read_pr_ab_matrix(infile_matrix);
