@@ -4,6 +4,8 @@
 
 #include "modelinfo.h"
 
+class Alignment;
+
 class ModelParameterRange : public std::pair<double, double> {
 public:
     typedef std::pair<double, double> super;
@@ -290,6 +292,9 @@ public:
                                  StateFreqType freq_type, PhyloTree* tree,
                                  ModelsBlock* models_block, 
                                  PhyloTree* report_to_trees);
+
+    void insistOnAlignmentSequenceType(const Alignment* alignment, 
+                                       SeqType desired_type) const;
 
     bool hasModel(const std::string& model_name) const;
     

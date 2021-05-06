@@ -513,6 +513,9 @@ ModelMarkov* ModelListFromYAMLFile::getBinaryModel(ModelInfoFromYAMLFile& model_
                                                    StateFreqType freq_type,
                                                    PhyloTree* tree,
                                                    PhyloTree* report_to_tree) {
+
+    insistOnAlignmentSequenceType(tree->aln, SeqType::SEQ_BINARY);
+
     ModelMarkov* model = nullptr;
     string       dummy_rate_params;
     string       dummy_freq_params;    
@@ -531,21 +534,12 @@ ModelMarkov* ModelListFromYAMLFile::getCodonModel(ModelInfoFromYAMLFile& model_i
                                                   StateFreqType freq_type,
                                                   PhyloTree* tree,
                                                   PhyloTree* report_to_tree) {
+    insistOnAlignmentSequenceType(tree->aln, SeqType::SEQ_CODON);
+
     ModelMarkov*    model = nullptr;
     string          dummy_rate_params;
     string          dummy_freq_params;    
     YAMLModelCodon* pmodel;
-
-    if (tree->aln->seq_type != SeqType::SEQ_CODON) {
-        std::stringstream complaint;
-        complaint << "Cannot use Codon Model with a " << getSeqTypeName(tree->aln->seq_type) 
-                  << " alignment.";
-        if (tree->aln->seq_type == SeqType::SEQ_DNA) {
-            complaint << "\nPlease re-run, with a DNA model,"
-                      << " or passing -seqtype CODON on the command-line.";
-        }
-        outError(complaint.str());
-    }
 
     pmodel = new YAMLModelCodon("", dummy_rate_params, freq_type,
                                   dummy_freq_params, tree, report_to_tree,
@@ -625,6 +619,8 @@ ModelMarkov* ModelListFromYAMLFile::getProteinModel(ModelInfoFromYAMLFile& model
                                                     PhyloTree* tree,
                                                     ModelsBlock* models_block,
                                                     PhyloTree* report_to_tree) {
+    insistOnAlignmentSequenceType(tree->aln, SeqType::SEQ_PROTEIN);
+
     ModelMarkov* model = nullptr;
     string dummy_rate_params;
     string dummy_freq_params;    
@@ -636,4 +632,18 @@ ModelMarkov* ModelListFromYAMLFile::getProteinModel(ModelInfoFromYAMLFile& model
     model = pmodel;
 
     return model;
+}
+
+void ModelListFromYAMLFile::insistOnAlignmentSequenceType(const Alignment* alignment, 
+                                                          SeqType desired_type) const {
+        if (alignment->seq_type != SeqType::SEQ_PROTEIN) {
+        std::stringstream complaint;
+        complaint << "Cannot use " << getSeqTypeName(desired_type) << " model"
+                  << " with a " << getSeqTypeName(alignment->seq_type) << "alignment."
+                  << "\nPlease re-run, with"
+                  << " a " << getSeqTypeName(alignment->seq_type) << " model,"
+                  << " or passing -seqtype " << getSeqTypeShortName(desired_type, false)
+                  << " on the command-line.";
+        outError(complaint.str());
+    }
 }
