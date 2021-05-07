@@ -439,32 +439,6 @@ void IQTreeMix::computePatternLikelihood(double *pattern_lh, double *cur_logl,
     computeLikelihood(pattern_lh);
 }
 
-/**
- * compute _pattern_lh_cat for site-likelihood per category
- * this function is for linked site-rate model only
- * @return tree log-likelihood
- */
-/*
-double IQTreeMix::computePatternLhCat(SiteLoglType wsl) {
-    //size_t nptn = ((aln->size()+vector_size-1)/vector_size)*vector_size;
-    size_t nptn = aln->size();
-    size_t ncat = site_rates[0]->getNRate();
-    size_t n = nptn*ncat;
-    size_t i,j;
-    
-    for (i=0; i<size(); i++) {
-        at(i)->computePatternLhCat(wsl);
-    }
-    
-    for (i=0; i<n; i++) {
-        _pattern_lh_cat[i] = 0.0;
-        for (j=0; j<size(); j++) {
-            _pattern_lh_cat[i] += at(j)->_pattern_lh_cat[i] * weights[j];
-        }
-    }
-}
- */
-
 void IQTreeMix::initializeAllPartialLh() {
     size_t i;
     // IQTree::initializeAllPartialLh();
@@ -554,7 +528,6 @@ double IQTreeMix::optimizeTreeWeightsByEM(double* pattern_mix_lh, int max_steps)
             if (weights[c] < 1e-10) weights[c] = 1e-10;
         }
 
-        /*
         // show the weights
         cout << "[IQTreeMix::optimizeTreeWeights] weights:";
         for (c = 0; c < ntree; c++) {
@@ -563,8 +536,7 @@ double IQTreeMix::optimizeTreeWeightsByEM(double* pattern_mix_lh, int max_steps)
             cout << weights[c];
         }
         cout << endl;
-        */
-
+        
         initializeAllPartialLh();
         score = computeLikelihood();
         clearAllPartialLH();
@@ -810,7 +782,7 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
     int step, n, substep;
     double* pattern_mix_lh;
     double gradient_epsilon = 0.0001;
-    double prev_score, score, prev_score2;
+    double prev_score, prev_score2, score, t_score;
     PhyloTree *ptree;
 
     ntree = size();
@@ -831,18 +803,20 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
 
             // optimize tree branches
             score = optimizeAllBranches(n, logl_epsilon);  // loop max n times
-            // cout << "after optimizing branches, likelihood = " << score << endl;
+            cout << "after optimizing branches, likelihood = " << score << endl;
         
             // optimize tree weights
             score = optimizeTreeWeightsByEM(pattern_mix_lh, n);  // loop max n times
             // score = optimizeTreeWeightsByBFGS();
-            // cout << "after optimizing tree weights, likelihood = " << score << endl;
+            cout << "after optimizing tree weights, likelihood = " << score << endl;
 
             // optimize the unlinked subsitution models one by one
             if (!isLinkModel) {
                 for (i=0; i<models.size(); i++) {
                     models[i]->optimizeParameters(gradient_epsilon);
                 }
+                score = computeLikelihood();
+                cout << "after optimizing unlinked subsitution model, likelihood = " << score << endl;
             }
             
             // optimize the unlinked site-rate models one by one
@@ -850,6 +824,8 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
                 for (i=0; i<site_rates.size(); i++) {
                     site_rates[i]->optimizeParameters(gradient_epsilon);
                 }
+                score = computeLikelihood();
+                cout << "after optimizing unlinked site-rate model, likelihood = " << score << endl;
             }
             
             score = computeLikelihood();
@@ -860,7 +836,7 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
             }
             prev_score2 = score;
         }
-        // cout << "substep = " << substep << endl;
+        cout << "substep = " << substep << endl;
         
         // reset the ptn_freq array to the original frequencies of the patterns
         for (i = 0; i < ntree; i++) {
@@ -870,14 +846,22 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
         }
         
         // optimize the linked subsitution model
-        if (isLinkModel)
-            score = models[0]->optimizeParameters(gradient_epsilon);
+        if (isLinkModel) {
+            t_score = models[0]->optimizeParameters(gradient_epsilon);
+            if (t_score < 0.0)
+                score = t_score;
+            cout << "after optimizing linked subsitution model, likelihood = " << score << "(t_score=" << t_score << ")" << endl;
+        }
 
         // optimize the linked site rate model
-        if (anySiteRate && isLinkSiteRate)
-            score = site_rates[0]->optimizeParameters(gradient_epsilon);
+        if (anySiteRate && isLinkSiteRate) {
+            t_score = site_rates[0]->optimizeParameters(gradient_epsilon);
+            if (t_score < 0.0)
+                score = t_score;
+            cout << "after optimizing linked site rate model, likelihood = " << score << "(t_score=" << t_score << ")" << endl;
+        }
 
-        // cout << "step= " << step << " score=" << score << endl;
+        cout << "step= " << step << " score=" << score << endl;
         if (score < prev_score + gradient_epsilon) {
             // converged
             break;

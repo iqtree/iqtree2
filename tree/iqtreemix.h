@@ -51,12 +51,6 @@ public:
     virtual void computePatternLikelihood(double *pattern_lh, double *cur_logl = NULL,
             double *pattern_lh_cat = NULL, SiteLoglType wsl = WSL_RATECAT);
 
-    /**
-     * compute _pattern_lh_cat for site-likelihood per category
-     * @return tree log-likelihood
-     */
-    //virtual double computePatternLhCat(SiteLoglType wsl);
-
     virtual void initializeAllPartialLh();
 
     virtual void deleteAllPartialLh();
