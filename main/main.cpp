@@ -90,10 +90,12 @@ void generateRandomTree(Params &params)
     SplitGraph sg;
 
     try {
-
         if (params.tree_gen == YULE_HARDING || params.tree_gen == CATERPILLAR ||
-            params.tree_gen == BALANCED || params.tree_gen == UNIFORM || params.tree_gen == STAR_TREE) {
-            if (!overwriteFile(params.user_file.c_str())) return;
+            params.tree_gen == BALANCED || params.tree_gen == UNIFORM || 
+            params.tree_gen == STAR_TREE) {
+            if (!overwriteFile(params.user_file.c_str())) {
+                return;
+            }
             ofstream out;
             out.open(params.user_file);
             MTree itree;

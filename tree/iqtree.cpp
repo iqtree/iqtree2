@@ -700,29 +700,39 @@ PhyloNode* IQTree::generateProximityTree(IntVector& order,
 }
 
 void IQTree::generateRandomTreeSubtype() {
-    freeNode();
-    IntVector       order;
-    PhyloNodeVector nodes;
-    {
-        int* rand_stream = init_sprng(0, 1, params->ran_seed,
-                                        SPRNG_DEFAULT);
-        randomizeTaxonOrder(rand_stream, order);
-        free_sprng(rand_stream);
-    }
-    nodes.resize(aln->getNSeq(), nullptr);
-    if (params->start_tree_subtype_name=="QDT") {
-        this->prepareToComputeDistances();
-        generateProximityTree(order, 0, order.size(), 3, nodes);
-        this->doneComputingDistances();
+    if (params->start_tree_subtype_name!="QDT" &&
+        params->start_tree_subtype_name!="RBT") {
+        generateRandomTree(YULE_HARDING);
     }
     else {
-        generateRandomBalancedTree(order, 0, order.size(), 3, nodes);
+        freeNode();
+        IntVector       order;
+        PhyloNodeVector nodes;
+        {
+            int* rand_stream = init_sprng(0, 1, params->ran_seed,
+                                            SPRNG_DEFAULT);
+            randomizeTaxonOrder(rand_stream, order);
+            free_sprng(rand_stream);
+        }
+        nodes.resize(aln->getNSeq(), nullptr);
+        if (params->start_tree_subtype_name=="QDT") {
+            this->prepareToComputeDistances();
+            generateProximityTree(order, 0, order.size(), 3, nodes);
+            this->doneComputingDistances();
+        }
+        else {
+            generateRandomBalancedTree(order, 0, order.size(), 3, nodes);
+        }
+        root     = nodes[0];
+        leafNum  = aln->getNSeq32();
+        rooted   = false;
+        setAlignment(aln);
+        initializeTree();
     }
-    root     = nodes[0];
-    leafNum  = aln->getNSeq32();
-    rooted   = false;
-    setAlignment(aln);
-    initializeTree();
+    if (rooted) {
+        rooted = false;
+        convertToRooted();
+    }
 }
 
 void IQTree::computeInitialTree(LikelihoodKernel kernel) {
@@ -828,18 +838,13 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
             break;
 
         case START_TREE_TYPE::STT_RANDOM_TREE:
-            if (params->start_tree_subtype_name=="RBT" ||
-                params->start_tree_subtype_name=="QDT" ) {
-                logLine("Creating " + params->start_tree_subtype_name +
-                        " tree ...");
-                start = getRealTime();
-                generateRandomTreeSubtype();
-                LOG_LINE(VerboseMode::VB_QUIET, "Random tree creation took "
-                         << getRealTime() - start << " seconds");
-                params->numInitTrees = 1;
-                break;
-            }
-            //else, fall through
+            logLine("Creating " + params->start_tree_subtype_name +
+                    " tree ...");
+            start = getRealTime();
+            generateRandomTreeSubtype();
+            LOG_LINE(VerboseMode::VB_QUIET, "Random tree creation took "
+                        << getRealTime() - start << " seconds");
+            break;
                 
         case START_TREE_TYPE::STT_PLL_PARSIMONY:
             logLine("\nCreate initial parsimony tree"
@@ -1049,17 +1054,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
                     break;
 
                 case START_TREE_TYPE::STT_RANDOM_TREE:
-                    if (params->start_tree_subtype_name=="QDT" ||
-                        params->start_tree_subtype_name=="RBT") {
-                        generateRandomTreeSubtype();
-                    }
-                    else {
-                        generateRandomTree(YULE_HARDING);
-                    }
-                    if (rooted) {
-                        rooted = false;
-                        convertToRooted();
-                    }
+                    generateRandomTreeSubtype();
                     break;
 
                 case START_TREE_TYPE::STT_PARSIMONY:
@@ -1127,8 +1122,14 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     bool   sayHowLong     = init_size < initTreeStrings.size() && noisy;
     if (sayHowLong) {
         size_t treeCount = initTreeStrings.size() - init_size;
-        LOG_LINE(VerboseMode::VB_QUIET, "Computing log-likelihood of "
-                 << treeCount << " initial trees ... ");
+        if (params->compute_likelihood) {
+            LOG_LINE(VerboseMode::VB_QUIET, "Computing log-likelihood of "
+                    << treeCount << " initial trees ... ");
+        }
+        else {
+            LOG_LINE(VerboseMode::VB_QUIET, "Computing parsimony scores of "
+                    << treeCount << " initial trees ... ");
+        }
     }
     startTime = getRealTime();
 
@@ -1275,15 +1276,11 @@ string IQTree::generateParsimonyTree(int randomSeed) {
             }
             has_pll_spr_been_run = true;
             break;
+
         case START_TREE_TYPE::STT_RANDOM_TREE:
-            if (params->start_tree_subtype_name=="QDT" ||
-                params->start_tree_subtype_name=="RBT") {
-                generateRandomTreeSubtype();
-            }
-            else {
-                generateRandomTree(YULE_HARDING);
-            }
+            generateRandomTreeSubtype();
             break;
+
         default:
             const char* doing_what;
             computeParsimonyTree(aln, randstream,  
@@ -4702,12 +4699,17 @@ void IQTree::sendStopMessage() {
 }
 
 void PhyloTree::warnNumThreads() const {
-    if (num_threads <= 1)
+    if (!params->compute_likelihood) {
         return;
+    }
+    if (num_threads <= 1) {
+        return;
+    }
     // return if -nt AUTO
-    if (params->num_threads == 0)
+    if (params->num_threads == 0) {
         return;
-    intptr_t nptn = getAlnNPattern();
+    }
+    intptr_t nptn = getAlnNPattern();    
     if (nptn < static_cast<intptr_t>(num_threads*vector_size)) {
         outError("Too many threads for short alignments,"
                  " please reduce number of threads"
@@ -4742,11 +4744,8 @@ void IQTree::initializePLLIfNecessary() {
     if (isInitializedPLL()) {
         return;
     }
-    if (params->start_tree == START_TREE_TYPE::STT_PLL_PARSIMONY 
-        || ( params->start_tree == START_TREE_TYPE::STT_RANDOM_TREE &&
-             params->start_tree_subtype_name != "RBT" &&
-             params->start_tree_subtype_name != "QDT")
-        || params->pll) {
+    if (params->start_tree == START_TREE_TYPE::STT_PLL_PARSIMONY ||
+        params->pll) {
         initializePLL(*params);
     }
 }

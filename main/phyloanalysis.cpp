@@ -2522,10 +2522,12 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
                        ? params.modelEps : (params.modelEps*10);
     string initTree;
     iqtree->prepareToComputeDistances();
+    int    parsimony_score = 0;
     //None of his will work until there are actually taxa tree
     //(we cannot do it until we *have* that).
     if (!params.compute_ml_tree_only) {
         iqtree->ensureNumberOfThreadsIsSet(&params, false);
+        bool calculate_parsimony = false;
         if (params.compute_likelihood) {
             iqtree->initializeAllPartialLh();
             handleGammaInvariantOptions(params, *iqtree);
@@ -2539,21 +2541,36 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
             initTree = iqtree->getTreeString();
         }
         // now overwrite with random tree
-        if (params.start_tree == START_TREE_TYPE::STT_RANDOM_TREE && !finishedInitTree &&
-            params.start_tree_subtype_name != "RBT" &&
-            params.start_tree_subtype_name != "QDT") {
-            cout << "Generate random initial Yule-Harding tree..." << endl;
-            iqtree->generateRandomTree(YULE_HARDING);
-            iqtree->wrapperFixNegativeBranch(true);
-            iqtree->initializeAllPartialLh();
-            initTree = iqtree->optimizeBranches(params.brlen_num_traversal);
-            cout << "Log-likelihood of random tree: " << iqtree->getCurScore() << endl;
+        if (params.start_tree == START_TREE_TYPE::STT_RANDOM_TREE && !finishedInitTree) {
+            cout << "Generate random initial " << params.start_tree_subtype_name << " tree..." << endl;
+            iqtree->generateRandomTreeSubtype();
+            if (params.compute_likelihood) {
+                iqtree->wrapperFixNegativeBranch(true);
+                iqtree->initializeAllPartialLh();
+                initTree = iqtree->optimizeBranches(params.brlen_num_traversal);
+                cout << "Log-likelihood of random tree: " << iqtree->getCurScore() << endl;
+            } 
+            else {
+                calculate_parsimony = true;
+            }
+        } 
+        else if (!finishedInitTree) {
+            calculate_parsimony = true;
+        }
+        if (calculate_parsimony) {
+            iqtree->setParsimonyKernel(iqtree->params->SSE);
+            iqtree->initializeAllPartialPars();
+            iqtree->setParsimonyBranchLengths();
+            parsimony_score = iqtree->computeParsimony("Calculating parsimony score of random tree");
+            initTree = iqtree->getTreeString();
+            cout << "Parsimony score of random tree: " << parsimony_score << endl;
         }
         
         /****************** NOW PERFORM MAXIMUM LIKELIHOOD TREE RECONSTRUCTION ******************/
         
         // Update best tree
         if (!finishedInitTree) {
+            double score = params.compute_likelihood ? iqtree->getCurScore() : (0-parsimony_score);
             iqtree->addTreeToCandidateSet(initTree, iqtree->getCurScore(), false, MPIHelper::getInstance().getProcessID());
             iqtree->printResultTree();
             iqtree->intermediateTrees.update(iqtree->getTreeString(), iqtree->getCurScore());

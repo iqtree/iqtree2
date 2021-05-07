@@ -457,9 +457,11 @@ namespace {
             params.start_tree = START_TREE_TYPE::STT_PARSIMONY_JOINING;
         else if (tree_name == "PLLPARS")
             params.start_tree = START_TREE_TYPE::STT_PLL_PARSIMONY;
-        else if (tree_name == "RAND" || tree_name=="RANDOM" ||
-                 tree_name == "RBT"  || tree_name == "QDT") {
-            params.start_tree_subtype_name = tree_name;
+        else if (tree_name == "RAND" || tree_name=="RANDOM") {
+            params.start_tree_subtype_name = "Yule-Harding";            
+            params.start_tree = START_TREE_TYPE::STT_RANDOM_TREE;
+        } else if (tree_name == "RBT"  || tree_name == "QDT") {  
+            params.start_tree_subtype_name = tree_name;      
             params.start_tree = START_TREE_TYPE::STT_RANDOM_TREE;
         }
         else if (START_TREE_RECOGNIZED(tree_name)) {
