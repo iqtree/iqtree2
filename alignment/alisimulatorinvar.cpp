@@ -15,6 +15,9 @@ AliSimulator(params) {
 AliSimulatorInvar::AliSimulatorInvar(AliSimulator *alisimulator, double invar_prop){
     tree = alisimulator->tree;
     params = alisimulator->params;
+    num_sites_per_state = alisimulator->num_sites_per_state;
+    expected_num_sites = alisimulator->expected_num_sites;
+    partition_rate = alisimulator->partition_rate;
     invariant_proportion = invar_prop;
 }
 
@@ -29,7 +32,7 @@ void AliSimulatorInvar::simulateSeqs(int sequence_length, double *site_specific_
     FOR_NEIGHBOR(node, dad, it) {
         
         // compute the transition probability matrix
-        model->computeTransMatrix((*it)->length, trans_matrix);
+        model->computeTransMatrix(partition_rate*(*it)->length, trans_matrix);
         
         // convert the probability matrix into an accumulated probability matrix
         convertProMatrixIntoAccumulatedProMatrix(trans_matrix, max_num_states, max_num_states);
@@ -62,7 +65,7 @@ void AliSimulatorInvar::simulateSeqs(int sequence_length, double *site_specific_
 void AliSimulatorInvar::simulateSeqsForTree()
 {
     // get variables
-    int sequence_length = params->alisim_sequence_length/params->alisim_sites_per_state*params->alisim_length_ratio;
+    int sequence_length = expected_num_sites*params->alisim_length_ratio;
     double invariant_proportion = tree->getRate()->getPInvar();
     ModelSubst *model = tree->getModel();
     int max_num_states = tree->aln->getMaxNumStates();
@@ -90,4 +93,8 @@ void AliSimulatorInvar::simulateSeqsForTree()
     
     // delete trans_matrix array
     delete[] trans_matrix;
+    
+    // removing constant states if it's necessary
+    if (params->alisim_length_ratio > 1)
+        removeConstantSites();
 }

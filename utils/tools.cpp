@@ -1117,7 +1117,6 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_ancestral_sequence_name = "";
     params.alisim_continuous_gamma = false;
     params.alisim_max_rate_categories_for_applying_caching = 5;
-    params.alisim_sites_per_state = 1;
     params.alisim_num_states_morph = 32;
     params.alisim_num_taxa_uniform_start = -1;
     params.alisim_num_taxa_uniform_end = -1;
@@ -4677,9 +4676,6 @@ void parseArg(int argc, char *argv[], Params &params) {
     if (params.sequence_type)
     {
         std::string sequence_type(params.sequence_type);
-        string KEYWORD = "CODON";
-        if (sequence_type.length() >= KEYWORD.length() && sequence_type.substr(0, KEYWORD.length()) == KEYWORD)
-            params.alisim_sites_per_state = 3;
     }
     
     // reset alisim_length_ratio if Ascertainment Bias Correction option (+ASC) is inactive

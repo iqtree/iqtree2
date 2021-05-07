@@ -15,6 +15,9 @@ AliSimulator(params) {
 AliSimulatorHeterogeneity::AliSimulatorHeterogeneity(AliSimulator *alisimulator){
     tree = alisimulator->tree;
     params = alisimulator->params;
+    num_sites_per_state = alisimulator->num_sites_per_state;
+    expected_num_sites = alisimulator->expected_num_sites;
+    partition_rate = alisimulator->partition_rate;
     rate_heterogeneity = tree->getRate();
 }
 
@@ -23,7 +26,7 @@ AliSimulatorHeterogeneity::AliSimulatorHeterogeneity(AliSimulator *alisimulator)
 */
 void AliSimulatorHeterogeneity::intializeSiteSpecificModelIndex()
 {
-    int sequence_length = params->alisim_sequence_length/params->alisim_sites_per_state*params->alisim_length_ratio;
+    int sequence_length = expected_num_sites*params->alisim_length_ratio;
     site_specific_model_index.resize(sequence_length);
     
     // if a mixture model is used -> randomly select a model for each site based on the weights of model components
@@ -117,7 +120,7 @@ void AliSimulatorHeterogeneity::intializeCachingAccumulatedTransMatrices(double 
             double branch_length_by_category = rate_heterogeneity->isHeterotachy()?branch_lengths[category_index]:branch_lengths[0];
             
             // compute the transition matrix
-            model->computeTransMatrix(branch_length_by_category*rate, trans_matrix, model_index);
+            model->computeTransMatrix(partition_rate*branch_length_by_category*rate, trans_matrix, model_index);
             
             // copy the transition matrix to the cache_trans_matrix
             for (int trans_index = 0; trans_index < max_num_states*max_num_states; trans_index++)
@@ -202,7 +205,7 @@ int AliSimulatorHeterogeneity::estimateStateFromAccumulatedTransMatrices(double 
 int AliSimulatorHeterogeneity::estimateStateFromOriginalTransMatrix(ModelSubst *model, int model_component_index, double rate, double *trans_matrix, int max_num_states, double branch_length, int dad_state)
 {
     // compute the transition matrix
-    model->computeTransMatrix(branch_length*rate, trans_matrix, model_component_index);
+    model->computeTransMatrix(partition_rate*branch_length*rate, trans_matrix, model_component_index);
     
     // iteratively select the state, considering it's dad states, and the transition_probability_matrix
     int starting_index = dad_state*max_num_states;
@@ -324,12 +327,15 @@ void AliSimulatorHeterogeneity::getSiteSpecificRates(double *site_specific_rates
 */
 void AliSimulatorHeterogeneity::simulateSeqsForTree(){
     // get variables
-    int sequence_length = params->alisim_sequence_length/params->alisim_sites_per_state*params->alisim_length_ratio;
+    int sequence_length = expected_num_sites*params->alisim_length_ratio;
     ModelSubst *model = tree->getModel();
     int max_num_states = tree->aln->getMaxNumStates();
     
     // initialize trans_matrix
     double *trans_matrix = new double[max_num_states*max_num_states];
+    
+    // initialize site specific model index based on its weights (in the mixture model)
+    intializeSiteSpecificModelIndex();
     
     // initialize site-specific rates
     double *site_specific_rates = new double[sequence_length];
@@ -342,4 +348,8 @@ void AliSimulatorHeterogeneity::simulateSeqsForTree(){
     
     // delete trans_matrix array
     delete[] trans_matrix;
+    
+    // removing constant states if it's necessary
+    if (params->alisim_length_ratio > 1)
+        removeConstantSites();
 }

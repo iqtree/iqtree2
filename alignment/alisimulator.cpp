@@ -7,19 +7,31 @@
 
 #include "alisimulator.h"
 
-AliSimulator::AliSimulator(Params *input_params)
+AliSimulator::AliSimulator(Params *input_params, int expected_number_sites, double new_partition_rate)
 {
     params = input_params;
     AliSimulator::initializeIQTreeFromTreeFile();
+    num_sites_per_state = tree->aln->seq_type == SEQ_CODON?3:1;
+    if (expected_number_sites == -1)
+        expected_num_sites = params->alisim_sequence_length/num_sites_per_state*params->alisim_length_ratio;
+    else
+        expected_num_sites = expected_number_sites;
+    partition_rate = new_partition_rate;
 }
 
 /**
     constructor
 */
-AliSimulator::AliSimulator(Params *input_params, IQTree *iq_tree)
+AliSimulator::AliSimulator(Params *input_params, IQTree *iq_tree, int expected_number_sites, double new_partition_rate)
 {
     params = input_params;
     tree = iq_tree;
+    num_sites_per_state = tree->aln->seq_type == SEQ_CODON?3:1;
+    if (expected_number_sites == -1)
+        expected_num_sites = params->alisim_sequence_length/num_sites_per_state*params->alisim_length_ratio;
+    else
+        expected_num_sites = expected_number_sites;
+    partition_rate = new_partition_rate;
 }
 
 AliSimulator::~AliSimulator()
@@ -31,20 +43,6 @@ AliSimulator::~AliSimulator()
     
     // delete tree
     delete tree;
-}
-
-/**
-*  show all input parameters for AliSim
-*/
-void AliSimulator::showParameters()
-{
-    cout << " - Tree filepath: " << params->user_file <<"\n";
-    cout << " - Length of output sequences: " << params->alisim_sequence_length <<"\n";
-    if (!params->model_name.empty())
-        cout << " - Model: " << params->model_name <<"\n";
-    cout << " - Number of output datasets: " << params->alisim_dataset_num<<"\n";
-    if (params->alisim_ancestral_sequence_name.length() > 0)
-        cout << " - Ancestral sequence position: " << params->alisim_dataset_num <<"\n";
 }
 
 /**
@@ -182,34 +180,95 @@ void AliSimulator::initializeModel()
 }
 
 /**
-*  generate an alignment from a tree (model, alignment instances are supplied via the IQTree instance)
+    remove all constant sites (in case with +ASC)
 */
-void AliSimulator::generateSingleDatasetFromSingleTree(string output_filepath, IntVector ancestral_sequence)
+void AliSimulator::removeConstantSites(){
+    // dummy variables
+    int num_variant_states = -1;
+    IntVector variant_state_mask;
+    
+    // create a variant state mask
+    createVariantStateMask(variant_state_mask, num_variant_states, expected_num_sites, tree->root, tree->root);
+    
+    // return error if num_variant_states is less than the expected_num_variant_states
+    if (num_variant_states < expected_num_sites){
+        outError("Unfortunately, after removing constant sites, the number of variant sites is less than the expected sequence length. Please use --length-ratio <LENGTH_RATIO> to generate more abundant sites and try again. The current <LENGTH_RATIO> is "+ convertDoubleToString(params->alisim_length_ratio));
+    }
+    
+    // get only variant sites for leaves
+    getOnlyVariantSites(variant_state_mask, tree->root, tree->root);
+}
+
+/**
+    only get variant sites
+*/
+void AliSimulator::getOnlyVariantSites(IntVector variant_state_mask, Node *node, Node *dad){
+    if (node->isLeaf() && node->name!=ROOT_NAME) {
+        // dummy sequence
+        IntVector variant_sites;
+        
+        // initialize the number of variant sites
+        int num_variant_states = 0;
+        
+        // browse sites one by one
+        for (int i = 0; i < node->sequence.size(); i++)
+            // only get variant sites
+            if (variant_state_mask[i] == -1)
+            {
+                // get the variant site
+                variant_sites.push_back(node->sequence[i]);
+                num_variant_states++;
+                
+                // stop checking further states if num_variant_states has exceeded the expected_num_variant_states
+                if (num_variant_states >= expected_num_sites)
+                    break;
+            }
+        
+        // replace the sequence of the Leaf by variant sites
+        node->sequence.clear();
+        node->sequence = variant_sites;
+    }
+    
+    // process its neighbors/children
+    NeighborVec::iterator it;
+    FOR_NEIGHBOR(node, dad, it) {
+        // browse 1-step deeper to the neighbor node
+        getOnlyVariantSites(variant_state_mask, (*it)->node, node);
+    }
+}
+
+/**
+*  generate the current partition of an alignment from a tree (model, alignment instances are supplied via the IQTree instance)
+*/
+void AliSimulator::generatePartitionAlignment(IntVector ancestral_sequence)
 {
-    // set ancestral sequence to the root node
-    tree->MTree::root->sequence = ancestral_sequence;
+    // if the ancestral sequence is not specified, randomly generate the sequence
+    if (ancestral_sequence.size() == 0)
+    {
+        int sequence_length = expected_num_sites*params->alisim_length_ratio;
+        tree->MTree::root->sequence = generateRandomSequence(sequence_length);
+    }
+    // otherwise, using the ancestral sequence + abundant sites
+    else
+    {
+        // set the ancestral sequence to the root node
+        tree->MTree::root->sequence = ancestral_sequence;
+        
+        // add abundant_sites
+        int num_abundant_sites = expected_num_sites * params->alisim_length_ratio - ancestral_sequence.size();
+        if (num_abundant_sites > 0)
+        {
+            IntVector abundant_sites = generateRandomSequence(num_abundant_sites);
+            for (int site:abundant_sites)
+                tree->MTree::root->sequence.push_back(site);
+        }
+    }
     
     // validate the sequence length (in case of codon)
     validataSeqLengthCodon();
     
     // simulate the sequence for each node in the tree by DFS
     simulateSeqsForTree();
-    
-    // if constant states are needed to be removed -> firstly create the variant state mask
-    int num_variant_states = -1;
-    int expected_num_variant_states = params->alisim_sequence_length/params->alisim_sites_per_state;
-    IntVector variant_state_mask;
-    if (params->alisim_length_ratio > 1)
-    {
-        createVariantStateMask(variant_state_mask, num_variant_states, expected_num_variant_states, tree->root, tree->root);
-        // return error if num_variant_states is less than the expected_num_variant_states
-        if (num_variant_states < expected_num_variant_states){
-            outError("Unfortunately, after removing constant sites, the number of variant sites is less than the expected sequence length. Please use --length-ratio <LENGTH_RATIO> to generate more abundant sites and try again. The current <LENGTH_RATIO> is "+ convertDoubleToString(params->alisim_length_ratio));
-        }
-    }
-    
-    // write output to file
-    writeSequencesToFile(output_filepath, variant_state_mask);
 }
 
 /**
@@ -251,121 +310,6 @@ void AliSimulator::createVariantStateMask(IntVector &variant_state_mask, int &nu
         // browse 1-step deeper to the neighbor node
         createVariantStateMask(variant_state_mask, num_variant_states, expected_num_variant_states, (*it)->node, node);
     }
-}
-
-/**
-*  generate mutiple alignments from a tree (model, alignment instances are supplied via the IQTree instance)
-*/
-void AliSimulator::generateMultipleAlignmentsFromSingleTree()
-{
-    // Get/Generate the ancestral sequence
-    IntVector ancestral_sequence;
-    // retrieve the ancestral sequence from input file if its position is specified in the input parameter
-    if (params->alisim_ancestral_sequence_name.length() > 0)
-        ancestral_sequence = retrieveAncestralSequenceFromInputFile(params->alisim_ancestral_sequence_aln_filepath, params->alisim_ancestral_sequence_name);
-    
-    // iteratively generate multiple datasets for each tree
-    for (int i = 0; i < params->alisim_dataset_num; i++)
-    {
-        // initialize site specific model index based on its weights (in the mixture model)
-        intializeSiteSpecificModelIndex();
-        
-        // if the ancestral sequence is not specified, randomly generate the sequence
-        if (params->alisim_ancestral_sequence_name.length() == 0)
-            ancestral_sequence = generateRandomSequence((int)(params->alisim_sequence_length/params->alisim_sites_per_state*params->alisim_length_ratio));
-        
-        // initialize output_filepath
-        std::string output_filepath(params->user_file);
-        output_filepath = output_filepath.substr(0, output_filepath.find_last_of("/\\") + 1);
-        output_filepath = output_filepath
-        +params->alisim_output_filename
-        +"_"+convertIntToString(i)+".phy";
-        
-        generateSingleDatasetFromSingleTree(output_filepath, ancestral_sequence);
-    }
-}
-
-/**
-*  retrieve the ancestral sequence for the root node from an input file
-*/
-IntVector AliSimulator:: retrieveAncestralSequenceFromInputFile(char *aln_filepath, string sequence_name)
-{
-    IntVector sequence;
-    
-    // read sequences from the input file
-    Alignment *aln = new Alignment();
-    StrVector sequences;
-    int nseq = 0, nsite = 0;
-    aln->extractSequences(aln_filepath, params->sequence_type, sequences, nseq, nsite);
-    StrVector seq_names = aln->getSeqNames();
-    
-    // delete aln
-    delete aln;
-    
-    // overwrite the output sequence_length
-    params->alisim_sequence_length = nsite;
-    cout<<" Sequence length is now set equally to the length of ancestral sequence."<<endl;
-    
-    string sequence_str = "";
-    for (int i = 0; i < seq_names.size(); i++)
-        if (!sequence_name.compare(seq_names[i]))
-        {
-            sequence_str = sequences[i];
-            break;
-        }
-    if (sequence_str.length() == 0)
-        outError("Sequence name could not be found in the input alignment file.");
-    
-    // get Max number of states
-    int max_num_states = tree->aln->getMaxNumStates();
-    
-    // get the base frequencies
-    double *state_freq = new double[max_num_states];
-    getStateFrequenciesFromModel(state_freq);
-    
-    // convert the probability matrix into an accumulated probability matrix
-    convertProMatrixIntoAccumulatedProMatrix(state_freq, 1, max_num_states);
-    
-    // convert the input sequence into (numerical states) sequence
-    int sequence_length = params->alisim_sequence_length/params->alisim_sites_per_state;
-    sequence.resize(sequence_length);
-    ostringstream err_str;
-    int num_error = 0;
-    for (int i = 0; i < sequence_length; i++)
-    {
-        if (tree->aln->seq_type == SEQ_CODON)
-        {
-            int site_index = i*params->alisim_sites_per_state;
-            sequence[i] = tree->aln->getCodonStateTypeFromSites(tree->aln->convertState(sequence_str[site_index], SEQ_DNA), tree->aln->convertState(sequence_str[site_index+1], SEQ_DNA), tree->aln->convertState(sequence_str[site_index+2], SEQ_DNA), sequence_name, site_index, err_str, num_error);
-        }
-        else
-        {
-            sequence[i] = tree->aln->convertState(sequence_str[i]);
-        
-            // Handle invalid/unknown state
-            if (sequence[i] >= max_num_states)
-                sequence[i] = getRandomItemWithAccumulatedProbabilityMatrix(state_freq, 0, max_num_states);
-        }
-    }
-    
-    // show error from ancestral sequence (if any)
-    if (num_error)
-        outError(err_str.str());
-    
-    // randomly generate abundant states (if necessary)
-    int num_abundant_states = params->alisim_sequence_length/params->alisim_sites_per_state*params->alisim_length_ratio - sequence_length;
-    for (int i = 0; i < num_abundant_states; i++)
-    {
-        sequence.push_back(getRandomItemWithAccumulatedProbabilityMatrix(state_freq, 0, max_num_states));
-    }
-    
-    // delete state_freq
-    delete [] state_freq;
-    
-    // show warning
-    outWarning("Using an ancestral sequence with base frequencies that are not compatible with the specification of the model may lead to unexpected results.");
-        
-    return sequence;
 }
 
 /**
@@ -421,7 +365,8 @@ void AliSimulator::getStateFrequenciesFromModel(double *state_freqs){
     // get user-defined base frequencies (if any)
     else if ((tree->getModel()->getFreqType() == FREQ_USER_DEFINED)
         || (ModelLieMarkov::validModelName(tree->getModel()->getName()))
-             || tree->aln->seq_type == SEQ_CODON)
+             || tree->aln->seq_type == SEQ_CODON
+             || (tree->getModel()->getFreqType() == FREQ_EMPIRICAL && params->aln_file))
         tree->getModel()->getStateFrequency(state_freqs);
     else // otherwise, randomly generate the base frequencies
     {
@@ -455,7 +400,7 @@ void AliSimulator::generateRandomBaseFrequencies(double *base_frequencies, int m
 void AliSimulator::simulateSeqsForTree()
 {
     // get variables
-    int sequence_length = params->alisim_sequence_length/params->alisim_sites_per_state*params->alisim_length_ratio;
+    int sequence_length = expected_num_sites*params->alisim_length_ratio;
     ModelSubst *model = tree->getModel();
     int max_num_states = tree->aln->getMaxNumStates();
     
@@ -467,6 +412,10 @@ void AliSimulator::simulateSeqsForTree()
     
     // delete trans_matrix array
     delete[] trans_matrix;
+    
+    // removing constant states if it's necessary
+    if (params->alisim_length_ratio > 1)
+        removeConstantSites();
 }
 
 /**
@@ -480,7 +429,7 @@ void AliSimulator::simulateSeqs(int sequence_length, ModelSubst *model, double *
     FOR_NEIGHBOR(node, dad, it) {
         
         // compute the transition probability matrix
-        model->computeTransMatrix((*it)->length, trans_matrix);
+        model->computeTransMatrix(partition_rate*(*it)->length, trans_matrix);
         
         // convert the probability matrix into an accumulated probability matrix
         convertProMatrixIntoAccumulatedProMatrix(trans_matrix, max_num_states, max_num_states);
@@ -571,181 +520,6 @@ int AliSimulator::binarysearchItemWithAccumulatedProbabilityMatrix(double *accum
 }
 
 /**
-*  write all sequences of a tree to an output file
-*/
-void AliSimulator::writeSequencesToFile(string file_path, IntVector variant_state_mask)
-{
-    try {
-        ofstream out;
-        out.exceptions(ios::failbit | ios::badbit);
-        out.open(file_path.c_str());
-        
-        // write the first line <#taxa> <length_of_sequence>
-        int leaf_num = tree->leafNum - ((tree->root->isLeaf() && tree->root->name == ROOT_NAME)?1:0);
-        out <<leaf_num<<" "<<params->alisim_sequence_length<< endl;
-        
-        // write senquences of leaf nodes to file with/without gaps copied from the input sequence
-        if (params->aln_file && !params->alisim_no_copy_gaps)
-        {
-            // load input sequences (with gaps)
-            vector<string> seq_names;
-            vector<string> sequences;
-            loadSequences(params->aln_file, seq_names, sequences);
-            
-            // show a warning if the length of input alignment is unequal to that of simulated sequence
-            if (sequences.size() > 0  && sequences[0].length() != params->alisim_sequence_length)
-                outWarning("The sequence length of the input alignment is unequal to that of that simulated sequences. Thus, only gaps in the first MIN(input_sequence_length, simulated_sequence_length) sites are copied.");
-            
-            // write simulated sequence with the gaps copied from the input sequence
-            writeASequenceToFileWithGaps(tree->aln, seq_names, sequences, out, variant_state_mask, tree->root, tree->root);
-        }
-        else
-        {
-            writeASequenceToFile(tree->aln, out, variant_state_mask, tree->root, tree->root);
-        }
-        
-        // close the file
-        out.close();
-    } catch (ios::failure) {
-        outError(ERR_WRITE_OUTPUT, file_path);
-    }
-}
-
-/**
-*  load sequences from input file
-*/
-void AliSimulator::loadSequences(char *file_path, vector<string> &seq_names, vector<string> &sequences)
-{
-    // read sequences from the input file
-    Alignment *aln = new Alignment();
-    int nseq = 0, nsite = 0;
-    aln->extractSequences(params->aln_file, params->sequence_type, sequences, nseq, nsite);
-    seq_names = aln->getSeqNames();
-}
-
-/**
-*  write a sequence of a node to an output file
-*/
-void AliSimulator::writeASequenceToFile(Alignment *aln, ofstream &out, IntVector variant_state_mask, Node *node, Node *dad)
-{
-    if (node->isLeaf() && node->name!=ROOT_NAME) {
-        out <<node->name <<" "<<convertEncodedSequenceToReadableSequence(aln, node->sequence, variant_state_mask) << endl;
-    }
-    
-    NeighborVec::iterator it;
-    FOR_NEIGHBOR(node, dad, it) {
-        writeASequenceToFile(aln, out, variant_state_mask, (*it)->node, node);
-    }
-}
-
-/**
-*  convert an encoded sequence (with integer numbers) to a readable sequence (with ACGT...)
-*/
-string AliSimulator::convertEncodedSequenceToReadableSequence(Alignment *aln, IntVector sequence, IntVector variant_state_mask)
-{
-    // initialize the output_sequence
-    string output_sequence = "";
-    
-    // initialize num_variant_states
-    int num_variant_states = 0;
-    
-    // browse state by state
-    for (int i = 0; i < sequence.size(); i++)
-    {
-        if (variant_state_mask.empty()
-                || (!variant_state_mask.empty() && variant_state_mask[i] == -1))
-            {
-                output_sequence = output_sequence + aln->convertStateBackStr(sequence[i]);
-                num_variant_states++;
-                
-                // stop checking abundant states if the first expected variant states are all converted into readable sites
-                if (num_variant_states >= params->alisim_sequence_length/params->alisim_sites_per_state)
-                    break;
-            }
-    }
-        
-    return output_sequence;
-    
-};
-
-/**
-*  write a sequence of a node to an output file with gaps copied from the input sequence
-*/
-void AliSimulator::writeASequenceToFileWithGaps(Alignment *aln, vector<string> seq_names, vector<string> sequences, ofstream &out, IntVector variant_state_mask, Node *node, Node *dad)
-{
-    if (node->isLeaf() && node->name!=ROOT_NAME) {
-        // retrieve the input sequence of the current node
-        for (int i = 0; i < sequences.size(); i++)
-            if (!seq_names[i].compare(node->name))
-            {
-                out <<node->name <<" "<<convertEncodedSequenceToReadableSequenceWithGaps(aln, sequences[i], node->sequence, variant_state_mask) << endl;
-            }
-    }
-    
-    NeighborVec::iterator it;
-    FOR_NEIGHBOR(node, dad, it) {
-        writeASequenceToFileWithGaps(aln, seq_names, sequences, out, variant_state_mask, (*it)->node, node);
-    }
-}
-
-/**
-*  convert an encoded sequence (with integer numbers) to a readable sequence (with ACGT...) with gaps copied from the input sequence
-*/
-string AliSimulator::convertEncodedSequenceToReadableSequenceWithGaps(Alignment *aln, string input_sequence, IntVector sequence, IntVector variant_state_mask)
-{
-    // initialize the output_sequence
-    string output_sequence = "";
-    
-    // initialize num_variant_states
-    int num_variant_states = 0;
-    
-    // browse state by state
-    for (int i = 0; i < sequence.size(); i++)
-    {
-        int num_sites_per_state = params->alisim_sites_per_state;
-        // handle gaps
-        if ((i+1)*num_sites_per_state - 1 < input_sequence.length()
-            && ((num_sites_per_state == 3
-                &&(input_sequence[i*num_sites_per_state] == '-'
-                   || input_sequence[i*num_sites_per_state+1] == '-'
-                   || input_sequence[i*num_sites_per_state+2] == '-'))
-                || input_sequence[i] == '-')){
-            // insert gaps in case with protein data
-            if (num_sites_per_state == 3)
-            {
-                output_sequence = output_sequence + input_sequence[i*num_sites_per_state];
-                output_sequence = output_sequence + input_sequence[i*num_sites_per_state+1];
-                output_sequence = output_sequence + input_sequence[i*num_sites_per_state+2];
-                
-                // increase the num_variant_states
-                num_variant_states++;
-            }
-            // insert gaps in normal cases
-            else
-            {
-                output_sequence = output_sequence + "-";
-                
-                // increase the num_variant_states
-                num_variant_states++;
-            }
-        }
-        // if it's not a gap
-        else if (variant_state_mask.empty()
-                || (!variant_state_mask.empty() && variant_state_mask[i] == -1))
-            {
-                output_sequence = output_sequence + aln->convertStateBackStr(sequence[i]);
-                num_variant_states++;
-            }
-        
-        // stop checking abundant states if the first expected variant states are all converted into readable sites
-        if (num_variant_states >= params->alisim_sequence_length/params->alisim_sites_per_state)
-            break;
-    }
-        
-    return output_sequence;
-}
-
-/**
 *  validate sequence length of codon
 *
 */
@@ -753,4 +527,11 @@ void AliSimulator::validataSeqLengthCodon()
 {
     if (tree->aln->seq_type == SEQ_CODON && (params->alisim_sequence_length%3))
         outError("Sequence length of Codon must be divisible by 3. Please check & try again!");
+}
+
+/**
+*  update the expected_num_sites due to the change of the sequence_length
+*/
+void AliSimulator::refreshExpectedNumSites(){
+    expected_num_sites = params->alisim_sequence_length/num_sites_per_state*params->alisim_length_ratio;
 }

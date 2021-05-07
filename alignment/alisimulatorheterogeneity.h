@@ -43,7 +43,7 @@ protected:
     /**
         initialize site specific model index based on its weights in the mixture model
     */
-    virtual void intializeSiteSpecificModelIndex();
+    void intializeSiteSpecificModelIndex();
     
     /**
         initialize state freqs for all model components (of a mixture model)

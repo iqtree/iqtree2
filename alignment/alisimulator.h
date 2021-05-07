@@ -42,16 +42,6 @@ protected:
     void initializeModel();
     
     /**
-    *  generate an alignment from a tree (model, alignment instances are supplied via the IQTree instance)
-    */
-    void generateSingleDatasetFromSingleTree(string output_filepath, IntVector ancestral_sequence);
-
-    /**
-    *  retrieve the ancestral sequence for the root node from an input file
-    */
-    IntVector retrieveAncestralSequenceFromInputFile(char *aln_filepath, string sequence_name);
-    
-    /**
     *  get state frequencies from model
     */
     void getStateFrequenciesFromModel(double *state_freqs);
@@ -85,36 +75,6 @@ protected:
     *  binary search an item from a set with accumulated probability array
     */
     int binarysearchItemWithAccumulatedProbabilityMatrix(double *accumulated_probability_maxtrix, double random_number, int start, int end, int first);
-
-    /**
-    *  write all sequences of a tree to an output file
-    */
-    void writeSequencesToFile(string file_path, IntVector variant_state_mask);
-    
-    /**
-    *  load sequences from input file
-    */
-    void loadSequences(char *file_path, vector<string> &seq_names, vector<string> &sequences);
-    
-    /**
-    *  write a sequence of a node to an output file
-    */
-    void writeASequenceToFile(Alignment *aln, ofstream &out, IntVector variant_state_mask, Node *node, Node *dad);
-    
-    /**
-    *  write a sequence of a node to an output file with gaps copied from the input sequence
-    */
-    void writeASequenceToFileWithGaps(Alignment *aln, vector<string> seq_names, vector<string> sequences, ofstream &out, IntVector variant_state_mask, Node *node, Node *dad);
-
-    /**
-    *  convert an encoded sequence (with integer numbers) to a readable sequence (with ACGT...)
-    */
-    string convertEncodedSequenceToReadableSequence(Alignment *aln, IntVector sequence, IntVector variant_state_mask);
-    
-    /**
-    *  convert an encoded sequence (with integer numbers) to a readable sequence (with ACGT...) with gaps copied from the input sequence
-    */
-    string convertEncodedSequenceToReadableSequenceWithGaps(Alignment *aln, string input_sequence, IntVector sequence, IntVector variant_state_mask);
     
     /**
     *  simulate sequences for all nodes in the tree by DFS
@@ -129,13 +89,6 @@ protected:
     void validataSeqLengthCodon();
     
     /**
-        initialize site specific model index based on its weights in the mixture model
-    */
-    virtual void intializeSiteSpecificModelIndex(){
-        // will be override in alisimulatorheterogeneity
-    };
-    
-    /**
         initialize state freqs for all model components (of a mixture model)
     */
     virtual void intializeStateFreqsMixtureModel(){
@@ -147,10 +100,23 @@ protected:
     */
     void createVariantStateMask(IntVector &variant_state_mask, int &num_variant_states, int expected_num_variant_states, Node *node, Node *dad);
     
+    /**
+        remove all constant sites (in case with +ASC)
+    */
+    void removeConstantSites();
+    
+    /**
+        only get variant sites
+    */
+    void getOnlyVariantSites(IntVector variant_state_mask, Node *node, Node *dad);
+    
 public:
     
     IQTree *tree;
     Params *params;
+    int num_sites_per_state;
+    int expected_num_sites;
+    double partition_rate;
     
     /**
         constructor
@@ -160,33 +126,32 @@ public:
     /**
         constructor
     */
-    AliSimulator(Params *params);
+    AliSimulator(Params *params, int expected_number_sites = -1, double new_partition_rate = 1);
     
     /**
         constructor
     */
-    AliSimulator(Params *params, IQTree *tree);
+    AliSimulator(Params *params, IQTree *tree, int expected_number_sites = -1, double new_partition_rate = 1);
     
     /**
         deconstructor
     */
     ~AliSimulator();
-
-    /**
-    *  show all input parameters for AliSim
-    */
-    virtual void showParameters();
     
-    /**
-    *  generate mutiple alignments from a tree (model, alignment instances are supplied via the IQTree instance)
-    */
-    void generateMultipleAlignmentsFromSingleTree();
-
     /**
     *  simulate sequences for all nodes in the tree
     */
     virtual void simulateSeqsForTree();
     
+    /**
+    *  generate the current partition of an alignment from a tree (model, alignment instances are supplied via the IQTree instance)
+    */
+    void generatePartitionAlignment(IntVector ancestral_sequence);
+    
+    /**
+    *  update the expected_num_sites due to the change of the sequence_length
+    */
+    void refreshExpectedNumSites();
 };
 
 #endif /* alisimulator_h */

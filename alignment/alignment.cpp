@@ -3565,7 +3565,8 @@ void convert_range(const char *str, int &lower, int &upper, int &step_size, char
     step_size = d;
 }
 
-void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id) {
+void Alignment::extractSiteID(Alignment *aln, const char* spec, IntVector &site_id, int max_id) {
+    if (max_id < aln->getNSite()) max_id = aln->getNSite();
     int i;
     char *str = (char*)spec;
     int nchars = 0;
@@ -3575,7 +3576,7 @@ void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id) {
             convert_range(str, lower, upper, step, str);
             // 2019-06-03: special '.' character
             if (upper == lower-1)
-                upper = aln->getNSite();
+                upper = max_id;
             lower--;
             upper--;
             nchars += (upper-lower+1)/step;
@@ -3583,7 +3584,7 @@ void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id) {
                 lower /= 3;
                 upper /= 3;
             }
-            if (upper >= aln->getNSite()) throw "Too large site ID";
+            if (upper >= max_id) throw "Too large site ID";
             if (lower < 0) throw "Negative site ID";
             if (lower > upper) throw "Wrong range";
             if (step < 1) throw "Wrong step size";

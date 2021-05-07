@@ -2279,11 +2279,6 @@ public:
     int alisim_max_rate_categories_for_applying_caching;
     
     /**
-    *  number of sites per state: 3 for codon, 1 for others
-    */
-    int alisim_sites_per_state;
-    
-    /**
     *  number of states (SEQ_MORPH)
     */
     int alisim_num_states_morph;

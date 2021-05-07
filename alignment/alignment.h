@@ -989,6 +989,8 @@ public:
      * @param sequence_type user-defined sequence type
      */
     void initCodon(char *gene_code_id);
+    
+    void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id, int max_id=0);
 
 
 protected:
@@ -1015,9 +1017,6 @@ protected:
     double* cache_ntfreq = NULL;
 
 };
-
-
-void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id);
 
 /**
  create a new Alignment object with possibility of comma-separated file names
