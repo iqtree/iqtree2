@@ -453,7 +453,7 @@ int PresenceAbsenceMatrix::getINFO_init_tree_taxon_order(vector<string> &taxa_na
         cout<<"Note, that this procedure does not guarantee generating all trees from a terrace! It is only meant to investigate, if at least some trees from a terrace can be generate."<<"\n";
     }
     
-    /*IntVector ordered_ids;
+    IntVector ordered_ids;
     
     for(i=1; i<part_num; i++){
         if(ordered_taxa_ids[i].size()>1){
@@ -488,7 +488,7 @@ int PresenceAbsenceMatrix::getINFO_init_tree_taxon_order(vector<string> &taxa_na
             //    cout<<k+1<<"|taxon "<<ordered_taxa_ids[i][k]<<"|"<<taxa_names[ordered_taxa_ids[i][k]]<<"\n";
             //}
         }
-    }*/
+    }
     
     const int must_insert = taxa_num - m;
     int inserted_num = taxa_names_sub.size();
@@ -935,9 +935,9 @@ void PresenceAbsenceMatrix::getPartOverlapComplete(){
     }
 };
 
-void PresenceAbsenceMatrix::print_overlap_matrix(){
+void PresenceAbsenceMatrix::print_overlap_matrix(ostream &out){
     assert(overlap_matrix.size()==part_num && "ERROR: assertion overlap_matrix.size()==part_num failed in print_overlap_matrix()..");
-    cout<<"\n"<<"Printing matrix of partition overlap:"<<"\n";
+    out<<"\n"<<"Printing matrix of partition overlap:"<<"\n";
     int i{0};
     /*cout<<" ";
     for(;i<part_num;i++){
@@ -948,15 +948,15 @@ void PresenceAbsenceMatrix::print_overlap_matrix(){
     for(const auto& v: overlap_matrix){
         IntVector sum;
         sum.resize(part_num,0);
-        cout<<"Part "<<i+1<<":";
+        out<<"Part "<<i+1<<":";
         for(const auto& u: v){
             sum[i]+=u;
-            cout<<" "<<u;
+            out<<" "<<u;
         }
-        cout<<" | "<<sum[i]<<"\n";
+        out<<" | "<<sum[i]<<"\n";
         i++;
     }
-    cout<<"\n";
+    out<<"\n";
 };
 
 void PresenceAbsenceMatrix::get_from_subtrees(vector<TerraceTree*> subtrees){

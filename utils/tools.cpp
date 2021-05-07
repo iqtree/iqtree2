@@ -1088,6 +1088,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.print_induced_trees = false;
     params.pr_ab_matrix = nullptr;
     params.print_pr_ab_matrix = false;
+    params.print_m_overlap = false;
     params.terrace_query_set = nullptr;
     params.terrace_stop_intermediate_num = -1;
     params.terrace_stop_terrace_trees_num = -1;
@@ -2150,6 +2151,11 @@ void parseArg(int argc, char *argv[], Params &params) {
             
             if (strcmp(argv[cnt], "-t_print_m") == 0) {
                 params.print_pr_ab_matrix = true;
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "-t_print_m_o") == 0) {
+                params.print_m_overlap = true;
                 continue;
             }
             

@@ -32,8 +32,26 @@ void runterraceanalysis(Params &params){
             matrix->read_pr_ab_matrix(params.pr_ab_matrix);
         }
         matrix->print_pr_ab_matrix();
-        matrix->getPartOverlapComplete();
-        matrix->print_overlap_matrix();
+        
+        string out_file;
+        ofstream out;
+        out_file = params.out_prefix;
+        out_file += ".pr_ab_matrix";
+        out.open(out_file);
+        matrix->print_pr_ab_matrix(out);
+        out.close();
+        
+        if(params.print_m_overlap){
+            matrix->getPartOverlapComplete();
+            
+            string out_file;
+            ofstream out;
+            out_file = params.out_prefix;
+            out_file += ".part_overlap";
+            out.open(out_file);
+            matrix->print_overlap_matrix(out);
+            out.close();
+        }
         
         cout<<"Total wall-clock time used: "<<getRealTime()-Params::getInstance().start_real_time<<" seconds ("<<convert_time(getRealTime()-Params::getInstance().start_real_time)<<")\n";
         cout<<"Total CPU time used: "<< getCPUTime()-Params::getInstance().startCPUTime << " seconds (" << convert_time(getCPUTime()-Params::getInstance().startCPUTime) << ")\n\n";

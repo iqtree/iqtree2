@@ -143,7 +143,7 @@ public:
      * Compute overlap between partitions
      */
     void getPartOverlapComplete();
-    void print_overlap_matrix();
+    void print_overlap_matrix(ostream &out);
 };
 
 vector<IntVector> getSubMatrix(vector<IntVector> pr_ab_complete, vector<string> taxa_names, MTree* tree);

@@ -942,6 +942,7 @@ public:
     bool print_terrace_trees;
     bool print_induced_trees;
     bool print_pr_ab_matrix;
+    bool print_m_overlap;
     
     /** file with tree set to be tested, whether from the same terrace with the representative tree */
     char *terrace_query_set;
