@@ -44,6 +44,13 @@ namespace {
         return s.substr(s.length()-suffixLen, suffixLen) == suffix;
     }
 
+    std::string string_to_lower(const std::string& input_string) {
+        std::string answer = input_string;
+        std::transform(answer.begin(), answer.end(), answer.begin(),
+                    []( char c){ return std::tolower(c); });
+        return answer;
+    }
+
     bool correcting_distances      = true;
     bool is_DNA                    = true;
     bool numbered_names            = false;
@@ -737,13 +744,14 @@ int main(int argc, char* argv[]) {
     std::string inputFilePath;          //phylip distance matrix formats are supported
     std::string outputFilePath;         //newick tree format
     std::string distanceOutputFilePath; //phylip distance matrix format
-    bool isOutputZipped           = false;
-    bool isOutputSuppressed       = false;
-    bool isOutputToStandardOutput = false; //caller asked for newick tree to go to std::cout
-    bool isBannerSuppressed       = false;
-    int  threadCount              = 0;
-    bool beSilent                 = false;
-    bool isMatrixToBeLoaded       = true;  //set to false if caller passes -no-matrix
+    bool isOutputZipped            = false;
+    bool isOutputSuppressed        = false;
+    bool isOutputToStandardOutput  = false; //caller asked for newick tree to go to std::cout
+    bool isBannerSuppressed        = false;
+    int  threadCount               = 0;
+    bool beSilent                  = false;
+    bool isMatrixToBeLoaded        = true;  //set to false if caller passes -no-matrix
+    bool isTreeConstructionSkipped = false;
     for (int argNum=1; argNum<argc; ++argNum) {
         std::string arg     = argv[argNum];
         std::string nextArg = (argNum+1<argc) ? argv[argNum+1] : "";
@@ -805,6 +813,8 @@ int main(int argc, char* argv[]) {
         else if (arg=="-t") {
             if (START_TREE_RECOGNIZED(nextArg)) {
                 algorithmName = nextArg;
+            } else if (string_to_lower(nextArg)=="none") {
+                isTreeConstructionSkipped = true;
             } else {
                 PROBLEM("Algorithm name " + nextArg + " not recognized");
                 PROBLEM("Recognized distance matrix algorithms are:");
@@ -927,23 +937,28 @@ int main(int argc, char* argv[]) {
 #endif
     }
     StartTree::BuilderInterface* algorithm = StartTree::Factory::getTreeBuilderByName(algorithmName);
-    if (algorithm==nullptr) {
-        std::cerr << "Tree builder algorithm was unexpectedly null"
-            << " (internal logic error)." << std::endl;
-        return 1;
+    if (!isTreeConstructionSkipped) {
+        if (algorithm==nullptr) {
+            std::cerr << "Tree builder algorithm was unexpectedly null"
+                << " (internal logic error)." << std::endl;
+            return 1;
+        }
+        algorithm->setZippedOutput(isOutputZipped || endsWith(outputFilePath,".gz"));
+        if (beSilent) {
+            algorithm->beSilent();
+        }
+        algorithm->setPrecision(precision);
     }
-    algorithm->setZippedOutput(isOutputZipped || endsWith(outputFilePath,".gz"));
-    if (beSilent) {
-        algorithm->beSilent();
-    }
-    algorithm->setPrecision(precision);
     Sequences  sequences;
     FlatMatrix m;
     bool succeeded = prepInput(alignmentFilePath, inputFilePath,
                                !algorithm->isBenchmark(),
                                distanceOutputFilePath,
                                sequences, isMatrixToBeLoaded, m);
-    if (succeeded && isMatrixToBeLoaded) {
+    if (isTreeConstructionSkipped) {
+        succeeded = true;
+    }
+    else if (succeeded && isMatrixToBeLoaded) {
         succeeded = algorithm->constructTreeInMemory(m.getSequenceNames(),
                                                      m.getDistanceMatrix(),
                                                      outputFilePath);
