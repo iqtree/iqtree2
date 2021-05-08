@@ -10,7 +10,12 @@
 
 #include "utils/tools.h"
 #include "tree/node.h"
+#include "superalignment.h"
+#include "superalignmentunlinked.h"
 #include "tree/phylotreemixlen.h"
+#include "tree/phylosupertree.h"
+#include "tree/phylosupertreeplen.h"
+#include "tree/phylosupertreeunlinked.h"
 #include "model/modelmarkov.h"
 #include "model/modelliemarkov.h"
 #include "model/ratecontinuousgammainvar.h"
@@ -29,7 +34,7 @@ protected:
     /**
     *  initialize an Alignment instance for IQTree
     */
-    void initializeAlignment();
+    void initializeAlignment(IQTree *tree, string model_fullname);
 
     /**
     *  iteratively add name of all leaf nodes into the alignment instance
@@ -39,7 +44,7 @@ protected:
     /**
     *  initialize a Model instance for IQTree
     */
-    void initializeModel();
+    void initializeModel(IQTree *tree, string model_name);
     
     /**
     *  get state frequencies from model

@@ -241,15 +241,15 @@ void runAliSimWithoutInference(Params params, IQTree *&tree)
 {
     cout << "[Alignment Simulator] Executing" <<"\n";
     
-    // show parameters
-    showParameters(params, params.aln_file && tree->isSuperTree());
-    
     // case 1 (default): without rate heterogeneity
     AliSimulator *alisimulator;
     if (tree && params.aln_file)
         alisimulator = new AliSimulator(&params, tree);
     else
         alisimulator = new AliSimulator(&params);
+    
+    // show parameters
+    showParameters(params, alisimulator->tree->isSuperTree());
     
     // iteratively generate multiple/a single  alignment(s) for each tree
     generateMultipleAlignmentsFromSingleTree(alisimulator);
@@ -416,7 +416,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator)
                 // extract site_ids of the partition
                 const char* info_spec = ((SuperAlignment*) super_tree->aln)->partitions[partition_index]->CharSet::position_spec.c_str();
                 IntVector site_ids;
-                current_tree->aln->extractSiteID(super_tree->aln, info_spec, site_ids, total_expected_num_states);
+                current_tree->aln->extractSiteID(current_tree->aln, info_spec, site_ids, total_expected_num_states);
                 
                 // mapping from site_id to its algnmennt id
                 for (int site_id: site_ids)
@@ -505,6 +505,12 @@ void generatePartitionAlignmentFromSingleSimulator(AliSimulator *alisimulator, I
         }
         else
         {
+            // if user specifies +I without invariant_rate -> set it to 0
+            if (rate_name.find("+I") != std::string::npos && isnan(invariant_proportion)) {
+                alisimulator->tree->getRate()->setPInvar(0);
+                outWarning("Invariant rate is now set to Zero since it has not been specified");
+            }
+            
             // case 2.1: with rate heterogeneity (gamma/freerate model with invariant sites)
             if (invariant_proportion > 0)
             {

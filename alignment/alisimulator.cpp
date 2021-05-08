@@ -50,29 +50,106 @@ AliSimulator::~AliSimulator()
 */
 void AliSimulator::initializeIQTreeFromTreeFile()
 {
-    tree = new IQTree();
-    bool is_rooted = false;
-    tree->readTree(params->user_file, is_rooted);
-    initializeAlignment();
-    initializeModel();
-
-    // if a Heterotachy model is used -> re-read the PhyloTreeMixlen from file
-    if (tree->getRate()->isHeterotachy())
+    // handle the case with partition models
+    if (params->partition_file) {
+        // initilize partition alignments
+        Alignment *aln;
+        if (params->partition_type == TOPO_UNLINKED)
+            aln = new SuperAlignmentUnlinked(*params);
+        else
+            aln = new SuperAlignment(*params);
+        
+        // initialize a super tree
+        if (params->partition_type == TOPO_UNLINKED) {
+            tree = new PhyloSuperTreeUnlinked((SuperAlignment*) aln);
+        } else if(params->partition_type != BRLEN_OPTIMIZE){
+            // initialize supertree - Proportional Edges case
+            tree = new PhyloSuperTreePlen((SuperAlignment*) aln, params->partition_type);
+        } else {
+            // initialize supertree stuff if user specifies partition file with -sp option
+            tree = new PhyloSuperTree((SuperAlignment*) aln);
+        }
+        tree->setParams(params);
+        bool is_rooted = false;
+        tree->readTree(params->user_file, is_rooted);
+        
+        // further initialize super_tree/alignments
+        for (int i = 0; i < ((PhyloSuperTree*) tree)->size(); i++)
+        {
+            // load phylotrees
+            IQTree *current_tree = (IQTree *) ((PhyloSuperTree*) tree)->at(i);
+            bool is_rooted = false;
+            current_tree->readTree(params->user_file, is_rooted, i);
+            
+            // update the alignment for the current partition
+            initializeAlignment(current_tree, current_tree->aln->model_name);
+            
+            // extract num_sites from partition
+            IntVector siteIDs;
+            current_tree->aln->extractSiteID(current_tree->aln, current_tree->aln->position_spec.c_str(), siteIDs, -1, true);
+            current_tree->aln->setExpectedNumSites(siteIDs.size());
+            
+            // initialize the model for the current partition
+            initializeModel(current_tree, current_tree->aln->model_name);
+            
+            // if a Heterotachy model is used -> re-read the PhyloTreeMixlen from file
+            if (current_tree->getRate()->isHeterotachy())
+            {
+                // initialize a new PhyloTreeMixlen
+                IQTree* new_tree = new PhyloTreeMixlen(current_tree->aln, current_tree->getRate()->getNRate());
+                
+                // delete the old tree
+                delete current_tree;
+                
+                // set the new PhyloTreeMixlen to the new tree
+                current_tree = new_tree;
+                
+                // re-load the tree/branch-lengths from the file
+                current_tree->IQTree::readTree(params->user_file, is_rooted, i);
+                
+                // re-initialize the model
+                initializeModel(current_tree, current_tree->aln->model_name);
+            }
+            
+            // set partition rate
+            if (params->partition_type == BRLEN_SCALE && params->alisim_partition_rates.size() > i)
+                ((PhyloSuperTree*) tree)->part_info[i].part_rate = params->alisim_partition_rates[i];
+        }
+    }
+    // other cases without partition models
+    else
     {
-        // initialize a new PhyloTreeMixlen
-        IQTree* new_tree = new PhyloTreeMixlen(tree->aln, tree->getRate()->getNRate());
+        // initialize tree
+        tree = new IQTree();
+        bool is_rooted = false;
+        tree->readTree(params->user_file, is_rooted);
+        tree->setParams(params);
         
-        // delete the old tree
-        delete tree;
+        // initialize alignment
+        tree->aln = new Alignment();
+        initializeAlignment(tree, params->model_name);
         
-        // set the new PhyloTreeMixlen to the new tree
-        tree = new_tree;
-        
-        // re-load the tree/branch-lengths from the file
-        tree->IQTree::readTree(params->user_file, is_rooted);
-        
-        // re-initialize the model
-        initializeModel();
+        // inittialize model
+        initializeModel(tree, params->model_name);
+
+        // if a Heterotachy model is used -> re-read the PhyloTreeMixlen from file
+        if (tree->getRate()->isHeterotachy())
+        {
+            // initialize a new PhyloTreeMixlen
+            IQTree* new_tree = new PhyloTreeMixlen(tree->aln, tree->getRate()->getNRate());
+            
+            // delete the old tree
+            delete tree;
+            
+            // set the new PhyloTreeMixlen to the new tree
+            tree = new_tree;
+            
+            // re-load the tree/branch-lengths from the file
+            tree->IQTree::readTree(params->user_file, is_rooted);
+            
+            // re-initialize the model
+            initializeModel(tree, params->model_name);
+        }
     }
 }
 
@@ -80,14 +157,10 @@ void AliSimulator::initializeIQTreeFromTreeFile()
 /**
 *  initialize an Alignment instance for IQTree
 */
-void AliSimulator::initializeAlignment()
+void AliSimulator::initializeAlignment(IQTree *tree, string model_fullname)
 {
-    tree->aln = new Alignment();
-    
     if (!params->sequence_type)
     {
-        // set the seq_type and the maximum number of bases based on the Seq_type
-        string model_fullname = params->model_name;
         // if a mixture model is used -> extract the name of the first model component for SeqType detection
         string KEYWORD = "MIX";
         string delimiter = ",";
@@ -169,14 +242,13 @@ void AliSimulator::addLeafNamesToAlignment(Alignment *aln, Node *node, Node *dad
 /**
 *  initialize a Model instance for IQTree
 */
-void AliSimulator::initializeModel()
+void AliSimulator::initializeModel(IQTree *tree, string model_name)
 {
-    tree->aln->model_name = params->model_name;
+    tree->aln->model_name = model_name;
     tree->aln->computeUnknownState();
     ModelsBlock *models_block = readModelsDefinition(*params);
-    tree->setParams(params);
     
-    tree->initializeModel(*params, tree->aln->model_name, models_block);
+    tree->IQTree::initializeModel(*params, tree->aln->model_name, models_block);
 }
 
 /**

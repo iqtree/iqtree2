@@ -271,10 +271,21 @@ void SuperAlignment::readPartitionRaxml(Params &params) {
         in.exceptions(ios::badbit);
 //        PartitionInfo info;
         Alignment *input_aln = NULL;
-        if (!params.aln_file)
+        // only show error if alisim is inactive but aln_file is not specified
+        if (!params.aln_file && !params.alisim_active)
             outError("Please supply an alignment with -s option");
-        
-        input_aln = createAlignment(params.aln_file, params.sequence_type, params.intype, params.model_name);
+        // if aln_file is specified -> create a new alignment
+        if (params.aln_file)
+            input_aln = createAlignment(params.aln_file, params.sequence_type, params.intype, params.model_name);
+        // otherwise, if alisim is active -> create a default alignment
+        else if (params.alisim_active)
+        {
+            input_aln = new SuperAlignment;
+            input_aln->model_name = params.model_name;
+            if (params.sequence_type)
+                input_aln->sequence_type = params.sequence_type;
+            ((SuperAlignment*) input_aln)->init();
+        }
         
         cout << endl << "Partition file is not in NEXUS format, assuming RAxML-style partition file..." << endl;
         
@@ -352,7 +363,8 @@ void SuperAlignment::readPartitionRaxml(Params &params) {
 //            info.cur_ptnlh = NULL;
 //            part_info.push_back(info);
             Alignment *part_aln = new Alignment();
-            part_aln->extractSites(input_aln, info.position_spec.c_str());
+            if (params.aln_file)
+                part_aln->extractSites(input_aln, info.position_spec.c_str());
             
             Alignment *new_aln;
             if (params.remove_empty_seq)
@@ -440,7 +452,8 @@ void SuperAlignment::readPartitionNexus(Params &params) {
         if (empty_partition || (*it)->char_partition != "") {
             if ((*it)->model_name == "")
                 (*it)->model_name = params.model_name;
-            if ((*it)->aln_file == "" && !input_aln) {
+            // // only show error if alisim is inactive but aln_file is not specified
+            if ((*it)->aln_file == "" && !input_aln && !params.alisim_active) {
                 if (!(*it)->position_spec.empty()) {
                     (*it)->aln_file = (*it)->position_spec;
                     (*it)->position_spec = "";
@@ -474,17 +487,25 @@ void SuperAlignment::readPartitionNexus(Params &params) {
             } else {
                 part_aln = input_aln;
             }
-            if (!(*it)->position_spec.empty() && (*it)->position_spec != "*") {
-                Alignment *new_aln = new Alignment();
-                new_aln->extractSites(part_aln, (*it)->position_spec.c_str());
-                if (part_aln != input_aln) delete part_aln;
-                part_aln = new_aln;
-            }
-            if (part_aln->seq_type == SEQ_DNA && ((*it)->sequence_type.substr(0, 5) == "CODON" || (*it)->sequence_type.substr(0, 5) == "NT2AA")) {
-                Alignment *new_aln = new Alignment();
-                new_aln->convertToCodonOrAA(part_aln, &(*it)->sequence_type[5], (*it)->sequence_type.substr(0, 5) == "NT2AA");
-                if (part_aln != input_aln) delete part_aln;
-                part_aln = new_aln;
+            
+            // initialize a default part_aln for the current partition if alisim is active without inference
+            if (params.alisim_active && !part_aln)
+                part_aln = new Alignment();
+            // otherwise, initialize new_aln normally
+            else
+            {
+                if (!(*it)->position_spec.empty() && (*it)->position_spec != "*") {
+                    Alignment *new_aln = new Alignment();
+                    new_aln->extractSites(part_aln, (*it)->position_spec.c_str());
+                    if (part_aln != input_aln) delete part_aln;
+                    part_aln = new_aln;
+                }
+                if (part_aln->seq_type == SEQ_DNA && ((*it)->sequence_type.substr(0, 5) == "CODON" || (*it)->sequence_type.substr(0, 5) == "NT2AA")) {
+                    Alignment *new_aln = new Alignment();
+                    new_aln->convertToCodonOrAA(part_aln, &(*it)->sequence_type[5], (*it)->sequence_type.substr(0, 5) == "NT2AA");
+                    if (part_aln != input_aln) delete part_aln;
+                    part_aln = new_aln;
+                }
             }
             Alignment *new_aln;
             if (params.remove_empty_seq)

@@ -677,11 +677,20 @@ void MTree::printTaxa(ostream &out, NodeVector &subtree) {
         }
 }
 
-void MTree::readTree(const char *infile, bool &is_rooted) {
+void MTree::readTree(const char *infile, bool &is_rooted, int tree_line_index) {
     ifstream in;
     try {
         in.exceptions(ios::failbit | ios::badbit);
         in.open(infile);
+        // move to the correct line to read the tree (in case with multiple trees *.parttrees)
+        for (int i = 0; i < tree_line_index; i++)
+        {
+            in.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            
+            // make sure the current line is not empty
+            if (in.peek() == EOF )
+                outError("Could not found a tree for the partition " + convertIntToString(tree_line_index+1) + " at line " + convertIntToString(tree_line_index+1)+" in the input tree file. To use Edge-unlinked partition model, please specify each tree for each partition in a single line one by one in the input (multiple)-tree file.");
+        }
         readTree(in, is_rooted);
         in.close();
     } catch (ios::failure) {

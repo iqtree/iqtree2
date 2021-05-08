@@ -413,6 +413,10 @@ public:
             @return number of sites (alignment columns)
      */
     inline size_t getNSite() {
+        // if expected_num_sites is specified -> resizing site_pattern
+        if (expected_num_sites > -1)
+            site_pattern.resize(expected_num_sites);
+        
         return site_pattern.size();
     }
 
@@ -990,8 +994,13 @@ public:
      */
     void initCodon(char *gene_code_id);
     
-    void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id, int max_id=0);
-
+    void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id, int max_id=0, bool test_num_sites=false);
+    
+    /**
+     * set the expected_num_sites (for alisim)
+     * @param the expected_num_sites
+     */
+    void setExpectedNumSites(int new_expected_num_sites);
 
 protected:
 
@@ -1000,6 +1009,11 @@ protected:
             sequence names
      */
     vector<string> seq_names;
+    
+    /**
+            expected num_sites
+     */
+    int expected_num_sites = -1;
 
     /**
             Site to pattern index

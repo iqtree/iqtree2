@@ -3565,7 +3565,7 @@ void convert_range(const char *str, int &lower, int &upper, int &step_size, char
     step_size = d;
 }
 
-void Alignment::extractSiteID(Alignment *aln, const char* spec, IntVector &site_id, int max_id) {
+void Alignment::extractSiteID(Alignment *aln, const char* spec, IntVector &site_id, int max_id, bool test_num_sites) {
     if (max_id < aln->getNSite()) max_id = aln->getNSite();
     int i;
     char *str = (char*)spec;
@@ -3584,7 +3584,7 @@ void Alignment::extractSiteID(Alignment *aln, const char* spec, IntVector &site_
                 lower /= 3;
                 upper /= 3;
             }
-            if (upper >= max_id) throw "Too large site ID";
+            if (!test_num_sites && upper >= max_id) throw "Too large site ID";
             if (lower < 0) throw "Negative site ID";
             if (lower > upper) throw "Wrong range";
             if (step < 1) throw "Wrong step size";
@@ -5602,4 +5602,12 @@ bool Alignment::readSiteStateFreq(const char* site_freq_file)
     }
     cout << site_state_freq.size() << " distinct per-site state frequency vectors detected" << endl;
     return aln_changed;
+}
+
+/**
+ * set the expected_num_sites (for alisim)
+ * @param the expected_num_sites
+ */
+void Alignment::setExpectedNumSites(int new_expected_num_sites){
+    expected_num_sites = new_expected_num_sites;
 }

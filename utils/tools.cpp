@@ -1973,6 +1973,48 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.opt_gammai = false;
 				continue;
 			}
+            // handle -p{<RATE_P1>,<RATE_P2>,...,<RATE_PN>}
+            string t_params = argv[cnt];
+            string KEYWORD = "-p{";
+            if ((t_params.length() > KEYWORD.length())
+                && (!t_params.substr(0, KEYWORD.length()).compare(KEYWORD)))
+            {
+                string delimiter = ",";
+                
+                // validate the input
+                if ((t_params[t_params.length()-1]!='}'))
+                    throw "To specify partitions' rates, please use -p{<RATE_1>,<RATE_2>,...,<RATE_N>} <partition_file>";
+                
+                // remove "-p{"
+                t_params.erase(0, KEYWORD.length());
+                        
+                // remove "}"
+                t_params = t_params.substr(0, t_params.length()-1);
+                        
+                // get the list of partitions' rates
+                while (t_params.length()>0)
+                {
+                    // get the <RATE_X>
+                    double tmp_rate = convert_double(t_params.substr(0, t_params.find(delimiter)).c_str());
+                    if (tmp_rate < 0)
+                        throw "<RATE> must be non-negative.";
+                    params.alisim_partition_rates.push_back(tmp_rate);
+                            
+                    // remove "<RATE_X>,"
+                    if (t_params.find(delimiter) != string::npos)
+                        t_params.erase(0, t_params.find(delimiter) + delimiter.length());
+                    else
+                        t_params = "";
+                }
+                
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -p{<RATE_1>,<RATE_2>,...,<RATE_N>} <partition_file>";
+                params.partition_file = argv[cnt];
+                params.partition_type = BRLEN_SCALE;
+                params.opt_gammai = false;
+                continue;
+            }
 			if (strcmp(argv[cnt], "-spj") == 0 || strcmp(argv[cnt], "-q") == 0) {
 				cnt++;
 				if (cnt >= argc)

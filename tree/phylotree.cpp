@@ -257,8 +257,8 @@ PhyloTree::~PhyloTree() {
     progressStackDepth = 0;
 }
 
-void PhyloTree::readTree(const char *infile, bool &is_rooted) {
-    MTree::readTree(infile, is_rooted);
+void PhyloTree::readTree(const char *infile, bool &is_rooted, int tree_line_index) {
+    MTree::readTree(infile, is_rooted, tree_line_index);
     // 2015-10-14: has to reset this pointer when read in
     current_it = current_it_back = NULL;
     if (rooted && root)
