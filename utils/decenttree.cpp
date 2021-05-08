@@ -773,7 +773,7 @@ int main(int argc, char* argv[]) {
             if (nextArg.empty()) {
                 PROBLEM(arg + " should be followed by compression level between 1 and 9");
             }
-            compression_level = atoi(arg.c_str());
+            compression_level = atoi(nextArg.c_str());
             if (compression_level<0) compression_level = 0;
             if (9<compression_level) compression_level = 9;
             ++argNum;
@@ -791,6 +791,7 @@ int main(int argc, char* argv[]) {
             if (nextArg.empty()) {
                 PROBLEM(arg + " should be followed by an output format (e.g. square, upper, or lower)");
             }
+            format = nextArg;
             ++argNum;
         }
         else if (arg=="-msa-out") {

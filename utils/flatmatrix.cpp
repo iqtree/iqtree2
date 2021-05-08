@@ -102,7 +102,7 @@ bool FlatMatrix::writeToDistanceFile(const std::string& format,
                                      int compression_level,
                                      const std::string& file_name) const {
     try {
-        if (file_name.find(".gz") == std::string::npos) {
+        if (format.find(".gz") == std::string::npos) {
             std::ofstream out;
             out.exceptions(std::ios::failbit | std::ios::badbit);
             out.open(file_name.c_str());
