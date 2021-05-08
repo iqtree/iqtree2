@@ -78,6 +78,7 @@
 #define upgma_h
 
 #include "distancematrix.h"          //for Matrix template class
+#include "vectortypes.h"             //for StrVector and IntVector
 #include "clustertree.h"             //for ClusterTree template class
 #include <vector>                    //for std::vector
 #include <string>                    //sequence names stored as std::string
