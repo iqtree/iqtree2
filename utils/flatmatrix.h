@@ -26,21 +26,22 @@
 #include <stdlib.h> //for size_t
 #include <vector>   //for std::vector
 #include <string>   //for std::string
+#include "vectortypes.h" //for StrVector
 
 class FlatMatrix {
 protected:
-    std::vector<std::string> sequenceNames;
-    intptr_t                 rowCount;
-    double*                  distanceMatrix;
-    bool                     borrowed;
+    StrVector sequenceNames;
+    intptr_t  rowCount;
+    double*   distanceMatrix;
+    bool      borrowed;
 public:
     typedef double cell_type;
     FlatMatrix();
-    FlatMatrix(const std::vector<std::string>& sequence_names,
+    FlatMatrix(const StrVector& sequence_names,
                double* distance_data);
     virtual ~FlatMatrix();
     
-    const std::vector<std::string>& getSequenceNames() const;
+    const StrVector&   getSequenceNames() const;
     size_t             getMaxSeqNameLength()    const;
     const std::string& sequenceName(intptr_t i)   const;
     std::string&       sequenceName(intptr_t i);

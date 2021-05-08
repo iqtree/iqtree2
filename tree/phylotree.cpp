@@ -4039,7 +4039,7 @@ template <class L, class F> double computeDistanceMatrix
         //results in the last few rows being allocated to some worker thread
         //just before the others finish... it won't be running
         //"all by itsef" for as long.
-        size_t   rowOffset     = nseqs * seq1;
+        intptr_t rowOffset     = nseqs * seq1;
         double*  distRow       = dist_mat       + rowOffset;
         const L* thisSequence  = sequenceMatrix + seq1 * seqLen;
         const L* otherSequence = thisSequence   + seqLen;
@@ -4144,7 +4144,7 @@ double PhyloTree::computeDistanceMatrix_Experimental() {
     }
     bool uncorrected = params->compute_obs_dist;
         //Use uncorrected (observed) distances
-    int seqCount = aln->getNSeq32();
+    intptr_t seqCount = aln->getNSeq();
     bool workToDo = false;
     cout.precision(6);
     EX_TRACE("Checking if distances already calculated...");
@@ -4156,11 +4156,11 @@ double PhyloTree::computeDistanceMatrix_Experimental() {
         DoubleVector rowMaxDistance;
         rowMaxDistance.resize(seqCount, 0.0);
         #pragma omp parallel for
-        for (int seq1=0; seq1<seqCount; ++seq1) {
+        for (intptr_t seq1=0; seq1<seqCount; ++seq1) {
             if (!workToDo) {
                 const double* distRow   = dist_matrix + seq1 * seqCount;
                 double maxDistanceInRow = 0;
-                for (int seq2=0; seq2<seqCount; ++seq2) {
+                for (intptr_t seq2=0; seq2<seqCount; ++seq2) {
                     double distance = distRow[seq2];
                     if (0.0 == distance && ( seq1 != seq2 ) ) {
                         workToDo = true;

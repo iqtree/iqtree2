@@ -105,24 +105,24 @@ bool AlignmentSummary::hasSequenceMatrix() const {
     return sequenceMatrix != nullptr;
 }
 
-int AlignmentSummary::getSequenceCount() const {
+intptr_t AlignmentSummary::getSequenceCount() const {
     return sequenceCount;
 }
 
-size_t AlignmentSummary::getSumOfConstantSiteFrequenciesForState(int state) const {
+intptr_t AlignmentSummary::getSumOfConstantSiteFrequenciesForState(int state) const {
     auto it = stateToSumOfConstantSiteFrequencies.find(state);
     return (it == stateToSumOfConstantSiteFrequencies.end()) ? 0 : it->second;
 }
 
-const std::vector<int>& AlignmentSummary::getSiteFrequencies() const {
+const IntVector& AlignmentSummary::getSiteFrequencies() const {
     return siteFrequencies;
 }
 
-size_t AlignmentSummary::getTotalFrequency() const {
+intptr_t AlignmentSummary::getTotalFrequency() const {
     return totalFrequency;
 }
 
-const std::vector<int>& AlignmentSummary::getNonConstSiteFrequencies() const {
+const IntVector& AlignmentSummary::getNonConstSiteFrequencies() const {
     return nonConstSiteFrequencies;
 }
 
@@ -142,7 +142,7 @@ const char* AlignmentSummary::getSequence(int sequence_id) const {
     return sequenceMatrix + static_cast<intptr_t>(sequence_id) * sequenceLength;
 }
 
-size_t AlignmentSummary::getSequenceLength() const {
+intptr_t AlignmentSummary::getSequenceLength() const {
     return sequenceLength;
 }
 
@@ -156,10 +156,9 @@ bool AlignmentSummary::constructSequenceMatrixNoisily(bool treatAllAmbiguousStat
     return constructSequenceMatrix(treatAllAmbiguousStatesAsUnknown, &progress);
 }
 
-size_t AlignmentSummary::getStateCount() const {
-    return static_cast<size_t>(maxState) - static_cast<size_t>(minState) + 1;
+intptr_t AlignmentSummary::getStateCount() const {
+    return static_cast<intptr_t>(maxState) - static_cast<intptr_t>(minState) + 1;
 }
-
 
 bool AlignmentSummary::constructSequenceMatrix ( bool treatAllAmbiguousStatesAsUnknown
                                                 , progress_display_ptr progress) {

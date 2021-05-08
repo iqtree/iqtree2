@@ -263,7 +263,7 @@ public:
     size_t getSize() {
         return row_count;
     }
-    virtual void setSize(size_t rank) {
+    virtual void setSize(intptr_t rank) {
         super::setDimensions(rank,rank);
         delete [] rowTotals;
         rowTotals = new T[rank];

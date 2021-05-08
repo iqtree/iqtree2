@@ -177,7 +177,7 @@ namespace {
 }
 
 bool BenchmarkingTreeBuilder::constructTreeInMemory
-( const std::vector<std::string> &sequenceNames
+( const StrVector &sequenceNames
 , const double *distanceMatrix
 , const std::string & newickTreeFilePath) {
     bool ok = false;

@@ -41,7 +41,7 @@
 FlatMatrix::FlatMatrix(): rowCount(0), distanceMatrix(nullptr), borrowed(false) {
 }
 
-FlatMatrix::FlatMatrix(const std::vector<std::string>& sequence_names,
+FlatMatrix::FlatMatrix(const StrVector& sequence_names,
                        double* distance_data)
     : sequenceNames(sequence_names), rowCount(sequence_names.size()),
       distanceMatrix(distance_data), borrowed(true){
@@ -54,7 +54,7 @@ FlatMatrix::~FlatMatrix() {
     distanceMatrix = nullptr;
 }
 
-const std::vector<std::string>& FlatMatrix::getSequenceNames() const {
+const StrVector& FlatMatrix::getSequenceNames() const {
     return sequenceNames;
 }
 

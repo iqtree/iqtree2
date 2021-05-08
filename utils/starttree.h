@@ -26,6 +26,7 @@
 #include <iostream>
 #include <vector>
 #include "timeutil.h"       //for getRealTime()
+#include "vectortypes.h"    //for StrVector template class
 
 namespace StartTree
 {
@@ -40,7 +41,7 @@ namespace StartTree
             ( const std::string &distanceMatrixFilePath
              , const std::string & newickTreeFilePath) = 0;
         virtual bool constructTreeInMemory
-            ( const std::vector<std::string> &sequenceNames
+            ( const StrVector &sequenceNames
              , const double *distanceMatrix
              , const std::string & newickTreeFilePath) = 0;
         virtual const std::string& getName() = 0;
@@ -147,7 +148,7 @@ namespace StartTree
             return builder.writeTreeFile(precision, newickTreeFilePath);
         }
         virtual bool constructTreeInMemory
-            ( const std::vector<std::string> &sequenceNames
+            ( const StrVector &sequenceNames
             , const double *distanceMatrix
             , const std::string & newickTreeFilePath) {
             B builder;
@@ -187,7 +188,7 @@ namespace StartTree
             ( const std::string& distanceMatrixFilePath
             , const std::string& newickTreeFilePath);
         virtual bool constructTreeInMemory
-            ( const std::vector<std::string> &sequenceNames
+            ( const StrVector &sequenceNames
             , const double *distanceMatrix
             , const std::string& newickTreeFilePath);
         virtual void setZippedOutput(bool zipIt);

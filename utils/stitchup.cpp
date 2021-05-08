@@ -155,14 +155,14 @@ public:
 #define STAPLE_LEG  (0.5*(1.0-STAPLE_ARCH))
 
 template <class T=double> struct StitchupGraph {
-    std::vector<std::string>        leafNames;
-    std::set< Stitch<T> >           stitches;
-    std::vector< int >              taxonToSetNumber;
-    std::vector< int >              taxonToNodeNumber;
-    std::vector< T   >              taxonToDistance;
-    std::vector< std::vector<int> > setMembers;
-    int                             nodeCount;
-    bool                            silent;
+    StrVector                leafNames;
+    std::set< Stitch<T> >    stitches;
+    std::vector< int >       taxonToSetNumber;
+    std::vector< int >       taxonToNodeNumber;
+    std::vector< T   >       taxonToDistance;
+    std::vector< IntVector > setMembers;
+    int                      nodeCount;
+    bool                     silent;
     StitchupGraph() : nodeCount(0) {
     }
     void clear() {
@@ -463,11 +463,11 @@ public:
         return loadDistanceMatrixInto(distanceMatrixFilePath, true, *this);
     }
     virtual bool loadMatrix
-        ( const std::vector<std::string>& names, const double* matrix ) {
+        ( const StrVector& names, const double* matrix ) {
         //Assumptions: 2 < names.size(), all names distinct
         //  matrix is symmetric, with matrix[row*names.size()+col]
         //  containing the distance between taxon row and taxon col.
-        setSize(names.size());
+        setSize(static_cast<intptr_t>(names.size()));
         graph.clear();
         for (auto it = names.begin(); it != names.end(); ++it) {
             addCluster(*it);

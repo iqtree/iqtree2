@@ -160,10 +160,10 @@ public:
     virtual std::string getAlgorithmName() const {
         return "UPGMA";
     }
-    virtual void setSize(size_t rank) {
+    virtual void setSize(intptr_t rank) {
         super::setSize(rank);
         rowToCluster.clear();
-        for (int r=0; r<row_count; ++r) {
+        for (intptr_t r=0; r<row_count; ++r) {
             rowToCluster.emplace_back(r);
         }
     }
@@ -175,12 +175,12 @@ public:
         calculateRowTotals();
         return rc;
     }
-    virtual bool loadMatrix(const std::vector<std::string>& names,
+    virtual bool loadMatrix(const StrVector& names,
                             const double* matrix) {
         //Assumptions: 2 < names.size(), all names distinct
         //  matrix is symmetric, with matrix[row*names.size()+col]
         //  containing the distance between taxon row and taxon col.
-        setSize(names.size());
+        setSize(static_cast<intptr_t>(names.size()));
         clusters.clear();
         for (auto it = names.begin(); it != names.end(); ++it) {
             clusters.addCluster(*it);

@@ -437,7 +437,7 @@ public:
             typedef FlatMatrix super;
             FakeMatrix(SequenceLoader& my_owner, progress_display& progress_bar)
                 : super(), owner(my_owner), show_progress(progress_bar) {}
-            virtual void setSize(size_t rows) { rowCount=rows;}
+            virtual void setSize(intptr_t rows) { rowCount=rows;}
             virtual void appendRowDistancesToLine(intptr_t nseqs,    intptr_t seq1, 
                                                   intptr_t rowStart, intptr_t rowStop,
                                                   std::stringstream& line) const {

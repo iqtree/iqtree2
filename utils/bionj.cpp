@@ -34,8 +34,9 @@
 #include <string.h>
 #include <time.h>
 
-#include "timeutil.h"  //JB2020-06-18 for getRealTime()
+#include "timeutil.h"    //JB2020-06-18 for getRealTime()
 #include "starttree.h"
+#include "vectortypes.h" //JB2021-05-09 for StrVector
 
 #define PREC 8                             /* precision of branch-lengths  */
 #define PRC  100
@@ -864,7 +865,7 @@ public:
             return true;
     }
     virtual bool constructTreeInMemory
-        ( const std::vector<std::string> &sequenceNames
+        ( const  StrVector& sequenceNames
          , const double *distanceMatrix
          , const std::string & newickTreeFilePath) {
             return false;

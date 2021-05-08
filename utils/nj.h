@@ -196,14 +196,14 @@ protected:
 
 template <class T=NJFloat> class UNJMatrix: public NJMatrix<T> {
 protected:
-    size_t original_n;
+    intptr_t original_n;
 public:
     typedef NJMatrix<T> super;
     UNJMatrix(): super(), original_n(0) { }
     virtual std::string getAlgorithmName() const {
         return "UNJ";
     }
-    virtual void setSize(size_t rank) {
+    virtual void setSize(intptr_t rank) {
         super::setSize(rank);
         original_n = rank;
     }
@@ -308,7 +308,7 @@ public:
         variance = *this;
         return rc;
     }
-    virtual bool loadMatrix(const std::vector<std::string>& names, 
+    virtual bool loadMatrix(const StrVector& names, 
                             const double* matrix) {
         bool rc = super::loadMatrix(names, matrix);
         variance = *this;
