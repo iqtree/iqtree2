@@ -58,16 +58,16 @@ const std::vector<std::string>& FlatMatrix::getSequenceNames() const {
     return sequenceNames;
 }
 
-const std::string& FlatMatrix::sequenceName(size_t i) const {
+const std::string& FlatMatrix::sequenceName(intptr_t i) const {
     return sequenceNames[i];
 }
 
-std::string& FlatMatrix::sequenceName(size_t i) {
+std::string& FlatMatrix::sequenceName(intptr_t i) {
     return sequenceNames[i];
 }
 
 
-void FlatMatrix::setSize(size_t rows) {
+void FlatMatrix::setSize(intptr_t rows) {
     if (!borrowed) {
         delete [] distanceMatrix;
     }
@@ -77,7 +77,7 @@ void FlatMatrix::setSize(size_t rows) {
     memset(distanceMatrix, 0, rowCount*rowCount*sizeof(double));
 }
 
-size_t FlatMatrix::getSize() {
+intptr_t FlatMatrix::getSize() {
     return rowCount;
 }
 
@@ -85,11 +85,11 @@ const double* FlatMatrix::getDistanceMatrix() const {
     return distanceMatrix;
 }
 
-double FlatMatrix::cell(size_t r, size_t c) const {
+double FlatMatrix::cell(intptr_t r, intptr_t c) const {
     return distanceMatrix[r * rowCount + c];
 }
 
-double& FlatMatrix::cell(size_t r, size_t c) {
+double& FlatMatrix::cell(intptr_t r, intptr_t c) {
     return distanceMatrix[r * rowCount + c];
 }
 
@@ -132,39 +132,48 @@ bool FlatMatrix::writeToDistanceFile(const std::string& format,
 
 template <class S>
 void FlatMatrix::writeDistancesToOpenFile(const std::string& format,
-                                          int precision, S &out) const {
+                                                  int precision, S &out) const {
     size_t nseqs   = sequenceNames.size();
     size_t max_len = getMaxSeqNameLength();
-    if (max_len < 10) max_len = 10;
+    if (max_len < 10) {
+        max_len = 10;
+    }
     out << nseqs << std::endl;
     out.precision(precision);
     bool lower = (format.substr(0,5) == "lower");
     bool upper = (format.substr(0,5) == "upper");
-    for (size_t seq1 = 0; seq1 < nseqs; ++seq1)  {
+    for (intptr_t seq1 = 0; seq1 < nseqs; ++seq1)  {
         std::stringstream line;
         line.width(max_len);
         line << std::fixed << std::left << sequenceNames[seq1];
         line.precision(precision);
         size_t rowStart = upper ? (seq1+1) : 0;
         size_t rowStop  = lower ? (seq1)   : nseqs;
-        size_t pos      = seq1 * nseqs + rowStart;
-        for (size_t seq2 = rowStart; seq2 < rowStop; ++seq2, ++pos) {
-            if (distanceMatrix[pos] <= 0) {
-                line << " 0";
-            } else {
-                line << " " << distanceMatrix[pos];
-            }
-        }
+
+        appendRowDistancesToLine(nseqs, seq1, rowStart, rowStop, line);
         line << "\n";
         out << line.str();
     }
     out.flush();
 }
 
+void FlatMatrix::appendRowDistancesToLine(intptr_t nseqs,    intptr_t seq1, 
+                                          intptr_t rowStart, intptr_t rowStop,
+                                          std::stringstream& line) const {
+    intptr_t pos = seq1 * nseqs + rowStart;
+    for (intptr_t seq2 = rowStart; seq2 < rowStop; ++seq2, ++pos) {
+        if (distanceMatrix[pos] <= 0) {
+            line << " 0";
+        } else {
+            line << " " << distanceMatrix[pos];
+        }
+    }
+}
+
 size_t FlatMatrix::getMaxSeqNameLength() const {
-    size_t len   = 0;
-    size_t nseqs = sequenceNames.size();
-    for (size_t i = 0; i < nseqs; ++i) {
+    size_t   len   = 0;
+    intptr_t nseqs = sequenceNames.size();
+    for (intptr_t i = 0; i < nseqs; ++i) {
         if (sequenceNames[i].length() > len) {
             len = sequenceNames[i].length();
         }

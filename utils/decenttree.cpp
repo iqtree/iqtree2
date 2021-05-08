@@ -68,7 +68,7 @@ void showBanner() {
 }
 
 void showUsage() {
-    std::cout << "Usage: decenttree (-fasta [fastapath] (-uncorrected)\n";
+    std::cout << "Usage: decenttree (-fasta [fastapath] (-uncorrected) (-no-matrix) (-dist-out [distout]\n";
     std::cout << "       (-alphabet [states]) (-unknown [chars]) (-not-dna))\n";
     std::cout << "       -in [mldist] (-c [level]) (-f [prec]) -out [newick] -t [algorithm]\n";
     std::cout << "       (-nt [threads]) (-gz) (-no-banner) (-q)\n";
@@ -76,6 +76,8 @@ void showUsage() {
     std::cout << "[fastapath]  is the path of a .fasta format file specifying genetic sequences\n";
     std::cout << "             (which may be in .gz format)\n";
     std::cout << "             (by default, the character indicating an unknown state is 'N')\n";
+    std::cout << "[distout]    is the path, of a file, into which the distance matrix is to be written\n";
+    std::cout << "             (possibly in a .gz format)\n";
     std::cout << "[states]     are the characters for each site\n";
     std::cout << "[chars]      are the characters that indicate a site has an unknown character.\n";
     std::cout << "[mldist]     is the path of a distance matrix file (which may be in .gz format)\n";
@@ -150,6 +152,17 @@ inline double uncorrectedDistance(double char_dist,
         ? (char_dist/chars_compared) : 0.0;
 }
 
+void useNumberedNamesIfAskedTo(FlatMatrix& m) {
+    if (numbered_names) {
+        auto name_count = m.getSequenceNames().size();
+        for (size_t i=0; i<name_count; ++i) {
+            std::stringstream name;
+            name << "A" << (i+1); //"A1", "A2", ...
+            m.sequenceName(i) = name.str();
+        }
+    }
+}
+
 struct Sequence {
 protected:
     std::string name;
@@ -206,28 +219,34 @@ struct Sequences: public std::vector<Sequence> {
     }
 };
 
-bool loadSequenceDistancesIntoMatrix(Sequences& sequences,
-                                     const std::vector<char>&   is_site_variant,
-                                     bool report_progress, FlatMatrix& m) {
-    intptr_t rank      = sequences.size();
-    size_t   rawSeqLen = sequences.front().sequenceLength();
+class SequenceLoader {
+protected:
+    Sequences&               sequences;
+    const std::vector<char>& is_site_variant;
+    bool                     report_progress;
+    intptr_t rank;
+    size_t   rawSeqLen;
     size_t   seqLen    = 0; //# of characters that actually vary between two sequences
-    m.setSize(rank);
-    for (auto it=is_site_variant.begin(); it!=is_site_variant.end(); ++it) {
-        seqLen += *it;
-    }
-    for (intptr_t row=0; row<rank; ++row) {
-        m.addCluster(sequences[row].getName());
-    }
-    size_t     unkLen        = ((seqLen+255)/256)*4;
-    char*      buffer        = new char      [ seqLen * rank ];
-    char**     sequence_data = new char*     [ rank ];
-    uint64_t*  unk_buffer    = new uint64_t  [ unkLen * rank ];
-    uint64_t** unknown_data  = new uint64_t* [ rank ];
-    memset(unk_buffer, 0, unkLen * rank);
-    
-    {
-        #if USE_PROGRESS_DISPLAY
+
+    //Serialized data drawn from the sequences (N=rank, P=number of variable sites)
+    size_t     unkLen        ; //Call this U
+    char*      buffer        ; //All of the sequence data, back to back (NP bytes)
+    char**     sequence_data ; //Array of N pointers into buffer (one per sequence)
+    uint64_t*  unk_buffer    ; //An array of bits, indicating which sites are unknown (NU bytes)
+    uint64_t** unknown_data  ; //Array of N pointers into unk_buffer (one per sequence)
+    double     num_states    ; //Number of states
+
+    void setUpSerializedData() {
+        if (unknown_data!=nullptr) {
+            return; //It's already been set up.
+        }
+        unkLen        = ((seqLen+255)/256)*4;
+        buffer        = new char      [ seqLen * rank ];
+        sequence_data = new char*     [ rank ];
+        unk_buffer    = new uint64_t  [ unkLen * rank ];
+        unknown_data  = new uint64_t* [ rank ];
+        memset(unk_buffer, 0, unkLen * rank);
+            #if USE_PROGRESS_DISPLAY
         const char* task = report_progress ? "Extracting variant sites": "";
         progress_display extract_progress(rank, task, "extracted from", "sequence");
         #else
@@ -279,31 +298,96 @@ bool loadSequenceDistancesIntoMatrix(Sequences& sequences,
         extract_progress.done();
         #endif
     }
-    
-    //Determine the number of states (needed for correcting distances)
-    double num_states = 0.0;
-    if (is_DNA) {
-        num_states = 4;
+
+    void getNumberOfStates() {
+        //Determine the number of states (needed for correcting distances)
+        num_states = 0.0;
+        if (is_DNA) {
+            num_states = 4;
+        }
+        else
+        {
+            std::vector<size_t> char_counts;
+            char_counts.resize(256, 0);
+            auto char_count_array = char_counts.data();
+            const unsigned char* start_buffer = reinterpret_cast<unsigned char*>(buffer);
+            const unsigned char* end_buffer   = start_buffer + rank * seqLen;
+            for (const unsigned char* scan=start_buffer; scan<end_buffer; ++scan) {
+                ++char_count_array[*scan];
+            }
+            for (int i=0; i<256; ++i) {
+                num_states += (char_counts[i]==0) ? 0 : 1;
+            }
+            if (0<char_counts[unknown_char]) {
+                --num_states;
+            }
+        }
     }
-    else
-    {
-        std::vector<size_t> char_counts;
-        char_counts.resize(256, 0);
-        auto char_count_array = char_counts.data();
-        const unsigned char* start_buffer = reinterpret_cast<unsigned char*>(buffer);
-        const unsigned char* end_buffer   = start_buffer + rank * seqLen;
-        for (const unsigned char* scan=start_buffer; scan<end_buffer; ++scan) {
-            ++char_count_array[*scan];
-        }
-        for (int i=0; i<256; ++i) {
-            num_states += (char_counts[i]==0) ? 0 : 1;
-        }
-        if (0<char_counts[unknown_char]) {
-            --num_states;
+
+public:
+    SequenceLoader(Sequences& sequences_to_load,
+                          const std::vector<char>& site_variant,
+                          bool report_progress_while_loading)
+        : sequences(sequences_to_load), is_site_variant(site_variant)
+        , report_progress(report_progress_while_loading), unkLen(0)
+        , buffer(nullptr), sequence_data(nullptr)
+        , unk_buffer(nullptr), unknown_data(nullptr) {
+        rank      = sequences.size();
+        rawSeqLen = sequences.front().sequenceLength();
+        seqLen    = 0;
+        for (auto it=is_site_variant.begin(); it!=is_site_variant.end(); ++it) {
+            seqLen += *it;
         }
     }
-    
-    {
+
+    ~SequenceLoader() {
+        delete [] unknown_data;
+        delete [] unk_buffer;
+        delete [] sequence_data;
+        delete [] buffer;
+    }
+
+    inline double getDistanceBetweenSequences(intptr_t row, intptr_t col) const {
+        uint64_t char_distance = vectorHammingDistance
+                                    (unknown_char, sequence_data[row],
+                                    sequence_data[col], seqLen);
+        uint64_t count_unknown = countBitsSetInEither
+                                    (unknown_data[row], unknown_data[col],
+                                    unkLen);
+        double   distance      = 0;
+        intptr_t adjSeqLen     = rawSeqLen - count_unknown;
+        if (0<adjSeqLen) {
+            if (correcting_distances) {
+                distance = correctDistance((double)char_distance, (double)adjSeqLen, (double)num_states);
+            } else {
+                distance = uncorrectedDistance((double)char_distance, (double)adjSeqLen);
+            }
+            if (distance < 0) {
+                distance = 0;
+            }
+        } else {
+            bool eitherMarked = sequences[row].isProblematic()
+                                || sequences[col].isProblematic();
+            if (!eitherMarked)
+            {
+                //Cannot calculate distance between these two sequences.
+                //Mark one of them (the one with more unknowns) as problematic.
+                uint64_t unkRow = countBitsSetIn(unknown_data[row], unkLen);
+                uint64_t unkCol = countBitsSetIn(unknown_data[col], unkLen);
+                intptr_t zap    = (unkCol < unkRow) ? row : col;
+                sequences[zap].markAsProblematic();
+            }
+        }    
+        return distance;    
+    }
+
+    bool loadSequenceDistances(FlatMatrix& m) {
+        m.setSize(rank);
+        for (intptr_t row=0; row<rank; ++row) {
+            m.addCluster(sequences[row].getName());
+        }
+        setUpSerializedData();
+        getNumberOfStates();
         #if USE_PROGRESS_DISPLAY
         const char* task = report_progress ? "Calculating distances": "";
         progress_display progress( rank*(rank-1)/2, task );
@@ -315,36 +399,7 @@ bool loadSequenceDistancesIntoMatrix(Sequences& sequences,
         #endif
         for (intptr_t row=0; row<rank; ++row) {
             for (intptr_t col=row+1; col<rank; ++col) {
-                uint64_t char_distance = vectorHammingDistance
-                                         (unknown_char, sequence_data[row],
-                                          sequence_data[col], seqLen);
-                uint64_t count_unknown = countBitsSetInEither
-                                         (unknown_data[row], unknown_data[col],
-                                          unkLen);
-                double   distance      = 0;
-                intptr_t adjSeqLen     = rawSeqLen - count_unknown;
-                if (0<adjSeqLen) {
-                    if (correcting_distances) {
-                        distance = correctDistance((double)char_distance, (double)adjSeqLen, (double)num_states);
-                    } else {
-                        distance = uncorrectedDistance((double)char_distance, (double)adjSeqLen);
-                    }
-                    if (distance < 0) {
-                        distance = 0;
-                    }
-                } else {
-                    bool eitherMarked = sequences[row].isProblematic()
-                                     || sequences[col].isProblematic();
-                    if (!eitherMarked)
-                    {
-                        //Cannot calculate distance between these two sequences.
-                        //Mark one of them (the one with more unknowns) as problematic.
-                        uint64_t unkRow = countBitsSetIn(unknown_data[row], unkLen);
-                        uint64_t unkCol = countBitsSetIn(unknown_data[col], unkLen);
-                        intptr_t zap    = (unkCol < unkRow) ? row : col;
-                        sequences[zap].markAsProblematic();
-                    }
-                }
+                double distance = getDistanceBetweenSequences(row, col);
                 m.cell(row, col) = distance;
                 m.cell(col, row) = distance;
             }
@@ -353,12 +408,72 @@ bool loadSequenceDistancesIntoMatrix(Sequences& sequences,
         #if USE_PROGRESS_DISPLAY
         progress.done();
         #endif
+        return true;
+   }
+
+    bool writeDistanceMatrixToFile(const std::string& filePath) {
+        setUpSerializedData();
+        getNumberOfStates();
+        #if USE_PROGRESS_DISPLAY
+        const char* task = report_progress ? "Writing distance matrix file": "";
+        progress_display progress(rank, task );
+        #else
+        progress_display progress = 0.0;
+        #endif
+
+        class FakeMatrix : public FlatMatrix {        
+            //This pretends to be a flat matrix.
+        protected:
+            SequenceLoader&   owner;
+            progress_display& show_progress;
+        public:
+            typedef FlatMatrix super;
+            FakeMatrix(SequenceLoader& my_owner, progress_display& progress_bar)
+                : super(), owner(my_owner), show_progress(progress_bar) {}
+            virtual void setSize(size_t rows) { rowCount=rows;}
+            virtual void appendRowDistancesToLine(intptr_t nseqs,    intptr_t seq1, 
+                                                  intptr_t rowStart, intptr_t rowStop,
+                                                  std::stringstream& line) const {
+                std::vector<double> distance_row_vector;
+                distance_row_vector.resize(rowStop-rowStart, 0);
+                double*  distance_row = distance_row_vector.data();
+                intptr_t column_count = rowStop - rowStart;
+                #ifdef _OPENMP
+                #pragma omp parallel for schedule(dynamic)
+                #endif
+                for (intptr_t column = 0; column < column_count; ++column) {
+                    intptr_t seq2      = column + rowStart;
+                    distance_row[seq2] = owner.getDistanceBetweenSequences(seq1, seq2);
+                }
+                for (intptr_t column = 0; column < column_count; ++column) {
+                    if (distance_row[column] <= 0) {
+                        line << " 0";
+                    } else {
+                        line << " " << distance_row[column];
+                    }
+                }
+                ++show_progress;
+            }
+        } m(*this, progress);
+        m.setSize(rank);
+        for (intptr_t row=0; row<rank; ++row) {
+            m.addCluster(sequences[row].getName());
+        }
+        useNumberedNamesIfAskedTo(m);
+
+        m.writeToDistanceFile(format, precision,
+                              compression_level,
+                              filePath);
+        return true;
     }
-    delete [] unknown_data;
-    delete [] unk_buffer;
-    delete [] sequence_data;
-    delete [] buffer;
-    return true;
+};
+
+bool loadSequenceDistancesIntoMatrix(Sequences& sequences,
+                                     const std::vector<char>&   is_site_variant,
+                                     bool report_progress, FlatMatrix& m) {
+    SequenceLoader loader(sequences, is_site_variant, report_progress);
+    bool success = loader.loadSequenceDistances(m);
+    return success;
 }
 
 struct SiteInfo {
@@ -525,21 +640,6 @@ bool writeMSAOutputFile(Sequences& sequences, const std::string& msaPath)
     return success;
 }
 
-bool writeDistanceMatrixToFile(FlatMatrix& m,
-                               const std::string& distFilePath) {
-    if (numbered_names) {
-        auto name_count = m.getSequenceNames().size();
-        for (size_t i=0; i<name_count; ++i) {
-            std::stringstream name;
-            name << "A" << (i+1); //"A1", "A2", ...
-            m.sequenceName(i) = name.str();
-        }
-    }
-    return m.writeToDistanceFile(format, precision,
-                                 compression_level,
-                                 distFilePath );
-}
-
 void removeProblematicSequences(Sequences& sequences,
                                 FlatMatrix& m) {
     size_t count_problem_sequences = sequences.countOfProblematicSequences();
@@ -580,7 +680,8 @@ bool prepInput(const std::string& alignmentInputFilePath,
                const std::string& matrixInputFilePath,
                bool  reportProgress,
                const std::string& distanceOutputFilePath,
-               Sequences& sequences, FlatMatrix& m) {
+               Sequences& sequences, bool loadMatrix,
+               FlatMatrix& m) {
     if (!alignmentInputFilePath.empty()) {
         Sequences sequences;
         std::vector<char> is_site_variant;
@@ -588,10 +689,12 @@ bool prepInput(const std::string& alignmentInputFilePath,
             sequences, is_site_variant)) {
             return false;
         }
-        if (!loadSequenceDistancesIntoMatrix
-                         (sequences, is_site_variant,
-                          reportProgress, m)) {
-            return false;
+        if (loadMatrix) {
+            if (!loadSequenceDistancesIntoMatrix
+                            (sequences, is_site_variant,
+                            reportProgress, m)) {
+                return false;
+            }
         }
         if (filter_problem_sequences) {
             removeProblematicSequences(sequences, m);
@@ -600,7 +703,17 @@ bool prepInput(const std::string& alignmentInputFilePath,
             writeMSAOutputFile(sequences, msaOutputPath);
         }
         if (!distanceOutputFilePath.empty()) {
-            writeDistanceMatrixToFile(m, distanceOutputFilePath);
+            if (loadMatrix) {
+                useNumberedNamesIfAskedTo(m);
+                return m.writeToDistanceFile(format, precision,
+                                 compression_level,
+                                 distanceOutputFilePath );
+            }
+            else {
+                SequenceLoader loader(sequences, is_site_variant, reportProgress);
+                bool success = loader.writeDistanceMatrixToFile(distanceOutputFilePath);
+                return success;
+            }
         }
     } else if (!matrixInputFilePath.empty()) {
         if (!loadDistanceMatrixInto(matrixInputFilePath,
@@ -620,9 +733,9 @@ int main(int argc, char* argv[]) {
     progress_display::setProgressDisplay(true); //Displaying progress bars
     #endif
     std::string algorithmName  = StartTree::Factory::getNameOfDefaultTreeBuilder();
-    std::string alignmentFilePath; //only .fasta format is supported
-    std::string inputFilePath;     //phylip distance matrix formats are supported
-    std::string outputFilePath;    //newick tree format
+    std::string alignmentFilePath;      //only .fasta format is supported
+    std::string inputFilePath;          //phylip distance matrix formats are supported
+    std::string outputFilePath;         //newick tree format
     std::string distanceOutputFilePath; //phylip distance matrix format
     bool isOutputZipped           = false;
     bool isOutputSuppressed       = false;
@@ -630,6 +743,7 @@ int main(int argc, char* argv[]) {
     bool isBannerSuppressed       = false;
     int  threadCount              = 0;
     bool beSilent                 = false;
+    bool isMatrixToBeLoaded       = true;  //set to false if caller passes -no-matrix
     for (int argNum=1; argNum<argc; ++argNum) {
         std::string arg     = argv[argNum];
         std::string nextArg = (argNum+1<argc) ? argv[argNum+1] : "";
@@ -665,6 +779,12 @@ int main(int argc, char* argv[]) {
             if (precision<1)  precision=1;
             ++argNum;
         }
+        else if (arg=="-out-format") {
+            if (nextArg.empty()) {
+                PROBLEM(arg + " should be followed by an output format (e.g. square, upper, or lower)");
+            }
+            ++argNum;
+        }
         else if (arg=="-msa-out") {
             if (nextArg.empty()) {
                 PROBLEM(arg + " should be followed by a file path");
@@ -678,6 +798,9 @@ int main(int argc, char* argv[]) {
             }
             distanceOutputFilePath = nextArg;
             ++argNum;
+        }
+        else if (arg=="-no-matrix") {
+            isMatrixToBeLoaded = false;
         }
         else if (arg=="-t") {
             if (START_TREE_RECOGNIZED(nextArg)) {
@@ -768,6 +891,9 @@ int main(int argc, char* argv[]) {
     else if (!inputFilePath.empty() && inputFilePath==outputFilePath) {
         PROBLEM("Input file and output file paths are the same (" + inputFilePath + ")");
     }
+    if (alignmentFilePath.empty() && !isMatrixToBeLoaded) {
+        PROBLEM("If distance matrix is not be loaded, an alignment file must be specified");
+    }
     if (!problems.str().empty()) {
         std::cerr << problems.str();
         return 1;
@@ -816,14 +942,17 @@ int main(int argc, char* argv[]) {
     bool succeeded = prepInput(alignmentFilePath, inputFilePath,
                                !algorithm->isBenchmark(),
                                distanceOutputFilePath,
-                               sequences, m);
-    if (succeeded) {
+                               sequences, isMatrixToBeLoaded, m);
+    if (succeeded && isMatrixToBeLoaded) {
         succeeded = algorithm->constructTreeInMemory(m.getSequenceNames(),
                                                      m.getDistanceMatrix(),
                                                      outputFilePath);
     }
     else if (!inputFilePath.empty()) {
         succeeded = algorithm->constructTree(inputFilePath, outputFilePath);
+    }
+    else if (!isMatrixToBeLoaded && !alignmentFilePath.empty() && !distanceOutputFilePath.empty() ) {
+        succeeded = algorithm->constructTree(distanceOutputFilePath, outputFilePath);
     }
     else {
         std::cerr << "Distance matrix calculation failed." << std::endl;

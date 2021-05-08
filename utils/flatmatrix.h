@@ -28,9 +28,9 @@
 #include <string>   //for std::string
 
 class FlatMatrix {
-private:
+protected:
     std::vector<std::string> sequenceNames;
-    size_t                   rowCount;
+    intptr_t                 rowCount;
     double*                  distanceMatrix;
     bool                     borrowed;
 public:
@@ -42,21 +42,25 @@ public:
     
     const std::vector<std::string>& getSequenceNames() const;
     size_t             getMaxSeqNameLength()    const;
-    const std::string& sequenceName(size_t i)   const;
-    std::string&       sequenceName(size_t i);
-    void               setSize(size_t rows);
-    size_t             getSize();
+    const std::string& sequenceName(intptr_t i)   const;
+    std::string&       sequenceName(intptr_t i);
+    virtual void       setSize(intptr_t rows);
+    intptr_t           getSize();
     const double*      getDistanceMatrix()      const;
-    double             cell(size_t r, size_t c) const;
-    double&            cell(size_t r, size_t c);
+    double             cell(intptr_t r, intptr_t c) const;
+    double&            cell(intptr_t r, intptr_t c);
     void               addCluster(const std::string& clusterName);
     bool               writeToDistanceFile(const std::string& format,
                                            int precision,
                                            int compression_level,
                                            const std::string& file_name) const;
     template <class S>
-    void          writeDistancesToOpenFile(const std::string& format,
-                                           int precision, S &out) const;
+    void               writeDistancesToOpenFile(const std::string& format,
+                                                int precision, S &out) const;
+
+    virtual void appendRowDistancesToLine(intptr_t nseqs,    intptr_t seq1, 
+                                         intptr_t rowStart, intptr_t rowStop,
+                                         std::stringstream& line) const; 
 };
 
 #endif /* flatmatrix_h */

@@ -62,6 +62,7 @@ protected:
 typedef progress_display* progress_display_ptr;
 
 #else
+typedef double  progress_display;
 typedef double* progress_display_ptr;
 
 #endif
