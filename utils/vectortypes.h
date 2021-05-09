@@ -8,6 +8,7 @@
 #ifndef vectortypes_h
 #define vectortypes_h
 #include <vector>
+#include <algorithm>
 
 /**
         vector of double number
