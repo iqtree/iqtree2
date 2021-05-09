@@ -421,9 +421,14 @@ public:
     bool writeDistanceMatrixToFile(const std::string& filePath) {
         setUpSerializedData();
         getNumberOfStates();
+        bool   isTriangle = format.find("lower") != std::string::npos ||
+                            format.find("upper") != std::string::npos;
+        double halfIfTriangle = isTriangle ? 0.5 : 1.0;
+        double calculations   = (double)rank * (double)(rank) * halfIfTriangle;
+
         #if USE_PROGRESS_DISPLAY
         const char* task = report_progress ? "Writing distance matrix file": "";
-        progress_display progress(rank, task );
+        progress_display progress(calculations, task );
         #else
         progress_display progress = 0.0;
         #endif
@@ -459,7 +464,7 @@ public:
                         line << " " << distance_row[column];
                     }
                 }
-                ++show_progress;
+                show_progress += (double)column_count;
             }
         } m(*this, progress);
         m.setSize(rank);
@@ -791,7 +796,7 @@ int main(int argc, char* argv[]) {
             if (nextArg.empty()) {
                 PROBLEM(arg + " should be followed by an output format (e.g. square, upper, or lower)");
             }
-            format = nextArg;
+            format = string_to_lower(nextArg);
             ++argNum;
         }
         else if (arg=="-msa-out") {
