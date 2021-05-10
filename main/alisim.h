@@ -23,9 +23,9 @@
 void runAliSim(Params &params, Checkpoint *checkpoint);
 
 /**
-*  execute AliSim without inference
+*  execute AliSim Simulation
 */
-void runAliSimWithoutInference(Params params, IQTree *&tree);
+void executeSimulation(Params params, IQTree *&tree, bool inference_mode);
 
 /**
 *  inferring input parameters for AliSim
@@ -50,7 +50,7 @@ IntVector retrieveAncestralSequenceFromInputFile(AliSimulator *super_alisimulato
 /**
 *  generate mutiple alignments from a tree (model, alignment instances are supplied via the IQTree instance)
 */
-void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator);
+void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, bool inference_mode);
 
 /**
 *  generate a partition alignment from a single simulator
@@ -70,26 +70,31 @@ void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_
 /**
 *  write all sequences of a tree to an output file
 */
-void writeSequencesToFile(string file_path, IntVector aln_ids, AliSimulator *alisimulator);
+void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length, AliSimulator *alisimulator, bool inference_mode);
 
 /**
 *  write a sequence of a node to an output file
 */
-void writeASequenceToFile(IQTree *tree, IntVector aln_ids, ofstream &out, Node *node, Node *dad);
+void writeASequenceToFile(Alignment *aln, int sequence_length, ofstream &out, Node *node, Node *dad);
 
 /**
 *  write a sequence of a node to an output file with gaps copied from the input sequence
 */
-void writeASequenceToFileWithGaps(IQTree *tree, IntVector aln_ids, vector<string> seq_names, vector<string> sequences, ofstream &out, Node *node, Node *dad);
+void writeASequenceToFileWithGaps(Alignment *aln, int sequence_length, vector<string> seq_names, vector<string> sequences, ofstream &out, Node *node, Node *dad);
 
 /**
 *  convert an encoded sequence (with integer numbers) to a readable sequence (with ACGT...)
 */
-string convertEncodedSequenceToReadableSequence(IQTree *tree, IntVector aln_ids, IntVector sequence);
+string convertEncodedSequenceToReadableSequence(Alignment *aln, int sequence_length, IntVector sequence);
 
 /**
 *  convert an encoded sequence (with integer numbers) to a readable sequence (with ACGT...) with gaps copied from the input sequence
 */
-string convertEncodedSequenceToReadableSequenceWithGaps(IQTree *tree, IntVector aln_ids, string input_sequence, IntVector sequence);
+string convertEncodedSequenceToReadableSequenceWithGaps(Alignment *aln, int sequence_length, string input_sequence, IntVector sequence);
+
+/**
+*  merge and write all sequences to output files
+*/
+void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator, bool inference_mode);
 
 #endif /* alisim_h */

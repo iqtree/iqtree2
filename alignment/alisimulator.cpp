@@ -71,15 +71,20 @@ void AliSimulator::initializeIQTreeFromTreeFile()
         }
         tree->setParams(params);
         bool is_rooted = false;
+        if (!params->user_file)
+            outError("Please supply a tree file by -t <TREE_FILEPATH>");
         tree->readTree(params->user_file, is_rooted);
         
         // further initialize super_tree/alignments
         for (int i = 0; i < ((PhyloSuperTree*) tree)->size(); i++)
         {
+            // -Q (params->partition_type == BRLEN_OPTIMIZE) -> tree_line_index = i; otherwise (-p, -q), tree_line_index = 0 (only a tree)
+            int tree_line_index = params->partition_type == BRLEN_OPTIMIZE?i:0;
+            
             // load phylotrees
             IQTree *current_tree = (IQTree *) ((PhyloSuperTree*) tree)->at(i);
             bool is_rooted = false;
-            current_tree->readTree(params->user_file, is_rooted, i);
+            current_tree->readTree(params->user_file, is_rooted, tree_line_index);
             
             // update the alignment for the current partition
             initializeAlignment(current_tree, current_tree->aln->model_name);
@@ -105,15 +110,20 @@ void AliSimulator::initializeIQTreeFromTreeFile()
                 current_tree = new_tree;
                 
                 // re-load the tree/branch-lengths from the file
-                current_tree->IQTree::readTree(params->user_file, is_rooted, i);
+                current_tree->IQTree::readTree(params->user_file, is_rooted, tree_line_index);
                 
                 // re-initialize the model
                 initializeModel(current_tree, current_tree->aln->model_name);
             }
             
             // set partition rate
-            if (params->partition_type == BRLEN_SCALE && params->alisim_partition_rates.size() > i)
-                ((PhyloSuperTree*) tree)->part_info[i].part_rate = params->alisim_partition_rates[i];
+            if (params->partition_type == BRLEN_SCALE)
+            {
+                if (params->alisim_partition_rates.size() >= ((PhyloSuperTree*) tree)->size())
+                    ((PhyloSuperTree*) tree)->part_info[i].part_rate = params->alisim_partition_rates[i];
+                else
+                    outError("Please use -p{<RATE_1>,<RATE_2>,...,<RATE_N>} <partition_file> to specify rates for each partition.");
+            }
         }
     }
     // other cases without partition models
@@ -191,7 +201,6 @@ void AliSimulator::initializeAlignment(IQTree *tree, string model_fullname)
         string model_familyname = model_familyname_with_params.substr(0, model_familyname_with_params.find("{"));
         detectSeqType(model_familyname.c_str(), tree->aln->seq_type);
         string seq_type_name = convertSeqTypeToSeqTypeName(tree->aln->seq_type);
-        params->sequence_type = strcpy(new char[seq_type_name.length() + 1], seq_type_name.c_str());
     }
     else
         tree->aln->seq_type = tree->aln->getSeqType(params->sequence_type);
@@ -222,7 +231,7 @@ void AliSimulator::initializeAlignment(IQTree *tree, string model_fullname)
     
     // init Codon (if neccessary)
     if (tree->aln->seq_type == SEQ_CODON)
-        tree->aln->initCodon(&params->sequence_type[5]);
+        tree->aln->initCodon(&tree->aln->sequence_type[5]);
 }
 
 /**
@@ -438,7 +447,7 @@ void AliSimulator::getStateFrequenciesFromModel(double *state_freqs){
     else if ((tree->getModel()->getFreqType() == FREQ_USER_DEFINED)
         || (ModelLieMarkov::validModelName(tree->getModel()->getName()))
              || tree->aln->seq_type == SEQ_CODON
-             || (tree->getModel()->getFreqType() == FREQ_EMPIRICAL && params->aln_file))
+             || (tree->getModel()->getFreqType() == FREQ_EMPIRICAL && tree->aln->aln_file.length() > 0))
         tree->getModel()->getStateFrequency(state_freqs);
     else // otherwise, randomly generate the base frequencies
     {
@@ -597,7 +606,7 @@ int AliSimulator::binarysearchItemWithAccumulatedProbabilityMatrix(double *accum
 */
 void AliSimulator::validataSeqLengthCodon()
 {
-    if (tree->aln->seq_type == SEQ_CODON && (params->alisim_sequence_length%3))
+    if (tree->aln->seq_type == SEQ_CODON && (!params->partition_file && params->alisim_sequence_length%3))
         outError("Sequence length of Codon must be divisible by 3. Please check & try again!");
 }
 

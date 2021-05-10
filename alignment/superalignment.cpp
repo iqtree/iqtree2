@@ -466,7 +466,7 @@ void SuperAlignment::readPartitionNexus(Params &params) {
             if ((*it)->sequence_type == "" && !(*it)->model_name.empty()) {
                 // try to get sequence type from model
             //TODO: why compile error?
-                (*it)->sequence_type = detectSeqTypeName((*it)->model_name.substr(0, (*it)->model_name.find_first_of("+*")));
+                (*it)->sequence_type = detectSeqTypeName((*it)->model_name.substr(0, (*it)->model_name.find_first_of("+*{")));
             }
             if ((*it)->aln_file == "" && ((*it)->position_spec == "" || (*it)->position_spec == "*"))
                 outError("Empty position range for partition ", (*it)->name);

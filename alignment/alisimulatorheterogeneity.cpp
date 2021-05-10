@@ -80,7 +80,7 @@ void AliSimulatorHeterogeneity::intializeStateFreqsMixtureModel()
     ModelSubst* model = tree->getModel();
     
     // only initialize state freqs if it's a mixture model && the state freqs have not been estimated by an inference process yet
-    if (model->isMixture() && !params->aln_file && model->getFreqType() == FREQ_EMPIRICAL)
+    if (model->isMixture() && tree->aln->aln_file.length() == 0 && model->getFreqType() == FREQ_EMPIRICAL)
     {
         // get max_num_bases
         int max_num_states = tree->aln->getMaxNumStates();
