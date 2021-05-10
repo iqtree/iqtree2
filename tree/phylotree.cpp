@@ -4180,7 +4180,7 @@ double PhyloTree::computeDistanceMatrix_Experimental() {
         if (!workToDo) {
             EX_TRACE("No work to do");
             double longest_dist = 0.0;
-            for ( size_t seq1 = 0; seq1 < seqCount; ++seq1  ) {
+            for ( intptr_t seq1 = 0; seq1 < seqCount; ++seq1  ) {
                 if ( longest_dist < rowMaxDistance[seq1] ) {
                     longest_dist = rowMaxDistance[seq1];
                 }
@@ -4195,7 +4195,8 @@ double PhyloTree::computeDistanceMatrix_Experimental() {
     EX_TRACE("Summarizing found " << s.getSequenceLength()
         << " sites with variation (and non-zero frequency),"
         << " and a state range of " << ( s.getStateCount()));
-    for (size_t i=0; i<s.getSequenceLength(); ++i) {
+    intptr_t seq_len = s.getSequenceLength();
+    for (intptr_t i=0; i<seq_len; ++i) {
         maxDistance += s.getSiteFrequencies()[i];
     }
     //Todo: Shouldn't this be totalFrequency, rather than
