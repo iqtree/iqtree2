@@ -125,5 +125,4 @@ public:
                           double parsimony_score);
 }; //ParsimonySPRMove
 
-
 #endif /* parsimonyspr_h */

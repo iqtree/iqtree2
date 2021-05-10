@@ -1,10 +1,12 @@
 //
 //  parsimonymove.cpp
 //  Class for:
-//  (a) finding a tree rearrangement (lazy SPR, SPR, or TBR)
-//      that has a fixed branch (e.g. for SPR, the branch at the "top"
-//      of the subtree that is to be pruned and regrafted),
-//      without modifying the tree.
+//  (a) finding a tree rearrangement (lazy NNI, SPR, or TBR)
+//      that has a fixed branch (e.g. for NNI, the branch 
+//      "around" which the interchange happens, for SPR, 
+//      the branch at the "top" of the subtree that is to 
+//      be pruned and regrafted, for TBR, the branch that
+//      will be removed), without modifying the tree,
 //  (b) checking whether a tree rearrangement is still valid
 //  (c) making (or reversing) a tree rearrangement.
 //
@@ -12,7 +14,6 @@
 //
 
 #include "parsimonymove.h"
-
 
 ParsimonyPathVector::ParsimonyPathVector
     ( intptr_t blocks, intptr_t min_threads, intptr_t threads_to_use )
@@ -49,11 +50,15 @@ intptr_t ParsimonyMove::getMinimumPathVectorCount() {
 }
 
 bool ParsimonyMove::operator < (const ParsimonyMove& rhs) const {
-    return benefit < rhs.benefit;
+    if (benefit < rhs.benefit) return true;
+    if (rhs.benefit < benefit) return false;
+    return source_branch_id < rhs.source_branch_id;
 }
 
 bool ParsimonyMove::operator <= (const ParsimonyMove& rhs) const {
-    return benefit <= rhs.benefit;
+    if (benefit < rhs.benefit) return true;
+    if (rhs.benefit < benefit) return false;
+    return source_branch_id <= rhs.source_branch_id;
 }
 
 double ParsimonyMove::getBenefit() const {
@@ -85,8 +90,9 @@ bool ParsimonyMove::isAConnectedThroughBToC
     //        (second half: from c to x)
     //Note 2: there doesn't seem to be much point making it
     //        faster, because checking nodes are still connected
-    //        is ony a small
-        
+    //        is ony a small part of the running time for parsimony
+    //        searches.
+    //
          
     std::vector<PhyloBranch> this_layer;
     std::vector<PhyloBranch> previous_layers;

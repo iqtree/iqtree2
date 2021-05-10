@@ -5,13 +5,6 @@
 //
 //  Created by James Barbetti on 18-Jan-2021.
 //
-//  Note: The reason that Parsimony NNI doesn't make use of
-//  the same "framework" is that I "factored" it out of the
-//  Parsimony SPR code, when I realized how much the Parsimony
-//  TBR code had in common with it.   If I had worked on SPR
-//  and TBR first, the parsimony NNI code would probably make
-//  use of ParsimonyMove too.  I might still retrofit.
-//
 
 #ifndef parsimonymove_h
 #define parsimonymove_h
@@ -27,7 +20,8 @@ class ParsimonyPathVector: public std::vector< std::vector<UINT*> > {
     intptr_t thread_count;
 public:
     ParsimonyPathVector() = delete;
-    ParsimonyPathVector(intptr_t blocks, intptr_t min_threads, intptr_t threads_to_use);
+    ParsimonyPathVector(intptr_t blocks, intptr_t min_threads, 
+                        intptr_t threads_to_use);
     ~ParsimonyPathVector() = default;
     intptr_t getBlocksPerThread() const;
     intptr_t getNumberOfPathsRequired() const;
@@ -195,4 +189,4 @@ public:
                                  PhyloBranchVector& path) const;
 };
 
-#endif /* parsimonymove_hpp */
+#endif /* parsimonymove_h */

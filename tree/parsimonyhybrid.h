@@ -1,8 +1,9 @@
 //
-//  parsimonyhybrid.hpp
-//  alignment
+//parsimonyhybrid.h
+//Describes a possible move, that is the union of two different 
+//types of possible move (e.g. an NNI *or* an SPR move).
 //
-//  Created by James Barbetti on 5/3/21.
+//Created by James Barbetti on 05-Mar-2021.
 //
 
 #ifndef parsimonyhybrid_h
@@ -26,8 +27,7 @@ protected:
         source_branch_id = original.source_branch_id;
     }
     
-public:
-    
+public:    
     static intptr_t getParsimonyVectorSize(intptr_t radius) {
         intptr_t alpha_size = A::getParsimonyVectorSize(radius);
         intptr_t beta_size  = B::getParsimonyVectorSize(radius);

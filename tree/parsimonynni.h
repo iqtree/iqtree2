@@ -1,6 +1,6 @@
 //
 //parsimonynni.h
-//Declarations of ParsimonyNNIMove.
+//Declarations of ParsimonyNNIMove (which describes a possible NNI move)
 //Created by James Barbetti on 05-Mar-2021 (declarations moved here).
 //
 
@@ -23,8 +23,8 @@ public:
     virtual std::string getDescription() const;
     static intptr_t getParsimonyVectorSize(intptr_t radius);
     static intptr_t getMinimumPathVectorCount();
-    virtual void   findMove(const PhyloTree& tree, /* problem, not const */
-                            const TargetBranchRange& branches, /* not TargetBranchRange */
+    virtual void   findMove(const PhyloTree& tree, 
+                            const TargetBranchRange& branches,
                             int /*radius*/ /* ignored; just part of signature */,
                             std::vector<UINT*> &path_parsimony,
                             double parsimony_score);
