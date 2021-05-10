@@ -132,8 +132,8 @@ bool FlatMatrix::writeToDistanceFile(const std::string& format,
 
 template <class S>
 void FlatMatrix::writeDistancesToOpenFile(const std::string& format,
-                                                  int precision, S &out) const {
-    size_t nseqs   = sequenceNames.size();
+                                          int precision, S &out) const {
+    intptr_t nseqs   = sequenceNames.size();
     size_t max_len = getMaxSeqNameLength();
     if (max_len < 10) {
         max_len = 10;
