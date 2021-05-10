@@ -1005,8 +1005,6 @@ void MTree::getTaxa(NodeVector &taxa, Node *node, Node *dad) const {
     if (node->isLeaf()) {
         taxa.push_back(node);
     }
-    //for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++)
-    //if ((*it)->node != dad)	{
     FOR_NEIGHBOR_IT(node, dad, it) {
         getTaxa(taxa, (*it)->node, node);
     }

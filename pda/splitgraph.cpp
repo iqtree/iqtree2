@@ -474,7 +474,6 @@ void SplitGraph::calcDistance(mmatrix(double) &dist) {
                 dist[*j][*i] += (*it)->weight;
             }
     }
-
 }
 
 

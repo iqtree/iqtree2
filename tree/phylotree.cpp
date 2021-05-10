@@ -1076,16 +1076,19 @@ void PhyloTree::setRootNode(const char *my_root, bool multi_taxa) {
         outWarning("Branch separating outgroup is not found");
 }
 
-void PhyloTree::readTreeString(const string &tree_string) {
+void PhyloTree::readTreeString(const string &tree_string, bool keep_node_names) {
     stringstream str(tree_string);
     freeNode();
     
-    // bug fix 2016-04-14: in case taxon name happens to be ID
     MTree::readTree(str, rooted);
+    if (!keep_node_names) {
+        // bug fix 2016-04-14: in case taxon name happens to be ID
+        assignLeafNames();
+    } else {
+        // bug fix 2021-05-10: in case taxon name *isn't* ID.
+    }
 
-    assignLeafNames();
     setRootNode(Params::getInstance().root);
-
     if (isSuperTree()) {
         ((PhyloSuperTree*) this)->mapTrees();
     }

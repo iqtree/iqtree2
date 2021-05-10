@@ -669,19 +669,15 @@ static unsigned int evaluateParsimonyIterativeFast(pllInstance *tr, partitionLis
     pNumber = (size_t)tr->ti[1],
     qNumber = (size_t)tr->ti[2];
 
-  int
-    model;
-
   unsigned int 
-    bestScore = tr->bestParsimony,    
     sum;
 
   if(tr->ti[0] > 4)
     newviewParsimonyIterativeFast(tr, pr, perSiteScores);
 
-  sum = tr->parsimonyScore[pNumber] + tr->parsimonyScore[qNumber];
+  unsigned int sum = tr->parsimonyScore[pNumber] + tr->parsimonyScore[qNumber];
 
-  for(model = 0; model < pr->numberOfPartitions; model++)
+  for(int model = 0; model < pr->numberOfPartitions; model++)
     {
       size_t
         k,

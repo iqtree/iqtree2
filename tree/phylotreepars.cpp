@@ -484,11 +484,9 @@ int PhyloTree::setParsimonyBranchLengths() {
     clearAllPartialLH();
     clearAllPartialParsimony(false);
     
-    int sum_score = 0;
-    double persite = 1.0/getAlnNSite();
-    double alpha = (site_rate) ? site_rate->getGammaShape() : 1.0;
-//    int pars_score;
-    //int i, state;
+    int    sum_score = 0;
+    double persite   = 1.0/getAlnNSite();
+    double alpha     = (site_rate) ? site_rate->getGammaShape() : 1.0;
 
     PhyloNode*     dad         = nodes1[0];
     PhyloNeighbor* dad_branch  = dad->findNeighbor(nodes2[0]);
@@ -1510,14 +1508,15 @@ int PhyloTree::computeParsimonyTreeNew(int *rand_stream) {
         #pragma omp parallel for num_threads(num_threads)
         #endif
         for (intptr_t j=0; j<branch_count; ++j) {
-            int t = context.getThreadNumber();
             PhyloBranch b(branches[j]);
             PhyloNeighbor* nei1 = b.getLeftNeighbor();
             PhyloNeighbor* nei2 = b.getRightNeighbor();
+
+            int    t    = context.getThreadNumber();
             double link = computePartialParsimonyOutOfTree(nei1->partial_pars,
                                                            nei2->partial_pars,
                                                            buffer[t]);
-            int branch = 0;
+            int  branch = 0;
             computeParsimonyOutOfTree(pars, buffer[t], &branch);
             scores[j] = static_cast<int>(link + branch); 
                 //cost to link anything there
@@ -1836,9 +1835,9 @@ int PhyloTree::setAllBranchLengthsFromParsimony(bool    recalculate_parsimony,
     getBranches(nodes1, nodes2);
     intptr_t branch_count = nodes1.size();
     int fixes = 0;
-//    #ifdef _OPENMP
-//    #pragma omp parallel for reduction(+:fixes)
-//    #endif
+    #ifdef _OPENMP
+    #pragma omp parallel for reduction(+:fixes)
+    #endif
     for (intptr_t b = 0; b < branch_count; ++b) {
         PhyloNode* left  = nodes1[b];
         PhyloNode* right = nodes2[b];
@@ -1863,8 +1862,8 @@ int PhyloTree::setOneBranchLengthFromParsimony(double tree_parsimony,
     if (branch_cost<1) {
         branch_cost = 1;
     }
-    double branch_length = branch_cost / getAlnNSite();
-    double alpha = (site_rate) ? site_rate->getGammaShape() : 1.0;
+    double branch_length    = branch_cost / getAlnNSite();
+    double alpha            = (site_rate) ? site_rate->getGammaShape() : 1.0;
     double corrected_length = correctBranchLengthF81(branch_length, alpha);
     if (corrected_length < params->min_branch_length) {
         corrected_length = params->min_branch_length;

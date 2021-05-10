@@ -322,8 +322,9 @@ int MTreeSet::countUnrooted() {
 
 
 void MTreeSet::assignLeafID() {
-	for (iterator it = begin(); it != end(); it++)
+	for (iterator it = begin(); it != end(); it++) {
 		(*it)->assignLeafID();
+	}
 }
 
 void MTreeSet::printTrees(const char *ofile, int  brtype)

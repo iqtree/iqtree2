@@ -510,12 +510,14 @@ static void newviewParsimonyIterativeFast(pllInstance *tr, partitionList *pr)
                         v_N = VECTOR_BIT_OR(v_N, l_A[j]);
                       }
                     
-                    for(j = 0; j < states; j++)             
-                      VECTOR_STORE((CAST)(&here[j][i]), VECTOR_BIT_OR(l_A[j], VECTOR_AND_NOT(v_N, v_A[j])));                                                                    
+                    for(j = 0; j < states; j++) {            
+                      VECTOR_STORE((CAST)(&here[j][i]), VECTOR_BIT_OR(l_A[j], VECTOR_AND_NOT(v_N, v_A[j]))); 
+                    }
                     
                     v_N = VECTOR_AND_NOT(v_N, allOne);
                     
-                    totalScore += vectorPopcount(v_N);
+                    unsigned int score_here = vectorPopcount(v_N);
+                    totalScore += score_here;
                   }                             
               }
             }            
@@ -536,19 +538,12 @@ static unsigned int evaluateParsimonyIterativeFast(pllInstance *tr, partitionLis
     pNumber = (size_t)tr->ti[1],
     qNumber = (size_t)tr->ti[2];
 
-  int
-    model;
-
-  unsigned int 
-    bestScore = tr->bestParsimony,    
-    sum;
-
   if(tr->ti[0] > 4)
     newviewParsimonyIterativeFast(tr, pr);
 
-  sum = tr->parsimonyScore[pNumber] + tr->parsimonyScore[qNumber];
+  unsigned int sum = tr->parsimonyScore[pNumber] + tr->parsimonyScore[qNumber];
 
-  for(model = 0; model < pr->numberOfPartitions; model++)
+  for(int model = 0; model < pr->numberOfPartitions; model++)
     {
       size_t
         k,
@@ -581,8 +576,6 @@ static unsigned int evaluateParsimonyIterativeFast(pllInstance *tr, partitionLis
                  
                  sum += vectorPopcount(v_N);
                  
-                 if(sum >= bestScore)
-                   return sum;                         
                }
            }
            break;
@@ -611,8 +604,6 @@ static unsigned int evaluateParsimonyIterativeFast(pllInstance *tr, partitionLis
                  
                  sum += vectorPopcount(v_N);
                  
-                 if(sum >= bestScore)            
-                   return sum;          
                }                 
            }
            break;
@@ -647,8 +638,6 @@ static unsigned int evaluateParsimonyIterativeFast(pllInstance *tr, partitionLis
                   
                   sum += vectorPopcount(v_N);          
                   
-                  if(sum >= bestScore)      
-                    return sum;                        
                 }
            }
            break;
@@ -685,8 +674,6 @@ static unsigned int evaluateParsimonyIterativeFast(pllInstance *tr, partitionLis
                  
                  sum += vectorPopcount(v_N);           
                  
-                 if(sum >= bestScore)         
-                   return sum;                 
                }
            }
          }
@@ -908,19 +895,12 @@ static unsigned int evaluateParsimonyIterativeFast(pllInstance *tr, partitionLis
     pNumber = (size_t)tr->ti[1],
     qNumber = (size_t)tr->ti[2];
 
-  int
-    model;
-
-  unsigned int 
-    bestScore = tr->bestParsimony,    
-    sum;
-
   if(tr->ti[0] > 4)
     newviewParsimonyIterativeFast(tr, pr); 
 
-  sum = tr->parsimonyScore[pNumber] + tr->parsimonyScore[qNumber];
+  unsigned int sum = tr->parsimonyScore[pNumber] + tr->parsimonyScore[qNumber];
 
-  for(model = 0; model < pr->numberOfPartitions; model++)
+  for(int model = 0; model < pr->numberOfPartitions; model++)
     {
       size_t
         k,
@@ -954,8 +934,6 @@ static unsigned int evaluateParsimonyIterativeFast(pllInstance *tr, partitionLis
 
                   sum += ((unsigned int) __builtin_popcount(t_N));
                  
-                 if(sum >= bestScore)
-                   return sum;                         
                }
            }
            break;
@@ -987,8 +965,6 @@ static unsigned int evaluateParsimonyIterativeFast(pllInstance *tr, partitionLis
 
                   sum += ((unsigned int) __builtin_popcount(t_N));
                  
-                 if(sum >= bestScore)            
-                   return sum;          
                }                 
            }
            break;
@@ -1020,8 +996,6 @@ static unsigned int evaluateParsimonyIterativeFast(pllInstance *tr, partitionLis
 
                   sum += ((unsigned int) __builtin_popcount(t_N));
                   
-                  if(sum >= bestScore)      
-                    return sum;                        
                 }
            }
            break;
@@ -1055,8 +1029,6 @@ static unsigned int evaluateParsimonyIterativeFast(pllInstance *tr, partitionLis
 
                   sum += ((unsigned int) __builtin_popcount(t_N));
                                                  
-                 if(sum >= bestScore)                     
-                   return sum;                     
                }                     
            }
          }
@@ -1066,10 +1038,6 @@ static unsigned int evaluateParsimonyIterativeFast(pllInstance *tr, partitionLis
 }
 
 #endif
-
-
-
-
 
 
 static unsigned int evaluateParsimony(pllInstance *tr, partitionList *pr, nodeptr p, pllBoolean full)
@@ -1233,12 +1201,13 @@ static void testInsertParsimony (pllInstance *tr, partitionList *pr, nodeptr p, 
         }
       
       if(saveBranches) {
-        hookup(q, r, z, numBranches);
-        rax_free(z);
-      }
-      else
-        hookupDefault(q, r);
-      
+          hookup(q, r, z, numBranches);
+          rax_free(z);
+        }
+      else {
+          hookupDefault(q, r);
+        }
+
       p->next->next->back = p->next->back = (nodeptr) NULL;
     }
        
@@ -1933,57 +1902,9 @@ void pllMakeParsimonyTreeFast(pllInstance *tr, partitionList *pr, int sprDist)
             }
         }                          
     }
-  while(randomMP < startMP);
-  
+  while(randomMP < startMP);  
   rax_free(perm);
 } 
-
-#if (0) //Old version
-int pllOptimizeWithParsimonySPR(pllInstance* tr, partitionList* pr, 
-                                 int maxSprIterations, int sprDist) {
-    allocateParsimonyDataStructures(tr, pr);
-
-    unsigned int totalNodes = tr->mxtips + tr->mxtips - 2;
-    nodeRectifierPars(tr);
-    tr->bestParsimony = UINT_MAX;
-    tr->bestParsimony = evaluateParsimony(tr, pr, tr->start, PLL_TRUE);
-
-    int          iterationsToGo = maxSprIterations;
-    unsigned int randomMP       = tr->bestParsimony;
-    unsigned int startMP;
-    do //Always do at least one iteration
-    {
-        startMP = randomMP;
-        //printf("start iteration=%d, mp=%d, sprdist=%d\n",
-        //       maxSprIterations-iterationsToGo+1,
-        //       startMP, sprDist);
-        nodeRectifierPars(tr);
-        for (unsigned int i = 1; i <= totalNodes ; ++i)
-        {
-            nodeptr p = tr->nodep[i];
-            rearrangeParsimony(tr, pr, p, 1, sprDist, PLL_FALSE);
-            if (tr->bestParsimony < randomMP) {
-                //printf("better %d %d\n", i, tr->bestParsimony);
-                restoreTreeRearrangeParsimony(tr, pr);
-                randomMP = tr->bestParsimony;
-            }
-            //else {
-            //    printf("worse %d %d\n", i, tr->bestParsimony);
-            //}
-        }
-        --iterationsToGo;
-    } while (0<iterationsToGo && randomMP < startMP);
-    pllFreeParsimonyDataStructures(tr, pr);
-    return maxSprIterations - iterationsToGo;
-}
-#endif 
-
-#if (0)
-//Don't need this, the code that called it is #ifdeffed out.
-double crap_random_double() {
-  return (double)rand() / (double)((unsigned)RAND_MAX + 1);
-} 
-#endif
 
 /**
  * DTH: optimize whatever tree is stored in tr by parsimony SPR
@@ -1995,7 +1916,6 @@ double crap_random_double() {
  * 
  */
 int pllOptimizeWithParsimonySPR(pllInstance * tr, partitionList * pr, int maxSprIterations, int maxtrav ){
-  //don't need this, not using crap_random_double()... srand(time(NULL));
   int perSiteScores = 1; //In Diep Thi Hoang's code, initialized to: globalParam->gbo_replicates > 0;
   int mintrav       = 1; //In Diep's code, this is a parameter
 	                       //Diep's code declared: unsigned int bestIterationScoreHits = 1;
@@ -2023,34 +1943,21 @@ int pllOptimizeWithParsimonySPR(pllInstance * tr, partitionList * pr, int maxSpr
     for(int i = 1; i <= nodeCount; ++i){
       tr->insertNode = NULL;
       tr->removeNode = NULL;
-
       rearrangeParsimony(tr, pr, tr->nodep[i], mintrav, maxtrav, PLL_FALSE);
-
-      #if (0) //Diep had this
-      if(tr->bestParsimony == randomMP) bestIterationScoreHits++;
-      if(tr->bestParsimony < randomMP) bestIterationScoreHits = 1;
-      if(((tr->bestParsimony < randomMP) ||
-          ((tr->bestParsimony == randomMP) &&
-            (crap_random_double() <= 1.0 / bestIterationScoreHits))) &&
-          tr->removeNode && tr->insertNode){
-        restoreTreeRearrangeParsimony(tr, pr);
-        randomMP = tr->bestParsimony;
-      }
-      #else 
       if (tr->removeNode!=NULL && tr->insertNode!=NULL) {
         if (tr->bestParsimony < randomMP) {
           restoreTreeRearrangeParsimony(tr, pr);
           randomMP = tr->bestParsimony;
           ++sprMovesDone;
         } 
+      } else {
+        tr->bestParsimony = randomMP; //James B. 10-May-2021
       }
-      #endif
     } 
     //printf("Parsimony now %d after %d moves\n", randomMP, sprMovesDone);
     --iterationsToGo;
   } while(randomMP < startMP && 0<iterationsToGo);
 
-  pllFreeParsimonyDataStructures(tr, pr); //<-- This was missing.
-
+  pllFreeParsimonyDataStructures(tr, pr); 
   return maxSprIterations - iterationsToGo; //Return # of iterations 
 }
