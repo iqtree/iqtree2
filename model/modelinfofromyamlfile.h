@@ -252,7 +252,9 @@ typedef std::map<std::string, ModelInfoFromYAMLFile> MapOfModels;
 
 class ModelListFromYAMLFile {
 protected:
-    MapOfModels models_found;
+    MapOfModels  models_found;
+    const string dummy_rate_params;
+    const string dummy_freq_params;    
 
 public:
     friend class ModelFileLoader;
