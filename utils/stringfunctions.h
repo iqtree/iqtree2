@@ -179,5 +179,8 @@ bool contains  (const char*        s, const char* pattern);
 bool is_string_all_digits(const std::string& s);
 bool is_string_all_digits(const char* s);
 
+//These functions added, 11-May-2021
+StrVector split_string(const std::string& splitme, const std::string& withme);
+StrVector split_string(const std::string& splitme, const char* withme);
 
 #endif /* stringfunctions_hpp */

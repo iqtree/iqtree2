@@ -597,22 +597,49 @@ void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_
                                                  ModelInfoFromYAMLFile* parent_model,
                                                  PhyloTree* report_to_tree) {
     
-    std::string superclass_model_name = stringScalar(substitution_model, "frommodel", "");
-    if (superclass_model_name != "") {
-        if (list.hasModel(superclass_model_name)) {
-            info = list.getModel(superclass_model_name);
-            TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
-                          "Model " << name_of_model
-                          << " is based on model " << superclass_model_name);
-        } else {
-            std::stringstream complaint;
-            complaint << "Model " << name_of_model << " specifies frommodel "
-                      << superclass_model_name << ", but that model was not found.";
-            outError(complaint.str());
+    info.is_modifier_model = false;
+    info.parent_model_name = stringScalar(substitution_model, "frommodel", "");
+    if (info.parent_model_name != "") {
+        if (string_to_upper(info.parent_model_name)=="ANY") {
+            info.parent_model_name.clear();
+            info.is_modifier_model = true;
+        }
+        else {
+            bool have_first_parent = false;
+            for (string ancestral_model : split_string(info.parent_model_name, "+")) {
+                if (list.hasModel(ancestral_model)) {
+                    if (!have_first_parent) {
+                        info = list.getModel(ancestral_model);
+                        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+                                    "Model " << name_of_model
+                                    << " is based on model " << ancestral_model);
+                        have_first_parent      = true;
+                    } else {
+                        const ModelInfoFromYAMLFile& modifier = 
+                            list.getModel(ancestral_model);
+                        info.inheritModel(modifier);
+                        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+                                    "Model " << name_of_model
+                                    << " is also based on model " << ancestral_model);
+                    }
+                } else {
+                    std::stringstream complaint;
+                    complaint << "Model " << name_of_model << " specifies a parent model of "
+                            << parent_model << ", but that model was not found.";
+                    complaint << "\nRecognized models are: ";
+                    const char* separator;
+                    for (std::string possible : list.getModelNames()) {
+                        complaint << separator << possible;
+                        separator = ", ";
+                    }
+                    complaint << ".";
+                    outError(complaint.str());
+                }
+            }
         }
     }
     info.model_file_path = file_path;
-    info.model_name      = name_of_model.empty() ? superclass_model_name : name_of_model;
+    info.model_name      = name_of_model.empty() ? info.parent_model_name : name_of_model;
     info.citation        = stringScalar (substitution_model, "citation",   info.citation.c_str());
     info.DOI             = stringScalar (substitution_model, "doi",        info.DOI.c_str());
     info.url             = stringScalar (substitution_model, "doi",        info.url.c_str());
@@ -639,12 +666,20 @@ void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_
     //Mixtures have to be handled before constraints, as constraints
     //that are setting parameters in mixed models... would otherwise
     //not be resolved correctly.
-    auto mixtures = substitution_model["mixture"];
+    auto mixtures = substitution_model["model_mixture"];
     if (mixtures) {
         complainIfNot(mixtures.IsSequence(),
-                      "Constraints for model " + model_name +
+                      "model_mixture for model " + model_name +
                       " in file " + file_path + " not a sequence");
         parseYAMLMixtureModels(mixtures, info, list, report_to_tree);
+    }
+
+    auto linked = substitution_model["linked_models"];
+    if (linked) {
+        complainIfNot(linked.IsSequence(),
+                      "linked_models for model " + model_name +
+                      " in file " + file_path + " not a sequence");
+        //Todo: parseYAMLLinkedModels(linked, info, list, report_to_tree);
     }
     
     auto constraints = substitution_model["constraints"];
@@ -661,7 +696,8 @@ void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_
     //
     auto rateMatrix = substitution_model["rateMatrix"];
     if (info.rate_matrix_expressions.empty() && 
-        info.rate_matrix_formula.empty() && !mixtures) {
+        info.rate_matrix_formula.empty() && !mixtures &&
+        !info.is_modifier_model && !linked) {
         complainIfNot(rateMatrix, "Model " + info.model_name +
                       " in file " + file_path +
                       " does not specify a rateMatrix" );

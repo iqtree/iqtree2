@@ -379,3 +379,31 @@ bool is_string_all_digits(const char* s) {
     }
     return true;
 }
+
+StrVector split_string(const std::string& splitme, const char* withme) {
+    StrVector answer;
+    if (splitme.empty()) {
+        return answer;
+    }
+    size_t separator_len = strlen(withme);
+    if (separator_len==0) {
+        answer.push_back(splitme);
+        return answer;
+    }
+    size_t last_cut = 0L;
+    for ( size_t next_cut = splitme.find(withme, last_cut);
+          next_cut != std::string::npos;
+          last_cut = next_cut + separator_len,
+          next_cut = splitme.find(withme, last_cut)) {
+        std::string next_string = splitme.substr(last_cut, next_cut-last_cut);
+        answer.push_back(next_string);
+    }
+    std::string last_string = splitme.substr(last_cut, splitme.length()-last_cut);
+    answer.push_back( last_string );
+    return answer;
+}
+
+StrVector split_string(const std::string& splitme, const std::string& withme) {
+    return split_string(splitme, withme.c_str());
+}
+

@@ -39,9 +39,9 @@
 
 void ModelListFromYAMLFile::loadFromFile (const char* file_path,
                                           PhyloTree* report_to_tree) {
-    YAML::Node yaml_model_list = YAML::LoadFile(file_path);
-    ModelFileLoader loader(file_path);
     try {
+        YAML::Node yaml_model_list = YAML::LoadFile(file_path);
+        ModelFileLoader loader(file_path);
         if (!yaml_model_list.IsSequence()) {
             throw YAML::Exception(yaml_model_list.Mark(),
                                   "list '[...]' expected");
@@ -59,7 +59,10 @@ void ModelListFromYAMLFile::loadFromFile (const char* file_path,
                                               nullptr, report_to_tree);
         }
     }
-    catch (YAML::Exception &e) {
+    catch (YAML::ParserException e) {
+        outError(e.what());
+    }
+    catch (YAML::Exception e) {
         outError(e.what());
     }
     catch (ModelExpression::ModelException x) {
@@ -439,6 +442,14 @@ public:
 
 bool ModelListFromYAMLFile::hasModel(const std::string& model_name) const {
     return models_found.find(model_name) != models_found.end();
+}
+
+StrVector ModelListFromYAMLFile::getModelNames() const {
+    StrVector answer;
+    for (auto it = models_found.begin(); it != models_found.end(); ++it) {
+        answer.push_back(it->first);
+    }
+    return answer;
 }
 
 const ModelInfoFromYAMLFile&

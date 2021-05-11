@@ -119,14 +119,29 @@ void StringMatrix::makeSquare(bool reflect) {
 }
 
 ModelInfoFromYAMLFile::ModelInfoFromYAMLFile()
-    : sequence_type(SeqType::SEQ_UNKNOWN), num_states(0)
+    : is_modifier_model(false)
+    , sequence_type(SeqType::SEQ_UNKNOWN), num_states(0)
     , reversible(false), rate_matrix_rank(0)
     , tip_likelihood_rank(0)
-    , frequency_type(StateFreqType::FREQ_UNKNOWN), mixed_models(nullptr) {
+    , frequency_type(StateFreqType::FREQ_UNKNOWN)
+    , mixed_models(nullptr), linked_models(nullptr) {
+}
+
+void ModelInfoFromYAMLFile::copyMixedAndLinkedModels(const ModelInfoFromYAMLFile& rhs) {
+    delete mixed_models;
+    if (rhs.mixed_models != nullptr) {
+        mixed_models = new MapOfModels(*rhs.mixed_models);
+    }
+    delete linked_models;
+    if (rhs.linked_models != nullptr) {
+        linked_models = new MapOfModels(*rhs.linked_models);
+    }
 }
 
 ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(const ModelInfoFromYAMLFile& rhs)
     : model_name(rhs.model_name), model_file_path(rhs.model_file_path)
+    , parent_model_name(rhs.parent_model_name)
+    , is_modifier_model(rhs.is_modifier_model)
     , citation(rhs.citation), DOI(rhs.DOI), url(rhs.url)
     , data_type_name(rhs.data_type_name), sequence_type(rhs.sequence_type)
     , num_states(rhs.num_states), reversible(rhs.reversible)
@@ -137,22 +152,52 @@ ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(const ModelInfoFromYAMLFile& rhs)
     , tip_likelihood_expressions(rhs.tip_likelihood_expressions)
     , tip_likelihood_formula(rhs.tip_likelihood_formula)
     , parameters(rhs.parameters), frequency_type(rhs.frequency_type)
-    , variables(rhs.variables), mixed_models(nullptr) {
-    if (rhs.mixed_models != nullptr) {
-        mixed_models = new MapOfModels(*rhs.mixed_models);
+    , variables(rhs.variables)
+    , mixed_models(nullptr), linked_models(nullptr) {
+    copyMixedAndLinkedModels(rhs);
+}
+
+ModelInfoFromYAMLFile& ModelInfoFromYAMLFile::operator=(const ModelInfoFromYAMLFile& rhs) {
+    if (&rhs != this) {
+        model_name                 = rhs.model_name;
+        model_file_path            = rhs.model_file_path;
+        parent_model_name          = rhs.parent_model_name;
+        is_modifier_model          = rhs.is_modifier_model;
+        citation                   = rhs.citation;
+        DOI                        = rhs.DOI; 
+        url                        = rhs.url;
+        data_type_name             = rhs.data_type_name;
+        sequence_type              = rhs.sequence_type;
+        num_states                 = rhs.num_states;
+        reversible                 = rhs.reversible;
+        rate_matrix_rank           = rhs.rate_matrix_rank;
+        rate_matrix_expressions    = rhs.rate_matrix_expressions;
+        rate_matrix_formula        = rhs.rate_matrix_formula;
+        tip_likelihood_rank        = rhs.tip_likelihood_rank;
+        tip_likelihood_expressions = rhs.tip_likelihood_expressions;
+        tip_likelihood_formula     = rhs.tip_likelihood_formula;
+        parameters                 = rhs.parameters; 
+        frequency_type             = rhs.frequency_type;
+        variables                  = rhs.variables;
+        copyMixedAndLinkedModels(rhs);
     }
+    return *this;
 }
 
 ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(const std::string& path)
-    : model_file_path(path), sequence_type(SeqType::SEQ_UNKNOWN)
+    : model_file_path(path), is_modifier_model(false)
+    , sequence_type(SeqType::SEQ_UNKNOWN)
     , num_states(0), reversible(true)
     , rate_matrix_rank(0), tip_likelihood_rank(0)
-    , frequency_type(StateFreqType::FREQ_UNKNOWN), mixed_models(nullptr) {
+    , frequency_type(StateFreqType::FREQ_UNKNOWN)
+    , mixed_models(nullptr), linked_models(nullptr) {
 }
 
 ModelInfoFromYAMLFile::~ModelInfoFromYAMLFile() {
     delete mixed_models;
     mixed_models = nullptr;
+    delete linked_models;
+    linked_models = nullptr;
 }
 
 bool ModelInfoFromYAMLFile::isMixtureModel() const {
@@ -341,7 +386,8 @@ void  ModelInfoFromYAMLFile::moveParameterToBack
 
 
 bool ModelInfoFromYAMLFile::hasVariable(const char* name) const {
-    if (hasDot(name) && mixed_models != nullptr) {
+    //Todo: look up linked_models too
+    if (hasDot(name) && mixed_models != nullptr ) {
         std::string sub_model_name;
         const char* var_name = nullptr;
         breakAtDot(name, sub_model_name, var_name);
@@ -352,23 +398,13 @@ bool ModelInfoFromYAMLFile::hasVariable(const char* name) const {
 }
 
 bool ModelInfoFromYAMLFile::hasVariable(const std::string& name) const {
-    if (hasDot(name.c_str()) && mixed_models != nullptr) {
-        std::string sub_model_name;
-        const char* var_name = nullptr;
-        breakAtDot(name.c_str(), sub_model_name, var_name);
-        auto it = findMixedModel(sub_model_name);
-        return it->second.hasVariable(var_name);
-    }
-    return variables.find(name) != variables.end();
-}
-
-double ModelInfoFromYAMLFile::getVariableValue(const std::string& name) const {
-    return getVariableValue(name.c_str());
+    return hasVariable(name.c_str());
 }
 
 double ModelInfoFromYAMLFile::getVariableValue(const char* name) const {
     auto found = variables.find(name);
     if (found == variables.end()) {
+        //Todo: look up linked_models too
         if (hasDot(name) && mixed_models != nullptr) {
             std::string sub_model_name;
             const char* var_name = nullptr;
@@ -381,9 +417,14 @@ double ModelInfoFromYAMLFile::getVariableValue(const char* name) const {
     return found->second.getValue();
 }
 
+double ModelInfoFromYAMLFile::getVariableValue(const std::string& name) const {
+    return getVariableValue(name.c_str());
+}
+
 bool ModelInfoFromYAMLFile::isVariableFixed(const std::string& name) const {
     auto found = variables.find(name);
     if (found == variables.end()) {
+        //Todo: look up linked_models too
         if (hasDot(name.c_str()) && mixed_models != nullptr) {
             std::string sub_model_name;
             const char* var_name = nullptr;
@@ -516,6 +557,7 @@ ModelVariable& ModelInfoFromYAMLFile::assign(const std::string& var_name,
     double value_to_set) {
     auto it = variables.find(var_name);
     if (it == variables.end()) {
+        //Todo: look up linked_models too
         if (hasDot(var_name.c_str()) && mixed_models != nullptr) {
             std::string sub_model_name;
             const char* sub_model_var_name = nullptr;
@@ -540,6 +582,7 @@ ModelVariable& ModelInfoFromYAMLFile::forceAssign(const std::string& var_name,
                                                   double value_to_set) {
     auto it = variables.find(var_name);
     if (it == variables.end()) {
+        //Todo: look up linked_models too
         if (hasDot(var_name.c_str()) && mixed_models != nullptr) {
             std::string sub_model_name;
             const char* sub_model_var_name = nullptr;
@@ -792,4 +835,138 @@ const std::string& ModelInfoFromYAMLFile::getRateMatrixExpression
 
 const std::string& ModelInfoFromYAMLFile::getName() const {
     return model_name;
+}
+
+void ModelInfoFromYAMLFile::appendTo(const std::string& append_me,
+                                     const char* with_sep,
+                                     std::string& to_me) {
+    if (append_me.empty()) {
+        return;
+    }
+    if (to_me.empty()) {
+        to_me = append_me;
+        return;
+    }
+    to_me += with_sep;
+    to_me += append_me;
+}
+
+bool ModelInfoFromYAMLFile::checkIntConsistent(const std::string& value_source,
+                                               const char* int_name,
+                                               int new_value,
+                                               int &old_value,
+                                               std::stringstream& complaint) {
+    if (old_value==0) {
+        //Wasn't set, take new value
+        old_value = new_value;
+        return true;
+    }
+    if (new_value==0) {
+        //Wasn't modified, take old value
+        return true;
+    }
+    if (new_value==old_value) {
+        //Old value and new value agreed
+        return true;
+    }
+    complaint << "Cannot have " << int_name << " of both " << old_value
+              << " and " << new_value << " (as per " << value_source << "). "; 
+    return false;
+}
+
+void ModelInfoFromYAMLFile::inheritModel(const ModelInfoFromYAMLFile& mummy) {
+    std::stringstream complaint;
+    appendTo(mummy.citation, ", ", citation);
+    appendTo(mummy.DOI,      ", ", DOI);
+    appendTo(mummy.url,      ", ", url);
+    if (data_type_name=="") {
+        data_type_name=mummy.data_type_name;
+        sequence_type=mummy.sequence_type;
+    } else if (mummy.data_type_name!="") {
+        if (mummy.data_type_name != data_type_name) {
+            complaint << "Cannot have data type of " << data_type_name << " and "
+                      << mummy.data_type_name 
+                      << " (as per " << mummy.model_name << "). ";
+        }
+    }
+    //Todo: what about reversible?!
+    checkIntConsistent(mummy.model_name, "states", 
+                       mummy.num_states, num_states, complaint);
+
+    checkIntConsistent(mummy.model_name, "rate matrix rank", 
+                       mummy.rate_matrix_rank, rate_matrix_rank, complaint);
+    if (!mummy.rate_matrix_expressions.empty()) {
+        rate_matrix_expressions = mummy.rate_matrix_expressions;
+    }
+    if (!mummy.rate_matrix_formula.empty()) {
+        rate_matrix_formula = mummy.rate_matrix_formula;
+    }
+
+    checkIntConsistent(mummy.model_name, "tip likelihood matrix rank", 
+                       mummy.tip_likelihood_rank, tip_likelihood_rank,
+                       complaint);
+    if (!mummy.tip_likelihood_expressions.empty()) {
+        tip_likelihood_expressions = mummy.tip_likelihood_expressions;
+    }
+    if (!mummy.tip_likelihood_formula.empty()) {
+        tip_likelihood_formula = mummy.tip_likelihood_formula;
+    }
+    for (const YAMLFileParameter& param : mummy.parameters) {
+        //Ee-uw.  Add parameter
+        const YAMLFileParameter* old_param = findParameter(param.name);
+        if (old_param == nullptr) {
+            addParameter(param);
+            continue;
+        }
+        if (old_param->type != param.type) {
+            complaint << "Cannot change type of parameter " << param.name 
+                      << " from " << old_param->type_name 
+                      << " to " << param.type_name
+                      << " (as per " << mummy.getName() << "). ";
+            continue;
+        }
+        if (old_param->is_subscripted != param.is_subscripted) {
+            const char* old_state = old_param->is_subscripted
+                                  ? "subscripted" : "un-subscripted";
+            const char* new_state = param.is_subscripted
+                                  ? "subscripted" : "un-subscripted";
+            complaint << "Cannot change parameter " << param.name 
+                      << " from " << old_state << " to " << new_state
+                      << " (as per " << mummy.getName() << "). ";
+            continue;
+        } 
+        else if (old_param->is_subscripted) {
+            if (old_param->minimum_subscript != param.minimum_subscript ||
+                old_param->maximum_subscript != param.maximum_subscript) {
+                complaint << "Cannot change subscript range"
+                          << " of parameter " << param.name
+                          << " from " << old_param->minimum_subscript
+                          << " .." << old_param->maximum_subscript
+                          << " to " << param.minimum_subscript
+                          << ".." << param.maximum_subscript
+                          << " (as per " << mummy.getName() << "). ";
+                continue;
+            }            
+        }
+    }
+    if (mummy.frequency_type != StateFreqType::FREQ_UNKNOWN) {
+        frequency_type = mummy.frequency_type;
+    }
+    for (auto mapping : mummy.variables) {
+        if (hasVariable(mapping.first)) {
+            if (variables[mapping.first].isFixed()) {
+                continue;
+            }
+        }
+        variables[mapping.first] = mapping.second;
+    }
+    //Todo: What about mixed_models?
+    for (auto prop_mapping: mummy.string_properties) {
+        string_properties[prop_mapping.first] = prop_mapping.second;
+    }
+    getVariableNamesByPosition();
+    std::string problem = complaint.str();
+    if (!problem.empty()) {
+        throw ModelExpression::ModelException(problem);
+    }
 }

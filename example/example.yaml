@@ -64,7 +64,7 @@
       range: [ 0.0001, 0.5 ]
       initValue: 0.05
 
-- substitutionmodel: YTIP
+- substitutionmodel: YTIP_EXPLICIT
   frommodel: YJC
   description: "YJC with an explicit tip likelihood matrix"
   parameters:
@@ -76,18 +76,21 @@
         - [ 0.10, 0.01, 0.88, 0.01 ]
         - [ 0.01, 0.10, 0.01, 0.88 ]
 
-- substitutionmodel: YTIP2
-  frommodel:   YTIP
-  description: "YJC with a formulaic tip likelihood matrix"
+- substitutionmodel: YTIP
+  frommodel:         ANY
+  description:       " with a formulaic tip likelihood matrix"
   parameters:
-    - name:      e
-      type:      other
-      initValue: 0.05
-    - name:      tiplikelihood
-      type:      matrix
-      rank:      num_states
-      formula:   "(row==column) ? (1-e) : (e/(num_states-1))"
-  stateFrequency: estimate
+    - name:          e
+      type:          other
+      initValue:     0.05
+    - name:          tiplikelihood
+      type:          matrix
+      rank:          num_states
+      formula:       "(row==column) ? (1-e) : (e/(num_states-1))"
+  stateFrequency:    estimate
+
+- substitutionmodel: YTIP2
+  frommodel:         YJC+YTIP  #tests inheritance from multiple models
 
 - substitutionmodel: YRIGHTASSOC
   frommodel:         YTIP2
@@ -228,14 +231,12 @@
                        : (column-1+(row-1)*(num_states-1)-row*(row-1)/2)), 
                     (row==column) ? 1 : (f(column)* r(i))"
 
-#Get the I formula right
-
 - substitutionmodel: YMIX
-  description: "Mixture of JC and GTR"
+  description: "Model Mixture of JC and GTR"
   parameters:
   - name: w(1..2)
     type: weight    # type weight implies that w[1]+w[2]=1.0
-  mixture:          # mixture components defined in this section
+  model_mixture:    # mixture components defined in this section
   - substitutionmodel: YMIX_JC
     frommodel: YJC  # 1st component from JC model
     weight: w(1)    # weight parameter
@@ -244,3 +245,63 @@
     frommodel: YGTR # 2nd component from GTR model
     weight: w(2)
     scale: 1.0   
+
+#Note: ratemodel is NOT supported as yet.
+#Note: A type of "calculated rate" is NOT supported as yet.
+#Rate models can be suffixed with a number 
+#(the number of rates).  G and R need a number of rates,
+#and I does not.
+
+#double perPoint_ = cmpPointChi2 (prob, 2.0 * gamma_shape) / (2.0 * gamma_shape);
+
+
+- ratemodel:        G
+  ratedistribution: gamma
+  parameters:
+  - name:           gamma_shape
+    type:           rate
+  - name:           rate(1..categories)
+    type:           calculated rate
+    formula:        "(categories==1) ? 1.0 : chi2((category+1)/categories, 2.0*gamma_shape) / (2.0*gamma_shape))"
+  - name:           proportion(1..categories)
+    type:           proportion
+
+- ratemodel:        R
+  ratedistribution: free
+  parameters:
+  - name:           rate(1..categories)
+    type:           rate
+  - name:           proportion(1..categories)
+    type:           proportion
+
+- ratemodel:        I
+  constraints:
+  - categories = 1
+  ratedistribution: invariant
+  parameters:
+  - name:           proportion
+    type:           proportion
+
+#Note: linked_models and tree_mixture are not parsed as yet.
+
+- substitutionmodel: YTREEMIX
+  frommodel:         YMIX
+  description:       "Tree Mixture"
+  parameters:
+  - name:            treeweight(1..3)
+    type:            weight
+    range:           0..1            #test that ranges can be supplied in .. format
+    initialValue:    [0.5, 0.3, 0.2] #test of assigning vector of inital values
+  linked_models:
+  - substitutionmodel: YJC2
+    frommodel:         YJC
+  tree_mixture:
+  - tree:            A
+    weight:          treeweight(1)
+    model:           YJC2+I+R{2}
+  - tree:            B
+    weight:          treeweight(2)
+    model:           YJC2+I+R{4}
+  - tree:            C
+    weight:          treeweight(3)
+    model:           YGTR+GAMMA_INVAR{3}

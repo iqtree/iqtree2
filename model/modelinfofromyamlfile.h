@@ -80,10 +80,15 @@ public:
     typedef std::vector<YAMLFileParameter>               Parameters;
     typedef std::map<std::string, ModelVariable>         Variables;
     typedef std::map<std::string, ModelInfoFromYAMLFile> MapOfModels;
-    typedef  std::map<std::string, std::string>          StringMap;
+    typedef std::map<std::string, std::string>          StringMap;
 private:
-    std::string   model_name;       //
-    std::string   model_file_path;  //
+    std::string   model_name;         //
+    std::string   model_file_path;    //
+    std::string   parent_model_name;  //The name of the parent model (if any)
+    bool          is_modifier_model;  //True for models that work by modifying
+                                      //or extending an existing model.  False for
+                                      //others.
+
     std::string   citation;         //Citation string
     std::string   DOI;              //DOI for the publication (optional)
     std::string   url;              //URL for the model (optional).
@@ -100,17 +105,31 @@ private:
     Parameters    parameters;      //parameters
     StateFreqType frequency_type;
     Variables     variables;
-    MapOfModels* mixed_models;
+    MapOfModels*  mixed_models;    //nullptr, except for model mixtures
+    MapOfModels*  linked_models;   //nullptr, except for tree mixtures
     StringMap     string_properties;
     mutable StrVector variable_names;
 
     friend class ModelListFromYAMLFile;
     friend class ModelFileLoader;
+
+protected:
+    void appendTo(const std::string& append_me,
+                  const char* with_sep,
+                  std::string& to_me);
+
+    bool checkIntConsistent(const std::string& value_source,
+                            const char* int_name,
+                            int new_value, int &old_value,
+                            std::stringstream& complaint);
+    void copyMixedAndLinkedModels(const ModelInfoFromYAMLFile& rhs);
+
 public:
     ModelInfoFromYAMLFile(); //Only ModelListFromYAMLFile uses it.
     ModelInfoFromYAMLFile(const ModelInfoFromYAMLFile& rhs);
     explicit ModelInfoFromYAMLFile(const std::string& file_path);
     ~ModelInfoFromYAMLFile();
+    ModelInfoFromYAMLFile& operator=(const ModelInfoFromYAMLFile& rhs);
 
     virtual std::string getFreeRateParameters(int& num_rate_cats,
         bool& fused_mix_rate) const {
@@ -246,6 +265,9 @@ public:
     std::string getStringProperty(const char* name,
         const char* default_value)            const;
 
+    //Inheriting
+    void inheritModel(const ModelInfoFromYAMLFile &);
+
 };
 
 typedef std::map<std::string, ModelInfoFromYAMLFile> MapOfModels;
@@ -299,6 +321,7 @@ public:
                                        SeqType desired_type) const;
 
     bool hasModel(const std::string& model_name) const;
+    StrVector getModelNames() const;
     
     const ModelInfoFromYAMLFile& getModel(const std::string& model_name) const;
 };
