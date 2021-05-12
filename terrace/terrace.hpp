@@ -76,17 +76,17 @@ public:
     /*
      *  Number of trees on terrace
      */
-    int terrace_trees_num;
+    unsigned int terrace_trees_num;
     
     /*
      *  Number of intermediate trees visited
      */
-    int intermediated_trees_num;
+    unsigned int intermediated_trees_num;
     
     /*
      *  Number of dead ends encountered
      */
-    int dead_ends_num;
+    unsigned int dead_ends_num;
     
     // file to output all generated terrace trees
     string out_file;

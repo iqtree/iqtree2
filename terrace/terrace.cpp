@@ -1085,11 +1085,11 @@ void Terrace::extendNewTaxon(string node_name, TerraceNode *node_1_branch, Terra
     //printTree(cout, WT_BR_SCALE | WT_NEWLINE);
     
     intermediated_trees_num +=1;
-    if(intermediated_trees_num % 100000 == 0){
-        cout<<"... trees generated - "<<intermediated_trees_num<<"; intermediated - "<<intermediated_trees_num-terrace_trees_num<<"; terrace - "<<terrace_trees_num<<"; dead paths - "<<dead_ends_num<<"\n";
-    }
+    //if(intermediated_trees_num % 100000 == 0){
+    //    cout<<"... trees generated - "<<intermediated_trees_num+terrace_trees_num<<"; intermediated - "<<intermediated_trees_num<<"; terrace - "<<terrace_trees_num<<"; dead paths - "<<dead_ends_num<<"\n";
+    //}
     
-    if(intermediated_trees_num - terrace_trees_num == intermediate_max_trees){
+    if(intermediated_trees_num == intermediate_max_trees){
         for(const auto &p: part_tree_pairs){
             p->unset_part_trees();
         }
@@ -1169,6 +1169,7 @@ void Terrace::generateTerraceTrees(Terrace *terrace, vector<Terrace*> &part_tree
                     }
                 }
                 terrace_trees_num+=1;
+                intermediated_trees_num-=1;
                 //if(terrace_trees_num % 1000 == 0){
                 //    cout<<"... generated tree "<<terrace_trees_num<<"\n";
                 //}
@@ -1664,7 +1665,16 @@ void Terrace::write_warning_stop(int type){
     cout<<"\n"<<"=========================================="<<"\n";
     cout<<"WARNING: stopping condition is active!"<<"\n";
     cout<<"The total number of trees on the terrace is NOT yet computed!"<<"\n";
-    cout<<"Check summary at the current step. You can change the stopping rule via corresponding option (see below)."<<"\n";
+    cout<<"Check summary at the current step.";
+    if(terrace_trees_num==UINT_MAX){
+        type=4;
+        cout<<"The number of terrace trees reached maximum value for unsigned int.\n";
+    }else if (intermediated_trees_num==UINT_MAX){
+        type=4;
+        cout<<"The number of intermediate trees reached maximum value for unsigned int.\n";
+    }else{
+        cout<<"You can change the stopping rule via corresponding option (see below)."<<"\n";
+    }
     cout<<"=========================================="<<"\n";
     
     switch (type) {

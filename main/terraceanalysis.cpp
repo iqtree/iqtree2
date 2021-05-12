@@ -200,21 +200,22 @@ void run_generate_trees(Terrace *terrace, Params &params,const int m){
     
     if(params.terrace_non_stop){
         cout<<"All stopping rules for terrace generation are turned off.\n";
-        init_terrace->intermediate_max_trees = -1;
-        init_terrace->terrace_max_trees = -1;
+        cout<<"For the number of intermediate trees and terrace trees the hard stopping rule is the maximum value of unsigned integer: "<<UINT_MAX<<"\n";
+        init_terrace->intermediate_max_trees = UINT_MAX;
+        init_terrace->terrace_max_trees = UINT_MAX;
         init_terrace->seconds_max = -1;
     } else {
         if(params.terrace_stop_intermediate_num > 0){
             init_terrace->intermediate_max_trees = params.terrace_stop_intermediate_num;
         } else if(params.terrace_stop_intermediate_num == 0){
-            cout<<"The stopping rule based on the number of intermediate trees is turned off.\n";
-            init_terrace->intermediate_max_trees = -1;
+            cout<<"The stopping rule based on the number of intermediate trees: the threshold is set to the maximum value of unsigned integer: "<<UINT_MAX<<"\n";
+            init_terrace->intermediate_max_trees = UINT_MAX;
         }
         if(params.terrace_stop_terrace_trees_num > 0){
             init_terrace->terrace_max_trees = params.terrace_stop_terrace_trees_num;
         } else if(params.terrace_stop_terrace_trees_num == 0){
-            cout<<"The stopping rule based on the size of a terrace is turned off.\n";
-            init_terrace->terrace_max_trees = -1;
+            cout<<"The stopping rule based on the size of a terrace: the threshold is set to the maximum value of unsigned integer: "<<UINT_MAX<<"\n";
+            init_terrace->terrace_max_trees = UINT_MAX;
         }
         
         if(params.terrace_stop_time > 0){
