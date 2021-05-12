@@ -166,7 +166,7 @@ int PhyloTree::optimizeSubtreeParsimony(ParsimonySearchParameters& s,
         moves.resize(branch_count);
         
 #ifdef _OPENMP
-#pragma omp parallel for num_threads(num_threads) reduction(+:positions_considered)
+#pragma omp parallel for num_threads(num_threads) reduction(+:positions_considered) schedule(dynamic)
 #endif
         for (intptr_t i=0; i<branch_count; ++i) {
             Move&         move   = moves[i];
