@@ -871,7 +871,7 @@ int main(int argc, char* argv[]) {
             if (nextArg.empty()) {
                 PROBLEM(arg + " should be followed by precision level between 4 and 15");
             }
-            precision = atoi(arg.c_str());
+            precision = atoi(nextArg.c_str());
             if (15<precision) precision=15;
             if (precision<1)  precision=1;
             ++argNum;
