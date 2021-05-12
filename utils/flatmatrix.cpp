@@ -66,6 +66,10 @@ std::string& FlatMatrix::sequenceName(intptr_t i) {
     return sequenceNames[i];
 }
 
+void FlatMatrix::setSequenceName(intptr_t i, 
+                                 const std::string& new_name) {
+    sequenceNames[i] = new_name;
+}
 
 void FlatMatrix::setSize(intptr_t rows) {
     if (!borrowed) {

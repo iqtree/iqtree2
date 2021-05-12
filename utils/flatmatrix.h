@@ -45,6 +45,8 @@ public:
     size_t             getMaxSeqNameLength()    const;
     const std::string& sequenceName(intptr_t i)   const;
     std::string&       sequenceName(intptr_t i);
+    void               setSequenceName(intptr_t i, 
+                                       const std::string& new_name);
     virtual void       setSize(intptr_t rows);
     intptr_t           getSize();
     const double*      getDistanceMatrix()      const;

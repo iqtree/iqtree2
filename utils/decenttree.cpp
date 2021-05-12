@@ -63,6 +63,9 @@ namespace {
     std::string unknown_chars; //defaults to .~_-?N
     std::string format             = "square.interleaved";
     bool        interleaved_format = true;
+
+    std::string stripName;              //characters to strip from names
+    std::string nameReplace("_");       //characters to replace stripepd chars with, in names
 };
 
 void showBanner() {
@@ -75,7 +78,8 @@ void showBanner() {
 }
 
 void showUsage() {
-    std::cout << "Usage: decenttree (-fasta [fastapath] (-uncorrected) (-no-matrix) (-dist-out [distout]\n";
+    std::cout << "Usage: decenttree (-fasta [fastapath] (-strip-name [stripped]) (-name-replace [reps])\n";
+    std::cout << "       (-uncorrected) (-no-matrix) (-dist-out [distout]\n";
     std::cout << "       (-alphabet [states]) (-unknown [chars]) (-not-dna))\n";
     std::cout << "       -in [mldist] (-c [level]) (-f [prec]) -out [newick] -t [algorithm]\n";
     std::cout << "       (-nt [threads]) (-gz) (-no-banner) (-q)\n";
@@ -83,6 +87,9 @@ void showUsage() {
     std::cout << "[fastapath]  is the path of a .fasta format file specifying genetic sequences\n";
     std::cout << "             (which may be in .gz format)\n";
     std::cout << "             (by default, the character indicating an unknown state is 'N')\n";
+    std::cout << "[stripped]   is a list of characters to replace in taxon names, e.g. \" /\"\n";
+    std::cout << "[rep]        is a list of characters to replace them with e.g. \"_\"\n";
+    std::cout << "             (may be shorter than [strippped]; if so first character is the default.\n";
     std::cout << "[distout]    is the path, of a file, into which the distance matrix is to be written\n";
     std::cout << "             (possibly in a .gz format)\n";
     std::cout << "[states]     are the characters for each site\n";
@@ -179,13 +186,15 @@ protected:
 public:
     explicit Sequence(const std::string& seq_name)
         : name(seq_name), is_problematic(false) {}
-    size_t sequenceLength()           const { return sequence_data.size(); }
-    const char* data()                const { return sequence_data.data(); }
-    const std::string& sequenceData() const { return sequence_data; }
-          std::string& sequenceData()       { return sequence_data; }
-    const std::string& getName()      const { return name; }
-    bool  isProblematic()             const { return is_problematic; }
-    void  markAsProblematic()               { is_problematic = true; }
+    size_t sequenceLength()           const    { return sequence_data.size(); }
+    const char* data()                const    { return sequence_data.data(); }
+    const std::string& sequenceData() const    { return sequence_data; }
+          std::string& sequenceData()          { return sequence_data; }
+    const std::string& getName()      const    { return name; }
+    void  setName(const std::string& new_name) { name = new_name; }
+    void  setName(const char* new_name)        { name = new_name; }
+    bool  isProblematic()             const    { return is_problematic; }
+    void  markAsProblematic()                  { is_problematic = true; }
 };
 
 struct Sequences: public std::vector<Sequence> {
@@ -416,7 +425,7 @@ public:
         progress.done();
         #endif
         return true;
-   }
+    }
 
     bool writeDistanceMatrixToFile(const std::string& filePath) {
         setUpSerializedData();
@@ -688,6 +697,78 @@ void removeProblematicSequences(Sequences& sequences,
         << " wall-clock seconds." << std::endl;
 }
 
+void setUpReplacementArray(const std::string& chars_to_strip, 
+                           const std::string& replacement_chars,
+                           char *in_char_to_out_char /*array of 256*/) {
+    unsigned char ch=0;
+    for (unsigned int c=0; c<256; ++c, ++ch) {
+        in_char_to_out_char[c] = ch;
+    }
+    size_t strip_count = chars_to_strip.length();
+    size_t rep_count   = replacement_chars.length();
+    for (size_t i=0; i<strip_count; ++i) {
+        char   ch_in  = chars_to_strip[i];
+        size_t ix_in  = (unsigned char)(ch_in);
+        size_t j      = (i<replacement_chars.length() ? i : 0);
+        char   ch_out = replacement_chars[j];
+        in_char_to_out_char[ch_in] = ch_out;
+    }
+}
+
+void fixUpSequenceNames(const std::string& chars_to_strip, 
+                        const std::string& replacement_chars,
+                        Sequences&  sequences) {
+    if (stripName.empty() || replacement_chars.empty()) {
+        return;
+    }
+    char in_char_to_out_char[256];
+    setUpReplacementArray(chars_to_strip, replacement_chars, in_char_to_out_char);
+
+    intptr_t seq_count = sequences.size();
+    #ifdef _OPENMP
+    #pragma omp parallel for
+    #endif
+    for (intptr_t seq=0; seq<seq_count; ++seq) {
+        std::string old_name = sequences[seq].getName();
+        std::string new_name = old_name;
+        for (size_t i=0; i<new_name.length(); ++i) {
+            char ch_in   = old_name[i];
+            size_t ix_in = (unsigned char)(ch_in);
+            new_name[i]  = in_char_to_out_char[ix_in];
+        }
+        if (new_name!=old_name) {
+            sequences[seq].setName(new_name);
+        }
+    }
+}
+
+void fixUpSequenceNames(const std::string& chars_to_strip, 
+                        const std::string& replacement_chars,
+                        FlatMatrix& m) {
+    if (stripName.empty() || replacement_chars.empty()) {
+        return;
+    }
+    char in_char_to_out_char[256];
+    setUpReplacementArray(chars_to_strip, replacement_chars, in_char_to_out_char);
+
+    intptr_t seq_count = m.getSize();
+    #ifdef _OPENMP
+    #pragma omp parallel for
+    #endif
+    for (intptr_t seq=0; seq<seq_count; ++seq) {
+        std::string old_name = m.sequenceName(seq);
+        std::string new_name = old_name;
+        for (size_t i=0; i<new_name.length(); ++i) {
+            char ch_in   = old_name[i];
+            size_t ix_in = (unsigned char)(ch_in);
+            new_name[i]  = in_char_to_out_char[ix_in];
+        }
+        if (new_name!=old_name) {
+            m.setSequenceName(seq, new_name);
+        }
+    }
+}                        
+
 bool prepInput(const std::string& alignmentInputFilePath,
                const std::string& matrixInputFilePath,
                bool  reportProgress,
@@ -701,6 +782,7 @@ bool prepInput(const std::string& alignmentInputFilePath,
             sequences, is_site_variant)) {
             return false;
         }
+        fixUpSequenceNames(stripName, nameReplace, sequences);
         if (loadMatrix) {
             if (!loadSequenceDistancesIntoMatrix
                             (sequences, is_site_variant,
@@ -730,6 +812,7 @@ bool prepInput(const std::string& alignmentInputFilePath,
     } else if (!matrixInputFilePath.empty()) {
         if (!loadDistanceMatrixInto(matrixInputFilePath,
                                     reportProgress, m)) {
+            fixUpSequenceNames(stripName, nameReplace, m);
             return false;
         }
     }
@@ -738,6 +821,7 @@ bool prepInput(const std::string& alignmentInputFilePath,
     }
     return true;
 }
+
 
 int main(int argc, char* argv[]) {
     std::stringstream problems;
@@ -815,6 +899,20 @@ int main(int argc, char* argv[]) {
         }
         else if (arg=="-no-matrix") {
             isMatrixToBeLoaded = false;
+        }
+        else if (arg=="-strip-name") {
+            if (nextArg.empty()) {
+                PROBLEM(arg + " should be followed by a list of characters to strip from names");
+            }
+            stripName = nextArg;
+            ++argNum;
+        }
+        else if (arg=="-name-replace") {
+            if (nextArg.empty()) {
+                PROBLEM(arg + " should be followed by a list of characters to replace those stripped from names");
+            }
+            nameReplace = nextArg;
+            ++argNum;            
         }
         else if (arg=="-t") {
             if (START_TREE_RECOGNIZED(nextArg)) {
