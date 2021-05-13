@@ -20,7 +20,8 @@ statefrequency.cpp statefrequency.h
 stringfunctions.cpp stringfunctions.h
 timekeeper.cpp timekeeper.h
 timeutil.h hammingdistance.h safe_io.h
-operatingsystem.cpp operatingsystem.h my_assert.h)
+operatingsystem.cpp operatingsystem.h my_assert.h
+vectortypes.cpp vectortypes.h)
 
 if(ZLIB_FOUND)
   target_link_libraries(utils ${ZLIB_LIBRARIES})
@@ -39,6 +40,7 @@ add_executable(decentTree
     upgma.h nj.h rapidnj.h auctionmatrix.h
     clustertree.h distancematrix.h hammingdistance.h
     stitchup.cpp
+    vectortypes.cpp vectortypes.h
     
     heapsort.h
     gzstream.cpp gzstream.h

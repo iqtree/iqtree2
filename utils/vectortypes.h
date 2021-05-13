@@ -8,7 +8,8 @@
 #ifndef vectortypes_h
 #define vectortypes_h
 #include <vector>
-#include <algorithm>
+#include <algorithm> //for std::transform
+#include <string>    //for std::string
 
 /**
         vector of double number
@@ -104,8 +105,34 @@ typedef std::vector<char> CharVector;
 /**
         vector of string
  */
-typedef std::vector<std::string> StrVector;
+class StrVector: public std::vector<std::string> {
+public:
+    typedef std::vector<std::string> super;
+    StrVector() = default;
+    StrVector(size_t size);
+    StrVector(const StrVector&) = default;
+    ~StrVector() = default;
 
+    template <int COUNT> StrVector& appendLiterals(const char* (&literals)[COUNT], 
+                                                   bool force_upper_case = false) {
+        for (int i=0; i<COUNT; ++i) {
+            std::string literal = literals[i];
+            if (force_upper_case) {
+                std::transform(literal.begin(), literal.end(), literal.begin(),
+                               []( char c){ return toupper(c); });
+            }
+            emplace_back(literal);
+        }
+        return *this;
+    }
+    template <int COUNT> StrVector& setToLiterals(const char* (&literals)[COUNT], 
+                                                  bool force_upper_case = false ) {
+        clear();
+        return appendLiterals(literals, force_upper_case);
+    }
+    bool contains(const char* find_me)        const;
+    bool contains(const std::string& find_me) const;
+};
 
 /**
         matrix of double number

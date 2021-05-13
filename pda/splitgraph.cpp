@@ -748,7 +748,7 @@ bool SplitGraph::isWeaklyCompatible() {
 }
 
 
-void SplitGraph::getTaxaName(vector<string> &taxname) {
+void SplitGraph::getTaxaName(StrVector &taxname) {
     taxname.clear();
     for (int i = 0; i < getNTaxa(); i++)
         taxname.push_back(taxa->GetTaxonLabel(i));

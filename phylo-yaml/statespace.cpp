@@ -318,7 +318,7 @@ void parseList(YAML::const_iterator first,
         parseList(first, last, last_list);
     }
     else {
-        last_list = { "" };
+        last_list.push_back("");
     }
     for (auto sit = this_list.begin(); sit != this_list.end(); sit++) {
         for (auto sit2 = last_list.begin(); sit2 != last_list.end(); sit2++ ) {
