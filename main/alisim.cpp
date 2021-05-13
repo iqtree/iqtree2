@@ -470,13 +470,19 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
                 // get variables
                 IQTree *current_tree = (IQTree*) super_tree->at(partition_index);
                 int expected_num_states_current_tree = current_tree->aln->getNSite();
+                int num_sites_per_state = super_tree->at(partition_index)->aln->seq_type == SEQ_CODON?3:1;
+                
+                // create position_spec in case aln_files are specified in a directory
+                if (super_alisimulator->params->partition_file && isDirectory(super_alisimulator->params->partition_file))
+                {
+                    ((SuperAlignment*) super_tree->aln)->partitions[partition_index]->CharSet::position_spec = "1-" + convertIntToString(super_tree->at(partition_index)->aln->getNSite()*num_sites_per_state);
+                }
                 
                 // extract site_ids of the partition
                 string info_spec_str = ((SuperAlignment*) super_tree->aln)->partitions[partition_index]->CharSet::position_spec;
                 // convert position_spec from "*" to "start-end"
                 if (!info_spec_str.compare("*") && super_tree->at(partition_index)->aln->getNSite() > 0)
                 {
-                    int num_sites_per_state = super_tree->at(partition_index)->aln->seq_type == SEQ_CODON?3:1;
                     info_spec_str = "1-" + convertIntToString(super_tree->at(partition_index)->aln->getNSite()*num_sites_per_state);
                     ((SuperAlignment*) super_tree->aln)->partitions[partition_index]->CharSet::position_spec = info_spec_str;
                 }

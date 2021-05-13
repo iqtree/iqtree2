@@ -75,6 +75,10 @@ void AliSimulator::initializeIQTreeFromTreeFile()
             outError("Please supply a tree file by -t <TREE_FILEPATH>");
         tree->readTree(params->user_file, is_rooted);
         
+        // sum of rate*n_sites and total sites (for rate normalization)
+        double sum = 0;
+        int num_sites = 0;
+        
         // further initialize super_tree/alignments
         for (int i = 0; i < ((PhyloSuperTree*) tree)->size(); i++)
         {
@@ -120,9 +124,36 @@ void AliSimulator::initializeIQTreeFromTreeFile()
             if (params->partition_type == BRLEN_SCALE)
             {
                 if (params->alisim_partition_rates.size() >= ((PhyloSuperTree*) tree)->size())
+                {
                     ((PhyloSuperTree*) tree)->part_info[i].part_rate = params->alisim_partition_rates[i];
+                    
+                    // update sum of rate*n_sites and num_sites (for rate normalization)
+                    sum += ((PhyloSuperTree*) tree)->part_info[i].part_rate * current_tree->aln->getNSite();
+                    if (current_tree->aln->seq_type == SEQ_CODON && ((PhyloSuperTree*) tree)->rescale_codon_brlen)
+                        num_sites += 3*current_tree->aln->getNSite();
+                    else
+                        num_sites += current_tree->aln->getNSite();
+                }
                 else
                     outError("Please use -p{<RATE_1>,<RATE_2>,...,<RATE_N>} <partition_file> to specify rates for each partition.");
+            }
+        }
+        
+        // normalizing the partition rates (if necessary)
+        if (params->partition_type == BRLEN_SCALE)
+        {
+            sum /= num_sites;
+            sum = 1.0/sum;
+            
+            // check whether normalization is necessary or not
+            if (sum != 1)
+            {
+                // show warning
+                outWarning("Partitions' rates are normalized so that sum of (partition_rate*partition_sequence_length) of all partitions is 1.");
+                
+                // update partitions' rates
+                for (int i = 0; i < ((PhyloSuperTree*) tree)->size(); i++)
+                    ((PhyloSuperTree*) tree)->part_info[i].part_rate  *= sum;
             }
         }
     }
