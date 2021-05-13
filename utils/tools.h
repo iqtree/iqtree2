@@ -349,7 +349,7 @@ enum LEAST_SQUARE_VAR {
 
 enum class START_TREE_TYPE {
     STT_BIONJ, STT_PARSIMONY, STT_PLL_PARSIMONY, STT_RANDOM_TREE, STT_USER_TREE,
-    STT_PARSIMONY_JOINING,
+    STT_PARSIMONY_JOINING, STT_PARSIMONY_ROUTING
 };
 
 const int MCAT_LOG = 1; // categorize by log(rate) for Meyer & von Haeseler model

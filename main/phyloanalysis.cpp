@@ -2540,8 +2540,9 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         } else {
             initTree = iqtree->getTreeString();
         }
+        bool isRandomTree = params.start_tree == START_TREE_TYPE::STT_RANDOM_TREE; 
         // now overwrite with random tree
-        if (params.start_tree == START_TREE_TYPE::STT_RANDOM_TREE && !finishedInitTree) {
+        if (isRandomTree && !finishedInitTree) {
             cout << "Generate random initial " << params.start_tree_subtype_name << " tree..." << endl;
             iqtree->generateRandomTreeSubtype();
             if (params.compute_likelihood) {
@@ -2561,9 +2562,13 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
             iqtree->setParsimonyKernel(iqtree->params->SSE);
             iqtree->initializeAllPartialPars();
             iqtree->setParsimonyBranchLengths();
-            parsimony_score = iqtree->computeParsimony("Calculating parsimony score of random tree");
+            const char* adjective = isRandomTree ? "random" : "initial";
+            std::string task_name = std::string("Calculating parsimony score of ") 
+                                  + adjective + " tree";
+            parsimony_score = iqtree->computeParsimony(task_name.c_str());
             initTree = iqtree->getTreeString();
-            cout << "Parsimony score of random tree: " << parsimony_score << endl;
+            cout << "Parsimony score of " << adjective 
+                 << " tree: " << parsimony_score << endl;
         }
         
         /****************** NOW PERFORM MAXIMUM LIKELIHOOD TREE RECONSTRUCTION ******************/

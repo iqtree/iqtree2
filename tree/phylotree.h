@@ -1718,7 +1718,8 @@ public:
      * @param alignment input alignment
      * @return parsimony score
      */
-    virtual int joinParsimonyTree(const char *out_prefix, Alignment *alignment);
+    virtual int joinParsimonyTree(const char *out_prefix, Alignment *alignment, 
+                                  START_TREE_TYPE start_tree);
         
     int  doParsimonyNNI(VerboseMode how_loud);
     

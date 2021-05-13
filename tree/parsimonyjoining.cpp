@@ -340,6 +340,7 @@ public:
             int branch_score = 0;
             tree.computeParsimonyOutOfTree(pars, scratch_vector,
                                            &branch_score);
+
             if ( s == 0 || branch_score<candidate.best_score) {
                 candidate.best_score  = branch_score;
                 candidate.best_branch = sample[s];
@@ -356,12 +357,11 @@ public:
     int routeCandidate(RoutedTaxon& taxon, UINT* scratch_vector) const {
         int prev_branch = -1;
         int dest_branch_id = taxon.best_branch;
-        
         auto pars = taxon.getParsimonyBlock();
         for (;;) {
             int best_branch_id = dest_branch_id;
             PhyloBranch target = branches[dest_branch_id];
-            IntVector neighboring_branch_ids;
+            IntVector   neighboring_branch_ids;
             FOR_EACH_PHYLO_NEIGHBOR(target.first,  target.second, it, nei) {
                 if (nei->id != prev_branch) {
                     neighboring_branch_ids.push_back(nei->id);
@@ -378,11 +378,17 @@ public:
                 PhyloBranch    b    = branches[id];
                 PhyloNeighbor* nei1 = b.getLeftNeighbor();
                 PhyloNeighbor* nei2 = b.getRightNeighbor();
+
+                ///Tried the following two statements: made it *much* slower.
+                //tree.computeParsimonyBranch(nei1, b.first);
+                //tree.computeParsimonyBranch(nei2, b.second);
+
                 tree.computePartialParsimonyOutOfTree(nei1->get_partial_pars(),
                                                       nei2->get_partial_pars(),
                                                       scratch_vector);
                 int branch_score = 0;
                 tree.computeParsimonyOutOfTree(pars, scratch_vector, &branch_score);
+
                 auto touching_nei = doesFirstTouch(b, target) ? nei1 : nei2;
                 int subtree_score = tree.getSubTreeParsimony(touching_nei);
                 if (branch_score<taxon.best_score) {
@@ -417,7 +423,9 @@ public:
         back->id              = static_cast<int>(branch_id);
     }
     void insertCandidate(RoutedTaxon& taxon,
-                         BlockAllocator& block_allocator) {
+                         BlockAllocator& block_allocator,
+                         UINT* scratch_vector) {
+        routeCandidate(taxon, scratch_vector);
         PhyloBranch target = branches[taxon.best_branch];
         taxon.new_interior->addNeighbor(target.first, -1);
         taxon.new_interior->addNeighbor(target.second, -1);
@@ -468,7 +476,7 @@ public:
     }
     void constructTree() {
         int         nseq          = tree.aln->getNSeq32();
-        double      work_estimate = (double)nseq * sqrt((nseq) + 12);
+        double      work_estimate = (double)nseq * sqrt(nseq) * 2.0;
         const char* task          = "Constructing tree with Parsimony Routing";
         tree.initProgress(work_estimate, task, "", "");
 
@@ -554,10 +562,10 @@ public:
                       candidates.begin()+stop_batch);
             
             for (int j=start_batch; j<stop_batch; ++j) {
-                insertCandidate(candidates[j], block_allocator);
+                insertCandidate(candidates[j], block_allocator, buffer[0]);
             }
             inserting.stop();
-            double work_done = (double)(stop_batch - start_batch)
+            double work_done = (double) (stop_batch - start_batch)
                              * (double) (sample_count+2);
             tree.trackProgress(work_done);
             total_work += work_done;
@@ -586,7 +594,8 @@ public:
 };
 
 int PhyloTree::joinParsimonyTree(const char *out_prefix,
-                                 Alignment *alignment) {
+                                 Alignment *alignment,
+                                 START_TREE_TYPE start_tree) {
     aln = alignment;
     size_t nseq = aln->getNSeq();
     if (nseq < 3) {
@@ -594,12 +603,25 @@ int PhyloTree::joinParsimonyTree(const char *out_prefix,
     }
     PhyloTreeThreadingContext context(*this, params->parsimony_uses_max_threads);
 
-    if (1) {
-        ParsimonyJoiningMatrixType pjm(*this);
-        pjm.join();
-    } else {
-        ParsimonyRouter pr(*this, context);
-        pr.constructTree();
+    switch (start_tree) {
+        case START_TREE_TYPE::STT_PARSIMONY_ROUTING:
+            {
+                ParsimonyRouter pr(*this, context);
+                pr.constructTree();
+            }
+            break;
+        case START_TREE_TYPE::STT_PARSIMONY_JOINING:
+            {
+                ParsimonyJoiningMatrixType pjm(*this);
+                pjm.join();
+            }
+            break;
+        default:
+            outWarning("Unrecognized start tree type; will use parsimony joining");
+            {
+                ParsimonyJoiningMatrixType pjm(*this);
+                pjm.join();
+            }
     }
     deleteAllPartialParsimony();
     initializeAllPartialPars();

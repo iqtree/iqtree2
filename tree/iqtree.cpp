@@ -828,13 +828,19 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
             break;
 
         case START_TREE_TYPE::STT_PARSIMONY_JOINING:
-            logLine("Creating parsimony tree by parsimony joining...");
-            start = getRealTime();
-            score = joinParsimonyTree(params->out_prefix.c_str(), aln);
-            LOG_LINE(VerboseMode::VB_QUIET, "Parsimony joining"
-                     << " took " << getRealTime() - start << " seconds"
-                     << ", parsimony score: " << score
-                     << " (based on " << aln->num_parsimony_sites << " sites)");
+        case START_TREE_TYPE::STT_PARSIMONY_ROUTING:
+            {
+                std::string verb = 
+                    (start_tree==START_TREE_TYPE::STT_PARSIMONY_ROUTING) 
+                    ? "routing" : "joining";
+                LOG_LINE(VerboseMode::VB_QUIET, "Creating parsimony tree by parsimony " + verb + "...");
+                start = getRealTime();
+                score = joinParsimonyTree(params->out_prefix.c_str(), aln, start_tree);
+                LOG_LINE(VerboseMode::VB_QUIET, "Parsimony " << verb
+                        << " took " << getRealTime() - start << " seconds"
+                        << ", parsimony score: " << score
+                        << " (based on " << aln->num_parsimony_sites << " sites)");
+            }
             break;
 
         case START_TREE_TYPE::STT_RANDOM_TREE:
@@ -1020,6 +1026,11 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
                                " via parsimony joining";
             verb = "constructed";
             break;
+        case START_TREE_TYPE::STT_PARSIMONY_ROUTING:
+            whatAmIDoingHere = "Constructing parsimony tree"
+                               " via parsimony routing";
+            verb = "constructed";
+            break;
         case START_TREE_TYPE::STT_BIONJ:
             whatAmIDoingHere = std::string("Loading ")
                              + params->start_tree_subtype_name + " tree ";
@@ -1077,8 +1088,9 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
                     }
                     break;
 
-                case START_TREE_TYPE::STT_PARSIMONY_JOINING: 
-                    joinParsimonyTree(nullptr, aln);
+                case START_TREE_TYPE::STT_PARSIMONY_JOINING: //fall-through 
+                case START_TREE_TYPE::STT_PARSIMONY_ROUTING:
+                    joinParsimonyTree(nullptr, aln, params->start_tree);
                     break;
 
                 default:

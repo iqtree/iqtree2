@@ -455,6 +455,8 @@ namespace {
             params.start_tree = START_TREE_TYPE::STT_PARSIMONY;
         else if (tree_name == "PJ")
             params.start_tree = START_TREE_TYPE::STT_PARSIMONY_JOINING;
+        else if (tree_name == "PR")
+            params.start_tree = START_TREE_TYPE::STT_PARSIMONY_ROUTING;
         else if (tree_name == "PLLPARS")
             params.start_tree = START_TREE_TYPE::STT_PLL_PARSIMONY;
         else if (tree_name == "RAND" || tree_name=="RANDOM") {
