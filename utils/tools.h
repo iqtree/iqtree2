@@ -2291,11 +2291,6 @@ public:
     IntVector alisim_num_taxa_list;
     
     /**
-    *  list of partition rates
-    */
-    DoubleVector alisim_partition_rates;
-    
-    /**
     *  birth_rate (Birth_Death model)
     */
     double birth_rate;
