@@ -16,7 +16,7 @@ public:
 };
 
 enum class ModelParameterType {
-    RATE, FREQUENCY, WEIGHT, OTHER
+    RATE, FREQUENCY, PROPORTION, WEIGHT, OTHER
 };
 
 class YAMLFileParameter {
@@ -88,6 +88,8 @@ private:
     bool          is_modifier_model;  //True for models that work by modifying
                                       //or extending an existing model.  False for
                                       //others.
+    bool          is_rate_model;      //True if this is a *rate*, rather than a
+                                      //substitution model.
 
     std::string   citation;         //Citation string
     std::string   DOI;              //DOI for the publication (optional)
@@ -267,7 +269,6 @@ public:
 
     //Inheriting
     void inheritModel(const ModelInfoFromYAMLFile &);
-
 };
 
 typedef std::map<std::string, ModelInfoFromYAMLFile> MapOfModels;
@@ -275,6 +276,7 @@ typedef std::map<std::string, ModelInfoFromYAMLFile> MapOfModels;
 class ModelListFromYAMLFile {
 protected:
     MapOfModels  models_found;
+    MapOfModels  rate_models_found;
     const string dummy_rate_params;
     const string dummy_freq_params;    
 
@@ -284,7 +286,7 @@ public:
     ~ModelListFromYAMLFile() = default;
 
     void loadFromFile(const char* file_path, PhyloTree* report_to_tree);
-    bool isModelNameRecognized(const char* model_name);
+    bool isSubstitutionModelNameRecognized(const char* model_name);
 
     ModelMarkov* getModelByName(const char* model_name, PhyloTree* tree,
                                 const char* model_params, StateFreqType freq_type,
@@ -320,8 +322,10 @@ public:
     void insistOnAlignmentSequenceType(const Alignment* alignment, 
                                        SeqType desired_type) const;
 
-    bool hasModel(const std::string& model_name) const;
-    StrVector getModelNames() const;
+    bool hasModel(const std::string& model_name)  const;
+    StrVector   getSubstitutionModelNames()       const;
+    std::string getListOfSubstitutionModelNames() const;
+    std::string getListOfRateModelNames()         const;
     
     const ModelInfoFromYAMLFile& getModel(const std::string& model_name) const;
 };

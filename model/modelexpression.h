@@ -53,6 +53,7 @@ namespace ModelExpression {
         virtual int    getPrecedence()      const;
         int            evaluateAsInteger()  const;
         virtual void   writeTextTo(std::stringstream &text) const = 0;
+        std::string    getText()            const;
     };
 
     class Token: public Expression {
@@ -199,6 +200,8 @@ namespace ModelExpression {
         typedef InfixOperator super;
         Assignment(ModelInfoFromYAMLFile& for_model);
         virtual ~Assignment() = default;
+        virtual void setOperands(Expression* left, 
+                                 Expression* right); //takes ownership
         virtual double evaluate()           const;
         virtual void   writeTextTo(std::stringstream &text) const;
         virtual bool   isAssignment()       const;
@@ -272,10 +275,13 @@ namespace ModelExpression {
     };
 
     class ListOperator: public InfixOperator {
+    protected:
         std::vector<Expression*> list_entries;
     public:
         typedef InfixOperator super;
         ListOperator(ModelInfoFromYAMLFile& for_model);
+        ListOperator(ModelInfoFromYAMLFile& for_model, 
+                     Expression* only); //1-entry list (takes ownership)
         virtual ~ListOperator();
         virtual int    getPrecedence()   const;
         virtual double evaluate()        const;
@@ -292,6 +298,37 @@ namespace ModelExpression {
         CommaOperator(ModelInfoFromYAMLFile& for_model);
         virtual int    getPrecedence()   const;
         virtual void   writeTextTo(std::stringstream &text) const;
+    };
+
+    class MultiFunction; //So it can be friend of MultiFunctionImplementation
+
+    class MultiFunctionImplementation {
+    protected:
+        int min_param_count;
+        int max_param_count;
+    public:
+        friend class MultiFunction;
+
+        MultiFunctionImplementation(int min_params, int max_params);
+        ~MultiFunctionImplementation() = default;
+        virtual double callFunction(ModelInfoFromYAMLFile& model,
+                                    ListOperator* parameter_list) const = 0;
+    };
+
+    class MultiFunction: public Expression {
+        std::string                        function_name;
+        const MultiFunctionImplementation* body;
+        ListOperator*                      parameter_list;
+    public:
+        typedef Expression super;
+        MultiFunction(ModelInfoFromYAMLFile& for_model,
+                      const char* name,
+                      const MultiFunctionImplementation* implementation);
+        virtual ~MultiFunction();
+        virtual void   setParameter(Expression* param); //takes ownership
+        virtual double evaluate() const;
+        virtual void   writeTextTo(std::stringstream &text) const;
+        virtual bool   isFunction() const;
     };
 
     class SelectOperator: public InfixOperator {

@@ -219,6 +219,8 @@ void ModelFileLoader::parseModelParameter(const YAML::Node& param,
         p.type = ModelParameterType::RATE;
     } else if (p.type_name=="frequency") {
         p.type = ModelParameterType::FREQUENCY;
+    } else if (p.type_name=="proportion") {
+        p.type = ModelParameterType::PROPORTION;
     } else if (p.type_name=="weight") {
         p.type = ModelParameterType::WEIGHT;
     } else {
@@ -234,6 +236,8 @@ void ModelFileLoader::parseModelParameter(const YAML::Node& param,
                     //Todo: should be 1.0 divided by number of states
                     //determined from the data type (info.data_type_name ?)
                     //Or 1 divided by the number of parameters.
+    } else if (p.type==ModelParameterType::PROPORTION) {
+        dv = 1.0;
     } else if (p.type==ModelParameterType::RATE) {
         dv = 1.0;
     } else if (p.type==ModelParameterType::WEIGHT) {
@@ -402,8 +406,8 @@ void ModelFileLoader::parseYAMLMixtureModels(const YAML::Node& mixture_models,
         std::string child_model_name = stringScalar(model, "substitutionmodel", "");
         TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity, "Processing mixture model" );
         ModelInfoFromYAMLFile child_info;
-        parseYAMLSubstitutionModel(model, child_model_name, child_info,
-                                   list, &info, report_to_tree);
+        parseYAMLModel(model, child_model_name, child_info,
+                       list, &info, report_to_tree);
         (*info.mixed_models)[info.getName()] = child_info;
     }
 }
@@ -457,7 +461,7 @@ double ModelFileLoader::setConstraint(ModelExpression::Assignment* a,
     if (!assigned->isVariable()) {
         std::stringstream complaint;
         complaint << "Constraint setting for model " << info.model_name
-                  << " did not assign a variable: " << constraint_string;
+                  << " did not assign a variable: "  << constraint_string;
         outError(complaint.str());
     }
     ModelExpression::Variable*   v = a->getTargetVariable();
@@ -590,16 +594,17 @@ void ModelFileLoader::dumpMatrixTo(const char* name, ModelInfoFromYAMLFile& info
         << " is...\n" << dump.str();
 }
 
-void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_model,
-                                                 const std::string& name_of_model,
-                                                 ModelInfoFromYAMLFile& info,
-                                                 ModelListFromYAMLFile& list,
-                                                 ModelInfoFromYAMLFile* parent_model,
-                                                 PhyloTree* report_to_tree) {
-    
+void ModelFileLoader::parseYAMLModel(const YAML::Node& substitution_model,
+                                     const std::string& name_of_model,
+                                     ModelInfoFromYAMLFile& info,
+                                     ModelListFromYAMLFile& list,
+                                     ModelInfoFromYAMLFile* parent_model,
+                                     PhyloTree* report_to_tree) {
     info.is_modifier_model = false;
     info.parent_model_name = stringScalar(substitution_model, "frommodel", "");
     if (info.parent_model_name != "") {
+        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity, 
+                      name_of_model << " parent is " << info.parent_model_name << "." );
         if (string_to_upper(info.parent_model_name)=="ANY") {
             info.parent_model_name.clear();
             info.is_modifier_model = true;
@@ -608,31 +613,39 @@ void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_
             bool have_first_parent = false;
             for (string ancestral_model : split_string(info.parent_model_name, "+")) {
                 if (list.hasModel(ancestral_model)) {
+                    const ModelInfoFromYAMLFile& ancestor =
+                         list.getModel(ancestral_model);
+                    if (info.is_rate_model && !ancestor.is_rate_model) {
+                        std::stringstream complaint;
+                        complaint << "Rate model " << name_of_model
+                                  << " cannot be based on" 
+                                  << "a substitution model " 
+                                  << ancestral_model << ".";
+                        outError(complaint.str());
+                    }
                     if (!have_first_parent) {
                         info = list.getModel(ancestral_model);
                         TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
                                     "Model " << name_of_model
                                     << " is based on model " << ancestral_model);
-                        have_first_parent      = true;
+                        have_first_parent = true;
                     } else {
-                        const ModelInfoFromYAMLFile& modifier = 
-                            list.getModel(ancestral_model);
-                        info.inheritModel(modifier);
+                        info.inheritModel(ancestor);
                         TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
                                     "Model " << name_of_model
                                     << " is also based on model " << ancestral_model);
                     }
                 } else {
                     std::stringstream complaint;
-                    complaint << "Model " << name_of_model << " specifies a parent model of "
-                            << parent_model << ", but that model was not found.";
+                    complaint << "Model " << name_of_model 
+                              << " specifies a parent model of "
+                              << info.parent_model_name << ", but that model was not found.";
                     complaint << "\nRecognized models are: ";
-                    const char* separator;
-                    for (std::string possible : list.getModelNames()) {
-                        complaint << separator << possible;
-                        separator = ", ";
+                    if (info.is_rate_model) {
+                        complaint << list.getListOfRateModelNames() << ".";
+                    } else {
+                        complaint << list.getListOfSubstitutionModelNames() << ".";
                     }
-                    complaint << ".";
                     outError(complaint.str());
                 }
             }
@@ -647,9 +660,13 @@ void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_
     info.data_type_name  = stringScalar (substitution_model, "datatype",   info.data_type_name.c_str());
     //Note: doco currently says this will be called "forData".
         
-    int num_states_requested = integerScalar(substitution_model,
-                                             "numStates", info.num_states);
-    info.setNumberOfStatesAndSequenceType(num_states_requested, report_to_tree);
+    if (!info.is_rate_model) {
+        int num_states_requested = integerScalar(substitution_model,
+                                                "numStates", info.num_states);
+        info.setNumberOfStatesAndSequenceType(num_states_requested, report_to_tree);
+    } else {
+        info.forceAssign("categories", 1);   
+    }
         
     //
     //Todo: extract other information from the subsstitution model.
@@ -668,6 +685,10 @@ void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_
     //not be resolved correctly.
     auto mixtures = substitution_model["model_mixture"];
     if (mixtures) {
+        complainIfSo(info.is_rate_model,
+                     "mixed rate models not supported."
+                     " cannot parse model " + model_name +
+                      " in file " + file_path);
         complainIfNot(mixtures.IsSequence(),
                       "model_mixture for model " + model_name +
                       " in file " + file_path + " not a sequence");
@@ -676,6 +697,11 @@ void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_
 
     auto linked = substitution_model["linked_models"];
     if (linked) {
+        complainIfSo(info.is_rate_model,
+                     "linked substitution models"
+                     " are not supported for rate models."
+                     " cannot parse model " + model_name +
+                      " in file " + file_path);
         complainIfNot(linked.IsSequence(),
                       "linked_models for model " + model_name +
                       " in file " + file_path + " not a sequence");
@@ -697,7 +723,7 @@ void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_
     auto rateMatrix = substitution_model["rateMatrix"];
     if (info.rate_matrix_expressions.empty() && 
         info.rate_matrix_formula.empty() && !mixtures &&
-        !info.is_modifier_model && !linked) {
+        !info.is_modifier_model && !linked && !info.is_rate_model) {
         complainIfNot(rateMatrix, "Model " + info.model_name +
                       " in file " + file_path +
                       " does not specify a rateMatrix" );
@@ -706,11 +732,19 @@ void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_
     //If this model subclasses another it doesn't have to specify
     //a rate matrix (if it doesn't it inherits from its parent model).
     if (rateMatrix) {
+        complainIfSo(info.is_rate_model,
+                     "Cannot specify rate matrix"
+                     " for rate model " + model_name +
+                      " in file " + file_path);
         parseRateMatrix(rateMatrix, info, report_to_tree);
     }
     
     auto stateFrequency = substitution_model["stateFrequency"];
     if (stateFrequency) {
+        complainIfSo(info.is_rate_model,
+                     "Cannot specify state frequencies"
+                     " for rate model " + model_name +
+                      " in file " + file_path);
         //
         //Check that dimension of the specified parameter is the
         //same as the rank of the rate matrix (it must be!).
@@ -770,6 +804,7 @@ void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_
         "errormodel", //One of "+E", "+EA", "+EC", "+EG", "+ET"
                       //recognized by ModelDNAError.
     };
+
     for (const char* prop_name : recognized_string_property_names ) {
         auto prop_node = substitution_model[prop_name];
         if (prop_node) {
@@ -787,9 +822,9 @@ void ModelFileLoader::parseYAMLSubstitutionModel(const YAML::Node& substitution_
     auto weight = substitution_model["weight"];
     if (weight) {
         complainIfNot(parent_model!=nullptr,
-                      "Model " + model_name +
-                      " in file " + file_path +
-                      " is not part of a mixture model" );
+                    "Model " + model_name +
+                    " in file " + file_path +
+                    " is not part of a mixture model" );
         //Todo: decide what to do with weight ; it may well
         //      be a reference to variable in the parent
         //      mixture model.  Does it have to be?

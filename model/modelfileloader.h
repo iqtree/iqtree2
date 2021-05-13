@@ -77,12 +77,12 @@ public:
                          ModelInfoFromYAMLFile& info,
                          PhyloTree* report_to_tree);
         
-    void parseYAMLSubstitutionModel(const YAML::Node& substitution_model,
-                                    const std::string& name_of_model,
-                                    ModelInfoFromYAMLFile& info,
-                                    ModelListFromYAMLFile& list,
-                                    ModelInfoFromYAMLFile* parent_model,
-                                    PhyloTree* report_to_tree);
+    void parseYAMLModel(const YAML::Node& substitution_model,
+                        const std::string& name_of_model,
+                        ModelInfoFromYAMLFile& info,
+                        ModelListFromYAMLFile& list,
+                        ModelInfoFromYAMLFile* parent_model,
+                        PhyloTree* report_to_tree);
 };
 
 #endif /* modelfileloader_h */

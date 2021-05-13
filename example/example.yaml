@@ -96,12 +96,15 @@
   frommodel:         YTIP2
   description:       "Right-associativity (constraint) test"
   parameters:
-    - name: [a,b,c,d]
+    - name: [a,b,c,d,gamma_shape,categories]
       type: other
       intValue: 0
   constraints:
-    - a=b=c=1
-    - d=2
+    - a=b=1
+    - categories=2
+    - gamma_shape=1.2
+    - c=chi2(1.0/categories/2.0, 2.0*gamma_shape)
+    - d=chi2(3.0/categories/2.0, 2.0*gamma_shape)
 
 ### GTR model ###
 - substitutionmodel: YGTR
@@ -254,7 +257,6 @@
 
 #double perPoint_ = cmpPointChi2 (prob, 2.0 * gamma_shape) / (2.0 * gamma_shape);
 
-
 - ratemodel:        G
   ratedistribution: gamma
   parameters:
@@ -262,7 +264,7 @@
     type:           rate
   - name:           rate(1..categories)
     type:           calculated rate
-    formula:        "(categories==1) ? 1.0 : chi2((category+1)/categories, 2.0*gamma_shape) / (2.0*gamma_shape))"
+    formula:        "(categories==1) ? 1.0 : chi2((2.0*category-1)/categories/2.0, 2.0*gamma_shape) / (2.0*gamma_shape))"
   - name:           proportion(1..categories)
     type:           proportion
 
@@ -275,12 +277,12 @@
     type:           proportion
 
 - ratemodel:        I
-  constraints:
-  - categories = 1
   ratedistribution: invariant
   parameters:
   - name:           proportion
     type:           proportion
+  constraints:
+  - categories = 1
 
 #Note: linked_models and tree_mixture are not parsed as yet.
 

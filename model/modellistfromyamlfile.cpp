@@ -48,15 +48,25 @@ void ModelListFromYAMLFile::loadFromFile (const char* file_path,
         }
         for (auto node : yaml_model_list) {
             if (!(node["substitutionmodel"])) {
+                if (node["ratemodel"]) {
+                    std::string rate_model_name = node["ratemodel"].Scalar();
+                    TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+                                "Parsing YAML rate model " << rate_model_name);
+                    ModelInfoFromYAMLFile &rate = rate_models_found[rate_model_name]
+                                                = ModelInfoFromYAMLFile();
+                    rate.is_rate_model = true;
+                    loader.parseYAMLModel(node, rate_model_name, rate, *this,
+                                          nullptr, report_to_tree);
+                }
                 continue;
             }
             std::string yaml_model_name = node["substitutionmodel"].Scalar();
             TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
-                          "Parsing YAML model " << yaml_model_name);
-            ModelInfoFromYAMLFile &y = models_found[yaml_model_name]
-                                     = ModelInfoFromYAMLFile();
-            loader.parseYAMLSubstitutionModel(node, yaml_model_name, y, *this,
-                                              nullptr, report_to_tree);
+                          "Parsing YAML substitution model " << yaml_model_name);
+            ModelInfoFromYAMLFile &model = models_found[yaml_model_name]
+                                         = ModelInfoFromYAMLFile();
+            loader.parseYAMLModel(node, yaml_model_name, model, *this,
+                                  nullptr, report_to_tree);
         }
     }
     catch (YAML::ParserException e) {
@@ -70,12 +80,14 @@ void ModelListFromYAMLFile::loadFromFile (const char* file_path,
     }
 }
 
-bool ModelListFromYAMLFile::isModelNameRecognized (const char* model_name) {
+bool ModelListFromYAMLFile::isSubstitutionModelNameRecognized (const char* model_name) {
     size_t i = 0;
     while (model_name[i]!='\0' && model_name[i]!='{') {
         ++i;
     }
-    auto found      = models_found.find(std::string(model_name, i));
+    std::string model_front = std::string(model_name, i);
+
+    auto found      = models_found.find(model_front);
     bool recognized = found != models_found.end();
     return recognized;
 }
@@ -441,10 +453,11 @@ public:
 };
 
 bool ModelListFromYAMLFile::hasModel(const std::string& model_name) const {
-    return models_found.find(model_name) != models_found.end();
+    return models_found.find(model_name) != models_found.end()
+        || rate_models_found.find(model_name) != rate_models_found.end();
 }
 
-StrVector ModelListFromYAMLFile::getModelNames() const {
+StrVector ModelListFromYAMLFile::getSubstitutionModelNames() const {
     StrVector answer;
     for (auto it = models_found.begin(); it != models_found.end(); ++it) {
         answer.push_back(it->first);
@@ -452,10 +465,35 @@ StrVector ModelListFromYAMLFile::getModelNames() const {
     return answer;
 }
 
+std::string ModelListFromYAMLFile::getListOfSubstitutionModelNames() const {
+    std::stringstream answer;
+    const char* separator = "";
+    for (auto it = models_found.begin(); it != models_found.end(); ++it) {
+        answer << separator << it->first;
+        separator = ", ";
+    }
+    return answer.str();
+}
+
+std::string ModelListFromYAMLFile::getListOfRateModelNames() const {
+    std::stringstream answer;
+    const char* separator = "";
+    for (auto it = rate_models_found.begin(); 
+         it != rate_models_found.end(); ++it) {
+        answer << separator << it->first;
+        separator = ", ";
+    }
+    return answer.str();
+}
+
 const ModelInfoFromYAMLFile&
     ModelListFromYAMLFile::getModel(const std::string& model_name) const {
     auto it = models_found.find(model_name);
-    ASSERT(it != models_found.end());
+    if (it!=models_found.end()) {
+        return it->second;
+    }
+    it = rate_models_found.find(model_name);
+    ASSERT(it != rate_models_found.end());
     return it->second;
 }
 

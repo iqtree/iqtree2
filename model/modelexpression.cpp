@@ -7,6 +7,7 @@
 
 #include "modelexpression.h"
 #include <utils/stringfunctions.h> //for convert_double
+#include <model/rategamma.h>       //for RateGamma::cmpPointChi2
 
 namespace ModelExpression {
 
@@ -31,18 +32,49 @@ namespace ModelExpression {
                 return log(parameter);
             }
         } ln_body;
-        std::map<std::string, UnaryFunctionImplementation*> functions;
+        class ChiSquared: public MultiFunctionImplementation {
+        public:
+            typedef MultiFunctionImplementation super;
+            ChiSquared(): super(2,2) {}
+            double callFunction(ModelInfoFromYAMLFile& mf,
+                                ModelExpression::ListOperator* parameter_list) const {
+                double p1 = parameter_list->evaluateEntry(0);
+                double p2 = parameter_list->evaluateEntry(1);
+                return RateGamma::cmpPointChi2(p1, p2);
+            } 
+        } chi2_body;
+
+        std::map<std::string, UnaryFunctionImplementation*> unary_functions;
+        std::map<std::string, MultiFunctionImplementation*> multi_functions;
         
         BuiltIns() {
-            functions["exp"] = &exp_body;
-            functions["ln"]  = &ln_body;
+            unary_functions["exp"]  = &exp_body;
+            unary_functions["ln"]   = &ln_body;
+            multi_functions["chi2"] = &chi2_body;
         }
+
+        bool isUnaryFunction(const std::string &name) {
+            return unary_functions.find(name) != unary_functions.end();
+        }
+
+        bool isMultiFunction(const std::string &name) {
+            return multi_functions.find(name) != multi_functions.end();
+        }
+
         bool isBuiltIn(const std::string &name) {
-            return functions.find(name) != functions.end();
+            return isUnaryFunction(name) || isMultiFunction(name);
         }
+
         Expression* asBuiltIn(ModelInfoFromYAMLFile& mf,
                               const std::string& name) {
-            return new UnaryFunction(mf, name.c_str(), functions[name]);
+            if (isUnaryFunction(name)) {
+                return new UnaryFunction(mf, name.c_str(), unary_functions[name]);
+            } else if (isMultiFunction(name) ) {
+                return new MultiFunction(mf, name.c_str(), multi_functions[name]);
+            }
+            std::stringstream complaint;
+            complaint << "Function " << name << " not recognized";
+            throw ModelExpression::ModelException(complaint.str());
         }
     } built_in_functions;
 
@@ -69,6 +101,13 @@ namespace ModelExpression {
         //
         return (int)floor(evaluate());
     }
+
+    std::string Expression::getText() const {
+        std::stringstream s;
+        writeTextTo(s);
+        return s.str();
+    }
+
 
     Token::Token(ModelInfoFromYAMLFile& for_model, char c): super(for_model) {
         token_char = c;
@@ -319,10 +358,36 @@ namespace ModelExpression {
     Assignment::Assignment(ModelInfoFromYAMLFile& for_model )
     : super(for_model) { }
 
+    void Assignment::setOperands(Expression* left, 
+                                 Expression* right) { //takes ownership
+        super::setOperands(left, right);
+        if (rhs==nullptr) {
+            throw ModelExpression::ModelException
+                  ("Assignment has null right-hand side");
+        }
+        if (lhs==nullptr) {
+            throw ModelExpression::ModelException
+                  ("Assignment has null left-hand side");
+        }
+        if (!lhs->isVariable()) {
+            throw ModelExpression::ModelException
+                  ("Can only assign to variables");
+        }
+    }
+
     double Assignment::evaluate() const {
+        if (rhs==nullptr) {
+            throw ModelExpression::ModelException
+                  ("Assignment has null right-hand side");
+        }
         double eval = rhs->evaluate();
-        if (lhs==nullptr || !lhs->isVariable()) {
-            outError("Can only assign to variables");
+        if (lhs==nullptr) {
+            throw ModelExpression::ModelException
+                  ("Assignment has null left-hand side");
+        }
+        if (!lhs->isVariable()) {
+            throw ModelExpression::ModelException
+                  ("Can only assign to variables");
         }
         Variable* v = dynamic_cast<ModelExpression::Variable*>(lhs);
         model.assign(v->getName(), eval);
@@ -468,7 +533,14 @@ namespace ModelExpression {
     }
 
     ListOperator::ListOperator(ModelInfoFromYAMLFile& for_model)
-        : super(for_model) {}
+        : super(for_model) {
+    }
+
+    ListOperator::ListOperator(ModelInfoFromYAMLFile& for_model, 
+                               Expression*            single_param)
+        : super(for_model) {
+            list_entries.push_back(single_param);
+        }
 
     ListOperator::~ListOperator() {
         for (Expression* exp : list_entries) {
@@ -548,6 +620,66 @@ namespace ModelExpression {
         lhs->writeTextTo(text);
         text << ", ";
         rhs->writeTextTo(text);
+    }
+
+    MultiFunctionImplementation::MultiFunctionImplementation(int min_pars, int max_pars)
+        : min_param_count(min_pars), max_param_count(max_pars) {
+    }
+
+    MultiFunction::MultiFunction(ModelInfoFromYAMLFile& for_model,
+                      const char* name,
+                      const MultiFunctionImplementation* implementation)
+        : super(for_model), function_name(name), body(implementation) {
+    }
+
+    MultiFunction::~MultiFunction() {
+        delete parameter_list;
+        parameter_list = nullptr;
+    }
+
+    void   MultiFunction::setParameter(Expression* param) /*takes ownership*/ {
+        if (!param->isList())
+        {
+            Expression* inner_param = param;
+            param = new ListOperator(this->model, inner_param);              
+        }
+        parameter_list = dynamic_cast<ListOperator*>(param);
+        if (parameter_list==nullptr) {
+            delete param;
+            throw ModelExpression::ModelException
+                  ("Parameter could not be cast to parameter_list");
+        }
+        int param_count = parameter_list->getEntryCount();
+        if (param_count < body->min_param_count) {
+            std::stringstream complaint;
+            complaint << "Too few parameters (" << param_count << ")"
+                      << " for function " << function_name
+                      << " (which must have at least "
+                      << body->min_param_count << ")";
+            throw  ModelExpression::ModelException(complaint.str());     
+        }
+        if (body->max_param_count < param_count) {
+            std::stringstream complaint;
+            complaint << "Too many parameters (" << param_count << ")"
+                      << " for function " << function_name
+                      << " (which can take at most "
+                      << body->max_param_count << ")";
+            throw  ModelExpression::ModelException(complaint.str());
+        }
+    }
+
+    double MultiFunction::evaluate() const {
+        return body->callFunction(model, parameter_list);
+    }
+
+    void   MultiFunction::writeTextTo(std::stringstream &text) const {
+        text << function_name << "(";
+        parameter_list->writeTextTo(text);
+        text << ")";
+    }
+
+    bool   MultiFunction::isFunction() const {
+        return true;
     }
 
     SelectOperator::SelectOperator(ModelInfoFromYAMLFile& for_model)
@@ -730,8 +862,19 @@ namespace ModelExpression {
             } else if (token->isFunction()) {
                 Expression* param = operand_stack.pop();
                 UnaryFunction* fn = dynamic_cast<UnaryFunction*>(token);
-                fn->setParameter(param);
-                operand_stack << fn;
+                if (fn!=nullptr) {
+                    fn->setParameter(param);
+                    operand_stack << fn;
+                } else {
+                    MultiFunction* mfn = dynamic_cast<MultiFunction*>(token);
+                    if (mfn!=nullptr) {
+                        mfn->setParameter(param);
+                        operand_stack << mfn;
+                    } else {
+                        throw ModelException("Internal Logic Error:"
+                                             " Unrecognized function type.");
+                    }
+                }
             } else {
                 operand_stack << token;
             }

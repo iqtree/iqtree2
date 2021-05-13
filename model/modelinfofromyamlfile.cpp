@@ -119,7 +119,7 @@ void StringMatrix::makeSquare(bool reflect) {
 }
 
 ModelInfoFromYAMLFile::ModelInfoFromYAMLFile()
-    : is_modifier_model(false)
+    : is_modifier_model(false), is_rate_model(false)
     , sequence_type(SeqType::SEQ_UNKNOWN), num_states(0)
     , reversible(false), rate_matrix_rank(0)
     , tip_likelihood_rank(0)
@@ -141,7 +141,7 @@ void ModelInfoFromYAMLFile::copyMixedAndLinkedModels(const ModelInfoFromYAMLFile
 ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(const ModelInfoFromYAMLFile& rhs)
     : model_name(rhs.model_name), model_file_path(rhs.model_file_path)
     , parent_model_name(rhs.parent_model_name)
-    , is_modifier_model(rhs.is_modifier_model)
+    , is_modifier_model(rhs.is_modifier_model), is_rate_model(rhs.is_rate_model)
     , citation(rhs.citation), DOI(rhs.DOI), url(rhs.url)
     , data_type_name(rhs.data_type_name), sequence_type(rhs.sequence_type)
     , num_states(rhs.num_states), reversible(rhs.reversible)
@@ -163,6 +163,7 @@ ModelInfoFromYAMLFile& ModelInfoFromYAMLFile::operator=(const ModelInfoFromYAMLF
         model_file_path            = rhs.model_file_path;
         parent_model_name          = rhs.parent_model_name;
         is_modifier_model          = rhs.is_modifier_model;
+        is_rate_model              = rhs.is_rate_model;
         citation                   = rhs.citation;
         DOI                        = rhs.DOI; 
         url                        = rhs.url;
@@ -185,7 +186,7 @@ ModelInfoFromYAMLFile& ModelInfoFromYAMLFile::operator=(const ModelInfoFromYAMLF
 }
 
 ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(const std::string& path)
-    : model_file_path(path), is_modifier_model(false)
+    : model_file_path(path), is_modifier_model(false), is_rate_model(false)
     , sequence_type(SeqType::SEQ_UNKNOWN)
     , num_states(0), reversible(true)
     , rate_matrix_rank(0), tip_likelihood_rank(0)
