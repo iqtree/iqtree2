@@ -808,7 +808,9 @@ namespace ModelExpression {
     Expression* InterpretedExpression::parseExpression(const std::string& text,
                                                        size_t& ix) {
         //
-        //Notes: 1. As yet, only supports unary functions
+        //Notes: 1. Now supports unary and multiple-parameter functions
+        //          (multiple-parameter functions take ONE parameter but it
+        //           is a list constructed via CommaOperator or ListOperator).
         //       2. Based on the pseudocode quoted at
         //          https://en.wikipedia.org/wiki/Shunting-yard_algorithm
         //
@@ -889,6 +891,58 @@ namespace ModelExpression {
         return operand_stack[0];
     }
 
+    bool InterpretedExpression::parseVariable(const std::string& text,
+                                              std::string& var_name,
+                                              size_t& ix,
+                                              Expression*& expr) {
+        if (text[ix]=='(') {
+            //Subscripted: Parse the subscript expression
+            size_t subscript_start = ix;
+            size_t text_length = text.length();
+            int    bracket_depth = 0;
+            do {
+                auto ch = text[ix];
+                if      (ch==')')  --bracket_depth;
+                else if (ch=='(')  ++bracket_depth;
+                ++ix;
+            } while (ix<text_length && 0<bracket_depth);
+            //ix = index of first character after the closing bracket.
+            std::string subscript_expr;
+            if (bracket_depth==0) {
+                subscript_expr = text.substr(subscript_start+1, ix-subscript_start-2);
+                if (is_string_all_digits(subscript_expr)) {
+                    //std::cout << "VS expr: " << subscript_expr << std::endl;
+                    var_name = var_name + "(" + subscript_expr + ")";
+                } else {
+                    //Oh, boy.  Subscript expression!
+                    InterpretedExpression x(model, subscript_expr);
+                    var_name = string_to_lower(var_name);
+                    const YAMLFileParameter* param = model.findParameter(var_name) ;
+                    if (param == nullptr ) {
+                        std::stringstream complaint;
+                        complaint << "Subscripted parameter " << var_name
+                                    << " not defined, for model " << model.getLongName();
+                        throw ModelException(complaint.str());
+                    }
+                    //std::cout << "PS expr: " << subscript_expr << std::endl;
+                    expr = new ParameterSubscript(model, param, x.detatchExpression());
+                    if (false) {
+                        logExpressionAndValue("PS", expr);
+                    }
+                    return true;
+                }
+            } else {
+                std::stringstream complaint;
+                complaint << "Subscripted reference for " << var_name
+                            << " for model " << model.getLongName()
+                            << " was not terminated by a closing bracket:\n" << text;
+                throw ModelException(complaint.str());
+            }
+        }
+        expr = new Variable(model, var_name);
+        return true;
+    }
+
     bool InterpretedExpression::parseToken(const std::string& text,
                                                   size_t& ix,
                                                   Expression*& expr) {
@@ -918,52 +972,7 @@ namespace ModelExpression {
                 expr = built_in_functions.asBuiltIn(model, var_name);
                 return true;
             }
-            if (text[ix]=='(') {
-                //Subscripted: Parse the subscript expression
-                size_t subscript_start = ix;
-                size_t text_length = text.length();
-                int    bracket_depth = 0;
-                do {
-                    auto ch = text[ix];
-                    if      (ch==')')  --bracket_depth;
-                    else if (ch=='(')  ++bracket_depth;
-                    ++ix;
-                } while (ix<text_length && 0<bracket_depth);
-                //ix = index of first character after the closing bracket.
-                std::string subscript_expr;
-                if (bracket_depth==0) {
-                    subscript_expr = text.substr(subscript_start+1, ix-subscript_start-2);
-                    if (is_string_all_digits(subscript_expr)) {
-                        //std::cout << "VS expr: " << subscript_expr << std::endl;
-                        var_name = var_name + "(" + subscript_expr + ")";
-                    } else {
-                        //Oh, boy.  Subscript expression!
-                        InterpretedExpression x(model, subscript_expr);
-                        var_name = string_to_lower(var_name);
-                        const YAMLFileParameter* param = model.findParameter(var_name) ;
-                        if (param == nullptr ) {
-                            std::stringstream complaint;
-                            complaint << "Subscripted parameter " << var_name
-                                      << " not defined, for model " << model.getLongName();
-                            throw ModelException(complaint.str());
-                        }
-                        //std::cout << "PS expr: " << subscript_expr << std::endl;
-                        expr = new ParameterSubscript(model, param, x.detatchExpression());
-                        if (false) {
-                            logExpressionAndValue("PS", expr);
-                        }
-                        return true;
-                    }
-                } else {
-                    std::stringstream complaint;
-                    complaint << "Subscripted reference for " << var_name
-                              << " for model " << model.getLongName()
-                              << " was not terminated by a closing bracket:\n" << text;
-                    throw ModelException(complaint.str());
-                }
-            }
-            expr = new Variable(model, var_name);
-            return true;
+            return parseVariable(text, var_name, ix, expr);
         }
         char nextch = ((ix+1)<text.length()) ? text[ix+1] : '\0';
         if (('0'<=ch && ch<='9') || (ch=='.' && '0'<=nextch && nextch<='9')) {

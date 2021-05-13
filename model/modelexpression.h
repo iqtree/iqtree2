@@ -139,7 +139,7 @@ namespace ModelExpression {
                       const char* name,
                       const UnaryFunctionImplementation* implementation);
         virtual ~UnaryFunction();
-        
+
         virtual void   setParameter(Expression* param); //takes ownership
         virtual double evaluate() const;
         virtual void   writeTextTo(std::stringstream &text) const;
@@ -370,6 +370,10 @@ namespace ModelExpression {
                                     size_t& index);
         bool        parseToken     (const std::string& text,
                                     size_t& ix, Expression*& expr);
+        bool        parseVariable  (const std::string& text,
+                                    std::string& var_name,
+                                    size_t& ix, Expression*& expr);
+
     public:
         typedef Expression super;
         using super::model;
