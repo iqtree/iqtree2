@@ -151,6 +151,7 @@ public:
                   neighToCluster->partial_pars );
         }
         auto abVector = neighToCluster->partial_pars;
+        auto abScore  = tree->getSubTreeParsimony(neighToCluster);
         
         #ifdef _OPENMP
         #pragma omp parallel for reduction(+:cTotal)
@@ -161,9 +162,13 @@ public:
                 T Dbi         = bRow[i];
 
                 //Parsimony distance
-                auto iVector  = topOfCluster[rowToCluster[i]]->partial_pars;
+                auto iCluster = topOfCluster[rowToCluster[i]];
+                auto iVector  = iCluster->partial_pars;
+                int  iScore   = tree->getSubTreeParsimony(iCluster);
                 int score     = 0;
                 tree->computeParsimonyOutOfTree( abVector, iVector, &score );
+                score         = score - abScore - iScore;                 
+
                 T Dci         = static_cast<T>(score);
 
                 aRow[i]       = Dci;
@@ -263,21 +268,34 @@ public:
 class ParsimonyRouter {
     //Todo: allow caller to pass in rand_stream
 public:
-    PhyloTree& tree;
-    PhyloTreeThreadingContext context;
-    int*              rand_stream;
-    PhyloBranchVector branches;     //branches added to tree
-    IntVector         sample;       //indicates indices of branches in sample
-
+    PhyloTree&                 tree;
+    PhyloTreeThreadingContext& context;
+    int*                       rand_stream;
+    bool                       owner_of_stream;
+    PhyloBranchVector          branches;     //branches added to tree
+    IntVector                  sample;       //indicates indices of branches in sample
 
     ParsimonyRouter(PhyloTree& tree_to_route,
                     PhyloTreeThreadingContext &context_to_use)
         : tree(tree_to_route), context(context_to_use) {
         rand_stream = init_sprng(0, 1, tree.params->ran_seed,
                                  SPRNG_DEFAULT);
+        owner_of_stream = true;
+    }
+    ParsimonyRouter(PhyloTree& tree_to_route,
+                    PhyloTreeThreadingContext &context_to_use,
+                    int* stream)
+        : tree(tree_to_route), context(context_to_use)
+        , rand_stream(stream), owner_of_stream(false) {
     }
     virtual ~ParsimonyRouter() {
-        free_sprng(rand_stream);
+        if (owner_of_stream) {
+            if (rand_stream!=nullptr) {
+                free_sprng(rand_stream);
+                rand_stream = nullptr;
+            }
+            owner_of_stream = false;
+        }
     }
     void selectSample(int sample_size, int branch_count) {
         if (sample_size==branch_count) {
@@ -412,13 +430,13 @@ public:
         //  /
         // B
         //
-        PhyloNeighbor* AC = target.first->findNeighbor(taxon.new_interior);
+        PhyloNeighbor* AC = target.first->findNeighbor(taxon.new_interior);   //used to be AB
         PhyloNeighbor* CB = taxon.new_interior->findNeighbor(target.second);
         block_allocator.allocateMemoryFor(CB);
         std::swap(AC->partial_pars, CB->partial_pars);
         CB->setParsimonyComputed(AC->isParsimonyComputed());
 
-        PhyloNeighbor* BC = target.second->findNeighbor(taxon.new_interior);
+        PhyloNeighbor* BC = target.second->findNeighbor(taxon.new_interior); //used to be BA
         PhyloNeighbor* CA = taxon.new_interior->findNeighbor(target.first);
         block_allocator.allocateMemoryFor(CA);
         std::swap(BC->partial_pars, CA->partial_pars);
@@ -449,9 +467,9 @@ public:
         ++tree.leafNum;
     }
     void constructTree() {
-        int nseq = tree.aln->getNSeq32();
-        double work_estimate = (double)nseq * sqrt((nseq) + 12);
-        const char* task = "Constructing tree with Parsimony Routing";
+        int         nseq          = tree.aln->getNSeq32();
+        double      work_estimate = (double)nseq * sqrt((nseq) + 12);
+        const char* task          = "Constructing tree with Parsimony Routing";
         tree.initProgress(work_estimate, task, "", "");
 
         TimeKeeper initializing ("Initializing");
@@ -489,6 +507,7 @@ public:
             candidates[i].initialize(&block_allocator, first_new_interior_id+i-3, taxonId, taxonName, false);
             candidates[i].new_interior->id = static_cast<int>(i + nseq - 2);
         }
+
         #ifdef _OPENMP
         #pragma omp parallel for
         #endif
@@ -517,17 +536,19 @@ public:
             if (nseq < stop_batch) {
                 stop_batch = nseq;
             }
+
             searching.start();
             #ifdef _OPENMP
             #pragma omp parallel for
             #endif
             for (int i=start_batch;i<stop_batch;++i) {
                 candidates[i].computeParsimony(&tree);
-                int  t = context.getThreadNumber();
+                int t = context.getThreadNumber();
                 bestSampleBranch(candidates[i], buffer[t]);
                 routeCandidate(candidates[i], buffer[t]);
             }
             searching.stop();
+
             inserting.start();
             std::sort(candidates.begin()+start_batch,
                       candidates.begin()+stop_batch);
