@@ -902,14 +902,16 @@ int main(int argc, char* argv[]) {
         }
         else if (arg=="-strip-name") {
             if (nextArg.empty()) {
-                PROBLEM(arg + " should be followed by a list of characters to strip from names");
+                PROBLEM(arg + " should be followed by a list of characters" 
+                        " to strip from names");
             }
             stripName = nextArg;
             ++argNum;
         }
         else if (arg=="-name-replace") {
             if (nextArg.empty()) {
-                PROBLEM(arg + " should be followed by a list of characters to replace those stripped from names");
+                PROBLEM(arg + " should be followed by a list of characters" 
+                        " to replace those stripped from names");
             }
             nameReplace = nextArg;
             ++argNum;            
