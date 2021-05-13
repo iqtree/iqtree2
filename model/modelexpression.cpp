@@ -224,10 +224,20 @@ namespace ModelExpression {
         return var_name_stream.str();
     }
 
+    Function::Function(ModelInfoFromYAMLFile& for_model,
+                       const char* name)
+        : super(for_model), function_name(name) {
+    }
+
+    bool   Function::isFunction() const {
+        return true;
+    }
+
+
     UnaryFunction::UnaryFunction(ModelInfoFromYAMLFile& for_model,
                                  const char* name,
                                  const UnaryFunctionImplementation* implementation)
-        : super(for_model), function_name(name)
+        : super(for_model, name)
         , body(implementation), parameter(nullptr) {
     }
 
@@ -244,10 +254,6 @@ namespace ModelExpression {
         text << function_name << "(";
         parameter->writeTextTo(text);
         text << ")";
-    }
-
-    bool   UnaryFunction::isFunction() const {
-        return true;
     }
 
     UnaryFunction::~UnaryFunction() {
@@ -629,7 +635,7 @@ namespace ModelExpression {
     MultiFunction::MultiFunction(ModelInfoFromYAMLFile& for_model,
                       const char* name,
                       const MultiFunctionImplementation* implementation)
-        : super(for_model), function_name(name), body(implementation) {
+        : super(for_model, name), body(implementation) {
     }
 
     MultiFunction::~MultiFunction() {
@@ -676,10 +682,6 @@ namespace ModelExpression {
         text << function_name << "(";
         parameter_list->writeTextTo(text);
         text << ")";
-    }
-
-    bool   MultiFunction::isFunction() const {
-        return true;
     }
 
     SelectOperator::SelectOperator(ModelInfoFromYAMLFile& for_model)
@@ -861,20 +863,13 @@ namespace ModelExpression {
                 operand_stack << op;
             } else if (token->isFunction()) {
                 Expression* param = operand_stack.pop();
-                UnaryFunction* fn = dynamic_cast<UnaryFunction*>(token);
-                if (fn!=nullptr) {
-                    fn->setParameter(param);
-                    operand_stack << fn;
-                } else {
-                    MultiFunction* mfn = dynamic_cast<MultiFunction*>(token);
-                    if (mfn!=nullptr) {
-                        mfn->setParameter(param);
-                        operand_stack << mfn;
-                    } else {
-                        throw ModelException("Internal Logic Error:"
-                                             " Unrecognized function type.");
-                    }
+                Function*   fn    = dynamic_cast<Function*>(token);
+                if (fn==nullptr) {
+                    throw ModelException("Internal Logic Error:"
+                                            " Unrecognized function type.");
                 }
+                fn->setParameter(param);
+                operand_stack << fn;
             } else {
                 operand_stack << token;
             }

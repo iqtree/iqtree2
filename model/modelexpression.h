@@ -116,20 +116,33 @@ namespace ModelExpression {
         virtual ~UnaryFunctionImplementation() = default;
     };
 
-    class UnaryFunction: public Expression {
-        std::string                        function_name;
+    class Function: public Expression {
+    protected:
+        std::string    function_name;
+    public:
+        typedef Expression super;
+        Function() = delete;
+        Function(ModelInfoFromYAMLFile& for_model,
+                      const char* name);
+        virtual ~Function() = default;
+
+        virtual bool   isFunction() const;
+        virtual void   setParameter(Expression* param) = 0; //takes ownership
+    };
+
+    class UnaryFunction: public Function {
         const UnaryFunctionImplementation* body;
         Expression*                        parameter;
     public:
-        typedef Expression super;
+        typedef Function super;
         UnaryFunction(ModelInfoFromYAMLFile& for_model,
                       const char* name,
                       const UnaryFunctionImplementation* implementation);
         virtual ~UnaryFunction();
+        
         virtual void   setParameter(Expression* param); //takes ownership
         virtual double evaluate() const;
         virtual void   writeTextTo(std::stringstream &text) const;
-        virtual bool   isFunction() const;
     };
 
     class InfixOperator: public Expression {
@@ -315,12 +328,11 @@ namespace ModelExpression {
                                     ListOperator* parameter_list) const = 0;
     };
 
-    class MultiFunction: public Expression {
-        std::string                        function_name;
+    class MultiFunction: public Function {
         const MultiFunctionImplementation* body;
         ListOperator*                      parameter_list;
     public:
-        typedef Expression super;
+        typedef Function super;
         MultiFunction(ModelInfoFromYAMLFile& for_model,
                       const char* name,
                       const MultiFunctionImplementation* implementation);
@@ -328,7 +340,6 @@ namespace ModelExpression {
         virtual void   setParameter(Expression* param); //takes ownership
         virtual double evaluate() const;
         virtual void   writeTextTo(std::stringstream &text) const;
-        virtual bool   isFunction() const;
     };
 
     class SelectOperator: public InfixOperator {
