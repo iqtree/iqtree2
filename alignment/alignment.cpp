@@ -472,7 +472,9 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two,
     BoolVector isSequenceRemoved(n, false);
     
 #if USE_PROGRESS_DISPLAY
-    progress_display progress(n*1.1, isShowingProgressDisabled ? "" :  "Checking for duplicate sequences");
+    const char* task_name = isShowingProgressDisabled 
+                          ? "" :  "Checking for duplicate sequences";
+    progress_display progress(n*1.1, task_name);
 #else
     double progress = 0.0;
 #endif
@@ -741,10 +743,10 @@ Alignment::Alignment(NxsDataBlock *data_block, char *sequence_type,
     
     if (Params::getInstance().compute_seq_composition)
         cout << "Alignment has " << getNSeq() << " sequences with " << getNSite()
-        << " columns, " << getNPattern() << " distinct patterns" << endl
-        << num_informative_sites << " parsimony-informative, "
-        << num_variant_sites-num_informative_sites << " singleton sites, "
-        << (int)(frac_const_sites*getNSite()) << " constant sites" << endl;
+             << " columns, " << getNPattern() << " distinct patterns" << endl
+             << num_informative_sites << " parsimony-informative, "
+             << num_variant_sites-num_informative_sites << " singleton sites, "
+             << (int)(frac_const_sites*getNSite()) << " constant sites" << endl;
     //buildSeqStates();
     checkSeqName();
     // OBSOLETE: identical sequences are handled later
@@ -758,7 +760,9 @@ bool Alignment::isStopCodon(int state) {
     // 2017-05-27: all stop codon removed from Markov process
     return false;
 
-	if (seq_type != SeqType::SEQ_CODON || state >= num_states) return false;
+	if (seq_type != SeqType::SEQ_CODON || state >= num_states) {
+        return false;
+    }
     ASSERT(!genetic_code.empty());
 	return (genetic_code[state] == '*');
 }
@@ -863,7 +867,9 @@ void Alignment::computeUnknownState() {
     case SeqType::SEQ_DNA: STATE_UNKNOWN = 18; break;
     case SeqType::SEQ_PROTEIN: STATE_UNKNOWN = 23; break;
     case SeqType::SEQ_POMO: {
-        if (pomo_sampling_method == SamplingType::SAMPLING_SAMPLED) STATE_UNKNOWN = num_states;
+        if (pomo_sampling_method == SamplingType::SAMPLING_SAMPLED) {
+            STATE_UNKNOWN = num_states;
+        }
         else STATE_UNKNOWN = 0xffffffff; // only dummy, will be initialized later
         break;
     }
@@ -1264,9 +1270,10 @@ void Alignment::updatePatterns(intptr_t oldPatternCount) {
 void Alignment::addConstPatterns(char *freq_const_patterns) {
 	IntVector vec;
 	convert_int_vec(freq_const_patterns, vec);
-	if (vec.size() != num_states)
-		outError("Const pattern frequency vector has different number of states: ", freq_const_patterns);
-
+	if (vec.size() != num_states) {
+		outError("Const pattern frequency vector" 
+                 " has different number of states: ", freq_const_patterns);
+    }
     intptr_t nsite      = getNSite();
     intptr_t orig_nsite = getNSite();
     intptr_t vec_size   = static_cast<intptr_t>(vec.size());
@@ -2983,7 +2990,8 @@ int Alignment::readCountsFormat(const char* filename, const char* sequence_type)
                     uint32_t pomo_state = (id1 | (values[id1]) << 2);
                     IntIntMap::iterator pit = pomo_sampled_states_index.find(pomo_state);
                     if (pit == pomo_sampled_states_index.end()) { // not found
-                        state = pomo_sampled_states_index[pomo_state] = static_cast<int>(pomo_sampled_states.size());
+                        state = static_cast<int>(pomo_sampled_states.size());
+                        pomo_sampled_states_index[pomo_state] = state;
                         pomo_sampled_states.push_back(pomo_state);
                     } else {
                         state = pit->second;
@@ -3411,14 +3419,18 @@ void Alignment::printNexus(ostream &out, bool append, const char *aln_site_list,
     for (seq_id = 0; seq_id < seq_names.size(); seq_id++) {
         out << "  ";
         out.width(max_len);
-        if (print_taxid)
+        if (print_taxid) {
             out << left << seq_id << " ";
-        else
+        }
+        else {
             out << left << seq_names[seq_id] << " ";
+        }
         int j = 0;
-        for (auto i = site_pattern.begin();  i != site_pattern.end(); i++, j++)
-            if (kept_sites[j])
+        for (auto i = site_pattern.begin();  i != site_pattern.end(); ++i, ++j) {
+            if (kept_sites[j]) {
                 out << convertStateBackStr(at(*i)[seq_id]);
+            }
+        }
         out << endl;
     }
     out << "  ;" << endl;
@@ -3434,11 +3446,11 @@ void Alignment::printAlignment(InputType format, const char *file_name,
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
         
-        if (append)
+        if (append) {
             out.open(file_name, ios_base::out | ios_base::app);
-        else
+        } else {
             out.open(file_name);
-        
+        }
         printAlignment(format, out, file_name, append,
                        aln_site_list, exclude_sites, ref_seq_name,
                        report_progress);
@@ -3460,15 +3472,18 @@ void Alignment::printAlignment(InputType format, ostream &out, const char* file_
     const char* formatName = "phylip";
     switch (format) {
         case InputType::IN_PHYLIP:
-            printPhylip(out, append, aln_site_list, exclude_sites, ref_seq_name, false, report_progress);
+            printPhylip(out, append, aln_site_list, exclude_sites, 
+                        ref_seq_name, false, report_progress);
             break;
         case InputType::IN_FASTA:
             formatName = "fasta";
-            printFasta(out, append, aln_site_list, exclude_sites, ref_seq_name, report_progress);
+            printFasta(out, append, aln_site_list, exclude_sites, 
+                       ref_seq_name, report_progress);
             break;
         case InputType::IN_NEXUS:
             formatName = "nexus";
-            printNexus(out, append, aln_site_list, exclude_sites, ref_seq_name, false, report_progress);
+            printNexus(out, append, aln_site_list, exclude_sites, 
+                       ref_seq_name, false, report_progress);
             break;
         default:
             ASSERT(0 && "Unsupported alignment output format");
@@ -5948,7 +5963,10 @@ void Alignment::multinomialProb(Alignment refAlign, double &prob)
 
 void Alignment::multinomialProb (DoubleVector logLL, double &prob)
 {
-    //cout << "Function in Alignment: Compute probability of the expected alignment (determined by patterns log-likelihood under some tree and model) given THIS alignment." << endl;
+    //cout << "Function in Alignment: Compute" 
+    //     << " probability of the expected alignment"
+    //     << " (determined by patterns log-likelihood" 
+    //     << " under some tree and model) given THIS alignment." << endl;
 
     //The expected normalized requencies
     IntVector expectedNorFre;
