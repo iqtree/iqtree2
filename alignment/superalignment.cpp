@@ -1514,14 +1514,20 @@ SuperAlignment::~SuperAlignment()
 	partitions.clear();
 }
 
-void SuperAlignment::printAlignment(InputType format, ostream &out, const char* file_name
-                                    , bool append, const char *aln_site_list
-                                    , int exclude_sites, const char *ref_seq_name
-                                    , bool report_progress)
+void SuperAlignment::printAlignment(InputType format, ostream &out, const char* file_name,
+                                    bool append, const char *aln_site_list,
+                                    int exclude_sites, const char *ref_seq_name,
+                                    bool report_progress)
 {
-    Alignment *concat = concatenateAlignments();
-    concat->printAlignment(format, out, file_name, append, aln_site_list,
-                           exclude_sites, ref_seq_name, report_progress);
+    //Ask for all of them
+    set<int> all_the_partition_ids;
+    for (int i=0; i<partitions.size(); ++i) {
+        all_the_partition_ids.insert(i);
+    }
+    Alignment *concat = concatenateAlignments(all_the_partition_ids);
+    ASSERT(!concat->isSuperAlignment());
+    concat->Alignment::printAlignment(format, out, file_name, append, aln_site_list,
+                                      exclude_sites, ref_seq_name, report_progress);
     delete concat;
     if (format == InputType::IN_NEXUS) {
         printPartition(out, NULL, true);
@@ -1573,11 +1579,12 @@ Alignment *SuperAlignment::concatenateAlignments(set<int> &ids) {
 		ASSERT(id >= 0 && id < partitions.size());
 		if (nstates == 0) nstates = partitions[id]->num_states;
 		if (sub_type == SeqType::SEQ_UNKNOWN) sub_type = partitions[id]->seq_type;
-		if (sub_type != partitions[id]->seq_type)
+		if (sub_type != partitions[id]->seq_type) {
 			outError("Cannot concatenate sub-alignments of different type");
-		if (nstates != partitions[id]->num_states)
+        }
+		if (nstates != partitions[id]->num_states) {
 			outError("Cannot concatenate sub-alignments of different #states");
-
+        }
 		string taxa_set;
         Pattern taxa_pat = getPattern(id);
         taxa_set.insert(taxa_set.begin(), taxa_pat.begin(), taxa_pat.end());
