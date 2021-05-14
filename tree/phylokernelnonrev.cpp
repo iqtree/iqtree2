@@ -200,7 +200,7 @@ void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, intptr_t ptn
         if (right->node == root) {
             // swap so that left node is the root
             std::swap(left, right);
-            std::swap(eleft, eright);)
+            std::swap(eleft, eright);
             std::swap(partial_lh_left, partial_lh_right);
         }
     
