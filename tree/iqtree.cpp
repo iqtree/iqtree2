@@ -1776,47 +1776,6 @@ void IQTree::assessQuartets(vector<RepresentLeafSet*> &leaves_vec,
 
 }
 
-void IQTree::reinsertLeavesByParsimony(PhyloNodeVector &del_leaves) {
-    ASSERT(0 && "this function is obsolete");
-    ASSERT(root->isLeaf());
-    for (auto it_leaf = del_leaves.begin();
-         it_leaf != del_leaves.end(); ++it_leaf) {
-        LOG_LINE(VerboseMode::VB_DEBUG, "Add leaf "
-                 << (*it_leaf)->id << " to the tree");
-        initializeAllPartialPars();
-        clearAllPartialLH();
-        clearAllPartialParsimony(false);
-        Node *target_node = NULL;
-        Node *target_dad = NULL;
-        Node *added_node = (*it_leaf)->firstNeighbor()->node;
-        Node *node1 = NULL;
-        Node *node2 = NULL;
-        //Node *leaf;
-        for (int i = 0; i < 3; i++) {
-            auto nei = added_node->neighbors[i];
-            if (nei->node->id == (*it_leaf)->id) {
-                //leaf = nei->node;
-            } else if (!node1) {
-                node1 = nei->node;
-            } else {
-                node2 = nei->node;
-            }
-        }
-
-        added_node->updateNeighbor(node1, DUMMY_NODE_1);
-        added_node->updateNeighbor(node2, DUMMY_NODE_2);
-
-        best_pars_score = INT_MAX;
-        // TODO: this needs to be adapted
-        //addTaxonMPFast(added_node, target_node, target_dad,
-        //               nullptr, root->neighbors[0]->node, root);
-        target_node->updateNeighbor(target_dad, added_node, -1.0);
-        target_dad->updateNeighbor(target_node, added_node, -1.0);
-        added_node->updateNeighbor(DUMMY_NODE_1, target_node, -1.0);
-        added_node->updateNeighbor(DUMMY_NODE_2, target_dad, -1.0);
-    }
-}
-
 void IQTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
 
     //int num_del_leaves = del_leaves.size();
@@ -1843,7 +1802,7 @@ void IQTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
             assessQuartets(leaves_vec, *it, *it_leaf);
         }
         NodeVector best_nodes, best_dads;
-        double best_bonus;
+        double best_bonus = 0;
         findBestBonus(best_bonus, best_nodes, best_dads);
         LOG_LINE(VerboseMode::VB_DEBUG, "Best bonus " << best_bonus 
             << " " << best_nodes[0]->id << " " << best_dads[0]->id);
@@ -1880,15 +1839,6 @@ void IQTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
                  WT_TAXON_ID | WT_NEWLINE | WT_BR_ID);
         showProgress();
     }
-}
-
-void IQTree::doParsimonyReinsertion() {
-    PhyloNodeVector del_leaves;
-
-    deleteLeaves(del_leaves);
-
-    reinsertLeavesByParsimony(del_leaves);
-    fixNegativeBranch(false);
 }
 
 void IQTree::getNonTabuBranches(Branches& allBranches,

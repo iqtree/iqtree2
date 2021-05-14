@@ -630,7 +630,6 @@ public:
             indicates whether a given node is a dummy "place-holder" node,
             used only for testing the placement cost of adding a new taxon,
             to an existing tree, by modifying the tree (for example, in 
-            addTaxonML and growTreeML, in reinsertLeavesByParsimony, and in
             insertNode2Branch, addTaxonMPFast, and computeParsimonyTree).  
 
             @param node the node

@@ -925,12 +925,6 @@ protected:
      */
     virtual void reinsertLeaves(PhyloNodeVector &del_leaves);
 
-    void reinsertLeavesByParsimony(PhyloNodeVector &del_leaves);
-
-
-    void doParsimonyReinsertion();
-
-
     /**
             assess a quartet with four taxa. Current implementation uses the four-point condition
             based on distance matrix for quick evaluation.
