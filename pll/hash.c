@@ -164,7 +164,7 @@ pllHashTable * pllHashInit (unsigned int n)
     @param item     Where to store the retrieved data
     @return         Returns \b PLL_TRUE if the string was found, otherwise \b PLL_FALSE
 */
-int pllHashSearch (pllHashTable * hTable, char * s, void ** item)
+int pllHashSearch (pllHashTable * hTable, const char * s, void ** item)
 {
   unsigned int pos;
   pllHashItem * hItem;

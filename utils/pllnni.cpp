@@ -713,9 +713,10 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
         nniB.z3[i] = q->next->z[i];
         nniB.z4[i] = q->next->next->z[i];
     }
-    nniB.likelihood = lh1;
-    nniB.loglDelta = lh1 - nniB.likelihood;
+    nniB.likelihood   = lh1;
+    nniB.loglDelta    = lh1 - nniB.likelihood;
     nniB.negLoglDelta = -nniB.loglDelta;
+	nniB.idString     = nullptr; //James B. 14-May CPPCheck warned, not initialized.
 
 	/* Restore previous NNI move */
 	doOneNNI(tr, pr, p, 0, TOPO_ONLY);
@@ -750,9 +751,10 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
         nniC.z3[i] = q->next->z[i];
         nniC.z4[i] = q->next->next->z[i];
     }
-    nniC.likelihood = lh2;
-    nniC.loglDelta = lh2 - nniA.likelihood;
+    nniC.likelihood   = lh2;
+    nniC.loglDelta    = lh2 - nniA.likelihood;
     nniC.negLoglDelta = -nniC.loglDelta;
+	nniC.idString     = nullptr;
     
     if (nniC.likelihood > nniB.likelihood) {
         bestNNI = nniC;
@@ -830,6 +832,34 @@ void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo
 	}
 }
 
+template <class T> class TempInstancePointer {
+protected:
+	T* instance;
+public:
+	TempInstancePointer() {
+		void* memory = malloc(sizeof(T));
+		memset(memory, 0, sizeof(T));
+		instance = (T*)memory;
+	}
+	T* detach() {
+		char* detached_instance = instance;
+		instance = nullptr;
+		return detached_instance;
+	}
+	operator const T*() const {
+		return instance;
+	}
+	T* operator->() { 
+		return instance;
+	}
+	~TempInstancePointer() {
+		if (instance!=nullptr) {
+			free(instance);
+			instance = nullptr;
+		}
+	}
+};
+
 /**
 * DTH:
 * The PLL version of saveCurrentTree function
@@ -838,24 +868,45 @@ void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo
 * @param p: root?
 */
 void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
-    double cur_logl = tr->likelihood;
 
-    struct pllHashItem * item_ptr = (struct pllHashItem *) malloc(sizeof(struct pllHashItem));
+	class TempStringCopy {
+		char* value;
+	public:
+		TempStringCopy() = delete;
+		TempStringCopy(const char* original) {
+			auto len = strlen(original);
+			value    = (char*)malloc(len+1); //+1 for null terminator
+			memcpy(value, original, len+1);
+		}
+		~TempStringCopy() {
+			if (value!=nullptr) {
+				free(value);
+			}
+		} 
+		char* detach() {
+			char* detached_value = value;
+			value = nullptr;
+			return detached_value;
+		}
+		operator const char*() const {
+			return value;
+		}
+	};
+
+
+
+    double cur_logl = tr->likelihood;
+	TempInstancePointer<pllHashItem> item_ptr;
+
     item_ptr->data = (int *) malloc(sizeof(int));
-    item_ptr->next = NULL;
-    item_ptr->str = NULL;
+    item_ptr->next = nullptr;
+    item_ptr->str  = nullptr;
 
     unsigned int tree_index = -1;
-    char * tree_str = NULL;
     pllTree2StringREC(tr->tree_string, tr, pr, tr->start->back, PLL_FALSE,
             PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_TRUE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
-    tree_str = (char *) malloc (strlen(tr->tree_string) + 1);
-#if defined(CLANG_UNDER_VS) || defined(_MSC_VER)
-    strcpy_s(tree_str, strlen(tr->tree_string) + 1, tr->tree_string);
-#else
-    strcpy(tree_str, tr->tree_string);
-#endif
     pllBoolean is_stored = PLL_FALSE;
+	TempStringCopy tree_str(tr->tree_string);
 
     if(is_stored){ // if found the tree_str
         pllUFBootDataPtr->duplication_counter++;
@@ -865,7 +916,7 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
                 if (verbose_mode >= VerboseMode::VB_MED)
                     printf("Current lh %f is much worse than expected %f\n",
                             cur_logl, pllUFBootDataPtr->treels_logl[tree_index]);
-            return;
+			return;
         }
 		if (verbose_mode >= VerboseMode::VB_MAX) {
 			printf("Updated logl %f to %f\n", pllUFBootDataPtr->treels_logl[tree_index], cur_logl);
@@ -884,9 +935,7 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
 
     } else {
 		if (pllUFBootDataPtr->logl_cutoff != 0.0 && cur_logl <= pllUFBootDataPtr->logl_cutoff + 1e-4){
-			free(tree_str);       //James B. 23-Jul-2020 (memory leak)
 			free(item_ptr->data); //James B. 23-Jul-2020 (memory leak)
-			free(item_ptr);       //James B. 23-Jul-2020 (memory leak)
 			return;
 		}
 		if (pllUFBootDataPtr->treels_size == pllUFBootDataPtr->candidate_trees_count) {
@@ -909,59 +958,50 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
 	}
     pllComputePatternLikelihood(tr, pattern_lh, &cur_logl);
 
-    if (pllUFBootDataPtr->boot_samples == NULL) {
+    if (pllUFBootDataPtr->boot_samples == nullptr) {
         // for runGuidedBootstrap
         pllUFBootDataPtr->treels_ptnlh[tree_index] = pattern_lh;
-		free(tree_str); //James B. 23-Jul-2020 (memory leak)
 		free(item_ptr->data); //James B. 23-Jul-2020 (memory leak)
-		free(item_ptr); //James B. 23-Jul-2020 (memory leak)
+		return;
 	}
-	else {
-		// online bootstrap
-		int nptn = pllUFBootDataPtr->n_patterns;
-		int updated = 0;
-		int nsamples = globalParams->gbo_replicates;
-		for (int sample = 0; sample < nsamples; sample++) {
-			double rell = 0.0;
-			for (int ptn = 0; ptn < nptn; ptn++)
-				rell += pattern_lh[ptn] * pllUFBootDataPtr->boot_samples[sample][ptn];
+	// online bootstrap
+	int nptn = pllUFBootDataPtr->n_patterns;
+	int updated = 0;
+	int nsamples = globalParams->gbo_replicates;
+	for (int sample = 0; sample < nsamples; sample++) {
+		double rell = 0.0;
+		for (int ptn = 0; ptn < nptn; ptn++)
+			rell += pattern_lh[ptn] * pllUFBootDataPtr->boot_samples[sample][ptn];
 
-			if (rell > pllUFBootDataPtr->boot_logl[sample] + globalParams->ufboot_epsilon ||
-				(rell > pllUFBootDataPtr->boot_logl[sample] - globalParams->ufboot_epsilon &&
-					random_double() <= 1.0 / (pllUFBootDataPtr->boot_counts[sample] + 1))) {
-						{
-							is_stored = pllHashSearch(pllUFBootDataPtr->treels, tree_str, &(item_ptr->data));
-							if (is_stored)
-								tree_index = *((int*)item_ptr->data);
-							else {
-								*((int*)item_ptr->data) = tree_index = pllUFBootDataPtr->candidate_trees_count - 1;
-								item_ptr->str = tree_str;
-								pllHashAdd(pllUFBootDataPtr->treels, pllHashString(tree_str, pllUFBootDataPtr->treels->size), tree_str, item_ptr->data);
-							}
-						}
-						if (rell <= pllUFBootDataPtr->boot_logl[sample] +
-							globalParams->ufboot_epsilon) {
-							pllUFBootDataPtr->boot_counts[sample]++;
-						}
+		if (rell > pllUFBootDataPtr->boot_logl[sample] + globalParams->ufboot_epsilon ||
+			(rell > pllUFBootDataPtr->boot_logl[sample] - globalParams->ufboot_epsilon &&
+				random_double() <= 1.0 / (pllUFBootDataPtr->boot_counts[sample] + 1))) {
+					{
+						is_stored = pllHashSearch(pllUFBootDataPtr->treels, tree_str, &(item_ptr->data));
+						if (is_stored)
+							tree_index = *((int*)item_ptr->data);
 						else {
-							pllUFBootDataPtr->boot_counts[sample] = 1;
+							*((int*)item_ptr->data) = tree_index = pllUFBootDataPtr->candidate_trees_count - 1;
+							item_ptr->str = tree_str.detach();
+							pllHashAdd(pllUFBootDataPtr->treels, pllHashString(tree_str, pllUFBootDataPtr->treels->size), tree_str, item_ptr->data);
 						}
-						if (rell > pllUFBootDataPtr->boot_logl[sample])
-							pllUFBootDataPtr->boot_logl[sample] = rell;
-						pllUFBootDataPtr->boot_trees[sample] = tree_index;
-						updated++;
-			}
+					}
+					if (rell <= pllUFBootDataPtr->boot_logl[sample] +
+						globalParams->ufboot_epsilon) {
+						pllUFBootDataPtr->boot_counts[sample]++;
+					}
+					else {
+						pllUFBootDataPtr->boot_counts[sample] = 1;
+					}
+					if (rell > pllUFBootDataPtr->boot_logl[sample])
+						pllUFBootDataPtr->boot_logl[sample] = rell;
+					pllUFBootDataPtr->boot_trees[sample] = tree_index;
+					updated++;
 		}
 	}
-
-    if (pllUFBootDataPtr->boot_samples){
-        free(pattern_lh);
-        free(tree_str);       //James B. 14-Jan-2021 (memory leak)
-        free(item_ptr->data); //James B. 14-Jan-2021 (memory leak)
-        free(item_ptr);       //James B. 14-Jan-2021 (memory leak)
-
-        pllUFBootDataPtr->treels_ptnlh[tree_index] = NULL;
-    }
+	free(pattern_lh);
+	free(item_ptr->data); //James B. 14-Jan-2021 (memory leak)
+	pllUFBootDataPtr->treels_ptnlh[tree_index] = nullptr;
 }
 
 /**

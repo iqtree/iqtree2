@@ -1674,7 +1674,7 @@ extern int pllTopologyPerformNNI(pllInstance * tr, nodeptr p, int swap);
 unsigned int pllHashString (const char * s, unsigned int size);
 int pllHashAdd  (pllHashTable * hTable, unsigned int hash, const char * s, void * item);
 pllHashTable * pllHashInit (unsigned int n);
-int pllHashSearch (struct pllHashTable * hTable, char * s, void ** item);
+int pllHashSearch (struct pllHashTable * hTable, const char * s, void ** item);
 void pllHashDestroy (struct pllHashTable ** hTable, void (*cbDealloc)(void *));
 
 /* node specific functions */
