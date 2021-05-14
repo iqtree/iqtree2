@@ -22,6 +22,9 @@
 #include "tree/iqtree.h"
 #include "main/phylotesting.h"
 #include <random>
+#ifdef _OPENMP
+    #include <omp.h>
+#endif
 
 class AliSimulator{
 protected:

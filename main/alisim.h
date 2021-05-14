@@ -75,12 +75,12 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
 /**
 *  write a sequence of a node to an output file
 */
-void writeASequenceToFile(Alignment *aln, int sequence_length, ofstream &out, Node *node, Node *dad);
+void writeASequenceToFile(Alignment *aln, int sequence_length, string &output_str, int max_str_length, ofstream &out, Node *node, Node *dad);
 
 /**
 *  write a sequence of a node to an output file with gaps copied from the input sequence
 */
-void writeASequenceToFileWithGaps(Alignment *aln, int sequence_length, vector<string> seq_names, vector<string> sequences, ofstream &out, Node *node, Node *dad);
+void writeASequenceToFileWithGaps(Alignment *aln, int sequence_length, vector<string> seq_names, vector<string> sequences, string &output_str, int max_str_length, ofstream &out, Node *node, Node *dad);
 
 /**
 *  convert an encoded sequence (with integer numbers) to a readable sequence (with ACGT...)

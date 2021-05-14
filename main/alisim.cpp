@@ -435,6 +435,8 @@ IntVector retrieveAncestralSequenceFromInputFile(AliSimulator *super_alisimulato
 */
 void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, bool inference_mode)
 {
+    auto start = std::chrono::system_clock::now();
+    
     // Load ancestral sequence from the input file if user has specified it
     IntVector ancestral_sequence;
     if (super_alisimulator->params->alisim_ancestral_sequence_name.length() > 0)
@@ -513,8 +515,18 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         else
             generatePartitionAlignmentFromSingleSimulator(super_alisimulator, ancestral_sequence);
         
+        // show the simulation time
+        auto end = std::chrono::system_clock::now();
+        std::chrono::duration<double> elapsed_seconds = end-start;
+        cout<<" - Simulation time: "<<elapsed_seconds.count()<<endl;
+        
         // merge & write alignments to files
         mergeAndWriteSequencesToFiles(output_filepath, super_alisimulator, inference_mode);
+        
+        // show the time spent on writing sequences to the output file
+        auto end_writing = std::chrono::system_clock::now();
+        std::chrono::duration<double> elapsed_seconds_writing = end_writing-end;
+        cout<<" - Time spent on writing output: "<<elapsed_seconds_writing.count()<<endl;
     }
 }
 
@@ -632,11 +644,34 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
                     outWarning("The sequence length of the input alignment is unequal to that of that simulated sequences. Thus, only gaps in the first MIN(input_sequence_length, simulated_sequence_length) sites are copied.");
 
                 // write simulated sequence with the gaps copied from the input sequence
-                writeASequenceToFileWithGaps(aln, sequence_length, seq_names, sequences, out, alisimulator->tree->root, alisimulator->tree->root);
+                // cache the output string
+                string output_str;
+#ifdef _OPENMP
+#pragma omp parallel
+#pragma omp single
+#endif
+                writeASequenceToFileWithGaps(aln, sequence_length, seq_names, sequences, output_str, alisimulator->params->alisim_max_str_length, out, alisimulator->tree->root, alisimulator->tree->root);
+                
+                // writing the remaining output_str to file
+                if (output_str.length() > 0)
+                    out<<output_str;
             }
-            else
             // write the sequences without copying gaps
-                writeASequenceToFile(aln, sequence_length, out, alisimulator->tree->root, alisimulator->tree->root);
+            else
+            {
+                // cache the output string
+                string output_str;
+#ifdef _OPENMP
+#pragma omp parallel
+#pragma omp single
+#endif
+                // browsing all sequences, converting each sequence & caching & writing output string to file
+                writeASequenceToFile(aln, sequence_length, output_str, alisimulator->params->alisim_max_str_length, out, alisimulator->tree->root, alisimulator->tree->root);
+                
+                // writing the remaining output_str to file
+                if (output_str.length() > 0)
+                    out<<output_str;
+            }
 
             // close the file
             out.close();
@@ -721,15 +756,36 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator,
 /**
 *  write a sequence of a node to an output file
 */
-void writeASequenceToFile(Alignment *aln, int sequence_length, ofstream &out, Node *node, Node *dad)
+void writeASequenceToFile(Alignment *aln, int sequence_length, string &output_str, int max_str_length, ofstream &out, Node *node, Node *dad)
 {
     if (node->isLeaf() && node->name!=ROOT_NAME) {
-        out<<node->name<<" "<<convertEncodedSequenceToReadableSequence(aln, sequence_length, node->sequence)<<endl;
+#ifdef _OPENMP
+#pragma omp task firstprivate(node) shared(output_str, out)
+#endif
+        {
+            string output = node->name + " " + convertEncodedSequenceToReadableSequence(aln, sequence_length, node->sequence) + "\n";
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+            {
+                output_str += output;
+                
+                // write the caching output_str to file if its length exceed the maximum string length
+                if (output_str.length() >= max_str_length)
+                {
+                    // write output_str to file
+                    out<<output_str;
+                    
+                    // empty output_str
+                    output_str = "";
+                }
+            }
+        }
     }
     
     NeighborVec::iterator it;
     FOR_NEIGHBOR(node, dad, it) {
-        writeASequenceToFile(aln, sequence_length, out, (*it)->node, node);
+        writeASequenceToFile(aln, sequence_length, output_str, max_str_length, out, (*it)->node, node);
     }
 }
 
@@ -752,19 +808,40 @@ string convertEncodedSequenceToReadableSequence(Alignment *aln, int sequence_len
 /**
 *  write a sequence of a node to an output file with gaps copied from the input sequence
 */
-void writeASequenceToFileWithGaps(Alignment *aln, int sequence_length, vector<string> seq_names, vector<string> sequences, ofstream &out, Node *node, Node *dad)
+void writeASequenceToFileWithGaps(Alignment *aln, int sequence_length, vector<string> seq_names, vector<string> sequences, string &output_str, int max_str_length, ofstream &out, Node *node, Node *dad)
 {
     if (node->isLeaf() && node->name!=ROOT_NAME) {
-        // retrieve the input sequence of the current node
-        for (int i = 0; i < sequences.size(); i++)
-            if (!seq_names[i].compare(node->name)){
-                out <<node->name <<" "<<convertEncodedSequenceToReadableSequenceWithGaps(aln, sequence_length, sequences[i], node->sequence) << endl;
-            }
+#ifdef _OPENMP
+#pragma omp task firstprivate(node) shared(output_str, out)
+#endif
+        {
+            // retrieve the input sequence of the current node
+            for (int i = 0; i < sequences.size(); i++)
+                if (!seq_names[i].compare(node->name)){
+                    string output = node->name + " " + convertEncodedSequenceToReadableSequenceWithGaps(aln, sequence_length, sequences[i], node->sequence) + "\n";
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+                    {
+                        output_str += output;
+                        
+                        // write the caching output_str to file if its length exceed the maximum string length
+                        if (output_str.length() >= max_str_length)
+                        {
+                            // write output_str to file
+                            out<<output_str;
+                            
+                            // empty output_str
+                            output_str = "";
+                        }
+                    }
+                }
+        }
     }
     
     NeighborVec::iterator it;
     FOR_NEIGHBOR(node, dad, it) {
-        writeASequenceToFileWithGaps(aln, sequence_length, seq_names, sequences, out, (*it)->node, node);
+        writeASequenceToFileWithGaps(aln, sequence_length, seq_names, sequences, output_str, max_str_length, out, (*it)->node, node);
     }
 }
 
