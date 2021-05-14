@@ -25,11 +25,15 @@ public:
     std::string         name;
     std::string         description;
     bool                is_subscripted;
+    std::string         subscript_expression; //Rate models often have parameters
+                                              //subscripted by the number of categories
     int                 minimum_subscript;
     int                 maximum_subscript;
     std::string         type_name;
     ModelParameterType  type;
     ModelParameterRange range;
+    std::string         init_expression;      //Expression for initializing parameter
+                                              //(Rate models may need to evaluate)
     double              value;
 
     //Constructors
@@ -80,7 +84,8 @@ public:
     typedef std::vector<YAMLFileParameter>               Parameters;
     typedef std::map<std::string, ModelVariable>         Variables;
     typedef std::map<std::string, ModelInfoFromYAMLFile> MapOfModels;
-    typedef std::map<std::string, std::string>          StringMap;
+    typedef std::map<std::string, std::string>           StringMap;
+
 private:
     std::string   model_name;         //
     std::string   model_file_path;    //
@@ -196,6 +201,19 @@ public:
     }
     void updateName(const std::string& name);
     void addParameter(const YAMLFileParameter& p);
+
+
+/***
+ * @param p
+ * @param min_subscript
+ * @param max_subsciprt
+ * @note  Assumes: at least one of the subscripts has changed
+ *        Doesnt assume: The new subscripts make sense.
+ ***/
+    void updateParameterSubscriptRange(YAMLFileParameter& p, 
+                                       int min_subscript,
+                                       int max_subscript,
+                                       PhyloTree* report_to_tree);
 
 public:
     const std::string& getName()                                        const;

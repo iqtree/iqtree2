@@ -385,6 +385,7 @@ namespace ModelExpression {
         virtual void   writeTextTo(std::stringstream &text) const;
         Expression* expression() const; //Does *not* yield ownership
         Expression* detatchExpression(); //*Does* yield ownership
+        bool evaluateIntegerRange(std::pair<int,int>& range) const;
     };
 } //ModelExpression namespace
 

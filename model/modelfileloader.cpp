@@ -144,11 +144,11 @@ void ModelFileLoader::parseModelParameter(const YAML::Node& param,
     if ( bracket != std::string::npos ) {
         auto expr_len = name_len-bracket;
         p.is_subscripted = true;
-        std::string expr = p.name.substr(bracket, expr_len );
+        p.subscript_expression = p.name.substr(bracket, expr_len );
         p.name = p.name.substr(0, bracket);
         const char* parsing_what = "subscript expression";
         try {
-            Interpreter interpreter(info, expr );
+            Interpreter interpreter(info, p.subscript_expression );
             auto x = interpreter.expression();
             if (x->isRange()) {
                 auto r = dynamic_cast<ModelExpression::RangeOperator*>(x);
@@ -215,7 +215,9 @@ void ModelFileLoader::parseModelParameter(const YAML::Node& param,
         }
     }
     
-    if (p.type_name=="rate") {
+    if (p.type_name=="calculated rate") {
+        p.type = ModelParameterType::RATE;
+    } else if (p.type_name=="rate") {
         p.type = ModelParameterType::RATE;
     } else if (p.type_name=="frequency") {
         p.type = ModelParameterType::FREQUENCY;
@@ -244,10 +246,12 @@ void ModelFileLoader::parseModelParameter(const YAML::Node& param,
         dv = 1.0 / (double)count;    //Todo: Should be 1.0 divided by # of parameters
     }
     //Todo: What if name was a list, and initValue is also a list?!
-    std::string value_string = stringScalar(param, "initValue", "");
-    p.range                  = parseRange  (param, "range", p.range, info);
-    if (value_string!="") {
-        p.value = info.evaluateExpression(value_string,
+    p.init_expression = stringScalar(param, "initValue", "");
+    p.range            = parseRange  (param, "range", p.range, info);
+    if (p.init_expression!="") {
+        int dummy_subscript = p.is_subscripted ? p.minimum_subscript : -1;
+        info.forceAssign("subscript", dummy_subscript);
+        p.value = info.evaluateExpression(p.init_expression,
                                           "initial value of " + p.name +
                                           " parameter" );
     } else if (!overriding) {
@@ -454,9 +458,9 @@ void ModelFileLoader::parseYAMLModelConstraints(const YAML::Node& constraints,
 }
 
 double ModelFileLoader::setConstraint(ModelExpression::Assignment* a,
-                                    ModelInfoFromYAMLFile& info,
-                                    const std::string& constraint_string,
-                                    PhyloTree* report_to_tree) {
+                                      ModelInfoFromYAMLFile& info,
+                                      const std::string& constraint_string,
+                                      PhyloTree* report_to_tree) {
     ModelExpression::Expression* assigned = a->getTarget();
     if (!assigned->isVariable()) {
         std::stringstream complaint;
@@ -479,6 +483,35 @@ double ModelFileLoader::setConstraint(ModelExpression::Assignment* a,
     TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
                   "Assigned " << v->getName()
                   << " := " << setting);
+
+    //And now for the horrible bit. Variable v might have been referenced
+    //in a range expression, for a parameter.
+    for (auto it = info.parameters.begin(); it!=info.parameters.end(); ++it) {
+        YAMLFileParameter& param = *it;
+        if (param.is_subscripted && !param.subscript_expression.empty()) {
+            Interpreter interpreter(info, param.subscript_expression);
+            std::pair<int,int> range;
+            bool rangeChanged = false;
+            try {
+                if (interpreter.evaluateIntegerRange(range)) {
+                    if (range.first != param.minimum_subscript ||
+                        range.second != param.maximum_subscript) {
+                        rangeChanged = true;
+                    }
+                }
+            }
+            catch (ModelExpression::ModelException x) {
+                throw ModelExpression::ModelException
+                      ("Error evaluating subscript range for " + param.name + 
+                       ": " + x.getMessage() );
+            }
+            if (rangeChanged) {
+                info.updateParameterSubscriptRange(param, range.first, 
+                                                   range.second, report_to_tree);
+            }
+        }
+    }
+
     return setting;
 }
 

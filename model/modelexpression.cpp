@@ -1073,4 +1073,23 @@ namespace ModelExpression {
         root = nullptr;
         return expr;
     }
+
+    bool InterpretedExpression::evaluateIntegerRange(std::pair<int,int>& range) const {
+        if (!root->isRange()) {
+            return false;
+        }
+        RangeOperator* expr = dynamic_cast<RangeOperator*>(root);
+        const char* for_what;
+        try {
+            for_what = "lower bound";
+            range.first  = expr->getIntegerLowerBound();
+            for_what = "upper bound";
+            range.second = expr->getIntegerUpperBound();
+        }
+        catch (ModelException x) {
+            throw ModelException("Error evaluating" + std::string(for_what) + 
+                                 " " + x.getMessage());
+        }
+        return true;
+    }
 }

@@ -264,9 +264,10 @@
     type:           rate
   - name:           rate(1..categories)
     type:           calculated rate
-    formula:        "(categories==1) ? 1.0 : chi2((2.0*category-1)/categories/2.0, 2.0*gamma_shape) / (2.0*gamma_shape))"
+    initValue:      "(categories==1) ? 1.0 : chi2((2.0*subscript-1)/categories/2.0, 2.0*gamma_shape) / (2.0*gamma_shape))"
   - name:           proportion(1..categories)
     type:           proportion
+    initValue:      1/categories
 
 - ratemodel:        R
   ratedistribution: free
@@ -275,14 +276,22 @@
     type:           rate
   - name:           proportion(1..categories)
     type:           proportion
+    initValue:      1/categories
 
 - ratemodel:        I
   ratedistribution: invariant
   parameters:
   - name:           proportion
     type:           proportion
+    initValue:      0.1          #Might want to guess at this another way
   constraints:
   - categories = 1
+
+- ratemodel:        GFOUR   #test that rates and proportions will be recalculated 
+                            #when categories is initialized/constrained.
+  frommodel:        G
+  constraints:
+  - categories = 4  
 
 #Note: linked_models and tree_mixture are not parsed as yet.
 

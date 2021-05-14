@@ -439,6 +439,8 @@ bool ModelInfoFromYAMLFile::isVariableFixed(const std::string& name) const {
 }
 
 void ModelInfoFromYAMLFile::addParameter(const YAMLFileParameter& p) {
+    typedef ModelExpression::InterpretedExpression Interpreter;
+    typedef ModelExpression::ModelException        Exception;
     bool replaced = false;
     for (auto it = parameters.begin(); it != parameters.end(); ++it) {
         if (it->name == p.name) {
@@ -452,12 +454,90 @@ void ModelInfoFromYAMLFile::addParameter(const YAMLFileParameter& p) {
     }
     if (p.is_subscripted) {
         for (int i = p.minimum_subscript; i <= p.maximum_subscript; ++i) {
+            forceAssign("subscript", i);
+            //Doesn't do forceAssign outside the loop and assign the 
+            //ModelVariable& that comes back from it, because the code
+            //here might *add* a variable, and depending on the container
+            //type of Variables... the ModelVariable& could go wrong
+            //(and that'd be *nasty* insidious coupling).
             std::string var_name = p.getSubscriptedVariableName(i);
+            double v = p.value;
+            if (!p.init_expression.empty()) {
+                try {
+                    Interpreter ix(*this, p.init_expression);
+                    v = ix.evaluate();
+                }
+                catch (Exception x) {
+                    std::stringstream complaint;
+                    complaint << "Error initializing " << p.name 
+                              << "(" << i << ")";
+                    throw Exception(complaint.str());
+                }
+            }
             variables[var_name] = ModelVariable(p.type, p.range, p.value);
         }
     }
     else {
         variables[p.name] = ModelVariable(p.type, p.range, p.value);
+    }
+}
+
+void ModelInfoFromYAMLFile::updateParameterSubscriptRange(YAMLFileParameter& p, 
+                                                          int min_subscript,
+                                                          int max_subscript,
+                                                          PhyloTree* report_to_tree) {
+    typedef ModelExpression::InterpretedExpression Interpreter;
+    typedef ModelExpression::ModelException        Exception;
+    if (max_subscript<min_subscript) {
+        std::stringstream complaint;
+        complaint << "New subscript range for " << p.name
+                  << " (" << min_subscript << ".." << max_subscript <<")"
+                  << " is invalid.";
+        throw Exception(complaint.str());
+    }
+    for (int i=p.minimum_subscript; i<=p.maximum_subscript; ++i) {
+        if (i<min_subscript || max_subscript<i) {
+            std::string dead_var_name = p.getSubscriptedVariableName(i);
+            auto it = variables.find(dead_var_name);
+            if (it!=variables.end()) {
+                variables.erase(it);
+            }
+        }
+    }
+    for (int i=min_subscript; i<=max_subscript; ++i) {
+        forceAssign("subscript", i);
+        //Doesn't do forceAssign outside the loop and assign the 
+        //ModelVariable& that comes back from it, because the code
+        //here might *add* a variable, and depending on the container
+        //type of Variables... the ModelVariable& could go wrong
+        //(and that'd be *nasty* insidious coupling).
+
+        std::string new_var_name = p.getSubscriptedVariableName(i);
+        const char* verb = "Added";
+        auto it = variables.find(new_var_name);
+        if (it!=variables.end()) {
+            if (it->second.isFixed()) {
+                continue;
+            }
+            verb = "Updated";
+        }
+        double v = 0;
+        if (!p.init_expression.empty()) {
+            try {
+                Interpreter ix(*this, p.init_expression);
+                v = ix.evaluate();
+            }
+            catch (Exception x) {
+                std::stringstream complaint;
+                complaint << "Error initializing " << p.name
+                            << "(" << i <<")=(" << p.init_expression << ")"
+                            << ": " << x.getMessage();
+                throw Exception(complaint.str());
+            }
+        }
+        variables[new_var_name] = ModelVariable(p.type, p.range, v);
+        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+                      verb << " subscripted variable " << new_var_name << "=" << v);
     }
 }
 
@@ -912,54 +992,66 @@ void ModelInfoFromYAMLFile::inheritModel(const ModelInfoFromYAMLFile& mummy) {
     if (!mummy.tip_likelihood_formula.empty()) {
         tip_likelihood_formula = mummy.tip_likelihood_formula;
     }
-    for (const YAMLFileParameter& param : mummy.parameters) {
+    for (const YAMLFileParameter& mummy_param : mummy.parameters) {
         //Ee-uw.  Add parameter
-        const YAMLFileParameter* old_param = findParameter(param.name);
-        if (old_param == nullptr) {
-            addParameter(param);
+        const YAMLFileParameter* child_param = findParameter(mummy_param.name);
+        if (child_param == nullptr) {
+            addParameter(mummy_param);
             continue;
         }
-        if (old_param->type != param.type) {
-            complaint << "Cannot change type of parameter " << param.name 
-                      << " from " << old_param->type_name 
-                      << " to " << param.type_name
+        if (child_param->type != mummy_param.type) {
+            complaint << "Cannot override type of parameter " << mummy_param.name 
+                      << " to " << child_param->type_name 
+                      << " from " << mummy_param.type_name
                       << " (as per " << mummy.getName() << "). ";
             continue;
         }
-        if (old_param->is_subscripted != param.is_subscripted) {
-            const char* old_state = old_param->is_subscripted
-                                  ? "subscripted" : "un-subscripted";
-            const char* new_state = param.is_subscripted
-                                  ? "subscripted" : "un-subscripted";
-            complaint << "Cannot change parameter " << param.name 
-                      << " from " << old_state << " to " << new_state
+        if (child_param->is_subscripted != mummy_param.is_subscripted) {
+            const char* child_state = child_param->is_subscripted
+                                    ? "subscripted" : "un-subscripted";
+            const char* mummy_state = mummy_param.is_subscripted
+                                    ? "subscripted" : "un-subscripted";
+            complaint << "Cannot override parameter " << mummy_param.name 
+                      << " to " << child_state << " from " << mummy_state
                       << " (as per " << mummy.getName() << "). ";
             continue;
         } 
-        else if (old_param->is_subscripted) {
-            if (old_param->minimum_subscript != param.minimum_subscript ||
-                old_param->maximum_subscript != param.maximum_subscript) {
+        else if (child_param->is_subscripted) {
+            if (child_param->minimum_subscript != mummy_param.minimum_subscript ||
+                child_param->maximum_subscript != mummy_param.maximum_subscript) {
+                //Todo: What if the subscript *expressions* are the SAME, but
+                //      the subscripts are different?
+                //      Evaluating mummy_param.subscript_expression
                 complaint << "Cannot change subscript range"
-                          << " of parameter " << param.name
-                          << " from " << old_param->minimum_subscript
-                          << " .." << old_param->maximum_subscript
-                          << " to " << param.minimum_subscript
-                          << ".." << param.maximum_subscript
+                          << " of parameter " << mummy_param.name
+                          << " to " << child_param->minimum_subscript
+                          << " .." << child_param->maximum_subscript
+                          << " from " << mummy_param.minimum_subscript
+                          << ".." << mummy_param.maximum_subscript
                           << " (as per " << mummy.getName() << "). ";
                 continue;
-            }            
+            }
+            //Todo: What if mummy *constrained* some of the expressions?
+            //Todo: What if mummy *defaulted* some of the expressions?
         }
     }
     if (mummy.frequency_type != StateFreqType::FREQ_UNKNOWN) {
         frequency_type = mummy.frequency_type;
     }
     for (auto mapping : mummy.variables) {
+        std::string var_name = mapping.first;
+        const ModelVariable& mummy_var = mapping.second;
         if (hasVariable(mapping.first)) {
-            if (variables[mapping.first].isFixed()) {
-                continue;
+            ModelVariable& child_var = variables[var_name];
+            if (mummy_var.isFixed() && !child_var.isFixed()) {
+                //Todo: Decide how to handle this:
+                //      mummy constrained the variable, child didn't.
+                //      Probably need to do *something*.  Warning, maybe?
             }
+        } else {
+            //Only add variables we don't already have
+            variables[var_name] = mapping.second;
         }
-        variables[mapping.first] = mapping.second;
     }
     //Todo: What about mixed_models?
     for (auto prop_mapping: mummy.string_properties) {
