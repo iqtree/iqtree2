@@ -435,7 +435,7 @@ IntVector retrieveAncestralSequenceFromInputFile(AliSimulator *super_alisimulato
 */
 void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, bool inference_mode)
 {
-    auto start = std::chrono::system_clock::now();
+    auto start = getRealTime();
     
     // Load ancestral sequence from the input file if user has specified it
     IntVector ancestral_sequence;
@@ -516,17 +516,15 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
             generatePartitionAlignmentFromSingleSimulator(super_alisimulator, ancestral_sequence);
         
         // show the simulation time
-        auto end = std::chrono::system_clock::now();
-        std::chrono::duration<double> elapsed_seconds = end-start;
-        cout<<" - Simulation time: "<<elapsed_seconds.count()<<endl;
+        auto end = getRealTime();
+        cout<<" - Simulation time: "<<end-start<<endl;
         
         // merge & write alignments to files
         mergeAndWriteSequencesToFiles(output_filepath, super_alisimulator, inference_mode);
         
         // show the time spent on writing sequences to the output file
-        auto end_writing = std::chrono::system_clock::now();
-        std::chrono::duration<double> elapsed_seconds_writing = end_writing-end;
-        cout<<" - Time spent on writing output: "<<elapsed_seconds_writing.count()<<endl;
+        auto end_writing = getRealTime();
+        cout<<" - Time spent on writing output: "<<end_writing-end<<endl;
     }
 }
 
@@ -545,7 +543,11 @@ void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_
 
             // initialize sequence of the super_node
             if (super_node->sequence.size() != expected_num_states_super_tree)
-                super_node->sequence.resize(expected_num_states_super_tree);
+            {
+#pragma omp critical
+                if (super_node->sequence.size() != expected_num_states_super_tree)
+                    super_node->sequence.resize(expected_num_states_super_tree);
+            }
 
             // copy sites one by one from the current sequence to its position in the sequence of the super_node
             for (int i = 0; i < node->sequence.size(); i++)
@@ -709,20 +711,21 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator,
             if (!already_merged)
             {
                 // dummy variables
+                auto start = getRealTime();
                 string partition_list = "";
                 int partition_count = 0;
                 
                 // the total number of states (sites) of all partitions which use the same alignment file.
                 int total_num_states = 0;
-                for (int j = i; j < super_tree->size(); j++)
+                int j;
+#ifdef _OPENMP
+#pragma omp parallel for shared(partition_list, partition_count, total_num_states)
+#endif
+                for (j = i; j < super_tree->size(); j++)
                 {
                     IQTree *current_tree = (IQTree*) super_tree->at(j);
                     if (!super_tree->at(i)->aln->aln_file.compare(current_tree->aln->aln_file) && super_tree->at(i)->aln->seq_type == super_tree->at(j)->aln->seq_type)
                     {
-                        // update partition_list
-                        partition_list = partition_list + "_" + super_tree->at(j)->aln->name;
-                        partition_count++;
-                        
                         // extract site_ids of the partition
                         const char* info_spec = ((SuperAlignment*) super_tree->aln)->partitions[j]->CharSet::position_spec.c_str();
                         IntVector site_ids;
@@ -731,10 +734,23 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator,
                         // copy alignment from the current tree to the super_tree
                         copySequencesToSuperTree(site_ids, super_tree->getAlnNSite(), super_tree, current_tree->root, current_tree->root);
                         
-                        // update total_num_states
-                        total_num_states += current_tree->aln->getNSite();
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+                        {
+                            // update total_num_states
+                            total_num_states += current_tree->aln->getNSite();
+                            
+                            // update partition_list
+                            partition_list = partition_list + "_" + super_tree->at(j)->aln->name;
+                            partition_count++;
+                        }
                     }
                 }
+                
+                // show time spent on merging partitions
+                auto end = getRealTime();
+                cout<<" - Time spent on merging partitions: "<<end-start<<endl;
                 
                 // initialize output file name
                 if (partition_count == super_tree->size())
