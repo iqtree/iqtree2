@@ -75,7 +75,7 @@ public:
 		read the rates from an input stream. it will throw error messages if failed
 		@param in input stream
 	*/
-	virtual void readRates(istream &in) THROW_SPEC_2(const char*, string);
+	virtual void readRates(istream &in);
 
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}

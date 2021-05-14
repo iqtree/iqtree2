@@ -20,14 +20,6 @@
 #ifndef MODELMARKOV_H
 #define MODELMARKOV_H
 
-#ifdef _MSC_VER
-#define THROW_SPEC(x)
-#define THROW_SPEC_2(x,y)
-#else
-#define THROW_SPEC(x) throw(x)
-#define THROW_SPEC_2(x,y) throw(x,y)
-#endif
-
 #include "tree/phylotree.h"
 #include "modelsubst.h"
 #include "utils/optimization.h"
@@ -159,30 +151,28 @@ public:
 		It will throw error messages if failed
 		@param in input stream
 	*/
-	virtual void readRates(istream &in) THROW_SPEC_2(const char*, string);
+	virtual void readRates(istream &in);
 
 	/**
 		Read the rate parameters from a comma-separated string
 		It will throw error messages if failed
 		@param in input stream
 	*/
-	virtual void readRates(string str) THROW_SPEC(const char*);
+	virtual void readRates(string str);
 
 	/**
 		Read state frequencies from an input stream. 
 		It will throw error messages if failed
 		@param in input stream
 	*/
-	virtual void readStateFreq(istream &in, PhyloTree* report_to_tree)
-        THROW_SPEC(const char*);
+	virtual void readStateFreq(istream &in, PhyloTree* report_to_tree);
 
 	/**
 		Read state frequencies from comma-separated string
 		It will throw error messages if failed
 		@param str input string
 	*/
-	virtual void readStateFreq(string str, PhyloTree* report_to_tree)
-        THROW_SPEC(const char*);
+	virtual void readStateFreq(string str, PhyloTree* report_to_tree);
 
 	/**
 		read model parameters from a file

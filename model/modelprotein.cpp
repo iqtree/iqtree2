@@ -970,7 +970,7 @@ void ModelProtein::restoreCheckpoint() {
     }
 }
 
-void ModelProtein::readRates(istream &in) THROW_SPEC_2(const char*, string) {
+void ModelProtein::readRates(istream &in) {
     int nrates = getNumRateEntries();
     int row = 1, col = 0;
     if (is_reversible) {

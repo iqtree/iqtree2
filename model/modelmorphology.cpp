@@ -54,7 +54,7 @@ void ModelMorphology::init(const char *model_name, string model_params,
     ModelMarkov::init(freq, report_to_tree);
 }
 
-void ModelMorphology::readRates(istream &in) THROW_SPEC_2(const char*, string) {
+void ModelMorphology::readRates(istream &in) {
 	int nrates = getNumRateEntries();
 	int row = 1, col = 0;
 	//since states for protein is stored in lower-triangle,

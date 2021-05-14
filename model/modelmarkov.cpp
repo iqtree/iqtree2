@@ -1520,7 +1520,7 @@ void ModelMarkov::decomposeRateMatrixRev() {
     delete [] rate_matrix;
 }
 
-void ModelMarkov::readRates(istream &in) THROW_SPEC_2(const char*, string) {
+void ModelMarkov::readRates(istream &in) {
     int nrates = getNumRateEntries();
     string str;
     in >> str;
@@ -1583,7 +1583,7 @@ void ModelMarkov::readRates(istream &in) THROW_SPEC_2(const char*, string) {
     }
 }
 
-void ModelMarkov::readRates(string str) THROW_SPEC(const char*) {
+void ModelMarkov::readRates(string str) {
     int nrates = getNumRateEntries();
     int end_pos = 0;
     cout << __func__ << " " << str << endl;
@@ -1616,8 +1616,7 @@ void ModelMarkov::readRates(string str) THROW_SPEC(const char*) {
     num_params = 0;
 }
 
-void ModelMarkov::readStateFreq(istream &in, PhyloTree* report_to_tree)
-    THROW_SPEC(const char*) {
+void ModelMarkov::readStateFreq(istream &in, PhyloTree* report_to_tree) {
     for (int i = 0; i < num_states; ++i) {
         if (!(in >> state_freq[i])) {
             throw "State frequencies could not be read";
@@ -1639,8 +1638,8 @@ void ModelMarkov::readStateFreq(istream &in, PhyloTree* report_to_tree)
     }
 }
 
-void ModelMarkov::readStateFreq(string str, PhyloTree* report_to_tree)
-    THROW_SPEC(const char*) {
+void ModelMarkov::readStateFreq(string str, 
+                                PhyloTree* report_to_tree) {
     int end_pos = 0;
     for (int i = 0; i < num_states; ++i) {
         int new_end_pos;
