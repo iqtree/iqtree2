@@ -255,20 +255,28 @@ string PhyloSuperTree::getTreeString() {
 	return tree_stream.str();
 }
 
-void PhyloSuperTree::readTreeString(const string &tree_string) {
+void PhyloSuperTree::readTreeString(const string &tree_string, bool nodes_have_names) {
 	stringstream str;
 	str << tree_string;
 	str.seekg(0, ios::beg);
 	freeNode();
-    // bug fix 2017-11-30: in case taxon name happens to be ID
 	MTree::readTree(str, rooted);
-    assignLeafNames();
+    if (!nodes_have_names) {
+    	// bug fix 2017-11-30: in case taxon name happens to be ID
+        assignLeafNames();
+    } else {
+        // bug fix 2021-05-14: in case taxon name *isn't* ID.
+    }
 //	setAlignment(aln);
 	setRootNode(params->root);
 	for (iterator it = begin(); it != end(); it++) {
 		(*it)->freeNode();
 		(*it)->readTree(str, (*it)->rooted);
-        (*it)->assignLeafNames();
+		if (!nodes_have_names) {
+			(*it)->assignLeafNames();
+		} else {
+			//bug fix 2021-05-14: in case taxon name *isn't* ID.
+		}
 //		(*it)->setAlignment((*it)->aln);
 	}
 	linkTrees();

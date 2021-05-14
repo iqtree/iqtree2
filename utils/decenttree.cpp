@@ -709,9 +709,9 @@ void setUpReplacementArray(const std::string& chars_to_strip,
     for (size_t i=0; i<strip_count; ++i) {
         char   ch_in  = chars_to_strip[i];
         size_t ix_in  = (unsigned char)(ch_in);
-        size_t j      = (i<replacement_chars.length() ? i : 0);
+        size_t j      = ( (i<rep_count) ? i : 0);
         char   ch_out = replacement_chars[j];
-        in_char_to_out_char[ch_in] = ch_out;
+        in_char_to_out_char[ix_in] = ch_out;
     }
 }
 

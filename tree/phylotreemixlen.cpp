@@ -117,11 +117,12 @@ void PhyloTreeMixlen::setMixlen(int mixlen) {
 	this->mixlen = mixlen;
 }
 
-void PhyloTreeMixlen::readTreeString(const string &tree_string) {
-    IQTree::readTreeString(tree_string);
+void PhyloTreeMixlen::readTreeString(const string &tree_string, bool nodes_have_name) {
+    IQTree::readTreeString(tree_string, nodes_have_name);
     treeLengths(relative_treelen);
-    if (mixlen > 0 && relative_treelen[0] == 0.0)
+    if (mixlen > 0 && relative_treelen[0] == 0.0) {
         relative_treelen.clear();
+    }
 }
 
 void PhyloTreeMixlen::initializeModel(Params &params, string model_name,

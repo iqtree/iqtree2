@@ -1081,8 +1081,8 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
                         tree.setParsimonyKernel(params->SSE);
                         tree.rooted = rooted;
                         const char* doing_what;
-                        double score = tree.computeParsimonyTree(aln, rstream, 
-                                                                 nullptr, doing_what);
+                        tree.computeParsimonyTree(aln, rstream, 
+                                                  nullptr, doing_what);
                         finish_random(rstream);
                         PhyloTree::readTreeString(tree.getTreeString());
                     }

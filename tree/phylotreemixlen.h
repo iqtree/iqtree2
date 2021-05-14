@@ -78,9 +78,11 @@ public:
             refactored 2015-12-22: Taxon IDs instead of Taxon names to save space!
             Read the tree saved with Taxon IDs and branch lengths.
             @param tree_string tree string to read from
-            @param updatePLL if true, tree is read into PLL
+            @param nodes_have_names true, if the ids of the nodes are to be calculated
+                        from the names (rather than the converse)
+
      */
-    virtual void readTreeString(const string &tree_string);
+    virtual void readTreeString(const string &tree_string, bool nodes_have_names = false);
 
     virtual void initializeModel(Params &params, string model_name,
                                  ModelsBlock *models_block,

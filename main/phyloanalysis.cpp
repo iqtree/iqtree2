@@ -2575,17 +2575,17 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         
         // Update best tree
         if (!finishedInitTree) {
-            double score = params.compute_likelihood ? iqtree->getCurScore() : (0-parsimony_score);
-            iqtree->addTreeToCandidateSet(initTree, iqtree->getCurScore(), false, MPIHelper::getInstance().getProcessID());
+            auto   process_id = MPIHelper::getInstance().getProcessID();
+            double score      = params.compute_likelihood ? iqtree->getCurScore() : (0-parsimony_score);
+            iqtree->addTreeToCandidateSet(initTree, score, false, process_id);
             iqtree->printResultTree();
-            iqtree->intermediateTrees.update(iqtree->getTreeString(), iqtree->getCurScore());
+            iqtree->intermediateTrees.update(iqtree->getTreeString(), score);
             if (iqtree->isSuperTreeUnlinked()) {
                 PhyloSuperTree* stree = (PhyloSuperTree*)iqtree;
                 for (auto it = stree->begin(); it != stree->end(); it++) {
                     auto tree = (IQTree*)(*it);
-                    auto proc_id = MPIHelper::getInstance().getProcessID();
-                    tree->addTreeToCandidateSet(tree->getTreeString(), tree->getCurScore(),
-                                                false, proc_id);
+                    tree->addTreeToCandidateSet(tree->getTreeString(), score,
+                                                false, process_id);
                 }
             }
         }

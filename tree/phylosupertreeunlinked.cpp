@@ -106,14 +106,18 @@ string PhyloSuperTreeUnlinked::getTreeString() {
     return tree_stream.str();
 }
 
-void PhyloSuperTreeUnlinked::readTreeString(const string &tree_string) {
+void PhyloSuperTreeUnlinked::readTreeString(const string &tree_string, bool nodes_have_names) {
     stringstream str;
     str << tree_string;
     str.seekg(0, ios::beg);
     for (iterator it = begin(); it != end(); it++) {
         (*it)->freeNode();
         (*it)->readTree(str, rooted);
-        (*it)->assignLeafNames();
+        if (!nodes_have_names) {
+            (*it)->assignLeafNames();
+        } else {
+            // bug fix 2021-05-14: in case taxon name *isn't* ID.
+        }
         (*it)->resetCurScore();
     }
 }

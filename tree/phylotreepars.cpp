@@ -1386,7 +1386,7 @@ int PhyloTree::computeParsimonyTreeBatch(int *rand_stream) {
     deleteAllPartialLhAndParsimony();
     IntVector taxon_order;
     create3TaxonTree(taxon_order, rand_stream);
-    int parsimony_score = computeParsimony();
+    computeParsimony();
 
     //Decide on sizes for sample trees.
     std::vector<intptr_t> sizes;

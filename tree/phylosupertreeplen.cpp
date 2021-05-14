@@ -1886,7 +1886,7 @@ string PhyloSuperTreePlen::getTreeString() {
     return PhyloTree::getTreeString();
 }
 
-void PhyloSuperTreePlen::readTreeString(const string &tree_string) {
-    PhyloTree::readTreeString(tree_string);
+void PhyloSuperTreePlen::readTreeString(const string &tree_string, bool nodes_have_names) {
+    PhyloTree::readTreeString(tree_string, nodes_have_names);
 
 }

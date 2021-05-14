@@ -309,13 +309,6 @@ public:
     virtual void readTree(istream &in, bool &is_rooted);
 
     /**
-            read the tree from a newick string
-            @param tree_string the tree string.
-            @param is_rooted (IN/OUT) true if tree is rooted
-     */
-    //virtual void readTreeString(string tree_string, bool is_rooted);
-
-    /**
             parse the tree from the input file in newick format
             @param infile the input file
             @param ch (IN/OUT) current char

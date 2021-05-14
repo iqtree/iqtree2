@@ -1201,7 +1201,7 @@ void PhyloTree::rollBack(istream &best_tree_string) {
     best_tree_string.seekg(0, ios::beg);
     freeNode();
     readTree(best_tree_string, rooted);
-    assignLeafNames();
+    assignLeafNames(); //Todo: James B. 14-May-2021.  Surely this is redundant?!
     if (params->compute_likelihood) {
         initializeAllPartialLh();
         clearAllPartialLH();

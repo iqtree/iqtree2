@@ -78,10 +78,12 @@ public:
 
     /**
      Read the tree saved with Taxon IDs and branch lengths.
-     @param tree_string tree string to read from
-     @param updatePLL if true, tree is read into PLL
+     @param tree_string      tree string to read from
+     @param nodes_have_names true, if the ids of the nodes are to be calculated
+                             from the names (rather than the converse)
+
      */
-    virtual void readTreeString(const string &tree_string);
+    virtual void readTreeString(const string &tree_string, bool nodes_have_names = false);
 
     /*
      * Return the tree string contining taxon IDs and branch lengths

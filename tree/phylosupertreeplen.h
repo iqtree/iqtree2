@@ -68,10 +68,13 @@ public:
     virtual void printResultTree(string suffix = "");
 
     /**
-            Read the tree saved with Taxon Names and branch lengths.
-            @param tree_string tree string to read from
+        Read the tree saved with Taxon Names and branch lengths.
+        @param tree_string      tree string to read from
+        @param nodes_have_names true, if the ids of the nodes are to be calculated
+                                from the names (rather than the converse)
+
      */
-    virtual void readTreeString(const string &tree_string);
+    virtual void readTreeString(const string &tree_string, bool nodes_have_names = false);
 
     /**
      * Return the tree string containing taxon names and branch lengths
