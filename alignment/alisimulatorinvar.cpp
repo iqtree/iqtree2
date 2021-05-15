@@ -65,7 +65,7 @@ void AliSimulatorInvar::simulateSeqs(int sequence_length, double *site_specific_
 void AliSimulatorInvar::simulateSeqsForTree()
 {
     // get variables
-    int sequence_length = expected_num_sites*params->alisim_length_ratio;
+    int sequence_length = expected_num_sites;
     double invariant_proportion = tree->getRate()->getPInvar();
     ModelSubst *model = tree->getModel();
     int max_num_states = tree->aln->getMaxNumStates();

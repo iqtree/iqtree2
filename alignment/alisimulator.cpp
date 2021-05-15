@@ -315,15 +315,26 @@ void AliSimulator::removeConstantSites(){
     IntVector variant_state_mask;
     
     // create a variant state mask
-    createVariantStateMask(variant_state_mask, num_variant_states, expected_num_sites, tree->root, tree->root);
+    createVariantStateMask(variant_state_mask, num_variant_states, expected_num_sites/params->alisim_length_ratio, tree->root, tree->root);
     
     // return error if num_variant_states is less than the expected_num_variant_states
-    if (num_variant_states < expected_num_sites){
+    if (num_variant_states < expected_num_sites/params->alisim_length_ratio){
         outError("Unfortunately, after removing constant sites, the number of variant sites is less than the expected sequence length. Please use --length-ratio <LENGTH_RATIO> to generate more abundant sites and try again. The current <LENGTH_RATIO> is "+ convertDoubleToString(params->alisim_length_ratio));
     }
+
+    // recording start_time
+    auto start = getRealTime();
     
+#ifdef _OPENMP
+#pragma omp parallel
+#pragma omp single
+#endif
     // get only variant sites for leaves
     getOnlyVariantSites(variant_state_mask, tree->root, tree->root);
+    
+    // show the time spent on copy variant sites
+    auto end = getRealTime();
+    cout<<" - Time spent on copying only variant sites: "<<end-start<<endl;
 }
 
 /**
@@ -331,29 +342,34 @@ void AliSimulator::removeConstantSites(){
 */
 void AliSimulator::getOnlyVariantSites(IntVector variant_state_mask, Node *node, Node *dad){
     if (node->isLeaf() && node->name!=ROOT_NAME) {
-        // dummy sequence
-        IntVector variant_sites;
-        
-        // initialize the number of variant sites
-        int num_variant_states = 0;
-        
-        // browse sites one by one
-        for (int i = 0; i < node->sequence.size(); i++)
-            // only get variant sites
-            if (variant_state_mask[i] == -1)
-            {
-                // get the variant site
-                variant_sites.push_back(node->sequence[i]);
-                num_variant_states++;
-                
-                // stop checking further states if num_variant_states has exceeded the expected_num_variant_states
-                if (num_variant_states >= expected_num_sites)
-                    break;
-            }
-        
-        // replace the sequence of the Leaf by variant sites
-        node->sequence.clear();
-        node->sequence = variant_sites;
+#ifdef _OPENMP
+#pragma omp task firstprivate(node)
+#endif
+        {
+            // dummy sequence
+            IntVector variant_sites;
+            
+            // initialize the number of variant sites
+            int num_variant_states = 0;
+            
+            // browse sites one by one
+            for (int i = 0; i < node->sequence.size(); i++)
+                // only get variant sites
+                if (variant_state_mask[i] == -1)
+                {
+                    // get the variant site
+                    variant_sites.push_back(node->sequence[i]);
+                    num_variant_states++;
+                    
+                    // stop checking further states if num_variant_states has exceeded the expected_num_variant_states
+                    if (num_variant_states >= expected_num_sites/params->alisim_length_ratio)
+                        break;
+                }
+            
+            // replace the sequence of the Leaf by variant sites
+            node->sequence.clear();
+            node->sequence = variant_sites;
+        }
     }
     
     // process its neighbors/children
@@ -371,10 +387,7 @@ void AliSimulator::generatePartitionAlignment(IntVector ancestral_sequence)
 {
     // if the ancestral sequence is not specified, randomly generate the sequence
     if (ancestral_sequence.size() == 0)
-    {
-        int sequence_length = expected_num_sites*params->alisim_length_ratio;
-        tree->MTree::root->sequence = generateRandomSequence(sequence_length);
-    }
+        tree->MTree::root->sequence = generateRandomSequence(expected_num_sites);
     // otherwise, using the ancestral sequence + abundant sites
     else
     {
@@ -382,7 +395,7 @@ void AliSimulator::generatePartitionAlignment(IntVector ancestral_sequence)
         tree->MTree::root->sequence = ancestral_sequence;
         
         // add abundant_sites
-        int num_abundant_sites = expected_num_sites * params->alisim_length_ratio - ancestral_sequence.size();
+        int num_abundant_sites = expected_num_sites - ancestral_sequence.size();
         if (num_abundant_sites > 0)
         {
             IntVector abundant_sites = generateRandomSequence(num_abundant_sites);
@@ -527,7 +540,7 @@ void AliSimulator::generateRandomBaseFrequencies(double *base_frequencies, int m
 void AliSimulator::simulateSeqsForTree()
 {
     // get variables
-    int sequence_length = expected_num_sites*params->alisim_length_ratio;
+    int sequence_length = expected_num_sites;
     ModelSubst *model = tree->getModel();
     int max_num_states = tree->aln->getMaxNumStates();
     

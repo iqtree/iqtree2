@@ -2308,6 +2308,11 @@ public:
     double alisim_length_ratio;
     
     /**
+    *  true if using +ASC
+    */
+    bool alisim_ASC_active;
+    
+    /**
     *  maximum_string_length
     */
     double alisim_max_str_length;

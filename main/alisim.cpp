@@ -319,6 +319,15 @@ void executeSimulation(Params params, IQTree *&tree, bool inference_mode)
     // show parameters
     showParameters(params, alisimulator->tree->isSuperTree());
     
+    // reset alisim_length_ratio if Ascertainment Bias Correction option (+ASC) is inactive
+    if (params.alisim_length_ratio > 1 && !params.alisim_ASC_active)
+    {
+        params.alisim_length_ratio = 1;
+        outWarning("<LENGTH_RATIO> is reset to 1 since Ascertainment Bias Correction option is inactive. Please use -m <MODEL_NAME>+ASC to activate Ascertainment Bias Correction option.");
+    }
+    // refesh the number of expected num-sites as alisim_length_ratio could be changed when reading partitions
+    alisimulator->refreshExpectedNumSites();
+    
     // iteratively generate multiple/a single  alignment(s) for each tree
     generateMultipleAlignmentsFromSingleTree(alisimulator, inference_mode);
     
@@ -519,7 +528,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
                 // stree->part_info[part].part_rate
                 double partition_rate = super_tree->params->partition_type == BRLEN_SCALE ? super_tree->part_info[partition_index].part_rate:1;
                 // generate alignment for the current tree/partition
-                AliSimulator* partition_simulator = new AliSimulator(super_tree->params, current_tree, expected_num_states_current_tree, partition_rate);
+                AliSimulator* partition_simulator = new AliSimulator(super_tree->params, current_tree, expected_num_states_current_tree*super_tree->params->alisim_length_ratio, partition_rate);
                 generatePartitionAlignmentFromSingleSimulator(partition_simulator, ancestral_sequence_current_tree);
             }
         }
@@ -556,8 +565,8 @@ void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_
             if (super_node->sequence.size() != expected_num_states_super_tree)
             {
 #pragma omp critical
-                if (super_node->sequence.size() < expected_num_states_super_tree)
-                    super_node->sequence.resize(expected_num_states_super_tree - super_node->sequence.size());
+                if (super_node->sequence.size() != expected_num_states_super_tree)
+                    super_node->sequence.resize(expected_num_states_super_tree);
             }
 
             // copy sites one by one from the current sequence to its position in the sequence of the super_node
@@ -775,7 +784,7 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator,
     // other cases (without partitions), just write sequences to a single file
     else
     {
-        int sequence_length = alisimulator->expected_num_sites;
+        int sequence_length = alisimulator->expected_num_sites/alisimulator->params->alisim_length_ratio;;
         writeSequencesToFile(file_path, alisimulator->tree->aln, sequence_length, alisimulator, inference_mode);
     }
 }

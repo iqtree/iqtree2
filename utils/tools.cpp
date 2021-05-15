@@ -1121,6 +1121,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_num_taxa_uniform_start = -1;
     params.alisim_num_taxa_uniform_end = -1;
     params.alisim_length_ratio = 1;
+    params.alisim_ASC_active = false;
     params.birth_rate = 0.8;
     params.death_rate = 0.2;
     params.alisim_max_str_length = 100000000;
@@ -2393,6 +2394,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 }
                 // handle "+ASC" -> set alisim_length_ratio to the default value at 2.0
                 if (params.model_name.find("+ASC") != std::string::npos) {
+                    params.alisim_ASC_active = true;
                     if (params.alisim_length_ratio == 1)
                         params.alisim_length_ratio = 2.0;
                 }
@@ -4677,13 +4679,6 @@ void parseArg(int argc, char *argv[], Params &params) {
     if (params.sequence_type)
     {
         std::string sequence_type(params.sequence_type);
-    }
-    
-    // reset alisim_length_ratio if Ascertainment Bias Correction option (+ASC) is inactive
-    if (params.alisim_length_ratio > 1 && (params.original_params.find("+ASC") == std::string::npos))
-    {
-        params.alisim_length_ratio = 1;
-        outWarning("<LENGTH_RATIO> is reset to 1 since Ascertainment Bias Correction option is inactive. Please use -m <MODEL_NAME>+ASC to activate Ascertainment Bias Correction option.");
     }
     
     //    if (MPIHelper::getInstance().isWorker()) {

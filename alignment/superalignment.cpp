@@ -344,6 +344,14 @@ void SuperAlignment::readPartitionRaxml(Params &params) {
                 info.model_name += "+ASC";
             info.model_name += rate_type;
             
+            // set length_ratio (for alisim)
+            if (params.alisim_active && info.model_name.find("+ASC") != std::string::npos)
+            {
+                params.alisim_ASC_active = true;
+                if (params.alisim_length_ratio == 1)
+                    params.alisim_length_ratio = 2.0;
+            }
+            
             getline(in, info.name, '=');
             trimString(info.name);
             if (info.name.empty())
@@ -516,6 +524,16 @@ void SuperAlignment::readPartitionNexus(Params &params) {
 //            new_aln->buildSeqStates();
             
             if (part_aln != new_aln && part_aln != input_aln) delete part_aln;
+            
+            // handle +ASC (with AliSim)
+            // set length_ratio (for alisim)
+            if (params.alisim_active && (*it)->model_name.find("+ASC") != std::string::npos)
+            {
+                params.alisim_ASC_active = true;
+                if (params.alisim_length_ratio == 1)
+                    params.alisim_length_ratio = 2.0;
+            }
+            
             new_aln->name = (*it)->name;
             new_aln->model_name = (*it)->model_name;
             new_aln->aln_file = (*it)->aln_file;
