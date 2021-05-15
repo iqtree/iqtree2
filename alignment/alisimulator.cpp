@@ -83,7 +83,15 @@ void AliSimulator::initializeIQTreeFromTreeFile()
         int num_sites = 0;
         
         // further initialize super_tree/alignments
-        for (int i = 0; i < ((PhyloSuperTree*) tree)->size(); i++)
+        // recording start_time
+        auto start = getRealTime();
+        
+        int i;
+        
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+        for (i = 0; i < ((PhyloSuperTree*) tree)->size(); i++)
         {
             // -Q (params->partition_type == BRLEN_OPTIMIZE) -> tree_line_index = i; otherwise (-p, -q), tree_line_index = 0 (only a tree)
             int tree_line_index = params->partition_type == BRLEN_OPTIMIZE?i:0;
@@ -140,6 +148,10 @@ void AliSimulator::initializeIQTreeFromTreeFile()
                     num_sites += current_tree->aln->getNSite();
             }
         }
+        
+        // show the reloading tree time
+        auto end = getRealTime();
+        cout<<" - Time spent on Loading trees: "<<end-start<<endl;
         
         // normalizing the partition rates (if necessary)
         if (params->partition_type == BRLEN_SCALE)

@@ -115,32 +115,43 @@ void inferInputParameters(Params &params, Checkpoint *checkpoint, IQTree *&tree,
         }
         
         // handle the case to reload super tree
-        if (tree->isSuperTree())
-        for (int i = 0; i < ((PhyloSuperTree*) tree)->size(); i++)
-        {
-            // -Q (params->partition_type == BRLEN_OPTIMIZE) -> tree_line_index = i; otherwise (-p, -q), tree_line_index = 0 (only a tree)
-            int tree_line_index = params.partition_type == BRLEN_OPTIMIZE?i:0;
+        if (tree->isSuperTree()){
+            // recording start_time
+            auto start = getRealTime();
             
-            // load phylotrees
-            IQTree *current_tree = (IQTree *) ((PhyloSuperTree*) tree)->at(i);
-            bool is_rooted = false;
-            current_tree->readTree(params.user_file, is_rooted, tree_line_index);
-            
-            // if a Heterotachy model is used -> re-read the PhyloTreeMixlen from file
-            if (current_tree->getRate()->isHeterotachy())
-            {
-                // initialize a new PhyloTreeMixlen
-                IQTree* new_tree = new PhyloTreeMixlen(current_tree->aln, current_tree->getRate()->getNRate());
+            int i;
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+            for (i = 0; i < ((PhyloSuperTree*) tree)->size(); i++){
+                // -Q (params->partition_type == BRLEN_OPTIMIZE) -> tree_line_index = i; otherwise (-p, -q), tree_line_index = 0 (only a tree)
+                int tree_line_index = params.partition_type == BRLEN_OPTIMIZE?i:0;
                 
-                // delete the old tree
-                delete current_tree;
+                // load phylotrees
+                IQTree *current_tree = (IQTree *) ((PhyloSuperTree*) tree)->at(i);
+                bool is_rooted = false;
+                current_tree->readTree(params.user_file, is_rooted, tree_line_index);
                 
-                // set the new PhyloTreeMixlen to the new tree
-                current_tree = new_tree;
-                
-                // re-load the tree/branch-lengths from the file
-                current_tree->IQTree::readTree(params.user_file, is_rooted, tree_line_index);
+                // if a Heterotachy model is used -> re-read the PhyloTreeMixlen from file
+                if (current_tree->getRate()->isHeterotachy())
+                {
+                    // initialize a new PhyloTreeMixlen
+                    IQTree* new_tree = new PhyloTreeMixlen(current_tree->aln, current_tree->getRate()->getNRate());
+                    
+                    // delete the old tree
+                    delete current_tree;
+                    
+                    // set the new PhyloTreeMixlen to the new tree
+                    current_tree = new_tree;
+                    
+                    // re-load the tree/branch-lengths from the file
+                    current_tree->IQTree::readTree(params.user_file, is_rooted, tree_line_index);
+                }
             }
+            
+            // show the reloading tree time
+            auto end = getRealTime();
+            cout<<" - Time spent on reloading trees: "<<end-start<<endl;
         }
     }
     
@@ -545,8 +556,8 @@ void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_
             if (super_node->sequence.size() != expected_num_states_super_tree)
             {
 #pragma omp critical
-                if (super_node->sequence.size() != expected_num_states_super_tree)
-                    super_node->sequence.resize(expected_num_states_super_tree);
+                if (super_node->sequence.size() < expected_num_states_super_tree)
+                    super_node->sequence.resize(expected_num_states_super_tree - super_node->sequence.size());
             }
 
             // copy sites one by one from the current sequence to its position in the sequence of the super_node
