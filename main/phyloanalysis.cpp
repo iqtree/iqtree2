@@ -104,35 +104,38 @@ void reportReferences(Params &params, ofstream &out) {
             << "https://doi.org/10.1016/j.jtbi.2016.07.042" << endl << endl;
     }
 
-    if (params.site_freq_file || params.tree_freq_file)
-    out << "Since you used site-specific frequency model please also cite: " << endl << endl
-        << "Huai-Chun Wang, Edward Susko, Bui Quang Minh, and Andrew J. Roger (2018)" << endl
-        << "Modeling site heterogeneity with posterior mean site frequency profiles" << endl
-        << "accelerates accurate phylogenomic estimation. Syst. Biol., 67:216–235." << endl
-        << "https://doi.org/10.1093/sysbio/syx068" << endl << endl;
+    if (params.site_freq_file || params.tree_freq_file) {
+        out << "Since you used site-specific frequency model please also cite: " << endl << endl
+            << "Huai-Chun Wang, Edward Susko, Bui Quang Minh, and Andrew J. Roger (2018)" << endl
+            << "Modeling site heterogeneity with posterior mean site frequency profiles" << endl
+            << "accelerates accurate phylogenomic estimation. Syst. Biol., 67:216–235." << endl
+            << "https://doi.org/10.1093/sysbio/syx068" << endl << endl;
+    }
 
+    if (params.gbo_replicates) {
+        out << "Since you used ultrafast bootstrap (UFBoot) please also cite: " << endl << endl
+            << "Diep Thi Hoang, Olga Chernomor, Arndt von Haeseler, Bui Quang Minh," << endl
+            << "and Le Sy Vinh (2018) UFBoot2: Improving the ultrafast bootstrap" << endl
+            << "approximation. Mol. Biol. Evol., 35:518–522." << endl
+            << "https://doi.org/10.1093/molbev/msx281" << endl << endl;
+    }
 
-    if (params.gbo_replicates)
-    out << "Since you used ultrafast bootstrap (UFBoot) please also cite: " << endl << endl
-        << "Diep Thi Hoang, Olga Chernomor, Arndt von Haeseler, Bui Quang Minh," << endl
-        << "and Le Sy Vinh (2018) UFBoot2: Improving the ultrafast bootstrap" << endl
-        << "approximation. Mol. Biol. Evol., 35:518–522." << endl
-        << "https://doi.org/10.1093/molbev/msx281" << endl << endl;
+    if (params.partition_file) {
+        out << "Since you used partition models please also cite:" << endl << endl
+            << "Olga Chernomor, Arndt von Haeseler, and Bui Quang Minh (2016)" << endl
+            << "Terrace aware data structure for phylogenomic inference from" << endl
+            << "supermatrices. Syst. Biol., 65:997-1008." << endl
+            << "https://doi.org/10.1093/sysbio/syw037" << endl << endl;
+    }
 
-    if (params.partition_file)
-    out << "Since you used partition models please also cite:" << endl << endl
-        << "Olga Chernomor, Arndt von Haeseler, and Bui Quang Minh (2016)" << endl
-        << "Terrace aware data structure for phylogenomic inference from" << endl
-        << "supermatrices. Syst. Biol., 65:997-1008." << endl
-        << "https://doi.org/10.1093/sysbio/syw037" << endl << endl;
-
-    if (params.terrace_analysis)
-    out << "Since you used terrace analysis please also cite:" << endl << endl
-        << "Biczok R, Bozsoky P, Eisenmann P, Ernst J, Ribizel T, Scholz F," << endl
-        << "Trefzer A, Weber F, Hamann M, Stamatakis A. (2018)" << endl
-        << "Two C++ libraries for counting trees on a phylogenetic" << endl
-        << "terrace. Bioinformatics 34:3399–3401." << endl
-        << "https://doi.org/10.1093/bioinformatics/bty384" << endl << endl;
+    if (params.terrace_analysis) {
+        out << "Since you used terrace analysis please also cite:" << endl << endl
+            << "Biczok R, Bozsoky P, Eisenmann P, Ernst J, Ribizel T, Scholz F," << endl
+            << "Trefzer A, Weber F, Hamann M, Stamatakis A. (2018)" << endl
+            << "Two C++ libraries for counting trees on a phylogenetic" << endl
+            << "terrace. Bioinformatics 34:3399–3401." << endl
+            << "https://doi.org/10.1093/bioinformatics/bty384" << endl << endl;
+    }
 
     if (params.dating_method == "LSD")
         out << "Since you used least square dating (LSD) please also cite: " << endl << endl
@@ -743,35 +746,42 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree,
                 break;
             }
     }
-    if (is_codon)
+    if (is_codon) {
         out << endl << "NOTE: Branch lengths are interpreted"
             << " as number of nucleotide substitutions per codon site!" << endl
             << "      Rescale them by 1/3 if you want to have"
             << " #nt substitutions per nt site" << endl;
-    if (main_tree) 
-    if (params.aLRT_replicates > 0 || params.gbo_replicates ||
-        (params.num_bootstrap_samples && params.compute_ml_tree)) {
-        out << "Numbers in parentheses are ";
-        if (params.aLRT_replicates > 0) {
-            out << "SH-aLRT support (%)";
-            if (params.localbp_replicates)
-                out << " / local bootstrap support (%)";
+    }
+    if (main_tree) {
+        if (params.aLRT_replicates > 0 || params.gbo_replicates ||
+            (params.num_bootstrap_samples && params.compute_ml_tree)) {
+            out << "Numbers in parentheses are ";
+            if (params.aLRT_replicates > 0) {
+                out << "SH-aLRT support (%)";
+                if (params.localbp_replicates) {
+                    out << " / local bootstrap support (%)";
+                }
+            }
+            if (params.aLRT_test) {
+                out << " / parametric aLRT support";
+            }
+            if (params.aBayes_test) {
+                out << " / aBayes support";
+            }
+            if (params.num_bootstrap_samples && params.compute_ml_tree) {
+                if (params.aLRT_replicates > 0 || params.aLRT_test || params.aBayes_test) {
+                    out << " /";
+                }
+                out << " standard " << RESAMPLE_NAME << " support (%)";
+            }
+            if (params.gbo_replicates) {
+                if (params.aLRT_replicates > 0 || params.aLRT_test || params.aBayes_test) {
+                    out << " /";
+                }
+                out << " ultrafast " << RESAMPLE_NAME << " support (%)";
+            }
+            out << endl;
         }
-        if (params.aLRT_test)
-            out << " / parametric aLRT support";
-        if (params.aBayes_test)
-            out << " / aBayes support";
-        if (params.num_bootstrap_samples && params.compute_ml_tree) {
-            if (params.aLRT_replicates > 0 || params.aLRT_test || params.aBayes_test)
-                out << " /";
-            out << " standard " << RESAMPLE_NAME << " support (%)";
-        }
-        if (params.gbo_replicates) {
-            if (params.aLRT_replicates > 0 || params.aLRT_test || params.aBayes_test)
-                out << " /";
-            out << " ultrafast " << RESAMPLE_NAME << " support (%)";
-        }
-        out << endl;
     }
     out << endl;
 
@@ -875,11 +885,12 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
         //         << "):    " << params.out_prefix << ".suboptimal_trees" << endl;
         //}
     }
-    if (params.num_runs > 1)
+    if (params.num_runs > 1) {
         cout << "  Trees from independent runs:   "
              << params.out_prefix << ".runtrees" << endl;
-
-    if (params.user_file.empty() && params.start_tree == START_TREE_TYPE::STT_BIONJ) {
+    }
+    if (params.user_file.empty() && 
+        params.start_tree == START_TREE_TYPE::STT_BIONJ) {
         cout << "  BIONJ tree:                    "
              << params.out_prefix << ".bionj" << endl;
     }
@@ -906,11 +917,12 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
         bool raxml_format_printed = true;
 
         for (auto it = ((SuperAlignment*)tree.aln)->partitions.begin();
-                it != ((SuperAlignment*)tree.aln)->partitions.end(); it++)
+                it != ((SuperAlignment*)tree.aln)->partitions.end(); ++it) {
             if (!(*it)->aln_file.empty()) {
                 raxml_format_printed = false;
                 break;
             }
+        }
         if (raxml_format_printed) {
              cout << "           in RAxML format:      "
                   << params.out_prefix << ".best_scheme" << endl;
@@ -2281,9 +2293,11 @@ void startTreeReconstruction(Params &params, IQTree* &iqtree,
     if (params.root) {
         StrVector outgroup_names;
         convert_string_vec(params.root, outgroup_names);
-        for (auto it = outgroup_names.begin(); it != outgroup_names.end(); it++)
-            if (iqtree->aln->getSeqID(*it) < 0)
+        for (auto it = outgroup_names.begin(); it != outgroup_names.end(); it++) {
+            if (iqtree->aln->getSeqID(*it) < 0) {
                 outError("Alignment does not have specified outgroup taxon ", *it);
+            }
+        }
     }
 
 //    if (params.count_trees && pllTreeCounter == NULL)
@@ -2361,8 +2375,9 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     int absent_states = 0;
     if (iqtree->isSuperTree()) {
         PhyloSuperTree *stree = (PhyloSuperTree*)iqtree;
-        for (auto i = stree->begin(); i != stree->end(); i++)
+        for (auto i = stree->begin(); i != stree->end(); i++) {
             absent_states += (*i)->aln->checkAbsentStates("partition " + (*i)->aln->name);
+        }
     } else {
         absent_states = iqtree->aln->checkAbsentStates("alignment");
     }
@@ -2560,15 +2575,16 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         }
         if (calculate_parsimony) {
             iqtree->setParsimonyKernel(iqtree->params->SSE);
+            iqtree->deleteAllPartialParsimony();
             iqtree->initializeAllPartialPars();
-            iqtree->setParsimonyBranchLengths();
             const char* adjective = isRandomTree ? "random" : "initial";
             std::string task_name = std::string("Calculating parsimony score of ") 
                                   + adjective + " tree";
             parsimony_score = iqtree->computeParsimony(task_name.c_str());
-            initTree = iqtree->getTreeString();
             cout << "Parsimony score of " << adjective 
                  << " tree: " << parsimony_score << endl;
+            iqtree->setAllBranchLengthsFromParsimony();
+            initTree = iqtree->getTreeString();
         }
         
         /****************** NOW PERFORM MAXIMUM LIKELIHOOD TREE RECONSTRUCTION ******************/
@@ -3521,18 +3537,20 @@ void runStandardBootstrap(Params &params, Alignment *alignment, IQTree *tree) {
 //            outError(ERR_READ_INPUT, treefile_name);
 //        }
         // write the tree into .boottrees file
-        if (MPIHelper::getInstance().isMaster())
-        try {
-            ofstream tree_out;
-            tree_out.exceptions(ios::failbit | ios::badbit);
-            tree_out.open(boottrees_name.c_str(), ios_base::out | ios_base::app);
-            tree_out << ss.str() << endl;
-            tree_out.close();
-        } catch (ios::failure) {
-            outError(ERR_WRITE_OUTPUT, boottrees_name);
+        if (MPIHelper::getInstance().isMaster()) {
+            try {
+                ofstream tree_out;
+                tree_out.exceptions(ios::failbit | ios::badbit);
+                tree_out.open(boottrees_name.c_str(), ios_base::out | ios_base::app);
+                tree_out << ss.str() << endl;
+                tree_out.close();
+            } catch (ios::failure) {
+                outError(ERR_WRITE_OUTPUT, boottrees_name);
+            }
         }
-        if (params.num_bootstrap_samples == 1)
+        if (params.num_bootstrap_samples == 1) {
             reportPhyloAnalysis(params, *boot_tree, *model_info);
+        }
         // WHY was the following line missing, which caused memory leak?
         bootstrap_alignment = boot_tree->aln;
         delete boot_tree;

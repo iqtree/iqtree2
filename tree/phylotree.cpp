@@ -2672,7 +2672,8 @@ double PhyloTree::optimizeOneBranchLS(PhyloNode *node1, PhyloNode *node2) {
             // TODO: Chua test bao gio
             outError("Paulin formula not supported yet");
             lsBranch = 0.5 * (distAC + distBC) - 0.5 * distAB;
-        }*/ else {
+        }*/ 
+        else {
             // weighted least square
             lsBranch = 0.5*(distAC/weightAC + distBC/weightBC - distAB/weightAB);
         }

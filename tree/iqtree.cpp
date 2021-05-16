@@ -785,7 +785,7 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
              params->parsimony_tbr_iterations != 0 ||
              params->parsimony_tbr_iterations != 0 ||
              params->parsimony_hybrid_iterations != 0) {
-            optimizeConstructedTree(false, VerboseMode::VB_MED);
+            optimizeConstructedTree(false, VerboseMode::VB_MIN);
         }
         fixNegativeBranches(false);
         params->numInitTrees = 1;
@@ -3782,7 +3782,7 @@ double IQTree::getAvgNumNNI() {
     if (vecNumNNI.size() == 0) {
         return 0;
     } else {
-        double median;
+        size_t median;
         size_t size = vecNumNNI.size();
         sort(vecNumNNI.begin(), vecNumNNI.end());
         if (size % 2 == 0) {

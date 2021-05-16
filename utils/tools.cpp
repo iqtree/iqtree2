@@ -4769,7 +4769,7 @@ void usage_iqtree(char* argv[], bool full_command) {
 //            << "                       Weiss & von Haeseler (2003) method" << endl
 //            << "  -ns <#simulations>   #Simulations to obtain null-distribution (default: 1000)" << endl
 
-    if (full_command)
+    if (full_command) {
     cout
         << endl << "CONSENSUS RECONSTRUCTION:" << endl
         << "  -t FILE              Set of input trees for consensus reconstruction" << endl
@@ -4819,6 +4819,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     //			<< "  -comp <treefile>     Compare tree with each in the input trees" << endl;
 
         << endl;
+    }
 
     if (full_command) {
         //TODO Print other options here (to be added)
@@ -5497,12 +5498,11 @@ void print_stacktrace(ostream &out, unsigned int max_frames)
             out << i << "   " << begin_name << "()" << endl;
 	    }
 #endif
-	}
-	else
-	{
-	    // couldn't parse the line? print the whole line.
+    }
+    else {
+        // couldn't parse the line? print the whole line.
 //	    out << i << ". " << symbollist[i] << endl;
-	}
+    }
     }
 
     free(funcname);
