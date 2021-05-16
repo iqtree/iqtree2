@@ -15,9 +15,23 @@ namespace ModelExpression {
 };
 
 class ModelFileLoader {
-public:    
+protected:    
     const char*       file_path;
     const std::string model_name;
+    void  handleInheritance        (ModelInfoFromYAMLFile& info, 
+                                    ModelListFromYAMLFile& list,
+                                    PhyloTree*             report_to_tree);
+    void  setModelStateFrequency   (const YAML::Node&      substitution_model, 
+                                    ModelInfoFromYAMLFile& info,
+                                    PhyloTree*             report_to_tree);
+    void setParameterSubscriptRange(ModelInfoFromYAMLFile& info,
+                                    YAMLFileParameter&     p);
+    void setParameterTypeAndValue  (const YAML::Node&      param,
+                                    bool                   overriding,
+                                    ModelInfoFromYAMLFile& info,
+                                    YAMLFileParameter&     p);
+
+public:
    
     ModelFileLoader(const char* path);
     std::string stringScalar(const YAML::Node& node,

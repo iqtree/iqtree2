@@ -133,88 +133,45 @@ void ModelFileLoader::parseYAMLModelParameters(const YAML::Node& params,
     }
 }
 
-void ModelFileLoader::parseModelParameter(const YAML::Node& param,
-                                          std::string name,
-                                          ModelInfoFromYAMLFile& info,
-                                          PhyloTree* report_to_tree) {
-    YAMLFileParameter p;
-    p.name       = name;
-    auto name_len = p.name.length();
-    auto bracket  = p.name.find('(');
-    if ( bracket != std::string::npos ) {
-        auto expr_len = name_len-bracket;
-        p.is_subscripted = true;
-        p.subscript_expression = p.name.substr(bracket, expr_len );
-        p.name = p.name.substr(0, bracket);
-        const char* parsing_what = "subscript expression";
-        try {
-            Interpreter interpreter(info, p.subscript_expression );
-            auto x = interpreter.expression();
-            if (x->isRange()) {
-                auto r = dynamic_cast<ModelExpression::RangeOperator*>(x);
-                parsing_what = "minimum subscript";
-                p.minimum_subscript = r->getIntegerLowerBound();
-                parsing_what = "maximum subscript";
-                p.maximum_subscript = r->getIntegerUpperBound();
-            } else {
-                p.minimum_subscript = 1;
-                p.maximum_subscript = x->evaluateAsInteger();
-            }
-            if (p.maximum_subscript<p.minimum_subscript) {
-                std::stringstream msg;
-                msg << "Illegal subscript expression"
-                    << " for " << info.getName()
-                    << " parameter " << name << ":\n"
-                    << " minimum subscript (" << p.minimum_subscript << ")"
-                    << " was greater than maximum (" << p.maximum_subscript << ")";
-            }
+void ModelFileLoader::setParameterSubscriptRange(ModelInfoFromYAMLFile& info,
+                                YAMLFileParameter& p) {
+            const char* parsing_what = "subscript expression";
+    try {
+        Interpreter interpreter(info, p.subscript_expression );
+        auto x = interpreter.expression();
+        if (x->isRange()) {
+            auto r = dynamic_cast<ModelExpression::RangeOperator*>(x);
+            parsing_what = "minimum subscript";
+            p.minimum_subscript = r->getIntegerLowerBound();
+            parsing_what = "maximum subscript";
+            p.maximum_subscript = r->getIntegerUpperBound();
+        } else {
+            p.minimum_subscript = 1;
+            p.maximum_subscript = x->evaluateAsInteger();
         }
-        catch (ModelExpression::ModelException x) {
+        if (p.maximum_subscript<p.minimum_subscript) {
             std::stringstream msg;
-            msg << "Error parsing " << parsing_what
+            msg << "Illegal subscript expression"
                 << " for " << info.getName()
-                << " parameter " << name << ":\n"
-                << x.getMessage();
-            outError(msg.str());
-        }
-    } else {
-        p.is_subscripted    = false;
-        p.minimum_subscript = 0;
-        p.maximum_subscript = 1;
-    }
-    
-    p.type_name = string_to_lower(stringScalar(param, "type", p.type_name.c_str()));
-    if (p.type_name=="matrix") {
-        complainIfSo(p.is_subscripted,
-                     "Matrix subscripts are implied by the matrix value itself, "
-                     " but " + p.name + " parameter of model " + info.getName() +
-                     " was explicitly subscripted (which is not supported).");
-        auto value   = param["value"];
-        auto formula = param["formula"];
-        auto rank    = param["rank"];
-        complainIfNot(value || (formula && rank), p.name +
-                      " matrix parameter's value must be defined"
-                      " in model " + info.getName() + ".");
-        parseMatrixParameter(param, name, info, report_to_tree);
-        return;
-    }
-    
-    bool overriding = false;
-    for (const YAMLFileParameter& oldp: info.parameters) {
-        if (oldp.name == p.name) {
-            complainIfNot(oldp.is_subscripted == p.is_subscripted,
-                          "Canot redefine subscripted parameter"
-                          " as unsubscripted (or vice versa)");
-            complainIfNot(oldp.minimum_subscript == p.minimum_subscript,
-                          "Cannot redefine parameter subscript range");
-            complainIfNot(oldp.maximum_subscript == p.maximum_subscript,
-                          "Cannot redefine parameter subscript range");
-            p = oldp;
-            overriding = true;
-            break;
+                << " parameter " << p.name << ":\n"
+                << " minimum subscript (" << p.minimum_subscript << ")"
+                << " was greater than maximum (" << p.maximum_subscript << ")";
         }
     }
-    
+    catch (ModelExpression::ModelException x) {
+        std::stringstream msg;
+        msg << "Error parsing " << parsing_what
+            << " for " << info.getName()
+            << " parameter " << p.name << ":\n"
+            << x.getMessage();
+        outError(msg.str());
+    }
+}
+
+void ModelFileLoader::setParameterTypeAndValue(const YAML::Node&      param, 
+                                               bool                   overriding,
+                                               ModelInfoFromYAMLFile& info,
+                                               YAMLFileParameter&     p) {
     if (p.type_name=="calculated rate") {
         p.type = ModelParameterType::RATE;
     } else if (p.type_name=="rate") {
@@ -265,6 +222,62 @@ void ModelFileLoader::parseModelParameter(const YAML::Node& param,
         }
         p.value = dv;
     }
+}
+
+void ModelFileLoader::parseModelParameter(const YAML::Node& param,
+                                          std::string name,
+                                          ModelInfoFromYAMLFile& info,
+                                          PhyloTree* report_to_tree) {
+    YAMLFileParameter p;
+    p.name       = name;
+    auto name_len = p.name.length();
+    auto bracket  = p.name.find('(');
+    if ( bracket != std::string::npos ) {
+        auto expr_len = name_len-bracket;
+        p.is_subscripted = true;
+        p.subscript_expression = p.name.substr(bracket, expr_len );
+        p.name = p.name.substr(0, bracket);
+        setParameterSubscriptRange(info, p);
+    } else {
+        p.is_subscripted    = false;
+        p.minimum_subscript = 0;
+        p.maximum_subscript = 1;
+    }
+    
+    p.type_name = string_to_lower(stringScalar(param, "type", p.type_name.c_str()));
+    if (p.type_name=="matrix") {
+        complainIfSo(p.is_subscripted,
+                     "Matrix subscripts are implied by the matrix value itself, "
+                     " but " + p.name + " parameter of model " + info.getName() +
+                     " was explicitly subscripted (which is not supported).");
+        auto value   = param["value"];
+        auto formula = param["formula"];
+        auto rank    = param["rank"];
+        complainIfNot(value || (formula && rank), p.name +
+                      " matrix parameter's value must be defined"
+                      " in model " + info.getName() + ".");
+        parseMatrixParameter(param, name, info, report_to_tree);
+        return;
+    }
+    
+    bool overriding = false;
+    for (const YAMLFileParameter& oldp: info.parameters) {
+        if (oldp.name == p.name) {
+            complainIfNot(oldp.is_subscripted == p.is_subscripted,
+                          "Canot redefine subscripted parameter"
+                          " as unsubscripted (or vice versa)");
+            complainIfNot(oldp.minimum_subscript == p.minimum_subscript,
+                          "Cannot redefine parameter subscript range");
+            complainIfNot(oldp.maximum_subscript == p.maximum_subscript,
+                          "Cannot redefine parameter subscript range");
+            p = oldp;
+            overriding = true;
+            break;
+        }
+    }
+
+    setParameterTypeAndValue(param, overriding, info, p);
+    
     p.description = stringScalar(param, "description", p.description.c_str());
     std::stringstream msg;
     if (p.is_subscripted) {
@@ -627,6 +640,121 @@ void ModelFileLoader::dumpMatrixTo(const char* name, ModelInfoFromYAMLFile& info
         << " is...\n" << dump.str();
 }
 
+void ModelFileLoader::handleInheritance(ModelInfoFromYAMLFile& info,
+                                        ModelListFromYAMLFile& list,
+                                        PhyloTree* report_to_tree) {
+    bool have_first_parent = false;
+    for (string ancestral_model : split_string(info.parent_model_name, "+")) {
+        if (list.hasModel(ancestral_model)) {
+            const ModelInfoFromYAMLFile& ancestor =
+                    list.getModel(ancestral_model);
+            if (info.is_rate_model && !ancestor.is_rate_model) {
+                std::stringstream complaint;
+                complaint << "Rate model " << info.model_name
+                            << " cannot be based on" 
+                            << "a substitution model " 
+                            << ancestral_model << ".";
+                outError(complaint.str());
+            }
+            if (!have_first_parent) {
+                std::string save_name = info.model_name;
+                info = list.getModel(ancestral_model);
+                info.model_name = save_name;
+                TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+                            "Model " << info.model_name
+                            << " is based on model " << ancestral_model);
+                have_first_parent = true;
+            } else {
+                info.inheritModel(ancestor);
+                TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+                            "Model " << info.model_name
+                            << " is also based on model " << ancestral_model);
+            }
+        } else {
+            std::stringstream complaint;
+            complaint << "Model " << info.model_name 
+                        << " specifies a parent model of "
+                        << info.parent_model_name << ", but that model was not found.";
+            complaint << "\nRecognized models are: ";
+            if (info.is_rate_model) {
+                complaint << list.getListOfRateModelNames() << ".";
+            } else {
+                complaint << list.getListOfSubstitutionModelNames() << ".";
+            }
+            outError(complaint.str());
+        }
+    }
+}
+
+void ModelFileLoader::setModelStateFrequency(const YAML::Node& substitution_model,
+                                             ModelInfoFromYAMLFile& info,
+                                             PhyloTree* report_to_tree) {
+    auto stateFrequency = substitution_model["stateFrequency"];
+    std::string low_freq;
+    if (stateFrequency) {
+        complainIfSo(info.is_rate_model,
+                     "Cannot specify state frequencies"
+                     " for rate model " + model_name +
+                      " in file " + file_path);
+        //
+        //Check that dimension of the specified parameter is the
+        //same as the rank of the rate matrix (it must be!).
+        //
+        std::string freq     = stateFrequency.IsScalar() ? stateFrequency.Scalar() : "";
+        low_freq = string_to_lower(freq);
+    }
+
+    if (stateFrequency && stateFrequency.IsSequence()) {
+        info.frequency_type = StateFreqType::FREQ_USER_DEFINED;
+        YAMLFileParameter freq_param = addDummyFrequencyParameterTo(info, report_to_tree);
+        int subscript = freq_param.minimum_subscript;
+        for (auto f: stateFrequency) {
+            complainIfNot(f.IsScalar(), "Model " + model_name +
+                            " in file " + file_path +
+                            " has unrecognized frequency ");
+            complainIfNot(subscript<=freq_param.maximum_subscript,
+                            "Too many frequencies specified for "
+                            "Model " + model_name +
+                            " in file " + file_path);
+            ModelExpression::InterpretedExpression x(info, f.Scalar());
+            auto   var_name  = freq_param.getSubscriptedVariableName(subscript);
+            double var_value = x.evaluate();
+            info.assign(var_name, var_value);
+            TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+                            "Assigned frequency: " << var_name
+                            << " := " << var_value  );
+            ++subscript;
+        }
+    }
+    else if (low_freq.empty()) {   
+        if (info.frequency_type != StateFreqType::FREQ_UNKNOWN) {
+            //We inherited a frequency type from a parent model. Use that.
+        }
+        else if (info.hasFrequencyParameters(info.num_states)) {
+            //If we have parameters with a type of frequency, we're all good.
+            info.frequency_type = StateFreqType::FREQ_USER_DEFINED;
+        } else {
+            //If we don't, then what?  Use estimate as a last resort.
+            info.frequency_type = StateFreqType::FREQ_ESTIMATE;
+        }
+        return;
+    } else if (low_freq=="estimate") {
+        info.frequency_type = StateFreqType::FREQ_ESTIMATE;
+    } else if (low_freq=="empirical") {
+        info.frequency_type = StateFreqType::FREQ_EMPIRICAL;
+    } else if (low_freq=="uniform") {
+        info.frequency_type = StateFreqType::FREQ_EQUAL;
+    } else if (info.isFrequencyParameter(low_freq)) {
+        info.frequency_type = StateFreqType::FREQ_USER_DEFINED;
+    } 
+    TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+                    "After setting frequency type"
+                    " of " << info.model_name <<
+                    " to " << low_freq << "...");
+    info.logVariablesTo(*report_to_tree);
+}
+
+
 void ModelFileLoader::parseYAMLModel(const YAML::Node& substitution_model,
                                      const std::string& name_of_model,
                                      ModelInfoFromYAMLFile& info,
@@ -635,57 +763,24 @@ void ModelFileLoader::parseYAMLModel(const YAML::Node& substitution_model,
                                      PhyloTree* report_to_tree) {
     info.is_modifier_model = false;
     info.parent_model_name = stringScalar(substitution_model, "frommodel", "");
-    if (info.parent_model_name != "") {
+    info.model_name        = name_of_model;
+                            
+    if (!info.parent_model_name.empty()) {
         TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity, 
-                      name_of_model << " parent is " << info.parent_model_name << "." );
+                      name_of_model << " parent is " 
+                      << info.parent_model_name << "." );
         if (string_to_upper(info.parent_model_name)=="ANY") {
             info.parent_model_name.clear();
             info.is_modifier_model = true;
         }
         else {
-            bool have_first_parent = false;
-            for (string ancestral_model : split_string(info.parent_model_name, "+")) {
-                if (list.hasModel(ancestral_model)) {
-                    const ModelInfoFromYAMLFile& ancestor =
-                         list.getModel(ancestral_model);
-                    if (info.is_rate_model && !ancestor.is_rate_model) {
-                        std::stringstream complaint;
-                        complaint << "Rate model " << name_of_model
-                                  << " cannot be based on" 
-                                  << "a substitution model " 
-                                  << ancestral_model << ".";
-                        outError(complaint.str());
-                    }
-                    if (!have_first_parent) {
-                        info = list.getModel(ancestral_model);
-                        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
-                                    "Model " << name_of_model
-                                    << " is based on model " << ancestral_model);
-                        have_first_parent = true;
-                    } else {
-                        info.inheritModel(ancestor);
-                        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
-                                    "Model " << name_of_model
-                                    << " is also based on model " << ancestral_model);
-                    }
-                } else {
-                    std::stringstream complaint;
-                    complaint << "Model " << name_of_model 
-                              << " specifies a parent model of "
-                              << info.parent_model_name << ", but that model was not found.";
-                    complaint << "\nRecognized models are: ";
-                    if (info.is_rate_model) {
-                        complaint << list.getListOfRateModelNames() << ".";
-                    } else {
-                        complaint << list.getListOfSubstitutionModelNames() << ".";
-                    }
-                    outError(complaint.str());
-                }
+            if (info.model_name.empty()) {            
+                info.model_name = info.parent_model_name;
             }
+            handleInheritance(info, list, report_to_tree);
         }
     }
     info.model_file_path = file_path;
-    info.model_name      = name_of_model.empty() ? info.parent_model_name : name_of_model;
     info.citation        = stringScalar (substitution_model, "citation",   info.citation.c_str());
     info.DOI             = stringScalar (substitution_model, "doi",        info.DOI.c_str());
     info.url             = stringScalar (substitution_model, "doi",        info.url.c_str());
@@ -772,67 +867,8 @@ void ModelFileLoader::parseYAMLModel(const YAML::Node& substitution_model,
         parseRateMatrix(rateMatrix, info, report_to_tree);
     }
     
-    auto stateFrequency = substitution_model["stateFrequency"];
-    if (stateFrequency) {
-        complainIfSo(info.is_rate_model,
-                     "Cannot specify state frequencies"
-                     " for rate model " + model_name +
-                      " in file " + file_path);
-        //
-        //Check that dimension of the specified parameter is the
-        //same as the rank of the rate matrix (it must be!).
-        //
-        std::string freq     = stateFrequency.IsScalar() ? stateFrequency.Scalar() : "";
-        std::string low_freq = string_to_lower(freq);
-        if (low_freq=="estimate") {
-            info.frequency_type = StateFreqType::FREQ_ESTIMATE;
-        } else if (low_freq=="empirical") {
-            info.frequency_type = StateFreqType::FREQ_EMPIRICAL;
-        } else if (low_freq=="uniform") {
-            info.frequency_type = StateFreqType::FREQ_EQUAL;
-        } else if (info.isFrequencyParameter(low_freq)) {
-            info.frequency_type = StateFreqType::FREQ_USER_DEFINED;
-        } else if (stateFrequency.IsSequence()) {
-            info.frequency_type = StateFreqType::FREQ_USER_DEFINED;
-            YAMLFileParameter freq_param = addDummyFrequencyParameterTo(info, report_to_tree);
-            int subscript = freq_param.minimum_subscript;
-            for (auto f: stateFrequency) {
-                complainIfNot(f.IsScalar(), "Model " + model_name +
-                              " in file " + file_path +
-                              " has unrecognized frequency ");
-                complainIfNot(subscript<=freq_param.maximum_subscript,
-                              "Too many frequencies specified for "
-                              "Model " + model_name +
-                              " in file " + file_path);
-                ModelExpression::InterpretedExpression x(info, f.Scalar());
-                auto   var_name  = freq_param.getSubscriptedVariableName(subscript);
-                double var_value = x.evaluate();
-                info.assign(var_name, var_value);
-                TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
-                              "Assigned frequency: " << var_name
-                              << " := " << var_value  );
-                ++subscript;
-            }
-        }
-        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
-                      "After setting frequency type"
-                      " of " << info.model_name <<
-                      " to " << low_freq << "...");
-        info.logVariablesTo(*report_to_tree);
+    setModelStateFrequency(substitution_model, info, report_to_tree);
 
-    } else {
-        if (info.frequency_type != StateFreqType::FREQ_UNKNOWN) {
-            //We inherited a frequency type from a parent model. Use that.
-        }
-        else if (info.hasFrequencyParameters(info.num_states)) {
-            //If we have parameters with a type of frequency, we're all good.
-            info.frequency_type = StateFreqType::FREQ_USER_DEFINED;
-        } else {
-            //If we don't, then what?  Use estimate as a last resort.
-            info.frequency_type = StateFreqType::FREQ_ESTIMATE;
-        }
-    }
-    
     const char* recognized_string_property_names[] = {
         "errormodel", //One of "+E", "+EA", "+EC", "+EG", "+ET"
                       //recognized by ModelDNAError.

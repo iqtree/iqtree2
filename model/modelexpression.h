@@ -362,17 +362,29 @@ namespace ModelExpression {
         virtual void   writeTextTo(std::stringstream &text) const;
     };
 
+    class ExpressionStack;
+
     class InterpretedExpression: public Expression {
     protected:
         bool        is_unset;
         Expression* root;
-        Expression* parseExpression(const   std::string& expression_text,
-                                    size_t& index);
-        bool        parseToken     (const std::string& text,
-                                    size_t& ix, Expression*& expr);
-        bool        parseVariable  (const std::string& text,
-                                    std::string& var_name,
-                                    size_t& ix, Expression*& expr);
+        Expression* parseExpression          (const   std::string& expression_text,
+                                              size_t& index);                        
+        Expression* parseTokenizedExpressions(ExpressionStack& tokenized);
+        bool        parseToken               (const std::string& text,
+                                              size_t& ix, Expression*& expr);
+        bool        parseVariable            (const std::string& text,
+                                              std::string& var_name,
+                                              size_t& ix, Expression*& expr);
+        std::string parseIdentifier          (const std::string& text,
+                                              size_t& ix);
+        bool        parseNumericConstant     (const std::string& text,
+                                              size_t& ix,
+                                              Expression*& expr);
+        bool        parseOtherToken          (const std::string& text,
+                                              size_t& ix, Expression*& expr);
+        void        skipWhiteSpace           (const std::string& text,
+                                              size_t& ix);
 
     public:
         typedef Expression super;

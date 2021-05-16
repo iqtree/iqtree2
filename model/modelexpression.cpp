@@ -814,7 +814,7 @@ namespace ModelExpression {
         //       2. Based on the pseudocode quoted at
         //          https://en.wikipedia.org/wiki/Shunting-yard_algorithm
         //
-        Expression* token;
+        Expression*     token;
         ExpressionStack output;
         ExpressionStack operator_stack;
         
@@ -854,9 +854,14 @@ namespace ModelExpression {
         while ( !operator_stack.empty() ) {
             output << operator_stack.pop();
         }
+
+        return parseTokenizedExpressions(output);
+    }
+
+    Expression* InterpretedExpression::parseTokenizedExpressions(ExpressionStack& tokenized) {
         ExpressionStack operand_stack;
-        for (size_t i=0; i<output.size(); ++i) {
-            token = output[i];
+        for (size_t i=0; i<tokenized.size(); ++i) {
+            Expression* token = tokenized[i];
             if (token->isOperator()) {
                 Expression*    rhs = operand_stack.pop();
                 Expression*    lhs = operand_stack.pop();
@@ -943,31 +948,55 @@ namespace ModelExpression {
         return true;
     }
 
-    bool InterpretedExpression::parseToken(const std::string& text,
-                                                  size_t& ix,
-                                                  Expression*& expr) {
+    std::string InterpretedExpression::parseIdentifier(const std::string& text,
+                                                       size_t& ix) {
+        size_t var_start = ix;
+        for (++ix; ix<text.size(); ++ix ) {
+            char ch = text[ix];
+            if (!isalpha(ch) && (ch < '0' || '9' < ch)
+                && ch != '.' && ch != '_' ) {
+                break;
+            }
+        }
+        return text.substr(var_start, ix-var_start);
+    }
+
+    bool InterpretedExpression::parseNumericConstant(const std::string& text,
+                                                     size_t& ix,
+                                                     Expression*& expr) {
+        //Number
+        int    endpos    = 0;
+        double v         = convert_double(text.c_str()+ix, endpos);
+        expr             = new Constant(model, v);
+        //".." sequences are read a bit funny.  We don't want them
+        //skipped over, because then expressions like "1..5" would not
+        //be read as "a range with lower bound 1 and upper bound 5".
+        for (; endpos>0 && (text[ix]!='.' || text[ix+1]!='.'); --endpos) {
+            ++ix;
+        }
+        return true;
+    }
+
+    void InterpretedExpression::skipWhiteSpace(const std::string& text,
+                                               size_t& ix) {
         while (ix<text.size() && text[ix]==' ') {
             ++ix;
         }
+    }
+
+    bool InterpretedExpression::parseToken(const std::string& text,
+                                           size_t& ix,
+                                           Expression*& expr) {
+        skipWhiteSpace(text, ix);
         if (text.size()<=ix) {
             expr = nullptr;
             return false;
         }
         auto ch = tolower(text[ix]);
         if (isalpha(ch)) {
-            //Variable
-            size_t var_start = ix;
-            for (++ix; ix<text.size(); ++ix ) {
-                ch = text[ix];
-                if (!isalpha(ch) && (ch < '0' || '9' < ch)
-                    && ch != '.' && ch != '_' ) {
-                    break;
-                }
-            }
-            std::string var_name = text.substr(var_start, ix-var_start);
-            while (ix<text.size() && text[ix]==' ') {
-                ++ix;
-            }
+            //Variable, or function call
+            std::string var_name = parseIdentifier(text, ix);
+            skipWhiteSpace(text, ix);
             if (built_in_functions.isBuiltIn(var_name)) {
                 expr = built_in_functions.asBuiltIn(model, var_name);
                 return true;
@@ -976,18 +1005,16 @@ namespace ModelExpression {
         }
         char nextch = ((ix+1)<text.length()) ? text[ix+1] : '\0';
         if (('0'<=ch && ch<='9') || (ch=='.' && '0'<=nextch && nextch<='9')) {
-            //Number
-            int    endpos    = 0;
-            double v         = convert_double(text.c_str()+ix, endpos);
-            expr             = new Constant(model, v);
-            //".." sequences are read a bit funny.  We don't want them
-            //skipped over, because then expressions like "1..5" would not
-            //be read as "a range with lower bound 1 and upper bound 5".
-            for (; endpos>0 && (text[ix]!='.' || text[ix+1]!='.'); --endpos) {
-                ++ix;
-            }
-            return true;
+            return parseNumericConstant(text, ix, expr);
         }
+        return parseOtherToken(text,ix,expr);
+    }
+
+    bool InterpretedExpression::parseOtherToken(const std::string& text,
+                                                size_t&            ix,
+                                                Expression*&       expr) {
+        char ch = text[ix];
+        char nextch = ((ix+1)<text.length()) ? text[ix+1] : '\0';
         switch (ch) {
             case '(': expr = new Token(model, ch);      break;
             case ')': expr = new Token(model, ch);      break;
@@ -995,7 +1022,7 @@ namespace ModelExpression {
                           expr = new InequalityOperator(model);
                           ++ix;
                       } else {
-                          throw ModelException("unary not (!) operator not supported");
+                          throw ModelException("unary not (!) operator not supported (yet)");
                       }
                       break;
             case '^': expr = new Exponentiation(model); break;
