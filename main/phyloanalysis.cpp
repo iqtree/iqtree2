@@ -2580,7 +2580,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
             const char* adjective = isRandomTree ? "random" : "initial";
             std::string task_name = std::string("Calculating parsimony score of ") 
                                   + adjective + " tree";
-            parsimony_score = iqtree->computeParsimony(task_name.c_str());
+            parsimony_score = iqtree->computeParsimony(task_name.c_str(), true, true);
             cout << "Parsimony score of " << adjective 
                  << " tree: " << parsimony_score << endl;
             double double_score = parsimony_score;
