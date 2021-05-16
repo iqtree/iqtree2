@@ -2583,7 +2583,8 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
             parsimony_score = iqtree->computeParsimony(task_name.c_str());
             cout << "Parsimony score of " << adjective 
                  << " tree: " << parsimony_score << endl;
-            iqtree->setAllBranchLengthsFromParsimony();
+            double double_score = parsimony_score;
+            iqtree->setAllBranchLengthsFromParsimony(false, double_score);
             initTree = iqtree->getTreeString();
         }
         
