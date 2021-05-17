@@ -517,10 +517,8 @@ public:
     }
 };
 
-bool loadAlignment(const std::string& alignmentFilePath,
-                   bool report_progress, Sequences &sequences,
-                   std::vector<char>& is_site_variant)
-{
+bool loadSequences(const std::string& alignmentFilePath,
+                   bool report_progress, Sequences &sequences) {
     #if USE_GZSTREAM
     pigzstream    in(report_progress ? "fasta" : "");
     #else
@@ -570,7 +568,17 @@ bool loadAlignment(const std::string& alignmentFilePath,
         return false;
     }
     in.close();
-    
+    return true;
+}
+
+bool loadAlignment(const std::string& alignmentFilePath,
+                   bool report_progress, Sequences &sequences,
+                   std::vector<char>& is_site_variant)
+{
+    if (!loadSequences(alignmentFilePath, report_progress, 
+                       sequences)) {
+        return false;
+    }
     std::vector<size_t> sequence_odd_site_count;
     {
         size_t seqLen   = sequences.front().sequenceLength();
