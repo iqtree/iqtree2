@@ -1085,9 +1085,9 @@ void Terrace::extendNewTaxon(string node_name, TerraceNode *node_1_branch, Terra
     //printTree(cout, WT_BR_SCALE | WT_NEWLINE);
     
     intermediated_trees_num +=1;
-    //if(intermediated_trees_num % 1000 == 0){
-    //    cout<<"... trees generated - "<<intermediated_trees_num+terrace_trees_num<<"; intermediated - "<<intermediated_trees_num<<"; terrace - "<<terrace_trees_num<<"; dead paths - "<<dead_ends_num<<"\n";
-    //}
+    if(intermediated_trees_num % 1000 == 0){
+        cout<<"... trees generated - "<<intermediated_trees_num+terrace_trees_num<<"; intermediated - "<<intermediated_trees_num<<"; terrace - "<<terrace_trees_num<<"; dead paths - "<<dead_ends_num<<"\n";
+    }
     
     if(intermediated_trees_num == intermediate_max_trees){
         for(const auto &p: part_tree_pairs){

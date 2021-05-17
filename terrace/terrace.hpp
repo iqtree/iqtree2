@@ -95,8 +95,8 @@ public:
     int trees_out_lim;
     
     // Stopping rules
-    int terrace_max_trees;
-    int intermediate_max_trees;
+    unsigned int terrace_max_trees;
+    unsigned int intermediate_max_trees;
     int seconds_max;
     
     /*
