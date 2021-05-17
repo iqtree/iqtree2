@@ -951,8 +951,8 @@ public:
      *  Options to set different stopping rules for generation of terrace trees
      */
     
-    unsigned int terrace_stop_intermediate_num;
-    unsigned int terrace_stop_terrace_trees_num;
+    int terrace_stop_intermediate_num;
+    int terrace_stop_terrace_trees_num;
     double terrace_stop_time;
     
     bool terrace_non_stop;

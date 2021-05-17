@@ -226,6 +226,13 @@ void run_generate_trees(Terrace *terrace, Params &params,const int m){
         }
     }
     
+    
+    cout<<"Current stopping thresholds:\n";
+    cout<<"1. Stop if terrace size reached: "<<init_terrace->terrace_max_trees<<"\n";
+    cout<<"2. Stop if the number of intermediate visited trees reached: "<<init_terrace->intermediate_max_trees<<"\n";
+    cout<<"3. Stop if the CPU time reached: "<<init_terrace->seconds_max<<" seconds"<<"\n";
+    
+    
     init_terrace->trees_out_lim = params.terrace_print_lim;
     init_terrace->linkTrees(true, false); // branch_back_map, taxon_back_map; in this case you only want to map branches
 
