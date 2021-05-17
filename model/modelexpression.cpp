@@ -20,6 +20,12 @@ namespace ModelExpression {
     const std::string& ModelException::getMessage() const {
         return message;
     }
+    /*static*/ void ModelException::throwIfNonBlank(const std::stringstream& complaint) {
+        std::string problem = complaint.str();
+        if (!problem.empty()) {
+            throw ModelException(problem);
+        }
+    }
 
     class BuiltIns {
     public:
@@ -740,11 +746,14 @@ namespace ModelExpression {
         : super(for_model) {}
 
     int    RangeOperator::getPrecedence()        const { return 2; }
+
     bool   RangeOperator::isRange()              const { return true; }
+
     int    RangeOperator::getIntegerLowerBound() const {
         //Todo: better error-checking (out of range for an int...
         return (int)floor(lhs->evaluate());
     }
+
     int    RangeOperator::getIntegerUpperBound() const {
         //Todo: better error-checking (out of range for an int...
         return (int)floor(rhs->evaluate());

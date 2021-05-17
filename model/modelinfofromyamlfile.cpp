@@ -957,6 +957,14 @@ bool ModelInfoFromYAMLFile::checkIntConsistent(const std::string& value_source,
 
 void ModelInfoFromYAMLFile::inheritModel(const ModelInfoFromYAMLFile& mummy) {
     std::stringstream complaint;
+    inheritModelProperties(mummy, complaint);
+    inheritModelParameters(mummy, complaint);
+    inheritModelVariables (mummy, complaint);
+    ModelExpression::ModelException::throwIfNonBlank(complaint);
+}
+
+void ModelInfoFromYAMLFile::inheritModelProperties(const ModelInfoFromYAMLFile& mummy,
+                                                   std::stringstream& complaint) {
     appendTo(mummy.citation, ", ", citation);
     appendTo(mummy.DOI,      ", ", DOI);
     appendTo(mummy.url,      ", ", url);
@@ -992,6 +1000,14 @@ void ModelInfoFromYAMLFile::inheritModel(const ModelInfoFromYAMLFile& mummy) {
     if (!mummy.tip_likelihood_formula.empty()) {
         tip_likelihood_formula = mummy.tip_likelihood_formula;
     }
+    if (mummy.frequency_type != StateFreqType::FREQ_UNKNOWN) {
+        frequency_type = mummy.frequency_type;
+    }
+}
+
+
+void ModelInfoFromYAMLFile::inheritModelParameters(const ModelInfoFromYAMLFile& mummy,
+                                                   std::stringstream& complaint) {
     for (const YAMLFileParameter& mummy_param : mummy.parameters) {
         //Ee-uw.  Add parameter
         const YAMLFileParameter* child_param = findParameter(mummy_param.name);
@@ -1035,9 +1051,10 @@ void ModelInfoFromYAMLFile::inheritModel(const ModelInfoFromYAMLFile& mummy) {
             //Todo: What if mummy *defaulted* some of the expressions?
         }
     }
-    if (mummy.frequency_type != StateFreqType::FREQ_UNKNOWN) {
-        frequency_type = mummy.frequency_type;
-    }
+}
+
+void ModelInfoFromYAMLFile::inheritModelVariables(const ModelInfoFromYAMLFile& mummy,
+                                                  std::stringstream& complaint) {
     for (auto mapping : mummy.variables) {
         std::string var_name = mapping.first;
         const ModelVariable& mummy_var = mapping.second;
@@ -1058,8 +1075,4 @@ void ModelInfoFromYAMLFile::inheritModel(const ModelInfoFromYAMLFile& mummy) {
         string_properties[prop_mapping.first] = prop_mapping.second;
     }
     getVariableNamesByPosition();
-    std::string problem = complaint.str();
-    if (!problem.empty()) {
-        throw ModelExpression::ModelException(problem);
-    }
 }

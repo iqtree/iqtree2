@@ -168,10 +168,10 @@ void ModelFileLoader::setParameterSubscriptRange(ModelInfoFromYAMLFile& info,
     }
 }
 
-void ModelFileLoader::setParameterTypeAndValue(const YAML::Node&      param, 
-                                               bool                   overriding,
-                                               ModelInfoFromYAMLFile& info,
-                                               YAMLFileParameter&     p) {
+void ModelFileLoader::setParameterType(const YAML::Node&      param, 
+                                       bool                   overriding,
+                                       ModelInfoFromYAMLFile& info,
+                                       YAMLFileParameter&     p) {
     if (p.type_name=="calculated rate") {
         p.type = ModelParameterType::RATE;
     } else if (p.type_name=="rate") {
@@ -186,6 +186,12 @@ void ModelFileLoader::setParameterTypeAndValue(const YAML::Node&      param,
         p.type_name = "other";
         p.type = ModelParameterType::OTHER;
     }
+}
+
+void ModelFileLoader::setParameterValue(const YAML::Node&      param, 
+                                        bool                   overriding,
+                                        ModelInfoFromYAMLFile& info,
+                                        YAMLFileParameter&     p) {
     
     auto count = p.maximum_subscript - p.minimum_subscript + 1;
     ASSERT(0<count);
@@ -276,7 +282,8 @@ void ModelFileLoader::parseModelParameter(const YAML::Node& param,
         }
     }
 
-    setParameterTypeAndValue(param, overriding, info, p);
+    setParameterType (param, overriding, info, p);
+    setParameterValue(param, overriding, info, p);
     
     p.description = stringScalar(param, "description", p.description.c_str());
     std::stringstream msg;
@@ -668,17 +675,20 @@ void ModelFileLoader::handleInheritance(ModelInfoFromYAMLFile& info,
                 info.inheritModel(ancestor);
                 TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
                             "Model " << info.model_name
-                            << " is also based on model " << ancestral_model);
+                            << " is also based on" 
+                            << " model " << ancestral_model);
             }
         } else {
             std::stringstream complaint;
             complaint << "Model " << info.model_name 
                         << " specifies a parent model of "
-                        << info.parent_model_name << ", but that model was not found.";
-            complaint << "\nRecognized models are: ";
+                        << info.parent_model_name << ","
+                        << " but that model was not found.";
             if (info.is_rate_model) {
+                complaint << "\nRecognized rate models are: ";
                 complaint << list.getListOfRateModelNames() << ".";
             } else {
+                complaint << "\nRecognized substitution models are: ";
                 complaint << list.getListOfSubstitutionModelNames() << ".";
             }
             outError(complaint.str());

@@ -54,6 +54,8 @@ public:
         @param defaultValue - the default value of the parameter
         @return the value of the parameter*/
     std::string   getIncrementalParameter(const char letter, const char* defaultValue) const;
+    int           findStartOfIncrementalParameter(const char letter) const;
+    int           findEndOfIncrementalParameter(int i) const;
 
     /** determine the value of a numeric incremental placement sub-parameter       
         @param letter       - the letter that indicates the parameter

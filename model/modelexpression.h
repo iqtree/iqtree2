@@ -31,6 +31,7 @@ namespace ModelExpression {
             explicit ModelException(const std::string& s);
             explicit ModelException(const std::stringstream& s);
             const std::string& getMessage() const;
+            static void throwIfNonBlank(const std::stringstream& s);
     };
 
     class Expression {

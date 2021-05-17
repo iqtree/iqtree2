@@ -25,6 +25,22 @@ std::string PlacementParameters::getIncrementalParameter
             (const char letter, const char* defaultValue) const {
     const std::string& inc = incremental_method;
     std::string answer = defaultValue;
+    int i = findStartOfIncrementalParameter(letter);
+    if (i==inc.length()) {
+        return answer;  //Didn't find it
+    }
+    ++i;
+    int j = findEndOfIncrementalParameter(i);
+    answer = inc.substr(i, j-i);
+    if (!answer.empty() && answer[0]=='{'
+        && answer[answer.length()-1]=='}' ) {
+        answer = answer.substr(1, answer.length()-2);
+    }
+    return answer;
+}
+
+int PlacementParameters::findStartOfIncrementalParameter(const char letter) const {
+    const std::string& inc = incremental_method;
     int braceLevel = 0;
     int i;
     for (i=0; i<inc.length(); ++i) {
@@ -36,29 +52,26 @@ std::string PlacementParameters::getIncrementalParameter
             --braceLevel;
         }
     }
-    if (i==inc.length()) {
-        return answer;  //Didn't find it
-    }
-    ++i;
-    int j;
-    for (j=i; j<inc.length(); ++j) {
+    return i;
+}
+
+int PlacementParameters::findEndOfIncrementalParameter(int i) const {
+    const std::string& inc = incremental_method;
+    int braceLevel = 0;
+    for (int j=i; j<inc.length(); ++j) {
         if (inc[j]=='+' && braceLevel==0) {
-            break;
+            return j;
         } else if (inc[j]=='-' && braceLevel==0) {
-            break;
+            return j;
         } else if (inc[j]=='{') {
             ++braceLevel;
         } else if (inc[j]=='}') {
             --braceLevel;
         }
     }
-    answer = inc.substr(i, j-i);
-    if (!answer.empty() && answer[0]=='{'
-        && answer[answer.length()-1]=='}' ) {
-        answer = answer.substr(1, answer.length()-2);
-    }
-    return answer;
+    return inc.length();
 }
+
 
 size_t  PlacementParameters::getIncrementalSizeParameter
         (const char letter, size_t defaultValue) const {

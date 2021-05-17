@@ -287,6 +287,12 @@ public:
 
     //Inheriting
     void inheritModel(const ModelInfoFromYAMLFile &);
+    void inheritModelProperties(const ModelInfoFromYAMLFile& mummy,
+                                std::stringstream& complaint);
+    void inheritModelParameters(const ModelInfoFromYAMLFile& mummy,
+                                std::stringstream& complaint);
+    void inheritModelVariables (const ModelInfoFromYAMLFile& mummy,
+                                std::stringstream& complaint);
 };
 
 typedef std::map<std::string, ModelInfoFromYAMLFile> MapOfModels;

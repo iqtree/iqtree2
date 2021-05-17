@@ -26,7 +26,11 @@ protected:
                                     PhyloTree*             report_to_tree);
     void setParameterSubscriptRange(ModelInfoFromYAMLFile& info,
                                     YAMLFileParameter&     p);
-    void setParameterTypeAndValue  (const YAML::Node&      param,
+    void setParameterType          (const YAML::Node&      param,
+                                    bool                   overriding,
+                                    ModelInfoFromYAMLFile& info,
+                                    YAMLFileParameter&     p);
+    void setParameterValue         (const YAML::Node&      param,
                                     bool                   overriding,
                                     ModelInfoFromYAMLFile& info,
                                     YAMLFileParameter&     p);
