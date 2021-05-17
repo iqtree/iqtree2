@@ -9,6 +9,7 @@ modelset.cpp modelset.h
 modelsubst.cpp modelsubst.h
 modelinfofromname.cpp modelinfo.h
 modelinfofromyamlfile.cpp modellistfromyamlfile.cpp modelinfofromyamlfile.h
+yamlmodelwrapper.cpp yamlmodelwrapper.cpp
 modelfileloader.cpp modelfileloader.h
 modelexpression.cpp modelexpression.h
 partitionmodel.cpp partitionmodel.h

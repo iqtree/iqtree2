@@ -11,9 +11,12 @@
 
 namespace ModelExpression {
 
-    ModelException::ModelException(const char* s) : message(s) {}
-    ModelException::ModelException(const std::string& s) : message(s) {}
-    ModelException::ModelException(const std::stringstream& s) : message(s.str()) {}
+    ModelException::ModelException(const char* s) : message(s) {
+    }
+    ModelException::ModelException(const std::string& s) : message(s) {        
+    }
+    ModelException::ModelException(const std::stringstream& s) : message(s.str()) {
+    }
     const std::string& ModelException::getMessage() const {
         return message;
     }
