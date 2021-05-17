@@ -1085,7 +1085,7 @@ void Terrace::extendNewTaxon(string node_name, TerraceNode *node_1_branch, Terra
     //printTree(cout, WT_BR_SCALE | WT_NEWLINE);
     
     intermediated_trees_num +=1;
-    //if(intermediated_trees_num % 100000 == 0){
+    //if(intermediated_trees_num % 1000 == 0){
     //    cout<<"... trees generated - "<<intermediated_trees_num+terrace_trees_num<<"; intermediated - "<<intermediated_trees_num<<"; terrace - "<<terrace_trees_num<<"; dead paths - "<<dead_ends_num<<"\n";
     //}
     
@@ -1618,7 +1618,7 @@ void Terrace::write_summary_generation(){
     cout<<"---------------------------------------------------------"<<"\n";
     cout<<"SUMMARY:"<<"\n";
     cout<<"Number of trees on terrace: "<<terrace_trees_num<<"\n";
-    cout<<"Number of intermediated trees visited: "<<intermediated_trees_num - terrace_trees_num<<"\n";
+    cout<<"Number of intermediated trees visited: "<<intermediated_trees_num<<"\n";
     cout<<"Number of dead ends encountered: "<<dead_ends_num<<"\n";
     cout<<"---------------------------------------------------------"<<"\n";
     
