@@ -2825,6 +2825,8 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         TREE_LOG_LINE(*iqtree, VerboseMode::VB_QUIET, 
                       "BEST SCORE FOUND : " << best_score);
     } else if (!params.compute_likelihood) {
+        iqtree->deleteAllPartialParsimony();
+        iqtree->initializePLLIfNecessary();
         int parsimony = iqtree->computeParsimony("Recomputing final parsimony sore", 
                                                  false, false);
         TREE_LOG_LINE(*iqtree, VerboseMode::VB_QUIET, 

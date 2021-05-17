@@ -868,8 +868,10 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
             LOG_LINE(VerboseMode::VB_QUIET, "Creation of initial parsimony tree"
                      << " took " << getRealTime() - start << " seconds");
             {
+                deleteAllPartialParsimony();
+                initializeAllPartialPars();
                 auto initial_parsimony = computeParsimony("Computing parsimony" 
-                                                        " of PLL Parismony tree");
+                                                        " of PLL Parismony tree", false, false);
                 LOG_LINE(VerboseMode::VB_QUIET, 
                         "Initial tree's parsimony score is " << initial_parsimony);
             }
