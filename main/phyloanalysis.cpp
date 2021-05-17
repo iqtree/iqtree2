@@ -2369,7 +2369,7 @@ void handleQuartetLikelihoodMapping(Params &params, IQTree &iqtree);
 void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
     //    string dist_file;
-    params.startCPUTime = getCPUTime();
+    params.startCPUTime    = getCPUTime();
     params.start_real_time = getRealTime();
     
     int absent_states = 0;
@@ -2769,8 +2769,13 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         return;
     }
     if (params.snni && 0<params.min_iterations && verbose_mode >= VerboseMode::VB_MED) {
-        cout << "Log-likelihoods of " << params.popSize
-             << " best candidate trees: " << endl;
+        if (params.compute_likelihood) {
+            cout << "Log-likelihoods of " << params.popSize
+                << " best candidate trees: " << endl;
+        } else {
+            cout << "Parsimony scores of " << params.popSize
+                << " best candidate trees: " << endl;
+        }
         iqtree->printBestScores();
         cout << endl;
     }
@@ -2780,8 +2785,13 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         }
     } else if ( 0 != params.min_iterations ) {
         iqtree->readTreeString(iqtree->getBestTrees()[0]);
-        iqtree->initializeAllPartialLh();
-        iqtree->clearAllPartialLH();
+        if (params.compute_likelihood) {
+            iqtree->initializeAllPartialLh();
+            iqtree->clearAllPartialLH();
+        } else {
+            iqtree->initializeAllPartialPars();
+            iqtree->clearAllPartialParsimony(false);
+        }
         cout << "--------------------------------------------------------------------" << endl;
         cout << "|                    FINALIZING TREE SEARCH                        |" << endl;
         cout << "--------------------------------------------------------------------" << endl;
@@ -2791,7 +2801,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
                 iqtree->setCurScore(iqtree->computeLikelihood());
             }
             cout << "CHECKPOINT: Final model parameters restored" << endl;
-        } else {
+        } else if (params.compute_likelihood) {
             cout << "Performs final model parameters optimization" << endl;
             string tree;
             Params::getInstance().fixStableSplits = false;
@@ -2811,7 +2821,14 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     }
 
     if (iqtree->tree_buffers.buffer_partial_lh != nullptr ) {
-        cout << "BEST SCORE FOUND : " << iqtree->getCurScore() << endl;
+        auto best_score = iqtree->getCurScore();
+        TREE_LOG_LINE(*iqtree, VerboseMode::VB_QUIET, 
+                      "BEST SCORE FOUND : " << best_score);
+    } else if (!params.compute_likelihood) {
+        int parsimony = iqtree->computeParsimony("Recomputing final parsimony sore", 
+                                                 false, false);
+        TREE_LOG_LINE(*iqtree, VerboseMode::VB_QUIET, 
+                      "BEST PARSIMONY SCORE FOUND : " << parsimony);    
     }
 
     if (params.write_candidate_trees) {

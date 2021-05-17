@@ -2786,8 +2786,14 @@ double IQTree::doTreeSearch() {
         /*----------------------------------------
          * Optimize tree with NNI
          *----------------------------------------*/
-        pair<int, int> nniInfos; // <num_NNIs, num_steps>
-        nniInfos = doNNISearch(true, "", this);
+        if (params->compute_likelihood) {
+            pair<int, int> nniInfos; // <num_NNIs, num_steps>
+            nniInfos = doNNISearch(true, "", this);
+        }
+        else {
+            optimizeConstructedTree(false, VerboseMode::VB_MAX);
+        }
+
         curTree = getTreeString();
         int pos = addTreeToCandidateSet(curTree, curScore, true,
                                         MPIHelper::getInstance().getProcessID());
@@ -3157,7 +3163,8 @@ void IQTree::printIterationInfo(int sourceProcID) {
         if (params->compute_likelihood) {
             msg << " / LogL: " << curScore;
         } else {
-            msg << " / Parsimony Score: " << (int)floor(-curScore);
+            int parsimony = computeParsimony("Computing tree parsimony", false, false);
+            msg << " / Parsimony Score: " << parsimony;
         }
         msg << " / Time: " << convert_time(getRealTime() - params->start_real_time);
         if (stop_rule.getCurIt() > 20) {
@@ -3253,7 +3260,13 @@ double IQTree::doTreePerturbation() {
             }
         }
         //optimizeBranches(1);
-        curScore = computeLogL();
+        if (params->compute_likelihood) {
+            curScore = computeLogL();
+        } else {
+            deleteAllPartialParsimony();
+            int parsimony = computeParsimony("Computing post-pertubation parsimony", false, false); 
+            return -parsimony;   
+        }
     }
     return curScore;
 }
