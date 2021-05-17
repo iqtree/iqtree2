@@ -20,7 +20,9 @@ void runterraceanalysis(Params &params){
     params.startCPUTime = getCPUTime();
     params.start_real_time = getRealTime();
 
-    cout<<"Starting species-tree/terrace analysis..."<<endl;
+    cout<<"---------------------------------------------------------\n";
+    cout<<"Starting species-tree/terrace analysis...\n";
+    cout<<"---------------------------------------------------------\n";
     
     if(params.matrix_order){
         cout<<"Reordering presence-absence matrix..\n\n";
@@ -226,7 +228,7 @@ void run_generate_trees(Terrace *terrace, Params &params,const int m){
         }
     }
     
-    
+    cout<<"---------------------------------------------------------"<<"\n";
     cout<<"Current stopping thresholds:\n";
     cout<<"1. Stop if terrace size reached: "<<init_terrace->terrace_max_trees<<"\n";
     cout<<"2. Stop if the number of intermediate visited trees reached: "<<init_terrace->intermediate_max_trees<<"\n";

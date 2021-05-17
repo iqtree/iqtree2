@@ -1086,7 +1086,7 @@ void Terrace::extendNewTaxon(string node_name, TerraceNode *node_1_branch, Terra
     
     intermediated_trees_num +=1;
     if(verbose_mode>=VB_MED){
-        if(intermediated_trees_num % 10000 == 0 and terrace_trees_num < 10000000){
+        if(intermediated_trees_num+terrace_trees_num % 10000 == 0 and terrace_trees_num < 10000000){
             cout<<"... trees generated - "<<intermediated_trees_num + terrace_trees_num<<"; intermediated - "<<intermediated_trees_num<<"; terrace - "<<terrace_trees_num<<"; dead paths - "<<dead_ends_num<<"\n";
         }else if(terrace_trees_num == 10000000){
             cout<<"Since the terrace size already reached 10MLN, no intermediate results will be printed, but the calculations continue...\n";
