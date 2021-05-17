@@ -332,6 +332,48 @@ public:
         }
         sortRow(a, clusterC, true, sorters[0]);
     }
+    void deriveBoundFromFirstColumn(T& qBest) const {
+        //
+        //Since we always have to check these entries when we process
+        //the row, why not process them up front, hoping to get a
+        //better bound on min(V) (and perhaps even "rule" entire rows
+        //"out of consideration", using that bound)? -James B).
+        //
+        intptr_t rSize = rowMinima.size();
+        std::vector<T> qLocalBestVector;
+        qLocalBestVector.resize( threadCount, qBest);
+        T* qLocalBest =  qLocalBestVector.data();
+
+        #ifdef _OPEN_MP
+        #pragma omp parallel for
+        #endif
+        for (size_t b=0; b<threadCount; ++b) {
+            T      qBestForThread = qBest;
+            size_t rStart         = b*rSize / threadCount;
+            size_t rStop          = (b+1)*rSize / threadCount;
+            for (size_t r=rStart; r < rStop
+                    && rowMinima[r].value < infiniteDistance; ++r) {
+                intptr_t rowA     = rowMinima[r].row;
+                intptr_t rowB     = rowMinima[r].column;
+                if (rowA < row_count && rowB < row_count ) {
+                    size_t clusterA = rowToCluster[rowA];
+                    size_t clusterB = rowToCluster[rowB];
+                    T qHere = this->rows[rowA][rowB]
+                            - scaledClusterTotals[clusterA]
+                            - scaledClusterTotals[clusterB];
+                    if (qHere < qBestForThread) {
+                        qBestForThread = qHere;
+                    }
+                }
+            }
+            qLocalBest[b] = qBestForThread;
+        }
+        for (size_t b=0; b<threadCount; ++b) {
+            if ( qLocalBest[b] < qBest ) {
+                qBest = qLocalBest[b];
+            }
+        }
+    }
     void decideOnRowScanningOrder(T& qBest) const {
         intptr_t rSize = rowMinima.size();
         //
@@ -347,51 +389,8 @@ public:
         //Or, better yet... From this iteration?!
         //
         
-        #define DERIVE_BOUND_FROM_FIRST_COLUMN 1
-        #if (DERIVE_BOUND_FROM_FIRST_COLUMN)
-        {
-            //
-            //Since we always have to check these entries when we process
-            //the row, why not process them up front, hoping to get a
-            //better bound on min(V) (and perhaps even "rule" entire rows
-            //"out of consideration", using that bound)? -James B).
-            //
-            std::vector<T> qLocalBestVector;
-            qLocalBestVector.resize( threadCount, qBest);
-            T* qLocalBest =  qLocalBestVector.data();
-
-            #ifdef _OPEN_MP
-            #pragma omp parallel for
-            #endif
-            for (size_t b=0; b<threadCount; ++b) {
-                T      qBestForThread = qBest;
-                size_t rStart         = b*rSize / threadCount;
-                size_t rStop          = (b+1)*rSize / threadCount;
-                for (size_t r=rStart; r < rStop
-                     && rowMinima[r].value < infiniteDistance; ++r) {
-                    intptr_t rowA     = rowMinima[r].row;
-                    intptr_t rowB     = rowMinima[r].column;
-                    if (rowA < row_count && rowB < row_count ) {
-                        size_t clusterA = rowToCluster[rowA];
-                        size_t clusterB = rowToCluster[rowB];
-                        T qHere = this->rows[rowA][rowB]
-                                - scaledClusterTotals[clusterA]
-                                - scaledClusterTotals[clusterB];
-                        if (qHere < qBestForThread) {
-                            qBestForThread = qHere;
-                        }
-                    }
-                }
-                qLocalBest[b] = qBestForThread;
-            }
-            for (size_t b=0; b<threadCount; ++b) {
-                if ( qLocalBest[b] < qBest ) {
-                    qBest = qLocalBest[b];
-                }
-            }
-        }
-        #endif
-        
+        deriveBoundFromFirstColumn(qBest);
+     
         #ifdef _OPENMP
         int threshold = threadCount << 7; /* multiplied by 128*/
         #endif
