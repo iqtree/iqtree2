@@ -1216,7 +1216,9 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.compute_ml_dist    = false;
                 params.compute_ml_tree    = false;
                 params.model_name         = "JC";
-                params.min_iterations     = 0;
+                if (params.min_iterations == -1 ) {
+                    params.min_iterations = 0;
+                }
                 continue;
             }
             if (arg=="-mlnj-only" || arg=="--mlnj-only") {
