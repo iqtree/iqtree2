@@ -476,6 +476,12 @@ IntVector AliSimulator::generateRandomSequence(int sequence_length)
         double *state_freq = new double[max_num_states];
         getStateFrequenciesFromModel(state_freq);
         
+        // finding the max probability position
+        int max_prob_pos = 0;
+        for (int i = 1; i < max_num_states; i++)
+            if (state_freq[i] > state_freq[max_prob_pos])
+                max_prob_pos = i;
+        
         // print model's parameters
         tree->getModel()->writeInfo(cout);
         
@@ -484,7 +490,7 @@ IntVector AliSimulator::generateRandomSequence(int sequence_length)
         
         // randomly generate each site in the sequence follows the base frequencies defined by the user
         for (int i = 0; i < sequence_length; i++)
-            sequence[i] =  getRandomItemWithAccumulatedProbabilityMatrix(state_freq, 0, max_num_states);
+            sequence[i] =  getRandomItemWithAccumulatedProbMatrixMaxProbFirst(state_freq, 0, max_num_states, max_prob_pos);
         
         // delete state_freq
         delete []  state_freq;
@@ -597,13 +603,15 @@ void AliSimulator::simulateSeqs(int sequence_length, ModelSubst *model, double *
 #pragma omp critical
 #endif
             if ((*it)->node->sequence.size() != sequence_length)
+            {
                 (*it)->node->sequence.resize(sequence_length);
+            }
         }
         for (int i = thread_id; i < sequence_length; i += num_threads)
         {
             // iteratively select the state for each site of the child node, considering it's dad states, and the transition_probability_matrix
             int starting_index = node->sequence[i]*max_num_states;
-            (*it)->node->sequence[i] = getRandomItemWithAccumulatedProbabilityMatrix(trans_matrix, starting_index, max_num_states);
+            (*it)->node->sequence[i] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(trans_matrix, starting_index, max_num_states, node->sequence[i]);
         }
         
         // browse 1-step deeper to the neighbor node
@@ -647,14 +655,24 @@ void AliSimulator::convertProMatrixIntoAccumulatedProMatrix(double *probability_
 }
 
 /**
-*  get a random item from a set of items with an accumulated probability array by binary search
+*  get a random item from a set of items with an accumulated probability array by binary search starting at the max probability
 */
-int AliSimulator::getRandomItemWithAccumulatedProbabilityMatrix(double *accumulated_probability_maxtrix, int starting_index, int num_columns)
-{
+int AliSimulator::getRandomItemWithAccumulatedProbMatrixMaxProbFirst(double *accumulated_probability_maxtrix, int starting_index, int num_columns, int max_prob_position){
     // generate a random number
     double random_number = random_double();
     
-    return binarysearchItemWithAccumulatedProbabilityMatrix(accumulated_probability_maxtrix, random_number, starting_index, starting_index+(num_columns-1), starting_index)-starting_index;
+    // starting at the probability of unchange first
+    if (random_number >= (max_prob_position==0?0:accumulated_probability_maxtrix[starting_index+max_prob_position-1]))
+    {
+        if (random_number <= accumulated_probability_maxtrix[starting_index+max_prob_position])
+            return max_prob_position;
+        // otherwise, searching on the right part
+        else
+            return binarysearchItemWithAccumulatedProbabilityMatrix(accumulated_probability_maxtrix, random_number, starting_index+max_prob_position+1, starting_index+(num_columns-1), starting_index)-starting_index;
+    }
+    
+    // otherwise, searching on the left part
+    return binarysearchItemWithAccumulatedProbabilityMatrix(accumulated_probability_maxtrix, random_number, starting_index, starting_index+max_prob_position-1, starting_index)-starting_index;
 }
 
 /**

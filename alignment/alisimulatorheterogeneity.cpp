@@ -39,6 +39,7 @@ void AliSimulatorHeterogeneity::intializeSiteSpecificModelIndex()
         
         // get the weights of model components
         bool isFused = model->isFused();
+        int max_prob_pos = 0;
         for (int i = 0; i < num_models; i++)
         {
             // fused model, take the weight from site_rate
@@ -46,6 +47,10 @@ void AliSimulatorHeterogeneity::intializeSiteSpecificModelIndex()
                 model_prop[i] = tree->getRate()->getProp(i) / (1.0 - tree->getRate()->getPInvar());
             else
                 model_prop[i] = model->getMixtureWeight(i);
+            
+            // finding the max probability position
+            if (model_prop[i] > model_prop[max_prob_pos])
+                max_prob_pos = i;
         }
             
         // convert the model_prop into an accumulated model_prop
@@ -54,7 +59,7 @@ void AliSimulatorHeterogeneity::intializeSiteSpecificModelIndex()
         for (int i = 0; i < sequence_length; i++)
         {
             // randomly select a model from the set of model components, considering its probability array.
-            site_specific_model_index[i] = getRandomItemWithAccumulatedProbabilityMatrix(model_prop, 0, num_models);
+            site_specific_model_index[i] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(model_prop, 0, num_models, max_prob_pos);
         }
         
         // delete the probability array of rate categories
@@ -203,7 +208,7 @@ int AliSimulatorHeterogeneity::estimateStateFromAccumulatedTransMatrices(double 
     
     ASSERT(category_index > RATE_ZERO_INDEX);
     
-    return getRandomItemWithAccumulatedProbabilityMatrix(cache_trans_matrix, starting_index, max_num_states);
+    return getRandomItemWithAccumulatedProbMatrixMaxProbFirst(cache_trans_matrix, starting_index, max_num_states, dad_state);
 }
 
 /**
@@ -241,8 +246,15 @@ void AliSimulatorHeterogeneity::getSiteSpecificRatesDiscrete(double *site_specif
     
     // initialize the probability array of rate categories
     double *category_probability_matrix = new double[num_rate_categories];
+    int max_prob_pos = 0;
     for (int i = 0; i < num_rate_categories; i++)
+    {
         category_probability_matrix[i] = rate_heterogeneity->getProp(i);
+        
+        // finding the max probability position
+        if (category_probability_matrix[i] > category_probability_matrix[max_prob_pos])
+            max_prob_pos = i;
+    }
     
     // convert the probability matrix of rate categories into an accumulated probability matrix of rate categories
     convertProMatrixIntoAccumulatedProMatrix(category_probability_matrix, 1, num_rate_categories);
@@ -251,7 +263,7 @@ void AliSimulatorHeterogeneity::getSiteSpecificRatesDiscrete(double *site_specif
     for (int i = 0; i < sequence_length; i++)
     {
         // randomly select a rate from the set of rate categories, considering its probability array.
-        int rate_category = getRandomItemWithAccumulatedProbabilityMatrix(category_probability_matrix, 0, num_rate_categories);
+        int rate_category = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(category_probability_matrix, 0, num_rate_categories, max_prob_pos);
         
         // if rate_category == -1 <=> this site is invariant -> return dad's state
         if (rate_category == -1)

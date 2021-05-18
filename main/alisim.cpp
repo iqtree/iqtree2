@@ -826,11 +826,11 @@ void writeASequenceToFile(Alignment *aln, int sequence_length, string &output_st
             // convert CODON
             else
                 for (int i = 0; i < sequence_length; i++)
-            {
+                {
                     output[start_index+i*num_sites_per_state] = state_mapping[node->sequence[i]][0];
                     output[start_index+i*num_sites_per_state + 1] = state_mapping[node->sequence[i]][1];
                     output[start_index+i*num_sites_per_state + 2] = state_mapping[node->sequence[i]][2];
-            }
+                }
 #ifdef _OPENMP
 #pragma omp critical
 #endif

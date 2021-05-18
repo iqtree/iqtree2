@@ -68,11 +68,11 @@ protected:
     *  get a random item from a set of items with a probability array
     */
     int getRandomItemWithProbabilityMatrix(double *probability_maxtrix, int starting_index, int num_items);
-
+    
     /**
-    *  get a random item from a set of items with an accumulated probability array by binary search
+    *  get a random item from a set of items with an accumulated probability array by binary search starting at the max probability
     */
-    int getRandomItemWithAccumulatedProbabilityMatrix(double *accumulated_probability_maxtrix, int starting_index, int num_columns);
+    int getRandomItemWithAccumulatedProbMatrixMaxProbFirst(double *accumulated_probability_maxtrix, int starting_index, int num_columns, int max_prob_position);
 
     /**
     *  convert an probability matrix into an accumulated probability matrix

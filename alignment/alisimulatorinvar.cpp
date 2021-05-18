@@ -55,7 +55,7 @@ void AliSimulatorInvar::simulateSeqs(int sequence_length, double *site_specific_
             else // otherwise, randomly select the state, considering it's dad states, and the transition_probability_matrix
             {
                 int starting_index = node->sequence[i]*max_num_states;
-                (*it)->node->sequence[i] = getRandomItemWithAccumulatedProbabilityMatrix(trans_matrix, starting_index, max_num_states);
+                (*it)->node->sequence[i] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(trans_matrix, starting_index, max_num_states, node->sequence[i]);
             }
         }
         
