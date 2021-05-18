@@ -1825,6 +1825,7 @@ void PhyloTree::extractBifurcatingSubTree(PhyloNeighborVec& removed_nei,
 int PhyloTree::setAllBranchLengthsFromParsimony(bool    recalculate_parsimony,
                                                 double& tree_parsimony) {
     if (recalculate_parsimony) {
+        deleteAllPartialParsimony();
         initializeAllPartialPars();
         tree_parsimony = computeParsimony("Recalculating tree parsimony"
                                           " to determine branch lengths",
@@ -1854,17 +1855,17 @@ int PhyloTree::setOneBranchLengthFromParsimony(double tree_parsimony,
     PhyloNeighbor* rightNei = node2->findNeighbor(node1);
     ASSERT(leftNei->isParsimonyComputed());
     ASSERT(rightNei->isParsimonyComputed());
-    int one_if_corrected = (leftNei->length <= 0 ||
-                            rightNei->length<=0) ? 1 : 0;
-    double branch_cost = tree_parsimony
-                       - getSubTreeParsimony(leftNei)
-                       - getSubTreeParsimony(rightNei);
-    if (branch_cost<1) {
-        branch_cost = 1;
+    int    one_if_corrected    = (leftNei->length <= 0 ||
+                                 rightNei->length<=0) ? 1 : 0;
+    double mutations_on_branch = tree_parsimony
+                               - getSubTreeParsimony(leftNei)
+                               - getSubTreeParsimony(rightNei);
+    double corrected_length = 0;
+    if ( 0 < mutations_on_branch ) {
+        double branch_length = mutations_on_branch / getAlnNSite();
+        double alpha         = (site_rate) ? site_rate->getGammaShape() : 1.0;
+        corrected_length     = correctBranchLengthF81(branch_length, alpha);
     }
-    double branch_length    = branch_cost / getAlnNSite();
-    double alpha            = (site_rate) ? site_rate->getGammaShape() : 1.0;
-    double corrected_length = correctBranchLengthF81(branch_length, alpha);
     if (corrected_length < params->min_branch_length) {
         corrected_length = params->min_branch_length;
     }
