@@ -138,14 +138,21 @@ void AliSimulatorHeterogeneity::intializeCachingAccumulatedTransMatrices(double 
 *  simulate sequences for all nodes in the tree by DFS
 *
 */
-void AliSimulatorHeterogeneity::simulateSeqs(int sequence_length, double *site_specific_rates, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad)
+void AliSimulatorHeterogeneity::simulateSeqs(int sequence_length, double *site_specific_rates, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, int thread_id, int num_threads)
 {
     // process its neighbors/children
     NeighborVec::iterator it;
     FOR_NEIGHBOR(node, dad, it) {
         
         // estimate the sequence for the current neighbor
-        (*it)->node->sequence.resize(sequence_length);
+        if ((*it)->node->sequence.size() != sequence_length)
+        {
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+            if ((*it)->node->sequence.size() != sequence_length)
+                (*it)->node->sequence.resize(sequence_length);
+        }
         
         // check if trans_matrix could be caching (without rate_heterogeneity or the num of rate_categories is lowr than the threshold (5)) or not
         if (tree->getRateName().empty()
@@ -165,7 +172,7 @@ void AliSimulatorHeterogeneity::simulateSeqs(int sequence_length, double *site_s
             intializeCachingAccumulatedTransMatrices(cache_trans_matrix, num_models, num_rate_categories, max_num_states, branch_lengths, trans_matrix, model);
 
             // estimate the sequence
-            for (int i = 0; i < sequence_length; i++)
+            for (int i = thread_id; i < sequence_length; i += num_threads)
                 (*it)->node->sequence[i] = estimateStateFromAccumulatedTransMatrices(cache_trans_matrix, site_specific_rates[i] , i, num_rate_categories, max_num_states, node->sequence[i]);
             
             // delete cache_trans_matrix
@@ -174,13 +181,13 @@ void AliSimulatorHeterogeneity::simulateSeqs(int sequence_length, double *site_s
         // otherwise, estimating the sequence without trans_matrix caching
         else
         {
-            for (int i = 0; i < sequence_length; i++)
+            for (int i = thread_id; i < sequence_length; i += num_threads)
                // randomly select the state, considering it's dad states, and the transition_probability_matrix
                 (*it)->node->sequence[i] = estimateStateFromOriginalTransMatrix(model, site_specific_model_index[i], site_specific_rates[i], trans_matrix, max_num_states, (*it)->length, node->sequence[i]);
         }
         
         // browse 1-step deeper to the neighbor node
-        simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, (*it)->node, node);
+        simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, (*it)->node, node, thread_id, num_threads);
     }
 }
 
@@ -331,9 +338,6 @@ void AliSimulatorHeterogeneity::simulateSeqsForTree(){
     ModelSubst *model = tree->getModel();
     int max_num_states = tree->aln->getMaxNumStates();
     
-    // initialize trans_matrix
-    double *trans_matrix = new double[max_num_states*max_num_states];
-    
     // initialize site specific model index based on its weights (in the mixture model)
     intializeSiteSpecificModelIndex();
     
@@ -341,13 +345,33 @@ void AliSimulatorHeterogeneity::simulateSeqsForTree(){
     double *site_specific_rates = new double[sequence_length];
     getSiteSpecificRates(site_specific_rates, sequence_length);
     
-    simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, tree->MTree::root, tree->MTree::root);
+    // initialize trans_matrix
+    double *trans_matrix;
+    
+    // simulate sequences
+    int num_threads = 1;
+    int thread_id = 0;
+#ifdef _OPENMP
+#pragma omp parallel private(thread_id, trans_matrix)
+#endif
+    {
+#ifdef _OPENMP
+#pragma omp single
+        num_threads = omp_get_num_threads();
         
+        thread_id = omp_get_thread_num();
+#endif
+
+        trans_matrix = new double[max_num_states*max_num_states];
+        
+        simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, tree->MTree::root, tree->MTree::root, thread_id, num_threads);
+    
+        // delete trans_matrix array
+        delete[] trans_matrix;
+    }
+    
     // delete the site-specific rates
     delete[] site_specific_rates;
-    
-    // delete trans_matrix array
-    delete[] trans_matrix;
     
     // removing constant states if it's necessary
     if (params->alisim_length_ratio > 1)

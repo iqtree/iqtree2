@@ -25,7 +25,7 @@ AliSimulatorInvar::AliSimulatorInvar(AliSimulator *alisimulator, double invar_pr
 *  simulate sequences for all nodes in the tree by DFS
 *
 */
-void AliSimulatorInvar::simulateSeqs(int sequence_length, double *site_specific_rates, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad)
+void AliSimulatorInvar::simulateSeqs(int sequence_length, double *site_specific_rates, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, int thread_id, int num_threads)
 {
     // process its neighbors/children
     NeighborVec::iterator it;
@@ -38,9 +38,15 @@ void AliSimulatorInvar::simulateSeqs(int sequence_length, double *site_specific_
         convertProMatrixIntoAccumulatedProMatrix(trans_matrix, max_num_states, max_num_states);
         
         // estimate the sequence for the current neighbor
-        (*it)->node->sequence.resize(sequence_length);
-        
-        for (int i = 0; i < sequence_length; i++)
+        if ((*it)->node->sequence.size() != sequence_length)
+        {
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+            if ((*it)->node->sequence.size() != sequence_length)
+                (*it)->node->sequence.resize(sequence_length);
+        }
+        for (int i = thread_id; i < sequence_length; i += num_threads)
         {
             
             // if this site is invariant -> preserve the dad's state
@@ -54,7 +60,7 @@ void AliSimulatorInvar::simulateSeqs(int sequence_length, double *site_specific_
         }
         
         // browse 1-step deeper to the neighbor node
-        simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, (*it)->node, node);
+        simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, (*it)->node, node, thread_id, num_threads);
     }
 }
 
@@ -70,9 +76,6 @@ void AliSimulatorInvar::simulateSeqsForTree()
     ModelSubst *model = tree->getModel();
     int max_num_states = tree->aln->getMaxNumStates();
     
-    // initialize trans_matrix
-    double *trans_matrix = new double[max_num_states*max_num_states];
-    
     // simulate Sequences
     // initialize the site-specific rates
     double *site_specific_rates = new double[sequence_length];
@@ -85,14 +88,33 @@ void AliSimulatorInvar::simulateSeqsForTree()
             site_specific_rates[i] = 1;
     }
     
+    // initialize trans_matrix
+    double *trans_matrix;
+    
     // simulate sequences with only Invariant sites option
-    simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, tree->MTree::root, tree->MTree::root);
+    int num_threads = 1;
+    int thread_id = 0;
+#ifdef _OPENMP
+#pragma omp parallel private(thread_id, trans_matrix)
+#endif
+    {
+#ifdef _OPENMP
+#pragma omp single
+        num_threads = omp_get_num_threads();
+        
+        thread_id = omp_get_thread_num();
+#endif
+
+        trans_matrix = new double[max_num_states*max_num_states];
+        
+        simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, tree->MTree::root, tree->MTree::root, thread_id, num_threads);
+    
+        // delete trans_matrix array
+        delete[] trans_matrix;
+    }
     
     // delete the site-specific rates
     delete[] site_specific_rates;
-    
-    // delete trans_matrix array
-    delete[] trans_matrix;
     
     // removing constant states if it's necessary
     if (params->alisim_length_ratio > 1)
