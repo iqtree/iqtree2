@@ -3256,6 +3256,16 @@ double PhyloTree::correctBranchLengthF81(double observedBran, double alpha) cons
     return correctedBranLen;
 }
 
+void PhyloTree::correctBranchLengthIfNeedBe(double &uncorrected) const {
+    if (!params->compute_obs_dist) {
+        double alpha = site_rate ? site_rate->getGammaShape() : 0.0;
+        uncorrected  = correctBranchLengthF81(uncorrected, alpha);
+    }
+    if (uncorrected <= params->min_branch_length) {
+        uncorrected  = params->min_branch_length;
+    }
+}
+
 double PhyloTree::computeCorrectedBayesianBranchLength(PhyloNeighbor* dad_branch,
                                                        PhyloNode*     dad) {
     double observedBran = computeBayesianBranchLength(dad_branch, dad);
@@ -4523,21 +4533,17 @@ int PhyloTree::fixNegativeBranch(bool force, PhyloNode *node, PhyloNode *dad) {
     if (force && !isUsingSankoffParsimony()) {
         return setParsimonyBranchLengths();
     }
-    double alpha = (site_rate) ? site_rate->getGammaShape() : 1.0;
     
     FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, nei){
         if (nei->length < 0.0 || force) { // negative branch length detected
             int branch_subst;
             computeParsimonyBranch(nei, node, &branch_subst);
-            if (branch_subst < 1) {
-                branch_subst = 1;
+            if (branch_subst < 0) {
+                branch_subst = 0;
             }
             double observed_parsimony_distance = (double) branch_subst / getAlnNSite();
-            double branch_length = correctBranchLengthF81(observed_parsimony_distance, alpha);
-            if (branch_length <= 0) {
-                branch_length = params->min_branch_length;
-            }
-            fixOneNegativeBranch(branch_length, nei, node);
+            double branch_length = observed_parsimony_distance;
+            correctBranchLengthIfNeedBe(branch_length);
             ++fixed;
         }
         if (nei->length <= 0.0 && (!rooted || node != root)) {

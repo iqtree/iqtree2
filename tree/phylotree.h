@@ -1417,16 +1417,21 @@ public:
     /**
      * Compute all pairwise distance of subtree rooted at \a source and other subtrees
      */
-    void computeSubtreeDists();
+    void   computeSubtreeDists();
 
-    void getUnmarkedNodes(PhyloNodeVector& unmarkedNodes, PhyloNode* node = NULL, PhyloNode* dad = NULL);
+    void   getUnmarkedNodes(PhyloNodeVector& unmarkedNodes, PhyloNode* node = NULL, 
+                            PhyloNode* dad = NULL);
 
-    void computeAllSubtreeDistForOneNode(PhyloNode* source, PhyloNode* nei1, PhyloNode* nei2, PhyloNode* node, PhyloNode* dad);
+    void   computeAllSubtreeDistForOneNode(PhyloNode* source, PhyloNode* nei1, PhyloNode* nei2, 
+                                           PhyloNode* node, PhyloNode* dad);
 
-    double correctBranchLengthF81(double observedBran, double alpha) const;
+    double correctBranchLengthF81         (double observedBran, double alpha) const;
+
+    void   correctBranchLengthIfNeedBe    (double &uncorrected) const;
 
     double computeCorrectedBayesianBranchLength(PhyloNeighbor *dad_branch,
                                                 PhyloNode *dad);
+
 
     /**
             Compute the variance in log-likelihood difference

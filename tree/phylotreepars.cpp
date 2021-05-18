@@ -471,10 +471,12 @@ double PhyloTree::jukesCantorCorrection(double dist, double alpha) const {
         }
     }
     // Branch lengths under PoMo are #events, which is ~N^2 * #substitutions
-    if (aln->seq_type == SeqType::SEQ_POMO)
+    if (aln->seq_type == SeqType::SEQ_POMO) {
         dist *= aln->virtual_pop_size * aln->virtual_pop_size;
-    if (dist < Params::getInstance().min_branch_length)
+    }
+    if (dist < Params::getInstance().min_branch_length) {
         dist = Params::getInstance().min_branch_length;
+    }
     return dist;
 }
 
@@ -486,7 +488,6 @@ int PhyloTree::setParsimonyBranchLengths() {
     
     int    sum_score = 0;
     double persite   = 1.0/getAlnNSite();
-    double alpha     = (site_rate) ? site_rate->getGammaShape() : 1.0;
 
     PhyloNode*     dad         = nodes1[0];
     PhyloNeighbor* dad_branch  = dad->findNeighbor(nodes2[0]);
@@ -550,10 +551,8 @@ int PhyloTree::setParsimonyBranchLengths() {
     }
     ASSERT(subst == branch_subst);
     sum_score += subst;
-    double branch_length = correctBranchLengthF81(subst*persite, alpha);
-    if (branch_length <= 0.0) {
-        branch_length = params->min_branch_length;
-    }
+    double branch_length = subst*persite;
+    correctBranchLengthIfNeedBe(branch_length);
     fixOneNegativeBranch(branch_length, dad_branch, dad);
     
     // walking down the tree to assign node states
@@ -608,10 +607,8 @@ int PhyloTree::setParsimonyBranchLengths() {
                 subst += aln->singleton_parsimony_states[node->id];
             }
         }
-        double branch_length = correctBranchLengthF81(subst*persite, alpha);
-        if (branch_length <= 0.0) {
-            branch_length = params->min_branch_length;
-        }
+        double branch_length =subst*persite;
+        correctBranchLengthIfNeedBe(branch_length);
         fixOneNegativeBranch(branch_length, dad_branch, dad);
         sum_score += subst;
     }
@@ -1863,10 +1860,10 @@ int PhyloTree::setOneBranchLengthFromParsimony(double tree_parsimony,
     double corrected_length = 0;
     if ( 0 < mutations_on_branch ) {
         double branch_length = mutations_on_branch / getAlnNSite();
-        double alpha         = (site_rate) ? site_rate->getGammaShape() : 1.0;
-        corrected_length     = correctBranchLengthF81(branch_length, alpha);
+        corrected_length     = branch_length;
+        correctBranchLengthIfNeedBe(corrected_length);
     }
-    if (corrected_length < params->min_branch_length) {
+    else if (corrected_length < params->min_branch_length) {
         corrected_length = params->min_branch_length;
     }
     leftNei->length = rightNei->length = corrected_length;

@@ -86,8 +86,10 @@ void LikelihoodCostCalculator::assessPlacementCost(PhyloTree& tree, const TaxonT
     const TargetBranch* target = placement.getTarget();
     double score               = (placement.parsimony_score > 1) ? placement.parsimony_score : 1;
     double normalized          = score / tree.getAlnNSite();
-    double alpha               = tree.getGammaShape();
-    double parsimony_length    = tree.correctBranchLengthF81( normalized, alpha );
+    double parsimony_length    = normalized;
+
+    tree.correctBranchLengthIfNeedBe(parsimony_length);
+    
     placement.lenToNewTaxon    = parsimony_length;
             
     PhyloNode fakeInterior;

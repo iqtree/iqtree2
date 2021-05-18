@@ -603,9 +603,8 @@ void PhyloSuperTreePlen::doNNI(const NNIMove &move, bool clearLH)
 	}
 }
 
-double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, SwapNNIParam *nni_param, NNIMove *nniMoves) {
-
-
+double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, 
+                                         SwapNNIParam *nni_param, NNIMove *nniMoves) {
 	int i = 0, id = 0;
 	int ntrees = static_cast<int>(size());
     uint64_t total_block_size = 0, total_scale_block_size = 0;
@@ -776,8 +775,9 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	 * For Restoring: saving current likelihoods for SubTree
 	 * ---------------------------------------------------------*/
 	double *saved_cur_score = new double[part_info.size()];
-	for (i = 0; i < part_info.size(); i++)
+	for (i = 0; i < part_info.size(); i++) {
 		saved_cur_score[i] = part_info[i].cur_score;
+	}
 
 	/* -------------------------------------------------------------------------------------------------------------------
 	 * Allocate new PhyloNeighbors:

@@ -241,14 +241,16 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance, bool write_info,
 
         if (getRate()->getFixParams()) {
             stringstream ss;
+            const char* separator = "";
             for (i = 0; i < mixlen; i++) {
-                if (i > 0) ss << ",";
-                ss << getRate()->getProp(i);
+                ss << separator << getRate()->getProp(i);
+                separator = ",";
             }
             param = ss.str();
         }
 
-        RateFree *relative_rate = new RateFree(mixlen, params->gamma_shape, param, false, params->optimize_alg_freerate, this);
+        RateFree *relative_rate = new RateFree(mixlen, params->gamma_shape, param, 
+                                               false, params->optimize_alg_freerate, this);
         relative_rate->setTree(this);
         
         // setup new rate model
