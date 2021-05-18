@@ -23,10 +23,17 @@
 #include "rategamma.h"
 #include <cmath>
 
+RateGamma::RateGamma(int ncat, PhyloTree* tree, PhyloTree* report_to_tree) : RateHeterogeneity() {
+	ncategory       = ncat;
+	phylo_tree      = tree;
+	cut_median      = false; //Use the mean rather than the median
+	gamma_shape     = tree->params->min_gamma_shape;
+	fix_gamma_shape = false;  
+	rates           = nullptr;
+	setNCategory(ncat);
+}
 
-
-RateGamma::RateGamma(int ncat, double shape, bool median, PhyloTree *tree) : RateHeterogeneity()
-{
+RateGamma::RateGamma(int ncat, double shape, bool median, PhyloTree *tree) : RateHeterogeneity() {
 	ncategory = ncat;
 	phylo_tree = tree;
 	cut_median = median;

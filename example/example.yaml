@@ -271,12 +271,16 @@
 
 - ratemodel:        R
   ratedistribution: free
+  optimisation:     2-BFGS,EM
   parameters:
-  - name:           rate(1..categories)
-    type:           rate
   - name:           proportion(1..categories)
     type:           proportion
+    range:          [0.001, 1.0] #Even though, RateFree declares MAX_FREE_RATE_PROP 1000
     initValue:      1/categories
+  - name:           rate(1..categories)
+    type:           rate
+    range:          [0.001, 1000.0]
+    tolerance;      0.0001
 
 - ratemodel:        I
   ratedistribution: invariant

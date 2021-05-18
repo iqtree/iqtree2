@@ -25,7 +25,7 @@
 #ifndef yaml_model_wrapper_h
 #define yaml_model_wrapper_h
 
-#include "modelexpression.h"
+#include "modelexpression.h"       //for ModelExpression::InterpretedExpression
 
 #include "modeldna.h"              //for ModelDNA
 #include "modeldnaerror.h"         //for ModelDNAError
@@ -34,8 +34,10 @@
 #include "modelbin.h"              //for ModelBIN
 #include "modelmorphology.h"       //for ModelMorphology
 
-#include "modelinfofromyamlfile.h"
-#include <tree/phylotree.h>
+#include "ratefree.h"              //for RateFree
+
+#include "modelinfofromyamlfile.h" //for ModelInfoFromYAMLFile, etc.
+#include <tree/phylotree.h>        //for PhyloTree
 
 template <class S> class YAMLModelWrapper: public S {
 protected:
@@ -363,6 +365,35 @@ public:
                  StateFreqType freq, std::string freq_params,
                  PhyloTree *tree, PhyloTree* report_to_tree,
                  const ModelInfoFromYAMLFile& info);
+};
+
+template <class R> class YAMLRateModelWrapper: public R {
+protected:
+    ModelInfoFromYAMLFile model_info;
+    PhyloTree*            report_tree;
+public:
+    typedef R super;
+    using super::getNDim;
+
+    YAMLRateModelWrapper(const ModelInfoFromYAMLFile& info,
+                     PhyloTree* tree)
+        : super(info.getNumberOfRateCategories(), tree, tree)
+        , model_info(info), report_tree(tree) {
+    }
+
+    virtual void setBounds(double* lower_bound, double* upper_bound,
+                            bool*  bound_check) {
+        int ndim = getNDim();
+        model_info.setBounds(ndim, lower_bound,
+                             upper_bound, bound_check);
+    }
+};
+
+class YAMLRateFree: public YAMLRateModelWrapper<RateFree> {
+public:
+    typedef YAMLRateModelWrapper<RateFree> super;
+    YAMLRateFree(PhyloTree *tree, PhyloTree* report_to_tree,
+                const ModelInfoFromYAMLFile& info);
 };
 
 #endif //yaml_model_wrapper_h

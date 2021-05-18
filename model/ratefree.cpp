@@ -24,21 +24,33 @@ const double TOL_FREE_RATE = 0.0001;
 const double MIN_FREE_RATE_PROP = 0.001;
 const double MAX_FREE_RATE_PROP = 1000;
 
-RateFree::RateFree(int ncat, double start_alpha, string params,
-                   bool sorted_rates, string opt_alg, PhyloTree *tree)
-    : RateGamma(ncat, start_alpha, false, tree) {
-	fix_params = 0;
-	prop = NULL;
-    this->sorted_rates = sorted_rates;
+RateFree::RateFree(int ncat, PhyloTree *tree, PhyloTree* report_to_tree)
+    : RateGamma(ncat, tree, report_to_tree) {
+	fix_params        = 0;
+	prop              = nullptr;
+    sorted_rates      = false;
     optimizing_params = 0;
-    this->optimize_alg = opt_alg;
+    optimize_alg      = report_to_tree->params->optimize_alg_freerate;
+	setNCategory(ncat);
+}
+
+RateFree::RateFree(int ncat, double start_alpha, string params,
+                   bool use_sorted_rates, string opt_alg, PhyloTree *tree)
+    : RateGamma(ncat, start_alpha, false, tree) {
+	fix_params        = 0;
+	prop              = nullptr;
+    sorted_rates      = use_sorted_rates;
+    optimizing_params = 0;
+    optimize_alg      = opt_alg;
 	setNCategory(ncat);
 
-	if (params.empty()) return;
+	if (params.empty()) {
+        return;
+    }
 	DoubleVector params_vec;
 	try {
 		convert_double_vec(params.c_str(), params_vec);
-		int i;
+		int    i;
 		double sum, sum_prop;
         if (params_vec.size() == ncategory) {
             // only inputing prop
@@ -49,20 +61,24 @@ RateFree::RateFree(int ncat, double start_alpha, string params,
             }
             fix_params = (Params::getInstance().optimize_from_given_params) ? 0 : 1;
         } else {
-            if (params_vec.size() != ncategory*2)
-                outError("Number of parameters for FreeRate model must be twice number of categories");
+            if (params_vec.size() != ncategory*2) {
+                outError("Number of parameters for FreeRate model"
+                         " must be twice the number of categories");
+            }
             for (i = 0, sum = 0.0, sum_prop = 0.0; i < ncategory; i++) {
                 prop[i] = params_vec[i*2];
                 rates[i] = params_vec[i*2+1];
                 sum += prop[i]*rates[i];
                 sum_prop += prop[i];
             }
-            for (i = 0; i < ncategory; i++)
+            for (i = 0; i < ncategory; i++) {
                 rates[i] /= sum;
+            }
             fix_params = (Params::getInstance().optimize_from_given_params) ? 0 : 2;
         }
-		if (fabs(sum_prop-1.0) > 1e-5)
+		if (fabs(sum_prop-1.0) > 1e-5) {
 			outError("Sum of category proportions not equal to 1");
+        }
 	} catch (string &str) {
 		outError(str);
 	}
@@ -74,52 +90,27 @@ void RateFree::startCheckpoint() {
 
 void RateFree::saveCheckpoint() {
     startCheckpoint();
-//    CKP_SAVE(fix_params);
-//    CKP_SAVE(sorted_rates);
-//    CKP_SAVE(optimize_alg);
     CKP_ARRAY_SAVE(ncategory, prop);
     CKP_ARRAY_SAVE(ncategory, rates);
     endCheckpoint();
-//    RateGamma::saveCheckpoint();
 }
 
 void RateFree::restoreCheckpoint() {
-//    RateGamma::restoreCheckpoint();
     startCheckpoint();
-//    CKP_RESTORE(fix_params);
-//    CKP_RESTORE(sorted_rates);
-//    CKP_RESTORE(optimize_alg);
     CKP_ARRAY_RESTORE(ncategory, prop);
     CKP_ARRAY_RESTORE(ncategory, rates);
     endCheckpoint();
-
-//	setNCategory(ncategory);
 }
 
 void RateFree::setNCategory(int ncat) {
 
     // initialize with gamma rates
     RateGamma::setNCategory(ncat);
-	if (prop) delete [] prop;
+    delete [] prop;
 	prop  = new double[ncategory];
-
     for (int i = 0; i < ncategory; i++) {
         prop[i] = (1.0-getPInvar())/ncategory;
     }
-    
-//	double sum_prop = (ncategory)*(ncategory+1)/2.0;
-//	double sum = 0.0;
-//	int i;
-	// initialize rates as increasing
-//	for (i = 0; i < ncategory; i++) {
-//		prop[i] = (double)(ncategory-i) / sum_prop;
-//        prop[i] = 1.0 / ncategory;
-//		rates[i] = (double)(i+1);
-//		sum += prop[i]*rates[i];
-//	}
-//	for (i = 0; i < ncategory; i++)
-//		rates[i] /= sum;
-
 	name = "+R";
 	name += convertIntToString(ncategory);
 	full_name = "FreeRate";
@@ -139,12 +130,11 @@ void RateFree::initFromCatMinusOne() {
         }
     }
     int second = (first == 0) ? 1 : 0;
-    for (int i = 0; i < ncategory-1; i++)
-        if (prop[i] > prop[second] && i != first)
+    for (int i = 0; i < ncategory-1; i++) {
+        if (prop[i] > prop[second] && i != first) {            
             second = i;
-
-//    memmove(rates, input->rates, (k+1)*sizeof(double));
-//    memmove(prop, input->prop, (k+1)*sizeof(double));
+        }
+    }
 
     // divide highest category into 2 of the same prop
     // 2018-06-12: fix bug negative rates
@@ -157,23 +147,13 @@ void RateFree::initFromCatMinusOne() {
     }
     prop[ncategory-1] = prop[first]/2;
     prop[first] = prop[first]/2;
-//    if (k < ncategory-2) {
-//        memcpy(&rates[k+2], &input->rates[k+1], (ncategory-2-k)*sizeof(double));
-//        memcpy(&prop[k+2], &input->prop[k+1], (ncategory-2-k)*sizeof(double));
-//    }
-    // copy half of k to the last category
 
-
-//    rates[ncategory-1] = rates[k];
-//    prop[ncategory-1] = prop[k] / 2;
-//    prop[k] = prop[k] / 2;
     // sort the rates in increasing order
     if (sorted_rates) {
         quicksort(rates, 0, ncategory-1, prop);
     }
     phylo_tree->clearAllPartialLH();
 }
-
 
 RateFree::~RateFree() {
     delete [] prop;
@@ -182,10 +162,11 @@ RateFree::~RateFree() {
 
 string RateFree::getNameParams() {
 	stringstream str;
+    const char* separator="";
 	str << "+R" << ncategory << "{";
 	for (int i = 0; i < ncategory; i++) {
-		if (i > 0) str << ",";
-		str << prop[i]<< "," << rates[i];
+		str << separator << prop[i]<< "," << rates[i];
+        separator = ",";
 	}
 	str << "}";
 	return str.str();
@@ -193,8 +174,9 @@ string RateFree::getNameParams() {
 
 double RateFree::meanRates() const {
 	double ret = 0.0;
-	for (int i = 0; i < ncategory; i++)
+	for (int i = 0; i < ncategory; i++) {
 		ret += prop[i] * rates[i];
+    }
 	return ret;
 }
 
@@ -204,20 +186,31 @@ double RateFree::meanRates() const {
  */
 double RateFree::rescaleRates() {
 	double norm = meanRates();
-	for (int i = 0; i < ncategory; i++)
+	for (int i = 0; i < ncategory; i++) {
 		rates[i] /= norm;
+    }
 	return norm;
 }
 
 int RateFree::getNDim() { 
-    if (fix_params == 2) return 0;
-    if (fix_params == 1) // only fix prop
+    if (fix_params == 2) {
+        return 0;
+    }
+    if (fix_params == 1) { 
+        // only fix prop
         return (ncategory-1);
-    if (optimizing_params == 0) return (2*ncategory-2); 
-    if (optimizing_params == 1) // rates
+    }
+    if (optimizing_params == 0) {
+        return (2*ncategory-2); 
+    }
+    if (optimizing_params == 1) { 
+        // rates
         return ncategory-1;
-    if (optimizing_params == 2) // proportions
+    }
+    if (optimizing_params == 2) { 
+        // proportions
         return ncategory-1;
+    }
     return 0;
 }
 
@@ -252,17 +245,19 @@ double RateFree::optimizeParameters(double gradient_epsilon,
         }
     }
 
-	double *variables = new double[ndim+1];
-	double *upper_bound = new double[ndim+1];
-	double *lower_bound = new double[ndim+1];
-	bool *bound_check = new bool[ndim+1];
-	double score;
+	double* variables   = new double[ndim+1];
+	double* upper_bound = new double[ndim+1];
+	double* lower_bound = new double[ndim+1];
+	bool*   bound_check = new bool  [ndim+1];
+	double  score;
 
 //    score = optimizeWeights();
 
     int left = 1, right = 2;
-    if (fix_params == 1) // fix proportions
+    if (fix_params == 1) {
+        // fix proportions
         right = 1;
+    }
     if (optimize_alg.find("1-BFGS") != string::npos) {
         left = 0; 
         right = 0;
@@ -276,20 +271,19 @@ double RateFree::optimizeParameters(double gradient_epsilon,
         setVariables(variables);
         setBounds(lower_bound, upper_bound, bound_check);
 
-//        if (optimizing_params == 2 && optimize_alg.find("-EM") != string::npos)
-//            score = optimizeWeights();
-//        else 
-        if (optimize_alg.find("BFGS-B") != string::npos)
+        if (optimize_alg.find("BFGS-B") != string::npos) {
             score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1,
                               max(gradient_epsilon, TOL_FREE_RATE));
-        else
+        }
+        else {
             score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound,
                                         bound_check, max(gradient_epsilon, TOL_FREE_RATE));
-
+        }
         getVariables(variables);
         // sort the rates in increasing order
-        if (sorted_rates)
+        if (sorted_rates) {
             quicksort(rates, 0, ncategory-1, prop);
+        }
         phylo_tree->clearAllPartialLH();
         score = phylo_tree->computeLikelihood();
     }
@@ -305,7 +299,9 @@ double RateFree::optimizeParameters(double gradient_epsilon,
 
 void RateFree::setBounds(double *lower_bound, double *upper_bound,
                          bool *bound_check) {
-	if (getNDim() == 0) return;
+	if (getNDim() == 0) {
+        return;
+    }
 	int i;
     if (optimizing_params == 2) {
         // proportions
@@ -334,13 +330,7 @@ void RateFree::setBounds(double *lower_bound, double *upper_bound,
             bound_check[i+ncategory-1] = false;
         }
     }
-//	for (i = ncategory; i <= 2*ncategory-2; i++) {
-//		lower_bound[i] = MIN_FREE_RATE;
-//		upper_bound[i] = MAX_FREE_RATE;
-//		bound_check[i] = false;
-//	}
 }
-
 
 void RateFree::setVariables(double *variables) {
 	if (getNDim() == 0) return;

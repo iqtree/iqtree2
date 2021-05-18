@@ -60,11 +60,13 @@ public:
     ModelVariable(ModelParameterType t, const ModelParameterRange& r, double v);
     ~ModelVariable() = default;
     ModelVariable(const ModelVariable& rhs) = default;
-    ModelVariable& operator=(const ModelVariable& rhs) = default;
-    void   setValue(double v);
-    void   markAsFixed();
-    double getValue() const;
-    bool   isFixed() const;
+
+    ModelVariable&     operator=(const ModelVariable& rhs) = default;
+    void               setValue(double v);
+    void               markAsFixed();
+    ModelParameterType getType() const;
+    double             getValue() const;
+    bool               isFixed() const;
 };
 
 class StringMatrix : public std::vector<StrVector> {
@@ -116,6 +118,8 @@ private:
     MapOfModels*  linked_models;   //nullptr, except for tree mixtures
     StringMap     string_properties;
     mutable StrVector variable_names;
+
+    std::string   opt_algorithm;  //optimization algorithm
 
     friend class ModelListFromYAMLFile;
     friend class ModelFileLoader;
@@ -293,6 +297,14 @@ public:
                                 std::stringstream& complaint);
     void inheritModelVariables (const ModelInfoFromYAMLFile& mummy,
                                 std::stringstream& complaint);
+
+    //Rate-Only stuff
+    const std::string& getOptimizationAlgorithm() const;
+    int getNumberOfRateCategories()      const;
+    int getNumberOfVariableRates()       const;
+    int getNumberOfProportions()         const;
+    int getNumberOfVariableProportions() const;
+
 };
 
 typedef std::map<std::string, ModelInfoFromYAMLFile> MapOfModels;

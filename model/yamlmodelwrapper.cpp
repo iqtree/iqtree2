@@ -64,3 +64,17 @@ YAMLModelProtein::YAMLModelProtein(ModelsBlock* block,
     setNumberOfStates(20); //Why again?
     setRateMatrixFromModel();
 }
+
+YAMLRateFree::YAMLRateFree(PhyloTree *tree, PhyloTree* report_to_tree,
+                const ModelInfoFromYAMLFile& info): super(info, report_to_tree) {
+    std::string algorithm = info.getOptimizationAlgorithm();
+    optimize_alg = algorithm.empty() ? optimize_alg : algorithm;
+    gamma_shape  = 1;
+    
+
+    //num_rate_cats, gamma_shape,
+    //freerate_params, !fused_mix_rate,
+    //params.optimize_alg_freerate, tree
+    
+
+}

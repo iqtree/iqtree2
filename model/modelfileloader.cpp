@@ -791,11 +791,12 @@ void ModelFileLoader::parseYAMLModel(const YAML::Node& substitution_model,
         }
     }
     info.model_file_path = file_path;
-    info.citation        = stringScalar (substitution_model, "citation",   info.citation.c_str());
-    info.DOI             = stringScalar (substitution_model, "doi",        info.DOI.c_str());
-    info.url             = stringScalar (substitution_model, "doi",        info.url.c_str());
-    info.reversible      = booleanScalar(substitution_model, "reversible", info.reversible);
-    info.data_type_name  = stringScalar (substitution_model, "datatype",   info.data_type_name.c_str());
+    info.citation        = stringScalar (substitution_model, "citation",    info.citation.c_str());
+    info.DOI             = stringScalar (substitution_model, "doi",         info.DOI.c_str());
+    info.url             = stringScalar (substitution_model, "doi",         info.url.c_str());
+    info.reversible      = booleanScalar(substitution_model, "reversible",  info.reversible);
+    info.opt_algorithm   = stringScalar (substitution_model, "optimization", info.opt_algorithm.c_str());
+    info.data_type_name  = stringScalar (substitution_model, "datatype",    info.data_type_name.c_str());
     //Note: doco currently says this will be called "forData".
         
     if (!info.is_rate_model) {

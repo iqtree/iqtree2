@@ -52,7 +52,6 @@ bool YAMLFileParameter::isMatchFor(const std::string& match_name,
         string_to_lower(name) == match_name);
 }
 
-
 ModelVariable::ModelVariable() : type(ModelParameterType::OTHER)
 , value(0), is_fixed(false) {
 }
@@ -569,16 +568,23 @@ bool ModelInfoFromYAMLFile::isFrequencyParameter(const std::string& param_name) 
 
 void ModelInfoFromYAMLFile::setBounds(int param_count, double* lower_bound,
     double* upper_bound, bool* bound_check) const {
+    //Rate Models have PROPORTION variables first, then RATE variables.
+    ModelParameterType supported_types[] = {
+        ModelParameterType::PROPORTION, 
+        ModelParameterType::RATE 
+    };
     int i = 1; //Rate parameter numbering starts at 1, see ModelMarkov
-    for (auto p : parameters) {
-        if (p.type == ModelParameterType::RATE) {
-            for (int sub = p.minimum_subscript;
-                sub <= p.maximum_subscript; ++sub) {
-                ASSERT(i <= param_count);
-                lower_bound[i] = p.range.first;
-                upper_bound[i] = p.range.second;
-                bound_check[i] = false;
-                ++i;
+    for (auto param_type : supported_types) {
+        for (auto p : parameters) {
+            if (p.type == param_type) {
+                for (int sub = p.minimum_subscript;
+                    sub <= p.maximum_subscript; ++sub) {
+                    ASSERT(i <= param_count);
+                    lower_bound[i] = p.range.first;
+                    upper_bound[i] = p.range.second;
+                    bound_check[i] = false;
+                    ++i;
+                }
             }
         }
     }
@@ -589,10 +595,14 @@ void ModelInfoFromYAMLFile::updateVariables(const double* updated_values,
     int param_count) {
     int i = 1; //Rate parameter numbering starts at 1, see ModelMarkov
     ModelParameterType supported_types[] = {
-        ModelParameterType::RATE, ModelParameterType::FREQUENCY };
-    //FREQUENCY must be after RATE.
-    //Todo: Where do weight parameters go?    Esepecially in mixture
-    //      models
+        ModelParameterType::PROPORTION,
+        ModelParameterType::RATE, 
+        ModelParameterType::FREQUENCY 
+    };
+    //PROPORTION must be before RATE (e.g. RateFree)
+    //FREQUENCY  must be after RATE  (e.g. ModelMarkov)
+    //Todo: Where do weight parameters go?    
+    //      Especially in mixture models
     for (auto param_type : supported_types) {
         if (param_type == ModelParameterType::FREQUENCY) {
             i = first_freq_index;
@@ -1076,3 +1086,53 @@ void ModelInfoFromYAMLFile::inheritModelVariables(const ModelInfoFromYAMLFile& m
     }
     getVariableNamesByPosition();
 }
+
+const std::string& ModelInfoFromYAMLFile::getOptimizationAlgorithm() const {
+    return opt_algorithm;
+}
+
+int ModelInfoFromYAMLFile::getNumberOfRateCategories() const {
+    int count = 0;
+    for (auto v: variables) {
+        if (v.second.getType() == ModelParameterType::RATE) {
+            ++count;
+        }
+    }
+    return count;
+}
+
+int ModelInfoFromYAMLFile::getNumberOfVariableRates() const {
+    int count = 0;
+    for (auto v: variables) {
+        if (v.second.getType() == ModelParameterType::RATE) {
+            if (!v.second.isFixed()) {
+                ++count;
+            }
+        }
+    }
+    return count;
+}
+
+int ModelInfoFromYAMLFile::getNumberOfProportions() const {
+    int count = 0;
+    for (auto v: variables) {
+        if (v.second.getType() == ModelParameterType::PROPORTION) {
+            ++count;
+        }
+    }
+    return count;
+}
+
+int ModelInfoFromYAMLFile::getNumberOfVariableProportions() const {
+    int count = 0;
+    for (auto v: variables) {
+        if (v.second.getType() == ModelParameterType::PROPORTION) {
+            if (!v.second.isFixed()) {
+                ++count;
+            }
+        }
+    }
+    return count;
+}
+
+

@@ -13,6 +13,14 @@
 class RateFree: public RateGamma {
 public:
 	/**
+		constructor (used by, for example, YAMLRateModelWrapper)
+		@param ncat number of rate categories
+		@param tree associated phylogenetic tree
+		@param report_to_tree send any log messages to this tree.
+	*/
+	RateFree(int ncat, PhyloTree *tree, PhyloTree* report_to_tree);
+
+	/**
 		constructor
 		@param ncat number of rate categories
 		@param tree associated phylogenetic tree

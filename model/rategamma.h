@@ -38,9 +38,19 @@ class RateGamma: virtual public RateHeterogeneity
 
 public:
 	/**
+		constructor (used by, for example, YAMLRateModelWrapper)
+		@param ncat number of rate categories
+		@param tree associated phylogenetic tree
+		@param report_to_tree send any log messages to this tree.
+		note: gamma shape and median are defaulted
+	*/
+	RateGamma(int ncat, PhyloTree *tree, PhyloTree* report_to_tree);
+
+	/**
 		constructor
 		@param ncat number of rate categories
 		@param shape Gamma shape parameter
+		@param median 
 		@param tree associated phylogenetic tree
 	*/
     RateGamma(int ncat, double shape, bool median, PhyloTree *tree);
