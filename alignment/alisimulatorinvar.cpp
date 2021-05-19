@@ -38,14 +38,6 @@ void AliSimulatorInvar::simulateSeqs(int sequence_length, double *site_specific_
         convertProMatrixIntoAccumulatedProMatrix(trans_matrix, max_num_states, max_num_states);
         
         // estimate the sequence for the current neighbor
-        if ((*it)->node->sequence.size() != sequence_length)
-        {
-#ifdef _OPENMP
-#pragma omp critical
-#endif
-            if ((*it)->node->sequence.size() != sequence_length)
-                (*it)->node->sequence.resize(sequence_length);
-        }
         for (int i = thread_id; i < sequence_length; i += num_threads)
         {
             
@@ -76,6 +68,13 @@ void AliSimulatorInvar::simulateSeqsForTree()
     ModelSubst *model = tree->getModel();
     int max_num_states = tree->aln->getMaxNumStates();
     
+    // initialize sequences for all nodes
+#ifdef _OPENMP
+#pragma omp parallel
+#pragma omp single
+#endif
+    initializeSequences(sequence_length, tree->MTree::root, tree->MTree::root);
+    
     // simulate Sequences
     // initialize the site-specific rates
     double *site_specific_rates = new double[sequence_length];
@@ -95,7 +94,7 @@ void AliSimulatorInvar::simulateSeqsForTree()
     int num_threads = 1;
     int thread_id = 0;
 #ifdef _OPENMP
-#pragma omp parallel private(thread_id, trans_matrix)
+#pragma omp parallel private(thread_id, trans_matrix) shared(num_threads)
 #endif
     {
 #ifdef _OPENMP

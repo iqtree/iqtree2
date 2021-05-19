@@ -150,15 +150,6 @@ void AliSimulatorHeterogeneity::simulateSeqs(int sequence_length, double *site_s
     FOR_NEIGHBOR(node, dad, it) {
         
         // estimate the sequence for the current neighbor
-        if ((*it)->node->sequence.size() != sequence_length)
-        {
-#ifdef _OPENMP
-#pragma omp critical
-#endif
-            if ((*it)->node->sequence.size() != sequence_length)
-                (*it)->node->sequence.resize(sequence_length);
-        }
-        
         // check if trans_matrix could be caching (without rate_heterogeneity or the num of rate_categories is lowr than the threshold (5)) or not
         if (tree->getRateName().empty()
             || (!params->alisim_continuous_gamma && rate_heterogeneity && rate_heterogeneity->getNDiscreteRate() <= params->alisim_max_rate_categories_for_applying_caching))
@@ -350,6 +341,13 @@ void AliSimulatorHeterogeneity::simulateSeqsForTree(){
     ModelSubst *model = tree->getModel();
     int max_num_states = tree->aln->getMaxNumStates();
     
+    // initialize sequences for all nodes
+#ifdef _OPENMP
+#pragma omp parallel
+#pragma omp single
+#endif
+    initializeSequences(sequence_length, tree->MTree::root, tree->MTree::root);
+    
     // initialize site specific model index based on its weights (in the mixture model)
     intializeSiteSpecificModelIndex();
     
@@ -364,7 +362,7 @@ void AliSimulatorHeterogeneity::simulateSeqsForTree(){
     int num_threads = 1;
     int thread_id = 0;
 #ifdef _OPENMP
-#pragma omp parallel private(thread_id, trans_matrix)
+#pragma omp parallel private(thread_id, trans_matrix) shared(num_threads)
 #endif
     {
 #ifdef _OPENMP
