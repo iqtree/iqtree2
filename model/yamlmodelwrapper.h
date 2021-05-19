@@ -63,67 +63,7 @@ public:
     
     void acceptParameterList(std::string parameter_list) {
         //parameter_list is passed by value so it can be modified
-        trimString(parameter_list);
-        if (startsWith(parameter_list, "{") &&
-            endsWith(parameter_list, "}")) {
-            auto len = parameter_list.length();
-            parameter_list = parameter_list.substr(1, len-2);
-        }
-        size_t param_list_length = parameter_list.length();
-        size_t i                 = 0;
-        int    bracket_depth     = 0;
-        typedef ModelExpression::InterpretedExpression Expr;
-        std::vector<Expr> expr_list;
-        while (i<param_list_length) {
-            size_t j = i;
-            for (;j<param_list_length &&
-                 (parameter_list[j]!=',' || 0<bracket_depth); ++j) {
-                char ch = parameter_list[j];
-                if (ch=='(') {
-                    ++bracket_depth;
-                }
-                else if (ch==')') {
-                    --bracket_depth;
-                }
-            }
-            std::string param = parameter_list.substr(i, j-i);
-            expr_list.emplace_back(model_info, param);
-            i = j + 1;
-        }
-        bool fix = !report_tree->params->optimize_from_given_params;
-        size_t position = 0;
-        for (Expr& ix : expr_list) {
-            ModelExpression::Expression* x = ix.expression();
-            if (x->isAssignment()) {
-                typedef ModelExpression::Assignment A;
-                typedef ModelExpression::Variable V;
-                A*             a        = dynamic_cast<A*>(x);
-                V*             xv       = a->getTargetVariable();
-                string         var_name = xv->getName();
-                double         setting  = a->getExpression()->evaluate();
-                ModelVariable& mv       = model_info.assign(var_name, setting);
-                if (fix) {
-                    mv.markAsFixed();
-                }
-                TREE_LOG_LINE(*report_tree, YAMLModelVerbosity,
-                              "Set " << xv->getName() << " to " << setting 
-                              << " by name." );
-            } else {
-                double         setting  = x->evaluate();
-                ModelVariable& mv       = model_info.assignByPosition(position, setting);
-                string         var_name = model_info.getVariableNamesByPosition()[position];
-                //No need for an index check for var_name's look-up, because
-                //assignByPosition would already have bombed if it were out of bounds.
-                if (fix) {
-                    mv.markAsFixed();
-                }
-                TREE_LOG_LINE(*report_tree, YAMLModelVerbosity,
-                              "Set " << var_name << " to " << setting 
-                              << " by position." );
-                ++position;
-            }
-        }
-        if (!expr_list.empty()) {
+        if (model_info.acceptParameterList(parameter_list, report_tree)) {
             setRateMatrixFromModel();
         }
     }
@@ -296,18 +236,8 @@ public:
     }
     
     virtual void writeInfo(ostream &out) {
-        if (YAMLVariableVerbosity <= verbose_mode ) {
-            auto rates = model_info.getParameterList(ModelParameterType::RATE);
-            if (!rates.empty()) {
-                out << "Rate parameters: " << rates << std::endl;
-            }
-        }
-        if (YAMLFrequencyVerbosity <= verbose_mode) {
-            auto freqs = model_info.getParameterList(ModelParameterType::FREQUENCY);
-            if (!freqs.empty()) {
-                out << "State frequencies: " << freqs << std::endl;
-            }
-        }
+        model_info.writeInfo("Rate parameters  ", ModelParameterType::RATE,      out);
+        model_info.writeInfo("State frequencies", ModelParameterType::FREQUENCY, out);
     }
 };
 
@@ -374,6 +304,9 @@ protected:
 public:
     typedef R super;
     using super::getNDim;
+    using super::startCheckpoint;
+    using super::endCheckpoint;
+    using super::checkpoint;
 
     YAMLRateModelWrapper(const ModelInfoFromYAMLFile& info,
                      PhyloTree* tree)
@@ -381,11 +314,51 @@ public:
         , model_info(info), report_tree(tree) {
     }
 
+    void acceptParameterList(std::string parameter_list) {
+        //parameter_list is passed by value so it can be modified
+        if (model_info.acceptParameterList(parameter_list, report_tree)) {
+            //Todo: Look at what RateFree does when it accepts
+            //command line parameters (in its main constructor)
+        }
+    }
+
     virtual void setBounds(double* lower_bound, double* upper_bound,
                             bool*  bound_check) {
         int ndim = getNDim();
         model_info.setBounds(ndim, lower_bound,
                              upper_bound, bound_check);
+    }
+
+    virtual bool getVariables(double* variables) {
+        //Todo: implement: get proportion and rate parameters,
+        //      and write them to variables (starting at index 1).
+        bool rc = super::getVariables(variables);
+        return rc;
+    }
+
+    virtual void setVariables(double *variables) {
+        //Todo: implement: set proportion and rate parameters
+        //This will need to call setRatesAndProportions to
+        //copy parameters through to the arrays (or whatever)
+        //that the (Rate...?) super-class (R) uses.
+        super::setVariables(variables);
+    }
+
+    virtual void saveCheckpoint() {
+        startCheckpoint();
+        model_info.saveToCheckpoint(checkpoint);
+        endCheckpoint();
+    }
+
+    virtual void restoreCheckpoint() {
+        startCheckpoint();
+        model_info.restoreFromCheckpoint(checkpoint);
+        endCheckpoint();
+    }
+
+    virtual void writeInfo(ostream &out) {
+        model_info.writeInfo("Proportions", ModelParameterType::PROPORTION, out);
+        model_info.writeInfo("Rates      ", ModelParameterType::RATE,       out);
     }
 };
 

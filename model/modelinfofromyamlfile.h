@@ -3,6 +3,7 @@
 #define modelinfofromyamlfile_h
 
 #include "modelinfo.h"
+#include <utils/stringfunctions.h> //for string_to_lower
 
 class Alignment;
 
@@ -18,6 +19,26 @@ public:
 enum class ModelParameterType {
     RATE, FREQUENCY, PROPORTION, WEIGHT, OTHER
 };
+
+inline ModelParameterType modelParameterTypeFromString(const std::string& type_name) {
+    std::string s = string_to_lower(type_name);
+    if (s=="frequency")  return ModelParameterType::FREQUENCY;
+    if (s=="other")      return ModelParameterType::OTHER;
+    if (s=="proportion") return ModelParameterType::PROPORTION;
+    if (s=="rate")       return ModelParameterType::RATE;
+    if (s=="weight")     return ModelParameterType::WEIGHT;
+    return ModelParameterType::RATE;
+}
+
+inline std::string modelParameterTypeToString(ModelParameterType type_code) {
+    if (type_code == ModelParameterType::FREQUENCY)  return "frequency";
+    if (type_code == ModelParameterType::OTHER)      return "other";
+    if (type_code == ModelParameterType::PROPORTION) return "proportion";
+    if (type_code == ModelParameterType::RATE)       return "rate";
+    if (type_code == ModelParameterType::WEIGHT)     return "weight";
+    return "";
+}
+
 
 class YAMLFileParameter {
 public:
@@ -62,11 +83,16 @@ public:
     ModelVariable(const ModelVariable& rhs) = default;
 
     ModelVariable&     operator=(const ModelVariable& rhs) = default;
-    void               setValue(double v);
+
+    void               setTypeName(const std::string& type_name);
+    void               setValue   (double v);
     void               markAsFixed();
-    ModelParameterType getType() const;
-    double             getValue() const;
-    bool               isFixed() const;
+
+    std::string        getTypeName() const;
+    ModelParameterType getType    () const;
+    double             getValue   () const;
+    bool               isFixed    () const;
+
 };
 
 class StringMatrix : public std::vector<StrVector> {
@@ -80,6 +106,8 @@ public:
      */
     void makeSquare(bool reflect);
 };
+
+class Checkpoint;
 
 class ModelInfoFromYAMLFile : public ModelInfo {
 public:
@@ -298,6 +326,10 @@ public:
     void inheritModelVariables (const ModelInfoFromYAMLFile& mummy,
                                 std::stringstream& complaint);
 
+    //Accepting parameters supplied on command-line
+    bool acceptParameterList   (std::string parameter_list,
+                                PhyloTree* report_tree);
+
     //Rate-Only stuff
     const std::string& getOptimizationAlgorithm() const;
     int getNumberOfRateCategories()      const;
@@ -305,6 +337,13 @@ public:
     int getNumberOfProportions()         const;
     int getNumberOfVariableProportions() const;
 
+    //Output
+    void writeInfo(const char* caption, ModelParameterType type,
+                   std::ostream& out) const;
+
+    //Checkpoints
+    void saveToCheckpoint     (Checkpoint* checkpoint) const;
+    void restoreFromCheckpoint(Checkpoint* checkpoint);
 };
 
 typedef std::map<std::string, ModelInfoFromYAMLFile> MapOfModels;

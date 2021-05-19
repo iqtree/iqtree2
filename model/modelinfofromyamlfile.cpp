@@ -62,12 +62,25 @@ ModelVariable::ModelVariable(ModelParameterType t,
     : range(r), type(t), value(v), is_fixed(false) {
 }
 
+void ModelVariable::setTypeName(const std::string& type_name) {
+    type = modelParameterTypeFromString(type_name);
+}
+
+
 void ModelVariable::setValue(double v) {
     value = v;
 }
 
 void ModelVariable::markAsFixed() {
     is_fixed = true;
+}
+
+ModelParameterType ModelVariable::getType() const {
+    return type;
+}
+
+std::string ModelVariable::getTypeName() const {
+    return modelParameterTypeToString(type);
 }
 
 double ModelVariable::getValue() const {
@@ -567,7 +580,7 @@ bool ModelInfoFromYAMLFile::isFrequencyParameter(const std::string& param_name) 
 }
 
 void ModelInfoFromYAMLFile::setBounds(int param_count, double* lower_bound,
-    double* upper_bound, bool* bound_check) const {
+                                      double* upper_bound, bool* bound_check) const {
     //Rate Models have PROPORTION variables first, then RATE variables.
     ModelParameterType supported_types[] = {
         ModelParameterType::PROPORTION, 
@@ -1135,4 +1148,117 @@ int ModelInfoFromYAMLFile::getNumberOfVariableProportions() const {
     return count;
 }
 
+bool ModelInfoFromYAMLFile::acceptParameterList(std::string parameter_list,
+                                                PhyloTree* report_tree) {
+    trimString(parameter_list);
+    if (startsWith(parameter_list, "{") &&
+        endsWith(parameter_list, "}")) {
+        auto len = parameter_list.length();
+        parameter_list = parameter_list.substr(1, len-2);
+    }
+    size_t param_list_length = parameter_list.length();
+    size_t i                 = 0;
+    int    bracket_depth     = 0;
+    typedef ModelExpression::InterpretedExpression Expr;
+    std::vector<Expr> expr_list;
+    while (i<param_list_length) {
+        size_t j = i;
+        for (;j<param_list_length &&
+                (parameter_list[j]!=',' || 0<bracket_depth); ++j) {
+            char ch = parameter_list[j];
+            if (ch=='(') {
+                ++bracket_depth;
+            }
+            else if (ch==')') {
+                --bracket_depth;
+            }
+        }
+        std::string param = parameter_list.substr(i, j-i);
+        expr_list.emplace_back(*this, param);
+        i = j + 1;
+    }
+    bool fix = !report_tree->params->optimize_from_given_params;
+    size_t position = 0;
+    for (Expr& ix : expr_list) {
+        ModelExpression::Expression* x = ix.expression();
+        if (x->isAssignment()) {
+            typedef ModelExpression::Assignment A;
+            typedef ModelExpression::Variable V;
+            A*             a        = dynamic_cast<A*>(x);
+            V*             xv       = a->getTargetVariable();
+            string         var_name = xv->getName();
+            double         setting  = a->getExpression()->evaluate();
+            ModelVariable& mv       = assign(var_name, setting);
+            if (fix) {
+                mv.markAsFixed();
+            }
+            TREE_LOG_LINE(*report_tree, YAMLModelVerbosity,
+                            "Set " << xv->getName() << " to " << setting 
+                            << " by name." );
+        } else {
+            double         setting  = x->evaluate();
+            ModelVariable& mv       = assignByPosition(position, setting);
+            string         var_name = getVariableNamesByPosition()[position];
+            //No need for an index check for var_name's look-up, because
+            //assignByPosition would already have bombed if it were out of bounds.
+            if (fix) {
+                mv.markAsFixed();
+            }
+            TREE_LOG_LINE(*report_tree, YAMLModelVerbosity,
+                            "Set " << var_name << " to " << setting 
+                            << " by position." );
+            ++position;
+        }
+    }
+    return !expr_list.empty();
+}
 
+void ModelInfoFromYAMLFile::writeInfo(const char* caption,
+                                      ModelParameterType param_type,
+                                      std::ostream& out ) const {
+    if (YAMLVariableVerbosity <= verbose_mode ) {
+        auto params = getParameterList(param_type);
+        if (!params.empty()) {
+            out << caption << ": " << params << std::endl;
+        }
+    }
+}
+
+void ModelInfoFromYAMLFile::saveToCheckpoint(Checkpoint* checkpoint) const {
+    //Todo: what about variables of linked models?
+    int variable_count = static_cast<int>(variables.size());
+    CKP_SAVE(variable_count);
+    checkpoint->startList(variable_count);
+    for (auto it=variables.begin(); it!=variables.end(); ++it) {
+        checkpoint->addListElement();
+        checkpoint->put("name",  it->first);
+        checkpoint->put("type",  it->second.getTypeName());
+        checkpoint->put("value", it->second.getValue());
+        checkpoint->put("fixed", it->second.isFixed());
+    }
+    checkpoint->endList();
+}
+
+void ModelInfoFromYAMLFile::restoreFromCheckpoint(Checkpoint* checkpoint) {
+    //Todo: what about variables of linked models?
+    int variable_count = 0;
+    CKP_RESTORE(variable_count);
+    checkpoint->startList(variable_count);
+    for (int var_num=0; var_num<variable_count; ++var_num) {
+        checkpoint->addListElement();
+        std::string name;
+        std::string type;
+        double      value;
+        bool        fixed;
+        CKP_RESTORE(name);
+        CKP_RESTORE(type);
+        CKP_RESTORE(value);
+        CKP_RESTORE(fixed);
+        ModelVariable& var = forceAssign(name, value);
+        var.setTypeName(type);
+        if (fixed) {
+            var.markAsFixed();
+        }
+    }
+    checkpoint->endList();
+}
