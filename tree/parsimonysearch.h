@@ -6,6 +6,7 @@
 #include "phylotree.h"
 #include "phylotreethreadingcontext.h"
 #include "parsimonysearchparameters.h"
+#include "parsimonymove.h"
 #include <utils/timekeeper.h>                  //for TimeKeeper
 #include <placement/targetbranch.h>            //for TargetBranchRange
 #include <placement/placementcostcalculator.h> //for ParsimonyCostCalculator

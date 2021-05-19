@@ -1710,21 +1710,27 @@ char Alignment::convertStateBack(char state) const {
         }
         return state;
     case SeqType::SEQ_PROTEIN: // Protein
-        if (state < 20)
+        if (state < 20) {
             return symbols_protein[(int)state];
-		else if (state == 20) return 'B';
-		else if (state == 21) return 'Z';
-		else if (state == 22) return 'J';
+		} else if (state == 20) {
+            return 'B';
+        } else if (state == 21) {
+            return 'Z';
+        } else if (state == 22) {
+            return 'J';
+        }
 //		else if (state == 4+8+19) return 'B';
 //		else if (state == 32+64+19) return 'Z';
-        else
+        else {
             return '-';
+        }
     case SeqType::SEQ_MORPH:
     	// morphological state
-        if (state < strlen(symbols_morph))
+        if (state < strlen(symbols_morph)) {
             return symbols_morph[(int)state];
-        else
+        } else {
             return '-';
+        }
     default:
     	// unknown
     	return '*';

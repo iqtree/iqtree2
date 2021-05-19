@@ -267,10 +267,12 @@ SplitGraph::~SplitGraph()
 void SplitGraph::convertFromTreesBlock(int burnin, int max_count, double split_threshold, 
     int split_weight_summary, double weight_threshold, const char *tree_weight_file) {
     cout << trees->GetNumTrees() << " tree(s) loaded" << endl;
-    if (burnin >= static_cast<int>(trees->GetNumTrees()))
+    if (burnin >= static_cast<int>(trees->GetNumTrees())) {
         outError("Burnin value is too large");
-    if (burnin > 0)
-    cout << burnin << " beginning tree(s) discarded" << endl;
+    }
+    if (burnin > 0) {
+        cout << burnin << " beginning tree(s) discarded" << endl;
+    }
     mtrees = new MTreeSet();
     
     for (int i = burnin; i < static_cast<int>(trees->GetNumTrees()) && (i < burnin+max_count); i++) {
@@ -657,15 +659,20 @@ bool SplitGraph::containSplit(Split &sp) {
 }
 
 double SplitGraph::computeBoundary(Split &area) {
-    if (!areas_boundary) return 0.0;
+    if (!areas_boundary) {
+        return 0.0;
+    }
     int nareas = static_cast<int>(sets->getNSets());
     double boundary = 0.0;
-    for (int i = 0; i < nareas; i++) 
-    if (area.containTaxon(i)) {
-        boundary += areas_boundary[i*nareas+i];
-        for (int j = i+1; j < nareas; j++) 
-            if (area.containTaxon(j))
-                boundary -= 2.0 * areas_boundary[i*nareas+j];
+    for (int i = 0; i < nareas; i++) {
+        if (area.containTaxon(i)) {
+            boundary += areas_boundary[i*nareas+i];
+            for (int j = i+1; j < nareas; j++) {
+                if (area.containTaxon(j)) {
+                    boundary -= 2.0 * areas_boundary[i*nareas+j];
+                }
+            }
+        }
     }
     return boundary;
 }

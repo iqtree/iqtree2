@@ -279,8 +279,9 @@ double PartitionModel::computeFunction(double shape) {
 #endif
     for (int j = 0; j < ntrees; j++) {
         int i = tree->part_order[j];
-        if (tree->at(i)->getRate()->isGammaRate())
+        if (tree->at(i)->getRate()->isGammaRate()) {
             res += tree->at(i)->getRate()->computeFunction(shape);
+        }
     }
     if (res == 0.0) {
         outError("No partition has Gamma rate heterogeneity!");

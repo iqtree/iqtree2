@@ -248,12 +248,13 @@ bool Checkpoint::getBool(string key, bool &ret) {
     if (!get(key, value)) {
         return false;
     }
-	if (value == "true") 
+	if (value == "true") {
         ret = true;
-    else if (value == "false") 
+    } else if (value == "false") {
         ret = false;
-    else
+    } else {
         outError("Invalid boolean value " + value + " for key " + key);
+    }
     return true;
 }
 

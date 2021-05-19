@@ -35,12 +35,13 @@ phylotree.h   phylotreethreadingcontext.h
 phylotreemixlen.cpp
 phylotreemixlen.h
 phylotreepars.cpp parsimonyjoining.cpp
-parsimonysearchparameters.h parsimonysearch.h
+parsimonysearchparameters.cpp parsimonysearchparameters.h 
 parsimonymove.cpp   parsimonymove.h
 parsimonynni.cpp    parsimonynni.h
 parsimonyspr.cpp    parsimonyspr.h
 parsimonytbr.cpp    parsimonytbr.h
 parsimonyhybrid.cpp parsimonyhybrid.h
+parsimonysearch.h
 likelihoodspr.cpp
 phylotreesse.cpp
 placement.cpp

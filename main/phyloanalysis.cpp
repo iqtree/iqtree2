@@ -2989,10 +2989,11 @@ void handleGammaInvariantOptions(Params &params, IQTree &iqtree) {
 void handleQuartetLikelihoodMapping(Params &params, IQTree &iqtree) {
     if (params.lmap_num_quartets >= 0) {
         cout << endl << "Performing likelihood mapping with ";
-        if (params.lmap_num_quartets > 0)
+        if (params.lmap_num_quartets > 0) {
             cout << params.lmap_num_quartets;
-        else
+        } else {
             cout << "all";
+        }
         cout << " quartets..." << endl;
         double lkmap_time = getRealTime();
         iqtree.doLikelihoodMapping();
