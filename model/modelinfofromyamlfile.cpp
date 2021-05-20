@@ -629,7 +629,7 @@ void ModelInfoFromYAMLFile::setBounds(int param_count, double* lower_bound,
 
 void ModelInfoFromYAMLFile::updateVariables(const double* updated_values,
                                             int first_freq_index,
-                                            int param_count) {
+                                            int last_param_index) {
     int i = 1; //Rate parameter numbering starts at 1, see ModelMarkov
     ModelParameterType supported_types[] = {
         ModelParameterType::PROPORTION,
@@ -644,15 +644,18 @@ void ModelInfoFromYAMLFile::updateVariables(const double* updated_values,
         if (param_type == ModelParameterType::FREQUENCY) {
             i = first_freq_index;
         }
-        updateModelVariablesByType(updated_values, param_count, param_type, i);
+        updateModelVariablesByType(updated_values, last_param_index+1, 
+                                   false, param_type, i);
     }
 }
 
 bool ModelInfoFromYAMLFile::updateModelVariablesByType(const double* updated_values,
                                                        int param_count,
+                                                       bool even_fixed_ones,                                                
                                                        ModelParameterType param_type,
                                                        int &i) {
-    bool anyChanges = false;
+    bool anyChanges                  = false;
+    int  skipped_frequency_variables = 0;
     for (auto p : parameters) {
         if (p.type != param_type) {
             continue;
@@ -661,10 +664,17 @@ bool ModelInfoFromYAMLFile::updateModelVariablesByType(const double* updated_val
             sub <= p.maximum_subscript; ++sub) {
             std::string var_name = p.getSubscriptedVariableName(sub);
             ModelVariable& var   = this->variables[var_name];
-            if (var.isFixed()) {
+            if (var.isFixed() && !even_fixed_ones) {
                 continue;
             }
             if (param_count<=i) {
+                if (param_type == ModelParameterType::FREQUENCY) {
+                    //The last frequency variable won't be set this way
+                    ++skipped_frequency_variables;
+                    if (skipped_frequency_variables==1) {
+                        continue;
+                    }
+                }
                 std::stringstream complaint;
                 complaint << "Internal logic error: Cannot use variable "
                             << " with 1-based-index " << i << " to assign "
@@ -688,6 +698,7 @@ bool ModelInfoFromYAMLFile::updateModelVariablesByType(const double* updated_val
 
 void ModelInfoFromYAMLFile::readModelVariablesByType( double* write_them_here,
                                                       int param_count,
+                                                      bool even_fixed_ones,
                                                       ModelParameterType param_type,
                                                       int &i) const {                                                
     for (auto p : parameters) {
@@ -709,7 +720,7 @@ void ModelInfoFromYAMLFile::readModelVariablesByType( double* write_them_here,
 
             }
             const ModelVariable& var = it->second;
-            if (var.isFixed()) {
+            if (var.isFixed() && !even_fixed_ones) {
                 continue;
             }
             if (param_count<i) {

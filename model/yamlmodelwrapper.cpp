@@ -78,5 +78,24 @@ YAMLRateFree::YAMLRateFree(PhyloTree *tree, PhyloTree* report_to_tree,
 }
 
 void YAMLRateFree::updateRateClassFromModelVariables() {
-    //Todo: Implement!
+    int rate_count = model_info.getNumberOfRateCategories();
+    int prop_count = model_info.getNumberOfProportions();
+    int rate_ix    = 0;
+    int prop_ix    = 0;
+    model_info.readModelVariablesByType(rates, rate_count, true,
+                                        ModelParameterType::RATE, rate_ix);
+    model_info.readModelVariablesByType(prop,  prop_count, true,
+                                        ModelParameterType::PROPORTION, prop_ix);
+}
+
+void YAMLRateFree::sortUpdatedRates() {
+    super::sortUpdatedRates();
+    int rate_count = model_info.getNumberOfRateCategories();
+    int prop_count = model_info.getNumberOfProportions();
+    int rate_ix    = 0;
+    int prop_ix    = 0;
+    model_info.updateModelVariablesByType(rates, rate_count, true,
+                                          ModelParameterType::RATE, rate_ix);
+    model_info.updateModelVariablesByType(prop,  prop_count, true,
+                                          ModelParameterType::PROPORTION, prop_ix);
 }

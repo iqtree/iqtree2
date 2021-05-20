@@ -25,7 +25,7 @@ public:
 	/**
 		constructor
 		@param ncat number of rate categories
-        @param sorted_rates TRUE to sort the rate in increasing order
+        @param sorted_rates true to sort the rate in increasing order
 		@param tree associated phylogenetic tree
 	*/
     RateHeterotachy(int ncat, string params, PhyloTree *tree);

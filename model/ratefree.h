@@ -145,6 +145,11 @@ protected:
 	virtual bool getVariables(double *variables);
 
 	/**
+	    sort updated/re-normalized rates
+	 */
+	virtual void sortUpdatedRates();
+
+	/**
 	 * proportion of sites for each rate categories
 	 */
 	double *prop;

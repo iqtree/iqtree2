@@ -147,17 +147,21 @@ void RateFree::initFromCatMinusOne() {
     }
     prop[ncategory-1] = prop[first]/2;
     prop[first] = prop[first]/2;
+    sortUpdatedRates();
 
-    // sort the rates in increasing order
-    if (sorted_rates) {
-        quicksort(rates, 0, ncategory-1, prop);
-    }
     phylo_tree->clearAllPartialLH();
 }
 
 RateFree::~RateFree() {
     delete [] prop;
     prop = nullptr;
+}
+
+void RateFree::sortUpdatedRates() {
+    // sort the rates in increasing order
+    if (sorted_rates) {
+        quicksort(rates, 0, ncategory-1, prop);
+    }
 }
 
 string RateFree::getNameParams() {
@@ -280,10 +284,7 @@ double RateFree::optimizeParameters(double gradient_epsilon,
                                         bound_check, max(gradient_epsilon, TOL_FREE_RATE));
         }
         getVariables(variables);
-        // sort the rates in increasing order
-        if (sorted_rates) {
-            quicksort(rates, 0, ncategory-1, prop);
-        }
+        sortUpdatedRates();
         phylo_tree->clearAllPartialLH();
         score = phylo_tree->computeLikelihood();
     }
@@ -646,10 +647,7 @@ double RateFree::optimizeWithEM(PhyloTree* report_to_tree) {
         if (converged) break;
     }
     
-    if (sorted_rates) {
-        // sort the rates in increasing order
-        quicksort(rates, 0, ncategory-1, prop);
-    }
+    sortUpdatedRates();
     
     delete tree;
     aligned_free(new_prop);

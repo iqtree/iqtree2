@@ -302,13 +302,13 @@ public:
     void   setBounds       (int bound_count, double* lower_bound,
                             double* upper_bound, bool* bound_check) const;
     void   updateVariables (const double* variables,
-                            int first_freq_index, int param_count);
+                            int first_freq_index, int last_param_index);
     bool   updateModelVariablesByType(const double* updated_values,
-                                      int param_count,
+                                      int param_count, bool even_fixed_ones,
                                       ModelParameterType param_type,
                                       int &i);
     void   readModelVariablesByType  (double* write_them_here,
-                                      int param_count,
+                                      int param_count, bool even_fixed_ones,
                                       ModelParameterType param_type,
                                       int &i) const;                                          
 

@@ -334,11 +334,11 @@ public:
     virtual bool getVariables(double* variables) {
         int  index = 1;
         int  ndim  = getNDim();
-        bool rc    = model_info.updateModelVariablesByType(variables, ndim, 
+        bool rc    = model_info.updateModelVariablesByType(variables, ndim, false,
                                                            ModelParameterType::SHAPE,      index);
-        rc        |= model_info.updateModelVariablesByType(variables, ndim,
+        rc        |= model_info.updateModelVariablesByType(variables, ndim, false, 
                                                            ModelParameterType::PROPORTION, index);
-        rc        |= model_info.updateModelVariablesByType(variables, ndim,
+        rc        |= model_info.updateModelVariablesByType(variables, ndim, false, 
                                                            ModelParameterType::RATE,       index);
         if (rc) {
             updateRateClassFromModelVariables();
@@ -349,11 +349,11 @@ public:
     virtual void setVariables(double *variables) {
         int index = 1;
         int ndim  = getNDim();
-        model_info.readModelVariablesByType(variables, ndim,
+        model_info.readModelVariablesByType(variables, ndim, false,
                                             ModelParameterType::SHAPE,      index);
-        model_info.readModelVariablesByType(variables, ndim,
+        model_info.readModelVariablesByType(variables, ndim, false,
                                             ModelParameterType::PROPORTION, index);
-        model_info.readModelVariablesByType(variables, ndim,
+        model_info.readModelVariablesByType(variables, ndim, false,
                                             ModelParameterType::RATE,       index);
     }
 
@@ -382,6 +382,7 @@ public:
     YAMLRateFree(PhyloTree *tree, PhyloTree* report_to_tree,
                 const ModelInfoFromYAMLFile& info);
     void updateRateClassFromModelVariables();
+    virtual void sortUpdatedRates();
 };
 
 #endif //yaml_model_wrapper_h
