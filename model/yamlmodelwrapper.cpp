@@ -75,6 +75,8 @@ YAMLRateFree::YAMLRateFree(PhyloTree *tree, PhyloTree* report_to_tree,
     //num_rate_cats, gamma_shape,
     //freerate_params, !fused_mix_rate,
     //params.optimize_alg_freerate, tree
-    
+}
 
+void YAMLRateFree::updateRateClassFromModelVariables() {
+    //Todo: Implement!
 }

@@ -52,6 +52,7 @@ void ModelListFromYAMLFile::loadFromFile (const char* file_path,
                     rate.is_rate_model = true;
                     loader.parseYAMLModel(node, rate_model_name, rate, *this,
                                           nullptr, report_to_tree);
+
                 }
                 continue;
             }

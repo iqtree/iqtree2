@@ -17,7 +17,7 @@ public:
 };
 
 enum class ModelParameterType {
-    RATE, FREQUENCY, PROPORTION, WEIGHT, OTHER
+    FREQUENCY, PROPORTION, RATE, SHAPE, WEIGHT, OTHER
 };
 
 inline ModelParameterType modelParameterTypeFromString(const std::string& type_name) {
@@ -26,6 +26,7 @@ inline ModelParameterType modelParameterTypeFromString(const std::string& type_n
     if (s=="other")      return ModelParameterType::OTHER;
     if (s=="proportion") return ModelParameterType::PROPORTION;
     if (s=="rate")       return ModelParameterType::RATE;
+    if (s=="shape")      return ModelParameterType::SHAPE;
     if (s=="weight")     return ModelParameterType::WEIGHT;
     return ModelParameterType::RATE;
 }
@@ -35,6 +36,7 @@ inline std::string modelParameterTypeToString(ModelParameterType type_code) {
     if (type_code == ModelParameterType::OTHER)      return "other";
     if (type_code == ModelParameterType::PROPORTION) return "proportion";
     if (type_code == ModelParameterType::RATE)       return "rate";
+    if (type_code == ModelParameterType::SHAPE)      return "shape";
     if (type_code == ModelParameterType::WEIGHT)     return "weight";
     return "";
 }
@@ -53,6 +55,7 @@ public:
     std::string         type_name;
     ModelParameterType  type;
     ModelParameterRange range;
+    double              tolerance;            //Tolerance
     std::string         init_expression;      //Expression for initializing parameter
                                               //(Rate models may need to evaluate)
     double              value;
@@ -68,6 +71,8 @@ public:
     bool isMatchFor(const std::string& match_name) const; /* assumed: lower-case */
     bool isMatchFor(const std::string& match_name,        /* assumed: lower-case */
                     ModelParameterType match_type) const;
+
+    void logParameterState(const char* verb, PhyloTree* report_to_tree) const;
 };
 
 class ModelVariable {
@@ -125,6 +130,8 @@ private:
                                       //others.
     bool          is_rate_model;      //True if this is a *rate*, rather than a
                                       //substitution model.
+    std::string   rate_distribution;  //Indicates what sort of rate distribution it is
+                                      //(Even though, I'm not sure this is really necessary!)
 
     std::string   citation;         //Citation string
     std::string   DOI;              //DOI for the publication (optional)
@@ -287,16 +294,25 @@ public:
     void computeTipLikelihoodsForState(int state, int num_states, double* likelihoods);
 
     //Variables
-    bool   hasVariable(const char* name)                       const;
-    bool   hasVariable(const std::string& name)                const;
-    double getVariableValue(const std::string& name)           const;
-    double getVariableValue(const char* name)                  const;
-    bool   isVariableFixed(const std::string& name)            const;
-    void   setBounds(int bound_count, double* lower_bound,
-        double* upper_bound, bool* bound_check) const;
-    void   updateVariables(const double* variables,
-        int first_freq_index,
-        int param_count);
+    bool   hasVariable     (const char* name)        const;
+    bool   hasVariable     (const std::string& name) const;
+    double getVariableValue(const std::string& name) const;
+    double getVariableValue(const char* name)        const;
+    bool   isVariableFixed (const std::string& name) const;
+    void   setBounds       (int bound_count, double* lower_bound,
+                            double* upper_bound, bool* bound_check) const;
+    void   updateVariables (const double* variables,
+                            int first_freq_index, int param_count);
+    bool   updateModelVariablesByType(const double* updated_values,
+                                      int param_count,
+                                      ModelParameterType param_type,
+                                      int &i);
+    void   readModelVariablesByType  (double* write_them_here,
+                                      int param_count,
+                                      ModelParameterType param_type,
+                                      int &i) const;                                          
+
+
     void   logVariablesTo(PhyloTree& report_to_tree)           const;
     ModelVariable& assign(const std::string& var_name,
                           double value);

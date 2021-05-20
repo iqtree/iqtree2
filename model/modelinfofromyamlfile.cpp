@@ -52,6 +52,28 @@ bool YAMLFileParameter::isMatchFor(const std::string& match_name,
         string_to_lower(name) == match_name);
 }
 
+void YAMLFileParameter::logParameterState(const char* verb, 
+                                          PhyloTree* report_to_tree) const {
+    std::stringstream msg;
+    msg << verb << " ";
+    if (is_subscripted) {
+        msg  << "subscripted parameter " << name
+             << "(" << minimum_subscript << " .. " << maximum_subscript << ")";
+    } else {
+        msg  << "parameter " << name;
+    }
+
+    msg  << " of type " << type_name
+         << ", with range " << range.first
+         << " to " << range.second
+         << ", and initial value " << value;
+
+    if (0<tolerance) {
+        msg << ", and tolerance " << tolerance;
+    }
+    TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity, msg.str());
+}
+
 ModelVariable::ModelVariable() : type(ModelParameterType::OTHER)
 , value(0), is_fixed(false) {
 }
@@ -154,6 +176,7 @@ ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(const ModelInfoFromYAMLFile& rhs)
     : model_name(rhs.model_name), model_file_path(rhs.model_file_path)
     , parent_model_name(rhs.parent_model_name)
     , is_modifier_model(rhs.is_modifier_model), is_rate_model(rhs.is_rate_model)
+    , rate_distribution(rhs.rate_distribution)
     , citation(rhs.citation), DOI(rhs.DOI), url(rhs.url)
     , data_type_name(rhs.data_type_name), sequence_type(rhs.sequence_type)
     , num_states(rhs.num_states), reversible(rhs.reversible)
@@ -176,6 +199,7 @@ ModelInfoFromYAMLFile& ModelInfoFromYAMLFile::operator=(const ModelInfoFromYAMLF
         parent_model_name          = rhs.parent_model_name;
         is_modifier_model          = rhs.is_modifier_model;
         is_rate_model              = rhs.is_rate_model;
+        rate_distribution          = rhs.rate_distribution;
         citation                   = rhs.citation;
         DOI                        = rhs.DOI; 
         url                        = rhs.url;
@@ -584,9 +608,9 @@ void ModelInfoFromYAMLFile::setBounds(int param_count, double* lower_bound,
     //Rate Models have PROPORTION variables first, then RATE variables.
     ModelParameterType supported_types[] = {
         ModelParameterType::PROPORTION, 
-        ModelParameterType::RATE 
+        ModelParameterType::RATE
     };
-    int i = 1; //Rate parameter numbering starts at 1, see ModelMarkov
+    int i = 1; //Parameter numbering starts at 1, see ModelMarkov
     for (auto param_type : supported_types) {
         for (auto p : parameters) {
             if (p.type == param_type) {
@@ -604,8 +628,8 @@ void ModelInfoFromYAMLFile::setBounds(int param_count, double* lower_bound,
 }
 
 void ModelInfoFromYAMLFile::updateVariables(const double* updated_values,
-    int first_freq_index,
-    int param_count) {
+                                            int first_freq_index,
+                                            int param_count) {
     int i = 1; //Rate parameter numbering starts at 1, see ModelMarkov
     ModelParameterType supported_types[] = {
         ModelParameterType::PROPORTION,
@@ -620,25 +644,89 @@ void ModelInfoFromYAMLFile::updateVariables(const double* updated_values,
         if (param_type == ModelParameterType::FREQUENCY) {
             i = first_freq_index;
         }
-        for (auto p : parameters) {
-            if (p.type == param_type) {
-                for (int sub = p.minimum_subscript;
-                    sub <= p.maximum_subscript; ++sub) {
-                    if (i <= param_count) {
-                        std::string var_name = p.getSubscriptedVariableName(sub);
-                        double      var_value = updated_values[i];
-                        if (!this->variables[var_name].isFixed()) {
-                            this->variables[var_name].setValue(var_value);
-                        }
-                        ++i;
-                    }
-                    //For the last frequency parameter, if there is one,
-                    //i will be equal to ( param_count + 1 ).
-                }
+        updateModelVariablesByType(updated_values, param_count, param_type, i);
+    }
+}
+
+bool ModelInfoFromYAMLFile::updateModelVariablesByType(const double* updated_values,
+                                                       int param_count,
+                                                       ModelParameterType param_type,
+                                                       int &i) {
+    bool anyChanges = false;
+    for (auto p : parameters) {
+        if (p.type != param_type) {
+            continue;
+        }
+        for (int sub = p.minimum_subscript;
+            sub <= p.maximum_subscript; ++sub) {
+            std::string var_name = p.getSubscriptedVariableName(sub);
+            ModelVariable& var   = this->variables[var_name];
+            if (var.isFixed()) {
+                continue;
             }
+            if (param_count<=i) {
+                std::stringstream complaint;
+                complaint << "Internal logic error: Cannot use variable "
+                            << " with 1-based-index " << i << " to assign "
+                            << " model variable " << var_name
+                            << " of " << getLongName()
+                            << " (too many model variables found).";
+                outError(complaint.str());
+            }
+            double value     = updated_values[i];
+            double old_value = var.getValue();
+            double delta     = fabs(value - old_value);
+            if (p.tolerance<=delta) {
+                var.setValue(value);
+                anyChanges = true;
+            }
+            ++i;
+        }
+    }
+    return anyChanges;
+}
+
+void ModelInfoFromYAMLFile::readModelVariablesByType( double* write_them_here,
+                                                      int param_count,
+                                                      ModelParameterType param_type,
+                                                      int &i) const {                                                
+    for (auto p : parameters) {
+        if (p.type != param_type) {
+            continue;
+        }
+        for (int sub = p.minimum_subscript;
+            sub <= p.maximum_subscript; ++sub) {
+            std::string var_name = p.getSubscriptedVariableName(sub);
+            auto it = variables.find(var_name);
+            if (it==variables.end()) {
+                std::stringstream complaint;
+                complaint << "Internal logic error: Cannot set variable "
+                            << " with 1-based-index " << i << " from "
+                            << " model variable " << var_name
+                            << " of " << getLongName()
+                            << " (model does not define variable).";
+                outError(complaint.str());
+
+            }
+            const ModelVariable& var = it->second;
+            if (var.isFixed()) {
+                continue;
+            }
+            if (param_count<i) {
+                std::stringstream complaint;
+                complaint << "Internal logic error: Cannot set variable "
+                            << " with 1-based-index " << i << " from "
+                            << " model variable " << var_name
+                            << " of " << getLongName()
+                            << " (too many model variables found).";
+                outError(complaint.str());
+            }
+            write_them_here[i] = var.getValue();
+            ++i;
         }
     }
 }
+
 
 void ModelInfoFromYAMLFile::logVariablesTo(PhyloTree& report_to_tree) const {
     if (verbose_mode < YAMLVariableVerbosity) {

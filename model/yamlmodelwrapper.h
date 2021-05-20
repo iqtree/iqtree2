@@ -88,7 +88,7 @@ public:
             for (int i = 0; i < num_all; i++) {
                 if (rates[i] != variables[i] ) {
                     TREE_LOG_LINE(*report_tree, VerboseMode::VB_MAX,
-                                  "  estimated rates[" << i << "] changing"
+                                  " estimated rates[" << i << "] changing"
                                   " from " << rates[i] << " to " << variables[i]);
                     rates[i] = variables[i];
                     changed  = true;
@@ -329,19 +329,32 @@ public:
                              upper_bound, bound_check);
     }
 
+    virtual void updateRateClassFromModelVariables() = 0 ;
+
     virtual bool getVariables(double* variables) {
-        //Todo: implement: get proportion and rate parameters,
-        //      and write them to variables (starting at index 1).
-        bool rc = super::getVariables(variables);
+        int  index = 1;
+        int  ndim  = getNDim();
+        bool rc    = model_info.updateModelVariablesByType(variables, ndim, 
+                                                           ModelParameterType::SHAPE,      index);
+        rc        |= model_info.updateModelVariablesByType(variables, ndim,
+                                                           ModelParameterType::PROPORTION, index);
+        rc        |= model_info.updateModelVariablesByType(variables, ndim,
+                                                           ModelParameterType::RATE,       index);
+        if (rc) {
+            updateRateClassFromModelVariables();
+        }
         return rc;
     }
 
     virtual void setVariables(double *variables) {
-        //Todo: implement: set proportion and rate parameters
-        //This will need to call setRatesAndProportions to
-        //copy parameters through to the arrays (or whatever)
-        //that the (Rate...?) super-class (R) uses.
-        super::setVariables(variables);
+        int index = 1;
+        int ndim  = getNDim();
+        model_info.readModelVariablesByType(variables, ndim,
+                                            ModelParameterType::SHAPE,      index);
+        model_info.readModelVariablesByType(variables, ndim,
+                                            ModelParameterType::PROPORTION, index);
+        model_info.readModelVariablesByType(variables, ndim,
+                                            ModelParameterType::RATE,       index);
     }
 
     virtual void saveCheckpoint() {
@@ -357,6 +370,7 @@ public:
     }
 
     virtual void writeInfo(ostream &out) {
+        model_info.writeInfo("Shapes     ", ModelParameterType::SHAPE,      out);
         model_info.writeInfo("Proportions", ModelParameterType::PROPORTION, out);
         model_info.writeInfo("Rates      ", ModelParameterType::RATE,       out);
     }
@@ -367,6 +381,7 @@ public:
     typedef YAMLRateModelWrapper<RateFree> super;
     YAMLRateFree(PhyloTree *tree, PhyloTree* report_to_tree,
                 const ModelInfoFromYAMLFile& info);
+    void updateRateClassFromModelVariables();
 };
 
 #endif //yaml_model_wrapper_h

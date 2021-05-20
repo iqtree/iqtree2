@@ -261,7 +261,8 @@
   ratedistribution: gamma
   parameters:
   - name:           gamma_shape
-    type:           rate
+    type:           shape
+    tolerance:      0.001
   - name:           rate(1..categories)
     type:           calculated rate
     initValue:      "(categories==1) ? 1.0 : chi2((2.0*subscript-1)/categories/2.0, 2.0*gamma_shape) / (2.0*gamma_shape))"
@@ -277,10 +278,11 @@
     type:           proportion
     range:          [0.001, 1.0] #Even though, RateFree declares MAX_FREE_RATE_PROP 1000
     initValue:      1/categories
+    tolerance:      0.001
   - name:           rate(1..categories)
     type:           rate
     range:          [0.001, 1000.0]
-    tolerance;      0.0001
+    tolerance:      0.0001
 
 - ratemodel:        I
   ratedistribution: invariant

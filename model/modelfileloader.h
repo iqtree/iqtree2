@@ -30,10 +30,16 @@ protected:
                                     bool                   overriding,
                                     ModelInfoFromYAMLFile& info,
                                     YAMLFileParameter&     p);
+    void setParameterTolerance     (const YAML::Node&      param,
+                                    bool                   overriding,
+                                    ModelInfoFromYAMLFile& info,
+                                    YAMLFileParameter&     p);
     void setParameterValue         (const YAML::Node&      param,
                                     bool                   overriding,
                                     ModelInfoFromYAMLFile& info,
                                     YAMLFileParameter&     p);
+    bool isAParameterOverride      (ModelInfoFromYAMLFile& info,
+                                    YAMLFileParameter& p);
 
 public:
    
@@ -41,12 +47,15 @@ public:
     std::string stringScalar(const YAML::Node& node,
                              const char* key,
                              const char* default_value);
-    bool booleanScalar(const YAML::Node& node,
-                       const char* key,
-                       const bool  default_value);
-    int  integerScalar(const YAML::Node& node,
-                       const char* key,
-                       const int   default_value);
+    bool   booleanScalar(const YAML::Node& node,
+                         const char*       key,
+                         const bool        default_value);
+    int    integerScalar(const YAML::Node& node,
+                         const char*       key,
+                         const int         default_value);
+    double doubleScalar (const YAML::Node& node,
+                         const char*       key,
+                         const double      default_value);
     
     void   complainIfSo (bool check_me, std::string error_message);
     void   complainIfNot(bool check_me, std::string error_message);

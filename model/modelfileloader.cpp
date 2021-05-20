@@ -43,6 +43,23 @@ int ModelFileLoader::integerScalar(const YAML::Node& node,
     return atoi(s.c_str());
 }
 
+double ModelFileLoader::doubleScalar(const YAML::Node& node,
+                                  const char* key, 
+                                  const double default_value) {
+    std::string s = stringScalar(node, key, "");
+    if (s.empty()) {
+        return default_value;
+    }
+    char ch = s[0];
+    if (ch<'0' || '9'<ch) {
+        if (ch!='-' && ch!='+' && ch!='.') {
+            return default_value;
+        }
+    }
+    double value = convert_double_nothrow(s.c_str(), default_value);
+    return value;
+}
+
 void ModelFileLoader::complainIfSo(bool        check_me,
                                    std::string error_message) {
     if (check_me) {
@@ -134,8 +151,8 @@ void ModelFileLoader::parseYAMLModelParameters(const YAML::Node& params,
 }
 
 void ModelFileLoader::setParameterSubscriptRange(ModelInfoFromYAMLFile& info,
-                                YAMLFileParameter& p) {
-            const char* parsing_what = "subscript expression";
+                                                 YAMLFileParameter& p) {
+    const char* parsing_what = "subscript expression";
     try {
         Interpreter interpreter(info, p.subscript_expression );
         auto x = interpreter.expression();
@@ -173,13 +190,15 @@ void ModelFileLoader::setParameterType(const YAML::Node&      param,
                                        ModelInfoFromYAMLFile& info,
                                        YAMLFileParameter&     p) {
     if (p.type_name=="calculated rate") {
-        p.type = ModelParameterType::RATE;
+        p.type      = ModelParameterType::RATE;
     } else if (p.type_name=="rate") {
         p.type = ModelParameterType::RATE;
     } else if (p.type_name=="frequency") {
         p.type = ModelParameterType::FREQUENCY;
     } else if (p.type_name=="proportion") {
         p.type = ModelParameterType::PROPORTION;
+    } else if (p.type_name=="shape") {
+        p.type = ModelParameterType::SHAPE;
     } else if (p.type_name=="weight") {
         p.type = ModelParameterType::WEIGHT;
     } else {
@@ -188,11 +207,39 @@ void ModelFileLoader::setParameterType(const YAML::Node&      param,
     }
 }
 
+void ModelFileLoader::setParameterTolerance(const YAML::Node&      param, 
+                                            bool                   overriding,
+                                            ModelInfoFromYAMLFile& info,
+                                            YAMLFileParameter&     p) {
+    if (!overriding) {
+        switch (p.type) {
+            case ModelParameterType::FREQUENCY:
+                p.tolerance = 1e-4;
+                break;
+            case ModelParameterType::PROPORTION:
+                p.tolerance = 1e-4;
+                break;
+            case ModelParameterType::RATE:
+                p.tolerance = 1e-6; //though FreeRate 
+                break;
+            case ModelParameterType::SHAPE:
+                p.tolerance = 0.001;
+                break;
+            case ModelParameterType::WEIGHT:
+                p.tolerance = 1e-4;
+                break;
+            case ModelParameterType::OTHER:
+                p.tolerance = 0;
+                break;
+        }
+    }
+    p.tolerance = doubleScalar(param, "tolerance", p.tolerance);
+}
+
 void ModelFileLoader::setParameterValue(const YAML::Node&      param, 
                                         bool                   overriding,
                                         ModelInfoFromYAMLFile& info,
                                         YAMLFileParameter&     p) {
-    
     auto count = p.maximum_subscript - p.minimum_subscript + 1;
     ASSERT(0<count);
     double dv   = 0.0; //default initial value
@@ -204,6 +251,8 @@ void ModelFileLoader::setParameterValue(const YAML::Node&      param,
     } else if (p.type==ModelParameterType::PROPORTION) {
         dv = 1.0;
     } else if (p.type==ModelParameterType::RATE) {
+        dv = 1.0;
+    } else if (p.type==ModelParameterType::SHAPE) {
         dv = 1.0;
     } else if (p.type==ModelParameterType::WEIGHT) {
         dv = 1.0 / (double)count;    //Todo: Should be 1.0 divided by # of parameters
@@ -266,7 +315,21 @@ void ModelFileLoader::parseModelParameter(const YAML::Node& param,
         return;
     }
     
-    bool overriding = false;
+    bool overriding = isAParameterOverride(info, p);
+
+    setParameterType     (param, overriding, info, p);
+    setParameterTolerance(param, overriding, info, p);
+    setParameterValue    (param, overriding, info, p);
+    
+    p.description = stringScalar(param, "description", p.description.c_str());
+
+    p.logParameterState("Parsed", report_to_tree);
+
+    info.addParameter(p);
+}
+
+bool ModelFileLoader::isAParameterOverride(ModelInfoFromYAMLFile& info,
+                                           YAMLFileParameter& p) {
     for (const YAMLFileParameter& oldp: info.parameters) {
         if (oldp.name == p.name) {
             complainIfNot(oldp.is_subscripted == p.is_subscripted,
@@ -277,29 +340,13 @@ void ModelFileLoader::parseModelParameter(const YAML::Node& param,
             complainIfNot(oldp.maximum_subscript == p.maximum_subscript,
                           "Cannot redefine parameter subscript range");
             p = oldp;
-            overriding = true;
+            return true;
             break;
         }
     }
-
-    setParameterType (param, overriding, info, p);
-    setParameterValue(param, overriding, info, p);
-    
-    p.description = stringScalar(param, "description", p.description.c_str());
-    std::stringstream msg;
-    if (p.is_subscripted) {
-        msg  << "Parsed subscripted parameter " << p.name
-             << "(" << p.minimum_subscript << " .. " << p.maximum_subscript << ")";
-    } else {
-        msg  << "Parsed parameter " << p.name;
-    }
-    msg  << " of type " << p.type_name
-         << ", with range " << p.range.first
-         << " to " << p.range.second
-         << ", and initial value " << p.value;
-    TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity, msg.str());
-    info.addParameter(p);
+    return false;
 }
+
 
 void ModelFileLoader::parseMatrixParameter(const YAML::Node& param,
                                            std::string name,
@@ -773,6 +820,7 @@ void ModelFileLoader::parseYAMLModel(const YAML::Node& substitution_model,
                                      PhyloTree* report_to_tree) {
     info.is_modifier_model = false;
     info.parent_model_name = stringScalar(substitution_model, "frommodel", "");
+    info.rate_distribution = stringScalar(substitution_model, "ratedistribution", "");
     info.model_name        = name_of_model;
                             
     if (!info.parent_model_name.empty()) {
