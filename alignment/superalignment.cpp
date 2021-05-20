@@ -313,6 +313,9 @@ void SuperAlignment::readPartitionRaxml(Params &params) {
                 }
             }
             
+            // dummy variable to record num of states
+            int num_states_morph = -1;
+            
             if (info.model_name.empty())
                 outError("Please give model names in partition file!");
             if (info.model_name == "BIN") {
@@ -321,18 +324,48 @@ void SuperAlignment::readPartitionRaxml(Params &params) {
             } else if (info.model_name == "DNA") {
                 info.sequence_type = "DNA";
                 info.model_name = "GTR";
-            } else if (info.model_name == "MULTI") {
+            } else if (info.model_name == "MULTI" || info.model_name == "MORPH") {
                 info.sequence_type = "MORPH";
                 info.model_name = "MK";
-            } else if (info.model_name.substr(0,5) == "CODON") {
+            } else {
+                // handle MORPH{<#STATE>} (alisim)
+                string ERR_MSG = "Please use MORPH{<#STATE>} to specify the number of states for MORPH. <#STATE> should be positive and no greater than 32.";
+                string t_params = info.model_name;
+                string KEYWORD = "MORPH";
+                if ((t_params.length() > KEYWORD.length())
+                    && (!t_params.substr(0, KEYWORD.length()).compare(KEYWORD)))
+                {
+                    // validate the input
+                    if ((t_params[KEYWORD.length()]!='{')
+                        ||(t_params[t_params.length()-1]!='}'))
+                        throw ERR_MSG;
+                    
+                    // remove "MORPH{"
+                    t_params.erase(0, KEYWORD.length() + 1);
+                    
+                    // remove "}"
+                    t_params = t_params.substr(0, t_params.length()-1);
+                    
+                    // extract num_states
+                    num_states_morph = convert_int(t_params.c_str());
+                    
+                    // validate num_states
+                    if (num_states_morph < 1 || num_states_morph > 32)
+                        throw ERR_MSG;
+                    
+                    // set seqtype to MORPH (without {<#STATE>})
+                    info.sequence_type = "MORPH";
+                    info.model_name = "MK";
+                } else if (info.model_name.substr(0,5) == "CODON") {
                 info.sequence_type = info.model_name;
                 info.model_name = "GY";
-            } else {
-                info.sequence_type = "AA";
-                if (*info.model_name.begin() == '[') {
-                    if (*info.model_name.rbegin() != ']')
-                        outError("User-defined protein model should be [myProtenSubstitutionModelFileName]");
-                    info.model_name = info.model_name.substr(1, info.model_name.length()-2);
+                } else {
+                    info.sequence_type = "AA";
+                    if (*info.model_name.begin() == '[') {
+                        if (*info.model_name.rbegin() != ']')
+                            outError("User-defined protein model should be [myProtenSubstitutionModelFileName]");
+                        info.model_name = info.model_name.substr(1, info.model_name.length()-2);
+                    }
                 }
             }
             
@@ -389,6 +422,9 @@ void SuperAlignment::readPartitionRaxml(Params &params) {
             new_aln->position_spec = info.position_spec;
             new_aln->aln_file = info.aln_file;
             new_aln->sequence_type = info.sequence_type;
+            // set num_states for morph if it has been specified
+            if (num_states_morph > -1)
+                new_aln->num_states = num_states_morph;
             partitions.push_back(new_aln);
             // TODO move to supertree
 //            PhyloTree *tree = new PhyloTree(new_aln);
@@ -471,6 +507,36 @@ void SuperAlignment::readPartitionNexus(Params &params) {
             if ((*it)->sequence_type=="" && params.sequence_type)
                 (*it)->sequence_type = params.sequence_type;
             
+            // handle MORPH{<#STATE>} (alisim)
+            int num_states_morph = -1;
+            string ERR_MSG = "Please use MORPH{<#STATE>} to specify the number of states for MORPH. <#STATE> should be positive and no greater than 32.";
+            string t_params = (*it)->sequence_type;
+            string KEYWORD = "MORPH";
+            if ((t_params.length() > KEYWORD.length())
+                && (!t_params.substr(0, KEYWORD.length()).compare(KEYWORD)))
+            {
+                // validate the input
+                if ((t_params[KEYWORD.length()]!='{')
+                    ||(t_params[t_params.length()-1]!='}'))
+                    throw ERR_MSG;
+                
+                // remove "MORPH{"
+                t_params.erase(0, KEYWORD.length() + 1);
+                
+                // remove "}"
+                t_params = t_params.substr(0, t_params.length()-1);
+                
+                // extract num_states
+                num_states_morph = convert_int(t_params.c_str());
+                
+                // validate num_states
+                if (num_states_morph < 1 || num_states_morph > 32)
+                    throw ERR_MSG;
+                
+                // set seqtype to MORPH (without {<#STATE>})
+                (*it)->sequence_type = KEYWORD;
+            }
+            
             if ((*it)->sequence_type == "" && !(*it)->model_name.empty()) {
                 // try to get sequence type from model
             //TODO: why compile error?
@@ -540,6 +606,9 @@ void SuperAlignment::readPartitionNexus(Params &params) {
             new_aln->position_spec = (*it)->position_spec;
             new_aln->sequence_type = (*it)->sequence_type;
             new_aln->tree_len = (*it)->tree_len;
+            // set num_states for morph if it has been specified
+            if (num_states_morph > -1)
+                new_aln->num_states = num_states_morph;
             partitions.push_back(new_aln);
 //            PhyloTree *tree = new PhyloTree(new_aln);
 //            push_back(tree);

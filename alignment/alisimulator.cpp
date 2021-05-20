@@ -215,41 +215,50 @@ void AliSimulator::initializeIQTreeFromTreeFile()
 */
 void AliSimulator::initializeAlignment(IQTree *tree, string model_fullname)
 {
-    if (!params->sequence_type)
+    // intializing seq_type if it's unknown
+    if (tree->aln->seq_type == SEQ_UNKNOWN)
     {
-        // if a mixture model is used -> extract the name of the first model component for SeqType detection
-        string KEYWORD = "MIX";
-        string delimiter = ",";
-        if ((model_fullname.length() > KEYWORD.length())
-            && (!model_fullname.substr(0, KEYWORD.length()).compare(KEYWORD)))
-        {
-            // only get the model name, removing additional params (+G,+F,*G,*F,etc)
-            model_fullname = model_fullname.substr(0, model_fullname.find("+"));
-            model_fullname = model_fullname.substr(0, model_fullname.find("*"));
-            
-            // validate the input
-            if ((model_fullname[KEYWORD.length()]!='{')
-                ||(model_fullname[model_fullname.length()-1]!='}')
-                ||(model_fullname.find(delimiter) == string::npos))
-                outError("Use -m MIX{m1,...,mK} to define a mixture model.");
-            
-            // remove "MIX{"
-            model_fullname.erase(0, KEYWORD.length() + 1);
-            
-            // get the first model name
-            model_fullname = model_fullname.substr(0, model_fullname.find(delimiter));
-            
-            // remove the weight (if any)
-            model_fullname = model_fullname.substr(0, model_fullname.find(":"));
-        }
-        string model_familyname_with_params = model_fullname.substr(0, model_fullname.find("+"));
-        model_familyname_with_params = model_familyname_with_params.substr(0, model_fullname.find("*"));
-        string model_familyname = model_familyname_with_params.substr(0, model_familyname_with_params.find("{"));
-        detectSeqType(model_familyname.c_str(), tree->aln->seq_type);
-        string seq_type_name = convertSeqTypeToSeqTypeName(tree->aln->seq_type);
+        // firstly, intializing seq_type from sequence_type if it's not empty
+        if (tree->aln->sequence_type.length()>0)
+            tree->aln->seq_type = tree->aln->getSeqType(tree->aln->sequence_type.c_str());
+        // otherwise, intializing seq_type from sequence_type (in params) if it's not empty
+        else
+            if (params->sequence_type)
+                tree->aln->seq_type = tree->aln->getSeqType(params->sequence_type);
+            // otherwise, detect seq_type model's name
+            else
+            {
+                // if a mixture model is used -> extract the name of the first model component for SeqType detection
+                string KEYWORD = "MIX";
+                string delimiter = ",";
+                if ((model_fullname.length() > KEYWORD.length())
+                    && (!model_fullname.substr(0, KEYWORD.length()).compare(KEYWORD)))
+                {
+                    // only get the model name, removing additional params (+G,+F,*G,*F,etc)
+                    model_fullname = model_fullname.substr(0, model_fullname.find("+"));
+                    model_fullname = model_fullname.substr(0, model_fullname.find("*"));
+                    
+                    // validate the input
+                    if ((model_fullname[KEYWORD.length()]!='{')
+                        ||(model_fullname[model_fullname.length()-1]!='}')
+                        ||(model_fullname.find(delimiter) == string::npos))
+                        outError("Use -m MIX{m1,...,mK} to define a mixture model.");
+                    
+                    // remove "MIX{"
+                    model_fullname.erase(0, KEYWORD.length() + 1);
+                    
+                    // get the first model name
+                    model_fullname = model_fullname.substr(0, model_fullname.find(delimiter));
+                    
+                    // remove the weight (if any)
+                    model_fullname = model_fullname.substr(0, model_fullname.find(":"));
+                }
+                string model_familyname_with_params = model_fullname.substr(0, model_fullname.find("+"));
+                model_familyname_with_params = model_familyname_with_params.substr(0, model_fullname.find("*"));
+                string model_familyname = model_familyname_with_params.substr(0, model_familyname_with_params.find("{"));
+                detectSeqType(model_familyname.c_str(), tree->aln->seq_type);
+            }
     }
-    else
-        tree->aln->seq_type = tree->aln->getSeqType(params->sequence_type);
     
     if (tree->aln->seq_type == SEQ_UNKNOWN)
         outError("Could not detect SequenceType from Model Name. Please check your Model Name or specify the SequenceType by --seqtype <SEQ_TYPE_STR> where <SEQ_TYPE_STR> is BIN, DNA, AA, NT2AA, CODON, or MORPH.");
@@ -262,7 +271,9 @@ void AliSimulator::initializeAlignment(IQTree *tree, string model_fullname)
         tree->aln->num_states = 20;
         break;
     case SEQ_MORPH:
-        tree->aln->num_states = params->alisim_num_states_morph;
+            // only set num_state if it has not yet set (noting that num_states of Morph could be set in partition file)
+            if (tree->aln->num_states == 0)
+                tree->aln->num_states = params->alisim_num_states_morph;
         break;
     case SEQ_POMO:
         throw "Sorry! SEQ_POMO is currently not supported";

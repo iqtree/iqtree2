@@ -723,14 +723,14 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator,
     {
         PhyloSuperTree *super_tree = ((PhyloSuperTree *)alisimulator->tree);
         
-        // merge phylotrees using the same alignment file and the same sequence_type with each other -> write sequences to the corresponding output files
+        // merge phylotrees using the same alignment file and the same sequence_type and the same num_states (morph) with each other -> write sequences to the corresponding output files
         for (int i = 0; i < super_tree->size(); i++)
         {
             // ignore the current phylotree if it has already merged
             bool already_merged = false;
             for (int j = 0; j < i; j++)
                 if (!super_tree->at(i)->aln->aln_file.compare(super_tree->at(j)->aln->aln_file)
-                    && super_tree->at(i)->aln->seq_type == super_tree->at(j)->aln->seq_type)
+                    && super_tree->at(i)->aln->seq_type == super_tree->at(j)->aln->seq_type && super_tree->at(i)->aln->num_states == super_tree->at(j)->aln->num_states)
                 {
                     already_merged = true;
                     break;
@@ -753,7 +753,7 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator,
                 for (j = i; j < super_tree->size(); j++)
                 {
                     IQTree *current_tree = (IQTree*) super_tree->at(j);
-                    if (!super_tree->at(i)->aln->aln_file.compare(current_tree->aln->aln_file) && super_tree->at(i)->aln->seq_type == super_tree->at(j)->aln->seq_type)
+                    if (!super_tree->at(i)->aln->aln_file.compare(current_tree->aln->aln_file) && super_tree->at(i)->aln->seq_type == super_tree->at(j)->aln->seq_type && super_tree->at(i)->aln->num_states == super_tree->at(j)->aln->num_states)
                     {
                         // extract site_ids of the partition
                         const char* info_spec = ((SuperAlignment*) super_tree->aln)->partitions[j]->CharSet::position_spec.c_str();
