@@ -16,6 +16,7 @@ AliSimulatorInvar::AliSimulatorInvar(AliSimulator *alisimulator, double invar_pr
     tree = alisimulator->tree;
     params = alisimulator->params;
     num_sites_per_state = alisimulator->num_sites_per_state;
+    length_ratio = alisimulator->length_ratio;
     expected_num_sites = alisimulator->expected_num_sites;
     partition_rate = alisimulator->partition_rate;
     invariant_proportion = invar_prop;
@@ -116,6 +117,6 @@ void AliSimulatorInvar::simulateSeqsForTree()
     delete[] site_specific_rates;
     
     // removing constant states if it's necessary
-    if (params->alisim_length_ratio > 1)
+    if (length_ratio > 1)
         removeConstantSites();
 }

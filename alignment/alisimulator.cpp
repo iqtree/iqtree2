@@ -12,10 +12,17 @@ AliSimulator::AliSimulator(Params *input_params, int expected_number_sites, doub
     params = input_params;
     AliSimulator::initializeIQTreeFromTreeFile();
     num_sites_per_state = tree->aln->seq_type == SEQ_CODON?3:1;
-    if (expected_number_sites == -1)
-        expected_num_sites = params->alisim_sequence_length/num_sites_per_state*params->alisim_length_ratio;
+    
+    // intialize length_ratio
+    if (tree->getModel() && tree->getSubstName().find("+ASC") != std::string::npos)
+        length_ratio = params->alisim_length_ratio;
     else
-        expected_num_sites = expected_number_sites;
+        length_ratio = 1;
+    
+    if (expected_number_sites == -1)
+        expected_num_sites = params->alisim_sequence_length/num_sites_per_state*length_ratio;
+    else
+        expected_num_sites = expected_number_sites*length_ratio;
     partition_rate = new_partition_rate;
 }
 
@@ -27,10 +34,17 @@ AliSimulator::AliSimulator(Params *input_params, IQTree *iq_tree, int expected_n
     params = input_params;
     tree = iq_tree;
     num_sites_per_state = tree->aln->seq_type == SEQ_CODON?3:1;
-    if (expected_number_sites == -1)
-        expected_num_sites = params->alisim_sequence_length/num_sites_per_state*params->alisim_length_ratio;
+    
+    // intialize length_ratio
+    if (tree->getModel() && tree->getSubstName().find("+ASC") != std::string::npos)
+        length_ratio = params->alisim_length_ratio;
     else
-        expected_num_sites = expected_number_sites;
+        length_ratio = 1;
+    
+    if (expected_number_sites == -1)
+        expected_num_sites = params->alisim_sequence_length/num_sites_per_state*length_ratio;
+    else
+        expected_num_sites = expected_number_sites*length_ratio;
     partition_rate = new_partition_rate;
 }
 
@@ -326,11 +340,11 @@ void AliSimulator::removeConstantSites(){
     IntVector variant_state_mask;
     
     // create a variant state mask
-    createVariantStateMask(variant_state_mask, num_variant_states, expected_num_sites/params->alisim_length_ratio, tree->root, tree->root);
+    createVariantStateMask(variant_state_mask, num_variant_states, expected_num_sites/length_ratio, tree->root, tree->root);
     
     // return error if num_variant_states is less than the expected_num_variant_states
-    if (num_variant_states < expected_num_sites/params->alisim_length_ratio){
-        outError("Unfortunately, after removing constant sites, the number of variant sites is less than the expected sequence length. Please use --length-ratio <LENGTH_RATIO> to generate more abundant sites and try again. The current <LENGTH_RATIO> is "+ convertDoubleToString(params->alisim_length_ratio));
+    if (num_variant_states < expected_num_sites/length_ratio){
+        outError("Unfortunately, after removing constant sites, the number of variant sites is less than the expected sequence length. Please use --length-ratio <LENGTH_RATIO> to generate more abundant sites and try again. The current <LENGTH_RATIO> is "+ convertDoubleToString(length_ratio));
     }
 
     // recording start_time
@@ -373,7 +387,7 @@ void AliSimulator::getOnlyVariantSites(IntVector variant_state_mask, Node *node,
                     num_variant_states++;
                     
                     // stop checking further states if num_variant_states has exceeded the expected_num_variant_states
-                    if (num_variant_states >= expected_num_sites/params->alisim_length_ratio)
+                    if (num_variant_states >= expected_num_sites/length_ratio)
                         break;
                 }
             
@@ -594,7 +608,7 @@ void AliSimulator::simulateSeqsForTree()
     }
     
     // removing constant states if it's necessary
-    if (params->alisim_length_ratio > 1)
+    if (length_ratio > 1)
         removeConstantSites();
 }
 
@@ -743,5 +757,5 @@ void AliSimulator::validataSeqLengthCodon()
 *  update the expected_num_sites due to the change of the sequence_length
 */
 void AliSimulator::refreshExpectedNumSites(){
-    expected_num_sites = params->alisim_sequence_length/num_sites_per_state*params->alisim_length_ratio;
+    expected_num_sites = params->alisim_sequence_length/num_sites_per_state*length_ratio;
 }

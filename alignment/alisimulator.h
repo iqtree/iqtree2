@@ -131,6 +131,7 @@ public:
     int num_sites_per_state;
     int expected_num_sites;
     double partition_rate;
+    double length_ratio = 1;
     
     /**
         constructor

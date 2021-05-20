@@ -1120,8 +1120,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_num_states_morph = 32;
     params.alisim_num_taxa_uniform_start = -1;
     params.alisim_num_taxa_uniform_end = -1;
-    params.alisim_length_ratio = 1;
-    params.alisim_ASC_active = false;
+    params.alisim_length_ratio = 2;
     params.birth_rate = 0.8;
     params.death_rate = 0.2;
     params.alisim_max_str_length = 100000000;
@@ -2391,12 +2390,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                             tmp_model_name = tmp_model_name + params.model_name[c_index];
                     params.model_name = tmp_model_name;
                             
-                }
-                // handle "+ASC" -> set alisim_length_ratio to the default value at 2.0
-                if (params.model_name.find("+ASC") != std::string::npos) {
-                    params.alisim_ASC_active = true;
-                    if (params.alisim_length_ratio == 1)
-                        params.alisim_length_ratio = 2.0;
                 }
 				continue;
 			}

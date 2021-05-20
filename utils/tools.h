@@ -2301,16 +2301,10 @@ public:
     double death_rate;
     
     /**
-    *  rate to generate abundant states
-    *  default is 1.0 in case without constant sites removal;
-    *  or is 2.0 in case with constant sites removal;
+    *  rate to generate abundant states (with +ASC)
+    *  default is 2.0;
     */
     double alisim_length_ratio;
-    
-    /**
-    *  true if using +ASC
-    */
-    bool alisim_ASC_active;
     
     /**
     *  maximum_string_length

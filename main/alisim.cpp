@@ -319,15 +319,6 @@ void executeSimulation(Params params, IQTree *&tree, bool inference_mode)
     // show parameters
     showParameters(params, alisimulator->tree->isSuperTree());
     
-    // reset alisim_length_ratio if Ascertainment Bias Correction option (+ASC) is inactive
-    if (params.alisim_length_ratio > 1 && !params.alisim_ASC_active)
-    {
-        params.alisim_length_ratio = 1;
-        outWarning("<LENGTH_RATIO> is reset to 1 since Ascertainment Bias Correction option is inactive. Please use -m <MODEL_NAME>+ASC to activate Ascertainment Bias Correction option.");
-    }
-    // refesh the number of expected num-sites as alisim_length_ratio could be changed when reading partitions
-    alisimulator->refreshExpectedNumSites();
-    
     // iteratively generate multiple/a single  alignment(s) for each tree
     generateMultipleAlignmentsFromSingleTree(alisimulator, inference_mode);
     
@@ -528,7 +519,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
                 // stree->part_info[part].part_rate
                 double partition_rate = super_tree->params->partition_type == BRLEN_SCALE ? super_tree->part_info[partition_index].part_rate:1;
                 // generate alignment for the current tree/partition
-                AliSimulator* partition_simulator = new AliSimulator(super_tree->params, current_tree, expected_num_states_current_tree*super_tree->params->alisim_length_ratio, partition_rate);
+                AliSimulator* partition_simulator = new AliSimulator(super_tree->params, current_tree, expected_num_states_current_tree, partition_rate);
                 generatePartitionAlignmentFromSingleSimulator(partition_simulator, ancestral_sequence_current_tree);
             }
         }
@@ -793,7 +784,7 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator,
     // other cases (without partitions), just write sequences to a single file
     else
     {
-        int sequence_length = alisimulator->expected_num_sites/alisimulator->params->alisim_length_ratio;;
+        int sequence_length = alisimulator->expected_num_sites/alisimulator->length_ratio;;
         writeSequencesToFile(file_path, alisimulator->tree->aln, sequence_length, alisimulator, inference_mode);
     }
 }
