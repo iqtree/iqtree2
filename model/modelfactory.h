@@ -220,6 +220,11 @@ public:
 		TRUE for storing process
 	*/
 	bool is_storing;
+    
+    /**
+        TRUE for continuous Gamma
+    */
+    bool is_continuous_gamma = false;
 
 	/**
 	 * encoded constant sites that are unobservable and added in the alignment

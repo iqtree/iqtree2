@@ -2269,11 +2269,6 @@ public:
     string alisim_ancestral_sequence_name;
     
     /**
-    *  true if using continuous gamma model
-    */
-    bool alisim_continuous_gamma;
-    
-    /**
     *  the maximum number of rate_categories that cached_trans_matrix could be applied
     */
     int alisim_max_rate_categories_for_applying_caching;

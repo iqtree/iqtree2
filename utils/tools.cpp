@@ -1115,7 +1115,6 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_dataset_num = 1;
     params.alisim_ancestral_sequence_aln_filepath = NULL;
     params.alisim_ancestral_sequence_name = "";
-    params.alisim_continuous_gamma = false;
     params.alisim_max_rate_categories_for_applying_caching = 5;
     params.alisim_num_states_morph = 32;
     params.alisim_num_taxa_uniform_start = -1;
@@ -2380,17 +2379,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use --model <model_name>";
                 
                 params.model_name = argv[cnt];
-                // handle continuous gamma model
-                if (params.model_name.find("+GC") != std::string::npos) {
-                    params.alisim_continuous_gamma = true;
-                    // remove 'C' from model_name to make sure it doesn't cause error when parsing model
-                    std::string tmp_model_name(1, params.model_name[0]);
-                    for (int c_index = 1; c_index < params.model_name.length(); c_index++)
-                        if (!(params.model_name[c_index-1]=='G' && params.model_name[c_index]=='C'))
-                            tmp_model_name = tmp_model_name + params.model_name[c_index];
-                    params.model_name = tmp_model_name;
-                            
-                }
 				continue;
 			}
             if (strcmp(argv[cnt], "--length-ratio") == 0) {

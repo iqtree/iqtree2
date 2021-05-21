@@ -153,7 +153,7 @@ void AliSimulatorHeterogeneity::simulateSeqs(int sequence_length, double *site_s
         // estimate the sequence for the current neighbor
         // check if trans_matrix could be caching (without rate_heterogeneity or the num of rate_categories is lowr than the threshold (5)) or not
         if (tree->getRateName().empty()
-            || (!params->alisim_continuous_gamma && rate_heterogeneity && rate_heterogeneity->getNDiscreteRate() <= params->alisim_max_rate_categories_for_applying_caching))
+            || (!tree->getModelFactory()->is_continuous_gamma && rate_heterogeneity && rate_heterogeneity->getNDiscreteRate() <= params->alisim_max_rate_categories_for_applying_caching))
         {
             int num_models = tree->getModel()->isMixture()?tree->getModel()->getNMixtures():1;
             int num_rate_categories  = tree->getRateName().empty()?1:rate_heterogeneity->getNDiscreteRate();
@@ -321,7 +321,7 @@ void AliSimulatorHeterogeneity::getSiteSpecificRates(double *site_specific_rates
     else
     {
         // initalize rates based on continuous gamma distribution
-        if ((rate_name.find("+G") != std::string::npos) && params->alisim_continuous_gamma)
+        if ((rate_name.find("+G") != std::string::npos) && tree->getModelFactory()->is_continuous_gamma)
         {
             getSiteSpecificRatesContinuousGamma(site_specific_rates, sequence_length);
         }
