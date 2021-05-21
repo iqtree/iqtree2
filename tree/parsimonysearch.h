@@ -50,7 +50,8 @@ int PhyloTree::doParsimonySearch(ParsimonySearchParameters& s) {
         task_name.clear();
     }
 
-    double work_estimate = (double)branch_count * ((double)s.iterations * 2.5 + 1.0);
+    double work_estimate = static_cast<double>(branch_count)
+                         * (static_cast<double>(s.iterations) * 2.5 + 1.0);
     //assumes that:
     // A. rescoring parsimony costs 1 (per source branch)
     // B. searching for possible moves costs 1 (per source branch)
@@ -204,7 +205,8 @@ int PhyloTree::optimizeSubtreeParsimony(ParsimonySearchParameters& s,
         size_t i=moves_considered;
         double work_step = 0;
         if (0<moves_considered) {
-            work_step = (double) branch_count / (double) moves_considered * 0.1;
+            work_step = static_cast<double>(branch_count) 
+                      / static_cast<double>(moves_considered) * 0.1;
         }
         while (0<i) {
             --i;

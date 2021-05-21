@@ -2019,8 +2019,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree,
 
 	if (params.partition_merge != MERGE_NONE) {
         double p = params.partfinder_rcluster/100.0;
-        double n = in_tree->size();
-        size_t num_pairs = static_cast<size_t>(round(n*(n-1)*p/2.0));
+        double n = static_cast<double>(in_tree->size());
+        size_t num_pairs = static_cast<size_t>(round(n*(n-1.0)*p/2.0));
         if (p < 1.0)
             num_pairs = min(num_pairs, params.partfinder_rcluster_max);
         total_num_model += num_pairs;
@@ -2217,16 +2217,16 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree,
             // computation cost is proportional to #sequences, #patterns, and #states
             {
                 Alignment* this_aln = in_tree->at(closest_pairs[i].first)->aln;
-                double nseq   = this_aln->getNSeq();
-                double npat   = this_aln->getNPattern();
-                double nstate = this_aln->num_states; 
+                double nseq   = static_cast<double>(this_aln->getNSeq());
+                double npat   = static_cast<double>(this_aln->getNPattern());
+                double nstate = static_cast<double>(this_aln->num_states);
                 closest_pairs[i].distance = -(nseq)*npat*nstate;
             }
             {
                 Alignment* this_aln = in_tree->at(closest_pairs[i].second)->aln;
-                double nseq   = this_aln->getNSeq();
-                double npat   = this_aln->getNPattern();
-                double nstate = this_aln->num_states; 
+                double nseq   = static_cast<double>(this_aln->getNSeq());
+                double npat   = static_cast<double>(this_aln->getNPattern());
+                double nstate = static_cast<double>(this_aln->num_states);
                 closest_pairs[i].distance -= -(nseq)*npat*nstate;
             }
         }
@@ -2429,9 +2429,9 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree,
         for (int i = 0; i < in_tree->size(); i++) {
             Alignment *this_aln = in_tree->at(i)->aln;
             // computation cost is proportional to #sequences, #patterns, and #states
-            double nseq = (double)this_aln->getNSeq();
-            double npat = this_aln->getNPattern();
-            double nstate = this_aln->num_states;
+            double nseq   = static_cast<double>(this_aln->getNSeq());
+            double npat   = static_cast<double>(this_aln->getNPattern());
+            double nstate = static_cast<double>(this_aln->num_states);
             partitionID.push_back({i, nseq * npat * nstate});
         }
         

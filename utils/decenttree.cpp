@@ -374,9 +374,12 @@ public:
         intptr_t adjSeqLen     = rawSeqLen - count_unknown;
         if (0<adjSeqLen) {
             if (correcting_distances) {
-                distance = correctDistance((double)char_distance, (double)adjSeqLen, (double)num_states);
+                distance = correctDistance(static_cast<double>(char_distance), 
+                                           static_cast<double>(adjSeqLen), 
+                                           static_cast<double>(num_states));
             } else {
-                distance = uncorrectedDistance((double)char_distance, (double)adjSeqLen);
+                distance = uncorrectedDistance(static_cast<double>(char_distance), 
+                                               static_cast<double>(adjSeqLen));
             }
             if (distance < 0) {
                 distance = 0;
@@ -433,7 +436,8 @@ public:
         bool   isTriangle = format.find("lower") != std::string::npos ||
                             format.find("upper") != std::string::npos;
         double halfIfTriangle = isTriangle ? 0.5 : 1.0;
-        double calculations   = (double)rank * (double)(rank) * halfIfTriangle;
+        double calculations   = static_cast<double>(rank) 
+                              * static_cast<double>(rank) * halfIfTriangle;
 
         #if USE_PROGRESS_DISPLAY
         const char* task = report_progress ? "Writing distance matrix file": "";
@@ -473,7 +477,7 @@ public:
                         line << " " << distance_row[column];
                     }
                 }
-                show_progress += (double)column_count;
+                show_progress += static_cast<double>(column_count);
             }
         } m(*this, progress);
         m.setSize(rank);

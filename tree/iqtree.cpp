@@ -3795,15 +3795,13 @@ void IQTree::getCompatibleNNIs(vector<NNIMove> &nniMoves,
 
 double IQTree::getAvgNumNNI() {
     if (vecNumNNI.size() == 0) {
-        return 0;
+        return 0.0;
     } else {
-        size_t median;
         size_t size = vecNumNNI.size();
         sort(vecNumNNI.begin(), vecNumNNI.end());
+        double median = static_cast<double>(vecNumNNI[size / 2]);
         if (size % 2 == 0) {
-            median = (vecNumNNI[size / 2 + 1] + vecNumNNI[size / 2]) / 2;
-        } else {
-            median = vecNumNNI[size / 2];
+            median = (median + static_cast<double>(vecNumNNI[size / 2 - 1])) * 0.5;
         }
         return median;
     }

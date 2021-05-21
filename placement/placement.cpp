@@ -69,7 +69,7 @@ int PlacementParameters::findEndOfIncrementalParameter(int i) const {
             --braceLevel;
         }
     }
-    return inc.length();
+    return static_cast<int>(inc.length());
 }
 
 

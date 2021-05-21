@@ -476,7 +476,7 @@ public:
     }
     void constructTree() {
         int         nseq          = tree.aln->getNSeq32();
-        double      work_estimate = (double)nseq * sqrt(nseq) * 2.0;
+        double      work_estimate = static_cast<double>(nseq) * sqrt(nseq) * 2.0;
         const char* task          = "Constructing tree with Parsimony Routing";
         tree.initProgress(work_estimate, task, "", "");
 
@@ -565,8 +565,8 @@ public:
                 insertCandidate(candidates[j], block_allocator, buffer[0]);
             }
             inserting.stop();
-            double work_done = (double) (stop_batch - start_batch)
-                             * (double) (sample_count+2);
+            double work_done = static_cast<double>(stop_batch - start_batch)
+                             * static_cast<double>(sample_count+2);
             tree.trackProgress(work_done);
             total_work += work_done;
             

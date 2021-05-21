@@ -30,7 +30,8 @@ double PhyloTree::recomputeParsimonyBranchLength(PhyloNode* fromNode, PhyloNode*
     PhyloNeighbor* backnei = toNode->findNeighbor(fromNode);
     int       branch_subst = 0;
     computeParsimonyBranchFast(nei, fromNode, &branch_subst);
-    double branch_length = (double) branch_subst / getAlnNSite();
+    double branch_length = static_cast<double>(branch_subst)
+                         / static_cast<double>(getAlnNSite());
     correctBranchLengthIfNeedBe(branch_length);
 
     nei->length     = branch_length;
@@ -526,7 +527,9 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
         //(each of which needs its own lh block)
     
     intptr_t newTaxaCount           = taxaIdsToAdd.size();
-    double   estimate_per_placement = 1.0 + floor((double)newTaxaCount / (double)leafNum / 2.0);
+    double   tax_per_leaf           = static_cast<double>(newTaxaCount) 
+                                    / static_cast<double>(leafNum);
+    double   estimate_per_placement = 1.0 + floor(tax_per_leaf/ 2.0);
     double   estimate               = newTaxaCount * (2.0 + estimate_per_placement);
     initProgress(estimate, description, "", "");
 

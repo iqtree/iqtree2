@@ -244,10 +244,7 @@ void ModelFileLoader::setParameterValue(const YAML::Node&      param,
     ASSERT(0<count);
     double dv   = 0.0; //default initial value
     if (p.type==ModelParameterType::FREQUENCY) {
-        dv = 1.0 / (double)count;
-                    //Todo: should be 1.0 divided by number of states
-                    //determined from the data type (info.data_type_name ?)
-                    //Or 1 divided by the number of parameters.
+        dv = 1.0 / static_cast<double>(count);
     } else if (p.type==ModelParameterType::PROPORTION) {
         dv = 1.0;
     } else if (p.type==ModelParameterType::RATE) {
@@ -255,7 +252,7 @@ void ModelFileLoader::setParameterValue(const YAML::Node&      param,
     } else if (p.type==ModelParameterType::SHAPE) {
         dv = 1.0;
     } else if (p.type==ModelParameterType::WEIGHT) {
-        dv = 1.0 / (double)count;    //Todo: Should be 1.0 divided by # of parameters
+        dv = 1.0 / static_cast<double>(count);    
     }
     //Todo: What if name was a list, and initValue is also a list?!
     p.init_expression = stringScalar(param, "initValue", "");
@@ -462,7 +459,9 @@ YAMLFileParameter
     p.maximum_subscript = info.getNumStates();
     p.type_name         = "frequency";
     p.type              = ModelParameterType::FREQUENCY;
-    p.value             = 1 / (double) info.getNumStates();
+    auto num_states     = info.getNumStates();
+    ASSERT(0 < num_states);
+    p.value            = 1 / static_cast<double>(num_states);
     info.addParameter(p);
     return p;
 }

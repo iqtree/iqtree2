@@ -185,9 +185,9 @@ public:
         ModelVariable& column_var = model_info.forceAssign("column", 0);
         
         for (int row = 0; row < rank; ++row) {
-            row_var.setValue((double)row+1);
+            row_var.setValue(static_cast<double>(row+1));
             for (int col = 0; col < rank; ++col) {
-                column_var.setValue((double)col+1);
+                column_var.setValue(static_cast<double>(col+1));
                 if (col != row) {
                     std::string expr_string =
                         model_info.getRateMatrixExpression(row,col);

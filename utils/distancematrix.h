@@ -364,7 +364,7 @@ public:
 
 template <class F=std::stringstream, class M> void loadDistanceMatrixFromOpenFile
 (F& in, bool reportProgress, M& matrix) {
-    size_t rank;
+    intptr_t rank;
     bool lower = false;
     bool upper = false;
     bool square = true;
@@ -378,7 +378,7 @@ template <class F=std::stringstream, class M> void loadDistanceMatrixFromOpenFil
 #else
     double progress = 0.0;
 #endif
-    for (size_t r = 0; r < matrix.getSize(); ++r) {
+    for (intptr_t r = 0; r < rank; ++r) {
         std::stringstream line;
         safeGetTrimmedLineAsStream(in, line);
         std::string name;
@@ -387,14 +387,14 @@ template <class F=std::stringstream, class M> void loadDistanceMatrixFromOpenFil
         if (upper) {
             //Copy column r from upper triangle (above the diagonal)
             //to the left part of row r (which is in the lower triangle).
-            for (size_t c = 0; c < r; ++c) {
+            for (intptr_t c = 0; c < r; ++c) {
                 matrix.cell(r, c) = matrix.cell(c, r);
             }
             matrix.cell(r, r) = 0;
         }
-        size_t cStart = (upper) ? (r + 1) : 0;
-        size_t cStop = (lower) ? r : matrix.getSize();
-        size_t c = cStart;
+        intptr_t cStart = (upper) ? (r + 1) : 0;
+        intptr_t cStop = (lower) ? r : rank;
+        intptr_t c = cStart;
         for (; line.tellg() != -1 && c < cStop; ++c) {
             line >> matrix.cell(r, c);
             //Ensure matrix is symmetric (as it is read!)
@@ -447,9 +447,9 @@ template <class F=std::stringstream, class M> void loadDistanceMatrixFromOpenFil
         ++progress;
     }
     if (lower) {
-        size_t n = matrix.getSize();
-        for (size_t r = 0; r < n; ++r) {
-            for (size_t c = r + 1; c < n; ++c) {
+        intptr_t n = matrix.getSize();
+        for (intptr_t r = 0; r < n; ++r) {
+            for (intptr_t c = r + 1; c < n; ++c) {
                 matrix.cell(r, c) = matrix.cell(c, r);
             }
         }

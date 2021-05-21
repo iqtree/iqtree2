@@ -806,12 +806,12 @@ ModelVariable& ModelInfoFromYAMLFile::forceAssign(const std::string& var_name,
 
 ModelVariable& ModelInfoFromYAMLFile::forceAssign(const std::string& var_name,
                                                   int value_to_set) {
-    return forceAssign(var_name, (double)value_to_set);
+    return forceAssign(var_name, static_cast<double>(value_to_set));
 }
 
 ModelVariable& ModelInfoFromYAMLFile::forceAssign(const char* var_name,
                                                   int value_to_set) {
-    return forceAssign(std::string(var_name), (double)value_to_set);
+    return forceAssign(std::string(var_name), static_cast<double>(value_to_set));
 }
 
 const StrVector& ModelInfoFromYAMLFile::getVariableNamesByPosition() const {
