@@ -6,6 +6,8 @@
 //
 
 #include "iqtreemix.h"
+#include "vectorclass/vectorclass.h"
+
 const double MIN_PROP = 0.001;
 const double MAX_PROP = 1000.0;
 
@@ -18,6 +20,7 @@ const double MAX_PROP = 1000.0;
 //    For example, MIX{GTR,GTR}+FO+T or GTR+MIX{FO+F0}+T is not be accepted
 // Similarly, the situation that a part of the site rate is linked while another part is unlinked is also not allowed.
 //    For example, GTR+MIX{I,I}+G4+T or GTR+I+MIX{G4+G4}+T is not be accepted
+// The tree weights can be fixed by: T{0.2,0.3,0.5}, otherwise, optimization on tree weights will be performed.
 
 IQTreeMix::IQTreeMix() : IQTree() {
     patn_freqs = NULL;
@@ -56,7 +59,11 @@ IQTreeMix::IQTreeMix(Params &params, Alignment *aln, vector<IQTree*> &trees) : I
     
     // number of optimization steps, default: number of Trees * 2
     // optimize_steps = 2 * size();
-    optimize_steps = 100;
+    // optimize_steps = 100;
+    optimize_steps = 1000;
+    
+    // initialize the tree weights as non-fixed, that means it needs to be optimized
+    isTreeWeightFixed = false;
 }
 
 IQTreeMix::~IQTreeMix() {
@@ -164,9 +171,9 @@ void rmSpace(string& s) {
 
 // to separate the submodel names and the site rate names from the full model name
 void IQTreeMix::separateModel(string modelName) {
-    size_t t_pos, i, k;
+    size_t t_pos, i, k, d_pos, d_pos2;
     string s;
-    vector<string> model_array, submodel_array;
+    vector<string> model_array, submodel_array, weight_array;
     
     rmSpace(modelName);
     treemix_model = modelName;
@@ -181,18 +188,48 @@ void IQTreeMix::separateModel(string modelName) {
         outError("This model is not a tree mixture model, because there is no '+T'");
     }
     if (t_pos < modelName.length()-2) {
-        ntree = atoi(modelName.substr(t_pos+2).c_str());
-        if (ntree < size()) {
-            
-            cout << endl << "NOTE: Only the first " << ntree << " trees in the treefile are considered, because '" <<  modelName.substr(t_pos+1) << "' has been specified!" << endl;
-            resize(ntree);
-            weights.resize(ntree);
-            double init_weight = 1.0 / (double) ntree;
-            for (i=0; i<ntree; i++) {
-                weights[i] = init_weight;
+        d_pos = t_pos+2;
+        while (d_pos < modelName.length() && isdigit(modelName[d_pos]))
+            d_pos++;
+        if (d_pos - t_pos > 2) {
+            ntree = atoi(modelName.substr(t_pos+2, d_pos-t_pos-2).c_str());
+            if (ntree < size()) {
+                cout << endl << "NOTE: Only the first " << ntree << " trees in the treefile are considered, because '" <<  modelName.substr(t_pos+1) << "' has been specified!" << endl;
+                resize(ntree);
+                weights.resize(ntree);
+                double init_weight = 1.0 / (double) ntree;
+                for (i=0; i<ntree; i++) {
+                    weights[i] = init_weight;
+                }
+            }
+        }
+        // check whether any tree weight is specified
+        if (d_pos < modelName.length() && modelName[d_pos] == '{') {
+            d_pos2 = modelName.find_first_of('}', d_pos+1);
+            if (d_pos2 != string::npos) {
+                s = modelName.substr(d_pos+1, d_pos2-d_pos-1);
+                separateStr(s, weight_array, ',');
+                if (weight_array.size() != ntree) {
+                    outError("The number of specified tree weights does not match with the number of trees");
+                }
+                double sum = 0.0;
+                for (i=0; i<ntree; i++) {
+                    weights[i] = atof(weight_array[i].c_str());
+                    sum += weights[i];
+                }
+                // normalize the weights
+                for (i=0; i<ntree; i++)
+                    weights[i] = weights[i] / sum;
+                isTreeWeightFixed = true;
+                cout << "The fixed tree weights:";
+                for (i=0; i<ntree; i++) {
+                    cout << " " << weights[i];
+                }
+                cout << endl;
             }
         }
     }
+    
     /*
     if (ntree <= 1) {
         outError("For tree mixture model, number of trees has to be at least 2.");
@@ -288,7 +325,7 @@ void IQTreeMix::initializeModel(Params &params, string model_name, ModelsBlock *
     models.clear();
     site_rates.clear();
     separateModel(model_name);
-    
+
     // initialize the models
     for (i=0; i<ntree; i++) {
         if (isLinkModel) {
@@ -301,7 +338,7 @@ void IQTreeMix::initializeModel(Params &params, string model_name, ModelsBlock *
                 if (siterate_names[0] != "E")
                     curr_model += "+" + siterate_names[0];
                 params.optimize_alg_gammai = "BFGS";
-                params.optimize_alg_freerate = "BFGS";
+                params.optimize_alg_freerate = "2-BFGS";
                 params.optimize_alg_mixlen = "BFGS";
             } else {
                 if (siterate_names[i] != "E")
@@ -361,6 +398,25 @@ void IQTreeMix::initializeModel(Params &params, string model_name, ModelsBlock *
             }
         }
     }
+    
+    /*
+    // initialize the tree weights using parsimony scores
+    double w_sum = 0.0;
+    cout << "parismony scores:";
+    for (i=0; i<ntree; i++) {
+        int par_score = at(i)->computeParsimony();
+        cout << " " << par_score;
+        weights[i] = 1.0 / (double) par_score;
+        w_sum += weights[i];
+    }
+    cout << endl;
+    cout << "tree weights are initialized as:";
+    for (i=0; i<ntree; i++) {
+        weights[i] = weights[i] / w_sum;
+        cout << " " << weights[i];
+    }
+    cout << endl;
+    */
 }
 
 double IQTreeMix::computeLikelihood(double *pattern_lh) {
@@ -490,11 +546,10 @@ double IQTreeMix::optimizeAllBranches(int my_iterations, double tolerance, int m
         prerequisite: computeLikelihood() has been invoked
 
  */
-double IQTreeMix::optimizeTreeWeightsByEM(double* pattern_mix_lh, int max_steps) {
+double IQTreeMix::optimizeTreeWeightsByEM(double* pattern_mix_lh, double gradient_epsilon, int max_steps) {
     size_t nptn, ntree, ptn, c;
     double *this_lk_cat;
     double lk_ptn;
-    double gradient_epsilon = 0.0001;
     double prev_score, score;
     int step;
 
@@ -528,15 +583,6 @@ double IQTreeMix::optimizeTreeWeightsByEM(double* pattern_mix_lh, int max_steps)
             if (weights[c] < 1e-10) weights[c] = 1e-10;
         }
 
-        // show the weights
-        cout << "[IQTreeMix::optimizeTreeWeights] weights:";
-        for (c = 0; c < ntree; c++) {
-            if (c > 0)
-                cout << ",";
-            cout << weights[c];
-        }
-        cout << endl;
-        
         initializeAllPartialLh();
         score = computeLikelihood();
         clearAllPartialLH();
@@ -556,8 +602,7 @@ double IQTreeMix::optimizeTreeWeightsByEM(double* pattern_mix_lh, int max_steps)
         prerequisite: computeLikelihood() has been invoked
 
  */
-double IQTreeMix::optimizeTreeWeightsByBFGS() {
-    double gradient_epsilon = 0.0001;
+double IQTreeMix::optimizeTreeWeightsByBFGS(double gradient_epsilon) {
     int ndim = size();
     size_t i;
     double *variables = new double[ndim+1]; // used for BFGS numerical recipes
@@ -776,102 +821,253 @@ int IQTreeMix::testNumThreads() {
     return at(0)->testNumThreads();
 }
 
-string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
+/**
+    optimize each tree separately
+ */
+void IQTreeMix::OptimizeTreesSeparately(bool printInfo, double gradient_epsilon) {
+    size_t step, i, ptn, nptn;
+    string result = "";
+    string curr_res;
+    PhyloTree* ptree;
+    double t_score, score, prev_score;
     
-    size_t i, ntree, nptn, ptn;
-    int step, n, substep;
-    double* pattern_mix_lh;
-    double gradient_epsilon = 0.0001;
-    double prev_score, prev_score2, score, t_score;
-    PhyloTree *ptree;
+    int n = 1;
 
-    ntree = size();
-    nptn = aln->getNPattern();
-    
-    // allocate memory
-    pattern_mix_lh = new double[ntree * nptn];
-
-    prev_score = computeLikelihood();
+    score = computeLikelihood();
+    prev_score = score;
     for (step = 0; step < optimize_steps; step++) {
-        n = 1;
         
-        prev_score2 = prev_score;
-        for (substep = 0; substep < step+1 ; substep++) {
-            
-            // compute the ptn_freq array according to the posterior probabilities along each site for each tree
-            computeFreqArray(pattern_mix_lh, false);
-
-            // optimize tree branches
-            score = optimizeAllBranches(n, logl_epsilon);  // loop max n times
-            cout << "after optimizing branches, likelihood = " << score << endl;
-        
-            // optimize tree weights
-            score = optimizeTreeWeightsByEM(pattern_mix_lh, n);  // loop max n times
-            // score = optimizeTreeWeightsByBFGS();
-            cout << "after optimizing tree weights, likelihood = " << score << endl;
-
-            // optimize the unlinked subsitution models one by one
-            if (!isLinkModel) {
-                for (i=0; i<models.size(); i++) {
-                    models[i]->optimizeParameters(gradient_epsilon);
-                }
-                score = computeLikelihood();
-                cout << "after optimizing unlinked subsitution model, likelihood = " << score << endl;
-            }
-            
-            // optimize the unlinked site-rate models one by one
-            if (anySiteRate && !isLinkSiteRate) {
-                for (i=0; i<site_rates.size(); i++) {
-                    site_rates[i]->optimizeParameters(gradient_epsilon);
-                }
-                score = computeLikelihood();
-                cout << "after optimizing unlinked site-rate model, likelihood = " << score << endl;
-            }
-            
-            score = computeLikelihood();
-
-            if (score < prev_score2 + gradient_epsilon) {
-                // converged
-                break;
-            }
-            prev_score2 = score;
-        }
-        cout << "substep = " << substep << endl;
-        
-        // reset the ptn_freq array to the original frequencies of the patterns
-        for (i = 0; i < ntree; i++) {
-            for (ptn = 0; ptn < nptn; ptn++) {
-                at(i)->ptn_freq[ptn] = patn_freqs[ptn];
-            }
-        }
-        
-        // optimize the linked subsitution model
-        if (isLinkModel) {
-            t_score = models[0]->optimizeParameters(gradient_epsilon);
-            if (t_score < 0.0)
-                score = t_score;
-            cout << "after optimizing linked subsitution model, likelihood = " << score << "(t_score=" << t_score << ")" << endl;
-        }
-
         // optimize the linked site rate model
         if (anySiteRate && isLinkSiteRate) {
             t_score = site_rates[0]->optimizeParameters(gradient_epsilon);
             if (t_score < 0.0)
                 score = t_score;
-            cout << "after optimizing linked site rate model, likelihood = " << score << "(t_score=" << t_score << ")" << endl;
         }
 
-        cout << "step= " << step << " score=" << score << endl;
+        // optimize the linked subsitution model
+        if (isLinkModel) {
+            t_score = models[0]->optimizeParameters(gradient_epsilon);
+            if (t_score < 0.0)
+                score = t_score;
+        }
+
+        // optimize the unlinked site-rate models one by one
+        if (anySiteRate && !isLinkSiteRate) {
+            for (i=0; i<site_rates.size(); i++) {
+                site_rates[i]->optimizeParameters(gradient_epsilon);
+            }
+        }
+
+        // optimize the unlinked subsitution models one by one
+        if (!isLinkModel) {
+            for (i=0; i<models.size(); i++) {
+                models[i]->optimizeParameters(gradient_epsilon);
+            }
+        }
+
+        // optimize tree branches
+        score = optimizeAllBranches(n, gradient_epsilon);  // loop max n times
+        
+        score = computeLikelihood();
+            
         if (score < prev_score + gradient_epsilon) {
             // converged
             break;
         }
         prev_score = score;
     }
+}
+
+/**
+    Initialize the tree weights using parsimony scores
+    Idea:
+    1. Check the parsimony score for each tree along all the sites
+    2. Select the sites with different parsimony score between the trees.
+    3. For each selected site, we check which parsimony score of the tree is minimum, and assign the site to the tree.
+    4. The tree weights are estimated according to the proportion of the sites assigned to each tree.
+ */
+void IQTreeMix::initializeTreeWeights() {
+    size_t i, j, ntree, nptn;
+    
+    ntree = size();
+    nptn = aln->ordered_pattern.size();
+    UINT* ptn_scores = new UINT[ntree * nptn];
+    UINT* curr_ptn_scores;
+    UINT min_par_score;
+    vector<int> tree_with_min_pars;
+    double weight_sum;
+    
+    // compute the parsimony scores along patterns for each tree
+    for (i=0; i<ntree; i++) {
+        curr_ptn_scores = ptn_scores + i * nptn;
+
+        at(i)->initCostMatrix(CM_UNIFORM);
+        at(i)->setParsimonyKernel(params->SSE);
+        at(i)->computeTipPartialParsimony();
+        at(i)->computeParsimonyOutOfTreeSankoff(curr_ptn_scores);
+    }
+    
+    // reset the tree weights
+    for (i=0; i<ntree; i++) {
+        weights[i] = 0.0;
+    }
+    
+    // estimate the tree weights
+    for (i=0; i<nptn; i++) {
+        min_par_score = ptn_scores[i];
+        tree_with_min_pars.clear();
+        tree_with_min_pars.push_back(0);
+        for (j=1; j<ntree; j++) {
+            if (ptn_scores[i+j*nptn] < min_par_score) {
+                tree_with_min_pars.clear();
+                tree_with_min_pars.push_back(j);
+                min_par_score = ptn_scores[i+j*nptn];
+            } else if (ptn_scores[i+j*nptn] == min_par_score) {
+                tree_with_min_pars.push_back(j);
+            }
+        }
+        if (tree_with_min_pars.size() < ntree) {
+            for (j=0; j<tree_with_min_pars.size(); j++) {
+                weights[tree_with_min_pars[j]] += aln->ordered_pattern[i].frequency;
+            }
+        }
+    }
+    
+    // normalize the tree weights
+    weight_sum = 0.0;
+    for (i=0; i<ntree; i++) {
+        weight_sum += weights[i];
+    }
+    for (i=0; i<ntree; i++) {
+        weights[i] = weights[i] / weight_sum;
+    }
+    
+    // show the initial tree weights
+    cout << "According to the parsimony scores along the sites, the tree weights are initialized to:";
+    for (i=0; i<ntree; i++) {
+        cout << " " << weights[i];
+    }
+    cout << endl;
+
+    delete[] ptn_scores;
+}
+
+string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
+    
+    size_t i, ntree, nptn, ptn;
+    int step, n, substep;//, nsubstep;
+    double* pattern_mix_lh;
+    double gradient_epsilon = 0.0001;
+    double epsilon_start = gradient_epsilon; // 1;
+    double epsilon_step = 0.1;
+    double curr_epsilon = epsilon_start;
+    double prev_score, prev_score2, score, t_score;
+    PhyloTree *ptree;
+
+    n = 1;
+    ntree = size();
+    nptn = aln->getNPattern();
+    
+    // allocate memory
+    pattern_mix_lh = new double[ntree * nptn];
+    
+    // initialize the tree weights according to parsimony scores along the sites
+    initializeTreeWeights();
+    
+    prev_score = score = -DBL_MAX;
+
+    for (step = 0; step < optimize_steps || true; step++) {
+        
+        if (step > 0) {
+            // reset the ptn_freq array to the original frequencies of the patterns
+            for (i = 0; i < ntree; i++) {
+                for (ptn = 0; ptn < nptn; ptn++) {
+                    at(i)->ptn_freq[ptn] = patn_freqs[ptn];
+                }
+            }
+        }
+
+        // optimize the linked site rate model
+        if (anySiteRate && isLinkSiteRate) {
+            site_rates[0]->optimizeParameters(curr_epsilon);
+            // cout << "after optimizing linked site rate model, likelihood = " << score << "(t_score=" << t_score << ")" << endl;
+        }
+
+        // optimize the linked subsitution model
+        if (isLinkModel) {
+            models[0]->optimizeParameters(curr_epsilon);
+            // cout << "after optimizing linked subsitution model, likelihood = " << score << "(t_score=" << t_score << ")" << endl;
+        }
+        
+        score = computeLikelihood();
+        prev_score2 = score;
+        
+        for (substep = 0; substep<step+1; substep++) {
+            
+            // compute the ptn_freq array according to the posterior probabilities along each site for each tree
+            computeFreqArray(pattern_mix_lh, false);
+
+            // optimize tree branches
+            score = optimizeAllBranches(1, curr_epsilon);  // loop max n times
+            // cout << "after optimizing branches, likelihood = " << score << endl;
+
+            // optimize the unlinked subsitution models one by one
+            if (!isLinkModel) {
+                for (i=0; i<models.size(); i++) {
+                    models[i]->optimizeParameters(curr_epsilon);
+                }
+                score = computeLikelihood();
+                // cout << "after optimizing unlinked subsitution model, likelihood = " << score << endl;
+            }
+
+            // optimize the unlinked site-rate models one by one
+            if (anySiteRate && !isLinkSiteRate) {
+                for (i=0; i<site_rates.size(); i++) {
+                    site_rates[i]->optimizeParameters(curr_epsilon);
+                }
+                score = computeLikelihood();
+                // cout << "after optimizing unlinked site-rate model, likelihood = " << score << endl;
+            }
+
+            // optimize tree weights
+            if (!isTreeWeightFixed) {
+                // score = optimizeTreeWeightsByEM(pattern_mix_lh, curr_epsilon, 1);  // loop max n times
+                score = optimizeTreeWeightsByEM(pattern_mix_lh, curr_epsilon, 1);  // loop max n times
+            }
+
+            score = computeLikelihood();
+            if (score < prev_score2 + curr_epsilon) {
+                // converged
+                break;
+            }
+            prev_score2 = score;
+        }
+        
+        // cout << "step= " << step << " substep = " << substep << " curr_epsilon=" << curr_epsilon << " score=" << score << endl;
+
+        if (score < prev_score + curr_epsilon && curr_epsilon > gradient_epsilon) {
+            // update the epsilon value
+            curr_epsilon = curr_epsilon * epsilon_step;
+        } else if (score < prev_score + gradient_epsilon) {
+            // converged
+            break;
+        }
+
+        prev_score = score;
+    }
 
     setCurScore(score);
 
     delete[] pattern_mix_lh;
+
+    // show the weights
+    cout << "Final estimation on weights:";
+    for (i = 0; i < ntree; i++) {
+        if (i > 0)
+            cout << ",";
+        cout << weights[i];
+    }
+    cout << endl;
     
     return getTreeString();
 }

@@ -354,6 +354,7 @@ class PhyloTree : public MTree, public Optimization, public CheckpointFactory {
     friend class ModelFactoryMixlen;
     friend class MemSlotVector;
     friend class ModelFactory;
+    friend class IQTreeMix;
 
 public:
     /**
@@ -687,7 +688,7 @@ public:
 
     template<class VectorClass>
     int computeParsimonyBranchSankoffSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
-
+    
 //    void printParsimonyStates(PhyloNeighbor *dad_branch = NULL, PhyloNode *dad = NULL);
 
     virtual void setParsimonyKernel(LikelihoodKernel lk);
@@ -736,6 +737,13 @@ public:
      @return parsimony score of the tree
      */
     int computeParsimonyBranchSankoff(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
+
+    /**
+     compute tree parsimony score along the patterns
+     @param ptn_scores (OUT) parsimony scores along the patterns
+     @return parsimony score of the tree
+     */
+    UINT computeParsimonyOutOfTreeSankoff(UINT* ptn_scores);
 
     /****************************************************************************
             likelihood function

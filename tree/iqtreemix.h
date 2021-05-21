@@ -69,8 +69,8 @@ public:
             prerequisite: computeLikelihood() has been invoked
 
      */
-    double optimizeTreeWeightsByEM(double* pattern_mix_lh, int max_steps);
-    double optimizeTreeWeightsByBFGS();
+    double optimizeTreeWeightsByEM(double* pattern_mix_lh, double gradient_epsilon, int max_steps);
+    double optimizeTreeWeightsByBFGS(double gradient_epsilon);
 
     virtual void showTree();
     
@@ -129,6 +129,16 @@ public:
     */
     virtual int testNumThreads();
 
+    /**
+        Initialize the tree weights using parsimony scores
+        Idea:
+        1. Check the parsimony score for each tree along all the sites
+        2. Select the sites with different parsimony score between the trees.
+        3. For each selected site, we check which parsimony score of the tree is minimum, and assign the site to the tree.
+        4. The tree weights are estimated according to the proportion of the sites assigned to each tree.
+     */
+    void initializeTreeWeights();
+    
     string optimizeModelParameters(bool printInfo, double logl_epsilon);
 
     /**
@@ -250,6 +260,11 @@ private:
             get posterior probabilities along each site for each tree
      */
     void getPostProb(double* pattern_mix_lh, bool need_computeLike);
+    
+    /**
+            optimize each tree separately
+     */
+    void OptimizeTreesSeparately(bool printInfo, double logl_epsilon);
 
     // -------------------------------------
     // for BFGS optimzation on tree weights
@@ -323,6 +338,11 @@ private:
             initial site rates
      */
     vector<RateHeterogeneity*> initial_site_rates;
+    
+    /**
+            is the tree weights fixed
+     */
+    bool isTreeWeightFixed;
 };
 
 #endif /* iqtreemix_h */
