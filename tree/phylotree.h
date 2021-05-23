@@ -2014,6 +2014,15 @@ public:
 
     double recomputeParsimonyBranchLength(PhyloNode* fromNode, PhyloNode* toNode);
 
+    /**
+            Adjusts parsimony branch lengths ()
+            @param  fromNode
+            @param  toNode
+            @param  substitutions_on_branch
+     */
+    void   adjustParsimonyBranchSubstitutionCount(PhyloNode* fromNode, PhyloNode* toNode,
+                                                  int& substitutions_on_branch) const;
+
     
     /****************************************************************************
             Distance function

@@ -621,15 +621,13 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.aln_nogaps = false;
     params.aln_no_const_sites = false;
     params.print_aln_info = false;
-//    params.parsimony = false;
-//    params.parsimony_tree = false;
     params.tree_spr = false;
     params.max_spr_iterations = 0;
     params.nexus_output = false;
     params.k_representative = 4;
     params.loglh_epsilon = 0.001;
     params.numSmoothTree = 1;
-    params.use_compute_parsimony_tree_new = false;
+    params.use_compute_parsimony_tree_new = true;   //default to parallelized one
     params.use_batch_parsimony_addition   = false;
     params.distance_uses_max_threads      = false;
     params.parsimony_uses_max_threads     = false;
@@ -1234,6 +1232,17 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
             if (arg=="-cud") {
                 params.count_unknown_as_different = true;
+                continue;
+            }
+            if (arg=="-cuss") {
+                if (!params.count_uninformative_sites_for_parsimony) {
+                    params.add_uninformative_sites_to_parsimony_length = true;
+                }
+                continue;
+            }
+            if (arg=="-cusp") {
+                params.count_uninformative_sites_for_parsimony     = true;
+                params.add_uninformative_sites_to_parsimony_length = false;
                 continue;
             }
             if (arg=="-pll-spr") {
@@ -4542,6 +4551,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --redo-tree          Restore ModelFinder and only redo tree search" << endl
     << "  --undo               Revoke finished run, used when changing some options" << endl
     << "  --cptime NUM         Minimum checkpoint interval (default: 60 sec and adapt)" << endl
+
     << endl << "PARTITION MODEL:" << endl
     << "  -p FILE|DIR          NEXUS/RAxML partition file or directory with alignments" << endl
     << "                       Edge-linked proportional partition model" << endl
@@ -4550,19 +4560,20 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -S FILE|DIR          Like -p but separate tree inference" << endl
     << "  --subsample NUM      Randomly sub-sample partitions (negative for complement)" << endl
     << "  --subsample-seed NUM Random number seed for --subsample" << endl
+
     << endl << "LIKELIHOOD/QUARTET MAPPING:" << endl
     << "  --lmap NUM           Number of quartets for likelihood mapping analysis" << endl
     << "  --lmclust FILE       NEXUS file containing clusters for likelihood mapping" << endl
     << "  --quartetlh          Print quartet log-likelihoods to .quartetlh file" << endl
+
     << endl << "TREE SEARCH ALGORITHM:" << endl
-//            << "  -pll                 Use phylogenetic likelihood library (PLL) (default: off)" << endl
+//  << "  -pll                 Use phylogenetic likelihood library (PLL) (default: off)" << endl
     << "  --ninit NUM          Number of initial parsimony trees (default: 100)" << endl
     << "  --ntop NUM           Number of top initial trees (default: 20)" << endl
     << "  --nbest NUM          Number of best trees retained during search (defaut: 5)" << endl
     << "  -n NUM               Fix number of iterations to stop (default: OFF)" << endl
     << "  --nstop NUM          Number of unsuccessful iterations to stop (default: 100)" << endl
     << "  --perturb NUM        Perturbation strength for randomized NNI (default: 0.5)" << endl
-    << "  --radius NUM         Radius for parsimony SPR search (default: 6)" << endl
     << "  --allnni             Perform more thorough NNI search (default: OFF)" << endl
     << "  -g FILE              (Multifurcating) topological constraint tree file" << endl
     << "  --fast               Fast search to resemble FastTree" << endl
@@ -4573,8 +4584,33 @@ void usage_iqtree(char* argv[], bool full_command) {
 #ifdef IQTREE_TERRAPHAST
     << "  --terrace            Check if the tree lies on a phylogenetic terrace" << endl
 #endif
-//            << "  -iqp                 Use the IQP tree perturbation (default: randomized NNI)" << endl
-//            << "  -iqpnni              Switch back to the old IQPNNI tree search algorithm" << endl
+//  << "  -iqp                 Use the IQP tree perturbation (default: randomized NNI)" << endl
+//  << "  -iqpnni              Switch back to the old IQPNNI tree search algorithm" << endl
+
+    << endl << "INITIAL TREES AND MAXIMUM PARSIMONY:" << endl
+    << "  -t ALGORITHM         Use distance matrix algorithm to generate initial tree" << endl
+    << "                       (NJ, RapidNJ, UNJ, BIONJ, BIONJ-R, UPGMA) (default: RapidNJ)" << endl
+    << "  -dobs                Use uncorrected observed distances as inputs to initial tree" << endl
+    << "  -t PARS              Generate initial tree using stepwise parsiomny" << endl
+    << "  -t PLLPARS           Generate initial tree using PLL library's parsimony " << endl
+    << "  -old-stepwise-parsimony   Use an older, less parallel, stepwise parsimony addition" << endl
+    << "  -parsimony-batch     Use batches, rather than single taxa, for stepwise parsimony" << endl
+    << "  -parsimony-nni NUM   Set number of iterationa of parsimony SPR" << endl
+    << "  -parsimony-spr NUM   Number of parsimony SPR iterations (default:none)" << endl
+    << "  --radius NUM         Radius for parsimony SPR search (default: 20)" << endl
+    << "  -spr-radius NUM      Radius for parismony SPR search (default: 20)" << endl
+    << "  -parsimony-tbr NUM   Number of parsimony TBR iterations (default: none)" << endl
+    << "  -tbr-radius NUM      Radius for parsimony TBR search (default: 10)" << endl
+    << "  -parsimony-hybrid NUM Number of combined SPR/TBR iterations (default: none)" << endl
+    << "  -parsimony-uses-max-threads   Use all available threads for parsimony" << endl
+    << "  -cuss                Count uninformative sites toward parsimony branch lengths" << endl
+    << "  -cusp                Count uninformative sites toward parsimony scores" << endl
+    << "  -ppl-spr             Use PLL library's parsimony SPR implementation" << endl
+    << "                       (-cuss and -cusp have no effect if PLL's SPR is used)" << endl
+    << "  -no-ml-dist          Do not construct a second initial tree using Likelihood distance" << endl
+    << "  -optimize-ml-tree-with-parsimony  Use parsimony NNI, SPR, or TBR on second initial tree" << endl
+    << "  -no-ml               Do not use maximum likelihood at all" << endl
+
     << endl << "ULTRAFAST BOOTSTRAP/JACKKNIFE:" << endl
     << "  -B, --ufboot NUM     Replicates for ultrafast bootstrap (>=1000)" << endl
     << "  -J, --ufjack NUM     Replicates for ultrafast jackknife (>=1000)" << endl
@@ -4582,12 +4618,12 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --sampling STRING    GENE|GENESITE resampling for partitions (default: SITE)" << endl
     << "  --boot-trees         Write bootstrap trees to .ufboot file (default: none)" << endl
     << "  --wbtl               Like --boot-trees but also writing branch lengths" << endl
-//            << "  -n <#iterations>     Minimum number of iterations (default: 100)" << endl
     << "  --nmax NUM           Maximum number of iterations (default: 1000)" << endl
     << "  --nstep NUM          Iterations for UFBoot stopping rule (default: 100)" << endl
     << "  --bcor NUM           Minimum correlation coefficient (default: 0.99)" << endl
     << "  --beps NUM           RELL epsilon to break tie (default: 0.5)" << endl
     << "  --bnni               Optimize UFBoot trees by NNI on bootstrap alignment" << endl
+
     << endl << "NON-PARAMETRIC BOOTSTRAP/JACKKNIFE:" << endl
     << "  -b, --boot NUM       Replicates for bootstrap + ML tree + consensus tree" << endl
     << "  -j, --jack NUM       Replicates for jackknife + ML tree + consensus tree" << endl
@@ -4597,12 +4633,13 @@ void usage_iqtree(char* argv[], bool full_command) {
 #ifdef USE_BOOSTER
     << "  --tbe                Transfer bootstrap expectation" << endl
 #endif
-//            << "  -t <threshold>       Minimum bootstrap support [0...1) for consensus tree" << endl
+
     << endl << "SINGLE BRANCH TEST:" << endl
     << "  --alrt NUM           Replicates for SH approximate likelihood ratio test" << endl
     << "  --alrt 0             Parametric aLRT test (Anisimova and Gascuel 2006)" << endl
     << "  --abayes             approximate Bayes test (Anisimova et al. 2011)" << endl
     << "  --lbp NUM            Replicates for fast local bootstrap probabilities" << endl
+
     << endl << "MODEL-FINDER:" << endl
     << "  -m TESTONLY          Standard model selection (like jModelTest, ProtTest)" << endl
     << "  -m TEST              Standard model selection followed by tree inference" << endl
@@ -4624,7 +4661,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --cmin NUM           Min categories for FreeRate model [+R] (default: 2)" << endl
     << "  --cmax NUM           Max categories for FreeRate model [+R] (default: 10)" << endl
     << "  --merit AIC|AICc|BIC  Akaike|Bayesian information criterion (default: BIC)" << endl
-//            << "  -msep                Perform model selection and then rate selection" << endl
+//  << "  -msep                Perform model selection and then rate selection" << endl
     << "  --mtree              Perform full tree search for every model" << endl
     << "  --madd STR,...       List of mixture models to consider" << endl
     << "  --mdef FILE          Model definition NEXUS file (see Manual)" << endl
@@ -4668,6 +4705,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "      Non-reversible:  STRSYM (strand symmetric model, equiv. WS6.6)," << endl
     << "                       NONREV, UNREST (unrestricted model, equiv. 12.12)" << endl
     << "           Otherwise:  Name of file containing user-model parameters" << endl
+
     << endl << "STATE FREQUENCY:" << endl
     << "  -m ...+F             Empirically counted frequencies from alignment" << endl
     << "  -m ...+FO            Optimized frequencies by maximum-likelihood" << endl
@@ -4695,8 +4733,8 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --gamma-median       Median approximation for +G site rates (default: mean)" << endl
     << "  --rate               Write empirical Bayesian site rates to .rate file" << endl
     << "  --mlrate             Write maximum likelihood site rates to .mlrate file" << endl
-//            << "  --mhrate             Computing site-specific rates to .mhrate file using" << endl
-//            << "                       Meyer & von Haeseler (2003) method" << endl
+//  << "  --mhrate             Computing site-specific rates to .mhrate file using" << endl
+//  << "                       Meyer & von Haeseler (2003) method" << endl
 
     << endl << "POLYMORPHISM AWARE MODELS (PoMo):"                                           << endl
     << "  -s FILE              Input counts file (see manual)"                               << endl
@@ -4732,8 +4770,8 @@ void usage_iqtree(char* argv[], bool full_command) {
     << endl << "TEST OF SYMMETRY:" << endl
     << "  --symtest               Perform three tests of symmetry" << endl
     << "  --symtest-only          Do --symtest then exist" << endl
-//    << "  --bisymtest             Perform three binomial tests of symmetry" << endl
-//    << "  --symtest-perm NUM      Replicates for permutation tests of symmetry" << endl
+//  << "  --bisymtest             Perform three binomial tests of symmetry" << endl
+//  << "  --symtest-perm NUM      Replicates for permutation tests of symmetry" << endl
     << "  --symtest-remove-bad    Do --symtest and remove bad partitions" << endl
     << "  --symtest-remove-good   Do --symtest and remove good partitions" << endl
     << "  --symtest-type MAR|INT  Use MARginal/INTernal test when removing partitions" << endl
@@ -4748,9 +4786,10 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -s FILE              Sequence alignment for --scf" << endl
     << "  -p FILE|DIR          Partition file or directory for --scf" << endl
     << "  --cf-verbose         Write CF per tree/locus to cf.stat_tree/_loci" << endl
-    << "  --cf-quartet         Write sCF for all resampled quartets to .cf.quartet" << endl
+    << "  --cf-quartet         Write sCF for all resampled quartets to .cf.quartet" << endl;
 
 #ifdef USE_LSD2
+    cout 
     << endl << "TIME TREE RECONSTRUCTION:" << endl
     << "  --date FILE          File containing dates of tips or ancestral nodes" << endl
     << "  --date TAXNAME       Extract dates from taxon names after last '|'" << endl
@@ -4762,14 +4801,15 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --date-outlier NUM   Z-score cutoff to remove outlier tips/nodes (e.g. 3)" << endl
     << "  --date-options \"..\"  Extra options passing directly to LSD2" << endl
     << "  --dating STRING      Dating method: LSD for least square dating (default)" << endl
-#endif
-    << endl;
-    
+#endif    
 
-//            << endl << "TEST OF MODEL HOMOGENEITY:" << endl
-//            << "  -m WHTEST            Testing model (GTR+G) homogeneity assumption using" << endl
-//            << "                       Weiss & von Haeseler (2003) method" << endl
-//            << "  -ns <#simulations>   #Simulations to obtain null-distribution (default: 1000)" << endl
+#if (0)
+    count
+    << endl << "TEST OF MODEL HOMOGENEITY:" << endl
+    << "  -m WHTEST            Testing model (GTR+G) homogeneity assumption using" << endl
+    << "                       Weiss & von Haeseler (2003) method" << endl
+    << "  -ns <#simulations>   #Simulations to obtain null-distribution (default: 1000)" << endl;
+#endif
 
     if (full_command) {
     cout
@@ -4781,14 +4821,14 @@ void usage_iqtree(char* argv[], bool full_command) {
         << "  --con-tree           Compute consensus tree to .contree file" << endl
         << "  --con-net            Computing consensus network to .nex file" << endl
         << "  --support FILE       Assign support values into this tree from -t trees" << endl
-        //<< "  -sup2 FILE           Like -sup but -t trees can have unequal taxon sets" << endl
+    //  << "  -sup2 FILE           Like -sup but -t trees can have unequal taxon sets" << endl
         << "  --suptag STRING      Node name (or ALL) to assign tree IDs where node occurs" << endl
         << endl << "TREE DISTANCE BY ROBINSON-FOULDS (RF) METRIC:" << endl
         << "  --tree-dist-all      Compute all-to-all RF distances for -t trees" << endl
         << "  --tree-dist FILE     Compute RF distances between -t trees and this set" << endl
         << "  --tree-dist2 FILE    Like -rf but trees can have unequal taxon sets" << endl
-    //            << "  -rf_adj              Computing RF distances of adjacent trees in <treefile>" << endl
-    //            << "  -wja                 Write ancestral sequences by joint reconstruction" << endl
+    //  << "  -rf_adj              Computing RF distances of adjacent trees in <treefile>" << endl
+    //  << "  -wja                 Write ancestral sequences by joint reconstruction" << endl
 
 
         << endl
@@ -4796,7 +4836,7 @@ void usage_iqtree(char* argv[], bool full_command) {
         << "GENERATING RANDOM TREES:" << endl
         << "  -r NUM               No. taxa for Yule-Harding random tree" << endl
         << "  --rand UNI|CAT|BAL   UNIform | CATerpillar | BALanced random tree" << endl
-        //<< "  --rand NET           Random circular split network" << endl
+    //  << "  --rand NET           Random circular split network" << endl
         << "  --rlen NUM NUM NUM   min, mean, and max random branch lengths" << endl
 
         << endl << "MISCELLANEOUS:" << endl
@@ -4815,11 +4855,10 @@ void usage_iqtree(char* argv[], bool full_command) {
         << "  --no-outfiles        Suppress printing output files" << endl
         << "  --eigenlib           Use Eigen3 library" << endl
         << "  -alninfo             Print alignment sites statistics to .alninfo" << endl
-    //            << "  -d <file>            Reading genetic distances from file (default: JC)" << endl
-    //			<< "  -d <outfile>         Calculate the distance matrix inferred from tree" << endl
-    //			<< "  -stats <outfile>     Output some statistics about branch lengths" << endl
-    //			<< "  -comp <treefile>     Compare tree with each in the input trees" << endl;
-
+    //  << "  -d <file>            Reading genetic distances from file (default: JC)" << endl
+    //	<< "  -d <outfile>         Calculate the distance matrix inferred from tree" << endl
+    //	<< "  -stats <outfile>     Output some statistics about branch lengths" << endl
+    //	<< "  -comp <treefile>     Compare tree with each in the input trees" << endl;
         << endl;
     }
 
@@ -5423,88 +5462,88 @@ void print_stacktrace(ostream &out, unsigned int max_frames)
     // iterate over the returned symbol lines. skip the first, it is the
     // address of this function.
     for (int i = 1; i < addrlen; ++i) {
-	char *begin_name = 0, *begin_offset = 0;
+        char *begin_name = 0, *begin_offset = 0;
 
-	// find parentheses and +address offset surrounding the mangled name:
-#ifdef __clang__
-      // OSX style stack trace
-      for ( char *p = symbollist[i]; *p; ++p )
-      {
-         if (( *p == '_' ) && ( *(p-1) == ' ' ))
-            begin_name = p-1;
-         else if ( *p == '+' )
-            begin_offset = p-1;
-      }
+        // find parentheses and +address offset surrounding the mangled name:
+    #ifdef __clang__
+        // OSX style stack trace
+        for ( char *p = symbollist[i]; *p; ++p )
+        {
+            if (( *p == '_' ) && ( *(p-1) == ' ' ))
+                begin_name = p-1;
+            else if ( *p == '+' )
+                begin_offset = p-1;
+        }
 
-      if ( begin_name && begin_offset && ( begin_name < begin_offset ))
-      {
-         *begin_name++ = '\0';
-         *begin_offset++ = '\0';
+        if ( begin_name && begin_offset && ( begin_name < begin_offset ))
+        {
+            *begin_name++ = '\0';
+            *begin_offset++ = '\0';
 
-         // mangled name is now in [begin_name, begin_offset) and caller
-         // offset in [begin_offset, end_offset). now apply
-         // __cxa_demangle():
-         int status;
-         char* ret = abi::__cxa_demangle( begin_name, &funcname[0],
-                                          &funcnamesize, &status );
-         if ( status == 0 )
-         {
-            funcname = ret; // use possibly realloc()-ed string
-//            out << "  " << symbollist[i] << " : " << funcname << "+"<< begin_offset << endl;
-            out << i << "   "  << funcname << endl;
-         } else {
-            // demangling failed. Output function name as a C function with
-            // no arguments.
-//             out << "  " << symbollist[i] << " : " << begin_name << "()+"<< begin_offset << endl;
-            out << i << "   " << begin_name << "()" << endl;
-         }
+            // mangled name is now in [begin_name, begin_offset) and caller
+            // offset in [begin_offset, end_offset). now apply
+            // __cxa_demangle():
+            int status;
+            char* ret = abi::__cxa_demangle( begin_name, &funcname[0],
+                                            &funcnamesize, &status );
+            if ( status == 0 )
+            {
+                funcname = ret; // use possibly realloc()-ed string
+    //            out << "  " << symbollist[i] << " : " << funcname << "+"<< begin_offset << endl;
+                out << i << "   "  << funcname << endl;
+            } else {
+                // demangling failed. Output function name as a C function with
+                // no arguments.
+    //             out << "  " << symbollist[i] << " : " << begin_name << "()+"<< begin_offset << endl;
+                out << i << "   " << begin_name << "()" << endl;
+            }
 
-#else // !DARWIN - but is posix
-         // ./module(function+0x15c) [0x8048a6d]
-    char *end_offset = 0;
-	for (char *p = symbollist[i]; *p; ++p)
-	{
-	    if (*p == '(')
-		begin_name = p;
-	    else if (*p == '+')
-		begin_offset = p;
-	    else if (*p == ')' && begin_offset) {
-		end_offset = p;
-		break;
-	    }
-	}
+    #else // !DARWIN - but is posix
+            // ./module(function+0x15c) [0x8048a6d]
+        char *end_offset = 0;
+        for (char *p = symbollist[i]; *p; ++p)
+        {
+            if (*p == '(')
+            begin_name = p;
+            else if (*p == '+')
+            begin_offset = p;
+            else if (*p == ')' && begin_offset) {
+            end_offset = p;
+            break;
+            }
+        }
 
-	if (begin_name && begin_offset && end_offset
-	    && begin_name < begin_offset)
-	{
-	    *begin_name++ = '\0';
-	    *begin_offset++ = '\0';
-	    *end_offset = '\0';
+        if (begin_name && begin_offset && end_offset
+            && begin_name < begin_offset)
+        {
+            *begin_name++ = '\0';
+            *begin_offset++ = '\0';
+            *end_offset = '\0';
 
-	    // mangled name is now in [begin_name, begin_offset) and caller
-	    // offset in [begin_offset, end_offset). now apply
-	    // __cxa_demangle():
+            // mangled name is now in [begin_name, begin_offset) and caller
+            // offset in [begin_offset, end_offset). now apply
+            // __cxa_demangle():
 
-	    int status;
-	    char* ret = abi::__cxa_demangle(begin_name,
-					    funcname, &funcnamesize, &status);
-	    if (status == 0) {
-            funcname = ret; // use possibly realloc()-ed string
-//            out << "  " << symbollist[i] << " : " << funcname << "+"<< begin_offset << endl;
-            out << i << "   " << funcname << endl;
-	    }
-	    else {
-            // demangling failed. Output function name as a C function with
-            // no arguments.
-//            out << "  " << symbollist[i] << " : " << begin_name << "()+"<< begin_offset << endl;
-            out << i << "   " << begin_name << "()" << endl;
-	    }
-#endif
-    }
-    else {
-        // couldn't parse the line? print the whole line.
-//	    out << i << ". " << symbollist[i] << endl;
-    }
+            int status;
+            char* ret = abi::__cxa_demangle(begin_name,
+                            funcname, &funcnamesize, &status);
+            if (status == 0) {
+                funcname = ret; // use possibly realloc()-ed string
+    //            out << "  " << symbollist[i] << " : " << funcname << "+"<< begin_offset << endl;
+                out << i << "   " << funcname << endl;
+            }
+            else {
+                // demangling failed. Output function name as a C function with
+                // no arguments.
+    //            out << "  " << symbollist[i] << " : " << begin_name << "()+"<< begin_offset << endl;
+                out << i << "   " << begin_name << "()" << endl;
+            }
+    #endif
+        }
+        else {
+            // couldn't parse the line? print the whole line.
+            //	    out << i << ". " << symbollist[i] << endl;
+        }
     }
 
     free(funcname);

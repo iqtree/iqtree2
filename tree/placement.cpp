@@ -30,6 +30,8 @@ double PhyloTree::recomputeParsimonyBranchLength(PhyloNode* fromNode, PhyloNode*
     PhyloNeighbor* backnei = toNode->findNeighbor(fromNode);
     int       branch_subst = 0;
     computeParsimonyBranchFast(nei, fromNode, &branch_subst);
+    adjustParsimonyBranchSubstitutionCount(fromNode, toNode, branch_subst);
+
     double branch_length = static_cast<double>(branch_subst)
                          / static_cast<double>(getAlnNSite());
     correctBranchLengthIfNeedBe(branch_length);

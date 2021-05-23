@@ -3261,8 +3261,24 @@ void PhyloTree::correctBranchLengthIfNeedBe(double &uncorrected) const {
         double alpha = site_rate ? site_rate->getGammaShape() : 0.0;
         uncorrected  = correctBranchLengthF81(uncorrected, alpha);
     }
-    if (uncorrected <= params->min_branch_length) {
-        uncorrected  = params->min_branch_length;
+    if (uncorrected < params->min_branch_length) {
+        uncorrected = params->min_branch_length;
+    }
+}
+
+void PhyloTree::adjustParsimonyBranchSubstitutionCount(PhyloNode* fromNode, PhyloNode* toNode,
+                                                       int& substitutions_on_branch) const {
+    if (params->add_uninformative_sites_to_parsimony_length) {
+        if (fromNode->isLeaf()) {
+            if (fromNode->id < aln->singleton_parsimony_states.size()) {
+                substitutions_on_branch += aln->singleton_parsimony_states[fromNode->id];
+            }
+        }
+        if (toNode->isLeaf()) {
+            if (toNode->id < aln->singleton_parsimony_states.size()) {
+                substitutions_on_branch += aln->singleton_parsimony_states[toNode->id];
+            }
+        }
     }
 }
 
@@ -4536,13 +4552,14 @@ int PhyloTree::fixNegativeBranch(bool force, PhyloNode *node, PhyloNode *dad) {
     
     FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, nei){
         if (nei->length < 0.0 || force) { // negative branch length detected
-            int branch_subst;
+            int branch_subst = 0;
             computeParsimonyBranch(nei, node, &branch_subst);
             if (branch_subst < 0) {
                 branch_subst = 0;
             }
+            adjustParsimonyBranchSubstitutionCount(nei->getNode(), node, branch_subst);
             double observed_parsimony_distance = (double) branch_subst / getAlnNSite();
-            double branch_length = observed_parsimony_distance;
+            double branch_length               = observed_parsimony_distance;
             correctBranchLengthIfNeedBe(branch_length);
             ++fixed;
         }

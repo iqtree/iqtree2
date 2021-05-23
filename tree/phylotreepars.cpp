@@ -198,7 +198,7 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
         if (site < max_sites) {
             dad_branch->partial_pars[(site/UINT_BITS)*nstates] |= ~((1<<(site%UINT_BITS)) - 1);
         }
-        {
+        if (params->count_uninformative_sites_for_parsimony) {
             //Count sites where the taxon, indicated by leafid, is the
             //taxon that has a "singleton" state (is the only one in the
             //pattern with this state, when all of the others that have
@@ -551,7 +551,11 @@ int PhyloTree::setParsimonyBranchLengths() {
     }
     ASSERT(subst == branch_subst);
     sum_score += subst;
-    double branch_length = subst*persite;
+
+    int adjustment = 0;
+    adjustParsimonyBranchSubstitutionCount(dad, node, adjustment);
+
+    double branch_length = static_cast<double>(subst+adjustment) * persite;
     correctBranchLengthIfNeedBe(branch_length);
     fixOneNegativeBranch(branch_length, dad_branch, dad);
     
@@ -597,22 +601,18 @@ int PhyloTree::setParsimonyBranchLengths() {
                 }
             }
         }
-        if (dad->isLeaf()) {
-            if (dad->id < aln->singleton_parsimony_states.size()) {
-                subst += aln->singleton_parsimony_states[dad->id];
-            }
-        }
-        if (node->isLeaf()) {
-            if (node->id < aln->singleton_parsimony_states.size()) {
-                subst += aln->singleton_parsimony_states[node->id];
-            }
-        }
-        double branch_length =subst*persite;
+        int adjustment = 0;
+        adjustParsimonyBranchSubstitutionCount(dad, node, adjustment);
+
+        double branch_length = static_cast<double>(subst+adjustment)*persite;
         correctBranchLengthIfNeedBe(branch_length);
         fixOneNegativeBranch(branch_length, dad_branch, dad);
         sum_score += subst;
     }
-    if (pars_score!=sum_score) {
+    if (params->count_uninformative_sites_for_parsimony) {
+        sum_score += aln->getCountOfSingletonParsimonyStates();
+    }
+    if (pars_score!=sum_score ) {
         hideProgress();
         LOG_LINE(VerboseMode::VB_MIN, "pars_score " << pars_score << " but sum_score " << sum_score);
         showProgress();
@@ -882,6 +882,21 @@ void PhyloTree::computePartialParsimonySankoff(PhyloNeighbor *dad_branch,
                 here = ( here < there ) ? here : there;
             }
             score += here;
+        }
+        if (params->count_uninformative_sites_for_parsimony) {
+            //Count sites where the taxon, indicated by leafid, is the
+            //taxon that has a "singleton" state (is the only one in the
+            //pattern with this state, when all of the others that have
+            //known states have the one known state).
+            //
+            //(Such sites are parsimony-uninformative but tracking how
+            // many of them there are, per taxon, potentially makes
+            // parsimony branch lengths more accurate).
+            //
+            if ( 0 <= node->id && node->id < aln->singleton_parsimony_states.size() ) {
+                UINT onesuch_site_count = aln->singleton_parsimony_states[node->id];
+                score += onesuch_site_count;
+            }
         }
         partial_pars[total_index] = score;
         return;
@@ -1857,9 +1872,15 @@ int PhyloTree::setOneBranchLengthFromParsimony(double tree_parsimony,
     double mutations_on_branch = tree_parsimony
                                - getSubTreeParsimony(leftNei)
                                - getSubTreeParsimony(rightNei);
+
+    int adjustment = 0;
+    adjustParsimonyBranchSubstitutionCount(node1, node2, adjustment);
+    mutations_on_branch += static_cast<double>(adjustment);
+
     double corrected_length = 0;
     if ( 0 < mutations_on_branch ) {
-        double branch_length = mutations_on_branch / getAlnNSite();
+        double branch_length = mutations_on_branch 
+                             / static_cast<double>(getAlnNSite());
         corrected_length     = branch_length;
         correctBranchLengthIfNeedBe(corrected_length);
     }

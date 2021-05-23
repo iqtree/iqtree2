@@ -22,8 +22,6 @@
 const double MIN_FREQUENCY          = 0.0001;
 const double MIN_FREQUENCY_DIFF     = 0.00001;
 
-const int NUM_CHAR = 256;
-typedef bitset<NUM_CHAR> StateBitset;
 
 class PhyloTree;
 
@@ -941,6 +939,8 @@ public:
     /** vector counting the number of singleton parsimony states
         for each taxon (used in Parsimony Joining).*/
     std::vector<UINT> singleton_parsimony_states;
+
+    UINT total_singleton_parsimony_states;
     
     /**
      * @return true if data type is SEQ_CODON and state is a stop codon
@@ -1001,6 +1001,8 @@ public:
     void getAppearance(StateType state, double *state_app);
 
     void getAppearance(StateType state, StateBitset &state_app);
+
+    UINT getCountOfSingletonParsimonyStates() const;
 
 	/**
 	 * read site specific state frequency vectors from a file to create corresponding model

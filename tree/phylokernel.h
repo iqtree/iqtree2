@@ -1732,7 +1732,7 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
             int max_sites = ((site+UINT_BITS-1)/UINT_BITS);
             memset(x, 255, (VCSIZE - max_sites)*sizeof(UINT));
         }
-        {
+        if (params->count_uninformative_sites_for_parsimony) {
             //Count sites where the taxon, indicated by leafid, is the
             //taxon that has a "singleton" state (is the only one in the
             //pattern with this state, when all of the others that have
@@ -1774,8 +1774,8 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
 
 template<class VectorClass>
 double PhyloTree::computePartialParsimonyOutOfTreeSIMD(const UINT* left_partial_pars,
-                                                     const UINT* right_partial_pars,
-                                                     UINT* dad_partial_pars) const {
+                                                       const UINT* right_partial_pars,
+                                                       UINT* dad_partial_pars) const {
     const int NUM_BITS   = VectorClass::size() * UINT_BITS;
     int       nstates    = aln->getMaxNumStates();
     UINT      score      = 0;
@@ -2000,6 +2000,22 @@ void PhyloTree::computePartialParsimonySankoffSIMD(PhyloNeighbor *dad_branch,
                 here = min(partial_pars_ptr[i],here);
             }
             score += horizontal_add(here);
+        }
+
+        if (params->count_uninformative_sites_for_parsimony) {
+            //Count sites where the taxon, indicated by leafid, is the
+            //taxon that has a "singleton" state (is the only one in the
+            //pattern with this state, when all of the others that have
+            //known states have the one known state).
+            //
+            //(Such sites are parsimony-uninformative but tracking how
+            // many of them there are, per taxon, potentially makes
+            // parsimony branch lengths more accurate).
+            //
+            if ( 0 <= node->id && node->id < aln->singleton_parsimony_states.size() ) {
+                UINT onesuch_site_count = aln->singleton_parsimony_states[node->id];
+                score += onesuch_site_count;
+            }
         }
         partial_pars[total_offset] = score;
         return;

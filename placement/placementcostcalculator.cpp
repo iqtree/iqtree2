@@ -80,14 +80,18 @@ bool LikelihoodCostCalculator::usesLikelihood() {
 
 void LikelihoodCostCalculator::assessPlacementCost(PhyloTree& tree, const TaxonToPlace& taxon,
                                                    PossiblePlacement& placement) const {
-    
     super::assessPlacementCost(tree, taxon, placement);
     
     const TargetBranch* target = placement.getTarget();
-    double score               = (placement.parsimony_score > 1) ? placement.parsimony_score : 1;
-    double normalized          = score / tree.getAlnNSite();
-    double parsimony_length    = normalized;
+    double score               = placement.parsimony_score;
+    double adjustment          = 0;
+    if (tree.params->add_uninformative_sites_to_parsimony_length) {
+        if (taxon.taxonId < tree.aln->singleton_parsimony_states.size()) {
+            adjustment = static_cast<double>(tree.aln->singleton_parsimony_states[taxon.taxonId]);
+        }
+    }
 
+    double parsimony_length    = (score+adjustment) / tree.getAlnNSite();
     tree.correctBranchLengthIfNeedBe(parsimony_length);
     
     placement.lenToNewTaxon    = parsimony_length;

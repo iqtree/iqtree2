@@ -1087,6 +1087,18 @@ public:
             true to treat unknown characters as different rather than discounting them, default: false.
      */
     bool count_unknown_as_different;
+
+    /**
+            true to count singleton states (states, in parsimony-uninformative patterns)
+            toward the parsimony branch lengths, for terminal branches, that touch the taxa with 
+            those states in those patterns.
+     */
+    bool add_uninformative_sites_to_parsimony_length;
+
+    /**
+            true if singleton states are to be counted toward parsimony scores.
+     */
+    bool count_uninformative_sites_for_parsimony;
     
     /**
             TRUE to compute the Juke-Cantor distances, default: FALSE

@@ -17,10 +17,15 @@
 using namespace std;
 using namespace PML;
 
+const int NUM_CHAR = 256;
+typedef bitset<NUM_CHAR> StateBitset;
+
 const int PAT_CONST       = 1; // const site pattern, e.g. AAAAAA, CC-C-CCCC
 const int PAT_INVARIANT   = 2; // invariant site pattern, including const patterns and e.g., GS--G-GGG (S = G/C)
 const int PAT_INFORMATIVE = 4; // parsimony informative sites
 const int PAT_VARIANT     = 8; // variant site pattern
+
+class Alignment; //forward declare for Pattern::countAppearances, below
 
 /**
 	Site-patterns in a multiple sequence alignment
@@ -28,6 +33,33 @@ const int PAT_VARIANT     = 8; // variant site pattern
 */
 class Pattern : public vector<StateType>
 {
+protected:
+	//Variables set in countAppearances():
+	StateBitset         state_app;
+	std::vector<size_t> num_app;
+	std::vector<size_t> last_app;
+
+	//Variables set in setInformativeFlags():
+	int                 count_multi    ; // number of states with >= 2 appearances
+    int                 count_singleton; // number of singleton states (with 1 appearance only)
+    bool                is_const;
+    bool                is_invariant;
+    bool                is_informative;
+
+public:
+	/**
+		frequency appearance of the pattern
+	*/
+	int frequency;
+
+    int flag;
+
+	/** 2015-03-04: if is_const is true, this will store the const character for the pattern */
+	char const_char;
+
+    /** number of different character states */
+    int num_chars;
+
 public:
 	/** 
 		constructor
@@ -79,18 +111,11 @@ public:
 
 	bool isAllGaps(int STATE_UNKNOWN) const;
 
-	/**
-		frequency appearance of the pattern
-	*/
-	int frequency;
+	void countAppearances(Alignment* aln);
 
-    int flag;
+	void setInformativeFlags(Alignment* aln);
 
-	/** 2015-03-04: if is_const is true, this will store the const character for the pattern */
-	char const_char;
-
-    /** number of different character states */
-    int num_chars;
+	void countTowardSingletonParsimonyStates(std::vector<UINT>& singleton_parsimony_states) const;
 };
 
 #endif

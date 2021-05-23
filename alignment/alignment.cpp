@@ -34,8 +34,6 @@
 #include <boost/scoped_array.hpp>
 #endif
 
-#define USE_UNINFORMATIVE_PARSIMONY (0)
-
 using namespace std;
 using namespace Eigen;
 
@@ -1028,142 +1026,9 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
 	determine if the pattern is constant. update the is_const variable.
 */
 void Alignment::computeConst(Pattern &pat) {
-    bool is_const = true;
-    bool is_invariant = false;
-    bool is_informative = false;
-    // critical fix: const_char was set wrongly to num_states
-    // in some data type (binary, codon), causing wrong
-    // log-likelihood computation for +I or +I+G model
-    pat.const_char = STATE_UNKNOWN+1;
-//    if (STATE_UNKNOWN == num_states)
-//    	pat.const_char = STATE_UNKNOWN+1;
-//    else
-//    	pat.const_char = STATE_UNKNOWN;
-    StateBitset state_app;
-    state_app.reset();
-    for (int j = 0; j < num_states; j++) {
-        state_app[j] = 1;
-    }
-    // number of appearance for each state, to compute is_informative
-#ifndef _MSC_VER
-    size_t num_app[num_states];
-    size_t last_app[num_states]; //last appearance
-#else
-    boost::scoped_array<size_t> num_app (new size_t [num_states]);
-    boost::scoped_array<size_t> last_app(new size_t[num_states]);
-#endif
-    memset(&num_app[0], 0, num_states*sizeof(size_t));
-
-    auto pat_data = pat.data();
-    int  pat_len  = static_cast<int>(pat.size());
-    for (int i = 0; i < pat_len; ++i) {
-        Pattern::value_type j = pat_data[i];
-    	StateBitset this_app;
-    	getAppearance(j, this_app);
-    	state_app &= this_app;
-        if (static_cast<int>(j) < num_states) {
-            auto state = (int)j;
-            num_app [state]++;
-            last_app[state] = i;
-        }
-//        else if (*i != STATE_UNKNOWN) {
-//            // ambiguous characters
-//            is_const = false;
-//        }
-    }
-    
-    int count = 0; // number of states with >= 2 appearances
-    pat.num_chars = 0; // number of states with >= 1 appearance
-    for (int j = 0; j < num_states; j++) if (num_app[j]) {
-        pat.num_chars++;
-        if (num_app[j] >= 2) {
-            ++count;
-        }
-#if (USE_UNINFORMATIVE_PARSIMONY)
-        else if (num_app[j] == 1) {
-            #ifdef _OPENMP
-            #pragma omp critical
-            #endif
-            {
-                singleton_parsimony_states.resize(pat_len,0);
-                singleton_parsimony_states[last_app[j]] += pat.frequency;
-            }
-        }
-#endif
-    }
-
-    // at least 2 states, each appearing at least twice
-    is_informative = (count >= 2);
-
-    // compute is_const
-    /*
-    is_const = is_const && (pat.num_chars <= 1);
-    if (is_const) {
-        if (pat.num_chars == 0) // all-gap pattern
-            pat.const_char = num_states;
-        else {
-            // pat.num_chars is 1
-            for (j = 0; j < num_states; j++)
-                if (num_app[j]) {
-                    pat.const_char = j;
-                    break;
-                }
-        }
-    }
-    */
-    is_const = (state_app.count() >= 1);
-    if (is_const) {
-        if (state_app.count() == num_states) {
-            pat.const_char = STATE_UNKNOWN;
-        } else if (state_app.count() == 1) {
-            for (int j = 0; j < num_states; j++)
-                if (state_app[j]) {
-                    pat.const_char = j;
-                    break;
-                }
-        } else if (seq_type == SeqType::SEQ_DNA) {
-            pat.const_char = num_states-1;
-            for (int j = 0; j < num_states; j++)
-                if (state_app[j])
-                    pat.const_char += (1<<j);
-        } else if (seq_type == SeqType::SEQ_PROTEIN) {
-            if (state_app[2] && state_app[3]) //4+8, // B = N or D
-                pat.const_char = num_states;
-            else if (state_app[5] && state_app[6]) //32+64, // Z = Q or E
-                pat.const_char = num_states+1;
-            else if (state_app[9] && state_app[10]) // 512+1024 // U = I or L
-                pat.const_char = num_states+2;
-            else ASSERT(0);
-        } else {
-            ASSERT(0);
-        }
-    }
-
-//    delete [] num_app;
-
-    // compute is_invariant
-    is_invariant = (state_app.count() >= 1);
-    ASSERT(is_invariant >= is_const);
-
-
-    // Wed Jun 28 16:01:30 BST 2017. The calculation of these properties seems
-    // to be OKish. They are only used for reports and to calculate the
-    // parsimony tree in the beginning anyways.
-
-    // if (seq_type == SeqType::SEQ_POMO) {
-    //     // For PoMo most sites are informative (ambiguous map from data to state space)
-    //     is_informative = true;
-    //     // For PoMo there are hardly any constant sites
-    //     is_const = false;
-    //     is_invariant = false;
-    // }
-
-    pat.flag = 0;
-    if (is_const) pat.flag |= PAT_CONST;
-    if (is_invariant) pat.flag |= PAT_INVARIANT;
-    if (is_informative) pat.flag |= PAT_INFORMATIVE;
+    pat.countAppearances   (this);
+    pat.setInformativeFlags(this);
 }
-
 
 void Alignment::printSiteInfo(ostream &out, int part_id) {
     size_t nsite = getNSite();
@@ -2026,6 +1891,8 @@ bool Alignment::constructPatterns(int nseq, int nsite,
     site_pattern.resize(nsite/step, -1);
     clear();
     pattern_index.clear();
+    singleton_parsimony_states.clear();
+    total_singleton_parsimony_states = 0;
     
     //1. Construct all the patterns, in parallel (*without* trying to consolidate
     //   duplicated patterns; we'll do that later).
@@ -2185,6 +2052,21 @@ bool Alignment::constructPatterns(int nseq, int nsite,
         delete progress_here;
         progress_here = progress = nullptr;
     }
+    
+    intptr_t taxon_count = getNSeq();
+    singleton_parsimony_states.resize(taxon_count, 0);
+    for (int p=0; p<w; ++p) {
+        const Pattern& pat = at(p);
+        pat.countTowardSingletonParsimonyStates(singleton_parsimony_states);
+    }
+    total_singleton_parsimony_states = 0;
+    #ifdef _OPENMP
+    #pragma omp parallel for reduction(+:total_singleton_parsimony_states)
+    #endif
+    for (intptr_t taxon=0; taxon<taxon_count; ++taxon) {
+        total_singleton_parsimony_states += singleton_parsimony_states[taxon];
+    }
+
     if (num_gaps_only) {
         #if USE_PROGRESS_DISPLAY
         if (progress!=nullptr) { progress->hide(); }
@@ -5400,13 +5282,11 @@ void Alignment::getAppearance(StateType state, double *state_app) {
 }
 
 void Alignment::getAppearance(StateType state, StateBitset &state_app) {
-
 	int i;
     if (state == STATE_UNKNOWN) {
     	state_app.set();
         return;
     }
-
     state_app.reset();
     if (static_cast<int>(state) < num_states) {
         state_app[(int)state] = 1;
@@ -5440,6 +5320,10 @@ void Alignment::getAppearance(StateType state, StateBitset &state_app) {
         break;
 	default: ASSERT(0); break;
 	}
+}
+
+UINT Alignment::getCountOfSingletonParsimonyStates() const {
+    return total_singleton_parsimony_states;
 }
 
 void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double *ntfreq) {
@@ -5621,7 +5505,8 @@ void Alignment::computeDivergenceMatrix(double *pair_freq,
             if (site_state_freq[i] == 0) continue;
             state_freq[i] += site_state_freq[i];
             double *pair_freq_ptr = pair_freq + (i*num_states);
-            pair_freq_ptr[i] += (site_state_freq[i]*(site_state_freq[i]-1)/2)*it->frequency;
+            double n = site_state_freq[i];
+            pair_freq_ptr[i] += (n*(n-1.0)/2.0)*it->frequency;
             for (j = i+1; j < num_states; j++)
                 pair_freq_ptr[j] += site_state_freq[i]*site_state_freq[j]*it->frequency;
         }
