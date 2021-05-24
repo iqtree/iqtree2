@@ -2059,13 +2059,14 @@ bool Alignment::constructPatterns(int nseq, int nsite,
         const Pattern& pat = at(p);
         pat.countTowardSingletonParsimonyStates(singleton_parsimony_states);
     }
-    total_singleton_parsimony_states = 0;
+    UINT total_states = 0;
     #ifdef _OPENMP
-    #pragma omp parallel for reduction(+:total_singleton_parsimony_states)
+    #pragma omp parallel for reduction(+:total_states)
     #endif
     for (intptr_t taxon=0; taxon<taxon_count; ++taxon) {
-        total_singleton_parsimony_states += singleton_parsimony_states[taxon];
+        total_states += singleton_parsimony_states[taxon];
     }
+    total_singleton_parsimony_states = total_states;
 
     if (num_gaps_only) {
         #if USE_PROGRESS_DISPLAY
@@ -5505,10 +5506,11 @@ void Alignment::computeDivergenceMatrix(double *pair_freq,
             if (site_state_freq[i] == 0) continue;
             state_freq[i] += site_state_freq[i];
             double *pair_freq_ptr = pair_freq + (i*num_states);
-            double n = site_state_freq[i];
+            double n = static_cast<double>(site_state_freq[i]);
             pair_freq_ptr[i] += (n*(n-1.0)/2.0)*it->frequency;
-            for (j = i+1; j < num_states; j++)
-                pair_freq_ptr[j] += site_state_freq[i]*site_state_freq[j]*it->frequency;
+            for (j = i + 1; j < num_states; ++j) {
+                pair_freq_ptr[j] += site_state_freq[i] * site_state_freq[j] * it->frequency;
+            }
         }
     }
 

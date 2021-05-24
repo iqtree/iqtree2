@@ -13,6 +13,8 @@
 #define PATTERN_H
 
 #include "phylo-yaml/statespace.h"
+#include <bitset>
+#include <vector>
 
 using namespace std;
 using namespace PML;

@@ -212,11 +212,11 @@ void Pattern::setInformativeFlags(Alignment* aln) {
 }
 
 void Pattern::countTowardSingletonParsimonyStates(std::vector<UINT>& singleton_parsimony_states) const {
-    int num_states = num_app.size();
+    int num_states = static_cast<int>(num_app.size());
     if (!is_informative && 0<count_singleton) {
         for (int j = 0; j < num_states; j++) {
             if (num_app[j]==1) {
-                int last_taxon_id = last_app[j];
+                size_t last_taxon_id = last_app[j];
                 singleton_parsimony_states[last_taxon_id] += frequency;
             }
         }
