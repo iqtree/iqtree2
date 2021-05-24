@@ -60,7 +60,7 @@ IQTreeMix::IQTreeMix(Params &params, Alignment *aln, vector<IQTree*> &trees) : I
     // number of optimization steps, default: number of Trees * 2
     // optimize_steps = 2 * size();
     // optimize_steps = 100;
-    optimize_steps = 10000;
+    optimize_steps = 1000;
     
     // initialize the tree weights as non-fixed, that means it needs to be optimized
     isTreeWeightFixed = false;
@@ -958,7 +958,7 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
     int step, n, substep;//, nsubstep;
     double* pattern_mix_lh;
     double gradient_epsilon = 0.0001;
-    double epsilon_start = 0.001;
+    double epsilon_start = 0.0001;
     double epsilon_step = 0.1;
     double curr_epsilon = epsilon_start;
     double prev_score, prev_score2, score, t_score;
