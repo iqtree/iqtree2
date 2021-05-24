@@ -60,7 +60,7 @@ IQTreeMix::IQTreeMix(Params &params, Alignment *aln, vector<IQTree*> &trees) : I
     // number of optimization steps, default: number of Trees * 2
     // optimize_steps = 2 * size();
     // optimize_steps = 100;
-    optimize_steps = 1000;
+    optimize_steps = 10000;
     
     // initialize the tree weights as non-fixed, that means it needs to be optimized
     isTreeWeightFixed = false;
@@ -958,7 +958,7 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
     int step, n, substep;//, nsubstep;
     double* pattern_mix_lh;
     double gradient_epsilon = 0.0001;
-    double epsilon_start = gradient_epsilon; // 1;
+    double epsilon_start = 0.001;
     double epsilon_step = 0.1;
     double curr_epsilon = epsilon_start;
     double prev_score, prev_score2, score, t_score;
@@ -976,7 +976,7 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
     
     prev_score = score = -DBL_MAX;
 
-    for (step = 0; step < optimize_steps || true; step++) {
+    for (step = 0; step < optimize_steps; step++) {
         
         if (step > 0) {
             // reset the ptn_freq array to the original frequencies of the patterns
@@ -990,6 +990,9 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
         // optimize the linked site rate model
         if (anySiteRate && isLinkSiteRate) {
             site_rates[0]->optimizeParameters(curr_epsilon);
+            if (siterate_names[0].find("R") != string::npos) {
+                site_rates[0]->rescaleRates();
+            }
             // cout << "after optimizing linked site rate model, likelihood = " << score << "(t_score=" << t_score << ")" << endl;
         }
 
@@ -1024,6 +1027,9 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
             if (anySiteRate && !isLinkSiteRate) {
                 for (i=0; i<site_rates.size(); i++) {
                     site_rates[i]->optimizeParameters(curr_epsilon);
+                    if (siterate_names[i].find("R") != string::npos) {
+                        site_rates[i]->rescaleRates();
+                    }
                 }
                 score = computeLikelihood();
                 // cout << "after optimizing unlinked site-rate model, likelihood = " << score << endl;
