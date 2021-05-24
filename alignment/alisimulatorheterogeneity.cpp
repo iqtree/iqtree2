@@ -144,7 +144,7 @@ void AliSimulatorHeterogeneity::intializeCachingAccumulatedTransMatrices(double 
 *  simulate sequences for all nodes in the tree by DFS
 *
 */
-void AliSimulatorHeterogeneity::simulateSeqs(int sequence_length, double *site_specific_rates, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, int thread_id, int num_threads)
+void AliSimulatorHeterogeneity::simulateSeqs(int sequence_length, double *site_specific_rates, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad)
 {
     // process its neighbors/children
     NeighborVec::iterator it;
@@ -169,7 +169,8 @@ void AliSimulatorHeterogeneity::simulateSeqs(int sequence_length, double *site_s
             intializeCachingAccumulatedTransMatrices(cache_trans_matrix, num_models, num_rate_categories, max_num_states, branch_lengths, trans_matrix, model);
 
             // estimate the sequence
-            for (int i = thread_id; i < sequence_length; i += num_threads)
+            (*it)->node->sequence.resize(sequence_length);
+            for (int i = 0; i < sequence_length; i++)
                 (*it)->node->sequence[i] = estimateStateFromAccumulatedTransMatrices(cache_trans_matrix, site_specific_rates[i] , i, num_rate_categories, max_num_states, node->sequence[i]);
             
             // delete cache_trans_matrix
@@ -178,13 +179,14 @@ void AliSimulatorHeterogeneity::simulateSeqs(int sequence_length, double *site_s
         // otherwise, estimating the sequence without trans_matrix caching
         else
         {
-            for (int i = thread_id; i < sequence_length; i += num_threads)
+            (*it)->node->sequence.resize(sequence_length);
+            for (int i = 0; i < sequence_length; i++)
                // randomly select the state, considering it's dad states, and the transition_probability_matrix
                 (*it)->node->sequence[i] = estimateStateFromOriginalTransMatrix(model, site_specific_model_index[i], site_specific_rates[i], trans_matrix, max_num_states, (*it)->length, node->sequence[i]);
         }
         
         // browse 1-step deeper to the neighbor node
-        simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, (*it)->node, node, thread_id, num_threads);
+        simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, (*it)->node, node);
     }
 }
 
@@ -342,13 +344,6 @@ void AliSimulatorHeterogeneity::simulateSeqsForTree(){
     ModelSubst *model = tree->getModel();
     int max_num_states = tree->aln->getMaxNumStates();
     
-    // initialize sequences for all nodes
-#ifdef _OPENMP
-#pragma omp parallel
-#pragma omp single
-#endif
-    initializeSequences(sequence_length, tree->MTree::root, tree->MTree::root);
-    
     // initialize site specific model index based on its weights (in the mixture model)
     intializeSiteSpecificModelIndex();
     
@@ -357,29 +352,13 @@ void AliSimulatorHeterogeneity::simulateSeqsForTree(){
     getSiteSpecificRates(site_specific_rates, sequence_length);
     
     // initialize trans_matrix
-    double *trans_matrix;
+    double *trans_matrix = new double[max_num_states*max_num_states];
     
     // simulate sequences
-    int num_threads = 1;
-    int thread_id = 0;
-#ifdef _OPENMP
-#pragma omp parallel private(thread_id, trans_matrix) shared(num_threads)
-#endif
-    {
-#ifdef _OPENMP
-#pragma omp single
-        num_threads = omp_get_num_threads();
-        
-        thread_id = omp_get_thread_num();
-#endif
+    simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, tree->MTree::root, tree->MTree::root);
 
-        trans_matrix = new double[max_num_states*max_num_states];
-        
-        simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, tree->MTree::root, tree->MTree::root, thread_id, num_threads);
-    
-        // delete trans_matrix array
-        delete[] trans_matrix;
-    }
+    // delete trans_matrix array
+    delete[] trans_matrix;
     
     // delete the site-specific rates
     delete[] site_specific_rates;

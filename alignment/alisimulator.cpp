@@ -102,9 +102,6 @@ void AliSimulator::initializeIQTreeFromTreeFile()
         
         int i;
         
-#ifdef _OPENMP
-#pragma omp parallel for
-#endif
         for (i = 0; i < ((PhyloSuperTree*) tree)->size(); i++)
         {
             // -Q (params->partition_type == BRLEN_OPTIMIZE) -> tree_line_index = i; otherwise (-p, -q), tree_line_index = 0 (only a tree)
@@ -574,38 +571,15 @@ void AliSimulator::simulateSeqsForTree()
     int sequence_length = expected_num_sites;
     ModelSubst *model = tree->getModel();
     int max_num_states = tree->aln->getMaxNumStates();
-    
-    // initialize sequences for all nodes
-#ifdef _OPENMP
-#pragma omp parallel
-#pragma omp single
-#endif
-    initializeSequences(sequence_length, tree->MTree::root, tree->MTree::root);
         
     // initialize trans_matrix
-    double *trans_matrix;
+    double *trans_matrix = new double[max_num_states*max_num_states];
     
     // simulate Sequences
-    int num_threads = 1;
-    int thread_id = 0;
-#ifdef _OPENMP
-#pragma omp parallel private(thread_id, trans_matrix) shared(num_threads)
-#endif
-    {
-#ifdef _OPENMP
-#pragma omp single
-        num_threads = omp_get_num_threads();
+    simulateSeqs(sequence_length, model, trans_matrix, max_num_states, tree->MTree::root, tree->MTree::root);
         
-        thread_id = omp_get_thread_num();
-#endif
-
-        trans_matrix = new double[max_num_states*max_num_states];
-        
-        simulateSeqs(sequence_length, model, trans_matrix, max_num_states, tree->MTree::root, tree->MTree::root, thread_id, num_threads);
-        
-        // delete trans_matrix array
-        delete[] trans_matrix;
-    }
+    // delete trans_matrix array
+    delete[] trans_matrix;
     
     // removing constant states if it's necessary
     if (length_ratio > 1)
@@ -616,7 +590,7 @@ void AliSimulator::simulateSeqsForTree()
 *  simulate sequences for all nodes in the tree by DFS
 *
 */
-void AliSimulator::simulateSeqs(int sequence_length, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, int thread_id, int num_threads)
+void AliSimulator::simulateSeqs(int sequence_length, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad)
 {
     // process its neighbors/children
     NeighborVec::iterator it;
@@ -629,7 +603,8 @@ void AliSimulator::simulateSeqs(int sequence_length, ModelSubst *model, double *
         convertProMatrixIntoAccumulatedProMatrix(trans_matrix, max_num_states, max_num_states);
         
         // estimate the sequence for the current neighbor
-        for (int i = thread_id; i < sequence_length; i += num_threads)
+        (*it)->node->sequence.resize(sequence_length);
+        for (int i = 0; i < sequence_length; i++)
         {
             // iteratively select the state for each site of the child node, considering it's dad states, and the transition_probability_matrix
             int starting_index = node->sequence[i]*max_num_states;
@@ -637,28 +612,7 @@ void AliSimulator::simulateSeqs(int sequence_length, ModelSubst *model, double *
         }
         
         // browse 1-step deeper to the neighbor node
-        simulateSeqs(sequence_length, model, trans_matrix, max_num_states, (*it)->node, node, thread_id, num_threads);
-    }
-}
-
-/**
-*  initialize sequence space for all nodes
-*
-*/
-void AliSimulator::initializeSequences(int sequence_length, Node *node, Node *dad){
-#ifdef _OPENMP
-#pragma omp task firstprivate(node)
-#endif
-        {
-            node->sequence.resize(sequence_length);
-            /*if (node->isLeaf()) {
-                node->sequence_str.resize(sequence_length*num_sites_per_state);
-            }*/
-        }
-    
-    NeighborVec::iterator it;
-    FOR_NEIGHBOR(node, dad, it) {
-        initializeSequences(sequence_length, (*it)->node, node);
+        simulateSeqs(sequence_length, model, trans_matrix, max_num_states, (*it)->node, node);
     }
 }
 
