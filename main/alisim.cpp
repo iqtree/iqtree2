@@ -125,7 +125,17 @@ void inferInputParameters(Params &params, Checkpoint *checkpoint, IQTree *&tree,
 #endif
             for (i = 0; i < ((PhyloSuperTree*) tree)->size(); i++){
                 // -Q (params->partition_type == BRLEN_OPTIMIZE) -> tree_line_index = i; otherwise (-p, -q), tree_line_index = 0 (only a tree)
-                int tree_line_index = params.partition_type == BRLEN_OPTIMIZE?i:0;
+                int tree_line_index = 0;
+                if (params.partition_type == BRLEN_OPTIMIZE)
+                {
+                    tree_line_index = i+1;
+                    // show information for the first time
+                    if (i == 0)
+                    {
+                        cout<<" The super tree (combining all taxa in all partitions) has been loaded from the first line of the input tree file."<<endl;
+                        cout<<" Loading partition trees one by one. Each tree should be specified in a single line in the input tree file."<<endl;
+                    }
+                }
                 
                 // load phylotrees
                 IQTree *current_tree = (IQTree *) ((PhyloSuperTree*) tree)->at(i);
@@ -623,7 +633,7 @@ void generatePartitionAlignmentFromSingleSimulator(AliSimulator *alisimulator, I
 /**
 *  write all sequences of a tree to an output file
 */
-void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length, AliSimulator *alisimulator, bool inference_mode)
+void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length, int num_leaves, AliSimulator *alisimulator, bool inference_mode)
 {
     try {
             // add ".phy" to the file_path
@@ -633,9 +643,8 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
             out.open(file_path.c_str());
 
             // write the first line <#taxa> <length_of_sequence>
-            int leaf_num = alisimulator->tree->leafNum - ((alisimulator->tree->root->isLeaf() && alisimulator->tree->root->name == ROOT_NAME)?1:0);
             int num_sites_per_state = aln->seq_type == SEQ_CODON?3:1;
-            out <<leaf_num<<" "<<sequence_length*num_sites_per_state<< endl;
+            out <<num_leaves<<" "<<sequence_length*num_sites_per_state<< endl;
         
             // initialize state_mapping (mapping from state to characters)
             vector<string> state_mapping;
@@ -738,6 +747,9 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator,
                 // the total number of states (sites) of all partitions which use the same alignment file.
                 int total_num_states = 0;
                 int j;
+                
+                // clear out all sequences in the current super_tree
+                clearoutSequencesSuperTree(super_tree->root, super_tree->root);
 #ifdef _OPENMP
 #pragma omp parallel for shared(partition_list, partition_count, total_num_states)
 #endif
@@ -776,16 +788,21 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator,
                 if (partition_count == super_tree->size())
                     partition_list = "_full";
                 
+                //  get the num_leaves
+                int num_leaves = super_tree->at(i)->leafNum - ((super_tree->at(i)->root->isLeaf() && super_tree->at(i)->root->name == ROOT_NAME)?1:0);
+                
                 // write the merged sequences to the output file for the current cluster of partitions
-                writeSequencesToFile(file_path + partition_list, super_tree->at(i)->aln, total_num_states, alisimulator, inference_mode);
+                writeSequencesToFile(file_path + partition_list, super_tree->at(i)->aln, total_num_states, num_leaves, alisimulator, inference_mode);
             }
         }
     }
     // other cases (without partitions), just write sequences to a single file
     else
     {
-        int sequence_length = alisimulator->expected_num_sites/alisimulator->length_ratio;;
-        writeSequencesToFile(file_path, alisimulator->tree->aln, sequence_length, alisimulator, inference_mode);
+        int sequence_length = alisimulator->expected_num_sites/alisimulator->length_ratio;
+        //  get the num_leaves
+        int num_leaves = alisimulator->tree->leafNum - ((alisimulator->tree->root->isLeaf() && alisimulator->tree->root->name == ROOT_NAME)?1:0);
+        writeSequencesToFile(file_path, alisimulator->tree->aln, sequence_length, num_leaves, alisimulator, inference_mode);
     }
 }
 
@@ -857,75 +874,81 @@ void writeASequenceToFileWithGaps(Alignment *aln, int sequence_length, vector<st
 #pragma omp task firstprivate(node) shared(output_str, out)
 #endif
         {
-            ASSERT(sequence_length <= node->sequence.size());
-            
-            // retrieve the input sequence of the current node
-            for (int ancestral_index = 0; ancestral_index < sequences.size(); ancestral_index++)
-                if (!seq_names[ancestral_index].compare(node->name)){
-
-                    // dummy variables
-                    int num_sites_per_state = aln->seq_type == SEQ_CODON?3:1;
-                    std::string output (sequence_length * num_sites_per_state+1, ' ');
-                    int start_index = node->name.length() + 1;
-                    
-                    // add node's name
-                    output = node->name + " " + output;
-                    output[output.length()-1] = '\n';
-                    
-                    // convert normal data
-                    if (num_sites_per_state == 1)
+            // not print empty sequence (missing taxa in partition)
+            if (sequence_length <= node->sequence.size())
+            {
+                string input_sequence = "";
+                
+                // retrieve the input sequence of the current node
+                for (int ancestral_index = 0; ancestral_index < sequences.size(); ancestral_index++)
+                    if (!seq_names[ancestral_index].compare(node->name))
                     {
-                        for (int i = 0; i < sequence_length; i++){
-                            // handle gaps
-                            if ((i+1)*num_sites_per_state - 1 < sequences[ancestral_index].length()
-                                && sequences[ancestral_index][i] == '-')
-                            {
-                                // insert gaps
-                                output[start_index+i*num_sites_per_state] = '-';
-                            }
-                            // if it's not a gap
-                            else
-                                output[start_index+i*num_sites_per_state] = state_mapping[node->sequence[i]][0];
-                        }
+                        input_sequence = sequences[ancestral_index];
+                        break;
                     }
-                    // convert CODON
-                    else {
-                        for (int i = 0; i < sequence_length; i++){
-                            // handle gaps
-                            if ((i+1)*num_sites_per_state - 1 < sequences[ancestral_index].length()
-                                && (sequences[ancestral_index][i*num_sites_per_state] == '-'
-                                        || sequences[ancestral_index][i*num_sites_per_state+1] == '-'
-                                        || sequences[ancestral_index][i*num_sites_per_state+2] == '-')){
-                                // insert gaps
-                                output[start_index+i*num_sites_per_state] =  sequences[ancestral_index][i*num_sites_per_state];
-                                output[start_index+i*num_sites_per_state + 1] =  sequences[ancestral_index][i*num_sites_per_state+1];
-                                output[start_index+i*num_sites_per_state + 2] =  sequences[ancestral_index][i*num_sites_per_state+2];
-                            }
-                            else
-                            {
-                                    output[start_index+i*num_sites_per_state] = state_mapping[node->sequence[i]][0];
-                                    output[start_index+i*num_sites_per_state + 1] = state_mapping[node->sequence[i]][1];
-                                    output[start_index+i*num_sites_per_state + 2] = state_mapping[node->sequence[i]][2];
-                            }
-                        }
-                    }
-#ifdef _OPENMP
-#pragma omp critical
-#endif
-                    {
-                        output_str += output;
-                        
-                        // write the caching output_str to file if its length exceed the maximum string length
-                        if (output_str.length() >= max_str_length)
+                // dummy variables
+                int num_sites_per_state = aln->seq_type == SEQ_CODON?3:1;
+                std::string output (sequence_length * num_sites_per_state+1, ' ');
+                int start_index = node->name.length() + 1;
+                
+                // add node's name
+                output = node->name + " " + output;
+                output[output.length()-1] = '\n';
+                
+                // convert normal data
+                if (num_sites_per_state == 1)
+                {
+                    for (int i = 0; i < sequence_length; i++){
+                        // handle gaps
+                        if ((i+1)*num_sites_per_state - 1 < input_sequence.length()
+                            && input_sequence[i] == '-')
                         {
-                            // write output_str to file
-                            out<<output_str;
-                            
-                            // empty output_str
-                            output_str = "";
+                            // insert gaps
+                            output[start_index+i*num_sites_per_state] = '-';
+                        }
+                        // if it's not a gap
+                        else
+                            output[start_index+i*num_sites_per_state] = state_mapping[node->sequence[i]][0];
+                    }
+                }
+                // convert CODON
+                else {
+                    for (int i = 0; i < sequence_length; i++){
+                        // handle gaps
+                        if ((i+1)*num_sites_per_state - 1 < input_sequence.length()
+                            && (input_sequence[i*num_sites_per_state] == '-'
+                                    || input_sequence[i*num_sites_per_state+1] == '-'
+                                    || input_sequence[i*num_sites_per_state+2] == '-')){
+                            // insert gaps
+                            output[start_index+i*num_sites_per_state] =  input_sequence[i*num_sites_per_state];
+                            output[start_index+i*num_sites_per_state + 1] =  input_sequence[i*num_sites_per_state+1];
+                            output[start_index+i*num_sites_per_state + 2] =  input_sequence[i*num_sites_per_state+2];
+                        }
+                        else
+                        {
+                                output[start_index+i*num_sites_per_state] = state_mapping[node->sequence[i]][0];
+                                output[start_index+i*num_sites_per_state + 1] = state_mapping[node->sequence[i]][1];
+                                output[start_index+i*num_sites_per_state + 2] = state_mapping[node->sequence[i]][2];
                         }
                     }
                 }
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+                {
+                    output_str += output;
+                    
+                    // write the caching output_str to file if its length exceed the maximum string length
+                    if (output_str.length() >= max_str_length)
+                    {
+                        // write output_str to file
+                        out<<output_str;
+                        
+                        // empty output_str
+                        output_str = "";
+                    }
+                }
+            }
         }
     }
     
@@ -933,4 +956,21 @@ void writeASequenceToFileWithGaps(Alignment *aln, int sequence_length, vector<st
     FOR_NEIGHBOR(node, dad, it) {
         writeASequenceToFileWithGaps(aln, sequence_length, seq_names, sequences, output_str, max_str_length, out, state_mapping, (*it)->node, node);
     }
+}
+
+/**
+*  clear out all sequences in the super_tree
+*
+*/
+void clearoutSequencesSuperTree(Node *node, Node *dad){
+#ifdef _OPENMP
+#pragma omp task firstprivate(node)
+#endif
+    if (node->isLeaf())
+        node->sequence.clear();
+
+    NeighborVec::iterator it;
+    FOR_NEIGHBOR(node, dad, it) {
+        clearoutSequencesSuperTree((*it)->node, node);
+     }
 }

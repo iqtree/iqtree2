@@ -70,7 +70,7 @@ void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_
 /**
 *  write all sequences of a tree to an output file
 */
-void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length, AliSimulator *alisimulator, bool inference_mode);
+void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length, int num_leaves, AliSimulator *alisimulator, bool inference_mode);
 
 /**
 *  write a sequence of a node to an output file
@@ -86,5 +86,11 @@ void writeASequenceToFileWithGaps(Alignment *aln, int sequence_length, vector<st
 *  merge and write all sequences to output files
 */
 void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator, bool inference_mode);
+
+/**
+*  clear out all sequences in the super_tree
+*
+*/
+void clearoutSequencesSuperTree(Node *node, Node *dad);
 
 #endif /* alisim_h */

@@ -105,7 +105,17 @@ void AliSimulator::initializeIQTreeFromTreeFile()
         for (i = 0; i < ((PhyloSuperTree*) tree)->size(); i++)
         {
             // -Q (params->partition_type == BRLEN_OPTIMIZE) -> tree_line_index = i; otherwise (-p, -q), tree_line_index = 0 (only a tree)
-            int tree_line_index = params->partition_type == BRLEN_OPTIMIZE?i:0;
+            int tree_line_index = 0;
+            if (params->partition_type == BRLEN_OPTIMIZE)
+            {
+                tree_line_index = i+1;
+                // show information for the first time
+                if (i == 0)
+                {
+                    cout<<" The super tree (combining all taxa in all partitions) has been loaded from the first line of the input tree file."<<endl;
+                    cout<<" Loading partition trees one by one. Each tree should be specified in a single line in the input tree file."<<endl;
+                }
+            }
             
             // load phylotrees
             IQTree *current_tree = (IQTree *) ((PhyloSuperTree*) tree)->at(i);
