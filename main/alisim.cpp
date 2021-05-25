@@ -799,7 +799,7 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator,
     // other cases (without partitions), just write sequences to a single file
     else
     {
-        int sequence_length = alisimulator->expected_num_sites/alisimulator->length_ratio;
+        int sequence_length = round(alisimulator->expected_num_sites/alisimulator->length_ratio);
         //  get the num_leaves
         int num_leaves = alisimulator->tree->leafNum - ((alisimulator->tree->root->isLeaf() && alisimulator->tree->root->name == ROOT_NAME)?1:0);
         writeSequencesToFile(file_path, alisimulator->tree->aln, sequence_length, num_leaves, alisimulator, inference_mode);

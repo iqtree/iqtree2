@@ -132,6 +132,9 @@ public:
 
     /** get the SeqType for a given string */
     static SeqType getSeqType(const char *sequence_type);
+    
+    /** get the SeqTypeString for a given SeqType */
+    string getSeqTypeStr(SeqType sequence_type);
 
       /**
                add a pattern into the alignment

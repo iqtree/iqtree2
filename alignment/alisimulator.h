@@ -118,6 +118,11 @@ protected:
     */
     void getOnlyVariantSites(IntVector variant_state_mask, Node *node, Node *dad);
     
+    /**
+        estimate length_ratio (for models with +ASC)
+    */
+    void estimateLengthRatio();
+    
 public:
     
     IQTree *tree;

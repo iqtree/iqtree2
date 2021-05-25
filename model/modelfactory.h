@@ -236,6 +236,7 @@ public:
     ASCType ASC_type;
     
     ASCType getASC() { return ASC_type; }
+    void setASC(ASCType new_ASC_type){ ASC_type = new_ASC_type; }
     
 	/**
 	 * optimize model and site_rate parameters

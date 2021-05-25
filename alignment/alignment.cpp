@@ -1699,6 +1699,29 @@ SeqType Alignment::getSeqType(const char *sequence_type) {
     return user_seq_type;
 }
 
+string Alignment::getSeqTypeStr(SeqType sequence_type) {
+    switch (sequence_type) {
+    case SEQ_BINARY:
+        return "BIN";
+        break;
+    case SEQ_DNA:
+        return "DNA";
+        break;
+    case SEQ_PROTEIN:
+        return "PROT";
+        break;
+    case SEQ_MORPH:
+        return "MORPH";
+        break;
+    case SEQ_CODON:
+        return "CODON";
+        break;
+    default:
+        return "";
+        break;
+    }
+}
+
 int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq, int nsite) {
     int seq_id;
     ostringstream err_str;

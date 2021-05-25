@@ -13,11 +13,8 @@ AliSimulator::AliSimulator(Params *input_params, int expected_number_sites, doub
     AliSimulator::initializeIQTreeFromTreeFile();
     num_sites_per_state = tree->aln->seq_type == SEQ_CODON?3:1;
     
-    // intialize length_ratio
-    if (tree->getModel() && tree->getSubstName().find("+ASC") != std::string::npos)
-        length_ratio = params->alisim_length_ratio;
-    else
-        length_ratio = 1;
+    // estimating the appropriate length_ratio in cases models with +ASC
+    estimateLengthRatio();
     
     if (expected_number_sites == -1)
         expected_num_sites = params->alisim_sequence_length/num_sites_per_state*length_ratio;
@@ -35,11 +32,8 @@ AliSimulator::AliSimulator(Params *input_params, IQTree *iq_tree, int expected_n
     tree = iq_tree;
     num_sites_per_state = tree->aln->seq_type == SEQ_CODON?3:1;
     
-    // intialize length_ratio
-    if (tree->getModel() && tree->getSubstName().find("+ASC") != std::string::npos)
-        length_ratio = params->alisim_length_ratio;
-    else
-        length_ratio = 1;
+    // estimating the appropriate length_ratio in cases models with +ASC
+    estimateLengthRatio();
     
     if (expected_number_sites == -1)
         expected_num_sites = params->alisim_sequence_length/num_sites_per_state*length_ratio;
@@ -244,6 +238,7 @@ void AliSimulator::initializeAlignment(IQTree *tree, string model_fullname)
             tree->aln->seq_type = tree->aln->getSeqType(tree->aln->sequence_type.c_str());
         // otherwise, intializing seq_type from sequence_type (in params) if it's not empty
         else
+        {
             if (params->sequence_type)
                 tree->aln->seq_type = tree->aln->getSeqType(params->sequence_type);
             // otherwise, detect seq_type model's name
@@ -279,6 +274,9 @@ void AliSimulator::initializeAlignment(IQTree *tree, string model_fullname)
                 string model_familyname = model_familyname_with_params.substr(0, model_familyname_with_params.find("{"));
                 detectSeqType(model_familyname.c_str(), tree->aln->seq_type);
             }
+            if (tree->aln->seq_type != SEQ_UNKNOWN)
+                tree->aln->sequence_type = tree->aln->getSeqTypeStr(tree->aln->seq_type);
+        }
     }
     
     if (tree->aln->seq_type == SEQ_UNKNOWN)
@@ -287,6 +285,9 @@ void AliSimulator::initializeAlignment(IQTree *tree, string model_fullname)
     switch (tree->aln->seq_type) {
     case SEQ_BINARY:
         tree->aln->num_states = 2;
+        break;
+    case SEQ_DNA:
+        tree->aln->num_states = 4;
         break;
     case SEQ_PROTEIN:
         tree->aln->num_states = 20;
@@ -300,7 +301,6 @@ void AliSimulator::initializeAlignment(IQTree *tree, string model_fullname)
         throw "Sorry! SEQ_POMO is currently not supported";
         break;
     default:
-        tree->aln->num_states = 4;
         break;
     }
     
@@ -347,10 +347,10 @@ void AliSimulator::removeConstantSites(){
     IntVector variant_state_mask;
     
     // create a variant state mask
-    createVariantStateMask(variant_state_mask, num_variant_states, expected_num_sites/length_ratio, tree->root, tree->root);
+    createVariantStateMask(variant_state_mask, num_variant_states, round(expected_num_sites/length_ratio), tree->root, tree->root);
     
     // return error if num_variant_states is less than the expected_num_variant_states
-    if (num_variant_states < expected_num_sites/length_ratio){
+    if (num_variant_states < round(expected_num_sites/length_ratio)){
         outError("Unfortunately, after removing constant sites, the number of variant sites is less than the expected sequence length. Please use --length-ratio <LENGTH_RATIO> to generate more abundant sites and try again. The current <LENGTH_RATIO> is "+ convertDoubleToString(length_ratio));
     }
 
@@ -394,7 +394,7 @@ void AliSimulator::getOnlyVariantSites(IntVector variant_state_mask, Node *node,
                     num_variant_states++;
                     
                     // stop checking further states if num_variant_states has exceeded the expected_num_variant_states
-                    if (num_variant_states >= expected_num_sites/length_ratio)
+                    if (num_variant_states >= round(expected_num_sites/length_ratio))
                         break;
                 }
             
@@ -722,4 +722,79 @@ void AliSimulator::validataSeqLengthCodon()
 */
 void AliSimulator::refreshExpectedNumSites(){
     expected_num_sites = params->alisim_sequence_length/num_sites_per_state*length_ratio;
+}
+
+/**
+    estimate length_ratio (for models with +ASC)
+*/
+void AliSimulator::estimateLengthRatio()
+{
+    // By default (without +ASC), length_ratio is set at 1
+    length_ratio = 1;
+        
+    // Handle the case with +ASC
+    if (tree->getModel() && tree->getSubstName().find("+ASC") != std::string::npos)
+    {
+        // using the length_ratio in params if it's specified by the user
+        if (tree->params->original_params.find("--length-ratio") != std::string::npos)
+            length_ratio = params->alisim_length_ratio;
+        // otherwise, estimating the length_ratio
+        else
+        {
+            // disable ASC for computing likelihood score
+            ASCType asc_type = tree->getModelFactory()->getASC();
+            tree->getModelFactory()->setASC(ASC_NONE);
+            
+            // get the number of states
+            int max_num_states = tree->aln->getMaxNumStates();
+            
+            // initialize a string concatenating all characters of all states (eg, ACGT for DNA)
+            string all_characters;
+            all_characters.resize(max_num_states*num_sites_per_state);
+            for (int i = 0; i < max_num_states; i++)
+            {
+                string characters_from_state = tree->aln->convertStateBackStr(i);
+                for (int j = 0; j < num_sites_per_state; j++)
+                    all_characters[i*num_sites_per_state+j] = characters_from_state[j];
+            }
+           
+            // initialize sequences (a dummy alignment with all sequences are set to all_characters)
+            StrVector sequences;
+            int nseq = tree->getNumTaxa(), nsite = max_num_states;
+            sequences.resize(nseq);
+            for (int i = 0; i < nseq; i++)
+                sequences[i] = all_characters;
+            
+            // build al constant site patterns
+            char *sequence_type = strcpy(new char[tree->aln->sequence_type.length() + 1], tree->aln->sequence_type.c_str());
+            tree->aln->buildPattern(sequences, sequence_type, nseq, nsite*num_sites_per_state);
+            
+            // compute the likelihood scores of all patterns
+            double *patterns_llh = new double[tree->aln->getNPattern()];
+            tree->setLikelihoodKernel(params->SSE);
+            tree->setNumThreads(params->num_threads);
+            tree->initializeAllPartialLh();
+            tree->computeLikelihood(patterns_llh);
+            
+            // initialize the estimated_length_ratio
+            double estimated_length_ratio = 0;
+            
+            // take the sum of all probabilities of all constant patterns
+            for (int i = 0; i < max_num_states; i++)
+                estimated_length_ratio += exp(patterns_llh[i]);
+            
+            // delete patterns_llh
+            delete [] patterns_llh;
+            
+            // set ASC type to its original value
+            tree->getModelFactory()->setASC(asc_type);
+            
+            // handle the case when estimated_length_ratio is estimated incorrectly
+            if (!isfinite(estimated_length_ratio) || estimated_length_ratio > 1)
+                estimated_length_ratio = 0.5;
+            
+            // update the length_ratio with a 10% (0.1) additional length_ratio (for backup purpose)
+            length_ratio = 1/(1-estimated_length_ratio) + 0.1;
+        }
+    }
 }
