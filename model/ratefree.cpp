@@ -11,6 +11,8 @@
 
 #include "model/modelfactory.h"
 #include "model/modelmixture.h"
+#include "variablebounds.h"
+
 #include <utils/stringfunctions.h> //for convert_double_vec
 #include <utils/timeutil.h> //temporary : for time log-lining
 
@@ -218,9 +220,33 @@ int RateFree::getNDim() {
     return 0;
 }
 
+void RateFree::setFixProportions(bool fixed) {
+    fix_params = fixed ? 2 : 0;
+}
+
+void RateFree::setFixRates(bool fixed) {
+    fix_params = fixed ? 1 : 0;
+}
+
+bool RateFree::isOptimizingProportions() const {
+    return optimizing_params != 1;
+}
+
+bool RateFree::isOptimizingRates() const {
+    return optimizing_params != 2;
+}
+
+bool RateFree::isOptimizingShapes() const {
+    return false;
+}
+
+bool RateFree::areProportionsFixed() const {
+    return fix_params == 1;
+}
+
 double RateFree::targetFunk(double x[]) {
 	getVariables(x);
-    if (optimizing_params != 2) {
+    if (isOptimizingRates()) {
         // only clear partial_lh if optimizing rates
         phylo_tree->clearAllPartialLH();
     }
@@ -249,52 +275,44 @@ double RateFree::optimizeParameters(double gradient_epsilon,
         }
     }
 
-	double* variables   = new double[ndim+1];
-	double* upper_bound = new double[ndim+1];
-	double* lower_bound = new double[ndim+1];
-	bool*   bound_check = new bool  [ndim+1];
-	double  score;
+    VariableBounds vb(ndim+1);
+	double score;
 
 //    score = optimizeWeights();
 
     int left = 1, right = 2;
-    if (fix_params == 1) {
+    if (areProportionsFixed()) {
         // fix proportions
         right = 1;
     }
     if (optimize_alg.find("1-BFGS") != string::npos) {
-        left = 0; 
+        left  = 0; 
         right = 0;
     }
 
     // changed to Wi -> Ri by Thomas on Sept 11, 15
     for (optimizing_params = right; optimizing_params >= left; optimizing_params--) {
-    
         ndim = getNDim();
         // by BFGS algorithm
-        setVariables(variables);
-        setBounds(lower_bound, upper_bound, bound_check);
+        setVariables(vb.variables);
+        setBounds(vb.lower_bound, vb.upper_bound, vb.bound_check);
 
         if (optimize_alg.find("BFGS-B") != string::npos) {
-            score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1,
+            score = -L_BFGS_B(ndim, vb.variables+1, 
+                              vb.lower_bound+1, vb.upper_bound+1,
                               max(gradient_epsilon, TOL_FREE_RATE));
         }
         else {
-            score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound,
-                                        bound_check, max(gradient_epsilon, TOL_FREE_RATE));
+            score = -minimizeMultiDimen(vb.variables, ndim, 
+                                        vb.lower_bound, vb.upper_bound,
+                                        vb.bound_check, max(gradient_epsilon, TOL_FREE_RATE));
         }
-        getVariables(variables);
+        getVariables(vb.variables);
         sortUpdatedRates();
         phylo_tree->clearAllPartialLH();
         score = phylo_tree->computeLikelihood();
     }
     optimizing_params = 0;
-
-	delete [] bound_check;
-	delete [] lower_bound;
-	delete [] upper_bound;
-	delete [] variables;
-
 	return score;
 }
 

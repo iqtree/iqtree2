@@ -124,25 +124,27 @@ void RateGamma::computeRates() {
 
 		//rescale in order to make mean equal to 1.0
 
-
-		for (cat = 0; cat < ncategory; cat ++)
+		for (cat = 0; cat < ncategory; cat ++) {
 			sum_rates += rates[ cat];
-
-		for (cat = 0; cat < ncategory; cat ++)
+		}
+		for (cat = 0; cat < ncategory; cat ++) {
 			rates[ cat ] = rates[ cat ] * ncategory / sum_rates;
+		}
 	}
 
 	/* BQM 2015-02-25: Testing if RAxML forgot this rate rescaling step */
-	if (phylo_tree && phylo_tree->params && phylo_tree->params->no_rescale_gamma_invar)
+	if (phylo_tree && phylo_tree->params && 
+	    phylo_tree->params->no_rescale_gamma_invar) {
 		return;
-
+	}
     double newScale = 0.0;
-    for (cat = 0; cat < ncategory; cat++)
+    for (cat = 0; cat < ncategory; cat++) {
         newScale += rates[cat];
-
+	}
     if (newScale != curScale) {
-        for (cat = 0; cat < ncategory; cat++)
-            rates[cat] *= curScale/newScale;    
+        for (cat = 0; cat < ncategory; cat++) {
+            rates[cat] *= curScale/newScale;
+		} 
     }
 
 	/* if invariable sites are present */
@@ -165,14 +167,17 @@ void RateGamma::computeRatesMean () {
 	int i;
 	double lnga1=cmpLnGamma(gamma_shape+1);
 	double *freqK = new double[ncategory];
-	for (i=0; i<ncategory-1; i++) /* cutting points, Eq. 9 */
+	for (i=0; i<ncategory-1; i++) { /* cutting points, Eq. 9 */
 		freqK[i]=cmpPointChi2((i+1.0)/ncategory, 2.0 * gamma_shape) / (2.0 * gamma_shape);
-	for (i=0; i<ncategory-1; i++) /* Eq. 10 */
+	}
+	for (i=0; i<ncategory-1; i++) { /* Eq. 10 */
 		freqK[i]=cmpIncompleteGamma(freqK[i]*gamma_shape, gamma_shape+1, lnga1);
-
+	}
 	rates[0] = freqK[0]*ncategory;
 	rates[ncategory-1] = (1-freqK[ncategory-2])*ncategory;
-	for (i=1; i<ncategory-1; i++)  rates[i] = (freqK[i]-freqK[i-1])*ncategory;
+	for (i=1; i<ncategory-1; i++) {
+		rates[i] = (freqK[i]-freqK[i-1])*ncategory;
+	}
 	delete [] freqK;
 }
 
@@ -198,30 +203,41 @@ double RateGamma::targetFunk(double x[]) {
 
 void RateGamma::setBounds(double *lower_bound, double *upper_bound,
                           bool *bound_check) {
-	if (getNDim() == 0) return;
+	if (getNDim() == 0) {
+		return;
+	}
 	lower_bound[1] = phylo_tree->params->min_gamma_shape;
 	upper_bound[1] = MAX_GAMMA_SHAPE;
 	bound_check[1] = false;
 }
 
+bool RateGamma::isOptimizingShapes() const {
+	return !fix_gamma_shape;
+}
+
 void RateGamma::setVariables(double *variables) {
-	if (getNDim() == 0) return;
+	if (getNDim() == 0) {
+		return;
+	}
 	variables[1] = gamma_shape;
 }
 
 bool RateGamma::getVariables(double *variables) {
-	if (getNDim() == 0) return false;
+	if (getNDim() == 0) {
+		return false;
+	}
     bool changed = (gamma_shape != variables[1]);
 	gamma_shape = variables[1];
-    if (changed)
+    if (changed) {
         computeRates();
+	}
     return changed;
 }
 
 double RateGamma::optimizeParameters(double gradient_epsilon,
                                      double min_gamma, double max_gamma,
                                      PhyloTree* report_to_tree) {
-	if (fix_gamma_shape) {
+	if (!isOptimizingShapes()) {
 		return phylo_tree->computeLikelihood();
 	}
 	TREE_LOG_LINE(*phylo_tree, VerboseMode::VB_MAX, 
@@ -243,8 +259,9 @@ double RateGamma::optimizeParameters(double gradient_epsilon,
 
 double RateGamma::optimizeParameters(double gradient_epsilon,
                                      PhyloTree* report_to_tree) {
-	if (fix_gamma_shape)
+	if (!isOptimizingShapes()) {
 		return phylo_tree->computeLikelihood();
+	}
 	TREE_LOG_LINE(*phylo_tree, VerboseMode::VB_MAX, 
 		          "Optimizing gamma shape...");
 	double negative_lh;
@@ -290,8 +307,9 @@ int RateGamma::computePatternRates(DoubleVector &pattern_rates,
 			sum_rate += rates[c] * lh_cat[c];
 			sum_lh += lh_cat[c];
 			if (lh_cat[c] > lh_cat[best]
-                || (lh_cat[c] == lh_cat[best] && random_double()<0.5))  // break tie at random
+                || (lh_cat[c] == lh_cat[best] && random_double()<0.5)) { // break tie at random
                 best = c;
+			}
 		}
 		pattern_rates[i] = sum_rate / sum_lh;
 		pattern_cat[i] = best;

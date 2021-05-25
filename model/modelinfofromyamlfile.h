@@ -299,8 +299,10 @@ public:
     double getVariableValue(const std::string& name) const;
     double getVariableValue(const char* name)        const;
     bool   isVariableFixed (const std::string& name) const;
-    void   setBounds       (int bound_count, double* lower_bound,
-                            double* upper_bound, bool* bound_check) const;
+    void   setBounds       (int bound_count, 
+                            const std::vector<ModelParameterType>& types,
+                            double* lower_bound, double* upper_bound, 
+                            bool* bound_check) const;
     void   updateVariables (const double* variables,
                             int first_freq_index, int last_param_index);
     bool   updateModelVariablesByType(const double* updated_values,
@@ -350,6 +352,7 @@ public:
     const std::string& getOptimizationAlgorithm() const;
     int getNumberOfRateCategories()      const;
     int getNumberOfVariableRates()       const;
+    int getNumberOfVariableShapes()      const;
     int getNumberOfProportions()         const;
     int getNumberOfVariableProportions() const;
 

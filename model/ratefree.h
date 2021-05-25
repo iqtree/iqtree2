@@ -62,6 +62,18 @@ public:
 	*/
 	virtual double getProp(int category) { return prop[category]; }
 
+	virtual void   setFixProportions(bool fixed);
+
+	virtual void   setFixRates(bool fixed);
+
+	virtual bool   isOptimizingProportions() const;
+
+	virtual bool   isOptimizingRates() const;
+
+	virtual bool   isOptimizingShapes() const;
+
+	virtual bool   areProportionsFixed() const;
+
 	/**
 		the target function which needs to be optimized
 		@param x the input vector x

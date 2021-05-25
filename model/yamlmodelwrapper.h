@@ -77,7 +77,9 @@ public:
             upper_bound[i] = MAX_RATE;
             bound_check[i] = false;
         }
-        model_info.setBounds(ndim, lower_bound,
+        std::vector<ModelParameterType> types;
+        types = { ModelParameterType::PROPORTION, ModelParameterType::RATE };
+        model_info.setBounds(ndim, types, lower_bound,
                              upper_bound, bound_check);
     }
     
@@ -301,9 +303,20 @@ template <class R> class YAMLRateModelWrapper: public R {
 protected:
     ModelInfoFromYAMLFile model_info;
     PhyloTree*            report_tree;
+    int                   number_of_variable_shapes;
+    int                   number_of_variable_proportions;
+    int                   number_of_variable_rates;
+    int                   number_of_variables;
+    bool                  only_optimizing_rates;
 public:
     typedef R super;
     using super::getNDim;
+    using super::setFixGammaShape;
+    using super::setFixProportions;
+    using super::setFixRates;
+    using super::isOptimizingProportions;
+    using super::isOptimizingRates;
+    using super::isOptimizingShapes;
     using super::startCheckpoint;
     using super::endCheckpoint;
     using super::checkpoint;
@@ -312,20 +325,48 @@ public:
                      PhyloTree* tree)
         : super(info.getNumberOfRateCategories(), tree, tree)
         , model_info(info), report_tree(tree) {
+        calculateNDim();
+    }
+
+    void calculateNDim() {
+        number_of_variable_shapes      = model_info.getNumberOfVariableShapes();
+        number_of_variable_proportions = model_info.getNumberOfVariableProportions();
+        number_of_variable_rates       = model_info.getNumberOfVariableRates();
+        number_of_variables   = number_of_variable_shapes 
+                              + number_of_variable_proportions
+                              + number_of_variable_rates;
+        setFixGammaShape  ( number_of_variable_shapes==0 );
+        setFixProportions ( number_of_variable_proportions==0 );
+        setFixRates       ( number_of_variable_rates==0 );
     }
 
     void acceptParameterList(std::string parameter_list) {
         //parameter_list is passed by value so it can be modified
         if (model_info.acceptParameterList(parameter_list, report_tree)) {
+            calculateNDim();
             //Todo: Look at what RateFree does when it accepts
             //command line parameters (in its main constructor)
         }
     }
 
+    virtual int getNDim() {
+        return number_of_variables;
+    }
+
     virtual void setBounds(double* lower_bound, double* upper_bound,
                             bool*  bound_check) {
         int ndim = getNDim();
-        model_info.setBounds(ndim, lower_bound,
+        std::vector<ModelParameterType> types;
+        if (isOptimizingShapes()) {
+            types.push_back(ModelParameterType::SHAPE);
+        }
+        if (isOptimizingProportions()) {
+            types.push_back(ModelParameterType::PROPORTION);
+        }
+        if (isOptimizingProportions()) {
+            types.push_back(ModelParameterType::RATE);
+        }
+        model_info.setBounds(ndim, types, lower_bound,
                              upper_bound, bound_check);
     }
 
@@ -334,12 +375,20 @@ public:
     virtual bool getVariables(double* variables) {
         int  index = 1;
         int  ndim  = getNDim();
-        bool rc    = model_info.updateModelVariablesByType(variables, ndim, false,
-                                                           ModelParameterType::SHAPE,      index);
-        rc        |= model_info.updateModelVariablesByType(variables, ndim, false, 
-                                                           ModelParameterType::PROPORTION, index);
-        rc        |= model_info.updateModelVariablesByType(variables, ndim, false, 
-                                                           ModelParameterType::RATE,       index);
+        bool rc    = false;
+
+        if (isOptimizingShapes()) {
+            rc  |= model_info.updateModelVariablesByType(variables, ndim, false,
+                                                         ModelParameterType::SHAPE,      index);
+        }
+        if (isOptimizingProportions()) {
+            rc  |= model_info.updateModelVariablesByType(variables, ndim, false, 
+                                                         ModelParameterType::PROPORTION, index);
+        }
+        if (isOptimizingRates()) {
+            rc  |= model_info.updateModelVariablesByType(variables, ndim, false, 
+                                                         ModelParameterType::RATE,       index);
+        }
         if (rc) {
             updateRateClassFromModelVariables();
         }
@@ -349,12 +398,18 @@ public:
     virtual void setVariables(double *variables) {
         int index = 1;
         int ndim  = getNDim();
-        model_info.readModelVariablesByType(variables, ndim, false,
-                                            ModelParameterType::SHAPE,      index);
-        model_info.readModelVariablesByType(variables, ndim, false,
-                                            ModelParameterType::PROPORTION, index);
-        model_info.readModelVariablesByType(variables, ndim, false,
-                                            ModelParameterType::RATE,       index);
+        if (isOptimizingShapes()) {
+            model_info.readModelVariablesByType(variables, ndim, false,
+                                                ModelParameterType::SHAPE,      index);
+        }
+        if (isOptimizingProportions()) {
+            model_info.readModelVariablesByType(variables, ndim, false,
+                                                ModelParameterType::PROPORTION, index);
+        }
+        if (isOptimizingRates()) {
+            model_info.readModelVariablesByType(variables, ndim, false,
+                                                ModelParameterType::RATE,       index);
+        }
     }
 
     virtual void saveCheckpoint() {

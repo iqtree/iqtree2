@@ -257,3 +257,4 @@ ModelSubst::~ModelSubst()
         delete [] state_freq;
     }
 }
+

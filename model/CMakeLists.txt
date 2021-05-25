@@ -32,6 +32,7 @@ modelunrest.cpp modelunrest.h
 modelliemarkov.cpp modelliemarkov.h
 modelpomo.cpp modelpomo.h
 modelpomomixture.cpp modelpomomixture.h
-modelfactorymixlen.cpp modelfactorymixlen.h)
+modelfactorymixlen.cpp modelfactorymixlen.h
+variablebounds.cpp variablebounds.h)
 
 target_link_libraries(model utils)

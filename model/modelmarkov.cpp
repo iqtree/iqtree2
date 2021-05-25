@@ -22,6 +22,7 @@
 #include <string.h>
 #include "modelliemarkov.h"
 #include "modelunrest.h"
+#include "variablebounds.h"
 
 #ifdef _MSC_VER
     //Hack to prevent assertion failures in aligned_malloc 
@@ -1066,28 +1067,24 @@ double ModelMarkov::optimizeParameters(double gradient_epsilon,
     TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MAX, 
                   "Optimizing " << name << " model parameters...");
 
-    double* variables = new double[ndim+1]; // used for BFGS numerical recipes
-    double* variables2 = new double[ndim+1]; // used for L-BFGS-B
-    double* upper_bound = new double[ndim+1];
-    double* lower_bound = new double[ndim+1];
-    bool*   bound_check = new bool[ndim+1];
+    VariableBounds vb(ndim+1);
     double  score;
 
     identifyHighestFrequencyState();
     
     // by BFGS algorithm
-    setVariables(variables);
-    setVariables(variables2);
-    setBounds(lower_bound, upper_bound, bound_check);
+    setVariables(vb.variables);
+    setVariables(vb.variables2);
+    setBounds(vb.lower_bound, vb.upper_bound, vb.bound_check);
 //    if (phylo_tree->params->optimize_alg.find("BFGS-B") == string::npos)
-        score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound,
-                                    bound_check, max(gradient_epsilon, TOL_RATE));
+        score = -minimizeMultiDimen(vb.variables, ndim, vb.lower_bound, vb.upper_bound,
+                                    vb.bound_check, max(gradient_epsilon, TOL_RATE));
 //    else
 //        score = -L_BFGS_B(ndim, variables+1,
 //                          lower_bound+1, upper_bound+1,
 //                          max(gradient_epsilon, TOL_RATE));
 
-    bool changed = getVariables(variables);
+    bool changed = getVariables(vb.variables);
 
     /* 2019-09-05: REMOVED due to numerical issue (NAN) with L-BFGS-B
     // 2017-12-06: more robust optimization using 2 different routines
@@ -1123,11 +1120,6 @@ double ModelMarkov::optimizeParameters(double gradient_epsilon,
         phylo_tree->clearAllPartialLH();
         score = phylo_tree->computeLikelihood();
     }
-    delete [] bound_check;
-    delete [] lower_bound;
-    delete [] upper_bound;
-    delete [] variables2;
-    delete [] variables;
     return score;
 }
 

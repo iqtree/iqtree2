@@ -6,6 +6,7 @@
  */
 
 #include "modelcodon.h"
+#include "variablebounds.h"
 #include <string>
 
 
@@ -1011,25 +1012,22 @@ double ModelCodon::optimizeParameters(double gradient_epsilon,
     }    
     TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MAX, 
                   "Optimizing " << name << " model parameters...");
-	double* variables   = new double[ndim+1];
-	double* upper_bound = new double[ndim+1];
-	double* lower_bound = new double[ndim+1];
-	bool*   bound_check = new bool[ndim+1];
+    VariableBounds vb(ndim+1);
 	double score;
 
     identifyHighestFrequencyState();
 	// by BFGS algorithm
-	setVariables(variables);
-	setBounds(lower_bound, upper_bound, bound_check);
+	setVariables(vb.variables);
+	setBounds(vb.lower_bound, vb.upper_bound, vb.bound_check);
     if (phylo_tree->params->optimize_alg_freerate.find("BFGS-B") == string::npos) {
-        score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, 
-                                    bound_check, max(gradient_epsilon, TOL_RATE));
+        score = -minimizeMultiDimen(vb.variables, ndim, vb.lower_bound, vb.upper_bound, 
+                                    vb.bound_check, max(gradient_epsilon, TOL_RATE));
     }
     else {
-        score = -L_BFGS_B(ndim, variables + 1, lower_bound + 1, upper_bound + 1, 
+        score = -L_BFGS_B(ndim, vb.variables + 1, vb.lower_bound + 1, vb.upper_bound + 1, 
                           max(gradient_epsilon, TOL_RATE));
     }
-	bool changed = getVariables(variables);
+	bool changed = getVariables(vb.variables);
     // BQM 2015-09-07: normalize state_freq
 	if (freq_type == StateFreqType::FREQ_ESTIMATE) {
         changed = scaleStateFreq();
@@ -1040,11 +1038,6 @@ double ModelCodon::optimizeParameters(double gradient_epsilon,
         score = phylo_tree->computeLikelihood();
     }
 	
-	delete [] bound_check;
-	delete [] lower_bound;
-	delete [] upper_bound;
-	delete [] variables;
-
 	return score;
 }
 

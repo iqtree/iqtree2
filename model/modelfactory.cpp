@@ -39,6 +39,7 @@
 #include "ratefreeinvar.h"
 #include "rateheterotachy.h"
 #include "rateheterotachyinvar.h"
+#include "variablebounds.h"
 #include <string>
 #include <utils/stringfunctions.h> //for convert_int
 #include <utils/timeutil.h>
@@ -921,45 +922,39 @@ double ModelFactory::optimizeAllParameters(double gradient_epsilon) {
     // return if nothing to be optimized
     if (ndim == 0) return 0.0;
 
-    double *variables = new double[ndim+1];
-    double *upper_bound = new double[ndim+1];
-    double *lower_bound = new double[ndim+1];
-    bool *bound_check = new bool[ndim+1];
+    VariableBounds vb(ndim+1);
+
     int i;
     double score;
 
     // setup the bounds for model
-    setVariables(variables);
+    setVariables(vb.variables);
     int model_ndim = model->getNDim();
     for (i = 1; i <= model_ndim; i++) {
         //cout << variables[i] << endl;
-        lower_bound[i] = MIN_RATE;
-        upper_bound[i] = MAX_RATE;
-        bound_check[i] = false;
+        vb.lower_bound[i] = MIN_RATE;
+        vb.upper_bound[i] = MAX_RATE;
+        vb.bound_check[i] = false;
     }
 
     if (model->freq_type == StateFreqType::FREQ_ESTIMATE) {
-        for (i = model_ndim - model->num_states+2; i <= model_ndim; i++)
-            upper_bound[i] = 1.0;
+        for (i = model_ndim - model->num_states+2; i <= model_ndim; i++) {
+            vb.upper_bound[i] = 1.0;
+        }
     }
 
     // setup the bounds for site_rate
-    site_rate->setBounds(lower_bound+model_ndim, upper_bound+model_ndim,
-                         bound_check+model_ndim);
+    site_rate->setBounds(vb.lower_bound+model_ndim, vb.upper_bound+model_ndim,
+                         vb.bound_check+model_ndim);
 
-    score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound,
-                                bound_check, max(gradient_epsilon, TOL_RATE));
+    score = -minimizeMultiDimen(vb.variables, ndim, vb.lower_bound, vb.upper_bound,
+                                vb.bound_check, max(gradient_epsilon, TOL_RATE));
 
-    getVariables(variables);
+    getVariables(vb.variables);
     model->decomposeRateMatrix();
     site_rate->phylo_tree->clearAllPartialLH();
 
     score = site_rate->phylo_tree->computeLikelihood();
-
-    delete [] bound_check;
-    delete [] lower_bound;
-    delete [] upper_bound;
-    delete [] variables;
 
     return score;
 }

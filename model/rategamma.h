@@ -217,6 +217,12 @@ public:
 protected:
 
 	/**
+		returns true if shape is variable (rather than fixed),
+		false if gamme shape is fixed
+	*/
+	virtual bool isOptimizingShapes() const;
+
+	/**
 		this function is served for the multi-dimension optimization. It should pack the model parameters
 		into a vector that is index from 1 (NOTE: not from 0)
 		@param variables (OUT) vector of variables, indexed from 1

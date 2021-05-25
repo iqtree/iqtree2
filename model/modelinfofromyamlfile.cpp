@@ -603,15 +603,12 @@ bool ModelInfoFromYAMLFile::isFrequencyParameter(const std::string& param_name) 
     return false;
 }
 
-void ModelInfoFromYAMLFile::setBounds(int param_count, double* lower_bound,
-                                      double* upper_bound, bool* bound_check) const {
-    //Rate Models have PROPORTION variables first, then RATE variables.
-    ModelParameterType supported_types[] = {
-        ModelParameterType::PROPORTION, 
-        ModelParameterType::RATE
-    };
+void ModelInfoFromYAMLFile::setBounds(int param_count, 
+                                      const std::vector<ModelParameterType>& types,
+                                      double* lower_bound, double* upper_bound, 
+                                      bool* bound_check) const {
     int i = 1; //Parameter numbering starts at 1, see ModelMarkov
-    for (auto param_type : supported_types) {
+    for (auto param_type : types) {
         for (auto p : parameters) {
             if (p.type == param_type) {
                 for (int sub = p.minimum_subscript;
@@ -1217,6 +1214,18 @@ int ModelInfoFromYAMLFile::getNumberOfVariableRates() const {
     int count = 0;
     for (auto v: variables) {
         if (v.second.getType() == ModelParameterType::RATE) {
+            if (!v.second.isFixed()) {
+                ++count;
+            }
+        }
+    }
+    return count;
+}
+
+int ModelInfoFromYAMLFile::getNumberOfVariableShapes() const {
+    int count = 0;
+    for (auto v: variables) {
+        if (v.second.getType() == ModelParameterType::SHAPE) {
             if (!v.second.isFixed()) {
                 ++count;
             }
