@@ -15,6 +15,7 @@
 #include "treetesting.h"
 #include "tree/phylotree.h"
 #include "tree/phylosupertree.h"
+#include "tree/iqtreemix.h"
 #include "gsl/mygsl.h"
 #include "utils/timeutil.h"
 
@@ -22,12 +23,15 @@
 void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
                  bool append, const char *linename) {
     double *pattern_lh;
-    if (!ptn_lh) {
-        pattern_lh = new double[tree->getAlnNPattern()];
-        tree->computePatternLikelihood(pattern_lh);
-    } else
-        pattern_lh = ptn_lh;
-    
+
+    if (!tree->isTreeMix()) {
+        if (!ptn_lh) {
+            pattern_lh = new double[tree->getAlnNPattern()];
+            tree->computePatternLikelihood(pattern_lh);
+        } else
+            pattern_lh = ptn_lh;
+    }
+
     try {
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
@@ -35,19 +39,28 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
             out.open(filename, ios::out | ios::app);
         } else {
             out.open(filename);
-            out << 1 << " " << tree->getAlnNSite() << endl;
         }
-        IntVector pattern_index;
-        tree->aln->getSitePatternIndex(pattern_index);
-        if (!linename)
-            out << "Site_Lh   ";
-        else {
-            out.width(10);
-            out << left << linename;
+        
+        if (tree->isTreeMix()) {
+            // tree mixture model
+            IQTreeMix* treeMix = (IQTreeMix*) tree;
+            treeMix->showLhProb(out);
+
+        } else {
+            if (!append)
+                out << 1 << " " << tree->getAlnNSite() << endl;
+            if (!linename)
+                out << "Site_Lh   ";
+            else {
+                out.width(10);
+                out << left << linename;
+            }
+            IntVector pattern_index;
+            tree->aln->getSitePatternIndex(pattern_index);
+            for (size_t i = 0; i < tree->getAlnNSite(); i++)
+                out << " " << pattern_lh[pattern_index[i]];
+            out << endl;
         }
-        for (size_t i = 0; i < tree->getAlnNSite(); i++)
-            out << " " << pattern_lh[pattern_index[i]];
-        out << endl;
         out.close();
         if (!append)
             cout << "Site log-likelihoods printed to " << filename << endl;
@@ -55,7 +68,7 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
         outError(ERR_WRITE_OUTPUT, filename);
     }
     
-    if (!ptn_lh)
+    if (!tree->isTreeMix() && !ptn_lh)
         delete[] pattern_lh;
 }
 

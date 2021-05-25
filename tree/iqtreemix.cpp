@@ -6,8 +6,6 @@
 //
 
 #include "iqtreemix.h"
-#include "vectorclass/vectorclass.h"
-
 const double MIN_PROP = 0.001;
 const double MAX_PROP = 1000.0;
 
@@ -1336,4 +1334,79 @@ void IQTreeMix::setBounds(double *lower_bound, double *upper_bound, bool* bound_
 // get the dimension of the variables (for tree weights)
 int IQTreeMix::getNDim() {
     return size();
+}
+
+// show the log-likelihoods and posterior probabilties for each tree along the sites
+void IQTreeMix::showLhProb(ofstream& out) {
+    double* pattern_lh_tree;
+    double* curr_ptn_lh;
+    double* post_prob;
+    size_t t,site,idx;
+    size_t nsite,nptn,ntree;
+    PhyloTree* ptree;
+    double sum;
+    
+    // pattern_index[i]
+    
+    nsite = aln->getNSite();
+    nptn = aln->getNPattern();
+    ntree = size();
+
+    IntVector pattern_index;
+    aln->getSitePatternIndex(pattern_index);
+
+    // compute likelihood for each tree
+    pattern_lh_tree = new double[nptn * ntree];
+    curr_ptn_lh = pattern_lh_tree;
+    for (t=0; t<ntree; t++) {
+        // save the site rate's tree
+        ptree = at(t)->getRate()->getTree();
+        // set the tree t as the site rate's tree
+        // and compute the likelihood values
+        at(t)->getRate()->setTree(at(t));
+        at(t)->initializeAllPartialLh();
+        at(t)->computeLikelihood(curr_ptn_lh);
+        at(t)->clearAllPartialLH();
+        // set back the prevoius site rate's tree
+        at(t)->getRate()->setTree(ptree);
+        curr_ptn_lh += nptn;
+    }
+    
+    // for posterior probabilities
+    post_prob = new double[ntree];
+    
+    // print out the log-likelihoods and posterior probabilties for each tree along the sites
+    out << "site,log-like";
+    for (t=0; t<ntree; t++) {
+        out << ",log-like tree " << t+1;
+    }
+    for (t=0; t<ntree; t++) {
+        out << ",post-prob tree " << t+1;
+    }
+    out << endl;
+    for (site=0; site<nsite; site++) {
+        out << site+1;
+        idx = pattern_index[site];
+        curr_ptn_lh = pattern_lh_tree;
+        sum = 0.0;
+        for (t=0; t<ntree; t++) {
+            post_prob[t] = exp(curr_ptn_lh[idx]) * weights[t];
+            sum += post_prob[t];
+            curr_ptn_lh += nptn;
+        }
+        out << "," << log(sum); // log-likelihood of the site
+        curr_ptn_lh = pattern_lh_tree;
+        for (t=0; t<ntree; t++) {
+            out << "," << curr_ptn_lh[idx]; // log-likelihood of the site for tree t
+        }
+        for (t=0; t<ntree; t++) {
+            post_prob[t] = post_prob[t] / sum;
+            out << "," << post_prob[t]; // posterior probability of the site for tree t
+        }
+        out << endl;
+    }
+    
+    // free the memory of the array
+    delete[] pattern_lh_tree;
+    delete[] post_prob;
 }

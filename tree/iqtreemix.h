@@ -214,6 +214,9 @@ public:
         return at(0)->getModel();
     }
 
+    // show the log-likelihoods and posterior probabilties for each tree along the sites
+    void showLhProb(ofstream& out);
+    
     /**
             pattern frequencies
      */
@@ -283,7 +286,7 @@ private:
     
     // get the dimension of the variables (for tree weights)
     int getNDim();
-    
+
     /**
             immediate array for pattern likelihoods during computation
      */
