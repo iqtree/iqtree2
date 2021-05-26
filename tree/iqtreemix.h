@@ -10,6 +10,7 @@
 
 #include <stdio.h>
 #include <vector>
+#include <map>
 #include <algorithm>
 #include <fstream>
 #include "iqtree.h"
@@ -248,6 +249,16 @@ public:
      */
     vector<RateHeterogeneity*> site_rates;
     
+    /**
+            members of each weight group
+     */
+    vector<vector<int> > weight_group_member;
+    
+    /**
+            does weight group exist
+     */
+    bool weightGrpExist;
+
 private:
 
     // to separate the submodel names and the site rate names from the full model name
@@ -269,6 +280,12 @@ private:
      */
     void OptimizeTreesSeparately(bool printInfo, double logl_epsilon);
 
+    /**
+             If there are multiple tree weights belonging to the same group
+             set all the tree weights of the same group to their average
+     */
+    void checkWeightGrp();
+    
     // -------------------------------------
     // for BFGS optimzation on tree weights
     // -------------------------------------

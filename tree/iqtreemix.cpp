@@ -25,6 +25,7 @@ IQTreeMix::IQTreeMix() : IQTree() {
     patn_isconst = NULL;
     ptn_like_cat = NULL;
     _ptn_like_cat = NULL;
+    weightGrpExist = false;
 }
 
 IQTreeMix::IQTreeMix(Params &params, Alignment *aln, vector<IQTree*> &trees) : IQTree(aln) {
@@ -62,6 +63,8 @@ IQTreeMix::IQTreeMix(Params &params, Alignment *aln, vector<IQTree*> &trees) : I
     
     // initialize the tree weights as non-fixed, that means it needs to be optimized
     isTreeWeightFixed = false;
+    
+    weightGrpExist = false;
 }
 
 IQTreeMix::~IQTreeMix() {
@@ -224,6 +227,33 @@ void IQTreeMix::separateModel(string modelName) {
                     cout << " " << weights[i];
                 }
                 cout << endl;
+            }
+        }
+        // check whether any grouping of tree weights is specified
+        if (d_pos < modelName.length() && modelName[d_pos] == '[') {
+            map<string,int> weight_grps;
+            map<string,int>::iterator itr;
+            weight_group_member.clear();
+            d_pos2 = modelName.find_first_of(']', d_pos+1);
+            if (d_pos2 != string::npos) {
+                s = modelName.substr(d_pos+1, d_pos2-d_pos-1);
+                separateStr(s, weight_array, ',');
+                if (weight_array.size() != ntree) {
+                    outError("The number of specified tree weights does not match with the number of trees");
+                }
+                for (i=0; i<ntree; i++) {
+                    itr = weight_grps.find(weight_array[i]);
+                    int grpID;
+                    if (itr != weight_grps.end()) {
+                        grpID = itr->second;
+                        weightGrpExist = true; // more than one tree weights belong to the same group
+                    } else {
+                        grpID = weight_grps.size();
+                        weight_grps.insert(pair<string,int>(weight_array[i],grpID));
+                        weight_group_member.push_back(vector<int>());
+                    }
+                    weight_group_member[grpID].push_back(i);
+                }
             }
         }
     }
@@ -540,6 +570,31 @@ double IQTreeMix::optimizeAllBranches(int my_iterations, double tolerance, int m
 }
 
 /**
+         If there are multiple tree weights belonging to the same group
+         set all the tree weights of the same group to their average
+ */
+void IQTreeMix::checkWeightGrp() {
+    size_t i,j;
+    double grp_mean;
+    if (weightGrpExist) {
+        // set all the tree weights in the same group as their average
+        for (i = 0; i < weight_group_member.size(); i++) {
+            if (weight_group_member[i].size() > 0) {
+                grp_mean = 0.0;
+                for (j = 0; j < weight_group_member[i].size(); j++) {
+                    grp_mean += weights[weight_group_member[i].at(j)];
+                }
+                grp_mean = grp_mean / weight_group_member[i].size();
+                for (j = 0; j < weight_group_member[i].size(); j++) {
+                    weights[weight_group_member[i].at(j)] = grp_mean;
+                }
+            }
+        }
+    }
+}
+
+
+/**
         compute the updated tree weights according to the likelihood values along each site
         prerequisite: computeLikelihood() has been invoked
 
@@ -580,6 +635,10 @@ double IQTreeMix::optimizeTreeWeightsByEM(double* pattern_mix_lh, double gradien
             weights[c] = weights[c] / getAlnNSite();
             if (weights[c] < 1e-10) weights[c] = 1e-10;
         }
+        
+        // If there are multiple tree weights belonging to the same group
+        // set all the tree weights of the same group to their average
+        checkWeightGrp();
 
         initializeAllPartialLh();
         score = computeLikelihood();
@@ -939,6 +998,10 @@ void IQTreeMix::initializeTreeWeights() {
     for (i=0; i<ntree; i++) {
         weights[i] = weights[i] / weight_sum;
     }
+    
+    // If there are multiple tree weights belonging to the same group
+    // set all the tree weights of the same group to their average
+    checkWeightGrp();
     
     // show the initial tree weights
     cout << "According to the parsimony scores along the sites, the tree weights are initialized to:";
