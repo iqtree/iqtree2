@@ -636,10 +636,6 @@ double IQTreeMix::optimizeTreeWeightsByEM(double* pattern_mix_lh, double gradien
             if (weights[c] < 1e-10) weights[c] = 1e-10;
         }
         
-        // If there are multiple tree weights belonging to the same group
-        // set all the tree weights of the same group to their average
-        checkWeightGrp();
-
         initializeAllPartialLh();
         score = computeLikelihood();
         clearAllPartialLH();
@@ -660,17 +656,34 @@ double IQTreeMix::optimizeTreeWeightsByEM(double* pattern_mix_lh, double gradien
 
  */
 double IQTreeMix::optimizeTreeWeightsByBFGS(double gradient_epsilon) {
-    int ndim = size();
+    int ndim = weight_group_member.size();
     size_t i;
-    double *variables = new double[ndim+1]; // used for BFGS numerical recipes
-    double *upper_bound = new double[ndim+1];
-    double *lower_bound = new double[ndim+1];
-    bool *bound_check = new bool[ndim+1];
+    double *variables; // used for BFGS numerical recipes
+    double *upper_bound;
+    double *lower_bound;
+    bool *bound_check;
     double score;
 
+    // special case: ndim = 1, i.e. all tree weights are forced the same
+    if (ndim == 1) {
+        for (i=0; i<size(); i++) {
+            weights[i] = 1.0 / size();
+        }
+        initializeAllPartialLh();
+        score = computeLikelihood();
+        clearAllPartialLH();
+        return score;
+    }
+    
+    // allocate memory to the arrays
+    variables = new double[ndim+1]; // used for BFGS numerical recipes
+    upper_bound = new double[ndim+1];
+    lower_bound = new double[ndim+1];
+    bound_check = new bool[ndim+1];
+
     // initialize tmp_weights for optimzation
-    tmp_weights.resize(size());
-    for (i=0; i<size(); i++)
+    tmp_weights.resize(ndim);
+    for (i=0; i<ndim; i++)
         tmp_weights[i] = weights[i];
     
     // by BFGS algorithm
@@ -1099,7 +1112,11 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
             // optimize tree weights
             if (!isTreeWeightFixed) {
                 // score = optimizeTreeWeightsByEM(pattern_mix_lh, curr_epsilon, 1);  // loop max n times
-                score = optimizeTreeWeightsByEM(pattern_mix_lh, curr_epsilon, 1);  // loop max n times
+                if (weightGrpExist) {
+                    score = optimizeTreeWeightsByBFGS(curr_epsilon);
+                } else {
+                    score = optimizeTreeWeightsByEM(pattern_mix_lh, curr_epsilon, 1);  // loop max n times
+                }
             }
 
             score = computeLikelihood();
@@ -1365,7 +1382,7 @@ double IQTreeMix::targetFunk(double x[]) {
 void IQTreeMix::setVariables(double *variables) {
     // for tree weights
     size_t i;
-    for (i=0; i<size(); i++) {
+    for (i=0; i<weight_group_member.size(); i++) {
         variables[i+1] = tmp_weights[i];
     }
 }
@@ -1373,14 +1390,19 @@ void IQTreeMix::setVariables(double *variables) {
 // read the "variables" and write into tree weights
 void IQTreeMix::getVariables(double *variables) {
     // for tree weights
-    size_t i;
+    size_t i,j;
+    int ndim = weight_group_member.size();
     double sum = 0.0;
-    for (i=0; i<size(); i++) {
+    double w;
+    for (i=0; i<ndim; i++) {
         tmp_weights[i] = variables[i+1];
-        sum += tmp_weights[i];
+        sum += tmp_weights[i] * weight_group_member[i].size();
     }
-    for (i=0; i<size(); i++) {
-        weights[i] = tmp_weights[i] / sum;
+    for (i=0; i<ndim; i++) {
+        w = tmp_weights[i] / sum;
+        for (j=0; j<weight_group_member[i].size(); j++) {
+            weights[weight_group_member[i].at(j)] = w;
+        }
     }
 }
 
