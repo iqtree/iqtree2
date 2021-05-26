@@ -185,6 +185,12 @@ void AliSimulatorHeterogeneity::simulateSeqs(int sequence_length, double *site_s
                 (*it)->node->sequence[i] = estimateStateFromOriginalTransMatrix(model, site_specific_model_index[i], site_specific_rates[i], trans_matrix, max_num_states, (*it)->length, node->sequence[i]);
         }
         
+        // update the num_children_done_simulation
+        node->num_children_done_simulation++;
+        // remove the sequence of
+        if (!node->isLeaf() && node->num_children_done_simulation >= (node->neighbors.size() - 1))
+            vector<int>().swap(node->sequence);
+        
         // browse 1-step deeper to the neighbor node
         simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, (*it)->node, node);
     }

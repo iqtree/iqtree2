@@ -621,6 +621,12 @@ void AliSimulator::simulateSeqs(int sequence_length, ModelSubst *model, double *
             (*it)->node->sequence[i] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(trans_matrix, starting_index, max_num_states, node->sequence[i]);
         }
         
+        // update the num_children_done_simulation
+        node->num_children_done_simulation++;
+        // remove the sequence of
+        if (!node->isLeaf() && node->num_children_done_simulation >= (node->neighbors.size() - 1))
+            vector<int>().swap(node->sequence);
+        
         // browse 1-step deeper to the neighbor node
         simulateSeqs(sequence_length, model, trans_matrix, max_num_states, (*it)->node, node);
     }
