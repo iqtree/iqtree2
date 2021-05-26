@@ -344,7 +344,7 @@ void AliSimulator::initializeModel(IQTree *tree, string model_name)
 void AliSimulator::removeConstantSites(){
     // dummy variables
     int num_variant_states = -1;
-    IntVector variant_state_mask;
+    vector<short int> variant_state_mask;
     
     // create a variant state mask
     createVariantStateMask(variant_state_mask, num_variant_states, round(expected_num_sites/length_ratio), tree->root, tree->root);
@@ -372,14 +372,14 @@ void AliSimulator::removeConstantSites(){
 /**
     only get variant sites
 */
-void AliSimulator::getOnlyVariantSites(IntVector variant_state_mask, Node *node, Node *dad){
+void AliSimulator::getOnlyVariantSites(vector<short int> variant_state_mask, Node *node, Node *dad){
     if (node->isLeaf() && node->name!=ROOT_NAME) {
 #ifdef _OPENMP
 #pragma omp task firstprivate(node)
 #endif
         {
             // dummy sequence
-            IntVector variant_sites;
+            vector<short int> variant_sites;
             
             // initialize the number of variant sites
             int num_variant_states = 0;
@@ -415,7 +415,7 @@ void AliSimulator::getOnlyVariantSites(IntVector variant_state_mask, Node *node,
 /**
 *  generate the current partition of an alignment from a tree (model, alignment instances are supplied via the IQTree instance)
 */
-void AliSimulator::generatePartitionAlignment(IntVector ancestral_sequence)
+void AliSimulator::generatePartitionAlignment(vector<short int> ancestral_sequence)
 {
     // if the ancestral sequence is not specified, randomly generate the sequence
     if (ancestral_sequence.size() == 0)
@@ -430,7 +430,7 @@ void AliSimulator::generatePartitionAlignment(IntVector ancestral_sequence)
         int num_abundant_sites = expected_num_sites - ancestral_sequence.size();
         if (num_abundant_sites > 0)
         {
-            IntVector abundant_sites = generateRandomSequence(num_abundant_sites);
+            vector<short int> abundant_sites = generateRandomSequence(num_abundant_sites);
             for (int site:abundant_sites)
                 tree->MTree::root->sequence.push_back(site);
         }
@@ -446,7 +446,7 @@ void AliSimulator::generatePartitionAlignment(IntVector ancestral_sequence)
 /**
     create mask for variant sites
 */
-void AliSimulator::createVariantStateMask(IntVector &variant_state_mask, int &num_variant_states, int expected_num_variant_states, Node *node, Node *dad){
+void AliSimulator::createVariantStateMask(vector<short int> &variant_state_mask, int &num_variant_states, int expected_num_variant_states, Node *node, Node *dad){
     // no need to check the further sites if num_variant_states has exceeded the expected_num_variant_states
     if (num_variant_states >= expected_num_variant_states)
         return;
@@ -487,10 +487,10 @@ void AliSimulator::createVariantStateMask(IntVector &variant_state_mask, int &nu
 /**
 *  randomly generate the ancestral sequence for the root node
 */
-IntVector AliSimulator::generateRandomSequence(int sequence_length)
+vector<short int> AliSimulator::generateRandomSequence(int sequence_length)
 {
     // initialize sequence
-    IntVector sequence;
+    vector<short int> sequence;
     sequence.resize(sequence_length);
     
     // get max_num_bases
@@ -625,7 +625,7 @@ void AliSimulator::simulateSeqs(int sequence_length, ModelSubst *model, double *
         node->num_children_done_simulation++;
         // remove the sequence of
         if (!node->isLeaf() && node->num_children_done_simulation >= (node->neighbors.size() - 1))
-            vector<int>().swap(node->sequence);
+            vector<short int>().swap(node->sequence);
         
         // browse 1-step deeper to the neighbor node
         simulateSeqs(sequence_length, model, trans_matrix, max_num_states, (*it)->node, node);

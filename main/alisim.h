@@ -45,7 +45,7 @@ void showParameters(Params params, bool is_partition_model);
 /**
 *  retrieve the ancestral sequence for the root node from an input file
 */
-IntVector retrieveAncestralSequenceFromInputFile(AliSimulator *super_alisimulator);
+vector<short int> retrieveAncestralSequenceFromInputFile(AliSimulator *super_alisimulator);
 
 /**
 *  generate mutiple alignments from a tree (model, alignment instances are supplied via the IQTree instance)
@@ -55,7 +55,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
 /**
 *  generate a partition alignment from a single simulator
 */
-void generatePartitionAlignmentFromSingleSimulator(AliSimulator *alisimulator, IntVector ancestral_sequence);
+void generatePartitionAlignmentFromSingleSimulator(AliSimulator *alisimulator, vector<short int> ancestral_sequence);
 
 /**
 *  compute the total sequence length of all partitions

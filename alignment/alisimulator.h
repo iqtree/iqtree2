@@ -57,7 +57,7 @@ protected:
     /**
     *  randomly generate the ancestral sequence for the root node
     */
-    IntVector generateRandomSequence(int sequence_length);
+    vector<short int> generateRandomSequence(int sequence_length);
     
     /**
     *  randomly generate the base frequencies
@@ -106,7 +106,7 @@ protected:
     /**
         create mask for variant states
     */
-    void createVariantStateMask(IntVector &variant_state_mask, int &num_variant_states, int expected_num_variant_states, Node *node, Node *dad);
+    void createVariantStateMask(vector<short int> &variant_state_mask, int &num_variant_states, int expected_num_variant_states, Node *node, Node *dad);
     
     /**
         remove all constant sites (in case with +ASC)
@@ -116,7 +116,7 @@ protected:
     /**
         only get variant sites
     */
-    void getOnlyVariantSites(IntVector variant_state_mask, Node *node, Node *dad);
+    void getOnlyVariantSites(vector<short int> variant_state_mask, Node *node, Node *dad);
     
     /**
         estimate length_ratio (for models with +ASC)
@@ -160,7 +160,7 @@ public:
     /**
     *  generate the current partition of an alignment from a tree (model, alignment instances are supplied via the IQTree instance)
     */
-    void generatePartitionAlignment(IntVector ancestral_sequence);
+    void generatePartitionAlignment(vector<short int> ancestral_sequence);
     
     /**
     *  update the expected_num_sites due to the change of the sequence_length

@@ -360,10 +360,10 @@ void showParameters(Params params, bool is_partition_model)
 /**
 *  retrieve the ancestral sequence for the root node from an input file
 */
-IntVector retrieveAncestralSequenceFromInputFile(AliSimulator *super_alisimulator)
+vector<short int> retrieveAncestralSequenceFromInputFile(AliSimulator *super_alisimulator)
 {
     // get variables
-    IntVector sequence;
+    vector<short int> sequence;
     char *aln_filepath = super_alisimulator->params->alisim_ancestral_sequence_aln_filepath;
     string sequence_name = super_alisimulator->params->alisim_ancestral_sequence_name;
     
@@ -459,7 +459,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
     auto start = getRealTime();
     
     // Load ancestral sequence from the input file if user has specified it
-    IntVector ancestral_sequence;
+    vector<short int> ancestral_sequence;
     if (super_alisimulator->params->alisim_ancestral_sequence_name.length() > 0)
         ancestral_sequence = retrieveAncestralSequenceFromInputFile(super_alisimulator);
     
@@ -515,7 +515,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
                 current_tree->aln->extractSiteID(current_tree->aln, info_spec, site_ids, total_expected_num_states);
 
                 // extract the ancestral sequence for the current partition from the full ancestral_sequence
-                IntVector ancestral_sequence_current_tree;
+                vector<short int> ancestral_sequence_current_tree;
                 if (ancestral_sequence.size() > 0)
                 {
                     ASSERT(site_ids.size() == expected_num_states_current_tree);
@@ -589,7 +589,7 @@ void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_
 /**
 *  generate a partition alignment from a single simulator
 */
-void generatePartitionAlignmentFromSingleSimulator(AliSimulator *alisimulator, IntVector ancestral_sequence)
+void generatePartitionAlignmentFromSingleSimulator(AliSimulator *alisimulator, vector<short int> ancestral_sequence)
 {
     // get variables
     string rate_name = alisimulator->tree->getRateName();

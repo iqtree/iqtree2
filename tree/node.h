@@ -270,7 +270,7 @@ public:
     /**
         sequence
      */
-    IntVector sequence;
+    vector<short int> sequence;
     
     /**
         number of children which have completed simulating the sequence (for AliSim)

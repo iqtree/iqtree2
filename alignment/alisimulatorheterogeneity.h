@@ -58,8 +58,8 @@ protected:
 public:
     
     RateHeterogeneity *rate_heterogeneity;
-    IntVector site_specific_model_index;
-    IntVector site_specific_rate_index;
+    vector<short int> site_specific_model_index;
+    vector<short int> site_specific_rate_index;
     const int RATE_ZERO_INDEX = -1;
     const int RATE_ONE_INDEX = 0;
     
