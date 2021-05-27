@@ -88,7 +88,7 @@ protected:
     *  simulate sequences for all nodes in the tree by DFS
     *
     */
-    virtual void simulateSeqs(int sequence_length, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad);
+    virtual void simulateSeqs(int sequence_length, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, ofstream &out, vector<string> state_mapping, string &output);
     
     /**
     *  validate sequence length of codon
@@ -155,17 +155,29 @@ public:
     /**
     *  simulate sequences for all nodes in the tree
     */
-    virtual void simulateSeqsForTree();
+    virtual void simulateSeqsForTree(string output_filepath = "");
     
     /**
     *  generate the current partition of an alignment from a tree (model, alignment instances are supplied via the IQTree instance)
     */
-    void generatePartitionAlignment(vector<short int> ancestral_sequence);
+    void generatePartitionAlignment(vector<short int> ancestral_sequence, string output_filepath = "");
     
     /**
     *  update the expected_num_sites due to the change of the sequence_length
     */
     void refreshExpectedNumSites();
+    
+    /**
+    *  initialize state_mapping (mapping from states into characters)
+    *
+    */
+    static void initializeStateMapping(Alignment *aln, vector<string> &state_mapping);
+    
+    /**
+    *  convert numerical states into readable characters
+    *
+    */
+    static string convertNumericalStatesIntoReadableCharacters(Node *node, int sequence_length, int num_sites_per_state, vector<string> state_mapping);
 };
 
 #endif /* alisimulator_h */

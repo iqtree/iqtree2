@@ -534,14 +534,24 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
             }
         }
         else
-            generatePartitionAlignmentFromSingleSimulator(super_alisimulator, ancestral_sequence);
+        {
+            // check whether we could write the output to file immediately after simulating it
+            if (!inference_mode && super_alisimulator->tree->getModelFactory() && super_alisimulator->tree->getModelFactory()->getASC() == ASC_NONE)
+                generatePartitionAlignmentFromSingleSimulator(super_alisimulator, ancestral_sequence, output_filepath);
+            // otherwise, writing output to file after completing the simulation
+            else
+                generatePartitionAlignmentFromSingleSimulator(super_alisimulator, ancestral_sequence);
+        }
         
         // show the simulation time
         auto end = getRealTime();
         cout<<" - Simulation time: "<<end-start<<endl;
         
-        // merge & write alignments to files
-        mergeAndWriteSequencesToFiles(output_filepath, super_alisimulator, inference_mode);
+        // merge & write alignments to files if they have not yet been written
+        if (inference_mode
+            || (super_alisimulator->tree->getModelFactory() && super_alisimulator->tree->getModelFactory()->getASC() != ASC_NONE)
+            || super_alisimulator->tree->isSuperTree())
+            mergeAndWriteSequencesToFiles(output_filepath, super_alisimulator, inference_mode);
         
         // show the time spent on writing sequences to the output file
         auto end_writing = getRealTime();
@@ -589,7 +599,7 @@ void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_
 /**
 *  generate a partition alignment from a single simulator
 */
-void generatePartitionAlignmentFromSingleSimulator(AliSimulator *alisimulator, vector<short int> ancestral_sequence)
+void generatePartitionAlignmentFromSingleSimulator(AliSimulator *alisimulator, vector<short int> ancestral_sequence, string output_filepath)
 {
     // get variables
     string rate_name = alisimulator->tree->getRateName();
@@ -627,7 +637,7 @@ void generatePartitionAlignmentFromSingleSimulator(AliSimulator *alisimulator, v
         }
     }
     
-    alisimulator->generatePartitionAlignment(ancestral_sequence);
+    alisimulator->generatePartitionAlignment(ancestral_sequence, output_filepath);
 }
 
 /**
@@ -648,10 +658,7 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
         
             // initialize state_mapping (mapping from state to characters)
             vector<string> state_mapping;
-            int max_num_states = aln->getMaxNumStates();
-            state_mapping.resize(max_num_states);
-            for (int i = 0; i< max_num_states; i++)
-                state_mapping[i] = aln->convertStateBackStr(i);
+            AliSimulator::initializeStateMapping(aln, state_mapping);
 
             // write senquences of leaf nodes to file with/without gaps copied from the input sequence
             if (inference_mode && !alisimulator->params->alisim_no_copy_gaps)
@@ -816,29 +823,8 @@ void writeASequenceToFile(Alignment *aln, int sequence_length, string &output_st
 #pragma omp task firstprivate(node) shared(output_str, out)
 #endif
         {
-            ASSERT(sequence_length <= node->sequence.size());
-            
-            // dummy variables
             int num_sites_per_state = aln->seq_type == SEQ_CODON?3:1;
-            std::string output (sequence_length * num_sites_per_state+1, ' ');
-            int start_index = node->name.length() + 1;
-            
-            // add node's name
-            output = node->name + " " + output;
-            output[output.length()-1] = '\n';
-            
-            // convert normal data
-            if (num_sites_per_state == 1)
-                for (int i = 0; i < sequence_length; i++)
-                    output[start_index+i*num_sites_per_state] = state_mapping[node->sequence[i]][0];
-            // convert CODON
-            else
-                for (int i = 0; i < sequence_length; i++)
-                {
-                    output[start_index+i*num_sites_per_state] = state_mapping[node->sequence[i]][0];
-                    output[start_index+i*num_sites_per_state + 1] = state_mapping[node->sequence[i]][1];
-                    output[start_index+i*num_sites_per_state + 2] = state_mapping[node->sequence[i]][2];
-                }
+            string output = AliSimulator::convertNumericalStatesIntoReadableCharacters(node, sequence_length, num_sites_per_state, state_mapping);
 #ifdef _OPENMP
 #pragma omp critical
 #endif

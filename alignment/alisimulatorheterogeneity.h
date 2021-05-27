@@ -18,7 +18,7 @@ protected:
     *  simulate sequences for all nodes in the tree by DFS
     *
     */
-    virtual void simulateSeqs(int sequence_length, double *site_specific_rates, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad);
+    virtual void simulateSeqs(int sequence_length, double *site_specific_rates, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, ofstream &out, vector<string> state_mapping, string &output);
     
     /**
         get site-specific rates based on Continuous Gamma Distribution
@@ -81,7 +81,7 @@ public:
     /**
     *  simulate sequences for all nodes in the tree
     */
-    virtual void simulateSeqsForTree();
+    virtual void simulateSeqsForTree(string output_filepath);
 };
 
 #endif /* alisimulatorheterogeneity_h */

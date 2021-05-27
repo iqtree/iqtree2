@@ -415,7 +415,7 @@ void AliSimulator::getOnlyVariantSites(vector<short int> variant_state_mask, Nod
 /**
 *  generate the current partition of an alignment from a tree (model, alignment instances are supplied via the IQTree instance)
 */
-void AliSimulator::generatePartitionAlignment(vector<short int> ancestral_sequence)
+void AliSimulator::generatePartitionAlignment(vector<short int> ancestral_sequence, string output_filepath)
 {
     // if the ancestral sequence is not specified, randomly generate the sequence
     if (ancestral_sequence.size() == 0)
@@ -440,7 +440,7 @@ void AliSimulator::generatePartitionAlignment(vector<short int> ancestral_sequen
     validataSeqLengthCodon();
     
     // simulate the sequence for each node in the tree by DFS
-    simulateSeqsForTree();
+    simulateSeqsForTree(output_filepath);
 }
 
 /**
@@ -575,18 +575,54 @@ void AliSimulator::generateRandomBaseFrequencies(double *base_frequencies, int m
 /**
 *  simulate sequences for all nodes in the tree
 */
-void AliSimulator::simulateSeqsForTree()
+void AliSimulator::simulateSeqsForTree(string output_filepath)
 {
     // get variables
     int sequence_length = expected_num_sites;
     ModelSubst *model = tree->getModel();
     int max_num_states = tree->aln->getMaxNumStates();
+    ofstream out;
+    vector<string> state_mapping;
+    string output;
         
     // initialize trans_matrix
     double *trans_matrix = new double[max_num_states*max_num_states];
     
+    // write output to file (if output_filepath is specified)
+    if (output_filepath.length() > 0)
+    {
+        try {
+            // add ".phy" to the output_filepath
+            output_filepath = output_filepath + ".phy";
+            out.exceptions(ios::failbit | ios::badbit);
+            out.open(output_filepath.c_str());
+
+            // write the first line <#taxa> <length_of_sequence>
+            int num_leaves = tree->leafNum - ((tree->root->isLeaf() && tree->root->name == ROOT_NAME)?1:0);
+            out <<num_leaves<<" "<< round(expected_num_sites/length_ratio)*num_sites_per_state<< endl;
+
+            // initialize state_mapping (mapping from state to characters)
+            initializeStateMapping(tree->aln, state_mapping);
+        } catch (ios::failure) {
+            outError(ERR_WRITE_OUTPUT, output_filepath);
+        }
+    }
+    
     // simulate Sequences
-    simulateSeqs(sequence_length, model, trans_matrix, max_num_states, tree->MTree::root, tree->MTree::root);
+    simulateSeqs(sequence_length, model, trans_matrix, max_num_states, tree->MTree::root, tree->MTree::root, out, state_mapping, output);
+        
+    // close the file if neccessary
+    if (output_filepath.length() > 0)
+    {
+        // writing the remaining output_str to file
+        if (output.length() > 0)
+            out<<output;
+        
+        out.close();
+        
+        // show the output file name
+        cout << "An alignment has just been exported to "<<output_filepath<<endl;
+    }
         
     // delete trans_matrix array
     delete[] trans_matrix;
@@ -600,7 +636,7 @@ void AliSimulator::simulateSeqsForTree()
 *  simulate sequences for all nodes in the tree by DFS
 *
 */
-void AliSimulator::simulateSeqs(int sequence_length, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad)
+void AliSimulator::simulateSeqs(int sequence_length, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, ofstream &out, vector<string> state_mapping, string &output)
 {
     // process its neighbors/children
     NeighborVec::iterator it;
@@ -621,14 +657,46 @@ void AliSimulator::simulateSeqs(int sequence_length, ModelSubst *model, double *
             (*it)->node->sequence[i] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(trans_matrix, starting_index, max_num_states, node->sequence[i]);
         }
         
+        // write sequence of leaf nodes to file if possible
+        if (state_mapping.size() > 0)
+        {
+            if ((*it)->node->isLeaf())
+            {
+                // convert numerical states into readable characters
+                output += convertNumericalStatesIntoReadableCharacters((*it)->node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping);
+                
+                // write the caching output to file if its length exceed the maximum string length
+                if (output.length() >= params->alisim_max_str_length)
+                {
+                    // write output to file
+                    out<<output;
+                    
+                    // empty output
+                    output = "";
+                }
+                
+                // remove the sequence to release the memory after extracting the sequence
+                vector<short int>().swap((*it)->node->sequence);
+            }
+            
+            if (node->isLeaf())
+            {
+                // convert numerical states into readable characters
+                output += convertNumericalStatesIntoReadableCharacters(node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping);
+                
+                // remove the sequence to release the memory after extracting the sequence
+                vector<short int>().swap(node->sequence);
+            }
+        }
+        
         // update the num_children_done_simulation
         node->num_children_done_simulation++;
-        // remove the sequence of
+        // remove the sequence of the current node to release the memory
         if (!node->isLeaf() && node->num_children_done_simulation >= (node->neighbors.size() - 1))
             vector<short int>().swap(node->sequence);
         
         // browse 1-step deeper to the neighbor node
-        simulateSeqs(sequence_length, model, trans_matrix, max_num_states, (*it)->node, node);
+        simulateSeqs(sequence_length, model, trans_matrix, max_num_states, (*it)->node, node, out, state_mapping, output);
     }
 }
 
@@ -803,4 +871,52 @@ void AliSimulator::estimateLengthRatio()
             length_ratio = 1/(1-estimated_length_ratio) + 0.1;
         }
     }
+}
+
+/**
+*  initialize state_mapping (mapping from states into characters)
+*
+*/
+void AliSimulator::initializeStateMapping(Alignment *aln, vector<string> &state_mapping)
+{
+    ASSERT(aln);
+    
+    // initialize state_mapping (mapping from state to characters)
+    int max_num_states = aln->getMaxNumStates();
+    state_mapping.resize(max_num_states);
+    for (int i = 0; i< max_num_states; i++)
+        state_mapping[i] = aln->convertStateBackStr(i);
+}
+
+/**
+*  convert numerical states into readable characters
+*
+*/
+string AliSimulator::convertNumericalStatesIntoReadableCharacters(Node *node, int sequence_length, int num_sites_per_state, vector<string> state_mapping)
+{
+    ASSERT(sequence_length <= node->sequence.size());
+    
+    // dummy variables
+    std::string output (sequence_length * num_sites_per_state+1, ' ');
+    int start_index = node->name.length() + 1;
+    
+    // add node's name
+    output = node->name + " " + output;
+    output[output.length()-1] = '\n';
+    
+    // convert normal data
+    if (num_sites_per_state == 1)
+        for (int i = 0; i < sequence_length; i++)
+            output[start_index+i*num_sites_per_state] = state_mapping[node->sequence[i]][0];
+    // convert CODON
+    else
+        for (int i = 0; i < sequence_length; i++)
+        {
+            output[start_index+i*num_sites_per_state] = state_mapping[node->sequence[i]][0];
+            output[start_index+i*num_sites_per_state + 1] = state_mapping[node->sequence[i]][1];
+            output[start_index+i*num_sites_per_state + 2] = state_mapping[node->sequence[i]][2];
+        }
+    
+    // return output
+    return output;
 }

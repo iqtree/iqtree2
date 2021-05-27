@@ -144,7 +144,7 @@ void AliSimulatorHeterogeneity::intializeCachingAccumulatedTransMatrices(double 
 *  simulate sequences for all nodes in the tree by DFS
 *
 */
-void AliSimulatorHeterogeneity::simulateSeqs(int sequence_length, double *site_specific_rates, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad)
+void AliSimulatorHeterogeneity::simulateSeqs(int sequence_length, double *site_specific_rates, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, ofstream &out, vector<string> state_mapping, string &output)
 {
     // process its neighbors/children
     NeighborVec::iterator it;
@@ -185,14 +185,46 @@ void AliSimulatorHeterogeneity::simulateSeqs(int sequence_length, double *site_s
                 (*it)->node->sequence[i] = estimateStateFromOriginalTransMatrix(model, site_specific_model_index[i], site_specific_rates[i], trans_matrix, max_num_states, (*it)->length, node->sequence[i]);
         }
         
+        // write sequence of leaf nodes to file if possible
+        if (state_mapping.size() > 0)
+        {
+            if ((*it)->node->isLeaf())
+            {
+                // convert numerical states into readable characters
+                output += convertNumericalStatesIntoReadableCharacters((*it)->node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping);
+                
+                // write the caching output to file if its length exceed the maximum string length
+                if (output.length() >= params->alisim_max_str_length)
+                {
+                    // write output to file
+                    out<<output;
+                    
+                    // empty output
+                    output = "";
+                }
+                
+                // remove the sequence to release the memory after extracting the sequence
+                vector<short int>().swap((*it)->node->sequence);
+            }
+            
+            if (node->isLeaf())
+            {
+                // convert numerical states into readable characters
+                output += convertNumericalStatesIntoReadableCharacters(node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping);
+                
+                // remove the sequence to release the memory after extracting the sequence
+                vector<short int>().swap(node->sequence);
+            }
+        }
+        
         // update the num_children_done_simulation
         node->num_children_done_simulation++;
-        // remove the sequence of
+        // remove the sequence of the current node to release the memory
         if (!node->isLeaf() && node->num_children_done_simulation >= (node->neighbors.size() - 1))
             vector<short int>().swap(node->sequence);
         
         // browse 1-step deeper to the neighbor node
-        simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, (*it)->node, node);
+        simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, (*it)->node, node, out, state_mapping, output);
     }
 }
 
@@ -344,11 +376,14 @@ void AliSimulatorHeterogeneity::getSiteSpecificRates(double *site_specific_rates
 /**
 *  simulate sequences for all nodes in the tree
 */
-void AliSimulatorHeterogeneity::simulateSeqsForTree(){
+void AliSimulatorHeterogeneity::simulateSeqsForTree(string output_filepath){
     // get variables
     int sequence_length = expected_num_sites;
     ModelSubst *model = tree->getModel();
     int max_num_states = tree->aln->getMaxNumStates();
+    ofstream out;
+    vector<string> state_mapping;
+    string output;
     
     // initialize site specific model index based on its weights (in the mixture model)
     intializeSiteSpecificModelIndex();
@@ -360,8 +395,41 @@ void AliSimulatorHeterogeneity::simulateSeqsForTree(){
     // initialize trans_matrix
     double *trans_matrix = new double[max_num_states*max_num_states];
     
+    // write output to file (if output_filepath is specified)
+    if (output_filepath.length() > 0)
+    {
+        try {
+            // add ".phy" to the output_filepath
+            output_filepath = output_filepath + ".phy";
+            out.exceptions(ios::failbit | ios::badbit);
+            out.open(output_filepath.c_str());
+
+            // write the first line <#taxa> <length_of_sequence>
+            int num_leaves = tree->leafNum - ((tree->root->isLeaf() && tree->root->name == ROOT_NAME)?1:0);
+            out <<num_leaves<<" "<< round(expected_num_sites/length_ratio)*num_sites_per_state<< endl;
+
+            // initialize state_mapping (mapping from state to characters)
+            initializeStateMapping(tree->aln, state_mapping);
+        } catch (ios::failure) {
+            outError(ERR_WRITE_OUTPUT, output_filepath);
+        }
+    }
+    
     // simulate sequences
-    simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, tree->MTree::root, tree->MTree::root);
+    simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, tree->MTree::root, tree->MTree::root, out, state_mapping, output);
+    
+    // close the file if neccessary
+    if (output_filepath.length() > 0)
+    {
+        // writing the remaining output_str to file
+        if (output.length() > 0)
+            out<<output;
+        
+        out.close();
+        
+        // show the output file name
+        cout << "An alignment has just been exported to "<<output_filepath<<endl;
+    }
 
     // delete trans_matrix array
     delete[] trans_matrix;

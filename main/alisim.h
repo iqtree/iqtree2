@@ -55,7 +55,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
 /**
 *  generate a partition alignment from a single simulator
 */
-void generatePartitionAlignmentFromSingleSimulator(AliSimulator *alisimulator, vector<short int> ancestral_sequence);
+void generatePartitionAlignmentFromSingleSimulator(AliSimulator *alisimulator, vector<short int> ancestral_sequence, string output_filepath = "");
 
 /**
 *  compute the total sequence length of all partitions

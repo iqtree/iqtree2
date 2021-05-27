@@ -275,7 +275,7 @@ public:
     /**
         number of children which have completed simulating the sequence (for AliSim)
      */
-    int num_children_done_simulation = 0;
+    short int num_children_done_simulation = 0;
 
     /**
         list of neighbors
