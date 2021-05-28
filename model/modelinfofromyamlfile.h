@@ -90,8 +90,11 @@ public:
     ModelVariable&     operator=(const ModelVariable& rhs) = default;
 
     void               setTypeName(const std::string& type_name);
+    void               setMinimum (double minimum_value);
+    void               setMaximum (double maximum_value);
     void               setValue   (double v);
     void               markAsFixed();
+    bool               constrainValueToRange();
 
     std::string        getTypeName() const;
     ModelParameterType getType    () const;
@@ -113,6 +116,8 @@ public:
 };
 
 class Checkpoint;
+
+namespace ModelExpression { class Expression; }
 
 class ModelInfoFromYAMLFile : public ModelInfo {
 public:
@@ -318,6 +323,12 @@ public:
     void   logVariablesTo(PhyloTree& report_to_tree)           const;
     ModelVariable& assign(const std::string& var_name,
                           double value);
+    ModelVariable& assign(const std::string& var_name,  
+                          ModelExpression::Expression *x,
+                          bool fix, const char* how,
+                          PhyloTree* report_tree);
+
+
     ModelVariable& forceAssign(const std::string& var_name,
                                double value);
     ModelVariable& forceAssign(const std::string& var_name,
@@ -325,7 +336,12 @@ public:
     ModelVariable& forceAssign(const char* var_name,
                                int value);
 
-    const StrVector& getVariableNamesByPosition() const;
+    const StrVector&   getVariableNamesByPosition() const;
+    /**
+        note:   Assumes getVariableNamesByPosition() called in advance
+    */
+    std::string getVariableNameByPosition(int position) const;
+
     ModelVariable& assignByPosition(size_t position,
         double value_to_set);
 

@@ -37,6 +37,9 @@ YAMLFileParameter::YAMLFileParameter()
 }
 
 std::string YAMLFileParameter::getSubscriptedVariableName(int subscript) const {
+    if (!is_subscripted) {
+        return name;
+    }
     std::stringstream subscripted_name;
     subscripted_name << name << "(" << subscript << ")";
     return subscripted_name.str();
@@ -86,6 +89,25 @@ ModelVariable::ModelVariable(ModelParameterType t,
 
 void ModelVariable::setTypeName(const std::string& type_name) {
     type = modelParameterTypeFromString(type_name);
+}
+
+void ModelVariable::setMinimum(double min_value) {
+    range.first = min_value;
+}
+
+void ModelVariable::setMaximum(double max_value) {
+    range.second = max_value;
+}
+
+bool ModelVariable::constrainValueToRange() {
+    if (value < range.first ) {
+        value = range.first;
+        return true;
+    } else if (range.second < value) {
+        value = range.second;
+        return true;
+    }
+    return false;
 }
 
 
@@ -814,7 +836,13 @@ ModelVariable& ModelInfoFromYAMLFile::forceAssign(const char* var_name,
 const StrVector& ModelInfoFromYAMLFile::getVariableNamesByPosition() const {
     variable_names.clear();
     ModelParameterType supported_types[] = {
-        ModelParameterType::RATE, ModelParameterType::FREQUENCY };
+        ModelParameterType::WEIGHT, 
+        ModelParameterType::SHAPE, 
+        ModelParameterType::PROPORTION, 
+        ModelParameterType::RATE, 
+        ModelParameterType::FREQUENCY,
+        ModelParameterType::OTHER,
+    };
     //FREQUENCY must be after RATE.
     //Todo: Where do weight parameters go?    Esepecially in mixture
     //      models
@@ -824,11 +852,31 @@ const StrVector& ModelInfoFromYAMLFile::getVariableNamesByPosition() const {
                 for (int sub = p.minimum_subscript;
                     sub <= p.maximum_subscript; ++sub) {
                     std::string var_name = p.getSubscriptedVariableName(sub);
+                    variable_names.emplace_back(var_name);
                 }
             }
         }
     }
     return variable_names;
+}
+
+std::string ModelInfoFromYAMLFile::getVariableNameByPosition(int position) const {
+    if (position<0 || variable_names.size()<=position) {
+        std::stringstream complaint;
+        complaint << "Cannot set variable with (1-based) position"
+                  << " " << (position+1) << ". Only variables with positions"
+                  << " 1 through " << (variable_names.size()+1) 
+                  << " can be supplied.";
+        const char* prefix = "\nVariable names are: ";
+        for (size_t pos=0; pos<variable_names.size(); ++pos) {
+            complaint << prefix << variable_names[pos];
+            prefix = ", ";
+        }
+        complaint << ".";
+        throw ModelExpression::ModelException(complaint.str());
+    } else {
+        return variable_names[position];
+    }
 }
 
 ModelVariable& ModelInfoFromYAMLFile::assignByPosition(size_t position,
@@ -1258,6 +1306,12 @@ int ModelInfoFromYAMLFile::getNumberOfVariableProportions() const {
 
 bool ModelInfoFromYAMLFile::acceptParameterList(std::string parameter_list,
                                                 PhyloTree* report_tree) {
+    typedef ModelExpression::InterpretedExpression Interpreter;
+    typedef ModelExpression::Expression            Expression;
+    typedef ModelExpression::Assignment            Assignment;
+    typedef ModelExpression::Variable              Variable;
+    typedef ModelExpression::ModelException        Exception;                                    
+                                                
     trimString(parameter_list);
     if (startsWith(parameter_list, "{") &&
         endsWith(parameter_list, "}")) {
@@ -1267,8 +1321,7 @@ bool ModelInfoFromYAMLFile::acceptParameterList(std::string parameter_list,
     size_t param_list_length = parameter_list.length();
     size_t i                 = 0;
     int    bracket_depth     = 0;
-    typedef ModelExpression::InterpretedExpression Expr;
-    std::vector<Expr> expr_list;
+    std::vector<Interpreter*> expr_list;
     while (i<param_list_length) {
         size_t j = i;
         for (;j<param_list_length &&
@@ -1282,44 +1335,92 @@ bool ModelInfoFromYAMLFile::acceptParameterList(std::string parameter_list,
             }
         }
         std::string param = parameter_list.substr(i, j-i);
-        expr_list.emplace_back(*this, param);
+        expr_list.push_back(new Interpreter(*this, param));
         i = j + 1;
     }
-    bool fix = !report_tree->params->optimize_from_given_params;
+    bool   fix = !report_tree->params->optimize_from_given_params;
     size_t position = 0;
-    for (Expr& ix : expr_list) {
-        ModelExpression::Expression* x = ix.expression();
-        if (x->isAssignment()) {
-            typedef ModelExpression::Assignment A;
-            typedef ModelExpression::Variable V;
-            A*             a        = dynamic_cast<A*>(x);
-            V*             xv       = a->getTargetVariable();
-            string         var_name = xv->getName();
-            double         setting  = a->getExpression()->evaluate();
-            ModelVariable& mv       = assign(var_name, setting);
-            if (fix) {
-                mv.markAsFixed();
+    getVariableNamesByPosition();
+    try {
+        for (size_t i=0; i<expr_list.size(); ++i) {
+            Interpreter* ix = expr_list[i];
+            Expression*  ex = ix->expression();
+            if (ex->isAssignment()) {
+                Assignment*    a        = dynamic_cast<Assignment*>(ex);
+                Variable*      xv       = a->getTargetVariable();
+                string         var_name = xv->getName();
+                Expression*    x        = a->getExpression();
+
+                assign( var_name, x, fix, "by name", report_tree);
+            } else {
+                string         var_name = getVariableNameByPosition(position);
+
+                assign( var_name, ex, fix, "by position", report_tree);
+                ++position;
             }
-            TREE_LOG_LINE(*report_tree, YAMLModelVerbosity,
-                            "Set " << xv->getName() << " to " << setting 
-                            << " by name." );
-        } else {
-            double         setting  = x->evaluate();
-            ModelVariable& mv       = assignByPosition(position, setting);
-            string         var_name = getVariableNamesByPosition()[position];
-            //No need for an index check for var_name's look-up, because
-            //assignByPosition would already have bombed if it were out of bounds.
-            if (fix) {
-                mv.markAsFixed();
-            }
-            TREE_LOG_LINE(*report_tree, YAMLModelVerbosity,
-                            "Set " << var_name << " to " << setting 
-                            << " by position." );
-            ++position;
-        }
+            delete ix;
+            expr_list[i] = 0;
+        }   
+    }
+    catch (Exception problem) {
+        std::stringstream complaint;
+        complaint << "An error occurred parsing parameter list"
+                  << " ... " << parameter_list << " ...:\n"
+                  << problem.getMessage();
+        outError(complaint.str());
     }
     return !expr_list.empty();
 }
+
+ModelVariable& ModelInfoFromYAMLFile::assign(const std::string& var_name,  
+                                   ModelExpression::Expression *x,
+                                   bool fix,
+                                   const char* how,
+                                   PhyloTree* report_tree) {
+    typedef ModelExpression::RangeOperator         Range;
+    typedef ModelExpression::ModelException        Exception;                                    
+    if (x->isRange()) {
+        Range*         range     = dynamic_cast<Range*>(x);
+        ModelVariable& mv        = variables[var_name];
+        double         min_value = range->getMinimum();
+        double         max_value = range->getMaximum();
+        if (max_value<min_value) {
+            std::stringstream complaint;
+            complaint << "Range supplied for " << var_name 
+                        << " is invalid.  Requested minimum " << min_value
+                        << " is greater than requested maximum " << max_value;
+            throw Exception(complaint.str());
+
+        } 
+        mv.setMinimum( min_value );
+        mv.setMaximum( max_value );
+        mv.constrainValueToRange();
+        if (min_value==max_value) {
+            mv.markAsFixed(); //Todo: permanently, though?
+        }
+        TREE_LOG_LINE(*report_tree, YAMLModelVerbosity,
+                        "Set " << var_name 
+                        << " range to " << min_value 
+                        << ".." << max_value 
+                        << " " << how << "." );
+        return mv;
+    }  
+    else {
+        double         setting  = x->evaluate();
+        ModelVariable& mv       = assign(var_name, setting);
+        const char* verb = "Set ";
+        if (fix && ! x->isEstimate()) {
+            mv.markAsFixed();
+            verb = "Set and fixed ";
+        }
+        TREE_LOG_LINE(*report_tree, YAMLModelVerbosity,
+                        verb << var_name 
+                        << " to " << setting 
+                        << " " << how << ".");
+        return mv;
+    }
+}
+
 
 void ModelInfoFromYAMLFile::writeInfo(const char* caption,
                                       ModelParameterType param_type,

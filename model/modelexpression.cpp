@@ -94,6 +94,7 @@ namespace ModelExpression {
     bool   Expression::isAssignment()       const { return false; }
     bool   Expression::isBoolean()          const { return false; }
     bool   Expression::isConstant()         const { return false; }
+    bool   Expression::isEstimate()         const { return false; }
     bool   Expression::isFunction()         const { return false; }
     bool   Expression::isList()             const { return false; }
     bool   Expression::isOperator()         const { return false; }
@@ -242,6 +243,38 @@ namespace ModelExpression {
         return true;
     }
 
+    Estimate::Estimate(ModelInfoFromYAMLFile& for_model)
+        : super(for_model, "estimate")
+        , expression(nullptr) {}
+
+    Estimate::~Estimate() {
+        delete expression;
+    }
+
+    double Estimate::evaluate() const {
+        if (expression==nullptr) {
+            throw ModelException("estimate without an expression");
+        }
+        return expression->evaluate();
+    }
+
+    void   Estimate::writeTextTo(std::stringstream &text) const {
+        text << "estimate(";
+        expression->writeTextTo(text);
+        text << ")";
+    }
+
+    bool   Estimate::isConstant() const {
+        return expression!=nullptr && expression->isConstant();
+    }
+
+    bool   Estimate::isEstimate() const {
+        return true;
+    }
+
+    void   Estimate::setParameter(Expression* param) {
+        expression = param;
+    }
 
     UnaryFunction::UnaryFunction(ModelInfoFromYAMLFile& for_model,
                                  const char* name,
@@ -749,14 +782,24 @@ namespace ModelExpression {
 
     bool   RangeOperator::isRange()              const { return true; }
 
-    int    RangeOperator::getIntegerLowerBound() const {
+    int    RangeOperator::getIntegerMinimum() const {
         //Todo: better error-checking (out of range for an int...
         return (int)floor(lhs->evaluate());
     }
 
-    int    RangeOperator::getIntegerUpperBound() const {
+    int    RangeOperator::getIntegerMaximum() const {
         //Todo: better error-checking (out of range for an int...
         return (int)floor(rhs->evaluate());
+    }
+
+    double RangeOperator::getMinimum() const {
+        //Todo: better error-checking (out of range for an int...
+        return lhs->evaluate();
+    }
+
+    double RangeOperator::getMaximum() const {
+        //Todo: better error-checking (out of range for an int...
+        return rhs->evaluate();
     }
 
     void   RangeOperator::writeTextTo(std::stringstream &text) const {
@@ -1009,6 +1052,10 @@ namespace ModelExpression {
             //Variable, or function call
             std::string var_name = parseIdentifier(text, ix);
             skipWhiteSpace(text, ix);
+            if (var_name == "estimate") {
+                expr = new Estimate(model);
+                return true;
+            }
             if (built_in_functions.isBuiltIn(var_name)) {
                 expr = built_in_functions.asBuiltIn(model, var_name);
                 return true;
@@ -1025,6 +1072,7 @@ namespace ModelExpression {
     bool InterpretedExpression::parseOtherToken(const std::string& text,
                                                 size_t&            ix,
                                                 Expression*&       expr) {
+        expr = nullptr;
         char ch = text[ix];
         char nextch = ((ix+1)<text.length()) ? text[ix+1] : '\0';
         switch (ch) {
@@ -1121,9 +1169,9 @@ namespace ModelExpression {
         const char* for_what;
         try {
             for_what = "lower bound";
-            range.first  = expr->getIntegerLowerBound();
+            range.first  = expr->getIntegerMinimum();
             for_what = "upper bound";
-            range.second = expr->getIntegerUpperBound();
+            range.second = expr->getIntegerMaximum();
         }
         catch (ModelException x) {
             throw ModelException("Error evaluating" + std::string(for_what) + 

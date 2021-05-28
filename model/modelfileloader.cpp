@@ -159,9 +159,9 @@ void ModelFileLoader::setParameterSubscriptRange(ModelInfoFromYAMLFile& info,
         if (x->isRange()) {
             auto r = dynamic_cast<ModelExpression::RangeOperator*>(x);
             parsing_what = "minimum subscript";
-            p.minimum_subscript = r->getIntegerLowerBound();
+            p.minimum_subscript = r->getIntegerMinimum();
             parsing_what = "maximum subscript";
-            p.maximum_subscript = r->getIntegerUpperBound();
+            p.maximum_subscript = r->getIntegerMaximum();
         } else {
             p.minimum_subscript = 1;
             p.maximum_subscript = x->evaluateAsInteger();

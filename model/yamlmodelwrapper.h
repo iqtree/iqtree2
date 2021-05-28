@@ -332,9 +332,10 @@ public:
         number_of_variable_shapes      = model_info.getNumberOfVariableShapes();
         number_of_variable_proportions = model_info.getNumberOfVariableProportions();
         number_of_variable_rates       = model_info.getNumberOfVariableRates();
-        number_of_variables   = number_of_variable_shapes 
-                              + number_of_variable_proportions
-                              + number_of_variable_rates;
+        number_of_variables   
+            = (isOptimizingShapes()      ? number_of_variable_shapes      : 0)
+            + (isOptimizingProportions() ? number_of_variable_proportions : 0)
+            + (isOptimizingRates()       ? number_of_variable_rates       : 0);
         setFixGammaShape  ( number_of_variable_shapes==0 );
         setFixProportions ( number_of_variable_proportions==0 );
         setFixRates       ( number_of_variable_rates==0 );
@@ -350,6 +351,10 @@ public:
     }
 
     virtual int getNDim() {
+        number_of_variables   
+            = (isOptimizingShapes()      ? number_of_variable_shapes      : 0)
+            + (isOptimizingProportions() ? number_of_variable_proportions : 0)
+            + (isOptimizingRates()       ? number_of_variable_rates       : 0);
         return number_of_variables;
     }
 

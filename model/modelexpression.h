@@ -38,12 +38,14 @@ namespace ModelExpression {
     protected:
         ModelInfoFromYAMLFile& model;
     public:
+        Expression(const Expression& rhs) = delete;
         Expression(ModelInfoFromYAMLFile& for_model);
         virtual ~Expression() = default;
         virtual double evaluate()           const;
         virtual bool   isAssignment()       const;
         virtual bool   isBoolean()          const;
         virtual bool   isConstant()         const;
+        virtual bool   isEstimate()         const;
         virtual bool   isFunction()         const;
         virtual bool   isList()             const;
         virtual bool   isOperator()         const;
@@ -110,6 +112,7 @@ namespace ModelExpression {
         virtual bool   isConstant() const;
     };
 
+ 
     class UnaryFunctionImplementation {
     public:
         virtual double callFunction(ModelInfoFromYAMLFile&,
@@ -129,6 +132,20 @@ namespace ModelExpression {
 
         virtual bool   isFunction() const;
         virtual void   setParameter(Expression* param) = 0; //takes ownership
+    };
+
+   class Estimate: public Function {
+    protected:
+        Expression* expression;
+    public:
+        typedef Function super;
+        Estimate(ModelInfoFromYAMLFile& for_model);
+        virtual ~Estimate();
+        virtual double evaluate() const;
+        virtual void   writeTextTo(std::stringstream &text) const;
+        virtual bool   isConstant() const;
+        virtual bool   isEstimate() const;
+        virtual void   setParameter(Expression* param); //takes ownership
     };
 
     class UnaryFunction: public Function {
@@ -356,10 +373,12 @@ namespace ModelExpression {
     public:
         typedef InfixOperator super;
         RangeOperator(ModelInfoFromYAMLFile& for_model);
-        virtual int    getPrecedence()        const;
-        virtual bool   isRange()              const;
-        virtual int    getIntegerLowerBound() const;
-        virtual int    getIntegerUpperBound() const;
+        virtual int    getPrecedence()     const;
+        virtual bool   isRange()           const;
+        virtual int    getIntegerMinimum() const;
+        virtual int    getIntegerMaximum() const;
+        virtual double getMinimum()        const;
+        virtual double getMaximum()        const;
         virtual void   writeTextTo(std::stringstream &text) const;
     };
 
