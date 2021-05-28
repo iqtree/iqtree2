@@ -4457,7 +4457,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 
                 // set default model_name
                 if (params.model_name.empty())
-                    params.model_name = "JC";
+                    params.model_name = "HKY";
                 
                 continue;
             }
@@ -4976,6 +4976,40 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -p FILE|DIR          Partition file or directory for --scf" << endl
     << "  --cf-verbose         Write CF per tree/locus to cf.stat_tree/_loci" << endl
     << "  --cf-quartet         Write sCF for all resampled quartets to .cf.quartet" << endl
+    
+    << endl << "ALISIM: ALIGNMENT SIMULATOR" << endl
+    << endl << "Usage: iqtree --alisim <OUTPUT_PREFIX> [-m MODEL] [-t TREE] ..." << endl << endl
+    << "  --alisim OUTPUT_PREFIX    Activate AliSim, specify the prefix for the output filename" << endl
+    << "  -t TREE_FILE              Specify the path to the input tree[s]" << endl
+    << "  --length LENGTH           Set the length of the simulated sequences" << endl
+    << "  --num-alignments NUMBER   Set the number of output datasets" << endl
+    << "  --seqtype STRING          BIN, DNA, AA, CODON, MORPH{NUM_STATES} (default: auto-detect)" << endl
+    << "                            For morphological data, 0<NUM_STATES<=32" << endl
+    << "  --m MODEL_STRING          Model name string (e.g. GTR+F+I+G) (see SUBSTITUTION MODEL)" << endl
+    << "                            AliSim supports user-specified State Frequency;" <<endl
+    << "                            Rate Heterogeneity (+G/+GC/+Rk)" << endl
+    << "                            for Discrete/Continuous Gamma/FreeRate Model; " << endl
+    << "                            Heterotachy models; Mixture Models;" << endl
+    << "                            Ascertainment bias correction (+ASC) to simulate sequences" << endl
+    << "                            without constant sites" << endl
+    << "  --mdef FILE               Model definition NEXUS file (see Manual)" << endl
+    << "  --root-seq FILE,SEQ_NAME  Supply the ancestral sequence from an alignment file" << endl
+    << "  -s FILE                   Specify the input sequence alignment (used in Inference Mode)" << endl
+    << "  --no-copy-gaps            Disable copying gaps from input sequences (default: false)" << endl
+    << "  -t RANDOM{MODEL,NUM_TAXA} Specify a model and the number of taxa to generate a random tree" << endl
+    << "                            MODEL is yh, u, cat, bal, bd{BIRTH_RATE,DEATH_RATE} standing for" << endl
+    << "                            YuleHarding, Uniform, Caterpillar, Balanced, BirthDeath" << endl
+    << "                            NUM_TAXA could be a fixed number, a list (NUM_1,NUM_2,...,NUM_N)" << endl
+    << "                            or a Uniform distribution U(LOWER_BOUND,UPPER_BOUND)" << endl
+    << "  -rlen MIN MEAN MAX        Specify the min, mean, max branch lengths of a random tree" << endl
+    << "  -p FILE                   NEXUS/RAxML partition file" << endl
+    << "                            Edge-linked proportional partition model" << endl
+    << "  -q FILE                   Like -p but edge-linked equal partition model " << endl
+    << "  -Q FILE                   Like -p but edge-unlinked partition model" << endl
+    << "  --seed NUM                Random seed number (default: CPU clock)" << endl
+    << "                            Be careful to make the AliSim reproducible," << endl
+    << "                            users should specify the seed number" << endl
+
 
 #ifdef USE_LSD2
     << endl << "TIME TREE RECONSTRUCTION:" << endl
