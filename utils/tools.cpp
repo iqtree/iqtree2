@@ -47,7 +47,6 @@
 
 #include "tools.h"
 #include "timeutil.h"
-#include "progress.h"
 #include "gzstream.h"
 #include "MPIHelper.h"
 #include "alignment/alignment.h"
@@ -55,13 +54,67 @@
 VerboseMode verbose_mode;
 extern void printCopyright(ostream &out);
 
+/*
+        WIN32 does not define gettimeofday() function.
+        Here declare it extra for WIN32 only.
+ */
+//#if defined(WIN32) && !defined(HAVE_GETTIMEOFDAY)
 #if defined(WIN32)
 #include <sstream>
 #endif
+//
+//struct timezone {
+//};
+//
+//void gettimeofday(struct timeval* t, void* timezone) {
+//    struct _timeb timebuffer;
+//    _ftime(&timebuffer);
+//    t->tv_sec = timebuffer.time;
+//    t->tv_usec = 1000 * timebuffer.millitm;
+//}
+//#else
+//#include <sys/time.h>
+//#endif
+
+
+/********************************************************
+        Defining DoubleMatrix methods
+ ********************************************************/
+
+/*DoubleMatrix::DoubleMatrix(int arows, int acols) {
+        rows = arows;
+        cols = acols;
+        size =  rows * cols;
+        value = new double[size];
+}
+
+void DoubleMatrix::setZero() {
+        memset(value, 0, size * sizeof(double));
+}
+
+
+DoubleMatrix::~DoubleMatrix() {
+        if (value) delete value;
+        value = NULL;
+}
+ */
 
 /********************************************************
         Miscellaneous
  ********************************************************/
+
+/**
+        Output an error to screen, then exit program
+        @param error error message
+ */
+/*
+void outError(char *error)
+{
+        cerr << "ERROR: " << error << endl;
+        exit(2);
+}
+ */
+
 
 /**
         Output an error to screen, then exit program
@@ -705,7 +758,6 @@ void quickStartGuide();
 
 void parseArg(int argc, char *argv[], Params &params) {
     int cnt;
-    progress_display::setProgressDisplay(false);
     verbose_mode = VB_MIN;
     params.tree_gen = NONE;
     params.user_file = NULL;
@@ -741,7 +793,6 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.experimental = true;
     params.compute_ml_dist = true;
     params.compute_ml_tree = true;
-    params.compute_ml_tree_only = false;
     params.budget_file = NULL;
     params.overlap = 0;
     params.is_rooted = false;
@@ -896,7 +947,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.p_invar_sites = -1.0;
     params.optimize_model_rate_joint = false;
     params.optimize_by_newton = true;
-    params.optimize_alg_freerate = "2-BFGS,EM";
+    params.optimize_alg_freerate = "1-BFGS,EM";
     params.optimize_alg_mixlen = "EM";
     params.optimize_alg_gammai = "EM";
     params.optimize_from_given_params = false;
@@ -1351,12 +1402,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.compute_ml_dist = false;
 				continue;
 			}
-            std::string arg = argv[cnt];
-            //Todo; move this up, use == rather than strcmp elsewhere, too.
-            if (arg=="-mlnj-only" || arg=="--mlnj-only") {
-                params.compute_ml_tree_only = true;
-                continue;
-            }
 			if (strcmp(argv[cnt], "-dobs") == 0) {
 				params.compute_obs_dist = true;
 				continue;
@@ -3452,11 +3497,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                     params.min_iterations = 2;
 				params.stop_condition = SC_FIXED_ITERATION;
                 params.modelEps = 0.05;
-                params.suppress_list_of_sequences = true;
-                params.suppress_zero_distance_warnings = true;
-                params.suppress_duplicate_sequence_warnings = true;
-                params.optimize_alg_freerate = "1-BFGS";
-                params.opt_gammai = false;
                 continue;
             }
 			if (strcmp(argv[cnt], "-fss") == 0) {
@@ -4176,10 +4216,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use --date-options <extra_options_for_dating_method>";
                 params.dating_options = argv[cnt];
-                continue;
-            }
-            if (arg=="-progress-bar" || arg=="--progress-bar" || arg=="-bar") {
-                progress_display::setProgressDisplay(true);
                 continue;
             }
 

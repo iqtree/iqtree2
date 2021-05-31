@@ -242,55 +242,70 @@ double RateFree::optimizeParameters(double gradient_epsilon) {
     if (verbose_mode >= VB_MED) {
         cout << "Optimizing " << name << " model parameters by " << optimize_alg << " algorithm..." << endl;
     }
-    // TODO: turn off EM algorithm for +ASC model
-    if ((optimize_alg.find("EM") != string::npos && phylo_tree->getModelFactory()->unobserved_ptns.empty())) {
-        if (fix_params == 0) {
-            return optimizeWithEM();
-        }
-    }
-	//if (freq_type == FREQ_ESTIMATE) scaleStateFreq(false);
-
-	double *variables = new double[ndim+1];
-	double *upper_bound = new double[ndim+1];
-	double *lower_bound = new double[ndim+1];
-	bool *bound_check = new bool[ndim+1];
-	double score;
-
-//    score = optimizeWeights();
-
-    int left = 1, right = 2;
-    if (fix_params == 1) // fix proportions
-        right = 1;
-    if (optimize_alg.find("1-BFGS") != string::npos) {
-        left = 0; 
-        right = 0;
-    }
-
-    // changed to Wi -> Ri by Thomas on Sept 11, 15
-    for (optimizing_params = right; optimizing_params >= left; optimizing_params--) {
     
-        ndim = getNDim();
-        // by BFGS algorithm
-        setVariables(variables);
-        setBounds(lower_bound, upper_bound, bound_check);
+    double *variables = new double[ndim+1];
+    double *upper_bound = new double[ndim+1];
+    double *lower_bound = new double[ndim+1];
+    bool *bound_check = new bool[ndim+1];
+    int left, right;
+    double score;
+    int pos=0;
+    string opt_alg;
+    while (pos < optimize_alg.length()) {
 
-//        if (optimizing_params == 2 && optimize_alg.find("-EM") != string::npos)
-//            score = optimizeWeights();
-//        else 
-        if (optimize_alg.find("BFGS-B") != string::npos)
-            score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_FREE_RATE));
-        else
-            score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_FREE_RATE));
+        // collect the substring until comma
+        opt_alg = "";
+        while (pos < optimize_alg.length() && optimize_alg[pos] != ',') {
+            opt_alg.append(1,optimize_alg[pos]);
+            pos++;
+        }
+        if (optimize_alg[pos] == ',')
+            pos++;
+    
+        // EM algorithm
+        // TODO: turn off EM algorithm for +ASC model
+        if ((opt_alg.find("EM") != string::npos && phylo_tree->getModelFactory()->unobserved_ptns.empty())) {
+            if (fix_params == 0) {
+                score = optimizeWithEM();
+            }
+        }
 
-        getVariables(variables);
-        // sort the rates in increasing order
-        if (sorted_rates)
-            quicksort(rates, 0, ncategory-1, prop);
-        phylo_tree->clearAllPartialLH();
-        score = phylo_tree->computeLikelihood();
+        // BFGS algorithm
+        if ((opt_alg.find("BFGS") != string::npos && phylo_tree->getModelFactory()->unobserved_ptns.empty())) {
+
+            left = 1; right = 2;
+            if (fix_params == 1) // fix proportions
+                right = 1;
+            if (opt_alg.find("1-BFGS") != string::npos) {
+                left = 0;
+                right = 0;
+            }
+
+            // changed to Wi -> Ri by Thomas on Sept 11, 15
+            for (optimizing_params = right; optimizing_params >= left; optimizing_params--) {
+            
+                ndim = getNDim();
+                // by BFGS algorithm
+                setVariables(variables);
+                setBounds(lower_bound, upper_bound, bound_check);
+
+                if (opt_alg.find("BFGS-B") != string::npos)
+                    score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_FREE_RATE));
+                else
+                    score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_FREE_RATE));
+
+                getVariables(variables);
+                // sort the rates in increasing order
+                if (sorted_rates)
+                    quicksort(rates, 0, ncategory-1, prop);
+                phylo_tree->clearAllPartialLH();
+                score = phylo_tree->computeLikelihood();
+            }
+            optimizing_params = 0;
+        }
+        // cout << opt_alg << " " << score << endl;
     }
-    optimizing_params = 0;
-
+    
 	delete [] bound_check;
 	delete [] lower_bound;
 	delete [] upper_bound;
