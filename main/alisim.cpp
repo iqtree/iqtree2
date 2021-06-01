@@ -333,7 +333,9 @@ void executeSimulation(Params params, IQTree *&tree, bool inference_mode)
     generateMultipleAlignmentsFromSingleTree(alisimulator, inference_mode);
     
     // delete alisimulator
-    delete alisimulator;
+    try {
+        delete alisimulator;
+    } catch(int err_num){}
     
     cout << "[Alignment Simulator] Done"<<"\n";
 }
@@ -562,7 +564,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
 /**
     copy sequences of leaves from a partition tree to super_tree
 */
-void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_tree, IQTree *super_tree, Node *node, Node *dad){
+void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_tree, IQTree *super_tree, int initial_state, Node *node, Node *dad){
     if (node->isLeaf() && node->name!=ROOT_NAME) {
         // find the corresponding node (super_node) in the super_tree
         Node *super_node = super_tree->findLeafName(node->name);
@@ -579,7 +581,7 @@ void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_
 #pragma omp critical
 #endif
                 if (super_node->sequence.size() != expected_num_states_super_tree)
-                    super_node->sequence.resize(expected_num_states_super_tree);
+                    super_node->sequence.resize(expected_num_states_super_tree, initial_state);
             }
 
             // copy sites one by one from the current sequence to its position in the sequence of the super_node
@@ -592,7 +594,7 @@ void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_
     NeighborVec::iterator it;
     FOR_NEIGHBOR(node, dad, it) {
         // browse 1-step deeper to the neighbor node
-        copySequencesToSuperTree(site_ids, expected_num_states_super_tree, super_tree, (*it)->node, node);
+        copySequencesToSuperTree(site_ids, expected_num_states_super_tree, super_tree, initial_state, (*it)->node, node);
     }
 }
 
@@ -771,7 +773,8 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator,
                         current_tree->aln->extractSiteID(current_tree->aln, info_spec, site_ids, super_tree->getAlnNSite());
                         
                         // copy alignment from the current tree to the super_tree
-                        copySequencesToSuperTree(site_ids, super_tree->getAlnNSite(), super_tree, current_tree->root, current_tree->root);
+                        int initial_state = current_tree->aln->getMaxNumStates();
+                        copySequencesToSuperTree(site_ids, super_tree->getAlnNSite(), super_tree, initial_state, current_tree->root, current_tree->root);
                         
 #ifdef _OPENMP
 #pragma omp critical
@@ -824,7 +827,16 @@ void writeASequenceToFile(Alignment *aln, int sequence_length, string &output_st
 #endif
         {
             int num_sites_per_state = aln->seq_type == SEQ_CODON?3:1;
-            string output = AliSimulator::convertNumericalStatesIntoReadableCharacters(node, sequence_length, num_sites_per_state, state_mapping);
+            // initialize the output sequence with all gaps (to handle the cases with missing taxa in partitions)
+            std::string output (sequence_length * num_sites_per_state+1, '-');
+            
+            // add node's name
+            output = node->name + " " + output;
+            output[output.length()-1] = '\n';
+            
+            // convert non-empty sequence
+            if (node->sequence.size() >= sequence_length)
+                output = AliSimulator::convertNumericalStatesIntoReadableCharacters(node, sequence_length, num_sites_per_state, state_mapping);
 #ifdef _OPENMP
 #pragma omp critical
 #endif
@@ -860,9 +872,19 @@ void writeASequenceToFileWithGaps(Alignment *aln, int sequence_length, vector<st
 #pragma omp task firstprivate(node) shared(output_str, out)
 #endif
         {
-            // not print empty sequence (missing taxa in partition)
-            if (sequence_length <= node->sequence.size())
+            // dummy variables
+            int num_sites_per_state = aln->seq_type == SEQ_CODON?3:1;
+            // initialize the output sequence with all gaps (to handle the cases with missing taxa in partitions)
+            std::string output (sequence_length * num_sites_per_state+1, '-');
+            
+            // add node's name
+            output = node->name + " " + output;
+            output[output.length()-1] = '\n';
+            
+            // convert non-empty sequence
+            if (node->sequence.size() >= sequence_length)
             {
+                int start_index = node->name.length() + 1;
                 string input_sequence = "";
                 
                 // retrieve the input sequence of the current node
@@ -872,14 +894,6 @@ void writeASequenceToFileWithGaps(Alignment *aln, int sequence_length, vector<st
                         input_sequence = sequences[ancestral_index];
                         break;
                     }
-                // dummy variables
-                int num_sites_per_state = aln->seq_type == SEQ_CODON?3:1;
-                std::string output (sequence_length * num_sites_per_state+1, ' ');
-                int start_index = node->name.length() + 1;
-                
-                // add node's name
-                output = node->name + " " + output;
-                output[output.length()-1] = '\n';
                 
                 // convert normal data
                 if (num_sites_per_state == 1)
@@ -918,21 +932,21 @@ void writeASequenceToFileWithGaps(Alignment *aln, int sequence_length, vector<st
                         }
                     }
                 }
+            }
 #ifdef _OPENMP
 #pragma omp critical
 #endif
+            {
+                output_str += output;
+                
+                // write the caching output_str to file if its length exceed the maximum string length
+                if (output_str.length() >= max_str_length)
                 {
-                    output_str += output;
+                    // write output_str to file
+                    out<<output_str;
                     
-                    // write the caching output_str to file if its length exceed the maximum string length
-                    if (output_str.length() >= max_str_length)
-                    {
-                        // write output_str to file
-                        out<<output_str;
-                        
-                        // empty output_str
-                        output_str = "";
-                    }
+                    // empty output_str
+                    output_str = "";
                 }
             }
         }

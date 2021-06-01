@@ -149,6 +149,9 @@ void AliSimulatorHeterogeneity::simulateSeqs(int sequence_length, double *site_s
     // process its neighbors/children
     NeighborVec::iterator it;
     FOR_NEIGHBOR(node, dad, it) {
+        // reset the num_children_done_simulation
+        if (node->num_children_done_simulation >= (node->neighbors.size() - 1))
+            node->num_children_done_simulation = 0;
         
         // estimate the sequence for the current neighbor
         // check if trans_matrix could be caching (without rate_heterogeneity or the num of rate_categories is lowr than the threshold (5)) or not

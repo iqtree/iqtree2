@@ -65,7 +65,7 @@ int computeTotalSequenceLengthAllPartitions(PhyloSuperTree *super_tree);
 /**
 *  copy sequences of leaves from a partition tree to super_tree
 */
-void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_tree, IQTree *super_tree, Node *node, Node *dad);
+void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_tree, IQTree *super_tree, int initial_state, Node *node, Node *dad);
 
 /**
 *  write all sequences of a tree to an output file

@@ -641,6 +641,9 @@ void AliSimulator::simulateSeqs(int sequence_length, ModelSubst *model, double *
     // process its neighbors/children
     NeighborVec::iterator it;
     FOR_NEIGHBOR(node, dad, it) {
+        // reset the num_children_done_simulation
+        if (node->num_children_done_simulation >= (node->neighbors.size() - 1))
+            node->num_children_done_simulation = 0;
         
         // compute the transition probability matrix
         model->computeTransMatrix(partition_rate*(*it)->length, trans_matrix);
@@ -883,9 +886,11 @@ void AliSimulator::initializeStateMapping(Alignment *aln, vector<string> &state_
     
     // initialize state_mapping (mapping from state to characters)
     int max_num_states = aln->getMaxNumStates();
-    state_mapping.resize(max_num_states);
+    state_mapping.resize(max_num_states+1);
     for (int i = 0; i< max_num_states; i++)
         state_mapping[i] = aln->convertStateBackStr(i);
+    // add an additional state for gap
+    state_mapping[max_num_states] = "-";
 }
 
 /**

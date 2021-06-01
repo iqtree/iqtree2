@@ -4990,8 +4990,8 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "                            Rate Heterogeneity (+G/+GC/+Rk)" << endl
     << "                            for Discrete/Continuous Gamma/FreeRate Model; " << endl
     << "                            Heterotachy models; Mixture Models;" << endl
-    << "                            Ascertainment bias correction (+ASC) to simulate sequences" << endl
-    << "                            without constant sites" << endl
+    << "                            and Ascertainment bias correction (+ASC) to simulate" << endl
+    << "                            sequences without constant sites" << endl
     << "  --mdef FILE               Model definition NEXUS file (see Manual)" << endl
     << "  --root-seq FILE,SEQ_NAME  Supply the ancestral sequence from an alignment file" << endl
     << "  -s FILE                   Specify the input sequence alignment (used in Inference Mode)" << endl

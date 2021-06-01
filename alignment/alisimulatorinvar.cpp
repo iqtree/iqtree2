@@ -31,6 +31,9 @@ void AliSimulatorInvar::simulateSeqs(int sequence_length, double *site_specific_
     // process its neighbors/children
     NeighborVec::iterator it;
     FOR_NEIGHBOR(node, dad, it) {
+        // reset the num_children_done_simulation
+        if (node->num_children_done_simulation >= (node->neighbors.size() - 1))
+            node->num_children_done_simulation = 0;
         
         // compute the transition probability matrix
         model->computeTransMatrix(partition_rate*(*it)->length, trans_matrix);
