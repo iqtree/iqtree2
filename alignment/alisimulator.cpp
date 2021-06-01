@@ -581,7 +581,7 @@ void AliSimulator::simulateSeqsForTree(string output_filepath)
     int sequence_length = expected_num_sites;
     ModelSubst *model = tree->getModel();
     int max_num_states = tree->aln->getMaxNumStates();
-    ofstream out;
+    ostream *out;
     vector<string> state_mapping;
     string output;
         
@@ -594,12 +594,15 @@ void AliSimulator::simulateSeqsForTree(string output_filepath)
         try {
             // add ".phy" to the output_filepath
             output_filepath = output_filepath + ".phy";
-            out.exceptions(ios::failbit | ios::badbit);
-            out.open(output_filepath.c_str());
+            if (params->do_compression)
+                out = new ogzstream(output_filepath.c_str());
+            else
+                out = new ofstream(output_filepath.c_str());
+            out->exceptions(ios::failbit | ios::badbit);
 
             // write the first line <#taxa> <length_of_sequence>
             int num_leaves = tree->leafNum - ((tree->root->isLeaf() && tree->root->name == ROOT_NAME)?1:0);
-            out <<num_leaves<<" "<< round(expected_num_sites/length_ratio)*num_sites_per_state<< endl;
+            *out <<num_leaves<<" "<< round(expected_num_sites/length_ratio)*num_sites_per_state<< endl;
 
             // initialize state_mapping (mapping from state to characters)
             initializeStateMapping(tree->aln, state_mapping);
@@ -609,16 +612,20 @@ void AliSimulator::simulateSeqsForTree(string output_filepath)
     }
     
     // simulate Sequences
-    simulateSeqs(sequence_length, model, trans_matrix, max_num_states, tree->MTree::root, tree->MTree::root, out, state_mapping, output);
+    simulateSeqs(sequence_length, model, trans_matrix, max_num_states, tree->MTree::root, tree->MTree::root, *out, state_mapping, output);
         
     // close the file if neccessary
     if (output_filepath.length() > 0)
     {
         // writing the remaining output_str to file
         if (output.length() > 0)
-            out<<output;
+            *out<<output;
         
-        out.close();
+        if (params->do_compression)
+            ((ogzstream*)out)->close();
+        else
+            ((ofstream*)out)->close();
+        delete out;
         
         // show the output file name
         cout << "An alignment has just been exported to "<<output_filepath<<endl;
@@ -636,7 +643,7 @@ void AliSimulator::simulateSeqsForTree(string output_filepath)
 *  simulate sequences for all nodes in the tree by DFS
 *
 */
-void AliSimulator::simulateSeqs(int sequence_length, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, ofstream &out, vector<string> state_mapping, string &output)
+void AliSimulator::simulateSeqs(int sequence_length, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, ostream &out, vector<string> state_mapping, string &output)
 {
     // process its neighbors/children
     NeighborVec::iterator it;

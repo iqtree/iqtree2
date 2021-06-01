@@ -650,13 +650,16 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
     try {
             // add ".phy" to the file_path
             file_path = file_path + ".phy";
-            ofstream out;
-            out.exceptions(ios::failbit | ios::badbit);
-            out.open(file_path.c_str());
+            ostream *out;
+            if (alisimulator->params->do_compression)
+                out = new ogzstream(file_path.c_str());
+            else
+                out = new ofstream(file_path.c_str());
+            out->exceptions(ios::failbit | ios::badbit);
 
             // write the first line <#taxa> <length_of_sequence>
             int num_sites_per_state = aln->seq_type == SEQ_CODON?3:1;
-            out <<num_leaves<<" "<<sequence_length*num_sites_per_state<< endl;
+            *out <<num_leaves<<" "<<sequence_length*num_sites_per_state<< endl;
         
             // initialize state_mapping (mapping from state to characters)
             vector<string> state_mapping;
@@ -690,11 +693,11 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
 #pragma omp parallel
 #pragma omp single
 #endif
-                writeASequenceToFileWithGaps(aln, sequence_length, seq_names, sequences, output_str, alisimulator->params->alisim_max_str_length, out, state_mapping, alisimulator->tree->root, alisimulator->tree->root);
+                writeASequenceToFileWithGaps(aln, sequence_length, seq_names, sequences, output_str, alisimulator->params->alisim_max_str_length, *out, state_mapping, alisimulator->tree->root, alisimulator->tree->root);
                 
                 // writing the remaining output_str to file
                 if (output_str.length() > 0)
-                    out<<output_str;
+                    *out<<output_str;
             }
             // write the sequences without copying gaps
             else
@@ -706,15 +709,19 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
 #pragma omp single
 #endif
                 // browsing all sequences, converting each sequence & caching & writing output string to file
-                writeASequenceToFile(aln, sequence_length, output_str, alisimulator->params->alisim_max_str_length, out, state_mapping, alisimulator->tree->root, alisimulator->tree->root);
+                writeASequenceToFile(aln, sequence_length, output_str, alisimulator->params->alisim_max_str_length, *out, state_mapping, alisimulator->tree->root, alisimulator->tree->root);
                 
                 // writing the remaining output_str to file
                 if (output_str.length() > 0)
-                    out<<output_str;
+                    *out<<output_str;
             }
 
             // close the file
-            out.close();
+            if (alisimulator->params->do_compression)
+                ((ogzstream*)out)->close();
+            else
+                ((ofstream*)out)->close();
+            delete out;
         
             // show the output file name
             cout << "An alignment has just been exported to "<<file_path<<endl;
@@ -819,7 +826,7 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator,
 /**
 *  write a sequence of a node to an output file
 */
-void writeASequenceToFile(Alignment *aln, int sequence_length, string &output_str, int max_str_length, ofstream &out, vector<string> state_mapping, Node *node, Node *dad)
+void writeASequenceToFile(Alignment *aln, int sequence_length, string &output_str, int max_str_length, ostream &out, vector<string> state_mapping, Node *node, Node *dad)
 {
     if (node->isLeaf() && node->name!=ROOT_NAME) {
 #ifdef _OPENMP
@@ -865,7 +872,7 @@ void writeASequenceToFile(Alignment *aln, int sequence_length, string &output_st
 /**
 *  write a sequence of a node to an output file with gaps copied from the input sequence
 */
-void writeASequenceToFileWithGaps(Alignment *aln, int sequence_length, vector<string> seq_names, vector<string> sequences, string &output_str, int max_str_length, ofstream &out, vector<string> state_mapping, Node *node, Node *dad)
+void writeASequenceToFileWithGaps(Alignment *aln, int sequence_length, vector<string> seq_names, vector<string> sequences, string &output_str, int max_str_length, ostream &out, vector<string> state_mapping, Node *node, Node *dad)
 {
     if (node->isLeaf() && node->name!=ROOT_NAME) {
 #ifdef _OPENMP

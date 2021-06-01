@@ -22,6 +22,7 @@
 #include "tree/iqtree.h"
 #include "main/phylotesting.h"
 #include <random>
+#include "utils/gzstream.h"
 #ifdef _OPENMP
     #include <omp.h>
 #endif
@@ -88,7 +89,7 @@ protected:
     *  simulate sequences for all nodes in the tree by DFS
     *
     */
-    virtual void simulateSeqs(int sequence_length, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, ofstream &out, vector<string> state_mapping, string &output);
+    virtual void simulateSeqs(int sequence_length, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, ostream &out, vector<string> state_mapping, string &output);
     
     /**
     *  validate sequence length of codon

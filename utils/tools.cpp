@@ -5009,6 +5009,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --seed NUM                Random seed number (default: CPU clock)" << endl
     << "                            Be careful to make the AliSim reproducible," << endl
     << "                            users should specify the seed number" << endl
+    << "  -gz                       Enable output compression but taking longer running time" << endl
 
 
 #ifdef USE_LSD2
