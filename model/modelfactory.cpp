@@ -339,22 +339,25 @@ void ModelFactory::removeSamplingParametersFromRateString(bool pomo,
         
     size_t wb_pos = rate_str.find("+WB");
     if (wb_pos != string::npos) {
-      if (!pomo)
+      if (!pomo) {
         outError("Weighted binomial sampling can only be used with PoMo.");
+      }
       rate_str = rate_str.substr(0, wb_pos)
         + rate_str.substr(wb_pos+3);
     }
     size_t wh_pos = rate_str.find("+WH");
     if (wh_pos != string::npos) {
-        if (!pomo)
+        if (!pomo) {
             outError("Weighted hypergeometric sampling can only be used with PoMo.");
+        }
         rate_str = rate_str.substr(0, wh_pos)
             + rate_str.substr(wh_pos+3);
     }
     size_t s_pos = rate_str.find("+S");
     if ( s_pos != string::npos) {
-        if (!pomo)
+        if (!pomo) {
             outError("Binomial sampling can only be used with PoMo.");
+        }
         rate_str = rate_str.substr(0, s_pos)
             + rate_str.substr(s_pos+2);
     }
@@ -386,7 +389,7 @@ void ModelFactory::initializePoMo(bool pomo, ModelInfo& rate_info,
     // mixture model, move +P{}, +GXX and +I flags to model string. For mixture
     // models, the heterozygosity can be set separately for each model and the
     // +P{}, +GXX and +I flags should already be inside the model definition.
-        if ( !ModelInfoFromName(model_str).isMixtureModel() && pomo) {
+    if ( !ModelInfoFromName(model_str).isMixtureModel() && pomo) {
         // +P{} flag.
         if (rate_info.isPolymorphismAware()) {
             std::string pomo_heterozygosity =
@@ -399,38 +402,38 @@ void ModelFactory::initializePoMo(bool pomo, ModelInfo& rate_info,
             }
         }
 
-      // +G flag.
-      size_t pomo_rate_start_pos;
-      if ((pomo_rate_start_pos = rate_str.find("+G")) != string::npos) {
-        string pomo_rate_str = "";
-        size_t pomo_rate_end_pos = rate_str.find_first_of("+*", pomo_rate_start_pos+1);
-        if (pomo_rate_end_pos == string::npos) {
-          pomo_rate_str = rate_str.substr(pomo_rate_start_pos,
-                                          rate_str.length() - pomo_rate_start_pos);
-          rate_str = rate_str.substr(0, pomo_rate_start_pos);
-          model_str += pomo_rate_str;
-        } else {
-          pomo_rate_str = rate_str.substr(pomo_rate_start_pos,
-                                          pomo_rate_end_pos - pomo_rate_start_pos);
-          rate_str = rate_str.substr(0, pomo_rate_start_pos) + rate_str.substr(pomo_rate_end_pos);
-          model_str += pomo_rate_str;
+        // +G flag.
+        size_t pomo_rate_start_pos;
+        if ((pomo_rate_start_pos = rate_str.find("+G")) != string::npos) {
+            string pomo_rate_str = "";
+            size_t pomo_rate_end_pos = rate_str.find_first_of("+*", pomo_rate_start_pos+1);
+            if (pomo_rate_end_pos == string::npos) {
+                pomo_rate_str = rate_str.substr(pomo_rate_start_pos,
+                                                rate_str.length() - pomo_rate_start_pos);
+                rate_str = rate_str.substr(0, pomo_rate_start_pos);
+                model_str += pomo_rate_str;
+            } else {
+                pomo_rate_str = rate_str.substr(pomo_rate_start_pos,
+                                                pomo_rate_end_pos - pomo_rate_start_pos);
+                rate_str = rate_str.substr(0, pomo_rate_start_pos) + rate_str.substr(pomo_rate_end_pos);
+                model_str += pomo_rate_str;
+            }
         }
-      }
 
-      // // +I flag.
-      // size_t pomo_irate_start_pos;
-      // if ((pomo_irate_start_pos = rate_str.find("+I")) != string::npos) {
-      //   string pomo_irate_str = "";
-      //   size_t pomo_irate_end_pos = rate_str.find_first_of("+*", pomo_irate_start_pos+1);
-      //   if (pomo_irate_end_pos == string::npos) {
-      //     pomo_irate_str = rate_str.substr(pomo_irate_start_pos, rate_str.length() - pomo_irate_start_pos);
-      //     rate_str = rate_str.substr(0, pomo_irate_start_pos);
-      //     model_str += pomo_irate_str;
-      //   } else {
-      //     pomo_irate_str = rate_str.substr(pomo_irate_start_pos, pomo_irate_end_pos - pomo_irate_start_pos);
-      //     rate_str = rate_str.substr(0, pomo_irate_start_pos) + rate_str.substr(pomo_irate_end_pos);
-      //     model_str += pomo_irate_str;
-      //   }
+        // // +I flag.
+        // size_t pomo_irate_start_pos;
+        // if ((pomo_irate_start_pos = rate_str.find("+I")) != string::npos) {
+        //   string pomo_irate_str = "";
+        //   size_t pomo_irate_end_pos = rate_str.find_first_of("+*", pomo_irate_start_pos+1);
+        //   if (pomo_irate_end_pos == string::npos) {
+        //     pomo_irate_str = rate_str.substr(pomo_irate_start_pos, rate_str.length() - pomo_irate_start_pos);
+        //     rate_str = rate_str.substr(0, pomo_irate_start_pos);
+        //     model_str += pomo_irate_str;
+        //   } else {
+        //     pomo_irate_str = rate_str.substr(pomo_irate_start_pos, pomo_irate_end_pos - pomo_irate_start_pos);
+        //     rate_str = rate_str.substr(0, pomo_irate_start_pos) + rate_str.substr(pomo_irate_end_pos);
+        //     model_str += pomo_irate_str;
+        //   }
     }
 }
 
@@ -599,7 +602,8 @@ void ModelFactory::initializeAscertainmentCorrection(ModelInfo& rate_info,
             tree->aln->getUnobservedConstPatterns(ASC_type, unobserved_ptns);
             
             // delete rarely observed state
-            for (intptr_t i = static_cast<intptr_t>(unobserved_ptns.size())-1; i >= 0; i--) {
+            intptr_t unobserved = static_cast<intptr_t>(unobserved_ptns.size());
+            for (intptr_t i = unobserved-1; i >= 0; i--) {
                 if (model->state_freq[(int)unobserved_ptns[i][0]] < 1e-8) {
                     unobserved_ptns.erase(unobserved_ptns.begin() + i);
                 }
@@ -622,18 +626,20 @@ void ModelFactory::initializeAscertainmentCorrection(ModelInfo& rate_info,
                 //                    cerr << pat_str << " is invariant site pattern" << endl;
                 //                }
                 if (!params.partition_file) {
-                    string varsites_file = ((string)params.out_prefix + ".varsites.phy");
+                    string varsites_file = params.out_prefix + ".varsites.phy";
                     tree->aln->printAlignment(params.aln_output_format,
                                               varsites_file.c_str(), false,
                                               NULL, EXCLUDE_INVAR);
                     cerr << "For your convenience alignment"
-                         << " with variable sites printed to " << varsites_file << endl;
+                         << " with variable sites printed to " 
+                         << varsites_file << endl;
                 }
                 double  fraction    = tree->aln->frac_invariant_sites;
                 double  site_count  = static_cast<double>(tree->aln->getNSite());
                 double  estimate    = floor(fraction * site_count + .5);
                 int64_t invar_count = static_cast<int64_t> (estimate);
-                outError("Invalid use of +ASC because of " + convertInt64ToString(invar_count) +
+                outError("Invalid use of +ASC because of " + 
+                         convertInt64ToString(invar_count) +
                          " invariant sites in the alignment");
             }
             TREE_LOG_LINE(*tree, VerboseMode::VB_MED,
@@ -1366,7 +1372,8 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
 }
 
 /**
- * @return TRUE if parameters are at the boundary that may cause numerical unstability
+ * @return TRUE if parameters are at the boundary 
+ *              hat may cause numerical unstability
  */
 bool ModelFactory::isUnstableParameters() {
     if (model->isUnstableParameters()) {
@@ -1383,10 +1390,11 @@ void ModelFactory::startStoringTransMatrix() {
 void ModelFactory::stopStoringTransMatrix() {
     if (!store_trans_matrix) return;
     is_storing = false;
-    if (!empty()) {
-        for (iterator it = begin(); it != end(); it++)
-            delete it->second;
-        clear();
+    if (!matrices.empty()) {
+        for (auto it = matrices.begin(); it != matrices.end(); it++) {
+            delete [] it->second;
+        }
+        matrices.clear();
     }
 }
 
@@ -1405,14 +1413,15 @@ void ModelFactory::computeTransMatrix(double time, double *trans_matrix,
         model->computeTransMatrix(time, trans_matrix, mixture);
         return;
     }
-    int mat_size = model->num_states * model->num_states;
-    iterator ass_it = find(static_cast<int>(round(time * 1e6)));
-    if (ass_it == end()) {
+    int  mat_size = model->num_states * model->num_states;
+    auto key = matrixMapKey(time);
+    auto ass_it = matrices.find(key);
+    if (ass_it == matrices.end()) {
         // allocate memory for 3 matricies
         double *trans_entry = new double[mat_size * 3];
         trans_entry[mat_size] = trans_entry[mat_size+1] = 0.0;
         model->computeTransMatrix(time, trans_entry, mixture);
-        ass_it = insert(value_type(static_cast<int>(round(time * 1e6)), trans_entry)).first;
+        ass_it = matrices.insert(MatrixMapEntry(key, trans_entry)).first;
     } else {
         //if (verbose_mode >= VerboseMode::VB_MAX)
             //cout << "ModelFactory bingo" << endl;
@@ -1427,15 +1436,16 @@ void ModelFactory::computeTransDerv(double time, double *trans_matrix,
         model->computeTransDerv(time, trans_matrix, trans_derv1, trans_derv2, mixture);
         return;
     }
-    int      mat_size = model->num_states * model->num_states;
-    iterator ass_it   = find(static_cast<int>(round(time * 1e6)));
-    if (ass_it == end()) {
+    int  mat_size = model->num_states * model->num_states;
+    auto key      = matrixMapKey(time);
+    auto ass_it   = matrices.find(key);
+    if (ass_it == matrices.end()) {
         // allocate memory for 3 matricies
         double* trans_entry   = new double[mat_size * 3];
         trans_entry[mat_size] = trans_entry[mat_size+1] = 0.0;
         model->computeTransDerv(time, trans_entry, trans_entry+mat_size,
                                 trans_entry+(mat_size*2), mixture);
-        ass_it = insert(value_type(static_cast<int>(round(time * 1e6)), trans_entry)).first;
+        ass_it = matrices.insert(MatrixMapEntry(key, trans_entry)).first;
     } else if (ass_it->second[mat_size] == 0.0 && ass_it->second[mat_size+1] == 0.0) {
         double *trans_entry = ass_it->second;
         model->computeTransDerv(time, trans_entry, trans_entry+mat_size,
@@ -1448,10 +1458,10 @@ void ModelFactory::computeTransDerv(double time, double *trans_matrix,
 
 ModelFactory::~ModelFactory()
 {
-    for (iterator it = begin(); it != end(); it++) {
-        delete it->second;
+    for ( auto it = matrices.begin(); it != matrices.end(); ++it) {
+        delete [] it->second;
     }
-    clear();
+    matrices.clear();
 }
 
 /************* FOLLOWING SERVE FOR JOINT OPTIMIZATION OF MODEL AND RATE PARAMETERS *******/

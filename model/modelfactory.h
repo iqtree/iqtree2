@@ -34,14 +34,23 @@ const double MAX_BRLEN_SCALE = 100.0;
 ModelsBlock *readModelsDefinition(Params &params);
 
 /**
-Store the transition matrix corresponding to evolutionary time so that one must not compute again. 
-For efficiency purpose esp. for protein (20x20) or codon (61x61).
-The values of the map contain 3 matricies consecutively: transition matrix, 1st, and 2nd derivative
 
 	@author BUI Quang Minh <minh.bui@univie.ac.at>
 */
-class ModelFactory : public unordered_map<int, double*>, public Optimization, public CheckpointFactory
+class ModelFactory : public Optimization, public CheckpointFactory
 {
+protected:
+	//Store the transition matrix corresponding to evolutionary time,
+	//so that they need not be computed again. 
+	//For efficiency purpose esp. for protein (20x20) or codon (61x61).
+	//The values of the map contain 3 matricies consecutively: 
+	//transition matrix, 1st, and 2nd derivative
+
+	typedef unordered_map<int,double*> MatrixMap;
+	typedef MatrixMap::value_type MatrixMapEntry;
+	MatrixMap matrices;
+	inline int matrixMapKey(double time) { return static_cast<int>(round(time * 1e6)); }
+
 public:
 
 	/**
