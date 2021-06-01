@@ -157,7 +157,7 @@ void Pattern::countAppearances(Alignment* aln) {
 }
 
 void Pattern::setInformativeFlags(Alignment* aln) {
-        is_informative = (count_multi > 1);
+    is_informative = (count_multi > 1);
     is_const       = (state_app.count() >= 1);
     if (is_const) {
         if (state_app.count() == aln->num_states) {

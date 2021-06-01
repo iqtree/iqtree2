@@ -8,6 +8,7 @@
 #include "alignment.h"
 #include "alignmentsummary.h"
 
+
 AlignmentSummary::AlignmentSummary(const Alignment* a
                                    , bool keepConstSites
                                    , bool keepBoringSites) {
@@ -16,24 +17,22 @@ AlignmentSummary::AlignmentSummary(const Alignment* a
     sequenceCount  = static_cast<int>(a->getNSeq());
     totalFrequency = 0;
     totalFrequencyOfNonConstSites = 0;
+
     if (sequenceCount==0) {
         minState = a->STATE_UNKNOWN;
         maxState = a->STATE_UNKNOWN;
         return;
     }
     
-    struct SiteSummary
-    {
-    public:
-        bool      isConst;
-        int       frequency;
-        StateType minState;
-        StateType maxState;
-        SiteSummary(): isConst(false), frequency(0), minState(0), maxState(0) {}
-    };
-    
     intptr_t siteCount = alignment->size();
     std::vector<SiteSummary> sites;
+    setUpSiteSummaries(siteCount, sites);
+    countVariableSites(keepConstSites, keepBoringSites, 
+                       siteCount, sites);
+}
+
+void AlignmentSummary::setUpSiteSummaries(intptr_t siteCount,
+                                          std::vector<SiteSummary>& sites) {
     sites.resize(siteCount);
     #ifdef _OPENMP
         #pragma omp parallel for
@@ -56,7 +55,13 @@ AlignmentSummary::AlignmentSummary(const Alignment* a
         }
         s.minState  = minStateForSite;
         s.maxState  = maxStateForSite;
-    }
+    }    
+}
+
+void AlignmentSummary::countVariableSites(bool keepConstSites, 
+                                          bool keepBoringSites,
+                                          intptr_t siteCount,
+                                          std::vector<SiteSummary>& sites) {
     sequenceLength = 0; //Number sites where there's some variability
     std::map<int, int> & map = stateToSumOfConstantSiteFrequencies;
     for (intptr_t site=0; site<siteCount; ++site) {

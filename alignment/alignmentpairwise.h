@@ -30,6 +30,17 @@ Pairwise alignment
 */
 class AlignmentPairwise : public Alignment, public Optimization
 {
+protected:
+    void   setSequenceNumbersFlat(int se1, int seq2);
+
+    double computeFunctionSiteSpecificRates(double value);
+    double computeFunctionSiteSpecificModel(double value);
+    double computeFunctionCategorizedRates(double value);
+
+    void   computeFuncDervSiteSpecificRate(double value, double &df, double &ddf);
+    void   computeFuncDervSiteSpecificModel(double value, double &df, double &ddf);
+    void   computeFuncDervCategorizedRates(double value, double &df, double &ddf);
+    void   computeFuncDervAsUsual(double value, double &df, double &ddf);
 public:
     AlignmentPairwise();
 

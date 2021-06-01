@@ -3736,7 +3736,7 @@ Alignment *Alignment::convertCodonToDNA() {
     verbose_mode = min(verbose_mode, VerboseMode::VB_MIN);
     // to avoid printing gappy sites in addPattern
     size_t nsite = getNSite();
-    size_t nseq = getNSeq();
+    size_t nseq  = getNSeq();
     Pattern pat[3];
     pat[0].resize(nseq);
     pat[1].resize(nseq);
@@ -3765,13 +3765,8 @@ Alignment *Alignment::convertCodonToDNA() {
     return res;
 }
 
-#ifdef _MSC_VER
-#define THROW_ONLY(x) 
-#else
-#define THROW_ONLY(x) throw(x)
-#endif
 void convert_range(const char *str, int &lower, int &upper, 
-                   int &step_size, char* &endptr) THROW_ONLY(string) {
+                   int &step_size, char* &endptr) {
 
     // parse the lower bound of the range
     int d = strtol(str, &endptr, 10);

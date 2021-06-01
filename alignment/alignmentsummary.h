@@ -19,6 +19,16 @@ Summary (for an Alignment) of sites where there are variations
 
 class Alignment;
 
+struct SiteSummary
+{
+public:
+    bool      isConst;
+    int       frequency;
+    StateType minState;
+    StateType maxState;
+    SiteSummary(): isConst(false), frequency(0), minState(0), maxState(0) {}
+};
+
 struct AlignmentSummary
 {
 protected:
@@ -36,6 +46,12 @@ protected:
     intptr_t              sequenceLength;  //Sequence length (or: count of sites per sequence)
     intptr_t              sequenceCount;   //The number of sequences
 
+    void setUpSiteSummaries(intptr_t siteCount, 
+                            std::vector<SiteSummary>& sites);
+    void countVariableSites(bool keepConstSites, 
+                            bool keepBoringSites,
+                            intptr_t siteCount,
+                            std::vector<SiteSummary>& sites);
 public:
     AlignmentSummary(const Alignment* a, bool keepConstSites, bool keepBoringSites);
     ~AlignmentSummary();
