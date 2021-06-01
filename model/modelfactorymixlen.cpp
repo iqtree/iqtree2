@@ -77,20 +77,15 @@ string ModelFactoryMixlen::sortClassesByTreeLength() {
     tree->saveBranchLengths(brlen);
     ASSERT(brlen.size() == tree->branchNum * tree->mixlen);
 
-    // compute tree lengths
-#ifndef _MSC_VER
-    double treelen[tree->mixlen];
-    int index[tree->mixlen];
-#else
-    boost::scoped_array<double> treelen(new double[tree->mixlen]);
-    boost::scoped_array<int>    index  (new int[tree->mixlen]);
-#endif
-    memset(&treelen[0], 0, sizeof(double)*tree->mixlen);
-    int i, j;
-    for (i = 0; i < tree->mixlen; i++) {
+    DoubleVector treelen(tree->mixlen);
+    IntVector    index(tree->mixlen);
+
+    treelen.resize(tree->mixlen, 0);
+
+    for (int i = 0; i < tree->mixlen; i++) {
         index[i] = i;
     }
-    for (i = 0, j = 0; i < brlen.size(); i++, j++) {
+    for (int i = 0, j = 0; i < brlen.size(); i++, j++) {
         if (j == tree->mixlen) j = 0;
         treelen[j] += brlen[i];
     }
@@ -98,70 +93,41 @@ string ModelFactoryMixlen::sortClassesByTreeLength() {
     // sort tree lengths and reorder branch lengths
     quicksort(&treelen[0], 0, tree->mixlen-1, &index[0]);
     bool sorted = true;
-    for (j = 0; j < tree->mixlen; j++)
-        if (index[j] != j) { sorted = false; break; };
+    for (int j = 0; j < tree->mixlen; j++) {
+        if (index[j] != j) { 
+            sorted = false; break; 
+        }
+    }
     if (!sorted) {
         double score = tree->curScore;
         cout << "Reordering classes by tree lengths" << endl;
         DoubleVector sorted_brlen;
         sorted_brlen.resize(brlen.size());
-        for (i = 0; i < tree->branchNum; i++) {
-            for (j = 0; j < tree->mixlen; j++) {
-                sorted_brlen[i*tree->mixlen + j] = brlen[i*tree->mixlen + index[j]];
+        int k = 0;
+        #ifdef _OPENMP
+        #pragma omp parallel for
+        #endif
+        for (int i = 0; i < tree->branchNum; i++) {
+            int m = i*tree->mixlen;
+            for (int j = 0; j < tree->mixlen; j++, ++k) {
+                sorted_brlen[m + j] = brlen[m + index[j]];
             }
         }
         tree->restoreBranchLengths(sorted_brlen);
 
         ASSERT(tree->mixlen == site_rate->getNRate());
-        // reoder class weights
-#ifndef _MSC_VER
-        double prop[site_rate->getNRate()];
-#else
-        boost::scoped_array<double> prop(new double[site_rate->getNRate()]);
-#endif
-        for (j = 0; j < site_rate->getNRate(); j++) {
+        DoubleVector prop(site_rate->getNRate());
+
+        //reorder class weights
+        for (int j = 0; j < site_rate->getNRate(); j++) {
             prop[j] = site_rate->getProp(index[j]);
         }
-        for (j = 0; j < site_rate->getNRate(); j++) {
+        for (int j = 0; j < site_rate->getNRate(); j++) {
             site_rate->setProp(j, prop[j]);
         }
         // reorder mixture models
         if (fused_mix_rate) {
-            ASSERT(model->getNMixtures() == site_rate->getNRate());
-//            ModelMixture *mixmodel = (ModelMixture*)model;
-            int nmix = model->getNMixtures();
-#ifndef _MSC_VER
-            ModelSubst *models[nmix];
-#else
-            boost::scoped_array<ModelSubst*> models(new ModelSubst * [nmix]);
-#endif
-            for (j = 0; j < nmix; j++) {
-                models[j] = model->getMixtureClass(index[j]);
-            }
-            for (j = 0; j < nmix; j++) {
-                model->setMixtureClass(j, models[j]);
-            }
-            for (j = 0; j < site_rate->getNRate(); j++) {
-                prop[j] = model->getMixtureWeight(index[j]);
-            }
-            for (j = 0; j < site_rate->getNRate(); j++) {
-                model->setMixtureWeight(j, prop[j]);
-            }
-            // assigning memory for individual models
-            int m = 0;
-            int num_states = model->num_states;
-            int states_squared = num_states*num_states;
-            for (m = 0; m < nmix; m++) {
-                auto mix_class = ((ModelMarkov*)model->getMixtureClass(m));
-                mix_class->setEigenvalues(&model->getEigenvalues()[m*num_states]);
-                mix_class->setEigenvectors(&model->getEigenvectors()[m*states_squared]);
-                auto i_evec = &model->getInverseEigenvectors()[m*states_squared];
-                mix_class->setInverseEigenvectors(i_evec);
-                auto i_evec_t = &model->getInverseEigenvectorsTransposed()[m*states_squared];
-                mix_class->setInverseEigenvectorsTransposed(i_evec_t);
-            }
-            model->decomposeRateMatrix();
-            site_rate->writeInfo(cout);
+            reorderMixtureModels(index, prop);
         }
         tree->clearAllPartialLH();
         ASSERT(fabs(score - tree->computeLikelihood()) < 0.1);
@@ -177,6 +143,40 @@ string ModelFactoryMixlen::sortClassesByTreeLength() {
         tree->relative_rate->setRate(j, treelen[j]*sum);
     */
     return tree->getTreeString();
+}
+
+void ModelFactoryMixlen::reorderMixtureModels(IntVector& index, DoubleVector& prop) {
+    ASSERT(model->getNMixtures() == site_rate->getNRate());
+//            ModelMixture *mixmodel = (ModelMixture*)model;
+    int nmix = model->getNMixtures();
+    std::vector<ModelSubst*> models(nmix);
+
+    for (int j = 0; j < nmix; j++) {
+        models[j] = model->getMixtureClass(index[j]);
+    }
+    for (int j = 0; j < nmix; j++) {
+        model->setMixtureClass(j, models[j]);
+    }
+    for (int j = 0; j < site_rate->getNRate(); j++) {
+        prop[j] = model->getMixtureWeight(index[j]);
+    }
+    for (int j = 0; j < site_rate->getNRate(); j++) {
+        model->setMixtureWeight(j, prop[j]);
+    }
+    // assigning memory for individual models
+    int num_states = model->num_states;
+    int states_squared = num_states*num_states;
+    for (int m = 0; m < nmix; m++) {
+        auto mix_class = ((ModelMarkov*)model->getMixtureClass(m));
+        mix_class->setEigenvalues(&model->getEigenvalues()[m*num_states]);
+        mix_class->setEigenvectors(&model->getEigenvectors()[m*states_squared]);
+        auto i_evec = &model->getInverseEigenvectors()[m*states_squared];
+        mix_class->setInverseEigenvectors(i_evec);
+        auto i_evec_t = &model->getInverseEigenvectorsTransposed()[m*states_squared];
+        mix_class->setInverseEigenvectorsTransposed(i_evec_t);
+    }
+    model->decomposeRateMatrix();
+    site_rate->writeInfo(cout);
 }
 
 int ModelFactoryMixlen::getNParameters(int brlen_type) {

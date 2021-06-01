@@ -42,6 +42,8 @@ public:
     */
     string sortClassesByTreeLength();
 
+    void reorderMixtureModels(IntVector& index, DoubleVector& prop);
+
 
     /**
      * @param brlen_type either BRLEN_OPTIMIZE, BRLEN_FIX or BRLEN_SCALE
