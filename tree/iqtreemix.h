@@ -39,6 +39,9 @@ public:
     
     void initializeModel(Params &params, string model_name, ModelsBlock *models_block);
 
+    // compute the overall likelihood value by combining all the existing likelihood values of the trees
+    double computeLikelihood_combine();
+    
     virtual double computeLikelihood(double *pattern_lh = NULL);
 
     /**

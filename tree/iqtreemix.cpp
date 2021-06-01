@@ -506,6 +506,35 @@ double IQTreeMix::computeLikelihood(double *pattern_lh) {
     return logLike;
 }
 
+// compute the overall likelihood value by combining all the existing likelihood values of the trees
+double IQTreeMix::computeLikelihood_combine() {
+    double* pattern_lh_tree;
+    size_t i,j,ptn,t;
+    size_t nptn,ntree;
+    double logLike = 0.0;
+    double subLike;
+    double score;
+    PhyloTree* ptree;
+    
+    nptn = aln->getNPattern();
+    ntree = size();
+
+    // compute the total likelihood
+    i=0;
+    for (ptn=0; ptn<nptn; ptn++) {
+        subLike = 0.0;
+        for (t=0; t<ntree; t++) {
+            subLike += ptn_like_cat[i] * weights[t];
+            i++;
+        }
+        // cout << ptn << "\t" << log(subLike) << "\t" << patn_freqs[ptn] << endl;
+        logLike += log(subLike) * (double) patn_freqs[ptn];
+    }
+    // cout << "[IQTreeMix::computeLikelihood] log-likelihood: " << logLike << endl;
+
+    return logLike;
+}
+
 /**
         compute pattern likelihoods only if the accumulated scaling factor is non-zero.
         Otherwise, copy the pattern_lh attribute
@@ -636,9 +665,7 @@ double IQTreeMix::optimizeTreeWeightsByEM(double* pattern_mix_lh, double gradien
             if (weights[c] < 1e-10) weights[c] = 1e-10;
         }
         
-        initializeAllPartialLh();
-        score = computeLikelihood();
-        clearAllPartialLH();
+        score = computeLikelihood_combine();
 
         if (score < prev_score + gradient_epsilon) {
             // converged
@@ -675,6 +702,9 @@ double IQTreeMix::optimizeTreeWeightsByBFGS(double gradient_epsilon) {
         return score;
     }
     
+    // compute the likelihood of each tree
+    computeLikelihood();
+    
     // allocate memory to the arrays
     variables = new double[ndim+1]; // used for BFGS numerical recipes
     upper_bound = new double[ndim+1];
@@ -683,9 +713,9 @@ double IQTreeMix::optimizeTreeWeightsByBFGS(double gradient_epsilon) {
 
     // initialize tmp_weights for optimzation
     tmp_weights.resize(ndim);
-    for (i=0; i<ndim; i++)
-        tmp_weights[i] = weights[i];
-    
+    for (i=0; i<ndim; i++) {
+        tmp_weights[i] = weights[weight_group_member[i].at(0)];
+    }
     // by BFGS algorithm
     setVariables(variables);
     setBounds(lower_bound, upper_bound, bound_check);
@@ -1127,7 +1157,7 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
             prev_score2 = score;
         }
         
-        // cout << "step= " << step << " substep = " << substep << " curr_epsilon=" << curr_epsilon << " score=" << score << endl;
+        cout << "step= " << step << " substep = " << substep << " curr_epsilon=" << curr_epsilon << " score=" << score << endl;
 
         if (score < prev_score + curr_epsilon && curr_epsilon > gradient_epsilon) {
             // update the epsilon value
@@ -1374,15 +1404,15 @@ void IQTreeMix::computeFreqArray(double* pattern_mix_lh, bool need_computeLike) 
 
 double IQTreeMix::targetFunk(double x[]) {
     getVariables(x);
-    clearAllPartialLH();
-    return -computeLikelihood();
+    return -computeLikelihood_combine();
 }
 
 // read the tree weights and write into "variables"
 void IQTreeMix::setVariables(double *variables) {
     // for tree weights
     size_t i;
-    for (i=0; i<weight_group_member.size(); i++) {
+    size_t ndim = weight_group_member.size();
+    for (i=0; i<ndim; i++) {
         variables[i+1] = tmp_weights[i];
     }
 }
@@ -1391,7 +1421,7 @@ void IQTreeMix::setVariables(double *variables) {
 void IQTreeMix::getVariables(double *variables) {
     // for tree weights
     size_t i,j;
-    int ndim = weight_group_member.size();
+    size_t ndim = weight_group_member.size();
     double sum = 0.0;
     double w;
     for (i=0; i<ndim; i++) {
@@ -1409,16 +1439,22 @@ void IQTreeMix::getVariables(double *variables) {
 // set the bounds
 void IQTreeMix::setBounds(double *lower_bound, double *upper_bound, bool* bound_check) {
     size_t i;
-    for (i=0; i<size(); i++) {
+    size_t ndim = weight_group_member.size();
+    for (i=0; i<ndim; i++) {
         lower_bound[i+1] = MIN_PROP;
         upper_bound[i+1] = MAX_PROP;
-        bound_check[i+1] = true;
+        bound_check[i+1] = false;
     }
 }
 
 // get the dimension of the variables (for tree weights)
 int IQTreeMix::getNDim() {
-    return size();
+    size_t s;
+    if (weight_group_member.size() > 0)
+        s = weight_group_member.size();
+    else
+        s = size();
+    return s;
 }
 
 // show the log-likelihoods and posterior probabilties for each tree along the sites
