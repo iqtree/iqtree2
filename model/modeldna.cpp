@@ -208,12 +208,11 @@ int ModelDNA::getNumberOfRates() const {
 void ModelDNA::readRates(string str) {
     int nrates = *max_element(param_spec.begin(), param_spec.end());
     int end_pos = 0;
-    int i, j;
-    for (j = 0; j < param_spec.length(); ++j) {
+    for (int j = 0; j < param_spec.length(); ++j) {
         rates[j] = 1.0;
     }
     num_params = 0;
-    for (i = 0; i <= nrates && end_pos < str.length(); ++i) {
+    for (int i = 0; i <= nrates && end_pos < str.length(); ++i) {
         int new_end_pos;
         double rate = 0;
         int id = (i < nrates) ? i+1 : 0;
@@ -254,7 +253,7 @@ void ModelDNA::readRates(string str) {
             outError("Comma to separate rates not found in ", str);
         }
         end_pos++;
-        for (j = 0; j < param_spec.length(); ++j) {
+        for (int j = 0; j < param_spec.length(); ++j) {
             if (param_spec[j] == id) {
                 rates[j] = rate;
             }

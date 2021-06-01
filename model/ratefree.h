@@ -10,6 +10,8 @@
 
 #include "rategamma.h"
 
+class ModelFactory;
+
 class RateFree: public RateGamma {
 public:
 	/**
@@ -98,6 +100,16 @@ public:
         @return log-likelihood of optimized parameters
     */
     double optimizeWithEM(PhyloTree* report_to_tree);
+
+	void   doEStep(intptr_t nptn, double* new_prop, size_t nmix);
+
+	int    doMStep(double* new_prop, size_t nmix);
+
+	bool regularizeProportions(double* new_prop, size_t nmix, 
+                               size_t  maxpropid);
+
+	void optimizeRatesOneByOne(PhyloTree* tree, intptr_t nptn,
+	                           bool& converged, ModelFactory* model_fac);
 
 	/**
 		return the number of dimensions

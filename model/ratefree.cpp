@@ -500,10 +500,13 @@ void RateFree::writeParameters(ostream &out) {
 
 }
 
+namespace {
+    const double MIN_PROP = 1e-4;
+};
+
 double RateFree::optimizeWithEM(PhyloTree* report_to_tree) {
     intptr_t nptn = phylo_tree->aln->getNPattern();
     size_t nmix = ncategory;
-    const double MIN_PROP = 1e-4;
     
     double *new_prop = aligned_alloc<double>(nmix);
     PhyloTree *tree = new PhyloTree;
@@ -554,45 +557,9 @@ double RateFree::optimizeWithEM(PhyloTree* report_to_tree) {
         }
         old_score = score;
         
-        // E-step
-        // decoupled weights (prop) from _pattern_lh_cat
-        // to obtain L_ci and compute pattern likelihood L_i
-        memset(new_prop, 0, nmix*sizeof(double));
-        for (intptr_t ptn = 0; ptn < nptn; ptn++) {
-            double *this_lk_cat = phylo_tree->tree_buffers._pattern_lh_cat + ptn*nmix;
-            double lk_ptn = phylo_tree->ptn_invar[ptn];
-            for (size_t c = 0; c < nmix; c++) {
-                lk_ptn += this_lk_cat[c];
-            }
-            ASSERT(lk_ptn != 0.0);
-            lk_ptn = phylo_tree->ptn_freq[ptn] / lk_ptn;
-            
-            // transform _pattern_lh_cat into posterior probabilities of each category
-            for (size_t c = 0; c < nmix; c++) {
-                this_lk_cat[c] *= lk_ptn;
-                new_prop[c]    += this_lk_cat[c];
-            }
-        }
-        
-        // M-step, update weights according to (*)
-        int    maxpropid  = 0;
-        double new_pinvar = 0.0;
-        double reciprocalOfNSite = 1.0 / (double)(phylo_tree->getAlnNSite());
-        for (int c = 0; c < nmix; c++) {
-            new_prop[c] *= reciprocalOfNSite;
-            if (new_prop[c] > new_prop[maxpropid]) {
-                maxpropid = c;
-            }
-        }
-        // regularize prop
-        bool zero_prop = false;
-        for (size_t c = 0; c < nmix; c++) {
-            if (new_prop[c] < MIN_PROP) {
-                new_prop[maxpropid] -= (MIN_PROP - new_prop[c]);
-                new_prop[c]          = MIN_PROP;
-                zero_prop            = true;
-            }
-        }
+        doEStep(nptn, new_prop, nmix);
+        int  maxpropid = doMStep(new_prop, nmix);
+        bool zero_prop = regularizeProportions(new_prop, nmix, maxpropid);
         // break if some probabilities too small
         if (zero_prop) {
             break;
@@ -600,6 +567,7 @@ double RateFree::optimizeWithEM(PhyloTree* report_to_tree) {
 
         bool converged = true;
         double sum_prop = 0.0;
+        double new_pinvar = 0.0;
         for (size_t c = 0; c < nmix; c++) {
             // check for convergence
             sum_prop   += new_prop[c];
@@ -621,46 +589,8 @@ double RateFree::optimizeWithEM(PhyloTree* report_to_tree) {
         
         ASSERT(fabs(sum_prop+new_pinvar-1.0) < MIN_PROP);
         
-        // now optimize rates one by one
-        double sum = 0.0;
-        for (int c = 0; c < nmix; c++) {
-            tree->copyPhyloTree(phylo_tree, true);
-            ModelMarkov *subst_model;
-            if (phylo_tree->getModel()->isMixture()
-                && phylo_tree->getModelFactory()->fused_mix_rate) {
-                auto model  = phylo_tree->getModel();
-                subst_model = (ModelMarkov*)model->getMixtureClass(c);
-            }
-            else {
-                subst_model = (ModelMarkov*)phylo_tree->getModel();
-            }
-            tree->setModel(subst_model);
-            subst_model->setTree(tree);
-            model_fac->model = subst_model;
-            if (subst_model->isMixture()
-                || subst_model->isSiteSpecificModel()
-                || !subst_model->isReversible()) {
-                tree->setLikelihoodKernel(phylo_tree->sse);
-            }
+        optimizeRatesOneByOne(tree, nptn, converged, model_fac);
 
-            // initialize likelihood
-            tree->initializeAllPartialLh();
-            // copy posterior probability into ptn_freq
-            tree->computePtnFreq();
-            double *this_lk_cat = phylo_tree->tree_buffers._pattern_lh_cat+c;
-            for (intptr_t ptn = 0; ptn < nptn; ptn++) {
-                tree->ptn_freq[ptn] = this_lk_cat[ptn*nmix];
-            }
-            double scaling = rates[c];
-            tree->scaleLength(scaling);
-            tree->optimizeTreeLengthScaling(MIN_PROP, scaling, 1.0/prop[c], 0.001);
-            converged = converged && (fabs(rates[c] - scaling) < 1e-4);
-            rates[c] = scaling;
-            sum += prop[c] * rates[c];
-            // reset subst model
-            tree->setModel(nullptr);
-            subst_model->setTree(phylo_tree);
-        }        
         phylo_tree->clearAllPartialLH();
         if (converged) break;
     }
@@ -670,4 +600,100 @@ double RateFree::optimizeWithEM(PhyloTree* report_to_tree) {
     delete tree;
     aligned_free(new_prop);
     return phylo_tree->computeLikelihood();
+}
+
+void RateFree::doEStep(intptr_t nptn, double* new_prop, size_t nmix) {
+    // E-step
+    // decoupled weights (prop) from _pattern_lh_cat
+    // to obtain L_ci and compute pattern likelihood L_i
+    memset(new_prop, 0, nmix*sizeof(double));
+    for (intptr_t ptn = 0; ptn < nptn; ptn++) {
+        double *this_lk_cat = phylo_tree->tree_buffers._pattern_lh_cat + ptn*nmix;
+        double lk_ptn = phylo_tree->ptn_invar[ptn];
+        for (size_t c = 0; c < nmix; c++) {
+            lk_ptn += this_lk_cat[c];
+        }
+        ASSERT(lk_ptn != 0.0);
+        lk_ptn = phylo_tree->ptn_freq[ptn] / lk_ptn;
+        
+        // transform _pattern_lh_cat into posterior probabilities of each category
+        for (size_t c = 0; c < nmix; c++) {
+            this_lk_cat[c] *= lk_ptn;
+            new_prop[c]    += this_lk_cat[c];
+        }
+    }
+}
+
+int RateFree::doMStep(double* new_prop, size_t nmix) {
+    // M-step, update weights according to (*)
+    int    maxpropid  = 0;
+    double reciprocalOfNSite = 1.0 / (double)(phylo_tree->getAlnNSite());
+    for (int c = 0; c < nmix; c++) {
+        new_prop[c] *= reciprocalOfNSite;
+        if (new_prop[c] > new_prop[maxpropid]) {
+            maxpropid = c;
+        }
+    }
+    return maxpropid;
+}
+
+bool RateFree::regularizeProportions(double* new_prop, size_t nmix, 
+                           size_t  maxpropid) {
+    // regularize prop
+    bool zero_prop = false;
+    for (size_t c = 0; c < nmix; c++) {
+        if (new_prop[c] < MIN_PROP) {
+            new_prop[maxpropid] -= (MIN_PROP - new_prop[c]);
+            new_prop[c]          = MIN_PROP;
+            zero_prop            = true;
+        }
+    }
+    return zero_prop;
+}
+
+void RateFree::optimizeRatesOneByOne(PhyloTree*    tree,  
+                                     intptr_t      nptn, 
+                                     bool&         converged,
+                                     ModelFactory* model_fac) {
+    size_t nmix = ncategory;
+    double sum = 0.0;
+
+    for (int c = 0; c < nmix; c++) {
+        tree->copyPhyloTree(phylo_tree, true);
+        ModelMarkov *subst_model;
+        if (phylo_tree->getModel()->isMixture()
+            && phylo_tree->getModelFactory()->fused_mix_rate) {
+            auto model  = phylo_tree->getModel();
+            subst_model = (ModelMarkov*)model->getMixtureClass(c);
+        }
+        else {
+            subst_model = (ModelMarkov*)phylo_tree->getModel();
+        }
+        tree->setModel(subst_model);
+        subst_model->setTree(tree);
+        model_fac->model = subst_model;
+        if (subst_model->isMixture()
+            || subst_model->isSiteSpecificModel()
+            || !subst_model->isReversible()) {
+            tree->setLikelihoodKernel(phylo_tree->sse);
+        }
+
+        // initialize likelihood
+        tree->initializeAllPartialLh();
+        // copy posterior probability into ptn_freq
+        tree->computePtnFreq();
+        double *this_lk_cat = phylo_tree->tree_buffers._pattern_lh_cat+c;
+        for (intptr_t ptn = 0; ptn < nptn; ptn++) {
+            tree->ptn_freq[ptn] = this_lk_cat[ptn*nmix];
+        }
+        double scaling = rates[c];
+        tree->scaleLength(scaling);
+        tree->optimizeTreeLengthScaling(MIN_PROP, scaling, 1.0/prop[c], 0.001);
+        converged = converged && (fabs(rates[c] - scaling) < 1e-4);
+        rates[c] = scaling;
+        sum += prop[c] * rates[c];
+        // reset subst model
+        tree->setModel(nullptr);
+        subst_model->setTree(phylo_tree);
+    }
 }
