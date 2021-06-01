@@ -312,3 +312,14 @@ Node::~Node() {
     neighbors.clear();
 }
 
+bool Node::unlinkNeighbor(Node* node) {
+    for (auto it=neighbors.begin(); it!=neighbors.end(); ++it) {
+        if ((*it)->node == node) {
+            delete (*it);
+            neighbors.erase(it);
+            return true;
+        }
+    }
+    return false;
+}
+

@@ -468,6 +468,7 @@ public:
      */
     void addNeighbor(Node *node, DoubleVector &length, int id = -1);
 
+    bool unlinkNeighbor(Node* node);
 };
 /*
 class Branch {
