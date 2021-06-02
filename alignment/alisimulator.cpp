@@ -592,17 +592,23 @@ void AliSimulator::simulateSeqsForTree(string output_filepath)
     if (output_filepath.length() > 0)
     {
         try {
-            // add ".phy" to the output_filepath
-            output_filepath = output_filepath + ".phy";
+            // add ".phy" or ".fa" to the output_filepath
+            if (params->aln_output_format != IN_FASTA)
+                output_filepath = output_filepath + ".phy";
+            else
+                output_filepath = output_filepath + ".fa";
             if (params->do_compression)
                 out = new ogzstream(output_filepath.c_str());
             else
                 out = new ofstream(output_filepath.c_str());
             out->exceptions(ios::failbit | ios::badbit);
 
-            // write the first line <#taxa> <length_of_sequence>
-            int num_leaves = tree->leafNum - ((tree->root->isLeaf() && tree->root->name == ROOT_NAME)?1:0);
-            *out <<num_leaves<<" "<< round(expected_num_sites/length_ratio)*num_sites_per_state<< endl;
+            // write the first line <#taxa> <length_of_sequence> (for PHYLIP output format)
+            if (params->aln_output_format != IN_FASTA)
+            {
+                int num_leaves = tree->leafNum - ((tree->root->isLeaf() && tree->root->name == ROOT_NAME)?1:0);
+                *out <<num_leaves<<" "<< round(expected_num_sites/length_ratio)*num_sites_per_state<< endl;
+            }
 
             // initialize state_mapping (mapping from state to characters)
             initializeStateMapping(tree->aln, state_mapping);
@@ -673,7 +679,7 @@ void AliSimulator::simulateSeqs(int sequence_length, ModelSubst *model, double *
             if ((*it)->node->isLeaf())
             {
                 // convert numerical states into readable characters
-                output += convertNumericalStatesIntoReadableCharacters((*it)->node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping);
+                output += convertNumericalStatesIntoReadableCharacters((*it)->node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping, params->aln_output_format);
                 
                 // write the caching output to file if its length exceed the maximum string length
                 if (output.length() >= params->alisim_max_str_length)
@@ -692,7 +698,7 @@ void AliSimulator::simulateSeqs(int sequence_length, ModelSubst *model, double *
             if (node->isLeaf())
             {
                 // convert numerical states into readable characters
-                output += convertNumericalStatesIntoReadableCharacters(node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping);
+                output += convertNumericalStatesIntoReadableCharacters(node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping, params->aln_output_format);
                 
                 // remove the sequence to release the memory after extracting the sequence
                 vector<short int>().swap(node->sequence);
@@ -904,16 +910,27 @@ void AliSimulator::initializeStateMapping(Alignment *aln, vector<string> &state_
 *  convert numerical states into readable characters
 *
 */
-string AliSimulator::convertNumericalStatesIntoReadableCharacters(Node *node, int sequence_length, int num_sites_per_state, vector<string> state_mapping)
+string AliSimulator::convertNumericalStatesIntoReadableCharacters(Node *node, int sequence_length, int num_sites_per_state, vector<string> state_mapping, InputType output_format)
 {
     ASSERT(sequence_length <= node->sequence.size());
     
     // dummy variables
     std::string output (sequence_length * num_sites_per_state+1, ' ');
-    int start_index = node->name.length() + 1;
+    int start_index;
     
     // add node's name
-    output = node->name + " " + output;
+    // in PHYLIP format
+    if (output_format != IN_FASTA)
+    {
+        output = node->name + " " + output;
+        start_index = node->name.length() + 1;
+    }
+    // in FASTA format
+    else
+    {
+        output = ">" + node->name + "\n" + output;
+        start_index = node->name.length() + 2;
+    }
     output[output.length()-1] = '\n';
     
     // convert normal data

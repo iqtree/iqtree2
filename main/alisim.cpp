@@ -97,7 +97,7 @@ void inferInputParameters(Params &params, Checkpoint *checkpoint, IQTree *&tree,
     {
         // initialize the tree_file if it has not been provided by the user
         char *pre_fix = params.aln_file?params.aln_file:params.partition_file;
-        params.user_file = new char[strlen(pre_fix) + 1];
+        params.user_file = new char[strlen(pre_fix) + 10];
         strcpy(params.user_file, pre_fix);
         if (params.partition_file && params.partition_type == BRLEN_OPTIMIZE)
             strcat(params.user_file,".parttrees");
@@ -648,8 +648,11 @@ void generatePartitionAlignmentFromSingleSimulator(AliSimulator *alisimulator, v
 void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length, int num_leaves, AliSimulator *alisimulator, bool inference_mode)
 {
     try {
-            // add ".phy" to the file_path
-            file_path = file_path + ".phy";
+            // add ".phy" or ".fa" to the output_filepath
+            if (alisimulator->params->aln_output_format != IN_FASTA)
+                file_path = file_path + ".phy";
+            else
+                file_path = file_path + ".fa";
             ostream *out;
             if (alisimulator->params->do_compression)
                 out = new ogzstream(file_path.c_str());
@@ -657,9 +660,12 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
                 out = new ofstream(file_path.c_str());
             out->exceptions(ios::failbit | ios::badbit);
 
-            // write the first line <#taxa> <length_of_sequence>
-            int num_sites_per_state = aln->seq_type == SEQ_CODON?3:1;
-            *out <<num_leaves<<" "<<sequence_length*num_sites_per_state<< endl;
+            // write the first line <#taxa> <length_of_sequence> (for PHYLIP output format)
+            if (alisimulator->params->aln_output_format != IN_FASTA)
+            {
+                int num_sites_per_state = aln->seq_type == SEQ_CODON?3:1;
+                *out <<num_leaves<<" "<<sequence_length*num_sites_per_state<< endl;
+            }
         
             // initialize state_mapping (mapping from state to characters)
             vector<string> state_mapping;
@@ -693,7 +699,7 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
 #pragma omp parallel
 #pragma omp single
 #endif
-                writeASequenceToFileWithGaps(aln, sequence_length, seq_names, sequences, output_str, alisimulator->params->alisim_max_str_length, *out, state_mapping, alisimulator->tree->root, alisimulator->tree->root);
+                writeASequenceToFileWithGaps(aln, sequence_length, seq_names, sequences, output_str, alisimulator->params->alisim_max_str_length, *out, state_mapping, alisimulator->params->aln_output_format, alisimulator->tree->root, alisimulator->tree->root);
                 
                 // writing the remaining output_str to file
                 if (output_str.length() > 0)
@@ -709,7 +715,7 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
 #pragma omp single
 #endif
                 // browsing all sequences, converting each sequence & caching & writing output string to file
-                writeASequenceToFile(aln, sequence_length, output_str, alisimulator->params->alisim_max_str_length, *out, state_mapping, alisimulator->tree->root, alisimulator->tree->root);
+                writeASequenceToFile(aln, sequence_length, output_str, alisimulator->params->alisim_max_str_length, *out, state_mapping, alisimulator->params->aln_output_format, alisimulator->tree->root, alisimulator->tree->root);
                 
                 // writing the remaining output_str to file
                 if (output_str.length() > 0)
@@ -826,7 +832,7 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator,
 /**
 *  write a sequence of a node to an output file
 */
-void writeASequenceToFile(Alignment *aln, int sequence_length, string &output_str, int max_str_length, ostream &out, vector<string> state_mapping, Node *node, Node *dad)
+void writeASequenceToFile(Alignment *aln, int sequence_length, string &output_str, int max_str_length, ostream &out, vector<string> state_mapping, InputType output_format, Node *node, Node *dad)
 {
     if (node->isLeaf() && node->name!=ROOT_NAME) {
 #ifdef _OPENMP
@@ -843,7 +849,7 @@ void writeASequenceToFile(Alignment *aln, int sequence_length, string &output_st
             
             // convert non-empty sequence
             if (node->sequence.size() >= sequence_length)
-                output = AliSimulator::convertNumericalStatesIntoReadableCharacters(node, sequence_length, num_sites_per_state, state_mapping);
+                output = AliSimulator::convertNumericalStatesIntoReadableCharacters(node, sequence_length, num_sites_per_state, state_mapping, output_format);
 #ifdef _OPENMP
 #pragma omp critical
 #endif
@@ -865,14 +871,14 @@ void writeASequenceToFile(Alignment *aln, int sequence_length, string &output_st
     
     NeighborVec::iterator it;
     FOR_NEIGHBOR(node, dad, it) {
-        writeASequenceToFile(aln, sequence_length, output_str, max_str_length, out, state_mapping, (*it)->node, node);
+        writeASequenceToFile(aln, sequence_length, output_str, max_str_length, out, state_mapping, output_format, (*it)->node, node);
     }
 }
 
 /**
 *  write a sequence of a node to an output file with gaps copied from the input sequence
 */
-void writeASequenceToFileWithGaps(Alignment *aln, int sequence_length, vector<string> seq_names, vector<string> sequences, string &output_str, int max_str_length, ostream &out, vector<string> state_mapping, Node *node, Node *dad)
+void writeASequenceToFileWithGaps(Alignment *aln, int sequence_length, vector<string> seq_names, vector<string> sequences, string &output_str, int max_str_length, ostream &out, vector<string> state_mapping, InputType output_format, Node *node, Node *dad)
 {
     if (node->isLeaf() && node->name!=ROOT_NAME) {
 #ifdef _OPENMP
@@ -883,15 +889,26 @@ void writeASequenceToFileWithGaps(Alignment *aln, int sequence_length, vector<st
             int num_sites_per_state = aln->seq_type == SEQ_CODON?3:1;
             // initialize the output sequence with all gaps (to handle the cases with missing taxa in partitions)
             std::string output (sequence_length * num_sites_per_state+1, '-');
+            int start_index;
             
             // add node's name
-            output = node->name + " " + output;
+            // in PHYLIP format
+            if (output_format != IN_FASTA)
+            {
+                output = node->name + " " + output;
+                start_index = node->name.length() + 1;
+            }
+            // in FASTA format
+            else
+            {
+                output = ">" + node->name + "\n" + output;
+                start_index = node->name.length() + 2;
+            }
             output[output.length()-1] = '\n';
             
             // convert non-empty sequence
             if (node->sequence.size() >= sequence_length)
             {
-                int start_index = node->name.length() + 1;
                 string input_sequence = "";
                 
                 // retrieve the input sequence of the current node
@@ -961,7 +978,7 @@ void writeASequenceToFileWithGaps(Alignment *aln, int sequence_length, vector<st
     
     NeighborVec::iterator it;
     FOR_NEIGHBOR(node, dad, it) {
-        writeASequenceToFileWithGaps(aln, sequence_length, seq_names, sequences, output_str, max_str_length, out, state_mapping, (*it)->node, node);
+        writeASequenceToFileWithGaps(aln, sequence_length, seq_names, sequences, output_str, max_str_length, out, state_mapping, output_format, (*it)->node, node);
     }
 }
 

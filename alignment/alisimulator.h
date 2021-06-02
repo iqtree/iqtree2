@@ -178,7 +178,7 @@ public:
     *  convert numerical states into readable characters
     *
     */
-    static string convertNumericalStatesIntoReadableCharacters(Node *node, int sequence_length, int num_sites_per_state, vector<string> state_mapping);
+    static string convertNumericalStatesIntoReadableCharacters(Node *node, int sequence_length, int num_sites_per_state, vector<string> state_mapping, InputType output_format);
 };
 
 #endif /* alisimulator_h */

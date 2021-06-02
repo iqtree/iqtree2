@@ -2599,7 +2599,9 @@ int main(int argc, char *argv[]) {
 
     time(&start_time);
     cout << "Date and Time: " << ctime(&start_time);
+    try{
     delete checkpoint;
+    }catch(int err_num){}
 
     finish_random();
     
