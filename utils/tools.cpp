@@ -5010,6 +5010,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "                            Be careful to make the AliSim reproducible," << endl
     << "                            users should specify the seed number" << endl
     << "  -gz                       Enable output compression but taking longer running time" << endl
+    << "  -af phy|fasta             Set the output format (default: phylip)" << endl
 
 
 #ifdef USE_LSD2
