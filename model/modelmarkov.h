@@ -31,7 +31,6 @@ const double MIN_RATE = 1e-4;
 const double TOL_RATE = 1e-4;
 const double MAX_RATE = 100;
 
-
 /**
 General Markov model of substitution (reversible or non-reversible)
 This works for all kind of data
@@ -40,15 +39,21 @@ This works for all kind of data
 */
 class ModelMarkov : public ModelSubst, public EigenDecomposition
 {
-	
+protected:
 	friend class ModelSet;
 	friend class ModelMixture;
     friend class ModelPoMo;
     friend class PartitionModel;
     friend class PartitionModelPlen;
-	
+	void setDefaults(bool reversible);
+
 public:
 	typedef ModelSubst super;
+
+	ModelMarkov();
+
+	ModelMarkov(PhyloTree* tree, PhyloTree* report_to_tree);
+
 	/**
 		constructor
 		@param tree associated tree for the model
@@ -405,9 +410,7 @@ public:
      * compute the memory size for the model, can be large for site-specific models
      * @return memory size required in bytes
      */
-    virtual uint64_t getMemoryRequired() {
-    	return ModelSubst::getMemoryRequired() + sizeof(double)*num_states*num_states*3;
-    }
+    virtual uint64_t getMemoryRequired();
 
     /** default TRUE: store only upper half of the rate matrix */
     bool half_matrix;

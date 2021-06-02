@@ -625,6 +625,11 @@ bool ModelInfoFromYAMLFile::isFrequencyParameter(const std::string& param_name) 
     return false;
 }
 
+StateFreqType ModelInfoFromYAMLFile::getFrequencyType() const {
+    return frequency_type;
+}
+
+
 void ModelInfoFromYAMLFile::setBounds(int param_count, 
                                       const std::vector<ModelParameterType>& types,
                                       double* lower_bound, double* upper_bound, 
@@ -1371,6 +1376,17 @@ bool ModelInfoFromYAMLFile::acceptParameterList(std::string parameter_list,
     }
     return !expr_list.empty();
 }
+
+MapOfModels& ModelInfoFromYAMLFile::getMixedModels() {
+    ASSERT(mixed_models!=nullptr);
+    return *mixed_models;
+}
+
+const MapOfModels& ModelInfoFromYAMLFile::getMixedModels() const {
+    ASSERT(mixed_models!=nullptr);
+    return *mixed_models;
+}
+
 
 ModelVariable& ModelInfoFromYAMLFile::assign(const std::string& var_name,  
                                    ModelExpression::Expression *x,

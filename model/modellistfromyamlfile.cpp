@@ -31,6 +31,10 @@
 #include <utils/stringfunctions.h> //for convert_int
 #include <utils/tools.h>           //for outError
 
+namespace {
+    const string dummy_rate_params;
+    const string dummy_freq_params;    
+};
 
 void ModelListFromYAMLFile::loadFromFile (const char* file_path,
                                           PhyloTree* report_to_tree) {
@@ -147,14 +151,18 @@ namespace {
     }
 };
 
-ModelMarkov* ModelListFromYAMLFile::getModelByName(const char* model_name,   PhyloTree *tree,
-                                                   const char* model_params, StateFreqType freq_type,
-                                                   const char* freq_params,  ModelsBlock* models_block,
-                                                   PhyloTree* report_to_tree) {
+ModelMarkov* ModelListFromYAMLFile::getModelByName
+            (const char* model_name,   PhyloTree *tree,
+             const char* model_params, StateFreqType freq_type,
+             const char* freq_params,  ModelsBlock* models_block,
+             PhyloTree* report_to_tree) {
     std::string name;
     std::string parameter_list;
     extractModelNameAndParameters(model_name, name, parameter_list);
     ModelInfoFromYAMLFile& model_info = models_found[model_name];
+    if (freq_type == StateFreqType::FREQ_UNKNOWN) {
+        freq_type = model_info.frequency_type;
+    }
     if (0<strlen(model_params) || 0<strlen(freq_params)) {
         TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
                       "Model Params: " << model_params
@@ -163,8 +171,17 @@ ModelMarkov* ModelListFromYAMLFile::getModelByName(const char* model_name,   Phy
             parameter_list = model_params;
         }
     }
-    if (freq_type == StateFreqType::FREQ_UNKNOWN) {
-        freq_type = model_info.frequency_type;
+    return getModelByReference(model_info, tree, freq_type, models_block, 
+                               parameter_list, report_to_tree);
+}
+
+ModelMarkov* ModelListFromYAMLFile::getModelByReference
+                        (ModelInfoFromYAMLFile& model_info, PhyloTree *tree,
+                         StateFreqType freq_type,           ModelsBlock* models_block,
+                         const std::string &parameter_list, PhyloTree* report_to_tree) {
+    if (model_info.isMixtureModel()) {
+        return getMixtureModel(model_info, parameter_list,
+                               freq_type, tree, models_block, report_to_tree);
     }
     switch (model_info.sequence_type) {
         case SeqType::SEQ_BINARY:
@@ -293,7 +310,7 @@ ModelMarkov* ModelListFromYAMLFile::getProteinModel(ModelInfoFromYAMLFile& model
 }
 
 void ModelListFromYAMLFile::insistOnAlignmentSequenceType(const Alignment* alignment, 
-                                                          SeqType desired_type) const {
+                                                          SeqType desired_type) {
     if (alignment->seq_type != desired_type) {
         std::stringstream complaint;
         complaint << "Cannot use " << getSeqTypeName(desired_type) << " model"
@@ -304,4 +321,16 @@ void ModelListFromYAMLFile::insistOnAlignmentSequenceType(const Alignment* align
                   << " on the command-line.";
         outError(complaint.str());
     }
+}
+
+ModelMarkov* ModelListFromYAMLFile::getMixtureModel(ModelInfoFromYAMLFile& model_info,
+                                                    const std::string& parameter_list,
+                                                    StateFreqType freq_type,
+                                                    PhyloTree* tree,
+                                                    ModelsBlock* models_block,
+                                                    PhyloTree* report_to_tree) {
+    YAMLModelMixture* model;
+    model = new YAMLModelMixture(model_info, tree, models_block, report_to_tree);
+    model->acceptParameterList(parameter_list);
+    return model;
 }

@@ -53,10 +53,8 @@ int computeStateFreqFromQMatrix (double Q[], double pi[], int n);
 //const double MIN_FREQ_RATIO = MIN_FREQUENCY;
 //const double MAX_FREQ_RATIO = 1.0/MIN_FREQUENCY;
 
-ModelMarkov::ModelMarkov(PhyloTree *tree, bool reversible, bool adapt_tree)
- : ModelSubst(tree->aln->num_states), EigenDecomposition()
-{
-    phylo_tree         = tree;
+void ModelMarkov::setDefaults(bool reversible) {
+    phylo_tree         = nullptr;
     rates              = nullptr;
 
     // variables for reversible model
@@ -80,7 +78,25 @@ ModelMarkov::ModelMarkov(PhyloTree *tree, bool reversible, bool adapt_tree)
     } else {
         name      = "NonRev";
         full_name = "General non-reversible model";
-    }
+    }    
+}
+
+ModelMarkov::ModelMarkov() : ModelSubst(4) {
+    setDefaults(true);
+}
+
+ModelMarkov::ModelMarkov(PhyloTree* tree, PhyloTree* report_to_tree) 
+    : ModelSubst(tree->aln->num_states) {
+    setDefaults(true);
+    phylo_tree         = tree;
+    setReversible(true, true);
+}
+
+ModelMarkov::ModelMarkov(PhyloTree *tree, bool reversible, bool adapt_tree)
+ : ModelSubst(tree->aln->num_states), EigenDecomposition()
+{
+    setDefaults(reversible);
+    phylo_tree         = tree;
     setReversible(reversible, adapt_tree);
 }
 
@@ -288,6 +304,10 @@ void ModelMarkov::getNameParamsFreq(ostream &retname) {
         }
         retname << "}";
     }
+}
+
+uint64_t ModelMarkov::getMemoryRequired() {
+    return ModelSubst::getMemoryRequired() + sizeof(double)*num_states*num_states*3;
 }
 
 void ModelMarkov::init_state_freq(StateFreqType type,

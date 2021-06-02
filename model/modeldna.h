@@ -43,8 +43,9 @@ class ModelDNA : public ModelMarkov
     friend class ModelPoMo;
 public:
 	/**
-		constructor
+		constructor (needed by YAMLModelWrapper)
 		@param tree associated tree for the model
+		@param report_to_tree log messages directed here
 	*/
     ModelDNA(PhyloTree *tree, PhyloTree* report_to_tree);
 

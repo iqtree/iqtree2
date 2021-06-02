@@ -57,7 +57,7 @@ ModelPoMoMixture::ModelPoMoMixture(const char *model_name, string model_params,
         ModelMarkov* model = new ModelMarkov(tree);
         model->init(StateFreqType::FREQ_USER_DEFINED, report_to_tree);
 //        model->total_num_subst = ratehet->getRate(m);
-        push_back(model);
+        models.push_back(model);
         prop[m] = ratehet->getProp(m);
     }
 
@@ -163,7 +163,7 @@ void ModelPoMoMixture::decomposeRateMatrix() {
         setScale(ratehet->getRate(m));
         ModelPoMo::decomposeRateMatrix();
         // TODO Check! TEST: copy state frequency
-        ModelPoMo::getStateFrequency(at(m)->state_freq);
+        ModelPoMo::getStateFrequency(models.at(m)->state_freq);
         // copy eigenvalues and eigenvectors
         if (m > 0) {
             memcpy(eigenvalues+m*num_states, eigenvalues, sizeof(double)*num_states);
@@ -258,12 +258,13 @@ void ModelPoMoMixture::update_eigen_pointers(double *eval, double *evec,
     size_t matrixOffset = 0; //into matrices
     size_t num_states_squared = num_states * num_states;
     
-    for (iterator it = begin(); it != end();
-         it++, rowOffset+=num_states, matrixOffset+=num_states_squared) {
-        (*it)->update_eigen_pointers(eval + rowOffset,
+    for (auto model : models) {
+        model->update_eigen_pointers(eval + rowOffset,
                                      evec + matrixOffset,
                                      inv_evec + matrixOffset,
                                      inv_evec_transposed + matrixOffset);
+        rowOffset+=num_states;
+        matrixOffset+=num_states_squared;
     }
     return;
 }
@@ -284,6 +285,7 @@ bool ModelPoMoMixture::isUnstableParameters() {
 // ModelMixture and ModelPoMo and inheritance is flawed.
 void ModelPoMoMixture::computeTransMatrix(double time, double *trans_matrix,
                                           int mixture) {
-  ASSERT(mixture < getNMixtures());
-  at(mixture)->computeTransMatrix(time, trans_matrix);
+    ASSERT(0<=mixture);
+    ASSERT(mixture < getNMixtures());
+    models[mixture]->computeTransMatrix(time, trans_matrix);
 }

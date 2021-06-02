@@ -33,9 +33,19 @@ ModelMarkov *createModel(string model_str, ModelsBlock *models_block,
 /**
  * mixture model
  */
-class ModelMixture: virtual public ModelMarkov, public vector<ModelMarkov*> {
+class ModelMixture: virtual public ModelMarkov {
+protected:
+	std::vector<ModelMarkov*> models;
+
+	//Supporting function, called from initMixture.
+	void checkProportionsAndWeights(DoubleVector& weights);
+	void setOptimizationSteps(bool optimize_weights);
+	void checkModelReversibility();
+
 public:
+	typedef ModelMarkov super;
     
+
 	/**
 		constructor
 		@param model_name model name, e.g., JC, HKY.
@@ -51,14 +61,17 @@ public:
                      StateFreqType freq, string freq_params, PhyloTree *tree,
                      bool optimize_weights, PhyloTree* report_to_tree);
 
+
+
+
     void initMem();
 
-    /**
-		constructor
+	/**
+		constructor (needed by YAMLModelWrapper)
 		@param tree associated tree for the model
+		@param report_to_tree log messages directed here
 	*/
     ModelMixture(PhyloTree *tree, PhyloTree* report_to_tree);
-
 
     virtual ~ModelMixture();
 
@@ -93,7 +106,7 @@ public:
 	/**
 	 * @return the number of mixture model components
 	 */
-	virtual int getNMixtures() {return static_cast<int>(size()); }
+	virtual int getNMixtures() {return static_cast<int>(models.size()); }
 
  	/**
 	 * @param cat mixture class
@@ -117,13 +130,15 @@ public:
 	 * @param cat mixture class ID
 	 * @return corresponding mixture model component
 	 */
-    virtual ModelSubst* getMixtureClass(int cat) { return at(cat); }
+    virtual ModelSubst* getMixtureClass(int cat) { return models.at(cat); }
 
 	/**
 	 * @param cat mixture class ID
 	 * @param m mixture model class to set
 	 */
-    virtual void setMixtureClass(int cat, ModelSubst* m) { at(cat) = (ModelMarkov*)m; }
+    virtual void setMixtureClass(int cat, ModelSubst* m) { 
+		models.at(cat) = dynamic_cast<ModelMarkov*>(m); 
+	}
 
 	/**
 		compute the state frequency vector
@@ -244,12 +259,7 @@ public:
      * compute the memory size for the model, can be large for site-specific models
      * @return memory size required in bytes
      */
-    virtual uint64_t getMemoryRequired() {
-    	uint64_t mem = ModelMarkov::getMemoryRequired();
-    	for (iterator it = begin(); it != end(); it++)
-    		mem += (*it)->getMemoryRequired();
-    	return mem;
-    }
+    virtual uint64_t getMemoryRequired();
 
 	/**
 		rates of mixture components

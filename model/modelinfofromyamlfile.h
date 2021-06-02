@@ -285,6 +285,7 @@ public:
     void  moveParameterToBack(const char* name,
                               ModelParameterType type);
     bool   isFrequencyParameter(const std::string& param_name)          const;
+    StateFreqType      getFrequencyType()                               const;
     std::string        getParameterList(ModelParameterType param_type)  const;
     void               appendParameterList(ModelParameterType param_type,
                                            std::stringstream& list)     const;
@@ -364,6 +365,10 @@ public:
     bool acceptParameterList   (std::string parameter_list,
                                 PhyloTree* report_tree);
 
+    //Mixture Model stuff
+    MapOfModels& getMixedModels();
+    const MapOfModels& getMixedModels() const;
+
     //Rate-Only stuff
     const std::string& getOptimizationAlgorithm() const;
     int getNumberOfRateCategories()      const;
@@ -387,8 +392,6 @@ class ModelListFromYAMLFile {
 protected:
     MapOfModels  models_found;
     MapOfModels  rate_models_found;
-    const string dummy_rate_params;
-    const string dummy_freq_params;    
 
 public:
     friend class ModelFileLoader;
@@ -403,34 +406,47 @@ public:
                                 const char* freq_params, ModelsBlock* blocks_model,
                                 PhyloTree* report_to_tree);
 
-    ModelMarkov* getBinaryModel(ModelInfoFromYAMLFile& model_info,
-                                const std::string& parameter_list,
-                                StateFreqType freq_type, PhyloTree* tree, 
-                                PhyloTree* report_to_tree);
+    static ModelMarkov* getModelByReference
+                    (ModelInfoFromYAMLFile& model_info, PhyloTree *tree,
+                     StateFreqType freq_type,           ModelsBlock* models_block,
+                     const std::string &parameter_list, PhyloTree* report_to_tree);
 
-    ModelMarkov* getCodonModel(ModelInfoFromYAMLFile& model_info,
-                              const std::string& parameter_list,
-                              StateFreqType freq_type, PhyloTree* tree,
-                              PhyloTree* report_to_tree);
-
-    ModelMarkov* getDNAModel(ModelInfoFromYAMLFile& model_info,
-                             const std::string& parameter_list,
-                             StateFreqType freq_type, PhyloTree* tree,
-                             PhyloTree* report_to_tree);
-
-    ModelMarkov* getMorphologicalModel(ModelInfoFromYAMLFile& model_info,
+    static ModelMarkov* getBinaryModel(ModelInfoFromYAMLFile& model_info,
                                        const std::string& parameter_list,
-                                       StateFreqType freq_type, PhyloTree* tree,
+                                       StateFreqType freq_type, PhyloTree* tree, 
                                        PhyloTree* report_to_tree);
 
-    ModelMarkov* getProteinModel(ModelInfoFromYAMLFile& model_info,
-                                 const std::string& parameter_list,
-                                 StateFreqType freq_type, PhyloTree* tree,
-                                 ModelsBlock* models_block, 
-                                 PhyloTree* report_to_trees);
+    static ModelMarkov* getCodonModel(ModelInfoFromYAMLFile& model_info,
+                                      const std::string& parameter_list,
+                                      StateFreqType freq_type, PhyloTree* tree,
+                                      PhyloTree* report_to_tree);
 
-    void insistOnAlignmentSequenceType(const Alignment* alignment, 
-                                       SeqType desired_type) const;
+    static ModelMarkov* getDNAModel(ModelInfoFromYAMLFile& model_info,
+                                    const std::string& parameter_list,
+                                    StateFreqType freq_type, PhyloTree* tree,
+                                    PhyloTree* report_to_tree);
+
+    static ModelMarkov* getMorphologicalModel(ModelInfoFromYAMLFile& model_info,
+                                              const std::string& parameter_list,
+                                              StateFreqType freq_type, PhyloTree* tree,
+                                              PhyloTree* report_to_tree);
+
+    static ModelMarkov* getProteinModel(ModelInfoFromYAMLFile& model_info,
+                                        const std::string& parameter_list,
+                                        StateFreqType freq_type, 
+                                        PhyloTree*    tree,
+                                        ModelsBlock*  models_block, 
+                                        PhyloTree*    report_to_trees);
+
+    static ModelMarkov* getMixtureModel(ModelInfoFromYAMLFile& model_info,
+                                        const std::string& parameter_list,
+                                        StateFreqType freq_type, 
+                                        PhyloTree*    tree, 
+                                        ModelsBlock*  models_block, 
+                                        PhyloTree*    report_to_tree);
+
+    static void insistOnAlignmentSequenceType(const Alignment* alignment, 
+                                              SeqType desired_type);
 
     bool hasModel(const std::string& model_name)  const;
     StrVector   getSubstitutionModelNames()       const;

@@ -1195,9 +1195,10 @@ ModelMarkov* createModel(string model_str, ModelsBlock *models_block,
 ModelMixture::ModelMixture(PhyloTree *tree,
                            PhyloTree* report_to_tree)
     : ModelMarkov(tree, report_to_tree) {
-    prop = NULL;
+    prop = nullptr;
     fix_prop = true;
     optimizing_submodels = false;
+    optimize_steps = 0;
 }
 
 ModelMixture::ModelMixture(string orig_model_name, string model_name,
@@ -1205,7 +1206,7 @@ ModelMixture::ModelMixture(string orig_model_name, string model_name,
                            StateFreqType freq, string freq_params, PhyloTree *tree,
                            bool optimize_weights, PhyloTree* report_to_tree)
     : ModelMarkov(tree) {
-    prop = NULL;
+    prop = nullptr;
     fix_prop = true;
     optimizing_submodels = false;
     optimize_steps = 0;
@@ -1351,7 +1352,7 @@ void ModelMixture::initMixture(string orig_model_name, string model_name,
                 model = createModel(this_name, models_block, sf, desc,
                                     tree, report_to_tree);
                 model->total_num_subst = rate * freq_rates[f];
-                push_back(model);
+                models.push_back(model);
                 weights.push_back(weight * freq_weights[f]);
                 if (m+f > 0) {
                     full_name += ',';
@@ -1373,7 +1374,7 @@ void ModelMixture::initMixture(string orig_model_name, string model_name,
 			model = createModel(this_name, models_block, freq,
                                 freq_params, tree, report_to_tree);
 			model->total_num_subst = rate;
-			push_back(model);
+			models.push_back(model);
 			weights.push_back(weight);
 			if (m > 0) {
 //				name += ',';
@@ -1386,56 +1387,71 @@ void ModelMixture::initMixture(string orig_model_name, string model_name,
 
 //	name += CLOSE_BRACKET;
 	full_name += CLOSE_BRACKET;
+    delete nxs_freq_optimize;
+    delete nxs_freq_empirical;
 
-	auto nmixtures = size();
+    checkProportionsAndWeights(weights);
+    setOptimizationSteps(optimize_weights);
+    checkModelReversibility();
+    decomposeRateMatrix();
+}
+
+void ModelMixture::checkProportionsAndWeights(DoubleVector& weights) {
+	auto nmixtures = models.size();
     aligned_free(prop);
 	prop = aligned_alloc<double>(nmixtures);
 
 	double sum = 0.0;
-	int i;
 	if (fix_prop) {
-		for (i = 0, sum = 0.0; i < nmixtures; i++) {
+		for (int i = 0; i < nmixtures; i++) {
 			prop[i] = weights[i];
 			sum += prop[i];
 		}
 	} else {
 		// initialize rates as increasing
-		for (i = 0, sum = 0.0; i < nmixtures; i++) {
-//			prop[i] = random_double();
+		for (int i = 0; i < nmixtures; i++) {
             prop[i] = 1.0/nmixtures;
 			sum += prop[i];
 		}
 	}
 	// normalize weights to 1.0
     if (sum != 1.0) {
-        sum = 1.0/sum;
+        double one_on_sum = 1.0/sum;
 //        cout << "NOTE: Mixture weights do not sum up to 1," 
 //             << " rescale weights by " << sum << endl;
-        for (i = 0; i < nmixtures; i++)
-             prop[i] *= sum;
+        for (int i = 0; i < nmixtures; ++i) {
+             prop[i] *= one_on_sum;
+        }
     }
 	// rescale total_num_subst such that the global rate is 1
-    for (i = 0, sum = 0.0; i < nmixtures; i++) {
-        sum += prop[i] * at(i)->total_num_subst;
+    for (int i = 0, sum = 0.0; i < nmixtures; ++i) {
+        sum += prop[i] * models[i]->total_num_subst;
     }
-    for (i = 0; i < nmixtures; i++) {
-        at(i)->total_num_subst /= sum;
+    double one_on_sum = 1.0/sum;
+    for (int i = 0; i < nmixtures; ++i) {
+        models[i]->total_num_subst *= one_on_sum;
     }
+}
+
+void ModelMixture::setOptimizationSteps(bool optimize_weights) {
     if (optimize_steps == 0) {
         optimize_steps = (getNDim() + 1) * 100;
     }
     if (optimize_weights) {
         fix_prop = false;
     }
-	fix_prop |= (nmixtures == 1);
-	// use central eigen etc. stufffs
+	fix_prop |= (models.size() == 1);
+}
 
+void ModelMixture::checkModelReversibility() {
     // check reversibility
-    bool rev = front()->isReversible();
+    int nmixtures = static_cast<int>(models.size());
+    ASSERT(0<nmixtures);
+    bool rev = models.front()->isReversible();
     bool err = false;
-    for (i = 1; i < nmixtures; i++) {
-        if (at(i)->isReversible() != rev) {
-            cerr << "ERROR: Model " << at(i)->name 
+    for (int i = 1; i < nmixtures; ++i) {
+        if (models[i]->isReversible() != rev) {
+            cerr << "ERROR: Model " << models[i]->name 
                  << " has different reversible property" << endl;
             err = true;
         }
@@ -1450,20 +1466,16 @@ void ModelMixture::initMixture(string orig_model_name, string model_name,
     if (isReversible()) {
         initMem();
     }
-	decomposeRateMatrix();
-
-    delete nxs_freq_optimize;
-    delete nxs_freq_empirical;
 }
 
 void ModelMixture::initMem() {    
-    auto nmixtures = size();
+    auto nmixtures = models.size();
     
     // Calculate the total number of states and take into account that each of the
     // models may be a mixture model itself (PoMo rate heterogeneity).    
     int num_states_total = 0;
-    for (iterator it = begin(); it != end(); it++) {
-        num_states_total += (*it)->get_num_states_total();
+    for (auto model : models) {
+        num_states_total += model->get_num_states_total();
     }    
     aligned_free(eigenvalues);
     aligned_free(eigenvectors);
@@ -1476,33 +1488,34 @@ void ModelMixture::initMem() {
     ensure_aligned_allocated(inv_eigenvectors_transposed, n_squared_m);
     
     // assigning memory for individual models
-    int m = 0;
+    int model_count = static_cast<int>(models.size());
     int count_num_states = 0;
     int count_num_states_2 = 0;
-    for (iterator it = begin(); it != end(); it++, m++) {
-        int num_states_this_model = (*it)->get_num_states_total();
+    for (int m =0 ; m<model_count; ++m) {
+        auto model = models[m];
+        int num_states_this_model = model->get_num_states_total();
         int num_states_this_model_2 = num_states_this_model * num_states_this_model;
         // first copy memory for eigen stuffs
-        memcpy(&eigenvalues[count_num_states], (*it)->eigenvalues,
+        memcpy(&eigenvalues[count_num_states], model->eigenvalues,
                num_states_this_model*sizeof(double));
-        memcpy(&eigenvectors[count_num_states_2], (*it)->eigenvectors,
+        memcpy(&eigenvectors[count_num_states_2], model->eigenvectors,
                num_states_this_model_2*sizeof(double));
-        memcpy(&inv_eigenvectors[count_num_states_2], (*it)->inv_eigenvectors,
+        memcpy(&inv_eigenvectors[count_num_states_2], model->inv_eigenvectors,
                num_states_this_model_2*sizeof(double));
         memcpy(&inv_eigenvectors_transposed[count_num_states_2], 
-               (*it)->inv_eigenvectors_transposed,
+               model->inv_eigenvectors_transposed,
                num_states_this_model_2*sizeof(double));
         
         // then delete
-        aligned_free((*it)->eigenvalues);
-        aligned_free((*it)->eigenvectors);
-        aligned_free((*it)->inv_eigenvectors);
-        aligned_free((*it)->inv_eigenvectors_transposed);
+        aligned_free(model->eigenvalues);
+        aligned_free(model->eigenvectors);
+        aligned_free(model->inv_eigenvectors);
+        aligned_free(model->inv_eigenvectors_transposed);
         
         // And assign new memory. Also, recursively, update respective pointers for
         // the mixture components of the current model. This is relevant if the
         // current model is a mixture model itself.
-        (*it)->update_eigen_pointers(&eigenvalues[count_num_states],
+        model->update_eigen_pointers(&eigenvalues[count_num_states],
                                      &eigenvectors[count_num_states_2],
                                      &inv_eigenvectors[count_num_states_2],
                                      &inv_eigenvectors_transposed[count_num_states_2]);
@@ -1516,19 +1529,21 @@ void ModelMixture::initMem() {
 
 ModelMixture::~ModelMixture() {
     aligned_free(prop);
-    for (reverse_iterator rit = rbegin(); rit != rend(); rit++) {
-        (*rit)->eigenvalues = nullptr;
-        (*rit)->eigenvectors = nullptr;
-        (*rit)->inv_eigenvectors = nullptr;
-        (*rit)->inv_eigenvectors_transposed = nullptr;
-        delete (*rit);
+    for (auto rit = models.rbegin(); rit != models.rend(); ++rit) {
+        auto model = *rit;
+        model->eigenvalues = nullptr;
+        model->eigenvectors = nullptr;
+        model->inv_eigenvectors = nullptr;
+        model->inv_eigenvectors_transposed = nullptr;
+        delete model;
     }
 }
 
 void ModelMixture::setCheckpoint(Checkpoint *checkpoint) {
 	CheckpointFactory::setCheckpoint(checkpoint);
-	for (iterator it = begin(); it != end(); it++)
-		(*it)->setCheckpoint(checkpoint);
+	for (auto model : models) {
+		model->setCheckpoint(checkpoint);
+    }
 }
 
 void ModelMixture::startCheckpoint() {
@@ -1543,10 +1558,11 @@ void ModelMixture::saveCheckpoint() {
         CKP_ARRAY_SAVE(nmix, prop);
     }
     int part = 1;
-    for (iterator it = begin(); it != end(); it++, part++) {
+    for (auto model : models) {
         checkpoint->startStruct("Component" + convertIntToString(part));
-        (*it)->saveCheckpoint();
+        model->saveCheckpoint();
         checkpoint->endStruct();
+        ++part;
     }
     endCheckpoint();
 
@@ -1563,22 +1579,24 @@ void ModelMixture::restoreCheckpoint() {
         CKP_ARRAY_RESTORE(nmix, prop);
     }
     int part = 1;
-    for (iterator it = begin(); it != end(); it++, part++) {
+    for (auto model : models) {
         checkpoint->startStruct("Component" + convertIntToString(part));
-        (*it)->restoreCheckpoint();
+        model->restoreCheckpoint();
         checkpoint->endStruct();
+        ++part;
     }
     endCheckpoint();
 
     decomposeRateMatrix();
-    if (phylo_tree)
+    if (phylo_tree) {
         phylo_tree->clearAllPartialLH();
+    }
 }
 
 void ModelMixture::getStateFrequency(double *state_freq, int mixture) {
     ASSERT(mixture < getNMixtures());
     if (mixture >= 0) {
-        at(mixture)->getStateFrequency(state_freq);
+        models[mixture]->getStateFrequency(state_freq);
         return;
     }
     // special case: return weighted sum of state_freq across classes
@@ -1592,7 +1610,7 @@ void ModelMixture::getStateFrequency(double *state_freq, int mixture) {
     memset(state_freq, 0, sizeof(double)*num_states);
     bool fused = isFused();
     for (int i = 0; i < mix; i++) {
-        at(i)->getStateFrequency(&state_freq_class[0]);
+        models.at(i)->getStateFrequency(&state_freq_class[0]);
         double weight = getMixtureWeight(i);
         // fused model, take the weight from site_rate
         if (fused) {
@@ -1612,24 +1630,26 @@ void ModelMixture::getStateFrequency(double *state_freq, int mixture) {
 }
 
 void ModelMixture::computeTransMatrix(double time, double *trans_matrix, int mixture) {
+    ASSERT(0 <= mixture);
     ASSERT(mixture < getNMixtures());
-    at(mixture)->computeTransMatrix(time, trans_matrix);
+    models[mixture]->computeTransMatrix(time, trans_matrix);
 }
 
 void ModelMixture::computeTransDerv(double time, double *trans_matrix,
     double *trans_derv1, double *trans_derv2, int mixture) {
+    ASSERT(0 <= mixture);
     ASSERT(mixture < getNMixtures());
-    at(mixture)->computeTransDerv(time, trans_matrix, trans_derv1, trans_derv2);
+    models[mixture]->computeTransDerv(time, trans_matrix, trans_derv1, trans_derv2);
 }
 
 int ModelMixture::getNDim() {
 //	int dim = (fix_prop) ? 0: (size()-1);
     int dim = 0;
     if (!optimizing_submodels && !fix_prop) {
-        dim = static_cast<int>(size()) - 1;
+        dim = static_cast<int>(models.size()) - 1;
     }
-    for (iterator it = begin(); it != end(); it++) {
-        dim += (*it)->getNDim();
+    for (auto model : models) {
+        dim += model->getNDim();
     }
 	return dim;
 }
@@ -1639,27 +1659,27 @@ int ModelMixture::getNDimFreq() {
     int num_empirical = 0;
     int num_codon_1x4 = 0;
     int num_codon_3x4 = 0;
-	for (iterator it = begin(); it != end(); it++) {
+	for (auto model: models) {
         // 2016-03-06: count empirical freq only once (thanks to Stephen Crotty)
-        switch ((*it)->freq_type) {
+        switch (model->freq_type) {
         case StateFreqType::FREQ_EMPIRICAL:
             num_empirical++;
             if (num_empirical==1)
-                dim += (*it)->getNDimFreq();
+                dim += model->getNDimFreq();
             break;
         case StateFreqType::FREQ_CODON_1x4:
             num_codon_1x4++;
             if (num_codon_1x4==1)
-                dim += (*it)->getNDimFreq();
+                dim += model->getNDimFreq();
             break;
         case StateFreqType::FREQ_CODON_3x4:
         case StateFreqType::FREQ_CODON_3x4C:
             num_codon_3x4++;
             if (num_codon_3x4==1)
-                dim += (*it)->getNDimFreq();
+                dim += model->getNDimFreq();
             break;
         default:
-            dim += (*it)->getNDimFreq();
+            dim += model->getNDimFreq();
         }
     }
 	return dim;
@@ -1667,17 +1687,18 @@ int ModelMixture::getNDimFreq() {
 
 double ModelMixture::targetFunk(double x[]) {
 	getVariables(x);
-//	decomposeRateMatrix();
 	int dim = 0;
-	for (iterator it = begin(); it != end(); it++) {
-		if ((*it)->getNDim() > 0)
-			(*it)->decomposeRateMatrix();
-		dim += ((*it)->getNDim());
+	for (auto model : models ) {
+		if (model->getNDim() > 0) {
+			model->decomposeRateMatrix();
+        }
+		dim += model->getNDim();
 	}
 	ASSERT(phylo_tree);
-	if (dim > 0) // only clear all partial_lh if changing at least 1 rate matrix
+	if (dim > 0) {
+        // only clear all partial_lh if changing at least 1 rate matrix
 		phylo_tree->clearAllPartialLH();
-//	if (prop[size()-1] < 0.0) return 1.0e+12;
+    }
 	return -phylo_tree->computeLikelihood();
 }
 
@@ -1743,7 +1764,7 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon,
                                     PhyloTree* report_to_tree) {
     intptr_t ptn;
     intptr_t nptn = phylo_tree->aln->getNPattern();
-    intptr_t nmix = size();
+    intptr_t nmix = models.size();
 
     double *new_prop = aligned_alloc<double>(nmix);
     PhyloTree *tree = new PhyloTree;
@@ -1844,28 +1865,29 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon,
             }
         }
 
-        // now optimize model one by one
-        for (int c = 0; c < nmix; c++) if (at(c)->getNDim() > 0) {
-            tree->copyPhyloTreeMixlen(phylo_tree, c, true);
-            ModelMarkov *subst_model;
-            subst_model = at(c);
-            tree->setModel(subst_model);
-            subst_model->setTree(tree);
-            model_fac->model = subst_model;
+        // now optimize models one by one
+        for (int c = 0; c < nmix; c++) {
+            ModelMarkov *subst_model = models[c];
+            if (subst_model->getNDim() > 0) {
+                tree->copyPhyloTreeMixlen(phylo_tree, c, true);            
+                tree->setModel(subst_model);
+                subst_model->setTree(tree);
+                model_fac->model = subst_model;
 
-            // initialize likelihood
-            tree->initializeAllPartialLh();
+                // initialize likelihood
+                tree->initializeAllPartialLh();
 
-            // copy posterior probability into ptn_freq
-            tree->computePtnFreq();
-            double *this_lk_cat = phylo_tree->tree_buffers._pattern_lh_cat+c;
-            for (ptn = 0; ptn < nptn; ptn++) {
-                tree->ptn_freq[ptn] = this_lk_cat[ptn*nmix];
+                // copy posterior probability into ptn_freq
+                tree->computePtnFreq();
+                double *this_lk_cat = phylo_tree->tree_buffers._pattern_lh_cat+c;
+                for (ptn = 0; ptn < nptn; ptn++) {
+                    tree->ptn_freq[ptn] = this_lk_cat[ptn*nmix];
+                }
+                subst_model->optimizeParameters(gradient_epsilon, report_to_tree);
+                // reset subst model
+                tree->setModel(nullptr);
+                subst_model->setTree(phylo_tree);
             }
-            subst_model->optimizeParameters(gradient_epsilon, report_to_tree);
-            // reset subst model
-            tree->setModel(NULL);
-            subst_model->setTree(phylo_tree);
         }
         phylo_tree->clearAllPartialLH();
     }
@@ -1883,7 +1905,7 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon,
 }
 
 bool ModelMixture::isFused() {
-	for (int i = 0; i < size(); i++) {
+	for (int i = 0; i < models.size(); i++) {
         if (prop[i] != 1.0) {
             return false;
         }
@@ -1916,13 +1938,13 @@ double ModelMixture::optimizeParameters(double gradient_epsilon,
 	// now rescale Q matrices to have proper interpretation of branch lengths
 
     double sum = 0.0;
-    intptr_t ncategory = size();
+    intptr_t ncategory = models.size();
     for (intptr_t i = 0 ; i < ncategory; ++i) {
-        sum += prop[i]*at(i)->total_num_subst;
+        sum += prop[i]*models[i]->total_num_subst;
     }
     if (fabs(sum-1.0) > 1e-6 && !isFused()) {
-        for (intptr_t i = 0; i < ncategory; ++i) {
-            at(i)->total_num_subst /= sum;
+        for (auto model : models) {
+            model->total_num_subst /= sum;
         }
         decomposeRateMatrix();
         phylo_tree->clearAllPartialLH();
@@ -1932,7 +1954,7 @@ double ModelMixture::optimizeParameters(double gradient_epsilon,
 
 bool ModelMixture::isUnstableParameters() {
     int c;
-    int ncategory = static_cast<int>(size());
+    int ncategory = static_cast<int>(models.size());
     for (c = 0; c < ncategory; c++)
         if (prop[c] < MIN_MIXTURE_PROP*0.1) {
             outWarning("The mixture model might be overfitting" 
@@ -1943,16 +1965,16 @@ bool ModelMixture::isUnstableParameters() {
 }
 
 void ModelMixture::decomposeRateMatrix() {
-    for (iterator it = begin(); it != end(); it++) {
-        (*it)->decomposeRateMatrix();
+    for (auto model : models) {
+        model->decomposeRateMatrix();
     }
 }
 
 void ModelMixture::setVariables(double *variables) {
     int dim = 0;
-    for (iterator it = begin(); it != end(); it++) {
-        (*it)->setVariables(&variables[dim]);
-        dim += (*it)->getNDim();
+    for (auto model : models) {
+        model->setVariables(&variables[dim]);
+        dim += model->getNDim();
     }
 //	if (fix_prop) return;
 //	int i, ncategory = size();
@@ -1978,9 +2000,9 @@ void ModelMixture::setVariables(double *variables) {
 bool ModelMixture::getVariables(double *variables) {
     int dim = 0;
     bool changed = false;
-    for (iterator it = begin(); it != end(); it++) {
-        changed |= (*it)->getVariables(&variables[dim]);
-        dim += (*it)->getNDim();
+    for (auto model : models) {
+        changed |= model->getVariables(&variables[dim]);
+        dim += model->getNDim();
     }
 //	if (fix_prop) return;
 //	int i, ncategory = size();
@@ -2022,10 +2044,10 @@ bool ModelMixture::getVariables(double *variables) {
 void ModelMixture::setBounds(double* lower_bound, double* upper_bound,
                              bool*   bound_check) {
 	int dim = 0;
-	for (iterator it = begin(); it != end(); it++) {
-		(*it)->setBounds(&lower_bound[dim], &upper_bound[dim],
+	for (auto model : models) {
+		model->setBounds(&lower_bound[dim], &upper_bound[dim],
                          &bound_check[dim]);
-		dim += (*it)->getNDim();
+		dim += model->getNDim();
 	}
 //	if (fix_prop) return;
 //	int i, ncategory = size();
@@ -2037,22 +2059,22 @@ void ModelMixture::setBounds(double* lower_bound, double* upper_bound,
 }
 
 void ModelMixture::writeInfo(ostream &out) {
-    int i;
-    for (i = 0; i < size(); i++) {
-        at(i)->writeInfo(out);
+    for (auto model : models) {
+        model->writeInfo(out);
     }
     //	if (fix_prop) return;
     if (isFused()) return;
     
     cout << "Mixture weights:";
-    for (i = 0; i < size(); i++)
+    for (int i = 0; i < models.size(); i++) {
         cout << " " << prop[i];
+    }
     cout << endl;
 }
 
 void ModelMixture::writeParameters(ostream &out) {
-	for (iterator it = begin(); it != end(); it++) {
-		(*it)->writeParameters(out);
+	for (auto model : models) {
+		model->writeParameters(out);
 	}
 }
 
@@ -2060,25 +2082,36 @@ string ModelMixture::getName() {
     if (name != "") return name;
     string retname = "MIX";
     retname += OPEN_BRACKET;
-    for (iterator it = begin(); it != end(); it++) {
-        if (it != begin()) retname += ",";
-        retname += (*it)->getName();
+    const char* separator = "";
+    for (auto model : models) {
+        retname += separator;
+        retname += model->getName();
+        separator = ",";
     }
     retname += CLOSE_BRACKET;
     return retname;
 }
 
 string ModelMixture::getNameParams() {
-    if (full_name != "")
+    if (full_name != "") {
         return full_name;
+    }
     string retname = "MIX";
     retname += OPEN_BRACKET;
     const char* separator = "";
-    for (iterator it = begin(); it != end(); it++) {
+    for (auto model : models) {
         retname  += separator;
         separator = ",";
-        retname  += (*it)->getNameParams();
+        retname  += model->getNameParams();
     }
     retname += CLOSE_BRACKET;
     return retname;
+}
+
+uint64_t ModelMixture::getMemoryRequired() {
+    uint64_t mem = ModelMarkov::getMemoryRequired();
+    for (auto model: models) {
+        mem += model->getMemoryRequired();
+    }
+    return mem;
 }

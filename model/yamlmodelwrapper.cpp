@@ -65,6 +65,33 @@ YAMLModelProtein::YAMLModelProtein(ModelsBlock* block,
     setRateMatrixFromModel();
 }
 
+YAMLModelMixture::YAMLModelMixture(const ModelInfoFromYAMLFile& info,
+                                   PhyloTree *tree,
+                                   ModelsBlock* models_block,
+                                   PhyloTree* report_to_tree)
+    : super(info, report_to_tree) {
+    //as per init() and initMixture()
+    ASSERT(info.isMixtureModel());
+    const std::string no_parameters; //parameters are passed to the mixture.
+    full_name = "MIX";
+    full_name += OPEN_BRACKET;
+    const char* separator = "";
+    for (auto child_info: info.getMixedModels()) {
+        auto model = ModelListFromYAMLFile::getModelByReference
+                     (child_info.second, tree, info.getFrequencyType(),
+                      models_block, no_parameters, report_to_tree);
+        models.push_back(model);
+        //what about weights?!
+        full_name += separator;
+        full_name += child_info.second.getName();
+        separator = ",";
+    }
+    full_name += CLOSE_BRACKET;
+
+    //Do more of what initMixture() does.
+
+}
+
 YAMLRateFree::YAMLRateFree(PhyloTree *tree, PhyloTree* report_to_tree,
                 const ModelInfoFromYAMLFile& info): super(info, report_to_tree) {
     std::string algorithm = info.getOptimizationAlgorithm();

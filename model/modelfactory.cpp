@@ -482,13 +482,10 @@ void ModelFactory::initializeModel(const std::string& model_name,
                                      tree, optimize_mixmodel_weight,
                                      report_to_tree);
         } else {
-            //            string model_desc;
-            //            NxsModel *nxsmodel = models_block->findModel(model_str);
-            //            if (nxsmodel) model_desc = nxsmodel->description;
             model = createModel(model_str, models_block, freq_type,
                                 freq_params, tree, report_to_tree);
         }
-//        fused_mix_rate &= model->isMixture() && site_rate->getNRate() > 1;
+        //fused_mix_rate &= model->isMixture() && site_rate->getNRate() > 1;
     } else {
         // site-specific model
         if (model_str == "JC" || model_str == "POISSON") {
@@ -506,7 +503,7 @@ void ModelFactory::initializeModel(const std::string& model_name,
             //     << " -> model " << site_model[i] << endl;
         }
         double* state_freq = new double[model->num_states];
-        double* rates = new double[model->getNumRateEntries()];
+        double* rates      = new double[model->getNumRateEntries()];
         for (size_t i = 0; i < tree->aln->site_state_freq.size(); ++i) {
             ModelMarkov *modeli;
             if (i == 0) {

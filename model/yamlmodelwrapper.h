@@ -33,6 +33,7 @@
 #include "modelcodon.h"            //for ModelCodon
 #include "modelbin.h"              //for ModelBIN
 #include "modelmorphology.h"       //for ModelMorphology
+#include "modelmixture.h"          //for ModelMixture
 
 #include "ratefree.h"              //for RateFree
 
@@ -297,6 +298,15 @@ public:
                  StateFreqType freq, std::string freq_params,
                  PhyloTree *tree, PhyloTree* report_to_tree,
                  const ModelInfoFromYAMLFile& info);
+};
+
+class YAMLModelMixture: public YAMLModelWrapper<ModelMixture> {
+public:
+    typedef YAMLModelWrapper<ModelMixture> super;
+    YAMLModelMixture(const ModelInfoFromYAMLFile& info,                
+                     PhyloTree *tree, 
+                     ModelsBlock* models_block,
+                     PhyloTree* report_to_tree);
 };
 
 template <class R> class YAMLRateModelWrapper: public R {
