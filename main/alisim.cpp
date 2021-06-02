@@ -97,7 +97,7 @@ void inferInputParameters(Params &params, Checkpoint *checkpoint, IQTree *&tree,
     {
         // initialize the tree_file if it has not been provided by the user
         char *pre_fix = params.aln_file?params.aln_file:params.partition_file;
-        params.user_file = new char[strlen(pre_fix) + 10];
+        params.user_file = new char[strlen(pre_fix) + 15];
         strcpy(params.user_file, pre_fix);
         if (params.partition_file && params.partition_type == BRLEN_OPTIMIZE)
             strcat(params.user_file,".parttrees");
