@@ -1431,7 +1431,8 @@ void ModelMixture::checkProportionsAndWeights(DoubleVector& weights) {
         }
     }
 	// rescale total_num_subst such that the global rate is 1
-    for (int i = 0, sum = 0.0; i < nmixtures; ++i) {
+    sum = 0.0;
+    for (int i = 0; i < nmixtures; ++i) {
         sum += prop[i] * models[i]->total_num_subst;
     }
     double one_on_sum = 1.0/sum;

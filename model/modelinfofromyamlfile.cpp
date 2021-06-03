@@ -404,7 +404,7 @@ const YAMLFileParameter* ModelInfoFromYAMLFile::findParameter
         }
     }
     if (parent_model!=nullptr) {
-        return parent_model->findParameter(name, type);    
+        return parent_model->findParameter(name);    
     }
     return nullptr;
 }
@@ -413,7 +413,6 @@ const YAMLFileParameter* ModelInfoFromYAMLFile::findParameter
                          (const std::string& name) const {
     return findParameter(name.c_str());
 }
-
 
 const YAMLFileParameter* ModelInfoFromYAMLFile::findParameter
                          (const char* name, ModelParameterType type) const {
@@ -1398,8 +1397,8 @@ bool ModelInfoFromYAMLFile::acceptParameterList(std::string parameter_list,
         expr_list.push_back(new Interpreter(*this, param));
         i = j + 1;
     }
-    bool   fix = !report_tree->params->optimize_from_given_params;
-    size_t position = 0;
+    bool fix      = !report_tree->params->optimize_from_given_params;
+    int  position = 0;
     getVariableNamesByPosition();
     try {
         for (size_t i=0; i<expr_list.size(); ++i) {
@@ -1441,7 +1440,6 @@ const MapOfModels& ModelInfoFromYAMLFile::getMixedModels() const {
     ASSERT(mixed_models!=nullptr);
     return *mixed_models;
 }
-
 
 ModelVariable& ModelInfoFromYAMLFile::assign(const std::string& var_name,  
                                    ModelExpression::Expression *x,
@@ -1491,7 +1489,6 @@ ModelVariable& ModelInfoFromYAMLFile::assign(const std::string& var_name,
         return mv;
     }
 }
-
 
 void ModelInfoFromYAMLFile::writeInfo(const char* caption,
                                       ModelParameterType param_type,
