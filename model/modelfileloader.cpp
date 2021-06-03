@@ -697,7 +697,7 @@ void ModelFileLoader::handleInheritance(ModelInfoFromYAMLFile& info,
                                         ModelListFromYAMLFile& list,
                                         PhyloTree* report_to_tree) {
     bool have_first_parent = false;
-    for (string ancestral_model : split_string(info.parent_model_name, "+")) {
+    for (string ancestral_model : split_string(info.superclass_model_name, "+")) {
         if (list.hasModel(ancestral_model)) {
             const ModelInfoFromYAMLFile& ancestor =
                     list.getModel(ancestral_model);
@@ -727,8 +727,8 @@ void ModelFileLoader::handleInheritance(ModelInfoFromYAMLFile& info,
         } else {
             std::stringstream complaint;
             complaint << "Model " << info.model_name 
-                        << " specifies a parent model of "
-                        << info.parent_model_name << ","
+                        << " specifies a superclass model of "
+                        << info.superclass_model_name << ","
                         << " but that model was not found.";
             if (info.is_rate_model) {
                 complaint << "\nRecognized rate models are: ";
@@ -817,22 +817,23 @@ void ModelFileLoader::parseYAMLModel(const YAML::Node& substitution_model,
                                      ModelListFromYAMLFile& list,
                                      ModelInfoFromYAMLFile* parent_model,
                                      PhyloTree* report_to_tree) {
-    info.is_modifier_model = false;
-    info.parent_model_name = stringScalar(substitution_model, "frommodel", "");
-    info.rate_distribution = stringScalar(substitution_model, "ratedistribution", "");
-    info.model_name        = name_of_model;
+    info.parent_model          = parent_model;
+    info.is_modifier_model     = false;
+    info.superclass_model_name = stringScalar(substitution_model, "frommodel", "");
+    info.rate_distribution     = stringScalar(substitution_model, "ratedistribution", "");
+    info.model_name            = name_of_model;
                             
-    if (!info.parent_model_name.empty()) {
+    if (!info.superclass_model_name.empty()) {
         TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity, 
                       name_of_model << " parent is " 
-                      << info.parent_model_name << "." );
-        if (string_to_upper(info.parent_model_name)=="ANY") {
-            info.parent_model_name.clear();
+                      << info.superclass_model_name << "." );
+        if (string_to_upper(info.superclass_model_name)=="ANY") {
+            info.superclass_model_name.clear();
             info.is_modifier_model = true;
         }
         else {
             if (info.model_name.empty()) {            
-                info.model_name = info.parent_model_name;
+                info.model_name = info.superclass_model_name;
             }
             handleInheritance(info, list, report_to_tree);
         }
@@ -952,9 +953,19 @@ void ModelFileLoader::parseYAMLModel(const YAML::Node& substitution_model,
                     "Model " + model_name +
                     " in file " + file_path +
                     " is not part of a mixture model" );
-        //Todo: decide what to do with weight ; it may well
-        //      be a reference to variable in the parent
-        //      mixture model.  Does it have to be?
+        complainIfNot(weight.IsScalar(),
+                    "Weight for model " + model_name +
+                    " in mixture model " + parent_model->getName() +
+                    " in file " + file_path +
+                    " was not a scalar" );
+        info.weight_formula = weight.Scalar();
+        info.model_weight = info.getModelWeight();
+        bool is_fixed = info.isModelWeightFixed();
+        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+                      (is_fixed ? "Fixed" : "Variable") <<
+                      " weight of " << parent_model->getName() <<
+                      "." << model_name << " was " << info.weight_formula <<
+                      "=" << info.model_weight);
     }
 
     auto scale  = substitution_model["scale"];

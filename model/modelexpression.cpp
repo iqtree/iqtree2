@@ -123,6 +123,10 @@ namespace ModelExpression {
         token_char = c;
     }
 
+    bool Token::isFixed() const {
+        return true; //Todo: Maybe it'd be better to throw if this is called.
+    }
+
     bool Token::isToken(char c) const {
         return (token_char == c);
     }
@@ -144,6 +148,10 @@ namespace ModelExpression {
     }
 
     bool Constant::isConstant() const {
+        return true;
+    }
+
+    bool Constant::isFixed() const {
         return true;
     }
 
@@ -169,6 +177,10 @@ namespace ModelExpression {
 
     void Variable::writeTextTo(std::stringstream &text) const {
         text << variable_name;
+    }
+
+    bool Variable::isFixed() const {
+        return model.isVariableFixed(variable_name);   
     }
 
     bool Variable::isVariable() const {
@@ -209,6 +221,15 @@ namespace ModelExpression {
     }
 
     std::string ParameterSubscript::getName() const {
+        const YAMLFileParameter* param = checkParameter();        
+        double x = subscript_expression->evaluate();
+        int    i = checkSubscript(param, x);
+        std::stringstream var_name_stream;
+        var_name_stream << param->name << "(" << i << ")";
+        return var_name_stream.str();
+    }
+
+    const YAMLFileParameter* ParameterSubscript::checkParameter() const {
         const YAMLFileParameter* param 
             = model.findParameter(parameter_to_subscript);
         if (param==nullptr) {
@@ -217,11 +238,15 @@ namespace ModelExpression {
                       << ", not found.";
             throw ModelException(complaint.str());
         }
-        double x = subscript_expression->evaluate();
+        return param;
+    }
+
+    int  ParameterSubscript::checkSubscript(const YAMLFileParameter* param,
+                                            double x) const {
         int    i = (int)floor(x);
         int   lo = param->minimum_subscript;
         int   hi = param->maximum_subscript;
-        if (x<lo || hi<x) {
+        if (i<lo || hi<i) {
             std::stringstream complaint;
             complaint << "Invalid subscript " << i
                       << " for parameter " << param->name
@@ -229,9 +254,21 @@ namespace ModelExpression {
                       << " through " << hi << " inclusive.";
             throw ModelException(complaint.str());
         }
+        return i;
+    }
+
+    bool ParameterSubscript::isFixed() const {
+        const YAMLFileParameter* param 
+            = model.findParameter(parameter_to_subscript);
+        if (!subscript_expression->isFixed()) {
+            return false;
+        }
+        double x = subscript_expression->evaluate();
+        int    i = checkSubscript(param, x);
         std::stringstream var_name_stream;
         var_name_stream << param->name << "(" << i << ")";
-        return var_name_stream.str();
+        std::string var_name = var_name_stream.str();
+        return model.isVariableFixed(var_name);
     }
 
     Function::Function(ModelInfoFromYAMLFile& for_model,
@@ -272,6 +309,10 @@ namespace ModelExpression {
         return true;
     }
 
+    bool Estimate::isFixed() const {
+        return false;
+    }
+
     void   Estimate::setParameter(Expression* param) {
         expression = param;
     }
@@ -290,6 +331,11 @@ namespace ModelExpression {
     double UnaryFunction::evaluate() const {
         double parameter_value = parameter->evaluate();
         return body->callFunction(model, parameter_value);
+    }
+
+    bool UnaryFunction::isFixed() const {
+        ASSERT(parameter!=nullptr);
+        return parameter->isFixed();
     }
 
     void   UnaryFunction::writeTextTo(std::stringstream &text) const {
@@ -319,6 +365,12 @@ namespace ModelExpression {
         text << ")" << operator_text << "(";
         rhs->writeTextTo(text);
         text << ")";
+    }
+
+    bool InfixOperator::isFixed() const {
+        ASSERT(lhs!=nullptr);
+        ASSERT(rhs!=nullptr);
+        return lhs->isFixed() && rhs->isFixed();
     }
 
     bool InfixOperator::isOperator() const {
@@ -461,6 +513,10 @@ namespace ModelExpression {
 
     bool Assignment::isAssignment() const {
         return true;
+    }
+
+    bool Assignment::isFixed() const {
+        return false;
     }
 
     bool Assignment::isRightAssociative() const {
@@ -629,6 +685,15 @@ namespace ModelExpression {
         }
     }
 
+    bool ListOperator::isFixed() const {
+        for (Expression* entry : list_entries) {
+            if (!entry->isFixed()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     bool ListOperator::isList() const {
         return true;
     }
@@ -718,6 +783,11 @@ namespace ModelExpression {
 
     double MultiFunction::evaluate() const {
         return body->callFunction(model, parameter_list);
+    }
+
+    bool   MultiFunction::isFixed()  const {
+        ASSERT(parameter_list!=nullptr);
+        return parameter_list->isFixed();
     }
 
     void   MultiFunction::writeTextTo(std::stringstream &text) const {
@@ -1134,6 +1204,11 @@ namespace ModelExpression {
 
     bool InterpretedExpression::isSet() const {
         return !is_unset;
+    }
+
+    bool InterpretedExpression::isFixed() const {
+        ASSERT(root!=nullptr);
+        return root->isFixed();
     }
 
     InterpretedExpression::~InterpretedExpression() {

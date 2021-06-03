@@ -180,23 +180,30 @@ ModelInfoFromYAMLFile::ModelInfoFromYAMLFile()
     , reversible(false), rate_matrix_rank(0)
     , tip_likelihood_rank(0)
     , frequency_type(StateFreqType::FREQ_UNKNOWN)
-    , mixed_models(nullptr), linked_models(nullptr) {
+    , parent_model(nullptr), mixed_models(nullptr)
+    , linked_models(nullptr), model_weight(1.0)  {
 }
 
 void ModelInfoFromYAMLFile::copyMixedAndLinkedModels(const ModelInfoFromYAMLFile& rhs) {
     delete mixed_models;
     if (rhs.mixed_models != nullptr) {
         mixed_models = new MapOfModels(*rhs.mixed_models);
+        for (auto it = (*mixed_models).begin(); it!=(*mixed_models).end(); ++it) {
+            it->second.parent_model = this;
+        }
     }
     delete linked_models;
     if (rhs.linked_models != nullptr) {
         linked_models = new MapOfModels(*rhs.linked_models);
+        for (auto it = (*linked_models).begin(); it!=(*linked_models).end(); ++it) {
+            it->second.parent_model = this;
+        }
     }
 }
 
 ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(const ModelInfoFromYAMLFile& rhs)
     : model_name(rhs.model_name), model_file_path(rhs.model_file_path)
-    , parent_model_name(rhs.parent_model_name)
+    , superclass_model_name(rhs.superclass_model_name)
     , is_modifier_model(rhs.is_modifier_model), is_rate_model(rhs.is_rate_model)
     , rate_distribution(rhs.rate_distribution)
     , citation(rhs.citation), DOI(rhs.DOI), url(rhs.url)
@@ -209,8 +216,9 @@ ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(const ModelInfoFromYAMLFile& rhs)
     , tip_likelihood_expressions(rhs.tip_likelihood_expressions)
     , tip_likelihood_formula(rhs.tip_likelihood_formula)
     , parameters(rhs.parameters), frequency_type(rhs.frequency_type)
-    , variables(rhs.variables)
-    , mixed_models(nullptr), linked_models(nullptr) {
+    , variables(rhs.variables), parent_model(rhs.parent_model)
+    , mixed_models(nullptr), linked_models(nullptr)
+    , model_weight(1.0) {
     copyMixedAndLinkedModels(rhs);
 }
 
@@ -218,7 +226,7 @@ ModelInfoFromYAMLFile& ModelInfoFromYAMLFile::operator=(const ModelInfoFromYAMLF
     if (&rhs != this) {
         model_name                 = rhs.model_name;
         model_file_path            = rhs.model_file_path;
-        parent_model_name          = rhs.parent_model_name;
+        superclass_model_name      = rhs.superclass_model_name;
         is_modifier_model          = rhs.is_modifier_model;
         is_rate_model              = rhs.is_rate_model;
         rate_distribution          = rhs.rate_distribution;
@@ -238,6 +246,7 @@ ModelInfoFromYAMLFile& ModelInfoFromYAMLFile::operator=(const ModelInfoFromYAMLF
         parameters                 = rhs.parameters; 
         frequency_type             = rhs.frequency_type;
         variables                  = rhs.variables;
+        //Note: parent_model is NOT set.
         copyMixedAndLinkedModels(rhs);
     }
     return *this;
@@ -249,7 +258,8 @@ ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(const std::string& path)
     , num_states(0), reversible(true)
     , rate_matrix_rank(0), tip_likelihood_rank(0)
     , frequency_type(StateFreqType::FREQ_UNKNOWN)
-    , mixed_models(nullptr), linked_models(nullptr) {
+    , parent_model(nullptr), mixed_models(nullptr)
+    , linked_models(nullptr), model_weight(1.0) {
 }
 
 ModelInfoFromYAMLFile::~ModelInfoFromYAMLFile() {
@@ -270,7 +280,6 @@ bool ModelInfoFromYAMLFile::isModelFinder() const {
 bool ModelInfoFromYAMLFile::isModelFinderOnly() const {
     return false;
 }
-
 
 bool ModelInfoFromYAMLFile::isReversible() const {
     return reversible;
@@ -398,13 +407,13 @@ const YAMLFileParameter* ModelInfoFromYAMLFile::findParameter
 }
 
 const YAMLFileParameter* ModelInfoFromYAMLFile::findParameter
-(const std::string& name) const {
+                         (const std::string& name) const {
     return findParameter(name.c_str());
 }
 
 
 const YAMLFileParameter* ModelInfoFromYAMLFile::findParameter
-(const char* name, ModelParameterType type) const {
+                         (const char* name, ModelParameterType type) const {
     size_t      param_count = parameters.size();
     std::string lower_name = string_to_lower(name);
     for (size_t i = 0; i < param_count; ++i) {
@@ -412,16 +421,19 @@ const YAMLFileParameter* ModelInfoFromYAMLFile::findParameter
             return &parameters[i];
         }
     }
+    if (parent_model!=nullptr) {
+        return parent_model->findParameter(name, type);    
+    }
     return nullptr;
 }
 
 const YAMLFileParameter* ModelInfoFromYAMLFile::findParameter
-(const std::string& name, ModelParameterType type) const {
+                         (const std::string& name, ModelParameterType type) const {
     return findParameter(name.c_str(), type);
 }
 
 void  ModelInfoFromYAMLFile::moveParameterToBack
-(const char* name, ModelParameterType type) {
+      (const char* name, ModelParameterType type) {
     size_t      param_count = parameters.size();
     std::string lower_name = string_to_lower(name);
     size_t      i;
@@ -443,7 +455,6 @@ void  ModelInfoFromYAMLFile::moveParameterToBack
     parameters[i] = lift;
 }
 
-
 bool ModelInfoFromYAMLFile::hasVariable(const char* name) const {
     //Todo: look up linked_models too
     if (hasDot(name) && mixed_models != nullptr ) {
@@ -453,7 +464,13 @@ bool ModelInfoFromYAMLFile::hasVariable(const char* name) const {
         auto it = findMixedModel(sub_model_name);
         return it->second.hasVariable(var_name);
     }
-    return variables.find(name) != variables.end();
+    if (variables.find(name) != variables.end()) {
+        return true;
+    }
+    if (parent_model==nullptr) {
+        return false;
+    }
+    return parent_model->hasVariable(name);
 }
 
 bool ModelInfoFromYAMLFile::hasVariable(const std::string& name) const {
@@ -463,15 +480,18 @@ bool ModelInfoFromYAMLFile::hasVariable(const std::string& name) const {
 double ModelInfoFromYAMLFile::getVariableValue(const char* name) const {
     auto found = variables.find(name);
     if (found == variables.end()) {
-        //Todo: look up linked_models too
-        if (hasDot(name) && mixed_models != nullptr) {
+        bool dotted = hasDot(name);
+        if (dotted && mixed_models != nullptr) {
             std::string sub_model_name;
             const char* var_name = nullptr;
             breakAtDot(name, sub_model_name, var_name);
             auto it = findMixedModel(sub_model_name);
             return it->second.getVariableValue(var_name);
         }
-        return 0.0;
+        if (dotted || parent_model==nullptr) {
+            return 0.0;
+        }
+        return parent_model->getVariableValue(name);
     }
     return found->second.getValue();
 }
@@ -484,14 +504,19 @@ bool ModelInfoFromYAMLFile::isVariableFixed(const std::string& name) const {
     auto found = variables.find(name);
     if (found == variables.end()) {
         //Todo: look up linked_models too
-        if (hasDot(name.c_str()) && mixed_models != nullptr) {
+        bool dotted = hasDot(name.c_str());
+
+        if (dotted && mixed_models != nullptr) {
             std::string sub_model_name;
             const char* var_name = nullptr;
             breakAtDot(name.c_str(), sub_model_name, var_name);
             auto it = findMixedModel(sub_model_name);
             return it->second.isVariableFixed(var_name);
         }
-        return false;
+        if (dotted || parent_model==nullptr) {
+            return false;
+        }
+        return parent_model->isVariableFixed(name);
     }
     return found->second.isFixed();
 }
@@ -507,6 +532,8 @@ void ModelInfoFromYAMLFile::addParameter(const YAMLFileParameter& p) {
             break;
         }
     }
+    //Problem here: What if this is a child model in a mixture model
+    //and there is a parameter with this name, in the parent model?
     if (!replaced) {
         parameters.emplace_back(p);
     }
@@ -615,7 +642,6 @@ bool  ModelInfoFromYAMLFile::hasFrequencyParameters(int min_variable_count) cons
     return false;
 }
 
-
 bool ModelInfoFromYAMLFile::isFrequencyParameter(const std::string& param_name) const {
     for (auto p : parameters) {
         if (string_to_lower(p.name) == string_to_lower(param_name)) {
@@ -629,6 +655,32 @@ StateFreqType ModelInfoFromYAMLFile::getFrequencyType() const {
     return frequency_type;
 }
 
+void ModelInfoFromYAMLFile::setFrequencyType(StateFreqType new_type) {
+    frequency_type = new_type;
+} 
+
+double ModelInfoFromYAMLFile::getModelWeight() const {
+    return model_weight;
+}
+
+double ModelInfoFromYAMLFile::getModelWeight() {
+    try {
+        ModelExpression::InterpretedExpression expr(*this, weight_formula);
+        model_weight = expr.evaluate();
+    }
+    catch (ModelExpression::ModelException x) {
+        std::stringstream complaint;
+        complaint << "Error determining weight of model " << getName()
+                  << ": " << x.getMessage();
+        throw ModelExpression::ModelException(complaint.str());
+    }
+    return model_weight;
+}
+
+bool ModelInfoFromYAMLFile::isModelWeightFixed() {
+    ModelExpression::InterpretedExpression expr(*this, weight_formula);
+    return expr.expression()->isFixed();
+}
 
 void ModelInfoFromYAMLFile::setBounds(int param_count, 
                                       const std::vector<ModelParameterType>& types,
@@ -794,7 +846,6 @@ ModelVariable& ModelInfoFromYAMLFile::assign(const std::string& var_name,
             return it->second.assign(std::string(sub_model_var_name),
                                      value_to_set);
         }
-
         std::stringstream complaint;
         complaint << "Could not assign"
             << " to unrecognized variable " << var_name
@@ -1143,7 +1194,8 @@ void ModelInfoFromYAMLFile::inheritModelProperties(const ModelInfoFromYAMLFile& 
     if (data_type_name=="") {
         data_type_name=mummy.data_type_name;
         sequence_type=mummy.sequence_type;
-    } else if (mummy.data_type_name!="") {
+    } 
+    else if (mummy.data_type_name!="") {
         if (mummy.data_type_name != data_type_name) {
             complaint << "Cannot have data type of " << data_type_name << " and "
                       << mummy.data_type_name 

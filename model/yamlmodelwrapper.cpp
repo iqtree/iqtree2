@@ -72,23 +72,47 @@ YAMLModelMixture::YAMLModelMixture(const ModelInfoFromYAMLFile& info,
     : super(info, report_to_tree) {
     //as per init() and initMixture()
     ASSERT(info.isMixtureModel());
+
+    StateFreqType freq = info.getFrequencyType();
+    if (freq == StateFreqType::FREQ_UNKNOWN) {
+        freq = StateFreqType::FREQ_USER_DEFINED;
+    }
+
+    if (freq == StateFreqType::FREQ_MIXTURE) {
+        //Todo: Do what?!        
+    }
+
+    bool optimize_weights = false;
+
     const std::string no_parameters; //parameters are passed to the mixture.
     full_name = "MIX";
     full_name += OPEN_BRACKET;
     const char* separator = "";
-    for (auto child_info: info.getMixedModels()) {
+    DoubleVector weights;
+    for (auto child_name_and_info: info.getMixedModels()) {
+        ModelInfoFromYAMLFile& child = child_name_and_info.second;
         auto model = ModelListFromYAMLFile::getModelByReference
-                     (child_info.second, tree, info.getFrequencyType(),
-                      models_block, no_parameters, report_to_tree);
+                    (child, tree, info.getFrequencyType(),
+                    models_block, no_parameters, report_to_tree);
         models.push_back(model);
+        weights.push_back(child.getModelWeight());
+        if (!optimize_weights) {
+            optimize_weights = !child.isModelWeightFixed();
+        }
         //what about weights?!
         full_name += separator;
-        full_name += child_info.second.getName();
+        full_name += child.getName();
         separator = ",";
     }
     full_name += CLOSE_BRACKET;
 
-    //Do more of what initMixture() does.
+    //Do more of what ModelMixture::initMixture() does.
+
+    checkProportionsAndWeights(weights);
+    setOptimizationSteps(optimize_weights);
+    checkModelReversibility();
+    decomposeRateMatrix();
+
 
 }
 

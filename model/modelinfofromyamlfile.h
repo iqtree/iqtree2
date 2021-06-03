@@ -129,7 +129,7 @@ public:
 private:
     std::string   model_name;         //
     std::string   model_file_path;    //
-    std::string   parent_model_name;  //The name of the parent model (if any)
+    std::string   superclass_model_name; //The name of the superclass model (if any)
     bool          is_modifier_model;  //True for models that work by modifying
                                       //or extending an existing model.  False for
                                       //others.
@@ -154,12 +154,17 @@ private:
     Parameters    parameters;      //parameters
     StateFreqType frequency_type;
     Variables     variables;
-    MapOfModels*  mixed_models;    //nullptr, except for model mixtures
-    MapOfModels*  linked_models;   //nullptr, except for tree mixtures
     StringMap     string_properties;
     mutable StrVector variable_names;
 
     std::string   opt_algorithm;  //optimization algorithm
+
+    //Only of relevance for child modules in mixtures
+    ModelInfoFromYAMLFile* parent_model;
+    MapOfModels*           mixed_models;   //nullptr, except for model mixtures
+    MapOfModels*           linked_models;  //nullptr, except for tree mixtures
+    std::string            weight_formula; //formula for deciding on weight
+    double                 model_weight;   //weight
 
     friend class ModelListFromYAMLFile;
     friend class ModelFileLoader;
@@ -274,7 +279,7 @@ public:
                                           PhyloTree* report_to_tree);
     double evaluateExpression(std::string& expression, std::string context);
 
-    //Parameters
+    //Parameters and variables
     const YAMLFileParameter* findParameter(const char* name)            const;
     const YAMLFileParameter* findParameter(const std::string& name)     const;
     const YAMLFileParameter* findParameter(const char* name,
@@ -282,13 +287,17 @@ public:
     const YAMLFileParameter* findParameter(const std::string& name,
                                            ModelParameterType type)     const;
     bool  hasFrequencyParameters(int min_variable_count)                const;
-    void  moveParameterToBack(const char* name,
-                              ModelParameterType type);
-    bool   isFrequencyParameter(const std::string& param_name)          const;
+    void  moveParameterToBack   (const char* name,
+                                 ModelParameterType type);
+    bool  isFrequencyParameter  (const std::string& param_name)         const;
     StateFreqType      getFrequencyType()                               const;
+    void               setFrequencyType(StateFreqType new_type);
     std::string        getParameterList(ModelParameterType param_type)  const;
     void               appendParameterList(ModelParameterType param_type,
                                            std::stringstream& list)     const;
+    double             getModelWeight()                                 const;
+    double             getModelWeight(); //This version re-evaluates weight_formula
+    bool               isModelWeightFixed(); //Can't be const.
 
     //Rate matrices
     int                getRateMatrixRank()                              const;
@@ -337,7 +346,7 @@ public:
     ModelVariable& forceAssign(const char* var_name,
                                int value);
 
-    const StrVector&   getVariableNamesByPosition() const;
+    const StrVector& getVariableNamesByPosition() const;
     /**
         note:   Assumes getVariableNamesByPosition() called in advance
     */

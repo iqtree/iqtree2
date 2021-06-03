@@ -46,6 +46,7 @@ namespace ModelExpression {
         virtual bool   isBoolean()          const;
         virtual bool   isConstant()         const;
         virtual bool   isEstimate()         const;
+        virtual bool   isFixed()            const = 0;
         virtual bool   isFunction()         const;
         virtual bool   isList()             const;
         virtual bool   isOperator()         const;
@@ -67,6 +68,7 @@ namespace ModelExpression {
         Token(ModelInfoFromYAMLFile& for_model, char c);
         virtual ~Token() = default;
         virtual void writeTextTo(std::stringstream &text) const;
+        virtual bool isFixed() const;
         virtual bool isToken(char c) const;
     };
 
@@ -81,23 +83,30 @@ namespace ModelExpression {
         Variable(ModelInfoFromYAMLFile& for_model,
                  const std::string& name);
         virtual ~Variable() = default;
-        virtual double evaluate() const;
+        virtual double evaluate()    const;
         virtual void   writeTextTo(std::stringstream &text) const;
-        virtual bool   isVariable() const;
+        virtual bool   isFixed()     const;
+        virtual bool   isVariable()  const;
         const std::string& getName() const;
     };
 
     class ParameterSubscript: public Variable {
+    protected:
         std::string parameter_to_subscript;
         Expression* subscript_expression;
+        int checkSubscript(const YAMLFileParameter* param,
+                           double x) const;
+        const YAMLFileParameter* checkParameter()         const;
+
     public:
         typedef Variable super;
         ParameterSubscript(ModelInfoFromYAMLFile& for_model,
                             const YAMLFileParameter* param,
                             Expression* subscript_expr);
         virtual ~ParameterSubscript();
-        virtual double evaluate() const;
-        std::string getName() const;
+        virtual double evaluate()   const;
+        virtual bool   isFixed()    const;
+        std::string    getName()    const;
     };
 
     class Constant: public Expression {
@@ -107,9 +116,10 @@ namespace ModelExpression {
         Constant(ModelInfoFromYAMLFile& for_model,
                  double v);
         virtual ~Constant() = default;
-        virtual double evaluate() const;
-        virtual void   writeTextTo(std::stringstream &text) const;
+        virtual double evaluate()   const;
         virtual bool   isConstant() const;
+        virtual bool   isFixed()    const;
+        virtual void   writeTextTo(std::stringstream &text) const;
     };
 
  
@@ -130,6 +140,7 @@ namespace ModelExpression {
                       const char* name);
         virtual ~Function() = default;
 
+        virtual bool   isFixed()    const = 0;
         virtual bool   isFunction() const;
         virtual void   setParameter(Expression* param) = 0; //takes ownership
     };
@@ -145,6 +156,7 @@ namespace ModelExpression {
         virtual void   writeTextTo(std::stringstream &text) const;
         virtual bool   isConstant() const;
         virtual bool   isEstimate() const;
+        virtual bool   isFixed()    const;
         virtual void   setParameter(Expression* param); //takes ownership
     };
 
@@ -160,6 +172,7 @@ namespace ModelExpression {
 
         virtual void   setParameter(Expression* param); //takes ownership
         virtual double evaluate() const;
+        virtual bool   isFixed()  const;
         virtual void   writeTextTo(std::stringstream &text) const;
     };
 
@@ -171,9 +184,12 @@ namespace ModelExpression {
         typedef Expression super;
         InfixOperator(ModelInfoFromYAMLFile& for_model);
         virtual ~InfixOperator();
-        virtual bool isOperator() const;
-        virtual void setOperands(Expression* left, Expression* right); //takes ownership
-        virtual void writeInfixTextTo(const char* operator_text, std::stringstream& text) const;
+        virtual bool   isFixed()    const;
+        virtual bool   isOperator() const;
+        virtual void   setOperands(Expression* left, 
+                                   Expression* right); //takes ownership
+        virtual void   writeInfixTextTo(const char* operator_text, 
+                                        std::stringstream& text) const;
     };
 
     class Exponentiation: public InfixOperator {
@@ -231,13 +247,13 @@ namespace ModelExpression {
         typedef InfixOperator super;
         Assignment(ModelInfoFromYAMLFile& for_model);
         virtual ~Assignment() = default;
-        virtual void setOperands(Expression* left, 
-                                 Expression* right); //takes ownership
+        virtual void   setOperands(Expression* left, 
+                                   Expression* right); //takes ownership
         virtual double evaluate()           const;
         virtual void   writeTextTo(std::stringstream &text) const;
         virtual bool   isAssignment()       const;
+        virtual bool   isFixed()            const;
         virtual bool   isRightAssociative() const;
-
         virtual int    getPrecedence()      const;
         Expression*    getTarget()          const;
         Variable*      getTargetVariable()  const;
@@ -318,6 +334,7 @@ namespace ModelExpression {
         virtual double evaluate()        const;
         virtual void   writeTextTo(std::stringstream &text) const;
         virtual void   setOperands(Expression* left, Expression* right); //takes ownership
+        virtual bool   isFixed()         const;
         virtual bool   isList()          const;
         virtual int    getEntryCount()   const;
         virtual double evaluateEntry(int index) const;
@@ -357,6 +374,7 @@ namespace ModelExpression {
         virtual ~MultiFunction();
         virtual void   setParameter(Expression* param); //takes ownership
         virtual double evaluate() const;
+        virtual bool   isFixed()  const;
         virtual void   writeTextTo(std::stringstream &text) const;
     };
 
@@ -412,10 +430,11 @@ namespace ModelExpression {
         InterpretedExpression(ModelInfoFromYAMLFile& for_model,
                               const std::string& expression_text);
         virtual ~InterpretedExpression();
-        bool    isSet() const;
-        virtual double evaluate() const;
+        bool           isSet()      const;
+        bool           isFixed()    const;
+        virtual double evaluate()   const;
         virtual void   writeTextTo(std::stringstream &text) const;
-        Expression* expression() const; //Does *not* yield ownership
+        Expression*    expression() const; //Does *not* yield ownership
         Expression* detatchExpression(); //*Does* yield ownership
         bool evaluateIntegerRange(std::pair<int,int>& range) const;
     };
