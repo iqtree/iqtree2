@@ -1075,8 +1075,10 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
     // allocate memory
     pattern_mix_lh = new double[ntree * nptn];
     
-    // initialize the tree weights according to parsimony scores along the sites
-    initializeTreeWeights();
+    if (!isTreeWeightFixed) {
+        // initialize the tree weights according to parsimony scores along the sites
+        initializeTreeWeights();
+    }
     
     prev_score = score = -DBL_MAX;
 
@@ -1114,9 +1116,11 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
             // compute the ptn_freq array according to the posterior probabilities along each site for each tree
             computeFreqArray(pattern_mix_lh, false);
 
-            // optimize tree branches
-            score = optimizeAllBranches(1, curr_epsilon);  // loop max n times
-            // cout << "after optimizing branches, likelihood = " << score << endl;
+            if (params->fixed_branch_length != BRLEN_FIX) {
+                // optimize tree branches
+                score = optimizeAllBranches(1, curr_epsilon);  // loop max n times
+                // cout << "after optimizing branches, likelihood = " << score << endl;
+            }
 
             // optimize the unlinked subsitution models one by one
             if (!isLinkModel) {
