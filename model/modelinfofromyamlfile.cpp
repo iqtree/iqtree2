@@ -403,6 +403,9 @@ const YAMLFileParameter* ModelInfoFromYAMLFile::findParameter
             return &parameters[i];
         }
     }
+    if (parent_model!=nullptr) {
+        return parent_model->findParameter(name, type);    
+    }
     return nullptr;
 }
 

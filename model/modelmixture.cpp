@@ -1239,10 +1239,12 @@ void ModelMixture::initMixture(string orig_model_name, string model_name,
 	if (freq == StateFreqType::FREQ_MIXTURE) {
 		for (m = 0, cur_pos = 0; cur_pos < freq_params.length(); m++) {
 			size_t pos = freq_params.find(',', cur_pos);
-			if (pos == string::npos)
+			if (pos == string::npos) {
 				pos = freq_params.length();
-			if (pos <= cur_pos)
+            }
+			if (pos <= cur_pos) {
 				outError("One frequency name in the mixture is empty.");
+            }
 			string this_name = freq_params.substr(cur_pos, pos-cur_pos);
 			double rate = 1.0, weight = 1.0;
 			size_t pos_rate = this_name.find(':');
@@ -1254,8 +1256,9 @@ void ModelMixture::initMixture(string orig_model_name, string model_name,
 					rate = convert_double(this_name.substr(pos_rate+1, pos_weight-pos_rate-1).c_str());
 					weight = convert_double(this_name.substr(pos_weight+1).c_str());
 					fix_prop = true;
-					if (weight <= 0.0)
+					if (weight <= 0.0) {
 						outError("Mixture component weight is negative!");
+                    }
                     weight = max(weight, MIN_MIXTURE_PROP);
 				}
 				this_name = this_name.substr(0, pos_rate);
@@ -1265,22 +1268,24 @@ void ModelMixture::initMixture(string orig_model_name, string model_name,
 			cur_pos = pos+1;
 			if (this_name == nxs_freq_empirical->name) {
 				freq_vec.push_back(nxs_freq_empirical);
-                num_pre_freq++;
+                ++num_pre_freq;
             } else if (this_name == nxs_freq_optimize->name) {
                 freq_vec.push_back(nxs_freq_optimize);
-                num_pre_freq++;
+                ++num_pre_freq;
 			} else {
 				NxsModel *freq_mod = models_block->findModel(this_name);
-				if (!freq_mod)
+				if (!freq_mod) {
 					outError("Frequency mixture name not found ", this_name);
+                }
 				if (!(freq_mod->flag & NM_FREQ)) {
 					cout << freq_mod->flag << endl;
 					outError("Frequency mixture name does not corresponding to frequency model ", this_name);
 				}
 				freq_vec.push_back(freq_mod);
 			}
-            if (num_pre_freq >= 2)
+            if (num_pre_freq >= 2) {
                 outError("Defining both empirical and optimize frequencies not allowed");
+            }
 		}
         double sum_weights = 0.0;
         for (m = 0; m < freq_weights.size(); m++) {
@@ -1313,10 +1318,12 @@ void ModelMixture::initMixture(string orig_model_name, string model_name,
 	if (model_list == "") model_list = model_name;
 	for (m = 0, cur_pos = 0; cur_pos < model_list.length(); m++) {
 		size_t pos = model_list.find(',', cur_pos);
-		if (pos == string::npos)
+		if (pos == string::npos) {
 			pos = model_list.length();
-		if (pos <= cur_pos)
+        }
+		if (pos <= cur_pos) {
 			outError("One model name in the mixture is empty.");
+        }
 		string this_name = model_list.substr(cur_pos, pos-cur_pos);
 		double rate = 1.0, weight = 1.0;
 		size_t pos_rate = this_name.find(':');
