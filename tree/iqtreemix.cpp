@@ -258,6 +258,14 @@ void IQTreeMix::separateModel(string modelName) {
         }
     }
     
+    if (weight_group_member.size() == 0) {
+        for (i=0; i<ntree; i++) {
+            vector<int> new_grp;
+            new_grp.push_back(i);
+            weight_group_member.push_back(new_grp);
+        }
+    }
+    
     /*
     if (ntree <= 1) {
         outError("For tree mixture model, number of trees has to be at least 2.");
@@ -1146,11 +1154,11 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
             // optimize tree weights
             if (!isTreeWeightFixed) {
                 // score = optimizeTreeWeightsByEM(pattern_mix_lh, curr_epsilon, 1);  // loop max n times
-                if (weightGrpExist) {
+                // if (weightGrpExist) {
                     score = optimizeTreeWeightsByBFGS(curr_epsilon);
-                } else {
+                /*} else {
                     score = optimizeTreeWeightsByEM(pattern_mix_lh, curr_epsilon, 1);  // loop max n times
-                }
+                }*/
             }
 
             score = computeLikelihood();
