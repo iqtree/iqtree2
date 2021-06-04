@@ -63,6 +63,15 @@ public:
 class ModelInfoFromName: public ModelInfo {
 private:
     std::string model_name;
+    int getNumberOfCategories(std::string model_name,  string::size_type posH, 
+                              bool is_mixture_model,   bool fused_mix_rate, 
+                              int &end_pos) const;
+    std::string getOtherHeterotachyParameters
+                (std::string model_name, string::size_type posH, 
+                 int end_pos) const;
+    void extractUserDefinedFrequency(std::string fstr,  StateFreqType& freq_type,
+                                     std::string& freq_params) const;
+
 public:
     friend class ModelFileLoader;
     

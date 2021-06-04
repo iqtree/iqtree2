@@ -867,33 +867,7 @@ void ModelFileLoader::parseYAMLModel(const YAML::Node& substitution_model,
         parseYAMLModelParameters(params, info, report_to_tree);
     }
 
-    //Mixtures have to be handled before constraints, as constraints
-    //that are setting parameters in mixed models... would otherwise
-    //not be resolved correctly.
-    auto mixtures = substitution_model["model_mixture"];
-    if (mixtures) {
-        complainIfSo(info.is_rate_model,
-                     "mixed rate models not supported."
-                     " cannot parse model " + model_name +
-                      " in file " + file_path);
-        complainIfNot(mixtures.IsSequence(),
-                      "model_mixture for model " + model_name +
-                      " in file " + file_path + " not a sequence");
-        parseYAMLMixtureModels(mixtures, info, list, report_to_tree);
-    }
-
-    auto linked = substitution_model["linked_models"];
-    if (linked) {
-        complainIfSo(info.is_rate_model,
-                     "linked substitution models"
-                     " are not supported for rate models."
-                     " cannot parse model " + model_name +
-                      " in file " + file_path);
-        complainIfNot(linked.IsSequence(),
-                      "linked_models for model " + model_name +
-                      " in file " + file_path + " not a sequence");
-        //Todo: parseYAMLLinkedModels(linked, info, list, report_to_tree);
-    }
+    parseYAMLSubModels(substitution_model, info, list, report_to_tree);
     
     auto constraints = substitution_model["constraints"];
     if (constraints) {
@@ -909,8 +883,9 @@ void ModelFileLoader::parseYAMLModel(const YAML::Node& substitution_model,
     //
     auto rateMatrix = substitution_model["rateMatrix"];
     if (info.rate_matrix_expressions.empty() && 
-        info.rate_matrix_formula.empty() && !mixtures &&
-        !info.is_modifier_model && !linked && !info.is_rate_model) {
+        info.rate_matrix_formula.empty() && !info.isMixtureModel() &&
+        !info.is_modifier_model && info.linked_models==nullptr && 
+        !info.is_rate_model) {
         complainIfNot(rateMatrix, "Model " + info.model_name +
                       " in file " + file_path +
                       " does not specify a rateMatrix" );
@@ -947,15 +922,57 @@ void ModelFileLoader::parseYAMLModel(const YAML::Node& substitution_model,
         }
     }
 
+    parseYAMLModelWeightAndScale(substitution_model, info, report_to_tree );
+
+
+}
+
+void ModelFileLoader::parseYAMLSubModels(const YAML::Node& substitution_model,
+                                         ModelInfoFromYAMLFile& info,
+                                         ModelListFromYAMLFile& list,
+                                         PhyloTree* report_to_tree) {
+    //Mixtures have to be handled before constraints, as constraints
+    //that are setting parameters in mixed models... would otherwise
+    //not be resolved correctly.
+    auto mixtures = substitution_model["model_mixture"];
+    if (mixtures) {
+        complainIfSo(info.is_rate_model,
+                     "mixed rate models not supported."
+                     " cannot parse model " + model_name +
+                      " in file " + file_path);
+        complainIfNot(mixtures.IsSequence(),
+                      "model_mixture for model " + model_name +
+                      " in file " + file_path + " not a sequence");
+        parseYAMLMixtureModels(mixtures, info, list, report_to_tree);
+    }
+
+    auto linked = substitution_model["linked_models"];
+    if (linked) {
+        complainIfSo(info.is_rate_model,
+                     "linked substitution models"
+                     " are not supported for rate models."
+                     " cannot parse model " + model_name +
+                      " in file " + file_path);
+        complainIfNot(linked.IsSequence(),
+                      "linked_models for model " + model_name +
+                      " in file " + file_path + " not a sequence");
+        //Todo: parseYAMLLinkedModels(linked, info, list, report_to_tree);
+    }
+}
+
+void ModelFileLoader::parseYAMLModelWeightAndScale
+        (const YAML::Node& substitution_model,
+        ModelInfoFromYAMLFile& info,
+        PhyloTree* report_to_tree) {
     auto weight = substitution_model["weight"];
     if (weight) {
-        complainIfNot(parent_model!=nullptr,
+        complainIfNot(info.parent_model!=nullptr,
                     "Model " + model_name +
                     " in file " + file_path +
                     " is not part of a mixture model" );
         complainIfNot(weight.IsScalar(),
                     "Weight for model " + model_name +
-                    " in mixture model " + parent_model->getName() +
+                    " in mixture model " + info.parent_model->getName() +
                     " in file " + file_path +
                     " was not a scalar" );
         info.weight_formula = weight.Scalar();
@@ -963,7 +980,7 @@ void ModelFileLoader::parseYAMLModel(const YAML::Node& substitution_model,
         bool is_fixed = info.isModelWeightFixed();
         TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
                       (is_fixed ? "Fixed" : "Variable") <<
-                      " weight of " << parent_model->getName() <<
+                      " weight of " << info.parent_model->getName() <<
                       "." << model_name << " was " << info.weight_formula <<
                       "=" << info.model_weight);
     }
@@ -974,21 +991,22 @@ void ModelFileLoader::parseYAMLModel(const YAML::Node& substitution_model,
         //      for a substitution model that is not part
         //      of a mixture model.
         //
-        complainIfNot(parent_model!=nullptr,
+        complainIfNot(info.parent_model!=nullptr,
                       "Model " + model_name +
                       " in file " + file_path +
                       " is not part of a mixture model" );
         //Todo: set the scale.
     }
-    
-    if (parent_model!=nullptr) {
+
+    if (info.parent_model!=nullptr) {
         if (!scale) {
             //Default the scale
         }
         complainIfNot(weight,
                       "No weight specified"
                       " for model " + model_name +
-                      " in mixture " + parent_model->getName() +
+                      " in mixture " + info.parent_model->getName() +
                       " in file " + file_path);
     }
+
 }

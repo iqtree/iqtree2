@@ -176,120 +176,75 @@ void ModelInfoFromName::getFrequencyOptions(std::string& freq_str,
                 + freq_str.substr(last_pos);
         }
         if (fstr.length() > 2 && fstr[2] == OPEN_BRACKET) {
-            if (freq_type == StateFreqType::FREQ_MIXTURE) {
-                outError("Mixture frequency with user-defined frequency"
-                    " is not allowed");
-            }
-            auto close_bracket = fstr.find(CLOSE_BRACKET);
-            if (close_bracket == string::npos) {
-                outError("Close bracket not found in ", fstr);
-            }
-            if (close_bracket != fstr.length() - 1) {
-                outError("Wrong close bracket position ", fstr);
-            }
-            freq_type = StateFreqType::FREQ_USER_DEFINED;
-            freq_params = fstr.substr(3, close_bracket - 3);
+            extractUserDefinedFrequency(fstr, freq_type, freq_params);
         }
-        else if (fstr == "+FC" || fstr == "+Fc" || fstr == "+F") {
-            if (freq_type == StateFreqType::FREQ_MIXTURE) {
-                freq_params = "empirical," + freq_params;
-                optimize_mixmodel_weight = true;
-            }
-            else {
-                freq_type = StateFreqType::FREQ_EMPIRICAL;
-            }
-        }
-        else if (fstr == "+FU" || fstr == "+Fu") {
-            if (freq_type == StateFreqType::FREQ_MIXTURE) {
-                outError("Mixture frequency with user-defined frequency"
-                    " is not allowed");
-            }
-            else {
-                freq_type = StateFreqType::FREQ_USER_DEFINED;
-            }
-        }
-        else if (fstr == "+FQ" || fstr == "+Fq") {
-            if (freq_type == StateFreqType::FREQ_MIXTURE) {
-                outError("Mixture frequency with equal frequency"
-                    " is not allowed");
-            }
-            else {
-                freq_type = StateFreqType::FREQ_EQUAL;
-            }
-        }
-        else if (fstr == "+FO" || fstr == "+Fo") {
-            if (freq_type == StateFreqType::FREQ_MIXTURE) {
-                freq_params = "optimize," + freq_params;
-                optimize_mixmodel_weight = true;
-            }
-            else {
-                freq_type = StateFreqType::FREQ_ESTIMATE;
+        struct Rule {
+            const char*   param;
+            const char*   mixture_prefix;
+            StateFreqType freq_type;
+            const char*   mixture_error;
+        } rules[] = {
+            { "+FC",    "empirical,", StateFreqType::FREQ_EMPIRICAL,    "" }, 
+            { "+F",     "empirical,", StateFreqType::FREQ_EMPIRICAL,    "" },
+            { "+FU",    "",           StateFreqType::FREQ_USER_DEFINED, "user-defined" },
+            { "+FQ",    "",           StateFreqType::FREQ_EQUAL,        "equal"},
+            { "+FO",    "optimize,",  StateFreqType::FREQ_ESTIMATE,     ""},
+            { "+F1X4",  "",           StateFreqType::FREQ_CODON_1x4,    "1X4"},
+            { "+F3X4",  "",           StateFreqType::FREQ_CODON_3x4,    "3X4"},
+            { "+F3X4C", "",           StateFreqType::FREQ_CODON_3x4C,   "3X4C"},
+            { "+FRY",   "",           StateFreqType::FREQ_DNA_RY,       "RY"},
+            { "+FWS",   "",           StateFreqType::FREQ_DNA_WS,       "WS"},
+            { "+FMK",   "",           StateFreqType::FREQ_DNA_MK,       "MK"},
+        };
+        std::string upper_fstr = string_to_upper(fstr);
+        for (const Rule& rule : rules) {
+            if (upper_fstr==rule.param) {
+                if (freq_type == StateFreqType::FREQ_MIXTURE) {
+                    if (strlen(rule.mixture_error)!=0) {
+                        std::stringstream complaint;
+                        complaint << "Mixture frequency with " 
+                                  << rule.mixture_error 
+                                  << " frequency is not allowed";
+                        outError(complaint.str());
+                    } else {
+                        freq_params = rule.mixture_prefix + freq_params;
+                        optimize_mixmodel_weight = true;
+                    }
+                }
+                else {
+                    freq_type = rule.freq_type;
+                }
+                return;
             }
         }
-        else if (fstr == "+F1x4" || fstr == "+F1X4") {
-            if (freq_type == StateFreqType::FREQ_MIXTURE) {
-                outError("Mixture frequency with " + fstr + " is not allowed");
-            }
-            else {
-                freq_type = StateFreqType::FREQ_CODON_1x4;
-            }
+        // might be "+F####" where # are digits
+        try {
+            freq_type = parseStateFreqDigits(fstr.substr(2));
+            // throws an error if not in +F#### format
         }
-        else if (fstr == "+F3x4" || fstr == "+F3X4") {
-            if (freq_type == StateFreqType::FREQ_MIXTURE) {
-                outError("Mixture frequency with " + fstr + " is not allowed");
-            }
-            else {
-                freq_type = StateFreqType::FREQ_CODON_3x4;
-            }
-        }
-        else if (fstr == "+F3x4C" || fstr == "+F3x4c" ||
-            fstr == "+F3X4C" || fstr == "+F3X4c") {
-            if (freq_type == StateFreqType::FREQ_MIXTURE) {
-                outError("Mixture frequency with " + fstr + " is not allowed");
-            }
-            else {
-                freq_type = StateFreqType::FREQ_CODON_3x4C;
-            }
-        }
-        else if (fstr == "+FRY") {
-            // MDW to Minh: I don't know how these should interact with FREQ_MIXTURE,
-            // so as nearly everything else treats it as an error, I do too.
-            // BQM answer: that's fine
-            if (freq_type == StateFreqType::FREQ_MIXTURE) {
-                outError("Mixture frequency with " + fstr + " is not allowed");
-            }
-            else {
-                freq_type = StateFreqType::FREQ_DNA_RY;
-            }
-        }
-        else if (fstr == "+FWS") {
-            if (freq_type == StateFreqType::FREQ_MIXTURE) {
-                outError("Mixture frequency with " + fstr + " is not allowed");
-            }
-            else {
-                freq_type = StateFreqType::FREQ_DNA_WS;
-            }
-        }
-        else if (fstr == "+FMK") {
-            if (freq_type == StateFreqType::FREQ_MIXTURE) {
-                outError("Mixture frequency with " + fstr + " is not allowed");
-            }
-            else {
-                freq_type = StateFreqType::FREQ_DNA_MK;
-            }
-        }
-        else {
-            // might be "+F####" where # are digits
-            try {
-                freq_type = parseStateFreqDigits(fstr.substr(2));
-                // throws an error if not in +F#### format
-            }
-            catch (...) {
-                outError("Unknown state frequency type ", fstr);
-            }
+        catch (...) {
+            outError("Unknown state frequency type ", fstr);
         }
         //model_str = model_str.substr(0, posfreq);
     }
+}
+
+void ModelInfoFromName::extractUserDefinedFrequency(std::string fstr,
+                                                    StateFreqType& freq_type,
+                                                    std::string& freq_params) const {
+    if (freq_type == StateFreqType::FREQ_MIXTURE) {
+        outError("Mixture frequency with user-defined frequency"
+            " is not allowed");
+    }
+    auto close_bracket = fstr.find(CLOSE_BRACKET);
+    if (close_bracket == string::npos) {
+        outError("Close bracket not found in ", fstr);
+    }
+    if (close_bracket != fstr.length() - 1) {
+        outError("Wrong close bracket position ", fstr);
+    }
+    freq_type = StateFreqType::FREQ_USER_DEFINED;
+    freq_params = fstr.substr(3, close_bracket - 3);
 }
 
 void ModelInfoFromName::getGammaParameters(int& num_rate_cats,
@@ -336,34 +291,32 @@ void ModelInfoFromName::getGammaParameters(int& num_rate_cats,
     }
 }
 
-std::string ModelInfoFromName::getHeterotachyParameters
-(bool is_mixture_model, int& num_rate_cats,
-    bool& fused_mix_rate) const {
-    string::size_type posH = model_name.find("+H"); // heterotachy model
-    string::size_type posH2 = model_name.find("*H"); // heterotachy model
-
-    if (posH != string::npos && posH2 != string::npos) {
-        auto posFirst = (posH < posH2) ? posH : posH2;
-        std::cout << "NOTE: both +H and *H were specified, continue with "
-            << model_name.substr(posFirst, 2) << std::endl;
-    }
-    if (posH2 != string::npos && posH2 < posH) {
-        posH = posH2;
-        fused_mix_rate = true;
-    }
-    std::string heterotachy_params;
-    // Heterotachy model
-    int end_pos = 0;
+int ModelInfoFromName::getNumberOfCategories(std::string model_name, 
+                                             string::size_type posH, 
+                                             bool is_mixture_model,
+                                             bool fused_mix_rate,
+                                             int &end_pos) const {
+    int number_of_categories = 0;
     if (model_name.length() > posH + 2 && isdigit(model_name[posH + 2])) {
         auto rest = model_name.substr(posH + 2);
-        num_rate_cats = convert_int(rest.c_str(), end_pos);
-        if (num_rate_cats < 1) {
-            outError("Wrong number of rate categories");
+        number_of_categories = convert_int(rest.c_str(), end_pos);
+        if (number_of_categories < 1) {
+            std::stringstream complaint;
+            complaint << "Wrong number of rate categories"
+                      << " (" << number_of_categories << ")";
+            outError(complaint.str());
         }
     }
     else if (!is_mixture_model || !fused_mix_rate) {
         outError("Please specify number of heterotachy classes (e.g., +H2)");
     }
+    return number_of_categories;
+}
+
+std::string ModelInfoFromName::getOtherHeterotachyParameters
+                ( std::string model_name, string::size_type posH, 
+                  int end_pos) const {
+    std::string heterotachy_params;
     if (model_name.length() > posH + 2 + end_pos &&
         model_name[posH + 2 + end_pos] == OPEN_BRACKET) {
         auto close_bracket = model_name.find(CLOSE_BRACKET, posH);
@@ -379,6 +332,31 @@ std::string ModelInfoFromName::getHeterotachyParameters
         outError("Wrong model name ", model_name);
     }
     return heterotachy_params;
+}
+
+std::string ModelInfoFromName::getHeterotachyParameters
+(bool is_mixture_model, int& num_rate_cats,
+    bool& fused_mix_rate) const {
+    string::size_type posH  = model_name.find("+H"); // heterotachy model
+    string::size_type posH2 = model_name.find("*H"); // heterotachy model
+
+    if (posH != string::npos && posH2 != string::npos) {
+        auto posFirst = (posH < posH2) ? posH : posH2;
+        std::cout << "NOTE: both +H and *H were specified, continue with "
+                  << model_name.substr(posFirst, 2) << std::endl;
+    }
+    if (posH2 != string::npos && posH2 < posH) {
+        posH = posH2;
+        fused_mix_rate = true;
+    }
+
+
+    int end_pos = 0;
+    // Heterotachy model
+    num_rate_cats = getNumberOfCategories(model_name, posH, is_mixture_model,
+                                          fused_mix_rate, end_pos);
+    return getOtherHeterotachyParameters(model_name, posH, end_pos);
+
 }
 
 double ModelInfoFromName::getProportionOfInvariantSites() const {

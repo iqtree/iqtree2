@@ -10,6 +10,11 @@
 #include <model/rategamma.h>       //for RateGamma::cmpPointChi2
 
 namespace ModelExpression {
+    void throwIfNot(bool checkMe, const char* msg) {
+        if (!checkMe) {
+            throw new ModelExpression::ModelException(msg);
+        }
+    }
 
     ModelException::ModelException(const char* s) : message(s) {
     }
@@ -1142,18 +1147,15 @@ namespace ModelExpression {
     bool InterpretedExpression::parseOtherToken(const std::string& text,
                                                 size_t&            ix,
                                                 Expression*&       expr) {
-        expr = nullptr;
-        char ch = text[ix];
+        expr        = nullptr;
+        char ch     = text[ix];
         char nextch = ((ix+1)<text.length()) ? text[ix+1] : '\0';
         switch (ch) {
             case '(': expr = new Token(model, ch);      break;
             case ')': expr = new Token(model, ch);      break;
-            case '!': if (nextch=='=') {
-                          expr = new InequalityOperator(model);
-                          ++ix;
-                      } else {
-                          throw ModelException("unary not (!) operator not supported (yet)");
-                      }
+            case '!': throwIfNot(nextch=='=', "unary not (!) operator not supported (yet)");
+                      expr = new InequalityOperator(model);
+                      ++ix;
                       break;
             case '^': expr = new Exponentiation(model); break;
             case '*': expr = new Multiplication(model); break;
@@ -1169,29 +1171,20 @@ namespace ModelExpression {
                           expr = new Assignment(model);
                       }
                       break;
-            case '&': if (nextch=='&') {
-                          expr = new ShortcutAndOperator(model);
-                          ++ix;
-                      } else {
-                          throw ModelException("bitwise-and & operator not supported");
-                      }
+            case '&': throwIfNot(nextch=='&', "bitwise-and & operator not supported");
+                      expr = new ShortcutAndOperator(model);
+                      ++ix;
                       break;
-            case '|': if (nextch=='|') {
-                          expr = new ShortcutOrOperator(model);
-                          ++ix;
-                      } else {
-                            throw ModelException("bitwise-or | operator not supported");
-                      }
+            case '|': throwIfNot(nextch=='|', "bitwise-or | operator not supported");
+                      expr = new ShortcutOrOperator(model);
+                      ++ix;
                       break;
             case ':': expr = new ListOperator(model);   break;
             case '?': expr = new SelectOperator(model); break;
-            case '.': if (nextch=='.') {
-                          expr = new RangeOperator(model);
-                          ++ix;
-                      } else {
-                          throw ModelException("period that wasn't part of .. or a number,"
-                                                   " was not understood");
-                      }
+            case '.': throwIfNot(nextch=='.', "period that wasn't part of .." 
+                                 " or a number, was not understood");
+                      expr = new RangeOperator(model);
+                      ++ix;
                       break;
             case ',': expr = new CommaOperator(model); break;
             default:
