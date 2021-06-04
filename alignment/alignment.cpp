@@ -4666,91 +4666,8 @@ double Alignment::readDist(igzstream &in, bool is_incremental,
     // read in distances to a temporary array
         
     for (size_t seq1 = 0; seq1 < nseqs; seq1++)  {
-        std::stringstream line;
-        safeGetTrimmedLineAsStream(in, line);
-        
-        string seq_name;
-        line >> seq_name;
-        if (map_seqName_ID.find(seq_name) != map_seqName_ID.end()) {
-            //When reading a distance file "incrementally", we can't tolerate
-            //duplicate sequence names (and we won't detect them later).
-            //Formerly duplicate sequence names weren't found early, here.
-            //Rather, they were left as is, and a later check (that every
-            //sequence name in the alignment had a matching line in the distance
-            //file) reported a problem (not the *right* problem, but a problem).
-            //But when is_incremental is true, that later check won't throw.
-            stringstream s;
-            s   << "Duplicate sequence name found in line " << (seq1+1)
-                << " of the file: " << seq_name;
-            throw s.str();
-        }
-        // assign taxa name to integer id
-        map_seqName_ID[seq_name] = static_cast<int>(seq1);
-
-        size_t pos = nseqs * seq1;
-        if (upper) {
-            //Copy column seq1 from upper triangle (above the diagonal)
-            //to the left part of row seq1 (which is in the lower triangle).
-            size_t column_pos = seq1; //position in column in upper triangle
-            for (size_t seq2=0; seq2<seq1; ++seq2, column_pos+=nseqs) {
-                tmp_dist_mat[pos++] = tmp_dist_mat[column_pos];
-            }
-            //And write zero on the diagonal, in row seq1.
-            tmp_dist_mat[pos++] = 0.0;
-        }
-        size_t rowStart = (upper) ? (seq1+1) : 0; //(row-start relative)
-        size_t rowStop  = (lower) ? seq1     : nseqs;
-        size_t seq2     = rowStart;
-        for (; line.tellg()!=-1 && seq2 < rowStop; ++seq2) {
-            double dist;
-            line >> dist;
-            tmp_dist_mat[pos++] = dist;
-            if (dist > longest_dist) {
-                longest_dist = dist;
-            }
-        }
-        if (line.tellg()==-1 && seq2<rowStop)
-        {
-            if (seq1==0 && seq2==0) {
-                //Implied lower-triangle format
-                tmp_dist_mat[0] = 0.0;
-                if (verbose_mode >= VerboseMode::VB_MED) {
-                    #if USE_PROGRESS_DISPLAY
-                    readProgress.hide();
-                    std::cout << "Distance matrix file "
-                              << " is in lower-triangle format" << std::endl;
-                    readProgress.show();
-                    #endif
-                }
-                lower  = true;
-            }
-            else if (seq1==0 && seq2+1==rowStop) {
-                if (verbose_mode >= VerboseMode::VB_MED) {
-                    #if USE_PROGRESS_DISPLAY
-                    readProgress.hide();
-                    std::cout << "Distance matrix file "
-                              << " is in upper-triangle format" << std::endl;
-                    readProgress.show();
-                    #endif
-                }
-                upper  = true;
-                for (; 0<seq2; --seq2) {
-                    tmp_dist_mat[seq2] = tmp_dist_mat[seq2-1];
-                }
-                tmp_dist_mat[0] = 0.0;
-            }
-            else {
-                std::stringstream problem;
-                problem << "Too few distances read from row " << (seq1+1)
-                        << " of the distance matrix, for sequence " << seq_name;
-                throw problem.str();
-            }
-        }
-        else if (lower) {
-            tmp_dist_mat[pos++] = 0.0; //Diagonal entry
-            //Leave cells in upper triangle empty (for now)
-        }
-        readProgress += (rowStop - rowStart) * ((lower||upper) ? 2.0 : 1.0);
+        readDistLine(in, nseqs, seq1, upper, lower, longest_dist, 
+                     tmp_dist_mat, map_seqName_ID, readProgress);
     }
     
     if (lower) {
@@ -4771,13 +4688,136 @@ double Alignment::readDist(igzstream &in, bool is_incremental,
     readProgress.done();
     #endif
     
-    // Now initialize the internal distance matrix, in which
-    // the sequence order is the same as in the alignment
+    {
+        // Now initialize the internal distance matrix, in which
+        // the sequence order is the same as in the alignment
+        std::vector<int> actual_to_temp_vector;
+        actual_to_temp_vector.resize(nseqs, 0);
+        int* actualToTemp = actual_to_temp_vector.data();
+
+        mapLoadedSequencesToAlignment(map_seqName_ID, nseqs, 
+                                    is_incremental, actualToTemp);
+
+        copyToDistanceMatrix(tmp_dist_mat, nseqs, actualToTemp, dist_mat);
+    }
+    temporary_distance_matrix.clear();
+    tmp_dist_mat = nullptr;
+
+    checkForSymmetricMatrix(dist_mat, nseqs);
+
+    /*
+    string dist_file = params.out_prefix;
+    dist_file += ".userdist";
+    printDist(params.dist_format, dist_file.c_str(), dist_mat);*/
+
+    return longest_dist;
+}
+
+void Alignment::readDistLine(igzstream &in, intptr_t nseqs, intptr_t seq1,
+                             bool &upper, bool &lower, double& longest_dist,
+                             double *tmp_dist_mat,  
+                             std::map<string,int>& map_seqName_ID,
+                             progress_display& readProgress) {
+    std::stringstream line;
+    safeGetTrimmedLineAsStream(in, line);
     
-    size_t missingSequences = 0; //count of sequences missing from temporary matrix
-    std::vector<int> actual_to_temp_vector;
-    actual_to_temp_vector.resize(nseqs, 0);
-    int* actualToTemp = actual_to_temp_vector.data();
+    string seq_name;
+    line >> seq_name;
+    if (map_seqName_ID.find(seq_name) != map_seqName_ID.end()) {
+        //When reading a distance file "incrementally", we can't tolerate
+        //duplicate sequence names (and we won't detect them later).
+        //Formerly duplicate sequence names weren't found early, here.
+        //Rather, they were left as is, and a later check (that every
+        //sequence name in the alignment had a matching line in the distance
+        //file) reported a problem (not the *right* problem, but a problem).
+        //But when is_incremental is true, that later check won't throw.
+        stringstream s;
+        s   << "Duplicate sequence name found in line " << (seq1+1)
+            << " of the file: " << seq_name;
+        throw s.str();
+    }
+    // assign taxa name to integer id
+    map_seqName_ID[seq_name] = static_cast<int>(seq1);
+
+    size_t pos = nseqs * seq1;
+    if (upper) {
+        //Copy column seq1 from upper triangle (above the diagonal)
+        //to the left part of row seq1 (which is in the lower triangle).
+        size_t column_pos = seq1; //position in column in upper triangle
+        for (size_t seq2=0; seq2<seq1; ++seq2, column_pos+=nseqs) {
+            tmp_dist_mat[pos++] = tmp_dist_mat[column_pos];
+        }
+        //And write zero on the diagonal, in row seq1.
+        tmp_dist_mat[pos++] = 0.0;
+    }
+    size_t rowStart = (upper) ? (seq1+1) : 0; //(row-start relative)
+    size_t rowStop  = (lower) ? seq1     : nseqs;
+    size_t seq2     = rowStart;
+    for (; line.tellg()!=-1 && seq2 < rowStop; ++seq2) {
+        double dist;
+        line >> dist;
+        tmp_dist_mat[pos++] = dist;
+        if (dist > longest_dist) {
+            longest_dist = dist;
+        }
+    }
+    if (line.tellg()==-1 && seq2<rowStop)
+    {
+        readShortDistLine(seq_name, seq1, seq2, rowStop, 
+                          upper, lower, 
+                          tmp_dist_mat, readProgress);
+    }
+    else if (lower) {
+        tmp_dist_mat[pos++] = 0.0; //Diagonal entry
+        //Leave cells in upper triangle empty (for now)
+    }
+    readProgress += (rowStop - rowStart) * ((lower||upper) ? 2.0 : 1.0);
+}
+
+void Alignment::readShortDistLine(const std::string& seq_name, 
+                                  intptr_t seq1, intptr_t seq2, intptr_t rowStop,
+                                  bool& upper, bool& lower, double *tmp_dist_mat,
+                                  progress_display& readProgress) {
+    if (seq1==0 && seq2==0) {
+        //Implied lower-triangle format
+        tmp_dist_mat[0] = 0.0;
+        if (verbose_mode >= VerboseMode::VB_MED) {
+            #if USE_PROGRESS_DISPLAY
+            readProgress.hide();
+            std::cout << "Distance matrix file "
+                        << " is in lower-triangle format" << std::endl;
+            readProgress.show();
+            #endif
+        }
+        lower  = true;
+    }
+    else if (seq1==0 && seq2+1==rowStop) {
+        if (verbose_mode >= VerboseMode::VB_MED) {
+            #if USE_PROGRESS_DISPLAY
+            readProgress.hide();
+            std::cout << "Distance matrix file "
+                        << " is in upper-triangle format" << std::endl;
+            readProgress.show();
+            #endif
+        }
+        upper  = true;
+        for (; 0<seq2; --seq2) {
+            tmp_dist_mat[seq2] = tmp_dist_mat[seq2-1];
+        }
+        tmp_dist_mat[0] = 0.0;
+    }
+    else {
+        std::stringstream problem;
+        problem << "Too few distances read from row " << (seq1+1)
+                << " of the distance matrix, for sequence " << seq_name;
+        throw problem.str();
+    }
+}
+
+void Alignment::mapLoadedSequencesToAlignment(std::map<string,int>& map_seqName_ID,
+                                              intptr_t nseqs, bool is_incremental, 
+                                              int* actualToTemp) {
+    size_t missingSequences = 0; //count of sequences missing from temporary matrix                                                
     for (int seq1 = 0; seq1 < static_cast<int>(nseqs); ++seq1) {
         string seq1Name = getSeqName(seq1);
         int seq1_tmp_id = -1;
@@ -4801,6 +4841,10 @@ double Alignment::readDist(igzstream &in, bool is_incremental,
         }
     }
     std::cout << std::endl;
+}
+
+void Alignment::copyToDistanceMatrix(double* tmp_dist_mat, intptr_t nseqs,
+                                     int* actualToTemp, double* dist_mat) {
 
     //Copy distances from tmp_dist_mat to dist_mat,
     //permuting rows and columns on the way
@@ -4829,8 +4873,6 @@ double Alignment::readDist(igzstream &in, bool is_incremental,
             }
         }
     }
-    temporary_distance_matrix.clear();
-    tmp_dist_mat = nullptr;
     
     /*
     pos = 0;
@@ -4841,8 +4883,9 @@ double Alignment::readDist(igzstream &in, bool is_incremental,
         std::cout << std::endl;
     }
     */
+}
 
-    // check for symmetric matrix
+void Alignment::checkForSymmetricMatrix(double* dist_mat, intptr_t nseqs) {
     for (int seq1 = 0; seq1 < static_cast<int>(nseqs)-1; seq1++) {
         auto checkRow = dist_mat + seq1*nseqs;
         if (checkRow[seq1] != 0.0) {
@@ -4862,13 +4905,6 @@ double Alignment::readDist(igzstream &in, bool is_incremental,
             }
         }
     }
-
-    /*
-    string dist_file = params.out_prefix;
-    dist_file += ".userdist";
-    printDist(params.dist_format, dist_file.c_str(), dist_mat);*/
-
-    return longest_dist;
 }
 
 double Alignment::readDist(const char *file_name, bool is_incremental,
