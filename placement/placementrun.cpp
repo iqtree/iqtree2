@@ -244,63 +244,24 @@ void PlacementRun::doPartOfBatchInsert
         }
         
         if (targets[t].isOutOfDate()) {
-#if (0)
-            TimeKeeper icky2("rescoring target");
-            icky2.start();
-#endif
             double parsimony_score = -1.0;
             targets[t].computeState(phylo_tree, parsimony_score,
                                     t, spare_blocks);
             ASSERT(targets[t].getLeftNeighbor()->isParsimonyComputed());
             ASSERT(targets[t].getRightNeighbor()->isParsimonyComputed());
-#if (0)
-            icky2.stop();
-            TREE_LOG_LINE(phylo_tree, VerboseMode::VB_MIN,
-                          "Rescoring target " << t
-                          << " for insert " << h << " took "
-                          << icky2.elapsed_wallclock_time << " wall, "
-                          << icky2.elapsed_cpu_time << " cpu");
-        } else {
-            TREE_LOG_LINE(phylo_tree, VerboseMode::VB_MIN, "Target " << t
-                          << " for insert " << h << " already up to date ");
-#endif
         }
-        
         size_t insertCount = j - h;
         if (insertCount<256) {
             //Insert candidates h through j-1
             insertTime.start();
-#if (0)
-            TimeKeeper icky("inserting");
-            icky.start();
-#endif
             for (size_t i=h; i<j; ++i) {
                 TaxonPlacement& insert    = inserts[i];
-#if (0)
-                TaxonToPlace&   candidate = candidates.getTaxonByIndex
-                                            (insert.candidate_index);
-                auto check_index = candidate.getBestPlacement().getTargetIndex();
-#endif
                 insertTaxon(candidates, insert.candidate_index,
                             targets, spare_blocks);
                 if ((taxa_inserted_in_total % 1000) == 0) {
                     phylo_tree.trackProgress(1000.0*estimate_per_placement);
                 }
-#if (0)
-                TREE_LOG_LINE(phylo_tree, VerboseMode::VB_MIN, "Insert " << i
-                              << ", of Candidate " << insert.candidate_index
-                              << ", at or near target branch " << insert.target_index
-                              << " (check " << check_index << ") done");
-#endif
             }
-#if (0)
-            icky.stop();
-            TREE_LOG_LINE(phylo_tree, VerboseMode::VB_MIN, "Inserting I " << h
-                          << " thru " << (j-1)
-                          << " at T " << inserts[h].target_index << " took "
-                          << icky.elapsed_wallclock_time << " wall, "
-                          << icky.elapsed_cpu_time << " cpu");
-#endif
             insertTime.stop();
         } else {
             //The recursive bit!
@@ -321,22 +282,9 @@ void PlacementRun::doPartOfBatchInsert
                                            spare_blocks, targets, *calculator);
                 insert.placement          = &candidate.getBestPlacement();
                 insert.target_index       = insert.placement->getTargetIndex();
-#if (0)
-                TREE_LOG_LINE(phylo_tree, VerboseMode::VB_MIN, "New place for insert " << i
-                              << " of candidate " << insert.candidate_index
-                              << " was target branch " << insert.target_index
-                              << " with pars score " << insert.placement->parsimony_score);
-#endif
             }
             rankingTime.start();
             std::sort(inserts.begin() + sampleStop, inserts.begin() + j );
-#if (0)
-            for (size_t i=sampleStop; i<j; ++i) {
-                TREE_LOG_LINE(phylo_tree, VerboseMode::VB_MIN, "Insert " << i
-                              << " candidate " << inserts[i].candidate_index
-                              << " has best placement t.b. " << inserts[i].target_index);
-            }
-#endif
             rankingTime.stop();
             doPartOfBatchInsert(candidates, inserts, sampleStop, j,
                                 spare_blocks, inside_estimate,

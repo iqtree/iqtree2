@@ -78,6 +78,16 @@ private:
     //3. doneFiltering discards is_worth_trying.
     //
 
+    void determineParsimonyScores  (PhyloTree& tree, TargetBranchRange& targets,
+                                    intptr_t startTarget, intptr_t stopTarget,
+                                    TaxaToPlace& taxa,
+                                    intptr_t startTaxon, intptr_t stopTaxon,
+                                    Matrix<double>& scores);
+    void decideWhichPlacementsToTry(PhyloTree& tree, TargetBranchRange& targets,
+                                    intptr_t startTarget, intptr_t stopTarget,
+                                    TaxaToPlace& taxa,
+                                    intptr_t startTaxon, intptr_t stopTaxon,
+                                    Matrix<double>& scores);
 public:
     /**
      @param calculator a new PlacementCostCalulator instance

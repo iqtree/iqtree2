@@ -74,10 +74,35 @@ void BaseballSearchHeuristic::prepareToFilter(PhyloTree& tree, TargetBranchRange
                                               intptr_t startTaxon, intptr_t stopTaxon) {
     target_base = startTarget;
     taxon_base  = startTaxon;
-    is_worth_trying.setDimensions( stopTarget-startTarget, stopTaxon-startTaxon) ;
+
+
     Matrix<double> scores;
-    scores.setDimensions( stopTarget-startTarget, stopTaxon-startTaxon);
+    
+    determineParsimonyScores(tree, targets, startTarget, stopTarget,
+                             taxa, startTaxon, stopTaxon, scores);
+    
+
+    decideWhichPlacementsToTry(tree, targets, startTarget, stopTarget,
+                               taxa, startTaxon, stopTaxon, scores);
+
+
+    //Todo: need to tell the tree that we're doing stuff (report progress).
+    //      The issue is, how do we count progress here, versus progress in the
+    //      more expensive cost-calculation to which this is feeding "combinations
+    //      worth trying".
+    //
+    tree_in_use = &tree;
+}
+
+void BaseballSearchHeuristic::determineParsimonyScores
+        (PhyloTree& tree, TargetBranchRange& targets,
+         intptr_t startTarget, intptr_t stopTarget,
+         TaxaToPlace& taxa, intptr_t startTaxon, intptr_t stopTaxon,
+         Matrix<double>& scores) {
+    intptr_t taxon_count  = stopTaxon  -  startTaxon;
+    intptr_t target_count = stopTarget -  startTarget;
     LikelihoodBlockPairs blocks(2);
+    scores.setDimensions(target_count, taxon_count);
     double parsimony_score = -1.0;
     for (intptr_t t = startTarget; t<stopTarget; ++t ) { //branch
         targets.getTargetBranch(t)->computeState(tree, parsimony_score, t, blocks);
@@ -92,9 +117,16 @@ void BaseballSearchHeuristic::prepareToFilter(PhyloTree& tree, TargetBranchRange
             scoreRow[c] = p.score;
         }
     }
+}
+
+void BaseballSearchHeuristic::decideWhichPlacementsToTry
+        (PhyloTree& tree, TargetBranchRange& targets,
+        intptr_t startTarget, intptr_t stopTarget,
+        TaxaToPlace& taxa, intptr_t startTaxon, intptr_t stopTaxon,
+        Matrix<double>& scores) {
     intptr_t taxon_count  = stopTaxon  -  startTaxon;
     intptr_t target_count = stopTarget -  startTarget;
-    
+    is_worth_trying.setDimensions( target_count, taxon_count) ;
     #ifdef _OPENMP
     #pragma omp parallel for
     #endif
@@ -140,12 +172,6 @@ void BaseballSearchHeuristic::prepareToFilter(PhyloTree& tree, TargetBranchRange
             tree.logLine(s.str());
         }
     }
-    //Todo: need to tell the tree that we're doing stuff (report progress).
-    //      The issue is, how do we count progress here, versus progress in the
-    //      more expensive cost-calculation to which this is feeding "combinations
-    //      worth trying".
-    //
-    tree_in_use = &tree;
 }
 
 bool BaseballSearchHeuristic::isPlacementWorthTrying(const TaxonToPlace& taxon, 
