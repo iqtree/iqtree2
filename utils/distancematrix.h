@@ -74,6 +74,10 @@ public:
     Matrix() : row_count(0), column_count(0), shrink_r(0)
              , data(nullptr), rows(nullptr) {
     }
+    Matrix(intptr_t r, intptr_t c): Matrix() {
+        setDimensions( r, c);
+    }
+
     virtual void clear() {
         delete [] data;
         delete [] rows;
