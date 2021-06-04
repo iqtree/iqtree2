@@ -120,10 +120,50 @@ progress_display& progress_display::operator += (intptr_t incrementalWork) {
 void progress_display::reportProgress(double time, double cpu, bool newline) {
     double elapsedTime = time - startTime;
     std::ostringstream progress;
+    bool verbed = false;
+
+    appendHowMuchDone(verbed, progress);
+    progress << " in ";
+    appendTimeDescription(elapsedTime, progress);
+    appendUsage(verbed, elapsedTime, cpu, progress);
+    std::string message = progress.str();
+
+    #if _OPENMP
+    #pragma omp critical (io)
+    #endif
+    {
+        lastReportedWork = workDone;
+        lastReportedTime = time;
+        lastReportedCPUTime = cpu;
+        if (isTerminal && !termout.fail()) {
+            termout << "\33[2K\r";
+        }
+        if (displayingProgress) {
+            if (newline) {
+                if (!termout.fail()) {
+                    termout.flush();
+                }
+                std::cout << message << std::endl;
+                #if defined(CLANG_UNDER_VS)
+                    OutputDebugStringA((message + "\n").c_str());
+                #endif
+            } else {
+                if (workDone < totalWorkToDo) {
+                    formatAsProgressBar(message);
+                }
+                if (!termout.fail()) {
+                    termout << message;
+                    termout.flush();
+                }
+            }
+        }
+    }
+}
+
+void progress_display::appendHowMuchDone(bool &verbed, std::ostringstream& progress) {
     if (!taskDescription.empty()) {
         progress << taskDescription << ":";
     }
-    bool verbed = false;
     if (totalWorkToDo <= workDone) {
         if (!taskDescription.empty()) {
             progress << " done";
@@ -148,9 +188,10 @@ void progress_display::reportProgress(double time, double cpu, bool newline) {
         progress.precision(3);
         progress << " " << percentDone << "% done";
     }
-    progress << " in ";
-    appendTimeDescription(elapsedTime, progress);
-    
+}
+
+void progress_display::appendUsage(bool verbed, double elapsedTime, double cpu, 
+                                   std::ostringstream& progress) {
     if (0<elapsedTime && lastReportedCPUTime < cpu) {
         progress.precision(4);
         double percentCPU = 100.0 * ( (cpu-startCPUTime) / elapsedTime);
@@ -164,48 +205,22 @@ void progress_display::reportProgress(double time, double cpu, bool newline) {
         appendTimeDescription(estimatedTime, progress);
         progress << " to go)";
     }
-    std::string message = progress.str();
-    #if _OPENMP
-    #pragma omp critical (io)
-    #endif
-    {
-        lastReportedWork = workDone;
-        lastReportedTime = time;
-        lastReportedCPUTime = cpu;
-        if (isTerminal && !termout.fail()) {
-            termout << "\33[2K\r";
-        }
-        if (displayingProgress) {
-            int barLen = 80;
-            if (newline) {
-                if (!termout.fail()) {
-                    termout.flush();
-                }
-                std::cout << message << std::endl;
-                #if defined(CLANG_UNDER_VS)
-                    OutputDebugStringA((message + "\n").c_str());
-                #endif
-            } else {
-                if (workDone < totalWorkToDo) {
-                    if (message.length() < barLen ) {
-                        message += std::string(barLen-message.length(), ' ');
-                    }
-                    size_t charsInGreen = (size_t) floor( workDone * barLen / totalWorkToDo );
-                    if (isTerminal && charsInGreen < message.length()) {
-                        size_t charsInGreenOrCyan //number of chars in green or blue
-                            = (( message.length() < barLen) ? message.length() : barLen);
-                        message = "\33[1;30;102m" + message.substr(0, charsInGreen)
-                        + "\33[1;30;106m" + message.substr(charsInGreen, charsInGreenOrCyan - charsInGreen)
-                        + "\33[0m" + message.substr(charsInGreenOrCyan, message.length() - charsInGreenOrCyan);
-                    }
-                }
-                if (!termout.fail()) {
-                    termout << message;
-                    termout.flush();
-                }
-            }
-        }
+}
+
+void progress_display::formatAsProgressBar(std::string& message) {
+    int barLen = 80;
+    if (message.length() < barLen ) {
+        message += std::string(barLen-message.length(), ' ');
     }
+    size_t charsInGreen = (size_t) floor( workDone * barLen / totalWorkToDo );
+    if (isTerminal && charsInGreen < message.length()) {
+        size_t charsInGreenOrCyan //number of chars in green or blue
+            = (( message.length() < barLen) ? message.length() : barLen);
+        message = "\33[1;30;102m" + message.substr(0, charsInGreen)
+        + "\33[1;30;106m" + message.substr(charsInGreen, charsInGreenOrCyan - charsInGreen)
+        + "\33[0m" + message.substr(charsInGreenOrCyan, message.length() - charsInGreenOrCyan);
+    }
+
 }
 
 progress_display& progress_display::done() {

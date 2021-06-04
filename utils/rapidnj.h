@@ -374,27 +374,11 @@ public:
             }
         }
     }
-    void decideOnRowScanningOrder(T& qBest) const {
-        intptr_t rSize = rowMinima.size();
-        //
-        //Rig the order in which rows are scanned based on
-        //which rows (might) have the lowest row minima
-        //based on what we saw last time.
-        //
-        //The original RapidNJ puts the second-best row from last time first.
-        //And, apart from that, goes in row order.
-        //But rows in the D, S, and I matrices are (all) shuffled
-        //in memory, so why not do all the rows in ascending order
-        //of their best Q-values from the last iteration?
-        //Or, better yet... From this iteration?!
-        //
-        
-        deriveBoundFromFirstColumn(qBest);
-     
+    void partiallySortRowMinima() const {
+        intptr_t rSize     = rowMinima.size();
         #ifdef _OPENMP
-        int threshold = threadCount << 7; /* multiplied by 128*/
+        int      threshold = threadCount << 7; /* multiplied by 128*/
         #endif
-        
         //Note, rowMinima might have size 0 (the first time this member
         //function is called during processing of a distance matrix)
         //Or it might have a size of n+1 (later times), but it won't be n.
@@ -411,13 +395,34 @@ public:
                 }
             }
         }
+    }
+
+    void decideOnRowScanningOrder(T& qBest) const {
+        //
+        //Rig the order in which rows are scanned based on
+        //which rows (might) have the lowest row minima
+        //based on what we saw last time.
+        //
+        //The original RapidNJ puts the second-best row from last time first.
+        //And, apart from that, goes in row order.
+        //But rows in the D, S, and I matrices are (all) shuffled
+        //in memory, so why not do all the rows in ascending order
+        //of their best Q-values from the last iteration?
+        //Or, better yet... From this iteration?!
+        //
+        
+        deriveBoundFromFirstColumn(qBest);
+             
+        partiallySortRowMinima();
+
         #ifdef _OPENMP
-        #pragma omp parallel for if(threshold<row_count)
+        #pragma omp parallel for if((threadCount<<7)<row_count)
         #endif
         for (intptr_t i = 0; i < row_count; ++i) {
             rowOrderChosen[i]=0; //Not chosen yet
         }
         
+        intptr_t rSize = rowMinima.size();
         intptr_t w = 0;
         for (intptr_t r=0; r < rSize
              && rowMinima[r].row < row_count

@@ -57,6 +57,11 @@ protected:
     bool   atMost;               //Estimate of work to do is an upper bound
     int    hidden;               //How many more times has hide() been called than show()
     std::fstream termout;        //Terminal output stream (not standard output!)
+
+    void appendHowMuchDone  (bool &verbed, std::ostringstream& progress);
+    void appendUsage        (bool verbed,  double elapsedTime, double cpu,
+                             std::ostringstream& progress);
+    void formatAsProgressBar(std::string&        message);
 };
 
 typedef progress_display* progress_display_ptr;

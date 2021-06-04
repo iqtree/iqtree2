@@ -532,6 +532,22 @@ protected:
     bool            isOutputToBeZipped;
 };
 
+template < class T=double > class TaxonEdge {
+public:
+    size_t taxon1, taxon2;
+    T      length;
+    bool operator <  ( const TaxonEdge &r) const {
+        return length < r.length;
+    }
+    bool operator <= ( const TaxonEdge &r) const {
+        return length < r.length;
+    }
+    TaxonEdge(): taxon1(0), taxon2(0), length(0) {}
+    TaxonEdge(size_t t1, size_t t2, T dist) :
+        taxon1(t1), taxon2(t2), length(dist) {}
+    TaxonEdge& operator=(const TaxonEdge& rhs) = default;
+};
+
 template < class T=double, class S=NJMatrix<T> > 
 class NearestTaxonClusterJoiningMatrix: public S {
     //
@@ -558,28 +574,9 @@ public:
     virtual std::string getAlgorithmName() const {
         return "NTCJ";
     }
-    virtual bool constructTree() {
-        if (row_count<3) {
-            return false;
-        }
-        class TaxonEdge {
-        public:
-            size_t taxon1, taxon2;
-            T      length;
-            bool operator <  ( const TaxonEdge &r) const {
-                return length < r.length;
-            }
-            bool operator <= ( const TaxonEdge &r) const {
-                return length < r.length;
-            }
-            TaxonEdge(): taxon1(0), taxon2(0), length(0) {}
-            TaxonEdge(size_t t1, size_t t2, T dist) :
-                taxon1(t1), taxon2(t2), length(dist) {}
-            TaxonEdge& operator=(const TaxonEdge& rhs) = default;
-        };
+    void constructVectorOfEdges(std::vector< TaxonEdge <T> >& edges) {
         T multiplier = 1.0 / (T)row_count;
         size_t row_count_triangle = row_count*(row_count-1)/2;
-        std::vector<TaxonEdge> edges;
         edges.reserve(row_count_triangle);
         for (intptr_t row=0; row<row_count; ++row) {
             const T* rowData = rows[row];
@@ -588,19 +585,13 @@ public:
                 edges.emplace_back(col, row, d);
             }
         }
-        MinHeapOnArray< TaxonEdge >
-            heap ( edges.data(), edges.size()
-                 , silent ? "" : "Constructing min-heap of possible edges" );
-        size_t iterations = 0;
-        
-        #if USE_PROGRESS_DISPLAY
-        const char* task_name = silent ? "" : "Assembling NTCJ Tree";
-        progress_display progress(row_count_triangle, task_name );
-        #else
-        double progress = 0.0;
-        #endif
+    }
 
+    void constructTreeFromEdgeHeap(MinHeapOnArray< TaxonEdge <T> > &heap,
+                                   progress_display& progress) {
         intptr_t taxon_count = row_count;
+        size_t iterations = 0;
+
         std::vector<size_t> taxonToRow;
         taxonToRow.resize(taxon_count);
         size_t* tr = taxonToRow.data();
@@ -611,7 +602,7 @@ public:
             tr[t] = t;
         }
         while (3<row_count) {
-            TaxonEdge shortest;
+            TaxonEdge<T> shortest;
             do {
                 shortest = heap.pop_min();
                 ++iterations;
@@ -635,6 +626,31 @@ public:
             progress += (taxon_count-row_count);
         }
         finishClustering();
+
+    }
+
+    virtual bool constructTree() {
+        if (row_count<3) {
+            return false;
+        }
+
+        std::vector< TaxonEdge <T> > edges;
+        constructVectorOfEdges(edges);
+
+        MinHeapOnArray< TaxonEdge <T> >
+            heap ( edges.data(), edges.size()
+                 , silent ? "" : "Constructing min-heap of possible edges" );
+        
+        #if USE_PROGRESS_DISPLAY
+        const char* task_name = silent ? "" : "Assembling NTCJ Tree";
+        size_t row_count_triangle = row_count*(row_count-1)/2;
+        progress_display progress(row_count_triangle, task_name );
+        #else
+        progress_display progress = 0.0;
+        #endif
+
+        constructTreeFromEdgeHeap(heap, progress);
+
         #if USE_PROGRESS_DISPLAY
         progress.done();
         #endif
