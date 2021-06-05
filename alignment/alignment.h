@@ -90,6 +90,8 @@ constexpr int EXCLUDE_GAP   = 1; // exclude gaps
 constexpr int EXCLUDE_INVAR = 2; // exclude invariant sites
 constexpr int EXCLUDE_UNINF = 4; // exclude uninformative sites
 
+class PatternInfoVector;
+
 /**
 Multiple Sequence Alignment. Stored by a vector of site-patterns
 
@@ -98,6 +100,7 @@ Multiple Sequence Alignment. Stored by a vector of site-patterns
 class Alignment : public vector<Pattern>, public CharSet, public StateSpace {
     friend class SuperAlignment;
     friend class SuperAlignmentUnlinked;
+    friend class PatternInfoVector;
 
 public:
 

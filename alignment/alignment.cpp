@@ -592,10 +592,11 @@ void Alignment::adjustHash(bool v, size_t& hash) const {
 
 bool Alignment::isGapOnlySeq(size_t seq_id) {
     ASSERT(seq_id < getNSeq());
-    for (iterator it = begin(); it != end(); it++)
+    for (iterator it = begin(); it != end(); it++) {
         if ((*it)[seq_id] != STATE_UNKNOWN) {
             return false;
         }
+    }
     return true;
 }
 
@@ -622,13 +623,18 @@ Alignment *Alignment::removeGappySeq() {
 void Alignment::checkGappySeq(bool force_error) {
     int nseq = getNSeq32();
     int wrong_seq = 0;
-    for (int i = 0; i < nseq; i++)
+    for (int i = 0; i < nseq; i++) {
         if (isGapOnlySeq(i)) {
-            outWarning("Sequence " + getSeqName(i) +
-                       " contains only gaps or missing data");
-            wrong_seq++;
+            std::stringstream complaint;
+            complaint << "Sequence " << getSeqName(i)
+                      << " (" << (i+1) << "th sequence in alignment)"
+                      << " contains only gaps or missing data";
+            outWarning(complaint.str());
+            ++wrong_seq;
         }
-    if (wrong_seq && force_error) {
+    }
+    return;
+    if (0<wrong_seq && force_error) {
         outError("Some sequences (see above) are problematic,"
                  " please check your alignment again");
     }
@@ -1866,21 +1872,40 @@ bool Alignment::buildPattern(StrVector &sequences,
     return constructPatterns(nseq, nsite, sequences, nullptr);
 }
 
+struct PatternInfo {
+public:
+    std::ostringstream errors;
+    std::ostringstream warnings;
+    int num_error;
+    bool isAllGaps;
+    PatternInfo() : num_error(0), isAllGaps(false) {}
+};
+
+class PatternInfoVector: public std::vector<PatternInfo> {
+public:
+    Alignment* aln;
+    SeqType    seq_type;
+    bool       nt2aa;
+    int        num_gaps_only;
+    char       char_to_state[NUM_CHAR];
+    char       AA_to_state[NUM_CHAR];
+
+    PatternInfoVector    () = delete;
+    PatternInfoVector    (Alignment* for_aln, bool nt2aa);
+    void loadPatterns    (int nsite, int nstep, 
+                          int nseq, const StrVector& sequences,
+                          progress_display_ptr progress);
+    int  compressPatterns(int step, std::stringstream& err_str,
+                          progress_display_ptr progress);
+};
+
 bool Alignment::constructPatterns(int nseq, int nsite,
                                   const StrVector& sequences,
                                   progress_display_ptr progress) {
     //initStateSpace(seq_type);
     // now convert to patterns
-    char char_to_state[NUM_CHAR];
-    char AA_to_state[NUM_CHAR];
     computeUnknownState();
     bool nt2aa = strncmp(sequence_type.c_str(), "NT2AA", 5) == 0;
-    if (nt2aa) {
-        buildStateMap(char_to_state, SeqType::SEQ_DNA);
-        buildStateMap(AA_to_state,   SeqType::SEQ_PROTEIN);
-    } else {
-        buildStateMap(char_to_state, seq_type);
-    }
     int step = 1;
     if (seq_type == SeqType::SEQ_CODON || nt2aa) {
         step = 3;
@@ -1897,14 +1922,7 @@ bool Alignment::constructPatterns(int nseq, int nsite,
     //1. Construct all the patterns, in parallel (*without* trying to consolidate
     //   duplicated patterns; we'll do that later).
     resize(nsite / step);
-    struct PatternInfo {
-        std::ostringstream errors;
-        std::ostringstream warnings;
-        int num_error;
-        bool isAllGaps;
-        PatternInfo() : num_error(0), isAllGaps(false) {}
-    };
-    std::vector<PatternInfo> patternInfo;
+    PatternInfoVector patternInfo(this, nt2aa);
     patternInfo.resize((nsite + (step-1)) / step);
     progress_display_ptr progress_here = nullptr;
     if (progress==nullptr && !isShowingProgressDisabled) {
@@ -1915,75 +1933,8 @@ bool Alignment::constructPatterns(int nseq, int nsite,
         #endif
     }
     
-    #ifdef _OPENMP
-    #pragma omp parallel for
-    #endif
-    for (int site = 0; site < nsite; site+=step) {
-        PatternInfo& info = patternInfo[site/step];
-        Pattern& pat = at(site / step);
-        pat.resize(nseq);
-        for (int seq = 0; seq < nseq; seq++) {
-            //char state = convertState(sequences[seq][site], seq_type);
-            char state = char_to_state[(int)(sequences[seq][site])];
-            if (seq_type == SeqType::SEQ_CODON || nt2aa) {
-                // special treatment for codon
-                char state2 = char_to_state[(int)(sequences[seq][site+1])];
-                char state3 = char_to_state[(int)(sequences[seq][site+2])];
-                if (state < 4 && state2 < 4 && state3 < 4) {
-                    //state = non_stop_codon[state*16 + state2*4 + state3];
-                    state = state*16 + state2*4 + state3;
-                    if (genetic_code[(int)state] == '*') {
-                        info.errors << "Sequence " << seq_names[seq]
-                            << " has stop codon " << sequences[seq][site]
-                            << sequences[seq][site + 1] << sequences[seq][site + 2]
-                            << " at site " << site + 1 << "\n";
-                        info.num_error++;
-                        state = STATE_UNKNOWN;
-                    } else if (nt2aa) {
-                        state = AA_to_state[(int)genetic_code[(int)state]];
-                    } else {
-                        state = non_stop_codon[(int)state];
-                    }
-            	} else if (state == STATE_INVALID || state2 == STATE_INVALID ||
-                           state3 == STATE_INVALID) {
-            		state = STATE_INVALID;
-                } else {
-                    if (state != STATE_UNKNOWN || state2 != STATE_UNKNOWN ||
-                        state3 != STATE_UNKNOWN) {
-                        info.warnings << "WARNING: Sequence " << seq_names[seq]
-                            << " has ambiguous character " << sequences[seq][site]
-                            << sequences[seq][site + 1] << sequences[seq][site + 2]
-                            << " at site " << site + 1 << "\n";
-                    }
-                    state = STATE_UNKNOWN;
-                }
-            }
-            if (state == STATE_INVALID) {
-                if (info.num_error <= 100) {
-                    if (info.num_error < 100) {
-                        info.errors << "Sequence " << seq_names[seq]
-                                    << " has invalid character " << sequences[seq][site];
-                        if (seq_type == SeqType::SEQ_CODON) {
-                            info.errors << sequences[seq][site + 1] << sequences[seq][site + 2];
-                        }
-                        info.errors << " at site " << site+1 << endl;
-                    } else if (info.num_error == 100) {
-                        info.errors << "...many more..." << endl;
-                    }
-                }
-                ++info.num_error;
-            }
-            pat[seq] = state;
-        }
-        computeConst(pat);
-        if (info.num_error == 0)
-        {
-            info.isAllGaps = pat.isAllGaps(STATE_UNKNOWN);
-        }
-        if (progress!=nullptr) {
-            (*progress) += (double)step;
-        }
-    }
+    patternInfo.loadPatterns(nsite, step, nseq, sequences, progress);
+
     if (progress_here!=nullptr) {
         #if USE_PROGRESS_DISPLAY
         progress_here->done();
@@ -1991,9 +1942,6 @@ bool Alignment::constructPatterns(int nseq, int nsite,
         #endif
         progress_here = progress = nullptr;
     }
-
-    std::stringstream err_str;
-    //2. Now handle warnings and errors, and compress patterns, sequentially
 
     #if USE_PROGRESS_DISPLAY
     if (progress==nullptr && !isShowingProgressDisabled) {
@@ -2003,48 +1951,11 @@ bool Alignment::constructPatterns(int nseq, int nsite,
     }
     #endif
 
-    int num_gaps_only = 0;
-    int w = 0;
-    int site = 0;
-    for (int r = 0; r < patternInfo.size(); ++r, site+=step) {
-        PatternInfo& info = patternInfo[r];
-        std::string warnings = info.warnings.str();
-        if (!warnings.empty()) {
-            #if USE_PROGRESS_DISPLAY
-            if (progress!=nullptr) { progress->hide(); }
-            #endif
-            cout << warnings;
-            #if USE_PROGRESS_DISPLAY
-            if (progress!=nullptr) { progress->show(); }
-            #endif
-        }
-        std::string errors = info.errors.str();
-        if (!errors.empty()) {
-            err_str << errors;
-        }
-        else {
-            num_gaps_only += info.isAllGaps ? 1 : 0;
-            PatternIntMap::iterator pat_it = pattern_index.find(at(r));
-            if (pat_it == pattern_index.end()) {
-                if (w < r) {
-                    std::swap(at(w), at(r));
-                }
-                at(w).frequency = 1;
-                pattern_index[at(w)] = w;
-                site_pattern[r] = w;
-                ++w;
-            }
-            else {
-                int q = pat_it->second;
-                ++at(q).frequency;
-                site_pattern[r] = q;
-            }
-        }
-        if (progress!=nullptr) {
-            (*progress) += ((double)step);
-        }
-    }
+    //2. Now handle warnings and errors, and compress patterns, sequentially
+    std::stringstream err_str;
+    int w = patternInfo.compressPatterns(step, err_str, progress);
     resize(w);
+
     if (progress_here!=nullptr) {
         #if USE_PROGRESS_DISPLAY
         progress_here->done();
@@ -2068,11 +1979,11 @@ bool Alignment::constructPatterns(int nseq, int nsite,
     }
     total_singleton_parsimony_states = total_states;
 
-    if (num_gaps_only) {
+    if (patternInfo.num_gaps_only) {
         #if USE_PROGRESS_DISPLAY
         if (progress!=nullptr) { progress->hide(); }
         #endif
-        cout << "WARNING: " << num_gaps_only
+        cout << "WARNING: " << patternInfo.num_gaps_only
              << " sites contain only gaps or ambiguous characters." << endl;
         #if USE_PROGRESS_DISPLAY
         if (progress!=nullptr) { progress->show(); }
@@ -2082,6 +1993,137 @@ bool Alignment::constructPatterns(int nseq, int nsite,
         throw err_str.str();
     }
     return true;
+}
+
+PatternInfoVector::PatternInfoVector(Alignment* for_aln, bool is_nt2aa)
+    : aln(for_aln), seq_type(for_aln->seq_type),  nt2aa(is_nt2aa)
+    , num_gaps_only(0) {
+    if (nt2aa) {
+        aln->buildStateMap(char_to_state, SeqType::SEQ_DNA);
+        aln->buildStateMap(AA_to_state,   SeqType::SEQ_PROTEIN);
+    } else {
+        aln->buildStateMap(char_to_state, seq_type);
+    }
+}
+
+void PatternInfoVector::loadPatterns(int nsite, int step, int nseq, 
+                                     const StrVector& sequences,
+                                     progress_display_ptr progress) {
+    auto STATE_UNKNOWN = aln->STATE_UNKNOWN;
+    #ifdef _OPENMP
+    #pragma omp parallel for
+    #endif
+    for (int site = 0; site < nsite; site+=step) {
+        PatternInfo& info = at(site/step);
+        Pattern& pat = aln->at(site / step);
+        pat.resize(nseq);
+        for (int seq = 0; seq < nseq; seq++) {
+            //char state = convertState(sequences[seq][site], seq_type);
+            char state = char_to_state[(int)(sequences[seq][site])];
+            if (seq_type == SeqType::SEQ_CODON || nt2aa) {
+                // special treatment for codon
+                char state2 = char_to_state[(int)(sequences[seq][site+1])];
+                char state3 = char_to_state[(int)(sequences[seq][site+2])];
+                if (state < 4 && state2 < 4 && state3 < 4) {
+                    //state = non_stop_codon[state*16 + state2*4 + state3];
+                    state = state*16 + state2*4 + state3;
+                    if (aln->genetic_code[(int)state] == '*') {
+                        info.errors << "Sequence " << aln->seq_names[seq]
+                            << " has stop codon " << sequences[seq][site]
+                            << sequences[seq][site + 1] << sequences[seq][site + 2]
+                            << " at site " << site + 1 << "\n";
+                        info.num_error++;
+                        state = STATE_UNKNOWN;
+                    } else if (nt2aa) {
+                        state = AA_to_state[(int)aln->genetic_code[(int)state]];
+                    } else {
+                        state = aln->non_stop_codon[(int)state];
+                    }
+            	} else if (state == STATE_INVALID || state2 == STATE_INVALID ||
+                           state3 == STATE_INVALID) {
+            		state = STATE_INVALID;
+                } else {
+                    if (state != STATE_UNKNOWN || state2 != STATE_UNKNOWN ||
+                        state3 != STATE_UNKNOWN) {
+                        info.warnings << "WARNING: Sequence " << aln->seq_names[seq]
+                            << " has ambiguous character " << sequences[seq][site]
+                            << sequences[seq][site + 1] << sequences[seq][site + 2]
+                            << " at site " << site + 1 << "\n";
+                    }
+                    state = STATE_UNKNOWN;
+                }
+            }
+            if (state == STATE_INVALID) {
+                if (info.num_error <= 100) {
+                    if (info.num_error < 100) {
+                        info.errors << "Sequence " << aln->seq_names[seq]
+                                    << " has invalid character " << sequences[seq][site];
+                        if (seq_type == SeqType::SEQ_CODON) {
+                            info.errors << sequences[seq][site + 1] << sequences[seq][site + 2];
+                        }
+                        info.errors << " at site " << site+1 << endl;
+                    } else if (info.num_error == 100) {
+                        info.errors << "...many more..." << endl;
+                    }
+                }
+                ++info.num_error;
+            }
+            pat[seq] = state;
+        }
+        aln->computeConst(pat);
+        if (info.num_error == 0)
+        {
+            info.isAllGaps = pat.isAllGaps(STATE_UNKNOWN);
+        }
+        if (progress!=nullptr) {
+            (*progress) += (double)step;
+        }
+    }
+}
+
+int PatternInfoVector::compressPatterns(int step, std::stringstream& err_str,
+                                        progress_display_ptr progress) {
+    int w = 0;
+    int site = 0;
+    for (int r = 0; r < size(); ++r, site+=step) {
+        PatternInfo& info     = at(r);
+        std::string  warnings = info.warnings.str();
+        if (!warnings.empty()) {
+            #if USE_PROGRESS_DISPLAY
+            if (progress!=nullptr) { progress->hide(); }
+            #endif
+            cout << warnings;
+            #if USE_PROGRESS_DISPLAY
+            if (progress!=nullptr) { progress->show(); }
+            #endif
+        }
+        std::string errors = info.errors.str();
+        if (!errors.empty()) {
+            err_str << errors;
+        }
+        else {
+            num_gaps_only += info.isAllGaps ? 1 : 0;
+            auto pat_it = aln->pattern_index.find(aln->at(r));
+            if (pat_it == aln->pattern_index.end()) {
+                if (w < r) {
+                    std::swap(aln->at(w), aln->at(r));
+                }
+                aln->at(w).frequency = 1;
+                aln->pattern_index[aln->at(w)] = w;
+                aln->site_pattern[r] = w;
+                ++w;
+            }
+            else {
+                int q = pat_it->second;
+                ++(aln->at(q).frequency);
+                aln->site_pattern[r] = q;
+            }
+        }
+        if (progress!=nullptr) {
+            (*progress) += ((double)step);
+        }
+    }
+    return w;
 }
 
 void processSeq(string &sequence, string &line, int line_num) {
