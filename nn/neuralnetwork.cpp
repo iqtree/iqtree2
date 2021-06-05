@@ -14,7 +14,7 @@ NeuralNetwork::NeuralNetwork(Alignment *alignment) {
     session_options.SetIntraOpNumThreads(1);
     session_options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_EXTENDED);
 
-    const char *model_path = "../nn_models/alpha_tmp_model.onnx";
+    const char *model_path = "../nn_models/lanfear_alpha_lstm.onnx";
 
     printf("Using Onnxruntime C++ API\n");
     Ort::Session session(env, model_path, session_options);
@@ -44,17 +44,13 @@ NeuralNetwork::NeuralNetwork(Alignment *alignment) {
         input_node_dims = tensor_info.GetShape();
         printf("Input %d : num_dims=%zu\n", i, input_node_dims.size());
         for (int j = 0; j < input_node_dims.size(); j++) {
-            if (input_node_dims[j] == -1) // TODO: check with Sebastian if there is a nicer way to deal with wildcard dim
-                input_node_dims[j] = 1;
             printf("Input %d : dim %d=%jd\n", i, j, input_node_dims[j]);
         }
     }
 
-    //std::vector<float> input_tensor_(10000 * 4);
-    std::array<float, 10000 * 4> input_tensor_{};
-    std::array<int64_t, 3> input_shape_{1, 10000, 4};
+    std::vector<float> input_tensor_(10000 * 4);
+    std::vector<int64_t> input_shape_{1, 10000, 4};
 
-    //std::vector<const char*> output_node_names = {"ev_model"};
     std::vector<const char *> output_node_names = {"alpha"};
 
     const size_t num_taxa = alignment->getNSeq();
@@ -64,8 +60,7 @@ NeuralNetwork::NeuralNetwork(Alignment *alignment) {
     mt19937 rng(chrono::steady_clock::now().time_since_epoch().count());
     std::uniform_int_distribution<size_t> dist(0, num_sites - 1);
 
-    // row major
-    for (size_t i = 0; i < 10000; i += 4) {
+    for (size_t i = 0; i < 40000; i = i + 4) {
         size_t site_idx = dist(rng);
         vector<size_t> freqs = alignment->getPattern(site_idx).freqs;
         input_tensor_[i] = (float) freqs[0] / num_taxa;
@@ -73,17 +68,6 @@ NeuralNetwork::NeuralNetwork(Alignment *alignment) {
         input_tensor_[i + 2] = (float) freqs[2] / num_taxa;
         input_tensor_[i + 3] = (float) freqs[3] / num_taxa;
     }
-
-    // column major
-//    for (size_t i = 0; i < 10000; i++) {
-//        size_t site_idx = dist(rng);
-//        auto mimi = alignment->getPattern(site_idx);
-//        vector<size_t> freqs = alignment->getPattern(site_idx).freqs;
-//        input_tensor_[i] = (float)freqs[0] / num_taxa;
-//        input_tensor_[i+10000] = (float)freqs[1] / num_taxa;
-//        input_tensor_[i+20000] = (float)freqs[2] / num_taxa;
-//        input_tensor_[i+30000] = (float)freqs[3] / num_taxa;
-//    }
 
     // create input tensor object from data values
     auto memory_info = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
@@ -101,7 +85,7 @@ NeuralNetwork::NeuralNetwork(Alignment *alignment) {
 
     // print alpha value
     for (int i = 0; i < 1; i++)
-        printf("Alpha value [%d] =  %f\n", i, floatarr[i]);
+        printf("Alpha value [%d] =  %f\n", i, floatarr[i] / 1000);
 
 }
 
