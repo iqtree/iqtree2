@@ -467,13 +467,12 @@ void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
 }
 
 void reportModel(ofstream &out, PhyloTree &tree) {
-
-    if (tree.getModel()->isMixture() &&
-        !tree.getModel()->isPolymorphismAware()) {
+    ModelSubst *mmodel = tree.getModel();
+    if (mmodel->isMixture() &&
+        !mmodel->isPolymorphismAware()) {
         out << "Mixture model of substitution: "
             << tree.getModelName() << endl;
 //        out << "Full name: " << tree.getModelName() << endl;
-        ModelSubst *mmodel = tree.getModel();
         out << endl << "  No  Component      Rate    Weight   Parameters" << endl;
         int nmix = mmodel->getNMixtures();
         for (int i = 0; i < nmix; i++) {
@@ -577,10 +576,10 @@ void reportRate(ostream &out, PhyloTree &tree) {
 
 void reportTree(ofstream &out, Params &params, PhyloTree &tree,
                 double tree_lh, double lh_variance, double main_tree) {
-    size_t ssize = tree.getAlnNSite();
-    double epsilon = 1.0 / ssize;
+    size_t ssize    = tree.getAlnNSite();
+    double epsilon  = 1.0 / ssize;
     double totalLen = tree.treeLength();
-    int df = tree.getModelFactory()->getNParameters(BRLEN_OPTIMIZE);
+    int    df       = tree.getModelFactory()->getNParameters(BRLEN_OPTIMIZE);
     double AIC_score, AICc_score, BIC_score;
     computeInformationScores(tree_lh, df, ssize, AIC_score,
                              AICc_score, BIC_score);
@@ -862,9 +861,10 @@ void computeLoglFromUserInputGAMMAInvar(Params &params, IQTree &iqtree);
 void printOutfilesInfo(Params &params, IQTree &tree) {
     ModelInfoFromName model_info(params.model_name);
     cout << endl << "Analysis results written to: " << endl;
-    if (!(params.suppress_output_flags & OUT_IQTREE))
+    if (!(params.suppress_output_flags & OUT_IQTREE)) {
         cout<< "  IQ-TREE report:                " << params.out_prefix << ".iqtree"
             << endl;
+    }
     if (params.compute_ml_tree) {
         if (!(params.suppress_output_flags & OUT_TREEFILE)) {
             if (model_info.isModelFinderOnly())
@@ -1044,11 +1044,12 @@ void reportPhyloAnalysis(Params &params, IQTree &tree,
         out << "IQ-TREE " << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR
             << iqtree_VERSION_PATCH << " COVID-edition built " << __DATE__ << endl
                 << endl;
-        if (params.partition_file)
+        if (params.partition_file) {
             out << "Partition file name: " << params.partition_file << endl;
-        if (params.aln_file)
+        }
+        if (params.aln_file) {
             out << "Input file name: " << params.aln_file << endl;
-
+        }
         if (!params.user_file.empty()) {
             out << "User tree file name: " << params.user_file << endl;
         }
@@ -1058,13 +1059,15 @@ void reportPhyloAnalysis(Params &params, IQTree &tree,
         if (modelfinder)
             out << "ModelFinder";
         if (params.compute_ml_tree) {
-            if (modelfinder)
+            if (modelfinder) {
                 out << " + ";
+            }
             out << "tree reconstruction";
         }
         if (params.num_bootstrap_samples > 0) {
-            if (params.compute_ml_tree)
+            if (params.compute_ml_tree) {
                 out << " + ";
+            }
             out << "non-parametric " << RESAMPLE_NAME
                 << " (" << params.num_bootstrap_samples << " replicates)";
         }
@@ -1132,33 +1135,43 @@ void reportPhyloAnalysis(Params &params, IQTree &tree,
         out << "SUBSTITUTION PROCESS" << endl << "--------------------" << endl
                 << endl;
         if (tree.isSuperTree()) {
-            if(params.partition_type == BRLEN_SCALE)
+            if(params.partition_type == BRLEN_SCALE) {
                 out << "Edge-linked-proportional partition model with ";
-            else if(params.partition_type == BRLEN_FIX)
+            }
+            else if(params.partition_type == BRLEN_FIX) {
                 out << "Edge-linked-equal partition model with ";
-            else if (params.partition_type == BRLEN_OPTIMIZE)
+            }
+            else if (params.partition_type == BRLEN_OPTIMIZE) {
                 out << "Edge-unlinked partition model with ";
-            else
+            }
+            else {
                 out << "Topology-unlinked partition model with ";
+            }
             
-            if (params.model_joint)
+            if (params.model_joint) {
                 out << "joint substitution model ";
-            else
+            }
+            else {
                 out << "separate substitution models ";
-            if (params.link_alpha)
+            }
+            if (params.link_alpha) {
                 out << "and joint gamma shape";
-            else
+            }
+            else {
                 out << "and separate rates across sites";
+            }
             out << endl << endl;
 
             PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
             PhyloSuperTree::iterator it;
             int part;
             if(params.partition_type == BRLEN_OPTIMIZE ||
-               params.partition_type == TOPO_UNLINKED)
+               params.partition_type == TOPO_UNLINKED) {
                 out << "  ID  Model         TreeLen  Parameters" << endl;
-            else
+            }
+            else {
                 out << "  ID  Model           Speed  Parameters" << endl;
+            }
             //out << "-------------------------------------" << endl;
             for (it = stree->begin(), part = 0; it != stree->end(); it++, part++) {
                 out.width(4);
@@ -1185,7 +1198,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree,
             PartitionModel *part_model = (PartitionModel*)tree.getModelFactory();
             for (auto itm = part_model->linked_models.begin();
                  itm != part_model->linked_models.end(); ++itm) {
-                for (it = stree->begin(); it != stree->end(); ++it)
+                for (it = stree->begin(); it != stree->end(); ++it) {
                     if ((*it)->getModel() == itm->second) {
                         out << "Linked model of substitution: "
                             << itm->second->getName() << endl << endl;
@@ -1194,6 +1207,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree,
                         (*it)->getModel()->fixParameters(fixed);
                         break;
                     }
+                }
             }
         } else if (params.compute_likelihood) {
             reportModel(out, tree);
@@ -1255,8 +1269,9 @@ void reportPhyloAnalysis(Params &params, IQTree &tree,
             out << "Run     logL" << endl;
             DoubleVector runLnL;
             tree.getCheckpoint()->getVector("runLnL", runLnL);
-            for (int run = 0; run < runLnL.size(); run++)
+            for (int run = 0; run < runLnL.size(); run++) {
                 out << run+1 << "\t" << fixed << runLnL[run] << endl;
+            }
             out << endl;
         }
 /*
@@ -2128,8 +2143,9 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
         out.open(site_mix_file.c_str());
         int ncat = iqtree.getRate()->getNRate();
         if (iqtree.getModel()->isMixture() &&
-            !iqtree.getModelFactory()->fused_mix_rate)
+            !iqtree.getModelFactory()->fused_mix_rate) {
             ncat = iqtree.getModel()->getNMixtures();
+        }
         out << "Ptn\tFreq\tNumMix\tCat" << endl;
 
         int c;
@@ -3768,8 +3784,9 @@ void computeSiteFrequencyModel(Params &params, Alignment *alignment) {
     tree->setLikelihoodKernel(params.SSE);
     tree->setNumThreads(params.num_threads);
     
-    if (!tree->getModel()->isMixture())
+    if (!tree->getModel()->isMixture()) {
         outError("No mixture model was specified!");
+    }
     uint64_t mem_size = tree->getMemoryRequired();
     uint64_t total_mem = getMemorySize();
     cout << "NOTE: " << (mem_size / 1024) / 1024

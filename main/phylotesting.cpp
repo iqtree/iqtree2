@@ -556,7 +556,8 @@ string computeFastMLTree(Params &params, Alignment *aln,
     //ASSERT(iqtree->root);
     iqtree->initializeModel(params, usual_model.getName(),
                             models_block, report_to_tree);
-    if (!iqtree->getModel()->isMixture() || aln->seq_type == SeqType::SEQ_POMO) {
+    if (!iqtree->getModel()->isMixture() || 
+        aln->seq_type == SeqType::SEQ_POMO) {
         usual_model.subst_name = iqtree->getSubstName();
         usual_model.rate_name = iqtree->getRateName();
     }
@@ -1466,14 +1467,15 @@ void transferModelParameters(PhyloSuperTree *super_tree,
                 if (part_model_info.getVector(std::get<2>(info), value))
                     continue; // value already exist
                 value.reserve(value1.size());
-                for (int i = 0; i < value1.size(); i++)
-                switch (std::get<1>(info)) {
-                    case ARIT_MEAN:
-                        value.push_back(weight1*value1[i] + weight2*value2[i]);
-                        break;
-                    case GEOM_MEAN:
-                        value.push_back(sqrt(value1[i]*value2[i]));
-                        break;
+                for (int i = 0; i < value1.size(); i++) {
+                    switch (std::get<1>(info)) {
+                        case ARIT_MEAN:
+                            value.push_back(weight1*value1[i] + weight2*value2[i]);
+                            break;
+                        case GEOM_MEAN:
+                            value.push_back(sqrt(value1[i]*value2[i]));
+                            break;
+                    }
                 }
                 part_model_info.putVector(std::get<2>(info), value);
                 break;
