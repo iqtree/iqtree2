@@ -1050,18 +1050,17 @@ protected:
     void readDistLine        (igzstream &in, intptr_t nseqs, intptr_t seq1,
                               bool &upper, bool &lower, double &longest_dist,
                               double *tmp_dist_mat,
-                              std::map<string,int>& map_seqName_ID,
+                              std::map<string,intptr_t>& map_seqName_ID,
                               progress_display& readProgress);
-
     void readShortDistLine   (const std::string& seq_name,
                               intptr_t seq1, intptr_t seq2, intptr_t rowStop,
                               bool& upper, bool& lower, double *tmp_dist_mat,
                               progress_display& readProgress);
-    void mapLoadedSequencesToAlignment(std::map<string,int>& map_seqName_ID,
+    void mapLoadedSequencesToAlignment(std::map<string,intptr_t>& map_seqName_ID,
                                        intptr_t nseqs, bool is_incremental, 
-                                       int* actualToTemp);
-    void copyToDistanceMatrix(double* tmp_dist_mat, intptr_t nseqs,
-                              int* actualToTemp, double* dist_mat);
+                                       intptr_t* actualToTemp);
+    void copyToDistanceMatrix   (double* tmp_dist_mat, intptr_t nseqs,
+                                 intptr_t* actualToTemp, double* dist_mat);
     void checkForSymmetricMatrix(double* dist_mat, intptr_t nseqs);                           
 };
 

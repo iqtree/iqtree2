@@ -4687,7 +4687,7 @@ double Alignment::readDist(igzstream &in, bool is_incremental,
     double longest_dist = 0.0;
     std::stringstream firstLine;
     safeGetTrimmedLineAsStream(in, firstLine);
-    size_t nseqs; //Number of sequences in distance matrix file
+    intptr_t nseqs; //Number of sequences in distance matrix file
     firstLine >> nseqs;
     if (!is_incremental && nseqs != getNSeq()) {
         throw "Distance file has different number of taxa";
@@ -4698,7 +4698,7 @@ double Alignment::readDist(igzstream &in, bool is_incremental,
     
     bool lower = false; //becomes true if lower-triangle format identified
     bool upper = false; //becomes true if upper-triangle format identified
-    std::map< string, int > map_seqName_ID;
+    std::map< string, intptr_t> map_seqName_ID;
     #if USE_PROGRESS_DISPLAY
     progress_display readProgress(nseqs*nseqs,
                                   "Reading distance matrix from file");
@@ -4707,21 +4707,21 @@ double Alignment::readDist(igzstream &in, bool is_incremental,
     #endif
     // read in distances to a temporary array
         
-    for (size_t seq1 = 0; seq1 < nseqs; seq1++)  {
+    for (intptr_t seq1 = 0; seq1 < nseqs; seq1++)  {
         readDistLine(in, nseqs, seq1, upper, lower, longest_dist, 
                      tmp_dist_mat, map_seqName_ID, readProgress);
     }
     
     if (lower) {
         //Copy the upper triangle of the matrix from the lower triangle
-        for (size_t seq1=0; seq1<nseqs; ++seq1) /*row*/ {
-            size_t rowStart = seq1     * nseqs; //start of (seq1)th row (in dist matrix)
-            size_t rowStop  = rowStart + nseqs; //end of (seq1)th row; start of (seq1+1)th.
-            size_t colPos   = rowStop  + seq1;  //(seq1)th column of (seq1+1)th row
+        for (intptr_t seq1=0; seq1<nseqs; ++seq1) /*row*/ {
+            intptr_t rowStart = seq1     * nseqs; //start of (seq1)th row (in dist matrix)
+            intptr_t rowStop  = rowStart + nseqs; //end of (seq1)th row; start of (seq1+1)th.
+            intptr_t colPos   = rowStop  + seq1;  //(seq1)th column of (seq1+1)th row
             //Run across the row, writing the [seq1+1]th through [nseq-1]th
             //elements of the row, with values read down the (seq1)th column
             //of the lower triangle.
-            for (size_t rowPos=rowStart+seq1+1; rowPos<rowStop; ++rowPos, colPos+=nseqs) {
+            for (intptr_t rowPos=rowStart+seq1+1; rowPos<rowStop; ++rowPos, colPos+=nseqs) {
                 tmp_dist_mat[rowPos] = tmp_dist_mat[colPos];
             }
         }
@@ -4733,9 +4733,9 @@ double Alignment::readDist(igzstream &in, bool is_incremental,
     {
         // Now initialize the internal distance matrix, in which
         // the sequence order is the same as in the alignment
-        std::vector<int> actual_to_temp_vector;
+        std::vector<intptr_t> actual_to_temp_vector;
         actual_to_temp_vector.resize(nseqs, 0);
-        int* actualToTemp = actual_to_temp_vector.data();
+        intptr_t* actualToTemp = actual_to_temp_vector.data();
 
         mapLoadedSequencesToAlignment(map_seqName_ID, nseqs, 
                                     is_incremental, actualToTemp);
@@ -4758,7 +4758,7 @@ double Alignment::readDist(igzstream &in, bool is_incremental,
 void Alignment::readDistLine(igzstream &in, intptr_t nseqs, intptr_t seq1,
                              bool &upper, bool &lower, double& longest_dist,
                              double *tmp_dist_mat,  
-                             std::map<string,int>& map_seqName_ID,
+                             std::map<string,intptr_t>& map_seqName_ID,
                              progress_display& readProgress) {
     std::stringstream line;
     safeGetTrimmedLineAsStream(in, line);
@@ -4785,16 +4785,16 @@ void Alignment::readDistLine(igzstream &in, intptr_t nseqs, intptr_t seq1,
     if (upper) {
         //Copy column seq1 from upper triangle (above the diagonal)
         //to the left part of row seq1 (which is in the lower triangle).
-        size_t column_pos = seq1; //position in column in upper triangle
-        for (size_t seq2=0; seq2<seq1; ++seq2, column_pos+=nseqs) {
+        intptr_t column_pos = seq1; //position in column in upper triangle
+        for (intptr_t seq2=0; seq2<seq1; ++seq2, column_pos+=nseqs) {
             tmp_dist_mat[pos++] = tmp_dist_mat[column_pos];
         }
         //And write zero on the diagonal, in row seq1.
         tmp_dist_mat[pos++] = 0.0;
     }
-    size_t rowStart = (upper) ? (seq1+1) : 0; //(row-start relative)
-    size_t rowStop  = (lower) ? seq1     : nseqs;
-    size_t seq2     = rowStart;
+    intptr_t rowStart = (upper) ? (seq1+1) : 0; //(row-start relative)
+    intptr_t rowStop  = (lower) ? seq1     : nseqs;
+    intptr_t seq2     = rowStart;
     for (; line.tellg()!=-1 && seq2 < rowStop; ++seq2) {
         double dist;
         line >> dist;
@@ -4856,13 +4856,13 @@ void Alignment::readShortDistLine(const std::string& seq_name,
     }
 }
 
-void Alignment::mapLoadedSequencesToAlignment(std::map<string,int>& map_seqName_ID,
+void Alignment::mapLoadedSequencesToAlignment(std::map<string,intptr_t>& map_seqName_ID,
                                               intptr_t nseqs, bool is_incremental, 
-                                              int* actualToTemp) {
+                                              intptr_t* actualToTemp) {
     size_t missingSequences = 0; //count of sequences missing from temporary matrix                                                
-    for (int seq1 = 0; seq1 < static_cast<int>(nseqs); ++seq1) {
-        string seq1Name = getSeqName(seq1);
-        int seq1_tmp_id = -1;
+    for (intptr_t seq1 = 0; seq1 < nseqs; ++seq1) {
+        string   seq1Name    = getSeqName(seq1);
+        intptr_t seq1_tmp_id = -1;
         if (map_seqName_ID.count(seq1Name) == 0) {
             if (is_incremental) {
                 ++missingSequences;
@@ -4885,8 +4885,8 @@ void Alignment::mapLoadedSequencesToAlignment(std::map<string,int>& map_seqName_
     std::cout << std::endl;
 }
 
-void Alignment::copyToDistanceMatrix(double* tmp_dist_mat, intptr_t nseqs,
-                                     int* actualToTemp, double* dist_mat) {
+void Alignment::copyToDistanceMatrix(double*   tmp_dist_mat, intptr_t nseqs,
+                                     intptr_t* actualToTemp, double*  dist_mat) {
 
     //Copy distances from tmp_dist_mat to dist_mat,
     //permuting rows and columns on the way
@@ -4898,11 +4898,11 @@ void Alignment::copyToDistanceMatrix(double* tmp_dist_mat, intptr_t nseqs,
     #ifdef _OPENMP
     #pragma omp parallel for
     #endif
-    for (int seq1 = 0; seq1 < nseqs; seq1++) {
+    for (intptr_t seq1 = 0; seq1 < nseqs; seq1++) {
         auto writeRow = dist_mat + seq1 * nseqs;
         if ( 0 <= actualToTemp[seq1] ) {
             auto readRow  = tmp_dist_mat + actualToTemp[seq1] * nseqs;
-            for (size_t seq2 = 0; seq2 < nseqs; seq2++) {
+            for (intptr_t seq2 = 0; seq2 < nseqs; seq2++) {
                 if ( 0 <= actualToTemp[seq2] ) {
                     writeRow[ seq2 ] = readRow [ actualToTemp[seq2] ];
                 } else {
@@ -4910,7 +4910,7 @@ void Alignment::copyToDistanceMatrix(double* tmp_dist_mat, intptr_t nseqs,
                 }
             }
         } else {
-            for (size_t seq2 = 0; seq2 < nseqs; seq2++) {
+            for (intptr_t seq2 = 0; seq2 < nseqs; seq2++) {
                 writeRow[ seq2 ] = 0.0;
             }
         }
@@ -4928,13 +4928,13 @@ void Alignment::copyToDistanceMatrix(double* tmp_dist_mat, intptr_t nseqs,
 }
 
 void Alignment::checkForSymmetricMatrix(double* dist_mat, intptr_t nseqs) {
-    for (int seq1 = 0; seq1 < static_cast<int>(nseqs)-1; seq1++) {
+    for (intptr_t seq1 = 0; seq1+1 < nseqs; seq1++) {
         auto checkRow = dist_mat + seq1*nseqs;
         if (checkRow[seq1] != 0.0) {
             throw "Diagonal elements of distance matrix is not ZERO";
         }
         auto checkColumn = checkRow + seq1 + nseqs; //same column of next row down
-        for (int seq2 = seq1+1; seq2 < static_cast<int>(nseqs);
+        for (intptr_t seq2 = seq1+1; seq2 < nseqs;
              seq2++, checkColumn+=nseqs) {
             if (checkRow[seq2] != *checkColumn) {
                 std::stringstream problem;
