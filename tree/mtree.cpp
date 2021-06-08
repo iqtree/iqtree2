@@ -103,8 +103,8 @@ void MTree::init(MTree &tree) {
 
 void MTree::assignIDs(StrVector& taxaNames) {
     bool err = false;
-    int nseq = static_cast<int>(taxaNames.size());
-    for (int seq = 0; seq < nseq; seq++) {
+    intptr_t nseq = taxaNames.size();
+    for (intptr_t seq = 0; seq < nseq; seq++) {
         string seq_name = taxaNames[seq];
         Node *node = findLeafName(seq_name);
         if (!node) {

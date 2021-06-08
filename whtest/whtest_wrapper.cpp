@@ -61,18 +61,18 @@ int WHTest_old(Params &params, PhyloTree &tree) {
 int WHTest(Params &params, IQTree &tree) {
 
 	int retval;
-	int nseq  = tree.aln->getNSeq32();
-    int nsite = tree.aln->getNSite32(); 
+	intptr_t nseq  = tree.aln->getNSeq();
+    intptr_t nsite = tree.aln->getNSite(); 
 
 
 	WHT_setAlignmentSize(nseq, nsite);
 	WHT_allocateMemory();
-	for (int i = 0; i < nseq; i++) {
-		for (int j = 0; j < nsite; j++) {
+	for (intptr_t i = 0; i < nseq; i++) {
+		for (intptr_t j = 0; j < nsite; j++) {
 			WHT_setSequenceSite(i, j, (*tree.aln)[tree.aln->getPatternID(j)][i]);
 		}
 	}			
-	for (int i = 0; i < nseq; i++) {
+	for (intptr_t i = 0; i < nseq; i++) {
 		WHT_setSequenceName(i, tree.aln->getSeqName(i).c_str());
 	}
 	double gamma_shape = tree.getModelFactory()->site_rate->getGammaShape();

@@ -1199,7 +1199,7 @@ int PhyloTree::computeParsimonyOutOfTreeSankoff(const UINT* dad_partial_pars,
 
 void PhyloTree::randomizeTaxonOrder(int* rand_stream,
                                     IntVector& taxon_order) {
-    int nseq = aln->getNSeq32();
+    intptr_t nseq = aln->getNSeq();
     taxon_order.resize(nseq);
     for (int i = 0; i < nseq; ++i) {
         taxon_order[i] = static_cast<int>(i);
@@ -1604,7 +1604,7 @@ int PhyloTree::computeParsimonyTreeNew(int *rand_stream) {
 }
 
 int PhyloTree::computeParsimonyTreeOld(int *rand_stream) {
-    int nseq = aln->getNSeq32();
+    intptr_t nseq = aln->getNSeq();
     if (nseq < 3) {
         outError(ERR_FEW_TAXA);
     }
@@ -1671,7 +1671,7 @@ int PhyloTree::computeParsimonyTreeOld(int *rand_stream) {
     initProgress(work_to_do,
                  "Constructing parsimony tree", "", "");
     
-    for (int step = 0; static_cast<int>(leafNum) < nseq; ++step) {
+    for (intptr_t step = 0; static_cast<intptr_t>(leafNum) < nseq; ++step) {
         PhyloNodeVector nodes1, nodes2;
         PhyloNode*      target_node = nullptr;
         PhyloNode*      target_dad  = nullptr;
@@ -1709,7 +1709,7 @@ int PhyloTree::computeParsimonyTreeOld(int *rand_stream) {
         added_node->addNeighbor(DUMMY_NODE_2, -1.0);
 
         usefulTime.start();
-        for (int branch_num = 0; branch_num < nodes1.size(); branch_num++) {
+        for (intptr_t branch_num = 0; branch_num < nodes1.size(); branch_num++) {
             UINT score = addTaxonMPFast(new_taxon, added_node,
                                         nodes1[branch_num], nodes2[branch_num]);
             if (branch_num == 0 || score < best_pars_score) {

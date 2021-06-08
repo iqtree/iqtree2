@@ -175,9 +175,9 @@ void SuperAlignment::init(StrVector *sequence_names) {
 
     size_t site = 0;
 	for (auto it = partitions.begin(); it != partitions.end(); ++it, ++site) {
-		int nseq = static_cast<int>((*it)->getNSeq());
+		int nseq = (*it)->getNSeq();
 		//cout << "nseq  = " << nseq << endl;
-		for (int seq = 0; seq < nseq; ++seq) {
+		for (intptr_t seq = 0; seq < nseq; ++seq) {
 			int id = getSeqID((*it)->getSeqName(seq));
 			if (id < 0) {
 				seq_names.push_back((*it)->getSeqName(seq));
@@ -203,11 +203,11 @@ void SuperAlignment::buildPattern() {
 	pattern_index.clear();
 	VerboseMode save_mode = verbose_mode; 
 	verbose_mode = min(verbose_mode, VerboseMode::VB_MIN); // to avoid printing gappy sites in addPattern
-	int nseq = getNSeq32();
+	intptr_t nseq = getNSeq();
 	for (size_t site = 0; site < nsite; site++) {
  		Pattern pat;
  		pat.resize(nseq, 0);
-        for (int seq = 0; seq < nseq; seq++) {
+        for (intptr_t seq = 0; seq < nseq; seq++) {
             pat[seq] = (taxa_index[seq][site] >= 0) ? 1 : 0;
         }
 		addPattern(pat, static_cast<int>(site));
@@ -799,9 +799,9 @@ void SuperAlignment::printBestPartitionRaxml(const char *filename) {
 
 void SuperAlignment::linkSubAlignment(int part) {
 	ASSERT(taxa_index.size() == getNSeq());
-	int nseq = getNSeq32();
+	intptr_t nseq = getNSeq();
 	BoolVector checked(partitions[part]->getNSeq(), false);
-	for (int seq = 0; seq < nseq; ++seq) {
+	for (intptr_t seq = 0; seq < nseq; ++seq) {
 		int id = partitions[part]->getSeqID(getSeqName(seq));
 		if (id < 0)
 			taxa_index[seq][part] = -1;
@@ -951,7 +951,7 @@ std::vector<size_t> SuperAlignment::getSequenceHashes(progress_display_ptr progr
     #ifdef _OPENMP
         #pragma omp parallel for
     #endif
-    for (int seq1=0; seq1<n; ++seq1) {
+    for (intptr_t seq1=0; seq1<n; ++seq1) {
         size_t hash = 0;
         int part = 0;
         for (auto ait = partitions.begin(); ait != partitions.end(); ait++, part++) {
@@ -976,12 +976,12 @@ std::vector<size_t> SuperAlignment::getSequenceHashes(progress_display_ptr progr
 }
 
 Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVector &removed_seqs, StrVector &target_seqs) {
-    auto n = getNSeq();
-    BoolVector isSequenceChecked(n, false);
-    BoolVector isSequenceRemoved(n, false);
+    intptr_t nseq = getNSeq();
+    BoolVector isSequenceChecked(nseq, false);
+    BoolVector isSequenceRemoved(nseq, false);
 
     #if USE_PROGRESS_DISPLAY
-    progress_display progress(n*2, isShowingProgressDisabled ? "" :  "Checking for duplicate sequences");
+    progress_display progress(nseq*2, isShowingProgressDisabled ? "" :  "Checking for duplicate sequences");
     #else
     double progress = 0.0;
     #endif
@@ -990,12 +990,11 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, 
     
     bool listIdentical = !Params::getInstance().suppress_duplicate_sequence_warnings;
 
-    auto startCheck = getRealTime();
-    int nseq = getNSeq32();
-	for (int seq1 = 0; seq1 < nseq; ++seq1, ++progress) {
+    auto     startCheck = getRealTime();
+	for (intptr_t seq1 = 0; seq1 < nseq; ++seq1, ++progress) {
         if (isSequenceChecked[seq1]) continue;
         bool first_ident_seq = true;
-		for (int seq2 = seq1+1; seq2 < nseq; ++seq2) {
+		for (intptr_t seq2 = seq1+1; seq2 < nseq; ++seq2) {
             if (getSeqName(seq2) == not_remove || isSequenceRemoved[seq2]) { continue;
             }
             if (hashes[seq1]!=hashes[seq2]) {
@@ -1620,12 +1619,13 @@ Alignment *SuperAlignment::concatenateAlignments(set<int> &ids) {
     	for (Alignment::iterator it = partitions[id]->begin(); it != partitions[id]->end(); it++) {
     		Pattern pat;
     		//int part_seq = 0;
-    		for (int seq = 0; seq < union_taxa.size(); seq++)
+    		for (intptr_t seq = 0; seq < union_taxa.size(); seq++)
     			if (union_taxa[seq] == 1) {
     				char ch = aln->STATE_UNKNOWN;
                     int seq_part = taxa_index[seq][id];
-                    if (seq_part >= 0)
+                    if (seq_part >= 0) {
                         ch = (*it)[seq_part];
+                    }
                     //if (taxa_set[seq] == 1) {
                     //    ch = (*it)[part_seq++];
                     //}
@@ -1690,9 +1690,9 @@ Alignment *SuperAlignment::concatenateAlignments() {
     for (size_t site = 0; site != nsite; ++site) {
         Alignment *part_aln = concatenateAlignments(ids[site]);
         saln->partitions.push_back(part_aln);
-        int nseq = static_cast<int>(part_aln->getNSeq());
+        intptr_t nseq = part_aln->getNSeq();
         //cout << "nseq  = " << nseq << endl;
-        for (int seq = 0; seq < nseq; ++seq) {
+        for (intptr_t seq = 0; seq < nseq; ++seq) {
             int id = saln->getSeqID(part_aln->getSeqName(seq));
             ASSERT(id >= 0);
             saln->taxa_index[id][site] = seq;

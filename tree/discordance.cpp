@@ -178,9 +178,10 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstre
         for (auto part_aln = saln->partitions.begin(); part_aln != saln->partitions.end(); part_aln++, part++) {
             // get the taxa names of the partition tree
             StringIntMap name_map;
-            for (int i = 0; i < (*part_aln)->getNSeq32(); i++)
+            intptr_t nseq = (*part_aln)->getNSeq();
+            for (intptr_t i = 0; i < nseq; i++) {
                 name_map[(*part_aln)->getSeqName(i)] = i;
-            
+            }
             // check that at least one taxon from each subtree is present in partition tree
             int left_count = 0, right_count = 0;
             for (auto it = left_taxa.begin(); it != left_taxa.end(); ++it) {

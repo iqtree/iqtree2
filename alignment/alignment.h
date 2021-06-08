@@ -430,7 +430,7 @@ public:
             @param i sequence index
             @return sequence name
      */
-    const string &getSeqName(int i) const;
+    const string &getSeqName(intptr_t i) const;
     
     /**
      * Change the name of a sequence
@@ -439,7 +439,7 @@ public:
      *            it does not duplicate the name of another sequence; it
      *            is up to the caller to ensure that it does not).
      */
-    void  setSeqName(int i, string name_to_use);
+    void  setSeqName(intptr_t i, string name_to_use);
 
     /**
      *  Get a vector containing all the sequence names
@@ -528,7 +528,7 @@ public:
             @return TRUE if seq_id contains only gaps or missing characters
             @param seq_id sequence ID
      */
-    bool isGapOnlySeq(size_t seq_id);
+    bool isGapOnlySeq(intptr_t seq_id);
 
     virtual bool isSuperAlignment() {
         return false;

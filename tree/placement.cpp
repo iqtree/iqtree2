@@ -164,7 +164,7 @@ void PhyloTree::removeSampleTaxaIfRequested() {
                      << " has id " << it->second->id );
         }
 
-        for (int seq = 0; seq < nseq; ++seq) {
+        for (intptr_t seq = 0; seq < nseq; ++seq) {
             r += countOfTaxaToRemove;
             if ( nseq <= r ) {
                 r -= nseq;
@@ -446,12 +446,12 @@ int  PhyloTree::renumberInternalNodes() {
     //Reassign ids of internal nodes
     NodeVector pnv;
     this->getInternalNodes(pnv);
-    int first_old_interior_id = aln->getNSeq32();
-    int node_count = static_cast<int>(pnv.size());
+    intptr_t first_old_interior_id = aln->getNSeq();
+    intptr_t node_count            = pnv.size();
     #ifdef _OPENMP
     #pragma omp parallel for
     #endif
-    for (int i=0; i<node_count; ++i) {
+    for (intptr_t i=0; i<node_count; ++i) {
         pnv[i]->id = first_old_interior_id + i;
     }
     return first_old_interior_id + static_cast<int>(pnv.size());

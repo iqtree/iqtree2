@@ -82,12 +82,12 @@ Alignment::Alignment()
     isShowingProgressDisabled = false;
 }
 
-const string &Alignment::getSeqName(int i) const {
+const string &Alignment::getSeqName(intptr_t i) const {
     ASSERT(i >= 0 && i < (int)seq_names.size());
     return seq_names[i];
 }
 
-void Alignment::setSeqName(int i, string name_to_use) {
+void Alignment::setSeqName(intptr_t i, string name_to_use) {
     ASSERT(i >= 0 && i < (int)seq_names.size());
     seq_names[i] = name_to_use;
 }
@@ -98,7 +98,7 @@ const StrVector& Alignment::getSeqNames() const {
 }
 
 int Alignment::getSeqID(const string &seq_name) const {
-    for (int i = 0; i < static_cast<int>(getNSeq()); i++) {
+    for (intptr_t i = 0; i < getNSeq(); i++) {
         if (seq_name == getSeqName(i)) {
             return i;
         }
@@ -108,7 +108,7 @@ int Alignment::getSeqID(const string &seq_name) const {
 
 size_t Alignment::getMaxSeqNameLength() const {
     size_t len = 0;
-    for (int i = 0; i < static_cast<int>(getNSeq()); i++) {
+    for (intptr_t i = 0; i < getNSeq(); ++i) {
         if (getSeqName(i).length() > len) {
             len = getSeqName(i).length();
         }
@@ -235,7 +235,7 @@ void Alignment::checkSeqName() {
     //lies a bit here.  We're not counting gap characters,
     //we are constructing the sequences (so we can count gap characters quickly).
 
-    int      numSequences      = static_cast<int>(seq_names.size());
+    intptr_t numSequences      = seq_names.size();
     size_t   numSites          = getNSite();
     char     firstUnknownState = static_cast<char>(num_states + pomo_sampled_states.size());
     const int* frequencies     = s.getSiteFrequencies().data();
@@ -372,11 +372,12 @@ int Alignment::checkIdenticalSeq()
     //Todo: This should use sequence hashing.
 	int num_identical = 0;
     IntVector checked;
-    checked.resize(getNSeq(), 0);
-	for (int seq1 = 0; seq1 < static_cast<int>(getNSeq()); ++seq1) {
+    intptr_t nseq = getNSeq(); 
+    checked.resize(nseq, 0);
+	for (intptr_t seq1 = 0; seq1 < nseq; ++seq1) {
         if (checked[seq1]) continue;
 		bool first = true;
-		for (int seq2 = seq1+1; seq2 < static_cast<int>(getNSeq()); ++seq2) {
+		for (intptr_t seq2 = seq1+1; seq2 < nseq; ++seq2) {
 			bool equal_seq = true;
 			for (iterator it = begin(); it != end(); it++)
 				if  ((*it)[seq1] != (*it)[seq2]) {
@@ -411,7 +412,7 @@ vector<size_t> Alignment::getSequenceHashes(progress_display_ptr progress) const
     #ifdef _OPENMP
         #pragma omp parallel for schedule(static,100)
     #endif
-    for (int seq1=0; seq1<n; ++seq1) {
+    for (intptr_t seq1=0; seq1<n; ++seq1) {
         size_t hash = 0;
         for (auto it = begin(); it != end(); ++it) {
             adjustHash((*it)[seq1], hash);
@@ -449,7 +450,7 @@ vector<size_t> Alignment::getPatternIndependentSequenceHashes(progress_display_p
     #ifdef _OPENMP
         #pragma omp parallel for schedule(static,100)
     #endif
-    for (int seq1=0; seq1<n; ++seq1) {
+    for (intptr_t seq1=0; seq1<n; ++seq1) {
         size_t hash = 0;
         for (int i=0; i<patternCount; ++i) {
             adjustHash(at(patterns[i])[seq1], hash);
@@ -477,9 +478,10 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two,
     double progress = 0.0;
 #endif
     
+    int            nseq   = getNSeq();
     vector<size_t> hashes = getSequenceHashes(&progress);
     std::map<size_t, size_t> hash_counts;
-    for (int i=0; i<getNSeq32(); ++i) {
+    for (intptr_t i=0; i<nseq; ++i) {
         auto it = hash_counts.find(i);
         if (it==hash_counts.end()) {
             hash_counts[hashes[i]] = 1;
@@ -491,7 +493,7 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two,
     bool listIdentical = !Params::getInstance().suppress_duplicate_sequence_warnings;
 
     auto startCheck = getRealTime();
-    for (int seq1 = 0; seq1 < getNSeq32(); ++seq1) {
+    for (intptr_t seq1 = 0; seq1 < nseq; ++seq1) {
         if ((seq1%1000)==999) {
             progress += 100.0;
         }
@@ -499,8 +501,9 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two,
             continue;
         }
         bool first_ident_seq = true;
-        for (int seq2 = seq1+1; seq2 < getNSeq32(); ++seq2) {
-            if ( getSeqName(seq2) == not_remove || isSequenceRemoved[seq2] ) {
+        for (intptr_t seq2 = seq1+1; seq2 < nseq; ++seq2) {
+            if ( getSeqName(seq2) == not_remove || 
+                 isSequenceRemoved[seq2] ) {
                 continue;
             }
             if (hashes[seq1] != hashes[seq2]) {
@@ -551,17 +554,18 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two,
     progress.done();
     #endif
     if (removed_seqs.size() > 0) {
-        double removeDupeStart = getRealTime();
-        if (removed_seqs.size() + 3 >= getNSeq()) {
+        double   removeDupeStart = getRealTime();
+        intptr_t nseq            = getNSeq();
+        if (removed_seqs.size() + 3 >= nseq) {
             outWarning("Your alignment contains too many identical sequences!");
         }
         IntVector keep_seqs;
-        for (int seq1 = 0; seq1 < getNSeq32(); seq1++) {
+        for (intptr_t seq1 = 0; seq1 < nseq; seq1++) {
             if ( !isSequenceRemoved[seq1] ) {
                 keep_seqs.emplace_back(seq1);
             }
         }
-        Alignment *aln = new Alignment;
+        Alignment* aln = new Alignment;
         aln->extractSubAlignment(this, keep_seqs, 0);
         //cout << "NOTE: Identified " << removed_seqs.size()
         //  << " sequences as duplicates." << endl;
@@ -590,7 +594,7 @@ void Alignment::adjustHash(bool v, size_t& hash) const {
                      + (hash<<6) + (hash>>2);
 }
 
-bool Alignment::isGapOnlySeq(size_t seq_id) {
+bool Alignment::isGapOnlySeq(intptr_t seq_id) {
     ASSERT(seq_id < getNSeq());
     for (iterator it = begin(); it != end(); it++) {
         if ((*it)[seq_id] != STATE_UNKNOWN) {
@@ -602,18 +606,20 @@ bool Alignment::isGapOnlySeq(size_t seq_id) {
 
 Alignment *Alignment::removeGappySeq() {
 	IntVector keep_seqs;
-    int nseq = getNSeq32();
-	for (int i = 0; i < nseq; i++)
+    intptr_t nseq = getNSeq();
+	for (intptr_t i = 0; i < nseq; i++)
 		if (! isGapOnlySeq(i)) {
 			keep_seqs.push_back(i);
 		}
 	if (keep_seqs.size() == nseq)
 		return this;
     // 2015-12-03: if resulting alignment has too few seqs, try to add some back
-    if (keep_seqs.size() < 3 && getNSeq() >= 3) {
-        for (int i = 0; i < nseq && keep_seqs.size() < 3; i++)
-            if (isGapOnlySeq(i))
+    if (keep_seqs.size() < 3 && nseq >= 3) {
+        for (intptr_t i = 0; i < nseq && keep_seqs.size() < 3; i++) {
+            if (isGapOnlySeq(i)) {
                 keep_seqs.push_back(i);
+            }
+        }
     }
 	Alignment *aln = new Alignment;
 	aln->extractSubAlignment(this, keep_seqs, 0);
@@ -621,9 +627,9 @@ Alignment *Alignment::removeGappySeq() {
 }
 
 void Alignment::checkGappySeq(bool force_error) {
-    int nseq = getNSeq32();
-    int wrong_seq = 0;
-    for (int i = 0; i < nseq; i++) {
+    intptr_t nseq      = getNSeq();
+    int      wrong_seq = 0;
+    for (intptr_t i = 0; i < nseq; i++) {
         if (isGapOnlySeq(i)) {
             std::stringstream complaint;
             complaint << "Sequence " << getSeqName(i)
@@ -737,12 +743,13 @@ Alignment::Alignment(NxsDataBlock *data_block, char *sequence_type,
     pars_lower_bound = nullptr;
     
     extractDataBlock(data_block);
-    if (verbose_mode >= VerboseMode::VB_DEBUG)
-        data_block->Report(cout);
 
-    if (getNSeq() < 3)
+    if (verbose_mode >= VerboseMode::VB_DEBUG) {
+        data_block->Report(cout);
+    }
+    if (getNSeq() < 3) {
         outError("Alignment must have at least 3 sequences");
-    
+    }
     countConstSite();
     
     if (Params::getInstance().compute_seq_composition)
@@ -799,7 +806,7 @@ void Alignment::buildSeqStates(vector<vector<int> > &seq_states, bool add_unobs_
     }
 	seq_states.clear();
 	seq_states.resize(getNSeq());
-	for (int seq = 0; seq < getNSeq(); seq++) {
+	for (intptr_t seq = 0; seq < getNSeq(); seq++) {
 		BoolVector has_state(STATE_UNKNOWN+1, false);
 		for (int site = 0; site < getNPattern(); site++)
 			has_state[at(site)[seq]] = true;
@@ -1262,9 +1269,10 @@ void Alignment::orderPatternByNumChars(int pat_type) {
 
     // fill up to vectorclass with dummy pattern
     intptr_t maxnptn = get_safe_upper_limit_float(num_parsimony_sites);
+    intptr_t nseq    = getNSeq();
     for (intptr_t ptn = nptn; ptn<maxnptn; ++ptn) {
         Pattern pat;
-        pat.resize(getNSeq(), STATE_UNKNOWN);
+        pat.resize(nseq, STATE_UNKNOWN);
         pat.frequency = 0;
         ordered_pattern.emplace_back(pat);
     }
@@ -3308,9 +3316,11 @@ void Alignment::printFasta(ostream &out, bool append, const char *aln_site_list,
     for (it = seq_names.begin(); it != seq_names.end(); it++, seq_id++) {
         out << ">" << (*it) << endl;
         int j = 0;
-        for (auto i = site_pattern.begin();  i != site_pattern.end(); i++, j++)
-            if (kept_sites[j])
+        for (auto i = site_pattern.begin();  i != site_pattern.end(); i++, j++) {
+            if (kept_sites[j]) {
                 out << convertStateBackStr(at(*i)[seq_id]);
+            }
+        }
         out << endl;
     }
 }
@@ -3346,8 +3356,7 @@ void Alignment::printNexus(ostream &out, bool append, const char *aln_site_list,
     size_t max_len = getMaxSeqNameLength();
     if (print_taxid) max_len = 10;
     if (max_len < 10) max_len = 10;
-    int seq_id;
-    for (seq_id = 0; seq_id < seq_names.size(); seq_id++) {
+    for (intptr_t seq_id = 0; seq_id < seq_names.size(); seq_id++) {
         out << "  ";
         out.width(max_len);
         if (print_taxid) {
@@ -3503,7 +3512,8 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id,
 
 
 void Alignment::extractPatterns(Alignment *aln, IntVector &ptn_id) {
-    for (int i = 0; i < aln->getNSeq32(); ++i) {
+    intptr_t nseq =  aln->getNSeq();
+    for (int i = 0; i < nseq; ++i) {
         seq_names.push_back(aln->getSeqName(i));
     }
     name           = aln->name;
@@ -3608,8 +3618,8 @@ void Alignment::convertToCodonOrAA(Alignment *aln, char *gene_code_id,
                  " when converting to codon sequences");
     }
     char AA_to_state[NUM_CHAR];
-    int nseqs = aln->getNSeq32();
-    for (int i = 0; i < nseqs ; ++i) {
+    intptr_t nseqs = aln->getNSeq();
+    for (intptr_t i = 0; i < nseqs ; ++i) {
         seq_names.push_back(aln->getSeqName(i));
     }
     name = aln->name;
@@ -3707,7 +3717,8 @@ Alignment *Alignment::convertCodonToAA() {
     if (seq_type != SeqType::SEQ_CODON)
         outError("Cannot convert non-codon alignment into AA");
     char AA_to_state[NUM_CHAR];
-    for (int i = 0; i < getNSeq32(); ++i) {
+    intptr_t nseq = getNSeq();
+    for (intptr_t i = 0; i < nseq; ++i) {
         res->seq_names.push_back(getSeqName(i));
     }
     res->name = name;
@@ -3729,13 +3740,12 @@ Alignment *Alignment::convertCodonToAA() {
     VerboseMode save_mode = verbose_mode;
     verbose_mode = min(verbose_mode, VerboseMode::VB_MIN);
     // to avoid printing gappy sites in addPattern
-    size_t nsite = getNSite();
-    size_t nseq = getNSeq();
+    size_t   nsite = getNSite();
     Pattern pat;
     pat.resize(nseq);
     
     for (size_t site = 0; site < nsite; ++site) {
-        for (size_t seq = 0; seq < nseq; ++seq) {
+        for (intptr_t seq = 0; seq < nseq; ++seq) {
             StateType state = at(getPatternID(site))[seq];
             if (state == STATE_UNKNOWN) {
                 state = res->STATE_UNKNOWN;
@@ -3757,7 +3767,8 @@ Alignment *Alignment::convertCodonToDNA() {
     if (seq_type != SeqType::SEQ_CODON) {
         outError("Cannot convert non-codon alignment into DNA");
     }
-    for (int i = 0; i < getNSeq32(); ++i) {
+    intptr_t nseqs = getNSeq();
+    for (intptr_t i = 0; i < nseqs; ++i) {
         res->seq_names.push_back(getSeqName(i));
     }
     res->name = name;
@@ -4238,7 +4249,7 @@ void Alignment::createGapMaskedAlignment(Alignment *masked_aln, Alignment *aln) 
         outError("Different number of sites in masked alignment");
     }
     intptr_t nsite = aln->getNSite();
-    int      nseq  = aln->getNSeq32();
+    intptr_t nseq  = aln->getNSeq();
     seq_names.insert(seq_names.begin(),
                      aln->seq_names.begin(), aln->seq_names.end());
     name = aln->name;
@@ -4251,7 +4262,7 @@ void Alignment::createGapMaskedAlignment(Alignment *masked_aln, Alignment *aln) 
     pattern_index.clear();
     IntVector name_map;
     for (auto it = seq_names.begin(); it != seq_names.end(); it++) {
-        int seq_id = masked_aln->getSeqID(*it);
+        intptr_t seq_id = masked_aln->getSeqID(*it);
         if (seq_id < 0) outError("Masked alignment does not contain taxon ", *it);
         name_map.push_back(seq_id);
     }
@@ -4294,7 +4305,7 @@ void Alignment::concatenateAlignment(Alignment *aln) {
     site_pattern.resize(cur_sites + nsite , -1);
     IntVector name_map;
     for (auto it = seq_names.begin(); it != seq_names.end(); it++) {
-        int seq_id = aln->getSeqID(*it);
+        intptr_t seq_id = aln->getSeqID(*it);
         if (seq_id < 0) {
             outError("The other alignment does not contain taxon ", *it);
         }
@@ -4478,20 +4489,27 @@ void Alignment::generateUninfPatterns(StateType repeat,
                                       vector<StateType> &singleton,
                                       vector<int> &seq_pos,
                                       vector<Pattern> &unobserved_ptns) {
-    int seqs = static_cast<int>(getNSeq());
+    intptr_t seqs = getNSeq();
     if (seq_pos.size() == singleton.size()) {
         Pattern pat;
         pat.resize(seqs, repeat);
-        for (int i = 0; i < seq_pos.size(); i++)
+        for (intptr_t i = 0; i < seq_pos.size(); i++) {
             pat[seq_pos[i]] = singleton[i];
+        }
         unobserved_ptns.push_back(pat);
         return;
     }
-    for (int seq = 0; seq < seqs; seq++) {
+    for (intptr_t seq = 0; seq < seqs; seq++) {
         bool dup = false;
-        for (auto s: seq_pos)
-            if (seq == s) { dup = true; break; }
-        if (dup) continue;
+        for (auto s: seq_pos) {
+            if (seq == s) { 
+                dup = true; 
+                break; 
+            }
+        }
+        if (dup) {
+            continue;
+        }
         vector<int> seq_pos_new = seq_pos;
         seq_pos_new.push_back(seq);
         generateUninfPatterns(repeat, singleton, seq_pos_new, unobserved_ptns);
@@ -4522,7 +4540,7 @@ void Alignment::getUnobservedConstPatterns(ASCType ASC_type,
             intptr_t orig_nptn = getNPattern();
             intptr_t max_orig_nptn = get_safe_upper_limit(orig_nptn);
             unobserved_ptns.reserve(max_orig_nptn*num_states);
-            int nseq = getNSeq32();
+            intptr_t nseq = getNSeq();
             for (StateType state = 0; static_cast<int>(state) < num_states; state++)
                 for (intptr_t ptn = 0; ptn < max_orig_nptn; ptn++) {
                     Pattern new_ptn;
@@ -4534,8 +4552,9 @@ void Alignment::getUnobservedConstPatterns(ASCType ASC_type,
                             else
                                 new_ptn.push_back(STATE_UNKNOWN);
                         }
-                    } else
+                    } else {
                         new_ptn.resize(nseq, STATE_UNKNOWN);
+                    }
                     unobserved_ptns.push_back(new_ptn);
                 }
             break;
@@ -4632,23 +4651,23 @@ double Alignment::computeJCDist(int seq1, int seq2) {
 
 template <class S> void Alignment::printDist(const std::string& format,
                                              S &out, double *dist_mat) const {
-    int    nseqs   = getNSeq32();
-    size_t max_len = getMaxSeqNameLength();
+    intptr_t nseqs   = getNSeq();
+    size_t   max_len = getMaxSeqNameLength();
     if (max_len < 10) max_len = 10;
     out << nseqs << endl;
     auto precision = max((int)ceil(-log10(Params::getInstance().min_branch_length))+1, 6);
     out.precision(precision);
     bool lower = (format.substr(0,5) == "lower");
     bool upper = (format.substr(0,5) == "upper");
-    for (int seq1 = 0; seq1 < nseqs; ++seq1)  {
+    for (intptr_t seq1 = 0; seq1 < nseqs; ++seq1)  {
         std::stringstream line;
         line.width(max_len);
         line.precision(precision);
         line << std::fixed << std::left << getSeqName(seq1);
-        size_t rowStart = upper ? (seq1+1) : 0;
-        size_t rowStop  = lower ? (seq1) : nseqs;
-        size_t pos      = seq1 * nseqs + rowStart;
-        for (size_t seq2 = rowStart; seq2 < rowStop; ++seq2) {
+        intptr_t rowStart = upper ? (seq1+1) : 0;
+        intptr_t rowStop  = lower ? (seq1) : nseqs;
+        intptr_t pos      = seq1 * nseqs + rowStart;
+        for (intptr_t seq2 = rowStart; seq2 < rowStop; ++seq2) {
             line << " ";
             line << dist_mat[pos++];
         }
@@ -5192,32 +5211,34 @@ void Alignment::countStatePerSequence (unsigned *count_per_sequence) {
 }
 
 void Alignment::computeStateFreqPerSequence (double *freq_per_sequence) {
-    size_t nseqs = getNSeq();
-    double *states_app = new double[num_states*(STATE_UNKNOWN+1)];
-    double *new_freq = new double[num_states];
-    unsigned *state_count = new unsigned[(STATE_UNKNOWN+1)*nseqs];
-    double *new_state_freq = new double[num_states];
+    intptr_t  nseqs          = getNSeq();
+    double*   states_app     = new double[num_states*(STATE_UNKNOWN+1)];
+    double*   new_freq       = new double[num_states];
+    unsigned* state_count    = new unsigned[(STATE_UNKNOWN+1)*nseqs];
+    double*   new_state_freq = new double[num_states];
     memset(state_count, 0, sizeof(unsigned)*(STATE_UNKNOWN+1)*nseqs);
 
     for (int i = 0; i <= static_cast<int>(STATE_UNKNOWN); i++) {
         getAppearance(i, &states_app[i*num_states]);
     }
     for (iterator it = begin(); it != end(); it++) {
-        for (size_t i = 0; i != nseqs; i++) {
+        for (intptr_t i = 0; i != nseqs; i++) {
             state_count[i*(STATE_UNKNOWN+1) + it->at(i)] += it->frequency;
         }
     }
     double equal_freq = 1.0/num_states;
-    for (size_t i = 0; i < num_states*nseqs; i++) {
+    for (intptr_t i = 0; i < num_states*nseqs; i++) {
         freq_per_sequence[i] = equal_freq;
     }
     const int NUM_TIME = 8;
     for (int k = 0; k < NUM_TIME; k++) {
-        for (int seq = 0; seq < nseqs; seq++) {
+        for (intptr_t seq = 0; seq < nseqs; seq++) {
             double *state_freq = &freq_per_sequence[seq*num_states];
             memset(new_state_freq, 0, sizeof(double)*num_states);
             for (int i = 0; i <= static_cast<int>(STATE_UNKNOWN); i++) {
-                if (state_count[seq*(STATE_UNKNOWN+1)+i] == 0) continue;
+                if (state_count[seq*(STATE_UNKNOWN+1)+i] == 0) {
+                    continue;
+                }
                 double sum_freq = 0.0;
                 for (int j = 0; j < num_states; j++) {
                     new_freq[j] = state_freq[j] * states_app[i*num_states+j];
@@ -5229,11 +5250,13 @@ void Alignment::computeStateFreqPerSequence (double *freq_per_sequence) {
                 }
             }
             double sum_freq = 0.0;
-            for (int j = 0; j < num_states; j++)
+            for (int j = 0; j < num_states; j++) {
                 sum_freq += new_state_freq[j];
+            }
             sum_freq = 1.0/sum_freq;
-            for (int j = 0; j < num_states; j++)
+            for (int j = 0; j < num_states; j++) {
                 state_freq[j] = new_state_freq[j]*sum_freq;
+            }
          }
     }
 
@@ -5401,12 +5424,15 @@ UINT Alignment::getCountOfSingletonParsimonyStates() const {
 }
 
 void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double *ntfreq) {
-	size_t nseqs = getNSeq();
+	intptr_t nseqs = getNSeq();
 
 	if (freq == StateFreqType::FREQ_CODON_1x4) {
 		memset(ntfreq, 0, sizeof(double)*4);
 		for (iterator it = begin(); it != end(); it++) {
-			for (int seq = 0; seq < nseqs; seq++) if ((*it)[seq] != STATE_UNKNOWN) {
+			for (intptr_t seq = 0; seq < nseqs; seq++) {
+                if ((*it)[seq] == STATE_UNKNOWN) {
+                    continue;
+                }
 				int codon = codon_table[(int)(*it)[seq]];
 //				int codon = (int)(*it)[seq];
 				int nt1 = codon / 16;
@@ -5418,13 +5444,16 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 			}
 		}
 		double sum = 0;
-		for (int i = 0; i < 4; i++)
+		for (int i = 0; i < 4; i++) {
 			sum += ntfreq[i];
-		for (int i = 0; i < 4; i++)
+        }
+		for (int i = 0; i < 4; i++) {
 			ntfreq[i] /= sum;
+        }
 		if (verbose_mode >= VerboseMode::VB_MED) {
-			for (int i = 0; i < 4; i++)
+			for (int i = 0; i < 4; i++) {
 				cout << "  " << symbols_dna[i] << ": " << ntfreq[i];
+            }
 			cout << endl;
 		}
 		memcpy(ntfreq+4, ntfreq, sizeof(double)*4);
@@ -5442,18 +5471,24 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
         }
 //        sum = (1.0-sum)/(1.0-sum_stop);
         sum = 1.0/sum;
-		for (int i = 0; i < num_states; i++)
-            if (!isStopCodon(i))
+		for (int i = 0; i < num_states; i++) {
+            if (!isStopCodon(i)) {
                 state_freq[i] *= sum;
+            }
+        }
         sum = 0.0;
-		for (int i = 0; i < num_states; i++)
+		for (int i = 0; i < num_states; i++) {
                 sum += state_freq[i];
+        }
         ASSERT(fabs(sum-1.0)<1e-5);
 	} else if (freq == StateFreqType::FREQ_CODON_3x4) {
 		// F3x4 frequency model
 		memset(ntfreq, 0, sizeof(double)*12);
 		for (iterator it = begin(); it != end(); it++) {
-			for (int seq = 0; seq < nseqs; seq++) if ((*it)[seq] != STATE_UNKNOWN) {
+			for (intptr_t seq = 0; seq < nseqs; seq++) {
+                if ((*it)[seq] == STATE_UNKNOWN) {
+                    continue;
+                }
 				int codon = codon_table[(int)(*it)[seq]];
 //				int codon = (int)(*it)[seq];
 				int nt1 = codon / 16;
@@ -5491,12 +5526,15 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
         }
 //        sum = (1.0-sum)/(1.0-sum_stop);
         sum = 1.0 / sum;
-		for (int i = 0; i < num_states; i++)
-            if (!isStopCodon(i))
+		for (int i = 0; i < num_states; i++) {
+            if (!isStopCodon(i)) {
                 state_freq[i] *= sum;
+            }
+        }
         sum = 0.0;
-		for (int i = 0; i < num_states; i++)
-                sum += state_freq[i];
+		for (int i = 0; i < num_states; i++) {
+            sum += state_freq[i];
+        }
         ASSERT(fabs(sum-1.0)<1e-5);
 
 //		double sum = 0;
