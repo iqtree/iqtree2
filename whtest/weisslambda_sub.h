@@ -21,10 +21,11 @@
 #ifndef WEISSLAMBDA_SUB_H
 #define WEISSLAMBDA_SUB_H
 
-extern int simulation, nr_basen, taxa;
-extern char datei_name[100];
+extern int      simulation;
+extern intptr_t nr_basen, taxa;
+extern char     datei_name[100];
 
-extern double alpha;
+extern double   alpha;
 /*
 extern char ausgabe_0[200];
 extern char ausgabe_1[200];

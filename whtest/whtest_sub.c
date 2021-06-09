@@ -55,15 +55,19 @@ void ReadDataSize ( char *datafile )
 	}
 
 
-	if ( fscanf ( ifp, "%d", &taxa ) != 1 ) {
+	int int_taxa;
+	if ( fscanf ( ifp, "%d", &int_taxa ) != 1 ) {
 		printf ( "\nERROR: Missing number of taxa!\n" );
 		Finalize ( 1 );
 	}
+	taxa = int_taxa;
 
-	if ( fscanf ( ifp, "%d", &nr_basen ) != 1 ) {
+	int int_nr_basen;
+	if ( fscanf ( ifp, "%d", &int_nr_basen ) != 1 ) {
 		printf ( "\nERROR: Missing number of sites!\n" );
 		Finalize ( 1 );
 	}
+	nr_basen = int_nr_basen;
 
 	do	
 		c = fgetc ( ifp ); 	/* skip rest of line */
@@ -129,49 +133,45 @@ void AllocateMemory()
 }
 
 void FreeMemory() {
-	int i, j, k;
 
 	/* raten_heterogenitaet */
 	free(alpha_rate);
 
 	/* pairwise rate matrices */
-	for ( i = ( int ) ( taxa* ( taxa-1. ) /2. ) - 1; i >= 0; i-- ) {
+	for ( intptr_t i = ( int ) ( taxa* ( taxa-1. ) /2. ) - 1; i >= 0; i-- ) {
 		free(q_matrizen[i]);
 	}
 	free(q_matrizen);
 
 	/* divergence matrices */
 
-	for ( i = taxa-1; i>=0; i-- ) {
-
-		for ( j = taxa-1; j >= 0; j-- ) {
-			for ( k = 4; k >= 0; k-- )
+	for ( intptr_t i = taxa-1; i>=0; i-- ) {
+		for ( intptr_t j = taxa-1; j >= 0; j-- ) {
+			for (intptr_t k = 4; k >= 0; k--) {
 				free(H[i][j][k]);
+			}
 			free(H[i][j]);
 		}
 		free(H[i]);
 	}
-
 	free(H);
 
 	/* distance matrix  */
 
-	for ( i = taxa-1; i >= 0; i-- )
+	for (intptr_t i = taxa - 1; i >= 0; i--) {
 		free(distance[i]);
+	}
 	free(distance);
-
 
 	/* TODO baum structure */
 
 	free(baum);
 	/* sequence data */
 
-	for ( i = 2*taxa-2; i >= 0; i-- )
+	for (intptr_t i = 2 * taxa - 2; i >= 0; i--) {
 		free(seqData[i]);
-
+	}
 	free(seqData);
-
-
 }
 
 
@@ -385,18 +385,18 @@ void FixDistance_old() {
 
 void Save_Distance(char *distfile, double **dist) {
 	FILE *fps;
-	int i, j;
 
 	if ((fps = fopen(distfile, "w")) == NULL) {
 		printf ( "\nERROR: Cannot write to file %s!\n", distfile );
 	}
 
-	fprintf(fps, "%d\n", taxa);
+	fprintf(fps, "%d\n", (int)taxa);
 
-	for (i = 0; i < taxa; i++) {
+	for (intptr_t i = 0; i < taxa; i++) {
 		fprintf(fps, "%-10s", baum[i].bezeichnung);
-		for (j = 0; j < taxa; j++) 
+		for (intptr_t j = 0; j < taxa; j++) {
 			fprintf(fps, " %f", dist[i][j]);
+		}
 		fprintf(fps, "\n");
 	}
 
@@ -719,16 +719,17 @@ void Save_Tree ( knoten *P )
 void ComputeNeighborJoiningTree()
 {
 
-	int i, j, c, p1 = 0, p2 = 0, nr_nodes;
-	int *cluster_index;
+	intptr_t i, j, c, p1 = 0, p2 = 0, nr_nodes;
+	intptr_t *cluster_index;
 	double **nj_matrix, nj_distance, *hilfsvektor;
 	double current_minimum, max = 0;
 	/*knoten *P;*/
 
 
-	cluster_index = ( int * ) malloc ( taxa * sizeof ( int ) );
-	for ( i = 0; i < taxa; i++ )
+	cluster_index = ( intptr_t * ) malloc ( taxa * sizeof ( intptr_t ) );
+	for (i = 0; i < taxa; i++) {
 		cluster_index[i] = i;
+	}
 
 	hilfsvektor = ( double * ) calloc ( taxa, sizeof ( double ) );
 
@@ -752,7 +753,7 @@ void ComputeNeighborJoiningTree()
 	/*  	baum = (knoten *) malloc ( (2*taxa-1) * sizeof ( knoten ) ); schon oben passiert  */
 
 	for ( i = 0; i < 2*taxa-1; i++ )	{
-		baum[i].label = baum[i].ixlabel = i;
+		baum[i].label = baum[i].ixlabel = (int)i;
 		baum[i].left = NULL;
 		baum[i].right = NULL;
 		baum[i].up = NULL;

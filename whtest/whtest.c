@@ -119,9 +119,8 @@ void Finalize(int exit_code) {
 	exit(exit_code);
 }
 
-
-
-int simulation, current_sim, nr_basen, taxa;
+int      simulation, current_sim;
+intptr_t nr_basen, taxa;
 
 int random_seed = -1;
 int check_times = 10;
@@ -150,7 +149,7 @@ char ausgabe_nj_tree[200];
 
 double *ml_distance = NULL;
 
-void WHT_setAlignmentSize(int ntax, int nsite) {
+void WHT_setAlignmentSize(intptr_t ntax, intptr_t nsite) {
 	taxa = ntax;
 	nr_basen = nsite;
 }
@@ -159,12 +158,12 @@ void WHT_allocateMemory() {
 	AllocateMemory();
 }
 
-void WHT_setSequenceSite(int seqid, int siteid, char c) {
+void WHT_setSequenceSite(intptr_t seqid, intptr_t siteid, char c) {
 	if (c>4) c = 4;
 	seqData[seqid][siteid] = c;
 }
 
-void WHT_setSequenceName(int seqid, const char *name) {
+void WHT_setSequenceName(intptr_t seqid, const char *name) {
 	safe_strcpy ( baum[seqid].bezeichnung, name);	
 }
 
@@ -346,7 +345,7 @@ void StartReport() {
 	fprintf(fps, "Gamma shape parameter: %f\n", alpha);
 	fprintf(fps, "Random number seed: %d\n\n", random_seed);
 	fprintf(fps, "SEQUENCE ALIGNMENT\n\n");
-	fprintf(fps, "Input data: %d sequences with %d nucleotide sites\n", taxa, nr_basen);
+	fprintf(fps, "Input data: %d sequences with %d nucleotide sites\n", (int)taxa, (int)nr_basen);
 	fprintf(fps, "\n");
 	fclose(fps);
 }
@@ -496,7 +495,7 @@ int WHTest_run ( int argc,char **argv ) {
 #endif
 
 	if (isMasterProc() && argc > 0)
-		printf("Input data set (%s) contains %d sequences of length %d\n", datei_name, taxa, nr_basen);
+		printf("Input data set (%s) contains %d sequences of length %d\n", datei_name, (int)taxa, (int)nr_basen);
 	if (argc > 0) ReadData ( datei_name );
 
 

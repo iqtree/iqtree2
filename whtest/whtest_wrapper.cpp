@@ -69,7 +69,8 @@ int WHTest(Params &params, IQTree &tree) {
 	WHT_allocateMemory();
 	for (intptr_t i = 0; i < nseq; i++) {
 		for (intptr_t j = 0; j < nsite; j++) {
-			WHT_setSequenceSite(i, j, (*tree.aln)[tree.aln->getPatternID(j)][i]);
+			WHT_setSequenceSite(i, j, 
+				                (*tree.aln)[tree.aln->getPatternID(j)][i]);
 		}
 	}			
 	for (intptr_t i = 0; i < nseq; i++) {

@@ -452,9 +452,9 @@ int  PhyloTree::renumberInternalNodes() {
     #pragma omp parallel for
     #endif
     for (intptr_t i=0; i<node_count; ++i) {
-        pnv[i]->id = first_old_interior_id + i;
+        pnv[i]->id = static_cast<int>(first_old_interior_id + i);
     }
-    return first_old_interior_id + static_cast<int>(pnv.size());
+    return static_cast<int>(first_old_interior_id + pnv.size());
 }
 
 

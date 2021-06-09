@@ -97,7 +97,7 @@ const StrVector& Alignment::getSeqNames() const {
 	return seq_names;
 }
 
-int Alignment::getSeqID(const string &seq_name) const {
+intptr_t Alignment::getSeqID(const string &seq_name) const {
     for (intptr_t i = 0; i < getNSeq(); i++) {
         if (seq_name == getSeqName(i)) {
             return i;
@@ -478,7 +478,7 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two,
     double progress = 0.0;
 #endif
     
-    int            nseq   = getNSeq();
+    intptr_t       nseq   = getNSeq();
     vector<size_t> hashes = getSequenceHashes(&progress);
     std::map<size_t, size_t> hash_counts;
     for (intptr_t i=0; i<nseq; ++i) {
@@ -517,7 +517,7 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two,
                 }
             }
             if (!equal_seq) continue;
-            if (removed_seqs.size()+3 < getNSeq() &&
+            if (static_cast<int>(removed_seqs.size())+3 < getNSeq() &&
                 (!keep_two || !first_ident_seq)) {
                 removed_seqs.push_back(getSeqName(seq2));
                 target_seqs.push_back(getSeqName(seq1));
@@ -556,7 +556,7 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two,
     if (removed_seqs.size() > 0) {
         double   removeDupeStart = getRealTime();
         intptr_t nseq            = getNSeq();
-        if (removed_seqs.size() + 3 >= nseq) {
+        if (static_cast<intptr_t>(removed_seqs.size()) + 3 >= nseq) {
             outWarning("Your alignment contains too many identical sequences!");
         }
         IntVector keep_seqs;
@@ -605,11 +605,11 @@ bool Alignment::isGapOnlySeq(intptr_t seq_id) {
 }
 
 Alignment *Alignment::removeGappySeq() {
-	IntVector keep_seqs;
-    intptr_t nseq = getNSeq();
+    IntVector keep_seqs;
+    intptr_t    nseq = getNSeq();
 	for (intptr_t i = 0; i < nseq; i++)
 		if (! isGapOnlySeq(i)) {
-			keep_seqs.push_back(i);
+			keep_seqs.push_back(static_cast<int>(i));
 		}
 	if (keep_seqs.size() == nseq)
 		return this;
@@ -617,7 +617,7 @@ Alignment *Alignment::removeGappySeq() {
     if (keep_seqs.size() < 3 && nseq >= 3) {
         for (intptr_t i = 0; i < nseq && keep_seqs.size() < 3; i++) {
             if (isGapOnlySeq(i)) {
-                keep_seqs.push_back(i);
+                keep_seqs.push_back(static_cast<int>(i));
             }
         }
     }
@@ -3124,7 +3124,7 @@ bool Alignment::getSiteFromResidue(int seq_id, int &residue_left,
 int Alignment::buildRetainingSites(const char *aln_site_list, IntVector &kept_sites,
                                    int exclude_sites, const char *ref_seq_name) const {
     if (aln_site_list) {
-        int seq_id = -1;
+        intptr_t seq_id = -1;
         if (ref_seq_name) {
             string ref_seq = ref_seq_name;
             seq_id = getSeqID(ref_seq);
@@ -3158,7 +3158,7 @@ int Alignment::buildRetainingSites(const char *aln_site_list, IntVector &kept_si
                     throw "Right range is bigger than alignment size";
                 }
                 if (seq_id >= 0) {
-                    getSiteFromResidue(seq_id, left, right);
+                    getSiteFromResidue(static_cast<int>(seq_id), left, right);
                 }
                 for (int i = left; i < right; i++)
                     kept_sites[i] = 1;
@@ -3356,7 +3356,8 @@ void Alignment::printNexus(ostream &out, bool append, const char *aln_site_list,
     size_t max_len = getMaxSeqNameLength();
     if (print_taxid) max_len = 10;
     if (max_len < 10) max_len = 10;
-    for (intptr_t seq_id = 0; seq_id < seq_names.size(); seq_id++) {
+    intptr_t nseq = seq_names.size();
+    for (intptr_t seq_id = 0; seq_id < nseq; seq_id++) {
         out << "  ";
         out.width(max_len);
         if (print_taxid) {
@@ -4263,8 +4264,10 @@ void Alignment::createGapMaskedAlignment(Alignment *masked_aln, Alignment *aln) 
     IntVector name_map;
     for (auto it = seq_names.begin(); it != seq_names.end(); it++) {
         intptr_t seq_id = masked_aln->getSeqID(*it);
-        if (seq_id < 0) outError("Masked alignment does not contain taxon ", *it);
-        name_map.push_back(seq_id);
+        if (seq_id < 0) {
+            outError("Masked alignment does not contain taxon ", *it);
+        }
+        name_map.push_back(static_cast<int>(seq_id));
     }
     VerboseMode save_mode = verbose_mode;
     verbose_mode = min(verbose_mode, VerboseMode::VB_MIN);
@@ -4273,7 +4276,7 @@ void Alignment::createGapMaskedAlignment(Alignment *masked_aln, Alignment *aln) 
         int ptn_id = aln->getPatternID(site);
         Pattern pat = aln->at(ptn_id);
         Pattern masked_pat = masked_aln->at(masked_aln->getPatternID(site));
-        for (size_t seq = 0; seq < nseq; ++seq) {
+        for (intptr_t seq = 0; seq < nseq; ++seq) {
             if (masked_pat[name_map[seq]] == STATE_UNKNOWN) {
                 pat[seq] = STATE_UNKNOWN;
             }
@@ -4309,7 +4312,7 @@ void Alignment::concatenateAlignment(Alignment *aln) {
         if (seq_id < 0) {
             outError("The other alignment does not contain taxon ", *it);
         }
-        name_map.push_back(seq_id);
+        name_map.push_back(static_cast<int>(seq_id));
     }
     VerboseMode save_mode = verbose_mode;
     verbose_mode = min(verbose_mode, VerboseMode::VB_MIN);
@@ -4490,10 +4493,11 @@ void Alignment::generateUninfPatterns(StateType repeat,
                                       vector<int> &seq_pos,
                                       vector<Pattern> &unobserved_ptns) {
     intptr_t seqs = getNSeq();
-    if (seq_pos.size() == singleton.size()) {
+    intptr_t seq_pos_size = seq_pos.size();
+    if (seq_pos_size == singleton.size()) {
         Pattern pat;
         pat.resize(seqs, repeat);
-        for (intptr_t i = 0; i < seq_pos.size(); i++) {
+        for (intptr_t i = 0; i < seq_pos_size; i++) {
             pat[seq_pos[i]] = singleton[i];
         }
         unobserved_ptns.push_back(pat);
@@ -4511,7 +4515,7 @@ void Alignment::generateUninfPatterns(StateType repeat,
             continue;
         }
         vector<int> seq_pos_new = seq_pos;
-        seq_pos_new.push_back(seq);
+        seq_pos_new.push_back(static_cast<int>(seq));
         generateUninfPatterns(repeat, singleton, seq_pos_new, unobserved_ptns);
     }
 }
@@ -4568,13 +4572,15 @@ void Alignment::getUnobservedConstPatterns(ASCType ASC_type,
                     if (s != repeat) rest.push_back(s);
                 vector<vector<StateType> > singletons;
                 generateSubsets(rest, singletons);
-                for (vector<StateType>& singleton : singletons)
-                    if (singleton.size() < getNSeq()-1 ||
-                        (singleton.size() == getNSeq()-1 && repeat == 0)) {
+                for (vector<StateType>& singleton : singletons) {
+                    intptr_t singleton_count = singletons.size();
+                    if (singleton_count < getNSeq() - 1 ||
+                        (singleton_count == getNSeq() - 1 && repeat == 0)) {
                         vector<int> seq_pos;
                         generateUninfPatterns(repeat, singleton,
-                                              seq_pos, unobserved_ptns);
+                            seq_pos, unobserved_ptns);
                     }
+                }
             }
             break;
         }
@@ -5580,9 +5586,11 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 		memset(state_freq, 0, num_states*sizeof(double));
         int i = 0;
         for (iterator it = begin(); it != end(); ++it, ++i)
-			for (size_t seq = 0; seq < nseqs; seq++) {
+			for (intptr_t seq = 0; seq < nseqs; seq++) {
 				int state = it->at(seq);
-				if (state >= num_states) continue;
+                if (state >= num_states) {
+                    continue;
+                }
 				state_freq[state] += it->frequency;
 			}
         double sum = 0.0;

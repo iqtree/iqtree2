@@ -45,12 +45,14 @@ const unsigned char STATE_INVALID = 127;
 
 #ifdef USE_HASH_MAP
 typedef unordered_map<string, int> StringIntMap;
+typedef unordered_map<string, intptr_t> StringInt64Map;
 typedef unordered_map<string, StateType> StringStateMap;
 typedef unordered_map<StateType, string> StateStringMap;
 typedef unordered_map<string, double> StringDoubleHashMap;
 typedef unordered_map<uint32_t, uint32_t> IntIntMap;
 #else
 typedef map<string, int> StringIntMap;
+typedef map<string, intptr_t> StringInt64Map; 
 typedef map<string, StateType> StringStateMap;
 typedef map<StateType, string> StateStringMap;
 typedef map<string, double> StringDoubleHashMap;

@@ -115,7 +115,7 @@ void MTree::assignIDs(StrVector& taxaNames) {
             outError(str, false);
         } else {
             ASSERT(node->isLeaf());
-            node->id = seq;
+            node->id = static_cast<int>(seq);
         }
     }
     StrVector taxname;

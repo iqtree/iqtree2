@@ -146,7 +146,8 @@ public:
             @param min_taxa only keep alignment that has >= min_taxa sequences
             @param[out] kept_partitions (for SuperAlignment) indices of kept partitions
      */
-    virtual void extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_true_char, int min_taxa = 0, IntVector *kept_partitions = NULL);
+    virtual void extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_true_char, 
+                                     int min_taxa = 0, IntVector *kept_partitions = NULL);
 
     /**
         extract a subset of partitions to form a new SuperAlignment object

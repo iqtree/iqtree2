@@ -24,13 +24,13 @@
 
 int WHTest_run ( int argc, char **argv );
 
-void WHT_setAlignmentSize(int ntax, int nsite);
+void WHT_setAlignmentSize(intptr_t ntax, intptr_t nsite);
 
 void WHT_allocateMemory();
 
-void WHT_setSequenceSite(int seqid, int siteid, char c);
+void WHT_setSequenceSite(intptr_t seqid, intptr_t siteid, char c);
 
-void WHT_setSequenceName(int seqid, const char *name);
+void WHT_setSequenceName(intptr_t seqid, const char *name);
 
 void WHT_setParams(int nsim, double gamma_shape, const char *filename, double *dist);
 

@@ -371,7 +371,7 @@ public:
     /**
             @return number of sequences
      */
-    inline size_t getNSeq() const {
+    inline intptr_t getNSeq() const {
         return seq_names.size();
     }
 
@@ -451,7 +451,7 @@ public:
             @param seq_name sequence name
             @return corresponding ID, -1 if not found
      */
-    int getSeqID(const string &seq_name) const;
+    intptr_t getSeqID(const string &seq_name) const;
 
     /**
             @return length of the longest sequence name

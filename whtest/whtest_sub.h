@@ -38,7 +38,8 @@ typedef struct _knoten {
 extern knoten *baum;
 extern int **seqData;
 
-extern int simulation, nr_basen, taxa;
+extern int      simulation;
+extern intptr_t nr_basen, taxa;
 
 extern double alpha, beta;
 

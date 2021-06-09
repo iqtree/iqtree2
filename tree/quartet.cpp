@@ -1332,11 +1332,11 @@ void PhyloTree::readLikelihoodMappingGroups(char *filename, QuartetGroups &LMGro
 		cout << "Cluster \"" << LMGroups.Name[4] << "\" lists " << (*i)->taxlist.size() << " sequences to be ignored:" << endl;
 		int t = 0;
 		for (auto it = (*i)->taxlist.begin(); it != (*i)->taxlist.end(); it++) {
-			auto taxid = aln->getSeqID(*it);
+			intptr_t taxid = aln->getSeqID(*it);
 			if (taxid < 0) {
 				cout << "WARNING: unknown sequence name \"" << (*it) << "\"! Will be ignored." << endl;
 			} else {
-				LMGroups.GroupX[t] = taxid;
+				LMGroups.GroupX[t] = static_cast<int>(taxid);
 				// cout << "  " << (*it) << " (" << taxid << "," << LMGroups.GroupX[t] << ")" << endl;
 				cout << "  " << LMGroups.GroupX[t]+1 << ". " << (*it) << endl;
 				t++;
@@ -1374,16 +1374,16 @@ void PhyloTree::readLikelihoodMappingGroups(char *filename, QuartetGroups &LMGro
 				cout << "WARNING: sequence name \"" << (*it) << "\"! Will be ignored." << endl;
 			} else {
 				switch(n){
-					case 0: LMGroups.GroupA[t] = taxid;
+					case 0: LMGroups.GroupA[t] = static_cast<int>(taxid);
 						cout << "  " << LMGroups.GroupA[t]+1 << ". " << (*it) << endl;
 						break;
-					case 1: LMGroups.GroupB[t] = taxid;
+					case 1: LMGroups.GroupB[t] = static_cast<int>(taxid);
 						cout << "  " << LMGroups.GroupB[t]+1 << ". " << (*it) << endl;
 						break;
-					case 2: LMGroups.GroupC[t] = taxid;
+					case 2: LMGroups.GroupC[t] = static_cast<int>(taxid);
 						cout << "  " << LMGroups.GroupC[t]+1 << ". " << (*it) << endl;
 						break;
-					case 3: LMGroups.GroupD[t] = taxid;
+					case 3: LMGroups.GroupD[t] = static_cast<int>(taxid);
 						cout << "  " << LMGroups.GroupD[t]+1 << ". " << (*it) << endl;
 						break;
     					default: outError("Only up to 4 Likelihood Mapping clusters allowed, plus one 'ignored' cluster!"); break;

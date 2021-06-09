@@ -175,18 +175,18 @@ void SuperAlignment::init(StrVector *sequence_names) {
 
     size_t site = 0;
 	for (auto it = partitions.begin(); it != partitions.end(); ++it, ++site) {
-		int nseq = (*it)->getNSeq();
+		intptr_t nseq = (*it)->getNSeq();
 		//cout << "nseq  = " << nseq << endl;
 		for (intptr_t seq = 0; seq < nseq; ++seq) {
-			int id = getSeqID((*it)->getSeqName(seq));
+			intptr_t id = getSeqID((*it)->getSeqName(seq));
 			if (id < 0) {
 				seq_names.push_back((*it)->getSeqName(seq));
 				id = static_cast<int>(seq_names.size())-1;
 				IntVector vec(nsite, -1);
-				vec[site] = seq;
+				vec[site] = static_cast<int>(seq);
 				taxa_index.push_back(vec);
 			} else
-				taxa_index[id][site] = seq;
+				taxa_index[id][site] = static_cast<int>(seq);
 		}
 	}
 	// now the patterns of sequence-genes presence/absence
@@ -802,11 +802,11 @@ void SuperAlignment::linkSubAlignment(int part) {
 	intptr_t nseq = getNSeq();
 	BoolVector checked(partitions[part]->getNSeq(), false);
 	for (intptr_t seq = 0; seq < nseq; ++seq) {
-		int id = partitions[part]->getSeqID(getSeqName(seq));
+		intptr_t id = partitions[part]->getSeqID(getSeqName(seq));
 		if (id < 0)
 			taxa_index[seq][part] = -1;
 		else {
-			taxa_index[seq][part] = id;
+			taxa_index[seq][part] = static_cast<int>(id);
 			checked[id] = true;
 		}
 	}
@@ -834,7 +834,7 @@ void SuperAlignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int 
 	//Alignment::extractSubAlignment(aln, seq_id, 0);
 
 	taxa_index.resize(getNSeq());
-	for (size_t i = 0; i < getNSeq(); ++i) {
+	for (intptr_t i = 0; i < getNSeq(); ++i) {
 		taxa_index[i].resize(saln->partitions.size(), -1);
     }
 
@@ -858,7 +858,7 @@ void SuperAlignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int 
 	}
 
     if (partitions.size() < saln->partitions.size()) {
-        for (size_t i = 0; i < getNSeq(); ++i) {
+        for (intptr_t i = 0; i < getNSeq(); ++i) {
             taxa_index[i].resize(partitions.size());
         }
     }
@@ -886,7 +886,7 @@ SuperAlignment *SuperAlignment::extractPartitions(IntVector &part_id) {
     }
     
     newaln->taxa_index.resize(newaln->getNSeq());
-    for (size_t i = 0; i < newaln->getNSeq(); ++i) {
+    for (intptr_t i = 0; i < newaln->getNSeq(); ++i) {
         newaln->taxa_index[i].resize(part_id.size(), -1);
     }
     
@@ -931,7 +931,7 @@ void SuperAlignment::removePartitions(set<int> &removed_id) {
     // build the taxa_index
     taxa_index.resize(getNSeq());
 
-    for (size_t i = 0; i < getNSeq(); ++i) {
+    for (intptr_t i = 0; i < getNSeq(); ++i) {
         taxa_index[i].resize(partitions.size(), -1);
     }
     for (int i = 0; i < num_partitions; ++i) {
@@ -943,8 +943,8 @@ void SuperAlignment::removePartitions(set<int> &removed_id) {
 
 std::vector<size_t> SuperAlignment::getSequenceHashes(progress_display_ptr progress) const {
     //JB2020-06-23 Begin : Determine hashes for all the sequences
-    auto startHash = getRealTime();
-    auto n         = getNSeq();
+    double   startHash = getRealTime();
+    intptr_t n         = getNSeq();
     vector<size_t> hashes;
     hashes.resize(n, 0);
     #ifdef USE_BOOST
@@ -1029,7 +1029,8 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, 
             if (!equal_seq) {
                 continue;
             }
-            if (removed_seqs.size() + 3 < getNSeq() && (!keep_two || !first_ident_seq)) {
+            if (static_cast<intptr_t>(removed_seqs.size()) + 3 < getNSeq() && 
+                (!keep_two || !first_ident_seq)) {
                 removed_seqs.push_back(getSeqName(seq2));
                 target_seqs.push_back(getSeqName(seq1));
                 isSequenceRemoved[seq2] = true;
@@ -1059,10 +1060,10 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, 
         cout << "Checking for identical sequences took " 
              << checkTime << " wall-clock seconds" << endl;
     }
-
-	if (removed_seqs.empty()) return this; // do nothing if the list is empty
-
-    if (removed_seqs.size() + 3 >= getNSeq()) {
+    if (removed_seqs.empty()) {
+        return this; // do nothing if the list is empty
+    }
+    if (static_cast<intptr_t>(removed_seqs.size()) + 3 >= getNSeq()) {
         outWarning("Your alignment contains too many identical sequences!");
     }
 	// now remove identical sequences
@@ -1619,7 +1620,8 @@ Alignment *SuperAlignment::concatenateAlignments(set<int> &ids) {
     	for (Alignment::iterator it = partitions[id]->begin(); it != partitions[id]->end(); it++) {
     		Pattern pat;
     		//int part_seq = 0;
-    		for (intptr_t seq = 0; seq < union_taxa.size(); seq++)
+            intptr_t union_seq_count = union_taxa.size();
+    		for (intptr_t seq = 0; seq < union_seq_count; seq++)
     			if (union_taxa[seq] == 1) {
     				char ch = aln->STATE_UNKNOWN;
                     int seq_part = taxa_index[seq][id];
@@ -1693,9 +1695,9 @@ Alignment *SuperAlignment::concatenateAlignments() {
         intptr_t nseq = part_aln->getNSeq();
         //cout << "nseq  = " << nseq << endl;
         for (intptr_t seq = 0; seq < nseq; ++seq) {
-            int id = saln->getSeqID(part_aln->getSeqName(seq));
+            intptr_t id = saln->getSeqID(part_aln->getSeqName(seq));
             ASSERT(id >= 0);
-            saln->taxa_index[id][site] = seq;
+            saln->taxa_index[id][site] = static_cast<int>(seq);
         }
     }
     // now the patterns of sequence-genes presence/absence

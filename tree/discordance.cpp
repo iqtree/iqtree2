@@ -177,7 +177,7 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstre
         size_t part = 0;
         for (auto part_aln = saln->partitions.begin(); part_aln != saln->partitions.end(); part_aln++, part++) {
             // get the taxa names of the partition tree
-            StringIntMap name_map;
+            StringInt64Map name_map;
             intptr_t nseq = (*part_aln)->getNSeq();
             for (intptr_t i = 0; i < nseq; i++) {
                 name_map[(*part_aln)->getSeqName(i)] = i;

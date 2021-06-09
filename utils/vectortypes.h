@@ -28,6 +28,11 @@ typedef std::vector<int> IntList;
 typedef std::vector<int> IntVector;
 
 /**
+        vector of intptr_t
+ */
+typedef std::vector<intptr_t> Int64Vector;
+
+/**
         vector of bool
  */
 

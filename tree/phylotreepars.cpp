@@ -1614,8 +1614,8 @@ int PhyloTree::computeParsimonyTreeOld(int *rand_stream) {
     PhyloNeighborVec removed_nei; // removed Neighbor
     PhyloNodeVector  attached_node; // node attached to removed Neighbor
     PhyloNodeVector  added_nodes; // newly added nodes
-    int    newNodeID;
-    size_t index;
+    intptr_t         newNodeID;
+    size_t           index;
 
     PhyloTreeThreadingContext context(*this, params->parsimony_uses_max_threads);
     setParsimonyKernel(params->SSE);
@@ -1678,13 +1678,14 @@ int PhyloTree::computeParsimonyTreeOld(int *rand_stream) {
         best_pars_score = UINT_MAX;
         
         // create a new node attached to new taxon or removed node
-        PhyloNode *added_node = newNode(newNodeID++);
+        PhyloNode *added_node = newNode(static_cast<int>(newNodeID));
+        ++newNodeID;
         PhyloNode *new_taxon;
         auto seq_name = aln->getSeqName(taxon_order[leafNum]);
 
         if (step < static_cast<intptr_t>(removed_nei.size())) {
             // add the removed_nei (from constraint tree) back to the tree
-            getNeiBranches(removed_nei, attached_node, added_nodes, step, nodes1, nodes2);
+            getNeiBranches(removed_nei, attached_node, added_nodes, static_cast<int>(step), nodes1, nodes2);
             new_taxon = removed_nei[step]->getNode();
             added_node->neighbors.push_back(removed_nei[step]);
             new_taxon->updateNeighbor(attached_node[step], added_node);
@@ -1709,7 +1710,8 @@ int PhyloTree::computeParsimonyTreeOld(int *rand_stream) {
         added_node->addNeighbor(DUMMY_NODE_2, -1.0);
 
         usefulTime.start();
-        for (intptr_t branch_num = 0; branch_num < nodes1.size(); branch_num++) {
+        intptr_t branch_count = nodes1.size();
+        for (intptr_t branch_num = 0; branch_num < branch_count; branch_num++) {
             UINT score = addTaxonMPFast(new_taxon, added_node,
                                         nodes1[branch_num], nodes2[branch_num]);
             if (branch_num == 0 || score < best_pars_score) {
