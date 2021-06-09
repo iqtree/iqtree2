@@ -465,6 +465,12 @@ public:
         return num_params;
     }
     
+	/**
+	 * Called when model variables have been updated in the YAML 
+	 * model info for this model (only relevant for YAML Models)
+	 */
+	virtual void setRateMatrixFromModel();
+
 protected:
 
 	/**

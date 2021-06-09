@@ -42,6 +42,10 @@ void ModelSubst::setNumberOfStates(int states) {
     }
 }
 
+void ModelSubst::setTree(PhyloTree *tree) {
+    //Doesn't have a phylo_tree member variable.  But subclasses do
+}
+
 void ModelSubst::startCheckpoint() {
     checkpoint->startStruct("ModelSubst");
 }

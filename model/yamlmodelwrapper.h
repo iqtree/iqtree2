@@ -52,18 +52,20 @@ public:
     using   S::rates;
     using   S::state_freq;
     
+    using   S::afterVariablesChanged;
     using   S::getNDim;
     using   S::getNumberOfRates;
     using   S::setRateMatrix;
-    
+
     YAMLModelWrapper(const ModelInfoFromYAMLFile& info,
-                     PhyloTree* report_to_tree)
-        : super(report_to_tree, report_to_tree)
+                     PhyloTree* tree, PhyloTree* report_to_tree)
+        : super(tree, report_to_tree)
         , model_info(info), report_tree(report_to_tree) {
     }
     
     void acceptParameterList(std::string parameter_list) {
         //parameter_list is passed by value so it can be modified
+        //(without those changes being copied back to the original)
         if (model_info.acceptParameterList(parameter_list, report_tree)) {
             setRateMatrixFromModel();
         }
@@ -71,7 +73,10 @@ public:
     
     virtual void setBounds(double *lower_bound, double *upper_bound,
                             bool *bound_check) {
-        //
+        if (isMixtureModel()) {
+            super::setBounds(lower_bound, upper_bound, bound_check);
+            return;
+        }
         int ndim = getNDim();
         for (int i = 1; i <= ndim; ++i) {
             lower_bound[i] = MIN_RATE;
@@ -83,9 +88,20 @@ public:
         model_info.setBounds(ndim, types, lower_bound,
                              upper_bound, bound_check);
     }
-    
+
+    virtual void afterVariablesChanged() {
+        //Overridden in YAMLModelMixture
+    }
+
     virtual bool getVariables(double *variables) {
         bool changed = false;
+        if (isMixtureModel()) {
+            changed = super::getVariables(variables);
+            if (changed) {
+                afterVariablesChanged();
+            }
+            return changed;
+        }
         if (num_params > 0) {
             int num_all = getNumberOfRates();
             for (int i = 0; i < num_all; i++) {
@@ -122,13 +138,17 @@ public:
             changed |= freqsFromParams(state_freq, variables+num_params+1,
                                        freq_type);
         }
-        TREE_LOG_LINE(*report_tree, VerboseMode::VB_MAX, "");
         if (changed) {
+            TREE_LOG_LINE(*report_tree, VerboseMode::VB_MAX, "");
             model_info.updateVariables(variables, first_freq_index, ndim);
             model_info.logVariablesTo(*report_tree);
             setRateMatrixFromModel();
+            afterVariablesChanged();
         }
         return changed;
+    }
+
+    virtual void afterWeightsChanged() {
     }
     
     virtual bool scaleStateFreq() {
@@ -157,6 +177,10 @@ public:
     }
 
     virtual void setVariables(double *variables) {
+        if (isMixtureModel()) {
+            super::setVariables(variables);
+            return;
+        }
         if (num_params > 0) {
             for (int i = 0; i < num_params; ++i) {
                 variables[i] = rates[i];
@@ -239,8 +263,22 @@ public:
     }
     
     virtual void writeInfo(ostream &out) {
-        model_info.writeInfo("Rate parameters  ", ModelParameterType::RATE,      out);
-        model_info.writeInfo("State frequencies", ModelParameterType::FREQUENCY, out);
+        model_info.writeInfo("Weight parameters    ", ModelParameterType::WEIGHT,     out);
+        model_info.writeInfo("Proportion parameters", ModelParameterType::PROPORTION, out);
+        model_info.writeInfo("Rate parameters      ", ModelParameterType::RATE,       out);
+        model_info.writeInfo("State frequencies    ", ModelParameterType::FREQUENCY,  out);
+    }
+
+    virtual bool isMixtureModel() {
+        return false;
+    }
+
+    const ModelInfoFromYAMLFile* getModelInfo() const {
+        return &model_info;
+    }
+
+    ModelInfoFromYAMLFile* getModelInfo() {
+        return &model_info;
     }
 };
 
@@ -301,12 +339,19 @@ public:
 };
 
 class YAMLModelMixture: public YAMLModelWrapper<ModelMixture> {
+protected:
+    std::vector<ModelInfoFromYAMLFile*> mixed_model_infos;
+    //Pointers to the information associated with each of the models
 public:
     typedef YAMLModelWrapper<ModelMixture> super;
-    YAMLModelMixture(const ModelInfoFromYAMLFile& info,                
+    YAMLModelMixture(ModelInfoFromYAMLFile& info,                
                      PhyloTree *tree, 
                      ModelsBlock* models_block,
                      PhyloTree* report_to_tree);
+    virtual bool isMixtureModel();
+    virtual void setRateMatrixFromModel();
+    virtual void afterVariablesChanged();
+    virtual void afterWeightsChanged();
 };
 
 template <class R> class YAMLRateModelWrapper: public R {

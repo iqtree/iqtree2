@@ -1852,6 +1852,10 @@ void ModelMarkov::setRates() {
 	ASSERT(0 && "setRates should only be called on subclass of ModelMarkov");
 }
 
+void ModelMarkov::setRateMatrixFromModel() {
+    
+}
+
 /* static */ ModelMarkov* ModelMarkov::getModelByName(string model_name,   PhyloTree *tree,
                                                       string model_params, StateFreqType freq_type,
                                                       string freq_params,  PhyloTree* report_to_tree) {

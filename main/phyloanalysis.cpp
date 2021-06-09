@@ -1664,7 +1664,11 @@ void printAnalysisInfo(int model_df, IQTree& iqtree, Params& params) {
              << " (" << model_df << " free parameters)" << endl;
     } else {
         cout << iqtree.getModelName() << " with ";
-        switch (iqtree.getModel()->getFreqType()) {
+        StateFreqType freq_type = iqtree.getModel()->getFreqType();
+        switch (freq_type) {
+        case StateFreqType::FREQ_UNKNOWN:
+            cout << "unspecified";
+            break;
         case StateFreqType::FREQ_EQUAL:
             cout << "equal";
             break;
@@ -1735,7 +1739,13 @@ void printAnalysisInfo(int model_df, IQTree& iqtree, Params& params) {
             cout << "constrained G=T";
             break;
         default:
-            outError("Wrong specified state frequencies");
+            {
+                std::stringstream complaint;
+                complaint << "Wrong specified state frequencies"
+                          << " (Freq Type " << static_cast<int>(freq_type) << ")";
+                std::string complaint_string = complaint.str();
+                outError(complaint_string);
+            }
         }
         cout << " frequencies (" << model_df << " free parameters)" << endl;
     }

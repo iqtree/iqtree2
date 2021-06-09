@@ -261,6 +261,8 @@ public:
 	virtual double optimizeParameters(double gradient_epsilon,
                                       PhyloTree* report_to_tree) { return 0.0; }
 
+	virtual void afterVariablesChanged() { }
+
 	/**
 		classify rates into categories, this is meant for the discrete MH model. 
 		The default just return tree_lh

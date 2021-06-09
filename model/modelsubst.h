@@ -42,6 +42,8 @@ public:
 	*/
     ModelSubst(int nstates);
 
+	void setTree(PhyloTree *tree);
+
 	void setNumberOfStates(int states);
 
 	/**
@@ -315,6 +317,12 @@ public:
                                       PhyloTree* report_to_tree) {
         return 0.0;        
     }
+
+	/**
+	  	Called after variables are changed (by, for example optimization of parameters.
+		    
+	*/
+	virtual void afterVariablesChanged() { }
 
 	/**
 	 * @return TRUE if parameters are at the boundary that may cause numerical unstability

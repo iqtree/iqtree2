@@ -493,7 +493,6 @@ void RateMeyerDiscrete::normalizeRates() {
 }
 
 double RateMeyerDiscrete::classifyRatesKMeans(PhyloTree* report_to_tree) {
-
 	ASSERT(ncategory > 0);
 	int nptn = static_cast<int>(size()); 
 

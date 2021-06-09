@@ -1769,8 +1769,8 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
 	initializeAllPartialLh(lh_addr, scale_addr, pars_addr);
     ASSERT(static_cast<intptr_t>(lh_addr - central_partial_lh) < static_cast<intptr_t>(total_partial_lh_entries*sizeof(double)) 
 		&& lh_addr > central_partial_lh);
-    tip_partial_lh = NULL;
-    tip_partial_pars = NULL;
+    tip_partial_lh   = nullptr;
+    tip_partial_pars = nullptr;
     for (it = begin(), part = 0; it != end(); it++, part++) {
         (*it)->tip_partial_lh = lh_addr;
         (*it)->tip_partial_pars = pars_addr;

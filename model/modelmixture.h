@@ -37,10 +37,18 @@ class ModelMixture: virtual public ModelMarkov {
 protected:
 	std::vector<ModelMarkov*> models;
 
-	//Supporting function, called from initMixture.
+	//Supporting function, called from initMixture()
 	void checkProportionsAndWeights(DoubleVector& weights);
 	void setOptimizationSteps(bool optimize_weights);
 	void checkModelReversibility();
+
+	//Supporting functions, called from optimizeWithEM().
+	void optimizeEStep(double* new_prop);
+	bool optimizeMStep(double* new_prop); //returns true if converged
+	void optimizeEachModel(double* new_prop, PhyloTree* tree,
+	                       ModelFactory *model_fac,
+						   double gradient_epsilon, 
+                           PhyloTree* report_to_tree);
 
 public:
 	typedef ModelMarkov super;
@@ -201,7 +209,6 @@ public:
     */
     double optimizeWithEM(double gradient_epsilon, PhyloTree* report_to_tree);
 
-
     /** 
         set number of optimization steps
         @param opt_steps number of optimization steps
@@ -297,6 +304,14 @@ protected:
 		@return TRUE if parameters are changed, FALSE otherwise (2015-10-20)
 	*/
 	virtual bool getVariables(double *variables);
+
+
+	/**
+		this function is called after optimizeWeights (YAMLModelMixture,
+		for example, needs to know when weights have changed, so it can
+		update its weight parameters)
+	*/
+	virtual void afterWeightsChanged();
 
 };
 

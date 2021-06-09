@@ -898,9 +898,10 @@ double ModelFactory::optimizeParametersOnly(int num_steps, double gradient_epsil
             // only optimized if model is not linked
             double model_lh = model->optimizeParameters(gradient_epsilon,
                                                         report_to_tree);
+            model->afterVariablesChanged();
             double rate_lh  = site_rate->optimizeParameters(gradient_epsilon,
                                                             report_to_tree);
-
+            site_rate->afterVariablesChanged();
             if (rate_lh == 0.0) {
                 logl = model_lh;
             }
@@ -1178,7 +1179,7 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
 
     double     begin_time = getRealTime();
     PhyloTree* tree       = site_rate->getTree();
-    ASSERT(tree);
+    ASSERT(tree!=nullptr);
     if (report_to_tree==nullptr) {
         report_to_tree = tree;
     }
@@ -1191,6 +1192,9 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
     // modified by Thomas Wong on Sept 11, 15
     // no optimization of branch length in the first round
     double optimizeStartTime = getRealTime();
+
+    tree->model->setTree(tree);
+
     double cur_lh            = tree->computeLikelihood();
     tree->setCurScore(cur_lh);
     report_to_tree->trackProgress(1.0);
@@ -1468,7 +1472,9 @@ int ModelFactory::getNDim()
 }
 
 double ModelFactory::targetFunk(double x[]) {
-    model->getVariables(x);
+    if (model->getVariables(x)) {
+        model->afterVariablesChanged();
+    }
     // need to compute rates again if p_inv or Gamma shape changes!
     if (model->state_freq[model->num_states-1] < MIN_RATE) {
         return 1.0e+12;
@@ -1484,7 +1490,14 @@ void ModelFactory::setVariables(double *variables) {
 }
 
 bool ModelFactory::getVariables(double *variables) {
-    bool changed = model->getVariables(variables);
-    changed |= site_rate->getVariables(variables + model->getNDim());
+    bool changed_model = model->getVariables(variables);
+    if (changed_model) {
+        model->afterVariablesChanged();
+    }
+    bool changed_rate  = site_rate->getVariables(variables + model->getNDim());
+    if (changed_rate) {
+        site_rate->afterVariablesChanged();
+    }
+    bool changed       = changed_model || changed_rate; 
     return changed;
 }

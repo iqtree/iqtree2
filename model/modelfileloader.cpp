@@ -478,7 +478,7 @@ void ModelFileLoader::parseYAMLMixtureModels(const YAML::Node& mixture_models,
         ModelInfoFromYAMLFile child_info;
         parseYAMLModel(model, child_model_name, child_info,
                        list, &info, report_to_tree);
-        (*info.mixed_models)[info.getName()] = child_info;
+        (*info.mixed_models)[child_model_name] = child_info;
     }
 }
 
@@ -921,10 +921,7 @@ void ModelFileLoader::parseYAMLModel(const YAML::Node& substitution_model,
             //Todo: what about lists?
         }
     }
-
     parseYAMLModelWeightAndScale(substitution_model, info, report_to_tree );
-
-
 }
 
 void ModelFileLoader::parseYAMLSubModels(const YAML::Node& substitution_model,
@@ -976,13 +973,14 @@ void ModelFileLoader::parseYAMLModelWeightAndScale
                     " in file " + file_path +
                     " was not a scalar" );
         info.weight_formula = weight.Scalar();
-        info.model_weight = info.getModelWeight();
-        bool is_fixed = info.isModelWeightFixed();
+        info.model_weight   = info.getModelWeight();
+        bool is_fixed       = info.isModelWeightFixed();
         TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
-                      (is_fixed ? "Fixed" : "Variable") <<
-                      " weight of " << info.parent_model->getName() <<
-                      "." << model_name << " was " << info.weight_formula <<
-                      "=" << info.model_weight);
+                      (is_fixed ? "Fixed" : "Variable") 
+                      << " weight of " << info.parent_model->getName()
+                      << "." << info.model_name 
+                      << " was " << info.weight_formula 
+                      << "=" << info.model_weight);
     }
 
     auto scale  = substitution_model["scale"];

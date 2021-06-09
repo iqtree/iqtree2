@@ -233,6 +233,7 @@ public:
                                                 double gradient_epsilon = 0.0001,
                                                 PhyloTree* report_to_tree = nullptr);
 
+
 	/**
 	 * @return TRUE if parameters are at the boundary that may cause numerical unstability
 	 */

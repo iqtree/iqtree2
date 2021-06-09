@@ -26,6 +26,7 @@
 #include <utils/stringfunctions.h> //for string_to_lower, startsWith, endsWith
 #include <tree/phylotree.h> //for TREE_LOG_LINE macro
 
+//YAML Logging Levels
 VerboseMode YAMLModelVerbosity     = VerboseMode::VB_MIN;
 VerboseMode YAMLVariableVerbosity  = VerboseMode::VB_MAX;
 VerboseMode YAMLFrequencyVerbosity = VerboseMode::VB_MAX;
@@ -181,7 +182,7 @@ ModelInfoFromYAMLFile::ModelInfoFromYAMLFile()
     , tip_likelihood_rank(0)
     , frequency_type(StateFreqType::FREQ_UNKNOWN)
     , parent_model(nullptr), mixed_models(nullptr)
-    , linked_models(nullptr), model_weight(1.0)  {
+    , linked_models(nullptr), weight_formula("1"), model_weight(1.0)  {
 }
 
 void ModelInfoFromYAMLFile::copyMixedAndLinkedModels(const ModelInfoFromYAMLFile& rhs) {
@@ -218,7 +219,7 @@ ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(const ModelInfoFromYAMLFile& rhs)
     , parameters(rhs.parameters), frequency_type(rhs.frequency_type)
     , variables(rhs.variables), parent_model(rhs.parent_model)
     , mixed_models(nullptr), linked_models(nullptr)
-    , model_weight(1.0) {
+    , weight_formula(rhs.weight_formula), model_weight(rhs.model_weight) {
     copyMixedAndLinkedModels(rhs);
 }
 
@@ -246,6 +247,8 @@ ModelInfoFromYAMLFile& ModelInfoFromYAMLFile::operator=(const ModelInfoFromYAMLF
         parameters                 = rhs.parameters; 
         frequency_type             = rhs.frequency_type;
         variables                  = rhs.variables;
+        weight_formula             = rhs.weight_formula;
+        model_weight               = rhs.model_weight;
         //Note: parent_model is NOT set.
         copyMixedAndLinkedModels(rhs);
     }
@@ -666,6 +669,7 @@ double ModelInfoFromYAMLFile::getModelWeight() const {
 }
 
 double ModelInfoFromYAMLFile::getModelWeight() {
+    ASSERT(!weight_formula.empty());
     try {
         ModelExpression::InterpretedExpression expr(*this, weight_formula);
         model_weight = expr.evaluate();
@@ -1055,9 +1059,10 @@ std::string ModelInfoFromYAMLFile::getParameterList(ModelParameterType param_typ
     return list.str();
 }
 
-void ModelInfoFromYAMLFile::appendParameterList(ModelParameterType param_type,
+bool ModelInfoFromYAMLFile::appendParameterList(ModelParameterType param_type,
     std::stringstream& list) const {
-    const char* separator = "";
+    const char* separator       = "";
+    bool        anything_listed = false;
     for (auto p : parameters) {
         if (p.type == param_type) {
             if (p.is_subscripted) {
@@ -1072,6 +1077,7 @@ void ModelInfoFromYAMLFile::appendParameterList(ModelParameterType param_type,
                             list << "(*)";
                         }
                         separator = ", ";
+                        anything_listed = true;
                     }
                     else {
                         std::stringstream complaint;
@@ -1090,6 +1096,7 @@ void ModelInfoFromYAMLFile::appendParameterList(ModelParameterType param_type,
                         list << "(*)";
                     }
                     separator = ", ";
+                    anything_listed = true;
                 }
                 else {
                     std::stringstream complaint;
@@ -1106,13 +1113,17 @@ void ModelInfoFromYAMLFile::appendParameterList(ModelParameterType param_type,
     //
     if (this->mixed_models != nullptr) {
         for (auto it = mixed_models->begin(); it != mixed_models->end(); ++it) {
-            list << separator << it->first;
-            list << "={";
-            it->second.appendParameterList(param_type, list);
-            list << "}";
-            separator = ", ";
+            std::stringstream sub_list;
+            sub_list << separator << it->first;
+            sub_list << "={";
+            if (it->second.appendParameterList(param_type, sub_list)) {
+                list << sub_list.str() << "}";
+                separator = ", ";
+                anything_listed = true;
+            }
         }
     }
+    return anything_listed;
 }
 
 const std::string& ModelInfoFromYAMLFile::getRateMatrixExpression
@@ -1439,6 +1450,19 @@ MapOfModels& ModelInfoFromYAMLFile::getMixedModels() {
 const MapOfModels& ModelInfoFromYAMLFile::getMixedModels() const {
     ASSERT(mixed_models!=nullptr);
     return *mixed_models;
+}
+
+void ModelInfoFromYAMLFile::copyVariablesFrom(const ModelInfoFromYAMLFile* original) {
+    for (auto it = original->variables.begin();
+         it != original->variables.end(); ++it) {
+        std::string    var_name  = it->first;
+        const ModelVariable& var_value = it->second;
+        variables[var_name]     = var_value;
+    }
+}
+
+void ModelInfoFromYAMLFile::setParentModel(ModelInfoFromYAMLFile* parent) {
+    parent_model = parent;
 }
 
 ModelVariable& ModelInfoFromYAMLFile::assign(const std::string& var_name,  

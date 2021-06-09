@@ -116,23 +116,27 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info,
         for (int partid = 0; partid < ntrees; partid++) {
             int part = tree->part_order[partid];
             // Subtree model parameters optimization
-            tree->part_info[part].cur_score = tree->at(part)->getModelFactory()->
+            auto subtree = tree->at(part);
+            auto factory = subtree->getModelFactory();
+            tree->part_info[part].cur_score = factory->
                 optimizeParametersOnly(i+1, gradient_epsilon/min(min(i,ntrees),10),
                                        tree->part_info[part].cur_score,
                                        report_to_tree);
-            if (tree->part_info[part].cur_score == 0.0)
-                tree->part_info[part].cur_score = tree->at(part)->computeLikelihood();
+
+            if (tree->part_info[part].cur_score == 0.0) {
+                tree->part_info[part].cur_score = subtree->computeLikelihood();
+            }
             cur_lh += tree->part_info[part].cur_score;
             
             
             // normalize rates s.t. branch lengths are #subst per site
-            double mean_rate = tree->at(part)->getRate()->rescaleRates();
+            double mean_rate = subtree->getRate()->rescaleRates();
             if (fabs(mean_rate-1.0) > 1e-6) {
                 if (tree->fixed_rates) {
                     outError("Unsupported -spj."
                              " Please use proportion edge-linked partition model (-spp)");
                 }
-                tree->at(part)->scaleLength(mean_rate);
+                subtree->scaleLength(mean_rate);
                 tree->part_info[part].part_rate *= mean_rate;
             }
             
@@ -258,7 +262,7 @@ double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
     for (int j = 0; j < tree->size(); j++) {
         int i = tree->part_order[j];
         double min_scaling = 1.0/tree->at(i)->getAlnNSite();
-        double max_scaling = static_cast<double>(nsites / tree->at(i)->getAlnNSite());
+        double max_scaling = static_cast<double>(nsites / (double)tree->at(i)->getAlnNSite());
         if (max_scaling < tree->part_info[i].part_rate)
             max_scaling = tree->part_info[i].part_rate;
         if (min_scaling > tree->part_info[i].part_rate)

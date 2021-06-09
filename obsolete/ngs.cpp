@@ -405,10 +405,10 @@ void NGSRateCat::writeInfo(ostream &out) {
  ****************************************************************************/
 
 NGSTree::NGSTree(Params &params, NGSAlignment *alignment) {
-    aln = alignment;
-    model = NULL;
-    site_rate = NULL;
-    model_factory = NULL;
+    aln                = alignment;
+    model              = nullptr;
+    site_rate          = nullptr;
+    model_factory      = nullptr;
     optimize_by_newton = params.optimize_by_newton;
     //tree.sse = params.SSE;
     setLikelihoodKernel(LK_386, params.num_threads);
@@ -945,10 +945,12 @@ void testSingleRateModel(Params &params, NGSAlignment &aln, NGSTree &tree, strin
         sprintf(model_name, "%s+F1", model.c_str());
     try {
         params.model_name = model_name;
-        sum_tree.setModelFactory(new ModelFactory(params, &sum_tree, models_block));
-        sum_tree.setModel(sum_tree.getModelFactory()->model);
-        sum_tree.setRate(sum_tree.getModelFactory()->site_rate);
-        double bestTreeScore = sum_tree.getModelFactory()->optimizeParameters(false, write_info);
+        auto factory = new ModelFactory(params, &sum_tree, models_block);
+        sum_tree.setModelFactory(factory);
+        sum_tree.setModel(factory->model);
+        sum_tree.setRate(factory->site_rate);
+        double bestTreeScore = factory->optimizeParameters(false, write_info);
+        factory->afterVariablesChanged();
         cout << "LogL: " << bestTreeScore;
         cout << " / Rate: " << sum_tree.getRate()->getRate(0) << endl;
     } catch (...) {

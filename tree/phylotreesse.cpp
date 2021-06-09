@@ -252,11 +252,11 @@ double PhyloTree::dotProductDoubleCall(double *x, double *y, int size) {
 
 
 void PhyloTree::computeTipPartialLikelihood() {
-	if ((tip_partial_lh_computed & 1) != 0)
+	if ((tip_partial_lh_computed & 1) != 0) {
 		return;
+    }
 	tip_partial_lh_computed |= 1;
-    
-    
+        
 	//-------------------------------------------------------
 	// initialize ptn_freq and ptn_invar
 	//-------------------------------------------------------
@@ -268,11 +268,11 @@ void PhyloTree::computeTipPartialLikelihood() {
     if (getModel()->isSiteSpecificModel()) {
         // TODO: THIS NEEDS TO BE CHANGED TO USE ModelSubst::computeTipLikelihood()
 //        ModelSet *models = (ModelSet*)model;
-        intptr_t nptn = aln->getNPattern();
-        size_t max_nptn = ((nptn+vector_size-1)/vector_size)*vector_size;
-        size_t tip_block_size = max_nptn * aln->num_states;
-        int nstates = aln->num_states;
-        size_t nseq = aln->getNSeq();
+        intptr_t nptn           = aln->getNPattern();
+        size_t   max_nptn       = ((nptn+vector_size-1)/vector_size)*vector_size;
+        size_t   tip_block_size = max_nptn * aln->num_states;
+        int      nstates        = aln->num_states;
+        size_t   nseq           = aln->getNSeq();
         ASSERT(vector_size > 0);
         
         
@@ -366,8 +366,9 @@ void PhyloTree::computeTipPartialLikelihood() {
     
     // 2020-06-23: refactor to use computeTipLikelihood
     int nmixtures = 1;
-    if (getModel()->useRevKernel())
+    if (getModel()->useRevKernel()) {
         nmixtures = getModel()->getNMixtures();
+    }
     int nstates = getModel()->num_states;
     int state;
     if (aln->seq_type == SeqType::SEQ_POMO) {
@@ -584,6 +585,7 @@ void PhyloTree::computePtnInvar() {
 
     // Again for PoMo, the stationary frequencies are set to the stationary
     // frequencies of the boundary states.
+    
     model->getMutationModel()->getStateFrequency(&state_freq[0], -1);
 
 	memset(ptn_invar, 0, maxptn*sizeof(double));
