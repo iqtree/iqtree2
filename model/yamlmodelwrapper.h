@@ -42,8 +42,9 @@
 
 template <class S> class YAMLModelWrapper: public S {
 protected:
-    ModelInfoFromYAMLFile model_info;
-    PhyloTree*            report_tree;
+    bool                   is_info_owned;
+    ModelInfoFromYAMLFile* model_info;
+    PhyloTree*             report_tree;
 public:
     typedef S super;
     using   S::freq_type;
@@ -57,16 +58,29 @@ public:
     using   S::getNumberOfRates;
     using   S::setRateMatrix;
 
-    YAMLModelWrapper(const ModelInfoFromYAMLFile& info,
+    YAMLModelWrapper() = delete;
+
+    YAMLModelWrapper(ModelInfoFromYAMLFile& info,
+                     bool  make_copy, 
                      PhyloTree* tree, PhyloTree* report_to_tree)
         : super(tree, report_to_tree)
-        , model_info(info), report_tree(report_to_tree) {
+        , is_info_owned(make_copy)
+        , model_info(make_copy ? new ModelInfoFromYAMLFile(info) : &info)
+        , report_tree(report_to_tree) {
+        model_info->logVariablesTo(*report_to_tree);
+    }
+
+    ~YAMLModelWrapper() {
+        if (is_info_owned) {
+            delete model_info;
+            model_info = nullptr;
+        }
     }
     
     void acceptParameterList(std::string parameter_list) {
         //parameter_list is passed by value so it can be modified
         //(without those changes being copied back to the original)
-        if (model_info.acceptParameterList(parameter_list, report_tree)) {
+        if (model_info->acceptParameterList(parameter_list, report_tree)) {
             setRateMatrixFromModel();
         }
     }
@@ -85,8 +99,8 @@ public:
         }
         std::vector<ModelParameterType> types;
         types = { ModelParameterType::PROPORTION, ModelParameterType::RATE };
-        model_info.setBounds(ndim, types, lower_bound,
-                             upper_bound, bound_check);
+        model_info->setBounds(ndim, types, lower_bound,
+                              upper_bound, bound_check);
     }
 
     virtual void afterVariablesChanged() {
@@ -132,7 +146,7 @@ public:
             //(one minus the sum of the others)
             if (scaleStateFreq()) {
                 changed = true;
-                model_info.assignLastFrequency(state_freq[num_states-1]);
+                model_info->assignLastFrequency(state_freq[num_states-1]);
             }
         } else {
             changed |= freqsFromParams(state_freq, variables+num_params+1,
@@ -140,8 +154,8 @@ public:
         }
         if (changed) {
             TREE_LOG_LINE(*report_tree, VerboseMode::VB_MAX, "");
-            model_info.updateVariables(variables, first_freq_index, ndim);
-            model_info.logVariablesTo(*report_tree);
+            model_info->updateVariables(variables, first_freq_index, ndim);
+            model_info->logVariablesTo(*report_tree);
             setRateMatrixFromModel();
             afterVariablesChanged();
         }
@@ -199,7 +213,7 @@ public:
     }
     
     void setRateMatrixFromModel() {
-        auto rank = model_info.getRateMatrixRank();
+        auto rank = model_info->getRateMatrixRank();
         ASSERT( rank == num_states );
         
         DoubleVector      rates;
@@ -207,9 +221,9 @@ public:
         std::stringstream trace;
         trace << "Rate Matrix: { ";
         
-        model_info.forceAssign("num_states", num_states);
-        ModelVariable& row_var    = model_info.forceAssign("row",    0);
-        ModelVariable& column_var = model_info.forceAssign("column", 0);
+        model_info->forceAssign("num_states", num_states);
+        ModelVariable& row_var    = model_info->forceAssign("row",    0);
+        ModelVariable& column_var = model_info->forceAssign("column", 0);
         
         for (int row = 0; row < rank; ++row) {
             row_var.setValue(static_cast<double>(row+1));
@@ -217,10 +231,10 @@ public:
                 column_var.setValue(static_cast<double>(col+1));
                 if (col != row) {
                     std::string expr_string =
-                        model_info.getRateMatrixExpression(row,col);
+                        model_info->getRateMatrixExpression(row,col);
                     typedef ModelExpression::InterpretedExpression Interpreter;
                     try {
-                        Interpreter interpreter(model_info, expr_string);
+                        Interpreter interpreter(*model_info, expr_string);
                         double entry = interpreter.evaluate();
                         rates.push_back(entry);
                         trace << separator << entry;
@@ -228,11 +242,25 @@ public:
                     catch (ModelExpression::ModelException x) {
                         std::stringstream msg;
                         msg << "Error parsing expression"
-                            << " for " << model_info.getName()
+                            << " for " << model_info->getName()
                             << " rate matrix entry"
                             << " for row "    << (row + 1) << ","
                             << " and column " << (col + 1) << ": "
-                            << x.getMessage();
+                            << x.getMessage() << "\n";
+
+                        msg << "Rate Matrix rank was: "
+                            << model_info->getRateMatrixRank() << "\n"
+                            << "Rate Matrix formula was: " 
+                            << model_info->getRateMatrixFormula() << "\n"
+                            << "Rate Matrix expressions were:\n";
+                        separator = "";
+                        for (int r=0; r<model_info->getRateMatrixRank(); ++r) {
+                            for (int c=0; c<model_info->getRateMatrixRank(); ++c) {
+                                msg << separator << model_info->getRateMatrixExpression(r, c);
+                                separator = ",";
+                            }
+                            separator = "\n";
+                        }
                         outError(msg.str());
                     }
                 } else {
@@ -248,8 +276,8 @@ public:
     
     virtual void computeTipLikelihood(PML::StateType state, double *state_lk) {
         int state_num = static_cast<int>(state);
-        if ( state_num < model_info.getTipLikelihoodMatrixRank()) {
-            model_info.computeTipLikelihoodsForState(state, num_states, state_lk);
+        if ( state_num < model_info->getTipLikelihoodMatrixRank()) {
+            model_info->computeTipLikelihoodsForState(state, num_states, state_lk);
         } else if (state_num < num_states) {
             // single state
             memset(state_lk, 0, num_states*sizeof(double));
@@ -263,10 +291,10 @@ public:
     }
     
     virtual void writeInfo(ostream &out) {
-        model_info.writeInfo("Weight parameters    ", ModelParameterType::WEIGHT,     out);
-        model_info.writeInfo("Proportion parameters", ModelParameterType::PROPORTION, out);
-        model_info.writeInfo("Rate parameters      ", ModelParameterType::RATE,       out);
-        model_info.writeInfo("State frequencies    ", ModelParameterType::FREQUENCY,  out);
+        model_info->writeInfo("Weight parameters    ", ModelParameterType::WEIGHT,     out);
+        model_info->writeInfo("Proportion parameters", ModelParameterType::PROPORTION, out);
+        model_info->writeInfo("Rate parameters      ", ModelParameterType::RATE,       out);
+        model_info->writeInfo("State frequencies    ", ModelParameterType::FREQUENCY,  out);
     }
 
     virtual bool isMixtureModel() {
@@ -274,80 +302,85 @@ public:
     }
 
     const ModelInfoFromYAMLFile* getModelInfo() const {
-        return &model_info;
+        return model_info;
     }
 
     ModelInfoFromYAMLFile* getModelInfo() {
-        return &model_info;
+        return model_info;
     }
 };
 
 class YAMLModelDNA: public YAMLModelWrapper<ModelDNA> {
 public:
     typedef YAMLModelWrapper<ModelDNA> super;
-    YAMLModelDNA(const char *model_name, string model_params,
-                 StateFreqType freq, string freq_params,
-                 PhyloTree *tree, PhyloTree* report_to_tree,
-                 const ModelInfoFromYAMLFile& info);
+    YAMLModelDNA(ModelInfoFromYAMLFile& info,
+                 bool make_copy, const char *model_name, 
+                 std::string model_params, StateFreqType freq, 
+                 std::string freq_params,  PhyloTree*    tree, 
+                 PhyloTree* report_to_tree);
 };
 
 class YAMLModelDNAError: public YAMLModelWrapper<ModelDNAError> {
 public:
     typedef YAMLModelWrapper<ModelDNAError> super;
-    YAMLModelDNAError(const char *model_name, string model_params,
-                      StateFreqType freq, string freq_params,
-                      PhyloTree *tree, PhyloTree* report_to_tree,
-                      const ModelInfoFromYAMLFile& info);
+    YAMLModelDNAError(ModelInfoFromYAMLFile& info,
+                      bool make_copy, const char *model_name, 
+                      std::string model_params, StateFreqType freq, 
+                      std::string freq_params,  PhyloTree*    tree, 
+                      PhyloTree* report_to_tree);
     bool getVariables(double *variables);
 };
 
 class YAMLModelProtein: public YAMLModelWrapper<ModelProtein> {
 public:
     typedef YAMLModelWrapper<ModelProtein> super;
-    YAMLModelProtein(ModelsBlock* block,
-                     const char *model_name, string model_params,
-                     StateFreqType freq, string freq_params,
-                     PhyloTree *tree, PhyloTree* report_to_tree,
-                     const ModelInfoFromYAMLFile& info);
+    YAMLModelProtein(ModelInfoFromYAMLFile& info, 
+                     bool make_copy, const char *model_name,
+                     std::string model_params, StateFreqType freq, 
+                     std::string freq_params,  ModelsBlock* block,
+                     PhyloTree *tree, PhyloTree* report_to_tree);
 };
 
 class YAMLModelBinary: public YAMLModelWrapper<ModelBIN> {
 public:
     typedef YAMLModelWrapper<ModelBIN> super;
-    YAMLModelBinary(const char *model_name, std::string model_params,
-                 StateFreqType freq, std::string freq_params,
-                 PhyloTree *tree, PhyloTree* report_to_tree,
-                 const ModelInfoFromYAMLFile& info);
+    YAMLModelBinary(ModelInfoFromYAMLFile& info,
+                    bool  make_copy, const char *model_name, 
+                    std::string model_params, StateFreqType freq, 
+                    std::string freq_params,  PhyloTree*    tree, 
+                    PhyloTree* report_to_tree);
 };
 
 class YAMLModelMorphology: public YAMLModelWrapper<ModelMorphology> {
 public:
     typedef YAMLModelWrapper<ModelMorphology> super;
-    YAMLModelMorphology(const char *model_name, std::string model_params,
-                 StateFreqType freq, std::string freq_params,
-                 PhyloTree *tree, PhyloTree* report_to_tree,
-                 const ModelInfoFromYAMLFile& info);
+    YAMLModelMorphology(ModelInfoFromYAMLFile& info,
+                        bool make_copy, const char *model_name, 
+                        std::string model_params, StateFreqType freq, 
+                        std::string freq_params,  PhyloTree*    tree, 
+                        PhyloTree* report_to_tree);
 };
 
 class YAMLModelCodon: public YAMLModelWrapper<ModelCodon> {
 public:
     typedef YAMLModelWrapper<ModelCodon> super;
-    YAMLModelCodon(const char *model_name, std::string model_params,
-                 StateFreqType freq, std::string freq_params,
-                 PhyloTree *tree, PhyloTree* report_to_tree,
-                 const ModelInfoFromYAMLFile& info);
+    YAMLModelCodon(ModelInfoFromYAMLFile& info, 
+                   bool make_copy, const char *model_name, 
+                   std::string model_params, StateFreqType freq, 
+                   std::string freq_params,  PhyloTree*    tree, 
+                   PhyloTree* report_to_tree);
 };
 
 class YAMLModelMixture: public YAMLModelWrapper<ModelMixture> {
 protected:
-    std::vector<ModelInfoFromYAMLFile*> mixed_model_infos;
     //Pointers to the information associated with each of the models
 public:
     typedef YAMLModelWrapper<ModelMixture> super;
-    YAMLModelMixture(ModelInfoFromYAMLFile& info,                
-                     PhyloTree *tree, 
-                     ModelsBlock* models_block,
+    YAMLModelMixture(ModelInfoFromYAMLFile& info, bool make_copy,              
+                     const char* model_name, StateFreqType freq,
+                     ModelsBlock* models_block, PhyloTree *tree, 
                      PhyloTree* report_to_tree);
+
     virtual bool isMixtureModel();
     virtual void setRateMatrixFromModel();
     virtual void afterVariablesChanged();

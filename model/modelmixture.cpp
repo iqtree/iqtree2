@@ -1152,11 +1152,10 @@ ModelMarkov* createModel(string model_str, ModelsBlock *models_block,
                                     " for Gamma rate heterogeneity.");
         }
     } else if (yaml_list.isSubstitutionModelNameRecognized(model_str.c_str())) {
-        ModelInfoFromYAMLFile* modelinfo = nullptr;
         model = yaml_list.getModelByName(model_str.c_str(),    tree,
                                          model_params.c_str(), freq_type,
                                          freq_params.c_str(),  models_block,
-                                         modelinfo, report_to_tree);
+                                        report_to_tree);
     } else if (ModelMarkov::validModelName(model_str)) {
         model = ModelMarkov::getModelByName(model_str,    tree,
                                             model_params, freq_type,

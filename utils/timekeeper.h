@@ -24,6 +24,7 @@ public:
     void start()       const;
     void stop()        const;
     void report()      const;
+    bool didAnything() const;
     std::string getElapsedDescription() const;
 
     void setActivity(std::string& new_activity);

@@ -475,10 +475,11 @@ void ModelFileLoader::parseYAMLMixtureModels(const YAML::Node& mixture_models,
     for (const YAML::Node& model: mixture_models) {
         std::string child_model_name = stringScalar(model, "substitutionmodel", "");
         TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity, "Processing mixture model" );
-        ModelInfoFromYAMLFile child_info;
-        parseYAMLModel(model, child_model_name, child_info,
+        ModelInfoFromYAMLFile* child_info = 
+            new ModelInfoFromYAMLFile(info.model_file_path);
+        parseYAMLModel(model, child_model_name, *child_info,
                        list, &info, report_to_tree);
-        (*info.mixed_models)[child_model_name] = child_info;
+        info.mixed_models->insert( child_model_name, child_info );
     }
 }
 
@@ -699,9 +700,9 @@ void ModelFileLoader::handleInheritance(ModelInfoFromYAMLFile& info,
     bool have_first_parent = false;
     for (string ancestral_model : split_string(info.superclass_model_name, "+")) {
         if (list.hasModel(ancestral_model)) {
-            const ModelInfoFromYAMLFile& ancestor =
+            const ModelInfoFromYAMLFile* ancestor =
                     list.getModel(ancestral_model);
-            if (info.is_rate_model && !ancestor.is_rate_model) {
+            if (info.is_rate_model && !ancestor->is_rate_model) {
                 std::stringstream complaint;
                 complaint << "Rate model " << info.model_name
                             << " cannot be based on" 
@@ -711,14 +712,14 @@ void ModelFileLoader::handleInheritance(ModelInfoFromYAMLFile& info,
             }
             if (!have_first_parent) {
                 std::string save_name = info.model_name;
-                info = list.getModel(ancestral_model);
+                info = *ancestor;
                 info.model_name = save_name;
                 TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
                             "Model " << info.model_name
                             << " is based on model " << ancestral_model);
                 have_first_parent = true;
             } else {
-                info.inheritModel(ancestor);
+                info.inheritModel(*ancestor);
                 TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
                             "Model " << info.model_name
                             << " is also based on" 

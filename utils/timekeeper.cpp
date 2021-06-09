@@ -68,6 +68,11 @@ void TimeKeeper::report() const {
     std::cout << desc.str();
 }
 
+bool TimeKeeper::didAnything() const {
+    double elapsed  = elapsed_wallclock_time + (stopped ? 0 : getRealTime());
+    return 0 < elapsed;
+}
+
 std::string TimeKeeper::getElapsedDescription() const {
     double elapsed  = elapsed_wallclock_time + (stopped ? 0 : getRealTime());
     std::stringstream desc;

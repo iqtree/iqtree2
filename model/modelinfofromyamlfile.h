@@ -119,12 +119,122 @@ class Checkpoint;
 
 namespace ModelExpression { class Expression; }
 
+class ModelInfoFromYAMLFile;
+
+template <class R> class NamedPointerMap: protected std::vector< R* > {
+protected:
+    std::map<std::string, int> name_map;
+    std::vector<std::string>   names;
+public:
+    typedef std::vector< R* > super;
+    using super::at;
+    using super::begin;
+    using super::clear;
+    using super::push_back;
+    using super::size;
+
+    //Constructors, Assignment operators, Destructors
+    //===============================================
+    NamedPointerMap() = default;
+    NamedPointerMap(const NamedPointerMap& rhs) {
+        copyFrom(rhs);
+    }
+    NamedPointerMap& operator=(const NamedPointerMap& rhs) {
+        if (this==&rhs) {
+            return *this;
+        }
+        super::clear();
+        name_map = rhs.name_map;
+        names    = rhs.names;
+        for (const R* pointer: rhs) {
+            push_back(pointer);
+        }
+        return *this;
+    }
+    NamedPointerMap& copyFrom(const NamedPointerMap& rhs) {
+        for (size_t i=0; i< rhs.size(); ++i) {
+            std::string name = rhs.names[i];
+            ASSERT(!hasName(name));
+            insert(name, new R(*(rhs[i])));
+        }
+        return *this;
+    }
+    virtual ~NamedPointerMap() {
+        name_map.clear();   
+        for (R* pointer: *this) {
+            delete pointer;
+        }
+        super::clear();
+    }
+
+    //Adding
+    //======
+    R* insertNew(const std::string& name) {
+        R* newPointer = new R();
+        insert(name, newPointer);
+        return newPointer;
+    }
+    void insert(const std::string& name, R* pointer) {
+        int index = static_cast<int>(size());
+        push_back(pointer);
+        names.push_back(name);
+        name_map[name] = index;
+    }
+
+    //Querying
+    //========
+    const std::vector<std::string>& getNames() const {
+        return names;
+    }
+    typename super::iterator find(const std::string& name) {
+        auto it = name_map.find(name);
+        ASSERT(it!=name_map.end());
+        return begin() + it->second;
+
+    }
+    typename super::const_iterator find(const std::string& name) const {
+        auto it = name_map.find(name);
+        ASSERT(it!=name_map.end());
+        return begin() + it->second;
+    }
+    bool hasName(const std::string& name) const {
+        return name_map.find(name) != name_map.end();
+    }
+    R* getPointer(const std::string& name) const {
+        R* pointer_found = nullptr;
+        auto it = name_map.find(name);
+        if (it!=name_map.end()) {
+            pointer_found = at(it->second);
+        }
+        return pointer_found;
+    }
+
+    //Iterators (I would prefer to disable the non-cost ones,
+    //but Clang doesn't seem to want to play ball).)
+    typedef typename super::const_iterator const_iterator;
+    typedef typename super::iterator       iterator;
+
+    iterator       begin()       {  return super::begin(); }
+    iterator       end()         {  return super::end();   }
+
+    const_iterator begin() const { return super::begin(); }
+    const_iterator end()   const { return super::end(); }
+};
+
+class MapOfModels: public NamedPointerMap<ModelInfoFromYAMLFile> {
+public:
+    typedef NamedPointerMap<ModelInfoFromYAMLFile> super;
+    typedef typename super::const_iterator const_iterator;
+    MapOfModels()  = default;
+    MapOfModels(const MapOfModels& rhs) = default;
+    ~MapOfModels() = default;
+};
+
 class ModelInfoFromYAMLFile : public ModelInfo {
 public:
-    typedef std::vector<YAMLFileParameter>               Parameters;
-    typedef std::map<std::string, ModelVariable>         Variables;
-    typedef std::map<std::string, ModelInfoFromYAMLFile> MapOfModels;
-    typedef std::map<std::string, std::string>           StringMap;
+    typedef std::vector<YAMLFileParameter>                Parameters;
+    typedef std::map<std::string, ModelVariable>          Variables;
+    typedef std::map<std::string, std::string>            StringMap;
 
 private:
     std::string   model_name;         //
@@ -272,7 +382,6 @@ public:
     void breakAtDot(const char* name, std::string& sub_model_name,
                     const char*& remainder)                             const;
     MapOfModels::const_iterator findMixedModel(const std::string& name) const;
-    MapOfModels::iterator       findMixedModel(const std::string& name);
 
     //Initialization helper functions
     void setNumberOfStatesAndSequenceType(int requested_num_states,
@@ -301,6 +410,7 @@ public:
 
     //Rate matrices
     int                getRateMatrixRank()                              const;
+    const std::string& getRateMatrixFormula()                           const;
     const std::string& getRateMatrixExpression(int row, int col)        const;
     int                getNumStates()                                   const;
 
@@ -369,6 +479,8 @@ public:
                                 std::stringstream& complaint);
     void inheritModelVariables (const ModelInfoFromYAMLFile& mummy,
                                 std::stringstream& complaint);
+    void inheritModelMatrices  (const ModelInfoFromYAMLFile& mummy,
+                                std::stringstream& complaint);
 
     //Accepting parameters supplied on command-line
     bool acceptParameterList   (std::string parameter_list,
@@ -397,8 +509,6 @@ public:
     void restoreFromCheckpoint(Checkpoint* checkpoint);
 };
 
-typedef std::map<std::string, ModelInfoFromYAMLFile> MapOfModels;
-
 class ModelListFromYAMLFile {
 protected:
     MapOfModels  models_found;
@@ -412,41 +522,35 @@ public:
     void loadFromFile(const char* file_path, PhyloTree* report_to_tree);
     bool isSubstitutionModelNameRecognized(const char* model_name);
 
-    ModelMarkov* getModelByName(const char* model_name, PhyloTree* tree,
+    ModelMarkov* getModelByName(const char* model_name,   PhyloTree* tree,
                                 const char* model_params, StateFreqType freq_type,
-                                const char* freq_params, ModelsBlock* blocks_model,
-                                ModelInfoFromYAMLFile*& info_of_model,
+                                const char* freq_params,  ModelsBlock* blocks_model,
                                 PhyloTree* report_to_tree);
 
     static ModelMarkov* getModelByReference
                     (ModelInfoFromYAMLFile& model_info, PhyloTree *tree,
                      StateFreqType freq_type,           ModelsBlock* models_block,
                      const std::string &parameter_list, 
-                     ModelInfoFromYAMLFile*& info_of_model,
                      PhyloTree* report_to_tree);
 
     static ModelMarkov* getBinaryModel(ModelInfoFromYAMLFile& model_info,
                                        const std::string& parameter_list,
                                        StateFreqType freq_type, PhyloTree* tree, 
-                                       ModelInfoFromYAMLFile*& info_of_model,
                                        PhyloTree* report_to_tree);
 
     static ModelMarkov* getCodonModel(ModelInfoFromYAMLFile& model_info,
                                       const std::string& parameter_list,
                                       StateFreqType freq_type, PhyloTree* tree,
-                                      ModelInfoFromYAMLFile*& info_of_model,
                                       PhyloTree* report_to_tree);
 
     static ModelMarkov* getDNAModel(ModelInfoFromYAMLFile& model_info,
                                     const std::string& parameter_list,
                                     StateFreqType freq_type, PhyloTree* tree,
-                                    ModelInfoFromYAMLFile*& info_of_model,
                                     PhyloTree* report_to_tree);
 
     static ModelMarkov* getMorphologicalModel(ModelInfoFromYAMLFile& model_info,
                                               const std::string& parameter_list,
                                               StateFreqType freq_type, PhyloTree* tree,
-                                              ModelInfoFromYAMLFile*& info_of_model,
                                               PhyloTree* report_to_tree);
 
     static ModelMarkov* getProteinModel(ModelInfoFromYAMLFile& model_info,
@@ -454,15 +558,13 @@ public:
                                         StateFreqType freq_type, 
                                         PhyloTree*    tree,
                                         ModelsBlock*  models_block, 
-                                        ModelInfoFromYAMLFile*& info_of_model,
                                         PhyloTree*    report_to_trees);
 
     static ModelMarkov* getMixtureModel(ModelInfoFromYAMLFile& model_info,
                                         const std::string& parameter_list,
                                         StateFreqType freq_type, 
-                                        PhyloTree*    tree, 
                                         ModelsBlock*  models_block, 
-                                        ModelInfoFromYAMLFile*& info_of_model,
+                                        PhyloTree*    tree, 
                                         PhyloTree*    report_to_tree);
 
     static void insistOnAlignmentSequenceType(const Alignment* alignment, 
@@ -473,7 +575,7 @@ public:
     std::string getListOfSubstitutionModelNames() const;
     std::string getListOfRateModelNames()         const;
     
-    const ModelInfoFromYAMLFile& getModel(const std::string& model_name) const;
+    const ModelInfoFromYAMLFile* getModel(const std::string& model_name) const;
 };
 
 #endif //modelinfofromyamlfile_h

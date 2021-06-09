@@ -409,6 +409,7 @@ namespace ModelExpression {
         Expression* parseExpression          (const   std::string& expression_text,
                                               size_t& index);                        
         Expression* parseTokenizedExpressions(ExpressionStack& tokenized);
+        void        checkOperandStack        (ExpressionStack& operand_stack);
         bool        parseToken               (const std::string& text,
                                               size_t& ix, Expression*& expr);
         bool        parseVariable            (const std::string& text,

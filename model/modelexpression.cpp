@@ -1011,20 +1011,30 @@ namespace ModelExpression {
                 operand_stack << token;
             }
         }
+        checkOperandStack(operand_stack);
+        return operand_stack[0];
+    }
+
+    void InterpretedExpression::checkOperandStack(ExpressionStack& operand_stack) {
         if (operand_stack.size()!=1) {
             std::stringstream complaint;
-            complaint << "Malformed expression appeared to be " 
-                      << operand_stack.size() << " space-separated expressions:";
-            int parameter_number = 1;
-            for (auto entry : operand_stack ) {
-                complaint << "\n" << parameter_number << " is: ";
-                entry->writeTextTo(complaint);
-                ++parameter_number;
+            if (operand_stack.size()==0) {
+                complaint << "Expression was blank";
+            }
+            else {
+                complaint << "Malformed expression appeared to be " 
+                        << operand_stack.size() << " space-separated expressions:";
+                int parameter_number = 1;
+                for (auto entry : operand_stack ) {
+                    complaint << "\n" << parameter_number << " is: ";
+                    entry->writeTextTo(complaint);
+                    ++parameter_number;
+                }
             }
             throw ModelException(complaint.str());
         }
-        return operand_stack[0];
     }
+
 
     bool InterpretedExpression::parseVariable(const std::string& text,
                                               std::string& var_name,

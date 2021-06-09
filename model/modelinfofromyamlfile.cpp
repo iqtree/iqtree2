@@ -111,7 +111,6 @@ bool ModelVariable::constrainValueToRange() {
     return false;
 }
 
-
 void ModelVariable::setValue(double v) {
     value = v;
 }
@@ -189,16 +188,10 @@ void ModelInfoFromYAMLFile::copyMixedAndLinkedModels(const ModelInfoFromYAMLFile
     delete mixed_models;
     if (rhs.mixed_models != nullptr) {
         mixed_models = new MapOfModels(*rhs.mixed_models);
-        for (auto it = (*mixed_models).begin(); it!=(*mixed_models).end(); ++it) {
-            it->second.parent_model = this;
-        }
     }
     delete linked_models;
     if (rhs.linked_models != nullptr) {
         linked_models = new MapOfModels(*rhs.linked_models);
-        for (auto it = (*linked_models).begin(); it!=(*linked_models).end(); ++it) {
-            it->second.parent_model = this;
-        }
     }
 }
 
@@ -315,24 +308,12 @@ void ModelInfoFromYAMLFile::breakAtDot(const char* name,
     }
 }
 
-ModelInfoFromYAMLFile::MapOfModels::const_iterator
+MapOfModels::const_iterator
 ModelInfoFromYAMLFile::findMixedModel(const std::string& name) const {
     auto it = mixed_models->find(name);
     if (it == mixed_models->end()) {
         std::stringstream complaint;
         complaint << "Could not evaluate mixedl model name " << name
-            << " for model " << getLongName();
-        throw ModelExpression::ModelException(complaint.str());
-    }
-    return it;
-}
-
-ModelInfoFromYAMLFile::MapOfModels::iterator
-ModelInfoFromYAMLFile::findMixedModel(const std::string& name) {
-    auto it = mixed_models->find(name);
-    if (it == mixed_models->end()) {
-        std::stringstream complaint;
-        complaint << "Could not evaluate mixed model name " << name
             << " for model " << getLongName();
         throw ModelExpression::ModelException(complaint.str());
     }
@@ -349,7 +330,7 @@ void ModelInfoFromYAMLFile::setNumberOfStatesAndSequenceType(int requested_num_s
     }
     if (!data_type_name.empty()) {
         TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
-                      "Data Type Name is" << data_type_name);
+                      "Data Type Name is " << data_type_name);
         auto seq_type_requested = getSeqType(data_type_name.c_str());
         if (seq_type_requested != SeqType::SEQ_UNKNOWN) {
             sequence_type = seq_type_requested;
@@ -467,7 +448,7 @@ bool ModelInfoFromYAMLFile::hasVariable(const char* name) const {
         const char* var_name = nullptr;
         breakAtDot(name, sub_model_name, var_name);
         auto it = findMixedModel(sub_model_name);
-        return it->second.hasVariable(var_name);
+        return (*it)->hasVariable(var_name);
     }
     if (variables.find(name) != variables.end()) {
         return true;
@@ -491,7 +472,7 @@ double ModelInfoFromYAMLFile::getVariableValue(const char* name) const {
             const char* var_name = nullptr;
             breakAtDot(name, sub_model_name, var_name);
             auto it = findMixedModel(sub_model_name);
-            return it->second.getVariableValue(var_name);
+            return (*it)->getVariableValue(var_name);
         }
         if (dotted || parent_model==nullptr) {
             return 0.0;
@@ -516,7 +497,7 @@ bool ModelInfoFromYAMLFile::isVariableFixed(const std::string& name) const {
             const char* var_name = nullptr;
             breakAtDot(name.c_str(), sub_model_name, var_name);
             auto it = findMixedModel(sub_model_name);
-            return it->second.isVariableFixed(var_name);
+            return (*it)->isVariableFixed(var_name);
         }
         if (dotted || parent_model==nullptr) {
             return false;
@@ -849,8 +830,8 @@ ModelVariable& ModelInfoFromYAMLFile::assign(const std::string& var_name,
             breakAtDot(var_name.c_str(), sub_model_name,
                 sub_model_var_name);
             auto it = findMixedModel(sub_model_name);
-            return it->second.assign(std::string(sub_model_var_name),
-                                     value_to_set);
+            return (*it)->assign(std::string(sub_model_var_name),
+                                 value_to_set);
         }
         std::stringstream complaint;
         complaint << "Could not assign"
@@ -873,7 +854,7 @@ ModelVariable& ModelInfoFromYAMLFile::forceAssign(const std::string& var_name,
             breakAtDot(var_name.c_str(), sub_model_name,
                 sub_model_var_name);
             auto it = findMixedModel(sub_model_name);
-            return it->second.forceAssign(std::string(sub_model_var_name),
+            return (*it)->forceAssign(std::string(sub_model_var_name),
                                           value_to_set);
         }
         ModelVariable var(ModelParameterType::OTHER,
@@ -1053,6 +1034,10 @@ int ModelInfoFromYAMLFile::getRateMatrixRank() const {
     return rate_matrix_rank;
 }
 
+const std::string& ModelInfoFromYAMLFile::getRateMatrixFormula() const {
+    return rate_matrix_formula;
+}
+
 std::string ModelInfoFromYAMLFile::getParameterList(ModelParameterType param_type) const {
     std::stringstream list;
     appendParameterList(param_type, list);
@@ -1112,11 +1097,11 @@ bool ModelInfoFromYAMLFile::appendParameterList(ModelParameterType param_type,
     //      for a JC+GTR model might read "GTR={r(1)=4, r(2)=3, ...}"
     //
     if (this->mixed_models != nullptr) {
-        for (auto it = mixed_models->begin(); it != mixed_models->end(); ++it) {
+        for (ModelInfoFromYAMLFile* model : *mixed_models) {
             std::stringstream sub_list;
-            sub_list << separator << it->first;
+            sub_list << separator << model->getName();
             sub_list << "={";
-            if (it->second.appendParameterList(param_type, sub_list)) {
+            if (model->appendParameterList(param_type, sub_list)) {
                 list << sub_list.str() << "}";
                 separator = ", ";
                 anything_listed = true;
@@ -1196,6 +1181,8 @@ void ModelInfoFromYAMLFile::inheritModel(const ModelInfoFromYAMLFile& mummy) {
     inheritModelProperties(mummy, complaint);
     inheritModelParameters(mummy, complaint);
     inheritModelVariables (mummy, complaint);
+    inheritModelMatrices  (mummy, complaint);
+
     ModelExpression::ModelException::throwIfNonBlank(complaint);
 }
 
@@ -1312,6 +1299,24 @@ void ModelInfoFromYAMLFile::inheritModelVariables(const ModelInfoFromYAMLFile& m
         string_properties[prop_mapping.first] = prop_mapping.second;
     }
     getVariableNamesByPosition();
+}
+
+void ModelInfoFromYAMLFile::inheritModelMatrices(const ModelInfoFromYAMLFile& mummy,
+                                                 std::stringstream& complaint) {
+    if (0<mummy.rate_matrix_rank) {
+        rate_matrix_rank           = mummy.rate_matrix_rank;
+        rate_matrix_expressions    = mummy.rate_matrix_expressions;
+    }
+    if (!mummy.rate_matrix_formula.empty()) {
+        rate_matrix_formula        = mummy.rate_matrix_formula;
+    }
+    if (0<mummy.tip_likelihood_rank) {
+       tip_likelihood_rank        = mummy.tip_likelihood_rank;
+        tip_likelihood_expressions = mummy.tip_likelihood_expressions;
+    }
+    if (!mummy.tip_likelihood_formula.empty()) {
+        tip_likelihood_formula     = mummy.tip_likelihood_formula;
+    }
 }
 
 const std::string& ModelInfoFromYAMLFile::getOptimizationAlgorithm() const {
@@ -1517,11 +1522,9 @@ ModelVariable& ModelInfoFromYAMLFile::assign(const std::string& var_name,
 void ModelInfoFromYAMLFile::writeInfo(const char* caption,
                                       ModelParameterType param_type,
                                       std::ostream& out ) const {
-    if (YAMLVariableVerbosity <= verbose_mode ) {
-        auto params = getParameterList(param_type);
-        if (!params.empty()) {
-            out << caption << ": " << params << std::endl;
-        }
+    auto params = getParameterList(param_type);
+    if (!params.empty()) {
+        out << caption << ": " << params << std::endl;
     }
 }
 

@@ -1,39 +1,43 @@
 #include "yamlmodelwrapper.h"
 
-YAMLModelBinary::YAMLModelBinary(const char *model_name, std::string model_params,
-                StateFreqType freq, std::string freq_params,
-                PhyloTree *tree, PhyloTree* report_to_tree,
-                const ModelInfoFromYAMLFile& info)
-        : super(info, tree, report_to_tree) {
+YAMLModelBinary::YAMLModelBinary(ModelInfoFromYAMLFile& info,
+                                 bool make_copy, const char *model_name, 
+                                 std::string model_params, StateFreqType freq, 
+                                 std::string freq_params, PhyloTree *tree, 
+                                 PhyloTree* report_to_tree)
+        : super(info, make_copy, tree, report_to_tree) {
     init(model_name, model_params, freq, freq_params, report_to_tree);
     setRateMatrixFromModel();
 }
 
-YAMLModelCodon::YAMLModelCodon(const char *model_name, std::string model_params,
-                StateFreqType freq, std::string freq_params,
-                PhyloTree *tree, PhyloTree* report_to_tree,
-                const ModelInfoFromYAMLFile& info)
-        : super(info, tree, report_to_tree) {
+YAMLModelCodon::YAMLModelCodon(ModelInfoFromYAMLFile& info,
+                               bool        make_copy,    const char*   model_name, 
+                               std::string model_params, StateFreqType freq, 
+                               std::string freq_params,  PhyloTree*    tree, 
+                               PhyloTree*  report_to_tree)
+        : super(info, make_copy, tree, report_to_tree) {
     setReversible(info.isReversible());
     init(model_name, model_params, freq, freq_params, report_to_tree);
     setRateMatrixFromModel();
 }
 
-YAMLModelDNA::YAMLModelDNA(const char *model_name, string model_params,
-                StateFreqType freq, string freq_params,
-                PhyloTree *tree, PhyloTree* report_to_tree,
-                const ModelInfoFromYAMLFile& info)
-        : super(info, tree, report_to_tree) {
+YAMLModelDNA::YAMLModelDNA(ModelInfoFromYAMLFile& info,
+                           bool        make_copy,    const char*   model_name, 
+                           std::string model_params, StateFreqType freq, 
+                           std::string freq_params,  PhyloTree*    tree, 
+                           PhyloTree*  report_to_tree)
+        : super(info, make_copy, tree, report_to_tree) {
     init(model_name, model_params, freq,
             freq_params, report_to_tree);
     setRateMatrixFromModel();
 }
 
-YAMLModelDNAError::YAMLModelDNAError(const char *model_name, string model_params,
-                    StateFreqType freq, string freq_params,
-                    PhyloTree *tree, PhyloTree* report_to_tree,
-                    const ModelInfoFromYAMLFile& info)
-        : super(info, tree, report_to_tree) {
+YAMLModelDNAError::YAMLModelDNAError(ModelInfoFromYAMLFile& info,
+                                     bool        make_copy,    const char* model_name, 
+                                     std::string model_params, StateFreqType freq, 
+                                     std::string freq_params,  PhyloTree*    tree, 
+                                     PhyloTree* report_to_tree)                    
+        : super(info, make_copy, tree, report_to_tree) {
     init(model_name, model_params, freq,
             freq_params, report_to_tree);        
     setRateMatrixFromModel();
@@ -42,26 +46,27 @@ YAMLModelDNAError::YAMLModelDNAError(const char *model_name, string model_params
 bool YAMLModelDNAError::getVariables(double *variables) {
     bool changed = super::getVariables(variables);
     if (changed && !fix_epsilon) {
-        epsilon = model_info.getVariableValue("epsilon");
+        epsilon = model_info->getVariableValue("epsilon");
     }
     return changed;
 }
 
-YAMLModelMorphology::YAMLModelMorphology(const char *model_name, std::string model_params,
-                StateFreqType freq, std::string freq_params,
-                PhyloTree *tree, PhyloTree* report_to_tree,
-                const ModelInfoFromYAMLFile& info)
-        : super(info, tree, report_to_tree) {
+YAMLModelMorphology::YAMLModelMorphology(ModelInfoFromYAMLFile& info,
+                                         bool        make_copy,    const char* model_name, 
+                                         std::string model_params, StateFreqType freq, 
+                                         std::string freq_params,  PhyloTree*    tree, 
+                                         PhyloTree*  report_to_tree)
+        : super(info, make_copy, tree, report_to_tree) {
     init(model_name, model_params, freq, freq_params, report_to_tree);
     setRateMatrixFromModel();
 }
 
-YAMLModelProtein::YAMLModelProtein(ModelsBlock* block,
-                    const char *model_name, string model_params,
-                    StateFreqType freq, string freq_params,
-                    PhyloTree *tree, PhyloTree* report_to_tree,
-                    const ModelInfoFromYAMLFile& info)
-        : super(info, tree, report_to_tree) {
+YAMLModelProtein::YAMLModelProtein(ModelInfoFromYAMLFile& info, 
+                                   bool        make_copy,    const char*   model_name, 
+                                   std::string model_params, StateFreqType freq, 
+                                   std::string freq_params,  ModelsBlock*  block,
+                                   PhyloTree*  tree,         PhyloTree*    report_to_tree)
+        : super(info, make_copy, tree, report_to_tree) {
     setModelsBlock(block);
     setNumberOfStates(20);
     setReversible(info.isReversible());
@@ -72,21 +77,22 @@ YAMLModelProtein::YAMLModelProtein(ModelsBlock* block,
 }
 
 YAMLModelMixture::YAMLModelMixture(ModelInfoFromYAMLFile& info,
-                                   PhyloTree *tree,
-                                   ModelsBlock* models_block,
-                                   PhyloTree* report_to_tree)
-    : super(info, tree, report_to_tree) {
+                                   bool          make_copy, const char*  model_name, 
+                                   StateFreqType freq,      ModelsBlock* models_block,
+                                   PhyloTree*    tree,      PhyloTree*   report_to_tree)
+    : super(info, make_copy, tree, report_to_tree) {
     //as per init() and initMixture()
     ASSERT(info.isMixtureModel());
 
-    StateFreqType freq = info.getFrequencyType();
-    if (freq == StateFreqType::FREQ_UNKNOWN) {
-        freq = StateFreqType::FREQ_USER_DEFINED;
+    StateFreqType old_freq = info.getFrequencyType();
+    StateFreqType new_freq = old_freq;
+    if (new_freq == StateFreqType::FREQ_UNKNOWN) {
+        new_freq = freq;
     }
-
-    if (freq == StateFreqType::FREQ_MIXTURE) {
-        //Todo: Do what?!        
+    if (new_freq == StateFreqType::FREQ_UNKNOWN) {
+        new_freq = StateFreqType::FREQ_USER_DEFINED;
     }
+    info.setFrequencyType(new_freq);
 
     bool optimize_weights = false;
 
@@ -95,28 +101,22 @@ YAMLModelMixture::YAMLModelMixture(ModelInfoFromYAMLFile& info,
     full_name += OPEN_BRACKET;
     const char* separator = "";
     DoubleVector weights;
-    for (auto child_name_and_info: model_info.getMixedModels()) {
-        ModelInfoFromYAMLFile& child = child_name_and_info.second;
-        ModelInfoFromYAMLFile* child_model_info = nullptr;
+    for (auto child: model_info->getMixedModels()) {
         auto model = ModelListFromYAMLFile::getModelByReference
-                    (child, tree, info.getFrequencyType(),
+                    (*child, tree, info.getFrequencyType(),
                     models_block, no_parameters, 
-                    child_model_info, report_to_tree);
-        mixed_model_infos.push_back(child_model_info);
-        child_model_info->setParentModel(&model_info);
+                    report_to_tree);
         models.push_back(model);
-        weights.push_back(child.getModelWeight());
+        weights.push_back(child->getModelWeight());
         if (!optimize_weights) {
-            optimize_weights = !child.isModelWeightFixed();
+            optimize_weights = !child->isModelWeightFixed();
         }
         //what about weights?!
         full_name += separator;
-        full_name += child.getName();
+        full_name += child->getName();
         separator = ",";
     }
     full_name += CLOSE_BRACKET;
-
-    setRateMatrixFromModel();
 
     //Do more of what ModelMixture::initMixture() does.
 
@@ -126,6 +126,8 @@ YAMLModelMixture::YAMLModelMixture(ModelInfoFromYAMLFile& info,
     decomposeRateMatrix();
 
     phylo_tree = tree;
+
+    setRateMatrixFromModel();
 }
 
 bool YAMLModelMixture::isMixtureModel() {
@@ -145,17 +147,8 @@ void YAMLModelMixture::setRateMatrixFromModel() {
     //See also afterVariablesChanged() which copies in the other direction
     //during optimization.
     //
-    int model_num = 0;
-    MapOfModels& map_of_models = model_info.getMixedModels();
-    ASSERT(map_of_models.size() == mixed_model_infos.size());
-    ASSERT(map_of_models.size() == models.size());
-    for (auto child_name_and_info: map_of_models) {
-        ModelInfoFromYAMLFile& child = child_name_and_info.second;
-        ModelInfoFromYAMLFile* copy  = mixed_model_infos[model_num];
-        copy->copyVariablesFrom(&child);
-        ModelMarkov* model = models[model_num];
+    for (ModelMarkov* model : models) {
         model->setRateMatrixFromModel();
-        ++model_num;
     }
 }
 
@@ -163,34 +156,22 @@ void YAMLModelMixture::afterVariablesChanged() {
     //
     //Called when variables have been changed, for at least some of
     //the child models associated with this mixture, during optimization.
-    //Each child model has its own copy of the ModelInfoFromYAMLFile
-    //(variables and all), which will have been updated, and the updates
-    //need to be copied back to what is in model_info's map of mixed models.
     //
-    int model_num = 0;
-    MapOfModels& map_of_models = model_info.getMixedModels();
-    ASSERT(map_of_models.size() == mixed_model_infos.size());
-    ASSERT(map_of_models.size() == models.size());
-    for (auto child_name_and_info: map_of_models) {
-        ModelInfoFromYAMLFile& child = child_name_and_info.second;   //original
-        ModelInfoFromYAMLFile* copy  = mixed_model_infos[model_num]; //changed
-        child.copyVariablesFrom(copy);  
-        ++model_num;
-    }
 }
 
 void YAMLModelMixture::afterWeightsChanged() {
     int nmix = getNMixtures();
     if (1<nmix) {
         int i = 0;
-        model_info.updateModelVariablesByType(prop, getNMixtures(), true,
-                                              ModelParameterType::WEIGHT, i);
+        model_info->updateModelVariablesByType(prop, getNMixtures(), true,
+                                               ModelParameterType::WEIGHT, i);
         return;
     }
 }
 
-YAMLRateFree::YAMLRateFree(PhyloTree *tree, PhyloTree* report_to_tree,
-                const ModelInfoFromYAMLFile& info): super(info, report_to_tree) {
+YAMLRateFree::YAMLRateFree(PhyloTree* tree, PhyloTree* report_to_tree,
+                           const ModelInfoFromYAMLFile& info)
+        : super(info, report_to_tree) {
     std::string algorithm = info.getOptimizationAlgorithm();
     optimize_alg = algorithm.empty() ? optimize_alg : algorithm;
     gamma_shape  = 1;
