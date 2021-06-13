@@ -334,7 +334,7 @@ void AliSimulator::initializeModel(IQTree *tree, string model_name)
     tree->aln->model_name = model_name;
     tree->aln->computeUnknownState();
     ModelsBlock *models_block = readModelsDefinition(*params);
-    
+    tree->params = params;
     tree->IQTree::initializeModel(*params, tree->aln->model_name, models_block);
 }
 
