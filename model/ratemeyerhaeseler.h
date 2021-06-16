@@ -107,6 +107,34 @@ public:
 	*/
 	double optimizeRate(int pattern);
 
+		/**
+			supporting function, called from optimizeRate() when the rate is on the boundary
+			of legal rates
+			@param pattern      target pattern
+			@param current_rate the current rate for the pattern
+			@param max_rate
+			@param negative_lh
+			@param ferror
+			@return optx - the optimized rate
+		*/
+		double optimizeRateNewton(int pattern,      double& current_rate,
+                                  double& max_rate, double& negative_lh,
+								  double& ferror);
+
+		/**
+			supporting function, called from optimizeRate() when the rate is on the boundary
+			of legal rates
+			@param pattern      target pattern
+			@param current_rate the current rate for the pattern
+			@param max_rate
+			@param negative_lh
+			@param ferror
+			@param optx
+		*/
+		void fixUpOptimizedBoundaryRate(int pattern,      double current_rate,
+		                                double& max_rate, double& negative_lh, 
+										double& ferror,   double& optx);
+
 	/**
 		optimize rates of all site-patterns
 	*/

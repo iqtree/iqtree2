@@ -230,11 +230,8 @@ void RateMeyerHaeseler::completeRateML() {
 }
 
 double RateMeyerHaeseler::optimizeRate(int pattern) {
-	optimizing_pattern = pattern;
-
-	double max_rate = MAX_SITE_RATE;
-
-	double minf = INFINITY, minx = 0;
+	optimizing_pattern  = pattern;
+	double max_rate     = MAX_SITE_RATE;
 	double negative_lh;
 	double current_rate = at(pattern);
 	double ferror, optx;
@@ -251,24 +248,8 @@ double RateMeyerHaeseler::optimizeRate(int pattern) {
 
     if (phylo_tree->optimize_by_newton && rate_mh) // Newton-Raphson method 
 	{
-    	optx = minimizeNewtonSafeMode(MIN_SITE_RATE, current_rate, max_rate,
-                                      TOL_SITE_RATE, negative_lh);
-		if (optx > MAX_SITE_RATE*0.99
-            || (optx < MIN_SITE_RATE*2 && !phylo_tree->aln->at(pattern).isConst()))
-		{
-			double optx2, negative_lh2;
-			optx2 = minimizeOneDimen(MIN_SITE_RATE, current_rate, max_rate,
-                                     TOL_SITE_RATE, &negative_lh2, &ferror);
-			if (negative_lh2 < negative_lh - 1e-4) {
-				cout << "+++NEWTON IS WRONG for pattern " << pattern << ": " << optx2 << " " << 
-				negative_lh2 << " (Newton: " << optx << " " << negative_lh <<")" << endl;
-			}
-			if (negative_lh < negative_lh2 - 1e-4 && 
-				verbose_mode >= VerboseMode::VB_MED) {
-				cout << "Brent is wrong for pattern " << pattern << ": " << optx2 << " " << 
-				negative_lh2 << " (Newton: " << optx << " " << negative_lh <<")" << endl;
-			}
-		}
+		optx = optimizeRateNewton(pattern, current_rate,
+                                  max_rate, negative_lh, ferror);
     }
     else {
 		optx = minimizeOneDimen(MIN_SITE_RATE, current_rate, max_rate,
@@ -293,50 +274,79 @@ double RateMeyerHaeseler::optimizeRate(int pattern) {
 		return optx; 
 	}
 
-//#ifndef NDEBUG		
 	if (optx == MAX_SITE_RATE || 
 		(optx == MIN_SITE_RATE && !phylo_tree->aln->at(pattern).isConst())) {
-		ofstream out;
-	
-        if (verbose_mode >= VerboseMode::VB_MED)  {
-            cout << "Checking pattern " << pattern
-                 << " (" << current_rate << ", " << optx << ")" << endl;
-            out.open("x", ios::app);
-            out << pattern;
-        }
-		for (double val=0.1; val <= 100; val += 0.1) {
-			double f = computeFunction(val);
-			
-			if (verbose_mode >= VerboseMode::VB_MED) {
-				out << " " << f;
-			}
-			if (f < minf) { 
-				minf = f; 
-				minx = val; 
-			}
-			if (verbose_mode < VerboseMode::VB_MED && minf < negative_lh) {
-				break;
-			}
-		}
-		if (verbose_mode >= VerboseMode::VB_MED) {
-			out << endl;
-			out.close();
-		}
-		//cout << "minx: " << minx << " " << minf << endl;
-		if (negative_lh > minf+1e-3) {
-			optx = minimizeOneDimen(MIN_SITE_RATE, minx, max_rate,
-                                    1e-3, &negative_lh, &ferror);
-			at(pattern) = optx;
-			if (verbose_mode >= VerboseMode::VB_MED) {
-				cout << "FIX rate: " << minx << " , " << optx << endl;
-			}
-		}
+		fixUpOptimizedBoundaryRate(pattern, current_rate, max_rate, 
+		                           negative_lh, ferror, optx);
 	}
-//#endif
 
 	return optx;
 }
 
+double RateMeyerHaeseler::optimizeRateNewton(int pattern, double& current_rate,
+                                             double& max_rate, double& negative_lh,
+											 double& ferror)  {
+	double optx = minimizeNewtonSafeMode(MIN_SITE_RATE, current_rate, max_rate,
+                                      TOL_SITE_RATE, negative_lh);
+	if (optx > MAX_SITE_RATE*0.99
+		|| (optx < MIN_SITE_RATE*2 && !phylo_tree->aln->at(pattern).isConst()))
+	{
+		double optx2, negative_lh2;
+		optx2 = minimizeOneDimen(MIN_SITE_RATE, current_rate, max_rate,
+								TOL_SITE_RATE, &negative_lh2, &ferror);
+		if (negative_lh2 < negative_lh - 1e-4) {
+			cout << "+++NEWTON IS WRONG for pattern " << pattern << ": " << optx2 << " " << 
+			negative_lh2 << " (Newton: " << optx << " " << negative_lh <<")" << endl;
+		}
+		if (negative_lh < negative_lh2 - 1e-4 && 
+			verbose_mode >= VerboseMode::VB_MED) {
+			cout << "Brent is wrong for pattern " << pattern << ": " << optx2 << " " << 
+			negative_lh2 << " (Newton: " << optx << " " << negative_lh <<")" << endl;
+		}
+	}
+	return optx;
+}
+
+void RateMeyerHaeseler::fixUpOptimizedBoundaryRate(int pattern, double current_rate,
+                                                   double& max_rate, double& negative_lh, 
+												   double& ferror,   double& optx) {
+	ofstream out;
+	if (verbose_mode >= VerboseMode::VB_MED)  {
+		cout << "Checking pattern " << pattern
+				<< " (" << current_rate << ", " << optx << ")" << endl;
+		out.open("x", ios::app);
+		out << pattern;
+	}
+	double minf = INFINITY;
+	double minx = 0;
+	for (double val=0.1; val <= 100; val += 0.1) {
+		double f = computeFunction(val);
+		
+		if (verbose_mode >= VerboseMode::VB_MED) {
+			out << " " << f;
+		}
+		if (f < minf) { 
+			minf = f; 
+			minx = val; 
+		}
+		if (verbose_mode < VerboseMode::VB_MED && minf < negative_lh) {
+			break;
+		}
+	}
+	if (verbose_mode >= VerboseMode::VB_MED) {
+		out << endl;
+		out.close();
+	}
+	//cout << "minx: " << minx << " " << minf << endl;
+	if (negative_lh > minf+1e-3) {
+		optx = minimizeOneDimen(MIN_SITE_RATE, minx, max_rate,
+								1e-3, &negative_lh, &ferror);
+		at(pattern) = optx;
+		if (verbose_mode >= VerboseMode::VB_MED) {
+			cout << "FIX rate: " << minx << " , " << optx << endl;
+		}
+	}
+}
 
 void RateMeyerHaeseler::optimizeRates() {
 	if (!dist_mat) {
