@@ -162,6 +162,40 @@ protected:
 	*/
 	int optimizing_cat;
 
+
+	/**
+		supporting functions, called by RateMeyerDiscrete::computeFunction...
+	*/
+
+
+	/**
+	@param eyeSequence      (distinct patterns in) sequence i from alignment
+	@param jaySequence      (distinct patterns in) sequence j from alignment
+	@param ptn_frequencies  frequencies of distinct patterns
+	@param nstate           number of states 
+	@param pair_frequencies an nstate*nstate matrix of pair frequencies
+							(will be added to, according to the known state of
+							 the kth pattern in both the ith and jth sequences 
+							 of the alignment)
+	@return true if eyeSequence, jaySequence, and ptn_frequencies were all set
+	*/
+	bool countPairFrequencies(const char* eyeSequence,     const char* jaySequence,
+                              const int*  ptn_frequencies, int nstate,
+                              int*        pair_frequencies) const;
+
+	/**
+	@param i                index of first sequence
+	@param j                index of second sequence
+	@param nstate           number of states 
+	@param pair_frequencies an nstate*nstate matrix of pair frequencies
+							(will be added to, according to the known state of
+							 the kth pattern in both the ith and jth sequences 
+							 of the alignment; multiplied by the frequency of the
+							 kth pattern).
+	*/
+
+	void countPairFrequencies(int i, int j, int nstate,
+                              int* pair_frequencies) const;
 };
 
 #endif

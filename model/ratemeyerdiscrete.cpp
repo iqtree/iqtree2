@@ -275,47 +275,23 @@ double RateMeyerDiscrete::computeFunction(double value) {
 		return -ptn_tree->computeLikelihood();
 	}
 
-	double lh = 0.0;
-	int nseq = static_cast<int>(phylo_tree->leafNum);
-	int nstate = phylo_tree->getModel()->num_states;
-	ModelSubst *model = phylo_tree->getModel();
-    int trans_size = nstate * nstate;
-	double *trans_mat = new double[trans_size];
-	int *pair_freq = new int[trans_size];
+	double      lh         = 0.0;
+	int         nseq       = static_cast<int>(phylo_tree->leafNum);
+	int         nstate     = phylo_tree->getModel()->num_states;
+	ModelSubst* model      = phylo_tree->getModel();
+    int         trans_size = nstate * nstate;
+	double*     trans_mat  = new double[trans_size];
+	int*        pair_freq  = new int[trans_size];
     
-    auto frequencies = phylo_tree->getConvertedSequenceFrequencies();
+    const int* frequencies = phylo_tree->getConvertedSequenceFrequencies();
     for (int i = 0; i < nseq-1; i++) {
-        auto eyeSequence = phylo_tree->getConvertedSequenceByNumber(i);
+        const char* eyeSequence = phylo_tree->getConvertedSequenceByNumber(i);
         for (int j = i + 1; j < nseq; j++) {
-            auto jaySequence = phylo_tree->getConvertedSequenceByNumber(j);
+            const char* jaySequence = phylo_tree->getConvertedSequenceByNumber(j);
             memset(pair_freq, 0, trans_size * sizeof(int));
-            if (jaySequence!=nullptr) { 
-                for (size_t k = 0; k < size(); k++) {
-                    if (ptn_cat[k] != optimizing_cat) {
-                        continue;
-                    }
-                    int state1 = eyeSequence[k];
-                    auto pairRow = pair_freq + state1*nstate;
-                    if (nstate<=state1) {
-                        continue;
-                    }
-                    int state2 = jaySequence[k];
-                    if ( state2 < nstate) {
-                        pairRow[state2] += frequencies[k];
-                    }
-                }
-            } else {
-                for (size_t k = 0; k < size(); k++) {
-                    if (ptn_cat[k] != optimizing_cat) {
-                        continue;
-                    }
-                    Pattern *pat = & phylo_tree->aln->at(k);
-                    int state1 = pat->at(i);
-                    int state2 = pat->at(j);
-                    if ( state1 < nstate && state2 < nstate) {
-                        pair_freq[state1*nstate + state2] += pat->frequency;
-                    }
-                }
+            if (!countPairFrequencies(eyeSequence, jaySequence, frequencies, nstate, pair_freq))
+            {
+                countPairFrequencies(i, j, nstate, pair_freq);
             }
             model->computeTransMatrix(value * dist_mat[i*nseq + j], trans_mat);
             for (size_t k = 0; k < trans_size; k++)
@@ -324,9 +300,9 @@ double RateMeyerDiscrete::computeFunction(double value) {
             }
         }
     }
-delete [] pair_freq;
-delete [] trans_mat;
-return lh;
+    delete [] pair_freq;
+    delete [] trans_mat;
+    return lh;
 }
 
 void RateMeyerDiscrete::computeFuncDerv(double value, double &df, double &ddf) {
@@ -346,40 +322,18 @@ void RateMeyerDiscrete::computeFuncDerv(double value, double &df, double &ddf) {
 	df = ddf = 0.0;
 
     int *pair_freq = new int[trans_size];
-    auto frequencies = phylo_tree->getConvertedSequenceFrequencies();
+    const int* frequencies = phylo_tree->getConvertedSequenceFrequencies();
     for (int i = 0; i + 1 < nseq; ++i) {
-        auto eyeSequence = phylo_tree->getConvertedSequenceByNumber(i);
+        const char* eyeSequence = phylo_tree->getConvertedSequenceByNumber(i);
         for (int j = i+1; j < nseq; ++j) {
-            auto jaySequence = phylo_tree->getConvertedSequenceByNumber(j);
+            const char* jaySequence = phylo_tree->getConvertedSequenceByNumber(j);
+
             memset(pair_freq, 0, trans_size * sizeof(int));
-            if (frequencies!=nullptr && eyeSequence!=nullptr && jaySequence!=nullptr) {
-                for (size_t k = 0; k < size(); ++k) {
-                    if (ptn_cat[k] != optimizing_cat) {
-                        continue;
-                    }
-                    int state1 = eyeSequence[k];
-                    if (nstate<=state1) {
-                        continue;
-                    }
-                    auto pairRow = pair_freq + state1*nstate;
-                    int state2 = jaySequence[k];
-                    if (nstate<=state2) {
-                        continue;
-                    }
-                    pairRow[state2] += frequencies[k];
-                }
-            } else {
-                for (size_t k = 0; k < size(); ++k) {
-                    if (ptn_cat[k] != optimizing_cat) {
-                        continue;
-                    }
-                    Pattern *pat = & phylo_tree->aln->at(k);
-                    int state1 = pat->at(i);
-                    int state2 = pat->at(j);
-                    if (state1 < nstate && state2 < nstate)
-                        pair_freq[state1*nstate + state2] += pat->frequency;
-                }
+            if (!countPairFrequencies(eyeSequence, jaySequence, frequencies, nstate, pair_freq))
+            {
+                countPairFrequencies(i, j, nstate, pair_freq);
             }
+
             double dist = dist_mat[i*nseq + j];
             double derv1 = 0.0, derv2 = 0.0;
             model->computeTransDerv(value * dist, trans_mat, trans_derv1, trans_derv2);
@@ -402,6 +356,44 @@ void RateMeyerDiscrete::computeFuncDerv(double value, double &df, double &ddf) {
     delete [] trans_derv2;
     delete [] trans_derv1;
     delete [] trans_mat;
+}
+
+bool RateMeyerDiscrete::countPairFrequencies(const char* eyeSequence,     const char* jaySequence,
+                                             const int*  ptn_frequencies, int nstate,
+                                             int*        pair_frequencies) const {
+    if (eyeSequence==nullptr || jaySequence==nullptr || ptn_frequencies==nullptr) {
+        return false;
+    }
+    for (size_t k = 0; k < size(); k++) {
+        if (ptn_cat[k] != optimizing_cat) {
+            continue;
+        }
+        int state1 = eyeSequence[k];
+        auto pairRow = pair_frequencies + state1*nstate;
+        if (nstate<=state1) {
+            continue;
+        }
+        int state2 = jaySequence[k];
+        if ( state2 < nstate) {
+            pairRow[state2] += ptn_frequencies[k];
+        }
+    }
+    return true;
+}
+
+void RateMeyerDiscrete::countPairFrequencies(int i, int j, int nstate,
+                                             int* pair_frequencies) const {
+    for (size_t k = 0; k < size(); k++) {
+        if (ptn_cat[k] != optimizing_cat) {
+            continue;
+        }
+        Pattern *pat = & phylo_tree->aln->at(k);
+        int state1 = pat->at(i);
+        int state2 = pat->at(j);
+        if ( state1 < nstate && state2 < nstate) {
+            pair_frequencies[state1*nstate + state2] += pat->frequency;
+        }
+    }
 }
 
 double RateMeyerDiscrete::optimizeCatRate(int cat) {
