@@ -1290,61 +1290,7 @@ void ModelMarkov::decomposeRateMatrix(){
         return;
     }
     if (num_params == -1) {
-        // reversible model
-        // manual compute eigenvalues/vectors for F81-style model
-        eigenvalues[0] = 0.0;
-        double mu = 0.0;
-        for (int i = 0; i < num_states; i++) {
-            mu += state_freq[i]*state_freq[i];
-        }
-        mu = total_num_subst/(1.0 - mu);
-        
-        // compute eigenvalues
-        for (int i = 1; i < num_states; i++) {
-            eigenvalues[i] = -mu;
-        }
-
-        //double *f = new double[num_states];
-        //for (i = 0; i < num_states; i++) f[i] = sqrt(state_freq[i]);
-        // compute eigenvectors
-        memset(eigenvectors, 0, num_states*num_states*sizeof(double));
-        memset(inv_eigenvectors, 0, num_states*num_states*sizeof(double));
-        eigenvectors[0] = 1.0;
-        for (int i = 1; i < num_states; i++) {
-            eigenvectors[i] = -1.0;
-            //eigenvectors[i] = f[i]/f[num_states-1];
-        }
-        for (int i = 1; i < num_states; i++) {
-            eigenvectors[i*num_states] = 1.0;
-            eigenvectors[i*num_states+i] = state_freq[0]/state_freq[i];
-        }
-        for (int i = 0; i < num_states; ++i) {
-            for (int j = 0; j < num_states; ++j) {
-                inv_eigenvectors[i*num_states+j]
-                    = state_freq[j]*eigenvectors[j*num_states+i];
-            }
-        }
-        calculateSquareMatrixTranspose(inv_eigenvectors, num_states
-                                       , inv_eigenvectors_transposed);
-        writeInfo(cout);
-        // sanity check
-        double *q = new double[num_states*num_states];
-        getQMatrix(q);
-        double zero = 0.0;
-        for (int j = 0; j < num_states; j++) {
-            for (int i = 0; i < num_states; i++) {
-                for (int k = 0; k < num_states; k++) {
-                    zero += q[i*num_states+k] * eigenvectors[k*num_states+j];
-                }
-                zero -= eigenvalues[j] * eigenvectors[i*num_states+j];
-                if (fabs(zero) > 1.0e-5) {
-                    cout << "\nERROR: Eigenvector doesn't satisfy eigenvalue equation!"
-                         << " (gap=" << fabs(zero) << ")" << endl;
-                    abort();
-                }
-            }
-        }
-        delete [] q;
+        decomposeRateMatrixReversible();
         return;
     }
     auto technique = phylo_tree->params->matrix_exp_technique;
@@ -1368,8 +1314,8 @@ void ModelMarkov::decomposeRateMatrix(){
         pi = pi*(1.0/pi.sum());
         
         ArrayXd pi_sqrt_arr = pi.array().sqrt();
-        auto pi_sqrt = pi_sqrt_arr.matrix().asDiagonal();
-        auto pi_sqrt_inv = pi_sqrt_arr.inverse().matrix().asDiagonal();
+        auto pi_sqrt        = pi_sqrt_arr.matrix().asDiagonal();
+        auto pi_sqrt_inv    = pi_sqrt_arr.inverse().matrix().asDiagonal();
 
         if (half_matrix) {
             for (int i = 0, k = 0, ii = 0; i < num_states; ++i) {
@@ -1496,6 +1442,64 @@ void ModelMarkov::decomposeRateMatrix(){
         return;
     }
     decomposeRateMatrixRev();
+}
+
+void ModelMarkov::decomposeRateMatrixReversible() {
+    // reversible model
+    // manual compute eigenvalues/vectors for F81-style model
+    eigenvalues[0] = 0.0;
+    double mu = 0.0;
+    for (int i = 0; i < num_states; i++) {
+        mu += state_freq[i]*state_freq[i];
+    }
+    mu = total_num_subst/(1.0 - mu);
+    
+    // compute eigenvalues
+    for (int i = 1; i < num_states; i++) {
+        eigenvalues[i] = -mu;
+    }
+
+    //double *f = new double[num_states];
+    //for (i = 0; i < num_states; i++) f[i] = sqrt(state_freq[i]);
+    // compute eigenvectors
+    memset(eigenvectors, 0, num_states*num_states*sizeof(double));
+    memset(inv_eigenvectors, 0, num_states*num_states*sizeof(double));
+    eigenvectors[0] = 1.0;
+    for (int i = 1; i < num_states; i++) {
+        eigenvectors[i] = -1.0;
+        //eigenvectors[i] = f[i]/f[num_states-1];
+    }
+    for (int i = 1; i < num_states; i++) {
+        eigenvectors[i*num_states] = 1.0;
+        eigenvectors[i*num_states+i] = state_freq[0]/state_freq[i];
+    }
+    for (int i = 0; i < num_states; ++i) {
+        for (int j = 0; j < num_states; ++j) {
+            inv_eigenvectors[i*num_states+j]
+                = state_freq[j]*eigenvectors[j*num_states+i];
+        }
+    }
+    calculateSquareMatrixTranspose(inv_eigenvectors, num_states
+                                    , inv_eigenvectors_transposed);
+    writeInfo(cout);
+    // sanity check
+    double *q = new double[num_states*num_states];
+    getQMatrix(q);
+    double zero = 0.0;
+    for (int j = 0; j < num_states; j++) {
+        for (int i = 0; i < num_states; i++) {
+            for (int k = 0; k < num_states; k++) {
+                zero += q[i*num_states+k] * eigenvectors[k*num_states+j];
+            }
+            zero -= eigenvalues[j] * eigenvectors[i*num_states+j];
+            if (fabs(zero) > 1.0e-5) {
+                cout << "\nERROR: Eigenvector doesn't satisfy eigenvalue equation!"
+                        << " (gap=" << fabs(zero) << ")" << endl;
+                abort();
+            }
+        }
+    }
+    delete [] q;
 }
 
 void ModelMarkov::decomposeRateMatrixRev() {

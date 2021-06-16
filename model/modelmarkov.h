@@ -373,6 +373,11 @@ public:
 	*/
 	virtual void decomposeRateMatrix();
 
+		/**  supporting function, called from decomposeRateMatrix, when
+		     (num_params == -1)
+		*/
+		void decomposeRateMatrixReversible();
+
 //	double *getEigenCoeff() const;
 
 	virtual double *getEigenvalues() const;
