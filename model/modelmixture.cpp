@@ -20,6 +20,7 @@
 //#include "phylokernelmixture.h"
 #include "modelpomomixture.h"
 #include "modelinfofromyamlfile.h" //for ModelListFromYAMLFile class
+#include "utils/statefrequency.h"
 #include <utils/stringfunctions.h> //for convert_double
 
 #ifdef _MSC_VER
@@ -1227,83 +1228,21 @@ void ModelMixture::initMixture(string orig_model_name, string model_name,
 {
     NxsModel* nxs_freq_empirical = new NxsModel("empirical");
     NxsModel* nxs_freq_optimize  = new NxsModel("optimize");
-    int       num_pre_freq       = 0;
 
-	vector<NxsModel*> freq_vec;
-	DoubleVector      freq_rates;
-	DoubleVector      freq_weights;
+	DoubleVector          freq_rates;
+	DoubleVector          freq_weights;
+	vector<NxsModel*>     freq_vec;
+    vector<StateFreqType> freq_type;
+    StrVector             freq_desc;
+
 	fix_prop             = false;
 	optimizing_submodels = false;
 
 	if (freq == StateFreqType::FREQ_MIXTURE) {
-        size_t cur_pos = 0;
-		for (int m = 0; cur_pos < freq_params.length(); ++m) {
-			size_t pos = freq_params.find(',', cur_pos);
-			if (pos == string::npos) {
-				pos = freq_params.length();
-            }
-			if (pos <= cur_pos) {
-				outError("One frequency name in the mixture is empty.");
-            }
-			string this_name = freq_params.substr(cur_pos, pos-cur_pos);
-			double rate = 1.0, weight = 1.0;
-			size_t pos_rate = this_name.find(':');
-			if (pos_rate != string::npos) {
-				size_t pos_weight = this_name.find(':', pos_rate+1);
-				if (pos_weight == string::npos) {
-					rate     = convert_double(this_name.substr(pos_rate+1).c_str());
-				} else {
-                    auto len = pos_weight - pos_rate - 1;
-					rate     = convert_double(this_name.substr(pos_rate+1, len).c_str());
-					weight   = convert_double(this_name.substr(pos_weight+1).c_str());
-					fix_prop = true;
-					if (weight <= 0.0) {
-						outError("Mixture component weight is negative!");
-                    }
-                    weight = max(weight, MIN_MIXTURE_PROP);
-				}
-				this_name = this_name.substr(0, pos_rate);
-			}
-			freq_rates.push_back(rate);
-			freq_weights.push_back(weight);
-			cur_pos = pos+1;
-			if (this_name == nxs_freq_empirical->name) {
-				freq_vec.push_back(nxs_freq_empirical);
-                ++num_pre_freq;
-            } else if (this_name == nxs_freq_optimize->name) {
-                freq_vec.push_back(nxs_freq_optimize);
-                ++num_pre_freq;
-			} else {
-				NxsModel *freq_mod = models_block->findModel(this_name);
-				if (!freq_mod) {
-					outError("Frequency mixture name not found ", this_name);
-                }
-				if (!(freq_mod->flag & NM_FREQ)) {
-					cout << freq_mod->flag << endl;
-					outError("Frequency mixture name does not" 
-                             "correspond to frequency model ", this_name);
-				}
-				freq_vec.push_back(freq_mod);
-			}
-            if (num_pre_freq >= 2) {
-                outError("Defining both empirical and optimize"  
-                         " frequencies not allowed");
-            }
-		}
-        double sum_weights = 0.0;
-        for (int m = 0; m < freq_weights.size(); ++m) {
-            if (freq_vec[m] != nxs_freq_empirical && 
-                freq_vec[m] != nxs_freq_optimize) {
-                sum_weights += freq_weights[m];
-            }
-        }
-        for (int m = 0; m < freq_weights.size(); ++m) {
-            if (freq_vec[m] == nxs_freq_empirical || 
-                freq_vec[m] == nxs_freq_optimize) {
-                freq_weights[m] = sum_weights / freq_weights.size();
-            }
-        }
-		ModelMarkov::init(StateFreqType::FREQ_USER_DEFINED, report_to_tree);
+        initMixtureFrequencies(nxs_freq_empirical, nxs_freq_optimize,
+                               freq_params, freq_rates, freq_weights, 
+                               freq_vec, freq_type, freq_desc,
+                               models_block, report_to_tree);
 	} else {
         if (freq_params != "") {
 			readStateFreq(freq_params, report_to_tree);
@@ -1323,48 +1262,15 @@ void ModelMixture::initMixture(string orig_model_name, string model_name,
 	if (model_list == "") {
         model_list = model_name;
     }
-    size_t cur_pos = 0;
-	for (int m = 0; cur_pos < model_list.length(); ++m) {
-		size_t pos = model_list.find(',', cur_pos);
-		if (pos == string::npos) {
-			pos = model_list.length();
-        }
-		if (pos <= cur_pos) {
-			outError("One model name in the mixture is empty.");
-        }
-		string this_name = model_list.substr(cur_pos, pos-cur_pos);
-		double rate = 1.0, weight = 1.0;
-		size_t pos_rate = this_name.find(':');
-		if (pos_rate != string::npos) {
-			size_t pos_weight = this_name.find(':', pos_rate+1);
-			if (pos_weight == string::npos) {
-				rate = convert_double(this_name.substr(pos_rate+1).c_str());
-			} else {
-                auto   rate_len = pos_weight - pos_rate - 1;
-                string rate_str = this_name.substr(pos_rate + 1, rate_len);
-				rate            = convert_double(rate_str.c_str());
-				weight          = convert_double(this_name.substr(pos_weight+1).c_str());
-				fix_prop        = true;
-				if (weight <= 0.0) {
-					outError("Mixture component weight is negative!");
-                }
-			}
-			this_name = this_name.substr(0, pos_rate);
-		}
-        cur_pos = pos+1;
+    size_t      cur_pos = 0;
+    std::string this_name;
+    double      rate;
+    double      weight;
+	for (int m = 0; parseModelRateAndWeight("model", model_list, cur_pos, this_name, rate, weight); ++m) {
         if (freq == StateFreqType::FREQ_MIXTURE) {
             for(int f = 0; f != freq_vec.size(); ++f) {
-                StateFreqType sf = StateFreqType::FREQ_USER_DEFINED;
-                std::string   desc;
-                if (freq_vec[f] == nxs_freq_empirical) {
-                    sf = StateFreqType::FREQ_EMPIRICAL;
-                }
-                else if (freq_vec[f] == nxs_freq_optimize) {
-                    sf = StateFreqType::FREQ_ESTIMATE;
-                }
-                else {
-                    desc = freq_vec[f]->description;
-                }
+                StateFreqType sf   = freq_type[f];
+                std::string   desc = freq_desc[f];
                 ModelMarkov* model = createModel(this_name, models_block, 
                                                  sf, desc, tree, report_to_tree);
                 model->total_num_subst = rate * freq_rates[f];
@@ -1374,18 +1280,7 @@ void ModelMixture::initMixture(string orig_model_name, string model_name,
                 if (m+f > 0) {
                     full_name += ',';
                 }
-                if (freq_vec[f] == nxs_freq_empirical) {
-                    model->name      += "+F";
-                    model->full_name += "+F";
-                } else if (freq_vec[f] == nxs_freq_optimize) {
-                    model->name      += "+FO";
-                    model->full_name += "+FO";
-                } else {
-                    model->name      += "+F" +freq_vec[f]->name + "";
-                    model->full_name += "+F" +freq_vec[f]->name + "";
-                }
-                //name += model->name;
-                full_name += model->name;
+                appendModelName(sf, freq_vec[f]->name, model);
             }
         } else {
 			ModelMarkov* model     = createModel(this_name, models_block, 
@@ -1408,6 +1303,133 @@ void ModelMixture::initMixture(string orig_model_name, string model_name,
     setOptimizationSteps(optimize_weights);
     checkModelReversibility();
     decomposeRateMatrix();
+}
+
+void ModelMixture::initMixtureFrequencies
+        (NxsModel* nxs_freq_empirical, NxsModel* nxs_freq_optimize,
+         string& freq_params, DoubleVector& freq_rates, 
+         DoubleVector& freq_weights, vector<NxsModel*>& freq_vec,
+         vector<StateFreqType>& freq_type, StrVector& freq_desc,
+         ModelsBlock *models_block, PhyloTree* report_to_tree) {
+    int    num_pre_freq = 0;
+    size_t cur_pos      = 0;
+    double sum_weights  = 0.0; //sum of user-defined weights
+
+    std::string this_name;
+    double      rate;
+    double      weight;
+
+    for (int m = 0; parseModelRateAndWeight("frequency", freq_params, cur_pos, 
+                                            this_name, rate, weight); ++m) {
+        freq_rates.push_back(rate);
+        freq_weights.push_back(weight);
+        StateFreqType sf;
+        std::string desc;
+        NxsModel* freq_mod;
+
+        if (this_name == nxs_freq_empirical->name) {
+            freq_mod = nxs_freq_empirical;
+            sf       = StateFreqType::FREQ_EMPIRICAL;
+            ++num_pre_freq;
+        } else if (this_name == nxs_freq_optimize->name) {
+            freq_mod = nxs_freq_optimize;
+            sf       = StateFreqType::FREQ_ESTIMATE;
+            ++num_pre_freq;
+        } else {
+            freq_mod = models_block->findModel(this_name);
+            if (!freq_mod) {
+                outError("Frequency mixture name not found ", this_name);
+            }
+            if (!(freq_mod->flag & NM_FREQ)) {
+                cout << freq_mod->flag << endl;
+                outError("Frequency mixture name does not" 
+                            "correspond to frequency model ", this_name);
+            }
+            sf   = StateFreqType::FREQ_USER_DEFINED;
+            desc = freq_mod->description;
+            sum_weights += weight;
+        }
+        freq_vec. push_back(freq_mod);
+        freq_type.push_back(sf);
+        freq_desc.push_back(desc);
+
+        if (num_pre_freq >= 2) {
+            outError("Defining both empirical and optimize"  
+                        " frequencies not allowed");
+        }
+    }
+    for (int m = 0; m < freq_weights.size(); ++m) {
+        if (freq_vec[m] == nxs_freq_empirical || 
+            freq_vec[m] == nxs_freq_optimize) {
+            freq_weights[m] = sum_weights / freq_weights.size();
+        }
+    }
+    ModelMarkov::init(StateFreqType::FREQ_USER_DEFINED, report_to_tree);
+}
+
+bool ModelMixture::parseModelRateAndWeight(const char* model_noun, 
+                                           const std::string& model_list, size_t &cur_pos,
+                                           std::string& this_name, double& rate, double& weight) {
+    if (model_list.length()<=cur_pos) {
+        return false;
+    }
+    size_t pos = model_list.find(',', cur_pos);
+    if (pos == string::npos) {
+        pos = model_list.length();
+    }
+    if (pos <= cur_pos) {
+        std::stringstream complaint;
+        complaint << "One " << model_noun << " name in the mixture is empty.";
+        outError(complaint.str());
+    }
+    this_name = model_list.substr(cur_pos, pos-cur_pos);
+    rate      = 1.0;
+    weight    = 1.0;
+    size_t pos_rate = this_name.find(':');
+    if (pos_rate != string::npos) {
+        size_t pos_weight = this_name.find(':', pos_rate+1);
+        if (pos_weight == string::npos) {
+            rate = convert_double(this_name.substr(pos_rate+1).c_str());
+        } else {
+            auto   rate_len = pos_weight - pos_rate - 1;
+            string rate_str = this_name.substr(pos_rate + 1, rate_len);
+            rate            = convert_double(rate_str.c_str());
+            weight          = convert_double(this_name.substr(pos_weight+1).c_str());
+            fix_prop        = true;
+            if (weight <= 0.0) {
+                std::stringstream complaint;
+                complaint << "Mixture component weight is negative for "
+                          << model_noun << " " << this_name << "!";
+                outError(complaint.str());
+            }
+        }
+        this_name = this_name.substr(0, pos_rate);
+    }
+    cur_pos = pos+1;
+    return true;
+}
+
+void ModelMixture::appendModelName(StateFreqType sf, const std::string& user_freq_name,
+                                   ModelMarkov* model) {
+    switch (sf) {
+        case StateFreqType::FREQ_EMPIRICAL:
+            model->name      += "+F";
+            model->full_name += "+F";
+            break;
+        case StateFreqType::FREQ_ESTIMATE:
+            model->name      += "+FO";
+            model->full_name += "+FO";
+            break;
+        case StateFreqType::FREQ_USER_DEFINED:
+            model->name      += "+F" + user_freq_name;
+            model->full_name += "+F" + user_freq_name;
+            break;
+        default:
+            //Leave model name as is.
+            break;
+    }
+    //name += model->name;
+    full_name += model->name;
 }
 
 void ModelMixture::checkProportionsAndWeights(DoubleVector& weights) {

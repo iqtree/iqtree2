@@ -64,13 +64,23 @@ public:
                  ModelsBlock *models_block, StateFreqType freq, string freq_params,
                  PhyloTree *tree, bool optimize_weights, PhyloTree* report_to_tree);
 
-    void initMixture(string orig_model_name, string model_name,
-                     string model_list, ModelsBlock *models_block,
-                     StateFreqType freq, string freq_params, PhyloTree *tree,
-                     bool optimize_weights, PhyloTree* report_to_tree);
+		void initMixture(string orig_model_name, string model_name,
+						string model_list, ModelsBlock *models_block,
+						StateFreqType freq, string freq_params, PhyloTree *tree,
+						bool optimize_weights, PhyloTree* report_to_tree);
 
+		bool parseModelRateAndWeight(const char* model_noun,
+		                             const std::string& model_list, size_t &cur_pos,
+									 std::string& this_name, double& rate, double& weight);
 
+		void initMixtureFrequencies(NxsModel* nxs_freq_empirical, NxsModel* nxs_freq_optimize,
+									string& freq_params, DoubleVector& freq_rates, 
+									DoubleVector& freq_weights, vector<NxsModel*>& freq_vec,     
+									vector<StateFreqType>& freq_type, StrVector& freq_desc,
+									ModelsBlock *models_block, PhyloTree* report_to_tree);
 
+		void appendModelName(StateFreqType sf, const std::string& user_freq_name,
+							 ModelMarkov* model);
 
     void initMem();
 
