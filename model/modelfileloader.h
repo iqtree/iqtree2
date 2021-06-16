@@ -44,6 +44,9 @@ protected:
                                     ModelInfoFromYAMLFile& info,
                                     ModelListFromYAMLFile& list,
                                     PhyloTree* report_to_tree);
+    void parseYAMLModelStringProperties(const YAML::Node& substitution_model,
+                                        ModelInfoFromYAMLFile& info,
+                                        PhyloTree* report_to_tree);
     void parseYAMLModelWeightAndScale(const YAML::Node& substitution_model,
                                       ModelInfoFromYAMLFile& info,
                                       PhyloTree* report_to_tree);
@@ -117,6 +120,7 @@ public:
                         ModelListFromYAMLFile& list,
                         ModelInfoFromYAMLFile* parent_model,
                         PhyloTree* report_to_tree);
+
 };
 
 #endif /* modelfileloader_h */

@@ -901,29 +901,17 @@ void ModelFileLoader::parseYAMLModel(const YAML::Node& substitution_model,
                       " in file " + file_path);
         parseRateMatrix(rateMatrix, info, report_to_tree);
     }
-    
-    setModelStateFrequency(substitution_model, info, report_to_tree);
+    setModelStateFrequency        (substitution_model, info, report_to_tree);
+    parseYAMLModelStringProperties(substitution_model, info, report_to_tree);
+    parseYAMLModelWeightAndScale  (substitution_model, info, report_to_tree);
+}
 
+namespace {
     const char* recognized_string_property_names[] = {
         "errormodel", //One of "+E", "+EA", "+EC", "+EG", "+ET"
-                      //recognized by ModelDNAError.
+                        //recognized by ModelDNAError.
     };
-
-    for (const char* prop_name : recognized_string_property_names ) {
-        auto prop_node = substitution_model[prop_name];
-        if (prop_node) {
-            if (prop_node.IsScalar()) {
-                std::string prop_value = prop_node.Scalar();
-                info.string_properties[prop_name] = prop_value;
-                TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
-                              "string property " << prop_name <<
-                              " set to " << prop_value);
-            }
-            //Todo: what about lists?
-        }
-    }
-    parseYAMLModelWeightAndScale(substitution_model, info, report_to_tree );
-}
+};
 
 void ModelFileLoader::parseYAMLSubModels(const YAML::Node& substitution_model,
                                          ModelInfoFromYAMLFile& info,
@@ -955,6 +943,25 @@ void ModelFileLoader::parseYAMLSubModels(const YAML::Node& substitution_model,
                       "linked_models for model " + model_name +
                       " in file " + file_path + " not a sequence");
         //Todo: parseYAMLLinkedModels(linked, info, list, report_to_tree);
+    }
+}
+
+void ModelFileLoader::parseYAMLModelStringProperties
+        (const YAML::Node& substitution_model,
+         ModelInfoFromYAMLFile& info,
+         PhyloTree* report_to_tree) {
+    for (const char* prop_name : recognized_string_property_names ) {
+        auto prop_node = substitution_model[prop_name];
+        if (prop_node) {
+            if (prop_node.IsScalar()) {
+                std::string prop_value = prop_node.Scalar();
+                info.string_properties[prop_name] = prop_value;
+                TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+                              "string property " << prop_name <<
+                              " set to " << prop_value);
+            }
+            //Todo: what about lists?
+        }
     }
 }
 
@@ -1007,5 +1014,4 @@ void ModelFileLoader::parseYAMLModelWeightAndScale
                       " in mixture " + info.parent_model->getName() +
                       " in file " + file_path);
     }
-
 }
