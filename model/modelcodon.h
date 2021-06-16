@@ -85,6 +85,10 @@ public:
                       StateFreqType freq, string freq_params,
                       PhyloTree* report_to_tree);
 
+	/** supporting function
+	*/
+	void initEmpiricalRates();
+
 	StateFreqType initCodon(const char *model_name, StateFreqType freq, bool reset_params);
 
 

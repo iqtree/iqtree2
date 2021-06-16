@@ -295,34 +295,58 @@ void ModelCodon::restoreCheckpoint() {
     endCheckpoint();
 
     decomposeRateMatrix();
-    if (phylo_tree)
+    if (phylo_tree!=nullptr) {
         phylo_tree->clearAllPartialLH();
-
+    }
 }
 
+namespace {
+    struct MG94Model { 
+        const char*     name; 
+        bool            should_fix_kappa; 
+        CodonKappaStyle kappa_style; 
+    } 
+    mg94_models[] = {
+        { "MG",     true, CK_ONE_KAPPA     },
+        { "MGK",    false, CK_ONE_KAPPA    },
+        { "MG1KTS", false, CK_ONE_KAPPA_TS },
+        { "MGKAP2", false, CK_ONE_KAPPA_TS },
+        { "MG1KTV", false, CK_ONE_KAPPA_TV },
+        { "MGKAP3", false, CK_ONE_KAPPA_TV },
+        { "MG2K",   false, CK_TWO_KAPPA    },
+        { "MGKAP4", false, CK_TWO_KAPPA    },
+    };
+    struct GY94Model { 
+        const char*     name; 
+        bool            should_fix_kappa; 
+        CodonKappaStyle kappa_style; 
+    }
+    gy94_models[] = {
+            { "GY",     false, CK_ONE_KAPPA    },
+            { "GY0K",   true,  CK_ONE_KAPPA    },
+            { "GYKAP1", true,  CK_ONE_KAPPA    },
+            { "GY1KTS", false, CK_ONE_KAPPA_TS },
+            { "GYKAP2", false, CK_ONE_KAPPA_TS },
+            { "GY1KTV", false, CK_ONE_KAPPA_TV },
+            { "GYKAP3", false, CK_ONE_KAPPA_TV },
+            { "GY2K",   false, CK_TWO_KAPPA    },
+            { "GYKAP4", false, CK_TWO_KAPPA    },
+    };
+};
+
 StateFreqType ModelCodon::initCodon(const char *model_name, StateFreqType freq, bool reset_params) {
-	string name_upper = string_to_upper(model_name);
-	if (name_upper == "MG") {
-		return initMG94(true, freq, CK_ONE_KAPPA);
-	} else if (name_upper == "MGK") {
-		return initMG94(false, freq, CK_ONE_KAPPA);
-	} else if (name_upper == "MG1KTS" || name_upper == "MGKAP2") {
-        return initMG94(false, freq, CK_ONE_KAPPA_TS);
-	} else if (name_upper == "MG1KTV" || name_upper == "MGKAP3") {
-        return initMG94(false, freq, CK_ONE_KAPPA_TV);
-	} else if (name_upper == "MG2K" || name_upper == "MGKAP4") {
-        return initMG94(false, freq, CK_TWO_KAPPA);
-	} else if (name_upper == "GY") {
-        return initGY94(false, CK_ONE_KAPPA);
-	} else if (name_upper == "GY0K" || name_upper == "GYKAP1") {
-        return initGY94(true, CK_ONE_KAPPA);
-	} else if (name_upper == "GY1KTS" || name_upper == "GYKAP2") {
-        return initGY94(false, CK_ONE_KAPPA_TS);
-	} else if (name_upper == "GY1KTV" || name_upper == "GYKAP3") {
-        return initGY94(false, CK_ONE_KAPPA_TV);
-	} else if (name_upper == "GY2K" || name_upper == "GYKAP4") {
-        return initGY94(false, CK_TWO_KAPPA);
-	} else if (name_upper == "ECM" || name_upper == "KOSI07" || name_upper == "ECMK07") {
+	const std::string name_upper = string_to_upper(model_name);
+    for (auto row: mg94_models) {
+        if (name_upper == row.name) {
+            return initMG94(row.should_fix_kappa, freq, row.kappa_style);
+        }
+    }
+    for (auto row: gy94_models) {
+        if (name_upper == row.name) {
+            return initGY94(row.should_fix_kappa, row.kappa_style);
+        }
+    }
+	if (name_upper == "ECM" || name_upper == "KOSI07" || name_upper == "ECMK07") {
 		if (!phylo_tree->aln->isStandardGeneticCode())
 			outError("For ECMK07 a standard genetic code must be used");
 		readCodonModel(model_ECMunrest, reset_params);
@@ -344,31 +368,10 @@ StateFreqType ModelCodon::initCodon(const char *model_name, StateFreqType freq, 
 	return StateFreqType::FREQ_UNKNOWN;
 }
 
-void ModelCodon::init(const char *model_name, string model_params,
-                      StateFreqType freq, string freq_params,
-                      PhyloTree* report_to_tree)
-{
-    int i, j;
-	for (i = 0; i < 12; i++)
-		ntfreq[i] = 0.25;
-    // initialize empirical_rates
-    for (i = 0; i < num_states; i++) {
-        double *this_emp_rate = &empirical_rates[i*num_states];
-        int *this_rate_attr = &rate_attr[i*num_states];
-        if (phylo_tree->aln->isStopCodon(i)) {
-            memset(this_emp_rate, 0, num_states*sizeof(double));
-            continue;
-        }
-        for (j = 0; j < num_states; j++) {
-            int attr = this_rate_attr[j];
-            if (attr & (CA_STOP_CODON+CA_MULTI_NT)) {
-                // stop codon or multiple nt substitutions
-                this_emp_rate[j] = 0.0;
-            } else {
-                this_emp_rate[j] = 1.0;
-            }
-        }
-    }
+void ModelCodon::init(const char*   model_name, string model_params,
+                      StateFreqType freq,       string freq_params,
+                      PhyloTree*    report_to_tree) {
+    initEmpiricalRates();
     ignore_state_freq      = false;
     StateFreqType def_freq = StateFreqType::FREQ_UNKNOWN;
     name                   = full_name = model_name;
@@ -408,6 +411,30 @@ void ModelCodon::init(const char *model_name, string model_params,
         phylo_tree->aln->computeCodonFreq(freq, state_freq, ntfreq);
     }
     ModelMarkov::init(freq, report_to_tree);
+}
+
+void ModelCodon::initEmpiricalRates() {
+    for (int i = 0; i < 12; i++) {
+		ntfreq[i] = 0.25;
+    }
+    // initialize empirical_rates
+    for (int i = 0; i < num_states; i++) {
+        double *this_emp_rate = &empirical_rates[i*num_states];
+        int *this_rate_attr = &rate_attr[i*num_states];
+        if (phylo_tree->aln->isStopCodon(i)) {
+            memset(this_emp_rate, 0, num_states*sizeof(double));
+            continue;
+        }
+        for (int j = 0; j < num_states; j++) {
+            int attr = this_rate_attr[j];
+            if (attr & (CA_STOP_CODON+CA_MULTI_NT)) {
+                // stop codon or multiple nt substitutions
+                this_emp_rate[j] = 0.0;
+            } else {
+                this_emp_rate[j] = 1.0;
+            }
+        }
+    }
 }
 
 StateFreqType ModelCodon::initMG94(bool should_fix_kappa, StateFreqType freq, 
