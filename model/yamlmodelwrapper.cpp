@@ -1,4 +1,5 @@
 #include "yamlmodelwrapper.h"
+#include "model/modelinfo.h"
 
 YAMLModelBinary::YAMLModelBinary(ModelInfoFromYAMLFile& info,
                                  bool make_copy, const char *model_name, 
@@ -118,7 +119,8 @@ YAMLModelMixture::YAMLModelMixture(ModelInfoFromYAMLFile& info,
     }
     full_name += CLOSE_BRACKET;
 
-    //Do more of what ModelMixture::initMixture() does.
+    TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity, 
+                  "optimize_weights=" << optimize_weights);
 
     checkProportionsAndWeights(weights);
     setOptimizationSteps(optimize_weights);

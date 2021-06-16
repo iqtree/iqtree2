@@ -225,6 +225,11 @@ public:
 	virtual double optimizeParameters(double gradient_epsilon,
                                       PhyloTree* report_to_tree);
 
+		/**
+			supporting function (called by optimizeParameters).
+		*/
+		virtual void rescaleWeights(); 
+
 	/**
 	 * @return TRUE if parameters are at the boundary that may cause numerical unstability
 	 */
