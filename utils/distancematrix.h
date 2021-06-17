@@ -52,8 +52,7 @@ template <class P> inline P* matrixAlign(P* p) {
     //address of that item.
     uintptr_t address = reinterpret_cast<uintptr_t>(p);
     auto offset = address & MATRIX_ALIGNMENT_MASK;
-    if (0<offset)
-    {
+    if (0<offset) {
         return p + (MATRIX_ALIGNMENT - offset)/sizeof(P);
     } else {
         return p;
@@ -161,8 +160,7 @@ public:
         //returns width, rounded up so that each row will
         //have a starting address that is MATRIX_ALIGNMENT-byte aligned.
         //
-        if (MATRIX_ALIGNMENT<=sizeof(T))
-        {
+        if (MATRIX_ALIGNMENT<=sizeof(T)) {
             return width;
         }
         size_t leftOver  = (width * sizeof(T)) & MATRIX_ALIGNMENT_MASK;
@@ -369,8 +367,8 @@ public:
 template <class F=std::stringstream, class M> void loadDistanceMatrixFromOpenFile
 (F& in, bool reportProgress, M& matrix) {
     intptr_t rank;
-    bool lower = false;
-    bool upper = false;
+    bool lower  = false;
+    bool upper  = false;
     bool square = true;
     std::stringstream first_line;
     safeGetTrimmedLineAsStream<F>(in, first_line);
@@ -397,8 +395,8 @@ template <class F=std::stringstream, class M> void loadDistanceMatrixFromOpenFil
             matrix.cell(r, r) = 0;
         }
         intptr_t cStart = (upper) ? (r + 1) : 0;
-        intptr_t cStop = (lower) ? r : rank;
-        intptr_t c = cStart;
+        intptr_t cStop  = (lower) ? r : rank;
+        intptr_t c      = cStart;
         for (; line.tellg() != -1 && c < cStop; ++c) {
             line >> matrix.cell(r, c);
             //Ensure matrix is symmetric (as it is read!)
@@ -413,12 +411,11 @@ template <class F=std::stringstream, class M> void loadDistanceMatrixFromOpenFil
                 matrix.cell(r, c) = v;
             }
         }
-        if (line.tellg() == -1 && c < cStop)
-        {
+        if (line.tellg() == -1 && c < cStop) {
             if (square && r == 0 && c == 0) {
                 //Implied lower-triangle format
                 square = false;
-                lower = true;
+                lower  = true;
 
 #if USE_PROGRESS_DISPLAY
                 progress.hide();
@@ -429,7 +426,7 @@ template <class F=std::stringstream, class M> void loadDistanceMatrixFromOpenFil
             else if (square && r == 0 && c + 1 == cStop) {
                 //Implied upper-triangle format
                 square = false;
-                upper = true;
+                upper  = true;
 #if USE_PROGRESS_DISPLAY
                 progress.hide();
                 std::cout << "Input appears to be in upper-triangle format" << std::endl;
