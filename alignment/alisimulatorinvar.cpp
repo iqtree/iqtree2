@@ -80,8 +80,10 @@ void AliSimulatorInvar::simulateSeqs(int sequence_length, double *site_specific_
             
             if (node->isLeaf())
             {
-                // convert numerical states into readable characters
-                output += convertNumericalStatesIntoReadableCharacters(node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping, params->aln_output_format);
+                // avoid writing sequence of __root__
+                if (node->name!=ROOT_NAME)
+                    // convert numerical states into readable characters
+                    output += convertNumericalStatesIntoReadableCharacters(node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping, params->aln_output_format);
                 
                 // remove the sequence to release the memory after extracting the sequence
                 vector<short int>().swap(node->sequence);
