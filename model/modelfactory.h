@@ -97,13 +97,40 @@ public:
                          bool optimize_mixmodel_weight,
                          PhyloTree* tree,
                          PhyloTree* report_to_tree);
-    void initializeAscertainmentCorrection(ModelInfo& rate_info,
-                                           std::string &rate_str,
-                                           PhyloTree* tree);
+    void initializeAscertainmentCorrection(ModelInfo&   rate_info,
+                                           std::string& rate_str,
+                                           PhyloTree*   tree);
     void initializeRateHeterogeneity(const ModelInfo& rate_info,
                                      std::string& rate_str,
                                      const Params& params,
                                      PhyloTree* tree);
+		void checkRateCompatibility(bool& isFreeRate, bool& isGammaModel, 
+                                    bool& isHeterotarchicRate, 
+                                    bool& isInvariantModel, 
+									bool& fused_mix_rate) const;
+		void getRateParameters     (const ModelInfo& rate_info,
+		                             bool& isFreeRate, bool& isGammaModel, 
+                                     bool& isHeterotarchicRate,
+									 bool& isInvariantModel, int& num_rate_cats,
+									 double& p_invar_sites, double& gamma_shape,
+									 std::string& freerate_params,
+									 std::string& heterotachy_params);
+		RateHeterogeneity* getHeterotarchicRate
+			(bool isInvariantModel, int num_rate_cats, 
+			 std::string& heterotachy_params, double& p_invar_sites, 
+			 PhyloTree* tree);
+
+		RateHeterogeneity* getGammaRate
+			(bool isInvariantModel, int num_rate_cats, 
+			 double gamma_shape, double p_invar_sites,
+			 const Params& params, PhyloTree* tree);
+
+		RateHeterogeneity* getFreeRate
+			(bool isInvariantModel, int num_rate_cats, 
+		 	 double gamma_shape, std::string freerate_params, 
+			 bool fused_mix_rate, double p_invar_sites, 
+			 const Params& params, PhyloTree* tree);
+
     void initializeFusedMixRate(ModelsBlock *models_block,
                                 const std::string& model_name,
                                 const std::string& model_str,
@@ -216,6 +243,27 @@ public:
 	virtual double optimizeParameters(int fixed_len = BRLEN_OPTIMIZE, bool write_info = true,
                                       double logl_epsilon = 0.1, double gradient_epsilon = 0.0001,
                                       PhyloTree* report_to_tree = nullptr);
+
+
+		virtual void reportOptimizingParameters(bool write_info, double optimizeStartTime,
+	    	                                    double cur_lh, PhyloTree* report_to_tree);
+
+		virtual double optimizeBranchLengths          (int fixed_len,   double cur_lh, int max_iterations,
+		                                               double logl_epsilon, double gradient_epsilon,
+													   PhyloTree* tree, PhyloTree* report_to_tree);
+		virtual double optimizeBranchLengthsAgain     (int fixed_len,   double cur_lh, 
+		                                               double logl_epsilon, double gradient_epsilon,
+													   PhyloTree* tree, PhyloTree* report_to_tree);
+		virtual void   reportParameterOptimizationStep(double cur_lh, double new_lh, int fixed_len,
+                                                       bool write_info, double logl_epsilon, int iteration,
+                                                       PhyloTree* tree, PhyloTree* report_to_tree);
+		virtual double optimizeBranchLengthsAThirdTime(int fixed_len,   double cur_lh, 
+		                                               double logl_epsilon, double gradient_epsilon,
+													   PhyloTree* tree, PhyloTree* report_to_tree);
+		virtual void   reportOptimizingParametersDone (bool write_info, int fixed_len, 
+                                                       double begin_time, double cur_lh, int rounds_done, 
+													   PhyloTree* tree, PhyloTree* report_to_tree);
+
 
     /**
      *  optimize model parameters and tree branch lengths for the +I+G model

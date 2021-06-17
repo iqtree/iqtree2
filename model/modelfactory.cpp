@@ -17,6 +17,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+#include "model/rateheterogeneity.h"
 #include "rateinvar.h"
 #include "modelfactory.h"
 #include "rategamma.h"
@@ -223,12 +224,10 @@ ModelFactory::ModelFactory(Params&    params, string&      model_name,
 void ModelFactory::initializeModelAlias(ModelsBlock *models_block,
                                         string& model_str) {
     /********* preprocessing model string ****************/
-    NxsModel *nxsmodel  = NULL;
-
-    string new_model_str = "";
-    size_t mix_pos;
-    for (mix_pos = 0; mix_pos < model_str.length(); mix_pos++) {
-        size_t next_mix_pos = model_str.find_first_of("+*", mix_pos);
+    NxsModel* nxsmodel      = nullptr;
+    string    new_model_str = "";
+    for (size_t mix_pos = 0; mix_pos < model_str.length(); mix_pos++) {
+        size_t next_mix_pos  = model_str.find_first_of("+*", mix_pos);
         string sub_model_str = model_str.substr(mix_pos, next_mix_pos-mix_pos);
         nxsmodel = models_block->findMixModel(sub_model_str);
         if (nxsmodel) {
@@ -242,7 +241,8 @@ void ModelFactory::initializeModelAlias(ModelsBlock *models_block,
         mix_pos        = next_mix_pos;
     }
     if (new_model_str != model_str) {
-        cout << "Model " << model_str << " is alias for " << new_model_str << endl;
+        cout << "Model " << model_str 
+             << " is alias for " << new_model_str << endl;
     }
     model_str = new_model_str;
     //    nxsmodel = models_block->findModel(model_str);
@@ -259,12 +259,13 @@ void ModelFactory::moveRateParameters(string& model_str, string& rate_str) {
         if (model_str[spec_pos] == '{') {
             // Scan for the corresponding '}'.
             size_t pos = findCloseBracket(model_str, spec_pos);
-            if (pos == string::npos)
+            if (pos == string::npos) {
                 outError("Model name has wrong bracket notation '{...}'");
-            rate_str = model_str.substr(pos+1);
+            }
+            rate_str  = model_str.substr(pos+1);
             model_str = model_str.substr(0, pos+1);
         } else {
-            rate_str = model_str.substr(spec_pos);
+            rate_str  = model_str.substr(spec_pos);
             model_str = model_str.substr(0, spec_pos);
         }
     }
@@ -278,10 +279,10 @@ void ModelFactory::moveFrequencyParameters(string& rate_str, string& model_str,
         size_t end_pos = rate_str.find_first_of("+*", spec_pos+1);
         if (end_pos == string::npos) {
             freq_str += rate_str.substr(spec_pos);
-            rate_str = rate_str.substr(0, spec_pos);
+            rate_str  = rate_str.substr(0, spec_pos);
         } else {
             freq_str += rate_str.substr(spec_pos, end_pos - spec_pos);
-            rate_str = rate_str.substr(0, spec_pos) + rate_str.substr(end_pos);
+            rate_str  = rate_str.substr(0, spec_pos) + rate_str.substr(end_pos);
         }
     }
 
@@ -493,12 +494,13 @@ void ModelFactory::initializeModel(const std::string& model_name,
         }
         model = new ModelSet(model_str.c_str(), tree);
         ModelSet *models = (ModelSet*)model; // assign pointer for convenience
-        models->init((freq_type != StateFreqType::FREQ_UNKNOWN) 
-                     ? freq_type : StateFreqType::FREQ_EMPIRICAL, 
-            report_to_tree);
+        auto freq_type_to_use = (freq_type != StateFreqType::FREQ_UNKNOWN) 
+                              ? freq_type : StateFreqType::FREQ_EMPIRICAL;
+        models->init(freq_type_to_use, report_to_tree);
         models->pattern_model_map.resize(tree->aln->getNPattern(), -1);
         for (size_t i = 0; i < tree->aln->getNSite(); ++i) {
-            models->pattern_model_map[tree->aln->getPatternID(i)] = tree->aln->site_model[i];
+            auto pattern_id = tree->aln->getPatternID(i);
+            models->pattern_model_map[pattern_id] = tree->aln->site_model[i];
             //cout << "site " << i << " ptn " << tree->aln->getPatternID(i)
             //     << " -> model " << site_model[i] << endl;
         }
@@ -648,9 +650,9 @@ void ModelFactory::initializeAscertainmentCorrection(ModelInfo& rate_info,
 }
 
 void ModelFactory::initializeRateHeterogeneity(const ModelInfo& rate_info,
-                                               std::string& rate_str,
-                                               const Params& params,
-                                               PhyloTree* tree) {
+                                               std::string&     rate_str,
+                                               const Params&    params,
+                                               PhyloTree*       tree) {
     /******************** initialize site rate heterogeneity ****************************/
         
     bool isFreeRate          = rate_info.isFreeRate();
@@ -658,80 +660,40 @@ void ModelFactory::initializeRateHeterogeneity(const ModelInfo& rate_info,
     bool isHeterotarchicRate = rate_info.hasRateHeterotachy();
     bool isInvariantModel    = rate_info.isInvariantModel();
 
-    if (isGammaModel && isFreeRate) {
-        outWarning("Both Gamma and FreeRate models were specified,"
-                   " continue with FreeRate model");
-        isGammaModel   = false;
-        fused_mix_rate = false;
-    }
-
-    if (isGammaModel && isHeterotarchicRate) {
-        outWarning("Both Gamma and heterotachy models were specified,"
-                   " continue with heterotachy model");
-        isGammaModel   = false;
-        fused_mix_rate = false;
-    }
-
-    if (isFreeRate && isHeterotarchicRate) {
-        outWarning("Both FreeRate and heterotachy models were specified,"
-                   " continue with heterotachy model");
-        isFreeRate     = false;
-        fused_mix_rate = false;
-    }
+    checkRateCompatibility(isFreeRate, isGammaModel, 
+                           isHeterotarchicRate, isInvariantModel,
+                           fused_mix_rate);
 
     string::size_type posX;
-    /* create site-rate heterogeneity */
-    int num_rate_cats = params.num_rate_cats;
-    if (fused_mix_rate && model->isMixture()) {
-        num_rate_cats = model->getNMixtures();
-    }
-        
-    double p_invar_sites  = params.p_invar_sites;
-    if (isInvariantModel) {
-        p_invar_sites = rate_info.getProportionOfInvariantSites();
-    }
-        
-    double gamma_shape    = params.gamma_shape;
-    if (isGammaModel) {
-        rate_info.getGammaParameters(num_rate_cats, gamma_shape);
-    }
-        
-    string freerate_params = "";
-    if (isFreeRate) {
-        freerate_params = rate_info.getFreeRateParameters(num_rate_cats,
-                                                          fused_mix_rate);
-    }
-        
+    int    num_rate_cats      = params.num_rate_cats;
+    double p_invar_sites      = params.p_invar_sites;
+    double gamma_shape        = params.gamma_shape;
+    string freerate_params    = "";
     string heterotachy_params = "";
-    if (isHeterotarchicRate) {
-        heterotachy_params = rate_info.getHeterotachyParameters(model->isMixture(),
-                                                                num_rate_cats,fused_mix_rate);
-    }
+
+    getRateParameters(rate_info, isFreeRate, isGammaModel, 
+                      isHeterotarchicRate, isInvariantModel,
+                      num_rate_cats, p_invar_sites, gamma_shape,
+                      freerate_params, heterotachy_params);
 
     if (rate_str.find('+') != string::npos || rate_str.find('*') != string::npos) {
-        //string rate_str = model_str.substr(pos);
-        if (isInvariantModel && isHeterotarchicRate) {
-            site_rate = new RateHeterotachyInvar(num_rate_cats, heterotachy_params,
-                                                 p_invar_sites, tree);
-        } else if (isHeterotarchicRate) {
-            site_rate = new RateHeterotachy(num_rate_cats, heterotachy_params, tree);
-        } else if (isInvariantModel && isGammaModel) {
-            site_rate = new RateGammaInvar(num_rate_cats, gamma_shape,
-                                           params.gamma_median, p_invar_sites,
-                                           params.optimize_alg_gammai, tree, false);
-        } else if (isInvariantModel && isFreeRate) {
-            site_rate = new RateFreeInvar(num_rate_cats, gamma_shape, freerate_params,
-                                          !fused_mix_rate, p_invar_sites,
-                                          params.optimize_alg_freerate, tree);
-        } else if (isInvariantModel) {
+        if (isHeterotarchicRate) {
+            site_rate = getHeterotarchicRate(isInvariantModel, num_rate_cats, 
+                                             heterotachy_params, p_invar_sites, tree);
+        }
+        else if (isGammaModel) {
+            site_rate = getGammaRate(isInvariantModel, num_rate_cats, gamma_shape,
+                                     p_invar_sites, params, tree);
+        }
+        else if (isFreeRate) {
+            site_rate = getFreeRate(isInvariantModel, num_rate_cats, gamma_shape,
+                                    freerate_params, fused_mix_rate, p_invar_sites, 
+                                    params, tree);
+        }
+        else if (isInvariantModel) {
             site_rate = new RateInvar(p_invar_sites, tree);
-        } else if (isGammaModel) {
-            site_rate = new RateGamma(num_rate_cats, gamma_shape,
-                                      params.gamma_median, tree);
-        } else if (isFreeRate) {
-            site_rate = new RateFree(num_rate_cats, gamma_shape,
-                                     freerate_params, !fused_mix_rate,
-                                     params.optimize_alg_freerate, tree);
+        }
+        //string rate_str = model_str.substr(pos);
 //        } else if ((posX = rate_str.find("+M")) != string::npos) {
 //            tree->setLikelihoodKernel(LK_NORMAL);
 //            params.rate_mh_type = true;
@@ -774,7 +736,7 @@ void ModelFactory::initializeRateHeterogeneity(const ModelInfo& rate_info,
 //            } else num_rate_cats = -1;
 //            site_rate = new NGSRate(tree);
 //            site_rate->setTree(tree);
-        } else if ((posX = rate_str.find("+K")) != string::npos) {
+        else if ((posX = rate_str.find("+K")) != string::npos) {
             if (rate_str.length() > posX+2 && isdigit(rate_str[posX+2])) {
                 num_rate_cats = convert_int(rate_str.substr(posX+2).c_str());
                 if (num_rate_cats < 1) {
@@ -782,8 +744,9 @@ void ModelFactory::initializeRateHeterogeneity(const ModelInfo& rate_info,
                 }
             }
             site_rate = new RateKategory(num_rate_cats, tree);
-        } else
+        } else {
             outError("Invalid rate heterogeneity type");
+        }
 //        if (model_str.find('+') != string::npos)
 //            model_str = model_str.substr(0, model_str.find('+'));
 //        else
@@ -792,6 +755,102 @@ void ModelFactory::initializeRateHeterogeneity(const ModelInfo& rate_info,
         site_rate = new RateHeterogeneity();
         site_rate->setTree(tree);
     }
+}
+
+void ModelFactory::checkRateCompatibility(bool& isFreeRate, bool& isGammaModel, 
+                                          bool& isHeterotarchicRate, 
+                                          bool& isInvariantModel,
+                                          bool& fused_mix_rate) const {
+    if (isGammaModel && isFreeRate) {
+        outWarning("Both Gamma and FreeRate models were specified,"
+                   " continue with FreeRate model");
+        isGammaModel   = false;
+        fused_mix_rate = false;
+    }
+
+    if (isGammaModel && isHeterotarchicRate) {
+        outWarning("Both Gamma and heterotachy models were specified,"
+                   " continue with heterotachy model");
+        isGammaModel   = false;
+        fused_mix_rate = false;
+    }
+
+    if (isFreeRate && isHeterotarchicRate) {
+        outWarning("Both FreeRate and heterotachy models were specified,"
+                   " continue with heterotachy model");
+        isFreeRate     = false;
+        fused_mix_rate = false;
+    }
+}
+
+void ModelFactory::getRateParameters(const ModelInfo& rate_info,
+                                     bool &isFreeRate, bool &isGammaModel, 
+                                     bool &isHeterotarchicRate,
+                                     bool &isInvariantModel, int& num_rate_cats,
+                                     double &p_invar_sites, double& gamma_shape,
+                                     std::string& freerate_params,
+                                     std::string& heterotachy_params) {
+       /* create site-rate heterogeneity */
+    if (fused_mix_rate && model->isMixture()) {
+        num_rate_cats = model->getNMixtures();
+    }
+        
+    if (isInvariantModel) {
+        p_invar_sites = rate_info.getProportionOfInvariantSites();
+    }
+        
+    if (isGammaModel) {
+        rate_info.getGammaParameters(num_rate_cats, gamma_shape);
+    }
+        
+    if (isFreeRate) {
+        freerate_params = rate_info.getFreeRateParameters(num_rate_cats,
+                                                          fused_mix_rate);
+    }
+        
+    if (isHeterotarchicRate) {
+        heterotachy_params = rate_info.getHeterotachyParameters(model->isMixture(),
+                                                                num_rate_cats,fused_mix_rate);
+    }
+}
+
+RateHeterogeneity* ModelFactory::getHeterotarchicRate
+    (bool isInvariantModel, int num_rate_cats, 
+     std::string& heterotachy_params, double& p_invar_sites, 
+     PhyloTree* tree) {
+    if (isInvariantModel) {
+        return new RateHeterotachyInvar(num_rate_cats, heterotachy_params,
+                                                p_invar_sites, tree);
+    }
+    return new RateHeterotachy(num_rate_cats, heterotachy_params, tree);
+}
+
+RateHeterogeneity* ModelFactory::getGammaRate
+    (bool isInvariantModel, int num_rate_cats, 
+     double gamma_shape, double p_invar_sites,
+     const Params&    params, PhyloTree* tree) {
+    if (isInvariantModel) {
+        return new RateGammaInvar(num_rate_cats, gamma_shape,
+                                        params.gamma_median, p_invar_sites,
+                                        params.optimize_alg_gammai, tree, false);
+    }
+    return new RateGamma(num_rate_cats, gamma_shape,
+                                params.gamma_median, tree);
+}
+
+RateHeterogeneity* ModelFactory::getFreeRate
+    (bool isInvariantModel, int num_rate_cats, 
+     double gamma_shape, std::string freerate_params, 
+     bool fused_mix_rate, double p_invar_sites, 
+     const Params& params, PhyloTree* tree) {
+    if (isInvariantModel) {
+        return new RateFreeInvar(num_rate_cats, gamma_shape, freerate_params,
+                                        !fused_mix_rate, p_invar_sites,
+                                        params.optimize_alg_freerate, tree);
+    }
+    return new RateFree(num_rate_cats, gamma_shape,
+                        freerate_params, !fused_mix_rate,
+                        params.optimize_alg_freerate, tree);
 }
 
 void ModelFactory::initializeFusedMixRate(ModelsBlock *models_block,
@@ -1199,31 +1258,9 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
     tree->setCurScore(cur_lh);
     report_to_tree->trackProgress(1.0);
 
-    if (verbose_mode >= VerboseMode::VB_MED || write_info) {
-        auto p = cout.precision(); //We'll restore it later
-        if (VerboseMode::VB_MED <= verbose_mode) {
-            double elapsed = getRealTime() - optimizeStartTime;
-            std::stringstream s;
-            s.precision(17);
-            s << "1. Initial log-likelihood: " << cur_lh;
-            s.precision(4);
-            s << " (took " << elapsed << " wall-clock sec)";
-            TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MED, 
-                          s.str() );
-        }
-        else {
-            TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_QUIET,
-                          "1. Initial log-likelihood: " << cur_lh);
-        }
-        if (verbose_mode >= VerboseMode::VB_MAX) {
-            report_to_tree->hideProgress();
-            report_to_tree->printTree(cout);
-            cout << endl;
-            cout.precision(p);
-            report_to_tree->showProgress();
-        }
-        cout.precision(p);
-    }
+    reportOptimizingParameters(write_info, optimizeStartTime, 
+                               cur_lh, report_to_tree);
+
 
     // For UpperBounds -----------
     //cout<<"MLCheck = "<<tree->mlCheck <<endl;
@@ -1234,80 +1271,27 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
 
     int i;
     for (i = 2; i < tree->params->num_param_iterations; i++) {
-        double new_lh;
+        double new_lh = optimizeBranchLengths(fixed_len, cur_lh, min(i,3),  
+                                              logl_epsilon,  gradient_epsilon, 
+                                              tree, report_to_tree);
 
-        // changed to optimise edge length first,
-        // and then Q,W,R inside the loop by Thomas on Sept 11, 15
-        if (fixed_len == BRLEN_OPTIMIZE) {
-            TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MAX,
-                          "Optimizing branch lengths");
-            new_lh = tree->optimizeAllBranches(min(i, 3), logl_epsilon);
-                // loop only 3 times in total (previously in v0.9.6 5 times)
-        }
-        else if (fixed_len == BRLEN_SCALE) {
-            double scaling = 1.0;
-            TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MAX,
-                          "Optimizing branch scaling");
-            new_lh = tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling,
-                                                     MAX_BRLEN_SCALE, gradient_epsilon);
-        } else {
-            new_lh = cur_lh;
-        }
         TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MAX, 
                       "Optimizing parameters");
         new_lh = optimizeParametersOnly(i, gradient_epsilon,
                                         new_lh, report_to_tree);
         if (new_lh == 0.0) {
-            if (fixed_len == BRLEN_OPTIMIZE) {
-                TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MAX,
-                              "Optimizing branch lengths (2nd time)");
-                auto iterations = tree->params->num_param_iterations;
-                cur_lh = tree->optimizeAllBranches(iterations, logl_epsilon);
-            } else if (fixed_len == BRLEN_SCALE) {
-                double scaling = 1.0;
-                TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MAX,
-                              "Optimizing branch scaling (2nd time)");
-                cur_lh = tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling,
-                                                         MAX_BRLEN_SCALE, gradient_epsilon);
-            }
+            cur_lh = optimizeBranchLengthsAgain(fixed_len, cur_lh,  
+                                                logl_epsilon, gradient_epsilon,
+                                                tree, report_to_tree);
             break;
         }
-        if (verbose_mode >= VerboseMode::VB_MED) {
-            report_to_tree->hideProgress();
-            model->writeInfo(cout);
-            site_rate->writeInfo(cout);
-            if (fixed_len == BRLEN_SCALE) {
-                cout << "Scaled tree length: "
-                     << tree->treeLength() << endl;
-            }
-            report_to_tree->showProgress();
-        }
-        if (new_lh > cur_lh + logl_epsilon) {
-            cur_lh = new_lh;
-            if (write_info) {
-                if (verbose_mode >= VerboseMode::VB_MED) {
-                    double elapsed = tree->params->num_param_iterations;
-                    TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MED,
-                                  i << ". Current log-likelihood: " << cur_lh
-                                  << " (after " << elapsed << " wall-clock sec)");
-                } else {
-                    TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_QUIET,
-                                  i << ". Current log-likelihood: " << cur_lh);
-                }
-            }
-        } else {
+        reportParameterOptimizationStep(cur_lh, new_lh, fixed_len, write_info, 
+                                        logl_epsilon, i, tree, report_to_tree);
+        if (new_lh <= cur_lh + logl_epsilon) {
             site_rate->classifyRates(new_lh, report_to_tree);
-            if (fixed_len == BRLEN_OPTIMIZE) {
-                TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MAX,
-                              "Optimizing branch lengths (3rd time)");
-                cur_lh = tree->optimizeAllBranches(100, logl_epsilon);
-            } else if (fixed_len == BRLEN_SCALE) {
-                double scaling = 1.0;
-                TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MAX,
-                              "Optimizing branch scaling (3rd time)");
-                cur_lh = tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling,
-                                                         MAX_BRLEN_SCALE, gradient_epsilon);
-            }
+            cur_lh = optimizeBranchLengthsAThirdTime(fixed_len, cur_lh, 
+                                                     logl_epsilon, gradient_epsilon, 
+                                                     tree, report_to_tree);
             break;
         }
         report_to_tree->trackProgress(1.0);
@@ -1338,16 +1322,149 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
                           "Rooting log-likelihood: " << cur_lh);
         }
     }
-    if (verbose_mode >= VerboseMode::VB_MED || write_info) {
-        TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_QUIET,
-                      "Optimal log-likelihood: " << cur_lh);
-    }
     // For UpperBounds -----------
     if(tree->mlCheck == 0) {
         tree->mlFirstOpt = cur_lh;
     }
     // ---------------------------
 
+    reportOptimizingParametersDone(write_info, fixed_len,  begin_time,
+                                   cur_lh, i-1, tree, report_to_tree);
+
+    startStoringTransMatrix();
+
+    // For UpperBounds -----------
+    tree->mlCheck = 1;
+    // ---------------------------
+
+    tree->setCurScore(cur_lh);
+    return cur_lh;
+}
+
+void ModelFactory::reportOptimizingParameters(bool write_info, double optimizeStartTime,
+                                              double cur_lh, PhyloTree* report_to_tree) {
+        if (verbose_mode >= VerboseMode::VB_MED || write_info) {
+        auto p = cout.precision(); //We'll restore it later
+        if (VerboseMode::VB_MED <= verbose_mode) {
+            double elapsed = getRealTime() - optimizeStartTime;
+            std::stringstream s;
+            s.precision(17);
+            s << "1. Initial log-likelihood: " << cur_lh;
+            s.precision(4);
+            s << " (took " << elapsed << " wall-clock sec)";
+            TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MED, 
+                          s.str() );
+        }
+        else {
+            TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_QUIET,
+                          "1. Initial log-likelihood: " << cur_lh);
+        }
+        if (verbose_mode >= VerboseMode::VB_MAX) {
+            report_to_tree->hideProgress();
+            report_to_tree->printTree(cout);
+            cout << endl;
+            cout.precision(p);
+            report_to_tree->showProgress();
+        }
+        cout.precision(p);
+    }
+}
+
+double ModelFactory::optimizeBranchLengths(int fixed_len, double cur_lh, int max_iterations, 
+                                           double logl_epsilon, double gradient_epsilon,
+                                           PhyloTree* tree, PhyloTree* report_to_tree) {
+    // changed to optimise edge length first,
+    // and then Q,W,R inside the loop by Thomas on Sept 11, 15
+    if (fixed_len == BRLEN_OPTIMIZE) {
+        TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MAX,
+                        "Optimizing branch lengths");
+        return tree->optimizeAllBranches(max_iterations, logl_epsilon);
+            // loop only 3 times in total (previously in v0.9.6 5 times)
+    }
+    else if (fixed_len == BRLEN_SCALE) {
+        double scaling = 1.0;
+        TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MAX,
+                        "Optimizing branch scaling");
+        return tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling,
+                                                    MAX_BRLEN_SCALE, gradient_epsilon);
+    } else {
+        return cur_lh;
+    }
+}
+
+double ModelFactory::optimizeBranchLengthsAgain(int fixed_len, double cur_lh, 
+                                                double logl_epsilon, double gradient_epsilon,
+                                                PhyloTree* tree,
+                                                PhyloTree* report_to_tree) {
+    if (fixed_len == BRLEN_OPTIMIZE) {
+        TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MAX,
+                        "Optimizing branch lengths (2nd time)");
+        auto iterations = tree->params->num_param_iterations;
+        cur_lh = tree->optimizeAllBranches(iterations, logl_epsilon);
+    } else if (fixed_len == BRLEN_SCALE) {
+        double scaling = 1.0;
+        TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MAX,
+                        "Optimizing branch scaling (2nd time)");
+        cur_lh = tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling,
+                                                    MAX_BRLEN_SCALE, gradient_epsilon);
+    }
+    return cur_lh;
+}
+
+void ModelFactory::reportParameterOptimizationStep(double cur_lh, double new_lh, int fixed_len,
+                                                   bool write_info, double logl_epsilon, int iteration,
+                                                   PhyloTree* tree, PhyloTree* report_to_tree) {
+    if (verbose_mode >= VerboseMode::VB_MED) {
+        report_to_tree->hideProgress();
+        model->writeInfo(cout);
+        site_rate->writeInfo(cout);
+        if (fixed_len == BRLEN_SCALE) {
+            cout << "Scaled tree length: "
+                 << tree->treeLength() << endl;
+        }
+        report_to_tree->showProgress();
+    }
+    if (new_lh > cur_lh + logl_epsilon) {
+        cur_lh = new_lh;
+        if (write_info) {
+            if (verbose_mode >= VerboseMode::VB_MED) {
+                double elapsed = tree->params->num_param_iterations;
+                TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MED,
+                                iteration << ". Current log-likelihood: " << cur_lh
+                                << " (after " << elapsed << " wall-clock sec)");
+            } else {
+                TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_QUIET,
+                                iteration << ". Current log-likelihood: " << cur_lh);
+            }
+        }
+    } 
+}
+
+double ModelFactory::optimizeBranchLengthsAThirdTime(int fixed_len, double cur_lh, 
+                                                     double logl_epsilon, double gradient_epsilon,
+                                                     PhyloTree* tree,
+                                                     PhyloTree* report_to_tree) {
+    if (fixed_len == BRLEN_OPTIMIZE) {
+        TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MAX,
+                        "Optimizing branch lengths (3rd time)");
+        cur_lh = tree->optimizeAllBranches(100, logl_epsilon);
+    } else if (fixed_len == BRLEN_SCALE) {
+        double scaling = 1.0;
+        TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MAX,
+                        "Optimizing branch scaling (3rd time)");
+        cur_lh = tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling,
+                                                    MAX_BRLEN_SCALE, gradient_epsilon);
+    }
+    return cur_lh;
+}
+
+void ModelFactory::reportOptimizingParametersDone(bool write_info, int fixed_len, double begin_time,
+                                                  double cur_lh, int rounds_done, PhyloTree* tree, 
+                                                  PhyloTree* report_to_tree) {
+    if (verbose_mode >= VerboseMode::VB_MED || write_info) {
+        TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_QUIET,
+                      "Optimal log-likelihood: " << cur_lh);
+    }
     if (verbose_mode <= VerboseMode::VB_MIN && write_info) {
         model->writeInfo(cout);
         site_rate->writeInfo(cout);
@@ -1359,17 +1476,9 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
     double elapsed_secs = getRealTime() - begin_time;
     if (write_info) {
         TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_QUIET,
-                      "Parameters optimization took " << i-1 << " rounds"
+                      "Parameters optimization took " << rounds_done << " rounds"
                       << " (" << elapsed_secs << " sec)" );
     }
-    startStoringTransMatrix();
-
-    // For UpperBounds -----------
-    tree->mlCheck = 1;
-    // ---------------------------
-
-    tree->setCurScore(cur_lh);
-    return cur_lh;
 }
 
 /**
