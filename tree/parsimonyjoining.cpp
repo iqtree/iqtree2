@@ -475,7 +475,7 @@ public:
         ++tree.leafNum;
     }
     void constructTree() {
-        int         nseq          = tree.aln->getNSeq32();
+        intptr_t    nseq          = tree.aln->getNSeq();
         double      work_estimate = static_cast<double>(nseq) * sqrt(nseq) * 2.0;
         const char* task          = "Constructing tree with Parsimony Routing";
         tree.initProgress(work_estimate, task, "", "");

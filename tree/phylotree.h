@@ -315,6 +315,8 @@ public:
 
 struct SPRMove;
 class SPRMoves;
+class SimilarityTree;
+class SimilarityNode;
         
 /**
 Phylogenetic Tree class
@@ -1725,6 +1727,26 @@ public:
     virtual int joinParsimonyTree(const char *out_prefix, Alignment *alignment, 
                                   START_TREE_TYPE start_tree);
         
+    virtual int createSimilarityMatchingTree();
+
+        void calculateSimilarityWeights
+                (std::vector<CharVector>&       matrix,
+                 DoubleVector&                  weights);
+        void constructSimilarityLeafNodes
+                (SimilarityTree&                sim_tree,
+                 const std::vector<CharVector>& matrix,
+                 const DoubleVector&            weights,
+                 std::vector<SimilarityNode*>&  sim_nodes);
+        void constructSimilarityTree
+                (std::vector<SimilarityNode*>&  sim_nodes,
+                 SimilarityTree&                sim_tree);
+        void mirrorSimilarityTreeStructure
+                (const std::vector<SimilarityNode*>& sim_nodes,
+                 std::vector<PhyloNode*>&            tree_nodes);
+        void correctSimilarityTreeStructure
+                (const SimilarityTree&          sim_tree,
+                 const std::vector<PhyloNode*>& tree_nodes);
+
     int  doParsimonyNNI(VerboseMode how_loud);
     
     int  doParsimonySPR(VerboseMode how_loud);

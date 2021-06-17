@@ -83,50 +83,50 @@ void PhyloTree::init() {
     tip_partial_pars                = nullptr; //points to the last part of central_partial_pars
                                                //(and is set when central_partial_pars is).
     
-    cost_matrix = NULL;
-    model_factory = NULL;
+    cost_matrix            = nullptr;
+    model_factory          = nullptr;
     discard_saturated_site = true;
-    _pattern_lh_cat_state = NULL;
-    _site_lh = NULL;
+    _pattern_lh_cat_state  = nullptr;
+    _site_lh               = nullptr;
     //root_state = STATE_UNKNOWN;
-    root_state = 126;
-    ptn_freq = NULL;
-    ptn_freq_pars = NULL;
-    ptn_invar = NULL;
-    subTreeDistComputed = false;
-    dist_matrix = nullptr;
-    dist_matrix_rank = 0;
-    is_dist_file_read = false;
-    params = NULL;
+    root_state             = 126;
+    ptn_freq               = nullptr;
+    ptn_freq_pars          = nullptr;
+    ptn_invar              = nullptr;
+    subTreeDistComputed    = false;
+    dist_matrix            = nullptr;
+    dist_matrix_rank       = 0;
+    is_dist_file_read      = false;
+    params                 = nullptr;
     setLikelihoodKernel(LK_SSE2);  // FOR TUNG: you forgot to initialize this variable!
     setNumThreads(1);
-    num_threads = 0;
-    num_packets = 0;
-    max_lh_slots = 0;
-    save_all_trees = 0;
-    nodeBranchDists = NULL;
+    num_threads     = 0;
+    num_packets     = 0;
+    max_lh_slots    = 0;
+    save_all_trees  = 0;
+    nodeBranchDists = nullptr;
     // FOR: upper bounds
-    mlCheck = 0;
-    skippedNNIub = 0;
-    totalNNIub = 0;
-    minStateFreq = 0.0;
-    //minUB = 0.0;
-    //meanUB = 0.0;
-    //maxUB = 0.0;
-    pllInst = NULL;
-    pllAlignment = NULL;
-    pllPartitions = NULL;
-//    lhComputed = false;
-    curScore = -DBL_MAX;
-    root = NULL;
+    mlCheck         = 0;
+    skippedNNIub    = 0;
+    totalNNIub      = 0;
+    minStateFreq    = 0.0;
+    //minUB         = 0.0;
+    //meanUB        = 0.0;
+    //maxUB         = 0.0;
+    pllInst         = nullptr;
+    pllAlignment    = nullptr;
+    pllPartitions   = nullptr;
+    //lhComputed    = false;
+    curScore        = -DBL_MAX;
+    root            = nullptr;
     current_scaling = 1.0;
-    is_opt_scaling = false;
+    is_opt_scaling  = false;
     num_partial_lh_computations = 0;
-    vector_size = 0;
-    safe_numeric = false;
-    summary = nullptr;
-    isSummaryBorrowed = false;
-    progress = nullptr;
+    vector_size        = 0;
+    safe_numeric       = false;
+    summary            = nullptr;
+    isSummaryBorrowed  = false;
+    progress           = nullptr;
     progressStackDepth = 0;
     isShowingProgressDisabled = false;
     warnedAboutThreadCount = false;
@@ -353,8 +353,8 @@ void PhyloTree::copyPhyloTreeMixlen(PhyloTree *tree, int mix, bool borrowSummary
 void PhyloTree::setAlignment(Alignment *alignment) {
     aln = alignment;
     //double checkStart = getRealTime();
-    int nseq = aln->getNSeq32();
-    bool err = false;
+    intptr_t nseq = aln->getNSeq();
+    bool     err  = false;
 #if FAST_NAME_CHECK
     map<string, Node*> mapNameToNode;
     getMapOfTaxonNameToNode(nullptr, nullptr, mapNameToNode);
@@ -567,8 +567,8 @@ void PhyloTree::logTaxaToBeRemoved(const map<string, Node*>& mapNameToNode) {
 
 bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
     PhyloTreeThreadingContext context(*this, false);
-    aln      = alignment;
-    int nseq = aln->getNSeq32();
+    aln           = alignment;
+    intptr_t nseq = aln->getNSeq();
 
     removeSampleTaxaIfRequested();
 
@@ -588,7 +588,7 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
     }
 
     IntVector taxaIdsToAdd; //not found in tree
-    for (int seq = 0; seq < nseq; seq++) {
+    for (intptr_t seq = 0; seq < nseq; seq++) {
         string seq_name = aln->getSeqName(seq);
         auto   it       = mapNameToNode.find(seq_name);
         if (it==mapNameToNode.end()) {
@@ -777,8 +777,8 @@ namespace {
 void PhyloTree::mergeAlignment(const Alignment* new_aln) {
 
     const std::string& path     = new_aln->aln_file;
-    int            old_count    = aln->getNSeq32();
-    int            new_count    = new_aln->getNSeq32();
+    intptr_t       old_count    = aln->getNSeq();
+    intptr_t       new_count    = new_aln->getNSeq();
     size_t         site_count   = aln->getNSite();
     std::string    task_name    = "Merging alignment " + path;
     StrVector      state_strings;
@@ -1212,22 +1212,20 @@ void PhyloTree::rollBack(istream &best_tree_string) {
 
 void PhyloTree::setModel(ModelSubst *amodel) {
     model = amodel;
-    //state_freqs = new double[numStates];
-    //model->getStateFrequency(state_freqs);
 }
 
 void PhyloTree::setModelFactory(ModelFactory *model_fac) {
     model_factory = model_fac;
-    if (model_fac) {
-        model = model_factory->model;
+    if (model_fac != nullptr) {
+        model     = model_factory->model;
         site_rate = model_factory->site_rate;
         if (!isSuperTree()) {
             setLikelihoodKernel(sse);
             setNumThreads(num_threads);
         }
     } else {
-        model = NULL;
-        site_rate = NULL;
+        model     = nullptr;
+        site_rate = nullptr;
     }
 }
 
@@ -4256,7 +4254,7 @@ double PhyloTree::computeDistanceMatrix_Experimental() {
 
 double PhyloTree::computeDistanceMatrix() {
     prepareToComputeDistances();
-    int  nseqs = aln->getNSeq32();
+    intptr_t nseqs = aln->getNSeq();
     double longest_dist = 0.0;
     cout.precision(6);
     double baseTime = getRealTime();
@@ -4272,7 +4270,7 @@ double PhyloTree::computeDistanceMatrix() {
     #ifdef _OPENMP
     #pragma omp parallel for schedule(dynamic)
     #endif
-    for (int seq1 = 0; seq1 < nseqs; ++seq1) {
+    for (intptr_t seq1 = 0; seq1 < nseqs; ++seq1) {
         #ifdef _OPENMP
             int threadNum = omp_get_thread_num();
         #else
@@ -4280,8 +4278,8 @@ double PhyloTree::computeDistanceMatrix() {
         #endif
         AlignmentPairwise* processor = distanceProcessors[threadNum];
         size_t rowStartPos = seq1 * nseqs;
-        for (int seq2=seq1+1; seq2 < nseqs; ++seq2) {
-            size_t sym_pos = rowStartPos + seq2;
+        for (intptr_t seq2=seq1+1; seq2 < nseqs; ++seq2) {
+            intptr_t sym_pos = rowStartPos + seq2;
             double d2l = 0;
             dist_matrix[sym_pos] = processor->recomputeDist(seq1, seq2, dist_matrix[sym_pos], d2l);
         }
@@ -4300,11 +4298,11 @@ double PhyloTree::computeDistanceMatrix() {
 
     //cout << (getRealTime()-baseTime) << "s Copying to lower triangle" << endl;
     //copy upper-triangle into lower-triangle and set diagonal = 0
-    for (size_t seq1 = 1; seq1 < nseqs; ++seq1) {
-        size_t rowStartPos = seq1 * nseqs;
-        size_t rowStopPos  = rowStartPos + seq1;
-        size_t colPos = seq1;
-        for (size_t rowPos = rowStartPos; rowPos<rowStopPos; ++rowPos, colPos+=nseqs) {
+    for (intptr_t seq1 = 1; seq1 < nseqs; ++seq1) {
+        intptr_t rowStartPos = seq1 * nseqs;
+        intptr_t rowStopPos  = rowStartPos + seq1;
+        intptr_t colPos = seq1;
+        for (intptr_t rowPos = rowStartPos; rowPos<rowStopPos; ++rowPos, colPos+=nseqs) {
             auto d = dist_matrix[colPos];
             dist_matrix [ rowPos ] = d;
             if (d > longest_dist) {
@@ -4386,17 +4384,17 @@ void PhyloTree::printDistanceFile() const {
 }
 
 double PhyloTree::computeObservedDistanceMatrix() {
-    int nseqs = aln->getNSeq32();
+    intptr_t nseqs = aln->getNSeq();
     ensureDistanceMatrixAllocated(nseqs);
     double longest_dist = 0.0;
     #ifdef _OPENMP
     #pragma omp parallel for schedule(dynamic)
     #endif
-    for (int seq1 = 0; seq1 < nseqs; ++seq1) {
+    for (intptr_t seq1 = 0; seq1 < nseqs; ++seq1) {
         size_t pos       = static_cast<size_t>(seq1) 
                          * static_cast<size_t>(nseqs);
         size_t upper_pos = static_cast<size_t>(seq1);
-        for (int seq2 = 0; seq2 < nseqs; 
+        for (intptr_t seq2 = 0; seq2 < nseqs; 
             ++seq2, ++pos, upper_pos+=static_cast<size_t>(nseqs)) {
             if (seq1 == seq2)
                 dist_matrix[pos] = 0.0;
@@ -5701,8 +5699,8 @@ void PhyloTree::computeSeqIdentityAlongTree(Split &sp, Node *node, Node *dad) {
     }
     if (!dad) return;
     // now going along alignment to compute seq identity
-    int ident = 0;
-    int nseqs = aln->getNSeq32();
+    int      ident = 0;
+    intptr_t nseqs = aln->getNSeq();
     for (Alignment::iterator it = aln->begin(); it != aln->end(); it++) {
         char state = aln->STATE_UNKNOWN;
         bool is_const = true;

@@ -247,7 +247,7 @@ void IQTree::initSettings(Params &params) {
 
     if (params.min_iterations == -1) {
         if (!params.gbo_replicates) {
-            int nseq = aln->getNSeq32();
+            intptr_t nseq = aln->getNSeq();
             if (params.stop_condition == SC_UNSUCCESS_ITERATION) {
                 params.min_iterations = nseq * 100;
             } else if (aln->getNSeq() < 100) {
@@ -736,10 +736,10 @@ void IQTree::generateRandomTreeSubtype() {
 }
 
 void IQTree::computeInitialTree(LikelihoodKernel kernel) {
-    double start = getRealTime();
-    string initTree;
+    double start    = getRealTime();
     string out_file = params->out_prefix;
-    int score;
+    string initTree;
+    int    score;
     if (params->stop_condition == SC_FIXED_ITERATION &&
         params->numNNITrees > params->min_iterations) {
         params->numNNITrees = max(params->min_iterations, 1);
@@ -837,10 +837,21 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
                 start = getRealTime();
                 score = joinParsimonyTree(params->out_prefix.c_str(), aln, start_tree);
                 LOG_LINE(VerboseMode::VB_QUIET, "Parsimony " << verb
-                        << " took " << getRealTime() - start << " seconds"
-                        << ", parsimony score: " << score
-                        << " (based on " << aln->num_parsimony_sites << " sites)");
+                         << " took " << getRealTime() - start << " seconds"
+                         << ", parsimony score: " << score
+                         << " (based on " << aln->num_parsimony_sites << " sites)");
             }
+            break;
+
+        case START_TREE_TYPE::STT_SIMILARITY_MATCHING:
+            logLine("Creating similarity-matching tree...");
+            start = getRealTime();
+            score = createSimilarityMatchingTree();
+            LOG_LINE(VerboseMode::VB_QUIET, "Similarity-matching tree creation took "
+                     << getRealTime() - start << " seconds"
+                     << ", parsimony score: " << score
+                     << " (based on " << aln->num_parsimony_sites << " sites)");
+
             break;
 
         case START_TREE_TYPE::STT_RANDOM_TREE:
@@ -849,7 +860,7 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
             start = getRealTime();
             generateRandomTreeSubtype();
             LOG_LINE(VerboseMode::VB_QUIET, "Random tree creation took "
-                        << getRealTime() - start << " seconds");
+                     << getRealTime() - start << " seconds");
             break;
                 
         case START_TREE_TYPE::STT_PLL_PARSIMONY:
@@ -1033,6 +1044,10 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
                                " via parsimony routing";
             verb = "constructed";
             break;
+        case START_TREE_TYPE::STT_SIMILARITY_MATCHING:
+            whatAmIDoingHere = "Constructing similarity-matching tree";
+            verb = "constructed";
+            break;
         case START_TREE_TYPE::STT_BIONJ:
             whatAmIDoingHere = std::string("Loading ")
                              + params->start_tree_subtype_name + " tree ";
@@ -1094,6 +1109,11 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
                 case START_TREE_TYPE::STT_PARSIMONY_ROUTING:
                     joinParsimonyTree(nullptr, aln, params->start_tree);
                     break;
+
+                case START_TREE_TYPE::STT_SIMILARITY_MATCHING:
+                    createSimilarityMatchingTree();
+                    break;
+
 
                 default:
                     //Use the tree we've already got!
@@ -1240,7 +1260,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         }
     }
 
-    if (isMixlen()) {
+    if (isMixlen() && params->compute_likelihood) {
         //(d) Optimizing model parameters for the best of the
         //    candidate trees.
         LOG_LINE(VerboseMode::VB_MIN, "Optimizing model parameters for top "
@@ -1260,13 +1280,14 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
             //tree = optimizeBranches();
             tree = optimizeModelParameters(false, -1, this);
             LOG_LINE(VerboseMode::VB_QUIET, "Tree "
-                     << distance(bestInitTrees.begin(), it)+1
-                     << " / LogL: " << getCurScore());
+                    << distance(bestInitTrees.begin(), it)+1
+                    << " / LogL: " << getCurScore());
             candidateTrees.update(tree, getCurScore());
             trackProgress(1.0);
         }
         doneProgress();
-        LOG_LINE(VerboseMode::VB_MIN, "... " << getRealTime() - startTime << " seconds");
+        double elapsed = getRealTime() - startTime;
+        LOG_LINE(VerboseMode::VB_MIN, "... " << elapsed << " seconds");
     }
     //---- BLOCKING COMMUNICATION
     syncCandidateTrees(Params::getInstance().numSupportTrees, true);
@@ -1551,7 +1572,7 @@ void IQTree::deleteNonCherryLeaves(PhyloNodeVector &del_leaves) {
     // get the vector of non cherry taxa
     getNonCherryLeaves(noncherry_taxa, cherry_taxa);
     root = NULL;
-    int num_taxa = aln->getNSeq32();
+    intptr_t num_taxa = aln->getNSeq();
     int num_delete = k_delete;
     if (num_delete > num_taxa - 4) {
         num_delete = num_taxa - 4;
@@ -2055,8 +2076,9 @@ string IQTree::doRandomNNIs(bool storeTabu) {
     } else {
         numRandomNNI = static_cast<int>(floor((static_cast<int>(leafNum) - 3)
                                               * Params::getInstance().initPS));
-        if (leafNum >= 4 && numRandomNNI == 0)
+        if (leafNum >= 4 && numRandomNNI == 0) {
             numRandomNNI = 1;
+        }
     }
 
     initTabuSplits.clear();
@@ -2533,13 +2555,14 @@ string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon,
         }
     } else {
         double modOptScore;
+        auto   factory = getModelFactory();
         if (params->opt_gammai) { // DO RESTART ON ALPHA AND P_INVAR
-            modOptScore = getModelFactory()->optimizeParametersGammaInvar
+            modOptScore = factory->optimizeParametersGammaInvar
                           (params->fixed_branch_length, printInfo,
                            logl_epsilon, 0.0001, this);
             params->opt_gammai = false;
         } else {
-            modOptScore = getModelFactory()->optimizeParameters
+            modOptScore = factory->optimizeParameters
                           (params->fixed_branch_length, printInfo,
                            logl_epsilon, 0.0001, this);
         }
@@ -2764,7 +2787,10 @@ double IQTree::doTreeSearch() {
     int ufboot_count, ufboot_count_check;
     stop_rule.getUFBootCountCheck(ufboot_count, ufboot_count_check);
     showNoProgress();
-    
+
+    TimeKeeper perturbing("Perturbing trees");
+    TimeKeeper optimizing("Optimizing trees");
+
     while (!stop_rule.meetStopCondition(stop_rule.getCurIt(), cur_correlation)) {
         searchinfo.curIter = stop_rule.getCurIt();
         // estimate logl_cutoff for bootstrap
@@ -2783,11 +2809,14 @@ double IQTree::doTreeSearch() {
         /*----------------------------------------
          * Perturb the tree
          *---------------------------------------*/
+        perturbing.start();
         doTreePerturbation();
+        perturbing.stop();
 
         /*----------------------------------------
          * Optimize tree with NNI
          *----------------------------------------*/
+        optimizing.start();
         if (params->compute_likelihood) {
             pair<int, int> nniInfos; // <num_NNIs, num_steps>
             nniInfos = doNNISearch(true, "", this);
@@ -2795,6 +2824,7 @@ double IQTree::doTreeSearch() {
         else {
             optimizeConstructedTree(false, VerboseMode::VB_MAX);
         }
+        optimizing.stop();
 
         curTree = getTreeString();
         int pos = addTreeToCandidateSet(curTree, curScore, true,
@@ -2924,6 +2954,15 @@ double IQTree::doTreeSearch() {
     // DTH: pllUFBoot deallocation
     if (params->pll) {
         pllDestroyUFBootData();
+    }
+
+    if (perturbing.didAnything() || optimizing.didAnything())
+    {
+        hideProgress();
+        std::cout.precision(4);
+        perturbing.report();
+        optimizing.report();
+        showProgress();
     }
 
 #ifdef _IQTREE_MPI
