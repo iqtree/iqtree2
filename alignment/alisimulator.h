@@ -124,6 +124,11 @@ protected:
     */
     void estimateLengthRatio();
     
+    /**
+        show warning if base frequencies are set/unset correctly (only check DNA models)
+    */
+    void checkBaseFrequenciesDNAModels();
+    
 public:
     
     IQTree *tree;

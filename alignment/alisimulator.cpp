@@ -21,6 +21,9 @@ AliSimulator::AliSimulator(Params *input_params, int expected_number_sites, doub
     else
         expected_num_sites = expected_number_sites*length_ratio;
     partition_rate = new_partition_rate;
+    
+    // check if base frequencies for DNA models are specified correctly
+    checkBaseFrequenciesDNAModels();
 }
 
 /**
@@ -950,4 +953,30 @@ string AliSimulator::convertNumericalStatesIntoReadableCharacters(Node *node, in
     
     // return output
     return output;
+}
+
+/**
+    show warning if base frequencies are set/unset correctly (only check DNA models)
+*/
+void AliSimulator::checkBaseFrequenciesDNAModels(){
+    if (tree->aln && tree->aln->seq_type == SEQ_DNA && !params->partition_file && params->model_name.find("MIX") == std::string::npos) {
+        
+        // initializing the list of unequal/equal base frequencies models
+        vector<string> unequal_base_frequencies_models = vector<string>{"GTR", "F81", "HKY", "HKY85", "TN", "TN93", "K81u", "TPM2u", "TPM3u", "TIM", "TIM2", "TIM3", "TVM"};
+        vector<string> equal_base_frequencies_models = vector<string>{"JC", "JC69", "K80", "K2P", "TNe", "K81", "K3P", "TPM2", "TPM3", "TIMe", "TIM2e", "TIM3e", "TVMe", "SYM"};
+        
+        // check whether base frequencies are not set for unequal base frequenceies models
+        for (string model_item: unequal_base_frequencies_models)
+            if (params->model_name.find(model_item) != std::string::npos && params->model_name.find("+F") == std::string::npos) {
+                outWarning(model_item+" must have unequal base frequencies. The base frequencies could be randomly generated if users do not provide them. However, we strongly recommend users specify the base frequencies for this model (by using +F{freq1,...,freqN}) for better simulation accuracy.");
+                break;
+            }
+        
+        // check whether base frequencies are set for equal base frequenceies models
+        for (string model_item: equal_base_frequencies_models)
+            if (params->model_name.find(model_item) != std::string::npos && params->model_name.find("+F") != std::string::npos) {
+                outWarning(model_item+" must have equal base frequencies. Unequal base frequencies specified by users could lead to incorrect simulation. We strongly recommend users to not specify the base frequencies for this model (by removing +F{freq1,...,freqN}).");
+                break;
+            }
+    }
 }
