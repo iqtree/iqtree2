@@ -176,7 +176,7 @@ YAMLRateFree::YAMLRateFree(PhyloTree* tree, PhyloTree* report_to_tree,
         : super(info, report_to_tree) {
     std::string algorithm = info.getOptimizationAlgorithm();
     optimize_alg = algorithm.empty() ? optimize_alg : algorithm;
-    gamma_shape  = 1;
+    gamma_shape  = 1.0;
 
     //num_rate_cats, gamma_shape,
     //freerate_params, !fused_mix_rate,
@@ -204,4 +204,47 @@ void YAMLRateFree::sortUpdatedRates() {
                                           ModelParameterType::RATE, rate_ix);
     model_info.updateModelVariablesByType(prop,  prop_count, true,
                                           ModelParameterType::PROPORTION, prop_ix);
+}
+
+YAMLRateFreeInvar::YAMLRateFreeInvar(PhyloTree* tree, PhyloTree* report_to_tree,
+                                     const ModelInfoFromYAMLFile& info)
+        : super(info, report_to_tree) {
+    std::string algorithm = info.getOptimizationAlgorithm();
+    optimize_alg = algorithm.empty() ? optimize_alg : algorithm;
+    gamma_shape  = 1.0;
+    const ModelVariable* pvar = info.getInvariantProportionVariable();
+    ASSERT(pvar!=nullptr);
+    setPInvar(pvar->getValue());
+    setFixPInvar(pvar->isFixed());
+
+    //num_rate_cats, gamma_shape,
+    //freerate_params, !fused_mix_rate,
+    //params.optimize_alg_freerate, tree
+}
+
+void YAMLRateFreeInvar::updateRateClassFromModelVariables() {
+    int rate_count = model_info.getNumberOfRateCategories();
+    int prop_count = model_info.getNumberOfProportions();
+    int rate_ix    = 0;
+    int prop_ix    = 0;
+    model_info.readModelVariablesByType(rates, rate_count, true,
+                                        ModelParameterType::RATE, rate_ix);
+    model_info.readModelVariablesByType(prop,  prop_count, true,
+                                        ModelParameterType::PROPORTION, prop_ix);
+    model_info.readModelVariablesByType(prop,  prop_count, true,
+                                        ModelParameterType::INVARIANT_PROPORTION, prop_ix);
+}
+
+void YAMLRateFreeInvar::sortUpdatedRates() {
+    super::sortUpdatedRates();
+    int rate_count = model_info.getNumberOfRateCategories();
+    int prop_count = model_info.getNumberOfProportions();
+    int rate_ix    = 0;
+    int prop_ix    = 0;
+    model_info.updateModelVariablesByType(rates, rate_count, true,
+                                          ModelParameterType::RATE, rate_ix);
+    model_info.updateModelVariablesByType(prop,  prop_count, true,
+                                          ModelParameterType::PROPORTION, prop_ix);
+    model_info.updateModelVariablesByType(prop,  prop_count, true,
+                                          ModelParameterType::INVARIANT_PROPORTION, prop_ix);
 }

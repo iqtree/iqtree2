@@ -36,6 +36,7 @@
 #include "modelmixture.h"          //for ModelMixture
 
 #include "ratefree.h"              //for RateFree
+#include "ratefreeinvar.h"         //for RateFreeInvar
 
 #include "modelinfofromyamlfile.h" //for ModelInfoFromYAMLFile, etc.
 #include <tree/phylotree.h>        //for PhyloTree
@@ -98,7 +99,9 @@ public:
             bound_check[i] = false;
         }
         std::vector<ModelParameterType> types;
-        types = { ModelParameterType::PROPORTION, ModelParameterType::RATE };
+        types = { ModelParameterType::PROPORTION, 
+                  ModelParameterType::INVARIANT_PROPORTION, 
+                  ModelParameterType::RATE };
         model_info->setBounds(ndim, types, lower_bound,
                               upper_bound, bound_check);
     }
@@ -293,6 +296,8 @@ public:
     virtual void writeInfo(ostream &out) {
         model_info->writeInfo("Weight parameters    ", ModelParameterType::WEIGHT,     out);
         model_info->writeInfo("Proportion parameters", ModelParameterType::PROPORTION, out);
+        model_info->writeInfo("Invariant proportion parameters",
+                              ModelParameterType::INVARIANT_PROPORTION, out);
         model_info->writeInfo("Rate parameters      ", ModelParameterType::RATE,       out);
         model_info->writeInfo("State frequencies    ", ModelParameterType::FREQUENCY,  out);
     }
@@ -307,6 +312,22 @@ public:
 
     ModelInfoFromYAMLFile* getModelInfo() {
         return model_info;
+    }
+
+	/**
+		@return true if an ascertainment bias correction has been
+		        specified for this model (if one was).  
+	*/
+	virtual bool getSpecifiedAscertainmentBiasCorrection(ASCType& asc_type) { 
+        return model_info->checkAscertainmentBiasCorrection(false, asc_type);
+    }
+
+	/**
+		@return a newly allocated Rate Model that was specified, for this
+		        model (if one was).
+	*/
+	virtual RateHeterogeneity* getSpecifiedRateModel(PhyloTree* tree) { 
+        return model_info->getSpecifiedRateModel(tree);
     }
 };
 
@@ -455,6 +476,7 @@ public:
         }
         if (isOptimizingProportions()) {
             types.push_back(ModelParameterType::PROPORTION);
+            types.push_back(ModelParameterType::INVARIANT_PROPORTION);
         }
         if (isOptimizingProportions()) {
             types.push_back(ModelParameterType::RATE);
@@ -477,6 +499,9 @@ public:
         if (isOptimizingProportions()) {
             rc  |= model_info.updateModelVariablesByType(variables, ndim, false, 
                                                          ModelParameterType::PROPORTION, index);
+            rc  |= model_info.updateModelVariablesByType(variables, ndim, false, 
+                                                         ModelParameterType::INVARIANT_PROPORTION, 
+                                                         index);
         }
         if (isOptimizingRates()) {
             rc  |= model_info.updateModelVariablesByType(variables, ndim, false, 
@@ -493,15 +518,21 @@ public:
         int ndim  = getNDim();
         if (isOptimizingShapes()) {
             model_info.readModelVariablesByType(variables, ndim, false,
-                                                ModelParameterType::SHAPE,      index);
+                                                ModelParameterType::SHAPE,      
+                                                index);
         }
         if (isOptimizingProportions()) {
             model_info.readModelVariablesByType(variables, ndim, false,
-                                                ModelParameterType::PROPORTION, index);
+                                                ModelParameterType::PROPORTION, 
+                                                index);
+            model_info.readModelVariablesByType(variables, ndim, false,
+                                                ModelParameterType::INVARIANT_PROPORTION, 
+                                                index);
         }
         if (isOptimizingRates()) {
             model_info.readModelVariablesByType(variables, ndim, false,
-                                                ModelParameterType::RATE,       index);
+                                                ModelParameterType::RATE,       
+                                                index);
         }
     }
 
@@ -518,9 +549,10 @@ public:
     }
 
     virtual void writeInfo(ostream &out) {
-        model_info.writeInfo("Shapes     ", ModelParameterType::SHAPE,      out);
-        model_info.writeInfo("Proportions", ModelParameterType::PROPORTION, out);
-        model_info.writeInfo("Rates      ", ModelParameterType::RATE,       out);
+        model_info.writeInfo("Shapes     ",           ModelParameterType::SHAPE,      out);
+        model_info.writeInfo("Proportions",           ModelParameterType::PROPORTION, out);
+        model_info.writeInfo("Invariant Proportions", ModelParameterType::INVARIANT_PROPORTION, out);
+        model_info.writeInfo("Rates      ",           ModelParameterType::RATE,       out);
     }
 };
 
@@ -528,6 +560,15 @@ class YAMLRateFree: public YAMLRateModelWrapper<RateFree> {
 public:
     typedef YAMLRateModelWrapper<RateFree> super;
     YAMLRateFree(PhyloTree *tree, PhyloTree* report_to_tree,
+                const ModelInfoFromYAMLFile& info);
+    void updateRateClassFromModelVariables();
+    virtual void sortUpdatedRates();
+};
+
+class YAMLRateFreeInvar:public YAMLRateModelWrapper<RateFreeInvar> {
+public:
+    typedef YAMLRateModelWrapper<RateFreeInvar> super;
+    YAMLRateFreeInvar(PhyloTree *tree, PhyloTree* report_to_tree,
                 const ModelInfoFromYAMLFile& info);
     void updateRateClassFromModelVariables();
     virtual void sortUpdatedRates();

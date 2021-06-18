@@ -6,6 +6,7 @@
 #include <utils/stringfunctions.h> //for string_to_lower
 
 class Alignment;
+class RateHeterogeneity;
 
 class ModelParameterRange : public std::pair<double, double> {
 public:
@@ -17,27 +18,30 @@ public:
 };
 
 enum class ModelParameterType {
-    FREQUENCY, PROPORTION, RATE, SHAPE, WEIGHT, OTHER
+    FREQUENCY, PROPORTION, INVARIANT_PROPORTION, 
+    RATE, SHAPE, WEIGHT, OTHER
 };
 
 inline ModelParameterType modelParameterTypeFromString(const std::string& type_name) {
     std::string s = string_to_lower(type_name);
-    if (s=="frequency")  return ModelParameterType::FREQUENCY;
-    if (s=="other")      return ModelParameterType::OTHER;
-    if (s=="proportion") return ModelParameterType::PROPORTION;
-    if (s=="rate")       return ModelParameterType::RATE;
-    if (s=="shape")      return ModelParameterType::SHAPE;
-    if (s=="weight")     return ModelParameterType::WEIGHT;
+    if (s=="frequency")            return ModelParameterType::FREQUENCY;
+    if (s=="other")                return ModelParameterType::OTHER;
+    if (s=="proportion")           return ModelParameterType::PROPORTION;
+    if (s=="invariant_proportion") return ModelParameterType::INVARIANT_PROPORTION;
+    if (s=="rate")                 return ModelParameterType::RATE;
+    if (s=="shape")                return ModelParameterType::SHAPE;
+    if (s=="weight")               return ModelParameterType::WEIGHT;
     return ModelParameterType::RATE;
 }
 
 inline std::string modelParameterTypeToString(ModelParameterType type_code) {
-    if (type_code == ModelParameterType::FREQUENCY)  return "frequency";
-    if (type_code == ModelParameterType::OTHER)      return "other";
-    if (type_code == ModelParameterType::PROPORTION) return "proportion";
-    if (type_code == ModelParameterType::RATE)       return "rate";
-    if (type_code == ModelParameterType::SHAPE)      return "shape";
-    if (type_code == ModelParameterType::WEIGHT)     return "weight";
+    if (type_code == ModelParameterType::FREQUENCY)            return "frequency";
+    if (type_code == ModelParameterType::INVARIANT_PROPORTION) return "proportion";
+    if (type_code == ModelParameterType::OTHER)                return "other";
+    if (type_code == ModelParameterType::PROPORTION)           return "invariant_proportion";
+    if (type_code == ModelParameterType::RATE)                 return "rate";
+    if (type_code == ModelParameterType::SHAPE)                return "shape";
+    if (type_code == ModelParameterType::WEIGHT)               return "weight";
     return "";
 }
 
@@ -234,11 +238,15 @@ public:
 #define PROPERTY_NAME_ASC         "ascertainmentbiascorrection"
 
 class ModelInfoFromYAMLFile : public ModelInfo {
+
+    friend class ModelListFromYAMLFile;
+    friend class ModelFileLoader;
+
 public:
     typedef std::vector<YAMLFileParameter>                Parameters;
     typedef std::map<std::string, ModelVariable>          Variables;
     typedef std::map<std::string, std::string>            StringMap;
- 
+
 private:
     std::string   model_name;         //
     std::string   model_file_path;    //
@@ -279,8 +287,8 @@ private:
     std::string            weight_formula; //formula for deciding on weight
     double                 model_weight;   //weight
 
-    friend class ModelListFromYAMLFile;
-    friend class ModelFileLoader;
+    //Set if a subsitution model has a specified rate model
+    ModelInfoFromYAMLFile* specified_rate_model_info;
 
 protected:
     void appendTo(const std::string& append_me,
@@ -332,8 +340,7 @@ public:
 
     virtual double getProportionOfInvariantSites() const { return 0.0; /*stub*/ }
 
-    virtual bool hasAscertainmentBiasCorrection()  const { return false; /*stub*/ }
-    virtual bool hasRateHeterotachy()              const { return false; /*stub*/ }
+    virtual bool hasRateHeterotachy()              const;
 
     virtual bool isFreeRate()                      const { return false; /*stub*/ }
     virtual bool isFrequencyMixture()              const { return false; /*stub*/ }
@@ -346,9 +353,9 @@ public:
     virtual bool isReversible()                    const;
     virtual bool isWeissAndVonHaeselerTest()       const { return false; /*stub*/ }
 
-    ASCType extractASCType(std::string& leftover_name) const;
-    bool    checkAscertainmentBiasCorrection(bool warnIfInvalid, ASCType &type) const;
-
+    virtual ASCType extractASCType                  (std::string& leftover_name)        const;
+    bool            checkAscertainmentBiasCorrection(bool warnIfInvalid, ASCType &type) const;
+    virtual bool    hasAscertainmentBiasCorrection  ()                                  const;
 
     std::string extractMixtureModelList
     (std::string& leftover_name) const {
@@ -360,9 +367,8 @@ public:
         FUNCTION_NOT_IMPLEMENTED;
         return "";
     }
-    void updateName(const std::string& name);
+    void updateName  (const std::string& name);
     void addParameter(const YAMLFileParameter& p);
-
 
 /***
  * @param p
@@ -410,17 +416,21 @@ public:
     double             getModelWeight(); //This version re-evaluates weight_formula
     bool               isModelWeightFixed(); //Can't be const.
 
-    //Rate matrices
+    //Rate matrices and associated rate models
     int                getRateMatrixRank()                              const;
     const std::string& getRateMatrixFormula()                           const;
     const std::string& getRateMatrixExpression(int row, int col)        const;
     int                getNumStates()                                   const;
+	RateHeterogeneity* getSpecifiedRateModel(PhyloTree* tree)           const;
+    RateHeterogeneity* getRateHeterogeneity(PhyloTree* tree)            const;
 
     //Tip Likelihood matrices
     int  getTipLikelihoodMatrixRank() const;
     void computeTipLikelihoodsForState(int state, int num_states, double* likelihoods);
 
     //Variables
+    const ModelVariable* getVariableByName(const char*        name) const;
+    const ModelVariable* getVariableByName(const std::string& name) const;
     bool   hasVariable     (const char* name)        const;
     bool   hasVariable     (const std::string& name) const;
     double getVariableValue(const std::string& name) const;
@@ -468,6 +478,7 @@ public:
         double value_to_set);
 
     bool   assignLastFrequency(double value);
+    const  ModelVariable* getInvariantProportionVariable() const;
 
     //String Properties
     std::string getStringProperty(const char* name,
@@ -501,7 +512,7 @@ public:
     int getNumberOfVariableRates()       const;
     int getNumberOfVariableShapes()      const;
     int getNumberOfProportions()         const;
-    int getNumberOfVariableProportions() const;
+    int getNumberOfVariableProportions() const; 
 
     //Output
     void writeInfo(const char* caption, ModelParameterType type,

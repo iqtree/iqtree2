@@ -7,6 +7,13 @@
 
 #include "ratefreeinvar.h"
 
+RateFreeInvar::RateFreeInvar(int ncat,
+                             PhyloTree* tree, 
+                             PhyloTree* report_to_tree) 
+	: RateInvar(0.1, tree)
+	, RateFree(ncat, tree, report_to_tree) {
+}
+
 RateFreeInvar::RateFreeInvar(int ncat, double start_alpha, string params,
                              bool sorted_rates, double p_invar_sites,
                              string opt_alg, PhyloTree *tree)
@@ -14,8 +21,8 @@ RateFreeInvar::RateFreeInvar(int ncat, double start_alpha, string params,
     , RateFree(ncat, start_alpha, params, sorted_rates, opt_alg, tree)
 {
 	cur_optimize = 0;
-	name = "+I" + name;
-	full_name = "Invar+" + full_name;
+	name         = "+I" + name;
+	full_name    = "Invar+" + full_name;
     setNCategory(ncat);
 }
 

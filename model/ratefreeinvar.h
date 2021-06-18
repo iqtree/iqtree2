@@ -16,6 +16,16 @@ public:
 
  	/**
 		constructor
+		@param ncat           number of rate categories
+		@param tree           associated phylogenetic tree
+		@param report_to_tree tree or what-have-you to log to
+		@note  pretends that the proportion of invariant sites is 10%
+		       (it gts overridden later).
+	*/
+	RateFreeInvar(int ncat, PhyloTree* tree, PhyloTree* report_to_tree);
+
+ 	/**
+		constructor
 		@param ncat number of rate categories
 		@param tree associated phylogenetic tree
 	*/

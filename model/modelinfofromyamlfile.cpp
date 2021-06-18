@@ -24,7 +24,8 @@
 #include "modelinfofromyamlfile.h"
 #include "modelexpression.h"
 #include <utils/stringfunctions.h> //for string_to_lower, startsWith, endsWith
-#include <tree/phylotree.h> //for TREE_LOG_LINE macro
+#include <tree/phylotree.h>        //for TREE_LOG_LINE macro
+#include "yamlmodelwrapper.h"      //for YAMLRateFree and friends.
 
 //YAML Logging Levels
 VerboseMode YAMLModelVerbosity     = VerboseMode::VB_MIN;
@@ -441,22 +442,31 @@ void  ModelInfoFromYAMLFile::moveParameterToBack
     parameters[i] = lift;
 }
 
-bool ModelInfoFromYAMLFile::hasVariable(const char* name) const {
+const ModelVariable* ModelInfoFromYAMLFile::getVariableByName(const char* name) const {
     //Todo: look up linked_models too
     if (hasDot(name) && mixed_models != nullptr ) {
         std::string sub_model_name;
         const char* var_name = nullptr;
         breakAtDot(name, sub_model_name, var_name);
         auto it = findMixedModel(sub_model_name);
-        return (*it)->hasVariable(var_name);
+        return (*it)->getVariableByName(var_name);
     }
+    auto it = variables.find(name);
     if (variables.find(name) != variables.end()) {
-        return true;
+        return &(it->second);
     }
     if (parent_model==nullptr) {
-        return false;
+        return nullptr;
     }
-    return parent_model->hasVariable(name);
+    return parent_model->getVariableByName(name);
+}
+
+const ModelVariable* ModelInfoFromYAMLFile::getVariableByName(const std::string& name) const {
+    return getVariableByName(name.c_str());
+}
+
+bool ModelInfoFromYAMLFile::hasVariable(const char* name) const {
+    return getVariableByName(name) != nullptr;
 }
 
 bool ModelInfoFromYAMLFile::hasVariable(const std::string& name) const {
@@ -464,22 +474,11 @@ bool ModelInfoFromYAMLFile::hasVariable(const std::string& name) const {
 }
 
 double ModelInfoFromYAMLFile::getVariableValue(const char* name) const {
-    auto found = variables.find(name);
-    if (found == variables.end()) {
-        bool dotted = hasDot(name);
-        if (dotted && mixed_models != nullptr) {
-            std::string sub_model_name;
-            const char* var_name = nullptr;
-            breakAtDot(name, sub_model_name, var_name);
-            auto it = findMixedModel(sub_model_name);
-            return (*it)->getVariableValue(var_name);
-        }
-        if (dotted || parent_model==nullptr) {
-            return 0.0;
-        }
-        return parent_model->getVariableValue(name);
+    const ModelVariable* pvar = getVariableByName(name);
+    if (pvar==nullptr) {
+        return 0.0;
     }
-    return found->second.getValue();
+    return pvar->getValue();
 }
 
 double ModelInfoFromYAMLFile::getVariableValue(const std::string& name) const {
@@ -487,24 +486,11 @@ double ModelInfoFromYAMLFile::getVariableValue(const std::string& name) const {
 }
 
 bool ModelInfoFromYAMLFile::isVariableFixed(const std::string& name) const {
-    auto found = variables.find(name);
-    if (found == variables.end()) {
-        //Todo: look up linked_models too
-        bool dotted = hasDot(name.c_str());
-
-        if (dotted && mixed_models != nullptr) {
-            std::string sub_model_name;
-            const char* var_name = nullptr;
-            breakAtDot(name.c_str(), sub_model_name, var_name);
-            auto it = findMixedModel(sub_model_name);
-            return (*it)->isVariableFixed(var_name);
-        }
-        if (dotted || parent_model==nullptr) {
-            return false;
-        }
-        return parent_model->isVariableFixed(name);
+    const ModelVariable* pvar = getVariableByName(name);
+    if (pvar==nullptr) {
+        return false;
     }
-    return found->second.isFixed();
+    return pvar->isFixed();
 }
 
 void ModelInfoFromYAMLFile::addParameter(const YAMLFileParameter& p) {
@@ -696,10 +682,12 @@ void ModelInfoFromYAMLFile::updateVariables(const double* updated_values,
     int i = 1; //Rate parameter numbering starts at 1, see ModelMarkov
     ModelParameterType supported_types[] = {
         ModelParameterType::PROPORTION,
+        ModelParameterType::INVARIANT_PROPORTION, 
         ModelParameterType::RATE, 
         ModelParameterType::FREQUENCY 
     };
     //PROPORTION must be before RATE (e.g. RateFree)
+    //INVARIANT_PROPORTION must be be after (because it is, e.g. in RateFreeInvar)
     //FREQUENCY  must be after RATE  (e.g. ModelMarkov)
     //Todo: Where do weight parameters go?    
     //      Especially in mixture models
@@ -800,7 +788,6 @@ void ModelInfoFromYAMLFile::readModelVariablesByType( double* write_them_here,
         }
     }
 }
-
 
 void ModelInfoFromYAMLFile::logVariablesTo(PhyloTree& report_to_tree) const {
     if (verbose_mode < YAMLVariableVerbosity) {
@@ -957,6 +944,17 @@ bool ModelInfoFromYAMLFile::assignLastFrequency(double value) {
     return false;
 }
 
+const ModelVariable* ModelInfoFromYAMLFile::getInvariantProportionVariable() const {
+    for (const YAMLFileParameter& parameter: parameters) {
+        if (parameter.type ==  ModelParameterType::INVARIANT_PROPORTION) {
+            auto i = parameter.minimum_subscript;
+            std::string var_name = parameter.getSubscriptedVariableName(i);
+            return getVariableByName(var_name);
+        }
+    }
+    return nullptr;
+}
+
 std::string ModelInfoFromYAMLFile::getStringProperty(const char* name,
     const char* default_value) const {
     auto it = string_properties.find(name);
@@ -1047,6 +1045,33 @@ int ModelInfoFromYAMLFile::getRateMatrixRank() const {
 
 const std::string& ModelInfoFromYAMLFile::getRateMatrixFormula() const {
     return rate_matrix_formula;
+}
+
+RateHeterogeneity* ModelInfoFromYAMLFile::getSpecifiedRateModel(PhyloTree* tree) const {
+    ASSERT (!is_rate_model);    //rate models don't *have* rate models, 
+                                //they are rate models
+    if (!hasRateHeterotachy()) {
+        return nullptr;
+    }
+    return specified_rate_model_info->getRateHeterogeneity(tree);
+}
+
+RateHeterogeneity* ModelInfoFromYAMLFile::getRateHeterogeneity(PhyloTree* tree) const {
+    //Zorkatron
+    ASSERT(is_rate_model);
+    bool isInvar = true;
+    for ( const YAMLFileParameter &param: parameters ) {
+        if (param.type == ModelParameterType::INVARIANT_PROPORTION) {
+            isInvar = true;            
+        }
+    }
+    //Note:gamma rate model is treated as a *kind* of free rate model
+    if (isInvar) {
+        return new YAMLRateFreeInvar(tree, tree, *this);
+    }
+    else {
+        return new YAMLRateFree(tree, tree, *this);
+    }
 }
 
 std::string ModelInfoFromYAMLFile::getParameterList(ModelParameterType param_type) const {
@@ -1370,7 +1395,10 @@ int ModelInfoFromYAMLFile::getNumberOfVariableShapes() const {
 int ModelInfoFromYAMLFile::getNumberOfProportions() const {
     int count = 0;
     for (auto v: variables) {
-        if (v.second.getType() == ModelParameterType::PROPORTION) {
+        auto t = v.second.getType();
+        if (t == ModelParameterType::PROPORTION) {
+            ++count;
+        } else if (t == ModelParameterType::INVARIANT_PROPORTION) {
             ++count;
         }
     }
@@ -1380,7 +1408,9 @@ int ModelInfoFromYAMLFile::getNumberOfProportions() const {
 int ModelInfoFromYAMLFile::getNumberOfVariableProportions() const {
     int count = 0;
     for (auto v: variables) {
-        if (v.second.getType() == ModelParameterType::PROPORTION) {
+        auto t = v.second.getType();
+        if ( t == ModelParameterType::PROPORTION ||
+             t == ModelParameterType::INVARIANT_PROPORTION ) {
             if (!v.second.isFixed()) {
                 ++count;
             }
@@ -1619,5 +1649,14 @@ bool ModelInfoFromYAMLFile::checkAscertainmentBiasCorrection
                 " not recognized.");
     }
     return !unrecognized;
+}
+
+bool ModelInfoFromYAMLFile::hasRateHeterotachy() const {
+    return specified_rate_model_info!=nullptr;
+}
+
+bool ModelInfoFromYAMLFile::hasAscertainmentBiasCorrection() const {
+    ASCType type;
+    return checkAscertainmentBiasCorrection(false, type);
 }
 

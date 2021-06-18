@@ -863,8 +863,8 @@ RateHeterogeneity* ModelFactory::getFreeRate
      const Params& params, PhyloTree* tree) {
     if (isInvariantModel) {
         return new RateFreeInvar(num_rate_cats, gamma_shape, freerate_params,
-                                        !fused_mix_rate, p_invar_sites,
-                                        params.optimize_alg_freerate, tree);
+                                 !fused_mix_rate, p_invar_sites,
+                                 params.optimize_alg_freerate, tree);
     }
     return new RateFree(num_rate_cats, gamma_shape,
                         freerate_params, !fused_mix_rate,

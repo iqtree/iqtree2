@@ -287,11 +287,9 @@
 - ratemodel:        I
   ratedistribution: invariant
   parameters:
-  - name:           proportion
-    type:           proportion
+  - name:           invariant_proportion
+    type:           invariant_proportion
     initValue:      0.1          #Might want to guess at this another way
-  constraints:
-  - categories = 1
 
 - ratemodel:        GFOUR   #test that rates and proportions will be recalculated 
                             #when categories is initialized/constrained.

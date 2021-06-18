@@ -197,6 +197,8 @@ void ModelFileLoader::setParameterType(const YAML::Node&      param,
         p.type = ModelParameterType::FREQUENCY;
     } else if (p.type_name=="proportion") {
         p.type = ModelParameterType::PROPORTION;
+    } else if (p.type_name=="invariant_proportion") {
+        p.type = ModelParameterType::INVARIANT_PROPORTION;
     } else if (p.type_name=="shape") {
         p.type = ModelParameterType::SHAPE;
     } else if (p.type_name=="weight") {
@@ -214,6 +216,9 @@ void ModelFileLoader::setParameterTolerance(const YAML::Node&      param,
     if (!overriding) {
         switch (p.type) {
             case ModelParameterType::FREQUENCY:
+                p.tolerance = 1e-4;
+                break;
+            case ModelParameterType::INVARIANT_PROPORTION:
                 p.tolerance = 1e-4;
                 break;
             case ModelParameterType::PROPORTION:
@@ -245,6 +250,8 @@ void ModelFileLoader::setParameterValue(const YAML::Node&      param,
     double dv   = 0.0; //default initial value
     if (p.type==ModelParameterType::FREQUENCY) {
         dv = 1.0 / static_cast<double>(count);
+    } else if (p.type==ModelParameterType::INVARIANT_PROPORTION) {
+        dv = 0.1;
     } else if (p.type==ModelParameterType::PROPORTION) {
         dv = 1.0;
     } else if (p.type==ModelParameterType::RATE) {

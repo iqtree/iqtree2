@@ -13,6 +13,7 @@
 #define SUBSTMODEL_H
 
 #include <string>
+#include "model/rateheterogeneity.h"
 #include "utils/tools.h"
 #include "utils/optimization.h"
 #include "utils/checkpoint.h"
@@ -24,6 +25,7 @@ const char OPEN_BRACKET = '{';
 const char CLOSE_BRACKET = '}';
 
 class PhyloTree;
+class RateHeterogeneity;
 
 /**
 Substitution model abstract class
@@ -45,6 +47,21 @@ public:
 	void setTree(PhyloTree *tree);
 
 	void setNumberOfStates(int states);
+
+	/**
+		@return true if an ascertainment bias correction has been
+		        specified for this model (if one was).  Overridden by/for
+				YAML subtitution models.
+	*/
+	virtual bool getSpecifiedAscertainmentBiasCorrection(ASCType& asc_type) { return false; }
+
+	/**
+		@return a newly allocated Rate Model that was specified, for this
+		        model (if one was) (nullptr if none was).  
+				Overridden for YAML subtitution models
+				for which rate model(s) are specified.
+	*/
+	virtual RateHeterogeneity* getSpecifiedRateModel(PhyloTree* tree) { return nullptr; }
 
 	/**
 		@return the number of dimensions
