@@ -906,13 +906,6 @@ void ModelFileLoader::parseYAMLModel(const YAML::Node& substitution_model,
     parseYAMLModelWeightAndScale  (substitution_model, info, report_to_tree);
 }
 
-namespace {
-    const char* recognized_string_property_names[] = {
-        "errormodel", //One of "+E", "+EA", "+EC", "+EG", "+ET"
-                        //recognized by ModelDNAError.
-    };
-};
-
 void ModelFileLoader::parseYAMLSubModels(const YAML::Node& substitution_model,
                                          ModelInfoFromYAMLFile& info,
                                          ModelListFromYAMLFile& list,
@@ -946,6 +939,14 @@ void ModelFileLoader::parseYAMLSubModels(const YAML::Node& substitution_model,
     }
 }
 
+namespace {
+    const char* recognized_string_property_names[] = {
+        PROPERTY_NAME_ERROR_MODEL, //One of "+E", "+EA", "+EC", "+EG", "+ET"
+                                   //recognized by ModelDNAError.
+        PROPERTY_NAME_ASC,
+    };
+};
+
 void ModelFileLoader::parseYAMLModelStringProperties
         (const YAML::Node& substitution_model,
          ModelInfoFromYAMLFile& info,
@@ -963,6 +964,8 @@ void ModelFileLoader::parseYAMLModelStringProperties
             //Todo: what about lists?
         }
     }
+    ASCType dummyASCType;
+    info.checkAscertainmentBiasCorrection(true, dummyASCType);
 }
 
 void ModelFileLoader::parseYAMLModelWeightAndScale

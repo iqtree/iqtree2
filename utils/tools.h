@@ -404,13 +404,22 @@ enum MatrixExpTechnique {
 };
 
 /** ascertainment bias correction type */
-enum ASCType {
+enum class ASCType {
     ASC_NONE,               // no ASC
     ASC_VARIANT,            // Lewis's correction for variant sites
     ASC_VARIANT_MISSING,    // Holder's correction for variant sites with missing data
     ASC_INFORMATIVE,        // correction for parsimony-informative sites
     ASC_INFORMATIVE_MISSING // Holder's correction for informative sites with missing data
 };
+inline bool isHolderAscertainmentCorrection(ASCType type) {
+    return (type == ASCType::ASC_VARIANT_MISSING || 
+            type == ASCType::ASC_INFORMATIVE_MISSING);
+}
+inline bool isLewisAscertainmentCorrection(ASCType type) {
+    return (type == ASCType::ASC_VARIANT || 
+            type == ASCType::ASC_INFORMATIVE);
+}
+string getASCName(ASCType ASC_type);
 
 enum AncestralSeqType {
     AST_NONE, AST_MARGINAL, AST_JOINT

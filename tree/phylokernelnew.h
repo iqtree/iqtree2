@@ -2216,22 +2216,22 @@ void PhyloTree::computeLikelihoodDervGenericSIMD
 #endif
 
 #ifndef KERNEL_FIX_STATES
-    int nstates   = aln->num_states;
+    int      nstates    = aln->num_states;
 #endif
-    int   ncat       = site_rate->getNRate();
-    int   ncat_mix   = (model_factory->fused_mix_rate) ? ncat : ncat*model->getNMixtures();
+    int      ncat       = site_rate->getNRate();
+    int      ncat_mix   = (model_factory->fused_mix_rate) ? ncat : ncat*model->getNMixtures();
 
     size_t   block      = ncat_mix * nstates;
     //intptr_t tip_block = nstates * model->getNMixtures();
     intptr_t orig_nptn  = aln->size();
     intptr_t max_orig_nptn = roundUpToMultiple(orig_nptn, VectorClass::size());
-    intptr_t nptn = max_orig_nptn+model_factory->unobserved_ptns.size();
-    ASCType  ASC_type  = model_factory->getASC();
-    bool ASC_Holder   = (ASC_type == ASC_VARIANT_MISSING || ASC_type == ASC_INFORMATIVE_MISSING);
-    bool ASC_Lewis    = (ASC_type == ASC_VARIANT || ASC_type == ASC_INFORMATIVE);
+    intptr_t nptn       = max_orig_nptn+model_factory->unobserved_ptns.size();
+    ASCType  ASC_type   = model_factory->getASC();
+    bool ASC_Holder     = isHolderAscertainmentCorrection(ASC_type);
+    bool ASC_Lewis      = isLewisAscertainmentCorrection(ASC_type);
 
-    double *const_df  = nullptr;
-    double *const_ddf = nullptr;
+    double *const_df    = nullptr;
+    double *const_ddf   = nullptr;
 
     if (ASC_Holder) {
         const_df  = aligned_alloc<double>(get_safe_upper_limit(nptn) - max_orig_nptn);
@@ -2672,9 +2672,9 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
     intptr_t max_orig_nptn = roundUpToMultiple(orig_nptn, VectorClass::size());
     intptr_t nptn          = max_orig_nptn + model_factory->unobserved_ptns.size();
     size_t   tip_mem_size  = max_orig_nptn * nstates;
-    ASCType  ASC_type     = model_factory->getASC();
-    bool     ASC_Holder    = (ASC_type == ASC_VARIANT_MISSING || ASC_type == ASC_INFORMATIVE_MISSING);
-    bool     ASC_Lewis     = (ASC_type == ASC_VARIANT || ASC_type == ASC_INFORMATIVE);
+    ASCType  ASC_type      = model_factory->getASC();
+    bool     ASC_Holder    = isHolderAscertainmentCorrection(ASC_type); 
+    bool     ASC_Lewis     = isLewisAscertainmentCorrection(ASC_type);
 
 #ifndef _MSC_VER
     size_t mix_addr_nstates[ncat_mix], mix_addr[ncat_mix];
@@ -2683,13 +2683,11 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
     boost::scoped_array<size_t> mix_addr(new size_t[ncat_mix]);
 #endif
 
-    int    denom         = (model_factory->fused_mix_rate) ? 1 : ncat;
-
-    double *eval         = model->getEigenvalues();
+    int      denom         = (model_factory->fused_mix_rate) ? 1 : ncat;
+    double*  val           = nullptr;
+    double*  buffer_partial_lh_ptr = buffers.buffer_partial_lh;
+    double*  eval          = model->getEigenvalues();
     ASSERT(eval);
-
-    double *val          = nullptr;
-    double *buffer_partial_lh_ptr = buffers.buffer_partial_lh;
 
 #ifndef _MSC_VER
     double cat_length[ncat];
@@ -3242,8 +3240,8 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD(LikelihoodBufferSet& bu
     intptr_t max_orig_nptn = roundUpToMultiple(orig_nptn,VectorClass::size());
     intptr_t nptn       = max_orig_nptn+model_factory->unobserved_ptns.size();
     ASCType  ASC_type   = model_factory->getASC();
-    bool     ASC_Holder = (ASC_type == ASC_VARIANT_MISSING || ASC_type == ASC_INFORMATIVE_MISSING);
-    bool     ASC_Lewis  = (ASC_type == ASC_VARIANT || ASC_type == ASC_INFORMATIVE);
+    bool     ASC_Holder = isHolderAscertainmentCorrection(ASC_type);
+    bool     ASC_Lewis  = isLewisAscertainmentCorrection(ASC_type);
 
 #ifndef _MSC_VER
     size_t mix_addr_nstates[ncat_mix], mix_addr[ncat_mix];
@@ -3474,16 +3472,16 @@ void PhyloTree::computeLikelihoodDervMixlenGenericSIMD(PhyloNeighbor *dad_branch
     int nstates = aln->num_states;
 #endif
 
-    size_t ncat          = site_rate->getNRate();
-    size_t ncat_mix      = (model_factory->fused_mix_rate) ? ncat : ncat*model->getNMixtures();
-    size_t nmix          = (model_factory->fused_mix_rate) ? 1 : model->getNMixtures();
-    size_t block         = ncat_mix * nstates;
-    intptr_t orig_nptn = aln->size();
-    size_t max_orig_nptn = roundUpToMultiple(orig_nptn, VectorClass::size());
-    intptr_t nptn         = max_orig_nptn+model_factory->unobserved_ptns.size();
-    ASCType ASC_type     = model_factory->getASC();
-    bool ASC_Holder      = (ASC_type == ASC_VARIANT_MISSING || ASC_type == ASC_INFORMATIVE_MISSING);
-    bool ASC_Lewis       = (ASC_type == ASC_VARIANT || ASC_type == ASC_INFORMATIVE);
+    size_t   ncat          = site_rate->getNRate();
+    size_t   ncat_mix      = (model_factory->fused_mix_rate) ? ncat : ncat*model->getNMixtures();
+    size_t   nmix          = (model_factory->fused_mix_rate) ? 1 : model->getNMixtures();
+    size_t   block         = ncat_mix * nstates;
+    intptr_t orig_nptn     = aln->size();
+    size_t   max_orig_nptn = roundUpToMultiple(orig_nptn, VectorClass::size());
+    intptr_t nptn          = max_orig_nptn+model_factory->unobserved_ptns.size();
+    ASCType  ASC_type      = model_factory->getASC();
+    bool     ASC_Holder    = isHolderAscertainmentCorrection(ASC_type);
+    bool     ASC_Lewis     = isLewisAscertainmentCorrection(ASC_type);
     ASSERT(!ASC_Holder && "Holder's ascertainment bias correction not supported for this mixlen model");
 
 //    size_t mix_addr_nstates[ncat_mix], mix_addr[ncat_mix], cat_id[ncat_mix];

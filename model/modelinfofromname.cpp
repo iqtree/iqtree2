@@ -456,19 +456,19 @@ ASCType ModelInfoFromName::extractASCType
     if (posasc != std::string::npos) {
         leftover_name = model_name.substr(0, posasc)
             + model_name.substr(posasc + 8);
-        return ASC_INFORMATIVE;
+        return ASCType::ASC_INFORMATIVE;
     }
     posasc = model_name.find("+ASC_MIS");
     if (posasc != std::string::npos) {
         leftover_name = model_name.substr(0, posasc)
             + model_name.substr(posasc + 8);
-        return ASC_VARIANT_MISSING;
+        return ASCType::ASC_VARIANT_MISSING;
     }
     posasc = model_name.find("+ASC");
     ASSERT(posasc != std::string::npos);
     leftover_name = model_name.substr(0, posasc)
         + model_name.substr(posasc + 4);
-    return ASC_VARIANT;
+    return ASCType::ASC_VARIANT;
 }
 
 std::string ModelInfoFromName::extractMixtureModelList

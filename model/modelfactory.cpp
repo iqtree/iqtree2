@@ -101,21 +101,28 @@ ModelsBlock *readModelsDefinition(Params &params) {
 }
 
 ModelFactory::ModelFactory() : CheckpointFactory() {
-    model = NULL;
-    site_rate = NULL;
+    model              = nullptr;
+    site_rate          = nullptr;
     store_trans_matrix = false;
-    is_storing = false;
-    joint_optimize = false;
-    fused_mix_rate = false;
-    ASC_type = ASC_NONE;
+    is_storing         = false;
+    joint_optimize     = false;
+    fused_mix_rate     = false;
+    ASC_type           = ASCType::ASC_NONE;
 }
 
 size_t findCloseBracket(string &str, size_t start_pos) {
     int counter = 0;
     for (size_t pos = start_pos+1; pos < str.length(); pos++) {
-        if (str[pos] == '{') counter++;
+        if (str[pos] == '{') {
+            counter++;
+        }
         if (str[pos] == '}') {
-            if (counter == 0) return pos; else counter--;
+            if (counter == 0) {
+                return pos; 
+            }
+            else {
+                counter--;
+            }
         }
     }
     return string::npos;
@@ -165,10 +172,10 @@ ModelFactory::ModelFactory(Params&    params, string&      model_name,
     is_storing         = false;
     joint_optimize     = params.optimize_model_rate_joint;
     fused_mix_rate     = false;
-    ASC_type           = ASC_NONE;
+    ASC_type           = ASCType::ASC_NONE;
     
     try {
-        string model_str   = model_name;
+        string model_str = model_name;
         if (model_str == "") {
             model_str = getDefaultModelName(tree, params);
         }
@@ -540,13 +547,19 @@ void ModelFactory::initializeAscertainmentCorrection(ModelInfo& rate_info,
                                                      std::string &rate_str,
                                                      PhyloTree* tree) {
     /******************** initialize ascertainment bias correction model ****************************/
-    Params& params = *(tree->params);
     rate_info.updateName(rate_str);
     if (rate_info.hasAscertainmentBiasCorrection()) {
         ASC_type = rate_info.extractASCType(rate_str);
         rate_info.updateName(rate_str);
-        if (ASC_type == ASC_INFORMATIVE) {
-            // ascertainment bias correction
+
+        setAscertainmentCorrection(tree);
+    }
+}
+
+void ModelFactory::setAscertainmentCorrection(PhyloTree* tree) {
+    Params& params = *(tree->params);
+    switch (ASC_type) {
+        case ASCType::ASC_INFORMATIVE:
             tree->aln->getUnobservedConstPatterns(ASC_type, unobserved_ptns);
             
             // rebuild the seq_states to contain states of unobserved constant patterns
@@ -555,22 +568,25 @@ void ModelFactory::initializeAscertainmentCorrection(ModelInfo& rate_info,
                 if (!params.partition_file) {
                     string infsites_file = ((string)params.out_prefix + ".infsites.phy");
                     tree->aln->printAlignment(params.aln_output_format, infsites_file.c_str(),
-                                              false, NULL, EXCLUDE_UNINF);
+                                                false, NULL, EXCLUDE_UNINF);
                     cerr << "For your convenience alignment"
-                         << " with parsimony-informative sites"
-                         << " printed to " << infsites_file << endl;
+                            << " with parsimony-informative sites"
+                            << " printed to " << infsites_file << endl;
                 }
                 auto total_sites  = tree->getAlnNSite();
                 auto useful_sites = tree->aln->num_informative_sites;
                 int useless_sites = static_cast<int>(total_sites - useful_sites);
                 outError("Invalid use of +ASC_INF"
-                         " because of " + convertIntToString(useless_sites) +
-                         " parsimony-uninformative sites in the alignment");
+                            " because of " + convertIntToString(useless_sites) +
+                            " parsimony-uninformative sites in the alignment");
             }
             TREE_LOG_LINE(*tree, VerboseMode::VB_MED,
-                          "Ascertainment bias correction: " << unobserved_ptns.size()
-                          << " unobservable uninformative patterns");
-        } else if (ASC_type == ASC_VARIANT_MISSING) {
+                            "Ascertainment bias correction: " << unobserved_ptns.size()
+                            << " unobservable uninformative patterns");
+            break;
+
+
+        case ASCType::ASC_VARIANT_MISSING:
             // initialize Holder's ascertainment bias correction model
             tree->aln->getUnobservedConstPatterns(ASC_type, unobserved_ptns);
             // rebuild the seq_states to contain states of unobserved constant patterns
@@ -579,73 +595,75 @@ void ModelFactory::initializeAscertainmentCorrection(ModelInfo& rate_info,
                 if (!params.partition_file) {
                     string varsites_file = ((string)params.out_prefix + ".varsites.phy");
                     tree->aln->printAlignment(params.aln_output_format, varsites_file.c_str(),
-                                              false, NULL, EXCLUDE_INVAR);
+                                                false, NULL, EXCLUDE_INVAR);
                     cerr << "For your convenience alignment"
-                         << " with variable sites printed to " << varsites_file << endl;
+                            << " with variable sites printed to " << varsites_file << endl;
                 }
                 double  fraction    = tree->aln->frac_invariant_sites;
                 double  site_count  = static_cast<double>(tree->aln->getNSite());
                 double  estimate    = floor(fraction * site_count + .5);
                 int64_t invar_count = static_cast<int64_t> (estimate);
                 outError("Invalid use of +ASC_MIS"
-                         " because of " + convertInt64ToString(invar_count) +
-                         " invariant sites in the alignment");
+                            " because of " + convertInt64ToString(invar_count) +
+                            " invariant sites in the alignment");
             }
             TREE_LOG_LINE(*tree, VerboseMode::VB_MED, 
-                          "Holder's ascertainment bias correction: "
-                          << unobserved_ptns.size()
-                          << " unobservable constant patterns" );
-        } else {
-            // ascertainment bias correction
-            ASC_type = ASC_VARIANT;
-            tree->aln->getUnobservedConstPatterns(ASC_type, unobserved_ptns);
-            
-            // delete rarely observed state
-            intptr_t unobserved = static_cast<intptr_t>(unobserved_ptns.size());
-            for (intptr_t i = unobserved-1; i >= 0; i--) {
-                if (model->state_freq[(int)unobserved_ptns[i][0]] < 1e-8) {
-                    unobserved_ptns.erase(unobserved_ptns.begin() + i);
-                }
+                            "Holder's ascertainment bias correction: "
+                            << unobserved_ptns.size()
+                            << " unobservable constant patterns" );
+            break;
+
+    default:
+        // ascertainment bias correction
+        ASC_type = ASCType::ASC_VARIANT;
+        tree->aln->getUnobservedConstPatterns(ASC_type, unobserved_ptns);
+        
+        // delete rarely observed state
+        intptr_t unobserved = static_cast<intptr_t>(unobserved_ptns.size());
+        for (intptr_t i = unobserved-1; i >= 0; i--) {
+            if (model->state_freq[(int)unobserved_ptns[i][0]] < 1e-8) {
+                unobserved_ptns.erase(unobserved_ptns.begin() + i);
             }
-            
-            // rebuild the seq_states to contain states of unobserved constant patterns
-            //tree->aln->buildSeqStates(model->seq_states, true);
-            //        if (unobserved_ptns.size() <= 0)
-            //            outError("Invalid use of +ASC because all"
-            //                     " constant patterns are observed in the alignment");
-            if (tree->aln->frac_invariant_sites > 0) {
-                //            cerr << tree->aln->frac_invariant_sites*tree->aln->getNSite()
-                //                 << " invariant sites observed in the alignment" << endl;
-                //            for (Alignment::iterator pit = tree->aln->begin();
-                //                 pit != tree->aln->end(); pit++)
-                //                if (pit->isInvariant()) {
-                //                    string pat_str = "";
-                //                    for (Pattern::iterator it = pit->begin(); it != pit->end(); it++)
-                //                        pat_str += tree->aln->convertStateBackStr(*it);
-                //                    cerr << pat_str << " is invariant site pattern" << endl;
-                //                }
-                if (!params.partition_file) {
-                    string varsites_file = params.out_prefix + ".varsites.phy";
-                    tree->aln->printAlignment(params.aln_output_format,
-                                              varsites_file.c_str(), false,
-                                              NULL, EXCLUDE_INVAR);
-                    cerr << "For your convenience alignment"
-                         << " with variable sites printed to " 
-                         << varsites_file << endl;
-                }
-                double  fraction    = tree->aln->frac_invariant_sites;
-                double  site_count  = static_cast<double>(tree->aln->getNSite());
-                double  estimate    = floor(fraction * site_count + .5);
-                int64_t invar_count = static_cast<int64_t> (estimate);
-                outError("Invalid use of +ASC because of " + 
-                         convertInt64ToString(invar_count) +
-                         " invariant sites in the alignment");
-            }
-            TREE_LOG_LINE(*tree, VerboseMode::VB_MED,
-                          "Ascertainment bias correction: "
-                          << unobserved_ptns.size()
-                          << " unobservable constant patterns");
         }
+        
+        // rebuild the seq_states to contain states of unobserved constant patterns
+        //tree->aln->buildSeqStates(model->seq_states, true);
+        //        if (unobserved_ptns.size() <= 0)
+        //            outError("Invalid use of +ASC because all"
+        //                     " constant patterns are observed in the alignment");
+        if (tree->aln->frac_invariant_sites > 0) {
+            //            cerr << tree->aln->frac_invariant_sites*tree->aln->getNSite()
+            //                 << " invariant sites observed in the alignment" << endl;
+            //            for (Alignment::iterator pit = tree->aln->begin();
+            //                 pit != tree->aln->end(); pit++)
+            //                if (pit->isInvariant()) {
+            //                    string pat_str = "";
+            //                    for (Pattern::iterator it = pit->begin(); it != pit->end(); it++)
+            //                        pat_str += tree->aln->convertStateBackStr(*it);
+            //                    cerr << pat_str << " is invariant site pattern" << endl;
+            //                }
+            if (!params.partition_file) {
+                string varsites_file = params.out_prefix + ".varsites.phy";
+                tree->aln->printAlignment(params.aln_output_format,
+                                            varsites_file.c_str(), false,
+                                            NULL, EXCLUDE_INVAR);
+                cerr << "For your convenience alignment"
+                        << " with variable sites printed to " 
+                        << varsites_file << endl;
+            }
+            double  fraction    = tree->aln->frac_invariant_sites;
+            double  site_count  = static_cast<double>(tree->aln->getNSite());
+            double  estimate    = floor(fraction * site_count + .5);
+            int64_t invar_count = static_cast<int64_t> (estimate);
+            outError("Invalid use of +ASC because of " + 
+                        convertInt64ToString(invar_count) +
+                        " invariant sites in the alignment");
+        }
+        TREE_LOG_LINE(*tree, VerboseMode::VB_MED,
+                        "Ascertainment bias correction: "
+                        << unobserved_ptns.size()
+                        << " unobservable constant patterns");
+        break;
     }
 }
 

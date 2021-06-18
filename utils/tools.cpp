@@ -478,6 +478,24 @@ namespace {
     }
 };
 
+string getASCName(ASCType ASC_type) {
+    switch (ASC_type) {
+        case ASCType::ASC_NONE:
+            return "";
+        case ASCType::ASC_VARIANT:
+            return "+ASC";
+        case ASCType::ASC_VARIANT_MISSING:
+            return "+ASC_MIS";
+        case ASCType::ASC_INFORMATIVE:
+            return "+ASC_INF";
+        case ASCType::ASC_INFORMATIVE_MISSING:
+            return "+ASC_INF_MIS";
+        default:
+            ASSERT(0 && "ASC_type not recognized");
+            return "";
+    }
+}
+
 void parseArg(int argc, char *argv[], Params &params) {
     int cnt;
     #if USE_PROGRESS_DISPLAY

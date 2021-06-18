@@ -230,12 +230,15 @@ public:
     ~MapOfModels() = default;
 };
 
+#define PROPERTY_NAME_ERROR_MODEL "errormodel"
+#define PROPERTY_NAME_ASC         "ascertainmentbiascorrection"
+
 class ModelInfoFromYAMLFile : public ModelInfo {
 public:
     typedef std::vector<YAMLFileParameter>                Parameters;
     typedef std::map<std::string, ModelVariable>          Variables;
     typedef std::map<std::string, std::string>            StringMap;
-
+ 
 private:
     std::string   model_name;         //
     std::string   model_file_path;    //
@@ -343,11 +346,10 @@ public:
     virtual bool isReversible()                    const;
     virtual bool isWeissAndVonHaeselerTest()       const { return false; /*stub*/ }
 
-    ASCType extractASCType
-    (std::string& leftover_name) const {
-        FUNCTION_NOT_IMPLEMENTED;
-        return ASC_VARIANT;
-    }
+    ASCType extractASCType(std::string& leftover_name) const;
+    bool    checkAscertainmentBiasCorrection(bool warnIfInvalid, ASCType &type) const;
+
+
     std::string extractMixtureModelList
     (std::string& leftover_name) const {
         FUNCTION_NOT_IMPLEMENTED;
@@ -470,6 +472,7 @@ public:
     //String Properties
     std::string getStringProperty(const char* name,
         const char* default_value)            const;
+    bool hasStringProperty(const char* name, std::string& value) const;
 
     //Inheriting
     void inheritModel(const ModelInfoFromYAMLFile &);

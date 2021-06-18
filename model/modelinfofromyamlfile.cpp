@@ -963,6 +963,17 @@ std::string ModelInfoFromYAMLFile::getStringProperty(const char* name,
     return it == string_properties.end() ? default_value : it->second;
 }
 
+bool ModelInfoFromYAMLFile::hasStringProperty
+        (const char* name, std::string& value) const {
+    std::string low_name = string_to_lower(name);
+    auto it = string_properties.find(name);
+    if (it==string_properties.end()) {
+        return false;
+    }
+    value = it->second;
+    return true;
+}
+
 int ModelInfoFromYAMLFile::getNumStates() const {
     //Todo: decide from the data type (or at least from data_type_name!)
     return 4; //but, for now, hardcoded!
@@ -1228,7 +1239,6 @@ void ModelInfoFromYAMLFile::inheritModelProperties(const ModelInfoFromYAMLFile& 
         frequency_type = mummy.frequency_type;
     }
 }
-
 
 void ModelInfoFromYAMLFile::inheritModelParameters(const ModelInfoFromYAMLFile& mummy,
                                                    std::stringstream& complaint) {
@@ -1566,3 +1576,48 @@ void ModelInfoFromYAMLFile::restoreFromCheckpoint(Checkpoint* checkpoint) {
     }
     checkpoint->endList();
 }
+
+ASCType ModelInfoFromYAMLFile::extractASCType(std::string& leftover_name) const {
+    ASCType type;
+    if (checkAscertainmentBiasCorrection(false, type)) {
+        return type;
+    } else {
+        return ASCType::ASC_NONE;
+    }
+}
+
+bool ModelInfoFromYAMLFile::checkAscertainmentBiasCorrection
+        (bool warnIfInvalid, ASCType &type) const {
+    std::string asc_name;
+    if (!hasStringProperty(PROPERTY_NAME_ASC, asc_name)) {
+        return false;
+    }
+    asc_name = string_to_lower(asc_name);
+    bool unrecognized = false;
+    bool is_holder    = false;
+    if (contains(asc_name, "holder")) {
+        is_holder     = true;
+    }
+    else {
+        unrecognized |= !contains(asc_name, "lewis");
+    }    
+    bool is_variant = false;
+    if (contains(asc_name, "variant")) {
+        is_variant    = true;
+    }
+    else {
+        unrecognized |= !contains(asc_name, "informative");
+    }
+    type = is_holder
+         ? (is_variant ? ASCType::ASC_VARIANT_MISSING 
+                       : ASCType::ASC_INFORMATIVE_MISSING )
+         : (is_variant ? ASCType::ASC_VARIANT
+                       : ASCType::ASC_INFORMATIVE );
+    if (unrecognized && warnIfInvalid) {
+        outWarning("Ascertainment bias correction"
+                " (" + asc_name + ") for model " + getName() +
+                " not recognized.");
+    }
+    return !unrecognized;
+}
+

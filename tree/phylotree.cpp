@@ -1314,25 +1314,6 @@ void PhyloTree::clearAllScaleNum(bool set_to_null) {
     }
 }
 
-
-string getASCName(ASCType ASC_type) {
-    switch (ASC_type) {
-        case ASC_NONE:
-            return "";
-        case ASC_VARIANT:
-            return "+ASC";
-        case ASC_VARIANT_MISSING:
-            return "+ASC_MIS";
-        case ASC_INFORMATIVE:
-            return "+ASC_INF";
-        case ASC_INFORMATIVE_MISSING:
-            return "+ASC_INF_MIS";
-        default:
-            ASSERT(0 && "ASC_type not recognized");
-            return "";
-    }
-}
-
 string PhyloTree::getSubstName() {
     return model->getName() + getASCName(model_factory->getASC());
 }

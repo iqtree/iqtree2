@@ -100,6 +100,8 @@ public:
     void initializeAscertainmentCorrection(ModelInfo&   rate_info,
                                            std::string& rate_str,
                                            PhyloTree*   tree);
+		void setAscertainmentCorrection(PhyloTree* tree);
+
     void initializeRateHeterogeneity(const ModelInfo& rate_info,
                                      std::string& rate_str,
                                      const Params& params,

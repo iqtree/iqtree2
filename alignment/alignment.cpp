@@ -4523,8 +4523,9 @@ void Alignment::generateUninfPatterns(StateType repeat,
 void Alignment::getUnobservedConstPatterns(ASCType ASC_type,
                                            vector<Pattern> &unobserved_ptns) {
     switch (ASC_type) {
-        case ASC_NONE: break;
-        case ASC_VARIANT: {
+        case ASCType::ASC_NONE: 
+            break;
+        case ASCType::ASC_VARIANT: 
             // Lewis's correction for variant sites
             unobserved_ptns.reserve(num_states);
             for (StateType state = 0; state < (StateType)num_states; state++) {
@@ -4538,38 +4539,46 @@ void Alignment::getUnobservedConstPatterns(ASCType ASC_type,
                 }
             }
             break;
-        }
-        case ASC_VARIANT_MISSING: {
-            // Holder's correction for variant sites with missing data
-            intptr_t orig_nptn = getNPattern();
-            intptr_t max_orig_nptn = get_safe_upper_limit(orig_nptn);
-            unobserved_ptns.reserve(max_orig_nptn*num_states);
-            intptr_t nseq = getNSeq();
-            for (StateType state = 0; static_cast<int>(state) < num_states; state++)
-                for (intptr_t ptn = 0; ptn < max_orig_nptn; ptn++) {
-                    Pattern new_ptn;
-                    if (ptn < orig_nptn) {
-                        new_ptn.reserve(nseq);
-                        for (auto state_ptn: at(ptn)) {
-                            if (static_cast<int>(state_ptn) < num_states)
-                                new_ptn.push_back(state);
-                            else
-                                new_ptn.push_back(STATE_UNKNOWN);
+        case ASCType::ASC_VARIANT_MISSING:
+            {
+                // Holder's correction for variant sites with missing data
+                intptr_t orig_nptn     = getNPattern();
+                intptr_t max_orig_nptn = get_safe_upper_limit(orig_nptn);
+                unobserved_ptns.reserve(max_orig_nptn*num_states);
+                intptr_t nseq = getNSeq();
+                for (StateType state = 0; static_cast<int>(state) < num_states; state++) {
+                    for (intptr_t ptn = 0; ptn < max_orig_nptn; ptn++) {
+                        Pattern new_ptn;
+                        if (ptn < orig_nptn) {
+                            new_ptn.reserve(nseq);
+                            for (auto state_ptn: at(ptn)) {
+                                if (static_cast<int>(state_ptn) < num_states) {
+                                    new_ptn.push_back(state);
+                                }
+                                else {
+                                    new_ptn.push_back(STATE_UNKNOWN);
+                                }
+                            }
+                        } 
+                        else {
+                            new_ptn.resize(nseq, STATE_UNKNOWN);
                         }
-                    } else {
-                        new_ptn.resize(nseq, STATE_UNKNOWN);
+                        unobserved_ptns.push_back(new_ptn);
                     }
-                    unobserved_ptns.push_back(new_ptn);
                 }
+            }
             break;
-        }
-        case ASC_INFORMATIVE: {
+
+        case ASCType::ASC_INFORMATIVE: 
             // Holder correction for informative sites
             for (StateType repeat = 0; static_cast<int>(repeat) < num_states; repeat++) {
                 vector<StateType> rest;
                 rest.reserve(num_states-1);
-                for (StateType s = 0; static_cast<int>(s) < num_states; s++)
-                    if (s != repeat) rest.push_back(s);
+                for (StateType s = 0; static_cast<int>(s) < num_states; s++) {
+                    if (s != repeat) {
+                        rest.push_back(s);
+                    }
+                }
                 vector<vector<StateType> > singletons;
                 generateSubsets(rest, singletons);
                 for (vector<StateType>& singleton : singletons) {
@@ -4583,12 +4592,11 @@ void Alignment::getUnobservedConstPatterns(ASCType ASC_type,
                 }
             }
             break;
-        }
-        case ASC_INFORMATIVE_MISSING: {
+
+        case ASCType::ASC_INFORMATIVE_MISSING: 
             // Holder correction for informative sites with missing data
             ASSERT(0 && "Not supported yet");
             break;
-        }
     }
 }
 
