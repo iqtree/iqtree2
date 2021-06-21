@@ -18,41 +18,56 @@ class ModelFileLoader {
 protected:    
     const char*       file_path;
     const std::string model_name;
-    void  handleInheritance        (ModelInfoFromYAMLFile& info, 
-                                    ModelListFromYAMLFile& list,
-                                    PhyloTree*             report_to_tree);
-    void  setModelStateFrequency   (const YAML::Node&      substitution_model, 
-                                    ModelInfoFromYAMLFile& info,
-                                    PhyloTree*             report_to_tree);
-    void setParameterSubscriptRange(ModelInfoFromYAMLFile& info,
-                                    YAMLFileParameter&     p);
-    void setParameterType          (const YAML::Node&      param,
-                                    bool                   overriding,
-                                    ModelInfoFromYAMLFile& info,
-                                    YAMLFileParameter&     p);
-    void setParameterTolerance     (const YAML::Node&      param,
-                                    bool                   overriding,
-                                    ModelInfoFromYAMLFile& info,
-                                    YAMLFileParameter&     p);
-    void setParameterValue         (const YAML::Node&      param,
-                                    bool                   overriding,
-                                    ModelInfoFromYAMLFile& info,
-                                    YAMLFileParameter&     p);
-    bool isAParameterOverride      (ModelInfoFromYAMLFile& info,
-                                    YAMLFileParameter& p);
-    void parseYAMLSubModels        (const YAML::Node& substitution_model,
-                                    ModelInfoFromYAMLFile& info,
-                                    ModelListFromYAMLFile& list,
-                                    PhyloTree* report_to_tree);
+
+    bool doesStringEndInNumber      (const std::string& input,
+                                     std::string& stem, 
+                                     std::string& numeric_suffix) const;
+    bool parseModelNameAndParameters(const std::string& input,
+                                     std::string& model_name, 
+                                     std::string& parameters) const;
+
+                    
+    void handleInheritance          (ModelInfoFromYAMLFile& info, 
+                                     ModelListFromYAMLFile& list,
+                                     std::string            inheritance_list,
+                                     bool                   must_be_rate_models,
+                                     PhyloTree*             report_to_tree);
+    void setModelStateFrequency     (const YAML::Node&      substitution_model, 
+                                     ModelInfoFromYAMLFile& info,
+                                     PhyloTree*             report_to_tree);
+    void setParameterSubscriptRange (ModelInfoFromYAMLFile& info,
+                                     YAMLFileParameter&     p);
+    void setParameterType           (const YAML::Node&      param,
+                                     bool                   overriding,
+                                     ModelInfoFromYAMLFile& info,
+                                     YAMLFileParameter&     p);
+    void setParameterTolerance      (const YAML::Node&      param,
+                                     bool                   overriding,
+                                     ModelInfoFromYAMLFile& info,
+                                     YAMLFileParameter&     p);
+    void setParameterValue          (const YAML::Node&      param,
+                                     bool                   overriding,
+                                     ModelInfoFromYAMLFile& info,
+                                     YAMLFileParameter&     p);
+    bool isAParameterOverride       (ModelInfoFromYAMLFile& info,
+                                     YAMLFileParameter& p);
+    void parseYAMLSubModels         (const YAML::Node& substitution_model,
+                                     ModelInfoFromYAMLFile& info,
+                                     ModelListFromYAMLFile& list,
+                                     PhyloTree* report_to_tree);
     void parseYAMLModelStringProperties(const YAML::Node& substitution_model,
                                         ModelInfoFromYAMLFile& info,
                                         PhyloTree* report_to_tree);
     void parseYAMLModelWeightAndScale(const YAML::Node& substitution_model,
                                       ModelInfoFromYAMLFile& info,
                                       PhyloTree* report_to_tree);
+    void inheritOneModel            (ModelInfoFromYAMLFile& info,
+                                     bool must_be_rate_models,
+                                     const ModelInfoFromYAMLFile* ancestor,
+                                     PhyloTree* report_to_tree,
+                                     bool &have_first_parent);
 
 public:
-   
     ModelFileLoader(const char* path);
     std::string stringScalar(const YAML::Node& node,
                              const char* key,

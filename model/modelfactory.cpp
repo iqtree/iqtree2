@@ -168,6 +168,8 @@ StateFreqType ModelFactory::getDefaultFrequencyTypeForSequenceType(SeqType seq_t
 ModelFactory::ModelFactory(Params&    params, string&      model_name,
                            PhyloTree* tree,   ModelsBlock* models_block,
                            PhyloTree* report_to_tree): CheckpointFactory() {
+    model              = nullptr;
+    site_rate          = nullptr;
     store_trans_matrix = params.store_trans_matrix;
     is_storing         = false;
     joint_optimize     = params.optimize_model_rate_joint;
@@ -217,11 +219,32 @@ ModelFactory::ModelFactory(Params&    params, string&      model_name,
         initializeModel(model_name, models_block, model_info,
                         model_str, params.freq_type, freq_params,
                         optimize_mixmodel_weight, tree, report_to_tree);
-        initializeAscertainmentCorrection(rate_info, rate_str, tree);
-        initializeRateHeterogeneity(rate_info, rate_str, params, tree);
-        initializeFusedMixRate(models_block, model_name, model_str, freq_params,
-                               freq_type, optimize_mixmodel_weight,
-                               tree, report_to_tree);
+
+        if (model->getSpecifiedAscertainmentBiasCorrection(ASC_type)) {
+            setAscertainmentCorrection(tree);
+        } else {
+            initializeAscertainmentCorrection(rate_info, rate_str, tree);
+        }
+
+        ASSERT(site_rate==nullptr);
+        site_rate = model->getSpecifiedRateModel(tree);
+        if (site_rate==nullptr) {            
+            TREE_LOG_LINE(*report_to_tree, YAMLRateVerbosity,
+                          "A rate model was NOT specified by/for"
+                          " the YAML substitution model");
+            initializeRateHeterogeneity(rate_info, rate_str, params, tree);
+        } else {
+            TREE_LOG_LINE(*report_to_tree, YAMLRateVerbosity,
+                          "A rate model was specified by/for"
+                          " the YAML substitution model");
+        }
+
+        if (fused_mix_rate) {
+            initializeFusedMixRate(models_block, model_name, model_str, freq_params,
+                                freq_type, optimize_mixmodel_weight,
+                                tree, report_to_tree);
+        }
+
         tree->discardSaturatedSite(params.discard_saturated_site);
     } catch (const char* str) {
         outError(str);
@@ -879,42 +902,40 @@ void ModelFactory::initializeFusedMixRate(ModelsBlock *models_block,
                                           bool optimize_mixmodel_weight,
                                           PhyloTree *tree,
                                           PhyloTree* report_to_tree) {
-    if (fused_mix_rate) {
-        if (!model->isMixture()) {
-            TREE_LOG_LINE(*tree, VerboseMode::VB_MED,
-                          "\nNOTE: Using mixture model"
-                          << " with unlinked " << model_str << " parameters");
-            string model_list = model_str;
-            delete model;
-            for (int i = 1; i < site_rate->getNRate(); i++) {
-                model_list += "," + model_str;
-            }
-            model = new ModelMixture(model_name, model_str, model_list,
-                                     models_block, freq_type, freq_params,
-                                     tree, optimize_mixmodel_weight,
-                                     report_to_tree);
+    if (!model->isMixture()) {
+        TREE_LOG_LINE(*tree, VerboseMode::VB_MED,
+                        "\nNOTE: Using mixture model"
+                        << " with unlinked " << model_str << " parameters");
+        string model_list = model_str;
+        delete model;
+        for (int i = 1; i < site_rate->getNRate(); i++) {
+            model_list += "," + model_str;
         }
-        if (model->getNMixtures() != site_rate->getNRate()) {
-            outError("Mixture model and site rate model"
-                     " do not have the same number of categories");
-        }
-        //if (!tree->isMixlen()) {
-        // reset mixture model
-        model->setFixMixtureWeight(true);
-        int nmix = model->getNMixtures();
-        for (int mix = 0; mix < nmix; mix++) {
-            ((ModelMarkov*)model->getMixtureClass(mix))->total_num_subst = 1.0;
-            model->setMixtureWeight(mix, 1.0);
-        }
-        model->decomposeRateMatrix();
-        //} else {
-        //    site_rate->setFixParams(1);
-        //    int c, ncat = site_rate->getNRate();
-        //    for (c = 0; c < ncat; c++) {
-        //        site_rate->setProp(c, 1.0);
-        //        }
-        //}
+        model = new ModelMixture(model_name, model_str, model_list,
+                                    models_block, freq_type, freq_params,
+                                    tree, optimize_mixmodel_weight,
+                                    report_to_tree);
     }
+    if (model->getNMixtures() != site_rate->getNRate()) {
+        outError("Mixture model and site rate model"
+                    " do not have the same number of categories");
+    }
+    //if (!tree->isMixlen()) {
+    // reset mixture model
+    model->setFixMixtureWeight(true);
+    int nmix = model->getNMixtures();
+    for (int mix = 0; mix < nmix; mix++) {
+        ((ModelMarkov*)model->getMixtureClass(mix))->total_num_subst = 1.0;
+        model->setMixtureWeight(mix, 1.0);
+    }
+    model->decomposeRateMatrix();
+    //} else {
+    //    site_rate->setFixParams(1);
+    //    int c, ncat = site_rate->getNRate();
+    //    for (c = 0; c < ncat; c++) {
+    //        site_rate->setProp(c, 1.0);
+    //        }
+    //}
 }
 
 void ModelFactory::setCheckpoint(Checkpoint *checkpoint) {
@@ -1304,7 +1325,8 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
             break;
         }
         reportParameterOptimizationStep(cur_lh, new_lh, fixed_len, write_info, 
-                                        logl_epsilon, i, tree, report_to_tree);
+                                        logl_epsilon, i, begin_time, 
+                                        tree, report_to_tree);
         if (new_lh <= cur_lh + logl_epsilon) {
             site_rate->classifyRates(new_lh, report_to_tree);
             cur_lh = optimizeBranchLengthsAThirdTime(fixed_len, cur_lh, 
@@ -1430,7 +1452,8 @@ double ModelFactory::optimizeBranchLengthsAgain(int fixed_len, double cur_lh,
 }
 
 void ModelFactory::reportParameterOptimizationStep(double cur_lh, double new_lh, int fixed_len,
-                                                   bool write_info, double logl_epsilon, int iteration,
+                                                   bool write_info, double logl_epsilon, 
+                                                   int iteration, double begin_time,
                                                    PhyloTree* tree, PhyloTree* report_to_tree) {
     if (verbose_mode >= VerboseMode::VB_MED) {
         report_to_tree->hideProgress();
@@ -1446,7 +1469,7 @@ void ModelFactory::reportParameterOptimizationStep(double cur_lh, double new_lh,
         cur_lh = new_lh;
         if (write_info) {
             if (verbose_mode >= VerboseMode::VB_MED) {
-                double elapsed = tree->params->num_param_iterations;
+                double elapsed = getRealTime() - begin_time;
                 TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MED,
                                 iteration << ". Current log-likelihood: " << cur_lh
                                 << " (after " << elapsed << " wall-clock sec)");

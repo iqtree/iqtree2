@@ -92,9 +92,8 @@ bool ModelListFromYAMLFile::isSubstitutionModelNameRecognized (const char* model
     }
     std::string model_front = std::string(model_name, i);
 
-    auto found      = models_found.find(model_front);
-    bool recognized = found != models_found.end();
-    return recognized;
+    auto found      = models_found.hasName(model_front);
+    return found;
 }
 
 bool ModelListFromYAMLFile::hasModel(const std::string& model_name) const {

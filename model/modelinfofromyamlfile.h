@@ -299,7 +299,11 @@ protected:
                             const char* int_name,
                             int new_value, int &old_value,
                             std::stringstream& complaint);
-    void copyMixedAndLinkedModels(const ModelInfoFromYAMLFile& rhs);
+    void copyMixedAndLinkedModels (const ModelInfoFromYAMLFile& rhs);
+    void changeParameterSubscriptRange(int new_min, int new_max, 
+                                       YAMLFileParameter& param);
+    void setSubscriptedVariable   (const YAMLFileParameter& p, int i);
+    bool removeSubscriptedVariable(const YAMLFileParameter&p, int i);
 
 public:
     ModelInfoFromYAMLFile(); //Only ModelListFromYAMLFile uses it.
@@ -307,6 +311,7 @@ public:
     explicit ModelInfoFromYAMLFile(const std::string& file_path);
     ~ModelInfoFromYAMLFile();
     ModelInfoFromYAMLFile& operator=(const ModelInfoFromYAMLFile& rhs);
+    void specifyRateModel(const ModelInfoFromYAMLFile& ancestor);
 
     virtual std::string getFreeRateParameters(int& num_rate_cats,
         bool& fused_mix_rate) const {

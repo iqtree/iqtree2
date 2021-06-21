@@ -256,8 +256,9 @@ public:
 		virtual double optimizeBranchLengthsAgain     (int fixed_len,   double cur_lh, 
 		                                               double logl_epsilon, double gradient_epsilon,
 													   PhyloTree* tree, PhyloTree* report_to_tree);
-		virtual void   reportParameterOptimizationStep(double cur_lh, double new_lh, int fixed_len,
-                                                       bool write_info, double logl_epsilon, int iteration,
+		virtual void   reportParameterOptimizationStep(double cur_lh,   double new_lh, int fixed_len,
+                                                       bool write_info, double logl_epsilon, 
+													   int iteration,   double begin_time,
                                                        PhyloTree* tree, PhyloTree* report_to_tree);
 		virtual double optimizeBranchLengthsAThirdTime(int fixed_len,   double cur_lh, 
 		                                               double logl_epsilon, double gradient_epsilon,

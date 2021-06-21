@@ -4,6 +4,7 @@
 //
 
 #include "modelfileloader.h"
+#include "model/modelinfo.h"
 #include "modelexpression.h" //for ModelExpression::ModelException
 #include <utils/stringfunctions.h>
 #include <tree/phylotree.h> //for TREE_LOG_LINE macro
@@ -299,7 +300,7 @@ void ModelFileLoader::parseModelParameter(const YAML::Node& param,
         setParameterSubscriptRange(info, p);
     } else {
         p.is_subscripted    = false;
-        p.minimum_subscript = 0;
+        p.minimum_subscript = 1;
         p.maximum_subscript = 1;
     }
     
@@ -701,54 +702,157 @@ void ModelFileLoader::dumpMatrixTo(const char* name, ModelInfoFromYAMLFile& info
         << " is...\n" << dump.str();
 }
 
+bool ModelFileLoader::doesStringEndInNumber(const std::string& input,
+                                            std::string& stem, 
+                                            std::string& numeric_suffix) const {
+    intptr_t len  = input.length();
+    intptr_t scan = input.length() - 1;
+    while (0<=scan && '0'<=input[scan] && input[scan]<='9') {
+        --scan;
+    }
+    if (scan<0 || scan+1==len) {
+        return false;
+    }
+    stem           = input.substr(0, scan+1);
+    numeric_suffix = input.substr(scan+1, len-scan-1 );
+    return true;
+}
+
+bool ModelFileLoader::parseModelNameAndParameters(const std::string& input,
+                                                  std::string& model_name, 
+                                                  std::string& parameters) const {
+    size_t len  = input.length();
+    for (size_t i = 0 ; i < len ; ++i ) {
+        if (input[i]=='{') {
+            int param_start   = i+1;
+            int bracket_depth = 0;
+            for (size_t pos = param_start; pos < len; ++pos) {
+                if (input[pos] == '{') {
+                    ++bracket_depth;
+                }
+                else if (input[pos] != '}') {
+                    continue;
+                }
+                if (bracket_depth == 0) {
+                    parameters = input.substr(param_start,
+                        pos-param_start);
+                    model_name = input.substr(0, i);
+                    return true;
+                }
+                else {
+                    bracket_depth--;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+
 void ModelFileLoader::handleInheritance(ModelInfoFromYAMLFile& info,
                                         ModelListFromYAMLFile& list,
+                                        std::string inheritance_list,
+                                        bool must_be_rate_models,
                                         PhyloTree* report_to_tree) {
     bool have_first_parent = false;
-    for (string ancestral_model : split_string(info.superclass_model_name, "+")) {
+    for (string ancestral_model : split_string(inheritance_list, "+")) {
         if (list.hasModel(ancestral_model)) {
             const ModelInfoFromYAMLFile* ancestor =
                     list.getModel(ancestral_model);
-            if (info.is_rate_model && !ancestor->is_rate_model) {
-                std::stringstream complaint;
-                complaint << "Rate model " << info.model_name
-                            << " cannot be based on" 
-                            << "a substitution model " 
-                            << ancestral_model << ".";
-                outError(complaint.str());
-            }
-            if (!have_first_parent) {
-                std::string save_name = info.model_name;
-                info = *ancestor;
-                info.model_name = save_name;
-                TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
-                            "Model " << info.model_name
-                            << " is based on model " << ancestral_model);
-                have_first_parent = true;
-            } else {
-                info.inheritModel(*ancestor);
-                TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
-                            "Model " << info.model_name
-                            << " is also based on" 
-                            << " model " << ancestral_model);
-            }
-        } else {
-            std::stringstream complaint;
-            complaint << "Model " << info.model_name 
-                        << " specifies a superclass model of "
-                        << info.superclass_model_name << ","
-                        << " but that model was not found.";
-            if (info.is_rate_model) {
-                complaint << "\nRecognized rate models are: ";
-                complaint << list.getListOfRateModelNames() << ".";
-            } else {
-                complaint << "\nRecognized substitution models are: ";
-                complaint << list.getListOfSubstitutionModelNames() << ".";
-            }
-            outError(complaint.str());
+            inheritOneModel(info, must_be_rate_models, ancestor, 
+                            report_to_tree, have_first_parent);
+            continue;
         }
+
+        //Rate models can be specified by suffixing them with the
+        //number of categories, and both rate & substitution models 
+        //can be parameterized
+        std::string model_name;
+        std::string params;
+        if (doesStringEndInNumber(ancestral_model, model_name, params)) {
+            params = "categories=" + params;
+            TREE_LOG_LINE(*report_to_tree, YAMLRateVerbosity,
+                          "Number parameter (" + params + ")"
+                          " to model (" + model_name + ")");
+        }
+        else {
+            parseModelNameAndParameters(ancestral_model, model_name, params);
+            TREE_LOG_LINE(*report_to_tree, YAMLRateVerbosity,
+                          "Parameters (" + params + ")"
+                          " found for ancestral or rate model"
+                          " (" + model_name + ")");
+        }
+        if (!params.empty()) {
+            if (list.hasModel(model_name)) {
+                const ModelInfoFromYAMLFile* base_model = 
+                    list.getModel(model_name);
+                ModelInfoFromYAMLFile derived_model(*base_model);
+                derived_model.acceptParameterList(params, report_to_tree);
+                inheritOneModel(info, must_be_rate_models, &derived_model, 
+                               report_to_tree, have_first_parent);
+                continue;
+            }
+        }
+
+        std::stringstream complaint;
+        const char* model_type = must_be_rate_models ? "rate" : "superclass";
+
+        complaint << "Model " << info.model_name 
+                    << " specifies a " << model_type << " model of "
+                    << info.superclass_model_name << ","
+                    << " but that model was not found.";
+        if (info.is_rate_model) {
+            complaint << "\nRecognized rate models are: ";
+            complaint << list.getListOfRateModelNames() << ".";
+        } else {
+            complaint << "\nRecognized substitution models are: ";
+            complaint << list.getListOfSubstitutionModelNames() << ".";
+        }
+        outError(complaint.str());
     }
 }
+
+void ModelFileLoader::inheritOneModel(ModelInfoFromYAMLFile& info,
+                                      bool must_be_rate_models,
+                                      const ModelInfoFromYAMLFile* ancestor,
+                                      PhyloTree* report_to_tree,
+                                      bool &have_first_parent) {
+    if (info.is_rate_model && !ancestor->is_rate_model) {
+        std::stringstream complaint;
+        complaint << "Rate model " << info.model_name
+                    << " cannot be based on" 
+                    << "a substitution model " 
+                    << ancestor->getName() << ".";
+        outError(complaint.str());
+    } else if (!info.is_rate_model && ancestor->is_rate_model) {
+        info.specifyRateModel(*ancestor);
+        return;
+    } else if (must_be_rate_models) {
+        std::stringstream complaint;
+        complaint << "Model " << info.model_name
+                    << " cannot have " << ancestor->getName()
+                    << " as a rate model" 
+                    << " (because " << ancestor->getName() 
+                    << " is a substitution model).";
+        outError(complaint.str());
+    }
+    if (!have_first_parent) {
+        std::string save_name = info.model_name;
+        info = *ancestor;
+        info.model_name = save_name;
+        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+                    "Model " << info.model_name
+                    << " is based on model " << ancestor->getName());
+        have_first_parent = true;
+    } else {
+        info.inheritModel(*ancestor);
+        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+                    "Model " << info.model_name
+                    << " is also based on" 
+                    << " model " << ancestor->getName());
+    }
+}
+
 
 void ModelFileLoader::setModelStateFrequency(const YAML::Node& substitution_model,
                                              ModelInfoFromYAMLFile& info,
@@ -843,9 +947,22 @@ void ModelFileLoader::parseYAMLModel(const YAML::Node& substitution_model,
             if (info.model_name.empty()) {            
                 info.model_name = info.superclass_model_name;
             }
-            handleInheritance(info, list, report_to_tree);
+            handleInheritance(info, list, info.superclass_model_name, 
+                              false, report_to_tree);
         }
     }
+
+    if (!info.is_rate_model) {
+        auto rate_model_name_list = stringScalar(substitution_model, "ratemodel", "");
+        TREE_LOG_LINE(*report_to_tree, YAMLRateVerbosity, 
+                    "Rate model list for " << info.model_name
+                    << " was " << rate_model_name_list << ".");
+        if (!rate_model_name_list.empty()) {
+            handleInheritance(info, list, rate_model_name_list, 
+                            true, report_to_tree);
+        }
+    }
+
     info.model_file_path = file_path;
     info.citation        = stringScalar (substitution_model, "citation",    info.citation.c_str());
     info.DOI             = stringScalar (substitution_model, "doi",         info.DOI.c_str());

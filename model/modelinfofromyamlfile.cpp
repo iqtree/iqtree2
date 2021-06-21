@@ -29,6 +29,7 @@
 
 //YAML Logging Levels
 VerboseMode YAMLModelVerbosity     = VerboseMode::VB_MIN;
+VerboseMode YAMLRateVerbosity      = VerboseMode::VB_MIN;
 VerboseMode YAMLVariableVerbosity  = VerboseMode::VB_MAX;
 VerboseMode YAMLFrequencyVerbosity = VerboseMode::VB_MAX;
 VerboseMode YAMLMatrixVerbosity    = VerboseMode::VB_MAX;
@@ -182,17 +183,29 @@ ModelInfoFromYAMLFile::ModelInfoFromYAMLFile()
     , tip_likelihood_rank(0)
     , frequency_type(StateFreqType::FREQ_UNKNOWN)
     , parent_model(nullptr), mixed_models(nullptr)
-    , linked_models(nullptr), weight_formula("1"), model_weight(1.0)  {
+    , linked_models(nullptr), weight_formula("1"), model_weight(1.0) 
+    , specified_rate_model_info(nullptr) {
 }
 
-void ModelInfoFromYAMLFile::copyMixedAndLinkedModels(const ModelInfoFromYAMLFile& rhs) {
+void ModelInfoFromYAMLFile::copyMixedAndLinkedModels
+        (const ModelInfoFromYAMLFile& rhs) {
     delete mixed_models;
+    mixed_models = nullptr;
     if (rhs.mixed_models != nullptr) {
         mixed_models = new MapOfModels(*rhs.mixed_models);
     }
+
     delete linked_models;
+    linked_models = nullptr;
     if (rhs.linked_models != nullptr) {
         linked_models = new MapOfModels(*rhs.linked_models);
+    }
+
+    delete specified_rate_model_info;
+    specified_rate_model_info = nullptr;
+    if (rhs.specified_rate_model_info != nullptr) {
+        specified_rate_model_info = new ModelInfoFromYAMLFile
+                                        (*rhs.specified_rate_model_info);
     }
 }
 
@@ -213,7 +226,8 @@ ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(const ModelInfoFromYAMLFile& rhs)
     , parameters(rhs.parameters), frequency_type(rhs.frequency_type)
     , variables(rhs.variables), parent_model(rhs.parent_model)
     , mixed_models(nullptr), linked_models(nullptr)
-    , weight_formula(rhs.weight_formula), model_weight(rhs.model_weight) {
+    , weight_formula(rhs.weight_formula), model_weight(rhs.model_weight)
+    , specified_rate_model_info(nullptr) {
     copyMixedAndLinkedModels(rhs);
 }
 
@@ -256,7 +270,8 @@ ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(const std::string& path)
     , rate_matrix_rank(0), tip_likelihood_rank(0)
     , frequency_type(StateFreqType::FREQ_UNKNOWN)
     , parent_model(nullptr), mixed_models(nullptr)
-    , linked_models(nullptr), model_weight(1.0) {
+    , linked_models(nullptr), model_weight(1.0)
+    , specified_rate_model_info(nullptr) {
 }
 
 ModelInfoFromYAMLFile::~ModelInfoFromYAMLFile() {
@@ -264,7 +279,18 @@ ModelInfoFromYAMLFile::~ModelInfoFromYAMLFile() {
     mixed_models = nullptr;
     delete linked_models;
     linked_models = nullptr;
+    delete specified_rate_model_info;
+    specified_rate_model_info = nullptr;
 }
+
+void ModelInfoFromYAMLFile::specifyRateModel(const ModelInfoFromYAMLFile& ancestor) {
+    if (specified_rate_model_info==nullptr) {
+        specified_rate_model_info = new ModelInfoFromYAMLFile(ancestor);
+    } else {
+        specified_rate_model_info->inheritModel(ancestor);
+    }
+}
+
 
 bool ModelInfoFromYAMLFile::isMixtureModel() const {
     return mixed_models != nullptr;
@@ -494,8 +520,6 @@ bool ModelInfoFromYAMLFile::isVariableFixed(const std::string& name) const {
 }
 
 void ModelInfoFromYAMLFile::addParameter(const YAMLFileParameter& p) {
-    typedef ModelExpression::InterpretedExpression Interpreter;
-    typedef ModelExpression::ModelException        Exception;
     bool replaced = false;
     for (auto it = parameters.begin(); it != parameters.end(); ++it) {
         if (it->name == p.name) {
@@ -517,26 +541,45 @@ void ModelInfoFromYAMLFile::addParameter(const YAMLFileParameter& p) {
             //here might *add* a variable, and depending on the container
             //type of Variables... the ModelVariable& could go wrong
             //(and that'd be *nasty* insidious coupling).
-            std::string var_name = p.getSubscriptedVariableName(i);
-            double v = p.value;
-            if (!p.init_expression.empty()) {
-                try {
-                    Interpreter ix(*this, p.init_expression);
-                    v = ix.evaluate();
-                }
-                catch (Exception x) {
-                    std::stringstream complaint;
-                    complaint << "Error initializing " << p.name 
-                              << "(" << i << ")";
-                    throw Exception(complaint.str());
-                }
-            }
-            variables[var_name] = ModelVariable(p.type, p.range, p.value);
+
+            setSubscriptedVariable(p, i);
         }
     }
     else {
         variables[p.name] = ModelVariable(p.type, p.range, p.value);
     }
+}
+
+void ModelInfoFromYAMLFile::setSubscriptedVariable
+        (const YAMLFileParameter& p, int i) {
+    typedef ModelExpression::InterpretedExpression Interpreter;
+    typedef ModelExpression::ModelException        Exception;
+    std::string var_name = p.getSubscriptedVariableName(i);
+    double v = p.value;
+    if (!p.init_expression.empty()) {
+        try {
+            Interpreter  ix(*this, p.init_expression);
+            v = ix.evaluate();
+        }
+        catch (Exception x) {
+            std::stringstream complaint;
+            complaint << "Error initializing " << p.name 
+                        << "(" << i << ")";
+            throw Exception(complaint.str());
+        }
+    }
+    variables[var_name] = ModelVariable(p.type, p.range, p.value);
+}
+
+bool ModelInfoFromYAMLFile::removeSubscriptedVariable
+        (const YAMLFileParameter& param, int i) {
+    std::string dead_var = param.getSubscriptedVariableName(i);
+    auto it = variables.find(dead_var);
+    if (it != variables.end()) {
+        variables.erase(it);
+        return true;
+    }
+    return false;
 }
 
 void ModelInfoFromYAMLFile::updateParameterSubscriptRange(YAMLFileParameter& p, 
@@ -718,7 +761,7 @@ bool ModelInfoFromYAMLFile::updateModelVariablesByType(const double* updated_val
             if (var.isFixed() && !even_fixed_ones) {
                 continue;
             }
-            if (param_count<=i) {
+            if (param_count<i) {
                 if (param_type == ModelParameterType::FREQUENCY) {
                     //The last frequency variable won't be set this way
                     ++skipped_frequency_variables;
@@ -783,7 +826,11 @@ void ModelInfoFromYAMLFile::readModelVariablesByType( double* write_them_here,
                             << " (too many model variables found).";
                 outError(complaint.str());
             }
+            double v = var.getValue();
             write_them_here[i] = var.getValue();
+            //std::cout << "Wrote " << var_name << "=" << v
+            //          << " (subscript " << sub << ")"
+            //          << " as parameter " << i << " of " << param_count << std::endl;
             ++i;
         }
     }
@@ -1057,7 +1104,6 @@ RateHeterogeneity* ModelInfoFromYAMLFile::getSpecifiedRateModel(PhyloTree* tree)
 }
 
 RateHeterogeneity* ModelInfoFromYAMLFile::getRateHeterogeneity(PhyloTree* tree) const {
-    //Zorkatron
     ASSERT(is_rate_model);
     bool isInvar = true;
     for ( const YAMLFileParameter &param: parameters ) {
@@ -1425,7 +1471,8 @@ bool ModelInfoFromYAMLFile::acceptParameterList(std::string parameter_list,
     typedef ModelExpression::Expression            Expression;
     typedef ModelExpression::Assignment            Assignment;
     typedef ModelExpression::Variable              Variable;
-    typedef ModelExpression::ModelException        Exception;                                    
+    typedef ModelExpression::ModelException        Exception;   
+    typedef ModelExpression::RangeOperator         Range;                                 
                                                 
     trimString(parameter_list);
     if (startsWith(parameter_list, "{") &&
@@ -1484,7 +1531,47 @@ bool ModelInfoFromYAMLFile::acceptParameterList(std::string parameter_list,
                   << problem.getMessage();
         outError(complaint.str());
     }
+
+    for (YAMLFileParameter& p : parameters) {
+        if (p.is_subscripted && !p.subscript_expression.empty()) {
+            Interpreter expr(*this, p.subscript_expression);
+            if (expr.expression()->isRange()) {
+                Range* op = dynamic_cast<Range*>(expr.expression());
+                changeParameterSubscriptRange(op->getIntegerMinimum(), 
+                                              op->getIntegerMaximum(),p);
+            }
+        }
+    }
+
     return !expr_list.empty();
+}
+
+void ModelInfoFromYAMLFile::changeParameterSubscriptRange
+        (int new_min, int new_max, YAMLFileParameter& param) {
+    if (new_max < new_min) {
+        std::stringstream complaint;
+        complaint << "An error occurred, setting the subscript "
+                  << " range for parameter " << param.name
+                  << " of model " << getName() << ": lower "
+                  << " bound (" << new_min <<") exceeded "
+                  << " the upper bound (" << new_max << ").";
+        outError(complaint.str());
+        return;
+    }
+    int old_min = param.minimum_subscript;
+    int old_max = param.maximum_subscript;
+    param.minimum_subscript = new_min;
+    param.maximum_subscript = new_max;
+    for (int i=new_min; i<=new_max; ++i) {
+        if (i<old_min || old_max<i) {
+            setSubscriptedVariable(param, i);
+        } 
+    }
+    for (int i=old_min; i<=old_max; ++i) {
+        if (i<new_min || new_max<i) {
+            removeSubscriptedVariable(param, i);
+        }
+    }
 }
 
 MapOfModels& ModelInfoFromYAMLFile::getMixedModels() {

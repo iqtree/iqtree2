@@ -234,21 +234,6 @@
                        : (column-1+(row-1)*(num_states-1)-row*(row-1)/2)), 
                     (row==column) ? 1 : (f(column)* r(i))"
 
-- substitutionmodel: YMIX
-  description: "Model Mixture of JC and GTR"
-  parameters:
-  - name: w(1..2)
-    type: weight    # type weight implies that w[1]+w[2]=1.0
-  model_mixture:    # mixture components defined in this section
-  - substitutionmodel: YMIX_JC
-    frommodel: YJC  # 1st component from JC model
-    weight: w(1)    # weight parameter
-    scale: 1.0      # scaling factor of Q matrix for this component
-  - substitutionmodel: YMIX_GTR
-    frommodel: YGTR # 2nd component from GTR model
-    weight: w(2)
-    scale: 1.0   
-
 #Note: ratemodel is NOT supported as yet.
 #Note: A type of "calculated rate" is NOT supported as yet.
 #Rate models can be suffixed with a number 
@@ -283,6 +268,7 @@
     type:           rate
     range:          [0.001, 1000.0]
     tolerance:      0.0001
+    initValue:      1.0
 
 - ratemodel:        I
   ratedistribution: invariant
@@ -296,6 +282,24 @@
   frommodel:        G
   constraints:
   - categories = 4  
+
+
+- substitutionmodel: YMIX
+  description:       "Model Mixture of JC and GTR"
+  ratemodel:         I+R4
+  parameters:
+  - name: w(1..2)
+    type: weight    # type weight implies that w[1]+w[2]=1.0
+  model_mixture:    # mixture components defined in this section
+  - substitutionmodel: YMIX_JC
+    frommodel: YJC  # 1st component from JC model
+    weight: w(1)    # weight parameter
+    scale: 1.0      # scaling factor of Q matrix for this component
+  - substitutionmodel: YMIX_GTR
+    frommodel: YGTR # 2nd component from GTR model
+    weight: w(2)
+    scale: 1.0   
+
 
 #Note: linked_models and tree_mixture are not parsed as yet.
 
