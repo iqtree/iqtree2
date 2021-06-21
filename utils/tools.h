@@ -2306,6 +2306,11 @@ public:
     */
     double alisim_max_str_length;
     
+    /**
+    *  fundi model test
+    */
+    string alisim_fundi_test;
+    
 };
 
 /**

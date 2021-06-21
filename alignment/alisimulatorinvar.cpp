@@ -20,6 +20,7 @@ AliSimulatorInvar::AliSimulatorInvar(AliSimulator *alisimulator, double invar_pr
     expected_num_sites = alisimulator->expected_num_sites;
     partition_rate = alisimulator->partition_rate;
     invariant_proportion = invar_prop;
+    max_length_taxa_name = alisimulator->max_length_taxa_name;
 }
 
 /**
@@ -62,7 +63,7 @@ void AliSimulatorInvar::simulateSeqs(int sequence_length, double *site_specific_
             if ((*it)->node->isLeaf())
             {
                 // convert numerical states into readable characters and write output to file
-                out<< convertNumericalStatesIntoReadableCharacters((*it)->node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping, params->aln_output_format);
+                out<< convertNumericalStatesIntoReadableCharacters((*it)->node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping, params->aln_output_format, max_length_taxa_name);
                 
                 // remove the sequence to release the memory after extracting the sequence
                 vector<short int>().swap((*it)->node->sequence);
@@ -73,7 +74,7 @@ void AliSimulatorInvar::simulateSeqs(int sequence_length, double *site_specific_
                 // avoid writing sequence of __root__
                 if (node->name!=ROOT_NAME)
                     // convert numerical states into readable characters and write output to file
-                    out<< convertNumericalStatesIntoReadableCharacters(node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping, params->aln_output_format);
+                    out<< convertNumericalStatesIntoReadableCharacters(node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping, params->aln_output_format, max_length_taxa_name);
                 
                 // remove the sequence to release the memory after extracting the sequence
                 vector<short int>().swap(node->sequence);

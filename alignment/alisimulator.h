@@ -129,6 +129,26 @@ protected:
     */
     void checkBaseFrequenciesDNAModels();
     
+    /**
+        extract the maximum length of taxa names
+    */
+    short int extractMaxTaxaNameLength();
+    
+    /**
+        selecting & permuting sites (FunDi models)
+    */
+    IntVector selectAndPermuteSites(double proportion, int num_sites);
+    
+    /**
+        permuting selected sites (FunDi models)
+    */
+    void permuteSelectedSites(IntVector selected_sites, vector<short int> &sequence);
+    
+    /**
+        extract selected Taxa (FunDi models)
+    */
+    void extractSelectedTaxa(IntVector &selected_taxa, int &num_taxa_found, string taxa1, string taxa2, Node *node, Node* dad);
+    
 public:
     
     IQTree *tree;
@@ -137,6 +157,9 @@ public:
     int expected_num_sites;
     double partition_rate;
     double length_ratio = 1;
+    short int max_length_taxa_name = 10;
+    IntVector selected_sites;
+    IntVector selected_taxa;
     
     /**
         constructor
@@ -183,7 +206,7 @@ public:
     *  convert numerical states into readable characters
     *
     */
-    static string convertNumericalStatesIntoReadableCharacters(Node *node, int sequence_length, int num_sites_per_state, vector<string> state_mapping, InputType output_format);
+    static string convertNumericalStatesIntoReadableCharacters(Node *node, int sequence_length, int num_sites_per_state, vector<string> state_mapping, InputType output_format, int max_length_taxa_name);
 };
 
 #endif /* alisimulator_h */

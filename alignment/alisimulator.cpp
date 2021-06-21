@@ -24,6 +24,30 @@ AliSimulator::AliSimulator(Params *input_params, int expected_number_sites, doub
     
     // check if base frequencies for DNA models are specified correctly
     checkBaseFrequenciesDNAModels();
+    
+    // extract max length of taxa names
+    extractMaxTaxaNameLength();
+    
+    // test FunDi
+    if (params->alisim_fundi_test.length() > 0)
+    {
+        string fundi_inputs = params->alisim_fundi_test;
+        int pos = fundi_inputs.find("_");
+        string taxa1 = fundi_inputs.substr(0, pos);
+        fundi_inputs.erase(0, pos + 1);
+        
+        pos = fundi_inputs.find("_");
+        string taxa2 = fundi_inputs.substr(0, pos);
+        fundi_inputs.erase(0, pos + 1);
+        
+        double proportion = convert_double(fundi_inputs.c_str());
+        
+        int num_taxa_found = 0;
+        extractSelectedTaxa(selected_taxa, num_taxa_found, taxa1, taxa2, tree->root, tree->root);
+        if (num_taxa_found < 2)
+            outError("Could not detect the subtree containing taxa " + taxa1 + " and taxa " + taxa2 + ". Please check and try again!");
+        selected_sites = selectAndPermuteSites(proportion, round(expected_num_sites/length_ratio));
+    }
 }
 
 /**
@@ -43,6 +67,9 @@ AliSimulator::AliSimulator(Params *input_params, IQTree *iq_tree, int expected_n
     else
         expected_num_sites = expected_number_sites*length_ratio;
     partition_rate = new_partition_rate;
+    
+    // extract max length of taxa names
+    extractMaxTaxaNameLength();
 }
 
 AliSimulator::~AliSimulator()
@@ -671,13 +698,18 @@ void AliSimulator::simulateSeqs(int sequence_length, ModelSubst *model, double *
             (*it)->node->sequence[i] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(trans_matrix, starting_index, max_num_states, node->sequence[i]);
         }
         
+        if (selected_taxa.size()>0 && std::find(selected_taxa.begin(), selected_taxa.end(), (*it)->node->id) != selected_taxa.end())
+        {
+            permuteSelectedSites(selected_sites, (*it)->node->sequence);
+        }
+        
         // write sequence of leaf nodes to file if possible
         if (state_mapping.size() > 0)
         {
             if ((*it)->node->isLeaf())
             {
                 // convert numerical states into readable characters and write output to file
-                out<< convertNumericalStatesIntoReadableCharacters((*it)->node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping, params->aln_output_format);
+                out<< convertNumericalStatesIntoReadableCharacters((*it)->node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping, params->aln_output_format, max_length_taxa_name);
                 
                 // remove the sequence to release the memory after extracting the sequence
                 vector<short int>().swap((*it)->node->sequence);
@@ -688,7 +720,7 @@ void AliSimulator::simulateSeqs(int sequence_length, ModelSubst *model, double *
                 // avoid writing sequence of __root__
                 if (node->name!=ROOT_NAME)
                     // convert numerical states into readable characters and write output to file
-                    out<< convertNumericalStatesIntoReadableCharacters(node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping, params->aln_output_format);
+                    out<< convertNumericalStatesIntoReadableCharacters(node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping, params->aln_output_format, max_length_taxa_name);
                 
                 // remove the sequence to release the memory after extracting the sequence
                 vector<short int>().swap(node->sequence);
@@ -900,7 +932,7 @@ void AliSimulator::initializeStateMapping(Alignment *aln, vector<string> &state_
 *  convert numerical states into readable characters
 *
 */
-string AliSimulator::convertNumericalStatesIntoReadableCharacters(Node *node, int sequence_length, int num_sites_per_state, vector<string> state_mapping, InputType output_format)
+string AliSimulator::convertNumericalStatesIntoReadableCharacters(Node *node, int sequence_length, int num_sites_per_state, vector<string> state_mapping, InputType output_format, int max_length_taxa_name)
 {
     ASSERT(sequence_length <= node->sequence.size());
     
@@ -912,8 +944,12 @@ string AliSimulator::convertNumericalStatesIntoReadableCharacters(Node *node, in
     // in PHYLIP format
     if (output_format != IN_FASTA)
     {
-        output = node->name + " " + output;
-        start_index = node->name.length() + 1;
+        // add padding to node_name
+        string name_with_padding = node->name;
+        std::string padding (max_length_taxa_name - name_with_padding.length() + 1, ' ');
+        name_with_padding += padding;
+        output = name_with_padding + output;
+        start_index = name_with_padding.length();
     }
     // in FASTA format
     else
@@ -963,5 +999,109 @@ void AliSimulator::checkBaseFrequenciesDNAModels(){
                 outWarning(model_item+" must have equal base frequencies. Unequal base frequencies specified by users could lead to incorrect simulation. We strongly recommend users to not specify the base frequencies for this model (by removing +F{freq1,...,freqN}).");
                 break;
             }
+    }
+}
+
+/**
+    extract the maximum length of taxa names
+*/
+short int AliSimulator::extractMaxTaxaNameLength()
+{
+    if (tree && tree->aln)
+    {
+        vector<string> seq_names = tree->aln->getSeqNames();
+        for (int i = 0; i < seq_names.size(); i++)
+            if (seq_names[i].length()>max_length_taxa_name)
+                max_length_taxa_name = seq_names[i].length();
+    }
+}
+
+/**
+    selecting & permuting sites (FunDi models)
+*/
+IntVector AliSimulator::selectAndPermuteSites(double proportion, int num_sites){
+    ASSERT(proportion<1);
+    
+    // dummy variables
+    IntVector permutedSites;
+    int num_selected_sites = round(proportion*num_sites);
+    
+    // select random unique sites one by one
+    for (int i = 0; i < num_selected_sites; i++)
+    {
+        // attempt up to 1000 times to select a random site
+        for (int j = 0; j < 1000; j++)
+        {
+            int random_site = random_int(num_sites);
+            
+            // check if the random_site has been already selected or not
+            if (std::find(permutedSites.begin(), permutedSites.end(), random_site) != permutedSites.end())
+                // retry if the random_site has already existed in the selected list
+                continue;
+            else
+            {
+                cout<<random_site<<endl;
+                // add the random site to the selected list
+                permutedSites.push_back(random_site);
+                break;
+            }
+        }
+        
+        if (permutedSites.size() <= i)
+            outError("Failed to select random sites for permutations (of FunDi model) after 1000 attempts");
+    }
+    
+    return permutedSites;
+}
+
+/**
+    permuting selected sites (FunDi models)
+*/
+void AliSimulator::permuteSelectedSites(IntVector selected_sites, vector<short int> &sequence)
+{
+    // store the first selected site into a dummy variable
+    ASSERT(selected_sites[0] < sequence.size());
+    short int tmp_site = sequence[selected_sites[0]];
+    
+    // permuting selected sites one by one
+    for (int i = 0; i < selected_sites.size() - 1; i++)
+    {
+        ASSERT(selected_sites[i] < sequence.size() && selected_sites[i+1] < sequence.size());
+        sequence[selected_sites[i]] = sequence[selected_sites[i+1]];
+    }
+    
+    // update the last selected sites from tmp_site
+    sequence[selected_sites[selected_sites.size() - 1]] = tmp_site;
+}
+
+/**
+    extract selected Taxa (FunDi models)
+*/
+void AliSimulator::extractSelectedTaxa(IntVector &selected_taxa, int &num_taxa_found, string taxa1, string taxa2, Node *node, Node* dad){
+    // start/stop add taxa in the subtree
+    if (node->isLeaf()
+        && ((node->name.compare(taxa1) == 0)
+            ||(node->name.compare(taxa2) == 0)))
+        num_taxa_found++;
+    
+    // add taxa into list of selected taxa
+    if (num_taxa_found <= 2)
+    {
+        cout<<node->name<<endl;
+        selected_taxa.push_back(node->id);
+    }
+    
+    // stop traversing tree if both taxa1 and taxa2 are found
+    if (num_taxa_found == 2)
+    {
+        num_taxa_found++;
+        return;
+    }
+
+    // process its neighbors/children
+    NeighborVec::iterator it;
+    FOR_NEIGHBOR(node, dad, it) {
+        // browse 1-step deeper to the neighbor node
+        extractSelectedTaxa(selected_taxa, num_taxa_found, taxa1, taxa2, (*it)->node, node);
     }
 }

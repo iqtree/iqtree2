@@ -1123,6 +1123,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.birth_rate = 0.8;
     params.death_rate = 0.2;
     params.alisim_max_str_length = 100000000;
+    params.alisim_fundi_test = "";
     
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
@@ -2154,6 +2155,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.ngs_mapped_reads = argv[cnt];
 				continue;
 			}
+            if (strcmp(argv[cnt], "--fundi") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --fundi taxa1 taxa2 proportion";
+                params.alisim_fundi_test = argv[cnt];
+                continue;
+            }
 			if (strcmp(argv[cnt], "-ngs_gap") == 0) {
 				params.ngs_ignore_gaps = false;
 				continue;
