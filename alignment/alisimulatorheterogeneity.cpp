@@ -144,7 +144,7 @@ void AliSimulatorHeterogeneity::intializeCachingAccumulatedTransMatrices(double 
 *  simulate sequences for all nodes in the tree by DFS
 *
 */
-void AliSimulatorHeterogeneity::simulateSeqs(int sequence_length, double *site_specific_rates, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, ostream &out, vector<string> state_mapping, string &output)
+void AliSimulatorHeterogeneity::simulateSeqs(int sequence_length, double *site_specific_rates, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, ostream &out, vector<string> state_mapping)
 {
     // process its neighbors/children
     NeighborVec::iterator it;
@@ -193,18 +193,8 @@ void AliSimulatorHeterogeneity::simulateSeqs(int sequence_length, double *site_s
         {
             if ((*it)->node->isLeaf())
             {
-                // convert numerical states into readable characters
-                output += convertNumericalStatesIntoReadableCharacters((*it)->node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping, params->aln_output_format);
-                
-                // write the caching output to file if its length exceed the maximum string length
-                if (output.length() >= params->alisim_max_str_length)
-                {
-                    // write output to file
-                    out<<output;
-                    
-                    // empty output
-                    output = "";
-                }
+                // convert numerical states into readable characters and write output to file
+                out<< convertNumericalStatesIntoReadableCharacters((*it)->node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping, params->aln_output_format);
                 
                 // remove the sequence to release the memory after extracting the sequence
                 vector<short int>().swap((*it)->node->sequence);
@@ -214,8 +204,8 @@ void AliSimulatorHeterogeneity::simulateSeqs(int sequence_length, double *site_s
             {
                 // avoid writing sequence of __root__
                 if (node->name!=ROOT_NAME)
-                    // convert numerical states into readable characters
-                    output += convertNumericalStatesIntoReadableCharacters(node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping, params->aln_output_format);
+                    // convert numerical states into readable characters and write output to file
+                    out<< convertNumericalStatesIntoReadableCharacters(node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping, params->aln_output_format);
                 
                 // remove the sequence to release the memory after extracting the sequence
                 vector<short int>().swap(node->sequence);
@@ -229,7 +219,7 @@ void AliSimulatorHeterogeneity::simulateSeqs(int sequence_length, double *site_s
             vector<short int>().swap(node->sequence);
         
         // browse 1-step deeper to the neighbor node
-        simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, (*it)->node, node, out, state_mapping, output);
+        simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, (*it)->node, node, out, state_mapping);
     }
 }
 
@@ -388,7 +378,6 @@ void AliSimulatorHeterogeneity::simulateSeqsForTree(string output_filepath){
     int max_num_states = tree->aln->getMaxNumStates();
     ostream *out;
     vector<string> state_mapping;
-    string output;
     
     // initialize site specific model index based on its weights (in the mixture model)
     intializeSiteSpecificModelIndex();
@@ -430,15 +419,11 @@ void AliSimulatorHeterogeneity::simulateSeqsForTree(string output_filepath){
     }
     
     // simulate sequences
-    simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, tree->MTree::root, tree->MTree::root, *out, state_mapping, output);
+    simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, tree->MTree::root, tree->MTree::root, *out, state_mapping);
     
     // close the file if neccessary
     if (output_filepath.length() > 0)
     {
-        // writing the remaining output_str to file
-        if (output.length() > 0)
-            *out<<output;
-        
         if (params->do_compression)
             ((ogzstream*)out)->close();
         else

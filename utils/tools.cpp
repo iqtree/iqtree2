@@ -2191,8 +2191,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                         throw ERR_MSG;
                     
                     // set seqtype to MORPH (without {<#STATE>})
-                    params.sequence_type = new char(KEYWORD.length());
-                    memcpy(params.sequence_type, KEYWORD.c_str(), KEYWORD.length());
+                    params.sequence_type = strcpy(new char[KEYWORD.length() + 1], KEYWORD.c_str());
                 }
                 
                 // if (arg.substr(0,2) == "CR") params.pomo_random_sampling = true;
