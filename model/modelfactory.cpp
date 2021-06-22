@@ -556,7 +556,7 @@ void ModelFactory::initializeModel(const std::string& model_name,
             }
             modeli->init(StateFreqType::FREQ_USER_DEFINED, 
                          report_to_tree);
-            models->push_back(modeli);
+            models->addModel(modeli);
         }
         delete [] rates;
         delete [] state_freq;

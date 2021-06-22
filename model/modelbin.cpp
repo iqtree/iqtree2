@@ -56,7 +56,7 @@ void ModelBIN::init(const char *model_name, string model_params,
         def_freq == StateFreqType::FREQ_EQUAL) {
         freq = def_freq;
     }
-    ModelMarkov::init(freq, report_to_tree);
+    super::init(freq, report_to_tree);
 }
 
 void ModelBIN::startCheckpoint() {

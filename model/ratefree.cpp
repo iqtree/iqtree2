@@ -107,7 +107,7 @@ void RateFree::restoreCheckpoint() {
 void RateFree::setNCategory(int ncat) {
 
     // initialize with gamma rates
-    RateGamma::setNCategory(ncat);
+    super::setNCategory(ncat);
     delete [] prop;
 	prop  = new double[ncategory];
     for (int i = 0; i < ncategory; i++) {

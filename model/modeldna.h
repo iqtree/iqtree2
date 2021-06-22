@@ -42,6 +42,7 @@ class ModelDNA : public ModelMarkov
 {
     friend class ModelPoMo;
 public:
+	typedef ModelMarkov super;
 	/**
 		constructor (needed by YAMLModelWrapper)
 		@param tree associated tree for the model

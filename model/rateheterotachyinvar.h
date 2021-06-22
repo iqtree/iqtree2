@@ -109,18 +109,18 @@ public:
 	//MSVC generates warning messages about these member functions
 	//being inherited "via dominance". Explictly declaring them
 	//instead shuts those warnings up.
-	virtual bool isHeterotachy()               const { return RateHeterotachy::isHeterotachy(); }
-	virtual int  getNRate()                    const { return RateHeterotachy::getNRate();  }
-	virtual int  getNDiscreteRate()            const { return RateHeterotachy::getNDiscreteRate(); }
-	virtual void setProp(int category, double value) { RateHeterotachy::setProp(category, value); }
-	virtual int  getFixParams()                const { return RateHeterotachy::getFixParams(); 	}
-	virtual void setFixParams(int mode)              { RateHeterotachy::setFixParams(mode); }
-	virtual void setOptimizeSteps(int steps)         { RateHeterotachy::setOptimizeSteps(steps);  }
+	virtual bool isHeterotachy()               const { return super::isHeterotachy(); }
+	virtual int  getNRate()                    const { return super::getNRate();  }
+	virtual int  getNDiscreteRate()            const { return super::getNDiscreteRate(); }
+	virtual void setProp(int category, double value) { super::setProp(category, value); }
+	virtual int  getFixParams()                const { return super::getFixParams(); 	}
+	virtual void setFixParams(int mode)              { super::setFixParams(mode); }
+	virtual void setOptimizeSteps(int steps)         { super::setOptimizeSteps(steps);  }
 
-	virtual double getPInvar()                 const { return RateInvar::getPInvar(); }
-	virtual void   setPInvar(double pInvar)          { RateInvar::setPInvar(pInvar); }
-	virtual bool   isFixPInvar()               const { return RateInvar::isFixPInvar(); }
-	void    setFixPInvar(bool fixPInvar)             { RateInvar::setFixPInvar(fixPInvar); }
+	virtual double getPInvar()                 const { return invar.getPInvar(); }
+	virtual void   setPInvar(double pInvar)          { invar.setPInvar(pInvar); }
+	virtual bool   isFixPInvar()               const { return invar.isFixPInvar(); }
+	void    setFixPInvar(bool fixPInvar)             { invar.setFixPInvar(fixPInvar); }
 #endif
 
 protected:

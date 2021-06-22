@@ -309,7 +309,7 @@ void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
         m->getRateMatrix(rate_mat);
     }
     else {
-        ((ModelSet*)m)->front()->getRateMatrix(rate_mat);
+        ((ModelSet*)m)->firstModel()->getRateMatrix(rate_mat);
     }
 
     if (m->num_states <= 4) {

@@ -375,7 +375,7 @@ void ModelLieMarkov::init(const char *model_name, string model_params,
 		freq_type = expected_freq_type; 
 	}
 
-    ModelMarkov::init(freq_type, report_to_tree);
+    super::init(freq_type, report_to_tree);
 }
 
 // Note to Minh: I see ModelUnrest also lacks checkpointing.
@@ -390,18 +390,20 @@ void ModelLieMarkov::startCheckpoint() {
 void ModelLieMarkov::saveCheckpoint() {
     // saves model_parameters
     startCheckpoint();
-    if (num_params > 0)
+    if (num_params > 0) {
         CKP_ARRAY_SAVE(num_params, model_parameters);
+	}
     endCheckpoint();
-    ModelMarkov::saveCheckpoint();
+    super::saveCheckpoint();
 }
 
 void ModelLieMarkov::restoreCheckpoint() {
-    ModelMarkov::restoreCheckpoint();
+    super::restoreCheckpoint();
     // restores model_parameters
     startCheckpoint();
-    if (num_params > 0)
+    if (num_params > 0) {
         CKP_ARRAY_RESTORE(num_params, model_parameters);
+	}
     endCheckpoint();
     setRates();                        // updates rate matrix
     decomposeRateMatrix();             // updates eigen system.
@@ -1039,7 +1041,7 @@ void ModelLieMarkov::setRates() {
 }
 
 void ModelLieMarkov::decomposeRateMatrix() {
-    return ModelMarkov::decomposeRateMatrix();
+    return super::decomposeRateMatrix();
     /*
     if (phylo_tree->params->matrix_exp_technique == MET_SCALING_SQUARING) 
         return;
@@ -2125,7 +2127,7 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 }
 
 void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix, int mixture) {
-    return ModelMarkov::computeTransMatrix(time, trans_matrix, mixture);
+    return super::computeTransMatrix(time, trans_matrix, mixture);
     /*
   MatrixExpTechnique technique = phylo_tree->params->matrix_exp_technique;
   if (technique == MET_SCALING_SQUARING || nondiagonalizable ) {

@@ -65,11 +65,11 @@ void RateInvar::saveCheckpoint() {
 //    CKP_SAVE(fix_p_invar);
 //    CKP_SAVE(optimize_p_invar);
     endCheckpoint();
-    RateHeterogeneity::saveCheckpoint();
+    super::saveCheckpoint();
 }
 
 void RateInvar::restoreCheckpoint() {
-    RateHeterogeneity::restoreCheckpoint();
+    super::restoreCheckpoint();
     startCheckpoint();
     CKP_RESTORE(p_invar);
 //    CKP_RESTORE(fix_p_invar);

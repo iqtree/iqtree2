@@ -40,6 +40,7 @@ const double POMO_MAX_BOUNDARY_FREQ = 0.95;
 class ModelPoMo : virtual public ModelMarkov
 {
  public:
+    typedef ModelMarkov super;
     /**
      * Constructor.
      * ModelMarkov() constructor calls ModelSubst() constructor.

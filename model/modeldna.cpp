@@ -154,7 +154,7 @@ void ModelDNA::init(const char *model_name, string model_params,
         def_freq == StateFreqType::FREQ_EQUAL) {
         freq = def_freq;
     }
-    ModelMarkov::init(freq, report_to_tree);
+    super::init(freq, report_to_tree);
     //model_parameters = new double [getNDim()+1]; 
     // see setVariables for explaination of +1
     //setVariables(model_parameters);
@@ -174,12 +174,12 @@ void ModelDNA::saveCheckpoint() {
         CKP_ARRAY_SAVE(6, rates);
     }
     endCheckpoint();
-    ModelMarkov::saveCheckpoint();
+    super::saveCheckpoint();
 }
 
 void ModelDNA::restoreCheckpoint() {
     // curiously, this seems to be the only plase ModelDNA uses model_parameters.
-    ModelMarkov::restoreCheckpoint();
+    super::restoreCheckpoint();
     startCheckpoint();
     if (!fixed_parameters) {
         CKP_ARRAY_RESTORE(6, rates);

@@ -31,12 +31,12 @@ void RateFreeInvar::startCheckpoint() {
 
 void RateFreeInvar::saveCheckpoint() {
     invar.saveCheckpoint();
-    RateFree::saveCheckpoint();
+    super::saveCheckpoint();
 }
 
 void RateFreeInvar::restoreCheckpoint() {
     invar.restoreCheckpoint();
-    RateFree::restoreCheckpoint();
+    super::restoreCheckpoint();
 }
 
 int RateFreeInvar::getNDim() const { 
@@ -57,7 +57,7 @@ std::string RateFreeInvar::getNameParams() const {
 
 
 void RateFreeInvar::setNCategory(int ncat) {
-	RateFree::setNCategory(ncat);
+	super::setNCategory(ncat);
 	name = "+I" + name;
 	full_name = "Invar+" + full_name;
 }
@@ -69,7 +69,7 @@ double RateFreeInvar::computeFunction(double value) {
 }
 
 double RateFreeInvar::targetFunk(double x[]) {
-	return RateFree::targetFunk(x);
+	return super::targetFunk(x);
 }
 
 void RateFreeInvar::writeInfo(ostream &out) {
@@ -123,7 +123,7 @@ void RateFreeInvar::setVariables(double *variables) {
 	@param variables vector of variables, indexed from 1
 */
 bool RateFreeInvar::getVariables(double *variables) {
-	bool changed = RateFree::getVariables(variables);
+	bool changed = super::getVariables(variables);
 	if (invar.getNDim() == 0) {
 		return changed;
 	}

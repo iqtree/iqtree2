@@ -18,6 +18,7 @@
  */
 class ModelMorphology: public ModelMarkov {
 public:
+    typedef ModelMarkov super;
 
     ModelMorphology(PhyloTree *tree, PhyloTree* report_to_tree);
 	/**

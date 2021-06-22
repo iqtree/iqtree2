@@ -50,7 +50,7 @@ void RateGammaInvar::startCheckpoint() {
 
 void RateGammaInvar::saveCheckpoint() {
     invar.saveCheckpoint();
-    RateGamma::saveCheckpoint();
+    super::saveCheckpoint();
 }
 
 void RateGammaInvar::restoreCheckpoint() {
@@ -60,11 +60,11 @@ void RateGammaInvar::restoreCheckpoint() {
     for (int cat = 0; cat < ncategory; cat++) {
         rates[cat] = 1.0 / (1.0 - invar.getPInvar());
     }
-    RateGamma::restoreCheckpoint();
+    super::restoreCheckpoint();
 }
 
 void RateGammaInvar::setNCategory(int ncat) {
-	RateGamma::setNCategory(ncat);
+	super::setNCategory(ncat);
     for (int cat = 0; cat < ncategory; cat++) {
         rates[cat] = 1.0 / (1.0 - invar.getPInvar());
     }
@@ -74,7 +74,7 @@ void RateGammaInvar::setNCategory(int ncat) {
 }
 
 std::string RateGammaInvar::getNameParams() const {
-	return invar.getNameParams() + RateGamma::getNameParams();
+	return invar.getNameParams() + super::getNameParams();
 }
 
 double RateGammaInvar::computeFunction(double value) {

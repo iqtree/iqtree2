@@ -34,7 +34,7 @@ void ModelSet::computeTransMatrix(double time, double* trans_matrix, int mixture
 {
     // TODO not working with vectorization
     ASSERT(0);
-	for (iterator it = begin(); it != end(); it++) {
+	for (auto it = models.begin(); it != models.end(); it++) {
 		(*it)->computeTransMatrix(time, trans_matrix, mixture);
 		trans_matrix += (num_states * num_states);
 	}
@@ -46,7 +46,7 @@ void ModelSet::computeTransDerv(double time, double* trans_matrix,
 {
     // TODO not working with vectorization
     ASSERT(0);
-	for (iterator it = begin(); it != end(); it++) {
+	for (auto it = models.begin(); it != models.end(); it++) {
 		(*it)->computeTransDerv(time, trans_matrix, trans_derv1,
                                 trans_derv2, mixture);
 		trans_matrix += (num_states * num_states);
@@ -58,7 +58,7 @@ void ModelSet::computeTransDerv(double time, double* trans_matrix,
 int ModelSet::getPtnModelID(int ptn)
 {
 	ASSERT(ptn >= 0 && ptn < pattern_model_map.size());
-	ASSERT(pattern_model_map[ptn] >= 0 && pattern_model_map[ptn] < size());
+	ASSERT(pattern_model_map[ptn] >= 0 && pattern_model_map[ptn] < models.size());
     return pattern_model_map[ptn];
 }
 
@@ -66,7 +66,7 @@ int ModelSet::getPtnModelID(int ptn)
 double ModelSet::computeTrans(double time, int model_id,
                               int state1, int state2) {
     if (phylo_tree->vector_size == 1) {
-        return at(model_id)->computeTrans(time, state1, state2);
+        return models.at(model_id)->computeTrans(time, state1, state2);
     }
 	// temporary fix problem with vectorized eigenvectors
 	int i;
@@ -90,7 +90,7 @@ double ModelSet::computeTrans(double time, int model_id,
 double ModelSet::computeTrans(double time, int model_id, int state1, int state2,
                               double &derv1, double &derv2) {
     if (phylo_tree->vector_size == 1) {
-        return at(model_id)->computeTrans(time, state1, state2, derv1, derv2);
+        return models.at(model_id)->computeTrans(time, state1, state2, derv1, derv2);
     }
 	// temporary fix problem with vectorized eigenvectors
     int     vsize        = static_cast<int>(phylo_tree->vector_size);
@@ -116,32 +116,32 @@ double ModelSet::computeTrans(double time, int model_id, int state1, int state2,
 
 int ModelSet::getNDim() const
 {
-	ASSERT(size());
-    return front()->getNDim();
+	ASSERT(0<models.size());
+    return models.front()->getNDim();
 }
 
 void ModelSet::writeInfo(ostream& out)
 {
-    if (empty()) {
+    if (models.empty()) {
         return;
     }
 	if (verbose_mode >= VerboseMode::VB_DEBUG) {
 		int i = 1;
-		for (iterator it = begin(); it != end(); it++, i++) {
+		for (auto it = models.begin(); it != models.end(); it++, i++) {
 			out << "Partition " << i << ":" << endl;
 			(*it)->writeInfo(out);
 		}
 	} else {
-		front()->writeInfo(out);
+		models.front()->writeInfo(out);
 	}
 }
 
 void ModelSet::decomposeRateMatrix()
 {
-    if (empty()) {
+    if (models.empty()) {
         return;
     }
-    for (iterator it = begin(); it != end(); it++) {
+    for (auto it = models.begin(); it != models.end(); it++) {
         (*it)->decomposeRateMatrix();
     }
     if (phylo_tree->vector_size == 1) {
@@ -150,10 +150,10 @@ void ModelSet::decomposeRateMatrix()
 	// rearrange eigen to obey vector_size
 	int  vsize    = static_cast<int>(phylo_tree->vector_size);
 	int  square   = num_states*num_states;
-    int  max_size = static_cast<int>(get_safe_upper_limit(size()));
+    int  max_size = static_cast<int>(get_safe_upper_limit(models.size()));
 
     // copy dummy values
-    for (size_t m = size(); m < max_size; m++) {
+    for (size_t m = models.size(); m < max_size; m++) {
         memcpy(&eigenvalues[m*num_states], &eigenvalues[(m-1)*num_states], sizeof(double)*num_states);
         memcpy(&eigenvectors[m*square], &eigenvectors[(m-1)*square], sizeof(double)*square);
         memcpy(&inv_eigenvectors[m*square], &inv_eigenvectors[(m-1)*square], sizeof(double)*square);
@@ -170,7 +170,8 @@ void ModelSet::decomposeRateMatrix()
     boost::scoped_array<double> new_inv_evec(new double[square * vsize]);
 #endif
 
-    for (intptr_t ptn = 0; ptn < static_cast<intptr_t>(size()); ptn += vsize) {
+    intptr_t num_models = static_cast<intptr_t>(models.size());
+    for (intptr_t ptn = 0; ptn < num_models; ptn += vsize) {
         double* eval_ptr     = &eigenvalues[ptn*num_states];
         double* evec_ptr     = &eigenvectors[ptn*square];
         double* inv_evec_ptr = &inv_eigenvectors[ptn*square];
@@ -197,22 +198,22 @@ void ModelSet::decomposeRateMatrix()
 
 bool ModelSet::getVariables(double* variables)
 {
-	ASSERT(size());
+	ASSERT(models.size());
     bool changed = false;
-	for (iterator it = begin(); it != end(); it++)
+	for (auto it = models.begin(); it != models.end(); it++)
 		changed |= (*it)->getVariables(variables);
     return changed;
 }
 
 void ModelSet::setVariables(double* variables)
 {
-	ASSERT(size());
-	front()->setVariables(variables);
+	ASSERT(models.size());
+	models.front()->setVariables(variables);
 }
 
 ModelSet::~ModelSet()
 {
-    for (reverse_iterator rit = rbegin(); rit != rend(); rit++) {
+    for (auto rit = models.rbegin(); rit != models.rend(); rit++) {
         (*rit)->eigenvalues = nullptr;
         (*rit)->eigenvectors = nullptr;
         (*rit)->inv_eigenvectors = nullptr;
@@ -222,7 +223,7 @@ ModelSet::~ModelSet()
 }
 
 void ModelSet::joinEigenMemory() {
-    size_t nmixtures = get_safe_upper_limit(size());
+    size_t nmixtures = get_safe_upper_limit(models.size());
     aligned_free(eigenvalues);
     aligned_free(eigenvectors);
     aligned_free(inv_eigenvectors);
@@ -237,7 +238,7 @@ void ModelSet::joinEigenMemory() {
     
     // assigning memory for individual models
     size_t m = 0;
-    for (iterator it = begin(); it != end(); it++, m++) {
+    for (auto it = models.begin(); it != models.end(); it++, m++) {
         // first copy memory for eigen stuffs
         memcpy(&eigenvalues[m*num_states],  (*it)->eigenvalues,      num_states*sizeof(double));
         memcpy(&eigenvectors[m*square],     (*it)->eigenvectors,     square*sizeof(double));
@@ -258,10 +259,20 @@ void ModelSet::joinEigenMemory() {
     }
     
     // copy dummy values
-    for (m = size(); m < nmixtures; m++) {
+    for (m = models.size(); m < nmixtures; m++) {
         memcpy(&eigenvalues[m*num_states], &eigenvalues[(m-1)*num_states], sizeof(double)*num_states);
         memcpy(&eigenvectors[m*square], &eigenvectors[(m-1)*square], sizeof(double)*square);
         memcpy(&inv_eigenvectors[m*square], &inv_eigenvectors[(m-1)*square], sizeof(double)*square);
         memcpy(&inv_eigenvectors_transposed[m*square], &inv_eigenvectors_transposed[(m-1)*square], sizeof(double)*square);
     }
 }
+
+ModelMarkov* ModelSet::firstModel() const {
+    return models.front();
+}
+
+void ModelSet::addModel(ModelMarkov* model_to_add) {
+
+}
+
+

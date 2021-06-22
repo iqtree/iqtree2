@@ -1090,7 +1090,7 @@ void ModelProtein::init(const char *model_name, string model_params,
     if (freq == StateFreqType::FREQ_UNKNOWN) {
         freq = StateFreqType::FREQ_USER_DEFINED;
     }
-    ModelMarkov::init(freq, report_to_tree);
+    super::init(freq, report_to_tree);
 }
 
 void ModelProtein::startCheckpoint() {
@@ -1103,12 +1103,11 @@ void ModelProtein::saveCheckpoint() {
         CKP_ARRAY_SAVE(getNumRateEntries(), rates);
         endCheckpoint();
     }
-    ModelMarkov::saveCheckpoint();
+    super::saveCheckpoint();
 }
 
 void ModelProtein::restoreCheckpoint() {
-    ModelMarkov::restoreCheckpoint();
-
+    super::restoreCheckpoint();
     if (num_params > 0 && !fixed_parameters) {
         startCheckpoint();
         CKP_ARRAY_RESTORE(getNumRateEntries(), rates);

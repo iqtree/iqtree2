@@ -30,6 +30,7 @@ Model for Binary data
 class ModelBIN : public ModelMarkov
 {
 public:
+	typedef ModelMarkov super;
 	ModelBIN(PhyloTree *tree, PhyloTree* report_to_tree);
 
 	/**

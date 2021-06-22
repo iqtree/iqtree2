@@ -74,7 +74,7 @@ public:
 		@param category category ID from 0 to #category-1
 		@return the rate of the specified category
 	*/
-	virtual double getRate(int category) const { return RateGamma::getRate(category); }
+	virtual double getRate(int category) const { return super::getRate(category); }
 
 	/**
 		set the proportion of invariable sites. Default: do nothing
@@ -206,18 +206,18 @@ private:
 	//Explicitly say, for member functions otherwise inherited via dominance
 	//which superclass they are to be inherited from (to silence... 11 warnings).
 	//The "dominance" warning messages basically result from a MSVC compiler bug.
-	virtual int    getNRate()         const { return RateGamma::getNRate(); }
-	virtual int    getNDiscreteRate() const { return RateGamma::getNDiscreteRate(); }
-	virtual void   setRate(int category, double value) { RateGamma::setRate(category, value); }
-	virtual double getGammaShape()    const { return RateGamma::getGammaShape(); }
-	virtual void   setGammaShape(double gs) { RateGamma::setGammaShape(gs); }
-	virtual bool   isFixGammaShape()  const { return RateGamma::isFixGammaShape(); }
-	virtual void   setFixGammaShape(bool fixGammaShape) { RateGamma::setFixGammaShape(fixGammaShape); }
-	virtual int    isGammaRate()      const { return RateGamma::isGammaRate(); }
+	virtual int    getNRate()         const { return super::getNRate(); }
+	virtual int    getNDiscreteRate() const { return super::getNDiscreteRate(); }
+	virtual void   setRate(int category, double value) { super::setRate(category, value); }
+	virtual double getGammaShape()    const { return super::getGammaShape(); }
+	virtual void   setGammaShape(double gs) { super::setGammaShape(gs); }
+	virtual bool   isFixGammaShape()  const { return super::isFixGammaShape(); }
+	virtual void   setFixGammaShape(bool fixGammaShape) { super::setFixGammaShape(fixGammaShape); }
+	virtual int    isGammaRate()      const { return super::isGammaRate(); }
 
-	virtual double getPInvar()        const { return RateInvar::getPInvar(); }
-	virtual bool isFixPInvar()        const { return RateInvar::isFixPInvar(); }
-	void    setFixPInvar(bool fixPInvar)    { RateInvar::setFixPInvar(fixPInvar); }
+	virtual double getPInvar()        const { return invar.getPInvar(); }
+	virtual bool isFixPInvar()        const { return invar.isFixPInvar(); }
+	void    setFixPInvar(bool fixPInvar)    { invar.setFixPInvar(fixPInvar); }
 #endif
 };
 

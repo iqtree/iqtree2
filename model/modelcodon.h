@@ -35,7 +35,7 @@ const int CA_TRANSITION_3NT   = 2048; // codon substitution involve the 3rd NT w
  */
 class ModelCodon: public ModelMarkov {
 public:
-
+	typedef ModelMarkov super;
 	void setDefaults();
 
 	ModelCodon(PhyloTree *tree, PhyloTree* report_to_tree) ;

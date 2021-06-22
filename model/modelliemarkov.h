@@ -12,10 +12,12 @@
 
 class ModelLieMarkov: public ModelMarkov {
 public:
-        ModelLieMarkov(string model_name, PhyloTree *tree,
-                       string model_params, StateFreqType freq_type,
-                       string freq_params, PhyloTree* report_to_tree);
-        virtual ~ModelLieMarkov();
+	typedef ModelMarkov super;
+
+	ModelLieMarkov(string model_name, PhyloTree *tree,
+					string model_params, StateFreqType freq_type,
+					string freq_params, PhyloTree* report_to_tree);
+	virtual ~ModelLieMarkov();
 
 	/**
 		this function is served for model testing

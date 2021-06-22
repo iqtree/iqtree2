@@ -14,6 +14,7 @@ class ModelFactory;
 
 class RateFree: public RateGamma {
 public:
+	typedef RateGamma super;
 	/**
 		constructor (used by, for example, YAMLRateModelWrapper)
 		@param ncat number of rate categories

@@ -37,6 +37,7 @@ class RateGamma: virtual public RateHeterogeneity
 	friend class RateGammaInvar;
 
 public:
+	typedef RateHeterogeneity super;
 	/**
 		constructor (used by, for example, YAMLRateModelWrapper)
 		@param ncat number of rate categories

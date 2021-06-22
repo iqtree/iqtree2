@@ -46,9 +46,6 @@ RateHeterotachy::RateHeterotachy(int ncat, string params, PhyloTree *tree) : Rat
 	}
 }
 
-/**
-    destructor
-*/
 RateHeterotachy::~RateHeterotachy() {
     delete [] prop;
     prop = nullptr;
@@ -63,13 +60,13 @@ void RateHeterotachy::setNCategory(int ncat) {
 	delete [] prop;
 	prop  = new double[ncategory];
 
-    int i;
-	for (i = 0; i < ncategory; i++)
+	for (int i = 0; i < ncategory; i++) {
         prop[i] = (1.0-getPInvar())/ncategory;
+    }
     
-	name = "+H";
-	name += convertIntToString(ncategory);
-	full_name = "Rate heterotachy";
+	name       = "+H";
+	name      += convertIntToString(ncategory);
+	full_name  = "Rate heterotachy";
 	full_name += " with " + convertIntToString(ncategory) + " categories";
 }
 
@@ -84,14 +81,14 @@ void RateHeterotachy::saveCheckpoint() {
     startCheckpoint();
     CKP_ARRAY_SAVE(ncategory, prop);
     endCheckpoint();
-    RateHeterogeneity::saveCheckpoint();
+    super::saveCheckpoint();
 }
 
 /**
     restore object from the checkpoint
 */
 void RateHeterotachy::restoreCheckpoint() {
-    RateHeterogeneity::restoreCheckpoint();
+    super::restoreCheckpoint();
     startCheckpoint();
     CKP_ARRAY_RESTORE(ncategory, prop);
     endCheckpoint();

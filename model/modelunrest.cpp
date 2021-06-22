@@ -24,7 +24,7 @@ ModelUnrest::ModelUnrest(PhyloTree *tree, string model_params,
 	}
     name = "UNREST";
     full_name = "Unrestricted model (non-reversible)";
-    ModelMarkov::init(StateFreqType::FREQ_ESTIMATE, report_to_tree);
+    super::init(StateFreqType::FREQ_ESTIMATE, report_to_tree);
 }
 
 /* static */ bool ModelUnrest::validModelName(string model_name) {
@@ -61,17 +61,19 @@ void ModelUnrest::startCheckpoint() {
 
 void ModelUnrest::saveCheckpoint() {
     startCheckpoint();
-    if (!fixed_parameters)
+    if (!fixed_parameters) {
         CKP_ARRAY_SAVE(getNumRateEntries(), rates);
+    }
     endCheckpoint();
-    ModelMarkov::saveCheckpoint();
+    super::saveCheckpoint();
 }
 
 void ModelUnrest::restoreCheckpoint() {
-    ModelMarkov::restoreCheckpoint();
+    super::restoreCheckpoint();
     startCheckpoint();
-    if (!fixed_parameters)
+    if (!fixed_parameters) {
         CKP_ARRAY_RESTORE(getNumRateEntries(), rates);
+    }
     endCheckpoint();
     decomposeRateMatrix();
     if (phylo_tree)

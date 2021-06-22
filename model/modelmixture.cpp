@@ -1250,7 +1250,7 @@ void ModelMixture::initMixture(string orig_model_name, string model_name,
         if (freq == StateFreqType::FREQ_UNKNOWN) {
             freq = StateFreqType::FREQ_USER_DEFINED;
         }
-		ModelMarkov::init(freq, report_to_tree);
+		super::init(freq, report_to_tree);
 	}
 
 	DoubleVector weights;
@@ -1364,7 +1364,7 @@ void ModelMixture::initMixtureFrequencies
             freq_weights[m] = sum_weights / freq_weights.size();
         }
     }
-    ModelMarkov::init(StateFreqType::FREQ_USER_DEFINED, report_to_tree);
+    super::init(StateFreqType::FREQ_USER_DEFINED, report_to_tree);
 }
 
 bool ModelMixture::parseModelRateAndWeight(const char* model_noun, 
@@ -1606,15 +1606,13 @@ void ModelMixture::saveCheckpoint() {
         ++part;
     }
     endCheckpoint();
-
-//    ModelMarkov::saveCheckpoint();
+    //super::saveCheckpoint();
 }
 
 void ModelMixture::restoreCheckpoint() {
-//    ModelMarkov::restoreCheckpoint();
-
+    //super::restoreCheckpoint();
     startCheckpoint();
-//    CKP_RESTORE(fix_prop);
+    //CKP_RESTORE(fix_prop);
     if (!fix_prop) {
         int nmix = getNMixtures();
         CKP_ARRAY_RESTORE(nmix, prop);
@@ -2198,7 +2196,7 @@ std::string ModelMixture::getNameParams() const {
 }
 
 uint64_t ModelMixture::getMemoryRequired() {
-    uint64_t mem = ModelMarkov::getMemoryRequired();
+    uint64_t mem = super::getMemoryRequired();
     for (auto model: models) {
         mem += model->getMemoryRequired();
     }

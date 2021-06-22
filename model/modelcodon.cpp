@@ -283,11 +283,11 @@ void ModelCodon::saveCheckpoint() {
     CKP_SAVE(kappa);
     CKP_SAVE(kappa2);
     endCheckpoint();
-    ModelMarkov::saveCheckpoint();
+    super::saveCheckpoint();
 }
 
 void ModelCodon::restoreCheckpoint() {
-    ModelMarkov::restoreCheckpoint();
+    super::restoreCheckpoint();
     startCheckpoint();
     CKP_RESTORE(omega);
     CKP_RESTORE(kappa);
@@ -410,7 +410,7 @@ void ModelCodon::init(const char*   model_name, string model_params,
         freq == StateFreqType::FREQ_CODON_3x4C) {
         phylo_tree->aln->computeCodonFreq(freq, state_freq, ntfreq);
     }
-    ModelMarkov::init(freq, report_to_tree);
+    super::init(freq, report_to_tree);
 }
 
 void ModelCodon::initEmpiricalRates() {
@@ -758,7 +758,7 @@ void ModelCodon::readCodonModelFile(const char *filename, bool reset_params) {
 
 void ModelCodon::decomposeRateMatrix() {
     computeCodonRateMatrix();
-    ModelMarkov::decomposeRateMatrix();
+    super::decomposeRateMatrix();
 }
 
 void ModelCodon::computeCodonRateMatrix() {

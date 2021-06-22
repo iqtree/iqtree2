@@ -26,10 +26,10 @@
  * a set of substitution models, used eg for site-specific state frequency model or 
  * partition model with joint branch lengths
  */
-class ModelSet : public ModelMarkov, public vector<ModelMarkov*>
+class ModelSet : public ModelMarkov
 {
-
 public:
+	typedef ModelMarkov super;
     ModelSet(const char *model_name, PhyloTree *tree);
 	/**
 	 * @return TRUE if this is a site-specific model, FALSE otherwise
@@ -40,8 +40,10 @@ public:
 	 * get the size of transition matrix, default is num_states*num_states.
 	 * can be changed for e.g. site-specific model
 	 */
-	virtual int getTransMatrixSize() { return num_states * num_states * static_cast<int>(size()); }
-
+	virtual int getTransMatrixSize() { 
+		return num_states * num_states 
+	           * static_cast<int>(models.size()); 
+	}
 
 	/**
 		compute the transition probability matrix.
@@ -142,7 +144,7 @@ public:
      */
     virtual uint64_t getMemoryRequired() {
     	uint64_t mem = ModelMarkov::getMemoryRequired();
-    	for (iterator it = begin(); it != end(); it++)
+    	for (auto it = models.begin(); it != models.end(); ++it)
     		mem += (*it)->getMemoryRequired();
     	return mem;
     }
@@ -155,10 +157,13 @@ public:
     */
     void joinEigenMemory();
 
-protected:
-	
-	
+	ModelMarkov* firstModel() const;
+	void addModel(ModelMarkov* model_to_add);
 
+
+protected:
+	vector<ModelMarkov*> models;
+	
 	/**
 		this function is served for the multi-dimension optimization. It should pack the model parameters 
 		into a vector that is index from 1 (NOTE: not from 0)

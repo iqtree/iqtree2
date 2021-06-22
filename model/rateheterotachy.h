@@ -22,6 +22,7 @@ class RateHeterotachy: virtual public RateHeterogeneity {
     friend class ModelFactoryMixlen;
 
 public:
+	typedef RateHeterogeneity super;
 	/**
 		constructor
 		@param ncat number of rate categories

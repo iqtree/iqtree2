@@ -63,12 +63,12 @@ void RateHeterotachyInvar::writeInfo(ostream &out) {
 */
 void RateHeterotachyInvar::writeParameters(ostream &out) {
 	invar.writeParameters(out);
-	RateHeterotachy::writeParameters(out);
+	super::writeParameters(out);
 }
 
 void RateHeterotachyInvar::setBounds(double *lower_bound, double *upper_bound,
                                      bool *bound_check) {
-	RateHeterotachy::setBounds(lower_bound, upper_bound, bound_check);
+	super::setBounds(lower_bound, upper_bound, bound_check);
 	if (invar.getNDim() == 0) {
 		return;
 	}
@@ -83,13 +83,13 @@ void RateHeterotachyInvar::setBounds(double *lower_bound, double *upper_bound,
 double RateHeterotachyInvar::optimizeParameters(double gradient_epsilon,
                                                 PhyloTree* report_to_tree) {
 	double tree_lh;
-	tree_lh = RateHeterotachy::optimizeParameters(gradient_epsilon,
-                                                  report_to_tree);
+	tree_lh = super::optimizeParameters(gradient_epsilon,
+                                        report_to_tree);
 	return tree_lh;
 }
 
 void RateHeterotachyInvar::setVariables(double *variables) {
-	RateHeterotachy::setVariables(variables);
+	super::setVariables(variables);
 	if (invar.getNDim() == 0) {
 		return;
 	}
@@ -102,7 +102,7 @@ void RateHeterotachyInvar::setVariables(double *variables) {
 	@param variables vector of variables, indexed from 1
 */
 bool RateHeterotachyInvar::getVariables(double *variables) {
-	bool changed = RateHeterotachy::getVariables(variables);
+	bool changed = super::getVariables(variables);
 	if (invar.getNDim() == 0) { 
 		return changed;
 	}

@@ -62,11 +62,11 @@ void RateGamma::saveCheckpoint() {
 //    CKP_SAVE(cut_median);
 //    CKP_SAVE(ncategory);
     endCheckpoint();
-    RateHeterogeneity::saveCheckpoint();
+    super::saveCheckpoint();
 }
 
 void RateGamma::restoreCheckpoint() {
-    RateHeterogeneity::restoreCheckpoint();
+    super::restoreCheckpoint();
     startCheckpoint();
     CKP_RESTORE(gamma_shape);
 //    CKP_RESTORE(fix_gamma_shape);

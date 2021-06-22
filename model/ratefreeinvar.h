@@ -121,27 +121,27 @@ public:
 	//MSVC generates warning messages about these member functions
 	//being inherited "via dominance". Explictly declaring them
 	//instead shuts those warnings up.
-	virtual int    getNRate()         const { return RateGamma::getNRate(); }
-	virtual void   setRate(int category, double value) { RateGamma::setRate(category, value); }
-	virtual int    getNDiscreteRate() const { return RateGamma::getNDiscreteRate(); }
-	virtual double getGammaShape()    const { return RateGamma::getGammaShape(); }
-	virtual void   setGammaShape(double gs) { RateGamma::setGammaShape(gs); }
-	virtual bool   isFixGammaShape()  const { return RateGamma::isFixGammaShape(); }
-	virtual void   setFixGammaShape(bool fixGammaShape) { RateGamma::setFixGammaShape(fixGammaShape); }
-	virtual int    isGammaRate()      const { return RateGamma::isGammaRate(); }
+	virtual int    getNRate()         const { return super::getNRate(); }
+	virtual void   setRate(int category, double value) { super::setRate(category, value); }
+	virtual int    getNDiscreteRate() const { return super::getNDiscreteRate(); }
+	virtual double getGammaShape()    const { return super::getGammaShape(); }
+	virtual void   setGammaShape(double gs) { super::setGammaShape(gs); }
+	virtual bool   isFixGammaShape()  const { return super::isFixGammaShape(); }
+	virtual void   setFixGammaShape(bool fixGammaShape) { super::setFixGammaShape(fixGammaShape); }
+	virtual int    isGammaRate()      const { return super::isGammaRate(); }
 	virtual int    computePatternRates(DoubleVector& pattern_rates, IntVector& pattern_cat) {
-		return RateGamma::computePatternRates(pattern_rates, pattern_cat);
+		return super::computePatternRates(pattern_rates, pattern_cat);
 	}
 
-	virtual double getPInvar()        const { return RateInvar::getPInvar(); }
-	virtual void   setPInvar(double pInvar) { RateInvar::setPInvar(pInvar); }
-	virtual bool   isFixPInvar()      const { return RateInvar::isFixPInvar(); }
-	void    setFixPInvar(bool fixPInvar)    { RateInvar::setFixPInvar(fixPInvar); }
+	virtual double getPInvar()        const { return invar.getPInvar(); }
+	virtual void   setPInvar(double pInvar) { invar.setPInvar(pInvar); }
+	virtual bool   isFixPInvar()      const { return invar.isFixPInvar(); }
+	void    setFixPInvar(bool fixPInvar)    { invar.setFixPInvar(fixPInvar); }
 
 
-	virtual double meanRates()        const { return RateFree::meanRates(); }
-	virtual double rescaleRates()           { return RateFree::rescaleRates(); }
-	virtual void initFromCatMinusOne()      { RateFree::initFromCatMinusOne(); }
+	virtual double meanRates()        const { return super::meanRates(); }
+	virtual double rescaleRates()           { return super::rescaleRates(); }
+	virtual void initFromCatMinusOne()      { super::initFromCatMinusOne(); }
 #endif
 
 protected:

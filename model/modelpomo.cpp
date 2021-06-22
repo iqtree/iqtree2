@@ -48,8 +48,8 @@ void ModelPoMo::init_mutation_model(const char *model_name,  string model_params
             cout << "Initialize PoMo DNA mutation model." << endl;
         }
         string model_str = model_name;
-        if (ModelMarkov::validModelName(model_str)) {
-            mutation_model = ModelMarkov::getModelByName(model_str, phylo_tree,
+        if (super::validModelName(model_str)) {
+            mutation_model = super::getModelByName(model_str, phylo_tree,
                                                          model_params, freq_type,
                                                          freq_params, report_to_tree);
         }
@@ -1052,7 +1052,7 @@ void ModelPoMo::report(ostream &out) {
 }
 
 void ModelPoMo::setCheckpoint(Checkpoint *checkpoint) {
-	ModelMarkov::setCheckpoint(checkpoint);
+	super::setCheckpoint(checkpoint);
     mutation_model->setCheckpoint(checkpoint);
 }
 
@@ -1068,7 +1068,7 @@ void ModelPoMo::saveCheckpoint() {
     mutation_model->saveCheckpoint();
     CKP_SAVE(heterozygosity);
     endCheckpoint();
-    ModelMarkov::saveCheckpoint();
+    super::saveCheckpoint();
 }
 
 // TODO DS: Check checkpointing :-).
@@ -1082,11 +1082,12 @@ void ModelPoMo::restoreCheckpoint() {
     CKP_RESTORE(heterozygosity);
     endCheckpoint();
     // Second, restore underlying mutation model.
-    ModelMarkov::restoreCheckpoint();
+    super::restoreCheckpoint();
     normalizeMutationRates();
     decomposeRateMatrix();
-    if (phylo_tree)
+    if (phylo_tree) {
         phylo_tree->clearAllPartialLH();
+    }
 }
 
 // Declaration of helper function; needed by decomposeRateMatrix().
@@ -1138,7 +1139,7 @@ void ModelPoMo::restoreCheckpoint() {
 
 void ModelPoMo::decomposeRateMatrix() {
     updatePoMoStatesAndRateMatrix();
-    ModelMarkov::decomposeRateMatrix();
+    super::decomposeRateMatrix();
     return;
 }
 
@@ -1207,8 +1208,9 @@ void ModelPoMo::computeTransMatrix(double time, double *trans_matrix, int mixtur
 			}
     }
   }
-
-  else ModelMarkov::computeTransMatrix(time, trans_matrix);
+  else {
+      super::computeTransMatrix(time, trans_matrix);
+  }
 }
 
 void ModelPoMo::computeTipLikelihood(PML::StateType state, double *lh) {

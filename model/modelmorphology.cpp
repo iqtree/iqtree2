@@ -51,7 +51,7 @@ void ModelMorphology::init(const char *model_name, string model_params,
         num_params = 0;
         freq = StateFreqType::FREQ_USER_DEFINED;
     }
-    ModelMarkov::init(freq, report_to_tree);
+    super::init(freq, report_to_tree);
 }
 
 void ModelMorphology::readRates(istream &in) {
@@ -93,17 +93,19 @@ void ModelMorphology::startCheckpoint() {
 
 void ModelMorphology::saveCheckpoint() {
     startCheckpoint();
-    if (num_params > 0)
+    if (num_params > 0) {
         CKP_ARRAY_SAVE(getNumRateEntries(), rates);
+    }
     endCheckpoint();
-    ModelMarkov::saveCheckpoint();
+    super::saveCheckpoint();
 }
 
 void ModelMorphology::restoreCheckpoint() {
-    ModelMarkov::restoreCheckpoint();
+    super::restoreCheckpoint();
     startCheckpoint();
-    if (num_params > 0)
+    if (num_params > 0) {
         CKP_ARRAY_RESTORE(getNumRateEntries(), rates);
+    }
     endCheckpoint();
     decomposeRateMatrix();
     if (phylo_tree)
