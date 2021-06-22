@@ -11,11 +11,12 @@
 #include "rateinvar.h"
 #include "ratefree.h"
 
-class RateFreeInvar: public RateInvar, public RateFree {
+class RateFreeInvar: public RateFree {
 public:
+	typedef RateFree super;
 
  	/**
-		constructor
+		constructor (called from YAMLRateFreeInvar).
 		@param ncat           number of rate categories
 		@param tree           associated phylogenetic tree
 		@param report_to_tree tree or what-have-you to log to
@@ -51,40 +52,41 @@ public:
 	/**
 		return the number of dimensions
 	*/
-	virtual int getNDim() { return RateInvar::getNDim() + RateFree::getNDim(); }
+	virtual int getNDim();
 
 	/**
 		get the proportion of sites under a specified category.
 		@param category category ID from 0 to #category-1
 		@return the proportion of the specified category
 	*/
-	virtual double getProp(int category) { return prop[category]; }
+	virtual double getProp(int category);
 
 	/**
 		get the rate of a specified category. Default returns 1.0 since it is homogeneous model
 		@param category category ID from 0 to #category-1
 		@return the rate of the specified category
 	*/
-	virtual double getRate(int category) { return RateFree::getRate(category); }
+	virtual double getRate(int category);
 
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
-	virtual string getNameParams() {
-		return RateInvar::getNameParams() + RateFree::getNameParams();
-	}
+	virtual string getNameParams();
 
 	/**
-		override function from Optimization class, used by the minimizeOneDimen() to optimize
+		override function from Optimization class, 
+		used by the minimizeOneDimen() to optimize
 		p_invar or gamma shape parameter.
-		@param value value of p_invar (if cur_optimize == 1) or gamma shape (if cur_optimize == 0).
+		@param value value of p_invar (if cur_optimize == 1)
+		             or gamma shape (if cur_optimize == 0).
 	*/
 	virtual double computeFunction(double value);
 
 	/**
 	 * setup the bounds for joint optimization with BFGS
 	 */
-	virtual void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
+	virtual void setBounds(double *lower_bound, double *upper_bound, 
+	                       bool *bound_check);
 
 	/**
 		optimize parameters
@@ -143,6 +145,7 @@ public:
 #endif
 
 protected:
+	RateInvar invar;
 
 	/**
 		this function is served for the multi-dimension optimization. It should pack the model parameters

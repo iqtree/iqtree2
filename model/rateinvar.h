@@ -35,7 +35,22 @@ class RateInvar : virtual public RateHeterogeneity
 {
 	friend class RateGammaInvar;
 
+protected:
+	void defaultInvariantProportion(double p_invar_requested);
+
 public:
+	typedef RateHeterogeneity super;
+
+ 	/**
+		constructor (called from YAMLRateFreeInvar).
+		@param dymmy_categories number of rate categories (zero!)
+		@param tree             associated phylogenetic tree
+		@param report_to_tree   tree or what-have-you to log to
+		@note  pretends that the proportion of invariant sites is 10%
+		       (it gts overridden later).
+	*/
+	RateInvar(int dummy_categories, PhyloTree* tree, PhyloTree* report_to_tree);
+
 	/**
 		constructor
 		@param p_invar_sites proportion of invariable sites
@@ -164,6 +179,17 @@ public:
         TRUE to optimize p_invar (if not fixed), FALSE otherwise (e.g. in case of mixture model)
     */
 //    bool optimize_p_invar;
+
+	//Functions needed, if RateInvar is to be passed as the
+	//template parameter to YAMLRateModelWrapper.
+	//==============================================
+	virtual void setFixProportions      (bool fixed);
+	virtual void setFixRates            (bool fixed);
+	virtual bool isOptimizingProportions() const;
+	virtual bool isOptimizingRates      () const;
+	virtual bool isOptimizingShapes     () const;
+	virtual bool areProportionsFixed    () const;
+	virtual void sortUpdatedRates       ();
 
 protected:
 

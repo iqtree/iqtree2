@@ -19,27 +19,40 @@
  ***************************************************************************/
 #include "rateinvar.h"
 
-RateInvar::RateInvar(double p_invar_sites, PhyloTree *tree)
- : RateHeterogeneity()
-{
-	if (tree) {
-        if (tree->aln->frac_const_sites == 0.0)
-            p_invar = 0.0;
-        else
-            p_invar = max(tree->aln->frac_const_sites/2.0, MIN_PINVAR);
-//		p_invar = MIN_PINVAR;
-	} else
+void RateInvar::defaultInvariantProportion(double p_invar_requested) {
+	if (0!=p_invar_requested) {
+		p_invar = p_invar_requested;
+	}
+	else if (phylo_tree!=nullptr) {
+		p_invar = phylo_tree->aln->frac_const_sites;
+		if (p_invar!=0) {
+            p_invar = max(p_invar*0.5, MIN_PINVAR);
+		}
+	} else {
 		p_invar = MIN_PINVAR;
+	}
 	fix_p_invar = false;
-//    optimize_p_invar = true;
-	phylo_tree = tree;
-	name = "+I";
-	full_name = "Invar";
-	if (p_invar_sites >= 0) {
-		p_invar = p_invar_sites;
+	if (0 < p_invar) {
 		// true unless -optfromgiven cmd line option
 		fix_p_invar = !(Params::getInstance().optimize_from_given_params);
 	}
+}
+
+RateInvar::RateInvar(int dummy_categories, PhyloTree* tree,
+                     PhyloTree* report_to_tree): super() {
+	phylo_tree = tree;
+	defaultInvariantProportion(0);
+	name      = "+I";
+	full_name = "Invar";
+}
+
+RateInvar::RateInvar(double p_invar_sites, PhyloTree *tree)
+ : super()
+{
+	phylo_tree = tree;
+	defaultInvariantProportion(p_invar_sites);
+	name      = "+I";
+	full_name = "Invar";
 }
 
 void RateInvar::startCheckpoint() {
@@ -122,13 +135,25 @@ void RateInvar::writeParameters(ostream &out) {
 }
 
 void RateInvar::setVariables(double *variables) {
-	if (RateInvar::getNDim() == 0) return;
+	if (getNDim() == 0) {
+		return;
+	}
 	variables[1] = p_invar;
 }
 
 bool RateInvar::getVariables(double *variables) {
-	if (RateInvar::getNDim() == 0) return false;
+	if (getNDim() == 0) {
+		return false;
+	}
     bool changed = (p_invar != variables[1]);
 	p_invar = variables[1];
     return changed;
 }
+
+void RateInvar::setFixProportions(bool fixed)   { fix_p_invar = fixed; }
+void RateInvar::setFixRates(bool fixed)         { } //One rate, always zero!
+bool RateInvar::isOptimizingProportions() const { return !fix_p_invar; }
+bool RateInvar::isOptimizingRates()       const { return false;        }
+bool RateInvar::isOptimizingShapes()      const { return false;        }
+bool RateInvar::areProportionsFixed()     const { return fix_p_invar; }
+void RateInvar::sortUpdatedRates()              { } //No rates, Nothing to do!

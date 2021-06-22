@@ -429,6 +429,7 @@ public:
     using super::startCheckpoint;
     using super::endCheckpoint;
     using super::checkpoint;
+    using super::sortUpdatedRates;
 
     YAMLRateModelWrapper(const ModelInfoFromYAMLFile& info,
                      PhyloTree* tree)
@@ -556,21 +557,30 @@ public:
     }
 };
 
-class YAMLRateFree: public YAMLRateModelWrapper<RateFree> {
-public:
-    typedef YAMLRateModelWrapper<RateFree> super;
-    YAMLRateFree(PhyloTree *tree, PhyloTree* report_to_tree,
-                const ModelInfoFromYAMLFile& info);
-    void updateRateClassFromModelVariables();
-    virtual void sortUpdatedRates();
-};
-
 class YAMLRateFreeInvar:public YAMLRateModelWrapper<RateFreeInvar> {
 public:
     typedef YAMLRateModelWrapper<RateFreeInvar> super;
     YAMLRateFreeInvar(PhyloTree *tree, PhyloTree* report_to_tree,
                 const ModelInfoFromYAMLFile& info);
-    void updateRateClassFromModelVariables();
+    virtual void updateRateClassFromModelVariables();
+    virtual void sortUpdatedRates();
+};
+
+class YAMLRateFree: public YAMLRateModelWrapper<RateFree> {
+public:
+    typedef YAMLRateModelWrapper<RateFree> super;
+    YAMLRateFree(PhyloTree *tree, PhyloTree* report_to_tree,
+                const ModelInfoFromYAMLFile& info);
+    virtual void updateRateClassFromModelVariables();
+    virtual void sortUpdatedRates();
+};
+
+class YAMLRateInvar:public YAMLRateModelWrapper<RateInvar> {
+public:
+    typedef YAMLRateModelWrapper<RateInvar> super;
+    YAMLRateInvar(PhyloTree *tree, PhyloTree* report_to_tree,
+                  const ModelInfoFromYAMLFile& info);
+    virtual void updateRateClassFromModelVariables();
     virtual void sortUpdatedRates();
 };
 

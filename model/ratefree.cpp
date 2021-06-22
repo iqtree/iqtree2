@@ -220,12 +220,24 @@ int RateFree::getNDim() {
     return 0;
 }
 
+const std::string& RateFree::getOptimizationAlgorithm() const {
+    return optimize_alg;
+}
+
+void RateFree::setGammaShape(double shape) { 
+    gamma_shape = shape; 
+}
+
 void RateFree::setFixProportions(bool fixed) {
     fix_params = fixed ? 2 : 0;
 }
 
 void RateFree::setFixRates(bool fixed) {
     fix_params = fixed ? 1 : 0;
+}
+
+void RateFree::setOptimizationAlgorithm(const std::string& algorithm) { 
+    optimize_alg = algorithm; 
 }
 
 bool RateFree::isOptimizingProportions() const {

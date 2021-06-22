@@ -10,15 +10,14 @@
 RateFreeInvar::RateFreeInvar(int ncat,
                              PhyloTree* tree, 
                              PhyloTree* report_to_tree) 
-	: RateInvar(0.1, tree)
-	, RateFree(ncat, tree, report_to_tree) {
+	: RateFree(ncat, tree, report_to_tree), invar(0.1, tree) {
 }
 
 RateFreeInvar::RateFreeInvar(int ncat, double start_alpha, string params,
                              bool sorted_rates, double p_invar_sites,
                              string opt_alg, PhyloTree *tree)
-    : RateInvar(p_invar_sites, tree)
-    , RateFree(ncat, start_alpha, params, sorted_rates, opt_alg, tree)
+    : RateFree(ncat, start_alpha, params, sorted_rates, opt_alg, tree)
+	, invar(p_invar_sites, tree)
 {
 	cur_optimize = 0;
 	name         = "+I" + name;
@@ -31,14 +30,31 @@ void RateFreeInvar::startCheckpoint() {
 }
 
 void RateFreeInvar::saveCheckpoint() {
-    RateInvar::saveCheckpoint();
+    invar.saveCheckpoint();
     RateFree::saveCheckpoint();
 }
 
 void RateFreeInvar::restoreCheckpoint() {
-    RateInvar::restoreCheckpoint();
+    invar.restoreCheckpoint();
     RateFree::restoreCheckpoint();
 }
+
+int RateFreeInvar::getNDim() { 
+	return invar.getNDim() + super::getNDim(); 
+}
+
+double RateFreeInvar::getProp(int category) {
+	return prop[category]; 
+}
+
+double RateFreeInvar::getRate(int category) {
+	return super::getRate(category); 
+}
+
+string RateFreeInvar::getNameParams() {
+	return invar.getNameParams() + super::getNameParams();
+}
+
 
 void RateFreeInvar::setNCategory(int ncat) {
 	RateFree::setNCategory(ncat);
@@ -47,7 +63,7 @@ void RateFreeInvar::setNCategory(int ncat) {
 }
 
 double RateFreeInvar::computeFunction(double value) {
-	p_invar = value;
+	invar.setPInvar(value);
 	phylo_tree->clearAllPartialLH();
 	return -phylo_tree->computeLikelihood();
 }
@@ -57,8 +73,8 @@ double RateFreeInvar::targetFunk(double x[]) {
 }
 
 void RateFreeInvar::writeInfo(ostream &out) {
-	RateInvar::writeInfo(out);
-	RateFree::writeInfo(out);
+	invar.writeInfo(out);
+	super::writeInfo(out);
 
 }
 
@@ -67,16 +83,18 @@ void RateFreeInvar::writeInfo(ostream &out) {
 	@param out output stream
 */
 void RateFreeInvar::writeParameters(ostream &out) {
-	RateInvar::writeParameters(out);
-	RateFree::writeParameters(out);
+	invar.writeParameters(out);
+	super::writeParameters(out);
 }
 
 void RateFreeInvar::setBounds(double *lower_bound, double *upper_bound,
                               bool *bound_check) {
-	RateFree::setBounds(lower_bound, upper_bound, bound_check);
-	if (RateInvar::getNDim() == 0) return;
+	super::setBounds(lower_bound, upper_bound, bound_check);
+	if (invar.getNDim() == 0) {
+		return;
+	}
 	int ndim = getNDim()-1;
-	RateInvar::setBounds(lower_bound+ndim, upper_bound+ndim, bound_check+ndim);
+	invar.setBounds(lower_bound+ndim, upper_bound+ndim, bound_check+ndim);
 }
 
 /**
@@ -86,15 +104,17 @@ void RateFreeInvar::setBounds(double *lower_bound, double *upper_bound,
 double RateFreeInvar::optimizeParameters(double gradient_epsilon,
                                          PhyloTree* report_to_tree) {
 	double tree_lh;
-	tree_lh = RateFree::optimizeParameters(gradient_epsilon,
+	tree_lh = super::optimizeParameters(gradient_epsilon,
                                            report_to_tree);
 	return tree_lh;
 }
 
 void RateFreeInvar::setVariables(double *variables) {
-	RateFree::setVariables(variables);
-	if (RateInvar::getNDim() == 0) return;
-	variables[getNDim()] = p_invar;
+	super::setVariables(variables);
+	if (invar.getNDim() == 0) {
+		return;
+	}
+	variables[getNDim()] = invar.getPInvar();
 }
 
 /**
@@ -104,9 +124,11 @@ void RateFreeInvar::setVariables(double *variables) {
 */
 bool RateFreeInvar::getVariables(double *variables) {
 	bool changed = RateFree::getVariables(variables);
-	if (RateInvar::getNDim() == 0) return changed;
-    changed |= (p_invar != variables[getNDim()]);
-	p_invar = variables[getNDim()];
+	if (invar.getNDim() == 0) {
+		return changed;
+	}
+    changed |= (invar.getPInvar() != variables[getNDim()]);
+	invar.setPInvar(variables[getNDim()]);
     return changed;
 }
 

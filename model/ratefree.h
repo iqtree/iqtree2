@@ -57,6 +57,8 @@ public:
 	 */
 	virtual string getNameParams();
 
+	virtual const string& getOptimizationAlgorithm() const;
+
 	/**
 		get the proportion of sites under a specified category.
 		@param category category ID from 0 to #category-1
@@ -67,6 +69,10 @@ public:
 	virtual void   setFixProportions(bool fixed);
 
 	virtual void   setFixRates(bool fixed);
+
+	virtual void   setGammaShape(double shape);
+
+	virtual void   setOptimizationAlgorithm(const std::string& algorithm);
 
 	virtual bool   isOptimizingProportions() const;
 

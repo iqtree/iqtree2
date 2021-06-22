@@ -220,12 +220,60 @@ void YAMLRateFree::sortUpdatedRates() {
     }                               
 }
 
+YAMLRateInvar::YAMLRateInvar(PhyloTree* tree, PhyloTree* report_to_tree,
+                             const ModelInfoFromYAMLFile& info)
+        : super(info, report_to_tree) {
+    std::string          algorithm = info.getOptimizationAlgorithm();
+    const ModelVariable* pvar      = info.getInvariantProportionVariable();
+    ASSERT(pvar!=nullptr);
+    defaultInvariantProportion(pvar->getValue());
+
+    fix_p_invar = pvar->isFixed(); 
+}
+
+void YAMLRateInvar::updateRateClassFromModelVariables() {
+    double dummy_doubles[2];
+    int    prop_index = 1;
+    model_info.readModelVariablesByType(&dummy_doubles[0],  1, true,
+                                        ModelParameterType::INVARIANT_PROPORTION, 
+                                        prop_index);
+    p_invar = dummy_doubles[1];
+    if (YAMLRateVerbosity <= verbose_mode) {
+        TREE_LOG_LINE(*phylo_tree, YAMLRateVerbosity, 
+                      "Set invariant propoprtion (" << p_invar 
+                      << " from model variables");
+        phylo_tree->hideProgress();
+        writeInfo(std::cout);
+        phylo_tree->showProgress();
+    }
+}
+
+void YAMLRateInvar::sortUpdatedRates() {
+    double dummy_doubles[2] = { 0, p_invar };
+    int    prop_index = 1;
+    super::sortUpdatedRates();
+    model_info.updateModelVariablesByType(&dummy_doubles[0],  1, true,
+                                          ModelParameterType::INVARIANT_PROPORTION, 
+                                          prop_index);
+    if (YAMLRateVerbosity <= verbose_mode) {
+        TREE_LOG_LINE(*phylo_tree, YAMLRateVerbosity, 
+                      "Set invariant proportion as part of"
+                      " invariant proportion optimization");
+        phylo_tree->hideProgress();
+        writeInfo(std::cout);
+        phylo_tree->showProgress();
+    }                               
+}
+
 YAMLRateFreeInvar::YAMLRateFreeInvar(PhyloTree* tree, PhyloTree* report_to_tree,
                                      const ModelInfoFromYAMLFile& info)
         : super(info, report_to_tree) {
     std::string algorithm = info.getOptimizationAlgorithm();
-    optimize_alg = algorithm.empty() ? optimize_alg : algorithm;
-    gamma_shape  = 1.0;
+    if (!algorithm.empty()) {
+        setOptimizationAlgorithm(algorithm);
+    }
+    setGammaShape(1.0);
+
     const ModelVariable* pvar = info.getInvariantProportionVariable();
     ASSERT(pvar!=nullptr);
     setPInvar(pvar->getValue());

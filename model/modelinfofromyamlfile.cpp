@@ -827,7 +827,7 @@ void ModelInfoFromYAMLFile::readModelVariablesByType( double* write_them_here,
                 outError(complaint.str());
             }
             double v = var.getValue();
-            write_them_here[i] = var.getValue();
+            write_them_here[i] = v;
             //std::cout << "Wrote " << var_name << "=" << v
             //          << " (subscript " << sub << ")"
             //          << " as parameter " << i << " of " << param_count << std::endl;
@@ -1113,7 +1113,11 @@ RateHeterogeneity* ModelInfoFromYAMLFile::getRateHeterogeneity(PhyloTree* tree) 
     }
     //Note:gamma rate model is treated as a *kind* of free rate model
     if (isInvar) {
-        return new YAMLRateFreeInvar(tree, tree, *this);
+        if (getNumberOfRateCategories()==0) {
+            return new YAMLRateInvar(tree, tree, *this);
+        } else {
+            return new YAMLRateFreeInvar(tree, tree, *this);
+        }
     }
     else {
         return new YAMLRateFree(tree, tree, *this);
