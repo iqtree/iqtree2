@@ -844,7 +844,7 @@ protected:
 public:
     BIONJ2009Adapter() {
     }
-    virtual const std::string& getName() {
+    virtual const std::string& getName() const {
         return name;
     }
     virtual const std::string& getDescription() {

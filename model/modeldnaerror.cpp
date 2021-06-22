@@ -77,13 +77,13 @@ void ModelDNAError::restoreCheckpoint() {
     endCheckpoint();
 }
 
-string ModelDNAError::getName() {
+string ModelDNAError::getName() const {
     string retname = ModelDNA::getName();
     retname += seqerr_name;
     return retname;
 }
 
-string ModelDNAError::getNameParams() {
+std::string ModelDNAError::getNameParams() const {
     string retname = ModelDNA::getNameParams();
     retname += seqerr_name + "{" + convertDoubleToString(epsilon) + "}";
     return retname;
@@ -96,7 +96,7 @@ void ModelDNAError::writeInfo(ostream &out) {
     out.precision(prec);
 }
 
-int ModelDNAError::getNDim() {
+int ModelDNAError::getNDim() const {
     if (fix_epsilon) {
         return ModelDNA::getNDim();
     }

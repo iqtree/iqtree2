@@ -90,7 +90,7 @@ public:
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
-	virtual string getNameParams();
+	virtual std::string getNameParams() const;
 
 	/**
 		@return TRUE to use median rate for discrete categories, FALSE to use mean rate instead
@@ -113,7 +113,7 @@ public:
 		@param category category ID from 0 to #category-1
 		@return the rate of the specified category
 	*/
-	virtual double getRate(int category) { return rates[category]; }
+	virtual double getRate(int category) const { return rates[category]; }
 
 	/**
 		set the rate of a specified category.
@@ -127,7 +127,7 @@ public:
 		@param category category ID from 0 to #category-1
 		@return the proportion of the specified category
 	*/
-	virtual double getProp(int category) { return 1.0/ncategory; }
+	virtual double getProp(int category) const { return 1.0/ncategory; }
 
 	/**
 	 * 	return pointer to the rate array
@@ -186,7 +186,7 @@ public:
 	/**
 		return the number of dimensions
 	*/
-	virtual int getNDim() { return !fix_gamma_shape; }
+	virtual int getNDim() const { return !fix_gamma_shape; }
 
 	/**
 		write information

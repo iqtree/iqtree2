@@ -53,12 +53,12 @@ public:
     /**
      * @return model name
      */
-    virtual string getName();
+    virtual string getName() const;
 
     /**
      * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
      */
-    virtual string getNameParams();
+    virtual std::string getNameParams() const;
 
     /**
         write information
@@ -70,7 +70,7 @@ public:
     /**
         return the number of dimensions
     */
-    virtual int getNDim();
+    virtual int getNDim() const;
 
     /**
      * setup the bounds for joint optimization with BFGS

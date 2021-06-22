@@ -261,7 +261,7 @@ void ModelDNA::readRates(string str) {
     }
 }
 
-string ModelDNA::getNameParams() {
+std::string ModelDNA::getNameParams() const {
     if (num_params == 0) {
         return name;
     }
@@ -379,7 +379,7 @@ bool ModelDNA::setRateType(string rate_str) {
     return true;
 }
 
-int ModelDNA::getNDim() {
+int ModelDNA::getNDim() const {
     if (fixed_parameters)
     {
         return 0;

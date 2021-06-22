@@ -44,7 +44,7 @@ namespace StartTree
             ( const StrVector &sequenceNames
              , const double *distanceMatrix
              , const std::string & newickTreeFilePath) = 0;
-        virtual const std::string& getName() = 0;
+        virtual const std::string& getName() const = 0;
         virtual const std::string& getDescription() = 0;
         virtual void beSilent() = 0;
         virtual void setPrecision(int precision) = 0;
@@ -118,7 +118,7 @@ namespace StartTree
         virtual void beSilent() {
             silent = true;
         }
-        virtual const std::string& getName() {
+        virtual const std::string& getName() const {
             return name;
         }
         virtual const std::string& getDescription() {
@@ -181,7 +181,7 @@ namespace StartTree
         int  precision;
     public:
         BenchmarkingTreeBuilder(Factory& f, const char* nameToUse, const char *descriptionToGive);
-        virtual const std::string& getName();
+        virtual const std::string& getName() const;
         virtual const std::string& getDescription();
         virtual bool isBenchmark() const;
         virtual bool constructTree

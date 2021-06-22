@@ -273,7 +273,7 @@ public:
 
 	Split *extractSubSplit(Split &taxa_mask);
 
-	string &getName() { return name; }
+	const std::string &getName() const { return name; }
 
 protected:
 	/**

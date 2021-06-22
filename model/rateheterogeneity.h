@@ -87,17 +87,17 @@ public:
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
-	virtual string getNameParams() { return name; }
+	virtual std::string getNameParams() const { return name; }
 
 	/**
 		@return false by default. True if rates are site-specific (Meyer and von Haeseler (2003) model)
 	*/
-	virtual bool isSiteSpecificRate() { return false; }
+	virtual bool isSiteSpecificRate() const { return false; }
 
     /**
         @return TRUE if this is a heterotachy model, default: FALSE
     */
-    virtual bool isHeterotachy() { return false; }
+    virtual bool isHeterotachy() const { return false; }
 
 	/**
 		get the number of rate categories. The default returns 1 category since it is homogeneous model
@@ -127,7 +127,7 @@ public:
 		@param category category ID from 0 to #category-1
 		@return the rate of the specified category
 	*/
-	virtual double getRate(int category) { return 1.0; }
+	virtual double getRate(int category) const { return 1.0; }
 
 	/**
 		set the rate of a specified category.
@@ -141,7 +141,7 @@ public:
 		@param category category ID from 0 to #category-1
 		@return the proportion of the specified category
 	*/
-	virtual double getProp(int category) { return 1.0; }
+	virtual double getProp(int category) const { return 1.0; }
 
 	/**
 		set the proportion of a specified category.
@@ -221,7 +221,7 @@ public:
         fix parameters, so that no optimization done
         @param mode some input mode
     */
-    virtual int getFixParams() { return 0; }
+    virtual int getFixParams() const { return 0; }
 
     /**
         fix parameters, so that no optimization done

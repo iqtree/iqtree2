@@ -80,7 +80,7 @@ void ModelGTR::setTree(PhyloTree *tree) {
 	phylo_tree = tree;
 }
 
-string ModelGTR::getName() {
+std::string ModelGTR::getName() const {
 	if (getFreqType() == StateFreqType::FREQ_EMPIRICAL)
 		return name + "+F";
 	else if (getFreqType() == StateFreqType::FREQ_CODON_1x4)
@@ -99,7 +99,7 @@ string ModelGTR::getName() {
         return name;
 }
 
-string ModelGTR::getNameParams() {
+string ModelGTR::getNameParams() const {
 
 	ostringstream retname;
 	retname << name;
@@ -115,7 +115,7 @@ string ModelGTR::getNameParams() {
     return retname.str();    
 }
     
-void ModelGTR::getNameParamsFreq(ostream &retname) {
+void ModelGTR::getNameParamsFreq(ostream &retname) const {
 	if (getFreqType() == StateFreqType::FREQ_EMPIRICAL || 
 		( getFreqType() == StateFreqType::FREQ_USER_DEFINED && 
 		  phylo_tree->aln->seq_type == SeqType::SEQ_DNA)) {
@@ -419,7 +419,7 @@ void ModelGTR::getQMatrix(double *q_mat) {
 
 }
 
-int ModelGTR::getNDim() { 
+int ModelGTR::getNDim() const { 
 	assert(freq_type != StateFreqType::FREQ_UNKNOWN);
 	int ndim = num_params;
 	if (freq_type == StateFreqType::FREQ_ESTIMATE) 
@@ -427,7 +427,7 @@ int ModelGTR::getNDim() {
 	return ndim;
 }
 
-int ModelGTR::getNDimFreq() { 
+int ModelGTR::getNDimFreq() const { 
 	if (freq_type == StateFreqType::FREQ_EMPIRICAL) 
         return num_states-1;
 	else if (freq_type == StateFreqType::FREQ_CODON_1x4) 

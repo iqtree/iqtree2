@@ -77,7 +77,7 @@ void RateInvar::restoreCheckpoint() {
     endCheckpoint();
 }
 
-string RateInvar::getNameParams() {
+std::string RateInvar::getNameParams() const {
 	ostringstream str;
 	str << "+I{" << p_invar << '}';
 	return str.str();

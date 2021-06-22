@@ -166,7 +166,7 @@ void RateFree::sortUpdatedRates() {
     }
 }
 
-string RateFree::getNameParams() {
+std::string RateFree::getNameParams() const {
 	stringstream str;
     const char* separator="";
 	str << "+R" << ncategory << "{";
@@ -198,7 +198,7 @@ double RateFree::rescaleRates() {
 	return norm;
 }
 
-int RateFree::getNDim() { 
+int RateFree::getNDim() const { 
     if (fix_params == 2) {
         return 0;
     }

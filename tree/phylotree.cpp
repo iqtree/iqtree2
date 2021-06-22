@@ -1245,7 +1245,7 @@ bool PhyloTree::hasRateHeterogeneity() const {
     return site_rate != nullptr;
 }
 
-RateHeterogeneity *PhyloTree::getRate() {
+RateHeterogeneity *PhyloTree::getRate() const {
     return site_rate;
 }
 

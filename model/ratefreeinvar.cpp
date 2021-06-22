@@ -39,19 +39,19 @@ void RateFreeInvar::restoreCheckpoint() {
     RateFree::restoreCheckpoint();
 }
 
-int RateFreeInvar::getNDim() { 
+int RateFreeInvar::getNDim() const { 
 	return invar.getNDim() + super::getNDim(); 
 }
 
-double RateFreeInvar::getProp(int category) {
+double RateFreeInvar::getProp(int category) const {
 	return prop[category]; 
 }
 
-double RateFreeInvar::getRate(int category) {
+double RateFreeInvar::getRate(int category) const {
 	return super::getRate(category); 
 }
 
-string RateFreeInvar::getNameParams() {
+std::string RateFreeInvar::getNameParams() const {
 	return invar.getNameParams() + super::getNameParams();
 }
 

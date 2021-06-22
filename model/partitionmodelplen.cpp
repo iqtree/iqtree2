@@ -300,7 +300,7 @@ double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
 }
 
 
-int PartitionModelPlen::getNParameters(int brlen_type) {
+int PartitionModelPlen::getNParameters(int brlen_type) const {
     PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
     int df = 0;
     for (auto it = tree->begin(); it != tree->end(); it++) {
@@ -323,7 +323,7 @@ int PartitionModelPlen::getNParameters(int brlen_type) {
 }
 
 /*
-int PartitionModelPlen::getNDim(){
+int PartitionModelPlen::getNDim() const{
     PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
     int ndim = tree->size() -1;
     return ndim;

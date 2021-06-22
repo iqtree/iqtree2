@@ -38,7 +38,7 @@ public:
     /**
         @return TRUE if this is a heterotachy model, default: FALSE
     */
-    virtual bool isHeterotachy() { return true; }
+    virtual bool isHeterotachy() const { return true; }
 
     /**
         start structure for checkpointing
@@ -59,14 +59,14 @@ public:
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
-	virtual string getNameParams();
+	virtual std::string getNameParams() const;
 
 
     /**
         fix parameters, so that no optimization done
         @param mode some input mode
     */
-    virtual int getFixParams() { return fix_params; }
+    virtual int getFixParams() const { return fix_params; }
 
     /**
         fix parameters, so that no optimization done
@@ -77,7 +77,7 @@ public:
 	/**
 		return the number of dimensions
 	*/
-	virtual int getNDim();
+	virtual int getNDim() const;
 
 	/**
 		@return the number of rate categories
@@ -94,7 +94,7 @@ public:
 		@param category category ID from 0 to #category-1
 		@return the rate of the specified category
 	*/
-	virtual double getRate(int category) {
+	virtual double getRate(int category) const {
         return 1.0;
     }
 
@@ -103,7 +103,7 @@ public:
 		@param category category ID from 0 to #category-1
 		@return the proportion of the specified category
 	*/
-	virtual double getProp(int category) { return prop[category]; }
+	virtual double getProp(int category) const { return prop[category]; }
 
 	/**
 		set the proportion of a specified category.

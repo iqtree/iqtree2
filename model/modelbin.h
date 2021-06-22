@@ -55,7 +55,7 @@ public:
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
-    virtual string getNameParams();
+    virtual std::string getNameParams() const;
 
     /**
         start structure for checkpointing

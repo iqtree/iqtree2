@@ -43,7 +43,7 @@ public:
     /**
      return the number of dimensions
      */
-    virtual int getNDim();
+    virtual int getNDim() const;
 
     /**
         start structure for checkpointing
@@ -63,7 +63,7 @@ public:
     /**
      * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
      */
-    virtual string getNameParams();
+    virtual string getNameParams() const;
 
     /**
      write information

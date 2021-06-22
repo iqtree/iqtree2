@@ -55,7 +55,7 @@ public:
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
-	virtual string getNameParams();
+	virtual string getNameParams() const;
 
 	virtual const string& getOptimizationAlgorithm() const;
 
@@ -64,7 +64,7 @@ public:
 		@param category category ID from 0 to #category-1
 		@return the proportion of the specified category
 	*/
-	virtual double getProp(int category) { return prop[category]; }
+	virtual double getProp(int category) const { return prop[category]; }
 
 	virtual void   setFixProportions(bool fixed);
 
@@ -120,7 +120,7 @@ public:
 	/**
 		return the number of dimensions
 	*/
-	virtual int getNDim();
+	virtual int getNDim() const;
 
 	/**
 		write information

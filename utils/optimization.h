@@ -126,7 +126,7 @@ public:
 	/**
 		return the number of dimensions
 	*/
-	virtual int getNDim() { return 0; }
+	virtual int getNDim() const { return 0; }
 
 
 	/**

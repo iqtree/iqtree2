@@ -89,7 +89,7 @@ void RateGamma::setNCategory(int ncat) {
 	computeRates();
 }
 
-string RateGamma::getNameParams() {
+std::string RateGamma::getNameParams() const {
     ostringstream str;
     str << "+G" << ncategory << '{' << gamma_shape << '}';
     return str.str();

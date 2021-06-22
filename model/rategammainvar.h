@@ -28,9 +28,10 @@ class for I+G rate heterogeneity
 
 	@author BUI Quang Minh <minh.bui@univie.ac.at>
 */
-class RateGammaInvar : public RateInvar, public RateGamma
+class RateGammaInvar : public RateGamma
 {
 public:
+	typedef RateGamma super;
  	/**
 		constructor
 		@param ncat number of rate categories
@@ -66,14 +67,14 @@ public:
 		@param category category ID from 0 to #category-1
 		@return the proportion of the specified category
 	*/
-	virtual double getProp(int category) { return (1.0-p_invar)/ncategory; }
+	virtual double getProp(int category) const { return (1.0-invar.getPInvar())/ncategory; }
 
 	/**
 		get the rate of a specified category. Default returns 1.0 since it is homogeneous model
 		@param category category ID from 0 to #category-1
 		@return the rate of the specified category
 	*/
-	virtual double getRate(int category) { return RateGamma::getRate(category); }
+	virtual double getRate(int category) const { return RateGamma::getRate(category); }
 
 	/**
 		set the proportion of invariable sites. Default: do nothing
@@ -97,7 +98,7 @@ public:
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
-	virtual string getNameParams();
+	virtual string getNameParams() const;
 
 	/**
 		override function from Optimization class, used by the minimizeOneDimen() to optimize
@@ -127,7 +128,7 @@ public:
 	/**
 		return the number of dimensions
 	*/
-	virtual int getNDim() { return RateInvar::getNDim() + RateGamma::getNDim(); }
+	virtual int getNDim() const { return invar.getNDim() + super::getNDim(); }
 
 	/**
 		the target function which needs to be optimized
@@ -161,6 +162,7 @@ public:
 	virtual int computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat);
 
 protected:
+	RateInvar invar;
 
 	/**
 		this function is served for the multi-dimension optimization. It should pack the model parameters

@@ -548,7 +548,7 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
 /**
     return the number of dimensions
 */
-int PhyloTreeMixlen::getNDim() {
+int PhyloTreeMixlen::getNDim() const {
     return mixlen;
 }
 

@@ -1681,7 +1681,7 @@ void ModelMixture::computeTransDerv(double time, double *trans_matrix,
                                       trans_derv1, trans_derv2);
 }
 
-int ModelMixture::getNDim() {
+int ModelMixture::getNDim() const {
 //	int dim = (fix_prop) ? 0: (size()-1);
     int dim = 0;
     if (!optimizing_submodels && !fix_prop) {
@@ -1693,7 +1693,7 @@ int ModelMixture::getNDim() {
 	return dim;
 }
 
-int ModelMixture::getNDimFreq() {
+int ModelMixture::getNDimFreq() const {
     int dim           = 0;
     int num_empirical = 0;
     int num_codon_1x4 = 0;
@@ -2167,7 +2167,7 @@ void ModelMixture::writeParameters(ostream &out) {
 	}
 }
 
-string ModelMixture::getName() {
+string ModelMixture::getName() const {
     if (name != "") return name;
     string retname = "MIX";
     retname += OPEN_BRACKET;
@@ -2181,7 +2181,7 @@ string ModelMixture::getName() {
     return retname;
 }
 
-string ModelMixture::getNameParams() {
+std::string ModelMixture::getNameParams() const {
     if (full_name != "") {
         return full_name;
     }

@@ -179,7 +179,7 @@ void ModelFactoryMixlen::reorderMixtureModels(IntVector& index, DoubleVector& pr
     site_rate->writeInfo(cout);
 }
 
-int ModelFactoryMixlen::getNParameters(int brlen_type) {
+int ModelFactoryMixlen::getNParameters(int brlen_type) const {
 	int df = ModelFactory::getNParameters(brlen_type);
     if (brlen_type == BRLEN_OPTIMIZE) {
         df += site_rate->phylo_tree->branchNum

@@ -49,7 +49,7 @@ public:
 	/**
 	 * @return model name
 	 */
-	virtual string getName();
+	virtual string getName() const;
 
     /**
         set checkpoint object
@@ -75,12 +75,12 @@ public:
 	/**
 		@return the number of dimensions
 	*/
-	virtual int getNDim();
+	virtual int getNDim() const;
 
 	/**
 		@return the number of dimensions corresponding to state frequencies
 	*/
-	virtual int getNDimFreq();
+	virtual int getNDimFreq() const;
 
 
 	/**
@@ -187,8 +187,8 @@ protected:
 	//being inherited "via dominance". Explictly declaring them
 	//instead shuts those warnings up.
 public:
-	virtual string getNameParams() { return ModelMixture::getNameParams(); }
-	virtual bool isMixture()       { return ModelMixture::isMixture(); }
+	virtual string getNameParams() const { return ModelMixture::getNameParams(); }
+	virtual bool isMixture()       const { return ModelMixture::isMixture(); }
 	virtual int getNMixtures()     { return ModelMixture::getNMixtures(); }
 	virtual double getMixtureWeight(int cat)              { return ModelMixture::getMixtureWeight(cat); }	
 	virtual void setMixtureWeight(int cat, double weight) { ModelMixture::setMixtureWeight(cat, weight); }

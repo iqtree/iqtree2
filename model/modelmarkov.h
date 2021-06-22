@@ -122,18 +122,18 @@ public:
 	/**
 	 * @return model name
 	 */
-	virtual string getName();
+	virtual std::string getName() const;
 
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
-	virtual string getNameParams();
+	virtual std::string getNameParams() const;
 
     /**
         internal function: return string for frequency
         @param retname output stream
     */
-    void getNameParamsFreq(ostream &retname);
+    void getNameParamsFreq(std::ostream &retname) const;
 
     /**
      @return the number of rate entries, usually equal to
@@ -289,7 +289,7 @@ public:
 		get frequency type
 		@return frequency type
 	*/
-	virtual StateFreqType getFreqType() { return freq_type; }
+	virtual StateFreqType getFreqType() const { return freq_type; }
 
 
 	/**
@@ -307,13 +307,13 @@ public:
 	/**
 		@return the number of dimensions
 	*/
-	virtual int getNDim();
+	virtual int getNDim() const;
 
 	/**
 		@return the number of dimensions corresponding to state frequencies, which is 
             not counted in getNDim(). This serves e.g. for computing AIC, BIC score
 	*/
-	virtual int getNDimFreq();
+	virtual int getNDimFreq() const;
 	
 
 	/**

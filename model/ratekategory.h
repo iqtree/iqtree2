@@ -60,7 +60,7 @@ public:
 		@param category category ID from 0 to #category-1
 		@return the rate of the specified category
 	*/
-	virtual double getRate(int category) { return rates[category]; }
+	virtual double getRate(int category) const { return rates[category]; }
 
 	/**
 		Compute site-specific rates. Override this for Gamma model
@@ -87,7 +87,7 @@ public:
 	/**
 		return the number of dimensions
 	*/
-	virtual int getNDim() { return (ncategory-1); }
+	virtual int getNDim() const { return (ncategory-1); }
 
 	/**
 		write information

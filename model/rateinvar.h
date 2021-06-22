@@ -76,21 +76,21 @@ public:
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
-	virtual string getNameParams();
+	virtual string getNameParams() const;
 
 	/**
 		get the proportion of sites under a specified category.
 		@param category category ID from 0 to #category-1
 		@return the proportion of the specified category
 	*/
-	virtual double getProp(int category) { return 1.0 - p_invar; }
+	virtual double getProp(int category) const { return 1.0 - p_invar; }
 
 	/**
 		get the rate of a specified category. Default returns 1.0 since it is homogeneous model
 		@param category category ID from 0 to #category-1
 		@return the rate of the specified category
 	*/
-	virtual double getRate(int category) { return 1.0 / (1.0 - p_invar); }
+	virtual double getRate(int category) const { return 1.0 / (1.0 - p_invar); }
 
 	/**
 		get the proportion of invariable sites
@@ -127,7 +127,7 @@ public:
 	/**
 		return the number of dimensions
 	*/
-	virtual int getNDim() { return !fix_p_invar; }
+	virtual int getNDim() const { return !fix_p_invar; }
 	
 
 	/**

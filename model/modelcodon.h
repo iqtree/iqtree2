@@ -95,7 +95,7 @@ public:
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
-	virtual string getNameParams() { return name; }
+	virtual std::string getNameParams() const { return name; }
 
     /** main function to compute rate matrix */
     void computeCodonRateMatrix();

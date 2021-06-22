@@ -178,7 +178,7 @@ double RunKMeans1D(int n, int k, double *points_orig, int *weights,
 RateMeyerDiscrete::RateMeyerDiscrete(int ncat, int cat_type,
                                      char *file_name, PhyloTree *tree,
                                      bool rate_type)
- : RateMeyerHaeseler(file_name, tree, rate_type)
+ : super(file_name, tree, rate_type)
 {
 	ncategory = ncat;
 	rates = NULL;
@@ -213,30 +213,38 @@ RateMeyerDiscrete::~RateMeyerDiscrete()
 	delete [] rates;
 }
 
-bool RateMeyerDiscrete::isSiteSpecificRate() { 
+bool RateMeyerDiscrete::isSiteSpecificRate() const { 
 	return !is_categorized; 
 }
 
 int RateMeyerDiscrete::getNDiscreteRate() const { 
-	if (!is_categorized) return RateMeyerHaeseler::getNDiscreteRate();
+	if (!is_categorized) {
+        return super::getNDiscreteRate();
+    }
 	ASSERT(ncategory > 0);
 	return ncategory; 
 }
 
-double RateMeyerDiscrete::getRate(int category) {
-	if (!is_categorized) return RateMeyerHaeseler::getRate(category);
+double RateMeyerDiscrete::getRate(int category) const {
+	if (!is_categorized) {
+        return super::getRate(category);
+    }
 	ASSERT(category < ncategory); 
 	return rates[category]; 
 }
 
 int RateMeyerDiscrete::getPtnCat(int ptn) {
-	if (!is_categorized) return RateMeyerHaeseler::getPtnCat(ptn);
+	if (!is_categorized) {
+        return super::getPtnCat(ptn);
+    }
 	ASSERT(ptn_cat);
 	return ptn_cat[ptn];
 }
 
 double RateMeyerDiscrete::getPtnRate(int ptn) {
-	if (!is_categorized) return RateMeyerHaeseler::getPtnRate(ptn);
+	if (!is_categorized) {
+        return super::getPtnRate(ptn);
+    }
 	ASSERT(ptn_cat && rates);
 	return rates[ptn_cat[ptn]];
 }
@@ -251,7 +259,7 @@ int RateMeyerDiscrete::computePatternRates(DoubleVector &pattern_rates,
 double RateMeyerDiscrete::optimizeParameters(double epsilon,
                                              PhyloTree* report_to_tree) {
     if (!is_categorized) {
-        return RateMeyerHaeseler::optimizeParameters(epsilon, report_to_tree);
+        return super::optimizeParameters(epsilon, report_to_tree);
     }
 	phylo_tree->calcDist(dist_mat);
 	for (int i = 0; i < ncategory; i++)
@@ -264,7 +272,7 @@ double RateMeyerDiscrete::optimizeParameters(double epsilon,
 
 double RateMeyerDiscrete::computeFunction(double value) {
     if (!is_categorized) {
-        return RateMeyerHaeseler::computeFunction(value);
+        return super::computeFunction(value);
     }
 	if (!rate_mh) {
 		if (value != cur_scale) {
@@ -307,10 +315,9 @@ double RateMeyerDiscrete::computeFunction(double value) {
 
 void RateMeyerDiscrete::computeFuncDerv(double value, double &df, double &ddf) {
 	if (!is_categorized) {
-		RateMeyerHaeseler::computeFuncDerv(value, df, ddf);
+		super::computeFuncDerv(value, df, ddf);
 		return;
 	}
-
 //	double lh = 0.0;
 	int nseq = phylo_tree->leafNum;
 	int nstate = phylo_tree->getModel()->num_states;

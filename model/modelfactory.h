@@ -230,7 +230,7 @@ public:
      * @param brlen_type either BRLEN_OPTIMIZE, BRLEN_FIX or BRLEN_SCALE
      * @return #parameters of the model + # branches
      */
-    virtual int getNParameters(int brlen_type);
+    virtual int getNParameters(int brlen_type) const;
 
 	/**
 		optimize model parameters and tree branch lengths
@@ -343,7 +343,7 @@ public:
 	/**
 		return the number of dimensions
 	*/
-	virtual int getNDim();
+	virtual int getNDim() const;
 
 	/**
 		the target function which needs to be optimized

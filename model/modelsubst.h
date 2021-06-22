@@ -66,22 +66,22 @@ public:
 	/**
 		@return the number of dimensions
 	*/
-	virtual int getNDim() { return 0; }
+	virtual int getNDim() const { return 0; }
 
 	/**
 		@return the number of dimensions corresponding to state frequencies
 	*/
-	virtual int getNDimFreq() { return 0; }
+	virtual int getNDimFreq() const { return 0; }
 	
 	/**
 	 * @return model name
 	 */
-	virtual string getName() { return name; }
+	virtual string getName() const { return name; }
 
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
-	virtual string getNameParams() { return name; }
+	virtual std::string getNameParams() const { return name; }
 
 	/**
 		@return TRUE if model is time-reversible, FALSE otherwise
@@ -112,7 +112,7 @@ public:
 	/**
 	 * @return TRUE if this is a mixture model, FALSE otherwise
 	 */
-	virtual bool isMixture() { return false; }
+	virtual bool isMixture() const { return false; }
 
     /** 
      * Confer to modelpomo.h.
@@ -278,7 +278,7 @@ public:
 		get frequency type
 		@return frequency type
 	*/
-	virtual StateFreqType getFreqType() { return StateFreqType::FREQ_EQUAL; }
+	virtual StateFreqType getFreqType() const { return StateFreqType::FREQ_EQUAL; }
 
     /** for reversible models, multiply likelihood with inverse eigenvectors for fast pruning algorithm
             @param[in/out] state_lk state likelihood multiplied with inverse eigenvectors

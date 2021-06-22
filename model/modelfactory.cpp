@@ -969,7 +969,7 @@ void ModelFactory::restoreCheckpoint() {
     endCheckpoint();
 }
 
-int ModelFactory::getNParameters(int brlen_type) {
+int ModelFactory::getNParameters(int brlen_type) const {
     int df = model->getNDim() + model->getNDimFreq() + site_rate->getNDim() +
         site_rate->getTree()->getNBranchParameters(brlen_type);
 
@@ -1616,7 +1616,7 @@ ModelFactory::~ModelFactory()
 }
 
 /************* FOLLOWING SERVE FOR JOINT OPTIMIZATION OF MODEL AND RATE PARAMETERS *******/
-int ModelFactory::getNDim()
+int ModelFactory::getNDim() const
 {
     return model->getNDim() + site_rate->getNDim();
 }

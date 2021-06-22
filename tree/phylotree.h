@@ -564,7 +564,7 @@ public:
             get rate heterogeneity
             @return associated rate heterogeneity class
      */
-    RateHeterogeneity *getRate();
+    RateHeterogeneity *getRate() const;
 
     void discardSaturatedSite(bool val);
 

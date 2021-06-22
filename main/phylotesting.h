@@ -56,7 +56,7 @@ public:
         getUsualModel(aln);
     }
     
-    string getName() {
+    string getName() const {
         return subst_name + rate_name;
     }
     

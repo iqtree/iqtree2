@@ -55,7 +55,7 @@ public:
 	// DO NOT override this function, because
     // BQM, 2017-05-02: getNDimFreq should return degree of freedom, which is not included in getNDim()
     // That's why 0 is returned for FREQ_ESTIMATE, num_states-1 for FREQ_EMPIRICAL
-//	virtual int getNDimFreq();
+//	virtual int getNDimFreq() const;
 
     // this is redundant, there is already the same function below
 //	bool isTimeReversible();
@@ -130,7 +130,7 @@ protected:
          * Minh: you might chose to remove this override, if you like "+FO"
 	 * to be on LM model names.
          */
-	string getName();
+	string getName() const;
 
 	/*
 	const static double ***BASES;

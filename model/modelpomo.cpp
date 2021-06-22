@@ -74,7 +74,7 @@ void ModelPoMo::init_mutation_model(const char *model_name,  string model_params
         setReversible(is_reversible);
 }
 
-string ModelPoMo::getName() {
+string ModelPoMo::getName() const {
   return this->name;
 }
 
@@ -482,14 +482,14 @@ double ModelPoMo::computeProbBoundaryMutation(int state1, int state2) {
         return 0.0;
 }
 
-int ModelPoMo::getNDim() {
+int ModelPoMo::getNDim() const {
     if (fixed_heterozygosity)
         return mutation_model->getNDim();
     else
         return mutation_model->getNDim()+1;
 }
 
-int ModelPoMo::getNDimFreq() {
+int ModelPoMo::getNDimFreq() const {
     return mutation_model->getNDimFreq();
 }
 

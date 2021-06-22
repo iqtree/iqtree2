@@ -63,7 +63,7 @@ void ModelBIN::startCheckpoint() {
     checkpoint->startStruct("ModelBIN");
 }
 
-string ModelBIN::getNameParams() {
+std::string ModelBIN::getNameParams() const {
     //if (num_params == 0) return name;
     ostringstream retname;
     retname << name;

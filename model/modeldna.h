@@ -86,7 +86,7 @@ public:
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
-	virtual string getNameParams();
+	virtual std::string getNameParams() const;
 
     /**
      @return the number of rate entries, equal to the number of elements
@@ -111,7 +111,7 @@ public:
 	/**
 		return the number of dimensions
 	*/
-	virtual int getNDim();
+	virtual int getNDim() const;
 
 	/**
 		write parameters, used with modeltest

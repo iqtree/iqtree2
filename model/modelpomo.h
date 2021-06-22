@@ -136,17 +136,17 @@ class ModelPoMo : virtual public ModelMarkov
 	/**
 	 * @return model name
 	 */
-	virtual string getName();
+	virtual string getName() const;
 
     /**
      *  @return Number of free parameters.
      */
-    virtual int getNDim();
+    virtual int getNDim() const;
 
 	/**
 		@return the number of dimensions corresponding to state frequencies
 	*/
-	virtual int getNDimFreq();
+	virtual int getNDimFreq() const;
 
 
     /**

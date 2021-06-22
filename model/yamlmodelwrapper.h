@@ -302,7 +302,7 @@ public:
         model_info->writeInfo("State frequencies    ", ModelParameterType::FREQUENCY,  out);
     }
 
-    virtual bool isMixtureModel() {
+    virtual bool isMixtureModel() const {
         return false;
     }
 
@@ -402,7 +402,7 @@ public:
                      ModelsBlock* models_block, PhyloTree *tree, 
                      PhyloTree* report_to_tree);
 
-    virtual bool isMixtureModel();
+    virtual bool isMixtureModel() const;
     virtual void setRateMatrixFromModel();
     virtual void afterVariablesChanged();
     virtual void afterWeightsChanged();
@@ -415,7 +415,7 @@ protected:
     int                   number_of_variable_shapes;
     int                   number_of_variable_proportions;
     int                   number_of_variable_rates;
-    int                   number_of_variables;
+    mutable int           number_of_variables;
     bool                  only_optimizing_rates;
 public:
     typedef R super;
@@ -460,7 +460,7 @@ public:
         }
     }
 
-    virtual int getNDim() {
+    virtual int getNDim() const {
         number_of_variables   
             = (isOptimizingShapes()      ? number_of_variable_shapes      : 0)
             + (isOptimizingProportions() ? number_of_variable_proportions : 0)

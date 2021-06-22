@@ -70,7 +70,7 @@ ModelPoMoMixture::ModelPoMoMixture(const char *model_name, string model_params,
 }
 
 
-string ModelPoMoMixture::getName() {
+string ModelPoMoMixture::getName() const {
     return ModelPoMo::getName();
 }
 
@@ -102,7 +102,7 @@ void ModelPoMoMixture::restoreCheckpoint() {
 }
 
 
-int ModelPoMoMixture::getNDim() {
+int ModelPoMoMixture::getNDim() const {
     if (opt_mode == OPT_RATEHET)
         return ratehet->getNDim();
     else if (opt_mode == OPT_POMO)
@@ -111,7 +111,7 @@ int ModelPoMoMixture::getNDim() {
 }
 
 
-int ModelPoMoMixture::getNDimFreq() {
+int ModelPoMoMixture::getNDimFreq() const {
     return ModelPoMo::getNDimFreq();
 }
 

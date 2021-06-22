@@ -76,7 +76,7 @@ void ModelMorphology::readRates(istream &in) {
 	}
 }
 
-int ModelMorphology::getNDim() {
+int ModelMorphology::getNDim() const {
     int ndim = num_params;
     if (freq_type == StateFreqType::FREQ_ESTIMATE) {
         ndim += num_states - 1;
@@ -110,7 +110,7 @@ void ModelMorphology::restoreCheckpoint() {
         phylo_tree->clearAllPartialLH();
 }
 
-string ModelMorphology::getNameParams() {
+std::string ModelMorphology::getNameParams() const {
     if (num_params == 0) return name;
     ostringstream retname;
     retname << name << '{';

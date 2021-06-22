@@ -118,7 +118,7 @@ public:
 	/**
 	 * @return TRUE if this is a mixture model, FALSE otherwise
 	 */
-	virtual bool isMixture() { return true; }
+	virtual bool isMixture() const { return true; }
 
 
 	/**
@@ -192,12 +192,12 @@ public:
 	/**
 		@return the number of dimensions
 	*/
-	virtual int getNDim();
+	virtual int getNDim() const;
 
 	/**
 		@return the number of dimensions corresponding to state frequencies
 	*/
-	virtual int getNDimFreq();
+	virtual int getNDimFreq() const;
 	
 	/**
 		the target function which needs to be optimized
@@ -270,12 +270,12 @@ public:
 	/**
 	 * @return model name
 	 */
-	virtual string getName();
+	virtual string getName() const;
 
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
-	virtual string getNameParams();
+	virtual string getNameParams() const;
 
     /**
      * compute the memory size for the model, can be large for site-specific models

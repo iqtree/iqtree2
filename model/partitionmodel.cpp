@@ -252,7 +252,7 @@ void PartitionModel::restoreCheckpoint() {
     endCheckpoint();
 }
 
-int PartitionModel::getNParameters(int brlen_type) {
+int PartitionModel::getNParameters(int brlen_type) const {
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
 	int df = 0;
     for (auto it = tree->begin(); it != tree->end(); it++) {
@@ -310,7 +310,7 @@ double PartitionModel::optimizeLinkedAlpha(bool write_info,
     
 }
 
-int PartitionModel::getNDim() {
+int PartitionModel::getNDim() const {
     return model->getNDim();
 }
 

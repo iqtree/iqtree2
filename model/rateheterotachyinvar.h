@@ -11,8 +11,9 @@
 #include "rateinvar.h"
 #include "rateheterotachy.h"
 
-class RateHeterotachyInvar: public RateInvar, public RateHeterotachy {
+class RateHeterotachyInvar: public RateHeterotachy {
 public:
+	typedef RateHeterotachy super;
 
  	/**
 		constructor
@@ -40,27 +41,27 @@ public:
 	/**
 		return the number of dimensions
 	*/
-	virtual int getNDim() { return RateInvar::getNDim() + RateHeterotachy::getNDim(); }
+	virtual int getNDim() const { return invar.getNDim() + super::getNDim(); }
 
 	/**
 		get the proportion of sites under a specified category.
 		@param category category ID from 0 to #category-1
 		@return the proportion of the specified category
 	*/
-	virtual double getProp(int category) { return prop[category]; }
+	virtual double getProp(int category) const { return prop[category]; }
 
 	/**
 		get the rate of a specified category. Default returns 1.0 since it is homogeneous model
 		@param category category ID from 0 to #category-1
 		@return the rate of the specified category
 	*/
-	virtual double getRate(int category);
+	virtual double getRate(int category) const;
 
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
-	virtual string getNameParams() {
-		return RateInvar::getNameParams() + RateHeterotachy::getNameParams();
+	virtual std::string getNameParams() const {
+		return invar.getNameParams() + super::getNameParams();
 	}
 
 	/**
@@ -108,11 +109,11 @@ public:
 	//MSVC generates warning messages about these member functions
 	//being inherited "via dominance". Explictly declaring them
 	//instead shuts those warnings up.
-	virtual bool isHeterotachy()                     { return RateHeterotachy::isHeterotachy(); }
+	virtual bool isHeterotachy()               const { return RateHeterotachy::isHeterotachy(); }
 	virtual int  getNRate()                    const { return RateHeterotachy::getNRate();  }
 	virtual int  getNDiscreteRate()            const { return RateHeterotachy::getNDiscreteRate(); }
 	virtual void setProp(int category, double value) { RateHeterotachy::setProp(category, value); }
-	virtual int  getFixParams()                      { return RateHeterotachy::getFixParams(); 	}
+	virtual int  getFixParams()                const { return RateHeterotachy::getFixParams(); 	}
 	virtual void setFixParams(int mode)              { RateHeterotachy::setFixParams(mode); }
 	virtual void setOptimizeSteps(int steps)         { RateHeterotachy::setOptimizeSteps(steps);  }
 
@@ -123,6 +124,7 @@ public:
 #endif
 
 protected:
+	RateInvar invar;
 
 	/**
 		this function is served for the multi-dimension optimization. It should pack the model parameters

@@ -109,7 +109,7 @@ BenchmarkingTreeBuilder::BenchmarkingTreeBuilder(Factory& f, const char* nameToU
     }
 }
 
-const std::string& BenchmarkingTreeBuilder::getName() {
+const std::string& BenchmarkingTreeBuilder::getName() const {
     return name;
 }
 

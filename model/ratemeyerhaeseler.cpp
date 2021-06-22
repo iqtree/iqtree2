@@ -117,7 +117,7 @@ RateMeyerHaeseler::~RateMeyerHaeseler()
     if (dist_mat) delete [] dist_mat;
 }
 
-int RateMeyerHaeseler::getNDim() {
+int RateMeyerHaeseler::getNDim() const {
     if (phylo_tree) {
         return static_cast<int>(phylo_tree->aln->getNPattern())-1;
     }
@@ -128,7 +128,7 @@ int RateMeyerHaeseler::getNDim() {
 }
 
 /*
-double RateMeyerHaeseler::getRate(int category) {
+double RateMeyerHaeseler::getRate(int category) const {
 	if (category < size())
 		return at(category);
 
@@ -148,7 +148,7 @@ int RateMeyerHaeseler::computePatternRates(DoubleVector &pattern_rates,
     return static_cast<int>(size());
 }
 
-void RateMeyerHaeseler::getRates(DoubleVector &rates) {
+void RateMeyerHaeseler::getRates(DoubleVector &rates) const {
 	rates.clear();
 	if (empty()) {
 		rates.resize(phylo_tree->aln->size(), 1.0);

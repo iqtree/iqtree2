@@ -8,7 +8,7 @@
 #include "rateheterotachyinvar.h"
 
 RateHeterotachyInvar::RateHeterotachyInvar(int ncat, string params, double p_invar_sites, PhyloTree *tree)
-: RateInvar(p_invar_sites, tree), RateHeterotachy(ncat, params, tree)
+: super(ncat, params, tree), invar(p_invar_sites, tree)
 {
 	cur_optimize = 0;
 	name = "+I" + name;
@@ -21,39 +21,39 @@ void RateHeterotachyInvar::startCheckpoint() {
 }
 
 void RateHeterotachyInvar::saveCheckpoint() {
-    RateInvar::saveCheckpoint();
-    RateHeterotachy::saveCheckpoint();
+    invar.saveCheckpoint();
+    super::saveCheckpoint();
 }
 
 void RateHeterotachyInvar::restoreCheckpoint() {
-    RateInvar::restoreCheckpoint();
-    RateHeterotachy::restoreCheckpoint();
+    invar.restoreCheckpoint();
+    super::restoreCheckpoint();
 }
 
-double RateHeterotachyInvar::getRate(int category) {
+double RateHeterotachyInvar::getRate(int category) const {
     return 1.0;
-    return 1.0 / (1.0 - p_invar);
+    return 1.0 / (1.0 - invar.getPInvar());
 }
 
 void RateHeterotachyInvar::setNCategory(int ncat) {
-	RateHeterotachy::setNCategory(ncat);
+	super::setNCategory(ncat);
 	name = "+I" + name;
 	full_name = "Invar+" + full_name;
 }
 
 double RateHeterotachyInvar::computeFunction(double value) {
-	p_invar = value;
+	invar.setPInvar(value);
 	phylo_tree->clearAllPartialLH();
 	return -phylo_tree->computeLikelihood();
 }
 
 double RateHeterotachyInvar::targetFunk(double x[]) {
-	return RateHeterotachy::targetFunk(x);
+	return super::targetFunk(x);
 }
 
 void RateHeterotachyInvar::writeInfo(ostream &out) {
-	RateInvar::writeInfo(out);
-	RateHeterotachy::writeInfo(out);
+	invar.writeInfo(out);
+	super::writeInfo(out);
 
 }
 
@@ -62,16 +62,18 @@ void RateHeterotachyInvar::writeInfo(ostream &out) {
 	@param out output stream
 */
 void RateHeterotachyInvar::writeParameters(ostream &out) {
-	RateInvar::writeParameters(out);
+	invar.writeParameters(out);
 	RateHeterotachy::writeParameters(out);
 }
 
 void RateHeterotachyInvar::setBounds(double *lower_bound, double *upper_bound,
                                      bool *bound_check) {
 	RateHeterotachy::setBounds(lower_bound, upper_bound, bound_check);
-	if (RateInvar::getNDim() == 0) return;
+	if (invar.getNDim() == 0) {
+		return;
+	}
 	int ndim = getNDim()-1;
-	RateInvar::setBounds(lower_bound+ndim, upper_bound+ndim, bound_check+ndim);
+	invar.setBounds(lower_bound+ndim, upper_bound+ndim, bound_check+ndim);
 }
 
 /**
@@ -88,8 +90,10 @@ double RateHeterotachyInvar::optimizeParameters(double gradient_epsilon,
 
 void RateHeterotachyInvar::setVariables(double *variables) {
 	RateHeterotachy::setVariables(variables);
-	if (RateInvar::getNDim() == 0) return;
-	variables[getNDim()] = p_invar;
+	if (invar.getNDim() == 0) {
+		return;
+	}
+	variables[getNDim()] = invar.getPInvar();
 }
 
 /**
@@ -99,9 +103,11 @@ void RateHeterotachyInvar::setVariables(double *variables) {
 */
 bool RateHeterotachyInvar::getVariables(double *variables) {
 	bool changed = RateHeterotachy::getVariables(variables);
-	if (RateInvar::getNDim() == 0) return changed;
-    changed |= (p_invar != variables[getNDim()]);
-	p_invar = variables[getNDim()];
+	if (invar.getNDim() == 0) { 
+		return changed;
+	}
+    changed |= (invar.getPInvar() != variables[getNDim()]);
+	invar.setPInvar(variables[getNDim()]);
     return changed;
 }
 

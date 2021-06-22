@@ -132,7 +132,7 @@ YAMLModelMixture::YAMLModelMixture(ModelInfoFromYAMLFile& info,
     setRateMatrixFromModel();
 }
 
-bool YAMLModelMixture::isMixtureModel() {
+bool YAMLModelMixture::isMixtureModel() const {
     return true;
 }
 

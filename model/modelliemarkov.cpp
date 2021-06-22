@@ -563,7 +563,7 @@ bool  ModelLieMarkov::validFreqType() {
  * for in num_param, so no more should be added.
  */
 
-//int ModelLieMarkov::getNDimFreq() { 
+//int ModelLieMarkov::getNDimFreq() const { 
 //	return 0;
 //}
 
@@ -650,7 +650,7 @@ bool ModelLieMarkov::isReversible() {
  * to be on LM model names.
  */
 
-string ModelLieMarkov::getName() {
+string ModelLieMarkov::getName() const {
     switch(getFreqType()) {
     case StateFreqType::FREQ_ESTIMATE:
         return name;
@@ -1627,7 +1627,7 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
         }
     }
 
-     else if (name.find("5.7a") != string::npos) {
+    else if (name.find("5.7a") != string::npos) {
 		a = -(rate_matrix[0] + rate_matrix[10])/6.;
 		e1 = rate_matrix[0] + 3.*a;
 		e2 = rate_matrix[5] + 3.*a;
@@ -1992,8 +1992,8 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			cinv_evec[6] = -0.5 -cinv_evec[2];
 			cinv_evec[14] = 0.5 - cinv_evec[2];
 		}
-
-	} else if (name.find("5.16") != string::npos) {
+	} 
+	else if (name.find("5.16") != string::npos) {
 		g1 = (rate_matrix[0] - rate_matrix[10])*0.5;
 		g2 = (rate_matrix[15] - rate_matrix[5])*0.5;
 		d = (-rate_matrix[5] + rate_matrix[0] - g2 - g1)*0.5;
@@ -2056,12 +2056,11 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			cinv_evec[1] =cinv_evec[9] = -cinv_evec[0] -cinv_evec[2];
 			cinv_evec[13] =cinv_evec[5] =-cinv_evec[1];
 		}
-
-	    }
+	}
 	else {
     	cout << "This line should not appear." << endl;
     }
-   if (nondiagonalizable == false) {
+    if (nondiagonalizable == false) {
 		/* check eigenvalue equation*/
 		std::complex<double> zero;
 		int error = 0;

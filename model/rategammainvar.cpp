@@ -24,23 +24,23 @@
 RateGammaInvar::RateGammaInvar(int ncat, double shape, bool median,
                                double p_invar_sites, string optimize_alg,
                                PhyloTree *tree, bool testParamDone) :
-		RateInvar(p_invar_sites, tree),
-        RateGamma(ncat, shape, median, tree) {
+        RateGamma(ncat, shape, median, tree), 
+        invar(p_invar_sites, tree) {
 	name = "+I" + name;
 	full_name = "Invar+" + full_name;
     this->optimize_alg = optimize_alg;
     cur_optimize = 0;
     this->testParamDone = testParamDone;
     for (int cat = 0; cat < ncategory; cat++) {
-        rates[cat] = 1.0 / (1.0 - p_invar);
+        rates[cat] = 1.0 / (1.0 - invar.getPInvar());
     }
 	computeRates();
 }
 
 void RateGammaInvar::setPInvar(double pInvar) {
-    p_invar = pInvar;
+    invar.setPInvar(pInvar);
     for (int cat = 0; cat < ncategory; cat++)
-        rates[cat] = 1.0/(1.0-p_invar);
+        rates[cat] = 1.0/(1.0-pInvar);
     computeRates();
 }
 
@@ -49,16 +49,16 @@ void RateGammaInvar::startCheckpoint() {
 }
 
 void RateGammaInvar::saveCheckpoint() {
-    RateInvar::saveCheckpoint();
+    invar.saveCheckpoint();
     RateGamma::saveCheckpoint();
 }
 
 void RateGammaInvar::restoreCheckpoint() {
     //should restore p_invar first before gamma,
     //because RateGamma will call computeRates()
-    RateInvar::restoreCheckpoint();
+    invar.restoreCheckpoint();
     for (int cat = 0; cat < ncategory; cat++) {
-        rates[cat] = 1.0 / (1.0 - p_invar);
+        rates[cat] = 1.0 / (1.0 - invar.getPInvar());
     }
     RateGamma::restoreCheckpoint();
 }
@@ -66,24 +66,22 @@ void RateGammaInvar::restoreCheckpoint() {
 void RateGammaInvar::setNCategory(int ncat) {
 	RateGamma::setNCategory(ncat);
     for (int cat = 0; cat < ncategory; cat++) {
-        rates[cat] = 1.0 / (1.0 - p_invar);
+        rates[cat] = 1.0 / (1.0 - invar.getPInvar());
     }
 	name = "+I" + name;
 	full_name = "Invar+" + full_name;
 	computeRates();
 }
 
-string RateGammaInvar::getNameParams() {
-	return RateInvar::getNameParams() + RateGamma::getNameParams();
+std::string RateGammaInvar::getNameParams() const {
+	return invar.getNameParams() + RateGamma::getNameParams();
 }
 
 double RateGammaInvar::computeFunction(double value) {
 	if (cur_optimize == 0)
 		gamma_shape = value;
 	else {
-		p_invar = value;
-        for (int cat = 0; cat < ncategory; cat++)
-            rates[cat] = 1.0/(1.0-p_invar);
+		setPInvar(value);
     }
 	// need to compute rates again if p_inv or Gamma shape changes!
 	computeRates();
@@ -92,28 +90,28 @@ double RateGammaInvar::computeFunction(double value) {
 }
 
 void RateGammaInvar::writeInfo(ostream &out) {
-	RateInvar::writeInfo(out);
-	RateGamma::writeInfo(out);
+	invar.writeInfo(out);
+	super::writeInfo(out);
 }
 
 void RateGammaInvar::writeParameters(ostream &out) {
-	RateInvar::writeParameters(out);
-	RateGamma::writeParameters(out);
+	invar.writeParameters(out);
+	super::writeParameters(out);
 }
 
 void RateGammaInvar::setVariables(double *variables) {
-	RateGamma::setVariables(variables);
-	int gid = RateGamma::getNDim();
-	RateInvar::setVariables(variables+gid);
+	super::setVariables(variables);
+	int gid = super::getNDim();
+	invar.setVariables(variables+gid);
 }
 
 bool RateGammaInvar::getVariables(double *variables) {
-	int gid = RateGamma::getNDim();
-	bool changed = RateGamma::getVariables(variables);
-	changed |= RateInvar::getVariables(variables+gid);
+	int  gid     = super::getNDim();
+	bool changed = super::getVariables(variables);
+	changed     |= invar.getVariables(variables+gid);
     if (changed) {
         // need to compute rates again if p_inv or Gamma shape changes!
-        RateGamma::computeRates();
+        super::computeRates();
     }
     return changed;
 }
@@ -127,9 +125,9 @@ double RateGammaInvar::targetFunk(double x[]) {
 
 void RateGammaInvar::setBounds(double *lower_bound, double *upper_bound,
                                bool *bound_check) {
-	int gid = RateGamma::getNDim();
-	RateGamma::setBounds(lower_bound, upper_bound, bound_check);
-	RateInvar::setBounds(lower_bound+gid, upper_bound+gid, bound_check+gid);
+	int gid = super::getNDim();
+	super::setBounds(lower_bound, upper_bound, bound_check);
+	invar.setBounds     (lower_bound+gid, upper_bound+gid, bound_check+gid);
 }
 
 double RateGammaInvar::optimizeParameters(double gradient_epsilon,
@@ -152,21 +150,21 @@ double RateGammaInvar::optimizeParameters(double gradient_epsilon,
                isFixPInvar() || isFixGammaShape()) {
 		double lh = phylo_tree->computeLikelihood();
 		cur_optimize = 0;
-		double gamma_lh = RateGamma::optimizeParameters(gradient_epsilon, report_to_tree);
+		double gamma_lh = super::optimizeParameters(gradient_epsilon, report_to_tree);
 		ASSERT(gamma_lh >= lh-0.1);
 		cur_optimize = 1;
 		double invar_lh = -DBL_MAX;
-        invar_lh = RateInvar::optimizeParameters(gradient_epsilon, report_to_tree);
+        invar_lh = invar.optimizeParameters(gradient_epsilon, report_to_tree);
 		ASSERT(invar_lh >= gamma_lh-0.1);
         cur_optimize = 0;
         return invar_lh;
 	} else if (optimize_alg.find("EM") != string::npos) {
         return optimizeWithEM(gradient_epsilon, report_to_tree);
     } else if (optimize_alg.find("BFGS") != string::npos) {
-        double *variables = new double[ndim+1];
-        double *upper_bound = new double[ndim+1];
-        double *lower_bound = new double[ndim+1];
-        bool *bound_check = new bool[ndim+1];
+        double* variables = new double[ndim+1];
+        double* upper_bound = new double[ndim+1];
+        double* lower_bound = new double[ndim+1];
+        bool*   bound_check = new bool[ndim+1];
         double score;
 
         // by BFGS algorithm
@@ -232,7 +230,7 @@ double RateGammaInvar::optimizeWithEM(double gradient_epsilon,
     double curlh = phylo_tree->computeLikelihood();
 
     cur_optimize = 0;
-    double gamma_lh = RateGamma::optimizeParameters(gradient_epsilon, report_to_tree);
+    double gamma_lh = super::optimizeParameters(gradient_epsilon, report_to_tree);
     if (!phylo_tree->params->ignore_any_errors) {
         ASSERT(gamma_lh > curlh - 1.0);
     }
@@ -260,9 +258,7 @@ double RateGammaInvar::optimizeWithEM(double gradient_epsilon,
 
     double newPInvar = ppInvar / nSites;
     ASSERT(newPInvar < 1.0);
-    //double curPInv = getPInvar();
-//    setPInvar(newPInvar);
-    p_invar = newPInvar;
+    invar.setPInvar(newPInvar);
     phylo_tree->clearAllPartialLH();
 //    phylo_tree->scaleLength((1-newPInvar)/(1-curPInv));
     double pinvLH = phylo_tree->computeLikelihood();

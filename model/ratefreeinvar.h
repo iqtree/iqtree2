@@ -52,26 +52,26 @@ public:
 	/**
 		return the number of dimensions
 	*/
-	virtual int getNDim();
+	virtual int getNDim() const;
 
 	/**
 		get the proportion of sites under a specified category.
 		@param category category ID from 0 to #category-1
 		@return the proportion of the specified category
 	*/
-	virtual double getProp(int category);
+	virtual double getProp(int category) const;
 
 	/**
 		get the rate of a specified category. Default returns 1.0 since it is homogeneous model
 		@param category category ID from 0 to #category-1
 		@return the rate of the specified category
 	*/
-	virtual double getRate(int category);
+	virtual double getRate(int category) const;
 
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
-	virtual string getNameParams();
+	virtual string getNameParams() const;
 
 	/**
 		override function from Optimization class, 

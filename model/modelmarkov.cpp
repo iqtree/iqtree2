@@ -247,7 +247,7 @@ void ModelMarkov::setTree(PhyloTree *tree) {
     phylo_tree = tree;
 }
 
-string ModelMarkov::getName() {
+string ModelMarkov::getName() const {
   // MDW note to Minh for code review: I don't really understand what getName()
   // is used for. I've tried to keep the old behaviour while adding
   // the new freq_types, but give this change extra attention please.
@@ -270,7 +270,7 @@ string ModelMarkov::getName() {
   */
 }
 
-string ModelMarkov::getNameParams() {
+std::string ModelMarkov::getNameParams() const {
 
 	ostringstream retname;
 	retname << name;
@@ -288,7 +288,7 @@ string ModelMarkov::getNameParams() {
     return retname.str();    
 }
     
-void ModelMarkov::getNameParamsFreq(ostream &retname) {
+void ModelMarkov::getNameParamsFreq(std::ostream &retname) const {
      // "+F..." but without {frequencies}
     retname << freqTypeString(freq_type, phylo_tree->aln->seq_type, true);
     if (fixed_parameters) {
@@ -864,7 +864,7 @@ void ModelMarkov::getQMatrix(double *q_mat) {
     delete [] rate_matrix;
 }
 
-int ModelMarkov::getNDim() { 
+int ModelMarkov::getNDim() const { 
     ASSERT(freq_type != StateFreqType::FREQ_UNKNOWN);
     if (fixed_parameters) {
         return 0;
@@ -880,7 +880,7 @@ int ModelMarkov::getNDim() {
     return ndim;
 }
 
-int ModelMarkov::getNDimFreq() {
+int ModelMarkov::getNDimFreq() const {
     //BQM, 2017-05-02: getNDimFreq should return degree of freedom,
     //which is not included in getNDim()
     //That's why 0 is returned for FREQ_ESTIMATE,

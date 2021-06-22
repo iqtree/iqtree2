@@ -51,7 +51,7 @@ public:
 	/**
 		@return true 
 	*/
-	virtual bool isSiteSpecificRate() { return true; }
+	virtual bool isSiteSpecificRate() const { return true; }
 
 	/**
 		get the number of rate categories. 
@@ -63,14 +63,14 @@ public:
 	/**
 		return the number of dimensions
 	*/
-	virtual int getNDim();
+	virtual int getNDim() const;
 
 	/**
 		get the rate of a specified category
 		@param category category ID from 0 to #category-1
 		@return the rate of the specified category
 	*/
-	//virtual double getRate(int category);
+	//virtual double getRate(int category) const;
 
 	/**
 		get the rate of a specified site-pattern. Default returns 1.0 since it is homogeneous model
@@ -86,8 +86,7 @@ public:
 	*/
 	virtual int computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat);
 
-	void getRates(DoubleVector &rates);
-
+	void getRates(DoubleVector &rates) const;
 
 	void setRates(DoubleVector &rates);
 

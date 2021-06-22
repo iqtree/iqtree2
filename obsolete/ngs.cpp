@@ -313,7 +313,7 @@ NGSRateCat::NGSRateCat(PhyloTree *tree, int ncat) {
 /**
 	return the number of dimensions
 */
-int NGSRateCat::getNDim() {
+int NGSRateCat::getNDim() const {
     return 2*ncategory-1;
 }
 

@@ -114,7 +114,7 @@ double ModelSet::computeTrans(double time, int model_id, int state1, int state2,
 	return trans_prob;
 }
 
-int ModelSet::getNDim()
+int ModelSet::getNDim() const
 {
 	ASSERT(size());
     return front()->getNDim();

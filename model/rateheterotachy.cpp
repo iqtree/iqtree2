@@ -11,6 +11,7 @@
 #include <utils/stringfunctions.h> //for convert_double_vec
 
 
+
 RateHeterotachy::RateHeterotachy(int ncat, string params, PhyloTree *tree) : RateHeterogeneity() {
     phylo_tree = tree;
     prop = NULL;
@@ -96,7 +97,7 @@ void RateHeterotachy::restoreCheckpoint() {
     endCheckpoint();
 }
 
-int RateHeterotachy::getNDim() {
+int RateHeterotachy::getNDim() const {
     if (fix_params) return 0;
     return ncategory-1;
 }
@@ -104,7 +105,7 @@ int RateHeterotachy::getNDim() {
 /**
  * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
  */
-string RateHeterotachy::getNameParams() {
+std::string RateHeterotachy::getNameParams() const {
 	stringstream str;
 	str << "+H" << ncategory << "{";
 	for (int i = 0; i < ncategory; i++) {

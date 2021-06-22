@@ -1172,7 +1172,7 @@ void ModelProtein::readRates(istream &in) {
     }
 }
 
-string ModelProtein::getNameParams() {
+std::string ModelProtein::getNameParams() const {
     ostringstream retname;
     retname << name;
     retname << freqTypeString(freq_type, phylo_tree->aln->seq_type, true);
