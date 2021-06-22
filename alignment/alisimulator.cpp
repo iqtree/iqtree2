@@ -946,6 +946,7 @@ string AliSimulator::convertNumericalStatesIntoReadableCharacters(Node *node, in
     {
         // add padding to node_name
         string name_with_padding = node->name;
+        ASSERT(max_length_taxa_name >= name_with_padding.length());
         std::string padding (max_length_taxa_name - name_with_padding.length() + 1, ' ');
         name_with_padding += padding;
         output = name_with_padding + output;

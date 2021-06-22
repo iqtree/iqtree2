@@ -2302,11 +2302,6 @@ public:
     double alisim_length_ratio;
     
     /**
-    *  maximum_string_length
-    */
-    double alisim_max_str_length;
-    
-    /**
     *  fundi model test
     */
     string alisim_fundi_test;

@@ -693,33 +693,21 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
                     outWarning("The sequence length of the input alignment is unequal to that of that simulated sequences. Thus, only gaps in the first MIN(input_sequence_length, simulated_sequence_length) sites are copied.");
 
                 // write simulated sequence with the gaps copied from the input sequence
-                // cache the output string
-                string output_str;
 #ifdef _OPENMP
 #pragma omp parallel
 #pragma omp single
 #endif
-                writeASequenceToFileWithGaps(aln, sequence_length, seq_names, sequences, output_str, alisimulator->params->alisim_max_str_length, *out, state_mapping, alisimulator->params->aln_output_format, alisimulator->max_length_taxa_name, alisimulator->tree->root, alisimulator->tree->root);
-                
-                // writing the remaining output_str to file
-                if (output_str.length() > 0)
-                    *out<<output_str;
+                writeASequenceToFileWithGaps(aln, sequence_length, seq_names, sequences, *out, state_mapping, alisimulator->params->aln_output_format, alisimulator->max_length_taxa_name, alisimulator->tree->root, alisimulator->tree->root);
             }
             // write the sequences without copying gaps
             else
             {
-                // cache the output string
-                string output_str;
 #ifdef _OPENMP
 #pragma omp parallel
 #pragma omp single
 #endif
                 // browsing all sequences, converting each sequence & caching & writing output string to file
-                writeASequenceToFile(aln, sequence_length, output_str, alisimulator->params->alisim_max_str_length, *out, state_mapping, alisimulator->params->aln_output_format, alisimulator->max_length_taxa_name, alisimulator->tree->root, alisimulator->tree->root);
-                
-                // writing the remaining output_str to file
-                if (output_str.length() > 0)
-                    *out<<output_str;
+                writeASequenceToFile(aln, sequence_length, *out, state_mapping, alisimulator->params->aln_output_format, alisimulator->max_length_taxa_name, alisimulator->tree->root, alisimulator->tree->root);
             }
 
             // close the file
@@ -832,11 +820,11 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator,
 /**
 *  write a sequence of a node to an output file
 */
-void writeASequenceToFile(Alignment *aln, int sequence_length, string &output_str, int max_str_length, ostream &out, vector<string> state_mapping, InputType output_format, int max_length_taxa_name, Node *node, Node *dad)
+void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, vector<string> state_mapping, InputType output_format, int max_length_taxa_name, Node *node, Node *dad)
 {
     if (node->isLeaf() && node->name!=ROOT_NAME) {
 #ifdef _OPENMP
-#pragma omp task firstprivate(node) shared(output_str, out)
+#pragma omp task firstprivate(node) shared(out)
 #endif
         {
             int num_sites_per_state = aln->seq_type == SEQ_CODON?3:1;
@@ -849,6 +837,7 @@ void writeASequenceToFile(Alignment *aln, int sequence_length, string &output_st
             {
                 // add padding to node_name
                 string name_with_padding = node->name;
+                ASSERT(max_length_taxa_name >= name_with_padding.length());
                 std::string padding (max_length_taxa_name - name_with_padding.length() + 1, ' ');
                 name_with_padding += padding;
                 output = name_with_padding + output;
@@ -865,35 +854,26 @@ void writeASequenceToFile(Alignment *aln, int sequence_length, string &output_st
 #pragma omp critical
 #endif
             {
-                output_str += output;
-                
-                // write the caching output_str to file if its length exceed the maximum string length
-                if (output_str.length() >= max_str_length)
-                {
-                    // write output_str to file
-                    out<<output_str;
-                    
-                    // empty output_str
-                    output_str = "";
-                }
+                // write output to file
+                out << output;
             }
         }
     }
     
     NeighborVec::iterator it;
     FOR_NEIGHBOR(node, dad, it) {
-        writeASequenceToFile(aln, sequence_length, output_str, max_str_length, out, state_mapping, output_format, max_length_taxa_name, (*it)->node, node);
+        writeASequenceToFile(aln, sequence_length, out, state_mapping, output_format, max_length_taxa_name, (*it)->node, node);
     }
 }
 
 /**
 *  write a sequence of a node to an output file with gaps copied from the input sequence
 */
-void writeASequenceToFileWithGaps(Alignment *aln, int sequence_length, vector<string> seq_names, vector<string> sequences, string &output_str, int max_str_length, ostream &out, vector<string> state_mapping, InputType output_format, int max_length_taxa_name, Node *node, Node *dad)
+void writeASequenceToFileWithGaps(Alignment *aln, int sequence_length, vector<string> seq_names, vector<string> sequences, ostream &out, vector<string> state_mapping, InputType output_format, int max_length_taxa_name, Node *node, Node *dad)
 {
     if (node->isLeaf() && node->name!=ROOT_NAME) {
 #ifdef _OPENMP
-#pragma omp task firstprivate(node) shared(output_str, out)
+#pragma omp task firstprivate(node) shared(out)
 #endif
         {
             // dummy variables
@@ -908,6 +888,7 @@ void writeASequenceToFileWithGaps(Alignment *aln, int sequence_length, vector<st
             {
                 // add padding to node_name
                 string name_with_padding = node->name;
+                ASSERT(max_length_taxa_name >= name_with_padding.length());
                 std::string padding (max_length_taxa_name - name_with_padding.length() + 1, ' ');
                 name_with_padding += padding;
                 output = name_with_padding + output;
@@ -976,24 +957,15 @@ void writeASequenceToFileWithGaps(Alignment *aln, int sequence_length, vector<st
 #pragma omp critical
 #endif
             {
-                output_str += output;
-                
-                // write the caching output_str to file if its length exceed the maximum string length
-                if (output_str.length() >= max_str_length)
-                {
-                    // write output_str to file
-                    out<<output_str;
-                    
-                    // empty output_str
-                    output_str = "";
-                }
+                // write output to file
+                out<< output;
             }
         }
     }
     
     NeighborVec::iterator it;
     FOR_NEIGHBOR(node, dad, it) {
-        writeASequenceToFileWithGaps(aln, sequence_length, seq_names, sequences, output_str, max_str_length, out, state_mapping, output_format, max_length_taxa_name, (*it)->node, node);
+        writeASequenceToFileWithGaps(aln, sequence_length, seq_names, sequences, out, state_mapping, output_format, max_length_taxa_name, (*it)->node, node);
     }
 }
 

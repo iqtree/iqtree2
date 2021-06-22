@@ -1122,7 +1122,6 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_length_ratio = 2;
     params.birth_rate = 0.8;
     params.death_rate = 0.2;
-    params.alisim_max_str_length = 100000000;
     params.alisim_fundi_test = "";
     
     // store original params

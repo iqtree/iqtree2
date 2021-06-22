@@ -83,7 +83,7 @@ string getDNAModelInfo(string model_name, string &full_name, string &rate_type, 
 	} else if (name_upper == "TPM2") {
 		name = "TPM2";
 		rate_type = "121020";
-		def_freq = FREQ_ESTIMATE;
+		def_freq = FREQ_EQUAL;
 		full_name = "TPM2 ()";
 	} else if (name_upper == "TPM2U" || name_upper == "TPM2UF") {
 		name = "TPM2u";
@@ -93,7 +93,7 @@ string getDNAModelInfo(string model_name, string &full_name, string &rate_type, 
 	} else if (name_upper == "TPM3") {
 		name = "TPM3";
 		rate_type = "120120";
-		def_freq = FREQ_ESTIMATE;
+		def_freq = FREQ_EQUAL;
 		full_name = "TPM3 ()";
 	} else if (name_upper == "TPM3U" || name_upper == "TPM3UF") {
 		name = "TPM3u";
