@@ -66,6 +66,9 @@ void AliSimulatorHeterogeneity::intializeSiteSpecificModelIndex()
         
         // delete the probability array of rate categories
         delete[] model_prop;
+        
+        // regenerate ancestral sequence based on mixture model component base fequencies
+        regenerateAncestralSequenceMixtureModel();
     }
     // otherwise, if it's not a mixture model -> set model index = 0 for all sites
     else
@@ -75,6 +78,50 @@ void AliSimulatorHeterogeneity::intializeSiteSpecificModelIndex()
         {
             site_specific_model_index[i] = 0;
         }
+    }
+}
+
+/**
+    regenerate ancestral sequence based on mixture model component base fequencies
+*/
+void AliSimulatorHeterogeneity::regenerateAncestralSequenceMixtureModel(){
+    // only regenerate the ancestral sequence if mixture model is used and the ancestral sequence is not specified by the user.
+    if (tree->getModel()->isMixture() && !tree->params->alisim_ancestral_sequence_aln_filepath){
+        // dummy variables
+        ModelSubst* model = tree->getModel();
+        int num_models = model->getNMixtures();
+        int num_states = tree->aln->getMaxNumStates();
+        
+        // initialize base frequencies maxtrix
+        double * base_freqs_all_components = new double[num_models*num_states];
+        double * base_freqs_one_component = new double[num_states];
+        
+        // retrieve base frequencies of each model component
+        for (int i = 0; i < num_models; i++)
+        {
+            model->getStateFrequency(base_freqs_one_component, i);
+            
+            // copy base_freqs_one_component to base_freqs_all_components
+            for (int j = 0; j < num_states; j++)
+                base_freqs_all_components[i*num_states+j] = base_freqs_one_component[j];
+        }
+        
+        // delete base_freqs_one_component
+        delete [] base_freqs_one_component;
+        
+        // convert base_freqs_all_components to accummulated matrix
+        convertProMatrixIntoAccumulatedProMatrix(base_freqs_all_components, num_models, num_states);
+        
+        // re-generate the ancestral sequence
+        for (int i = 0; i < expected_num_sites; i++)
+        {
+            double rand_num = random_double();
+            int starting_index = site_specific_model_index[i]*num_states;
+            tree->root->sequence[i] = binarysearchItemWithAccumulatedProbabilityMatrix(base_freqs_all_components, rand_num, starting_index, starting_index + num_states - 1, starting_index) - starting_index;
+        }
+        
+        // delete base_freqs_one_component
+        delete [] base_freqs_all_components;
     }
 }
 

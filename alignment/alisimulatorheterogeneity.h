@@ -55,6 +55,11 @@ protected:
     */
     void intializeCachingAccumulatedTransMatrices(double *cache_trans_matrix, int num_models, int num_rate_categories, int max_num_states, DoubleVector branch_lengths, double *trans_matrix, ModelSubst* model);
     
+    /**
+        regenerate ancestral sequence based on mixture model component base fequencies
+    */
+    void regenerateAncestralSequenceMixtureModel();
+    
 public:
     
     RateHeterogeneity *rate_heterogeneity;
