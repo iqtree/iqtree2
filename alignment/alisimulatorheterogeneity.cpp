@@ -123,7 +123,10 @@ void AliSimulatorHeterogeneity::intializeCachingAccumulatedTransMatrices(double 
             if (fuse_mixture_model && model_index != category_index)
                 continue;
             
-            double rate = tree->getRateName().empty()?1:rate_heterogeneity->getRate(category_index);
+            double rate = rate_heterogeneity->getNRate() == 1?1:rate_heterogeneity->getRate(category_index);
+            // update the rate based on model component's rate
+            if (model->isMixture())
+                rate = rate * ((ModelMarkov*)model->getMixtureClass(model_index))->total_num_subst;
             double branch_length_by_category = rate_heterogeneity->isHeterotachy()?branch_lengths[category_index]:branch_lengths[0];
             
             // compute the transition matrix
@@ -244,6 +247,10 @@ int AliSimulatorHeterogeneity::estimateStateFromAccumulatedTransMatrices(double 
 */
 int AliSimulatorHeterogeneity::estimateStateFromOriginalTransMatrix(ModelSubst *model, int model_component_index, double rate, double *trans_matrix, int max_num_states, double branch_length, int dad_state)
 {
+    // update the rate based on model component's rate
+    if (model->isMixture())
+        rate = rate * ((ModelMarkov*)model->getMixtureClass(model_component_index))->total_num_subst;
+    
     // compute the transition matrix
     model->computeTransMatrix(partition_rate*branch_length*rate, trans_matrix, model_component_index);
     

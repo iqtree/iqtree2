@@ -614,7 +614,7 @@ void generatePartitionAlignmentFromSingleSimulator(AliSimulator *alisimulator, v
     if ((!rate_name.empty()) || is_mixture_model)
     {
         // case 2.3: with only invariant sites (without gamma/freerate model/mixture models)
-        if (!rate_name.compare("+I"))
+        if (!rate_name.compare("+I") && !is_mixture_model)
         {
             alisimulator = new AliSimulatorInvar(alisimulator, invariant_proportion);
         }
