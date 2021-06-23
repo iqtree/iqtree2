@@ -1097,7 +1097,7 @@ const std::string& ModelInfoFromYAMLFile::getRateMatrixFormula() const {
 RateHeterogeneity* ModelInfoFromYAMLFile::getSpecifiedRateModel(PhyloTree* tree) const {
     ASSERT (!is_rate_model);    //rate models don't *have* rate models, 
                                 //they are rate models
-    if (!hasRateHeterotachy()) {
+    if (!hasSpecifiedRateModel()) {
         return nullptr;
     }
     return specified_rate_model_info->getRateHeterogeneity(tree);
@@ -1109,6 +1109,13 @@ RateHeterogeneity* ModelInfoFromYAMLFile::getRateHeterogeneity(PhyloTree* tree) 
     for ( const YAMLFileParameter &param: parameters ) {
         if (param.type == ModelParameterType::INVARIANT_PROPORTION) {
             isInvar = true;            
+        }
+    }
+    if (hasRateHeterotachy()) {
+        if (isInvar) {
+            return new YAMLRateHeterotachyInvar(tree, tree, *this);
+        } else {
+            return new YAMLRateHeterotachy(tree, tree, *this);
         }
     }
     //Note:gamma rate model is treated as a *kind* of free rate model
@@ -1743,6 +1750,10 @@ bool ModelInfoFromYAMLFile::checkAscertainmentBiasCorrection
 }
 
 bool ModelInfoFromYAMLFile::hasRateHeterotachy() const {
+    return contains(rate_distribution,"heterotachy");
+}
+
+bool ModelInfoFromYAMLFile::hasSpecifiedRateModel() const {
     return specified_rate_model_info!=nullptr;
 }
 

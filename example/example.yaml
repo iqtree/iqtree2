@@ -255,13 +255,21 @@
     type:           proportion
     initValue:      1/categories
 
+- ratemodel:        H
+  ratedistribution: heterotachy
+  parameters:
+  - name:           proportion(1..categories)
+    type:           proportion
+    range:          0.0001 .. 1 #Allow ranges to be specified as... ranges too
+    initValue:      1/categories
+
 - ratemodel:        R
   ratedistribution: free
   optimisation:     2-BFGS,EM
   parameters:
   - name:           proportion(1..categories)
     type:           proportion
-    range:          [0.001, 1.0] #Even though, RateFree declares MAX_FREE_RATE_PROP 1000
+    range:          [0.001 .. 1.0] #Even though, RateFree declares MAX_FREE_RATE_PROP 1000
     initValue:      1/categories
     tolerance:      0.001
   - name:           rate(1..categories)

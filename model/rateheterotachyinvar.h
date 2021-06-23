@@ -22,6 +22,14 @@ public:
 	*/
     RateHeterotachyInvar(int ncat, string params, double p_invar_sites, PhyloTree *tree);
 
+	/**
+		constructor (used by, for example, YAMLRateModelWrapper)
+		@param ncat number of rate categories
+		@param tree associated phylogenetic tree
+		@param report_to_tree send any log messages to this tree.
+	*/
+	RateHeterotachyInvar(int ncat, PhyloTree *tree, PhyloTree* report_to_tree);
+
     /**
         start structure for checkpointing
     */

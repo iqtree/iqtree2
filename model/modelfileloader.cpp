@@ -934,7 +934,7 @@ void ModelFileLoader::parseYAMLModel(const YAML::Node& substitution_model,
     info.superclass_model_name = stringScalar(substitution_model, "frommodel", "");
     info.rate_distribution     = stringScalar(substitution_model, "ratedistribution", "");
     info.model_name            = name_of_model;
-                            
+
     if (!info.superclass_model_name.empty()) {
         TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity, 
                       name_of_model << " parent is " 

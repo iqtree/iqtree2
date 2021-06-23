@@ -32,6 +32,14 @@ public:
     RateHeterotachy(int ncat, string params, PhyloTree *tree);
 
 	/**
+		constructor (used by, for example, YAMLRateModelWrapper)
+		@param ncat number of rate categories
+		@param tree associated phylogenetic tree
+		@param report_to_tree send any log messages to this tree.
+	*/
+	RateHeterotachy(int ncat, PhyloTree *tree, PhyloTree* report_to_tree);
+
+	/**
 		destructor
 	*/
     virtual ~RateHeterotachy();
@@ -151,13 +159,18 @@ public:
     */
 	virtual void setNCategory(int ncat);
 
+	virtual void setFixProportions      (bool fix);
+	virtual void setFixRates            (bool fix);
+	virtual bool isOptimizingProportions() const;
+	virtual bool isOptimizingRates      () const;
+	virtual bool isOptimizingShapes     () const;
+	virtual void sortUpdatedRates       ();
 protected:
 
 	/**
 		number of rate categories
 	*/
 	int ncategory;
-
 
 	/**
 	 * proportion of sites for each rate categories
@@ -170,6 +183,11 @@ protected:
     /** number of optimization steps, default: ncategory*2 */
     int optimize_steps;
 
+    /** tolerance (for deciding when proportions have converged) */
+	double prop_tolerance;
+
+    /** minimum value for a proportion */
+	double prop_minimum;
 };
 
 

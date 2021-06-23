@@ -37,6 +37,8 @@
 
 #include "ratefree.h"              //for RateFree
 #include "ratefreeinvar.h"         //for RateFreeInvar
+#include "rateheterotachy.h"       //for RateHeterotachy
+#include "rateheterotachyinvar.h"  //for RateHeterotachyInvar
 
 #include "modelinfofromyamlfile.h" //for ModelInfoFromYAMLFile, etc.
 #include <tree/phylotree.h>        //for PhyloTree
@@ -557,6 +559,15 @@ public:
     }
 };
 
+class YAMLRateFree: public YAMLRateModelWrapper<RateFree> {
+public:
+    typedef YAMLRateModelWrapper<RateFree> super;
+    YAMLRateFree(PhyloTree *tree, PhyloTree* report_to_tree,
+                const ModelInfoFromYAMLFile& info);
+    virtual void updateRateClassFromModelVariables();
+    virtual void sortUpdatedRates();
+};
+
 class YAMLRateFreeInvar:public YAMLRateModelWrapper<RateFreeInvar> {
 public:
     typedef YAMLRateModelWrapper<RateFreeInvar> super;
@@ -566,11 +577,20 @@ public:
     virtual void sortUpdatedRates();
 };
 
-class YAMLRateFree: public YAMLRateModelWrapper<RateFree> {
+class YAMLRateHeterotachy: public YAMLRateModelWrapper<RateHeterotachy> {
 public:
-    typedef YAMLRateModelWrapper<RateFree> super;
-    YAMLRateFree(PhyloTree *tree, PhyloTree* report_to_tree,
-                const ModelInfoFromYAMLFile& info);
+    typedef YAMLRateModelWrapper<RateHeterotachy> super;
+    YAMLRateHeterotachy(PhyloTree *tree, PhyloTree* report_to_tree,
+                        const ModelInfoFromYAMLFile& info);
+    virtual void updateRateClassFromModelVariables();
+    virtual void sortUpdatedRates();
+};
+
+class YAMLRateHeterotachyInvar:public YAMLRateModelWrapper<RateHeterotachyInvar> {
+public:
+    typedef YAMLRateModelWrapper<RateHeterotachyInvar> super;
+    YAMLRateHeterotachyInvar(PhyloTree *tree, PhyloTree* report_to_tree,
+                             const ModelInfoFromYAMLFile& info);
     virtual void updateRateClassFromModelVariables();
     virtual void sortUpdatedRates();
 };

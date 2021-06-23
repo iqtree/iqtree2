@@ -346,6 +346,7 @@ public:
     virtual double getProportionOfInvariantSites() const { return 0.0; /*stub*/ }
 
     virtual bool hasRateHeterotachy()              const;
+    virtual bool hasSpecifiedRateModel()           const;
 
     virtual bool isFreeRate()                      const { return false; /*stub*/ }
     virtual bool isFrequencyMixture()              const { return false; /*stub*/ }

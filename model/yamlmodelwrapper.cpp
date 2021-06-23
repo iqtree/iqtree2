@@ -174,6 +174,7 @@ void YAMLModelMixture::afterWeightsChanged() {
 YAMLRateFree::YAMLRateFree(PhyloTree* tree, PhyloTree* report_to_tree,
                            const ModelInfoFromYAMLFile& info)
         : super(info, report_to_tree) {
+    setNCategory(info.getNumberOfRateCategories());
     std::string algorithm = info.getOptimizationAlgorithm();
     optimize_alg = algorithm.empty() ? optimize_alg : algorithm;
     gamma_shape  = 1.0;
@@ -268,6 +269,7 @@ void YAMLRateInvar::sortUpdatedRates() {
 YAMLRateFreeInvar::YAMLRateFreeInvar(PhyloTree* tree, PhyloTree* report_to_tree,
                                      const ModelInfoFromYAMLFile& info)
         : super(info, report_to_tree) {
+    setNCategory(info.getNumberOfRateCategories());
     std::string algorithm = info.getOptimizationAlgorithm();
     if (!algorithm.empty()) {
         setOptimizationAlgorithm(algorithm);
@@ -319,6 +321,88 @@ void YAMLRateFreeInvar::sortUpdatedRates() {
     if (YAMLRateVerbosity <= verbose_mode) {
         TREE_LOG_LINE(*phylo_tree, YAMLRateVerbosity, 
                       "Set model variables during rate optimization");
+        phylo_tree->hideProgress();
+        writeInfo(std::cout);
+        phylo_tree->showProgress();
+    }                               
+}
+
+YAMLRateHeterotachy::YAMLRateHeterotachy
+    (PhyloTree *tree, PhyloTree* report_to_tree,
+    const ModelInfoFromYAMLFile& info)
+    : super(info, report_to_tree) {
+    setNCategory(info.getNumberOfProportions());
+}
+
+void YAMLRateHeterotachy::updateRateClassFromModelVariables() {
+    int prop_count = model_info.getNumberOfProportions();
+    int prop_ix    = 0;
+    model_info.readModelVariablesByType(prop,  prop_count, true,
+                                        ModelParameterType::PROPORTION, prop_ix);
+    if (YAMLRateVerbosity <= verbose_mode) {
+        TREE_LOG_LINE(*phylo_tree, YAMLRateVerbosity, 
+                      "Set props from model variables");
+        phylo_tree->hideProgress();
+        writeInfo(std::cout);
+        phylo_tree->showProgress();
+    }
+}
+
+void YAMLRateHeterotachy::sortUpdatedRates() {
+    super::sortUpdatedRates();
+    int prop_count = model_info.getNumberOfProportions();
+    int prop_ix    = 0;
+    model_info.updateModelVariablesByType(prop,  prop_count, true,
+                                          ModelParameterType::PROPORTION, prop_ix);
+    if (YAMLRateVerbosity <= verbose_mode) {
+        TREE_LOG_LINE(*phylo_tree, YAMLRateVerbosity, 
+                      "Set model variables during proportion optimization");
+        phylo_tree->hideProgress();
+        writeInfo(std::cout);
+        phylo_tree->showProgress();
+    }                               
+}
+
+YAMLRateHeterotachyInvar::YAMLRateHeterotachyInvar
+    (PhyloTree *tree, PhyloTree* report_to_tree,
+     const ModelInfoFromYAMLFile& info) 
+     : super(info, report_to_tree) {
+    setNCategory(info.getNumberOfProportions());
+    setGammaShape(1.0);
+
+    const ModelVariable* pvar = info.getInvariantProportionVariable();
+    ASSERT(pvar!=nullptr);
+    setPInvar(pvar->getValue());
+    setFixPInvar(pvar->isFixed());
+}
+
+void YAMLRateHeterotachyInvar::updateRateClassFromModelVariables() {
+    int prop_count = model_info.getNumberOfProportions();
+    int prop_ix    = 0;
+    model_info.readModelVariablesByType(prop,  prop_count, true,
+                                        ModelParameterType::PROPORTION, prop_ix);
+    model_info.readModelVariablesByType(prop,  prop_count, true,
+                                        ModelParameterType::INVARIANT_PROPORTION, prop_ix);
+    if (YAMLRateVerbosity <= verbose_mode) {
+        TREE_LOG_LINE(*phylo_tree, YAMLRateVerbosity, 
+                      "Set rates and props from model variables");
+        phylo_tree->hideProgress();
+        writeInfo(std::cout);
+        phylo_tree->showProgress();
+    }
+}
+
+void YAMLRateHeterotachyInvar::sortUpdatedRates() {
+    super::sortUpdatedRates();
+    int prop_count = model_info.getNumberOfProportions();
+    int prop_ix    = 0;
+    model_info.updateModelVariablesByType(prop,  prop_count, true,
+                                          ModelParameterType::PROPORTION, prop_ix);
+    model_info.updateModelVariablesByType(prop,  prop_count, true,
+                                          ModelParameterType::INVARIANT_PROPORTION, prop_ix);
+    if (YAMLRateVerbosity <= verbose_mode) {
+        TREE_LOG_LINE(*phylo_tree, YAMLRateVerbosity, 
+                      "Set model variables during proportion optimization");
         phylo_tree->hideProgress();
         writeInfo(std::cout);
         phylo_tree->showProgress();

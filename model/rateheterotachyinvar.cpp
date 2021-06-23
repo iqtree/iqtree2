@@ -7,12 +7,21 @@
 
 #include "rateheterotachyinvar.h"
 
+RateHeterotachyInvar::RateHeterotachyInvar(int ncat, PhyloTree *tree, 
+                                           PhyloTree* report_to_tree)
+: super(ncat, tree, report_to_tree), invar(0, tree) {
+	cur_optimize = 0;
+	name         = "+I"     + name;
+	full_name    = "Invar+" + full_name;
+    setNCategory(ncat);
+}
+
 RateHeterotachyInvar::RateHeterotachyInvar(int ncat, string params, double p_invar_sites, PhyloTree *tree)
 : super(ncat, params, tree), invar(p_invar_sites, tree)
 {
 	cur_optimize = 0;
-	name = "+I" + name;
-	full_name = "Invar+" + full_name;
+	name         = "+I"     + name;
+	full_name    = "Invar+" + full_name;
     setNCategory(ncat);
 }
 
