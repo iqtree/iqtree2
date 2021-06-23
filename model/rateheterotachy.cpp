@@ -306,9 +306,19 @@ double RateHeterotachy::optimizeWithEM(PhyloTree* report_to_tree) {
 */
 }
 
-void RateHeterotachy::setFixProportions(bool fix)     { fix_params = fix ? 1 : 0; }
-void RateHeterotachy::setFixRates      (bool fix)     { } //means nothing
+
 bool RateHeterotachy::isOptimizingProportions() const { return true;  }
 bool RateHeterotachy::isOptimizingRates      () const { return false; }
 bool RateHeterotachy::isOptimizingShapes     () const { return false; }
+
 void RateHeterotachy::sortUpdatedRates       ()       {               }
+void RateHeterotachy::setFixProportions(bool fix)     { fix_params = fix ? 1 : 0; }
+void RateHeterotachy::setFixRates      (bool fix)     { } //means nothing
+void RateHeterotachy::setProportionTolerance(double tol) {
+    ASSERT(0<tol);
+    prop_tolerance = tol;
+}
+void RateHeterotachy::setRateTolerance(double tol) {
+    ASSERT(0<tol);
+    rate_tolerance = tol;
+}

@@ -215,6 +215,7 @@ void ModelFileLoader::setParameterTolerance(const YAML::Node&      param,
                                             ModelInfoFromYAMLFile& info,
                                             YAMLFileParameter&     p) {
     if (!overriding) {
+        std::stringstream complaint;
         switch (p.type) {
             case ModelParameterType::FREQUENCY:
                 p.tolerance = 1e-4;
@@ -237,9 +238,22 @@ void ModelFileLoader::setParameterTolerance(const YAML::Node&      param,
             case ModelParameterType::OTHER:
                 p.tolerance = 0;
                 break;
+            default:
+                complaint << "Model parameter type"
+                          << " (" << (int)(p.type)
+                          << " ) not recognized"
+                          << " by setParameterTolerance.";
+                throw ModelExpression::ModelException
+                      (complaint.str());
         }
     }
-    p.tolerance = doubleScalar(param, "tolerance", p.tolerance);
+    p.tolerance_expression = stringScalar(param, "tolerance", "");
+    if (!p.tolerance_expression.empty()) {   
+        std::stringstream context;
+        context << "tolerance of " << p.name;
+        p.tolerance = info.evaluateExpression(p.tolerance_expression, 
+                                              context.str());
+    }
 }
 
 void ModelFileLoader::setParameterValue(const YAML::Node&      param, 
@@ -262,9 +276,18 @@ void ModelFileLoader::setParameterValue(const YAML::Node&      param,
     } else if (p.type==ModelParameterType::WEIGHT) {
         dv = 1.0 / static_cast<double>(count);    
     }
+    else {
+        std::stringstream complaint;
+        complaint << "Model parameter type"
+                    << " (" << (int)(p.type)
+                    << " ) not recognized"
+                    << " by setParameterValue.";
+        throw ModelExpression::ModelException
+                (complaint.str());
+    }
     //Todo: What if name was a list, and initValue is also a list?!
     p.init_expression = stringScalar(param, "initValue", "");
-    p.range            = parseRange  (param, "range", p.range, info);
+    p.range           = parseRange  (param, "range", p.range, info);
     if (p.init_expression!="") {
         int dummy_subscript = p.is_subscripted ? p.minimum_subscript : -1;
         info.forceAssign("subscript", dummy_subscript);

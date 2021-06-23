@@ -176,6 +176,14 @@ public:
 	*/
 	virtual void setPInvar(double pinv) { }
 
+	virtual void setMaximumProportion   (double max_prop) { }
+
+	virtual void setMinimumProportion   (double min_prop) { }
+
+	virtual void setProportionTolerance (double tol) { }
+
+	virtual void setRateTolerance       (double tol) { }
+
 	virtual bool isFixPInvar() const {
 		return true;
 	}

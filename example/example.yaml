@@ -251,9 +251,11 @@
   - name:           rate(1..categories)
     type:           calculated rate
     initValue:      "(categories==1) ? 1.0 : chi2((2.0*subscript-1)/categories/2.0, 2.0*gamma_shape) / (2.0*gamma_shape))"
+    tolerance:      0.0001
   - name:           proportion(1..categories)
     type:           proportion
     initValue:      1/categories
+    tolerance:      0.0001
 
 - ratemodel:        H
   ratedistribution: heterotachy
@@ -262,6 +264,7 @@
     type:           proportion
     range:          0.0001 .. 1 #Allow ranges to be specified as... ranges too
     initValue:      1/categories
+    tolerance:      0.0001
 
 - ratemodel:        R
   ratedistribution: free
@@ -277,6 +280,7 @@
     range:          [0.001, 1000.0]
     tolerance:      0.0001
     initValue:      1.0
+    tolerance:      0.0001
 
 - ratemodel:        I
   ratedistribution: invariant
@@ -284,13 +288,13 @@
   - name:           invariant_proportion
     type:           invariant_proportion
     initValue:      0.1          #Might want to guess at this another way
+    tolerance:      0.0001
 
 - ratemodel:        GFOUR   #test that rates and proportions will be recalculated 
                             #when categories is initialized/constrained.
   frommodel:        G
   constraints:
   - categories = 4  
-
 
 - substitutionmodel: YMIX
   description:       "Model Mixture of JC and GTR"

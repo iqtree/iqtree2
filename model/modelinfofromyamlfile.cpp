@@ -125,6 +125,10 @@ ModelParameterType ModelVariable::getType() const {
     return type;
 }
 
+ModelParameterRange ModelVariable::getRange() const {
+    return range;
+}
+
 std::string ModelVariable::getTypeName() const {
     return modelParameterTypeToString(type);
 }
@@ -388,7 +392,7 @@ void ModelInfoFromYAMLFile::setNumberOfStatesAndSequenceType(int requested_num_s
 }
 
 double ModelInfoFromYAMLFile::evaluateExpression(std::string& expr,
-    std::string context) {
+                                                 std::string context) {
     const char* verb = "parsing";
     try {
         ModelExpression::InterpretedExpression interpreter(*this, expr);
@@ -991,6 +995,46 @@ bool ModelInfoFromYAMLFile::assignLastFrequency(double value) {
     return false;
 }
 
+const YAMLFileParameter& ModelInfoFromYAMLFile::getInvariantProportionParameter() const {
+    for (const YAMLFileParameter& parameter: parameters) {
+        if (parameter.type ==  ModelParameterType::INVARIANT_PROPORTION) {
+            return parameter;
+        }
+    }
+    ASSERT(0 && "model info has invariant proportion parameter");
+    return parameters.front();
+} 
+
+YAMLFileParameter& ModelInfoFromYAMLFile::getInvariantProportionParameter()  {
+    for ( YAMLFileParameter& parameter: parameters) {
+        if (parameter.type ==  ModelParameterType::INVARIANT_PROPORTION) {
+            return parameter;
+        }
+    }
+    ASSERT(0 && "model info has invariant proportion parameter");
+    return parameters.front();
+} 
+
+const YAMLFileParameter& ModelInfoFromYAMLFile::getProportionParameter() const {
+    for (const YAMLFileParameter& parameter: parameters) {
+        if (parameter.type ==  ModelParameterType::PROPORTION) {
+            return parameter;
+        }
+    }
+    ASSERT(0 && "model info has invariant proportion parameter");
+    return parameters.front();
+} 
+
+YAMLFileParameter& ModelInfoFromYAMLFile::getProportionParameter()  {
+    for ( YAMLFileParameter& parameter: parameters) {
+        if (parameter.type ==  ModelParameterType::PROPORTION) {
+            return parameter;
+        }
+    }
+    ASSERT(0 && "model info has invariant proportion parameter");
+    return parameters.front();
+} 
+
 const ModelVariable* ModelInfoFromYAMLFile::getInvariantProportionVariable() const {
     for (const YAMLFileParameter& parameter: parameters) {
         if (parameter.type ==  ModelParameterType::INVARIANT_PROPORTION) {
@@ -1001,6 +1045,26 @@ const ModelVariable* ModelInfoFromYAMLFile::getInvariantProportionVariable() con
     }
     return nullptr;
 }
+
+const YAMLFileParameter& ModelInfoFromYAMLFile::getRateParameter() const {
+    for (const YAMLFileParameter& parameter: parameters) {
+        if (parameter.type ==  ModelParameterType::RATE) {
+            return parameter;
+        }
+    }
+    ASSERT(0 && "model info has no rate parameter");
+    return parameters.front();
+} 
+
+YAMLFileParameter& ModelInfoFromYAMLFile::getRateParameter()  {
+    for ( YAMLFileParameter& parameter: parameters) {
+        if (parameter.type ==  ModelParameterType::RATE) {
+            return parameter;
+        }
+    }
+    ASSERT(0 && "model info has no rate parameter");
+    return parameters.front();
+} 
 
 std::string ModelInfoFromYAMLFile::getStringProperty(const char* name,
     const char* default_value) const {
@@ -1094,7 +1158,7 @@ const std::string& ModelInfoFromYAMLFile::getRateMatrixFormula() const {
     return rate_matrix_formula;
 }
 
-RateHeterogeneity* ModelInfoFromYAMLFile::getSpecifiedRateModel(PhyloTree* tree) const {
+RateHeterogeneity* ModelInfoFromYAMLFile::getSpecifiedRateModel(PhyloTree* tree) {
     ASSERT (!is_rate_model);    //rate models don't *have* rate models, 
                                 //they are rate models
     if (!hasSpecifiedRateModel()) {
@@ -1103,7 +1167,7 @@ RateHeterogeneity* ModelInfoFromYAMLFile::getSpecifiedRateModel(PhyloTree* tree)
     return specified_rate_model_info->getRateHeterogeneity(tree);
 }
 
-RateHeterogeneity* ModelInfoFromYAMLFile::getRateHeterogeneity(PhyloTree* tree) const {
+RateHeterogeneity* ModelInfoFromYAMLFile::getRateHeterogeneity(PhyloTree* tree) {
     ASSERT(is_rate_model);
     bool isInvar = true;
     for ( const YAMLFileParameter &param: parameters ) {

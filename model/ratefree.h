@@ -196,6 +196,11 @@ protected:
 
     string optimize_alg;
 
+	double proportion_tolerance;
+	double rate_tolerance;
+	
+	virtual void setProportionTolerance(double tol);
+	virtual void setRateTolerance(double tol);
 };
 
 #endif /* RATEFREE_H_ */

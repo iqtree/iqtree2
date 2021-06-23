@@ -271,13 +271,13 @@ double RateGammaInvar::randomRestartOptimization(double gradient_epsilon,
     if (testParamDone) {
         return optimizeWithEM(gradient_epsilon, report_to_tree);
     }
-    double frac_const = phylo_tree->aln->frac_const_sites;
-    double bestLogl = phylo_tree->getCurScore();
-    double bestAlpha = 0.0;
-    double bestPInvar = 0.0;
-    double testInterval = (frac_const - MIN_PINVAR*2) / 10;
-    double initPInv = MIN_PINVAR;
-    double initAlpha = getGammaShape();
+    double frac_const   = phylo_tree->aln->frac_const_sites;
+    double bestLogl     = phylo_tree->getCurScore();
+    double bestAlpha    = 0.0;
+    double bestPInvar   = 0.0;
+    double testInterval = (frac_const - invar.getMinimumProportion()*2) / 10;
+    double initPInv     = invar.getMinimumProportion();
+    double initAlpha    = getGammaShape();
 
     while (initPInv <= frac_const) {
         if (verbose_mode >= VerboseMode::VB_MED) {

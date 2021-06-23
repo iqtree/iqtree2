@@ -36,6 +36,9 @@ void RateInvar::defaultInvariantProportion(double p_invar_requested) {
 		// true unless -optfromgiven cmd line option
 		fix_p_invar = !(Params::getInstance().optimize_from_given_params);
 	}
+	minimum   = MIN_PINVAR;
+	maximum   = phylo_tree->aln->frac_const_sites;
+	tolerance = TOL_PINVAR;
 }
 
 RateInvar::RateInvar(int dummy_categories, PhyloTree* tree,
@@ -100,10 +103,12 @@ double RateInvar::targetFunk(double x[]) {
 
 void RateInvar::setBounds(double *lower_bound, double *upper_bound,
                           bool *bound_check) {
-	if (getNDim() == 0) return;
-	lower_bound[1] = MIN_PINVAR;
-	upper_bound[1] = phylo_tree->aln->frac_const_sites;
-	bound_check[1] = false;
+	if (getNDim() == 0) {
+		return;
+	}
+	lower_bound[1] = minimum;
+	upper_bound[1] = maximum;
+	bound_check[1] = true;
 }
 
 double RateInvar::optimizeParameters(double gradient_epsilon,
@@ -119,9 +124,8 @@ double RateInvar::optimizeParameters(double gradient_epsilon,
     
     double negative_lh;
     double ferror;
-    double max_invar = min(phylo_tree->aln->frac_const_sites, 1.0-MIN_PINVAR);
-    double step      = max(gradient_epsilon, TOL_PINVAR);
-    p_invar          = minimizeOneDimen(MIN_PINVAR, p_invar, max_invar, step,
+    double step      = max(gradient_epsilon, tolerance);
+    p_invar          = minimizeOneDimen(minimum, p_invar, maximum, step,
                                         &negative_lh, &ferror);
     return -computeFunction(p_invar);
 }
@@ -150,10 +154,19 @@ bool RateInvar::getVariables(double *variables) {
     return changed;
 }
 
-void RateInvar::setFixProportions(bool fixed)   { fix_p_invar = fixed; }
-void RateInvar::setFixRates(bool fixed)         { } //One rate, always zero!
-bool RateInvar::isOptimizingProportions() const { return !fix_p_invar; }
-bool RateInvar::isOptimizingRates()       const { return false;        }
-bool RateInvar::isOptimizingShapes()      const { return false;        }
-bool RateInvar::areProportionsFixed()     const { return fix_p_invar; }
-void RateInvar::sortUpdatedRates()              { } //No rates, Nothing to do!
+bool   RateInvar::isOptimizingProportions() const       { return !fix_p_invar;  }
+bool   RateInvar::isOptimizingRates()       const       { return false;         }
+bool   RateInvar::isOptimizingShapes()      const       { return false;         }
+bool   RateInvar::areProportionsFixed()     const       { return fix_p_invar;   }
+double RateInvar::getMinimumProportion()    const       { return minimum;       }
+
+void RateInvar::sortUpdatedRates      ()                { } //No rates, Nothing to do!
+void RateInvar::setFixProportions     (bool fixed)      { fix_p_invar = fixed;  }
+void RateInvar::setFixRates           (bool fixed)      { } //One rate, always zero!
+void RateInvar::setMaximumProportion  (double max_prop) { maximum   = max_prop; }
+void RateInvar::setMinimumProportion  (double min_prop) { minimum   = min_prop; }
+void RateInvar::setProportionTolerance(double tol)      {
+	 ASSERT(0<tol);
+	 tolerance = tol;      
+}
+

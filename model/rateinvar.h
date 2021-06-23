@@ -35,8 +35,6 @@ class RateInvar : virtual public RateHeterogeneity
 {
 	friend class RateGammaInvar;
 
-protected:
-	void defaultInvariantProportion(double p_invar_requested);
 
 public:
 	typedef RateHeterogeneity super;
@@ -183,15 +181,27 @@ public:
 	//Functions needed, if RateInvar is to be passed as the
 	//template parameter to YAMLRateModelWrapper.
 	//==============================================
-	virtual void setFixProportions      (bool fixed);
-	virtual void setFixRates            (bool fixed);
-	virtual bool isOptimizingProportions() const;
-	virtual bool isOptimizingRates      () const;
-	virtual bool isOptimizingShapes     () const;
-	virtual bool areProportionsFixed    () const;
-	virtual void sortUpdatedRates       ();
+	virtual bool   isOptimizingProportions() const;
+	virtual bool   isOptimizingRates      () const;
+	virtual bool   isOptimizingShapes     () const;
+	virtual bool   areProportionsFixed    () const;
+	virtual double getMinimumProportion   () const;
+
+	virtual void   sortUpdatedRates       ();
+	virtual void   setFixProportions      (bool fixed);
+	virtual void   setFixRates            (bool fixed);
+	virtual void   setMaximumProportion   (double max_prop);
+	virtual void   setMinimumProportion   (double min_prop);
+	virtual void   setProportionTolerance (double tol);
 
 protected:
+	double minimum;
+	double maximum;
+	double tolerance;
+
+	void defaultInvariantProportion(double p_invar_requested);
+
+	void setTolerance(double convergence_tolerance);
 
 	/**
 		this function is served for the multi-dimension optimization. It should pack the model parameters

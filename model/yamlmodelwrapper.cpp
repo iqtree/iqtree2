@@ -172,7 +172,7 @@ void YAMLModelMixture::afterWeightsChanged() {
 }
 
 YAMLRateFree::YAMLRateFree(PhyloTree* tree, PhyloTree* report_to_tree,
-                           const ModelInfoFromYAMLFile& info)
+                           ModelInfoFromYAMLFile& info)
         : super(info, report_to_tree) {
     setNCategory(info.getNumberOfRateCategories());
     std::string algorithm = info.getOptimizationAlgorithm();
@@ -182,6 +182,9 @@ YAMLRateFree::YAMLRateFree(PhyloTree* tree, PhyloTree* report_to_tree,
     //num_rate_cats, gamma_shape,
     //freerate_params, !fused_mix_rate,
     //params.optimize_alg_freerate, tree
+
+    setProportionToleranceFromModel();
+    setRateToleranceFromModel();
 }
 
 void YAMLRateFree::updateRateClassFromModelVariables() {
@@ -222,11 +225,23 @@ void YAMLRateFree::sortUpdatedRates() {
 }
 
 YAMLRateInvar::YAMLRateInvar(PhyloTree* tree, PhyloTree* report_to_tree,
-                             const ModelInfoFromYAMLFile& info)
+                            ModelInfoFromYAMLFile& info)
         : super(info, report_to_tree) {
     std::string          algorithm = info.getOptimizationAlgorithm();
     const ModelVariable* pvar      = info.getInvariantProportionVariable();
     ASSERT(pvar!=nullptr);
+    auto                 range     = pvar->getRange();
+
+    setMinimumProportion(range.first);
+    setMaximumProportion(range.second);
+
+    YAMLFileParameter&   param     = info.getInvariantProportionParameter();
+    if (!param.tolerance_expression.empty()) {
+        param.tolerance = info.evaluateExpression(param.tolerance_expression, 
+                                                  "invariant proportion");
+        setProportionTolerance(param.tolerance);
+    }
+
     defaultInvariantProportion(pvar->getValue());
 
     fix_p_invar = pvar->isFixed(); 
@@ -267,7 +282,7 @@ void YAMLRateInvar::sortUpdatedRates() {
 }
 
 YAMLRateFreeInvar::YAMLRateFreeInvar(PhyloTree* tree, PhyloTree* report_to_tree,
-                                     const ModelInfoFromYAMLFile& info)
+                                     ModelInfoFromYAMLFile& info)
         : super(info, report_to_tree) {
     setNCategory(info.getNumberOfRateCategories());
     std::string algorithm = info.getOptimizationAlgorithm();
@@ -275,11 +290,24 @@ YAMLRateFreeInvar::YAMLRateFreeInvar(PhyloTree* tree, PhyloTree* report_to_tree,
         setOptimizationAlgorithm(algorithm);
     }
     setGammaShape(1.0);
+    setProportionToleranceFromModel();
+    setRateToleranceFromModel();
 
-    const ModelVariable* pvar = info.getInvariantProportionVariable();
+    const ModelVariable* pvar  = info.getInvariantProportionVariable();
     ASSERT(pvar!=nullptr);
     setPInvar(pvar->getValue());
     setFixPInvar(pvar->isFixed());
+
+    auto                 range = pvar->getRange();
+    setMinimumProportion(range.first);
+    setMaximumProportion(range.second);
+
+    YAMLFileParameter&   param = info.getInvariantProportionParameter();
+    if (!param.tolerance_expression.empty()) {
+        param.tolerance = info.evaluateExpression(param.tolerance_expression, 
+                                                  "invariant proportion");
+        invar.setProportionTolerance(param.tolerance);
+    }
 
     //num_rate_cats, gamma_shape,
     //freerate_params, !fused_mix_rate,
@@ -329,9 +357,10 @@ void YAMLRateFreeInvar::sortUpdatedRates() {
 
 YAMLRateHeterotachy::YAMLRateHeterotachy
     (PhyloTree *tree, PhyloTree* report_to_tree,
-    const ModelInfoFromYAMLFile& info)
+     ModelInfoFromYAMLFile& info)
     : super(info, report_to_tree) {
     setNCategory(info.getNumberOfProportions());
+    setProportionToleranceFromModel();
 }
 
 void YAMLRateHeterotachy::updateRateClassFromModelVariables() {
@@ -365,15 +394,27 @@ void YAMLRateHeterotachy::sortUpdatedRates() {
 
 YAMLRateHeterotachyInvar::YAMLRateHeterotachyInvar
     (PhyloTree *tree, PhyloTree* report_to_tree,
-     const ModelInfoFromYAMLFile& info) 
+     ModelInfoFromYAMLFile& info) 
      : super(info, report_to_tree) {
     setNCategory(info.getNumberOfProportions());
     setGammaShape(1.0);
+    setProportionToleranceFromModel();
 
-    const ModelVariable* pvar = info.getInvariantProportionVariable();
+    YAMLFileParameter&   param  = info.getInvariantProportionParameter();
+    if (!param.tolerance_expression.empty()) {
+        param.tolerance = info.evaluateExpression(param.tolerance_expression, 
+                                                  "invariant proportion");
+        invar.setProportionTolerance(param.tolerance);
+    }
+
+    const ModelVariable* pvar  = info.getInvariantProportionVariable();
     ASSERT(pvar!=nullptr);
     setPInvar(pvar->getValue());
     setFixPInvar(pvar->isFixed());
+
+    auto                 range = pvar->getRange();
+    setMinimumProportion(range.first);
+    setMaximumProportion(range.second);
 }
 
 void YAMLRateHeterotachyInvar::updateRateClassFromModelVariables() {

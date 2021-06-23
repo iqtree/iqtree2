@@ -59,6 +59,7 @@ public:
     std::string         type_name;
     ModelParameterType  type;
     ModelParameterRange range;
+    std::string         tolerance_expression; //Expression for setting/adjusting tolerance
     double              tolerance;            //Tolerance
     std::string         init_expression;      //Expression for initializing parameter
                                               //(Rate models may need to evaluate)
@@ -93,17 +94,18 @@ public:
 
     ModelVariable&     operator=(const ModelVariable& rhs) = default;
 
-    void               setTypeName(const std::string& type_name);
-    void               setMinimum (double minimum_value);
-    void               setMaximum (double maximum_value);
-    void               setValue   (double v);
-    void               markAsFixed();
-    bool               constrainValueToRange();
+    void                 setTypeName (const std::string& type_name);
+    void                 setMinimum  (double minimum_value);
+    void                 setMaximum  (double maximum_value);
+    void                 setValue    (double v);
+    void                 markAsFixed ();
+    bool                 constrainValueToRange();
 
-    std::string        getTypeName() const;
-    ModelParameterType getType    () const;
-    double             getValue   () const;
-    bool               isFixed    () const;
+    std::string          getTypeName () const;
+    ModelParameterType   getType     () const;
+    ModelParameterRange  getRange    () const;
+    double               getValue    () const;
+    bool                 isFixed     () const;
 
 };
 
@@ -427,8 +429,8 @@ public:
     const std::string& getRateMatrixFormula()                           const;
     const std::string& getRateMatrixExpression(int row, int col)        const;
     int                getNumStates()                                   const;
-	RateHeterogeneity* getSpecifiedRateModel(PhyloTree* tree)           const;
-    RateHeterogeneity* getRateHeterogeneity(PhyloTree* tree)            const;
+	RateHeterogeneity* getSpecifiedRateModel(PhyloTree* tree);
+    RateHeterogeneity* getRateHeterogeneity(PhyloTree* tree);
 
     //Tip Likelihood matrices
     int  getTipLikelihoodMatrixRank() const;
@@ -484,7 +486,7 @@ public:
         double value_to_set);
 
     bool   assignLastFrequency(double value);
-    const  ModelVariable* getInvariantProportionVariable() const;
+
 
     //String Properties
     std::string getStringProperty(const char* name,
@@ -519,6 +521,16 @@ public:
     int getNumberOfVariableShapes()      const;
     int getNumberOfProportions()         const;
     int getNumberOfVariableProportions() const; 
+
+    const YAMLFileParameter& getInvariantProportionParameter() const;
+    YAMLFileParameter&       getInvariantProportionParameter();
+    const  ModelVariable*    getInvariantProportionVariable() const;
+
+    const YAMLFileParameter& getProportionParameter() const;
+    YAMLFileParameter&       getProportionParameter();
+
+    const YAMLFileParameter& getRateParameter() const;
+    YAMLFileParameter&       getRateParameter();
 
     //Output
     void writeInfo(const char* caption, ModelParameterType type,

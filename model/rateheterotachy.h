@@ -157,14 +157,18 @@ public:
         set number of rate categories
         @param ncat #categories
     */
-	virtual void setNCategory(int ncat);
+	virtual void setNCategory           (int ncat);
 
-	virtual void setFixProportions      (bool fix);
-	virtual void setFixRates            (bool fix);
 	virtual bool isOptimizingProportions() const;
 	virtual bool isOptimizingRates      () const;
 	virtual bool isOptimizingShapes     () const;
 	virtual void sortUpdatedRates       ();
+
+	virtual void setFixProportions      (bool   fix);
+	virtual void setFixRates            (bool   fix);
+	virtual void setProportionTolerance (double tol);
+	virtual void setRateTolerance       (double tol);
+
 protected:
 
 	/**
@@ -188,6 +192,10 @@ protected:
 
     /** minimum value for a proportion */
 	double prop_minimum;
+
+    /** tolerance (for deciding when rates have converged) */
+	double rate_tolerance;
+
 };
 
 

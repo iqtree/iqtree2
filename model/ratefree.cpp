@@ -28,22 +28,27 @@ const double MAX_FREE_RATE_PROP = 1000;
 
 RateFree::RateFree(int ncat, PhyloTree *tree, PhyloTree* report_to_tree)
     : RateGamma(ncat, tree, report_to_tree) {
-	fix_params        = 0;
-	prop              = nullptr;
-    sorted_rates      = false;
-    optimizing_params = 0;
-    optimize_alg      = report_to_tree->params->optimize_alg_freerate;
+	fix_params           = 0;
+	prop                 = nullptr;
+    sorted_rates         = false;
+    optimizing_params    = 0;
+    optimize_alg         = report_to_tree->params->optimize_alg_freerate;
+    proportion_tolerance = 1e-4;
+    rate_tolerance       = 1e-4;
 	setNCategory(ncat);
 }
 
 RateFree::RateFree(int ncat, double start_alpha, string params,
                    bool use_sorted_rates, string opt_alg, PhyloTree *tree)
     : RateGamma(ncat, start_alpha, false, tree) {
-	fix_params        = 0;
-	prop              = nullptr;
-    sorted_rates      = use_sorted_rates;
-    optimizing_params = 0;
-    optimize_alg      = opt_alg;
+	fix_params           = 0;
+	prop                 = nullptr;
+    sorted_rates         = use_sorted_rates;
+    optimizing_params    = 0;
+    optimize_alg         = opt_alg;
+    proportion_tolerance = 1e-4;
+    rate_tolerance       = 1e-4;
+
 	setNCategory(ncat);
 
 	if (params.empty()) {
@@ -583,7 +588,7 @@ double RateFree::optimizeWithEM(PhyloTree* report_to_tree) {
         for (size_t c = 0; c < nmix; c++) {
             // check for convergence
             sum_prop   += new_prop[c];
-            converged   = converged && (fabs(prop[c]-new_prop[c]) < 1e-4);
+            converged   = converged && (fabs(prop[c]-new_prop[c]) < proportion_tolerance);
             prop[c]     = new_prop[c];
             new_pinvar += new_prop[c];
         }
@@ -591,7 +596,7 @@ double RateFree::optimizeWithEM(PhyloTree* report_to_tree) {
         new_pinvar = 1.0 - new_pinvar;
 
         if (new_pinvar > 1e-4 && getPInvar() != 0.0) {
-            converged = converged && (fabs(getPInvar()-new_pinvar) < 1e-4);
+            converged = converged && (fabs(getPInvar()-new_pinvar) < proportion_tolerance);
             if (isFixPInvar()) {
                 outError("Fixed given p-invar is not supported");
             }
@@ -701,11 +706,21 @@ void RateFree::optimizeRatesOneByOne(PhyloTree*    tree,
         double scaling = rates[c];
         tree->scaleLength(scaling);
         tree->optimizeTreeLengthScaling(MIN_PROP, scaling, 1.0/prop[c], 0.001);
-        converged = converged && (fabs(rates[c] - scaling) < 1e-4);
+        converged = converged && (fabs(rates[c] - scaling) < rate_tolerance);
         rates[c] = scaling;
         sum += prop[c] * rates[c];
         // reset subst model
         tree->setModel(nullptr);
         subst_model->setTree(phylo_tree);
     }
+}
+
+void RateFree::setProportionTolerance(double tol) {
+    ASSERT(0<tol);
+    proportion_tolerance = tol;
+}
+
+void RateFree::setRateTolerance(double tol) {
+    ASSERT(0<tol);
+    rate_tolerance = tol;
 }

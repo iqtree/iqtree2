@@ -488,6 +488,29 @@ public:
                              upper_bound, bound_check);
     }
 
+    void setProportionToleranceFromModel() {
+        if (0<model_info.getNumberOfProportions()) {
+            YAMLFileParameter& param = model_info.getProportionParameter();
+            if (!param.tolerance_expression.empty()) {
+                param.tolerance = model_info.evaluateExpression(param.tolerance_expression, 
+                                                        "proportion tolerance");
+                super::setProportionTolerance(param.tolerance);
+            }
+        }
+    }
+
+    void setRateToleranceFromModel() {
+        if (0<model_info.getNumberOfRateCategories()) {
+            YAMLFileParameter& param = model_info.getRateParameter();
+            if (!param.tolerance_expression.empty()) {
+                param.tolerance = model_info.evaluateExpression
+                                  (param.tolerance_expression, 
+                                   "rate tolerance");
+                super::setRateTolerance(param.tolerance);
+            }
+        }
+    }
+
     virtual void updateRateClassFromModelVariables() = 0 ;
 
     virtual bool getVariables(double* variables) {
@@ -563,7 +586,7 @@ class YAMLRateFree: public YAMLRateModelWrapper<RateFree> {
 public:
     typedef YAMLRateModelWrapper<RateFree> super;
     YAMLRateFree(PhyloTree *tree, PhyloTree* report_to_tree,
-                const ModelInfoFromYAMLFile& info);
+                 ModelInfoFromYAMLFile& info);
     virtual void updateRateClassFromModelVariables();
     virtual void sortUpdatedRates();
 };
@@ -572,7 +595,7 @@ class YAMLRateFreeInvar:public YAMLRateModelWrapper<RateFreeInvar> {
 public:
     typedef YAMLRateModelWrapper<RateFreeInvar> super;
     YAMLRateFreeInvar(PhyloTree *tree, PhyloTree* report_to_tree,
-                const ModelInfoFromYAMLFile& info);
+                      ModelInfoFromYAMLFile& info);
     virtual void updateRateClassFromModelVariables();
     virtual void sortUpdatedRates();
 };
@@ -581,7 +604,7 @@ class YAMLRateHeterotachy: public YAMLRateModelWrapper<RateHeterotachy> {
 public:
     typedef YAMLRateModelWrapper<RateHeterotachy> super;
     YAMLRateHeterotachy(PhyloTree *tree, PhyloTree* report_to_tree,
-                        const ModelInfoFromYAMLFile& info);
+                        ModelInfoFromYAMLFile& info);
     virtual void updateRateClassFromModelVariables();
     virtual void sortUpdatedRates();
 };
@@ -590,7 +613,7 @@ class YAMLRateHeterotachyInvar:public YAMLRateModelWrapper<RateHeterotachyInvar>
 public:
     typedef YAMLRateModelWrapper<RateHeterotachyInvar> super;
     YAMLRateHeterotachyInvar(PhyloTree *tree, PhyloTree* report_to_tree,
-                             const ModelInfoFromYAMLFile& info);
+                            ModelInfoFromYAMLFile& info);
     virtual void updateRateClassFromModelVariables();
     virtual void sortUpdatedRates();
 };
@@ -599,7 +622,7 @@ class YAMLRateInvar:public YAMLRateModelWrapper<RateInvar> {
 public:
     typedef YAMLRateModelWrapper<RateInvar> super;
     YAMLRateInvar(PhyloTree *tree, PhyloTree* report_to_tree,
-                  const ModelInfoFromYAMLFile& info);
+                  ModelInfoFromYAMLFile& info);
     virtual void updateRateClassFromModelVariables();
     virtual void sortUpdatedRates();
 };
