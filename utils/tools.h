@@ -1548,6 +1548,11 @@ public:
      *  Optimization algorithm for +I+G
      */
     string optimize_alg_gammai;
+    
+    /**
+     *  Optimization algorithm for tree weights in tree-mixture model
+     */
+    string optimize_alg_treeweight;
 
     /**
      * If given model parameters on command line (e.g. -m RY3.4{0.2,-0.4})

@@ -1153,12 +1153,11 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
 
             // optimize tree weights
             if (!isTreeWeightFixed) {
-                // score = optimizeTreeWeightsByEM(pattern_mix_lh, curr_epsilon, 1);  // loop max n times
-                // if (weightGrpExist) {
+                if (weightGrpExist || params->optimize_alg_treeweight == "BFGS") {
                     score = optimizeTreeWeightsByBFGS(curr_epsilon);
-                /*} else {
+                } else {
                     score = optimizeTreeWeightsByEM(pattern_mix_lh, curr_epsilon, 1);  // loop max n times
-                }*/
+                }
             }
 
             score = computeLikelihood();
