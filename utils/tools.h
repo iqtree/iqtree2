@@ -2302,9 +2302,14 @@ public:
     double alisim_length_ratio;
     
     /**
-    *  fundi model test
+    *  fundi model - set of taxa
     */
-    string alisim_fundi_test;
+    vector<string> alisim_fundi_taxon_set;
+    
+    /**
+    *  fundi model - proportion
+    */
+    double alisim_fundi_proportion;
     
 };
 

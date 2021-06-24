@@ -142,12 +142,12 @@ protected:
     /**
         permuting selected sites (FunDi models)
     */
-    void permuteSelectedSites(IntVector selected_sites, vector<short int> &sequence);
+    void permuteSelectedSites(IntVector selected_sites, Node* node);
     
     /**
-        extract selected Taxa (FunDi models)
+        writing and deleting simulated sequence immediately if possible
     */
-    void extractSelectedTaxa(IntVector &selected_taxa, int &num_taxa_found, string taxa1, string taxa2, Node *node, Node* dad);
+    void writeAndDeleteSequenceImmediatelyIfPossible(ostream &out, vector<string> state_mapping, NeighborVec::iterator it, Node* node);
     
 public:
     
@@ -158,8 +158,7 @@ public:
     double partition_rate;
     double length_ratio = 1;
     short int max_length_taxa_name = 10;
-    IntVector selected_sites;
-    IntVector selected_taxa;
+    IntVector selected_sites_fundi;
     
     /**
         constructor

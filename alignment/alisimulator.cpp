@@ -28,26 +28,9 @@ AliSimulator::AliSimulator(Params *input_params, int expected_number_sites, doub
     // extract max length of taxa names
     extractMaxTaxaNameLength();
     
-    // test FunDi
-    if (params->alisim_fundi_test.length() > 0)
-    {
-        string fundi_inputs = params->alisim_fundi_test;
-        int pos = fundi_inputs.find("_");
-        string taxa1 = fundi_inputs.substr(0, pos);
-        fundi_inputs.erase(0, pos + 1);
-        
-        pos = fundi_inputs.find("_");
-        string taxa2 = fundi_inputs.substr(0, pos);
-        fundi_inputs.erase(0, pos + 1);
-        
-        double proportion = convert_double(fundi_inputs.c_str());
-        
-        int num_taxa_found = 0;
-        extractSelectedTaxa(selected_taxa, num_taxa_found, taxa1, taxa2, tree->root, tree->root);
-        if (num_taxa_found < 2)
-            outError("Could not detect the subtree containing taxa " + taxa1 + " and taxa " + taxa2 + ". Please check and try again!");
-        selected_sites = selectAndPermuteSites(proportion, round(expected_num_sites/length_ratio));
-    }
+    // innialize set of selected sites for permutation in FunDi model
+    if (params->alisim_fundi_taxon_set.size()>0)
+        selected_sites_fundi = selectAndPermuteSites(params->alisim_fundi_proportion, round(expected_num_sites));
 }
 
 /**
@@ -70,6 +53,10 @@ AliSimulator::AliSimulator(Params *input_params, IQTree *iq_tree, int expected_n
     
     // extract max length of taxa names
     extractMaxTaxaNameLength();
+    
+    // innialize set of selected sites for permutation in FunDi model
+    if (params->alisim_fundi_taxon_set.size()>0)
+        selected_sites_fundi = selectAndPermuteSites(params->alisim_fundi_proportion, round(expected_num_sites));
 }
 
 AliSimulator::~AliSimulator()
@@ -698,44 +685,57 @@ void AliSimulator::simulateSeqs(int sequence_length, ModelSubst *model, double *
             (*it)->node->sequence[i] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(trans_matrix, starting_index, max_num_states, node->sequence[i]);
         }
         
-        if (selected_taxa.size()>0 && std::find(selected_taxa.begin(), selected_taxa.end(), (*it)->node->id) != selected_taxa.end())
+        // permuting selected sites for FunDi model
+        if (params->alisim_fundi_taxon_set.size()>0)
         {
-            permuteSelectedSites(selected_sites, (*it)->node->sequence);
-        }
-        
-        // write sequence of leaf nodes to file if possible
-        if (state_mapping.size() > 0)
-        {
-            if ((*it)->node->isLeaf())
-            {
-                // convert numerical states into readable characters and write output to file
-                out<< convertNumericalStatesIntoReadableCharacters((*it)->node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping, params->aln_output_format, max_length_taxa_name);
-                
-                // remove the sequence to release the memory after extracting the sequence
-                vector<short int>().swap((*it)->node->sequence);
-            }
-            
             if (node->isLeaf())
-            {
-                // avoid writing sequence of __root__
-                if (node->name!=ROOT_NAME)
-                    // convert numerical states into readable characters and write output to file
-                    out<< convertNumericalStatesIntoReadableCharacters(node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping, params->aln_output_format, max_length_taxa_name);
-                
-                // remove the sequence to release the memory after extracting the sequence
-                vector<short int>().swap(node->sequence);
-            }
+                permuteSelectedSites(selected_sites_fundi, node);
+            if ((*it)->node->isLeaf())
+                permuteSelectedSites(selected_sites_fundi, (*it)->node);
         }
         
-        // update the num_children_done_simulation
-        node->num_children_done_simulation++;
-        // remove the sequence of the current node to release the memory
-        if (!node->isLeaf() && node->num_children_done_simulation >= (node->neighbors.size() - 1))
-            vector<short int>().swap(node->sequence);
+        // writing and deleting simulated sequence immediately if possible
+        writeAndDeleteSequenceImmediatelyIfPossible(out, state_mapping, it, node);
         
         // browse 1-step deeper to the neighbor node
         simulateSeqs(sequence_length, model, trans_matrix, max_num_states, (*it)->node, node, out, state_mapping);
     }
+}
+
+/**
+    writing and deleting simulated sequence immediately if possible
+*/
+void AliSimulator::writeAndDeleteSequenceImmediatelyIfPossible(ostream &out, vector<string> state_mapping, NeighborVec::iterator it, Node* node)
+{
+    // write sequence of leaf nodes to file if possible
+    if (state_mapping.size() > 0)
+    {
+        if ((*it)->node->isLeaf())
+        {
+            // convert numerical states into readable characters and write output to file
+            out<< convertNumericalStatesIntoReadableCharacters((*it)->node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping, params->aln_output_format, max_length_taxa_name);
+            
+            // remove the sequence to release the memory after extracting the sequence
+            vector<short int>().swap((*it)->node->sequence);
+        }
+        
+        if (node->isLeaf())
+        {
+            // avoid writing sequence of __root__
+            if (node->name!=ROOT_NAME)
+                // convert numerical states into readable characters and write output to file
+                out<< convertNumericalStatesIntoReadableCharacters(node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping, params->aln_output_format, max_length_taxa_name);
+            
+            // remove the sequence to release the memory after extracting the sequence
+            vector<short int>().swap(node->sequence);
+        }
+    }
+    
+    // update the num_children_done_simulation
+    node->num_children_done_simulation++;
+    // remove the sequence of the current node to release the memory
+    if (!node->isLeaf() && node->num_children_done_simulation >= (node->neighbors.size() - 1))
+        vector<short int>().swap(node->sequence);
 }
 
 /**
@@ -1041,7 +1041,6 @@ IntVector AliSimulator::selectAndPermuteSites(double proportion, int num_sites){
                 continue;
             else
             {
-                cout<<random_site<<endl;
                 // add the random site to the selected list
                 permutedSites.push_back(random_site);
                 break;
@@ -1058,51 +1057,23 @@ IntVector AliSimulator::selectAndPermuteSites(double proportion, int num_sites){
 /**
     permuting selected sites (FunDi models)
 */
-void AliSimulator::permuteSelectedSites(IntVector selected_sites, vector<short int> &sequence)
+void AliSimulator::permuteSelectedSites(IntVector selected_sites, Node* node)
 {
-    // store the first selected site into a dummy variable
-    ASSERT(selected_sites[0] < sequence.size());
-    short int tmp_site = sequence[selected_sites[0]];
-    
-    // permuting selected sites one by one
-    for (int i = 0; i < selected_sites.size() - 1; i++)
+    // permuting sites in FunDi model
+    if (std::find(params->alisim_fundi_taxon_set.begin(), params->alisim_fundi_taxon_set.end(), node->name) != params->alisim_fundi_taxon_set.end())
     {
-        ASSERT(selected_sites[i] < sequence.size() && selected_sites[i+1] < sequence.size());
-        sequence[selected_sites[i]] = sequence[selected_sites[i+1]];
-    }
-    
-    // update the last selected sites from tmp_site
-    sequence[selected_sites[selected_sites.size() - 1]] = tmp_site;
-}
-
-/**
-    extract selected Taxa (FunDi models)
-*/
-void AliSimulator::extractSelectedTaxa(IntVector &selected_taxa, int &num_taxa_found, string taxa1, string taxa2, Node *node, Node* dad){
-    // start/stop add taxa in the subtree
-    if (node->isLeaf()
-        && ((node->name.compare(taxa1) == 0)
-            ||(node->name.compare(taxa2) == 0)))
-        num_taxa_found++;
-    
-    // add taxa into list of selected taxa
-    if (num_taxa_found <= 2)
-    {
-        cout<<node->name<<endl;
-        selected_taxa.push_back(node->id);
-    }
-    
-    // stop traversing tree if both taxa1 and taxa2 are found
-    if (num_taxa_found == 2)
-    {
-        num_taxa_found++;
-        return;
-    }
-
-    // process its neighbors/children
-    NeighborVec::iterator it;
-    FOR_NEIGHBOR(node, dad, it) {
-        // browse 1-step deeper to the neighbor node
-        extractSelectedTaxa(selected_taxa, num_taxa_found, taxa1, taxa2, (*it)->node, node);
+        // store the first selected site into a dummy variable
+        ASSERT(selected_sites[0] < node->sequence.size());
+        short int tmp_site = node->sequence[selected_sites[0]];
+        
+        // permuting selected sites one by one
+        for (int i = 0; i < selected_sites.size() - 1; i++)
+        {
+            ASSERT(selected_sites[i] < node->sequence.size() && selected_sites[i+1] < node->sequence.size());
+            node->sequence[selected_sites[i]] = node->sequence[selected_sites[i+1]];
+        }
+        
+        // update the last selected sites from tmp_site
+        node->sequence[selected_sites[selected_sites.size() - 1]] = tmp_site;
     }
 }

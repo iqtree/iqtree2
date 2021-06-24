@@ -1122,7 +1122,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_length_ratio = 2;
     params.birth_rate = 0.8;
     params.death_rate = 0.2;
-    params.alisim_fundi_test = "";
+    params.alisim_fundi_proportion = 0;
     
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
@@ -2157,8 +2157,25 @@ void parseArg(int argc, char *argv[], Params &params) {
             if (strcmp(argv[cnt], "--fundi") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use --fundi taxa1 taxa2 proportion";
-                params.alisim_fundi_test = argv[cnt];
+                    throw "Use --fundi taxa_1,...,taxa_n,proportion";
+                string fundi_input = argv[cnt];
+                
+                // parse input taxon set
+                size_t pos = 0;
+                string delimiter = ",";
+                while ((pos = fundi_input.find(delimiter)) != std::string::npos) {
+                    params.alisim_fundi_taxon_set.push_back(fundi_input.substr(0, pos));
+                    fundi_input.erase(0, pos + delimiter.length());
+                }
+                if (params.alisim_fundi_taxon_set.size() == 0 || fundi_input.length() == 0)
+                    throw "Use --fundi taxa_1,...,taxa_n,proportion";
+                
+                // parse proportion
+                params.alisim_fundi_proportion = convert_double(fundi_input.c_str());
+                
+                if (params.alisim_fundi_proportion > 1)
+                    throw "Proportion in FunDi model must be less than 1";
+                
                 continue;
             }
 			if (strcmp(argv[cnt], "-ngs_gap") == 0) {

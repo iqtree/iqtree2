@@ -21,6 +21,7 @@ AliSimulatorHeterogeneity::AliSimulatorHeterogeneity(AliSimulator *alisimulator)
     partition_rate = alisimulator->partition_rate;
     rate_heterogeneity = tree->getRate();
     max_length_taxa_name = alisimulator->max_length_taxa_name;
+    selected_sites_fundi = alisimulator->selected_sites_fundi;
 }
 
 /**
@@ -236,35 +237,17 @@ void AliSimulatorHeterogeneity::simulateSeqs(int sequence_length, double *site_s
                 (*it)->node->sequence[i] = estimateStateFromOriginalTransMatrix(model, site_specific_model_index[i], site_specific_rates[i], trans_matrix, max_num_states, (*it)->length, node->sequence[i]);
         }
         
-        // write sequence of leaf nodes to file if possible
-        if (state_mapping.size() > 0)
+        // permuting selected sites for FunDi model
+        if (params->alisim_fundi_taxon_set.size()>0)
         {
-            if ((*it)->node->isLeaf())
-            {
-                // convert numerical states into readable characters and write output to file
-                out<< convertNumericalStatesIntoReadableCharacters((*it)->node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping, params->aln_output_format, max_length_taxa_name);
-                
-                // remove the sequence to release the memory after extracting the sequence
-                vector<short int>().swap((*it)->node->sequence);
-            }
-            
             if (node->isLeaf())
-            {
-                // avoid writing sequence of __root__
-                if (node->name!=ROOT_NAME)
-                    // convert numerical states into readable characters and write output to file
-                    out<< convertNumericalStatesIntoReadableCharacters(node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping, params->aln_output_format, max_length_taxa_name);
-                
-                // remove the sequence to release the memory after extracting the sequence
-                vector<short int>().swap(node->sequence);
-            }
+                permuteSelectedSites(selected_sites_fundi, node);
+            if ((*it)->node->isLeaf())
+                permuteSelectedSites(selected_sites_fundi, (*it)->node);
         }
         
-        // update the num_children_done_simulation
-        node->num_children_done_simulation++;
-        // remove the sequence of the current node to release the memory
-        if (!node->isLeaf() && node->num_children_done_simulation >= (node->neighbors.size() - 1))
-            vector<short int>().swap(node->sequence);
+        // writing and deleting simulated sequence immediately if possible
+        writeAndDeleteSequenceImmediatelyIfPossible(out, state_mapping, it, node);
         
         // browse 1-step deeper to the neighbor node
         simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, (*it)->node, node, out, state_mapping);
