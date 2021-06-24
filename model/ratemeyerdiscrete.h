@@ -40,6 +40,8 @@ public:
    */
    RateMeyerDiscrete(int ncat, int cat_type, char *file_name, PhyloTree *tree, bool rate_type);
 
+   RateMeyerDiscrete(int ncat, PhyloTree* tree, PhyloTree* report_to_tree);
+
    RateMeyerDiscrete();
 
 	/**
@@ -132,7 +134,14 @@ public:
 		write information
 		@param out output stream
 	*/
-	virtual void writeInfo(ostream &out);
+	virtual void   writeInfo(ostream &out);
+
+	virtual void   setNCategory(int ncat);
+
+	/**
+	    sort updated/re-normalized rates
+	 */
+	virtual void   sortUpdatedRates();
 
 protected:
 

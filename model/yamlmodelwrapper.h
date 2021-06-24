@@ -39,6 +39,8 @@
 #include "ratefreeinvar.h"         //for RateFreeInvar
 #include "rateheterotachy.h"       //for RateHeterotachy
 #include "rateheterotachyinvar.h"  //for RateHeterotachyInvar
+#include "ratemeyerdiscrete.h"     //for RateMeyerDiscrete
+#include "ratemeyerhaeseler.h"     //for RateMeyerHaeseler
 #include "ratekategory.h"          //for RateKategory
 
 #include "modelinfofromyamlfile.h" //for ModelInfoFromYAMLFile, etc.
@@ -628,6 +630,24 @@ public:
     virtual void sortUpdatedRates();
 };
 
+class YAMLRateMeyerDiscrete:public YAMLRateModelWrapper<RateMeyerDiscrete> {
+public:
+    typedef YAMLRateModelWrapper<RateMeyerDiscrete> super;
+    YAMLRateMeyerDiscrete(PhyloTree *tree, PhyloTree* report_to_tree,
+                     ModelInfoFromYAMLFile& info);
+    virtual void updateRateClassFromModelVariables();
+    virtual void sortUpdatedRates();    
+};
+
+class YAMLRateMeyerHaeseler:public YAMLRateModelWrapper<RateMeyerHaeseler> {
+public:
+    typedef YAMLRateModelWrapper<RateMeyerHaeseler> super;
+    YAMLRateMeyerHaeseler(PhyloTree *tree, PhyloTree* report_to_tree,
+                     ModelInfoFromYAMLFile& info);
+    virtual void updateRateClassFromModelVariables();
+    virtual void sortUpdatedRates();    
+};
+
 class YAMLRateKategory:public YAMLRateModelWrapper<RateKategory> {
 public:
     typedef YAMLRateModelWrapper<RateKategory> super;
@@ -636,6 +656,5 @@ public:
     virtual void updateRateClassFromModelVariables();
     virtual void sortUpdatedRates();    
 };
-
 
 #endif //yaml_model_wrapper_h

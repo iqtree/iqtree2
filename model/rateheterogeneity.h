@@ -34,7 +34,6 @@ const double MIN_SITE_RATE = 1e-6;
 const double MAX_SITE_RATE = 100.0;
 const double TOL_SITE_RATE = 1e-6;
 
-
 /**
 class for among-site rate heterogeneity, the default is homogeneous (equal) rate model
 

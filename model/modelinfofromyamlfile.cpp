@@ -1200,6 +1200,11 @@ RateHeterogeneity* ModelInfoFromYAMLFile::getSpecifiedRateModel(PhyloTree* tree)
 
 RateHeterogeneity* ModelInfoFromYAMLFile::getRateHeterogeneity(PhyloTree* tree) {
     ASSERT(is_rate_model);
+
+    if (false) {
+        return new YAMLRateMeyerDiscrete(tree, tree, *this);
+        return new YAMLRateMeyerHaeseler(tree, tree, *this);
+    }
     if (isKategoryModel()) {
         return new YAMLRateKategory(tree, tree, *this);
     }

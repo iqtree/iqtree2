@@ -31,13 +31,15 @@ Inherited from Optimization and the double vector for storing site-specific rate
 
 	@author BUI Quang Minh <minh.bui@univie.ac.at>
 */
-class RateMeyerHaeseler : public RateHeterogeneity, public DoubleVector
+class RateMeyerHaeseler : public RateHeterogeneity
 {
 public:
 	/**
 		constructor
 	*/
     RateMeyerHaeseler(char *file_name, PhyloTree *tree, bool rate_type);
+
+	RateMeyerHaeseler(int dummy_rates, PhyloTree* tree, PhyloTree* report_to_tree);
 
     RateMeyerHaeseler();
 
@@ -139,7 +141,6 @@ public:
 	*/
 	virtual void optimizeRates();
 
-
 	/**
 		This function is inherited from Optimization class for optimizting site rates 
 		@param value x-value of the function
@@ -164,8 +165,26 @@ public:
 	*/
 	double *dist_mat;
 
+	virtual bool   isOptimizingProportions() const;
+
+	virtual bool   isOptimizingRates() const;
+
+	virtual bool   isOptimizingShapes() const;
+
+	virtual void   setFixProportions(bool fixed);
+
+	virtual void   setFixRates(bool fixed);
+
+	virtual void   setRateTolerance(double tol);
+
+	/**
+	    sort updated/re-normalized rates
+	 */
+	virtual void   sortUpdatedRates();
 
 protected:
+
+	DoubleVector pat_rates;
 
 	char *rate_file;
 
@@ -185,6 +204,10 @@ protected:
 
 	void prepareRateML(IntVector &ptn_id);
 	void completeRateML();
+
+	double rate_tolerance;
+	double rate_minimum;
+	double rate_maximum;
 };
 
 #endif

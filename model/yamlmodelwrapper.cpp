@@ -450,6 +450,66 @@ void YAMLRateHeterotachyInvar::sortUpdatedRates() {
     }                               
 }
 
+YAMLRateMeyerDiscrete::YAMLRateMeyerDiscrete(PhyloTree* tree, PhyloTree* report_to_tree,
+                           ModelInfoFromYAMLFile& info)
+        : super(info, report_to_tree) {
+    setNCategory(info.getNumberOfRateCategories());
+
+    //num_rate_cats, gamma_shape,
+    //freerate_params, !fused_mix_rate,
+    //params.optimize_alg_freerate, tree
+
+    setRateToleranceFromModel();
+}
+
+void YAMLRateMeyerDiscrete::updateRateClassFromModelVariables() {
+    int rate_count = model_info.getNumberOfRateCategories();
+    int rate_ix    = 0;
+    model_info.readModelVariablesByType(rates, rate_count, true,
+                                        ModelParameterType::RATE, rate_ix);
+    if (YAMLRateVerbosity <= verbose_mode) {
+        TREE_LOG_LINE(*phylo_tree, YAMLRateVerbosity, 
+                      "Set rates from model variables");
+        phylo_tree->hideProgress();
+        writeInfo(std::cout);
+        phylo_tree->showProgress();
+    }
+}
+
+void YAMLRateMeyerDiscrete::sortUpdatedRates() {
+    super::sortUpdatedRates();
+    int rate_count = model_info.getNumberOfRateCategories();
+    int rate_ix    = 0;
+    model_info.updateModelVariablesByType(rates, rate_count, true,
+                                          ModelParameterType::RATE, rate_ix);
+    if (YAMLRateVerbosity <= verbose_mode) {
+        TREE_LOG_LINE(*phylo_tree, YAMLRateVerbosity, 
+                      "Set model variables during rate optimization");
+        phylo_tree->hideProgress();
+        writeInfo(std::cout);
+        phylo_tree->showProgress();
+    }                               
+}
+
+YAMLRateMeyerHaeseler::YAMLRateMeyerHaeseler
+    (PhyloTree* tree, PhyloTree* report_to_tree,
+     ModelInfoFromYAMLFile& info)
+        : super(info, report_to_tree) {
+
+    //num_rate_cats, gamma_shape,
+    //freerate_params, !fused_mix_rate,
+    //params.optimize_alg_freerate, tree
+
+    setRateToleranceFromModel();
+}
+
+void YAMLRateMeyerHaeseler::updateRateClassFromModelVariables() {
+}
+
+void YAMLRateMeyerHaeseler::sortUpdatedRates() {
+    super::sortUpdatedRates();
+}
+
 YAMLRateKategory::YAMLRateKategory(PhyloTree* tree, PhyloTree* report_to_tree,
                            ModelInfoFromYAMLFile& info)
         : super(info, report_to_tree) {

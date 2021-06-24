@@ -175,42 +175,50 @@ double RunKMeans1D(int n, int k, double *points_orig, int *weights,
 /************************************************
 	RateMeyerDiscrete
 ************************************************/
-RateMeyerDiscrete::RateMeyerDiscrete(int ncat, int cat_type,
-                                     char *file_name, PhyloTree *tree,
-                                     bool rate_type)
- : super(file_name, tree, rate_type)
-{
+
+void RateMeyerDiscrete::setNCategory(int ncat) {
 	ncategory = ncat;
-	rates = NULL;
-	ptn_cat = NULL;
-	is_categorized = false;
-	mcat_type = cat_type;
+    delete rates;
+    rates = nullptr;
 	if (ncat > 0) {
 		rates = new double[ncategory];
 		memset(rates, 0, sizeof(double) * ncategory);
 	}
     string cat_num = convertIntToString(ncategory);
 	name += cat_num;
-	if (ncategory > 0)
+	if (ncategory > 0) {
 		full_name += " with " + cat_num + " categories";
-	else
+    }
+	else {
 		full_name += "auto-detect #categories";
+    }
+}
+
+RateMeyerDiscrete::RateMeyerDiscrete(int ncat, int cat_type,
+                                     char *file_name, PhyloTree *tree,
+                                     bool rate_type)
+ : super(file_name, tree, rate_type) {
+	rates          = nullptr;
+	ptn_cat        = nullptr;
+	is_categorized = false;
+	mcat_type      = cat_type;
+
+    setNCategory(ncat);
 }
 
 RateMeyerDiscrete::RateMeyerDiscrete() {
-	ncategory = 0;
-	rates = NULL;
-	ptn_cat = NULL;
+	ncategory      = 0;
+	rates          = nullptr;
+	ptn_cat        = nullptr;
 	is_categorized = false;
-	mcat_type = 0;
-	rates = NULL;
-	name = full_name = "";
-	rate_mh = true;
+	mcat_type      = 0;
+	rate_mh        = true;
 }
 
 RateMeyerDiscrete::~RateMeyerDiscrete()
 {
 	delete [] rates;
+    rates = nullptr;
 }
 
 bool RateMeyerDiscrete::isSiteSpecificRate() const { 
@@ -251,8 +259,8 @@ double RateMeyerDiscrete::getPtnRate(int ptn) {
 
 int RateMeyerDiscrete::computePatternRates(DoubleVector &pattern_rates,
                                            IntVector &pattern_cat) {
-	pattern_rates.insert(pattern_rates.begin(), begin(), end());
-	pattern_cat.insert(pattern_cat.begin(), ptn_cat, ptn_cat + size());
+	pattern_rates.insert(pattern_rates.begin(), pat_rates.begin(), pat_rates.end());
+	pattern_cat.insert(pattern_cat.begin(), ptn_cat, ptn_cat + pat_rates.size());
     return ncategory;
 }
 
@@ -371,7 +379,7 @@ bool RateMeyerDiscrete::countPairFrequencies(const char* eyeSequence,     const 
     if (eyeSequence==nullptr || jaySequence==nullptr || ptn_frequencies==nullptr) {
         return false;
     }
-    for (size_t k = 0; k < size(); k++) {
+    for (size_t k = 0; k < pat_rates.size(); k++) {
         if (ptn_cat[k] != optimizing_cat) {
             continue;
         }
@@ -390,7 +398,7 @@ bool RateMeyerDiscrete::countPairFrequencies(const char* eyeSequence,     const 
 
 void RateMeyerDiscrete::countPairFrequencies(int i, int j, int nstate,
                                              int* pair_frequencies) const {
-    for (size_t k = 0; k < size(); k++) {
+    for (size_t k = 0; k < pat_rates.size(); k++) {
         if (ptn_cat[k] != optimizing_cat) {
             continue;
         }
@@ -411,42 +419,43 @@ double RateMeyerDiscrete::optimizeCatRate(int cat) {
 
 	if (!rate_mh) {
 		IntVector ptn_id;
-		for (int i = 0; i < size(); i++)
-			if (ptn_cat[i] == optimizing_cat)
+		for (int i = 0; i < pat_rates.size(); i++) {
+			if (ptn_cat[i] == optimizing_cat) {
 				ptn_id.push_back(i);
+            }
+        }
 		prepareRateML(ptn_id);
 	}
-
     if (phylo_tree->optimize_by_newton && rate_mh) // Newton-Raphson method 
 	{
-    	optx = minimizeNewtonSafeMode(MIN_SITE_RATE, current_rate,
-                                      MAX_SITE_RATE, TOL_SITE_RATE, negative_lh);
+    	optx = minimizeNewtonSafeMode(rate_minimum, current_rate,
+                                      rate_maximum, rate_tolerance, negative_lh);
     }
     else {
-		optx = minimizeOneDimen(MIN_SITE_RATE, current_rate,
-                                MAX_SITE_RATE, TOL_SITE_RATE,
+		optx = minimizeOneDimen(rate_minimum, current_rate,
+                                rate_maximum, rate_tolerance,
                                 &negative_lh, &ferror);
-        if (optx < MAX_SITE_RATE) {
-            double fnew = computeFunction(MAX_SITE_RATE);
-            if (fnew<= negative_lh+TOL_SITE_RATE) {
-                optx = MAX_SITE_RATE;
+        if (optx < rate_maximum) {
+            double fnew = computeFunction(rate_maximum);
+            if (fnew<= negative_lh+rate_tolerance) {
+                optx = rate_maximum;
                 negative_lh = fnew;
             }
         }
-        if (optx > MIN_SITE_RATE) {
-            double fnew = computeFunction(MIN_SITE_RATE);
-            if (fnew<= negative_lh+TOL_SITE_RATE) {
-                optx = MIN_SITE_RATE;
+        if (optx > rate_minimum) {
+            double fnew = computeFunction(rate_minimum);
+            if (fnew<= negative_lh+rate_tolerance) {
+                optx = rate_minimum;
                 negative_lh = fnew;
             }
         }
     }
-    //negative_lh = brent(MIN_SITE_RATE, current_rate, max_rate, 1e-3, &optx);
-    if (optx > MAX_SITE_RATE*0.99) {
-        optx = MAX_SITE_RATE;
+    //negative_lh = brent(rate_minimum, current_rate, max_rate, 1e-3, &optx);
+    if (optx > rate_maximum*0.99) {
+        optx = rate_maximum;
     }
-    if (optx < MIN_SITE_RATE*2) {
-        optx = MIN_SITE_RATE;
+    if (optx < rate_minimum*2) {
+        optx = rate_minimum;
     }
     rates[cat] = optx;
     if (!rate_mh) {
@@ -458,13 +467,13 @@ double RateMeyerDiscrete::optimizeCatRate(int cat) {
 void RateMeyerDiscrete::normalizeRates() {
     double sum = 0.0;
     double ok  = 0.0;
-	intptr_t nptn = size();
+	intptr_t nptn = pat_rates.size();
     
     auto frequencies = phylo_tree->getConvertedSequenceFrequencies();
     if (frequencies!=nullptr) {
         for (intptr_t i = 0; i < nptn; i++) {
 			//Note: Won't work for > 2 billion
-            if (getPtnRate(static_cast<int>(i)) < MAX_SITE_RATE) {
+            if (getPtnRate(static_cast<int>(i)) < rate_maximum) {
                 double freq = frequencies[i];
                 sum += getPtnRate(static_cast<int>(i)) * freq;
                 ok  += freq;
@@ -473,7 +482,7 @@ void RateMeyerDiscrete::normalizeRates() {
     } else {
         for (intptr_t  i = 0; i < nptn; i++) {
 			//Note: Won't work for > 2 billion
-            if (getPtnRate(static_cast<int>(i)) < MAX_SITE_RATE) {
+            if (getPtnRate(static_cast<int>(i)) < rate_maximum) {
                 double freq = phylo_tree->aln->at(i).frequency;
                 sum += getPtnRate(static_cast<int>(i)) * freq;
                 ok  += freq;
@@ -484,7 +493,7 @@ void RateMeyerDiscrete::normalizeRates() {
         //cout << "Normalizing rates " << sum << " / " << ok << endl;
         double scale_f = ok / sum;
         for (int i = 0; i < ncategory; i++) {
-            if (rates[i] > 2*MIN_SITE_RATE && rates[i] < MAX_SITE_RATE) {
+            if (rates[i] > 2*rate_minimum && rates[i] < rate_maximum) {
                 rates[i] *= scale_f;
             }
         }
@@ -493,7 +502,7 @@ void RateMeyerDiscrete::normalizeRates() {
 
 double RateMeyerDiscrete::classifyRatesKMeans(PhyloTree* report_to_tree) {
 	ASSERT(ncategory > 0);
-	int nptn = static_cast<int>(size()); 
+	int nptn = static_cast<int>(pat_rates.size()); 
 
 	// clustering the rates with k-means
 	//AddKMeansLogging(&cout, false);
@@ -502,7 +511,7 @@ double RateMeyerDiscrete::classifyRatesKMeans(PhyloTree* report_to_tree) {
 	int i;
 	if (!ptn_cat) ptn_cat = new int[nptn];
 	for (i = 0; i < nptn; i++) {
-		points[i] = at(i);
+		points[i] = pat_rates.at(i);
 		if (mcat_type & MCAT_LOG) points[i] = log(points[i]);
 		weights[i] = 1;
 		if (!(mcat_type & MCAT_PATTERN)) 
@@ -523,8 +532,8 @@ double RateMeyerDiscrete::classifyRatesKMeans(PhyloTree* report_to_tree) {
     if (rates[0] < MIN_SITE_RATE) {
         rates[0] = MIN_SITE_RATE;
     }
-    if (rates[ncategory-1] > MAX_SITE_RATE - 1e-6) {
-        rates[ncategory-1] = MAX_SITE_RATE;
+    if (rates[ncategory-1] > rate_maximum - 1e-6) {
+        rates[ncategory-1] = rate_maximum;
     }
 	if (verbose_mode >= VerboseMode::VB_MED) {
 		cout << "K-means cost: " << cost << endl;
