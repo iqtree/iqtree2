@@ -700,12 +700,12 @@ void ModelFactory::initializeRateHeterogeneity(const ModelInfo& rate_info,
     bool isGammaModel        = rate_info.isGammaModel();
     bool isHeterotarchicRate = rate_info.hasRateHeterotachy();
     bool isInvariantModel    = rate_info.isInvariantModel();
+    bool isKategoryModel     = rate_info.isKategoryModel();
 
     checkRateCompatibility(isFreeRate, isGammaModel, 
                            isHeterotarchicRate, isInvariantModel,
                            fused_mix_rate);
 
-    string::size_type posX;
     int    num_rate_cats      = params.num_rate_cats;
     double p_invar_sites      = params.p_invar_sites;
     double gamma_shape        = params.gamma_shape;
@@ -777,14 +777,9 @@ void ModelFactory::initializeRateHeterogeneity(const ModelInfo& rate_info,
 //            } else num_rate_cats = -1;
 //            site_rate = new NGSRate(tree);
 //            site_rate->setTree(tree);
-        else if ((posX = rate_str.find("+K")) != string::npos) {
-            if (rate_str.length() > posX+2 && isdigit(rate_str[posX+2])) {
-                num_rate_cats = convert_int(rate_str.substr(posX+2).c_str());
-                if (num_rate_cats < 1) {
-                    outError("Wrong number of rate categories");
-                }
-            }
-            site_rate = new RateKategory(num_rate_cats, tree);
+        else if (isKategoryModel) {
+            num_rate_cats = rate_info.getKategoryRateCount(1, num_rate_cats);
+            site_rate     = new RateKategory(num_rate_cats, tree);
         } else {
             outError("Invalid rate heterogeneity type");
         }

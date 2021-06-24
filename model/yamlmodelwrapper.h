@@ -39,6 +39,7 @@
 #include "ratefreeinvar.h"         //for RateFreeInvar
 #include "rateheterotachy.h"       //for RateHeterotachy
 #include "rateheterotachyinvar.h"  //for RateHeterotachyInvar
+#include "ratekategory.h"          //for RateKategory
 
 #include "modelinfofromyamlfile.h" //for ModelInfoFromYAMLFile, etc.
 #include <tree/phylotree.h>        //for PhyloTree
@@ -626,5 +627,15 @@ public:
     virtual void updateRateClassFromModelVariables();
     virtual void sortUpdatedRates();
 };
+
+class YAMLRateKategory:public YAMLRateModelWrapper<RateKategory> {
+public:
+    typedef YAMLRateModelWrapper<RateKategory> super;
+    YAMLRateKategory(PhyloTree *tree, PhyloTree* report_to_tree,
+                     ModelInfoFromYAMLFile& info);
+    virtual void updateRateClassFromModelVariables();
+    virtual void sortUpdatedRates();    
+};
+
 
 #endif //yaml_model_wrapper_h

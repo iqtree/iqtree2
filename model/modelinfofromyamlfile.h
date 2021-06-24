@@ -352,8 +352,9 @@ public:
 
     virtual bool isFreeRate()                      const { return false; /*stub*/ }
     virtual bool isFrequencyMixture()              const { return false; /*stub*/ }
-    virtual bool isGammaModel()                    const { return false; /*stub*/ }
-    virtual bool isInvariantModel()                const { return false; /*stub*/ }
+    virtual bool isGammaModel()                    const;
+    virtual bool isInvariantModel()                const;
+    virtual bool isKategoryModel()                 const;
     virtual bool isMixtureModel()                  const;
     virtual bool isModelFinder()                   const;
     virtual bool isModelFinderOnly()               const;
@@ -361,6 +362,7 @@ public:
     virtual bool isReversible()                    const;
     virtual bool isWeissAndVonHaeselerTest()       const { return false; /*stub*/ }
 
+    virtual int  getKategoryRateCount               (int rate_count, int min_count)     const;
     virtual ASCType extractASCType                  (std::string& leftover_name)        const;
     bool            checkAscertainmentBiasCorrection(bool warnIfInvalid, ASCType &type) const;
     virtual bool    hasAscertainmentBiasCorrection  ()                                  const;

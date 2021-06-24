@@ -426,6 +426,10 @@ bool ModelInfoFromName::isInvariantModel() const {
     return model_name.find("+I") != std::string::npos;
 }
 
+bool ModelInfoFromName::isKategoryModel() const {
+    return model_name.find("+K") != string::npos;
+}
+
 bool ModelInfoFromName::isMixtureModel() const {
     return startsWith(model_name, "MIX");
 }
@@ -448,6 +452,17 @@ bool ModelInfoFromName::isPolymorphismAware() const {
 
 bool ModelInfoFromName::isWeissAndVonHaeselerTest() const {
     return model_name == "WHTEST";
+}
+
+int  ModelInfoFromName::getKategoryRateCount(int rate_count, int min_count) const {
+    auto posX = model_name.find("+K");
+    if (model_name.length() > posX+2 && isdigit(model_name[posX+2])) {
+        rate_count = convert_int(model_name.substr(posX+2).c_str());
+        if (rate_count < min_count) {
+            outError("Wrong number of rate categories");
+        }
+    }
+    return rate_count;
 }
 
 ASCType ModelInfoFromName::extractASCType

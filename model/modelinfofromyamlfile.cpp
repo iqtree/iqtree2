@@ -295,7 +295,30 @@ void ModelInfoFromYAMLFile::specifyRateModel(const ModelInfoFromYAMLFile& ancest
     }
 }
 
+bool ModelInfoFromYAMLFile::isGammaModel() const {
+    for (auto p : parameters) {
+        if (p.type == ModelParameterType::SHAPE) {
+            //Todo: decide. Should it have to have name 
+            //that contains the substring, "gamma"?
+            return true;
+        }
+    }
+    return false;
+}
 
+bool ModelInfoFromYAMLFile::isInvariantModel() const {
+    for (auto p : parameters) {
+        if (p.type == ModelParameterType::INVARIANT_PROPORTION) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool ModelInfoFromYAMLFile::isKategoryModel()  const {
+    return contains(rate_distribution, "kategory");
+}
+    
 bool ModelInfoFromYAMLFile::isMixtureModel() const {
     return mixed_models != nullptr;
 }
@@ -310,6 +333,14 @@ bool ModelInfoFromYAMLFile::isModelFinderOnly() const {
 
 bool ModelInfoFromYAMLFile::isReversible() const {
     return reversible;
+}
+
+int  ModelInfoFromYAMLFile::getKategoryRateCount(int rate_count, int min_count) const {
+    rate_count = getNumberOfRateCategories();
+    if (rate_count<min_count) {
+         outError("Wrong number of rate categories");
+    }
+    return rate_count;
 }
 
 void ModelInfoFromYAMLFile::updateName(const std::string& name) {
@@ -1021,7 +1052,7 @@ const YAMLFileParameter& ModelInfoFromYAMLFile::getProportionParameter() const {
             return parameter;
         }
     }
-    ASSERT(0 && "model info has invariant proportion parameter");
+    ASSERT(0 && "model info has no proportion parameter");
     return parameters.front();
 } 
 
@@ -1031,7 +1062,7 @@ YAMLFileParameter& ModelInfoFromYAMLFile::getProportionParameter()  {
             return parameter;
         }
     }
-    ASSERT(0 && "model info has invariant proportion parameter");
+    ASSERT(0 && "model info has no proportion parameter");
     return parameters.front();
 } 
 
@@ -1169,12 +1200,10 @@ RateHeterogeneity* ModelInfoFromYAMLFile::getSpecifiedRateModel(PhyloTree* tree)
 
 RateHeterogeneity* ModelInfoFromYAMLFile::getRateHeterogeneity(PhyloTree* tree) {
     ASSERT(is_rate_model);
-    bool isInvar = true;
-    for ( const YAMLFileParameter &param: parameters ) {
-        if (param.type == ModelParameterType::INVARIANT_PROPORTION) {
-            isInvar = true;            
-        }
+    if (isKategoryModel()) {
+        return new YAMLRateKategory(tree, tree, *this);
     }
+    bool isInvar = isInvariantModel();
     if (hasRateHeterotachy()) {
         if (isInvar) {
             return new YAMLRateHeterotachyInvar(tree, tree, *this);
@@ -1335,6 +1364,24 @@ bool ModelInfoFromYAMLFile::checkIntConsistent(const std::string& value_source,
 
 void ModelInfoFromYAMLFile::inheritModel(const ModelInfoFromYAMLFile& mummy) {
     std::stringstream complaint;
+    if (!mummy.rate_distribution.empty()) {
+        //Comma-Separated List set union
+        if (rate_distribution.empty()) {
+            rate_distribution = mummy.rate_distribution;
+        } 
+        else {
+            std::set<std::string> dist_set;
+            for (auto child_distribution : split_string(rate_distribution,",") ) {
+                dist_set.insert(child_distribution);
+            }
+            for (auto mummy_distribution : split_string(mummy.rate_distribution,",") ) {
+                if (dist_set.insert(mummy_distribution).second) {
+                    rate_distribution += ",";
+                    rate_distribution += mummy_distribution;
+                }
+            }
+        }
+    }
     inheritModelProperties(mummy, complaint);
     inheritModelParameters(mummy, complaint);
     inheritModelVariables (mummy, complaint);

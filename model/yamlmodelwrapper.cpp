@@ -449,3 +449,44 @@ void YAMLRateHeterotachyInvar::sortUpdatedRates() {
         phylo_tree->showProgress();
     }                               
 }
+
+YAMLRateKategory::YAMLRateKategory(PhyloTree* tree, PhyloTree* report_to_tree,
+                           ModelInfoFromYAMLFile& info)
+        : super(info, report_to_tree) {
+    setNCategory(info.getNumberOfRateCategories());
+
+    //num_rate_cats, gamma_shape,
+    //freerate_params, !fused_mix_rate,
+    //params.optimize_alg_freerate, tree
+
+    setRateToleranceFromModel();
+}
+
+void YAMLRateKategory::updateRateClassFromModelVariables() {
+    int rate_count = model_info.getNumberOfRateCategories();
+    int rate_ix    = 0;
+    model_info.readModelVariablesByType(rates, rate_count, true,
+                                        ModelParameterType::RATE, rate_ix);
+    if (YAMLRateVerbosity <= verbose_mode) {
+        TREE_LOG_LINE(*phylo_tree, YAMLRateVerbosity, 
+                      "Set rates from model variables");
+        phylo_tree->hideProgress();
+        writeInfo(std::cout);
+        phylo_tree->showProgress();
+    }
+}
+
+void YAMLRateKategory::sortUpdatedRates() {
+    super::sortUpdatedRates();
+    int rate_count = model_info.getNumberOfRateCategories();
+    int rate_ix    = 0;
+    model_info.updateModelVariablesByType(rates, rate_count, true,
+                                          ModelParameterType::RATE, rate_ix);
+    if (YAMLRateVerbosity <= verbose_mode) {
+        TREE_LOG_LINE(*phylo_tree, YAMLRateVerbosity, 
+                      "Set model variables during rate optimization");
+        phylo_tree->hideProgress();
+        writeInfo(std::cout);
+        phylo_tree->showProgress();
+    }                               
+}

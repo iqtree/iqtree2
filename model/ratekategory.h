@@ -40,6 +40,14 @@ public:
     RateKategory(int ncat, PhyloTree *tree);
 
 	/**
+		constructor (used by, for example, YAMLRateModelWrapper)
+		@param ncat number of rate categories
+		@param tree associated phylogenetic tree
+		@param report_to_tree send any log messages to this tree.
+	*/
+	RateKategory(int ncat, PhyloTree *tree, PhyloTree* report_to_tree);
+
+	/**
 		destructor
 	*/
     virtual ~RateKategory();
@@ -67,7 +75,13 @@ public:
 		@param pattern_rates (OUT) pattern rates. Resizing if necesary
         @return total number of categories
 	*/
-	virtual int computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat);
+	virtual int  computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat);
+
+	/**
+	 * setup the bounds for joint optimization with BFGS
+	 */
+	virtual void setBounds(double* lower_bound, double* upper_bound, 
+                           bool*   bound_check);
 
 	/**
 		the target function which needs to be optimized
@@ -101,6 +115,20 @@ public:
 	*/
 	virtual void writeParameters(ostream &out);
 
+	virtual bool   isOptimizingProportions() const;
+
+	virtual bool   isOptimizingRates() const;
+
+	virtual bool   isOptimizingShapes() const;
+
+	virtual void   setFixProportions(bool fixed);
+
+	virtual void   setFixRates(bool fixed);
+
+	virtual void   setRateTolerance(double tol);
+
+	virtual void   setNCategory(int cat);
+
 protected:
 
 	/**
@@ -113,6 +141,9 @@ protected:
 	*/
 	double *rates;
 
+	double rate_tolerance;
+
+	double minimum_rate;
 	
 	/**
 		this function is served for the multi-dimension optimization. It should pack the model parameters 
@@ -128,6 +159,11 @@ protected:
 		@return TRUE if parameters are changed, FALSE otherwise (2015-10-20)
 	*/
 	virtual bool getVariables(double *variables);
+
+	/**
+	    sort updated/re-normalized rates
+	 */
+	virtual void sortUpdatedRates();
 
 };
 

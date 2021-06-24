@@ -49,11 +49,14 @@ public:
     virtual bool isFrequencyMixture()              const = 0;
     virtual bool isGammaModel()                    const = 0;
     virtual bool isInvariantModel()                const = 0;
+    virtual bool isKategoryModel()                 const = 0;
     virtual bool isMixtureModel()                  const = 0;
     virtual bool isModelFinder()                   const = 0;
     virtual bool isModelFinderOnly()               const = 0;
     virtual bool isPolymorphismAware()             const = 0;
     virtual bool isWeissAndVonHaeselerTest()       const = 0;
+
+    virtual int  getKategoryRateCount(int rate_count, int min_count) const = 0;
     
     virtual ASCType     extractASCType(std::string& leftover_name) const = 0;
     virtual std::string extractMixtureModelList(std::string& leftover_name) const = 0;
@@ -101,11 +104,14 @@ public:
     virtual bool isFrequencyMixture()              const;
     virtual bool isGammaModel()                    const;
     virtual bool isInvariantModel()                const;
+    virtual bool isKategoryModel()                 const;
     virtual bool isMixtureModel()                  const;
     virtual bool isModelFinder()                   const;
     virtual bool isModelFinderOnly()               const;
     virtual bool isPolymorphismAware()             const;
     virtual bool isWeissAndVonHaeselerTest()       const;
+
+    virtual int  getKategoryRateCount(int rate_count, int min_count) const;
 
     ASCType     extractASCType(std::string& leftover_name) const;
     std::string extractMixtureModelList(std::string& leftover_name) const;

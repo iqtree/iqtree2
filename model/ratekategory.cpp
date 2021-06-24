@@ -20,22 +20,53 @@
 #include "tree/phylotree.h"
 #include "ratekategory.h"
 
-RateKategory::RateKategory(int ncat, PhyloTree *tree)
-{
-	ncategory = ncat;
-	phylo_tree = tree;
-	rates = new double[ncategory];
-	name = "+K";
-	name += convertIntToString(ncategory);
-	full_name = "KAT";
+
+void RateKategory::setNCategory(int ncat) {
+	ASSERT(ncat!=0);
+	if (ncategory==ncat) {
+		return;
+	}
+	delete rates;
+	ncategory  = ncat;
+	rates      = new double[ncategory];
+	name       = "+K";
+	name      += convertIntToString(ncategory);
+	full_name  = "KAT";
 	full_name += " with " + convertIntToString(ncategory) + " categories";
-	if (ncategory == 1) { rates[0] = 1.0; return; } 
-	int i;
-	for (i = 0; i < ncategory; i++) do { rates[i] = random_double(); } while (rates[i]<0.1 || rates[i] > 0.9);
-	//for (i = 0; i < ncategory; i++) rates[i] = 1.0 + i;
+	if (ncategory == 1) { 
+		rates[0] = 1.0; return; 
+	} 
+	for (int i = 0; i < ncategory; i++) {
+		do { 
+			rates[i] = random_double(); 
+		} 
+		while (rates[i]<0.1 || rates[i] > 0.9);
+	}
 	double sum = 0.0;
-	for (i = 0; i < ncategory; i++) sum += rates[i];
-	for (i = 0; i < ncategory; i++) rates[i] = rates[i]*ncategory/sum;
+	for (int i = 0; i < ncategory; i++) {
+		sum += rates[i];
+	}
+	ASSERT(0<sum);
+	double scaling_factor = ncategory/sum;
+	#ifdef  _OPENMP
+	#pragma omp parallel for
+	#endif
+	for (int i = 0; i < ncategory; i++) {
+		rates[i] *= scaling_factor;
+	}
+}
+
+RateKategory::RateKategory(int ncat, PhyloTree *tree, 
+                           PhyloTree* report_to_tree)
+	: ncategory(0), rates(nullptr) {
+	phylo_tree     = tree;
+	minimum_rate   = 1e-4;
+	rate_tolerance = 1e-6;
+	setNCategory(ncat);
+}
+
+RateKategory::RateKategory(int ncat, PhyloTree *tree)
+	 : RateKategory(ncat, tree, tree) {
 }
 
 RateKategory::~RateKategory()
@@ -47,7 +78,9 @@ RateKategory::~RateKategory()
 double RateKategory::targetFunk(double x[])
 {
 	getVariables(x);
-	if (rates[ncategory-1] < 1e-4) return 1.0e+12;
+	if (rates[ncategory-1] < minimum_rate) {
+		 return 1.0e+12;
+	}
 	ASSERT(phylo_tree);
 	phylo_tree->clearAllPartialLH();
 	return -phylo_tree->computeLikelihood();
@@ -57,30 +90,25 @@ double RateKategory::optimizeParameters(double gradient_epsilon,
                                         PhyloTree* report_to_tree)
 {
 	int ndim = getNDim();
-	
-	// return if nothing to be optimized
-	if (ndim == 0) return 0.0;
-
+	if (ndim == 0) {
+		// return if nothing to be optimized
+		return 0.0;
+	}
 	TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MAX, 
 		          "Optimizing " << name << " model parameters...");
 
-	double *variables = new double[ndim+1];
-	double *upper_bound = new double[ndim+1];
-	double *lower_bound = new double[ndim+1];
-	bool *bound_check = new bool[ndim+1];
-	int i;
-	double score;
+	double* variables   = new double[ndim+1];
+	double* upper_bound = new double[ndim+1];
+	double* lower_bound = new double[ndim+1];
+	bool*   bound_check = new bool[ndim+1];
+	double  score;
 	
 	// by BFGS algorithm
 	setVariables(variables);
-	for (i = 1; i <= ndim; i++) {
-		//cout << variables[i] << endl;
-		lower_bound[i] = 1e-4;
-		upper_bound[i] = ncategory;
-		bound_check[i] = false;
-	}
+	setBounds(lower_bound, upper_bound, bound_check);
 
-	score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, 1e-6));
+	score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, 
+	                            bound_check, max(gradient_epsilon, rate_tolerance));
 
 	getVariables(variables);
 	//sort(rates, rates+ncategory);
@@ -93,6 +121,17 @@ double RateKategory::optimizeParameters(double gradient_epsilon,
 	delete [] variables;
 
 	return score;
+}
+
+void RateKategory::setBounds(double* lower_bound, double* upper_bound, 
+                             bool*   bound_check) {
+	int ndim = getNDim(); 
+	for (int i = 1; i <= ndim; i++) {
+		//cout << variables[i] << endl;
+		lower_bound[i] = minimum_rate;
+		upper_bound[i] = ncategory;
+		bound_check[i] = false;
+	}
 }
 
 int RateKategory::computePatternRates(DoubleVector& pattern_rates, IntVector& pattern_cat)
@@ -112,7 +151,9 @@ int RateKategory::computePatternRates(DoubleVector& pattern_rates, IntVector& pa
 		for (int c = 0; c < ncategory; c++) {
 			sum_rate += rates[c] * lh_cat[c];
 			sum_lh += lh_cat[c];
-			if (lh_cat[c] > lh_cat[best]) best = c;
+			if (lh_cat[c] > lh_cat[best]) {
+				best = c;
+			}
 		}
 		pattern_rates[i] = sum_rate / sum_lh;
 		pattern_cat[i] = best;
@@ -138,14 +179,16 @@ int RateKategory::computePatternRates(DoubleVector& pattern_rates, IntVector& pa
 
 bool RateKategory::getVariables(double* variables)
 {
-	if (ncategory == 1) return false;
+	if (ncategory == 1) {
+		return false;
+	}
     bool changed = (rates[0] != 1.0);
 	rates[0] = 1.0;
 	changed |= memcmpcpy(rates, variables+1, (ncategory-1) * sizeof(double));
 	double sum = 0.0;
-	int i;
-	for (i = 0; i < ncategory-1; i++) 
+	for (int i = 0; i < ncategory-1; ++i) {
 		sum += rates[i];
+	}
 	/*
 	for (i = 0; i < ncategory; i++) 
 		rates[i] = rates[i]*ncategory/sum;*/
@@ -160,12 +203,12 @@ void RateKategory::setVariables(double* variables)
 	memcpy(variables+1, rates, (ncategory-1) * sizeof(double));
 }
 
-
 void RateKategory::writeInfo(ostream& out)
 {
 	out << "Rates: ";
-	for (int i = 0; i < ncategory; i++)
+	for (int i = 0; i < ncategory; i++) {
 		out << " " << rates[i];
+	}
 	out << endl;
 	out << "BIC: " << -2 * phylo_tree->computeLikelihood()
         + getNDim() * log(phylo_tree->getAlnNSite()) << endl;
@@ -174,3 +217,16 @@ void RateKategory::writeInfo(ostream& out)
 void RateKategory::writeParameters(ostream& out)
 {
 }
+
+bool RateKategory::isOptimizingProportions() const     { return false; }
+bool RateKategory::isOptimizingRates      () const     { return true;  }
+bool RateKategory::isOptimizingShapes     () const     { return false; }
+
+void RateKategory::sortUpdatedRates       ()           { }
+void RateKategory::setFixProportions      (bool fix)   { } //means nothing
+void RateKategory::setFixRates            (bool fix)   { } //means nothing
+void RateKategory::setRateTolerance       (double tol) {
+    ASSERT(0<tol);
+    rate_tolerance = tol;
+}
+

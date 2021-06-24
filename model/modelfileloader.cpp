@@ -275,6 +275,8 @@ void ModelFileLoader::setParameterValue(const YAML::Node&      param,
         dv = 1.0;
     } else if (p.type==ModelParameterType::WEIGHT) {
         dv = 1.0 / static_cast<double>(count);    
+    } else if (p.type==ModelParameterType::OTHER) {
+        dv = 1.0;  
     }
     else {
         std::stringstream complaint;
@@ -1163,5 +1165,5 @@ void ModelFileLoader::parseYAMLModelWeightAndScale
                       " for model " + model_name +
                       " in mixture " + info.parent_model->getName() +
                       " in file " + file_path);
-    }
 }
+    }
