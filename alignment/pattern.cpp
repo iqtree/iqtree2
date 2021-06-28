@@ -156,42 +156,44 @@ void Pattern::countAppearances(Alignment* aln) {
     }
 }
 
+void Pattern::setConstCharForAlignment(Alignment* aln) {
+    if (state_app.count() == aln->num_states) {
+        const_char = aln->STATE_UNKNOWN;
+    } else if (state_app.count() == 1) {
+        for (int j = 0; j < aln->num_states; j++) {
+            if (state_app[j]) {
+                const_char = j;
+                break;
+            }
+        }
+    } else if (aln->seq_type == SeqType::SEQ_DNA) {
+        const_char = aln->num_states-1;
+        for (int j = 0; j < aln->num_states; j++)
+            if (state_app[j])
+                const_char += (1<<j);
+    } else if (aln->seq_type == SeqType::SEQ_PROTEIN) {
+        if (state_app[2] && state_app[3]) //4+8, // B = N or D
+            const_char = aln->num_states;
+        else if (state_app[5] && state_app[6]) //32+64, // Z = Q or E
+            const_char = aln->num_states+1;
+        else if (state_app[9] && state_app[10]) // 512+1024 // U = I or L
+            const_char = aln->num_states+2;
+        else ASSERT(0);
+    } else {
+        ASSERT(0);
+    }    
+}
+
 void Pattern::setInformativeFlags(Alignment* aln) {
     is_informative = (count_multi > 1);
     is_const       = (state_app.count() >= 1);
     if (is_const) {
-        if (state_app.count() == aln->num_states) {
-            const_char = aln->STATE_UNKNOWN;
-        } else if (state_app.count() == 1) {
-            for (int j = 0; j < aln->num_states; j++)
-                if (state_app[j]) {
-                    const_char = j;
-                    break;
-                }
-        } else if (aln->seq_type == SeqType::SEQ_DNA) {
-            const_char = aln->num_states-1;
-            for (int j = 0; j < aln->num_states; j++)
-                if (state_app[j])
-                    const_char += (1<<j);
-        } else if (aln->seq_type == SeqType::SEQ_PROTEIN) {
-            if (state_app[2] && state_app[3]) //4+8, // B = N or D
-                const_char = aln->num_states;
-            else if (state_app[5] && state_app[6]) //32+64, // Z = Q or E
-                const_char = aln->num_states+1;
-            else if (state_app[9] && state_app[10]) // 512+1024 // U = I or L
-                const_char = aln->num_states+2;
-            else ASSERT(0);
-        } else {
-            ASSERT(0);
-        }
+        setConstCharForAlignment(aln);
     }
-
-//    delete [] num_app;
 
     // compute is_invariant
     is_invariant = (state_app.count() >= 1);
     ASSERT(is_invariant >= is_const);
-
 
     // Wed Jun 28 16:01:30 BST 2017. The calculation of these properties seems
     // to be OKish. They are only used for reports and to calculate the
@@ -205,10 +207,9 @@ void Pattern::setInformativeFlags(Alignment* aln) {
     //     is_invariant = false;
     // }
 
-    flag = 0;
-    if (is_const) flag |= PAT_CONST;
-    if (is_invariant) flag |= PAT_INVARIANT;
-    if (is_informative) flag |= PAT_INFORMATIVE;
+    flag  = (is_const       ? PAT_CONST       : 0);
+    flag |= (is_invariant   ? PAT_INVARIANT   : 0);
+    flag |= (is_informative ? PAT_INFORMATIVE : 0);
 }
 
 void Pattern::countTowardSingletonParsimonyStates(std::vector<UINT>& singleton_parsimony_states) const {

@@ -48,6 +48,9 @@ protected:
     bool                is_invariant;
     bool                is_informative;
 
+	void setConstCharForAlignment(Alignment* aln);
+
+
 public:
 	/**
 		frequency appearance of the pattern
