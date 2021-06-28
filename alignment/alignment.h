@@ -1023,7 +1023,6 @@ public:
 
 protected:
 
-
     /**
             sequence names
      */
@@ -1059,9 +1058,16 @@ protected:
     void mapLoadedSequencesToAlignment(std::map<string,intptr_t>& map_seqName_ID,
                                        intptr_t nseqs, bool is_incremental, 
                                        intptr_t* actualToTemp);
-    void copyToDistanceMatrix   (double* tmp_dist_mat, intptr_t nseqs,
-                                 intptr_t* actualToTemp, double* dist_mat);
-    void checkForSymmetricMatrix(double* dist_mat, intptr_t nseqs);                           
+    void copyToDistanceMatrix     (double* tmp_dist_mat, intptr_t nseqs,
+                                   intptr_t* actualToTemp, double* dist_mat);
+    void checkForSymmetricMatrix  (double* dist_mat, intptr_t nseqs); 
+
+    void readFirstLineOfPhylipFile(const std::string& line,
+                                   int& nseq, int& nsite);
+    void readFastaSequenceData    (igzstream& in, StrVector& sequences);
+    void parseMSFSequenceNameLine (std::string line, int line_num,
+                                   StrVector&  sequences, int& seq_len);
+
 };
 
 

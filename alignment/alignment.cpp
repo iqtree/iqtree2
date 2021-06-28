@@ -2186,21 +2186,13 @@ int Alignment::readPhylip(const char *filename, const char *sequence_type) {
         if (line == "") continue;
 
         //cout << line << endl;
-        if (nseq == 0) { // read number of sequences and sites
-            istringstream line_in(line);
-            if (!(line_in >> nseq >> nsite))
-                throw "Invalid PHYLIP format."
-                      " First line must contain number of sequences and sites";
-            //cout << "nseq: " << nseq << "  nsite: " << nsite << endl;
-            if (nseq < 3)
-                throw "There must be at least 3 sequences";
-            if (nsite < 1)
-                throw "No alignment columns";
-
+        if (nseq == 0) { 
+            // read number of sequences and sites
+            readFirstLineOfPhylipFile(line, nseq, nsite);
             seq_names.resize(nseq, "");
             sequences.resize(nseq, "");
-
-        } else { // read sequence contents
+        } 
+        else { // read sequence contents
             if (seq_names[seq_id] == "") { // cut out the sequence name
                 string::size_type pos = line.find_first_of(" \t");
                 if (pos == string::npos) pos = 10; //  assume standard phylip
@@ -2214,9 +2206,13 @@ int Alignment::readPhylip(const char *filename, const char *sequence_type) {
                 while (!linestr.eof() ) {
                     state = -1;
                     linestr >> state;
-                    if (state < 0) break;
+                    if (state < 0) {
+                        break;
+                    }
                     sequences[seq_id].append(1, state);
-                    if (num_states < state+1) num_states = state+1;
+                    if (num_states < state+1) {
+                        num_states = state+1;
+                    }
                 }
             } else processSeq(sequences[seq_id], line, line_num);
             if (sequences[seq_id].length() != sequences[0].length()) {
@@ -2226,8 +2222,9 @@ int Alignment::readPhylip(const char *filename, const char *sequence_type) {
                         << sequences[seq_id].length() << endl;
                 throw err_str.str();
             }
-            if (sequences[seq_id].length() > old_len)
+            if (sequences[seq_id].length() > old_len) {
                 seq_id++;
+            }
             if (seq_id == nseq) {
                 seq_id = 0;
                 // make sure that all sequences have the same length at this moment
@@ -2241,6 +2238,22 @@ int Alignment::readPhylip(const char *filename, const char *sequence_type) {
     in.close();
 
     return buildPattern(sequences, sequence_type, nseq, nsite);
+}
+
+void Alignment::readFirstLineOfPhylipFile(const std::string& line,
+                                          int& nseq, int& nsite) {
+    istringstream line_in(line);
+    if (!(line_in >> nseq >> nsite)) {
+        throw "Invalid PHYLIP format."
+                " First line must contain number of sequences and sites";
+    }
+    //cout << "nseq: " << nseq << "  nsite: " << nsite << endl;
+    if (nseq < 3) {
+        throw "There must be at least 3 sequences";
+    }
+    if (nsite < 1) {
+        throw "No alignment columns";
+    }
 }
 
 int Alignment::readPhylipSequential(const char *filename,
@@ -2314,9 +2327,6 @@ int Alignment::readFasta(const char *filename, const char *sequence_type) {
     StrVector sequences;
     ostringstream err_str;
     igzstream in;
-    // ifstream in;
-    int line_num = 1;
-    string line;
 
     // PoMo with Fasta files is not supported yet.
     // if (sequence_type) {
@@ -2332,38 +2342,7 @@ int Alignment::readFasta(const char *filename, const char *sequence_type) {
     // remove the failbit
     in.exceptions(ios::badbit);
 
-    {
-        #if USE_PROGRESS_DISPLAY
-        const char* task = isShowingProgressDisabled ? "" : "Reading fasta file";
-        progress_display progress(in.getCompressedLength(), task, "", "");
-        #else
-        double progress = 0.0;
-        #endif
-        
-        for (; !in.eof(); line_num++) {
-            safeGetLine(in, line);
-            if (line == "") {
-                continue;
-            }
-            //cout << line << endl;
-            if (line[0] == '>') { // next sequence
-                string::size_type pos = line.find_first_of("\n\r");
-                seq_names.push_back(line.substr(1, pos-1));
-                trimString(seq_names.back());
-                sequences.push_back("");
-                continue;
-            }
-            // read sequence contents
-            if (sequences.empty()) {
-                throw "First line must begin with '>' to define sequence name";
-            }
-            processSeq(sequences.back(), line, line_num);
-            progress = (double)in.getCompressedPosition();
-        }
-        #if USE_PROGRESS_DISPLAY
-        progress.done();
-        #endif
-    }
+    readFastaSequenceData(in, sequences);
 
     in.clear();
     // set the failbit again
@@ -2419,6 +2398,43 @@ int Alignment::readFasta(const char *filename, const char *sequence_type) {
                         static_cast<int>(seq_names.size()), 
                         static_cast<int>(sequences.front().length()));
 }
+
+void Alignment::readFastaSequenceData(igzstream& in, StrVector& sequences) {
+    // ifstream in;
+    int line_num = 1;
+    string line;
+    #if USE_PROGRESS_DISPLAY
+    const char* task = isShowingProgressDisabled ? "" : "Reading fasta file";
+    progress_display progress(in.getCompressedLength(), task, "", "");
+    #else
+    double progress = 0.0;
+    #endif
+    
+    for (; !in.eof(); line_num++) {
+        safeGetLine(in, line);
+        if (line == "") {
+            continue;
+        }
+        //cout << line << endl;
+        if (line[0] == '>') { // next sequence
+            string::size_type pos = line.find_first_of("\n\r");
+            seq_names.push_back(line.substr(1, pos-1));
+            trimString(seq_names.back());
+            sequences.push_back("");
+            continue;
+        }
+        // read sequence contents
+        if (sequences.empty()) {
+            throw "First line must begin with '>' to define sequence name";
+        }
+        processSeq(sequences.back(), line, line_num);
+        progress = (double)in.getCompressedPosition();
+    }
+    #if USE_PROGRESS_DISPLAY
+    progress.done();
+    #endif
+}
+
 
 int Alignment::readClustal(const char *filename,
                            const char *sequence_type) {
@@ -2493,14 +2509,11 @@ int Alignment::readClustal(const char *filename,
 
 
 int Alignment::readMSF(const char *filename, const char *sequence_type) {
-
-
     StrVector sequences;
     igzstream in;
     int line_num = 1;
     string line;
     num_states = 0;
-
 
     // set the failbit and badbit
     in.exceptions(ios::failbit | ios::badbit);
@@ -2512,7 +2525,8 @@ int Alignment::readMSF(const char *filename, const char *sequence_type) {
         throw "MSF file must start with header line MULTIPLE_ALIGNMENT";
     }
 
-    int seq_len = 0, seq_count = 0;
+    int  seq_len     = 0;
+    int  seq_count   = 0;
     bool seq_started = false;
 
     for (line_num = 2; !in.eof(); line_num++) {
@@ -2521,7 +2535,6 @@ int Alignment::readMSF(const char *filename, const char *sequence_type) {
         if (line == "") {
             continue;
         }
-        size_t pos;
 
         if (line.substr(0, 2) == "//") {
             seq_started = true;
@@ -2533,72 +2546,36 @@ int Alignment::readMSF(const char *filename, const char *sequence_type) {
                 throw "Line " + convertIntToString(line_num) +
                       ": Cannot declare sequence name here";
             }
-            line = line.substr(5);
-            trimString(line);
-            pos = line.find_first_of(" \t");
-            if (pos == string::npos) {
-                throw "Line " + convertIntToString(line_num) +
-                      ": No whitespace found after sequence name";
-            }
-            string seq_name = line.substr(0,pos);
-            seq_names.push_back(seq_name);
-            sequences.push_back("");
-            pos = line.find("Len:");
-            if (pos == string::npos) {
-                throw "Line " + convertIntToString(line_num) +
-                      ": Sequence description does not contain 'Len:'";
-            }
-            line = line.substr(pos+4);
-            trimString(line);
-            pos = line.find_first_of(" \t");
-            if (pos == string::npos) {
-                throw "Line " + convertIntToString(line_num) +
-                      ": No whitespace found after sequence length";
-            }
-            int len;
-            line = line.substr(0, pos);
-            try {
-                len = convert_int(line.c_str());
-            } catch (string &str) {
-                throw "Line " + convertIntToString(line_num) + ": " + str;
-            }
-            if (len <= 0) {
-                throw "Line " + convertIntToString(line_num) +
-                      ": Non-positive sequence length not allowed";
-            }
-            if (seq_len == 0)
-                seq_len = len;
-            else if (seq_len != len)
-                throw "Line " + convertIntToString(line_num) +
-                      ": Sequence length " + convertIntToString(len) +
-                      " is different from previously defined " +
-                      convertIntToString(seq_len);
+            parseMSFSequenceNameLine(line, line_num, sequences, seq_len);
             continue;
         }
-
-        if (!seq_started) continue;
-
-        if (seq_names.empty())
+        if (!seq_started) {
+            continue;
+        }
+        if (seq_names.empty()) {
             throw "No sequence name declared in header";
-
-        if (isdigit(line[0])) continue;
-        pos = line.find_first_of(" \t");
-        if (pos == string::npos)
+        }
+        if (isdigit(line[0])) {
+            continue;
+        }
+        size_t pos = line.find_first_of(" \t");
+        if (pos == string::npos) {
             throw "Line " + convertIntToString(line_num) 
             + ": whitespace not found between sequence name and content - " + line;
-
+        }
         string seq_name = line.substr(0, pos);
-        if (seq_name != seq_names[seq_count])
+        if (seq_name != seq_names[seq_count]) {
             throw "Line " + convertIntToString(line_num) +
                   ": Sequence name " + seq_name +
                   " does not match previously declared " + seq_names[seq_count];
-
+        }
         line = line.substr(pos+1);
         // read sequence contents
         processSeq(sequences[seq_count], line, line_num);
         seq_count++;
-        if (seq_count == seq_names.size())
+        if (seq_count == seq_names.size()) {
             seq_count = 0;
+        }
     }
     in.clear();
     // set the failbit again
@@ -2607,6 +2584,52 @@ int Alignment::readMSF(const char *filename, const char *sequence_type) {
     return buildPattern(sequences, sequence_type, 
         static_cast<int>(seq_names.size()), 
         static_cast<int>(sequences.front().length()));
+}
+
+void Alignment::parseMSFSequenceNameLine(std::string line, int line_num,
+                                         StrVector&  sequences, int& seq_len) {
+    line = line.substr(5);
+    trimString(line);
+    size_t pos = line.find_first_of(" \t");
+    if (pos == string::npos) {
+        throw "Line " + convertIntToString(line_num) +
+              ": No whitespace found after sequence name";
+    }
+    string seq_name = line.substr(0,pos);
+    seq_names.push_back(seq_name);
+    sequences.push_back("");
+    pos = line.find("Len:");
+    if (pos == string::npos) {
+        throw "Line " + convertIntToString(line_num) +
+              ": Sequence description does not contain 'Len:'";
+    }
+    line = line.substr(pos+4);
+    trimString(line);
+    pos  = line.find_first_of(" \t");
+    if (pos == string::npos) {
+        throw "Line " + convertIntToString(line_num) +
+              ": No whitespace found after sequence length";
+    }
+    int len;
+    line = line.substr(0, pos);
+    try {
+        len = convert_int(line.c_str());
+    } catch (string &str) {
+        throw "Line " + convertIntToString(line_num) + ": " + str;
+    }
+    if (len <= 0) {
+        throw "Line " + convertIntToString(line_num) +
+              ": Non-positive sequence length not allowed";
+    }
+    if (seq_len == 0) {
+        seq_len = len;
+    }
+    else if (seq_len != len) {
+        throw "Line " + convertIntToString(line_num) +
+              ": Sequence length " + convertIntToString(len) +
+              " is different from previously defined " +
+              convertIntToString(seq_len);
+    }
 }
 
 // TODO: Use outWarning to print warnings.
