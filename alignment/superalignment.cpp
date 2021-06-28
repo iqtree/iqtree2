@@ -91,8 +91,9 @@ void SuperAlignment::readFromParams(Params &params) {
                          " An example syntax looks like: \n#nexus\nbegin sets;\n"
                          "  charset part1=1-100;\n  charset part2=101-300;\nend;");
             }
-        } else
+        } else {
             readPartitionRaxml(params);
+        }
     }
     if (partitions.empty())
         outError("No partition found");
@@ -273,8 +274,6 @@ void SuperAlignment::readPartition(Params &params) {
     } catch (string str) {
         outError(str);
     }
-    
-    
 }
 
 void SuperAlignment::readPartitionRaxml(Params &params) {
@@ -297,67 +296,25 @@ void SuperAlignment::readPartitionRaxml(Params &params) {
         if (pos != string::npos) rate_type = params.model_name.substr(pos);
         
         while (!in.eof()) {
-            CharSet info;
-            getline(in, info.model_name, ',');
-            if (in.eof()) break;
-            trimString(info.model_name);
-            //            std::transform(info.model_name.begin(), info.model_name.end(), 
-            //                           info.model_name.begin(), ::toupper);
-            
-            bool is_ASC = info.model_name.substr(0,4) == "ASC_";
-            if (is_ASC) info.model_name.erase(0, 4);
-            StateFreqType freq = StateFreqType::FREQ_UNKNOWN;
-            if (info.model_name.find_first_of("*+{") == string::npos ) {
-                if (*info.model_name.rbegin() == 'F' && info.model_name != "DAYHOFF") {
-                    freq = StateFreqType::FREQ_EMPIRICAL;
-                    info.model_name.erase(info.model_name.length()-1);
-                } else if (*info.model_name.rbegin() == 'X' && info.model_name != "LG4X") {
-                    freq = StateFreqType::FREQ_ESTIMATE;
-                    info.model_name.erase(info.model_name.length()-1);
-                }
+            std::string model_name;
+            getline(in, model_name, ',');
+            if (in.eof()) {
+                break;
             }
-            
-            if (info.model_name.empty())
-                outError("Please give model names in partition file!");
-            if (info.model_name == "BIN") {
-                info.sequence_type = "BIN";
-                info.model_name = "GTR2";
-            } else if (info.model_name == "DNA") {
-                info.sequence_type = "DNA";
-                info.model_name = "GTR";
-            } else if (info.model_name == "MULTI") {
-                info.sequence_type = "MORPH";
-                info.model_name = "MK";
-            } else if (info.model_name.substr(0,5) == "CODON") {
-                info.sequence_type = info.model_name;
-                info.model_name = "GY";
-            } else {
-                info.sequence_type = "AA";
-                if (*info.model_name.begin() == '[') {
-                    if (*info.model_name.rbegin() != ']')
-                        outError("User-defined protein model should be [myProtenSubstitutionModelFileName]");
-                    info.model_name = info.model_name.substr(1, info.model_name.length()-2);
-                }
-            }
-            
-            if (freq == StateFreqType::FREQ_EMPIRICAL)
-                info.model_name += "+F";
-            else if (freq == StateFreqType::FREQ_ESTIMATE)
-                info.model_name += "+FO";
-            if (is_ASC) {
-                info.model_name += "+ASC";
-            }
-            info.model_name += rate_type;
+            CharSet info(model_name);
+            info.setSequenceTypeAndModelNameFromString(info.model_name);
+            info.adjustModelName(rate_type);
             
             getline(in, info.name, '=');
             trimString(info.name);
-            if (info.name.empty())
+            if (info.name.empty()) {
                 outError("Please give partition names in partition file!");
-            
+            }
             safeGetLine(in, info.position_spec);
             trimString(info.position_spec);
-            if (info.position_spec.empty())
+            if (info.position_spec.empty()) {
                 outError("Please specify alignment positions for partition" + info.name);
+            }
             std::replace(info.position_spec.begin(), info.position_spec.end(), ',', ' ');
             
             //            cout << "Reading partition " << info.name << " (model=" << info.model_name << ", seq=" << info.sequence_type << ", pos=" << ((info.position_spec.length() >= 20) ? info.position_spec.substr(0,20)+"..." : info.position_spec) << ") ..." << endl;
@@ -371,19 +328,17 @@ void SuperAlignment::readPartitionRaxml(Params &params) {
             part_aln->extractSites(input_aln, info.position_spec.c_str());
             
             Alignment *new_aln;
-            if (params.remove_empty_seq)
+            if (params.remove_empty_seq) {
                 new_aln = part_aln->removeGappySeq();
-            else
+                delete part_aln;
+            }
+            else {
                 new_aln = part_aln;
-            // also rebuild states set of each sequence for likelihood computation
-//            new_aln->buildSeqStates();
-            
-            if (part_aln != new_aln) delete part_aln;
-
-            new_aln->name = info.name;
-            new_aln->model_name = info.model_name;
+            }
+            new_aln->name          = info.name;
+            new_aln->model_name    = info.model_name;
             new_aln->position_spec = info.position_spec;
-            new_aln->aln_file = info.aln_file;
+            new_aln->aln_file      = info.aln_file;
             new_aln->sequence_type = info.sequence_type;
             partitions.push_back(new_aln);
             // TODO move to supertree

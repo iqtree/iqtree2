@@ -21,6 +21,7 @@
 #define MSETSBLOCK_H
 
 #include "ncl/ncl.h"
+#include "utils/statefrequency.h" //for StateFreqType
 
 /**
 	a taxa set with name
@@ -47,9 +48,8 @@ class CharSet {
 public:
     
     /** constructor */
-    CharSet() {
-        tree_len = 0.0;
-    }
+    CharSet();
+	CharSet(const std::string& name);
     
 	/** charset name */
 	string name;
@@ -71,6 +71,13 @@ public:
     
     /** total tree length for this charset */
     double tree_len;
+
+	bool is_ASC;
+
+	StateFreqType freq;
+
+	void setSequenceTypeAndModelNameFromString(std::string input);
+	void adjustModelName(const std::string& rate_type);
 };
 
 

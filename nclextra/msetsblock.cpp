@@ -21,6 +21,69 @@
 #include "utils/stringfunctions.h" //for convert_double
 #include "utils/tools.h"
 
+CharSet::CharSet(): tree_len(0.0), is_ASC(false) {
+}
+
+CharSet::CharSet(const std::string& name) : CharSet() {
+	model_name = name;
+	trimString(model_name);
+	//            std::transform(info.model_name.begin(), info.model_name.end(), 
+	//                           info.model_name.begin(), ::toupper);
+	
+	is_ASC = model_name.substr(0,4) == "ASC_";
+	if (is_ASC) {
+		model_name.erase(0, 4);
+	}
+	StateFreqType freq = StateFreqType::FREQ_UNKNOWN;
+	if (model_name.find_first_of("*+{") == string::npos ) {
+		if (*model_name.rbegin() == 'F' && model_name != "DAYHOFF") {
+			freq = StateFreqType::FREQ_EMPIRICAL;
+			model_name.erase(model_name.length()-1);
+		} else if (*model_name.rbegin() == 'X' && model_name != "LG4X") {
+			freq = StateFreqType::FREQ_ESTIMATE;
+			model_name.erase(model_name.length()-1);
+		}
+	}
+}
+
+void CharSet::setSequenceTypeAndModelNameFromString(std::string input) {
+	if (input.empty()) {
+		outError("Please give model names in partition file!");
+	}
+	if (input == "BIN") {
+		sequence_type = "BIN";
+		model_name    = "GTR2";
+	} else if (input == "DNA") {
+		sequence_type = "DNA";
+		model_name    = "GTR";
+	} else if (input == "MULTI") {
+		sequence_type = "MORPH";
+		model_name    = "MK";
+	} else if (startsWith(input,"CODON")) {
+		sequence_type = input;
+		model_name    = "GY";
+	} else {
+		sequence_type = "AA";
+		if (*input.begin() == '[') {
+			if (*input.rbegin() != ']') {
+				outError("User-defined protein model should be [myProtenSubstitutionModelFileName]");
+			}
+			model_name = input.substr(1, input.length()-2);
+		}
+	}
+}
+
+void CharSet::adjustModelName(const std::string& rate_type) {
+	if (freq == StateFreqType::FREQ_EMPIRICAL)
+		model_name += "+F";
+	else if (freq == StateFreqType::FREQ_ESTIMATE)
+		model_name += "+FO";
+	if (is_ASC) {
+		model_name += "+ASC";
+	}
+	model_name += rate_type;
+}
+
 MSetsBlock::MSetsBlock()
  : NxsBlock()
 {
