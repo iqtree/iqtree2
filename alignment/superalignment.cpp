@@ -1525,15 +1525,18 @@ double SuperAlignment::computeMissingData() {
 
 }
 
-Alignment *SuperAlignment::concatenateAlignments(set<int> &ids) {
-	string union_taxa;
-	int nsites = 0, nstates = 0;
-	SeqType sub_type = SeqType::SEQ_UNKNOWN;
+void SuperAlignment::identifyUnionTaxa
+        (const std::set<int>& ids, std::string& union_taxa, 
+         int& nsites, int& nstates, SeqType& sub_type ) {
 	for (auto it = ids.begin(); it != ids.end(); it++) {
 		int id = *it;
 		ASSERT(id >= 0 && id < partitions.size());
-		if (nstates == 0) nstates = partitions[id]->num_states;
-		if (sub_type == SeqType::SEQ_UNKNOWN) sub_type = partitions[id]->seq_type;
+		if (nstates == 0) {
+            nstates = partitions[id]->num_states;
+        }
+		if (sub_type == SeqType::SEQ_UNKNOWN) {
+            sub_type = partitions[id]->seq_type;
+        }
 		if (sub_type != partitions[id]->seq_type) {
 			outError("Cannot concatenate sub-alignments of different type");
         }
@@ -1544,17 +1547,33 @@ Alignment *SuperAlignment::concatenateAlignments(set<int> &ids) {
         Pattern taxa_pat = getPattern(id);
         taxa_set.insert(taxa_set.begin(), taxa_pat.begin(), taxa_pat.end());
 		nsites += static_cast<int>(partitions[id]->getNSite());
-		if (it == ids.begin()) union_taxa = taxa_set; else {
-			for (int j = 0; j < union_taxa.length(); j++)
-				if (taxa_set[j] == 1) union_taxa[j] = 1;
+		if (it == ids.begin()) {
+            union_taxa = taxa_set; 
+        }
+        else {
+			for (int j = 0; j < union_taxa.length(); j++) {
+				if (taxa_set[j] == 1) { 
+                    union_taxa[j] = 1;
+                }
+            }
 		}
 	}
+}
+
+Alignment *SuperAlignment::concatenateAlignments(set<int> &ids) {
+	string  union_taxa;
+	int     nsites   = 0;
+    int     nstates  = 0;
+	SeqType sub_type = SeqType::SEQ_UNKNOWN;
+
+    identifyUnionTaxa(ids, union_taxa, nsites, nstates, sub_type);
 
 	Alignment *aln = new Alignment;
-	for (int i = 0; i < union_taxa.length(); i++)
+	for (int i = 0; i < union_taxa.length(); i++) {
 		if (union_taxa[i] == 1) {
 			aln->seq_names.push_back(getSeqName(i));
 		}
+    }
 	aln->num_states = nstates;
 	aln->seq_type   = sub_type;
 	aln->site_pattern.resize(nsites, -1);

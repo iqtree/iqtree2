@@ -40,6 +40,12 @@ So data is binary.
 
 class SuperAlignment : public Alignment
 {
+
+protected:
+    void identifyUnionTaxa(const std::set<int>& ids, 
+                           std::string& union_taxa, int& nsites, 
+                           int& nstates, SeqType& sub_type );
+
 public:
 	/** constructor initialize from a supertree */
     SuperAlignment(Params &params);
