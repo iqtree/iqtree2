@@ -228,6 +228,10 @@ private:
 
 	void dfpmin(double p[], int n, double lower[], double upper[], double gtol, int *iter, double *fret, double *hessian);
 
+		void setHessin (int n, double* hessian, double** hessin);
+	    void dfpminStep(int n, double* g, double* dg, double* hdg,
+                        double** hessin, double* xi);
+
 	void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[],
 		double *f, double stpmax, int *check, double lower[], double upper[]);
 

@@ -797,12 +797,72 @@ double Optimization::minimizeMultiDimen(double guess[], int ndim,
 free_matrix(hessin,1,n,1,n);free_vector(hdg,1,n);free_vector(g,1,n); \
 free_vector(dg,1,n);
 
+void Optimization::setHessin(int n, double* hessian, double** hessin) {
+    if (hessian) {
+        int pos = 0;
+        for (int i=1; i<=n; i++) {
+            for (int j=1; j<=n; j++, ++pos) {
+                hessin[i][j] = hessian[pos];
+            }
+        }
+    } else {
+        for (int i=1;i<=n;i++) {
+            for (int j=1;j<=n;j++) {
+                hessin[i][j]=0.0;
+            }
+            hessin[i][i]=1.0;
+        }
+    }
+}
 
+void Optimization::dfpminStep(int n, double* g, double* dg, double* hdg,
+                              double** hessin, double* xi) {
+	for (int i=1;i<=n;i++) {
+		dg[i]=g[i]-dg[i];
+	}
+	for (int i=1;i<=n;i++) {
+		hdg[i]=0.0;
+		for (int j=1;j<=n;j++) {
+			hdg[i] += hessin[i][j]*dg[j];
+		}
+	}
+	double fac=0;
+	double fae=0;
+	double sumdg=0.0;
+	double sumxi=0.0;
+	for (int i=1;i<=n;i++) {
+		fac += dg[i]*xi[i];
+		fae += dg[i]*hdg[i];
+		sumdg += SQR(dg[i]);
+		sumxi += SQR(xi[i]);
+	}
+	if (fac*fac > EPS*sumdg*sumxi)
+	{
+		fac=1.0/fac;
+		double fad=1.0/fae;
+		for (int i=1;i<=n;i++) {
+			dg[i]=fac*xi[i]-fad*hdg[i];
+		}
+		for (int i=1;i<=n;i++) {
+			for (int j=1;j<=n;j++) {
+				hessin[i][j] += fac*xi[i]*xi[j]
+								-fad*hdg[i]*hdg[j]+fae*dg[i]*dg[j];
+			}
+		}
+	}
+	for (int i=1;i<=n;i++) {
+		xi[i]=0.0;
+		for (int j=1;j<=n;j++) {
+			xi[i] -= hessin[i][j]*g[j];
+		}
+	}
+
+}
 
 void Optimization::dfpmin(double p[], int n, double lower[], double upper[]
                           , double gtol, int *iter, double *fret, double *hessian) {
     int check,i,its,j;
-    double den,fac,fad,fae,fp,stpmax,sum=0.0,sumdg,sumxi,temp,test;
+    double den,fp,stpmax,sum=0.0,temp,test;
     double *dg,*g,*hdg,**hessin,*pnew,*xi;
     
     dg=new_vector(1,n);
@@ -812,26 +872,14 @@ void Optimization::dfpmin(double p[], int n, double lower[], double upper[]
     pnew=new_vector(1,n);
     xi=new_vector(1,n);
     fp = derivativeFunk(p,g);
+
     for (i=1;i<=n;++i)
     {
         xi[i] = -g[i];
         sum += p[i]*p[i];
     }
-    if (hessian) {
-        int pos = 0;
-        for (i=1; i<=n; i++) {
-            for (j=1; j<=n; j++, ++pos) {
-                hessin[i][j] = hessian[pos];
-            }
-        }
-    } else {
-        for (i=1;i<=n;i++) {
-            for (j=1;j<=n;j++) {
-                hessin[i][j]=0.0;
-            }
-            hessin[i][i]=1.0;
-        }
-    }
+
+	setHessin(n, hessian, hessin);
 	//checkBound(p, xi, lower, upper, n);
 	//checkDirection(p, xi);
 
@@ -865,40 +913,7 @@ void Optimization::dfpmin(double p[], int n, double lower[], double upper[]
 			FREEALL
 			return;
 		}
-        for (i=1;i<=n;i++) {
-            dg[i]=g[i]-dg[i];
-        }
-        for (i=1;i<=n;i++) {
-            hdg[i]=0.0;
-            for (j=1;j<=n;j++) {
-                hdg[i] += hessin[i][j]*dg[j];
-            }
-        }
-		fac=fae=sumdg=sumxi=0.0;
-		for (i=1;i<=n;i++) {
-			fac += dg[i]*xi[i];
-			fae += dg[i]*hdg[i];
-			sumdg += SQR(dg[i]);
-			sumxi += SQR(xi[i]);
-		}
-		if (fac*fac > EPS*sumdg*sumxi)
-		{
-			fac=1.0/fac;
-			fad=1.0/fae;
-            for (i=1;i<=n;i++) {
-                dg[i]=fac*xi[i]-fad*hdg[i];
-            }
-			for (i=1;i<=n;i++) {
-				for (j=1;j<=n;j++) {
-					hessin[i][j] += fac*xi[i]*xi[j]
-					                -fad*hdg[i]*hdg[j]+fae*dg[i]*dg[j];
-				}
-			}
-		}
-		for (i=1;i<=n;i++) {
-			xi[i]=0.0;
-			for (j=1;j<=n;j++) xi[i] -= hessin[i][j]*g[j];
-		}
+		dfpminStep(n, g, dg, hdg, hessin, xi);
 		//checkBound(p, xi, lower, upper, n);
 		//checkDirection(p, xi);
 		//if (*iter > 200) cout << "iteration=" << *iter << endl;
