@@ -240,6 +240,10 @@ private:
 		double factr, double pgtol,
 		int *fncount, int *grcount, int maxit, char *msg,
 		int trace, int nREPORT);
+
+		bool lbfgsbStep(int     maxit,  int  iter, int     nREPORT, int trace, 
+                        char*   task,   int  n,    double* x, 
+		                double& f,      int* fail);
     
 	void ensureBetween(double lowest, double &var, double highest);
 	void checkFinite(double check_me, const char* message);

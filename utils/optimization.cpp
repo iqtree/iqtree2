@@ -1192,6 +1192,43 @@ double Optimization::L_BFGS_B(int n, double* x, double* l, double* u, double pgt
     return Fmin;
 }
 
+bool Optimization::lbfgsbStep
+		(int     maxit,  int  iter, int     nREPORT, int trace, 
+         char*   task,   int  n,    double* x, 
+		 double& f,      int* fail) {
+	//Returns false when lbfgsb main do loop should exit,
+	//otherwise, true.
+	if (strncmp(task, "FG", 2) == 0) {
+		f = optimGradient(n, x, g);
+		if (!isfinite(f)) {
+			cerr << "L-BFGS-B needs finite values of 'fn'" << endl;
+			exit(1);
+		}
+		
+	} else if (strncmp(task, "NEW_X", 5) == 0) {
+		iter++;
+		if(trace == 1 && (iter % nREPORT == 0)) {
+			cout << "iter " << iter << " value " << f << endl;
+		}
+		if (iter > maxit) {
+			*fail = 1;
+			return false;
+		}
+	} else if (strncmp(task, "WARN", 4) == 0) {
+		*fail = 51;
+		return false;
+	} else if (strncmp(task, "CONV", 4) == 0) {
+		return false;
+	} else if (strncmp(task, "ERROR", 5) == 0) {
+		*fail = 52;
+		return false;
+	} else { /* some other condition that is not supposed to happen */
+		*fail = 52;
+		return false;
+	}
+	return true;
+}
+
 void Optimization::lbfgsb(int n, int m, double *x, double *l, double *u, int *nbd,
 		double *Fmin, int *fail,
 		double factr, double pgtol,
@@ -1237,48 +1274,25 @@ void Optimization::lbfgsb(int n, int m, double *x, double *l, double *u, int *nb
 #else
 	strcpy(task, "START");
 #endif
-	while(1) {
+	do {
 		/* Main workhorse setulb() from ../appl/lbfgsb.c : */
 		setulb(n, m, x, l, u, nbd, &f, g, factr, &pgtol, wa, iwa, task,
 				tr, lsave, isave, dsave);
 		/*    Rprintf("in lbfgsb - %s\n", task);*/
-		if (strncmp(task, "FG", 2) == 0) {
-			f = optimGradient(n, x, g);
-			if (!isfinite(f)) {
-				cerr << "L-BFGS-B needs finite values of 'fn'" << endl;
-				exit(1);
-			}
-			
-		} else if (strncmp(task, "NEW_X", 5) == 0) {
-			iter++;
-			if(trace == 1 && (iter % nREPORT == 0)) {
-				cout << "iter " << iter << " value " << f << endl;
-			}
-			if (iter > maxit) {
-				*fail = 1;
-				break;
-			}
-		} else if (strncmp(task, "WARN", 4) == 0) {
-			*fail = 51;
-			break;
-		} else if (strncmp(task, "CONV", 4) == 0) {
-			break;
-		} else if (strncmp(task, "ERROR", 5) == 0) {
-			*fail = 52;
-			break;
-		} else { /* some other condition that is not supposed to happen */
-			*fail = 52;
-			break;
-		}
 	}
+	while lbfgsbStep(maxit, iter, nREPORT,  trace, 
+						task, n, x, f, fail);
+
 	*Fmin = f;
 	*fncount = *grcount = isave[33];
 	if (trace) {
 		cout << "final value " << *Fmin << endl;
-		if (iter < maxit && *fail == 0)
+		if (iter < maxit && *fail == 0) {
 			cout << "converged" << endl;
-		else
+		}
+		else {
 			cout << "stopped after " << iter << " iterations\n";
+		}
 	}
 	strcpy(msg, task);
 	free(g);
