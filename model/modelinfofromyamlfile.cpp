@@ -287,11 +287,12 @@ ModelInfoFromYAMLFile::~ModelInfoFromYAMLFile() {
     specified_rate_model_info = nullptr;
 }
 
-void ModelInfoFromYAMLFile::specifyRateModel(const ModelInfoFromYAMLFile& ancestor) {
+void ModelInfoFromYAMLFile::specifyRateModel(const ModelInfoFromYAMLFile& ancestor,
+                                             PhyloTree* report_to_tree) {
     if (specified_rate_model_info==nullptr) {
         specified_rate_model_info = new ModelInfoFromYAMLFile(ancestor);
     } else {
-        specified_rate_model_info->inheritModel(ancestor);
+        specified_rate_model_info->inheritModel(ancestor, report_to_tree);
     }
 }
 
@@ -554,7 +555,8 @@ bool ModelInfoFromYAMLFile::isVariableFixed(const std::string& name) const {
     return pvar->isFixed();
 }
 
-void ModelInfoFromYAMLFile::addParameter(const YAMLFileParameter& p) {
+void ModelInfoFromYAMLFile::addParameter(const YAMLFileParameter& p,
+                                         PhyloTree* report_to_tree) {
     bool replaced = false;
     for (auto it = parameters.begin(); it != parameters.end(); ++it) {
         if (it->name == p.name) {
@@ -577,7 +579,7 @@ void ModelInfoFromYAMLFile::addParameter(const YAMLFileParameter& p) {
             //type of Variables... the ModelVariable& could go wrong
             //(and that'd be *nasty* insidious coupling).
 
-            setSubscriptedVariable(p, i);
+            setSubscriptedVariable(p, i, report_to_tree);
         }
     }
     else {
@@ -586,14 +588,15 @@ void ModelInfoFromYAMLFile::addParameter(const YAMLFileParameter& p) {
 }
 
 void ModelInfoFromYAMLFile::setSubscriptedVariable
-        (const YAMLFileParameter& p, int i) {
+        (const YAMLFileParameter& p, int i, 
+         PhyloTree* report_to_tree) {
     typedef ModelExpression::InterpretedExpression Interpreter;
     typedef ModelExpression::ModelException        Exception;
     std::string var_name = p.getSubscriptedVariableName(i);
-    double v = p.value;
+    double      v        = p.value;
     if (!p.init_expression.empty()) {
         try {
-            Interpreter  ix(*this, p.init_expression);
+            Interpreter ix(*this, p.init_expression);
             v = ix.evaluate();
         }
         catch (Exception x) {
@@ -603,11 +606,19 @@ void ModelInfoFromYAMLFile::setSubscriptedVariable
             throw Exception(complaint.str());
         }
     }
-    variables[var_name] = ModelVariable(p.type, p.range, p.value);
+    if (i<11) {
+        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity, 
+                    "Setting " << getName() << "." 
+                    << var_name << "=" << p.init_expression 
+                    << (p.init_expression.empty() ? "" : "=")
+                    << v );
+    }
+    variables[var_name] = ModelVariable(p.type, p.range, v);
 }
 
 bool ModelInfoFromYAMLFile::removeSubscriptedVariable
-        (const YAMLFileParameter& param, int i) {
+        (const YAMLFileParameter& param, int i,
+         PhyloTree* report_to_tree) {
     std::string dead_var = param.getSubscriptedVariableName(i);
     auto it = variables.find(dead_var);
     if (it != variables.end()) {
@@ -1367,33 +1378,72 @@ bool ModelInfoFromYAMLFile::checkIntConsistent(const std::string& value_source,
     return false;
 }
 
-void ModelInfoFromYAMLFile::inheritModel(const ModelInfoFromYAMLFile& mummy) {
-    std::stringstream complaint;
-    if (!mummy.rate_distribution.empty()) {
-        //Comma-Separated List set union
-        if (rate_distribution.empty()) {
-            rate_distribution = mummy.rate_distribution;
-        } 
-        else {
-            std::set<std::string> dist_set;
-            for (auto child_distribution : split_string(rate_distribution,",") ) {
-                dist_set.insert(child_distribution);
-            }
-            for (auto mummy_distribution : split_string(mummy.rate_distribution,",") ) {
-                if (dist_set.insert(mummy_distribution).second) {
-                    rate_distribution += ",";
-                    rate_distribution += mummy_distribution;
-                }
-            }
+void ModelInfoFromYAMLFile::inheritModelRateDistributions
+        (const ModelInfoFromYAMLFile& mummy) {
+    if (mummy.rate_distribution.empty()) {
+        return;
+    }
+    //Comma-Separated List set union
+    if (rate_distribution.empty()) {
+        rate_distribution = mummy.rate_distribution;
+        return;
+    } 
+    std::set<std::string> dist_set;
+    for (auto child_distribution : split_string(rate_distribution,",") ) {
+        dist_set.insert(child_distribution);
+    }
+    for (auto mummy_distribution : split_string(mummy.rate_distribution,",") ) {
+        if (dist_set.insert(mummy_distribution).second) {
+            rate_distribution += ",";
+            rate_distribution += mummy_distribution;
         }
     }
+}
+
+void ModelInfoFromYAMLFile::inheritModel(const ModelInfoFromYAMLFile& mummy,
+                                         PhyloTree* report_to_tree) {
+    if (this==&mummy) {
+        //Ouch.  You're not allowed to go R+R+R... Or similar.
+        //It'd probably *work* but it's not a case that programmers
+        //should have to worry about.
+        TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MIN,
+                      "Model " << getName() << " cannot inherit from itself.");
+        return;
+    }
+    inheritModelRateDistributions(mummy);
+
+    if (is_rate_model) {
+        //Todo: Recalculate, how many categories there are!
+        //Or something.  I'm not sure what needs to happen here.
+        std::set<std::string> rate_vars;
+        mummy.addNamesOfVariablesOfTypeToSet(ModelParameterType::RATE, rate_vars);
+        addNamesOfVariablesOfTypeToSet(ModelParameterType::RATE, rate_vars);
+        int rate_cats = static_cast<int>(rate_vars.size());
+        forceAssign("categories", rate_cats );
+        model_name += "+";
+        model_name += mummy.getName();
+    }
+
+    std::stringstream complaint;
     inheritModelProperties(mummy, complaint);
-    inheritModelParameters(mummy, complaint);
+    inheritModelParameters(mummy, complaint, report_to_tree);
     inheritModelVariables (mummy, complaint);
     inheritModelMatrices  (mummy, complaint);
 
     ModelExpression::ModelException::throwIfNonBlank(complaint);
 }
+
+void ModelInfoFromYAMLFile::addNamesOfVariablesOfTypeToSet
+        (ModelParameterType type,
+         std::set<std::string>& var_names) const {
+    for (auto it = variables.begin();
+            it!=variables.end(); ++it) {
+        if (it->second.getType() == type) {
+            var_names.insert(it->first);
+        }
+    }
+}
+
 
 void ModelInfoFromYAMLFile::inheritModelProperties(const ModelInfoFromYAMLFile& mummy,
                                                    std::stringstream& complaint) {
@@ -1439,12 +1489,13 @@ void ModelInfoFromYAMLFile::inheritModelProperties(const ModelInfoFromYAMLFile& 
 }
 
 void ModelInfoFromYAMLFile::inheritModelParameters(const ModelInfoFromYAMLFile& mummy,
-                                                   std::stringstream& complaint) {
+                                                   std::stringstream& complaint,
+                                                   PhyloTree* report_to_tree) {
     for (const YAMLFileParameter& mummy_param : mummy.parameters) {
         //Ee-uw.  Add parameter
         const YAMLFileParameter* child_param = findParameter(mummy_param.name);
         if (child_param == nullptr) {
-            addParameter(mummy_param);
+            addParameter(mummy_param, report_to_tree);
             continue;
         }
         if (child_param->type != mummy_param.type) {
@@ -1593,7 +1644,7 @@ int ModelInfoFromYAMLFile::getNumberOfVariableProportions() const {
 }
 
 bool ModelInfoFromYAMLFile::acceptParameterList(std::string parameter_list,
-                                                PhyloTree* report_tree) {
+                                                PhyloTree* report_to_tree) {
     typedef ModelExpression::InterpretedExpression Interpreter;
     typedef ModelExpression::Expression            Expression;
     typedef ModelExpression::Assignment            Assignment;
@@ -1627,7 +1678,7 @@ bool ModelInfoFromYAMLFile::acceptParameterList(std::string parameter_list,
         expr_list.push_back(new Interpreter(*this, param));
         i = j + 1;
     }
-    bool fix      = !report_tree->params->optimize_from_given_params;
+    bool fix      = !report_to_tree->params->optimize_from_given_params;
     int  position = 0;
     getVariableNamesByPosition();
     try {
@@ -1640,11 +1691,11 @@ bool ModelInfoFromYAMLFile::acceptParameterList(std::string parameter_list,
                 string         var_name = xv->getName();
                 Expression*    x        = a->getExpression();
 
-                assign( var_name, x, fix, "by name", report_tree);
+                assign( var_name, x, fix, "by name", report_to_tree);
             } else {
                 string         var_name = getVariableNameByPosition(position);
 
-                assign( var_name, ex, fix, "by position", report_tree);
+                assign( var_name, ex, fix, "by position", report_to_tree);
                 ++position;
             }
             delete ix;
@@ -1665,7 +1716,8 @@ bool ModelInfoFromYAMLFile::acceptParameterList(std::string parameter_list,
             if (expr.expression()->isRange()) {
                 Range* op = dynamic_cast<Range*>(expr.expression());
                 changeParameterSubscriptRange(op->getIntegerMinimum(), 
-                                              op->getIntegerMaximum(),p);
+                                              op->getIntegerMaximum(),p,
+                                              report_to_tree);
             }
         }
     }
@@ -1674,7 +1726,8 @@ bool ModelInfoFromYAMLFile::acceptParameterList(std::string parameter_list,
 }
 
 void ModelInfoFromYAMLFile::changeParameterSubscriptRange
-        (int new_min, int new_max, YAMLFileParameter& param) {
+        (int new_min, int new_max, YAMLFileParameter& param,
+         PhyloTree* report_to_tree) {
     if (new_max < new_min) {
         std::stringstream complaint;
         complaint << "An error occurred, setting the subscript "
@@ -1691,12 +1744,12 @@ void ModelInfoFromYAMLFile::changeParameterSubscriptRange
     param.maximum_subscript = new_max;
     for (int i=new_min; i<=new_max; ++i) {
         if (i<old_min || old_max<i) {
-            setSubscriptedVariable(param, i);
+            setSubscriptedVariable(param, i, report_to_tree);
         } 
     }
     for (int i=old_min; i<=old_max; ++i) {
         if (i<new_min || new_max<i) {
-            removeSubscriptedVariable(param, i);
+            removeSubscriptedVariable(param, i, report_to_tree);
         }
     }
 }

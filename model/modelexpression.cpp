@@ -46,6 +46,21 @@ namespace ModelExpression {
                 return log(parameter);
             }
         } ln_body;
+        class Rand : public UnaryFunctionImplementation {
+        protected:
+            int *rstream;
+        public:
+            Rand() { 
+                init_random(1, false, &rstream);
+            }
+            ~Rand() {
+                finish_random(rstream);
+            }
+            double callFunction(ModelInfoFromYAMLFile& mf,
+                                double parameter) const {
+                return random_double(rstream);
+            }
+        } rand_body;
         class ChiSquared: public MultiFunctionImplementation {
         public:
             typedef MultiFunctionImplementation super;
@@ -62,9 +77,10 @@ namespace ModelExpression {
         std::map<std::string, MultiFunctionImplementation*> multi_functions;
         
         BuiltIns() {
+            multi_functions["chi2"] = &chi2_body;
             unary_functions["exp"]  = &exp_body;
             unary_functions["ln"]   = &ln_body;
-            multi_functions["chi2"] = &chi2_body;
+            unary_functions["rand"] = &rand_body;
         }
 
         bool isUnaryFunction(const std::string &name) {

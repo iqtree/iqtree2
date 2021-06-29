@@ -355,7 +355,7 @@ void ModelFileLoader::parseModelParameter(const YAML::Node& param,
 
     p.logParameterState("Parsed", report_to_tree);
 
-    info.addParameter(p);
+    info.addParameter(p, report_to_tree);
 }
 
 bool ModelFileLoader::isAParameterOverride(ModelInfoFromYAMLFile& info,
@@ -495,7 +495,7 @@ YAMLFileParameter
     auto num_states     = info.getNumStates();
     ASSERT(0 < num_states);
     p.value            = 1 / static_cast<double>(num_states);
-    info.addParameter(p);
+    info.addParameter(p, report_to_tree);
     return p;
 }
 
@@ -850,7 +850,7 @@ void ModelFileLoader::inheritOneModel(ModelInfoFromYAMLFile& info,
                     << ancestor->getName() << ".";
         outError(complaint.str());
     } else if (!info.is_rate_model && ancestor->is_rate_model) {
-        info.specifyRateModel(*ancestor);
+        info.specifyRateModel(*ancestor, report_to_tree);
         return;
     } else if (must_be_rate_models) {
         std::stringstream complaint;
@@ -870,7 +870,7 @@ void ModelFileLoader::inheritOneModel(ModelInfoFromYAMLFile& info,
                     << " is based on model " << ancestor->getName());
         have_first_parent = true;
     } else {
-        info.inheritModel(*ancestor);
+        info.inheritModel(*ancestor, report_to_tree);
         TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
                     "Model " << info.model_name
                     << " is also based on" 
@@ -1002,7 +1002,7 @@ void ModelFileLoader::parseYAMLModel(const YAML::Node& substitution_model,
                                                 "numStates", info.num_states);
         info.setNumberOfStatesAndSequenceType(num_states_requested, report_to_tree);
     } else {
-        info.forceAssign("categories", 1);   
+        info.forceAssign("categories", 1);
     }
         
     //

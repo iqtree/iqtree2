@@ -279,7 +279,7 @@
     type:           rate
     range:          [0.001, 1000.0]
     tolerance:      0.0001
-    initValue:      1.0
+    initValue:      rand(2.0) #start with random rate values
 
 - ratemodel:        I
   ratedistribution: invariant
@@ -305,7 +305,7 @@
 
 - substitutionmodel:   YMIX
   description:         "Model Mixture of JC and GTR"
-  ratemodel:           I+K4
+  ratemodel:           I+R4
   parameters:
   - name:              w(1..2)
     type:              weight  # type weight implies that w[1]+w[2]=1.0

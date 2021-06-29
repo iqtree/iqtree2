@@ -522,11 +522,10 @@ namespace {
 };
 
 double RateFree::optimizeWithEM(PhyloTree* report_to_tree) {
-    intptr_t nptn = phylo_tree->aln->getNPattern();
-    size_t nmix = ncategory;
-    
-    double *new_prop = aligned_alloc<double>(nmix);
-    PhyloTree *tree = new PhyloTree;
+    intptr_t   nptn     = phylo_tree->aln->getNPattern();
+    size_t     nmix     = ncategory;
+    double*    new_prop = aligned_alloc<double>(nmix);
+    PhyloTree* tree     = new PhyloTree;
 
     tree->copyPhyloTree(phylo_tree, true);
     tree->optimize_by_newton = phylo_tree->optimize_by_newton;
@@ -535,7 +534,7 @@ double RateFree::optimizeWithEM(PhyloTree* report_to_tree) {
     tree->setNumThreads(phylo_tree->num_threads);
 
     // initialize model
-    ModelFactory *model_fac = new ModelFactory();
+    ModelFactory *model_fac   = new ModelFactory();
     model_fac->joint_optimize = phylo_tree->params->optimize_model_rate_joint;
 //    model_fac->unobserved_ptns = phylo_tree->getModelFactory()->unobserved_ptns;
 
@@ -544,7 +543,7 @@ double RateFree::optimizeWithEM(PhyloTree* report_to_tree) {
     site_rate->setTree(tree);
             
     model_fac->site_rate = site_rate;
-    tree->model_factory = model_fac;
+    tree->model_factory  = model_fac;
     tree->setParams(phylo_tree->params);
     double old_score = 0.0;
     // EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
@@ -594,7 +593,6 @@ double RateFree::optimizeWithEM(PhyloTree* report_to_tree) {
         }
 
         new_pinvar = 1.0 - new_pinvar;
-
         if (new_pinvar > 1e-4 && getPInvar() != 0.0) {
             converged = converged && (fabs(getPInvar()-new_pinvar) < proportion_tolerance);
             if (isFixPInvar()) {

@@ -303,9 +303,12 @@ protected:
                             std::stringstream& complaint);
     void copyMixedAndLinkedModels (const ModelInfoFromYAMLFile& rhs);
     void changeParameterSubscriptRange(int new_min, int new_max, 
-                                       YAMLFileParameter& param);
-    void setSubscriptedVariable   (const YAMLFileParameter& p, int i);
-    bool removeSubscriptedVariable(const YAMLFileParameter&p, int i);
+                                       YAMLFileParameter& param,
+                                       PhyloTree* report_to_tree);
+    void setSubscriptedVariable   (const YAMLFileParameter& p, int i,
+                                   PhyloTree* report_to_tree);
+    bool removeSubscriptedVariable(const YAMLFileParameter&p, int i,
+                                   PhyloTree* report_to_tree);
 
 public:
     ModelInfoFromYAMLFile(); //Only ModelListFromYAMLFile uses it.
@@ -313,7 +316,8 @@ public:
     explicit ModelInfoFromYAMLFile(const std::string& file_path);
     ~ModelInfoFromYAMLFile();
     ModelInfoFromYAMLFile& operator=(const ModelInfoFromYAMLFile& rhs);
-    void specifyRateModel(const ModelInfoFromYAMLFile& ancestor);
+    void specifyRateModel(const ModelInfoFromYAMLFile& ancestor,
+                          PhyloTree* report_to_tree);
 
     virtual std::string getFreeRateParameters(int& num_rate_cats,
         bool& fused_mix_rate) const {
@@ -378,7 +382,7 @@ public:
         return "";
     }
     void updateName  (const std::string& name);
-    void addParameter(const YAMLFileParameter& p);
+    void addParameter(const YAMLFileParameter& p, PhyloTree* report_to_tree);
 
 /***
  * @param p
@@ -496,11 +500,17 @@ public:
     bool hasStringProperty(const char* name, std::string& value) const;
 
     //Inheriting
-    void inheritModel(const ModelInfoFromYAMLFile &);
+    void inheritModel(const ModelInfoFromYAMLFile &,
+                      PhyloTree* report_to_tree);
+    void inheritModelRateDistributions
+                               (const ModelInfoFromYAMLFile& mummy);
+    void addNamesOfVariablesOfTypeToSet(ModelParameterType type,
+                                        std::set<std::string>& var_names) const;
     void inheritModelProperties(const ModelInfoFromYAMLFile& mummy,
                                 std::stringstream& complaint);
     void inheritModelParameters(const ModelInfoFromYAMLFile& mummy,
-                                std::stringstream& complaint);
+                                std::stringstream& complaint,
+                                PhyloTree* report_to_tree);
     void inheritModelVariables (const ModelInfoFromYAMLFile& mummy,
                                 std::stringstream& complaint);
     void inheritModelMatrices  (const ModelInfoFromYAMLFile& mummy,

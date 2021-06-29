@@ -190,8 +190,8 @@ YAMLRateFree::YAMLRateFree(PhyloTree* tree, PhyloTree* report_to_tree,
 void YAMLRateFree::updateRateClassFromModelVariables() {
     int rate_count = model_info.getNumberOfRateCategories();
     int prop_count = model_info.getNumberOfProportions();
-    int rate_ix    = 0;
-    int prop_ix    = 0;
+    int rate_ix    = 1;
+    int prop_ix    = 1;
     model_info.readModelVariablesByType(rates, rate_count, true,
                                         ModelParameterType::RATE, rate_ix);
     model_info.readModelVariablesByType(prop,  prop_count, true,
@@ -209,8 +209,8 @@ void YAMLRateFree::sortUpdatedRates() {
     super::sortUpdatedRates();
     int rate_count = model_info.getNumberOfRateCategories();
     int prop_count = model_info.getNumberOfProportions();
-    int rate_ix    = 0;
-    int prop_ix    = 0;
+    int rate_ix    = 1;
+    int prop_ix    = 1;
     model_info.updateModelVariablesByType(rates, rate_count, true,
                                           ModelParameterType::RATE, rate_ix);
     model_info.updateModelVariablesByType(prop,  prop_count, true,
@@ -268,6 +268,7 @@ void YAMLRateInvar::sortUpdatedRates() {
     double dummy_doubles[2] = { 0, p_invar };
     int    prop_index = 1;
     super::sortUpdatedRates();
+
     model_info.updateModelVariablesByType(&dummy_doubles[0],  1, true,
                                           ModelParameterType::INVARIANT_PROPORTION, 
                                           prop_index);
@@ -317,12 +318,19 @@ YAMLRateFreeInvar::YAMLRateFreeInvar(PhyloTree* tree, PhyloTree* report_to_tree,
 void YAMLRateFreeInvar::updateRateClassFromModelVariables() {
     int rate_count = model_info.getNumberOfRateCategories();
     int prop_count = model_info.getNumberOfProportions();
-    int rate_ix    = 0;
-    int prop_ix    = 0;
+    int rate_ix    = 1;
+    int prop_ix    = 1;
+    TREE_LOG_LINE(*phylo_tree, YAMLModelVerbosity, "RC=" << rate_count
+        << ", PC=" << prop_count);
+
     model_info.readModelVariablesByType(rates, rate_count, true,
                                         ModelParameterType::RATE, rate_ix);
     model_info.readModelVariablesByType(prop,  prop_count, true,
                                         ModelParameterType::PROPORTION, prop_ix);
+    //Is the last proportion correct?
+
+    prop_ix = prop_count;                                    
+    TREE_LOG_LINE(*phylo_tree, YAMLModelVerbosity, "PI=" << prop_ix);
     model_info.readModelVariablesByType(prop,  prop_count, true,
                                         ModelParameterType::INVARIANT_PROPORTION, prop_ix);
     if (YAMLRateVerbosity <= verbose_mode) {
@@ -338,8 +346,8 @@ void YAMLRateFreeInvar::sortUpdatedRates() {
     super::sortUpdatedRates();
     int rate_count = model_info.getNumberOfRateCategories();
     int prop_count = model_info.getNumberOfProportions();
-    int rate_ix    = 0;
-    int prop_ix    = 0;
+    int rate_ix    = 1;
+    int prop_ix    = 1;
     model_info.updateModelVariablesByType(rates, rate_count, true,
                                           ModelParameterType::RATE, rate_ix);
     model_info.updateModelVariablesByType(prop,  prop_count, true,
@@ -464,7 +472,7 @@ YAMLRateMeyerDiscrete::YAMLRateMeyerDiscrete(PhyloTree* tree, PhyloTree* report_
 
 void YAMLRateMeyerDiscrete::updateRateClassFromModelVariables() {
     int rate_count = model_info.getNumberOfRateCategories();
-    int rate_ix    = 0;
+    int rate_ix    = 1;
     model_info.readModelVariablesByType(rates, rate_count, true,
                                         ModelParameterType::RATE, rate_ix);
     if (YAMLRateVerbosity <= verbose_mode) {
@@ -479,7 +487,7 @@ void YAMLRateMeyerDiscrete::updateRateClassFromModelVariables() {
 void YAMLRateMeyerDiscrete::sortUpdatedRates() {
     super::sortUpdatedRates();
     int rate_count = model_info.getNumberOfRateCategories();
-    int rate_ix    = 0;
+    int rate_ix    = 1;
     model_info.updateModelVariablesByType(rates, rate_count, true,
                                           ModelParameterType::RATE, rate_ix);
     if (YAMLRateVerbosity <= verbose_mode) {
@@ -524,7 +532,7 @@ YAMLRateKategory::YAMLRateKategory(PhyloTree* tree, PhyloTree* report_to_tree,
 
 void YAMLRateKategory::updateRateClassFromModelVariables() {
     int rate_count = model_info.getNumberOfRateCategories();
-    int rate_ix    = 0;
+    int rate_ix    = 1;
     model_info.readModelVariablesByType(rates, rate_count, true,
                                         ModelParameterType::RATE, rate_ix);
     if (YAMLRateVerbosity <= verbose_mode) {
@@ -539,7 +547,7 @@ void YAMLRateKategory::updateRateClassFromModelVariables() {
 void YAMLRateKategory::sortUpdatedRates() {
     super::sortUpdatedRates();
     int rate_count = model_info.getNumberOfRateCategories();
-    int rate_ix    = 0;
+    int rate_ix    = 1;
     model_info.updateModelVariablesByType(rates, rate_count, true,
                                           ModelParameterType::RATE, rate_ix);
     if (YAMLRateVerbosity <= verbose_mode) {
