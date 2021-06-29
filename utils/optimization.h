@@ -242,7 +242,7 @@ private:
 		int trace, int nREPORT);
 
 		bool lbfgsbStep(int     maxit,  int  iter, int     nREPORT, int trace, 
-                        char*   task,   int  n,    double* x, 
+                        char*   task,   int  n,    double* x, double* g,
 		                double& f,      int* fail);
     
 	void ensureBetween(double lowest, double &var, double highest);

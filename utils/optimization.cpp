@@ -856,12 +856,11 @@ void Optimization::dfpminStep(int n, double* g, double* dg, double* hdg,
 			xi[i] -= hessin[i][j]*g[j];
 		}
 	}
-
 }
 
 void Optimization::dfpmin(double p[], int n, double lower[], double upper[]
                           , double gtol, int *iter, double *fret, double *hessian) {
-    int check,i,its,j;
+    int check,i,its;
     double den,fp,stpmax,sum=0.0,temp,test;
     double *dg,*g,*hdg,**hessin,*pnew,*xi;
     
@@ -1194,7 +1193,7 @@ double Optimization::L_BFGS_B(int n, double* x, double* l, double* u, double pgt
 
 bool Optimization::lbfgsbStep
 		(int     maxit,  int  iter, int     nREPORT, int trace, 
-         char*   task,   int  n,    double* x, 
+         char*   task,   int  n,    double* x,       double* g,
 		 double& f,      int* fail) {
 	//Returns false when lbfgsb main do loop should exit,
 	//otherwise, true.
@@ -1280,8 +1279,8 @@ void Optimization::lbfgsb(int n, int m, double *x, double *l, double *u, int *nb
 				tr, lsave, isave, dsave);
 		/*    Rprintf("in lbfgsb - %s\n", task);*/
 	}
-	while lbfgsbStep(maxit, iter, nREPORT,  trace, 
-						task, n, x, f, fail);
+	while (lbfgsbStep(maxit, iter, nREPORT,  trace, 
+					  task, n, x, g, f, fail));
 
 	*Fmin = f;
 	*fncount = *grcount = isave[33];
