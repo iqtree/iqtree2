@@ -59,6 +59,15 @@ public:
 	void eigensystem(double **rate_params, double *state_freq, 
 	double *eval, double **evec, double **inv_evec, int num_state);
 
+		// Supporting functions... called by eigensystem():
+		void calculateEigenVectorsOfQ(int      num_state, int new_num,
+                                      double*  forg, double** evec_new,
+									  double** evec);
+		void checkEigenValueEquation (int      num_state, double** evec,
+                                      double** b,         double*  eval,
+									  double** rate_params, 
+									  double*  state_freq);
+
 	/**
 		EigenSystem for general non-symmetric matrix without state frequencies
 		@param rate_matrix rate matrix

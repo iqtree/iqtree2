@@ -46,16 +46,13 @@ void EigenDecomposition::eigensystem(
 	double **b = (double**)new double[num_state];
 	double **evec_new = (double**)new double[num_state];
 	int *ordr = new int[num_state + 1];
-	int i, j, k, error, new_num, inew, jnew;
-	double zero;
+	int i, j, new_num, inew;
 
-
-	for (i=0; i < num_state; i++)
+	for (i=0; i < num_state; i++) {
 		a[i] = new double[num_state];
-	for (i=0; i < num_state; i++)
 		b[i] = new double[num_state];
-	for (i=0; i < num_state; i++)
 		evec_new[i] = new double[num_state];
+	}
 
 	/* get relative transition matrix and frequencies */
 	memcpy(forg, state_freq, num_state * sizeof(double));
@@ -97,56 +94,21 @@ void EigenDecomposition::eigensystem(
 
 	// now get back eigen
 	//for (i = 0,inew = 0; i < num_state; i++)
-	for (i = num_state-1,inew = new_num-1; i >= 0; i--)
+	for (i = num_state-1,inew = new_num-1; i >= 0; i--) {
 		eval[i] = (forg[i] > ZERO_FREQ) ? eval_new[inew--] : 0;
-
-	// calculate the actual eigenvectors of Q and its inverse matrix
-	//for (i = 0, inew = 0; i < num_state; i++)
-	for (i = num_state-1,inew = new_num-1; i >= 0; i--)
-		if (forg[i] > ZERO_FREQ) {
-			for (j = num_state-1, jnew = new_num-1; j >= 0; j--)
-				if (forg[j] > ZERO_FREQ) {
-					evec[i][j] = evec_new[inew][jnew];
-					jnew--;
-				} else {
-					evec[i][j] = (i == j);
-				}
- 			inew--;
-		} else 
-		for (j=0; j < num_state; j++) {
-			evec[i][j] = (i==j);
-		}
-
-	/* check eigenvalue equation */
-	error = 0;
-	for (j = 0; j < num_state; j++) {
-		for (i = 0, zero = 0.0; i < num_state; i++) {
-			for (k = 0; k < num_state; k++) zero += b[i][k] * evec[k][j];
-			zero -= eval[j] * evec[i][j];
-			if (fabs(zero) > 1.0e-5) {
-				error = 1;
-				break;
-			}
-		}
-	}
-	if (error) {
-		cout << "\nWARNING: Eigensystem doesn't satisfy eigenvalue equation!\n";
-		cout << "Rate matrix R: " << endl;
-		for (i = 0; i < num_state; i++) {
-			for (j = 0; j < num_state; j++) cout << rate_params[i][j] << " ";
-			cout << endl;
-		}
-		cout << "State frequencies: " << endl;
-		for (i = 0; i < num_state; i++) cout << state_freq[i] << " ";
-		cout << endl;
 	}
 
-	for (i=num_state-1; i>= 0; i--)
+	calculateEigenVectorsOfQ(num_state, new_num, forg, 
+	                         evec_new, evec);
+	checkEigenValueEquation (num_state, evec, b, eval,
+	                         rate_params, state_freq);
+
+
+	for (i=num_state-1; i>= 0; i--) {
 		delete [] evec_new[i];
-	for (i=num_state-1; i>= 0; i--)
 		delete [] b[i];
-	for (i=num_state-1; i>= 0; i--)
 		delete [] a[i];
+	}
 	delete [] ordr;
 	delete [] evec_new;
 	delete [] b;
@@ -160,6 +122,62 @@ void EigenDecomposition::eigensystem(
 	//checkevector(evec, inv_evec, num_state); /* check whether inversion was OK */
 
 } /* eigensystem */
+
+void EigenDecomposition::calculateEigenVectorsOfQ(int num_state, int new_num,
+                                                  double* forg, double** evec_new,
+												  double** evec) {
+	// calculate the actual eigenvectors of Q and its inverse matrix
+	//for (i = 0, inew = 0; i < num_state; i++)
+	for (int i = num_state-1,inew = new_num-1; i >= 0; i--) {
+		if (forg[i] > ZERO_FREQ) {
+			for (int j = num_state-1, jnew = new_num-1; j >= 0; j--) {
+				if (forg[j] > ZERO_FREQ) {
+					evec[i][j] = evec_new[inew][jnew];
+					--jnew;
+				} else {
+					evec[i][j] = (i == j);
+				}
+			}
+			--inew;
+		} else 
+		for (int j=0; j < num_state; j++) {
+			evec[i][j] = (i==j);
+		}
+	}
+}
+
+void EigenDecomposition::checkEigenValueEquation(int      num_state, double** evec,
+                                                 double** b,    double *eval,
+												 double** rate_params, 
+												 double*  state_freq) {
+	/* check eigenvalue equation */
+	int error = 0;
+	for (int j = 0; j < num_state; j++) {
+		for (int i = 0, zero = 0.0; i < num_state; i++) {
+			for (int k = 0; k < num_state; k++) zero += b[i][k] * evec[k][j];
+			zero -= eval[j] * evec[i][j];
+			if (fabs(zero) > 1.0e-5) {
+				error = 1;
+				break;
+			}
+		}
+	}
+	if (error) {
+		cout << "\nWARNING: Eigensystem doesn't satisfy eigenvalue equation!\n";
+		cout << "Rate matrix R: " << endl;
+		for (int i = 0; i < num_state; i++) {
+			for (int j = 0; j < num_state; j++) {
+				cout << rate_params[i][j] << " ";
+			}
+			cout << endl;
+		}
+		cout << "State frequencies: " << endl;
+		for (int i = 0; i < num_state; i++) {
+			cout << state_freq[i] << " ";
+		}
+		cout << endl;
+	}
+}
 
 
 void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_freq, 
@@ -234,7 +252,7 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 	//for (i = 0, inew = 0; i < num_state; i++)
 	for (i = num_state-1,inew = new_num-1; i >= 0; i--)
 		if (forg[i] > ZERO_FREQ) {
-			for (j = num_state-1, jnew = new_num-1; j >= 0; j--)
+			for (j = num_state-1, jnew = new_num-1; j >= 0; j--) {
 				if (forg[j] > ZERO_FREQ) {
 					evec[i*num_state+j] = a[inew][jnew] / forg_sqrt[inew];
 					inv_evec[i*num_state+j] = a[jnew][inew] * forg_sqrt[jnew];
@@ -243,11 +261,13 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 					evec[i*num_state+j] = (i == j);
 					inv_evec[i*num_state+j] = (i == j);
 				}
+			}
  			inew--;
-		} else 
-		for (j=0; j < num_state; j++) {
-			evec[i*num_state+j] = (i==j);
-			inv_evec[i*num_state+j] = (i==j);
+		} else {
+			for (j=0; j < num_state; j++) {
+				evec[i*num_state+j] = (i==j);
+				inv_evec[i*num_state+j] = (i==j);
+			}
 		}
 
     // Only print eigenvalues and eigenvectors if state space is manageable.
@@ -405,7 +425,7 @@ void EigenDecomposition::eigensystem_nonrev(
 	for (i = num_state-1,inew = new_num-1; i >= 0; i--)
 		if (forg[i] > ZERO_FREQ) {
 // 			for (j = 0, jnew = 0; j < num_state; j++)
-			for (j = num_state-1, jnew = new_num-1; j >= 0; j--)
+			for (j = num_state-1, jnew = new_num-1; j >= 0; j--) {
 				if (forg[j] > ZERO_FREQ) {
 					evec[i*num_state+j] = evec_new[inew][jnew];
 					inv_evec[i*num_state+j] = inv_evec_new[inew][jnew];
@@ -415,12 +435,14 @@ void EigenDecomposition::eigensystem_nonrev(
 					evec[i*num_state+j] = (i == j);
 					inv_evec[i*num_state+j] = (i == j);
 				}
+			}
 // 			inew++;
  			inew--;
-		} else
-		for (j=0; j < num_state; j++) {
-			evec[i*num_state+j] = (i==j);
-			inv_evec[i*num_state+j] = (i==j);
+		} else {
+			for (j=0; j < num_state; j++) {
+				evec[i*num_state+j] = (i==j);
+				inv_evec[i*num_state+j] = (i==j);
+			}
 		}
 
 	/* check eigenvalue equation */
@@ -485,10 +507,11 @@ void EigenDecomposition::computeRateMatrix(double **a, double *stateFrqArr_, int
 	double delta, temp, sum;
 	double *m = new double[num_state];
 
-	if (!ignore_state_freq)
-	for (i = 0; i < num_state; i++) {
-		for (j = 0; j < num_state; j++) {
-			a[i][j] = stateFrqArr_[j]*a[i][j];
+	if (!ignore_state_freq) {
+		for (i = 0; i < num_state; i++) {
+			for (j = 0; j < num_state; j++) {
+				a[i][j] = stateFrqArr_[j]*a[i][j];
+			}
 		}
 	}
 
