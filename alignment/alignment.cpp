@@ -1469,98 +1469,102 @@ void Alignment::buildStateMap(char *map, SeqType seq_type) {
 	@param seq_type data type (SEQ_DNA, etc.)
 	@return state ID
 */
-StateType Alignment::convertState(char state, SeqType seq_type) {
-    if (state == '?' || state == '-' || state == '.' || state == '~')
+StateType Alignment::convertState(char state, SeqType seq_type) const {
+    if (state == '?' || state == '-' || state == '.' || state == '~') {
         return STATE_UNKNOWN;
-
-    char *loc;
-
+    }
     switch (seq_type) {
-    case SeqType::SEQ_BINARY:
-        switch (state) {
+        case SeqType::SEQ_BINARY:
+            return convertBinaryState(state);
+        case SeqType::SEQ_DNA: // DNA
+            return convertDNAState(state);
+        case SeqType::SEQ_PROTEIN: // Protein
+            return convertProteinState(state);
+        case SeqType::SEQ_MORPH: // Standard morphological character
+            return convertMorphologicalState(state);
+        default:
+            return STATE_INVALID;
+    }
+}
+
+StateType Alignment::convertBinaryState(char state) const {
+    switch (state) {
         case '0':
             return 0;
         case '1':
             return 1;
         default:
             return STATE_INVALID;
-        		}
-		break;
-    case SeqType::SEQ_DNA: // DNA
-        switch (state) {
-        case 'A':
-            return 0;
-        case 'C':
-            return 1;
-        case 'G':
-            return 2;
-        case 'T':
-            return 3;
-        case 'U':
-            return 3;
-        case 'R':
-            return 1+4+3; // A or G, Purine
-        case 'Y':
-            return 2+8+3; // C or T, Pyrimidine
-        case 'O':
-        case 'N':
-        case 'X':
-            return STATE_UNKNOWN;
-        case 'W':
-            return 1+8+3; // A or T, Weak
-        case 'S':
-            return 2+4+3; // G or C, Strong
-        case 'M':
-            return 1+2+3; // A or C, Amino
-        case 'K':
-            return 4+8+3; // G or T, Keto
-        case 'B':
-            return 2+4+8+3; // C or G or T
-        case 'H':
-            return 1+2+8+3; // A or C or T
-        case 'D':
-            return 1+4+8+3; // A or G or T
-        case 'V':
-            return 1+2+4+3; // A or G or C
-        default:
-            return STATE_INVALID; // unrecognize character
-        }
-        return state;
-    case SeqType::SEQ_PROTEIN: // Protein
-//		if (state == 'B') return 4+8+19;
-//		if (state == 'Z') return 32+64+19;
-		if (state == 'B') return 20;
-		if (state == 'Z') return 21;
-		if (state == 'J') return 22;
-        if (state == '*') return STATE_UNKNOWN; // stop codon
-        if (state == 'U') return STATE_UNKNOWN; // 21st amino-acid
-        if (state == 'O') return STATE_UNKNOWN; // 22nd amino-acid
-        loc = strchr(symbols_protein, state);
-
-        if (!loc) return STATE_INVALID; // unrecognize character
-        state = static_cast<char>(loc - symbols_protein);
-        if (state < 20)
-            return state;
-        else
-            return STATE_UNKNOWN;
-    case SeqType::SEQ_MORPH: // Standard morphological character
-        loc = strchr(symbols_morph, state);
-
-        if (!loc) return STATE_INVALID; // unrecognize character
-        state = static_cast<char>(loc - symbols_morph);
-	    return state;
-    default:
-        return STATE_INVALID;
     }
 }
 
-// TODO: state should int
+namespace {
+    const struct { char ch; StateType state_type; } dna_map[] = {
+        { 'A', 0 },
+        { 'C', 1 },
+        { 'G', 2 },
+        { 'T', 3 },
+        { 'U', 3 },
+        { 'R', 1+4+3},   // A or G, Purine
+        { 'Y', 2+8+3},   // C or T, Pyrimidine
+        { 'W', 1+8+3},   // A or T, Weak
+        { 'S', 2+4+3},   // G or C, Strong
+        { 'M', 1+2+3},   // A or C, Amino
+        { 'K', 4+8+3},   // G or T, Keto
+        { 'B', 2+4+8+3}, // C or G or T
+        { 'H', 1+2+8+3}, // A or C or T
+        { 'D', 1+4+8+3}, // A or G or T
+        { 'V', 1+2+4+3}, // A or G or C
+    };
+}
+
+StateType Alignment::convertDNAState(char state) const {
+    if (state=='O' || state=='N' || state=='X') {
+        return STATE_UNKNOWN;
+    }
+    for (auto map_entry: dna_map) {
+        if (state==map_entry.ch) {
+            return map_entry.state_type;
+        }
+    }
+    return STATE_INVALID; // unrecognize character
+}
+
+StateType Alignment::convertProteinState(char state) const {
+    //if (state == 'B') return 4+8+19;
+    //if (state == 'Z') return 32+64+19;
+    if (state == 'B') return 20;
+    if (state == 'Z') return 21;
+    if (state == 'J') return 22;
+    if (state == '*') return STATE_UNKNOWN; // stop codon
+    if (state == 'U') return STATE_UNKNOWN; // 21st amino-acid
+    if (state == 'O') return STATE_UNKNOWN; // 22nd amino-acid
+    const char* loc = strchr(symbols_protein, state);
+    if (loc==nullptr) {
+        return STATE_INVALID; // unrecognized character
+    }
+    state = static_cast<char>(loc - symbols_protein);
+    if (state < 20) {
+        return state;
+    }
+    return STATE_UNKNOWN;
+}
+
+StateType Alignment::convertMorphologicalState(char state) const {
+    const char* loc = strchr(symbols_morph, state);
+    if (loc==nullptr) {
+        return STATE_INVALID; // unrecognize character
+    }
+    state = static_cast<char>(loc - symbols_morph);
+	return state;
+}
+
+// TODO: state should be int
 StateType Alignment::convertState(char state) {
 	return convertState(state, seq_type);
 }
 
-
-// TODO: state should int
+// TODO: state should be int
 char Alignment::convertStateBack(char state) const {
     if (state == STATE_UNKNOWN) return '-';
     if (state == STATE_INVALID) return '?';

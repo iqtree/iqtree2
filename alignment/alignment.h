@@ -307,7 +307,11 @@ public:
 
     void buildStateMap(char *map, SeqType seq_type);
 
-    virtual StateType convertState(char state, SeqType seq_type);
+    virtual StateType convertState(char state, SeqType seq_type) const;
+    virtual StateType convertBinaryState       (char state) const;
+    virtual StateType convertDNAState          (char state) const;
+    virtual StateType convertProteinState      (char state) const;
+    virtual StateType convertMorphologicalState(char state) const;
 
     /** 
      * convert state if the number of states (num_states is known)
