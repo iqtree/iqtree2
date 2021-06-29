@@ -183,7 +183,6 @@ Optimization::~Optimization()
 #define SHFT(a,b,c,d) (a)=(b);(b)=(c);(c)=(d);
 #define SIGN(a,b) ((b) >= 0.0 ? fabs(a) : -fabs(a))
 
-#define TRY_AITKEN 0
 /* Brents method in one dimension */
 double Optimization::brent_opt (double ax, double bx, double cx, double tol,
                           double *foptx, double *f2optx, double fax, double fbx, double fcx) {
@@ -208,11 +207,6 @@ double Optimization::brent_opt (double ax, double bx, double cx, double tol,
 		fv=fax;
 	}
 
-#if TRY_AITKEN
-    double delta = 0;     //change in U
-    double lastDelta = 0; //previous change in U
-    double lastU = 0;     //previous value of U
-#endif
 	for (iter=1;iter<=ITMAX;iter++) {
 		xm=0.5*(a+b);
 		tol2=2.0*(tol1=tol*fabs(x)+ZEPS);
@@ -251,32 +245,6 @@ double Optimization::brent_opt (double ax, double bx, double cx, double tol,
 		u=(fabs(d) >= tol1 ? x+d : x+SIGN(tol1,d));
 		fu=computeFunction(u);
         
-#if TRY_AITKEN
-        //In a Nutshell, Aitken's sequence accelerator constructs
-        //an auxiliary sequence, using
-        //"the main sequence, minus the square of the delta divided
-        // by the delta of the delta".
-        
-        double aitken = 0;
-        bool   haveAitken = false;
-        if (iter>=2) {
-            lastDelta = delta;
-            delta     = u - lastU;
-            //For now. Later, use a calculated tolerance
-            if (iter>=3 && 0.00001 < fabs(delta-lastDelta) && 0.00001 < fabs(delta) ) {
-                haveAitken = true;
-                aitken = u - ( delta * delta ) / (delta - lastDelta);
-            }
-        }
-        cout.precision(6);
-        if (!haveAitken) {
-            cout << "f(" << u << ")=" << fu << endl;
-        } else {
-            cout << "f(" << u << ")=" << fu << ", A=" << aitken << ", f(A)=" << computeFunction(aitken) << endl;
-        }
-        lastU = u;
-#endif
-
 		if (fu <= fx) {
 			if (u >= x)
 				a=x;
@@ -424,6 +392,21 @@ double Optimization::minimizeNewtonSafeMode(double xmin, double xguess, double x
 	return optx;
 }
 
+void Optimization::ensureBetween(double lowest, double &var, double highest) {
+	if ( var < lowest ) {
+		var = lowest;
+	}
+	if ( highest < var ) {
+		var = highest;
+	}
+}
+
+void Optimization::checkFinite(double check_me, const char* message) {
+	if (!isfinite(check_me)) {
+		nrerror(message);
+	}
+}
+
 double Optimization::minimizeNewton(double x1, double xguess, double x2, 
 	                                double xacc, double &d2l, int maxNRStep)
 {
@@ -432,15 +415,13 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2,
 	double temp,xh,xl,rts, rts_old, xinit;
 
 	rts = xguess;
-	if (rts < x1) rts = x1;
-	if (rts > x2) rts = x2;
+	ensureBetween(x1, rts, x2);
 	xinit = xguess;
 //	finit = fold = fm = computeFuncDerv(rts,f,df);
     computeFuncDerv(rts,f,df);
 	d2l = df;
-	if (!isfinite(f) || !isfinite(df)) {
-		nrerror("Wrong computeFuncDerv");
-	}
+	checkFinite(f,  "Wrong computeFuncDerv");
+	checkFinite(df, "Wrong computeFuncDerv");
 	if (df >= 0.0 && fabs(f) < xacc) return rts;
 	if (f < 0.0) {
 		xl = rts;
@@ -485,7 +466,8 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2,
 //		fold = fm;
 //		fm = computeFuncDerv(rts,f,df);
         computeFuncDerv(rts,f,df);
-		if (!isfinite(f) || !isfinite(df)) nrerror("Wrong computeFuncDerv");
+		checkFinite(f,  "Wrong computeFuncDerv");
+		checkFinite(df, "Wrong computeFuncDerv");
 		if (df > 0.0 && fabs(f) < xacc) {
 			d2l = df;
 //			if (fm > finit) {
@@ -771,7 +753,10 @@ bool Optimization::restartParameters(double guess[], int ndim, double lower[], d
     return (restart);
 }
 
-double Optimization::minimizeMultiDimen(double guess[], int ndim, double lower[], double upper[], bool bound_check[], double gtol, double *hessian) {
+double Optimization::minimizeMultiDimen(double guess[], int ndim, 
+                                        double lower[], double upper[], 
+										bool bound_check[], double gtol, 
+										double *hessian) {
     int i, iter;
     double fret, minf = 1e+12;
     double *minx = new double [ndim+1];

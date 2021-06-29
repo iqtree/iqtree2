@@ -237,6 +237,10 @@ private:
 		int *fncount, int *grcount, int maxit, char *msg,
 		int trace, int nREPORT);
     
+	void ensureBetween(double lowest, double &var, double highest);
+	void checkFinite(double check_me, const char* message);
+
+
 };
 
 
