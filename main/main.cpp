@@ -76,6 +76,23 @@
 
 using namespace std;
 
+std::string getTreeGenerationDescription(TreeGenType gen_type) {
+    switch (gen_type) {
+        case YULE_HARDING:
+            return "random Yule-Harding tree";
+        case UNIFORM:
+            return " random uniform tree";
+        case CATERPILLAR:
+            return "random caterpillar tree";
+        case BALANCED:
+            return "random balanced tree.";
+        case STAR_TREE:
+            return "star tree with random external branch lengths";
+        default: 
+            return "";
+    }
+}
+
 void generateRandomTree(Params &params)
 {
     if (params.sub_size < 3 && !params.aln_file) {
@@ -103,24 +120,11 @@ void generateRandomTree(Params &params)
             if (params.second_tree) {
                 cout << "Generating random branch lengths on tree " << params.second_tree << " ..." << endl;
                 itree.readTree(params.second_tree, params.is_rooted);
-            } else
-            switch (params.tree_gen) {
-            case YULE_HARDING:
-                cout << "Generating random Yule-Harding tree..." << endl;
-                break;
-            case UNIFORM:
-                cout << "Generating random uniform tree..." << endl;
-                break;
-            case CATERPILLAR:
-                cout << "Generating random caterpillar tree..." << endl;
-                break;
-            case BALANCED:
-                cout << "Generating random balanced tree..." << endl;
-                break;
-            case STAR_TREE:
-                cout << "Generating star tree with random external branch lengths..." << endl;
-                break;
-            default: break;
+            } else {
+                std::string desc = getTreeGenerationDescription(params.tree_gen);
+                if (!desc.empty()) {
+                    cout << "Generating " << desc << "..." << endl;
+                }
             }
             ofstream out2;
             if (params.num_zero_len) {
@@ -2657,11 +2661,11 @@ int main(int argc, char *argv[]) {
         if (params.aln_file || params.partition_file) {
             runPhyloAnalysis(params, checkpoint);
         } else {
-            outError("Please use one MPI process! The feature you wanted does not need parallelization.");
+            outError("Please use one MPI process!" 
+                     " The feature you wanted does not need parallelization.");
         }
-    } else
-    // call the main function
-    if (params.tree_gen != NONE) {
+    } else if (params.tree_gen != NONE) {
+        // call the main function
         generateRandomTree(params);
     } else if (params.do_pars_multistate) {
         doParsMultiState(params);
