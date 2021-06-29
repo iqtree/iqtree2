@@ -215,6 +215,12 @@ RateMeyerDiscrete::RateMeyerDiscrete() {
 	rate_mh        = true;
 }
 
+RateMeyerDiscrete::RateMeyerDiscrete(int ncat, PhyloTree* tree, 
+                                     PhyloTree* report_to_tree)
+    : super(ncat, tree, report_to_tree) {
+}
+
+
 RateMeyerDiscrete::~RateMeyerDiscrete()
 {
 	delete [] rates;
@@ -617,4 +623,7 @@ double RateMeyerDiscrete::classifyRates(double tree_lh,
 void RateMeyerDiscrete::writeInfo(ostream &out) {
 	//out << "Number of categories: " << ncategory << endl;
 }
+
+void RateMeyerDiscrete::sortUpdatedRates()           { }
+
 

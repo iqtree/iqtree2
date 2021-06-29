@@ -49,6 +49,12 @@ RateMeyerHaeseler::RateMeyerHaeseler(char *file_name, PhyloTree *tree, bool rate
 	}
 }
 
+RateMeyerHaeseler::RateMeyerHaeseler(int dummy_rates, PhyloTree* tree, 
+                                     PhyloTree* report_to_tree) 
+	: RateMeyerHaeseler() {
+	setTree(tree);
+}
+
 void RateMeyerHaeseler::readRateFile(char *rate_file_to_read) {
 	cout << "Reading site-specific rate file " << rate_file_to_read << " ..." << endl;
 	try {
