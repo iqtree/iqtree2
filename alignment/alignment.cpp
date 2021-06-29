@@ -1328,22 +1328,17 @@ void Alignment::regroupSitePattern(int groups, IntVector& site_group)
 	//printPhylip("/dev/stdout");
 }
 
+Alignment::CharacterCountsByType::CharacterCountsByType()
+    : num_nuc(0),   num_ungap(0), num_bin(0)
+    , num_alpha(0), num_digit(0) {
+}
 
-/**
-	detect the data type of the input sequences
-	@param sequences vector of strings
-	@return the data type of the input sequences
-*/
-SeqType Alignment::detectSequenceType(StrVector &sequences) {
-    size_t   num_nuc   = 0;
-    size_t   num_ungap = 0;
-    size_t   num_bin   = 0;
-    size_t   num_alpha = 0;
-    size_t   num_digit = 0;
-    double   detectStart = getRealTime();
+void Alignment::CharacterCountsByType::countCharactersByType
+        (StrVector& sequences) {
     intptr_t sequenceCount = sequences.size();
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+:num_nuc,num_ungap,num_bin,num_alpha,num_digit)
+#pragma omp parallel for \
+    reduction(+:num_nuc,num_ungap,num_bin,num_alpha,num_digit)
 #endif
     for (intptr_t seqNum = 0; seqNum < sequenceCount; ++seqNum) {
         auto start = sequences.at(seqNum).data();
@@ -1373,18 +1368,36 @@ SeqType Alignment::detectSequenceType(StrVector &sequences) {
             }
         }
     }
+}
+/**
+	detect the data type of the input sequences
+	@param sequences vector of strings
+	@return the data type of the input sequences
+*/
+SeqType Alignment::detectSequenceType(StrVector &sequences) {
+    double   detectStart = getRealTime();
+    Alignment::CharacterCountsByType counts;
+    counts.countCharactersByType(sequences);
+
     if (verbose_mode >= VerboseMode::VB_MED) {
         cout << "Sequence Type detection took "
              << (getRealTime()-detectStart) << " seconds." << endl;
     }
-    if (((double)num_nuc) / num_ungap > 0.9)
+    if (counts.num_ungap==0) {
+        return SeqType::SEQ_UNKNOWN;
+    }
+    if (((double)counts.num_nuc) / counts.num_ungap > 0.9) {
         return SeqType::SEQ_DNA;
-    if (((double)num_bin) / num_ungap > 0.9)
+    }
+    if (((double)counts.num_bin) / counts.num_ungap > 0.9) {
         return SeqType::SEQ_BINARY;
-    if (((double)num_alpha) / num_ungap > 0.9)
+    }
+    if (((double)counts.num_alpha) / counts.num_ungap > 0.9) {
         return SeqType::SEQ_PROTEIN;
-    if (((double)(num_alpha+num_digit)) / num_ungap > 0.9)
+    }
+    if (((double)(counts.num_alpha+counts.num_digit)) / counts.num_ungap > 0.9) {
         return SeqType::SEQ_MORPH;
+    }
     return SeqType::SEQ_UNKNOWN;
 }
 

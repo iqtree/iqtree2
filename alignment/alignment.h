@@ -289,6 +289,18 @@ public:
     /****************************************************************************
             output alignment 
      ****************************************************************************/
+
+    class CharacterCountsByType {
+        public:
+            size_t num_nuc;
+            size_t num_ungap;
+            size_t num_bin;
+            size_t num_alpha;
+            size_t num_digit;
+            CharacterCountsByType();
+            void countCharactersByType(StrVector& sequences);
+    };
+
     SeqType detectSequenceType(StrVector &sequences);
 
     void computeUnknownState();
