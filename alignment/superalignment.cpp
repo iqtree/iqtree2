@@ -1750,8 +1750,7 @@ void SuperAlignment::identifyUnionTaxa
 		if (it == ids.begin()) {
             union_taxa = taxa_set; 
         }
-        else 
-        {
+        else {
 			for (int j = 0; j < union_taxa.length(); j++) {
 				if (taxa_set[j] == 1) { 
                     union_taxa[j] = 1;
