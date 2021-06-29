@@ -1041,6 +1041,10 @@ protected:
 
     bool isShowingProgressDisabled;
 
+
+    void readAlignmentFile(InputType intype, const char* filename,
+                           const char* requested_sequence_type);
+
     /**
 	 * special initialization for codon sequences, e.g., setting #states, genetic_code
 	 * @param sequence_type user-defined sequence type

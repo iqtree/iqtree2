@@ -646,12 +646,51 @@ void Alignment::checkGappySeq(bool force_error) {
     }
 }
 
-Alignment::Alignment(const char *filename, const char *sequence_type,
-                     InputType &intype, string model) : vector<Pattern>() {
+void Alignment::readAlignmentFile(InputType intype, const char* filename,
+                                  const char* requested_sequence_type) {
+    try {
+        if (intype == InputType::IN_NEXUS) {
+            cout << "Nexus format detected" << endl;
+            readNexus(filename);
+        } else if (intype == InputType::IN_FASTA) {
+            cout << "Fasta format detected" << endl;
+            readFasta(filename, requested_sequence_type);
+        } else if (intype == InputType::IN_PHYLIP) {
+            cout << "Phylip format detected" << endl;
+            if (Params::getInstance().phylip_sequential_format)
+                readPhylipSequential(filename, requested_sequence_type);
+            else
+                readPhylip(filename, requested_sequence_type);
+        } else if (intype == InputType::IN_COUNTS) {
+            cout << "Counts format (PoMo) detected" << endl;
+            readCountsFormat(filename, requested_sequence_type);
+        } else if (intype == InputType::IN_CLUSTAL) {
+            cout << "Clustal format detected" << endl;
+            readClustal(filename, requested_sequence_type);
+        } else if (intype == InputType::IN_MSF) {
+            cout << "MSF format detected" << endl;
+            readMSF(filename, requested_sequence_type);
+        } else {
+            outError("Unknown sequence format,"
+                     " please use PHYLIP, FASTA, CLUSTAL, MSF, or NEXUS format");
+        }
+    } catch (ios::failure) {
+        outError(ERR_READ_INPUT);
+    } catch (const char *str) {
+        outError(str);
+    } catch (string str) {
+        outError(str);
+    }
+}
+
+Alignment::Alignment(const char *filename, 
+                     const char *requested_sequence_type,
+                     InputType &intype, string model) 
+                     : vector<Pattern>() {
     name = "Noname";
     this->model_name = model;
-    if (sequence_type) {
-        this->sequence_type = sequence_type;
+    if (requested_sequence_type!=nullptr) {
+        this->sequence_type = requested_sequence_type;
     }
     aln_file = filename;
     num_states = 0;
@@ -664,39 +703,8 @@ Alignment::Alignment(const char *filename, const char *sequence_type,
     cout << "Reading alignment file " << filename << " ... ";
     intype = detectInputFile(filename);
 
-    try {
-        if (intype == InputType::IN_NEXUS) {
-            cout << "Nexus format detected" << endl;
-            readNexus(filename);
-        } else if (intype == InputType::IN_FASTA) {
-            cout << "Fasta format detected" << endl;
-            readFasta(filename, sequence_type);
-        } else if (intype == InputType::IN_PHYLIP) {
-            cout << "Phylip format detected" << endl;
-            if (Params::getInstance().phylip_sequential_format)
-                readPhylipSequential(filename, sequence_type);
-            else
-                readPhylip(filename, sequence_type);
-        } else if (intype == InputType::IN_COUNTS) {
-            cout << "Counts format (PoMo) detected" << endl;
-            readCountsFormat(filename, sequence_type);
-        } else if (intype == InputType::IN_CLUSTAL) {
-            cout << "Clustal format detected" << endl;
-            readClustal(filename, sequence_type);
-        } else if (intype == InputType::IN_MSF) {
-            cout << "MSF format detected" << endl;
-            readMSF(filename, sequence_type);
-        } else {
-            outError("Unknown sequence format,"
-                     " please use PHYLIP, FASTA, CLUSTAL, MSF, or NEXUS format");
-        }
-    } catch (ios::failure) {
-        outError(ERR_READ_INPUT);
-    } catch (const char *str) {
-        outError(str);
-    } catch (string str) {
-        outError(str);
-    }
+    readAlignmentFile(intype, filename, requested_sequence_type);
+
     if (verbose_mode >= VerboseMode::VB_MED) {
         cout << "Time to read input file was "
              << (getRealTime() - readStart) << " sec." << endl;
