@@ -30,11 +30,13 @@ void RateFreeInvar::startCheckpoint() {
 }
 
 void RateFreeInvar::saveCheckpoint() {
+	invar.setCheckpoint(checkpoint);
     invar.saveCheckpoint();
     super::saveCheckpoint();
 }
 
 void RateFreeInvar::restoreCheckpoint() {
+	invar.setCheckpoint(checkpoint);
     invar.restoreCheckpoint();
     super::restoreCheckpoint();
 }
@@ -54,7 +56,6 @@ double RateFreeInvar::getRate(int category) const {
 std::string RateFreeInvar::getNameParams() const {
 	return invar.getNameParams() + super::getNameParams();
 }
-
 
 void RateFreeInvar::setNCategory(int ncat) {
 	super::setNCategory(ncat);

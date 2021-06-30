@@ -578,10 +578,14 @@ public:
     }
 
     virtual void writeInfo(ostream &out) {
-        model_info.writeInfo("Shapes     ",           ModelParameterType::SHAPE,      out);
-        model_info.writeInfo("Proportions",           ModelParameterType::PROPORTION, out);
-        model_info.writeInfo("Invariant Proportions", ModelParameterType::INVARIANT_PROPORTION, out);
-        model_info.writeInfo("Rates      ",           ModelParameterType::RATE,       out);
+        model_info.writeInfo("Shapes               ", 
+                             ModelParameterType::SHAPE,      out);
+        model_info.writeInfo("Proportions          ", 
+                             ModelParameterType::PROPORTION, out);
+        model_info.writeInfo("Invariant Proportions", 
+                             ModelParameterType::INVARIANT_PROPORTION, out);
+        model_info.writeInfo("Rates                ", 
+                             ModelParameterType::RATE,       out);
     }
 };
 
