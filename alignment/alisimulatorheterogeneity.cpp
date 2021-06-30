@@ -21,7 +21,7 @@ AliSimulatorHeterogeneity::AliSimulatorHeterogeneity(AliSimulator *alisimulator)
     partition_rate = alisimulator->partition_rate;
     rate_heterogeneity = tree->getRate();
     max_length_taxa_name = alisimulator->max_length_taxa_name;
-    selected_sites_fundi = alisimulator->selected_sites_fundi;
+    fundi_items = alisimulator->fundi_items;
 }
 
 /**
@@ -241,9 +241,9 @@ void AliSimulatorHeterogeneity::simulateSeqs(int sequence_length, double *site_s
         if (params->alisim_fundi_taxon_set.size()>0)
         {
             if (node->isLeaf())
-                permuteSelectedSites(selected_sites_fundi, node);
+                permuteSelectedSites(fundi_items, node);
             if ((*it)->node->isLeaf())
-                permuteSelectedSites(selected_sites_fundi, (*it)->node);
+                permuteSelectedSites(fundi_items, (*it)->node);
         }
         
         // writing and deleting simulated sequence immediately if possible

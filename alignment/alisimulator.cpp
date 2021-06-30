@@ -30,7 +30,7 @@ AliSimulator::AliSimulator(Params *input_params, int expected_number_sites, doub
     
     // innialize set of selected sites for permutation in FunDi model
     if (params->alisim_fundi_taxon_set.size()>0)
-        selected_sites_fundi = selectAndPermuteSites(params->alisim_fundi_proportion, round(expected_num_sites));
+        fundi_items = selectAndPermuteSites(params->alisim_fundi_proportion, round(expected_num_sites));
 }
 
 /**
@@ -56,7 +56,7 @@ AliSimulator::AliSimulator(Params *input_params, IQTree *iq_tree, int expected_n
     
     // innialize set of selected sites for permutation in FunDi model
     if (params->alisim_fundi_taxon_set.size()>0)
-        selected_sites_fundi = selectAndPermuteSites(params->alisim_fundi_proportion, round(expected_num_sites));
+        fundi_items = selectAndPermuteSites(params->alisim_fundi_proportion, round(expected_num_sites));
 }
 
 AliSimulator::~AliSimulator()
@@ -689,9 +689,9 @@ void AliSimulator::simulateSeqs(int sequence_length, ModelSubst *model, double *
         if (params->alisim_fundi_taxon_set.size()>0)
         {
             if (node->isLeaf())
-                permuteSelectedSites(selected_sites_fundi, node);
+                permuteSelectedSites(fundi_items, node);
             if ((*it)->node->isLeaf())
-                permuteSelectedSites(selected_sites_fundi, (*it)->node);
+                permuteSelectedSites(fundi_items, (*it)->node);
         }
         
         // writing and deleting simulated sequence immediately if possible
@@ -1020,11 +1020,12 @@ short int AliSimulator::extractMaxTaxaNameLength()
 /**
     selecting & permuting sites (FunDi models)
 */
-IntVector AliSimulator::selectAndPermuteSites(double proportion, int num_sites){
+vector<FunDi_Item> AliSimulator::selectAndPermuteSites(double proportion, int num_sites){
     ASSERT(proportion<1);
     
     // dummy variables
-    IntVector permutedSites;
+    vector<FunDi_Item> fundi_items;
+    IntVector tmp_selected_sites;
     int num_selected_sites = round(proportion*num_sites);
     
     // select random unique sites one by one
@@ -1036,44 +1037,77 @@ IntVector AliSimulator::selectAndPermuteSites(double proportion, int num_sites){
             int random_site = random_int(num_sites);
             
             // check if the random_site has been already selected or not
-            if (std::find(permutedSites.begin(), permutedSites.end(), random_site) != permutedSites.end())
+            if (std::find(tmp_selected_sites.begin(), tmp_selected_sites.end(), random_site) != tmp_selected_sites.end())
                 // retry if the random_site has already existed in the selected list
                 continue;
             else
             {
                 // add the random site to the selected list
-                permutedSites.push_back(random_site);
+                tmp_selected_sites.push_back(random_site);
                 break;
             }
         }
         
-        if (permutedSites.size() <= i)
+        if (tmp_selected_sites.size() <= i)
             outError("Failed to select random sites for permutations (of FunDi model) after 1000 attempts");
     }
     
-    return permutedSites;
+    // select a new position for each of the first num_selected_sites - 1 selected sites
+    IntVector position_pool(tmp_selected_sites);
+    for (int i = 0; i < num_selected_sites - 1; i++)
+    {
+        // attempt up to 1000 times
+        for (int j = 0; j < 1000; j++)
+        {
+            int rand_num = random_int(position_pool.size());
+            int new_position = position_pool[rand_num];
+            
+            // if new_position == current_position, then retry
+            if (new_position == tmp_selected_sites[i])
+                continue;
+            // otherwise, it is a valid new position
+            else
+            {
+                FunDi_Item tmp_fundi_item = {tmp_selected_sites[i],new_position};
+                fundi_items.push_back(tmp_fundi_item);
+                // remove the new_position from the position pool
+                position_pool.erase(position_pool.begin() + rand_num);
+                break;
+            }
+        }
+        
+        if (fundi_items.size() <= i) {
+            outError("Failed to select a positions to permute the selected sites (of FunDi model) after 1000 attempts");
+        }
+    }
+    // select a new position for the last selected site
+    ASSERT(position_pool.size() == 1);
+    if (tmp_selected_sites[tmp_selected_sites.size()-1] != position_pool[0])
+    {
+        FunDi_Item tmp_fundi_item = {tmp_selected_sites[tmp_selected_sites.size()-1], position_pool[0]};
+        fundi_items.push_back(tmp_fundi_item);
+    }
+    else
+    {
+        FunDi_Item tmp_fundi_item = {tmp_selected_sites[tmp_selected_sites.size()-1], fundi_items[0].new_position};
+        fundi_items.push_back(tmp_fundi_item);
+        fundi_items[0].new_position = position_pool[0];
+    }
+    
+    return fundi_items;
 }
 
 /**
     permuting selected sites (FunDi models)
 */
-void AliSimulator::permuteSelectedSites(IntVector selected_sites, Node* node)
+void AliSimulator::permuteSelectedSites(vector<FunDi_Item> fundi_items, Node* node)
 {
+    // caching the current states of all selected sites
+    map<int, short int> caching_sites;
+    for (int i = 0; i < fundi_items.size(); i++)
+        caching_sites[fundi_items[i].selected_site] = node->sequence[fundi_items[i].selected_site];
+    
     // permuting sites in FunDi model
-    if (std::find(params->alisim_fundi_taxon_set.begin(), params->alisim_fundi_taxon_set.end(), node->name) != params->alisim_fundi_taxon_set.end())
-    {
-        // store the first selected site into a dummy variable
-        ASSERT(selected_sites[0] < node->sequence.size());
-        short int tmp_site = node->sequence[selected_sites[0]];
-        
-        // permuting selected sites one by one
-        for (int i = 0; i < selected_sites.size() - 1; i++)
-        {
-            ASSERT(selected_sites[i] < node->sequence.size() && selected_sites[i+1] < node->sequence.size());
-            node->sequence[selected_sites[i]] = node->sequence[selected_sites[i+1]];
-        }
-        
-        // update the last selected sites from tmp_site
-        node->sequence[selected_sites[selected_sites.size() - 1]] = tmp_site;
-    }
+    for (int i = 0; i < fundi_items.size(); i++)
+        node->sequence[fundi_items[i].new_position] = caching_sites[fundi_items[i].selected_site];
 }

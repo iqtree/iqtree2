@@ -2173,8 +2173,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 // parse proportion
                 params.alisim_fundi_proportion = convert_double(fundi_input.c_str());
                 
-                if (params.alisim_fundi_proportion > 1)
-                    throw "Proportion in FunDi model must be less than 1";
+                if (params.alisim_fundi_proportion > 1 || params.alisim_fundi_proportion <= 0)
+                    throw "Proportion in FunDi model must be positive and not greater than 1";
                 
                 continue;
             }

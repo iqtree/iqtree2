@@ -27,6 +27,11 @@
     #include <omp.h>
 #endif
 
+struct FunDi_Item {
+  int selected_site;
+  int new_position;
+} ;
+
 class AliSimulator{
 protected:
     
@@ -137,12 +142,12 @@ protected:
     /**
         selecting & permuting sites (FunDi models)
     */
-    IntVector selectAndPermuteSites(double proportion, int num_sites);
+    vector<FunDi_Item> selectAndPermuteSites(double proportion, int num_sites);
     
     /**
         permuting selected sites (FunDi models)
     */
-    void permuteSelectedSites(IntVector selected_sites, Node* node);
+    void permuteSelectedSites(vector<FunDi_Item> fundi_items, Node* node);
     
     /**
         writing and deleting simulated sequence immediately if possible
@@ -158,7 +163,7 @@ public:
     double partition_rate;
     double length_ratio = 1;
     short int max_length_taxa_name = 10;
-    IntVector selected_sites_fundi;
+    vector<FunDi_Item> fundi_items;
     
     /**
         constructor
