@@ -83,6 +83,15 @@ public:
     /** read partition model file in NEXUS format into variable info */
     void readPartitionNexus(const Params &params);
 
+        /** supporting member functions, for readPartitionNexus */
+        void loadNexusPartitions(const Params& params, MSetsBlock* sets_block, 
+                                 bool empty_partition, Alignment*  input_aln);
+        void determineNexusPartitionSequenceType(const Params& params, 
+                                                 CharSet* charset); 
+        void loadOneNexusPartition(const Params& params,
+                                   Alignment* input_aln,
+                                   CharSet* charset);
+
     /** read partition as files in a directory */
     void readPartitionDir(string partition_dir, const char *sequence_type,
                           InputType &intype, string model, bool remove_empty_seq);

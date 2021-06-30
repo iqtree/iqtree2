@@ -461,8 +461,7 @@ void SuperAlignment::readPartitionNexus(const Params &params) {
     }
     
     bool empty_partition = true;
-    vector<CharSet*>::iterator it;
-    for (it = sets_block->charsets.begin(); 
+    for (auto it = sets_block->charsets.begin(); 
          it != sets_block->charsets.end(); it++) {
         if ((*it)->model_name != "") {
             empty_partition = false;
@@ -476,7 +475,20 @@ void SuperAlignment::readPartitionNexus(const Params &params) {
     cout << endl << "Loading " << sets_block->charsets.size()
          << " partitions..." << endl;
     
-    for (it = sets_block->charsets.begin(); 
+    loadNexusPartitions(params, sets_block, 
+                        empty_partition, input_aln);
+ 
+    if (input_aln) {
+        delete input_aln;
+    }
+    delete sets_block;
+}
+
+void SuperAlignment::loadNexusPartitions(const Params& params,
+                                         MSetsBlock* sets_block,
+                                         bool empty_partition,
+                                         Alignment* input_aln) {
+    for (auto it = sets_block->charsets.begin(); 
          it != sets_block->charsets.end(); it++) {
         if (empty_partition || (*it)->char_partition != "") {
             if ((*it)->model_name == "") {
@@ -490,21 +502,8 @@ void SuperAlignment::readPartitionNexus(const Params &params) {
                     outError("No input data for partition ", (*it)->name);
                 }
             }
-            if ((*it)->sequence_type=="" && params.sequence_type) {
-                (*it)->sequence_type = params.sequence_type;
-            }
-            if ((*it)->sequence_type == "" && !(*it)->model_name.empty()) {
-                // try to get sequence type from model
-                //TODO: why compile error?
-                auto name = (*it)->model_name;
-                (*it)->sequence_type = detectSeqTypeName(name.substr(0, 
-                                                         name.find_first_of("+*")));
-            }
-            auto spec = (*it)->position_spec;
-            if ((*it)->aln_file == "" && ( spec == "" || spec == "*")) {
-                outError("Empty position range for partition ", (*it)->name);
-            }
-            trimString((*it)->sequence_type);
+            determineNexusPartitionSequenceType(params, *it);
+
             // cout << endl << "Reading partition " << info.name 
             //      << " (model=" << info.model_name << ","
             //      << " aln=" << info.aln_file << "," 
@@ -519,71 +518,95 @@ void SuperAlignment::readPartitionNexus(const Params &params) {
                     outError("Unknown sequence type " + (*it)->sequence_type);
                 }
             }
-
-            // TODO move to supertree
-//            info.nniMoves[0].ptnlh = NULL;
-//            info.nniMoves[1].ptnlh = NULL;
-//            info.cur_ptnlh = NULL;
-//            part_info.push_back(info);
-            Alignment *part_aln;
-            if ((*it)->aln_file != "") {
-                part_aln = createAlignment((*it)->aln_file, 
-                                           (*it)->sequence_type.c_str(), 
-                                           params.intype, (*it)->model_name);
-            } else {
-                part_aln = input_aln;
-            }
-            if (!(*it)->position_spec.empty() && 
-                 (*it)->position_spec != "*") {
-                Alignment *new_aln = new Alignment();
-                new_aln->extractSites(part_aln, (*it)->position_spec.c_str());
-                if (part_aln != input_aln) delete part_aln;
-                part_aln = new_aln;
-            }
-            if (part_aln->seq_type == SeqType::SEQ_DNA && 
-                ((*it)->sequence_type.substr(0, 5) == "CODON" || 
-                 (*it)->sequence_type.substr(0, 5) == "NT2AA")) {
-                Alignment *new_aln = new Alignment();
-                bool isNT2AA = (*it)->sequence_type.substr(0, 5) == "NT2AA";
-                new_aln->convertToCodonOrAA(part_aln, &(*it)->sequence_type[5], 
-                                            isNT2AA);
-                if (part_aln != input_aln) delete part_aln;
-                part_aln = new_aln;
-            }
-            Alignment *new_aln;
-            if (params.remove_empty_seq) {
-                new_aln = part_aln->removeGappySeq();
-            }
-            else {
-                new_aln = part_aln;
-            }
-            // also rebuild states set of each sequence 
-            // for likelihood computation
-            // new_aln->buildSeqStates();
-            
-            if (part_aln != new_aln && part_aln != input_aln){
-                delete part_aln;
-            }
-            new_aln->name = (*it)->name;
-            new_aln->model_name = (*it)->model_name;
-            new_aln->aln_file = (*it)->aln_file;
-            new_aln->position_spec = (*it)->position_spec;
-            new_aln->sequence_type = (*it)->sequence_type;
-            new_aln->tree_len = (*it)->tree_len;
-            partitions.push_back(new_aln);
-            // PhyloTree *tree = new PhyloTree(new_aln);
-            // push_back(tree);
-            // params = origin_params;
-            // cout << new_aln->getNSeq() << " sequences " 
-            //      << "and " << new_aln->getNSite()
-            //      << " sites extracted" << endl;
+            loadOneNexusPartition(params, input_aln, *it);
         }
-    }    
-    if (input_aln) {
-        delete input_aln;
-    }
-    delete sets_block;
+    }   
 }
+
+void SuperAlignment::determineNexusPartitionSequenceType
+        (const Params& params, CharSet* charset) {
+    if (charset->sequence_type=="" && params.sequence_type) {
+        charset->sequence_type = params.sequence_type;
+    }
+    if (charset->sequence_type == "" && !charset->model_name.empty()) {
+        // try to get sequence type from model
+        //TODO: why compile error?
+        auto name = charset->model_name;
+        charset->sequence_type = detectSeqTypeName(name.substr(0, 
+                                                   name.find_first_of("+*")));
+    }
+    auto spec = charset->position_spec;
+    if (charset->aln_file == "" && ( spec == "" || spec == "*")) {
+        outError("Empty position range for partition ", charset->name);
+    }
+    trimString(charset->sequence_type);    
+}
+
+
+void SuperAlignment::loadOneNexusPartition(const Params& params,
+                                           Alignment* input_aln,
+                                           CharSet* charset) {
+    // TODO move to supertree
+    // info.nniMoves[0].ptnlh = NULL;
+    // info.nniMoves[1].ptnlh = NULL;
+    // info.cur_ptnlh = NULL;
+    // part_info.push_back(info);
+    Alignment *part_aln;
+    if (charset->aln_file != "") {
+        part_aln = createAlignment(charset->aln_file, 
+                                   charset->sequence_type.c_str(), 
+                                   params.intype, charset->model_name);
+    } else {
+        part_aln = input_aln;
+    }
+    if (!charset->position_spec.empty() && 
+            charset->position_spec != "*") {
+        Alignment *new_aln = new Alignment();
+        new_aln->extractSites(part_aln, charset->position_spec.c_str());
+        if (part_aln != input_aln) delete part_aln;
+        part_aln = new_aln;
+    }
+    if (part_aln->seq_type == SeqType::SEQ_DNA && 
+        (charset->sequence_type.substr(0, 5) == "CODON" || 
+            charset->sequence_type.substr(0, 5) == "NT2AA")) {
+        Alignment *new_aln = new Alignment();
+        bool isNT2AA = charset->sequence_type.substr(0, 5) == "NT2AA";
+        new_aln->convertToCodonOrAA(part_aln, &charset->sequence_type[5], 
+                                    isNT2AA);
+        if (part_aln != input_aln) {
+            delete part_aln;
+        }
+        part_aln = new_aln;
+    }
+    Alignment *new_aln;
+    if (params.remove_empty_seq) {
+        new_aln = part_aln->removeGappySeq();
+    }
+    else {
+        new_aln = part_aln;
+    }
+    // also rebuild states set of each sequence 
+    // for likelihood computation
+    // new_aln->buildSeqStates();
+    
+    if (part_aln != new_aln && part_aln != input_aln){
+        delete part_aln;
+    }
+    new_aln->name          = charset->name;
+    new_aln->model_name    = charset->model_name;
+    new_aln->aln_file      = charset->aln_file;
+    new_aln->position_spec = charset->position_spec;
+    new_aln->sequence_type = charset->sequence_type;
+    new_aln->tree_len      = charset->tree_len;
+    partitions.push_back(new_aln);
+    // PhyloTree *tree = new PhyloTree(new_aln);
+    // push_back(tree);
+    // params = origin_params;
+    // cout << new_aln->getNSeq() << " sequences " 
+    //      << "and " << new_aln->getNSite()
+    //      << " sites extracted" << endl;
+}
+
 
 void SuperAlignment::readPartitionDir
         (string partition_dir, const char *sequence_type,
