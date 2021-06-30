@@ -1566,78 +1566,72 @@ StateType Alignment::convertState(char state) {
 
 // TODO: state should be int
 char Alignment::convertStateBack(char state) const {
-    if (state == STATE_UNKNOWN) return '-';
-    if (state == STATE_INVALID) return '?';
-
+    if (state == STATE_UNKNOWN) {
+        return '-';
+    }
+    if (state == STATE_INVALID) {
+        return '?';
+    }
     switch (seq_type) {
-    case SeqType::SEQ_BINARY:
-        switch (state) {
+        case SeqType::SEQ_BINARY:
+            return convertBinaryStateBack(state);
+        case SeqType::SEQ_DNA: // DNA
+            return convertDNAStateBack(state);
+        case SeqType::SEQ_PROTEIN: // Protein
+            return convertProteinStateBack(state);
+        case SeqType::SEQ_MORPH:
+            return convertMorphologicalStateBack(state);
+        default:
+            // unknown
+            return '*';
+    }
+}
+
+char Alignment::convertBinaryStateBack(char state) const {
+    switch (state) {
         case 0:
             return '0';
         case 1:
             return '1';
         default:
-            return STATE_INVALID;
+            return '?'; //Formerly, was returning STATE_INVALID;
+    }
+}
+
+char Alignment::convertDNAStateBack(char state) const {
+    //Note: Because T appears before U in dna_map,
+    //      a state of 3 comes out as 'T', not 'U'.
+    for (auto map_entry: dna_map) {
+        if (state==map_entry.state_type) {
+            return map_entry.ch;
         }
-    case SeqType::SEQ_DNA: // DNA
-        switch (state) {
-        case 0:
-            return 'A';
-        case 1:
-            return 'C';
-        case 2:
-            return 'G';
-        case 3:
-            return 'T';
-        case 1+4+3:
-            return 'R'; // A or G, Purine
-        case 2+8+3:
-            return 'Y'; // C or T, Pyrimidine
-        case 1+8+3:
-            return 'W'; // A or T, Weak
-        case 2+4+3:
-            return 'S'; // G or C, Strong
-        case 1+2+3:
-            return 'M'; // A or C, Amino
-        case 4+8+3:
-            return 'K'; // G or T, Keto
-        case 2+4+8+3:
-            return 'B'; // C or G or T
-        case 1+2+8+3:
-            return 'H'; // A or C or T
-        case 1+4+8+3:
-            return 'D'; // A or G or T
-        case 1+2+4+3:
-            return 'V'; // A or G or C
-        default:
-            return '?'; // unrecognize character
-        }
-        return state;
-    case SeqType::SEQ_PROTEIN: // Protein
-        if (state < 20) {
-            return symbols_protein[(int)state];
-		} else if (state == 20) {
-            return 'B';
-        } else if (state == 21) {
-            return 'Z';
-        } else if (state == 22) {
-            return 'J';
-        }
-//		else if (state == 4+8+19) return 'B';
-//		else if (state == 32+64+19) return 'Z';
-        else {
-            return '-';
-        }
-    case SeqType::SEQ_MORPH:
-    	// morphological state
-        if (state < strlen(symbols_morph)) {
-            return symbols_morph[(int)state];
-        } else {
-            return '-';
-        }
-    default:
-    	// unknown
-    	return '*';
+    }
+    return '?'; // unrecognized character
+}
+
+char Alignment::convertProteinStateBack(char state) const {
+    if (state < 20) {
+        return symbols_protein[(int)state];
+    } else if (state == 20) {
+        return 'B';
+    } else if (state == 21) {
+        return 'Z';
+    } else if (state == 22) {
+        return 'J';
+    }
+    // else if (state == 4+8+19) return 'B';
+    // else if (state == 32+64+19) return 'Z';
+    else {
+        return '-';
+    }
+}
+
+char Alignment::convertMorphologicalStateBack(char state) const {
+    // morphological state
+    if (state < strlen(symbols_morph)) {
+        return symbols_morph[(int)state];
+    } else {
+        return '-';
     }
 }
 
@@ -1651,7 +1645,9 @@ string Alignment::convertStateBackStr(StateType state) const {
     }
 	if (seq_type == SeqType::SEQ_CODON) {
         // codon data
-        if (static_cast<int>(state) >= num_states) return "???";
+        if (static_cast<int>(state) >= num_states) {
+            return "???";
+        }
         assert(!codon_table.empty());
         state = codon_table[(int)state];
         str = symbols_dna[state/16];

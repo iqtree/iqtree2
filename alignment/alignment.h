@@ -330,6 +330,12 @@ public:
 	 */
     char convertStateBack(char state) const;
 
+    /** Supporting member functions per specific sequence types */
+    char convertBinaryStateBack       (char state) const;
+    char convertDNAStateBack          (char state) const;
+    char convertProteinStateBack      (char state) const;
+    char convertMorphologicalStateBack(char state) const;
+
     /**
 	 * convert from internal state to user-readable state (e.g., to ACGT for DNA)
 	 * Note: work for all data
