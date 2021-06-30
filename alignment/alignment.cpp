@@ -3701,13 +3701,13 @@ void Alignment::convertToCodonOrAA(Alignment *aln, char *gene_code_id,
     for (intptr_t i = 0; i < nseqs ; ++i) {
         seq_names.push_back(aln->getSeqName(i));
     }
-    name = aln->name;
-    model_name = aln->model_name;
+    name          = aln->name;
+    model_name    = aln->model_name;
     sequence_type = aln->sequence_type;
     position_spec = aln->position_spec;
-    aln_file = aln->aln_file;
-//    num_states = aln->num_states;
-    seq_type = SeqType::SEQ_CODON;
+    aln_file      = aln->aln_file;
+    //num_states  = aln->num_states;
+    seq_type      = SeqType::SEQ_CODON;
     initCodon(gene_code_id, nt2aa);
 
     computeUnknownState();
@@ -3715,81 +3715,103 @@ void Alignment::convertToCodonOrAA(Alignment *aln, char *gene_code_id,
     if (nt2aa) {
         buildStateMap(AA_to_state, SeqType::SEQ_PROTEIN);
     }
-
     site_pattern.resize(aln->getNSite()/3, -1);
     clear();
     pattern_index.clear();
     int step = ((seq_type == SeqType::SEQ_CODON || nt2aa) ? 3 : 1);
 
     VerboseMode save_mode = verbose_mode;
-    verbose_mode = min(verbose_mode, VerboseMode::VB_MIN);
+    verbose_mode  = min(verbose_mode, VerboseMode::VB_MIN);
     // to avoid printing gappy sites in addPattern
-    size_t nsite = aln->getNSite();
-    size_t nseq = aln->getNSeq();
+    size_t  nsite = aln->getNSite();
+    size_t  nseq  = aln->getNSeq();
     Pattern pat;
+
     pat.resize(nseq);
     int num_error = 0;
     ostringstream err_str;
 
     for (size_t site = 0; site < nsite; site+=step) {
-        for (size_t seq = 0; seq < nseq; ++seq) {
-            //char state = convertState(sequences[seq][site], seq_type);
-            char state = aln->at(aln->getPatternID(site))[seq];
-            // special treatment for codon
-            char state2 = aln->at(aln->getPatternID(site+1))[seq];
-            char state3 = aln->at(aln->getPatternID(site+2))[seq];
-            if (state < 4 && state2 < 4 && state3 < 4) {
-//            		state = non_stop_codon[state*16 + state2*4 + state3];
-                state = state*16 + state2*4 + state3;
-                if (genetic_code[(int)state] == '*') {
-                    err_str << "Sequence " << seq_names[seq]
-                            << " has stop codon "
-                            << " at site " << site+1 << endl;
-                    num_error++;
-                    state = STATE_UNKNOWN;
-                } else if (nt2aa) {
-                    state = AA_to_state[(int)genetic_code[(int)state]];
-                } else {
-                    state = non_stop_codon[(int)state];
-                }
-            } else if (state == STATE_INVALID || state2 == STATE_INVALID ||
-                       state3 == STATE_INVALID) {
-                state = STATE_INVALID;
-            } else {
-                if (state != STATE_UNKNOWN || state2 != STATE_UNKNOWN ||
-                    state3 != STATE_UNKNOWN) {
-                    ostringstream warn_str;
-                    warn_str << "Sequence " << seq_names[seq]
-                             << " has ambiguous character "
-                             << " at site " << site+1;
-                    outWarning(warn_str.str());
-                }
-                state = STATE_UNKNOWN;
-            }
-            if (state == STATE_INVALID) {
-                if (num_error < 100) {
-                    err_str << "Sequence " << seq_names[seq]
-                            << " has invalid character ";
-                    err_str << " at site " << site+1 << endl;
-                } else if (num_error == 100)
-                    err_str << "...many more..." << endl;
-                num_error++;
-            }
-            pat[seq] = state;
-        }
-        if (!num_error)
+        convertSiteToCodonOrAA(aln, nt2aa, AA_to_state, 
+                               site, pat, num_error, err_str);
+        if (!num_error) {
             addPattern(pat, static_cast<int>(site/step));
+        }
     }
-    if (num_error)
+    if (num_error) {
         outError(err_str.str());
+    }
     verbose_mode = save_mode;
     countConstSite();
     // sanity check
-    for (iterator it = begin(); it != end(); it++)
-    	if (it->at(0) == -1)
+    for (iterator it = begin(); it != end(); it++) {
+    	if (it->at(0) == -1) {
     		ASSERT(0);
-
+        }
+    }
 }
+
+void Alignment::convertSiteToCodonOrAA(Alignment* aln, bool nt2aa,
+                                       const char* AA_to_state, 
+                                       size_t site, Pattern& pat,
+                                       int&   num_error,
+                                       std::ostringstream& err_str) {
+    size_t nseq = aln->getNSeq();                                        
+    for (size_t seq = 0; seq < nseq; ++seq) {
+        //char state = convertState(sequences[seq][site], seq_type);
+        char state  = aln->at(aln->getPatternID(site))[seq];
+        // special treatment for codon
+        char state2 = aln->at(aln->getPatternID(site+1))[seq];
+        char state3 = aln->at(aln->getPatternID(site+2))[seq];
+        if (state < 4 && state2 < 4 && state3 < 4) {
+    //            		state = non_stop_codon[state*16 + state2*4 + state3];
+            state = state*16 + state2*4 + state3;
+            if (genetic_code[(int)state] == '*') {
+                err_str << "Sequence " << seq_names[seq]
+                        << " has stop codon "
+                        << " at site " << site+1 << endl;
+                num_error++;
+                state = STATE_UNKNOWN;
+            } else if (nt2aa) {
+                state = AA_to_state[(int)genetic_code[(int)state]];
+            } else {
+                state = non_stop_codon[(int)state];
+            }
+        } else if (state == STATE_INVALID || state2 == STATE_INVALID ||
+                    state3 == STATE_INVALID) {
+            state = STATE_INVALID;
+        } else {
+            if (state != STATE_UNKNOWN || state2 != STATE_UNKNOWN ||
+                state3 != STATE_UNKNOWN) {
+                ostringstream warn_str;
+                warn_str << "Sequence " << seq_names[seq]
+                            << " has ambiguous character "
+                            << " at site " << site+1;
+                outWarning(warn_str.str());
+            }
+            state = STATE_UNKNOWN;
+        }
+        reportIfStateInvalid(site, seq, state, num_error, err_str);
+        pat[seq] = state;
+    }
+}
+
+void Alignment::reportIfStateInvalid(size_t site, size_t seq,
+                                     char state,  int&   num_error,
+                                     std::ostringstream& err_str) {
+    if (state != STATE_INVALID) {
+        return;
+    }
+    if (num_error < 100) {
+        err_str << "Sequence " << seq_names[seq]
+                << " has invalid character ";
+        err_str << " at site " << site+1 << endl;
+    } else if (num_error == 100) {
+        err_str << "...many more..." << endl;
+    }
+    num_error++;
+}
+
 
 Alignment *Alignment::convertCodonToAA() {
     Alignment *res = new Alignment;

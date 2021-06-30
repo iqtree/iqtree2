@@ -698,6 +698,17 @@ public:
     */
     void convertToCodonOrAA(Alignment *aln, char *gene_code_id, bool nt2aa = false);
 
+        /** supporting functions for convertToCodonOrAA */
+        void convertSiteToCodonOrAA(Alignment* aln,  bool nt2aa,
+                                    const char* AA_to_state,
+                                    size_t      site, Pattern& pat,
+                                    int&        num_error,
+                                    std::ostringstream& err_str);
+        void reportIfStateInvalid  (size_t site, size_t seq,
+                                    char state, int&   num_error,
+                                    std::ostringstream& err_str);
+
+
     /**
      convert this codon alignment to AA
      */
