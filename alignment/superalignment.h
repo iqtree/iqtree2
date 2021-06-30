@@ -61,7 +61,11 @@ public:
         @param params program Params
      */
     void readFromParams(Params &params);
-    
+
+        void readPartitionModelFile(const Params& params);
+        void subSamplePartitions(Params& params, int subsample);
+        void writePartitionInfo() const;
+
     /**
      initialize seq_names, taxon_index, buildPattern
      */
@@ -74,10 +78,10 @@ public:
     void readPartition(Params &params);
     
     /** read RAxML-style partition file */
-    void readPartitionRaxml(Params &params);
+    void readPartitionRaxml(const Params &params);
     
     /** read partition model file in NEXUS format into variable info */
-    void readPartitionNexus(Params &params);
+    void readPartitionNexus(const Params &params);
 
     /** read partition as files in a directory */
     void readPartitionDir(string partition_dir, const char *sequence_type,

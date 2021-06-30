@@ -90,25 +90,11 @@ void SuperAlignment::readFromParams(Params &params) {
                           params.intype, params.model_name, 
                           params.remove_empty_seq);
     } else {
-        cout << "Reading partition model file " 
-             << params.partition_file << " ..." << endl;
-        if (detectInputFile(params.partition_file) == InputType::IN_NEXUS) {
-            readPartitionNexus(params);
-            if (partitions.empty()) {
-                outError("No partition found in SETS block." 
-                         " An example syntax looks like: \n"
-                         "#nexus\n"
-                         "begin sets;\n"
-                         "  charset part1=1-100;\n" 
-                         "  charset part2=101-300;\n"
-                         "end;");
-            }
-        } else {
-            readPartitionRaxml(params);
-        }
+        readPartitionModelFile(params);
     }
-    if (partitions.empty())
+    if (partitions.empty()) {
         outError("No partition found");
+    }
     
     // check for duplicated partition names
     unordered_set<string> part_names;
@@ -119,59 +105,93 @@ void SuperAlignment::readFromParams(Params &params) {
         part_names.insert((*pit)->name);
     }
     
-    if (params.subsampling != 0) {
+    int subsample = params.subsampling;
+    if (subsample != 0) {
         // sumsample a number of partitions
-        int subsample = params.subsampling;
-        if (abs(subsample) >= partitions.size()) {
-            outError("--subsample must be between -" + 
-                     convertInt64ToString(partitions.size() - 1) + 
-                     " and " + convertInt64ToString(partitions.size() - 1));
-        }
-        cout << "Random subsampling " 
-             << (subsample + ((subsample > 0) ? 0 : partitions.size()))
-             << " partitions (seed: " 
-             << params.subsampling_seed <<  ")..." << endl;
-        int *rstream;
-        init_random(params.subsampling_seed, false, &rstream);
-        // make sure to sub-sample exact number
-        BoolVector sample(partitions.size(), false);
-        int i;
-        for (int num = 0; num < abs(subsample); ) {
-            i = random_int(static_cast<int>(sample.size()), rstream);
-            if (!sample[i]) {
-                sample[i] = true;
-                num++;
-            }
-        }
-        finish_random(rstream);
-        if (subsample < 0) {
-            // reverse sampling
-            for (i = 0; i < sample.size(); i++)
-                sample[i] = !sample[i];
-        }
-        vector<Alignment*> keep_partitions;
-        for (i = 0; i < sample.size(); i++)
-            if (sample[i])
-                keep_partitions.push_back(partitions[i]);
-        // now replace partitions
-        partitions = keep_partitions;
+        subSamplePartitions(params, subsample);
     }
     
+    writePartitionInfo();
+}
+
+void SuperAlignment::readPartitionModelFile(const Params& params) {
+    cout << "Reading partition model file " 
+         << params.partition_file << " ..." << endl;
+    if (detectInputFile(params.partition_file) == InputType::IN_NEXUS) {
+        readPartitionNexus(params);
+        if (partitions.empty()) {
+            outError("No partition found in SETS block." 
+                        " An example syntax looks like: \n"
+                        "#nexus\n"
+                        "begin sets;\n"
+                        "  charset part1=1-100;\n" 
+                        "  charset part2=101-300;\n"
+                        "end;");
+        }
+    } else {
+        readPartitionRaxml(params);
+    }
+}
+
+void SuperAlignment::subSamplePartitions(Params& params, int subsample) {
+    if (abs(subsample) >= partitions.size()) {
+        outError("--subsample must be between -" + 
+                    convertInt64ToString(partitions.size() - 1) + 
+                    " and " + convertInt64ToString(partitions.size() - 1));
+    }
+    cout << "Random subsampling " 
+            << (subsample + ((subsample > 0) ? 0 : partitions.size()))
+            << " partitions (seed: " 
+            << params.subsampling_seed <<  ")..." << endl;
+    int *rstream;
+    init_random(params.subsampling_seed, false, &rstream);
+    // make sure to sub-sample exact number
+    BoolVector sample(partitions.size(), false);
+    int i;
+    for (int num = 0; num < abs(subsample); ) {
+        i = random_int(static_cast<int>(sample.size()), rstream);
+        if (!sample[i]) {
+            sample[i] = true;
+            num++;
+        }
+    }
+    finish_random(rstream);
+    if (subsample < 0) {
+        // reverse sampling
+        for (i = 0; i < sample.size(); i++) {
+            sample[i] = !sample[i];
+        }
+    }
+    vector<Alignment*> keep_partitions;
+    for (i = 0; i < sample.size(); i++) {
+        if (sample[i]) {
+            keep_partitions.push_back(partitions[i]);
+        }
+    }
+    // now replace partitions
+    partitions = keep_partitions;    
+}
+
+void SuperAlignment::writePartitionInfo() const {
     // Initialize the counter for evaluated NNIs on subtrees
     cout << "Subset\tType\tSeqs\tSites\tInfor\tInvar\tModel\tName" << endl;
     int part = 0;
-    for (auto it = partitions.begin(); it != partitions.end(); it++, part++) {
-        cout << part+1 << "\t" << (*it)->sequence_type << "\t" << (*it)->getNSeq()
-        << "\t" << (*it)->getNSite() << "\t" << (*it)->num_informative_sites
-        << "\t" << (*it)->getNSite()-(*it)->num_variant_sites << "\t"
-        << (*it)->model_name << "\t" << (*it)->name << endl;
+    for (auto it = partitions.begin(); 
+         it != partitions.end(); it++, part++) {
+        cout << part+1 << "\t" << (*it)->sequence_type
+             << "\t" << (*it)->getNSeq()
+             << "\t" << (*it)->getNSite() 
+             << "\t" << (*it)->num_informative_sites
+             << "\t" << (*it)->getNSite()-(*it)->num_variant_sites 
+             << "\t" << (*it)->model_name
+             << "\t" << (*it)->name << endl;
         if ((*it)->num_variant_sites == 0) {
             outWarning("No variant sites in partition " + (*it)->name);
         } else if ((*it)->num_informative_sites == 0) {
             outWarning("No parsimony-informative sites"
                        " in partition " + (*it)->name);
         }
-    }
+    }    
 }
 
 void SuperAlignment::init(StrVector *sequence_names) {
@@ -308,7 +328,7 @@ void SuperAlignment::readPartition(Params &params) {
     }
 }
 
-void SuperAlignment::readPartitionRaxml(Params &params) {
+void SuperAlignment::readPartitionRaxml(const Params &params) {
     try {
         ifstream in;
         in.exceptions(ios::failbit | ios::badbit);
@@ -405,7 +425,7 @@ void SuperAlignment::readPartitionRaxml(Params &params) {
     }
 }
 
-void SuperAlignment::readPartitionNexus(Params &params) {
+void SuperAlignment::readPartitionNexus(const Params &params) {
 //    Params origin_params = params;
     MSetsBlock*   sets_block = new MSetsBlock();
     NxsTaxaBlock* taxa_block = nullptr;
