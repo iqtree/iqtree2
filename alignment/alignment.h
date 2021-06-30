@@ -506,8 +506,24 @@ public:
      * @param target_seqs (OUT) corresponding name of kept sequence that is identical to the removed sequences
      * @return this if no sequences were removed, or new alignment if at least 1 sequence was removed
      */
-    virtual Alignment *removeIdenticalSeq(string not_remove, bool keep_two, StrVector &removed_seqs, StrVector &target_seqs);
+    virtual Alignment* removeIdenticalSeq(string not_remove, bool keep_two, 
+                                          StrVector &removed_seqs, 
+                                          StrVector &target_seqs);
 
+        //Supporting functions for removeIdenticalSeq...
+        bool shouldRemoveSequence(int seq1, int seq2, 
+                                const string& not_remove,
+                                const BoolVector& isSequenceRemoved,
+                                const vector<size_t>& hashes) const;
+
+        void reportSequenceKept(int seq1, int seq2, bool listIdentical,
+                                progress_display& progress) const;
+
+        void doneCheckingForDuplicateSequences(double startCheck, 
+                                            progress_display& progress) const;
+
+        Alignment* removeSpecifiedSequences(const StrVector&  removed_seqs,
+                                            const BoolVector& isSequenceRemoved);
     
     /**
      * calclulate hashes of all the sequences (note: hashes depend on patterns, so

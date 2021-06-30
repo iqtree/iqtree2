@@ -77,7 +77,7 @@ const char* genetic_codes[] = {
     genetic_code9,  genetic_code10, genetic_code11, genetic_code12,
     genetic_code13, genetic_code14, genetic_code15, genetic_code16,
     nullptr,        nullptr,        nullptr,        nullptr,
-    nullptr,        genetic_code22, genetic_code23, genetic_code24,
+    genetic_code21, genetic_code22, genetic_code23, genetic_code24,
     genetic_code25
 };
 const int min_translation_table = 1;
@@ -476,6 +476,18 @@ vector<size_t> Alignment::getPatternIndependentSequenceHashes(progress_display_p
     return hashes;
 }
 
+template <class V, class C> void getCounts(const std::vector<V>& values, 
+                                           std::map<V, C>& counts) {
+    for (const V& v: values) {
+        auto it = counts.find(v);
+        if (it==counts.end()) {
+            counts[v] = 1;
+        } else {
+            ++counts[v];
+        }
+    }
+}
+
 Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two,
                                          StrVector &removed_seqs, StrVector &target_seqs)
 {
@@ -494,65 +506,83 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two,
     intptr_t       nseq   = getNSeq();
     vector<size_t> hashes = getSequenceHashes(&progress);
     std::map<size_t, size_t> hash_counts;
-    for (intptr_t i=0; i<nseq; ++i) {
-        auto it = hash_counts.find(i);
-        if (it==hash_counts.end()) {
-            hash_counts[hashes[i]] = 1;
-        } else {
-            ++hash_counts[hashes[i]];
-        }
-    }
+    getCounts(hashes, hash_counts);
 
     bool listIdentical = !Params::getInstance().suppress_duplicate_sequence_warnings;
 
     auto startCheck = getRealTime();
     for (intptr_t seq1 = 0; seq1 < nseq; ++seq1) {
         if ((seq1%1000)==999) {
-            progress += 100.0;
+            progress += 1000.0;
         }
         if ( isSequenceChecked[seq1] || hash_counts[hashes[seq1]] == 1) {
             continue;
         }
         bool first_ident_seq = true;
         for (intptr_t seq2 = seq1+1; seq2 < nseq; ++seq2) {
-            if ( getSeqName(seq2) == not_remove || 
-                 isSequenceRemoved[seq2] ) {
+            if (!shouldRemoveSequence(seq1, seq2, not_remove,
+                                      isSequenceRemoved, hashes)) {
                 continue;
             }
-            if (hashes[seq1] != hashes[seq2]) {
-                continue; //JB2020-06-17
-            }
-            bool equal_seq = true;
-            for (iterator it = begin(); it != end(); it++) {
-                if  ((*it)[seq1] != (*it)[seq2]) {
-                    equal_seq = false;
-                    break;
-                }
-            }
-            if (!equal_seq) continue;
             if (static_cast<int>(removed_seqs.size())+3 < getNSeq() &&
                 (!keep_two || !first_ident_seq)) {
                 removed_seqs.push_back(getSeqName(seq2));
                 target_seqs.push_back(getSeqName(seq1));
                 isSequenceRemoved[seq2] = true;
             } else {
-                if (listIdentical) {
-                    #if USE_PROGRESS_DISPLAY
-                    progress.hide();
-                    #endif
-                    cout << "NOTE: " << getSeqName(seq2)
-                         << " is identical to " << getSeqName(seq1)
-                         << " but kept for subsequent analysis" << endl;
-                    #if USE_PROGRESS_DISPLAY
-                    progress.show();
-                    #endif
-                }
+                reportSequenceKept(seq1, seq2, listIdentical, progress);
             }
             isSequenceChecked[seq2] = true;
-            first_ident_seq = false;
+            first_ident_seq         = false;
         }
         isSequenceChecked[seq1] = true;
     }
+    doneCheckingForDuplicateSequences(startCheck, progress);
+
+
+    if (0 < removed_seqs.size() ) {
+        return removeSpecifiedSequences(removed_seqs, isSequenceRemoved);
+    } else {
+        return this;
+    }
+}
+
+bool Alignment::shouldRemoveSequence(int seq1, int seq2, 
+                                     const string& not_remove,
+                                     const BoolVector& isSequenceRemoved,
+                                     const vector<size_t>& hashes) const {
+    if ( getSeqName(seq2) == not_remove || 
+            isSequenceRemoved[seq2] ) {
+        return false;
+    }
+    if (hashes[seq1] != hashes[seq2]) {
+        return false; //JB2020-06-17
+    }
+    for (auto it = begin(); it != end(); it++) {
+        if  ((*it)[seq1] != (*it)[seq2]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void Alignment::reportSequenceKept(int seq1, int seq2, bool listIdentical,
+                                   progress_display& progress) const {
+    if (listIdentical) {
+        #if USE_PROGRESS_DISPLAY
+        progress.hide();
+        #endif
+        cout << "NOTE: " << getSeqName(seq2)
+                << " is identical to " << getSeqName(seq1)
+                << " but kept for subsequent analysis" << endl;
+        #if USE_PROGRESS_DISPLAY
+        progress.show();
+        #endif
+    }
+}
+
+void Alignment::doneCheckingForDuplicateSequences(double startCheck, 
+                                                  progress_display& progress) const {
     #if USE_PROGRESS_DISPLAY
         bool displaying_progress = progress_display::getProgressDisplay();
     #else
@@ -561,37 +591,41 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two,
     if (verbose_mode >= VerboseMode::VB_MED && !displaying_progress) {
         auto checkTime = getRealTime() - startCheck;
         cout << "Checking for duplicate sequences took " << checkTime
-            << " wall-clock seconds" << endl;
+             << " wall-clock seconds" << endl;
     }
     #if USE_PROGRESS_DISPLAY
-    progress.done();
-    #endif
-    if (removed_seqs.size() > 0) {
-        double   removeDupeStart = getRealTime();
-        intptr_t nseq            = getNSeq();
-        if (static_cast<intptr_t>(removed_seqs.size()) + 3 >= nseq) {
-            outWarning("Your alignment contains too many identical sequences!");
-        }
-        IntVector keep_seqs;
-        for (intptr_t seq1 = 0; seq1 < nseq; seq1++) {
-            if ( !isSequenceRemoved[seq1] ) {
-                keep_seqs.emplace_back(seq1);
-            }
-        }
-        Alignment* aln = new Alignment;
-        aln->extractSubAlignment(this, keep_seqs, 0);
-        //cout << "NOTE: Identified " << removed_seqs.size()
-        //  << " sequences as duplicates." << endl;
-        if (verbose_mode >= VerboseMode::VB_MED) {
-            std::stringstream msg;
-            msg.precision(4);
-            msg << "Removing " << removed_seqs.size() << " duplicated sequences took "
-                << (getRealTime() - removeDupeStart) << " sec.";
-            std::cout << msg.str() << std::endl;
-        }
-        return aln;
-    } else return this;
+        progress.done();
+    #endif    
 }
+
+Alignment* Alignment::removeSpecifiedSequences
+                (const StrVector&  removed_seqs,
+                 const BoolVector& isSequenceRemoved) {
+    double   removeDupeStart = getRealTime();
+    intptr_t nseq            = getNSeq();
+    if (static_cast<intptr_t>(removed_seqs.size()) + 3 >= nseq) {
+        outWarning("Your alignment contains too many identical sequences!");
+    }
+    IntVector keep_seqs;
+    for (intptr_t seq1 = 0; seq1 < nseq; seq1++) {
+        if ( !isSequenceRemoved[seq1] ) {
+            keep_seqs.emplace_back(seq1);
+        }
+    }
+    Alignment* aln = new Alignment;
+    aln->extractSubAlignment(this, keep_seqs, 0);
+    //cout << "NOTE: Identified " << removed_seqs.size()
+    //  << " sequences as duplicates." << endl;
+    if (verbose_mode >= VerboseMode::VB_MED) {
+        std::stringstream msg;
+        msg.precision(4);
+        msg << "Removing " << removed_seqs.size() << " duplicated sequences took "
+            << (getRealTime() - removeDupeStart) << " sec.";
+        std::cout << msg.str() << std::endl;
+    }
+    return aln;
+}
+
 
 void Alignment::adjustHash(StateType v, size_t& hash) const {
     //Based on what boost::hash_combine() does.
