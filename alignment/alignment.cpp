@@ -539,7 +539,6 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two,
     }
     doneCheckingForDuplicateSequences(startCheck, progress);
 
-
     if (0 < removed_seqs.size() ) {
         return removeSpecifiedSequences(removed_seqs, isSequenceRemoved);
     } else {
@@ -595,7 +594,7 @@ void Alignment::doneCheckingForDuplicateSequences(double startCheck,
     }
     #if USE_PROGRESS_DISPLAY
         progress.done();
-    #endif    
+    #endif
 }
 
 Alignment* Alignment::removeSpecifiedSequences

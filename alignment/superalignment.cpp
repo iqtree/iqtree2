@@ -542,7 +542,6 @@ void SuperAlignment::determineNexusPartitionSequenceType
     trimString(charset->sequence_type);    
 }
 
-
 void SuperAlignment::loadOneNexusPartition(const Params& params,
                                            Alignment* input_aln,
                                            CharSet* charset) {
@@ -1131,7 +1130,9 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two,
 
     auto     startCheck = getRealTime();
 	for (intptr_t seq1 = 0; seq1 < nseq; ++seq1, ++progress) {
-        if (isSequenceChecked[seq1]) continue;
+        if (isSequenceChecked[seq1]) {
+            continue;
+        }
         bool first_ident_seq = true;
 		for (intptr_t seq2 = seq1+1; seq2 < nseq; ++seq2) {
             if (getSeqName(seq2) == not_remove || 
@@ -1141,37 +1142,7 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two,
             if (hashes[seq1]!=hashes[seq2]) {
                 continue;
             }
-			bool equal_seq = true;
-			int part = 0;
-			// check if seq1 and seq2 are identical over all partitions
-			for (auto ait = partitions.begin(); 
-                 ait != partitions.end(); ++ait, part++) {
-				int subseq1 = taxa_index[seq1][part];
-				int subseq2 = taxa_index[seq2][part];
-				if (subseq1 < 0 && subseq2 < 0) {
-                    // continue if both seqs are absent in this partition
-					continue;
-                }
-				if (subseq1 < 0 && subseq2 > 0) {
-					// if one sequence is present and the other is absent 
-                    // for a gene, we conclude that they are not identical
-					equal_seq = false;
-					break;
-				}
-				if (subseq1 > 0 && subseq2 < 0) {
-					// if one sequence is present and the other is absent 
-                    // for a gene, we conclude that they are not identical
-					equal_seq = false;
-					break;
-				}
-				// now if both seqs are present, check sequence content
-                for (iterator it = (*ait)->begin(); it != (*ait)->end(); it++) {
-					if  ((*it)[subseq1] != (*it)[subseq2]) {
-						equal_seq = false;
-						break;
-					}
-                }
-			}
+			bool equal_seq = areSequencesIdentical(seq1, seq2);
             if (!equal_seq) {
                 continue;
             }
@@ -1181,39 +1152,58 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two,
                 target_seqs.push_back(getSeqName(seq1));
                 isSequenceRemoved[seq2] = true;
             } else {
-                if (listIdentical) {
-                    #if USE_PROGRESS_DISPLAY
-                    progress.hide();
-                    #endif
-                    cout << "NOTE: " << getSeqName(seq2) 
-                         << " is identical to " << getSeqName(seq1)
-                         << " but kept for subsequent analysis" << endl;
-                    #if USE_PROGRESS_DISPLAY
-                    progress.show();
-                    #endif
-                }
+                reportSequenceKept(seq1, seq2, listIdentical, progress);
             }
             isSequenceChecked[seq2] = true;
             first_ident_seq = false;
 		}
 		isSequenceChecked[seq1] = true;
 	}
-    #if USE_PROGRESS_DISPLAY
-    progress.done();
-    #endif
-    
-    if (verbose_mode >= VerboseMode::VB_MED) {
-        auto checkTime = getRealTime() - startCheck;
-        cout << "Checking for identical sequences took " 
-             << checkTime << " wall-clock seconds" << endl;
-    }
+    doneCheckingForDuplicateSequences(startCheck, progress);
+    if (static_cast<intptr_t>(removed_seqs.size()) + 3 >= getNSeq()) {
+        outWarning("Your alignment contains too many identical sequences!");
+    }    
     if (removed_seqs.empty()) {
         return this; // do nothing if the list is empty
     }
-    if (static_cast<intptr_t>(removed_seqs.size()) + 3 >= getNSeq()) {
-        outWarning("Your alignment contains too many identical sequences!");
-    }
+    return filterOutSequences(isSequenceRemoved);
+}
+
+bool SuperAlignment::areSequencesIdentical(int seq1, int seq2) {
+    int part = 0;
+    // check if seq1 and seq2 are identical over all partitions
+    for (auto ait = partitions.begin(); 
+            ait != partitions.end(); ++ait, part++) {
+        int subseq1 = taxa_index[seq1][part];
+        int subseq2 = taxa_index[seq2][part];
+        if (subseq1 < 0 && subseq2 < 0) {
+            // continue if both seqs are absent in this partition
+            continue;
+        }
+        if (subseq1 < 0 && subseq2 > 0) {
+            // if one sequence is present and the other is absent 
+            // for a gene, we conclude that they are not identical
+            return false;
+        }
+        if (subseq1 > 0 && subseq2 < 0) {
+            // if one sequence is present and the other is absent 
+            // for a gene, we conclude that they are not identical
+            return false;
+        }
+        // now if both seqs are present, check sequence content
+        for (iterator it = (*ait)->begin(); it != (*ait)->end(); it++) {
+            if  ((*it)[subseq1] != (*it)[subseq2]) {
+                return false;
+            }
+        }
+    } 
+    return true;
+}
+
+Alignment* SuperAlignment::filterOutSequences
+                (BoolVector& isSequenceRemoved) {
 	// now remove identical sequences
+    intptr_t  nseq = getNSeq();
 	IntVector keep_seqs;
 	for (int seq1 = 0; seq1 < nseq; ++seq1)
     {

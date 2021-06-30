@@ -191,7 +191,10 @@ public:
      */
     virtual Alignment *removeIdenticalSeq(string not_remove, bool keep_two, StrVector &removed_seqs, StrVector &target_seqs);
     
-    
+        bool areSequencesIdentical(int seq1, int seq2);
+        Alignment* filterOutSequences(BoolVector& isSequenceRemoved);
+
+
     /** determine hashes
      @param progress pointer to a progress_display instance to report  progress against
      @return a vector of the hashes of the sequences in the alignment
