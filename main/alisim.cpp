@@ -689,7 +689,7 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
                 seq_names = tmp_aln->getSeqNames();
 
                 // show a warning if the length of input alignment is unequal to that of simulated sequence
-                if (sequences.size() > 0 && sequences[0].length() != sequence_length)
+                if (sequences.size() > 0 && sequences[0].length() != sequence_length*alisimulator->num_sites_per_state)
                     outWarning("The sequence length of the input alignment is unequal to that of that simulated sequences. Thus, only gaps in the first MIN(input_sequence_length, simulated_sequence_length) sites are copied.");
 
                 // write simulated sequence with the gaps copied from the input sequence

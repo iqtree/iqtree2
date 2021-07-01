@@ -1010,10 +1010,26 @@ short int AliSimulator::extractMaxTaxaNameLength()
 {
     if (tree && tree->aln)
     {
-        vector<string> seq_names = tree->aln->getSeqNames();
-        for (int i = 0; i < seq_names.size(); i++)
-            if (seq_names[i].length()>max_length_taxa_name)
-                max_length_taxa_name = seq_names[i].length();
+        // if it's a super tree -> check each tree one by one
+        if (tree->isSuperTree())
+        {
+            for (int i = 0 ; i < ((PhyloSuperTree*) tree)->size(); i++)
+            {
+                IQTree *current_tree = (IQTree *) ((PhyloSuperTree*) tree)->at(i);
+                vector<string> seq_names = current_tree->aln->getSeqNames();
+                for (int i = 0; i < seq_names.size(); i++)
+                    if (seq_names[i].length()>max_length_taxa_name)
+                        max_length_taxa_name = seq_names[i].length();
+            }
+        }
+        // otherwise, just check the current tree
+        else
+        {
+            vector<string> seq_names = tree->aln->getSeqNames();
+            for (int i = 0; i < seq_names.size(); i++)
+                if (seq_names[i].length()>max_length_taxa_name)
+                    max_length_taxa_name = seq_names[i].length();
+        }
     }
 }
 

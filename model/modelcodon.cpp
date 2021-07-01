@@ -401,6 +401,71 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
             def_freq = FREQ_USER_DEFINED;
 	}
 
+    // set model parameters (omega, kappa, kappa2)
+    size_t num_commas = std::count(model_params.begin(), model_params.end(), ',');
+    size_t num_spaces = std::count(model_params.begin(), model_params.end(), ' ');
+    // make sure model_params are used to set omega, kappa, kappa2
+    if (model_params.length()>0 && num_commas <= 2 && num_spaces == 0)
+    {
+        string delimiter = ",";
+        
+        // parse omega
+        // check if the model allow users to specify this parameter or not?
+        if (fix_omega)
+        {
+            std::string model_name_str(model_name);
+            outError("Sorry! Omega is not existed or unable to be set in the model "+model_name_str);
+        }
+        size_t pos = model_params.find(delimiter);
+        omega = convert_double(model_params.substr(0, pos).c_str());
+        
+        // delete omega from model_params
+        if (pos!= std::string::npos)
+            model_params.erase(0, pos + delimiter.length());
+        else
+            model_params = "";
+        
+        // parse kappa
+        if (model_params.length() > 0)
+        {
+            // check if the model allow users to specify this parameter or not?
+            if (fix_kappa)
+            {
+                std::string model_name_str(model_name);
+                outError("Sorry! Kappa is not existed or unable to be set in the model "+model_name_str);
+            }
+            
+            pos = model_params.find(delimiter);
+            kappa = convert_double(model_params.substr(0, pos).c_str());
+            
+            // delete kappa from model_params
+            if (pos!= std::string::npos)
+                model_params.erase(0, pos + delimiter.length());
+            else
+                model_params = "";
+        }
+        
+        // parse kappa2
+        if (model_params.length() > 0)
+        {
+            // check if the model allow users to specify this parameter or not?
+            if (fix_kappa2)
+            {
+                std::string model_name_str(model_name);
+                outError("Sorry! Kappa2 is not existed or unable to be set in the model "+model_name_str);
+            }
+            
+            pos = model_params.find(delimiter);
+            kappa2 = convert_double(model_params.substr(0, pos).c_str());
+            
+            // delete kappa2 from model_params
+            if (pos!= std::string::npos)
+                model_params.erase(0, pos + delimiter.length());
+            else
+                model_params = "";
+        }
+    }
+    
     num_params = (!fix_omega) + (!fix_kappa) + (!fix_kappa2);
 
 	if (freq_params != "") {
