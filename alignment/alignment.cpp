@@ -3936,9 +3936,7 @@ Alignment *Alignment::convertCodonToDNA() {
     return res;
 }
 
-void convert_range(const char *str, int &lower, int &upper, 
-                   int &step_size, char* &endptr) {
-
+void parse_lower_bound(const char *str, int &lower, char* &endptr) {
     // parse the lower bound of the range
     int d = strtol(str, &endptr, 10);
     if ((d == 0 && endptr == str) || abs(d) == HUGE_VALL) {
@@ -3948,19 +3946,18 @@ void convert_range(const char *str, int &lower, int &upper,
         throw err;
     }
     lower = d;
-    //int d_save = d;
-    upper = d;
-    step_size = 1;
-    // skip blank chars
-    for (; *endptr == ' '; endptr++) {}
-    if (*endptr != '-') return;
+}
 
-    // parse the upper bound of the range
-    endptr++;
+void skip_blank_chars(char* &endptr) {
     // skip blank chars
     for (; *endptr == ' '; endptr++) {}
+}
+
+void parse_upper_bound(const char *str, int lower, int &upper, char* &endptr) {
+    // parse the upper bound of the range
+    skip_blank_chars(endptr);
     str = endptr;
-    d = strtol(str, &endptr, 10);
+    int d = strtol(str, &endptr, 10);
     if ((d == 0 && endptr == str) || abs(d) == HUGE_VALL) {
         if (str[0] == '.') {
             // 2019-06-03: special character '.' for whatever ending position
@@ -3973,17 +3970,16 @@ void convert_range(const char *str, int &lower, int &upper,
             throw err;
         }
     }
-
-    //lower = d_save;
     upper = d;
-    // skip blank chars
-    for (; *endptr == ' '; endptr++) {}
+}
 
-    if (*endptr != '\\') return;
-
+void parse_step_size(const char *str, int &step_size, char* &endptr) {
+    if (*endptr != '\\') {
+        return;
+    }
     // parse the step size of the range
     str = endptr+1;
-    d = strtol(str, &endptr, 10);
+    int d = strtol(str, &endptr, 10);
     if ((d == 0 && endptr == str) || abs(d) == HUGE_VALL) {
         string err = "Expecting integer, but found \"";
         err += str;
@@ -3991,6 +3987,22 @@ void convert_range(const char *str, int &lower, int &upper,
         throw err;
     }
     step_size = d;
+}
+
+void convert_range(const char *str, int &lower, int &upper, 
+                   int &step_size, char* &endptr) {
+    parse_lower_bound(str, lower, endptr);
+    upper     = lower;
+    step_size = 1;
+    skip_blank_chars(endptr);
+    if (*endptr != '-') {
+        return;
+    } else {
+        ++endptr; //skip over the '-' character
+    }
+    parse_upper_bound(str, lower, upper, endptr);
+    skip_blank_chars (endptr);
+    parse_step_size  (str, step_size, endptr);
 }
 
 void extractSiteID(Alignment *aln, const char* spec,
@@ -4005,8 +4017,9 @@ void extractSiteID(Alignment *aln, const char* spec,
             convert_range(str, lower, upper, step, endstr);
             str = endstr;
             // 2019-06-03: special '.' character
-            if (upper == lower-1)
+            if (upper == lower-1) {
                 upper = static_cast<int>(aln->getNSite());
+            }
             lower--;
             upper--;
             nchars += (upper-lower+1)/step;
@@ -4024,9 +4037,10 @@ void extractSiteID(Alignment *aln, const char* spec,
             if (*str == ',' || *str == ' ') str++;
             //else break;
         }
-        if (aln->seq_type == SeqType::SEQ_CODON && nchars % 3 != 0)
+        if (aln->seq_type == SeqType::SEQ_CODON && nchars % 3 != 0) {
             throw (string)"Range " + spec +
                   " length is not multiple of 3 (necessary for codon data)";
+        }
     } catch (const char* err) {
         outError(err);
     } catch (string err) {
