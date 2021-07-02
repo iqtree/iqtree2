@@ -1786,7 +1786,6 @@ int getMorphStates(const StrVector &sequences) {
     return 0;
 }
 
-
 bool Alignment::buildPattern(StrVector &sequences,
                              const char *sequence_type,
                              int nseq, int nsite) {
@@ -5555,119 +5554,123 @@ UINT Alignment::getCountOfSingletonParsimonyStates() const {
     return total_singleton_parsimony_states;
 }
 
-void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double *ntfreq) {
+void Alignment::computeCodonFreq_1x4(double *state_freq, 
+                                     double *ntfreq) {
 	intptr_t nseqs = getNSeq();
-
-	if (freq == StateFreqType::FREQ_CODON_1x4) {
-		memset(ntfreq, 0, sizeof(double)*4);
-		for (iterator it = begin(); it != end(); it++) {
-			for (intptr_t seq = 0; seq < nseqs; seq++) {
-                if ((*it)[seq] == STATE_UNKNOWN) {
-                    continue;
-                }
-				int codon = codon_table[(int)(*it)[seq]];
+    memset(ntfreq, 0, sizeof(double)*4);
+    for (iterator it = begin(); it != end(); it++) {
+        for (intptr_t seq = 0; seq < nseqs; seq++) {
+            if ((*it)[seq] == STATE_UNKNOWN) {
+                continue;
+            }
+            int codon = codon_table[(int)(*it)[seq]];
 //				int codon = (int)(*it)[seq];
-				int nt1 = codon / 16;
-				int nt2 = (codon % 16) / 4;
-				int nt3 = codon % 4;
-				ntfreq[nt1] += (*it).frequency;
-				ntfreq[nt2] += (*it).frequency;
-				ntfreq[nt3] += (*it).frequency;
-			}
-		}
-		double sum = 0;
-		for (int i = 0; i < 4; i++) {
-			sum += ntfreq[i];
+            int nt1 = codon / 16;
+            int nt2 = (codon % 16) / 4;
+            int nt3 = codon % 4;
+            ntfreq[nt1] += (*it).frequency;
+            ntfreq[nt2] += (*it).frequency;
+            ntfreq[nt3] += (*it).frequency;
         }
-		for (int i = 0; i < 4; i++) {
-			ntfreq[i] /= sum;
+    }
+    double sum = 0;
+    for (int i = 0; i < 4; i++) {
+        sum += ntfreq[i];
+    }
+    for (int i = 0; i < 4; i++) {
+        ntfreq[i] /= sum;
+    }
+    if (verbose_mode >= VerboseMode::VB_MED) {
+        for (int i = 0; i < 4; i++) {
+            cout << "  " << symbols_dna[i] << ": " << ntfreq[i];
         }
-		if (verbose_mode >= VerboseMode::VB_MED) {
-			for (int i = 0; i < 4; i++) {
-				cout << "  " << symbols_dna[i] << ": " << ntfreq[i];
-            }
-			cout << endl;
-		}
-		memcpy(ntfreq+4, ntfreq, sizeof(double)*4);
-		memcpy(ntfreq+8, ntfreq, sizeof(double)*4);
-        sum = 0.0;
-		for (int i = 0; i < num_states; i++) {
-            int codon = codon_table[i];
-            state_freq[i] = ntfreq[codon/16] * ntfreq[(codon%16)/4] * ntfreq[codon%4];
-			if (isStopCodon(i)) {
+        cout << endl;
+    }
+    memcpy(ntfreq+4, ntfreq, sizeof(double)*4);
+    memcpy(ntfreq+8, ntfreq, sizeof(double)*4);
+    sum = 0.0;
+    for (int i = 0; i < num_states; i++) {
+        int codon = codon_table[i];
+        state_freq[i] = ntfreq[codon/16] * ntfreq[(codon%16)/4] * ntfreq[codon%4];
+        if (isStopCodon(i)) {
 //                sum_stop += state_freq[i];
-				state_freq[i] = Params::getInstance().min_state_freq;
-			} else {
-                sum += state_freq[i];
-            }
-        }
-//        sum = (1.0-sum)/(1.0-sum_stop);
-        sum = 1.0/sum;
-		for (int i = 0; i < num_states; i++) {
-            if (!isStopCodon(i)) {
-                state_freq[i] *= sum;
-            }
-        }
-        sum = 0.0;
-		for (int i = 0; i < num_states; i++) {
-                sum += state_freq[i];
-        }
-        ASSERT(fabs(sum-1.0)<1e-5);
-	} else if (freq == StateFreqType::FREQ_CODON_3x4) {
-		// F3x4 frequency model
-		memset(ntfreq, 0, sizeof(double)*12);
-		for (iterator it = begin(); it != end(); it++) {
-			for (intptr_t seq = 0; seq < nseqs; seq++) {
-                if ((*it)[seq] == STATE_UNKNOWN) {
-                    continue;
-                }
-				int codon = codon_table[(int)(*it)[seq]];
-//				int codon = (int)(*it)[seq];
-				int nt1 = codon / 16;
-				int nt2 = (codon % 16) / 4;
-				int nt3 = codon % 4;
-				ntfreq[nt1] += (*it).frequency;
-				ntfreq[4+nt2] += (*it).frequency;
-				ntfreq[8+nt3] += (*it).frequency;
-			}
-		}
-		for (int j = 0; j < 12; j+=4) {
-			double sum = 0;
-			for (int i = 0; i < 4; i++)
-				sum += ntfreq[i+j];
-			for (int i = 0; i < 4; i++)
-				ntfreq[i+j] /= sum;
-			if (verbose_mode >= VerboseMode::VB_MED) {
-				for (int i = 0; i < 4; i++)
-					cout << "  " << symbols_dna[i] << ": " << ntfreq[i+j];
-				cout << endl;
-			}
-		}
-
-//        double sum_stop=0.0;
-        double sum = 0.0;
-		for (int i = 0; i < num_states; i++) {
-            int codon = codon_table[i];
-            state_freq[i] = ntfreq[codon/16] * ntfreq[4+(codon%16)/4] * ntfreq[8+codon%4];
-			if (isStopCodon(i)) {
-//                sum_stop += state_freq[i];
-				state_freq[i] = Params::getInstance().min_state_freq;
-			} else {
-                sum += state_freq[i];
-            }
-        }
-//        sum = (1.0-sum)/(1.0-sum_stop);
-        sum = 1.0 / sum;
-		for (int i = 0; i < num_states; i++) {
-            if (!isStopCodon(i)) {
-                state_freq[i] *= sum;
-            }
-        }
-        sum = 0.0;
-		for (int i = 0; i < num_states; i++) {
+            state_freq[i] = Params::getInstance().min_state_freq;
+        } else {
             sum += state_freq[i];
         }
-        ASSERT(fabs(sum-1.0)<1e-5);
+    }
+//        sum = (1.0-sum)/(1.0-sum_stop);
+    sum = 1.0/sum;
+    for (int i = 0; i < num_states; i++) {
+        if (!isStopCodon(i)) {
+            state_freq[i] *= sum;
+        }
+    }
+    sum = 0.0;
+    for (int i = 0; i < num_states; i++) {
+            sum += state_freq[i];
+    }
+    ASSERT(fabs(sum-1.0)<1e-5);
+}
+
+void Alignment::computeCodonFreq_3x4(double *state_freq, 
+                                     double *ntfreq) {
+    // F3x4 frequency model
+    intptr_t nseqs = getNSeq();
+    memset(ntfreq, 0, sizeof(double)*12);
+    for (iterator it = begin(); it != end(); it++) {
+        for (intptr_t seq = 0; seq < nseqs; seq++) {
+            if ((*it)[seq] == STATE_UNKNOWN) {
+                continue;
+            }
+            int codon = codon_table[(int)(*it)[seq]];
+//				int codon = (int)(*it)[seq];
+            int nt1 = codon / 16;
+            int nt2 = (codon % 16) / 4;
+            int nt3 = codon % 4;
+            ntfreq[nt1] += (*it).frequency;
+            ntfreq[4+nt2] += (*it).frequency;
+            ntfreq[8+nt3] += (*it).frequency;
+        }
+    }
+    for (int j = 0; j < 12; j+=4) {
+        double sum = 0;
+        for (int i = 0; i < 4; i++)
+            sum += ntfreq[i+j];
+        for (int i = 0; i < 4; i++)
+            ntfreq[i+j] /= sum;
+        if (verbose_mode >= VerboseMode::VB_MED) {
+            for (int i = 0; i < 4; i++)
+                cout << "  " << symbols_dna[i] << ": " << ntfreq[i+j];
+            cout << endl;
+        }
+    }
+
+    // double sum_stop=0.0;
+    double sum = 0.0;
+    for (int i = 0; i < num_states; i++) {
+        int codon = codon_table[i];
+        state_freq[i] = ntfreq[codon/16] * ntfreq[4+(codon%16)/4] * ntfreq[8+codon%4];
+        if (isStopCodon(i)) {
+            //sum_stop += state_freq[i];
+            state_freq[i] = Params::getInstance().min_state_freq;
+        } else {
+            sum += state_freq[i];
+        }
+    }
+
+    // sum = (1.0-sum)/(1.0-sum_stop);
+    sum = 1.0 / sum;
+    for (int i = 0; i < num_states; i++) {
+        if (!isStopCodon(i)) {
+            state_freq[i] *= sum;
+        }
+    }
+    sum = 0.0;
+    for (int i = 0; i < num_states; i++) {
+        sum += state_freq[i];
+    }
+    ASSERT(fabs(sum-1.0)<1e-5);
 
 //		double sum = 0;
 //		for (i = 0; i < num_states; i++)
@@ -5705,25 +5708,41 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 //				cout << endl;
 //			}
 //		}
+}
+
+void Alignment::computeEmpiricalFrequencies(double *state_freq) {
+	intptr_t nseqs = getNSeq();
+    memset(state_freq, 0, num_states*sizeof(double));
+    int i = 0;
+    for (iterator it = begin(); it != end(); ++it, ++i)
+        for (intptr_t seq = 0; seq < nseqs; seq++) {
+            int state = it->at(seq);
+            if (state >= num_states) {
+                continue;
+            }
+            state_freq[state] += it->frequency;
+        }
+    double sum = 0.0;
+    for (i = 0; i < num_states; i++) {
+        sum += state_freq[i];
+    }
+    for (i = 0; i < num_states; i++) {
+        state_freq[i] /= sum;
+    }
+}
+
+void Alignment::computeCodonFreq(StateFreqType freq,  
+                                 double *state_freq, double *ntfreq) {
+	if (freq == StateFreqType::FREQ_CODON_1x4) {
+        computeCodonFreq_1x4(state_freq, ntfreq);
+	} else if (freq == StateFreqType::FREQ_CODON_3x4) {
+        computeCodonFreq_3x4(state_freq, ntfreq);
 	} else if (freq == StateFreqType::FREQ_CODON_3x4C) {
-        outError("F3X4C not yet implemented. Contact authors if you really need it.");
+        outError("F3X4C not yet implemented."
+                 " Contact authors if you really need it.");
 	} else if (freq == StateFreqType::FREQ_EMPIRICAL || 
                freq == StateFreqType::FREQ_ESTIMATE) {
-		memset(state_freq, 0, num_states*sizeof(double));
-        int i = 0;
-        for (iterator it = begin(); it != end(); ++it, ++i)
-			for (intptr_t seq = 0; seq < nseqs; seq++) {
-				int state = it->at(seq);
-                if (state >= num_states) {
-                    continue;
-                }
-				state_freq[state] += it->frequency;
-			}
-        double sum = 0.0;
-        for (i = 0; i < num_states; i++)
-        	sum += state_freq[i];
-        for (i = 0; i < num_states; i++)
-        	state_freq[i] /= sum;
+        computeEmpiricalFrequencies(state_freq);
 	} else {
         outError("Unsupported codon frequency");
     }

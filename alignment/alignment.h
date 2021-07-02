@@ -880,6 +880,11 @@ public:
 	 */
 	void computeCodonFreq(StateFreqType freq, double *state_freq, double *ntfreq);
 
+        /** supporting functions for calculating codon frequences */
+        void computeCodonFreq_1x4(double *state_freq, double *ntfreq);
+        void computeCodonFreq_3x4(double *state_freq, double *ntfreq);
+        void computeEmpiricalFrequencies(double *state_freq);
+
 	/**
             compute empirical substitution counts between state pairs
             @param normalize true to normalize row sum to 1, false otherwise
