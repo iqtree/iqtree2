@@ -372,7 +372,7 @@ int PresenceAbsenceMatrix::getINFO_init_tree_taxon_order(vector<string> &taxa_na
             cout<<"% of missing entries in supermatrix: "<<missing_percent<<"\n";
             cout<<"---------------------------------------------------------"<<"\n";
             cout<<"\n"<<"INFO: "<<"\n";
-            cout<<"At least one partition (partition "<<i<<") covers all taxa."<<"\n"<<"There are only trivial terraces (contain just 1 tree) for this dataset. Great!"<<"\n"<<"\n";
+            cout<<"At least one partition (partition "<<i+1<<") covers all taxa."<<"\n"<<"There are only trivial terraces (contain just 1 tree) for this dataset. Great!"<<"\n"<<"\n";
             cout<<"---------------------------------------------------------"<<"\n";
             cout<<"SUMMARY:"<<"\n";
             cout<<"Number of trees on terrace: "<<1<<"\n";
