@@ -199,7 +199,18 @@ public:
 
     bool buildPattern(StrVector &sequences, const char *sequence_type,
                       int nseq, int nsite);
-    
+
+        /** supporting functions for buildPattern */
+        void checkSequenceNamesAreCorrect(int nseq, int nsite, 
+                                          double seqCheckStart,
+                                          const StrVector &sequences);
+        int  determineNumberOfStates(SeqType seq_type, 
+                                     const StrVector &sequences,
+                                     const char* sequence_type);
+        void checkDataType(const char* sequence_type, 
+                           const StrVector &sequences, bool& nt2aa);
+
+
     bool constructPatterns(int nseq, int nsite,
                            const StrVector& sequences,
                            progress_display_ptr progress);

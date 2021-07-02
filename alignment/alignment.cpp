@@ -1768,7 +1768,7 @@ void Alignment::initCodon(const char *gene_code_id, bool nt2aa) {
     num_states = nt2aa ? num_proteins         : num_non_stop_codons;
 }
 
-int getMorphStates(StrVector &sequences) {
+int getMorphStates(const StrVector &sequences) {
     char maxstate = 0;
     for (auto it = sequences.begin(); it != sequences.end(); it++) {
         for (auto pos = it->begin(); pos != it->end(); pos++) {
@@ -1796,142 +1796,161 @@ bool Alignment::buildPattern(StrVector &sequences,
     if (nseq != seq_names.size()) {
         throw "Different number of sequences than specified";
     }
-    unordered_set<string> namesSeen;
-    double seqCheckStart = getRealTime();
-    
-    {
-        ostringstream err_str;
-        /* now check that all sequence names are correct */
-        for (int seq_id = 0; seq_id < nseq; seq_id ++) {
-            if (seq_names[seq_id] == "")
-                err_str << "Sequence number " << seq_id+1
-                        << " has no names\n";
-            // check that all the names are different
-            if (!namesSeen.insert(seq_names[seq_id]).second) {
-                err_str << "The sequence name " << seq_names[seq_id]
-                        << " is duplicated\n";
-            }
-        }
-        if (err_str.str() != "")
-        {
-            throw err_str.str();
-        }
-        if (verbose_mode >= VerboseMode::VB_MED) {
-            cout.precision(6);
-            cout << "Duplicate sequence name check took "
-                 << (getRealTime()-seqCheckStart) << " seconds." << endl;
-        }
-        /* now check that all sequences have the same length */
-        for (int seq_id = 0; seq_id < nseq; seq_id ++) {
-            if (sequences[seq_id].length() != nsite) {
-                err_str << "Sequence " << seq_names[seq_id] << " contains ";
-                if (sequences[seq_id].length() < nsite)
-                    err_str << "not enough";
-                else
-                    err_str << "too many";
-                
-                err_str << " characters (" << sequences[seq_id].length() << ")\n";
-            }
-        }
-        
-        if (err_str.str() != "")
-            throw err_str.str();
-    }
+    double seqCheckStart = getRealTime();    
+    checkSequenceNamesAreCorrect(nseq, nsite, seqCheckStart, sequences);
 
-    /* now check data type */
-    seq_type = detectSequenceType(sequences);
+    seq_type   = detectSequenceType(sequences);
+    num_states = determineNumberOfStates(seq_type, sequences, sequence_type);
+    bool nt2aa = false;
+    checkDataType(sequence_type, sequences, nt2aa);
+
+    return constructPatterns(nseq, nsite, sequences, nullptr);
+}
+
+void Alignment::checkSequenceNamesAreCorrect(int nseq, int nsite, 
+                                             double seqCheckStart,
+                                             const StrVector &sequences ) {
+    unordered_set<string> namesSeen;
+    ostringstream err_str;
+    /* now check that all sequence names are correct */
+    for (int seq_id = 0; seq_id < nseq; seq_id ++) {
+        if (seq_names[seq_id] == "")
+            err_str << "Sequence number " << seq_id+1
+                    << " has no names\n";
+        // check that all the names are different
+        if (!namesSeen.insert(seq_names[seq_id]).second) {
+            err_str << "The sequence name " << seq_names[seq_id]
+                    << " is duplicated\n";
+        }
+    }
+    if (err_str.str() != "")
+    {
+        throw err_str.str();
+    }
+    if (verbose_mode >= VerboseMode::VB_MED) {
+        cout.precision(6);
+        cout << "Duplicate sequence name check took "
+                << (getRealTime()-seqCheckStart) << " seconds." << endl;
+    }
+    /* now check that all sequences have the same length */
+    for (int seq_id = 0; seq_id < nseq; seq_id ++) {
+        if (sequences[seq_id].length() != nsite) {
+            err_str << "Sequence " << seq_names[seq_id] << " contains ";
+            if (sequences[seq_id].length() < nsite)
+                err_str << "not enough";
+            else
+                err_str << "too many";
+            
+            err_str << " characters (" << sequences[seq_id].length() << ")\n";
+        }
+    }
+    
+    if (err_str.str() != "") {
+        throw err_str.str();
+    }
+}
+
+int Alignment::determineNumberOfStates(SeqType seq_type, const StrVector &sequences,
+                                       const char* sequence_type) {
     switch (seq_type) {
     case SeqType::SEQ_BINARY:
-        num_states = 2;
         cout << "Alignment most likely contains binary sequences" << endl;
-        break;
+        return 2;
     case SeqType::SEQ_DNA:
-        num_states = 4;
         cout << "Alignment most likely contains DNA/RNA sequences" << endl;
-        break;
+        return 4;
     case SeqType::SEQ_PROTEIN:
-        num_states = 20;
         cout << "Alignment most likely contains protein sequences" << endl;
-        break;
+        return 20;
     case SeqType::SEQ_MORPH:
-        num_states = getMorphStates(sequences);
-        if (num_states < 2 || num_states > 32) {
-            throw "Invalid number of states.";
+        {
+            int states = getMorphStates(sequences);
+            if (states < 2 || states > 32) {
+                throw "Invalid number of states.";
+            }
+            cout << "Alignment most likely contains " << states
+                << "-state morphological data" << endl;
+            return states;
         }
-        cout << "Alignment most likely contains " << num_states
-             << "-state morphological data" << endl;
-        break;
     case SeqType::SEQ_POMO:
-        throw "Counts Format pattern is built in Alignment::readCountsFormat().";
+        throw "Counts Format pattern is built"
+              " in Alignment::readCountsFormat().";
         break;
     default:
-        if (!sequence_type)
+        if (!sequence_type) {
             throw "Unknown sequence type.";
-    }
-    bool nt2aa = false;
-    if (sequence_type == nullptr) {
-        sequence_type = "";
-    }
-    if (strcmp(sequence_type,"") != 0) {
-        SeqType user_seq_type = getSeqType(sequence_type);
-        num_states = getNumStatesForSeqType(user_seq_type, num_states);
-        switch (user_seq_type) {
-            case SeqType::SEQ_BINARY: /* fall-through */
-            case SeqType::SEQ_DNA:
-                break;
-                
-            case SeqType::SEQ_CODON:
-                ASSERT( strncmp(sequence_type, "CODON", 5)==0 );
-                if (seq_type != SeqType::SEQ_DNA) {
-                    outWarning("You want to use codon models"
-                               " but the sequences were not detected as DNA");
-                }
-                cout << "Converting to codon sequences"
-                     << " with genetic code " << &sequence_type[5]
-                     << " ..." << endl;
-                initCodon(&sequence_type[5], false);
-                break;
-                
-            case SeqType::SEQ_MORPH:
-                num_states = getMorphStates(sequences);
-                if (num_states < 2 || num_states > 32) {
-                    throw "Invalid number of states";
-                }
-                break;
-                
-            case SeqType::SEQ_MULTISTATE:
-                cout << "Multi-state data with "
-                     << num_states << " alphabets" << endl;
-                break;
-                
-            case SeqType::SEQ_PROTEIN:
-                if (strncmp(sequence_type, "NT2AA", 5) == 0) {
-                    if (seq_type != SeqType::SEQ_DNA) {
-                        outWarning("Sequence type detected as non DNA!");
-                    }
-                    initCodon(&sequence_type[5], true);
-                    nt2aa    = true;
-                    cout << "Translating to amino-acid sequences"
-                         << " with genetic code " << &sequence_type[5]
-                         << " ..." << endl;
-                }
-                break;
-                
-            case SeqType::SEQ_UNKNOWN:
-                throw "Invalid sequence type.";
-                break;
-                
-            default:
-                std::stringstream warning;
-                warning << "Your specified sequence type"
-                        << " (" << getSeqTypeName(user_seq_type) << ")"
-                        << " is different from the detected one"
-                        << " (" << getSeqTypeName(seq_type) << ")";
-                outWarning(warning.str());
         }
-        seq_type = user_seq_type;
+        break;
     }
-    return constructPatterns(nseq, nsite, sequences, nullptr);
+    return 0;
+}
+
+void Alignment::checkDataType(const char* sequence_type, 
+                              const StrVector &sequences, bool& nt2aa) {
+    if (sequence_type == nullptr) {
+        return;
+    }
+    if (strcmp(sequence_type,"") == 0) {
+        return;
+    }
+    SeqType user_seq_type = getSeqType(sequence_type);
+    num_states = getNumStatesForSeqType(user_seq_type, num_states);
+    switch (user_seq_type) {
+        case SeqType::SEQ_BINARY: /* fall-through */
+        case SeqType::SEQ_DNA:
+            break;
+            
+        case SeqType::SEQ_CODON:
+            ASSERT( strncmp(sequence_type, "CODON", 5)==0 );
+            if (seq_type != SeqType::SEQ_DNA) {
+                outWarning("You want to use codon models"
+                            " but the sequences were not detected as DNA");
+            }
+            cout << "Converting to codon sequences"
+                    << " with genetic code " << &sequence_type[5]
+                    << " ..." << endl;
+            initCodon(&sequence_type[5], false);
+            break;
+            
+        case SeqType::SEQ_MORPH:
+            num_states = getMorphStates(sequences);
+            if (num_states < 2 || num_states > 32) {
+                throw "Invalid number of states";
+            }
+            break;
+            
+        case SeqType::SEQ_MULTISTATE:
+            cout << "Multi-state data with "
+                    << num_states << " alphabets" << endl;
+            break;
+            
+        case SeqType::SEQ_PROTEIN:
+            if (strncmp(sequence_type, "NT2AA", 5) == 0) {
+                if (seq_type != SeqType::SEQ_DNA) {
+                    outWarning("Sequence type detected as non DNA!");
+                }
+                initCodon(&sequence_type[5], true);
+                nt2aa    = true;
+                cout << "Translating to amino-acid sequences"
+                        << " with genetic code " << &sequence_type[5]
+                        << " ..." << endl;
+            }
+            break;
+            
+        case SeqType::SEQ_UNKNOWN:
+            throw "Invalid sequence type.";
+            break;
+            
+        default:
+            std::stringstream warning;
+            warning << "Your specified sequence type"
+                    << " (" << getSeqTypeName(user_seq_type) << ")"
+                    << " is different from the detected one"
+                    << " (" << getSeqTypeName(seq_type) << ")";
+            outWarning(warning.str());
+            break;
+    }
+    seq_type = user_seq_type;
 }
 
 struct PatternInfo {
