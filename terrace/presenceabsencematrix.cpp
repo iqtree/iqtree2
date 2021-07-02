@@ -9,6 +9,7 @@
 #include "alignment/superalignment.h"
 #include "tree/node.h"
 #include "tree/mtree.h"
+#include "utils/timeutil.h"
 
 PresenceAbsenceMatrix::PresenceAbsenceMatrix(){
     taxa_num = 0;
@@ -70,7 +71,7 @@ void PresenceAbsenceMatrix::read_pr_ab_matrix(istream &in){
     int i=0,j=0;
     for(i=0; i<taxa_num; i++){
         if(!(in>>name)) throw "Each line should start with a taxon name!";
-        if(name == "0" or name == "1") throw "Each line should start with a taxon name! 0 and 1 are not allowed as taxon names.";
+        //if(name == "0" or name == "1") throw "Each line should start with a taxon name! 0 and 1 are not allowed as taxon names.";
         //cout<<"Taxon "<<i<<": "<<name<<"\n";
         taxa_names.push_back(name);
         vector<int> vec(part_num, -1);
@@ -343,6 +344,14 @@ int PresenceAbsenceMatrix::getINFO_init_tree_taxon_order(vector<string> &taxa_na
         }
     }
     
+    for(j=0; j<taxa_num; j++){
+        if(taxon_cov[j]==0){
+            cout<<"ERROR: taxon "<<j<<" ("<<taxa_names[j]<<")"<<" is not covered by any partition (row sum = 0). Remove it from the dataset.\n";
+            assert(taxon_cov[j]!=0);
+        }
+    }
+    
+    
     for(i=0; i<part_num; i++){
         for(j=0; j<taxa_num; j++){
             if(taxon_cov[j]!=1){ // taxa covered only by one partition
@@ -353,8 +362,28 @@ int PresenceAbsenceMatrix::getINFO_init_tree_taxon_order(vector<string> &taxa_na
             }
         }
         if(part_cov[i]+uniq_taxa[i] == taxa_num){
+            cout<<"\n"<<"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"<<"\n";
+            cout<<"INPUT INFO:"<<"\n";
+            cout<<"---------------------------------------------------------"<<"\n";
+            cout<<"Number of taxa: "<<taxa_num<<"\n";
+            cout<<"Number of partitions: "<<part_num<<"\n";
+            cout<<"Number of special taxa (row sum = 1): "<<uniq_taxa_num<<"\n";
+            percent_missing();
+            cout<<"% of missing entries in supermatrix: "<<missing_percent<<"\n";
+            cout<<"---------------------------------------------------------"<<"\n";
             cout<<"\n"<<"INFO: "<<"\n";
-            cout<<"At least one partition covers all taxa."<<"\n"<<"There are only trivial terraces (contain just 1 tree) for this dataset. Great!"<<"\n"<<"\n";
+            cout<<"At least one partition (partition "<<i<<") covers all taxa."<<"\n"<<"There are only trivial terraces (contain just 1 tree) for this dataset. Great!"<<"\n"<<"\n";
+            cout<<"---------------------------------------------------------"<<"\n";
+            cout<<"SUMMARY:"<<"\n";
+            cout<<"Number of trees on terrace: "<<1<<"\n";
+            cout<<"Number of intermediated trees visited: "<<0<<"\n";
+            cout<<"Number of dead ends encountered: "<<0<<"\n";
+            cout<<"---------------------------------------------------------"<<"\n";
+            cout<<"Total wall-clock time used: "<<getRealTime()-Params::getInstance().start_real_time<<" seconds ("<<convert_time(getRealTime()-Params::getInstance().start_real_time)<<")"<<"\n";
+            cout<<"Total CPU time used: "
+            << getCPUTime()-Params::getInstance().startCPUTime << " seconds (" << convert_time(getCPUTime()-Params::getInstance().startCPUTime) << ")" << "\n";
+            cout<<"\n";
+            
             exit(0);
         }
     }
