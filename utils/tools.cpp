@@ -5016,6 +5016,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "                            and Ascertainment bias correction (+ASC) to simulate" << endl
     << "                            sequences without constant sites" << endl
     << "  --mdef FILE               Model definition NEXUS file (see Manual)" << endl
+    << "  --fundi TAXA_LIST,RHO     Specify a list of taxa, and Rho (Fundi weight) for FunDi model" << endl
     << "  --root-seq FILE,SEQ_NAME  Supply the ancestral sequence from an alignment file" << endl
     << "  -s FILE                   Specify the input sequence alignment (used in Inference Mode)" << endl
     << "  --no-copy-gaps            Disable copying gaps from input sequences (default: false)" << endl

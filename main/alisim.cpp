@@ -800,7 +800,7 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator,
                     partition_list = "_full";
                 
                 //  get the num_leaves
-                int num_leaves = super_tree->at(i)->leafNum - ((super_tree->at(i)->root->isLeaf() && super_tree->at(i)->root->name == ROOT_NAME)?1:0);
+                int num_leaves = super_tree->leafNum - ((super_tree->root->isLeaf() && super_tree->root->name == ROOT_NAME)?1:0);
                 
                 // write the merged sequences to the output file for the current cluster of partitions
                 writeSequencesToFile(file_path + partition_list, super_tree->at(i)->aln, total_num_states, num_leaves, alisimulator, inference_mode);
