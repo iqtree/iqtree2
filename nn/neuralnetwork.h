@@ -11,12 +11,15 @@
 class NeuralNetwork {
 public:
     /** constructor */
-    NeuralNetwork(Alignment* alignment);
+    NeuralNetwork(Alignment *alignment);
 
     /** destructor */
     virtual ~NeuralNetwork();
 
-    int doInference(int input);
+    double doAlphaInference();
+    string doModelInference();
+
+    Alignment *alignment;
 
 };
 

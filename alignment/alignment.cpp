@@ -471,6 +471,97 @@ bool Alignment::isGapOnlySeq(size_t seq_id) {
     return true;
 }
 
+// added by TD
+vector<float> Alignment::computeSummaryStats(int seq1_idx, int seq2_idx) {
+    ASSERT(seq1_idx < getNSeq());
+    ASSERT(seq2_idx < getNSeq());
+
+    vector<float> stats(26);
+    //vector<size_t> freqs_seq1(4);
+    //vector<size_t> freqs_seq2(4);
+    //vector<size_t> titv_rates(16);
+
+    map<size_t, size_t> bitshift_map = {{0, 1}, {1, 3}, {2, 5}, {3, 7}};
+
+    for (iterator it = begin(); it != end(); it++) {
+        // count nucleotides for sequence 1
+        switch ((*it)[seq1_idx]) {
+            case 0: stats[4]++;
+                break;
+            case 1: stats[5]++;
+                break;
+            case 2: stats[6]++;
+                break;
+            case 3: stats[7]++;
+                break;
+            default:
+                throw "Sequence contains other characters than A, C, G, T";
+        }
+        // count nucleotides for sequence 2
+        switch ((*it)[seq2_idx]) {
+            case 0: stats[8]++;
+                break;
+            case 1: stats[9]++;
+                break;
+            case 2: stats[10]++;
+                break;
+            case 3: stats[11]++;
+                break;
+            default:
+                throw "Sequence contains other characters than A, C, G, T";
+        }
+        // count transitions and transversions
+        switch(bitshift_map[(*it)[seq1_idx]] << bitshift_map[(*it)[seq2_idx]]) {
+            case 2: stats[0]++; // AA
+                break;
+            case 8: stats[14]++; // AC
+                break;
+            case 32: stats[15]++; // AG
+                break;
+            case 128: stats[16]++; // AT
+                break;
+            case 6: stats[20]++; // CA
+                break;
+            case 24: stats[1]++; // CC
+                break;
+            case 96: stats[18]++; // CG
+                break;
+            case 384: stats[17]++; // CT
+                break;
+            case 10: stats[21]++; // GA
+                break;
+            case 40: stats[24]++; // GC
+                break;
+            case 160: stats[2]++; // GG
+                break;
+            case 640: stats[19]++; // GT
+                break;
+            case 14: stats[22]++; // TA
+                break;
+            case 56: stats[23]++; // TC
+                break;
+            case 224: stats[25]++; // TG
+                break;
+            case 896: stats[3]++; // TT
+                break;
+            default:
+                throw "Bitshift result not known!";
+        }
+    }
+    stats[12] = stats[14] + stats[16] + stats[24] + stats[19] +
+                stats[25] + stats[22] + stats[18] + stats[20]; // transversion counts
+    stats[13] = stats[15] + stats[21] + stats[17] + stats[23]; // transition counts
+
+    size_t n_sites = getNSite();
+    // todo: check how to make it work with transform
+    //std::transform(stats.begin(), stats.end(), stats.begin(), [n_sites](int &c){return c/n_sites;});
+
+    for (size_t i = 0; i < 26; i++) {
+       stats[i] /= n_sites;
+    }
+    return stats;
+}
+
 Alignment *Alignment::removeGappySeq() {
 	IntVector keep_seqs;
 	size_t nseq = getNSeq();
