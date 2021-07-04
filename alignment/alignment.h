@@ -925,6 +925,20 @@ public:
 	 */
 	bool readSiteStateFreq(const char* site_freq_file);
 
+    // added by TD
+    /**
+     * Compute pairwise summary statistics between two sequences, resulting in 26 values:
+     * - 4 nucleotide frequencies for sequence 1
+     * - 4 nucleotide frequencies for sequence 2
+     * - 1 count for total number transitions between sequence 1 and sequence 2
+     * - 1 count for total number of transversions between sequence 1 and sequence 2
+     * - 16 transition/transversion counts between sequence 1 and sequence 2
+     * @param seq1_idx
+     * @param seq2_idx
+     * @return
+     */
+    vector<float> computeSummaryStats(int seq1_idx, int seq2_idx);
+
 
 protected:
 
