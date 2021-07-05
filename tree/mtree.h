@@ -329,13 +329,22 @@ public:
      */
     void parseFile(istream &infile, char &ch, Node* &root, DoubleVector &branch_len);
 
+        /** supporting functions for parseFile */
+        void parseInternalNode   (istream &infile, char &ch, 
+                                  Node* parent, Node*& node, 
+                                  DoubleVector& brlen);
+        std::string parseNodeName(istream &infile, char &ch, size_t max_len);
+        void setNodeNameAndID    (Node* node, std::string& seqname);
+        void parseBranchLength   (istream &infile, char &ch, size_t max_len,
+                                  DoubleVector &branch_len);
+
     /**
         parse the string containing branch length(s)
         by default, this will parse just one length
         @param lenstr string containing branch length(s)
         @param[out] branch_len output branch length(s)
     */
-    virtual void parseBranchLength(string &lenstr, DoubleVector &branch_len);
+    void recordBranchLength(string &lenstr, DoubleVector &branch_len);
 
     /**
             initialize tree, set node structure

@@ -824,7 +824,7 @@ void MTree::initializeTree(Node *node, Node* dad)
     }
 }
 
-void MTree::parseBranchLength(string &lenstr, DoubleVector &branch_len) {
+void MTree::recordBranchLength(string &lenstr, DoubleVector &branch_len) {
 //    branch_len.push_back(convert_double(lenstr.c_str()));
     double len = convert_double(lenstr.c_str());
     if (in_comment.empty()) {
@@ -853,112 +853,138 @@ void MTree::parseBranchLength(string &lenstr, DoubleVector &branch_len) {
 }
 
 
-void MTree::parseFile(istream &infile, char &ch, Node* &root, DoubleVector &branch_len)
-{
-    Node *node;
-    int maxlen = 1000;
-    string seqname;
-    int seqlen;
+void MTree::parseFile(istream &infile, char &ch, Node* &parent, 
+                      DoubleVector &branch_len) {
     DoubleVector brlen;
     branch_len.clear();
 
-    root = newNode();
-
+    parent = newNode();    
     if (ch == '(') {
-        // internal node
-        ch = readNextChar(infile);
-        while (ch != ')' && !infile.eof())
-        {
-            node = NULL;
-            parseFile(infile, ch, node, brlen);
-            //if (brlen == -1.0)
-            //throw "Found branch with no length.";
-            //if (brlen < 0.0)
-            //throw ERR_NEG_BRANCH;
-            root->addNeighbor(node, brlen);
-            node->addNeighbor(root, brlen);
-            if (infile.eof())
-                throw "Expecting ')', but end of file instead";
-            if (ch == ',')
-                ch = readNextChar(infile);
-            else if (ch != ')') {
-                string err = "Expecting ')', but found '";
-                err += ch;
-                err += "' instead";
-                throw err;
-            }
-        }
-        if (!infile.eof()) ch = readNextChar(infile);
+        Node* node;
+        parseInternalNode(infile, ch, parent, node, brlen);
     }
-    // now read the node name
-    seqlen = 0;
+    size_t maxlen  = 1000;
+    string seqname = parseNodeName(infile, ch, maxlen);
+
+    setNodeNameAndID(parent, seqname);
+
+    if (ch == ';' || infile.eof()) {
+        return;
+    }
+    if (ch == ':')
+    {
+        parseBranchLength(infile, ch, maxlen, branch_len);
+    }
+}
+
+void MTree::parseInternalNode(istream &infile, char &ch, 
+                              Node* parent, Node*& node, 
+                              DoubleVector& brlen) {
+    // internal node
+    ch = readNextChar(infile);
+    while (ch != ')' && !infile.eof())
+    {
+        node = nullptr;
+        parseFile(infile, ch, node, brlen);
+        //if (brlen == -1.0)
+        //throw "Found branch with no length.";
+        //if (brlen < 0.0)
+        //throw ERR_NEG_BRANCH;
+        parent->addNeighbor(node, brlen);
+        node->addNeighbor(parent, brlen);
+        if (infile.eof())
+            throw "Expecting ')', but end of file instead";
+        if (ch == ',')
+            ch = readNextChar(infile);
+        else if (ch != ')') {
+            string err = "Expecting ')', but found '";
+            err += ch;
+            err += "' instead";
+            throw err;
+        }
+    }
+    if (!infile.eof()) {
+        ch = readNextChar(infile);
+    }
+}
+
+std::string MTree::parseNodeName(istream &infile, char &ch, size_t max_len) {
     char end_ch = 0;
     if (ch == '\'' || ch == '"') end_ch = ch;
-    seqname = "";
+    string seqname = "";
 
-    while (!infile.eof() && seqlen < maxlen)
+    while (!infile.eof() && seqname.length() < max_len)
     {
         if (end_ch == 0) {
-            if (is_newick_token(ch) || controlchar(ch)) break;
+            if (is_newick_token(ch) || 
+                controlchar(ch)) {
+                break;
+            }
         }
         seqname += ch;
-        ++seqlen;
         ch = infile.get();
         ++in_column;
         if (end_ch != 0 && ch == end_ch) {
             seqname += ch;
-            ++seqlen;
             break;
         }
     }
-    if ((controlchar(ch) || ch == '[' || ch == end_ch) && !infile.eof())
+    if ((controlchar(ch) || ch == '[' || ch == end_ch) && !infile.eof()) {
         ch = readNextChar(infile, ch);
-    if (seqlen == maxlen)
-        throw "Too long name ( > 1000)";
-    if (root->isLeaf())
-        renameString(seqname);
-//    seqname[seqlen] = 0;
-    if (seqlen == 0 && root->isLeaf())
-        throw "Redundant double-bracket ‘((…))’ with closing bracket ending at";
-    if (seqlen > 0)
-        root->name.append(seqname);
-    if (root->isLeaf()) {
-        // is a leaf, assign its ID
-        root->id = leafNum;
-        if (leafNum == 0)
-            MTree::root = root;
-        ++leafNum;
     }
+    if (seqname.length() == max_len) {
+        throw "Too long name ( > 1000)";
+    }
+    return seqname;
+}
 
-    if (ch == ';' || infile.eof())
-        return;
-    if (ch == ':')
-    {
-        string saved_comment = in_comment;
-        ch = readNextChar(infile);
-        if (in_comment.empty())
-            in_comment = saved_comment;
-        seqlen = 0;
-        seqname = "";
-        while (!is_newick_token(ch) && !controlchar(ch) && !infile.eof() && seqlen < maxlen)
-        {
-//            seqname[seqlen] = ch;
-            seqname += ch;
-            ++seqlen;
-            ch = infile.get();
-            ++in_column;
+void MTree::setNodeNameAndID(Node* node, std::string& seqname) {
+    if (node->isLeaf()) {
+        renameString(seqname);
+    }
+    if (seqname.length() == 0 && node->isLeaf()) {
+        throw "Redundant double-bracket ‘((…))’" 
+              " with closing bracket ending at";
+    }
+    if (seqname.length() > 0) {
+        node->name.append(seqname);
+    }
+    if (node->isLeaf()) {
+        // is a leaf, assign its ID
+        node->id = leafNum;
+        if (leafNum == 0) {
+            root = node;
         }
-        if ((controlchar(ch) || ch == '[') && !infile.eof()) {
-            ch = readNextChar(infile, ch);
-        }
-        if (seqlen == maxlen || infile.eof()) {
-            throw "branch length format error.";
-        }
-        parseBranchLength(seqname, branch_len);
+        ++leafNum;
     }
 }
 
-
+void MTree::parseBranchLength(istream& infile, char &ch, 
+                              size_t   max_len, 
+                              DoubleVector &branch_len) {
+    string saved_comment = in_comment;
+    ch = readNextChar(infile);
+    if (in_comment.empty()) {
+        in_comment = saved_comment;
+    }
+    size_t      seqlen  = 0;
+    std::string seqname = "";
+    while (!is_newick_token(ch) && !controlchar(ch) && 
+            !infile.eof() && seqlen < max_len)
+    {
+        seqname += ch;
+        ++seqlen;
+        ch = infile.get();
+        ++in_column;
+    }
+    if ((controlchar(ch) || ch == '[') && !infile.eof()) {
+        ch = readNextChar(infile, ch);
+    }
+    if (seqlen == max_len || infile.eof()) {
+        throw "branch length format error.";
+    }
+    recordBranchLength(seqname, branch_len);
+}
 
 /**
 	check tree is bifurcating tree (every leaf with level 1 or 3)
@@ -975,14 +1001,17 @@ void MTree::checkValidTree(bool &stop, Node *node, Node *dad)
     //if (node->neighbors[i]->node != dad) {
     FOR_NEIGHBOR_IT(node, dad, it) {
         checkValidTree(stop, (*it)->node, node);
-        if (stop)
+        if (stop) {
             return;
+        }
     }
 }
 
 double MTree::treeLength(Node *node, Node *dad)
 {
-    if (!node) node = root;
+    if (!node) {
+        node = root;
+    }
     double sum = 0;
     FOR_NEIGHBOR_IT(node, dad, it) {
         sum += (*it)->length + treeLength((*it)->node, node);

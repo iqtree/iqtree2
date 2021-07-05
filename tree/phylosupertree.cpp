@@ -667,8 +667,9 @@ int PhyloSuperTree::computeParsimonyBranchObsolete(PhyloNeighbor *dad_branch, Ph
 }
 
 void PhyloSuperTree::computePartitionOrder() {
-    if (!part_order.empty())
+    if (!part_order.empty()) {
         return;
+	}
 	int ntrees = static_cast<int>(size());
     part_order.resize(ntrees);
     part_order_by_nptn.resize(ntrees);
@@ -1303,7 +1304,9 @@ int PhyloSuperTree::countEmptyBranches(PhyloNode *node, PhyloNode *dad) {
 /** remove identical sequences from the tree */
 void PhyloSuperTree::removeIdenticalSeqs(Params &params) {
 	IQTree::removeIdenticalSeqs(params);
-	if (removed_seqs.empty()) return;
+	if (removed_seqs.empty()) {
+		return;
+	}
 	// now synchronize aln
 	int part = 0;
     SuperAlignment *saln = (SuperAlignment*)aln;
@@ -1328,13 +1331,11 @@ void PhyloSuperTree::reinsertIdenticalSeqs(Alignment *orig_aln) {
 
 	// now synchronize aln
 	int part = 0;
-    for (iterator it = begin(); it != end(); it++, part++) {
+    for (iterator it = begin(); it != end(); ++it, ++part) {
 //        (*it)->setAlignment(((SuperAlignment*)aln)->partitions[part]);
 		(*it)->aln = ((SuperAlignment*)aln)->partitions[part];
     }
 	mapTrees();
-
-
 }
 
 int PhyloSuperTree::fixNegativeBranch(bool force, PhyloNode *node, PhyloNode *dad) {
