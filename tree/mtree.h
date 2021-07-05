@@ -97,6 +97,11 @@ public:
 
     Node* copyTree(MTree *tree, string &taxa_set, double &len, Node *node = nullptr, Node *dad = nullptr);
 
+        /** supporting functions for copyTree */
+        void chooseRootInTaxaSet(const MTree* tree, 
+                                 const std::string& taxa_set, 
+                                 Node*& node) const;
+
     /**
             In case of mulfurcating tree, extract a bifurcating subtree by randomly removing multifurcation
             If the tree is bifurcating, nothing change
@@ -221,6 +226,12 @@ public:
      */
     virtual int printTree(ostream &out, int brtype, Node *node, Node *dad = nullptr);
 
+        /** supporting functions for printTree */
+        void printLeaf(std::ostream& out,  int  brtype, 
+                       Node*         node, int& smallest_taxid);
+        Neighbor* printInterior(std::ostream& out,  int  brtype, 
+                               Node* node,  Node* dad,
+                               bool& first, int&  smallest_taxid);
 
     /**
             print the sub-tree to the output file in newick format
@@ -608,7 +619,7 @@ public:
             @param dad dad of the node, used to direct the search
             @return node if found, otherwise nullptr
      */
-    Node *findNodeID(int id, Node *node = nullptr, Node* dad = nullptr);
+    Node* findNodeID(int id, Node *node = nullptr, Node* dad = nullptr) const;
 
 
     /**

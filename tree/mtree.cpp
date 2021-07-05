@@ -137,7 +137,9 @@ void MTree::assignIDs(StrVector& taxaNames) {
 }
 
 void MTree::copyTree(MTree *tree) {
-    if (root) freeNode();
+    if (root) {
+        freeNode();
+    }
     stringstream ss;
     tree->printTree(ss);
     readTree(ss, tree->rooted);
@@ -153,37 +155,52 @@ void MTree::copyTree(MTree *tree, string &taxa_set) {
 //    if (tree->leafNum != taxa_set.length())
 //        outError("#leaves and taxa_set do not match!");
     leafNum = nodeNum = branchNum = 0;
-    for (string::iterator it = taxa_set.begin(); it != taxa_set.end(); it++)
+    for (string::iterator it = taxa_set.begin(); 
+         it != taxa_set.end(); ++it) {
         nodeNum += (*it);
+    }
     double new_len;
-    if (root) freeNode();
-    root = NULL;
+    if (root!=nullptr) {
+        freeNode();
+        root = nullptr;    
+    }
     root = copyTree(tree, taxa_set, new_len);
-    if (rooted)
+    if (rooted) {
         ASSERT(root->name == ROOT_NAME);
+    }
 }
 
-Node* MTree::copyTree(MTree *tree, string &taxa_set, double &len, Node *node, Node *dad) {
-    if (!node) {
-        if (taxa_set[tree->root->id]) {
-            node = tree->root;
-        } else {
-            for (int i = 0; i < static_cast<int>(tree->leafNum); i++)
-                if (taxa_set[i]) {
-                    node = tree->findNodeID(i);
-                    break;
-                }
+void MTree::chooseRootInTaxaSet(const MTree* tree, const std::string& taxa_set, 
+                                Node*& node) const {
+    if (node!=nullptr) {
+        return;
+    }
+    if (taxa_set[tree->root->id]) {
+        node = tree->root;
+        return;
+    }
+    for (int i = 0; i < static_cast<int>(tree->leafNum); i++) {
+        if (taxa_set[i]) {
+            node = tree->findNodeID(i);
+            break;
         }
     }
-    Node *new_node = NULL;
-    NodeVector new_nodes;
+}
+
+Node* MTree::copyTree(MTree *tree, string &taxa_set, double &len, 
+                      Node *node, Node *dad) {
+    Node*        new_node = nullptr;
+    NodeVector   new_nodes;
     DoubleVector new_lens;
+    chooseRootInTaxaSet(tree, taxa_set, node);
     if (node!=nullptr && node->isLeaf()) {
         len = 0.0;
         if (taxa_set[node->id]) {
             new_node = newNode(leafNum++, node->name.c_str());
         }
-        if (dad) return new_node;
+        if (dad) {
+            return new_node;
+        }
     }
     if (new_node) {
         new_nodes.push_back(new_node);
@@ -197,7 +214,9 @@ Node* MTree::copyTree(MTree *tree, string &taxa_set, double &len, Node *node, No
             new_lens.push_back((*it)->length + new_len);
         }
     }
-    if (new_nodes.empty()) return NULL;
+    if (new_nodes.empty()) {
+        return nullptr;
+    }
     if (new_nodes.size() == 1) {
         len = new_lens[0];
         return new_nodes[0];
@@ -384,14 +403,17 @@ void MTree::printTree(const char *ofile, int brtype)
     try {
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
-        if (brtype & WT_APPEND)
+        if (brtype & WT_APPEND) {
             out.open(ofile, ios_base::out | ios_base::app);
-        else
+        }
+        else {
             out.open(ofile);
+        }
         printTree(out, brtype);
         out.close();
-        if (verbose_mode >= VerboseMode::VB_DEBUG)
+        if (verbose_mode >= VerboseMode::VB_DEBUG) {
             cout << "Tree was printed to " << ofile << endl;
+        }
     } catch (ios::failure) {
         outError(ERR_WRITE_OUTPUT, ofile);
     }
@@ -429,20 +451,23 @@ void MTree::printTree(ostream &out, int brtype) {
             out << "(";
             printTree(out, brtype, root);
             out << ",";
-            if (brtype & WT_TAXON_ID)
+            if (brtype & WT_TAXON_ID) {
                 out << root->neighbors[0]->node->id;
-            else
+            }
+            else {
                 out << root->neighbors[0]->node->name;
-
-            if (brtype & WT_BR_LEN)
+            }
+            if (brtype & WT_BR_LEN) {
                 out << ":0";
+            }
             out << ")";
-        } else
+        } else {
             // tree has more than 2 taxa
             printTree(out, brtype, root->neighbors[0]->node);
-    } else
+        }
+    } else {
         printTree(out, brtype, root);
-
+    }
     out << ";";
     if (brtype & WT_NEWLINE) out << endl;
 }
@@ -460,13 +485,13 @@ struct IntStringCmp
     /**
     	nodecmp, for pruning algorithm
     */
-    bool operator()(const IntString* s1, const IntString* s2) const
+    bool operator()(const IntString& s1, const IntString& s2) const
     {
-        return (s1->id) < (s2->id);
+        return (s1.id) < (s2.id);
     }
 };
 
-typedef set<IntString*, IntStringCmp> IntStringSet;
+typedef set<IntString, IntStringCmp> IntStringSet;
 
 void MTree::printBranchLength(ostream &out, int brtype, bool print_slash, Neighbor *length_nei) {
     if (length_nei->length == -1.0)
@@ -508,69 +533,13 @@ int MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
     out.precision(num_precision);
     if (!node) node = root;
     if (node->isLeaf()) {
-        smallest_taxid = node->id;
-        if (brtype & WT_TAXON_ID)
-            out << node->id;
-        else
-            out << node->name;
-
-        if (brtype & WT_BR_LEN) {
-        	out.setf( std::ios::fixed, std:: ios::floatfield ); // some sofware does handle number format like '1.234e-6'
-//            out.precision(10); // increase precision to avoid zero branch (like in RAxML)
-            printBranchLength(out, brtype, false, node->neighbors[0]);
-//        	double len = node->neighbors[0]->length;
-//            if (brtype & WT_BR_SCALE) len *= len_scale;
-//            if (brtype & WT_BR_LEN_ROUNDING) len = round(len);
-//            if (brtype & WT_BR_LEN_FIXED_WIDTH)
-//                out << ":" << fixed << len;
-//            else
-//                out << ":" << len;
-        }
+        printLeaf(out, brtype, node, smallest_taxid);
     } else {
         // internal node
         out << "(";
         bool first = true;
-        Neighbor *length_nei = NULL;
-        //for (int i = 0; i < node->neighbors.size(); i++)
-        //if (node->neighbors[i]->node != dad)
-        if (! (brtype & WT_SORT_TAXA)) {
-            FOR_NEIGHBOR_IT(node, dad, it) {
-                if ((*it)->node->name != ROOT_NAME) {
-                    if (!first)
-                        out << ",";
-                    int taxid = printTree(out, brtype, (*it)->node, node);
-                    if (taxid < smallest_taxid) smallest_taxid = taxid;
-                    first = false;
-                } else
-                    length_nei = (*it);
-            } else {
-                length_nei = (*it);
-            }
-        } else {
-            IntStringSet strout;
-            FOR_NEIGHBOR_IT(node, dad, it) {
-                if ((*it)->node->name != ROOT_NAME) {
-                    ostringstream ss;
-                    IntString *str = new IntString;
-                    str->id = printTree(ss, brtype, (*it)->node, node);
-                    //ss.flush();
-                    str->str = ss.str();
-                    strout.insert(str);
-                } else
-                	length_nei = (*it);
-            } else {
-            	length_nei = (*it);
-            }
-            smallest_taxid = (*strout.begin())->id;
-            IntStringSet::iterator iss;
-            for (iss = strout.begin(); iss != strout.end(); iss++) {
-                if (!first) out << ",";
-                out << (*iss)->str;
-                first = false;
-            }
-            for (iss = strout.begin(); iss != strout.end(); iss++)
-                delete (*iss);
-        }
+        Neighbor *length_nei = printInterior(out, brtype, node, dad,
+                                             first, smallest_taxid);
         out << ")";
         if (brtype & WT_INT_NODE)
             out << node->id;
@@ -583,6 +552,76 @@ int MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
     return smallest_taxid;
 }
 
+void MTree::printLeaf(std::ostream& out,  int  brtype, 
+                      Node*         node, int& smallest_taxid) {
+    smallest_taxid = node->id;
+    if (brtype & WT_TAXON_ID)
+        out << node->id;
+    else
+        out << node->name;
+
+    if (brtype & WT_BR_LEN) {
+        out.setf( std::ios::fixed, std:: ios::floatfield ); // some sofware does handle number format like '1.234e-6'
+//            out.precision(10); // increase precision to avoid zero branch (like in RAxML)
+        printBranchLength(out, brtype, false, node->neighbors[0]);
+//        	double len = node->neighbors[0]->length;
+//            if (brtype & WT_BR_SCALE) len *= len_scale;
+//            if (brtype & WT_BR_LEN_ROUNDING) len = round(len);
+//            if (brtype & WT_BR_LEN_FIXED_WIDTH)
+//                out << ":" << fixed << len;
+//            else
+//                out << ":" << len;
+    }
+}
+
+Neighbor* MTree::printInterior(std::ostream& out,  int  brtype, 
+                               Node* node,  Node* dad,
+                               bool& first, int&  smallest_taxid) {
+    Neighbor* length_nei = (dad==nullptr) 
+                         ? nullptr : node->findNeighbor(dad);
+    //for (int i = 0; i < node->neighbors.size(); i++)
+    //if (node->neighbors[i]->node != dad)
+    if (! (brtype & WT_SORT_TAXA)) {
+        FOR_NEIGHBOR_IT(node, dad, it) {
+            if ((*it)->node->name != ROOT_NAME) {
+                if (first) {
+                    first = false;
+                } else {
+                    out << ",";
+                }
+                int taxid = printTree(out, brtype, (*it)->node, node);
+                if (taxid < smallest_taxid) {
+                    smallest_taxid = taxid;
+                }
+            } else {
+                length_nei = (*it);
+            }
+        }
+        return length_nei;
+    }
+
+    IntStringSet strout;
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        if ((*it)->node->name != ROOT_NAME) {
+            ostringstream ss;
+            IntString     str;
+            str.id  = printTree(ss, brtype, (*it)->node, node);
+            str.str = ss.str();
+            strout.insert(str);
+        } else {
+            length_nei = (*it);
+        }
+    } 
+    smallest_taxid = (*strout.begin()).id;
+    for (auto iss = strout.begin(); iss != strout.end(); iss++) {
+        if (!first) {
+            out << ",";
+        }
+        out << iss->str;
+        first = false;
+    }
+    return length_nei;
+}
 
 void MTree::printSubTree(ostream &out, NodeVector &subtree) {
     if (root->isLeaf())
@@ -1604,9 +1643,13 @@ Node *MTree::findLeafName(const string &name, Node *node, Node *dad) {
     return NULL;
 }
 
-Node *MTree::findNodeID(int id, Node *node, Node* dad) {
-    if (!node) node = root;
-    if (node->id == id) return node;
+Node *MTree::findNodeID(int id, Node *node, Node* dad) const {
+    if (!node) {
+        node = root;
+    }
+    if (node->id == id) {
+        return node;
+    }
     FOR_NEIGHBOR_IT(node, dad, it) {
         Node *res = findNodeID(id, (*it)->node, node);
         if (res) return res;
