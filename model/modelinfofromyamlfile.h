@@ -453,17 +453,19 @@ public:
     void   setBounds       (int bound_count, 
                             const std::vector<ModelParameterType>& types,
                             double* lower_bound, double* upper_bound, 
-                            bool* bound_check) const;
-    void   updateVariables (const double* variables,
-                            int first_freq_index, int last_param_index);
+                            bool* bound_check,
+                            PhyloTree* report_to_tree) const;
+    void   updateModelVariables (const double* variables,
+                                 int first_freq_index, int last_param_index,
+                                 PhyloTree* report_to_tree);
     bool   updateModelVariablesByType(const double* updated_values,
                                       int param_count, bool even_fixed_ones,
                                       ModelParameterType param_type,
-                                      int &i);
+                                      int &i, PhyloTree* report_to_tree);
     void   readModelVariablesByType  (double* write_them_here,
                                       int param_count, bool even_fixed_ones,
                                       ModelParameterType param_type,
-                                      int &i) const;                                          
+                                      int &i, PhyloTree* report_to_tree) const;                                          
 
 
     void   logVariablesTo(PhyloTree& report_to_tree)           const;

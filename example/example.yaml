@@ -113,12 +113,12 @@
   reversible: true
   datatype: DNA
   parameters:
-  - name:  r(1..5)   # rate parameter vector r(1), ... , r(5)
+  - name:  r(1..5)          # rate parameter vector r(1), ... , r(5)
     type:  rate
-    range: [ 0.0001, 99+1 ]   #tests: expressions in ranges
-    initValue: (2.0/2.0)*1.0  #tests: expressions for initial value
+    range: [ 0.0001, 100 ] 
+    initValue: 1.0            
   - name:  f(1..num_states) # frequency vector f(1), ..., f(4)
-    type:  frequency # make parameters in range [0,1] and sum to 1.0
+    type:  frequency        # make parameters in range [0,1] and sum to 1.0
     range: [ 0, 1]
   rateMatrix:
   - [      ,     r(1)*f(2), r(2)*f(3), r(3)*f(4) ]
@@ -251,11 +251,11 @@
   - name:           rate(1..categories)
     type:           calculated rate
     initValue:      "(categories==1) ? 1.0 : chi2((2.0*subscript-1)/categories/2.0, 2.0*gamma_shape) / (2.0*gamma_shape))"
-    tolerance:      0.0001
+    tolerance:      0.001
   - name:           proportion(1..categories)
     type:           proportion
     initValue:      1/categories
-    tolerance:      0.0001
+    tolerance:      0.001
 
 - ratemodel:        H
   ratedistribution: heterotachy
@@ -264,7 +264,7 @@
     type:           proportion
     range:          0.0001 .. 1 #Allow ranges to be specified as... ranges too
     initValue:      1/categories
-    tolerance:      0.0001
+    tolerance:      0.001
 
 - ratemodel:        R
   ratedistribution: free
@@ -278,7 +278,7 @@
   - name:           rate(1..categories)
     type:           rate
     range:          [0.001, 1000.0]
-    tolerance:      0.0001
+    tolerance:      0.001
     initValue:      rand(2.0) #start with random rate values
 
 - ratemodel:        I
@@ -287,7 +287,7 @@
   - name:           invariant_proportion
     type:           invariant_proportion
     initValue:      0.1          #Might want to guess at this another way
-    tolerance:      0.0001
+    tolerance:      0.001
 
 - ratemodel:        K
   ratedistribution: kategory
@@ -295,7 +295,7 @@
   - name:           rate(1..categories)
     type:           rate
     range:          [0.001, categories]
-    tolerance:      0.0001
+    tolerance:      0.001
 
 - ratemodel:        GFOUR   #test that rates and proportions will be recalculated 
                              #when categories is initialized/constrained.
@@ -309,6 +309,8 @@
   parameters:
   - name:              w(1..2)
     type:              weight  # type weight implies that w[1]+w[2]=1.0
+    range:             [0.01,0.99]
+    tolerance:         0.01
   model_mixture:               # mixture components defined in this section
   - substitutionmodel: YMIX_JC
     frommodel:         YJC     # 1st component from JC model
@@ -329,6 +331,7 @@
     type:            weight
     range:           0..1            #test that ranges can be supplied in .. format
     initialValue:    [0.5, 0.3, 0.2] #test of assigning vector of inital values
+    tolerance:       0.01
   linked_models:
   - substitutionmodel: YJC2
     frommodel:         YJC

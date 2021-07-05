@@ -22,6 +22,7 @@
  ***************************************************************************/
 
 #pragma once
+#include "utils/tools.h"
 #ifndef yaml_model_wrapper_h
 #define yaml_model_wrapper_h
 
@@ -53,6 +54,7 @@ protected:
     PhyloTree*             report_tree;
 public:
     typedef S super;
+    using   S::phylo_tree;
     using   S::freq_type;
     using   S::num_params;
     using   S::num_states;
@@ -62,6 +64,7 @@ public:
     using   S::afterVariablesChanged;
     using   S::getNDim;
     using   S::getNumberOfRates;
+    using   S::isReversible;
     using   S::setRateMatrix;
 
     YAMLModelWrapper() = delete;
@@ -86,13 +89,20 @@ public:
     void acceptParameterList(std::string parameter_list) {
         //parameter_list is passed by value so it can be modified
         //(without those changes being copied back to the original)
+        ASSERT(model_info!=nullptr);
         if (model_info->acceptParameterList(parameter_list, report_tree)) {
             setRateMatrixFromModel();
         }
     }
     
+	virtual std::string getName() const {
+        ASSERT(model_info!=nullptr);
+        return model_info->getName();
+    }
+
     virtual void setBounds(double *lower_bound, double *upper_bound,
                             bool *bound_check) {
+        ASSERT(model_info!=nullptr);
         if (isMixtureModel()) {
             super::setBounds(lower_bound, upper_bound, bound_check);
             return;
@@ -107,8 +117,14 @@ public:
         types = { ModelParameterType::PROPORTION, 
                   ModelParameterType::INVARIANT_PROPORTION, 
                   ModelParameterType::RATE };
+        
+        if (isReversible() && freq_type == StateFreqType::FREQ_ESTIMATE) {
+            types.push_back(ModelParameterType::FREQUENCY);
+        }
+
         model_info->setBounds(ndim, types, lower_bound,
-                              upper_bound, bound_check);
+                              upper_bound, bound_check,
+                              phylo_tree);
     }
 
     virtual void afterVariablesChanged() {
@@ -138,31 +154,35 @@ public:
         }
         int ndim = getNDim();
         int first_freq_index = (ndim-num_states+2);
-        if (freq_type == StateFreqType::FREQ_ESTIMATE) {
-            auto read_freq = variables+first_freq_index;
-            for (int i=0; i<num_states-1; ++i) {
-                if (state_freq[i]!=read_freq[i]) {
-                    TREE_LOG_LINE(*report_tree, VerboseMode::VB_MAX,
-                                  "  estimated freqs[" << i << "] changing"
-                                  << " from " << state_freq[i]
-                                  << " to " << read_freq[i]);
-                    state_freq[i] = read_freq[i];
-                    changed       = true;
+        if (isReversible()) {
+            if (freq_type == StateFreqType::FREQ_ESTIMATE) {
+                auto read_freq = variables+first_freq_index;
+                for (int i=0; i<num_states-1; ++i) {
+                    if (state_freq[i]!=read_freq[i]) {
+                        TREE_LOG_LINE(*report_tree, VerboseMode::VB_MAX,
+                                    "  estimated freqs[" << i << "] changing"
+                                    << " from " << state_freq[i]
+                                    << " to " << read_freq[i]);
+                        state_freq[i] = read_freq[i];
+                        changed       = true;
+                    }
                 }
+                //Set the last frequency to the residual
+                //(one minus the sum of the others)
+                if (scaleStateFreq()) {
+                    model_info->assignLastFrequency(state_freq[num_states-1]);
+                }
+            } else {
+                changed |= freqsFromParams(state_freq, variables+num_params+1,
+                                        freq_type);
             }
-            //Set the last frequency to the residual
-            //(one minus the sum of the others)
-            if (scaleStateFreq()) {
-                changed = true;
-                model_info->assignLastFrequency(state_freq[num_states-1]);
-            }
-        } else {
-            changed |= freqsFromParams(state_freq, variables+num_params+1,
-                                       freq_type);
         }
         if (changed) {
-            TREE_LOG_LINE(*report_tree, VerboseMode::VB_MAX, "");
-            model_info->updateVariables(variables, first_freq_index, ndim);
+            TREE_LOG_LINE(*report_tree, YAMLVariableVerbosity,
+                          "getVariables called" 
+                          " for " << model_info->getName());
+            model_info->updateModelVariables(variables, first_freq_index, 
+                                             ndim, phylo_tree);
             model_info->logVariablesTo(*report_tree);
             setRateMatrixFromModel();
             afterVariablesChanged();
@@ -244,7 +264,9 @@ public:
                     try {
                         Interpreter interpreter(*model_info, expr_string);
                         double entry = interpreter.evaluate();
-                        rates.push_back(entry);
+                        if ( row < col || !isReversible()) {
+                            rates.push_back(entry);
+                        }
                         trace << separator << entry;
                     }
                     catch (ModelExpression::ModelException x) {
@@ -279,6 +301,18 @@ public:
         }
         trace << " }";
         TREE_LOG_LINE(*report_tree, VerboseMode::VB_MAX, trace.str());
+
+        if (YAMLVariableVerbosity <= verbose_mode) {
+            std::stringstream rate_list;
+            const char* sep = "{ ";
+            for (double rate: rates) {
+                rate_list << sep << rate;
+                sep = ", ";
+            }
+            rate_list << " }";
+            TREE_LOG_LINE(*report_tree, YAMLVariableVerbosity, 
+                          "Setting rates... " << rate_list.str());
+        }
         setRateMatrix(rates.data());
     }
     
@@ -424,6 +458,7 @@ protected:
     bool                  only_optimizing_rates;
 public:
     typedef R super;
+    using super::phylo_tree;
     using super::getNDim;
     using super::setFixGammaShape;
     using super::setFixProportions;
@@ -457,12 +492,13 @@ public:
     }
 
     void acceptParameterList(std::string parameter_list) {
-        //parameter_list is passed by value so it can be modified
         if (model_info.acceptParameterList(parameter_list, report_tree)) {
             calculateNDim();
-            //Todo: Look at what RateFree does when it accepts
-            //command line parameters (in its main constructor)
         }
+    }
+
+    virtual std::string getName() const {
+        return model_info.getName();
     }
 
     virtual int getNDim() const {
@@ -487,8 +523,9 @@ public:
         if (isOptimizingProportions()) {
             types.push_back(ModelParameterType::RATE);
         }
+ 
         model_info.setBounds(ndim, types, lower_bound,
-                             upper_bound, bound_check);
+                             upper_bound, bound_check, phylo_tree);
     }
 
     void setProportionToleranceFromModel() {
@@ -520,22 +557,35 @@ public:
         int  index = 1;
         int  ndim  = getNDim();
         bool rc    = false;
+        StrVector opt_list;
 
         if (isOptimizingShapes()) {
             rc  |= model_info.updateModelVariablesByType(variables, ndim, false,
-                                                         ModelParameterType::SHAPE,      index);
+                                                         ModelParameterType::SHAPE, 
+                                                         index, phylo_tree);
+            opt_list.push_back("shapes");
         }
         if (isOptimizingProportions()) {
             rc  |= model_info.updateModelVariablesByType(variables, ndim, false, 
-                                                         ModelParameterType::PROPORTION, index);
+                                                         ModelParameterType::PROPORTION, 
+                                                         index, phylo_tree);
             rc  |= model_info.updateModelVariablesByType(variables, ndim, false, 
                                                          ModelParameterType::INVARIANT_PROPORTION, 
-                                                         index);
+                                                         index, phylo_tree);
+            opt_list.push_back("proportions");
         }
         if (isOptimizingRates()) {
             rc  |= model_info.updateModelVariablesByType(variables, ndim, false, 
-                                                         ModelParameterType::RATE,       index);
+                                                         ModelParameterType::RATE, 
+                                                         index, phylo_tree);
+            opt_list.push_back("rates");
         }
+
+        TREE_LOG_LINE(*phylo_tree, YAMLVariableVerbosity,
+                      "getVariables for " << model_info.getName()
+                      << "( optimizing " << opt_list.join(",") << ") "
+                      << " changed==" << rc);
+
         if (rc) {
             updateRateClassFromModelVariables();
         }
@@ -548,20 +598,20 @@ public:
         if (isOptimizingShapes()) {
             model_info.readModelVariablesByType(variables, ndim, false,
                                                 ModelParameterType::SHAPE,      
-                                                index);
+                                                index, phylo_tree);
         }
         if (isOptimizingProportions()) {
             model_info.readModelVariablesByType(variables, ndim, false,
                                                 ModelParameterType::PROPORTION, 
-                                                index);
+                                                index, phylo_tree);
             model_info.readModelVariablesByType(variables, ndim, false,
                                                 ModelParameterType::INVARIANT_PROPORTION, 
-                                                index);
+                                                index, phylo_tree);
         }
         if (isOptimizingRates()) {
             model_info.readModelVariablesByType(variables, ndim, false,
                                                 ModelParameterType::RATE,       
-                                                index);
+                                                index, phylo_tree);
         }
     }
 

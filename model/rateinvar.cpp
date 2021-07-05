@@ -113,20 +113,27 @@ void RateInvar::setBounds(double *lower_bound, double *upper_bound,
 
 double RateInvar::optimizeParameters(double gradient_epsilon,
                                      PhyloTree* report_to_tree) {
+								
     if (phylo_tree->aln->frac_const_sites == 0.0) {
         return -computeFunction(0.0);
     }
     if (fix_p_invar) {
         return -computeFunction(p_invar);
     }
+
     TREE_LOG_LINE(*phylo_tree, VerboseMode::VB_MAX, 
 		          "Optimizing proportion of invariable sites...");
     
+	double dummy[2] = { -1, 0 };
+    setVariables(dummy);
+
     double negative_lh;
     double ferror;
     double step      = max(gradient_epsilon, tolerance);
     p_invar          = minimizeOneDimen(minimum, p_invar, maximum, step,
                                         &negative_lh, &ferror);
+	dummy[1] = p_invar;
+	getVariables(dummy);
     return -computeFunction(p_invar);
 }
 

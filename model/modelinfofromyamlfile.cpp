@@ -30,7 +30,7 @@
 //YAML Logging Levels
 VerboseMode YAMLModelVerbosity     = VerboseMode::VB_MIN;
 VerboseMode YAMLRateVerbosity      = VerboseMode::VB_MIN;
-VerboseMode YAMLVariableVerbosity  = VerboseMode::VB_MAX;
+VerboseMode YAMLVariableVerbosity  = VerboseMode::VB_MIN;
 VerboseMode YAMLFrequencyVerbosity = VerboseMode::VB_MAX;
 VerboseMode YAMLMatrixVerbosity    = VerboseMode::VB_MAX;
 
@@ -747,17 +747,33 @@ bool ModelInfoFromYAMLFile::isModelWeightFixed() {
 void ModelInfoFromYAMLFile::setBounds(int param_count, 
                                       const std::vector<ModelParameterType>& types,
                                       double* lower_bound, double* upper_bound, 
-                                      bool* bound_check) const {
+                                      bool* bound_check,
+                                      PhyloTree* report_to_tree) const {
     int i = 1; //Parameter numbering starts at 1, see ModelMarkov
     for (auto param_type : types) {
+        bool is_freq = (param_type == ModelParameterType::FREQUENCY);
         for (auto p : parameters) {
             if (p.type == param_type) {
                 for (int sub = p.minimum_subscript;
                     sub <= p.maximum_subscript; ++sub) {
-                    ASSERT(i <= param_count);
-                    lower_bound[i] = p.range.first;
-                    upper_bound[i] = p.range.second;
-                    bound_check[i] = false;
+                    std::string var_name = p.getSubscriptedVariableName(sub);
+                    if (i <= param_count) { 
+                        lower_bound[i] = p.range.first;
+                        upper_bound[i] = p.range.second;
+                        bound_check[i] = false;
+                        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+                                    "Set bound " << i 
+                                    << " : " << var_name 
+                                    << " [" << lower_bound[i]
+                                    << ".." << upper_bound[i] << "]");
+                    } else if (is_freq) {
+                        ASSERT(i <= param_count + 1);
+                        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+                                    "Did *not* set (last freq?) bound " << i 
+                                    << " : " << var_name );
+                    } else {
+                        ASSERT(i <= param_count);
+                    }
                     ++i;
                 }
             }
@@ -765,9 +781,10 @@ void ModelInfoFromYAMLFile::setBounds(int param_count,
     }
 }
 
-void ModelInfoFromYAMLFile::updateVariables(const double* updated_values,
-                                            int first_freq_index,
-                                            int last_param_index) {
+void ModelInfoFromYAMLFile::updateModelVariables(const double* updated_values,
+                                                 int first_freq_index,
+                                                 int last_param_index,
+                                                 PhyloTree* report_to_tree) {
     int i = 1; //Rate parameter numbering starts at 1, see ModelMarkov
     ModelParameterType supported_types[] = {
         ModelParameterType::PROPORTION,
@@ -785,7 +802,7 @@ void ModelInfoFromYAMLFile::updateVariables(const double* updated_values,
             i = first_freq_index;
         }
         updateModelVariablesByType(updated_values, last_param_index+1, 
-                                   false, param_type, i);
+                                   false, param_type, i, report_to_tree);
     }
 }
 
@@ -793,7 +810,8 @@ bool ModelInfoFromYAMLFile::updateModelVariablesByType(const double* updated_val
                                                        int param_count,
                                                        bool even_fixed_ones,                                                
                                                        ModelParameterType param_type,
-                                                       int &i) {
+                                                       int &i,
+                                                       PhyloTree* report_to_tree) {
     bool anyChanges                  = false;
     int  skipped_frequency_variables = 0;
     for (auto p : parameters) {
@@ -825,10 +843,22 @@ bool ModelInfoFromYAMLFile::updateModelVariablesByType(const double* updated_val
             }
             double value     = updated_values[i];
             double old_value = var.getValue();
-            double delta     = fabs(value - old_value);
-            if (p.tolerance<=delta) {
+            double delta     = value - old_value;
+            if (p.tolerance<=fabs(delta)) {
                 var.setValue(value);
                 anyChanges = true;
+                TREE_LOG_LINE(*report_to_tree, YAMLVariableVerbosity,
+                            "Updated " << var_name << "=" << value
+                            << " (delta " << delta << ") "
+                            << " from parameter " << i 
+                            << " of " << param_count);
+            } else {
+                TREE_LOG_LINE(*report_to_tree, YAMLVariableVerbosity,
+                            "Did not update " << var_name << "=" << old_value
+                            << " (to " << value << ") "
+                            << " from parameter " << i 
+                            << " of " << param_count 
+                            << " (delta was " << delta << ")");
             }
             ++i;
         }
@@ -836,11 +866,10 @@ bool ModelInfoFromYAMLFile::updateModelVariablesByType(const double* updated_val
     return anyChanges;
 }
 
-void ModelInfoFromYAMLFile::readModelVariablesByType( double* write_them_here,
-                                                      int param_count,
-                                                      bool even_fixed_ones,
-                                                      ModelParameterType param_type,
-                                                      int &i) const {                                                
+void ModelInfoFromYAMLFile::readModelVariablesByType
+        (double* write_them_here, int param_count,
+         bool even_fixed_ones, ModelParameterType param_type,
+         int &i, PhyloTree* report_to_tree) const {                                                
     for (auto p : parameters) {
         if (p.type != param_type) {
             continue;
@@ -874,9 +903,11 @@ void ModelInfoFromYAMLFile::readModelVariablesByType( double* write_them_here,
             }
             double v = var.getValue();
             write_them_here[i] = v;
-            //std::cout << "Wrote " << var_name << "=" << v
-            //          << " (subscript " << sub << ")"
-            //          << " as parameter " << i << " of " << param_count << std::endl;
+            TREE_LOG_LINE(*report_to_tree, YAMLVariableVerbosity,
+                          "Wrote from " << var_name << "=" << v
+                          << " (subscript " << sub << ")"
+                          << " to parameter " << i 
+                          << " of " << param_count);
             ++i;
         }
     }
