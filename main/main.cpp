@@ -93,12 +93,10 @@ std::string getTreeGenerationDescription(TreeGenType gen_type) {
     }
 }
 
-void generateRandomTree(Params &params)
-{
+void generateRandomTree(Params &params) {
     if (params.sub_size < 3 && !params.aln_file) {
         outError(ERR_FEW_TAXA);
     }
-
     if (params.user_file.empty()) {
         outError("Please specify an output tree file name");
     }
@@ -189,7 +187,6 @@ void generateRandomTree(Params &params)
             //mtree.calcDist(params.dist_file);
         //}
     }
-
 }
 
 inline void separator(ostream &out, int type = 0) {
@@ -250,23 +247,33 @@ void printRunMode(ostream &out, RunMode run_mode) {
     }
 }
 
+void summarizeAnalysisType(ostream &out, Params &params, 
+                           bool budget_constraint,
+                           InputType analysis_type);
+
 /**
     summarize the running with header
 */
-void summarizeHeader(ostream &out, Params &params, bool budget_constraint, InputType analysis_type) {
+void summarizeHeader(ostream &out, Params &params, 
+                     bool budget_constraint, InputType analysis_type) {
     printCopyright(out);
     out << "Input tree/split network file name: " << params.user_file << endl;
-    if(params.eco_dag_file)
+    if(params.eco_dag_file) {
         out << "Input food web file name: "<<params.eco_dag_file<<endl;
-     out << "Input file format: " << ((params.intype == InputType::IN_NEWICK) ? "Newick" : ( (params.intype == InputType::IN_NEXUS) ? "Nexus" : "Unknown" )) << endl;
-    if (params.initial_file != NULL)
+    }
+    out << "Input file format: " << ((params.intype == InputType::IN_NEWICK) ? "Newick" : ( (params.intype == InputType::IN_NEXUS) ? "Nexus" : "Unknown" )) << endl;
+    if (params.initial_file != NULL) {
         out << "Initial taxa file: " << params.initial_file << endl;
-    if (params.param_file != NULL)
+    }
+    if (params.param_file != NULL) {
         out << "Parameter file: " << params.param_file << endl;
+    }
     out << endl;
     out << "Type of measure: " << ((params.root != NULL || params.is_rooted) ? "Rooted": "Unrooted") <<
             (analysis_type== InputType::IN_NEWICK ? " phylogenetic diversity (PD)" : " split diversity (SD)");
-    if (params.root != NULL) out << " at " << params.root;
+    if (params.root != NULL) {
+        out << " at " << params.root;
+    }
     out << endl;
     if (params.run_mode != CALC_DIST && params.run_mode != PD_USER_SET) {
         out << "Search objective: " << ((params.find_pd_min) ? "Minimum" : "Maximum") << endl;
@@ -280,17 +287,33 @@ void summarizeHeader(ostream &out, Params &params, bool budget_constraint, Input
         out << "Search option: " << ((params.find_all) ? "Multiple optimal sets" : "Single optimal set") << endl;
     }
     out << endl;
+    summarizeAnalysisType(out, params, budget_constraint, 
+                          analysis_type);
+}
+
+void summarizeAnalysisType(ostream &out, Params &params,
+                           bool budget_constraint,
+                           InputType analysis_type) {
     out << "Type of analysis: ";
     switch (params.run_mode) {
-        case PD_USER_SET: out << "PD/SD of user sets";
-            if (params.pdtaxa_file) out << " (" << params.pdtaxa_file << ")"; break;
-        case CALC_DIST: out << "Distance matrix computation"; break;
+        case PD_USER_SET: 
+            out << "PD/SD of user sets";
+            if (params.pdtaxa_file) {
+                out << " (" << params.pdtaxa_file << ")"; 
+            }
+            break;
+        case CALC_DIST: 
+            out << "Distance matrix computation"; 
+            break;
         default:
             out << ((budget_constraint) ? "Budget constraint " : "Subset size k ");
-            if (params.intype == InputType::IN_NEWICK)
+            if (params.intype == InputType::IN_NEWICK) {
                 out << ((analysis_type == InputType::IN_NEWICK) ? "on tree" : "on tree -> split network");
-            else
+            } 
+            else {
                 out << "on split network";
+            }
+            break;
     }
     out << endl;
     //out << "Random number seed: " << params.ran_seed << endl;
@@ -306,7 +329,6 @@ void summarizeFooter(ostream &out, Params &params) {
     out << "Time used: " << params.run_time  << " seconds." << endl;
     out << "Finished time: " << date << endl;
 }
-
 
 int getMaxNameLen(StrVector &setName) {
     int len = 0;
@@ -468,61 +490,45 @@ void printTaxaSet(Params &params, vector<PDTaxaSet> &taxa_set, RunMode cur_mode)
     scoreout.close();
 }
 
+void calculateDistanceMatrixOnly(Params &params) {
+    bool is_rooted = false;
+    MExtTree tree(params.user_file.c_str(), is_rooted);
+    cout << "Tree contains " << tree.leafNum << " taxa." << endl;
+    cout << "Calculating distance matrix..." << endl;
+    tree.calcDist(params.dist_file);
+    cout << "Distances printed to " << params.dist_file << endl;
+}
 
-/**
-    run PD algorithm on trees
-*/
-void runPDTree(Params &params)
-{
-
-    if (params.run_mode == CALC_DIST) {
-        bool is_rooted = false;
-        MExtTree tree(params.user_file.c_str(), is_rooted);
-        cout << "Tree contains " << tree.leafNum << " taxa." << endl;
-        cout << "Calculating distance matrix..." << endl;
-        tree.calcDist(params.dist_file);
-        cout << "Distances printed to " << params.dist_file << endl;
-        return;
-    }
-
-    double t_begin, t_end;
-    //char filename[300];
-    //int idx;
-
+void computeScoreOfUserDefinedSets(Params &params) {
+    // compute score of user-defined sets
+    double            t_begin = getCPUTime();
+    PDTree            tree(params);
     vector<PDTaxaSet> taxa_set;
+    PDRelatedMeasures pd_more;
 
-    if (params.run_mode == PD_USER_SET) {
-        // compute score of user-defined sets
-        t_begin = getCPUTime();
-        cout << "Computing PD score for user-defined set of taxa..." << endl;
-        PDTree tree(params);
-        PDRelatedMeasures pd_more;
-        tree.computePD(params, taxa_set, pd_more);
+    cout << "Computing PD score for user-defined set of taxa..." << endl;
+    tree.computePD(params, taxa_set, pd_more);
 
-        if (params.endemic_pd)
-            tree.calcPDEndemism(taxa_set, pd_more.PDEndemism);
-        if (params.complement_area != NULL)
-            tree.calcPDComplementarity(taxa_set, params.complement_area, pd_more.PDComplementarity);
-
-        t_end = getCPUTime();
-        params.run_time = (t_end-t_begin);
-        summarizeTree(params, tree, taxa_set, pd_more);
-        return;
+    if (params.endemic_pd) {
+        tree.calcPDEndemism(taxa_set, pd_more.PDEndemism);
     }
+    if (params.complement_area != NULL) {
+        tree.calcPDComplementarity(taxa_set, params.complement_area, 
+                                   pd_more.PDComplementarity);
+    }
+    double t_end = getCPUTime();
+    params.run_time = (t_end-t_begin);
+    summarizeTree(params, tree, taxa_set, pd_more);
+}
 
-
+void runGreedyAlgorithm(Params &params, bool &detected_greedy, 
+                        Greedy& test_greedy,
+                        vector<PDTaxaSet>& taxa_set) {
     /*********************************************
         run greedy algorithm
     *********************************************/
 
-    if (params.sub_size < 2) {
-        outError(ERR_NO_K);
-    }
-
-    bool detected_greedy = (params.run_mode != PRUNING);
-
-    Greedy test_greedy;
-
+    detected_greedy = (params.run_mode != PRUNING);
     test_greedy.init(params);
 
     if (params.root == NULL && !params.is_rooted)
@@ -542,13 +548,13 @@ void runPDTree(Params &params)
         }
         if (detected_greedy) {
             params.detected_mode = GREEDY;
-            t_begin=getCPUTime();
+            double t_begin=getCPUTime();
             cout << endl << "Greedy Algorithm..." << endl;
 
             taxa_set.clear();
             test_greedy.run(params, taxa_set);
 
-            t_end=getCPUTime();
+            double t_end=getCPUTime();
             params.run_time = (t_end-t_begin);
             cout << "Time used: " << params.run_time << " seconds." << endl;
             if (params.min_size == params.sub_size)
@@ -562,44 +568,67 @@ void runPDTree(Params &params)
             summarizeTree(params, test_greedy, taxa_set, pd_more);
         }
     }
+}
 
+void runPruningAlgorithm(Params& params, bool& detected_greedy,
+                         Greedy test_greedy, vector<PDTaxaSet>& taxa_set) {
     /*********************************************
         run pruning algorithm
     *********************************************/
+    Pruning test_pruning;
+
+    if (params.run_mode == PRUNING || params.run_mode == BOTH_ALG) {
+        //Pruning test_pruning(params);
+        test_pruning.init(params);
+    } else if (!detected_greedy) {
+        test_pruning.init(test_greedy);
+    } else {
+        return;
+    }
+    params.detected_mode = PRUNING;
+    double t_begin=getCPUTime();
+    cout << endl << "Pruning Algorithm..." << endl;
+    taxa_set.clear();
+    test_pruning.run(params, taxa_set);
+
+    double t_end=getCPUTime();
+    params.run_time = (t_end-t_begin) ;
+    cout << "Time used: " << params.run_time << " seconds.\n";
+    if (params.min_size == params.sub_size) {
+        cout << "Resulting tree length = " << taxa_set[0].score << endl;
+    }
+    if (params.nr_output > 0) {
+        printTaxaSet(params, taxa_set, PRUNING);
+    }
+    PDRelatedMeasures pd_more;
+    summarizeTree(params, test_pruning, taxa_set, pd_more);
+}
+
+/**
+    run PD algorithm on trees
+*/
+void runPDTree(Params &params)
+{
+    if (params.run_mode == CALC_DIST) {
+        calculateDistanceMatrixOnly(params);
+        return;
+    }
+    if (params.run_mode == PD_USER_SET) {
+        computeScoreOfUserDefinedSets(params);
+        return;
+    }
+    if (params.sub_size < 2) {
+        outError(ERR_NO_K);
+    }
+    bool   detected_greedy = false;
+    Greedy test_greedy;
+    vector<PDTaxaSet> taxa_set;
+    runGreedyAlgorithm(params, detected_greedy, test_greedy, taxa_set);
+
     if (params.run_mode == PRUNING || params.run_mode == BOTH_ALG ||
         (params.run_mode == DETECTED)) {
-
-        Pruning test_pruning;
-
-        if (params.run_mode == PRUNING || params.run_mode == BOTH_ALG) {
-            //Pruning test_pruning(params);
-            test_pruning.init(params);
-        } else if (!detected_greedy) {
-            test_pruning.init(test_greedy);
-        } else {
-            return;
-        }
-        params.detected_mode = PRUNING;
-        t_begin=getCPUTime();
-        cout << endl << "Pruning Algorithm..." << endl;
-        taxa_set.clear();
-        test_pruning.run(params, taxa_set);
-
-        t_end=getCPUTime();
-        params.run_time = (t_end-t_begin) ;
-        cout << "Time used: " << params.run_time << " seconds.\n";
-        if (params.min_size == params.sub_size)
-            cout << "Resulting tree length = " << taxa_set[0].score << endl;
-
-        if (params.nr_output > 0)
-            printTaxaSet(params, taxa_set, PRUNING);
-
-        PDRelatedMeasures pd_more;
-
-        summarizeTree(params, test_pruning, taxa_set, pd_more);
-
+        runPruningAlgorithm(params, detected_greedy, test_greedy, taxa_set); 
     }
-
 }
 
 void checkSplitDistance(ostream &out, PDNetwork &sg) {
@@ -1066,6 +1095,12 @@ void printGainMatrix(const char *filename, mmatrix(double) &delta_gain, int star
     }
 }
 
+void calculateTaxaOrder(CircularNetwork& sg, vector<int>& taxa_order);
+void runBootstrapAnalysis(Params& params, CircularNetwork& sg, 
+                          vector<SplitSet>& pd_set, 
+                          vector<int>& taxa_order);
+void reportOnPDSets(CircularNetwork& sg, vector<SplitSet>& pd_set);
+
 /**
     run PD algorithm on split networks
 */
@@ -1074,25 +1109,16 @@ void runPDSplit(Params &params) {
     cout << "Using NCL - Nexus Class Library" << endl << endl;
 
     // init a split graph class from the parameters
-    CircularNetwork sg(params);
-    int i;
+    CircularNetwork  sg(params);
 
     // this vector of SplitSet store all the optimal PD sets
     vector<SplitSet> pd_set;
     // this define an order of taxa (circular order in case of circular networks)
-    vector<int> taxa_order;
+    vector<int>      taxa_order;
     // this store a particular taxa set
-    Split taxa_set;
+    Split            taxa_set;
 
-
-    if (sg.isCircular()) {
-        // is a circular network, get circular order
-        for (i = 0; i < sg.getNTaxa(); i++)
-            taxa_order.push_back(sg.getCircleId(i));
-    } else
-        // otherwise, get the incremental order
-        for (i = 0; i < sg.getNTaxa(); i++)
-            taxa_order.push_back(i);
+    calculateTaxaOrder(sg, taxa_order);
 
     PDRelatedMeasures pd_more;
 
@@ -1107,7 +1133,6 @@ void runPDSplit(Params &params) {
         } else {
             int sub_size = (params.sub_size >= 1) ? params.sub_size : sg.getPdaBlock()->getSubSize();
             if (sub_size < 1 && params.pd_proportion == 0.0) params.run_mode = PD_USER_SET;
-
         }
     }
 
@@ -1116,39 +1141,17 @@ void runPDSplit(Params &params) {
         cout << "Computing PD score for user-defined set of taxa..." << endl;
         pd_set.resize(1);
         sg.computePD(params, pd_set[0], pd_more);
-        if (params.endemic_pd)
+        if (params.endemic_pd) {
             sg.calcPDEndemism(pd_set[0], pd_more.PDEndemism);
-
-        if (params.complement_area != NULL)
-            sg.calcPDComplementarity(pd_set[0], params.complement_area, pd_more.setName, pd_more.PDComplementarity);
-
+        }
+        if (params.complement_area != NULL) {
+            sg.calcPDComplementarity(pd_set[0], params.complement_area, 
+                                     pd_more.setName, pd_more.PDComplementarity);
+        }
     } else {
         // otherwise, call the main function
         if (params.num_bootstrap_samples) {
-            cout << endl << "======= START BOOTSTRAP ANALYSIS =======" << endl;
-            MTreeSet *mtrees = sg.getMTrees();
-            if (mtrees->size() < 100)
-                cout << "WARNING: bootstrap may be unstable with less than 100 trees" << endl;
-            StrVector taxname;
-            sg.getTaxaName(taxname);
-            i = 1;
-            for (MTreeSet::iterator it = mtrees->begin(); it != mtrees->end(); it++, i++) {
-                cout << "---------- TREE " << i << " ----------" << endl;
-                // convert tree into split sytem
-                SplitGraph sg2;
-                (*it)->convertSplits(taxname, sg2);
-                // change the current split system
-                for (auto itDel = sg.rbegin(); itDel != sg.rend(); ++itDel) {
-                    delete *itDel;
-                }
-                sg.clear();
-                sg.insert(sg.begin(), sg2.begin(), sg2.end());
-                sg2.clear();
-
-                // now findPD on the converted tree-split system
-                sg.findPD(params, pd_set, taxa_order);
-            }
-            cout << "======= DONE BOOTSTRAP ANALYSIS =======" << endl << endl;
+            runBootstrapAnalysis(params, sg, pd_set, taxa_order);
         } else {
             sg.findPD(params, pd_set, taxa_order);
         }
@@ -1159,25 +1162,12 @@ void runPDSplit(Params &params) {
     //time(&time_end);
     params.run_time = time_end - time_begin;
 
-    cout << "Time used: " << (double) (params.run_time) << " seconds." << endl;
+    cout << "Time used: " << (double) (params.run_time)
+         << " seconds." << endl;
 
-    if (verbose_mode >= VerboseMode::VB_DEBUG && !sg.isPDArea()) {
-        cout << "PD set(s) with score(s): " << endl;
-        for (vector<SplitSet>::iterator it = pd_set.begin(); it != pd_set.end(); it++)
-        for (SplitSet::iterator it2 = (*it).begin(); it2 != (*it).end(); it2++ ){
-            //(*it)->report(cout);
-            cout << "  " << (*it2)->getWeight() << "    ";
-            for (i = 0; i < sg.getNTaxa(); i++)
-                if ((*it2)->containTaxon(i))
-                cout << sg.getTaxa()->GetTaxonLabel(i) << "  ";
-            if (sg.isBudgetConstraint())
-                cout << " (budget = " << sg.calcCost(*(*it2)) << ")";
-            cout << endl;
-        }
-    }
+    reportOnPDSets(sg, pd_set);
 
     sg.printOutputSetScore(params, pd_set);
-
 
     summarizeSplit(params, sg, pd_set, pd_more, true);
 
@@ -1186,14 +1176,81 @@ void runPDSplit(Params &params) {
         sg.calcPDGain(pd_set, delta_gain);
         string filename = params.out_prefix;
         filename += ".pdgain";
-        printGainMatrix(filename.c_str(), delta_gain, pd_set.front().front()->countTaxa());
+        printGainMatrix(filename.c_str(), delta_gain, 
+                        pd_set.front().front()->countTaxa());
         //cout << delta_gain;
     }
 
-
     //for (i = pd_set.size()-1; i >= 0; i--)
     //    delete pd_set[i];
+}
 
+void calculateTaxaOrder(CircularNetwork& sg, 
+                        vector<int>& taxa_order) {
+    if (sg.isCircular()) {
+        // is a circular network, get circular order
+        for (int i = 0; i < sg.getNTaxa(); i++) {
+            taxa_order.push_back(sg.getCircleId(i));
+        }
+    } else {
+        // otherwise, get the incremental order
+        for (int i = 0; i < sg.getNTaxa(); i++) {
+            taxa_order.push_back(i);
+        }
+    }
+}
+
+void runBootstrapAnalysis(Params& params, CircularNetwork& sg, 
+                          vector<SplitSet>& pd_set,
+                          vector<int>& taxa_order) {
+    cout << endl << "======= START BOOTSTRAP ANALYSIS =======" << endl;
+    MTreeSet *mtrees = sg.getMTrees();
+    if (mtrees->size() < 100) {
+        cout << "WARNING: bootstrap may be unstable" 
+                " with less than 100 trees" << endl;
+    }
+    StrVector taxname;
+    sg.getTaxaName(taxname);
+    int i = 1;
+    for (MTreeSet::iterator it = mtrees->begin(); it != mtrees->end(); it++, i++) {
+        cout << "---------- TREE " << i << " ----------" << endl;
+        // convert tree into split sytem
+        SplitGraph sg2;
+        (*it)->convertSplits(taxname, sg2);
+        // change the current split system
+        for (auto itDel = sg.rbegin(); itDel != sg.rend(); ++itDel) {
+            delete *itDel;
+        }
+        sg.clear();
+        sg.insert(sg.begin(), sg2.begin(), sg2.end());
+        sg2.clear();
+
+        // now findPD on the converted tree-split system
+        sg.findPD(params, pd_set, taxa_order);
+    }
+    cout << "======= DONE BOOTSTRAP ANALYSIS =======" << endl << endl;
+}
+
+void reportOnPDSets(CircularNetwork& sg, vector<SplitSet>& pd_set) {
+    if (verbose_mode >= VerboseMode::VB_DEBUG && !sg.isPDArea()) {
+        cout << "PD set(s) with score(s): " << endl;
+        for (vector<SplitSet>::iterator it = pd_set.begin(); 
+             it != pd_set.end(); it++) {
+            for (SplitSet::iterator it2 = (*it).begin(); it2 != (*it).end(); it2++ ){
+                //(*it)->report(cout);
+                cout << "  " << (*it2)->getWeight() << "    ";
+                for (int i = 0; i < sg.getNTaxa(); i++) {
+                    if ((*it2)->containTaxon(i)) {
+                        cout << sg.getTaxa()->GetTaxonLabel(i) << "  ";
+                    }
+                }
+                if (sg.isBudgetConstraint()) {
+                    cout << " (budget = " << sg.calcCost(*(*it2)) << ")";
+                }
+                cout << endl;
+            }
+        }
+    }
 }
 
 void printSplitSet(SplitGraph &sg, SplitIntMap &hash_ss) {
