@@ -4796,7 +4796,7 @@ void Alignment::getAppearance(StateType state, StateBitset &state_app) {
 	}
 }
 
-void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double *ntfreq) {
+void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double *ntfreq, string freq_params) {
 	size_t nseqs = getNSeq();
     
     // TRUE if alisim is executing and state/codon freqs needs to be randomly generated
@@ -4811,9 +4811,31 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
             // randomly generate ntfreq if it has not yet been generated
             if (!cache_ntfreq)
             {
-                // randomly generate ntfreq
-                for (int i = 0; i < 4 ; i++)
-                    ntfreq[i] = random_double();
+                // if the user has specified freq_params -> extract frequencies
+                if (freq_params.length() > 0)
+                {
+                    // validate the number of input params (
+                    size_t num_commas = std::count(freq_params.begin(), freq_params.end(), ',');
+                    if (num_commas != 3)
+                        outError("To use F1X4, please specify 4 frequencies by +F1X4{<freq_0>,...,<freq_3>} or let AliSim randomly generate the frequencies by +F1X4.");
+                    
+                    // extract user-specified frequencies one by one
+                    string delimiter = ",";
+                    for (int i = 0; i < 4; i++)
+                    {
+                        size_t pos = freq_params.find(delimiter);
+                        ntfreq[i] = convert_double(freq_params.substr(0, pos).c_str());
+                        
+                        // delete the current from freq_params
+                        freq_params.erase(0, pos + delimiter.length());
+                    }
+                }
+                // otherwise, randomly generate ntfreq
+                else
+                {
+                    for (int i = 0; i < 4 ; i++)
+                        ntfreq[i] = random_double();
+                }
                 
                 // cache ntfreq for using later
                 cache_ntfreq = new double[4];
@@ -4886,9 +4908,31 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
             // randomly generate ntfreq if it has not yet been generated
             if (!cache_ntfreq)
             {
-                // randomly generate ntfreq
-                for (int i = 0; i < 12 ; i++)
-                    ntfreq[i] = random_double();
+                // if the user has specified freq_params -> extract frequencies
+                if (freq_params.length() > 0)
+                {
+                    // validate the number of input params (
+                    size_t num_commas = std::count(freq_params.begin(), freq_params.end(), ',');
+                    if (num_commas != 11)
+                        outError("To use F3X4, please specify 12 frequencies by +F3X4{<freq_0>,...,<freq_11>} or let AliSim randomly generate the frequencies by +F3X4.");
+                    
+                    // extract user-specified frequencies one by one
+                    string delimiter = ",";
+                    for (int i = 0; i < 12; i++)
+                    {
+                        size_t pos = freq_params.find(delimiter);
+                        ntfreq[i] = convert_double(freq_params.substr(0, pos).c_str());
+                        
+                        // delete the current from freq_params
+                        freq_params.erase(0, pos + delimiter.length());
+                    }
+                }
+                // otherwise, randomly generate ntfreq
+                else
+                {
+                    for (int i = 0; i < 12 ; i++)
+                        ntfreq[i] = random_double();
+                }
                 
                 // cache ntfreq for using later
                 cache_ntfreq = new double[12];

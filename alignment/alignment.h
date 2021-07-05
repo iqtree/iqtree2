@@ -800,8 +800,9 @@ public:
 	 * at least num_states entries.
 	 * @param freq either FREQ_CODON_1x4, FREQ_CODON_3x4, or FREQ_CODON_3x4C
 	 * @param ntfreq (OUT) nucleotide frequencies, assuming of size 4 for F1x4 and of size 12 for F3x4.
+     * @param freq_params is user-specified frequency params (assuming 4 params for F1x4 and 12 params for F3x4).
 	 */
-	void computeCodonFreq(StateFreqType freq, double *state_freq, double *ntfreq);
+	void computeCodonFreq(StateFreqType freq, double *state_freq, double *ntfreq, string freq_params = "");
 
 	/**
             compute empirical substitution counts between state pairs

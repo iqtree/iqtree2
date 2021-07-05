@@ -308,21 +308,21 @@ void ModelCodon::restoreCheckpoint() {
 
 }
 
-StateFreqType ModelCodon::initCodon(const char *model_name, StateFreqType freq, bool reset_params) {
+StateFreqType ModelCodon::initCodon(const char *model_name, StateFreqType freq, bool reset_params, string freq_params) {
 	string name_upper = model_name;
 	for (string::iterator it = name_upper.begin(); it != name_upper.end(); it++)
 		(*it) = toupper(*it);
     
 	if (name_upper == "MG") {
-		return initMG94(true, freq, CK_ONE_KAPPA);
+		return initMG94(true, freq, CK_ONE_KAPPA, freq_params);
 	} else if (name_upper == "MGK") {
-		return initMG94(false, freq, CK_ONE_KAPPA);
+		return initMG94(false, freq, CK_ONE_KAPPA, freq_params);
 	} else if (name_upper == "MG1KTS" || name_upper == "MGKAP2") {
-        return initMG94(false, freq, CK_ONE_KAPPA_TS);
+        return initMG94(false, freq, CK_ONE_KAPPA_TS, freq_params);
 	} else if (name_upper == "MG1KTV" || name_upper == "MGKAP3") {
-        return initMG94(false, freq, CK_ONE_KAPPA_TV);
+        return initMG94(false, freq, CK_ONE_KAPPA_TV, freq_params);
 	} else if (name_upper == "MG2K" || name_upper == "MGKAP4") {
-        return initMG94(false, freq, CK_TWO_KAPPA);
+        return initMG94(false, freq, CK_TWO_KAPPA, freq_params);
 	} else if (name_upper == "GY") {
         return initGY94(false, CK_ONE_KAPPA);
 	} else if (name_upper == "GY0K" || name_upper == "GYKAP1") {
@@ -388,12 +388,12 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
 	name = full_name = model_name;
     size_t pos;
 	if ((pos=name.find('_')) == string::npos) {
-		def_freq = initCodon(model_name, freq, true);
+		def_freq = initCodon(model_name, freq, true, freq_params);
 	} else {
-		def_freq = initCodon(name.substr(0, pos).c_str(), freq, false);
+		def_freq = initCodon(name.substr(0, pos).c_str(), freq, false, freq_params);
 		if (def_freq != FREQ_USER_DEFINED)
 			outError("Invalid model " + name + ": first component must be an empirical model"); // first model must be empirical
-		def_freq = initCodon(name.substr(pos+1).c_str(), freq, false);
+		def_freq = initCodon(name.substr(pos+1).c_str(), freq, false, freq_params);
 		if (def_freq == FREQ_USER_DEFINED) // second model must be parametric
 			outError("Invalid model " + name + ": second component must be a mechanistic model");
 		// adjust the constraint
@@ -468,7 +468,7 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
     
     num_params = (!fix_omega) + (!fix_kappa) + (!fix_kappa2);
 
-	if (freq_params != "") {
+	if (freq_params != "" && freq != FREQ_CODON_1x4 && freq != FREQ_CODON_3x4 && freq != FREQ_CODON_3x4C) {
 		readStateFreq(freq_params);
 	}
 	if (model_params != "") {
@@ -479,12 +479,12 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
     if (freq == FREQ_UNKNOWN) freq = def_freq;
 	if (freq == FREQ_CODON_1x4 || freq == FREQ_CODON_3x4 || freq == FREQ_CODON_3x4C) {
 		//ntfreq = new double[12];
-		phylo_tree->aln->computeCodonFreq(freq, state_freq, ntfreq);
+		phylo_tree->aln->computeCodonFreq(freq, state_freq, ntfreq, freq_params);
 	}
 	ModelMarkov::init(freq);
 }
 
-StateFreqType ModelCodon::initMG94(bool fix_kappa, StateFreqType freq, CodonKappaStyle kappa_style) {
+StateFreqType ModelCodon::initMG94(bool fix_kappa, StateFreqType freq, CodonKappaStyle kappa_style, string freq_params) {
 	/* Muse-Gaut 1994 model with 1 parameters: omega */
 
     fix_omega = false;
@@ -504,7 +504,7 @@ StateFreqType ModelCodon::initMG94(bool fix_kappa, StateFreqType freq, CodonKapp
       case FREQ_CODON_1x4:
       case FREQ_CODON_3x4:
       case FREQ_CODON_3x4C:
-		phylo_tree->aln->computeCodonFreq(freq, state_freq, ntfreq);
+		phylo_tree->aln->computeCodonFreq(freq, state_freq, ntfreq, freq_params);
         break;
       case FREQ_EMPIRICAL:
       case FREQ_ESTIMATE:

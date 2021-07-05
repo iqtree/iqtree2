@@ -493,6 +493,23 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
                 outError("Mixture frequency with " + fstr + " is not allowed");
             else
                 freq_type = FREQ_CODON_1x4;
+        } // handle "+F1X4{<freq_0>,...,<freq_3>}"
+        else if (fstr.length() > 5
+                   && (!fstr.substr(0, 5).compare("+F1X4")
+                       || !fstr.substr(0, 5).compare("+F1x4")))
+        {
+            if (freq_type == FREQ_MIXTURE)
+                outError("Mixture frequency with " + fstr + " is not allowed");
+            else
+                freq_type = FREQ_CODON_1x4;
+            
+            // validate the input
+            if ((fstr[5]!='{')
+                ||(fstr[fstr.length()-1]!='}'))
+                throw "To use F1X4, please specify 4 frequencies by +F1X4{<freq_0>,...,<freq_3>} or let AliSim randomly generate the frequencies by +F1X4.";
+            else
+                freq_params = fstr.substr(6, fstr.length()-6-1);
+            
         } else if (fstr == "+F3x4" || fstr == "+F3X4") {
             if (freq_type == FREQ_MIXTURE)
                 outError("Mixture frequency with " + fstr + " is not allowed");
@@ -503,6 +520,23 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
                 outError("Mixture frequency with " + fstr + " is not allowed");
             else
                 freq_type = FREQ_CODON_3x4C;
+        } // handle "+F3X4{<freq_0>,...,<freq_11>}"
+        else if (fstr.length() > 5
+                   && (!fstr.substr(0, 5).compare("+F3X4")
+                       || !fstr.substr(0, 5).compare("+F3x4")))
+        {
+            if (freq_type == FREQ_MIXTURE)
+                outError("Mixture frequency with " + fstr + " is not allowed");
+            else
+                freq_type = FREQ_CODON_3x4;
+            
+            // validate the input
+            if ((fstr[5]!='{')
+                ||(fstr[fstr.length()-1]!='}'))
+                throw "To use F3X4, please specify 12 frequencies by +F3X4{<freq_0>,...,<freq_11>} or let AliSim randomly generate the frequencies by +F3X4.";
+            else
+                freq_params = fstr.substr(6, fstr.length()-6-1);
+            
         } else if (fstr == "+FRY") {
         // MDW to Minh: I don't know how these should interact with FREQ_MIXTURE,
         // so as nearly everything else treats it as an error, I do too.
