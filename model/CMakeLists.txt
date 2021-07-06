@@ -26,6 +26,10 @@ ratefreeinvar.cpp ratefreeinvar.h
 rateheterotachy.cpp rateheterotachy.h
 rateheterotachyinvar.cpp rateheterotachyinvar.h
 modelcodon.cpp modelcodon.h
+modelcodonempirical.cpp modelcodonempirical.h
+modelcodonparametric.cpp modelcodonparametric.h
+modelcodonsemiempirical.cpp modelcodonsemiempirical.h
+modelgtr.cpp modelgtr.h
 modelmorphology.cpp modelmorphology.h
 modelmixture.cpp modelmixture.h
 modelunrest.cpp modelunrest.h

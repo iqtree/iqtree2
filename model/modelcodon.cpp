@@ -347,18 +347,21 @@ StateFreqType ModelCodon::initCodon(const char *model_name, StateFreqType freq, 
         }
     }
 	if (name_upper == "ECM" || name_upper == "KOSI07" || name_upper == "ECMK07") {
-		if (!phylo_tree->aln->isStandardGeneticCode())
+		if (!phylo_tree->aln->isStandardGeneticCode()) {
 			outError("For ECMK07 a standard genetic code must be used");
+        }
 		readCodonModel(model_ECMunrest, reset_params);
 		return StateFreqType::FREQ_USER_DEFINED;
 	} else if (name_upper == "ECMREST") {
-		if (!phylo_tree->aln->isStandardGeneticCode())
+		if (!phylo_tree->aln->isStandardGeneticCode()) {
 			outError("For ECMREST a standard genetic code must be used");
+        }
 		readCodonModel(model_ECMrest, reset_params);
 		return StateFreqType::FREQ_USER_DEFINED;
 	} else if (name_upper == "SCHN05" || name_upper == "ECMS05") {
-		if (!phylo_tree->aln->isStandardGeneticCode())
+		if (!phylo_tree->aln->isStandardGeneticCode()) {
 			outError("For ECMS05 a standard genetic code must be used");
+        }
 		readCodonModel(model_ECM_Schneider05, reset_params);
 		return StateFreqType::FREQ_USER_DEFINED;
 	} else if (!name_upper.empty()) {
@@ -443,13 +446,15 @@ StateFreqType ModelCodon::initMG94(bool should_fix_kappa, StateFreqType freq,
 
     fix_omega = false;
     this->fix_kappa = should_fix_kappa;
-    if (should_fix_kappa)
+    if (should_fix_kappa) {
         kappa = 1.0;
+    }
     fix_kappa2 = true;
     codon_freq_style = CF_TARGET_NT;
     this->codon_kappa_style = kappa_style;
-    if (kappa_style == CK_TWO_KAPPA)
+    if (kappa_style == CK_TWO_KAPPA) {
         fix_kappa2 = false;
+    }
     
     if (freq == StateFreqType::FREQ_UNKNOWN || 
         freq == StateFreqType::FREQ_USER_DEFINED) {
@@ -489,16 +494,14 @@ StateFreqType ModelCodon::initGY94(bool should_fix_kappa,
     fix_kappa2 = true;
     codon_freq_style = CF_TARGET_CODON;
     this->codon_kappa_style = kappa_style;
-    if (kappa_style == CK_TWO_KAPPA)
+    if (kappa_style == CK_TWO_KAPPA) {
         fix_kappa2 = false;
-            
+    }       
     return StateFreqType::FREQ_EMPIRICAL;
 }
 
-
 void ModelCodon::computeRateAttributes() {
     char symbols_protein[] = "ARNDCQEGHILKMFPSTWYVX"; // X for unknown AA
-    int i, j, ts, tv;
     int nrates = getNumRateEntries();
     if (!rate_attr) {
         rate_attr = new int[nrates];
@@ -506,30 +509,31 @@ void ModelCodon::computeRateAttributes() {
     }
     char aa_cost_change[400];
     memset(aa_cost_change, 10, sizeof(char)*400);
-    for (i = 0; i < num_states; i++) {
+    for (int i = 0; i < num_states; i++) {
         int *rate_attr_row = &rate_attr[i*num_states];
         if (phylo_tree->aln->isStopCodon(i)) {
-            for (j = 0; j < num_states; j++)
+            for (int j = 0; j < num_states; j++) {
                 rate_attr_row[j] = CA_STOP_CODON;
+            }
             continue;
         }
-        for (j = 0; j < num_states; j++)  {
+        for (int j = 0; j < num_states; j++)  {
             if (j == i || phylo_tree->aln->isStopCodon(j)) {
                 rate_attr_row[j] = CA_STOP_CODON;
                 continue;
             }
             int nuc1, nuc2;
             int attr = 0;
-            ts = tv = 0;
             int codoni = phylo_tree->aln->codon_table[i];
             int codonj = phylo_tree->aln->codon_table[j];
             if (phylo_tree->aln->genetic_code[codoni] == 
-                phylo_tree->aln->genetic_code[codonj])
+                phylo_tree->aln->genetic_code[codonj]) {
                 attr |= CA_SYNONYMOUS;
-            else
+            }
+            else {
                 attr |= CA_NONSYNONYMOUS;
-                
-                
+            }
+                   
             int nt_changes = ((codoni/16) != (codonj/16)) + (((codoni%16)/4) != ((codonj%16)/4)) + ((codoni%4) != (codonj%4));
             auto code = phylo_tree->aln->genetic_code;
             auto aa1  = strchr(symbols_protein, code[codoni]) - symbols_protein;
@@ -538,6 +542,9 @@ void ModelCodon::computeRateAttributes() {
             if (nt_changes < aa_cost_change[aa1*20+aa2]) {
                 aa_cost_change[aa1*20+aa2] = aa_cost_change[aa2*20+aa1] = nt_changes;
             }
+
+            int ts = 0;
+            int tv = 0;
             
             if ((nuc1=codoni/16) != (nuc2=codonj/16)) {
                 if (abs(nuc1-nuc2)==2) { // transition 
@@ -566,13 +573,13 @@ void ModelCodon::computeRateAttributes() {
                     tv++;
                 }
             }
-            if (ts+tv>1) 
+            if (ts+tv>1) {
                 attr |= CA_MULTI_NT;
-            else if (ts==1) 
+            } else if (ts==1) {
                 attr |= CA_TRANSITION;
-            else if (tv==1)
+            } else if (tv==1) {
                 attr |= CA_TRANSVERSION;
-                    
+            }
             rate_attr_row[j] = attr;
         }
     }
@@ -580,29 +587,33 @@ void ModelCodon::computeRateAttributes() {
     if (verbose_mode >= VerboseMode::VB_MAX) {
 
         // make cost matrix fulfill triangular inequality
-        for (int k = 0; k < 20; k++)
-            for (i = 0; i < 20; i++)
-                for (j = 0; j < 20; j++)
-                    if (aa_cost_change[i*20+j] > aa_cost_change[i*20+k] + aa_cost_change[k*20+j])
+        for (int k = 0; k < 20; k++) {
+            for (int i = 0; i < 20; i++) {
+                for (int j = 0; j < 20; j++) {
+                    if (aa_cost_change[i*20+j] > aa_cost_change[i*20+k] + aa_cost_change[k*20+j]) {
                         aa_cost_change[i*20+j] = aa_cost_change[i*20+k] + aa_cost_change[k*20+j];
-
+                    }
+                }
+            }
+        }
         cout << "cost matrix by number of nt changes for TNT use" << endl;
         cout << "smatrix =1 (aa_nt_changes)";
-        for (i = 0; i < 19; i++)
-            for (j = i+1; j < 20; j++)
+        for (int i = 0; i < 19; i++) {
+            for (int j = i+1; j < 20; j++) {
                 cout << " " << symbols_protein[i] << "/" << symbols_protein[j] 
                      << " " << (int)aa_cost_change[i*20+j];
+            }
+        }
         cout << ";" << endl;
         cout << 20 << endl;
-        for (i = 0; i < 20; i++) {
+        for (int i = 0; i < 20; i++) {
             aa_cost_change[i*20+i] = 0;
-            for (j = 0; j < 20; j++)
+            for (int j = 0; j < 20; j++) {
                 cout << (int)aa_cost_change[i*20+j] << " ";
+            }
             cout << endl;
         }
-        
     }
-    
 }
 
 void ModelCodon::combineRateNTFreq() {
@@ -612,9 +623,9 @@ void ModelCodon::combineRateNTFreq() {
             continue;
         double *this_rate = &empirical_rates[i*num_states];
         for (j = 0; j < num_states; j++)  {
-            if (this_rate[j] == 0.0)
+            if (this_rate[j] == 0.0) {
                 continue;
-
+            }
             int codoni = phylo_tree->aln->codon_table[i];
             int codonj = phylo_tree->aln->codon_table[j];
             int nuc1, nuc2;
@@ -630,20 +641,16 @@ void ModelCodon::combineRateNTFreq() {
             }
         }
     }
-    
 }
 
-
 void ModelCodon::readCodonModel(istream &in, bool reset_params) {
-	int nrates = getNumRateEntries();
-
-	int i, j;
+	int nrates   = getNumRateEntries();
 	int nscodons = phylo_tree->aln->getNumNonstopCodons();
 
-	double * q = new double[nscodons*nscodons];
+	double *q = new double[nscodons*nscodons];
 	double *f = new double[nscodons];
-	for (i = 1; i < nscodons; i++) {
-		for (j = 0; j < i; j++) {
+	for (int i = 1; i < nscodons; i++) {
+		for (int j = 0; j < i; j++) {
 			in >> q[i*nscodons+j];
 			//q[j*num_states+i] = q[i*num_states+j];
             if (verbose_mode >= VerboseMode::VB_MAX) {
@@ -654,22 +661,24 @@ void ModelCodon::readCodonModel(istream &in, bool reset_params) {
             cout << endl;
         }
 	}
-    for (i = 0; i < nscodons; i++) {
+    for (int i = 0; i < nscodons; i++) {
         in >> f[i];
     }
 	StrVector codons;
 	codons.resize(nscodons);
 	IntVector state_map;
 	state_map.resize(nscodons);
-	for (i = 0; i < nscodons; i++) {
+	for (int i = 0; i < nscodons; i++) {
 		in >> codons[i];
-		if (codons[i].length() != 3)
+		if (codons[i].length() != 3) {
 			outError("Input model has wrong codon format ", codons[i]);
+        }
 		int nt1 = phylo_tree->aln->convertState(codons[i][0], SeqType::SEQ_DNA);
 		int nt2 = phylo_tree->aln->convertState(codons[i][1], SeqType::SEQ_DNA);
 		int nt3 = phylo_tree->aln->convertState(codons[i][2], SeqType::SEQ_DNA);
-		if (nt1 > 3 || nt2 > 3 || nt3 > 3)
+		if (nt1 > 3 || nt2 > 3 || nt3 > 3) {
 			outError("Wrong codon triplet ", codons[i]);
+        }
 		state_map[i] = phylo_tree->aln->non_stop_codon[nt1*16+nt2*4+nt3];
         if (phylo_tree->aln->isStopCodon(state_map[i]) || 
             state_map[i] == STATE_INVALID) {
@@ -683,12 +692,12 @@ void ModelCodon::readCodonModel(istream &in, bool reset_params) {
         cout << endl;
     }
 
-	//int row = 0, col = 1;
-	// since rates for codons is stored in lower-triangle, special treatment is needed
+	// since rates for codons is stored in lower-triangle, 
+    // special treatment is needed
     memset(empirical_rates, 0, nrates*sizeof(double));
-    memset(rates, 0, nrates*sizeof(double));
-	for (i = 1; i < nscodons; i++) {
-		for (j = 0; j < i; j++) {
+    memset(rates,           0, nrates*sizeof(double));
+	for (int i = 1; i < nscodons; i++) {
+		for (int j = 0; j < i; j++) {
 			int row = state_map[i], col = state_map[j];
 			if (row < col) {
 				int tmp = row;
@@ -697,7 +706,7 @@ void ModelCodon::readCodonModel(istream &in, bool reset_params) {
 			}
 //			int id = col*(2*num_states-col-1)/2 + (row-col-1);
             double qentry = q[i*nscodons+j];
-            int id = row*num_states+col;
+            int    id    = row*num_states+col;
 			ASSERT(id < nrates && id >= 0);
 			empirical_rates[id] = rates[id] = qentry;
             id = col*num_states+row;
@@ -707,13 +716,12 @@ void ModelCodon::readCodonModel(istream &in, bool reset_params) {
 	}
 	memset(state_freq, 0, num_states*sizeof(double));
     auto min_freq = Params::getInstance().min_state_freq;
-    for (i = 0; i < num_states; i++) {
+    for (int i = 0; i < num_states; i++) {
         state_freq[i] = min_freq;
     }
-
-	for (i = 0; i < nscodons; i++)
+	for (int i = 0; i < nscodons; i++) {
 		state_freq[state_map[i]] = f[i]-(num_states-nscodons)*min_freq/nscodons;
-
+    }
     if (reset_params) {
         fix_omega = fix_kappa = fix_kappa2 = true;
         omega = kappa = kappa2 = 1.0;

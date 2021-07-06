@@ -29,11 +29,12 @@ ModelMarkov *createModel(string model_str, ModelsBlock *models_block,
                         StateFreqType freq_type, string freq_params,
                         PhyloTree *tree, PhyloTree* report_to_tree);
 
+class ModelPoMoMixture;
 
 /**
  * mixture model
  */
-class ModelMixture: virtual public ModelMarkov {
+class ModelMixture: public ModelMarkov {
 protected:
 	std::vector<ModelMarkov*> models;
 
@@ -52,6 +53,7 @@ protected:
 
 public:
 	typedef ModelMarkov super;
+	friend class ModelPoMoMixture;
     
 
 	/**

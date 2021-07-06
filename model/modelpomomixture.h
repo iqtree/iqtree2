@@ -26,9 +26,10 @@ enum PomoMixtureOptMode {OPT_NONE, OPT_RATEHET, OPT_POMO};
 /**
     Mixture PoMo models
 */
-class ModelPoMoMixture : public ModelPoMo, public ModelMixture {
+class ModelPoMoMixture : public ModelPoMo {
 
 public:
+	typedef ModelPoMo super;
 	/**
 		constructor
 		@param model_name model name, e.g., JC, HKY.
@@ -163,6 +164,8 @@ public:
 
 
 protected:
+
+	ModelMixture mixture;
 
     /** normally false, set to true while optimizing rate heterogeneity */
     PomoMixtureOptMode opt_mode;

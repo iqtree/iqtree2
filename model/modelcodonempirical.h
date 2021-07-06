@@ -15,6 +15,7 @@
  */
 class ModelCodonEmpirical: public ModelCodon {
 public:
+	typedef ModelCodon super;
 	/**
 		constructor
 		@param model_name model name, e.g., GY,YN
@@ -34,8 +35,9 @@ public:
 		@param model_name model name, e.g., JC, HKY.
 		@param freq state frequency type
 	*/
-	virtual void init(const char *model_name, string model_params, StateFreqType freq, string freq_params);
-
+	virtual void init(const char *model_name, string model_params, 
+	                  StateFreqType freq, string freq_params,
+					  PhyloTree* report_to_tree);
 
 	/**
 	 * read codon model from a stream, modying rates and state_freq accordingly

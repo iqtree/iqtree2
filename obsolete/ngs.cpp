@@ -55,15 +55,15 @@ NGSAlignment::NGSAlignment(int nstate, string &seq1, string &seq2) {
     int len = seq1.length();
     int i;
     for (i = 0; i < len; i++) {
-        int state1 = convertState(seq1[i], SEQ_DNA);
-        int state2 = convertState(seq2[i], SEQ_DNA);
+        int state1 = convertState(seq1[i], SeqType::SEQ_DNA);
+        int state2 = convertState(seq2[i], SeqType::SEQ_DNA);
         if (state1 < num_states && state2 < num_states)
             pair_freq[state1*num_states+state2] += 1;
     }
 }
 
 char NGSAlignment::convertState(char state, SeqType seq_type) {
-    char c = Alignment::convertState(state, SEQ_DNA);
+    char c = Alignment::convertState(state, SeqType::SEQ_DNA);
     if (c == STATE_UNKNOWN) return 4;
     if (c >= 4) return 5;
     return c;
@@ -411,7 +411,7 @@ NGSTree::NGSTree(Params &params, NGSAlignment *alignment) {
     model_factory      = nullptr;
     optimize_by_newton = params.optimize_by_newton;
     //tree.sse = params.SSE;
-    setLikelihoodKernel(LK_386, params.num_threads);
+    setLikelihoodKernel(LK_386);
 }
 
 double NGSTree::computeLikelihood(double *pattern_lh) {
@@ -445,8 +445,9 @@ double NGSTreeCat::computeLikelihood(double *pattern_lh) {
             sum_trans_mat[i] += site_rate->proportion[cat]*trans_mat[i];
     }
     double lh = 0.0;
-    for (i = 0; i < trans_size; i++)
+    for (i = 0; i < trans_size; i++) {
         lh += ((NGSAlignment*)aln)->pair_freq[i] * log(sum_trans_mat[i]);
+    }
     delete [] trans_mat;
     delete [] sum_trans_mat;
     return lh;
@@ -740,8 +741,8 @@ void NGSReadSet::processReadWhileParsing(NGSRead &tempread) {
         reverseComplement(tempread.scaff);
         reverseComplement(tempread.read);
     }
-    tempread.convertStateStr(tempread.scaff, SEQ_DNA);
-    tempread.convertStateStr(tempread.read, SEQ_DNA);
+    tempread.convertStateStr(tempread.scaff, SeqType::SEQ_DNA);
+    tempread.convertStateStr(tempread.read,  SeqType::SEQ_DNA);
     ASSERT(tempread.scaff.length() == tempread.read.length());
 
     int nstates = 4 + (!ngs_ignore_gaps);
@@ -836,7 +837,8 @@ void reportNGSAnalysis(const char *file_name, Params &params, NGSAlignment &aln,
     /*
      * This isn't a good way of doing it. Rather somewhere high up in the model heirarchy
      * define a bool isSymmetric() method, which is true for time reversible models and
-     * not true for nonTR models. ! ModelGTR has 'half_matrix' member, which should do the job.
+     * not true for nonTR models. ! ModelGTR has 'half_matrix' member, 
+     * which should do the job.
      */
     if (ModelMarkov::validModelName(tree.getModel()->name)) {
         for (i = 0, k=0; i < aln.num_states; i++)
@@ -860,16 +862,16 @@ void reportNGSAnalysis(const char *file_name, Params &params, NGSAlignment &aln,
     out << endl;
     out << "State frequencies: ";
     switch (tree.getModel()->getFreqType()) {
-    case FREQ_EMPIRICAL:
+    case StateFreqType::FREQ_EMPIRICAL:
         out << "(empirical counts from alignment)" << endl;
         break;
-    case FREQ_ESTIMATE:
+    case StateFreqType::FREQ_ESTIMATE:
         out << "(estimated with maximum likelihood)" << endl;
         break;
-    case FREQ_USER_DEFINED:
+    case StateFreqType::FREQ_USER_DEFINED:
         out << "(user-defined)" << endl;
         break;
-    case FREQ_EQUAL:
+    case StateFreqType::FREQ_EQUAL:
         out << "(equal frequencies)" << endl;
         break;
     default:
@@ -945,7 +947,8 @@ void testSingleRateModel(Params &params, NGSAlignment &aln, NGSTree &tree, strin
         sprintf(model_name, "%s+F1", model.c_str());
     try {
         params.model_name = model_name;
-        auto factory = new ModelFactory(params, &sum_tree, models_block);
+        auto factory = new ModelFactory(params, params.model_name, &sum_tree, 
+                                        models_block, &sum_tree);
         sum_tree.setModelFactory(factory);
         sum_tree.setModel(factory->model);
         sum_tree.setRate(factory->site_rate);
@@ -1000,7 +1003,9 @@ void testTwoRateModel(Params &params, NGSAlignment &aln, NGSTree &tree, string m
         sprintf(model_name, "%s+FC2", model.c_str());
     try {
         params.model_name = model_name;
-        sum_tree.setModelFactory(new ModelFactory(params, &sum_tree, models_block));
+        sum_tree.setModelFactory(new ModelFactory(params, params.model_name, 
+                                                  &sum_tree, models_block,
+                                                  &sum_tree));
         sum_tree.setModel(sum_tree.getModelFactory()->model);
         sum_tree.setRate(sum_tree.getModelFactory()->site_rate);
         double bestTreeScore = sum_tree.getModelFactory()->optimizeParameters(false, write_info);
@@ -1140,7 +1145,8 @@ void runNGSAnalysis(Params &params) {
     else
         sprintf(model_name, "%s+F%d", params.model_name.c_str(), aln.ncategory);
     params.model_name = model_name;
-    tree.setModelFactory(new ModelFactory(params, &tree, models_block));
+    tree.setModelFactory(new ModelFactory(params, params.model_name, &tree, 
+                                          models_block, &tree));
     tree.setModel(tree.getModelFactory()->model);
     tree.setRate(tree.getModelFactory()->site_rate);
 

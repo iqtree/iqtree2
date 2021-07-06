@@ -180,10 +180,10 @@ public:
     CodonFreqStyle codon_freq_style;
     
     /** rate atrributes */
-    int *rate_attr;
+    int*    rate_attr;
     
 	/** empirical rates for empirical codon model or parametric+empirical codon model */
-	double *empirical_rates;
+	double* empirical_rates;
     
 protected:
 
@@ -197,14 +197,16 @@ protected:
         @param freq input frequency
         @return default frequency type
     */
-	StateFreqType initMG94(bool fix_kappa, StateFreqType freq, CodonKappaStyle kappa_style);
+	StateFreqType initMG94(bool fix_kappa, StateFreqType freq, 
+	                       CodonKappaStyle kappa_style);
 
 	/** initialize Goldman-Yang 1994 model (simplified version with 2 parameters omega and kappa 
         @param fix_kappa whether or not to fix kappa
         @param kappa_style: CK_ONE_KAPPA for traditional GY model, others follow Kosiol et al 2007
         @return default frequency type
     */
-	StateFreqType initGY94(bool fix_kappa, CodonKappaStyle kappa_style);
+	StateFreqType initGY94(bool fix_kappa, 
+	                       CodonKappaStyle kappa_style);
 
 	/**
 		this function is served for the multi-dimension optimization. It should pack the model parameters

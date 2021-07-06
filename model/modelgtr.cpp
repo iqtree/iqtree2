@@ -25,8 +25,9 @@
 //const double MAX_FREQ_RATIO = 1.0/MIN_FREQUENCY;
 
 ModelGTR::ModelGTR(PhyloTree *tree, bool count_rates)
- : ModelSubst(tree->aln->num_states), EigenDecomposition()
+ : super(tree,tree)
 {
+	setNumberOfStates(tree->aln->num_states);
     half_matrix = true;
 	int i;
 	int nrate = getNumRateEntries();
@@ -75,28 +76,28 @@ void ModelGTR::restoreCheckpoint() {
     checkpoint->endStruct();
 }
 
-
-void ModelGTR::setTree(PhyloTree *tree) {
-	phylo_tree = tree;
-}
-
 std::string ModelGTR::getName() const {
-	if (getFreqType() == StateFreqType::FREQ_EMPIRICAL)
+	if (getFreqType() == StateFreqType::FREQ_EMPIRICAL) {
 		return name + "+F";
-	else if (getFreqType() == StateFreqType::FREQ_CODON_1x4)
-		return name += "+F1X4";
-	else if (getFreqType() == StateFreqType::FREQ_CODON_3x4)
+	}
+	if (getFreqType() == StateFreqType::FREQ_CODON_1x4) {
+		return name + "+F1X4";
+	} 
+	if (getFreqType() == StateFreqType::FREQ_CODON_3x4) {
 		return name + "+F3X4";
-	else if (getFreqType() == StateFreqType::FREQ_CODON_3x4C)
+	} 
+	if (getFreqType() == StateFreqType::FREQ_CODON_3x4C) {
 		return name + "+F3X4C";
-	else if (getFreqType() == StateFreqType::FREQ_ESTIMATE && 
-		     phylo_tree->aln->seq_type != SeqType::SEQ_DNA)
+	} 
+	if (getFreqType() == StateFreqType::FREQ_ESTIMATE && 
+		     phylo_tree->aln->seq_type != SeqType::SEQ_DNA) {
 		return name + "+FO";
-	else if (getFreqType() == StateFreqType::FREQ_EQUAL && 
-		     phylo_tree->aln->seq_type != SeqType::SEQ_DNA)
+	}
+	if (getFreqType() == StateFreqType::FREQ_EQUAL && 
+		phylo_tree->aln->seq_type != SeqType::SEQ_DNA) {
 		return name + "+FQ";
-    else
-        return name;
+	}
+	return name;
 }
 
 string ModelGTR::getNameParams() const {
@@ -115,7 +116,7 @@ string ModelGTR::getNameParams() const {
     return retname.str();    
 }
     
-void ModelGTR::getNameParamsFreq(ostream &retname) const {
+void ModelGTR::getNameParamsFreq(std::ostream &retname) const {
 	if (getFreqType() == StateFreqType::FREQ_EMPIRICAL || 
 		( getFreqType() == StateFreqType::FREQ_USER_DEFINED && 
 		  phylo_tree->aln->seq_type == SeqType::SEQ_DNA)) {
@@ -129,7 +130,7 @@ void ModelGTR::getNameParamsFreq(ostream &retname) const {
 	else if (getFreqType() == StateFreqType::FREQ_CODON_3x4)
 		retname << "+F3X4";
 	else if (getFreqType() == StateFreqType::FREQ_CODON_3x4C)
-		name += "+F3X4C";
+		retname << "+F3X4C";
 	else if (getFreqType() == StateFreqType::FREQ_ESTIMATE) {
 		retname << "+FO";
         retname << "{" << state_freq[0];
@@ -141,13 +142,15 @@ void ModelGTR::getNameParamsFreq(ostream &retname) const {
 		retname << "+FQ";
 }
 
-void ModelGTR::init(StateFreqType type) {
+void ModelGTR::init(const char *model_name, string model_params,
+                    StateFreqType freq, string freq_params,
+                    PhyloTree* report_to_tree) {
 	//if (type == StateFreqType::FREQ_UNKNOWN) return;
 	int i;
-	freq_type = type;
+	freq_type = freq;
 	assert(freq_type != StateFreqType::FREQ_UNKNOWN);
 	switch (freq_type) {
-	case FREQ_EQUAL:
+	case StateFreqType::FREQ_EQUAL:
 		if (phylo_tree->aln->seq_type == SeqType::SEQ_CODON) {
 			int nscodon = phylo_tree->aln->getNumNonstopCodons();
             double freq_codon = (1.0-(num_states-nscodon)*MIN_FREQUENCY)/(nscodon);
@@ -162,8 +165,8 @@ void ModelGTR::init(StateFreqType type) {
 				state_freq[i] = freq_state;
 		}
 		break;	
-	case FREQ_ESTIMATE:
-	case FREQ_EMPIRICAL:
+	case StateFreqType::FREQ_ESTIMATE:
+	case StateFreqType::FREQ_EMPIRICAL:
 		if (phylo_tree->aln->seq_type == SeqType::SEQ_CODON) {
 			double ntfreq[12];
 			phylo_tree->hideProgress();
@@ -173,14 +176,14 @@ void ModelGTR::init(StateFreqType type) {
 		}
 		else {
 			phylo_tree->hideProgress();
-			phylo_tree->aln->computeStateFreq(state_freq);
+			phylo_tree->aln->computeStateFreq(state_freq, false, report_to_tree);
 			phylo_tree->showProgress();
 		}
 		for (i = 0; i < num_states; i++)
 			if (state_freq[i] > state_freq[highest_freq_state])
 				highest_freq_state = i;
 		break;
-	case FREQ_USER_DEFINED:
+	case StateFreqType::FREQ_USER_DEFINED:
 		if (state_freq[0] == 0.0) outError("State frequencies not specified");
 		break;
 	default: break;
@@ -232,7 +235,8 @@ void ModelGTR::writeInfo(ostream &out) {
 	//out.unsetf(ios::fixed);
 }
 
-void ModelGTR::computeTransMatrix(double time, double *trans_matrix) {
+void ModelGTR::computeTransMatrix(double time, double *trans_matrix, 
+                                  int mixture) {
 	/* compute P(t) */
 	double evol_time = time / total_num_subst;
 	double *exptime = new double[num_states];
@@ -290,7 +294,8 @@ double ModelGTR::computeTrans(double time, int state1, int state2) {
 	return trans_prob;
 }
 
-double ModelGTR::computeTrans(double time, int state1, int state2, double &derv1, double &derv2) {
+double ModelGTR::computeTrans(double time, int state1, int state2, 
+                              double &derv1, double &derv2) {
 	double evol_time = time / total_num_subst;
 	int i;
 
@@ -308,8 +313,9 @@ double ModelGTR::computeTrans(double time, int state1, int state2, double &derv1
 }
 
 
-void ModelGTR::computeTransDerv(double time, double *trans_matrix, 
-	double *trans_derv1, double *trans_derv2) 
+void ModelGTR::computeTransDerv(double  time, double *trans_matrix, 
+                                double* trans_derv1, double *trans_derv2,
+								int mixture) 
 {
 	/* compute P(t) */
 
@@ -347,8 +353,9 @@ void ModelGTR::computeTransDerv(double time, double *trans_matrix,
 	delete [] exptime;
 }
 
-void ModelGTR::computeTransDervFreq(double time, double rate_val, double* trans_matrix, double* trans_derv1, double* trans_derv2)
-{
+void ModelGTR::computeTransDervFreq(double time, double rate_val, 
+                                    double* trans_matrix, double* trans_derv1, 
+									double* trans_derv2){
 	int nstates = num_states;
 	double rate_sqr = rate_val*rate_val;
 	computeTransDerv(time * rate_val, trans_matrix, trans_derv1, trans_derv2);
@@ -374,24 +381,6 @@ void ModelGTR::setRateMatrix(double* rate_mat)
 {
 	int nrate = getNumRateEntries();
 	memcpy(rates, rate_mat, nrate * sizeof(double));
-}
-
-void ModelGTR::getStateFrequency(double *freq) {
-	assert(state_freq);
-	assert(freq_type != StateFreqType::FREQ_UNKNOWN);
-	memcpy(freq, state_freq, sizeof(double) * num_states);
-    // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
-    double sum = 0.0;
-    int i;
-    for (i = 0; i < num_states; i++) sum += freq[i];
-    sum = 1.0/sum;
-    for (i = 0; i < num_states; i++) freq[i] *= sum;
-}
-
-void ModelGTR::setStateFrequency(double* freq)
-{
-	assert(state_freq);
-	memcpy(state_freq, freq, sizeof(double) * num_states);
 }
 
 void ModelGTR::getQMatrix(double *q_mat) {
@@ -439,20 +428,19 @@ int ModelGTR::getNDimFreq() const {
     return 0;
 }
 
-void ModelGTR::scaleStateFreq(bool sum_one) {
-	int i;
-	if (sum_one) {
-		// make the frequencies sum to 1
-		double sum = 0.0;
-		for (i = 0; i < num_states; i++) sum += state_freq[i];
-		for (i = 0; i < num_states; i++) state_freq[i] /= sum;		
-	} else {
-		// make the last frequency equal to 0.1
-		if (state_freq[num_states-1] == 0.1) return;
-		assert(state_freq[num_states-1] > 1.1e-6);
-		for (i = 0; i < num_states; i++) 
-			state_freq[i] /= state_freq[num_states-1]*10.0;
+bool ModelGTR::scaleStateFreq() {
+	// make the frequencies sum to 1
+	double sum = 0.0;
+	for (int i = 0; i < num_states; i++) {
+		sum += state_freq[i];
 	}
+	if (sum==1.0) {
+		return false;
+	}
+	for (int i = 0; i < num_states; i++) {
+		state_freq[i] /= sum;
+	}
+	return true;
 }
 
 void ModelGTR::setVariables(double *variables) {
@@ -577,7 +565,8 @@ void ModelGTR::setBounds(double *lower_bound, double *upper_bound,
 	}
 }
 
-double ModelGTR::optimizeParameters(double gradient_epsilon) {
+double ModelGTR::optimizeParameters(double gradient_epsilon, 
+                                    PhyloTree* report_to_tree) {
 	int ndim = getNDim();
 	
 	// return if nothing to be optimized
@@ -596,10 +585,11 @@ double ModelGTR::optimizeParameters(double gradient_epsilon) {
 	bool *bound_check = new bool[ndim+1];
 	double score;
 
-    for (int i = 0; i < num_states; i++)
-        if (state_freq[i] > state_freq[highest_freq_state])
+    for (int i = 0; i < num_states; i++) {
+        if (state_freq[i] > state_freq[highest_freq_state]) {
             highest_freq_state = i;
-
+		}
+	}
 	// by BFGS algorithm
 	setVariables(variables);
 	setBounds(lower_bound, upper_bound, bound_check);
@@ -614,8 +604,8 @@ double ModelGTR::optimizeParameters(double gradient_epsilon) {
 	bool changed = getVariables(variables);
     // BQM 2015-09-07: normalize state_freq
 	if (freq_type == StateFreqType::FREQ_ESTIMATE) { 
-        scaleStateFreq(true);
-        changed = true;
+        changed |= scaleStateFreq();
+		// JCB 06-Jul-2021: |= rather than = in last line.
     }
     if (changed) {
         decomposeRateMatrix();
@@ -630,7 +620,7 @@ double ModelGTR::optimizeParameters(double gradient_epsilon) {
 	return score;
 }
 
-void ModelGTR::decomposeRateMatrix(){
+void ModelGTR::decomposeRateMatrix() {
 	int i, j, k = 0;
 
 	if (num_params == -1) {
@@ -748,7 +738,7 @@ void ModelGTR::decomposeRateMatrix(){
 
 } 
 
-void ModelGTR::readRates(istream &in) throw(const char*, string) {
+void ModelGTR::readRates(istream &in) {
 	int nrates = getNumRateEntries();
 	string str;
 	in >> str;
@@ -772,7 +762,7 @@ void ModelGTR::readRates(istream &in) throw(const char*, string) {
 	}
 }
 
-void ModelGTR::readRates(string str) throw(const char*) {
+void ModelGTR::readRates(string str) {
 	int nrates = getNumRateEntries();
 	int end_pos = 0;
 	cout << __func__ << " " << str << endl;
@@ -801,21 +791,26 @@ void ModelGTR::readRates(string str) throw(const char*) {
 
 }
 
-void ModelGTR::readStateFreq(istream &in) throw(const char*) {
+void ModelGTR::readStateFreq(istream &in, PhyloTree* report_to_tree) {
 	int i;
 	for (i = 0; i < num_states; i++) {
-		if (!(in >> state_freq[i])) 
+		if (!(in >> state_freq[i])) {
 			throw "State frequencies could not be read";
-		if (state_freq[i] < 0.0)
+		}
+		if (state_freq[i] < 0.0) {
 			throw "Negative state frequencies found";
+		}
 	}
 	double sum = 0.0;
-	for (i = 0; i < num_states; i++) sum += state_freq[i];
-	if (fabs(sum-1.0) > 1e-2)
+	for (i = 0; i < num_states; i++) {
+		sum += state_freq[i];
+	}
+	if (fabs(sum-1.0) > 1e-2) {
 		throw "State frequencies do not sum up to 1.0";
+	}
 }
 
-void ModelGTR::readStateFreq(string str) throw(const char*) {
+void ModelGTR::readStateFreq(string str, PhyloTree* report_to_tree) {
 	int i;
 	int end_pos = 0;
 	for (i = 0; i < num_states; i++) {
@@ -837,7 +832,9 @@ void ModelGTR::readStateFreq(string str) throw(const char*) {
 		outError("State frequencies do not sum up to 1.0 in ", str);
 }
 
-void ModelGTR::readParameters(const char *file_name) { 
+void ModelGTR::readParameters(const char* file_name, 
+                              bool        adapt_tree_ignored,
+							  PhyloTree*  report_to_tree) { 
 	try {
 		ifstream in(file_name);
 		if (in.fail()) {
@@ -845,7 +842,7 @@ void ModelGTR::readParameters(const char *file_name) {
         }
 		cout << "Reading model parameters from file " << file_name << endl;
 		readRates(in);
-		readStateFreq(in);
+		readStateFreq(in, report_to_tree);
 		in.close();
 	}
 	catch (const char *str) {
@@ -855,61 +852,4 @@ void ModelGTR::readParameters(const char *file_name) {
 	writeInfo(cout);
 }
 
-
-ModelGTR::~ModelGTR() {
-	freeMem();
-}
-
-void ModelGTR::freeMem()
-{
-//	int i;
-	//delete eigen_coeff_derv2;
-	//delete eigen_coeff_derv1;
-//	aligned_free(eigen_coeff);
-
-//	for (i = num_states-1; i>=0; i--)
-//		delete [] inv_eigenvectors[i];
-	aligned_free(inv_eigenvectors);
-//	for (i = num_states-1; i>=0; i--)
-//		delete [] eigenvectors[i];
-	aligned_free(eigenvectors);
-
-	aligned_free(eigenvalues);
-
-	if (rates) delete [] rates;
-}
-
-//double *ModelGTR::getEigenCoeff() const
-//{
-//    return eigen_coeff;
-//}
-//
-double *ModelGTR::getEigenvalues() const
-{
-    return eigenvalues;
-}
-
-double *ModelGTR::getEigenvectors() const
-{
-    return eigenvectors;
-}
-
-double* ModelGTR::getInverseEigenvectors() const {
-	return inv_eigenvectors;
-}
-
-//void ModelGTR::setEigenCoeff(double *eigenCoeff)
-//{
-//    eigen_coeff = eigenCoeff;
-//}
-
-void ModelGTR::setEigenvalues(double *eigenvalues)
-{
-    this->eigenvalues = eigenvalues;
-}
-
-void ModelGTR::setEigenvectors(double *eigenvectors)
-{
-    this->eigenvectors = eigenvectors;
-}
 

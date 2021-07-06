@@ -150,16 +150,17 @@ GGG";
 
 ModelCodonEmpirical::ModelCodonEmpirical(const char *model_name, string model_params,
 		StateFreqType freq, string freq_params, PhyloTree *tree, bool count_rates) :
-		ModelCodon(tree, count_rates)
+		ModelCodon(tree, tree)
 {
-	init(model_name, model_params, freq, freq_params);
+	init(model_name, model_params, freq, freq_params, tree);
 }
 
 ModelCodonEmpirical::~ModelCodonEmpirical() {
 }
 
 void ModelCodonEmpirical::init(const char *model_name, string model_params, 
-	                           StateFreqType freq, string freq_params)
+	                           StateFreqType freq, string freq_params,
+							   PhyloTree* report_to_tree)
 {
 	StateFreqType def_freq = StateFreqType::FREQ_UNKNOWN;
 	name = full_name = model_name;
@@ -189,12 +190,12 @@ void ModelCodonEmpirical::init(const char *model_name, string model_params,
 		}
 	} else {
 		//cout << "User-specified model "<< model_name << endl;
-		readParameters(model_name);
+		readParameters(model_name, true, report_to_tree);
 			//name += " (user-defined)";
 	}
 
 	if (freq_params != "") {
-		readStateFreq(freq_params);
+		readStateFreq(freq_params, report_to_tree);
 	}
 	if (model_params != "") {
 		readRates(model_params);
@@ -203,14 +204,17 @@ void ModelCodonEmpirical::init(const char *model_name, string model_params,
 		def_freq == StateFreqType::FREQ_EQUAL) {
 		freq = def_freq;
 	}
-	ModelCodon::init(freq);
+	std::string dummy_params;
+	std::string dummy_freq_params;
+	super::init("", dummy_params, freq, dummy_freq_params, report_to_tree);
 }
 
 void ModelCodonEmpirical::readCodonModel(istream &in) {
 	int i, j;
 	double ** q = (double**)new double[num_states];
-	for (i = 0; i < num_states; i++)
+	for (i = 0; i < num_states; i++) {
 		q[i] = new double[num_states];
+	}
 	double *f = new double[num_states];
 	for (i = 1; i < num_states; i++) {
 		for (j = 0; j < i; j++) {
@@ -232,13 +236,15 @@ void ModelCodonEmpirical::readCodonModel(istream &in) {
 	state_map.resize(num_states);
 	for (i = 0; i < num_states; i++) {
 		in >> codons[i];
-		if (codons[i].length() != 3)
+		if (codons[i].length() != 3) {
 			outError("Input model has wrong codon format ", codons[i]);
-		int nt1 = phylo_tree->aln->convertState(codons[i][0], SEQ_DNA);
-		int nt2 = phylo_tree->aln->convertState(codons[i][1], SEQ_DNA);
-		int nt3 = phylo_tree->aln->convertState(codons[i][2], SEQ_DNA);
-		if (nt1 > 3 || nt2 > 3 || nt3 > 3)
+		}
+		int nt1 = phylo_tree->aln->convertState(codons[i][0], SeqType::SEQ_DNA);
+		int nt2 = phylo_tree->aln->convertState(codons[i][1], SeqType::SEQ_DNA);
+		int nt3 = phylo_tree->aln->convertState(codons[i][2], SeqType::SEQ_DNA);
+		if (nt1 > 3 || nt2 > 3 || nt3 > 3) {
 			outError("Wrong codon triplet ", codons[i]);
+		}
 		state_map[i] = phylo_tree->aln->non_stop_codon[nt1*16+nt2*4+nt3];
 		if (verbose_mode >= VerboseMode::VB_MAX) {
 			cout << " " << codons[i] << " " << state_map[i];
@@ -266,6 +272,7 @@ void ModelCodonEmpirical::readCodonModel(istream &in) {
 	for (i = 0; i < num_states; i++) {
 		state_freq[i] = MIN_FREQUENCY;
 	}
+	int nscodons = static_cast<int>(codons.size());
 	for (i = 0; i < nscodons; i++) {
 		state_freq[state_map[i]] = f[i] - (num_states - nscodons) * MIN_FREQUENCY / nscodons;
 	}

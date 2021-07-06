@@ -81,19 +81,19 @@ void ModelMarkov::setDefaults(bool reversible) {
     }    
 }
 
-ModelMarkov::ModelMarkov() : ModelSubst(4) {
+ModelMarkov::ModelMarkov() : super(4) {
     setDefaults(true);
 }
 
 ModelMarkov::ModelMarkov(PhyloTree* tree, PhyloTree* report_to_tree) 
-    : ModelSubst(tree->aln->num_states) {
+    : super(tree->aln->num_states) {
     setDefaults(true);
     phylo_tree         = tree;
     setReversible(true, true);
 }
 
 ModelMarkov::ModelMarkov(PhyloTree *tree, bool reversible, bool adapt_tree)
- : ModelSubst(tree->aln->num_states), EigenDecomposition()
+ : super(tree->aln->num_states), EigenDecomposition()
 {
     setDefaults(reversible);
     phylo_tree         = tree;
@@ -224,7 +224,7 @@ void ModelMarkov::saveCheckpoint() {
     startCheckpoint();
     //CKP_ARRAY_SAVE(num_params, model_parameters);
     endCheckpoint();
-    ModelSubst::saveCheckpoint();
+    super::saveCheckpoint();
 }
 
 /*
@@ -233,7 +233,7 @@ void ModelMarkov::saveCheckpoint() {
  * consistent with the new model_parameters.
  */
 void ModelMarkov::restoreCheckpoint() {
-    ModelSubst::restoreCheckpoint();
+    super::restoreCheckpoint();
     startCheckpoint();
     //CKP_ARRAY_RESTORE(num_params, model_parameters);
     endCheckpoint();
@@ -271,7 +271,6 @@ string ModelMarkov::getName() const {
 }
 
 std::string ModelMarkov::getNameParams() const {
-
 	ostringstream retname;
 	retname << name;
 //	if (num_states != 4) retname << num_states;
@@ -307,7 +306,7 @@ void ModelMarkov::getNameParamsFreq(std::ostream &retname) const {
 }
 
 uint64_t ModelMarkov::getMemoryRequired() {
-    return ModelSubst::getMemoryRequired() + sizeof(double)*num_states*num_states*3;
+    return super::getMemoryRequired() + sizeof(double)*num_states*num_states*3;
 }
 
 void ModelMarkov::init_state_freq(StateFreqType type,
@@ -405,35 +404,35 @@ void ModelMarkov::writeInfo(ostream &out) {
 }
 
 void ModelMarkov::report_rates(ostream& out, string title, double *r) {
-  out << setprecision(5);
-  if (is_reversible && num_states == 4) {
-    out << title << ":";
-    //out.precision(3);
-    //out << fixed;
-    out << "  A-C: " << r[0];
-    out << "  A-G: " << r[1];
-    out << "  A-T: " << r[2];
-    out << "  C-G: " << r[3];
-    out << "  C-T: " << r[4];
-    out << "  G-T: " << r[5];
-    out << endl;
-  }
-  else if (!is_reversible) {
-    out << title << ":" << endl;
-    out << "  A-C: " << r[0];
-    out << "  A-G: " << r[1];
-    out << "  A-T: " << r[2];
-    out << "  C-A: " << r[3];
-    out << "  C-G: " << r[4];
-    out << "  C-T: " << r[5] << endl;
-    out << "  G-A: " << r[6];
-    out << "  G-C: " << r[7];
-    out << "  G-T: " << r[8];
-    out << "  T-A: " << r[9];
-    out << "  T-C: " << r[10];
-    out << "  T-G: " << r[11];
-    out << endl;
-  }
+    out << setprecision(5);
+    if (is_reversible && num_states == 4) {
+        out << title << ":";
+        //out.precision(3);
+        //out << fixed;
+        out << "  A-C: " << r[0];
+        out << "  A-G: " << r[1];
+        out << "  A-T: " << r[2];
+        out << "  C-G: " << r[3];
+        out << "  C-T: " << r[4];
+        out << "  G-T: " << r[5];
+        out << endl;
+    }
+    else if (!is_reversible) {
+        out << title << ":" << endl;
+        out << "  A-C: " << r[0];
+        out << "  A-G: " << r[1];
+        out << "  A-T: " << r[2];
+        out << "  C-A: " << r[3];
+        out << "  C-G: " << r[4];
+        out << "  C-T: " << r[5] << endl;
+        out << "  G-A: " << r[6];
+        out << "  G-C: " << r[7];
+        out << "  G-T: " << r[8];
+        out << "  T-A: " << r[9];
+        out << "  T-C: " << r[10];
+        out << "  T-G: " << r[11];
+        out << endl;
+    }
 }
 
 void ModelMarkov::report_state_freqs(ostream& out,
@@ -566,9 +565,10 @@ double ModelMarkov::computeTrans(double time, int state1, int state2) {
 
 double ModelMarkov::computeTrans(double time, int state1, int state2,
                                  double &derv1, double &derv2) {
-    double evol_time = time / total_num_subst;
+    double evol_time  = time / total_num_subst;
     double trans_prob = 0.0;
-    derv1 = derv2 = 0.0;
+    derv1             = 0.0;
+    derv2             = 0.0;
     for (int i = 0; i < num_states; i++) {
         double trans = eigenvectors[state1*num_states+i]
                      * inv_eigenvectors[i*num_states+state2]
@@ -834,7 +834,7 @@ void ModelMarkov::adaptStateFrequency(double* freq)
             }
         }
     }
-    ModelSubst::setStateFrequency(freq);
+    super::setStateFrequency(freq);
 }
 
 void ModelMarkov::getQMatrix(double *q_mat) {
@@ -1607,27 +1607,29 @@ void ModelMarkov::readRates(string str) {
         for (int i = 0; i < nrates; i++) {
             rates[i] = 1.0;
         }
-    } else for (int i = 0; i < nrates; i++) {
-        int new_end_pos;
-        try {
-            rates[i] = convert_double(str.substr(end_pos).c_str(), new_end_pos);
-        } catch (string &str) {
-            outError(str);
+    } else {
+        for (int i = 0; i < nrates; i++) {
+            int new_end_pos;
+            try {
+                rates[i] = convert_double(str.substr(end_pos).c_str(), new_end_pos);
+            } catch (string &str) {
+                outError(str);
+            }
+            end_pos += new_end_pos;
+            if (rates[i] <= 0.0) {
+                outError("Non-positive rates found");
+            }
+            if (i == nrates-1 && end_pos < str.length()) {
+                outError("String too long ", str);
+            }
+            if (i < nrates-1 && end_pos >= str.length()) {
+                outError("Unexpected end of string ", str);
+            }
+            if (end_pos < str.length() && str[end_pos] != ',') {
+                outError("Comma to separate rates not found in ", str);
+            }
+            end_pos++;
         }
-        end_pos += new_end_pos;
-        if (rates[i] <= 0.0) {
-            outError("Non-positive rates found");
-        }
-        if (i == nrates-1 && end_pos < str.length()) {
-            outError("String too long ", str);
-        }
-        if (i < nrates-1 && end_pos >= str.length()) {
-            outError("Unexpected end of string ", str);
-        }
-        if (end_pos < str.length() && str[end_pos] != ',') {
-            outError("Comma to separate rates not found in ", str);
-        }
-        end_pos++;
     }
     num_params = 0;
 }

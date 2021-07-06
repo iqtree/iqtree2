@@ -34,7 +34,9 @@ public:
 		@param model_name model name, e.g., JC, HKY.
 		@param freq state frequency type
 	*/
-	virtual void init(const char *model_name, string model_params, StateFreqType freq, string freq_params);
+	virtual void init(const char *model_name, string model_params, 
+	                  StateFreqType freq, string freq_params,
+					  PhyloTree* report_to_tree);
 
 	/**
 		write information
@@ -50,6 +52,9 @@ protected:
 	/** initialize Goldman-Yang 1994 model (simplified version with 2 parameters omega and kappa */
 	void initGY94();
 
+	void setRateGroup(IntVector& upper_triangle_entry_to_rate);
+
+	void setRateGroupConstraint(const char* constraint);
 
 };
 

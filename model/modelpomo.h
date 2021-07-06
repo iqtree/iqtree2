@@ -37,7 +37,7 @@ const double POMO_MAX_REL_HETEROZYGOSITY = 3;
 const double POMO_MIN_BOUNDARY_FREQ = 0.05;
 const double POMO_MAX_BOUNDARY_FREQ = 0.95;
 
-class ModelPoMo : virtual public ModelMarkov
+class ModelPoMo : public ModelMarkov
 {
  public:
     typedef ModelMarkov super;
