@@ -29,7 +29,7 @@ among-site-rate model that sites are categorized into K categories of equal prop
 where the K rates are optimized by ML instead of the Gamma distribution
 
 */
-class RateKategory : virtual public RateHeterogeneity
+class RateKategory : public RateHeterogeneity
 {
 public:
 	/**

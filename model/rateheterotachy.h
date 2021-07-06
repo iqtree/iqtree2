@@ -17,7 +17,7 @@ class PhyloTree;
 /**
     rate-heterotachy model, allowing for mixed branch lengths
 */
-class RateHeterotachy: virtual public RateHeterogeneity {
+class RateHeterotachy: public RateHeterogeneity {
 
     friend class ModelFactoryMixlen;
 

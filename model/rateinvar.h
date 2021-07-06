@@ -31,10 +31,9 @@ class for rate heterogeneity with a fraction of invariable sites
 
 	@author BUI Quang Minh <minh.bui@univie.ac.at>
 */
-class RateInvar : virtual public RateHeterogeneity
+class RateInvar : public RateHeterogeneity
 {
 	friend class RateGammaInvar;
-
 
 public:
 	typedef RateHeterogeneity super;

@@ -13,7 +13,7 @@
 /**
  * parametric codon model (e.g., Goldman-Yang, Muse-Gaut)
  */
-class ModelCodonParametric: virtual public ModelCodon {
+class ModelCodonParametric: public ModelCodon {
 public:
 	/**
 		constructor

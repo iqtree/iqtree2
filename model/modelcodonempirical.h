@@ -13,7 +13,7 @@
 /**
  * empirical codon model (e.g., Kosiol et al. 2007)
  */
-class ModelCodonEmpirical: virtual public ModelCodon {
+class ModelCodonEmpirical: public ModelCodon {
 public:
 	/**
 		constructor

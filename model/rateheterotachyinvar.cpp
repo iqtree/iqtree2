@@ -30,11 +30,13 @@ void RateHeterotachyInvar::startCheckpoint() {
 }
 
 void RateHeterotachyInvar::saveCheckpoint() {
+	invar.setCheckpoint(checkpoint);
     invar.saveCheckpoint();
     super::saveCheckpoint();
 }
 
 void RateHeterotachyInvar::restoreCheckpoint() {
+	invar.setCheckpoint(checkpoint);
     invar.restoreCheckpoint();
     super::restoreCheckpoint();
 }
