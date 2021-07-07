@@ -601,7 +601,7 @@ double ModelPoMo::getScale() {
   return scale;
 }
 
-bool ModelPoMo::getVariables(double *variables) {
+bool ModelPoMo::getVariables(const double *variables) {
     bool changed = false;
     changed = mutation_model->getVariables(variables);
 

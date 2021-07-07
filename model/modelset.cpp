@@ -196,7 +196,7 @@ void ModelSet::decomposeRateMatrix()
     }
 }
 
-bool ModelSet::getVariables(double* variables)
+bool ModelSet::getVariables(const double* variables)
 {
 	ASSERT(models.size());
     bool changed = false;

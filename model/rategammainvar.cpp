@@ -107,7 +107,7 @@ void RateGammaInvar::setVariables(double *variables) {
 	invar.setVariables(variables+gid);
 }
 
-bool RateGammaInvar::getVariables(double *variables) {
+bool RateGammaInvar::getVariables(const double *variables) {
 	int  gid     = super::getNDim();
 	bool changed = super::getVariables(variables);
 	changed     |= invar.getVariables(variables+gid);

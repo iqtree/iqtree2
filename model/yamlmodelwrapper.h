@@ -131,7 +131,7 @@ public:
         //Overridden in YAMLModelMixture
     }
 
-    virtual bool getVariables(double *variables) {
+    virtual bool getVariables(const double *variables) {
         bool changed = false;
         if (isMixtureModel()) {
             changed = super::getVariables(variables);
@@ -388,7 +388,7 @@ public:
                       std::string model_params, StateFreqType freq, 
                       std::string freq_params,  PhyloTree*    tree, 
                       PhyloTree* report_to_tree);
-    bool getVariables(double *variables);
+    bool getVariables(const double *variables);
 };
 
 class YAMLModelProtein: public YAMLModelWrapper<ModelProtein> {
@@ -553,7 +553,7 @@ public:
 
     virtual void updateRateClassFromModelVariables() = 0 ;
 
-    virtual bool getVariables(double* variables) {
+    virtual bool getVariables(const double* variables) {
         int  index = 1;
         int  ndim  = getNDim();
         bool rc    = false;

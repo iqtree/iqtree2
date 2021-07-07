@@ -178,7 +178,7 @@ void ModelDNAError::setBounds(double *lower_bound, double *upper_bound,
     }
 }
 
-bool ModelDNAError::getVariables(double *variables) {
+bool ModelDNAError::getVariables(const double *variables) {
     bool changed = ModelDNA::getVariables(variables);
     if (!fix_epsilon) {
         int id = ModelDNA::getNDim()+1;

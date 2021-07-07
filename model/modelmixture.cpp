@@ -2083,7 +2083,7 @@ void ModelMixture::setVariables(double *variables) {
 
 }
 
-bool ModelMixture::getVariables(double *variables) {
+bool ModelMixture::getVariables(const double *variables) {
     int  dim     = 0;
     bool changed = false;
     for (auto model : models) {

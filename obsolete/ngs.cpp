@@ -322,7 +322,7 @@ void NGSRateCat::setVariables(double *variables) {
     memcpy(variables+ncategory+1, proportion, (ncategory-1)*sizeof(double));
 }
 
-bool NGSRateCat::getVariables(double *variables) {
+bool NGSRateCat::getVariables(const double *variables) {
     bool changed = memcmpcpy(rates, variables+1, ncategory * sizeof(double));
     changed |= memcmpcpy(proportion, variables+ncategory+1, (ncategory-1)*sizeof(double));
     double sum = 0.0;

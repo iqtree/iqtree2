@@ -440,7 +440,7 @@ void ModelDNA::computeTipLikelihood(PML::StateType state, double *state_lk) {
  * getVariables *changes* the state of the model, setting from *variables
  * Returns true if the model state has changed, false if not.
  */
-bool ModelDNA::getVariables(double *variables) {
+bool ModelDNA::getVariables(const double *variables) {
     bool changed = false;
     if (num_params > 0) {
         int num_all = static_cast<int>(param_spec.length());

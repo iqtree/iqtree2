@@ -399,7 +399,7 @@ void RateFree::setVariables(double *variables) {
     }
 }
 
-bool RateFree::getVariables(double *variables) {
+bool RateFree::getVariables(const double *variables) {
 	if (getNDim() == 0) return false;
 	int i;
     bool changed = false;

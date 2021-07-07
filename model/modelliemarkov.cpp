@@ -711,7 +711,7 @@ void ModelLieMarkov::setVariables(double *variables) {
     }
 }
 
-bool ModelLieMarkov::getVariables(double* variables) {
+bool ModelLieMarkov::getVariables(const double* variables) {
 	int nrate = getNDim();
 	int i;
 	bool changed = false;

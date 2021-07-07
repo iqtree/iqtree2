@@ -112,7 +112,7 @@ void RateHeterotachyInvar::setVariables(double *variables) {
 	from a vector of variables that is index from 1 (NOTE: not from 0)
 	@param variables vector of variables, indexed from 1
 */
-bool RateHeterotachyInvar::getVariables(double *variables) {
+bool RateHeterotachyInvar::getVariables(const double *variables) {
 	bool changed = super::getVariables(variables);
 	if (invar.getNDim() == 0) { 
 		return changed;

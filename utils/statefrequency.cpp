@@ -241,7 +241,7 @@ StateFreqType parseStateFreqDigits(std::string digits) {
  * returns true if base frequencies have changed as a result of this call
  */
 
-bool freqsFromParams(double *freq_vec, double *params, StateFreqType freq_type) {
+bool freqsFromParams(double *freq_vec, const double *params, StateFreqType freq_type) {
 
     // BQM 2017-05-02: Note that only freq for A, C, G are free parameters and stored
     // in params, whereas freq_T is not free and should be handled properly

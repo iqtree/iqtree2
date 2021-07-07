@@ -196,7 +196,7 @@ void ModelPoMoMixture::setVariables(double *variables) {
 }
 
 
-bool ModelPoMoMixture::getVariables(double *variables) {
+bool ModelPoMoMixture::getVariables(const double *variables) {
     if (opt_mode == OPT_RATEHET) {
         bool changed = ratehet->getVariables(variables);
         if (changed) {

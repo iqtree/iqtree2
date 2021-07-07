@@ -959,7 +959,7 @@ void ModelMarkov::setVariables(double *variables) {
     }
 }
 
-bool ModelMarkov::getVariables(double *variables) {
+bool ModelMarkov::getVariables(const double *variables) {
     int nrate = getNDim();
     if (is_reversible && freq_type == StateFreqType::FREQ_ESTIMATE) {
         nrate -= (num_states-1);

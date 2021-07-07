@@ -222,7 +222,7 @@ void RateGamma::setVariables(double *variables) {
 	variables[1] = gamma_shape;
 }
 
-bool RateGamma::getVariables(double *variables) {
+bool RateGamma::getVariables(const double *variables) {
 	if (getNDim() == 0) {
 		return false;
 	}

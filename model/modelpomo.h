@@ -341,7 +341,7 @@ class ModelPoMo : public ModelMarkov
      * @param variables Vector of variables, indexed from 1.
      * @return TRUE if parameters are changed, FALSE otherwise (2015-10-20)
      */
-    virtual bool getVariables(double *variables);
+    virtual bool getVariables(const double *variables);
 
     /**
 	 * Called from getVariables() to update the rate matrix for the

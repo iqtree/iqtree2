@@ -348,7 +348,7 @@ protected:
 		@param variables vector of variables, indexed from 1
 		@return TRUE if parameters are changed, FALSE otherwise (2015-10-20)
 	*/
-	virtual bool getVariables(double *variables) { return false; }
+	virtual bool getVariables(const double *variables) { return false; }
 
 	
 };

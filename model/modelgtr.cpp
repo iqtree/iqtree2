@@ -469,7 +469,7 @@ void ModelGTR::setVariables(double *variables) {
 	}
 }
 
-bool ModelGTR::getVariables(double *variables) {
+bool ModelGTR::getVariables(const double *variables) {
 	int nrate = getNDim();
 	int i;
 	bool changed = false;

@@ -44,7 +44,7 @@ YAMLModelDNAError::YAMLModelDNAError(ModelInfoFromYAMLFile& info,
     setRateMatrixFromModel();
 }
 
-bool YAMLModelDNAError::getVariables(double *variables) {
+bool YAMLModelDNAError::getVariables(const double *variables) {
     bool changed = super::getVariables(variables);
     if (changed && !fix_epsilon) {
         epsilon = model_info->getVariableValue("epsilon");

@@ -1634,7 +1634,7 @@ void ModelFactory::setVariables(double *variables) {
     site_rate->setVariables(variables + model->getNDim());
 }
 
-bool ModelFactory::getVariables(double *variables) {
+bool ModelFactory::getVariables(const double *variables) {
     bool changed_model = model->getVariables(variables);
     if (changed_model) {
         model->afterVariablesChanged();

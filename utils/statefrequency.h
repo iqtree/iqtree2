@@ -76,7 +76,7 @@ StateFreqType parseStateFreqDigits(std::string digits);
  * All params in range [0,1]
  * returns true if base frequencies have changed as a result of this call
  */
-bool freqsFromParams(double *freq_vec, double *params, StateFreqType freq_type);
+bool freqsFromParams(double *freq_vec, const double *params, StateFreqType freq_type);
 
 /*
  * For given freq_type, derives frequency parameters from freq_vec

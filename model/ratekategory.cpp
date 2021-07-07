@@ -177,7 +177,7 @@ int RateKategory::computePatternRates(DoubleVector& pattern_rates, IntVector& pa
 //	delete [] ptn_rates;
 }
 
-bool RateKategory::getVariables(double* variables)
+bool RateKategory::getVariables(const double* variables)
 {
 	if (ncategory == 1) {
 		return false;

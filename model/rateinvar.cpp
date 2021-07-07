@@ -152,7 +152,7 @@ void RateInvar::setVariables(double *variables) {
 	variables[1] = p_invar;
 }
 
-bool RateInvar::getVariables(double *variables) {
+bool RateInvar::getVariables(const double *variables) {
 	if (getNDim() == 0) {
 		return false;
 	}

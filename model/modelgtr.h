@@ -28,7 +28,7 @@ class ModelGTR : public ModelMarkov {
         virtual int         getNDimFreq() const;
         virtual bool        scaleStateFreq();
         virtual void        setVariables(double *variables);
-        virtual bool        getVariables(double *variables);
+        virtual bool        getVariables(const double *variables);
         virtual double      targetFunk(double x[]);
         virtual bool        isUnstableParameters();
         virtual void        setBounds(double *lower_bound, double *upper_bound, 

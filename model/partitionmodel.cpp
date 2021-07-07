@@ -332,8 +332,9 @@ double PartitionModel::targetFunk(double x[]) {
         res += part_model->targetFunk(x);
         part_model->fixParameters(fixed);
     }
-    if (res == 0.0)
+    if (res == 0.0) {
         outError("No partition has model ", model->getName());
+    }
     return res;
 }
 
@@ -341,12 +342,14 @@ void PartitionModel::setVariables(double *variables) {
     model->setVariables(variables);
 }
 
-bool PartitionModel::getVariables(double *variables) {
+bool PartitionModel::getVariables(const double *variables) {
     bool changed = false;
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
-    for (auto it = tree->begin(); it != tree->end(); it++)
-        if ((*it)->getModel()->getName() == model->getName())
+    for (auto it = tree->begin(); it != tree->end(); it++) {
+        if ((*it)->getModel()->getName() == model->getName()) {
             changed |= (*it)->getModel()->getVariables(variables);
+        }
+    }
     return changed;
 }
 

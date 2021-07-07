@@ -90,7 +90,7 @@ public:
     double optimizeGeneRate(double tol);
     
     //	virtual double targetFunk(double x[]);
-    //	virtual void getVariables(double *variables);
+    //	virtual void getVariables(const double *variables);
     //	virtual void setVariables(double *variables);
     
     /** partition ID currently under optimization of of its rate */

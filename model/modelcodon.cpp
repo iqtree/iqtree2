@@ -938,7 +938,7 @@ double ModelCodon::computeEmpiricalOmega() {
     return (dn/ds)*(0.21/0.79);
 }
 
-bool ModelCodon::getVariables(double *variables) {
+bool ModelCodon::getVariables(const double *variables) {
 	int j;
     bool changed = false;
     if (num_params > 0) {
