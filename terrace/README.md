@@ -82,7 +82,7 @@ __-g_print__    - Write all generated species-trees into a file.
 
 __-g_print_lim NUM__  - Limit on the number of species-trees to be written to a file  
 >NOTE: The program will continue generation, but will stop writing trees.  
->WARNING: Do not use summary statistics just on a fraction of trees! Due to construction, consecutive trees have more similar tree topologies.  
+>WARNING: Do not use summary statistics just on a fraction of trees! Due to the way the generation is performed, consecutive trees have more similar topologies.  
 
 __-g_print_induced__  - Write induced partition subtrees  
 __-g_print_m__ - Write corresponding presence-absence matrix  
