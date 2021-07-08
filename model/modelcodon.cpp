@@ -334,11 +334,14 @@ namespace {
     };
 };
 
-StateFreqType ModelCodon::initCodon(const char *model_name, StateFreqType freq, bool reset_params) {
+StateFreqType ModelCodon::initCodon(const char *model_name, 
+                                    StateFreqType freq, 
+                                    bool reset_params) {
 	const std::string name_upper = string_to_upper(model_name);
     for (auto row: mg94_models) {
         if (name_upper == row.name) {
-            return initMG94(row.should_fix_kappa, freq, row.kappa_style);
+            return initMG94(row.should_fix_kappa, 
+                            freq, row.kappa_style);
         }
     }
     for (auto row: gy94_models) {
@@ -346,7 +349,8 @@ StateFreqType ModelCodon::initCodon(const char *model_name, StateFreqType freq, 
             return initGY94(row.should_fix_kappa, row.kappa_style);
         }
     }
-	if (name_upper == "ECM" || name_upper == "KOSI07" || name_upper == "ECMK07") {
+	if (name_upper == "ECM" || name_upper == "KOSI07" || 
+        name_upper == "ECMK07") {
 		if (!phylo_tree->aln->isStandardGeneticCode()) {
 			outError("For ECMK07 a standard genetic code must be used");
         }
@@ -422,8 +426,8 @@ void ModelCodon::initEmpiricalRates() {
     }
     // initialize empirical_rates
     for (int i = 0; i < num_states; i++) {
-        double *this_emp_rate = &empirical_rates[i*num_states];
-        int *this_rate_attr = &rate_attr[i*num_states];
+        double* this_emp_rate = &empirical_rates[i*num_states];
+        int*    this_rate_attr = &rate_attr[i*num_states];
         if (phylo_tree->aln->isStopCodon(i)) {
             memset(this_emp_rate, 0, num_states*sizeof(double));
             continue;
@@ -534,7 +538,9 @@ void ModelCodon::computeRateAttributes() {
                 attr |= CA_NONSYNONYMOUS;
             }
                    
-            int nt_changes = ((codoni/16) != (codonj/16)) + (((codoni%16)/4) != ((codonj%16)/4)) + ((codoni%4) != (codonj%4));
+            int  nt_changes = ((codoni/16) != (codonj/16)) 
+                            + (((codoni%16)/4) != ((codonj%16)/4)) 
+                            + ((codoni%4) != (codonj%4));
             auto code = phylo_tree->aln->genetic_code;
             auto aa1  = strchr(symbols_protein, code[codoni]) - symbols_protein;
             auto aa2  = strchr(symbols_protein, code[codonj]) - symbols_protein;
@@ -585,22 +591,24 @@ void ModelCodon::computeRateAttributes() {
     }
     
     if (verbose_mode >= VerboseMode::VB_MAX) {
-
+        char* cc = aa_cost_change; //shorter name
         // make cost matrix fulfill triangular inequality
         for (int k = 0; k < 20; k++) {
             for (int i = 0; i < 20; i++) {
                 for (int j = 0; j < 20; j++) {
-                    if (aa_cost_change[i*20+j] > aa_cost_change[i*20+k] + aa_cost_change[k*20+j]) {
-                        aa_cost_change[i*20+j] = aa_cost_change[i*20+k] + aa_cost_change[k*20+j];
+                    if (cc[i*20+j] > cc[i*20+k] + cc[k*20+j]) {
+                        cc[i*20+j] = cc[i*20+k] + cc[k*20+j];
                     }
                 }
             }
         }
-        cout << "cost matrix by number of nt changes for TNT use" << endl;
+        cout << "cost matrix by number of nt changes"
+             << " for TNT use" << endl;
         cout << "smatrix =1 (aa_nt_changes)";
         for (int i = 0; i < 19; i++) {
             for (int j = i+1; j < 20; j++) {
-                cout << " " << symbols_protein[i] << "/" << symbols_protein[j] 
+                cout << " " << symbols_protein[i]
+                     << "/" << symbols_protein[j] 
                      << " " << (int)aa_cost_change[i*20+j];
             }
         }
@@ -673,14 +681,15 @@ void ModelCodon::readCodonModel(istream &in, bool reset_params) {
 		if (codons[i].length() != 3) {
 			outError("Input model has wrong codon format ", codons[i]);
         }
-		int nt1 = phylo_tree->aln->convertState(codons[i][0], SeqType::SEQ_DNA);
-		int nt2 = phylo_tree->aln->convertState(codons[i][1], SeqType::SEQ_DNA);
-		int nt3 = phylo_tree->aln->convertState(codons[i][2], SeqType::SEQ_DNA);
+        auto aln = phylo_tree->aln;
+		int  nt1 = aln->convertState(codons[i][0], SeqType::SEQ_DNA);
+		int  nt2 = aln->convertState(codons[i][1], SeqType::SEQ_DNA);
+		int  nt3 = aln->convertState(codons[i][2], SeqType::SEQ_DNA);
 		if (nt1 > 3 || nt2 > 3 || nt3 > 3) {
 			outError("Wrong codon triplet ", codons[i]);
         }
-		state_map[i] = phylo_tree->aln->non_stop_codon[nt1*16+nt2*4+nt3];
-        if (phylo_tree->aln->isStopCodon(state_map[i]) || 
+		state_map[i] = aln->non_stop_codon[nt1*16+nt2*4+nt3];
+        if (aln->isStopCodon(state_map[i]) || 
             state_map[i] == STATE_INVALID) {
             outError("Stop codon encountered");
         }
@@ -720,7 +729,8 @@ void ModelCodon::readCodonModel(istream &in, bool reset_params) {
         state_freq[i] = min_freq;
     }
 	for (int i = 0; i < nscodons; i++) {
-		state_freq[state_map[i]] = f[i]-(num_states-nscodons)*min_freq/nscodons;
+        auto delta = (num_states-nscodons)*min_freq/nscodons;
+		state_freq[state_map[i]] = f[i] - delta;
     }
     if (reset_params) {
         fix_omega = fix_kappa = fix_kappa2 = true;
@@ -730,7 +740,8 @@ void ModelCodon::readCodonModel(istream &in, bool reset_params) {
 	delete [] q;
 }
 
-void ModelCodon::readCodonModel(string &str, bool reset_params) {
+void ModelCodon::readCodonModel(string &str, 
+                                bool reset_params) {
 	try {
 		istringstream in(str);
 		readCodonModel(in, reset_params);
@@ -740,7 +751,8 @@ void ModelCodon::readCodonModel(string &str, bool reset_params) {
 	}
 }
 
-void ModelCodon::readCodonModelFile(const char *filename, bool reset_params) {
+void ModelCodon::readCodonModelFile(const char *filename, 
+                                    bool reset_params) {
 	try {
 		ifstream in;
         // set the failbit and badbit
@@ -774,18 +786,18 @@ void ModelCodon::computeCodonRateMatrix() {
 //        return; // do nothing for empirical codon model
         
     switch (codon_kappa_style) {
-    case CK_ONE_KAPPA:
-        computeCodonRateMatrix_1KAPPA();
-        break;
-    case CK_ONE_KAPPA_TS:
-        computeCodonRateMatrix_1KAPPATS();
-        break;
-    case CK_ONE_KAPPA_TV:
-        computeCodonRateMatrix_1KAPPATV();
-        break;
-    case CK_TWO_KAPPA:
-        computeCodonRateMatrix_2KAPPA();
-        break;
+        case CK_ONE_KAPPA:
+            computeCodonRateMatrix_1KAPPA();
+            break;
+        case CK_ONE_KAPPA_TS:
+            computeCodonRateMatrix_1KAPPATS();
+            break;
+        case CK_ONE_KAPPA_TV:
+            computeCodonRateMatrix_1KAPPATV();
+            break;
+        case CK_TWO_KAPPA:
+            computeCodonRateMatrix_2KAPPA();
+            break;
     }
 }
 
@@ -808,13 +820,16 @@ void ModelCodon::computeCodonRateMatrix_1KAPPA() {
             if (this_rate[j] == 0.0) continue;
             int attr = this_rate_attr[j];
             if (attr & CA_SYNONYMOUS) { // synonymous
-                if (attr & CA_TRANSITION) // transition
+                if (attr & CA_TRANSITION) { // transition
                     this_rate[j] *= kappa;
+                }
             } else if (attr & CA_NONSYNONYMOUS) { // non-synomyous
-                if (attr & CA_TRANSITION) // transition
-                    this_rate[j] *= omega_kappa;                
-                else // transversion
+                if (attr & CA_TRANSITION) { // transition
+                    this_rate[j] *= omega_kappa;
+                }
+                else { // transversion
                     this_rate[j] *= omega;
+                }
             }
         }
     }
@@ -825,8 +840,9 @@ void ModelCodon::computeCodonRateMatrix_1KAPPATS() {
     memcpy(rates, empirical_rates, nrates*sizeof(double));
 
     int i, j;
-    double kappa_pow[] = {1.0, kappa, kappa*kappa, kappa*kappa*kappa};
-    double omega_kappa_pow[] = {omega, omega*kappa, omega*kappa*kappa, omega*kappa*kappa*kappa};
+    double kappa_pow[]       = {1.0, kappa, kappa*kappa, kappa*kappa*kappa};
+    double omega_kappa_pow[] = {omega, omega*kappa, omega*kappa*kappa, 
+                                omega*kappa*kappa*kappa};
 
     for (i = 0; i < num_states; i++) {
         double *this_rate = &rates[i*num_states];
@@ -838,10 +854,14 @@ void ModelCodon::computeCodonRateMatrix_1KAPPATS() {
             int attr = this_rate_attr[j];
             if (this_rate[j] == 0.0) continue;
             if (attr & CA_SYNONYMOUS) { // synonymous
-                int num = ((attr & CA_TRANSITION_1NT) != 0) + ((attr & CA_TRANSITION_2NT) != 0) + ((attr & CA_TRANSITION_3NT) != 0);
+                int num = ((attr & CA_TRANSITION_1NT) != 0) 
+                        + ((attr & CA_TRANSITION_2NT) != 0) 
+                        + ((attr & CA_TRANSITION_3NT) != 0);
                 this_rate[j] *= kappa_pow[num];
             } else if (attr & CA_NONSYNONYMOUS) { // non-synomyous
-                int num = ((attr & CA_TRANSITION_1NT) != 0) + ((attr & CA_TRANSITION_2NT) != 0) + ((attr & CA_TRANSITION_3NT) != 0);
+                int num = ((attr & CA_TRANSITION_1NT) != 0) 
+                        + ((attr & CA_TRANSITION_2NT) != 0) 
+                        + ((attr & CA_TRANSITION_3NT) != 0);
                 this_rate[j] *= omega_kappa_pow[num];
             }
         }
@@ -853,8 +873,9 @@ void ModelCodon::computeCodonRateMatrix_1KAPPATV() {
     memcpy(rates, empirical_rates, nrates*sizeof(double));
 
     int i, j;
-    double kappa_pow[] = {1.0, kappa, kappa*kappa, kappa*kappa*kappa};
-    double omega_kappa_pow[] = {omega, omega*kappa, omega*kappa*kappa, omega*kappa*kappa*kappa};
+    double kappa_pow[]       = {1.0, kappa, kappa*kappa, kappa*kappa*kappa};
+    double omega_kappa_pow[] = {omega, omega*kappa, omega*kappa*kappa, 
+                                omega*kappa*kappa*kappa};
 
     for (i = 0; i < num_states; i++) {
         double *this_rate = &rates[i*num_states];
@@ -866,10 +887,14 @@ void ModelCodon::computeCodonRateMatrix_1KAPPATV() {
             int attr = this_rate_attr[j];
             if (this_rate[j] == 0.0) continue;
             if (attr & CA_SYNONYMOUS) { // synonymous
-                int num = ((attr & CA_TRANSVERSION_1NT) != 0) + ((attr & CA_TRANSVERSION_2NT) != 0) + ((attr & CA_TRANSVERSION_3NT) != 0);
+                int num = ((attr & CA_TRANSVERSION_1NT) != 0) 
+                        + ((attr & CA_TRANSVERSION_2NT) != 0) 
+                        + ((attr & CA_TRANSVERSION_3NT) != 0);
                 this_rate[j] *= kappa_pow[num];
             } else if (attr & CA_NONSYNONYMOUS) { // non-synomyous
-                int num = ((attr & CA_TRANSVERSION_1NT) != 0) + ((attr & CA_TRANSVERSION_2NT) != 0) + ((attr & CA_TRANSVERSION_3NT) != 0);
+                int num = ((attr & CA_TRANSVERSION_1NT) != 0) 
+                        + ((attr & CA_TRANSVERSION_2NT) != 0) 
+                        + ((attr & CA_TRANSVERSION_3NT) != 0);
                 this_rate[j] *= omega_kappa_pow[num];
             }
         }
@@ -880,27 +905,35 @@ void ModelCodon::computeCodonRateMatrix_2KAPPA() {
     int nrates = getNumRateEntries();
     memcpy(rates, empirical_rates, nrates*sizeof(double));
 
-    int i, j;
-    double kappa_pow[] = {1.0, kappa, kappa*kappa, kappa*kappa*kappa};
-    double omega_kappa_pow[] = {omega, omega*kappa, omega*kappa*kappa, omega*kappa*kappa*kappa};
-    double kappa2_pow[] = {1.0, kappa2, kappa2*kappa2, kappa2*kappa2*kappa2};
+    double kappa_pow[]       = {1.0, kappa, kappa*kappa, kappa*kappa*kappa};
+    double omega_kappa_pow[] = {omega, omega*kappa, omega*kappa*kappa, 
+                                omega*kappa*kappa*kappa};
+    double kappa2_pow[]      = {1.0, kappa2, kappa2*kappa2, kappa2*kappa2*kappa2};
 
-    for (i = 0; i < num_states; i++) {
+    for (int i = 0; i < num_states; i++) {
         double *this_rate = &rates[i*num_states];
         int *this_rate_attr = &rate_attr[i*num_states];
         if (phylo_tree->aln->isStopCodon(i)) {
             continue;
         }
-        for (j = 0; j < num_states; j++) {
+        for (int j = 0; j < num_states; j++) {
             int attr = this_rate_attr[j];
             if (this_rate[j] == 0.0) continue;
             if (attr & CA_SYNONYMOUS) { // synonymous
-                int numts = ((attr & CA_TRANSITION_1NT) != 0) + ((attr & CA_TRANSITION_2NT) != 0) + ((attr & CA_TRANSITION_3NT) != 0);            
-                int numtv = ((attr & CA_TRANSVERSION_1NT) != 0) + ((attr & CA_TRANSVERSION_2NT) != 0) + ((attr & CA_TRANSVERSION_3NT) != 0);
+                int numts = ((attr & CA_TRANSITION_1NT) != 0) 
+                          + ((attr & CA_TRANSITION_2NT) != 0) 
+                          + ((attr & CA_TRANSITION_3NT) != 0);            
+                int numtv = ((attr & CA_TRANSVERSION_1NT) != 0) 
+                          + ((attr & CA_TRANSVERSION_2NT) != 0) 
+                          + ((attr & CA_TRANSVERSION_3NT) != 0);
                 this_rate[j] *= kappa_pow[numts]*kappa2_pow[numtv];
             } else if (attr & CA_NONSYNONYMOUS) { // non-synomyous
-                int numts = ((attr & CA_TRANSITION_1NT) != 0) + ((attr & CA_TRANSITION_2NT) != 0) + ((attr & CA_TRANSITION_3NT) != 0);            
-                int numtv = ((attr & CA_TRANSVERSION_1NT) != 0) + ((attr & CA_TRANSVERSION_2NT) != 0) + ((attr & CA_TRANSVERSION_3NT) != 0);
+                int numts = ((attr & CA_TRANSITION_1NT) != 0) 
+                          + ((attr & CA_TRANSITION_2NT) != 0) 
+                          + ((attr & CA_TRANSITION_3NT) != 0);            
+                int numtv = ((attr & CA_TRANSVERSION_1NT) != 0) 
+                          + ((attr & CA_TRANSVERSION_2NT) != 0) 
+                          + ((attr & CA_TRANSVERSION_3NT) != 0);
                 this_rate[j] *= omega_kappa_pow[numts]*kappa2_pow[numtv];
             }
         }
@@ -958,7 +991,8 @@ bool ModelCodon::getVariables(const double *variables) {
         ASSERT(j == num_params+1);
     }
 	if (freq_type == StateFreqType::FREQ_ESTIMATE) {
-        // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
+        // 2015-09-07: relax the sum of state_freq to be 1, 
+        // this will be done at the end of optimization
 		int ndim = getNDim();
 		changed |= memcmpcpy(state_freq, variables+(ndim-num_states+2), 
                              (num_states-1)*sizeof(double));
@@ -1016,7 +1050,8 @@ void ModelCodon::setVariables(double *variables) {
 	}
 }
 
-void ModelCodon::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
+void ModelCodon::setBounds(double *lower_bound, double *upper_bound, 
+                           bool *bound_check) {
 	int i, ndim = getNDim();
 
 	for (i = 1; i <= ndim; i++) {
@@ -1055,11 +1090,14 @@ double ModelCodon::optimizeParameters(double gradient_epsilon,
 	setVariables(vb.variables);
 	setBounds(vb.lower_bound, vb.upper_bound, vb.bound_check);
     if (phylo_tree->params->optimize_alg_freerate.find("BFGS-B") == string::npos) {
-        score = -minimizeMultiDimen(vb.variables, ndim, vb.lower_bound, vb.upper_bound, 
-                                    vb.bound_check, max(gradient_epsilon, TOL_RATE));
+        score = -minimizeMultiDimen(vb.variables, ndim, 
+                                    vb.lower_bound, vb.upper_bound, 
+                                    vb.bound_check, max(gradient_epsilon, 
+                                    TOL_RATE));
     }
     else {
-        score = -L_BFGS_B(ndim, vb.variables + 1, vb.lower_bound + 1, vb.upper_bound + 1, 
+        score = -L_BFGS_B(ndim, vb.variables + 1, 
+                          vb.lower_bound + 1, vb.upper_bound + 1, 
                           max(gradient_epsilon, TOL_RATE));
     }
 	bool changed = getVariables(vb.variables);
@@ -1072,7 +1110,6 @@ double ModelCodon::optimizeParameters(double gradient_epsilon,
         phylo_tree->clearAllPartialLH();
         score = phylo_tree->computeLikelihood();
     }
-	
 	return score;
 }
 

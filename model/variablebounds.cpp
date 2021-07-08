@@ -1,7 +1,7 @@
 #include "variablebounds.h"
 
 VariableBounds::VariableBounds(int dimension) {
-    variables  = new double[dimension*4];
+    variables   = new double[dimension*4];
     variables2  = variables + dimension;
     upper_bound = variables + dimension*2;
     lower_bound = variables + dimension*3;
