@@ -206,39 +206,15 @@ int ModelDNA::getNumberOfRates() const {
 }
 
 void ModelDNA::readRates(string str) {
-    int nrates = *max_element(param_spec.begin(), param_spec.end());
+    int nrates  = *max_element(param_spec.begin(), param_spec.end());
     int end_pos = 0;
     for (int j = 0; j < param_spec.length(); ++j) {
         rates[j] = 1.0;
     }
     num_params = 0;
     for (int i = 0; i <= nrates && end_pos < str.length(); ++i) {
-        int new_end_pos;
-        double rate = 0;
-        int id = (i < nrates) ? i+1 : 0;
-        if (str[end_pos] == '?') {
-            param_fixed[id] = false;
-            end_pos++;
-            rate = 1.0;
-            num_params++;
-        } else {
-            if (Params::getInstance().optimize_rate_matrix) {
-                num_params++;
-                param_fixed[id] = false;
-            } else
-                if (Params::getInstance().optimize_from_given_params) {
-                    num_params++;
-                    param_fixed[id] = false;
-                } else {
-                    param_fixed[id] = true;
-                }
-            try {
-                rate = convert_double(str.substr(end_pos).c_str(), new_end_pos);
-            } catch (string str) {
-                outError(str);
-            }
-            end_pos += new_end_pos;
-        }
+        int    id   = (i < nrates) ? i+1 : 0;
+        double rate = readSingleRate(str, id, end_pos);
         if (rate < 0.0) {
             outError("Negative rates found");
         }
@@ -252,13 +228,44 @@ void ModelDNA::readRates(string str) {
         if (end_pos < str.length() && str[end_pos] != ',') {
             outError("Comma to separate rates not found in ", str);
         }
-        end_pos++;
+        ++end_pos;
         for (int j = 0; j < param_spec.length(); ++j) {
             if (param_spec[j] == id) {
                 rates[j] = rate;
             }
         }
     }
+}
+
+double ModelDNA::readSingleRate(const std::string& str,
+                              int id /*rate number*/,
+                              int& end_pos) {
+    double rate = 1.0;
+    if (str[end_pos] == '?') {
+        param_fixed[id] = false;
+        end_pos++;
+        num_params++;
+        return rate;
+    } 
+    if (Params::getInstance().optimize_rate_matrix) {
+        num_params++;
+        param_fixed[id] = false;
+    } 
+    else if (Params::getInstance().optimize_from_given_params) {
+        num_params++;
+        param_fixed[id] = false;
+    } else {
+        param_fixed[id] = true;
+    }
+    int new_end_pos;
+    try {
+        rate = convert_double(str.substr(end_pos).c_str(), new_end_pos);
+    } 
+    catch (string str) {
+        outError(str);
+    }
+    end_pos += new_end_pos;
+    return rate;
 }
 
 std::string ModelDNA::getNameParams() const {
