@@ -13,7 +13,9 @@ Gentrius is a deterministic algorithm that given a set of incomplete unrooted su
 Analysis with Gentrius
 -----------------------
 
-* __Basic Input:__ There are several ways and inputs one can use to start the analysis. Here are the examples of command lines:
+### Basic Input
+-----------------------
+There are several ways and inputs one can use to start the analysis. Here are the examples of command lines:  
 
     1.  __iqtree2 -gentrius <file 1> -pr_ab_matrix <file 2>__
     2.  __iqtree2 -gentrius <file 1> -s <file 3> -p <file 4>__
@@ -35,7 +37,9 @@ Analysis with Gentrius
     - File 4: a partition info file for the alignment in file 3
     - File 5: contains a set of subtrees to be analysed
 
-* __Stopping Rules:__ As the underlying problem is computationally hard, we use three different rules to stop the analysis. The thresholds can be changed by the corresponding options.
+### Stopping Rules
+-----------------------
+As the underlying problem is computationally hard, we use three different rules to stop the analysis. The thresholds can be changed by the corresponding options.
 
     - Rule 1: stop the analysis after generating NUM number of species-trees. Default value: 1MLN trees.   
         + __-g_stop_t NUM__  To change the threshold  
