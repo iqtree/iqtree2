@@ -38,19 +38,19 @@ Analysis with Gentrius
 * __Stopping Rules:__ As the underlying problem is computationally hard, we use three different rules to stop the analysis. The thresholds can be changed by the corresponding options.
 
     - Rule 1: stop the analysis after generating NUM number of species-trees. Default value: 1MLN trees.   
-    >__-g_stop_t NUM__  To change the threshold  
-    >__-g_stop_t 0__  To turn off the rule  
+        + __-g_stop_t NUM__  To change the threshold  
+        + __-g_stop_t 0__  To turn off the rule  
 
     - Rule 2: stop the analysis after NUM number of intermediate trees were visited. Default value: 10MLN trees.       
-    >__-g_stop_i NUM__  To change the threshold  
-    >__-g_stop_i 0__  To turn off the rule  
+        + __-g_stop_i NUM__  To change the threshold  
+        + __-g_stop_i 0__  To turn off the rule  
 
     - Rule 3: stop the analysis after NUM hours (CPU time). Default: 168 hours (7 days).   
-    >__-g_stop_h NUM__  To change the threshold  
-    >__-g_stop_h 0__  To turn off the rule  
+        + __-g_stop_h NUM__  To change the threshold  
+        + __-g_stop_h 0__  To turn off the rule  
 
     - To turn off all stopping rules use:  
-    >__-g_non_stop__ 
+        + __-g_non_stop__ 
 
 
 * __Output__: If no other option is used, the ouput is just the log file. It contains the following information:
@@ -71,25 +71,25 @@ Analysis with Gentrius
 
 Here are additional options to output more information:
 
->__-g_print__    Write all generated species-trees into a file.  
+__-g_print__    Write all generated species-trees into a file.  
     WARNING: There might be millions of trees! Use the next option to set the limit on the number of trees to be written into a file.  
     NOTE: The program will continue generation, but will stop writing trees.  
     WARNING: Do not use summary statistics just on a fraction of trees! Due to construction, consequetive trees have more similar tree topologies.  
 
->__-g_print_lim NUM__    Limit on the number of species-trees to be written to a file  
->__-g_print_induced__    Write induced partition subtrees  
->__-g_print_m__  Write corresponding presence-absence matrix  
+__-g_print_lim NUM__  - Limit on the number of species-trees to be written to a file  
+__-g_print_induced__  - Write induced partition subtrees  
+__-g_print_m__ - Write corresponding presence-absence matrix  
 
 
 * __Additional Analyses__: 
 
     * __Backward approach__ Due to complexity there might be cases, when Gentrius fails to generate any species-tree. In this case one can try to generate species-trees using backward approach: remove NUM of leaves, generate species-trees by re-inserting these removed leaves. This technique cannot guarantee generating all species-trees compatible with a set of subtrees. However, by using this approach on simulated datasets it was possible to generate millions of species-trees for complex examples.
 
-    >__-g_rm_leaves NUM__   To use backward approach
+    __-g_rm_leaves NUM__   - To use backward approach
 
     * __Test set of species-trees__ It is also possible to check, if some species-trees from a query set have identical set of subtrees as a representative species-tree (if they belong to the same phylogenetic terrace). 
 
-    >__-g_query FILE__  To perform check for a set of species-trees
+    __-g_query FILE__  - To perform check for a set of species-trees
 
 
 User support
