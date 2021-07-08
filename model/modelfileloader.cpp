@@ -960,33 +960,8 @@ void ModelFileLoader::parseYAMLModel(const YAML::Node& substitution_model,
     info.rate_distribution     = stringScalar(substitution_model, "ratedistribution", "");
     info.model_name            = name_of_model;
 
-    if (!info.superclass_model_name.empty()) {
-        TREE_LOG_LINE(*report_to_tree, YAMLParsingVerbosity, 
-                      name_of_model << " parent is " 
-                      << info.superclass_model_name << "." );
-        if (string_to_upper(info.superclass_model_name)=="ANY") {
-            info.superclass_model_name.clear();
-            info.is_modifier_model = true;
-        }
-        else {
-            if (info.model_name.empty()) {            
-                info.model_name = info.superclass_model_name;
-            }
-            handleInheritance(info, list, info.superclass_model_name, 
-                              false, report_to_tree);
-        }
-    }
-
-    if (!info.is_rate_model) {
-        auto rate_model_name_list = stringScalar(substitution_model, "ratemodel", "");
-        TREE_LOG_LINE(*report_to_tree, YAMLRateVerbosity, 
-                    "Rate model list for " << info.model_name
-                    << " was " << rate_model_name_list << ".");
-        if (!rate_model_name_list.empty()) {
-            handleInheritance(info, list, rate_model_name_list, 
-                            true, report_to_tree);
-        }
-    }
+    parseYAMLModelInheritance(substitution_model, info, 
+                              list, report_to_tree);
 
     info.model_file_path = file_path;
     info.citation        = stringScalar (substitution_model, "citation",    info.citation.c_str());
@@ -1053,6 +1028,40 @@ void ModelFileLoader::parseYAMLModel(const YAML::Node& substitution_model,
     setModelStateFrequency        (substitution_model, info, report_to_tree);
     parseYAMLModelStringProperties(substitution_model, info, report_to_tree);
     parseYAMLModelWeightAndScale  (substitution_model, info, report_to_tree);
+}
+
+void ModelFileLoader::parseYAMLModelInheritance
+        (const YAML::Node& substitution_model,
+         ModelInfoFromYAMLFile& info,
+         ModelListFromYAMLFile& list,
+         PhyloTree* report_to_tree) {
+    if (!info.superclass_model_name.empty()) {
+        TREE_LOG_LINE(*report_to_tree, YAMLParsingVerbosity, 
+                      info.model_name << " parent is " 
+                      << info.superclass_model_name << "." );
+        if (string_to_upper(info.superclass_model_name)=="ANY") {
+            info.superclass_model_name.clear();
+            info.is_modifier_model = true;
+        }
+        else {
+            if (info.model_name.empty()) {            
+                info.model_name = info.superclass_model_name;
+            }
+            handleInheritance(info, list, info.superclass_model_name, 
+                              false, report_to_tree);
+        }
+    }
+
+    if (!info.is_rate_model) {
+        auto rate_model_name_list = stringScalar(substitution_model, "ratemodel", "");
+        TREE_LOG_LINE(*report_to_tree, YAMLRateVerbosity, 
+                    "Rate model list for " << info.model_name
+                    << " was " << rate_model_name_list << ".");
+        if (!rate_model_name_list.empty()) {
+            handleInheritance(info, list, rate_model_name_list, 
+                            true, report_to_tree);
+        }
+    }
 }
 
 void ModelFileLoader::parseYAMLSubModels(const YAML::Node& substitution_model,

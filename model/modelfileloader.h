@@ -55,6 +55,10 @@ protected:
                                      ModelInfoFromYAMLFile& info,
                                      ModelListFromYAMLFile& list,
                                      PhyloTree* report_to_tree);
+    void parseYAMLModelInheritance  (const YAML::Node& substitution_model,
+                                     ModelInfoFromYAMLFile& info,
+                                     ModelListFromYAMLFile& list,
+                                     PhyloTree* report_to_tree);
     void parseYAMLModelStringProperties(const YAML::Node& substitution_model,
                                         ModelInfoFromYAMLFile& info,
                                         PhyloTree* report_to_tree);
