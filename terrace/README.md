@@ -40,15 +40,15 @@ There are several ways and inputs one can use to start the analysis. Here are th
 -----
 As the underlying problem is computationally hard, we use three different rules to stop the analysis. The thresholds can be changed by the corresponding options.
 
-- Rule 1: stop the analysis after generating NUM number of species-trees. Default value: 1MLN trees.   
+- __Rule 1:__ stop the analysis after generating NUM of species-trees. Default value: 1MLN trees.   
          __-g_stop_t NUM__  - To change the threshold  
          __-g_stop_t 0__  - To turn off the rule  
 
-- Rule 2: stop the analysis after NUM number of intermediate trees were visited. Default value: 10MLN trees.       
+- __Rule 2:__ stop the analysis after NUM of intermediate trees were visited. Default value: 10MLN trees.       
          __-g_stop_i NUM__  - To change the threshold  
          __-g_stop_i 0__  - To turn off the rule  
 
-- Rule 3: stop the analysis after NUM hours (CPU time). Default: 168 hours (7 days).   
+- __Rule 3:__ stop the analysis after NUM hours (CPU time). Default: 168 hours (7 days).   
          __-g_stop_h NUM__  - To change the threshold  
          __-g_stop_h 0__  - To turn off the rule  
 
@@ -58,7 +58,7 @@ As the underlying problem is computationally hard, we use three different rules 
 
 ### Output
 -----
-If no other option is used, the ouput is just the log file. It contains the following information:
+If no other option is used, the ouput is just the log file. The following information is provided about the analysis:
 
     INFORMATION about input dataset:  
     Number of taxa: NUM  
