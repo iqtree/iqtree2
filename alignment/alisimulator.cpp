@@ -1118,12 +1118,14 @@ vector<FunDi_Item> AliSimulator::selectAndPermuteSites(double proportion, int nu
 */
 void AliSimulator::permuteSelectedSites(vector<FunDi_Item> fundi_items, Node* node)
 {
-    // caching the current states of all selected sites
-    map<int, short int> caching_sites;
-    for (int i = 0; i < fundi_items.size(); i++)
-        caching_sites[fundi_items[i].selected_site] = node->sequence[fundi_items[i].selected_site];
-    
-    // permuting sites in FunDi model
-    for (int i = 0; i < fundi_items.size(); i++)
-        node->sequence[fundi_items[i].new_position] = caching_sites[fundi_items[i].selected_site];
+    if (std::find(params->alisim_fundi_taxon_set.begin(), params->alisim_fundi_taxon_set.end(), node->name) != params->alisim_fundi_taxon_set.end()) {
+            // caching the current states of all selected sites
+            map<int, short int> caching_sites;
+            for (int i = 0; i < fundi_items.size(); i++)
+                caching_sites[fundi_items[i].selected_site] = node->sequence[fundi_items[i].selected_site];
+            
+            // permuting sites in FunDi model
+            for (int i = 0; i < fundi_items.size(); i++)
+                node->sequence[fundi_items[i].new_position] = caching_sites[fundi_items[i].selected_site];
+        }
 }
