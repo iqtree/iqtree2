@@ -101,6 +101,10 @@ public:
 		@param in input stream
 	*/
 	virtual void readRates(string str);
+		//Supporting function
+		double readSingleRate(const std::string& str,
+                              int id /*rate number*/,
+                              int& end_pos);
 
 	/**
 		set the substitution rate parameters by a specification
