@@ -8,6 +8,7 @@ YAMLModelBinary::YAMLModelBinary(ModelInfoFromYAMLFile& info,
                                  PhyloTree* report_to_tree)
         : super(info, make_copy, tree, report_to_tree) {
     init(model_name, model_params, freq, freq_params, report_to_tree);
+    setNumberOfVariableRates(model_info->getNumberOfVariableRates());
     setRateMatrixFromModel();
 }
 
@@ -19,6 +20,7 @@ YAMLModelCodon::YAMLModelCodon(ModelInfoFromYAMLFile& info,
         : super(info, make_copy, tree, report_to_tree) {
     setReversible(info.isReversible());
     init(model_name, model_params, freq, freq_params, report_to_tree);
+    setNumberOfVariableRates(model_info->getNumberOfVariableRates());
     setRateMatrixFromModel();
 }
 
@@ -30,6 +32,7 @@ YAMLModelDNA::YAMLModelDNA(ModelInfoFromYAMLFile& info,
         : super(info, make_copy, tree, report_to_tree) {
     init(model_name, model_params, freq,
             freq_params, report_to_tree);
+    setNumberOfVariableRates(model_info->getNumberOfVariableRates());
     setRateMatrixFromModel();
 }
 
@@ -40,7 +43,8 @@ YAMLModelDNAError::YAMLModelDNAError(ModelInfoFromYAMLFile& info,
                                      PhyloTree* report_to_tree)                    
         : super(info, make_copy, tree, report_to_tree) {
     init(model_name, model_params, freq,
-            freq_params, report_to_tree);        
+            freq_params, report_to_tree);
+    setNumberOfVariableRates(model_info->getNumberOfRateCategories());
     setRateMatrixFromModel();
 }
 
@@ -59,6 +63,7 @@ YAMLModelMorphology::YAMLModelMorphology(ModelInfoFromYAMLFile& info,
                                          PhyloTree*  report_to_tree)
         : super(info, make_copy, tree, report_to_tree) {
     init(model_name, model_params, freq, freq_params, report_to_tree);
+    setNumberOfVariableRates(model_info->getNumberOfVariableRates());
     setRateMatrixFromModel();
 }
 
@@ -74,6 +79,7 @@ YAMLModelProtein::YAMLModelProtein(ModelInfoFromYAMLFile& info,
     init(model_name, model_params, freq,
             freq_params, report_to_tree);
     setNumberOfStates(20); //Why again?
+    setNumberOfVariableRates(model_info->getNumberOfVariableRates());
     setRateMatrixFromModel();
 }
 
@@ -129,6 +135,7 @@ YAMLModelMixture::YAMLModelMixture(ModelInfoFromYAMLFile& info,
 
     phylo_tree = tree;
 
+    setNumberOfVariableRates(model_info->getNumberOfVariableRates());
     setRateMatrixFromModel();
 }
 

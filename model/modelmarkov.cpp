@@ -186,8 +186,8 @@ void ModelMarkov::setReversible(bool reversible, bool adapt_tree) {
         }
         size_t num_states_squared = num_states * num_states;
         ensure_aligned_allocated(eigenvalues_imag, num_states);
-        ensure_aligned_allocated(ceval, num_states);
-        ensure_aligned_allocated(cevec, num_states_squared);
+        ensure_aligned_allocated(ceval,     num_states);
+        ensure_aligned_allocated(cevec,     num_states_squared);
         ensure_aligned_allocated(cinv_evec, num_states_squared);
         if (adapt_tree && phylo_tree && !phylo_tree->rooted
             && 0 < phylo_tree->leafNum) {
@@ -1860,6 +1860,23 @@ void ModelMarkov::setRates() {
 
 void ModelMarkov::setRateMatrixFromModel() {
     
+}
+
+void ModelMarkov::setNumberOfVariableRates(int param_count) {
+    if (num_params<param_count) {
+        double* old_rates = rates;
+        rates = new double[num_params+1];
+        if (0<num_params) {
+            for (int i=0; i<=num_params; ++i) {
+                rates[i] = old_rates[i];
+            }
+            for (int i=num_params+1; i<param_count; ++i) {
+                rates[i] = 1.0;
+            }
+        }
+        delete [] old_rates;
+    }
+    num_params = param_count;       
 }
 
 /* static */ ModelMarkov* ModelMarkov::getModelByName(string model_name,   PhyloTree *tree,

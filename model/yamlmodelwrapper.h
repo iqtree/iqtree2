@@ -65,6 +65,7 @@ public:
     using   S::getNDim;
     using   S::getNumberOfRates;
     using   S::isReversible;
+    using   S::setNumberOfVariableRates;
     using   S::setRateMatrix;
 
     YAMLModelWrapper() = delete;
@@ -91,6 +92,7 @@ public:
         //(without those changes being copied back to the original)
         ASSERT(model_info!=nullptr);
         if (model_info->acceptParameterList(parameter_list, report_tree)) {
+            setNumberOfVariableRates(model_info->getNumberOfVariableRates());
             setRateMatrixFromModel();
         }
     }
@@ -184,6 +186,7 @@ public:
             model_info->updateModelVariables(variables, first_freq_index, 
                                              ndim, phylo_tree);
             model_info->logVariablesTo(*report_tree);
+            setNumberOfVariableRates(model_info->getNumberOfVariableRates());
             setRateMatrixFromModel();
             afterVariablesChanged();
         }
@@ -223,21 +226,45 @@ public:
             super::setVariables(variables);
             return;
         }
+        TREE_LOG_LINE(*report_tree, YAMLVariableVerbosity,
+                      "setVariables called for " 
+                      << model_info->getName() 
+                      << " which has " 
+                      << model_info->getNumberOfVariableRates()
+                      << " unfixed rate variables");
         if (num_params > 0) {
-            for (int i = 0; i < num_params; ++i) {
+            TREE_LOG_LINE(*report_tree, YAMLVariableVerbosity, 
+                          "num_params was " << num_params);
+            int i = 1;
+            model_info->readModelVariablesByType(rates, num_params, false,
+                                                 ModelParameterType::RATE, 
+                                                 i, phylo_tree);
+            TREE_LOG_LINE(*report_tree, YAMLVariableVerbosity, 
+                          "after calling readModelVariablesByType,"
+                          " i was " << i);
+            for (i = 1; i <= num_params; ++i) {
                 variables[i] = rates[i];
             }
         }
+        int ndim = getNDim();
         if (freq_type == StateFreqType::FREQ_ESTIMATE) {
             // 2015-09-07: relax the sum of state_freq to be 1.0,
             // this will be done at the end of optimization
-            int ndim = getNDim();
             memcpy(variables+(ndim-num_states+2), state_freq,
                    (num_states-1)*sizeof(double));
         } else {
             paramsFromFreqs(variables+num_params+1,
                             state_freq, freq_type);
         }
+        std::stringstream trace;
+        trace << "ndim was " << ndim << ", freqs were ";
+        const char* sep = "";
+        for (int i=0; i<num_states-1; ++i) {
+            trace << sep << state_freq[i];
+            sep = ", ";
+        }
+        TREE_LOG_LINE(*report_tree, YAMLVariableVerbosity, 
+                      trace.str());
     }
     
     void setRateMatrixFromModel() {

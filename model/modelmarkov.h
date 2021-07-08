@@ -476,6 +476,12 @@ public:
 	 */
 	virtual void setRateMatrixFromModel();
 
+	/**
+	 * Called to let Model classes how many variable rate parameters
+	 * there are.
+	 */
+	virtual void setNumberOfVariableRates(int param_count);
+
 protected:
 
 	/**
