@@ -4774,7 +4774,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -s FILE              PHYLIP/FASTA/NEXUS/CLUSTAL/MSF alignment file(s)" << endl
     << "  -p FILE              NEXUS/RAxML partition file" << endl
     << "  -g_stop_t NUM        Stop after NUM species-trees were generated, or use 0 to turn off this stopping rule. Default: 1MLN trees."<< endl
-    << "  -g_stop_i NUM        Stop after NUM intermediate trees were generated, or use 0 to turn off this stopping rule. Default: 10MLN trees." << endl
+    << "  -g_stop_i NUM        Stop after NUM intermediate trees were visited, or use 0 to turn off this stopping rule. Default: 10MLN trees." << endl
     << "  -g_stop_h NUM        Stop after NUM hours (CPU time), or use 0 to turn off this stopping rule. Default: 7 days." << endl
     << "  -g_non_stop          Turn off all stopping rules." << endl
     << "  -g_query FILE        Species-trees to test for identical set of subtrees." << endl
