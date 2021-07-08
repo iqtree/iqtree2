@@ -22,6 +22,7 @@
  ***************************************************************************/
 
 #pragma once
+#include "model/modelinfo.h"
 #include "utils/tools.h"
 #ifndef yaml_model_wrapper_h
 #define yaml_model_wrapper_h
@@ -63,7 +64,6 @@ public:
     
     using   S::afterVariablesChanged;
     using   S::getNDim;
-    using   S::getNumberOfRates;
     using   S::isReversible;
     using   S::setNumberOfVariableRates;
     using   S::setRateMatrix;
@@ -142,14 +142,21 @@ public:
             }
             return changed;
         }
+        int num_rates = getNumberOfRates();
+        TREE_LOG_LINE(*report_tree, YAMLVariableVerbosity,
+                        "getVariables called" 
+                        " for " << model_info->getName() <<
+                        " with num_params = " << num_params <<
+                        " and num_rates = " << num_rates);
         if (num_params > 0) {
-            int num_all = getNumberOfRates();
-            for (int i = 0; i < num_all; i++) {
-                if (rates[i] != variables[i] ) {
+            for (int i = 0; i < num_rates; i++) {
+                if (rates[i] != variables[i+1] ) {
                     TREE_LOG_LINE(*report_tree, VerboseMode::VB_MAX,
                                   " estimated rates[" << i << "] changing"
-                                  " from " << rates[i] << " to " << variables[i]);
-                    rates[i] = variables[i];
+                                  " from " << rates[i] << 
+                                  " to " << variables[i+1] <<
+                                  " to match variables[" << (i+1) << "]");
+                    rates[i] = variables[i+1];
                     changed  = true;
                 }
             }
@@ -172,19 +179,21 @@ public:
                 //Set the last frequency to the residual
                 //(one minus the sum of the others)
                 if (scaleStateFreq()) {
-                    model_info->assignLastFrequency(state_freq[num_states-1]);
+                    changed = true;
+                    auto last_freq = state_freq[num_states-1];
+                    TREE_LOG_LINE(*report_tree, YAMLVariableVerbosity,
+                                  "Setting model's last frequency parameter"
+                                  " to " << last_freq );
+                    model_info->assignLastFrequency(last_freq);
                 }
             } else {
                 changed |= freqsFromParams(state_freq, variables+num_params+1,
-                                        freq_type);
+                                           freq_type);
             }
         }
         if (changed) {
-            TREE_LOG_LINE(*report_tree, YAMLVariableVerbosity,
-                          "getVariables called" 
-                          " for " << model_info->getName());
             model_info->updateModelVariables(variables, first_freq_index, 
-                                             ndim, phylo_tree);
+                                             ndim,      phylo_tree);
             model_info->logVariablesTo(*report_tree);
             setNumberOfVariableRates(model_info->getNumberOfVariableRates());
             setRateMatrixFromModel();
@@ -221,6 +230,10 @@ public:
         return changed;
     }
 
+    virtual int getNumberOfRates() const {
+        return model_info->getNumberOfVariableRates();
+    }
+
     virtual void setVariables(double *variables) {
         if (isMixtureModel()) {
             super::setVariables(variables);
@@ -235,25 +248,27 @@ public:
         if (num_params > 0) {
             TREE_LOG_LINE(*report_tree, YAMLVariableVerbosity, 
                           "num_params was " << num_params);
-            int i = 1;
-            model_info->readModelVariablesByType(rates, num_params, false,
+            int i = 0; //rates is 0-based
+            model_info->readModelVariablesByType(rates, num_params-1, false,
                                                  ModelParameterType::RATE, 
                                                  i, phylo_tree);
             TREE_LOG_LINE(*report_tree, YAMLVariableVerbosity, 
                           "after calling readModelVariablesByType,"
                           " i was " << i);
-            for (i = 1; i <= num_params; ++i) {
-                variables[i] = rates[i];
+            for (i = 0; i < num_params; ++i) {
+                variables[i+1] = rates[i];
+                //variables is 1-based, rates is 0-based.
             }
         }
-        int ndim = getNDim();
+        int  ndim           = getNDim();
+        auto freq_variables = variables+num_params+1;
         if (freq_type == StateFreqType::FREQ_ESTIMATE) {
             // 2015-09-07: relax the sum of state_freq to be 1.0,
             // this will be done at the end of optimization
-            memcpy(variables+(ndim-num_states+2), state_freq,
+            memcpy(freq_variables, state_freq,
                    (num_states-1)*sizeof(double));
         } else {
-            paramsFromFreqs(variables+num_params+1,
+            paramsFromFreqs(freq_variables,
                             state_freq, freq_type);
         }
         std::stringstream trace;

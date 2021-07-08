@@ -29,10 +29,11 @@
 
 //YAML Logging Levels
 VerboseMode YAMLModelVerbosity     = VerboseMode::VB_MIN;
-VerboseMode YAMLRateVerbosity      = VerboseMode::VB_MIN;
-VerboseMode YAMLVariableVerbosity  = VerboseMode::VB_MIN;
 VerboseMode YAMLFrequencyVerbosity = VerboseMode::VB_MAX;
 VerboseMode YAMLMatrixVerbosity    = VerboseMode::VB_MAX;
+VerboseMode YAMLParsingVerbosity   = VerboseMode::VB_MAX;
+VerboseMode YAMLRateVerbosity      = VerboseMode::VB_MAX;
+VerboseMode YAMLVariableVerbosity  = VerboseMode::VB_MAX;
 
 YAMLFileParameter::YAMLFileParameter()
     : is_subscripted(false), minimum_subscript(0), maximum_subscript(0)
@@ -77,7 +78,7 @@ void YAMLFileParameter::logParameterState(const char* verb,
     if (0<tolerance) {
         msg << ", and tolerance " << tolerance;
     }
-    TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity, msg.str());
+    TREE_LOG_LINE(*report_to_tree, YAMLVariableVerbosity, msg.str());
 }
 
 ModelVariable::ModelVariable() : type(ModelParameterType::OTHER)
@@ -392,7 +393,7 @@ void ModelInfoFromYAMLFile::setNumberOfStatesAndSequenceType(int requested_num_s
         num_states = 4;
     }
     if (!data_type_name.empty()) {
-        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+        TREE_LOG_LINE(*report_to_tree, YAMLParsingVerbosity,
                       "Data Type Name is " << data_type_name);
         auto seq_type_requested = getSeqType(data_type_name.c_str());
         if (seq_type_requested != SeqType::SEQ_UNKNOWN) {
@@ -416,7 +417,7 @@ void ModelInfoFromYAMLFile::setNumberOfStatesAndSequenceType(int requested_num_s
             break;
         }
     }
-    TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+    TREE_LOG_LINE(*report_to_tree, YAMLParsingVerbosity,
                   "Number of states is " << num_states);
 
     forceAssign("num_states", num_states);
@@ -607,7 +608,7 @@ void ModelInfoFromYAMLFile::setSubscriptedVariable
         }
     }
     if (i<11) {
-        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity, 
+        TREE_LOG_LINE(*report_to_tree, YAMLVariableVerbosity, 
                     "Setting " << getName() << "." 
                     << var_name << "=" << p.init_expression 
                     << (p.init_expression.empty() ? "" : "=")
@@ -682,7 +683,7 @@ void ModelInfoFromYAMLFile::updateParameterSubscriptRange(YAMLFileParameter& p,
             }
         }
         variables[new_var_name] = ModelVariable(p.type, p.range, v);
-        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+        TREE_LOG_LINE(*report_to_tree, YAMLVariableVerbosity,
                       verb << " subscripted variable " << new_var_name << "=" << v);
     }
 }
@@ -761,14 +762,14 @@ void ModelInfoFromYAMLFile::setBounds(int param_count,
                         lower_bound[i] = p.range.first;
                         upper_bound[i] = p.range.second;
                         bound_check[i] = false;
-                        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+                        TREE_LOG_LINE(*report_to_tree, YAMLVariableVerbosity,
                                     "Set bound " << i 
                                     << " : " << var_name 
                                     << " [" << lower_bound[i]
                                     << ".." << upper_bound[i] << "]");
                     } else if (is_freq) {
                         ASSERT(i <= param_count + 1);
-                        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+                        TREE_LOG_LINE(*report_to_tree, YAMLVariableVerbosity,
                                     "Did *not* set (last freq?) bound " << i 
                                     << " : " << var_name );
                     } else {
@@ -801,7 +802,7 @@ void ModelInfoFromYAMLFile::updateModelVariables(const double* updated_values,
         if (param_type == ModelParameterType::FREQUENCY) {
             i = first_freq_index;
         }
-        updateModelVariablesByType(updated_values, last_param_index+1, 
+        updateModelVariablesByType(updated_values, last_param_index, 
                                    false, param_type, i, report_to_tree);
     }
 }
@@ -1834,7 +1835,7 @@ ModelVariable& ModelInfoFromYAMLFile::assign(const std::string& var_name,
         if (min_value==max_value) {
             mv.markAsFixed(); //Todo: permanently, though?
         }
-        TREE_LOG_LINE(*report_tree, YAMLModelVerbosity,
+        TREE_LOG_LINE(*report_tree, YAMLVariableVerbosity,
                         "Set " << var_name 
                         << " range to " << min_value 
                         << ".." << max_value 
@@ -1849,7 +1850,7 @@ ModelVariable& ModelInfoFromYAMLFile::assign(const std::string& var_name,
             mv.markAsFixed();
             verb = "Set and fixed ";
         }
-        TREE_LOG_LINE(*report_tree, YAMLModelVerbosity,
+        TREE_LOG_LINE(*report_tree, YAMLVariableVerbosity,
                         verb << var_name 
                         << " to " << setting 
                         << " " << how << ".");

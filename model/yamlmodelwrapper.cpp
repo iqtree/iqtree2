@@ -125,7 +125,7 @@ YAMLModelMixture::YAMLModelMixture(ModelInfoFromYAMLFile& info,
     }
     full_name += CLOSE_BRACKET;
 
-    TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity, 
+    TREE_LOG_LINE(*report_to_tree, YAMLVariableVerbosity, 
                   "optimize_weights=" << optimize_weights);
 
     checkProportionsAndWeights(weights);
@@ -332,7 +332,7 @@ void YAMLRateFreeInvar::updateRateClassFromModelVariables() {
     int prop_count = model_info.getNumberOfProportions();
     int rate_ix    = 1;
     int prop_ix    = 1;
-    TREE_LOG_LINE(*phylo_tree, YAMLModelVerbosity, "RC=" << rate_count
+    TREE_LOG_LINE(*phylo_tree, YAMLRateVerbosity, "RC=" << rate_count
         << ", PC=" << prop_count);
 
     model_info.readModelVariablesByType(rates, rate_count, true,
@@ -344,7 +344,7 @@ void YAMLRateFreeInvar::updateRateClassFromModelVariables() {
     //Is the last proportion correct?
 
     prop_ix = prop_count;                                    
-    TREE_LOG_LINE(*phylo_tree, YAMLModelVerbosity, "PI=" << prop_ix);
+    TREE_LOG_LINE(*phylo_tree, YAMLRateVerbosity, "PI=" << prop_ix);
     model_info.readModelVariablesByType(prop,  prop_count, true,
                                         ModelParameterType::INVARIANT_PROPORTION, 
                                         prop_ix, phylo_tree);

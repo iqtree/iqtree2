@@ -446,7 +446,7 @@ void ModelFileLoader::parseMatrixParameter(const YAML::Node& param,
         rank            = (int)floor(rank_dbl);
         complainIfNot(0<rank, "rank of " + name + " matrix of model "
                       + info.getName() + " was invalid (" + rank_str + ")");
-        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+        TREE_LOG_LINE(*report_to_tree, YAMLMatrixVerbosity,
                       "Rank of " << info.getName() << "." << name <<
                       " was " << rank_str << " ... or " << rank);
     }
@@ -478,7 +478,7 @@ void ModelFileLoader::parseMatrixParameter(const YAML::Node& param,
         std::stringstream matrix_stream;
         dumpMatrixTo(lower_name.c_str(), info, expressions, rank,
                      formula, matrix_stream);
-        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity, matrix_stream.str());
+        TREE_LOG_LINE(*report_to_tree, YAMLMatrixVerbosity, matrix_stream.str());
     }
 }
 
@@ -503,11 +503,11 @@ void ModelFileLoader::parseYAMLMixtureModels(const YAML::Node& mixture_models,
                                              ModelInfoFromYAMLFile& info,
                                              ModelListFromYAMLFile& list,
                                              PhyloTree* report_to_tree) {
-    TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity, "Processing mixtures" );
+    TREE_LOG_LINE(*report_to_tree, YAMLParsingVerbosity, "Processing mixtures" );
     info.mixed_models = new MapOfModels();
     for (const YAML::Node& model: mixture_models) {
         std::string child_model_name = stringScalar(model, "substitutionmodel", "");
-        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity, "Processing mixture model" );
+        TREE_LOG_LINE(*report_to_tree, YAMLParsingVerbosity, "Processing mixture model" );
         ModelInfoFromYAMLFile* child_info = 
             new ModelInfoFromYAMLFile(info.model_file_path);
         parseYAMLModel(model, child_model_name, *child_info,
@@ -580,7 +580,7 @@ double ModelFileLoader::setConstraint(ModelExpression::Assignment* a,
     }
     ModelVariable& mv = info.assign(v->getName(), setting);
     mv.markAsFixed();
-    TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+    TREE_LOG_LINE(*report_to_tree, YAMLVariableVerbosity,
                   "Assigned " << v->getName()
                   << " := " << setting);
 
@@ -668,7 +668,7 @@ void ModelFileLoader::parseRateMatrix(const YAML::Node& rate_matrix,
         dumpMatrixTo("rate", info, info.rate_matrix_expressions,
                      info.rate_matrix_rank, info.rate_matrix_formula,
                      matrix_stream);
-        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity, matrix_stream.str());
+        TREE_LOG_LINE(*report_to_tree, YAMLMatrixVerbosity, matrix_stream.str());
     }
 }
 
@@ -865,13 +865,13 @@ void ModelFileLoader::inheritOneModel(ModelInfoFromYAMLFile& info,
         std::string save_name = info.model_name;
         info = *ancestor;
         info.model_name = save_name;
-        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+        TREE_LOG_LINE(*report_to_tree, YAMLParsingVerbosity,
                     "Model " << info.model_name
                     << " is based on model " << ancestor->getName());
         have_first_parent = true;
     } else {
         info.inheritModel(*ancestor, report_to_tree);
-        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+        TREE_LOG_LINE(*report_to_tree, YAMLParsingVerbosity,
                     "Model " << info.model_name
                     << " is also based on" 
                     << " model " << ancestor->getName());
@@ -913,7 +913,7 @@ void ModelFileLoader::setModelStateFrequency(const YAML::Node& substitution_mode
             auto   var_name  = freq_param.getSubscriptedVariableName(subscript);
             double var_value = x.evaluate();
             info.assign(var_name, var_value);
-            TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+            TREE_LOG_LINE(*report_to_tree, YAMLVariableVerbosity,
                             "Assigned frequency: " << var_name
                             << " := " << var_value  );
             ++subscript;
@@ -940,7 +940,7 @@ void ModelFileLoader::setModelStateFrequency(const YAML::Node& substitution_mode
     } else if (info.isFrequencyParameter(low_freq)) {
         info.frequency_type = StateFreqType::FREQ_USER_DEFINED;
     } 
-    TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+    TREE_LOG_LINE(*report_to_tree, YAMLFrequencyVerbosity,
                     "After setting frequency type"
                     " of " << info.model_name <<
                     " to " << low_freq << "...");
@@ -961,7 +961,7 @@ void ModelFileLoader::parseYAMLModel(const YAML::Node& substitution_model,
     info.model_name            = name_of_model;
 
     if (!info.superclass_model_name.empty()) {
-        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity, 
+        TREE_LOG_LINE(*report_to_tree, YAMLParsingVerbosity, 
                       name_of_model << " parent is " 
                       << info.superclass_model_name << "." );
         if (string_to_upper(info.superclass_model_name)=="ANY") {
@@ -1106,7 +1106,7 @@ void ModelFileLoader::parseYAMLModelStringProperties
             if (prop_node.IsScalar()) {
                 std::string prop_value = prop_node.Scalar();
                 info.string_properties[prop_name] = prop_value;
-                TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+                TREE_LOG_LINE(*report_to_tree, YAMLParsingVerbosity,
                               "string property " << prop_name <<
                               " set to " << prop_value);
             }

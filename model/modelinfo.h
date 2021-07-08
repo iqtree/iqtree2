@@ -11,6 +11,7 @@
 #include <nclextra/modelsblock.h>
 
 extern VerboseMode YAMLModelVerbosity;
+extern VerboseMode YAMLParsingVerbosity;
 extern VerboseMode YAMLRateVerbosity;
 extern VerboseMode YAMLVariableVerbosity;
 extern VerboseMode YAMLFrequencyVerbosity;

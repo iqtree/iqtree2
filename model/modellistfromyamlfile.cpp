@@ -21,6 +21,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "model/modelinfo.h"
 #include "modelinfofromyamlfile.h"
 #include "modelsubst.h"            //for OPEN_BRACKET and CLOSE_BRACKET
 #include "modelfileloader.h"
@@ -49,7 +50,7 @@ void ModelListFromYAMLFile::loadFromFile (const char* file_path,
             if (!(node["substitutionmodel"])) {
                 if (node["ratemodel"]) {
                     std::string rate_model_name = node["ratemodel"].Scalar();
-                    TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+                    TREE_LOG_LINE(*report_to_tree, YAMLParsingVerbosity,
                                 "Parsing YAML rate model " << rate_model_name);
                     if (rate_models_found.hasName(rate_model_name)) {
                         std::stringstream complaint;
@@ -67,7 +68,7 @@ void ModelListFromYAMLFile::loadFromFile (const char* file_path,
                 continue;
             }
             std::string yaml_model_name = node["substitutionmodel"].Scalar();
-            TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+            TREE_LOG_LINE(*report_to_tree, YAMLParsingVerbosity,
                           "Parsing YAML substitution model " << yaml_model_name);
             ModelInfoFromYAMLFile* model = models_found.insertNew(yaml_model_name);
             loader.parseYAMLModel(node, yaml_model_name, *model, *this,
@@ -166,7 +167,7 @@ ModelMarkov* ModelListFromYAMLFile::getModelByName
         freq_type = model_info->frequency_type;
     }
     if (0<strlen(model_params) || 0<strlen(freq_params)) {
-        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+        TREE_LOG_LINE(*report_to_tree, YAMLFrequencyVerbosity,
                       "Model Params: " << model_params
                       << " Freq Params: " << freq_params);
         if (parameter_list.empty()) {
