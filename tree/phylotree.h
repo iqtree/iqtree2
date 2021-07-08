@@ -1813,7 +1813,8 @@ public:
             @param dad dad of the node, used to direct the search
             @return the likelihood of the tree
      */
-    virtual void optimizeAllBranches(PhyloNode *node, PhyloNode *dad = NULL, int maxNRStep = 100);
+    virtual void optimizeAllBranches(PhyloNode *node, PhyloNode *dad = nullptr, 
+                                     int maxNRStep = 100);
 
     /**
      * optimize all branch lengths at the subtree rooted at node step-by-step.

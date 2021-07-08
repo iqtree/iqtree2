@@ -891,7 +891,8 @@ public:
             @param[out] pair_freq matrix of size num_states*num_states
             @param[out] state_freq vector of size num_states
      */
-    virtual void computeDivergenceMatrix(double *pair_freq, double *state_freq, bool normalize = true);
+    virtual void computeDivergenceMatrix(double* pair_freq, double* state_freq, 
+                                         bool    normalize);
 
     /**
         perform matched-pair tests of symmetry of Lars Jermiin et al.

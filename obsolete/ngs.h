@@ -56,7 +56,7 @@ public:
 
 	NGSAlignment(int nstate, string &seq1, string &seq2);
 
-	virtual char convertState(char state, SeqType seq_type);
+	virtual StateType convertState(char state, SeqType seq_type) const;
 
 
 	/**
@@ -69,7 +69,8 @@ public:
 		@param state_freq (OUT) is filled with state frequencies, assuming state_freq was allocated with 
 			at least num_states entries.
 	*/
-	virtual void computeStateFreq(double *state_freq, size_t num_unknown_states = 0);
+	virtual void computeStateFreq(double *state_freq, size_t num_unknown_states,
+	                              PhyloTree* report_to_tree);
 
 	/**
 		compute the sum of pair state frequencies over all categories
@@ -141,7 +142,11 @@ public:
             @param iterations number of iterations to loop through all branches
             @return the likelihood of the tree
      */
-    virtual double optimizeAllBranches(int my_iterations = 100, double tolerance = TOL_LIKELIHOOD, int maxNRStep = 100);
+    virtual double optimizeAllBranches(int    my_iterations = 100, 
+	                                   double tolerance     = TOL_LIKELIHOOD, 
+									   int    maxNRStep     = 100,
+									   bool   were_lengths_consistent = true,
+                                       PhyloTree* report_to_tree = nullptr);
 
 };
 
@@ -165,7 +170,7 @@ public:
 		compute categorized rates from the "continuous" rate of the original Meyer & von Haeseler model.
 		The current implementation uses the k-means algorithm with k-means++ package.
 	*/
-	virtual double optimizeParameters(double epsilon);
+	virtual double optimizeParameters(double epsilon, PhyloTree* report_to_tree);
 
 
 	/**
@@ -182,13 +187,17 @@ public:
 		@param ddf (OUT) second derivative
 		@return f(value) of function f you want to minimize
 	*/
-	virtual void computeFuncDerv(double value, double &df, double &ddf);
+	virtual void computeFuncDerv(double value, 
+	                             double &df, double &ddf);
 
 	/**
 		classify rates into categories.
 		@param tree_lh the current tree log-likelihood
 	*/
-	virtual double classifyRates(double tree_lh) { return tree_lh; }
+	virtual double classifyRates(double     tree_lh, 
+	                             PhyloTree* report_to_tree) { 
+		return tree_lh; 
+	}
 
 	/**
 		write information
@@ -211,8 +220,8 @@ public:
 		compute categorized rates from the "continuous" rate of the original Meyer & von Haeseler model.
 		The current implementation uses the k-means algorithm with k-means++ package.
 	*/
-	virtual double optimizeParameters(double epsilon);
-
+	virtual double optimizeParameters(double     epsilon,
+	                                  PhyloTree* report_to_tree);
 
 	/**
 		return the number of dimensions

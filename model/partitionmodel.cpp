@@ -104,7 +104,7 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree,
         int nstates = linked_models.begin()->second->num_states;
         double *pair_freq = new double[nstates * nstates];
         double *state_freq = new double[nstates];
-        tree->aln->computeDivergenceMatrix(pair_freq, state_freq);
+        tree->aln->computeDivergenceMatrix(pair_freq, state_freq, true);
         /*
         MatrixXd divmat = Map<Matrix<double,Dynamic, Dynamic, RowMajor> > (pair_freq, nstates, nstates);
         cout << "DivMat: " << endl << divmat << endl;
