@@ -2123,38 +2123,38 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             
-            if (strcmp(argv[cnt], "-terrace_analysis") == 0) {
+            if (strcmp(argv[cnt], "-gentrius") == 0) {
                 params.terrace_analysis = true;
                 continue;
             }
             
-            if (strcmp(argv[cnt], "-t_print") == 0) {
+            if (strcmp(argv[cnt], "-g_print") == 0) {
                 params.print_terrace_trees = true;
                 continue;
             }
             
-            if (strcmp(argv[cnt], "-t_print_lim") == 0) {
+            if (strcmp(argv[cnt], "-g_print_lim") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use -t_print_lim <num_of_trees_to_be_output>";
+                    throw "Use -g_print_lim <num_of_trees_to_be_output>";
                 params.terrace_print_lim = convert_int(argv[cnt]);
                 if(params.terrace_print_lim<=0){
-                    throw "Invalid value! Use -t_print_lim <trees_num> with trees_num>0";
+                    throw "Invalid value! Use -g_print_lim <trees_num> with trees_num>0";
                 }
                 continue;
             }
             
-            if (strcmp(argv[cnt], "-t_print_induced") == 0) {
+            if (strcmp(argv[cnt], "-g_print_induced") == 0) {
                 params.print_induced_trees = true;
                 continue;
             }
             
-            if (strcmp(argv[cnt], "-t_print_m") == 0) {
+            if (strcmp(argv[cnt], "-g_print_m") == 0) {
                 params.print_pr_ab_matrix = true;
                 continue;
             }
             
-            if (strcmp(argv[cnt], "-t_print_m_o") == 0) {
+            if (strcmp(argv[cnt], "-g_print_m_o") == 0) {
                 params.print_m_overlap = true;
                 continue;
             }
@@ -2167,60 +2167,60 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             
-            if (strcmp(argv[cnt], "-terrace_query") == 0) {
+            if (strcmp(argv[cnt], "-g_query") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use -terrace_query <terrace_query_set_file>";
+                    throw "Use -g_query <gentrius_query_set_file>";
                 params.terrace_query_set = argv[cnt];
                 continue;
             }
             
-            if (strcmp(argv[cnt], "-t_rm_leaves") == 0) {
+            if (strcmp(argv[cnt], "-g_rm_leaves") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use -t_rm_leaves <number_of_leaves_to_be_inserted>";
+                    throw "Use -g_rm_leaves <number_of_leaves_to_be_inserted>";
                 params.terrace_remove_m_leaves = convert_int(argv[cnt]);
                 if(params.terrace_remove_m_leaves<=0){
-                    throw "Invalid value! Use -t_rm_leaves <leaves_num> with leaves_num>0";
+                    throw "Invalid value! Use -g_rm_leaves <leaves_num> with leaves_num>0";
                 }
                 continue;
             }
             
             
-            if (strcmp(argv[cnt], "-t_stop_i") == 0) {
+            if (strcmp(argv[cnt], "-g_stop_i") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use -t_stop_i <number_of_intermediate_trees_to_stop>";
+                    throw "Use -g_stop_i <number_of_intermediate_trees_to_stop>";
                 params.terrace_stop_intermediate_num = convert_int(argv[cnt]);
                 if(params.terrace_stop_intermediate_num<0){
-                    throw "Invalid value! Use -t_stop_i <trees_num> with trees_num > 0 to stop after trees_num intermediate trees were generated, or use trees_num == 0 to turn off this stopping rule.";
+                    throw "Invalid value! Use -g_stop_i <trees_num> with trees_num > 0 to stop after trees_num intermediate trees were generated, or use trees_num == 0 to turn off this stopping rule. Default: 10MLN trees.";
                 }
                 continue;
             }
             
-            if (strcmp(argv[cnt], "-t_stop_t") == 0) {
+            if (strcmp(argv[cnt], "-g_stop_t") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use -t_stop_t <number_of_terrace_trees_to_stop>";
+                    throw "Use -g_stop_t <number_of_terrace_trees_to_stop>";
                 params.terrace_stop_terrace_trees_num = convert_int(argv[cnt]);
                 if(params.terrace_stop_terrace_trees_num<0){
-                    throw "Invalid value! Use -t_stop_t <trees_num> with trees_num>0 to stop after trees_num terrace trees were generated, or use trees_num == 0 to turn off this stopping rule.";
+                    throw "Invalid value! Use -g_stop_t <trees_num> with trees_num>0 to stop after trees_num terrace trees were generated, or use trees_num == 0 to turn off this stopping rule. Default: 1MLN trees.";
                 }
                 continue;
             }
             
-            if (strcmp(argv[cnt], "-t_stop_h") == 0) {
+            if (strcmp(argv[cnt], "-g_stop_h") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use -t_stop_h <number_of_hours_to_stop>";
+                    throw "Use -g_stop_h <number_of_hours_to_stop>";
                 params.terrace_stop_time = convert_double(argv[cnt]);
                 if(params.terrace_stop_time<0){
-                    throw "Invalid value! Use -t_stop_h <h> with h>0 to stop the run after h hours, or use h == 0 to turn off this stopping rule.";
+                    throw "Invalid value! Use -g_stop_h <h> with h>0 to stop the run after h hours, or use h == 0 to turn off this stopping rule. Default: 7 days.";
                 }
                 continue;
             }
             
-            if (strcmp(argv[cnt], "-t_non_stop") == 0) {
+            if (strcmp(argv[cnt], "-g_non_stop") == 0) {
                 params.terrace_non_stop = true;
                 continue;
             }
@@ -4768,6 +4768,24 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --cf-verbose         Write CF per tree/locus to cf.stat_tree/_loci" << endl
     << "  --cf-quartet         Write sCF for all resampled quartets to .cf.quartet" << endl
 
+    << endl << "ANALYSIS WITH GENTRIUS ALGORITHM:" << endl
+    << "  -gentrius FILE       File must contain either a single species-tree or a set of subtrees." << endl
+    << "  -pr_ab_matrix FILE   Presence-absence matrix of loci coverage." << endl
+    << "  -s FILE              PHYLIP/FASTA/NEXUS/CLUSTAL/MSF alignment file(s)" << endl
+    << "  -p FILE              NEXUS/RAxML partition file" << endl
+    << "  -g_stop_t NUM        Stop after NUM species-trees were generated, or use 0 to turn off this stopping rule. Default: 1MLN trees."<< endl
+    << "  -g_stop_i NUM        Stop after NUM intermediate trees were generated, or use 0 to turn off this stopping rule. Default: 10MLN trees." << endl
+    << "  -g_stop_h NUM        Stop after NUM hours (CPU time), or use 0 to turn off this stopping rule. Default: 7 days." << endl
+    << "  -g_non_stop          Turn off all stopping rules." << endl
+    << "  -g_query FILE        Species-trees to test for identical set of subtrees." << endl
+    << "  -g_print             Write all generated species-trees. WARNING: there might be millions of trees!" << endl
+    << "  -g_print_lim NUM     Limit on the number of species-trees to be written." << endl
+    << "  -g_print_induced     Write induced partition subtrees." << endl
+    << "  -g_print_m           Write presence-absence matrix." << endl
+    << "  -g_rm_leaves NUM     Invoke reverse analysis for complex datasets." << endl
+    
+    
+    
 #ifdef USE_LSD2
     << endl << "TIME TREE RECONSTRUCTION:" << endl
     << "  --date FILE          File containing dates of tips or ancestral nodes" << endl

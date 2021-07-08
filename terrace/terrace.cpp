@@ -1685,14 +1685,14 @@ void Terrace::write_warning_stop(int type){
         case 1:
             cout<<"Type of stopping rule: number of visited intermediate trees"<<"\n";
             cout<<"Current setting: stop if the number of visited intermediate trees reached "<<intermediate_max_trees<<"\n";
-            cout<<"To change the value use -t_stop_i <number_of_intermediate_trees_to_stop>"<<"\n";
+            cout<<"To change the value use -g_stop_i <number_of_intermediate_trees_to_stop>"<<"\n";
             cout<<"------------------------------------------"<<"\n";
             cout<<"The number of considered intermediated trees already reached "<<intermediate_max_trees<<". Exiting generation process..."<<"\n";
             break;
         case 2:
             cout<<"Type of stopping rule: terrace size"<<"\n";
             cout<<"Current setting: stop if the number of trees on the terrace reached "<<terrace_max_trees<<"\n";
-            cout<<"To change the value use -t_stop_t <number_of_terrace_trees_to_stop>"<<"\n";
+            cout<<"To change the value use -g_stop_t <number_of_terrace_trees_to_stop>"<<"\n";
             cout<<"------------------------------------------"<<"\n";
             cout<<"Considered terrace already contains "<<terrace_max_trees<<" trees."<<"\n"<<"Exiting generation process..."<<"\n";
             break;
@@ -1700,7 +1700,7 @@ void Terrace::write_warning_stop(int type){
         case 3:
             cout<<"Type of stopping rule: CPU time used"<<"\n";
             cout<<"Current setting: stop if the CPU time used is larger than "<<seconds_max<<"\n";
-            cout<<"To change the value use -t_stop_h <number_of_hours_to_stop>"<<"\n";
+            cout<<"To change the value use -g_stop_h <number_of_hours_to_stop>"<<"\n";
             cout<<"------------------------------------------"<<"\n";
             cout<<"Total CPU time is already larger than "<<seconds_max<<" trees."<<"\n"<<"Exiting generation process..."<<"\n";
             break;
