@@ -1675,14 +1675,14 @@ int ModelInfoFromYAMLFile::getNumberOfVariableProportions() const {
     return count;
 }
 
+
 bool ModelInfoFromYAMLFile::acceptParameterList(std::string parameter_list,
                                                 PhyloTree* report_to_tree) {
     typedef ModelExpression::InterpretedExpression Interpreter;
     typedef ModelExpression::Expression            Expression;
     typedef ModelExpression::Assignment            Assignment;
     typedef ModelExpression::Variable              Variable;
-    typedef ModelExpression::ModelException        Exception;   
-    typedef ModelExpression::RangeOperator         Range;                                 
+    typedef ModelExpression::ModelException        Exception;
                                                 
     trimString(parameter_list);
     if (startsWith(parameter_list, "{") &&
@@ -1690,22 +1690,12 @@ bool ModelInfoFromYAMLFile::acceptParameterList(std::string parameter_list,
         auto len = parameter_list.length();
         parameter_list = parameter_list.substr(1, len-2);
     }
-    size_t param_list_length = parameter_list.length();
-    size_t i                 = 0;
-    int    bracket_depth     = 0;
+    size_t    param_list_length = parameter_list.length();
+    size_t    i                 = 0;
     std::vector<Interpreter*> expr_list;
     while (i<param_list_length) {
-        size_t j = i;
-        for (;j<param_list_length &&
-                (parameter_list[j]!=',' || 0<bracket_depth); ++j) {
-            char ch = parameter_list[j];
-            if (ch=='(') {
-                ++bracket_depth;
-            }
-            else if (ch==')') {
-                --bracket_depth;
-            }
-        }
+        size_t      j     = findEndOfParameter(parameter_list, 
+                                               param_list_length, i);
         std::string param = parameter_list.substr(i, j-i);
         expr_list.push_back(new Interpreter(*this, param));
         i = j + 1;
@@ -1742,6 +1732,34 @@ bool ModelInfoFromYAMLFile::acceptParameterList(std::string parameter_list,
         outError(complaint.str());
     }
 
+    changeSubscriptRangesOfParameters(report_to_tree);
+
+    return !expr_list.empty();
+}
+
+bool ModelInfoFromYAMLFile::findEndOfParameter(const std::string parameter_list,
+                                               size_t param_list_length,
+                                               size_t i) const {
+    int    bracket_depth     = 0;
+    size_t j = i;
+    for (;j<param_list_length &&
+            (parameter_list[j]!=',' || 0<bracket_depth); ++j) {
+        char ch = parameter_list[j];
+        if (ch=='(') {
+            ++bracket_depth;
+        }
+        else if (ch==')') {
+            --bracket_depth;
+        }
+    }
+    return j;
+}
+
+void ModelInfoFromYAMLFile::changeSubscriptRangesOfParameters
+        (PhyloTree* report_to_tree) {
+    typedef ModelExpression::InterpretedExpression Interpreter;
+    typedef ModelExpression::RangeOperator         Range;                                 
+
     for (YAMLFileParameter& p : parameters) {
         if (p.is_subscripted && !p.subscript_expression.empty()) {
             Interpreter expr(*this, p.subscript_expression);
@@ -1753,8 +1771,6 @@ bool ModelInfoFromYAMLFile::acceptParameterList(std::string parameter_list,
             }
         }
     }
-
-    return !expr_list.empty();
 }
 
 void ModelInfoFromYAMLFile::changeParameterSubscriptRange
