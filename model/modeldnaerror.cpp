@@ -105,27 +105,28 @@ int ModelDNAError::getNDim() const {
     }
 }
 
+int  ModelDNAError::getErrorNucleotideState() const {
+    if (seqerr_name == "+EA") {
+        return 0;
+    } else if (seqerr_name == "+EC") {
+        return 1;
+    } else if (seqerr_name == "+EG") {
+        return 2;
+    } else if (seqerr_name == "+ET") {
+        return 3;
+    } else if (seqerr_name == "+E")  {
+        return -1;
+    }
+    outError("Unknown sequencing error model " + seqerr_name);
+    return -1;
+}
+
 void ModelDNAError::computeTipLikelihood(PML::StateType state, double *state_lk) {
     if (epsilon == 0.0) {
         ModelDNA::ModelSubst::computeTipLikelihood(state, state_lk);
         return;
     }
-    int i;
-
-    int b = -1;
-    if (seqerr_name == "+EA")
-        b = 0;
-    else if (seqerr_name == "+EC")
-        b = 1;
-    else if (seqerr_name == "+EG")
-        b = 2;
-    else if (seqerr_name == "+ET")
-        b = 3;
-    else if (seqerr_name == "+E")
-        b = -1;
-    else {
-        outError("Unknown sequencing error model " + seqerr_name);
-    }
+    int b = getErrorNucleotideState();
     
     // true for observed states, false for unobserved state
     bool observed[4] = {false, false, false, false};
@@ -137,7 +138,7 @@ void ModelDNAError::computeTipLikelihood(PML::StateType state, double *state_lk)
     } else if (state < 18) {
         // ambiguous (polymorphic) state
         int cstate = state-num_states+1;
-        for (i = 0; i < num_states; i++) {
+        for (int i = 0; i < num_states; ++i) {
             if ((cstate) & (1 << i)) {
                 observed[i] = true;
                 num_observed++;
@@ -145,7 +146,7 @@ void ModelDNAError::computeTipLikelihood(PML::StateType state, double *state_lk)
         }
     } else {
         // unknown state
-        for (i = 0; i < num_states; i++) {
+        for (int i = 0; i < num_states; i++) {
             observed[i] = true;
         }
         num_observed = num_states;
@@ -162,7 +163,7 @@ void ModelDNAError::computeTipLikelihood(PML::StateType state, double *state_lk)
         observed_lk = 1.0 - (4-num_observed)*epsilon/3.0;
         unobserved_lk = num_observed*epsilon/3.0;
     }
-    for (i = 0; i < num_states; i++) {
+    for (int i = 0; i < num_states; i++) {
         state_lk[i] = observed[i] ? observed_lk : unobserved_lk;
     }
 }

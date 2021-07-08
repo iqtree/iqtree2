@@ -84,6 +84,9 @@ public:
      */
     virtual void computeTipLikelihood(PML::StateType state, double *state_lk);
 
+        //Supporting function
+        int getErrorNucleotideState() const;
+
     /**
          this function is called by ModelListFromYAMLFile::getModelByName
          to configure an instance ofr ModelDNAError.
