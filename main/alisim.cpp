@@ -754,14 +754,14 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator,
                 string partition_list = "";
                 int partition_count = 0;
                 
-                // the total number of states (sites) of all partitions which use the same alignment file.
-                int total_num_states = 0;
+                // the maximum index of sites in all partitions which use the same alignment file.
+                int max_site_index = 0;
                 int j;
                 
                 // clear out all sequences in the current super_tree
                 clearoutSequencesSuperTree(super_tree->root, super_tree->root);
 #ifdef _OPENMP
-#pragma omp parallel for shared(partition_list, partition_count, total_num_states)
+#pragma omp parallel for shared(partition_list, partition_count, max_site_index)
 #endif
                 for (j = i; j < super_tree->size(); j++)
                 {
@@ -781,8 +781,10 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator,
 #pragma omp critical
 #endif
                         {
-                            // update total_num_states
-                            total_num_states += current_tree->aln->getNSite();
+                            // update max_site_index
+                            for (int site_index:site_ids)
+                                if (max_site_index<site_index)
+                                    max_site_index = site_index;
                             
                             // update partition_list
                             partition_list = partition_list + "_" + super_tree->at(j)->aln->name;
@@ -803,7 +805,7 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator,
                 int num_leaves = super_tree->leafNum - ((super_tree->root->isLeaf() && super_tree->root->name == ROOT_NAME)?1:0);
                 
                 // write the merged sequences to the output file for the current cluster of partitions
-                writeSequencesToFile(file_path + partition_list, super_tree->at(i)->aln, total_num_states, num_leaves, alisimulator, inference_mode);
+                writeSequencesToFile(file_path + partition_list, super_tree->at(i)->aln, max_site_index+1, num_leaves, alisimulator, inference_mode);
             }
         }
     }
