@@ -74,7 +74,24 @@ public:
                                       double logl_epsilon = 0.1, double gradient_epsilon = 0.0001,
                                       PhyloTree* report_to_tree = nullptr);
     
-    
+        double optimizeSubtreeModelParameters(PhyloSuperTreePlen *tree, 
+                                              int iteration,
+                                              double gradient_epsilon,
+                                              PhyloTree* report_to_tree);
+        double optimizeGeneRate(PhyloSuperTreePlen *tree, double tree_lh, 
+                                double cur_lh, double gradient_episilon);
+
+        double optimizeBranchLengthsIfRequested(PhyloSuperTreePlen *tree, 
+                                                int    fixed_len, 
+                                                int    iteration,
+                                                double cur_lh, 
+                                                double logl_epsilon,
+                                                double gradient_epsilon);
+        void   logResultOfParameterOptimization(bool   write_info,
+                                                double begin_time,
+                                                int    iteration,
+                                                PhyloTree* report_to_tree);
+
     /**
      *  optimize model parameters and tree branch lengths for the +I+G model
      *  using restart strategy.
