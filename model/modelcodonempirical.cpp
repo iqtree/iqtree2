@@ -209,15 +209,13 @@ void ModelCodonEmpirical::init(const char *model_name, string model_params,
 	super::init("", dummy_params, freq, dummy_freq_params, report_to_tree);
 }
 
-void ModelCodonEmpirical::readCodonModel(istream &in) {
-	int i, j;
+double** ModelCodonEmpirical::readRateMatrix(istream& in) const {
 	double ** q = (double**)new double[num_states];
-	for (i = 0; i < num_states; i++) {
+	for (int i = 0; i < num_states; ++i) {
 		q[i] = new double[num_states];
 	}
-	double *f = new double[num_states];
-	for (i = 1; i < num_states; i++) {
-		for (j = 0; j < i; j++) {
+	for (int i = 1; i < num_states; ++i) {
+		for (int j = 0; j < i; ++j) {
 			in >> q[i][j];
 			q[j][i] = q[i][j];
 			if (verbose_mode >= VerboseMode::VB_MAX) {
@@ -228,13 +226,34 @@ void ModelCodonEmpirical::readCodonModel(istream &in) {
 			cout << endl;
 		}
 	}
-	for (i = 0; i < num_states; i++)
+	return q;
+}
+
+void ModelCodonEmpirical::forgetRateMatrix(double** q) const {
+	for (int i = num_states - 1; i >= 0; i--) {
+		delete[] q[i];
+	}
+	delete [] q;
+}
+
+double* ModelCodonEmpirical::readFrequencyVector(istream& in) const {
+	double *f = new double[num_states];
+	for (int i = 0; i < num_states; ++i) {
 		in >> f[i];
-	StrVector codons;
+	}
+	return f;
+}
+
+void ModelCodonEmpirical::forgetFrequencyVector(double* f) const {
+	delete [] f;
+}
+
+void ModelCodonEmpirical::readCodonsAndStateMap(istream &in, 
+                                                StrVector& codons,
+												IntVector& state_map) {
 	codons.resize(num_states);
-	IntVector state_map;
 	state_map.resize(num_states);
-	for (i = 0; i < num_states; i++) {
+	for (int i = 0; i < num_states; i++) {
 		in >> codons[i];
 		if (codons[i].length() != 3) {
 			outError("Input model has wrong codon format ", codons[i]);
@@ -253,11 +272,13 @@ void ModelCodonEmpirical::readCodonModel(istream &in) {
 	if (verbose_mode >= VerboseMode::VB_MAX) {
 		cout << endl;
 	}
-	//int nrates = getNumRateEntries();
-	//int row = 0, col = 1;
-	// since rates for codons is stored in lower-triangle, special treatment is needed
-	for (i = 1; i < num_states; i++) {
-		for (j = 0; j < i; j++) {
+}
+
+void ModelCodonEmpirical::calculateRatesAndFrequencies
+		(const StrVector& codons, const IntVector& state_map,
+		 double** q,              double* f) {
+	for (int i = 1; i < num_states; i++) {
+		for (int j = 0; j < i; j++) {
 			int row = state_map[i], col = state_map[j];
 			if (row < col) {
 				int tmp = row;
@@ -269,19 +290,32 @@ void ModelCodonEmpirical::readCodonModel(istream &in) {
 			rates[id] = q[i][j];
 		}
 	}
-	for (i = 0; i < num_states; i++) {
+	for (int i = 0; i < num_states; i++) {
 		state_freq[i] = MIN_FREQUENCY;
 	}
 	int nscodons = static_cast<int>(codons.size());
-	for (i = 0; i < nscodons; i++) {
-		state_freq[state_map[i]] = f[i] - (num_states - nscodons) * MIN_FREQUENCY / nscodons;
-	}
+	for (int i = 0; i < nscodons; i++) {
+		state_freq[state_map[i]] = f[i] - (num_states - nscodons) 
+		                         * MIN_FREQUENCY / nscodons;
+	}	
+}
+
+void ModelCodonEmpirical::readCodonModel(istream &in) {
+	double** q = readRateMatrix(in);
+	double*  f = readFrequencyVector(in);
+	StrVector codons;
+	IntVector state_map;
+
+	readCodonsAndStateMap(in, codons, state_map);
+	calculateRatesAndFrequencies(codons, state_map, q, f);
+
+	//int nrates = getNumRateEntries();
+	//int row = 0, col = 1;
+	// since rates for codons is stored in lower-triangle, special treatment is needed
+
 	num_params = 0;
 
-	delete [] f;
-	for (i = num_states - 1; i >= 0; i--) {
-		delete[] q[i];
-	}
-	delete [] q;
+	forgetFrequencyVector(f);
+	forgetRateMatrix(q);
 }
 

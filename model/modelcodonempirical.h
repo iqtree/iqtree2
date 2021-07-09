@@ -45,6 +45,20 @@ public:
 	 */
 	void readCodonModel(istream &in);
 
+		//Supporting functions
+		double** readRateMatrix        (istream& in) const;
+		void     forgetRateMatrix      (double** q)  const;
+
+		void     readCodonsAndStateMap (istream &in, 
+                                        StrVector& codons,
+									    IntVector& state_map);
+		void     calculateRatesAndFrequencies(const StrVector& codons, 
+		                                      const IntVector& state_map,
+											  double** q,        
+											  double* f);
+
+		double*  readFrequencyVector   (istream& in) const;
+		void     forgetFrequencyVector (double*  f)  const;
 };
 
 #endif /* MODELCODONEMPIRICAL_H_ */
