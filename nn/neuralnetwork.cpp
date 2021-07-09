@@ -60,8 +60,8 @@ double NeuralNetwork::doAlphaInference() {
 
     std::vector<const char *> output_node_names = {"alpha"};
 
-    const size_t num_taxa = this->alignment->getNSeq();
-    const size_t num_sites = this->alignment->getNSite();
+    size_t num_sites = this->alignment->getNSite();
+    size_t num_taxa = this->alignment->getNSeq();
 
     // choose 10,000 random positions (with repetition) in (0, num_sites - 1)
     mt19937 rng(chrono::steady_clock::now().time_since_epoch().count());
@@ -70,6 +70,9 @@ double NeuralNetwork::doAlphaInference() {
     for (size_t i = 0; i < 40000; i = i + 4) {
         size_t site_idx = dist(rng);
         vector<size_t> freqs = this->alignment->getPattern(site_idx).freqs;
+        // in case of gaps, adjust number of taxa
+        // size_t num_taxa = accumulate(freqs.begin(), freqs.end(), 0);
+
         input_tensor_[i] = (float) freqs[0] / num_taxa;
         input_tensor_[i + 1] = (float) freqs[1] / num_taxa;
         input_tensor_[i + 2] = (float) freqs[2] / num_taxa;
