@@ -36,6 +36,7 @@ class ModelGTR : public ModelMarkov {
         virtual double      optimizeParameters(double gradient_epsilon,
                                                PhyloTree* report_to_tree);
         virtual void        decomposeRateMatrix();
+        virtual void        manuallyComputeEigenvectors();
         virtual void        readRates(istream &in);
         virtual void        readRates(std::string str);
         virtual void        readStateFreq(istream &in, PhyloTree* report_to_tree);
