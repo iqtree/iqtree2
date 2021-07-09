@@ -939,6 +939,15 @@ public:
      */
     vector<float> computeSummaryStats(int seq1_idx, int seq2_idx);
 
+    // added by TD
+    /**
+     * Removes sites of alignments where >70% are gaps. With >0 but <=70% gaps, gaps are replaced by
+     * the most frequent base. This strategy is used for the model selection and alpha inference via
+     * the neural network.
+     * @return modified (new) alignment
+     */
+    Alignment* removeAndFillUpGappySites();
+
 
 protected:
 

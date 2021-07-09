@@ -484,6 +484,10 @@ vector<float> Alignment::computeSummaryStats(int seq1_idx, int seq2_idx) {
     map<size_t, size_t> bitshift_map = {{0, 1}, {1, 3}, {2, 5}, {3, 7}};
 
     for (iterator it = begin(); it != end(); it++) {
+        // check if contains gaps, if yes discard position
+        /*if ((*it)[seq1_idx] == 18 || (*it)[seq2_idx] == 18) { // 18 stands for a gap
+            continue;
+        }*/
         // count nucleotides for sequence 1
         switch ((*it)[seq1_idx]) {
             case 0: stats[4]++;
@@ -560,6 +564,42 @@ vector<float> Alignment::computeSummaryStats(int seq1_idx, int seq2_idx) {
        stats[i] /= n_sites;
     }
     return stats;
+}
+
+// added by TD
+Alignment *Alignment::removeAndFillUpGappySites() {
+
+    IntVector keep_patterns;
+
+    // remove all sites with > 70% gaps
+    for (size_t idx = 0; idx < getNPattern(); idx++) {
+        size_t count_gaps = 0;
+        Pattern pattern = getPattern(idx);
+        for (size_t i = 0; i < getNSeq(); i++) {
+            if (pattern[i] == STATE_UNKNOWN)
+                count_gaps++;
+        }
+        if (count_gaps / getNSeq() <= 0.7) {
+            keep_patterns.push_back(idx);
+        }
+    }
+
+    Alignment *aln = new Alignment;
+    aln->extractPatterns(this, keep_patterns);
+
+    for (size_t idx = 0; idx < boost::size(keep_patterns); idx++) {
+        vector<size_t> freqs = aln->at(idx).freqs;
+        uint32_t most_frequent_base = std::max_element(freqs.begin(), freqs.end()) - freqs.begin();
+        for (size_t i = 0; i < getNSeq(); i++) {
+            if (aln->at(idx)[i] == STATE_UNKNOWN) {
+                // fill up gap with most frequent base
+                aln->at(idx)[i] = (StateType)most_frequent_base;
+            }
+        }
+    }
+
+    return aln;
+
 }
 
 Alignment *Alignment::removeGappySeq() {
