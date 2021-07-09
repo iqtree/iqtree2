@@ -523,9 +523,9 @@ public:
                                 PhyloTree* report_tree);
 
         //Support functions for acceptParameterList
-        bool findEndOfParameter(const std::string parameter_list,
-                                size_t param_list_length,
-                                size_t i) const;
+        size_t findEndOfParameter(const std::string parameter_list,
+                                  size_t param_list_length,
+                                  size_t i) const;
         void changeSubscriptRangesOfParameters(PhyloTree* report_to_tree);
 
     //Mixture Model stuff

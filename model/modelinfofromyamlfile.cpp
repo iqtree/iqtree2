@@ -1737,15 +1737,19 @@ bool ModelInfoFromYAMLFile::acceptParameterList(std::string parameter_list,
     return !expr_list.empty();
 }
 
-bool ModelInfoFromYAMLFile::findEndOfParameter(const std::string parameter_list,
-                                               size_t param_list_length,
-                                               size_t i) const {
-    int    bracket_depth     = 0;
-    size_t j = i;
-    for (;j<param_list_length &&
-            (parameter_list[j]!=',' || 0<bracket_depth); ++j) {
+size_t ModelInfoFromYAMLFile::findEndOfParameter(const std::string parameter_list,
+                                                 size_t param_list_length,
+                                                 size_t i) const {
+    int    bracket_depth = 0;
+    size_t j             = i;
+    for (;j<param_list_length; ++j) {
         char ch = parameter_list[j];
-        if (ch=='(') {
+        if (ch==',') {
+            if (0==bracket_depth) {
+                break;
+            }
+        }
+        else if (ch=='(') {
             ++bracket_depth;
         }
         else if (ch==')') {
