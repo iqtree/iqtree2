@@ -5,12 +5,15 @@
 //  Created by James Barbetti on 1/7/20.
 //
 
-#ifndef alignmentsummary_hpp
-#define alignmentsummary_hpp
+#ifndef alignmentsummary_h
+#define alignmentsummary_h
 
 #include <vector>
 #include <map>
 #include <utils/progress.h> //for progress_display
+#include <utils/vectortypes.h> //for IntVector
+#include <phylo-yaml/statespace.h>
+
 
 /**
 Summary (for an Alignment) of sites where there are variations
@@ -19,17 +22,17 @@ Summary (for an Alignment) of sites where there are variations
 
 class Alignment;
 
-struct SiteSummary
+class SiteSummary
 {
 public:
-    bool      isConst;
-    int       frequency;
-    StateType minState;
-    StateType maxState;
+    bool           isConst;
+    int            frequency;
+    PML::StateType minState;
+    PML::StateType maxState;
     SiteSummary(): isConst(false), frequency(0), minState(0), maxState(0) {}
 };
 
-struct AlignmentSummary
+class AlignmentSummary
 {
 protected:
     const Alignment*      alignment;
@@ -40,8 +43,8 @@ protected:
     std::map<int, int>    stateToSumOfConstantSiteFrequencies;
     size_t                totalFrequency;    //sum of frequencies (*including* constant sites!)
     size_t                totalFrequencyOfNonConstSites; //ditto (*excluding* constant sites!)
-    StateType             minState;        //found on any site where there is variation
-    StateType             maxState;        //ditto
+    PML::StateType        minState;        //found on any site where there is variation
+    PML::StateType        maxState;        //ditto
     char*                 sequenceMatrix;
     intptr_t              sequenceLength;  //Sequence length (or: count of sites per sequence)
     intptr_t              sequenceCount;   //The number of sequences
@@ -73,4 +76,4 @@ public:
                                                  const char* taskName, const char* verb);
 };
 
-#endif /* alignmentsummary_hpp */
+#endif /* alignmentsummary_h */

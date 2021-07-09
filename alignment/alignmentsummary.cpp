@@ -8,7 +8,6 @@
 #include "alignment.h"
 #include "alignmentsummary.h"
 
-
 AlignmentSummary::AlignmentSummary(const Alignment* a
                                    , bool keepConstSites
                                    , bool keepBoringSites) {

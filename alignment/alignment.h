@@ -92,6 +92,14 @@ constexpr int EXCLUDE_UNINF = 4; // exclude uninformative sites
 
 class PatternInfoVector;
 
+class AlignmentSummary;
+
+struct SequenceInfo {
+    double percent_gaps;
+    bool   failed;
+    double pvalue;
+};
+
 /**
 Multiple Sequence Alignment. Stored by a vector of site-patterns
 
@@ -502,6 +510,22 @@ public:
             check proper and undupplicated sequence names
      */
     void checkSeqName();
+        //Supporting functions
+        void renameSequencesIfNeedBe();
+        void checkSequenceNamesAreDistinct();
+        SequenceInfo* calculateSequenceInfo(const AlignmentSummary* s,
+                                            const double* state_freq,
+                                            const unsigned* count_per_seq,
+                                            int     degrees_of_freedom,
+                                            size_t &r_num_problem_seq,
+                                            size_t &r_total_gaps, 
+                                            size_t &r_num_failed);
+        void   reportSequenceInfo (const SequenceInfo* seqInfo, 
+                                   size_t max_len) const;
+        size_t countGapsInSequence(const AlignmentSummary* s, 
+                                   char  firstUnknownState, 
+                                   int   seq_index) const;
+        void   forgetSequenceInfo (SequenceInfo*& seqInfo) const;
 
     /**
      * check identical sequences
@@ -926,7 +950,7 @@ public:
             @return the number of ungappy and unambiguous characters from a sequence
             @param seq_id sequence ID
      */
-    int countProperChar(int seq_id);
+    int countProperChar(int seq_id) const;
 
     /**
             @return unconstrained log-likelihood (without a tree)

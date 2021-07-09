@@ -183,33 +183,8 @@ int Alignment::checkAbsentStates(string msg) {
 }
 
 void Alignment::checkSeqName() {
-    ostringstream warn_str;
-    StrVector::iterator it;
-    for (it = seq_names.begin(); it != seq_names.end(); it++) {
-        string orig_name = (*it);
-        if (renameString(*it)) {
-            warn_str << orig_name << " -> " << (*it) << endl;
-        }
-    }
-    if (!warn_str.str().empty() &&
-        Params::getInstance().compute_seq_composition) {
-        string str = "Some sequence names are changed as follows:\n";
-        outWarning(str + warn_str.str());
-    }
-    // now check that sequence names are different
-    StrVector names;
-    names.insert(names.begin(), seq_names.begin(), seq_names.end());
-    sort(names.begin(), names.end());
-    bool ok = true;
-    for (it = names.begin(); it != names.end(); it++) {
-        if (it+1==names.end()) break;
-        if (*it == *(it+1)) {
-            cout << "ERROR: Duplicated sequence name " << *it << endl;
-            ok = false;
-        }
-    }
-    if (!ok) outError("Please rename sequences listed above!");
-
+    renameSequencesIfNeedBe();
+    checkSequenceNamesAreDistinct();
     if (!Params::getInstance().compute_seq_composition) {
         return;
     }
@@ -233,11 +208,12 @@ void Alignment::checkSeqName() {
         cout << "NOTE: The composition test for PoMo"
              << " only tests the proportion of fixed states!" << endl;
     }
-    bool listSequences = !Params::getInstance().suppress_list_of_sequences;
-    size_t max_len = getMaxSeqNameLength()+1;
+    bool   listSequences = !Params::getInstance().suppress_list_of_sequences;
+    size_t max_len       = getMaxSeqNameLength()+1;
     if (listSequences) {
         cout.width(max_len+14);
-        cout << right << "Gap/Ambiguity" << "  Composition  p-value"<< endl;
+        cout << right << "Gap/Ambiguity" 
+             << "  Composition  p-value" << endl;
         cout.precision(2);
     }
 
@@ -248,37 +224,90 @@ void Alignment::checkSeqName() {
     //lies a bit here.  We're not counting gap characters,
     //we are constructing the sequences (so we can count gap characters quickly).
 
-    intptr_t numSequences      = seq_names.size();
-    size_t   numSites          = getNSite();
+    size_t     num_problem_seq;
+    size_t     total_gaps;
+    size_t     num_failed;
+    SequenceInfo* seqInfo        = calculateSequenceInfo(&s, &state_freq[0],
+                                                         count_per_seq, df,
+                                                         num_problem_seq,
+                                                         total_gaps, num_failed);
+    
+    if (listSequences) {
+        reportSequenceInfo(seqInfo, max_len);
+    }
+
+    forgetSequenceInfo(seqInfo);
+    
+    if (num_problem_seq) {
+        cout << "WARNING: " << num_problem_seq
+             << " sequences contain more than 50% gaps/ambiguity" << endl;
+    }
+    if (listSequences) {
+        cout << "**** ";
+        cout.width(max_len+2);
+        cout << left << " TOTAL  ";
+        cout.width(6);
+        cout << right << ((double)total_gaps/getNSite())/getNSeq()*100 << "% ";
+        cout << " " << num_failed << " sequences failed composition"
+             << " chi2 test (p-value<5%; df=" << df << ")" << endl;
+        cout.precision(3);
+    }
+    delete [] count_per_seq;
+}
+
+void Alignment::renameSequencesIfNeedBe() {
+    ostringstream warn_str;
+    StrVector::iterator it;
+    for (it = seq_names.begin(); it != seq_names.end(); it++) {
+        string orig_name = (*it);
+        if (renameString(*it)) {
+            warn_str << orig_name << " -> " << (*it) << endl;
+        }
+    }
+    if (!warn_str.str().empty() &&
+        Params::getInstance().compute_seq_composition) {
+        string str = "Some sequence names are changed as follows:\n";
+        outWarning(str + warn_str.str());
+    }
+}
+
+void Alignment::checkSequenceNamesAreDistinct() {
+    // now check that sequence names are different
+    StrVector names;
+    names.insert(names.begin(), seq_names.begin(), seq_names.end());
+    sort(names.begin(), names.end());
+    bool ok = true;
+    for (auto it = names.begin(); it != names.end(); it++) {
+        if (it+1==names.end()) break;
+        if (*it == *(it+1)) {
+            cout << "ERROR: Duplicated sequence name " << *it << endl;
+            ok = false;
+        }
+    }
+    if (!ok) {
+        outError("Please rename sequences listed above!");
+    }
+}
+
+SequenceInfo* Alignment::calculateSequenceInfo(const AlignmentSummary* s,
+                                               const double*   state_freq,
+                                               const unsigned* count_per_seq,
+                                               int     degrees_of_freedom,
+                                               size_t &r_num_problem_seq,
+                                               size_t &r_total_gaps, 
+                                               size_t &r_num_failed) {
+    intptr_t      numSequences = seq_names.size();
     char     firstUnknownState = static_cast<char>(num_states + pomo_sampled_states.size());
-    const int* frequencies     = s.getSiteFrequencies().data();
+    SequenceInfo* seqInfo      = new SequenceInfo[numSequences];
 
-    struct SequenceInfo {
-        double percent_gaps;
-        bool   failed;
-        double pvalue;
-    };
-    SequenceInfo* seqInfo = new SequenceInfo[numSequences];
-
-    size_t num_problem_seq = 0;
-    size_t total_gaps = 0;
-    size_t num_failed = 0;
-    size_t seq_len = s.getSequenceLength();
-#ifdef _OPENMP
+    size_t num_problem_seq     = 0;
+    size_t total_gaps          = 0;
+    size_t num_failed          = 0;
+    #ifdef _OPENMP
     #pragma omp parallel for reduction(+:total_gaps,num_problem_seq,num_failed)
     #endif
     for (int i = 0; i < numSequences; i++) {
-        size_t num_gaps;
-        if (s.hasSequenceMatrix()) {
-            //Discount the non-gap characters with a (not-yet-vectorized)
-            //sweep over the sequence.
-            const char* sequence = s.getSequence(i);
-            num_gaps = sumForUnknownCharacters(firstUnknownState, sequence,
-                                               seq_len, frequencies);
-        } else {
-            //Do the discounting the hard way
-            num_gaps = numSites - countProperChar(i);
-        }
+        size_t num_gaps = countGapsInSequence(s, firstUnknownState, i);
         total_gaps += num_gaps;
         seqInfo[i].percent_gaps = ((double)num_gaps / getNSite()) * 100.0;
         if ( 50.0 < seqInfo[i].percent_gaps ) {
@@ -335,49 +364,62 @@ void Alignment::checkSeqName() {
                 }
             }
             chi2  *= sum_count;
-            pvalue = chi2prob(df, chi2);
-
+            pvalue = chi2prob(degrees_of_freedom, chi2);
         }
         seqInfo[i].pvalue = pvalue;
         seqInfo[i].failed = (pvalue < 0.05);
         num_failed += seqInfo[i].failed ? 1 : 0;
     }
-    if (listSequences) {
-        for (intptr_t i = 0; i < numSequences; i++) {
-            cout.width(4);
-            cout << right << i + 1 << "  ";
-            cout.width(max_len);
-            cout << left << seq_names[i] << " ";
-            cout.width(6);
-            cout << right << seqInfo[i].percent_gaps << "%";
-            if (seqInfo[i].failed) {
-                cout << "    failed ";
-            }
-            else {
-                cout << "    passed ";
-            }
-            cout.width(9);
-            cout << right << (seqInfo[i].pvalue * 100) << "%";
-            cout << endl;
-        }
-    }
-    delete[] seqInfo;
+    r_num_problem_seq = num_problem_seq;
+    r_total_gaps      = total_gaps;
+    r_num_failed      = num_failed;
+    return seqInfo;
+}
 
-    if (num_problem_seq) {
-        cout << "WARNING: " << num_problem_seq
-             << " sequences contain more than 50% gaps/ambiguity" << endl;
+size_t Alignment::countGapsInSequence(const AlignmentSummary* s, 
+                                      char  firstUnknownState, 
+                                      int   seq_index) const {
+    if (s->hasSequenceMatrix()) {
+        //Discount the non-gap characters with a (not-yet-vectorized)
+        //sweep over the sequence.
+        const char* sequence    = s->getSequence(seq_index);
+        const int*  frequencies = s->getSiteFrequencies().data();
+        size_t      seq_len     = s->getSequenceLength();
+
+
+        return sumForUnknownCharacters(firstUnknownState, sequence,
+                                        seq_len, frequencies);
+    } else {
+        //Do the discounting the hard way
+        return getNSite() - countProperChar(seq_index);
     }
-    if (listSequences) {
-        cout << "**** ";
-        cout.width(max_len+2);
-        cout << left << " TOTAL  ";
+}
+
+void Alignment::reportSequenceInfo(const SequenceInfo* seqInfo,
+                                   size_t max_len) const {
+    intptr_t numSequences = seq_names.size();
+    for (intptr_t i = 0; i < numSequences; i++) {
+        cout.width(4);
+        cout << right << i + 1 << "  ";
+        cout.width(max_len);
+        cout << left << seq_names[i] << " ";
         cout.width(6);
-        cout << right << ((double)total_gaps/getNSite())/getNSeq()*100 << "% ";
-        cout << " " << num_failed << " sequences failed composition"
-             << " chi2 test (p-value<5%; df=" << df << ")" << endl;
-        cout.precision(3);
+        cout << right << seqInfo[i].percent_gaps << "%";
+        if (seqInfo[i].failed) {
+            cout << "    failed ";
+        }
+        else {
+            cout << "    passed ";
+        }
+        cout.width(9);
+        cout << right << (seqInfo[i].pvalue * 100) << "%";
+        cout << endl;
     }
-    delete [] count_per_seq;
+}
+
+void Alignment::forgetSequenceInfo(SequenceInfo*& seqInfo) const {
+    delete [] seqInfo;
+    seqInfo = nullptr;
 }
 
 int Alignment::checkIdenticalSeq()
@@ -4731,9 +4773,9 @@ void Alignment::getUnobservedConstPatterns(ASCType ASC_type,
     }
 }
 
-int Alignment::countProperChar(int seq_id) {
+int Alignment::countProperChar(int seq_id) const {
     int num_proper_chars = 0;
-    for (iterator it = begin(); it != end(); it++) {
+    for (auto it = begin(); it != end(); ++it) {
         if ((*it)[seq_id] < num_states + pomo_sampled_states.size()) {
             num_proper_chars+=(*it).frequency;
         }
