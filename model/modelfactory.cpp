@@ -1056,6 +1056,28 @@ double ModelFactory::optimizeAllParameters(double gradient_epsilon) {
     return score;
 }
 
+GammaInvarOptimizationState::GammaInvarOptimizationState
+    (PhyloTree* phylo_tree, ModelSubst* model,
+     RateHeterogeneity* site_rate): tree(phylo_tree) {
+    begin_time          = getRealTime();
+    tree->setCurScore(tree->computeLikelihood());
+    tree->saveBranchLengths(initBranLens);
+    bestLens            = initBranLens;
+    saved_ckp           = model->getCheckpoint();
+    model_ckp           = *saved_ckp;
+    /* Best estimates found */
+    bestLogl            = -DBL_MAX;
+    bestAlpha           = 0.0;
+    bestPInvar          = 0.0;
+    numberOfStartValues = 10.0;
+    frac_const          = tree->aln->frac_const_sites;
+    testInterval        = (frac_const - MIN_PINVAR * 2.0)
+                        / (numberOfStartValues - 1.0);
+    initPInv            = MIN_PINVAR;
+    initAlpha           = site_rate->getGammaShape();
+
+}
+
 double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info,
                                                   double logl_epsilon,
                                                   double gradient_epsilon,
@@ -1068,168 +1090,167 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
                                   logl_epsilon, gradient_epsilon,
                                   report_to_tree);
     }
-
-    double begin_time = getRealTime();
-
-    PhyloTree *tree = site_rate->getTree();
-    double frac_const = tree->aln->frac_const_sites;
-    tree->setCurScore(tree->computeLikelihood());
-
-    /* Back up branch lengths and substitutional rates */
-    DoubleVector initBranLens;
-    DoubleVector bestLens;
-    tree->saveBranchLengths(initBranLens);
-    bestLens = initBranLens;
-    Checkpoint *model_ckp = new Checkpoint;
-    Checkpoint *best_ckp  = new Checkpoint;
-    Checkpoint *saved_ckp = model->getCheckpoint();
-    *model_ckp = *saved_ckp;
-
-    /* Best estimates found */
-    double bestLogl     = -DBL_MAX;
-    double bestAlpha    = 0.0;
-    double bestPInvar   = 0.0;
-
-    size_t numberOfStartValues = 10; //Was hardcoded
     
-    double testInterval = (frac_const - MIN_PINVAR * 2.0)
-                        / ((double)numberOfStartValues - 1.0);
-    double initPInv     = MIN_PINVAR;
-    double initAlpha    = site_rate->getGammaShape();
+    GammaInvarOptimizationState state(site_rate->getTree(), model,
+                                      site_rate);
+
 
     if (Params::getInstance().opt_gammai_fast) {
-        initPInv = frac_const/2;
-        bool stop = false;
-        while(!stop) {
-            if (write_info) {
-                TREE_LOG_LINE(*tree, VerboseMode::VB_QUIET,
-                              "\nTesting with init. pinv = " << initPInv
-                              << " / init. alpha = "  << initAlpha );
-            }
-            DoubleVector estResults
-                = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon,
-                                                gradient_epsilon, initPInv,
-                                                initAlpha, initBranLens, model_ckp,
-                                                report_to_tree);
-            if (write_info) {
-                TREE_LOG_LINE(*tree, VerboseMode::VB_QUIET,
-                              "Est. p_inv: " << estResults[0]
-                              << " / Est. gamma shape: " << estResults[1]
-                              << " / Logl: " << estResults[2]);
-            }
-            if (estResults[2] > bestLogl) {
-                bestLogl   = estResults[2];
-                bestAlpha  = estResults[1];
-                bestPInvar = estResults[0];
-                bestLens.clear();
-                tree->saveBranchLengths(bestLens);
-                model->setCheckpoint(best_ckp);
-                model->saveCheckpoint();
-                model->setCheckpoint(saved_ckp);
-                if (estResults[0] < initPInv) {
-                    initPInv = estResults[0] - testInterval;
-                    if (initPInv < 0.0)
-                        initPInv = 0.0;
-                } else {
-                    initPInv = estResults[0] + testInterval;
-                    if (initPInv > frac_const) {
-                        initPInv = frac_const;
-                    }
-                }
-                //cout << "New initPInv = " << initPInv << endl;
-            }  else {
-                stop = true;
-            }
-        }
+        optimizeParametersGammaInvarFast(write_info,   fixed_len,
+                                         logl_epsilon, gradient_epsilon,
+                                         state,
+                                         report_to_tree);
     } else {
-        // Now perform testing different initial p_inv values
-        std::stringstream whatIAmDoing;
-        whatIAmDoing << "Thoroughly optimizing +I+G parameters from "
-            << numberOfStartValues << " start values";
-        if (write_info) {
-            #if USE_PROGRESS_DISPLAY
-            if (!progress_display::getProgressDisplay()) {
-                cout << whatIAmDoing.str() << "..." << endl;
-            }
-            #else
-            cout << whatIAmDoing.str() << "..." << endl;
-            #endif
-        }
-        tree->initProgress(static_cast<double>(numberOfStartValues),
-                           whatIAmDoing.str(),
-                           "tried", "start value");
-        while (initPInv <= frac_const) {
-            DoubleVector estResults; // vector of p_inv, alpha and logl
-            if (Params::getInstance().opt_gammai_keep_bran) {
-                estResults
-                    = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon,
-                                                    gradient_epsilon, initPInv,
-                                                    initAlpha, bestLens, model_ckp,
-                                                    report_to_tree);
-            }
-            else {
-                estResults
-                    = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon,
-                                                    gradient_epsilon, initPInv,
-                                                    initAlpha, initBranLens, model_ckp,
-                                                    report_to_tree);
-            }
-            if (write_info) {
-                TREE_LOG_LINE(*tree, VerboseMode::VB_QUIET,
-                              "Init pinv, alpha: " << initPInv << ", "  << initAlpha
-                              << " / Estimate: " << estResults[0] << ", " << estResults[1]
-                              << " / LogL: " << estResults[2]);
-            }
-            initPInv = initPInv + testInterval;
-            if (estResults[2] > bestLogl) {
-                bestLogl   = estResults[2];
-                bestAlpha  = estResults[1];
-                bestPInvar = estResults[0];
-                bestLens.clear();
-                tree->saveBranchLengths(bestLens);
-                model->setCheckpoint(best_ckp);
-                model->saveCheckpoint();
-                model->setCheckpoint(saved_ckp);
-            }
-            tree->trackProgress(1.0);
-        }
-        tree->doneProgress();
+        optimizeParametersGammaInvarSlow(write_info,   fixed_len, 
+                                         logl_epsilon, gradient_epsilon,
+                                         state,
+                                         report_to_tree);
     }
-    site_rate->setGammaShape(bestAlpha);
-    site_rate->setPInvar(bestPInvar);
+    site_rate->setGammaShape(state.bestAlpha);
+    site_rate->setPInvar(state.bestPInvar);
 
     // -- Mon Apr 17 21:12:14 BST 2017
     // DONE Minh, merged correctly
-    model->setCheckpoint(best_ckp);
+    model->setCheckpoint(&state.best_ckp);
     model->restoreCheckpoint();
-    model->setCheckpoint(saved_ckp);
+    model->setCheckpoint(state.saved_ckp);
     // --
 
-    tree->restoreBranchLengths(bestLens);
+    state.tree->restoreBranchLengths(state.bestLens);
 
-    tree->clearAllPartialLH();
-    tree->setCurScore(tree->computeLikelihood());
+    state.tree->clearAllPartialLH();
+    state.tree->setCurScore(state.tree->computeLikelihood());
     if (write_info) {
-        TREE_LOG_LINE(*tree, VerboseMode::VB_QUIET, 
-                      "Optimal pinv,alpha: " << bestPInvar
-                      << ", " << bestAlpha
-                      << " / LogL: " << tree->getCurScore() << "\n");
+        TREE_LOG_LINE(*state.tree, VerboseMode::VB_QUIET, 
+                      "Optimal pinv,alpha: " << state.bestPInvar
+                      << ", " << state.bestAlpha
+                      << " / LogL: " << state.tree->getCurScore() << "\n");
     }
-    if (!tree->params->ignore_any_errors) {
-        ASSERT(fabs(tree->getCurScore() - bestLogl) < 1.0);
+    if (!state.tree->params->ignore_any_errors) {
+        ASSERT(fabs(state.tree->getCurScore() - state.bestLogl) < 1.0);
     }
-    delete model_ckp;
-    delete best_ckp;
 
-    double elapsed_secs = getRealTime() - begin_time;
+    double elapsed_secs = getRealTime() - state.begin_time;
     if (write_info) {
-        TREE_LOG_LINE(*tree, VerboseMode::VB_QUIET, 
+        TREE_LOG_LINE(*state.tree, VerboseMode::VB_QUIET, 
                       "Parameters optimization took "
                       << elapsed_secs << " sec");
     }
 
     // 2016-03-14: this was missing!
-    return tree->getCurScore();
+    return state.tree->getCurScore();
+}
+
+void ModelFactory::optimizeParametersGammaInvarFast
+        (bool write_info, int fixed_len,
+         double logl_epsilon, double gradient_epsilon,
+         GammaInvarOptimizationState& state,
+         PhyloTree* report_to_tree) {
+
+
+    bool   stop         = false;
+    while(!stop) {
+        if (write_info) {
+            TREE_LOG_LINE(*state.tree, VerboseMode::VB_QUIET,
+                            "\nTesting with init. pinv = " << state.initPInv
+                            << " / init. alpha = "  << state.initAlpha );
+        }
+        DoubleVector estResults
+            = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon,
+                                            gradient_epsilon, state.initPInv,
+                                            state.initAlpha, state.initBranLens, 
+                                            &state.model_ckp, report_to_tree);
+        if (write_info) {
+            TREE_LOG_LINE(*state.tree, VerboseMode::VB_QUIET,
+                            "Est. p_inv: " << estResults[0]
+                            << " / Est. gamma shape: " << estResults[1]
+                            << " / Logl: " << estResults[2]);
+        }
+        if (estResults[2] > state.bestLogl) {
+            state.bestLogl   = estResults[2];
+            state.bestAlpha  = estResults[1];
+            state.bestPInvar = estResults[0];
+            state.bestLens.clear();
+            state.tree->saveBranchLengths(state.bestLens);
+            model->setCheckpoint(&state.best_ckp);
+            model->saveCheckpoint();
+            model->setCheckpoint(state.saved_ckp);
+            if (estResults[0] < state.initPInv) {
+                state.initPInv = estResults[0] - state.testInterval;
+                if (state.initPInv < 0.0)
+                    state.initPInv = 0.0;
+            } else {
+                state.initPInv = estResults[0] + state.testInterval;
+                if (state.initPInv > state.frac_const) {
+                    state.initPInv = state.frac_const;
+                }
+            }
+            //cout << "New initPInv = " << initPInv << endl;
+        }  else {
+            stop = true;
+        }
+    }
+}
+
+void ModelFactory::optimizeParametersGammaInvarSlow
+        (bool write_info, int fixed_len,
+         double logl_epsilon, double gradient_epsilon,
+         GammaInvarOptimizationState& state,
+         PhyloTree*    report_to_tree) {
+    std::stringstream whatIAmDoing;
+    // Now perform testing different initial p_inv values
+    whatIAmDoing << "Thoroughly optimizing +I+G parameters from "
+        << state.numberOfStartValues << " start values";
+    if (write_info) {
+        #if USE_PROGRESS_DISPLAY
+        if (!progress_display::getProgressDisplay()) {
+            cout << whatIAmDoing.str() << "..." << endl;
+        }
+        #else
+        cout << whatIAmDoing.str() << "..." << endl;
+        #endif
+    }
+    report_to_tree->initProgress(state.numberOfStartValues,
+                                 whatIAmDoing.str(),
+                                 "tried", "start value");
+    while (state.initPInv <= state.frac_const) {
+        DoubleVector estResults; // vector of p_inv, alpha and logl
+        if (Params::getInstance().opt_gammai_keep_bran) {
+            estResults
+                = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon,
+                                                gradient_epsilon, state.initPInv,
+                                                state.initAlpha, state.bestLens, 
+                                                &state.model_ckp, report_to_tree);
+        }
+        else {
+            estResults
+                = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon,
+                                                gradient_epsilon, state.initPInv,
+                                                state.initAlpha, state.initBranLens, 
+                                                &state.model_ckp, report_to_tree);
+        }
+        if (write_info) {
+            TREE_LOG_LINE(*state.tree, VerboseMode::VB_QUIET,
+                            "Init pinv, alpha: " << state.initPInv
+                            << ", "  << state.initAlpha
+                            << " / Estimate: " << estResults[0] 
+                            << ", " << estResults[1]
+                            << " / LogL: " << estResults[2]);
+        }
+        state.initPInv = state.initPInv + state.testInterval;
+        if (estResults[2] > state.bestLogl) {
+            state.bestLogl   = estResults[2];
+            state.bestAlpha  = estResults[1];
+            state.bestPInvar = estResults[0];
+            state.bestLens.clear();
+            state.tree->saveBranchLengths(state.bestLens);
+            model->setCheckpoint(&state.best_ckp);
+            model->saveCheckpoint();
+            model->setCheckpoint(state.saved_ckp);
+        }
+        report_to_tree->trackProgress(1.0);
+    }
+    report_to_tree->doneProgress();
 }
 
 DoubleVector ModelFactory::optimizeGammaInvWithInitValue(int fixed_len, double logl_epsilon,

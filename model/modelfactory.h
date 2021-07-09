@@ -33,6 +33,30 @@ const double MAX_BRLEN_SCALE = 100.0;
 
 ModelsBlock *readModelsDefinition(Params &params);
 
+struct GammaInvarOptimizationState {
+public:
+	double       begin_time;
+	PhyloTree*   tree;
+	DoubleVector initBranLens;
+	DoubleVector bestLens;
+	Checkpoint   model_ckp;
+	Checkpoint   best_ckp ;
+	Checkpoint*  saved_ckp;
+	/* Best estimates found */
+	double       bestLogl;
+	double       bestAlpha;
+	double       bestPInvar;
+    double       numberOfStartValues;
+    double       frac_const;
+    double       testInterval;                        
+    double       initPInv;
+    double       initAlpha; 
+
+	GammaInvarOptimizationState(PhyloTree* phylo_tree, ModelSubst* model,
+	                            RateHeterogeneity* site_rate);
+	~GammaInvarOptimizationState() = default;
+};
+
 /**
 
 	@author BUI Quang Minh <minh.bui@univie.ac.at>
@@ -278,12 +302,22 @@ public:
      * @param report_to_tree report proress to this tree
      *	@return the best likelihood
      */
-    virtual double optimizeParametersGammaInvar(int fixed_len = BRLEN_OPTIMIZE,
-                                                bool write_info = true,
+    virtual double optimizeParametersGammaInvar(int    fixed_len    = BRLEN_OPTIMIZE,
+                                                bool   write_info   = true,
                                                 double logl_epsilon = 0.1,
                                                 double gradient_epsilon = 0.0001,
                                                 PhyloTree* report_to_tree = nullptr);
-
+		//Supporting functions
+		void optimizeParametersGammaInvarFast(bool write_info, int fixed_len,
+		                                      double logl_epsilon, 
+											  double gradient_epsilon,
+											  GammaInvarOptimizationState& state,
+											  PhyloTree*    report_to_tree);
+		void optimizeParametersGammaInvarSlow(bool write_info, int fixed_len,
+		                                      double logl_epsilon, 
+											  double gradient_epsilon,
+											  GammaInvarOptimizationState& state,
+											  PhyloTree*    report_to_tree);
 
 	/**
 	 * @return TRUE if parameters are at the boundary that may cause numerical unstability
