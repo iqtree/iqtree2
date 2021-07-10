@@ -2234,6 +2234,11 @@ public:
     bool alisim_active;
     
     /**
+    *  TRUE if AliSim is running with inference mode
+    */
+    bool alisim_inference_mode;
+    
+    /**
     *  TRUE to disable copying gaps from input sequences
     */
     bool alisim_no_copy_gaps;
@@ -2811,6 +2816,20 @@ int random_int(int n, int *rstream = NULL);
  * returns a random floating-point nuber in the range [0; 1)
  */
 double random_double(int *rstream = NULL);
+
+/**
+        randomly select a base frequency from the pool of freqs
+        @param freqs_string string storing the pool of freqs
+        @param num_freqs the total number of freqs in the pool
+ */
+double random_a_nucleotide_base_freq(string freqs_string, int num_freqs);
+
+/**
+        randomly select the frequency for each nucleotide base from the pools of freqs
+        @param freqs storing the output base frequencies
+        @param num_freqs (optional) the total number of freqs in the pool (default: 10000)
+ */
+void random_nucleotide_frequencies(double *freqs, int num_freqs = 10000);
 
 template <class T>
 void my_random_shuffle (T first, T last, int *rstream = NULL)

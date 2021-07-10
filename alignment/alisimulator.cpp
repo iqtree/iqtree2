@@ -561,11 +561,17 @@ void AliSimulator::getStateFrequenciesFromModel(double *state_freqs){
     else if ((tree->getModel()->getFreqType() == FREQ_USER_DEFINED)
         || (ModelLieMarkov::validModelName(tree->getModel()->getName()))
              || tree->aln->seq_type == SEQ_CODON
-             || (tree->getModel()->getFreqType() == FREQ_EMPIRICAL && tree->aln->aln_file.length() > 0))
+             || (tree->getModel()->getFreqType() == FREQ_EMPIRICAL && params->alisim_inference_mode))
         tree->getModel()->getStateFrequency(state_freqs);
     else // otherwise, randomly generate the base frequencies
     {
-        generateRandomBaseFrequencies(state_freqs, tree->aln->getMaxNumStates());
+        
+        // if sequence_type is dna -> randomly generate base frequencies based on empirical distributions
+        if (tree->aln->seq_type == SEQ_DNA)
+            random_nucleotide_frequencies(state_freqs);
+        // otherwise, randomly generate base frequencies based on uniform distribution
+        else
+            generateRandomBaseFrequencies(state_freqs, tree->aln->getMaxNumStates());
         tree->getModel()->setStateFrequency(state_freqs);
     }
 }

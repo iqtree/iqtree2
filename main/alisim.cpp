@@ -36,6 +36,7 @@ void runAliSim(Params &params, Checkpoint *checkpoint)
         // delete partition_aln
         delete partition_aln;
     }
+    params.alisim_inference_mode = inference_mode;
     
     // generate a random tree if neccessary
     if (params.tree_gen != NONE)

@@ -61,7 +61,10 @@ public:
 	*/
 	virtual bool isReversible();
 
-
+    /**
+         initialize random state frequencies when running AliSim without inference mode
+    */
+    void initStateFreqsAliSim(StateFreqType expected_freq_type);
 
 	static bool validModelName(string model_name);
 	void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);

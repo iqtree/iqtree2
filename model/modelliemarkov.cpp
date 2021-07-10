@@ -322,6 +322,10 @@ const double MAX_LIE_WEIGHT =  0.98;
 ModelLieMarkov::ModelLieMarkov(string model_name, PhyloTree *tree, string model_params, StateFreqType freq_type, string freq_params)
 	: ModelMarkov(tree, false) {
   init(model_name.c_str(), model_params, freq_type, freq_params);
+        
+        // show warning if the user is running AliSim without inference mode but has not yet specified model parameters
+        if (Params::getInstance().alisim_active && !Params::getInstance().alisim_inference_mode && model_params.length() == 0 && getNParams()>0)
+            outWarning("Without Inference Mode, we strongly recommend users to specify model parameters for more accuracy simulations. Users could use <Model_Name>{<param_0>,...,<param_n>}. For the model "+model_name+", users should specify "+convertIntToString(getNParams())+" params (see User Manuals).");
 }
 
 void ModelLieMarkov::init(const char *model_name, string model_params, StateFreqType freq, string freq_params)
@@ -364,6 +368,98 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
 
     if (freq_type == FREQ_UNKNOWN || expected_freq_type == FREQ_EQUAL) freq_type = expected_freq_type;
     ModelMarkov::init(freq_type);
+    
+    // initialize random state frequencies if AliSim is running without inference mode
+    if (Params::getInstance().alisim_active && !Params::getInstance().alisim_inference_mode && (freq_type == FREQ_ESTIMATE || freq_type == FREQ_EMPIRICAL)){
+        // initializing state_freqs from expected_freq_type
+        initStateFreqsAliSim(expected_freq_type);
+    }
+}
+
+/**
+     initialize random state frequencies when running AliSim without inference mode
+*/
+void ModelLieMarkov::initStateFreqsAliSim(StateFreqType expected_freq_type)
+{
+    switch (expected_freq_type) {
+        case FREQ_ESTIMATE:
+        case FREQ_EMPIRICAL:
+            random_nucleotide_frequencies(state_freq);
+            break;
+        case FREQ_DNA_1212:
+        case FREQ_DNA_1221:
+        case FREQ_DNA_1122:
+        {
+            // randomly generate two frequencies
+            double freq1 = random_double();
+            double freq2 = random_double();
+            
+            // set state freqs
+            if (expected_freq_type == FREQ_DNA_1212)
+            {
+                state_freq[0] = state_freq[2] = freq1;
+                state_freq[1] = state_freq[3] = freq2;
+            }
+            else if (expected_freq_type == FREQ_DNA_1221)
+            {
+                state_freq[0] = state_freq[3] = freq1;
+                state_freq[1] = state_freq[2] = freq2;
+            } else if (expected_freq_type == FREQ_DNA_1122)
+            {
+                state_freq[0] = state_freq[1] = freq1;
+                state_freq[2] = state_freq[3] = freq2;
+            }
+            
+            // normalize state frequencies so that sum of them are 1
+            double total = (freq1+freq2)*2;
+            for (int i = 0; i < 4; i++)
+                state_freq[i] /= total;
+            break;
+        }
+        case FREQ_DNA_RY:
+        case FREQ_DNA_WS:
+        case FREQ_DNA_MK:
+        {
+            // randomly generate two pairs of frequencies
+            double pair1_freq1 = random_double();
+            double pair1_freq2 = random_double();
+            double pair2_freq1 = random_double();
+            double pair2_freq2 = random_double();
+            
+            // normalize state frequencies of each pair so that sum of them are 0.5
+            double total = pair1_freq1 + pair1_freq2;
+            pair1_freq1 = pair1_freq1/total/2;
+            pair1_freq2 = pair1_freq2/total/2;
+            total = pair2_freq1 + pair2_freq2;
+            pair2_freq1 = pair2_freq1/total/2;
+            pair2_freq2 = pair2_freq2/total/2;
+            
+            // set state freqs
+            if (expected_freq_type == FREQ_DNA_RY)
+            {
+                state_freq[0] = pair1_freq1;
+                state_freq[1] = pair2_freq1;
+                state_freq[2] = pair1_freq2;
+                state_freq[3] = pair2_freq2;
+            }
+            else if (expected_freq_type == FREQ_DNA_WS)
+            {
+                state_freq[0] = pair1_freq1;
+                state_freq[1] = pair2_freq1;
+                state_freq[2] = pair2_freq2;
+                state_freq[3] = pair1_freq2;
+            } else if (expected_freq_type == FREQ_DNA_MK)
+            {
+                state_freq[0] = pair1_freq1;
+                state_freq[1] = pair1_freq2;
+                state_freq[2] = pair2_freq1;
+                state_freq[3] = pair2_freq2;
+            }
+            break;
+        }
+        default:
+            break;
+    }
 }
 
 // Note to Minh: I see ModelUnrest also lacks checkpointing.

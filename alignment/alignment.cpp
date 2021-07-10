@@ -4801,7 +4801,7 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
     
     // TRUE if alisim is executing and state/codon freqs needs to be randomly generated
     Params params = Params::getInstance();
-    bool freqs_random_generated = params.alisim_active && !params.aln_file;
+    bool freqs_random_generated = params.alisim_active && !params.alisim_inference_mode;
 
 	if (freq == FREQ_CODON_1x4) {
 		memset(ntfreq, 0, sizeof(double)*4);
@@ -4830,11 +4830,12 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
                         freq_params.erase(0, pos + delimiter.length());
                     }
                 }
-                // otherwise, randomly generate ntfreq
+                // otherwise, randomly generate ntfreq based on empirical distribution
                 else
                 {
-                    for (int i = 0; i < 4 ; i++)
-                        ntfreq[i] = random_double();
+                    //for (int i = 0; i < 4 ; i++)
+                        //ntfreq[i] = random_double();
+                    random_nucleotide_frequencies(ntfreq);
                 }
                 
                 // cache ntfreq for using later
@@ -4927,11 +4928,25 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
                         freq_params.erase(0, pos + delimiter.length());
                     }
                 }
-                // otherwise, randomly generate ntfreq
+                // otherwise, randomly generate ntfreq based on empirical distributions
                 else
                 {
-                    for (int i = 0; i < 12 ; i++)
-                        ntfreq[i] = random_double();
+                    //for (int i = 0; i < 12 ; i++)
+                        //ntfreq[i] = random_double();
+                    double *tmp_freqs = new double[4];
+                    
+                    // repeatively generate a set of frequencies for each codon position
+                    for (int i = 0; i<3; i++)
+                    {
+                        random_nucleotide_frequencies(tmp_freqs);
+                        
+                        // copy the current set of frequencies to ntfreq
+                        for (int j = 0; j < 4; j++)
+                            ntfreq[i*4+j] = tmp_freqs[j];
+                    }
+                    
+                    // delete tmp_freqs
+                    delete [] tmp_freqs;
                 }
                 
                 // cache ntfreq for using later

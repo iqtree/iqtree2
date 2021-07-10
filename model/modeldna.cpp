@@ -29,6 +29,13 @@ ModelDNA::ModelDNA(const char *model_name, string model_params, StateFreqType fr
 : ModelMarkov(tree)
 {
   init(model_name, model_params, freq, freq_params);
+
+    // show warning if the user is running AliSim without inference mode but has not yet specified model parameters
+    if (Params::getInstance().alisim_active && !Params::getInstance().alisim_inference_mode && model_params.length() == 0 && getNParams()>0)
+    {
+        std::string model_name_str(model_name);
+        outWarning("Without Inference Mode, we strongly recommend users to specify model parameters for more accuracy simulations. Users could use <Model_Name>{<param_0>,...,<param_n>}. For the model "+model_name_str+", users should specify "+convertIntToString(getNParams())+" params (see User Manuals).");
+    }
 }
 
 string getDNAModelInfo(string model_name, string &full_name, string &rate_type, StateFreqType &def_freq) {
