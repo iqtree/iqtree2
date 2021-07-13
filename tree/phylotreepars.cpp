@@ -665,60 +665,56 @@ void PhyloTree::initCostMatrix(CostMatrixType cost_type) {
     clearAllPartialParsimony(false);
 }
 
-void PhyloTree::loadCostMatrixFile(char * file_name){
-    if(cost_matrix){
-        aligned_free(cost_matrix);
-        cost_matrix = NULL;
+void PhyloTree::loadUniformCostMatrix() {
+    int cost_nstates = aln->num_states;
+    cost_matrix  = aligned_alloc<unsigned int>(cost_nstates * cost_nstates);
+    for (int i = 0; i < cost_nstates; i++) {
+        for (int j = 0; j < cost_nstates; j++) {
+            if (j == i) {
+                cost_matrix[i * cost_nstates + j] = 0;
+            }
+            else {
+                cost_matrix[i * cost_nstates + j] = 1;
+            }
+        }
     }
-    //    if(strcmp(file_name, "fitch") == 0)
-    ////    if(file_name == NULL)
-    //        cost_matrix = new SankoffCostMatrix(aln->num_states);
-    //    else
-    //        cost_matrix = new SankoffCostMatrix(file_name);
-    
+}
+
+void PhyloTree::loadSankoffCostMatrixFromFile(const char* file_name) {
+    cout << "Loading cost matrix from " << file_name << "..." << endl;
+    ifstream fin(file_name);
+    if(!fin.is_open()){
+        outError("Reading cost matrix file cannot perform. Please check your input file!");
+    }
     int cost_nstates;
-    if(strcmp(file_name, "fitch") == 0 || strcmp(file_name, "e") == 0) { // uniform cost
-        cost_nstates = aln->num_states;
-        cost_matrix  = aligned_alloc<unsigned int>(cost_nstates * cost_nstates);
-        for (int i = 0; i < cost_nstates; i++) {
-            for (int j = 0; j < cost_nstates; j++) {
-                if (j == i) {
-                    cost_matrix[i * cost_nstates + j] = 0;
-                }
-                else {
-                    cost_matrix[i * cost_nstates + j] = 1;
-                }
-            }
-        }
-    } else{ // Sankoff cost
-        cout << "Loading cost matrix from " << file_name << "..." << endl;
-        ifstream fin(file_name);
-        if(!fin.is_open()){
-            outError("Reading cost matrix file cannot perform. Please check your input file!");
-        }
-        fin >> cost_nstates;
-        if (cost_nstates != aln->num_states)
-            outError("Cost matrix file does not have the same size as number of alignment states");
-        // allocate memory for cost_matrix
-        cost_matrix = aligned_alloc<unsigned int>(cost_nstates * cost_nstates);
-        
-        // read numbers from file
-        for (int i = 0; i < cost_nstates; i++) {
-            for (int j = 0; j < cost_nstates; j++) {
-                fin >> cost_matrix[i * cost_nstates + j];
-            }
-        }
-        fin.close();
+    fin >> cost_nstates;
+    if (cost_nstates != aln->num_states) {
+        outError("Cost matrix file does not have the same size as number of alignment states");
     }
+    // allocate memory for cost_matrix
+    cost_matrix = aligned_alloc<unsigned int>(cost_nstates * cost_nstates);
     
-    bool changed = false;
+    // read numbers from file
+    for (int i = 0; i < cost_nstates; i++) {
+        for (int j = 0; j < cost_nstates; j++) {
+            fin >> cost_matrix[i * cost_nstates + j];
+        }
+    }
+    fin.close();
+}
+
+void PhyloTree::checkCostMatrix() {
+    bool changed      = false;
+    int  cost_nstates = aln->num_states;
     
     for (int k = 0; k < cost_nstates; ++k) {
         for (int i = 0; i < cost_nstates; ++i) {
             for (int j = 0; j < cost_nstates; ++j) {
-                if (cost_matrix[i*cost_nstates+j] > cost_matrix[i*cost_nstates+k] + cost_matrix[k*cost_nstates+j]) {
+                if (cost_matrix[i*cost_nstates+j] > 
+                    cost_matrix[i*cost_nstates+k] + cost_matrix[k*cost_nstates+j]) {
                     changed = true;
-                    cost_matrix[i*cost_nstates+j] = cost_matrix[i*cost_nstates+k] + cost_matrix[k*cost_nstates+j];
+                    cost_matrix[i*cost_nstates+j] = cost_matrix[i*cost_nstates+k] 
+                                                  + cost_matrix[k*cost_nstates+j];
                 }
             }
         }
@@ -735,6 +731,26 @@ void PhyloTree::loadCostMatrixFile(char * file_name){
     } else {
         cout << "Cost matrix satisfies triangular inenquality" << endl;
     }
+}
+
+void PhyloTree::loadCostMatrixFile(const char * file_name){
+    if(cost_matrix){
+        aligned_free(cost_matrix);
+        cost_matrix = NULL;
+    }
+    //    if(strcmp(file_name, "fitch") == 0)
+    ////    if(file_name == NULL)
+    //        cost_matrix = new SankoffCostMatrix(aln->num_states);
+    //    else
+    //        cost_matrix = new SankoffCostMatrix(file_name);
+    
+    if(strcmp(file_name, "fitch") == 0 || 
+        strcmp(file_name, "e") == 0) { 
+        loadUniformCostMatrix();
+    } else { 
+        loadSankoffCostMatrixFromFile(file_name);
+    }
+    checkCostMatrix();
 }
 
 void PhyloTree::computeTipPartialParsimony() {

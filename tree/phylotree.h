@@ -866,7 +866,11 @@ public:
      * read the cost matrix file
      * initialize for 'nstates' and 'columns'
      */
-    void loadCostMatrixFile(char* file_name = NULL);
+    void loadCostMatrixFile(const char* file_name = nullptr);
+        //Supporting functions
+        void loadUniformCostMatrix();
+        void loadSankoffCostMatrixFromFile(const char* file_name);
+        void checkCostMatrix();
 
     /*
      * For a leaf character corresponding to an ambiguous state
@@ -879,7 +883,7 @@ public:
      @param dad_branch the branch leading to the subtree
      @param dad its dad, used to direct the traversal
      */
-    void computePartialParsimonySankoff(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    void   computePartialParsimonySankoff(PhyloNeighbor *dad_branch, PhyloNode *dad);
     
     double computePartialParsimonyOutOfTreeSankoff(const UINT* left_partial_pars,
                                                    const UINT* right_partial_pars,
