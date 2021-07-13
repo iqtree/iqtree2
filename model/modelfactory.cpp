@@ -1368,6 +1368,7 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
             tree->clearAllPartialLH();
         }
     }
+
     auto params = Params::getInstance();
     if (params.root_find && tree->rooted
         && params.root_move_dist > 0) {
@@ -1467,7 +1468,7 @@ double ModelFactory::optimizeBranchLengthsAgain(int fixed_len, double cur_lh,
     return cur_lh;
 }
 
-void ModelFactory::reportParameterOptimizationStep(double cur_lh, double new_lh, int fixed_len,
+void ModelFactory::reportParameterOptimizationStep(double &cur_lh, double new_lh, int fixed_len,
                                                    bool write_info, double logl_epsilon, 
                                                    int iteration, double begin_time,
                                                    PhyloTree* tree, PhyloTree* report_to_tree) {
