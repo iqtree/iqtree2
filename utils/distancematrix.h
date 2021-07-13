@@ -364,8 +364,38 @@ public:
     }
 };
 
+template <class M> inline void copyLowerTriangleOfMatrixToUpper(M& matrix) {
+    intptr_t n = matrix.getSize();
+    for (intptr_t r = 0; r < n; ++r) {
+        for (intptr_t c = r + 1; c < n; ++c) {
+            matrix.cell(r, c) = matrix.cell(c, r);
+        }
+    }
+}
+
+template <class F=std::stringstream, class M> intptr_t loadPartialRowFromLine
+    (F& line,  M& matrix, bool square,
+     intptr_t r, intptr_t cStart, intptr_t cStop) {
+    intptr_t c      = cStart;
+    for (; line.tellg() != -1 && c < cStop; ++c) {
+        line >> matrix.cell(r, c);
+        //Ensure matrix is symmetric (as it is read!)
+        //Note: I'd rather throw if there's a disagreement!
+        //But I want backwards compatibility with BIONJ2009.
+        if (square && c < r && matrix.cell(r, c) != matrix.cell(c, r)) {
+            //If loading from a square matrix file,
+            //and in lower triangle, and the corresponding entry
+            //in the upper triangle was different, average them both.
+            typename M::cell_type v = (matrix.cell(r, c) + matrix.cell(c, r)) * (typename M::cell_type)0.5;
+            matrix.cell(c, r) = v; //U-R
+            matrix.cell(r, c) = v;
+        }
+    }
+    return c;
+}
+
 template <class F=std::stringstream, class M> void loadDistanceMatrixFromOpenFile
-(F& in, bool reportProgress, M& matrix) {
+    (F& in, bool reportProgress, M& matrix) {
     intptr_t rank;
     bool lower  = false;
     bool upper  = false;
@@ -392,55 +422,44 @@ template <class F=std::stringstream, class M> void loadDistanceMatrixFromOpenFil
             for (intptr_t c = 0; c < r; ++c) {
                 matrix.cell(r, c) = matrix.cell(c, r);
             }
-            matrix.cell(r, r) = 0;
         }
+        matrix.cell(r, r) = 0;
         intptr_t cStart = (upper) ? (r + 1) : 0;
         intptr_t cStop  = (lower) ? r : rank;
-        intptr_t c      = cStart;
-        for (; line.tellg() != -1 && c < cStop; ++c) {
-            line >> matrix.cell(r, c);
-            //Ensure matrix is symmetric (as it is read!)
-            //Note: I'd rather throw if there's a disagreement!
-            //But I want backwards compatibility with BIONJ2009.
-            if (square && c < r && matrix.cell(r, c) != matrix.cell(c, r)) {
-                //If loading from a square matrix file,
-                //and in lower triangle, and the corresponding entry
-                //in the upper triangle was different, average them both.
-                typename M::cell_type v = (matrix.cell(r, c) + matrix.cell(c, r)) * (typename M::cell_type)0.5;
-                matrix.cell(c, r) = v; //U-R
-                matrix.cell(r, c) = v;
-            }
-        }
+        intptr_t c      = loadPartialRowFromLine(line, matrix, square, 
+                                                 r,    cStart, cStop);
+        const char* format_comment = nullptr;
+
         if (line.tellg() == -1 && c < cStop) {
             if (square && r == 0 && c == 0) {
                 //Implied lower-triangle format
-                square = false;
-                lower  = true;
-
-#if USE_PROGRESS_DISPLAY
-                progress.hide();
-                std::cout << "Input appears to be in lower-triangle format" << std::endl;
-                progress.show();
-#endif
+                square         = false;
+                lower          = true;
+                format_comment = "Input appears to be in lower-triangle format" ;
             }
             else if (square && r == 0 && c + 1 == cStop) {
                 //Implied upper-triangle format
-                square = false;
-                upper  = true;
-#if USE_PROGRESS_DISPLAY
-                progress.hide();
-                std::cout << "Input appears to be in upper-triangle format" << std::endl;
-                progress.show();
-#endif
+                square         = false;
+                upper          = true;
+                format_comment = "Input appears to be in upper-triangle format" ;
                 for (size_t shift = cStop - 1; 0 < shift; --shift) {
                     matrix.cell(0, shift) = matrix.cell(0, shift - 1);
                 }
                 matrix.cell(0, 0) = 0;
             }
+#if USE_PROGRESS_DISPLAY
+            if (format_comment!=nullptr) {
+                progress.hide();
+                std::cout << format_comment << std::endl;
+                progress.show();
+            }
+#endif
         }
         else if (line.tellg() != -1) {
             std::stringstream problem;
-            problem << "Expected to see columns [" << (cStart + 1) << ".." << cStop << "]"
+            problem 
+                << "Expected to see columns"
+                << " [" << (cStart + 1) << ".." << cStop << "]"
                 << " in row " << r << " of the distance matrix,"
                 << " but there were more distances.";
             throw problem.str();
@@ -448,17 +467,13 @@ template <class F=std::stringstream, class M> void loadDistanceMatrixFromOpenFil
         ++progress;
     }
     if (lower) {
-        intptr_t n = matrix.getSize();
-        for (intptr_t r = 0; r < n; ++r) {
-            for (intptr_t c = r + 1; c < n; ++c) {
-                matrix.cell(r, c) = matrix.cell(c, r);
-            }
-        }
+        copyLowerTriangleOfMatrixToUpper(matrix);
     }
 }
 
 template <class M> bool loadDistanceMatrixInto
-    (const std::string distanceMatrixFilePath, bool reportProgress, M& matrix) {        
+    (const std::string distanceMatrixFilePath, 
+     bool reportProgress, M& matrix) {        
     #if USE_GZSTREAM
     igzstream     in;
     #else
