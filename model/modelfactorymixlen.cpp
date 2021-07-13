@@ -26,7 +26,8 @@ ModelFactoryMixlen::ModelFactoryMixlen(Params &params, string &model_name,
         outError("Sorry for the inconvience, please rerun IQ-TREE with option above");
     }
     if (tree->getMixlen() != site_rate->getNRate()) {
-        ((PhyloTreeMixlen*)tree)->setMixlen(site_rate->getNRate());
+        auto mix_tree = (PhyloTreeMixlen*)tree;
+        mix_tree->setMixlen(site_rate->getNRate());
 //        outError("#heterotachy classes and #mixture branch lengths do not match");
     }
     if (fused_mix_rate) {
@@ -95,14 +96,16 @@ string ModelFactoryMixlen::sortClassesByTreeLength() {
     bool sorted = true;
     for (int j = 0; j < tree->mixlen; j++) {
         if (index[j] != j) { 
-            sorted = false; break; 
+            sorted = false; 
+            break; 
         }
     }
     if (!sorted) {
         double score = tree->curScore;
-        cout << "Reordering classes by tree lengths" << endl;
         DoubleVector sorted_brlen;
         sorted_brlen.resize(brlen.size());
+        cout << "Reordering classes by tree lengths" << endl;
+        
         int k = 0;
         #ifdef _OPENMP
         #pragma omp parallel for
@@ -130,6 +133,12 @@ string ModelFactoryMixlen::sortClassesByTreeLength() {
             reorderMixtureModels(index, prop);
         }
         tree->clearAllPartialLH();
+        double updated_score = tree->computeLikelihood();
+        if (0.1 <= fabs(score - updated_score)) {
+            std::cout << "score was " << score
+                      << " updated score was " << updated_score 
+                      << std::endl;
+        }
         ASSERT(fabs(score - tree->computeLikelihood()) < 0.1);
     }
 

@@ -4505,14 +4505,15 @@ int PhyloTree::setNegativeBranch(bool force, double newlen, Node *node, Node *da
     return fixed;
 }
 
-void PhyloTree::fixOneNegativeBranch(double branch_length, Neighbor *dad_branch, Node *dad) {
+void PhyloTree::fixOneNegativeBranch(double branch_length, 
+                                     Neighbor *dad_branch, Node *dad) {
     dad_branch->length = branch_length;
     // set the backward branch length
     dad_branch->node->findNeighbor(dad)->length = branch_length;
 }
 
-int PhyloTree::fixNegativeBranch(bool force, PhyloNode *node, PhyloNode *dad) {
-
+int PhyloTree::fixNegativeBranch(bool force, PhyloNode *node, 
+                                 PhyloNode *dad) {
     // 2019-02-05: fix crash when no variant sites found
     if (aln->num_variant_sites == 0) {
         return setNegativeBranch(force, params->min_branch_length, root, NULL);

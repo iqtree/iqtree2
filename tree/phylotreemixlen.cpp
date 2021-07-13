@@ -105,6 +105,10 @@ void PhyloTreeMixlen::restoreCheckpoint() {
     }
 }
 
+PhyloNodeMixlen* PhyloTreeMixlen::getRoot() {
+    return (PhyloNodeMixlen*)root;
+}
+
 PhyloNodeMixlen* PhyloTreeMixlen::newNode(int node_id, const char* node_name) {
     return new PhyloNodeMixlen(node_id, node_name);
 }
@@ -117,7 +121,8 @@ void PhyloTreeMixlen::setMixlen(int mixlen) {
 	this->mixlen = mixlen;
 }
 
-void PhyloTreeMixlen::readTreeString(const string &tree_string, bool nodes_have_name) {
+void PhyloTreeMixlen::readTreeString(const string &tree_string, 
+                                     bool nodes_have_name) {
     IQTree::readTreeString(tree_string, nodes_have_name);
     treeLengths(relative_treelen);
     if (mixlen > 0 && relative_treelen[0] == 0.0) {
@@ -140,10 +145,14 @@ void PhyloTreeMixlen::initializeModel(Params &params, string model_name,
                             models_block, report_to_tree);
 }
 
-void PhyloTreeMixlen::treeLengths(DoubleVector &lenvec, Node *node, Node *dad) {
-    if (lenvec.empty())
+void PhyloTreeMixlen::treeLengths(DoubleVector &lenvec, 
+                                  Node *node, Node *dad) {
+    if (lenvec.empty()) {
         lenvec.resize(mixlen, 0.0);
-    if (!node) node = root;
+    }
+    if (!node) {
+        node = root;
+    }
     FOR_NEIGHBOR_IT(node, dad, it) {
         treeLengths(lenvec, (*it)->node, node);
         for (int i = 0; i < mixlen; i++)
@@ -151,25 +160,32 @@ void PhyloTreeMixlen::treeLengths(DoubleVector &lenvec, Node *node, Node *dad) {
     }
 }
 
+#define FOR_EACH_PHYLO_NEIGHBOR_MIXLEN(mynode, mydad, it, nei) \
+    for (PhyloNeighborMixlen* nei=nullptr, *nei2x=((PhyloNodeMixlen*)(mynode))->firstNeighbor(); nei2x!=nullptr ; nei2x=nullptr) \
+        for (NeighborVec::iterator it = (mynode)->neighbors.begin(); it != (mynode)->neighbors.end(); ++it) \
+                if ((nei = (PhyloNeighborMixlen*)(*it)) && nei->getNode() != (mydad) )
 
-void PhyloTreeMixlen::initializeMixBranches(PhyloNode *node, PhyloNode *dad) {
+
+void PhyloTreeMixlen::initializeMixBranches(PhyloNodeMixlen* node, 
+                                            PhyloNodeMixlen* dad) {
     if (!node) {
         node = getRoot();
         // exit if already initialized
-//        if (!((PhyloNeighborMixlen*)root->neighbors[0])->lengths.empty())
-//            return;
+        // if (! getRoot()->firstNeighbor()->lengths.empty() )
+        //     return;
     }
-    FOR_NEIGHBOR_IT(node, dad, it) {
+    FOR_EACH_PHYLO_NEIGHBOR_MIXLEN(node, dad, it, nei) {
         // assign length of left branch
-        PhyloNeighborMixlen *nei = (PhyloNeighborMixlen*)(*it);
-        PhyloNeighborMixlen *back_nei = (PhyloNeighborMixlen*)((*it)->node->findNeighbor(node));
+        PhyloNeighborMixlen *back_nei = nei->getNode()->findNeighbor(node);
         if (nei->lengths.empty()) {
             // no branch lengths, initialize with relative rates
             ASSERT(nei->length >= 0);
             nei->lengths.resize(mixlen, nei->length);
             back_nei->lengths.resize(mixlen, back_nei->length);
             for (int i = 0; i < mixlen; i++) {
-                nei->lengths[i] = back_nei->lengths[i] = max(params->min_branch_length, nei->length * relative_treelen[i]);
+                auto max_length = max(params->min_branch_length, 
+                                      nei->length * relative_treelen[i]);
+                nei->lengths[i] = back_nei->lengths[i] = max_length;
             }
         } else if (nei->lengths.size() > mixlen) {
             // too many lengths, cut down
@@ -186,7 +202,9 @@ void PhyloTreeMixlen::initializeMixBranches(PhyloNode *node, PhyloNode *dad) {
             }
             avglen /= cur;
             for (int i = cur; i < mixlen; i++) {
-                nei->lengths[i] = back_nei->lengths[i] = max(params->min_branch_length, avglen * relative_treelen[i]);
+                auto max_length = max(params->min_branch_length, 
+                                      avglen * relative_treelen[i]);
+                nei->lengths[i] = back_nei->lengths[i] = max_length;
             }
         }
 
@@ -194,39 +212,38 @@ void PhyloTreeMixlen::initializeMixBranches(PhyloNode *node, PhyloNode *dad) {
         for (int i = 0; i < mixlen; i++) {
             mean_len += nei->lengths[i] * site_rate->getProp(i);
         }
-//        mean_len /= mixlen;
+        // mean_len /= mixlen;
         nei->length = back_nei->length = mean_len;
 
         // recursive call
-        initializeMixBranches((PhyloNode*)(*it)->node, node);
+        initializeMixBranches(nei->getNode(), node);
     }
 }
 
-void PhyloTreeMixlen::assignMeanMixBranches(Node *node, Node *dad) {
-    if (!node) node = root;
-    FOR_NEIGHBOR_IT(node, dad, it) {
-        PhyloNeighborMixlen *nei = (PhyloNeighborMixlen*)(*it);
+void PhyloTreeMixlen::assignMeanMixBranches(PhyloNodeMixlen* node, 
+                                            PhyloNodeMixlen* dad) {
+    if (!node) {
+        node = getRoot();
+    }
+    FOR_EACH_PHYLO_NEIGHBOR_MIXLEN(node, dad, it, nei) {
         double mean_len = 0.0;
-        for (int i = 0; i < nei->lengths.size(); i++)
+        for (int i = 0; i < nei->lengths.size(); ++i) {
             mean_len += nei->lengths[i] * site_rate->getProp(i);
-//        mean_len /= nei->lengths.size();
-        nei->length = mean_len;
-        
-        nei = (PhyloNeighborMixlen*)(*it)->node->findNeighbor(node);
-        nei->length = mean_len;
-        assignMeanMixBranches((*it)->node, node);
+        }
+        //mean_len /= nei->lengths.size();
+        nei->length      = mean_len;
+        auto back_nei    = nei->getNode()->findNeighbor(node);
+        back_nei->length = mean_len;
+        assignMeanMixBranches(nei->getNode(), node);
     }
 }
 
 void PhyloTreeMixlen::initializeMixlen(double tolerance, bool write_info,
                                        PhyloTree* report_to_tree) {
     // initialize mixture branch lengths if empty
-
-    if (initializing_mixlen)
+    if (initializing_mixlen) {
         return;
-
-    int i;
-
+    }
     initializing_mixlen = true;
 
     if (relative_treelen.empty()) {
@@ -235,20 +252,19 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance, bool write_info,
 
         // create new rate model
         // random alpha
-//        relative_rate = new RateGamma(mixlen, params->gamma_shape, params->gamma_median, this);
+        // relative_rate = new RateGamma(mixlen, params->gamma_shape,
+        // params->gamma_median, this);
 
         string param;
-
         if (getRate()->getFixParams()) {
             stringstream ss;
             const char* separator = "";
-            for (i = 0; i < mixlen; i++) {
+            for (int i = 0; i < mixlen; i++) {
                 ss << separator << getRate()->getProp(i);
                 separator = ",";
             }
             param = ss.str();
         }
-
         RateFree *relative_rate = new RateFree(mixlen, params->gamma_shape, param, 
                                                false, params->optimize_alg_freerate, this);
         relative_rate->setTree(this);
@@ -272,67 +288,68 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance, bool write_info,
 
         // 2016-07-22: BUGFIX should rescale rates
         double mean_rate = relative_rate->rescaleRates();
-        if (fabs(mean_rate-1.0) > 1e-6 && params->fixed_branch_length != BRLEN_FIX) {
-//            scaleLength(mean_rate);
+        if (fabs(mean_rate-1.0) > 1e-6 && 
+            params->fixed_branch_length != BRLEN_FIX) {
+            // scaleLength(mean_rate);
         }
         if (write_info) {
             cout << "Initial LogL: " << curScore << ", ";
-    //        if (verbose_mode >= VerboseMode::VB_MED)
-                relative_rate->writeInfo(cout);
+            // if (verbose_mode >= VerboseMode::VB_MED)
+            relative_rate->writeInfo(cout);
         }
-
         // make the rates more distinct
-        if (mixlen > 1 && relative_rate->getRate(0) / relative_rate->getRate(mixlen-1) > 0.9) {
+        auto first_rate = relative_rate->getRate(0);
+        auto last_rate  = relative_rate->getRate(mixlen-1);
+        if (mixlen > 1 && first_rate / last_rate > 0.9) {
             cout << "Making the rates more distinct..." << endl;
-            relative_rate->setRate(0, relative_rate->getRate(0)*0.95);
-            relative_rate->setRate(mixlen-1, relative_rate->getRate(mixlen-1)*1.05);
+            relative_rate->setRate(0, first_rate*0.95);
+            relative_rate->setRate(mixlen-1, last_rate*1.05);
         }
-
         double treelen = treeLength();
         relative_treelen.resize(mixlen);
         // 2017-12-21: BUG: moved this out of write_info if
         // otherwise, relative_treelen is not initialized
-        for (i = 0; i < mixlen; i++)
+        for (int i = 0; i < mixlen; i++) {
             relative_treelen[i] = treelen * relative_rate->getRate(i);
-
+        }
         if (write_info) {
             cout << "relative_treelen:";
-            for (i = 0; i < mixlen; i++) {
+            for (int i = 0; i < mixlen; i++) {
                 cout << " " << relative_treelen[i];
             }
             cout << endl;
         }
-
-
         // restore rate model
         setRate(saved_rate);
-        model_factory->site_rate = saved_rate;
+        model_factory->site_rate      = saved_rate;
         model_factory->fused_mix_rate = saved_fused_mix_rate;
         setLikelihoodKernel(sse);
 
         // set the weights of heterotachy model
         double pinvar = site_rate->getPInvar();
-        if (!site_rate->getFixParams())
-            for (i = 0; i < mixlen; i++)
+        if (!site_rate->getFixParams()) {
+            for (int i = 0; i < mixlen; ++i) {
                 site_rate->setProp(i, relative_rate->getProp(i)*(1.0-pinvar));
-                
+            }
+        }       
         delete relative_rate;
         clearAllPartialLH();
         clearAllPartialParsimony(false);
     }
 
-    if (((PhyloNeighborMixlen*)root->neighbors[0])->lengths.size() != mixlen) {
+    if (getRoot()->firstNeighbor()->lengths.size() != mixlen) {
         // assign branch length from rate model
         DoubleVector saved_treelen = relative_treelen;
         DoubleVector lenvec;
         treeLengths(lenvec);
-        for (i = 0; i < mixlen; i++) {
+        for (int i = 0; i < mixlen; i++) {
             relative_treelen[i] = relative_treelen[i] / lenvec[i];
         }
         if (verbose_mode >= VerboseMode::VB_MED) {
             cout << "relative_ratio:";
-            for (i = 0; i < mixlen; i++)
+            for (int i = 0; i < mixlen; i++) {
                 cout << " " << relative_treelen[i];
+            }
             cout << endl;
         }
         initializeMixBranches();
@@ -340,39 +357,37 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance, bool write_info,
         clearAllPartialParsimony(false);
         relative_treelen = saved_treelen;
     }
-
     initializing_mixlen = false;
-
 }
 
-void PhyloTreeMixlen::fixOneNegativeBranch(double branch_length, Neighbor *dad_branch, Node *dad) {
+void PhyloTreeMixlen::fixOneNegativeBranch
+        ( double               branch_length, 
+          Neighbor* dad_branch, 
+          Node*     dad) {
     PhyloTree::fixOneNegativeBranch(branch_length, dad_branch, dad);
     /*
-    PhyloNeighborMixlen *br = (PhyloNeighborMixlen*)dad_branch;
-    if (br->lengths.empty())
+    if (dad_branch->lengths.empty())
         return;
     int i;
-    for (i = 0; i < br->lengths.size(); i++)
-        br->lengths[i] = branch_length * relative_rate->getRate(i);
-    br = (PhyloNeighborMixlen*)dad_branch->node->findNeighbor(dad);
+    for (i = 0; i < dad_branch->lengths.size(); i++) {
+        dad_branch->lengths[i] = branch_length * relative_rate->getRate(i);
+    }
+    PhyloNeighborMixlen *br = dad_branch->getNode()->findNeighbor(dad);
     for (i = 0; i < br->lengths.size(); i++)
         br->lengths[i] = branch_length * relative_rate->getRate(i);
     */
 }
 
-
-void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH, int maxNRStep) {
-
-    if (initializing_mixlen)
+void PhyloTreeMixlen::optimizeOneBranch
+        ( PhyloNode* node1, PhyloNode* node2, 
+          bool clearLH, int maxNRStep) {
+    if (initializing_mixlen) {
         return PhyloTree::optimizeOneBranch(node1, node2, clearLH, maxNRStep);
-
+    }
     current_it =  node1->findNeighbor(node2);
     ASSERT(current_it);
     current_it_back = node2->findNeighbor(node1);
     ASSERT(current_it_back);
-
-    int i;
-
     tree_buffers.theta_computed = false;
 
 #ifdef USE_CPPOPTLIB
@@ -412,23 +427,24 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
         boost::scoped_array<double> upper_bound(new double[mixlen]);
         boost::scoped_array<double> variables(new double[mixlen]);
 #endif
-        for (i = 0; i < mixlen; i++) {
+        for (int i = 0; i < mixlen; i++) {
             lower_bound[i] = params->min_branch_length;
             variables[i] = current_it->getLength(i);
             upper_bound[i] = params->max_branch_length;
         }
-
         minimizeNewtonMulti(&lower_bound[0], &variables[0], 
                             &upper_bound[0], params->min_branch_length, 
                             mixlen);
-        for (i = 0; i < mixlen; i++) {
+        for (int i = 0; i < mixlen; i++) {
             current_it->setLength(i, variables[i]);
             current_it_back->setLength(i, variables[i]);
         }
     } else if (params->optimize_alg_mixlen.find("BFGS") != string::npos) {
 
-        // BFGS method to simultaneously optimize all lengths per branch
-        // It is often better than the true Newton method (Numerical Recipes in C++, chap. 10.7)
+        // BFGS method to simultaneously 
+        // optimize all lengths per branch
+        // It is often better than the true Newton method 
+        // (Numerical Recipes in C++, chap. 10.7)
 #ifndef _MSC_VER
         double variables[mixlen+1];
         double upper_bound[mixlen+1];
@@ -440,7 +456,7 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
         boost::scoped_array<double> lower_bound ( new double [mixlen + 1]);
         boost::scoped_array<bool> bound_check( new bool [mixlen + 1]);
 #endif
-        for (i = 0; i < mixlen; i++) {
+        for (int i = 0; i < mixlen; i++) {
             lower_bound[i+1] = params->min_branch_length;
             variables[i+1] = current_it->getLength(i);
             upper_bound[i+1] = params->max_branch_length;
@@ -460,21 +476,22 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
             score = -L_BFGS_B(mixlen, &variables[1], &lower_bound[1], 
                               &upper_bound[1], params->min_branch_length);
         else
-            score = -minimizeMultiDimen(&variables[0], mixlen, &lower_bound[0], &upper_bound[0], 
-                                        &bound_check[0], params->min_branch_length, &hessian[0]);
+            score = -minimizeMultiDimen(&variables[0], mixlen, 
+                                        &lower_bound[0], &upper_bound[0], 
+                                        &bound_check[0], params->min_branch_length, 
+                                        &hessian[0]);
 
-        for (i = 0; i < mixlen; i++) {
+        for (int i = 0; i < mixlen; i++) {
             current_it->setLength(i, variables[i+1]);
             current_it_back->setLength(i, variables[i+1]);
         }
         if (verbose_mode >= VerboseMode::VB_DEBUG) {
             cout << "Mixlen-LnL: " << score << endl;
         }
-
     } else {
-
-        if (!model_factory->fused_mix_rate && getModel()->isMixture())
+        if (!model_factory->fused_mix_rate && getModel()->isMixture()) {
             outError("Please use option -optlen BFGS to disable EM algorithm");
+        }
         
         // EM algorithm
         intptr_t nptn = aln->getNPattern();
@@ -486,29 +503,33 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
 
         // 2 steps are empirically determined to be best!
         for (int EM_step = 0; EM_step < 2; EM_step++) {
-
             double new_tree_lh = computePatternLhCat(WSL_RATECAT);
-            if (new_tree_lh+1.0 < tree_lh)
-                cout << "WARN: at EM step " << EM_step << " new_tree_lh " << new_tree_lh << " worse than tree_lh " << tree_lh << endl;
-            if (new_tree_lh-params->min_branch_length < tree_lh)
+            if (new_tree_lh+1.0 < tree_lh) {
+                cout << "WARN: at EM step " << EM_step 
+                     << " new_tree_lh " << new_tree_lh 
+                     << " worse than tree_lh " << tree_lh << endl;
+            }
+            if (new_tree_lh-params->min_branch_length < tree_lh) {
                 break;
+            }
             tree_lh = new_tree_lh;
-
             // E-step
-            // decoupled weights (prop) from _pattern_lh_cat to obtain L_ci and compute pattern likelihood L_i
+            // decoupled weights (prop) from _pattern_lh_cat 
+            // to obtain L_ci and compute pattern likelihood L_i
             for (intptr_t ptn = 0; ptn < nptn; ptn++) {
-                double *this_lk_cat = tree_buffers._pattern_lh_cat + ptn*nmix;
-                double lk_ptn = ptn_invar[ptn];
+                double* this_lk_cat = tree_buffers._pattern_lh_cat 
+                                    + ptn*nmix;
+                double  lk_ptn = ptn_invar[ptn];
                 for (size_t c = 0; c < nmix; c++) {
                     lk_ptn += this_lk_cat[c];
                 }
                 ASSERT(lk_ptn != 0.0);
                 lk_ptn = ptn_freq[ptn] / lk_ptn;
-                // transform _pattern_lh_cat into posterior probabilities of each category
+                // transform _pattern_lh_cat into 
+                // posterior probabilities of each category
                 for (size_t c = 0; c < nmix; c++) {
                     this_lk_cat[c] *= lk_ptn;
                 }
-                
             } 
          
             double negative_lh;
@@ -524,25 +545,23 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
                 double current_len = current_it->getLength(cur_mixture);
                 ASSERT(current_len >= 0.0);
                 // Newton-Raphson method
-                optx = minimizeNewton(params->min_branch_length, current_len, params->max_branch_length, params->min_branch_length, negative_lh, maxNRStep);
-
+                optx = minimizeNewton(params->min_branch_length, 
+                                      current_len, params->max_branch_length, 
+                                      params->min_branch_length, negative_lh, 
+                                      maxNRStep);
                 current_it->setLength(cur_mixture, optx);
                 current_it_back->setLength(cur_mixture, optx);
-            
             }
-            
             cur_mixture = -1;
             // reset ptn_freq
             ptn_freq_computed = false;
             computePtnFreq();
         } // for EM_step
     }
-
     if (clearLH) {
         node1->clearReversePartialLh(node2);
         node2->clearReversePartialLh(node1);
     }
-
 }
 
 /**
@@ -552,23 +571,23 @@ int PhyloTreeMixlen::getNDim() const {
     return mixlen;
 }
 
-
 /**
     the target function which needs to be optimized
     @param x the input vector x
     @return the function value at x
 */
 double PhyloTreeMixlen::targetFunk(double x[]) {
-    int i;
-    for (i = 0; i < mixlen; i++) {
+    for (int i = 0; i < mixlen; i++) {
         current_it->setLength(i, x[i+1]);
         current_it_back->setLength(i, x[i+1]);
     }
-    if (tree_buffers.theta_computed)
+    if (tree_buffers.theta_computed) {
         return -computeLikelihoodFromBuffer();
-    else
+    }
+    else {
         return -computeLikelihoodBranch(current_it, current_it_back->getNode(),
                                         tree_buffers);
+    }
 }
 
 double PhyloTreeMixlen::derivativeFunk(double x[], double dfx[]) {
@@ -584,8 +603,8 @@ double PhyloTreeMixlen::derivativeFunk(double x[], double dfx[]) {
     boost::scoped_array<double> df  ( new double [mixlen + 1] );
     boost::scoped_array<double> ddf ( new double [static_cast<size_t>(mixlen) * static_cast<size_t>(mixlen)]);
 #endif
-    computeLikelihoodDerv(current_it, current_it_back->getNode(), &df[0], &ddf[0],
-                          tree_buffers);
+    computeLikelihoodDerv(current_it, current_it_back->getNode(), 
+                          &df[0], &ddf[0], tree_buffers);
     for (int i = 0; i < mixlen; ++i) {
         df[i] = -df[i];
     }
@@ -593,21 +612,21 @@ double PhyloTreeMixlen::derivativeFunk(double x[], double dfx[]) {
     return -df[mixlen];
 }
 
-void PhyloTreeMixlen::computeFuncDervMulti(double *value, double *df, double *ddf) {
-    int i;
-    for (i = 0; i < mixlen; i++) {
+void PhyloTreeMixlen::computeFuncDervMulti
+        (double *value, double *df, double *ddf) {
+    for (int i = 0; i < mixlen; i++) {
         current_it->setLength(i, value[i]);
         current_it_back->setLength(i, value[i]);
     }
-    computeLikelihoodDerv(current_it, current_it_back->getNode(), df, ddf,
-                          tree_buffers);
+    computeLikelihoodDerv(current_it, current_it_back->getNode(), 
+                          df, ddf, tree_buffers);
 
     // last element of df is the tree log-ikelihood
-    for (i = 0; i <= mixlen; i++) {
+    for (int i = 0; i <= mixlen; i++) {
         df[i] = -df[i];
     }
     int mixlen2 = mixlen * mixlen;
-    for (i = 0; i < mixlen2; i++)
+    for (int i = 0; i < mixlen2; i++)
         ddf[i] = -ddf[i];
 }
 
@@ -624,30 +643,27 @@ double PhyloTreeMixlen::optimizeAllBranches(int my_iterations, double tolerance,
     double tree_lh = PhyloTree::optimizeAllBranches(my_iterations, tolerance,
                                                     maxNRStep, were_lengths_consistent,
                                                     report_to_tree);
-
-    if (!initializing_mixlen)
+    if (!initializing_mixlen) {
         assignMeanMixBranches();
-    
+    }
     return tree_lh;
 }
 
 pair<int, int> PhyloTreeMixlen::optimizeNNI(bool speedNNI, const char* context) {
-    int i, j;
-
     DoubleVector meanlenvec;
     treeLengths(meanlenvec);
     // compute mean branch length
-    for (j = 0; j < mixlen; j++) {
+    for (int j = 0; j < mixlen; j++) {
         meanlenvec[j] /= (branchNum);
     }
     // scan over all branches and fix short/long branches
-    NodeVector nodes1, nodes2;
+    PhyloNodeMixlenVector nodes1, nodes2;
     getBranches(nodes1, nodes2);
     int num_fixed = 0;
-    for (i = 0; i < nodes1.size(); i++) {
-        PhyloNeighborMixlen* nei = (PhyloNeighborMixlen*)nodes1[i]->findNeighbor(nodes2[i]);
-        PhyloNeighborMixlen* nei_back = (PhyloNeighborMixlen*)nodes2[i]->findNeighbor(nodes1[i]);
-        for (j = 0; j < mixlen; j++) {
+    for (int i = 0; i < nodes1.size(); i++) {
+        PhyloNeighborMixlen* nei      = nodes1[i]->findNeighbor(nodes2[i]);
+        PhyloNeighborMixlen* nei_back = nodes2[i]->findNeighbor(nodes1[i]);
+        for (int j = 0; j < mixlen; j++) {
             if (nei->lengths[j] > params->max_branch_length*0.9) {
                 // if too long or too short branch, assign with mean branch length
                 nei->lengths[j] = nei_back->lengths[j] = meanlenvec[j];
@@ -661,55 +677,69 @@ pair<int, int> PhyloTreeMixlen::optimizeNNI(bool speedNNI, const char* context) 
     return IQTree::optimizeNNI(speedNNI, context);
 }
 
-void PhyloTreeMixlen::printBranchLength(ostream &out, int brtype, bool print_slash, Neighbor *length_nei) {
-    if (((PhyloNeighborMixlen*)length_nei)->lengths.empty())
+void PhyloTreeMixlen::printBranchLength(ostream &out, int brtype, 
+                                        bool print_slash, 
+                                        Neighbor *length_nei) {
+    PhyloNeighborMixlen* nei = (PhyloNeighborMixlen*)length_nei;
+    if (nei->lengths.empty()) {
         return PhyloTree::printBranchLength(out, brtype, print_slash, length_nei);
-
-    if ((brtype & (WT_BR_LEN+WT_BR_SCALE)) == 0)
+    }
+    if ((brtype & (WT_BR_LEN+WT_BR_SCALE)) == 0) {
         return;
-
-    PhyloNeighborMixlen *nei = (PhyloNeighborMixlen*) length_nei;
-
+    }
     if (cur_mixture == -1) {
         // print mixture branch lengths
         out << "[";
         for (int i = 0; i < mixlen; i++) {
-            if (i > 0) out << BRANCH_LENGTH_SEPARATOR;
+            if (i > 0) {
+                out << BRANCH_LENGTH_SEPARATOR;
+            }
             double length = nei->lengths[i];
             if (brtype & WT_BR_SCALE) length *= len_scale;
             if (brtype & WT_BR_LEN_ROUNDING) length = round(length);
             if (brtype & WT_BR_LEN) {
-                if (brtype & WT_BR_LEN_FIXED_WIDTH)
+                if (brtype & WT_BR_LEN_FIXED_WIDTH) {
                     out << fixed << length;
-                else
+                }
+                else {
                     out << length;
-            } else if (brtype & WT_BR_CLADE && length_nei->node->name != ROOT_NAME) {
+                }
+            } else if (brtype & WT_BR_CLADE && 
+                       length_nei->node->name != ROOT_NAME) {
                 out << length;
             }
         }
         out << "]";
     }
 
-    if (brtype & WT_BR_LEN)
+    if (brtype & WT_BR_LEN) {
         out << ":";
-    else if ((brtype & WT_BR_CLADE) && print_slash && length_nei->node->name != ROOT_NAME)
+    }
+    else if ((brtype & WT_BR_CLADE) && print_slash && 
+             length_nei->node->name != ROOT_NAME) {
         out << "/";
-        
-    double length = nei->length;
+    }    
+    double length = length_nei->length;
 
     if (cur_mixture >= 0) {
         // print branch length of a mixture component only!
         length = nei->lengths[cur_mixture];
     }
-
-    if (brtype & WT_BR_SCALE) length *= len_scale;
-    if (brtype & WT_BR_LEN_ROUNDING) length = round(length);
+    if (brtype & WT_BR_SCALE) {
+        length *= len_scale;
+    }
+    if (brtype & WT_BR_LEN_ROUNDING) {
+        length = round(length);
+    }
     if (brtype & WT_BR_LEN) {
-        if (brtype & WT_BR_LEN_FIXED_WIDTH)
+        if (brtype & WT_BR_LEN_FIXED_WIDTH) {
             out << fixed << length;
-        else
+        }
+        else {
             out << length;
-    } else if (brtype & WT_BR_CLADE && length_nei->node->name != ROOT_NAME) {
+        }
+    } else if (brtype & WT_BR_CLADE && 
+               length_nei->node->name != ROOT_NAME) {
         out << length;
     }
 }
@@ -718,33 +748,35 @@ void PhyloTreeMixlen::printResultTree(string suffix) {
     if (MPIHelper::getInstance().isWorker()) {
         return;
     }
-    if (params->suppress_output_flags & OUT_TREEFILE)
+    if (params->suppress_output_flags & OUT_TREEFILE) {
         return;
+    }
     setRootNode(params->root);
     string tree_file_name = params->out_prefix;
     tree_file_name += ".treefile";
     if (suffix.compare("") != 0) {
         tree_file_name += "." + suffix;
     }
-
     try {
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
         out.open(tree_file_name.c_str());
         cur_mixture = -1;
-        printTree(out, WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
+        printTree(out, WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | 
+                       WT_SORT_TAXA | WT_NEWLINE);
         for (cur_mixture = 0; cur_mixture < mixlen; cur_mixture++) {
             //out << "[Heterotachy class " << cur_mixture+1 << "]" << endl;
-            printTree(out, WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
+            printTree(out, WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | 
+                           WT_SORT_TAXA | WT_NEWLINE);
         }
         cur_mixture = -1;
         out.close();
     } catch (ios::failure) {
         outError(ERR_WRITE_OUTPUT, tree_file_name);
     }
-
-    if (verbose_mode >= VerboseMode::VB_MED)
+    if (verbose_mode >= VerboseMode::VB_MED) {
         cout << "Best tree printed to " << tree_file_name << endl;
+    }
 }
 
 
@@ -787,23 +819,20 @@ void PhyloTreeMixlen::hessian(const TVector &x, THessian &hessian) {
 // defining log-likelihood derivative function for EM algorithm
 void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
 
-    if (cur_mixture < 0)
+    if (cur_mixture < 0) {
         return PhyloTree::computeFuncDerv(value, df, ddf);
-
+    }
     current_it->setLength(cur_mixture, value);
     current_it_back->setLength(cur_mixture, value);
-
-    (this->*computeLikelihoodDervMixlenPointer)(current_it,  current_it_back->getNode(), df, ddf,
-                                                tree_buffers);
-
+    (this->*computeLikelihoodDervMixlenPointer)
+        (current_it,  current_it_back->getNode(), 
+         df, ddf, tree_buffers);
 	df = -df;
     ddf = -ddf;
     return;
 
-
     PhyloNeighbor* dad_branch  = current_it;
     PhyloNode*     dad         = current_it_back->getNode();
-
     PhyloNode*     node        = dad_branch->getNode();
     PhyloNeighbor* node_branch = node->findNeighbor(dad);
     if (!central_partial_lh) {
@@ -813,7 +842,6 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
         std::swap(dad, node);
         std::swap(dad_branch, node_branch);
     }
-    
     ASSERT(dad_branch->isLikelihoodComputed()  || node->isLeaf());
     ASSERT(node_branch->isLikelihoodComputed() || dad->isLeaf());
 
@@ -824,9 +852,9 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
     size_t statemix  = nstates * nmixture;
     size_t statecat  = nstates * ncat;
     intptr_t orig_nptn = aln->size();
-    intptr_t nptn = aln->size()+model_factory->unobserved_ptns.size();
-    intptr_t maxptn = get_safe_upper_limit(nptn);
-    double *eval = model->getEigenvalues();
+    intptr_t nptn    = aln->size()+model_factory->unobserved_ptns.size();
+    intptr_t maxptn  = get_safe_upper_limit(nptn);
+    double*  eval    = model->getEigenvalues();
     ASSERT(eval);
 
     ASSERT(tree_buffers.theta_all);
@@ -844,10 +872,13 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
                 
                 // TODO: check with vectorclass!
                 double *lh_tip         = tip_partial_lh +
-                ((int)((ptn < orig_nptn) ? (aln->at(ptn))[dad->id] :  model_factory->unobserved_ptns[ptn-orig_nptn][dad->id]))*statemix;
+                ((int)((ptn < orig_nptn) 
+                    ? (aln->at(ptn))[dad->id] 
+                    :  model_factory->unobserved_ptns[ptn-orig_nptn][dad->id]))*statemix;
                 for (size_t m = 0; m < nmixture; m++) {
                     for (size_t i = 0; i < statecat; i++) {
-                        theta[m*statecat+i] = lh_tip[m*nstates + i%nstates] * partial_lh_dad[m*statecat+i];
+                        theta[m*statecat+i] = lh_tip[m*nstates 
+                                            + i%nstates] * partial_lh_dad[m*statecat+i];
                     }
                 }
             }
@@ -873,7 +904,6 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
         }
         tree_buffers.theta_computed = true;
     }
-
     double *val0 = new double[statecat];
     double *val1 = new double[statecat];
     double *val2 = new double[statecat];
@@ -890,15 +920,16 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
             val2[(c)*nstates+i] = cof*val1_;
         }
     }
-
-    double my_df = 0.0, my_ddf = 0.0, prob_const = 0.0, df_const = 0.0, ddf_const = 0.0;
+    double my_df = 0.0, my_ddf = 0.0, prob_const = 0.0;
+    double df_const = 0.0, ddf_const = 0.0;
 
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+:my_df,my_ddf,prob_const,df_const,ddf_const)
 #endif
     for (intptr_t ptn = 0; ptn < nptn; ptn++) {
         double  lh_ptn = ptn_invar[ptn], df_ptn = 0.0, ddf_ptn = 0.0;
-        double* theta  = tree_buffers.theta_all + ptn*block + cur_mixture*statecat;
+        double* theta  = tree_buffers.theta_all + ptn*block 
+                       + cur_mixture*statecat;
         for (size_t i = 0; i < statecat; i++) {
             lh_ptn  += val0[i] * theta[i];
             df_ptn  += val1[i] * theta[i];
@@ -935,7 +966,6 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
         df += nsites * df_frac;
         ddf += nsites *(ddf_frac + df_frac*df_frac);
     }
-
     delete [] val2;
     delete [] val1;
     delete [] val0;
@@ -943,4 +973,3 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
     df  = -df;
     ddf = -ddf;
 }
-

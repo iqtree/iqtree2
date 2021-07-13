@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include "phylonode.h"
 
+class PhyloNodeMixlen;
 /**
 A neighbor in a phylogenetic tree with mixture branch lengths
 
@@ -26,31 +27,17 @@ public:
         @param alength length of branch
         @param aid branch ID
      */
-    PhyloNeighborMixlen(Node *anode, double alength, int aid = -1) : PhyloNeighbor(anode, alength, aid) {
-        lengths.clear();
-    }
+    PhyloNeighborMixlen(Node *anode, double alength, int aid = -1);
 
-    PhyloNeighborMixlen(Node *anode, DoubleVector &alength, int aid = -1) : PhyloNeighbor(anode, -1.0, aid) {
-        lengths = alength;
-        if (!lengths.empty()) {
-            length = 0.0;
-            for (int i = 0; i < lengths.size(); i++)
-                length += lengths[i];
-            length /= lengths.size();
-        }
-    }
+    PhyloNeighborMixlen(Node *anode, DoubleVector &alength, int aid = -1);
 
-    PhyloNeighborMixlen(const PhyloNeighborMixlen &nei) : PhyloNeighbor(nei) {
-        lengths = nei.lengths;
-    }
+    PhyloNeighborMixlen(const PhyloNeighborMixlen &nei);
     
     /**
      allocate a new Neighbor by just copying from this one
      @return pointer to newly created Neighbor
      */
-    virtual PhyloNeighborMixlen* newNeighbor() const {
-        return (new PhyloNeighborMixlen(*this));
-    }
+    virtual PhyloNeighborMixlen* newNeighbor() const;
 
     /** branch lengths for mixture */
     DoubleVector lengths;
@@ -61,21 +48,14 @@ public:
         @param c class index
         @return branch length for class c
     */
-    virtual double getLength(int c) { 
-        if (lengths.empty())
-            return length; 
-        ASSERT(c < lengths.size());
-        return lengths[c];
-    }
+    virtual double getLength(int c);
 
     /**
         get branch lengths, used by heterotachy model (PhyloNeighborMixlen)
         the default is just to return a single branch length
         @return branch length for class c
     */
-    virtual void getLength(DoubleVector &vec) { 
-        vec = lengths;
-    }
+    virtual void getLength(DoubleVector &vec);
 
     /**
         get branch lengths, used by heterotachy model (PhyloNeighborMixlen)
@@ -83,11 +63,7 @@ public:
         @param vec (OUT) destination branch length vector
         @param start_pos starting position in vec to copy to
     */
-    virtual void getLength(DoubleVector &vec, int start_pos) { 
-        ASSERT(start_pos+lengths.size() <= vec.size());
-        for (int i = 0; i < lengths.size(); i++)
-            vec[start_pos+i] = lengths[i];
-    }
+    virtual void getLength(DoubleVector &vec, int start_pos);
 
 
     /**
@@ -96,23 +72,14 @@ public:
         @param c class index
         @return branch length for class c
     */
-    virtual void setLength(int c, double len) {
-        if (lengths.empty()) {
-            length = len;
-            return;
-        }
-        ASSERT(c < lengths.size());
-        lengths[c] = len;
-    }
+    virtual void setLength(int c, double len);
 
     /**
         get branch lengths, used by heterotachy model (PhyloNeighborMixlen)
         the default is just to return a single branch length
         @return branch length for class c
     */
-    virtual void setLength(const DoubleVector &vec) { 
-        lengths = vec;
-    }
+    virtual void setLength(const DoubleVector &vec);
 
     /**
         set branch length by length of a Neighbor, used by heterotachy model (PhyloNeighborMixlen)
@@ -120,10 +87,7 @@ public:
         @param nei source neigbor to copy branch lengths
         @return branch length for class c
     */
-    virtual void setLength(Neighbor *nei) { 
-        length = nei->length; 
-        lengths = ((PhyloNeighborMixlen*)nei)->lengths;
-    }
+    virtual void setLength(Neighbor *nei);
     
     /**
         set branch lengths, used by heterotachy model (PhyloNeighborMixlen)
@@ -131,15 +95,9 @@ public:
         @param vec source branch length vector
         @param start_pos starting position in vec to copy from
     */
-    virtual void setLength(const DoubleVector &vec, int start_pos, int num_elem) { 
-        ASSERT(start_pos+num_elem <= vec.size());
-        lengths.clear();
-        lengths.insert(lengths.begin(), vec.begin()+start_pos, vec.begin()+start_pos+num_elem);
-    }
+    virtual void setLength(const DoubleVector &vec, int start_pos, int num_elem);
     
-
-protected:
-
+    virtual PhyloNodeMixlen* getNode() const;
 };
 
 class PhyloNodeMixlen : public PhyloNode {
@@ -147,27 +105,27 @@ public:
     /**
         constructor
      */
-    PhyloNodeMixlen() : PhyloNode() {}
+    PhyloNodeMixlen();
 
     /**
         constructor
         @param aid id of this node
      */
-    PhyloNodeMixlen(int aid) : PhyloNode(aid) {}
-
-    /**
-        constructor
-        @param aid id of this node
-        @param aname name of this node
-     */
-    PhyloNodeMixlen(int aid, int aname) : PhyloNode(aid, aname) {}
+    PhyloNodeMixlen(int aid);
 
     /**
         constructor
         @param aid id of this node
         @param aname name of this node
      */
-    PhyloNodeMixlen(int aid, const char *aname) : PhyloNode(aid, aname) {}
+    PhyloNodeMixlen(int aid, int aname);
+
+    /**
+        constructor
+        @param aid id of this node
+        @param aname name of this node
+     */
+    PhyloNodeMixlen(int aid, const char *aname);
 
     /**
         add a neighbor
@@ -185,7 +143,13 @@ public:
      */
     void addNeighbor(Node *node, DoubleVector &length, int id = -1);
 
-protected:
+    virtual PhyloNeighborMixlen* firstNeighbor() const;
+
+    virtual PhyloNeighborMixlen* findNeighbor(PhyloNodeMixlen* node) const;
+
 };
+
+typedef SubclassPointerVector<PhyloNodeMixlen, NodeVector> PhyloNodeMixlenVector;
+
 
 #endif /* defined(__iqtree__phylonodemixlen__) */

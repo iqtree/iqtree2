@@ -58,6 +58,8 @@ public:
     */
     virtual void restoreCheckpoint();
 
+    virtual PhyloNodeMixlen* getRoot();
+
     /**
             allocate a new node. Override this if you have an inherited Node class.
             @param node_id node ID
@@ -118,7 +120,8 @@ public:
     /**
      * assign branch length as mean over all branch lengths of categories
      */
-    void assignMeanMixBranches(Node *node = NULL, Node *dad = NULL);
+    void assignMeanMixBranches(PhyloNodeMixlen *node = nullptr, 
+                               PhyloNodeMixlen *dad  = nullptr);
 
     /**
      *  internal function called by printTree to print branch length
@@ -136,8 +139,8 @@ public:
     /**
         initialize mixture branch lengths
     */
-    void initializeMixBranches(PhyloNode *node = nullptr,
-                               PhyloNode *dad  = nullptr);
+    void initializeMixBranches(PhyloNodeMixlen *node = nullptr,
+                               PhyloNodeMixlen *dad  = nullptr);
 
     /** initialize parameters if necessary */
     void initializeMixlen(double tolerance, bool write_info,
