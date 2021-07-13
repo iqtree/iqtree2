@@ -2012,13 +2012,19 @@ public:
     char       char_to_state[NUM_CHAR];
     char       AA_to_state[NUM_CHAR];
 
-    PatternInfoVector    () = delete;
-    PatternInfoVector    (Alignment* for_aln, bool nt2aa);
-    void loadPatterns    (int nsite, int nstep, 
-                          int nseq, const StrVector& sequences,
-                          progress_display_ptr progress);
-    int  compressPatterns(int step, std::stringstream& err_str,
-                          progress_display_ptr progress);
+    PatternInfoVector          () = delete;
+    PatternInfoVector          (Alignment* for_aln, bool nt2aa);
+    void loadPatterns          (int nsite, int nstep, 
+                                int nseq, const StrVector& sequences,
+                                progress_display_ptr progress);
+    char loadCodonState        (const StrVector& sequences, 
+                                int site, int seq, char state,
+                                PatternInfo& info);
+    void recordInvalidCharacter(const StrVector& sequences, 
+                                int site, int seq, 
+                                PatternInfo& info);
+    int  compressPatterns      (int step, std::stringstream& err_str,
+                                progress_display_ptr progress);
 };
 
 bool Alignment::constructPatterns(int nseq, int nsite,
@@ -2131,76 +2137,88 @@ PatternInfoVector::PatternInfoVector(Alignment* for_aln, bool is_nt2aa)
 void PatternInfoVector::loadPatterns(int nsite, int step, int nseq, 
                                      const StrVector& sequences,
                                      progress_display_ptr progress) {
-    auto STATE_UNKNOWN = aln->STATE_UNKNOWN;
     #ifdef _OPENMP
     #pragma omp parallel for
     #endif
     for (int site = 0; site < nsite; site+=step) {
         PatternInfo& info = at(site/step);
-        Pattern& pat = aln->at(site / step);
+        Pattern&     pat  = aln->at(site / step);
         pat.resize(nseq);
         for (int seq = 0; seq < nseq; seq++) {
             //char state = convertState(sequences[seq][site], seq_type);
             char state = char_to_state[(int)(sequences[seq][site])];
             if (seq_type == SeqType::SEQ_CODON || nt2aa) {
-                // special treatment for codon
-                char state2 = char_to_state[(int)(sequences[seq][site+1])];
-                char state3 = char_to_state[(int)(sequences[seq][site+2])];
-                if (state < 4 && state2 < 4 && state3 < 4) {
-                    //state = non_stop_codon[state*16 + state2*4 + state3];
-                    state = state*16 + state2*4 + state3;
-                    if (aln->genetic_code[(int)state] == '*') {
-                        info.errors << "Sequence " << aln->seq_names[seq]
-                            << " has stop codon " << sequences[seq][site]
-                            << sequences[seq][site + 1] << sequences[seq][site + 2]
-                            << " at site " << site + 1 << "\n";
-                        info.num_error++;
-                        state = STATE_UNKNOWN;
-                    } else if (nt2aa) {
-                        state = AA_to_state[(int)aln->genetic_code[(int)state]];
-                    } else {
-                        state = aln->non_stop_codon[(int)state];
-                    }
-            	} else if (state == STATE_INVALID || state2 == STATE_INVALID ||
-                           state3 == STATE_INVALID) {
-            		state = STATE_INVALID;
-                } else {
-                    if (state != STATE_UNKNOWN || state2 != STATE_UNKNOWN ||
-                        state3 != STATE_UNKNOWN) {
-                        info.warnings << "WARNING: Sequence " << aln->seq_names[seq]
-                            << " has ambiguous character " << sequences[seq][site]
-                            << sequences[seq][site + 1] << sequences[seq][site + 2]
-                            << " at site " << site + 1 << "\n";
-                    }
-                    state = STATE_UNKNOWN;
-                }
+                state = loadCodonState(sequences, site, seq, state, info);
             }
             if (state == STATE_INVALID) {
-                if (info.num_error <= 100) {
-                    if (info.num_error < 100) {
-                        info.errors << "Sequence " << aln->seq_names[seq]
-                                    << " has invalid character " << sequences[seq][site];
-                        if (seq_type == SeqType::SEQ_CODON) {
-                            info.errors << sequences[seq][site + 1] << sequences[seq][site + 2];
-                        }
-                        info.errors << " at site " << site+1 << endl;
-                    } else if (info.num_error == 100) {
-                        info.errors << "...many more..." << endl;
-                    }
-                }
-                ++info.num_error;
+                recordInvalidCharacter(sequences, site, seq, info);
             }
             pat[seq] = state;
         }
         aln->computeConst(pat);
         if (info.num_error == 0)
         {
-            info.isAllGaps = pat.isAllGaps(STATE_UNKNOWN);
+            info.isAllGaps = pat.isAllGaps(aln->STATE_UNKNOWN);
         }
         if (progress!=nullptr) {
             (*progress) += (double)step;
         }
     }
+}
+
+char PatternInfoVector::loadCodonState(const StrVector& sequences, 
+                                       int site, int seq, char state,
+                                       PatternInfo& info) {
+                    // special treatment for codon
+    char state2 = char_to_state[(int)(sequences[seq][site+1])];
+    char state3 = char_to_state[(int)(sequences[seq][site+2])];
+    if (state < 4 && state2 < 4 && state3 < 4) {
+        //state = non_stop_codon[state*16 + state2*4 + state3];
+        state = state*16 + state2*4 + state3;
+        if (aln->genetic_code[(int)state] == '*') {
+            info.errors << "Sequence " << aln->seq_names[seq]
+                << " has stop codon " << sequences[seq][site]
+                << sequences[seq][site + 1] << sequences[seq][site + 2]
+                << " at site " << site + 1 << "\n";
+            info.num_error++;
+            state = aln->STATE_UNKNOWN;
+        } else if (nt2aa) {
+            state = AA_to_state[(int)aln->genetic_code[(int)state]];
+        } else {
+            state = aln->non_stop_codon[(int)state];
+        }
+    } else if (state == STATE_INVALID || state2 == STATE_INVALID ||
+                state3 == STATE_INVALID) {
+        state = STATE_INVALID;
+    } else {
+        if (state != aln->STATE_UNKNOWN || state2 != aln->STATE_UNKNOWN ||
+            state3 != aln->STATE_UNKNOWN) {
+            info.warnings << "WARNING: Sequence " << aln->seq_names[seq]
+                << " has ambiguous character " << sequences[seq][site]
+                << sequences[seq][site + 1] << sequences[seq][site + 2]
+                << " at site " << site + 1 << "\n";
+        }
+        state = aln->STATE_UNKNOWN;
+    }
+    return state;
+}
+
+void PatternInfoVector::recordInvalidCharacter(const StrVector& sequences, 
+                                               int site, int seq, 
+                                               PatternInfo& info) {
+    if (info.num_error <= 100) {
+        if (info.num_error < 100) {
+            info.errors << "Sequence " << aln->seq_names[seq]
+                        << " has invalid character " << sequences[seq][site];
+            if (seq_type == SeqType::SEQ_CODON) {
+                info.errors << sequences[seq][site + 1] << sequences[seq][site + 2];
+            }
+            info.errors << " at site " << site+1 << endl;
+        } else if (info.num_error == 100) {
+            info.errors << "...many more..." << endl;
+        }
+    }
+    ++info.num_error;
 }
 
 int PatternInfoVector::compressPatterns(int step, std::stringstream& err_str,
