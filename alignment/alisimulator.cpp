@@ -568,7 +568,10 @@ void AliSimulator::getStateFrequenciesFromModel(double *state_freqs){
         
         // if sequence_type is dna -> randomly generate base frequencies based on empirical distributions
         if (tree->aln->seq_type == SEQ_DNA)
-            random_nucleotide_frequencies(state_freqs);
+        {
+            RandomDistribution rd;
+            rd.random_base_frequencies(state_freqs);
+        }
         // otherwise, randomly generate base frequencies based on uniform distribution
         else
             generateRandomBaseFrequencies(state_freqs, tree->aln->getMaxNumStates());

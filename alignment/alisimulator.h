@@ -23,6 +23,7 @@
 #include "main/phylotesting.h"
 #include <random>
 #include "utils/gzstream.h"
+#include "utils/randomdistribution.h"
 #ifdef _OPENMP
     #include <omp.h>
 #endif
