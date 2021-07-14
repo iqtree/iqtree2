@@ -1237,10 +1237,10 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     candidateTrees.setMaxSize(Params::getInstance().numSupportTrees);
 
     candidateCount = bestInitTrees.size();
-    size_t candidate = 1;
-    for (auto it = bestInitTrees.begin();
-         it != bestInitTrees.end(); ++it, ++candidate) {
-        readTreeString(*it);
+    size_t candidate = 0;
+    for (const std::string& tree_string : bestInitTrees) {
+        ++candidate;
+        readTreeString(tree_string);
         stringstream treeDescription;
         treeDescription << "candidate tree " << candidate
                         << " (of " << candidateCount << ")";
@@ -1250,10 +1250,10 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
             doNNISearch(true, context.c_str(), this);
             score = curScore;
         } else {
-            score = 0 -(double)doParsimonyNNI(VerboseMode::VB_MAX);
+            score = 0 - (double)doParsimonyNNI(VerboseMode::VB_MAX);
         }
         string treeString = getTreeString();
-        auto process_id = MPIHelper::getInstance().getProcessID();
+        auto   process_id = MPIHelper::getInstance().getProcessID();
         addTreeToCandidateSet(treeString, score, true, process_id);
         if (Params::getInstance().writeDistImdTrees) {
             intermediateTrees.update(treeString, score);
@@ -2605,11 +2605,13 @@ string IQTree::ensureModelParametersAreSet(double initEpsilon) {
         }
         setCurScore(computeLikelihood());
         initTree = getTreeString();
-        LOG_LINE(VerboseMode::VB_QUIET, "CHECKPOINT: Model parameters restored,"
+        LOG_LINE(VerboseMode::VB_QUIET, 
+                 "CHECKPOINT: Model parameters restored,"
                  " LogL: " << getCurScore());
     } else {
         initTree = optimizeModelParameters(true, initEpsilon, this);
         if (isMixlen()) {
+            curScore = computeLikelihood();
             ModelFactoryMixlen* factory = (ModelFactoryMixlen*)getModelFactory();
             initTree = factory->sortClassesByTreeLength();
         }
@@ -3324,8 +3326,9 @@ pair<int, int> IQTree::doNNISearch(bool write_info, const char* context,
     }
     pair<int, int> nniInfos; // Number of NNIs and number of steps
     if (params->pll) {
-        if (params->partition_file)
+        if (params->partition_file) {
             outError("Unsupported -pll -sp combination!");
+        }
         curScore = pllOptimizeNNI(nniInfos.first, nniInfos.second, searchinfo);
         pllTreeToNewick(pllInst->tree_string, pllInst,
                         pllPartitions, pllInst->start->back, PLL_TRUE,
