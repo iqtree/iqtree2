@@ -60,7 +60,7 @@ bool YAMLFileParameter::isMatchFor(const std::string& match_name,
 }
 
 void YAMLFileParameter::logParameterState(const char* verb, 
-                                          PhyloTree* report_to_tree) const {
+                                          LoggingTarget* logging_target) const {
     std::stringstream msg;
     msg << verb << " ";
     if (is_subscripted) {
@@ -78,7 +78,7 @@ void YAMLFileParameter::logParameterState(const char* verb,
     if (0<tolerance) {
         msg << ", and tolerance " << tolerance;
     }
-    TREE_LOG_LINE(*report_to_tree, YAMLVariableVerbosity, msg.str());
+    TREE_LOG_LINE(*logging_target, YAMLVariableVerbosity, msg.str());
 }
 
 ModelVariable::ModelVariable() : type(ModelParameterType::OTHER)
@@ -289,11 +289,11 @@ ModelInfoFromYAMLFile::~ModelInfoFromYAMLFile() {
 }
 
 void ModelInfoFromYAMLFile::specifyRateModel(const ModelInfoFromYAMLFile& ancestor,
-                                             PhyloTree* report_to_tree) {
+                                             LoggingTarget* logging_target) {
     if (specified_rate_model_info==nullptr) {
         specified_rate_model_info = new ModelInfoFromYAMLFile(ancestor);
     } else {
-        specified_rate_model_info->inheritModel(ancestor, report_to_tree);
+        specified_rate_model_info->inheritModel(ancestor, logging_target);
     }
 }
 
@@ -384,8 +384,9 @@ ModelInfoFromYAMLFile::findMixedModel(const std::string& name) const {
     return it;
 }
 
-void ModelInfoFromYAMLFile::setNumberOfStatesAndSequenceType(int requested_num_states,
-                                                             PhyloTree* report_to_tree) {
+void ModelInfoFromYAMLFile::setNumberOfStatesAndSequenceType
+        (int requested_num_states,
+         LoggingTarget* logging_target) {
     if (requested_num_states != 0) {
         num_states = requested_num_states;
     }
@@ -393,7 +394,7 @@ void ModelInfoFromYAMLFile::setNumberOfStatesAndSequenceType(int requested_num_s
         num_states = 4;
     }
     if (!data_type_name.empty()) {
-        TREE_LOG_LINE(*report_to_tree, YAMLParsingVerbosity,
+        TREE_LOG_LINE(*logging_target, YAMLParsingVerbosity,
                       "Data Type Name is " << data_type_name);
         auto seq_type_requested = getSeqType(data_type_name.c_str());
         if (seq_type_requested != SeqType::SEQ_UNKNOWN) {
@@ -417,7 +418,7 @@ void ModelInfoFromYAMLFile::setNumberOfStatesAndSequenceType(int requested_num_s
             break;
         }
     }
-    TREE_LOG_LINE(*report_to_tree, YAMLParsingVerbosity,
+    TREE_LOG_LINE(*logging_target, YAMLParsingVerbosity,
                   "Number of states is " << num_states);
 
     forceAssign("num_states", num_states);
@@ -557,7 +558,7 @@ bool ModelInfoFromYAMLFile::isVariableFixed(const std::string& name) const {
 }
 
 void ModelInfoFromYAMLFile::addParameter(const YAMLFileParameter& p,
-                                         PhyloTree* report_to_tree) {
+                                         LoggingTarget* logging_target) {
     bool replaced = false;
     for (auto it = parameters.begin(); it != parameters.end(); ++it) {
         if (it->name == p.name) {
@@ -580,7 +581,7 @@ void ModelInfoFromYAMLFile::addParameter(const YAMLFileParameter& p,
             //type of Variables... the ModelVariable& could go wrong
             //(and that'd be *nasty* insidious coupling).
 
-            setSubscriptedVariable(p, i, report_to_tree);
+            setSubscriptedVariable(p, i, logging_target);
         }
     }
     else {
@@ -590,7 +591,7 @@ void ModelInfoFromYAMLFile::addParameter(const YAMLFileParameter& p,
 
 void ModelInfoFromYAMLFile::setSubscriptedVariable
         (const YAMLFileParameter& p, int i, 
-         PhyloTree* report_to_tree) {
+         LoggingTarget* logging_target) {
     typedef ModelExpression::InterpretedExpression Interpreter;
     typedef ModelExpression::ModelException        Exception;
     std::string var_name = p.getSubscriptedVariableName(i);
@@ -608,7 +609,7 @@ void ModelInfoFromYAMLFile::setSubscriptedVariable
         }
     }
     if (i<11) {
-        TREE_LOG_LINE(*report_to_tree, YAMLVariableVerbosity, 
+        TREE_LOG_LINE(*logging_target, YAMLVariableVerbosity, 
                     "Setting " << getName() << "." 
                     << var_name << "=" << p.init_expression 
                     << (p.init_expression.empty() ? "" : "=")
@@ -619,7 +620,7 @@ void ModelInfoFromYAMLFile::setSubscriptedVariable
 
 bool ModelInfoFromYAMLFile::removeSubscriptedVariable
         (const YAMLFileParameter& param, int i,
-         PhyloTree* report_to_tree) {
+         LoggingTarget* logging_target) {
     std::string dead_var = param.getSubscriptedVariableName(i);
     auto it = variables.find(dead_var);
     if (it != variables.end()) {
@@ -632,7 +633,7 @@ bool ModelInfoFromYAMLFile::removeSubscriptedVariable
 void ModelInfoFromYAMLFile::updateParameterSubscriptRange(YAMLFileParameter& p, 
                                                           int min_subscript,
                                                           int max_subscript,
-                                                          PhyloTree* report_to_tree) {
+                                                          LoggingTarget* logging_target) {
     typedef ModelExpression::InterpretedExpression Interpreter;
     typedef ModelExpression::ModelException        Exception;
     if (max_subscript<min_subscript) {
@@ -683,7 +684,7 @@ void ModelInfoFromYAMLFile::updateParameterSubscriptRange(YAMLFileParameter& p,
             }
         }
         variables[new_var_name] = ModelVariable(p.type, p.range, v);
-        TREE_LOG_LINE(*report_to_tree, YAMLVariableVerbosity,
+        TREE_LOG_LINE(*logging_target, YAMLVariableVerbosity,
                       verb << " subscripted variable " << new_var_name << "=" << v);
     }
 }
@@ -914,7 +915,8 @@ void ModelInfoFromYAMLFile::readModelVariablesByType
     }
 }
 
-void ModelInfoFromYAMLFile::logVariablesTo(PhyloTree& report_to_tree) const {
+void ModelInfoFromYAMLFile::logVariablesTo
+        (LoggingTarget* logging_target) const {
     if (verbose_mode < YAMLVariableVerbosity) {
         return;
     }
@@ -928,7 +930,7 @@ void ModelInfoFromYAMLFile::logVariablesTo(PhyloTree& report_to_tree) const {
     if (list.find("nan") != std::string::npos) {
         list += " ...?";
     }
-    TREE_LOG_LINE(report_to_tree, YAMLModelVerbosity, list);
+    TREE_LOG_LINE(*logging_target, YAMLModelVerbosity, list);
 }
 
 ModelVariable& ModelInfoFromYAMLFile::assign(const std::string& var_name,
@@ -1433,12 +1435,12 @@ void ModelInfoFromYAMLFile::inheritModelRateDistributions
 }
 
 void ModelInfoFromYAMLFile::inheritModel(const ModelInfoFromYAMLFile& mummy,
-                                         PhyloTree* report_to_tree) {
+                                         LoggingTarget* logging_target) {
     if (this==&mummy) {
         //Ouch.  You're not allowed to go R+R+R... Or similar.
         //It'd probably *work* but it's not a case that programmers
         //should have to worry about.
-        TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MIN,
+        TREE_LOG_LINE(*logging_target, VerboseMode::VB_MIN,
                       "Model " << getName() << " cannot inherit from itself.");
         return;
     }
@@ -1458,7 +1460,7 @@ void ModelInfoFromYAMLFile::inheritModel(const ModelInfoFromYAMLFile& mummy,
 
     std::stringstream complaint;
     inheritModelProperties(mummy, complaint);
-    inheritModelParameters(mummy, complaint, report_to_tree);
+    inheritModelParameters(mummy, complaint, logging_target);
     inheritModelVariables (mummy, complaint);
     inheritModelMatrices  (mummy, complaint);
 
@@ -1522,12 +1524,12 @@ void ModelInfoFromYAMLFile::inheritModelProperties(const ModelInfoFromYAMLFile& 
 
 void ModelInfoFromYAMLFile::inheritModelParameters(const ModelInfoFromYAMLFile& mummy,
                                                    std::stringstream& complaint,
-                                                   PhyloTree* report_to_tree) {
+                                                   LoggingTarget* logging_target) {
     for (const YAMLFileParameter& mummy_param : mummy.parameters) {
         //Ee-uw.  Add parameter
         const YAMLFileParameter* child_param = findParameter(mummy_param.name);
         if (child_param == nullptr) {
-            addParameter(mummy_param, report_to_tree);
+            addParameter(mummy_param, logging_target);
             continue;
         }
         if (child_param->type != mummy_param.type) {
@@ -1661,6 +1663,17 @@ int ModelInfoFromYAMLFile::getNumberOfProportions() const {
     return count;
 }
 
+int ModelInfoFromYAMLFile::getNumberOfInvariantProportions() const {
+    int count = 0;
+    for (auto v: variables) {
+        auto t = v.second.getType();
+        if (t == ModelParameterType::INVARIANT_PROPORTION) {
+            ++count;
+        }
+    }
+    return count;
+}
+
 int ModelInfoFromYAMLFile::getNumberOfVariableProportions() const {
     int count = 0;
     for (auto v: variables) {
@@ -1676,8 +1689,9 @@ int ModelInfoFromYAMLFile::getNumberOfVariableProportions() const {
 }
 
 
-bool ModelInfoFromYAMLFile::acceptParameterList(std::string parameter_list,
-                                                PhyloTree* report_to_tree) {
+bool ModelInfoFromYAMLFile::acceptParameterList(Params& params,
+                                                std::string parameter_list,
+                                                LoggingTarget* logging_target) {
     typedef ModelExpression::InterpretedExpression Interpreter;
     typedef ModelExpression::Expression            Expression;
     typedef ModelExpression::Assignment            Assignment;
@@ -1700,7 +1714,7 @@ bool ModelInfoFromYAMLFile::acceptParameterList(std::string parameter_list,
         expr_list.push_back(new Interpreter(*this, param));
         i = j + 1;
     }
-    bool fix      = !report_to_tree->params->optimize_from_given_params;
+    bool fix      = !params.optimize_from_given_params;
     int  position = 0;
     getVariableNamesByPosition();
     try {
@@ -1713,11 +1727,11 @@ bool ModelInfoFromYAMLFile::acceptParameterList(std::string parameter_list,
                 string         var_name = xv->getName();
                 Expression*    x        = a->getExpression();
 
-                assign( var_name, x, fix, "by name", report_to_tree);
+                assign( var_name, x, fix, "by name", logging_target);
             } else {
                 string         var_name = getVariableNameByPosition(position);
 
-                assign( var_name, ex, fix, "by position", report_to_tree);
+                assign( var_name, ex, fix, "by position", logging_target);
                 ++position;
             }
             delete ix;
@@ -1732,7 +1746,7 @@ bool ModelInfoFromYAMLFile::acceptParameterList(std::string parameter_list,
         outError(complaint.str());
     }
 
-    changeSubscriptRangesOfParameters(report_to_tree);
+    changeSubscriptRangesOfParameters(logging_target);
 
     return !expr_list.empty();
 }
@@ -1760,7 +1774,7 @@ size_t ModelInfoFromYAMLFile::findEndOfParameter(const std::string parameter_lis
 }
 
 void ModelInfoFromYAMLFile::changeSubscriptRangesOfParameters
-        (PhyloTree* report_to_tree) {
+        (LoggingTarget* logging_target) {
     typedef ModelExpression::InterpretedExpression Interpreter;
     typedef ModelExpression::RangeOperator         Range;                                 
 
@@ -1771,7 +1785,7 @@ void ModelInfoFromYAMLFile::changeSubscriptRangesOfParameters
                 Range* op = dynamic_cast<Range*>(expr.expression());
                 changeParameterSubscriptRange(op->getIntegerMinimum(), 
                                               op->getIntegerMaximum(),p,
-                                              report_to_tree);
+                                              logging_target);
             }
         }
     }
@@ -1779,7 +1793,7 @@ void ModelInfoFromYAMLFile::changeSubscriptRangesOfParameters
 
 void ModelInfoFromYAMLFile::changeParameterSubscriptRange
         (int new_min, int new_max, YAMLFileParameter& param,
-         PhyloTree* report_to_tree) {
+         LoggingTarget* logging_target) {
     if (new_max < new_min) {
         std::stringstream complaint;
         complaint << "An error occurred, setting the subscript "
@@ -1796,12 +1810,12 @@ void ModelInfoFromYAMLFile::changeParameterSubscriptRange
     param.maximum_subscript = new_max;
     for (int i=new_min; i<=new_max; ++i) {
         if (i<old_min || old_max<i) {
-            setSubscriptedVariable(param, i, report_to_tree);
+            setSubscriptedVariable(param, i, logging_target);
         } 
     }
     for (int i=old_min; i<=old_max; ++i) {
         if (i<new_min || new_max<i) {
-            removeSubscriptedVariable(param, i, report_to_tree);
+            removeSubscriptedVariable(param, i, logging_target);
         }
     }
 }
@@ -1831,9 +1845,8 @@ void ModelInfoFromYAMLFile::setParentModel(ModelInfoFromYAMLFile* parent) {
 
 ModelVariable& ModelInfoFromYAMLFile::assign(const std::string& var_name,  
                                    ModelExpression::Expression *x,
-                                   bool fix,
-                                   const char* how,
-                                   PhyloTree* report_tree) {
+                                   bool fix, const char* how,
+                                   LoggingTarget* logging_target) {
     typedef ModelExpression::RangeOperator         Range;
     typedef ModelExpression::ModelException        Exception;                                    
     if (x->isRange()) {
@@ -1855,7 +1868,7 @@ ModelVariable& ModelInfoFromYAMLFile::assign(const std::string& var_name,
         if (min_value==max_value) {
             mv.markAsFixed(); //Todo: permanently, though?
         }
-        TREE_LOG_LINE(*report_tree, YAMLVariableVerbosity,
+        TREE_LOG_LINE(*logging_target, YAMLVariableVerbosity,
                         "Set " << var_name 
                         << " range to " << min_value 
                         << ".." << max_value 
@@ -1870,7 +1883,7 @@ ModelVariable& ModelInfoFromYAMLFile::assign(const std::string& var_name,
             mv.markAsFixed();
             verb = "Set and fixed ";
         }
-        TREE_LOG_LINE(*report_tree, YAMLVariableVerbosity,
+        TREE_LOG_LINE(*logging_target, YAMLVariableVerbosity,
                         verb << var_name 
                         << " to " << setting 
                         << " " << how << ".");
@@ -1983,3 +1996,30 @@ bool ModelInfoFromYAMLFile::hasAscertainmentBiasCorrection() const {
     return checkAscertainmentBiasCorrection(false, type);
 }
 
+bool isYAMLRateHeterotachyModel
+        (Params& params, const std::string& model_name, 
+         int& num_mixlen) {
+    if (model_name.empty()) {
+        //std::cout << "XX model" << std::endl;
+        return false; //no model
+    }
+    auto yaml_path = params.yaml_model_file;
+    if (yaml_path.empty()) {
+        //std::cout << "XX NO YAML file" << std::endl;
+        return false; //not using YAML model file
+    }
+    LoggingTarget dummy_logging_target; //No tree yet!
+    ModelListFromYAMLFile yaml_list;
+    yaml_list.loadFromFile(params, yaml_path.c_str(), 
+                           &dummy_logging_target);
+
+
+    std::string subst_model_name = split_string(model_name, "+")[0];
+
+    if (!yaml_list.isSubstitutionModelNameRecognized(subst_model_name)) {
+        //std::cout << "XX Name not recognized: " << subst_model_name << std::endl;
+        return false; //not a YAML model
+    }
+    return yaml_list.isRateHeterotachyRequired(params, model_name, num_mixlen,
+                                            &dummy_logging_target);
+}

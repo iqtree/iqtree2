@@ -24,17 +24,10 @@ protected:
                                      std::string& numeric_suffix) const;
     bool parseModelNameAndParameters(const std::string& input,
                                      std::string& model_name, 
-                                     std::string& parameters) const;
-
-                    
-    void handleInheritance          (ModelInfoFromYAMLFile& info, 
-                                     ModelListFromYAMLFile& list,
-                                     std::string            inheritance_list,
-                                     bool                   must_be_rate_models,
-                                     PhyloTree*             report_to_tree);
+                                     std::string& parameters) const;         
     void setModelStateFrequency     (const YAML::Node&      substitution_model, 
                                      ModelInfoFromYAMLFile& info,
-                                     PhyloTree*             report_to_tree);
+                                     LoggingTarget*         logging_target);
     void setParameterSubscriptRange (ModelInfoFromYAMLFile& info,
                                      YAMLFileParameter&     p);
     void setParameterType           (const YAML::Node&      param,
@@ -50,26 +43,28 @@ protected:
                                      ModelInfoFromYAMLFile& info,
                                      YAMLFileParameter&     p);
     bool isAParameterOverride       (ModelInfoFromYAMLFile& info,
-                                     YAMLFileParameter& p);
-    void parseYAMLSubModels         (const YAML::Node& substitution_model,
+                                     YAMLFileParameter&     p);
+    void parseYAMLSubModels         (Params&                params,
+                                     const YAML::Node&      substitution_model,
                                      ModelInfoFromYAMLFile& info,
                                      ModelListFromYAMLFile& list,
-                                     PhyloTree* report_to_tree);
-    void parseYAMLModelInheritance  (const YAML::Node& substitution_model,
+                                     LoggingTarget*         logging_target);
+    void parseYAMLModelInheritance  (Params&                params,
+                                     const YAML::Node&      substitution_model,
                                      ModelInfoFromYAMLFile& info,
                                      ModelListFromYAMLFile& list,
-                                     PhyloTree* report_to_tree);
+                                     LoggingTarget*         logging_target);
     void parseYAMLModelStringProperties(const YAML::Node& substitution_model,
                                         ModelInfoFromYAMLFile& info,
-                                        PhyloTree* report_to_tree);
-    void parseYAMLModelWeightAndScale(const YAML::Node& substitution_model,
+                                        LoggingTarget*       logging_target);
+    void parseYAMLModelWeightAndScale(const YAML::Node&      substitution_model,
                                       ModelInfoFromYAMLFile& info,
-                                      PhyloTree* report_to_tree);
+                                      LoggingTarget*         logging_target);
     void inheritOneModel            (ModelInfoFromYAMLFile& info,
-                                     bool must_be_rate_models,
+                                     bool           must_be_rate_models,
                                      const ModelInfoFromYAMLFile* ancestor,
-                                     PhyloTree* report_to_tree,
-                                     bool &have_first_parent);
+                                     LoggingTarget* logging_target,
+                                     bool&          have_first_parent);
 
 public:
     ModelFileLoader(const char* path);
@@ -97,48 +92,55 @@ public:
     
     void parseYAMLModelParameters(const YAML::Node& params,
                                   ModelInfoFromYAMLFile& info,
-                                  PhyloTree* report_to_tree);
+                                  LoggingTarget* logging_target);
     void parseModelParameter (const YAML::Node& param,
                               std::string name,
                               ModelInfoFromYAMLFile& info,
-                              PhyloTree* report_to_tree);
+                              LoggingTarget* logging_target);
     void parseMatrixParameter(const YAML::Node& param,
                               std::string name,
                               ModelInfoFromYAMLFile& info,
-                              PhyloTree* report_to_tree);
+                              LoggingTarget* logging_target);
 
     YAMLFileParameter
          addDummyFrequencyParameterTo(ModelInfoFromYAMLFile& info,
-                                      PhyloTree* report_to_tree);
+                                      LoggingTarget* logging_target);
     void parseYAMLModelConstraints(const YAML::Node& params,
                                    ModelInfoFromYAMLFile& info,
-                                   PhyloTree* report_to_tree);
+                                   LoggingTarget* logging_target);
     double setConstraint(ModelExpression::Assignment* a,
                          ModelInfoFromYAMLFile&       info,
                          const std::string& constraint_string,
-                         PhyloTree*         report_to_tree);
+                         LoggingTarget*     logging_target);
     
-    void parseYAMLMixtureModels(const YAML::Node& mixture_models,
+    void parseYAMLMixtureModels(Params& params,
+                                const YAML::Node& mixture_models,
                                 ModelInfoFromYAMLFile& info,
                                 ModelListFromYAMLFile& list,
-                                PhyloTree* report_to_tree);
+                                LoggingTarget* logging_target);
     void dumpMatrixTo(const char* name, ModelInfoFromYAMLFile& info,
                       const StringMatrix& matrix,
                       int rank,
                       const std::string& formula, std::stringstream &out);
 
-
-
     void parseRateMatrix(const YAML::Node& rate_matrix,
                          ModelInfoFromYAMLFile& info,
-                         PhyloTree* report_to_tree);
+                         LoggingTarget* logging_target);
         
-    void parseYAMLModel(const YAML::Node& substitution_model,
+    void parseYAMLModel(Params& params,
+                        const YAML::Node& substitution_model,
                         const std::string& name_of_model,
                         ModelInfoFromYAMLFile& info,
                         ModelListFromYAMLFile& list,
                         ModelInfoFromYAMLFile* parent_model,
-                        PhyloTree* report_to_tree);
+                        LoggingTarget* logging_target);
+
+    void handleInheritance(Params&                params,
+                           ModelInfoFromYAMLFile& info, 
+                           ModelListFromYAMLFile& list,
+                           std::string            inheritance_list,
+                           bool                   must_be_rate_models,
+                           LoggingTarget*         logging_target);
 
 };
 

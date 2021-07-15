@@ -45,6 +45,7 @@ inline std::string modelParameterTypeToString(ModelParameterType type_code) {
     return "";
 }
 
+class LoggingTarget;
 
 class YAMLFileParameter {
 public:
@@ -77,7 +78,7 @@ public:
     bool isMatchFor(const std::string& match_name,        /* assumed: lower-case */
                     ModelParameterType match_type) const;
 
-    void logParameterState(const char* verb, PhyloTree* report_to_tree) const;
+    void logParameterState(const char* verb, LoggingTarget* logging_target) const;
 };
 
 class ModelVariable {
@@ -239,6 +240,10 @@ public:
 #define PROPERTY_NAME_ERROR_MODEL "errormodel"
 #define PROPERTY_NAME_ASC         "ascertainmentbiascorrection"
 
+bool isYAMLRateHeterotachyModel(Params& params, 
+                                const std::string& model_name,
+                                int& num_mixlen);
+
 class ModelInfoFromYAMLFile : public ModelInfo {
 
     friend class ModelListFromYAMLFile;
@@ -304,11 +309,11 @@ protected:
     void copyMixedAndLinkedModels (const ModelInfoFromYAMLFile& rhs);
     void changeParameterSubscriptRange(int new_min, int new_max, 
                                        YAMLFileParameter& param,
-                                       PhyloTree* report_to_tree);
+                                       LoggingTarget* logging_target);
     void setSubscriptedVariable   (const YAMLFileParameter& p, int i,
-                                   PhyloTree* report_to_tree);
+                                   LoggingTarget* logging_target);
     bool removeSubscriptedVariable(const YAMLFileParameter&p, int i,
-                                   PhyloTree* report_to_tree);
+                                   LoggingTarget* logging_target);
 
 public:
     ModelInfoFromYAMLFile(); //Only ModelListFromYAMLFile uses it.
@@ -317,7 +322,7 @@ public:
     ~ModelInfoFromYAMLFile();
     ModelInfoFromYAMLFile& operator=(const ModelInfoFromYAMLFile& rhs);
     void specifyRateModel(const ModelInfoFromYAMLFile& ancestor,
-                          PhyloTree* report_to_tree);
+                          LoggingTarget* logging_target);
 
     virtual std::string getFreeRateParameters(int& num_rate_cats,
         bool& fused_mix_rate) const {
@@ -382,7 +387,8 @@ public:
         return "";
     }
     void updateName  (const std::string& name);
-    void addParameter(const YAMLFileParameter& p, PhyloTree* report_to_tree);
+    void addParameter(const YAMLFileParameter& p, 
+                      LoggingTarget* logging_target);
 
 /***
  * @param p
@@ -394,7 +400,7 @@ public:
     void updateParameterSubscriptRange(YAMLFileParameter& p, 
                                        int min_subscript,
                                        int max_subscript,
-                                       PhyloTree* report_to_tree);
+                                       LoggingTarget* logging_target);
 
 public:
     const std::string& getName()                                        const;
@@ -407,7 +413,7 @@ public:
 
     //Initialization helper functions
     void setNumberOfStatesAndSequenceType(int requested_num_states,
-                                          PhyloTree* report_to_tree);
+                                          LoggingTarget* logging_target);
     double evaluateExpression(std::string& expression, std::string context);
 
     //Parameters and variables
@@ -468,13 +474,13 @@ public:
                                       int &i, PhyloTree* report_to_tree) const;                                          
 
 
-    void   logVariablesTo(PhyloTree& report_to_tree)           const;
+    void   logVariablesTo(LoggingTarget* logging_target) const;
     ModelVariable& assign(const std::string& var_name,
                           double value);
     ModelVariable& assign(const std::string& var_name,  
                           ModelExpression::Expression *x,
                           bool fix, const char* how,
-                          PhyloTree* report_tree);
+                          LoggingTarget* logging_target);
 
 
     ModelVariable& forceAssign(const std::string& var_name,
@@ -503,7 +509,7 @@ public:
 
     //Inheriting
     void inheritModel(const ModelInfoFromYAMLFile &,
-                      PhyloTree* report_to_tree);
+                      LoggingTarget* logging_target);
     void inheritModelRateDistributions
                                (const ModelInfoFromYAMLFile& mummy);
     void addNamesOfVariablesOfTypeToSet(ModelParameterType type,
@@ -512,21 +518,22 @@ public:
                                 std::stringstream& complaint);
     void inheritModelParameters(const ModelInfoFromYAMLFile& mummy,
                                 std::stringstream& complaint,
-                                PhyloTree* report_to_tree);
+                                LoggingTarget* logging_target);
     void inheritModelVariables (const ModelInfoFromYAMLFile& mummy,
                                 std::stringstream& complaint);
     void inheritModelMatrices  (const ModelInfoFromYAMLFile& mummy,
                                 std::stringstream& complaint);
 
     //Accepting parameters supplied on command-line
-    bool acceptParameterList   (std::string parameter_list,
-                                PhyloTree* report_tree);
+    bool acceptParameterList   (Params& params,
+                                std::string parameter_list,
+                                LoggingTarget* logging_target);
 
         //Support functions for acceptParameterList
         size_t findEndOfParameter(const std::string parameter_list,
                                   size_t param_list_length,
                                   size_t i) const;
-        void changeSubscriptRangesOfParameters(PhyloTree* report_to_tree);
+        void changeSubscriptRangesOfParameters(LoggingTarget* logging_target);
 
     //Mixture Model stuff
     MapOfModels& getMixedModels();
@@ -536,11 +543,12 @@ public:
 
     //Rate-Only stuff
     const std::string& getOptimizationAlgorithm() const;
-    int getNumberOfRateCategories()      const;
-    int getNumberOfVariableRates()       const;
-    int getNumberOfVariableShapes()      const;
-    int getNumberOfProportions()         const;
-    int getNumberOfVariableProportions() const; 
+    int getNumberOfRateCategories()       const;
+    int getNumberOfVariableRates()        const;
+    int getNumberOfVariableShapes()       const;
+    int getNumberOfProportions()          const;
+    int getNumberOfInvariantProportions() const;
+    int getNumberOfVariableProportions()  const; 
 
     const YAMLFileParameter& getInvariantProportionParameter() const;
     YAMLFileParameter&       getInvariantProportionParameter();
@@ -561,6 +569,8 @@ public:
     void restoreFromCheckpoint(Checkpoint* checkpoint);
 };
 
+class LoggingTarget;
+
 class ModelListFromYAMLFile {
 protected:
     MapOfModels  models_found;
@@ -571,8 +581,15 @@ public:
     ModelListFromYAMLFile() = default;
     ~ModelListFromYAMLFile() = default;
 
-    void loadFromFile(const char* file_path, PhyloTree* report_to_tree);
+    void loadFromFile(Params& params, const char* file_path, 
+                      LoggingTarget* report_to_tree);
     bool isSubstitutionModelNameRecognized(const char* model_name);
+    bool isSubstitutionModelNameRecognized(const std::string& model_name);
+
+    bool isRateHeterotachyRequired(Params& params, 
+                                   const std::string& model_name,
+                                   int& num_mixlen,
+                                   LoggingTarget* report_to_tree);
 
     ModelMarkov* getModelByName(const char* model_name,   PhyloTree* tree,
                                 const char* model_params, StateFreqType freq_type,

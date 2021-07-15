@@ -30,6 +30,17 @@
 #include "mtreeset.h"
 using namespace std;
 
+void LoggingTarget::logLine(const char* line) const {
+    #ifdef _OPENMP
+    #pragma omp critical (io)
+    #endif
+    std::cout << line << std::endl;
+}
+
+void LoggingTarget::logLine(const std::string& line) const {
+    logLine(line.c_str());
+}
+
 /*********************************************
 	class MTree
 *********************************************/
@@ -2182,12 +2193,8 @@ void MTree::hideProgress() const {
 void MTree::showProgress() const {
 }
 
-#define HUNTING_HEAP_CORRUPTION (0)
 void MTree::logLine(const char* line) const {
     hideProgress();
-    #if HUNTING_HEAP_CORRUPTION && defined(CLANG_UNDER_VS) && defined(DEBUG)
-        _CrtCheckMemory();
-    #endif //HUNTING_HEAP_CORRUPTION
     #ifdef _OPENMP
     #pragma omp critical (io)
     #endif

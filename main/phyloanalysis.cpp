@@ -55,6 +55,7 @@
 #include "model/partitionmodel.h"
 #include "model/modelmixture.h"
 #include "model/modelfactorymixlen.h"
+#include "model/modelinfofromyamlfile.h" //for ModelListFromYAMLFile class
 //#include "guidedbootstrap.h"
 #include "model/modelset.h"
 #include "model/modelinfo.h"
@@ -3995,7 +3996,6 @@ void computeSiteFrequencyModel(Params &params, Alignment *alignment) {
          << " USING THE INFERRED SITE FREQUENCY MODEL" << endl;
 }
 
-
 /**********************************************************
  * TOP-LEVEL FUNCTION
  ***********************************************************/
@@ -4016,21 +4016,28 @@ IQTree *newIQTree(Params &params, Alignment *alignment) {
         }
         // this alignment will actually be of type SuperAlignment
         //        alignment = tree->aln;
-        if (((PhyloSuperTree*)tree)->rescale_codon_brlen)
+        if (((PhyloSuperTree*)tree)->rescale_codon_brlen) {
             cout << "NOTE: Mixed codon and other data, branch lengths"
                  << " of codon partitions are rescaled by 3!" << endl;
+        }
         
     } else {
         // allocate heterotachy tree if neccessary
-        ModelInfoFromName model_info(alignment->model_name);
+        std::string model_name = alignment->model_name;
+        ModelInfoFromName model_info(model_name);
+        int num_mixlen = 0;
         if (params.num_mixlen > 1) {
             tree = new PhyloTreeMixlen(alignment, params.num_mixlen);
+        } else if (isYAMLRateHeterotachyModel(params, model_name, num_mixlen)) {
+            tree = new PhyloTreeMixlen(alignment, num_mixlen);
         } else if (model_info.hasRateHeterotachy()) {
+            //Problem.  For a YAML Model, seeing +H doesn't necessarily
+            //mean that this tree will need rate heterotachy.
             tree = new PhyloTreeMixlen(alignment, 0);
-        } else
+        } else {
             tree = new IQTree(alignment);
+        }
     }
-
     return tree;
 }
 
@@ -4379,8 +4386,6 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
              << " number of mutations and frequency shifts" << endl;
         cout.precision(3);
     }
-
-
     if (params.concatenate_aln) {
         Alignment aln(params.concatenate_aln, params.sequence_type,
                       params.intype, params.model_name);
@@ -4388,7 +4393,6 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
              << params.concatenate_aln << " ..." << endl;
         alignment->concatenateAlignment(&aln);
     }
-
     if (params.constraint_tree_file) {
         cout << "Reading constraint tree "
              << params.constraint_tree_file << "..." << endl;
@@ -4416,11 +4420,13 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
                      " you have to specify a root with -o option");
         }
         tree->setAlignment(tree->aln);
-        if (!tree->rooted)
+        if (!tree->rooted) {
             tree->setRootNode(params.root);
+        }
         tree->computeSeqIdentityAlongTree();
-        if (verbose_mode >= VerboseMode::VB_MED)
+        if (verbose_mode >= VerboseMode::VB_MED) {
             tree->drawTree(cout);
+        }
         string out_tree = (string)params.out_prefix + ".seqident_tree";
         tree->printTree(out_tree.c_str());
         cout << "Tree with sequence identity" 
@@ -4461,7 +4467,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
                      << filename << endl;
             }
         }
-        alignment = NULL; // from now on use tree->aln instead
+        alignment = nullptr; // from now on use tree->aln instead
 
         startTreeReconstruction(params, tree, *model_info);
         // call main tree reconstruction

@@ -124,7 +124,7 @@ ModelParameterRange ModelFileLoader::parseRange(const YAML::Node& node,
     
 void ModelFileLoader::parseYAMLModelParameters(const YAML::Node& params,
                                                ModelInfoFromYAMLFile& info,
-                                               PhyloTree* report_to_tree) {
+                                               LoggingTarget* logging_target) {
     //
     //Assumes: params is a sequence of parameter declarations
     //
@@ -133,14 +133,14 @@ void ModelFileLoader::parseYAMLModelParameters(const YAML::Node& params,
         if (name_node) {
             if (name_node.IsScalar()) {
                 parseModelParameter(param, name_node.Scalar(), info,
-                                    report_to_tree);
+                                    logging_target);
             }
             else if (name_node.IsSequence()) {
                 for (auto current_name: name_node) {
                     if (current_name.IsScalar()) {
                         std::string name = current_name.Scalar();
                         parseModelParameter(param, name, info,
-                                            report_to_tree);
+                                            logging_target);
                     }
                 }
             }
@@ -312,7 +312,7 @@ void ModelFileLoader::setParameterValue(const YAML::Node&      param,
 void ModelFileLoader::parseModelParameter(const YAML::Node& param,
                                           std::string name,
                                           ModelInfoFromYAMLFile& info,
-                                          PhyloTree* report_to_tree) {
+                                          LoggingTarget* logging_target) {
     YAMLFileParameter p;
     p.name       = name;
     auto name_len = p.name.length();
@@ -341,7 +341,7 @@ void ModelFileLoader::parseModelParameter(const YAML::Node& param,
         complainIfNot(value || (formula && rank), p.name +
                       " matrix parameter's value must be defined"
                       " in model " + info.getName() + ".");
-        parseMatrixParameter(param, name, info, report_to_tree);
+        parseMatrixParameter(param, name, info, logging_target);
         return;
     }
     
@@ -353,9 +353,9 @@ void ModelFileLoader::parseModelParameter(const YAML::Node& param,
     
     p.description = stringScalar(param, "description", p.description.c_str());
 
-    p.logParameterState("Parsed", report_to_tree);
+    p.logParameterState("Parsed", logging_target);
 
-    info.addParameter(p, report_to_tree);
+    info.addParameter(p, logging_target);
 }
 
 bool ModelFileLoader::isAParameterOverride(ModelInfoFromYAMLFile& info,
@@ -381,7 +381,7 @@ bool ModelFileLoader::isAParameterOverride(ModelInfoFromYAMLFile& info,
 void ModelFileLoader::parseMatrixParameter(const YAML::Node& param,
                                            std::string name,
                                            ModelInfoFromYAMLFile& info,
-                                           PhyloTree* report_to_tree) {
+                                           LoggingTarget* logging_target) {
     //Assumed: parameter has a "value" entry, and it is a sequence of sequences
     
     auto         value        = param["value"];
@@ -446,7 +446,7 @@ void ModelFileLoader::parseMatrixParameter(const YAML::Node& param,
         rank            = (int)floor(rank_dbl);
         complainIfNot(0<rank, "rank of " + name + " matrix of model "
                       + info.getName() + " was invalid (" + rank_str + ")");
-        TREE_LOG_LINE(*report_to_tree, YAMLMatrixVerbosity,
+        TREE_LOG_LINE(*logging_target, YAMLMatrixVerbosity,
                       "Rank of " << info.getName() << "." << name <<
                       " was " << rank_str << " ... or " << rank);
     }
@@ -478,13 +478,13 @@ void ModelFileLoader::parseMatrixParameter(const YAML::Node& param,
         std::stringstream matrix_stream;
         dumpMatrixTo(lower_name.c_str(), info, expressions, rank,
                      formula, matrix_stream);
-        TREE_LOG_LINE(*report_to_tree, YAMLMatrixVerbosity, matrix_stream.str());
+        TREE_LOG_LINE(*logging_target, YAMLMatrixVerbosity, matrix_stream.str());
     }
 }
 
 YAMLFileParameter
     ModelFileLoader::addDummyFrequencyParameterTo(ModelInfoFromYAMLFile& info,
-                                                  PhyloTree* report_to_tree) {
+                                                  LoggingTarget* logging_target) {
     YAMLFileParameter   p;
     p.name              = "freq";
     p.is_subscripted    = true;
@@ -495,30 +495,31 @@ YAMLFileParameter
     auto num_states     = info.getNumStates();
     ASSERT(0 < num_states);
     p.value            = 1 / static_cast<double>(num_states);
-    info.addParameter(p, report_to_tree);
+    info.addParameter(p, logging_target);
     return p;
 }
 
-void ModelFileLoader::parseYAMLMixtureModels(const YAML::Node& mixture_models,
+void ModelFileLoader::parseYAMLMixtureModels(Params& params,
+                                             const YAML::Node& mixture_models,
                                              ModelInfoFromYAMLFile& info,
                                              ModelListFromYAMLFile& list,
-                                             PhyloTree* report_to_tree) {
-    TREE_LOG_LINE(*report_to_tree, YAMLParsingVerbosity, "Processing mixtures" );
+                                             LoggingTarget* logging_target) {
+    TREE_LOG_LINE(*logging_target, YAMLParsingVerbosity, "Processing mixtures" );
     info.mixed_models = new MapOfModels();
     for (const YAML::Node& model: mixture_models) {
         std::string child_model_name = stringScalar(model, "substitutionmodel", "");
-        TREE_LOG_LINE(*report_to_tree, YAMLParsingVerbosity, "Processing mixture model" );
+        TREE_LOG_LINE(*logging_target, YAMLParsingVerbosity, "Processing mixture model" );
         ModelInfoFromYAMLFile* child_info = 
             new ModelInfoFromYAMLFile(info.model_file_path);
-        parseYAMLModel(model, child_model_name, *child_info,
-                       list, &info, report_to_tree);
+        parseYAMLModel(params, model, child_model_name, *child_info,
+                       list, &info, logging_target);
         info.mixed_models->insert( child_model_name, child_info );
     }
 }
 
 void ModelFileLoader::parseYAMLModelConstraints(const YAML::Node& constraints,
                                                 ModelInfoFromYAMLFile& info,
-                                                PhyloTree* report_to_tree) {
+                                                LoggingTarget* logging_target) {
     int constraint_num = 1;
     for (const YAML::Node& constraint: constraints) {
         //
@@ -545,7 +546,7 @@ void ModelFileLoader::parseYAMLModelConstraints(const YAML::Node& constraints,
             }
             ModelExpression::Assignment* a =
                 dynamic_cast<ModelExpression::Assignment*>(x);
-            setConstraint(a, info, constraint_string, report_to_tree);
+            setConstraint(a, info, constraint_string, logging_target);
         }
         catch (ModelExpression::ModelException x) {
             std::stringstream complaint;
@@ -560,7 +561,7 @@ void ModelFileLoader::parseYAMLModelConstraints(const YAML::Node& constraints,
 double ModelFileLoader::setConstraint(ModelExpression::Assignment* a,
                                       ModelInfoFromYAMLFile& info,
                                       const std::string& constraint_string,
-                                      PhyloTree* report_to_tree) {
+                                      LoggingTarget* logging_target) {
     ModelExpression::Expression* assigned = a->getTarget();
     if (!assigned->isVariable()) {
         std::stringstream complaint;
@@ -574,13 +575,13 @@ double ModelFileLoader::setConstraint(ModelExpression::Assignment* a,
     if (x->isAssignment()) {
         auto a2 = dynamic_cast<ModelExpression::Assignment*>(x);
         setting = setConstraint(a2, info, constraint_string,
-                                report_to_tree);
+                                logging_target);
     } else {
         setting = a->getExpression()->evaluate();
     }
     ModelVariable& mv = info.assign(v->getName(), setting);
     mv.markAsFixed();
-    TREE_LOG_LINE(*report_to_tree, YAMLVariableVerbosity,
+    TREE_LOG_LINE(*logging_target, YAMLVariableVerbosity,
                   "Assigned " << v->getName()
                   << " := " << setting);
 
@@ -607,7 +608,7 @@ double ModelFileLoader::setConstraint(ModelExpression::Assignment* a,
             }
             if (rangeChanged) {
                 info.updateParameterSubscriptRange(param, range.first, 
-                                                   range.second, report_to_tree);
+                                                   range.second, logging_target);
             }
         }
     }
@@ -617,7 +618,7 @@ double ModelFileLoader::setConstraint(ModelExpression::Assignment* a,
 
 void ModelFileLoader::parseRateMatrix(const YAML::Node& rate_matrix,
                                       ModelInfoFromYAMLFile& info,
-                                      PhyloTree* report_to_tree) {
+                                      LoggingTarget* logging_target) {
     //Assumes rate_matrix is a sequence (of rows)
     size_t column_count = 0;
     for (auto row : rate_matrix) {
@@ -668,7 +669,7 @@ void ModelFileLoader::parseRateMatrix(const YAML::Node& rate_matrix,
         dumpMatrixTo("rate", info, info.rate_matrix_expressions,
                      info.rate_matrix_rank, info.rate_matrix_formula,
                      matrix_stream);
-        TREE_LOG_LINE(*report_to_tree, YAMLMatrixVerbosity, matrix_stream.str());
+        TREE_LOG_LINE(*logging_target, YAMLMatrixVerbosity, matrix_stream.str());
     }
 }
 
@@ -774,18 +775,19 @@ bool ModelFileLoader::parseModelNameAndParameters(const std::string& input,
 }
 
 
-void ModelFileLoader::handleInheritance(ModelInfoFromYAMLFile& info,
+void ModelFileLoader::handleInheritance(Params& params,
+                                        ModelInfoFromYAMLFile& info,
                                         ModelListFromYAMLFile& list,
                                         std::string inheritance_list,
                                         bool must_be_rate_models,
-                                        PhyloTree* report_to_tree) {
+                                        LoggingTarget* logging_target) {
     bool have_first_parent = false;
     for (string ancestral_model : split_string(inheritance_list, "+")) {
         if (list.hasModel(ancestral_model)) {
             const ModelInfoFromYAMLFile* ancestor =
                     list.getModel(ancestral_model);
             inheritOneModel(info, must_be_rate_models, ancestor, 
-                            report_to_tree, have_first_parent);
+                            logging_target, have_first_parent);
             continue;
         }
 
@@ -793,28 +795,31 @@ void ModelFileLoader::handleInheritance(ModelInfoFromYAMLFile& info,
         //number of categories, and both rate & substitution models 
         //can be parameterized
         std::string model_name;
-        std::string params;
-        if (doesStringEndInNumber(ancestral_model, model_name, params)) {
-            params = "categories=" + params;
-            TREE_LOG_LINE(*report_to_tree, YAMLRateVerbosity,
-                          "Number parameter (" + params + ")"
+        std::string model_name_number_suffix;
+        std::string param_list;
+        if (doesStringEndInNumber(ancestral_model, model_name, 
+                                  model_name_number_suffix)) {            
+            param_list = "categories=" + model_name_number_suffix;
+            TREE_LOG_LINE(*logging_target, YAMLRateVerbosity,
+                          "Number parameter (" + param_list + ")"
                           " to model (" + model_name + ")");
         }
         else {
-            parseModelNameAndParameters(ancestral_model, model_name, params);
-            TREE_LOG_LINE(*report_to_tree, YAMLRateVerbosity,
-                          "Parameters (" + params + ")"
+            parseModelNameAndParameters(ancestral_model, model_name, param_list);
+            TREE_LOG_LINE(*logging_target, YAMLRateVerbosity,
+                          "Parameters (" + param_list + ")"
                           " found for ancestral or rate model"
                           " (" + model_name + ")");
         }
-        if (!params.empty()) {
+        if (!param_list.empty()) {
             if (list.hasModel(model_name)) {
                 const ModelInfoFromYAMLFile* base_model = 
                     list.getModel(model_name);
                 ModelInfoFromYAMLFile derived_model(*base_model);
-                derived_model.acceptParameterList(params, report_to_tree);
+                derived_model.model_name += model_name_number_suffix;
+                derived_model.acceptParameterList(params, param_list, logging_target);
                 inheritOneModel(info, must_be_rate_models, &derived_model, 
-                               report_to_tree, have_first_parent);
+                               logging_target, have_first_parent);
                 continue;
             }
         }
@@ -840,7 +845,7 @@ void ModelFileLoader::handleInheritance(ModelInfoFromYAMLFile& info,
 void ModelFileLoader::inheritOneModel(ModelInfoFromYAMLFile& info,
                                       bool must_be_rate_models,
                                       const ModelInfoFromYAMLFile* ancestor,
-                                      PhyloTree* report_to_tree,
+                                      LoggingTarget* logging_target,
                                       bool &have_first_parent) {
     if (info.is_rate_model && !ancestor->is_rate_model) {
         std::stringstream complaint;
@@ -850,7 +855,7 @@ void ModelFileLoader::inheritOneModel(ModelInfoFromYAMLFile& info,
                     << ancestor->getName() << ".";
         outError(complaint.str());
     } else if (!info.is_rate_model && ancestor->is_rate_model) {
-        info.specifyRateModel(*ancestor, report_to_tree);
+        info.specifyRateModel(*ancestor, logging_target);
         return;
     } else if (must_be_rate_models) {
         std::stringstream complaint;
@@ -865,13 +870,13 @@ void ModelFileLoader::inheritOneModel(ModelInfoFromYAMLFile& info,
         std::string save_name = info.model_name;
         info = *ancestor;
         info.model_name = save_name;
-        TREE_LOG_LINE(*report_to_tree, YAMLParsingVerbosity,
+        TREE_LOG_LINE(*logging_target, YAMLParsingVerbosity,
                     "Model " << info.model_name
                     << " is based on model " << ancestor->getName());
         have_first_parent = true;
     } else {
-        info.inheritModel(*ancestor, report_to_tree);
-        TREE_LOG_LINE(*report_to_tree, YAMLParsingVerbosity,
+        info.inheritModel(*ancestor, logging_target);
+        TREE_LOG_LINE(*logging_target, YAMLParsingVerbosity,
                     "Model " << info.model_name
                     << " is also based on" 
                     << " model " << ancestor->getName());
@@ -881,7 +886,7 @@ void ModelFileLoader::inheritOneModel(ModelInfoFromYAMLFile& info,
 
 void ModelFileLoader::setModelStateFrequency(const YAML::Node& substitution_model,
                                              ModelInfoFromYAMLFile& info,
-                                             PhyloTree* report_to_tree) {
+                                             LoggingTarget* logging_target) {
     auto stateFrequency = substitution_model["stateFrequency"];
     std::string low_freq;
     if (stateFrequency) {
@@ -893,13 +898,15 @@ void ModelFileLoader::setModelStateFrequency(const YAML::Node& substitution_mode
         //Check that dimension of the specified parameter is the
         //same as the rank of the rate matrix (it must be!).
         //
-        std::string freq     = stateFrequency.IsScalar() ? stateFrequency.Scalar() : "";
+        std::string freq = stateFrequency.IsScalar() 
+                         ? stateFrequency.Scalar() : "";
         low_freq = string_to_lower(freq);
     }
 
     if (stateFrequency && stateFrequency.IsSequence()) {
         info.frequency_type = StateFreqType::FREQ_USER_DEFINED;
-        YAMLFileParameter freq_param = addDummyFrequencyParameterTo(info, report_to_tree);
+        YAMLFileParameter freq_param = 
+            addDummyFrequencyParameterTo(info, logging_target);
         int subscript = freq_param.minimum_subscript;
         for (auto f: stateFrequency) {
             complainIfNot(f.IsScalar(), "Model " + model_name +
@@ -913,7 +920,7 @@ void ModelFileLoader::setModelStateFrequency(const YAML::Node& substitution_mode
             auto   var_name  = freq_param.getSubscriptedVariableName(subscript);
             double var_value = x.evaluate();
             info.assign(var_name, var_value);
-            TREE_LOG_LINE(*report_to_tree, YAMLVariableVerbosity,
+            TREE_LOG_LINE(*logging_target, YAMLVariableVerbosity,
                             "Assigned frequency: " << var_name
                             << " := " << var_value  );
             ++subscript;
@@ -940,28 +947,29 @@ void ModelFileLoader::setModelStateFrequency(const YAML::Node& substitution_mode
     } else if (info.isFrequencyParameter(low_freq)) {
         info.frequency_type = StateFreqType::FREQ_USER_DEFINED;
     } 
-    TREE_LOG_LINE(*report_to_tree, YAMLFrequencyVerbosity,
+    TREE_LOG_LINE(*logging_target, YAMLFrequencyVerbosity,
                     "After setting frequency type"
                     " of " << info.model_name <<
                     " to " << low_freq << "...");
-    info.logVariablesTo(*report_to_tree);
+    info.logVariablesTo(logging_target);
 }
 
 
-void ModelFileLoader::parseYAMLModel(const YAML::Node& substitution_model,
+void ModelFileLoader::parseYAMLModel(Params &params,
+                                     const YAML::Node& substitution_model,
                                      const std::string& name_of_model,
                                      ModelInfoFromYAMLFile& info,
                                      ModelListFromYAMLFile& list,
                                      ModelInfoFromYAMLFile* parent_model,
-                                     PhyloTree* report_to_tree) {
+                                     LoggingTarget* logging_target) {
     info.parent_model          = parent_model;
     info.is_modifier_model     = false;
     info.superclass_model_name = stringScalar(substitution_model, "frommodel", "");
     info.rate_distribution     = stringScalar(substitution_model, "ratedistribution", "");
     info.model_name            = name_of_model;
 
-    parseYAMLModelInheritance(substitution_model, info, 
-                              list, report_to_tree);
+    parseYAMLModelInheritance(params, substitution_model, info, 
+                              list, logging_target);
 
     info.model_file_path = file_path;
     info.citation        = stringScalar (substitution_model, "citation",    info.citation.c_str());
@@ -975,7 +983,7 @@ void ModelFileLoader::parseYAMLModel(const YAML::Node& substitution_model,
     if (!info.is_rate_model) {
         int num_states_requested = integerScalar(substitution_model,
                                                 "numStates", info.num_states);
-        info.setNumberOfStatesAndSequenceType(num_states_requested, report_to_tree);
+        info.setNumberOfStatesAndSequenceType(num_states_requested, logging_target);
     } else {
         info.forceAssign("categories", 1);
     }
@@ -984,22 +992,22 @@ void ModelFileLoader::parseYAMLModel(const YAML::Node& substitution_model,
     //Todo: extract other information from the subsstitution model.
     //      Such as parameters and rate matrices and so forth
     //
-    auto params = substitution_model["parameters"];
-    if (params) {
-        complainIfNot(params.IsSequence(),
+    auto param_list = substitution_model["parameters"];
+    if (param_list) {
+        complainIfNot(param_list.IsSequence(),
                       "Parameters of model " + model_name +
                       " in file " + file_path + " not a sequence");
-        parseYAMLModelParameters(params, info, report_to_tree);
+        parseYAMLModelParameters(param_list, info, logging_target);
     }
 
-    parseYAMLSubModels(substitution_model, info, list, report_to_tree);
+    parseYAMLSubModels(params, substitution_model, info, list, logging_target);
     
     auto constraints = substitution_model["constraints"];
     if (constraints) {
         complainIfNot(constraints.IsSequence(),
                       "Constraints for model " + model_name +
                       " in file " + file_path + " not a sequence");
-        parseYAMLModelConstraints(constraints, info, report_to_tree);
+        parseYAMLModelConstraints(constraints, info, logging_target);
     }
     
     //
@@ -1023,20 +1031,21 @@ void ModelFileLoader::parseYAMLModel(const YAML::Node& substitution_model,
                      "Cannot specify rate matrix"
                      " for rate model " + model_name +
                       " in file " + file_path);
-        parseRateMatrix(rateMatrix, info, report_to_tree);
+        parseRateMatrix(rateMatrix, info, logging_target);
     }
-    setModelStateFrequency        (substitution_model, info, report_to_tree);
-    parseYAMLModelStringProperties(substitution_model, info, report_to_tree);
-    parseYAMLModelWeightAndScale  (substitution_model, info, report_to_tree);
+    setModelStateFrequency        (substitution_model, info, logging_target);
+    parseYAMLModelStringProperties(substitution_model, info, logging_target);
+    parseYAMLModelWeightAndScale  (substitution_model, info, logging_target);
 }
 
 void ModelFileLoader::parseYAMLModelInheritance
-        (const YAML::Node& substitution_model,
+        (Params& params, 
+         const YAML::Node& substitution_model,
          ModelInfoFromYAMLFile& info,
          ModelListFromYAMLFile& list,
-         PhyloTree* report_to_tree) {
+         LoggingTarget* logging_target) {
     if (!info.superclass_model_name.empty()) {
-        TREE_LOG_LINE(*report_to_tree, YAMLParsingVerbosity, 
+        TREE_LOG_LINE(*logging_target, YAMLParsingVerbosity, 
                       info.model_name << " parent is " 
                       << info.superclass_model_name << "." );
         if (string_to_upper(info.superclass_model_name)=="ANY") {
@@ -1047,27 +1056,27 @@ void ModelFileLoader::parseYAMLModelInheritance
             if (info.model_name.empty()) {            
                 info.model_name = info.superclass_model_name;
             }
-            handleInheritance(info, list, info.superclass_model_name, 
-                              false, report_to_tree);
+            handleInheritance(params, info, list, info.superclass_model_name, 
+                              false, logging_target);
         }
     }
-
     if (!info.is_rate_model) {
         auto rate_model_name_list = stringScalar(substitution_model, "ratemodel", "");
-        TREE_LOG_LINE(*report_to_tree, YAMLRateVerbosity, 
+        TREE_LOG_LINE(*logging_target, YAMLRateVerbosity, 
                     "Rate model list for " << info.model_name
                     << " was " << rate_model_name_list << ".");
         if (!rate_model_name_list.empty()) {
-            handleInheritance(info, list, rate_model_name_list, 
-                            true, report_to_tree);
+            handleInheritance(params, info, list, rate_model_name_list, 
+                              true, logging_target);
         }
     }
 }
 
-void ModelFileLoader::parseYAMLSubModels(const YAML::Node& substitution_model,
+void ModelFileLoader::parseYAMLSubModels(Params& params, 
+                                         const YAML::Node& substitution_model,
                                          ModelInfoFromYAMLFile& info,
                                          ModelListFromYAMLFile& list,
-                                         PhyloTree* report_to_tree) {
+                                         LoggingTarget* logging_target) {
     //Mixtures have to be handled before constraints, as constraints
     //that are setting parameters in mixed models... would otherwise
     //not be resolved correctly.
@@ -1080,7 +1089,7 @@ void ModelFileLoader::parseYAMLSubModels(const YAML::Node& substitution_model,
         complainIfNot(mixtures.IsSequence(),
                       "model_mixture for model " + model_name +
                       " in file " + file_path + " not a sequence");
-        parseYAMLMixtureModels(mixtures, info, list, report_to_tree);
+        parseYAMLMixtureModels(params, mixtures, info, list, logging_target);
     }
 
     auto linked = substitution_model["linked_models"];
@@ -1108,14 +1117,14 @@ namespace {
 void ModelFileLoader::parseYAMLModelStringProperties
         (const YAML::Node& substitution_model,
          ModelInfoFromYAMLFile& info,
-         PhyloTree* report_to_tree) {
+         LoggingTarget* logging_target) {
     for (const char* prop_name : recognized_string_property_names ) {
         auto prop_node = substitution_model[prop_name];
         if (prop_node) {
             if (prop_node.IsScalar()) {
                 std::string prop_value = prop_node.Scalar();
                 info.string_properties[prop_name] = prop_value;
-                TREE_LOG_LINE(*report_to_tree, YAMLParsingVerbosity,
+                TREE_LOG_LINE(*logging_target, YAMLParsingVerbosity,
                               "string property " << prop_name <<
                               " set to " << prop_value);
             }
@@ -1129,7 +1138,7 @@ void ModelFileLoader::parseYAMLModelStringProperties
 void ModelFileLoader::parseYAMLModelWeightAndScale
         (const YAML::Node& substitution_model,
         ModelInfoFromYAMLFile& info,
-        PhyloTree* report_to_tree) {
+        LoggingTarget* logging_target) {
     auto weight = substitution_model["weight"];
     if (weight) {
         complainIfNot(info.parent_model!=nullptr,
@@ -1144,7 +1153,7 @@ void ModelFileLoader::parseYAMLModelWeightAndScale
         info.weight_formula = weight.Scalar();
         info.model_weight   = info.getModelWeight();
         bool is_fixed       = info.isModelWeightFixed();
-        TREE_LOG_LINE(*report_to_tree, YAMLModelVerbosity,
+        TREE_LOG_LINE(*logging_target, YAMLModelVerbosity,
                       (is_fixed ? "Fixed" : "Variable") 
                       << " weight of " << info.parent_model->getName()
                       << "." << info.model_name 

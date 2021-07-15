@@ -77,7 +77,7 @@ public:
         , is_info_owned(make_copy)
         , model_info(make_copy ? new ModelInfoFromYAMLFile(info) : &info)
         , report_tree(report_to_tree) {
-        model_info->logVariablesTo(*report_to_tree);
+        model_info->logVariablesTo(report_to_tree);
     }
 
     ~YAMLModelWrapper() {
@@ -87,11 +87,12 @@ public:
         }
     }
     
-    void acceptParameterList(std::string parameter_list) {
+    void acceptParameterList(Params& params, std::string parameter_list,
+                             LoggingTarget* logging_target) {
         //parameter_list is passed by value so it can be modified
         //(without those changes being copied back to the original)
         ASSERT(model_info!=nullptr);
-        if (model_info->acceptParameterList(parameter_list, report_tree)) {
+        if (model_info->acceptParameterList(params, parameter_list, report_tree)) {
             setNumberOfVariableRates(model_info->getNumberOfVariableRates());
             setRateMatrixFromModel();
         }
@@ -194,7 +195,7 @@ public:
         if (changed) {
             model_info->updateModelVariables(variables, first_freq_index, 
                                              ndim,      phylo_tree);
-            model_info->logVariablesTo(*report_tree);
+            model_info->logVariablesTo(report_tree);
             setNumberOfVariableRates(model_info->getNumberOfVariableRates());
             setRateMatrixFromModel();
             afterVariablesChanged();
@@ -533,8 +534,10 @@ public:
         setFixRates       ( number_of_variable_rates==0 );
     }
 
-    void acceptParameterList(std::string parameter_list) {
-        if (model_info.acceptParameterList(parameter_list, report_tree)) {
+    void acceptParameterList(Params& params, std::string parameter_list,
+                             LoggingTarget* logging_target) {
+        if (model_info.acceptParameterList(params, parameter_list, 
+                                           logging_target)) {
             calculateNDim();
         }
     }

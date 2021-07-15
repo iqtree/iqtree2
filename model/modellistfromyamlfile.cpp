@@ -37,8 +37,9 @@ namespace {
     const string dummy_freq_params;    
 };
 
-void ModelListFromYAMLFile::loadFromFile (const char* file_path,
-                                          PhyloTree* report_to_tree) {
+void ModelListFromYAMLFile::loadFromFile (Params& params,
+                                          const char* file_path,
+                                          LoggingTarget* report_to_tree) {
     try {
         YAML::Node yaml_model_list = YAML::LoadFile(file_path);
         ModelFileLoader loader(file_path);
@@ -62,7 +63,7 @@ void ModelListFromYAMLFile::loadFromFile (const char* file_path,
                     }
                     ModelInfoFromYAMLFile* rate = rate_models_found.insertNew(rate_model_name);
                     rate->is_rate_model          = true;
-                    loader.parseYAMLModel(node, rate_model_name, *rate, *this,
+                    loader.parseYAMLModel(params, node, rate_model_name, *rate, *this,
                                           nullptr, report_to_tree);
                 }
                 continue;
@@ -71,8 +72,8 @@ void ModelListFromYAMLFile::loadFromFile (const char* file_path,
             TREE_LOG_LINE(*report_to_tree, YAMLParsingVerbosity,
                           "Parsing YAML substitution model " << yaml_model_name);
             ModelInfoFromYAMLFile* model = models_found.insertNew(yaml_model_name);
-            loader.parseYAMLModel(node, yaml_model_name, *model, *this,
-                                  nullptr, report_to_tree);
+            loader.parseYAMLModel(params, node, yaml_model_name, *model, 
+                                  *this, nullptr, report_to_tree);
         }
     }
     catch (YAML::ParserException e) {
@@ -86,7 +87,8 @@ void ModelListFromYAMLFile::loadFromFile (const char* file_path,
     }
 }
 
-bool ModelListFromYAMLFile::isSubstitutionModelNameRecognized (const char* model_name) {
+bool ModelListFromYAMLFile::isSubstitutionModelNameRecognized 
+        (const char* model_name) {
     size_t i = 0;
     while (model_name[i]!='\0' && model_name[i]!='{') {
         ++i;
@@ -95,6 +97,11 @@ bool ModelListFromYAMLFile::isSubstitutionModelNameRecognized (const char* model
 
     auto found      = models_found.hasName(model_front);
     return found;
+}
+
+bool ModelListFromYAMLFile::isSubstitutionModelNameRecognized 
+        (const std::string& model_name) {
+    return isSubstitutionModelNameRecognized(model_name.c_str());
 }
 
 bool ModelListFromYAMLFile::hasModel(const std::string& model_name) const {
@@ -154,6 +161,64 @@ namespace {
     }
 };
 
+bool ModelListFromYAMLFile::isRateHeterotachyRequired
+        (Params& params, 
+         const std::string& model_name,
+         int &num_mixlen,
+         LoggingTarget* logging_target) {
+    std::string name;
+    std::string inherit_list;    //list of classes to inherit
+    std::string parameter_list;  //list of parameters to pass to model
+    extractModelNameAndParameters(model_name.c_str(), name, parameter_list);
+    ModelInfoFromYAMLFile* model_info = models_found.getPointer(name);
+    ModelInfoFromYAMLFile  dynamic_model;
+    if (model_info==nullptr) {
+        //std::cout << "XX did not find substitution model pointer"
+        //          << " for " << name << std::endl;
+        std::string base_model = split_string(name, "+")[0];
+        if (base_model != name) {
+            auto base_model_info = models_found.getPointer(base_model);
+            inherit_list  = name.substr(base_model.length()+1);
+            //std::cout << "XX base model is " << base_model << std::endl;
+            //std::cout << "XX inherit list is " << inherit_list << std::endl;
+
+            if (base_model_info!=nullptr) {
+                dynamic_model = *base_model_info;
+                model_info    = &dynamic_model;
+                ModelFileLoader loader(params.yaml_model_file.c_str());
+                loader.handleInheritance(params, dynamic_model, *this,
+                                         inherit_list, false, logging_target);
+            }
+        } 
+        if (model_info==nullptr) {
+            return false;
+        }
+    }    
+    dynamic_model = *model_info;
+    model_info    = &dynamic_model;
+    if (!parameter_list.empty()) {
+        dynamic_model.acceptParameterList(params, parameter_list, logging_target);
+    }
+    auto rate_info = model_info->specified_rate_model_info;
+    
+    if (rate_info==nullptr) {
+        //std::cout << "XX did not find rate info for " << name << std::endl;
+        return false;
+    }
+    if (!rate_info->hasRateHeterotachy()) {
+        //std::cout << "XX Rate model wasn't heterotachic, for " << name << std::endl;
+        return false;
+    }
+    num_mixlen = rate_info->getNumberOfProportions()
+               - rate_info->getNumberOfInvariantProportions();
+    //Problem.  This includes the invariant proportion
+
+    //std::cout << "XX Number of heterotarchic proportions"
+    //          << " from " << rate_info->getName()
+    //          << " was " << num_mixlen << std::endl;
+    return true;
+}
+
 ModelMarkov* ModelListFromYAMLFile::getModelByName
             (const char* model_name,   PhyloTree *tree,
              const char* model_params, StateFreqType freq_type,
@@ -163,6 +228,7 @@ ModelMarkov* ModelListFromYAMLFile::getModelByName
     std::string parameter_list;
     extractModelNameAndParameters(model_name, name, parameter_list);
     ModelInfoFromYAMLFile* model_info = models_found.getPointer(model_name);
+    ASSERT(model_info!=nullptr);
     if (freq_type == StateFreqType::FREQ_UNKNOWN) {
         freq_type = model_info->frequency_type;
     }
@@ -238,7 +304,7 @@ ModelMarkov* ModelListFromYAMLFile::getBinaryModel(ModelInfoFromYAMLFile& model_
     model = new YAMLModelBinary(model_info, model_info.parent_model==nullptr,
                                 "", dummy_rate_params, freq_type,
                                 dummy_freq_params, tree, report_to_tree);
-    model->acceptParameterList(parameter_list);
+    model->acceptParameterList(*tree->params, parameter_list, report_to_tree);
     return model;
 }
 
@@ -253,7 +319,7 @@ ModelMarkov* ModelListFromYAMLFile::getCodonModel(ModelInfoFromYAMLFile& model_i
     model = new YAMLModelCodon(model_info, model_info.parent_model==nullptr, 
                                "", dummy_rate_params, freq_type,
                                dummy_freq_params, tree, report_to_tree);
-    model->acceptParameterList(parameter_list);
+    model->acceptParameterList(*tree->params, parameter_list, report_to_tree);
     return model;
 }
     
@@ -285,7 +351,7 @@ ModelMarkov* ModelListFromYAMLFile::getDNAModel(ModelInfoFromYAMLFile& model_inf
                       "epsilon is " << epsilon
                       << ", fixed is " << epsilon_is_fixed
                       << ", and errormodel is " << error_model);
-        emodel->acceptParameterList(parameter_list);
+        emodel->acceptParameterList(*tree->params, parameter_list, report_to_tree);
         model = emodel;
     }
     else {
@@ -294,7 +360,7 @@ ModelMarkov* ModelListFromYAMLFile::getDNAModel(ModelInfoFromYAMLFile& model_inf
                                   "", dummy_rate_params, freq_type,
                                   dummy_freq_params, tree,
                                   report_to_tree);
-        dmodel->acceptParameterList(parameter_list);
+        dmodel->acceptParameterList(*tree->params, parameter_list, report_to_tree);
         model = dmodel;
     }
     return model;
@@ -309,7 +375,7 @@ ModelMarkov* ModelListFromYAMLFile::getMorphologicalModel(ModelInfoFromYAMLFile&
     model = new YAMLModelMorphology(model_info, model_info.parent_model==nullptr,
                                     "", dummy_rate_params, freq_type,
                                     dummy_freq_params, tree, report_to_tree);
-    model->acceptParameterList(parameter_list);
+    model->acceptParameterList(*tree->params, parameter_list, report_to_tree);
     return model;
 }
 
@@ -325,7 +391,7 @@ ModelMarkov* ModelListFromYAMLFile::getProteinModel(ModelInfoFromYAMLFile& model
                                  "", dummy_rate_params, freq_type,
                                  dummy_freq_params, models_block,
                                  tree, report_to_tree);
-    model->acceptParameterList(parameter_list);
+    model->acceptParameterList(*tree->params, parameter_list, report_to_tree);
     return model;
 }
 
@@ -352,6 +418,6 @@ ModelMarkov* ModelListFromYAMLFile::getMixtureModel(ModelInfoFromYAMLFile& model
     YAMLModelMixture* model;
     model = new YAMLModelMixture(model_info, true, model_info.getName().c_str(),
                                  freq_type,  models_block, tree, report_to_tree);
-    model->acceptParameterList(parameter_list);
+    model->acceptParameterList(*tree->params, parameter_list, report_to_tree);
     return model;
 }
