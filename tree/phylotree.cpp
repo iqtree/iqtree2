@@ -5649,12 +5649,18 @@ void PhyloTree::convertToUnrooted() {
         // delete and join adjacent branches
         Node *node1 = NULL, *node2 = NULL;
         double len = 0.0;
+        // merge attributes
+        map<string,string> attributes;
         FOR_NEIGHBOR_IT(node, root, it) {
             if (!node1) node1 = (*it)->node; else node2 = (*it)->node;
             len += (*it)->length;
+            attributes.insert((*it)->attributes.begin(),(*it)->attributes.end());
         }
         node1->updateNeighbor(node, node2, len);
         node2->updateNeighbor(node, node1, len);
+        node1->findNeighbor(node2)->attributes = attributes;
+        node2->findNeighbor(node1)->attributes = attributes;
+        
         delete node;
     } else {
         // only delete root node

@@ -37,6 +37,7 @@
 #include "ncl/ncl.h"
 #include "utils/tools.h"
 #include "pda/split.h"
+#include "model/modelsubst.h"
 
 using namespace std;
 
@@ -59,6 +60,11 @@ public:
         the other end of the branch
      */
     Node *node;
+    
+    /**
+        branch-specific model
+     */
+    ModelSubst *model;
 
     /**
         branch length

@@ -804,12 +804,19 @@ void MTree::initializeTree(Node *node, Node* dad)
 
 void MTree::parseBranchLength(string &lenstr, DoubleVector &branch_len) {
 //    branch_len.push_back(convert_double(lenstr.c_str()));
+    string KEYWORD="&&NHX:";
+    bool in_comment_contains_key_value = in_comment.length() > KEYWORD.length()
+                                          && !in_comment.substr(0, KEYWORD.length()).compare(KEYWORD);
+    
     double len = convert_double(lenstr.c_str());
-    if (in_comment.empty()) {
+    if (in_comment.empty() || in_comment_contains_key_value) {
         branch_len.push_back(len);
         return;
     }
-    convert_double_vec(in_comment.c_str(), branch_len, BRANCH_LENGTH_SEPARATOR);
+    
+    // don't try to parse multiple lengths if in_comment starts with "&&NHX:" (input key=value)
+    if (!in_comment_contains_key_value)
+        convert_double_vec(in_comment.c_str(), branch_len, BRANCH_LENGTH_SEPARATOR);
 //    char* str = (char*)in_comment.c_str() + 1;
 //    int pos;
 //    for (int i = 1; str[0] == 'L'; i++) {
@@ -855,6 +862,46 @@ void MTree::parseFile(istream &infile, char &ch, Node* &root, DoubleVector &bran
             //throw ERR_NEG_BRANCH;
             root->addNeighbor(node, brlen);
             node->addNeighbor(root, brlen);
+            
+            // handle [&&NHX:model=GTR+G]
+            string KEYWORD="&&NHX:";
+            bool in_comment_contains_key_value = in_comment.length() > KEYWORD.length()
+                                                  && !in_comment.substr(0, KEYWORD.length()).compare(KEYWORD);
+            if (in_comment_contains_key_value)
+            {
+                string tmp_comment = in_comment;
+                
+                // remove "&&NHX:"
+                tmp_comment.erase(0, KEYWORD.length());
+                
+                // split tmp_comment into multiple key_value_pairs by ","
+                while (tmp_comment.length() > 0) {
+                    size_t pos_comma = tmp_comment.find(',');
+                    string key_value_pair = tmp_comment.substr(0, pos_comma);
+                    
+                    // parse key/value
+                    size_t pos_equal = key_value_pair.find('=');
+                    if (pos_equal != std::string::npos)
+                    {
+                        // extract key, value
+                        string key = key_value_pair.substr(0, pos_equal);
+                        string value = key_value_pair.substr(pos_equal + 1, key_value_pair.length() - pos_equal -1);
+                        
+                        // add key/value to attributes
+                        root->findNeighbor(node)->putAttr(key, value);
+                        node->findNeighbor(root)->putAttr(key, value);
+                    }
+                    else
+                        outError("Error in reading the newick tree. Please use `[&&NHX:<key_1>=<value_1>,...,<key_n>=<value_n>]` to specify custom attributes (e.g., `[&&NHX:model=GTR]`)");
+                    
+                    // remove the current key_value_pair from tmp_comment
+                    if (pos_comma != std::string::npos)
+                        tmp_comment.erase(0, pos_comma + 1);
+                    else
+                        tmp_comment = "";
+                }
+            }
+            
             if (infile.eof())
                 throw "Expecting ')', but end of file instead";
             if (ch == ',')
