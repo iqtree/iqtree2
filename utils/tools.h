@@ -2325,6 +2325,11 @@ public:
     *  state-specific distributions
     */
     string alisim_state_specific_distributions;
+    
+    /**
+    *  TRUE to skip checking the memory capacity for large mixture models
+    */
+    bool alisim_skip_checking_memory;
 };
 
 /**

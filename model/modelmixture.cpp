@@ -1345,7 +1345,8 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
     }
     // forgot to call this after refactoring
     if (isReversible()) {
-        initMem();
+        if (!Params::getInstance().alisim_skip_checking_memory)
+            initMem();
     }
 	decomposeRateMatrix();
 
