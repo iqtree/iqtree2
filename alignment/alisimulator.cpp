@@ -684,7 +684,7 @@ void AliSimulator::simulateSeqs(int sequence_length, ModelSubst *model, double *
             branchSpecificEvolution(sequence_length, trans_matrix, max_num_states, node, it);
         // otherwise, simulate the sequence based on the common model
         else
-            simulateASequenceFromBranch(model, sequence_length, trans_matrix, max_num_states, node, it);
+            simulateASequenceFromBranchAfterInitVariables(model, sequence_length, NULL, trans_matrix, max_num_states, node, it);
         
         // permuting selected sites for FunDi model
         if (params->alisim_fundi_taxon_set.size()>0)
@@ -1237,6 +1237,22 @@ void AliSimulator::branchSpecificEvolution(int sequence_length, double *trans_ma
 */
 void AliSimulator::simulateASequenceFromBranch(ModelSubst *model, int sequence_length, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it)
 {
+    // initialize the site-specific rates
+    double *site_specific_rates = new double[sequence_length];
+    initVariables(sequence_length, site_specific_rates);
+    
+    // simulate a sequence for a node from a specific branch after all variables has been initializing
+    simulateASequenceFromBranchAfterInitVariables(model, sequence_length, site_specific_rates, trans_matrix, max_num_states, node, it);
+    
+    // delete the site-specific rates
+    delete[] site_specific_rates;
+}
+
+/**
+    simulate a sequence for a node from a specific branch after all variables has been initializing
+*/
+void AliSimulator::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, double *site_specific_rates, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it)
+{
     // compute the transition probability matrix
     model->computeTransMatrix(partition_rate*(*it)->length, trans_matrix);
     
@@ -1251,4 +1267,12 @@ void AliSimulator::simulateASequenceFromBranch(ModelSubst *model, int sequence_l
         int starting_index = node->sequence[i]*max_num_states;
         (*it)->node->sequence[i] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(trans_matrix, starting_index, max_num_states, node->sequence[i]);
     }
+}
+
+/**
+    initialize variables (e.g., site-specific rate)
+*/
+void AliSimulator::initVariables(int sequence_length, double *site_specific_rates)
+{
+    // Do nothing, this method will be overrided in AliSimulatorHeterogeneity and AliSimulatorInvar
 }

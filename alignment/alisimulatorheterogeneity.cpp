@@ -67,9 +67,6 @@ void AliSimulatorHeterogeneity::intializeSiteSpecificModelIndex()
         
         // delete the probability array of rate categories
         delete[] model_prop;
-        
-        // regenerate ancestral sequence based on mixture model component base fequencies
-        regenerateAncestralSequenceMixtureModel();
     }
     // otherwise, if it's not a mixture model -> set model index = 0 for all sites
     else
@@ -172,40 +169,12 @@ void AliSimulatorHeterogeneity::simulateSeqs(int sequence_length, double *site_s
         if (node->num_children_done_simulation >= (node->neighbors.size() - 1))
             node->num_children_done_simulation = 0;
         
-        // estimate the sequence for the current neighbor
-        // check if trans_matrix could be caching (without rate_heterogeneity or the num of rate_categories is lowr than the threshold (5)) or not
-        if (tree->getRateName().empty()
-            || (!tree->getModelFactory()->is_continuous_gamma && rate_heterogeneity && rate_heterogeneity->getNDiscreteRate() <= params->alisim_max_rate_categories_for_applying_caching))
-        {
-            int num_models = tree->getModel()->isMixture()?tree->getModel()->getNMixtures():1;
-            int num_rate_categories  = tree->getRateName().empty()?1:rate_heterogeneity->getNDiscreteRate();
-            double *cache_trans_matrix = new double[num_models*num_rate_categories*max_num_states*max_num_states];
-            
-            // initialize a set of branch_lengths
-            DoubleVector branch_lengths;
-            branch_lengths.resize(num_rate_categories);
-            for (int i = 0; i < num_rate_categories; i++)
-                branch_lengths[i] = (*it)->getLength(i);
-            
-            // initialize caching accumulated trans_matrices
-            intializeCachingAccumulatedTransMatrices(cache_trans_matrix, num_models, num_rate_categories, max_num_states, branch_lengths, trans_matrix, model);
-
-            // estimate the sequence
-            (*it)->node->sequence.resize(sequence_length);
-            for (int i = 0; i < sequence_length; i++)
-                (*it)->node->sequence[i] = estimateStateFromAccumulatedTransMatrices(cache_trans_matrix, site_specific_rates[i] , i, num_rate_categories, max_num_states, node->sequence[i]);
-            
-            // delete cache_trans_matrix
-            delete [] cache_trans_matrix;
-        }
-        // otherwise, estimating the sequence without trans_matrix caching
+        // if a model is specify for the current branch -> simulate the sequence based on that branch-specific model
+        if ((*it)->attributes["model"].length()>0)
+            branchSpecificEvolution(sequence_length, trans_matrix, max_num_states, node, it);
+        // otherwise, simulate the sequence based on the common model
         else
-        {
-            (*it)->node->sequence.resize(sequence_length);
-            for (int i = 0; i < sequence_length; i++)
-               // randomly select the state, considering it's dad states, and the transition_probability_matrix
-                (*it)->node->sequence[i] = estimateStateFromOriginalTransMatrix(model, site_specific_model_index[i], site_specific_rates[i], trans_matrix, max_num_states, (*it)->length, node->sequence[i]);
-        }
+            simulateASequenceFromBranchAfterInitVariables(model, sequence_length, site_specific_rates, trans_matrix, max_num_states, node, it);
         
         // permuting selected sites for FunDi model
         if (params->alisim_fundi_taxon_set.size()>0)
@@ -383,6 +352,10 @@ void AliSimulatorHeterogeneity::simulateSeqsForTree(string output_filepath){
     // initialize site specific model index based on its weights (in the mixture model)
     intializeSiteSpecificModelIndex();
     
+    // regenerate ancestral sequence based on mixture model component base fequencies
+    if (tree->getModel()->isMixture())
+        regenerateAncestralSequenceMixtureModel();
+    
     // initialize site-specific rates
     double *site_specific_rates = new double[sequence_length];
     getSiteSpecificRates(site_specific_rates, sequence_length);
@@ -444,4 +417,56 @@ void AliSimulatorHeterogeneity::simulateSeqsForTree(string output_filepath){
     // removing constant states if it's necessary
     if (length_ratio > 1)
         removeConstantSites();
+}
+
+/**
+    simulate a sequence for a node from a specific branch after all variables has been initializing
+*/
+void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, double *site_specific_rates, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it){
+    // estimate the sequence for the current neighbor
+    // check if trans_matrix could be caching (without rate_heterogeneity or the num of rate_categories is lowr than the threshold (5)) or not
+    if (tree->getRateName().empty()
+        || (!tree->getModelFactory()->is_continuous_gamma && rate_heterogeneity && rate_heterogeneity->getNDiscreteRate() <= params->alisim_max_rate_categories_for_applying_caching))
+    {
+        int num_models = tree->getModel()->isMixture()?tree->getModel()->getNMixtures():1;
+        int num_rate_categories  = tree->getRateName().empty()?1:rate_heterogeneity->getNDiscreteRate();
+        double *cache_trans_matrix = new double[num_models*num_rate_categories*max_num_states*max_num_states];
+        
+        // initialize a set of branch_lengths
+        DoubleVector branch_lengths;
+        branch_lengths.resize(num_rate_categories);
+        for (int i = 0; i < num_rate_categories; i++)
+            branch_lengths[i] = (*it)->getLength(i);
+        
+        // initialize caching accumulated trans_matrices
+        intializeCachingAccumulatedTransMatrices(cache_trans_matrix, num_models, num_rate_categories, max_num_states, branch_lengths, trans_matrix, model);
+
+        // estimate the sequence
+        (*it)->node->sequence.resize(sequence_length);
+        for (int i = 0; i < sequence_length; i++)
+            (*it)->node->sequence[i] = estimateStateFromAccumulatedTransMatrices(cache_trans_matrix, site_specific_rates[i] , i, num_rate_categories, max_num_states, node->sequence[i]);
+        
+        // delete cache_trans_matrix
+        delete [] cache_trans_matrix;
+    }
+    // otherwise, estimating the sequence without trans_matrix caching
+    else
+    {
+        (*it)->node->sequence.resize(sequence_length);
+        for (int i = 0; i < sequence_length; i++)
+           // randomly select the state, considering it's dad states, and the transition_probability_matrix
+            (*it)->node->sequence[i] = estimateStateFromOriginalTransMatrix(model, site_specific_model_index[i], site_specific_rates[i], trans_matrix, max_num_states, (*it)->length, node->sequence[i]);
+    }
+}
+
+/**
+    initialize variables (e.g., site-specific rate)
+*/
+void AliSimulatorHeterogeneity::initVariables(int sequence_length, double *site_specific_rates)
+{
+    // initialize site specific model index based on its weights (in the mixture model)
+    intializeSiteSpecificModelIndex();
+    
+    // initialize site-specific rates
+    getSiteSpecificRates(site_specific_rates, sequence_length);
 }

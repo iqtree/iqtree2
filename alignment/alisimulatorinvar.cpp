@@ -166,21 +166,6 @@ void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(ModelSubst
 }
 
 /**
-    simulate a sequence for a node from a specific branch
-*/
-void AliSimulatorInvar::simulateASequenceFromBranch(ModelSubst *model, int sequence_length, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it){
-    // initialize the site-specific rates
-    double *site_specific_rates = new double[sequence_length];
-    initVariables(sequence_length, site_specific_rates);
-    
-    // simulate a sequence for a node from a specific branch after all variables has been initializing
-    simulateASequenceFromBranchAfterInitVariables(model, sequence_length, site_specific_rates, trans_matrix, max_num_states, node, it);
-    
-    // delete the site-specific rates
-    delete[] site_specific_rates;
-}
-
-/**
     initialize variables (e.g., site-specific rate)
 */
 void AliSimulatorInvar::initVariables(int sequence_length, double *site_specific_rates)
