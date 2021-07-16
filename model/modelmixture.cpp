@@ -1369,10 +1369,12 @@ void ModelMixture::initMem() {
     aligned_free(eigenvectors);
     aligned_free(inv_eigenvectors);
     aligned_free(inv_eigenvectors_transposed);
-    ensure_aligned_allocated(eigenvalues, num_states_total*nmixtures);
-    ensure_aligned_allocated(eigenvectors, num_states_total*num_states_total*nmixtures);
-    ensure_aligned_allocated(inv_eigenvectors, num_states_total*num_states_total*nmixtures);
-    ensure_aligned_allocated(inv_eigenvectors_transposed, num_states_total*num_states_total*nmixtures);
+    unsigned long long int tmp_size = num_states_total*nmixtures;
+    ensure_aligned_allocated(eigenvalues, tmp_size);
+    tmp_size *= num_states_total;
+    ensure_aligned_allocated(eigenvectors, tmp_size);
+    ensure_aligned_allocated(inv_eigenvectors, tmp_size);
+    ensure_aligned_allocated(inv_eigenvectors_transposed, tmp_size);
     
     // assigning memory for individual models
     int m = 0;

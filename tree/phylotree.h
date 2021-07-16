@@ -120,7 +120,7 @@ inline T *aligned_alloc(size_t size) {
     return (T*)mem;
 }
 
-template <class T> T* ensure_aligned_allocated(T* & ptr, size_t size) {
+template <class T> T* ensure_aligned_allocated(T* & ptr, long long int size) {
     if (ptr == nullptr) {
         ptr = aligned_alloc<T>(size);
     }
